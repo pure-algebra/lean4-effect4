@@ -1,10 +1,12 @@
-import Effect4.Program.Typing
-import Effect4.Program.Eff
-import Effect4.Program.Fold
-import Effect4.Schema.Authoring
-import Effect4.Schema.Document
-import Effect4.Schema.Fold
-import Effect4.Schema.Payload
+module
+
+public import Effect4.Program.Typing
+public import Effect4.Program.Eff
+public import Effect4.Program.Fold
+public import Effect4.Schema.Authoring
+public import Effect4.Schema.Document
+public import Effect4.Schema.Fold
+public import Effect4.Schema.Payload
 
 /-!
 # Effect4.Schema.Bridge — Program Type to Schema Representation Bridge (S-1 / S-2)
@@ -31,6 +33,8 @@ annotation policy (amended twice on 2026-10-01: a check's annotations too, and `
 in place of the probe's; the proofs read only `normAnn none = none` and the guard, so the key list
 can change without touching them.
 -/
+
+@[expose] public section
 
 namespace Effect4.Schema.Bridge
 

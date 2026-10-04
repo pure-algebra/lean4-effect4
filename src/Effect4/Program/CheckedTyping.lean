@@ -1,4 +1,6 @@
-import Effect4.Program.Typing
+module
+
+public import Effect4.Program.Typing
 
 /-!
 # The computed whole-program typing result
@@ -11,6 +13,8 @@ restriction, target profile, or stored program representation.
 The checker equations, uniqueness, and connection to the declarative judgment live
 in `Laws/Program/CheckedTyping.lean`; the application graph does not import them.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

@@ -208,6 +208,7 @@
     },
     {
       "Name": "Fold",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Eff,Effect4.Program.Ty"],
       "Tool": "tools/Effect4Gen/Fold.lean",
       "Imports": "Effect4.Program.Eff,Effect4.Program.Ty",
       "Out": "src\\Effect4\\Program\\Fold.lean",
@@ -261,6 +262,7 @@
     {
       "Note": "The one-layer view of the program family, from the constructor declarations: an argument by sort (ArgF), a generic layer function as an EffAlgebra (ofLayer), the argument sorts and constructor names, and build with one rfl equation per constructor. What a table-driven printer and reader stand on (R4.2).",
       "Name": "LayerView",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Fold"],
       "Tool": "tools/Effect4Gen/LayerView.lean",
       "Imports": "Effect4.Program.Fold",
       "Out": "src\\Effect4\\Program\\LayerView.lean",
@@ -275,7 +277,8 @@
       "Name": "TyExtras",
       "Tool": "tools/Effect4Gen/Fold.lean",
       "Flags": [
-        "--extras"
+        "--extras",
+        "--module"
       ],
       "Imports": "Effect4.Program.Fold",
       "Out": "src\\Effect4\\Program\\TyFoldExtras.lean",
@@ -288,6 +291,7 @@
     {
       "Note": "Node.child and Node.setChild from the constructor declarations: one arm per node-typed argument, the child scheme every consumer resolves against.",
       "Name": "NodeLenses",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Node"],
       "Tool": "tools/Effect4Gen/Authoring.lean",
       "Imports": "Effect4.Program.Node",
       "Out": "src\\Effect4\\Program\\NodeLenses.lean",
@@ -300,6 +304,7 @@
     {
       "Note": "The binder table (review log B17): Node.binders, closedChild and childLevel from tools/Effect4Gen/binders.json, read by the hoisting proofs and the authoring lifts.",
       "Name": "Binders",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Refs"],
       "Tool": "tools/Effect4Gen/Authoring.lean",
       "Imports": "Effect4.Program.Refs",
       "Out": "src\\Effect4\\Program\\Binders.lean",
@@ -312,6 +317,7 @@
     {
       "Note": "The scope predicate (every variable below its level) as the binder table's algebra on the carrier Nat -> Bool, run by the fold; one equation per constructor.",
       "Name": "Scoped",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Fold,Effect4.Program.Refs"],
       "Tool": "tools/Effect4Gen/Authoring.lean",
       "Imports": "Effect4.Program.Fold,Effect4.Program.Refs",
       "Out": "src\\Effect4\\Program\\Scoped.lean",

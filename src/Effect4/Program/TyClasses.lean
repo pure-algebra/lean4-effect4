@@ -1,4 +1,6 @@
-import Effect4.Program.TyFoldExtras
+module
+
+public import Effect4.Program.TyFoldExtras
 
 /-!
 # The classifier table of `Ty` (decisions row 182 (a), slice C)
@@ -13,6 +15,8 @@ A column lands with its consumer. Today: `handleFree`, the data fragment's class
 `shapeDecides`, where the shape check (`Val.hasTy`) is membership at every world, read by the Schema
 answer bridge (both in `Laws/Program/Typed/Membership.lean`).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

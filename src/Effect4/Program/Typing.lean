@@ -1,5 +1,7 @@
-import Effect4.Program.Typing.Rules
-import Effect4.Program.Checker
+module
+
+public import Effect4.Program.Typing.Rules
+public import Effect4.Program.Checker
 
 /-!
 # Program.Typing — the checker's answers, as projections of the one check
@@ -13,6 +15,8 @@ environment slot changes no success projection (`check_weaken`, at every path; `
 that once defined `effTy` here, and the proof graph over it, were deleted on 2026-09-18 once
 every consumer reached the fold (`docs/core/traversal-census.md` §7.8).
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

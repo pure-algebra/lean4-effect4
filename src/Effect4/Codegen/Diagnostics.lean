@@ -1,4 +1,6 @@
-import Effect4.Program.Typing.Blame
+module
+
+public import Effect4.Program.Typing.Blame
 
 /-!
 # Codegen.Diagnostics — the host compiler's configuration and the refusal-to-code table
@@ -24,6 +26,8 @@ reports, per corpus program, whether the observed codes meet the predicted ones,
 on the one direction that must never happen, a program this checker types that TypeScript
 refuses.
 -/
+
+@[expose] public section
 
 namespace Effect4.Codegen
 
@@ -51,10 +55,14 @@ deriving DecidableEq, Repr
 /-- The pinned configuration. -/
 def HostConfig.pinned : HostConfig := {}
 
+set_option backward.privateInPublic true in
 private def jsonBool (b : Bool) : String := if b then "true" else "false"
 
+set_option backward.privateInPublic true in
 private def jsonString (s : String) : String := "\"" ++ s ++ "\""
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- The `tsconfig.json` text of a configuration over the paths to include. -/
 def HostConfig.tsconfig (c : HostConfig) (includes : List String) : String :=
   let fields : List (String × String) :=
@@ -70,6 +78,8 @@ def HostConfig.tsconfig (c : HostConfig) (includes : List String) : String :=
     String.intercalate ",\n" (fields.map fun (k, v) => "    " ++ jsonString k ++ ": " ++ v) ++
     "\n  },\n  \"include\": [" ++ String.intercalate ", " (includes.map jsonString) ++ "]\n}\n"
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- The pins the lane checks before it trusts a run. -/
 def HostConfig.pinsJson (c : HostConfig) : String :=
   "{\"compiler\": " ++ jsonString c.compiler ++ ", \"version\": " ++ jsonString c.version ++

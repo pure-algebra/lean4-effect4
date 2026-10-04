@@ -1,5 +1,7 @@
-import Effect4.Program.Ty
-import Effect4.Program.AtomInventory
+module
+
+public import Effect4.Program.Ty
+public import Effect4.Program.AtomInventory
 
 /-!
 # Native atom typing (DI-40)
@@ -29,6 +31,8 @@ normalizes its exact positional answer, as decisions rows 159 and 197 require.
 `all_complete` forces an appended constructor into the inventory, `Scheme.apply` is total, and
 every dispatch here covers the enum explicitly, so a new constructor cannot inherit a fallback.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

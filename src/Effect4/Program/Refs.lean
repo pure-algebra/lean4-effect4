@@ -1,5 +1,7 @@
-import Effect4.Program.NodeLenses
-import Effect4.Program.Fold
+module
+
+public import Effect4.Program.NodeLenses
+public import Effect4.Program.Fold
 
 /-!
 # Program.Refs — nodes, paths and layer references (the host rows slice, step 2)
@@ -31,6 +33,8 @@ path in its digits (`refName`), and `readRefName` decodes it from the UTF-8 byte
 (`String.toUTF8` is the representation; the string API's character traversals reach
 `Classical.choice` on this toolchain, `Eff.lean` `Ty.key`).
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

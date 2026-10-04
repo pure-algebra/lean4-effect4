@@ -1,4 +1,6 @@
-import Effect4.Program.Typing.Blame
+module
+
+public import Effect4.Program.Typing.Blame
 
 /-!
 # Program.Checker — typing with located refusal, as one fold of the program
@@ -27,6 +29,8 @@ The answer join never refuses (`EffTy.joinAnswer_eq`), so the fold joins with `T
 merges an `if`'s branches with `GenTy.mergeT` and sequences a statement before its tail with
 `GenTy.seqT`; the hand blocks' `Option` there is history.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

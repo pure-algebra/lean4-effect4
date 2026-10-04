@@ -1,4 +1,6 @@
-import Effect4.Program.Eff
+module
+
+public import Effect4.Program.Eff
 
 /-!
 # Program.Node — the mutual program family as one addressable sort
@@ -9,6 +11,8 @@ declaration order; `Node.child` and `Node.setChild` (`Program/NodeLenses.lean`, 
 from the declarations) address them by that index, and `Program/Refs.lean` builds paths,
 lookups and layer references on them.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

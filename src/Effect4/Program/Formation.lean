@@ -1,4 +1,6 @@
-import Effect4.Program.LayerView
+module
+
+public import Effect4.Program.LayerView
 
 /-!
 # Raw type formation
@@ -12,6 +14,8 @@ The coordinator places `raw-formation` under decidability of the type algebra.
 Its consumers are runtime admission, checked module reading and production, and
 checked replay. This judgment says nothing about typing or inhabitance.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

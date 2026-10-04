@@ -1,7 +1,9 @@
-import Effect4.Program.NativeAtom
-import Effect4.Program.ErrorImage
-import Effect4.Program.Typing
-import Effect4.Machine.Stores
+module
+
+public import Effect4.Program.NativeAtom
+public import Effect4.Program.ErrorImage
+public import Effect4.Program.Typing
+public import Effect4.Machine.Stores
 
 /-!
 # Syntax.Native — the native row alphabet over the stores (lane A3, first cut)
@@ -23,6 +25,8 @@ The read-modify-write rows carry their pure function as a `FnName` *in the opera
 takes a JavaScript function, DB-02 forbids storing one, and the store already interprets the
 names. The Layer and Context rows (`RowKind.program`) are not in this first cut.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

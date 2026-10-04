@@ -1,11 +1,15 @@
-import Effect4.Program.Typing.Rules
-import Effect4.Program.Fold
+module
+
+public import Effect4.Program.Typing.Rules
+public import Effect4.Program.Fold
 
 /-!
 Located reasons for failed record and tuple term typing. The diagnostic fold never returns a type.
 `argTy` and `argsTy` remain the acceptance rules; the caller invokes this fold only after failure.
 Program paths and nested term addresses remain separate data.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 
@@ -116,10 +120,12 @@ def tupleIndex (target : Ty) (index : Nat) : Option TupleTypingReason :=
       | .prod _ _ => some (.outOfBounds 2)
       | _ => some (.nonTuple branch)) none
 
+set_option backward.privateInPublic true in
 private def Carrier : TermFam → Type
   | .term => Term × (Bool → List Nat → Option TermTypingRefusal)
   | .terms => Terms × (Bool → List Nat → Nat → Option TermTypingRefusal)
 
+set_option backward.privateInPublic true in
 /-- The generated term fold carries its raw node beside a diagnostic computation.
 Only failed children are descended into, in the typing rule's order and literal mode. -/
 private def algebra (infer : Bool → Term → Option Ty)
@@ -156,6 +162,8 @@ private def algebra (infer : Bool → Term → Option Ty)
     | none => head.2 flag (path ++ [index])
     | some _ => tail.2 flag path (index + 1))
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- Diagnose a failed term. This function never supplies a successful type. -/
 def diagnose {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
     Option TermTypingRefusal :=
@@ -168,13 +176,16 @@ def locate {Op : Type} (sig : Signature Op) (env : TyEnv) (term : Term) :
   | .record why => some why
   | .tuple _ => none
 
+set_option backward.privateInPublic true in
 private def inCause (path : List Nat) : TermTypingRefusal → CauseTypingRefusal
   | .record why => .record ⟨path, why⟩
   | .tuple why => .tuple ⟨path, why⟩
 
+set_option backward.privateInPublic true in
 private def CauseCarrier (_ : CauseTermFam) : Type :=
   CauseTerm × (List Nat → Option CauseTypingRefusal)
 
+set_option backward.privateInPublic true in
 private def causeAlgebra (inferCause : CauseTerm → Option Ty) (inferTerm : Term → Option Ty)
     (diagnose : Term → Option TermTypingRefusal) : CauseTermAlgebra CauseCarrier where
   cause_fail term := (.fail term, fun path =>
@@ -195,6 +206,8 @@ private def causeAlgebra (inferCause : CauseTerm → Option Ty) (inferTerm : Ter
     | none => left.2 (path ++ [0])
     | some _ => right.2 (path ++ [1]))
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- Diagnose a failed cause while keeping cause and term addresses separate. -/
 def diagnoseCause {Op : Type} (sig : Signature Op) (env : TyEnv) (cause : CauseTerm) :
     Option CauseTypingRefusal :=

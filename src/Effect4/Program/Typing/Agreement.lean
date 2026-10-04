@@ -1,4 +1,6 @@
-import Effect4.Program.Typing
+module
+
+public import Effect4.Program.Typing
 
 /-!
 # Program.Typing.Agreement — the projection law, the list sort, and the folds
@@ -12,6 +14,8 @@ fold (`Typing/Rules.lean`, `Folds/Term.lean`) and `termTy` its projection at `fa
 and completeness against `HasTy`, and every
 consequence that needs them, are the proof graph's (`Laws/Program/Typing/CheckSound.lean`).
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

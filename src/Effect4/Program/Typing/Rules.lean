@@ -1,8 +1,10 @@
-import Effect4.Program.Refs
-import Effect4.Program.Formation
-import Effect4.Program.Record
-import Effect4.Program.Tuple
-import Effect4.Machine.Context
+module
+
+public import Effect4.Program.Refs
+public import Effect4.Program.Formation
+public import Effect4.Program.Record
+public import Effect4.Program.Tuple
+public import Effect4.Machine.Context
 
 /-!
 # Program.Typing.Rules — the type algebra and the rules the checker applies
@@ -17,6 +19,8 @@ the weakening lemmas of terms and causes. The checker itself is `Program/Checker
 success projections `effTy`, `layerTy`, … are `Program/Typing.lean`; this module is what both
 read and is imported by both.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

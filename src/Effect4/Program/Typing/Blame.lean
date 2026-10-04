@@ -1,4 +1,6 @@
-import Effect4.Program.Typing.TermRefusal
+module
+
+public import Effect4.Program.Typing.TermRefusal
 
 /-!
 # Program.Typing.Blame — the vocabulary of the located refusal (DI-86)
@@ -13,6 +15,8 @@ checker's: `Program/Checker.lean`'s `check` answers the type or the refusal in o
 walk that once lived here beside `effTy`, and the mutual induction that tied the two, were
 deleted on 2026-09-18 once the fold carried both.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 
