@@ -261,58 +261,61 @@ theorem ServiceDef.agrees_serviceTy {Op : Type} {sig : Signature Op} {s : Servic
 One lemma per definition, named so `authoring_scoped` finds it, each one application of the
 lemma of the lift it is made of. -/
 
-theorem ServiceDef.use_scoped {Op : Type} (s : ServiceDef) : ((s.use : Src Op)).Scoped :=
+theorem ServiceDef.use_scoped {Op : Type} [ScopedOp Op]
+    (s : ServiceDef) : ((s.use : Src Op)).Scoped :=
   service_scoped s.key
 
-theorem ServiceDef.give_scoped {Op : Type} (s : ServiceDef) {value : TermSrc} {body : Src Op}
+theorem ServiceDef.give_scoped {Op : Type} [ScopedOp Op]
+    (s : ServiceDef) {value : TermSrc} {body : Src Op}
     (h1 : value.Scoped) (h2 : body.Scoped) : ((s.give value body : Src Op)).Scoped :=
   provideService_scoped s.key h1 h2
 
-theorem ServiceDef.layer_scoped {Op : Type} (s : ServiceDef) {build : Src Op}
+theorem ServiceDef.layer_scoped {Op : Type} [ScopedOp Op] (s : ServiceDef) {build : Src Op}
     (h : build.Scoped) : ((s.layer build : LayerSrc Op)).Scoped :=
   Layer.effect_scoped s.key h
 
-theorem Layer.value_scoped {Op : Type} (key : Effect4.ServiceKey) {value : TermSrc}
+theorem Layer.value_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) {value : TermSrc}
     (h : value.Scoped) : ((Layer.value key value : LayerSrc Op)).Scoped :=
   Layer.effect_scoped key (Authoring.succeed_scoped h)
 
-theorem ServiceDef.constant_scoped {Op : Type} (s : ServiceDef) {value : TermSrc}
+theorem ServiceDef.constant_scoped {Op : Type} [ScopedOp Op] (s : ServiceDef) {value : TermSrc}
     (h : value.Scoped) : ((s.constant value : LayerSrc Op)).Scoped :=
   Layer.value_scoped s.key h
 
-theorem Layer.empty_scoped {Op : Type} : ((Layer.empty : LayerSrc Op)).Scoped :=
+theorem Layer.empty_scoped {Op : Type} [ScopedOp Op] : ((Layer.empty : LayerSrc Op)).Scoped :=
   Layer.effectDiscard_scoped (Authoring.succeed_scoped Authoring.unit_scoped)
 
-theorem provide_scoped {Op : Type} {layer : LayerSrc Op} {body : Src Op}
+theorem provide_scoped {Op : Type} [ScopedOp Op] {layer : LayerSrc Op} {body : Src Op}
     (h0 : layer.Scoped) (h1 : body.Scoped) : ((provide layer body : Src Op)).Scoped :=
   provideLayer_scoped false h0 h1
 
-theorem provideAll_scoped {Op : Type} {layers : List (LayerSrc Op)} {body : Src Op}
+theorem provideAll_scoped {Op : Type} [ScopedOp Op] {layers : List (LayerSrc Op)} {body : Src Op}
     (h0 : ∀ l ∈ layers, l.Scoped) (h1 : body.Scoped) :
     ((provideAll layers body : Src Op)).Scoped :=
   provideLayer_scoped false (Layer.mergeAll_scoped h0) h1
 
-theorem provideFresh_scoped {Op : Type} {layer : LayerSrc Op} {body : Src Op}
+theorem provideFresh_scoped {Op : Type} [ScopedOp Op] {layer : LayerSrc Op} {body : Src Op}
     (h0 : layer.Scoped) (h1 : body.Scoped) : ((provideFresh layer body : Src Op)).Scoped :=
   provideLayer_scoped true h0 h1
 
-theorem fork_scoped {Op : Type} {body : Src Op} (options : Effect4.Supervision.ForkOptions)
+theorem fork_scoped {Op : Type} [ScopedOp Op]
+    {body : Src Op} (options : Effect4.Supervision.ForkOptions)
     (h : body.Scoped) : ((fork body options : Src Op)).Scoped :=
   withFiber_scoped (Action.fork_scoped options h)
 
-theorem daemonFork_scoped {Op : Type} {body : Src Op} (h : body.Scoped) :
+theorem daemonFork_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h : body.Scoped) :
     ((daemonFork body : Src Op)).Scoped :=
   withFiber_scoped (Action.fork_scoped daemonOptions h)
 
-theorem daemonForkIn_scoped {Op : Type} {body : Src Op} {scope : TermSrc}
+theorem daemonForkIn_scoped {Op : Type} [ScopedOp Op] {body : Src Op} {scope : TermSrc}
     (h : body.Scoped) (hs : scope.Scoped) : ((daemonForkIn body scope : Src Op)).Scoped :=
   withFiber_scoped (Action.forkIn_scoped daemonOptions h hs)
 
-theorem await_scoped {Op : Type} {fiber : TermSrc} (h : fiber.Scoped) :
+theorem await_scoped {Op : Type} [ScopedOp Op] {fiber : TermSrc} (h : fiber.Scoped) :
     ((await fiber : Src Op)).Scoped :=
   awaitFiber_scoped .awaitValue h
 
-theorem join_scoped {Op : Type} {fiber : TermSrc} (h : fiber.Scoped) :
+theorem join_scoped {Op : Type} [ScopedOp Op] {fiber : TermSrc} (h : fiber.Scoped) :
     ((join fiber : Src Op)).Scoped :=
   awaitFiber_scoped .joinEffect h
 

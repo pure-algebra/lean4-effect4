@@ -19,7 +19,8 @@ constructor declarations from the Lean environment, and emits:
   `Node.child` assigns it.
 * group `Scoped` → `src/Effect4/Program/Scoped.lean`: the same table as an algebra of the
   program signature (`Fold.lean`) on the carrier `Nat → Bool`, so `Eff.scopedAt n e` (every
-  variable below its level) is one `cata_eff`, with one `rfl` equation per constructor.
+  variable below its level) is one `cata_eff`, with one `rfl` equation per constructor. An
+  operation's own data is read by the alphabet's `ScopedOp` (`Program/ScopedOp.lean`).
 * group `ScopedLaws` → `src/Effect4/Laws/Program/Authoring/Lifts.lean`: for every lift, the
   theorem that it preserves scope, with one proof script for all of them.
 * group `NodeLenses` → `src/Effect4/Program/NodeLenses.lean`: `Node.child` and
@@ -119,6 +120,10 @@ inductive ArgKind
   | term
   | optionTerm
   | cause
+  /-- An argument of the family's parameter type, the operation alphabet `Op` (`perform`'s
+  operation): its own data is scoped by the alphabet's `ScopedOp` instance
+  (`Program/ScopedOp.lean`), at the level the table gives the argument. -/
+  | op
   | other
   deriving BEq, Repr
 
@@ -142,6 +147,7 @@ def famOfHead (members : List Name) (ty : Expr) : Option Name :=
 def readCtor (members : List Name) (c : Name) : MetaM Ctor := do
   let ci ← getConstInfoCtor c
   let args ← forallBoundedTelescope ci.type (ci.numParams + ci.numFields) fun xs _ => do
+    let params := xs[:ci.numParams].toArray
     let mut acc := []
     for x in xs[ci.numParams:] do
       let ty ← inferType x
@@ -150,7 +156,8 @@ def readCtor (members : List Name) (c : Name) : MetaM Ctor := do
       let kind := match famOfHead members ty with
         | some f => ArgKind.node f
         | none =>
-          if tyText == "Effect4.Program.Term" then ArgKind.term
+          if params.contains ty then ArgKind.op
+          else if tyText == "Effect4.Program.Term" then ArgKind.term
           else if tyText == "Option Effect4.Program.Term" then ArgKind.optionTerm
           else if tyText == "Effect4.Program.CauseTerm" then ArgKind.cause
           else ArgKind.other
@@ -299,6 +306,7 @@ def srcTypeOf : ArgKind → Option String
   | .term => some "TermSrc"
   | .optionTerm => some "Option TermSrc"
   | .cause => some "CauseSrc"
+  | .op => none
   | .other => none
 
 def liftPrefix : Name → String
@@ -360,7 +368,8 @@ def emitLiftCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (N
         results := results ++ [headTerm hc]
         continue
     match a.kind with
-    | .other =>
+    | .other | .op =>
+      -- data, taken as it is: an operation is not elaborated against the scope
       params := params ++ [s!"({a.name} : {a.tyText})"]
       results := results ++ [a.name]
     | kind =>
@@ -440,8 +449,10 @@ The scope predicate is not a second recursion over the seven sorts: it is the pr
 signature's algebra (`Fold.lean`, `EffAlgebra`) on the carrier `Nat → Bool`, one field per
 constructor, each argument checked at the level its row gives it, run by `cata_eff`. The one
 head-dependent row (`whenHead`: a statement list's tail is one deeper after a `bindYield`)
-is carried as a flag in that family's carrier. One equation lemma per constructor, `rfl`,
-is what consumers rewrite with. -/
+is carried as a flag in that family's carrier. An argument of the alphabet's type, `perform`'s
+operation, is read by the alphabet's `ScopedOp` instance (`Program/ScopedOp.lean`), so every
+emitted declaration takes `[ScopedOp Op]`. One equation lemma per constructor, `rfl`, is what
+consumers rewrite with. -/
 
 /-- The level an argument is checked at, from its row: `0` for a closed child, `n + k` under
 `k` binders, `n` otherwise. -/
@@ -515,6 +526,7 @@ def emitScoped (t : Table) (ctors : List Ctor) : MetaM (String × List String) :
       | .term => some s!"a{j}.scoped {l}"
       | .optionTerm => some s!"a{j}.all (·.scoped {l})"
       | .cause => some s!"a{j}.scoped {l}"
+      | .op => some s!"ScopedOp.scopedAt a{j} {l}"
       | .node fam =>
         if algebra then
           if isLayerFam fam then some s!"a{j} 0"
@@ -552,10 +564,10 @@ def emitScoped (t : Table) (ctors : List Ctor) : MetaM (String × List String) :
     let rhs := conj false
     let rhs := if rhs == "true" then rhs else s!"({rhs})"
     let lemma := if isLayerFam c.fam then "scoped" else "scopedAt"
-    eqns := eqns ++ [s!"@[simp] theorem {famShort}.{lemma}_{c.short} \{Op : Type} {nParam}{params} :\n    {lhs} = {rhs} := rfl"]
+    eqns := eqns ++ [s!"@[simp] theorem {famShort}.{lemma}_{c.short} \{Op : Type} [ScopedOp Op] {nParam}{params} :\n    {lhs} = {rhs} := rfl"]
     if flagged c.fam then
       let v := if c.name == (flag?.map (·.head)).getD .anonymous then "true" else "false"
-      eqns := eqns ++ [s!"@[simp] theorem {famShort}.bindsNext_{c.short} \{Op : Type} {params} :\n    {famShort}.bindsNext (({app} : {famShort} Op)) = {v} := rfl"]
+      eqns := eqns ++ [s!"@[simp] theorem {famShort}.bindsNext_{c.short} \{Op : Type} [ScopedOp Op] {params} :\n    {famShort}.bindsNext (({app} : {famShort} Op)) = {v} := rfl"]
   let carrier := match flag? with
     | some f =>
       let key := (nodeCtorOf f.fam).getD "stmt"
@@ -565,30 +577,31 @@ def emitScoped (t : Table) (ctors : List Ctor) : MetaM (String × List String) :
     | some f =>
       let fs := shortName f.fam
       let key := (nodeCtorOf f.fam).getD "stmt"
-      s!"def {fs}.scopedAt \{Op : Type} (n : Nat) (s : {fs} Op) : Bool := (cata_{key} (scopedAlgebra Op) s).1 n\n" ++
+      s!"def {fs}.scopedAt \{Op : Type} [ScopedOp Op] (n : Nat) (s : {fs} Op) : Bool := (cata_{key} (scopedAlgebra Op) s).1 n\n" ++
       s!"/-- Whether the statement binds the one after it: the head the table's `whenHead` row names. -/\n" ++
-      s!"def {fs}.bindsNext \{Op : Type} (s : {fs} Op) : Bool := (cata_{key} (scopedAlgebra Op) s).2\n"
-    | none => "def Stmt.scopedAt {Op : Type} (n : Nat) (s : Stmt Op) : Bool := cata_stmt (scopedAlgebra Op) s n\n"
+      s!"def {fs}.bindsNext \{Op : Type} [ScopedOp Op] (s : {fs} Op) : Bool := (cata_{key} (scopedAlgebra Op) s).2\n"
+    | none => "def Stmt.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) (s : Stmt Op) : Bool := cata_stmt (scopedAlgebra Op) s n\n"
   let text := String.intercalate "\n" ([
     "/-- The carrier: at every sort the scope test at a level; the flagged family also says",
     "whether it binds the sibling after it (the table's one `whenHead` row). -/",
     carrier,
     "",
-    "/-- The binder table as an algebra: each argument checked at the level its row gives it. -/",
-    "def scopedAlgebra (Op : Type) : EffAlgebra Op ScopeCarrier where"] ++ fields ++ [
+    "/-- The binder table as an algebra: each argument checked at the level its row gives it, and",
+    "an operation's own data by the alphabet's `ScopedOp` instance at its node's level. -/",
+    "def scopedAlgebra (Op : Type) [ScopedOp Op] : EffAlgebra Op ScopeCarrier where"] ++ fields ++ [
     "",
     "/-- Every variable in scope at `n`, read off the tree by the one fold (`scoped` is the",
     "constructor, Effect's `scoped` combinator). -/",
-    "def Eff.scopedAt {Op : Type} (n : Nat) (e : Eff Op) : Bool := cata_eff (scopedAlgebra Op) e n",
+    "def Eff.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) (e : Eff Op) : Bool := cata_eff (scopedAlgebra Op) e n",
     flagDefs,
-    "def Stmts.scopedAt {Op : Type} (n : Nat) (ss : Stmts Op) : Bool := cata_stmts (scopedAlgebra Op) ss n",
-    "def Effs.scopedAt {Op : Type} (n : Nat) (es : Effs Op) : Bool := cata_effs (scopedAlgebra Op) es n",
-    "def ActionTerm.scopedAt {Op : Type} (n : Nat) (a : ActionTerm Op) : Bool := cata_action (scopedAlgebra Op) a n",
+    "def Stmts.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) (ss : Stmts Op) : Bool := cata_stmts (scopedAlgebra Op) ss n",
+    "def Effs.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) (es : Effs Op) : Bool := cata_effs (scopedAlgebra Op) es n",
+    "def ActionTerm.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) (a : ActionTerm Op) : Bool := cata_action (scopedAlgebra Op) a n",
     "/-- A layer is closed: its bodies are checked at level `0`. -/",
-    "def LayerTerm.scoped {Op : Type} (l : LayerTerm Op) : Bool := cata_layer (scopedAlgebra Op) l 0",
-    "def LayerTerms.scoped {Op : Type} (ls : LayerTerms Op) : Bool := cata_layers (scopedAlgebra Op) ls 0",
+    "def LayerTerm.scoped {Op : Type} [ScopedOp Op] (l : LayerTerm Op) : Bool := cata_layer (scopedAlgebra Op) l 0",
+    "def LayerTerms.scoped {Op : Type} [ScopedOp Op] (ls : LayerTerms Op) : Bool := cata_layers (scopedAlgebra Op) ls 0",
     "",
-    "def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool",
+    "def Node.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) : Node Op → Bool",
     "  | .eff e => e.scopedAt n",
     "  | .stmts ss => ss.scopedAt n",
     "  | .stmt s => s.scopedAt n",
@@ -609,7 +622,8 @@ if every source argument is scoped, the result is scoped (`Laws/Program/Authorin
 holds the predicates and the base). The proof is the same for every lift: open the `do`
 chain (`bind_ok` once per elaborated argument), read each argument's scope at the depth the
 row pushed, and close with the constructor's equation of the scope algebra
-(`Program/Scoped.lean`). -/
+(`Program/Scoped.lean`). An operation is data the lift takes as it is, not a source
+elaborated against the scope, so its hypothesis is its scope at every level (`ScopedOp`). -/
 
 def hypOf (kind : ArgKind) (name : String) : Option String :=
   match kind with
@@ -619,6 +633,7 @@ def hypOf (kind : ArgKind) (name : String) : Option String :=
   | .term => some s!"{name}.Scoped"
   | .cause => some s!"{name}.Scoped"
   | .optionTerm => some s!"∀ t ∈ {name}, t.Scoped"
+  | .op => some s!"∀ n, ScopedOp.scopedAt {name} n = true"
   | .other => none
 
 def emitLiftLemmaCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
@@ -633,7 +648,7 @@ def emitLiftLemmaCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Opti
   let fullName := liftPrefix c.fam ++ defName
   let isCause := c.fam == `Effect4.Program.CauseTerm
   let mut params : List String :=
-    (if isCause then [] else ["{Op : Type}"]) ++ slots.map fun s => s!"({s} : String)"
+    (if isCause then [] else ["{Op : Type}", "[ScopedOp Op]"]) ++ slots.map fun s => s!"({s} : String)"
   let mut hyps : List String := []
   let mut appArgs : List String := slots
   let mut steps : List String := []
@@ -650,6 +665,14 @@ def emitLiftLemmaCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Opti
     appArgs := appArgs ++ [a.name]
     match a.kind with
     | .other => params := params ++ [s!"({a.name} : {a.tyText})"]
+    | .op =>
+      -- the operation, taken as data: no elaboration step; its scope at the lift's level is
+      -- the hypothesis read at the scope's depth
+      let some hyp := hypOf .op a.name | return none
+      params := params ++ [s!"({a.name} : {a.tyText})"]
+      hyps := hyps ++ [s!"(h{j} : {hyp})"]
+      haves := haves ++ [s!"  have s{j} := h{j} env.names.length"]
+      ss := ss ++ [s!"s{j}"]
     | kind =>
       let some ty := srcTypeOf kind | return none
       let some hyp := hypOf kind a.name | return none

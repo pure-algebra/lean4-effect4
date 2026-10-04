@@ -470,6 +470,9 @@ def registry : Registry where
     { id := "addressed-replacement", concept := "initial-algebras-folds", role := .compatibility
       title := "Successful same-sort path replacement reads back, retains the root sort, and restores the original tree"
       pointer := .witness `Effect4.Program.Node.replaceAt_spec },
+    { id := "operation-data-scoped", concept := "initial-algebras-folds", role := .decidability
+      title := "The scope fold decides a perform node: scoped exactly when its operation's own data (the alphabet's ScopedOp) and its request are"
+      pointer := .witness `Effect4.Program.Eff.perform_scoped_iff },
 
     -- 8. context-requirements
     { id := "satisfies-empty", concept := "context-requirements", role := .compatibility
@@ -715,8 +718,7 @@ def registry : Registry where
       top := [`Effect4.Program.Typed.order_refl, `Effect4.Program.Typed.order_trans,
         `Effect4.Program.Typed.refMake_extension, `Effect4.Program.Typed.deferredMake_extension,
         `Effect4.Program.Typed.memoBuild_extension]
-      openParts := ["an operation's data is scope-checked: scopedAlgebra's perform arm ignores the operation (state plan T0)",
-        "the store runs binder terms, FnName retires (decisions row 43; state plan T2–T3)",
+      openParts := ["the store runs binder terms, FnName retires (decisions row 43; state plan T2–T3)",
         "rows as templates: Ref and Deferred rows over parameters, Deferred.make carrying its type arguments, modify answering B while storing A; until then the native spellings read as cells at nat (decisions row 42, row 96 D2; state plan T3)",
         "the faces of Ref<A> and Deferred<A, E>: printer, readers, TypeScript profile and OCaml, binder terms printed (decisions rows 42–43, step 5; state plan T5)"] },
     { id := "R5", title := "Services: the service table, layers and provision"
