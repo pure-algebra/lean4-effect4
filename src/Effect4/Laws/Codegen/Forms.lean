@@ -207,4 +207,148 @@ theorem ensuring_typed (sig : Signature NativeOp) (env : TyEnv)
     (effTy_insert_append sig env [.exitOf a.answer a.error] finalizer).trans hb
   simp only [Conform.Effect4.Typing.effTy_onExit, ha, hb', Option.bind_eq_bind, Option.bind_some]
 
+/-! ## The remaining eleven rows (R10: each form owes a typing lemma)
+
+Each law types the row's actual expansion through the checker's declarative rule: the
+argument typings become derivations (`effTy_sound`), the row's rule assembles them, and
+`effTy_complete` returns to the checker. -/
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.void` answers `unit`. -/
+theorem void_typed (sig : Signature NativeOp) (env : TyEnv) :
+    ((all.find? (fun f => f.id == "void")).bind
+      (fun f => f.expansion.expand env.length {})).bind (effTy sig env) =
+      some (EffTy.pure .unit) := by
+  change effTy sig env (.succeed (.lit .unit)) = _
+  exact effTy_complete sig _ env _ (.succeed rfl)
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.die` fails with its defect's cause and answers `never`. -/
+theorem die_typed (sig : Signature NativeOp) (env : TyEnv) (value : Term) (ty : Ty)
+    (hc : causeTy sig env (.die value) = some ty) :
+    ((all.find? (fun f => f.id == "die")).bind
+      (fun f => f.expansion.expand env.length { terms := [value] })).bind (effTy sig env) =
+      some ⟨.never, ty, Requirement.empty⟩ := by
+  change effTy sig env (.failCause (.die value)) = _
+  exact effTy_complete sig _ env _ (.failCause hc)
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `yield* Key` answers the key's carrier and requires the key. -/
+theorem yieldKey_typed (sig : Signature NativeOp) (env : TyEnv) (key : ServiceKey) (ty : Ty)
+    (hk : sig.serviceTy key = some ty) :
+    ((all.find? (fun f => f.id == "yieldKey")).bind
+      (fun f => f.expansion.expand env.length { keys := [key] })).bind (effTy sig env) =
+      some ⟨ty, .never, Requirement.single key⟩ := by
+  change effTy sig env (.service key) = _
+  exact effTy_complete sig _ env _ (.service hk)
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.matchCause` with term arms: each arm is a value under its binder, and the answers
+join. -/
+theorem matchCause_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff NativeOp)
+    (onValue onCause : Term) (b : EffTy) (v c answer : Ty)
+    (hb : effTy sig env body = some b)
+    (hv : termTy sig (env ++ [b.answer]) onValue = some v)
+    (hc : termTy sig (env ++ [.causeOf b.error]) onCause = some c)
+    (hj : EffTy.joinAnswer (EffTy.pure v).answer (EffTy.pure c).answer = some answer) :
+    ((all.find? (fun f => f.id == "matchCause")).bind
+      (fun f => f.expansion.expand env.length
+        { effects := [body], terms := [onValue, onCause] })).bind (effTy sig env) =
+      some ⟨answer, (EffTy.pure v).error.join (EffTy.pure c).error,
+        (b.requires.union (EffTy.pure v).requires).union (EffTy.pure c).requires⟩ := by
+  change effTy sig env (.matchCause body (.succeed onValue) (.succeed onCause)) = _
+  exact effTy_complete sig _ env _
+    (.matchCause (effTy_sound sig body env b hb) (.succeed hv) (.succeed hc) hj)
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.matchCauseEffect`: the handlers are programs under their binders. -/
+theorem matchCauseEffect_typed (sig : Signature NativeOp) (env : TyEnv)
+    (body onValue onCause : Eff NativeOp) (b v c : EffTy) (answer : Ty)
+    (hb : effTy sig env body = some b)
+    (hv : effTy sig (env ++ [b.answer]) onValue = some v)
+    (hc : effTy sig (env ++ [.causeOf b.error]) onCause = some c)
+    (hj : EffTy.joinAnswer v.answer c.answer = some answer) :
+    ((all.find? (fun f => f.id == "matchCauseEffect")).bind
+      (fun f => f.expansion.expand env.length { effects := [body, onValue, onCause] })).bind
+        (effTy sig env) =
+      some ⟨answer, v.error.join c.error, (b.requires.union v.requires).union c.requires⟩ := by
+  change effTy sig env (.matchCause body onValue onCause) = _
+  exact effTy_complete sig _ env _ (.matchCause (effTy_sound sig body env b hb)
+    (effTy_sound sig onValue _ v hv) (effTy_sound sig onCause _ c hc) hj)
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.yieldNow` answers `unit`. -/
+theorem yieldNow_typed (sig : Signature NativeOp) (env : TyEnv) :
+    ((all.find? (fun f => f.id == "yieldNow")).bind
+      (fun f => f.expansion.expand env.length {})).bind (effTy sig env) =
+      some (EffTy.pure .unit) := by
+  change effTy sig env (.yieldNow 0) = _
+  exact effTy_complete sig _ env _ (.yieldNow 0)
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.forkChild` with the default options answers the child's fiber handle. -/
+theorem forkChildDefault_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff NativeOp)
+    (p : EffTy) (hp : effTy sig env body = some p) :
+    ((all.find? (fun f => f.id == "forkChildDefault")).bind
+      (fun f => f.expansion.expand env.length { effects := [body] })).bind (effTy sig env) =
+      some ⟨.fiberOf p.answer p.error, .never, p.requires⟩ := by
+  change effTy sig env (.withFiber (.fork body (defaults false))) = _
+  exact effTy_complete sig _ env _ (.withFiber (.fork _ (effTy_sound sig body env p hp)))
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.forkDetach` with the default options answers the child's fiber handle. -/
+theorem forkDetachDefault_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff NativeOp)
+    (p : EffTy) (hp : effTy sig env body = some p) :
+    ((all.find? (fun f => f.id == "forkDetachDefault")).bind
+      (fun f => f.expansion.expand env.length { effects := [body] })).bind (effTy sig env) =
+      some ⟨.fiberOf p.answer p.error, .never, p.requires⟩ := by
+  change effTy sig env (.withFiber (.fork body (defaults true))) = _
+  exact effTy_complete sig _ env _ (.withFiber (.fork _ (effTy_sound sig body env p hp)))
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.forkIn` with the default options: the target is a scope handle. -/
+theorem forkInDefault_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff NativeOp)
+    (scope : Term) (p : EffTy) (hp : effTy sig env body = some p)
+    (hs : termTy sig env scope = some Ty.scope) :
+    ((all.find? (fun f => f.id == "forkInDefault")).bind
+      (fun f => f.expansion.expand env.length { effects := [body], terms := [scope] })).bind
+        (effTy sig env) =
+      some ⟨.fiberOf p.answer p.error, .never, p.requires⟩ := by
+  change effTy sig env (.withFiber (.forkIn body (defaults true) scope)) = _
+  exact effTy_complete sig _ env _ (.withFiber (.forkIn _ (effTy_sound sig body env p hp) hs))
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.forkScoped` with the default options requires the ambient scope. -/
+theorem forkScopedDefault_typed (sig : Signature NativeOp) (env : TyEnv) (body : Eff NativeOp)
+    (p : EffTy) (hp : effTy sig env body = some p) :
+    ((all.find? (fun f => f.id == "forkScopedDefault")).bind
+      (fun f => f.expansion.expand env.length { effects := [body] })).bind (effTy sig env) =
+      some ⟨.fiberOf p.answer p.error, .never,
+        p.requires.union (Requirement.single sig.scopeKey)⟩ := by
+  change effTy sig env (.withFiber (.forkScoped body (defaults true))) = _
+  exact effTy_complete sig _ env _ (.withFiber (.forkScoped _ (effTy_sound sig body env p hp)))
+
+open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
+/-- `Effect.acquireRelease` with a one-argument release: the release, written under the
+resource's binder, gets an unused exit slot inserted after it. -/
+theorem releaseOne_typed (sig : Signature NativeOp) (env : TyEnv)
+    (acquire release : Eff NativeOp) (a r : EffTy)
+    (ha : effTy sig env acquire = some a)
+    (hr : effTy sig (env ++ [a.answer]) release = some r) (hn : r.error.normalize = .never) :
+    ((all.find? (fun f => f.id == "releaseOne")).bind
+      (fun f => f.expansion.expand env.length { effects := [acquire, release] })).bind
+        (effTy sig env) =
+      some ⟨a.answer, a.error,
+        (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩ := by
+  change effTy sig env (.acquireRelease acquire (insert (env.length + 1) 1 release)) = _
+  have hlen : (env ++ [a.answer]).length = env.length + 1 := by
+    simp only [List.length_append, List.length_singleton]
+  have hr' : effTy sig (env ++ [a.answer, .exitOf .unknown .unknown])
+      (insert (env.length + 1) 1 release) = some r := by
+    have h := effTy_insert_append sig (env ++ [a.answer]) [.exitOf .unknown .unknown] release
+    rw [hlen, List.append_assoc] at h
+    exact h.trans hr
+  exact effTy_complete sig _ env _
+    (.acquireRelease (effTy_sound sig acquire env a ha) (effTy_sound sig _ _ r hr') hn)
+
 end Effect4.Codegen.Forms

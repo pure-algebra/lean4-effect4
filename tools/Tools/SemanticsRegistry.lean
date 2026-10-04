@@ -742,11 +742,23 @@ def registry : Registry where
       top := [`Effect4.Program.Typed.m7_proved]
       openParts := ["part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)"] },
     { id := "R10", title := "Library code inherits theorems: a composed module's law is Agrees profile module expansion"
-      top := []
+      top := [`Effect4.Codegen.Forms.andThenEffect_typed,
+        `Effect4.Codegen.Forms.andThenContinuation_typed,
+        `Effect4.Codegen.Forms.andThenThunk_typed, `Effect4.Codegen.Forms.as_typed,
+        `Effect4.Codegen.Forms.asVoid_typed, `Effect4.Codegen.Forms.tapContinuation_typed,
+        `Effect4.Codegen.Forms.tapEffect_typed, `Effect4.Codegen.Forms.ensuring_typed,
+        `Effect4.Codegen.Forms.void_typed, `Effect4.Codegen.Forms.die_typed,
+        `Effect4.Codegen.Forms.yieldKey_typed, `Effect4.Codegen.Forms.matchCause_typed,
+        `Effect4.Codegen.Forms.matchCauseEffect_typed,
+        `Effect4.Codegen.Forms.yieldNow_typed,
+        `Effect4.Codegen.Forms.forkChildDefault_typed,
+        `Effect4.Codegen.Forms.forkDetachDefault_typed,
+        `Effect4.Codegen.Forms.forkInDefault_typed,
+        `Effect4.Codegen.Forms.forkScopedDefault_typed,
+        `Effect4.Codegen.Forms.releaseOne_typed]
       openParts := ["a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)",
         "no form has a behaviour law (DI-89)",
         "none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators",
-        "typing lemmas for 11 of the 19 shared forms: Laws/Codegen/Forms types 8 (DI-89)",
         "per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)",
         "DI-39's six rows not landed",
         "a composite's contract by a stuttering route (post-Phase C §11.4)"] },

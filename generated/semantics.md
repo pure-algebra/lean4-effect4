@@ -1439,7 +1439,7 @@ A requirement with an open part not yet stated as a plan node is open, whatever 
 | R7 | open | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | — |
 | R9 | open | `m7_proved` (proved) | — |
-| R10 | open | — | — |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | — |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | — |
 | R12 | open | `fairTape_unarmed` (proved) | — |
 | R13 | open | `journal_replays` (proved) | — |
@@ -1656,17 +1656,54 @@ flowchart LR
 - Open: a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)
 - Open: no form has a behaviour law (DI-89)
 - Open: none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators
-- Open: typing lemmas for 11 of the 19 shared forms: Laws/Codegen/Forms types 8 (DI-89)
 - Open: per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)
 - Open: DI-39's six rows not landed
 - Open: a composite's contract by a stuttering route (post-Phase C §11.4)
 
 ```mermaid
 flowchart LR
+  n0["andThenEffect_typed<br/>proved"]
+  n1["andThenContinuation_typed<br/>proved"]
+  n2["andThenThunk_typed<br/>proved"]
+  n3["as_typed<br/>proved"]
+  n4["asVoid_typed<br/>proved"]
+  n5["tapContinuation_typed<br/>proved"]
+  n6["tapEffect_typed<br/>proved"]
+  n7["ensuring_typed<br/>proved"]
+  n8["void_typed<br/>proved"]
+  n9["die_typed<br/>proved"]
+  n10["yieldKey_typed<br/>proved"]
+  n11["matchCause_typed<br/>proved"]
+  n12["matchCauseEffect_typed<br/>proved"]
+  n13["yieldNow_typed<br/>proved"]
+  n14["forkChildDefault_typed<br/>proved"]
+  n15["forkDetachDefault_typed<br/>proved"]
+  n16["forkInDefault_typed<br/>proved"]
+  n17["forkScopedDefault_typed<br/>proved"]
+  n18["releaseOne_typed<br/>proved"]
 ```
 
 | Node | Status | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- |
+| `andThenEffect_typed` | proved | `check_sound`, `check_complete` | 72 | 230 |
+| `andThenContinuation_typed` | proved | `check_sound`, `check_complete` | 57 | 220 |
+| `andThenThunk_typed` | proved | `andThenEffect_typed` | 53 | 206 |
+| `as_typed` | proved | `check_sound`, `check_complete` | 99 | 226 |
+| `asVoid_typed` | proved | `as_typed` | 53 | 206 |
+| `tapContinuation_typed` | proved | `normalize_idem`, `check_sound`, `check_complete` | 165 | 233 |
+| `tapEffect_typed` | proved | `normalize_idem`, `check_sound`, `check_complete` | 179 | 243 |
+| `ensuring_typed` | proved | `check_sound`, `check_complete` | 72 | 230 |
+| `void_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `die_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `yieldKey_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `matchCause_typed` | proved | `check_sound`, `check_complete` | 59 | 221 |
+| `matchCauseEffect_typed` | proved | `check_sound`, `check_complete` | 59 | 221 |
+| `yieldNow_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `forkChildDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `forkDetachDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `forkInDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `forkScopedDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `releaseOne_typed` | proved | `check_sound`, `check_complete` | 75 | 230 |
 
 ### R11: Resources are released: at most once per registration, exactly once in close order
 
