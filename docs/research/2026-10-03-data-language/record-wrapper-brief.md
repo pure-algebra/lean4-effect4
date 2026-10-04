@@ -116,7 +116,7 @@ The next integration extends `PrintLeaf.printTerm` and the mutually recursive `r
 The public round-trip premise remains scope alone, including raw declarations and unequal field/value lists.
 Generic helper heads distinguish the new forms from legacy arbitrary `Term.app` calls.
 The core wrapper owns one `helperNames` list for target runtime bindings.
-Row, trailing-argument and export name guards exclude those bindings while preserving raw atom reconstruction.
+Row, trailing-argument and export name guards exclude those bindings without changing raw atom reconstruction.
 The exclusion stays separate from the reserved program-head alphabet.
 
 The existing core `Codegen.Read` also owns proofs of leaf and row reconstruction.

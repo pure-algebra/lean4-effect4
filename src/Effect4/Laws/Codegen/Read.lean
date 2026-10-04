@@ -1,4 +1,4 @@
-import Effect4.Codegen.Read
+import Effect4.Laws.Codegen.ReadLeaf
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Codegen.Template
 

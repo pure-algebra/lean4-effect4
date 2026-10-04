@@ -192,4 +192,21 @@ theorem readSet_exact (e : Expr) (name : String) (target value : Expr)
     · exact nomatch h
   · exact nomatch h
 
+/-- The term reader's construction branch cannot consume a field image. -/
+theorem readRecord_writeField (optional : Bool) (name : String) (target : Expr) :
+    readRecord (writeField optional name target) = none := by
+  cases optional with
+  | false =>
+    simp only [writeField, Bool.false_eq_true, ↓reduceIte]
+    split <;> rfl
+  | true => rfl
+
+/-- The term reader's construction branch cannot consume an update image. -/
+theorem readRecord_writeSet (name : String) (target value : Expr) :
+    readRecord (writeSet name target value) = none := rfl
+
+/-- The term reader's field branch cannot consume an update image. -/
+theorem readField_writeSet (name : String) (target value : Expr) :
+    readField (writeSet name target value) = none := rfl
+
 end Effect4.Codegen.Record
