@@ -3,7 +3,7 @@
 ## Ruling
 
 Decision row 198 amends the target images for required reads and overwrite.
-The core syntax, checker, evaluator and world-indexed typing statements stay unchanged.
+The program syntax, checker, evaluator and world-indexed typing statements stay unchanged.
 The literal key-form rule from row 196 stays unchanged.
 
 The new images are `recordRequired(key)(target)`, `recordOptional(key)(target)` and `recordSet(key)(target)(replacement)`.
