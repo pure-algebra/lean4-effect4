@@ -1029,8 +1029,8 @@ theorem zipNames_checked {values : List Val} {types : List Ty}
         · simp only [Field.firstOf, if_neg hn]
           exact hrel name
 
-/-- Every admitted construction returns a value fitting its checked record type.
-The premise uses the evaluated argument list; the term evaluator supplies it through `FitsAll`. -/
+/-- An admitted construction returns a value accepted by its Boolean type check.
+The native term proofs supply evaluated arguments through `Program.Fits`. -/
 theorem build {fields : List (String × Bool × Ty)}
     {names : List String} {types : List Ty} {values : List Val} {answer : Ty}
     (hcheck : Program.Record.check fields names types = some answer)
@@ -1100,8 +1100,8 @@ theorem build {fields : List (String × Bool × Ty)}
     next hchecks => cases hcheck
 
 
-/-- Membership supplies an actual well-shaped, uniquely named frame to lookup.
-The result concerns the existing value, not a replacement witness. -/
+/-- The Boolean record check supplies a frame with string names and distinct fields.
+Lookup consumes the existing value. -/
 theorem entries {v : Val} {fields : List (String × Bool × Ty)}
     (hfit : Has v (.record fields)) :
     ∃ es, Record.entries v = some es ∧
@@ -1139,8 +1139,8 @@ theorem lookup {v : Val} {fields : List (String × Bool × Ty)}
   simp only [Record.lookup, hentries, Option.map_some]
 
 
-/-- Required lookup finds the existing fitting field.
-This is a value-operation premise for `evalTerm_progress`, not whole-program progress. -/
+/-- Required lookup finds the existing field accepted by its declared type check.
+The native term theorem `evalTerm_isSome` consumes this operation result. -/
 theorem required {v : Val} {fields : List (String × Bool × Ty)}
     {name : String} {type : Ty}
     (hfit : Has v (.record fields))
@@ -1379,9 +1379,9 @@ theorem termTy_record_inv {Op : Type} {sig : Signature Op} {env : TyEnv}
   · exact Option.bind_eq_some_iff.mp h
 
 mutual
-/-- Under `Fits`, a term that types and evaluates evaluates to a value of its type
-(plan §2.2, ENSURES 6): `Fits.get?` at a variable, `Lit.toVal_hasTy` at a literal,
-`nativeAtom_typed` at an application, with `nativeSignature.atomOf = nativeAtomTy` by `rfl`. -/
+/-- Under `Fits`, an admitted native term returns a value accepted by its checked type.
+Actual successful evaluation remains a premise. Record cases use `RecordChecks`.
+This serves the existing straight-fragment meaning typing contract (ENSURES 6). -/
 theorem evalTerm_hasTy (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : Val)
     (hfit : Fits env tys) (hty : termTy nativeSignature tys t = some ty)
     (hev : evalTerm env t = some v) : Val.hasTy v ty = true := by
@@ -1469,10 +1469,9 @@ termination_by structural ts
 end
 
 mutual
-/-- Under `Fits`, a term that types evaluates (plan §2.2, ENSURES 7): the lengths agree at a
-variable (`Fits.length`), `Lit.toVal_isSome` at a literal, and `nativeAtom_typed` at an
-application over the fitted argument values. Until DB-15 this carried a `noStr` premise, the
-one literal that did not evaluate. -/
+/-- Under `Fits`, an admitted native term evaluates (ENSURES 7).
+The atom table and record operations supply actual results for their checked arguments.
+This pure-term theorem establishes no whole-program termination or host liveness. -/
 theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
     (hfit : Fits env tys) (hty : termTy nativeSignature tys t = some ty) :
     (evalTerm env t).isSome = true := by
