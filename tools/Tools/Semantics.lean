@@ -214,10 +214,12 @@ private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement) 
       ("byHypothesis", toJson m.byHypothesis)]))]
   let reqs := requirements.toArray.map fun r =>
     let statuses := r.top.map plan.status
-    let word := if statuses.all (· == .proved) then "proved"
+    let word := if !r.openParts.isEmpty then "open"
+      else if statuses.all (· == .proved) then "proved"
       else if statuses.any (· == .ready) then "ready"
       else if statuses.any (· == .reduced) then "reduced" else "declared"
     obj [("id", text r.id), ("title", text r.title), ("status", text word),
+      ("openParts", toJson r.openParts),
       ("top", toJson (r.top.map fun n =>
         obj [("name", text n.toString), ("status", text (plan.status n).word)])),
       ("reachable", toJson ((plan.reachable r.top.toArray).map Name.toString)),
@@ -402,6 +404,7 @@ private def renderPlan (plan : Json) : String := Id.run do
   let statusOf (name : String) : String :=
     ((nodes.find? (field · "name" == name)).map (field · "status")).getD "declared"
   let mut out := "\n## Plan\n\nThe requirements that have plan nodes. A node is a ledger goal or a proved theorem; an edge is an authored reduction whose implication from its premise nodes to its target the kernel checked within the semantic ceiling (`tools/ProofGraph/Plan.lean`). Statuses are derived: declared, reduced, ready, proved. A loose premise is one no node discharges; it keeps its target from being ready.\n\n"
+  out := out ++ "A requirement with an open part not yet stated as a plan node is open, whatever its nodes' statuses.\n\n"
   out := out ++ "| Requirement | Status | Top nodes | Next goals |\n| --- | --- | --- | --- |\n"
   for req in array plan "requirements" do
     let tops := String.intercalate ", " ((array req "top").toList.map fun t =>
@@ -419,7 +422,10 @@ private def renderPlan (plan : Json) : String := Id.run do
       out := out ++ s!"- `{shortName (field l "target")}` via `{shortName (field l "reduction")}`: `{cell (field l "premise")}`\n"
   for req in array plan "requirements" do
     let reach := ((nested req "reachable").getArr?.toOption.getD #[]).toList.map fun n => n.getStr?.toOption.getD ""
-    out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n```mermaid\nflowchart LR\n"
+    out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n"
+    for part in (nested req "openParts").getArr?.toOption.getD #[] do
+      out := out ++ s!"- Open: {part.getStr?.toOption.getD ""}\n"
+    out := out ++ "\n```mermaid\nflowchart LR\n"
     for (n, i) in reach.zipIdx do
       out := out ++ s!"  n{i}[\"{shortName n}<br/>{statusOf n}\"]\n"
     for e in array plan "edges" do

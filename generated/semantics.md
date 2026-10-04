@@ -1390,14 +1390,18 @@ Tagged: 2; inherited (provisional): 1364; unplaced: 0.
 
 The requirements that have plan nodes. A node is a ledger goal or a proved theorem; an edge is an authored reduction whose implication from its premise nodes to its target the kernel checked within the semantic ceiling (`tools/ProofGraph/Plan.lean`). Statuses are derived: declared, reduced, ready, proved. A loose premise is one no node discharges; it keeps its target from being ready.
 
+A requirement with an open part not yet stated as a plan node is open, whatever its nodes' statuses.
+
 | Requirement | Status | Top nodes | Next goals |
 | --- | --- | --- | --- |
-| R9 | proved | `m7_proved` (proved) | — |
-| R12 | proved | `fairTape_unarmed` (proved) | — |
+| R9 | open | `m7_proved` (proved) | — |
+| R12 | open | `fairTape_unarmed` (proved) | — |
 
 **Next goals** (0): 
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
+
+- Open: part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)
 
 ```mermaid
 flowchart LR
@@ -1414,7 +1418,10 @@ flowchart LR
 | `loadsTyped` | proved | `denotesTyped` | 188 | 1147 |
 | `decision_preserves` | proved | `fits_subN`, `subN_trans`, `configTyped_frame`, `fits_mono`, `wake_preserves`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1039 | 1481 |
 
-### R12: Frontiers name what they await: so far the finite fair-tape endpoint (R12-a)
+### R12: Frontiers name what they await
+
+- Open: R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet)
+- Open: R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)
 
 ```mermaid
 flowchart LR

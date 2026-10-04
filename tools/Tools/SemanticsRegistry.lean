@@ -75,6 +75,9 @@ structure Requirement where
   id : String                     -- the row, `R1` … `R13`
   title : String
   top : List Name
+  /-- the parts of the row not yet stated as plan nodes, each with what it waits on; while one
+  remains, the requirement is open whatever its nodes' statuses -/
+  openParts : List String := []
 deriving Repr, Inhabited
 
 /-- An authored reduction: the conditional theorem `reduction` reduces the plan node `target`
@@ -667,9 +670,12 @@ def registry : Registry where
   ]
   requirements := [
     { id := "R9", title := "Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)"
-      top := [`Effect4.Program.Typed.m7_proved] },
-    { id := "R12", title := "Frontiers name what they await: so far the finite fair-tape endpoint (R12-a)"
-      top := [`Effect4.Machine.Scheduling.fairTape_unarmed] }
+      top := [`Effect4.Program.Typed.m7_proved]
+      openParts := ["part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)"] },
+    { id := "R12", title := "Frontiers name what they await"
+      top := [`Effect4.Machine.Scheduling.fairTape_unarmed]
+      openParts := ["R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet)",
+        "R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)"] }
   ]
   reductions := [
     { target := `Effect4.Program.Typed.m7_proved, reduction := `Effect4.Program.Typed.m7_of_ledger }
