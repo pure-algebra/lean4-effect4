@@ -6,7 +6,9 @@ Decision row 198 amends the target images for required reads and overwrite.
 The program syntax, checker, evaluator and world-indexed typing statements stay unchanged.
 The literal key-form rule from row 196 stays unchanged.
 
-The new images are `recordRequired(key)(target)`, `recordOptional(key)(target)` and `recordSet(key)(target)(replacement)`.
+The new images are `recordRequired<"k">("k")(target)`, `recordOptional<"k">("k")(target)` and `recordSet<"k">("k")(target)(replacement)`.
+The literal type argument must match the stored key.
+This marker keeps these images distinct from an ordinary program atom application.
 Their return types retain `never` for an impossible receiver.
 The update helper copies the target before evaluating the replacement.
 It writes the field through a computed key, including `__proto__`.

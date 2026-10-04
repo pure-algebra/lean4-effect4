@@ -6,6 +6,7 @@ import Effect4.Program.Typing.Agreement
 import Effect4.Program.Authoring
 import Effect4.Program.Authoring.Lifts
 import Effect4.Program.Authoring.Records
+import Effect4.Program.Authoring.Maps
 import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Store.Domain.ProgramWire

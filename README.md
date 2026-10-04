@@ -67,10 +67,22 @@ Its answer type is `option string`; execution returns `None` because `nickname` 
 `Authoring.recordSet` inserts or replaces a field in a new record, retaining the original record.
 It makes the supplied field required and can change its type.
 
-Every string field name is supported, including `__proto__` and names requiring bracket access in TypeScript.
+Every string field name is supported, including `__proto__` and names outside the TypeScript identifier profile.
 An optional read distinguishes absence from a present `undefined` or a present `Option.none`.
 The checked example and overwrite controls are in `Test/Api/RecordAuthoring.lean`.
 JSON and Schema record codecs remain a separate implementation slice.
+
+## Maps in authored programs
+
+`Authoring.mapEmpty` constructs an empty string map.
+`Authoring.mapSet` inserts or replaces a value and retains the original map.
+The checked result type retains the old and new value types.
+`Authoring.mapGet` returns an outer option for own-key presence.
+A missing key differs from a present unit or empty option.
+
+`Authoring.mapKeys` and `Authoring.mapEntries` return entries in UTF-8 key order.
+`Authoring.mapFromEntries` constructs a map from ordinary pairs and retains the last value for each repeated key.
+The application examples and execution controls are in `Test/Api/MapAuthoring.lean`.
 
 ## Building
 

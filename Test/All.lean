@@ -42,6 +42,9 @@ import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns
 import Test.Program.FormationContract
 import Test.Program.RecordValues
+import Test.Program.MapValues
+import Test.Program.MapTyping
+import Test.Program.MapHandles
 import Test.Program.RecordOperations
 import Test.Program.FoldFamilySelection
 import Test.Program.RecordRefusals
@@ -159,6 +162,7 @@ import Test.Program.ProvideRows
 import Test.Program.ConfigContract
 import Test.Api.ApiContract
 import Test.Api.RecordAuthoring
+import Test.Api.MapAuthoring
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract

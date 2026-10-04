@@ -37,7 +37,8 @@ Use computed keys when any field name is `__proto__`.
 Otherwise, use quoted keys when any name fails the canonical identifier profile.
 Otherwise, use plain keys.
 The reader accepts precisely this choice for each literal.
-Field access uses dot access for canonical identifiers and bracket access otherwise.
+Decision row 198 amends field reads and overwrite to retain bottom types in impossible tag branches.
+The exact helper images and evidence are in `record-elimination-ruling.md`.
 This ruling replaces row 167's per-field literal spelling, retaining every string field name.
 
 Declared record types remain program data, including absent optional fields.
