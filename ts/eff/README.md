@@ -44,6 +44,8 @@ numbers, so its domain is wider than this host representation.
 | `check.ts` | hand | the corpus differential against Lean's JSON and wire (below) |
 | `check-styles.ts` | hand | construction checks over all indexed foreign sources with tsgo 7's API (one node child: the oracle's grammar, decisions row 168) and oxc (bun children recycled after 128 files) |
 | `test/read.test.ts` | hand | the pinned cases |
+| `test/payload-classes.typecheck.ts` | hand | the payload class face's printed forms (decisions row 120, part E2), green under the package's type check |
+| `test/red/payload-classes.red.ts` | hand | their red twin, outside the package's check; `test/payload-classes.test.ts` runs tsgo on `test/red/tsconfig.json` and pins each error code |
 
 No row type is written by hand: `Row`, `Ty`, `NativeOp` are families like any other, and the
 profile's entries are values of those schemas. A `.gen.ts` file is written by

@@ -142,6 +142,49 @@ export const normalize = (type: Ty): Ty => {
 
 export const targetIdentifier = (name: string): boolean =>
   /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name) && !targetReservedIdentifiers.includes(name)
+
+/* ---- payload classes (decisions row 120, part E2): `Program/Eff.lean` and `Codegen/Types.lean` */
+
+type RecordFields = Extract<Ty, { _tag: "record" }>["fields"]
+
+/** `Record.tagOf`: a required string-literal `_tag`, read from the canonical fields. */
+export const tagOf = (fields: RecordFields): string | undefined => {
+  const tag = canonicalFields(fields).find(([name]) => name === "_tag")
+  return tag !== undefined && tag[1][0] === false && tag[1][1]._tag === "lit" ? tag[1][1].value : undefined
+}
+/** `isTagTy`: a string, a string literal, or a union of them. */
+const isTagTy = (type: Ty): boolean =>
+  type._tag === "string" || type._tag === "lit" || (type._tag === "union" && isTagTy(type.left) && isTagTy(type.right))
+/** `payloadFieldTy`: first-order and holding no handle by its type, at every node. */
+export const payloadFieldTy = (type: Ty): boolean => {
+  switch (type._tag) {
+    case "nat": case "string": case "bool": case "unit": case "lit": case "null": case "undefined":
+    case "number": case "bytes": return true
+    case "option": case "list": return payloadFieldTy(type.inner)
+    case "prod": case "union": return payloadFieldTy(type.left) && payloadFieldTy(type.right)
+    case "except": return payloadFieldTy(type.error) && payloadFieldTy(type.value)
+    case "map": return payloadFieldTy(type.key) && payloadFieldTy(type.value)
+    case "tuple": return type.items.every(payloadFieldTy)
+    case "record": return type.fields.every(([, [, value]]) => payloadFieldTy(value))
+    default: return false
+  }
+}
+/** `classSpelling?`: a message-only record is the pair, a tag-only record the literal (ruling (c)). */
+const classSpelling = (fields: RecordFields): boolean => {
+  if (tagOf(fields) === undefined) return false
+  const rest = canonicalFields(fields).filter(([name]) => name !== "_tag")
+  if (rest.length === 0) return true
+  const only = rest[0]!
+  return rest.length === 1 && only[0] === "message" && only[1][0] === false && isTagTy(only[1][1])
+}
+/** `payloadRecordTy`: a tagged payload record type. */
+export const payloadRecord = (fields: RecordFields): boolean =>
+  tagOf(fields) !== undefined && fields.every(([, [, value]]) => payloadFieldTy(value)) && !classSpelling(fields)
+/** `Types.payloadClass?`: the class a record type prints as, its tag when an identifier. */
+export const payloadClass = (fields: RecordFields): string | undefined => {
+  const tag = tagOf(fields)
+  return tag !== undefined && payloadRecord(fields) && targetIdentifier(tag) ? tag : undefined
+}
 export const quoteType = (text: string): string =>
   `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")}"`
 export const recordKeyForm = (names: readonly string[]): "plain" | "quoted" | "computed" =>
@@ -201,6 +244,9 @@ export const targetType = (raw: Ty, legacy: (text: string) => string | undefined
         return value === undefined ? undefined : `Readonly<Record<string, ${value}>>`
       }
       case "record": {
+        // a tagged payload record type is its class, which the module declares (decisions row 120)
+        const cls = payloadClass(type.fields)
+        if (cls !== undefined) return cls
         const fields = type.fields.map(([name, [optional, value]]) => {
           const target = render(value)
           return target === undefined ? undefined : `readonly ${targetIdentifier(name) ? name : quoteType(name)}${optional ? "?" : ""}: ${target}`

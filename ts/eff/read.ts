@@ -19,7 +19,7 @@ import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, Serv
 import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
 import { readTupleIndex } from "./tuple-index.ts"
-import { targetType, legacyType, recordKeyForm, quoteType } from "./target-types.ts"
+import { targetType, legacyType, recordKeyForm, quoteType, payloadClass, targetIdentifier } from "./target-types.ts"
 import { heads, rows, serviceTypes, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
@@ -58,8 +58,9 @@ export const readTypeScript = (source: string, filename = "program.ts", table: R
     if (!isNode(program)) return refuse({ _tag: "program", what: "no program" })
     const module = programModuleOf(program)
     if (failed(module)) return again(module)
-    const { declarations, main } = module.success
-    return declarations.length === 0 ? Result.map(readProgramExpr(main), decodeEff) : readModule(declarations, main)
+    const { classes, declarations, main } = module.success
+    return withClasses(classes, () =>
+      declarations.length === 0 ? Result.map(readProgramExpr(main), decodeEff) : readModule(declarations, main))
   })
 
 /** Fragment seam for the independent oxc normalization and printer-image test entrypoint. */
@@ -148,6 +149,22 @@ export const withTable = <A>(table: ReadonlyArray<Row>, body: () => A): A => {
     return body()
   } finally {
     supplied = saved
+  }
+}
+
+/** The payload classes the module declares (decisions row 120, part E2; `Codegen/Classes.lean`
+ * `Classes`): each tag with its record fields, `_tag` first. A class construction
+ * `new Tag({ … })` reads under them. Bound for the duration of one entry-point call; a bare
+ * expression has none. */
+type RecordFields = Extract<Ty, { _tag: "record" }>["fields"]
+let declaredClasses: ReadonlyArray<readonly [string, RecordFields]> = []
+export const withClasses = <A>(classes: ReadonlyArray<readonly [string, RecordFields]>, body: () => A): A => {
+  const saved = declaredClasses
+  declaredClasses = classes
+  try {
+    return body()
+  } finally {
+    declaredClasses = saved
   }
 }
 
@@ -681,8 +698,10 @@ const stmtsOf = (items: ReadonlyArray<unknown>): Read<ReadonlyArray<TsStmt>> => 
   return ok(out)
 }
 
-/** A file's leading declarations and the one program it ends with. */
+/** A file's leading class declarations, its declarations and the one program it ends with. */
 interface Module {
+  /** The payload classes its leading `export class` declarations declare (decisions row 120). */
+  readonly classes: ReadonlyArray<readonly [string, RecordFields]>
   /** The `const L_<path> = <layer>` declarations before the last statement, in file order. */
   readonly declarations: ReadonlyArray<Declaration>
   /** The last statement's expression: the program itself. */
@@ -707,28 +726,159 @@ const constDeclOf = (s: Node): Declaration | undefined => {
   return { name: id.name, value: init }
 }
 
+/** A payload field's type from its printed spelling (`Codegen/Classes.lean` `readTy`, over oxc's
+ * nodes): one choice per spelling, `number` as `nat`, `readonly [A, B]` as a product, a union as
+ * the right-nested union of its members. A class name reads as nothing. */
+const readNamedType = (name: string, args: ReadonlyArray<Ty>): Ty | undefined => {
+  const [a, b] = args
+  if (name === "Uint8Array" && args.length === 0) return { _tag: "bytes" }
+  if (name === "Option.Option" && args.length === 1) return { _tag: "option", inner: a! }
+  if (name === "ReadonlyArray" && args.length === 1) return { _tag: "list", inner: a! }
+  if (name === "Result.Result" && args.length === 2) return { _tag: "except", error: b!, value: a! }
+  if (name === "Record" && args.length === 2 && a!._tag === "string") return { _tag: "map", key: a!, value: b! }
+  if (name === "Readonly" && args.length === 1 && a!._tag === "map") return a
+  return undefined
+}
+const ofMembers = (members: ReadonlyArray<Ty>): Ty => members.length === 0 ? { _tag: "never" } :
+  members.slice(0, -1).reduceRight<Ty>((right, left) => ({ _tag: "union", left, right }), members.at(-1)!)
+const readTypeNodes = (nodes: ReadonlyArray<unknown> | undefined): Ty[] | undefined => {
+  if (nodes === undefined) return undefined
+  const out: Ty[] = []
+  for (const node of nodes) {
+    const t = isNode(node) ? readTypeNode(node) : undefined
+    if (t === undefined) return undefined
+    out.push(t)
+  }
+  return out
+}
+const readFieldNodes = (members: ReadonlyArray<unknown> | undefined): Array<readonly [string, readonly [boolean, Ty]]> | undefined => {
+  if (members === undefined) return undefined
+  const out: Array<readonly [string, readonly [boolean, Ty]]> = []
+  for (const field of members) {
+    if (!isNode(field) || field.type !== "TSPropertySignature" || field.computed === true || field.readonly !== true) return undefined
+    const key = nodeAt(field, "key")
+    const name = key?.type === "Identifier" && typeof key.name === "string" ? key.name
+      : key?.type === "Literal" && typeof key.value === "string" ? key.value : undefined
+    const annotation = nodeAt(field, "typeAnnotation")
+    const value = annotation && nodeAt(annotation, "typeAnnotation")
+    const t = value && readTypeNode(value)
+    if (name === undefined || t === undefined) return undefined
+    out.push([name, [field.optional === true, t]])
+  }
+  return out
+}
+const readTypeNode = (t: Node): Ty | undefined => {
+  switch (t.type) {
+    case "TSNumberKeyword": return { _tag: "nat" }
+    case "TSStringKeyword": return { _tag: "string" }
+    case "TSBooleanKeyword": return { _tag: "bool" }
+    case "TSVoidKeyword": return { _tag: "unit" }
+    case "TSNullKeyword": return { _tag: "null" }
+    case "TSUndefinedKeyword": return { _tag: "undefined" }
+    case "TSLiteralType": {
+      const literal = nodeAt(t, "literal")
+      return literal?.type === "Literal" && typeof literal.value === "string" ? { _tag: "lit", value: literal.value } : undefined
+    }
+    case "TSTypeReference": {
+      const ref = nodeAt(t, "typeName")
+      const name = ref && qualifiedTypeName(ref)
+      const typeArgs = nodeAt(t, "typeArguments")
+      const args = typeArgs ? readTypeNodes(listAt(typeArgs, "params")) : []
+      return name === undefined || args === undefined ? undefined : readNamedType(name, args)
+    }
+    case "TSTypeOperator": {
+      const value = nodeAt(t, "typeAnnotation")
+      if (t.operator !== "readonly" || value?.type !== "TSTupleType") return undefined
+      const items = readTypeNodes(listAt(value, "elementTypes"))
+      if (items === undefined) return undefined
+      return items.length === 2 ? { _tag: "prod", left: items[0]!, right: items[1]! } : { _tag: "tuple", items }
+    }
+    case "TSUnionType": {
+      const members = readTypeNodes(listAt(t, "types"))
+      return members === undefined ? undefined : ofMembers(members)
+    }
+    case "TSTypeLiteral": {
+      const fields = readFieldNodes(listAt(t, "members"))
+      return fields === undefined ? undefined : { _tag: "record", fields }
+    }
+    default: return undefined
+  }
+}
+
+/** The class's type argument as `Codegen/Classes.lean` `classDecl` prints it: the fields after
+ * `_tag`, in order, `readonly`, each type as the type projection spells it. */
+const classTypeText = (rest: RecordFields): string | undefined => {
+  const fields: string[] = []
+  for (const [name, [optional, type]] of rest) {
+    const target = targetType(type, legacyType)
+    if (target === undefined) return undefined
+    fields.push(`readonly ${targetIdentifier(name) ? name : quoteType(name)}${optional ? "?" : ""}: ${target}`)
+  }
+  return fields.length === 0 ? "{}" : `{ ${fields.join("; ")} }`
+}
+
 /**
- * What a program file holds: any number of `const name = expression` declarations — the
- * layers `printModule` hoists — and then the program, as a bare expression statement (the
- * generated corpus) or as `export const name = expression` with any declared type (the truth
- * files). Imports are skipped; anything else before the last statement is not one program.
+ * `export class Tag extends Data.TaggedError("Tag")<{ readonly f: T; … }> {}` (decisions row 120,
+ * part E2): the tag and the record fields, `_tag` first (`Codegen/Classes.lean` `readClassDecl`).
+ * Accepted only when the declaration is exactly what the printer prints of what it reads to.
+ * `undefined` when the statement is no class declaration.
+ */
+const classDeclOf = (s: Node): Read<readonly [string, RecordFields]> | undefined => {
+  const decl = s.type === "ExportNamedDeclaration" ? nodeAt(s, "declaration") : undefined
+  if (decl?.type !== "ClassDeclaration") return undefined
+  const malformed = refuse({ _tag: "shape", what: "class" })
+  const id = nodeAt(decl, "id")
+  const superClass = nodeAt(decl, "superClass")
+  const typeArgs = nodeAt(decl, "superTypeArguments")
+  const body = nodeAt(decl, "body")
+  if (id?.type !== "Identifier" || typeof id.name !== "string" || superClass?.type !== "CallExpression" ||
+      typeArgs === undefined || (listAt(body ?? decl, "body") ?? [undefined]).length !== 0 ||
+      (listAt(decl, "implements") ?? []).length !== 0 || (listAt(decl, "decorators") ?? []).length !== 0 ||
+      decl.typeParameters || decl.abstract === true || decl.declare === true) return malformed
+  const callee = nodeAt(superClass, "callee")
+  const args = listAt(superClass, "arguments") ?? []
+  const tagArg = args[0]
+  const params = listAt(typeArgs, "params") ?? []
+  const literal = params[0]
+  if (!callee || dotted(callee) !== "Data.TaggedError" || args.length !== 1 || !isNode(tagArg) ||
+      tagArg.type !== "Literal" || tagArg.value !== id.name || params.length !== 1 || !isNode(literal) ||
+      literal.type !== "TSTypeLiteral") return malformed
+  const rest = readFieldNodes(listAt(literal, "members"))
+  if (rest === undefined || classTypeText(rest) !== typeName(literal)) return malformed
+  return ok([id.name, [["_tag", [false, { _tag: "lit", value: id.name }]], ...rest]])
+}
+
+/**
+ * What a program file holds: its payload class declarations first (decisions row 120), then any
+ * number of `const name = expression` declarations — the layers `printModule` hoists — and then
+ * the program, as a bare expression statement (the generated corpus) or as
+ * `export const name = expression` with any declared type (the truth files). Imports are
+ * skipped; anything else before the last statement is not one program.
  */
 const programModuleOf = (program: Node): Read<Module> => {
   const body = (listAt(program, "body") ?? []).filter((s): s is Node => isNode(s) && s.type !== "ImportDeclaration")
   const last = body[body.length - 1]
   if (last === undefined) return refuse({ _tag: "program", what: "0 statements after imports" })
+  const classes: Array<readonly [string, RecordFields]> = []
   const declarations: Declaration[] = []
   for (const s of body.slice(0, -1)) {
+    const c = classDeclOf(s)
+    if (c !== undefined) {
+      if (declarations.length > 0) return refuse({ _tag: "program", what: "a class declaration after a const declaration" })
+      if (failed(c)) return again(c)
+      classes.push(c.success)
+      continue
+    }
     const d = constDeclOf(s)
     if (d === undefined) return refuse({ _tag: "program", what: `${s.type} where a const declaration was expected` })
     declarations.push(d)
   }
   if (last.type === "ExpressionStatement") {
     const e = nodeAt(last, "expression")
-    return e ? ok({ declarations, main: e }) : refuse({ _tag: "program", what: "empty expression statement" })
+    return e ? ok({ classes, declarations, main: e }) : refuse({ _tag: "program", what: "empty expression statement" })
   }
   const main = constDeclOf(last)
-  return main ? ok({ declarations, main: main.value }) : refuse({ _tag: "program", what: last.type })
+  return main ? ok({ classes, declarations, main: main.value }) : refuse({ _tag: "program", what: last.type })
 }
 
 /* ============================================================ § 3  the fragment → Eff  (Read.lean, over templates.gen.ts) */
@@ -753,6 +903,52 @@ const varRead = (n: number, s: string): number | undefined => {
 const headOf = (s: string): Head | undefined => ((heads as ReadonlyArray<string>).includes(s) ? (s as Head) : undefined)
 
 const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
+
+/** `Classes.classTag?`: the class a record construction prints as, when its declared fields are a
+ * payload class (`payloadClass`), `_tag` is its first field, its first name and its first value
+ * (the tag's literal), no later name repeats `_tag`, and every other name has its value. */
+const sameTy = (a: Ty, b: Ty): boolean => JSON.stringify(a) === JSON.stringify(b)
+export const classTag = (fields: RecordFields, names: ReadonlyArray<string>, values: ReadonlyArray<Term>): string | undefined => {
+  const tag = payloadClass(fields)
+  if (tag === undefined) return undefined
+  const head = fields[0]
+  const first = values[0]
+  return head !== undefined && head[0] === "_tag" && head[1][0] === false && sameTy(head[1][1], { _tag: "lit", value: tag }) &&
+    names[0] === "_tag" && first !== undefined && first._tag === "lit" && first.value._tag === "str" &&
+    first.value.value === tag && !names.slice(1).includes("_tag") && names.length === values.length ? tag : undefined
+}
+
+/** The object of a construction or a record literal: its names and values in written order,
+ * and its key form; undefined for a spread or another expression. */
+const objectEntries = (object: Expr): { names: string[]; values: Expr[]; form: KeyForm } | undefined => {
+  const entries: ReadonlyArray<ObjectEntry> | undefined = object._tag === "objectWith" ? object.entries :
+    object._tag === "object" ? object.fields.map(([name, value]) => ({ _tag: "property", name, value })) : undefined
+  if (entries === undefined) return undefined
+  const names: string[] = [], values: Expr[] = []
+  for (const entry of entries) {
+    if (entry._tag !== "property") return undefined
+    names.push(entry.name); values.push(entry.value)
+  }
+  return { names, values, form: object._tag === "objectWith" ? object.keys : "plain" }
+}
+
+/** `new Tag({ f: v, … })`, a payload class construction (`Codegen/Classes.lean` `readClass`): the
+ * record term whose fields the module's classes declare for `Tag`, `_tag` restored first, accepted
+ * only when the printer prints that term as this construction. */
+const readClassTerm = (n: number, x: Expr): Read<Term> | undefined => {
+  if (x._tag !== "new" || x.callee._tag !== "ident" || x.args.length !== 1) return undefined
+  const object = objectEntries(x.args[0]!)
+  if (object === undefined || object.form !== recordKeyForm(object.names)) return undefined
+  const tag = x.callee.name
+  const fields = declaredClasses.find(([name]) => name === tag)?.[1]
+  if (fields === undefined) return refuse({ _tag: "unknownIdent", name: tag })
+  const read = readTerms(n, object.values)
+  if (failed(read)) return again(read)
+  const names = ["_tag", ...object.names]
+  const values: ReadonlyArray<Term> = [{ _tag: "lit", value: { _tag: "str", value: tag } }, ...read.success]
+  if (classTag(fields, names, values) !== tag) return refuse({ _tag: "shape", what: "class" })
+  return ok({ _tag: "record", fields, presentNames: names, values })
+}
 
 /** Canonical records and field operations; undefined means this is another term form. */
 const readRecordTerm = (n: number, x: Expr): Read<Term> | undefined => {
@@ -791,7 +987,11 @@ const readRecordTerm = (n: number, x: Expr): Read<Term> | undefined => {
       values = children
       if (form !== recordKeyForm(names) || expected === undefined || fn.typeArgs[0] !== expected) return malformed("annotation or key form")
     }
-    return Result.map(readTerms(n, values), (values): Term => ({ _tag: "record", fields: declared.fields, presentNames: names, values }))
+    const read = readTerms(n, values)
+    if (failed(read)) return again(read)
+    // the printer prints a construction in the class form as `new Tag({ … })` (decisions row 120)
+    if (classTag(declared.fields, names, read.success) !== undefined) return malformed("in class form")
+    return ok({ _tag: "record", fields: declared.fields, presentNames: names, values: read.success })
   }
   const update = fn._tag === "call" && fn.fn._tag === "call" ? fn.fn : undefined
   if (update?.fn._tag === "generic" && update.fn.fn._tag === "ident" && update.fn.fn.name === "recordSet") {
@@ -827,6 +1027,8 @@ const readTupleTerm = (n: number, x: Expr): Read<Term> | undefined => {
 }
 
 export const readTerm = (n: number, x: Expr): Read<Term> => {
+  const construction = readClassTerm(n, x)
+  if (construction !== undefined) return construction
   const tuple = readTupleTerm(n, x)
   if (tuple !== undefined) return tuple
   const record = readRecordTerm(n, x)
@@ -1322,8 +1524,6 @@ const holds = (p: ArgPat, v: unknown): boolean => {
     case "optTermNone": case "optTyNone": return v === null
     case "optTermSome": case "optTySome": return v !== null && v !== undefined
     case "daemon": return (v as { daemon?: boolean } | null)?.daemon === p.value
-    // a record construction: `fail` of one is an error payload, refused until E2 (decisions row 120)
-    case "recordTerm": return (v as { _tag?: string } | null)?._tag === "record"
   }
 }
 
