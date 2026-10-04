@@ -252,7 +252,10 @@ under `ofExit`. This is a finite machine witness for the coverage row
   regenerated, not proved.
 - Queues and streams: they come next (row 204), over this slice's `Ref<A>` and `Deferred<A, E>`.
 
-## 5. Questions for the owner, with recommendations
+## 5. The owner's rulings (2026-10-04, all as recommended)
+
+Question 1 is decisions row 208; questions 2 and 4 are row 209; question 3 ratified rows 155 (a)
+and 183's repair.
 
 1. **`Deferred.complete` and `Deferred.completeWith`.** Recommended:
    - `complete(d, eff)` becomes a derived form with a behaviour law (DI-89), transcribing rc.112
