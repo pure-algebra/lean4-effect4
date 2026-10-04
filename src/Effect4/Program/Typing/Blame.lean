@@ -1,4 +1,4 @@
-import Effect4.Program.Typing.Rules
+import Effect4.Program.Typing.TermRefusal
 
 /-!
 # Program.Typing.Blame — the vocabulary of the located refusal (DI-86)
@@ -67,6 +67,10 @@ inductive TypeReason
   | literalOutsideAlphabet (value : Lit)
   /-- The request matched, but an actual substituted row column fails formation. -/
   | instantiatedFormation (row : String) (why : FormationRefusal)
+  /-- A failed record operation at an address within the refused term. -/
+  | recordTerm (why : RecordTermRefusal)
+  /-- A failed record operation inside a cause leaf, at two separate addresses. -/
+  | recordCause (why : RecordCauseRefusal)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -97,6 +101,8 @@ def TypeReason.head : TypeReason → String
   | .breakOutsideLoop => "breakOutsideLoop"
   | .literalOutsideAlphabet _ => "literalOutsideAlphabet"
   | .instantiatedFormation _ _ => "instantiatedFormation"
+  | .recordTerm _ => "recordTerm"
+  | .recordCause _ => "recordCause"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

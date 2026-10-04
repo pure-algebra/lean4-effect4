@@ -100,7 +100,7 @@ mutual
     | .provideLayer _ _ _ | .service _ | .provideService _ _ _ | .select _ _ _ _
     | .iterate _ _ _ _ _ _ => by
       simp only [Eff.weaken, check, toOption_bind, toOption_pure, toOption_throw, toOption_expect,
-        toOption_term?, apply_ite Except.toOption, termTy_weaken, causeTy_weaken,
+        toOption_term?, toOption_cause?, apply_ite Except.toOption, termTy_weaken, causeTy_weaken,
         catchIfError_weaken, List.append_assoc, List.cons_append, check_weaken,
         checkStmts_weaken, checkAction_weaken]
 

@@ -106,7 +106,20 @@ def expect {α : Type} (r : TypeRefusal) : Option α → Except TypeRefusal α
 
 /-- A term's type at a node, or its refusal there. -/
 def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except TypeRefusal Ty :=
-  expect ⟨p, .term t⟩ (termTy sig env t)
+  match termTy sig env t with
+  | some type => .ok type
+  | none => .error ⟨p, match TermRefusal.locate sig env t with
+      | some why => .recordTerm why
+      | none => .term t⟩
+
+/-- A cause's type, or a record-specific explanation when a leaf term failed. -/
+def cause? (sig : Signature Op) (env : TyEnv) (p : List Nat) (cause : CauseTerm) :
+    Except TypeRefusal Ty :=
+  match causeTy sig env cause with
+  | some type => .ok type
+  | none => .error ⟨p, match TermRefusal.locateCause sig env cause with
+      | some why => .recordCause why
+      | none => .cause cause⟩
 
 /-- The element type of a list type. -/
 def listOf? : Ty → Option Ty
@@ -134,7 +147,7 @@ mutual
       if admittedErrTy e then pure ⟨.never, e, Requirement.empty⟩
       else throw ⟨p, .errorNotAdmitted e⟩
     | .failCause cause => do
-      let e ← expect ⟨p, .cause cause⟩ (causeTy sig env cause)
+      let e ← cause? sig env p cause
       pure ⟨.never, e, Requirement.empty⟩
     | .sync thunk => do
       let t ← term? sig env p thunk
@@ -421,7 +434,12 @@ theorem toOption_expect {α : Type} (r : TypeRefusal) (o : Option α) : (expect 
   cases o <;> rfl
 
 theorem toOption_term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) :
-    (term? sig env p t).toOption = termTy sig env t := toOption_expect _ _
+    (term? sig env p t).toOption = termTy sig env t := by
+  cases result : termTy sig env t <;> simp only [term?, result, Except.toOption]
+
+theorem toOption_cause? (sig : Signature Op) (env : TyEnv) (p : List Nat) (cause : CauseTerm) :
+    (cause? sig env p cause).toOption = causeTy sig env cause := by
+  cases result : causeTy sig env cause <;> simp only [cause?, result, Except.toOption]
 
 theorem toOption_fold {α : Type} (step : GenTy → List Ty → Except TypeRefusal α)
     (ret : Except TypeRefusal Ty → Except TypeRefusal α) (pass : Except TypeRefusal α)
