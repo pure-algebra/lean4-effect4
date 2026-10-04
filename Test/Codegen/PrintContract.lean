@@ -448,6 +448,11 @@ def notFoundTerm : Term :=
     ⟨.never, .union .string (.record notFoundFields), Requirement.empty⟩ = false
 -- green control: a record in the answer column is no payload
 #guard declarationTypeRepresentable ⟨.record notFoundFields, .never, Requirement.empty⟩
+-- The boundary until E2, measured: the table reads terms, not types. A payload failed from a
+-- bound variable still prints as an expression; the declaration refuses it only through the
+-- error column. A payload handled inside, or reified by `exit`, leaves the column, so its
+-- declaration prints too. E2's class face has to reach these routes.
+#guard (print nativeSignature 0 (.bind (.succeed notFoundTerm) (.fail (.var 0)))).isOk
 
 /-! ## `printEntry`: an export name the reader can tell from everything it decodes
 
