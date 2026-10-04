@@ -61,6 +61,7 @@ let rec json_term (v : term) : Eff_json_text.t =
   | Term_record (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "record"; Eff_json_text.Array (List.map (fun y -> (let (y0, y1) = y in Eff_json_text.Array [Eff_json_text.String y0; (let (y0, y1) = y1 in Eff_json_text.Array [Eff_json_text.Bool y0; json_ty y1])])) a0); Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) a1); json_terms a2]
   | Term_field (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "field"; json_field_read_mode a0; json_term a1; Eff_json_text.String a2]
   | Term_recordSet (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "recordSet"; json_term a0; Eff_json_text.String a1; json_term a2]
+  | Term_tupleAt (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "tupleAt"; json_term a0; Eff_json_text.Int a1]
 and json_terms (v : terms) : Eff_json_text.t =
   match v with
   | Terms_nil -> Eff_json_text.Array [Eff_json_text.String "nil"]
@@ -163,6 +164,7 @@ let rec json_decision (v : decision) : Eff_json_text.t =
   | Decision_bool -> Eff_json_text.Array [Eff_json_text.String "bool"]
   | Decision_option -> Eff_json_text.Array [Eff_json_text.String "option"]
   | Decision_tag a0 -> Eff_json_text.Array [Eff_json_text.String "tag"; Eff_json_text.String a0]
+  | Decision_recordTag a0 -> Eff_json_text.Array [Eff_json_text.String "recordTag"; Eff_json_text.String a0]
 
 let print_decision (v : decision) : string = Eff_json_text.render (json_decision v)
 

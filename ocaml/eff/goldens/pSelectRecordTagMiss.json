@@ -1,0 +1,1 @@
+["select",["record",[["_tag",[false,["lit","Found"]]],["value",[false,["nat"]]]],["value","_tag"],["cons",["lit",["nat",7]],["cons",["lit",["str","Found"]],["nil"]]]],["recordTag","Other"],["succeed",["var",0]],["succeed",["var",0]]]

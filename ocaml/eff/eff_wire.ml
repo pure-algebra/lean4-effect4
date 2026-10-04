@@ -240,6 +240,7 @@ let rec emit_term (b : Buffer.t) (v : term) : unit =
   | Term_record (a0, a1, a2) -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_string b y) (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_bool b y) (fun b y -> emit_ty b y) y) y) a0; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) a1; emit_terms b a2)
   | Term_field (a0, a1, a2) -> Eff_frame.emit_ctor b 4 (fun b -> emit_field_read_mode b a0; emit_term b a1; Eff_frame.emit_string b a2)
   | Term_recordSet (a0, a1, a2) -> Eff_frame.emit_ctor b 5 (fun b -> emit_term b a0; Eff_frame.emit_string b a1; emit_term b a2)
+  | Term_tupleAt (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_term b a0; Eff_frame.emit_nat b a1)
 and emit_terms (b : Buffer.t) (v : terms) : unit =
   match v with
   | Terms_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
@@ -304,6 +305,14 @@ let rec decode_term (s : string) (pos : int) (limit : int) : (term * int) option
            | None -> None
            | Some (a2, p) ->
             if p = e then Some (Term_recordSet (a0, a1, a2), next) else None)))
+    | 6 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match Eff_frame.decode_nat s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Term_tupleAt (a0, a1), next) else None))
     | _ -> None)
 and decode_terms (s : string) (pos : int) (limit : int) : (terms * int) option =
   match Eff_frame.read_ctor s pos limit with
@@ -661,6 +670,7 @@ let rec emit_decision (b : Buffer.t) (v : decision) : unit =
   | Decision_bool -> Eff_frame.emit_ctor b 0 (fun _ -> ())
   | Decision_option -> Eff_frame.emit_ctor b 1 (fun _ -> ())
   | Decision_tag a0 -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0)
+  | Decision_recordTag a0 -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_string b a0)
 
 let encode_decision (v : decision) : string = Eff_frame.to_string emit_decision v
 
@@ -678,6 +688,11 @@ let rec decode_decision (s : string) (pos : int) (limit : int) : (decision * int
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Decision_tag a0, next) else None)
+    | 3 ->
+      (match Eff_frame.decode_string s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Decision_recordTag a0, next) else None)
     | _ -> None)
 
 let decode_decision_exact (s : string) : decision option = Eff_frame.exact decode_decision s

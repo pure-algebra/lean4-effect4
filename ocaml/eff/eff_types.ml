@@ -169,6 +169,7 @@ type term =
   | Term_record of (string * (bool * ty)) list * string list * terms
   | Term_field of field_read_mode * term * string
   | Term_recordSet of term * string * term
+  | Term_tupleAt of term * int
 
 and terms =
   | Terms_nil
@@ -181,6 +182,7 @@ let ctor_index_term : term -> int = function
   | Term_record _ -> 3
   | Term_field _ -> 4
   | Term_recordSet _ -> 5
+  | Term_tupleAt _ -> 6
 let wire_tag_term : term -> int = function
   | Term_var _ -> 0
   | Term_lit _ -> 1
@@ -188,6 +190,7 @@ let wire_tag_term : term -> int = function
   | Term_record _ -> 3
   | Term_field _ -> 4
   | Term_recordSet _ -> 5
+  | Term_tupleAt _ -> 6
 let ctor_name_term : term -> string = function
   | Term_var _ -> "var"
   | Term_lit _ -> "lit"
@@ -195,7 +198,8 @@ let ctor_name_term : term -> string = function
   | Term_record _ -> "record"
   | Term_field _ -> "field"
   | Term_recordSet _ -> "recordSet"
-let ctor_names_term : string list = ["var"; "lit"; "app"; "record"; "field"; "recordSet"]
+  | Term_tupleAt _ -> "tupleAt"
+let ctor_names_term : string list = ["var"; "lit"; "app"; "record"; "field"; "recordSet"; "tupleAt"]
 
 let ctor_index_terms : terms -> int = function
   | Terms_nil -> 0
@@ -464,20 +468,24 @@ type decision =
   | Decision_bool
   | Decision_option
   | Decision_tag of string
+  | Decision_recordTag of string
 
 let ctor_index_decision : decision -> int = function
   | Decision_bool -> 0
   | Decision_option -> 1
   | Decision_tag _ -> 2
+  | Decision_recordTag _ -> 3
 let wire_tag_decision : decision -> int = function
   | Decision_bool -> 0
   | Decision_option -> 1
   | Decision_tag _ -> 2
+  | Decision_recordTag _ -> 3
 let ctor_name_decision : decision -> string = function
   | Decision_bool -> "bool"
   | Decision_option -> "option"
   | Decision_tag _ -> "tag"
-let ctor_names_decision : string list = ["bool"; "option"; "tag"]
+  | Decision_recordTag _ -> "recordTag"
+let ctor_names_decision : string list = ["bool"; "option"; "tag"; "recordTag"]
 
 
 type eff =

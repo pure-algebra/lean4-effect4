@@ -39,6 +39,7 @@ module type PROGRAM_TYPES = sig
   | Term_record of (string * (bool * ty)) list * string list * terms
   | Term_field of field_read_mode * term * string
   | Term_recordSet of term * string * term
+  | Term_tupleAt of term * int
   and terms = Terms_nil | Terms_cons of term * terms
   type cause_term = | CauseTerm_fail of term
   | CauseTerm_die of term
@@ -79,7 +80,10 @@ module type PROGRAM_TYPES = sig
   type service_name = int
   type service_type_code = int
   type service_key = { name : service_name; service : service_type_code }
-  type decision = Decision_bool | Decision_option | Decision_tag of string
+  type decision = | Decision_bool
+  | Decision_option
+  | Decision_tag of string
+  | Decision_recordTag of string
   type 'op eff = | Eff_succeed of term
   | Eff_fail of term
   | Eff_failCause of cause_term
@@ -191,7 +195,7 @@ let engine_ctor_names = [
   ("ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"; "record"; "map"; "tuple"; "app"; "null"; "undefined"; "number"; "bytes"]);
   ("lit", ["unit"; "nat"; "bool"; "str"]);
   ("field_read_mode", ["required"; "optional"]);
-  ("term", ["var"; "lit"; "app"; "record"; "field"; "recordSet"]);
+  ("term", ["var"; "lit"; "app"; "record"; "field"; "recordSet"; "tupleAt"]);
   ("terms", ["nil"; "cons"]);
   ("cause_term", ["fail"; "die"; "interrupt"; "both"]);
   ("mask_mode", ["interruptible"; "uninterruptible"; "inherit"]);
@@ -199,7 +203,7 @@ let engine_ctor_names = [
   ("finalizer_strategy", ["sequential"; "parallel"]);
   ("fn_name", ["incr"; "double"; "zeroWhenPositive"; "noChange"; "takeAndBump"]);
   ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredMake"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"]);
-  ("decision", ["bool"; "option"; "tag"]);
+  ("decision", ["bool"; "option"; "tag"; "recordTag"]);
   ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]);
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("stmts", ["nil"; "cons"]);

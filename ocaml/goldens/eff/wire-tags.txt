@@ -1,7 +1,7 @@
 Ty: never=0 unit=1 nat=2 int=3 string=4 bool=5 handle=6 option=7 list=8 prod=9 except=10 exitOf=11 causeOf=12 fiberOf=13 union=14 lit=15 refOf=16 deferredOf=17 var=18 unknown=19 record=20 map=21 tuple=22 app=23 null=24 undefined=25 number=26 bytes=27
 Lit: unit=0 nat=1 bool=2 str=3
 FieldReadMode: required=0 optional=1
-Term: var=0 lit=1 app=2 record=3 field=4 recordSet=5
+Term: var=0 lit=1 app=2 record=3 field=4 recordSet=5 tupleAt=6
 Terms: nil=0 cons=1
 CauseTerm: fail=0 die=1 interrupt=2 both=3
 MaskMode: interruptible=0 uninterruptible=1 inherit=2
@@ -9,7 +9,7 @@ ObserverMode: awaitValue=0 joinEffect=1
 FinalizerStrategy: sequential=0 parallel=1
 FnName: incr=0 double=1 zeroWhenPositive=2 noChange=3 takeAndBump=4
 NativeOp: refMake=0 refGet=1 refSet=2 refGetAndSet=3 refSetAndGet=4 refUpdate=5 refGetAndUpdate=6 refUpdateAndGet=7 refUpdateSome=8 refGetAndUpdateSome=9 refUpdateSomeAndGet=10 refModify=11 refModifySome=12 deferredMake=13 deferredIsDone=14 deferredPoll=15 deferredSucceed=16 deferredFail=17 deferredAwait=18 scopeMake=19 sleep=20 clockNow=21 external=22
-Decision: bool=0 option=1 tag=2
+Decision: bool=0 option=1 tag=2 recordTag=3
 Eff: succeed=0 fail=1 failCause=2 sync=4 suspend=5 perform=6 bind=7 gen=8 catchCause=9 matchCause=10 onExit=11 exit=12 uninterruptible=13 interruptible=14 yieldNow=17 awaitFiber=19 withFiber=20 scoped=21 acquireRelease=22 provideLayer=23 service=24 provideService=25 catchIf=26 select=27 iterate=28
 Stmt: bindYield=0 yieldDiscard=1 ret=2 ifElse=3 whileTrue=4 breakLoop=5
 Stmts: nil=0 cons=1

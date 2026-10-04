@@ -4,10 +4,10 @@
 
 open Eff_types
 
-let atom_names : string list = ["succ"; "pred"; "isZero"; "not"; "add"; "lt"; "eq"; "pair"; "fst"; "snd"; "strings"; "causeIsFail"; "causeError"; "causeIsDie"; "causeIsInterrupt"; "or"; "and"; "tagIs"; "isSome"; "getOrElse"; "ite"; "some"; "none"; "mul"; "nil"; "cons"; "get"; "length"; "append"; "sub"; "div"; "mod"; "concat"]
+let atom_names : string list = ["succ"; "pred"; "isZero"; "not"; "add"; "lt"; "eq"; "pair"; "fst"; "snd"; "strings"; "causeIsFail"; "causeError"; "causeIsDie"; "causeIsInterrupt"; "or"; "and"; "tagIs"; "isSome"; "getOrElse"; "ite"; "some"; "none"; "mul"; "nil"; "cons"; "get"; "length"; "append"; "sub"; "div"; "mod"; "concat"; "mapEmpty"; "mapGet"; "mapSet"; "mapKeys"; "mapEntries"; "mapFromEntries"; "tuple"]
 
 (* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)
-let const_atoms : string list = ["pair"]
+let const_atoms : string list = ["pair"; "tuple"]
 let const_atom (name : string) : bool = List.mem name const_atoms
 
 (* 13 nullary operations, 8 over every fn_name, 1 over every finalizer_strategy: 55 values. *)

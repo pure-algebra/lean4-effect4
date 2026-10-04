@@ -804,6 +804,7 @@ and term =
   | Term_record of (string * (bool * ty)) list * string list * terms
   | Term_field of field_read_mode * term * string
   | Term_recordSet of term * string * term
+  | Term_tupleAt of term * int
 and field_read_mode = FieldReadMode_required | FieldReadMode_optional
 and err =
   | Err_boom
@@ -829,7 +830,11 @@ and registration = Registration_deferred | Registration_external
 and service_key = { name : service_name; service : service_type_code }
 and combine_mode = CombineMode_provide | CombineMode_provideMerge
 and service_universe = unit
-and decision = Decision_bool | Decision_option | Decision_tag of string
+and decision =
+  | Decision_bool
+  | Decision_option
+  | Decision_tag of string
+  | Decision_recordTag of string
 and ty =
   | Ty_never
   | Ty_unit
@@ -921,6 +926,13 @@ and native_atom =
   | NativeAtom_natDiv
   | NativeAtom_natMod
   | NativeAtom_strConcat
+  | NativeAtom_mapEmpty
+  | NativeAtom_mapGet
+  | NativeAtom_mapSet
+  | NativeAtom_mapKeys
+  | NativeAtom_mapEntries
+  | NativeAtom_mapFromEntries
+  | NativeAtom_tuple
 and reason_tag = ReasonTag_fail | ReasonTag_die | ReasonTag_interrupt
 and memo_map = { id : memo_map_id; parent : memo_map_id option; entries : memo_entry L.t }
 and 'u reference = { key : service_key; default : 'u }
@@ -1878,138 +1890,166 @@ let sh_dispatcher_mk buckets armed =
   let program_native_atom_of_name_opt (x_1 : string) : native_atom option =
   let _x_2 = "succ" in
   let _x_3 = x_1 = _x_2 in
-  if _x_3 then (let _x_133 = NativeAtom_succ in
-    let _x_134 = Some _x_133 in
-    _x_134) else (let _x_4 = "pred" in
+  if _x_3 then (let _x_161 = NativeAtom_succ in
+    let _x_162 = Some _x_161 in
+    _x_162) else (let _x_4 = "pred" in
     let _x_5 = x_1 = _x_4 in
-    if _x_5 then (let _x_131 = NativeAtom_pred in
-      let _x_132 = Some _x_131 in
-      _x_132) else (let _x_6 = "isZero" in
+    if _x_5 then (let _x_159 = NativeAtom_pred in
+      let _x_160 = Some _x_159 in
+      _x_160) else (let _x_6 = "isZero" in
       let _x_7 = x_1 = _x_6 in
-      if _x_7 then (let _x_129 = NativeAtom_isZero in
-        let _x_130 = Some _x_129 in
-        _x_130) else (let _x_8 = "not" in
+      if _x_7 then (let _x_157 = NativeAtom_isZero in
+        let _x_158 = Some _x_157 in
+        _x_158) else (let _x_8 = "not" in
         let _x_9 = x_1 = _x_8 in
-        if _x_9 then (let _x_127 = NativeAtom_boolNot in
-          let _x_128 = Some _x_127 in
-          _x_128) else (let _x_10 = "add" in
+        if _x_9 then (let _x_155 = NativeAtom_boolNot in
+          let _x_156 = Some _x_155 in
+          _x_156) else (let _x_10 = "add" in
           let _x_11 = x_1 = _x_10 in
-          if _x_11 then (let _x_125 = NativeAtom_add in
-            let _x_126 = Some _x_125 in
-            _x_126) else (let _x_12 = "lt" in
+          if _x_11 then (let _x_153 = NativeAtom_add in
+            let _x_154 = Some _x_153 in
+            _x_154) else (let _x_12 = "lt" in
             let _x_13 = x_1 = _x_12 in
-            if _x_13 then (let _x_123 = NativeAtom_lt in
-              let _x_124 = Some _x_123 in
-              _x_124) else (let _x_14 = "eq" in
+            if _x_13 then (let _x_151 = NativeAtom_lt in
+              let _x_152 = Some _x_151 in
+              _x_152) else (let _x_14 = "eq" in
               let _x_15 = x_1 = _x_14 in
-              if _x_15 then (let _x_121 = NativeAtom_eq in
-                let _x_122 = Some _x_121 in
-                _x_122) else (let _x_16 = "pair" in
+              if _x_15 then (let _x_149 = NativeAtom_eq in
+                let _x_150 = Some _x_149 in
+                _x_150) else (let _x_16 = "pair" in
                 let _x_17 = x_1 = _x_16 in
-                if _x_17 then (let _x_119 = NativeAtom_pair in
-                  let _x_120 = Some _x_119 in
-                  _x_120) else (let _x_18 = "fst" in
+                if _x_17 then (let _x_147 = NativeAtom_pair in
+                  let _x_148 = Some _x_147 in
+                  _x_148) else (let _x_18 = "fst" in
                   let _x_19 = x_1 = _x_18 in
-                  if _x_19 then (let _x_117 = NativeAtom_fst in
-                    let _x_118 = Some _x_117 in
-                    _x_118) else (let _x_20 = "snd" in
+                  if _x_19 then (let _x_145 = NativeAtom_fst in
+                    let _x_146 = Some _x_145 in
+                    _x_146) else (let _x_20 = "snd" in
                     let _x_21 = x_1 = _x_20 in
-                    if _x_21 then (let _x_115 = NativeAtom_snd in
-                      let _x_116 = Some _x_115 in
-                      _x_116) else (let _x_22 = "strings" in
+                    if _x_21 then (let _x_143 = NativeAtom_snd in
+                      let _x_144 = Some _x_143 in
+                      _x_144) else (let _x_22 = "strings" in
                       let _x_23 = x_1 = _x_22 in
-                      if _x_23 then (let _x_113 = NativeAtom_strings in
-                        let _x_114 = Some _x_113 in
-                        _x_114) else (let _x_24 = "causeIsFail" in
+                      if _x_23 then (let _x_141 = NativeAtom_strings in
+                        let _x_142 = Some _x_141 in
+                        _x_142) else (let _x_24 = "causeIsFail" in
                         let _x_25 = x_1 = _x_24 in
-                        if _x_25 then (let _x_111 = NativeAtom_causeIsFail in
-                          let _x_112 = Some _x_111 in
-                          _x_112) else (let _x_26 = "causeError" in
+                        if _x_25 then (let _x_139 = NativeAtom_causeIsFail in
+                          let _x_140 = Some _x_139 in
+                          _x_140) else (let _x_26 = "causeError" in
                           let _x_27 = x_1 = _x_26 in
-                          if _x_27 then (let _x_109 = NativeAtom_causeError in
-                            let _x_110 = Some _x_109 in
-                            _x_110) else (let _x_28 = "causeIsDie" in
+                          if _x_27 then (let _x_137 = NativeAtom_causeError in
+                            let _x_138 = Some _x_137 in
+                            _x_138) else (let _x_28 = "causeIsDie" in
                             let _x_29 = x_1 = _x_28 in
-                            if _x_29 then (let _x_107 = NativeAtom_causeIsDie in
-                              let _x_108 = Some _x_107 in
-                              _x_108) else (let _x_30 = "causeIsInterrupt" in
+                            if _x_29 then (let _x_135 = NativeAtom_causeIsDie in
+                              let _x_136 = Some _x_135 in
+                              _x_136) else (let _x_30 = "causeIsInterrupt" in
                               let _x_31 = x_1 = _x_30 in
-                              if _x_31 then (let _x_105 = NativeAtom_causeIsInterrupt in
-                                let _x_106 = Some _x_105 in
-                                _x_106) else (let _x_32 = "or" in
+                              if _x_31 then (let _x_133 = NativeAtom_causeIsInterrupt in
+                                let _x_134 = Some _x_133 in
+                                _x_134) else (let _x_32 = "or" in
                                 let _x_33 = x_1 = _x_32 in
-                                if _x_33 then (let _x_103 = NativeAtom_boolOr in
-                                  let _x_104 = Some _x_103 in
-                                  _x_104) else (let _x_34 = "and" in
+                                if _x_33 then (let _x_131 = NativeAtom_boolOr in
+                                  let _x_132 = Some _x_131 in
+                                  _x_132) else (let _x_34 = "and" in
                                   let _x_35 = x_1 = _x_34 in
-                                  if _x_35 then (let _x_101 = NativeAtom_boolAnd in
-                                    let _x_102 = Some _x_101 in
-                                    _x_102) else (let _x_36 = "tagIs" in
+                                  if _x_35 then (let _x_129 = NativeAtom_boolAnd in
+                                    let _x_130 = Some _x_129 in
+                                    _x_130) else (let _x_36 = "tagIs" in
                                     let _x_37 = x_1 = _x_36 in
-                                    if _x_37 then (let _x_99 = NativeAtom_tagIs in
-                                      let _x_100 = Some _x_99 in
-                                      _x_100) else (let _x_38 = "isSome" in
+                                    if _x_37 then (let _x_127 = NativeAtom_tagIs in
+                                      let _x_128 = Some _x_127 in
+                                      _x_128) else (let _x_38 = "isSome" in
                                       let _x_39 = x_1 = _x_38 in
-                                      if _x_39 then (let _x_97 = NativeAtom_isSome in
-                                        let _x_98 = Some _x_97 in
-                                        _x_98) else (let _x_40 = "getOrElse" in
+                                      if _x_39 then (let _x_125 = NativeAtom_isSome in
+                                        let _x_126 = Some _x_125 in
+                                        _x_126) else (let _x_40 = "getOrElse" in
                                         let _x_41 = x_1 = _x_40 in
-                                        if _x_41 then (let _x_95 = NativeAtom_getOrElse in
-                                          let _x_96 = Some _x_95 in
-                                          _x_96) else (let _x_42 = "ite" in
+                                        if _x_41 then (let _x_123 = NativeAtom_getOrElse in
+                                          let _x_124 = Some _x_123 in
+                                          _x_124) else (let _x_42 = "ite" in
                                           let _x_43 = x_1 = _x_42 in
-                                          if _x_43 then (let _x_93 = NativeAtom_ite in
-                                            let _x_94 = Some _x_93 in
-                                            _x_94) else (let _x_44 = "some" in
+                                          if _x_43 then (let _x_121 = NativeAtom_ite in
+                                            let _x_122 = Some _x_121 in
+                                            _x_122) else (let _x_44 = "some" in
                                             let _x_45 = x_1 = _x_44 in
-                                            if _x_45 then (let _x_91 = NativeAtom_optSome in
-                                              let _x_92 = Some _x_91 in
-                                              _x_92) else (let _x_46 = "none" in
+                                            if _x_45 then (let _x_119 = NativeAtom_optSome in
+                                              let _x_120 = Some _x_119 in
+                                              _x_120) else (let _x_46 = "none" in
                                               let _x_47 = x_1 = _x_46 in
-                                              if _x_47 then (let _x_89 = NativeAtom_optNone in
-                                                let _x_90 = Some _x_89 in
-                                                _x_90) else (let _x_48 = "mul" in
+                                              if _x_47 then (let _x_117 = NativeAtom_optNone in
+                                                let _x_118 = Some _x_117 in
+                                                _x_118) else (let _x_48 = "mul" in
                                                 let _x_49 = x_1 = _x_48 in
-                                                if _x_49 then (let _x_87 = NativeAtom_mul in
-                                                  let _x_88 = Some _x_87 in
-                                                  _x_88) else (let _x_50 = "nil" in
+                                                if _x_49 then (let _x_115 = NativeAtom_mul in
+                                                  let _x_116 = Some _x_115 in
+                                                  _x_116) else (let _x_50 = "nil" in
                                                   let _x_51 = x_1 = _x_50 in
-                                                  if _x_51 then (let _x_85 = NativeAtom_listNil in
-                                                    let _x_86 = Some _x_85 in
-                                                    _x_86) else (let _x_52 = "cons" in
+                                                  if _x_51 then (let _x_113 = NativeAtom_listNil in
+                                                    let _x_114 = Some _x_113 in
+                                                    _x_114) else (let _x_52 = "cons" in
                                                     let _x_53 = x_1 = _x_52 in
-                                                    if _x_53 then (let _x_83 = NativeAtom_listCons in
-                                                      let _x_84 = Some _x_83 in
-                                                      _x_84) else (let _x_54 = "get" in
+                                                    if _x_53 then (let _x_111 = NativeAtom_listCons in
+                                                      let _x_112 = Some _x_111 in
+                                                      _x_112) else (let _x_54 = "get" in
                                                       let _x_55 = x_1 = _x_54 in
-                                                      if _x_55 then (let _x_81 = NativeAtom_listGet in
-                                                        let _x_82 = Some _x_81 in
-                                                        _x_82) else (let _x_56 = "length" in
+                                                      if _x_55 then (let _x_109 = NativeAtom_listGet in
+                                                        let _x_110 = Some _x_109 in
+                                                        _x_110) else (let _x_56 = "length" in
                                                         let _x_57 = x_1 = _x_56 in
-                                                        if _x_57 then (let _x_79 = NativeAtom_listLength in
-                                                          let _x_80 = Some _x_79 in
-                                                          _x_80) else (let _x_58 = "append" in
+                                                        if _x_57 then (let _x_107 = NativeAtom_listLength in
+                                                          let _x_108 = Some _x_107 in
+                                                          _x_108) else (let _x_58 = "append" in
                                                           let _x_59 = x_1 = _x_58 in
-                                                          if _x_59 then (let _x_77 = NativeAtom_listAppend in
-                                                            let _x_78 = Some _x_77 in
-                                                            _x_78) else (let _x_60 = "sub" in
+                                                          if _x_59 then (let _x_105 = NativeAtom_listAppend in
+                                                            let _x_106 = Some _x_105 in
+                                                            _x_106) else (let _x_60 = "sub" in
                                                             let _x_61 = x_1 = _x_60 in
-                                                            if _x_61 then (let _x_75 = NativeAtom_natSub in
-                                                              let _x_76 = Some _x_75 in
-                                                              _x_76) else (let _x_62 = "div" in
+                                                            if _x_61 then (let _x_103 = NativeAtom_natSub in
+                                                              let _x_104 = Some _x_103 in
+                                                              _x_104) else (let _x_62 = "div" in
                                                               let _x_63 = x_1 = _x_62 in
-                                                              if _x_63 then (let _x_73 = NativeAtom_natDiv in
-                                                                let _x_74 = Some _x_73 in
-                                                                _x_74) else (let _x_64 = "mod" in
+                                                              if _x_63 then (let _x_101 = NativeAtom_natDiv in
+                                                                let _x_102 = Some _x_101 in
+                                                                _x_102) else (let _x_64 = "mod" in
                                                                 let _x_65 = x_1 = _x_64 in
-                                                                if _x_65 then (let _x_71 = NativeAtom_natMod in
-                                                                  let _x_72 = Some _x_71 in
-                                                                  _x_72) else (let _x_66 = "concat" in
+                                                                if _x_65 then (let _x_99 = NativeAtom_natMod in
+                                                                  let _x_100 = Some _x_99 in
+                                                                  _x_100) else (let _x_66 = "concat" in
                                                                   let _x_67 = x_1 = _x_66 in
-                                                                  if _x_67 then (let _x_69 = NativeAtom_strConcat in
-                                                                    let _x_70 = Some _x_69 in
-                                                                    _x_70) else (let _x_68 = None in
-                                                                    _x_68)))))))))))))))))))))))))))))))))
+                                                                  if _x_67 then (let _x_97 = NativeAtom_strConcat in
+                                                                    let _x_98 = Some _x_97 in
+                                                                    _x_98) else (let _x_68 = "mapEmpty" in
+                                                                    let _x_69 = x_1 = _x_68 in
+                                                                    if _x_69 then (let _x_95 = NativeAtom_mapEmpty in
+                                                                      let _x_96 = Some _x_95 in
+                                                                      _x_96) else (let _x_70 = "mapGet" in
+                                                                      let _x_71 = x_1 = _x_70 in
+                                                                      if _x_71 then (let _x_93 = NativeAtom_mapGet in
+                                                                        let _x_94 = Some _x_93 in
+                                                                        _x_94) else (let _x_72 = "mapSet" in
+                                                                        let _x_73 = x_1 = _x_72 in
+                                                                        if _x_73 then (let _x_91 = NativeAtom_mapSet in
+                                                                          let _x_92 = Some _x_91 in
+                                                                          _x_92) else (let _x_74 = "mapKeys" in
+                                                                          let _x_75 = x_1 = _x_74 in
+                                                                          if _x_75 then (let _x_89 = NativeAtom_mapKeys in
+                                                                            let _x_90 = Some _x_89 in
+                                                                            _x_90) else (let _x_76 = "mapEntries" in
+                                                                            let _x_77 = x_1 = _x_76 in
+                                                                            if _x_77 then (let _x_87 = NativeAtom_mapEntries in
+                                                                              let _x_88 = Some _x_87 in
+                                                                              _x_88) else (let _x_78 = "mapFromEntries" in
+                                                                              let _x_79 = x_1 = _x_78 in
+                                                                              if _x_79 then (let _x_85 = NativeAtom_mapFromEntries in
+                                                                                let _x_86 = Some _x_85 in
+                                                                                _x_86) else (let _x_80 = "tuple" in
+                                                                                let _x_81 = x_1 = _x_80 in
+                                                                                if _x_81 then (let _x_83 = NativeAtom_tuple in
+                                                                                  let _x_84 = Some _x_83 in
+                                                                                  _x_84) else (let _x_82 = None in
+                                                                                  _x_82))))))))))))))))))))))))))))))))))))))))
 
   (* LCNF mono: List.all._at_.Effect4.Program.stringsAtom.spec_0 (x.1 : List Effect4.Store.Val) : Bool *)
   let rec list_all_at_program_strings_atom_spec_0 (x_1 : val_ list) : bool =
@@ -3006,6 +3046,295 @@ let sh_dispatcher_mk buckets armed =
     | _ -> (let _x_8 = None in
       _x_8)
 
+  (* LCNF mono: Effect4.Machine.Map.empty : Effect4.Store.Val *)
+  let map_empty : val_ =
+  let _x_1 = [] in
+  let _x_2 = Val_list _x_1 in
+  _x_2
+
+  (* LCNF mono: Effect4.Machine.Map.readPairs (x.1 : List Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
+  let rec map_read_pairs (x_1 : val_ list) : (string * val_) list option =
+  match x_1 with
+    | [] -> (let _x_2 = [] in
+      let _x_3 = Some _x_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match (head_4 : val_) with
+        | Val_pair (a_6, b_7) -> (match (a_6 : val_) with
+            | Val_str s_8 -> (let _x_9 = map_read_pairs tail_5 in
+              match _x_9 with
+                | None -> _x_9
+                | Some val__10 -> (let _x_11 = s_8, b_7 in
+                  let _x_12 = _x_11 :: val__10 in
+                  let _x_13 = Some _x_12 in
+                  _x_13))
+            | _ -> (let _x_14 = None in
+              _x_14))
+        | _ -> (let _x_15 = None in
+          _x_15))
+
+  (* LCNF mono: Effect4.Machine.Map.read (x.1 : Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
+  let map_read (x_1 : val_) : (string * val_) list option =
+  match (x_1 : val_) with
+    | Val_list xs_2 -> (let _x_3 = map_read_pairs xs_2 in
+      _x_3)
+    | _ -> (let _x_4 = None in
+      _x_4)
+
+  (* LCNF mono: Effect4.Field.firstOf._redArg (n : String) (x.1 : List (Prod String lcAny)) : Option lcAny *)
+  let rec field_first_of (n : string) (x_1 : (string * _) list) : _ option =
+  match x_1 with
+    | [] -> (let _x_2 = None in
+      _x_2)
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_5, snd_6 -> (let _x_7 = fst_5 = n in
+          if _x_7 then (let _x_9 = Some snd_6 in
+            _x_9) else (let _x_8 = field_first_of n tail_4 in
+            _x_8)))
+
+  (* LCNF mono: Effect4.Machine.Map.get (value : Effect4.Store.Val) (key : String) : Option Effect4.Store.Val *)
+  let map_get (value : val_) (key : string) : val_ option =
+  let _x_1 = map_read value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = field_first_of key val__3 in
+      match _x_4 with
+        | None -> (let _x_5 = Val_none in
+          let _x_6 = Some _x_5 in
+          _x_6)
+        | Some val__7 -> (let _x_8 = Val_some val__7 in
+          let _x_9 = Some _x_8 in
+          _x_9))
+
+  (* LCNF mono: List.mapTR.loop._at_.Effect4.Field.bytesKey.spec_0 (a.1 : List UInt8) (a.2 : List Nat) : List Nat *)
+  let rec list_map_tr_loop_at_field_bytes_key_spec_0 (a_1 : int list) (a_2 : int list) : int list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (let _x_6 = head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      let _x_8 = list_map_tr_loop_at_field_bytes_key_spec_0 tail_5 _x_7 in
+      _x_8)
+
+  (* LCNF mono: Effect4.Field.bytesKey (s : String) : List Nat *)
+  let field_bytes_key (s : string) : int list =
+  let _x_1 = lcnf_utf8_bytes s in
+  let _x_2 = _x_1 in
+  let _x_3 = _x_2 in
+  let _x_4 = [] in
+  let _x_5 = list_map_tr_loop_at_field_bytes_key_spec_0 _x_3 _x_4 in
+  _x_5
+
+  (* LCNF mono: Effect4.Field.ltKey (x.1 : List Nat) (x.2 : List Nat) : Bool *)
+  let rec field_lt_key (x_1 : int list) (x_2 : int list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = false in
+          _x_3)
+        | _ :: _ -> (let _x_6 = true in
+          _x_6))
+    | head_7 :: tail_8 -> (match x_2 with
+        | [] -> (let _x_9 = false in
+          _x_9)
+        | head_10 :: tail_11 -> (let _x_12 = head_7 < head_10 in
+          if _x_12 then _x_12 else (let _x_13 = head_10 < head_7 in
+            if _x_13 then _x_12 else (let _x_14 = field_lt_key tail_8 tail_11 in
+              _x_14))))
+
+  (* LCNF mono: List.hasDecEq._redArg (inst.1 : lcAny -> lcAny -> Bool) (x.2 : List lcAny) (x.3 : List lcAny) : Bool *)
+  let rec list_has_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ list) (x_3 : _ list) : bool =
+  match x_2 with
+    | [] -> (match x_3 with
+        | [] -> (let _x_4 = true in
+          _x_4)
+        | _ :: _ -> (let _x_7 = false in
+          _x_7))
+    | head_8 :: tail_9 -> (let _x_10 = false in
+      match x_3 with
+        | [] -> _x_10
+        | head_11 :: tail_12 -> (let _x_13 = list_has_dec_eq inst_1 tail_9 tail_12 in
+          let _x_14 = inst_1 head_8 head_11 in
+          if _x_14 then (if _x_13 then _x_13 else _x_10) else _x_10))
+
+  (* LCNF mono: instDecidableEqList._redArg (inst.1 : lcAny -> lcAny -> Bool) (xs : List lcAny) (ys : List lcAny) : Bool *)
+  let inst_decidable_eq_list (inst_1 : _ -> _ -> bool) (xs : _ list) (ys : _ list) : bool =
+  match xs with
+    | [] -> (match ys with
+        | [] -> (let _x_2 = true in
+          _x_2)
+        | _ :: _ -> (let _x_5 = false in
+          _x_5))
+    | head_6 :: tail_7 -> (match ys with
+        | [] -> (let _x_8 = false in
+          _x_8)
+        | head_9 :: tail_10 -> (let _x_11 = list_has_dec_eq inst_1 tail_7 tail_10 in
+          let _x_12 = inst_1 head_6 head_9 in
+          if _x_12 then _x_11 else _x_12))
+
+  (* LCNF mono: Effect4.Field.insertBy._redArg (key : String -> (List Nat)) (p : Prod String lcAny) (x.1 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+  let rec field_insert_by (key : string -> int list) (p : string * _) (x_1 : (string * _) list) : (string * _) list =
+  match x_1 with
+    | [] -> (let _x_2 = p :: x_1 in
+      _x_2)
+    | head_3 :: tail_4 -> (match p with
+        | fst_1, _ -> (match head_3 with
+            | fst_2, _ -> (let _x_5 = key fst_1 in
+              let _x_6 = key fst_2 in
+              let _x_7 = field_lt_key _x_5 _x_6 in
+              if _x_7 then (let _x_12 = p :: x_1 in
+                _x_12) else (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
+                let _x_9 = inst_decidable_eq_list _x_8 _x_5 _x_6 in
+                if _x_9 then x_1 else (let _x_10 = field_insert_by key p tail_4 in
+                  let _x_11 = head_3 :: _x_10 in
+                  _x_11)))))
+
+  (* LCNF mono: List.foldl._at_.Effect4.Field.canonBy.spec_0._redArg (key : String -> (List Nat)) (x.1 : List (Prod String lcAny)) (x.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+  let rec list_foldl_at_field_canon_by_spec_0 (key : string -> int list) (x_1 : (string * _) list) (x_2 : (string * _) list) : (string * _) list =
+  match x_2 with
+    | [] -> x_1
+    | head_3 :: tail_4 -> (let _x_5 = field_insert_by key head_3 x_1 in
+      let _x_6 = list_foldl_at_field_canon_by_spec_0 key _x_5 tail_4 in
+      _x_6)
+
+  (* LCNF mono: Effect4.Field.canonBy._redArg (key : String -> (List Nat)) (fs : List (Prod String lcAny)) : List (Prod String lcAny) *)
+  let field_canon_by (key : string -> int list) (fs : (string * _) list) : (string * _) list =
+  let _x_1 = [] in
+  let _x_2 = list_foldl_at_field_canon_by_spec_0 key _x_1 fs in
+  _x_2
+
+  (* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Map.write.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+  let rec list_map_tr_loop_at_map_write_spec_0 (a_1 : (string * val_) list) (a_2 : val_ list) : val_ list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, snd_1 -> (let _x_6 = Val_str fst_1 in
+          let _x_7 = Val_pair (_x_6, snd_1) in
+          let _x_8 = _x_7 :: a_2 in
+          let _x_9 = list_map_tr_loop_at_map_write_spec_0 tail_5 _x_8 in
+          _x_9))
+
+  (* LCNF mono: Effect4.Machine.Map.write (entries : List (Prod String Effect4.Store.Val)) : Effect4.Store.Val *)
+  let map_write (entries : (string * val_) list) : val_ =
+  let _x_1 = [] in
+  let _x_2 = list_map_tr_loop_at_map_write_spec_0 entries _x_1 in
+  let _x_3 = Val_list _x_2 in
+  _x_3
+
+  (* LCNF mono: Effect4.Machine.Map.set (value : Effect4.Store.Val) (key : String) (replacement : Effect4.Store.Val) : Option Effect4.Store.Val *)
+  let map_set (value : val_) (key : string) (replacement : val_) : val_ option =
+  let _x_1 = map_read value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = field_bytes_key in
+      let _x_5 = key, replacement in
+      let _x_6 = _x_5 :: val__3 in
+      let _x_7 = field_canon_by _x_4 _x_6 in
+      let _x_8 = map_write _x_7 in
+      let _x_9 = Some _x_8 in
+      _x_9)
+
+  (* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Map.keys.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+  let rec list_map_tr_loop_at_map_keys_spec_0 (a_1 : (string * val_) list) (a_2 : val_ list) : val_ list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, _ -> (let _x_6 = Val_str fst_1 in
+          let _x_7 = _x_6 :: a_2 in
+          let _x_8 = list_map_tr_loop_at_map_keys_spec_0 tail_5 _x_7 in
+          _x_8))
+
+  (* LCNF mono: Effect4.Machine.Map.keys (value : Effect4.Store.Val) : Option Effect4.Store.Val *)
+  let map_keys (value : val_) : val_ option =
+  let _x_1 = map_read value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = field_bytes_key in
+      let _x_5 = field_canon_by _x_4 val__3 in
+      let _x_6 = [] in
+      let _x_7 = list_map_tr_loop_at_map_keys_spec_0 _x_5 _x_6 in
+      let _x_8 = Val_list _x_7 in
+      let _x_9 = Some _x_8 in
+      _x_9)
+
+  (* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Map.entries.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+  let rec list_map_tr_loop_at_map_entries_spec_0 (a_1 : (string * val_) list) (a_2 : val_ list) : val_ list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, snd_1 -> (let _x_6 = Val_str fst_1 in
+          let _x_7 = [] in
+          let _x_8 = snd_1 :: _x_7 in
+          let _x_9 = _x_6 :: _x_8 in
+          let _x_10 = Val_list _x_9 in
+          let _x_11 = _x_10 :: a_2 in
+          let _x_12 = list_map_tr_loop_at_map_entries_spec_0 tail_5 _x_11 in
+          _x_12))
+
+  (* LCNF mono: Effect4.Machine.Map.entries (value : Effect4.Store.Val) : Option Effect4.Store.Val *)
+  let map_entries (value : val_) : val_ option =
+  let _x_1 = map_read value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = field_bytes_key in
+      let _x_5 = field_canon_by _x_4 val__3 in
+      let _x_6 = [] in
+      let _x_7 = list_map_tr_loop_at_map_entries_spec_0 _x_5 _x_6 in
+      let _x_8 = Val_list _x_7 in
+      let _x_9 = Some _x_8 in
+      _x_9)
+
+  (* LCNF mono: Effect4.Machine.Map.readTuples (x.1 : List Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
+  let rec map_read_tuples (x_1 : val_ list) : (string * val_) list option =
+  match x_1 with
+    | [] -> (let _x_2 = [] in
+      let _x_3 = Some _x_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match (head_4 : val_) with
+        | Val_list xs_6 -> (match xs_6 with
+            | head_7 :: tail_8 -> (match (head_7 : val_) with
+                | Val_str s_9 -> (match tail_8 with
+                    | head_10 :: tail_11 -> (match tail_11 with
+                        | [] -> (let _x_12 = map_read_tuples tail_5 in
+                          match _x_12 with
+                            | None -> _x_12
+                            | Some val__13 -> (let _x_14 = s_9, head_10 in
+                              let _x_15 = _x_14 :: val__13 in
+                              let _x_16 = Some _x_15 in
+                              _x_16))
+                        | _ -> (let _x_17 = None in
+                          _x_17))
+                    | _ -> (let _x_18 = None in
+                      _x_18))
+                | _ -> (let _x_19 = None in
+                  _x_19))
+            | _ -> (let _x_20 = None in
+              _x_20))
+        | _ -> (let _x_21 = None in
+          _x_21))
+
+  (* LCNF mono: Effect4.Machine.Map.fromEntries (value : Effect4.Store.Val) : Option Effect4.Store.Val *)
+  let map_from_entries (value : val_) : val_ option =
+  let _x_1 = val__as_list_opt value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = map_read_tuples val__3 in
+      match _x_4 with
+        | None -> (let _x_5 = None in
+          _x_5)
+        | Some val__6 -> (let _x_7 = field_bytes_key in
+          let _x_8 = List.rev val__6 in
+          let _x_9 = field_canon_by _x_7 _x_8 in
+          let _x_10 = map_write _x_9 in
+          let _x_11 = Some _x_10 in
+          _x_11))
+
   (* LCNF mono: Effect4.Program.NativeAtom.eval (x.1 : Effect4.Program.NativeAtom) (x.2 : List Effect4.Store.Val) : Option Effect4.Store.Val *)
   let program_native_atom_eval (x_1 : native_atom) (x_2 : val_ list) : val_ option =
   let _jp_3 = fun _y_4 -> let _x_5 = Val_bool _y_4 in
@@ -3524,6 +3853,70 @@ let sh_dispatcher_mk buckets armed =
               _x_374))
         | _ -> (let _x_375 = None in
           _x_375))
+    | NativeAtom_mapEmpty -> (match x_2 with
+        | [] -> (let _x_376 = map_empty in
+          let _x_377 = Some _x_376 in
+          _x_377)
+        | _ -> (let _x_378 = None in
+          _x_378))
+    | NativeAtom_mapGet -> (match x_2 with
+        | head_379 :: tail_380 -> (match tail_380 with
+            | head_381 :: tail_382 -> (match (head_381 : val_) with
+                | Val_str s_383 -> (match tail_382 with
+                    | [] -> (let _x_384 = map_get head_379 s_383 in
+                      _x_384)
+                    | _ -> (let _x_385 = None in
+                      _x_385))
+                | _ -> (let _x_386 = None in
+                  _x_386))
+            | _ -> (let _x_387 = None in
+              _x_387))
+        | _ -> (let _x_388 = None in
+          _x_388))
+    | NativeAtom_mapSet -> (match x_2 with
+        | head_389 :: tail_390 -> (match tail_390 with
+            | head_391 :: tail_392 -> (match (head_391 : val_) with
+                | Val_str s_393 -> (match tail_392 with
+                    | head_394 :: tail_395 -> (match tail_395 with
+                        | [] -> (let _x_396 = map_set head_389 s_393 head_394 in
+                          _x_396)
+                        | _ -> (let _x_397 = None in
+                          _x_397))
+                    | _ -> (let _x_398 = None in
+                      _x_398))
+                | _ -> (let _x_399 = None in
+                  _x_399))
+            | _ -> (let _x_400 = None in
+              _x_400))
+        | _ -> (let _x_401 = None in
+          _x_401))
+    | NativeAtom_mapKeys -> (match x_2 with
+        | head_402 :: tail_403 -> (match tail_403 with
+            | [] -> (let _x_404 = map_keys head_402 in
+              _x_404)
+            | _ -> (let _x_405 = None in
+              _x_405))
+        | _ -> (let _x_406 = None in
+          _x_406))
+    | NativeAtom_mapEntries -> (match x_2 with
+        | head_407 :: tail_408 -> (match tail_408 with
+            | [] -> (let _x_409 = map_entries head_407 in
+              _x_409)
+            | _ -> (let _x_410 = None in
+              _x_410))
+        | _ -> (let _x_411 = None in
+          _x_411))
+    | NativeAtom_mapFromEntries -> (match x_2 with
+        | head_412 :: tail_413 -> (match tail_413 with
+            | [] -> (let _x_414 = map_from_entries head_412 in
+              _x_414)
+            | _ -> (let _x_415 = None in
+              _x_415))
+        | _ -> (let _x_416 = None in
+          _x_416))
+    | NativeAtom_tuple -> (let _x_417 = Val_list x_2 in
+      let _x_418 = Some _x_417 in
+      _x_418)
 
   (* LCNF mono: Effect4.Program.nativeAtom (name : String) (values : List Effect4.Store.Val) : Option Effect4.Store.Val *)
   let program_native_atom (name : string) (values : val_ list) : val_ option =
@@ -3553,102 +3946,6 @@ let sh_dispatcher_mk buckets armed =
               _x_14))
         | _ -> (let _x_15 = None in
           _x_15))
-
-  (* LCNF mono: List.mapTR.loop._at_.Effect4.Field.bytesKey.spec_0 (a.1 : List UInt8) (a.2 : List Nat) : List Nat *)
-  let rec list_map_tr_loop_at_field_bytes_key_spec_0 (a_1 : int list) (a_2 : int list) : int list =
-  match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
-    | head_4 :: tail_5 -> (let _x_6 = head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      let _x_8 = list_map_tr_loop_at_field_bytes_key_spec_0 tail_5 _x_7 in
-      _x_8)
-
-  (* LCNF mono: Effect4.Field.bytesKey (s : String) : List Nat *)
-  let field_bytes_key (s : string) : int list =
-  let _x_1 = lcnf_utf8_bytes s in
-  let _x_2 = _x_1 in
-  let _x_3 = _x_2 in
-  let _x_4 = [] in
-  let _x_5 = list_map_tr_loop_at_field_bytes_key_spec_0 _x_3 _x_4 in
-  _x_5
-
-  (* LCNF mono: Effect4.Field.ltKey (x.1 : List Nat) (x.2 : List Nat) : Bool *)
-  let rec field_lt_key (x_1 : int list) (x_2 : int list) : bool =
-  match x_1 with
-    | [] -> (match x_2 with
-        | [] -> (let _x_3 = false in
-          _x_3)
-        | _ :: _ -> (let _x_6 = true in
-          _x_6))
-    | head_7 :: tail_8 -> (match x_2 with
-        | [] -> (let _x_9 = false in
-          _x_9)
-        | head_10 :: tail_11 -> (let _x_12 = head_7 < head_10 in
-          if _x_12 then _x_12 else (let _x_13 = head_10 < head_7 in
-            if _x_13 then _x_12 else (let _x_14 = field_lt_key tail_8 tail_11 in
-              _x_14))))
-
-  (* LCNF mono: List.hasDecEq._redArg (inst.1 : lcAny -> lcAny -> Bool) (x.2 : List lcAny) (x.3 : List lcAny) : Bool *)
-  let rec list_has_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ list) (x_3 : _ list) : bool =
-  match x_2 with
-    | [] -> (match x_3 with
-        | [] -> (let _x_4 = true in
-          _x_4)
-        | _ :: _ -> (let _x_7 = false in
-          _x_7))
-    | head_8 :: tail_9 -> (let _x_10 = false in
-      match x_3 with
-        | [] -> _x_10
-        | head_11 :: tail_12 -> (let _x_13 = list_has_dec_eq inst_1 tail_9 tail_12 in
-          let _x_14 = inst_1 head_8 head_11 in
-          if _x_14 then (if _x_13 then _x_13 else _x_10) else _x_10))
-
-  (* LCNF mono: instDecidableEqList._redArg (inst.1 : lcAny -> lcAny -> Bool) (xs : List lcAny) (ys : List lcAny) : Bool *)
-  let inst_decidable_eq_list (inst_1 : _ -> _ -> bool) (xs : _ list) (ys : _ list) : bool =
-  match xs with
-    | [] -> (match ys with
-        | [] -> (let _x_2 = true in
-          _x_2)
-        | _ :: _ -> (let _x_5 = false in
-          _x_5))
-    | head_6 :: tail_7 -> (match ys with
-        | [] -> (let _x_8 = false in
-          _x_8)
-        | head_9 :: tail_10 -> (let _x_11 = list_has_dec_eq inst_1 tail_7 tail_10 in
-          let _x_12 = inst_1 head_6 head_9 in
-          if _x_12 then _x_11 else _x_12))
-
-  (* LCNF mono: Effect4.Field.insertBy._redArg (key : String -> (List Nat)) (p : Prod String lcAny) (x.1 : List (Prod String lcAny)) : List (Prod String lcAny) *)
-  let rec field_insert_by (key : string -> int list) (p : string * _) (x_1 : (string * _) list) : (string * _) list =
-  match x_1 with
-    | [] -> (let _x_2 = p :: x_1 in
-      _x_2)
-    | head_3 :: tail_4 -> (match p with
-        | fst_1, _ -> (match head_3 with
-            | fst_2, _ -> (let _x_5 = key fst_1 in
-              let _x_6 = key fst_2 in
-              let _x_7 = field_lt_key _x_5 _x_6 in
-              if _x_7 then (let _x_12 = p :: x_1 in
-                _x_12) else (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
-                let _x_9 = inst_decidable_eq_list _x_8 _x_5 _x_6 in
-                if _x_9 then x_1 else (let _x_10 = field_insert_by key p tail_4 in
-                  let _x_11 = head_3 :: _x_10 in
-                  _x_11)))))
-
-  (* LCNF mono: List.foldl._at_.Effect4.Field.canonBy.spec_0._redArg (key : String -> (List Nat)) (x.1 : List (Prod String lcAny)) (x.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
-  let rec list_foldl_at_field_canon_by_spec_0 (key : string -> int list) (x_1 : (string * _) list) (x_2 : (string * _) list) : (string * _) list =
-  match x_2 with
-    | [] -> x_1
-    | head_3 :: tail_4 -> (let _x_5 = field_insert_by key head_3 x_1 in
-      let _x_6 = list_foldl_at_field_canon_by_spec_0 key _x_5 tail_4 in
-      _x_6)
-
-  (* LCNF mono: Effect4.Field.canonBy._redArg (key : String -> (List Nat)) (fs : List (Prod String lcAny)) : List (Prod String lcAny) *)
-  let field_canon_by (key : string -> int list) (fs : (string * _) list) : (string * _) list =
-  let _x_1 = [] in
-  let _x_2 = list_foldl_at_field_canon_by_spec_0 key _x_1 fs in
-  _x_2
 
   (* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Record.frame.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
   let rec list_map_tr_loop_at_record_frame_spec_0 (a_1 : (string * val_) list) (a_2 : val_ list) : val_ list =
@@ -3791,17 +4088,6 @@ let sh_dispatcher_mk buckets armed =
               if _x_11 then _x_6 else (let _x_12 = None in
                 _x_12))))
 
-  (* LCNF mono: Effect4.Field.firstOf._redArg (n : String) (x.1 : List (Prod String lcAny)) : Option lcAny *)
-  let rec field_first_of (n : string) (x_1 : (string * _) list) : _ option =
-  match x_1 with
-    | [] -> (let _x_2 = None in
-      _x_2)
-    | head_3 :: tail_4 -> (match head_3 with
-        | fst_5, snd_6 -> (let _x_7 = fst_5 = n in
-          if _x_7 then (let _x_9 = Some snd_6 in
-            _x_9) else (let _x_8 = field_first_of n tail_4 in
-            _x_8)))
-
   (* LCNF mono: Effect4.Machine.Record.lookup (value : Effect4.Store.Val) (name : String) : Option (Option Effect4.Store.Val) *)
   let record_lookup (value : val_) (name : string) : val_ option option =
   let _x_1 = record_entries value in
@@ -3840,6 +4126,23 @@ let sh_dispatcher_mk buckets armed =
       let _x_9 = Some _x_8 in
       _x_9)
 
+  (* LCNF mono: Effect4.Program.Val.tuple? (x.1 : Effect4.Store.Val) : Option (List Effect4.Store.Val) *)
+  let program_val__tuple_opt (x_1 : val_) : val_ list option =
+  match (x_1 : val_) with
+    | Val_list xs_2 -> (let _x_3 = Some xs_2 in
+      _x_3)
+    | _ -> (let _x_4 = None in
+      _x_4)
+
+  (* LCNF mono: Effect4.Program.Val.tupleAt? (value : Effect4.Store.Val) (index : Nat) : Option Effect4.Store.Val *)
+  let program_val__tuple_at_opt (value : val_) (index : int) : val_ option =
+  let _x_1 = program_val__tuple_opt value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = list_get_opt_internal val__3 index in
+      _x_4)
+
   (* LCNF mono: Effect4.Program.evalTerm (env : List Effect4.Store.Val) (x.1 : Effect4.Program.Term) : Option Effect4.Store.Val
    Effect4.Program.evalTerms (env : List Effect4.Store.Val) (x.1 : Effect4.Program.Terms) : Option (List Effect4.Store.Val) *)
   let rec program_eval_term (env : val_ E.t) (x_1 : term) =
@@ -3875,6 +4178,11 @@ let sh_dispatcher_mk buckets armed =
             | None -> _x_32
             | Some val__33 -> (let _x_34 = record_set val__31 name_28 val__33 in
               _x_34)))
+    | Term_tupleAt (target_35, index_36) -> (let _x_37 = program_eval_term env target_35 in
+      match _x_37 with
+        | None -> _x_37
+        | Some val__38 -> (let _x_39 = program_val__tuple_at_opt val__38 index_36 in
+          _x_39))
 
 and program_eval_terms (env : val_ E.t) (x_1 : terms) =
   match (x_1 : terms) with
@@ -7636,14 +7944,6 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
   let _x_4 = Prim_withFiber _x_3 in
   let _x_5 = program_embed _x_4 in
   _x_5
-
-  (* LCNF mono: Effect4.Program.Val.tuple? (x.1 : Effect4.Store.Val) : Option (List Effect4.Store.Val) *)
-  let program_val__tuple_opt (x_1 : val_) : val_ list option =
-  match (x_1 : val_) with
-    | Val_list xs_2 -> (let _x_3 = Some xs_2 in
-      _x_3)
-    | _ -> (let _x_4 = None in
-      _x_4)
 
   (* LCNF mono: List.mapM.loop._at_.Effect4.Program.actionAt.spec_0 (x.1 : List Effect4.Store.Val) (x.2 : List Nat) : Option (List Nat) *)
   let rec list_map_m_loop_at_program_action_at_spec_0 (x_1 : val_ list) (x_2 : int list) : int list option =
@@ -11690,6 +11990,22 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
     | _ -> (let _x_15 = None in
       _x_15)
 
+  (* LCNF mono: Effect4.Program.Record.tagHit (tag : String) (value : Effect4.Store.Val) : Bool *)
+  let program_record_tag_hit (tag : string) (value : val_) : bool =
+  let _x_1 = "_tag" in
+  let _x_2 = record_lookup value _x_1 in
+  match _x_2 with
+    | Some val__3 -> (match val__3 with
+        | Some val__4 -> (match (val__4 : val_) with
+            | Val_str s_5 -> (let _x_6 = s_5 = tag in
+              _x_6)
+            | _ -> (let _x_7 = false in
+              _x_7))
+        | _ -> (let _x_8 = false in
+          _x_8))
+    | _ -> (let _x_9 = false in
+      _x_9)
+
   (* LCNF mono: Effect4.Program.Decision.decide (x.1 : Effect4.Program.Decision) (x.2 : Effect4.Store.Val) : Option (Prod Bool (Option Effect4.Store.Val)) *)
   let program_decision_decide (x_1 : decision) (x_2 : val_) : (bool * val_ option) option =
   match (x_1 : decision) with
@@ -11724,6 +12040,11 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
           let _x_26 = _x_25, _x_19 in
           let _x_27 = Some _x_26 in
           _x_27))
+    | Decision_recordTag tag_28 -> (let _x_29 = program_record_tag_hit tag_28 x_2 in
+      let _x_30 = Some x_2 in
+      let _x_31 = _x_29, _x_30 in
+      let _x_32 = Some _x_31 in
+      _x_32)
 
   (* LCNF mono: Effect4.Program.Point.childBind (p : Effect4.Program.Point) (i : Nat) (x.1 : Option Effect4.Store.Val) : Effect4.Program.Point *)
   let program_point_child_bind (p : point) (i : int) (x_1 : val_ option) : point =
@@ -12757,26 +13078,26 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
       let _x_10 = events @ _x_9 in
       let _x_11 = _x_6, _x_10 in
       _x_11) in
-  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_13 _y_14 _y_18 in
+  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_15 _y_13 _y_18 in
   match _x_19 with
-    | None -> _jp_4 _y_16
+    | None -> _jp_4 _y_14
     | Some val__20 -> (match val__20 with
         | fst_21, _ -> (let _x_23 = [] in
-          match (_y_17 : (_, _, _, _, _, _, _) frame_fiber) with
+          match (_y_16 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_24 = _x_23 @ stack in
               let _x_25 = ({ current = fst_21; stack = _x_24; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_26 = FrameStep_running _x_25 in
-              let _x_27 = prim_finalizer_events _y_13 _y_16 in
-              let _x_28 = _y_15 @ _x_27 in
+              let _x_27 = prim_finalizer_events _y_15 _y_14 in
+              let _x_28 = _y_17 @ _x_27 in
               let _x_29 = list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12 _x_23 _x_23 in
               let _x_30 = _x_28 @ _x_29 in
               let _x_31 = _x_26, _x_30 in
               _x_31))) in
   let _jp_32 = fun _y_33 _y_34 _y_35 _y_36 _y_37 -> match provided with
-    | None -> _jp_12 _y_33 _y_37 _y_34 _y_35 _y_36 provided
+    | None -> _jp_12 _y_37 _y_34 _y_33 _y_35 _y_36 provided
     | Some val__38 -> (let _x_39 = frame_pop_delivered_exit pop val__38 in
       let _x_40 = Some _x_39 in
-      _jp_12 _y_33 _y_37 _y_34 _y_35 _y_36 _x_40) in
+      _jp_12 _y_37 _y_34 _y_33 _y_35 _y_36 _x_40) in
   let _jp_41 = fun _y_42 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_42 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -12792,8 +13113,8 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
               let _x_51 = _x_50, events_1 in
               _x_51))
         | ContAnswer_frame frame_52 -> (match carried_cause with
-            | None -> _jp_32 frame_52 events_1 delivered fiber cause
-            | Some val__53 -> _jp_32 frame_52 events_1 delivered fiber val__53)
+            | None -> _jp_32 frame_52 delivered fiber events_1 cause
+            | Some val__53 -> _jp_32 frame_52 delivered fiber events_1 val__53)
         | ContAnswer_empty -> _jp_4 delivered) in
   match provided with
     | None -> (let _x_54 = Exit_failure cause in
@@ -13540,8 +13861,8 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
 
   (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4._redArg (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.Iter lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim) with_fiber_action) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
-  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_3 @ _y_6 in
-  let _x_8 = ({ machine = _y_5; fiber = _y_4; yielding = yielding; outcome = _y_2; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_5 @ _y_6 in
+  let _x_8 = ({ machine = _y_2; fiber = _y_4; yielding = yielding; outcome = _y_3; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   _x_8 in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
     | WithFiberAction_fork (program_9, options_10, site_11) -> (match (options_10 : fork_options) with
@@ -13557,10 +13878,10 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                                   let _x_25 = evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4__red_arg__lam_0 fst_22 _x_24 in
                                   let _x_26 = Effect4_machine_outcome_continue_ in
                                   if daemon then (let _x_30 = [] in
-                                    _jp_1 _x_26 snd_23 _x_25 fst_20 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
+                                    _jp_1 fst_20 _x_26 _x_25 snd_23 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
                                     let _x_28 = [] in
                                     let _x_29 = _x_27 :: _x_28 in
-                                    _jp_1 _x_26 snd_23 _x_25 fst_20 _x_29))))))) in
+                                    _jp_1 fst_20 _x_26 _x_25 snd_23 _x_29))))))) in
           if daemon then _jp_12 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks; _ } -> (let _x_31 = true in
                 let _x_32 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_31; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
@@ -14189,11 +14510,11 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   (* LCNF mono: Effect4.Program.exitScoped (root : Effect4.Program.Eff Effect4.Program.NativeOp) (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Machine.Iter Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_6; interruptible = _y_3; interrupted_cause = _y_7; deferred_interrupt = _y_4 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_2; prevent_yield = _y_8; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_9 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_4; interruptible = _y_3; interrupted_cause = _y_8; deferred_interrupt = _y_9 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_6; prevent_yield = _y_7; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_5 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
-      let _x_15 = ({ machine = _y_5; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+      let _x_15 = ({ machine = _y_2; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       _x_15 in
       let _x_16 = sh_machine_completed_exits m in
       let _x_17 = [] in
@@ -14221,13 +14542,13 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                                     | Some val__35 -> (match val__35 with
                                         | fst_36, snd_37 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_36; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_37 with
-                                            | None -> _jp_1 max_ops_before_yield interruptible deferred_interrupt m_2 stack interrupted_cause prevent_yield previous_26 _x_29
+                                            | None -> _jp_1 m_2 interruptible stack previous_26 max_ops_before_yield prevent_yield interrupted_cause deferred_interrupt _x_29
                                             | Some val__38 -> (let _x_39 = RunEvent_finalizerProgram (id, finalizer_24, exit__2) in
                                               let _x_40 = _x_39 :: _x_17 in
                                               let _x_41 = sh_machine_emit m_2 _x_40 in
                                               let _x_42 = program_embed val__38 in
                                               let _x_43 = finalizer_code interp exit__2 _x_42 in
-                                              _jp_1 max_ops_before_yield interruptible deferred_interrupt _x_41 stack interrupted_cause prevent_yield previous_26 _x_43)))))))
+                                              _jp_1 _x_41 interruptible stack previous_26 max_ops_before_yield prevent_yield interrupted_cause deferred_interrupt _x_43)))))))
                     | _ -> (let _x_44 = evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding in
                       _x_44))
                 | _ -> (let _x_45 = evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding in

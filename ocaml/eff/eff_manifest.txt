@@ -1,7 +1,7 @@
 Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) option(ty) list(ty) prod(ty,ty) except(ty,ty) exitOf(ty,ty) causeOf(ty) fiberOf(ty,ty) union(ty,ty) lit(string) refOf(ty) deferredOf(ty,ty) var(int) unknown record((string * (bool * ty)) list) map(ty,ty) tuple(ty list) app(string,ty list) null undefined number bytes
 Effect4.Program.Lit (lit) inductive: unit nat(int) bool(bool) str(string)
 Effect4.Program.FieldReadMode (field_read_mode) inductive: required optional
-Effect4.Program.Term (term) inductive: var(int) lit(lit) app(string,terms) record((string * (bool * ty)) list,string list,terms) field(field_read_mode,term,string) recordSet(term,string,term)
+Effect4.Program.Term (term) inductive: var(int) lit(lit) app(string,terms) record((string * (bool * ty)) list,string list,terms) field(field_read_mode,term,string) recordSet(term,string,term) tupleAt(term,int)
 Effect4.Program.Terms (terms) inductive: nil cons(term,terms)
 Effect4.Program.CauseTerm (cause_term) inductive: fail(term) die(term) interrupt(term option) both(cause_term,cause_term)
 Effect4.Supervision.MaskMode (mask_mode) inductive: interruptible uninterruptible inherit
@@ -13,7 +13,7 @@ Effect4.Program.NativeOp (native_op) inductive: refMake refGet refSet refGetAndS
 Effect4.ServiceName (service_name) structure: value:int
 Effect4.ServiceTypeCode (service_type_code) structure: value:int
 Effect4.ServiceKey (service_key) structure: name:service_name service:service_type_code
-Effect4.Program.Decision (decision) inductive: bool option tag(string)
+Effect4.Program.Decision (decision) inductive: bool option tag(string) recordTag(string)
 Effect4.Program.Eff (eff) inductive: succeed(term) fail(term) failCause(cause_term) sync(term) suspend(eff) perform(native_op,term) bind(eff,eff) gen(stmts) catchCause(eff,eff) matchCause(eff,eff,eff) onExit(eff,eff) exit(eff) uninterruptible(eff) interruptible(eff) yieldNow(int) awaitFiber(term,observer_mode) withFiber(action_term) scoped(eff) acquireRelease(eff,eff) provideLayer(layer_term,bool,eff) service(service_key) provideService(service_key,term,eff) catchIf(term,eff,eff) select(term,decision,eff,eff) iterate(ty option,term,term,term,term,eff)
 Effect4.Program.Stmt (stmt) inductive: bindYield(eff) yieldDiscard(eff) ret(term) ifElse(term,stmts,stmts) whileTrue(stmts) breakLoop
 Effect4.Program.Stmts (stmts) inductive: nil cons(stmt,stmts)

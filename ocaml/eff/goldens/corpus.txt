@@ -58,3 +58,9 @@ pRecordOptionalPresent	well-typed
 pRecordSet	well-typed
 pIllRecordRaw	ill-typed
 pIllRecordExtraValue	ill-typed
+pTupleAt	well-typed
+pTupleAtNested	well-typed
+pIllTupleAtIndex	ill-typed
+pSelectRecordTag	well-typed
+pSelectRecordTagMiss	well-typed
+pIllRecordTagRaw	ill-typed
