@@ -1,25 +1,40 @@
-# 2026-10-04 seat M receipt: the module-system cutover, stopped at the hash gate
+# 2026-10-04 seat M receipt: the module-system cutover of `hash` and of 96 package-free core modules
 
-**The one thing to know before merging:** the wave stopped after `hash`, as the brief's gate
-requires. M2 contradicts the prediction of the reference scout's modules note. The pinned
-audit counts moved (sha256 from 422 to 420, sha3 from 571 to 576), and the HashTest gate count
-moved from 1618 to 1627. Every difference is an auxiliary declaration that the module system makes
-private or mints anew. No authored declaration is lost, and M1 and M3 hold. Part 2 did not start:
-the estate worktree has no commit and no edit.
+**The one thing to know before merging:** 96 of the 103 package-free `src/Effect4` modules
+outside `Laws` are modules now. The gate passes over the full battery. Seven stay non-module
+(T13). `Program.Typed`, `Program.Compile` and `Program.Admit` specialize the machine's functions.
+As modules, in a reverted try, they lost those specializations, and the `lcnf` cut grew by about
+4000 lines. Their
+importers `Program.Admission`, `Program.Provision`, `Schema.Codec` and `Api.Frontier` stay with
+them. The amended M2 holds: every authored user name is present after the conversion, auxiliaries
+excepted, and the measured exception is 168 renumbered auxiliary names.
+
+History of the night: after `hash` the wave stopped, because M2's count equality failed (the
+audit counts include auxiliaries). The coordinator then ruled option 1 below into row 200
+(`d8faeae2`) and started Part 2, which ran to the end.
 
 ## Base and head
 
 | Tree | Branch | Base | Head | State |
 | --- | --- | --- | --- | --- |
-| `hash`, `/Users/pooks/Dev/lean4-hash` | `module-system` | `c906b15` (`main`, the estate's pin) | `13ee594` | one commit, local only, never pushed |
-| the estate, `/Users/pooks/Dev/lean4-effect4-modules` | `modules/cutover` | `d2bbbaf5` | `d2bbbaf5` | untouched: no edit, no build, no commit |
-| the main checkout | `refactor/phase1-phase3` | — | — | only `scratch/seat-M/` and this receipt written; this receipt is not force-added |
+| `hash`, `/Users/pooks/Dev/lean4-hash` | `module-system` | `c906b15` (`main`, the estate's pin) | `13ee594` | one commit, local only, never pushed; its re-pin accepted by the coordinator |
+| the estate, `/Users/pooks/Dev/lean4-effect4-modules` | `modules/cutover` | `97983cf6` (the coordinator's repaired head; first `d2bbbaf5`, then `407ed498`, each before any edit of mine) | `970246cd` | eight commits, never pushed; the worktree is clean |
+| the main checkout | `refactor/phase1-phase3` | — | — | only `scratch/seat-M/` and this receipt written; the coordinator force-added an earlier version of this receipt at `d8faeae2` |
 
-## The gate decision, and the owner's options
+The estate commits, in order:
+
+1. `88d9881b`, `a759f909` and `3225b1e6`: the tooling prerequisites (a), (b) and (c);
+2. `d8bb17a4`, `81b8618f`, `adb9717c` and `fe5ed57c`: chains A, B, C and D;
+3. `970246cd`: the Makefile's variances sources.
+
+# Part 1: `hash`
+
+## The M2 stop after `hash`, and the owner's options
 
 The brief defines M2 as "the audit lines are unchanged" and stops the wave when M1, M2 or M3
 contradicts the note's prediction. The note's §3(e) predicts that the gate's line and the pinned
-audit lines stay equal. They did not, so the wave stops here.
+audit lines stay equal. They did not, so the wave stopped after `hash` until the coordinator's
+ruling (option 1, below).
 
 What the measurement shows instead (tested, `scratch/seat-M/m3_diff.py` and `audit_replay.py`
 over the two name listings):
@@ -51,7 +66,7 @@ from a loss of coverage.
 
 Options for the owner:
 
-1. **Amend M2 and relaunch Part 2 (recommended).** The amended M2 has four conditions:
+1. **Amend M2 and relaunch Part 2 (recommended, and ruled).** The amended M2 has four conditions:
    - every user name before the conversion is present after it;
    - every name present only after it is an auxiliary (`_proof_N`, `match_N`, equation lemmas);
    - the gate passes;
@@ -93,7 +108,8 @@ root, so that the branch builds green. Accepting that re-pin is part of option 1
 | `Hash/Sha256/Verified.lean`, `Hash/Sha3/Verified.lean` (non-module) | the pinned lines re-pinned to 420 and 576; the docstrings name the auxiliaries that account for the change |
 | `Hash/Verified.lean` (non-module) | the docstring's two counts updated |
 
-The estate: no file. The main checkout: this receipt, and the scripts, probes and logs under
+The estate's changed files are in Part 2. The main checkout: this receipt, and the scripts, probes
+and logs under
 `scratch/seat-M/`.
 
 ## Commands and results
@@ -122,6 +138,7 @@ Every `lake` and `lean` invocation ran through `scratch/lean-slot.sh`, which set
 | 16 | `git add` of the 29 paths; `git commit` | `30322ba`; amended after row 17 to add M4's numbers: `13ee594`, the same tree (`git diff 30322ba 13ee594` is empty) |
 | 17 | `lean-slot.sh scratch/seat-M/m4-timing.sh` | four cold builds, alternating; M4 below |
 | 18 | `python3 scratch/seat-M/estate_scan.py` (reads `/Users/pooks/Dev/lean4-effect4-modules/src`, no Lean) | 425 modules, 156 outside `Laws`, 103 of them reaching no package; the forecast below |
+| 19 | `lean-slot.sh bash -c "LEAN_PATH=<baseline build>/lib/lean lean --run scratch/seat-M/aux_refs_probe.lean Hash.Verified <names>; LEAN_PATH=.lake/build/lib/lean lean --run …"` | exit 0; the auxiliaries each named declaration uses, per build (`aux-refs.txt`); the baseline build is run 3's, kept in the session scratchpad |
 
 ## M1 to M5
 
@@ -235,114 +252,335 @@ elaborator's `whnf` reduces `Nat.land`, `Nat.lor` and `Nat.xor` natively (`Lean/
 reading). The kernel's own list is not in the toolchain's sources, so for the kernel this is
 assumed.
 
-## Gate lines before and after
+## Part 1 scope
 
-The three `hash` lines are in the M2 table above. The estate's gate line was not measured: Part 2
-did not start, so neither its baseline build of `Test` nor its closing one ran.
+- Converted: the `hash` library closure, 26 modules, in one commit (`13ee594`).
+- `hash` produces no `lcnf` output, so Part 1 has no LCNF diff.
 
-## LCNF diffs
+# Part 2: the estate
 
-None. Part 2 did not run, and `hash` produces no `lcnf` output.
+## Base, branch and commits
 
-## Chains converted and chains left
+- Worktree `/Users/pooks/Dev/lean4-effect4-modules`, branch `modules/cutover`, rebased onto the
+  coordinator's repaired head `97983cf6` (the battery repair `bf60f896`). Head `970246cd`.
+- Tooling prerequisites, one commit each: `88d9881b` (a), `a759f909` (b), `3225b1e6` (c).
+- The Makefile's variances sources, after a Codex advisory finding: `970246cd`.
 
-- Converted: the `hash` library closure, 26 modules, in one commit.
-- Left, all of Part 2:
-  - the tooling prerequisites: (a) the gate's module-root refusal, (b) `fileImports` through
-    `Lean.Elab.parseImports`, (c) the emitters' module header behind a manifest field;
-  - the 103 `src/Effect4` modules outside `Laws` that reach no package;
-  - the estate's closing M2 and its M1.
+## M2 baseline (tested)
 
-What Part 2 would meet, from a text scan of the worktree (`scratch/seat-M/estate_scan.py`,
-reading-level counts by `grep`-style patterns, so upper bounds; per module in
-`estate-free-modules.tsv`). The `hash` column gives the edits each construct cost there.
+Before the repair, at `407ed498`, three contract batteries were red: `Test.Api.HostSessionContract`
+and `Test.Api.KeyedHostContract` ("Fields missing: `formed`") and `Test.Program.NativeAtomContract`
+(the pinned atom list). Four batteries import them: `Test.Api.RunnerContract`,
+`Test.Counterexamples.Machine.Runtime.HostReservedDefect`, `Test.Program.GuardFoldLift` and
+`Test.Run.RunContract`. A reduced measurement set those seven aside, never committed
+(`scratch/seat-M/gate-line.sh`). After the repair the full battery is green. The baseline below is
+over the full battery (`scratch/seat-M/gate-line-full.sh`). That script appends
+`#effect4_print_choice_reachers` after the gate and restores `Test/All.lean`.
 
-| Construct (trap) | `hash`, 26 files | Estate, the 103 package-free modules outside `Laws` |
+| Measure | Reduced set, `407ed498` | Full battery, `97983cf6` and (a), (b) |
 | --- | --- | --- |
-| private definitions (T7) | 10 in 4 files; 18 `privateInPublic` sites in 3 files | 71 in 15 files |
-| `#guard` lines (T4) | 19 in 4 files; 6 `meta import`s in 3 files | 337 in 23 files |
-| `decide`, `rfl`, `unfold` or `delta` (T3 candidates) | 50, 161, 33; 3 proofs broke, 5 `import all`s | 257, 1734, 201, in 36, 60, 34 files |
-| `deriving` clauses | 2 | 200 in 54 files |
-| meta code (`elab`, `macro`, `syntax`) | 0 | 2 files |
-| generated files (converted only through their emitters) | 0 | 13 |
+| `lake build Test` | green, 7 batteries aside | green, 877 jobs |
+| library-root gate | 156 API/utility modules, 269 Laws-only modules | the same |
+| axiom gate | checked 634 modules and 78469 declarations | checked 641 modules and 79191 declarations |
+| exact implementation boundary | 17 modules, 23 declarations | the same |
+| choice reachers | 295 declarations, 23 roots (17 public, 6 private) | the same |
+| constants of the `Effect4` modules (private level, `hash_names_probe.lean` over `Effect4,Effect4.Laws`) | 69708 | 69708, byte-identical listing |
 
-The scan reproduces the verifier's counts: 425 `Effect4` modules, 156 outside `Laws`, 103 of
-them reaching no package.
+## Tooling prerequisites (tested and reproduced)
+
+| Commit | Change | Evidence |
+| --- | --- | --- |
+| `88d9881b` | `#effect4_axiom_gate` throws when its environment's header is a module | tested: the gate passes with the same line. No red control: a module cannot import the non-module gate module, and `Environment` has a private constructor, so a test cannot fake a module header |
+| `a759f909` | `Effect4Gen.Check.fileImports` reads the header with `Lean.Elab.parseImports`; leaves out the implicit `Init`; refuses a header that does not parse | tested: the new guard agrees on `Effect4.Store.Domain.Derived.Json` and on a scratch copy with a module header; the old guard agrees on the first and throws "the given files import nothing" on the second; `Test.Store.DerivedCheck` builds |
+| `3225b1e6` | `Tools.GeneratedStamp.moduleText` and `moduleFlags`; `--module` and `--meta-imports` in the eight Effect4Gen emitters, through a group's existing `Flags`; `--module` in `Tools.Variances`, through the manifest's top-level `VariancesFlags` and `scripts/generate.py` | reproduced: `generate.py --only derived --output-dir` and `--only variances --output-dir` pass with every switch off; tested with the switch on, into scratch files |
+
+## Chains (each tested by its build, the ratchet, the LCNF diff and check-mode regeneration)
+
+Every chain was converted bottom-up from the import layering of the 103 package-free modules
+(`scratch/seat-M/estate-dag.json`). It was then built with `Effect4`, `Effect4.Laws` and every
+other direct importer. After each chain: `python3 scripts/generate.py --only lcnf` and `git diff`,
+`lake env lean Test/Audit/ProofStyle.lean`, and `generate.py --only variances` and `--only derived`
+in check mode, all through the lock.
+
+| Chain | Layers | Modules | Commit | Build of chain, Effect4, Laws and importers | LCNF diff | Ratchet | Check-mode regeneration |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A | 0 to 2 | 30 (2 generated) | `d8bb17a4` | green, 670 jobs, 511 s | changed, explained and committed (below) | passes | `variances` and `derived` pass |
+| B | 3 to 9 | 27 (3 generated) | `81b8618f` | green, 644 jobs, 459 s | changed, explained, tested and committed (below) | passes | `variances` and `derived` pass |
+| C | 10 to 18 | 21 (6 generated) | `adb9717c` | green, 672 jobs, 373 s | none | passes | `variances` and `derived` pass |
+| D, first try | 19 to 23 | 25 (2 generated) | not committed | green, 667 jobs, 360 s | api_gen.ml and api_engine.ml changed by about 4000 lines: stopped (T13) | passes | pass |
+| D | 19 to 23 | 18 (2 generated) | `fe5ed57c` | green, 339 s | none | passes | `variances` and `derived` pass |
+
+Chain A's LCNF change, read in the diff. The specializations of `annotateEntries` lose their
+`_private.…0.` prefix, so their OCaml names change. One join point of `frame_fiber_resume_cause`
+takes its parameters in another order, with every use permuted to match.
+With the old names mapped to the new, `machine_gen.ml`, `api_gen.ml` and `api_engine.ml` are
+identical, and `fibers_gen.ml` differs only in that join point's 18 lines. A trace of the join
+point's two call sites shows the same five calls on the same values before and after.
+
+Chain B's LCNF change, read in the diff. `opam exec --switch=effect4 -- dune build` and
+`dune test eff gen clock` then pass (tested). Later, `dune test engine` ran twice against the main
+checkout's printed corpus of 1 October: once with the committed outputs and once with those of
+`97983cf6`. Both give the same 1353 PASS lines and 0 failures. Its three-engine differential finds
+0 divergences over 66 goldens, 11 truth programs and 408 corpus programs. That evidence is tested
+and bounded: one older corpus, random tapes. Three kinds:
+
+- a specialization of `List.filterTR.loop` is named after the module that now makes it,
+  `RunMachine.disarm` instead of `Supervision.raceComplete`. The old one is emitted again for its
+  own module;
+- three record updates copy fields from a call's result, where the old code wrote the constants
+  that call returns. The callee's LCNF body no longer crosses the module boundary (T13).
+  The callees are `frame_fiber_start`, `supervision_race_all_state_initial` and
+  `wake_list_run_batch`. Reading their generated bodies, each returns exactly those constants;
+- two more join points take their parameters in another order, with their call sites permuted to
+  match.
+
+Chain D's first try is the one T13 stop of the night. With all 25 modules converted, the cut of
+`Effect4.Api.run` and `Effect4.Api.replay` grew by about 2300 lines in `api_gen.ml`. It grew as
+much in `api_engine.ml`. A `fiber_core` record of closures now travels at run time, where the old
+code specialized it away. The closure tables trace the changed entries to specializations made in
+`Effect4.Program.Compile` (`causeOf`, `contEOf`, `exitScoped`), `Effect4.Program.Admit`
+(`replayCheckedFrom`) and `Effect4.Program.Typed` (`Val.hasTy`, `externalHandleTarget`). These three
+specialize the machine's functions at concrete arguments. As modules they read only the exported
+LCNF bodies of their imports. `shouldExportBody` limits those to template-like or small exposed
+definitions, so the specializations are lost. That mechanism is reading
+(`Lean/Compiler/LCNF/Visibility.lean`); the names in the tables are tested. I could not show a
+change of this size harmless. So I reverted those three and the four chain-D modules that import
+them: `Program.Admission`, `Program.Provision`, `Schema.Codec` and `Api.Frontier`. With them
+non-module, the `lcnf` family regenerates without a diff.
+
+## M2 at the end (tested)
+
+The same full-battery measurement as the baseline (`gate-line-full.sh`), at `fe5ed57c`:
+
+| Measure | Before, `97983cf6` and (a), (b) | After, `fe5ed57c` |
+| --- | --- | --- |
+| `lake build Test` | green, 877 jobs | green, 877 jobs |
+| library-root gate | 156 API/utility modules, 269 Laws-only modules | the same |
+| axiom gate | checked 641 modules and 79191 declarations | checked 641 modules and 79581 declarations (+390) |
+| exact implementation boundary | 17 modules, 23 declarations | the same |
+| choice reachers | 295 declarations, 23 roots (17 public, 6 private) | the same |
+| `Effect4` constants, private level | 69708 (51968 public, 17740 private) | 70092 (51480 public, 18612 private) |
+
+The amended M2, condition by condition (`scratch/seat-M/m2_estate.py` and a classification of every
+absent and new name, `m2-estate.txt`):
+
+1. **Every authored user name before the conversion is present after it, auxiliaries excepted:
+   holds.** All 30133 authored user names are present, and none changed kind; 12343 of them are in
+   the 96 converted modules. The measured exception: 168 auxiliary user names are absent after,
+   108 `_proof_N` and 60 `match_N` or their equation lemmas. They are renumbered across the public
+   and private boundary, as in `hash`. The coordinator is amending row 200's wording to this form.
+2. **Every new name is an auxiliary: holds.** 552 new names, all auxiliaries: 429 `match_N`, 111
+   `_proof_N`, 6 `_sparseCasesOn_N` and 6 `eq_N`, `eq_def` or `match_N_N`.
+3. **The gate passes: holds** (the table above).
+4. **Its `Classical.choice` count is unchanged: holds.** `#effect4_print_choice_reachers` gives 295
+   declarations and 23 roots before and after. The gate line's exemption counts are unchanged.
+
+Visibility: 522 auxiliaries became private. Three authored declarations became public, the three
+de-privatized helpers below, and so did three of their auxiliaries.
+
+## M1 on a converted core chain (tested)
+
+`scratch/seat-M/m1-estate.sh` and `m1-estate-b.sh` edit `Effect4.Machine.Cause` (chain A). The module
+importer is `Effect4.Machine.Exit`, which has only `public import Effect4.Machine.Cause`. Hashes are
+the first 16 hex digits.
+
+| Edit | `.olean` | `.olean.server` | `.olean.private` | `.ir` | `--no-build Effect4.Machine.Exit` |
+| --- | --- | --- | --- | --- | --- |
+| none (as built) | `216225edd36b54f3` | `28c17122f152badf` | `260068103066fb80` | `c00a471d3ca22945` | exit 0 |
+| a proof that is not an `rfl` proof: `keys_nodup`, `self.keysNodup` to `id self.keysNodup` | same | `64ac8119366170f8` | `cb59c42a0eb97b3a` | same | exit 0 |
+| an `rfl` proof made a non-`rfl` one: `keys_eq`, `rfl` to `Eq.trans rfl rfl` | `31eaf29717181051` | `ade1e31847b40143` | `ca54f50d8376f975` | same | exit 3 |
+| a docstring, one word | same | `34171d9df023c575` | `bf10be58e9545397` | same | exit 0 |
+| a statement (red control): binder `key` to `k` in `lookup_eq` | `902230690f99b777` | `095969b5ffbfeccd` | `571e0ea322a2d1d8` | same | exit 3 |
+
+Every undo returns every hash to its first row, and the importer to exit 0. The payoff holds for a
+proof edit. One qualification, by reading `inferDefEqAttr` (`Lean/DefEqAttrib.lean`). A theorem
+proved by `rfl` is tagged `@[defeq]` and `@[backward_defeq]` for `dsimp`. The tags of a public
+theorem are exported. So turning an `rfl` proof into another proof, or the reverse, changes the
+exported part and rebuilds module importers, by design.
+
+## M5, the breakage census of the estate (tested, from the diff `97983cf6..fe5ed57c`)
+
+76 of the 96 converted files needed only the header, the 13 generated files among them (their
+switches carry their guards' meta imports). By cause:
+
+| Cause | Lines | Files | What it served |
+| --- | --- | --- | --- |
+| `backward.privateInPublic` (T7) | 51 `set_option` lines | 10 | 29 private helpers and 22 declarations whose exported body or statement names one |
+| de-privatized helper | 3 | 2 | `annotateEntries` (a public statement and its proofs must share one matcher for `rw` to apply); `Representation.beq_iff` and `Check.beq_iff` (`privateInPublic` did not export these private theorems of a mutual structural block) |
+| core `import all` (T3) | 5 | 5 | `Init.Data.String.Defs` (`String.toUTF8`) in four files, `Init.Data.Nat.ToString` (`Nat.ofDigitChars`) in one |
+| `meta import` for a guard (T4) | 21 | 13 | 11 lines in 5 hand-converted files; 10 lines written by the generators' `--meta-imports` |
+| `public meta section` and `public meta import` | 2 and 2 | 2 | `Program.FoldOf` (all elaborator code); `Program.Authoring.Sugar` (runtime part exposed, the `eff` macro in a nested meta section) |
+| kept non-module (T13) | — | 7 | the specialization sites `Program.Typed`, `Program.Compile`, `Program.Admit`, and their importers |
+| split, `meta initialize`, proof text, statement | 0 | 0 | — |
+
+Predicted against needed, for the scan's trap candidates (the scan is a text count, so an upper
+bound):
+
+| Construct | Scan of the 103 | Needed in the 96 |
+| --- | --- | --- |
+| private definitions (T7) | 71 in 15 files | 29 helper sites exported and 3 declarations de-privatized, in 10 files |
+| `#guard` lines (T4) | 337 in 23 files | 21 `meta import` lines in 13 files |
+| `decide`, `rfl`, `unfold` or `delta` (T3) | 257, 1734, 201 | 5 `import all` lines for `String.toUTF8` and `Nat.ofDigitChars` |
+| meta code | 2 files | 2 files with a meta section |
+| generated files | 13 | 13, all through their switches |
+
+## Chains left
+
+- The seven package-free modules kept non-module (T13): `Effect4.Program.Typed`,
+  `Effect4.Program.Compile`, `Effect4.Program.Admit`, `Effect4.Program.Admission`,
+  `Effect4.Program.Provision`, `Effect4.Schema.Codec`, `Effect4.Api.Frontier`.
+- Outside this brief: the 53 core modules that reach a package, all 269 `Laws` modules, and the
+  three `ProofGraph` modules that `Laws` imports. The 53 wait for `typescript` and `effects` to be
+  converted and re-pinned, and for `hash` to be pushed and re-pinned.
+
+## Changed files of Part 2
+
+| Commit | Files |
+| --- | --- |
+| `88d9881b` | `Test/Audit/AxiomGate.lean` |
+| `a759f909` | `tools/Effect4Gen/Check.lean` |
+| `3225b1e6` | `scripts/generate.py`; `tools/Effect4Gen/{Atoms,Authoring,Fold,Forms,LayerView,Main,Rows,View}.lean`; `tools/Effect4Gen/manifest.json`; `tools/Tools/GeneratedStamp.lean`; `tools/Tools/Variances.lean` |
+| `d8bb17a4` | 30 `src/Effect4` files (`scratch/seat-M/chainA.txt`); `tools/Effect4Gen/manifest.json`; 8 `lcnf` outputs under `ocaml/gen/` and `ocaml/engine/` |
+| `81b8618f` | 27 `src/Effect4` files (`chainB.txt`); the manifest; 7 `lcnf` outputs |
+| `adb9717c` | 21 `src/Effect4` files (`chainC.txt`); the manifest |
+| `fe5ed57c` | 18 `src/Effect4` files (`chainD2.txt`); the manifest |
+| `970246cd` | `Makefile`: `tools/Effect4Gen/manifest.json` joins `VARIANCE_SOURCES` (a Codex advisory finding, relayed by the coordinator) |
+
+No file under `src/Effect4/Laws/**`, `tools/ProofGraph/**`, `tools/Tools/Semantics*.lean`,
+`docs/core/**`, `AGENTS.md`, `lakefile.toml` or the root import files changed. `Test/All.lean` and
+seven batteries were changed for measurements only, restored each time, and never committed.
+
+## Commands of Part 2 and their results
+
+Every `lake`, `lean`, `python3 scripts/generate.py` and `dune` call ran through
+`scratch/lean-slot.sh`.
+
+| Command (in the worktree) | Result |
+| --- | --- |
+| `lake build Test` at `407ed498` | red: 3 contract batteries (repaired by the coordinator at `bf60f896`) |
+| `scratch/seat-M/gate-line.sh before` and `after-a` (7 batteries set aside) | green; the reduced-set column above |
+| `scratch/seat-M/gate-line-full.sh base-full` at `97983cf6` and (a), (b) | green, 877 jobs; the baseline column above |
+| `lake env lean --run scratch/seat-M/hash_names_probe.lean Effect4,Effect4.Laws Effect4 private` | 69708 rows before, 70092 after |
+| `lake build Test.Audit.AxiomGate`; `lake build Effect4Gen.Check Test.Store.DerivedCheck` | green |
+| the guard controls of (b) (`scratch/seat-M/guard-control/`) | new guard agrees twice; old guard throws on the module-header copy |
+| `lake build effect4gen effect4gen-catalogue Tools.Variances Tools.GeneratedStamp` | green, 234 jobs |
+| `python3 scripts/generate.py --only derived` and `--only variances`, both `--output-dir`, after (c) and after each chain | `PASS generate` every time |
+| `python3 scripts/generate.py --only lcnf` at the base, then after each chain, and `git diff -- ocaml/` | no diff at the base; diffs after A, B and the first D (above); none after C and D |
+| per chain: `lake build <chain> Effect4 Effect4.Laws <other direct importers>` | green: 670, 644, 672, 667 (first D) jobs; D again green |
+| per chain: `lake env lean Test/Audit/ProofStyle.lean` | passes; 1950 recorded occurrences in 1153 entries, 60 unread commands, every time |
+| `opam exec --switch=effect4 -- dune build -j 2`; `dune test -j 2 eff gen clock` (after chain B) | exit 0; `test_eff: 555 checks, 0 failures`, G0 runs `p42`, `pFork`, `pAwait` |
+| `lake env .lake/build/bin/effect4gen …` and `effect4gen-catalogue …` with `--module` | the 13 generated files, each reproduced by the next check-mode `derived` or `variances` run |
+| `scratch/seat-M/gate-line-full.sh after-full` at `fe5ed57c` | green, 877 jobs; the "after" column above |
+| `python3 scratch/seat-M/m2_estate.py` and the absent-and-new classification | the M2 conditions above |
+| `E4_LEAN_CORPUS=<main checkout>/.lake/corpus opam exec --switch=effect4 -- dune test -j 2 --force engine`, with the committed `lcnf` outputs (A) and with those of `97983cf6` restored for the run (B) | A and B each: 1353 PASS lines, 28 sections with 0 failures; the three-engine differential over 66 goldens, 11 truth programs and 408 Lean-corpus programs finds 0 divergences |
+| `make gen-variances`; `touch tools/Effect4Gen/manifest.json`; `make -q .lake/gen/variances`, before and after the Makefile fix | exit 0 before the fix (the defect), exit 1 after; exit 0 again after regenerating |
+| `python3 scripts/generate.py --only eff`, `wire`, `cas` and `ts`, each with `--output-dir`, at `970246cd`, then `cmp` of every emitted file against the tree (those routes do not compare by themselves) | `eff` 210 files and its 2 engine structure files, `wire` 11, `cas` 119, `ts` 9: 0 differ |
+| `scratch/seat-M/m1-estate.sh estate` and `m1-estate-b.sh estate-b` | the M1 table above |
+
+## Gate lines before and after (both parts)
+
+| Gate | Before | After |
+| --- | --- | --- |
+| `hash`, `#hash_axiom_gate` (HashTest) | checked 47 modules and 1618 declarations; 122 reach `Classical.choice`; 0 offenders | checked 47 modules and 1627 declarations; 122; 0 offenders |
+| `hash`, sha256 audit (pinned) | 422 declarations across 12 modules; 0 reach `Classical.choice` | 420 across 12; 0 (re-pinned) |
+| `hash`, sha3 audit (pinned) | 571 declarations across 14 modules; 45 reach `Classical.choice` | 576 across 14; 45 (re-pinned) |
+| the estate, `#effect4_axiom_gate` (`Test/All.lean`) | checked 641 modules and 79191 declarations; boundary 17 modules, 23 declarations | checked 641 modules and 79581 declarations; boundary 17 and 23 |
+| the estate, `#effect4_print_choice_reachers` | 295 declarations, 23 roots (17 public, 6 private) | the same |
 
 ## Axiom output
 
-The HashTest gate after the conversion: 47 modules and 1627 declarations, 122 of them reaching
-`Classical.choice`, 0 offenders. The two family audits after: 0 offenders, choice counts 0 and 45
-as before. The estate's axiom gate did not run, since no estate file changed.
+`hash`: the HashTest gate passes after the conversion with 0 offenders. 122 declarations reach
+`Classical.choice`, as before. Both family audits pass with 0 offenders and choice counts 0 and 45.
+The estate: `#effect4_axiom_gate` passes over the full battery at `fe5ed57c` (the table above). The
+choice reachers and the exact implementation boundary are those of `97983cf6`.
 
 ## Evidence
 
-- **proved**: nothing new. The `hash` theorems are unchanged in statement and accepted by the
-  kernel under the package ceiling, and the gate's 0 offenders covers them.
-- **tested**: M1, M2, M3, M4 and M5 as tabled; the five executable gates; the trust self-test;
-  the M2 attribution, which `audit_replay.py` reproduces from the listings.
-- **reading**: the mechanisms named here. `addDeclCore` (`Lean/AddDecl.lean`) exports a theorem as
-  an axiom and a `privateInPublic` declaration as is. `resolvePrivateName` and
-  `checkPrivateInPublic` (`Lean/ResolveName.lean`) give the T7 refusal and its warning. The
-  exposure of `Init.Data.Vector.Basic`, `Init.Data.Array.Basic`, `Init.Data.Array.DecidableEq`,
-  `Init.Data.Nat.Fold` and `Init.Data.List.Basic` comes from their headers. The estate gate's
-  count comes from `auditedFacts` (`tools/ProofGraph/Audit.lean`).
-- **assumed**: the rule inside Lean that mints the second copy of an auxiliary. The probes show
-  the copies, but that rule was not read in Lean's source. Also assumed: the kernel's native `Nat`
-  operations (above).
-- **Bounded**: M4's times. Two threads, a machine shared with the coordinator's lane, load
-  averages 4.7 to 8.4 on 8 cores, the other lock slot busy for some runs. M3 covers the `Hash`
-  modules only. The estate forecast is a text scan.
+- **proved**: nothing new. No statement changed, so every theorem keeps its proof; the kernel
+  accepted every rebuilt module, and both gates report 0 offenders.
+- **reproduced**: the 25 derived outputs and `TyVariance` (check-mode `generate.py`, after (c) and
+  after every chain), including the 13 generated files converted through their switches. At the
+  head, the `eff`, `wire`, `cas` and `ts` families too: every emitted file equals the tree's. Only
+  `readme` was not run; it needs the host runtime.
+- **tested**:
+  - M1 to M5 in both parts as tabled, and the amended M2's four conditions;
+  - the five `hash` executable gates and its trust self-test;
+  - the tooling controls of (a), (b) and (c);
+  - per chain, the LCNF regeneration and diff, and the proof-style ratchet;
+  - `dune build` and `dune test eff gen clock` after chain B, and `dune test engine` with the
+    committed and the base `lcnf` outputs (bounded);
+  - the variances freshness fix, by a manifest-only edit under `make -q`, before and after.
+- **reading**: the mechanisms named here. `addDeclCore` (`Lean/AddDecl.lean`) exports a theorem as an
+  axiom and a `privateInPublic` declaration as is. `resolvePrivateName` and `checkPrivateInPublic`
+  (`Lean/ResolveName.lean`) give the T7 refusal and its warning. `inferDefEqAttr`
+  (`Lean/DefEqAttrib.lean`) tags `rfl` theorems. The core modules' exposure comes from their
+  headers. The estate gate's count comes from `auditedFacts` (`tools/ProofGraph/Audit.lean`). The
+  meaning of chains A's and B's LCNF hunks comes from reading the diffs.
+- **assumed**:
+  - the rule inside Lean that mints a second copy of an auxiliary (the probes show the copies);
+  - the kernel's native `Nat` operations;
+  - for chain D's first try, that the lost specializations come from `shouldExportBody`. Its
+    source was read, but not traced declaration by declaration.
+- **Bounded**: `hash`'s M4 times (two threads, a shared machine). The OCaml `engine` differential ran
+  against one older printed corpus with random tapes. M1 in the estate covers one module and one
+  importer. The scan's counts are text counts.
 - **Host-only**: none.
 
 ## Landed theorems and their placement
 
-None. No theorem was stated or changed. The conversion changed no statement and no definition
-body; three proofs gained header imports, and none had its text changed.
+None. No theorem was stated, and no statement or definition body changed. Proofs changed text
+nowhere; they gained header imports (`import all`), and declarations gained `set_option` wrappers.
 
 ## Open obligations
 
-1. **The owner**: choose an option of "The gate decision" above, then relaunch Part 2 or end
-   the cutover. Part 2 must not start under the unamended M2.
-2. **`hash`, if the re-pin is accepted**: update the prose that still states 422 and 571, which
-   I did not edit. That is `README.md`, `AGENTS.md`, `docs/EXTRACTION-RECORD.md` (two tables
-   and the pinned lines), and the docstrings of `Hash/Sha256/Audit.lean` and
-   `Hash/Sha3/Audit.lean`.
-3. **`hash` upstream**: a push to `pure-algebra/lean4-hash`, a new `rev` in the estate's
-   `lakefile.toml` and the manifest belong to the coordinator. Nothing was pushed.
-4. **The `privateInPublic` escape**: 18 declarations carry it. Their helpers sit in the exported
-   part as is, so an edit to a helper rebuilds the importers. De-privatizing them later renames 8
-   declarations and moves the sha256 audit count again.
-5. **M1 on a `Laws` chain** with `@[semantics]` and `@[aesop]`, which the note asks for: owed,
-   with Part 2.
-6. **Part 2's tooling prerequisites** (a), (b) and (c) do not depend on M2's criterion, so they
-   could run before the owner decides. The brief stops all of Part 2, so I did not start them.
-7. **Not run**: `leanchecker` in any form (the brief forbids a bare run). `hash`'s
-   `lake test` is the `HashVerified` build, which every default-target build above includes.
+1. **Row 200's M2 wording**: the coordinator is amending it to "every authored user name". The
+   estate's measured exception, 168 renumbered auxiliary names, is stated in M2 at the end.
+2. **The seven T13 modules**: decide how the specialization sites convert. The options:
+   - keep them non-module;
+   - let the machine's specialized definitions export their LCNF bodies, then measure the `lcnf`
+     diff again. `@[specialize]` or `@[inline]` makes a body template-like for `shouldExportBody`;
+   - accept the larger, slower generated engine.
+3. **The `privateInPublic` escape**: 22 declarations in the estate and 10 in `hash` reach exported
+   private helpers. An edit to a helper rebuilds the importers, as an exposed body does. De-privatizing
+   later renames the helpers and, in `hash`, moves the sha256 audit count again.
+4. **`hash`**: update the prose that still states 422 and 571: `README.md`, `AGENTS.md`,
+   `docs/EXTRACTION-RECORD.md`, and the docstrings of `Hash/Sha256/Audit.lean` and
+   `Hash/Sha3/Audit.lean`. Then push and re-pin, which belong to the coordinator.
+5. **M1 on a `Laws` chain** with `@[semantics]` and `@[aesop]`: owed with the `Laws` conversion.
+6. **Not run**: `leanchecker` in any form (the brief forbids a bare run).
 
 ## Proposed decisions rows (proposals only)
 
-- **P1, amending row 200's M2.** M2 passes on the four conditions of option 1 above. The raw
-  count is reported, not compared. Owner.
-- **P2, the `hash` re-pin.** Accept 420 and 576 on `module-system` and update the `hash` prose,
-  or change both family audits to count authored declarations only. Owner, with the `hash`
-  maintainers.
+- **P1, row 200's M2 (the coordinator is amending it).** "Every authored user name before the
+  conversion is present after it." For the measurement, an auxiliary is a name with a component
+  that Lean's naming gives auxiliaries: `Name.isInternal`, `match_N`, `eq_N`, `eq_def`, `proof_N`,
+  `splitter`, `congr_simp` and `else_eq`.
+- **P2, the T13 modules.** The specialization sites stay non-module until a measured LCNF diff
+  allows them; the same check guards every later chain. Owner.
 - **P3, the estate gate's line.** The line reports authored and auxiliary declarations as two
-  numbers, and M2 compares the authored one. Lean's predicates and the `_proof_N` and `match_N`
-  spellings name the auxiliaries. Coordinator.
+  numbers, and M2 compares the authored one. Coordinator.
+- **P4, an `rfl` proof is interface.** Recorded beside M1: changing a theorem's proof between `rfl`
+  and anything else rebuilds module importers, because the `@[defeq]` tags are exported. Coordinator.
 
 ## Deviations from the brief
 
 - One `lake env printenv LAKE_CACHE_DIR` ran in `hash` outside the lock, before the first build.
-  It reads the TOML configuration and builds nothing. Every later call went through the lock.
-- Every `hash` build ran with `LAKE_ARTIFACT_CACHE=false`. Lake reads the artifact cache by
-  default even where no package enables it (`Package.isArtifactCacheReadable`,
-  `Lake/Config/Monad.lean`), and the estate stores `hash`'s artifacts there. Without the flag the
-  baseline could have been restored, not built.
-- M4 ran at `LEAN_NUM_THREADS=2`, the lock's bound, not the note's 3.
-- The default targets were named one by one, never a bare `lake build`. The trust self-test runs
-  its own `lake build` without targets inside its throwaway copy, by its design, within one slot.
-- The re-pin of the two `hash` audit lines is beyond the brief's file list. It is the only way
-  the branch builds green, and the commit message says so.
-- The commit message was amended once, to add M4's later pairs, before anything else read it.
-- The estate scan read the worktree's sources without building or editing anything.
+  It reads the TOML configuration and builds nothing.
+- Every `hash` build ran with `LAKE_ARTIFACT_CACHE=false`. Lake reads the artifact cache by default
+  even where no package enables it (`Package.isArtifactCacheReadable`, `Lake/Config/Monad.lean`).
+  Without the flag the baseline could have been restored, not built.
+- `hash`'s M4 ran at `LEAN_NUM_THREADS=2`, the lock's bound, not the note's 3.
+- The `hash` default targets were named one by one. Its trust self-test runs its own `lake build`
+  without targets inside its throwaway copy, by its design, within one slot.
+- The re-pin of the two `hash` audit lines is beyond the brief's file list; the coordinator accepted
+  it.
+- The `hash` commit message was amended once, to add M4's later pairs, before anything else read it.
+- The emitter switch uses the manifest's existing per-group `Flags` field, not a new field. The
+  `Variances` producer has no group, so it reads a new top-level `VariancesFlags`.
+- The built emitters, run through `lake env`, wrote the 13 generated files in place. So a chain
+  needed no rebuild of the generator executables first. Check-mode `generate.py` then reproduced
+  each file.
+- After chains A and B the LCNF outputs changed. I judged both changes explained and harmless, and
+  committed the regenerated outputs with their chains, as AGENTS.md asks for a producer's changed
+  output. Chain D's change I could not show harmless, so I reverted those seven modules.
+- (a) landed without a red-control fixture, for the reason given in its row.

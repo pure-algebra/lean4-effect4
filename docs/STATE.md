@@ -64,11 +64,11 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   kernel in one environment.
 - **The proof-style ratchet** (`Test/Audit/ProofStyle.lean`): no new `simp_all`, `first`, `try`
   or `simp` without `only` under `src/Effect4`.
-- **The module system** (decisions row 200). `hash` is converted on a local branch, not pushed
-  (`/Users/pooks/Dev/lean4-hash`, branch `module-system`). M1 and M3 hold, and M2 is amended to
-  a coverage test. The estate's package-free modules are converting in the worktree
-  `/Users/pooks/Dev/lean4-effect4-modules`. See the
-  [seat M receipt](research/2026-10-04-seat-M-receipt.md).
+- **The module system** (decisions rows 200 and 202). 96 of the 103 package-free core modules
+  outside `Laws` are modules, merged from `modules/cutover` (`cb8f510a`). M1 holds, and M2 holds as
+  amended, with 168 renumbered auxiliaries. Seven specialization sites stay non-module (T13, row
+  202). `hash` is converted on a local branch, not pushed (`/Users/pooks/Dev/lean4-hash`, branch
+  `module-system`). See the [seat M receipt](research/2026-10-04-seat-M-receipt.md).
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
