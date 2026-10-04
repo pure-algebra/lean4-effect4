@@ -1,5 +1,7 @@
-import Effect4.Machine.Fiber
-import Effect4.Machine.Exit
+module
+
+public import Effect4.Machine.Fiber
+public import Effect4.Machine.Exit
 /-!
 # Fiber vocabulary shared with the reference machine
 
@@ -9,6 +11,8 @@ mode, the scope mode, the frozen race bookkeeping `raceComplete`, and the
 interrupt cause. The controller calculus this module used to hold was retired
 on 2026-09-04 with `docs/research/2026-09-04-retire-old-machines.md`.
 -/
+
+@[expose] public section
 set_option autoImplicit false
 namespace Effect4.Supervision
 universe u v w

@@ -1,5 +1,9 @@
-import Effect4.Data.Json
-import Effect4.Data.Optic
+module
+
+public import Effect4.Data.Json
+public import Effect4.Data.Optic
+meta import Effect4.Data.Json
+meta import Effect4.Data.Optic
 
 /-!
 # Data.JsonOptic — the optic at a key of a JSON object, with its laws
@@ -21,6 +25,8 @@ Prisms (`Optic.id<S>().tag("Circle")`) have no model here: a prism over `Json` w
 again `Json` cannot satisfy `preview_replace` for a replacement that lacks the tag. The row
 is owed and the emitter says so in its header.
 -/
+
+@[expose] public section
 
 namespace Effect4.Json
 

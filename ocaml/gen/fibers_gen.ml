@@ -679,13 +679,13 @@ let reason_annotations_lookup (self : (string * _) list) (key : string) : _ opti
 
 
 
-(* LCNF mono: List.mapTR.loop._at_._private.Effect4.Machine.Cause.0.Effect4.ReasonAnnotations.annotateEntries.spec_0._redArg (overwrite : Bool) (extra : List (Prod String lcAny)) (a.1 : List (Prod String lcAny)) (a.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.ReasonAnnotations.annotateEntries.spec_0._redArg (overwrite : Bool) (extra : List (Prod String lcAny)) (a.1 : List (Prod String lcAny)) (a.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
 
-let rec list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0 (overwrite : bool) (extra : (string * _) list) (a_1 : (string * _) list) (a_2 : (string * _) list) : (string * _) list =
+let rec list_map_tr_loop_at_reason_annotations_annotate_entries_spec_0 (overwrite : bool) (extra : (string * _) list) (a_1 : (string * _) list) (a_2 : (string * _) list) : (string * _) list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
-      list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0 overwrite extra tail_5 _x_8 in
+      list_map_tr_loop_at_reason_annotations_annotate_entries_spec_0 overwrite extra tail_5 _x_8 in
       if overwrite then (match head_4 with
           | fst_1, _ -> (let _x_10 = reason_annotations_lookup extra fst_1 in
             match _x_10 with
@@ -721,9 +721,9 @@ let reason_annotations_keys (self : (string * _) list) : string list =
 
 
 
-(* LCNF mono: List.filterTR.loop._at_._private.Effect4.Machine.Cause.0.Effect4.ReasonAnnotations.annotateEntries.spec_1._redArg (self : List (Prod String lcAny)) (a.1 : List (Prod String lcAny)) (a.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.ReasonAnnotations.annotateEntries.spec_1._redArg (self : List (Prod String lcAny)) (a.1 : List (Prod String lcAny)) (a.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
 
-let rec list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 (self : (string * _) list) (a_1 : (string * _) list) (a_2 : (string * _) list) : (string * _) list =
+let rec list_filter_tr_loop_at_reason_annotations_annotate_entries_spec_1 (self : (string * _) list) (a_1 : (string * _) list) (a_2 : (string * _) list) : (string * _) list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
@@ -731,17 +731,17 @@ let rec list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_a
           let _f_7 = inst_beq_of_decidable_eq__red_arg__lam_0 _x_6 in
           let _x_8 = reason_annotations_keys self in
           let _x_9 = List.exists (_f_7 fst_1) _x_8 in
-          if _x_9 then list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self tail_5 a_2 else (let _x_10 = head_4 :: a_2 in
-            list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self tail_5 _x_10)))
+          if _x_9 then list_filter_tr_loop_at_reason_annotations_annotate_entries_spec_1 self tail_5 a_2 else (let _x_10 = head_4 :: a_2 in
+            list_filter_tr_loop_at_reason_annotations_annotate_entries_spec_1 self tail_5 _x_10)))
 
 
 
-(* LCNF mono: _private.Effect4.Machine.Cause.0.Effect4.ReasonAnnotations.annotateEntries._redArg (self : List (Prod String lcAny)) (extra : List (Prod String lcAny)) (overwrite : Bool) : List (Prod String lcAny) *)
+(* LCNF mono: Effect4.ReasonAnnotations.annotateEntries._redArg (self : List (Prod String lcAny)) (extra : List (Prod String lcAny)) (overwrite : Bool) : List (Prod String lcAny) *)
 
 let reason_annotations_annotate_entries (self : (string * _) list) (extra : (string * _) list) (overwrite : bool) : (string * _) list =
   let _x_1 = [] in
-  let _x_2 = list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0 overwrite extra self _x_1 in
-  let _x_3 = list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self extra _x_1 in
+  let _x_2 = list_map_tr_loop_at_reason_annotations_annotate_entries_spec_0 overwrite extra self _x_1 in
+  let _x_3 = list_filter_tr_loop_at_reason_annotations_annotate_entries_spec_1 self extra _x_1 in
   _x_2 @ _x_3
 
 
@@ -2091,26 +2091,26 @@ let frame_fiber_resume_cause (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool)
       let _x_14 = _x_12 :: _x_13 in
       let _x_15 = events @ _x_14 in
       _x_11, _x_15) in
-  let _jp_17 = fun _y_18 _y_19 _y_20 _y_21 _y_22 _y_23 -> let _x_24 = prim_arm_e inst_1 inst_2 inst_3 inst_4 interp _y_22 _y_19 _y_23 in
+  let _jp_17 = fun _y_18 _y_19 _y_20 _y_21 _y_22 _y_23 -> let _x_24 = prim_arm_e inst_1 inst_2 inst_3 inst_4 interp _y_20 _y_21 _y_23 in
   match _x_24 with
-    | None -> _jp_9 _y_20
+    | None -> _jp_9 _y_22
     | Some val__25 -> (match val__25 with
         | fst_26, _ -> (let _x_28 = [] in
-          match (_y_21 : (_, _, _, _, _, _, _) frame_fiber) with
+          match (_y_18 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_29 = _x_28 @ stack in
               let _x_30 = ({ current = fst_26; stack = _x_29; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_31 = FrameStep_running _x_30 in
-              let _x_32 = prim_finalizer_events _y_22 _y_20 in
-              let _x_33 = _y_18 @ _x_32 in
+              let _x_32 = prim_finalizer_events _y_20 _y_22 in
+              let _x_33 = _y_19 @ _x_32 in
               let _x_34 = list_map_tr_loop _f_5 _x_28 _x_28 in
               let _x_35 = _x_33 @ _x_34 in
               _x_31, _x_35))) in
   let _jp_37 = fun _y_38 _y_39 _y_40 _y_41 _y_42 -> match provided with
     | None -> (let _x_43 = None in
-      _jp_17 _y_38 _y_42 _y_39 _y_41 _y_40 _x_43)
+      _jp_17 _y_38 _y_39 _y_40 _y_42 _y_41 _x_43)
     | Some val__44 -> (let _x_45 = frame_pop_delivered_exit pop val__44 in
       let _x_46 = Some _x_45 in
-      _jp_17 _y_38 _y_42 _y_39 _y_41 _y_40 _x_46) in
+      _jp_17 _y_38 _y_39 _y_40 _y_42 _y_41 _x_46) in
   let _jp_47 = fun _y_48 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_48 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -2124,8 +2124,8 @@ let frame_fiber_resume_cause (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool)
               let _x_56 = FrameStep_running _x_55 in
               _x_56, events_1))
         | ContAnswer_frame frame_58 -> (match carried_cause with
-            | None -> _jp_37 events_1 delivered frame_58 fiber cause
-            | Some val__59 -> _jp_37 events_1 delivered frame_58 fiber val__59)
+            | None -> _jp_37 fiber events_1 frame_58 delivered cause
+            | Some val__59 -> _jp_37 fiber events_1 frame_58 delivered val__59)
         | ContAnswer_empty -> _jp_9 delivered) in
   match provided with
     | None -> (let _x_60 = Exit_failure cause in

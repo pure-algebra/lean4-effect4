@@ -1,3 +1,5 @@
+module
+
 /-!
 # Store.Kind
 
@@ -15,6 +17,8 @@ trips are one `decide` each and the two injectivity theorems are corollaries, th
 `RepresentationTag.tagName_injective` is proved (`src/Effect4/Schema/Representation.lean:200`).
 `export` is a Lean keyword, so the constructor is spelled `«export»`; its name is `"export"`.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

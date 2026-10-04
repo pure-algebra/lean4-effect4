@@ -1,4 +1,9 @@
-import Effect4.Store.Carrier.Utf8
+module
+
+public import Effect4.Store.Carrier.Utf8
+import all Init.Data.String.Defs
+meta import Effect4.Store.Carrier.Digits
+meta import Effect4.Store.Carrier.Utf8
 
 /-!
 # Store.Val
@@ -41,6 +46,8 @@ is not content, `handles` lists the ones a tree carries, and `encode?` is the ch
 bytes only when the tree is well-formed, so the size condition of `decode_encode` is a
 receipt, never an assumption (review R5).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

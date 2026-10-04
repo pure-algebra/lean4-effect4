@@ -1,3 +1,5 @@
+module
+
 /-!
 # The type language's declaration
 
@@ -25,6 +27,8 @@ and the constructor cannot land. A constructor is **appended**, never inserted, 
 mirror pins declaration order (`scripts/lib/program_structure.py`) and the wire tags are
 positional (`tools/Effect4Gen/wire-tags.json`).
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

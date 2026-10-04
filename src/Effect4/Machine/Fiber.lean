@@ -1,10 +1,14 @@
-import Std
+module
+
+public import Std
 
 /-!
 # Fiber identity
 
 Fiber identity, the one name the reference machine and the old calculi share.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

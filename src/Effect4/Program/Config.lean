@@ -1,5 +1,9 @@
-import Effect4.Data.Row
-import Effect4.Machine.Key
+module
+
+public import Effect4.Data.Row
+public import Effect4.Machine.Key
+meta import Effect4.Machine.Key
+meta import Effect4.Data.Row
 
 /-!
 # Program.Config — configuration as a provider algebra, a reader, and a requirement row
@@ -51,6 +55,8 @@ Three places where the model deliberately parts company with rc.112, each pinned
 | Payoff | the requirement row of a configuration: `residual` is empty exactly when every path the term may read is supplied, and `absent_names_missing` says a run that came back absent names one that was not |
 | Anti-vacuity | six counterexample rows, `E4-CONF-CE-001..006`, each a pair of `#guard`s that would both have to change to fake the law |
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 
@@ -271,14 +277,17 @@ characters (`String.ts:1664`), then upper-case each token and join with `_`. Bot
 regexps consume their match, but neither can suppress a boundary the other would find, so
 the character-pair test below is the same function. -/
 
+set_option backward.privateInPublic true in
 private def isWordChar (c : Char) : Bool := c.isAlpha || c.isDigit
 
+set_option backward.privateInPublic true in
 /-- The two `CONFIG_SPLIT_REGEXP` boundaries as a test on a character pair with one
 character of lookahead (`String.ts:1661`). -/
 private def splitsHere (prev cur : Char) (next : Option Char) : Bool :=
   ((prev.isLower || prev.isDigit) && cur.isUpper)
     || (prev.isUpper && cur.isUpper && (match next with | some n => n.isLower | none => false))
 
+set_option backward.privateInPublic true in
 private def configTokens : List Char → List Char → List (List Char) → List (List Char)
   | [], cur, acc => if cur.isEmpty then acc.reverse else (cur.reverse :: acc).reverse
   | c :: rest, cur, acc =>
@@ -291,6 +300,8 @@ private def configTokens : List Char → List Char → List (List Char) → List
             if splitsHere p c rest.head? then configTokens rest [c] (cur.reverse :: acc)
             else configTokens rest (c :: cur) acc
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- `Str.configCase` (`String.ts:1760-1761`), the casing `ConfigProvider.constantCase` uses. -/
 def configCase (s : String) : String :=
   String.intercalate "_" ((configTokens s.toList [] []).map (fun t => (String.ofList t).toUpper))
@@ -374,6 +385,7 @@ def provided {Name : Type} : List (Path Name × String) → List (Path Name)
       | some _ => q :: provided rest
       | none => provided rest
 
+set_option backward.privateInPublic true in
 private def distinct {α : Type} [DecidableEq α] : List α → List α
   | [] => []
   | a :: as =>
@@ -388,6 +400,8 @@ def nextSeg {Name : Type} [DecidableEq Name] : Path Name → Path Name → Optio
   | _ :: _, [] => none
   | a :: p, b :: q => if a = b then nextSeg p q else none
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- The distinct immediate children of `p` (`ConfigProvider.ts:1230-1231`). -/
 def childrenAt {Name : Type} [DecidableEq Name]
     (entries : List (Path Name × String)) (p : Path Name) : List (Seg Name) :=
@@ -1033,6 +1047,7 @@ def lookupTmpl {Name : Type} [DecidableEq Name] (n : Name) :
   | [] => none
   | (m, t) :: rest => if m = n then some t else lookupTmpl n rest
 
+set_option backward.privateInPublic true in
 private def catOk {Name : Type} :
     Except (Refusal Name) String → Except (Refusal Name) String → Except (Refusal Name) String
   | .ok a, .ok b => .ok (a ++ b)
@@ -1048,6 +1063,7 @@ private theorem catOk_ok {Name : Type} {x y : Except (Refusal Name) String} {r :
     | error e => simp [catOk] at h
     | ok sb => exact ⟨sa, sb, rfl, rfl, by simpa [catOk] using h.symm⟩
 
+set_option backward.privateInPublic true in
 /-- What a resolved reference does with the text it expanded to: the empty string counts as
 missing and falls back to the `:-` default (`ConfigProvider.ts:1392-1394`). -/
 private def refFinish {Name : Type} (d : Option String) :
@@ -1055,6 +1071,8 @@ private def refFinish {Name : Type} (d : Option String) :
   | .error e => .error e
   | .ok s => .ok (if s = "" then d.getD "" else s)
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- One expansion pass, with the recursive step supplied. A missing name, and a name that
 expands to the empty string, both fall back to the `:-` default or to `""`
 (`ConfigProvider.ts:1392-1394`). -/

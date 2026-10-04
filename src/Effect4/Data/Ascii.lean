@@ -1,4 +1,7 @@
-import Std
+module
+
+public import Std
+import all Init.Data.String.Defs
 
 /-!
 # ASCII byte access
@@ -7,6 +10,8 @@ The byte view of a String uses its UTF-8 array and stays within the repository's
 axiom ceiling. `asciiChars?` refuses bytes above 127. The local theorems describe
 only this ASCII fragment; the full UTF-8 codec is `src/Effect4/Store/Carrier/Utf8.lean`.
 -/
+
+@[expose] public section
 
 namespace Effect4.Data.Ascii
 

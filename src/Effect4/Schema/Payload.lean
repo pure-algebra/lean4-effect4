@@ -1,4 +1,6 @@
-import Effect4.Data.Json
+module
+
+public import Effect4.Data.Json
 
 /-!
 # Schema payload leaves
@@ -15,6 +17,8 @@ constraints belong to the persisted host decoding boundary; they are not
 hidden inside constructors here. Row 39 retires the separate Lean field-admission
 judgment while retaining these raw carriers.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

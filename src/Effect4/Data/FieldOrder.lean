@@ -1,4 +1,7 @@
-import Std
+module
+
+public import Std
+import all Init.Data.String.Defs
 
 /-!
 # The canonical field order (decisions rows 119, 157, 165; probe P, question 1)
@@ -20,6 +23,8 @@ judgment (`firstRepeated_eq_none_iff`): permutation invariance holds exactly on 
 
 Ported from `docs/research/2026-10-01-type-language-probe/P/probes/P1FieldOrder.lean`.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

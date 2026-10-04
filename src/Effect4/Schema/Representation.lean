@@ -1,5 +1,7 @@
-import Std
-import Effect4.Schema.Payload
+module
+
+public import Std
+public import Effect4.Schema.Payload
 
 /-!
 # Schema representation tag census
@@ -22,6 +24,8 @@ rc.112 — the eleven keyword tags and `objectKeyword` all persist as optional
 annotations plus ordered checks — and they remain twelve distinct tags,
 because the persisted `_tag` string is itself observable content.
 -/
+
+@[expose] public section
 
 namespace Effect4
 
@@ -805,6 +809,7 @@ is compared with `==` through the derived instance of its own type, which is
 where `DecidableEq Float64` and `DecidableEq Json` enter.
 -/
 
+set_option backward.privateInPublic true in
 mutual
 
 /-- Structural equality on representations, as a Boolean. -/
@@ -936,6 +941,8 @@ private def Check.beqList : List Check → List Check → Bool
 
 end
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 mutual
 
 /--
@@ -946,7 +953,7 @@ representations.
 the only case that recurses into this theorem itself; every other recursive
 position goes through one of the list companions below.
 -/
-private theorem Representation.beq_iff (first second : Representation) :
+theorem Representation.beq_iff (first second : Representation) :
     Representation.beq first second = true ↔ first = second := by
   cases first
   case suspend ann₁ cs₁ th₁ =>
@@ -1038,7 +1045,7 @@ private theorem Representation.beqOptionCheckAnnotation_iff
 termination_by structural first
 
 /-- Boolean structural equality agrees with propositional equality on checks. -/
-private theorem Check.beq_iff (first second : Check) :
+theorem Check.beq_iff (first second : Check) :
     Check.beq first second = true ↔ first = second := by
   cases first <;> cases second <;>
     simp [Check.beq, Representation.beqCheckAnnotation_iff,
@@ -1058,10 +1065,14 @@ termination_by structural first
 
 end
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- `SC-REP-03`, payload half: decidable structural equality on representations. -/
 instance : DecidableEq Representation :=
   fun first second => decidable_of_iff _ (Representation.beq_iff first second)
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- `SC-REP-03`, payload half: decidable structural equality on checks. -/
 instance : DecidableEq Check :=
   fun first second => decidable_of_iff _ (Check.beq_iff first second)

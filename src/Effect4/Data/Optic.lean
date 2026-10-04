@@ -1,4 +1,6 @@
-import Std
+module
+
+public import Std
 
 /-!
 # Small lawful optics
@@ -12,6 +14,8 @@ The nested `Lawful` structures state the equations used by callers.  The
 composition theorems make those equations reusable rather than requiring each
 Schema dimension to prove them again.
 -/
+
+@[expose] public section
 
 namespace Effect4
 
@@ -207,6 +211,7 @@ end Optional
 
 namespace Traversal
 
+set_option backward.privateInPublic true in
 private def collectMany (collect : A → List B) : List A → List B
   | [] => []
   | head :: tail => collect head ++ collectMany collect tail
@@ -220,6 +225,8 @@ private theorem map_append_exact (f : A → B) (first second : List A) :
         f head :: (tail.map f ++ second.map f)
       rw [ih]
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- Compose ordered finite traversals from outer to inner. -/
 def compose (outer : Traversal S A) (inner : Traversal A B) : Traversal S B where
   collect source := collectMany inner.collect (outer.collect source)

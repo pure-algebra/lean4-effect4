@@ -1,4 +1,6 @@
-import Std
+module
+
+public import Std
 
 /-!
 # Semantics.Cause.lean
@@ -18,6 +20,8 @@ Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/core.ts` 137-319 and
 `Test/contracts/cause-exit.contract.md`, held by the battery
 `Test/Machine/Semantics/CauseExitContract.lean`.
 -/
+
+@[expose] public section
 
 namespace Effect4
 
@@ -76,7 +80,7 @@ theorem lookup_empty {α : Type u} (key : String) :
     (empty : ReasonAnnotations α).lookup key = none := rfl
 
 /-- The merged entry list of `annotate`: kept slots, then the new keys. -/
-private def annotateEntries {α : Type u} (self extra : ReasonAnnotations α)
+def annotateEntries {α : Type u} (self extra : ReasonAnnotations α)
     (overwrite : Bool) : List (String × α) :=
   self.entries.map (fun entry =>
     if overwrite = true then
@@ -123,6 +127,7 @@ private theorem map_fst_filter {α : Type u} (entries : List (String × α))
         List.filter_cons_of_pos (by simp only [decide_eq_true_eq]; exact hkeep),
         ih]
 
+set_option backward.privateInPublic true in
 private theorem annotateEntries_keys {α : Type u} (self extra : ReasonAnnotations α)
     (overwrite : Bool) :
     (annotateEntries self extra overwrite).map Prod.fst =
@@ -131,6 +136,8 @@ private theorem annotateEntries_keys {α : Type u} (self extra : ReasonAnnotatio
   rw [List.map_append, map_fst_annotate, map_fst_filter]
   rfl
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- Merge `extra` into `self`: kept slots, in-place overwrite, appended tail. -/
 def annotate {α : Type u} (self extra : ReasonAnnotations α) (overwrite : Bool) :
     ReasonAnnotations α where
@@ -974,6 +981,7 @@ theorem combine_self {ε δ ι α : Type u} [DecidableEq ε] [DecidableEq δ]
     filter_not_mem self.reasons self.reasons (fun _ hreason => hreason),
     List.append_nil]
 
+set_option backward.privateInPublic true in
 private def squashOf {ε δ ι α : Type u} (errors : List ε) (defects : List δ)
     (reasons : List (Reason ε δ ι α)) : Squashed ε δ :=
   match errors with
@@ -986,6 +994,8 @@ private def squashOf {ε δ ι α : Type u} (errors : List ε) (defects : List �
       | [] => Squashed.emptyCause
       | _ :: _ => Squashed.interruptedWithoutError
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- rc.112 `causeSquash`: partition first, then choose the first arm that fires. -/
 def squash {ε δ ι α : Type u} (self : Cause ε δ ι α) : Squashed ε δ :=
   squashOf (self.reasons.filterMap Reason.error?)

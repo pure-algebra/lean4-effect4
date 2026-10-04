@@ -1,4 +1,6 @@
-import Std
+module
+
+public import Std
 
 /-!
 # Ingest.Taxonomy
@@ -9,6 +11,8 @@ literal detail templates. A detail substitutes its one `{value}` field, never pa
 The enumeration pattern follows foldlab Cas/Lift/Taxonomy.lean at
 4005d34f249cda25134ac2bddff514e3a068bc1e (read-only source).
 -/
+
+@[expose] public section
 
 namespace Effect4.Ingest
 

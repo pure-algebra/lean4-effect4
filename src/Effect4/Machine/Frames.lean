@@ -1,4 +1,6 @@
-import Effect4.Machine.Exit
+module
+
+public import Effect4.Machine.Exit
 
 /-!
 # Runtime.Runtime.lean
@@ -43,6 +45,8 @@ Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/core.ts` 365-583 and
 `E4-RUN-CE-021`, witnessed in
 `Test/Counterexamples/Machine/Runtime/Frames.lean`.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

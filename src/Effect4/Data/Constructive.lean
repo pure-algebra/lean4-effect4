@@ -1,3 +1,5 @@
+module
+
 /-!
 # Effect4.Data.Constructive — Choice-free standard library foundation
 
@@ -10,6 +12,8 @@ identities (e.g. `Option.bind_eq_some` or `List.mem_iff`). Using this module gua
 reasoning over optional fields, associative lookup lists, and decidable predicates will never
 silently pull in `Classical.choice` and fail the library axiom audit.
 -/
+
+@[expose] public section
 
 namespace Effect4.Constructive
 

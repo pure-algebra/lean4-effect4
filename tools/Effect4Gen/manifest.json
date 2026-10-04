@@ -22,11 +22,13 @@
     "module whose code the appended guards run. Absent, the file keeps its bytes. The top-level",
     "`VariancesFlags` does the same for tools/Tools/Variances.lean's core module."
   ],
+  "VariancesFlags": ["--module"],
   "groups": [
     {
       "Note": "The nested companions of `Ty` (decisions rows 119, 162, 171): the data wave's record, tuple and reference heads hold a list of children, so Lean derives no `induction`, no `DecidableEq` and only a partial `Repr`; the fold generator's `elim` kind writes the single-motive eliminator (registered `@[induction_eliminator]`), the structural equality with its `iff` and the `DecidableEq` instance, and the structural `Repr`, from the declaration alone. First, because every group that reads `Ty` reads its equality.",
       "Name": "TyEq",
       "Tool": "tools/Effect4Gen/Fold.lean",
+      "Flags": ["--module"],
       "Imports": "Effect4.Program.TyCore",
       "Out": "src\\Effect4\\Program\\TyEq.lean",
       "Guards": "",

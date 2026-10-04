@@ -1,4 +1,6 @@
-import Lean
+module
+
+public meta import Lean
 
 /-!
 # Program.FoldOf — a hand traversal becomes its algebra, with the proof
@@ -46,6 +48,8 @@ order, `N.XAlgebra (params…) (R : XFam → Type u)` with fields `<fam>_<ctor>`
 member-then-constructor order, `N.XHom alg` with fields `f_<fam>` then `h_<fam>_<ctor>` in the
 same order, and `N.hom_eq_cata_<fam>`, `N.cata_<fam>`.
 -/
+
+public meta section
 
 open Lean Meta Elab Command
 

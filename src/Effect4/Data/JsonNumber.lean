@@ -1,4 +1,6 @@
-import Effect4.Data.Json
+module
+
+public import Effect4.Data.Json
 
 /-!
 # Data.JsonNumber
@@ -18,6 +20,8 @@ the same way. The law that is not here: `binary64OfNat` is exact below 2^53 and 
 toward zero above it, so it is not injective on `Nat` (`Surface/Annotate.lean:58`); its
 inverse and that theorem are owed.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

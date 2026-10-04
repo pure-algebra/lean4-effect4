@@ -1,4 +1,6 @@
-import Std
+module
+
+public import Std
 
 /-!
 # Data.Json.lean
@@ -122,6 +124,8 @@ choice, not an accident: `WellFounded.fix` would put `Quot.sound` into the
 receipt of every consequence, and the structural elaborator does not refuse
 this carrier, so there is no reason to spend it.
 -/
+
+@[expose] public section
 
 namespace Effect4
 
@@ -359,6 +363,7 @@ theorem cases_census (value : Json) :
   | arr elements => exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨elements, rfl⟩))))
   | obj entries => exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨entries, rfl⟩))))
 
+set_option backward.privateInPublic true in
 mutual
 
 /--
@@ -422,6 +427,7 @@ private theorem beqEntries_iff {as : List (String × Json)}
       simp only [beqEntries, Bool.and_eq_true, decide_eq_true_eq, List.cons.injEq,
         Prod.ext_iff, hhead, htail, and_assoc]
 
+set_option backward.privateInPublic true in
 /--
 `beq` decides structural equality.
 
@@ -437,6 +443,8 @@ private theorem beq_iff : ∀ a b : Json, beq a b = true ↔ a = b := by
   | arr elements ih => intro b; cases b <;> simp [beq, beqList_iff ih]
   | obj entries ih => intro b; cases b <;> simp [beq, beqEntries_iff ih]
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /--
 Decidable structural equality on the raw JSON tree.
 
@@ -450,6 +458,8 @@ instance instDecidableEqJson : DecidableEq Json := fun a b =>
   else
     isFalse fun hab => h ((beq_iff a b).mpr hab)
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 mutual
 
 /--
@@ -477,6 +487,8 @@ private def numbersFiniteEntries : List (String × Json) → Bool
   | entry :: rest => numbersFinite entry.2 && numbersFiniteEntries rest
 end
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 mutual
 
 /--

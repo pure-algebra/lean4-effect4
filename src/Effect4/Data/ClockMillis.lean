@@ -1,5 +1,8 @@
-import Effect4.Data.Ascii
-import Init.Data.Nat.ToString
+module
+
+public import Effect4.Data.Ascii
+public import Init.Data.Nat.ToString
+import all Init.Data.Nat.ToString
 
 /-!
 # Exact logical milliseconds
@@ -13,6 +16,8 @@ refuses an observation outside the target's natural-number profile (DI-56).
 Decimal transport accepts exactly `0` or a nonzero digit followed by digits. Large clock
 adjustments enter through that transport, without first passing through a host integer.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

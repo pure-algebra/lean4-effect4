@@ -1,9 +1,13 @@
-import Effect4.Data.Ascii
-import Init.Data.Nat.ToString
+module
+
+public import Effect4.Data.Ascii
+public import Init.Data.Nat.ToString
 
 /-! Canonical natural text for tuple indices, service keys and variable-name laws.
 The byte fold is shared with the existing codegen decoder; it does not assign a nominal type.
 Exact reconstruction laws live in `Laws/Data/NatDecimal.lean`. -/
+
+@[expose] public section
 
 namespace Effect4.Data.NatDecimal
 

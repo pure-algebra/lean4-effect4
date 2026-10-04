@@ -19,13 +19,13 @@ Effect4.Cause.combine._redArg	cause_combine	false	4	0	0	0	2	3	0	0	0	0	4	0	0	0	0	
 Effect4.Cause.interrupt._redArg	cause_interrupt	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	6	4	0	0	0	1	0	9207850800561856016
 List.mapTR.loop._at_.Effect4.Cause.annotate.spec_0._redArg	list_map_tr_loop_at_cause_annotate_spec_0	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	10	0	2	0	1	0	7182849168057335337
 Effect4.Cause.dedup._redArg	cause_dedup	true	5	0	0	0	1	2	0	0	0	0	5	0	0	0	0	0	0	0	0	2	15	0	2	0	1	0	16833849552514014968
-Effect4.Reason.annotate._redArg	reason_annotate	false	6	0	0	0	1	3	0	0	0	0	6	0	0	0	0	0	0	0	0	12	15	0	3	0	1	0	5088107103815554821
+Effect4.Reason.annotate._redArg	reason_annotate	false	6	0	0	0	1	3	0	0	0	0	6	0	0	0	0	0	0	0	0	12	15	0	3	0	1	0	14956030718678669226
 Effect4.Cause.dedup._redArg._lam_0	cause_dedup__red_arg__lam_0	false	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	0	6	0	2	0	1	0	18184455622027487933
 List.filterTR.loop._redArg	list_filter_tr_loop	true	5	0	0	0	2	3	0	0	0	0	4	1	0	0	0	0	0	0	0	1	10	0	4	0	1	0	16596727924625328097
-_private.Effect4.Machine.Cause.0.Effect4.ReasonAnnotations.annotateEntries._redArg	reason_annotations_annotate_entries	false	4	0	0	0	0	1	0	0	0	0	4	0	0	0	0	0	0	0	0	1	9	0	0	0	1	0	3304448200719879409
+Effect4.ReasonAnnotations.annotateEntries._redArg	reason_annotations_annotate_entries	false	4	0	0	0	0	1	0	0	0	0	4	0	0	0	0	0	0	0	0	1	9	0	0	0	1	0	26194177036384998
 Effect4.instDecidableEqReason.decEq._redArg	inst_decidable_eq_reason_dec_eq	false	9	0	0	0	7	9	0	0	0	0	7	2	0	0	0	0	0	0	0	0	16	0	12	3	1	0	16710702113939345489
-List.mapTR.loop._at_._private.Effect4.Machine.Cause.0.Effect4.ReasonAnnotations.annotateEntries.spec_0._redArg	list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0	true	5	0	1	3	4	2	0	0	0	0	5	0	0	0	0	0	0	0	0	3	14	0	7	0	1	0	5635981845798543759
-List.filterTR.loop._at_._private.Effect4.Machine.Cause.0.Effect4.ReasonAnnotations.annotateEntries.spec_1._redArg	list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1	true	8	0	0	0	3	3	0	0	0	0	8	0	0	0	0	0	0	0	0	1	14	0	5	0	1	0	12422886137411596854
+List.mapTR.loop._at_.Effect4.ReasonAnnotations.annotateEntries.spec_0._redArg	list_map_tr_loop_at_reason_annotations_annotate_entries_spec_0	true	5	0	1	3	4	2	0	0	0	0	5	0	0	0	0	0	0	0	0	3	14	0	7	0	1	0	4042450505273672491
+List.filterTR.loop._at_.Effect4.ReasonAnnotations.annotateEntries.spec_1._redArg	list_filter_tr_loop_at_reason_annotations_annotate_entries_spec_1	true	8	0	0	0	3	3	0	0	0	0	8	0	0	0	0	0	0	0	0	1	14	0	5	0	1	0	13876033518428110931
 Effect4.instDecidableEqReasonAnnotations.decEq._redArg	inst_decidable_eq_reason_annotations_dec_eq	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	8190202502108969402
 Option.instDecidableEq._redArg	option_inst_decidable_eq	false	4	0	0	0	3	4	0	0	0	0	3	1	0	0	0	0	0	0	0	0	2	0	6	0	1	0	2622474760605170674
 Effect4.ReasonAnnotations.lookup._redArg	reason_annotations_lookup	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	2	3	0	3	0	1	0	8477350987100895848

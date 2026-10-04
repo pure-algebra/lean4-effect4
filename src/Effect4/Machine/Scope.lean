@@ -1,4 +1,6 @@
-import Effect4.Machine.Exit
+module
+
+public import Effect4.Machine.Exit
 
 /-!
 # Runtime.Scope.lean
@@ -28,6 +30,8 @@ Pinned source: `vendor/effect-4.0.0-rc.112/src/Scope.ts` 99-187 and
 `Test/Machine/Runtime/ScopeContract.lean`. The proof graph is
 `docs/research/SCOPE-DAG.md`.
 -/
+
+@[expose] public section
 
 namespace Effect4
 
@@ -477,6 +481,7 @@ private theorem tableRemove_append_self [DecidableEq κ] (table : List (κ × φ
 
 /-! ### Registration -/
 
+set_option backward.privateInPublic true in
 /-- rc.112 `scopeAddFinalizerUnsafe` at the state level: the first add takes the
 inline slot, the second promotes both into a map, and a `Closed` state has no
 arm at all. -/
@@ -490,6 +495,8 @@ private def addState [DecidableEq κ] (state : ScopeState κ φ β ε δ ι α) 
   | .openMap table => .openMap (tableInsert table key finalizer)
   | .closed exit => .closed exit
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- rc.112 `scopeAddFinalizerUnsafe`. census: scope.add-finalizer -/
 def addUnsafe [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ) (finalizer : φ) :
     Scope κ φ β ε δ ι α where
@@ -691,6 +698,7 @@ theorem addExit_closed_registers_nothing [DecidableEq κ]
 
 /-! ### Removal -/
 
+set_option backward.privateInPublic true in
 /-- rc.112 `scopeRemoveFinalizerUnsafe` at the state level: clear the inline slot
 on a key match, otherwise delete from the map, and leave a non-`Open` state
 untouched. -/
@@ -704,6 +712,8 @@ private def removeState [DecidableEq κ] (state : ScopeState κ φ β ε δ ι �
   | .openEmpty => .openEmpty
   | .closed exit => .closed exit
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- rc.112 `scopeRemoveFinalizerUnsafe`. census: scope.remove-finalizer -/
 def removeUnsafe [DecidableEq κ] (self : Scope κ φ β ε δ ι α) (key : κ) :
     Scope κ φ β ε δ ι α where

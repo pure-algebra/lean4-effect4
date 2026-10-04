@@ -1,4 +1,6 @@
-import Std
+module
+
+public import Std
 
 /-!
 # First-order context keys
@@ -37,6 +39,8 @@ a service value is relative to a supplied `ServiceUniverse`, and nothing here
 consumes one. `Context/Service` and `Context/Environment` are the first nodes
 that can state what agreement between two universes buys.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

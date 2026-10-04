@@ -1,7 +1,9 @@
-import Effect4.Data.Row
-import Effect4.Data.FieldOrder
-import Effect4.Program.TyEq
-import Effect4.Program.TyVariance
+module
+
+public import Effect4.Data.Row
+public import Effect4.Data.FieldOrder
+public import Effect4.Program.TyEq
+public import Effect4.Program.TyVariance
 
 /-!
 # The inspectable type language and its canonical API
@@ -22,6 +24,8 @@ handle.
 The order's rules between two different heads that are not congruences are one table of declared
 edges on leaf heads (`leafEdges`, decisions row 177), consulted by `sub` before its rows.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

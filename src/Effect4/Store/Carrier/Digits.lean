@@ -1,3 +1,5 @@
+module
+
 /-!
 # Store.Digits
 
@@ -20,6 +22,8 @@ width: `natOfDigits_toDigits` is `Nat.mod_pow_succ` read from the top digit down
 characterised as the least width that fits (`digitCount_spec`, `digitCount_unique`), which is
 what makes "no leading zero" a theorem (`natBytes_head`) rather than a scan.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

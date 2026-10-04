@@ -1,5 +1,7 @@
-import Std
-import Effect4.Data.Constructive
+module
+
+public import Std
+public import Effect4.Data.Constructive
 
 /-!
 # Finite canonical rows
@@ -12,6 +14,8 @@ The module deliberately consumes Lean's standard order classes. It introduces
 no comparator, order package, unchecked row constructor, or semantic claim
 about what later users of a row observe.
 -/
+
+@[expose] public section
 
 namespace Effect4
 
@@ -42,6 +46,7 @@ theorem mem_def {α : Type u} [LT α] (a : α) (r : Row α) :
     a ∈ r ↔ a ∈ r.elems :=
   Iff.rfl
 
+set_option backward.privateInPublic true in
 private def decidableListMem {α : Type u} [DecidableEq α] (a : α) :
     (xs : List α) → Decidable (a ∈ xs)
   | [] => isFalse (by simp)
@@ -57,12 +62,15 @@ private def decidableListMem {α : Type u} [DecidableEq α] (a : α) :
               · exact h he
               · exact ht hm)
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 instance {α : Type u} [LT α] [DecidableEq α] (a : α) (r : Row α) :
     Decidable (a ∈ r) :=
   decidableListMem a r.elems
 
 /-! ## Structural sorted insertion -/
 
+set_option backward.privateInPublic true in
 private def insertElems {α : Type u} [LT α] [DecidableEq α] [DecidableLT α]
     (x : α) : List α → List α
   | [] => [x]
@@ -98,6 +106,7 @@ private theorem lt_of_not_lt_of_ne {α : Type u} [LE α] [LT α]
   · exact (Std.LawfulOrderLT.lt_iff b a).mpr
       ⟨hba, fun hab => hne (Std.IsPartialOrder.le_antisymm a b hab hba)⟩
 
+set_option backward.privateInPublic true in
 private theorem ascending_insertElems {α : Type u} [LE α] [LT α]
     [DecidableEq α] [DecidableLT α] [Std.IsLinearOrder α]
     [Std.LawfulOrderLT α] (x : α) {xs : List α}
@@ -128,6 +137,8 @@ private theorem ascending_insertElems {α : Type u} [LE α] [LT α]
             · exact hHead z hz
           · exact ih hTail
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- Insert one element into an already canonical row. -/
 def insert {α : Type u} [LE α] [LT α] [DecidableEq α] [DecidableLT α]
     [Std.IsLinearOrder α] [Std.LawfulOrderLT α]
@@ -520,6 +531,7 @@ theorem subset_iff {α : Type u} [LT α] (r s : Row α) :
     Subset r s ↔ ∀ a : α, a ∈ r → a ∈ s :=
   Iff.rfl
 
+set_option backward.privateInPublic true in
 private def decidableListSubset {α : Type u} [LT α] [DecidableEq α]
     (xs : List α) (s : Row α) : Decidable (∀ a : α, a ∈ xs → a ∈ s) :=
   match xs with
@@ -542,6 +554,8 @@ private def decidableListSubset {α : Type u} [LT α] [DecidableEq α]
               · exact hx
               · exact hxs a ha)
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 instance {α : Type u} [LT α] [DecidableEq α] (r s : Row α) :
     Decidable (Subset r s) :=
   decidableListSubset r.elems s

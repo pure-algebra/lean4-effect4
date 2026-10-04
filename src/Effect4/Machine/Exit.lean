@@ -1,4 +1,6 @@
-import Effect4.Machine.Cause
+module
+
+public import Effect4.Machine.Cause
 
 /-!
 # Semantics.Exit.lean
@@ -16,6 +18,8 @@ Pinned source: `vendor/effect-4.0.0-rc.112/src/internal/effect.ts` 2024-2038,
 `Test/contracts/cause-exit.contract.md`, held by the battery
 `Test/Machine/Semantics/CauseExitContract.lean`.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

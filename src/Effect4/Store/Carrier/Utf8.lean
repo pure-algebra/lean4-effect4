@@ -1,4 +1,7 @@
-import Effect4.Store.Carrier.Digits
+module
+
+public import Effect4.Store.Carrier.Digits
+import all Init.Data.String.Defs
 
 /-!
 # Store.Utf8
@@ -29,6 +32,8 @@ derived from `Char.valid`; `String.ofList_injective` is not used anywhere becaus
 `utf8Encode_data_toList` is the bridge; statements about byte arrays are made through
 `.data.toList`, the projection today's `Canonical String` instance reads.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 
