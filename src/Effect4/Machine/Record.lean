@@ -63,3 +63,15 @@ def set (value : Val) (name : String) (replacement : Val) : Option Val := do
   some (frame (Field.canonBy Field.bytesKey ((name, replacement) :: fields)))
 
 end Effect4.Machine.Record
+
+namespace Effect4.Program.Record
+
+/-- Own-field literal testing. Malformed raw frames and non-string tags miss. The one reader of
+a record's `_tag`: the record select (`Decision.recordTag`) and the `tagIs` atom
+(`NativeAtom.tagHit`, decisions row 120) both read it, so it sits below both. -/
+def tagHit (tag : String) (value : Store.Val) : Bool :=
+  match Machine.Record.lookup value "_tag" with
+  | some (some (.str actual)) => decide (actual = tag)
+  | _ => false
+
+end Effect4.Program.Record

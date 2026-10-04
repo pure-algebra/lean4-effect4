@@ -131,5 +131,8 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .instantiatedFormation _ _ => []
   | .recordTerm _ => []
   | .recordCause _ => []
+  -- The error payload's restrictions (decisions row 120): TypeScript accepts every failure value.
+  | .errorPayloadField _ _ _ => []
+  | .errorSpelling _ _ => []
 
 end Effect4.Codegen

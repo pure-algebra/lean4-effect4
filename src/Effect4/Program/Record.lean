@@ -74,10 +74,4 @@ def tagArms (tag : String) (target : Ty) : Option (Ty × Ty) :=
       Ty.ofMembers (members.filter (fun type => !(isTag tag type))))
   else none
 
-/-- Own-field literal testing. Malformed raw frames and non-string tags miss. -/
-def tagHit (tag : String) (value : Store.Val) : Bool :=
-  match Machine.Record.lookup value "_tag" with
-  | some (some (.str actual)) => decide (actual = tag)
-  | _ => false
-
 end Effect4.Program.Record

@@ -244,6 +244,59 @@ section ErrorImage
 #guard ([Err.boom, .tag 3, .tagged "A" "m", .text "s"]).all (fun e =>
   Defect.image.ofVal (Defect.image.toVal (.error e)) == some (.error e))
 
+-- Decisions row 120: an error payload is a handle-free record frame, written `ctor 4 [frame]` and
+-- read back exactly. A frame holding a handle, a frame repeating a name and a non-frame are not
+-- payloads, and their images are refused.
+def notFoundFrame : Val :=
+  (Effect4.Machine.Record.build ["_tag", "id"] [.str "NotFound", .nat 9]).getD .unit
+def handleFrame : Val := .ctor 0 [.list [.str "_tag"], .list [Val.cell ⟨0⟩]]
+#guard isPayload notFoundFrame
+#guard !isPayload handleFrame
+#guard !isPayload (.ctor 0 [.list [.str "a", .str "a"], .list [.nat 1, .nat 2]])
+#guard !isPayload (.nat 3)
+#guard (Payload.image.ofVal notFoundFrame).map (fun p => Err.image.toVal (.payload p)) =
+  some (.ctor 4 [notFoundFrame])
+#guard ((Payload.image.ofVal notFoundFrame).map Err.payload).all fun e =>
+  ofErr (Err.image.toVal e) == some e &&
+    Defect.image.ofVal (Defect.image.toVal (.error e)) == some (.error e)
+#guard ofErr (.ctor 4 [.nat 3]) = none
+#guard ofErr (.ctor 4 [handleFrame]) = none
+#guard ofErr (.ctor 4 []) = none
+-- `errOf` reads the frame and `valOfErr` gives it back; a frame with a handle stays `boom`.
+#guard valOfErr (errOf notFoundFrame) = some notFoundFrame
+#guard errOf handleFrame = .boom
+-- The admitted record error types: a required literal `_tag` (ruling (b)), payload-admissible
+-- fields (ruling (a)), and no other spelling (ruling (c)).
+def notFoundTy : Ty := .record [("_tag", false, .lit "NotFound"), ("id", false, .nat)]
+#guard supportedErrTy notFoundTy
+#guard Val.hasTy notFoundFrame notFoundTy
+#guard Val.hasTy (Val.exitErr (Cause.fail (errOf notFoundFrame))) (.causeOf notFoundTy)
+#guard Val.hasTy (Val.exitErr (Cause.fail (errOf notFoundFrame))) (.exitOf .nat notFoundTy)
+#guard !(Val.hasTy (Val.exitErr (Cause.fail (errOf notFoundFrame))) (.causeOf .string))
+#guard !supportedErrTy (.record [("id", false, .nat)])
+#guard !supportedErrTy (.record [("_tag", false, .string), ("id", false, .nat)])
+#guard !supportedErrTy (.record [("_tag", true, .lit "E"), ("id", false, .nat)])
+#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
+#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("n", false, .int)])
+#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("ref", false, NativeOp.refTy)])
+#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("at", false, .option (.handle "Db"))])
+#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("message", false, .string)])
+#guard !supportedErrTy (.record [("_tag", false, .lit "E")])
+#guard supportedErrTy (.record [("_tag", false, .lit "E"), ("message", false, .string), ("id", false, .nat)])
+#guard supportedErrTy (.record [("_tag", false, .lit "E"), ("at", false, .record [("x", false, .nat)])])
+#guard supportedErrTy (.record [("_tag", false, .lit "E"), ("ids", false, .list .nat), ("why", true, .string)])
+#guard supportedErrTy (.union notFoundTy (.prod (.lit "Other") .string))
+-- The atom `tagIs` reads a record's `_tag` beside a pair's tag; a record with another tag, or
+-- none, misses.
+#guard NativeAtom.eval .tagIs [.str "NotFound", notFoundFrame] = some (.bool true)
+#guard NativeAtom.eval .tagIs [.str "Other", notFoundFrame] = some (.bool false)
+#guard NativeAtom.eval .tagIs [.str "NotFound", .list [.str "NotFound", .str "m"]] = some (.bool true)
+#guard NativeAtom.eval .tagIs [.str "x",
+  (Effect4.Machine.Record.build ["id"] [.nat 1]).getD .unit] = some (.bool false)
+-- A promoted payload keeps its record (`Defect.ofError`, DI-31).
+#guard ((Payload.image.ofVal notFoundFrame).map fun p =>
+  Defect.ofError (.payload p) == .error (.payload p)) = some true
+
 -- Cause and failed-exit E checks reject a single bad reason in a mixed cause.
 #guard Val.hasTy (Val.exitErr (Cause.fail (.tag 1))) (.causeOf .nat)
 #guard Val.hasTy (Val.exitErr (Cause.fail (.text "lost"))) (.causeOf .string)

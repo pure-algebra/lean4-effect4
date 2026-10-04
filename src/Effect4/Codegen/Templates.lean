@@ -64,10 +64,15 @@ inductive ArgPat where
   | someTerm
   | someTy
   | daemon (b : Bool)
+  /-- The argument is a record construction. It chooses the row only: `fail` of a record is an
+  error payload, which the table refuses by name until its class face lands (decisions row
+  120, E2). -/
+  | recordTerm
 deriving DecidableEq
 
 /-- What a row prints: an expression skeleton, a statement skeleton (the rows of the statement
-family), or the refusal of an action with no public export. -/
+family), or the refusal, by name, of a construct with no rc.112 spelling yet: an action with no
+public export, a child fork into a scope, an error payload before its class face (E2). -/
 inductive RowOut where
   | tpl (t : Tpl)
   | stmt (t : StmtTpl)
@@ -143,6 +148,9 @@ call of `perform` is the last program row: a tree is a row call when it is nothi
 
 def effRows : List Row :=
   [ ⟨.eff, "succeed", [], .tpl (call "Effect.succeed" [h 0])⟩
+  -- an error payload (decisions row 120): its face is one `Data.TaggedError` class per tag,
+  -- E2's; until then the table refuses it by name rather than print a structural object
+  , ⟨.eff, "fail", [(0, .recordTerm)], .refuse errorPayloadName⟩
   , ⟨.eff, "fail", [], .tpl (call "Effect.fail" [h 0])⟩
   , ⟨.eff, "failCause", [], .tpl (call "Effect.failCause" [h 0])⟩
   , ⟨.eff, "sync", [], .tpl (call "Effect.sync" [.arrow (h 0)])⟩
@@ -290,6 +298,7 @@ def ArgPat.holds {R : EffFam → Type} : ArgPat → ArgF Op R → Bool
   | .someTerm, .optTerm (some _) => true
   | .someTy, .optTy (some _) => true
   | .daemon b, .forkOptions o => decide (o.daemon = b)
+  | .recordTerm, .term (.record _ _ _) => true
   | _, _ => false
 
 /-- The argument a pattern determines, when it determines one: what a reader supplies for an
@@ -305,11 +314,8 @@ theorem ArgPat.holds_of_supplies {R : EffFam → Type} {p : ArgPat} {a : ArgF Op
     simp only [ArgPat.supplies, Option.some.injEq] at h
     subst h
     exact v.holds_arg
-  | decisionTag => cases h
-  | decisionRecordTag => cases h
-  | someTerm => cases h
-  | someTy => cases h
-  | daemon b => cases h
+  -- every other pattern only chooses the row: it supplies nothing
+  | _ => cases h
 
 /-- Whether the argument at `i` satisfies a pattern; an argument that is not there satisfies
 none. -/

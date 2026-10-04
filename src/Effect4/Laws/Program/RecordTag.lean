@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed
 import Effect4.Program.Record
+import Effect4.Laws.Auto.Semantics
 
 /-! Literal record discriminants, serving `denote-typed` through the two decision membership laws.
 These helpers use the original value and the existing named-record frame (row 195).
@@ -93,3 +94,30 @@ theorem tagArms_hasTy {tag : String} {target hit miss : Ty} {v : Val} {allocated
   · exact nomatch harms
 
 end Effect4.Program.Record
+
+namespace Effect4.Program
+open Effect4.Machine
+
+/-- **`tagIs` is sound at records** (decisions row 120): on a value of a record type with a
+literal `_tag`, the atom answers whether that literal is the tag, as the record select reads it
+(`Record.tagHit_eq_isTag`). A record frame is no pair, so the atom's pair arm never fires on it.
+Concept `residual-program-typing`, R10. No proof reads it yet: decisions row 130's residual,
+which subtracts a caught tag from the column, is its consumer; the batteries test `catchIf` over
+`tagIs` on payloads meanwhile. It establishes nothing about the residual a hit leaves, which stays
+the whole error column until row 130. -/
+@[semantics "residual-program-typing" (requirement := R10)]
+theorem NativeAtom.tagHit_record {type : Ty} {v : Val} {allocated : List String} (tag : String)
+    (ht : (Record.tagOf type).isSome = true) (hv : Val.hasTy v type allocated = true) :
+    NativeAtom.tagHit tag v = Record.isTag tag type := by
+  rw [← Record.tagHit_eq_isTag tag ht hv]
+  cases type with
+  | record fs =>
+    cases hparts : recordParts? v with
+    | none => rw [Val.hasTy_record_none hparts] at hv; exact nomatch hv
+    | some parts =>
+      obtain ⟨ns, xs⟩ := parts
+      rw [Typed.recordParts?_eq_some hparts]
+      rfl
+  | _ => exact nomatch ht
+
+end Effect4.Program

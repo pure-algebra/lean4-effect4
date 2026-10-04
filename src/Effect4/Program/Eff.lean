@@ -48,22 +48,83 @@ def isTagTy : Ty → Bool
   | .union l r => isTagTy l && isTagTy r
   | _ => false
 
+mutual
+/-- Whether a type may type a field of a typed failure's payload (decisions row 120): first-order,
+and holding no handle by its type, at every node. The payload carrier (`Payload`,
+`Machine/Alphabets.lean`) holds handle-free record frames only, so a field's type admits only
+values that hold none (`Laws/Program/Admit.lean`, `handles_of_payloadFieldTy`). Excluded:
+`unknown` (ruling (a): refused by name), a handle, a nominal reference (`app`), a fiber, a cell, a
+deferred, an exit, a cause, a type variable, `int` (row 121: not inhabited yet) and `never`. -/
+def payloadFieldTy : Ty → Bool
+  | .nat | .string | .bool | .unit | .lit _ | .null | .undefined | .number | .bytes => true
+  | .option t | .list t => payloadFieldTy t
+  | .prod a b | .except a b | .map a b | .union a b => payloadFieldTy a && payloadFieldTy b
+  | .tuple ts => payloadItemTys ts
+  | .record fs => payloadFieldTys fs
+  | .never | .int | .handle _ | .refOf _ | .deferredOf _ _ | .fiberOf _ _ | .exitOf _ _
+  | .causeOf _ | .app _ _ | .var _ | .unknown => false
+/-- `payloadFieldTy` at every item of a tuple. -/
+def payloadItemTys : List Ty → Bool
+  | [] => true
+  | t :: ts => payloadFieldTy t && payloadItemTys ts
+/-- `payloadFieldTy` at every field of a record. -/
+def payloadFieldTys : List (String × Bool × Ty) → Bool
+  | [] => true
+  | (_, _, t) :: fs => payloadFieldTy t && payloadFieldTys fs
+end
+
+mutual
+/-- The first field of a record, in its written order, whose type no payload admits, with the
+field's path and type (ruling (a)'s refusal, `TypeReason.errorPayloadField`). A field typed by a
+record names the first such field inside it. -/
+def excludedField : List (String × Bool × Ty) → Option (List String × Ty)
+  | [] => none
+  | (n, _, t) :: fs => if payloadFieldTy t then excludedField fs else some (excludedAt n t)
+/-- A refused field's path and type: through a record, its first refused field. -/
+def excludedAt (n : String) : Ty → List String × Ty
+  | .record fs =>
+    match excludedField fs with
+    | some (path, field) => (n :: path, field)
+    | none => ([n], .record fs)
+  | t => ([n], t)
+end
+
+/-- The spelling a record error already has in rc.112 (decisions row 120, ruling (c)): a record
+whose only fields are a required `_tag` literal and a required string-valued `message` is the
+pair `[tag, message]`, and a record with the `_tag` field alone is the literal `tag`. A
+message-only class and a no-field class keep those spellings, so no class has two, and the face
+reads each back one way (E2). `none` for every other record. -/
+def classSpelling? (fs : List (String × Bool × Ty)) : Option Ty := do
+  let tag ← Record.tagOf (.record fs)
+  match (Ty.canon fs).filter (fun f => f.1 != "_tag") with
+  | [] => some (.lit tag)
+  | [("message", false, m)] => if isTagTy m then some (.prod (.lit tag) m) else none
+  | _ => none
+
+/-- A record error type the payload carrier represents (decisions row 120): a required `_tag`
+field typed by a string literal (ruling (b): one class per tagged payload type), every field
+type payload-admissible (ruling (a)), and no other spelling (ruling (c)). -/
+def payloadRecordTy (fs : List (String × Bool × Ty)) : Bool :=
+  (Record.tagOf (.record fs)).isSome && payloadFieldTys fs && (classSpelling? fs).isNone
+
 /-- The raw error profile represented without payload loss by `Err` (DI-15, DI-62).
 `never` admits no values; unions admit only represented columns. Defects and interruptions
 remain outside this error language. A pair is represented (`Err.tagged tag message`, two
 strings) when both its components are string-valued — `string` or a string literal — so the
 literal rule's `pair("SqlError", "boom") : readonly ["SqlError", "boom"]` (DI-15, DI-55) is
 an admitted failure exactly as `pair("SqlError", m) : readonly ["SqlError", string]` is
-(part 4, 2026-09-12: the payload column was `string` alone before the literal rule). -/
+(part 4, 2026-09-12: the payload column was `string` alone before the literal rule). A record is
+represented (`Err.payload`, a handle-free frame) when `payloadRecordTy` holds (decisions row
+120). -/
 def rawSupportedErrTy : Ty → Bool
   | .never | .nat | .string | .lit _ => true
   | .prod a b => isTagTy a && isTagTy b
   | .union l r => rawSupportedErrTy l && rawSupportedErrTy r
+  | .record fs => payloadRecordTy fs
   | .unit | .int | .bool | .handle _ | .option _ | .list _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
   | .refOf _ | .deferredOf _ _ | .var _ | .unknown => false
-  -- the data wave's forms carry no `Err` image until the error-payload commit (decisions row 120)
-  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => false
+  | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => false
 
 /-- Error support reads the raw profile of the canonical type. -/
 def supportedErrTy (t : Ty) : Bool := rawSupportedErrTy t.normalize

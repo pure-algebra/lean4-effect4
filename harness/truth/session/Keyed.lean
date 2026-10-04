@@ -122,6 +122,8 @@ def reasonJson : Reason Err Defect FiberId Ann → J
   | .fail (.tagged tag msg) _ => Json.mkObj [("fail", toJson [tag, msg])]
   | .fail (.text msg) _ => Json.mkObj [("fail", toJson msg)]
   | .fail (.tag n) _ => Json.mkObj [("fail", toJson n)]
+  -- a record payload (decisions row 120): its frame through the structural value wire
+  | .fail (.payload p) _ => Json.mkObj [("fail", valJson p.val)]
   | .die (.user n) _ => Json.mkObj [("die", toJson n)]
   | .die (.error (.text msg)) _ => Json.mkObj [("die", toJson msg)]
   | .interrupt fiber _ => Json.mkObj [("interrupt", toJson (fiber.map FiberId.value))]
@@ -138,7 +140,10 @@ def decodeReason (j : J) : Except String (Reason Err Defect FiberId Ann) := do
     | .str s => return .fail (.text s) .empty
     | .nat n => return .fail (.tag n) .empty
     | .list [.str a, .str b] => return .fail (.tagged a b) .empty
-    | _ => throw "unsupported error shape"
+    | v =>
+      match Effect4.Machine.Payload.image.ofVal v with
+      | some p => return .fail (.payload p) .empty
+      | none => throw "unsupported error shape"
   else if (field j "die").isOk then
     keys j ["die"]
     match ← decodeVal 32 (← field j "die") with

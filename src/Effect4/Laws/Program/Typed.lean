@@ -231,11 +231,11 @@ theorem reasonAdmits_congr {f g : Val → Ty → Bool} (ty : Ty) (h : ∀ v, f v
     reasonAdmits f ty r = reasonAdmits g ty r := by
   cases r with
   | fail e _ =>
-    cases e with
-    | boom => rfl
-    | tag n => exact h _
-    | tagged t m => exact h _
-    | text s => exact h _
+    -- the fold reads the error only through its image, whatever the error alphabet holds
+    simp only [reasonAdmits]
+    cases valOfErr e with
+    | none => rfl
+    | some v => exact h v
   | die _ _ => rfl
   | interrupt _ _ => rfl
 
@@ -255,11 +255,10 @@ theorem reasonAdmits_mono {f g : Val → Ty → Bool} (ty : Ty)
     reasonAdmits f ty r = true → reasonAdmits g ty r = true := by
   cases r with
   | fail e _ =>
-    cases e with
-    | boom => intro impossible; cases impossible
-    | tag n => exact h _
-    | tagged t m => exact h _
-    | text s => exact h _
+    simp only [reasonAdmits]
+    cases valOfErr e with
+    | none => exact id
+    | some v => exact h v
   | die _ _ => exact id
   | interrupt _ _ => exact id
 

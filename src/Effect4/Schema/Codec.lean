@@ -3,6 +3,7 @@ import Effect4.Program.Fold
 import Effect4.Data.JsonNumber
 import Effect4.Machine.Map
 import Effect4.Machine.Record
+import Effect4.Store.Carrier.Digest
 
 /-!
 # Type-directed JSON boundary
@@ -61,15 +62,35 @@ def payload? (j : Json) (tag field : String) : Option Json := do
   let [.str actual, payload] ← fields? j ["_tag", field] | none
   if actual = tag then some payload else none
 
-/-- The truth harness's closed error payload, used inside a promoted defect. -/
+/-- A record payload's JSON text (decisions row 120): the lowercase hexadecimal of its canonical
+bytes (`Payload.image.encode`, the store's byte codec). An error inside a promoted defect has no
+type to direct a JSON image, and the bytes are exact without one. No new `Val → Json` image is
+made, as decisions row 10 directs. -/
+def payloadHex (p : Payload) : String := String.ofList (Store.hexOfBytes (Payload.image.encode p))
+
+/-- A payload from its JSON text, exactly: the lowercase hexadecimal of one well-formed
+handle-free record frame and nothing else. The text is read through its UTF-8 bytes, which are
+the code points because every hexadecimal digit is ASCII (`Digest.ofHex?`'s reading; a traversal
+of the `String` itself reaches `Classical.choice`). The re-encoding check refuses an uppercase
+spelling, so the image is exact (`decodeErr_exact`). -/
+def payloadOfHex? (hex : String) : Option Payload := do
+  let bytes ← Store.bytesOfHexCodes (hex.toByteArray.data.toList.map UInt8.toNat)
+  let p ← Payload.image.decode bytes
+  if payloadHex p = hex then some p else none
+
+/-- The truth harness's closed error payload, used inside a promoted defect. A record payload is
+the one-key object `{"payload": hex}` (`payloadHex`), apart from `{"boom": null}`, a number, a
+pair and a string. -/
 def encodeErr : Err → Json
   | .boom => .obj [("boom", .null)]
   | .tag n => Arch.Json.ofNat n
   | .tagged tag message => .arr [.str tag, .str message]
   | .text s => .str s
+  | .payload p => .obj [("payload", .str (payloadHex p))]
 
 def decodeErr : Json → Option Err
   | .obj [("boom", .null)] => some .boom
+  | .obj [("payload", .str hex)] => (payloadOfHex? hex).map Err.payload
   | .arr [.str tag, .str message] => some (.tagged tag message)
   | .str s => some (.text s)
   | j => (nat? j).map Err.tag

@@ -23,10 +23,11 @@ namespace Effect4.Program
 
 open Effect4.Machine.Env (Requirement)
 
-/-- Why the printer declined a program. `internalAction` names the `ActionTerm` constructor
-whose rc.112 counterpart has no public export with the same frame shape. `layerRef` is the
-declaration block's (the host rows slice): a layer reference whose target path names no layer,
-so no `const` can be hoisted for it. -/
+/-- Why the printer declined a program. `internalAction` names what the template table refuses
+(`RowOut.refuse`): the `ActionTerm` constructor whose rc.112 counterpart has no public export
+with the same frame shape, a child fork into a scope, and `Err.payload` (`errorPayloadRefusal`).
+`layerRef` is the declaration block's (the host rows slice): a layer reference whose target path
+names no layer, so no `const` can be hoisted for it. -/
 inductive PrintRefusal
   | internalAction (name : String)
   | layerRef (target : List Nat)
@@ -35,6 +36,15 @@ inductive PrintRefusal
   /-- A legacy target type has no structural reading in the supported profile. -/
   | typeSpelling (text : String)
 deriving DecidableEq, Repr
+
+/-- The name the printer refuses an error payload by (decisions row 120). -/
+def errorPayloadName : String := "Err.payload"
+
+/-- The printer's refusal of an error payload (decisions row 120): `fail` of a record
+construction (the template table's row), or a declaration whose error column holds a tagged
+record (`declarationType`). The payload's face, one `Data.TaggedError` class per tag, is E2's;
+until then the printer names the carrier and prints no structural object in its place. -/
+def errorPayloadRefusal : PrintRefusal := .internalAction errorPayloadName
 
 /-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/
 def firstByte (s : String) : Option UInt8 := s.toByteArray.data.toList.head?

@@ -134,20 +134,6 @@ module type INSTANCE = sig
     | Completion_ofExit of ('b, 'e, 'd, 'i, 'a) exit_
     | Completion_ofRefGet of ref_key
 
-  type err =
-    | Err_boom
-    | Err_tag of int
-    | Err_tagged of string * string
-    | Err_text of string
-
-  type defect =  (* :236-241 *)
-    | Defect_notImplemented
-    | Defect_asyncFiber
-    | Defect_badName
-    | Defect_missingService
-    | Defect_user of int
-    | Defect_error of err
-
   type val_ =  (* :208-220 *)
     | Val_unit
     | Val_bool of bool
@@ -163,6 +149,24 @@ module type INSTANCE = sig
     | Val_handle of int * int
     | Val_negInt of int
     | Val_float of int
+
+  (* a handle-free record value (Effect4.Machine.Payload, decisions row 120) *)
+  type payload = val_
+
+  type err =
+    | Err_boom
+    | Err_tag of int
+    | Err_tagged of string * string
+    | Err_text of string
+    | Err_payload of payload
+
+  type defect =  (* :236-241 *)
+    | Defect_notImplemented
+    | Defect_asyncFiber
+    | Defect_badName
+    | Defect_missingService
+    | Defect_user of int
+    | Defect_error of err
 
   type stuck =  (* :651 *)
     | Stuck_unknownFiber of fiber_id

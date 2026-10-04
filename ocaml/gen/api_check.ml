@@ -44,6 +44,7 @@ let rec show_val (v : A.val_) =
 let show_reason = function
   | A.Reason_fail (A.Err_boom, _) -> "fail(boom)"
   | A.Reason_fail (A.Err_tag t, _) -> Printf.sprintf "fail(tag %d)" t
+  | A.Reason_fail (A.Err_payload p, _) -> "fail(payload " ^ show_val p ^ ")"
   | A.Reason_fail _ -> "fail"
   | A.Reason_die (_, _) -> "die"
   | A.Reason_interrupt (None, _) -> "interrupt(none)"

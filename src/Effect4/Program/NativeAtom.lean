@@ -238,11 +238,12 @@ def spec : NativeAtom → Spec
                   cite := "NativeAtom.boolAnd; all inputs are pure evaluated Boolean values." }
   | .tagIs =>
       { scheme := .mono [.string, .unknown] .bool,
-        cite := "NativeAtom.tagIs: true exactly on a pair whose first component is the tag\n\
-                 (`.list [.str tag, _]`, `NativeAtom.tagHit`). This ordinary Boolean test \
-                 carries no\nrefinement promise. In particular, catchIf's first-failure test \
-                 does not establish\nthat every failure in a re-raised cause excludes this tag \
-                 (DI-17, DI-39)." }
+        cite := "NativeAtom.tagIs: true on a pair whose first component is the tag\n\
+                 (`.list [.str tag, _]`) and on a record whose own `_tag` is the tag\n\
+                 (`NativeAtom.tagHit`, `Record.tagHit`; decisions row 120). This ordinary \
+                 Boolean test carries no\nrefinement promise. In particular, catchIf's \
+                 first-failure test does not establish\nthat every failure in a re-raised \
+                 cause excludes this tag (DI-17, DI-39)." }
   | .isSome =>
       { scheme := .mono [.option .unknown] .bool,
         cite := "NativeAtom.isSome: presence only, with no TypeScript branch refinement.\n\

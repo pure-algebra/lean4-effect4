@@ -3,6 +3,7 @@ import Effect4.Laws.Machine.Handles
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Auto.Semantics
 
 /-!
 # Program.Admit — what a checked decision and a checked replay establish
@@ -199,22 +200,330 @@ every tape and every golden read the same. Source of the proofs: scout B
 (`docs/research/2026-09-09-scout-proof-statements.md` §3), reproved here against the
 production definitions unchanged. -/
 
+/-! ### The error payload (decisions row 120)
+
+A payload is a handle-free record frame (`Payload`, `Machine/Alphabets.lean`). Its image is the
+frame (`Payload.image`, exact by the subtype's laws), `errOf` reads it in its last arm, and
+`valOfErr` gives it back. A value of an admitted record error type is one
+(`isPayload_of_hasTy_record`): its field types are payload-admissible (`payloadFieldTy`), so it
+holds no handle (`handles_of_payloadFieldTy`) and its membership reads no allocation table
+(`hasTy_payloadFieldTy_allocation`). Concepts: `exact-codecs` (the image) and `store-typing` (no
+handle by the type); requirement R3. -/
+
+/-- A record frame's value column: `Record.entries` reads only the frame
+`ctor 0 [list names, list values]`. A step of `errOf_payload`. -/
+theorem frame_of_entries {v : Val} (h : (Record.entries v).isSome = true) :
+    ∃ ns xs, v = .ctor 0 [.list ns, .list xs] := by
+  cases hp : recordParts? v with
+  | none =>
+    have hnone : Record.entries v = none := by
+      simp only [Record.entries, hp, Option.bind_eq_bind, Option.bind_none]
+    rw [hnone] at h
+    exact Bool.noConfusion h
+  | some parts =>
+    obtain ⟨ns, xs⟩ := parts
+    exact ⟨ns, xs, Typed.recordParts?_eq_some hp⟩
+
+/-- On a constructor frame `errOf` is its last arm: the payload reader's answer. -/
+theorem errOf_ctor (i : Nat) (args : List Val) :
+    errOf (.ctor i args) = match Payload.image.ofVal (.ctor i args) with
+      | some p => .payload p
+      | none => .boom := rfl
+
+/-- **A payload's value reads back as the payload** (decisions row 120): its frame matches none
+of `errOf`'s first three arms, and the last reads it through `Payload.image`. Concept
+`exact-codecs`, claim `error-payload-exact` (R3); consumer `errOf_valOfErr`. -/
+@[semantics "exact-codecs" (requirement := R3)]
+theorem errOf_payload (p : Payload) : errOf p.val = .payload p := by
+  obtain ⟨ns, xs, hv⟩ := frame_of_entries (entries_of_isPayload p.property)
+  have hread : Payload.image.ofVal p.val = some p := Payload.image.ofVal_toVal p
+  rw [hv] at hread ⊢
+  rw [errOf_ctor, hread]
+
+/-- `errOf` of a value the payload carrier holds. -/
+theorem errOf_of_isPayload {v : Val} (h : isPayload v = true) : errOf v = .payload ⟨v, h⟩ :=
+  errOf_payload ⟨v, h⟩
+
+theorem payloadItemTys_iff (ts : List Ty) :
+    payloadItemTys ts = true ↔ ∀ t ∈ ts, payloadFieldTy t = true := by
+  induction ts with
+  | nil => simp only [payloadItemTys, List.not_mem_nil, false_implies, implies_true]
+  | cons t ts ih =>
+    rw [payloadItemTys, Bool.and_eq_true, ih, List.forall_mem_cons]
+
+theorem payloadFieldTys_iff (fs : List (String × Bool × Ty)) :
+    payloadFieldTys fs = true ↔ ∀ q ∈ fs, payloadFieldTy q.2.2 = true := by
+  induction fs with
+  | nil => simp only [payloadFieldTys, List.not_mem_nil, false_implies, implies_true]
+  | cons q fs ih =>
+    obtain ⟨n, o, t⟩ := q
+    rw [payloadFieldTys, Bool.and_eq_true, ih, List.forall_mem_cons]
+
+/-- An admitted record error type's fields are payload-admissible. -/
+theorem payloadFieldTys_of_payloadRecordTy {fs : List (String × Bool × Ty)}
+    (h : payloadRecordTy fs = true) : payloadFieldTys fs = true :=
+  (Bool.and_eq_true_iff.mp (Bool.and_eq_true_iff.mp h).1).2
+
+/-- **Membership at a payload-admissible type reads no allocation table**: such a type names
+no handle, and only a handle's arm reads the table. Concept `store-typing`; a step of
+`hasTy_rawSupported_allocation`'s record arm and of `isPayload_of_hasTy_record`. -/
+theorem hasTy_payloadFieldTy_allocation :
+    ∀ t : Ty, payloadFieldTy t = true →
+      ∀ (v : Val) (allocated : List String), Val.hasTy v t allocated = Val.hasTy v t [] := by
+  intro t
+  induction t with
+  | unit | nat | string | bool | lit _ | null | undefined | number | bytes =>
+    intro _ v allocated
+    rfl
+  | option a iha =>
+    intro hp v allocated
+    have ih := fun x => iha hp x allocated
+    simp only [Val.hasTy, ih]
+  | list a iha =>
+    intro hp v allocated
+    have ih := fun x => iha hp x allocated
+    simp only [Val.hasTy, ih]
+  | prod a b iha ihb | except a b iha ihb | map a b iha ihb | union a b iha ihb =>
+    intro hp v allocated
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hp
+    have ih1 := fun x => iha ha x allocated
+    have ih2 := fun x => ihb hb x allocated
+    simp only [Val.hasTy, ih1, ih2]
+  | tuple ts ih =>
+    intro hp v allocated
+    have hts := (payloadItemTys_iff ts).mp hp
+    have hcheck : Val.itemCheckers ts allocated = Val.itemCheckers ts [] := by
+      rw [Val.itemCheckers_eq_map, Val.itemCheckers_eq_map]
+      apply List.map_congr_left
+      intro t ht
+      exact funext fun x => ih t ht (hts t ht) x allocated
+    simp only [Val.hasTy, hcheck]
+  | record fs ih =>
+    intro hp v allocated
+    have hfs := (payloadFieldTys_iff fs).mp hp
+    have hcheck : Val.fieldCheckers fs allocated = Val.fieldCheckers fs [] := by
+      rw [Val.fieldCheckers_eq_map, Val.fieldCheckers_eq_map]
+      apply List.map_congr_left
+      intro q hq
+      simp only [Val.checkerOf, funext fun x => ih q hq (hfs q hq) x allocated]
+    simp only [Val.hasTy, hcheck]
+  -- every type a payload excludes: `payloadFieldTy` refuses it
+  | _ =>
+    intro hp
+    exact nomatch hp
+
+/-- A list whose every member holds no handle holds none. -/
+theorem handlesList_eq_nil {xs : List Val} (h : ∀ x ∈ xs, x.handles = []) :
+    Store.Val.handlesList xs = [] := by
+  rw [Store.Val.handlesList_eq_flatMap, List.flatMap_eq_nil_iff]
+  exact h
+
+/-- Every item a tuple check admits passes one of the item checkers. -/
+theorem itemsHasTy_mem (cs : List (Val → Bool)) (xs : List Val) (h : itemsHasTy cs xs = true) :
+    ∀ x ∈ xs, ∃ c ∈ cs, c x = true := by
+  fun_induction itemsHasTy cs xs with
+  | case1 => exact fun _ hx => absurd hx List.not_mem_nil
+  | case2 c cs x xs ih =>
+    obtain ⟨hc, hrest⟩ := Bool.and_eq_true_iff.mp h
+    intro y hy
+    rcases List.mem_cons.mp hy with rfl | hy
+    · exact ⟨c, List.mem_cons_self, hc⟩
+    · obtain ⟨c', hc', hy'⟩ := ih hrest y hy
+      exact ⟨c', List.mem_cons_of_mem c hc', hy'⟩
+  | case3 => exact nomatch h
+
+/-- The named read admits only string names, and every value it admits passes one of the
+field checkers. -/
+theorem namedHasTy_mem (cs : List (String × Bool × (Val → Bool))) (ns xs : List Val)
+    (h : namedHasTy cs ns xs = true) :
+    (∀ n ∈ ns, ∃ s, n = .str s) ∧ ∀ x ∈ xs, ∃ c ∈ cs, c.2.2 x = true := by
+  fun_induction namedHasTy cs ns xs with
+  | case1 => exact ⟨fun _ hn => absurd hn List.not_mem_nil, fun _ hx => absurd hx List.not_mem_nil⟩
+  | case2 =>
+    exact ⟨fun _ hn => absurd hn List.not_mem_nil, fun _ hx => absurd hx List.not_mem_nil⟩
+  | case3 o c cs m ns x xs ih =>
+    obtain ⟨hc, hrest⟩ := Bool.and_eq_true_iff.mp h
+    obtain ⟨hn, hx⟩ := ih hrest
+    refine ⟨fun n' hn' => ?_, fun y hy => ?_⟩
+    · rcases List.mem_cons.mp hn' with rfl | hn'
+      · exact ⟨m, rfl⟩
+      · exact hn n' hn'
+    · rcases List.mem_cons.mp hy with rfl | hy
+      · exact ⟨(m, o, c), List.mem_cons_self, hc⟩
+      · obtain ⟨c', hc', hy'⟩ := hx y hy
+        exact ⟨c', List.mem_cons_of_mem _ hc', hy'⟩
+  | case4 n o c cs m ns x xs _ ih =>
+    obtain ⟨hn, hx⟩ := ih (Bool.and_eq_true_iff.mp h).2
+    refine ⟨hn, fun y hy => ?_⟩
+    obtain ⟨c', hc', hy'⟩ := hx y hy
+    exact ⟨c', List.mem_cons_of_mem _ hc', hy'⟩
+  | case5 => exact nomatch h
+
+/-- **A value of a payload-admissible type holds no handle** (decisions row 120): the type is
+first-order and names no handle, fiber, cell, deferred or nominal reference at any node, and
+excludes `unknown`, whose members may hold any. Concept `store-typing`, the host boundary
+(`docs/core/host-boundary.md` §5). The carrier holds handle-free frames only, which keeps the six
+handle-freeness lemmas unconditional; this lemma makes every admitted record error such a frame.
+Consumer: `isPayload_of_hasTy_record`. -/
+@[semantics "store-typing" (requirement := R6)]
+theorem handles_of_payloadFieldTy :
+    ∀ t : Ty, payloadFieldTy t = true → ∀ v : Val, Val.hasTy v t = true → v.handles = [] := by
+  intro t
+  induction t with
+  | unit | nat | string | bool | lit _ | null | undefined | number | bytes =>
+    intro _ v hv
+    cases v with
+    | list xs => exact nomatch hv
+    | pair a b => exact nomatch hv
+    | some a => exact nomatch hv
+    | ctor i args => exact nomatch hv
+    | handle k n => exact nomatch hv
+    | _ => rfl
+  | option a iha =>
+    intro hp v hv
+    rcases Val.hasTy_option_inv_at hv with rfl | ⟨x, rfl, hx⟩
+    · rfl
+    · exact iha hp x hx
+  | list a iha =>
+    intro hp v hv
+    obtain ⟨vs, hvs, hall⟩ := Val.hasTy_list_inv_at hv
+    have hnil := handlesList_eq_nil fun x hx => iha hp x (hall x hx)
+    rcases Val.asList?_exact hvs with rfl | rfl
+    · exact hnil
+    · show Store.Val.handlesList [.list vs] = []
+      rw [Store.Val.handlesList_cons, Store.Val.handles, hnil]
+      rfl
+  | prod a b iha ihb =>
+    intro hp v hv
+    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hp
+    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv_at hv
+    show Store.Val.handlesList [x, y] = []
+    exact handlesList_eq_nil fun z hz => by
+      rcases List.mem_cons.mp hz with rfl | hz
+      · exact iha ha z hx
+      · rcases List.mem_singleton.mp hz with rfl
+        exact ihb hb z hy
+  | except e a ihe iha =>
+    intro hp v hv
+    obtain ⟨he, ha⟩ := Bool.and_eq_true_iff.mp hp
+    simp only [Val.hasTy] at hv
+    split at hv
+    · next err =>
+      show Store.Val.handlesList [err] = []
+      rw [Store.Val.handlesList_cons, ihe he err hv]
+      rfl
+    · next val =>
+      show Store.Val.handlesList [val] = []
+      rw [Store.Val.handlesList_cons, iha ha val hv]
+      rfl
+    · exact nomatch hv
+  | map k t ihk iht =>
+    intro hp v hv
+    obtain ⟨hk, ht⟩ := Bool.and_eq_true_iff.mp hp
+    simp only [Val.hasTy] at hv
+    split at hv
+    · next es =>
+      have hall := List.all_eq_true.mp (Bool.and_eq_true_iff.mp hv).2
+      show Store.Val.handlesList es = []
+      refine handlesList_eq_nil fun e he => ?_
+      have hentry := hall e he
+      split at hentry
+      · next a x =>
+        obtain ⟨ha, hx⟩ := Bool.and_eq_true_iff.mp hentry
+        show a.handles ++ x.handles = []
+        rw [ihk hk a ha, iht ht x hx]
+        rfl
+      · exact nomatch hentry
+    · exact nomatch hv
+  | union l r ihl ihr =>
+    intro hp v hv
+    obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp hp
+    rcases Bool.or_eq_true_iff.mp hv with h | h
+    · exact ihl hl v h
+    · exact ihr hr v h
+  | tuple ts ih =>
+    intro hp v hv
+    have hts := (payloadItemTys_iff ts).mp hp
+    simp only [Val.hasTy] at hv
+    split at hv
+    · next xs =>
+      rw [Val.itemCheckers_eq_map] at hv
+      show Store.Val.handlesList xs = []
+      refine handlesList_eq_nil fun x hx => ?_
+      obtain ⟨c, hc, hcx⟩ := itemsHasTy_mem _ xs hv x hx
+      obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hc
+      exact ih t ht (hts t ht) x hcx
+    · exact nomatch hv
+  | record fs ih =>
+    intro hp v hv
+    have hfs := (payloadFieldTys_iff fs).mp hp
+    cases hparts : recordParts? v with
+    | none => rw [Val.hasTy_record_none hparts] at hv; exact nomatch hv
+    | some parts =>
+      obtain ⟨ns, xs⟩ := parts
+      rw [Val.hasTy_record hparts] at hv
+      obtain ⟨hns, hxs⟩ := namedHasTy_mem _ ns xs hv
+      rw [Typed.recordParts?_eq_some hparts]
+      show Store.Val.handlesList [.list ns, .list xs] = []
+      have hnames : Store.Val.handlesList ns = [] := handlesList_eq_nil fun n hn => by
+        obtain ⟨s, rfl⟩ := hns n hn
+        rfl
+      have hvalues : Store.Val.handlesList xs = [] := handlesList_eq_nil fun x hx => by
+        obtain ⟨c, hc, hcx⟩ := hxs x hx
+        obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hc
+        exact ih q (Ty.mem_canon hq) (hfs q (Ty.mem_canon hq)) x hcx
+      rw [Store.Val.handlesList_cons, Store.Val.handlesList_cons, Store.Val.handlesList_nil,
+        Store.Val.handles, Store.Val.handles, hnames, hvalues]
+      rfl
+  -- every type a payload excludes: `payloadFieldTy` refuses it
+  | _ =>
+    intro hp
+    exact nomatch hp
+
+/-- **A value of an admitted record error type is a payload** (decisions row 120): a record
+frame (`RecordChecks.entries`) that holds no handle (`handles_of_payloadFieldTy`), at any
+allocation table. Concept `residual-program-typing`, R3; consumer
+`valOfErr_errOf_rawSupported`'s record arm, hence `errOf_ne_boom_of_supported`. -/
+@[semantics "residual-program-typing" (requirement := R3)]
+theorem isPayload_of_hasTy_record {fs : List (String × Bool × Ty)} {v : Val}
+    {allocated : List String} (hfs : payloadFieldTys fs = true)
+    (hv : Val.hasTy v (.record fs) allocated = true) : isPayload v = true := by
+  have hv' : Val.hasTy v (.record fs) = true := by
+    rw [← hasTy_payloadFieldTy_allocation (.record fs) hfs v allocated]
+    exact hv
+  obtain ⟨es, hes, _⟩ := RecordChecks.entries hv'
+  have hh := handles_of_payloadFieldTy (.record fs) hfs v hv'
+  unfold isPayload
+  rw [hes, hh]
+  rfl
+
 /-- A value read out of the error alphabet rebuilds the same error (`errOf` on the left
 inverse of `valOfErr`). `boom` has no image, so it is excluded by the hypothesis rather than
-by a side condition. -/
+by a side condition. A payload rebuilds through the last arm (`errOf_payload`). -/
 theorem errOf_valOfErr (e : Err) (v : Val) (h : valOfErr e = some v) : errOf v = e := by
   cases e with
   | boom => cases h
   | tag n => cases Option.some.inj h; rfl
   | tagged t m => cases Option.some.inj h; rfl
   | text s => cases Option.some.inj h; rfl
+  | payload p => cases Option.some.inj h; exact errOf_payload p
 
 /-- A value that is not collapsed by `errOf` is recovered by `valOfErr`. The premise is the
 collapse itself: `errOf` sends every unrecognised shape to `boom`, and a collapse has no
-inverse. Natural, text, and two-string payloads all have an exact inverse (DI-62). -/
+inverse. Natural, text, two-string and record payloads all have an exact inverse (DI-62,
+decisions row 120). The cases are `errOf`'s own (`fun_cases`). -/
 theorem valOfErr_errOf (v : Val) (h : errOf v ≠ .boom) : valOfErr (errOf v) = some v := by
-  unfold errOf at h ⊢
-  split at h <;> simp_all [valOfErr]
+  revert h
+  fun_cases errOf v with
+  | case4 _ p _ _ _ hp =>
+    intro _
+    exact (congrArg some (Payload.image.ofVal_exact hp)).symm
+  | case5 =>
+    intro h
+    exact absurd rfl h
+  | _ =>
+    intro _
+    rfl
 
 theorem hasTy_isTagTy_allocation (ty : Ty) (v : Val) (allocated : List String)
     (ht : isTagTy ty = true) : Val.hasTy v ty allocated = Val.hasTy v ty [] := by
@@ -269,6 +578,10 @@ private theorem hasTy_rawSupported_allocation (ty : Ty) (v : Val) (allocated : L
   | union a b iha ihb =>
     obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hs
     simp only [Val.hasTy, iha ha, ihb hb]
+  -- a record payload (decisions row 120): its field types read no table
+  | record fs _ =>
+    exact hasTy_payloadFieldTy_allocation (.record fs) (payloadFieldTys_of_payloadRecordTy hs)
+      v allocated
   -- every constructor outside the error profile; a wildcard, so a new constructor never
   -- touches this proof
   | _ =>
@@ -324,6 +637,10 @@ private theorem valOfErr_errOf_rawSupported (ty : Ty) (v : Val) (allocated : Lis
     obtain h | h := Bool.or_eq_true_iff.mp hv
     · exact iha ha h
     · exact ihb hb h
+  -- a record payload (decisions row 120): the value is a payload, which `errOf` reads
+  | record fs _ =>
+    rw [errOf_of_isPayload (isPayload_of_hasTy_record (payloadFieldTys_of_payloadRecordTy hs) hv)]
+    rfl
   -- every constructor outside the error profile; a wildcard, so a new constructor never
   -- touches this proof
   | _ =>
@@ -338,7 +655,11 @@ theorem valOfErr_errOf_supported (ty : Ty) (v : Val) (allocated : List String)
   rw [hasTy_normalize]
   exact hv
 
-/-- Row DI-62. The admitted error language excludes the payload-discarding `boom` case. -/
+/-- Row DI-62. The admitted error language excludes the payload-discarding `boom` case, record
+payloads included (decisions row 120). Concept `residual-program-typing`, R3; consumers the
+checker's failure rule (`errAdmits_errOf`) and `FitsCause`'s failure arm. It does not establish
+that the admitted error types are complete against rc.112. -/
+@[semantics "residual-program-typing" (requirement := R3)]
 theorem errOf_ne_boom_of_supported (ty : Ty) (v : Val) (allocated : List String)
     (hs : supportedErrTy ty = true) (hv : Val.hasTy v ty allocated = true) :
     errOf v ≠ .boom := by
@@ -354,6 +675,11 @@ theorem valOfErr_keys (e : Err) (v : Val) (h : valOfErr e = some v) : v.keys = [
   | tag n => cases Option.some.inj h; rfl
   | tagged t m => cases Option.some.inj h; rfl
   | text s => cases Option.some.inj h; rfl
+  -- a record payload: none by the carrier's own proof (decisions row 120)
+  | payload p =>
+    cases Option.some.inj h
+    rw [Val.keys_eq_handles, handles_of_isPayload p.property]
+    rfl
 
 /-- Closed failure images contain no handles, including every decoded typed-failure
 payload. This holds before admission, so neither host failure arm needs a new check. -/
@@ -388,15 +714,20 @@ theorem errAdmits_errOf (ty : Ty) (v : Val) (allocated : List String)
   rw [← hasTy_supported_allocation ty v allocated hs]
   exact hv
 
-/-- Row DI-31. `orDie` retains text and package payloads, and the historical numeric/raw cases. -/
-theorem orDieCause_fail (e : Err) :
-    orDieCause (Cause.fail e) =
-      Cause.die (match e with
-        | .boom => Defect.badName
-        | .tag n => Defect.user n
-        | .tagged t m => Defect.error (.tagged t m)
-        | .text s => Defect.error (.text s)) := by
-  cases e <;> rfl
+/-- Row DI-31. `orDie` is `Defect.ofError` at the first failure: it retains text, package and
+record payloads (decisions row 120), and the historical numeric and raw cases. -/
+theorem orDieCause_fail (e : Err) : orDieCause (Cause.fail e) = Cause.die (Defect.ofError e) :=
+  rfl
+
+/-- A represented error (one with an image) becomes neither shape defect: `Defect.ofError` sends
+only `boom` to `badName` and no error to `notImplemented`. Read off `valOfErr`, so no case of the
+error alphabet is named. Concept `store-typing` (H2 part one's exclusion, decisions row 107);
+consumers `ofError_errOf_ne_badName`, `shapeFree_die_of_fits` and the layer arm. -/
+theorem Defect.ofError_shapeFree {e : Err} {v : Val} (h : valOfErr e = some v) :
+    Defect.ofError e ≠ .badName ∧ Defect.ofError e ≠ .notImplemented := by
+  cases e with
+  | boom => cases h
+  | _ => exact ⟨nofun, nofun⟩
 
 /-- The production reason predicate is the shared fold at default-allocation membership. -/
 theorem errAdmits_eq_reasonAdmits (ty : Ty) (r : Reason Err Defect FiberId Ann) :
@@ -766,13 +1097,8 @@ theorem hasTy_join_right (a b : Ty) (v : Val) (h : Val.hasTy v b = true) :
 /-- A well-typed supported error value never converts to the wrong-shape defect: its image
 inverts (`valOfErr_errOf_supported`), so it is not `boom`. -/
 theorem ofError_errOf_ne_badName (ty : Ty) (v : Val) (hs : supportedErrTy ty = true)
-    (hv : Val.hasTy v ty = true) : Defect.ofError (errOf v) ≠ Defect.badName := by
-  have hval := valOfErr_errOf_supported ty v [] hs hv
-  cases herr : errOf v with
-  | boom => rw [herr] at hval; exact absurd hval (by simp [valOfErr])
-  | tag n => simp [Defect.ofError]
-  | tagged t m => simp [Defect.ofError]
-  | text s => simp [Defect.ofError]
+    (hv : Val.hasTy v ty = true) : Defect.ofError (errOf v) ≠ Defect.badName :=
+  (Defect.ofError_shapeFree (valOfErr_errOf_supported ty v [] hs hv)).1
 
 /-- Under `Fits`, a cause term the checker admits evaluates (ENSURES 7 for cause terms). -/
 theorem causeOf_isSome_of_causeTy (tys : TyEnv) (env : List Val) (hfit : Fits env tys)

@@ -416,6 +416,44 @@ R8's named printer/reader connection.
 #guard declarationTypeRepresentable
     ⟨.handle "not a type !", .never, Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩ = false
 
+/-! ## The error payload, refused by name until its class face (decisions row 120)
+
+`fail` of a record construction is an error payload. Its face is one `Data.TaggedError` class per
+tag, which part E2 prints; until then the template table refuses the term, and the declaration
+printer refuses an error column that holds a payload type, both as `Err.payload`. A record in
+success position still prints. -/
+
+def notFoundFields : List (String × Bool × Ty) := [("_tag", false, .lit "NotFound"), ("id", false, .nat)]
+def notFoundTerm : Term :=
+  .record notFoundFields ["_tag", "id"] (.cons (.lit (.str "NotFound")) (.cons (.lit (.nat 9)) .nil))
+
+#guard match print nativeSignature 0 (.fail notFoundTerm) with
+  | .error why => why == errorPayloadRefusal
+  | .ok _ => false
+#guard errorPayloadRefusal = .internalAction "Err.payload"
+-- inside another construct, too
+#guard match print nativeSignature 0 (.bind (.succeed (.lit (.nat 1))) (.fail notFoundTerm)) with
+  | .error why => why == errorPayloadRefusal
+  | .ok _ => false
+-- green controls: the record succeeds, and a failure that is no record prints
+#guard (print nativeSignature 0 (.succeed notFoundTerm)).isOk
+#guard (print nativeSignature 0 (.fail (.lit (.str "lost")))).isOk
+-- the declaration: an error column holding the payload type is refused, by name
+#guard match printDecl "program" ⟨.never, .record notFoundFields, Requirement.empty⟩
+    (.call (.ident "Effect.fail") [.int 1]) with
+  | .error why => why == errorPayloadRefusal
+  | .ok _ => false
+#guard declarationTypeRepresentable ⟨.never, .record notFoundFields, Requirement.empty⟩ = false
+#guard declarationTypeRepresentable
+    ⟨.never, .union .string (.record notFoundFields), Requirement.empty⟩ = false
+-- green control: a record in the answer column is no payload
+#guard declarationTypeRepresentable ⟨.record notFoundFields, .never, Requirement.empty⟩
+-- The boundary until E2, measured: the table reads terms, not types. A payload failed from a
+-- bound variable still prints as an expression; the declaration refuses it only through the
+-- error column. A payload handled inside, or reified by `exit`, leaves the column, so its
+-- declaration prints too. E2's class face has to reach these routes.
+#guard (print nativeSignature 0 (.bind (.succeed notFoundTerm) (.fail (.var 0)))).isOk
+
 /-! ## `printEntry`: an export name the reader can tell from everything it decodes
 
 `E4-TARGET-NAME-CE-001`. The declaration printer used to accept any export name, so a block

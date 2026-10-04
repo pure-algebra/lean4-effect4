@@ -1002,6 +1002,7 @@ def argPatJs : ArgPat → Except String String
   | .someTerm => .ok (tagged "optTermSome" [])
   | .someTy => .ok (tagged "optTySome" [])
   | .daemon b => .ok (tagged "daemon" [("value", toString b)])
+  | .recordTerm => .ok (tagged "recordTerm" [])
 
 /-- The depth an argument is read at, as `Templates.argDepth` decides it: closed for an argument
 of a layer family, otherwise under the binders its hole is under (`Template.levelAt`). -/
@@ -1079,7 +1080,7 @@ def templateTypes : String :=
   "  | { readonly _tag: \"term\"; readonly value: unknown }\n" ++
   "  | { readonly _tag: \"bool\" | \"daemon\"; readonly value: boolean }\n" ++
   "  | { readonly _tag: \"mode\"; readonly value: \"joinEffect\" | \"awaitValue\" }\n" ++
-  "  | { readonly _tag: \"decisionBool\" | \"decisionOption\" | \"decisionTag\" | \"decisionRecordTag\" | \"optTermNone\" | \"optTermSome\" | \"optTyNone\" | \"optTySome\" }\n" ++
+  "  | { readonly _tag: \"decisionBool\" | \"decisionOption\" | \"decisionTag\" | \"decisionRecordTag\" | \"optTermNone\" | \"optTermSome\" | \"optTyNone\" | \"optTySome\" | \"recordTerm\" }\n" ++
   "export type Depth = { readonly _tag: \"rel\"; readonly k: number } | { readonly _tag: \"closed\" }\n" ++
   "export interface TemplateRow {\n" ++
   "  readonly fam: Fam\n  readonly ctor: string\n" ++

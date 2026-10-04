@@ -186,6 +186,15 @@ def string : Image String where
       rfl
     · exact nomatch h
 
+/-- The carrier's own image: every value is itself, and every value reads. A restriction of it
+(`subtype`) is the image of a value class, as an error payload is one (decisions row 120,
+`Machine/Alphabets.lean`). -/
+def ident : Image Val where
+  toVal := id
+  ofVal := some
+  ofVal_toVal _ := rfl
+  ofVal_exact h := Option.some.inj h
+
 /-! ## Combinators -/
 
 section combinators

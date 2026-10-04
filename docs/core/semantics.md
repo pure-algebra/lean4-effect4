@@ -586,6 +586,11 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   distinct target Identifier types (`keyIdentifier_injective`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
   An ordinary key prints its full key text; the scope key prints `Scope.Scope`.
   Identity holds within one pinned link table, not across modules; tsgo controls test the target reading.
+- **Error payload exactness (`error-payload-exact`)**: a typed failure's record payload reads back exactly through the
+  error image (`errOf_valOfErr`, `src/Effect4/Laws/Program/Admit.lean`; decisions row 120, part E1).
+  The payload image (`Payload.image`) restricts the identity image to handle-free record frames, and `Store.Image` carries its laws.
+  Its JSON image is the hexadecimal of its canonical bytes (`decodeErr_exact`, `src/Effect4/Laws/Schema/Codec.lean`).
+  The printed face is open: the printer refuses `Err.payload` by name until part E2 prints one class per tag.
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.

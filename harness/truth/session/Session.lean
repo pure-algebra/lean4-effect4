@@ -176,6 +176,9 @@ def exitJson : ExitV → J
       match r with
       | .fail (.tagged tag message) _ => Json.mkObj [("fail", toJson [tag, message])]
       | .die (.error (.text message)) _ => Json.mkObj [("die", Json.mkObj [("error", .str message)])]
+      -- a record payload (decisions row 120), as the codec writes it; the v1 adapter reads none
+      | .fail (.payload p) _ =>
+        Json.mkObj [("fail", Json.mkObj [("payload", .str (Effect4.Schema.Codec.payloadHex p))])]
       | _ => Json.mkObj [("unsupported", .bool true)]).toArray)]
   | _ => Json.mkObj [("unsupported", .bool true)]
 

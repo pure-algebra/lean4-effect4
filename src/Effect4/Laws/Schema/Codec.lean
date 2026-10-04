@@ -373,8 +373,8 @@ theorem sortE_two (e1 e2 : String × Json) (rest : List (String × Json)) :
   | [_], h => exact nomatch h
   | a :: b :: r, _ => exact ⟨a, b, r, rfl⟩
 
-/-- An object of one entry not named `boom` is no error image. -/
-theorem decodeErr_obj_ne {k : String} (hk : k ≠ "boom") (y : Json) :
+/-- An object of one entry named neither `boom` nor `payload` is no error image. -/
+theorem decodeErr_obj_ne {k : String} (hk : k ≠ "boom") (hp : k ≠ "payload") (y : Json) :
     decodeErr (.obj [(k, y)]) = none := by
   unfold decodeErr
   split
@@ -383,6 +383,11 @@ theorem decodeErr_obj_ne {k : String} (hk : k ≠ "boom") (y : Json) :
     injection heq with heq
     injection heq with hk' _
     exact absurd hk' hk
+  · rename_i heq
+    injection heq with heq
+    injection heq with heq
+    injection heq with hk' _
+    exact absurd hk' hp
   · rename_i heq
     exact nomatch heq
   · rename_i heq
@@ -394,6 +399,10 @@ theorem decodeErr_obj_two (e f : String × Json) (r : List (String × Json)) :
     decodeErr (.obj (e :: f :: r)) = none := by
   unfold decodeErr
   split
+  · rename_i heq
+    injection heq with heq
+    injection heq with _ heq
+    exact nomatch heq
   · rename_i heq
     injection heq with heq
     injection heq with _ heq
@@ -422,7 +431,10 @@ theorem decodeErr_normJ (j : Json) : decodeErr (normJ j) = decodeErr j := by
       by_cases hk : k = "boom"
       · subst hk
         cases x <;> rfl
-      · rw [decodeErr_obj_ne hk, decodeErr_obj_ne hk]
+      · by_cases hp : k = "payload"
+        · subst hp
+          cases x <;> rfl
+        · rw [decodeErr_obj_ne hk hp, decodeErr_obj_ne hk hp]
     | e1 :: e2 :: rest =>
       obtain ⟨a, b, r, hab⟩ := sortE_two e1 e2 rest
       rw [hab, decodeErr_obj_two, decodeErr_obj_two]
@@ -926,11 +938,31 @@ theorem mapM_exact {α : Type} (dec : Json → Option α) (enc : α → Option J
           rfl
         · rw [List.map_cons, List.map_cons, hn, hns]
 
+/-- A payload's JSON text is exact (decisions row 120): what reads is the lowercase hexadecimal
+of the payload's canonical bytes (`payloadHex`), character for character. Concept
+`exact-codecs`; a step of `decodeErr_exact`. -/
+theorem payloadOfHex?_exact {hex : String} {p : Payload} (h : payloadOfHex? hex = some p) :
+    payloadHex p = hex := by
+  unfold payloadOfHex? at h
+  obtain ⟨bytes, _, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨q, _, h⟩ := Option.bind_eq_some_iff.mp h
+  split at h
+  · next hq =>
+    cases h
+    exact hq
+  · exact nomatch h
+
+/-- What decodes as an error re-encodes to the same JSON: exact without a normaliser, the
+payload's arm included (decisions row 120). -/
 theorem decodeErr_exact {j : Json} {e : Err} (h : decodeErr j = some e) : encodeErr e = j := by
   unfold decodeErr at h
   split at h
   · cases h
     rfl
+  · next hex =>
+    obtain ⟨p, hp, rfl⟩ := Option.map_eq_some_iff.mp h
+    show Json.obj [("payload", .str (payloadHex p))] = Json.obj [("payload", .str hex)]
+    rw [payloadOfHex?_exact hp]
   · cases h
     rfl
   · cases h

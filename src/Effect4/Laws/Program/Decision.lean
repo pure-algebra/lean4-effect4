@@ -9,9 +9,10 @@ The `select` packet (`docs/research/2026-09-16-select-and-iterate-ready-packet.m
 `Decision.decide_typed`, the one safety theorem of the value-decided fork. A scrutinee of
 type `t` on which `Decision.arms` answers always decides, and the value the chosen arm binds
 has that arm's type. `.bool` by the shape of a Boolean, `.option` by
-`Val.hasTy_option_inv_at`, `.tag` by `Ty.payload_hasTy` (the hit) and `Ty.diffTag_sound`
-(the miss). `NativeAtom.tagHit_eq` bridges the runtime test to the reader; `tagHit` keeps
-its own equations, which the `catchIf` lemmas depend on.
+`Val.hasTy_option_inv_at`, `.tag` by `Ty.payload_hasTy` (the hit) and
+`Ty.diffTag_sound_of_payload` (the miss). `NativeAtom.tagHit_eq` bridges the runtime test to the
+two readers, the pair's and the record's; `tagHit` keeps its own equations, which the `catchIf`
+lemmas depend on.
 
 This is the whole "no `badShape` on an admitted program" story for the construct, and the
 only place the decision forms receive their separate coarse membership proofs.
@@ -20,20 +21,62 @@ only place the decision forms receive their separate coarse membership proofs.
 namespace Effect4.Program
 open Effect4 Effect4.Machine
 
-/-- `tagHit` is the Boolean image of `tagPayload?`. -/
+/-- `tagHit` is the Boolean image of the two tag readers: the pair's (`tagPayload?`) and, since
+decisions row 120, the record's (`Record.tagHit`). A pair is no record frame, so the record
+reader misses every pair. The cases are `tagHit`'s own (`fun_cases`). -/
 theorem NativeAtom.tagHit_eq (tag : String) (v : Val) :
-    NativeAtom.tagHit tag v = (Val.tagPayload? tag v).isSome := by
-  cases v <;> try rfl
-  rename_i xs
-  match xs with
-  | [] => rfl
-  | [x] => cases x <;> rfl
-  | x :: _ :: _ :: _ => cases x <;> rfl
-  | [x, y] =>
-    cases x <;> try rfl
-    rename_i t
-    simp only [NativeAtom.tagHit, Val.tagPayload?]
-    cases t == tag <;> simp
+    NativeAtom.tagHit tag v = ((Val.tagPayload? tag v).isSome || Record.tagHit tag v) := by
+  fun_cases NativeAtom.tagHit tag v with
+  | case1 t x =>
+    simp only [Val.tagPayload?]
+    cases t == tag <;> rfl
+  | case2 v hpair =>
+    have hnone : Val.tagPayload? tag v = none := by
+      unfold Val.tagPayload?
+      split
+      · next t x => exact absurd rfl (hpair t x)
+      · rfl
+    rw [hnone]
+    rfl
+
+/-- A value of a tagged member (`prod (lit tag) _`) is a pair the pair reader reads. A step of
+`Ty.diffTag_sound_of_payload`. -/
+theorem Ty.tagPayload_of_tagged (tag : String) (m : Ty) (v : Val) (allocated : List String)
+    (hm : Ty.isTagged tag m = true) (hv : Val.hasTy v m allocated = true) :
+    (Val.tagPayload? tag v).isSome = true := by
+  cases m with
+  | prod a b =>
+    cases a with
+    | lit t =>
+      obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv_at hv
+      cases x with
+      | str s =>
+        simp only [Ty.isTagged, beq_iff_eq] at hm
+        subst hm
+        simp only [Val.hasTy] at hx
+        simp only [Val.tagPayload?, hx, ↓reduceIte, Option.isSome_some]
+      | _ => exact nomatch hx
+    | _ => exact nomatch hm
+  | _ => exact nomatch hm
+
+/-- **The pair select's miss** (the `.tag` decision): a value of the column the pair reader
+misses is a value of the residual. A record member stays in the residual whatever its `_tag`, so
+the record reader is not consulted (decisions rows 120 and 130). Concept
+`residual-program-typing`; consumer `Decision.decide_typed` and the typed denotation's select. -/
+theorem Ty.diffTag_sound_of_payload (tag : String) (e : Ty) (v : Val) (allocated : List String)
+    (hv : Val.hasTy v e allocated = true) (hp : Val.tagPayload? tag v = none) :
+    Val.hasTy v (Ty.diffTag tag e) allocated = true := by
+  rw [← hasTy_members] at hv
+  obtain ⟨m, hm, hvm⟩ := List.any_eq_true.mp hv
+  unfold Ty.diffTag
+  rw [hasTy_ofMembers]
+  apply List.any_eq_true.mpr
+  refine ⟨m, List.mem_filter.mpr ⟨hm, ?_⟩, hvm⟩
+  cases htag : Ty.isTagged tag m
+  · rfl
+  · have hsome := Ty.tagPayload_of_tagged tag m v allocated htag hvm
+    rw [hp] at hsome
+    exact nomatch hsome
 
 /-- On a tagged column, a hit's payload has the payload type: the two-cell list can inhabit
 only a member tagged with the hit's tag, and that member's payload type is one of the
@@ -165,9 +208,7 @@ theorem Decision.decide_typed (d : Decision) {t : Ty} {e0 e1 : List Ty} {v : Val
         | none =>
           refine ⟨false, some v, by simp only [Decision.decide, hp], ?_⟩
           show Val.hasTy v (Ty.diffTag name t.normalize) allocated = true
-          apply Ty.diffTag_sound name t.normalize v allocated hv'
-          rw [NativeAtom.eval_tagIs, NativeAtom.tagHit_eq, hp]
-          rfl
+          exact Ty.diffTag_sound_of_payload name t.normalize v allocated hv' hp
     · exact nomatch harms
 
   | recordTag name =>

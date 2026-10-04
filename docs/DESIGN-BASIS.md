@@ -1350,7 +1350,7 @@ records only) lands after the M5–M7 milestone by default (row 119).
 
 The other data rows of 2026-10-01, by number; each row's content and status are the register's
 (`docs/core/decisions.md`), and none is restated here: row 120, error payloads (DI-62 amended):
-proposed; row 121, `int` and numbers: proposed, with row 108; row 122, Decision 12 and the boundary
+ruled, part E1 landed; row 121, `int` and numbers: proposed, with row 108; row 122, Decision 12 and the boundary
 decode route: ruled, and written into `docs/core/host-boundary.md` §7 at `0eea3cd0`, which owns it
 (this row links there and copies nothing); row 123, the in-program schema operation: proposed in
 principle; row 124, recursive types: open; row 125, keyed collections: open; row 126, equality at
@@ -1363,7 +1363,8 @@ admission refusals; row 2's stage (b) is ruled by row 119.
 
 - **Decision.** Strings are machine values; a host row's records and errors cross as strings and
   string pairs, with the pair made at the row adapter; a program's failure payload is restricted to
-  `never`, `nat`, `string`, `prod string string` or their unions; `int` stays uninhabited. Records
+  `never`, `nat`, `string`, `prod string string` or their unions; `int` stays uninhabited. Row 120
+  adds a record with a required literal `_tag` and payload-admissible fields (`Err.payload`). Records
   enter `Ty` by row 119's ruled design (canonical field order, positional values, exact subtyping,
   width projected at the boundary); until that slice lands, `Ty` has none.
 - **Witnesses** (re-read at `6b3f2c92`). Defined or proved (string values and pairs): `Lit.toVal`

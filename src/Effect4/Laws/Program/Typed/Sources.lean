@@ -127,7 +127,11 @@ def hookSources : List Row := [
   ("Effect4.Machine.RunInterp.exitsValue", .hook (some "Effect4.Machine.countdownPark")),
   ("Effect4.Machine.RunInterp.voidValue", .hook (some "Effect4.Program.Sched.evaluateFiberR")),
   ("Effect4.Machine.RunInterp.scopeValue", .hook (some "Effect4.Machine.FiberAction.ambientScope")),
-  ("Effect4.Machine.RunInterp.prepareAnswer", .hook none)
+  ("Effect4.Machine.RunInterp.prepareAnswer", .hook none),
+  -- An error payload's record (decisions row 120), reached through the defects the interpreter
+  -- holds (`notImplemented`, `asyncFiberError`, `missingScope`), none of which carries one. A
+  -- payload inside a cause is typed with its cause (`FitsCause`), where the census stops.
+  ("Effect4.Machine.Payload.val", .hook none)
 ]
 
 /-- Every row. -/

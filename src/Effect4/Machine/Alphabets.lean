@@ -3,6 +3,7 @@ module
 public import Effect4.Machine.Value
 public import Effect4.Machine.Completion
 public import Effect4.Machine.Wake
+public import Effect4.Machine.Record
 
 /-!
 # Machine.Alphabets — the error, defect and value alphabets, once, below the stores
@@ -31,6 +32,47 @@ Every alphabet is first-order and derives `DecidableEq`, which the separation ga
 `Deep.Fibers` (`docs/research/FRAMES-DAG.md` separation 4) need at this instantiation.
 The generic Completion data and its Ref key are shared through `Machine.Completion`. -/
 
+/-! ## The error payload (decisions row 120, DI-62)
+
+A typed failure may carry a record: rc.112's `Data.TaggedError` instance, as its fields. The
+carrier is the class of values that can be one: a record frame (decisions row 165) that holds no
+handle. It restricts the shared carrier and adds no second value family. Its image is the frame
+itself, exact by the subtype's laws (`Payload.image`). The proof the subtype carries keeps every
+cause handle-free (`Err.image_handleFree`). -/
+
+/-- Whether a value can be a typed failure's payload (decisions row 120): `Record.entries` reads
+it as a record frame (string names, one value per name, no name twice) and it holds no handle. -/
+def isPayload (v : Store.Val) : Bool := (Record.entries v).isSome && v.handles.isEmpty
+
+/-- A typed failure's payload: a handle-free record frame (decisions row 120). The value with
+its proof, `{v : Val // isPayload v = true}` under a name of its own, so the position census
+(`Laws/Program/Typed/Sources.lean`) keys it by that name. -/
+structure Payload where
+  val : Store.Val
+  property : isPayload val = true
+deriving DecidableEq
+
+instance : Repr Payload := ⟨fun p n => reprPrec p.val n⟩
+
+/-- A payload holds no handle, by its own proof. -/
+theorem handles_of_isPayload {v : Store.Val} (h : isPayload v = true) : v.handles = [] :=
+  List.isEmpty_iff.mp (Bool.and_eq_true_iff.mp h).2
+
+/-- A payload is a record frame, by its own proof. -/
+theorem entries_of_isPayload {v : Store.Val} (h : isPayload v = true) :
+    (Record.entries v).isSome = true :=
+  (Bool.and_eq_true_iff.mp h).1
+
+/-- A payload's image in the shared carrier: the record frame itself, read back exactly when it
+is one. It is `Image.subtype` of the carrier's own image, transported to the named structure. -/
+def Payload.image : Store.Image Payload :=
+  (Store.Image.ident.subtype (fun v => isPayload v = true)).equiv
+    (fun s => ⟨s.val, s.property⟩) (fun p => ⟨p.val, p.property⟩) (fun _ => rfl) (fun _ => rfl)
+
+/-- The payload image writes no handle. The subtype's proof gives it, not the frame's shape. -/
+theorem Payload.image_handleFree : Store.Image.HandleFree Payload.image :=
+  fun p => handles_of_isPayload p.property
+
 /-- The typed error alphabet: `boom` a failure with no typed payload, `tag n` a numeric
 error (`Effect.fail(7)`), and `tagged tag message` a host package failure crossing as the
 ratified `prod string string` (DB-15, the host rows slice): the error's `_tag` and its
@@ -41,6 +83,10 @@ inductive Err
   | tagged (tag message : String)
   /-- A textual typed failure (DI-62), preserving its exact payload. -/
   | text (message : String)
+  /-- A typed failure carrying a handle-free record (decisions row 120): rc.112's
+  `Data.TaggedError` instance, as its fields. Appended as `ctor 4`, so every existing golden
+  keeps its bytes. -/
+  | payload (p : Payload)
 deriving DecidableEq, Repr
 
 /-- The defect alphabet: `defaultEvaluate`'s payload (`PrimInterp.notImplemented`), the
@@ -61,14 +107,16 @@ deriving DecidableEq, Repr
 
 /-- The defect a represented error becomes, whether promoted by `orDie`
 (`internal/effect.ts:3289`, DI-31) or spelled directly as `Cause.die` of an admitted error
-value (DI-74): a numeric error keeps its number as a user defect, a text or package error keeps
-its exact payload, and the payload-less `boom` is the wrong-shape defect. The one owner of
-that conversion, used by both sites in `Program/Compile.lean` (`orDieCause`, `causeOf`). -/
+value (DI-74): a numeric error keeps its number as a user defect, a text, package or record
+error keeps its exact payload, and the payload-less `boom` is the wrong-shape defect. The one
+owner of that conversion, used by both sites in `Program/Compile.lean` (`orDieCause`,
+`causeOf`). -/
 def Defect.ofError : Err → Defect
   | .tag code => .user code
   | .boom => .badName
   | .tagged tag message => .error (.tagged tag message)
   | .text message => .error (.text message)
+  | .payload p => .error (.payload p)
 
 /-- The cause-annotation value alphabet; `stackAnnotations` contributes none
 (`internal/effect.ts:579-580` is `fiberStackAnnotations`, host stack data). -/
@@ -105,27 +153,52 @@ def ofErr : Store.Val → Option Err
   | .ctor 1 [.nat c] => some (.tag c)
   | .ctor 2 [.str t, .str m] => some (.tagged t m)
   | .ctor 3 [.str s] => some (.text s)
+  | .ctor 4 [v] => (Payload.image.ofVal v).map .payload
   | _ => none
 
 /-- `Err` at the generated rule: `boom` is `ctor 0 []`, `tag c` is `ctor 1 [nat c]`,
-`tagged tag message` is `ctor 2 [str tag, str message]`, and `text s` is
-`ctor 3 [str s]`. Existing constructor encodings remain fixed. -/
+`tagged tag message` is `ctor 2 [str tag, str message]`, `text s` is `ctor 3 [str s]`, and
+`payload p` is `ctor 4 [frame]` through `Payload.image`. Existing constructor encodings remain
+fixed. -/
 def Err.image : Image Err where
   toVal
     | .boom => .ctor 0 []
     | .tag c => .ctor 1 [.nat c]
     | .tagged t m => .ctor 2 [.str t, .str m]
     | .text s => .ctor 3 [.str s]
+    | .payload p => .ctor 4 [Payload.image.toVal p]
   ofVal := ofErr
-  ofVal_toVal e := by cases e <;> rfl
+  ofVal_toVal e := by
+    cases e with
+    | payload p =>
+      show (Payload.image.ofVal (Payload.image.toVal p)).map Err.payload = some (.payload p)
+      rw [Payload.image.ofVal_toVal]
+      rfl
+    | _ => rfl
   ofVal_exact := by
     intro v e h
     unfold ofErr at h
-    split at h <;> first | (injection h with h; subst h; rfl) | exact nomatch h
+    split at h
+    · cases h; rfl
+    · cases h; rfl
+    · cases h; rfl
+    · cases h; rfl
+    · next written =>
+      obtain ⟨p, hp, hpe⟩ := Image.map_eq_some_inv h
+      subst hpe
+      show Store.Val.ctor 4 [written] = Store.Val.ctor 4 [Payload.image.toVal p]
+      rw [Payload.image.ofVal_exact hp]
+    · exact nomatch h
 
+/-- No error image holds a handle: the payload's by its subtype's proof, the rest by shape. -/
 theorem Err.image_handleFree : Image.HandleFree Err.image := by
   intro e
-  cases e <;> rfl
+  cases e with
+  | payload p =>
+    show Store.Val.handlesList [Payload.image.toVal p] = []
+    rw [Store.Val.handlesList_cons, Payload.image_handleFree p]
+    rfl
+  | _ => rfl
 
 def ofDefect : Store.Val → Option Defect
   | .ctor 0 [] => some .notImplemented
@@ -368,7 +441,7 @@ theorem cause?_exact {v : Val} {c : CauseV} (h : cause? v = some c) : v = exitEr
   · exact nomatch h
 
 /-- The carrier's own image: the identity. -/
-def image : Image Val := ⟨id, some, fun _ => rfl, fun h => Option.some.inj h⟩
+def image : Image Val := Image.ident
 
 end Val
 

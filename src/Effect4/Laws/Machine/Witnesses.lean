@@ -101,6 +101,8 @@ def reasonCode : Reason Err Defect FiberId Ann → Nat
   -- the code does not carry the pair; it is read through `causeImage` and the truth wire
   | Reason.fail (Err.tagged _ _) _ => 101
   | Reason.fail (Err.text _) _ => 102
+  -- a record payload (decisions row 120): the code does not carry the record either
+  | Reason.fail (Err.payload _) _ => 103
   | Reason.fail (Err.tag c) _ => 110 + c
   | Reason.die Defect.notImplemented _ => 200
   | Reason.die Defect.asyncFiber _ => 201

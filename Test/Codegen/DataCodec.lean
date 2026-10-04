@@ -77,4 +77,39 @@ def objectUnion : Ty := .union (.record [("x", false, .nat)]) (.map .string .nat
 #print axioms Schema.encode_of_decode
 #print axioms Schema.decode_iff
 
+/-! ## The error payload's JSON (decisions row 120)
+
+A promoted defect's error has no type to direct its JSON. A record payload crosses as the
+one-key object `{"payload": hex}` of its canonical bytes, apart from `{"boom": null}`, a number,
+a pair and a string; the image is exact (`Schema.Codec.decodeErr_exact`). At a record error type
+the type-directed codec writes the record itself. -/
+
+def failFrame : Val := Record.frame [("_tag", .str "NotFound"), ("id", .nat 9)]
+def failPayload : List Err := ((Payload.image.ofVal failFrame).map Err.payload).toList
+
+#guard failPayload.length = 1
+#guard failPayload.all fun e => Schema.Codec.decodeErr (Schema.Codec.encodeErr e) == some e
+#guard failPayload.all fun e =>
+  Schema.Codec.decodeDefect (Schema.Codec.encodeDefect (.error e)) == some (.error e)
+#guard failPayload.all fun e => match Schema.Codec.encodeErr e with
+  | .obj [("payload", .str _)] => true
+  | _ => false
+-- a record named like `boom` stays apart from the payload-less boom
+#guard ((Payload.image.ofVal (Record.frame [("boom", .unit)])).map fun p =>
+  Schema.Codec.encodeErr (.payload p) != Schema.Codec.encodeErr .boom) = some true
+-- red controls: an uppercase spelling, a non-frame and malformed text are refused
+#guard failPayload.all fun e => match Schema.Codec.encodeErr e with
+  | .obj [("payload", .str hex)] =>
+    hex.toUpper != hex && Schema.Codec.decodeErr (.obj [("payload", .str hex.toUpper)]) == none
+  | _ => false
+#guard Schema.Codec.decodeErr (.obj [("payload", .str "")]) = none
+#guard Schema.Codec.decodeErr (.obj [("payload", .str "zz")]) = none
+#guard Schema.Codec.decodeErr (.obj [("payload", Arch.Json.ofNat 1)]) = none
+-- at the record type, a cause's failure carries the record's own JSON
+#guard (Schema.encode (.causeOf (.record [("_tag", false, .lit "NotFound"), ("id", false, .nat)]))
+    (Val.exitErr (Cause.fail (errOf failFrame)))).isSome
+
+#print axioms Schema.Codec.decodeErr_exact
+#print axioms Schema.Codec.payloadOfHex?_exact
+
 end Effect4.Test.DataCodec

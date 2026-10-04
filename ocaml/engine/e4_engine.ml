@@ -36,20 +36,6 @@ module type INSTANCE = sig
     | Completion_ofExit of ('b, 'e, 'd, 'i, 'a) exit_
     | Completion_ofRefGet of ref_key
 
-  type err =
-    | Err_boom
-    | Err_tag of int
-    | Err_tagged of string * string
-    | Err_text of string
-
-  type defect =
-    | Defect_notImplemented
-    | Defect_asyncFiber
-    | Defect_badName
-    | Defect_missingService
-    | Defect_user of int
-    | Defect_error of err
-
   type val_ =
     | Val_unit
     | Val_bool of bool
@@ -65,6 +51,24 @@ module type INSTANCE = sig
     | Val_handle of int * int
     | Val_negInt of int
     | Val_float of int
+
+  (* a handle-free record value (Effect4.Machine.Payload, decisions row 120) *)
+  type payload = val_
+
+  type err =
+    | Err_boom
+    | Err_tag of int
+    | Err_tagged of string * string
+    | Err_text of string
+    | Err_payload of payload
+
+  type defect =
+    | Defect_notImplemented
+    | Defect_asyncFiber
+    | Defect_badName
+    | Defect_missingService
+    | Defect_user of int
+    | Defect_error of err
 
   type stuck =
     | Stuck_unknownFiber of fiber_id
@@ -428,6 +432,7 @@ module Make (I : INSTANCE) = struct
     | I.Err_tag t -> Printf.sprintf "tag %d" t
     | I.Err_tagged (tag, msg) -> Printf.sprintf "tagged %s: %s" tag msg
     | I.Err_text msg -> Printf.sprintf "text %s" msg
+    | I.Err_payload p -> "payload " ^ show_val p
 
   let show_defect (d : I.defect) : string =
     match d with

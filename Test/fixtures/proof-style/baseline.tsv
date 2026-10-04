@@ -369,11 +369,9 @@ src/Effect4/Laws/Program/Admit.lean	handleLive_eq	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	hasTy_join_left	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	hasTy_join_right	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	isTagTy_string	simp-without-only	2
-src/Effect4/Laws/Program/Admit.lean	ofError_errOf_ne_badName	simp-without-only	4
 src/Effect4/Laws/Program/Admit.lean	replayCheckedFrom_answersValid	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	requestOf_current	simp-without-only	3
 src/Effect4/Laws/Program/Admit.lean	requestOf_current	try	1
-src/Effect4/Laws/Program/Admit.lean	valOfErr_errOf	simp_all	1
 src/Effect4/Laws/Program/Admit.lean	valOfErr_errOf_rawSupported	simp-without-only	5
 src/Effect4/Laws/Program/Agreement.lean	Node.at_append	simp-without-only	1
 src/Effect4/Laws/Program/Agreement.lean	buildWithScopeK_context	simp-without-only	1
@@ -539,8 +537,6 @@ src/Effect4/Laws/Program/Authoring/Lifts.lean	withFiber_scoped	simp-without-only
 src/Effect4/Laws/Program/Authoring/Lifts.lean	yieldNow_scoped	simp-without-only	1
 src/Effect4/Laws/Program/CheckedTyping.lean	checkTypedProgram_refusal_iff	simp_all	1
 src/Effect4/Laws/Program/CheckedTyping.lean	checkTypedProgram_type	simp_all	1
-src/Effect4/Laws/Program/Decision.lean	NativeAtom.tagHit_eq	simp-without-only	1
-src/Effect4/Laws/Program/Decision.lean	NativeAtom.tagHit_eq	try	2
 src/Effect4/Laws/Program/Denote.lean	Straight.suspendDecided_iff	simp-without-only	1
 src/Effect4/Laws/Program/DenoteB.lean	Looped.suspendDecided_iff	simp-without-only	1
 src/Effect4/Laws/Program/DenoteR.lean	denoteLayer_effect	unread	1
@@ -961,7 +957,6 @@ src/Effect4/Laws/Store/CanonicalSpec.lean	mapM_ofVal_spec	unread	1
 src/Effect4/Laws/Store/CanonicalSpec.lean	ofVal_spec	unread	1
 src/Effect4/Machine/Alphabets.lean	Defect.image	try	2
 src/Effect4/Machine/Alphabets.lean	Defect.image_handleFree	try	1
-src/Effect4/Machine/Alphabets.lean	Err.image	first	1
 src/Effect4/Machine/Cause.lean	hasInterrupts_iff	simp-without-only	1
 src/Effect4/Machine/Cause.lean	lookup_annotate_absent	simp-without-only	1
 src/Effect4/Machine/Cause.lean	lookup_annotate_kept	simp-without-only	1
