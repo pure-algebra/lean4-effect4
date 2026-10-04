@@ -1,4 +1,6 @@
-import Effect4.Schema.Annotations
+module
+
+public import Effect4.Schema.Annotations
 
 /-!
 # Schema.Document.lean
@@ -94,6 +96,8 @@ shapes, never the carrier. Verified spans, all under
 Note that Foldlab's `Document` is single-root. `MultiDocument` has no prior
 art here at all.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

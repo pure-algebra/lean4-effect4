@@ -1,8 +1,12 @@
-import Effect4.Program.Ty
+module
+
+public import Effect4.Program.Ty
 
 /-! Exact positional projection for decisions rows 159 and 197.
 The checker normalizes the target once, then checks every union alternative.
 A list type supplies no fixed positions. -/
+
+@[expose] public section
 
 namespace Effect4.Program.Tuple
 

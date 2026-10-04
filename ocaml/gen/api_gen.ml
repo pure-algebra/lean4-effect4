@@ -6889,21 +6889,20 @@ let deferred_store_wake_batch (self : _ deferred_store) (cell : int) : _ deferre
             | None -> (let _x_3 = wake_list_run_batch wake in
               match _x_3 with
                 | fst_1, snd_1 -> (match (snd_1 : _ wake_list) with
-                    | { waiters = waiters; phase = phase; _ } -> (let _x_4 = None in
-                      let _x_5 = waiters @ fst_1 in
-                      let _x_6 = ({ waiters = _x_5; batch = _x_4; phase = phase } : _ wake_list) in
-                      let _x_7 = ({ completion = completion; wake = _x_6 } : _ deferred_cell) in
-                      deferred_store_set_cell self cell _x_7)))
-            | Some val__9 -> (let _x_10 = wake_list_run_batch wake in
-              match _x_10 with
-                | fst_2, snd_2 -> (let _x_11 = ({ completion = completion; wake = snd_2 } : _ deferred_cell) in
-                  let _x_12 = deferred_store_set_cell self cell _x_11 in
-                  match (_x_12 : _ deferred_store) with
+                    | { waiters = waiters; batch = batch; phase = phase } -> (let _x_4 = waiters @ fst_1 in
+                      let _x_5 = ({ waiters = _x_4; batch = batch; phase = phase } : _ wake_list) in
+                      let _x_6 = ({ completion = completion; wake = _x_5 } : _ deferred_cell) in
+                      deferred_store_set_cell self cell _x_6)))
+            | Some val__8 -> (let _x_9 = wake_list_run_batch wake in
+              match _x_9 with
+                | fst_2, snd_2 -> (let _x_10 = ({ completion = completion; wake = snd_2 } : _ deferred_cell) in
+                  let _x_11 = deferred_store_set_cell self cell _x_10 in
+                  match (_x_11 : _ deferred_store) with
                     | { cells = cells; _ } -> (match (self : _ deferred_store) with
-                        | { due = due; _ } -> (let _x_13 = [] in
-                          let _x_14 = list_map_tr_loop_at_deferred_store_complete_spec_0 val__9 fst_2 _x_13 in
-                          let _x_15 = due @ _x_14 in
-                          ({ cells = cells; due = _x_15 } : _ deferred_store)))))))
+                        | { due = due; _ } -> (let _x_12 = [] in
+                          let _x_13 = list_map_tr_loop_at_deferred_store_complete_spec_0 val__8 fst_2 _x_12 in
+                          let _x_14 = due @ _x_13 in
+                          ({ cells = cells; due = _x_14 } : _ deferred_store)))))))
 
 
 
@@ -11603,14 +11602,14 @@ let run_machine_update (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f
 
 
 
-(* LCNF mono: List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0 (child : Nat) (a.1 : List Nat) (a.2 : List Nat) : List Nat *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Machine.RunMachine.disarm.spec_0 (owner : Nat) (a.1 : List Nat) (a.2 : List Nat) : List Nat *)
 
-let rec list_filter_tr_loop_at_supervision_race_complete_spec_0 (child : int) (a_1 : int list) (a_2 : int list) : int list =
+let rec list_filter_tr_loop_at_run_machine_disarm_spec_0 (owner : int) (a_1 : int list) (a_2 : int list) : int list =
   match a_1 with
     | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = head_4 = child in
-      if _x_6 then list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
-        list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 _x_7))
+    | head_4 :: tail_5 -> (let _x_6 = head_4 = owner in
+      if _x_6 then list_filter_tr_loop_at_run_machine_disarm_spec_0 owner tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
+        list_filter_tr_loop_at_run_machine_disarm_spec_0 owner tail_5 _x_7))
 
 
 
@@ -11619,7 +11618,7 @@ let rec list_filter_tr_loop_at_supervision_race_complete_spec_0 (child : int) (a
 let run_machine_disarm (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (owner : int) : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } -> (let _x_1 = [] in
-      let _x_2 = list_filter_tr_loop_at_supervision_race_complete_spec_0 owner armed _x_1 in
+      let _x_2 = list_filter_tr_loop_at_run_machine_disarm_spec_0 owner armed _x_1 in
       ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = _x_2; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine))
 
 
@@ -14406,7 +14405,7 @@ let drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_f
 let fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13__red_arg__lam_0 (id : int) (p : (eff_name, _, val_, err, defect, int, unit, _, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) : (eff_name, _, val_, err, defect, int, unit, _, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber =
   match (p : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
     | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = [] in
-      let _x_2 = list_filter_tr_loop_at_supervision_race_complete_spec_0 id children _x_1 in
+      let _x_2 = list_filter_tr_loop_at_run_machine_disarm_spec_0 id children _x_1 in
       ({ id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = _x_2; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber))
 
 
@@ -14554,6 +14553,17 @@ let rec list_foldl_at_interrupt_each_at_fire_observer_at_drive_step_at_drive_sta
                   if snd_11 then (let _x_21 = Cmd_evaluate head_3 in
                     let _x_22 = _x_21 :: _x_14 in
                     _jp_16 _x_22) else _jp_16 _x_14))))
+
+
+
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0 (child : Nat) (a.1 : List Nat) (a.2 : List Nat) : List Nat *)
+
+let rec list_filter_tr_loop_at_supervision_race_complete_spec_0 (child : int) (a_1 : int list) (a_2 : int list) : int list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = head_4 = child in
+      if _x_6 then list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
+        list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 _x_7))
 
 
 

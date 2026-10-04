@@ -1,4 +1,6 @@
-import Effect4.Schema.Document
+module
+
+public import Effect4.Schema.Document
 
 /-!
 # Schema authoring conveniences
@@ -6,6 +8,8 @@ import Effect4.Schema.Document
 Small constructors over the canonical raw Schema carriers. This module does
 not define a second schema AST or executable predicate language.
 -/
+
+@[expose] public section
 
 namespace Effect4.Schema
 

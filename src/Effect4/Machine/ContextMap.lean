@@ -1,5 +1,7 @@
-import Effect4.Machine.Key
-import Effect4.Machine.Value
+module
+
+public import Effect4.Machine.Key
+public import Effect4.Machine.Value
 
 /-!
 # Machine.ContextMap — the service map, its keys and its codec
@@ -18,6 +20,8 @@ the requirement rows, satisfaction, the context updates and the counterexamples 
 service programs over `Effects.Algebra.Program` was deleted on 2026-10-01, so no module of the core
 root imports the `Effects` package).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

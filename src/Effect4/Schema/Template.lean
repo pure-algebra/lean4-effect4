@@ -1,5 +1,7 @@
-import Effect4.Schema.Fold
-import Effect4.Schema.Authoring
+module
+
+public import Effect4.Schema.Fold
+public import Effect4.Schema.Authoring
 
 /-!
 # Schema templates: Schema IR with holes, filled by a fold over the Schema AST
@@ -17,6 +19,8 @@ child's representation, and the payload mark at a declaration's id or in a strin
 the payload. Every other node is rebuilt as it is (`cata_id_representation`). A reference to no
 child stays a reference, so a template's own `$ref`s pass through.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

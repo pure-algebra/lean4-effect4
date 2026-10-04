@@ -1,10 +1,12 @@
-import Effect4.Machine.Fibers
-import Effect4.Machine.Scope
-import Effect4.Machine.Value
-import Effect4.Machine.ContextMap
-import Effect4.Machine.Wake
-import Effect4.Machine.Timer
-import Effect4.Machine.Alphabets
+module
+
+public import Effect4.Machine.Fibers
+public import Effect4.Machine.Scope
+public import Effect4.Machine.Value
+public import Effect4.Machine.ContextMap
+public import Effect4.Machine.Wake
+public import Effect4.Machine.Timer
+public import Effect4.Machine.Alphabets
 
 /-!
 # Deep spike S2: the concrete stores and the `RunInterp` over them
@@ -43,6 +45,8 @@ finalization (`AGENTS.md`, "State produced before failure remains available to f
 whose falsifier is one reachable decision after which the store is an earlier one; the executable
 instance is `Deep.Witnesses.db07_store_survives_failure`.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

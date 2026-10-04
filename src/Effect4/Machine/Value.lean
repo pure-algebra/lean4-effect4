@@ -1,6 +1,11 @@
-import Effect4.Store.Carrier.Image
-import Effect4.Machine.Exit
-import Effect4.Machine.Fiber
+module
+
+public import Effect4.Store.Carrier.Image
+public import Effect4.Machine.Exit
+public import Effect4.Machine.Fiber
+meta import Effect4.Store.Carrier.Val
+meta import Effect4.Machine.Fiber
+meta import Effect4.Store.Carrier.Image
 
 /-!
 # Machine.Value — the shared value foundation, Machine side
@@ -44,6 +49,8 @@ cause* it is an identity (`fiberIdentity`, `ctor 0 [nat]`, the generated rule fo
 structure): `Val.keys` does not count it — "a reified failed exit carries a cause only" — and
 `cause_handleFree` is that fact on the shared carrier.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

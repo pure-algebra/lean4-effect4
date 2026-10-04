@@ -1,9 +1,13 @@
-import Effect4.Machine.Alphabets
-import Effect4.Data.FieldOrder
+module
+
+public import Effect4.Machine.Alphabets
+public import Effect4.Data.FieldOrder
 
 /-! String-map value operations for decisions rows 125, 166 and 197.
 Maps use pair entries; ordinary program entries use two-item lists.
 Output maps have distinct keys in UTF-8 order. Constructor duplicates retain their last value. -/
+
+@[expose] public section
 
 namespace Effect4.Machine.Map
 

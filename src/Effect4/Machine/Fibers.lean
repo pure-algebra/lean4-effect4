@@ -1,8 +1,10 @@
-import Effect4.Data.ClockMillis
-import Effect4.Machine.Frames
-import Effect4.Machine.Supervision
-import Effect4.Machine.Completion
-import Effect4.Machine.Wake
+module
+
+public import Effect4.Data.ClockMillis
+public import Effect4.Machine.Frames
+public import Effect4.Machine.Supervision
+public import Effect4.Machine.Completion
+public import Effect4.Machine.Wake
 
 /-!
 # The program-carrying fiber machine
@@ -34,6 +36,8 @@ are live frontiers (DB-04). A stuck marker records a state rc.112 cannot reach
 (a join on a handle the machine does not hold, an unknown scope key).
 The error channel is `Cause ε δ ι α` and `Exit` everywhere.
 -/
+
+@[expose] public section
 
 namespace Effect4.Machine
 

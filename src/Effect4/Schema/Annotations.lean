@@ -1,5 +1,7 @@
-import Effect4.Data.Optic
-import Effect4.Schema.Representation
+module
+
+public import Effect4.Data.Optic
+public import Effect4.Schema.Representation
 
 /-!
 # Schema annotation carrier
@@ -13,6 +15,8 @@ references have no field, while a stored `none` is a present field. Recursive
 annotation traversal and the broader annotation editing API were retired by
 decision row 39.
 -/
+
+@[expose] public section
 
 namespace Effect4
 

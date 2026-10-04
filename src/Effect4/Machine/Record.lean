@@ -1,9 +1,13 @@
-import Effect4.Store.Carrier.Val
-import Effect4.Data.FieldOrder
+module
+
+public import Effect4.Store.Carrier.Val
+public import Effect4.Data.FieldOrder
 
 /-! Named record value operations for decisions rows 165 and 195.
 The value carrier and frame stay unchanged. Names and values remain paired during sorting.
 Malformed columns refuse before lookup or overwrite. -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

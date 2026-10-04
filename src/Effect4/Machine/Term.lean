@@ -1,7 +1,9 @@
-import Effect4.Machine.Alphabets
-import Effect4.Machine.Record
-import Effect4.Machine.Map
-import Effect4.Program.TyEq
+module
+
+public import Effect4.Machine.Alphabets
+public import Effect4.Machine.Record
+public import Effect4.Machine.Map
+public import Effect4.Program.TyEq
 
 /-!
 # Machine.Term — the first-order term language and its evaluation, below the stores
@@ -18,6 +20,8 @@ evaluate a term (the function-taking rows of decisions row 43 carry one) and sta
 step. Namespace `Effect4.Program` is kept: the wire tags, the generator and every consumer
 name these constants by it (L1 of the language push, `docs/research/2026-09-18-rows-42-43-plan.md` §2c).
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

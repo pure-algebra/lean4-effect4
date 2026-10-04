@@ -1,5 +1,7 @@
-import Effect4.Program.Record
-import Effect4.Store.Carrier.Val
+module
+
+public import Effect4.Program.Record
+public import Effect4.Store.Carrier.Val
 
 /-!
 # Program.Decision — how a value-decided fork selects its arm
@@ -21,6 +23,8 @@ meaning, `effTy` and `HasTy` all read these two, so they agree by construction, 
   bound value has the arm's type — the whole "no `badShape` on an admitted program" story
   for the construct.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 open Effect4.Store

@@ -1,6 +1,8 @@
-import Effect4.Machine.Value
-import Effect4.Machine.Completion
-import Effect4.Machine.Wake
+module
+
+public import Effect4.Machine.Value
+public import Effect4.Machine.Completion
+public import Effect4.Machine.Wake
 
 /-!
 # Machine.Alphabets — the error, defect and value alphabets, once, below the stores
@@ -16,6 +18,8 @@ function-taking rows carry. The S5 spike's second copy of this alphabet under
 `Effect4.Machine.Env` (`Machine/Context.lean`) had no consumer and is gone. Every name keeps
 its namespace, so no reader changes.
 -/
+
+@[expose] public section
 
 namespace Effect4.Machine
 

@@ -1,5 +1,7 @@
-import Effect4.Machine.Wake
-import Effect4.Data.ClockMillis
+module
+
+public import Effect4.Machine.Wake
+public import Effect4.Data.ClockMillis
 
 /-!
 # The timer store — the logical clock and its sleeps (A4)
@@ -36,6 +38,8 @@ the next fire.
 clock never moves backwards, R1), `TIMER-FB-KEPT-CANCEL` (a cancelled sleep is removed, not
 kept, R2), `TIMER-FB-INFINITE` (`sleep ∞` is not a deadline).
 -/
+
+@[expose] public section
 
 namespace Effect4.Machine
 

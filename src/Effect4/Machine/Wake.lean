@@ -1,5 +1,7 @@
-import Effect4.Machine.Fiber
-import Effect4.Machine.Value
+module
+
+public import Effect4.Machine.Fiber
+public import Effect4.Machine.Value
 
 /-!
 # Effect4.Machine.Wake
@@ -37,6 +39,8 @@ written with these sweeps; the list is FIFO, a Semaphore's sweep is not (`SCHED-
 The machine side of the clause is the resume guard: a resume for a fiber no longer parked on
 that token is inert (`drive_resume_wrong_token`, `Machine/Clauses.lean`).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

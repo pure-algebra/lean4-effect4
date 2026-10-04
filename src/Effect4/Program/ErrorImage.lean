@@ -1,5 +1,7 @@
-import Effect4.Program.Ty
-import Effect4.Machine.Term
+module
+
+public import Effect4.Program.Ty
+public import Effect4.Machine.Term
 
 /-!
 # Program.ErrorImage — the closed error image and parameterized cause folds
@@ -15,6 +17,8 @@ use the same fold both recursively and at external admission. The recursive call
 over the smaller type and its allocation table; this module has no dependency on `Val.hasTy`.
 The conversion and membership laws live in `Laws/Program/{Typed,Admit}.lean`.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

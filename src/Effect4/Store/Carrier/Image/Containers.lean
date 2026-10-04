@@ -1,7 +1,11 @@
-import Effect4.Store.Carrier.Image
+module
+
+public import Effect4.Store.Carrier.Image
 
 /-! Disjoint constructor images for sums and explicit errors. These are codecs, not
 new membership rules for the program's error type. -/
+
+@[expose] public section
 namespace Effect4.Store.Image
 variable {α β : Type}
 

@@ -1,4 +1,6 @@
-import Effect4.Store.Carrier.Val
+module
+
+public import Effect4.Store.Carrier.Val
 
 /-!
 # Store.Image
@@ -30,6 +32,8 @@ The combinators write the frames the generated `Canonical` instances write
 image built from them is therefore byte-identical to the instance the generator would emit for
 the same declaration, which is what lets the OCaml side share one decoder.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

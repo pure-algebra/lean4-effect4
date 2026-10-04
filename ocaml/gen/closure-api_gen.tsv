@@ -139,7 +139,7 @@ Effect4.Program.Point.childBind	program_point_child_bind	false	2	0	0	0	1	2	0	0	0
 Effect4.Program.compileEff	program_compile_eff	true	89	0	1	3	17	35	0	2	0	0	87	0	1	0	1	0	0	0	0	161	117	0	48	5	1	0	13274814522809716433
 Effect4.Machine.progOf	prog_of	true	91	0	0	0	2	27	0	0	0	0	91	0	0	0	0	0	0	0	0	221	109	0	28	0	1	0	9809952371676580223
 Effect4.Program.Point.ofCapture	program_point_of_capture	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	6	0	1	0	1	0	6782708975492097927
-Effect4.Machine.DeferredStore.wakeBatch._redArg	deferred_store_wake_batch	false	14	0	0	0	8	3	0	0	0	0	14	0	0	0	0	0	0	0	0	6	26	0	10	0	1	0	12945317851750752031
+Effect4.Machine.DeferredStore.wakeBatch._redArg	deferred_store_wake_batch	false	13	0	0	0	8	3	0	0	0	0	13	0	0	0	0	0	0	0	0	5	26	0	10	0	1	0	13911034005123845060
 Effect4.Machine.Env.ambientScope	env_ambient_scope	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	3	0	0	0	1	0	11381641479029783834
 List.mapTR.loop._at_.Effect4.Machine.exitsVal.spec_0	list_map_tr_loop_at_exits_val_spec_0	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	6	0	2	0	1	0	9357698972288772276
 Effect4.Machine.stackKey	stack_key	false	10	0	0	0	3	4	0	7	0	0	3	0	3	4	0	0	0	0	0	0	6	0	6	0	1	0	1973622085188268693
@@ -241,7 +241,7 @@ Effect4.Machine.MemoWorld.deleteEntry	memo_world_delete_entry	false	5	0	0	0	2	2	
 Effect4.Machine.refStep	ref_step	false	88	0	1	2	20	30	0	2	0	0	86	0	0	0	2	0	0	0	0	64	134	0	49	1	1	0	16479998470594638855
 Effect4.Machine.DeferredStore.cellAt._redArg	deferred_store_cell_at	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	1	0	1	0	2683930862243776319
 Effect4.Machine.WakeList.register._redArg	wake_list_register	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	4	11	0	1	0	1	0	15423574983730355961
-Effect4.Machine.DeferredStore.setCell._redArg	deferred_store_set_cell	false	4	0	0	0	1	1	0	1	0	0	3	0	1	0	0	0	0	0	0	2	8	0	1	0	1	0	10184370704710630997
+Effect4.Machine.DeferredStore.setCell._redArg	deferred_store_set_cell	false	4	0	0	0	1	1	0	1	0	0	3	0	1	0	0	0	0	0	0	3	8	0	1	0	1	0	4863290763208402043
 List.get?Internal._redArg	list_get_opt_internal	true	7	0	0	0	2	3	0	2	0	0	5	0	2	0	0	0	0	0	0	2	7	0	3	1	1	0	7917179579382169689
 Effect4.Program.instDecidableEqRegistration	program_inst_decidable_eq_registration	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	11997596113152781046
 Effect4.Program.instDecidableEqRowKind	program_inst_decidable_eq_row_kind	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	17139293446232041623
@@ -323,7 +323,7 @@ Effect4.Machine.closeSeqStep	close_seq_step	false	7	0	0	0	1	2	0	0	0	0	7	0	0	0	0	
 Effect4.Machine.closeDone._redArg	close_done	false	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	16	2	0	2	0	1	0	5292085095127107823
 Effect4.Program.rootPoint	program_root_point	false	3	0	0	0	0	1	0	1	0	0	2	0	1	0	0	0	0	0	0	1	6	0	0	0	1	0	15469819770862145322
 Effect4.Machine.Dispatcher.drain._redArg	dispatcher_drain	false	8	0	0	0	1	1	0	1	0	0	7	0	1	0	0	0	0	0	0	12	9	0	1	0	1	0	5932509194067731258
-Effect4.Machine.RunMachine.disarm._redArg	run_machine_disarm	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	13	14	0	1	0	1	0	3738641773443435841
+Effect4.Machine.RunMachine.disarm._redArg	run_machine_disarm	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	13	14	0	1	0	1	0	9443435539995767168
 List.foldl._at_.Effect4.Machine.fireState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_1.spec_3	list_foldl_at_fire_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_1_spec_3	true	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	14	0	2	0	1	0	780093433882649175
 Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6	drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6	false	207	0	4	8	72	46	0	2	0	0	198	7	2	0	0	0	0	0	0	497	569	0	119	2	1	0	312681246228363471
 Effect4.Machine.settled._redArg	settled	false	2	0	0	0	4	3	0	0	0	0	2	0	0	0	0	0	0	0	0	0	1	0	6	0	1	0	12808980464883832319
@@ -357,7 +357,7 @@ List.mapTR.loop._at_.Effect4.Machine.MemoWorld.updateEntry.spec_0	list_map_tr_lo
 Effect4.Machine.MemoWorld.setMap	memo_world_set_map	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	0	0	1	0	5176313146246189584
 List.find?._at_.Effect4.Machine.MemoWorld.entryAt.spec_0	list_find_opt_at_memo_world_entry_at_spec_0	true	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	2	6	0	5	0	1	0	5468994318988498905
 List.filterTR.loop._at_.Effect4.Machine.MemoWorld.deleteEntry.spec_0	list_filter_tr_loop_at_memo_world_delete_entry_spec_0	true	6	0	0	0	3	3	0	0	0	0	6	0	0	0	0	0	0	0	0	1	12	0	5	0	1	0	15839575944230453547
-Effect4.Machine.refPoke	ref_poke	false	3	0	0	0	0	1	0	1	0	0	2	0	1	0	0	0	0	0	0	1	6	0	0	0	1	0	2290970934819190974
+Effect4.Machine.refPoke	ref_poke	false	3	0	0	0	0	1	0	1	0	0	2	0	1	0	0	0	0	0	0	2	6	0	0	0	1	0	596843256215832198
 Effect4.Machine.FnName.total	fn_name_total	false	6	0	1	2	4	6	0	2	0	0	4	0	2	0	0	0	0	0	0	0	8	0	6	4	1	0	12741899710592536063
 Effect4.Machine.FnName.partialUpdate	fn_name_partial_update	false	9	0	0	0	3	5	0	1	0	0	8	0	1	0	0	0	0	0	0	5	7	0	4	3	1	0	17583358025737998475
 Effect4.Machine.FnName.modify	fn_name_modify	false	6	0	1	2	2	2	0	1	0	0	5	0	1	0	0	0	0	0	0	4	13	0	2	2	1	0	17436298346736581601
@@ -442,8 +442,8 @@ Effect4.Program.numberImage	program_number_image	false	2	0	0	0	2	3	0	0	0	0	2	0	0
 Effect4.Program.internalHandleTargets	program_internal_handle_targets	false	11	0	0	0	0	1	0	5	0	0	6	0	0	5	0	0	0	0	0	6	10	0	0	0	1	0	14103980708180370728
 List.elem._at_.Effect4.Program.NativeAtom.covers.spec_0	list_elem_at_program_native_atom_covers_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	2630399432333297539
 List.mapTR.loop._at_.Effect4.Machine.Dispatcher.drain.spec_0._redArg	list_map_tr_loop_at_dispatcher_drain_spec_0	true	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	3	0	1	0	16431373586312183879
-_private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Machine.Dispatcher.drain.spec_1._redArg	list_flat_map_tr_go_at_dispatcher_drain_spec_1	true	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	2	0	1	0	15780816635787139227
-List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0	list_filter_tr_loop_at_supervision_race_complete_spec_0	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	700761300740038917
+_private.Init.Data.List.Impl.0.List.flatMapTR.go._at_.Effect4.Machine.Dispatcher.drain.spec_1._redArg	list_flat_map_tr_go_at_dispatcher_drain_spec_1	true	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	1	5	0	2	0	1	0	14382053606256825234
+List.filterTR.loop._at_.Effect4.Machine.RunMachine.disarm.spec_0	list_filter_tr_loop_at_run_machine_disarm_spec_0	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	11359200060688530300
 Effect4.Machine.fireStep._at_.Effect4.Machine.fireState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_1.spec_2	fire_step_at_fire_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_1_spec_2	false	8	0	0	0	3	2	0	0	0	0	8	0	0	0	0	0	0	0	0	14	16	0	4	0	1	0	14257059884650450135
 Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_8._redArg	iteration_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_8	false	7	0	0	0	2	2	0	0	0	0	7	0	0	0	0	0	0	0	0	8	15	0	3	0	1	0	16087990123979551789
 Effect4.Machine.settle._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_9._redArg	settle_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_9	false	43	0	0	0	6	7	0	0	0	0	43	0	0	0	0	0	0	0	0	85	111	0	12	0	1	0	14154604431739574090
@@ -553,7 +553,7 @@ Effect4.Machine.exitFiber.exitInterruptChildren._at_.Effect4.Machine.exitFiber._
 List.find?._at_.Effect4.Machine.RunMachine.race?.spec_0._redArg	list_find_opt_at_run_machine_race_opt_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	7163454274731504365
 List.mapTR.loop._at_.Effect4.Machine.RunMachine.updateRace.spec_0._redArg	list_map_tr_loop_at_run_machine_update_race_spec_0	true	4	0	1	2	4	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	10	0	6	0	1	0	2030575854521651834
 Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_19._redArg	spawn_at_launch_entrant_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_12_spec_19	false	18	0	1	3	7	1	0	1	0	0	16	1	1	0	0	0	0	0	0	30	45	0	9	0	1	0	8704779502239761520
-Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13._redArg._lam_0	fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13__red_arg__lam_0	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	11	18	0	1	0	1	0	11495595993585524493
+Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13._redArg._lam_0	fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13__red_arg__lam_0	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	11	18	0	1	0	1	0	10030017507885477809
 List.find?._at_.Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13.spec_21	list_find_opt_at_fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13_spec_21	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	363894453220804280
 Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13._redArg._lam_1	fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13__red_arg__lam_1	false	4	0	0	0	1	1	0	0	0	0	4	0	0	0	0	0	0	0	0	12	19	0	1	0	1	0	2789846411146590301
 Effect4.Machine.countdownWalk._redArg	countdown_walk	true	11	0	0	0	4	4	0	0	0	0	11	0	0	0	0	0	0	0	0	10	19	0	7	0	1	0	6707174492295168613
@@ -622,6 +622,7 @@ Effect4.Machine.storesCloseScopeUnsafe._redArg	stores_close_scope_unsafe	false	1
 Effect4.Machine.finalizerCode._redArg	finalizer_code	false	4	0	1	2	3	1	0	0	0	0	2	2	0	0	0	0	0	0	0	14	8	0	4	0	1	0	15764448396312432208
 Effect4.Machine.RunFiber.publish._at_.Effect4.Machine.exitFiber.exitStore._at_.Effect4.Machine.exitFiber._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_10.spec_15.spec_18._redArg	run_fiber_publish_at_exit_fiber_exit_store_at_exit_fiber_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_10_spec_15_spec_18	false	7	0	0	0	2	1	0	0	0	0	7	0	0	0	0	0	0	0	0	20	21	0	2	0	1	0	3943048828012119493
 List.mapTR.loop._at_.Effect4.Machine.exitFiber.exitStore._at_.Effect4.Machine.exitFiber._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_10.spec_15.spec_19._redArg	list_map_tr_loop_at_exit_fiber_exit_store_at_exit_fiber_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_10_spec_15_spec_19	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	9	10	0	2	0	1	0	10186810198002441875
+List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0	list_filter_tr_loop_at_supervision_race_complete_spec_0	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	700761300740038917
 Effect4.Exit.causeReasons._redArg	exit__cause_reasons	false	1	0	0	0	1	2	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	2	0	1	0	10354834121175226058
 Effect4.Supervision.WaitState.pending._redArg	supervision_wait_state_pending	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	1	0	1	0	14953679686653513911
 Effect4.ReasonAnnotations.annotateEntries._redArg	reason_annotations_annotate_entries	false	4	0	0	0	0	1	0	0	0	0	4	0	0	0	0	0	0	0	0	1	9	0	0	0	1	0	26194177036384998

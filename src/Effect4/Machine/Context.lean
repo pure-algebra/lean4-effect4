@@ -1,6 +1,8 @@
-import Effect4.Machine.ContextMap
-import Effect4.Machine.Fibers
-import Effect4.Data.Row
+module
+
+public import Effect4.Machine.ContextMap
+public import Effect4.Machine.Fibers
+public import Effect4.Data.Row
 
 /-!
 # Machine.Context — requirement rows, satisfaction, and the context updates `withFiber` names
@@ -57,6 +59,8 @@ a typed error and never a hidden default.
 namespace keeps the old spellings as patterns, the way `Machine/Stores.lean` spells
 `Machine.Val`'s (`docs/research/2026-09-07-u1-cutover-dispatch.md`, U1b).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

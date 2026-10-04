@@ -6156,21 +6156,20 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
             | None -> (let _x_3 = wake_list_run_batch wake in
               match _x_3 with
                 | fst_1, snd_1 -> (match (snd_1 : _ wake_list) with
-                    | { waiters = waiters; phase = phase; _ } -> (let _x_4 = None in
-                      let _x_5 = waiters @ fst_1 in
-                      let _x_6 = ({ waiters = _x_5; batch = _x_4; phase = phase } : _ wake_list) in
-                      let _x_7 = ({ completion = completion; wake = _x_6 } : _ deferred_cell) in
-                      sh_deferred_set_cell self cell _x_7)))
-            | Some val__9 -> (let _x_10 = wake_list_run_batch wake in
-              match _x_10 with
-                | fst_2, snd_2 -> (let _x_11 = ({ completion = completion; wake = snd_2 } : _ deferred_cell) in
-                  let _x_12 = sh_deferred_set_cell self cell _x_11 in
-                  match (_x_12 : _ deferred_store) with
+                    | { waiters = waiters; batch = batch; phase = phase } -> (let _x_4 = waiters @ fst_1 in
+                      let _x_5 = ({ waiters = _x_4; batch = batch; phase = phase } : _ wake_list) in
+                      let _x_6 = ({ completion = completion; wake = _x_5 } : _ deferred_cell) in
+                      sh_deferred_set_cell self cell _x_6)))
+            | Some val__8 -> (let _x_9 = wake_list_run_batch wake in
+              match _x_9 with
+                | fst_2, snd_2 -> (let _x_10 = ({ completion = completion; wake = snd_2 } : _ deferred_cell) in
+                  let _x_11 = sh_deferred_set_cell self cell _x_10 in
+                  match (_x_11 : _ deferred_store) with
                     | { cells = cells; _ } -> (match (self : _ deferred_store) with
-                        | { due = due; _ } -> (let _x_13 = [] in
-                          let _x_14 = list_map_tr_loop_at_deferred_store_complete_spec_0 val__9 fst_2 _x_13 in
-                          let _x_15 = due @ _x_14 in
-                          ({ cells = cells; due = _x_15 } : _ deferred_store)))))))
+                        | { due = due; _ } -> (let _x_12 = [] in
+                          let _x_13 = list_map_tr_loop_at_deferred_store_complete_spec_0 val__8 fst_2 _x_12 in
+                          let _x_14 = due @ _x_13 in
+                          ({ cells = cells; due = _x_14 } : _ deferred_store)))))))
 
   (* LCNF mono: Effect4.Machine.Stores.wakeList._redArg (key : Effect4.Machine.WakeKey) (s : Effect4.Machine.Stores) : Effect4.Machine.Stores *)
   let stores_wake_list (key : wake_key) (s : stores) : stores =
@@ -9983,19 +9982,19 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   let _x_55 = program_prepare_external_answer table in
   ({ to_prim_interp = _x_41; park_of = _f_6; park_code = _f_7; interrupt_code = _f_8; interrupt_as_code = _f_9; interrupt_all_code = _f_10; with_fiber_of = _f_11; sync_state = _f_12; register_async = _f_13; answer_code = _f_14; due_resumes = _f_15; wake_list = _x_42; clock_step = _f_16; cancel_name = _f_17; abort_name = _x_43; park_cancel_name = _x_45; race_cancel_name = _f_18; race_settle = _f_19; finalizer_program = _f_20; restore_name = _f_21; merge_name = _f_22; scope_status = _f_23; scope_link_fiber = _f_24; drop_finalizer = _f_25; close_scope = _f_26; ambient_scope = _x_46; budget_of = _f_27; empty_context = _x_47; context_value = _f_30; exit_value = _f_28; fiber_value = _f_31; fiber_id_value = _f_29; fibers_value = _f_32; exits_value = _x_48; void_value = _x_49; scope_value = _f_33; close_done_name = _x_51; encode_fiber = _f_34; stack_annotations = _x_52; async_fiber_error = _x_53; missing_scope = _x_54; prepare_answer = _x_55 } : (_, _, _, _, _, _, _, _, _, _) run_interp)
 
-  (* LCNF mono: List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0 (child : Nat) (a.1 : List Nat) (a.2 : List Nat) : List Nat *)
-  let rec list_filter_tr_loop_at_supervision_race_complete_spec_0 (child : int) (a_1 : int list) (a_2 : int list) : int list =
+  (* LCNF mono: List.filterTR.loop._at_.Effect4.Machine.RunMachine.disarm.spec_0 (owner : Nat) (a.1 : List Nat) (a.2 : List Nat) : List Nat *)
+  let rec list_filter_tr_loop_at_run_machine_disarm_spec_0 (owner : int) (a_1 : int list) (a_2 : int list) : int list =
   match a_1 with
     | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (let _x_6 = head_4 = child in
-      if _x_6 then list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
-        list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 _x_7))
+    | head_4 :: tail_5 -> (let _x_6 = head_4 = owner in
+      if _x_6 then list_filter_tr_loop_at_run_machine_disarm_spec_0 owner tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
+        list_filter_tr_loop_at_run_machine_disarm_spec_0 owner tail_5 _x_7))
 
   (* LCNF mono: Effect4.Machine.RunMachine.disarm._redArg (m : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (owner : Nat) : Effect4.Machine.RunMachine lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny *)
   let run_machine_disarm (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (owner : int) : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } -> (let _x_1 = [] in
-      let _x_2 = list_filter_tr_loop_at_supervision_race_complete_spec_0 owner armed _x_1 in
+      let _x_2 = list_filter_tr_loop_at_run_machine_disarm_spec_0 owner armed _x_1 in
       ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = _x_2; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine))
 
   (* LCNF mono: Effect4.Machine.taskCmds._redArg (x.1 : Effect4.Machine.Task lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : lcAny *)
@@ -12271,7 +12270,7 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   let fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13__red_arg__lam_0 (id : int) (p : (eff_name, _, val_, err, defect, int, unit, _, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) : (eff_name, _, val_, err, defect, int, unit, _, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber =
   match (p : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
     | { id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let _x_1 = [] in
-      let _x_2 = list_filter_tr_loop_at_supervision_race_complete_spec_0 id children _x_1 in
+      let _x_2 = list_filter_tr_loop_at_run_machine_disarm_spec_0 id children _x_1 in
       ({ id = id_1; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = _x_2; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber))
 
   (* LCNF mono: List.find?._at_.Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13.spec_21 (token.1 : Nat) (x.2 : List (Effect4.Machine.Pending Effect4.Program.EffName Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Option (Effect4.Machine.Pending Effect4.Program.EffName Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
@@ -12392,6 +12391,14 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                   if snd_11 then (let _x_21 = Cmd_evaluate head_3 in
                     let _x_22 = _x_21 :: _x_14 in
                     _jp_16 _x_22) else _jp_16 _x_14))))
+
+  (* LCNF mono: List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0 (child : Nat) (a.1 : List Nat) (a.2 : List Nat) : List Nat *)
+  let rec list_filter_tr_loop_at_supervision_race_complete_spec_0 (child : int) (a_1 : int list) (a_2 : int list) : int list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (let _x_6 = head_4 = child in
+      if _x_6 then list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 a_2 else (let _x_7 = head_4 :: a_2 in
+        list_filter_tr_loop_at_supervision_race_complete_spec_0 child tail_5 _x_7))
 
   (* LCNF mono: Effect4.Exit.causeReasons._redArg (x.1 : Effect4.Exit lcAny lcAny lcAny lcAny lcAny) : List (Effect4.Reason lcAny lcAny lcAny lcAny) *)
   let exit__cause_reasons (x_1 : (_, _, _, _, _) exit_) : (_, _, _, _) reason list =

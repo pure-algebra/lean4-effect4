@@ -1,8 +1,10 @@
-import Effect4.Machine.Key
-import Effect4.Machine.Supervision
-import Effect4.Program.Ty
-import Effect4.Program.Decision
-import Effect4.Machine.Term
+module
+
+public import Effect4.Machine.Key
+public import Effect4.Machine.Supervision
+public import Effect4.Program.Ty
+public import Effect4.Program.Decision
+public import Effect4.Machine.Term
 
 /-!
 # Syntax.Eff — the Effect TS program AST (lane A1 of the AST relation)
@@ -33,6 +35,8 @@ and compile differently, and that difference is what the host relation (R4) is s
 list-shaped fields are the mutual cons-types `Terms`, `Stmts` and `Effs`, and the optional
 cancel of a callback is a second constructor.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

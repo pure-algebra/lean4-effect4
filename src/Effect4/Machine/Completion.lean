@@ -1,4 +1,6 @@
-import Effect4.Machine.Supervision
+module
+
+public import Effect4.Machine.Supervision
 
 /-!
 # External completions
@@ -10,6 +12,8 @@ operation is defined here.
 Numeric keys model allocation order, not host object identity (the existing
 `SCOPE-FB-KEY-IDENTITY` boundary).
 -/
+
+@[expose] public section
 
 namespace Effect4.Machine
 

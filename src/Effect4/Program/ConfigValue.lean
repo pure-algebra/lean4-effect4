@@ -1,5 +1,9 @@
-import Effect4.Store.Carrier.Image
-import Effect4.Program.Config
+module
+
+public import Effect4.Store.Carrier.Image
+public import Effect4.Program.Config
+meta import Effect4.Program.Config
+meta import Effect4.Store.Carrier.Val
 
 /-!
 # Program.ConfigValue — the configuration reader's values as a view of the shared carrier
@@ -16,6 +20,8 @@ the carrier alone.
 `Resolution`, `Failure` and `Outcome` keep their records; only the value they carry shares
 the encoding.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

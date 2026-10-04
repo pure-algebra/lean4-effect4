@@ -1,9 +1,13 @@
-import Effect4.Program.Ty
-import Effect4.Machine.Record
+module
+
+public import Effect4.Program.Ty
+public import Effect4.Machine.Record
 
 /-! Record type operations over types already computed by the term checker.
 Recursive declaration formation is checked before these operations by public admission.
 These checks retain original field and supplied-name duplicates before normalization. -/
+
+@[expose] public section
 
 namespace Effect4.Program.Record
 
