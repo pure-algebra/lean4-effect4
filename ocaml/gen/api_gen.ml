@@ -525,6 +525,7 @@ and err =
   | Err_tag of int
   | Err_tagged of string * string
   | Err_text of string
+  | Err_payload of payload
 and 'op stmts = Stmts_nil | Stmts_cons of 'op stmt * 'op stmts
 and 'op stmt =
   | Stmt_bindYield of 'op eff
@@ -852,6 +853,7 @@ and memo_map_id = int
 and 'u context = 'u service list
 and scope_store = scope_entry list
 and ref_key = int
+and payload = val_
 and service_name = int
 and service_type_code = int
 
@@ -1478,6 +1480,258 @@ let program_strings_atom (vs : val_ list) : val_ option =
 
 
 
+(* LCNF mono: Effect4.Machine.Payload.image._lam_0 (s : Effect4.Store.Val) : Effect4.Store.Val *)
+
+let payload_image__lam_0 (s : val_) : val_ =
+  s
+
+
+
+(* LCNF mono: Effect4.Machine.Payload.image._lam_1 (p : Effect4.Store.Val) : Effect4.Store.Val *)
+
+let payload_image__lam_1 (p : val_) : val_ =
+  p
+
+
+
+(* LCNF mono: Effect4.Store.Image.ident._lam_0 (val : Effect4.Store.Val) : Option Effect4.Store.Val *)
+
+let store_image_ident__lam_0 (val_ : val_) : val_ option =
+  Some val_
+
+
+
+(* LCNF mono: Effect4.Store.Image.ident._lam_1 (_y.1 : Effect4.Store.Val) : Effect4.Store.Val *)
+
+let store_image_ident__lam_1 (_y_1 : val_) : val_ =
+  _y_1
+
+
+
+(* LCNF mono: Effect4.Store.Image.ident : Effect4.Store.Image Effect4.Store.Val *)
+
+let store_image_ident : val_ image =
+  let _f_1 = store_image_ident__lam_0 in
+  let _f_2 = store_image_ident__lam_1 in
+  ({ to_val = _f_2; of_val = _f_1 } : _ image)
+
+
+
+(* LCNF mono: Effect4.Store.Image.subtype._at_.Effect4.Machine.Payload.image.spec_0._redArg._lam_0 (I : Effect4.Store.Image Effect4.Store.Val) (s : Effect4.Store.Val) : Effect4.Store.Val *)
+
+let store_image_subtype_at_payload_image_spec_0__red_arg__lam_0 (i : val_ image) (s : val_) : val_ =
+  match (i : _ image) with
+    | { to_val = to_val; _ } -> to_val s
+
+
+
+(* LCNF mono: Effect4.Program.recordParts? (x.1 : Effect4.Store.Val) : Option (Prod (List Effect4.Store.Val) (List Effect4.Store.Val)) *)
+
+let program_record_parts_opt (x_1 : val_) : (val_ list * val_ list) option =
+  match (x_1 : val_) with
+    | Val_ctor (index_2, args_3) -> (let _x_4 = 0 in
+      let _x_5 = index_2 = _x_4 in
+      if _x_5 then (match args_3 with
+          | head_7 :: tail_8 -> (match (head_7 : val_) with
+              | Val_list xs_9 -> (match tail_8 with
+                  | head_10 :: tail_11 -> (match (head_10 : val_) with
+                      | Val_list xs_12 -> (match tail_11 with
+                          | [] -> (let _x_13 = xs_9, xs_12 in
+                            Some _x_13)
+                          | _ -> None)
+                      | _ -> None)
+                  | _ -> None)
+              | _ -> None)
+          | _ -> None) else None)
+    | _ -> None
+
+
+
+(* LCNF mono: Effect4.Machine.Record.readColumns (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
+
+let rec record_read_columns (x_1 : val_ list) (x_2 : val_ list) : (string * val_) list option =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = [] in
+          Some _x_3)
+        | _ -> None)
+    | head_6 :: tail_7 -> (match (head_6 : val_) with
+        | Val_str s_8 -> (match x_2 with
+            | head_9 :: tail_10 -> (let _x_11 = record_read_columns tail_7 tail_10 in
+              match _x_11 with
+                | None -> _x_11
+                | Some val__12 -> (let _x_13 = s_8, head_9 in
+                  let _x_14 = _x_13 :: val__12 in
+                  Some _x_14))
+            | _ -> None)
+        | _ -> None)
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Record.entries.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List String) : List String *)
+
+let rec list_map_tr_loop_at_record_entries_spec_0 (a_1 : (string * val_) list) (a_2 : string list) : string list =
+  match a_1 with
+    | [] -> List.rev a_2
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, _ -> (let _x_6 = fst_1 :: a_2 in
+          list_map_tr_loop_at_record_entries_spec_0 tail_5 _x_6))
+
+
+
+(* LCNF mono: List.nodupDecidable._redArg._lam_0 (inst.1 : lcAny -> lcAny -> Bool) (a : lcAny) (b : lcAny) : Bool *)
+
+let list_nodup_decidable__red_arg__lam_0 (inst_1 : _ -> _ -> bool) a b : bool =
+  let _x_2 = inst_1 a b in
+  if _x_2 then false else true
+
+
+
+(* LCNF mono: List.decidableBAll._redArg (inst.1 : lcAny -> Bool) (x.2 : List lcAny) : Bool *)
+
+let rec list_decidable_ball (inst_1 : _ -> bool) (x_2 : _ list) : bool =
+  match x_2 with
+    | [] -> true
+    | head_4 :: tail_5 -> (let _x_6 = inst_1 head_4 in
+      if _x_6 then list_decidable_ball inst_1 tail_5 else _x_6)
+
+
+
+(* LCNF mono: List.instDecidablePairwise._redArg (inst.1 : lcAny -> lcAny -> Bool) (x.2 : List lcAny) : Bool *)
+
+let rec list_inst_decidable_pairwise (inst_1 : _ -> _ -> bool) (x_2 : _ list) : bool =
+  match x_2 with
+    | [] -> true
+    | head_4 :: tail_5 -> (let _x_6 = list_inst_decidable_pairwise inst_1 tail_5 in
+      if _x_6 then (let _x_7 = inst_1 head_4 in
+        list_decidable_ball _x_7 tail_5) else _x_6)
+
+
+
+(* LCNF mono: List.nodupDecidable._redArg (inst.1 : lcAny -> lcAny -> Bool) (l : List lcAny) : Bool *)
+
+let list_nodup_decidable (inst_1 : _ -> _ -> bool) (l : _ list) : bool =
+  let _f_2 = list_nodup_decidable__red_arg__lam_0 inst_1 in
+  list_inst_decidable_pairwise _f_2 l
+
+
+
+(* LCNF mono: Effect4.Machine.Record.entries (value : Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
+
+let record_entries (value : val_) : (string * val_) list option =
+  let _x_1 = program_record_parts_opt value in
+  match _x_1 with
+    | None -> None
+    | Some val__3 -> (match val__3 with
+        | fst_4, snd_5 -> (let _x_6 = record_read_columns fst_4 snd_5 in
+          match _x_6 with
+            | None -> _x_6
+            | Some val__7 -> (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
+              let _x_9 = [] in
+              let _x_10 = list_map_tr_loop_at_record_entries_spec_0 val__7 _x_9 in
+              let _x_11 = list_nodup_decidable _x_8 _x_10 in
+              if _x_11 then _x_6 else None)))
+
+
+
+(* LCNF mono: Effect4.Store.Val.handles (x.1 : Effect4.Store.Val) : List (Prod UInt8 Nat)
+   Effect4.Store.Val.handlesList (x.1 : List Effect4.Store.Val) : List (Prod UInt8 Nat) *)
+
+let rec store_val__handles (x_1 : val_) : (int * int) list =
+  match (x_1 : val_) with
+    | Val_handle (kind_2, key_3) -> (let _x_4 = kind_2, key_3 in
+      let _x_5 = [] in
+      _x_4 :: _x_5)
+    | Val_list xs_7 -> store_val__handles_list xs_7
+    | Val_pair (a_9, b_10) -> (let _x_11 = store_val__handles a_9 in
+      let _x_12 = store_val__handles b_10 in
+      _x_11 @ _x_12)
+    | Val_some a_14 -> store_val__handles a_14
+    | Val_ctor (_, args_17) -> store_val__handles_list args_17
+    | _ -> []
+
+and store_val__handles_list (x_1 : val_ list) : (int * int) list =
+  match x_1 with
+    | [] -> []
+    | head_3 :: tail_4 -> (let _x_5 = store_val__handles head_3 in
+      let _x_6 = store_val__handles_list tail_4 in
+      _x_5 @ _x_6)
+
+
+
+(* LCNF mono: Effect4.Machine.isPayload (v : Effect4.Store.Val) : Bool *)
+
+let is_payload (v : val_) : bool =
+  let _x_1 = record_entries v in
+  match _x_1 with
+    | None -> false
+    | Some _ -> (let _x_4 = store_val__handles v in
+      _x_4 = [])
+
+
+
+(* LCNF mono: Effect4.Store.Image.subtype._at_.Effect4.Machine.Payload.image.spec_0._redArg._lam_1 (I : Effect4.Store.Image Effect4.Store.Val) (v : Effect4.Store.Val) : Option Effect4.Store.Val *)
+
+let store_image_subtype_at_payload_image_spec_0__red_arg__lam_1 (i : val_ image) (v : val_) : val_ option =
+  match (i : _ image) with
+    | { of_val = of_val; _ } -> (let _x_1 = of_val v in
+      match _x_1 with
+        | None -> None
+        | Some val__3 -> (let _x_4 = is_payload val__3 in
+          if _x_4 then Some val__3 else None))
+
+
+
+(* LCNF mono: Effect4.Store.Image.subtype._at_.Effect4.Machine.Payload.image.spec_0._redArg (I : Effect4.Store.Image Effect4.Store.Val) : Effect4.Store.Image Effect4.Store.Val *)
+
+let store_image_subtype_at_payload_image_spec_0 (i : val_ image) : val_ image =
+  let _f_1 = store_image_subtype_at_payload_image_spec_0__red_arg__lam_0 i in
+  let _f_2 = store_image_subtype_at_payload_image_spec_0__red_arg__lam_1 i in
+  ({ to_val = _f_1; of_val = _f_2 } : _ image)
+
+
+
+(* LCNF mono: Effect4.Store.Image.equiv._redArg._lam_0 (I : Effect4.Store.Image lcAny) (g : lcAny -> lcAny) (b : lcAny) : Effect4.Store.Val *)
+
+let store_image_equiv__red_arg__lam_0 (i : _ image) (g : _ -> _) b : val_ =
+  match (i : _ image) with
+    | { to_val = to_val; _ } -> (let _x_1 = g b in
+      to_val _x_1)
+
+
+
+(* LCNF mono: Effect4.Store.Image.equiv._redArg._lam_1 (I : Effect4.Store.Image lcAny) (f : lcAny -> lcAny) (v : Effect4.Store.Val) : Option lcAny *)
+
+let store_image_equiv__red_arg__lam_1 (i : _ image) (f : _ -> _) (v : val_) : _ option =
+  match (i : _ image) with
+    | { of_val = of_val; _ } -> (let _x_1 = of_val v in
+      match _x_1 with
+        | None -> None
+        | Some val__3 -> (let _x_4 = f val__3 in
+          Some _x_4))
+
+
+
+(* LCNF mono: Effect4.Store.Image.equiv._redArg (I : Effect4.Store.Image lcAny) (f : lcAny -> lcAny) (g : lcAny -> lcAny) : Effect4.Store.Image lcAny *)
+
+let store_image_equiv (i : _ image) (f : _ -> _) (g : _ -> _) : _ image =
+  let _f_1 = store_image_equiv__red_arg__lam_0 i g in
+  let _f_2 = store_image_equiv__red_arg__lam_1 i f in
+  ({ to_val = _f_1; of_val = _f_2 } : _ image)
+
+
+
+(* LCNF mono: Effect4.Machine.Payload.image : Effect4.Store.Image Effect4.Store.Val *)
+
+let payload_image : val_ image =
+  let _f_1 = payload_image__lam_0 in
+  let _f_2 = payload_image__lam_1 in
+  let _x_3 = store_image_ident in
+  let _x_4 = store_image_subtype_at_payload_image_spec_0 _x_3 in
+  store_image_equiv _x_4 _f_1 _f_2
+
+
+
 (* LCNF mono: Effect4.Machine.Err.image._lam_0 (x.1 : Effect4.Machine.Err) : Effect4.Store.Val *)
 
 let err_image__lam_0 (x_1 : err) : val_ =
@@ -1502,6 +1756,13 @@ let err_image__lam_0 (x_1 : err) : val_ =
       let _x_23 = [] in
       let _x_24 = _x_22 :: _x_23 in
       Val_ctor (_x_21, _x_24))
+    | Err_payload p_26 -> (let _x_27 = payload_image in
+      match (_x_27 : _ image) with
+        | { to_val = to_val; _ } -> (let _x_28 = 4 in
+          let _x_29 = to_val p_26 in
+          let _x_30 = [] in
+          let _x_31 = _x_29 :: _x_30 in
+          Val_ctor (_x_28, _x_31)))
 
 
 
@@ -1512,26 +1773,26 @@ let of_err (x_1 : val_) : err option =
     | Val_ctor (index_2, args_3) -> (let _x_4 = 0 in
       let _x_5 = index_2 = _x_4 in
       if _x_5 then (match args_3 with
-          | [] -> (let _x_42 = Err_boom in
-            Some _x_42)
+          | [] -> (let _x_54 = Err_boom in
+            Some _x_54)
           | _ -> None) else (let _x_6 = 1 in
         let _x_7 = index_2 = _x_6 in
         if _x_7 then (match args_3 with
-            | head_34 :: tail_35 -> (match (head_34 : val_) with
-                | Val_nat n_36 -> (match tail_35 with
-                    | [] -> (let _x_37 = Err_tag n_36 in
-                      Some _x_37)
+            | head_46 :: tail_47 -> (match (head_46 : val_) with
+                | Val_nat n_48 -> (match tail_47 with
+                    | [] -> (let _x_49 = Err_tag n_48 in
+                      Some _x_49)
                     | _ -> None)
                 | _ -> None)
             | _ -> None) else (let _x_8 = 2 in
           let _x_9 = index_2 = _x_8 in
           if _x_9 then (match args_3 with
-              | head_21 :: tail_22 -> (match (head_21 : val_) with
-                  | Val_str s_23 -> (match tail_22 with
-                      | head_24 :: tail_25 -> (match (head_24 : val_) with
-                          | Val_str s_26 -> (match tail_25 with
-                              | [] -> (let _x_27 = Err_tagged (s_23, s_26) in
-                                Some _x_27)
+              | head_33 :: tail_34 -> (match (head_33 : val_) with
+                  | Val_str s_35 -> (match tail_34 with
+                      | head_36 :: tail_37 -> (match (head_36 : val_) with
+                          | Val_str s_38 -> (match tail_37 with
+                              | [] -> (let _x_39 = Err_tagged (s_35, s_38) in
+                                Some _x_39)
                               | _ -> None)
                           | _ -> None)
                       | _ -> None)
@@ -1539,13 +1800,25 @@ let of_err (x_1 : val_) : err option =
               | _ -> None) else (let _x_10 = 3 in
             let _x_11 = index_2 = _x_10 in
             if _x_11 then (match args_3 with
-                | head_13 :: tail_14 -> (match (head_13 : val_) with
-                    | Val_str s_15 -> (match tail_14 with
-                        | [] -> (let _x_16 = Err_text s_15 in
-                          Some _x_16)
+                | head_25 :: tail_26 -> (match (head_25 : val_) with
+                    | Val_str s_27 -> (match tail_26 with
+                        | [] -> (let _x_28 = Err_text s_27 in
+                          Some _x_28)
                         | _ -> None)
                     | _ -> None)
-                | _ -> None) else None))))
+                | _ -> None) else (let _x_12 = 4 in
+              let _x_13 = index_2 = _x_12 in
+              if _x_13 then (match args_3 with
+                  | head_15 :: tail_16 -> (match tail_16 with
+                      | [] -> (let _x_17 = payload_image in
+                        match (_x_17 : _ image) with
+                          | { of_val = of_val; _ } -> (let _x_18 = of_val head_15 in
+                            match _x_18 with
+                              | None -> None
+                              | Some val__20 -> (let _x_21 = Err_payload val__20 in
+                                Some _x_21)))
+                      | _ -> None)
+                  | _ -> None) else None)))))
     | _ -> None
 
 
@@ -1718,36 +1991,6 @@ let store_image_ctor1 (i : _ image) (i_1 : int) : _ image =
   let _f_1 = store_image_ctor1__red_arg__lam_0 i i_1 in
   let _x_2 = fun _eta -> store_image_of_ctor1 i i_1 _eta in
   ({ to_val = _f_1; of_val = _x_2 } : _ image)
-
-
-
-(* LCNF mono: Effect4.Store.Image.equiv._redArg._lam_0 (I : Effect4.Store.Image lcAny) (g : lcAny -> lcAny) (b : lcAny) : Effect4.Store.Val *)
-
-let store_image_equiv__red_arg__lam_0 (i : _ image) (g : _ -> _) b : val_ =
-  match (i : _ image) with
-    | { to_val = to_val; _ } -> (let _x_1 = g b in
-      to_val _x_1)
-
-
-
-(* LCNF mono: Effect4.Store.Image.equiv._redArg._lam_1 (I : Effect4.Store.Image lcAny) (f : lcAny -> lcAny) (v : Effect4.Store.Val) : Option lcAny *)
-
-let store_image_equiv__red_arg__lam_1 (i : _ image) (f : _ -> _) (v : val_) : _ option =
-  match (i : _ image) with
-    | { of_val = of_val; _ } -> (let _x_1 = of_val v in
-      match _x_1 with
-        | None -> None
-        | Some val__3 -> (let _x_4 = f val__3 in
-          Some _x_4))
-
-
-
-(* LCNF mono: Effect4.Store.Image.equiv._redArg (I : Effect4.Store.Image lcAny) (f : lcAny -> lcAny) (g : lcAny -> lcAny) : Effect4.Store.Image lcAny *)
-
-let store_image_equiv (i : _ image) (f : _ -> _) (g : _ -> _) : _ image =
-  let _f_1 = store_image_equiv__red_arg__lam_0 i g in
-  let _f_2 = store_image_equiv__red_arg__lam_1 i f in
-  ({ to_val = _f_1; of_val = _f_2 } : _ image)
 
 
 
@@ -1954,43 +2197,6 @@ let rec list_map_tr_loop_at_value_annotations_spec_0 (a_1 : (string * _) list) (
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, _ -> (let _x_6 = fst_1 :: a_2 in
           list_map_tr_loop_at_value_annotations_spec_0 tail_5 _x_6))
-
-
-
-(* LCNF mono: List.nodupDecidable._redArg._lam_0 (inst.1 : lcAny -> lcAny -> Bool) (a : lcAny) (b : lcAny) : Bool *)
-
-let list_nodup_decidable__red_arg__lam_0 (inst_1 : _ -> _ -> bool) a b : bool =
-  let _x_2 = inst_1 a b in
-  if _x_2 then false else true
-
-
-
-(* LCNF mono: List.decidableBAll._redArg (inst.1 : lcAny -> Bool) (x.2 : List lcAny) : Bool *)
-
-let rec list_decidable_ball (inst_1 : _ -> bool) (x_2 : _ list) : bool =
-  match x_2 with
-    | [] -> true
-    | head_4 :: tail_5 -> (let _x_6 = inst_1 head_4 in
-      if _x_6 then list_decidable_ball inst_1 tail_5 else _x_6)
-
-
-
-(* LCNF mono: List.instDecidablePairwise._redArg (inst.1 : lcAny -> lcAny -> Bool) (x.2 : List lcAny) : Bool *)
-
-let rec list_inst_decidable_pairwise (inst_1 : _ -> _ -> bool) (x_2 : _ list) : bool =
-  match x_2 with
-    | [] -> true
-    | head_4 :: tail_5 -> (let _x_6 = list_inst_decidable_pairwise inst_1 tail_5 in
-      if _x_6 then (let _x_7 = inst_1 head_4 in
-        list_decidable_ball _x_7 tail_5) else _x_6)
-
-
-
-(* LCNF mono: List.nodupDecidable._redArg (inst.1 : lcAny -> lcAny -> Bool) (l : List lcAny) : Bool *)
-
-let list_nodup_decidable (inst_1 : _ -> _ -> bool) (l : _ list) : bool =
-  let _f_2 = list_nodup_decidable__red_arg__lam_0 inst_1 in
-  list_inst_decidable_pairwise _f_2 l
 
 
 
@@ -2331,6 +2537,7 @@ let program_val_of_err (x_1 : err) : val_ option =
       Some _x_13)
     | Err_text message_15 -> (let _x_16 = Val_str message_15 in
       Some _x_16)
+    | Err_payload p_18 -> Some p_18
 
 
 
@@ -2353,6 +2560,43 @@ let program_query_error (value : val_) : val_ option =
 
 
 
+(* LCNF mono: Effect4.Field.firstOf._redArg (n : String) (x.1 : List (Prod String lcAny)) : Option lcAny *)
+
+let rec field_first_of (n : string) (x_1 : (string * _) list) : _ option =
+  match x_1 with
+    | [] -> None
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_5, snd_6 -> (let _x_7 = fst_5 = n in
+          if _x_7 then Some snd_6 else field_first_of n tail_4))
+
+
+
+(* LCNF mono: Effect4.Machine.Record.lookup (value : Effect4.Store.Val) (name : String) : Option (Option Effect4.Store.Val) *)
+
+let record_lookup (value : val_) (name : string) : val_ option option =
+  let _x_1 = record_entries value in
+  match _x_1 with
+    | None -> None
+    | Some val__3 -> (let _x_4 = field_first_of name val__3 in
+      Some _x_4)
+
+
+
+(* LCNF mono: Effect4.Program.Record.tagHit (tag : String) (value : Effect4.Store.Val) : Bool *)
+
+let program_record_tag_hit (tag : string) (value : val_) : bool =
+  let _x_1 = "_tag" in
+  let _x_2 = record_lookup value _x_1 in
+  match _x_2 with
+    | Some val__3 -> (match val__3 with
+        | Some val__4 -> (match (val__4 : val_) with
+            | Val_str s_5 -> s_5 = tag
+            | _ -> false)
+        | _ -> false)
+    | _ -> false
+
+
+
 (* LCNF mono: Effect4.Program.NativeAtom.tagHit (tag : String) (x.1 : Effect4.Store.Val) : Bool *)
 
 let program_native_atom_tag_hit (tag : string) (x_1 : val_) : bool =
@@ -2362,11 +2606,11 @@ let program_native_atom_tag_hit (tag : string) (x_1 : val_) : bool =
             | Val_str s_5 -> (match tail_4 with
                 | _ :: tail_7 -> (match tail_7 with
                     | [] -> s_5 = tag
-                    | _ -> false)
-                | _ -> false)
-            | _ -> false)
-        | _ -> false)
-    | _ -> false
+                    | _ -> program_record_tag_hit tag x_1)
+                | _ -> program_record_tag_hit tag x_1)
+            | _ -> program_record_tag_hit tag x_1)
+        | _ -> program_record_tag_hit tag x_1)
+    | _ -> program_record_tag_hit tag x_1
 
 
 
@@ -2499,17 +2743,6 @@ let map_read (x_1 : val_) : (string * val_) list option =
   match (x_1 : val_) with
     | Val_list xs_2 -> map_read_pairs xs_2
     | _ -> None
-
-
-
-(* LCNF mono: Effect4.Field.firstOf._redArg (n : String) (x.1 : List (Prod String lcAny)) : Option lcAny *)
-
-let rec field_first_of (n : string) (x_1 : (string * _) list) : _ option =
-  match x_1 with
-    | [] -> None
-    | head_3 :: tail_4 -> (match head_3 with
-        | fst_5, snd_6 -> (let _x_7 = fst_5 = n in
-          if _x_7 then Some snd_6 else field_first_of n tail_4))
 
 
 
@@ -3268,89 +3501,6 @@ let program_inst_decidable_eq_field_read_mode (x_1 : field_read_mode) (y_2 : fie
 
 
 
-(* LCNF mono: Effect4.Program.recordParts? (x.1 : Effect4.Store.Val) : Option (Prod (List Effect4.Store.Val) (List Effect4.Store.Val)) *)
-
-let program_record_parts_opt (x_1 : val_) : (val_ list * val_ list) option =
-  match (x_1 : val_) with
-    | Val_ctor (index_2, args_3) -> (let _x_4 = 0 in
-      let _x_5 = index_2 = _x_4 in
-      if _x_5 then (match args_3 with
-          | head_7 :: tail_8 -> (match (head_7 : val_) with
-              | Val_list xs_9 -> (match tail_8 with
-                  | head_10 :: tail_11 -> (match (head_10 : val_) with
-                      | Val_list xs_12 -> (match tail_11 with
-                          | [] -> (let _x_13 = xs_9, xs_12 in
-                            Some _x_13)
-                          | _ -> None)
-                      | _ -> None)
-                  | _ -> None)
-              | _ -> None)
-          | _ -> None) else None)
-    | _ -> None
-
-
-
-(* LCNF mono: Effect4.Machine.Record.readColumns (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
-
-let rec record_read_columns (x_1 : val_ list) (x_2 : val_ list) : (string * val_) list option =
-  match x_1 with
-    | [] -> (match x_2 with
-        | [] -> (let _x_3 = [] in
-          Some _x_3)
-        | _ -> None)
-    | head_6 :: tail_7 -> (match (head_6 : val_) with
-        | Val_str s_8 -> (match x_2 with
-            | head_9 :: tail_10 -> (let _x_11 = record_read_columns tail_7 tail_10 in
-              match _x_11 with
-                | None -> _x_11
-                | Some val__12 -> (let _x_13 = s_8, head_9 in
-                  let _x_14 = _x_13 :: val__12 in
-                  Some _x_14))
-            | _ -> None)
-        | _ -> None)
-
-
-
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Record.entries.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List String) : List String *)
-
-let rec list_map_tr_loop_at_record_entries_spec_0 (a_1 : (string * val_) list) (a_2 : string list) : string list =
-  match a_1 with
-    | [] -> List.rev a_2
-    | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, _ -> (let _x_6 = fst_1 :: a_2 in
-          list_map_tr_loop_at_record_entries_spec_0 tail_5 _x_6))
-
-
-
-(* LCNF mono: Effect4.Machine.Record.entries (value : Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
-
-let record_entries (value : val_) : (string * val_) list option =
-  let _x_1 = program_record_parts_opt value in
-  match _x_1 with
-    | None -> None
-    | Some val__3 -> (match val__3 with
-        | fst_4, snd_5 -> (let _x_6 = record_read_columns fst_4 snd_5 in
-          match _x_6 with
-            | None -> _x_6
-            | Some val__7 -> (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
-              let _x_9 = [] in
-              let _x_10 = list_map_tr_loop_at_record_entries_spec_0 val__7 _x_9 in
-              let _x_11 = list_nodup_decidable _x_8 _x_10 in
-              if _x_11 then _x_6 else None)))
-
-
-
-(* LCNF mono: Effect4.Machine.Record.lookup (value : Effect4.Store.Val) (name : String) : Option (Option Effect4.Store.Val) *)
-
-let record_lookup (value : val_) (name : string) : val_ option option =
-  let _x_1 = record_entries value in
-  match _x_1 with
-    | None -> None
-    | Some val__3 -> (let _x_4 = field_first_of name val__3 in
-      Some _x_4)
-
-
-
 (* LCNF mono: Effect4.Machine.Record.read (optional : Bool) (value : Effect4.Store.Val) (name : String) : Option Effect4.Store.Val *)
 
 let record_read (optional : bool) (value : val_) (name : string) : val_ option =
@@ -3459,21 +3609,27 @@ let program_bad_shape : (eff_name, eff_thunk, val_, err, defect, int, unit) prim
 (* LCNF mono: Effect4.Program.errOf (x.1 : Effect4.Store.Val) : Effect4.Machine.Err *)
 
 let program_err_of (x_1 : val_) : err =
+  let _jp_2 = fun v -> let _x_3 = payload_image in
+  match (_x_3 : _ image) with
+    | { of_val = of_val; _ } -> (let _x_4 = of_val v in
+      match _x_4 with
+        | None -> Err_boom
+        | Some val__6 -> Err_payload val__6) in
   match (x_1 : val_) with
-    | Val_nat n_2 -> Err_tag n_2
-    | Val_str s_4 -> Err_text s_4
-    | Val_list xs_6 -> (match xs_6 with
-        | head_7 :: tail_8 -> (match (head_7 : val_) with
-            | Val_str s_9 -> (match tail_8 with
-                | head_10 :: tail_11 -> (match (head_10 : val_) with
-                    | Val_str s_12 -> (match tail_11 with
-                        | [] -> Err_tagged (s_9, s_12)
-                        | _ -> Err_boom)
-                    | _ -> Err_boom)
-                | _ -> Err_boom)
-            | _ -> Err_boom)
-        | _ -> Err_boom)
-    | _ -> Err_boom
+    | Val_nat n_8 -> Err_tag n_8
+    | Val_str s_10 -> Err_text s_10
+    | Val_list xs_12 -> (match xs_12 with
+        | head_13 :: tail_14 -> (match (head_13 : val_) with
+            | Val_str s_15 -> (match tail_14 with
+                | head_16 :: tail_17 -> (match (head_16 : val_) with
+                    | Val_str s_18 -> (match tail_17 with
+                        | [] -> Err_tagged (s_15, s_18)
+                        | _ -> _jp_2 x_1)
+                    | _ -> _jp_2 x_1)
+                | _ -> _jp_2 x_1)
+            | _ -> _jp_2 x_1)
+        | _ -> _jp_2 x_1)
+    | _ -> _jp_2 x_1
 
 
 
@@ -3493,6 +3649,72 @@ let cause_interrupt (interruptor : _ option) : (_, _, _, _) reason list =
   let _x_1 = [] in
   let _x_2 = Reason_interrupt (interruptor, _x_1) in
   _x_2 :: _x_1
+
+
+
+(* LCNF mono: Effect4.Store.Val.beq (x.1 : Effect4.Store.Val) (x.2 : Effect4.Store.Val) : Bool
+   Effect4.Store.Val.beqList (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Store.Val) : Bool *)
+
+let rec store_val__beq (x_1 : val_) (x_2 : val_) : bool =
+  match (x_1 : val_) with
+    | Val_unit -> (match (x_2 : val_) with
+        | Val_unit -> true
+        | _ -> false)
+    | Val_bool b_5 -> (match (x_2 : val_) with
+        | Val_bool b_6 -> if b_5 then b_6 else if b_6 then b_5 else true
+        | _ -> false)
+    | Val_nat n_9 -> (match (x_2 : val_) with
+        | Val_nat n_10 -> n_9 = n_10
+        | _ -> false)
+    | Val_str s_13 -> (match (x_2 : val_) with
+        | Val_str s_14 -> s_13 = s_14
+        | _ -> false)
+    | Val_bytes bs_17 -> (match (x_2 : val_) with
+        | Val_bytes bs_18 -> (let _x_19 = fun _b1 _b2 -> _b1 = _b2 in
+          inst_decidable_eq_list _x_19 bs_17 bs_18)
+        | _ -> false)
+    | Val_list xs_22 -> (match (x_2 : val_) with
+        | Val_list xs_23 -> store_val__beq_list xs_22 xs_23
+        | _ -> false)
+    | Val_pair (a_26, b_27) -> (match (x_2 : val_) with
+        | Val_pair (a_28, b_29) -> (let _x_30 = store_val__beq a_26 a_28 in
+          if _x_30 then store_val__beq b_27 b_29 else _x_30)
+        | _ -> false)
+    | Val_none -> (match (x_2 : val_) with
+        | Val_none -> true
+        | _ -> false)
+    | Val_some a_35 -> (match (x_2 : val_) with
+        | Val_some a_36 -> store_val__beq a_35 a_36
+        | _ -> false)
+    | Val_ctor (index_39, args_40) -> (match (x_2 : val_) with
+        | Val_ctor (index_41, args_42) -> (let _x_43 = index_39 = index_41 in
+          if _x_43 then store_val__beq_list args_40 args_42 else _x_43)
+        | _ -> false)
+    | Val_ref (kind_46, digest_47) -> (match (x_2 : val_) with
+        | Val_ref (kind_48, digest_49) -> (let _x_50 = kind_46 = kind_48 in
+          if _x_50 then (let _x_51 = fun _b1 _b2 -> _b1 = _b2 in
+            inst_decidable_eq_list _x_51 digest_47 digest_49) else _x_50)
+        | _ -> false)
+    | Val_handle (kind_54, key_55) -> (match (x_2 : val_) with
+        | Val_handle (kind_56, key_57) -> (let _x_58 = kind_54 = kind_56 in
+          if _x_58 then key_55 = key_57 else _x_58)
+        | _ -> false)
+    | Val_negInt n_61 -> (match (x_2 : val_) with
+        | Val_negInt n_62 -> n_61 = n_62
+        | _ -> false)
+    | Val_float bits_65 -> (match (x_2 : val_) with
+        | Val_float bits_66 -> bits_65 = bits_66
+        | _ -> false)
+
+and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> true
+        | _ -> false)
+    | head_5 :: tail_6 -> (match x_2 with
+        | head_7 :: tail_8 -> (let _x_9 = store_val__beq head_5 head_7 in
+          if _x_9 then store_val__beq_list tail_6 tail_8 else _x_9)
+        | _ -> false)
 
 
 
@@ -3522,6 +3744,12 @@ let inst_decidable_eq_err_dec_eq (x_1 : err) (x_2 : err) : bool =
         | Err_text message_18 -> (let _x_19 = message_16 = message_18 in
           if _x_19 then _x_19 else _x_17)
         | _ -> _x_17)
+    | Err_payload p_20 -> (let _x_21 = false in
+      match (x_2 : err) with
+        | Err_boom -> _x_21
+        | Err_payload p_22 -> (let _x_23 = store_val__beq p_20 p_22 in
+          if _x_23 then _x_23 else _x_21)
+        | _ -> _x_21)
 
 
 
@@ -7485,29 +7713,6 @@ let val__context_opt (a_1 : val_) : ctx option =
 
 
 
-(* LCNF mono: Effect4.Machine.Val.image._lam_0 (val : Effect4.Store.Val) : Option Effect4.Store.Val *)
-
-let val__image__lam_0 (val_ : val_) : val_ option =
-  Some val_
-
-
-
-(* LCNF mono: Effect4.Machine.Val.image._lam_1 (_y.1 : Effect4.Store.Val) : Effect4.Store.Val *)
-
-let val__image__lam_1 (_y_1 : val_) : val_ =
-  _y_1
-
-
-
-(* LCNF mono: Effect4.Machine.Val.image : Effect4.Store.Image Effect4.Store.Val *)
-
-let val__image : val_ image =
-  let _f_1 = val__image__lam_0 in
-  let _f_2 = val__image__lam_1 in
-  ({ to_val = _f_2; of_val = _f_1 } : _ image)
-
-
-
 (* LCNF mono: Effect4.Machine.Value.toExit._redArg (B : Effect4.Store.Image lcAny) (C : Effect4.Store.Image (List (Effect4.Reason lcAny lcAny lcAny lcAny))) (x.1 : Effect4.Exit lcAny lcAny lcAny lcAny lcAny) : Effect4.Store.Val *)
 
 let value_to_exit (b : _ image) (c : (_, _, _, _) reason list image) (x_1 : (_, _, _, _, _) exit_) : val_ =
@@ -7570,7 +7775,7 @@ let value_exit_ (b : _ image) (c : (_, _, _, _) reason list image) : (_, _, _, _
 (* LCNF mono: Effect4.Machine.exitImage : Effect4.Store.Image (Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
 
 let exit_image : (val_, err, defect, int, unit) exit_ image =
-  let _x_1 = val__image in
+  let _x_1 = store_image_ident in
   let _x_2 = cause_image in
   value_exit_ _x_1 _x_2
 
@@ -9667,31 +9872,6 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
 
 
 
-(* LCNF mono: Effect4.Store.Val.handles (x.1 : Effect4.Store.Val) : List (Prod UInt8 Nat)
-   Effect4.Store.Val.handlesList (x.1 : List Effect4.Store.Val) : List (Prod UInt8 Nat) *)
-
-let rec store_val__handles (x_1 : val_) : (int * int) list =
-  match (x_1 : val_) with
-    | Val_handle (kind_2, key_3) -> (let _x_4 = kind_2, key_3 in
-      let _x_5 = [] in
-      _x_4 :: _x_5)
-    | Val_list xs_7 -> store_val__handles_list xs_7
-    | Val_pair (a_9, b_10) -> (let _x_11 = store_val__handles a_9 in
-      let _x_12 = store_val__handles b_10 in
-      _x_11 @ _x_12)
-    | Val_some a_14 -> store_val__handles a_14
-    | Val_ctor (_, args_17) -> store_val__handles_list args_17
-    | _ -> []
-
-and store_val__handles_list (x_1 : val_ list) : (int * int) list =
-  match x_1 with
-    | [] -> []
-    | head_3 :: tail_4 -> (let _x_5 = store_val__handles head_3 in
-      let _x_6 = store_val__handles_list tail_4 in
-      _x_5 @ _x_6)
-
-
-
 (* LCNF mono: Effect4.Program.externalValue (ty : Effect4.Program.Ty) (allocated : List String) (value : Effect4.Store.Val) : Option (Prod (List String) Effect4.Store.Val) *)
 
 let program_external_value (ty : ty) (allocated : string list) (value : val_) : (string list * val_) option =
@@ -10166,72 +10346,6 @@ let program_point_capture (p : point) (a : val_) (ctx : ctx) : capture =
       let _x_2 = a :: _x_1 in
       let _x_3 = env @ _x_2 in
       ({ path = path; env = _x_3; fuel = fuel; tape = tape; ctx = ctx; root = root } : capture))
-
-
-
-(* LCNF mono: Effect4.Store.Val.beq (x.1 : Effect4.Store.Val) (x.2 : Effect4.Store.Val) : Bool
-   Effect4.Store.Val.beqList (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Store.Val) : Bool *)
-
-let rec store_val__beq (x_1 : val_) (x_2 : val_) : bool =
-  match (x_1 : val_) with
-    | Val_unit -> (match (x_2 : val_) with
-        | Val_unit -> true
-        | _ -> false)
-    | Val_bool b_5 -> (match (x_2 : val_) with
-        | Val_bool b_6 -> if b_5 then b_6 else if b_6 then b_5 else true
-        | _ -> false)
-    | Val_nat n_9 -> (match (x_2 : val_) with
-        | Val_nat n_10 -> n_9 = n_10
-        | _ -> false)
-    | Val_str s_13 -> (match (x_2 : val_) with
-        | Val_str s_14 -> s_13 = s_14
-        | _ -> false)
-    | Val_bytes bs_17 -> (match (x_2 : val_) with
-        | Val_bytes bs_18 -> (let _x_19 = fun _b1 _b2 -> _b1 = _b2 in
-          inst_decidable_eq_list _x_19 bs_17 bs_18)
-        | _ -> false)
-    | Val_list xs_22 -> (match (x_2 : val_) with
-        | Val_list xs_23 -> store_val__beq_list xs_22 xs_23
-        | _ -> false)
-    | Val_pair (a_26, b_27) -> (match (x_2 : val_) with
-        | Val_pair (a_28, b_29) -> (let _x_30 = store_val__beq a_26 a_28 in
-          if _x_30 then store_val__beq b_27 b_29 else _x_30)
-        | _ -> false)
-    | Val_none -> (match (x_2 : val_) with
-        | Val_none -> true
-        | _ -> false)
-    | Val_some a_35 -> (match (x_2 : val_) with
-        | Val_some a_36 -> store_val__beq a_35 a_36
-        | _ -> false)
-    | Val_ctor (index_39, args_40) -> (match (x_2 : val_) with
-        | Val_ctor (index_41, args_42) -> (let _x_43 = index_39 = index_41 in
-          if _x_43 then store_val__beq_list args_40 args_42 else _x_43)
-        | _ -> false)
-    | Val_ref (kind_46, digest_47) -> (match (x_2 : val_) with
-        | Val_ref (kind_48, digest_49) -> (let _x_50 = kind_46 = kind_48 in
-          if _x_50 then (let _x_51 = fun _b1 _b2 -> _b1 = _b2 in
-            inst_decidable_eq_list _x_51 digest_47 digest_49) else _x_50)
-        | _ -> false)
-    | Val_handle (kind_54, key_55) -> (match (x_2 : val_) with
-        | Val_handle (kind_56, key_57) -> (let _x_58 = kind_54 = kind_56 in
-          if _x_58 then key_55 = key_57 else _x_58)
-        | _ -> false)
-    | Val_negInt n_61 -> (match (x_2 : val_) with
-        | Val_negInt n_62 -> n_61 = n_62
-        | _ -> false)
-    | Val_float bits_65 -> (match (x_2 : val_) with
-        | Val_float bits_66 -> bits_65 = bits_66
-        | _ -> false)
-
-and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
-  match x_1 with
-    | [] -> (match x_2 with
-        | [] -> true
-        | _ -> false)
-    | head_5 :: tail_6 -> (match x_2 with
-        | head_7 :: tail_8 -> (let _x_9 = store_val__beq head_5 head_7 in
-          if _x_9 then store_val__beq_list tail_6 tail_8 else _x_9)
-        | _ -> false)
 
 
 
@@ -11155,21 +11269,6 @@ let program_val__tag_payload_opt (tag : string) (x_1 : val_) : val_ option =
             | _ -> None)
         | _ -> None)
     | _ -> None
-
-
-
-(* LCNF mono: Effect4.Program.Record.tagHit (tag : String) (value : Effect4.Store.Val) : Bool *)
-
-let program_record_tag_hit (tag : string) (value : val_) : bool =
-  let _x_1 = "_tag" in
-  let _x_2 = record_lookup value _x_1 in
-  match _x_2 with
-    | Some val__3 -> (match val__3 with
-        | Some val__4 -> (match (val__4 : val_) with
-            | Val_str s_5 -> s_5 = tag
-            | _ -> false)
-        | _ -> false)
-    | _ -> false
 
 
 

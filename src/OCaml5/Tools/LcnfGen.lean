@@ -143,7 +143,12 @@ def main (argv : List String) : IO Unit := do
     | some path => pure (some (← IO.FS.readFile path))
   let mods := args.importModuleNames
   let env ← importModules (mods.map fun m => { module := m }) {} 0
-  let ctx : Core.Context := { fileName := "<lcnf-gen>", fileMap := default }
+  -- One `MetaM` run spells every type of the closure, through every carrier-inference round,
+  -- and Lean's heartbeat budget counts the whole run. The default (200000 thousand) stopped the
+  -- `api_gen` cut once the error payload carrier (decisions row 120) grew its closure; the
+  -- budget is five times that, still finite, so a runaway cut stops deterministically.
+  let ctx : Core.Context :=
+    { fileName := "<lcnf-gen>", fileMap := default, maxHeartbeats := 1000000 * 1000 }
   let act : MetaM Unit := do
     -- Two Lean type constants can share a short name (`Effect4.Api.Outcome` and
     -- `Effect4.Machine.Outcome` are both `outcome`). Renaming one *after* the annotations and

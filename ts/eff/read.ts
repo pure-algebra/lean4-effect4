@@ -1322,6 +1322,8 @@ const holds = (p: ArgPat, v: unknown): boolean => {
     case "optTermNone": case "optTyNone": return v === null
     case "optTermSome": case "optTySome": return v !== null && v !== undefined
     case "daemon": return (v as { daemon?: boolean } | null)?.daemon === p.value
+    // a record construction: `fail` of one is an error payload, refused until E2 (decisions row 120)
+    case "recordTerm": return (v as { _tag?: string } | null)?._tag === "record"
   }
 }
 
