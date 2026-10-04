@@ -212,6 +212,39 @@ does not stand in for `modify`.
 
 ### T3. Rows as templates, terms in rows (after T0–T2, seat S and row 120's carrier)
 
+**Re-cut 2026-10-04, after T2: T3a, then T3b.** The slice below is too large for one seat, and
+its two halves change different things. T3a changes the types and leaves the function rows at
+`refOf nat`. T3b gives the eight read-modify-write rows their terms. Each starts with a design note
+for the coordinator, and each lands its broken restatements as planned goals (row 203, placed per
+row 207).
+
+- **T3a, the types.**
+  - The `Ref` rows without a function, and the `Deferred` rows, go over `refOf (var 0)` and
+    `deferredOf (var 0) (var 1)`.
+  - `NativeOp.deferredMake (value error : Ty)` carries its type arguments.
+  - `syncOpOf` decodes any value, including `Deferred.fail` at any admitted error, through E1's
+    carrier.
+  - `HandleFits` and `Val.hasTy` retire `refTarget`/`deferredTarget`, and service code 7 is
+    `refOf nat`.
+  - Key-based collision checks replace `NativeOp.all`.
+  - The match guard normalizes, and `matchTemplate_complete_anchored` is stated.
+  - Rows 155 (a) and 183's repair land here.
+  - The eight read-modify-write rows stay closed at `refOf nat`, with their names.
+  - The faces print today's spellings at today's instances, and refuse any other instance by name
+    until T5. `Deferred.make<A, E>()` at a non-number instance is refused by name, never printed
+    at a default.
+- **T3b, the terms.**
+  - `NativeOp`'s eight rows carry `(f : Term)`, with `Row.fn` and `Signature.termOf`.
+  - `rowTy` types the term at `env ++ [A]` and binds `modify`'s `B` from it.
+  - The `ScopedOp` instance checks the term at `n + 1`, and the authoring row lift elaborates it
+    under the current value's binder (row 43, seat T0's finding).
+  - `syncRow_typed` discharges `TermMaps` from the term's typing.
+  - `FnName` leaves the operations and the store. It survives only as the printer's and readers'
+    vocabulary for the five old shapes until T5, and any other term is refused by name.
+  - T2's connector, the lowerings and the agreements go.
+
+The original slice, for reference:
+
 The rows:
 - The Ref rows go over `refOf (var 0)`, the Deferred rows over `deferredOf (var 0) (var 1)`.
 - `NativeOp.deferredMake (value error : Ty)` carries its type arguments, as rc.112's
