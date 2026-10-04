@@ -509,11 +509,7 @@ theorem idents?_printTerms : ∀ ts : Terms, idents? (printTerms ts) = ts.names?
     | record fields names values =>
       simp only [printTerms, printTerm, Terms.names?, Effect4.Codegen.Record.writeRecord]
       split <;> rfl
-    | field mode target name =>
-      simp only [printTerms, printTerm, Terms.names?, Effect4.Codegen.Record.writeField]
-      split
-      · rfl
-      · split <;> rfl
+    | field mode target name => rfl
     | recordSet target name value => rfl
 
 theorem printTerm_ident {t : Term} {x : String} (h : printTerm t = .ident x) :
@@ -528,11 +524,7 @@ theorem printTerm_ident {t : Term} {x : String} (h : printTerm t = .ident x) :
   | record fields names values =>
     simp only [printTerm, Effect4.Codegen.Record.writeRecord] at h
     split at h <;> exact nomatch h
-  | field mode target name =>
-    simp only [printTerm, Effect4.Codegen.Record.writeField] at h
-    split at h
-    · exact nomatch h
-    · split at h <;> exact nomatch h
+  | field mode target name => exact nomatch h
   | recordSet target name value => exact nomatch h
 
 theorem printTerm_eq_bool (term : Term) (value : Bool) :
@@ -546,10 +538,7 @@ theorem printTerm_eq_bool (term : Term) (value : Bool) :
     simp only [printTerm, Effect4.Codegen.Record.writeRecord]
     split <;> simp only [reduceCtorEq]
   | field mode target name =>
-    simp only [printTerm, Effect4.Codegen.Record.writeField]
-    split
-    · simp only [reduceCtorEq]
-    · split <;> simp only [reduceCtorEq]
+    simp only [printTerm, Effect4.Codegen.Record.writeField, reduceCtorEq]
   | recordSet target name replacement =>
     simp only [printTerm, Effect4.Codegen.Record.writeSet, reduceCtorEq]
 

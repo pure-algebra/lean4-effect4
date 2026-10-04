@@ -438,6 +438,12 @@ theorem Decision.decide_bound_keys (d : Decision) (v : Val) (first : Bool) (w : 
       cases h.2
       exact Val.tagPayload?_keys hp
 
+  | recordTag name =>
+    simp only [Decision.decide, Option.some.injEq, Prod.mk.injEq] at h
+    cases h.2
+    exact List.Subset.refl _
+
+
 theorem Point.childBind_keys_subset (p : Point) (i : Nat) (w : Option Val)
     (hw : ∀ v, w = some v → Val.keys v ⊆ p.keys) : (p.childBind i w).keys ⊆ p.keys := by
   cases w with

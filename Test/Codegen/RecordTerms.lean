@@ -36,6 +36,7 @@ def nested : Term := .recordSet
 -- Generic wrapper heads leave existing arbitrary atom calls recoverable.
 #guard readTerm 0 (printTerm (.app "recordValue" .nil)) == .ok (.app "recordValue" .nil)
 #guard readTerm 0 (printTerm (.app "recordRaw" .nil)) == .ok (.app "recordRaw" .nil)
+#guard readTerm 0 (printTerm (.app "recordRequired" .nil)) == .ok (.app "recordRequired" .nil)
 #guard readTerm 0 (printTerm (.app "recordOptional" .nil)) == .ok (.app "recordOptional" .nil)
 #guard readTerm 0 (printTerm (.app "recordSet" .nil)) == .ok (.app "recordSet" .nil)
 #guard Effect4.Codegen.Record.helperNames.all fun name => !exportNameSafe name

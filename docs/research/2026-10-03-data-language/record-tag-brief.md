@@ -66,6 +66,7 @@ This avoids changing the reader's context or relying on target expression Boolea
 The internal capture-kind helper currently assumes every decision in the structural target image uses a string capture.
 Extend it to the actual argument's kind, and obtain the row's required kind from its classifier.
 This changes an internal helper conclusion while keeping public reconstruction hypotheses and domains unchanged.
+`argKind_of_selected` feeds `kinds_of_printArgs`, and therefore `print_of_readable`, under the same `printed-modules` question.
 The distinct helper head is registered in the existing head and template tables.
 
 Add independent printed-source controls in both TypeScript walks.
@@ -91,3 +92,20 @@ Axiom queries remain at `[propext, Quot.sound]` or below.
 Finite controls cover hit, miss, absent requested tag, all-hit and empty columns, invalid discriminants, raw decision retention, and nested handles.
 Target controls check whole-object identity, own-property testing, one scrutinee evaluation, deferred callbacks, and exact branch types with pinned tsgo 7.
 No full sweep or push is part of this slice.
+
+
+## Never-preserving target operations (row 198)
+
+The coordinator's `record-elimination-ruling.md` records E4-RECORD-CE-013/014/015.
+The former required member read, optional-result type, and spread update fail target checking for a core `never` receiver.
+The stored terms and their type rules stay unchanged.
+The canonical target images become `recordRequired<"k">("k")(target)`, `recordOptional<"k">("k")(target)`, and `recordSet<"k">("k")(target)(replacement)`.
+Their literal generic markers keep ordinary atom calls outside the wrapper image.
+The update copies its target before replacement evaluation; the target helper writes computed own keys.
+
+Placement: Exact Codecs & Data Plane Embeddings, existing `printed-modules` claim, requirements R2/R3.
+The consumers are `readTerm_printTerm`, `readTerm_exact`, and their program/module reconstruction laws.
+The wrapper retraction and exactness statements keep arbitrary child expressions and every prior hypothesis.
+The successful-read size helpers still justify recursive reading.
+These Lean statements concern structural target expressions; the pinned-tsgo and Bun controls remain finite target evidence.
+No new semantic representation, core bottom restriction, or scheduler/host theorem is introduced.

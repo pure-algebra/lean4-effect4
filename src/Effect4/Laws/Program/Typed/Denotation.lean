@@ -1000,6 +1000,29 @@ theorem decide_fits {w : World} {d : Decision} {t : Ty} {e0 e1 : List Ty} {v : V
             simp only [NativeAtom.tagHit_eq, hp, Option.isSome_none, Bool.false_eq_true] at hhit
     · exact nomatch harms
 
+  | recordTag name =>
+    obtain ⟨⟨hit, miss⟩, hparts, heq⟩ := Option.map_eq_some_iff.mp harms
+    cases heq
+    refine ⟨Record.tagHit name v, some v, rfl, ?_⟩
+    simp only [Record.tagArms] at hparts
+    split at hparts
+    · next hcolumn =>
+      cases hparts
+      have hn := (fits_normalize w t v).mpr hv
+      obtain ⟨branch, hmember, hbranch⟩ := (fits_members w v t.normalize).mpr hn
+      have htag := Record.tagHit_eq_isTag name
+        (List.all_eq_true.mp hcolumn branch hmember) (fits_hasTy w branch v hbranch)
+      cases hb : Record.tagHit name v with
+      | false =>
+        change Fits w v (Ty.ofMembers _)
+        apply (fits_ofMembers w v _).mpr
+        exact ⟨branch, List.mem_filter.mpr ⟨hmember, by rw [← htag, hb]; rfl⟩, hbranch⟩
+      | true =>
+        change Fits w v (Ty.ofMembers _)
+        apply (fits_ofMembers w v _).mpr
+        exact ⟨branch, List.mem_filter.mpr ⟨hmember, htag ▸ hb⟩, hbranch⟩
+    · exact nomatch hparts
+
 theorem childBind_path (q : Point) (i : Nat) (b : Option Val) :
     (q.childBind i b).path = q.path ++ [i] := by
   cases b <;> rfl

@@ -234,7 +234,7 @@ variable {Op : Type}
 
 /-! ## What an argument prints to: its kind, and whether it prints at all -/
 
-/-- The kind of capture an argument of a sort prints to, when it prints one. -/
+/-- The default capture kind by sort; record decisions refine it in `argKind`. -/
 def sortKind : ArgSort → Option HoleKind
   | .child .effs | .child .layers => some .exprs
   | .child .stmts => some .stmts
@@ -243,6 +243,12 @@ def sortKind : ArgSort → Option HoleKind
   | .decision => some .str
   | .nat => some .int
   | .optTy => some .type
+
+/-- The argument chooses its capture kind when two decision forms share a sort. -/
+def argKind {R : EffFam → Type} (v : ArgF Op R) : Option HoleKind :=
+  match v with
+  | .decision (.recordTag _) => some .expr
+  | _ => sortKind (argSortOf v)
 
 /-- Whether an argument prints to a capture: by its sort, and for the three sorts whose
 value decides it, by the value. -/
@@ -260,43 +266,41 @@ theorem argPrints_of_sortPrints {R : EffFam → Type} (v : ArgF Op R)
     (h : sortPrints (argSortOf v) = true) : argPrints v = true := by
   cases v <;> aesop (add norm simp [sortPrints, argSortOf, argPrints])
 
-/-- A readable leaf prints: to a capture of its sort's kind when `argPrints`, to none
-otherwise. -/
+/-- A readable leaf prints to its capture kind when `argPrints`, and to none otherwise. -/
 theorem printArg_ok_leaf {sig : Signature Op} {d : Nat} {daemon : Bool}
     (v : ArgF Op (EffSelfCarrier Op))
     (hr : argReadable sig d daemon (ArgF.fold (readableAlg sig) v) = true)
     (hleaf : ∀ fam, argSortOf v ≠ .child fam) :
     ∃ x, printArg sig d (ArgF.fold (printAlg sig) v) = .ok x ∧
-      (argPrints v = true → ∃ a, x = some a ∧ some (Arg.kind a) = sortKind (argSortOf v)) ∧
+      (argPrints v = true → ∃ a, x = some a ∧ some (Arg.kind a) = argKind v) ∧
       (argPrints v = false → x = none) := by
   have hl := leafReadable_of_argReadable hleaf hr
-  cases v <;> aesop (add norm simp [ArgF.fold, printArg, argPrints, sortKind, argSortOf, Arg.kind,
+  cases v <;> aesop (add norm simp [ArgF.fold, printArg, argPrints, argKind, sortKind, argSortOf, Arg.kind,
     leafReadable, keyReadable, printKey, bind, Except.bind, pure, Except.pure], safe cases Decision)
 
-/-- What a printed capture's kind is, and that a readable argument prints: to a capture of
-its sort's kind when `argPrints`, to none otherwise. -/
+/-- A readable argument prints to its capture kind when `argPrints`, and to none otherwise. -/
 theorem printArg_ok {sig : Signature Op} {d : Nat} {daemon : Bool}
     {v : ArgF Op (EffSelfCarrier Op)}
     (hr : argReadable sig d daemon (ArgF.fold (readableAlg sig) v) = true)
     (hchild : ∀ fam' (c : EffSelfCarrier Op fam'), v = .child fam' c → ReadableAt sig fam' c d →
       ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y) :
     ∃ x, printArg sig d (ArgF.fold (printAlg sig) v) = .ok x ∧
-      (argPrints v = true → ∃ a, x = some a ∧ some (Arg.kind a) = sortKind (argSortOf v)) ∧
+      (argPrints v = true → ∃ a, x = some a ∧ some (Arg.kind a) = argKind v) ∧
       (argPrints v = false → x = none) := by
   cases v with
   | child fam c =>
     have hra := readableAt_of_argReadable hr
     obtain ⟨y, hy⟩ := hchild fam c rfl hra
-    cases fam <;> aesop (add norm simp [ArgF.fold, cataFam, printArg, argPrints, sortKind,
+    cases fam <;> aesop (add norm simp [ArgF.fold, cataFam, printArg, argPrints, argKind, sortKind,
       argSortOf, Arg.kind, bind, Except.bind, pure, Except.pure])
   | _ => exact printArg_ok_leaf _ hr (fun _ h => by cases h)
 
 /-! ## The table: every hole is filled by a capture of its kind -/
 
-/-- The pattern at `i` forces the argument to print (`someTerm`, `decisionTag`, `someTy`). -/
+/-- Term, annotation, and either tag-decision patterns force their argument to print. -/
 def patForcesPrint (row : Templates.Row) (i : Nat) : Bool :=
   row.fixed.any fun p => p.1 == i && match p.2 with
-    | .someTerm | .decisionTag | .someTy => true
+    | .someTerm | .decisionTag | .decisionRecordTag | .someTy => true
     | _ => false
 
 def RowOut.holeKinds : RowOut → List (Nat × HoleKind)
@@ -304,12 +308,23 @@ def RowOut.holeKinds : RowOut → List (Nat × HoleKind)
   | .stmt t => holeKindsStmt t
   | _ => []
 
-/-- Every hole of a row asks for the kind its argument's sort prints to, and the argument
-prints: by its sort, or because the classifier forces it. -/
+/-- A decision classifier supplies the kind of its distinct capture image. -/
+def decisionPatKind : ArgPat → Option HoleKind
+  | .decisionTag => some .str
+  | .decisionRecordTag => some .expr
+  | _ => none
+
+/-- Decision holes use their classifier's kind; other sorts retain their fixed kind. -/
+def rowKind (row : Templates.Row) (i : Nat) : ArgSort → Option HoleKind
+  | .decision => (row.fixed.find? (fun p => p.1 == i)).bind (fun p => decisionPatKind p.2)
+  | sort => sortKind sort
+
+/-- Every hole asks for its argument's capture kind, and that argument prints by its sort
+or because the classifier forces it. -/
 def rowHoleKinds (row : Templates.Row) : Bool :=
   match argSorts row.fam row.ctor with
   | some sorts => (RowOut.holeKinds row.out).all fun p => match sorts[p.1]? with
-      | some s => sortKind s == some p.2 && (sortPrints s || patForcesPrint row p.1)
+      | some s => rowKind row p.1 s == some p.2 && (sortPrints s || patForcesPrint row p.1)
       | none => false
   | none => match row.out with
     | .tpl _ | .stmt _ => false
@@ -329,6 +344,24 @@ theorem argPrints_of_forced {row : Templates.Row} {fam : EffFam} {ctor : String}
   subst hj
   cases pat <;> cases v <;> aesop (add norm simp [Templates.patternAt, Templates.ArgPat.holds,
     argPrints], safe cases Decision)
+
+/-- A selected classifier agrees with the actual argument's capture kind. -/
+theorem argKind_of_selected {row : Templates.Row} {fam : EffFam} {ctor : String}
+    {args : List (ArgF Op (EffSelfCarrier Op))} (hsel : row.selects fam ctor args = true)
+    {i : Nat} {v : ArgF Op (EffSelfCarrier Op)} (hv : args[i]? = some v) {kind : HoleKind}
+    (hk : rowKind row i (argSortOf v) = some kind) : argKind v = some kind := by
+  cases v with
+  | decision d =>
+    unfold rowKind at hk
+    obtain ⟨p, hp, hkind⟩ := Option.bind_eq_some_iff.mp hk
+    have hi : p.1 = i := by
+      simpa only [beq_iff_eq] using List.find?_some hp
+    simp only [Templates.Row.selects, Bool.and_eq_true, List.all_eq_true] at hsel
+    have hpat := hsel.2 p (List.mem_of_find?_eq_some hp)
+    simp only [Templates.patternAt, hi, hv, Templates.ArgPat.holds] at hpat
+    cases hpk : p.2 <;> cases d <;>
+      aesop (add norm simp [decisionPatKind, argKind, argSortOf, sortKind, Templates.ArgPat.holds])
+  | _ => exact hk
 
 /-- All the arguments of a readable node print, and the substitution captures every hole of
 the row in its kind. -/
@@ -392,7 +425,7 @@ theorem kinds_of_printArgs {sig : Signature Op} {n : Nat} {row : Templates.Row}
         (by simp only [List.getElem?_map, ha, Option.map_some])
       rw [argSortOf_fold, Nat.zero_add, hx] at this
       refine ⟨a, (Except.ok.inj this).symm, ?_⟩
-      rw [hk.1] at hkind
+      rw [argKind_of_selected hsel ha hk.1] at hkind
       exact Option.some.inj hkind
 
 /-! ## The row call prints -/

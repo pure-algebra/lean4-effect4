@@ -16,7 +16,7 @@ def origins : List Bindings.Origin :=
   effectOrigins ++ Effect4.Codegen.Record.helperNames.map (fun name => .imported "./records" (some name))
 
 def ambient : List TypeScript.Import :=
-  [.named ["Effect", "Option"] "effect", .named ["recordValue", "recordOptional", "recordRaw", "recordSet"] "./records"]
+  [.named ["Effect", "Option"] "effect", .named ["recordValue", "recordRequired", "recordOptional", "recordRaw", "recordSet"] "./records"]
 
 #guard (Effect4.Api.printDecl "main" program).isSome
 #guard match emitModule "main" program with

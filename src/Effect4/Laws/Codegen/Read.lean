@@ -221,7 +221,7 @@ theorem ArgPat.holds_fold {R : EffFam → Type} (alg : EffAlgebra Op R) (p : Arg
     (a : ArgF Op (EffSelfCarrier Op)) : p.holds (ArgF.fold alg a) = p.holds a := by
   cases p with
   | is v => exact Fixed.holds_fold alg v a
-  | decisionTag =>
+  | decisionTag | decisionRecordTag =>
     cases a with
     | decision d => cases d <;> rfl
     | _ => rfl
@@ -413,7 +413,7 @@ theorem readArg_exact
         (argDepth row.fam (argSortOf (ArgF.fold (printAlg sig) (fixed.arg (Op := Op)))) n
           (row.out.levelAt i)) fixed
       exact ⟨x, hx, fun hin => absurd hin hnot⟩
-    | decisionTag => rw [hp2] at hp; cases hp
+    | decisionTag | decisionRecordTag => rw [hp2] at hp; cases hp
     | someTerm => rw [hp2] at hp; cases hp
     | someTy => rw [hp2] at hp; cases hp
     | daemon b => rw [hp2] at hp; cases hp

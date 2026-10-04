@@ -1,5 +1,6 @@
 import Effect4.Program.Decision
 import Effect4.Laws.Program.Residual
+import Effect4.Laws.Program.RecordTag
 
 /-!
 # Laws.Program.Decision — a typed scrutinee always decides
@@ -13,7 +14,7 @@ has that arm's type. `.bool` by the shape of a Boolean, `.option` by
 its own equations, which the `catchIf` lemmas depend on.
 
 This is the whole "no `badShape` on an admitted program" story for the construct, and the
-only place the three decisions are proved about separately.
+only place the decision forms receive their separate coarse membership proofs.
 -/
 
 namespace Effect4.Program
@@ -119,7 +120,7 @@ theorem Decision.decide_typed (d : Decision) {t : Ty} {e0 e1 : List Ty} {v : Val
     split at harms
     · rename_i ht
       subst ht
-      try simp only [Option.some.injEq, Prod.mk.injEq] at harms
+      simp only [Option.some.injEq, Prod.mk.injEq] at harms
       obtain ⟨h0, h1⟩ := harms
       subst h0; subst h1
       simp only [Val.hasTy] at hv
@@ -132,7 +133,7 @@ theorem Decision.decide_typed (d : Decision) {t : Ty} {e0 e1 : List Ty} {v : Val
     simp only [Decision.arms] at harms
     split at harms
     · rename_i a hnorm
-      try simp only [Option.some.injEq, Prod.mk.injEq] at harms
+      simp only [Option.some.injEq, Prod.mk.injEq] at harms
       obtain ⟨h0, h1⟩ := harms
       subst h0; subst h1
       rw [← hasTy_normalize, hnorm] at hv
@@ -168,5 +169,18 @@ theorem Decision.decide_typed (d : Decision) {t : Ty} {e0 e1 : List Ty} {v : Val
           rw [NativeAtom.eval_tagIs, NativeAtom.tagHit_eq, hp]
           rfl
     · exact nomatch harms
+
+  | recordTag name =>
+    obtain ⟨⟨hit, miss⟩, hparts, heq⟩ := Option.map_eq_some_iff.mp harms
+    cases heq
+    refine ⟨Record.tagHit name v, some v, rfl, ?_⟩
+    have htyped := Record.tagArms_hasTy hparts hv
+    cases hb : Record.tagHit name v with
+    | false =>
+      change Val.hasTy v miss allocated = true
+      simpa only [hb, Bool.false_eq_true, ↓reduceIte] using htyped
+    | true =>
+      change Val.hasTy v hit allocated = true
+      simpa only [hb, ↓reduceIte] using htyped
 
 end Effect4.Program
