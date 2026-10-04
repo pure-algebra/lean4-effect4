@@ -14,5 +14,5 @@
     "types": ["bun"]
   },
   "include": ["*.ts", "test", "ingest"],
-  "exclude": ["ingest/fixtures"]
+  "exclude": ["ingest/fixtures", "test/red"]
 }

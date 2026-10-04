@@ -1340,6 +1340,73 @@
    "decl":
    "export const main: Effect.Effect<readonly [boolean, number], never, never> = Effect.flatMap(Effect.exit(Effect.suspend(() => false ? Effect.fail(7) : Effect.succeed(0))), (a0) => Effect.flatMap(Effect.succeed(causeError(a0)), (a1) => Effect.succeed(pair(isSome(a1), getOrElse(a1, 9)))))\n"},
   {"wellTyped": true,
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "{ readonly _tag: \"NotFound\"; readonly id: number }",
+    "answer": "never"},
+   "straight": true,
+   "scenario": null,
+   "runSync":
+   {"sync": true,
+    "exitKind": "fail",
+    "exit": {"failure": {"reasons": [{"fail": {"payload": {"id": 9, "_tag": "NotFound"}}}]}}},
+   "run":
+   {"schedule": ["started 0", "exited 0 fail"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 1,
+    "fibers":
+    [{"parkedToken": null,
+      "id": 0,
+      "exited": true,
+      "exit":
+      {"failure":
+       {"reasons":
+        [{"fail":
+          {"payload":
+           "0a000000000000004e0200000000000000000400000000000000180300000000000000045f746167030000000000000002696404000000000000001b0300000000000000084e6f74466f756e6402000000000000000109"}}]}}}],
+    "fiberCount": 1,
+    "exitKind": "fail",
+    "exit": {"failure": {"reasons": [{"fail": {"payload": {"id": 9, "_tag": "NotFound"}}}]}},
+    "events":
+    ["started 0",
+     "exited 0 {\"failure\":{\"reasons\":[{\"fail\":{\"payload\":\"0a000000000000004e0200000000000000000400000000000000180300000000000000045f746167030000000000000002696404000000000000001b0300000000000000084e6f74466f756e6402000000000000000109\"}}]}}"]},
+   "name": "pFailPayload",
+   "exprRefusal": null,
+   "expr": "Effect.fail(new NotFound({ id: 9 }))",
+   "declInferred":
+   "export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\nexport const main = Effect.fail(new NotFound({ id: 9 }))\n",
+   "decl":
+   "export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\nexport const main: Effect.Effect<never, NotFound, never> = Effect.fail(new NotFound({ id: 9 }))\n"},
+  {"wellTyped": true,
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "{ readonly _tag: \"NotFound\"; readonly id: number }",
+    "answer": "number"},
+   "straight": false,
+   "scenario": null,
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 1}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 3,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": 1}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": 1},
+    "events": ["started 0", "exited 0 {\"success\":1}"]},
+   "name": "pTagPayload",
+   "exprRefusal": null,
+   "expr":
+   "Effect.catchIf(Effect.fail(new NotFound({ id: 9 })), (a0) => tagIs(\"NotFound\", a0), (a0) => Effect.succeed(1), undefined)",
+   "declInferred":
+   "export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\nexport const main = Effect.catchIf(Effect.fail(new NotFound({ id: 9 })), (a0) => tagIs(\"NotFound\", a0), (a0) => Effect.succeed(1), undefined)\n",
+   "decl":
+   "export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\nexport const main: Effect.Effect<number, NotFound, never> = Effect.catchIf(Effect.fail(new NotFound({ id: 9 })), (a0) => tagIs(\"NotFound\", a0), (a0) => Effect.succeed(1), undefined)\n"},
+  {"wellTyped": true,
    "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
    "straight": false,
    "scenario": "U-01",

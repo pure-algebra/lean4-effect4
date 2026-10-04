@@ -347,6 +347,10 @@ open Effect4.Codegen.Templates (RowOut ArgPat Fixed table tableLayer printAlg pr
 
 variable {Op : Type}
 
+open Effect4.Codegen.Classes (Classes)
+
+variable {classes : Classes}
+
 /-! ## The domain: a fold that says whether every leaf reads back -/
 
 /-- The carrier of the domain: readable at an environment length, leaving the binders a
@@ -357,11 +361,11 @@ abbrev Dom (_ : EffFam) : Type := Nat → Option Nat
 spells, fork options whose daemon flag the row spells, no type annotation (B19: types are not
 read), and a layer path whose declared name decodes (the name codec has no law of its own; the
 domain runs it). -/
-def leafReadable {R : EffFam → Type} (sig : Signature Op) (d : Nat) (daemon : Bool) :
-    ArgF Op R → Bool
-  | .term t => t.scoped d
-  | .optTerm (some t) => t.scoped d
-  | .cause c => CauseTerm.scoped d c
+def leafReadable {R : EffFam → Type} (classes : Classes) (sig : Signature Op) (d : Nat)
+    (daemon : Bool) : ArgF Op R → Bool
+  | .term t => t.scoped d && t.covers classes
+  | .optTerm (some t) => t.scoped d && t.covers classes
+  | .cause c => CauseTerm.scoped d c && c.covers classes
   | .key k => keyReadable sig k
   | .forkOptions o => o.daemon == daemon
   | .optTy (some _) => false
@@ -369,30 +373,33 @@ def leafReadable {R : EffFam → Type} (sig : Signature Op) (d : Nat) (daemon : 
   | _ => true
 
 /-- One argument reads back at depth `d`: a child by its own fold, a leaf by `leafReadable`. -/
-def argReadable (sig : Signature Op) (d : Nat) (daemon : Bool) : ArgF Op Dom → Bool
+def argReadable (classes : Classes) (sig : Signature Op) (d : Nat) (daemon : Bool) :
+    ArgF Op Dom → Bool
   | .child _ r => (r d).isSome
-  | a => leafReadable sig d daemon a
+  | a => leafReadable classes sig d daemon a
 
 /-- Every argument of a row reads back at the depth the printer gives it. -/
-def argsReadable (sig : Signature Op) (fam : EffFam) (n : Nat) (out : RowOut) (daemon : Bool) :
+def argsReadable (classes : Classes) (sig : Signature Op) (fam : EffFam) (n : Nat) (out : RowOut)
+    (daemon : Bool) :
     List (ArgF Op Dom) → Nat → Bool
   | [], _ => true
   | a :: as, i =>
-    argReadable sig (argDepth fam (argSortOf a) n (out.levelAt i)) daemon a &&
-    argsReadable sig fam n out daemon as (i + 1)
+    argReadable classes sig (argDepth fam (argSortOf a) n (out.levelAt i)) daemon a &&
+    argsReadable classes sig fam n out daemon as (i + 1)
 
 /-- The domain, per layer: the row the printer chooses must be a skeleton or the row call, and
 its arguments must read back; the spines are readable item by item, statements threading the
 binders they declare. -/
-def domLayer (sig : Signature Op) : (fam : EffFam) → String → List (ArgF Op Dom) → Dom fam
-  | .eff, ctor, args => fun n => rowDom sig .eff ctor args n
-  | .action, ctor, args => fun n => rowDom sig .action ctor args n
-  | .layer, ctor, args => fun n => rowDom sig .layer ctor args n
+def domLayer (classes : Classes) (sig : Signature Op) :
+    (fam : EffFam) → String → List (ArgF Op Dom) → Dom fam
+  | .eff, ctor, args => fun n => rowDom classes sig .eff ctor args n
+  | .action, ctor, args => fun n => rowDom classes sig .action ctor args n
+  | .layer, ctor, args => fun n => rowDom classes sig .layer ctor args n
   | .stmt, ctor, args => fun n =>
     match table.find? fun row => row.selects .stmt ctor args with
     | some row => match row.out with
       | .stmt t =>
-        if argsReadable sig .stmt n (.stmt t) (rowDaemon row) args 0 then some t.declares else none
+        if argsReadable classes sig .stmt n (.stmt t) (rowDaemon row) args 0 then some t.declares else none
       | _ => none
     | none => none
   | .effs, "nil", [] => fun _ => some 0
@@ -406,41 +413,46 @@ def domLayer (sig : Signature Op) : (fam : EffFam) → String → List (ArgF Op 
     let declared ← head n; let _ ← tail (n + declared); some 0
   | .effs, _, _ | .layers, _, _ | .stmts, _, _ => fun _ => none
 where
-  rowDom (sig : Signature Op) (fam : EffFam) (ctor : String) (args : List (ArgF Op Dom))
-      (n : Nat) : Option Nat :=
+  rowDom (classes : Classes) (sig : Signature Op) (fam : EffFam) (ctor : String)
+      (args : List (ArgF Op Dom)) (n : Nat) : Option Nat :=
     match table.find? fun row => row.selects fam ctor args with
     | none => none
     | some row => match row.out with
       | .refuse _ | .stmt _ => none
       | .rowCall => match args with
         | [.op op, .term request] =>
-          if sig.dom op && requestReadable (sig.rowOf op) n request then some 0 else none
+          if sig.dom op && requestReadable (sig.rowOf op) n request && request.covers classes then
+            some 0
+          else none
         | _ => none
-      | .tpl t => if argsReadable sig fam n (.tpl t) (rowDaemon row) args 0 then some 0 else none
+      | .tpl t => if argsReadable classes sig fam n (.tpl t) (rowDaemon row) args 0 then some 0 else none
 
 /-- The domain's algebra: the layer function and nothing else, so `cata_build` speaks of it. -/
-def readableAlg (sig : Signature Op) : EffAlgebra Op Dom := EffAlgebra.ofLayer (domLayer sig)
+def readableAlg (classes : Classes) (sig : Signature Op) : EffAlgebra Op Dom :=
+  EffAlgebra.ofLayer (domLayer classes sig)
 
 /-- A node of a family is readable at an environment length. -/
-def ReadableAt (sig : Signature Op) (fam : EffFam) (e : EffSelfCarrier Op fam) (n : Nat) : Prop :=
-  ∃ d, cataFam (readableAlg sig) fam e n = some d
+def ReadableAt (classes : Classes) (sig : Signature Op) (fam : EffFam) (e : EffSelfCarrier Op fam)
+    (n : Nat) : Prop :=
+  ∃ d, cataFam (readableAlg classes sig) fam e n = some d
 
 /-- The structural domain of the round trip: the fold says every leaf reads back. -/
-def Readable (sig : Signature Op) (n : Nat) (e : Eff Op) : Bool :=
-  (cata_eff (readableAlg sig) e n).isSome
+def Readable (classes : Classes) (sig : Signature Op) (n : Nat) (e : Eff Op) : Bool :=
+  (cata_eff (readableAlg classes sig) e n).isSome
 
 /-! ## The reader side of `PrintsTo` -/
 
 /-- A capture reads to a node at a depth: what the recursion establishes of each child, and the
 theorem of the whole tree. -/
-def ReadsTo (sig : Signature Op) (spell : String → List String → Option Op) (d : Nat) :
+def ReadsTo (classes : Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+    (d : Nat) :
     (fam : EffFam) → EffSelfCarrier Op fam → Arg → Prop
-  | .eff, v, .expr y => readT sig spell .eff d y = some (.ok v)
-  | .action, v, .expr y => readT sig spell .action d y = some (.ok v)
-  | .layer, v, .expr y => readT sig spell .layer d y = some (.ok v)
-  | .effs, v, .exprs ys => readSpine sig spell .effs d ys = .ok v
-  | .layers, v, .exprs ys => readSpine sig spell .layers d ys = .ok v
-  | .stmts, v, .stmts ss => readStmts sig spell d ss = .ok v
+  | .eff, v, .expr y => readT classes sig spell .eff d y = some (.ok v)
+  | .action, v, .expr y => readT classes sig spell .action d y = some (.ok v)
+  | .layer, v, .expr y => readT classes sig spell .layer d y = some (.ok v)
+  | .effs, v, .exprs ys => readSpine classes sig spell .effs d ys = .ok v
+  | .layers, v, .exprs ys => readSpine classes sig spell .layers d ys = .ok v
+  | .stmts, v, .stmts ss => readStmts classes sig spell d ss = .ok v
   | _, _, _ => False
 
 /-! ## The leaves read back -/
@@ -450,9 +462,9 @@ attribute [local aesop safe forward] readTerm_printTerm readCause_printCause rea
 /-- A readable leaf prints, and what it prints reads back at the same depth and sort. -/
 theorem readLeaf_print {sig : Signature Op} {d : Nat} {daemon : Bool}
     {v : ArgF Op (EffSelfCarrier Op)} (hleaf : ∀ fam, argSortOf v ≠ .child fam)
-    (hr : leafReadable sig d daemon v = true)
+    (hr : leafReadable classes sig d daemon v = true)
     {a : Arg} (hp : printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a)) :
-    readLeaf sig d daemon (argSortOf v) a = .ok v := by
+    readLeaf classes sig d daemon (argSortOf v) a = .ok v := by
   cases v <;> aesop (add norm simp [leafReadable, ArgF.fold, printArg, argSortOf, readLeaf,
     readLiteral_print, readForkOptions_print])
 
@@ -460,8 +472,8 @@ theorem readLeaf_print {sig : Signature Op} {d : Nat} {daemon : Bool}
 
 theorem argsReadable_at {sig : Signature Op} {fam : EffFam} {n : Nat} {out : RowOut}
     {daemon : Bool} : ∀ (as : List (ArgF Op Dom)) (i k : Nat) (a : ArgF Op Dom),
-    argsReadable sig fam n out daemon as i = true → as[k]? = some a →
-    argReadable sig (argDepth fam (argSortOf a) n (out.levelAt (i + k))) daemon a = true
+    argsReadable classes sig fam n out daemon as i = true → as[k]? = some a →
+    argReadable classes sig (argDepth fam (argSortOf a) n (out.levelAt (i + k))) daemon a = true
   | [], _, _, _, _, hk => by aesop
   | b :: bs, i, 0, a, h, hk => by aesop (add norm simp argsReadable)
   | b :: bs, i, k + 1, a, h, hk => by
@@ -530,15 +542,15 @@ theorem printsTo_of_printArg {sig : Signature Op} {d : Nat} {fam : EffFam}
 /-- A readable leaf argument is a readable leaf: the fold changes only children. -/
 theorem leafReadable_of_argReadable {sig : Signature Op} {d : Nat} {daemon : Bool}
     {v : ArgF Op (EffSelfCarrier Op)} (hleaf : ∀ fam, argSortOf v ≠ .child fam)
-    (h : argReadable sig d daemon (ArgF.fold (readableAlg sig) v) = true) :
-    leafReadable sig d daemon v = true := by
+    (h : argReadable classes sig d daemon (ArgF.fold (readableAlg classes sig) v) = true) :
+    leafReadable classes sig d daemon v = true := by
   cases v <;> aesop (add norm simp [argReadable, ArgF.fold, leafReadable, argSortOf])
 
 /-- A readable child is readable at its depth, as `ReadableAt` says it. -/
 theorem readableAt_of_argReadable {sig : Signature Op} {d : Nat} {daemon : Bool} {fam : EffFam}
     {c : EffSelfCarrier Op fam}
-    (h : argReadable sig d daemon (ArgF.fold (readableAlg sig) (.child fam c)) = true) :
-    ReadableAt sig fam c d := by
+    (h : argReadable classes sig d daemon (ArgF.fold (readableAlg classes sig) (.child fam c)) = true) :
+    ReadableAt classes sig fam c d := by
   aesop (add norm simp [argReadable, ArgF.fold, ReadableAt, Option.isSome_iff_exists])
 
 section Args
@@ -554,41 +566,41 @@ variable (sig : Signature Op) (σ : Subst)
 /-- `readCapture` at a child, by the capture's shape (the definition, at each arm). -/
 theorem readCapture_expr_child (daemon : Bool) (d : Nat) (fam : EffFam) (i : Nat) (y : Expr)
     (hmem : (i, Arg.expr y) ∈ σ) :
-    readCapture sig daemon σ child children block d (.child fam) i (.expr y) hmem =
+    readCapture classes sig daemon σ child children block d (.child fam) i (.expr y) hmem =
       (child fam d y i hmem).map (.child fam) := rfl
 
 theorem readCapture_exprs_child (daemon : Bool) (d : Nat) (fam : EffFam) (i : Nat)
     (ys : List Expr) (hmem : (i, Arg.exprs ys) ∈ σ) :
-    readCapture sig daemon σ child children block d (.child fam) i (.exprs ys) hmem =
+    readCapture classes sig daemon σ child children block d (.child fam) i (.exprs ys) hmem =
       (children fam d ys i hmem).map (.child fam) := rfl
 
 theorem readCapture_stmts_child (daemon : Bool) (d : Nat) (i : Nat) (ss : List TypeScript.Stmt)
     (hmem : (i, Arg.stmts ss) ∈ σ) :
-    readCapture sig daemon σ child children block d (.child .stmts) i (.stmts ss) hmem =
+    readCapture classes sig daemon σ child children block d (.child .stmts) i (.stmts ss) hmem =
       (block d ss i hmem).map (.child .stmts) := rfl
 
 /-- A readable leaf that printed to a capture reads back from it. -/
 theorem readCapture_print_leaf (daemon : Bool) (d : Nat) (v : ArgF Op (EffSelfCarrier Op))
-    (hr : argReadable sig d daemon (ArgF.fold (readableAlg sig) v) = true)
+    (hr : argReadable classes sig d daemon (ArgF.fold (readableAlg classes sig) v) = true)
     (a : Arg) (hp : printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a))
     (hleaf : ∀ fam, argSortOf v ≠ .child fam) (i : Nat) (hmem : (i, a) ∈ σ) :
-    readCapture sig daemon σ child children block d (argSortOf v) i a hmem = .ok v := by
+    readCapture classes sig daemon σ child children block d (argSortOf v) i a hmem = .ok v := by
   have hl := readLeaf_print (daemon := daemon) hleaf (leafReadable_of_argReadable hleaf hr) hp
   cases v <;> cases a <;> aesop (add norm simp [readCapture, argSortOf, ArgF.fold, printArg])
 
 /-- A readable argument that printed to a capture reads back from it, at its sort. -/
 theorem readCapture_print
-    (hchild : ∀ fam d y i h c, ReadableAt sig fam c d → PrintsTo sig d fam c (.expr y) →
+    (hchild : ∀ fam d y i h c, ReadableAt classes sig fam c d → PrintsTo sig d fam c (.expr y) →
       child fam d y i h = .ok c)
-    (hchildren : ∀ fam d ys i h c, ReadableAt sig fam c d → PrintsTo sig d fam c (.exprs ys) →
+    (hchildren : ∀ fam d ys i h c, ReadableAt classes sig fam c d → PrintsTo sig d fam c (.exprs ys) →
       children fam d ys i h = .ok c)
-    (hblock : ∀ d ss i h c, ReadableAt sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
+    (hblock : ∀ d ss i h c, ReadableAt classes sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
       block d ss i h = .ok c)
     (daemon : Bool) (d : Nat) (v : ArgF Op (EffSelfCarrier Op))
-    (hr : argReadable sig d daemon (ArgF.fold (readableAlg sig) v) = true)
+    (hr : argReadable classes sig d daemon (ArgF.fold (readableAlg classes sig) v) = true)
     (a : Arg) (hp : printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a))
     (i : Nat) (hmem : (i, a) ∈ σ) :
-    readCapture sig daemon σ child children block d (argSortOf v) i a hmem = .ok v := by
+    readCapture classes sig daemon σ child children block d (argSortOf v) i a hmem = .ok v := by
   cases v with
   | child fam c =>
     have hra := readableAt_of_argReadable hr
@@ -623,11 +635,11 @@ theorem supplied_eq_of_selects {fam : EffFam} {ctor : String}
 /-- One argument of a readable node reads back: supplied when the classifier fixes it, else
 from what the skeleton captured, which is what the printer put there. -/
 theorem readArg_print
-    (hchild : ∀ fam d y i h c, ReadableAt sig fam c d → PrintsTo sig d fam c (.expr y) →
+    (hchild : ∀ fam d y i h c, ReadableAt classes sig fam c d → PrintsTo sig d fam c (.expr y) →
       child fam d y i h = .ok c)
-    (hchildren : ∀ fam d ys i h c, ReadableAt sig fam c d → PrintsTo sig d fam c (.exprs ys) →
+    (hchildren : ∀ fam d ys i h c, ReadableAt classes sig fam c d → PrintsTo sig d fam c (.exprs ys) →
       children fam d ys i h = .ok c)
-    (hblock : ∀ d ss i h c, ReadableAt sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
+    (hblock : ∀ d ss i h c, ReadableAt classes sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
       block d ss i h = .ok c)
     (i : Nat) (v : ArgF Op (EffSelfCarrier Op)) {τ : Subst}
     (hsup : ∀ a, row.supplied i = some a → a = v)
@@ -637,9 +649,9 @@ theorem readArg_print
     (hσ : i ∈ row.out.holes → lookup σ i = lookup τ i)
     (hprint : printArg sig (argDepth row.fam (argSortOf v) n (row.out.levelAt i))
       (ArgF.fold (printAlg sig) v) = .ok (lookup τ i))
-    (hr : argReadable sig (argDepth row.fam (argSortOf v) n (row.out.levelAt i)) (rowDaemon row)
-      (ArgF.fold (readableAlg sig) v) = true) :
-    readArg sig n row σ child children block (argSortOf v) i = .ok v := by
+    (hr : argReadable classes sig (argDepth row.fam (argSortOf v) n (row.out.levelAt i)) (rowDaemon row)
+      (ArgF.fold (readableAlg classes sig) v) = true) :
+    readArg classes sig n row σ child children block (argSortOf v) i = .ok v := by
   unfold readArg
   cases hs : row.supplied i with
   | some a => simp only [hsup a hs]
@@ -654,11 +666,11 @@ theorem readArg_print
 
 /-- The arguments of a readable node, in declaration order, read back to themselves. -/
 theorem readArgs_print
-    (hchild : ∀ fam d y i h c, ReadableAt sig fam c d → PrintsTo sig d fam c (.expr y) →
+    (hchild : ∀ fam d y i h c, ReadableAt classes sig fam c d → PrintsTo sig d fam c (.expr y) →
       child fam d y i h = .ok c)
-    (hchildren : ∀ fam d ys i h c, ReadableAt sig fam c d → PrintsTo sig d fam c (.exprs ys) →
+    (hchildren : ∀ fam d ys i h c, ReadableAt classes sig fam c d → PrintsTo sig d fam c (.exprs ys) →
       children fam d ys i h = .ok c)
-    (hblock : ∀ d ss i h c, ReadableAt sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
+    (hblock : ∀ d ss i h c, ReadableAt classes sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
       block d ss i h = .ok c)
     {τ : Subst}
     (hlook : ∀ j ∈ row.out.holes, ∃ a, lookup τ j = some a)
@@ -672,9 +684,9 @@ theorem readArgs_print
       printArg sig (argDepth row.fam (argSortOf v) n (row.out.levelAt (i + k)))
         (ArgF.fold (printAlg sig) v) = .ok (lookup τ (i + k))) →
     (∀ k v, args[k]? = some v →
-      argReadable sig (argDepth row.fam (argSortOf v) n (row.out.levelAt (i + k))) (rowDaemon row)
-        (ArgF.fold (readableAlg sig) v) = true) →
-    readArgs sig n row σ child children block (args.map argSortOf) i = .ok args
+      argReadable classes sig (argDepth row.fam (argSortOf v) n (row.out.levelAt (i + k))) (rowDaemon row)
+        (ArgF.fold (readableAlg classes sig) v) = true) →
+    readArgs classes sig n row σ child children block (args.map argSortOf) i = .ok args
   | [], _, _, _, _, _ => rfl
   | v :: rest, i, hsup, hhole, hprint, hr => by
     have h0 := readArg_print sig σ n row hchild hchildren hblock i v
@@ -890,11 +902,11 @@ theorem rowPrint_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Carrie
 
 /-- What the domain said at a node of an expression family. -/
 theorem rowDom_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Dom)} {n d : Nat}
-    (h : domLayer.rowDom sig fam ctor args n = some d) :
+    (h : domLayer.rowDom classes sig fam ctor args n = some d) :
     ∃ row, table.find? (fun r => r.selects fam ctor args) = some row ∧
-      ((∃ t, row.out = .tpl t ∧ argsReadable sig fam n (.tpl t) (rowDaemon row) args 0 = true) ∨
+      ((∃ t, row.out = .tpl t ∧ argsReadable classes sig fam n (.tpl t) (rowDaemon row) args 0 = true) ∨
        (∃ op r, row.out = .rowCall ∧ args = [.op op, .term r] ∧ sig.dom op = true ∧
-          requestReadable (sig.rowOf op) n r = true)) := by
+          requestReadable (sig.rowOf op) n r = true ∧ r.covers classes = true)) := by
   unfold domLayer.rowDom at h
   aesop
 
@@ -925,27 +937,27 @@ variable {fam : EffFam} {n : Nat} {x : Expr} {k : Nat}
     Option (Except ReadFailure (EffSelfCarrier Op fam'))}
 
 theorem readRow_none_of_fam {row : Templates.Row} (h : row.fam ≠ fam) :
-    readRow sig spell fam n x row k child children block same = none := by
+    readRow classes sig spell fam n x row k child children block same = none := by
   unfold readRow; simp only [h, ↓reduceIte]
 
 theorem readRow_none_of_refuse {row : Templates.Row} {name : String} (h : row.out = .refuse name) :
-    readRow sig spell fam n x row k child children block same = none := by
+    readRow classes sig spell fam n x row k child children block same = none := by
   unfold readRow; aesop
 
 theorem readRow_none_of_stmt {row : Templates.Row} {t : StmtTpl} (h : row.out = .stmt t) :
-    readRow sig spell fam n x row k child children block same = none := by
+    readRow classes sig spell fam n x row k child children block same = none := by
   unfold readRow; aesop
 
 theorem readRow_none_of_nomatch {row : Templates.Row} {t : Tpl} (hout : row.out = .tpl t)
     (hm : matchT n t x = none) :
-    readRow sig spell fam n x row k child children block same = none := by
+    readRow classes sig spell fam n x row k child children block same = none := by
   unfold readRow; aesop
 
 /-- A transparent row whose lower family reads nothing reads nothing. -/
 theorem readRow_none_of_same {row : Templates.Row} {i : Nat} (hout : row.out = .tpl (.hole i))
     {fam' : EffFam} (hsorts : argSorts row.fam row.ctor = some [.child fam'])
     (hsame : ∀ hk d, same fam' hk d = none) :
-    readRow sig spell fam n x row k child children block same = none := by
+    readRow classes sig spell fam n x row k child children block same = none := by
   unfold readRow
   aesop (add norm simp [Tpl.rigid, hsame])
 
@@ -972,7 +984,7 @@ theorem readArgs_at_print {row : Templates.Row} (hmem : row ∈ table)
     {t : Tpl} (hout : row.out = .tpl t)
     {τ : Subst} (hτ : printArgs sig fam n (.tpl t) (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ)
     (hinst : inst n τ t = some x)
-    (hr : argsReadable sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg sig))) 0
+    (hr : argsReadable classes sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg classes sig))) 0
       = true)
     {σ : Subst} (hagree : ∀ i ∈ holes t, lookup σ i = lookup τ i)
     {child' : (fam' : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
@@ -981,13 +993,13 @@ theorem readArgs_at_print {row : Templates.Row} (hmem : row ∈ table)
       Except ReadFailure (EffSelfCarrier Op fam')}
     {block' : Nat → (ss : List TypeScript.Stmt) → (i : Nat) → (i, Arg.stmts ss) ∈ σ →
       Except ReadFailure (EffSelfCarrier Op .stmts)}
-    (hchild : ∀ fam' d y i h c, ReadableAt sig fam' c d → PrintsTo sig d fam' c (.expr y) →
+    (hchild : ∀ fam' d y i h c, ReadableAt classes sig fam' c d → PrintsTo sig d fam' c (.expr y) →
       child' fam' d y i h = .ok c)
-    (hchildren : ∀ fam' d ys i h c, ReadableAt sig fam' c d → PrintsTo sig d fam' c (.exprs ys) →
+    (hchildren : ∀ fam' d ys i h c, ReadableAt classes sig fam' c d → PrintsTo sig d fam' c (.exprs ys) →
       children' fam' d ys i h = .ok c)
-    (hblock : ∀ d ss i h c, ReadableAt sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
+    (hblock : ∀ d ss i h c, ReadableAt classes sig .stmts c d → PrintsTo sig d .stmts c (.stmts ss) →
       block' d ss i h = .ok c) :
-    readArgs sig n row σ child' children' block' (args.map argSortOf) 0 = .ok args := by
+    readArgs classes sig n row σ child' children' block' (args.map argSortOf) 0 = .ok args := by
   obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
   obtain ⟨hprint, _⟩ := printArgs_lookup (args.map (ArgF.fold (printAlg sig))) 0 τ hτ
   have hsorts' : argSorts row.fam row.ctor = some (args.map argSortOf) := by
@@ -1009,7 +1021,7 @@ theorem readArgs_at_print {row : Templates.Row} (hmem : row ∈ table)
     rw [argSortOf_fold] at this
     simpa only [hfam, hout] using this
   · intro k v hk
-    have := argsReadable_at (args.map (ArgF.fold (readableAlg sig))) 0 k (ArgF.fold (readableAlg sig) v)
+    have := argsReadable_at (args.map (ArgF.fold (readableAlg classes sig))) 0 k (ArgF.fold (readableAlg classes sig) v)
       hr (by simp only [List.getElem?_map, hk, Option.map_some])
     rw [argSortOf_fold] at this
     simpa only [hfam, hout] using this
@@ -1023,15 +1035,15 @@ theorem readRow_rigid_print {row : Templates.Row} (hk : table[k]? = some row)
     {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid = true)
     {τ : Subst} (hτ : printArgs sig fam n (.tpl t) (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ)
     (hinst : inst n τ t = some x)
-    (hr : argsReadable sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg sig))) 0
+    (hr : argsReadable classes sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg classes sig))) 0
       = true)
-    (hchild : ∀ fam' d y (hy : sizeOf y < sizeOf x) c, ReadableAt sig fam' c d →
+    (hchild : ∀ fam' d y (hy : sizeOf y < sizeOf x) c, ReadableAt classes sig fam' c d →
       PrintsTo sig d fam' c (.expr y) → child fam' d y hy = .ok c)
-    (hchildren : ∀ fam' d ys (hy : sizeOf ys < sizeOf x) c, ReadableAt sig fam' c d →
+    (hchildren : ∀ fam' d ys (hy : sizeOf ys < sizeOf x) c, ReadableAt classes sig fam' c d →
       PrintsTo sig d fam' c (.exprs ys) → children fam' d ys hy = .ok c)
-    (hblock : ∀ d ss (hy : sizeOf ss < sizeOf x) c, ReadableAt sig .stmts c d →
+    (hblock : ∀ d ss (hy : sizeOf ss < sizeOf x) c, ReadableAt classes sig .stmts c d →
       PrintsTo sig d .stmts c (.stmts ss) → block d ss hy = .ok c) :
-    readRow sig spell fam n x row k child children block same = some (.ok e) := by
+    readRow classes sig spell fam n x row k child children block same = some (.ok e) := by
   obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
   obtain ⟨σ, hσ, hagree⟩ := match_of_inst n τ t x hinst
   have hargs := readArgs_at_print (List.mem_of_getElem? hk) hsel hsorts hout hτ hinst hr hagree
@@ -1065,10 +1077,10 @@ theorem readRow_action_print {row : Templates.Row} (hk : table[k]? = some row)
     (hidx : table.findIdx? (fun r => r.selects fam ctor ([.child .action c] : List (ArgF Op (EffSelfCarrier Op)))) = some k)
     {i : Nat} (hout : row.out = .tpl (.hole i)) (hrank : famRank .action < famRank fam)
     (hprint : cata_action (printAlg sig) c (argDepth fam (.child .action) n 0) = .ok x)
-    (hr : ReadableAt sig .action c (argDepth fam (.child .action) n 0))
-    (hsame : ∀ fam' hlt d (c' : EffSelfCarrier Op fam'), ReadableAt sig fam' c' d →
+    (hr : ReadableAt classes sig .action c (argDepth fam (.child .action) n 0))
+    (hsame : ∀ fam' hlt d (c' : EffSelfCarrier Op fam'), ReadableAt classes sig fam' c' d →
       PrintsTo sig d fam' c' (.expr x) → same fam' hlt d = some (.ok c')) :
-    readRow sig spell fam n x row k child children block same = some (.ok e) := by
+    readRow classes sig spell fam n x row k child children block same = some (.ok e) := by
   obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
   have hb := buildRow_of_findIdx? hbuild hidx
   have hs := hsame .action hrank _ c hr (by simpa only [PrintsTo] using hprint)
@@ -1089,7 +1101,7 @@ theorem readRow_path_print {row : Templates.Row} (hk : table[k]? = some row)
     {i : Nat} (hout : row.out = .tpl (.hole i))
     (hx : x = .ident (LayerTerm.refName p))
     (hr : LayerTerm.readRefName (LayerTerm.refName p) = some p) :
-    readRow sig spell fam n x row k child children block same = some (.ok e) := by
+    readRow classes sig spell fam n x row k child children block same = some (.ok e) := by
   obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
   have hb := buildRow_of_findIdx? hbuild hidx
   obtain ⟨rfam, rctor, rfixed, rout⟩ := row
@@ -1103,15 +1115,16 @@ theorem readRow_path_print {row : Templates.Row} (hk : table[k]? = some row)
 theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.Row}
     (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op : Op} {r : Term}
     (hd : sig.dom op = true) (hreq : requestReadable (sig.rowOf op) n r = true)
+    (hc : r.covers classes = true)
     (hp : printRow (sig.rowOf op) r = .ok x) (hfam' : fam = .eff) :
-    readRow sig spell fam n x row k child children block same =
+    readRow classes sig spell fam n x row k child children block same =
       some (.ok (hfam' ▸ (Eff.perform op r : EffSelfCarrier Op .eff))) := by
   subst hfam'
   obtain ⟨rfam, rctor, rfixed, rout⟩ := row
   simp only at hfam hrow
   subst hfam hrow
   unfold readRow
-  simp only [↓reduceIte, read_printRow hl op hd r hreq hp, rowAnswer, Except.mapError]
+  simp only [↓reduceIte, read_printRow hl op hd r hreq hc hp, rowAnswer, Except.mapError]
 
 /-! ## No row before the printing row fires -/
 
@@ -1129,7 +1142,7 @@ theorem matchT_none_of_reserved (hl : LawfulSpelling sig spell) {op : Op} {r : T
 
 /-- No action row reads the row call's image. -/
 theorem readT_action_none_of_printRow (hl : LawfulSpelling sig spell) {op : Op} {r : Term}
-    (hp : printRow (sig.rowOf op) r = .ok x) (d : Nat) : readT sig spell .action d x = none := by
+    (hp : printRow (sig.rowOf op) r = .ok x) (d : Nat) : readT classes sig spell .action d x = none := by
   rw [readT, List.findSome?_eq_none_iff]
   intro p hmem
   obtain ⟨row, k⟩ := p
@@ -1167,7 +1180,7 @@ theorem earlier_none_rigid {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid
     (hinst : inst n τ t = some x)
     (hnode : ∀ i y, childHole sorts i = true → i ∈ holes t → lookup τ i = some (.expr y) →
       nodeLike y = true) :
-    readRow sig spell fam n x rj j child children block same = none := by
+    readRow classes sig spell fam n x rj j child children block same = none := by
   unfold rowsApart at hap
   rw [hout] at hap
   simp only [hrigid, ↓reduceIte, hsorts] at hap
@@ -1183,7 +1196,7 @@ theorem earlier_none_rigid {t : Tpl} (hout : row.out = .tpl t) (hrigid : t.rigid
 theorem earlier_none_action {i : Nat} (hout : row.out = .tpl (.hole i))
     (hsorts : argSorts row.fam row.ctor = some [.child .action]) {h : String}
     (hx : exprHead? x = some h) (hact : h ∈ actionHeads) :
-    readRow sig spell fam n x rj j child children block same = none := by
+    readRow classes sig spell fam n x rj j child children block same = none := by
   unfold rowsApart at hap
   rw [hout] at hap
   simp only [Tpl.rigid, Bool.false_eq_true, ↓reduceIte, hsorts] at hap
@@ -1206,7 +1219,7 @@ theorem earlier_none_action {i : Nat} (hout : row.out = .tpl (.hole i))
 /-- Before the transparent row that reads a name: the image is an identifier. -/
 theorem earlier_none_path {i : Nat} (hout : row.out = .tpl (.hole i))
     (hsorts : argSorts row.fam row.ctor = some [.path]) {s : String} (hx : x = .ident s) :
-    readRow sig spell fam n x rj j child children block same = none := by
+    readRow classes sig spell fam n x rj j child children block same = none := by
   unfold rowsApart at hap
   rw [hout] at hap
   simp only [Tpl.rigid, Bool.false_eq_true, ↓reduceIte, hsorts] at hap
@@ -1224,7 +1237,7 @@ transparent row hands the image to the action family, which reads nothing of it.
 theorem earlier_none_rowCall (hl : LawfulSpelling sig spell) (hrow : row.out = .rowCall)
     {op : Op} {r : Term} (hp : printRow (sig.rowOf op) r = .ok x)
     (hsame : ∀ hk d, same .action hk d = none) :
-    readRow sig spell fam n x rj j child children block same = none := by
+    readRow classes sig spell fam n x rj j child children block same = none := by
   unfold rowsApart at hap
   rw [hrow] at hap
   simp only at hap
@@ -1261,23 +1274,23 @@ returns the node, `readT` returns the node. -/
 theorem readT_of_row {row : Templates.Row} (hk : table[k]? = some row)
     {e : EffSelfCarrier Op fam}
     (hbefore : ∀ j < k, ∀ rj, table[j]? = some rj →
-      readRow sig spell fam n x rj j
-        (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
-        (fun fam' d ys _ => readSpine sig spell fam' d ys)
-        (fun d body _ => readStmts sig spell d body)
-        (fun fam' _ d => readT sig spell fam' d x) = none)
-    (hat : readRow sig spell fam n x row k
-        (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
-        (fun fam' d ys _ => readSpine sig spell fam' d ys)
-        (fun d body _ => readStmts sig spell d body)
-        (fun fam' _ d => readT sig spell fam' d x) = some (.ok e)) :
-    readT sig spell fam n x = some (.ok e) := by
+      readRow classes sig spell fam n x rj j
+        (fun fam' d y _ => (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))))
+        (fun fam' d ys _ => readSpine classes sig spell fam' d ys)
+        (fun d body _ => readStmts classes sig spell d body)
+        (fun fam' _ d => readT classes sig spell fam' d x) = none)
+    (hat : readRow classes sig spell fam n x row k
+        (fun fam' d y _ => (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))))
+        (fun fam' d ys _ => readSpine classes sig spell fam' d ys)
+        (fun d body _ => readStmts classes sig spell d body)
+        (fun fam' _ d => readT classes sig spell fam' d x) = some (.ok e)) :
+    readT classes sig spell fam n x = some (.ok e) := by
   rw [readT]
-  refine findSome?_zipIdx (fun (p : Templates.Row × Nat) => readRow sig spell fam n x p.1 p.2
-      (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
-      (fun fam' d ys _ => readSpine sig spell fam' d ys)
-      (fun d body _ => readStmts sig spell d body)
-      (fun fam' _ d => readT sig spell fam' d x)) table 0 k row (.ok e)
+  refine findSome?_zipIdx (fun (p : Templates.Row × Nat) => readRow classes sig spell fam n x p.1 p.2
+      (fun fam' d y _ => (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))))
+      (fun fam' d ys _ => readSpine classes sig spell fam' d ys)
+      (fun d body _ => readStmts classes sig spell d body)
+      (fun fam' _ d => readT classes sig spell fam' d x)) table 0 k row (.ok e)
     (fun j hj rj hrj => ?_) hk ?_
   · simpa only [Nat.zero_add] using hbefore j hj rj hrj
   · simpa only [Nat.zero_add] using hat
@@ -1332,14 +1345,14 @@ variable (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {x : Expr}
   {row : Templates.Row} {k : Nat} (hk : table[k]? = some row)
   (hsel : row.selects fam ctor args = true)
   (hidx : table.findIdx? (fun r => r.selects fam ctor args) = some k)
-  (hchild : ∀ fam' d (y : Expr), sizeOf y < sizeOf x → ∀ c, ReadableAt sig fam' c d →
-    PrintsTo sig d fam' c (.expr y) → readT sig spell fam' d y = some (.ok c) ∧ nodeLike y = true)
-  (hchildren : ∀ fam' d (ys : List Expr), sizeOf ys < sizeOf x → ∀ c, ReadableAt sig fam' c d →
-    PrintsTo sig d fam' c (.exprs ys) → readSpine sig spell fam' d ys = .ok c)
-  (hblock : ∀ d (ss : List TypeScript.Stmt), sizeOf ss < sizeOf x → ∀ c, ReadableAt sig .stmts c d →
-    PrintsTo sig d .stmts c (.stmts ss) → readStmts sig spell d ss = .ok c)
-  (hsame : ∀ fam', famRank fam' < famRank fam → ∀ d c, ReadableAt sig fam' c d →
-    PrintsTo sig d fam' c (.expr x) → readT sig spell fam' d x = some (.ok c) ∧ nodeLike x = true)
+  (hchild : ∀ fam' d (y : Expr), sizeOf y < sizeOf x → ∀ c, ReadableAt classes sig fam' c d →
+    PrintsTo sig d fam' c (.expr y) → readT classes sig spell fam' d y = some (.ok c) ∧ nodeLike y = true)
+  (hchildren : ∀ fam' d (ys : List Expr), sizeOf ys < sizeOf x → ∀ c, ReadableAt classes sig fam' c d →
+    PrintsTo sig d fam' c (.exprs ys) → readSpine classes sig spell fam' d ys = .ok c)
+  (hblock : ∀ d (ss : List TypeScript.Stmt), sizeOf ss < sizeOf x → ∀ c, ReadableAt classes sig .stmts c d →
+    PrintsTo sig d .stmts c (.stmts ss) → readStmts classes sig spell d ss = .ok c)
+  (hsame : ∀ fam', famRank fam' < famRank fam → ∀ d c, ReadableAt classes sig fam' c d →
+    PrintsTo sig d fam' c (.expr x) → readT classes sig spell fam' d x = some (.ok c) ∧ nodeLike x = true)
 
 /-- A capture `lookup` finds is a member. -/
 theorem mem_of_lookup {σ : Subst} {i : Nat} {a : Arg} (h : lookup σ i = some a) : (i, a) ∈ σ := by
@@ -1358,7 +1371,7 @@ is smaller than the tree, and it is readable, so the recursion says so. -/
 theorem child_at_hole {t : Tpl} (_hout : row.out = .tpl t) (hrigid : t.rigid = true) {τ : Subst}
     (hτ : printArgs sig fam n (.tpl t) (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ)
     (hinst : inst n τ t = some x)
-    (hr : argsReadable sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg sig))) 0
+    (hr : argsReadable classes sig fam n (.tpl t) (rowDaemon row) (args.map (ArgF.fold (readableAlg classes sig))) 0
       = true)
     (i : Nat) (y : Expr) (hc : childHole (args.map argSortOf) i = true) (hin : i ∈ holes t)
     (hlook : lookup τ i = some (.expr y)) : nodeLike y = true := by
@@ -1374,8 +1387,8 @@ theorem child_at_hole {t : Tpl} (_hout : row.out = .tpl t) (hrigid : t.rigid = t
   | some a =>
     rw [ha] at hc
     have hp := hprint i (ArgF.fold (printAlg sig) a) (by simp only [List.getElem?_map, ha, Option.map_some])
-    have hra := argsReadable_at (args.map (ArgF.fold (readableAlg sig))) 0 i
-      (ArgF.fold (readableAlg sig) a) hr (by simp only [List.getElem?_map, ha, Option.map_some])
+    have hra := argsReadable_at (args.map (ArgF.fold (readableAlg classes sig))) 0 i
+      (ArgF.fold (readableAlg classes sig) a) hr (by simp only [List.getElem?_map, ha, Option.map_some])
     rw [argSortOf_fold] at hp hra
     rw [Nat.zero_add, hlook] at hp
     rw [Nat.zero_add] at hra
@@ -1409,8 +1422,8 @@ include hl hchild hchildren hblock hsame in
 from `x`, and `x` is node-like — given the recursion below the node and at the lower families. -/
 theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     {e : EffSelfCarrier Op fam} (hx : PrintsTo sig n fam e (.expr x))
-    (hr : ReadableAt sig fam e n) :
-    readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true := by
+    (hr : ReadableAt classes sig fam e n) :
+    readT classes sig spell fam n x = some (.ok e) ∧ nodeLike x = true := by
   obtain ⟨ctor, args, hview⟩ : ∃ ctor args, view fam e = (ctor, args) := ⟨_, _, rfl⟩
   have hbuild : build fam ctor args = some e := by
     have := build_view fam e; rwa [hview] at this
@@ -1421,13 +1434,13 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     rcases hfam with rfl | rfl | rfl <;> simp only [PrintsTo, cataFam] at hx this <;>
       (rw [show printAlg sig = EffAlgebra.ofLayer (tableLayer sig) from rfl, this] at hx; exact hx)
   obtain ⟨d, hd⟩ := hr
-  have hdom : domLayer.rowDom sig fam ctor (args.map (ArgF.fold (readableAlg sig))) n = some d := by
-    have := cata_build (domLayer sig) fam ctor args e hbuild
-    rw [show readableAlg sig = EffAlgebra.ofLayer (domLayer sig) from rfl, this] at hd
+  have hdom : domLayer.rowDom classes sig fam ctor (args.map (ArgF.fold (readableAlg classes sig))) n = some d := by
+    have := cata_build (domLayer classes sig) fam ctor args e hbuild
+    rw [show readableAlg classes sig = EffAlgebra.ofLayer (domLayer classes sig) from rfl, this] at hd
     rcases hfam with rfl | rfl | rfl <;> exact hd
   obtain ⟨row, hfind, hcase⟩ := rowPrint_inv hp
   obtain ⟨row', hfind', hcase'⟩ := rowDom_inv hdom
-  rw [find?_selects_fold (readableAlg sig) (printAlg sig), hfind, Option.some.injEq] at hfind'
+  rw [find?_selects_fold (readableAlg classes sig) (printAlg sig), hfind, Option.some.injEq] at hfind'
   subst hfind'
   obtain ⟨k, hk, hidx, _⟩ := find?_index _ table row hfind
   have hpred : (fun r : Templates.Row => r.selects fam ctor (args.map (ArgF.fold (printAlg sig)))) =
@@ -1443,9 +1456,9 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
   have hsorts'' : argSorts fam row.ctor = some (args.map argSortOf) := by
     rw [hctor]; exact hsorts
   -- the recursion, in the shape `readRow` asks for
-  have hchild' : ∀ fam' d (y : Expr) (hy : sizeOf y < sizeOf x) c, ReadableAt sig fam' c d →
+  have hchild' : ∀ fam' d (y : Expr) (hy : sizeOf y < sizeOf x) c, ReadableAt classes sig fam' c d →
       PrintsTo sig d fam' c (.expr y) →
-      (readT sig spell fam' d y).getD (.error (.here (unread fam'))) = .ok c :=
+      (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))) = .ok c :=
     fun fam' d y hy c hr hp => by rw [(hchild fam' d y hy c hr hp).1]; rfl
   -- an earlier row of another family reads nothing
   have hother : ∀ j < k, ∀ rj, table[j]? = some rj → rj.fam ≠ fam ∨ rowsApart rj row = true :=
@@ -1507,8 +1520,8 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
               printsTo_of_printArg hp0
             have hlevel : (RowOut.tpl (.hole 0)).levelAt 0 = 0 := rfl
             rw [hlevel] at hpa
-            have hra : ReadableAt sig .action c (argDepth .eff (.child .action) n 0) := by
-              have := argsReadable_at _ 0 0 (ArgF.fold (readableAlg sig) (.child .action c)) hr' rfl
+            have hra : ReadableAt classes sig .action c (argDepth .eff (.child .action) n 0) := by
+              have := argsReadable_at _ 0 0 (ArgF.fold (readableAlg classes sig) (.child .action c)) hr' rfl
               rw [Nat.add_zero, argSortOf_fold, argSortOf, hlevel] at this
               exact readableAt_of_argReadable this
             have hrank : famRank .action < famRank .eff := by decide
@@ -1540,7 +1553,7 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
             have hx : x = .ident (LayerTerm.refName p) := by
               rw [← hp0] at hinst; simpa only [Option.some.injEq] using hinst.symm
             have hrp : LayerTerm.readRefName (LayerTerm.refName p) = some p := by
-              have := argsReadable_at _ 0 0 (ArgF.fold (readableAlg sig) (.path p)) hr' rfl
+              have := argsReadable_at _ 0 0 (ArgF.fold (readableAlg classes sig) (.path p)) hr' rfl
               simpa only [argReadable, ArgF.fold, leafReadable, decide_eq_true_eq] using this
             refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, ?_⟩
             · rcases hother j hj rj hrj with hne | hap
@@ -1551,14 +1564,14 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
           | _ => cases ha
       | _ => exact absurd rfl hrigid
   · -- the row call
-    rcases hcase' with ⟨_, hout', _⟩ | ⟨op', r', hout', hargs', hd', hreq⟩
+    rcases hcase' with ⟨_, hout', _⟩ | ⟨op', r', hout', hargs', hd', hreq, hcov⟩
     · rw [hout] at hout'; cases hout'
     have hfamily := table_fact table_family hmem
     simp only [rowFamily, hout, beq_iff_eq] at hfamily
     rw [hfamily] at hfamrow
     subst hfamrow
     have hargs := fold_eq_op_term (printAlg sig) hargs
-    have hargs' := fold_eq_op_term (readableAlg sig) hargs'
+    have hargs' := fold_eq_op_term (readableAlg classes sig) hargs'
     rw [hargs, List.cons.injEq, List.cons.injEq, ArgF.op.injEq, ArgF.term.injEq] at hargs'
     obtain ⟨rfl, rfl, _⟩ := hargs'
     have he : e = .perform op r := eff_of_view_op_term e op r (by rw [hview]; exact hargs)
@@ -1567,7 +1580,7 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     · rcases hother j hj rj hrj with hne | hap
       · exact readRow_none_of_fam hne
       · exact earlier_none_rowCall hap hl hout hp' (fun hk d => readT_action_none_of_printRow hl hp' d)
-    · exact readRow_rowCall_print hl hout hfamily hd' hreq hp' rfl
+    · exact readRow_rowCall_print hl hout hfamily hd' hreq hcov hp' rfl
 
 end Step
 
@@ -1588,9 +1601,9 @@ theorem stmtPrint_inv {ctor : String} {args : List (ArgF Op Carrier)} {declared 
 
 /-- What the domain said at a statement. -/
 theorem stmtDom_inv {ctor : String} {args : List (ArgF Op Dom)} {d : Nat}
-    (h : domLayer sig .stmt ctor args n = some d) :
+    (h : domLayer classes sig .stmt ctor args n = some d) :
     ∃ row t, table.find? (fun r => r.selects .stmt ctor args) = some row ∧ row.out = .stmt t ∧
-      argsReadable sig .stmt n (.stmt t) (rowDaemon row) args 0 = true ∧ d = t.declares := by
+      argsReadable classes sig .stmt n (.stmt t) (rowDaemon row) args 0 = true ∧ d = t.declares := by
   unfold domLayer at h
   aesop
 
@@ -1602,22 +1615,22 @@ variable {child : (fam' : EffFam) → Nat → (y : Expr) → sizeOf y < sizeOf s
     Except ReadFailure (EffSelfCarrier Op .stmts)}
 
 theorem readStmtRow_none_of_fam {row : Templates.Row} (h : row.fam ≠ .stmt) :
-    readStmtRow sig n s row k child children block = none := by
+    readStmtRow classes sig n s row k child children block = none := by
   unfold readStmtRow; simp only [h, ↓reduceIte]
 
 theorem readStmtRow_none_of_out {row : Templates.Row} (h : ∀ t, row.out ≠ .stmt t) :
-    readStmtRow sig n s row k child children block = none := by
+    readStmtRow classes sig n s row k child children block = none := by
   unfold readStmtRow; aesop
 
 theorem readStmtRow_none_of_nomatch {row : Templates.Row} {t : StmtTpl} (hout : row.out = .stmt t)
     (hm : matchStmt n t s = none) :
-    readStmtRow sig n s row k child children block = none := by
+    readStmtRow classes sig n s row k child children block = none := by
   unfold readStmtRow; aesop
 
 /-- A statement row before the printing one is apart by former. -/
 theorem earlier_stmt_none {rj : Templates.Row} {row : Templates.Row} (hap : rowsApart rj row = true)
     {t : StmtTpl} (hout : row.out = .stmt t) {τ : Subst} (hinst : instStmt n τ t = some s) :
-    readStmtRow sig n s rj k child children block = none := by
+    readStmtRow classes sig n s rj k child children block = none := by
   unfold rowsApart at hap
   rw [hout] at hap
   simp only at hap
@@ -1638,15 +1651,15 @@ theorem readStmtRow_print {row : Templates.Row} (hk : table[k]? = some row)
     {t : StmtTpl} (hout : row.out = .stmt t) {τ : Subst}
     (hτ : printArgs sig .stmt n (.stmt t) (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ)
     (hinst : instStmt n τ t = some s)
-    (hr : argsReadable sig .stmt n (.stmt t) (rowDaemon row) (args.map (ArgF.fold (readableAlg sig))) 0
+    (hr : argsReadable classes sig .stmt n (.stmt t) (rowDaemon row) (args.map (ArgF.fold (readableAlg classes sig))) 0
       = true)
-    (hchild : ∀ fam' d y (hy : sizeOf y < sizeOf s) c, ReadableAt sig fam' c d →
+    (hchild : ∀ fam' d y (hy : sizeOf y < sizeOf s) c, ReadableAt classes sig fam' c d →
       PrintsTo sig d fam' c (.expr y) → child fam' d y hy = .ok c)
-    (hchildren : ∀ fam' d ys (hy : sizeOf ys < sizeOf s) c, ReadableAt sig fam' c d →
+    (hchildren : ∀ fam' d ys (hy : sizeOf ys < sizeOf s) c, ReadableAt classes sig fam' c d →
       PrintsTo sig d fam' c (.exprs ys) → children fam' d ys hy = .ok c)
-    (hblock : ∀ d ss (hy : sizeOf ss < sizeOf s) c, ReadableAt sig .stmts c d →
+    (hblock : ∀ d ss (hy : sizeOf ss < sizeOf s) c, ReadableAt classes sig .stmts c d →
       PrintsTo sig d .stmts c (.stmts ss) → block d ss hy = .ok c) :
-    readStmtRow sig n s row k child children block = some (.ok (st, t.declares)) := by
+    readStmtRow classes sig n s row k child children block = some (.ok (st, t.declares)) := by
   obtain ⟨hfam, hctor⟩ := selects_fam_ctor hsel
   obtain ⟨σ, hσ, hagree⟩ := matchStmt_of_instStmt n τ t s hinst
   have hmem := List.mem_of_getElem? hk
@@ -1670,7 +1683,7 @@ theorem readStmtRow_print {row : Templates.Row} (hk : table[k]? = some row)
       rw [argSortOf_fold] at this
       simpa only [hfam, hout] using this)
     (fun k v hk => by
-      have := argsReadable_at (args.map (ArgF.fold (readableAlg sig))) 0 k (ArgF.fold (readableAlg sig) v)
+      have := argsReadable_at (args.map (ArgF.fold (readableAlg classes sig))) 0 k (ArgF.fold (readableAlg classes sig) v)
         hr (by simp only [List.getElem?_map, hk, Option.map_some])
       rw [argSortOf_fold] at this
       simpa only [hfam, hout] using this)
@@ -1699,23 +1712,23 @@ variable {sig : Signature Op} {spell : String → List String → Option Op}
 
 /-- Everything readable whose image has size at most `m` reads back from its image; the
 images of the expression families are node-like. -/
-def PrintsBackUpTo (sig : Signature Op) (spell : String → List String → Option Op) (m : Nat) :
-    Prop :=
-  (∀ fam n (e : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m → ReadableAt sig fam e n →
-    PrintsTo sig n fam e (.expr x) → readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true) ∧
-  (∀ fam n (e : EffSelfCarrier Op fam) (xs : List Expr), sizeOf xs ≤ m → ReadableAt sig fam e n →
-    PrintsTo sig n fam e (.exprs xs) → readSpine sig spell fam n xs = .ok e) ∧
-  (∀ n (e : Stmts Op) (ss : List TypeScript.Stmt), sizeOf ss ≤ m → ReadableAt sig .stmts e n →
-    PrintsTo sig n .stmts e (.stmts ss) → readStmts sig spell n ss = .ok e)
+def PrintsBackUpTo (classes : Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (m : Nat) : Prop :=
+  (∀ fam n (e : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m → ReadableAt classes sig fam e n →
+    PrintsTo sig n fam e (.expr x) → readT classes sig spell fam n x = some (.ok e) ∧ nodeLike x = true) ∧
+  (∀ fam n (e : EffSelfCarrier Op fam) (xs : List Expr), sizeOf xs ≤ m → ReadableAt classes sig fam e n →
+    PrintsTo sig n fam e (.exprs xs) → readSpine classes sig spell fam n xs = .ok e) ∧
+  (∀ n (e : Stmts Op) (ss : List TypeScript.Stmt), sizeOf ss ≤ m → ReadableAt classes sig .stmts e n →
+    PrintsTo sig n .stmts e (.stmts ss) → readStmts classes sig spell n ss = .ok e)
 
 /-- The node step, from the induction hypothesis. -/
 theorem readT_print_step (hl : LawfulSpelling sig spell) {m : Nat}
-    (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') {fam : EffFam} {n : Nat}
+    (ih : ∀ m', m' < m → PrintsBackUpTo classes sig spell m') {fam : EffFam} {n : Nat}
     {e : EffSelfCarrier Op fam} {x : Expr} (hx : sizeOf x ≤ m)
-    (hsame : ∀ fam', famRank fam' < famRank fam → ∀ d c, ReadableAt sig fam' c d →
-      PrintsTo sig d fam' c (.expr x) → readT sig spell fam' d x = some (.ok c) ∧ nodeLike x = true)
-    (hr : ReadableAt sig fam e n) (hp : PrintsTo sig n fam e (.expr x)) :
-    readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true := by
+    (hsame : ∀ fam', famRank fam' < famRank fam → ∀ d c, ReadableAt classes sig fam' c d →
+      PrintsTo sig d fam' c (.expr x) → readT classes sig spell fam' d x = some (.ok c) ∧ nodeLike x = true)
+    (hr : ReadableAt classes sig fam e n) (hp : PrintsTo sig n fam e (.expr x)) :
+    readT classes sig spell fam n x = some (.ok e) ∧ nodeLike x = true := by
   have hfam : fam = .eff ∨ fam = .action ∨ fam = .layer := by
     cases fam <;> simp only [PrintsTo] at hp <;> simp
   exact readT_print hl
@@ -1726,25 +1739,25 @@ theorem readT_print_step (hl : LawfulSpelling sig spell) {m : Nat}
 
 /-- The domain's spines, item by item (the definition, at each cons). -/
 theorem dom_effs_cons (e : Eff Op) (es : Effs Op) (n : Nat) :
-    cata_effs (readableAlg sig) (.cons e es) n =
-      (cata_eff (readableAlg sig) e n).bind fun _ =>
-        (cata_effs (readableAlg sig) es n).bind fun _ => some 0 := rfl
+    cata_effs (readableAlg classes sig) (.cons e es) n =
+      (cata_eff (readableAlg classes sig) e n).bind fun _ =>
+        (cata_effs (readableAlg classes sig) es n).bind fun _ => some 0 := rfl
 
 theorem dom_layers_cons (l : LayerTerm Op) (ls : LayerTerms Op) (n : Nat) :
-    cata_layers (readableAlg sig) (.cons l ls) n =
-      (cata_layer (readableAlg sig) l n).bind fun _ =>
-        (cata_layers (readableAlg sig) ls n).bind fun _ => some 0 := rfl
+    cata_layers (readableAlg classes sig) (.cons l ls) n =
+      (cata_layer (readableAlg classes sig) l n).bind fun _ =>
+        (cata_layers (readableAlg classes sig) ls n).bind fun _ => some 0 := rfl
 
 theorem dom_stmts_cons (st : Program.Stmt Op) (ss : Stmts Op) (n : Nat) :
-    cata_stmts (readableAlg sig) (.cons st ss) n =
-      (cata_stmt (readableAlg sig) st n).bind fun d =>
-        (cata_stmts (readableAlg sig) ss (n + d)).bind fun _ => some 0 := rfl
+    cata_stmts (readableAlg classes sig) (.cons st ss) n =
+      (cata_stmt (readableAlg classes sig) st n).bind fun d =>
+        (cata_stmts (readableAlg classes sig) ss (n + d)).bind fun _ => some 0 := rfl
 
 /-- The spines' step: item by item, from the induction hypothesis. -/
-theorem readSpine_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') :
+theorem readSpine_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo classes sig spell m') :
     ∀ (fam : EffFam) (n : Nat) (e : EffSelfCarrier Op fam) (xs : List Expr),
-      sizeOf xs ≤ m → ReadableAt sig fam e n → PrintsTo sig n fam e (.exprs xs) →
-      readSpine sig spell fam n xs = .ok e
+      sizeOf xs ≤ m → ReadableAt classes sig fam e n → PrintsTo sig n fam e (.exprs xs) →
+      readSpine classes sig spell fam n xs = .ok e
   | .effs, n, e, xs, hx, hr, hp => by
     cases e with
     | nil =>
@@ -1789,15 +1802,15 @@ theorem readSpine_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo s
 
 /-- A readable statement whose image is `(s, declared)` reads back from `s` through the first
 statement row that fires, declaring `declared`, given the recursion below it. -/
-theorem readStmt_print {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') {n : Nat}
+theorem readStmt_print {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo classes sig spell m') {n : Nat}
     {st : Program.Stmt Op} {s : TypeScript.Stmt} {declared : Nat} (hs : sizeOf s ≤ m)
     (hp : cata_stmt (printAlg sig) st n = .ok (s, declared)) {d : Nat}
-    (hr : cata_stmt (readableAlg sig) st n = some d) :
+    (hr : cata_stmt (readableAlg classes sig) st n = some d) :
     (table.zipIdx.findSome? fun (row, k) =>
-      readStmtRow sig n s row k
-        (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
-        (fun fam' d ys _ => readSpine sig spell fam' d ys)
-        (fun d body _ => readStmts sig spell d body)) = some (.ok (st, declared)) ∧ d = declared := by
+      readStmtRow classes sig n s row k
+        (fun fam' d y _ => (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))))
+        (fun fam' d ys _ => readSpine classes sig spell fam' d ys)
+        (fun d body _ => readStmts classes sig spell d body)) = some (.ok (st, declared)) ∧ d = declared := by
   obtain ⟨ctor, args, hview⟩ : ∃ ctor args, view .stmt st = (ctor, args) := ⟨_, _, rfl⟩
   have hbuild : build .stmt ctor args = some st := by
     have := build_view .stmt st; rwa [hview] at this
@@ -1808,14 +1821,14 @@ theorem readStmt_print {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spe
     simp only [cataFam] at this
     rw [show printAlg sig = EffAlgebra.ofLayer (tableLayer sig) from rfl, this] at hp
     exact hp
-  have hd' : domLayer sig .stmt ctor (args.map (ArgF.fold (readableAlg sig))) n = some d := by
-    have := cata_build (domLayer sig) .stmt ctor args st hbuild
+  have hd' : domLayer classes sig .stmt ctor (args.map (ArgF.fold (readableAlg classes sig))) n = some d := by
+    have := cata_build (domLayer classes sig) .stmt ctor args st hbuild
     simp only [cataFam] at this
-    rw [show readableAlg sig = EffAlgebra.ofLayer (domLayer sig) from rfl, this] at hr
+    rw [show readableAlg classes sig = EffAlgebra.ofLayer (domLayer classes sig) from rfl, this] at hr
     exact hr
   obtain ⟨row, t, τ, hfind, hout, hτ, hinst, rfl⟩ := stmtPrint_inv hp'
   obtain ⟨row', t', hfind', hout', hr', rfl⟩ := stmtDom_inv hd'
-  rw [find?_selects_fold (readableAlg sig) (printAlg sig), hfind, Option.some.injEq] at hfind'
+  rw [find?_selects_fold (readableAlg classes sig) (printAlg sig), hfind, Option.some.injEq] at hfind'
   subst hfind'
   rw [hout, RowOut.stmt.injEq] at hout'
   subst hout'
@@ -1827,10 +1840,10 @@ theorem readStmt_print {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spe
     have := List.find?_some hfind; rwa [selects_fold] at this
   obtain ⟨hfam, _⟩ := selects_fam_ctor hsel
   refine ⟨?_, rfl⟩
-  refine findSome?_zipIdx (fun (p : Templates.Row × Nat) => readStmtRow sig n s p.1 p.2
-      (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
-      (fun fam' d ys _ => readSpine sig spell fam' d ys)
-      (fun d body _ => readStmts sig spell d body)) table 0 k row (.ok (st, t.declares))
+  refine findSome?_zipIdx (fun (p : Templates.Row × Nat) => readStmtRow classes sig n s p.1 p.2
+      (fun fam' d y _ => (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))))
+      (fun fam' d ys _ => readSpine classes sig spell fam' d ys)
+      (fun d body _ => readStmts classes sig spell d body)) table 0 k row (.ok (st, t.declares))
     (fun j hj rj hrj => ?_) hk ?_
   · simp only [Nat.zero_add]
     rcases apart_of_lt hrj hk hj with hne | hap
@@ -1845,10 +1858,10 @@ theorem readStmt_print {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spe
 
 /-- The statement spine's step: each statement through its row, the rest under what it
 declares. -/
-theorem readStmts_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo sig spell m') :
+theorem readStmts_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo classes sig spell m') :
     ∀ (n : Nat) (e : Stmts Op) (ss : List TypeScript.Stmt),
-      sizeOf ss ≤ m → ReadableAt sig .stmts e n → PrintsTo sig n .stmts e (.stmts ss) →
-      readStmts sig spell n ss = .ok e
+      sizeOf ss ≤ m → ReadableAt classes sig .stmts e n → PrintsTo sig n .stmts e (.stmts ss) →
+      readStmts classes sig spell n ss = .ok e
   | n, e, ss, hx, hr, hp => by
     cases e with
     | nil =>
@@ -1870,12 +1883,12 @@ theorem readStmts_print_step {m : Nat} (ih : ∀ m', m' < m → PrintsBackUpTo s
       simp only [hrow, Except.mapError, ok_bind, h2]
 
 /-- Everything readable reads back from its image, at every size. -/
-theorem printsBackUpTo (hl : LawfulSpelling sig spell) (m : Nat) : PrintsBackUpTo sig spell m := by
+theorem printsBackUpTo (hl : LawfulSpelling sig spell) (m : Nat) : PrintsBackUpTo classes sig spell m := by
   induction m using Nat.strongRecOn with
   | _ m ih =>
     have hlow : ∀ fam, famRank fam = 0 → ∀ n (e : EffSelfCarrier Op fam) (x : Expr), sizeOf x ≤ m →
-        ReadableAt sig fam e n → PrintsTo sig n fam e (.expr x) →
-        readT sig spell fam n x = some (.ok e) ∧ nodeLike x = true :=
+        ReadableAt classes sig fam e n → PrintsTo sig n fam e (.expr x) →
+        readT classes sig spell fam n x = some (.ok e) ∧ nodeLike x = true :=
       fun fam h0 n e x hx hr hp =>
         readT_print_step hl ih hx (fun fam' hlt => absurd hlt (by omega)) hr hp
     refine ⟨fun fam n e x hx hr hp => ?_, readSpine_print_step ih, readStmts_print_step ih⟩
@@ -1885,22 +1898,22 @@ theorem printsBackUpTo (hl : LawfulSpelling sig spell) (m : Nat) : PrintsBackUpT
 
 /-- **Law 11.** What the printer prints of a readable program reads back to it. -/
 theorem read_print (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
-    (hr : Readable sig n e = true) {x : Expr} (hp : print sig n e = .ok x) :
-    readEff sig spell n x = .ok e := by
+    (hr : Readable classes sig n e = true) {x : Expr} (hp : print sig n e = .ok x) :
+    readEff classes sig spell n x = .ok e := by
   have h := (printsBackUpTo hl (sizeOf x)).1 .eff n e x (Nat.le_refl _)
     (by unfold ReadableAt; simpa only [Readable, cataFam, Option.isSome_iff_exists] using hr) hp
   simp only [readEff, readEffAt, h.1, Option.getD_some, Except.mapError]
 
 /-- The same of a layer, which is closed: read and printed at depth `0`. -/
 theorem readLayer_print (hl : LawfulSpelling sig spell) {l : LayerTerm Op}
-    (hr : ReadableAt sig .layer l 0) {x : Expr} (hp : printLayer sig l = .ok x) :
-    readLayer sig spell x = .ok l := by
+    (hr : ReadableAt classes sig .layer l 0) {x : Expr} (hp : printLayer sig l = .ok x) :
+    readLayer classes sig spell x = .ok l := by
   have h := (printsBackUpTo hl (sizeOf x)).1 .layer 0 l x (Nat.le_refl _) hr hp
   simp only [readLayer, readLayerAt, h.1, Option.getD_some, Except.mapError]
 
 /-- A readable program reads back from whatever the printer prints of it. -/
 theorem ReadsBack.of_Readable (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
-    (hr : Readable sig n e = true) : ReadsBack sig spell n e :=
+    (hr : Readable classes sig n e = true) : ReadsBack classes sig spell n e :=
   fun _ hp => read_print hl hr hp
 
 end Theorem

@@ -144,16 +144,16 @@ def genericSpell (s : String) (names : List String) : Option Bool :=
 -- the bare call names this row but omits what it declares, so it is refused rather than
 -- read as some other program: `Deferred.make()` is exactly the emission `E4-CHECK-CE-013`
 -- rejects
-#guard (readEff genericSig genericSpell 0 (.call (.ident "Deferred.make") [])).isOk = false
+#guard (readEff [] genericSig genericSpell 0 (.call (.ident "Deferred.make") [])).isOk = false
 
 -- wrong type arguments, and an empty argument list, are refused
-#guard (readEff genericSig genericSpell 0
+#guard (readEff [] genericSig genericSpell 0
   (.call (.generic (.ident "Deferred.make") [.name ["number"] []]) [])).isOk = false
-#guard (readEff genericSig genericSpell 0
+#guard (readEff [] genericSig genericSpell 0
   (.call (.generic (.ident "Deferred.make") []) [])).isOk = false
 
 -- and a row that declares none still refuses a call that carries some
-#guard (readEff sig spell 1
+#guard (readEff [] sig spell 1
   (.call (.generic (.ident "Ref.get") [.name ["number"] []]) [.ident "a0"])).isOk = false
 
 def tupleRowOf : Bool → Row
@@ -231,58 +231,58 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
     (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))) = false
 
 -- The saved-variable spelling reads as the variable, under the ordinary scope check.
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
     [.call (.ident "fst") [.ident "a1"], .call (.ident "snd") [.ident "a1"]]) =
   .error (.unknownIdent "a1")
 
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
     [.call (.ident "fst") [.ident "a0"], .call (.ident "snd") [.ident "a0"],
       .ident "first", .ident "second"]) =
   .ok (.perform true (.var 0))
 
 -- Components of two different identifiers are an ordinary pair.
-#guard readEff tupleSig tupleSpell 2 (.call (.ident "Fixture.tuple")
+#guard readEff [] tupleSig tupleSpell 2 (.call (.ident "Fixture.tuple")
     [.call (.ident "fst") [.ident "a0"], .call (.ident "snd") [.ident "a1"]]) =
   .ok (.perform false (.app "pair" (.cons (.app "fst" (.cons (.var 0) .nil))
     (.cons (.app "snd" (.cons (.var 1) .nil)) .nil))))
 
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7]) =
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7]) =
   .ok (.perform false (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
 
 -- Trailing names are matched exactly and in order: a misordered suffix is no row, and a call
 -- that is no row and no head is refused by its head (since DI-72 it is no atom application).
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
     [.ident "a0", .int 7, .ident "second", .ident "first"]) =
   .error (.unknownHead "Fixture.tuple")
 
 -- The former one-request call, a one-argument call with trailing names, and three
 -- plain arguments are not tuple readings.
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0"]) =
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0"]) =
   .error (.arity "Fixture.tuple")
 
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple")
     [.ident "a0", .ident "first", .ident "second"]) = .error (.arity "Fixture.tuple")
 
 -- three plain arguments are no row call, and since DI-72 no atom application either
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7, .int 8]) =
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Fixture.tuple") [.ident "a0", .int 7, .int 8]) =
   .error (.unknownHead "Fixture.tuple")
 
 -- A call row does not accept the tuple reading.
-#guard readEff sig spell 1 (.call (.ident "Ref.get") [.ident "a0", .int 1]) =
+#guard readEff [] sig spell 1 (.call (.ident "Ref.get") [.ident "a0", .int 1]) =
   .error (.arity "Ref.get")
 
 -- The former wrapper is a call whose head is no reserved name and no row: refused before its
 -- arguments are read.
-#guard readEff tupleSig tupleSpell 1 (.call (.ident "Reflect.apply")
+#guard readEff [] tupleSig tupleSpell 1 (.call (.ident "Reflect.apply")
     [.ident "Fixture.tuple", .ident "undefined", .ident "a0"]) =
   .error (.unknownHead "Reflect.apply")
 
-#guard readEff tupleSig tupleSpell 0 (.ident "Reflect.apply") =
+#guard readEff [] tupleSig tupleSpell 0 (.ident "Reflect.apply") =
   .error (.unknownIdent "Reflect.apply")
 
 -- Every old native one-request tuple call is rejected by the row parser.
 #guard [NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].all
-    fun op => decide (readEff nativeSignature nativeSpell 1
+    fun op => decide (readEff [] nativeSignature nativeSpell 1
       (.call (.ident op.row.spelling)
         [.call (.ident "pair") [.ident "a0", .int 7]]) = .error (.arity op.row.spelling))
 
@@ -328,11 +328,11 @@ open Effect4.Api in
 
 #guard readable sig spell 1 (.fail (.var 0)) = true
 #guard readable sig spell 0 (.fail (.lit (.nat 3))) = true
-#guard readEff sig spell 0 (.int 3) = .error (.shape "bare value")
-#guard readEff sig spell 0 (.str "hi") = .error (.shape "bare value")
-#guard readEff sig spell 0 (.ident "undefined") = .error (.shape "bare value")
-#guard readEff sig spell 1 (.ident "a0") = .error (.shape "bare binder")
-#guard readEff sig spell 1 (.call (.ident "succ") [.ident "a0"]) = .error (.unknownHead "succ")
+#guard readEff [] sig spell 0 (.int 3) = .error (.shape "bare value")
+#guard readEff [] sig spell 0 (.str "hi") = .error (.shape "bare value")
+#guard readEff [] sig spell 0 (.ident "undefined") = .error (.shape "bare value")
+#guard readEff [] sig spell 1 (.ident "a0") = .error (.shape "bare binder")
+#guard readEff [] sig spell 1 (.call (.ident "succ") [.ident "a0"]) = .error (.unknownHead "succ")
 
 #guard roundTrip sig spell 1 (.sync (.app "succ" (.cons (.var 0) .nil)))
   = .ok (.sync (.app "succ" (.cons (.var 0) .nil)))
@@ -459,38 +459,38 @@ open Effect4.Api in
 
 #guard headOf "Effect.withFiber" = some .withFiber
 
-#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
       .ret (.ident "Effect.void")]]) = .ok (.withFiber (.runIn (.var 0) (.var 1)))
 
-#guard readEff sig spell 2 (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]) =
+#guard readEff [] sig spell 2 (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]) =
   .error (.unknownHead "Fiber.runIn")
 
-#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock ["a2"] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
       .ret (.ident "Effect.void")]]) = .error (.arity "Effect.withFiber")
 
-#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
       .exprStmt (.ident "extra"), .ret (.ident "Effect.void")]]) = .error (.arity "Effect.withFiber")
 
-#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
       .ret (.ident "undefined")]]) = .error (.arity "Effect.withFiber")
 
-#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
       .ret (.call (.ident "Effect.succeed") [.ident "undefined"])]]) = .error (.arity "Effect.withFiber")
 
-#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.other") [.ident "a0", .ident "a1"]),
       .ret (.ident "Effect.void")]]) = .error (.arity "Effect.withFiber")
 
-#guard readEff sig spell 2 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 2 (.call (.ident "Effect.withFiber")
     [.arrow none (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"])]) =
   .error (.arity "Effect.withFiber")
 
-#guard readEff sig spell 0 (.call (.ident "Effect.withFiber")
+#guard readEff [] sig spell 0 (.call (.ident "Effect.withFiber")
     [.arrowBlock [] [.exprStmt (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]),
       .ret (.ident "Effect.void")]]) = .error (.unknownIdent "a0")
 
@@ -516,23 +516,23 @@ open Effect4.Api in
 
 /-! ## The refusals, one per constructor of `ReadRefusal` -/
 
-#guard readEff sig spell 0 (.call (.ident "Cause.fail") [.int 1]) = .error (.unknownHead "Cause.fail")
+#guard readEff [] sig spell 0 (.call (.ident "Cause.fail") [.int 1]) = .error (.unknownHead "Cause.fail")
 
-#guard readEff sig spell 0 (.ident "nope") = .error (.unknownIdent "nope")
+#guard readEff [] sig spell 0 (.ident "nope") = .error (.unknownIdent "nope")
 
-#guard readEff sig spell 0 (.ident "Ref.get") = .error (.arity "Ref.get")
+#guard readEff [] sig spell 0 (.ident "Ref.get") = .error (.arity "Ref.get")
 
-#guard readEff sig spell 0 (.call (.ident "Effect.flatMap")
+#guard readEff [] sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")])
   = .error (.arity "Effect.flatMap")
 
-#guard readEff sig spell 0 (.call (.ident "Effect.forkChild")
+#guard readEff [] sig spell 0 (.call (.ident "Effect.forkChild")
     [.call (.ident "Effect.succeed") [.int 1], .object []])
   = .error (.shape "forkOptions")
 
-#guard readEff sig spell 0 (.int (-1)) = .error (.negative (-1))
+#guard readEff [] sig spell 0 (.int (-1)) = .error (.negative (-1))
 
-#guard readEff sig spell 0 (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]])
+#guard readEff [] sig spell 0 (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]])
   = .error .unsupportedStmt
 
 /-! ## Explicit annotations are retained at the carrier boundary
@@ -545,38 +545,38 @@ no reading (`unsupportedStmt`), and a consumer routing on the alphabet must be a
 to tell "annotated, not admitted here" from "wrong shape".
 -/
 
-#guard readEff nativeSignature nativeSpell 0
+#guard readEff [] nativeSignature nativeSpell 0
     (.call (.ident "Effect.sync") [.arrow (some (.name ["number"] [])) (.int 1)]) =
   .error (.annotation "Effect.sync thunk return")
-#guard readEff nativeSignature nativeSpell 0
+#guard readEff [] nativeSignature nativeSpell 0
     (.call (.ident "Effect.suspend") [.arrow (some (.name ["number"] []))
       (.call (.ident "Effect.succeed") [.int 1])]) =
   .error (.annotation "Effect.suspend thunk return")
-#guard readEff nativeSignature nativeSpell 0
+#guard readEff [] nativeSignature nativeSpell 0
     (.call (.ident "Effect.flatMap") [.call (.ident "Effect.succeed") [.int 1],
       .lambda [⟨"a0", some (.name ["number"] [])⟩]
         (.call (.ident "Effect.succeed") [.ident "a0"]) none]) =
   .error (.annotation "Effect.flatMap parameter")
-#guard readEff nativeSignature nativeSpell 0
+#guard readEff [] nativeSignature nativeSpell 0
     (.call (.ident "Effect.flatMap") [.call (.ident "Effect.succeed") [.int 1],
       .lambda [⟨"a0", none⟩] (.call (.ident "Effect.succeed") [.ident "a0"])
         (some (.name ["number"] []))]) =
   .error (.annotation "Effect.flatMap return")
-#guard readEff nativeSignature nativeSpell 0
+#guard readEff [] nativeSignature nativeSpell 0
     (.call (.ident "Effect.gen") [.generator
       [.constYield "a0" (.call (.ident "Effect.succeed") [.int 1])
         (some (.name ["number"] [])), .ret (.ident "a0")]]) =
   .error (.annotation "yielded const")
-#guard readEff nativeSignature nativeSpell 0
+#guard readEff [] nativeSignature nativeSpell 0
     (.call (.ident "Effect.gen") [.generator
       [.letInit "a0" (.int 1) (some (.name ["number"] [])), .ret (.ident "a0")]]) =
   .error (.annotation "local const")
 -- The two refusals the new constructor must not swallow: an argument list no arm reads,
 -- and a statement form with no reading at all.
-#guard readEff nativeSignature nativeSpell 2
+#guard readEff [] nativeSignature nativeSpell 2
     (.call (.ident "Fiber.runIn") [.ident "a0", .ident "a1"]) =
   .error (.unknownHead "Fiber.runIn")
-#guard readEff nativeSignature nativeSpell 0
+#guard readEff [] nativeSignature nativeSpell 0
     (.call (.ident "Effect.gen") [.generator [.letDefinite "x" (.name ["number"] [])]]) =
   .error .unsupportedStmt
 
@@ -677,12 +677,12 @@ private def holdsAnnotatedLoop (p : Eff NativeOp) : Bool :=
     (.select (.var 0) (.tag "cons") (.succeed (.var 1)) (.succeed (.var 1))) =
   .ok (.select (.var 0) (.tag "cons") (.succeed (.var 1)) (.succeed (.var 1)))
 -- a binder out of scope in the option's first arm (it is under none) is refused
-#guard (readEff nativeSignature nativeSpell 1 (.call (.ident "optionCase")
+#guard (readEff [] nativeSignature nativeSpell 1 (.call (.ident "optionCase")
     [.ident "a0", .arrow none (.call (.ident "Effect.succeed") [.ident "a1"]),
       .lambda ["a1"] (.call (.ident "Effect.succeed") [.ident "a1"])])) =
   .error (.unknownIdent "a1")
 -- exactness by the printer's own choice of row: a literal-true `catchIf` is `Effect.catch`
-#guard (readEff nativeSignature nativeSpell 0 (.call (.ident "Effect.catchIf")
+#guard (readEff [] nativeSignature nativeSpell 0 (.call (.ident "Effect.catchIf")
     [ .call (.ident "Effect.succeed") [.int 1], .lambda ["a0"] (.bool true)
     , .lambda ["a0"] (.call (.ident "Effect.succeed") [.int 2]), .ident "undefined" ])) =
   .error (.shape "not the printed row")
@@ -697,33 +697,33 @@ above still holds); beside it go the path down to the node that refused, and, wh
 head matched no row, where the nearest row's skeleton and the tree part. -/
 
 -- a wrong binder: no row matches, and the row with that head says what it has there
-#guard readEffAt sig spell 0 (.call (.ident "Effect.flatMap")
+#guard readEffAt [] sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")]) =
   .error { why := .arity "Effect.flatMap", expected := some (["argument 1", "parameters"], "a0") }
 
 -- one argument too many
-#guard readEffAt sig spell 0 (.call (.ident "Effect.succeed") [.int 1, .int 2]) =
+#guard readEffAt [] sig spell 0 (.call (.ident "Effect.succeed") [.int 1, .int 2]) =
   .error { why := .arity "Effect.succeed", expected := some ([], "1 arguments") }
 
 -- a variable out of scope two levels down: the second argument of the bind, the first of the succeed
-#guard readEffAt sig spell 0 (.call (.ident "Effect.flatMap")
+#guard readEffAt [] sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1],
       .lambda ["a0"] (.call (.ident "Effect.succeed") [.ident "a5"])]) =
   .error { path := [("bind", 1), ("succeed", 0)], why := .unknownIdent "a5" }
 
 -- inside a generator: the body, its second statement, that statement's value
-#guard readEffAt sig spell 0 (.call (.ident "Effect.gen") [.generator
+#guard readEffAt [] sig spell 0 (.call (.ident "Effect.gen") [.generator
     [.constYield "a0" (.call (.ident "Effect.succeed") [.int 1]) none, .ret (.ident "a9")]]) =
   .error { path := [("gen", 0), ("cons", 1), ("cons", 0), ("ret", 0)], why := .unknownIdent "a9" }
 
 -- the location never changes the refusal
-#guard readEff sig spell 0 (.call (.ident "Effect.flatMap")
+#guard readEff [] sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1],
       .lambda ["a0"] (.call (.ident "Effect.succeed") [.ident "a5"])]) =
   .error (.unknownIdent "a5")
 
 -- for a person
-#guard (match readEffAt sig spell 0 (.call (.ident "Effect.flatMap")
+#guard (match readEffAt [] sig spell 0 (.call (.ident "Effect.flatMap")
     [.call (.ident "Effect.succeed") [.int 1], .lambda ["b0"] (.ident "b0")]) with
   | .error f => f.render
   | .ok _ => "") =
@@ -823,19 +823,19 @@ private def joinLayers : List (LayerTerm NativeOp) :=
   match printDecl "main" ty body with
   | .error _ => false
   | .ok declaration =>
-    Effect4.Codegen.envelopeCheck "main" ty [.const declaration] == none
+    Effect4.Codegen.envelopeCheck "main" ty [] [.const declaration] == none
 #guard
   let ty : EffTy := ⟨.nat, .never, Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
   let declaration : TypeScript.ConstDecl :=
     { doc := [], name := "main", value := .ident "body", type := some (.name ["Effect", "Effect"]
         [.name ["number"] [], .name ["never"] [], .name ["never"] []]) }
-  match Effect4.Codegen.envelopeCheck "main" ty [.const declaration] with
+  match Effect4.Codegen.envelopeCheck "main" ty [] [.const declaration] with
   | some (.declaredType _ _) => true
   | _ => false
 #guard
   let ty : EffTy := ⟨.nat, .never, Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
   let declaration : TypeScript.ConstDecl := { doc := [], name := "main", value := .ident "body" }
-  match Effect4.Codegen.envelopeCheck "main" ty [.const declaration] with
+  match Effect4.Codegen.envelopeCheck "main" ty [] [.const declaration] with
   | some (.declaredType _ _) => true
   | _ => false
 

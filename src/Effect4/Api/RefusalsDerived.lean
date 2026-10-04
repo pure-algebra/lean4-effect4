@@ -10,8 +10,8 @@
 --    Effect4.Program.TupleTypingReason Effect4.Program.TupleTermRefusal \
 --    Effect4.Program.TupleCauseRefusal Effect4.Program.TermTypingRefusal \
 --    Effect4.Program.CauseTypingRefusal Effect4.Program.TypeReason Effect4.Program.TypeRefusal \
---    Effect4.Api.AuthorRefusal Effect4.Program.PrintRefusal Effect4.Program.ReadRefusal \
---    Effect4.Api.BuildRefusal
+--    Effect4.Api.AuthorRefusal Effect4.Program.ClassRefusal Effect4.Program.PrintRefusal \
+--    Effect4.Program.ReadRefusal Effect4.Api.BuildRefusal
 -- Carriers read from: Effect4.Program.Native, Effect4.Program.Formation, Effect4.Program.SigApp, Effect4.Program.Admission, Effect4.Program.Authoring, Effect4.Program.Typing.TermRefusal, Effect4.Program.Typing.Blame, Effect4.Api, Effect4.Codegen.PrintLeaf, Effect4.Codegen.Read, Effect4.Api.Author
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/refusals.lean
 import Effect4.Api
@@ -1823,6 +1823,70 @@ instance instCanonical : Canonical (_root_.Effect4.Api.AuthorRefusal) :=
 
 end AuthorRefusalC
 
+namespace ClassRefusalC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "ClassRefusal"
+     [("notIdentifier", 0, []),
+      ("collides", 1, []),
+      ("fieldsDiffer", 2, []),
+      ("construction", 3, []),
+      ("unreadable", 4, [])],
+   []⟩
+
+def toVal : _root_.Effect4.Program.ClassRefusal → Val
+  | .notIdentifier => .ctor 0 []
+  | .collides => .ctor 1 []
+  | .fieldsDiffer => .ctor 2 []
+  | .construction => .ctor 3 []
+  | .unreadable => .ctor 4 []
+
+def ofVal : Val → Option (_root_.Effect4.Program.ClassRefusal)
+  | .ctor 0 [] => some .notIdentifier
+  | .ctor 1 [] => some .collides
+  | .ctor 2 [] => some .fieldsDiffer
+  | .ctor 3 [] => some .construction
+  | .ctor 4 [] => some .unreadable
+  | _ => none
+
+set_option linter.unusedSimpArgs false in
+theorem ofVal_toVal (a : _root_.Effect4.Program.ClassRefusal) : ofVal (toVal a) = some a := by
+  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.ClassRefusal} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  all_goals first
+    | (injection h with h; subst h; rfl)
+    | (rename_i w
+       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+       subst hj
+       simp only [toVal]
+       rw [Canonical.ofVal_exact hx])
+    | exact nomatch h
+
+theorem fits (a : _root_.Effect4.Program.ClassRefusal) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «notIdentifier» =>
+    exact accepts_sum _ _ _ 0 "notIdentifier" [] [] rfl (acceptsFields_nil _)
+  | «collides» =>
+    exact accepts_sum _ _ _ 1 "collides" [] [] rfl (acceptsFields_nil _)
+  | «fieldsDiffer» =>
+    exact accepts_sum _ _ _ 2 "fieldsDiffer" [] [] rfl (acceptsFields_nil _)
+  | «construction» =>
+    exact accepts_sum _ _ _ 3 "construction" [] [] rfl (acceptsFields_nil _)
+  | «unreadable» =>
+    exact accepts_sum _ _ _ 4 "unreadable" [] [] rfl (acceptsFields_nil _)
+
+instance instCanonical : Canonical (_root_.Effect4.Program.ClassRefusal) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end ClassRefusalC
+
 namespace PrintRefusalC
 
 def shapeDoc : ShapeDoc :=
@@ -1830,20 +1894,29 @@ def shapeDoc : ShapeDoc :=
      [("internalAction", 0, [("name", (shape _root_.String).root)]),
       ("layerRef", 1, [("target", (shape (@_root_.List (_root_.Nat))).root)]),
       ("unsafeName", 2, [("spelling", (shape _root_.String).root)]),
-      ("typeSpelling", 3, [("text", (shape _root_.String).root)])],
-   (shape _root_.String).defs ++ (shape (@_root_.List (_root_.Nat))).defs⟩
+      ("typeSpelling", 3, [("text", (shape _root_.String).root)]),
+      ("payloadClass", 4, [("tag", (shape _root_.String).root),
+        ("why", (shape _root_.Effect4.Program.ClassRefusal).root)])],
+   (shape _root_.String).defs ++ (shape (@_root_.List (_root_.Nat))).defs ++
+     (shape _root_.Effect4.Program.ClassRefusal).defs⟩
 
 def toVal : _root_.Effect4.Program.PrintRefusal → Val
   | .internalAction a0 => .ctor 0 [Canonical.toVal a0]
   | .layerRef a0 => .ctor 1 [Canonical.toVal a0]
   | .unsafeName a0 => .ctor 2 [Canonical.toVal a0]
   | .typeSpelling a0 => .ctor 3 [Canonical.toVal a0]
+  | .payloadClass a0 a1 => .ctor 4 [Canonical.toVal a0, Canonical.toVal a1]
 
 def ofVal : Val → Option (_root_.Effect4.Program.PrintRefusal)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .internalAction
   | .ctor 1 [v0] => (Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0).map .layerRef
   | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .unsafeName
   | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .typeSpelling
+  | .ctor 4 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.String) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.ClassRefusal) v1 with
+    | some a0, some a1 => some (.payloadClass a0 a1)
+    | _, _ => none
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -1861,14 +1934,27 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.PrintRefusal} (h : ofV
        subst hj
        simp only [toVal]
        rw [Canonical.ofVal_exact hx])
+    | (split at h
+       · rename_i b0 b1 h0 h1
+         injection h with h
+         subst h
+         simp only [toVal]
+         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+         done
+       all_goals exact nomatch h)
     | exact nomatch h
 
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
     _ _ (Canonical.fits x)
 theorem lift_ListNat (x : (@_root_.List (_root_.Nat))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_ClassRefusal (x : _root_.Effect4.Program.ClassRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.ClassRefusal).root
+      (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
 
@@ -1886,6 +1972,10 @@ theorem fits (a : _root_.Effect4.Program.PrintRefusal) : shapeDoc.accepts (toVal
   | «typeSpelling» a0 =>
     exact accepts_sum _ _ _ 3 "typeSpelling" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «payloadClass» a0 a1 =>
+    exact accepts_sum _ _ _ 4 "payloadClass" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_ClassRefusal a1) (acceptsFields_nil _)))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.PrintRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -2173,7 +2263,10 @@ def typings : List TypeRefusal :=
 def authors : List AuthorRefusal := scopes.map .scope ++ typings.map .typing
 
 def prints : List PrintRefusal :=
-  [.internalAction "fork", .layerRef [0, 2], .unsafeName "a0", .typeSpelling "Date"]
+  [.internalAction "fork", .layerRef [0, 2], .unsafeName "a0", .typeSpelling "Date",
+   .payloadClass "not-a-tag" .notIdentifier, .payloadClass "Effect" .collides,
+   .payloadClass "NotFound" .fieldsDiffer, .payloadClass "NotFound" .construction,
+   .payloadClass "Rate" .unreadable]
 
 def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",

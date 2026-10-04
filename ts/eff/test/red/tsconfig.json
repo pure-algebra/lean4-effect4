@@ -1,0 +1,6 @@
+{
+  "//": "The red twins: every line must fail; `test/payload-classes.test.ts` runs tsgo on this project and pins each error code.",
+  "extends": "../../tsconfig.json",
+  "include": ["*.ts"],
+  "exclude": []
+}

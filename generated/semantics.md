@@ -728,6 +728,7 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | record-codec-layout | compatibility | proved | Effect4.Schema.decode_iff | yes |  |
 | service-identifier-injective | compatibility | proved | Effect4.Program.keyIdentifier_injective | yes |  |
 | error-payload-exact | compatibility | proved | Effect4.Program.errOf_valOfErr | yes |  |
+| payload-class-decl-exact | compatibility | proved | Effect4.Codegen.admitModule_classDecls | yes |  |
 
 ### Printed statements
 
@@ -787,9 +788,10 @@ Literature: RendelOstermann2010, audit P32 — adaptedResult
 **collection-term-print-read**
 
 ```lean
-∀ {n : Nat} (t : Effect4.Program.Term),
+∀ {classes : Effect4.Codegen.Classes.Classes} {n : Nat} (t : Effect4.Program.Term),
   Eq (Effect4.Program.Term.scoped n t) Bool.true →
-    Eq (Effect4.Program.readTerm n (Effect4.Program.printTerm t)) (Except.ok t)
+    Eq (Effect4.Program.Term.covers classes t) Bool.true →
+      Eq (Effect4.Program.readTerm classes n (Effect4.Program.printTerm t)) (Except.ok t)
 ```
 
 **record-codec-layout**
@@ -813,6 +815,16 @@ Literature: RendelOstermann2010, audit P32 — adaptedResult
 ```lean
 ∀ (e : Effect4.Machine.Err) (v : Effect4.Machine.Val),
   Eq (Effect4.Program.valOfErr e) (Option.some v) → Eq (Effect4.Program.errOf v) e
+```
+
+**payload-class-decl-exact**
+
+```lean
+∀ {table : Effect4.Program.RowTable} {name : String}
+  {allowed : List Effect4.Codegen.Bindings.Origin} {ambient : List TypeScript.Import}
+  {module : TypeScript.Module} {r : Effect4.Codegen.ModuleReading table name allowed ambient},
+  Eq (Effect4.Codegen.admitModule name module table allowed ambient) (Except.ok r) →
+    Eq (Effect4.Program.splitClasses module.decls).fst r.classDecls
 ```
 
 ## subtyping-algebra
@@ -1510,7 +1522,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | --- | --- | --- | --- | --- |
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
-| R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
+| R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
 | R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | `perform_scoped_iff` (proved), `mono` (proved), `kernel_term_agrees` (proved) | — |
 | R5 | open | `build_total` (proved) | — | — |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved) | — |
@@ -1869,7 +1881,7 @@ flowchart LR
 
 - Open: variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130
 - Open: recursive types are row 124 (open): nominal Σ_app declarations through Ty.app
-- Open: error payloads: the carrier landed (decisions row 120, part E1); open: E2's face (one Data.TaggedError class per tag, printed and read back; the printer refuses Err.payload by name until then), catchTag's residual over records (decisions row 130), int and number fields (row 121), and a host row answering a payload (R6, parked)
+- Open: error payloads: the carrier (decisions row 120, part E1) and the face (part E2: one Data.TaggedError class per tag, printed and read back) landed; open: catchTag's residual over records (decisions row 130), int and number fields (row 121; a number field is refused by name as unreadable), a field typed by another class (refused by name), a record update of a class instance (it answers a structural object), and a host row answering a payload (R6, parked)
 - Open: int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121), not landed; the admission's int scan still refuses it
 - Open: the Schema and JSON images of app, null, undefined, number and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161)
 - Open: equality at records: eq stays refused at records until a program compares them (decisions row 126)
@@ -1886,23 +1898,25 @@ flowchart LR
   n7["readTerm_printTerm<br/>proved"]
   n8["type_metadata_exact<br/>proved"]
   n9["errOf_valOfErr<br/>proved"]
-  n10["errOf_ne_boom_of_supported<br/>proved"]
-  n11["errOf_payload<br/>proved"]
-  n12["isPayload_of_hasTy_record<br/>proved"]
-  n13["subN_trans<br/>proved"]
-  n14["normalize_idem<br/>proved"]
-  n15["subN_refl<br/>proved"]
-  n16["handles_of_payloadFieldTy<br/>proved"]
-  n1 --> n13
+  n10["admitModule_classDecls<br/>proved"]
+  n11["errOf_ne_boom_of_supported<br/>proved"]
+  n12["errOf_payload<br/>proved"]
+  n13["isPayload_of_hasTy_record<br/>proved"]
+  n14["subN_trans<br/>proved"]
+  n15["normalize_idem<br/>proved"]
+  n16["subN_refl<br/>proved"]
+  n17["handles_of_payloadFieldTy<br/>proved"]
   n1 --> n14
-  n2 --> n13
+  n1 --> n15
+  n2 --> n14
   n2 --> n1
-  n3 --> n15
-  n9 --> n11
-  n10 --> n4
-  n10 --> n11
-  n10 --> n12
-  n12 --> n16
+  n3 --> n16
+  n9 --> n12
+  n10 --> n0
+  n11 --> n4
+  n11 --> n12
+  n11 --> n13
+  n13 --> n17
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -1914,9 +1928,10 @@ flowchart LR
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `decode_iff` | proved | — | — | 185 | 293 |
 | `ofSchema_exact` | proved | — | — | 41 | 144 |
-| `readTerm_printTerm` | proved | — | — | 131 | 168 |
+| `readTerm_printTerm` | proved | — | — | 149 | 194 |
 | `type_metadata_exact` | proved | — | — | 61 | 86 |
 | `errOf_valOfErr` | proved | — | `errOf_payload` | 4 | 16 |
+| `admitModule_classDecls` | proved | — | `checkInput_eq_none_iff` | 140 | 689 |
 | `errOf_ne_boom_of_supported` | proved | — | `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record` | 230 | 227 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 129 |
@@ -2264,12 +2279,12 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `read_print` | proved | — | `readTerm_printTerm` | 273 | 490 |
-| `read_exact` | proved | — | — | 225 | 453 |
+| `read_print` | proved | — | `readTerm_printTerm` | 281 | 511 |
+| `read_exact` | proved | — | — | 227 | 467 |
 | `run_eq_meaning` | proved | — | — | 310 | 909 |
 | `loopAgreement` | proved | — | — | 339 | 920 |
 | `run_eq_ref` | proved | — | — | 877 | 1062 |
-| `readTerm_printTerm` | proved | — | — | 131 | 168 |
+| `readTerm_printTerm` | proved | — | — | 149 | 194 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
 
@@ -2320,6 +2335,7 @@ flowchart LR
   n40["provideLayerArm<br/>proved"]
   n41["onExit_typed<br/>proved"]
   n42["rowTy_instantiated_formed<br/>proved"]
+  n43["handles_of_payloadFieldTy<br/>proved"]
   n0 --> n2
   n0 --> n3
   n0 --> n4
@@ -2451,6 +2467,7 @@ flowchart LR
   n32 --> n28
   n32 --> n6
   n32 --> n18
+  n38 --> n43
   n39 --> n18
   n40 --> n6
   n40 --> n7
@@ -2521,6 +2538,7 @@ flowchart LR
 | `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `subN_refl`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 834 | 903 |
 | `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 89 | 627 |
 | `rowTy_instantiated_formed` | proved | — | — | 54 | 88 |
+| `handles_of_payloadFieldTy` | proved | — | — | 44 | 132 |
 
 ### R10: Library code inherits theorems: a composed module's law is Agrees profile module expansion
 

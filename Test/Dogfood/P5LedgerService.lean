@@ -20,21 +20,21 @@ the one fragment that runs: `settle` on the logical clock, the verifier's altern
 row (its finding X11).
 
 **Changes since 2026-09-30.** Records landed (row 119): the `Account` value types, list field and
-variants included, but a cell still holds a number only. The error payload carrier landed
-(decisions row 120, part E1): `InsufficientFunds{needed, available}` with natural fields builds as
-a typed failure and runs to `Err.payload`, and the printer refuses it by name until E2 prints the
-class (section 2).
+variants included, but a cell still holds a number only. The error payload landed
+(decisions row 120, parts E1 and E2): `InsufficientFunds{needed, available}` with natural fields
+builds as a typed failure and runs to `Err.payload`. It prints as a module that declares its
+`Data.TaggedError` class and fails with `new InsufficientFunds({ … })`, and the module reads back
+(section 5).
 
 **What the language refuses** (sections 1 and 2): the `Account` record, the account id and the
 history in a cell (`requestNotSubtype`); `needed` and `available` as rc.112 types them, signed
-numbers (admission refuses `int` by the field's path; row 121); the payload's face until E2; a
+numbers (admission refuses `int` by the field's path; row 121); a
 signed number (table admission refuses an `int` column as uninhabited,
 and `sub` truncates, so `10 - 25` answers `0` where rc.112 answers `-15`). A listener is code,
 which no value holds; so are `Ref.modify`'s effect-valued answer and `Effect.callback`'s cancel
 effect, and removal by identity needs equality on code (R7, row 82).
 
-**Waits on:** R4 with rows 42–43 steps 3–5 (record and list cells); R3 with row 120's face (E2)
-and row 121 (`int`); R7 with row 82 (listeners, the effect-valued answer, the cancel effect);
+**Waits on:** R4 with rows 42–43 steps 3–5 (record and list cells); R3 with row 121 (`int`); R7 with row 82 (listeners, the effect-valued answer, the cancel effect);
 R10 with DI-89 (`forEach`) and DI-39 (`catchTag`); R6, parked, or the logical clock (`settle`).
 The slices of row 204 that move it: state at any type, and error payloads.
 -/
@@ -174,15 +174,16 @@ def stage : Reach :=
 def insufficient25 : Val :=
   recordOf ["_tag", "available", "needed"] [.str "InsufficientFunds", .nat 10, .nat 25]
 
-/-- How far the payload part gets (decisions row 120, part E1). -/
+/-- How far the payload part gets (decisions row 120, parts E1 and E2). -/
 def payloadMeasured : List (String × PartReach) :=
   [("InsufficientFunds{needed, available} as a typed failure",
     partReach insufficientModule insufficient25)]
 
 /-- The payload part's stage, as `Test/Dogfood/README.md` quotes it: built with natural fields, run
-to `Err.payload`, and refused by the printer by name until E2. -/
+to `Err.payload`, printed as a module that declares its `InsufficientFunds` class (its fields in
+their written order, `needed` before `available`), and read back. -/
 def payloadStage : List (String × PartReach) :=
-  [("InsufficientFunds{needed, available} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩)]
+  [("InsufficientFunds{needed, available} as a typed failure", ⟨"built", true, "printed", true⟩)]
 
 #guard payloadMeasured = payloadStage
 

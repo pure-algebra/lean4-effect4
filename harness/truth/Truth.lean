@@ -57,6 +57,8 @@ The value wire: `unit` ↦ `null`, `nat` ↦ number,
 `cell k` ↦ `{"ref":k}`, `promise k` ↦ `{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`,
 `context` ↦ `{"context":true}`, a reified exit ↦ `{"success":v}` / `{"failure":cause}`; a
 cause is `{"reasons":[…]}` with `{"fail":n|string|{"boom":null}|[tag,message]|{"payload":hex}}`,
+where the program's own exit writes a payload through its error column,
+`{"fail":{"payload":{"_tag":…,…}}}` (`errJsonAt`, decisions row 120, ruling (a)),
 `{"die":d}`,
 where a represented error defect is `{"die":{"error":<the same error wire>}}`,
 `{"interrupt":who|null}`;
@@ -360,6 +362,17 @@ def optionResult (present : Bool) : Api.Program :=
 def pOptionSome : Api.Program := optionResult true
 def pOptionNone : Api.Program := optionResult false
 
+/-- Decisions row 120, part E2: a tagged payload record as a typed failure. The module declares
+`NotFound`'s `Data.TaggedError` class and fails with `new NotFound({ id: 9 })`; the exit's
+error is compared through the type-directed codec (`errJsonAt`). -/
+def notFound (id : Nat) : Term :=
+  .record [("_tag", false, .lit "NotFound"), ("id", false, .nat)] ["_tag", "id"]
+    (.cons (.lit (.str "NotFound")) (.cons (.lit (.nat id)) .nil))
+def pFailPayload : Api.Program := .fail (notFound 9)
+/-- The payload caught by its tag: `tagIs` reads the instance's own `_tag` on both faces. -/
+def pTagPayload : Api.Program :=
+  .catchIf (tagTest "NotFound" 0) (.fail (notFound 9)) (.succeed (.lit (.nat 1)))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures. Every listed program contributes
 one manifest entry. -/
@@ -373,7 +386,7 @@ def corpus : List (String × Api.Program) :=
     ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
-    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pInterruptEscape", pInterruptEscape)]
+    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape)]
 
 /-! ## The value wire -/
 
@@ -383,9 +396,10 @@ def errJson : Err → J
   -- the host wires the failed pair as a two-element array, as `pair` builds it
   | .tagged t m => Lean.Json.arr #[Lean.Json.str t, Lean.Json.str m]
   | .text s => Lean.Json.str s
-  -- a record payload (decisions row 120): the codec's one-key object of its canonical bytes in
-  -- hexadecimal (`Schema.Codec.encodeErr`), apart from the four shapes above. No corpus program
-  -- fails with one until E2 prints its class; E2 sets the face's comparison.
+  -- a record payload (decisions row 120) where no type directs its image (a promoted defect's
+  -- error, a child fiber's exit, a reified exit inside a value): the codec's one-key object of
+  -- its canonical bytes in hexadecimal (`Schema.Codec.encodeErr`), apart from the four shapes
+  -- above. At the program's own exit the error column directs it (`errJsonAt`).
   | .payload p => Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]
 
 def defectJson : Defect → J
@@ -440,6 +454,55 @@ partial def valJson : Val → J
 def exitJson : ExitV → J
   | .success v => Lean.Json.mkObj [("success", valJson v)]
   | .failure c => Lean.Json.mkObj [("failure", causeJson c)]
+
+mutual
+/-- The codec's JSON (`Effect4.Json`) as the manifest's (`Lean.Json`). A number is a natural
+(`Schema.Codec.nat?`): the codec writes no other, and anything else is named, never rounded. An
+object's keys come out in `Lean.Json`'s order, by code point, which is UTF-8 byte order. -/
+def leanJson : Effect4.Json → J
+  | .null => Lean.Json.null
+  | .bool b => Lean.Json.bool b
+  | .number f => match Effect4.Schema.Codec.nat? (.number f) with
+    | some n => toJson n
+    | none => Lean.Json.str "not a natural"
+  | .str s => Lean.Json.str s
+  | .arr items => Lean.Json.arr (leanJsons items).toArray
+  | .obj entries => Lean.Json.mkObj (leanEntries entries)
+/-- `leanJson` at every item. -/
+def leanJsons : List Effect4.Json → List J
+  | [] => []
+  | j :: js => leanJson j :: leanJsons js
+/-- `leanJson` at every value, keys kept. -/
+def leanEntries : List (String × Effect4.Json) → List (String × J)
+  | [] => []
+  | (k, j) :: es => (k, leanJson j) :: leanEntries es
+end
+
+/-- A typed failure's error at the program's error column (decisions row 120, ruling (a), part
+E2): a payload through the type-directed codec (`Schema.encode`), under the one key `payload`,
+its objects' keys in UTF-8 byte order (`leanJson`). That is the JSON rc.112 writes for the
+printed class's instance (`Data.Error`'s `toJSON`, `{ ...plainArgs, ...this }`,
+`vendor/effect-4.0.0-rc.112/src/internal/core.ts:602-604`), which `run-truth.ts` sorts the same
+way. Any other error, and a payload the codec does not write (a `number`, `null`, `undefined`
+or byte field), is `errJson`'s. -/
+def errJsonAt (errorTy : Option Ty) : Err → J
+  | .payload p =>
+    match errorTy.bind fun t => Effect4.Schema.encode t p.val with
+    | some j => Lean.Json.mkObj [("payload", leanJson j)]
+    | none => errJson (.payload p)
+  | e => errJson e
+
+/-- `reasonJson` with the failure's error at the program's error column (`errJsonAt`). -/
+def reasonJsonAt (errorTy : Option Ty) : Reason Err Defect FiberId Ann → J
+  | .fail e _ => Lean.Json.mkObj [("fail", errJsonAt errorTy e)]
+  | r => reasonJson r
+
+/-- The program's own exit, its failures typed by its error column: the `exit` the comparison
+reads (`run.exit`, `runSync.exit`). A child fiber's exit and the event texts keep `exitJson`. -/
+def exitJsonAt (errorTy : Option Ty) : ExitV → J
+  | .success v => exitJson (.success v)
+  | .failure c => Lean.Json.mkObj [("failure",
+      Lean.Json.mkObj [("reasons", Lean.Json.arr (c.reasons.map (reasonJsonAt errorTy)).toArray)])]
 
 /-- The kind of an exit, with the archived tracer's precedence (`outcomeWire`): a `Fail`
 reason wins, then an `Interrupt`, then a `Die`; an empty cause is its own kind. -/
@@ -599,11 +662,20 @@ def typeJson (sig : Signature NativeOp) (ty : EffTy) : J :=
     , ("requires", Lean.Json.arr (ty.requires.elems.map (requireJson sig)).toArray)
     , ("requiresEmpty", Lean.Json.bool (decide (ty.requires = Machine.Env.Requirement.empty))) ]
 
+/-- Why a module cannot declare a payload class (`ClassRefusal`, decisions row 120). -/
+def classRefusalText : ClassRefusal → String
+  | .notIdentifier => "not an identifier"
+  | .collides => "collides with a bound name"
+  | .fieldsDiffer => "two payload types under one tag"
+  | .construction => "a construction outside the class form"
+  | .unreadable => "a declaration that does not read back"
+
 def refusalText : PrintRefusal → String
   | .internalAction name => s!"internal action {name}"
   | .layerRef target => s!"layer reference to {target}"
   | .unsafeName spelling => s!"unsafe name {spelling}"
   | .typeSpelling text => s!"type spelling {text}"
+  | .payloadClass tag why => s!"payload class {tag}: {classRefusalText why}"
 
 def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J :=
   Lean.Json.mkObj
@@ -626,9 +698,10 @@ def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (name : String := "") : J :=
   let r := fixtureRun name p fuel table answers
   let trace := r.trace
+  let errorTy := (Api.typeOf p table).map (·.error)
   Lean.Json.mkObj
     [ ("outcome", Lean.Json.str (outcomeText r.outcome))
-    , ("exit", match r.exit with | some e => exitJson e | none => Lean.Json.null)
+    , ("exit", match r.exit with | some e => exitJsonAt errorTy e | none => Lean.Json.null)
     , ("exitKind", match r.exit with | some e => Lean.Json.str (exitKind e) | none => Lean.Json.null)
     , ("fiberCount", toJson r.fiberCount)
     , ("fibers", Lean.Json.arr (r.machine.fibers.map fiberJson).toArray)
@@ -641,7 +714,7 @@ def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
   let (_, exit) := Api.runSync p fuel answers table
   Lean.Json.mkObj
-    [ ("exit", exitJson exit)
+    [ ("exit", exitJsonAt ((Api.typeOf p table).map (·.error)) exit)
     , ("exitKind", Lean.Json.str (exitKind exit))
     , ("sync", Lean.Json.bool (!isAsyncFiberDefect exit)) ]
 
@@ -736,9 +809,9 @@ order, one JSON Lines row per call (`harness/truth/tapes/<name>.jsonl`, written 
 * **pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112`, the
   versions `scripts/check-truth.py` refuses to run without, on bun. A tape is evidence about
   those bytes and no others.
-* **the corpus.** 31 programs, of which 6 have tapes; the gate re-records all six on every run
-  and refuses a byte that moved, so a committed tape is the answer rc.112 *just* gave, not a
-  remembered one.
+* **the corpus.** The programs of `corpus` (`main` prints how many); the gate re-records every
+  tape under `harness/truth/tapes` on every run and refuses a byte that moved, so a committed
+  tape is the answer rc.112 *just* gave, not a remembered one.
 * **the error column.** A `failed` row is the DB-15 pair, made at the adapter before the
   program sees it (`prelude.ts` `toPair`, DI-59), so the value replayed here, the value the
   printed program's own handler observed and the value on the tape are one value.
@@ -799,7 +872,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pAcquireClosed", "pProvide", "pProvideMerge", "pProvideTwice", "pDiamond", "pMergeAll", "pAcquireHandle",
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
-   "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pInterruptEscape"]
+   "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
+   "pInterruptEscape"]
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
@@ -824,6 +898,24 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
   errJson (.payload p) != errJson .boom && errJson (.payload p) ==
     Lean.Json.mkObj [("payload", Lean.Json.str (Effect4.Schema.Codec.payloadHex p))]) = some true
 #guard defectJson (.error (.text "lost")) == Lean.Json.mkObj [("error", Lean.Json.str "lost")]
+-- decisions row 120, part E2: the payload programs type at their record, print with their class,
+-- read back, and the program's exit writes the payload through its error column (`errJsonAt`)
+#guard (Api.typeOf pFailPayload).map (·.error) =
+  some (.record [("_tag", false, .lit "NotFound"), ("id", false, .nat)])
+#guard (Api.typeOf pTagPayload).map (·.answer) = some .nat
+#guard Api.roundTrip pFailPayload = .ok pFailPayload
+#guard Api.roundTrip pTagPayload = .ok pTagPayload
+#guard (Api.printModule "main" pFailPayload).map (fun m =>
+    String.join (m.decls.map (TypeScript.Render.decl house0))) = some
+  ("export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\n" ++
+   "export const main: Effect.Effect<never, NotFound, never> = Effect.fail(new NotFound({ id: 9 }))\n")
+#guard ((Api.run pFailPayload 1000).exit.map fun e =>
+    (exitJsonAt ((Api.typeOf pFailPayload).map (·.error)) e).compress) =
+  some "{\"failure\":{\"reasons\":[{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]}}"
+#guard (Api.run pTagPayload 1000).exit = some (.success (.nat 1))
+-- untyped, a payload keeps the hexadecimal of its canonical bytes
+#guard ((Api.run pFailPayload 1000).exit.map fun e =>
+    (exitJsonAt none e).compress == (exitJson e).compress) = some true
 #guard Api.typeOf pFailText = some ⟨.never, .string, Env.Requirement.empty⟩
 #guard Api.typeOf pFailBoomText = some ⟨.never, .string, Env.Requirement.empty⟩
 #guard (Api.run pFailText 1000).exit = some (.failure (Cause.fail (.text "lost")))

@@ -179,6 +179,7 @@
         "Effect4.Program.TypeReason",
         "Effect4.Program.TypeRefusal",
         "Effect4.Api.AuthorRefusal",
+        "Effect4.Program.ClassRefusal",
         "Effect4.Program.PrintRefusal",
         "Effect4.Program.ReadRefusal",
         "Effect4.Api.BuildRefusal"

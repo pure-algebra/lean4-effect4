@@ -43,9 +43,12 @@ theorem printModule_erasure (name : String) (program : Program) (table : RowTabl
     printModule name program table =
       match typeOf program table with
       | some ty =>
-        match Effect4.Program.printEntry table (nativeSignature table) name ty program with
-        | .ok decls => some { header := [], imports := [], decls := decls.map .const }
-        | .error _ => none
+        match Effect4.Program.printEntry table (nativeSignature table) name ty program,
+            Effect4.Codegen.ClassTable.moduleClasses (nativeSignature table) name ty program with
+        | .ok decls, .ok (_, classDecls) =>
+          some { header := [], imports := []
+                 decls := classDecls.map .classDecl ++ decls.map .const }
+        | _, _ => none
       | none => none :=
   Effect4.Codegen.emitModule_erasure name program table formed
 

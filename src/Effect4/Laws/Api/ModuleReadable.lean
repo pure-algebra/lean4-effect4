@@ -28,20 +28,25 @@ open Effect4.Codegen
 
 variable {Op : Type}
 
-/-- The pieces of a hoisted program are readable and their declared names decode. -/
-def moduleReadable (sig : Signature Op) (root : Eff Op) : Bool :=
+open Effect4.Codegen.Classes (Classes)
+
+variable {classes : Classes}
+
+/-- The pieces of a hoisted program are readable under the module's payload classes (decisions
+row 120, part E2) and their declared names decode. -/
+def moduleReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Bool :=
   match root.hoistAll with
   | .ok (main, history) =>
-    Readable sig 0 main && history.all fun entry =>
-      (cata_layer (readableAlg sig) entry.2 0).isSome &&
+    Readable classes sig 0 main && history.all fun entry =>
+      (cata_layer (readableAlg classes sig) entry.2 0).isSome &&
         decide (LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
   | .error _ => false
 
 /-- What `moduleReadable` says of the pieces. -/
 theorem moduleReadable_pieces {sig : Signature Op} {root : Eff Op}
-    (hr : moduleReadable sig root = true) :
-    ∃ main history, root.hoistAll = .ok (main, history) ∧ Readable sig 0 main = true ∧
-      (∀ entry ∈ history, ReadableAt sig .layer entry.2 0) ∧
+    (hr : moduleReadable classes sig root = true) :
+    ∃ main history, root.hoistAll = .ok (main, history) ∧ Readable classes sig 0 main = true ∧
+      (∀ entry ∈ history, ReadableAt classes sig .layer entry.2 0) ∧
       (∀ entry ∈ history, LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1) := by
   unfold moduleReadable at hr
   split at hr
@@ -54,14 +59,18 @@ theorem moduleReadable_pieces {sig : Signature Op} {root : Eff Op}
   · cases hr
 
 /-- **The module inverse on the readable domain.** The declaration block the module printer
-prints of a program whose pieces are readable reads back to the program. -/
+prints of a program whose pieces are readable under the module's classes, after class
+declarations that read back to those classes, reads back to the program. -/
 theorem readModule_printModule_readable {sig : Signature Op}
     {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) {root : Eff Op}
-    (hr : moduleReadable sig root = true) {name : String} {ty : EffTy}
+    (hr : moduleReadable classes sig root = true) {classDecls : List TypeScript.ClassDecl}
+    (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
+    {name : String} {ty : EffTy}
     {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell (decls.map TypeScript.Decl.const) = .ok root := by
+    readModule sig spell
+      (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
   obtain ⟨main, history, hoisted, hmain, hlayers, hnames⟩ := moduleReadable_pieces hr
-  exact readModule_printModule hoisted (ReadsBack.of_Readable hl hmain)
+  exact readModule_printModule hoisted classesRead (ReadsBack.of_Readable hl hmain)
     (fun entry hm x hp => readLayer_print hl (hlayers entry hm) hp) hnames printed
 
 /-! ## A program whose pieces are readable prints as a declaration block -/
@@ -87,7 +96,7 @@ def capturedDecl (sig : Signature Op) (history : List (List Nat × LayerTerm Op)
 
 /-- Each captured layer named in a target list prints as a declaration. -/
 theorem captured_mapM_ok {sig : Signature Op} {history : List (List Nat × LayerTerm Op)}
-    (hlayers : ∀ entry ∈ history, ReadableAt sig .layer entry.2 0) :
+    (hlayers : ∀ entry ∈ history, ReadableAt classes sig .layer entry.2 0) :
     ∀ (targets : List (List Nat)), (∀ t ∈ targets, t ∈ history.map (·.1)) →
     ∃ ds, targets.mapM (capturedDecl sig history) = .ok ds
   | [], _ => ⟨[], rfl⟩
@@ -109,7 +118,7 @@ theorem captured_mapM_ok {sig : Signature Op} {history : List (List Nat × Layer
 /-- **A program whose pieces are readable prints as a declaration block**, at every export
 name and every representable declaration type. -/
 theorem printModule_readable {sig : Signature Op} {root : Eff Op}
-    (hr : moduleReadable sig root = true) (name : String) (ty : EffTy)
+    (hr : moduleReadable classes sig root = true) (name : String) (ty : EffTy)
     (types : declarationTypeRepresentable ty = true) :
     ∃ decls, printModule sig name ty root = .ok decls := by
   obtain ⟨main, history, hoisted, hmain, hlayers, _⟩ := moduleReadable_pieces hr
@@ -135,11 +144,12 @@ open Effect4.Program
 readable under the native table. -/
 theorem ModuleEmission.readModule {program : NativeEff} {table : RowTable} {name : String}
     (emission : ModuleEmission program table name) (lawful : LawfulTable table = true)
-    (readable : moduleReadable (nativeSignature table) program = true) :
+    (readable : moduleReadable emission.classes (nativeSignature table) program = true) :
     Program.readModule (nativeSignature table) (nativeSpell table) emission.module.decls =
       .ok program := by
   obtain ⟨_, _, printed⟩ := Program.printEntry_ok emission.generated
-  exact readModule_printModule_readable (nativeLawful table lawful) readable printed
+  exact readModule_printModule_readable (nativeLawful table lawful) readable
+    (Classes.readClassDecls_checked (moduleClasses_checked emission.classified)) printed
 
 /-- Every row of a lawful table has safe names. -/
 theorem lawful_rowNamesSafe {table : RowTable} (lawful : LawfulTable table = true) :
@@ -155,15 +165,19 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
     (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
     (safe : exportNameSafe name = true) (lawful : LawfulTable table = true)
-    (readable : moduleReadable (nativeSignature table) program = true)
+    {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
+    (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
+      .ok (classes, classDecls))
+    (readable : moduleReadable classes (nativeSignature table) program = true)
     (types : declarationTypeRepresentable typing.ty = true)
     (annotations : annotationRefusal program = none) :
     ∃ emission, emitModule name program table = .ok emission := by
   obtain ⟨decls, printed⟩ := printModule_readable readable name typing.ty types
   have generated : printEntry table (nativeSignature table) name typing.ty program = .ok decls := by
     simp only [printEntry, safe, Bool.not_true, Bool.false_eq_true, ↓reduceIte,
-      lawful_rowNamesSafe lawful, annotations, printed]
-  exact ⟨⟨formed, typing, decls, generated⟩, ModuleEmission.recheck _⟩
+      lawful_rowNamesSafe lawful, classified, annotations, printed]
+  exact ⟨⟨formed, typing, classes, classDecls, classified, decls, generated⟩,
+    ModuleEmission.recheck _⟩
 
 end Effect4.Codegen
 
@@ -175,12 +189,13 @@ open Effect4.Program
 a module whose reading is the program. -/
 theorem printModule_roundTrip {name : String} {program : Program} {table : RowTable}
     (lawful : LawfulTable table = true)
-    (readable : moduleReadable (nativeSignature table) program = true)
+    (readable : ∀ e : Effect4.Codegen.ModuleEmission program table name,
+      moduleReadable e.classes (nativeSignature table) program = true)
     {module : TypeScript.Module} (printed : printModule name program table = some module) :
     readModule module table = .ok program := by
   unfold printModule at printed
   obtain ⟨emission, hemit, hmod⟩ := Option.map_eq_some_iff.mp printed
   subst hmod
-  exact emission.readModule lawful readable
+  exact emission.readModule lawful (readable emission)
 
 end Effect4.Api

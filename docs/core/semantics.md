@@ -585,6 +585,8 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
 - **Term reconstruction (`collection-term-print-read`)**: structural reading reconstructs every scoped term after printing
   (`readTerm_printTerm`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
   This includes raw record declarations and every natural tuple index.
+  A payload class construction prints as `new Tag({ … })` and reads back under the module's classes (decisions row 120).
+  Its premise is that the classes cover the term's class constructions (`Term.covers`).
   The scope premise remains unchanged; rendered-source recognition and target execution remain separate boundaries.
 - **Service key identity (`service-identifier-injective`)**: at one signature's scope key, distinct service keys print
   distinct target Identifier types (`keyIdentifier_injective`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
@@ -594,7 +596,13 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   error image (`errOf_valOfErr`, `src/Effect4/Laws/Program/Admit.lean`; decisions row 120, part E1).
   The payload image (`Payload.image`) restricts the identity image to handle-free record frames, and `Store.Image` carries its laws.
   Its JSON image is the hexadecimal of its canonical bytes (`decodeErr_exact`, `src/Effect4/Laws/Schema/Codec.lean`).
-  The printed face is open: the printer refuses `Err.payload` by name until part E2 prints one class per tag.
+  Part E2 prints one `Data.TaggedError` class per tagged payload type, and the printed module reads back.
+  `read_print`, `read_exact` and `readModule_printModule` state the round trip.
+- **Payload class declarations (`payload-class-decl-exact`)**: an admitted module's payload class declarations are the
+  printed ones (`admitModule_classDecls`, `src/Effect4/Laws/Codegen/Admit.lean`; decisions row 120, part E2).
+  The class reader accepts only the declaration that it prints back (`readClassDecl_exact`).
+  The printer refuses a class whose declaration does not read back, by name, with its tag.
+  The tsgo verdict on the printed forms is a finite check with a red twin (`ts/eff/test/payload-classes.test.ts`).
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.

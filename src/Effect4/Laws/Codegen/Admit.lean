@@ -1,11 +1,12 @@
 import Effect4.Codegen.Admit
+import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Codegen.Checked
 import Effect4.Laws.Codegen.SourceBindings
 
 /-!
 # The reading certificate against its own checks
 
-`envelopeCheck` is a computed answer; `EnvelopeValid` is the same four facts as a Prop, and
+`envelopeCheck` is a computed answer; `EnvelopeValid` is the same five facts as a Prop, and
 `envelopeCheck_iff` relates them, so a consumer reasons about the declaration block and not
 about the order of a `match`. The certificate is then the pullback of the raw reader's
 graph and the checker's graph along that envelope: `ModuleReading.recheck` says the
@@ -26,12 +27,17 @@ variable {table : RowTable} {name : String} {allowed : List Bindings.Origin}
 
 /-! ## The envelope as a Prop -/
 
-/-- The four facts the envelope decides, stated on the declaration block. -/
-structure EnvelopeValid (name : String) (ty : EffTy) (decls : List TypeScript.Decl) : Prop where
+/-- The five facts the envelope decides, stated on the declaration block: the leading class
+declarations read back to the printer's classes (decisions row 120), then the four of the
+declaration block after them. -/
+structure EnvelopeValid (name : String) (ty : EffTy) (classes : Classes.Classes)
+    (decls : List TypeScript.Decl) : Prop where
   safe : exportNameSafe name = true
-  main : ∃ main : TypeScript.ConstDecl, decls.getLast? = some (.const main) ∧
+  declared : Program.blockClasses decls = some classes
+  main : ∃ main : TypeScript.ConstDecl,
+    (Program.splitClasses decls).2.getLast? = some (.const main) ∧
     main.name = name ∧ main.exported = true ∧ declarationType ty = .ok main.type
-  layers : ∀ d ∈ decls.dropLast, ∃ c : TypeScript.ConstDecl,
+  layers : ∀ d ∈ (Program.splitClasses decls).2.dropLast, ∃ c : TypeScript.ConstDecl,
     d = .const c ∧ c.type = none ∧ c.exported = true
 
 theorem mainConst_eq_some {decls : List TypeScript.Decl} {main : TypeScript.ConstDecl} :
@@ -94,8 +100,9 @@ theorem layersPlain_iff (ds : List TypeScript.Decl) :
         cases heq
 
 /-- The computed envelope admits exactly the stated declaration-block judgment. -/
-theorem envelopeCheck_iff (name : String) (ty : EffTy) (decls : List TypeScript.Decl) :
-    envelopeCheck name ty decls = none ↔ EnvelopeValid name ty decls := by
+theorem envelopeCheck_iff (name : String) (ty : EffTy) (classes : Classes.Classes)
+    (decls : List TypeScript.Decl) :
+    envelopeCheck name ty classes decls = none ↔ EnvelopeValid name ty classes decls := by
   unfold envelopeCheck
   split
   · rename_i unsafe?
@@ -116,67 +123,100 @@ theorem envelopeCheck_iff (name : String) (ty : EffTy) (decls : List TypeScript.
         simp [hdt] at htype
     · rename_i expected hdt
       split
-      · rename_i hmain
+      · rename_i wrongClasses
         constructor
         · intro refused
           cases refused
         · intro valid
-          obtain ⟨main, hlast, _, _, _⟩ := valid.main
-          rw [mainConst_eq_some.mpr hlast] at hmain
-          cases hmain
-      · rename_i main hmain
-        have hlast : decls.getLast? = some (.const main) := mainConst_eq_some.mp hmain
-        have uniqueMain : ∀ m : TypeScript.ConstDecl,
-            decls.getLast? = some (.const m) → m = main := by
-          intro m hm
-          simpa using hm.symm.trans hlast
+          exact absurd valid.declared wrongClasses
+      · rename_i rightClasses
+        have declared : Program.blockClasses decls = some classes := by
+          simpa only [ne_eq, Decidable.not_not] using rightClasses
         split
-        · rename_i wrongName
+        · rename_i hmain
           constructor
           · intro refused
             cases refused
           · intro valid
-            obtain ⟨m, hm, hname, _, _⟩ := valid.main
-            cases uniqueMain m hm
-            exact absurd hname wrongName
-        · rename_i rightName
-          have hname : main.name = name := by simpa using rightName
+            obtain ⟨main, hlast, _, _, _⟩ := valid.main
+            rw [mainConst_eq_some.mpr hlast] at hmain
+            cases hmain
+        · rename_i main hmain
+          have hlast : (Program.splitClasses decls).2.getLast? = some (.const main) :=
+            mainConst_eq_some.mp hmain
+          have uniqueMain : ∀ m : TypeScript.ConstDecl,
+              (Program.splitClasses decls).2.getLast? = some (.const m) → m = main := by
+            intro m hm
+            simpa using hm.symm.trans hlast
           split
-          · rename_i notExported
+          · rename_i wrongName
             constructor
             · intro refused
               cases refused
             · intro valid
-              obtain ⟨m, hm, _, hexported, _⟩ := valid.main
+              obtain ⟨m, hm, hname, _, _⟩ := valid.main
               cases uniqueMain m hm
-              exact absurd hexported notExported
-          · rename_i isExported
-            have hexported : main.exported = true := by simpa using isExported
+              exact absurd hname wrongName
+          · rename_i rightName
+            have hname : main.name = name := by simpa using rightName
             split
-            · rename_i wrongType
+            · rename_i notExported
               constructor
               · intro refused
                 cases refused
               · intro valid
-                obtain ⟨m, hm, _, _, htype⟩ := valid.main
+                obtain ⟨m, hm, _, hexported, _⟩ := valid.main
                 cases uniqueMain m hm
-                rw [hdt] at htype
-                exact absurd (Except.ok.inj htype).symm wrongType
-            · rename_i rightType
-              have htype : main.type = expected := by simpa using rightType
-              rw [layersPlain_iff]
-              constructor
-              · intro layers
-                exact ⟨safe, ⟨main, hlast, hname, hexported, by rw [hdt, htype]⟩, layers⟩
-              · intro valid
-                exact valid.layers
+                exact absurd hexported notExported
+            · rename_i isExported
+              have hexported : main.exported = true := by simpa using isExported
+              split
+              · rename_i wrongType
+                constructor
+                · intro refused
+                  cases refused
+                · intro valid
+                  obtain ⟨m, hm, _, _, htype⟩ := valid.main
+                  cases uniqueMain m hm
+                  rw [hdt] at htype
+                  exact absurd (Except.ok.inj htype).symm wrongType
+              · rename_i rightType
+                have htype : main.type = expected := by simpa using rightType
+                rw [layersPlain_iff]
+                constructor
+                · intro layers
+                  exact ⟨safe, declared, ⟨main, hlast, hname, hexported, by rw [hdt, htype]⟩,
+                    layers⟩
+                · intro valid
+                  exact valid.layers
+
+/-! ## The class section -/
+
+/-- A module's classes are the classes its checked declarations read back to: the class table's
+declarations are `checkedDecl`'s (decisions row 120). Step of `ModuleEmission.admit` and of the
+emitted module's reading (R8). -/
+theorem moduleClasses_checked {Op : Type} {sig : Signature Op} {name : String} {ty : EffTy}
+    {program : Eff Op} {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
+    (h : ClassTable.moduleClasses sig name ty program = .ok (classes, classDecls)) :
+    classes.mapM ClassTable.checkedDecl = .ok classDecls := by
+  unfold ClassTable.moduleClasses at h
+  obtain ⟨_, _, h⟩ := bind_eq_ok.mp h
+  obtain ⟨_, _, h⟩ := bind_eq_ok.mp h
+  obtain ⟨table, _, h⟩ := bind_eq_ok.mp h
+  dsimp only at h
+  split at h
+  · exact nomatch h
+  · obtain ⟨decls, hdecls, h⟩ := bind_eq_ok.mp h
+    cases h
+    exact hdecls
 
 /-! ## The certificate -/
 
 /-- A completed reading is exactly what the computed boundary returns for its module. -/
 theorem ModuleReading.recheck (r : ModuleReading table name allowed ambient) :
     admitModule name r.module table allowed ambient = .ok r := by
-  obtain ⟨module, program, formed, typing, annotations, bound, read, env⟩ := r
+  obtain ⟨module, program, formed, typing, classes, classDecls, classified, annotations, bound,
+    read, env⟩ := r
   unfold admitModule
   split
   · rename_i refused
@@ -205,15 +245,23 @@ theorem ModuleReading.recheck (r : ModuleReading table name allowed ambient) :
           subst sameTyping
           split
           · rename_i why refused
-            rw [annotations] at refused
+            rw [classified] at refused
             cases refused
-          · split
+          · rename_i classes' classDecls' hclasses
+            have sameClasses := Except.ok.inj (hclasses.symm.trans classified)
+            simp only [Prod.mk.injEq] at sameClasses
+            obtain ⟨rfl, rfl⟩ := sameClasses
+            split
             · rename_i why refused
-              rw [env] at refused
+              rw [annotations] at refused
               cases refused
-            · cases bound'
-              cases bound
-              rfl
+            · split
+              · rename_i why refused
+                rw [env] at refused
+                cases refused
+              · cases bound'
+                cases bound
+                rfl
 
 /-- The certificate is indexed by the module it was computed from. -/
 theorem admitModule_module {module : TypeScript.Module}
@@ -232,8 +280,10 @@ theorem admitModule_module {module : TypeScript.Module}
           · cases h
           · split at h
             · cases h
-            · cases h
-              rfl
+            · split at h
+              · cases h
+              · cases h
+                rfl
 
 /-- O3: typed reading is a projection of the certificate, at the one core checker. -/
 theorem admitModule_typed {module : TypeScript.Module}
@@ -262,9 +312,22 @@ theorem admitModule_bound {module : TypeScript.Module}
 theorem admitModule_envelope {module : TypeScript.Module}
     {r : ModuleReading table name allowed ambient}
     (h : admitModule name module table allowed ambient = .ok r) :
-    EnvelopeValid name r.typing.ty module.decls := by
+    EnvelopeValid name r.typing.ty r.classes module.decls := by
   rw [← admitModule_module h]
-  exact (envelopeCheck_iff _ _ _).mp r.envelope
+  exact (envelopeCheck_iff _ _ _ _).mp r.envelope
+
+/-- **The envelope admits exactly the printed class declarations** (decisions row 120, part E2):
+an admitted module's leading class declarations are the ones the printer writes for the program
+it reads to (`ClassTable.moduleClasses`), in order. Concept `exact-codecs`, claim
+`payload-class-decl-exact` (R3); with `ModuleEmission.admit`, the class section's exact
+embedding at the boundary. -/
+@[semantics "exact-codecs" (requirement := R3)]
+theorem admitModule_classDecls {module : TypeScript.Module}
+    {r : ModuleReading table name allowed ambient}
+    (h : admitModule name module table allowed ambient = .ok r) :
+    (Program.splitClasses module.decls).1 = r.classDecls :=
+  Classes.readClassDecls_eq_checked (admitModule_envelope h).declared
+    (moduleClasses_checked r.classified)
 
 /-- For a fixed reading there is one typing certificate; `TypedProgram.unique` is why the
 completeness statements below name the recorded type and not the certificate. -/
@@ -279,12 +342,17 @@ theorem admitModule_complete {module : TypeScript.Module} {program : NativeEff}
       .ok program)
     (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
+    {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
+    (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
+      .ok (classes, classDecls))
     (annotations : annotationRefusal program = none)
-    (env : envelopeCheck name typing.ty module.decls = none) :
+    (env : envelopeCheck name typing.ty classes module.decls = none) :
     ∃ r, admitModule name module table allowed ambient = .ok r ∧
       r.program = program ∧ r.typing.ty = typing.ty :=
-  ⟨⟨module, program, formed, typing, annotations, bound, read, env⟩,
-    ModuleReading.recheck ⟨module, program, formed, typing, annotations, bound, read, env⟩, rfl, rfl⟩
+  ⟨⟨module, program, formed, typing, classes, classDecls, classified, annotations, bound, read,
+      env⟩,
+    ModuleReading.recheck ⟨module, program, formed, typing, classes, classDecls, classified,
+      annotations, bound, read, env⟩, rfl, rfl⟩
 
 /-- A module has one reading: the program, the typing and the evidence are functions of it. -/
 theorem ModuleReading.unique (left right : ModuleReading table name allowed ambient)
@@ -310,17 +378,24 @@ theorem ModuleEmission.admit {program : NativeEff} {table : RowTable} {name : St
   obtain ⟨safe, _, printed⟩ := Program.printEntry_ok e.generated
   obtain ⟨layers, main, body, shape, plain, declaration⟩ := Program.printModule_shape printed
   obtain ⟨hname, _, hexported, htype⟩ := Program.printDecl_fields declaration
-  have decls : e.module.decls = layers.map TypeScript.Decl.const ++ [.const main] := by
-    simp only [ModuleEmission.module, shape, List.map_append, List.map_cons, List.map_nil]
-  have env : envelopeCheck name e.typing.ty e.module.decls = none := by
-    refine (envelopeCheck_iff _ _ _).mpr ⟨safe, ⟨main, ?_, hname, hexported, htype⟩, ?_⟩
-    · simp only [decls, List.getLast?_append, List.getLast?_singleton, Option.some_or]
+  have split : Program.splitClasses e.module.decls =
+      (e.classDecls, layers.map TypeScript.Decl.const ++ [.const main]) := by
+    simp only [ModuleEmission.module]
+    rw [Program.splitClasses_append, shape]
+    simp only [List.map_append, List.map_cons, List.map_nil]
+  have declared : Program.blockClasses e.module.decls = some e.classes := by
+    rw [Program.blockClasses, split]
+    exact Classes.readClassDecls_checked (moduleClasses_checked e.classified)
+  have env : envelopeCheck name e.typing.ty e.classes e.module.decls = none := by
+    refine (envelopeCheck_iff _ _ _ _).mpr
+      ⟨safe, declared, ⟨main, ?_, hname, hexported, htype⟩, ?_⟩
+    · simp only [split, List.getLast?_append, List.getLast?_singleton, Option.some_or]
     · intro d mem
-      rw [decls] at mem
+      rw [split] at mem
       simp only [List.dropLast_append_cons, List.dropLast_singleton, List.append_nil] at mem
       obtain ⟨c, hc, heq⟩ := List.mem_map.mp mem
       exact ⟨c, heq.symm, (plain c hc).1, (plain c hc).2⟩
-  exact admitModule_complete bound read e.formed e.typing
+  exact admitModule_complete bound read e.formed e.typing e.classified
     (Program.printEntry_annotations e.generated) env
 
 end Effect4.Codegen

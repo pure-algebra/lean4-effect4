@@ -4,7 +4,7 @@ import Effect4.Laws.Program.Size
 /-!
 # Laws.Codegen.PrintReadable — a readable program prints
 
-The completeness half of the round trip: `Readable sig n e = true → ∃ x, print sig n e = .ok x`.
+The completeness half of the round trip: `Readable classes sig n e = true → ∃ x, print sig n e = .ok x`.
 With law 11 (`read_print`) this gives `Readable e → roundTrip e = ok e`.
 
 The proof is the generic node step again, by induction on the size of the program measured by
@@ -232,6 +232,10 @@ open Effect4.Codegen.Templates (RowOut ArgPat Fixed table tableLayer printAlg pr
 
 variable {Op : Type}
 
+open Effect4.Codegen.Classes (Classes)
+
+variable {classes : Classes}
+
 /-! ## What an argument prints to: its kind, and whether it prints at all -/
 
 /-- The default capture kind by sort; record decisions refine it in `argKind`. -/
@@ -269,7 +273,7 @@ theorem argPrints_of_sortPrints {R : EffFam → Type} (v : ArgF Op R)
 /-- A readable leaf prints to its capture kind when `argPrints`, and to none otherwise. -/
 theorem printArg_ok_leaf {sig : Signature Op} {d : Nat} {daemon : Bool}
     (v : ArgF Op (EffSelfCarrier Op))
-    (hr : argReadable sig d daemon (ArgF.fold (readableAlg sig) v) = true)
+    (hr : argReadable classes sig d daemon (ArgF.fold (readableAlg classes sig) v) = true)
     (hleaf : ∀ fam, argSortOf v ≠ .child fam) :
     ∃ x, printArg sig d (ArgF.fold (printAlg sig) v) = .ok x ∧
       (argPrints v = true → ∃ a, x = some a ∧ some (Arg.kind a) = argKind v) ∧
@@ -281,8 +285,8 @@ theorem printArg_ok_leaf {sig : Signature Op} {d : Nat} {daemon : Bool}
 /-- A readable argument prints to its capture kind when `argPrints`, and to none otherwise. -/
 theorem printArg_ok {sig : Signature Op} {d : Nat} {daemon : Bool}
     {v : ArgF Op (EffSelfCarrier Op)}
-    (hr : argReadable sig d daemon (ArgF.fold (readableAlg sig) v) = true)
-    (hchild : ∀ fam' (c : EffSelfCarrier Op fam'), v = .child fam' c → ReadableAt sig fam' c d →
+    (hr : argReadable classes sig d daemon (ArgF.fold (readableAlg classes sig) v) = true)
+    (hchild : ∀ fam' (c : EffSelfCarrier Op fam'), v = .child fam' c → ReadableAt classes sig fam' c d →
       ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y) :
     ∃ x, printArg sig d (ArgF.fold (printAlg sig) v) = .ok x ∧
       (argPrints v = true → ∃ a, x = some a ∧ some (Arg.kind a) = argKind v) ∧
@@ -367,8 +371,8 @@ theorem argKind_of_selected {row : Templates.Row} {fam : EffFam} {ctor : String}
 the row in its kind. -/
 theorem printArgs_ok {sig : Signature Op} {fam : EffFam} {n : Nat} {out : RowOut} {daemon : Bool} :
     ∀ (args : List (ArgF Op (EffSelfCarrier Op))) (i : Nat),
-    argsReadable sig fam n out daemon (args.map (ArgF.fold (readableAlg sig))) i = true →
-    (∀ fam' (c : EffSelfCarrier Op fam') d, ArgF.child fam' c ∈ args → ReadableAt sig fam' c d →
+    argsReadable classes sig fam n out daemon (args.map (ArgF.fold (readableAlg classes sig))) i = true →
+    (∀ fam' (c : EffSelfCarrier Op fam') d, ArgF.child fam' c ∈ args → ReadableAt classes sig fam' c d →
       ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y) →
     ∃ τ, printArgs sig fam n out (args.map (ArgF.fold (printAlg sig))) i = .ok τ
   | [], _, _, _ => ⟨[], rfl⟩
@@ -388,9 +392,9 @@ theorem kinds_of_printArgs {sig : Signature Op} {n : Nat} {row : Templates.Row}
     (hmem : row ∈ table) {ctor : String} {args : List (ArgF Op (EffSelfCarrier Op))}
     (hsel : row.selects row.fam ctor args = true)
     (hsorts : argSorts row.fam ctor = some (args.map argSortOf)) {daemon : Bool}
-    (hr : argsReadable sig row.fam n row.out daemon (args.map (ArgF.fold (readableAlg sig))) 0 = true)
+    (hr : argsReadable classes sig row.fam n row.out daemon (args.map (ArgF.fold (readableAlg classes sig))) 0 = true)
     (hchild : ∀ fam' (c : EffSelfCarrier Op fam') d, ArgF.child fam' c ∈ args →
-      ReadableAt sig fam' c d → ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y)
+      ReadableAt classes sig fam' c d → ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y)
     {τ : Subst} (hτ : printArgs sig row.fam n row.out (args.map (ArgF.fold (printAlg sig))) 0 = .ok τ) :
     Kinds τ (RowOut.holeKinds row.out) := by
   have hk := table_fact table_holeKinds hmem
@@ -415,8 +419,8 @@ theorem kinds_of_printArgs {sig : Signature Op} {n : Nat} {row : Templates.Row}
         rcases hk.2 with h | h
         · exact argPrints_of_sortPrints v h
         · exact argPrints_of_forced hsel p.1 h v ha
-      have hra := argsReadable_at (args.map (ArgF.fold (readableAlg sig))) 0 p.1
-        (ArgF.fold (readableAlg sig) v) hr (by simp only [List.getElem?_map, ha, Option.map_some])
+      have hra := argsReadable_at (args.map (ArgF.fold (readableAlg classes sig))) 0 p.1
+        (ArgF.fold (readableAlg classes sig) v) hr (by simp only [List.getElem?_map, ha, Option.map_some])
       rw [argSortOf_fold, Nat.zero_add] at hra
       obtain ⟨x, hx, hsome, _⟩ := printArg_ok (daemon := daemon) hra
         (fun fam' c hv hra' => hchild fam' c _ (hv ▸ List.mem_of_getElem? ha) hra')
@@ -454,32 +458,33 @@ theorem Prints.exists {fam : EffFam} {e : EffSelfCarrier Op fam} {n d : Nat}
   cases fam <;> simp only [Prints, cataFam] at h ⊢ <;> aesop
 
 /-- The recursion a node needs: every child prints at every depth it is readable at. -/
-def ChildrenPrint (sig : Signature Op) (fam : EffFam) (e : EffSelfCarrier Op fam) : Prop :=
+def ChildrenPrint (classes : Classes) (sig : Signature Op) (fam : EffFam)
+    (e : EffSelfCarrier Op fam) : Prop :=
   ∀ fam' (c : EffSelfCarrier Op fam') d k, ArgF.child fam' c ∈ (view fam e).2 →
-    cataFam (readableAlg sig) fam' c d = some k → Prints sig fam' c d k
+    cataFam (readableAlg classes sig) fam' c d = some k → Prints sig fam' c d k
 
-theorem ChildrenPrint.exists {fam : EffFam} {e : EffSelfCarrier Op fam} (ih : ChildrenPrint sig fam e)
+theorem ChildrenPrint.exists {fam : EffFam} {e : EffSelfCarrier Op fam} (ih : ChildrenPrint classes sig fam e)
     {fam' : EffFam} {c : EffSelfCarrier Op fam'} {d : Nat} (hm : ArgF.child fam' c ∈ (view fam e).2)
-    (hr : ReadableAt sig fam' c d) : ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y := by
+    (hr : ReadableAt classes sig fam' c d) : ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y := by
   obtain ⟨k, hk⟩ := hr
   exact (ih fam' c d k hm hk).exists
 
 /-- A readable node of an expression family prints. -/
 theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
-    {e : EffSelfCarrier Op fam} {n : Nat} (hr : ReadableAt sig fam e n)
-    (ih : ChildrenPrint sig fam e) : ∃ x : Out fam, cataFam (printAlg sig) fam e n = .ok x := by
+    {e : EffSelfCarrier Op fam} {n : Nat} (hr : ReadableAt classes sig fam e n)
+    (ih : ChildrenPrint classes sig fam e) : ∃ x : Out fam, cataFam (printAlg sig) fam e n = .ok x := by
   obtain ⟨ctor, args, hview⟩ : ∃ ctor args, view fam e = (ctor, args) := ⟨_, _, rfl⟩
   have hbuild : build fam ctor args = some e := by
     have := build_view fam e; rwa [hview] at this
   have hsorts : argSorts fam ctor = some (args.map argSortOf) := by
     have := argSorts_view fam e; rwa [hview] at this
   have ih' : ∀ fam' (c : EffSelfCarrier Op fam') d, ArgF.child fam' c ∈ args →
-      ReadableAt sig fam' c d → ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y :=
+      ReadableAt classes sig fam' c d → ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y :=
     fun fam' c d hm hra => ih.exists (by rw [hview]; exact hm) hra
   obtain ⟨d, hd⟩ := hr
-  have hdom : domLayer.rowDom sig fam ctor (args.map (ArgF.fold (readableAlg sig))) n = some d := by
-    have := cata_build (domLayer sig) fam ctor args e hbuild
-    rw [show readableAlg sig = EffAlgebra.ofLayer (domLayer sig) from rfl, this] at hd
+  have hdom : domLayer.rowDom classes sig fam ctor (args.map (ArgF.fold (readableAlg classes sig))) n = some d := by
+    have := cata_build (domLayer classes sig) fam ctor args e hbuild
+    rw [show readableAlg classes sig = EffAlgebra.ofLayer (domLayer classes sig) from rfl, this] at hd
     rcases hfam with rfl | rfl | rfl <;> exact hd
   obtain ⟨row, hfind, hcase⟩ := rowDom_inv hdom
   have hsel : row.selects fam ctor args = true := by
@@ -488,7 +493,7 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
   have hmem := List.mem_of_find?_eq_some hfind
   have hfind' : (table.find? fun r => r.selects fam ctor (args.map (ArgF.fold (printAlg sig)))) =
       some row := by
-    rw [find?_selects_fold (printAlg sig) (readableAlg sig)]; exact hfind
+    rw [find?_selects_fold (printAlg sig) (readableAlg classes sig)]; exact hfind
   have hcata : cataFam (printAlg sig) fam e =
       tableLayer sig fam ctor (args.map (ArgF.fold (printAlg sig))) :=
     cata_build (tableLayer sig) fam ctor args e hbuild
@@ -507,9 +512,9 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
     rcases hfam with rfl | rfl | rfl <;>
       exact ⟨x, by simp only [tableLayer, tableLayer.rowPrint, hfind', hout, hτ, ok_bind, hinst]⟩
   · -- the row call
-    have hargs' := fold_eq_op_term (readableAlg sig) hargs
+    have hargs' := fold_eq_op_term (readableAlg classes sig) hargs
     subst hargs'
-    obtain ⟨x, hx⟩ := printRow_ok hreq
+    obtain ⟨x, hx⟩ := printRow_ok hreq.1
     have hfind'' : (table.find? fun r' => r'.selects fam ctor
         ([.op op, .term r] : List (ArgF Op Carrier))) = some row := by
       simpa only [List.map_cons, List.map_nil, ArgF.fold] using hfind'
@@ -518,20 +523,20 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
         ArgF.fold, hfind'', hout, hx]⟩
 
 /-- A readable statement prints, with the binders the domain counted. -/
-theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableAlg sig) st n = some d)
-    (ih : ChildrenPrint sig .stmt st) : ∃ s, cata_stmt (printAlg sig) st n = .ok (s, d) := by
+theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableAlg classes sig) st n = some d)
+    (ih : ChildrenPrint classes sig .stmt st) : ∃ s, cata_stmt (printAlg sig) st n = .ok (s, d) := by
   obtain ⟨ctor, args, hview⟩ : ∃ ctor args, view .stmt st = (ctor, args) := ⟨_, _, rfl⟩
   have hbuild : build .stmt ctor args = some st := by
     have := build_view .stmt st; rwa [hview] at this
   have hsorts : argSorts .stmt ctor = some (args.map argSortOf) := by
     have := argSorts_view .stmt st; rwa [hview] at this
   have ih' : ∀ fam' (c : EffSelfCarrier Op fam') d, ArgF.child fam' c ∈ args →
-      ReadableAt sig fam' c d → ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y :=
+      ReadableAt classes sig fam' c d → ∃ y : Out fam', cataFam (printAlg sig) fam' c d = .ok y :=
     fun fam' c d hm hra => ih.exists (by rw [hview]; exact hm) hra
-  have hdom : domLayer sig .stmt ctor (args.map (ArgF.fold (readableAlg sig))) n = some d := by
-    have := cata_build (domLayer sig) .stmt ctor args st hbuild
+  have hdom : domLayer classes sig .stmt ctor (args.map (ArgF.fold (readableAlg classes sig))) n = some d := by
+    have := cata_build (domLayer classes sig) .stmt ctor args st hbuild
     simp only [cataFam] at this
-    rw [show readableAlg sig = EffAlgebra.ofLayer (domLayer sig) from rfl, this] at hd
+    rw [show readableAlg classes sig = EffAlgebra.ofLayer (domLayer classes sig) from rfl, this] at hd
     exact hd
   obtain ⟨row, t, hfind, hout, hr', rfl⟩ := stmtDom_inv hdom
   have hsel : row.selects .stmt ctor args = true := by
@@ -540,7 +545,7 @@ theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableA
   have hmem := List.mem_of_find?_eq_some hfind
   have hfind' : (table.find? fun r => r.selects .stmt ctor (args.map (ArgF.fold (printAlg sig)))) =
       some row := by
-    rw [find?_selects_fold (printAlg sig) (readableAlg sig)]; exact hfind
+    rw [find?_selects_fold (printAlg sig) (readableAlg classes sig)]; exact hfind
   have hcata : cataFam (printAlg sig) .stmt st =
       tableLayer sig .stmt ctor (args.map (ArgF.fold (printAlg sig))) :=
     cata_build (tableLayer sig) .stmt ctor args st hbuild
@@ -562,8 +567,8 @@ theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableA
   simp only [tableLayer, hfind', hτ, ok_bind, hinst]
 
 /-- The spines print item by item. -/
-theorem print_effs {e : Effs Op} {n : Nat} (hr : ReadableAt sig .effs e n)
-    (ih : ChildrenPrint sig .effs e) : ∃ x : Out .effs, cataFam (printAlg sig) .effs e n = .ok x := by
+theorem print_effs {e : Effs Op} {n : Nat} (hr : ReadableAt classes sig .effs e n)
+    (ih : ChildrenPrint classes sig .effs e) : ∃ x : Out .effs, cataFam (printAlg sig) .effs e n = .ok x := by
   cases e with
   | nil => exact ⟨[], rfl⟩
   | cons e es =>
@@ -576,8 +581,8 @@ theorem print_effs {e : Effs Op} {n : Nat} (hr : ReadableAt sig .effs e n)
     simp only [cataFam] at hy hys ⊢
     exact ⟨y :: ys, by rw [cata_effs_cons, hy, hys]; rfl⟩
 
-theorem print_layers {e : LayerTerms Op} {n : Nat} (hr : ReadableAt sig .layers e n)
-    (ih : ChildrenPrint sig .layers e) :
+theorem print_layers {e : LayerTerms Op} {n : Nat} (hr : ReadableAt classes sig .layers e n)
+    (ih : ChildrenPrint classes sig .layers e) :
     ∃ x : Out .layers, cataFam (printAlg sig) .layers e n = .ok x := by
   cases e with
   | nil => exact ⟨[], rfl⟩
@@ -591,8 +596,8 @@ theorem print_layers {e : LayerTerms Op} {n : Nat} (hr : ReadableAt sig .layers 
     simp only [cataFam] at hy hys ⊢
     exact ⟨y :: ys, by rw [cata_layers_cons, hy, hys]; rfl⟩
 
-theorem print_stmts {e : Stmts Op} {n : Nat} (hr : ReadableAt sig .stmts e n)
-    (ih : ChildrenPrint sig .stmts e) :
+theorem print_stmts {e : Stmts Op} {n : Nat} (hr : ReadableAt classes sig .stmts e n)
+    (ih : ChildrenPrint classes sig .stmts e) :
     ∃ x : Out .stmts, cataFam (printAlg sig) .stmts e n = .ok x := by
   cases e with
   | nil => exact ⟨[], rfl⟩
@@ -616,11 +621,11 @@ variable {sig : Signature Op}
 
 /-- Every readable node of size at most `m` prints. -/
 theorem prints_upTo (m : Nat) : ∀ (fam : EffFam) (e : EffSelfCarrier Op fam) (n k : Nat),
-    cataFam sizeAlg fam e ≤ m → cataFam (readableAlg sig) fam e n = some k → Prints sig fam e n k := by
+    cataFam sizeAlg fam e ≤ m → cataFam (readableAlg classes sig) fam e n = some k → Prints sig fam e n k := by
   induction m using Nat.strongRecOn with
   | _ m ih =>
     intro fam e n k hsize hr
-    have children : ChildrenPrint sig fam e := fun fam' c d k' hm hk =>
+    have children : ChildrenPrint classes sig fam e := fun fam' c d k' hm hk =>
       ih (cataFam sizeAlg fam' c) (by have := size_child_lt fam e fam' c hm; omega) fam' c d k'
         (Nat.le_refl _) hk
     cases fam with
@@ -633,13 +638,13 @@ theorem prints_upTo (m : Nat) : ∀ (fam : EffFam) (e : EffSelfCarrier Op fam) (
     | stmts => exact print_stmts ⟨k, hr⟩ children
 
 /-- **A readable program prints.** -/
-theorem print_of_readable {n : Nat} {e : Eff Op} (hr : Readable sig n e = true) :
+theorem print_of_readable {n : Nat} {e : Eff Op} (hr : Readable classes sig n e = true) :
     ∃ x, print sig n e = .ok x := by
   obtain ⟨k, hk⟩ := Option.isSome_iff_exists.mp hr
   exact prints_upTo (cataFam sizeAlg .eff e) .eff e n k (Nat.le_refl _) hk
 
 /-- A readable layer prints. -/
-theorem printLayer_of_readable {l : LayerTerm Op} (hr : ReadableAt sig .layer l 0) :
+theorem printLayer_of_readable {l : LayerTerm Op} (hr : ReadableAt classes sig .layer l 0) :
     ∃ x, printLayer sig l = .ok x := by
   obtain ⟨k, hk⟩ := hr
   exact prints_upTo (cataFam sizeAlg .layer l) .layer l 0 k (Nat.le_refl _) hk
@@ -647,14 +652,16 @@ theorem printLayer_of_readable {l : LayerTerm Op} (hr : ReadableAt sig .layer l 
 /-- The round trip on the readable domain: a readable program prints, and what it prints
 reads back to it. -/
 theorem roundTrip_of_readable {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op} (hr : Readable sig n e = true) :
+    (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
+    (hr : Readable (classesOf e) sig n e = true) :
     roundTrip sig spell n e = .ok e := by
   obtain ⟨x, hx⟩ := print_of_readable hr
   simp only [roundTrip, hx, read_print hl hr hx]
 
 /-- The executed check of the round trip holds on the readable domain. -/
 theorem readable_of_Readable [DecidableEq Op] {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op} (hr : Readable sig n e = true) :
+    (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
+    (hr : Readable (classesOf e) sig n e = true) :
     readable sig spell n e = true := by
   simp only [readable, roundTrip_of_readable hl hr, decide_true]
 

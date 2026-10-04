@@ -2,6 +2,7 @@ import Effect4.Program.Typing
 import Effect4.Codegen.Names
 import Effect4.Codegen.Types
 import Effect4.Codegen.Record
+import Effect4.Codegen.Classes
 import Effect4.Codegen.Tuple
 import TypeScript
 
@@ -23,11 +24,31 @@ namespace Effect4.Program
 
 open Effect4.Machine.Env (Requirement)
 
+/-- Why a module cannot declare an error payload's class (decisions row 120, ruling (b): one
+`Data.TaggedError` class per tagged payload type, named by its tag). Each is a refusal of the
+module, named with the tag (`PrintRefusal.payloadClass`). -/
+inductive ClassRefusal
+  /-- The tag is not a TypeScript identifier, so no class can be named by it. -/
+  | notIdentifier
+  /-- The tag collides with a name the module already binds: an import (`Data`, `Effect`, …),
+  an atom or row of its prelude, a reserved head, a builtin, or one of its own declarations. -/
+  | collides
+  /-- Two payload types under one tag with different fields: one class cannot declare both. -/
+  | fieldsDiffer
+  /-- A construction of the payload type outside the class form (`Classes.classTag?`): `_tag`
+  is not its first field, its first name and the tag's literal, or a name repeats `_tag`. -/
+  | construction
+  /-- The class's printed declaration does not read back to its fields
+  (`ClassTable.checkedDecl`): a field type TypeScript spells like another (`number`), or a field
+  naming another class. -/
+  | unreadable
+deriving DecidableEq, Repr
+
 /-- Why the printer declined a program. `internalAction` names what the template table refuses
 (`RowOut.refuse`): the `ActionTerm` constructor whose rc.112 counterpart has no public export
-with the same frame shape, a child fork into a scope, and `Err.payload` (`errorPayloadRefusal`).
-`layerRef` is the declaration block's (the host rows slice): a layer reference whose target path
-names no layer, so no `const` can be hoisted for it. -/
+with the same frame shape, and a child fork into a scope. `layerRef` is the declaration block's
+(the host rows slice): a layer reference whose target path names no layer, so no `const` can be
+hoisted for it. `payloadClass` is the module's: an error payload class it cannot declare. -/
 inductive PrintRefusal
   | internalAction (name : String)
   | layerRef (target : List Nat)
@@ -35,16 +56,9 @@ inductive PrintRefusal
   | unsafeName (spelling : String)
   /-- A legacy target type has no structural reading in the supported profile. -/
   | typeSpelling (text : String)
+  /-- An error payload class the module cannot declare, named by its tag (decisions row 120). -/
+  | payloadClass (tag : String) (why : ClassRefusal)
 deriving DecidableEq, Repr
-
-/-- The name the printer refuses an error payload by (decisions row 120). -/
-def errorPayloadName : String := "Err.payload"
-
-/-- The printer's refusal of an error payload (decisions row 120): `fail` of a record
-construction (the template table's row), or a declaration whose error column holds a tagged
-record (`declarationType`). The payload's face, one `Data.TaggedError` class per tag, is E2's;
-until then the printer names the carrier and prints no structural object in its place. -/
-def errorPayloadRefusal : PrintRefusal := .internalAction errorPayloadName
 
 /-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/
 def firstByte (s : String) : Option UInt8 := s.toByteArray.data.toList.head?
@@ -181,13 +195,17 @@ def printLit : Lit → TypeScript.Expr
 
 mutual
   /-- A pure term as target syntax. Generic record wrappers retain raw declarations and
-  distinguish construction, access and update from existing atom calls. -/
+  distinguish construction, access and update from existing atom calls. A construction in the
+  class form (`Classes.classTag?`, decisions row 120) is `new Tag({ … })`, `_tag` omitted: its
+  class carries the declaration, so a reader restores it from the module's classes. -/
   def printTerm : Term → TypeScript.Expr
     | .var index => .ident (Var.name index)
     | .lit value => printLit value
     | .app atom args => .call (.ident atom) (printTerms args)
     | .record fields names values =>
-      Effect4.Codegen.Record.writeRecord fields names (printTerms values)
+      match Effect4.Codegen.Classes.classTag? fields names values with
+      | some tag => Effect4.Codegen.Classes.writeClass tag names.tail (printTerms values).tail
+      | none => Effect4.Codegen.Record.writeRecord fields names (printTerms values)
     | .field mode target name =>
       Effect4.Codegen.Record.writeField (decide (mode = .optional)) name (printTerm target)
     | .recordSet target name value =>

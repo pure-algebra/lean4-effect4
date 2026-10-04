@@ -30,10 +30,11 @@ This battery ports four encodings:
 * The host is a `Run.Reactor` driven by `Run.runWith` (`src/Effect4/Run.lean`). The probes wrote
   the same policy by hand over `Api.HostSession`, whose `outstanding` now answers `Await` records
   (row 16).
-* The error payload carrier landed (decisions row 120, part E1). `NotFound{id}` and
+* The error payload landed (decisions row 120, parts E1 and E2). `NotFound{id}` and
   `Unauthorized{reason}` build as typed failures and run to `Err.payload`, and `tagIs` catches a
-  payload by its `_tag`; the printer refuses a payload by name until E2 prints the class
-  (section 6). The handler still fails with the pairs, which print and read back.
+  payload by its `_tag`. Each prints as a module that declares its `Data.TaggedError` class and
+  fails with `new`, and the module reads back (section 8). The handler still fails with the
+  pairs, which print and read back.
 
 **Bounded as seat W10's brief bounds the data wave's acceptance**
 (`docs/research/2026-10-01-data-wave/brief-W10.md`): the handler only; errors are DB-15's
@@ -41,13 +42,13 @@ literal-tagged pairs; the caller threads the id's text (row 131); the host decod
 `CurrentUser` is a value, not a service (row 118). The battery encodes no layered program.
 
 **What the language refuses** (section 6): a string or record service carrier (`AppConfig`,
-`CurrentUser`), a pair whose message is a number, number-to-text, the `catchTag` form, and a
-payload's face until E2. `UserRepo`'s methods are code, which no value holds (R7).
+`CurrentUser`), a pair whose message is a number, number-to-text, and the `catchTag` form.
+`UserRepo`'s methods are code, which no value holds (R7).
 
-**Waits on:** R3 with row 120's face (E2); R5 and R7 with rows 21, 82 and 118 (code-valued
-services and structured carriers); R13 with rows 51 and 83 (`Config` at load); row 131
-(number to text); row 123 (decoding inside a program); R10 with DI-39, DI-89 and row 130
-(`catchTag` and its residual). The slices of row 204 that move it: error payloads (row 120), and
+**Waits on:** R3 with row 130 (`catchTag`'s residual over records); R5 and R7 with rows 21, 82
+and 118 (code-valued services and structured carriers); R13 with rows 51 and 83 (`Config` at
+load); row 131 (number to text); row 123 (decoding inside a program); R10 with DI-39, DI-89 and
+row 130 (`catchTag` and its residual). The slices of row 204 that move it: error payloads (row 120), and
 the derived forms beside them.
 -/
 
@@ -386,16 +387,17 @@ become, not the errors. -/
 def notFound9 : Val := recordOf ["_tag", "id"] [.str "NotFound", .nat 9]
 def unauthorizedBadToken : Val := recordOf ["_tag", "reason"] [.str "Unauthorized", .str "bad token"]
 
-/-- How far the payload parts get (decisions row 120, part E1). -/
+/-- How far the payload parts get (decisions row 120, parts E1 and E2). -/
 def payloadMeasured : List (String × PartReach) :=
   [ ("NotFound{id} as a typed failure", partReach notFoundModule notFound9)
   , ("Unauthorized{reason} as a typed failure", partReach unauthorizedModule unauthorizedBadToken) ]
 
 /-- The payload parts' stage, as `Test/Dogfood/README.md` quotes it: built, run to `Err.payload`,
-and refused by the printer by name until E2. -/
+printed as modules that declare the `NotFound` and `Unauthorized` classes and fail with `new`, and
+read back. -/
 def payloadStage : List (String × PartReach) :=
-  [ ("NotFound{id} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩)
-  , ("Unauthorized{reason} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩) ]
+  [ ("NotFound{id} as a typed failure", ⟨"built", true, "printed", true⟩)
+  , ("Unauthorized{reason} as a typed failure", ⟨"built", true, "printed", true⟩) ]
 
 #guard payloadMeasured = payloadStage
 

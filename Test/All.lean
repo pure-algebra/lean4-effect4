@@ -18,6 +18,7 @@ import Test.Codegen.Metadata
 import Test.Codegen.Record
 import Test.Codegen.RecordTerms
 import Test.Codegen.RecordEmission
+import Test.Codegen.PayloadClasses
 import Test.Codegen.RecordTag
 import Test.Codegen.Tuple
 import Test.Codegen.SchemaGenerationContract
