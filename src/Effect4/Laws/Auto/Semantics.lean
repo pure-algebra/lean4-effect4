@@ -1,5 +1,6 @@
 import Lean
 import ProofGraph.Population
+import ProofGraph.Goal
 
 /-!
 Concept placement metadata for declarations, separate from claims and proof status.
@@ -33,25 +34,18 @@ initialize semanticsAttribute : ParametricAttribute String ← do
   cell.set (some attr)
   return attr
 
-private def goalMarker : Expr → Bool
-  | .forallE _ _ body _ => goalMarker body
-  | e => e.isAppOfArity `ProofGraph.Obligation 1
-
 def semanticsModule (env : Environment) (name : Name) : Name :=
   match env.getModuleIdxFor? name with
   | some idx => env.header.moduleNames[idx.toNat]!
   | none => env.mainModule
 
-/-- Eligible theorem names, sorted. A checked witness is excluded only when its parent is
-an actual obligation marker. Population selection is owned by the caller. -/
+/-- Eligible theorem names, sorted: the authored theorems, planned goals excluded (decisions row
+203). Population selection is owned by the caller. -/
 def semanticsTheorems (env : Environment) : Array Name :=
-  (env.constants.toList.filterMap fun (name, ci) => do
-    let .thmInfo info := ci | none
-    if ProofGraph.isAuxiliary env name || goalMarker info.type then none else do
-      if name.getString! == "checked" then
-        if let some parent := env.find? name.getPrefix then
-          if goalMarker parent.type then return ← none
-      some name).toArray.qsort (·.toString < ·.toString)
+  (env.constants.toList.filterMap fun (name, ci) =>
+    if ci matches .thmInfo _ && !ProofGraph.isAuxiliary env name && !ProofGraph.isGoal env name then
+      some name
+    else none).toArray.qsort (·.toString < ·.toString)
 
 syntax (name := semanticsCensus) "#semantics_census" (ppSpace ident)? : command
 

@@ -93,7 +93,7 @@ Table cells are exempt from the limits. A cell holds a phrase or one short sente
   only on its fragment. The host boundary stays where `docs/core/host-boundary.md` puts it.
 - **W22.** Keep proof role, evidence status and scope as separate labels. Never use one word for
   two of them.
-- **W23.** No open ledger goal does not mean the semantics is finished. Never write or imply it.
+- **W23.** No open planned goal does not mean the semantics is finished. Never write or imply it.
 - **W24.** Keep the seven judgments of §4 distinct: formation, canonical form, membership,
   inhabitance, profile support, codec admission and reply admission. Never merge two, and never
   use one word for another. Use only the implications that a definition or a named theorem
@@ -266,8 +266,8 @@ Each entry is one row of six columns:
 | **authoring lift** | A generated function that lifts one `Eff` constructor into authoring source (`Src Op`): it resolves its children, then builds the constructor. It denotes embedding into the initial algebra. The lifts are functions; the macro over them is the sugar. | `succeed` (`src/Effect4/Program/Authoring/Lifts.lean`) | — | — | — |
 | **sugar** | The `eff { ... }` and `eff do ...` blocks: a Lean macro that expands a do-block into calls of the authoring lifts, an authored `Src Op` program. | `eff`, `expandDoElems` (`src/Effect4/Program/Authoring/Sugar.lean`) | — | — | — |
 | **tactic** | A proof-search program over a tactic goal: `simp only`, `aesop`, `decide`, or a project tactic. | `authoring_scoped` (`src/Effect4/Laws/Program/Authoring/Tactic.lean`) | — | — | — |
-| **tactic goal** | The proof state a tactic works on. A ledger goal is a different thing (§3.4). | — | — | — | — |
-| **Lean command** (command elaborator) | A `#name` instruction that runs during Lean elaboration (`CommandElabM`). A run command is a different thing (§3.6). | `#traversal_census` (`src/Effect4/Laws/Auto/Traversals.lean`); `#proof_wanted` (`src/Effect4/Laws/Auto/Obligations.lean`) | Lean: `Lean.Elab.Command.elabCommand` | — | — |
+| **tactic goal** | The proof state a tactic works on. A planned goal is a different thing (§3.4). | — | — | — | — |
+| **Lean command** (command elaborator) | A `#name` instruction that runs during Lean elaboration (`CommandElabM`). A run command is a different thing (§3.6). | `#traversal_census` (`src/Effect4/Laws/Auto/Traversals.lean`); `#plan_status` (`tools/ProofGraph/Plan.lean`) | Lean: `Lean.Elab.Command.elabCommand` | — | — |
 | **Lean environment** | The declarations a module sees after its imports. A typing environment is a different thing. | — | — | — | — |
 | **declaration** | A named constant of the Lean environment: a definition, theorem, inductive type, structure or instance. | — | — | — | — |
 | **module** (Lean module) | One Lean file, named by its path. An Effect module is a module of rc.112. | — | — | — | — |
@@ -283,7 +283,8 @@ Each entry is one row of six columns:
 | **`#guard`** | A check that a battery runs during Lean elaboration. Rendered bytes stay inside it. | — | — | — | — |
 | **definitional equality** | Equality by the kernel's reduction (`rfl`). Fold uniqueness is a theorem, not a definitional equality. | `hom_eq_cata_eff` (`src/Effect4/Program/Fold.lean`) | — | — | — |
 | **aesop bank** (bank) | A named aesop rule set of the law graph. | `src/Effect4/Laws/Auto/RuleSets.lean` | aesop, by name | — | — |
-| **`#proof_wanted`** | The command that declares a ledger goal: an open obligation with its statement. | `#proof_wanted` (`src/Effect4/Laws/Auto/Obligations.lean`) | — | — | — |
+| **`proof_goal`** | The command that declares a planned goal: a theorem with its statement and a `sorry` body. | `elabGoal` (`tools/ProofGraph/Goal.lean`) | Mathlib's `proof_wanted`, by analogy | `#proof_wanted` | — |
+| **`proof_sketch`** | The command that proves a theorem by a script and declares the script's open goals as planned goals. | `elabSketch` (`tools/ProofGraph/Sketch.lean`) | lean-mlir's `extract_goals`, by name | `#extract_obligations` | — |
 | **delaboration** | Lean's display of an expression as syntax for people. It is not our printer, and it keeps no inverse. | — | the Lean 4 metaprogramming book, by name; Lean: `Lean.PrettyPrinter.delab` | — | — |
 | **generated declaration** | A declaration that a command or a generator writes. | `fold_of` (`src/Effect4/Program/FoldOf.lean`) | — | — | — |
 | **Lake trace** | Lake's `.trace` record that a module or one of its imports changed. The Makefile judges staleness by it. | `Makefile` | — | — | — |
@@ -298,13 +299,13 @@ Each entry is one row of six columns:
 | **registry** (semantics registry) | The authored claims, concepts and cuts that `generated/semantics.md` reports. The handle registry is a different term (§3.7). | `registry`, `Claim` (`tools/Tools/SemanticsRegistry.lean`) | — | — | Every use: "semantics", "handle", "claim", "claims", or in code. |
 | **claim** (registry claim) | An entry of the semantics registry: a question with a concept, a role, a title and a pointer. | `Claim` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **role** | The proof role of a claim, one of `Role`'s words. A role is never a status and never a scope. | `Role` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **pointer** | What a claim points at: a witness, a ledger goal, a refutation, an absence with its reason, or an assumption with its source. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
+| **pointer** | What a claim points at: a witness or planned goal, a refutation, an absence with its reason, or an assumption with its source. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **concept** | One of the ten semantic concepts of `docs/core/semantics.md`, by its id. | `Concept` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **cut** | An applicability decision: what a concept's claims exclude, by decisions row. | `Cut` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **literature relation** | How a claim uses a source: definition used, proof technique, adapted result, analogy, excluded feature. | `LiteratureRef` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
-| **ledger** (proof ledger) | The ProofGraph record of goals per scope, each wanted or checked. The fork ledger is a different term (§3.6). | `Obligation`, `check` (`tools/ProofGraph/Ledger.lean`) | — | — | — |
-| **ledger goal** | An obligation declared by `#proof_wanted` and retired when its proof lands. No open ledger goal does not mean the semantics is finished. | `readGoal` (`tools/ProofGraph/Ledger.lean`); `#proof_wanted` (`src/Effect4/Laws/Auto/Obligations.lean`) | — | — | — |
-| **obligation** | A statement owed for a named purpose: a ledger goal, a claim or a contract item. | `Obligation` (`tools/ProofGraph/Ledger.lean`) | proof obligation (standard) | — | — |
+| **planned goal** (goal) | A theorem whose body is `sorry`, declared by `proof_goal` and tagged. Downstream proofs use it; its proof replaces it in place. No open planned goal does not mean the semantics is finished. | `isGoal` (`tools/ProofGraph/Goal.lean`) | a blueprint's stated lemma (leanblueprint, LeanArchitect, by name) | ledger goal | — |
+| **modulo** | Of a theorem: its proof reaches planned goals, so it is proved from them, not proved. | `Standing` (`tools/ProofGraph/Goal.lean`) | — | — | — |
+| **obligation** | A statement owed for a named purpose: a planned goal, a claim or a contract item. | `elabGoal` (`tools/ProofGraph/Goal.lean`) | proof obligation (standard) | — | — |
 | **placement** (obligation placement) | The five things written before an obligation is worked (§6.5). The registry's declaration placement, tagged or inherited, is a different term. | — | — | — | — |
 | **consumer** | The declaration or claim that uses a lemma. | — | — | — | — |
 | **premise** (hypothesis) | An assumption of a theorem. A conditional theorem leaves its premises open. | — | — | — | — |
@@ -453,13 +454,13 @@ the artifact that reports it, and one word means one thing in all of them.
 
 | Term | Meaning here | Tree anchor | Literature | Do not use | Qualifier |
 | --- | --- | --- | --- | --- | --- |
-| **proved** | A theorem that the kernel accepted within the trust ceiling, cited by name and path. Never said of a paper; a declared ledger goal is not proved. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
+| **proved** | A theorem that the kernel accepted within the trust ceiling, cited by name and path. Never said of a paper; a planned goal is not proved, and a theorem modulo one is not proved. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **reproduced** | A byte comparison against a fresh producer run (`make check-gen`). | `Makefile` | constructive check (Mokhov, Mitchell, Peyton Jones, by name, DI-32) | — | — |
 | **tested** | A finite checker or host run over named inputs passed. | — | — | — | — |
 | **stamped** | A verifying trace over a producer's inputs, with no claim about the committed bytes. No group carries it since 2026-09-13. | — | verifying trace (DI-32) | — | — |
 | **assumed** | Stated and not checked: an external assumption, with its source and its bounds. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **reading** | Established by reading the named source or text, with no run and no proof. | — | — | — | — |
-| **declared** (wanted) | A ledger goal that is declared and not yet proved. | `readGoal` (`tools/ProofGraph/Ledger.lean`) | — | — | — |
+| **declared** (wanted) | A planned goal that is declared and not yet proved. | `isGoal` (`tools/ProofGraph/Goal.lean`) | — | — | — |
 | **refuted** | A registry claim that a counterexample refutes. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **absent** | A registry claim with no witness, goal or refutation, and a stated reason. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **exists** (status) | Code without the theorem that its claim needs (the system map's status word). | — | — | — | — |
@@ -649,14 +650,15 @@ flowchart LR
     CLAIM["claim"]
     CON["concept"]
     WIT["witness"]
-    GOAL["ledger goal"]
+    GOAL["planned goal"]
     CE["counterexample"]
     REG -->|holds| CLAIM
     CLAIM -->|belongs to| CON
     CLAIM -->|points at| WIT
     CLAIM -->|points at| GOAL
     CLAIM -->|points at| CE
-    GOAL -->|is retired when proved by| WIT
+    WIT -->|rests on, modulo| GOAL
+    GOAL -->|is replaced in place by| WIT
   end
   AGR -.->|can be the| WIT
 ```
@@ -748,7 +750,7 @@ Each: registry claim id, role and pointer. Status is generated, never written he
 
 ```text
 - Concept: <one of the ten in docs/core/semantics.md>; property: <the required property>.
-- Question: registry claim <id> (role <role>), or ledger goal <name>; consumer: <name>.
+- Question: registry claim <id> (role <role>), or planned goal <name>; consumer: <name>.
 - Reach: the judgment, observation, fragment and hypotheses; the decisions rows and register lines.
 - Does not establish: the open premises, invariant versus progress, safety versus liveness,
   the fragment, the host boundary.

@@ -22,10 +22,10 @@ deriving Repr, Inhabited, BEq
 
 /-- What the claim points at. Authored; never a status (§3 derives the status). -/
 inductive Pointer
-  /-- a plain theorem stating the claim (not `theorem`, a keyword, which v2 had to escape) -/
+  /-- a theorem stating the claim, or a planned goal (`proof_goal`, decisions row 203); its status is
+  derived from its proof: wanted for a goal, modulo when it rests on goals, proved otherwise (not
+  `theorem`, a keyword, which v2 had to escape) -/
   | witness (name : Name)
-  /-- a ledger goal: a theorem whose type concludes `ProofGraph.Obligation p` -/
-  | goal (name : Name)
   /-- a theorem refuting the claim, and the register row that records it -/
   | refutedBy (registerId : String) (witness : Name)
   /-- no witness, no goal, no refutation; the reason is required -/
@@ -70,21 +70,14 @@ structure Cut where
 deriving Repr, Inhabited
 
 /-- A requirement row of the system map (`docs/core/system-map.md` §8) with the plan nodes that
-state it in Lean: ledger goals or proved theorems. Its status is derived from theirs. -/
+state it in Lean: planned goals or theorems. Its status is derived from theirs. -/
 structure Requirement where
   id : String                     -- the row, `R1` … `R13`
   title : String
   top : List Name
-  /-- the parts of the row not yet stated as plan nodes, each with what it waits on; while one
-  remains, the requirement is open whatever its nodes' statuses -/
+  /-- the parts of the row not yet stated as goals, each with what it waits on; while one remains,
+  the requirement is open whatever its nodes' statuses -/
   openParts : List String := []
-deriving Repr, Inhabited
-
-/-- An authored reduction: the conditional theorem `reduction` reduces the plan node `target`
-(`ProofGraph.Plan`). The association is authored; the edge is kernel-checked, never trusted. -/
-structure Reduction where
-  target : Name
-  reduction : Name
 deriving Repr, Inhabited
 
 structure Registry where
@@ -94,8 +87,7 @@ structure Registry where
   cuts : List Cut
   /-- the requirements with plan nodes, in the system map's order -/
   requirements : List Requirement := []
-  reductions : List Reduction := []
-  /-- module prefixes whose ledger goals join the plan as nodes -/
+  /-- module prefixes whose planned goals join the plan as nodes -/
   planScope : List Name := []
 deriving Repr, Inhabited
 
@@ -779,13 +771,6 @@ def registry : Registry where
       openParts := ["load inputs, the environment snapshot and the seed: designed (the 2026-09-10 Config route B), not implemented (decisions rows 51, 83)",
         "supplied values fit the admitted load requirements: restates M5 (loadsTyped, the retired ledger's typedState_load) when Config lands",
         "the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)"] }
-  ]
-  reductions := [
-    { target := `Effect4.Program.Typed.m7_proved, reduction := `Effect4.Program.Typed.m7_of_ledger },
-    { target := `Effect4.Program.Typed.loadsTyped,
-      reduction := `Effect4.Program.Typed.loadsTyped_of_denotesTyped_typed },
-    { target := `Effect4.Program.Typed.denotesTyped,
-      reduction := `Effect4.Program.Typed.denotesTyped_of_provideLayer }
   ]
   planScope := [`Effect4]
 

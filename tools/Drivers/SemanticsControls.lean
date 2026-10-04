@@ -98,10 +98,10 @@ private def negativeCases : Array ReportCase := #[
   { label := "default shared by two concepts"
     registry := { base with concepts := [one, { two with defaultModules := [fixtureModule] }] }
     expected := #[#["Test.Audit.SemanticsCensus", "duplicate"]] },
-  { label := "duplicate ledger goal"
-    registry := { base with claims := [claim "first-goal" (.goal (fixtureName `checkedGoal)),
-                                      claim "second-goal" (.goal (fixtureName `checkedGoal))] }
-    expected := #[#["checkedGoal", "duplicate"]] },
+  { label := "duplicate planned goal"
+    registry := { base with claims := [claim "first-goal" (.witness (fixtureName `wantedGoal)),
+                                      claim "second-goal" (.witness (fixtureName `wantedGoal))] }
+    expected := #[#["wantedGoal", "duplicate"]] },
   { label := "stale theorem"
     registry := withPointer (.witness (fixtureName `missingWitness))
     expected := #[#["fixture-claim", "missingWitness", "Unknown constant"]] },
@@ -147,18 +147,18 @@ private def negativeCases : Array ReportCase := #[
     expected := #[#["fixture-claim", "semantics", "not a theorem"]] },
   { label := "plain witness outside axiom ceiling", registry := withPointer (.witness `Classical.em)
     expected := #[#["fixture-claim", "Classical.em", "disallowed axioms"]] },
-  { label := "ordinary theorem is not a goal", registry := withPointer (.goal (fixtureName `firstWitness))
-    expected := #[#["fixture-claim", "firstWitness", "obligation"]] },
-  { label := "missing ledger markers", registry := withPointer (.goal (fixtureName `missingGoal))
-    expected := #[#["fixture-claim", "missingGoal", "missing"]] },
-  { label := "stale wanted beside checked", registry := withPointer (.goal (fixtureName `bothGoal))
-    expected := #[#["fixture-claim", "bothGoal", "stale"]] },
-  { label := "checked proof of a different proposition"
-    registry := withPointer (.goal (fixtureName `wrongCheckedGoal))
-    expected := #[#["fixture-claim", "wrongCheckedGoal", "proposition changed"]] },
-  { label := "wanted marker of a different proposition"
-    registry := withPointer (.goal (fixtureName `wrongWantedGoal))
-    expected := #[#["fixture-claim", "wrongWantedGoal", "placeholder proposition changed"]] },
+  { label := "refutation resting on a goal"
+    registry := withPointer (.refutedBy "E4-TEST-CE-001" (fixtureName `restingWitness))
+    expected := #[#["fixture-claim", "restingWitness", "rests on planned goals"]] },
+  { label := "refutation that is a goal"
+    registry := withPointer (.refutedBy "E4-TEST-CE-001" (fixtureName `wantedGoal))
+    expected := #[#["fixture-claim", "wantedGoal", "is a planned goal"]] },
+  { label := "requirement top that is not a theorem"
+    registry := { base with requirements := [{ id := "R0", title := "A", top := [fixtureName `semantics] }] }
+    expected := #[#["plan", "semantics", "not a theorem"]] },
+  { label := "requirement top outside the axiom ceiling"
+    registry := { base with requirements := [{ id := "R0", title := "A", top := [`Classical.em] }] }
+    expected := #[#["plan", "Classical.em", "disallowed axioms"]] },
   { label := "blank absence reason", registry := withPointer (.absent "  ")
     expected := #[#["fixture-claim", "reason"]] },
   { label := "blank assumption source", registry := withPointer (.assumed " " "Fixture reason")
@@ -184,22 +184,42 @@ private def checkPositive : MetaM Unit := do
     throwError "semantics controls: second imported attribute was not loaded"
   let report ← accepted "all statuses" { base with
     claims := [claim "plain" (.witness (fixtureName `firstWitness)),
-               claim "checked" (.goal (fixtureName `checkedGoal)),
-               { (claim "wanted" (.goal (fixtureName `wantedGoal))) with contestedBy := ["E4-TEST-CE-003"] },
-               claim "extracted" (.goal (fixtureName `extractedGoal.part1)),
+               claim "resting" (.witness (fixtureName `restingWitness)),
+               { (claim "wanted" (.witness (fixtureName `wantedGoal))) with contestedBy := ["E4-TEST-CE-003"] },
+               claim "sketched" (.witness (fixtureName `sketchedGoal)),
+               claim "part" (.witness (fixtureName `sketchedGoal.part1)),
                claim "refuted" (.refutedBy "E4-TEST-CE-001" (fixtureName `firstWitness)),
                claim "absent" (.absent "No fixture witness is claimed"),
                claim "assumed" (.assumed "External fixture" "Not locally proved")]
-    cuts := [cut "fixture-one" 1] }
+    cuts := [cut "fixture-one" 1]
+    requirements := [{ id := "R0", title := "Fixture requirement", top := [fixtureName `restingWitness] },
+                     { id := "R1", title := "Proved fixture requirement", top := [fixtureName `firstWitness] }]
+    planScope := [fixtureModule] }
   let claims ← arrayField report "claims"
-  for (id, status) in #[("plain", "proved"), ("checked", "proved"), ("wanted", "wanted"),
-                       ("extracted", "wanted"),
+  for (id, status) in #[("plain", "proved"), ("resting", "modulo"), ("wanted", "wanted"),
+                       ("sketched", "modulo"), ("part", "wanted"),
                        ("refuted", "refuted"), ("absent", "absent"), ("assumed", "assumed")] do
     expectString (← field (← named claims "id" id) "status") "_tag" status
   expectString (← field (← named claims "id" "plain") "status") "by" "theorem"
-  expectString (← field (← named claims "id" "checked") "status") "by" "ledger"
-  -- an extracted part is pending by its extraction tag, with no placeholder
-  expectString (← field (← named claims "id" "extracted") "status") "by" "extraction"
+  expectString (← field (← named claims "id" "wanted") "status") "by" "goal"
+  -- a theorem that uses a goal is proved modulo exactly the goals its proof reaches
+  let restsOn (id : String) : MetaM (Array Json) := do
+    arrayField (← field (← named claims "id" id) "status") "restsOn"
+  unless (← restsOn "resting") == #[toJson s!"{fixtureModule}.wantedGoal"] do
+    throwError "semantics controls: the resting witness does not rest on exactly wantedGoal"
+  unless (← restsOn "sketched") == #[toJson s!"{fixtureModule}.sketchedGoal.part1",
+      toJson s!"{fixtureModule}.sketchedGoal.part2"] do
+    throwError "semantics controls: the sketch does not rest on exactly its two parts"
+  -- the plan: R0 rests on the goal, R1 is proved; the parts no requirement reaches are listed
+  let plan ← field report "plan"
+  let reqs ← arrayField plan "requirements"
+  expectString (← named reqs "id" "R0") "status" "open"
+  expectString (← named reqs "id" "R1") "status" "proved"
+  unless (← arrayField (← named reqs "id" "R0") "next") == #[toJson s!"{fixtureModule}.wantedGoal"] do
+    throwError "semantics controls: R0's next goal is not wantedGoal"
+  unless (← arrayField plan "unplacedGoals") == #[toJson s!"{fixtureModule}.sketchedGoal.part1",
+      toJson s!"{fixtureModule}.sketchedGoal.part2"] do
+    throwError "semantics controls: the unplaced goals are not the sketch's parts"
   let wanted ← named claims "id" "wanted"
   let contested ← arrayField wanted "contestedBy"
   expectString (← named contested "id" "E4-TEST-CE-003") "registerStatus" "SEEDED"
@@ -217,7 +237,7 @@ private def checkPositive : MetaM Unit := do
     expectString placed "placement" kind
   let concepts ← arrayField report "concepts"
   let counts ← field (← named concepts "id" "fixture-one") "counts"
-  for (key, expected) in #[("claims", 7), ("proved", 2), ("wanted", 2), ("refuted", 1),
+  for (key, expected) in #[("claims", 8), ("proved", 1), ("modulo", 2), ("wanted", 2), ("refuted", 1),
                           ("absent", 1), ("assumed", 1)] do
     let actual ← checked key (counts.getObjValAs? Nat key)
     unless actual == expected do throwError "semantics controls: count {key}: {actual} != {expected}"

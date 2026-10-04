@@ -3,8 +3,8 @@ import Effect4.Laws.Auto.Obligations
 import Effect4.Machine.Stores
 
 /-! Phase B statements and command controls for generated indexed columns.
-All propositions are wanted obligations, with no authored proof bodies. Preserve this
-pre-search copy before allowing the instrument to discharge already-closed projections. -/
+The `Effect4.TypedState` bank closes every statement but `duplicate_position`, which stays a planned
+goal (decisions row 203). -/
 open Effect4.Program.Typed Effect4.Machine
 
 namespace Test.IndexedColumnDraft
@@ -27,24 +27,27 @@ def refLeafType {W : Type} (P : Preds W) : W → RefKey → Val → Prop := P.He
 def cellLeafType {W : Type} (P : Preds W) : W → DeferredKey → Cell → Prop := P.PromiseCell
 
 theorem refs_projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
-    ProofGraph.Obligation (SampleOk P w .root x →
-      ∀ i v, x.refs[i]? = some v → P.HeapCell w ⟨i⟩ v) := ⟨⟩
+    SampleOk P w .root x →
+      ∀ i v, x.refs[i]? = some v → P.HeapCell w ⟨i⟩ v := by
+  aesop (rule_sets := [Effect4.TypedState])
 
 theorem cells_projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
-    ProofGraph.Obligation (SampleOk P w .root x →
-      ∀ i v, x.cells[i]? = some v → P.PromiseCell w ⟨i⟩ v) := ⟨⟩
+    SampleOk P w .root x →
+      ∀ i v, x.cells[i]? = some v → P.PromiseCell w ⟨i⟩ v := by
+  aesop (rule_sets := [Effect4.TypedState])
 
 theorem construct {W : Type} (P : Preds W) (w : W) (x : Sample) :
-    ProofGraph.Obligation ((∀ i v, x.refs[i]? = some v → P.HeapCell w ⟨i⟩ v) →
-      (∀ i v, x.cells[i]? = some v → P.PromiseCell w ⟨i⟩ v) → SampleOk P w .root x) := ⟨⟩
+    (∀ i v, x.refs[i]? = some v → P.HeapCell w ⟨i⟩ v) →
+      (∀ i v, x.cells[i]? = some v → P.PromiseCell w ⟨i⟩ v) → SampleOk P w .root x := by
+  aesop (rule_sets := [Effect4.TypedState])
 
 theorem empty {W : Type} (P : Preds W) (w : W) :
-    ProofGraph.Obligation (SampleOk P w .root ⟨[], []⟩) := ⟨⟩
+    SampleOk P w .root ⟨[], []⟩ := by
+  aesop (rule_sets := [Effect4.TypedState])
 
 def onlyFirst : Preds Unit := ⟨fun _ key _ => key.index = 0, fun _ _ _ => True⟩
-theorem duplicate_position (v : Val) :
-    ProofGraph.Obligation (¬ SampleOk onlyFirst () .root ⟨[v, v], []⟩) := ⟨⟩
-#proof_wanted duplicate_position
+proof_goal duplicate_position (v : Val) :
+    ¬ SampleOk onlyFirst () .root ⟨[v, v], []⟩
 end Test.IndexedColumnDraft
 
 namespace Test.IndexedColumnDraft.Sibling
@@ -65,7 +68,8 @@ def sources : List Row := [
 #typed_state Test.IndexedColumnDraft.Sibling.Sample using sources columns Test.IndexedColumnDraft.Sibling.Sample
 -- Owning cells cannot make the sibling due occurrence disappear.
 theorem due_required {W : Type} (P : Preds W) (w : W) (x : Sample) :
-    ProofGraph.Obligation (SampleOk P w .root x → P.PromiseTable w x) := ⟨⟩
+    SampleOk P w .root x → P.PromiseTable w x := by
+  aesop (rule_sets := [Effect4.TypedState])
 end Test.IndexedColumnDraft.Sibling
 
 namespace Test.IndexedColumnDraft.NoIndex
@@ -129,8 +133,9 @@ def columnType {W : Type} (leaf : W → RefKey → Nat → Prop) : W → List Na
   Columns.Sample_items leaf
 
 theorem projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
-    ProofGraph.Obligation (SampleOk P w .root x →
-      ∀ i v, x.items[i]? = some v → P.NatCell w ⟨i⟩ v) := ⟨⟩
+    SampleOk P w .root x →
+      ∀ i v, x.items[i]? = some v → P.NatCell w ⟨i⟩ v := by
+  aesop (rule_sets := [Effect4.TypedState])
 end Test.IndexedColumnDraft.NatDirect
 
 namespace Test.IndexedColumnDraft.NatNested
@@ -153,8 +158,8 @@ def columnType {W : Type} (leaf : W → RefKey → Nat → Prop) : W → List Na
   Columns.Leaf_items leaf
 
 theorem projection {W : Type} (P : Preds W) (w : W) (x : Sample) :
-    ProofGraph.Obligation (SampleOk P w .root x →
-      ∀ i v, x.child.items[i]? = some v → P.NatCell w ⟨i⟩ v) := ⟨⟩
+    SampleOk P w .root x →
+      ∀ i v, x.child.items[i]? = some v → P.NatCell w ⟨i⟩ v := by
+  aesop (rule_sets := [Effect4.TypedState])
 end Test.IndexedColumnDraft.NatNested
 
-#typed_state_obligations Test.IndexedColumnDraft ceiling 8 using aesop (rule_sets := [Effect4.TypedState])

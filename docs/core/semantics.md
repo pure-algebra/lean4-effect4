@@ -74,7 +74,7 @@ a stated correspondence. The unrestricted bind counterexample (`E4-TYPED-CE-030`
 settle every possible weakest-precondition interpretation.
 
 A claim's title, role and selected evidence express an authored interpretation. The printed
-proposition states exactly what its theorem proves or its ledger goal requests. Checking a theorem
+proposition states exactly what its theorem proves or its planned goal requests. Checking a theorem
 does not check the English interpretation. Refutation and contest links therefore expose the
 registered attacked statement and revision alongside the witness. Historical attacks do not
 automatically refute repaired propositions.
@@ -88,7 +88,7 @@ alone proves termination or eventual host cooperation.
 
 The generated report checks every concept's selected claims in the loaded environment. A
 concept's claims are a selection, not a complete inventory: an owed property is made visible as
-an `absent` claim, and a ledger goal the registry does not name is not in the report. Generated tables own evidence status, propositions,
+an `absent` claim, and a planned goal the registry does not name is not in the report. Generated tables own evidence status, propositions,
 and counts; prose explains meaning, scope, and boundaries. Cuts own applicability.
 
 ### 1.2 API and Evidence Boundary
@@ -184,13 +184,13 @@ evidence status. The [tooling follow-up](../research/2026-10-01-semantics/types-
 records the source-resolution and rendering gaps and two bounded adoption slices. Planned
 prerequisites stay distinct from checked theorem applications.
 
-The plan (`tools/ProofGraph/Plan.lean`) holds that distinction mechanically. A ledger goal states a
-wanted proposition before its proof exists. A conditional theorem registered as a reduction of a
-goal is the decomposition, in the style of `m7_of_ledger`. It becomes an edge only when the kernel
-checks the implication from the matched premise nodes to the goal, within the semantic ceiling. A premise that no node matches is loose, and it keeps the goal from being ready. Statuses
-are derived: declared, reduced, ready, proved. The plan section of `generated/semantics.md` renders
-them per requirement. This is the blueprint method of formalization projects, with the authored
-edges replaced by checked implications and no `sorry` stubs.
+The plan (`tools/ProofGraph/Plan.lean`) holds that distinction mechanically (decisions row 203). A
+planned goal (`proof_goal`) states a wanted proposition before its proof exists, as a theorem whose
+body is `sorry`. Downstream proofs use it, so a decomposition is an ordinary theorem whose proof
+uses goals, in the style of `m7_of_ledger`. The kernel checks it when it is added. A node's status
+is read from its proof, with goals as leaves: goal, modulo the goals it rests on, or proved. The
+plan section of `generated/semantics.md` renders them per requirement. This is the blueprint
+method of formalization projects, with the edges read from proof terms rather than authored.
 
 ## 2. The Ten Semantic Concepts
 

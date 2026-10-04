@@ -2,6 +2,7 @@ import Lean
 import Lean.Util.CollectAxioms
 import ProofGraph.Audit
 import ProofGraph.Axioms
+import ProofGraph.Goal
 import Effect4
 
 /-!
@@ -115,7 +116,6 @@ private def auditImplementationModules : List Name :=
   , `Effect4.Laws.Program.Typed.PositionGate
   , `Effect4.Laws.Program.Typed.TypedStateDecl
   , `Effect4.Laws.Auto.Frames
-  , `Effect4.Laws.Auto.Obligations
   , `Effect4.Laws.Program.Typed.TypedSources
   , `Effect4.Laws.Auto.AnswerGate
   -- Semantic concept tags and their census are environment instrumentation.
@@ -454,12 +454,28 @@ elab "#effect4_axiom_gate" : command => do
     (moduleOf? environment declaration).any choiceImplementationModules.contains ||
       exactImplementationDeclarations.contains declaration
   let t4 ← liftIO IO.monoMsNow
-  -- one memoized traversal of the dependency graph serves every declaration below
-  let (reachedAll, memoAll) := ProofGraph.reachedAxiomsMany environment declarations {}
+  -- one memoized traversal of the dependency graph serves every declaration below. A planned
+  -- goal (decisions row 203) is a leaf of the walk: it is reported among the axioms by its name,
+  -- and its `sorry` is never entered, so `sorryAx` reaches a declaration only as a goal's body.
+  let isGoal := ProofGraph.isGoal environment
+  let (reachedAll, memoAll) := ProofGraph.reachedAxiomsMany environment declarations {} isGoal
   let mut memo : ProofGraph.AxiomMemo := memoAll
+  let mut goalCount := 0
+  let mut resting := 0
   for (declaration, reached) in declarations.zip reachedAll do
     let some axioms := reached
       | throwError "Effect4 axiom gate: axiom collection exhausted its step budget at {declaration}"
+    if isGoal declaration then
+      -- a goal is a theorem whose body is `sorry`, declared outside the application root
+      let some (.thmInfo info) := environment.find? declaration
+        | throwError "Effect4 goal gate: goal {declaration} is not a theorem"
+      unless ProofGraph.bareSorry info.value do
+        throwError "Effect4 goal gate: the body of goal {declaration} is not `sorry`"
+      if (moduleOf? environment declaration).any apiModules.contains then
+        throwError "Effect4 goal gate: goal {declaration} is in a module the Effect4 root reaches"
+      goalCount := goalCount + 1
+      continue
+    if axioms.any isGoal then resting := resting + 1
     -- An auxiliary or equation lemma inherits the admission of the declaration
     -- it was generated from; see `admissionAncestors` for which parents count.
     let bound :=
@@ -468,6 +484,7 @@ elab "#effect4_axiom_gate" : command => do
       else
         allowedAxioms
     for axiomName in axioms do
+      if isGoal axiomName then continue
       if forbiddenAxioms.contains axiomName then
         throwError
           "Effect4 axiom gate: declaration {declaration} reaches forbidden axiom {axiomName}"
@@ -482,7 +499,7 @@ elab "#effect4_axiom_gate" : command => do
   for exempted in choiceImplementationModules do
     let mut used := false
     for declaration in byModule.getD exempted #[] do
-      let (reached, memo') := (ProofGraph.reachedAxioms environment declaration).run memo
+      let (reached, memo') := (ProofGraph.reachedAxioms environment declaration isGoal).run memo
       memo := memo'
       if (reached.getD #[]).contains ``Classical.choice then
         used := true
@@ -494,7 +511,7 @@ elab "#effect4_axiom_gate" : command => do
     if !(declarations.contains exempted) then
       throwError
         "Effect4 axiom gate: exact implementation exemption names missing declaration {exempted}"
-    let (reached, memo') := (ProofGraph.reachedAxioms environment exempted).run memo
+    let (reached, memo') := (ProofGraph.reachedAxioms environment exempted isGoal).run memo
     memo := memo'
     if !(reached.getD #[]).contains ``Classical.choice then
       throwError
@@ -513,6 +530,7 @@ elab "#effect4_axiom_gate" : command => do
   let t6 ← liftIO IO.monoMsNow
   logInfo
     m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; phases (ms): sources and closure {t1 - t0}, library roots {t2 - t1}, declarations {t3 - t2}, resolution {t4 - t3}, axioms {t5 - t4}, exemptions {t6 - t5}; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
+  logInfo m!"Effect4 goal gate: {goalCount} planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; {resting} declaration(s) rest on goals; no other declaration reaches sorryAx"
 
 /-!
 ## Re-pinning the exact choice list
