@@ -5,11 +5,11 @@ import Effect4.Laws.Program.DenoteB
 /-!
 # p4: dogfood 1's rate limiter
 
-The rc.112 source is `Test/Dogfood/rc112/p4-rate-limiter.ts`. It admits at most three requests per
-1000 ms window, refills the window from a detached daemon, runs five requests at once and
-interrupts the daemon at shutdown. Its state is one record in one `Ref`, and `Ref.modify` admits a
-request in one atomic step. `run-p4.ts` ran it on effect 4.0.0-rc.112 under bun 1.4.2, and it
-answered `[3, 2, 3]` (`Test/Dogfood/rc112/hostruns.log`).
+The rc.112 source is `Test/Dogfood/rc112/p4-rate-limiter.ts`. It lets at most three requests
+through per 1000 ms window, refills the window from a detached daemon, runs five requests at once
+and interrupts the daemon at shutdown. Its state is one record in one `Ref`, and `Ref.modify`
+decides a request in one atomic step. `run-p4.ts` ran it on effect 4.0.0-rc.112 under bun 1.4.2,
+and it answered `[3, 2, 3]` (`Test/Dogfood/rc112/hostruns.log`).
 
 This battery ports the model probe's program 4
 (`git:ce2ece4f:docs/research/2026-09-30-model-probe/programs/ProbePrograms345.lean`, section
@@ -18,14 +18,14 @@ This battery ports the model probe's program 4
 encoding is dogfood 1's design: three number cells, and a request that reads, then updates.
 
 **Changes since 2026-09-30.**
-* The request answers whether it admitted, and the program answers rc.112's triple as a tuple
+* The request answers whether it went through, and the program answers rc.112's triple as a tuple
   (row 159). The probe answered the pair `(admitted, rejected)` only, which is the triple's first
   two items. The probe could have written the triple with nested pairs, so this change is the
   encoding's, not the language's.
 * No construct the probe used changed its spelling.
 
 **What the language refuses** (section 4): the `Window` record in one cell (`requestNotSubtype`,
-the cell row expects `nat`), and the atomic admit, which needs `Ref.modify` with a binder term.
+the cell row expects `nat`), and the atomic decision, which needs `Ref.modify` with a binder term.
 `Ref.update` takes one of the five names of `fnNames` (`src/Effect4/Program/Native.lean`).
 
 **Waits on:** R4, rows 42–43 steps 3–5 (a record cell and a function row with a binder term), and
@@ -50,7 +50,7 @@ def refill (used : TermSrc) : Src NativeOp :=
       body := fun _ => andThen (Effect.sleep (nat 1000)) (Ref.set used (nat 0))
       step := fun c _ => c }
 
-/-- One request: read, optionally yield, then admit or reject, and answer the decision. The read
+/-- One request: read, optionally yield, then accept or reject, and answer the decision. The read
 and the write are two store steps, so the request is not atomic. -/
 def request (yielding : Bool) (used admitted rejected : TermSrc) : Src NativeOp :=
   bindName "current" (Ref.get used) fun current =>
@@ -60,7 +60,7 @@ def request (yielding : Bool) (used admitted rejected : TermSrc) : Src NativeOp 
           (andThen (Ref.update .incr admitted) (succeed (bool true))))
         (andThen (Ref.update .incr rejected) (succeed (bool false))))
 
-/-- One admitted decision as a count. -/
+/-- One accepted request as a count. -/
 def countOne (decision : TermSrc) : TermSrc := app "ite" [decision, nat 1, nat 0]
 
 /-- The program (`p4-rate-limiter.ts`, `program`): three cells, the daemon, five forked requests
@@ -116,7 +116,7 @@ def rc112 : ExitV := .success (.list [.nat 3, .nat 2, .nat 3])
 -- (`git:ce2ece4f:docs/research/2026-09-30-model-probe/programs/verify.md`, PROG-12).
 #guard answer false = some rc112
 -- Red control: with a yield between the read and the write, all five requests read 0 before any
--- write, so all five admit. This is dogfood 1's `[5, 0]` race; the atomic `Ref.modify` of the
+-- write, so all five go through. This is dogfood 1's `[5, 0]` race; the atomic `Ref.modify` of the
 -- rc.112 program has no such interleaving, and the encoding cannot spell it (section 4).
 #guard answer true = some (.success (.list [.nat 5, .nat 0, .nat 5]))
 
@@ -161,7 +161,7 @@ def windowCell : Module NativeOp :=
   some (.requestNotSubtype "refMake" (.prod .nat .nat) .nat)
 -- Green control: a number cell builds, and so does the nearest update, `incr`.
 #guard verdict (program (bindName "r" (Ref.make (nat 0)) fun r => Ref.update .incr r)) = "built"
--- The admit step `w.used < limit ? … : …` is a function the update rows cannot take: they take
+-- The decision step `w.used < limit ? … : …` is a function the update rows cannot take: they take
 -- one of five names (row 43 step 3 retires the alphabet for a binder term).
 #guard Effect4.Program.fnNames.length = 5
 

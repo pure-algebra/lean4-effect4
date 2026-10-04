@@ -72,7 +72,7 @@ def answerOf (exit : Option Effect4.Machine.ExitV) (rc112 : Effect4.Machine.Exit
 /-- How far one program gets today: the stage its README row quotes.
 
 * `refused`: each part of the rc.112 program that the language refuses, with its `verdict`;
-* `admitted`: the battery's encoding is elaborated, typed and admitted (`Api.Author.build`);
+* `admitted`: `Api.Author.build` elaborates, types and admits the battery's program;
 * `answer`: its run against rc.112's recorded answer;
 * `printed`: `Api.print` answers TypeScript syntax for it;
 * `readBack`: `Api.readable` holds, so reading its printing gives the program back. -/
