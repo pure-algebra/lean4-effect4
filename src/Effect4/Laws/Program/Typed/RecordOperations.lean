@@ -353,4 +353,97 @@ theorem record_setType_fits {w : World} {value replacement : Val} {target answer
   obtain ⟨out, hout, hfit⟩ := record_setOf_fits hbranchType hbranchFit hreplacement
   exact ⟨out, hout, fits_joinResults ha hfit⟩
 
+mutual
+/-- **Term soundness for membership (TY-07, proved).** Under a signature whose atoms are the
+native table's, a term that types and evaluates over values fitting their types evaluates to a
+value that fits the term's type: the environment's fit at a variable, `fits_lit` at a literal,
+`atomFits` at an application over the fitted argument values. -/
+theorem evalTerm_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) (w : World) (t : Term) (env : List Val)
+    (tys : List Ty) (ty : Ty) (v : Val) (hfit : FitsAll w env tys)
+    (hty : termTy sig tys t = some ty) (hev : evalTerm env t = some v) : Fits w v ty := by
+  cases t with
+  | var i => exact hfit.get? hev hty
+  | lit l =>
+    have hty' : some (litArgTy false l) = some ty := hty
+    cases hty'
+    exact fits_lit w false l v hev
+  | app atom args =>
+    have hty' : (argsTy sig tys (sig.constAtom atom) args).bind (sig.atomOf atom) = some ty := hty
+    obtain ⟨tl, hts, hatomTy⟩ := Option.bind_eq_some_iff.mp hty'
+    rw [hatom] at hatomTy
+    have hev' : (evalTerms env args).bind (nativeAtom atom) = some v := hev
+    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp hev'
+    unfold nativeAtomTy at hatomTy
+    obtain ⟨named, hname, hty2⟩ := Option.bind_eq_some_iff.mp hatomTy
+    simp only [nativeAtom, hname, Option.bind_some] at hv
+    exact atomFits named w tl ty vs v hty2
+      (evalTerms_fitsAll sig hatom hconst w args env tys (sig.constAtom atom) tl vs hfit hts hvs) hv
+  | record fields names values =>
+    obtain ⟨types, ht, hc⟩ := termTy_record_inv hty
+    have he : (evalTerms env values).bind (Machine.Record.build names) = some v := hev
+    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨out, hout, hfitout⟩ := record_build_fits hc (evalTerms_fitsAll sig hatom hconst w values env tys true types vs hfit ht hvs)
+    rw [hout] at hv
+    cases hv
+    exact hfitout
+  | field mode target name =>
+    have ht : (termTy sig tys target).bind (fun ty => Record.fieldType (mode = .optional) ty name) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    have he : (evalTerm env target).bind (fun value => Machine.Record.read (mode = .optional) value name) = some v := hev
+    obtain ⟨value, he, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨out, hout, hfitout⟩ := record_fieldType_fits hc (evalTerm_fitsAll sig hatom hconst w target env tys targetType value hfit ht he)
+    rw [hout] at hv
+    cases hv
+    exact hfitout
+  | recordSet target name replacement =>
+    have ht : ((termTy sig tys target).bind fun targetType =>
+      (argTy sig tys true replacement).bind fun replacementType =>
+      Record.setType targetType name replacementType) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨replacementType, hr, hc⟩ := Option.bind_eq_some_iff.mp hc
+    have he : ((evalTerm env target).bind fun value => (evalTerm env replacement).bind
+      fun next => Machine.Record.set value name next) = some v := hev
+    obtain ⟨value, he, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨next, hn, hv⟩ := Option.bind_eq_some_iff.mp hv
+    have hnext : Fits w next replacementType := by
+      rcases argTy_cases _ _ _ replacement replacementType hr with ⟨l, rfl, rfl⟩ | hr
+      · exact fits_lit w true l next hn
+      · exact evalTerm_fitsAll sig hatom hconst w replacement env tys replacementType next hfit hr hn
+    obtain ⟨out, hout, hfitout⟩ := record_setType_fits hc (evalTerm_fitsAll sig hatom hconst w target env tys targetType value hfit ht he) hnext
+    rw [hout] at hv
+    cases hv
+    exact hfitout
+termination_by structural t
+
+/-- The list form: the values of typed arguments fit their argument types. -/
+theorem evalTerms_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = nativeAtomTy)
+    (hconst : sig.constAtom = nativeConstAtom) (w : World) (ts : Terms) (env : List Val)
+    (tys : List Ty) (const : Bool) (tl : List Ty) (vs : List Val) (hfit : FitsAll w env tys)
+    (hty : argsTy sig tys const ts = some tl) (hev : evalTerms env ts = some vs) :
+    FitsAll w vs tl := by
+  cases ts with
+  | nil =>
+    have hty' : some ([] : List Ty) = some tl := hty
+    have hev' : some ([] : List Val) = some vs := hev
+    cases hty'
+    cases hev'
+    exact .nil
+  | cons head tail =>
+    rw [argsTy_cons] at hty
+    obtain ⟨t1, ht1, hty'⟩ := Option.bind_eq_some_iff.mp hty
+    obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp hty'
+    cases hcons
+    have hev2 : ((evalTerm env head).bind fun v =>
+        (evalTerms env tail).bind fun rest => some (v :: rest)) = some vs := hev
+    obtain ⟨v1, hv1, hev'⟩ := Option.bind_eq_some_iff.mp hev2
+    obtain ⟨vrest, hvrest, hvcons⟩ := Option.bind_eq_some_iff.mp hev'
+    cases hvcons
+    refine .cons ?_ (evalTerms_fitsAll sig hatom hconst w tail env tys const rest vrest hfit hrest hvrest)
+    rcases argTy_cases _ _ _ head t1 ht1 with ⟨value, rfl, rfl⟩ | ht1'
+    · exact fits_lit w const value v1 hv1
+    · exact evalTerm_fitsAll sig hatom hconst w head env tys t1 v1 hfit ht1' hv1
+termination_by structural ts
+end
+
 end Effect4.Program.Typed

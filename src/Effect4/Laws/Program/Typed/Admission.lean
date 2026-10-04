@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Typed.Membership
+import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Program.Checker
 import Effect4.Laws.Program.Sched
 import Effect4.Laws.Program.Signature

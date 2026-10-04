@@ -1,4 +1,6 @@
 import Effect4.Laws.Program.Typed.RecordOperations
+import Effect4.Laws.Program.Typed.Denotation
+import Effect4.Laws.Program.MeaningSound
 
 /-! Finite record-operation controls for rows 165, 178, and 195.
 These examples check local values and types. They establish no target execution claim. -/
@@ -71,6 +73,36 @@ open Effect4.Program Effect4.Program.Typed Effect4.Machine
 example (w : Typed.World) : ∃ value,
     Record.build [] [] = some value ∧ Fits w value (.record []) :=
   record_build_fits (fields := []) (types := []) rfl .nil
+
+-- The world theorem covers an actual record constructor through the term checker.
+example (w : Typed.World) : ∃ value,
+    evalTerm [] (.record [] [] .nil) = some value ∧ Fits w value (.record []) :=
+  evalTerm_progress (sig := nativeSignature) rfl (.nil : FitsAll w [] []) _ _ rfl
+
+-- Both read modes and overwrite pass through the same value operations.
+#guard evalTerm [] (.field .optional (.record [("a", true, .nat)] [] .nil) "a") =
+  some Store.Val.none
+#guard evalTerm [] (.field .required (.record [("a", false, .nat)] ["a"]
+  (.cons (.lit (.nat 7)) .nil)) "a") = some (.nat 7)
+#guard evalTerm [] (.field .required (.recordSet (.record [] [] .nil) "a"
+  (.lit (.nat 9))) "a") = some (.nat 9)
+
+-- Raw handle containment retains unknown kind bytes; the registered subset cannot replace it.
+#guard evalTerm [.handle 255 42] (.field .required
+  (.record [("a", false, .unknown)] ["a"] (.cons (.var 0) .nil)) "a") =
+  some (.handle 255 42)
+
+#print axioms Effect4.Program.RecordChecks.build
+#print axioms Effect4.Program.RecordChecks.fieldType
+#print axioms Effect4.Program.RecordChecks.setType
+#print axioms Effect4.Program.evalTerm_hasTy
+#print axioms Effect4.Program.evalTerm_isSome
+#print axioms evalTerm_fitsAll
+#print axioms evalTerm_progress
+#print axioms Effect4.Program.evalTerm_keys
+#print axioms Effect4.Program.RawHandles.evalTerm_handles
+#print axioms Effect4.Program.RawHandles.evalTerm_registered
+#print axioms Effect4.Program.Denote.evalTerm_validIn
 
 #print axioms ascending_names_sublist
 #print axioms namedFit_of_sublist_lookup

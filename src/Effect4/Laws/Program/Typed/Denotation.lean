@@ -538,6 +538,39 @@ theorem evalTerm_progress (hatom : sig.atomOf = nativeAtomTy) (hfit : FitsAll w 
     show (NativeAtom.ofName? atom).bind (fun a => a.eval vs) = some v
     rw [hname]
     exact hv
+  | .record fields names values, ty, hty => by
+    obtain ⟨types, ht, hc⟩ := termTy_record_inv hty
+    obtain ⟨vs, hvs, hfitvs⟩ := evalTerms_progress hatom hfit true values types ht
+    obtain ⟨out, hout, hfitout⟩ := record_build_fits hc hfitvs
+    refine ⟨out, ?_, hfitout⟩
+    show (evalTerms vals values).bind (Machine.Record.build names) = some out
+    rw [hvs, Option.bind_some, hout]
+  | .field mode target name, ty, hty => by
+    have ht : (termTy sig env target).bind (fun ty => Record.fieldType (mode = .optional) ty name) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom hfit target targetType ht
+    obtain ⟨out, hout, hfitout⟩ := record_fieldType_fits hc hfitvalue
+    refine ⟨out, ?_, hfitout⟩
+    show (evalTerm vals target).bind (fun value => Machine.Record.read (mode = .optional) value name) = some out
+    rw [he, Option.bind_some, hout]
+  | .recordSet target name replacement, ty, hty => by
+    have ht : ((termTy sig env target).bind fun targetType =>
+      (argTy sig env true replacement).bind fun replacementType =>
+      Record.setType targetType name replacementType) = some ty := hty
+    obtain ⟨targetType, ht, hc⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨replacementType, hr, hc⟩ := Option.bind_eq_some_iff.mp hc
+    obtain ⟨value, he, hfitvalue⟩ := evalTerm_progress hatom hfit target targetType ht
+    have hnext : ∃ next, evalTerm vals replacement = some next ∧ Fits w next replacementType := by
+      rcases argTy_cases _ _ _ replacement replacementType hr with ⟨l, rfl, rfl⟩ | hr
+      · obtain ⟨next, hn⟩ := Option.isSome_iff_exists.mp (Lit.toVal_isSome l)
+        exact ⟨next, hn, fits_lit w true l next hn⟩
+      · exact evalTerm_progress hatom hfit replacement replacementType hr
+    obtain ⟨next, hn, hnext⟩ := hnext
+    obtain ⟨out, hout, hfitout⟩ := record_setType_fits hc hfitvalue hnext
+    refine ⟨out, ?_, hfitout⟩
+    show ((evalTerm vals target).bind fun value => (evalTerm vals replacement).bind
+      fun next => Machine.Record.set value name next) = some out
+    rw [he, Option.bind_some, hn, Option.bind_some, hout]
 termination_by t => sizeOf t
 
 /-- The argument list's form. -/
@@ -2692,22 +2725,17 @@ theorem external_arm {i : Nat} {request : Term} (hfuel : p.fuel ≠ 0)
   rw [hv]
   let row := root.signature.rowOf (.external i)
   have hrow' : rowTy row requestTy = some ty := hrow
-  unfold rowTy at hrow'
-  cases hmatch : Ty.matchTemplate [] row.request.normalize requestTy.normalize with
-  | none =>
-    rw [hmatch] at hrow'
-    exact nomatch hrow'
-  | some subst =>
-    rw [hmatch] at hrow'
-    injection hrow' with hty
-    subst hty
-    have hvv := hostRow_valueVars root i hdom_lt
-    let cert : EffTy := ⟨row.answer, row.error, Env.Requirement.ofList row.requires⟩
-    have hbit : bitEntry root (.external i) cert := ⟨hdom, Ty.sub_refl row.answer, Ty.sub_refl row.error⟩
-    refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) cert hbit ?_
-    intro w' ord ans post
-    exact .pure (exitOk_instantiate subst w' cert ans hvv.1 hvv.2 post)
+  obtain ⟨subst, hmatch, hformed⟩ := rowTy_instantiated_formed hrow'
+  have hformed := (Formation.check_eq_none_iff _).mpr hformed
+  simp only [rowTy, checkRow, hmatch, hformed, Except.toOption, Option.some.injEq] at hrow'
+  cases hrow'
+  have hvv := hostRow_valueVars root i hdom_lt
+  let cert : EffTy := ⟨row.answer, row.error, Env.Requirement.ofList row.requires⟩
+  have hbit : bitEntry root (.external i) cert := ⟨hdom, Ty.sub_refl row.answer, Ty.sub_refl row.error⟩
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) cert hbit ?_
+  intro w' ord ans post
+  exact .pure (exitOk_instantiate subst w' cert ans hvv.1 hvv.2 post)
 
 /-- **`perform`**: a host row, the two asynchronous built-in rows, or a store row. -/
 theorem perform_arm {op : NativeOp} {r : Term} (hfuel : p.fuel ≠ 0)

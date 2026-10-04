@@ -119,6 +119,130 @@ theorem flatMap_subset_of_subset {α : Type} {f : α → List Handle} {l l' : Li
   obtain ⟨a, ha, hx⟩ := List.mem_flatMap.mp hx
   exact List.mem_flatMap.mpr ⟨a, h ha, hx⟩
 
+namespace RecordHandles
+
+private theorem columns_values : ∀ (ns xs : List Val) (es : List (String × Val)),
+    Record.readColumns ns xs = some es → es.map Prod.snd = xs
+  | [], [], es, h => by cases h; rfl
+  | [], _ :: _, _, h => by cases h
+  | n :: _, [], _, h => by cases n <;> cases h
+  | n :: ns, x :: xs, es, h => by
+    cases n with
+    | str name =>
+      obtain ⟨rest, hr, rfl⟩ := Option.map_eq_some_iff.mp h
+      simp only [List.map_cons, columns_values ns xs rest hr]
+    | _ => cases h
+
+private theorem frame_handles (es : List (String × Val)) :
+    Store.Val.handles (Record.frame es) = es.flatMap (fun e => Store.Val.handles e.2) := by
+  have hnames : Store.Val.handlesList (es.map (fun e => Val.str e.1)) = [] := by
+    induction es with
+    | nil => rfl
+    | cons e es ih =>
+      simp only [List.map_cons, Store.Val.handlesList, Store.Val.handles, List.nil_append, ih]
+  simp only [Record.frame, Store.Val.handles, Store.Val.handlesList, hnames,
+    List.nil_append, List.append_nil, Store.Val.handlesList_eq_flatMap, List.flatMap_map]
+
+
+private theorem entries_handles {v : Val} {es : List (String × Val)}
+    (h : Record.entries v = some es) :
+    es.flatMap (fun e => Store.Val.handles e.2) ⊆ Store.Val.handles v := by
+  obtain ⟨parts, hp, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨ns, xs⟩ := parts
+  obtain ⟨fields, hc, h⟩ := Option.bind_eq_some_iff.mp h
+  split at h
+  next hnd =>
+    cases h
+    rw [Typed.recordParts?_eq_some hp]
+    have hxs := columns_values ns xs es hc
+    simp only [Store.Val.handles, Store.Val.handlesList, List.append_nil,
+      Store.Val.handlesList_eq_flatMap]
+    rw [← hxs, List.flatMap_map]
+    exact List.subset_append_right _ _
+  next hnd => cases h
+
+private theorem canon_handles (es : List (String × Val)) :
+    (Field.canonBy Field.bytesKey es).flatMap (fun e => Store.Val.handles e.2) ⊆
+      es.flatMap (fun e => Store.Val.handles e.2) := by
+  intro k hk
+  obtain ⟨e, he, hk⟩ := List.mem_flatMap.mp hk
+  exact List.mem_flatMap.mpr ⟨e, Field.mem_canonBy he, hk⟩
+
+/-- Record construction retains only raw handle frames from its supplied values. -/
+theorem build {names : List String} {values : List Val} {v : Val}
+    (h : Record.build names values = some v) :
+    Store.Val.handles v ⊆ values.flatMap Store.Val.handles := by
+  obtain ⟨es, he, h⟩ := Option.bind_eq_some_iff.mp h
+  split at h
+  next hnd =>
+    cases h
+    rw [frame_handles]
+    have hv := (Typed.zipNames_columns names values es he).2
+    rw [← hv, List.flatMap_map]
+    exact canon_handles es
+  next hnd => cases h
+
+/-- Either field-read mode retains only raw handle frames from its input value. -/
+theorem read {optional : Bool} {value out : Val} {name : String}
+    (h : Record.read optional value name = some out) :
+    Store.Val.handles out ⊆ Store.Val.handles value := by
+  obtain ⟨result, hl, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨es, he, hr⟩ := Option.map_eq_some_iff.mp hl
+  subst result
+  have hfield : ∀ x, Field.firstOf name es = some x →
+      Store.Val.handles x ⊆ Store.Val.handles value := by
+    intro x hx k hk
+    exact entries_handles he (List.mem_flatMap.mpr ⟨(name, x), Field.firstOf_mem hx, hk⟩)
+  cases optional with
+  | true =>
+    simp only [↓reduceIte, Option.some.injEq] at h
+    subst out
+    cases hf : Field.firstOf name es with
+    | none => exact List.nil_subset _
+    | some x => exact hfield x hf
+  | false =>
+    simp only [Bool.false_eq_true, ↓reduceIte] at h
+    exact hfield out h
+
+/-- Overwrite retains only raw handle frames from the target and replacement. -/
+theorem set {value replacement out : Val} {name : String}
+    (h : Record.set value name replacement = some out) :
+    Store.Val.handles out ⊆ Store.Val.handles replacement ++ Store.Val.handles value := by
+  obtain ⟨es, he, h⟩ := Option.bind_eq_some_iff.mp h
+  cases h
+  rw [frame_handles]
+  exact List.Subset.trans (canon_handles _) (List.append_subset.mpr
+    ⟨List.subset_append_left _ _, List.Subset.trans (entries_handles he) (List.subset_append_right _ _)⟩)
+
+private theorem keys_of_handles {v : Val} {vs : List Val}
+    (h : Store.Val.handles v ⊆ vs.flatMap Store.Val.handles) :
+    v.keys ⊆ vs.flatMap Val.keys := by
+  intro k hk
+  rw [Val.keys_eq_handles] at hk
+  obtain ⟨code, hc, hk⟩ := List.mem_filterMap.mp hk
+  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp (h hc)
+  refine List.mem_flatMap.mpr ⟨value, hv, ?_⟩
+  rw [Val.keys_eq_handles]
+  exact List.mem_filterMap.mpr ⟨code, hc, hk⟩
+
+theorem build_keys {names : List String} {values : List Val} {v : Val}
+    (h : Record.build names values = some v) : v.keys ⊆ values.flatMap Val.keys :=
+  keys_of_handles (build h)
+
+theorem read_keys {optional : Bool} {value out : Val} {name : String}
+    (h : Record.read optional value name = some out) : out.keys ⊆ value.keys := by
+  have hr : Store.Val.handles out ⊆ [value].flatMap Store.Val.handles := by
+    simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using read h
+  simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using keys_of_handles hr
+
+theorem set_keys {value replacement out : Val} {name : String}
+    (h : Record.set value name replacement = some out) : out.keys ⊆ replacement.keys ++ value.keys := by
+  have hr : Store.Val.handles out ⊆ [replacement, value].flatMap Store.Val.handles := by
+    simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using set h
+  simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil] using keys_of_handles hr
+
+end RecordHandles
+
 mutual
 theorem evalTerm_keys (t : Term) (env : List Val) (v : Val) (h : evalTerm env t = some v) :
     v.keys ⊆ env.flatMap Val.keys := by
@@ -134,6 +258,21 @@ theorem evalTerm_keys (t : Term) (env : List Val) (v : Val) (h : evalTerm env t 
     rw [evalTerm_app] at h
     obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp h
     exact List.Subset.trans (nativeAtom_keys atom vs v hv) (evalTerms_keys args env vs hvs)
+  | record fields names values =>
+    have h' : (evalTerms env values).bind (Record.build names) = some v := h
+    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp h'
+    exact List.Subset.trans (RecordHandles.build_keys hv) (evalTerms_keys values env vs hvs)
+  | field mode target name =>
+    have h' : (evalTerm env target).bind (fun value => Record.read (mode = .optional) value name) = some v := h
+    obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
+    exact List.Subset.trans (RecordHandles.read_keys hr) (evalTerm_keys target env value he)
+  | recordSet target name replacement =>
+    have h' : ((evalTerm env target).bind fun value => (evalTerm env replacement).bind
+      fun next => Record.set value name next) = some v := h
+    obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
+    obtain ⟨next, hn, hs⟩ := Option.bind_eq_some_iff.mp hr
+    exact List.Subset.trans (RecordHandles.set_keys hs) (List.append_subset.mpr
+      ⟨evalTerm_keys replacement env next hn, evalTerm_keys target env value he⟩)
 termination_by structural t
 theorem evalTerms_keys (ts : Terms) (env : List Val) (vs : List Val) (h : evalTerms env ts = some vs) :
     vs.flatMap Val.keys ⊆ env.flatMap Val.keys := by
@@ -348,6 +487,21 @@ mutual
      rw [evalTerm_app] at h
      obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp h
      exact List.Subset.trans (nativeAtom_handles atom vs v hv) (evalTerms_handles args env vs hvs)
+   | record fields names values =>
+     have h' : (evalTerms env values).bind (Record.build names) = some v := h
+     obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp h'
+     exact List.Subset.trans (RecordHandles.build hv) (evalTerms_handles values env vs hvs)
+   | field mode target name =>
+     have h' : (evalTerm env target).bind (fun value => Record.read (mode = .optional) value name) = some v := h
+     obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
+     exact List.Subset.trans (RecordHandles.read hr) (evalTerm_handles target env value he)
+   | recordSet target name replacement =>
+     have h' : ((evalTerm env target).bind fun value => (evalTerm env replacement).bind
+       fun next => Record.set value name next) = some v := h
+     obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
+     obtain ⟨next, hn, hs⟩ := Option.bind_eq_some_iff.mp hr
+     exact List.Subset.trans (RecordHandles.set hs) (List.append_subset.mpr
+       ⟨evalTerm_handles replacement env next hn, evalTerm_handles target env value he⟩)
  termination_by structural t
  theorem evalTerms_handles (ts : Terms) (env : List Val) (vs : List Val)
      (h : evalTerms env ts = some vs) :

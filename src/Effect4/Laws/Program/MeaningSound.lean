@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.Handles.Term
 import Effect4.Laws.Program.DenoteB
 import Effect4.Laws.Program.Progress
 import Effect4.Laws.Program.Admit
@@ -248,43 +249,29 @@ theorem Lit.toVal_validIn (s : Stores) (l : Lit) (v : Val) (h : l.toVal = some v
   | bool b => cases h; rfl
   | str t => cases h; rfl
 
-mutual
-/-- A term over valid values evaluates to a valid value: an atom builds scalars or rearranges
-its arguments, and no term mints a handle. -/
+/-- A term over valid values evaluates to a valid value because its raw handles come from its environment. -/
 theorem evalTerm_validIn (s : Stores) (t : Term) (env : List Val) (v : Val)
     (henv : ∀ x ∈ env, x.validIn s = true) (h : evalTerm env t = some v) :
     v.validIn s = true := by
-  cases t with
-  | var i =>
-    have h' : env[i]? = some v := h
-    exact henv v (List.mem_of_getElem? h')
-  | lit l => exact Lit.toVal_validIn s l v h
-  | app atom args =>
-    rw [evalTerm_app] at h
-    obtain ⟨vs, hvs, hv⟩ := Option.bind_eq_some_iff.mp h
-    unfold nativeAtom at hv
-    obtain ⟨named, _, hv⟩ := Option.bind_eq_some_iff.mp hv
-    exact NativeAtom.eval_validIn s named vs v (evalTerms_validIn s args env vs henv hvs) hv
-termination_by structural t
+  rw [Val.validIn_eq_handles, List.all_eq_true]
+  intro code hc
+  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp (RawHandles.evalTerm_handles t env v h hc)
+  have hv := henv value hv
+  rw [Val.validIn_eq_handles, List.all_eq_true] at hv
+  exact hv code hc
+
+/-- Every returned argument remains valid in the input stores. -/
 theorem evalTerms_validIn (s : Stores) (ts : Terms) (env : List Val) (vs : List Val)
     (henv : ∀ x ∈ env, x.validIn s = true) (h : evalTerms env ts = some vs) :
     ∀ x ∈ vs, x.validIn s = true := by
-  cases ts with
-  | nil =>
-    have h' : some ([] : List Val) = some vs := h
-    cases h'
-    exact fun _ hx => nomatch hx
-  | cons head tail =>
-    rw [evalTerms_cons] at h
-    obtain ⟨v1, hv1, h'⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨rest, hrest, hcons⟩ := Option.bind_eq_some_iff.mp h'
-    cases hcons
-    intro x hx
-    cases hx with
-    | head => exact evalTerm_validIn s head env _ henv hv1
-    | tail _ hx' => exact evalTerms_validIn s tail env rest henv hrest x hx'
-termination_by structural ts
-end
+  intro x hx
+  rw [Val.validIn_eq_handles, List.all_eq_true]
+  intro code hc
+  have hc := RawHandles.evalTerms_handles ts env vs h (List.mem_flatMap.mpr ⟨x, hx, hc⟩)
+  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp hc
+  have hv := henv value hv
+  rw [Val.validIn_eq_handles, List.all_eq_true] at hv
+  exact hv code hc
 
 /-! ## The invariant and the statement -/
 

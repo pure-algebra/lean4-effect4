@@ -156,20 +156,54 @@ def pairElemOf (fam : Family) (t : Expr) : MetaM (Option (Nat × Expr)) := do
 /-- Read `g`'s signature: the first binder whose type is a family member, or, when there is
 none, the first whose type is a list of one (the list sibling), or a list of products holding one
 (the field-list sibling). -/
-def memberOf (fam : Family) (g : Name) : MetaM Member := do
+def memberOf? (fam : Family) (g : Name) : MetaM (Option Member) := do
   let info ← getConstInfoDefn g
   forallTelescope info.type fun xs _ => do
     for h : i in [:xs.size] do
       if let some (j, _, false) ← familyArgsOf fam (← inferType xs[i]) then
-        return { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := false }
+        return some { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := false }
     for h : i in [:xs.size] do
       if let some (j, _, true) ← familyArgsOf fam (← inferType xs[i]) then
-        return { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := true }
+        return some { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := true }
     for h : i in [:xs.size] do
       if let some (j, e) ← pairElemOf fam (← inferType xs[i]) then
-        return { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := true,
-                 elem := some e }
-    throwError "fold_of: {g} takes no value of the family {fam.members}"
+        return some { fn := g, type := info.type, member := j, at_ := i, arity := xs.size, isList := true,
+                      elem := some e }
+    return none
+
+/-- Require one block member to support the chosen generated family. -/
+def memberOf (fam : Family) (g : Name) : MetaM Member := do
+  let some member ← memberOf? fam g
+    | throwError "fold_of: {g} takes no value of the family {fam.members}"
+  return member
+
+/-- Every generated family in the function arguments, including list and field-list arguments. -/
+def familiesIn (xs : Array Expr) : MetaM (Array Family) := do
+  let mut families := #[]
+  for x in xs do
+    let t ← whnf (← inferType x)
+    let leaves ← if t.isAppOfArity ``List 1 then prodLeaves 8 t.appArg! else pure #[t]
+    for leaf in leaves do
+      if let some family ← familyOf? leaf then
+        unless families.any (fun old => old.members == family.members) do
+          families := families.push family
+  return families
+
+/-- A fold uses a family shared by every mutual sibling. Ambiguity requires an explicit choice. -/
+def selectFamily (target : Name) (block : Array Name) (candidates : Array Family)
+    (requested : Option Name) : MetaM Family := do
+  let supported ← candidates.filterM fun family =>
+    block.allM fun name => return (← memberOf? family name).isSome
+  if let some name := requested then
+    let some family := supported.find? (fun family => family.members.contains name)
+      | throwError "fold_of: requested family {name} is not shared by every member of {block}"
+    return family
+  match supported.toList with
+  | [family] => return family
+  | [] =>
+    throwError "fold_of: {target} has no generated family shared by every mutual sibling; candidates: {candidates.map (·.members)}"
+  | _ =>
+    throwError "fold_of: {target} has ambiguous generated families {supported.map (·.members)}; use (family := FamilyMember)"
 
 /-- `XFam.rec (motive := fun _ => Type u) T₁ … Tₙ`, as a function of the family. -/
 def carrierOf (famType : Name) (level : Level) (carriers : Array Expr) : MetaM Expr :=
@@ -546,32 +580,23 @@ def identThrough (P : Positions) : Nat → Expr → Expr → MetaM Expr
     mkEqTrans mapMap (← mkEqTrans congr mapId)
 
 /-- The work of `fold_of`, in `MetaM`. -/
-def convert (target : Name) : MetaM Unit := do
+def convert (target : Name) (requested : Option Name := none) : MetaM Unit := do
     let info ← getConstInfoDefn target
     let block := info.all.toArray
-    -- the family, read from `target`'s own signature
-    let familyIn := fun (xs : Array Expr) => do
-      for x in xs do
-        if let some fam ← familyOf? (← inferType x) then return some fam
-      for x in xs do
-        let t ← whnf (← inferType x)
-        if t.isAppOf ``List then
-          if let some fam ← familyOf? t.appArg! then return some fam
-      pure (none : Option Family)
+    -- Select once against the entire block, before reopening fixed binders.
     let fam₀ ← forallTelescope info.type fun xs _ => do
-      let some fam ← familyIn xs
-        | throwError "fold_of: {target} takes no value of a free object with a generated fold"
-      pure fam
+      selectFamily target block (← familiesIn xs) requested
     let members ← block.mapM fun g => (memberOf fam₀ g : MetaM Member)
     let fixedCount ← fixedPrefix block members fam₀
     let algCtor := (← getConstInfoInduct fam₀.algebra).ctors[0]!
     let homCtor := (← getConstInfoInduct fam₀.hom).ctors[0]!
     forallBoundedTelescope info.type fixedCount fun fixed rest => do
-      -- the family again, under the fixed binders (its parameters may mention them)
+      -- Reopen this exact family so its parameters refer to the fixed local binders.
       let fam ← forallTelescope rest fun xs _ => do
-        let some fam ← familyIn xs
-          | throwError "fold_of: {target} takes no value of a free object with a generated fold"
-        pure fam
+        let candidates ← familiesIn xs
+        let some family := candidates.find? (fun family => family.members == fam₀.members)
+          | throwError "fold_of: selected family {fam₀.members} disappeared after fixed binders"
+        pure family
       let famType := fam.fams[0]!.getPrefix
       let ns := famType.getPrefix
       let levelParams := info.levelParams.map mkLevelParam
@@ -1121,10 +1146,17 @@ def convert (target : Name) : MetaM Unit := do
       logInfo m!"fold_of{if para then " (paramorphism: the carrier pairs the value)" else ""}: \
         {algName} : {← ppExpr (← mkForallFVars fixed algTy)}"
 
-syntax (name := foldOf) "fold_of " ident : command
+syntax (name := foldOf) "fold_of " ident (" (" &"family" " := " ident ")")? : command
 
 @[command_elab foldOf] def elabFoldOf : CommandElab := fun stx => do
-  let target ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo stx[1]
-  liftTermElabM (convert target)
+  match stx with
+  | `(fold_of $target:ident (family := $family:ident)) =>
+    let target ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo target
+    let family ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo family
+    liftTermElabM (convert target (some family))
+  | `(fold_of $target:ident) =>
+    let target ← liftCoreM <| realizeGlobalConstNoOverloadWithInfo target
+    liftTermElabM (convert target)
+  | _ => throwUnsupportedSyntax
 
 end Effect4.Program.FoldOf

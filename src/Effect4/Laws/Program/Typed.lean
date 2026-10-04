@@ -5,7 +5,6 @@ import Effect4.Laws.Program.ErrorQueries
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Template
 import Effect4.Laws.Auto.Inversion
-import Effect4.Laws.Machine.Book
 
 /-!
 # Program.Typed — the value typing of the native cut (slice 1, lane 1)
@@ -998,44 +997,37 @@ private theorem has_record_inv (v : Val) (fields : List (String × Bool × Ty))
     obtain ⟨ns, xs⟩ := parts
     exact ⟨ns, xs, rfl, (has_record hv fields).mp hfit⟩
 
-/-- Fitting argument lists stay paired with their supplied names. -/
+/-- Fitting argument lists stay paired with their supplied names and named lookups. -/
 theorem zipNames_checked {values : List Val} {types : List Ty}
     (hfit : Effect4.Program.Fits values types) :
     ∀ (names : List String) (arguments : List (String × Ty)),
       Record.zipNames names types = some arguments →
       ∃ es, Record.zipNames names values = some es ∧
-        ListRel (fun e a => e.1 = a.1 ∧ Has e.2 a.2) es arguments := by
+        ∀ name, match Field.firstOf name es, Field.firstOf name arguments with
+        | none, none => True
+        | some value, some type => Has value type
+        | _, _ => False := by
   induction hfit with
   | nil =>
     intro names arguments h
     cases names with
-    | nil => cases h; exact ⟨[], rfl, .nil⟩
+    | nil => cases h; exact ⟨[], rfl, fun _ => True.intro⟩
     | cons n ns => cases h
-  | cons hv _ ih =>
+  | @cons value type values types hv _ ih =>
     intro names arguments h
     cases names with
     | nil => cases h
     | cons n names =>
       obtain ⟨args, hargs, rfl⟩ := Option.map_eq_some_iff.mp h
       obtain ⟨es, hes, hrel⟩ := ih names args hargs
-      refine ⟨(n, _) :: es, ?_, .cons ⟨rfl, hv⟩ hrel⟩
-      simp only [Record.zipNames, hes, Option.map_some]
-
-
-/-- Paired fitting values and argument types give matching named lookups. -/
-theorem firstOf_checked {es : List (String × Val)} {arguments : List (String × Ty)}
-    (hrel : ListRel (fun e a => e.1 = a.1 ∧ Has e.2 a.2) es arguments) (name : String) :
-    match Field.firstOf name es, Field.firstOf name arguments with
-    | none, none => True
-    | some value, some type => Has value type
-    | _, _ => False := by
-  induction hrel with
-  | nil => trivial
-  | @cons e a es arguments hhead _ ih =>
-    by_cases hn : a.1 = name
-    · simpa only [Field.firstOf, hhead.1, if_pos hn] using hhead.2
-    · simpa only [Field.firstOf, hhead.1, if_neg hn] using ih
-
+      refine ⟨(n, value) :: es, ?_, ?_⟩
+      · simp only [Record.zipNames, hes, Option.map_some]
+      · intro name
+        by_cases hn : n = name
+        · simp only [Field.firstOf, if_pos hn]
+          exact hv
+        · simp only [Field.firstOf, if_neg hn]
+          exact hrel name
 
 /-- Every admitted construction returns a value fitting its checked record type.
 The premise uses the evaluated argument list; the term evaluator supplies it through `FitsAll`. -/
@@ -1083,7 +1075,7 @@ theorem build {fields : List (String × Bool × Ty)}
         intro q hq
         obtain ⟨f, hf, rfl⟩ := List.mem_map.mp hq
         have hfield := List.all_eq_true.mp hall.2 f (Field.mem_canonBy hf)
-        have hvalues := firstOf_checked hrel f.1
+        have hvalues := hrel f.1
         rw [Field.firstOf_canonBy Field.bytesKey_injective]
         cases ht : Field.firstOf f.1 arguments with
         | none =>

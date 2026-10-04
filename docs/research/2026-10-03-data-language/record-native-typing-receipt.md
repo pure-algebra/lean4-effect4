@@ -1,7 +1,7 @@
 # Record native typing receipt
 
 The native term typing and evaluation theorems compile for all three record constructors.
-World membership and handle containment integration remain pending.
+The follow-up receipt is `docs/research/2026-10-03-data-language/record-term-proof-receipt.md`.
 
 Base: `a9340668`.
 The commit containing this receipt supplies its head.
@@ -51,5 +51,6 @@ The subsequent world and handle check stops in three dependencies before checkin
 The coordinator supplies the generated canonical program update.
 The other seats supply their record cases.
 
-Axiom output remains pending until the next assigned Lean slot.
+The follow-up queries report `[propext, Quot.sound]` for the native term and record-operation theorems.
+The follow-up proves paired lookup directly and removes the temporary machine-proof dependency.
 No whole-library check, host compiler, or runtime comparison runs in this stage.
