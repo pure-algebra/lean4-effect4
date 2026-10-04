@@ -672,6 +672,12 @@ def registry : Registry where
       reason := "rc.112 runs closed rows (Effect.ts:17494-17497)" }
   ]
   requirements := [
+    { id := "R2", title := "Extension is conservative: C1–C8 over DI-47's relation on Σ_app"
+      top := [`Effect4.Program.check_ext, `Effect4.Program.check_restrict, `Effect4.Program.lawful_append]
+      openParts := ["C2 for host rows: operational until DI-69's row meaning lands",
+        "C4 for TypedProg (the generic judgment is proved both ways)",
+        "C5: the world projection with its back condition (its red controls are proved)",
+        "C7: conditional on decisions row 115", "C8: per form"] },
     { id := "R5", title := "Services: the service table, layers and provision"
       top := [`Effect4.Program.Provision.build_total]
       openParts := ["lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)",

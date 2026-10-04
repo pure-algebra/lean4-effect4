@@ -1409,11 +1409,33 @@ A requirement with an open part not yet stated as a plan node is open, whatever 
 
 | Requirement | Status | Top nodes | Next goals |
 | --- | --- | --- | --- |
+| R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — |
 | R5 | open | `build_total` (proved) | — |
 | R9 | open | `m7_proved` (proved) | — |
 | R12 | open | `fairTape_unarmed` (proved) | — |
 
 **Next goals** (0): 
+
+### R2: Extension is conservative: C1–C8 over DI-47's relation on Σ_app
+
+- Open: C2 for host rows: operational until DI-69's row meaning lands
+- Open: C4 for TypedProg (the generic judgment is proved both ways)
+- Open: C5: the world projection with its back condition (its red controls are proved)
+- Open: C7: conditional on decisions row 115
+- Open: C8: per form
+
+```mermaid
+flowchart LR
+  n0["check_ext<br/>proved"]
+  n1["check_restrict<br/>proved"]
+  n2["lawful_append<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `check_ext` | proved | — | 147 | 221 |
+| `check_restrict` | proved | `cata_eff_congr_on`, `hom_eq_cata_eff` | 70 | 282 |
+| `lawful_append` | proved | — | 40 | 146 |
 
 ### R5: Services: the service table, layers and provision
 
