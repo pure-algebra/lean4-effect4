@@ -1408,8 +1408,12 @@ flowchart LR
   n0["m7_proved<br/>proved"]
   n1["loadsTyped<br/>proved"]
   n2["decision_preserves<br/>proved"]
+  n3["denotesTyped<br/>proved"]
+  n4["provideLayerArm<br/>proved"]
   n0 -->|"m7_of_ledger"| n1
   n0 -->|"m7_of_ledger"| n2
+  n1 -->|"loadsTyped_of_denotesTyped_typed"| n3
+  n3 -->|"denotesTyped_of_provideLayer"| n4
 ```
 
 | Node | Status | Nearest nodes | Lemmas | Definitions |
@@ -1417,6 +1421,8 @@ flowchart LR
 | `m7_proved` | proved | `decision_preserves`, `loadsTyped`, `m7_of_ledger` | 0 | 3 |
 | `loadsTyped` | proved | `denotesTyped` | 188 | 1147 |
 | `decision_preserves` | proved | `fits_subN`, `subN_trans`, `configTyped_frame`, `fits_mono`, `wake_preserves`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1039 | 1481 |
+| `denotesTyped` | proved | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `allGuard_typed`, `rowTy_instantiated_formed` | 820 | 859 |
+| `provideLayerArm` | proved | `fits_subN`, `subN_refl`, `fits_normalize`, `normalize_idem`, `subN_trans`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 850 | 881 |
 
 ### R12: Frontiers name what they await
 

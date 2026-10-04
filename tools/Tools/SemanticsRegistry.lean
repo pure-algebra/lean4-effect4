@@ -678,7 +678,11 @@ def registry : Registry where
         "R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)"] }
   ]
   reductions := [
-    { target := `Effect4.Program.Typed.m7_proved, reduction := `Effect4.Program.Typed.m7_of_ledger }
+    { target := `Effect4.Program.Typed.m7_proved, reduction := `Effect4.Program.Typed.m7_of_ledger },
+    { target := `Effect4.Program.Typed.loadsTyped,
+      reduction := `Effect4.Program.Typed.loadsTyped_of_denotesTyped_typed },
+    { target := `Effect4.Program.Typed.denotesTyped,
+      reduction := `Effect4.Program.Typed.denotesTyped_of_provideLayer }
   ]
   planScope := [`Effect4]
 
