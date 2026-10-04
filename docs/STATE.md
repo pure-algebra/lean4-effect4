@@ -12,6 +12,23 @@ ecosystem (the printer and readers). Programs are data: a canonical `Eff` tree w
 a computed typing certificate, folds, a journaled run with replay, and a printed image that
 reads back.
 
+## Data-language development
+
+The implementation starts from `82d34358` on `codex/data-language-wave`.
+It adds record construction, required and optional reads, overwrite, tag selection, string maps and fixed tuples.
+Raw formation precedes program admission, including checks after row type arguments instantiate.
+Schema representations and JSON codecs cover these data shapes with their existing reconstruction laws.
+
+The [integration receipt](research/2026-10-03-data-language/integration-receipt.md) records the checked modules, generated reports and finite target comparisons.
+The [implementation plan](research/2026-10-03-data-language/plan.md) retains the dependency order and printer rulings.
+`generated/semantics.md` reports the proof claims from their declarations.
+These results establish no general target execution, progress or liveness theorem.
+
+The next host-session step needs the checked type instance at each external call site.
+The [host-instance note](research/2026-10-03-data-language/host-instance-follow-on.md) records the missing relation and proposed metadata boundary.
+Inferring that instance from a runtime value loses information, including the element type of an empty list.
+That representation change precedes the host correspondence proof and later lowering work.
+
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
 Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-first redirect

@@ -296,6 +296,12 @@ The normalizer retains duplicate keys and sorts object entries recursively.
 A host JSON text parser may discard duplicates before supplying the Lean JSON value.
 That parser behavior remains outside the Lean theorem.
 
+The finite comparisons in `harness/truth/schema-codec/check.ts` cover the new data shapes against rc.112.
+The strict comparison uses `onExcessProperty: "error"` for host decoding.
+The default host decoder discards extra record fields; the Lean decoder refuses them.
+The controls retain these differences and the duplicate-key text parsing difference explicitly.
+The [Schema host receipt](../research/2026-10-03-data-language/schema-host-receipt.md) records their scope and commands.
+
 S-5 remains the requested finite host check of recorded exits against their published `Schema.Exit`, under decision row 5.
 The Lean codec laws alone establish no rc.112 execution or external host progress.
 Decision 12 answers DI-08 for the persisted description plane.
