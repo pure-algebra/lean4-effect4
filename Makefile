@@ -98,9 +98,11 @@ PRODUCER_COMMON := scripts/generate.py scripts/lib/derived_plan.py tools/Tools/G
 # Declaration-site variance, read off the vendored rc.112 sources by a Lean `--run` driver
 # (tooling plan 1.4a). It is an INPUT of `derived` -- the TyView group reads it -- so it is the
 # first link of the chain, and `check-gen` holds it like any other generated file.
+# `generate.py` reads the manifest's `VariancesFlags` for it, so the manifest is a source.
 VARIANCES := tools/Effect4Gen/variances.json
 VARIANCE_OUT := $(VARIANCES) src/Effect4/Program/TyVariance.lean
 VARIANCE_SOURCES := tools/Tools/Variances.lean $(VENDOR_SOURCES) $(PRODUCER_COMMON) \
+  tools/Effect4Gen/manifest.json \
   $(wildcard src/Effect4/Store/Carrier/*.lean) lakefile.toml lake-manifest.json lean-toolchain
 .PHONY: variance-output-missing
 $(GEN)/variances: $(VARIANCE_SOURCES) $(wildcard $(VARIANCE_OUT)) $(if $(filter-out $(wildcard $(VARIANCE_OUT)),$(VARIANCE_OUT)),variance-output-missing)
