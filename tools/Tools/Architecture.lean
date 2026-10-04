@@ -550,6 +550,20 @@ def semanticsJson : FilePath := ".lake/gen/semantics-report/semantics.json"
 /-- Text that may sit inside a `<script>` element: no `</` closes it early. -/
 def scriptSafe (s : String) : String := s.replace "</" "<\\/"
 
+/-- The Lean areas of the role register, as module prefixes, for the proof graph's lanes: a module
+belongs to the area whose prefix is the longest one naming it. -/
+def areasJson : String :=
+  let column : Column → String
+    | .runtime => "runtime" | .laws => "laws" | .tools => "tools" | .tests => "tests" | _ => "other"
+  let prefixOf (path : String) : String :=
+    let p := if path.startsWith "src/" then dropStr path 4
+      else if path.startsWith "tools/" then dropStr path 6 else path
+    let p := if p.endsWith ".lean" then dropRightStr p 5 else p
+    p.replace "/" "."
+  let rows := (areas.filter (·.column.isLean)).map fun a =>
+    s!"\{\"prefix\":\"{prefixOf a.path}\",\"title\":\"{a.title}\",\"column\":\"{column a.column}\",\"layer\":{a.layer}}"
+  "[" ++ String.intercalate "," rows ++ "]"
+
 /-- The proof graph, derived from the semantics report's plan and claims: the report's JSON is
 embedded as data, and `tools/Tools/ProofGraphView.js`, an ES module, lays it out with d3-dag's
 Sugiyama method and draws it with d3 in the browser, both from a pinned CDN
@@ -563,6 +577,7 @@ def renderProofGraph : IO String := do
   return "<style>" ++ style ++ "</style>" ++
     "<div id=\"pg\" class=\"pg\"><div class=\"pg-bar\"></div><div class=\"pg-body\"><div class=\"pg-canvas\"></div><aside class=\"pg-panel\"></aside></div></div>" ++
     "<script type=\"application/json\" id=\"pg-data\">" ++ scriptSafe data ++ "</script>" ++
+    "<script type=\"application/json\" id=\"pg-areas\">" ++ scriptSafe areasJson ++ "</script>" ++
     "<script type=\"module\">" ++ scriptSafe script ++ "</script>"
 
 /-- The import matrix over the non-detail Lean areas and the external packages. -/
