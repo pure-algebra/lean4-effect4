@@ -1,0 +1,61 @@
+{
+  "observed_at_utc": "2026-10-04T15:52:15.446206+00:00",
+  "base_plan": "e40371c0:docs/research/2026-10-04-claude-lead/state-any-type-plan.md",
+  "scope": "Read-only plan/source audit and bounded probes; no Lean or repository edits.",
+  "findings": [
+    {
+      "id": "complete-derived-form-skips-done",
+      "status": "Verified finite counterexample to the proposed expansion, not to existing Effect4 code.",
+      "source": "state-any-type-plan.md section5 item1; vendor/effect-4.0.0-rc.112/src/Deferred.ts: complete and into",
+      "consequence": "An unconditional effect-then-done expansion runs side effects after completion. rc.112 complete checks self.effect first and skips them. into also uses uninterruptibleMask with restore around the computation.",
+      "smallest_correction": "State the already-completed guard and interruptibility protocol in the form contract before proving the expansion.",
+      "probe": "/private/tmp/codex-effect4-overnight-monitor/deferred-complete-guard-probe.json",
+      "positive_control": "Pending deferred: both implementations run once and accept the candidate.",
+      "negative_control": "Completed deferred: actual runs zero times; candidate runs once. Both answer false and retain the first value.",
+      "placement": {
+        "concept": "translation-simulation",
+        "property": "R10 derived-form behavior; R8 named observation",
+        "consumer": "Proposed Deferred.complete form",
+        "hypotheses": "Admitted program and completion types; compatible fixed decisions for a scheduled theorem; pending/done state explicit.",
+        "observation": "Completion flag, side effects and awaited exit; interruption under a separately specified tape.",
+        "prerequisite": "Exact first-order form expansion including guard and interruptibility, before a goal statement.",
+        "exclusions": "Current probe is finite host evidence and checks no interruption or concurrency."
+      }
+    },
+    {
+      "id": "stored-eff-is-not-a-host-function",
+      "status": "Verified authority mismatch in proposed refusal rationale.",
+      "source": "Plan sections4 and5 item1; docs/DESIGN-ISSUES.md DI-20 and DI-28; docs/core/semantics.md overview; docs/core/machine-state.md Composed APIs",
+      "finding": "DI-20/28 govern effect polymorphism, not an impossibility of stored first-order Eff. Machine-state already describes typed first-order references to retained Eff behavior.",
+      "smallest_correction": "Keep arbitrary completeWith outside this slice if intended, but name unsupported R7 code resolution/capture as the boundary. Do not equate stored Eff data with a forbidden host function.",
+      "exclusions": "This note does not request implementing retained code or widening scope."
+    },
+    {
+      "id": "t1-requires-scope-check-not-only-acyclicity",
+      "status": "Verified difference between current theorem statements; derivation feasibility remains open.",
+      "source": "Plan T1; src/Effect4/Laws/Program/Typed/Results.lean: exits_hasTy; src/Effect4/Laws/Program/MeaningSound.lean: sound, SoundP; src/Effect4/Laws/Program/LoopSound.lean: soundB; tools/ProofGraph/Axioms.lean: reachedAxioms",
+      "finding": "exits_hasTy assumes AdmittedTape and types recorded exits. sound/soundB quantify arbitrary typed environments and stores; SoundP also gives bad-exit independence, store order and well-formedness.",
+      "smallest_correction": "Check all side conditions and retained consumers before deleting stronger proofs. A closed-program exit corollary may use the transport route without replacing the stronger judgments.",
+      "probe_guidance": "For a named dependency test use reachedAxioms with a stop predicate for sound/soundB/progress and a fresh memo. Its default result and plan status do not report arbitrary theorem reachability.",
+      "exclusions": "No claim that the desired derivation is impossible; no weakening of frozen statements authorized."
+    },
+    {
+      "id": "proofgraph-missing-data-silent-default",
+      "status": "Rechecked the current in-flight JS prefix; prior finding remains valid and was previously unsent.",
+      "source": "tools/Tools/ProofGraphView.js: report.plan fallback and n.out filter; tools/Tools/Architecture.lean: renderProofGraph",
+      "consequence": "Missing plan renders an empty model; unknown nearest dependency is silently dropped.",
+      "smallest_correction": "Validate required fields and node references; show a visible unavailable/error state instead of an empty successful graph. Add narrow malformed-input controls alongside row207 controls.",
+      "probe": "/private/tmp/codex-effect4-overnight-monitor/proofgraph-input-recheck.json",
+      "exclusions": "No browser rendering claim; the current unmutated report has no missing reference in this probe."
+    }
+  ],
+  "nonfindings": [
+    "Pinned rc.112 Ref.modifySome really returns [B, Option<A>]; the plan is correct on that shape.",
+    "The earlier general-state audit and finite probe are now retained alongside the tracked plan."
+  ],
+  "delivery": {
+    "status": "queued",
+    "verified": "Claude Message47 contains all four points; unread while coordinator continues. Prompt empty afterward. Normal Send used; never Send now/Stop.",
+    "at": "2026-10-04T15:54:10.568541+00:00"
+  }
+}

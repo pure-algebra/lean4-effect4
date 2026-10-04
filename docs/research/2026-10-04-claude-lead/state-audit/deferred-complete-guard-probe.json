@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-04T15:49:18.940Z",
+  "version": "4.0.0-rc.112",
+  "node": "v22.23.2",
+  "statement": "Unconditionally running effect then done is not Deferred.complete on an already completed deferred.",
+  "observation": "Returned completion flag, Ref counter after the call, and awaited value.",
+  "scope": "Finite host probe with a pending positive control; no concurrency, interruption or Lean proof.",
+  "pending": {
+    "actual": {
+      "accepted": true,
+      "executions": 1,
+      "value": "candidate"
+    },
+    "candidate": {
+      "accepted": true,
+      "executions": 1,
+      "value": "candidate"
+    }
+  },
+  "done": {
+    "actual": {
+      "accepted": false,
+      "executions": 0,
+      "value": "first"
+    },
+    "candidate": {
+      "accepted": false,
+      "executions": 1,
+      "value": "first"
+    }
+  },
+  "status": "PASS: candidate refuted by observable state"
+}

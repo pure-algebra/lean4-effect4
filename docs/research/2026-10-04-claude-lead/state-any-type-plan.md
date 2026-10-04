@@ -49,6 +49,13 @@ not a Lean theorem and not a concurrency proof. Its observations:
   `false` and replaces nothing.
 - `Deferred.complete(d, eff)` runs the effect once and stores its exit, so both awaits see the
   value from before the write.
+- `complete` is guarded: `suspend(() => self.effect ? succeed(false) : into(effect, self))`
+  (`Deferred.ts`, `complete`). On a completed deferred it answers `false` and never runs `eff`.
+  `into` runs `eff` under `uninterruptibleMask`, restoring the caller's interruptibility around
+  it, then calls `done` with its exit (`Deferred.ts`, `into`). The monitor's second probe
+  (`state-audit/deferred-complete-guard-probe.mjs`) shows the guard matters: on a completed
+  deferred, an unguarded "run, then `done`" runs a side effect that `complete` skips. Both answer
+  `false` and keep the first value. The pending deferred is the positive control.
 
 The model:
 - `Completion` is `ofExit exit | ofRefGet cell` (`Machine/Completion.lean`). `completionPrim`
@@ -105,9 +112,23 @@ back in. Two routes:
 2. **Restate.** `TypedAt`, `SoundP`, `SoundB` and `progress` carry the world's per-cell table, and
    reuse `HeapCell`, `HeapTable` and `HeapTypedAt` (`Typed/World.lean`).
 
-The seat measures first: `#plan_status` and `ProofGraph.reachedAxioms` over `run_eq_meaning` and
-`loopAgreement` show whether either reaches `sound`, `soundB` or `progress`. Route 1 if neither
-does, route 2 otherwise. Either way:
+Route 1 does not replace route 2 (the monitor's follow-up audit). The two statements differ in
+scope:
+- `exits_hasTy` assumes an admitted tape (`AdmittedTape`) and types the recorded exits of a
+  closed program;
+- `sound` and `soundB` quantify over arbitrary typed environments and stores, and `SoundP` also
+  gives bad-exit independence, the store order and well-formedness.
+
+So the transport gives at most the closed-program exit corollary. The stronger judgments stay
+while any consumer needs them. The seat:
+1. lists the consumers of `sound`, `soundB`, `progress` and their fields;
+2. tests the dependency with `ProofGraph.reachedAxioms`, using a fresh memo and a stop predicate
+   that names `sound`, `soundB` and `progress` (the default result and `#plan_status` do not
+   report reachability of an arbitrary theorem);
+3. restates the stronger judgments over the per-cell table (route 2). Route 1 adds the
+   closed-program corollary only where it is cheaper and loses nothing.
+
+Either way:
 - `HeapNat`, `step_heapNat` and `FnName.*_hasTy_nat` are deleted;
 - `heapNat_iff` survives only if a public consumer still states a number-only result.
 
@@ -221,8 +242,12 @@ under `ofExit`. This is a finite machine witness for the coverage row
   under every schedule.
 - Host rows at templates: R6 stays parked. Row 183's repair makes the certificate the instance,
   but no host-correspondence proof follows.
-- Functions as values: they stay refused (DI-20, DI-28). A binder term is first-order data with a
-  fixed binder layout.
+- Functions as values: they stay refused by the profile (decisions row 43). A binder term is
+  first-order data with a fixed binder layout.
+- Retained behaviour: a deferred completed with an arbitrary stored `Eff`. A stored first-order
+  program is data, not a host function. What it lacks is R7's code resolution and capture contract
+  (`docs/core/machine-state.md`, "Composed APIs": resolution must establish the entry signature
+  and the capture layout).
 - Profile support or lowering beyond regeneration: the OCaml and TypeScript faces are
   regenerated, not proved.
 - Queues and streams: they come next (row 204), over this slice's `Ref<A>` and `Deferred<A, E>`.
@@ -230,11 +255,18 @@ under `ofExit`. This is a finite machine witness for the coverage row
 ## 5. Questions for the owner, with recommendations
 
 1. **`Deferred.complete` and `Deferred.completeWith`.** Recommended:
-   - `complete(d, eff)` becomes a derived form with a behaviour law (DI-89): run `eff` once,
-     then `done(d, exit)`;
-   - `completeWith(d, eff)` with an arbitrary effect stays refused by name, since a stored effect
-     is a function as a value (DI-20, DI-28);
-   - the one first-order stored effect, `ofRefGet`, stays host-only.
+   - `complete(d, eff)` becomes a derived form with a behaviour law (DI-89), transcribing rc.112
+     exactly (§2):
+     - if `d` is completed, answer `false` and run nothing;
+     - otherwise run `eff` under a mask that restores the caller's interruptibility, and call
+       `done(d, exit)` with its exit.
+     The form's contract states the guard and the mask before any goal is stated. Today's
+     `uninterruptible` and `interruptible` do not express "restore the caller's", so the form
+     needs that construct, or its law holds only for an interruptible caller.
+   - `completeWith(d, eff)` with an arbitrary effect stays outside this slice and is refused by
+     name. Its boundary is R7's missing code resolution and capture contract, not a ban on stored
+     programs (§4).
+   - The one first-order stored effect, `ofRefGet`, stays host-only.
 2. **The error column of `Deferred<A, E>`.** `Deferred.fail` at a non-number error needs an `Err`
    that carries a value: row 120's payload carrier. Recommended: land row 120's carrier before
    T3. The other order would leave `fail` refused by name at every error type except a tag.
@@ -242,6 +274,7 @@ under `ofExit`. This is a finite machine witness for the coverage row
    - row 155 (a): a parameter in a row column counts as inhabited for the column check;
    - row 183: `bitEntry` reads the row's instance at the request, not the template.
    Recommended: ratify both as recommended.
-4. **The straight soundness (T1).** Recommended: derive it from the typed state if the dependency
-   walk allows, and restate it over the per-cell table otherwise. `HeapNat` goes either way. The
-   coordinator proceeds this way unless the owner objects.
+4. **The straight soundness (T1).** Recommended: restate `sound`, `soundB` and `progress` over the
+   per-cell table, keeping their generality. Deriving them from the typed state gives only the
+   closed-program exit corollary (T1). `HeapNat` goes. The coordinator proceeds this way unless
+   the owner objects.
