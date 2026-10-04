@@ -18,7 +18,7 @@ Effect4.Program.Node.child._redArg	program_node_child	false	211	0	8	28	60	75	0	5
 Effect4.Api.evaluate	api_evaluate	false	2	0	0	0	0	1	0	1	0	0	1	0	1	0	0	0	0	0	0	7	1	0	0	0	1	0	6503242508184499272
 Effect4.Program.interpOf	program_interp_of	false	56	0	0	0	0	1	0	0	0	0	56	0	0	0	0	0	0	0	0	18	67	0	0	0	1	0	18321761907653015333
 Effect4.Machine.replayEval._at_.Effect4.Program.replayCheckedFrom.spec_0	replay_eval_at_program_replay_checked_from_spec_0	true	10	0	0	0	8	6	0	0	0	0	10	0	0	0	0	0	0	0	0	60	22	0	13	0	1	0	9028814964921071593
-Effect4.Api.frontierReasons	api_frontier_reasons	false	19	0	1	2	3	3	0	0	0	0	19	0	0	0	0	0	0	0	0	7	22	0	6	0	1	0	4455449711076460887
+Effect4.Api.frontierReasons	api_frontier_reasons	false	20	0	3	6	6	3	0	0	0	0	20	0	0	0	0	0	0	0	0	7	29	0	11	0	1	0	6411630052674661342
 Effect4.Machine.fireState._redArg	fire_state	false	14	0	0	0	3	2	0	0	0	0	14	0	0	0	0	0	0	0	0	35	40	0	4	0	1	0	3335838013959446820
 Effect4.Machine.flushAllState._redArg	flush_all_state	true	14	0	0	0	9	7	0	2	0	0	12	0	2	0	0	0	0	0	0	10	35	0	15	0	1	0	7860929796865513678
 Effect4.Machine.stepDecisionState.loop._redArg	step_decision_state_loop	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	2	3	0	1	0	1	0	1050575363077463747

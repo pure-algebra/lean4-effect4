@@ -46,12 +46,14 @@ def compileReasonsR (m : RState) : List FrontierReason :=
   m.fibers.filterMap fun f =>
     if isCompileFrontierR f.frame.current then some (.compileFuel f.id) else none
 
+/-- `frontierReasons`'s mirror: the tape clause names a runnable fiber or an armed owner
+(decisions row 201 (b)). -/
 def reasonsR (why : Exhaustion) (m : RState) : List FrontierReason :=
   (match why with | .fuel => [.commandFuel] | .tape => []) ++
     compileReasonsR m ++ hostReasonsR m ++ timerReasonsR m ++
     (match why with
     | .fuel => []
-    | .tape => if hasRunnableR m then [.awaitDecision] else [])
+    | .tape => if hasRunnableR m || !m.armed.isEmpty then [.awaitDecision] else [])
 
 def nonCompile : FrontierReason → Bool
   | .compileFuel _ => false
@@ -153,7 +155,8 @@ theorem book_reasons_nonCompile {e : NativeEff} {m : NativeMachine} {r : RState}
     (h : BookMeans (CodeMeans e) (Means e) m r) (why : Exhaustion) :
     (frontierReasons why m).filter nonCompile = (reasonsR why r).filter nonCompile := by
   simp only [frontierReasons, reasonsR, List.filter_append, filter_compileReasons,
-    filter_compileReasonsR, hostReasons_eq_ref h, timerReasons_eq_ref h, hasRunnable_eq_ref h]
+    filter_compileReasonsR, hostReasons_eq_ref h, timerReasons_eq_ref h, hasRunnable_eq_ref h,
+    h.armed]
   cases why <;> rfl
 
 /-- The raw replay relation supplies equal exhaustion tags as well as the book. -/
@@ -206,7 +209,7 @@ theorem book_reasons_eq_ref {e : NativeEff} {m : NativeMachine} {r : RState}
     (h : BookMeans (CodeMeans e) (Means e) m r) (hc : CompileBook m r) (why : Exhaustion) :
     frontierReasons why m = reasonsR why r := by
   simp only [frontierReasons, reasonsR, compileReasons_eq_ref hc,
-    hostReasons_eq_ref h, timerReasons_eq_ref h, hasRunnable_eq_ref h]
+    hostReasons_eq_ref h, timerReasons_eq_ref h, hasRunnable_eq_ref h, h.armed]
   cases why <;> rfl
 
 /-- The public replay exposes the driver's reason projection. -/

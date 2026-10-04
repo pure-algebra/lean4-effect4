@@ -236,8 +236,9 @@ def noFuel : Run := Run.open twice "fuel-frontier" { compileFuel := 40, fuel := 
   (Run.open twice "work").controlOnce.outstanding
 #guard (Run.open twice "work").controlOnce.nextControl = none
 
--- Yield parks the fiber while its dispatcher owns a queued resume. The new view exposes
--- this work without changing the existing protocol observation or frontier reasons.
+-- Yield parks the fiber while its dispatcher owns a queued resume. The work view names the
+-- queued owner, and the frontier awaits a decision for it (decisions row 201 (b)); the
+-- protocol observation stays `parked`.
 def yieldingProgram : Api.Program := .bind (.yieldNow 0) (.succeed (.lit (.nat 23)))
 
 def yieldingAdmitted : Api.AdmittedProgram yieldingProgram [] where
@@ -260,7 +261,7 @@ def yielded : Run := (Run.open yielding "yielded").controlOnce
 
 #guard yielded.observe.state = .parked
 #guard yielded.work.runnable = []
-#guard yielded.observe.reasons = []
+#guard yielded.observe.reasons = [.awaitDecision]
 #guard yielded.work.queued = [Api.root]
 #guard yielded.nextControl = some Api.flush
 #guard yielded.controlOnce.exit = some (.success (.nat 23))

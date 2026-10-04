@@ -1,8 +1,10 @@
 import Effect4.Api.HostProtocol
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Auto.Semantics
 
 /-! P2b observation laws. Host waits take priority over aggregate exit and
-runnable observations. Driver completion is not inferred from these predicates. -/
+runnable observations. Driver completion is not inferred from these predicates.
+R12-b closes the module: the tape frontier is empty exactly at a deadlock. -/
 set_option autoImplicit false
 namespace Effect4.Api
 open Effect4 Effect4.Machine Effect4.Program
@@ -20,10 +22,12 @@ theorem awaitHost_mem (why : Exhaustion) (m : NativeMachine) (key : HostProtocol
   cases why <;> cases h : hasRunnable m <;>
     simp [frontierReasons, h, compileReasons, timerReasons]
 
+/-- The decision reason is present exactly at a tape frontier with a runnable fiber or an
+armed owner (decisions row 201 (b)). -/
 theorem awaitDecision_iff (why : Exhaustion) (m : NativeMachine) :
-    .awaitDecision ∈ frontierReasons why m ↔ why = .tape ∧ hasRunnable m = true := by
-  cases why <;> cases h : hasRunnable m <;>
-    simp [frontierReasons, h, compileReasons, hostReasons, timerReasons]
+    .awaitDecision ∈ frontierReasons why m ↔
+      why = .tape ∧ (hasRunnable m = true ∨ m.armed ≠ []) := by
+  cases why <;> aesop (add norm simp [frontierReasons, compileReasons, hostReasons, timerReasons])
 
 theorem commandFuel_iff (why : Exhaustion) (m : NativeMachine) :
     .commandFuel ∈ frontierReasons why m ↔ why = .fuel := by
@@ -81,11 +85,15 @@ theorem observe_idle_iff (why : Exhaustion) (m : NativeMachine) :
     simp
   exact all_exited_not_runnable m he
 
+/-- DI-68's tape law, as decisions row 201 (b) amends it: with no host wait at a tape frontier,
+the decision reason is present exactly when the observer reads `idle` or an owner is armed. An
+armed owner with no runnable fiber reads `parked` (`E4-SCHED-CE-021`). -/
 theorem observe_idle_tape_iff (m : NativeMachine)
     (h : ¬ ∃ key, .awaitHost key ∈ frontierReasons .tape m) :
-    HostProtocol.observe m = .idle ↔ .awaitDecision ∈ frontierReasons .tape m := by
+    (HostProtocol.observe m = .idle ∨ m.armed ≠ []) ↔
+      .awaitDecision ∈ frontierReasons .tape m := by
   rw [observe_idle_iff .tape, awaitDecision_iff]
-  simp [h]
+  simp only [h, not_false_eq_true, true_and, ne_eq]
 
 /-- The observation and reason alphabet agree, with host priority explicit. -/
 theorem observe_of_reasons (why : Exhaustion) (m : NativeMachine) :
@@ -95,7 +103,37 @@ theorem observe_of_reasons (why : Exhaustion) (m : NativeMachine) :
       m.fibers.all (fun f => f.exit.isSome) = true) ∧
     (HostProtocol.observe m = .idle ↔
       (¬ ∃ key, .awaitHost key ∈ frontierReasons why m) ∧ hasRunnable m = true) ∧
-    (.awaitDecision ∈ frontierReasons why m ↔ why = .tape ∧ hasRunnable m = true) :=
+    (.awaitDecision ∈ frontierReasons why m ↔
+      why = .tape ∧ (hasRunnable m = true ∨ m.armed ≠ [])) :=
   ⟨observe_awaitingAsync_iff why m, observe_terminated_iff why m,
     observe_idle_iff why m, awaitDecision_iff why m⟩
+
+/-! ## R12-b: an empty frontier is a deadlock
+
+R12 (`docs/core/system-map.md` §8) asks that `Deadlocked` require nothing armed. -/
+
+/-- **A deadlocked machine** (R12): live and unfinished, with nothing to wait for, read in the
+frontier's order. No fiber's current code stands at its compile budget, no fiber awaits a host
+reply, no fiber sleeps on a timer, no fiber is runnable, and no owner is armed. -/
+def Deadlocked (m : NativeMachine) : Prop :=
+  m.stuck = none ∧ m.finished = false ∧
+    (∀ f ∈ m.fibers, isCompileFrontier f.frame.current = false) ∧ Program.awaits m = [] ∧
+    m.state.timers.wake.waiters = [] ∧ hasRunnable m = false ∧ m.armed = []
+
+/-- **R12-b: at a live, unfinished machine, the tape frontier is empty exactly at a deadlock.**
+So the frontier names a reason whenever work is armed (`E4-SCHED-CE-021`, repaired by decisions
+row 201 (b)).
+
+Concept `reactive-scheduling`, claim `frontier-names-work`: the frontier half of the
+classification that `scheduler-progress` asks for. Reach: every frame machine (`NativeMachine`),
+with no reachability or typing premise, at the tape exhaustion site; a fuel frontier always names
+`.commandFuel` (`commandFuel_iff`). It does not establish that the named decision steps the
+machine, what any decision does at a deadlocked machine, or liveness (R12-c). It serves R12:
+`Deadlocked` requires nothing armed. -/
+@[semantics "reactive-scheduling"]
+theorem frontier_empty_iff_deadlocked (m : NativeMachine) (live : m.stuck = none)
+    (unfinished : m.finished = false) :
+    frontierReasons .tape m = [] ↔ Deadlocked m := by
+  aesop (add norm simp [frontierReasons, Deadlocked, compileReasons, hostReasons, timerReasons,
+    List.filterMap_eq_nil_iff])
 end Effect4.Api

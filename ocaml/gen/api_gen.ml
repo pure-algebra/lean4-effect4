@@ -15622,28 +15622,32 @@ let api_has_runnable (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ct
 (* LCNF mono: Effect4.Api.frontierReasons (why : Effect4.Machine.Exhaustion) (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : List Effect4.Api.FrontierReason *)
 
 let api_frontier_reasons (why : exhaustion) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) : frontier_reason list =
-  let _jp_1 = fun _y_2 -> let _x_3 = api_compile_reasons m in
-  let _x_4 = _y_2 @ _x_3 in
-  let _x_5 = api_host_reasons m in
-  let _x_6 = _x_4 @ _x_5 in
-  let _x_7 = api_timer_reasons m in
-  let _x_8 = _x_6 @ _x_7 in
+  let _jp_1 = fun _y_2 -> let _x_3 = FrontierReason_awaitDecision in
+  let _x_4 = [] in
+  let _x_5 = _x_3 :: _x_4 in
+  _y_2 @ _x_5 in
+  let _jp_7 = fun _y_8 _y_9 -> if _y_9 then _jp_1 _y_8 else (let _x_10 = [] in
+    _y_8 @ _x_10) in
+  let _jp_12 = fun _y_13 -> let _x_14 = api_compile_reasons m in
+  let _x_15 = _y_13 @ _x_14 in
+  let _x_16 = api_host_reasons m in
+  let _x_17 = _x_15 @ _x_16 in
+  let _x_18 = api_timer_reasons m in
+  let _x_19 = _x_17 @ _x_18 in
   match (why : exhaustion) with
-    | Exhaustion_fuel -> (let _x_9 = [] in
-      _x_8 @ _x_9)
-    | Exhaustion_tape -> (let _x_11 = api_has_runnable m in
-      if _x_11 then (let _x_14 = FrontierReason_awaitDecision in
-        let _x_15 = [] in
-        let _x_16 = _x_14 :: _x_15 in
-        _x_8 @ _x_16) else (let _x_12 = [] in
-        _x_8 @ _x_12)) in
+    | Exhaustion_fuel -> (let _x_20 = [] in
+      _x_19 @ _x_20)
+    | Exhaustion_tape -> (let _x_22 = api_has_runnable m in
+      if _x_22 then _jp_7 _x_19 _x_22 else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
+          | { armed = armed; _ } -> (let _x_23 = armed = [] in
+            if _x_23 then _jp_7 _x_19 _x_22 else _jp_1 _x_19))) in
   match (why : exhaustion) with
-    | Exhaustion_fuel -> (let _x_18 = FrontierReason_commandFuel in
-      let _x_19 = [] in
-      let _x_20 = _x_18 :: _x_19 in
-      _jp_1 _x_20)
-    | Exhaustion_tape -> (let _x_21 = [] in
-      _jp_1 _x_21)
+    | Exhaustion_fuel -> (let _x_24 = FrontierReason_commandFuel in
+      let _x_25 = [] in
+      let _x_26 = _x_24 :: _x_25 in
+      _jp_12 _x_26)
+    | Exhaustion_tape -> (let _x_27 = [] in
+      _jp_12 _x_27)
 
 
 

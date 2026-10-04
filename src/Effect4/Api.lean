@@ -297,8 +297,9 @@ def replay (program : Program) (fuel : Nat) (tape : List Decision)
   | ReplayResult.stuck why m => ⟨Outcome.stuck why, m, []⟩
 
 /-- Completeness of this tape observation at explicit command and compile budgets.
-It excludes outstanding host replies and a missing runnable decision; timers and
-exhaustion remain observable and this predicate does not assert termination. -/
+It excludes outstanding host replies and a missing scheduling decision: a runnable fiber
+or an armed owner (decisions row 201 (b)). Timers and exhaustion remain observable, and
+this predicate does not assert termination. -/
 def Tape.Complete (program : Program) (table : RowTable) (tape : List Decision)
     (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := [])
