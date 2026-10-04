@@ -65,5 +65,5 @@ def compiler(modules: Path):
 
 def copy_prelude(source: Path, destination: Path):
     """Copy the runtime prelude and its sibling implementations for either truth lane."""
-    for name in ['prelude.ts', 'prelude-atoms.gen.ts', 'records.ts']:
+    for name in ['prelude.ts', 'prelude-atoms.gen.ts', 'records.ts', 'tuples.ts']:
         shutil.copyfile(source / name, destination / name)

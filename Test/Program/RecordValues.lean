@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.RecordValues
+import Effect4.Laws.Program.Typed.Membership
 
 /-!
 # Named record value controls
