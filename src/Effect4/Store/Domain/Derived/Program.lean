@@ -329,18 +329,21 @@ def shapeDoc : ShapeDoc :=
   ⟨.sum "Decision"
      [("bool", 0, []),
       ("option", 1, []),
-      ("tag", 2, [("tag", (shape _root_.String).root)])],
+      ("tag", 2, [("tag", (shape _root_.String).root)]),
+      ("recordTag", 3, [("tag", (shape _root_.String).root)])],
    (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.Decision → Val
   | .bool => .ctor 0 []
   | .option => .ctor 1 []
   | .tag a0 => .ctor 2 [Canonical.toVal a0]
+  | .recordTag a0 => .ctor 3 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.Decision)
   | .ctor 0 [] => some .bool
   | .ctor 1 [] => some .option
   | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .tag
+  | .ctor 3 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .recordTag
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -373,6 +376,9 @@ theorem fits (a : _root_.Effect4.Program.Decision) : shapeDoc.accepts (toVal a) 
     exact accepts_sum _ _ _ 1 "option" [] [] rfl (acceptsFields_nil _)
   | «tag» a0 =>
     exact accepts_sum _ _ _ 2 "tag" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
+  | «recordTag» a0 =>
+    exact accepts_sum _ _ _ 3 "recordTag" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.Decision) :=

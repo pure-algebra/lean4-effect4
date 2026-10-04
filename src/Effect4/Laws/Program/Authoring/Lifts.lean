@@ -276,6 +276,21 @@ theorem selectTag_scoped {Op : Type} (payload : String) (rest : String) {scrutin
   simp only [Env.push_length, List.length_cons, List.length_nil] at s3
   simp [s0, s2, s3]
 
+theorem selectRecordTag_scoped {Op : Type} (hit : String) (miss : String) {scrutinee : TermSrc} (tag : String) {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
+    ((selectRecordTag hit miss scrutinee tag arm0 arm1) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold selectRecordTag at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  obtain ⟨x2, hx2, h⟩ := bind_ok h
+  obtain ⟨x3, hx3, h⟩ := bind_ok h
+  cases h
+  have s0 := h0.holds _ _ _ hx0
+  have s2 := h2.holds _ _ _ hx2
+  simp only [Env.push_length, List.length_cons, List.length_nil] at s2
+  have s3 := h3.holds _ _ _ hx3
+  simp only [Env.push_length, List.length_cons, List.length_nil] at s3
+  simp [s0, s2, s3]
+
 theorem iterate_scoped {Op : Type} (cursor : String) (answer : String) (cursorTy : Option Effect4.Program.Ty) {initial : TermSrc} {test : TermSrc} {step : TermSrc} {result : TermSrc} {body : Src Op} (h1 : initial.Scoped) (h2 : test.Scoped) (h3 : step.Scoped) (h4 : result.Scoped) (h5 : body.Scoped) :
     ((iterate cursor answer cursorTy initial test step result body) : Src Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩

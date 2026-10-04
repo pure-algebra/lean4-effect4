@@ -26,6 +26,7 @@
     { "ctor": "Effect4.Program.Eff.select", "whenArg": 1, "whenHead": "Effect4.Program.Decision.bool", "lift": "selectBool", "slots": [], "args": [[], [], [], []] },
     { "ctor": "Effect4.Program.Eff.select", "whenArg": 1, "whenHead": "Effect4.Program.Decision.option", "lift": "selectOption", "slots": ["bound"], "args": [[], [], [], [0]] },
     { "ctor": "Effect4.Program.Eff.select", "whenArg": 1, "whenHead": "Effect4.Program.Decision.tag", "lift": "selectTag", "slots": ["payload", "rest"], "args": [[], [], [0], [1]] },
+    { "ctor": "Effect4.Program.Eff.select", "whenArg": 1, "whenHead": "Effect4.Program.Decision.recordTag", "lift": "selectRecordTag", "slots": ["hit", "miss"], "args": [[], [], [0], [1]] },
     { "ctor": "Effect4.Program.Eff.matchCause", "slots": ["value", "cause"], "args": [[], [0], [1]] },
     { "ctor": "Effect4.Program.Eff.onExit", "slots": ["exit"], "args": [[], [0]] },
     { "ctor": "Effect4.Program.Eff.iterate", "slots": ["cursor", "answer"], "args": [[], [], [0], [0, 1], [0], [0]] },

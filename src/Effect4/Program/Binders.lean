@@ -22,6 +22,8 @@ def binders : Node Op → Nat → Nat
   | .eff (.select _ (.option) _ _), 1 => 1
   | .eff (.select _ (.tag _) _ _), 0 => 1
   | .eff (.select _ (.tag _) _ _), 1 => 1
+  | .eff (.select _ (.recordTag _) _ _), 0 => 1
+  | .eff (.select _ (.recordTag _) _ _), 1 => 1
   | .eff (.matchCause _ _ _), 1 => 1
   | .eff (.matchCause _ _ _), 2 => 1
   | .eff (.onExit _ _), 1 => 1

@@ -75,7 +75,7 @@
       "retired": {}
     },
     "Effect4.Program.Decision": {
-      "active": {"bool": 0, "option": 1, "tag": 2},
+      "active": {"bool": 0, "option": 1, "tag": 2, "recordTag": 3},
       "retired": {}
     },
     "Effect4.Program.Eff": {

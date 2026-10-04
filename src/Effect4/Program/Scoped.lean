@@ -41,7 +41,7 @@ def scopedAlgebra (Op : Type) : EffAlgebra Op ScopeCarrier where
   eff_service := fun _ _ => true
   eff_provideService := fun _ a1 a2 n => a1.scoped n && a2 n
   eff_catchIf := fun a0 a1 a2 n => a0.scoped (n + 1) && a1 n && a2 (n + 1)
-  eff_select := fun a0 a1 a2 a3 n => a0.scoped n && a2 (n + match a1 with | .bool => 0 | .option => 0 | (.tag _) => 1) && a3 (n + match a1 with | .bool => 0 | .option => 1 | (.tag _) => 1)
+  eff_select := fun a0 a1 a2 a3 n => a0.scoped n && a2 (n + match a1 with | .bool => 0 | .option => 0 | (.tag _) => 1 | (.recordTag _) => 1) && a3 (n + match a1 with | .bool => 0 | .option => 1 | (.tag _) => 1 | (.recordTag _) => 1)
   eff_iterate := fun _ a1 a2 a3 a4 a5 n => a1.scoped n && a2.scoped (n + 1) && a3.scoped (n + 2) && a4.scoped (n + 1) && a5 (n + 1)
   action_fork := fun a0 _ n => a0 n
   action_forkIn := fun a0 _ a2 n => a0 n && a2.scoped n
@@ -154,7 +154,7 @@ def Node.scopedAt {Op : Type} (n : Nat) : Node Op → Bool
 @[simp] theorem Eff.scopedAt_catchIf {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Eff Op) (a2 : Effect4.Program.Eff Op) :
     Eff.scopedAt n ((.catchIf a0 a1 a2 : Eff Op)) = (a0.scoped (n + 1) && Eff.scopedAt n a1 && Eff.scopedAt (n + 1) a2) := rfl
 @[simp] theorem Eff.scopedAt_select {Op : Type} (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Decision) (a2 : Effect4.Program.Eff Op) (a3 : Effect4.Program.Eff Op) :
-    Eff.scopedAt n ((.select a0 a1 a2 a3 : Eff Op)) = (a0.scoped n && Eff.scopedAt (n + match a1 with | .bool => 0 | .option => 0 | (.tag _) => 1) a2 && Eff.scopedAt (n + match a1 with | .bool => 0 | .option => 1 | (.tag _) => 1) a3) := rfl
+    Eff.scopedAt n ((.select a0 a1 a2 a3 : Eff Op)) = (a0.scoped n && Eff.scopedAt (n + match a1 with | .bool => 0 | .option => 0 | (.tag _) => 1 | (.recordTag _) => 1) a2 && Eff.scopedAt (n + match a1 with | .bool => 0 | .option => 1 | (.tag _) => 1 | (.recordTag _) => 1) a3) := rfl
 @[simp] theorem Eff.scopedAt_iterate {Op : Type} (n : Nat) (a0 : Option Effect4.Program.Ty) (a1 : Effect4.Program.Term) (a2 : Effect4.Program.Term) (a3 : Effect4.Program.Term) (a4 : Effect4.Program.Term) (a5 : Effect4.Program.Eff Op) :
     Eff.scopedAt n ((.iterate a0 a1 a2 a3 a4 a5 : Eff Op)) = (a1.scoped n && a2.scoped (n + 1) && a3.scoped (n + 2) && a4.scoped (n + 1) && Eff.scopedAt (n + 1) a5) := rfl
 @[simp] theorem ActionTerm.scopedAt_fork {Op : Type} (n : Nat) (a0 : Effect4.Program.Eff Op) (a1 : Effect4.Supervision.ForkOptions) :

@@ -173,6 +173,14 @@ def selectTag {Op : Type} (payload : String) (rest : String) (scrutinee : TermSr
     let x3 ← arm1 (env.push [rest]) (p ++ [1])
     .ok (.select x0 (.tag tag) x2 x3)
 
+/-- `Effect4.Program.Eff.select`: `arm0` sees `hit`; `arm1` sees `miss`. -/
+def selectRecordTag {Op : Type} (hit : String) (miss : String) (scrutinee : TermSrc) (tag : String) (arm0 : Src Op) (arm1 : Src Op) : Src Op :=
+  fun env p => do
+    let x0 ← scrutinee env p
+    let x2 ← arm0 (env.push [hit]) (p ++ [0])
+    let x3 ← arm1 (env.push [miss]) (p ++ [1])
+    .ok (.select x0 (.recordTag tag) x2 x3)
+
 /-- `Effect4.Program.Eff.iterate`: `test` sees `cursor`; `step` sees `cursor`, `answer`; `result` sees `cursor`; `body` sees `cursor`. -/
 def iterate {Op : Type} (cursor : String) (answer : String) (cursorTy : Option Effect4.Program.Ty) (initial : TermSrc) (test : TermSrc) (step : TermSrc) (result : TermSrc) (body : Src Op) : Src Op :=
   fun env p => do
