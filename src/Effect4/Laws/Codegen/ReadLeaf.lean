@@ -1,5 +1,6 @@
 import Effect4.Codegen.Read
 import Effect4.Laws.Codegen.Record
+import Effect4.Laws.Codegen.Tuple
 
 /-!
 # Leaf and row reconstruction laws
@@ -41,52 +42,26 @@ through `String.toList`), so injectivity is taken from the bytes instead: the UT
 a decimal string are its digits, and `decodeBytes` reads the number back. -/
 
 theorem decodeBytes_append (bs : List UInt8) (b : UInt8) :
-    decodeBytes (bs ++ [b]) = decodeBytes bs * 10 + digitOfByte b := by
-  simp [decodeBytes, List.foldl_append]
+    decodeBytes (bs ++ [b]) = decodeBytes bs * 10 + digitOfByte b :=
+  Data.NatDecimal.decodeBytes_append bs b
 
 theorem utf8_digitChar : ∀ m, m < 10 →
-    String.utf8EncodeChar (Nat.digitChar m) = [UInt8.ofNat (48 + m)] := by decide
+    String.utf8EncodeChar (Nat.digitChar m) = [UInt8.ofNat (48 + m)] :=
+  Data.NatDecimal.utf8_digitChar
 
-theorem digitOfByte_digit : ∀ m, m < 10 → digitOfByte (UInt8.ofNat (48 + m)) = m := by decide
+theorem digitOfByte_digit : ∀ m, m < 10 → digitOfByte (UInt8.ofNat (48 + m)) = m :=
+  Data.NatDecimal.digitOfByte_digit
 
 theorem toDigitsCore_append (fuel : Nat) : ∀ (n : Nat) (ds : List Char), n < fuel →
-    Nat.toDigitsCore 10 fuel n ds = Nat.toDigitsCore 10 fuel n [] ++ ds := by
-  induction fuel with
-  | zero => intro n ds h; omega
-  | succ fuel ih =>
-    intro n ds hn
-    simp only [Nat.toDigitsCore]
-    by_cases h0 : n / 10 = 0
-    · simp [h0]
-    · simp only [h0, if_false]
-      rw [ih (n / 10) (Nat.digitChar (n % 10) :: ds) (by omega),
-        ih (n / 10) [Nat.digitChar (n % 10)] (by omega), List.append_assoc]
-      rfl
+    Nat.toDigitsCore 10 fuel n ds = Nat.toDigitsCore 10 fuel n [] ++ ds :=
+  Data.NatDecimal.toDigitsCore_append fuel
 
 theorem decodeBytes_toDigitsCore (fuel : Nat) : ∀ n, n < fuel →
-    decodeBytes ((Nat.toDigitsCore 10 fuel n []).flatMap String.utf8EncodeChar) = n := by
-  induction fuel with
-  | zero => intro n h; omega
-  | succ fuel ih =>
-    intro n hn
-    have hm : n % 10 < 10 := Nat.mod_lt _ (by decide)
-    simp only [Nat.toDigitsCore]
-    by_cases h0 : n / 10 = 0
-    · simp only [h0, if_true, List.flatMap_cons, List.flatMap_nil, List.append_nil,
-        utf8_digitChar _ hm]
-      simp only [decodeBytes, List.foldl_cons, List.foldl_nil, Nat.zero_mul, Nat.zero_add,
-        digitOfByte_digit _ hm]
-      omega
-    · simp only [h0, if_false]
-      rw [toDigitsCore_append fuel (n / 10) [Nat.digitChar (n % 10)] (by omega),
-        List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil,
-        utf8_digitChar _ hm, decodeBytes_append, ih (n / 10) (by omega), digitOfByte_digit _ hm]
-      omega
+    decodeBytes ((Nat.toDigitsCore 10 fuel n []).flatMap String.utf8EncodeChar) = n :=
+  Data.NatDecimal.decodeBytes_toDigitsCore fuel
 
-theorem decodeBytes_repr (n : Nat) : decodeBytes (Nat.repr n).toByteArray.data.toList = n := by
-  rw [Nat.repr, String.toByteArray_ofList, List.utf8Encode, List.toList_data_toByteArray,
-    Nat.toDigits]
-  exact decodeBytes_toDigitsCore (n + 1) n (Nat.lt_succ_self n)
+theorem decodeBytes_repr (n : Nat) : decodeBytes (Nat.repr n).toByteArray.data.toList = n :=
+  Data.NatDecimal.decodeBytes_repr n
 
 theorem readKey_exact {Op : Type} {sig : Signature Op} {x : Expr} {key : ServiceKey}
     (h : readKey sig x = .ok key) : printKey sig key = .ok x := by
@@ -257,10 +232,10 @@ mutual
     | .var i, h => by
       simp only [Term.scoped, decide_eq_true_eq] at h
       simp only [printTerm, readTerm, Effect4.Codegen.Record.readRecord,
-        Effect4.Codegen.Record.readField, Effect4.Codegen.Record.readSet, Var.read_name h]
+        Effect4.Codegen.Record.readField, Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt, Var.read_name h]
     | .lit .unit, _ => by
       simp only [printTerm, printLit, readTerm, Effect4.Codegen.Record.readRecord,
-        Effect4.Codegen.Record.readField, Effect4.Codegen.Record.readSet,
+        Effect4.Codegen.Record.readField, Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt,
         Var.read_none Var.name_ne_undefined, ↓reduceIte]
     | .lit (.nat k), _ => by
       rw [printTerm, printLit, readTerm]
@@ -270,7 +245,7 @@ mutual
     | .app atom args, h => by
       simp only [Term.scoped] at h
       simp only [printTerm, readTerm, Effect4.Codegen.Record.readRecord,
-        Effect4.Codegen.Record.readField, Effect4.Codegen.Record.readSet,
+        Effect4.Codegen.Record.readField, Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt,
         readTerms_printTerms args h, Except.map]
     | .record fields names values, h => by
       simp only [Term.scoped] at h
@@ -313,6 +288,19 @@ mutual
         rw [readTerm_printTerm target h.1]
         simp only [ok_bind, readTerm_printTerm value h.2]
       · next hr => rw [hr] at hs; exact nomatch hs
+    | .tupleAt target index, h => by
+      simp only [Term.scoped] at h
+      rw [printTerm, readTerm]
+      simp only [Effect4.Codegen.Tuple.readRecord_writeAt,
+        Effect4.Codegen.Tuple.readField_writeAt, Effect4.Codegen.Tuple.readSet_writeAt]
+      have hs := Effect4.Codegen.Tuple.readAt_writeAt index (printTerm target)
+      split
+      · next index' target' hr =>
+        rw [hr] at hs
+        cases hs
+        rw [readTerm_printTerm target h]
+        rfl
+      · next hr => rw [hr] at hs; exact nomatch hs
   termination_by structural t
 
   theorem readTerms_printTerms {n : Nat} (ts : Terms) (h : Terms.scoped n ts = true) :
@@ -353,28 +341,35 @@ mutual
           rw [printTerm, readTerm_exact target htarget, readTerm_exact value hvalue]
           exact Effect4.Codegen.Record.readSet_exact x name target value hs
         · split at h
-          · next s =>
-            split at h
-            · next i hi =>
-              cases h
-              obtain ⟨hs, _⟩ := Var.read_exact hi
-              exact congrArg Expr.ident hs.symm
-            · split at h
-              · next hs => cases h; exact congrArg Expr.ident hs.symm
+          · next index target ht =>
+            have := Effect4.Codegen.Tuple.readAt_size x index target ht
+            obtain ⟨term, hterm, heq⟩ := map_eq_ok.mp h
+            cases heq
+            rw [printTerm, readTerm_exact target hterm]
+            exact Effect4.Codegen.Tuple.readAt_exact x index target ht
+          · split at h
+            · next s =>
+              split at h
+              · next i hi =>
+                cases h
+                obtain ⟨hs, _⟩ := Var.read_exact hi
+                exact congrArg Expr.ident hs.symm
+              · split at h
+                · next hs => cases h; exact congrArg Expr.ident hs.symm
+                · exact nomatch h
+            · next k =>
+              split at h
+              · next hk =>
+                cases h
+                exact congrArg Expr.int (Int.toNat_of_nonneg hk)
               · exact nomatch h
-          · next k =>
-            split at h
-            · next hk =>
-              cases h
-              exact congrArg Expr.int (Int.toNat_of_nonneg hk)
+            · cases h; rfl
+            · cases h; rfl
+            ·
+              obtain ⟨terms, hterms, ht⟩ := map_eq_ok.mp h
+              cases ht
+              rw [printTerm, readTerms_exact _ hterms]
             · exact nomatch h
-          · cases h; rfl
-          · cases h; rfl
-          ·
-            obtain ⟨terms, hterms, ht⟩ := map_eq_ok.mp h
-            cases ht
-            rw [printTerm, readTerms_exact _ hterms]
-          · exact nomatch h
   termination_by sizeOf x
   decreasing_by all_goals subst_vars; all_goals simp_wf; all_goals omega
 
@@ -406,7 +401,7 @@ theorem readLiteral_exact {x : Expr} {value : Lit} (h : readLiteral x = .ok valu
   simp only [readLiteral, bind_eq_ok] at h
   obtain ⟨term, ht, h⟩ := h
   cases term with
-  | var _ | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ => cases h
+  | var _ | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => cases h
   | lit v =>
     cases h
     exact readTerm_exact x ht
@@ -511,6 +506,7 @@ theorem idents?_printTerms : ∀ ts : Terms, idents? (printTerms ts) = ts.names?
       split <;> rfl
     | field mode target name => rfl
     | recordSet target name value => rfl
+    | tupleAt target index => rfl
 
 theorem printTerm_ident {t : Term} {x : String} (h : printTerm t = .ident x) :
     (∃ i, t = .var i ∧ x = Var.name i) ∨ (t = .lit .unit ∧ x = "undefined") := by
@@ -526,6 +522,7 @@ theorem printTerm_ident {t : Term} {x : String} (h : printTerm t = .ident x) :
     split at h <;> exact nomatch h
   | field mode target name => exact nomatch h
   | recordSet target name value => exact nomatch h
+  | tupleAt target index => exact nomatch h
 
 theorem printTerm_eq_bool (term : Term) (value : Bool) :
     printTerm term = .bool value ↔ term = .lit (.bool value) := by
@@ -541,6 +538,8 @@ theorem printTerm_eq_bool (term : Term) (value : Bool) :
     simp only [printTerm, Effect4.Codegen.Record.writeField, reduceCtorEq]
   | recordSet target name replacement =>
     simp only [printTerm, Effect4.Codegen.Record.writeSet, reduceCtorEq]
+  | tupleAt target index =>
+    simp only [printTerm, Effect4.Codegen.Tuple.writeAt, reduceCtorEq]
 
 /-- An atom application that is no row reads as no row call, so the caller may read it as a
 term. -/
@@ -716,7 +715,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
           readTerm_printTerm (.lit .unit) rfl
         simp [readTupleArgs, savedVar?, hv]
       | nat _ | bool _ | str _ => simp at h
-    | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ => cases h
+    | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => cases h
   · simp only [hpa, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
     obtain ⟨⟨hx, hy⟩, hsv⟩ := h
     obtain rfl := pairArgs?_some hpa
