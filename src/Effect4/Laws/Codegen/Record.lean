@@ -137,57 +137,44 @@ theorem readRecord_exact (e : Expr) (fields : Fields) (names : List String) (val
 /-- The required/optional mode survives independently of the target expression's type. -/
 theorem readField_writeField (optional : Bool) (name : String) (target : Expr) :
     readField (writeField optional name target) = some (optional, name, target) := by
-  cases optional with
-  | false =>
-    cases hi : targetIdentifier name with
-    | false => simp only [writeField, readField, hi, Bool.false_eq_true, ↓reduceIte]
-    | true => simp only [writeField, readField, hi, Bool.false_eq_true, ↓reduceIte]
-  | true =>
-    simp only [writeField, readField, ↓reduceIte]
+  cases optional <;> simp only [writeField, readField, Bool.false_eq_true, ↓reduceIte]
 
-/-- Alternate access spellings and inconsistent optional keys are outside the exact image. -/
+/-- Alternate access spellings and inconsistent literal keys are outside the exact image. -/
 theorem readField_exact (e : Expr) (optional : Bool) (name : String) (target : Expr)
     (h : readField e = some (optional, name, target)) : writeField optional name target = e := by
   unfold readField at h
   split at h
-  · next target' name' =>
-    split at h
-    · next hi =>
-      cases h
-      simp only [writeField, Bool.false_eq_true, ↓reduceIte, hi]
-    · exact nomatch h
-  · next target' name' =>
-    split at h
-    · exact nomatch h
-    · next hi =>
-      cases h
-      simp only [writeField, Bool.false_eq_true, ↓reduceIte, hi]
   · next name' key target' =>
     split at h
     · next hk =>
       cases h
       subst key
-      simp only [writeField, ↓reduceIte]
+      rfl
+    · exact nomatch h
+  · next name' key target' =>
+    split at h
+    · next hk =>
+      cases h
+      subst key
+      rfl
     · exact nomatch h
   · exact nomatch h
 
 /-- The update wrapper retains its exact key and both arbitrary child expressions. -/
 theorem readSet_writeSet (name : String) (target value : Expr) :
     readSet (writeSet name target value) = some (name, target, value) := by
-  simp only [writeSet, readSet, and_self, ↓reduceIte]
+  simp only [writeSet, readSet, ↓reduceIte]
 
-/-- No extra entry, alternate key form, or different literal key is accepted. -/
+/-- Extra arguments, missing applications, and inconsistent literal keys are refused. -/
 theorem readSet_exact (e : Expr) (name : String) (target value : Expr)
     (h : readSet e = some (name, target, value)) : writeSet name target value = e := by
   unfold readSet at h
   split at h
-  · next key form target' name' value' =>
+  · next name' key target' value' =>
     split at h
-    · next hc =>
+    · next hk =>
       cases h
-      obtain ⟨hk, hf⟩ := hc
       subst key
-      subst form
       rfl
     · exact nomatch h
   · exact nomatch h
@@ -195,11 +182,7 @@ theorem readSet_exact (e : Expr) (name : String) (target value : Expr)
 /-- The term reader's construction branch cannot consume a field image. -/
 theorem readRecord_writeField (optional : Bool) (name : String) (target : Expr) :
     readRecord (writeField optional name target) = none := by
-  cases optional with
-  | false =>
-    simp only [writeField, Bool.false_eq_true, ↓reduceIte]
-    split <;> rfl
-  | true => rfl
+  cases optional <;> rfl
 
 /-- The term reader's construction branch cannot consume an update image. -/
 theorem readRecord_writeSet (name : String) (target value : Expr) :

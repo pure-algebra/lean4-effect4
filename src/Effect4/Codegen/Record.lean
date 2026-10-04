@@ -20,7 +20,7 @@ namespace Effect4.Codegen.Record
 open Effect4.Program TypeScript
 
 /-- Runtime helper bindings owned by the record target profile, separate from program heads. -/
-def helperNames : List String := ["recordValue", "recordRaw", "recordOptional", "recordSet"]
+def helperNames : List String := ["recordValue", "recordRaw", "recordRequired", "recordOptional", "recordSet"]
 
 /-- Existing raw record declaration data, not a new type representation. -/
 abbrev Fields := List (String × Bool × Ty)
@@ -141,19 +141,15 @@ theorem readRecord_size (e : Expr) (fields : Fields) (names : List String) (valu
     | some type => rw [ht] at h; exact nomatch h
   · exact nomatch h
 
-/-- The mode is explicit: false means required, true means optional. -/
+/-- Both modes retain a literal key marker and use a never-preserving target helper (row 198). -/
 def writeField (optional : Bool) (name : String) (target : Expr) : Expr :=
-  if optional then
-    .call (.call (.generic (.ident "recordOptional") [.literal name]) [.str name]) [target]
-  else if targetIdentifier name then .member target name
-  else .index target (.str name)
+  .call (.call (.generic (.ident (if optional then "recordOptional" else "recordRequired"))
+    [.literal name]) [.str name]) [target]
 
-/-- Read the mode and exact name from the distinct canonical field images. -/
+/-- The helper head retains the mode; both literal key occurrences must agree. -/
 def readField : Expr → Option (Bool × String × Expr)
-  | .member target name =>
-    if targetIdentifier name then some (false, name, target) else none
-  | .index target (.str name) =>
-    if targetIdentifier name then none else some (false, name, target)
+  | .call (.call (.generic (.ident "recordRequired") [.literal name]) [.str key]) [target] =>
+    if key = name then some (false, name, target) else none
   | .call (.call (.generic (.ident "recordOptional") [.literal name]) [.str key]) [target] =>
     if key = name then some (true, name, target) else none
   | _ => none
@@ -166,14 +162,9 @@ theorem readField_size (e : Expr) (optional : Bool) (name : String) (target : Ex
   split at h
   · split at h
     · cases h
-      simp only [Expr.member.sizeOf_spec]
+      simp only [Expr.call.sizeOf_spec, List.cons.sizeOf_spec]
       omega
     · exact nomatch h
-  · split at h
-    · exact nomatch h
-    · cases h
-      simp only [Expr.index.sizeOf_spec]
-      omega
   · split at h
     · cases h
       simp only [Expr.call.sizeOf_spec, List.cons.sizeOf_spec]
@@ -181,17 +172,15 @@ theorem readField_size (e : Expr) (optional : Bool) (name : String) (target : Ex
     · exact nomatch h
   · exact nomatch h
 
-/-- A constant-type-preserving identity marks the canonical spread update.
-The target appears first and the replacement appears once after it. -/
+/-- Curried update: copy the target before evaluating the replacement (row 198).
+The literal generic marker distinguishes this image from an ordinary atom call. -/
 def writeSet (name : String) (target value : Expr) : Expr :=
-  .call (.call (.generic (.ident "recordSet") [.literal name]) [])
-    [.objectWith (keyForm [name]) [.spread target, .property name value]]
+  .call (.call (.call (.generic (.ident "recordSet") [.literal name]) [.str name]) [target]) [value]
 
-/-- Read exactly one spread followed by one property, with a matching literal key. -/
+/-- Read the exact literal key, target, and replacement from the curried helper image. -/
 def readSet : Expr → Option (String × Expr × Expr)
-  | .call (.call (.generic (.ident "recordSet") [.literal key]) [])
-      [.objectWith form [.spread target, .property name value]] =>
-    if key = name ∧ form = keyForm [name] then some (name, target, value) else none
+  | .call (.call (.call (.generic (.ident "recordSet") [.literal name]) [.str key]) [target]) [value] =>
+    if key = name then some (name, target, value) else none
   | _ => none
 
 /-- Exact-codecs termination helper for the two update children of `readTerm`.
@@ -203,8 +192,7 @@ theorem readSet_size (e : Expr) (name : String) (target value : Expr)
   split at h
   · split at h
     · cases h
-      simp only [Expr.call.sizeOf_spec, List.cons.sizeOf_spec, Expr.objectWith.sizeOf_spec,
-        ObjectEntry.spread.sizeOf_spec, ObjectEntry.property.sizeOf_spec]
+      simp only [Expr.call.sizeOf_spec, List.cons.sizeOf_spec]
       constructor <;> omega
     · exact nomatch h
   · exact nomatch h
