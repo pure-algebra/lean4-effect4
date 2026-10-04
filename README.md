@@ -43,6 +43,35 @@ and the dependency boundaries.
 The earlier Flow route is retained in git history and on branch `archive/flow-route`.
 The earlier Surface library is preserved on branch `archive/surface`.
 
+## Records in authored programs
+
+A record declaration retains required and optional fields, including fields whose values are absent.
+Use the existing authoring functions through `Effect4.Api`:
+
+```lean
+import Effect4.Api
+open Effect4.Program
+
+def person : Authoring.TermSrc :=
+  Authoring.record [("name", false, .string), ("nickname", true, .string)]
+    [("name", Authoring.str "Ada")]
+
+def nickname : Authoring.Src NativeOp :=
+  Authoring.bind "person" (Authoring.succeed person)
+    (Authoring.succeed (Authoring.optionalField (Authoring.var "person") "nickname"))
+```
+
+`Effect4.Api.author nickname` checks the program and returns its certificate.
+Its answer type is `option string`; execution returns `None` because `nickname` is absent.
+`Authoring.field` reads a required field.
+`Authoring.recordSet` inserts or replaces a field in a new record, retaining the original record.
+It makes the supplied field required and can change its type.
+
+Every string field name is supported, including `__proto__` and names requiring bracket access in TypeScript.
+An optional read distinguishes absence from a present `undefined` or a present `Option.none`.
+The checked example and overwrite controls are in `Test/Api/RecordAuthoring.lean`.
+JSON and Schema record codecs remain a separate implementation slice.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact

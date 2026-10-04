@@ -158,6 +158,7 @@ import Test.Program.ProvisionContract
 import Test.Program.ProvideRows
 import Test.Program.ConfigContract
 import Test.Api.ApiContract
+import Test.Api.RecordAuthoring
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract
