@@ -20,6 +20,7 @@ def initial : Session program table where
   admitted := {
     ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
     typed := by cbv
+    formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
     lawful := by decide
     runnable := by decide
     intFreeTable := by decide

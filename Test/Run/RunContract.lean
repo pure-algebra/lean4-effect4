@@ -97,6 +97,7 @@ def pairProgram : Api.Program :=
 def pairAdmitted : Api.AdmittedProgram pairProgram Test.Api.HostSessionContract.table where
   ty := ⟨.exitOf .nat (.prod .string .string), .never, .empty⟩
   typed := by cbv
+  formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
   lawful := by decide
   runnable := by decide
   intFreeTable := by decide
@@ -176,6 +177,7 @@ def timedProgram : Api.Program :=
 def timedAdmitted : Api.AdmittedProgram timedProgram [] where
   ty := ⟨.exitOf .nat .never, .never, .empty⟩
   typed := by cbv
+  formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
   lawful := by decide
   runnable := by decide
   intFreeTable := by decide
@@ -241,6 +243,7 @@ def yieldingProgram : Api.Program := .bind (.yieldNow 0) (.succeed (.lit (.nat 2
 def yieldingAdmitted : Api.AdmittedProgram yieldingProgram [] where
   ty := ⟨.nat, .never, .empty⟩
   typed := by cbv
+  formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
   lawful := by decide
   runnable := by decide
   intFreeTable := by decide
@@ -271,6 +274,7 @@ def mixedWorkProgram : Api.Program :=
 def mixedWorkAdmitted : Api.AdmittedProgram mixedWorkProgram Test.Api.HostSessionContract.table where
   ty := ⟨.nat, .prod .string .string, .empty⟩
   typed := by cbv
+  formed := (Effect4.Program.Formation.checkInput_eq_none_iff _ _).mp (by decide +kernel)
   lawful := by decide
   runnable := by decide
   intFreeTable := by decide
