@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Commands.Clauses.All
+import Effect4.Laws.Program.Typed.AdmissionRows
 import Effect4.Laws.Auto.Obligations
 
 /-!
@@ -15,10 +16,11 @@ threads the application's signature through admission (the plan:
 * `AdmissionGap`: the three conditions `LawfulSig` asks of a row table that the API's admission
   does not check: every required key served, every row well scoped, every template admissible
   (`E4-TYPED-CE-041` witnesses each).
-* `lawfulSig_of_admitted` (a planned goal): an admitted table that meets the gap is a lawful
-  signature with the built-in services. Every other row condition is admission's own.
-* `AdmittedProgram.source` and `reachable_typed_admitted` (proved modulo that goal): the source such
-  an admitted program denotes, and M6's consequence for it.
+* `lawfulSig_of_admitted` (proved): an admitted table that meets the gap is a lawful signature
+  with the built-in services. Every other row condition is admission's own, read by row in
+  `Laws/Program/Typed/AdmissionRows.lean`.
+* `AdmittedProgram.source` and `reachable_typed_admitted` (proved): the source such an admitted
+  program denotes, and M6's consequence for it.
 
 Placement (`AGENTS.md`). Concepts: `translation-simulation` (M7) and `residual-program-typing`
 (admission). Claims: `m7-admitted` and `admitted-source-lawful`, in R9 and R1. Reach: the built-in
@@ -59,12 +61,23 @@ structure AdmissionGap (table : RowTable) : Prop where
     r.request.templateAdmissible = true ∧ r.answer.templateAdmissible = true ∧
       r.error.templateAdmissible = true
 
-/-- **The bridge, row-table half** (planned goal; claim `admitted-source-lawful`). An admitted table
-that meets the admission gap is a lawful signature with the built-in services: admission's other
-row checks are `rowChecks`' remaining thirteen, and its key check is `rowsDistinct`. -/
-proof_goal lawfulSig_of_admitted {program : NativeEff} {table : RowTable}
+/-- **The bridge, row-table half** (proved; claim `admitted-source-lawful`). An admitted table that
+meets the admission gap is a lawful signature with the built-in services. The gap gives four of
+`rowChecks`' sixteen checks and `served`. Admission's fields give the other twelve, read by row
+(`Laws/Program/Typed/AdmissionRows.lean`), and its key check is `rowsDistinct`. With no declaration,
+`services` and `codesDistinct` hold vacuously. -/
+theorem lawfulSig_of_admitted {program : NativeEff} {table : RowTable}
     (a : AdmittedProgram program table) (gap : AdmissionGap table) :
-    LawfulSig (SigApp.mk table [])
+    LawfulSig (SigApp.mk table []) := by
+  obtain ⟨keys, collision, trailing⟩ := (Table.lawful_eq_true_iff table).mp a.lawful
+  have runnable := (checkTable_eq_none_iff table).mp a.runnable
+  have ints := (findIntInTable_eq_none_iff table).mp a.intFreeTable
+  have handles := (findInternalHandleInTable_eq_none_iff table).mp a.internalFreeTable
+  have filled := (findEmptyColumnInTable_eq_none_iff table).mp a.columnsTable
+  obtain ⟨served, scopedRows, templates⟩ := gap
+  refine ⟨fun r hr => ?_, List.pairwise_map.mp keys, fun _ h => (nomatch h), List.Pairwise.nil,
+    served⟩
+  aesop (add norm simp [rowChecks])
 
 /-- The source an admitted program over a table that meets the gap denotes. -/
 def _root_.Effect4.Program.AdmittedProgram.source {program : NativeEff} {table : RowTable}
