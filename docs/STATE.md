@@ -100,7 +100,7 @@ State at any type runs in seven slices, T0–T6, in the
 [state plan](research/2026-10-04-claude-lead/state-any-type-plan.md). The owner ruled its four
 questions as recommended: rows 208 and 209, and rows 155 (a) and 183 ratified. T1 landed
 (seat T1, merged `236df2ff`): the straight soundness holds at the typed world, and `HeapNat` is
-deleted. Error payloads run
+deleted. T0 landed (seat T0, merged `c8f01acf`): the scope check reads an operation's own data. Error payloads run
 in two parts, E1 (the carrier) before T3 and E2 (the face), in the
 [error payloads plan](research/2026-10-04-claude-lead/error-payloads-plan.md).
 
