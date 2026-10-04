@@ -96,7 +96,9 @@ The owner ratified the coordinator's recommendations (decisions rows 21, 120, 20
 The evidence is in the [roadmap note](research/2026-10-04-claude-lead/next-after-sigapp.md).
 State at any type runs in seven slices, T0–T6, in the
 [state plan](research/2026-10-04-claude-lead/state-any-type-plan.md). The owner ruled its four
-questions as recommended: rows 208 and 209, and rows 155 (a) and 183 ratified.
+questions as recommended: rows 208 and 209, and rows 155 (a) and 183 ratified. Error payloads run
+in two parts, E1 (the carrier) before T3 and E2 (the face), in the
+[error payloads plan](research/2026-10-04-claude-lead/error-payloads-plan.md).
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
