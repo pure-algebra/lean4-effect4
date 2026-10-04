@@ -714,6 +714,10 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
   (`provide_discharges` (`src/Effect4/Program/Provision.lean`)).
 - **Closed layer composition (`provide-closed`)**: Composing closed layers yields closed requirements.
   (`provide_closed` (`src/Effect4/Program/Provision.lean`)).
+- **Build totality (`build-total`)**: Under a typed leaf semantics, a layer the checker types
+  builds under every context that satisfies its requirement row, and the built context satisfies
+  its output row (`build_total` (`src/Effect4/Laws/Program/BuildTotal.lean`), restored under
+  decisions row 147). The machine's build refining `build` is the row's other half, still owed.
 - **Layer sharing invariants (`layer-sharing-contract`)**: Dynamic layer memoization and sharing invariants
   (`LayerSharingContract.lean`).
 

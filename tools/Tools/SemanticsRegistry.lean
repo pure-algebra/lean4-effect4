@@ -494,6 +494,9 @@ def registry : Registry where
     { id := "provide-closed", concept := "context-requirements", role := .fundamentalProperty
       title := "A closed dependency layer that covers all requirements yields a closed program"
       pointer := .witness `Effect4.Program.Provision.LayerTy.provide_closed },
+    { id := "build-total", concept := "context-requirements", role := .progress
+      title := "Build totality: under a typed leaf semantics, a layer the checker types builds under every context satisfying its requirement row, and the built context satisfies its output row (restored, decisions row 147)"
+      pointer := .witness `Effect4.Program.Provision.build_total },
 
     -- 9. host-session-protocol
     { id := "allows-answer", concept := "host-session-protocol", role := .preservation
@@ -669,6 +672,10 @@ def registry : Registry where
       reason := "rc.112 runs closed rows (Effect.ts:17494-17497)" }
   ]
   requirements := [
+    { id := "R5", title := "Services: the service table, layers and provision"
+      top := [`Effect4.Program.Provision.build_total]
+      openParts := ["lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)",
+        "reference keys, Config, minted keys, and context validation at any runtime bridge (system map §8, R5)"] },
     { id := "R9", title := "Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)"
       top := [`Effect4.Program.Typed.m7_proved]
       openParts := ["part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)"] },

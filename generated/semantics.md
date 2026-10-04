@@ -881,6 +881,7 @@ Context Requirements: Graded coeffects, requirement rows, and layer discharge
 | emission-requirements-complete | compatibility | proved | Effect4.Codegen.ModuleEmission.annotation_complete | yes |  |
 | provide-discharges | preservation | proved | Effect4.Program.Provision.LayerTy.provide_discharges | yes |  |
 | provide-closed | fundamentalProperty | proved | Effect4.Program.Provision.LayerTy.provide_closed | yes |  |
+| build-total | progress | proved | Effect4.Program.Provision.build_total | yes |  |
 
 ### Printed statements
 
@@ -962,6 +963,20 @@ Literature: Leijen2014, audit P22 — adaptedResult
 ```lean
 ∀ (s t : Effect4.Program.LayerTy),
   t.Closed → Effect4.Row.Subset s.requires t.out → (s.provide t).Closed
+```
+
+**build-total**
+
+```lean
+∀ {Op : Type} (sig : Effect4.Program.Signature Op) (sem : Effect4.Program.Provision.LeafSem Op),
+  Effect4.Program.Provision.LeafSem.Typed sig sem →
+    ∀ (l : Effect4.Program.LayerTerm Op) (t : Effect4.Program.LayerTy)
+      (ctx : Effect4.Machine.Env.Ctx),
+      Eq (Effect4.Program.layerTy sig l) (Option.some t) →
+        Effect4.Machine.Env.Context.Satisfies ctx t.requires →
+          Exists fun out =>
+            And (Eq (Effect4.Program.Provision.build sem l ctx) (Option.some out))
+              (Effect4.Machine.Env.Context.Satisfies out t.out)
 ```
 
 ## host-session-protocol
@@ -1394,10 +1409,25 @@ A requirement with an open part not yet stated as a plan node is open, whatever 
 
 | Requirement | Status | Top nodes | Next goals |
 | --- | --- | --- | --- |
+| R5 | open | `build_total` (proved) | — |
 | R9 | open | `m7_proved` (proved) | — |
 | R12 | open | `fairTape_unarmed` (proved) | — |
 
 **Next goals** (0): 
+
+### R5: Services: the service table, layers and provision
+
+- Open: lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)
+- Open: reference keys, Config, minted keys, and context validation at any runtime bridge (system map §8, R5)
+
+```mermaid
+flowchart LR
+  n0["build_total<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `build_total` | proved | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 170 | 242 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
 
