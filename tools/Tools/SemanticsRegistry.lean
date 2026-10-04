@@ -420,6 +420,9 @@ def registry : Registry where
     { id := "service-identifier-injective", concept := "exact-codecs", role := .compatibility
       title := "At one signature's scope key, distinct service keys print distinct target Identifier types"
       pointer := .witness `Effect4.Program.keyIdentifier_injective },
+    { id := "error-payload-exact", concept := "exact-codecs", role := .compatibility
+      title := "A typed failure's record payload reads back exactly through the error image: errOf inverts valOfErr at every represented error, the handle-free record frame included (decisions row 120)"
+      pointer := .witness `Effect4.Program.errOf_valOfErr },
 
     -- 6. subtyping-algebra
     { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility
@@ -704,10 +707,10 @@ def registry : Registry where
         `Effect4.Program.Typed.fits_subN, `Effect4.Program.Typed.inhabited_iff_fits,
         `Effect4.Program.hom_eq_cata_ty, `Effect4.Schema.decode_iff,
         `Effect4.Schema.Bridge.ofSchema_exact, `Effect4.Program.readTerm_printTerm,
-        `Effect4.Codegen.Metadata.type_metadata_exact]
+        `Effect4.Codegen.Metadata.type_metadata_exact, `Effect4.Program.errOf_valOfErr]
       openParts := ["variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130",
         "recursive types are row 124 (open): nominal Σ_app declarations through Ty.app",
-        "error payloads: a handle-free payload carrier with an exact embedding into Val (decisions row 120, DI-62; ratification owed)",
+        "error payloads: the carrier landed (decisions row 120, part E1); open: E2's face (one Data.TaggedError class per tag, printed and read back; the printer refuses Err.payload by name until then), catchTag's residual over records (decisions row 130), int and number fields (row 121), and a host row answering a payload (R6, parked)",
         "int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121), not landed; the admission's int scan still refuses it",
         "the Schema and JSON images of app, null, undefined, number and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161)",
         "equality at records: eq stays refused at records until a program compares them (decisions row 126)"] },
