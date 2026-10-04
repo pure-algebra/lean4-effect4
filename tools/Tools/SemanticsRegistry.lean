@@ -554,6 +554,13 @@ def registry : Registry where
     { id := "m7-never-halts", concept := "translation-simulation", role := .progress
       title := "M7c: the frame machine never halts on M7Fragment (row 139's stuck = none in J)"
       pointer := .witness `Effect4.Program.Typed.m7_proved },
+    { id := "m7-admitted", concept := "translation-simulation", role := .fundamentalProperty
+      title := "M7a–c for a program the API admits at the empty row table, with a closed requirement row and an answer-free tape"
+      pointer := .witness `Effect4.Program.Typed.m7_admitted },
+    { id := "admitted-source-lawful", concept := "residual-program-typing", role := .compatibility
+      title := "An admitted table whose required keys are served is a lawful signature with the built-in services (the bridge from admission to the typed state, row-table half)"
+      pointer := .witness `Effect4.Program.Typed.lawfulSig_of_admitted
+      contestedBy := ["E4-TYPED-CE-041"] },
     { id := "m7-exit-handles-valid", concept := "translation-simulation", role := .preservation
       title := "Recorded exits name only live scope handles on every reachable machine (row 139)"
       pointer := .witness `Effect4.Program.Typed.exitHandles_valid },
@@ -670,8 +677,9 @@ def registry : Registry where
     { id := "R1", title := "The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it"
       top := [`Conform.Effect4.Typing.check_sound, `Conform.Effect4.Typing.check_complete,
         `Effect4.Program.admitSig_ok_iff, `Effect4.Program.Denote.meaning_typed_app,
-        `Effect4.Program.Denote.run_typed_app, `Effect4.Program.Denote.meaningB_typed_app]
-      openParts := ["admission pinned to the built-in signature: AdmittedProgram and code generation's admission check at nativeSignature table (decisions row 21, ruled 2026-10-01: thread it in the Σ_app slice)",
+        `Effect4.Program.Denote.run_typed_app, `Effect4.Program.Denote.meaningB_typed_app,
+        `Effect4.Program.Typed.reachable_typed_admitted]
+      openParts := ["admission pinned to the built-in signature and weaker than LawfulSig: AdmittedProgram checks no served key (E4-TYPED-CE-041), and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)",
         "the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)",
         "meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)",
         "structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)"] },
@@ -731,7 +739,7 @@ def registry : Registry where
         "the TypeScript face against rc.112: finite truth-harness checks only (DI-49)",
         "the profile as data, named by each face's law (decisions row 79, R79.5)"] },
     { id := "R9", title := "Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)"
-      top := [`Effect4.Program.Typed.m7_proved]
+      top := [`Effect4.Program.Typed.m7_proved, `Effect4.Program.Typed.m7_admitted]
       openParts := ["part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)"] },
     { id := "R10", title := "Library code inherits theorems: a composed module's law is Agrees profile module expansion"
       top := [`Effect4.Codegen.Forms.andThenEffect_typed,

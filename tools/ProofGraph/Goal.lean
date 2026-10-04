@@ -54,7 +54,9 @@ syntax (name := goalDecl) (docComment)? "proof_goal " declId declSig : command
   let decl ← match doc? with
     | some doc => `(command| $doc:docComment theorem $id $sig := sorry)
     | none => `(command| theorem $id $sig := sorry)
-  withScope (fun scope => { scope with opts := warn.sorry.set scope.opts false }) do
+  -- the body is `sorry`, so the binders are unused by construction: both warnings are off here only
+  withScope (fun scope => { scope with
+      opts := (warn.sorry.set scope.opts false).setBool `linter.unusedVariables false }) do
     elabCommand decl
   let name ← liftTermElabM <| realizeGlobalConstNoOverloadWithInfo id.raw[0]
   liftCoreM <| tagGoal name
