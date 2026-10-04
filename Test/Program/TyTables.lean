@@ -4,11 +4,11 @@ import Effect4.Program.TyClasses
 /-!
 # Test.Program.TyTables — the per-constructor tables of `Ty` (decisions row 182 (a), slice C)
 
-**The Schema face table is the hand fold.** `tyFaces` writes each constructor's node of rc.112's
-Schema IR as a template (`Schema.Template`: children as references, the payload at a mark), and its
-fold agrees with `Schema.Bridge.schema` at every type (`schema_eq_face`): the generated uniqueness in
-layer form (`eq_cata_ofLayer`), each constructor's layer checked by computation. Every property
-proved of `Bridge.schema` (the bridge's exactness, `ofSchema_exact`) holds of the table's fold.
+`tyFaces` stores one first-order recipe for each type constructor.
+Fixed recipes use child references and a payload mark.
+Record and tuple selectors retain the complete generated child lists.
+`schema_eq_face` connects the interpreted algebra to `Schema.Bridge.schema` at every type.
+The bridge's retraction and exactness results therefore apply to this table fold.
 
 **The refusals a table gets from its generated type.** `TyTable` has one field per constructor of
 `Ty` (`TyFoldExtras`, generated from the declaration), so a table with a row missing, a row for no
@@ -24,7 +24,9 @@ open Effect4 Effect4.Program
 
 /-- **The Schema face table agrees with `Schema.Bridge.schema` at every type.** -/
 theorem schema_eq_face (t : Ty) : Schema.Bridge.schema t = cata_ty (TyTable.schemaFace tyFaces) t :=
-  eq_cata_ofLayer _ Schema.Bridge.schema (fun t => by cases t <;> rfl) t
+  rfl
+
+#print axioms schema_eq_face
 
 /-- error: Fields missing: `unknown` -/
 #guard_msgs (error) in

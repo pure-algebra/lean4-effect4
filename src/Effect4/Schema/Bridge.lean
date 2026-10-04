@@ -12,8 +12,8 @@ import Effect4.Schema.Payload
 This module implements Decision 12 (S-1, S-2) from `docs/research/2026-09-10-schema-at-boundaries.md`:
 1. `Ty.schema : Ty → Representation`: Lowering any program type into an rc.112 `SchemaRepresentation`.
 2. `Ty.ofSchema : Representation → Option Ty`: the reader, recovering the first-order program type.
-3. `ofSchema_schema`: the retraction `ofSchema (schema t) = some t`, on closed types whose handles
-   avoid the reserved type-parameter id (`reservedFree`).
+3. `ofSchema_schema`: raw retraction on closed types in `reservedFree`'s exact profile.
+   The profile excludes unsupported nodes, nonstring map keys, the two-item tuple alias, and the reserved handle id.
 4. `ofSchema_exact`: exactness (decisions row 128): `ofSchema r = some t → normS r = schema t`, so
    the pair is an exact embedding modulo `normS` (`N_S`, a fold), not a retraction alone.
 5. `EffTy.document` & `Row.document`: As-an-effect and as-a-plain-object schema documents for program boundaries.
@@ -60,38 +60,55 @@ and a handle of that name keeps its own image (Codex, unlowered-boundary review)
 def unlowered (head : String) : Representation :=
   .declaration ⟨"effect4/unlowered/" ++ head, .str "unlowered"⟩ none [] []
 
-/-- Lowers any first-order `Ty` into its canonical rc.112 `SchemaRepresentation`. -/
-def schema : Ty → Representation
-  | .never => Schema.never
-  | .unknown => .unknown none []
-  | .unit => Schema.void
-  | .nat => .number none [isIntCheck, nonNegativeCheck]
-  | .int => .number none [isIntCheck]
-  | .string => Schema.string
-  | .bool => Schema.boolean
-  | .lit s => Schema.literalString s
-  | .handle target => .declaration ⟨target, .null⟩ none [] []
-  | .option inner => .declaration ⟨"effect/schema/Option", .null⟩ none [schema inner] []
-  | .list inner => Schema.array (schema inner)
-  | .prod left right => Schema.tuple [Schema.element (schema left), Schema.element (schema right)]
-  | .except error value => .declaration ⟨"effect/schema/Result", .null⟩ none [schema value, schema error] []
-  | .exitOf value error => .declaration ⟨"effect/schema/Exit", .null⟩ none [schema value, schema error, defectRep] []
-  | .causeOf error => .declaration ⟨"effect/schema/Cause", .null⟩ none [schema error, defectRep] []
-  | .fiberOf value error => .declaration ⟨"effect/schema/Fiber", .null⟩ none [schema value, schema error] []
-  | .refOf value => .declaration ⟨"effect/schema/Ref", .null⟩ none [schema value] []
-  | .deferredOf value error => .declaration ⟨"effect/schema/Deferred", .null⟩ none [schema value, schema error] []
-  -- a row template's parameter has no schema: an opaque node `ofSchema` refuses by name
-  | .var _ => .declaration ⟨"effect/schema/TypeParameter", .null⟩ none [] []
-  | .union left right => .union none [] [schema left, schema right] .anyOf
-  -- the data wave's forms, refused by name until the Schema commit lowers each
-  | .record _ => unlowered "record"
-  | .map _ _ => unlowered "map"
-  | .tuple _ => unlowered "tuple"
-  | .app _ _ => unlowered "app"
-  | .null => unlowered "null"
-  | .undefined => unlowered "undefined"
-  | .number => unlowered "number"
-  | .bytes => unlowered "bytes"
+/-- The Schema algebra has one field for every type constructor. -/
+def schemaAlg : TyAlgebra (fun _ => Representation) where
+  ty_never := Schema.never
+  ty_unknown := .unknown none []
+  ty_unit := Schema.void
+  ty_nat := .number none [isIntCheck, nonNegativeCheck]
+  ty_int := .number none [isIntCheck]
+  ty_string := Schema.string
+  ty_bool := Schema.boolean
+  ty_lit s := Schema.literalString s
+  ty_handle target := .declaration ⟨target, .null⟩ none [] []
+  ty_option inner := .declaration ⟨"effect/schema/Option", .null⟩ none [inner] []
+  ty_list inner := Schema.array inner
+  ty_prod left right := Schema.tuple [Schema.element left, Schema.element right]
+  ty_except error value := .declaration ⟨"effect/schema/Result", .null⟩ none [value, error] []
+  ty_exitOf value error := .declaration ⟨"effect/schema/Exit", .null⟩ none [value, error, defectRep] []
+  ty_causeOf error := .declaration ⟨"effect/schema/Cause", .null⟩ none [error, defectRep] []
+  ty_fiberOf value error := .declaration ⟨"effect/schema/Fiber", .null⟩ none [value, error] []
+  ty_refOf value := .declaration ⟨"effect/schema/Ref", .null⟩ none [value] []
+  ty_deferredOf value error := .declaration ⟨"effect/schema/Deferred", .null⟩ none [value, error] []
+  ty_var _ := .declaration ⟨"effect/schema/TypeParameter", .null⟩ none [] []
+  ty_union left right := .union none [] [left, right] .anyOf
+  ty_record fields := Schema.struct (fields.map fun field =>
+    Schema.property field.1 field.2.2 field.2.1)
+  ty_map key value := Schema.struct [] [Schema.index key value]
+  ty_tuple items := Schema.tuple (items.map fun item => Schema.element item)
+  ty_app _ _ := unlowered "app"
+  ty_null := unlowered "null"
+  ty_undefined := unlowered "undefined"
+  ty_number := unlowered "number"
+  ty_bytes := unlowered "bytes"
+
+/-- Write a type through the generated fold. The public writer normalizes first. -/
+def schema (t : Ty) : Representation := cata_ty schemaAlg t
+
+/-- The record fold retains raw declaration order and each optional flag. -/
+theorem schema_record (fields : List (String × Bool × Ty)) :
+    schema (.record fields) = Schema.struct
+      (fields.map fun field => Schema.property field.1 (schema field.2.2) field.2.1) := by
+  rw [schema, cata_ty_record]
+  simp only [schemaAlg, List.map_map, Function.comp_def, prodMapSnd]
+  rfl
+
+/-- The tuple fold retains the complete ordered child list. -/
+theorem schema_tuple (items : List Ty) :
+    schema (.tuple items) = Schema.tuple (items.map fun item => Schema.element (schema item)) := by
+  rw [schema, cata_ty_tuple]
+  simp only [schemaAlg, List.map_map, Function.comp_def]
+  rfl
 
 /-- Extracts the identifier of a persisted check. The reader no longer reads a check by its id
 (row 128: it compares whole checks); this stays the id projection the fold census registers
@@ -184,6 +201,19 @@ def isDefect : Representation → Bool
   | .declaration ⟨"effect/schema/Json", .null⟩ ann [] [] => decide (normAnn ann = none)
   | _ => false
 
+/-- Read a plain string property after reading its child type. -/
+def readProperty (name : PropertyKey) (optional mutable : Bool) (ann : Annotations)
+    (child : Option Ty) : Option (String × Bool × Ty) :=
+  match name with
+  | .string key =>
+    if mutable = false ∧ normAnn ann = none then child.map (fun ty => (key, optional, ty))
+    else none
+  | _ => none
+
+/-- Read a required plain tuple element after reading its child type. -/
+def readElement (optional : Bool) (ann : Annotations) (child : Option Ty) : Option Ty :=
+  if optional = false ∧ normAnn ann = none then child else none
+
 /-- Reconstitutes a first-order `Ty` from an rc.112 `SchemaRepresentation` (decisions rows 6 and
 128): exactly the nodes `schema` mints, modulo `N_S`. Each arm reads its annotation bag first and
 refuses a key outside the erased ones (row 179). A `number`'s checks are compared whole, after
@@ -266,7 +296,53 @@ def ofSchema : Representation → Option Ty
       let tb ← ofSchema b
       some (.union ta tb)
     else none
+  | .objects ann [] properties [] =>
+    if normAnn ann = none then
+      (properties.mapM fun property => readProperty property.name property.isOptional
+        property.isMutable property.annotations (ofSchema property.type)).map Ty.record
+    else none
+  | .objects ann [] [] [⟨.string keyAnn [], value⟩] =>
+    if normAnn ann = none ∧ normAnn keyAnn = none then
+      (ofSchema value).map (Ty.map .string)
+    else none
+  | .arrays ann [] elements [] =>
+    if normAnn ann = none ∧ elements.length ≠ 2 then
+      (elements.mapM fun element =>
+        readElement element.isOptional element.annotations (ofSchema element.type)).map Ty.tuple
+    else none
   | _ => none
+
+decreasing_by
+  all_goals simp_wf
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · omega
+  · rename_i hproperty
+    have hsize := List.sizeOf_lt_of_mem hproperty
+    cases property
+    simp only [PropertySignatureOf.mk.sizeOf_spec] at hsize
+    simp only
+    omega
+  · omega
+  · rename_i helement
+    have hsize := List.sizeOf_lt_of_mem helement
+    cases element
+    simp only [ElementOf.mk.sizeOf_spec] at hsize
+    simp only
+    omega
 
 /-! ## `N_S` at each node `schema` writes (the fold's equations) -/
 
@@ -318,6 +394,16 @@ theorem normS_arrays (ann : Annotations) (checks : List Check)
       .arrays (normAnn ann) (checks.map normCheck) ((els.map (ElementOf.map normS)).map normElement)
         (rest.map normS) := by
   rw [normS, cata_representation_arrays]
+  rfl
+
+/-- Object normalization retains property order, optional flags, and index signatures. -/
+theorem normS_objects (ann : Annotations) (checks : List Check)
+    (properties : List PropertySignature) (indexes : List IndexSignature) :
+    normS (.objects ann checks properties indexes) =
+      .objects (normAnn ann) (checks.map normCheck)
+        ((properties.map (PropertySignatureOf.map normS)).map normProperty)
+        (indexes.map (IndexSignatureOf.map normS)) := by
+  rw [normS, cata_representation_objects]
   rfl
 
 theorem normS_union (ann : Annotations) (checks : List Check) (types : List Representation)
@@ -389,132 +475,341 @@ theorem normS_schema (t : Ty) : normS (schema t) = schema t := by
     show normS (.union none [] [schema a, schema b] .anyOf) = _
     rw [normS_union, List.map_cons, List.map_cons, List.map_nil, iha, ihb]
     rfl
-  | record _ _ | map _ _ _ _ | tuple _ _ | app _ _ _ | null | undefined | number | bytes => rfl
+  | record fields ih =>
+    rw [schema_record, Schema.struct, normS_objects]
+    simp only [List.map_nil, normAnn, List.map_map]
+    congr 1
+    apply List.map_congr_left
+    intro field hfield
+    simp only [Function.comp_apply, Schema.property, PropertySignatureOf.map, normProperty,
+      normAnn, ih field hfield]
+  | map key value ihk ihv =>
+    change normS (.objects none [] [] [Schema.index (schema key) (schema value)]) = _
+    rw [normS_objects]
+    simp only [List.map_nil, List.map_cons, Schema.index, IndexSignatureOf.map,
+      normAnn, ihk, ihv]
+    rfl
+  | tuple items ih =>
+    rw [schema_tuple, Schema.tuple, normS_arrays]
+    simp only [List.map_nil, normAnn, List.map_map]
+    congr 1
+    apply List.map_congr_left
+    intro item hitem
+    simp only [Function.comp_apply, Schema.element, ElementOf.map, normElement,
+      normAnn, ih item hitem]
+  | app _ _ _ | null | undefined | number | bytes => rfl
 
 /-! ## The retraction and exactness -/
 
-/-- The fold behind `reservedFree`: a handle's target is checked against the reserved id, every
-other node conjoins its children. -/
-def reservedFreeAlg : TyAlgebra (fun _ => Bool) where
-  ty_never := true
-  ty_unit := true
-  ty_nat := true
-  ty_int := true
-  ty_string := true
-  ty_bool := true
-  ty_handle target := decide (target ≠ "effect/schema/TypeParameter")
-  ty_option a := a
-  ty_list a := a
-  ty_prod a b := a && b
-  ty_except a b := a && b
-  ty_exitOf a b := a && b
-  ty_causeOf a := a
-  ty_fiberOf a b := a && b
-  ty_union a b := a && b
-  ty_lit _ := true
-  ty_refOf a := a
-  ty_deferredOf a b := a && b
-  ty_var _ := true
-  ty_unknown := true
-  ty_record _ := false
-  ty_map _ _ := false
-  ty_tuple _ := false
-  ty_app _ _ := false
-  ty_null := false
-  ty_undefined := false
-  ty_number := false
-  ty_bytes := false
+/-- The raw profile and an exact-string discriminator, computed together by the type fold. -/
+def reservedProfileAlg : TyAlgebra (fun _ => Bool × Bool) where
+  ty_never := (false, true)
+  ty_unit := (false, true)
+  ty_nat := (false, true)
+  ty_int := (false, true)
+  ty_string := (true, true)
+  ty_bool := (false, true)
+  ty_handle target := (false, decide (target ≠ "effect/schema/TypeParameter"))
+  ty_option a := (false, a.2)
+  ty_list a := (false, a.2)
+  ty_prod a b := (false, a.2 && b.2)
+  ty_except a b := (false, a.2 && b.2)
+  ty_exitOf a b := (false, a.2 && b.2)
+  ty_causeOf a := (false, a.2)
+  ty_fiberOf a b := (false, a.2 && b.2)
+  ty_union a b := (false, a.2 && b.2)
+  ty_lit _ := (false, true)
+  ty_refOf a := (false, a.2)
+  ty_deferredOf a b := (false, a.2 && b.2)
+  ty_var _ := (false, true)
+  ty_unknown := (false, true)
+  ty_record fields := (false, fields.all fun field => field.2.2.2)
+  ty_map key value := (false, key.1 && value.2)
+  ty_tuple items := (false, decide (items.length ≠ 2) && items.all Prod.snd)
+  ty_app _ _ := (false, false)
+  ty_null := (false, false)
+  ty_undefined := (false, false)
+  ty_number := (false, false)
+  ty_bytes := (false, false)
 
-/-- No handle target is the reserved type-parameter id `effect/schema/TypeParameter`, and no node
-is a data-wave form the bridge does not lower yet (`unlowered`): the premise the retraction gains
-when the reader refuses that id by name and the writer refuses those forms by name (a fold;
-formation should refuse such a handle, the Schema commit lowers the forms, and then the premise
-goes). -/
-def reservedFree (t : Ty) : Bool := cata_ty reservedFreeAlg t
+/-- The raw Schema profile: supported nodes, string map keys, no two-item tuple alias,
+and no reserved type-parameter handle. The public writer normalizes first. -/
+def reservedFree (t : Ty) : Bool := (cata_ty reservedProfileAlg t).2
 
-/-- **The retraction**: `ofSchema` is a left inverse to `schema` on every closed type whose handles
-avoid the reserved type-parameter id (`schema` mints no annotation, no check but `number`'s, `null`
-payloads and plain elements, so every guard passes; a row template's parameter is not a program
-type and has no schema to read back). Until row 128's commit the premise `reservedFree` was not
-needed, because the reader read the type parameter's declaration back as a handle. -/
+/-- The profile's discriminator recognizes exactly the raw string constructor. -/
+theorem reservedProfile_string (t : Ty) :
+    (cata_ty reservedProfileAlg t).1 = decide (t = .string) := by
+  cases t <;> rfl
+
+/-- Record profile admission checks every declared field, including absent optional fields. -/
+theorem reservedFree_record (fields : List (String × Bool × Ty)) :
+    reservedFree (.record fields) = fields.all (fun field => reservedFree field.2.2) := by
+  rw [reservedFree, cata_ty_record]
+  simp only [reservedProfileAlg, List.all_map, Function.comp_def, prodMapSnd]
+  rfl
+
+/-- A map in the raw Schema profile has exactly the string key constructor. -/
+theorem reservedFree_map (key value : Ty) :
+    reservedFree (.map key value) = (decide (key = .string) && reservedFree value) := by
+  rw [reservedFree, cata_ty_map]
+  change ((cata_ty reservedProfileAlg key).1 && reservedFree value) = _
+  rw [reservedProfile_string]
+
+/-- The raw tuple profile excludes the product alias and checks every item. -/
+theorem reservedFree_tuple (items : List Ty) :
+    reservedFree (.tuple items) = (decide (items.length ≠ 2) && items.all reservedFree) := by
+  rw [reservedFree, cata_ty_tuple]
+  simp only [reservedProfileAlg, List.length_map, List.all_map, Function.comp_def]
+  rfl
+
+/-- Pointwise successful reconstruction lifts to an ordered child list. -/
+private theorem mapM_retract {α β : Type} (write : α → β) (read : β → Option α)
+    (values : List α) (h : ∀ value ∈ values, read (write value) = some value) :
+    (values.map write).mapM read = some values := by
+  induction values with
+  | nil => rfl
+  | cons value values ih =>
+    rw [List.map_cons, List.mapM_cons, h value List.mem_cons_self,
+      ih (fun item hi => h item (List.mem_cons_of_mem value hi))]
+    rfl
+
+/-- Outside arity two, the plain array reader uses the tuple branch. -/
+private theorem ofSchema_tuple (ann : Annotations) (elements : List Element)
+    (hne : elements.length ≠ 2) :
+    ofSchema (.arrays ann [] elements []) =
+      if normAnn ann = none then
+        (elements.mapM fun element =>
+          readElement element.isOptional element.annotations (ofSchema element.type)).map Ty.tuple
+      else none := by
+  have guard (xs : List Element) (hx : xs.length ≠ 2) :
+      (if normAnn ann = none ∧ xs.length ≠ 2 then
+        (xs.mapM fun element =>
+          readElement element.isOptional element.annotations (ofSchema element.type)).map Ty.tuple
+      else none) =
+      if normAnn ann = none then
+        (xs.mapM fun element =>
+          readElement element.isOptional element.annotations (ofSchema element.type)).map Ty.tuple
+      else none := by
+    by_cases ha : normAnn ann = none
+    · rw [if_pos ⟨ha, hx⟩, if_pos ha]
+    · rw [if_neg (fun h => ha h.1), if_neg ha]
+  cases elements with
+  | nil =>
+    rw [ofSchema.eq_def]
+    exact guard [] hne
+  | cons a elements =>
+    cases elements with
+    | nil =>
+      rcases a with ⟨optional, type, annotations⟩
+      cases optional <;> rw [ofSchema.eq_def] <;> exact guard _ hne
+    | cons b elements =>
+      cases elements with
+      | nil => exact False.elim (hne rfl)
+      | cons c elements =>
+        rcases a with ⟨optionalA, typeA, annotationsA⟩
+        cases optionalA with
+        | true => rw [ofSchema.eq_def]; exact guard _ hne
+        | false =>
+          rcases b with ⟨optionalB, typeB, annotationsB⟩
+          cases optionalB <;> rw [ofSchema.eq_def] <;> exact guard _ hne
+
+/-- Raw Schema retraction on the closed exact profile.
+The profile excludes unsupported forms, nonstring map keys, two-item tuples, and the reserved handle id. -/
 theorem ofSchema_schema (t : Ty) (h : t.closed = true) (hr : reservedFree t = true) :
     ofSchema (schema t) = some t := by
   induction t with
-  | never => rfl
-  | unknown => rfl
-  | unit => rfl
-  | nat => decide +kernel
-  | int => decide +kernel
-  | string => rfl
-  | bool => rfl
-  | lit _ => rfl
+  | never => rw [ofSchema.eq_def]; rfl
+  | unknown => rw [ofSchema.eq_def]; rfl
+  | unit => rw [ofSchema.eq_def]; rfl
+  | nat => rw [ofSchema.eq_def]; decide +kernel
+  | int => rw [ofSchema.eq_def]; decide +kernel
+  | string => rw [ofSchema.eq_def]; rfl
+  | bool => rw [ofSchema.eq_def]; rfl
+  | lit _ => rw [ofSchema.eq_def]; rfl
   | handle target =>
     have hne : target ≠ "effect/schema/TypeParameter" := of_decide_eq_true hr
+    rw [ofSchema.eq_def]
     show (if normAnn none = none then
       (if target = "effect/schema/TypeParameter" then none else some (Ty.handle target)) else none) = _
     rw [if_pos (show normAnn none = none from rfl), if_neg hne]
   | var _ => exact Bool.noConfusion h
-  -- the data wave's forms are not lowered yet, so `reservedFree` excludes them
-  | record _ _ | map _ _ _ _ | tuple _ _ | app _ _ _ | null | undefined | number | bytes =>
-    exact Bool.noConfusion hr
+  | app _ _ _ | null | undefined | number | bytes => exact Bool.noConfusion hr
+  | record fields ih =>
+    rw [Ty.closed, Ty.closedFields_eq_all] at h
+    rw [reservedFree_record] at hr
+    have hread := mapM_retract
+      (fun field : String × Bool × Ty => Schema.property field.1 (schema field.2.2) field.2.1)
+      (fun property => readProperty property.name property.isOptional property.isMutable
+        property.annotations (ofSchema property.type)) fields (by
+          intro field hf
+          obtain ⟨name, optional, ty⟩ := field
+          have ht := ih (name, optional, ty) hf
+            (List.all_eq_true.mp h _ hf) (List.all_eq_true.mp hr _ hf)
+          change (if false = false ∧ normAnn none = none then
+            (ofSchema (schema ty)).map (fun t => (name, optional, t)) else none) = _
+          rw [if_pos ⟨rfl, rfl⟩, ht]
+          rfl)
+    rw [schema_record, Schema.struct, ofSchema.eq_def]
+    dsimp only
+    rw [if_pos (show normAnn none = none from rfl), hread]
+    rfl
+  | map key value _ ihv =>
+    rw [reservedFree_map, Bool.and_eq_true] at hr
+    have hk : key = .string := of_decide_eq_true hr.1
+    subst key
+    rw [Ty.closed, Bool.and_eq_true] at h
+    change ofSchema (.objects none [] [] [⟨.string none [], schema value⟩]) = _
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [if_pos (show normAnn none = none ∧ normAnn none = none from ⟨rfl, rfl⟩),
+      ihv h.2 hr.2]
+    rfl
+  | tuple items ih =>
+    rw [Ty.closed, Ty.closedItems_eq_all] at h
+    rw [reservedFree_tuple, Bool.and_eq_true] at hr
+    have hne : items.length ≠ 2 := of_decide_eq_true hr.1
+    have hread := mapM_retract
+      (fun item => Schema.element (schema item))
+      (fun element => readElement element.isOptional element.annotations (ofSchema element.type))
+      items (by
+        intro item hi
+        have ht := ih item hi (List.all_eq_true.mp h _ hi) (List.all_eq_true.mp hr.2 _ hi)
+        change (if false = false ∧ normAnn none = none then ofSchema (schema item) else none) = _
+        rw [if_pos ⟨rfl, rfl⟩, ht])
+    rw [schema_tuple, Schema.tuple, ofSchema_tuple _ _ (by simpa only [List.length_map] using hne),
+      if_pos (show normAnn none = none from rfl), hread]
+    rfl
   | option a ih =>
     show ofSchema (.declaration ⟨"effect/schema/Option", .null⟩ none [schema a] []) = _
-    rw [ofSchema, ih h hr]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [ih h hr]
     rfl
   | list a ih =>
     show ofSchema (.arrays none [] [] [schema a]) = _
-    rw [ofSchema, ih h hr]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [ih h hr]
     rfl
   | prod a b iha ihb =>
     rw [Ty.closed, Bool.and_eq_true] at h
     have hr' : reservedFree a = true ∧ reservedFree b = true := Bool.and_eq_true _ _ ▸ hr
     show ofSchema (.arrays none [] [⟨false, schema a, none⟩, ⟨false, schema b, none⟩] []) = _
-    rw [ofSchema, if_pos ⟨rfl, rfl, rfl⟩, iha h.1 hr'.1, ihb h.2 hr'.2]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [if_pos ⟨rfl, rfl, rfl⟩, iha h.1 hr'.1, ihb h.2 hr'.2]
     rfl
   | except e a ihe iha =>
     rw [Ty.closed, Bool.and_eq_true] at h
     have hr' : reservedFree e = true ∧ reservedFree a = true := Bool.and_eq_true _ _ ▸ hr
     show ofSchema (.declaration ⟨"effect/schema/Result", .null⟩ none [schema a, schema e] []) = _
-    rw [ofSchema, iha h.2 hr'.2, ihe h.1 hr'.1]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [iha h.2 hr'.2, ihe h.1 hr'.1]
     rfl
   | exitOf a e iha ihe =>
     rw [Ty.closed, Bool.and_eq_true] at h
     have hr' : reservedFree a = true ∧ reservedFree e = true := Bool.and_eq_true _ _ ▸ hr
     show ofSchema (.declaration ⟨"effect/schema/Exit", .null⟩ none
       [schema a, schema e, defectRep] []) = _
-    rw [ofSchema, iha h.1 hr'.1, ihe h.2 hr'.2]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [iha h.1 hr'.1, ihe h.2 hr'.2]
     rfl
   | causeOf e ih =>
     show ofSchema (.declaration ⟨"effect/schema/Cause", .null⟩ none [schema e, defectRep] []) = _
-    rw [ofSchema, ih h hr]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [ih h hr]
     rfl
   | fiberOf a e iha ihe =>
     rw [Ty.closed, Bool.and_eq_true] at h
     have hr' : reservedFree a = true ∧ reservedFree e = true := Bool.and_eq_true _ _ ▸ hr
     show ofSchema (.declaration ⟨"effect/schema/Fiber", .null⟩ none [schema a, schema e] []) = _
-    rw [ofSchema, iha h.1 hr'.1, ihe h.2 hr'.2]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [iha h.1 hr'.1, ihe h.2 hr'.2]
     rfl
   | refOf a ih =>
     show ofSchema (.declaration ⟨"effect/schema/Ref", .null⟩ none [schema a] []) = _
-    rw [ofSchema, ih h hr]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [ih h hr]
     rfl
   | deferredOf a e iha ihe =>
     rw [Ty.closed, Bool.and_eq_true] at h
     have hr' : reservedFree a = true ∧ reservedFree e = true := Bool.and_eq_true _ _ ▸ hr
     show ofSchema (.declaration ⟨"effect/schema/Deferred", .null⟩ none [schema a, schema e] []) = _
-    rw [ofSchema, iha h.1 hr'.1, ihe h.2 hr'.2]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [iha h.1 hr'.1, ihe h.2 hr'.2]
     rfl
   | union a b iha ihb =>
     rw [Ty.closed, Bool.and_eq_true] at h
     have hr' : reservedFree a = true ∧ reservedFree b = true := Bool.and_eq_true _ _ ▸ hr
     show ofSchema (.union none [] [schema a, schema b] .anyOf) = _
-    rw [ofSchema, iha h.1 hr'.1, ihb h.2 hr'.2]
+    rw [ofSchema.eq_def]
+    dsimp only
+    rw [iha h.1 hr'.1, ihb h.2 hr'.2]
     rfl
 
 /-- Retraction over canonical types `CTy`. -/
 theorem ofSchema_schema_cty (t : CTy) (h : t.toRaw.closed = true)
     (hr : reservedFree t.toRaw = true) : ofSchema (schema t.toRaw) = some t.toRaw :=
   ofSchema_schema t.toRaw h hr
+
+/-- Lift a successful child reader's reconstruction equation to the ordered list. -/
+private theorem mapM_reconstruct {α β : Type} (read : α → Option β) (write : β → α)
+    (norm : α → α) (xs : List α) (ys : List β)
+    (pointwise : ∀ x ∈ xs, ∀ y, read x = some y → norm x = write y)
+    (h : xs.mapM read = some ys) : xs.map norm = ys.map write := by
+  induction xs generalizing ys with
+  | nil => rw [List.mapM_nil] at h; cases h; rfl
+  | cons x xs ih =>
+    rw [List.mapM_cons] at h
+    cases hx : read x with
+    | none => rw [hx] at h; exact nomatch h
+    | some y =>
+      cases hxs : xs.mapM read with
+      | none => rw [hx, hxs] at h; exact nomatch h
+      | some rest =>
+        rw [hx, hxs] at h
+        cases h
+        rw [List.map_cons, List.map_cons, pointwise x List.mem_cons_self y hx,
+          ih rest (fun a ha => pointwise a (List.mem_cons_of_mem x ha)) hxs]
+
+/-- A successful plain property read retains its name and optional flag. -/
+private theorem readProperty_exact (p : PropertySignature) (field : String × Bool × Ty)
+    (child : ∀ t, ofSchema p.type = some t → normS p.type = schema t)
+    (h : readProperty p.name p.isOptional p.isMutable p.annotations (ofSchema p.type) = some field) :
+    normProperty (PropertySignatureOf.map normS p) =
+      Schema.property field.1 (schema field.2.2) field.2.1 := by
+  obtain ⟨name, rep, optional, mutable, ann⟩ := p
+  cases name with
+  | string key =>
+    change (if mutable = false ∧ normAnn ann = none then
+      (ofSchema rep).map (fun t => (key, optional, t)) else none) = some field at h
+    split at h
+    · rename_i admitted
+      obtain ⟨ty, ht, rfl⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨rfl, hann⟩ := admitted
+      simp only [PropertySignatureOf.map, normProperty, Schema.property, child ty ht, hann]
+    · exact nomatch h
+  | number _ => exact nomatch h
+  | globalSymbol _ => exact nomatch h
+
+/-- A successful plain element read retains its child and has no optional flag. -/
+private theorem readElement_exact (element : Element) (ty : Ty)
+    (child : ∀ t, ofSchema element.type = some t → normS element.type = schema t)
+    (h : readElement element.isOptional element.annotations (ofSchema element.type) = some ty) :
+    normElement (ElementOf.map normS element) = Schema.element (schema ty) := by
+  obtain ⟨optional, rep, ann⟩ := element
+  change (if optional = false ∧ normAnn ann = none then ofSchema rep else none) = some ty at h
+  split at h
+  · rename_i admitted
+    obtain ⟨rfl, hann⟩ := admitted
+    simp only [ElementOf.map, normElement, Schema.element, child ty h, hann]
+  · exact nomatch h
 
 /-- **Exactness of the reader, modulo `N_S`** (decisions row 128): a representation `ofSchema`
 reads is the read type's schema up to the annotation entries that change no decoding. By
@@ -529,10 +824,24 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   case case5 ann hann => intro t h; cases h; rw [normS_void, hann]; rfl
   case case6 => intro t h; exact nomatch h
   case case7 ann checks hann hchecks =>
-    intro t h; cases h; rw [normS_number, hann, hchecks]; rfl
-  case case8 ann checks hann _ hchecks =>
-    intro t h; cases h; rw [normS_number, hann, hchecks]; rfl
-  case case9 => intro t h; exact nomatch h
+    simp only [List.attach_map_val] at hchecks
+    intro t h
+    rw [if_pos hchecks] at h
+    cases h
+    rw [normS_number, hann, hchecks]
+    rfl
+  case case8 ann checks hann hnot hchecks =>
+    simp only [List.attach_map_val] at hnot hchecks
+    intro t h
+    rw [if_neg hnot, if_pos hchecks] at h
+    cases h
+    rw [normS_number, hann, hchecks]
+    rfl
+  case case9 ann checks _ hnot hnot' =>
+    simp only [List.attach_map_val] at hnot hnot'
+    intro t h
+    rw [if_neg hnot, if_neg hnot'] at h
+    exact nomatch h
   case case10 => intro t h; exact nomatch h
   case case11 ann hann => intro t h; cases h; rw [normS_string, hann]; rfl
   case case12 => intro t h; exact nomatch h
@@ -632,7 +941,40 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
     rw [normS_union, hann, List.map_cons, List.map_cons, List.map_nil, iha ta ha, ihb tb hb]
     rfl
   case case38 => intro t h; exact nomatch h
-  case case39 => intro t h; exact nomatch h
+  case case39 ann properties hann ih =>
+    intro t h
+    obtain ⟨fields, hfields, rfl⟩ := Option.map_eq_some_iff.mp h
+    rw [schema_record, Schema.struct, normS_objects, hann]
+    simp only [List.map_nil, List.map_map]
+    congr 1
+    exact mapM_reconstruct
+      (fun p => readProperty p.name p.isOptional p.isMutable p.annotations (ofSchema p.type))
+      (fun field => Schema.property field.1 (schema field.2.2) field.2.1)
+      (fun p => normProperty (PropertySignatureOf.map normS p)) properties fields
+      (fun p hp field hf => readProperty_exact p field (ih p hp) hf) hfields
+  case case40 => intro t h; exact nomatch h
+  case case41 ann keyAnn value hann ih =>
+    intro t h
+    obtain ⟨ty, hty, rfl⟩ := Option.map_eq_some_iff.mp h
+    change normS (.objects ann [] [] [⟨.string keyAnn [], value⟩]) =
+      .objects none [] [] [⟨.string none [], schema ty⟩]
+    rw [normS_objects, hann.1]
+    simp only [List.map_nil, List.map_cons, IndexSignatureOf.map, ih ty hty,
+      normS_string, hann.2]
+  case case42 => intro t h; exact nomatch h
+  case case43 ann elements _ hann ih =>
+    intro t h
+    obtain ⟨items, hitems, rfl⟩ := Option.map_eq_some_iff.mp h
+    rw [schema_tuple, Schema.tuple, normS_arrays, hann.1]
+    simp only [List.map_nil, List.map_map]
+    congr 1
+    exact mapM_reconstruct
+      (fun e => readElement e.isOptional e.annotations (ofSchema e.type))
+      (fun ty => Schema.element (schema ty))
+      (fun e => normElement (ElementOf.map normS e)) elements items
+      (fun e he ty ht => readElement_exact e ty (ih e he) ht) hitems
+  case case44 => intro t h; exact nomatch h
+  case case45 => intro t h; exact nomatch h
 
 /-- Exactness in the vocabulary's shape (`AGENTS.md`, exact embedding): `r ≡ schema t` modulo `N_S`. -/
 theorem ofSchema_exact' {r : Representation} {t : Ty} (h : ofSchema r = some t) :
@@ -706,9 +1048,8 @@ namespace Effect4.Program.CTy
 /-- Schema projection of a canonical type. -/
 def schema (t : CTy) : Effect4.Representation := Ty.schema t.toRaw
 
-/-- The public schema boundary retracts on closed canonical types whose handles avoid the reserved
-type-parameter id; integer parsing is retained. A row template's parameter is not a program type
-(`Ty.closed`). -/
+/-- Public Schema retraction on closed canonical types in the exact raw profile.
+Normalization has already replaced every two-item tuple with its product. -/
 theorem ofSchema_schema (t : CTy) (h : t.toRaw.closed = true)
     (hr : Effect4.Schema.Bridge.reservedFree t.toRaw = true) :
     Ty.ofSchema (schema t) = some t.toRaw := by

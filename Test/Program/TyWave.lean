@@ -79,12 +79,11 @@ open Effect4.Program
 -- a former, while a handle of the marker's own name, the two forms that normalize away and the
 -- leaves already lowered keep their images.
 open Effect4.Schema in
-#guard [("record", Ty.record []), ("map", .map .string .nat), ("tuple", .tuple [.nat, .nat, .nat]),
-    ("app", .app "x" [.nat]), ("null", .null), ("undefined", .undefined), ("number", .number),
+#guard [("app", Ty.app "x" [.nat]), ("null", .null), ("undefined", .undefined), ("number", .number),
     ("bytes", .bytes)].all fun (h, t) =>
   Bridge.ofSchema (Bridge.unlowered h) == none && Bridge.ofSchema (Bridge.schema t) == none
 open Effect4.Schema in
-#guard Bridge.ofSchema (Ty.schema (.option (.record []))) == none
+#guard Bridge.ofSchema (Ty.schema (.option (.record []))) == some (.option (.record []))
 open Effect4.Schema in
 #guard Bridge.ofSchema (Ty.schema (.handle "effect4/unlowered/record")) ==
   some (.handle "effect4/unlowered/record")

@@ -32,10 +32,20 @@ fold_of Effect4.Program.NativeAtom.projectProduct
 fold_of Effect4.Program.Tuple.project
 fold_of Effect4.Program.findInt
 fold_of Effect4.Program.Val.hasTy
-fold_of Effect4.Schema.Bridge.schema
 fold_of Effect4.Schema.Codec.layout
 fold_of Effect4.Schema.Codec.isSupported
 fold_of Effect4.Schema.Codec.encodeRaw
 fold_of Effect4.Schema.Codec.decodeRaw
 
 end Effect4.Program
+
+namespace Effect4.Schema.Bridge.schema
+
+/-- The Schema writer already uses this algebra through the generated type fold. -/
+abbrev alg := Effect4.Schema.Bridge.schemaAlg
+
+/-- Direct fold connection for Schema writing; serves the two Schema embedding claims. -/
+theorem eq_cata (t : Effect4.Program.Ty) :
+    Effect4.Schema.Bridge.schema t = Effect4.Program.cata_ty alg t := rfl
+
+end Effect4.Schema.Bridge.schema
