@@ -7,15 +7,14 @@ import Effect4.Schema.Bridge
 import Effect4.Schema.Codec
 
 /-!
-# The hand traversals of `Ty` as folds
+# Type traversals and fold connections
 
-Every structural definition over `Ty` the census lists (`docs/core/traversal-census.md` §3.2),
-read as a `TyAlgebra` with its connector `g.eq_cata : ∀ …, g … t … = cata_ty g.alg t …`. The
-accumulator-shaped ones carry their other arguments in the carrier: `findInt.alg` at
-`Path → Option Path`, `Val.hasTy.alg` at `Val → List String → Bool`, `Codec.encodeRaw.alg` at
-`Val → Option Json` and `Codec.decodeRaw.alg` at `Json → Option Val` — the two-discriminant
-matches (`| .unit, .unit => …`) read as the case split on the type with the value's split
-inside. Not here: `instReprTy.repr` and `Ty.Le` (a `Prop`-valued relation on two types).
+`fold_of` connects the listed structural definitions to their generated type algebra.
+Accumulator-shaped definitions carry their extra arguments in the algebra's result.
+Schema writing uses `Bridge.schemaAlg` directly.
+The JSON boundary uses one `Codec.wireAlgebra`; layout, support, encoding and decoding project its result.
+Their connectors retain the existing outward names.
+The traversal census owns the classification of each declaration.
 -/
 
 namespace Effect4.Program
@@ -32,10 +31,6 @@ fold_of Effect4.Program.NativeAtom.projectProduct
 fold_of Effect4.Program.Tuple.project
 fold_of Effect4.Program.findInt
 fold_of Effect4.Program.Val.hasTy
-fold_of Effect4.Schema.Codec.layout
-fold_of Effect4.Schema.Codec.isSupported
-fold_of Effect4.Schema.Codec.encodeRaw
-fold_of Effect4.Schema.Codec.decodeRaw
 
 end Effect4.Program
 
@@ -49,3 +44,21 @@ theorem eq_cata (t : Effect4.Program.Ty) :
     Effect4.Schema.Bridge.schema t = Effect4.Program.cata_ty alg t := rfl
 
 end Effect4.Schema.Bridge.schema
+
+namespace Effect4.Schema.Codec
+open Effect4.Program
+
+/-- The JSON boundary uses one generated type fold; each outward operation is its projection. -/
+theorem wire.eq_cata (t : Ty) : wire t = cata_ty wireAlgebra t := rfl
+
+theorem layout.eq_cata (t : Ty) : layout t = (cata_ty wireAlgebra t).layout := rfl
+
+theorem isSupported.eq_cata (t : Ty) : isSupported t = (cata_ty wireAlgebra t).supported := rfl
+
+theorem encodeRaw.eq_cata (t : Ty) (v : Effect4.Machine.Val) :
+    encodeRaw t v = (cata_ty wireAlgebra t).encode v := rfl
+
+theorem decodeRaw.eq_cata (t : Ty) (j : Effect4.Json) :
+    decodeRaw t j = (cata_ty wireAlgebra t).decode j := rfl
+
+end Effect4.Schema.Codec

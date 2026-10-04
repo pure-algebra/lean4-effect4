@@ -270,21 +270,35 @@ lived only in research notes, now force-added
 them here. Cite the first as "Decision 12", never "D12": in tracked files "D12" also names other
 things.
 
-**Decision 12: every boundary value carries an Effect Schema.** The owner's words: "an Effect
-Schema representation of all boundaries. The program at its most degenerate still emits an
-Effect Schema representation of whatever value is there." What it means at `dceae006`:
-- **Landed.** S-1, `Ty.schema : Ty → Representation` (`src/Effect4/Schema/Bridge.lean`); S-2,
-  the documents, `EffTy.document` (as an effect: the exit schema with its requirement keys,
-  `src/Effect4/Schema/Bridge.lean`) and `Row.document` (a row's request, answer and error); S-3,
-  the codec at a type, `Effect4.Schema.encode`/`decode` (`src/Effect4/Schema/Codec.lean`,
-  `:239`). `EffTy.document` publishes a program's exit schema; `Api.schemaOf` was deleted with
-  row 39. Until their exactness theorems land, `Ty.ofSchema` and the JSON codec are retractions,
-  not exact embeddings (row 128).
-- **Not started.** S-5, the gate that every recorded exit decodes under its program's published
-  `Schema.Exit` on rc.112: row 5 (finite, host evidence when it runs).
-- **DI-08 is answered by it** (ruled, row 122): Schema is in the release as the persisted
-  description plane, the language every boundary is described in; the authoring plane stays
-  archive-tier (the note's own answer, `2026-09-10-schema-at-boundaries.md:11-13`).
+**Decision 12: every boundary value carries an Effect Schema.**
+`Ty.schema` writes a persisted description in `src/Effect4/Schema/Bridge.lean`.
+`EffTy.document` publishes the exit description and requirement keys.
+`Row.document` publishes request, answer and error descriptions.
+The Schema language describes data; effectful behavior remains program content.
+
+`Bridge.ofSchema_schema` states retraction for closed, reserved-free raw types.
+`Bridge.ofSchema_exact` states exactness under `Bridge.normS` after successful Schema reading.
+Both declarations live in `src/Effect4/Schema/Bridge.lean`.
+The public type face normalizes record fields and the two-item tuple/product alias.
+Raw Schema reading separately retains property order and optional flags.
+Formation separately refuses repeated declaration names.
+
+`Schema.encode` and `Schema.decode` live in `src/Effect4/Schema/Codec.lean`.
+They include records, string maps and fixed-size tuples, composed with the existing supported leaves.
+The decoder refuses duplicate JSON keys before sorting, undeclared record fields and missing required fields.
+An absent optional field differs from a present value containing an option.
+Opaque handles and unsupported leaves have no new JSON image.
+Type support does not establish value-level codec admission.
+
+`Schema.decode_iff` states exactness under `Codec.normJ` in `src/Effect4/Laws/Schema/Codec.lean`.
+It covers every type; both public operations normalize the type first.
+The normalizer retains duplicate keys and sorts object entries recursively.
+A host JSON text parser may discard duplicates before supplying the Lean JSON value.
+That parser behavior remains outside the Lean theorem.
+
+S-5 remains the requested finite host check of recorded exits against their published `Schema.Exit`, under decision row 5.
+The Lean codec laws alone establish no rc.112 execution or external host progress.
+Decision 12 answers DI-08 for the persisted description plane.
 
 **The boundary rule.** The owner's rule for every boundary: "fidelity to a normal Effect TS
 project where possible; never break host code because a type at a boundary was declared narrower

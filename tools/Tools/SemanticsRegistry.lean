@@ -378,8 +378,8 @@ def registry : Registry where
       title := "Retraction of Schema generation on reserved-free types"
       pointer := .witness `Effect4.Schema.Bridge.ofSchema_schema },
     { id := "record-codec-layout", concept := "exact-codecs", role := .compatibility
-      title := "Exact JSON and Schema codecs for record values, which carry their canonical names"
-      pointer := .absent "Open: the JSON codec has no record arm and the Schema face refuses record by name; record values carry canonical names (decisions row 165 (a))" },
+      title := "Record JSON decoding is exact under normJ; named record values retain optional presence"
+      pointer := .witness `Effect4.Schema.decode_iff },
 
     -- 6. subtyping-algebra
     { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility

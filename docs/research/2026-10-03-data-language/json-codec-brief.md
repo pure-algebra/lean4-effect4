@@ -54,6 +54,7 @@ flowchart TD
 
 | Obligation | Consumer | Exact scope |
 | --- | --- | --- |
+| Fold type projection | `decodeRaw_normJ` and `decodeRaw_exact` | Every raw type, including noncanonical union children |
 | Object sorting and per-name codec selection | `decodeRaw_normJ` and `decodeRaw_exact` | Distinct JSON keys and successful child decoding |
 | Positional codec traversal | `decodeRaw_normJ` and `decodeRaw_exact` | Equal item and codec lengths |
 | Record and map frame reconstruction | `decodeRaw_exact` | Successful raw reads; the existing frame owners |

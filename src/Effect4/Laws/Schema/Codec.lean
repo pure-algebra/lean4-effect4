@@ -1,35 +1,197 @@
 import Effect4.Schema.Codec
 import Effect4.Laws.Program.Admits
+import Effect4.Laws.Machine.Map
+import Effect4.Laws.Program.Typed.RecordValues
 
-/-! S-3 checked JSON boundary laws, under the owner's 2026-09-11 admission amendment, and the
-pair's exactness (decisions row 128).
+/-!
+# Checked JSON boundary laws
 
-The S-3 laws' type parameters range over canonical types. Exact recovery is conditional on
-executable value admission; subtype agreement also requires the conservative structural
-`Codec.Compatible` certificate. No host theorem or claim of completeness for the compatibility test
-is made.
+Concept: Exact Codecs & Data Plane Embeddings.
+Claims: `decode-encode`, `decode-iff` and `record-codec-layout`; requirements R2 and R3.
+The data-language JSON codec brief places the helpers and their consumers before implementation.
 
-**Exactness** (row 128; the vocabulary's exact embedding, `AGENTS.md`): the JSON pair is exact
-modulo `Codec.normJ`, the key-order normaliser (`Schema/Codec.lean`), at every type, canonical or
-not (`encode` and `decode` normalize the type first):
+`decode_iff` states exactness modulo `Codec.normJ` for every type.
+Both public operations normalize that type before interpreting its wire layout.
+Exact value recovery requires executable codec admission.
+Subtype agreement also requires `Codec.Compatible`; the test claims no completeness for compatibility.
 
-    decode t j = some v ↔ ∃ j', encode t v = some j' ∧ normJ j' = normJ j      (`decode_iff`)
+The raw laws retain every original type, including noncanonical union children.
+`decodeRaw_normJ` proves that object-key order does not change decoding.
+`decodeRaw_exact` reconstructs the normalized encoder image after every successful raw decode.
+Record and map cases refuse duplicate keys before sorting.
+Tuple cases retain exact positional arity.
 
-Its two halves are `decode_of_encode` (the retraction) and `encode_of_decode` (exactness). They rest
-on two facts about the raw pair, each by induction over the type: the decoder reads `normJ`'s
-quotient (`Codec.decodeRaw_normJ`: `fields?` and `payload?` commute with the sort, through its
-permutation lemma), and every JSON the raw decoder reads is the raw encoder's image of the value it
-returns, modulo `normJ` (`Codec.decodeRaw_exact`; the union arm is where the canonical-branch repair
-is read). The proofs are seat P's (`docs/research/2026-10-01-type-language-probe/P/probes/P8Codec.lean`,
-on today's functions) with the repaired decoder in place of the probe's copy. Not claimed: that the
-repair left the checked encoder's domain unchanged (it agrees on the contract's cases; the repaired
-decoder answers differently from the old one only on JSON the old one read at a non-canonical
-branch). -/
+These laws establish no target execution, arbitrary host exception encoding or host progress.
+The union decoder retains decision row 128's canonical branch rule.
+The original failure control remains in `Test/Codegen/SchemaGenerationContract.lean`.
+-/
 
 set_option autoImplicit false
 
 namespace Effect4.Schema.Codec
 open Effect4 Effect4.Program Effect4.Machine
+
+/-- The codec fold retains each raw type exactly.
+This supplies original union membership tests to both raw codec laws. -/
+theorem wire_type (t : Ty) : (wire t).type = t := by
+  induction t with
+  | option t ih => exact congrArg Ty.option ih
+  | list t ih => exact congrArg Ty.list ih
+  | prod a b iha ihb =>
+    change Ty.prod (wire a).type (wire b).type = .prod a b
+    rw [iha, ihb]
+  | except a b iha ihb =>
+    change Ty.except (wire a).type (wire b).type = .except a b
+    rw [iha, ihb]
+  | exitOf a b iha ihb =>
+    change Ty.exitOf (wire a).type (wire b).type = .exitOf a b
+    rw [iha, ihb]
+  | causeOf a ih => exact congrArg Ty.causeOf ih
+  | fiberOf a b iha ihb =>
+    change Ty.fiberOf (wire a).type (wire b).type = .fiberOf a b
+    rw [iha, ihb]
+  | union a b iha ihb =>
+    change Ty.union (wire a).type (wire b).type = .union a b
+    rw [iha, ihb]
+  | refOf a ih => exact congrArg Ty.refOf ih
+  | deferredOf a b iha ihb =>
+    change Ty.deferredOf (wire a).type (wire b).type = .deferredOf a b
+    rw [iha, ihb]
+  | map a b iha ihb =>
+    change Ty.map (wire a).type (wire b).type = .map a b
+    rw [iha, ihb]
+  | record fields ih =>
+    unfold wire
+    rw [cata_ty_record]
+    change Ty.record ((fields.map (prodMapSnd (prodMapSnd (cata_ty wireAlgebra)))).map
+      (fun f => (f.1, f.2.1, f.2.2.type))) = .record fields
+    congr 1
+    rw [List.map_map]
+    calc
+      _ = fields.map id := List.map_congr_left (by
+        intro f hf
+        change (f.1, f.2.1, (wire f.2.2).type) = f
+        rw [ih f hf])
+      _ = fields := List.map_id fields
+  | tuple items ih =>
+    unfold wire
+    rw [cata_ty_tuple]
+    change Ty.tuple ((items.map (cata_ty wireAlgebra)).map Wire.type) = .tuple items
+    congr 1
+    rw [List.map_map]
+    exact (List.map_congr_left (g := id) ih).trans (List.map_id items)
+  | app name items ih =>
+    unfold wire
+    rw [cata_ty_app]
+    change Ty.app name ((items.map (cata_ty wireAlgebra)).map Wire.type) = .app name items
+    congr 1
+    rw [List.map_map]
+    exact (List.map_congr_left (g := id) ih).trans (List.map_id items)
+  | _ => rfl
+
+/-- The option decoder's outer equation, used by the unchanged raw codec laws. -/
+theorem decodeRaw_option (t : Ty) (j : Json) :
+    decodeRaw (.option t) j =
+      if fields? j ["_tag"] = some [.str "None"] then some .none
+      else (do
+        let p ← payload? j "Some" "value"
+        (decodeRaw t p).map Store.Val.some) := rfl
+
+theorem decodeRaw_except (e a : Ty) (j : Json) :
+    decodeRaw (.except e a) j =
+      if let some p := payload? j "Failure" "failure" then
+        (decodeRaw e p).map (fun v => .ctor 0 [v])
+      else (do
+        let p ← payload? j "Success" "success"
+        (decodeRaw a p).map (fun v => .ctor 1 [v])) := rfl
+
+theorem decodeRaw_exitOf (a e : Ty) (j : Json) :
+    decodeRaw (.exitOf a e) j =
+      if let some p := payload? j "Success" "value" then
+        (decodeRaw a p).map (fun v => .ctor 0 [v])
+      else (do
+        let p ← payload? j "Failure" "cause"
+        (decodeCause (decodeRaw e) p).map Val.exitErr) := rfl
+
+theorem decodeRaw_union (a b : Ty) (j : Json) :
+    decodeRaw (.union a b) j =
+      match (decodeRaw a j).filter (fun v => Val.hasTy v a) with
+      | some v => some v
+      | none => (decodeRaw b j).filter (fun v => Val.hasTy v b && !Val.hasTy v a) := by
+  change (match (decodeRaw a j).filter (fun v => Val.hasTy v (wire a).type) with
+    | some v => some v
+    | none => (decodeRaw b j).filter (fun v => Val.hasTy v (wire b).type && !Val.hasTy v (wire a).type)) = _
+  rw [wire_type, wire_type]
+
+theorem encodeRaw_union (a b : Ty) (v : Val) :
+    encodeRaw (.union a b) v =
+      if Val.hasTy v a then encodeRaw a v
+      else if Val.hasTy v b then encodeRaw b v else none := by
+  change (if Val.hasTy v (wire a).type then encodeRaw a v
+    else if Val.hasTy v (wire b).type then encodeRaw b v else none) = _
+  rw [wire_type, wire_type]
+
+theorem decodeRaw_record (fields : List (String × Bool × Ty)) (j : Json) :
+    decodeRaw (.record fields) j =
+      (objectRead (named (fields.map fun f => (f.1, decodeRaw f.2.2))) j).map Record.frame := by
+  unfold decodeRaw wire
+  rw [cata_ty_record]
+  simp only [wireAlgebra, List.map_map, Function.comp_def, prodMapSnd]
+
+theorem encodeRaw_record (fields : List (String × Bool × Ty)) (v : Val) :
+    encodeRaw (.record fields) v = (do
+      let es ← Record.entries v
+      let js ← objectValues (named (fields.map fun f => (f.1, encodeRaw f.2.2))) es
+      pure (.obj js)) := by
+  unfold encodeRaw wire
+  rw [cata_ty_record]
+  simp only [wireAlgebra, List.map_map, Function.comp_def, prodMapSnd]
+
+theorem decodeRaw_map (key value : Ty) (j : Json) :
+    decodeRaw (.map key value) j = if key = .string then
+      (objectRead (fun _ => decodeRaw value) j).map Map.write else none := by
+  change (if (wire key).type = .string then
+    (objectRead (fun _ => decodeRaw value) j).map Map.write else none) = _
+  rw [wire_type]
+
+theorem encodeRaw_map (key value : Ty) (v : Val) :
+    encodeRaw (.map key value) v = if key = .string then (do
+      let es ← Map.read v
+      let js ← objectValues (fun _ => encodeRaw value) es
+      pure (.obj js)) else none := by
+  change (if (wire key).type = .string then (do
+    let es ← Map.read v
+    let js ← objectValues (fun _ => encodeRaw value) es
+    pure (Json.obj js)) else none) = _
+  rw [wire_type]
+
+theorem decodeRaw_tuple (items : List Ty) (j : Json) :
+    decodeRaw (.tuple items) j = match j with
+      | .arr js => (positions (items.map decodeRaw) js).map Val.list
+      | _ => none := by
+  change (cata_ty wireAlgebra (.tuple items)).decode j = _
+  rw [cata_ty_tuple]
+  change (match j with
+    | .arr js => (positions ((items.map (cata_ty wireAlgebra)).map Wire.decode) js).map Val.list
+    | _ => none) = _
+  have hm : (items.map (cata_ty wireAlgebra)).map Wire.decode = items.map decodeRaw := by
+    rw [List.map_map]
+    rfl
+  rw [hm]
+
+theorem encodeRaw_tuple (items : List Ty) (v : Val) :
+    encodeRaw (.tuple items) v = match v with
+      | .list vs => (positions (items.map encodeRaw) vs).map Json.arr
+      | _ => none := by
+  change (cata_ty wireAlgebra (.tuple items)).encode v = _
+  rw [cata_ty_tuple]
+  change (match v with
+    | .list vs => (positions ((items.map (cata_ty wireAlgebra)).map Wire.encode) vs).map Json.arr
+    | _ => none) = _
+  have hm : (items.map (cata_ty wireAlgebra)).map Wire.encode = items.map encodeRaw := by
+    rw [List.map_map]
+    rfl
+  rw [hm]
 
 /-! ## `N_J`'s equations; the sort is a permutation -/
 
@@ -395,6 +557,70 @@ theorem fields?_tag_normJ (j : Json) (s : String) :
       · intro h
         simp only [Option.some.injEq, List.cons.injEq, reduceCtorEq, and_false] at h
 
+/-- Object payload traversal retains its input keys. This serves raw codec exactness. -/
+theorem objectValues_keys {α β : Type} (f : String → α → Option β) :
+    ∀ (es : List (String × α)) (out : List (String × β)),
+      objectValues f es = some out → out.map Prod.fst = es.map Prod.fst
+  | [], out, h => by cases h; rfl
+  | (key, value) :: es, out, h => by
+    simp only [objectValues, List.mapM_cons, Option.bind_eq_bind] at h
+    obtain ⟨head, hh, htail⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨tail, ht, hout⟩ := Option.bind_eq_some_iff.mp htail
+    cases Option.some.inj hout
+    obtain ⟨next, hn, rfl⟩ := Option.map_eq_some_iff.mp hh
+    simp only [List.map_cons, objectValues_keys f es tail ht]
+
+/-- Object payload decoding ignores recursive JSON key order when each child decoder does. -/
+theorem objectValues_normJ (dec : String → Json → Option Val)
+    (hdec : ∀ key j, dec key (normJ j) = dec key j) (es : List (String × Json)) :
+    objectValues dec (es.map (fun e => (e.1, normJ e.2))) = objectValues dec es := by
+  simp only [objectValues, mapM_map_comp, hdec]
+
+/-- Object reading refuses duplicate keys before sorting and decodes independently of key order. -/
+theorem objectRead_normJ (dec : String → Json → Option Val)
+    (hdec : ∀ key j, dec key (normJ j) = dec key j) (j : Json) :
+    objectRead dec (normJ j) = objectRead dec j := by
+  cases j with
+  | obj es =>
+    rw [normJ_obj]
+    have hkeys : (sortE (es.map (fun e => (e.1, normJ e.2)))).map Prod.fst |>.Perm (es.map Prod.fst) := by
+      simpa only [List.map_map, Function.comp_def] using
+        (sortE_perm (es.map (fun e => (e.1, normJ e.2)))).map Prod.fst
+    simp only [objectRead]
+    by_cases hnd : (es.map Prod.fst).Nodup
+    · rw [if_pos (hkeys.nodup_iff.mpr hnd), if_pos hnd]
+      rw [Field.canonBy_perm Field.bytesKey_injective (sortE_perm _)
+        (hkeys.nodup_iff.mpr hnd), Field.canonBy_map]
+      exact objectValues_normJ dec hdec _
+    · rw [if_neg (fun h => hnd (hkeys.nodup_iff.mp h)), if_neg hnd]
+  | arr js => rw [normJ_arr]; rfl
+  | _ => rfl
+
+/-- One decoder per tuple position commutes with recursive JSON key normalization. -/
+theorem positions_normJ :
+    ∀ (decoders : List (Json → Option Val)),
+      (∀ dec ∈ decoders, ∀ j, dec (normJ j) = dec j) →
+      ∀ js, positions decoders (js.map normJ) = positions decoders js
+  | [], _, [] => rfl
+  | [], _, _ :: _ => rfl
+  | _ :: _, _, [] => rfl
+  | dec :: decoders, hdec, j :: js => by
+    simp only [List.map_cons, positions, hdec dec (List.mem_cons_self ..),
+      positions_normJ decoders (fun d hd => hdec d (List.mem_cons_of_mem _ hd)) js]
+
+/-- A declared field decoder inherits normalization from its selected child. -/
+theorem named_normJ : ∀ (fields : List (String × (Json → Option Val))),
+    (∀ f ∈ fields, ∀ j, f.2 (normJ j) = f.2 j) →
+    ∀ key j, named fields key (normJ j) = named fields key j
+  | [], _, _, _ => rfl
+  | f :: fields, h, key, j => by
+    simp only [named, Field.firstOf]
+    by_cases hk : f.1 = key
+    · rw [if_pos hk, Option.bind_some, Option.bind_some]
+      exact h f (List.mem_cons_self ..) j
+    · rw [if_neg hk]
+      exact named_normJ fields (fun f hf => h f (List.mem_cons_of_mem _ hf)) key j
+
 /-- **The decoder reads `N_J`'s quotient** (every arm, the cause, reason, defect and error
 decoders included): a JSON and its key-sorted form decode alike. -/
 theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decodeRaw t j := by
@@ -410,7 +636,7 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
     rw [nat?_normJ]
   | option t ih =>
     intro j
-    rw [decodeRaw, decodeRaw]
+    rw [decodeRaw_option, decodeRaw_option]
     by_cases hn : fields? j ["_tag"] = some [.str "None"]
     · rw [if_pos ((fields?_tag_normJ j "None").mpr hn), if_pos hn]
     · rw [if_neg (fun h => hn ((fields?_tag_normJ j "None").mp h)), if_neg hn, payload?_normJ]
@@ -446,7 +672,7 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
     | _ => rfl
   | except e a ihe iha =>
     intro j
-    rw [decodeRaw, decodeRaw, payload?_normJ, payload?_normJ]
+    rw [decodeRaw_except, decodeRaw_except, payload?_normJ, payload?_normJ]
     cases payload? j "Failure" "failure" with
     | some p =>
       show (decodeRaw e (normJ p)).map _ = (decodeRaw e p).map _
@@ -459,7 +685,7 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
       | none => rfl
   | exitOf a e iha ihe =>
     intro j
-    rw [decodeRaw, decodeRaw, payload?_normJ, payload?_normJ]
+    rw [decodeRaw_exitOf, decodeRaw_exitOf, payload?_normJ, payload?_normJ]
     cases payload? j "Success" "value" with
     | some p =>
       show (decodeRaw a (normJ p)).map _ = (decodeRaw a p).map _
@@ -478,7 +704,37 @@ theorem decodeRaw_normJ : ∀ (t : Ty) (j : Json), decodeRaw t (normJ j) = decod
     rw [decodeCause_normJ (decodeRaw e) ih]
   | union a b iha ihb =>
     intro j
-    rw [decodeRaw, decodeRaw, iha, ihb]
+    rw [decodeRaw_union, decodeRaw_union, iha, ihb]
+  | record fields ih =>
+    intro j
+    rw [decodeRaw_record, decodeRaw_record]
+    congr 1
+    apply objectRead_normJ
+    apply named_normJ
+    intro f hf j
+    obtain ⟨field, hfield, rfl⟩ := List.mem_map.mp hf
+    exact ih field hfield j
+  | map key value _ ih =>
+    intro j
+    rw [decodeRaw_map, decodeRaw_map]
+    by_cases hk : key = .string
+    · rw [if_pos hk, if_pos hk, objectRead_normJ _ (fun _ => ih)]
+    · rw [if_neg hk, if_neg hk]
+  | tuple items ih =>
+    intro j
+    rw [decodeRaw_tuple, decodeRaw_tuple]
+    cases j with
+    | arr js =>
+      rw [normJ_arr]
+      change (positions (items.map decodeRaw) (js.map normJ)).map Val.list =
+        (positions (items.map decodeRaw) js).map Val.list
+      congr 1
+      apply positions_normJ
+      intro dec hd j
+      obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hd
+      exact ih t ht j
+    | obj es => rw [normJ_obj]
+    | _ => rfl
   | _ => intro j; rfl
 
 /-! ## Exactness: every JSON the raw decoder reads is the raw encoder's image, modulo `N_J` -/
@@ -760,6 +1016,145 @@ theorem decodeCause_exact (dec : Json → Option Val) (enc : Val → Option Json
       · rw [normJ_arr, normJ_arr, hn]
   | _ => exact nomatch h
 
+/-- Stable JSON insertion agrees with field insertion when the inserted key is fresh. -/
+theorem insertE_eq_insertBy (e : String × Json) :
+    ∀ es, e.1 ∉ es.map Prod.fst → insertE e es = Field.insertBy Field.bytesKey e es
+  | [], _ => rfl
+  | f :: fs, h => by
+    have hn : e.1 ≠ f.1 := by
+      intro he
+      exact h (List.mem_map.mpr ⟨f, List.mem_cons_self .., he.symm⟩)
+    have ht : e.1 ∉ fs.map Prod.fst := fun hm => h (List.mem_cons_of_mem _ hm)
+    change (if Field.ltKey (Field.bytesKey e.1) (Field.bytesKey f.1) = true then e :: f :: fs
+      else f :: insertE e fs) = _
+    rw [Field.insertBy]
+    by_cases hl : Field.ltKey (Field.bytesKey e.1) (Field.bytesKey f.1) = true
+    · rw [if_pos hl, if_pos hl]
+    · rw [if_neg hl, if_neg hl,
+        if_neg (fun he => hn (Field.bytesKey_injective _ _ he)), insertE_eq_insertBy e fs ht]
+
+/-- The JSON key sort is field canonicalization only when no key repeats.
+The duplicate-retaining normalizer itself remains unchanged. -/
+theorem sortE_eq_canonBy (es : List (String × Json)) (hnd : (es.map Prod.fst).Nodup) :
+    sortE es = Field.canonBy Field.bytesKey es := by
+  have walk : ∀ (xs acc : List (String × Json)), ((acc ++ xs).map Prod.fst).Nodup →
+      xs.foldl (fun acc e => insertE e acc) acc =
+        xs.foldl (fun acc e => Field.insertBy Field.bytesKey e acc) acc := by
+    intro xs
+    induction xs with
+    | nil => intro acc h; rfl
+    | cons e xs ih =>
+      intro acc h
+      have hp : (acc ++ e :: xs).Perm (e :: acc ++ xs) := List.perm_middle
+      have hn := (hp.map Prod.fst).nodup_iff.mp h
+      have hf : e.1 ∉ acc.map Prod.fst := by
+        intro hm
+        apply (List.nodup_cons.mp hn).1
+        change e.1 ∈ (acc ++ xs).map Prod.fst
+        rw [List.map_append]
+        exact List.mem_append_left (xs.map Prod.fst) hm
+      have hi : (insertE e acc ++ xs).Perm (acc ++ e :: xs) :=
+        ((insertE_perm e acc).append_right xs).trans List.perm_middle.symm
+      have ht := (hi.map Prod.fst).nodup_iff.mpr h
+      rw [List.foldl_cons, List.foldl_cons, ih _ ht, insertE_eq_insertBy e acc hf]
+  exact walk es [] hnd
+
+/-- Sorting distinct object keys before decoding does not change their normalized JSON image. -/
+theorem normJ_canonBy (es : List (String × Json)) (hnd : (es.map Prod.fst).Nodup) :
+    normJ (.obj (Field.canonBy Field.bytesKey es)) = normJ (.obj es) := by
+  have hnorm : ((es.map (fun e => (e.1, normJ e.2))).map Prod.fst).Nodup := by
+    simpa only [List.map_map, Function.comp_def] using hnd
+  have hcanon : (((Field.canonBy Field.bytesKey es).map (fun e => (e.1, normJ e.2))).map Prod.fst).Nodup := by
+    simpa only [List.map_map, Function.comp_def] using Field.canonBy_names_nodup (key := Field.bytesKey) es
+  rw [normJ_obj, normJ_obj, sortE_eq_canonBy _ hcanon, sortE_eq_canonBy _ hnorm,
+    ← Field.canonBy_map, Field.canonBy_idem]
+
+/-- Successful object payload conversion keeps each key and reconstructs each normalized payload. -/
+theorem objectValues_exact (dec : String → Json → Option Val) (enc : String → Val → Option Json)
+    (hex : ∀ key j v, dec key j = some v → ∃ j', enc key v = some j' ∧ normJ j' = normJ j) :
+    ∀ (es : List (String × Json)) (vs : List (String × Val)), objectValues dec es = some vs →
+      ∃ js, objectValues enc vs = some js ∧ normEs js = normEs es
+  | [], vs, h => by cases h; exact ⟨[], rfl, rfl⟩
+  | (key, j) :: es, vs, h => by
+    simp only [objectValues, List.mapM_cons, Option.bind_eq_bind] at h
+    obtain ⟨head, hh, htail⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨tail, ht, hout⟩ := Option.bind_eq_some_iff.mp htail
+    cases Option.some.inj hout
+    obtain ⟨v, hv, rfl⟩ := Option.map_eq_some_iff.mp hh
+    obtain ⟨j', he, hn⟩ := hex key j v hv
+    obtain ⟨js, hes, hns⟩ := objectValues_exact dec enc hex es tail ht
+    refine ⟨(key, j') :: js, ?_, ?_⟩
+    · simp only [objectValues] at hes ⊢
+      simp only [List.mapM_cons, he, Option.map_some, hes, Option.bind_eq_bind,
+        Option.bind_some, pure, Pure.pure]
+    · simp only [normEs, hn, hns]
+
+/-- A per-name codec table inherits exactness from the selected declared child. -/
+theorem named_exact {α : Type} (dec : α → Json → Option Val) (enc : α → Val → Option Json) :
+    ∀ (fields : List (String × α)),
+      (∀ f ∈ fields, ∀ j v, dec f.2 j = some v → ∃ j', enc f.2 v = some j' ∧ normJ j' = normJ j) →
+      ∀ key j v, named (fields.map (fun f => (f.1, dec f.2))) key j = some v →
+        ∃ j', named (fields.map (fun f => (f.1, enc f.2))) key v = some j' ∧ normJ j' = normJ j
+  | [], _, _, _, _, h => nomatch h
+  | f :: fields, hex, key, j, v, h => by
+    simp only [List.map_cons, named, Field.firstOf] at h ⊢
+    by_cases hk : f.1 = key
+    · rw [if_pos hk, Option.bind_some] at h
+      rw [if_pos hk, Option.bind_some]
+      exact hex f (List.mem_cons_self ..) j v h
+    · rw [if_neg hk] at h ⊢
+      exact named_exact dec enc fields (fun f hf => hex f (List.mem_cons_of_mem _ hf)) key j v h
+
+/-- Positional decoding reconstructs an equally long encoder image. -/
+theorem positions_exact {α : Type} (dec : α → Json → Option Val) (enc : α → Val → Option Json) :
+    ∀ (items : List α),
+      (∀ t ∈ items, ∀ j v, dec t j = some v → ∃ j', enc t v = some j' ∧ normJ j' = normJ j) →
+      ∀ js vs, positions (items.map dec) js = some vs →
+        ∃ js', positions (items.map enc) vs = some js' ∧ js'.map normJ = js.map normJ
+  | [], _, [], vs, h => by cases h; exact ⟨[], rfl, rfl⟩
+  | [], _, _ :: _, _, h => nomatch h
+  | _ :: _, _, [], _, h => nomatch h
+  | t :: items, hex, j :: js, vs, h => by
+    simp only [List.map_cons, positions, Option.bind_eq_bind] at h
+    obtain ⟨v, hv, htail⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨tail, ht, hout⟩ := Option.bind_eq_some_iff.mp htail
+    cases Option.some.inj hout
+    obtain ⟨j', he, hn⟩ := hex t (List.mem_cons_self ..) j v hv
+    obtain ⟨js', hes, hns⟩ := positions_exact dec enc items
+      (fun t ht => hex t (List.mem_cons_of_mem _ ht)) js tail ht
+    refine ⟨j' :: js', ?_, ?_⟩
+    · simp only [List.map_cons, positions, he, Option.bind_eq_bind, Option.bind_some, hes,
+        pure, Pure.pure]
+    · simp only [List.map_cons, hn, hns]
+
+/-- A frame reconstructed by the object decoder reads back without losing a field. -/
+theorem entries_frame (es : List (String × Val)) (h : (es.map Prod.fst).Nodup) :
+    Record.entries (Record.frame es) = some es := by
+  simp only [Record.entries, Record.frame, Program.recordParts?, Option.bind_eq_bind,
+    Option.bind_some, Typed.readColumns_frame, if_pos h]
+
+/-- Object decoding supplies both frame validity and the encoder's normalized object image. -/
+theorem objectRead_exact (dec : String → Json → Option Val) (enc : String → Val → Option Json)
+    (hex : ∀ key j v, dec key j = some v → ∃ j', enc key v = some j' ∧ normJ j' = normJ j)
+    (j : Json) (vs : List (String × Val)) (h : objectRead dec j = some vs) :
+    (vs.map Prod.fst).Nodup ∧ ∃ js, objectValues enc vs = some js ∧ normJ (.obj js) = normJ j := by
+  cases j with
+  | obj es =>
+    change (if (es.map Prod.fst).Nodup then
+      objectValues dec (Field.canonBy Field.bytesKey es) else none) = some vs at h
+    by_cases hnd : (es.map Prod.fst).Nodup
+    · rw [if_pos hnd] at h
+      have hk := objectValues_keys dec _ _ h
+      obtain ⟨js, he, hn⟩ := objectValues_exact dec enc hex _ _ h
+      refine ⟨?_, js, he, ?_⟩
+      · rw [hk]
+        exact Field.canonBy_names_nodup (key := Field.bytesKey) es
+      · rw [normJ, hn]
+        exact normJ_canonBy es hnd
+    · rw [if_neg hnd] at h
+      exact nomatch h
+  | _ => exact nomatch h
+
 /-- **The raw decoder is exact against the raw encoder, modulo `N_J`** (every arm). The union arm
 is where the canonical-branch repair is read: a value read off the second branch is not a member
 of the first, so the encoder sends it to the second (the arm without the repair fails here: the red
@@ -799,7 +1194,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
       exact ⟨Arch.Json.ofNat n, rfl, by rw [nat?_exact hn]⟩
   | option t ih =>
     intro j v h
-    rw [decodeRaw] at h
+    rw [decodeRaw_option] at h
     split at h
     · rename_i hnone
       cases h
@@ -867,7 +1262,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
     | _ => exact nomatch h
   | except e a ihe iha =>
     intro j v h
-    rw [decodeRaw] at h
+    rw [decodeRaw_except] at h
     split at h
     · rename_i p hp
       cases hd : decodeRaw e p with
@@ -899,7 +1294,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
           rfl
   | exitOf a e iha ihe =>
     intro j v h
-    rw [decodeRaw] at h
+    rw [decodeRaw_exitOf] at h
     split at h
     · rename_i p hp
       cases hd : decodeRaw a p with
@@ -945,7 +1340,7 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
       exact he
   | union a b iha ihb =>
     intro j v h
-    rw [decodeRaw] at h
+    rw [decodeRaw_union] at h
     split at h
     · rename_i w hw
       have hwv : w = v := Option.some.inj h
@@ -953,16 +1348,56 @@ theorem decodeRaw_exact : ∀ (t : Ty) (j : Json) (v : Val), decodeRaw t j = som
       obtain ⟨hdw, hmem⟩ := Option.filter_eq_some_iff.mp hw
       obtain ⟨j', he, hn⟩ := iha j w hdw
       refine ⟨j', ?_, hn⟩
-      show (if Val.hasTy w a then encodeRaw a w else if Val.hasTy w b then encodeRaw b w else none) = _
+      rw [encodeRaw_union]
       rw [if_pos hmem]
       exact he
     · obtain ⟨hdv, hmem⟩ := Option.filter_eq_some_iff.mp h
       rw [Bool.and_eq_true, Bool.not_eq_true'] at hmem
       obtain ⟨j', he, hn⟩ := ihb j v hdv
       refine ⟨j', ?_, hn⟩
-      show (if Val.hasTy v a then encodeRaw a v else if Val.hasTy v b then encodeRaw b v else none) = _
+      rw [encodeRaw_union]
       rw [if_neg (by rw [hmem.2]; exact Bool.false_ne_true), if_pos hmem.1]
       exact he
+  | record fields ih =>
+    intro j v h
+    rw [decodeRaw_record] at h
+    obtain ⟨es, hes, rfl⟩ := Option.map_eq_some_iff.mp h
+    have hx := objectRead_exact
+      (named (fields.map fun f => (f.1, decodeRaw f.2.2)))
+      (named (fields.map fun f => (f.1, encodeRaw f.2.2)))
+      (named_exact (fun f : Bool × Ty => decodeRaw f.2)
+        (fun f : Bool × Ty => encodeRaw f.2) fields ih) j es hes
+    obtain ⟨hnd, js, he, hn⟩ := hx
+    refine ⟨.obj js, ?_, hn⟩
+    rw [encodeRaw_record, entries_frame es hnd, Option.bind_eq_bind, Option.bind_some, he]
+    rfl
+  | map key value _ ih =>
+    intro j v h
+    rw [decodeRaw_map] at h
+    by_cases hk : key = .string
+    · rw [if_pos hk] at h
+      obtain ⟨es, hes, rfl⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨_, js, he, hn⟩ := objectRead_exact
+        (fun _ => decodeRaw value) (fun _ => encodeRaw value) (fun _ => ih) j es hes
+      refine ⟨.obj js, ?_, hn⟩
+      rw [encodeRaw_map, if_pos hk, Map.read_write, Option.bind_eq_bind, Option.bind_some, he]
+      rfl
+    · rw [if_neg hk] at h
+      exact nomatch h
+  | tuple items ih =>
+    intro j v h
+    rw [decodeRaw_tuple] at h
+    cases j with
+    | arr js =>
+      obtain ⟨vs, hvs, rfl⟩ := Option.map_eq_some_iff.mp h
+      obtain ⟨js', he, hn⟩ := positions_exact decodeRaw encodeRaw items ih js vs hvs
+      refine ⟨.arr js', ?_, ?_⟩
+      · rw [encodeRaw_tuple]
+        change (positions (items.map encodeRaw) vs).map Json.arr = _
+        rw [he]
+        rfl
+      · rw [normJ_arr, normJ_arr, hn]
+    | _ => exact nomatch h
   | _ => intro j v h; exact nomatch h
 
 end Effect4.Schema.Codec
@@ -1099,12 +1534,13 @@ theorem encode_injective {t : CTy} {v w : Val} {j : Json}
 
 /-- All strings cross the JSON boundary, not merely the finite examples in the battery. -/
 theorem encode_string (s : String) : encode .string (.str s) = some (.str s) := by
-  simp [encode, Ty.normalize, Val.hasTy, Codec.layout, Codec.encodeRaw, Codec.decodeRaw]
+  change (if some (Val.str s : Val) = some (.str s) then some (Json.str s) else none) = _
+  rw [if_pos rfl]
 
 theorem encode_bool (b : Bool) : encode .bool (.bool b) = some (.bool b) := by
-  simp [encode, Ty.normalize, Val.hasTy, Codec.layout, Codec.encodeRaw, Codec.decodeRaw]
+  change (if some (Val.bool b : Val) = some (.bool b) then some (Json.bool b) else none) = _
+  rw [if_pos rfl]
 
-theorem encode_unit : encode .unit .unit = some .null := by
-  simp [encode, Ty.normalize, Val.hasTy, Codec.layout, Codec.encodeRaw, Codec.decodeRaw]
+theorem encode_unit : encode .unit .unit = some .null := rfl
 
 end Effect4.Schema

@@ -1,5 +1,8 @@
 import Effect4.Program.Typed
+import Effect4.Program.Fold
 import Effect4.Data.JsonNumber
+import Effect4.Machine.Map
+import Effect4.Machine.Record
 
 /-!
 # Type-directed JSON boundary
@@ -23,39 +26,6 @@ set_option autoImplicit false
 
 namespace Effect4.Schema.Codec
 open Effect4 Effect4.Program Effect4.Machine
-
-/-- Literal refinements share a wire layout with strings. Union branch types remain
-intact because their membership tests select a meaning for overlapping raw values. -/
-def layout : Ty → Ty
-  | .lit _ => .string
-  | .option t => .option (layout t)
-  | .list t => .list (layout t)
-  | .prod a b => .prod (layout a) (layout b)
-  | .except e a => .except (layout e) (layout a)
-  | .exitOf a e => .exitOf (layout a) (layout e)
-  | .causeOf e => .causeOf (layout e)
-  | t => t
-
-/-- A conservative structural certificate: both types use the same wire interpreter.
-Together with `Ty.sub`, this permits literal widening through composite types. -/
-def Compatible (s t : Ty) : Prop := layout s = layout t
-
-instance (s t : Ty) : Decidable (Compatible s t) := inferInstanceAs (Decidable (layout s = layout t))
-
-/-- Types with no opaque or unsupported component. `never` is supported as an empty
-column (for example an Exit's error); it still encodes and decodes no standalone value.
-This type check does not establish value-level JSON representability.
-
-A classifier lists its positive arms and closes with an explicit `false` (DI-95): the wire
-interpreter (`encodeRaw`/`decodeRaw`) knows exactly the leaves and containers named here, so an
-appended constructor is unsupported until it is given an arm in all three. Handles (`handle`,
-`fiberOf`, `refOf`, `deferredOf`), `int`, a template parameter (`var`) and the top (`unknown`)
-are the negative class today. -/
-def isSupported : Ty → Bool
-  | .never | .unit | .nat | .string | .bool | .lit _ => true
-  | .option t | .list t | .causeOf t => isSupported t
-  | .prod a b | .except a b | .exitOf a b | .union a b => isSupported a && isSupported b
-  | _ => false
 
 /-- Decode only exact, nonnegative, integral binary64 data in the image of `ofNat`.
 The reconstruction check rejects fractional values, negative zero and non-finite data. -/
@@ -151,74 +121,182 @@ def decodeCause (decodeError : Json → Option Val) : Json → Option CauseV
   | .arr reasons => (reasons.mapM (decodeReason decodeError)).map (fun rs => ⟨rs⟩)
   | _ => none
 
-/-- Structural wire encoder. Original type membership is checked at the public boundary
-and at union branch selection. Literal constraints are therefore not duplicated here. -/
-def encodeRaw : Ty → Val → Option Json
-  | .unit, .unit => some .null
-  | .bool, .bool b => some (.bool b)
-  | .nat, .nat n => some (Arch.Json.ofNat n)
-  | .string, .str s | .lit _, .str s => some (.str s)
-  | .option _, .none => some (.obj [("_tag", .str "None")])
-  | .option t, .some v => (encodeRaw t v).map (tagged "Some" "value")
-  | .list t, .list vs => (vs.mapM (encodeRaw t)).map Json.arr
-  | .prod a b, .list [x, y] => do
-    let jx ← encodeRaw a x
-    let jy ← encodeRaw b y
-    return .arr [jx, jy]
-  | .except e _, .ctor 0 [v] => (encodeRaw e v).map (tagged "Failure" "failure")
-  | .except _ a, .ctor 1 [v] => (encodeRaw a v).map (tagged "Success" "success")
-  | .exitOf a _, .ctor 0 [v] => (encodeRaw a v).map (tagged "Success" "value")
-  | .exitOf _ e, .ctor 1 [written] => do
-    let c ← causeImage.ofVal written
-    (encodeCause (encodeRaw e) c).map (tagged "Failure" "cause")
-  | .causeOf e, v => do
-    let c ← Val.cause? v
-    encodeCause (encodeRaw e) c
-  | .union a b, v =>
-    if Val.hasTy v a then encodeRaw a v
-    else if Val.hasTy v b then encodeRaw b v else none
+/-- Apply one codec per position. Unequal lengths refuse rather than truncate. -/
+def positions {α β : Type} : List (α → Option β) → List α → Option (List β)
+  | [], [] => some []
+  | f :: fs, x :: xs => do
+    let y ← f x
+    let ys ← positions fs xs
+    pure (y :: ys)
   | _, _ => none
 
-/-- Structural wire decoder. A union reads the encoder's canonical branch (decisions row 128):
-its first branch for a value that is a member of it, its second branch only for a value that is
-not, which is `encodeRaw`'s own selection rule. Without the second clause the decoder read
-`{"_tag":"Success","value":1}` at `union (except nat nat) (exitOf nat nat)` as `Result`'s failure
-`ctor 0 [nat 1]`, whose encoding is `{"_tag":"Failure","failure":1}`: two JSON images of one value
-(the red control in `Test/Codegen/SchemaGenerationContract.lean`). With it the pair is exact modulo
-`normJ` (`Laws/Schema/Codec.lean`, `decode_iff`). -/
-def decodeRaw : Ty → Json → Option Val
-  | .unit, .null => some .unit
-  | .bool, .bool b => some (.bool b)
-  | .nat, j => (nat? j).map Val.nat
-  | .string, .str s | .lit _, .str s => some (.str s)
-  | .option t, j =>
-    if fields? j ["_tag"] = some [.str "None"] then some .none
-    else do
-      let payload ← payload? j "Some" "value"
-      (decodeRaw t payload).map Store.Val.some
-  | .list t, .arr js => (js.mapM (decodeRaw t)).map Val.list
-  | .prod a b, .arr [jx, jy] => do
-    let x ← decodeRaw a jx
-    let y ← decodeRaw b jy
-    return .list [x, y]
-  | .except e a, j =>
-    if let some p := payload? j "Failure" "failure" then
-      (decodeRaw e p).map (fun v => .ctor 0 [v])
-    else do
-      let p ← payload? j "Success" "success"
-      (decodeRaw a p).map (fun v => .ctor 1 [v])
-  | .exitOf a e, j =>
-    if let some p := payload? j "Success" "value" then
-      (decodeRaw a p).map (fun v => .ctor 0 [v])
-    else do
-      let p ← payload? j "Failure" "cause"
-      (decodeCause (decodeRaw e) p).map Val.exitErr
-  | .causeOf e, j => (decodeCause (decodeRaw e) j).map Val.exitErr
-  | .union a b, j =>
-    match (decodeRaw a j).filter (fun v => Val.hasTy v a) with
-    | some v => some v
-    | none => (decodeRaw b j).filter (fun v => Val.hasTy v b && !Val.hasTy v a)
-  | _, _ => none
+/-- Select a declared field codec by its stored name. An undeclared field refuses. -/
+def named {α β : Type} (fs : List (String × (α → Option β)))
+    (key : String) (value : α) : Option β :=
+  (Field.firstOf key fs).bind (fun f => f value)
+
+/-- Transform every object payload while retaining its key. -/
+def objectValues {α β : Type} (f : String → α → Option β)
+    (entries : List (String × α)) : Option (List (String × β)) :=
+  entries.mapM fun entry => (f entry.1 entry.2).map (fun value => (entry.1, value))
+
+/-- Read distinct object keys in canonical UTF-8 order before decoding their payloads. -/
+def objectRead (dec : String → Json → Option Val) : Json → Option (List (String × Val))
+  | .obj entries =>
+      if (entries.map Prod.fst).Nodup then
+        objectValues dec (Field.canonBy Field.bytesKey entries)
+      else none
+  | _ => none
+
+/-- The interpreted wire boundary of one raw type.
+These functions belong to the fold carrier, never to stored program or Schema data. -/
+structure Wire where
+  type : Ty
+  layout : Ty
+  supported : Bool
+  encode : Val → Option Json
+  decode : Json → Option Val
+
+/-- A type without a wire interpreter retains its raw spelling and refuses every value. -/
+def Wire.refused (type : Ty) (supported : Bool := false) : Wire :=
+  ⟨type, type, supported, fun _ => none, fun _ => none⟩
+
+/-- One wire interpretation per type constructor.
+Record fields retain their names and flags. Tuple positions retain their exact arity.
+Union selection uses the original child types, including raw, noncanonical spellings. -/
+def wireAlgebra : TyAlgebra (fun _ => Wire) where
+  ty_never := .refused .never true
+  ty_unit := ⟨.unit, .unit, true,
+    (fun | .unit => some .null | _ => none),
+    (fun | .null => some .unit | _ => none)⟩
+  ty_nat := ⟨.nat, .nat, true,
+    (fun | .nat n => some (Arch.Json.ofNat n) | _ => none),
+    fun j => (nat? j).map Val.nat⟩
+  ty_int := .refused .int
+  ty_string := ⟨.string, .string, true,
+    (fun | .str s => some (.str s) | _ => none),
+    (fun | .str s => some (.str s) | _ => none)⟩
+  ty_bool := ⟨.bool, .bool, true,
+    (fun | .bool b => some (.bool b) | _ => none),
+    (fun | .bool b => some (.bool b) | _ => none)⟩
+  ty_handle name := .refused (.handle name)
+  ty_option t := ⟨.option t.type, .option t.layout, t.supported,
+    (fun
+      | .none => some (.obj [("_tag", .str "None")])
+      | .some v => (t.encode v).map (tagged "Some" "value")
+      | _ => none),
+    fun j => if fields? j ["_tag"] = some [.str "None"] then some .none
+      else do
+        let payload ← payload? j "Some" "value"
+        (t.decode payload).map Store.Val.some⟩
+  ty_list t := ⟨.list t.type, .list t.layout, t.supported,
+    (fun | .list vs => (vs.mapM t.encode).map Json.arr | _ => none),
+    (fun | .arr js => (js.mapM t.decode).map Val.list | _ => none)⟩
+  ty_prod a b := ⟨.prod a.type b.type, .prod a.layout b.layout, a.supported && b.supported,
+    (fun
+      | .list [x, y] => do
+        let jx ← a.encode x
+        let jy ← b.encode y
+        pure (.arr [jx, jy])
+      | _ => none),
+    (fun
+      | .arr [jx, jy] => do
+        let x ← a.decode jx
+        let y ← b.decode jy
+        pure (.list [x, y])
+      | _ => none)⟩
+  ty_except e a := ⟨.except e.type a.type, .except e.layout a.layout, e.supported && a.supported,
+    (fun
+      | .ctor 0 [v] => (e.encode v).map (tagged "Failure" "failure")
+      | .ctor 1 [v] => (a.encode v).map (tagged "Success" "success")
+      | _ => none),
+    fun j => if let some p := payload? j "Failure" "failure" then
+        (e.decode p).map (fun v => .ctor 0 [v])
+      else do
+        let p ← payload? j "Success" "success"
+        (a.decode p).map (fun v => .ctor 1 [v])⟩
+  ty_exitOf a e := ⟨.exitOf a.type e.type, .exitOf a.layout e.layout, a.supported && e.supported,
+    (fun
+      | .ctor 0 [v] => (a.encode v).map (tagged "Success" "value")
+      | .ctor 1 [written] => do
+        let c ← causeImage.ofVal written
+        (encodeCause e.encode c).map (tagged "Failure" "cause")
+      | _ => none),
+    fun j => if let some p := payload? j "Success" "value" then
+        (a.decode p).map (fun v => .ctor 0 [v])
+      else do
+        let p ← payload? j "Failure" "cause"
+        (decodeCause e.decode p).map Val.exitErr⟩
+  ty_causeOf e := ⟨.causeOf e.type, .causeOf e.layout, e.supported,
+    (fun v => do
+      let c ← Val.cause? v
+      encodeCause e.encode c),
+    fun j => (decodeCause e.decode j).map Val.exitErr⟩
+  ty_fiberOf a e := .refused (.fiberOf a.type e.type)
+  ty_union a b := ⟨.union a.type b.type, .union a.type b.type, a.supported && b.supported,
+    (fun v => if Val.hasTy v a.type then a.encode v
+      else if Val.hasTy v b.type then b.encode v else none),
+    fun j => match (a.decode j).filter (fun v => Val.hasTy v a.type) with
+      | some v => some v
+      | none => (b.decode j).filter (fun v => Val.hasTy v b.type && !Val.hasTy v a.type)⟩
+  ty_lit value := ⟨.lit value, .string, true,
+    (fun | .str s => some (.str s) | _ => none),
+    (fun | .str s => some (.str s) | _ => none)⟩
+  ty_refOf a := .refused (.refOf a.type)
+  ty_deferredOf a e := .refused (.deferredOf a.type e.type)
+  ty_var index := .refused (.var index)
+  ty_unknown := .refused .unknown
+  ty_record fields := ⟨
+    .record (fields.map fun f => (f.1, f.2.1, f.2.2.type)),
+    .record (fields.map fun f => (f.1, f.2.1, f.2.2.layout)),
+    fields.all (fun f => f.2.2.supported),
+    (fun value => do
+      let entries ← Record.entries value
+      let encoded ← objectValues (named (fields.map fun f => (f.1, f.2.2.encode))) entries
+      pure (.obj encoded)),
+    fun j => (objectRead (named (fields.map fun f => (f.1, f.2.2.decode))) j).map Record.frame⟩
+  ty_map key value := ⟨.map key.type value.type, .map key.type value.layout,
+    decide (key.type = .string) && value.supported,
+    (fun input => if key.type = .string then do
+      let entries ← Map.read input
+      let encoded ← objectValues (fun _ => value.encode) entries
+      pure (.obj encoded)
+      else none),
+    fun j => if key.type = .string then
+      (objectRead (fun _ => value.decode) j).map Map.write else none⟩
+  ty_tuple items := ⟨.tuple (items.map Wire.type), .tuple (items.map Wire.layout),
+    items.all Wire.supported,
+    (fun | .list values => (positions (items.map Wire.encode) values).map Json.arr | _ => none),
+    (fun | .arr values => (positions (items.map Wire.decode) values).map Val.list | _ => none)⟩
+  ty_app name items := .refused (.app name (items.map Wire.type))
+  ty_null := .refused .null
+  ty_undefined := .refused .undefined
+  ty_number := .refused .number
+  ty_bytes := .refused .bytes
+
+/-- The type language's generated fold supplies every recursive wire interpretation. -/
+def wire (t : Ty) : Wire := cata_ty wireAlgebra t
+
+/-- Literal refinements share a wire layout with strings.
+Union children retain their raw types for canonical branch selection. -/
+def layout (t : Ty) : Ty := (wire t).layout
+
+/-- Equal wire layouts, used with subtype evidence at the public codec boundary. -/
+def Compatible (s t : Ty) : Prop := layout s = layout t
+
+instance (s t : Ty) : Decidable (Compatible s t) := inferInstanceAs (Decidable (layout s = layout t))
+
+/-- Structural type support does not establish value-level JSON representability.
+Optional absence may encode even when the absent field's type lacks a wire image. -/
+def isSupported (t : Ty) : Bool := (wire t).supported
+
+/-- Raw encoding checks original type membership only when selecting a union branch.
+The public boundary separately checks the complete value's normalized membership. -/
+def encodeRaw (t : Ty) : Val → Option Json := (wire t).encode
+
+/-- Raw decoding follows the encoder's canonical union branch, as required by row 128.
+The second branch refuses a value that belongs to the first branch. -/
+def decodeRaw (t : Ty) : Json → Option Val := (wire t).decode
 
 /-! ## `N_J`: the key-order normaliser (decisions row 128)
 

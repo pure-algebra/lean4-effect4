@@ -70,7 +70,11 @@ It makes the supplied field required and can change its type.
 Every string field name is supported, including `__proto__` and names outside the TypeScript identifier profile.
 An optional read distinguishes absence from a present `undefined` or a present `Option.none`.
 The checked example and overwrite controls are in `Test/Api/RecordAuthoring.lean`.
-JSON and Schema record codecs remain a separate implementation slice.
+Schema descriptions and JSON codecs include records, string maps and fixed-size tuples.
+JSON decoding refuses duplicate keys, unknown record fields and missing required fields.
+An absent optional field differs from a present field containing an optional value.
+Type support and value-level codec admission remain separate checks.
+The codec laws describe exact recovery under the named JSON normalizer; host execution remains a separate check.
 
 ## Maps in authored programs
 

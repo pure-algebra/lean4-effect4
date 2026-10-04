@@ -2,6 +2,7 @@ import Effect4.Laws
 import Test.Api.FrontierContract
 import Test.Data.OpticContract
 import Test.Schema.AnnotationDataPlaneContract
+import Test.Schema.DataBridge
 import Test.Schema.AuthoringContract
 import Test.Schema.DialectContract
 import Test.Counterexamples.Codegen.TypeScriptRender
@@ -12,10 +13,12 @@ import Test.Data.RowContract
 import Test.Machine.Environment.ContextKeyContract
 import Test.Codegen.ExprContract
 import Test.Codegen.DataTypes
+import Test.Codegen.DataCodec
 import Test.Codegen.Metadata
 import Test.Codegen.Record
 import Test.Codegen.RecordTerms
 import Test.Codegen.RecordEmission
+import Test.Codegen.RecordTag
 import Test.Codegen.SchemaGenerationContract
 import Test.Codegen.SchemaGenerationCoverage
 import Test.Machine.Semantics.CauseExitContract
@@ -49,6 +52,7 @@ import Test.Program.RecordOperations
 import Test.Program.FoldFamilySelection
 import Test.Program.RecordRefusals
 import Test.Program.RecordTerms
+import Test.Program.RecordTag
 import Test.Program.AuthoringRecords
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
