@@ -69,7 +69,7 @@ Placement of `lawfulSig_of_admitted`:
 ```mermaid
 flowchart TD
   S0["0. bridge (landed)"] --> S2
-  S1["1. SigApp in the core"] --> S2["2. admission at Σ_app"]
+  S1["1. SigApp in the core (landed)"] --> S2["2. admission at Σ_app (landed)"]
   S2 --> S4["4. the faces at app.signature"]
   S4 --> S3["3. authoring, Built, session, Run"]
   S3 --> S5["5. milestones at the API"]
@@ -104,7 +104,16 @@ flowchart TD
    (the per-key table that `one_code_two_carriers` refutes), `disagreeingService` and
    `BuildRefusal.serviceCarrier`.
 
-Steps 1 and 2 are one seat's slice. Step 4 follows, in files disjoint from step 2's (`Codegen/*`,
+Steps 1 and 2 landed on 2026-10-04 (seat S, merged `9a56167c`;
+`docs/research/2026-10-04-seat-S-receipt.md`). Two findings for the steps that follow:
+
+- The table's integer scan stays admission's first check and refuses as `uninhabited at`, with
+  its path (DI-67, decisions row 149, `Test/contracts/foundation-wave2.contract.md`). So
+  `admitSig`'s `intType` reason never reaches `admitProgram`.
+- `checkTable` and `TableRefusal` survive only for DI-61 (b)'s `Api.checkTable`, the dictionary's
+  anchors and the invocation tests. Step 3 retires them, with DI-61 (b) amended.
+
+Steps 1 and 2 were one seat's slice. Step 4 follows, in files disjoint from step 2's (`Codegen/*`,
 `Laws/Codegen/*`, `Laws/Api/ModuleReadable`). Step 3 comes last of the three, so authoring never
 builds a program that code generation refuses.
 

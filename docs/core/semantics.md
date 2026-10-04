@@ -669,7 +669,7 @@ theorem hom_eq_cata_eff {Op : Type} {R : EffFam → Type u}
     hom.f_eff node = cata_eff alg node
 def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
 ```
-(`src/Effect4/Program/Fold.lean:1270`, `src/Effect4/Program/Admission.lean:79`).
+(`hom_eq_cata_eff`, `src/Effect4/Program/Fold.lean`; `inhabited`, `src/Effect4/Program/Columns.lean`).
 
 #### 4. Required Properties and Obligations
 - **Uniqueness of catamorphism (`hom-eq-cata-eff`)**: Any algebra homomorphism out of `Eff` is pointwise equal to `cata_eff`

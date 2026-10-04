@@ -74,9 +74,11 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   [slice plan](research/2026-10-04-claude-lead/sigapp-slice-plan.md) threads the application's
   signature through program admission in six steps. Step 0 landed
   (`Laws/Program/Typed/AdmittedSource.lean`): `m7_admitted`, `lawfulSig_of_admitted` and
-  `reachable_typed_admitted` are proved. The bridge takes `AdmissionGap` as a premise:
-  `E4-TYPED-CE-041` shows that program admission checks no served key, scope or template. Step 2
-  repairs it.
+  `reachable_typed_admitted` are proved. Steps 1 and 2 landed (seat S, merged `9a56167c`):
+  `SigApp` and `admitSig` are in the core (`Program/SigApp.lean`), program admission runs at Σ_app
+  and checks the signature, and `E4-TYPED-CE-041` is repaired. Every program the API admits
+  denotes a lawful source, with no premise. See the
+  [seat S receipt](research/2026-10-04-seat-S-receipt.md).
 - **Four empty aesop banks deleted** (decisions row 65): `Inversion`, `Reader`, `Rows`, `TyOrder`.
 
 ## Next, ruled 2026-10-04

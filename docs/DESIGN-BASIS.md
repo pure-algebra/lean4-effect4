@@ -985,7 +985,7 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
   (`src/Effect4/Store/Carrier/Image.lean`), `AdmittedProgram`
   (`src/Effect4/Program/Admission.lean`), `admitProgram`
   (`src/Effect4/Program/Admission.lean`), `internalHandleScan`
-  (`src/Effect4/Program/Admission.lean`), `admitAnswer` (`src/Effect4/Program/Admit.lean`),
+  (`src/Effect4/Program/Columns.lean`), `admitAnswer` (`src/Effect4/Program/Admit.lean`),
   `mintedIn` (`src/Effect4/Program/Admit.lean`), `admitted_row`
   (`src/Effect4/Laws/Program/Admit.lean`), `external_answer_typed`
   (`src/Effect4/Laws/Program/Admit.lean`), `external_error_typed`
