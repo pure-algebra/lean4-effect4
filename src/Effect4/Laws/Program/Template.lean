@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Program.Typing
 import Effect4.Program.Native
+import Effect4.Program.SigApp
 import Aesop
 
 /-!
@@ -440,54 +441,11 @@ value the target would refuse, and it DOES refuse pairs whose value sets agree. 
 built on it can lose a program, never mistype one — L4's anchored completeness is the
 statement that says which programs it loses, and it is not this one.
 
-The predicates are defined here and not in the core because nothing but a proof reads them:
-no reader, printer, emitter or codec asks whether a template is admissible. -/
+The predicates are defined in the core, because the signature's admission reads them
+(`rowChecks`, `Program/SigApp.lean`): `Ty.varsOf` and `Ty.templateAdmissible` beside the template
+calculus (`Program/Ty.lean`), `Row.wellScoped` beside the row checks (`Program/SigApp.lean`). -/
 
 namespace Ty
-
-mutual
-/-- The parameters a template mentions, in occurrence order. -/
-def varsOf : Ty → List Nat
-  | .var i => [i]
-  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
-  | .null | .undefined | .number | .bytes => []
-  | .option t | .list t | .causeOf t | .refOf t => varsOf t
-  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
-  | .map a b => varsOf a ++ varsOf b
-  | .record fs => varsOfFields fs
-  | .tuple ts | .app _ ts => varsOfItems ts
-/-- The field-list companion of `varsOf`. -/
-def varsOfFields : List (String × Bool × Ty) → List Nat
-  | [] => []
-  | (_, _, t) :: rest => varsOf t ++ varsOfFields rest
-/-- The item-list companion of `varsOf`. -/
-def varsOfItems : List Ty → List Nat
-  | [] => []
-  | t :: rest => varsOf t ++ varsOfItems rest
-end
-
-mutual
-/-- A template is admissible when no parameter sits under a union head. Named
-fields and positional arguments are inference positions; a union has no fixed
-position correspondence. This is the profile consumed by `admitSig`. -/
-def templateAdmissible : Ty → Bool
-  | .union a b => a.closed && b.closed
-  | .option t | .list t | .causeOf t | .refOf t => templateAdmissible t
-  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b | .map a b =>
-    templateAdmissible a && templateAdmissible b
-  | .record fs => templateAdmissibleFields fs
-  | .tuple ts | .app _ ts => templateAdmissibleItems ts
-  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
-  | .var _ | .null | .undefined | .number | .bytes => true
-/-- The field companion of the template profile, retaining every raw field. -/
-def templateAdmissibleFields : List (String × Bool × Ty) → Bool
-  | [] => true
-  | (_, _, ty) :: rest => templateAdmissible ty && templateAdmissibleFields rest
-/-- The positional companion of the template profile. -/
-def templateAdmissibleItems : List Ty → Bool
-  | [] => true
-  | ty :: rest => templateAdmissible ty && templateAdmissibleItems rest
-end
 
 /-- The list equation used by `templateAdmissible_of_closed` for row admission. -/
 theorem templateAdmissibleFields_eq_all (fs : List (String × Bool × Ty)) :
@@ -555,12 +513,6 @@ theorem varsOf_eq_nil_of_closed (t : Ty) (h : closed t = true) : varsOf t = [] :
   | _ => aesop (add norm simp [closed, varsOf])
 
 end Ty
-
-/-- A row is well scoped when every parameter its answer or its error mentions is one its
-request binds. `infer` reads bindings from the request alone (`rowTy`), so a parameter that
-appeared only on an answer would be instantiated at nothing and printed back as a `var`. -/
-def Row.wellScoped (row : Row) : Bool :=
-  (row.answer.varsOf ++ row.error.varsOf).all fun i => row.request.varsOf.contains i
 
 /-- Every native row of this cut has an admissible template. Vacuously, because every row is
 closed (`row_closed`) — but the statement is the one that survives step 3 of

@@ -76,29 +76,6 @@ def lawful (table : RowTable) : Bool :=
     table.all (fun row => !(NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey row)) &&
     table.all (fun row => !decide (row.shape = .value) || row.trailing.isEmpty)
 
-/-- Why a table is not lawful on the program plane. -/
-inductive LawfulRefusal
-  | duplicateKey (key : String × List String)
-  | builtinCollision (key : String × List String)
-  | valueRowTrailing (key : String × List String)
-deriving DecidableEq, Repr
-
-/-- Decide why a table is unlawful, or `none` if lawful. -/
-def checkLawful (table : RowTable) : Option LawfulRefusal :=
-  let keys := table.map rowKey
-  if let some dupKey := findDup keys then
-    some (.duplicateKey dupKey)
-  else if let some row := table.find? (fun r => (NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r)) then
-    some (.builtinCollision (rowKey row))
-  else if let some row := table.find? (fun r => r.shape = .value && !r.trailing.isEmpty) then
-    some (.valueRowTrailing (rowKey row))
-  else
-    none
-where
-  findDup : List (String × List String) → Option (String × List String)
-    | [] => none
-    | k :: rest => if rest.contains k then some k else findDup rest
-
 end Table
 
 end Effect4.Program

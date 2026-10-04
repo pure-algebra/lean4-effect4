@@ -3326,7 +3326,7 @@ theorem fits_lit (w : World) (const : Bool) (l : Lit) (v : Val) (h : l.toVal = s
 
 /-! ## Inhabitance agrees with membership (decisions row 127; DI-67)
 
-`inhabited` (`Program/Admission.lean`) is a `TyAlgebra` fold; the column check `admitColumn`
+`inhabited` (`Program/Columns.lean`) is a `TyAlgebra` fold; the column check `admitColumn`
 reads it. It agrees with `Fits` on every type (`inhabited_iff_fits`): soundness reads one member
 (`inhabited_of_fits`, and DI-67's own statement over `Val.hasTy`, `inhabited_of_hasTy`);
 completeness builds one world for every handle position at once, each declared at its own fresh
@@ -4164,7 +4164,7 @@ The case analyses on `Ty` that M5's denotation lemma (`Laws/Program/Typed/Denota
 reads and that row 132 keeps in this module. -/
 
 /-- **Membership at a flat carrier is `FlatFits`** (proved): the converse of `flatFits_fits` on
-the carriers `flatCarrier` admits (`Laws/Program/Signature.lean`: the scalars and every handle
+the carriers `flatCarrier` admits (`Program/SigApp.lean`: the scalars and every handle
 but the context). `provideService`'s denotation sets a context binding the provided value under
 its key, and the `setContext` row demands `ServicesFit` (`Typed/Residual.lean`'s `fiberPre`),
 which reads the key's carrier through `FlatFits`; the checker gives the value's membership at
@@ -4623,9 +4623,9 @@ private theorem zipIdx_foldr_eq_none (pos : Path) :
     · exact zipIdx_foldr_eq_none pos items (n + 1) hrest f hf
 
 /-- **A column with no internal handle former keeps its parameters under value formers**
-(proved): `findInternalHandle` (`Program/Admission.lean`) answers at every `refOf`, `deferredOf`
+(proved): `findInternalHandle` (`Program/Columns.lean`) answers at every `refOf`, `deferredOf`
 and `fiberOf`, the only formers `Ty.valueVars` constrains. A lawful row's answer and error
-columns pass that scan (`rowChecks`, `Laws/Program/Signature.lean`), so the host-row arm of M5's
+columns pass that scan (`rowChecks`, `Program/SigApp.lean`), so the host-row arm of M5's
 denotation lemma reads `fits_instantiate` at them. -/
 theorem valueVars_of_noInternalHandle : ∀ (t : Ty) (pos : Path),
     findInternalHandle pos t = none → Ty.valueVars t = true := by

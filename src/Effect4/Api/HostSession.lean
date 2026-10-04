@@ -82,7 +82,7 @@ structure RetiredCall where
 deriving DecidableEq
 
 structure Session (program : Api.Program) (table : RowTable) where
-  admitted : AdmittedProgram program table
+  admitted : AdmittedProgram program ⟨table, []⟩
   header : Header
   machine : Api.Machine
   nextCall : Nat := 0
@@ -125,7 +125,9 @@ structure Result (program : Api.Program) (table : RowTable) where
   session : Session program table
 
 /-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
-refuse. The expected profile is supplied by the binding's explicitly selected profile. -/
+refuse. The expected profile is supplied by the binding's explicitly selected profile. The header
+carries the row table only (decisions row 21), so the program is admitted at the table's own
+signature, `⟨table, []⟩`. -/
 def start (program : Api.Program) (table : RowTable) (expectedProfile : String)
     (header : Header) (compileFuel : Nat) :
     Except Refusal (Session program table) :=
@@ -133,7 +135,7 @@ def start (program : Api.Program) (table : RowTable) (expectedProfile : String)
   else if header.session = "" then .error .session
   else if header.profile ≠ expectedProfile then .error .profile
   else if header.table ≠ table then .error .table
-  else match admitProgram program table with
+  else match admitProgram program ⟨table, []⟩ with
     | .error why => .error (.program why)
     | .ok admitted => .ok { admitted, header, machine := Api.load program compileFuel }
 

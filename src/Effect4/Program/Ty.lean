@@ -939,6 +939,59 @@ theorem matchTemplateArgs_length {σ σ' : Subst} {ps rs : List Ty} {join : Bool
       obtain ⟨σ'', _, hrest⟩ := h
       simp only [List.length_cons, ih hrest]
 
+/-! ### The template profile (decisions row 42)
+
+What a row's template may say for inference to mean anything. `infer` reads bindings from the
+request alone, so every parameter of a row's answer or error must be one its request mentions
+(`varsOf`, read by `Row.wellScoped` in `Program/SigApp.lean`). A union has no fixed position
+correspondence, so no parameter may sit under a union head (`templateAdmissible`). The signature's
+admission reads both (`rowChecks`, `Program/SigApp.lean`); their laws are
+`Laws/Program/Template.lean`'s. -/
+
+mutual
+/-- The parameters a template mentions, in occurrence order. -/
+def varsOf : Ty → List Nat
+  | .var i => [i]
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
+  | .null | .undefined | .number | .bytes => []
+  | .option t | .list t | .causeOf t | .refOf t => varsOf t
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
+  | .map a b => varsOf a ++ varsOf b
+  | .record fs => varsOfFields fs
+  | .tuple ts | .app _ ts => varsOfItems ts
+/-- The field-list companion of `varsOf`. -/
+def varsOfFields : List (String × Bool × Ty) → List Nat
+  | [] => []
+  | (_, _, t) :: rest => varsOf t ++ varsOfFields rest
+/-- The item-list companion of `varsOf`. -/
+def varsOfItems : List Ty → List Nat
+  | [] => []
+  | t :: rest => varsOf t ++ varsOfItems rest
+end
+
+mutual
+/-- A template is admissible when no parameter sits under a union head. Named
+fields and positional arguments are inference positions; a union has no fixed
+position correspondence. This is the profile consumed by `admitSig`. -/
+def templateAdmissible : Ty → Bool
+  | .union a b => a.closed && b.closed
+  | .option t | .list t | .causeOf t | .refOf t => templateAdmissible t
+  | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .deferredOf a b | .map a b =>
+    templateAdmissible a && templateAdmissible b
+  | .record fs => templateAdmissibleFields fs
+  | .tuple ts | .app _ ts => templateAdmissibleItems ts
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
+  | .var _ | .null | .undefined | .number | .bytes => true
+/-- The field companion of the template profile, retaining every raw field. -/
+def templateAdmissibleFields : List (String × Bool × Ty) → Bool
+  | [] => true
+  | (_, _, ty) :: rest => templateAdmissible ty && templateAdmissibleFields rest
+/-- The positional companion of the template profile. -/
+def templateAdmissibleItems : List Ty → Bool
+  | [] => true
+  | ty :: rest => templateAdmissible ty && templateAdmissibleItems rest
+end
+
 /-- Product distribution expands union factors. An explicit `never` factor stays
 explicit: this operation does not add a product-annihilation rule to subtyping. -/
 def factors (t : Ty) : List Ty :=

@@ -192,12 +192,12 @@ def counterexample : Api.Program :=
 With `perform` unified as the one invocation form, it is admitted and readable. -/
 
 def admitted (program : Api.Program) (table : RowTable := []) : Bool :=
-  match Api.admitProgram program table with
+  match Api.admitProgram program ⟨table, []⟩ with
   | .ok _ => true
   | .error _ => false
 
 def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitRefusal :=
-  match Api.admitProgram program table with
+  match Api.admitProgram program ⟨table, []⟩ with
   | .ok _ => none
   | .error why => some why
 
@@ -208,15 +208,15 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
 #guard Api.readable performSleep
 -- The refusals, one fixture each.
 #guard refusal counterexample = some .illTyped
-#guard refusal performExternal [malformedRow] = some (.table (.notExternal 0))
--- A sync row is refused by the table under perform, which types against it.
-#guard refusal performExternal [syncRow] = some (.table (.notAsync 0))
+#guard refusal performExternal [malformedRow] = some (.signature (.row 0 .notExternal))
+-- A sync row is refused by the table's signature under perform, which types against it.
+#guard refusal performExternal [syncRow] = some (.signature (.row 0 .notAsync))
 #guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with spelling := "Ref.get" }]
-  = some (.builtinCollision ("Ref.get", []))
+  = some (.signature (.row 0 .builtinCollision))
 #guard refusal (.succeed (.lit (.nat 1))) [goodRow, goodRow]
-  = some (.duplicateKey ("Host.wait", []))
+  = some (.signature (.duplicateRow ("Host.wait", [])))
 #guard refusal (.succeed (.lit (.nat 1))) [{ goodRow with shape := .value, trailing := ["x"] }]
-  = some (.valueRowTrailing ("Host.wait", ["x"]))
+  = some (.signature (.row 0 .valueRowTrailing))
 #guard match Program.printEntry [{ goodRow with spelling := "a1" }] (nativeSignature [{ goodRow with spelling := "a1" }]) "main" (EffTy.pure .unit) (.succeed (.lit .unit)) with
   | .error (.unsafeName "a1") => true
   | _ => false
@@ -233,14 +233,14 @@ certificate is consumed as an argument, so a caller cannot reach these without b
 
 def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option ExitV :=
-  match Api.admitProgram program table with
+  match Api.admitProgram program ⟨table, []⟩ with
   | .ok certificate => (Api.runAdmitted certificate fuel answers).exit
   | .error _ => none
 
 def replayAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
     (tape : List Api.Decision)
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option ExitV :=
-  match Api.admitProgram program table with
+  match Api.admitProgram program ⟨table, []⟩ with
   | .ok certificate => (Api.replayAdmitted certificate fuel tape answers).exit
   | .error _ => none
 
