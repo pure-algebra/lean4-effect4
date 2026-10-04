@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed.Validity
 import Effect4.Laws.Program.Typed.RecordValues
+import Effect4.Laws.Program.Typed.MapValues
 import Effect4.Program.FoldOf
 import Effect4.Laws.Program.Signature
 import Effect4.Program.TyClasses
@@ -2924,6 +2925,101 @@ theorem queryError_fits (w : World) (value answer : Val) (input error : Ty)
   · trivial
   · next extracted hfound => exact fits_firstErrorValue hcause hfound
 
+/-! String-map operations at world-indexed membership.
+These `denote-typed` helpers supply both membership and existence to the native atom consumers. -/
+namespace MapFits
+open MapValues
+
+/-- A fitting string map exposes its exact carrier and each payload's world membership. -/
+theorem map_inv {w : World} {value : Val} {t : Ty} (h : Fits w value (.map .string t)) :
+    ∃ entries, value = Machine.Map.write entries ∧ ∀ e ∈ entries, Fits w e.2 t := by
+  simp only [Fits] at h
+  split at h
+  · next values =>
+    have hw : ∀ value ∈ values, ∃ e : String × Val,
+        value = .pair (.str e.1) e.2 ∧ Fits w e.2 t := by
+      intro v hv
+      have hp := h.2 v hv
+      cases v with
+      | pair key payload =>
+        obtain ⟨name, rfl⟩ := fits_string_inv (w := w) hp.1
+        exact ⟨(name, payload), rfl, hp.2⟩
+      | _ => exact hp.elim
+    obtain ⟨entries, rfl, hentries⟩ := encoded_of_all _ _ values hw
+    exact ⟨entries, rfl, hentries⟩
+  · exact h.elim
+
+/-- Canonical map construction retains every payload's world membership. -/
+theorem write_canon {w : World} {entries : List (String × Val)} {t : Ty}
+    (h : ∀ e ∈ entries, Fits w e.2 t) :
+    Fits w (Machine.Map.write (Field.canonBy Field.bytesKey entries)) (.map .string t) := by
+  refine ⟨sorted_pairs (Field.canonBy_ascending entries), ?_⟩
+  intro value hv
+  obtain ⟨e, he, rfl⟩ := List.mem_map.mp hv
+  exact ⟨True.intro, canon_all (P := fun value => Fits w value t) h e he⟩
+
+/-- Lookup returns an option whose present payload fits in the same world. -/
+theorem get {w : World} {value : Val} {t : Ty} (h : Fits w value (.map .string t)) (key : String) :
+    ∃ out, Machine.Map.get value key = some out ∧ Fits w out (.option t) := by
+  obtain ⟨entries, rfl, hall⟩ := map_inv h
+  cases hf : Field.firstOf key entries with
+  | none => exact ⟨.none, by simp only [Machine.Map.get, Machine.Map.read_write, hf, Option.map_some, Option.elim_none], True.intro⟩
+  | some found =>
+    exact ⟨.some found, by simp only [Machine.Map.get, Machine.Map.read_write, hf, Option.map_some, Option.elim_some],
+      hall (key, found) (Field.firstOf_mem hf)⟩
+
+/-- Update keeps the old and replacement memberships as separate union alternatives. -/
+theorem set {w : World} {value replacement : Val} {a b : Ty}
+    (h : Fits w value (.map .string a)) (key : String) (hr : Fits w replacement b) :
+    ∃ out, Machine.Map.set value key replacement = some out ∧
+      Fits w out (.map .string (.union a b)) := by
+  obtain ⟨entries, rfl, hall⟩ := map_inv h
+  refine ⟨Machine.Map.write (Field.canonBy Field.bytesKey ((key, replacement) :: entries)),
+    by simp only [Machine.Map.set, Machine.Map.read_write, Option.map_some], write_canon ?_⟩
+  intro e he
+  rcases List.mem_cons.mp he with rfl | he
+  · exact Or.inr hr
+  · exact Or.inl (hall e he)
+
+/-- Extracted keys fit the string list type at every world. -/
+theorem keys {w : World} {value : Val} {t : Ty} (h : Fits w value (.map .string t)) :
+    ∃ out, Machine.Map.keys value = some out ∧ Fits w out (.list .string) := by
+  obtain ⟨entries, rfl, _⟩ := map_inv h
+  refine ⟨.list ((Field.canonBy Field.bytesKey entries).map fun e => .str e.1),
+    by simp only [Machine.Map.keys, Machine.Map.read_write, Option.map_some], ?_⟩
+  intro v hv
+  obtain ⟨e, _, rfl⟩ := List.mem_map.mp hv
+  trivial
+
+/-- Extracted ordinary pairs retain every payload's membership in the supplied world. -/
+theorem entries {w : World} {value : Val} {t : Ty} (h : Fits w value (.map .string t)) :
+    ∃ out, Machine.Map.entries value = some out ∧ Fits w out (.list (.prod .string t)) := by
+  obtain ⟨entries, rfl, hall⟩ := map_inv h
+  refine ⟨.list ((Field.canonBy Field.bytesKey entries).map fun e => .list [.str e.1, e.2]),
+    by simp only [Machine.Map.entries, Machine.Map.read_write, Option.map_some], ?_⟩
+  intro v hv
+  obtain ⟨e, he, rfl⟩ := List.mem_map.mp hv
+  exact ⟨True.intro, canon_all (P := fun value => Fits w value t) hall e he⟩
+
+/-- Every fitting entry-list view constructs a fitting map, without a new shape premise. -/
+theorem fromEntries {w : World} {value : Val} {t : Ty}
+    (h : Fits w value (.list (.prod .string t))) :
+    ∃ out, Machine.Map.fromEntries value = some out ∧ Fits w out (.map .string t) := by
+  obtain ⟨values, hv, hall⟩ := (fits_list_iff w value _).mp h
+  have hw : ∀ value ∈ values, ∃ e : String × Val,
+      value = .list [.str e.1, e.2] ∧ Fits w e.2 t := by
+    intro value hvalue
+    obtain ⟨key, payload, rfl, hk, hp⟩ := (fits_prod_iff w value _ _).mp (hall value hvalue)
+    obtain ⟨name, rfl⟩ := fits_string_inv hk
+    exact ⟨(name, payload), rfl, hp⟩
+  obtain ⟨entries, rfl, hentries⟩ := encoded_of_all _ _ values hw
+  refine ⟨Machine.Map.write (Field.canonBy Field.bytesKey entries.reverse),
+    by simp only [Machine.Map.fromEntries, hv, Option.bind_eq_bind, Option.bind_some,
+      Machine.Map.readTuples_map, Option.pure_def], write_canon ?_⟩
+  exact fun e he => hentries e (List.mem_reverse.mp he)
+
+end MapFits
+
 /-! ### Every atom -/
 
 /-- **Every atom keeps membership.** One line where a shape carries the argument; a short block
@@ -3092,6 +3188,54 @@ theorem atomFits (a : NativeAtom) : AtomFits a := by
     subst hv
     exact (fits_list_iff w _ _).mpr ⟨front ++ back, rfl,
       fun y hy => (List.mem_append.mp hy).elim (hfront y) (hback y)⟩
+
+  | mapEmpty =>
+    refine atomFits_of_mono rfl fun w vs v hfit hv => ?_
+    cases hfit.nil_inv
+    cases hv
+    exact ⟨rfl, fun _ hmem => nomatch hmem⟩
+  | mapGet =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨value, key, rfl, hf, hk⟩ := hfit.pair_inv
+    obtain ⟨name, rfl⟩ := fits_string_inv hk
+    obtain ⟨out, he, ho⟩ := MapFits.get hf name
+    change Machine.Map.get value name = some v at hv
+    rw [he] at hv
+    cases hv
+    exact ho
+  | mapSet =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨value, key, replacement, rfl, hf, hk, hr⟩ := hfit.triple_inv
+    obtain ⟨name, rfl⟩ := fits_string_inv hk
+    obtain ⟨out, he, ho⟩ := MapFits.set hf name hr
+    change Machine.Map.set value name replacement = some v at hv
+    rw [he] at hv
+    cases hv
+    exact ho
+  | mapKeys =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨value, rfl, hf⟩ := hfit.singleton_inv
+    obtain ⟨out, he, ho⟩ := MapFits.keys hf
+    change Machine.Map.keys value = some v at hv
+    rw [he] at hv
+    cases hv
+    exact ho
+  | mapEntries =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨value, rfl, hf⟩ := hfit.singleton_inv
+    obtain ⟨out, he, ho⟩ := MapFits.entries hf
+    change Machine.Map.entries value = some v at hv
+    rw [he] at hv
+    cases hv
+    exact ho
+  | mapFromEntries =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨value, rfl, hf⟩ := hfit.singleton_inv
+    obtain ⟨out, he, ho⟩ := MapFits.fromEntries hf
+    change Machine.Map.fromEntries value = some v at hv
+    rw [he] at hv
+    cases hv
+    exact ho
 
 /-! ### Terms -/
 

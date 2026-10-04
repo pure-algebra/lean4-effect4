@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Handles.Alphabet
+import Effect4.Laws.Machine.Map
 
 /-!
 # The handle invariant at the compiled alphabet — Term
@@ -53,6 +54,17 @@ theorem asList?_keys {v : Val} {vs : List Val} (h : Val.asList? v = some vs) :
   · show vs.flatMap Val.keys ⊆ Val.keys (.list vs) ++ []
     rw [List.append_nil, Val.keys_list]
     exact List.Subset.refl _
+
+private theorem native_keys_of_handles {value : Val} {inputs : List Val}
+    (h : Store.Val.handles value ⊆ inputs.flatMap Store.Val.handles) :
+    value.keys ⊆ inputs.flatMap Val.keys := by
+  intro key hk
+  rw [Val.keys_eq_handles] at hk
+  obtain ⟨code, hc, hk⟩ := List.mem_filterMap.mp hk
+  obtain ⟨input, hi, hc⟩ := List.mem_flatMap.mp (h hc)
+  refine List.mem_flatMap.mpr ⟨input, hi, ?_⟩
+  rw [Val.keys_eq_handles]
+  exact List.mem_filterMap.mpr ⟨code, hc, hk⟩
 
 theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAtom atom vs = some v) :
     v.keys ⊆ vs.flatMap Val.keys := by
@@ -110,6 +122,29 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
     simp only [Val.keys_list, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
       List.append_nil, List.mem_append] at hk ⊢
     exact hk.imp (fun hk => asList?_keys hf hk) (fun hk => asList?_keys hb hk)
+  case h_37 => cases h; exact List.nil_subset _
+  case h_38 =>
+    apply native_keys_of_handles
+    simpa only [List.flatMap_cons, List.flatMap_nil, Store.Val.handles,
+      List.nil_append, List.append_nil] using Machine.Map.get_handles h
+  case h_39 =>
+    apply native_keys_of_handles
+    intro code hc
+    have hm := Machine.Map.set_handles h hc
+    simp only [List.flatMap_cons, List.flatMap_nil, Store.Val.handles,
+      List.nil_append, List.append_nil, List.mem_append] at hm ⊢
+    exact hm.elim Or.inr Or.inl
+  case h_40 =>
+    rw [Val.keys_eq_handles, Machine.Map.keys_handles h]
+    exact List.nil_subset _
+  case h_41 =>
+    apply native_keys_of_handles
+    simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
+      using Machine.Map.entries_handles h
+  case h_42 =>
+    apply native_keys_of_handles
+    simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
+      using Machine.Map.fromEntries_handles h
   all_goals cases h
   all_goals sub_tac norm [Val.tuple]
 
@@ -468,6 +503,23 @@ theorem nativeAtom_handles (atom : String) (vs : List Val) (v : Val)
     simp only [handles_list, List.flatMap_append, List.flatMap_cons, List.flatMap_nil,
       List.append_nil, List.mem_append] at hk ⊢
     exact hk.imp (fun hk => asList_handles hf hk) (fun hk => asList_handles hb hk)
+  case h_37 => cases h; exact List.nil_subset _
+  case h_38 =>
+    simpa only [List.flatMap_cons, List.flatMap_nil, Store.Val.handles,
+      List.nil_append, List.append_nil] using Machine.Map.get_handles h
+  case h_39 =>
+    intro code hc
+    have hm := Machine.Map.set_handles h hc
+    simp only [List.flatMap_cons, List.flatMap_nil, Store.Val.handles,
+      List.nil_append, List.append_nil, List.mem_append] at hm ⊢
+    exact hm.elim Or.inr Or.inl
+  case h_40 => rw [Machine.Map.keys_handles h]; exact List.nil_subset _
+  case h_41 =>
+    simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
+      using Machine.Map.entries_handles h
+  case h_42 =>
+    simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
+      using Machine.Map.fromEntries_handles h
   all_goals cases h
   all_goals sub_tac norm [Val.tuple, Store.Val.handles, Store.Val.handlesList]
 

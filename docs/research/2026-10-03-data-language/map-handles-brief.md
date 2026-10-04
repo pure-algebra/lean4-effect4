@@ -5,10 +5,13 @@ The coordinator retains the pending OCaml manual patch and owns its integrated c
 
 ## Placement
 
-Concept: Scope Lifetime & Finalization in `docs/core/semantics.md`.
-Role: helpers for the semantics registry claim `m7-exit-handles-valid`.
+Concept: Residual Program Typing in `docs/core/semantics.md`.
+Role: helpers for the semantics registry claim `straight-meaning-typed`.
 The immediate consumers are `nativeAtom_keys` and `RawHandles.nativeAtom_handles` in `src/Effect4/Laws/Program/Handles/Term.lean`.
-Their existing term laws feed registration and the native value invariant.
+The raw term law feeds `Denote.evalTerm_validIn`, then `sound`, then `meaning_typed` in `src/Effect4/Laws/Program/MeaningSound.lean`.
+That theorem requires `Straight` and successful native typing from an empty environment.
+It concludes `ExitHasTy` in the produced stores from empty initial stores.
+The decoded-key route feeds `Handles.Hooks` and `Handles.Layer` separately for R4.
 This slice retains their statements and every existing premise.
 
 The raw observation is `Store.Val.handles`, including unknown kind bytes and exact allocation indices.
@@ -19,7 +22,7 @@ Decisions rows 125, 166, and 197 bound the string-map representation and duplica
 
 These helpers establish no allocation existence, scheduler progress, liveness, or OCaml simulation.
 The host boundary remains in `docs/core/host-boundary.md`.
-They serve R3 and the existing M6 to M7 handle-validity route.
+They serve R3 and R4. They do not supply a direct premise of the M7 exit-handle theorem.
 
 Reader reconstruction helpers also serve Store Typing & Value Membership and the `denote-typed` claim.
 `Typed.MapValues` consumes their exact successful-reader equations and forward reconstruction equations.

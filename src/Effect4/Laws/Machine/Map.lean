@@ -2,7 +2,8 @@ import Effect4.Machine.Map
 
 /-! Map reader reconstruction and raw handle containment.
 The typing consumers use the reader equations for `denote-typed`.
-The handle consumers use the subsets for `m7-exit-handles-valid`.
+The raw handle consumers use the subsets for `straight-meaning-typed`.
+The decoded-key consumers serve the separate R4 handle route.
 Every subset requires successful evaluation and retains unknown handle kind bytes. -/
 
 namespace Effect4.Machine.Map
@@ -141,14 +142,20 @@ theorem entries_handles {value out : Val} (h : entries value = some out) :
 /-- Construction keeps only raw handles from the supplied ordinary entry tuples. -/
 theorem fromEntries_handles {value out : Val} (h : fromEntries value = some out) :
     Val.handles out ⊆ Val.handles value := by
-  cases value with
-  | list values =>
-    obtain ⟨fields, hr, rfl⟩ := Option.map_eq_some_iff.mp h
-    rw [readTuples_exact hr, tupleEntries_handles, write_handles]
-    refine List.Subset.trans (canon_handles fields.reverse) ?_
-    intro code hc
-    obtain ⟨field, hf, hc⟩ := List.mem_flatMap.mp hc
-    exact List.mem_flatMap.mpr ⟨field, List.mem_reverse.mp hf, hc⟩
-  | _ => cases h
+  obtain ⟨values, hl, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨fields, hr, h⟩ := Option.bind_eq_some_iff.mp h
+  have hout : write (Field.canonBy Field.bytesKey fields.reverse) = out := Option.some.inj h
+  subst out
+  have hinput : Val.handles (.list values) ⊆ Val.handles value := by
+    rcases Machine.Val.asList?_exact hl with rfl | rfl
+    · exact List.Subset.refl _
+    · simp only [Val.handles, Val.handlesList, List.append_nil]
+      exact List.Subset.refl _
+  rw [readTuples_exact hr, tupleEntries_handles] at hinput
+  rw [write_handles]
+  refine List.Subset.trans (canon_handles fields.reverse) (List.Subset.trans ?_ hinput)
+  intro code hc
+  obtain ⟨field, hf, hc⟩ := List.mem_flatMap.mp hc
+  exact List.mem_flatMap.mpr ⟨field, List.mem_reverse.mp hf, hc⟩
 
 end Effect4.Machine.Map

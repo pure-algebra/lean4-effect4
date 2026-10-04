@@ -11,7 +11,9 @@ The commit containing this receipt supplies the low-level head.
 The five-part placement is `map-handles-brief.md` beside this receipt.
 `readPairs_map`, `readTuples_map`, `readPairs_exact`, `readTuples_exact`, and `read_write` serve `denote-typed` through the typing seat's `Typed.MapValues`.
 `read_exact`, `write_handles`, `tupleEntries_handles`, and `read_handles` connect the raw carrier to its handle list.
-The five operation subset helpers serve `m7-exit-handles-valid` through the native term consumers.
+The five operation handle helpers serve `straight-meaning-typed` through `RawHandles.evalTerm_handles` and `Denote.evalTerm_validIn`.
+The decoded-key consumers in `Handles.Hooks` and `Handles.Layer` remain a separate R4 route.
+No direct raw-subset premise enters `exitHandles_valid`.
 `keys_handles` gives an empty handle list, which supplies its subset immediately.
 No helper adds a typing, registered-input, canonicality, or external host premise.
 

@@ -39,6 +39,7 @@ They remain finite target evidence, outside the Lean evaluation proofs.
 - `Laws/Program/Typed.lean`: coarse result membership and evaluation existence cases.
 - `Laws/Program/Typed/Membership.lean`: world-indexed result membership cases.
 - `Laws/Program/Typed/Denotation.lean`: world-indexed evaluation existence cases.
+- `Laws/Program/MeaningSound.lean`: reuse raw handle containment in `NativeAtom.eval_validIn`, with its statement unchanged.
 - `Laws/Program/Handles/Term.lean` and a dedicated map helper module, unless the coordinator delegates these files separately.
 - Focused map tests, this brief and receipts.
 

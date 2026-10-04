@@ -1,5 +1,6 @@
 import Effect4.Program.Typed
 import Effect4.Laws.Program.Typed.RecordValues
+import Effect4.Laws.Program.Typed.MapValues
 import Effect4.Program.ErrorImage
 import Effect4.Laws.Program.ErrorQueries
 import Effect4.Laws.Program.TypeAlgebra
@@ -590,6 +591,109 @@ theorem NativeAtom.getOrElse_none (fallback : Val) :
 theorem NativeAtom.getOrElse_some (v fallback : Val) :
     NativeAtom.eval .getOrElse [Store.Val.some v, fallback] = some v := rfl
 
+/-! String-map operations at the Boolean value check.
+These helpers serve `denote-typed` through native-atom soundness, with the existing premises. -/
+namespace MapChecks
+open Typed.MapValues
+
+/-- A fitting string map has its exact pair carrier and fitting payloads. -/
+theorem map_inv {value : Val} {t : Ty} (h : Val.hasTy value (.map .string t) = true) :
+    ∃ entries, value = Machine.Map.write entries ∧
+      ∀ e ∈ entries, Val.hasTy e.2 t = true := by
+  simp only [Val.hasTy] at h
+  split at h
+  · next values =>
+    have hall := List.all_eq_true.mp (Bool.and_eq_true_iff.mp h).2
+    have hw : ∀ value ∈ values, ∃ e : String × Val,
+        value = .pair (.str e.1) e.2 ∧ Val.hasTy e.2 t = true := by
+      intro v hv
+      have hp := hall v hv
+      cases v with
+      | pair key payload =>
+        cases key with
+        | str name => exact ⟨(name, payload), rfl, (Bool.and_eq_true_iff.mp hp).2⟩
+        | _ => cases hp
+      | _ => cases hp
+    obtain ⟨entries, rfl, hentries⟩ := encoded_of_all _ _ values hw
+    exact ⟨entries, rfl, hentries⟩
+  · exact nomatch h
+
+/-- Canonical map construction retains every payload's Boolean type membership. -/
+theorem write_canon {entries : List (String × Val)} {t : Ty}
+    (h : ∀ e ∈ entries, Val.hasTy e.2 t = true) :
+    Val.hasTy (Machine.Map.write (Field.canonBy Field.bytesKey entries)) (.map .string t) = true := by
+  refine Bool.and_eq_true_iff.mpr ⟨sorted_pairs (Field.canonBy_ascending entries), ?_⟩
+  apply List.all_eq_true.mpr
+  intro value hv
+  obtain ⟨e, he, rfl⟩ := List.mem_map.mp hv
+  exact h e (Field.mem_canonBy he)
+
+/-- Lookup produces a typed outer option and preserves absence. -/
+theorem get {value : Val} {t : Ty} (h : Val.hasTy value (.map .string t) = true) (key : String) :
+    ∃ out, Machine.Map.get value key = some out ∧ Val.hasTy out (.option t) = true := by
+  obtain ⟨entries, rfl, hall⟩ := map_inv h
+  cases hf : Field.firstOf key entries with
+  | none => exact ⟨.none, by simp only [Machine.Map.get, Machine.Map.read_write, hf, Option.map_some, Option.elim_none], rfl⟩
+  | some found =>
+    exact ⟨.some found, by simp only [Machine.Map.get, Machine.Map.read_write, hf, Option.map_some, Option.elim_some],
+      hall (key, found) (Field.firstOf_mem hf)⟩
+
+/-- Update answers in the union of the old and replacement value types. -/
+theorem set {value replacement : Val} {a b : Ty}
+    (h : Val.hasTy value (.map .string a) = true) (key : String)
+    (hr : Val.hasTy replacement b = true) :
+    ∃ out, Machine.Map.set value key replacement = some out ∧
+      Val.hasTy out (.map .string (.union a b)) = true := by
+  obtain ⟨entries, rfl, hall⟩ := map_inv h
+  refine ⟨Machine.Map.write (Field.canonBy Field.bytesKey ((key, replacement) :: entries)),
+    by simp only [Machine.Map.set, Machine.Map.read_write, Option.map_some], write_canon ?_⟩
+  intro e he
+  rcases List.mem_cons.mp he with rfl | he
+  · exact Bool.or_eq_true_iff.mpr (Or.inr hr)
+  · exact Bool.or_eq_true_iff.mpr (Or.inl (hall e he))
+
+/-- Key extraction answers a list of strings. -/
+theorem keys {value : Val} {t : Ty} (h : Val.hasTy value (.map .string t) = true) :
+    ∃ out, Machine.Map.keys value = some out ∧ Val.hasTy out (.list .string) = true := by
+  obtain ⟨entries, rfl, _⟩ := map_inv h
+  refine ⟨.list ((Field.canonBy Field.bytesKey entries).map fun e => .str e.1),
+    by simp only [Machine.Map.keys, Machine.Map.read_write, Option.map_some], ?_⟩
+  apply List.all_eq_true.mpr
+  intro v hv
+  obtain ⟨e, _, rfl⟩ := List.mem_map.mp hv
+  rfl
+
+/-- Entry extraction uses ordinary program pairs and retains payload membership. -/
+theorem entries {value : Val} {t : Ty} (h : Val.hasTy value (.map .string t) = true) :
+    ∃ out, Machine.Map.entries value = some out ∧
+      Val.hasTy out (.list (.prod .string t)) = true := by
+  obtain ⟨entries, rfl, hall⟩ := map_inv h
+  refine ⟨.list ((Field.canonBy Field.bytesKey entries).map fun e => .list [.str e.1, e.2]),
+    by simp only [Machine.Map.entries, Machine.Map.read_write, Option.map_some], ?_⟩
+  apply List.all_eq_true.mpr
+  intro v hv
+  obtain ⟨e, he, rfl⟩ := List.mem_map.mp hv
+  exact hall e (Field.mem_canonBy he)
+
+/-- Every fitting list of ordinary string pairs constructs a map, including the empty snapshot. -/
+theorem fromEntries {value : Val} {t : Ty}
+    (h : Val.hasTy value (.list (.prod .string t)) = true) :
+    ∃ out, Machine.Map.fromEntries value = some out ∧ Val.hasTy out (.map .string t) = true := by
+  obtain ⟨values, hv, hall⟩ := Val.hasTy_list_inv h
+  have hw : ∀ value ∈ values, ∃ e : String × Val,
+      value = .list [.str e.1, e.2] ∧ Val.hasTy e.2 t = true := by
+    intro value hvalue
+    obtain ⟨key, payload, rfl, hk, hp⟩ := Val.hasTy_prod_inv (hall value hvalue)
+    obtain ⟨name, rfl⟩ := Val.hasTy_string_inv hk
+    exact ⟨(name, payload), rfl, hp⟩
+  obtain ⟨entries, rfl, hentries⟩ := encoded_of_all _ _ values hw
+  refine ⟨Machine.Map.write (Field.canonBy Field.bytesKey entries.reverse),
+    by simp only [Machine.Map.fromEntries, hv, Option.bind_eq_bind, Option.bind_some,
+      Machine.Map.readTuples_map, Option.pure_def], write_canon ?_⟩
+  exact fun e he => hentries e (List.mem_reverse.mp he)
+
+end MapChecks
+
 /-! ### Atom soundness, once per scheme
 
 `nativeAtom_typed` was one theorem of twenty hand blocks, each re-deriving the same three
@@ -933,6 +1037,29 @@ theorem sound (a : NativeAtom) : Sound a := by
   | natDiv => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
   | natMod => exact sound_of_shape .nat2 rfl (fun _ _ => ⟨_, rfl⟩)
   | strConcat => exact sound_of_shape .str2 rfl (fun _ _ => ⟨_, rfl⟩)
+  | mapEmpty => exact sound_of_mono rfl fun vs hfit => by cases hfit.nil_inv; exact ⟨_, rfl, rfl⟩
+  | mapGet =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨value, key, rfl, hv, hk⟩ := hfit.pair_inv
+    obtain ⟨name, rfl⟩ := Val.hasTy_string_inv hk
+    exact MapChecks.get hv name
+  | mapSet =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨value, key, replacement, rfl, hv, hk, hr⟩ := hfit.triple_inv
+    obtain ⟨name, rfl⟩ := Val.hasTy_string_inv hk
+    exact MapChecks.set hv name hr
+  | mapKeys =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact MapChecks.keys hv
+  | mapEntries =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact MapChecks.entries hv
+  | mapFromEntries =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨value, rfl, hv⟩ := hfit.singleton_inv
+    exact MapChecks.fromEntries hv
 
 end NativeAtom
 

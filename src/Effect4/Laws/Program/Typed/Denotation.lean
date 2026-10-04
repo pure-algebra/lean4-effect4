@@ -506,6 +506,38 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
     obtain ⟨back, hb⟩ := asList_of_fits hr
     simp only [NativeAtom.eval, hf, hb, Option.bind_some, Option.map_some, Option.isSome_some]
 
+  | mapEmpty =>
+    refine progress_of_mono rfl (fun w vs hfit => ?_) w tys ty vs hty hfit
+    cases hfit.nil_inv
+    rfl
+  | mapGet =>
+    refine progress_of_poly rfl (by decide) (fun w σ vs hfit => ?_) w tys ty vs hty hfit
+    obtain ⟨value, key, rfl, hf, hk⟩ := hfit.pair_inv
+    obtain ⟨name, rfl⟩ := fits_string_inv hk
+    obtain ⟨out, he, _⟩ := MapFits.get hf name
+    exact Option.isSome_iff_exists.mpr ⟨out, he⟩
+  | mapSet =>
+    refine progress_of_poly rfl (by decide) (fun w σ vs hfit => ?_) w tys ty vs hty hfit
+    obtain ⟨value, key, replacement, rfl, hf, hk, hr⟩ := hfit.triple_inv
+    obtain ⟨name, rfl⟩ := fits_string_inv hk
+    obtain ⟨out, he, _⟩ := MapFits.set hf name hr
+    exact Option.isSome_iff_exists.mpr ⟨out, he⟩
+  | mapKeys =>
+    refine progress_of_poly rfl (by decide) (fun w σ vs hfit => ?_) w tys ty vs hty hfit
+    obtain ⟨value, rfl, hf⟩ := hfit.singleton_inv
+    obtain ⟨out, he, _⟩ := MapFits.keys hf
+    exact Option.isSome_iff_exists.mpr ⟨out, he⟩
+  | mapEntries =>
+    refine progress_of_poly rfl (by decide) (fun w σ vs hfit => ?_) w tys ty vs hty hfit
+    obtain ⟨value, rfl, hf⟩ := hfit.singleton_inv
+    obtain ⟨out, he, _⟩ := MapFits.entries hf
+    exact Option.isSome_iff_exists.mpr ⟨out, he⟩
+  | mapFromEntries =>
+    refine progress_of_poly rfl (by decide) (fun w σ vs hfit => ?_) w tys ty vs hty hfit
+    obtain ⟨value, rfl, hf⟩ := hfit.singleton_inv
+    obtain ⟨out, he, _⟩ := MapFits.fromEntries hf
+    exact Option.isSome_iff_exists.mpr ⟨out, he⟩
+
 section TermProgress
 
 variable {sig : Signature NativeOp} {w : World} {vals : List Val} {env : List Ty}

@@ -170,76 +170,16 @@ theorem asList?_validIn {s : Stores} {v : Val} {vs : List Val} (h : Val.asList? 
 
 theorem NativeAtom.eval_validIn (s : Stores) (atom : NativeAtom) (vs : List Val) (v : Val)
     (hvs : ∀ x ∈ vs, x.validIn s = true) (h : atom.eval vs = some v) : v.validIn s = true := by
-  unfold NativeAtom.eval at h
-  split at h
-  case h_9 a b =>
-    cases h
-    exact validIn_list_of_mem hvs
-  case h_10 a rest =>
-    cases h
-    exact validIn_list_mem (hvs _ (List.mem_cons_self ..)) _ (List.mem_cons_self ..)
-  case h_11 a b rest =>
-    cases h
-    exact validIn_list_mem (hvs _ (List.mem_cons_self ..)) _
-      (List.mem_cons_of_mem _ (List.mem_cons_self ..))
-  case h_12 =>
-    unfold stringsAtom at h
-    split at h
-    · cases h
-      exact validIn_list_of_mem hvs
-    · cases h
-  case h_13 value | h_15 value | h_16 value =>
-    unfold queryTag at h
-    obtain ⟨_, _, rfl⟩ := Option.map_eq_some_iff.mp h
-    rfl
-  case h_14 value =>
-    unfold queryError at h
-    obtain ⟨reasons, _, h⟩ := Option.bind_eq_some_iff.mp h
-    cases h
-    split
-    · rfl
-    · next error herr =>
-      obtain ⟨e, _, he⟩ := Option.bind_eq_some_iff.mp herr
-      exact valOfErr_validIn s e error he
-  case h_22 fallback =>
-    cases h
-    exact hvs _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
-  case h_23 value other =>
-    cases h
-    have := hvs _ (List.mem_cons_self ..)
-    exact this
-  -- the selection answers one of its branches, whole
-  case h_24 c a b =>
-    cases h
-    cases c
-    · exact hvs _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
-    · exact hvs _ (List.mem_cons_of_mem _ (List.mem_cons_self ..))
-  case h_25 a =>
-    cases h
-    exact hvs a (List.mem_cons_self ..)
-  -- the list atoms answer members of their list arguments, or a count
-  case h_29 x xs =>
-    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
-    have hxs := asList?_validIn hl (hvs xs (List.mem_cons_of_mem _ (List.mem_cons_self ..)))
-    exact validIn_list_of_mem fun y hy => (List.mem_cons.mp hy).elim
-      (fun hyx => hyx ▸ hvs x (List.mem_cons_self ..)) (hxs y)
-  case h_30 xs i =>
-    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
-    split
-    · next e he =>
-      exact asList?_validIn hl (hvs xs (List.mem_cons_self ..)) e (List.mem_of_getElem? he)
-    · rfl
-  case h_31 xs =>
-    obtain ⟨_, _, rfl⟩ := Option.map_eq_some_iff.mp h
-    rfl
-  case h_32 xs ys =>
-    obtain ⟨front, hf, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨back, hb, rfl⟩ := Option.map_eq_some_iff.mp h
-    exact validIn_list_of_mem fun y hy => (List.mem_append.mp hy).elim
-      (asList?_validIn hf (hvs xs (List.mem_cons_self ..)) y)
-      (asList?_validIn hb (hvs ys (List.mem_cons_of_mem _ (List.mem_cons_self ..))) y)
-  all_goals cases h
-  all_goals rfl
+  have hnamed : nativeAtom atom.name vs = some v := by
+    simp only [nativeAtom, NativeAtom.ofName?_name, Option.bind_some]
+    exact h
+  rw [Val.validIn_eq_handles, List.all_eq_true]
+  intro code hc
+  obtain ⟨value, hv, hc⟩ := List.mem_flatMap.mp
+    (RawHandles.nativeAtom_handles atom.name vs v hnamed hc)
+  have hv := hvs value hv
+  rw [Val.validIn_eq_handles, List.all_eq_true] at hv
+  exact hv code hc
 
 theorem Lit.toVal_validIn (s : Stores) (l : Lit) (v : Val) (h : l.toVal = some v) :
     v.validIn s = true := by
