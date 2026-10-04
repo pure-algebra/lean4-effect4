@@ -298,7 +298,7 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   `typeOfProgram root.sig root.prog = some ty → TypedProg root w ty (denoteR root)`
   (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)), proved at every source by
   `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`); the load
-  (`load-typed`, `typedState_load`, `Assembly.lean:1674`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
+  (`load-typed`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
   the load connector whose race-marker premise the root code's typing discharges
   (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
   The displayed implication abbreviates the premises of `DenotesTyped`. They are well-formed layer

@@ -279,7 +279,7 @@ theorem advance_conforms {program : Api.Program} {table : RowTable}
 /-! ## Accepted successful replies and the actual prepared value
 
 Concept 9 (host-answer admission) meeting concept 1 membership; proposed T4 contributor
-`session-success-prepared-membership`. `PreparedWanted` records the exact local question,
+`session-success-prepared-membership`. `PreparedSuccess` records the exact local question,
 and `submit_success_prepared_fits` is its session API consumer. Placement and boundaries:
 `docs/research/2026-10-03-session-work/t4-plan.md`, decisions 97–99, 117, 138–139 and 152.
 This is not `AnswerOk`, whole-session typing, or a failure/handle admission theorem.

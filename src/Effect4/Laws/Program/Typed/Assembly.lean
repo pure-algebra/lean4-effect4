@@ -1796,7 +1796,7 @@ theorem obsTyped_admitted (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
   exact ⟨w, typed, (obsTyped_of_machineTyped typed).1, (obsTyped_of_machineTyped typed).2,
     typed.live.running⟩
 
-/-- **M7 from the ledger** (decisions row 138's route): `typedState_load` and
+/-- **M7 from the ledger** (decisions row 138's route): `loadsTyped` and
 `decision_preserves` at one source and budget give M7a–c at every answer-free tape. -/
 theorem m7_of_ledger (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (tape : List Api.Decision) (load : LoadsTyped root rootTy fuel fuel)
@@ -1858,14 +1858,14 @@ theorem replayR_bmeans_reachable (e : NativeEff) (fuel : Nat) (tape : List Api.D
 
 /-! ## Declared obligations
 
-`typedState_load` (M5: initialization from an admitted source) and the denotation lemma, proved in
+`loadsTyped` (M5: initialization from an admitted source) and the denotation lemma, proved in
 `Typed/LayerArm.lean`, where `M3bAssembly`'s report runs. The transition ledger (M6): one
 preservation obligation per command constructor, one for a tape decision under admitted host
 answers, and the capstone that every reachable state is typed. -/
 
 /-! M7 (decisions row 138, ruled 2026-10-01): at the empty host table, on answer-free tapes, with
 observation `obs`, the frame machine's run is typed. `m7_of_ledger` derives all three from
-`typedState_load` and `decision_preserves`. -/
+`loadsTyped` and `decision_preserves`. -/
 
 /-! The decision edits and the fire snapshot (decisions row 140, R3): `DecisionLift`'s fields
 other than `step`, over `J`, `I` and `O`, and the split's re-establishment. -/
