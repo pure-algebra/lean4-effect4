@@ -117,33 +117,33 @@
     ]
   },
   {
-    "name": "G1 the wave appended, every addition named, goldens and verdicts untouched",
+    "name": "G1 one constructor appended after the last, named, goldens and verdicts untouched",
     "expect": "PASS",
     "edits": [
       {
         "path": "tools/Effect4Gen/wire-tags.json",
-        "old": "\"unknown\": 19",
-        "new": "\"unknown\": 19, \"record\": 20, \"map\": 21, \"tuple\": 22, \"app\": 23, \"null\": 24, \"undefined\": 25, \"number\": 26, \"bytes\": 27"
+        "old": "\"bytes\": 27",
+        "new": "\"bytes\": 27, \"probe\": 28"
       },
       {
         "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
         "old": "\"Effect4.Program.Ty.lit\",",
-        "new": "\"Effect4.Program.Ty.lit\", \"Effect4.Program.Ty.record\", \"Effect4.Program.Ty.map\", \"Effect4.Program.Ty.tuple\", \"Effect4.Program.Ty.app\", \"Effect4.Program.Ty.null\", \"Effect4.Program.Ty.undefined\", \"Effect4.Program.Ty.number\", \"Effect4.Program.Ty.bytes\","
+        "new": "\"Effect4.Program.Ty.lit\", \"Effect4.Program.Ty.probe\","
       },
       {
         "path": "ocaml/goldens/eff/manifest.txt",
-        "old": "deferredOf var unknown\n",
-        "new": "deferredOf var unknown record map tuple app null undefined number bytes\n"
+        "old": "number bytes\n",
+        "new": "number bytes probe\n"
       },
       {
         "path": "ocaml/goldens/eff/wire-tags.txt",
-        "old": "var=18 unknown=19\n",
-        "new": "var=18 unknown=19 record=20 map=21 tuple=22 app=23 null=24 undefined=25 number=26 bytes=27\n"
+        "old": "bytes=27\n",
+        "new": "bytes=27 probe=28\n"
       },
       {
         "path": "ocaml/eff/goldens/metadata.tsv",
-        "old": "ty-unknown\t",
-        "new": "ty-record\tTy\t00\t[\"record\"]\t{}\nty-unknown\t"
+        "old": "ty-bytes\t",
+        "new": "ty-probe\tTy\t00\t[\"probe\"]\t{}\nty-bytes\t"
       }
     ]
   }

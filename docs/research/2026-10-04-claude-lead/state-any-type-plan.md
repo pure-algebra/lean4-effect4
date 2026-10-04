@@ -170,7 +170,21 @@ Placement:
 - R4 open part 3.
 - Does not establish anything at a template row: the rows are still closed here.
 
-### T2. The store runs terms (after T0; behaviour-preserving)
+### T2. The store runs terms (landed 2026-10-04, seat T2, merged `89e41ae9`)
+
+Landed as designed in `docs/research/2026-10-04-seat-T2-design.md`, with these rulings:
+- D1: a read-modify-write step on a non-number cell is a frontier (decisions row 43);
+- D2: the raw-handle law moved below the store laws (`Laws/Machine/TermHandles.lean`);
+- D3: one lowering per shape;
+- D5 (b): one bridge (`clause_kernel`) for the twelve heap rows, with `clause_refGet` deleted;
+- D6: `TermMaps` at every later world (claim `term-maps-mono`).
+
+The decoders reuse the carrier's exact images. Left for T3:
+- `poke_world` (`Typed/Adequacy.lean`) and `Evaluating.store_restated` (`Clauses/Store.lean`) have
+  no consumer; T3 deletes both;
+- T3's list in the design note, "What T3 then changes".
+
+The design as planned:
 
 1. `Machine/Stores.lean` imports `Machine/Term.lean`.
    - The `SyncOp` read-modify-write rows carry `(f : Term) (env : List Val)`.
