@@ -235,7 +235,9 @@ its arrows. Anything else is a leak.
     `(x == x) = true` for `String` or `Nat`, and aesop on a catch-all's negative hypotheses, both
     reach `Classical.choice`.
   - Not written by hand in a new or touched proof, anywhere under `src/`: `simp_all`, `first | …`
-    and `try`. A fallback that fails silently into an unsolved goal hides a missing lemma.
+    and `try`. A fallback that fails silently into an unsolved goal hides a missing lemma. The
+    proof-style ratchet (`Test/Audit/ProofStyle.lean`) refuses a new use, and a `simp` without
+    `only`, against the recorded uses in `Test/fixtures/proof-style/baseline.tsv`.
   - Every warning is an error (`-DwarningAsError=true` in the lakefile, 2026-09-19). An unused
     `simp` argument, a dead tactic or a `sorry` in an `example` fails the build where it is
     written.

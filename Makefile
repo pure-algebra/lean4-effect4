@@ -328,6 +328,17 @@ check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration thro
 	$(LAKE) exe kernel-replay --self-test
 	$(LAKE) exe kernel-replay Test Test.Slow
 
+# The proof-style ratchet (AGENTS.md: no new simp_all, first, try or simp without only under src/).
+# It runs inside `make check` through the battery (Test/Audit/ProofStyle.lean); this target reruns
+# the scan without a build cache, and record-proof-style rewrites the baseline after a cleanup.
+check-proof-style: ## rescan src/Effect4 for simp_all, first, try and simp without only against the recorded baseline
+	$(LAKE) build ProofGraph.ProofStyle Effect4 Effect4Laws
+	$(LAKE) env lean Test/Audit/ProofStyle.lean
+
+record-proof-style: ## rewrite Test/fixtures/proof-style/baseline.tsv from the tree (a reviewed diff)
+	$(LAKE) build ProofGraph.ProofStyle Effect4 Effect4Laws
+	$(LAKE) env lean tools/ProofStyleRecord.lean
+
 traversal-census: ## print the traversal census (`docs/core/traversal-census.md`)
 	$(LAKE) build Test.Audit.TraversalCensus
 
