@@ -1,10 +1,14 @@
-import Effect4.Program.Native
+module
+
+public import Effect4.Program.Native
 
 /-! DI-11: a stream kernel uses external rows and existing Scope/Eff constructors.
 `pullRow` carries Option (List α); the binding additionally checks nonempty Some chunks.
 No stream constructor, queue store, Done error, host closure, or operator AST is introduced.
 Source: vendor/effect-4.0.0-rc.112/src/Stream.ts, toPull;
 Test/contracts/foundation-wave2.contract.md, T-09 / T-12 amendment. -/
+
+@[expose] public section
 set_option autoImplicit false
 namespace Effect4.Program.Stream
 open Effect4 Effect4.Machine

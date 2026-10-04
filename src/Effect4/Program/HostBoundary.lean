@@ -1,4 +1,6 @@
-import Effect4.Program.Profile
+module
+
+public import Effect4.Program.Profile
 
 /-!
 Boundary classifications for the selected small host models. This is a driver view of
@@ -7,6 +9,8 @@ that a validated call has no supplied reply at this observation, not that the se
 relation has no possible transition. The session protocol supplies actual reply validation.
 Authority: Test/contracts/foundation-wave2.contract.md, Host protocol.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

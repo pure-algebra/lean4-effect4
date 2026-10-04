@@ -1,5 +1,7 @@
-import Effect4.Program.Packages.SqliteBun
-import Effect4.Program.Packages.KeyValueStoreMemory
+module
+
+public import Effect4.Program.Packages.SqliteBun
+public import Effect4.Program.Packages.KeyValueStoreMemory
 
 /-!
 # Program.Packages — the canonical package tables, as one list
@@ -11,6 +13,8 @@ for the TypeScript readers, in this order; a table's identity is its rows in the
 an external index is a position in the link table supplied beside the program (`Read.lean`
 `nativeSpell`; DI-22, and `table` below).
 -/
+
+@[expose] public section
 
 namespace Effect4.Program.Packages
 

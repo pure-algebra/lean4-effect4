@@ -1,4 +1,6 @@
-import Effect4.Program.Native
+module
+
+public import Effect4.Program.Native
 
 /-!
 # Program.Profile — the target profile: what is data, what is specification
@@ -49,6 +51,8 @@ not vacuous. It owns no adapter, no tape, no third package.
   reply does not mean that no semantic transition exists. The `Refusal` alphabet in Admit
   belongs to envelope/decision checks; valid incomplete replay remains a frontier.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

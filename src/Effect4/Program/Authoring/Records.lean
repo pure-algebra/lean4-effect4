@@ -1,8 +1,12 @@
-import Effect4.Program.Authoring
+module
+
+public import Effect4.Program.Authoring
 
 /-! Record builders in the existing scope reader, for decisions row 195.
 These functions resolve child names and reconstruct stored terms.
 Formation and typing remain the ordinary checked boundaries. -/
+
+@[expose] public section
 
 namespace Effect4.Program.Authoring
 

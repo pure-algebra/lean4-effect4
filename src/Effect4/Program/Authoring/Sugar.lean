@@ -1,6 +1,8 @@
-import Lean.Parser.Do
-import Effect4.Program.Authoring.Lifts
-import Effect4.Program.Authoring.Rows
+module
+
+public meta import Lean.Parser.Do
+public import Effect4.Program.Authoring.Lifts
+public import Effect4.Program.Authoring.Rows
 
 /-!
 # Program.Authoring.Sugar — binders over a fresh name, and derived forms
@@ -13,6 +15,8 @@ spellings `flatMap`, `andThen`, `map`, `ifElse`, `Src`-level functions over the 
 with no constructor and no second expansion owner. `minting` is the one way the surface names
 a binder of its own, here and in the generated forms.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program.Authoring
 
@@ -72,6 +76,8 @@ instance : Coe Unit TermSrc where
   coe _ := unit
 
 /-! ## The `eff` authoring macro -/
+
+public meta section
 
 open Lean Parser Term
 
@@ -169,5 +175,7 @@ def expandDoElems : List (TSyntax `doElem) → MacroM (TSyntax `term)
 
 scoped macro_rules
   | `(eff $seq:doSeq) => expandDoElems (unnestElems (getDoSeqElems seq))
+
+end
 
 end Effect4.Program.Authoring

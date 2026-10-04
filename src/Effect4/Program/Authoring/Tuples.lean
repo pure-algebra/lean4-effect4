@@ -1,7 +1,11 @@
-import Effect4.Program.Authoring
+module
+
+public import Effect4.Program.Authoring
 
 /-! Positional builders in the existing scope reader, for decisions rows 159 and 197.
 The checked boundary retains exact arity and rejects an unavailable position. -/
+
+@[expose] public section
 
 namespace Effect4.Program.Authoring
 

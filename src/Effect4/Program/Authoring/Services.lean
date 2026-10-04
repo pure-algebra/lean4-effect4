@@ -1,4 +1,6 @@
-import Effect4.Program.Authoring.Sugar
+module
+
+public import Effect4.Program.Authoring.Sugar
 
 /-!
 # Program.Authoring.Services — services, packages and layers, written as words
@@ -28,6 +30,8 @@ prints has one owner.
   (`Program/Native.lean`) so that no existing signature, byte or proof moves: at the empty
   table the two are the same value, `rfl`.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

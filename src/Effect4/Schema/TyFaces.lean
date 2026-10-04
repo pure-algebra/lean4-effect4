@@ -1,6 +1,8 @@
-import Effect4.Program.TyFoldExtras
-import Effect4.Schema.Template
-import Effect4.Schema.Bridge
+module
+
+public import Effect4.Program.TyFoldExtras
+public import Effect4.Schema.Template
+public import Effect4.Schema.Bridge
 
 /-!
 # First-order Schema recipes for each type constructor
@@ -15,6 +17,8 @@ They retain field names, optional flags, and arbitrary tuple arity.
 That agreement carries the bridge's raw retraction and exactness results to the table.
 The table stores only first-order data; its interpreter stores no program content.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

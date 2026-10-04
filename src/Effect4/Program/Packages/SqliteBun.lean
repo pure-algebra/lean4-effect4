@@ -1,4 +1,6 @@
-import Effect4.Program.Native
+module
+
+public import Effect4.Program.Native
 
 /-!
 # Packages.SqliteBun — the first canonical package table (host rows slice, step 5)
@@ -39,6 +41,8 @@ A program that uses these rows types, prints and reads back only under this tabl
 (`Api.typeOf p sqliteBun`, `Api.print p sqliteBun`, `Api.read e sqliteBun`); its external
 indices are the rows' positions here, so the order below is part of the table's identity.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program.Packages
 

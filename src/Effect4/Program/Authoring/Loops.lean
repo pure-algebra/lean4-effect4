@@ -1,4 +1,6 @@
-import Effect4.Program.Authoring.Sugar
+module
+
+public import Effect4.Program.Authoring.Sugar
 
 /-!
 # Program.Authoring.Loops — loops an author writes, over the one loop
@@ -13,6 +15,8 @@ Binders are Lean functions over names minted for the scope (`minting`), as `bind
 cursor carries no annotation unless the author states one (DI-91): its type is its initial
 value's.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program.Authoring
 

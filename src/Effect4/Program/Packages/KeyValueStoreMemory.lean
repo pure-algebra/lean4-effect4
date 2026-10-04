@@ -1,4 +1,6 @@
-import Effect4.Program.Native
+module
+
+public import Effect4.Program.Native
 
 /-!
 # Packages.KeyValueStoreMemory — the second canonical package table (host rows slice, step 5)
@@ -24,6 +26,8 @@ What is the package's and what is modelled (the scouts of 2026-09-09):
 * Errors cross as `prod string string`: `KeyValueStoreError` is a `Data.TaggedError` with
   `message`, `method` and `key` (`:183-195`).
 -/
+
+@[expose] public section
 
 namespace Effect4.Program.Packages
 

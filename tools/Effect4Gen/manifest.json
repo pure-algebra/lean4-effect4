@@ -330,6 +330,7 @@
     {
       "Note": "The authoring lifts (DI-83, DI-84): one per constructor an author may write, from the same table.",
       "Name": "Authoring",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Authoring"],
       "Tool": "tools/Effect4Gen/Authoring.lean",
       "Imports": "Effect4.Program.Authoring",
       "Out": "src\\Effect4\\Program\\Authoring\\Lifts.lean",
@@ -342,6 +343,7 @@
     {
       "Note": "The native rows as authoring wrappers, named as the printed image spells them, from NativeOp.all and the NativeOp declarations (DI-89's native half).",
       "Name": "Rows",
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Authoring.Lifts"],
       "Tool": "tools/Effect4Gen/Rows.lean",
       "Imports": "Effect4.Program.Authoring.Lifts",
       "Out": "src\\Effect4\\Program\\Authoring\\Rows.lean",

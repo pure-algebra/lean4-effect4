@@ -1,8 +1,12 @@
-import Effect4.Program.Authoring
+module
+
+public import Effect4.Program.Authoring
 
 /-! String-map builders in the existing scope reader, for decisions rows 166 and 197.
 Each builder resolves names and applies the ordinary native atom.
 The ordinary checker and map value semantics remain the owners of typing and evaluation. -/
+
+@[expose] public section
 
 namespace Effect4.Program.Authoring
 

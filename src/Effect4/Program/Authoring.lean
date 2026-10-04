@@ -1,5 +1,7 @@
-import Effect4.Program.Refs
-import Effect4.Program.Native
+module
+
+public import Effect4.Program.Refs
+public import Effect4.Program.Native
 
 /-!
 # Program.Authoring — the scope reader: names for the program algebra's binders
@@ -30,6 +32,8 @@ each shared layer once by name; `elaborateModule` places every named layer at it
 in program order and turns each later use into `LayerTerm.ref` of that path, which is what
 `Eff.restoreAll` (`Program/Refs.lean`) does with a declaration block. Nobody writes a path.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program.Authoring
 
@@ -333,11 +337,13 @@ def Module.rowNames {Op : Type} (m : Module Op) : RowNames := RowDef.names m.row
 def Module.serviceTypes {Op : Type} (m : Module Op) : List (Effect4.ServiceKey × Ty) :=
   m.services.map fun s => (s.key, s.carrier)
 
+set_option backward.privateInPublic true in
 private def layerNamesOf {Op : Type} (layers : List (String × LayerSrc Op)) :
     Except Refusal LayerNames :=
   layers.zipIdx.foldlM (init := []) fun acc ((name, _), k) =>
     if acc.any (·.1 == name) then .error ⟨[], .duplicateLayer name⟩ else .ok (acc ++ [(name, k)])
 
+set_option backward.privateInPublic true in
 /-- The placeholder sites of a tree, in program order: `(site, k)` for every reference to the
 `k`-th declaration. -/
 private def placeholderSites {Op : Type} (tree : Eff Op) : List (List Nat × Nat) :=
@@ -346,6 +352,7 @@ private def placeholderSites {Op : Type} (tree : Eff Op) : List (List Nat × Nat
   let paths := Path.sortBy Path.lt (sites.map (·.1))
   paths.filterMap fun s => (sites.find? (·.1 == s))
 
+set_option backward.privateInPublic true in
 /-- Place each declared layer at its first use, one per round: the earliest unplaced
 placeholder site in program order receives its declaration's term (whose own references to
 declared layers are placeholders again, handled by later rounds). -/
@@ -361,6 +368,7 @@ private def placeRounds {Op : Type} (terms : List (LayerTerm Op)) (names : Layer
       | some _, some (Node.eff tree') => placeRounds terms names fuel tree' ((k, site) :: placed)
       | _, _ => .error ⟨site, .placement name⟩
 
+set_option backward.privateInPublic true in
 /-- Every remaining placeholder reference points at the placed declaration. -/
 private def pointAtPlaced {Op : Type} (placed : List (Nat × List Nat)) (tree : Eff Op) :
     Except Refusal (Eff Op) :=
@@ -379,6 +387,8 @@ def rowNamesOf (rows : List RowDef) : Except Refusal RowNames :=
   | some spelling => .error ⟨[], .duplicateRow spelling⟩
   | none => .ok (RowDef.names rows)
 
+set_option backward.privateInPublic true in
+set_option backward.privateInPublic.warn false in
 /-- The one first-order tree of an authored module: main elaborated in the empty scope, every
 declared layer placed at its first use in program order, every later use a reference to that
 path. A declared layer nobody uses is dropped; a declared row nobody calls keeps its position,

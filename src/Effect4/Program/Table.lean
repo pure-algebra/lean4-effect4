@@ -1,4 +1,6 @@
-import Effect4.Program.Native
+module
+
+public import Effect4.Program.Native
 
 /-!
 # Program.Table — the row table invariants and keys
@@ -12,6 +14,8 @@ Name safety (avoiding binder collision with `a0`, `a1`, ... and reserved express
 is a printer and reader concern (`Codegen/Print.lean`, `Codegen/Read.lean`), kept strictly
 out of the program plane so that admission never imports codegen.
 -/
+
+@[expose] public section
 
 namespace Effect4.Program
 

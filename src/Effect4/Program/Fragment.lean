@@ -1,4 +1,6 @@
-import Effect4.Program.Native
+module
+
+public import Effect4.Program.Native
 
 /-!
 # Program.Fragment — executable membership in the proved program fragment
@@ -8,6 +10,8 @@ It retains its original namespace and accepted constructors. Membership alone
 asserts neither typing nor execution safety; those require admission and the
 corresponding theorems in the Laws graph.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 
