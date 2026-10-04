@@ -76,4 +76,11 @@ info: Test.Audit.SemanticsCensus.placedSketch: proved modulo 1 part(s)
 @[semantics "fixture-two" (requirement := R2)] proof_sketch placedSketch : True ∧ True := by
   refine ⟨?_, True.intro⟩
 
+-- Acceptance fixtures (decisions row 206), for the report's refusals: a battery namespace whose
+-- `stage` is not a `Reach` literal, and one that waits on a requirement the registry lacks.
+def notReach.stage : Nat := 1
+def notReach.waitsOn : List String := ["R1"]
+def unknownWait.stage : Nat := 1
+def unknownWait.waitsOn : List String := ["R99"]
+
 end Test.Audit.SemanticsCensus

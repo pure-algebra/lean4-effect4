@@ -89,10 +89,17 @@ structure Registry where
   requirements : List Requirement := []
   /-- module prefixes whose planned goals join the plan as nodes -/
   planScope : List Name := []
+  /-- the acceptance programs (decisions row 206): each battery's namespace, which declares the
+  literal `stage` it reaches and the requirements it `waitsOn`; each module is a root -/
+  acceptance : List Name := []
 deriving Repr, Inhabited
 
 def registry : Registry where
-  roots := [`Effect4.Laws, `Test.Program.TypedProgBindRed, `Test.Program.ProtocolPosts]
+  roots := [`Effect4.Laws, `Test.Program.TypedProgBindRed, `Test.Program.ProtocolPosts,
+    `Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers, `Test.Dogfood.P3WorkerQueue,
+    `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
+  acceptance := [`Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers,
+    `Test.Dogfood.P3WorkerQueue, `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
   concepts := [
     { id := "store-typing"
       title := "Store Typing: World-indexed semantic value membership (Fits) and store typings"

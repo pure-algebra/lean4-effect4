@@ -13,6 +13,11 @@ of row 204 moves at least one program forward.
   `formAdmits`.
 - `P1HttpCache.lean` to `P5LedgerService.lean` hold one battery per program. `Test/All.lean`
   imports each one, so the module-closure gate and the axiom gate cover them.
+- Each battery declares two literals that the semantics report reads (`make gen-semantics`):
+  - `stage`, the stage the program reaches;
+  - `waitsOn`, the requirements of the system map's §8 that its row below explains.
+  `generated/semantics.md` prints them in its section "Acceptance programs", with the programs
+  each requirement keeps waiting.
 
 ## The reference texts
 

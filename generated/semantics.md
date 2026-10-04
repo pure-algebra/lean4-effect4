@@ -2541,3 +2541,26 @@ flowchart LR
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `journal_replays` | proved | — | — | 77 | 926 |
+
+## Acceptance programs
+
+The rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/README.md`). Each row is the `stage` its battery declares, which a guard ties to the battery's own measurement, and the requirements it `waitsOn`. A slice that moves a program edits both.
+
+| Program | Admitted | Answer | Printed | Read back | Refused parts | Waits on |
+| --- | --- | --- | --- | --- | --- | --- |
+| `P1HttpCache` | yes | differs | yes | no | HttpError{status, url} as a typed failure (typing: errorNotAdmitted); a Quote record in the key-value cache (typing: requestNotSubtype) | R3, R6, R7, R10 |
+| `P2HandlerLayers` | yes | rc112 | yes | yes | AppConfig as a string service (serviceCarrier: signature none); CurrentUser as a record service (serviceCarrier: signature none); NotFound{id} as a typed failure (typing: errorNotAdmitted); Unauthorized{reason} as a typed failure (typing: errorNotAdmitted); a number in a template string (typing: term) | R3, R5, R7, R10, R13 |
+| `P3WorkerQueue` | yes | differs | yes | yes | the log as a Ref of a list (typing: requestNotSubtype); JobFailed{id, reason} as a typed failure (typing: errorNotAdmitted) | R3, R4, R10, R11 |
+| `P4RateLimiter` | yes | rc112 | yes | yes | the Window record in one Ref (typing: requestNotSubtype) | R4, R10 |
+| `P5LedgerService` | no | notRun | no | no | the Account record in one Ref (typing: requestNotSubtype); InsufficientFunds{needed, available} as a typed failure (typing: errorNotAdmitted); a signed number (admission) | R3, R4, R6, R7, R10 |
+
+The programs each requirement keeps waiting:
+
+- R3: `P1HttpCache`, `P2HandlerLayers`, `P3WorkerQueue`, `P5LedgerService`
+- R4: `P3WorkerQueue`, `P4RateLimiter`, `P5LedgerService`
+- R5: `P2HandlerLayers`
+- R6: `P1HttpCache`, `P5LedgerService`
+- R7: `P1HttpCache`, `P2HandlerLayers`, `P5LedgerService`
+- R10: `P1HttpCache`, `P2HandlerLayers`, `P3WorkerQueue`, `P4RateLimiter`, `P5LedgerService`
+- R11: `P3WorkerQueue`
+- R13: `P2HandlerLayers`

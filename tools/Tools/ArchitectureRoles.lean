@@ -131,6 +131,7 @@ def areas : List Area := [
   ⟨"Test/Api", .tests, 0, "Test/Api", "the face's batteries", true, true⟩,
   ⟨"Test/Codegen", .tests, 0, "Test/Codegen", "printer, reader and module batteries", true, true⟩,
   ⟨"Test/Data", .tests, 0, "Test/Data", "rows, JSON and optics", true, true⟩,
+  ⟨"Test/Dogfood", .tests, 0, "Test/Dogfood", "the rc.112 probe programs as acceptance tests: one battery per program pins how far it gets (decisions row 206)", true, true⟩,
   ⟨"Test/Ingest", .tests, 0, "Test/Ingest", "the taxonomy", true, true⟩,
   ⟨"Test/Machine", .tests, 0, "Test/Machine", "the machine's batteries and the runtime contracts", true, true⟩,
   ⟨"Test/Program", .tests, 0, "Test/Program", "the program batteries, the generator, the red controls", true, true⟩,
