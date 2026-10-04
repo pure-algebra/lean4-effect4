@@ -412,7 +412,7 @@ def registry : Registry where
       title := "Retraction of Schema generation on reserved-free types"
       pointer := .witness `Effect4.Schema.Bridge.ofSchema_schema },
     { id := "collection-term-print-read", concept := "exact-codecs", role := .compatibility
-      title := "Every scoped term reconstructs after structural printing, including records and every static tuple index"
+      title := "Every scoped term reconstructs after structural printing, including records, payload class constructions under classes that cover them (decisions row 120), and every static tuple index"
       pointer := .witness `Effect4.Program.readTerm_printTerm },
     { id := "record-codec-layout", concept := "exact-codecs", role := .compatibility
       title := "Record JSON decoding is exact under normJ; named record values retain optional presence"
@@ -423,6 +423,9 @@ def registry : Registry where
     { id := "error-payload-exact", concept := "exact-codecs", role := .compatibility
       title := "A typed failure's record payload reads back exactly through the error image: errOf inverts valOfErr at every represented error, the handle-free record frame included (decisions row 120)"
       pointer := .witness `Effect4.Program.errOf_valOfErr },
+    { id := "payload-class-decl-exact", concept := "exact-codecs", role := .compatibility
+      title := "An admitted module's payload class declarations are exactly the ones the printer writes for the program it reads to (decisions row 120, part E2)"
+      pointer := .witness `Effect4.Codegen.admitModule_classDecls },
 
     -- 6. subtyping-algebra
     { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility
@@ -713,7 +716,7 @@ def registry : Registry where
         `Effect4.Codegen.Metadata.type_metadata_exact, `Effect4.Program.errOf_valOfErr]
       openParts := ["variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130",
         "recursive types are row 124 (open): nominal Σ_app declarations through Ty.app",
-        "error payloads: the carrier landed (decisions row 120, part E1); open: E2's face (one Data.TaggedError class per tag, printed and read back; the printer refuses Err.payload by name until then), catchTag's residual over records (decisions row 130), int and number fields (row 121), and a host row answering a payload (R6, parked)",
+        "error payloads: the carrier (decisions row 120, part E1) and the face (part E2: one Data.TaggedError class per tag, printed and read back) landed; open: catchTag's residual over records (decisions row 130), int and number fields (row 121; a number field is refused by name as unreadable), a field typed by another class (refused by name), a record update of a class instance (it answers a structural object), and a host row answering a payload (R6, parked)",
         "int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121), not landed; the admission's int scan still refuses it",
         "the Schema and JSON images of app, null, undefined, number and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161)",
         "equality at records: eq stays refused at records until a program compares them (decisions row 126)"] },
