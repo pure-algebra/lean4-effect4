@@ -69,8 +69,6 @@ def Payload.image : Store.Image Payload :=
   (Store.Image.ident.subtype (fun v => isPayload v = true)).equiv
     (fun s => ⟨s.val, s.property⟩) (fun p => ⟨p.val, p.property⟩) (fun _ => rfl) (fun _ => rfl)
 
-theorem Payload.image_toVal (p : Payload) : Payload.image.toVal p = p.val := rfl
-
 /-- The payload image writes no handle. The subtype's proof gives it, not the frame's shape. -/
 theorem Payload.image_handleFree : Store.Image.HandleFree Payload.image :=
   fun p => handles_of_isPayload p.property

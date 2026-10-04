@@ -30,8 +30,6 @@ def payloadImage : Image Payload :=
   ((Canonical.image Val).subtype (fun v => isPayload v = true)).equiv
     (fun s => ⟨s.val, s.property⟩) (fun p => ⟨p.val, p.property⟩) (fun _ => rfl) (fun _ => rfl)
 
-theorem payloadImage_toVal (p : Payload) : payloadImage.toVal p = Canonical.toVal p.val := rfl
-
 instance instCanonicalPayload : Canonical Payload where
   shape := Canonical.shape Val
   toVal := payloadImage.toVal

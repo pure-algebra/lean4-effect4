@@ -656,17 +656,6 @@ theorem valOfErr_errOf_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy e
     (hv : Fits w v e) : valOfErr (errOf v) = some v :=
   valOfErr_errOf_supported e v _ hs (fits_hasTy w e v hv)
 
-/-- **A member of a payload-admissible type holds no handle, at every world** (decisions row
-120): `handles_of_payloadFieldTy` read through `fits_hasTy`, since such a type reads no
-allocation table (`hasTy_payloadFieldTy_allocation`). An admitted record error's payload so names
-no world entry. Concept `store-typing`, the host boundary (`docs/core/host-boundary.md` §5). -/
-@[semantics "store-typing" (requirement := R6)]
-theorem handles_of_fits_payloadFieldTy {w : World} {t : Ty} {v : Val}
-    (ht : payloadFieldTy t = true) (hv : Fits w v t) : v.handles = [] := by
-  have h := fits_hasTy w t v hv
-  rw [hasTy_payloadFieldTy_allocation t ht] at h
-  exact handles_of_payloadFieldTy t ht v h
-
 /-- A defect made from an admitted error value is not a shape defect. -/
 theorem shapeFree_die_of_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy e = true)
     (hv : Fits w v e) : ShapeFree (Cause.die (Defect.ofError (errOf v)) : CauseV) := by
