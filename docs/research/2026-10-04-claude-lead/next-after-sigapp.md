@@ -118,9 +118,10 @@ program forward. A program's semantic claims ("p3's worker pool returns every jo
 `proof_goal`s once the program admits. Dogfooding then answers "is this on track" with a
 measurement at every slice, instead of in one later phase.
 
-## 6. For the owner
+## 6. The owner's rulings (2026-10-04, as recommended)
 
-1. The order of §4, in particular state at any type before queues and streams.
-2. Row 120's ratification (error payloads).
-3. The stream end signal: rc.112's `Cause.Done` with a leftover, or DI-11's `none`.
-4. Whether p1–p5 become tracked acceptance programs (§5).
+1. The order of §4: decisions row 204.
+2. Error payloads: row 120, ratified.
+3. The stream end: a value that carries its leftover, kept apart from failures; the TypeScript face
+   maps it to rc.112's `Cause.Done` (row 205, amending DI-11).
+4. The probe programs become tracked acceptance tests (row 206).

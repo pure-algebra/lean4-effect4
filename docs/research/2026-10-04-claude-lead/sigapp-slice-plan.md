@@ -68,10 +68,9 @@ Placement of `lawfulSig_of_admitted`:
 flowchart TD
   S0["0. bridge (landed)"] --> S2
   S1["1. SigApp in the core"] --> S2["2. admission at Σ_app"]
-  S2 --> S3["3. authoring, Built, session, Run"]
   S2 --> S4["4. the faces at app.signature"]
+  S4 --> S3["3. authoring, Built, session, Run"]
   S3 --> S5["5. milestones at the API"]
-  S4 --> S5
   S5 --> S6["6. delete the table-indexed path"]
 ```
 
@@ -103,15 +102,16 @@ flowchart TD
    (the per-key table that `one_code_two_carriers` refutes), `disagreeingService` and
    `BuildRefusal.serviceCarrier`.
 
-Steps 1 and 2 are one seat's slice. Step 3 waits on question 1. Step 4 can run beside step 3 in a
-second seat: its files are disjoint (`Codegen/*`, `Laws/Codegen/*`, `Laws/Api/ModuleReadable`).
+Steps 1 and 2 are one seat's slice. Step 4 follows, in files disjoint from step 2's (`Codegen/*`,
+`Laws/Codegen/*`, `Laws/Api/ModuleReadable`). Step 3 comes last of the three, so authoring never
+builds a program that code generation refuses.
 
-## 5. Questions for the owner
+## 5. The owner's rulings (2026-10-04, decisions row 21)
 
-1. The session header carries the row table today. Does it carry the service declarations as well,
-   with a protocol version step, or does the session derive them from the admitted program?
-2. Does step 4 ship with step 2, or after it? The faces stay correct at the built-in signature
-   meanwhile.
+1. The session header keeps the row table only. The session takes the services from the admitted
+   program, so the wire format does not change.
+2. Code generation moves to the application's signature before authoring accepts declared services:
+   step 4 lands before step 3.
 
 ## 6. What this plan does not establish
 

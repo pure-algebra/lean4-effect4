@@ -78,6 +78,22 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   needs a served premise: `E4-TYPED-CE-041` shows that program admission checks no served key.
 - **Four empty aesop banks deleted** (decisions row 65): `Inversion`, `Reader`, `Rows`, `TyOrder`.
 
+## Next, ruled 2026-10-04
+
+The owner ratified the coordinator's recommendations (decisions rows 21, 120, 201, 204–207):
+
+- **The order** (row 204): finish the Σ_app slice through step 2, then state at any type (rows
+  42–43, steps 3–5), then queues, then streams. Error payloads (row 120, ratified) and derived forms
+  with behaviour laws (DI-89) land alongside. Lowering and the host-session guarantee stay parked.
+- **The Σ_app slice** (row 21): the session header keeps the row table only; code generation moves
+  to the application's signature before authoring accepts declared services.
+- **Streams** (row 205): a stream's end is a value carrying its leftover, apart from failures.
+- **Acceptance** (row 206): the probe programs become tracked tests, in a dogfood folder of `Test/`.
+- **Planned goals** (row 207): `proof_goal` carries its requirement and concept.
+- **The host protocol** (row 201): armed work with no runnable fiber reads `parked`.
+
+The evidence is in the [roadmap note](research/2026-10-04-claude-lead/next-after-sigapp.md).
+
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
 Phase A, placement, the Phase B skeleton and the Phase C fills of the skeleton-first redirect
