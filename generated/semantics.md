@@ -1478,7 +1478,7 @@ flowchart LR
 
 ### R12: Frontiers name what they await
 
-- Open: R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet)
+- Open: R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet; refuted today by E4-SCHED-CE-021)
 - Open: R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)
 
 ```mermaid

@@ -687,7 +687,7 @@ def registry : Registry where
       openParts := ["part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed]
-      openParts := ["R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet)",
+      openParts := ["R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet; refuted today by E4-SCHED-CE-021)",
         "R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)"] }
   ]
   reductions := [
