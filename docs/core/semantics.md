@@ -339,6 +339,8 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   checked layer-free program loads into `J` (`loadsTyped_of_layerFree`,
   `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
 
+The `sound-at-app-signature` claim carries `meaning_typed`, `run_typed` and `meaningB_typed` to an application's signature: any table, service declarations at fresh codes (`src/Effect4/Laws/Program/SoundAnySignature.lean`). A looped program is a program of the built-in signature, so C3's reflection (`effTy_restrict`) transfers its typing.
+
 The `straight-meaning-typed` claim requires `Straight e = true` and successful native program typing in the empty environment.
 `Denote.meaning_typed` establishes `ExitHasTy` at the resulting stores, starting from empty stores.
 Its declaration lives in `src/Effect4/Laws/Program/MeaningSound.lean`.

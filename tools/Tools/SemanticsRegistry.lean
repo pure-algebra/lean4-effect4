@@ -226,6 +226,9 @@ def registry : Registry where
       literature := [
         { work := "deVilhenaPottier2021", locator := "audit P8", relation := "proofTechnique" }
       ] },
+    { id := "sound-at-app-signature", concept := "residual-program-typing", role := .compatibility
+      title := "Meaning, loop and run soundness at an application's signature: any table, service declarations at fresh codes, by C3's reflection (R1)"
+      pointer := .witness `Effect4.Program.Denote.run_typed_app },
     { id := "straight-meaning-typed", concept := "residual-program-typing", role := .fundamentalProperty
       title := "Typed straight programs return ExitHasTy from the empty environment and stores"
       pointer := .witness `Effect4.Program.Denote.meaning_typed },
@@ -674,10 +677,11 @@ def registry : Registry where
   requirements := [
     { id := "R1", title := "The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it"
       top := [`Conform.Effect4.Typing.check_sound, `Conform.Effect4.Typing.check_complete,
-        `Effect4.Program.admitSig_ok_iff]
+        `Effect4.Program.admitSig_ok_iff, `Effect4.Program.Denote.meaning_typed_app,
+        `Effect4.Program.Denote.run_typed_app, `Effect4.Program.Denote.meaningB_typed_app]
       openParts := ["admission pinned to the built-in signature: AdmittedProgram and code generation's admission check at nativeSignature table (decisions row 21, ruled 2026-10-01: thread it in the Σ_app slice)",
         "the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)",
-        "meaning, loop and run soundness at any table and service list: proved only in the dropped probe R2Probe.lean (ce2ece4f, dropped f7ccf52e); the tree states them at nativeSignature, and the corollaries are owed",
+        "meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)",
         "structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)"] },
     { id := "R2", title := "Extension is conservative: C1–C8 over DI-47's relation on Σ_app"
       top := [`Effect4.Program.check_ext, `Effect4.Program.check_restrict, `Effect4.Program.lawful_append]

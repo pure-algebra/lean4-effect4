@@ -75,6 +75,7 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | instantiated-formation | compatibility | proved | Effect4.Program.rowTy_instantiated_formed | yes |  |
 | seq-typed | compatibility | proved | Effect4.Program.Typed.seq_typed | yes |  |
 | close-typed | preservation | proved | Effect4.Program.Typed.close_typed | yes |  |
+| sound-at-app-signature | compatibility | proved | Effect4.Program.Denote.run_typed_app | yes |  |
 | straight-meaning-typed | fundamentalProperty | proved | Effect4.Program.Denote.meaning_typed | yes |  |
 | denote-typed | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022, E4-TYPED-CE-023, E4-TYPED-CE-031 |
 | rebuild-admission | compatibility | proved | Effect4.Program.Authoring.rebuild_spec | yes |  |
@@ -138,6 +139,26 @@ Literature: ATTAPL, ch. 3, pp. 87–136 — adaptedResult
 ```
 
 Literature: deVilhenaPottier2021, audit P8 — proofTechnique
+
+**sound-at-app-signature**
+
+```lean
+∀ (t : Effect4.Program.RowTable) (s : List (Prod Effect4.ServiceKey Effect4.Program.Ty)),
+  (∀ (entry : Prod Effect4.ServiceKey Effect4.Program.Ty),
+      List.instMembership.mem s entry → { rows := t }.FreshCode entry) →
+    ∀ (e : Effect4.Program.NativeEff) (ty : Effect4.Program.EffTy) (fuel : Nat),
+      Eq (Effect4.Program.Denote.Straight e) Bool.true →
+        Eq (Effect4.Program.effTy { rows := t, services := s }.signature List.nil e)
+            (Option.some ty) →
+          instLENat.le (Effect4.Program.Agreement.depth e) fuel →
+            instLENat.le (instHAdd.hAdd (instHMul.hMul 2 (Effect4.Program.Agreement.steps e)) 6)
+                fuel →
+              And (Eq (Effect4.Api.run e fuel).outcome Effect4.Api.Outcome.finished)
+                (Exists fun ex =>
+                  And (Eq (Effect4.Api.run e fuel).exit (Option.some ex))
+                    (Effect4.Program.Denote.ExitHasTy ty.answer ty.error
+                      (Effect4.Api.run e fuel).stores ex))
+```
 
 **straight-meaning-typed**
 
@@ -1409,7 +1430,7 @@ A requirement with an open part not yet stated as a plan node is open, whatever 
 
 | Requirement | Status | Top nodes | Next goals |
 | --- | --- | --- | --- |
-| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved) | — |
+| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved) | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved) | — |
 | R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | — |
@@ -1429,7 +1450,7 @@ A requirement with an open part not yet stated as a plan node is open, whatever 
 
 - Open: admission pinned to the built-in signature: AdmittedProgram and code generation's admission check at nativeSignature table (decisions row 21, ruled 2026-10-01: thread it in the Σ_app slice)
 - Open: the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)
-- Open: meaning, loop and run soundness at any table and service list: proved only in the dropped probe R2Probe.lean (ce2ece4f, dropped f7ccf52e); the tree states them at nativeSignature, and the corollaries are owed
+- Open: meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)
 - Open: structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)
 
 ```mermaid
@@ -1437,6 +1458,9 @@ flowchart LR
   n0["check_sound<br/>proved"]
   n1["check_complete<br/>proved"]
   n2["admitSig_ok_iff<br/>proved"]
+  n3["meaning_typed_app<br/>proved"]
+  n4["run_typed_app<br/>proved"]
+  n5["meaningB_typed_app<br/>proved"]
 ```
 
 | Node | Status | Nearest nodes | Lemmas | Definitions |
@@ -1444,6 +1468,9 @@ flowchart LR
 | `check_sound` | proved | — | 133 | 217 |
 | `check_complete` | proved | — | 68 | 220 |
 | `admitSig_ok_iff` | proved | — | 44 | 151 |
+| `meaning_typed_app` | proved | `check_restrict`, `meaning_typed` | 75 | 331 |
+| `run_typed_app` | proved | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 102 | 1101 |
+| `meaningB_typed_app` | proved | `check_restrict`, `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 740 | 735 |
 
 ### R2: Extension is conservative: C1–C8 over DI-47's relation on Σ_app
 
