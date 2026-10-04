@@ -53,11 +53,16 @@ def compileReasons (m : NativeMachine) : List FrontierReason :=
   m.fibers.filterMap fun f =>
     if isCompileFrontier f.frame.current then some (.compileFuel f.id) else none
 
+/-- What a stopped run waits for (DI-68). The frontier is an Effect4 observation: rc.112 has
+none. When the tape ran out, `.awaitDecision` names scheduling work a decision takes up: a
+runnable fiber (`evaluate`), or an armed owner (`fire`, `flush`), a host callback scheduled
+(`setImmediate`, `Scheduler.ts:207-212`) and not yet run (`afterScheduled`, `:217-220`).
+Decisions row 201 (b) added the armed owner. -/
 def frontierReasons (why : Exhaustion) (m : NativeMachine) : List FrontierReason :=
   (match why with | .fuel => [.commandFuel] | .tape => []) ++
     compileReasons m ++ hostReasons m ++ timerReasons m ++
     (match why with
     | .fuel => []
-    | .tape => if hasRunnable m then [.awaitDecision] else [])
+    | .tape => if hasRunnable m || !m.armed.isEmpty then [.awaitDecision] else [])
 
 end Effect4.Api

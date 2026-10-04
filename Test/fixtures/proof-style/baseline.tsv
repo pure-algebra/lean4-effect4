@@ -53,13 +53,11 @@ src/Effect4/Data/Row.lean	not_mem_empty	simp-without-only	1
 src/Effect4/Data/Row.lean	singleton	simp-without-only	1
 src/Effect4/Ingest/Taxonomy.lean	all_complete	simp-without-only	1
 src/Effect4/Laws/Api/Frontier.lean	all_exited_not_runnable	simp_all	1
-src/Effect4/Laws/Api/Frontier.lean	awaitDecision_iff	simp-without-only	1
 src/Effect4/Laws/Api/Frontier.lean	awaitHost_mem	simp-without-only	1
 src/Effect4/Laws/Api/Frontier.lean	commandFuel_iff	simp-without-only	1
 src/Effect4/Laws/Api/Frontier.lean	exists_awaitHost_iff	simp-without-only	2
 src/Effect4/Laws/Api/Frontier.lean	observe_awaitingAsync_iff	simp-without-only	1
 src/Effect4/Laws/Api/Frontier.lean	observe_idle_iff	simp-without-only	1
-src/Effect4/Laws/Api/Frontier.lean	observe_idle_tape_iff	simp-without-only	1
 src/Effect4/Laws/Api/Frontier.lean	observe_terminated_iff	simp-without-only	1
 src/Effect4/Laws/Api/Fuel.lean	finished_mono_fuel	simp-without-only	1
 src/Effect4/Laws/Api/HostSession.lean	advance_conforms	simp_all	1

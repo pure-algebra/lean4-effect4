@@ -5,7 +5,7 @@ Effect4.Api.evaluate	api_evaluate	false	2	0	0	0	0	1	0	1	0	0	1	0	1	0	0	0	0	0	0	7	
 Effect4.Program.interpOf	program_interp_of	false	56	0	0	0	0	1	0	0	0	0	56	0	0	0	0	0	0	0	0	18	67	0	0	0	1	0	18321761907653015333
 Effect4.Api.load	api_load	false	25	0	0	0	3	1	0	2	0	0	22	1	2	0	0	0	0	0	0	16	35	0	3	0	1	0	14379869517259352758
 Effect4.Machine.replayEval._at_.Effect4.Program.replayCheckedFrom.spec_0	replay_eval_at_program_replay_checked_from_spec_0	true	10	0	0	0	8	6	0	0	0	0	10	0	0	0	0	0	0	0	0	60	22	0	13	0	1	0	9028814964921071593
-Effect4.Api.frontierReasons	api_frontier_reasons	false	19	0	1	2	3	3	0	0	0	0	19	0	0	0	0	0	0	0	0	7	22	0	6	0	1	0	4455449711076460887
+Effect4.Api.frontierReasons	api_frontier_reasons	false	20	0	3	6	6	3	0	0	0	0	20	0	0	0	0	0	0	0	0	7	29	0	11	0	1	0	6411630052674661342
 Effect4.Program.interpOf._lam_0	program_interp_of__lam_0	false	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	8	1	0	2	2	1	0	4670197982487956493
 Effect4.Program.interpOf._lam_1	program_interp_of__lam_1	false	19	0	1	2	6	3	0	0	0	0	18	1	0	0	0	0	0	0	0	16	20	0	8	1	1	0	9048112559118779740
 Effect4.Program.interpOf._lam_2	program_interp_of__lam_2	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	9	5	0	1	1	1	0	10865180526345428689

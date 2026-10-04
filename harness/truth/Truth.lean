@@ -895,7 +895,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard (Api.run pAcquireHandle 1000 acquireHandleAnswers acquireHandleTable).stores.externals.allocated =
   ["Host.Resource"]
 
-/-- P2b finite check of the amended observation equations on a final machine. -/
+/-- P2b finite check of the amended observation equations on a final machine. The decision
+reason names a runnable fiber or an armed owner (decisions row 201 (b), `awaitDecision_iff`). -/
 def observesReasons (why : Exhaustion) (m : Api.Machine) : Bool :=
   let rs := Api.frontierReasons why m
   let host := rs.any fun | .awaitHost _ => true | _ => false
@@ -903,7 +904,7 @@ def observesReasons (why : Exhaustion) (m : Api.Machine) : Bool :=
   ((observation == .awaitingAsync) == host) &&
     ((observation == .terminated) == (!host && m.fibers.all (fun f => f.exit.isSome))) &&
     ((observation == .idle) == (!host && Api.hasRunnable m)) &&
-    (rs.contains .awaitDecision == (why == .tape && Api.hasRunnable m))
+    (rs.contains .awaitDecision == (why == .tape && (Api.hasRunnable m || !m.armed.isEmpty)))
 
 #guard corpus.all fun (name, p) =>
   let (table, answers) := hostInputs name
