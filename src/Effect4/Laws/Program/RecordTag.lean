@@ -101,9 +101,10 @@ open Effect4.Machine
 /-- **`tagIs` is sound at records** (decisions row 120): on a value of a record type with a
 literal `_tag`, the atom answers whether that literal is the tag, as the record select reads it
 (`Record.tagHit_eq_isTag`). A record frame is no pair, so the atom's pair arm never fires on it.
-Concept `residual-program-typing`, R10; consumer: `catchIf` over error payloads, whose test
-`tagIs(tag, e)` now catches a payload by its class tag. It establishes nothing about the residual
-a hit leaves, which stays the whole error column until decisions row 130. -/
+Concept `residual-program-typing`, R10. No proof reads it yet: decisions row 130's residual,
+which subtracts a caught tag from the column, is its consumer; the batteries test `catchIf` over
+`tagIs` on payloads meanwhile. It establishes nothing about the residual a hit leaves, which stays
+the whole error column until row 130. -/
 @[semantics "residual-program-typing" (requirement := R10)]
 theorem NativeAtom.tagHit_record {type : Ty} {v : Val} {allocated : List String} (tag : String)
     (ht : (Record.tagOf type).isSome = true) (hv : Val.hasTy v type allocated = true) :

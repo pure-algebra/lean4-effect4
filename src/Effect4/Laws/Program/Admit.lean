@@ -362,8 +362,9 @@ theorem namedHasTy_mem (cs : List (String × Bool × (Val → Bool))) (ns xs : L
 /-- **A value of a payload-admissible type holds no handle** (decisions row 120): the type is
 first-order and names no handle, fiber, cell, deferred or nominal reference at any node, and
 excludes `unknown`, whose members may hold any. Concept `store-typing`, the host boundary
-(`docs/core/host-boundary.md` §5): it keeps the six handle-freeness lemmas unconditional at
-payloads. Consumer: `isPayload_of_hasTy_record`. -/
+(`docs/core/host-boundary.md` §5). The carrier holds handle-free frames only, which keeps the six
+handle-freeness lemmas unconditional; this lemma makes every admitted record error such a frame.
+Consumer: `isPayload_of_hasTy_record`. -/
 @[semantics "store-typing" (requirement := R6)]
 theorem handles_of_payloadFieldTy :
     ∀ t : Ty, payloadFieldTy t = true → ∀ v : Val, Val.hasTy v t = true → v.handles = [] := by
