@@ -1135,7 +1135,8 @@ def TermShape : Shape :=
       ("field", 4, [("mode", (shape _root_.Effect4.Program.FieldReadMode).root),
         ("target", .named "Term"), ("name", (shape _root_.String).root)]),
       ("recordSet", 5, [("target", .named "Term"), ("name", (shape _root_.String).root),
-        ("value", .named "Term")])]
+        ("value", .named "Term")]),
+      ("tupleAt", 6, [("target", .named "Term"), ("index", (shape _root_.Nat).root)])]
 
 def TermsShape : Shape :=
   .sum "Terms"
@@ -1159,6 +1160,7 @@ def toValTerm : _root_.Effect4.Program.Term → Val
   | .record a0 a1 a2 => .ctor 3 [Canonical.toVal a0, Canonical.toVal a1, toValTerms a2]
   | .field a0 a1 a2 => .ctor 4 [Canonical.toVal a0, toValTerm a1, Canonical.toVal a2]
   | .recordSet a0 a1 a2 => .ctor 5 [toValTerm a0, Canonical.toVal a1, toValTerm a2]
+  | .tupleAt a0 a1 => .ctor 6 [toValTerm a0, Canonical.toVal a1]
 def toValTerms : _root_.Effect4.Program.Terms → Val
   | .nil => .ctor 0 []
   | .cons a0 a1 => .ctor 1 [toValTerm a0, toValTerms a1]
@@ -1196,6 +1198,10 @@ def rawTerm : Val → Option (_root_.Effect4.Program.Term)
     match rawTerm v0, Canonical.ofVal (α := _root_.String) v1, rawTerm v2 with
     | some a0, some a1, some a2 => some (.recordSet a0 a1 a2)
     | _, _, _ => none
+  | .ctor 6 [v0, v1] =>
+    match rawTerm v0, Canonical.ofVal (α := _root_.Nat) v1 with
+    | some a0, some a1 => some (.tupleAt a0 a1)
+    | _, _ => none
   | _ => none
 def rawTerms : Val → Option (_root_.Effect4.Program.Terms)
   | .ctor 0 [] => some .nil
@@ -1222,6 +1228,8 @@ theorem rawTerm_toValTerm (a : _root_.Effect4.Program.Term) :
     simp [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1]
   | «recordSet» a0 a1 a2 =>
     simp [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal, rawTerm_toValTerm a2]
+  | «tupleAt» a0 a1 =>
+    simp [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal]
 termination_by structural a
 theorem rawTerms_toValTerms (a : _root_.Effect4.Program.Terms) :
     rawTerms (toValTerms a) = some a := by
@@ -1306,6 +1314,10 @@ theorem fitsTerm (a : _root_.Effect4.Program.Term) :
       (acceptsFields_cons _ _ _ _ _ _ (fitsTerm a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_String a1)
           (acceptsFields_cons _ _ _ _ _ _ (fitsTerm a2) (acceptsFields_nil _))))
+  | «tupleAt» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 6 "tupleAt" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsTerm a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a1) (acceptsFields_nil _)))
 termination_by structural a
 theorem fitsTerms (a : _root_.Effect4.Program.Terms) :
     acceptsIn defs (.named "Terms") (toValTerms a) = true := by
@@ -3173,5 +3185,19 @@ def nested (tag : Nat) : Val :=
     Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))])).isSome
 
 end WireTagAcceptance
+
+namespace TupleWireAcceptance
+open Effect4 Effect4.Program Effect4.Store
+
+#guard Canonical.toVal (Term.tupleAt (.var 0) 2) =
+  .ctor 6 [Canonical.toVal (Term.var 0), Canonical.toVal (2 : Nat)]
+#guard Canonical.decode (α := Term)
+  (Canonical.encode (Term.tupleAt (.var 0) 900719925474099312345678901)) =
+  some (.tupleAt (.var 0) 900719925474099312345678901)
+#guard Canonical.ofVal (α := Term) (.ctor 6 [Canonical.toVal (Term.var 0)]) = none
+#guard Canonical.ofVal (α := Term)
+  (.ctor 6 [Canonical.toVal (Term.var 0), Canonical.toVal ("2" : String)]) = none
+
+end TupleWireAcceptance
 
 end Effect4.Store

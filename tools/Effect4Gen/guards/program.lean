@@ -169,3 +169,17 @@ def nested (tag : Nat) : Val :=
     Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))])).isSome
 
 end WireTagAcceptance
+
+namespace TupleWireAcceptance
+open Effect4 Effect4.Program Effect4.Store
+
+#guard Canonical.toVal (Term.tupleAt (.var 0) 2) =
+  .ctor 6 [Canonical.toVal (Term.var 0), Canonical.toVal (2 : Nat)]
+#guard Canonical.decode (α := Term)
+  (Canonical.encode (Term.tupleAt (.var 0) 900719925474099312345678901)) =
+  some (.tupleAt (.var 0) 900719925474099312345678901)
+#guard Canonical.ofVal (α := Term) (.ctor 6 [Canonical.toVal (Term.var 0)]) = none
+#guard Canonical.ofVal (α := Term)
+  (.ctor 6 [Canonical.toVal (Term.var 0), Canonical.toVal ("2" : String)]) = none
+
+end TupleWireAcceptance
