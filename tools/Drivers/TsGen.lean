@@ -567,7 +567,18 @@ def emitTypeProjectionCases (fs : List Family) : Except String String := do
      .record [("items", false, .map .string (.tuple [.nat, .string, .bytes]))],
      .map (.union .never .string) .nat, .tuple [.union .nat .string, .bool],
      .union (.handle "A | B") (.handle "B"), .app "Ref.Ref" [.nat],
-     .union (.record [("x", true, .nat)]) (.record [("x", true, .number)])]
+     .union (.record [("x", true, .nat)]) (.record [("x", true, .number)]),
+     -- tagged payload types (decisions row 120, ruling (b)): each prints as its class's name; a
+     -- tag that is no identifier, a message-only or tag-only record (ruling (c)) and a field no
+     -- payload admits (ruling (a)) keep the structural object
+     .record [("_tag", false, .lit "NotFound"), ("id", false, .nat)],
+     .record [("reason", false, .string), ("_tag", false, .lit "Unauthorized")],
+     .union (.record [("_tag", false, .lit "NotFound"), ("id", false, .nat)])
+       (.record [("_tag", false, .lit "Unauthorized"), ("reason", false, .string)]),
+     .record [("_tag", false, .lit "not-a-tag"), ("id", false, .nat)],
+     .record [("_tag", false, .lit "Wrapped"), ("message", false, .string)],
+     .record [("_tag", false, .lit "Bare")],
+     .record [("_tag", false, .lit "Opaque"), ("cause", false, .unknown)]]
   let legacy : List Effect4.Program.Ty :=
     (["readonly [A, B,]", "[A | B, C]", "Box<(A | B)>", "A<B,>",
       "Readonly<Record<string, number>>", "keyof A", "Foo.while", "readonly X",
@@ -1002,7 +1013,6 @@ def argPatJs : ArgPat → Except String String
   | .someTerm => .ok (tagged "optTermSome" [])
   | .someTy => .ok (tagged "optTySome" [])
   | .daemon b => .ok (tagged "daemon" [("value", toString b)])
-  | .recordTerm => .ok (tagged "recordTerm" [])
 
 /-- The depth an argument is read at, as `Templates.argDepth` decides it: closed for an argument
 of a layer family, otherwise under the binders its hole is under (`Template.levelAt`). -/
@@ -1080,7 +1090,7 @@ def templateTypes : String :=
   "  | { readonly _tag: \"term\"; readonly value: unknown }\n" ++
   "  | { readonly _tag: \"bool\" | \"daemon\"; readonly value: boolean }\n" ++
   "  | { readonly _tag: \"mode\"; readonly value: \"joinEffect\" | \"awaitValue\" }\n" ++
-  "  | { readonly _tag: \"decisionBool\" | \"decisionOption\" | \"decisionTag\" | \"decisionRecordTag\" | \"optTermNone\" | \"optTermSome\" | \"optTyNone\" | \"optTySome\" | \"recordTerm\" }\n" ++
+  "  | { readonly _tag: \"decisionBool\" | \"decisionOption\" | \"decisionTag\" | \"decisionRecordTag\" | \"optTermNone\" | \"optTermSome\" | \"optTyNone\" | \"optTySome\" }\n" ++
   "export type Depth = { readonly _tag: \"rel\"; readonly k: number } | { readonly _tag: \"closed\" }\n" ++
   "export interface TemplateRow {\n" ++
   "  readonly fam: Fam\n  readonly ctor: string\n" ++

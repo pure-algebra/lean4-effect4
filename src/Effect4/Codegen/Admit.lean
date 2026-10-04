@@ -5,8 +5,9 @@ import Effect4.Codegen.SourceBindings
 /-!
 # Checked reading of a declaration block
 
-`Program.readModule` is the raw reconstruction: it takes the last `const` as the main
-program and ignores its name, its export flag, its annotation and the module's imports.
+`Program.readModule` is the raw reconstruction: it reads the leading class declarations as
+the payload classes (decisions row 120), takes the last `const` as the main program and ignores
+its name, its export flag, its annotation and the module's imports.
 This module is the checked boundary beside it, in the way `emitModule` sits beside
 `printModule`: `admitModule` runs the lexical binding check on the original module, the
 raw reconstruction, raw formation, the one whole-program checker, and the declaration
@@ -42,6 +43,9 @@ inductive SurfaceRefusal where
   | declaredType (expected actual : Option TypeScript.TypeRef)
   | layerDeclaration (name : String)
   | formation (why : Formation.Refusal)
+  /-- The block's leading class declarations are not the payload classes the printer declares
+  for the program it reads to (decisions row 120). -/
+  | classDeclarations
   deriving DecidableEq
 
 /-- Every earlier declaration of a block is a plain exported layer constant: the shape
@@ -60,31 +64,28 @@ def mainConst (decls : List TypeScript.Decl) : Option TypeScript.ConstDecl :=
   | some (.const main) => some main
   | _ => none
 
-/-- The envelope of a declaration block around a checked type: the export name is safe, the
-last declaration is the exported main constant under that name annotated exactly as the
-printer annotates the type, and every earlier declaration is a plain layer constant. `none`
-means the envelope agrees; otherwise the first disagreement, named. -/
-def envelopeCheck (name : String) (ty : EffTy) (decls : List TypeScript.Decl) :
-    Option SurfaceRefusal :=
+/-- The envelope of a declaration block around a checked type and the payload classes the
+printer declares for its program: the export name is safe, the leading class declarations read
+back to exactly those classes (decisions row 120), the last declaration is the exported main
+constant under that name annotated exactly as the printer annotates the type, and every
+declaration between is a plain layer constant. `none` means the envelope agrees; otherwise the
+first disagreement, named. -/
+def envelopeCheck (name : String) (ty : EffTy) (classes : Classes.Classes)
+    (decls : List TypeScript.Decl) : Option SurfaceRefusal :=
   if exportNameSafe name ≠ true then some (.unsafeName name)
   else
     match declarationType ty with
     | .error why => some (.unrepresentable why)
     | .ok expected =>
-      match mainConst decls with
+      if Program.blockClasses decls ≠ some classes then some .classDeclarations
+      else
+      match mainConst (Program.splitClasses decls).2 with
       | none => some (.read (.shape "module"))
       | some main =>
         if main.name ≠ name then some (.exportName name main.name)
         else if main.exported ≠ true then some (.notExported name)
         else if main.type ≠ expected then some (.declaredType expected main.type)
-        else layersPlain decls.dropLast
-
-/-- The `effect` namespaces the printer's heads and the native rows use, as permitted
-import origins by name or as the whole package. `Exit`, `Option` and `Result` are here for
-printed values; the rest are the head table's own namespaces. -/
-def effectNamespaces : List String :=
-  ["Effect", "Layer", "Ref", "Fiber", "Cause", "Deferred", "Scope", "Context",
-    "Exit", "Option", "Result"]
+        else layersPlain (Program.splitClasses decls).2.dropLast
 
 /-- The permitted origins a standalone Effect module is read against. -/
 def effectOrigins : List Bindings.Origin :=
@@ -97,17 +98,22 @@ def withAmbient (ambient : List TypeScript.Import) (module : TypeScript.Module) 
   { module with imports := ambient ++ module.imports }
 
 /-- What the reading boundary checked, for exactly this module, table and export name.
-`program` and `typing` are functions of `module`, so two readings of one module are equal. -/
+`program`, `typing` and the classes are functions of `module`, so two readings of one module
+are equal. -/
 structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindings.Origin)
     (ambient : List TypeScript.Import) where
   module : TypeScript.Module
   program : NativeEff
   formed : Formation.InputFormed program table
   typing : TypedProgram (nativeSignature table) program
+  classes : Classes.Classes
+  classDecls : List TypeScript.ClassDecl
+  classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
+    .ok (classes, classDecls)
   annotations : annotationRefusal program = none
   bound : SourceBindings.Checked allowed (withAmbient ambient module)
   read : Program.readModule (nativeSignature table) (nativeSpell table) module.decls = .ok program
-  envelope : envelopeCheck name typing.ty module.decls = none
+  envelope : envelopeCheck name typing.ty classes module.decls = none
 
 /-- Checked reading: lexical bindings, raw reconstruction, the shared typing certificate,
 and the declaration envelope compared with what the printer emits for the checked type. -/
@@ -127,12 +133,15 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
       match checkTypedProgram (nativeSignature table) program with
       | none => .error .illTyped
       | some typing =>
+        match hclasses : ClassTable.moduleClasses (nativeSignature table) name typing.ty program with
+        | .error why => .error (.unrepresentable why)
+        | .ok (classes, classDecls) =>
         match hannotations : annotationRefusal program with
         | some why => .error (.unrepresentable why)
         | none =>
-        match henv : envelopeCheck name typing.ty module.decls with
+        match henv : envelopeCheck name typing.ty classes module.decls with
         | some why => .error why
         | none => .ok ⟨module, program, (Formation.checkInput_eq_none_iff program table).mp hformed,
-            typing, hannotations, bound, hread, henv⟩
+            typing, classes, classDecls, hclasses, hannotations, bound, hread, henv⟩
 
 end Effect4.Codegen

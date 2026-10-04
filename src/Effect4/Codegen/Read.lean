@@ -139,29 +139,49 @@ theorem mem_reserved_of_headOf {s : String} {h : Head} (hh : headOf s = some h) 
 mutual
   /-- Recover a pure term from its target expression, including raw record declarations.
   Generic wrapper heads distinguish the new forms from arbitrary legacy atom calls.
-  Variable scope is checked here; type formation and target admission remain separate. -/
-  def readTerm (n : Nat) (x : Expr) : Except ReadRefusal Term :=
+  Variable scope is checked here; type formation and target admission remain separate.
+  A class construction `new Tag({ … })` (decisions row 120) reads as the record term whose
+  fields the module's `classes` declare for `Tag`, with `_tag` restored first; it is accepted
+  only when the printer prints that term as this construction (`Classes.classTag?`), and a
+  structural record the printer would print as a construction is refused. -/
+  def readTerm (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x : Expr) :
+      Except ReadRefusal Term :=
+    match hc : Effect4.Codegen.Classes.readClass x with
+    | some (tag, names, values) =>
+      have := Effect4.Codegen.Classes.readClass_size x tag names values hc
+      match classes.lookup tag with
+      | none => .error (.unknownIdent tag)
+      | some fields => do
+        let vs ← readTerms classes n values
+        if Effect4.Codegen.Classes.classTag? fields ("_tag" :: names) (.cons (.lit (.str tag)) vs) =
+            some tag then
+          .ok (.record fields ("_tag" :: names) (.cons (.lit (.str tag)) vs))
+        else .error (.shape "class")
+    | none =>
     match hr : Effect4.Codegen.Record.readRecord x with
-    | some (fields, names, values) =>
+    | some (fields, names, values) => do
       have := Effect4.Codegen.Record.readRecord_size x fields names values hr
-      (readTerms n values).map (.record fields names)
+      let vs ← readTerms classes n values
+      if (Effect4.Codegen.Classes.classTag? fields names vs).isNone then .ok (.record fields names vs)
+      else .error (.shape "record in class form")
     | none =>
       match hf : Effect4.Codegen.Record.readField x with
       | some (optional, name, target) =>
         have := Effect4.Codegen.Record.readField_size x optional name target hf
-        (readTerm n target).map fun t => .field (if optional then .optional else .required) t name
+        (readTerm classes n target).map fun t =>
+          .field (if optional then .optional else .required) t name
       | none =>
         match hs : Effect4.Codegen.Record.readSet x with
         | some (name, target, value) => do
           have := Effect4.Codegen.Record.readSet_size x name target value hs
-          let t ← readTerm n target
-          let v ← readTerm n value
+          let t ← readTerm classes n target
+          let v ← readTerm classes n value
           .ok (.recordSet t name v)
         | none =>
           match ht : Effect4.Codegen.Tuple.readAt x with
           | some (index, target) =>
             have := Effect4.Codegen.Tuple.readAt_size x index target ht
-            (readTerm n target).map fun t => .tupleAt t index
+            (readTerm classes n target).map fun t => .tupleAt t index
           | none =>
             match x with
             | .ident s =>
@@ -171,35 +191,37 @@ mutual
             | .int k => if 0 ≤ k then .ok (.lit (.nat k.toNat)) else .error (.negative k)
             | .bool b => .ok (.lit (.bool b))
             | .str s => .ok (.lit (.str s))
-            | .call (.ident atom) args => (readTerms n args).map (.app atom)
+            | .call (.ident atom) args => (readTerms classes n args).map (.app atom)
             | _ => .error (.shape "term")
   termination_by sizeOf x
   decreasing_by all_goals simp_wf; all_goals omega
 
   /-- An argument list, in order. -/
-  def readTerms (n : Nat) (xs : List Expr) : Except ReadRefusal Terms :=
+  def readTerms (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (xs : List Expr) :
+      Except ReadRefusal Terms :=
     match xs with
     | [] => .ok .nil
     | x :: rest => do
-      let t ← readTerm n x
-      let ts ← readTerms n rest
+      let t ← readTerm classes n x
+      let ts ← readTerms classes n rest
       .ok (.cons t ts)
   termination_by sizeOf xs
   decreasing_by all_goals simp_wf; all_goals omega
 end
 
 /-- A cause back from the public `Cause` constructors the printer spells. -/
-def readCause (n : Nat) (x : Expr) : Except ReadRefusal CauseTerm :=
+def readCause (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x : Expr) :
+    Except ReadRefusal CauseTerm :=
   match x with
   | .call (.ident s) args =>
     match headOf s, args with
-    | some .causeFail, [e] => (readTerm n e).map .fail
-    | some .causeDie, [d] => (readTerm n d).map .die
+    | some .causeFail, [e] => (readTerm classes n e).map .fail
+    | some .causeDie, [d] => (readTerm classes n d).map .die
     | some .causeInterrupt, [] => .ok (.interrupt none)
-    | some .causeInterrupt, [who] => (readTerm n who).map fun w => .interrupt (some w)
+    | some .causeInterrupt, [who] => (readTerm classes n who).map fun w => .interrupt (some w)
     | some .causeCombine, [l, r] => do
-      let a ← readCause n l
-      let b ← readCause n r
+      let a ← readCause classes n l
+      let b ← readCause classes n r
       .ok (.both a b)
     | _, _ => .error (.shape "cause")
   | _ => .error (.shape "cause")
@@ -274,12 +296,13 @@ theorem savedVar?_some {x y : Expr} {v : String} (h : savedVar? x y = some v) :
 
 /-- The request of a tuple-call row from its two arguments: the components of one saved
 variable read back as that variable, any other two terms as their `pair` application. -/
-def readTupleArgs (n : Nat) (x y : Expr) : Except ReadRefusal Term :=
+def readTupleArgs (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x y : Expr) :
+    Except ReadRefusal Term :=
   match savedVar? x y with
-  | some v => readTerm n (.ident v)
+  | some v => readTerm classes n (.ident v)
   | none => do
-    let a ← readTerm n x
-    let b ← readTerm n y
+    let a ← readTerm classes n x
+    let b ← readTerm classes n y
     .ok (.app "pair" (.cons a (.cons b .nil)))
 
 /-- A call as a call row; `none` when no row of the table has this head and argument
@@ -288,7 +311,8 @@ the trailing names alone on a `unit` request, and the request followed by the tr
 names otherwise; a tuple-call row's is its two request arguments followed by the trailing
 names. The three readings are tried in that order, and `LawfulSpelling` is what makes at
 most one succeed. -/
-def readRowCall (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+def readRowCall (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat)
     (s : String) (typeArgs : List TypeScript.TypeRef) (args : List Expr) : Option (Except ReadRefusal (Eff Op)) :=
   -- the call's type arguments must be exactly the ones the row declares: a row that needs
   -- them refuses a bare call, and a row that declares none refuses a call that carries any
@@ -306,7 +330,7 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
       | some op =>
         some (if (sig.rowOf op).shape = .call ∧ (sig.rowOf op).request ≠ Ty.unit ∧
             rowTypeArgs (sig.rowOf op) = some typeArgs then
-          (readTerm n request).map (rowAnswer (sig.rowOf op) op)
+          (readTerm classes n request).map (rowAnswer (sig.rowOf op) op)
         else .error (.arity s))
       | none =>
         match rest with
@@ -315,7 +339,7 @@ def readRowCall (sig : Signature Op) (spell : String → List String → Option 
           | some op =>
             some (if (sig.rowOf op).shape = .tupleCall ∧
                 rowTypeArgs (sig.rowOf op) = some typeArgs then
-              (readTupleArgs n request second).map (rowAnswer (sig.rowOf op) op)
+              (readTupleArgs classes n request second).map (rowAnswer (sig.rowOf op) op)
             else .error (.arity s))
           | none => none
         | [] => none
@@ -334,21 +358,23 @@ def addReceiver (sig : Signature Op) (receiver : Term) : Eff Op → Except ReadR
   | _ => .error (.shape "method row")
 
 /-- Method arguments use the same three arity readings as ordinary row calls. -/
-def readRowMethod (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+def readRowMethod (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat)
     (receiver : Expr) (s : String) (typeArgs : List TypeScript.TypeRef) (args : List Expr) :
     Except ReadRefusal (Eff Op) := do
-  let recv ← readTerm n receiver
-  let body ← (readRowCall (methodSignature sig) spell n s typeArgs args).getD
+  let recv ← readTerm classes n receiver
+  let body ← (readRowCall classes (methodSignature sig) spell n s typeArgs args).getD
     (.error (.unknownHead s))
   addReceiver sig recv body
 
 /-- Methods have their own receiver syntax. Empty generic lists are outside the printed image. -/
-def readMethod (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
+def readMethod (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat)
     (x : Expr) : Except ReadRefusal (Eff Op) :=
   match x with
-  | .method receiver s args => readRowMethod sig spell n receiver s [] args
+  | .method receiver s args => readRowMethod classes sig spell n receiver s [] args
   | .call (.generic (.member receiver s) (ta :: tas)) args =>
-    readRowMethod sig spell n receiver s (ta :: tas) args
+    readRowMethod classes sig spell n receiver s (ta :: tas) args
   | _ => .error (.shape "expression")
 
 /-- The digit a byte spells, `'0'` as `0`. -/
@@ -384,9 +410,10 @@ def readKey {Op : Type} (sig : Signature Op) : Expr → Except ReadRefusal Servi
     | none => .error (.shape "service key")
   | _ => .error (.shape "service key")
 
-/-- The literal domain of `Layer.succeed`, using the ordinary term reader. -/
+/-- The literal domain of `Layer.succeed`, using the ordinary term reader. A literal holds no
+record, so it reads under no class. -/
 def readLiteral (x : Expr) : Except ReadRefusal Lit := do
-  let term ← readTerm 0 x
+  let term ← readTerm [] 0 x
   match term with
   | .lit value => .ok value
   | _ => .error (.shape "literal")
@@ -441,11 +468,11 @@ def readDefect : ReadRefusal := .shape "table"
 /-- A leaf argument from its capture, by sort, at the depth its row gives it. A scoped fork's
 options object carries no `daemon` field: the row's pattern decides it for a plain fork, and
 `forkIn` / `forkScoped` fork a daemon at the pin (`internal/effect.ts:5366`, `:5406`). -/
-def readLeaf {R : EffFam → Type} (sig : Signature Op) (d : Nat) (daemon : Bool) :
+def readLeaf {R : EffFam → Type} (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (d : Nat) (daemon : Bool) :
     ArgSort → Arg → Except ReadRefusal (ArgF Op R)
-  | .term, .expr y => (readTerm d y).map .term
-  | .optTerm, .expr y => (readTerm d y).map fun t => .optTerm (some t)
-  | .cause, .expr y => (readCause d y).map .cause
+  | .term, .expr y => (readTerm classes d y).map .term
+  | .optTerm, .expr y => (readTerm classes d y).map fun t => .optTerm (some t)
+  | .cause, .expr y => (readCause classes d y).map .cause
   | .lit, .expr y => (readLiteral y).map .lit
   | .key, .expr y => (readKey sig y).map .key
   | .forkOptions, .expr y => (readForkOptions daemon y).map .forkOptions
@@ -469,7 +496,7 @@ def rowDaemon (row : Templates.Row) : Bool :=
 /-- One capture as the argument of sort `s`: a child is handed to the recursion with the fact
 that it is one of the captures (what the recursion's measure is stated over); anything else goes
 through the leaf reader of its sort. -/
-def readCapture (sig : Signature Op) (daemon : Bool) (σ : Subst)
+def readCapture (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (daemon : Bool) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
       Except ReadFailure (EffSelfCarrier Op fam))
     (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
@@ -481,23 +508,23 @@ def readCapture (sig : Signature Op) (daemon : Bool) (σ : Subst)
   | .expr y, h =>
     match s with
     | .child fam => (child fam d y i h).map (.child fam)
-    | s => (readLeaf sig d daemon s (.expr y)).mapError .here
+    | s => (readLeaf classes sig d daemon s (.expr y)).mapError .here
   | .exprs ys, h =>
     match s with
     | .child fam => (children fam d ys i h).map (.child fam)
-    | s => (readLeaf sig d daemon s (.exprs ys)).mapError .here
+    | s => (readLeaf classes sig d daemon s (.exprs ys)).mapError .here
   | .stmts body, h =>
     match s with
     | .child .stmts => (block d body i h).map (.child .stmts)
-    | s => (readLeaf sig d daemon s (.stmts body)).mapError .here
-  | .str v, _ => (readLeaf sig d daemon s (.str v)).mapError .here
-  | .int v, _ => (readLeaf sig d daemon s (.int v)).mapError .here
-  | .type t, _ => (readLeaf sig d daemon s (.type t)).mapError .here
+    | s => (readLeaf classes sig d daemon s (.stmts body)).mapError .here
+  | .str v, _ => (readLeaf classes sig d daemon s (.str v)).mapError .here
+  | .int v, _ => (readLeaf classes sig d daemon s (.int v)).mapError .here
+  | .type t, _ => (readLeaf classes sig d daemon s (.type t)).mapError .here
 
 /-- The argument at position `i`, of sort `s`, at the depth its hole is under
 (`RowOut.levelAt`, `Templates.argDepth`): supplied when the classifier fixes it, otherwise read
 from what the skeleton captured there. -/
-def readArg (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
+def readArg (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
       Except ReadFailure (EffSelfCarrier Op fam))
     (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
@@ -510,13 +537,13 @@ def readArg (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
   | none =>
     match captured σ i with
     | some ⟨a, h⟩ =>
-      readCapture sig (rowDaemon row) σ child children block
+      readCapture classes sig (rowDaemon row) σ child children block
         (Templates.argDepth row.fam s n (row.out.levelAt i)) s i a h
     | none => .error (.here readDefect)
 
 /-- The arguments of a row, in declaration order. A failure below an argument is seen from that
 argument of the row's constructor. -/
-def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
+def readArgs (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     (child : (fam : EffFam) → Nat → (y : Expr) → (i : Nat) → (i, Arg.expr y) ∈ σ →
       Except ReadFailure (EffSelfCarrier Op fam))
     (children : (fam : EffFam) → Nat → (ys : List Expr) → (i : Nat) → (i, Arg.exprs ys) ∈ σ →
@@ -526,8 +553,8 @@ def readArgs (sig : Signature Op) (n : Nat) (row : Templates.Row) (σ : Subst)
     List ArgSort → Nat → Except ReadFailure (List (ArgF Op (EffSelfCarrier Op)))
   | [], _ => .ok []
   | s :: ss, i => do
-    let a ← (readArg sig n row σ child children block s i).mapError (·.under row.ctor i)
-    let rest ← readArgs sig n row σ child children block ss (i + 1)
+    let a ← (readArg classes sig n row σ child children block s i).mapError (·.under row.ctor i)
+    let rest ← readArgs classes sig n row σ child children block ss (i + 1)
     .ok (a :: rest)
 
 /-- The arguments read select this row: the printer would choose it for them, so what is read
@@ -560,8 +587,8 @@ def programHeads : List String :=
 /-- What is not a skeleton, read as the hand fields print it: a bare identifier as a value row,
 a call as a call row, a method call as a method row. A reserved head no row matched is refused
 by its argument list when it heads a program clause, and by its name otherwise. -/
-def readPerform (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (x : Expr) : Except ReadRefusal (Eff Op) :=
+def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+    (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match x with
   | .ident s =>
     match Var.read n s with
@@ -577,10 +604,10 @@ def readPerform (sig : Signature Op) (spell : String → List String → Option 
   | .call (.ident s) args =>
     match headOf s with
     | some h => if s ∈ programHeads then .error (callRefusal h args) else .error (.unknownHead s)
-    | none => (readRowCall sig spell n s [] args).getD (.error (.unknownHead s))
+    | none => (readRowCall classes sig spell n s [] args).getD (.error (.unknownHead s))
   | .call (.generic (.ident s) (ta :: tas)) args =>
-    (readRowCall sig spell n s (ta :: tas) args).getD (.error (.unknownHead s))
-  | _ => readMethod sig spell n x
+    (readRowCall classes sig spell n s (ta :: tas) args).getD (.error (.unknownHead s))
+  | _ => readMethod classes sig spell n x
 
 /-- The refusal of a tree that no row of its family matches, named by the family. -/
 def unread : EffFam → ReadRefusal
@@ -614,7 +641,7 @@ the readers of what it captures are handed in, each with the fact that makes the
 terminate (a rigid skeleton's captures are strictly inside the tree, `match_below`; a
 transparent row hands the SAME tree to a strictly lower family). So what is true of a row is
 stated and proved here, once, with the recursion as a hypothesis. -/
-def readRow (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
+def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
     (n : Nat) (x : Expr) (row : Templates.Row) (k : Nat)
     (child : (fam' : EffFam) → Nat → (y : Expr) → sizeOf y < sizeOf x →
       Except ReadFailure (EffSelfCarrier Op fam'))
@@ -631,7 +658,7 @@ def readRow (sig : Signature Op) (spell : String → List String → Option Op) 
     -- the row call stands last among the program rows: a tree is one when it is nothing else
     | .rowCall =>
       match fam with
-      | .eff => some ((readPerform sig spell n x).mapError fun why =>
+      | .eff => some ((readPerform classes sig spell n x).mapError fun why =>
           { why, expected := nearestRow n x })
       | _ => none
     | .tpl t =>
@@ -643,7 +670,7 @@ def readRow (sig : Signature Op) (spell : String → List String → Option Op) 
         | some sorts =>
           if hr : t.rigid = true then
             some do
-              let args ← readArgs sig n row σ
+              let args ← readArgs classes sig n row σ
                 (fun fam' d y i hy => child fam' d y (match_below n t x σ hr hσ (i, .expr y) hy))
                 (fun fam' d ys i hy =>
                   children fam' d ys (match_below n t x σ hr hσ (i, .exprs ys) hy))
@@ -659,7 +686,7 @@ def readRow (sig : Signature Op) (spell : String → List String → Option Op) 
                   buildRow fam row.ctor [.child fam' c] k
               else none
             | [sort] =>
-              match readLeaf (R := EffSelfCarrier Op) sig n true sort (.expr x) with
+              match readLeaf (R := EffSelfCarrier Op) classes sig n true sort (.expr x) with
               | .ok a => (buildRow fam row.ctor [a] k).toOption.map .ok
               | .error _ => none
             | _ => none
@@ -667,7 +694,8 @@ def readRow (sig : Signature Op) (spell : String → List String → Option Op) 
 
 /-- One statement row against a statement, with the binders its skeleton declares for the
 statements after it; `none` when the row does not match. -/
-def readStmtRow (sig : Signature Op) (n : Nat) (s : TypeScript.Stmt) (row : Templates.Row) (k : Nat)
+def readStmtRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (n : Nat) (s : TypeScript.Stmt) (row : Templates.Row)
+    (k : Nat)
     (child : (fam' : EffFam) → Nat → (y : Expr) → sizeOf y < sizeOf s →
       Except ReadFailure (EffSelfCarrier Op fam'))
     (children : (fam' : EffFam) → Nat → (ys : List Expr) → sizeOf ys < sizeOf s →
@@ -685,7 +713,7 @@ def readStmtRow (sig : Signature Op) (n : Nat) (s : TypeScript.Stmt) (row : Temp
         | none => none
         | some sorts =>
           some do
-            let args ← readArgs sig n row σ
+            let args ← readArgs classes sig n row σ
               (fun fam' d y i hy =>
                 child fam' d y (Template.matchStmt_below n t s σ hσ (i, .expr y) hy))
               (fun fam' d ys i hy =>
@@ -701,31 +729,31 @@ def readStmtRow (sig : Signature Op) (n : Nat) (s : TypeScript.Stmt) (row : Temp
 mutual
   /-- `readT sig spell fam n x`: the first row of `fam` that reads `x` (`readRow`); `none` when
   no row matches. -/
-  def readT (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
-      (n : Nat) (x : Expr) : Option (Except ReadFailure (EffSelfCarrier Op fam)) :=
+  def readT (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+      (fam : EffFam) (n : Nat) (x : Expr) : Option (Except ReadFailure (EffSelfCarrier Op fam)) :=
     Templates.table.zipIdx.findSome? fun (row, k) =>
-      readRow sig spell fam n x row k
-        (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
-        (fun fam' d ys _ => readSpine sig spell fam' d ys)
-        (fun d body _ => readStmts sig spell d body)
-        (fun fam' _ d => readT sig spell fam' d x)
+      readRow classes sig spell fam n x row k
+        (fun fam' d y _ => (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))))
+        (fun fam' d ys _ => readSpine classes sig spell fam' d ys)
+        (fun d body _ => readStmts classes sig spell d body)
+        (fun fam' _ d => readT classes sig spell fam' d x)
   termination_by (sizeOf x, famRank fam)
 
   /-- A spine of programs or of layers, item by item. -/
-  def readSpine (sig : Signature Op) (spell : String → List String → Option Op) (fam : EffFam)
-      (n : Nat) (xs : List Expr) : Except ReadFailure (EffSelfCarrier Op fam) :=
+  def readSpine (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+      (fam : EffFam) (n : Nat) (xs : List Expr) : Except ReadFailure (EffSelfCarrier Op fam) :=
     match fam, xs with
     | .effs, [] => .ok .nil
     | .effs, y :: rest => do
-      let e ← ((readT sig spell .eff n y).getD (.error (.here (unread .eff)))).mapError
+      let e ← ((readT classes sig spell .eff n y).getD (.error (.here (unread .eff)))).mapError
         (·.under "cons" 0)
-      let es ← (readSpine sig spell .effs n rest).mapError (·.under "cons" 1)
+      let es ← (readSpine classes sig spell .effs n rest).mapError (·.under "cons" 1)
       .ok (.cons e es)
     | .layers, [] => .ok .nil
     | .layers, y :: rest => do
-      let l ← ((readT sig spell .layer n y).getD (.error (.here (unread .layer)))).mapError
+      let l ← ((readT classes sig spell .layer n y).getD (.error (.here (unread .layer)))).mapError
         (·.under "cons" 0)
-      let ls ← (readSpine sig spell .layers n rest).mapError (·.under "cons" 1)
+      let ls ← (readSpine classes sig spell .layers n rest).mapError (·.under "cons" 1)
       .ok (.cons l ls)
     | _, _ => .error (.here readDefect)
   termination_by (sizeOf xs, 0)
@@ -733,80 +761,98 @@ mutual
   /-- The spine of statements: each statement through the first statement row that reads it
   (`readStmtRow`), the rest under the binders that row's skeleton declares, as the printer's
   spine threads them. -/
-  def readStmts (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-      (stmts : List TypeScript.Stmt) : Except ReadFailure (Stmts Op) :=
+  def readStmts (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+      (n : Nat) (stmts : List TypeScript.Stmt) : Except ReadFailure (Stmts Op) :=
     match stmts with
     | [] => .ok .nil
     | s :: rest =>
       let byRow := Templates.table.zipIdx.findSome? fun (row, k) =>
-        readStmtRow sig n s row k
-          (fun fam' d y _ => (readT sig spell fam' d y).getD (.error (.here (unread fam'))))
-          (fun fam' d ys _ => readSpine sig spell fam' d ys)
-          (fun d body _ => readStmts sig spell d body)
+        readStmtRow classes sig n s row k
+          (fun fam' d y _ => (readT classes sig spell fam' d y).getD (.error (.here (unread fam'))))
+          (fun fam' d ys _ => readSpine classes sig spell fam' d ys)
+          (fun d body _ => readStmts classes sig spell d body)
       match byRow with
       | some r => do
         let (st, declared) ← r.mapError (·.under "cons" 0)
-        let tail ← (readStmts sig spell (n + declared) rest).mapError (·.under "cons" 1)
+        let tail ← (readStmts classes sig spell (n + declared) rest).mapError (·.under "cons" 1)
         .ok (.cons st tail)
       | none => .error ((ReadFailure.here (stmtRefusal s)).under "cons" 0)
   termination_by (sizeOf stmts, 0)
 end
 
-/-- A program from a tree, at environment length `n`. -/
-def readEffAt (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (x : Expr) : Except ReadFailure (Eff Op) :=
-  (readT sig spell .eff n x).getD (.error (.here (unread .eff)))
+/-- A program from a tree, at environment length `n`, under the module's payload classes. -/
+def readEffAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+    (n : Nat) (x : Expr) : Except ReadFailure (Eff Op) :=
+  (readT classes sig spell .eff n x).getD (.error (.here (unread .eff)))
 
 /-- The same with the refusal alone: where it happened is `readEffAt`'s. -/
-def readEff (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (x : Expr) : Except ReadRefusal (Eff Op) :=
-  (readEffAt sig spell n x).mapError (·.why)
+def readEff (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+    (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
+  (readEffAt classes sig spell n x).mapError (·.why)
 
 /-- A layer from a tree. A layer is closed: its bodies are read at environment length `0`. -/
-def readLayerAt (sig : Signature Op) (spell : String → List String → Option Op)
+def readLayerAt (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
     (x : Expr) : Except ReadFailure (LayerTerm Op) :=
-  (readT sig spell .layer 0 x).getD (.error (.here (unread .layer)))
+  (readT classes sig spell .layer 0 x).getD (.error (.here (unread .layer)))
 
-def readLayer (sig : Signature Op) (spell : String → List String → Option Op)
+def readLayer (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
     (x : Expr) : Except ReadRefusal (LayerTerm Op) :=
-  (readLayerAt sig spell x).mapError (·.why)
+  (readLayerAt classes sig spell x).mapError (·.why)
 
 end TableReader
 
-/-- A declaration block back to the program (the host rows slice): every
+/-- A block's leading class declarations (decisions row 120: the module declares its payload
+classes first) and the declarations after them. -/
+def splitClasses : List TypeScript.Decl → List TypeScript.ClassDecl × List TypeScript.Decl
+  | .classDecl c :: rest => ((splitClasses rest).1.cons c, (splitClasses rest).2)
+  | ds => ([], ds)
+
+/-- The payload classes a block declares (`Classes.readClassDecls` of its leading class
+declarations), when every one reads back. A tag declared twice reads as its first declaration;
+the checked boundary compares the classes with the printer's (`Codegen.envelopeCheck`). -/
+def blockClasses (decls : List TypeScript.Decl) : Option Effect4.Codegen.Classes.Classes :=
+  Effect4.Codegen.Classes.readClassDecls (splitClasses decls).1
+
+/-- A declaration block back to the program (the host rows slice): its leading class
+declarations read as the payload classes the rest is read under (decisions row 120), every
 `const L_<path> = <layer>` read as a layer at the path its name carries and put back at that
 path (`Refs.lean` `restoreAll`, ancestors first), the last declaration the main program.
 The program reconstruction law applies to successfully printed modules under its stated
 readability and hoisting premises. This raw reader ignores declaration type annotations,
 export flags and the main declaration's name; it is not exact source-module admission.
-Malformed declaration forms, layer paths and failed restoration return `shape "module"`. -/
+A class declaration that does not read back returns `shape "class"`; malformed declaration forms,
+layer paths and failed restoration return `shape "module"`. -/
 def readModule (sig : Signature Op) (spell : String → List String → Option Op)
     (decls : List TypeScript.Decl) : Except ReadRefusal (Eff Op) :=
-  match decls.getLast?, decls.dropLast with
-  | some (.const main), layerDecls => do
-    let e ← readEff sig spell 0 main.value
-    let ds ← layerDecls.mapM fun d =>
-      match d with
-      | .const c =>
-        match LayerTerm.readRefName c.name with
-        | some t =>
-          if LayerTerm.refName t = c.name then do
-            let l ← readLayer sig spell c.value
-            .ok (t, l)
-          else .error (.shape "module")
-        | none => .error (.shape "module")
-      | _ => .error (.shape "module")
-    match e.restoreAll ds with
-    | some e' => .ok e'
-    | none => .error (.shape "module")
-  | _, _ => .error (.shape "module")
+  match blockClasses decls with
+  | none => .error (.shape "class")
+  | some classes =>
+    match (splitClasses decls).2.getLast?, (splitClasses decls).2.dropLast with
+    | some (.const main), layerDecls => do
+      let e ← readEff classes sig spell 0 main.value
+      let ds ← layerDecls.mapM fun d =>
+        match d with
+        | .const c =>
+          match LayerTerm.readRefName c.name with
+          | some t =>
+            if LayerTerm.refName t = c.name then do
+              let l ← readLayer classes sig spell c.value
+              .ok (t, l)
+            else .error (.shape "module")
+          | none => .error (.shape "module")
+        | _ => .error (.shape "module")
+      match e.restoreAll ds with
+      | some e' => .ok e'
+      | none => .error (.shape "module")
+    | _, _ => .error (.shape "module")
 
-/-- The reader after the printer: the executed shadow of `read_print`. The printer's refusal
+/-- The reader after the printer: the executed shadow of `read_print`, under the classes the
+program's constructions name (`classesOf`, what its module declares). The printer's refusal
 alphabet is not the reader's, so a printer refusal is reported as the `shape` named `printer`. -/
 def roundTrip (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
     (e : Eff Op) : Except ReadRefusal (Eff Op) :=
   match print sig n e with
-  | .ok x => readEff sig spell n x
+  | .ok x => readEff (classesOf e) sig spell n x
   | .error _ => .error (.shape "printer")
 
 /-- The program comes back from its own printing: the domain of the round trip, as the round
@@ -827,20 +873,20 @@ theorem roundTrip_eq [DecidableEq Op] {sig : Signature Op}
     rw [he, of_decide_eq_true hr]
   · cases hr
 
-/-- The program reads back from whatever the printer prints of it: the premise the module law
-composes, stated of any reader. -/
-def ReadsBack (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (e : Eff Op) : Prop :=
-  ∀ x, print sig n e = .ok x → readEff sig spell n x = .ok e
+/-- The program reads back from whatever the printer prints of it, under a module's payload
+classes: the premise the module law composes, stated of any reader. -/
+def ReadsBack (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat) (e : Eff Op) : Prop :=
+  ∀ x, print sig n e = .ok x → readEff classes sig spell n x = .ok e
 
 /-- The same of a layer. -/
-def LayerTerm.ReadsBack (sig : Signature Op) (spell : String → List String → Option Op)
-    (l : LayerTerm Op) : Prop :=
-  ∀ x, printLayer sig l = .ok x → readLayer sig spell x = .ok l
+def LayerTerm.ReadsBack (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (l : LayerTerm Op) : Prop :=
+  ∀ x, printLayer sig l = .ok x → readLayer classes sig spell x = .ok l
 
 theorem ReadsBack.of_readable [DecidableEq Op] {sig : Signature Op}
     {spell : String → List String → Option Op} {n : Nat} {e : Eff Op}
-    (hr : readable sig spell n e = true) : ReadsBack sig spell n e := by
+    (hr : readable sig spell n e = true) : ReadsBack (classesOf e) sig spell n e := by
   intro x hp
   have h := roundTrip_eq hr
   unfold roundTrip at h

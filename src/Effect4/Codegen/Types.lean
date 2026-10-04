@@ -1,4 +1,5 @@
 import Effect4.Program.Ty
+import Effect4.Program.Eff
 import Effect4.Store.Carrier.Utf8
 import TypeScript.TypeRef
 import TypeScript.Identifier
@@ -23,11 +24,25 @@ types are constructed directly by the service profile, not parsed here.
 This projection deliberately retains the current `void` spelling of unit and
 the shared `number` spelling of naturals and integers. It makes no injectivity,
 source-typing, or target-execution claim.
+
+A tagged payload record type (`payloadRecordTy`, decisions row 120) whose tag is a target
+identifier projects to the name of its class (`payloadClass?`): ruling (b) prints one
+`Data.TaggedError` class per tagged payload type, named by its tag. A module declares the class
+(`Codegen/Classes.lean`); the projection is the reference to it.
 -/
 
 namespace Effect4.Codegen.Types
 
 open TypeScript
+
+/-- The class a record type prints as (decisions row 120, ruling (b)): its tag, when its fields
+are a tagged payload record type (`Program.payloadRecordTy`: a required `_tag` literal, every
+field payload-admissible, no other spelling) and the tag is a target identifier. Classness is a
+property of the type: the model's record types are structural, so a tagged record used as data is
+the same type as the failure it may become. -/
+def payloadClass? (fields : List (String × Bool × Program.Ty)) : Option String := do
+  let tag ← Program.Record.tagOf (.record fields)
+  if Program.payloadRecordTy fields && targetIdentifier tag then some tag else none
 
 private abbrev Bytes := List UInt8
 
@@ -309,7 +324,10 @@ private def ofNormalized : Program.Ty → Option TypeRef
       pure (.name ["Deferred", "Deferred"] [a, e])
   -- a row template's parameter is not a program type: no reference
   | .var _ => none
-  | .record fields => (ofFields fields).map TypeRef.object
+  -- a tagged payload record type is its class, which the module declares (decisions row 120)
+  | .record fields => match payloadClass? fields with
+    | some tag => some (.name [tag] [])
+    | none => (ofFields fields).map TypeRef.object
   | .map key value => do
       if key != .string then none else do
         let target ← ofNormalized value

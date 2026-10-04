@@ -29,19 +29,26 @@ inductive EmissionRefusal where
 
 /-- A module's declarations and the checks that produced them from exactly the
 indexed program, table and name. `formed` records raw formation; `typing` records
-the ordinary core typing judgment.
+the ordinary core typing judgment; `classified` records the payload classes the module
+declares and their declarations (decisions row 120, `ClassTable.moduleClasses`).
 There are no runner-only registration conditions at the code generation boundary. -/
 structure ModuleEmission (program : NativeEff) (table : RowTable) (name : String) where
   formed : Formation.InputFormed program table
   typing : TypedProgram (nativeSignature table) program
+  classes : Classes.Classes
+  classDecls : List TypeScript.ClassDecl
+  classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
+    .ok (classes, classDecls)
   declarations : List TypeScript.ConstDecl
   generated : Program.printEntry table (nativeSignature table) name typing.ty program =
     .ok declarations
 
-/-- The unchanged current module envelope, constructed from retained declarations.
-Empty imports are an explicit limit of this producer, not evidence of source binding. -/
+/-- The module envelope, constructed from retained declarations: the payload classes first,
+then the declaration block. Empty imports are an explicit limit of this producer, not evidence
+of source binding. -/
 def ModuleEmission.module (emission : ModuleEmission program table name) : TypeScript.Module :=
-  { header := [], imports := [], decls := emission.declarations.map .const }
+  { header := [], imports := []
+    decls := emission.classDecls.map .classDecl ++ emission.declarations.map .const }
 
 /-- Print from retained typing and raw formation evidence. Both public producers
 obtain this evidence before calling the declaration printer. -/
@@ -51,7 +58,11 @@ def emitFormedModule (name : String) {program : NativeEff} {table : RowTable}
     Except EmissionRefusal (ModuleEmission program table name) :=
   match printed : Program.printEntry table (nativeSignature table) name typing.ty program with
   | .error why => .error (.print why)
-  | .ok declarations => .ok ⟨formed, typing, declarations, printed⟩
+  | .ok declarations =>
+    match classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program with
+    | .error why => .error (.print why)
+    | .ok (classes, classDecls) =>
+      .ok ⟨formed, typing, classes, classDecls, classified, declarations, printed⟩
 
 /-- A typing certificate does not replace raw formation. Check it before printing. -/
 def emitTypedModule (name : String) {program : NativeEff} {table : RowTable}

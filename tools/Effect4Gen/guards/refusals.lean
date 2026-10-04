@@ -65,7 +65,10 @@ def typings : List TypeRefusal :=
 def authors : List AuthorRefusal := scopes.map .scope ++ typings.map .typing
 
 def prints : List PrintRefusal :=
-  [.internalAction "fork", .layerRef [0, 2], .unsafeName "a0", .typeSpelling "Date"]
+  [.internalAction "fork", .layerRef [0, 2], .unsafeName "a0", .typeSpelling "Date",
+   .payloadClass "not-a-tag" .notIdentifier, .payloadClass "Effect" .collides,
+   .payloadClass "NotFound" .fieldsDiffer, .payloadClass "NotFound" .construction,
+   .payloadClass "Rate" .unreadable]
 
 def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",

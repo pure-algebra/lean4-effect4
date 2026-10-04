@@ -3,8 +3,8 @@ src/Effect4/Api.lean	check	simp-without-only	1
 src/Effect4/Api.lean	explain_none_iff	simp_all	2
 src/Effect4/Api/Derived.lean	ofVal_exact	first	2
 src/Effect4/Api/Derived.lean	ofVal_toVal	simp-without-only	4
-src/Effect4/Api/RefusalsDerived.lean	ofVal_exact	first	16
-src/Effect4/Api/RefusalsDerived.lean	ofVal_toVal	simp-without-only	23
+src/Effect4/Api/RefusalsDerived.lean	ofVal_exact	first	17
+src/Effect4/Api/RefusalsDerived.lean	ofVal_toVal	simp-without-only	24
 src/Effect4/Api/RunnerDerived.lean	ofVal_exact	first	13
 src/Effect4/Api/RunnerDerived.lean	ofVal_toVal	simp-without-only	20
 src/Effect4/Codegen/PrintLeaf.lean	methodArgsRow_shape	simp-without-only	2

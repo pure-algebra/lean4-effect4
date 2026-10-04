@@ -145,17 +145,19 @@ def print (program : Program) (table : RowTable := []) : Except PrintRefusal Typ
 /-- A program back from one TypeScript expression, at the empty environment: read through the
 table the printer prints from (`src/Effect4/Codegen/Read.lean`, `readT`), a `ReadRefusal` on a
 tree no row matches. A row is accepted only when the printer would choose it for what was
-read, so what is read prints back to the tree read (guarded on the corpus; the theorem over the
-table is owed, R5.2). -/
-def read (expression : TypeScript.Expr) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.readEff (nativeSignature table) (nativeSpell table) 0 expression
+read, so what is read prints back to the tree read (`read_exact`). A payload class construction
+`new Tag({ … })` reads under the module's `classes` (decisions row 120); a bare expression has
+none. -/
+def read (expression : TypeScript.Expr) (table : RowTable := [])
+    (classes : Effect4.Codegen.Classes.Classes := []) : Except ReadRefusal Program :=
+  Program.readEff classes (nativeSignature table) (nativeSpell table) 0 expression
 
 /-- `read`, with where a refusal happened: the path of constructors and argument indices down to
 the node that refused, and, when a reserved head matched no row, what the nearest row's skeleton
 has where the tree parts from it (`Effect4.Program.ReadFailure`; `.render` for a person). -/
-def readAt (expression : TypeScript.Expr) (table : RowTable := []) :
-    Except Program.ReadFailure Program :=
-  Program.readEffAt (nativeSignature table) (nativeSpell table) 0 expression
+def readAt (expression : TypeScript.Expr) (table : RowTable := [])
+    (classes : Effect4.Codegen.Classes.Classes := []) : Except Program.ReadFailure Program :=
+  Program.readEffAt classes (nativeSignature table) (nativeSpell table) 0 expression
 
 /-- Whether `read` of the program's printing is the program itself: the round trip, decided by
 running it. What the printer loses is listed in `Codegen/Read.lean`'s module note (a variable
