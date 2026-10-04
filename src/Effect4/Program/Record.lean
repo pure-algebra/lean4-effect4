@@ -48,4 +48,32 @@ def setOf (name : String) (valueType : Ty) : Ty → Option Ty
 def setType (target : Ty) (name : String) (valueType : Ty) : Option Ty :=
   ((Ty.members target.normalize).mapM (setOf name valueType)).map joinResults
 
+/-- A required literal discriminant, read from the canonical field declarations. -/
+def tagOf : Ty → Option String
+  | .record fields =>
+    match Field.firstOf "_tag" (Ty.canon fields) with
+    | some (false, .lit tag) => some tag
+    | _ => none
+  | _ => none
+
+/-- Whether this record alternative carries the selected literal. -/
+def isTag (tag : String) (type : Ty) : Bool :=
+  match tagOf type with
+  | some actual => decide (actual = tag)
+  | none => false
+
+/-- Partition an entire literal-tagged record column; empty sides are bottom. -/
+def tagArms (tag : String) (target : Ty) : Option (Ty × Ty) :=
+  let members := target.normalize.members
+  if members.all (fun type => (tagOf type).isSome) then
+    some (Ty.ofMembers (members.filter (isTag tag)),
+      Ty.ofMembers (members.filter (fun type => !(isTag tag type))))
+  else none
+
+/-- Own-field literal testing. Malformed raw frames and non-string tags miss. -/
+def tagHit (tag : String) (value : Store.Val) : Bool :=
+  match Machine.Record.lookup value "_tag" with
+  | some (some (.str actual)) => decide (actual = tag)
+  | _ => false
+
 end Effect4.Program.Record

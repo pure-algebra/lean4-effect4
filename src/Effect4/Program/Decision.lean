@@ -1,4 +1,4 @@
-import Effect4.Program.Ty
+import Effect4.Program.Record
 import Effect4.Store.Carrier.Val
 
 /-!
@@ -11,8 +11,8 @@ each arm's environment gains from the scrutinee's type). The compiler, the refer
 meaning, `effTy` and `HasTy` all read these two, so they agree by construction, as
 `catchIf`'s error test does. Child 0 is the arm the decision names first.
 
-**Depends on.** `Ty` (the tag algebra `taggedColumn`, `payloadTy`, `diffTag`) and the store's
-`Val`. Nothing about the machine.
+**Depends on.** `Ty`, the record classifier and named-value lookup, and the store's
+`Val`. No machine state or evaluator is needed.
 
 **Properties.**
 * `arms_length`: the arms bind exactly `binds` values, so a reader's binder depth and the
@@ -41,6 +41,8 @@ inductive Decision
   /-- A tagged pair `[tag, payload]` runs child 0 with the payload bound; every other value
   runs child 1 with the whole value bound, at the residual type (DI-39). -/
   | tag (tag : String)
+  /-- A literal-tagged record selects a branch and binds the whole record on both sides. -/
+  | recordTag (tag : String)
 deriving DecidableEq, Repr
 
 namespace Decision
@@ -57,6 +59,7 @@ def decide : Decision → Val → Option (Bool × Option Val)
     match Val.tagPayload? t v with
     | some payload => some (true, some payload)
     | none => some (false, some v)
+  | .recordTag name, value => some (Record.tagHit name value, some value)
 
 /-- What child 0 and child 1 bind, from the scrutinee's type; `none` refuses the scrutinee.
 `.bool` tests the type syntactically (`t = .bool`), the rule the retired `branch` had, which
@@ -71,12 +74,13 @@ def arms : Decision → Ty → Option (List Ty × List Ty)
     let c := t.normalize
     if Ty.taggedColumn c then (Ty.payloadTy name c).map fun p => ([p], [Ty.diffTag name c])
     else none
+  | .recordTag name, t => (Record.tagArms name t).map fun arms => ([arms.1], [arms.2])
 
 /-- How many values each child binds, for the readers' binder depth. -/
 def binds : Decision → Nat × Nat
   | .bool => (0, 0)
   | .option => (0, 1)
-  | .tag _ => (1, 1)
+  | .tag _ | .recordTag _ => (1, 1)
 
 theorem arms_length (d : Decision) (t : Ty) (e0 e1 : List Ty) (h : d.arms t = some (e0, e1)) :
     (e0.length, e1.length) = d.binds := by
@@ -84,26 +88,24 @@ theorem arms_length (d : Decision) (t : Ty) (e0 e1 : List Ty) (h : d.arms t = so
   | bool =>
     simp only [arms, binds] at h ⊢
     split at h
-    · try simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨h0, h1⟩ := h
-      subst h0; subst h1; rfl
-    · simp at h
+    · cases h; rfl
+    · exact nomatch h
   | option =>
     simp only [arms, binds] at h ⊢
     split at h
-    · try simp only [Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨h0, h1⟩ := h
-      subst h0; subst h1; rfl
-    · simp at h
+    · cases h; rfl
+    · exact nomatch h
   | tag name =>
     simp only [arms, binds] at h ⊢
     split at h
-    · cases hp : Ty.payloadTy name t.normalize
-      · simp [hp] at h
-      · try simp only [hp, Option.map, Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨h0, h1⟩ := h
-        subst h0; subst h1; rfl
-    · simp at h
+    · obtain ⟨payload, _, heq⟩ := Option.map_eq_some_iff.mp h
+      cases heq
+      rfl
+    · exact nomatch h
+  | recordTag name =>
+    obtain ⟨parts, _, heq⟩ := Option.map_eq_some_iff.mp h
+    cases heq
+    rfl
 
 end Decision
 end Effect4.Program
