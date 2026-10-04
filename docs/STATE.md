@@ -106,6 +106,9 @@ in two parts, E1 (the carrier) before T3 and E2 (the face), in the
 [error payloads plan](research/2026-10-04-claude-lead/error-payloads-plan.md). E1 landed (seat E1,
 merged `db504f03`): a program fails with a tagged record; p1, p2, p3 and p5 build their errors. E2
 landed (seat E2, merged `a917b768`): payloads print and read back as `Data.TaggedError` classes.
+The derived forms (DI-89, R10) are planned in the
+[derived forms plan](research/2026-10-04-claude-lead/derived-forms-plan.md); its §3 asks the owner
+seven questions.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 

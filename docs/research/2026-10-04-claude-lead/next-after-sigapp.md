@@ -26,7 +26,7 @@ ingest corpus uses the idiom (`docs/research/2026-10-01-type-language-probe/T/no
 | # | Feature | Evidence | Owner of the decision |
 | --- | --- | --- | --- |
 | 1 | `Ref<A>`, `Deferred<A, E>` at any type, rows as templates | cells and deferreds carry numbers (`Native.lean`); row 42 calls it "the largest visible gap against Effect" | rows 42–43, steps 3–5; R4 |
-| 2 | Derived forms with behaviour laws: `catchTag`, `forEach`, `all`, `retry`, `Schedule`, the eliminators | refused in the corpus: `catchTag` 4,320 units, `forEach` 967, `retry` 938; `Schedule` 0% admitted | DI-89; row 130; R10 |
+| 2 | Derived forms with behaviour laws: `catchTag`, `forEach`, `all`, `retry`, `Schedule`, the eliminators | refused in the corpus: `catchTag` 4,320 uses, `forEach` 967, `retry` 938 (uses, not units: DI-48 bars a handler unit count until the census reports which rule fired); `Schedule` 0% admitted | DI-89; row 130; R10 |
 | 3 | Structured error payloads | `Err` is `boom`, `tag`, `tagged` or `text` (`Machine/Alphabets.lean`); 4 of 5 probes, 13 of 15 projects | row 120 (ratification owed) |
 | 4 | A typed guarantee for programs that call the host | M7 covers the empty row table only; R6 parked by the owner | rows 97–100, 183; DI-57 |
 | 5 | Queue, PubSub, Semaphore, Cache | no census row; Queue 127 uses, 0% admitted | DI-11 (composites, ruled) |
