@@ -1,6 +1,13 @@
-import Effect4.Data.JsonNumber
-import Effect4.Store.Carrier.Kind
-import Effect4.Store.Carrier.Digest
+module
+
+public import Effect4.Data.JsonNumber
+public import Effect4.Store.Carrier.Kind
+public import Effect4.Store.Carrier.Digest
+meta import Effect4.Data.Json
+meta import Effect4.Store.Carrier.Val
+meta import Effect4.Data.JsonNumber
+meta import Effect4.Store.Carrier.Kind
+meta import Effect4.Store.Carrier.Digest
 
 /-!
 # Store.Shape
@@ -26,6 +33,8 @@ The printer uses lowercase hex and the JSON-number rule `Json.ofNat` over
 `binary64OfNat`, owned by `Effect4.Arch.JsonNumber` in Data/JsonNumber. The distinct
 `Shape.render : Shape → String` below supplies the structural Repr only.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

@@ -1,4 +1,10 @@
-import Effect4.Store.Domain.Canonical
+module
+
+public import Effect4.Store.Domain.Canonical
+meta import Effect4.Store.Carrier.Digest
+meta import Effect4.Store.Carrier.Kind
+meta import Effect4.Store.Carrier.Val
+meta import Effect4.Store.Domain.Canonical
 
 /-!
 # Store.Node
@@ -39,6 +45,8 @@ Everything that needs `Canonical Document` — the meta-schema, the genesis, `sp
 `address` and their laws — is written under `variable [Content Document]`, so the module
 compiles before lane G derives the instance and instantiates when it lands.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

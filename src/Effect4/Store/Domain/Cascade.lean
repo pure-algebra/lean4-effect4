@@ -1,4 +1,6 @@
-import Effect4.Store.Domain.Store
+module
+
+public import Effect4.Store.Domain.Store
 
 /-!
 # Effect4.Store.Cascade — Multi-Tier Cascading CAS Store
@@ -13,6 +15,8 @@ This module provides the basic, intuitive ergonomics for multi-tier / cascading 
 
 All definitions in this module are strictly constructive and remain within `[propext, Quot.sound]`.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

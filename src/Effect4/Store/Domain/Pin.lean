@@ -1,4 +1,6 @@
-import Effect4.Store.Carrier.Digest
+module
+
+public import Effect4.Store.Carrier.Digest
 
 /-!
 # Store.Pin
@@ -36,6 +38,8 @@ theorem characterizes a collision and assumes nothing about `sha256`. The
 level-1 statement takes injectivity as a named premise that is never
 discharged in this tree. Level 2 is not stated.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

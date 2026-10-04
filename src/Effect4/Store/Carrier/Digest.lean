@@ -1,5 +1,10 @@
-import Hash.Sha256.Api
-import Effect4.Store.Carrier.Val
+module
+
+public import Hash.Sha256.Api
+public import Effect4.Store.Carrier.Val
+meta import Hash.Sha256.Fast
+meta import Effect4.Store.Carrier.Val
+meta import Hash.Sha256.Digest
 
 /-!
 # Store.Digest
@@ -23,6 +28,8 @@ bytes, `s.toByteArray.data.toList`, never `String.toList`: on this toolchain `St
 reaches `Classical.choice` and the bytes do not, and a hex digit is one ASCII byte, so the
 bytes are the code points (`utf8Bytes_map_ofNat`).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

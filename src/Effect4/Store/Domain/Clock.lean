@@ -1,5 +1,7 @@
-import Effect4.Data.ClockMillis
-import Effect4.Store.Domain.Canonical
+module
+
+public import Effect4.Data.ClockMillis
+public import Effect4.Store.Domain.Canonical
 
 /-!
 # Canonical logical milliseconds
@@ -7,6 +9,8 @@ import Effect4.Store.Domain.Canonical
 The exact wire image is a canonical nonnegative decimal string. Reading rejects any
 other spelling and never routes large values through a bounded host-number payload.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

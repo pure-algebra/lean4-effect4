@@ -1,4 +1,11 @@
-import Effect4.Store.Domain.Derived.Program
+module
+
+public import Effect4.Store.Domain.Derived.Program
+meta import Effect4.Program.Eff
+meta import Effect4.Program.Native
+meta import Effect4.Store.Carrier.Digest
+meta import Effect4.Store.Domain.Canonical
+meta import Effect4.Store.Domain.Derived.Program
 
 /-!
 # Program.Wire
@@ -32,6 +39,8 @@ payload shorter than `2^64`, which `Val.WF` decides; every program a machine can
 `decode_exact`. The same rule is implemented on the OCaml side (`ocaml/eff`) from the same
 constructor order, and the goldens `OCaml5/Tools/EffWire.lean` prints are the cross-check.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

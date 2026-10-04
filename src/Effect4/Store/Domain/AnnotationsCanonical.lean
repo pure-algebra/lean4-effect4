@@ -1,5 +1,7 @@
-import Effect4.Store.Domain.Canonical
-import Effect4.Machine.Value
+module
+
+public import Effect4.Store.Domain.Canonical
+public import Effect4.Machine.Value
 
 /-!
 # The canonical instance of a reason's annotations
@@ -14,6 +16,8 @@ serialized, and reading never drops or reorders a duplicate: it refuses.
 With this instance in scope the generator derives `Reason`, `Cause`, `Exit`, `Completion` and
 the decision alphabet by its ordinary rule.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

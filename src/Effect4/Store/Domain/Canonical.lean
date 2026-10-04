@@ -1,6 +1,12 @@
-import Effect4.Store.Domain.Shape
-import Effect4.Schema.OfShape
-import Effect4.Store.Carrier.Image
+module
+
+public import Effect4.Store.Domain.Shape
+public import Effect4.Schema.OfShape
+public import Effect4.Store.Carrier.Image
+meta import Effect4.Data.Json
+meta import Effect4.Schema.OfShape
+meta import Effect4.Store.Carrier.Digest
+meta import Effect4.Store.Carrier.Val
 
 /-!
 # Store.Canonical
@@ -24,6 +30,8 @@ under a named scalar shape (so their spec renders `number` with an identifier), 
 as `bytes` with the length checked in `ofVal`. `Bytes` is declared after `List α` so that
 `List UInt8` still frames as `bytes`, the way it did before `UInt8` had an instance.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

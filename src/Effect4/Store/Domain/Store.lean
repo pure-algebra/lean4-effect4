@@ -1,4 +1,8 @@
-import Effect4.Store.Domain.Node
+module
+
+public import Effect4.Store.Domain.Node
+meta import Effect4.Store.Carrier.Kind
+meta import Effect4.Store.Domain.Node
 
 /-!
 # Store.Store
@@ -34,6 +38,8 @@ reference, a closed store), because `putNode` checks admission before it looks t
 Roots (Q7): the one mutable plane, moved by compare-and-set on an optimistic version
 (`putRoot`), each root's target resolving at its kind.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

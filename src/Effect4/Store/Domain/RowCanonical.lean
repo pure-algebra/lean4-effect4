@@ -1,5 +1,7 @@
-import Effect4.Store.Domain.Canonical
-import Effect4.Data.Row
+module
+
+public import Effect4.Store.Domain.Canonical
+public import Effect4.Data.Row
 
 /-!
 # Exact images for canonical finite rows
@@ -8,6 +10,8 @@ A row is a sorted list with a proof. Reuse Image.subtype and Image.equiv: bytes 
 list framing, while decoding refuses a list that does not satisfy strict ascent.
 No proof is serialized, and decoding never sorts or silently removes duplicates.
 -/
+
+@[expose] public section
 
 namespace Effect4.Store
 

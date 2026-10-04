@@ -1,5 +1,11 @@
-import Effect4.Store.Domain.Shape
-import Effect4.Schema.Authoring
+module
+
+public import Effect4.Store.Domain.Shape
+public import Effect4.Schema.Authoring
+meta import Effect4.Schema.Representation
+meta import Effect4.Store.Domain.Shape
+meta import Effect4.Schema.Annotations
+meta import Effect4.Schema.Authoring
 
 /-!
 # Schema.OfShape
@@ -13,6 +19,8 @@ Canonical.document stays owned by Store.Domain.Canonical; schema-node and addres
 construction stay in Store.Domain.Node/Genesis, above Schema. They consume this one
 rendering implementation. Domain schema bytes keep their version-0 behavior.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

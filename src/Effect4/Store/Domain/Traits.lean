@@ -1,4 +1,14 @@
-import Effect4.Store.Domain.Word
+module
+
+public import Effect4.Store.Domain.Word
+meta import Effect4.Store.Carrier.Digest
+meta import Effect4.Store.Carrier.Kind
+meta import Effect4.Store.Carrier.Val
+meta import Effect4.Store.Domain.Canonical
+meta import Effect4.Store.Domain.Node
+meta import Effect4.Store.Domain.Shape
+meta import Effect4.Store.Domain.Store
+meta import Effect4.Store.Domain.Word
 
 /-!
 # Store.Traits
@@ -26,6 +36,8 @@ of the supersession forest (the annotations of a subject that no annotation name
 spec node's, then the registry node's — and both are insensitive to the order the store lists
 its nodes in (`traitsOf_perm`).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

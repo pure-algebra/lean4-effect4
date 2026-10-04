@@ -1,7 +1,9 @@
-import Effect4.Store.Domain.Node
-import Effect4.Store.Domain.Store
-import Effect4.Store.Domain.Traits
-import Effect4.Store.Domain.Derived.Schema
+module
+
+public import Effect4.Store.Domain.Node
+public import Effect4.Store.Domain.Store
+public import Effect4.Store.Domain.Traits
+public import Effect4.Store.Domain.Derived.Schema
 
 /-!
 # Store.Genesis
@@ -26,6 +28,8 @@ library module prints nothing. The guard is cheap — `#guard` evaluates the com
 procedure, not the kernel, so the SHA-256 of the ninety-two-kilobyte meta-schema decides in
 about two seconds (lane B's measurement, 2026-09-05).
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 

@@ -1,4 +1,10 @@
-import Effect4.Store.Domain.Store
+module
+
+public import Effect4.Store.Domain.Store
+meta import Effect4.Store.Carrier.Digest
+meta import Effect4.Store.Carrier.Kind
+meta import Effect4.Store.Domain.Node
+meta import Effect4.Store.Domain.Store
 
 /-!
 # Store.Word
@@ -33,6 +39,8 @@ alone, but its completeness — the root is reached before the fuel runs out —
 graph to be acyclic, which is exactly `Store.Ranked`. The rank is a hypothesis of the theorem,
 never a field of the store.
 -/
+
+@[expose] public section
 
 set_option autoImplicit false
 
