@@ -34,7 +34,7 @@ inductive SurfaceRefusal where
   | read (why : ReadRefusal)
   /-- The reconstructed program does not type against the signature. -/
   | illTyped
-  /-- The checked type has no target annotation, so no declaration could be compared. -/
+  /-- A result or stored type has no target annotation. -/
   | unrepresentable (why : PrintRefusal)
   | unsafeName (name : String)
   | exportName (expected actual : String)
@@ -104,6 +104,7 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
   program : NativeEff
   formed : Formation.InputFormed program table
   typing : TypedProgram (nativeSignature table) program
+  annotations : annotationRefusal program = none
   bound : SourceBindings.Checked allowed (withAmbient ambient module)
   read : Program.readModule (nativeSignature table) (nativeSpell table) module.decls = .ok program
   envelope : envelopeCheck name typing.ty module.decls = none
@@ -126,9 +127,12 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
       match checkTypedProgram (nativeSignature table) program with
       | none => .error .illTyped
       | some typing =>
+        match hannotations : annotationRefusal program with
+        | some why => .error (.unrepresentable why)
+        | none =>
         match henv : envelopeCheck name typing.ty module.decls with
         | some why => .error why
         | none => .ok ⟨module, program, (Formation.checkInput_eq_none_iff program table).mp hformed,
-            typing, bound, hread, henv⟩
+            typing, hannotations, bound, hread, henv⟩
 
 end Effect4.Codegen

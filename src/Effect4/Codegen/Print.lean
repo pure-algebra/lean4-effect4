@@ -155,6 +155,14 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     let declaration ← printDecl name ty m
     .ok (ds ++ [declaration])
 
+/-- Check stored declarations, including records discarded before the final result.
+The raw printer retains its exact fallback; checked entries require a target projection. -/
+def annotationRefusal (program : Eff Op) : Option PrintRefusal :=
+  (Formation.programAnnotations program).findSome? fun (_, type) =>
+    match Codegen.Types.ofTy type with
+    | some _ => none
+    | none => some (.typeSpelling type.render)
+
 /-- Print an admitted program against its row table. Refuses by name if the requested
 export name is unsafe (a printed binder `a0`, a reserved head, a layer reference name, or
 no legal binding at all), and then if any row carries an unsafe name. Refusing the export
@@ -166,24 +174,44 @@ def printEntry (table : List Row) (sig : Signature Op) (name : String) (ty : Eff
   else
     match table.find? (fun row => !rowNamesSafe row) with
     | some row => .error (.unsafeName row.spelling)
-    | none => printModule sig name ty e
+    | none =>
+      match annotationRefusal e with
+      | some why => .error why
+      | none => printModule sig name ty e
 
-/-- Everything a successful entry establishes: the export name and every row name are
-safe, and the block is exactly what the module printer produced. -/
+/-- Shared checks of a successful entry, serving `printed-modules` through module emission.
+Stored-annotation support is a target profile fact, not a target execution theorem (R2/R3). -/
+theorem printEntry_checks {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
+    {e : Eff Op} {decls : List TypeScript.ConstDecl}
+    (h : printEntry table sig name ty e = .ok decls) :
+    exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
+      annotationRefusal e = none ∧ printModule sig name ty e = .ok decls := by
+  cases hs : exportNameSafe name with
+  | false => simp only [printEntry, hs, Bool.not_false, ↓reduceIte] at h; cases h
+  | true =>
+    simp only [printEntry, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte] at h
+    cases hr : table.find? (fun row => !rowNamesSafe row) with
+    | some row => simp only [hr] at h; cases h
+    | none =>
+      simp only [hr] at h
+      cases ha : annotationRefusal e with
+      | some why => simp only [ha] at h; cases h
+      | none => exact ⟨rfl, rfl, rfl, by simpa only [ha] using h⟩
+
+/-- Every successful entry retains safe names and the actual module-printer equation. -/
 theorem printEntry_ok {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
     {e : Eff Op} {decls : List TypeScript.ConstDecl}
     (h : printEntry table sig name ty e = .ok decls) :
     exportNameSafe name = true ∧ table.find? (fun row => !rowNamesSafe row) = none ∧
       printModule sig name ty e = .ok decls := by
-  unfold printEntry at h
-  split at h
-  · simp at h
-  · rename_i unsafe?
-    have safe : exportNameSafe name = true := by
-      simpa using unsafe?
-    split at h
-    · simp at h
-    · rename_i clean
-      exact ⟨safe, clean, h⟩
+  obtain ⟨safe, rows, _, printed⟩ := printEntry_checks h
+  exact ⟨safe, rows, printed⟩
+
+/-- A checked entry contains only representable stored annotations (`printed-modules`, R2/R3).
+The exact hypothesis is successful `printEntry`; host execution remains outside this fact. -/
+theorem printEntry_annotations {table : List Row} {sig : Signature Op} {name : String} {ty : EffTy}
+    {e : Eff Op} {decls : List TypeScript.ConstDecl}
+    (h : printEntry table sig name ty e = .ok decls) : annotationRefusal e = none :=
+  (printEntry_checks h).2.2.1
 
 end Effect4.Program

@@ -1,3 +1,4 @@
+import Effect4.Laws.Codegen.ReadLeaf
 import Effect4.Schema.Bridge
 import Effect4.Schema.OfShape
 import Effect4.Codegen.Read

@@ -4,6 +4,7 @@ import Effect4.Program.Table
 import Effect4.Program.Typing.Blame
 import Effect4.Program.Typing.Agreement
 import Effect4.Program.Authoring
+import Effect4.Program.Authoring.Records
 import Effect4.Api.Derived
 import Effect4.Program.Packages
 import Effect4.Store.Domain.ProgramWire
@@ -176,14 +177,14 @@ well-formed program and nothing else. Type it with `wellTyped` before running it
 def ofBytes (bytes : Store.Bytes) : Option Program := Wire.decodeProgram bytes
 
 /-- The program as an exported constant with its `Effect.Effect<A, E>` type. Raw
-formation, typing and printing must all succeed; otherwise the result is `none`. -/
+formation, stored-annotation support, typing and printing must all succeed; otherwise the result is `none`. -/
 def printDecl (name : String) (program : Program) (table : RowTable := []) : Option TypeScript.ConstDecl :=
-  match Program.Formation.checkInput program table with
-  | some _ => none
-  | none =>
+  match Program.Formation.checkInput program table, Program.annotationRefusal program with
+  | none, none =>
     match checkTyping program table, print program table with
     | some typing, Except.ok body => (Program.printDecl name typing.ty body).toOption
     | _, _ => none
+  | _, _ => none
 
 /-- The program as a declaration block: one `const L_<path> = …` per referenced layer target
 (the host rows slice, `Program.printModule`), then the exported main constant; `none` when it

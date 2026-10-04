@@ -176,7 +176,7 @@ theorem envelopeCheck_iff (name : String) (ty : EffTy) (decls : List TypeScript.
 /-- A completed reading is exactly what the computed boundary returns for its module. -/
 theorem ModuleReading.recheck (r : ModuleReading table name allowed ambient) :
     admitModule name r.module table allowed ambient = .ok r := by
-  obtain ⟨module, program, formed, typing, bound, read, env⟩ := r
+  obtain ⟨module, program, formed, typing, annotations, bound, read, env⟩ := r
   unfold admitModule
   split
   · rename_i refused
@@ -205,11 +205,15 @@ theorem ModuleReading.recheck (r : ModuleReading table name allowed ambient) :
           subst sameTyping
           split
           · rename_i why refused
-            rw [env] at refused
+            rw [annotations] at refused
             cases refused
-          · cases bound'
-            cases bound
-            rfl
+          · split
+            · rename_i why refused
+              rw [env] at refused
+              cases refused
+            · cases bound'
+              cases bound
+              rfl
 
 /-- The certificate is indexed by the module it was computed from. -/
 theorem admitModule_module {module : TypeScript.Module}
@@ -226,8 +230,10 @@ theorem admitModule_module {module : TypeScript.Module}
         · cases h
         · split at h
           · cases h
-          · cases h
-            rfl
+          · split at h
+            · cases h
+            · cases h
+              rfl
 
 /-- O3: typed reading is a projection of the certificate, at the one core checker. -/
 theorem admitModule_typed {module : TypeScript.Module}
@@ -266,18 +272,19 @@ theorem ModuleReading.typing_eq (r : ModuleReading table name allowed ambient)
     (typing : TypedProgram (nativeSignature table) r.program) : r.typing = typing :=
   TypedProgram.unique _ _
 
-/-- Completeness of the boundary against its own five checks. -/
+/-- Completeness of source admission against its declared checks, including stored-annotation support. -/
 theorem admitModule_complete {module : TypeScript.Module} {program : NativeEff}
     (bound : SourceBindings.Checked allowed (withAmbient ambient module))
     (read : Program.readModule (nativeSignature table) (nativeSpell table) module.decls =
       .ok program)
     (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
+    (annotations : annotationRefusal program = none)
     (env : envelopeCheck name typing.ty module.decls = none) :
     ∃ r, admitModule name module table allowed ambient = .ok r ∧
       r.program = program ∧ r.typing.ty = typing.ty :=
-  ⟨⟨module, program, formed, typing, bound, read, env⟩,
-    ModuleReading.recheck ⟨module, program, formed, typing, bound, read, env⟩, rfl, rfl⟩
+  ⟨⟨module, program, formed, typing, annotations, bound, read, env⟩,
+    ModuleReading.recheck ⟨module, program, formed, typing, annotations, bound, read, env⟩, rfl, rfl⟩
 
 /-- A module has one reading: the program, the typing and the evidence are functions of it. -/
 theorem ModuleReading.unique (left right : ModuleReading table name allowed ambient)
@@ -313,6 +320,7 @@ theorem ModuleEmission.admit {program : NativeEff} {table : RowTable} {name : St
       simp only [List.dropLast_append_cons, List.dropLast_singleton, List.append_nil] at mem
       obtain ⟨c, hc, heq⟩ := List.mem_map.mp mem
       exact ⟨c, heq.symm, (plain c hc).1, (plain c hc).2⟩
-  exact admitModule_complete bound read e.formed e.typing env
+  exact admitModule_complete bound read e.formed e.typing
+    (Program.printEntry_annotations e.generated) env
 
 end Effect4.Codegen

@@ -49,9 +49,10 @@ theorem printModule_erasure (name : String) (program : Program) (table : RowTabl
       | none => none :=
   Effect4.Codegen.emitModule_erasure name program table formed
 
-/-- On raw formed input, evidence retention leaves the declaration result unchanged. -/
+/-- On formed input with supported stored annotations, evidence retention retains the declaration result. -/
 theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)
-    (formed : Formation.InputFormed program table) :
+    (formed : Formation.InputFormed program table)
+    (annotations : annotationRefusal program = none) :
     printDecl name program table =
       match typeOf program table, print program table with
       | some ty, .ok body => (Effect4.Program.printDecl name ty body).toOption
@@ -61,10 +62,10 @@ theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)
   | none =>
     have typed := checkTypedProgram_refusal_iff.mp checked
     cases body : print program table <;>
-      simp only [printDecl, hformed, checkTyping, checked, typeOf, typed, body]
+      simp only [printDecl, hformed, annotations, checkTyping, checked, typeOf, typed, body]
   | some typing =>
     cases body : print program table <;>
-      simp only [printDecl, hformed, checkTyping, checked, typeOf, typing.typed, body]
+      simp only [printDecl, hformed, annotations, checkTyping, checked, typeOf, typing.typed, body]
 
 /-- O3 through the application face: an admitted module's program carries the type the
 certificate records, by the one whole-program checker the rest of the tree uses. -/

@@ -87,19 +87,50 @@ and cleanup, including retained state. This comparison does not cover traces, ar
 finite-fuel frontiers, loops, scheduling, host tables or target execution; it is a contribution
 to T5, not the general relation. Typing an edited program still uses admission separately.
 
+### 1.2 Named records
+
+The record builders live in [`Program.Authoring.Records`](../../src/Effect4/Program/Authoring/Records.lean).
+They produce the existing `Term` language and use the ordinary program checker.
+
+| Builder | Result |
+| --- | --- |
+| `record fields present` | A record with its full declaration and explicitly supplied fields. |
+| `field target name` | The value of a declared required field. |
+| `optionalField target name` | An outer option that reports own-field presence. |
+| `recordSet target name value` | A new record with that field required at the replacement type. |
+
+An absent field differs from a present field containing `undefined` or an empty option.
+Updating a field can change its type.
+Every alternative of a union must support the requested read or update.
+Records retain all field names, including names that need TypeScript bracket access.
+The key spelling follows decisions row 196.
+
+```mermaid
+flowchart LR
+  A[Record builders] --> T[Stored Term]
+  T --> F[Raw formation]
+  F --> C[Program typing]
+  C --> P[Checked TypeScript printing]
+  P --> R[Checked source admission]
+```
+
+Checked declaration production and source admission check stored annotations as well as the final result type.
+Raw TypeScript printing and reading retain unsupported metadata for exact structural reconstruction.
+Source admission also requires permitted lexical bindings, including the host's record helper imports.
+A successful source reading establishes no target execution claim.
+
+The structural reader laws live in [`Laws.Codegen.ReadLeaf`](../../src/Effect4/Laws/Codegen/ReadLeaf.lean).
+The focused boundary controls live in [`RecordEmission`](../../Test/Codegen/RecordEmission.lean).
+The source and runtime controls remain finite checks.
+
 ## 2. The open decisions (2026-09-17)
 
 Ten, deduplicated from the 2026-09-17 receipts and scouts, ordered by what depends on what, each
 with the recommendation and the reason. A ruling is made only when written into `decisions.md`.
 
-**D-A — how a record and a sum are named at the boundary.** (D's D-1; the language decision.)
-(a) sugar over nested `prod` and tagged tuples, no carrier change (the standing ruling,
-core-goals §4.4); (b) `Ty.record` / `Ty.variant` lowering to `objects` and a tagged union;
-(c) keep `Ty`, carry field names as an annotation on the `Representation`. *Recommend (c), then
-(b) if it is not enough:* the shape at the boundary is already right and only the names are
-missing; (c) costs one annotation key, keeps every retraction theorem and `Ty`'s wire tags;
-(a) leaves the published schema an `Arrays` where the author wrote a record. This gates the
-ledger and the pool dogfoods and the MCP tool schemas.
+**D-A — records at the boundary.** Decisions rows 165, 178, 195 and 196 settle the record representation and its TypeScript spelling.
+Section 1.2 describes the authoring surface.
+The decisions register owns the rulings.
 
 **D-B — what a handle publishes, and whether a described handle crosses.** (D's D-2, C's D8.)
 *Recommend:* a host reviver mints the index (rc.112's `SchemaRepresentation.ts:574`, the same
