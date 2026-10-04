@@ -3,3 +3,4 @@ Test/fixtures/proof-style/red/Sample.lean	banned	simp-without-only	1
 Test/fixtures/proof-style/red/Sample.lean	banned	simp_all	1
 Test/fixtures/proof-style/red/Sample.lean	banned	try	1
 Test/fixtures/proof-style/red/Sample.lean	plain	simp_all	1
+Test/fixtures/proof-style/red/Sample.lean	localSyntax	unread	1
