@@ -73,9 +73,10 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
 - **The Σ_app slice** (decisions row 21, R1). The
   [slice plan](research/2026-10-04-claude-lead/sigapp-slice-plan.md) threads the application's
   signature through program admission in six steps. Step 0 landed
-  (`Laws/Program/Typed/AdmittedSource.lean`): `m7_admitted` is proved, and
-  `reachable_typed_admitted` is proved modulo the planned goal `lawfulSig_of_admitted`. That goal
-  needs a served premise: `E4-TYPED-CE-041` shows that program admission checks no served key.
+  (`Laws/Program/Typed/AdmittedSource.lean`): `m7_admitted`, `lawfulSig_of_admitted` and
+  `reachable_typed_admitted` are proved. The bridge takes `AdmissionGap` as a premise:
+  `E4-TYPED-CE-041` shows that program admission checks no served key, scope or template. Step 2
+  repairs it.
 - **Four empty aesop banks deleted** (decisions row 65): `Inversion`, `Reader`, `Rows`, `TyOrder`.
 
 ## Next, ruled 2026-10-04

@@ -47,11 +47,13 @@ three as one premise, `AdmissionGap`.
 | Declaration | Status | What it says |
 | --- | --- | --- |
 | `m7_admitted` | proved | at the empty row table, a program the API admits, with a closed row and an answer-free tape, satisfies M7a–c |
-| `lawfulSig_of_admitted` | planned goal | an admitted table that meets `AdmissionGap` is a lawful signature with the built-in services |
-| `reachable_typed_admitted` | modulo `lawfulSig_of_admitted` | every machine an admitted program's admitted tapes reach is typed, over a table that meets the gap |
+| `lawfulSig_of_admitted` | proved (seat P, `01bf3f6d`) | an admitted table that meets `AdmissionGap` is a lawful signature with the built-in services |
+| `reachable_typed_admitted` | proved | every machine an admitted program's admitted tapes reach is typed, over a table that meets the gap |
 
 The registry names `m7_admitted` (claim `m7-admitted`, R9) and `lawfulSig_of_admitted` (claim
-`admitted-source-lawful`, R1). `generated/semantics.md` shows the goal as R1's next goal.
+`admitted-source-lawful`, R1). Admission's other twelve row checks are read by row in
+`Laws/Program/Typed/AdmissionRows.lean`. The claim keeps `E4-TYPED-CE-041` as its contesting row
+until step 2 makes the gap admission's own.
 
 Placement of `lawfulSig_of_admitted`:
 
