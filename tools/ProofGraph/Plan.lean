@@ -128,18 +128,23 @@ def Status.word : Status → String
 
 private def conclusionHead (e : Expr) : Option Name := e.getForallBody.getAppFn.constName?
 
-/-- The node indices worth trying for a premise body with this head. -/
-private def candidates (nodes : Array Node) (body : Expr) : Array Nat :=
+/-- The node indices worth trying for a premise body with this head. A node under the target's
+own name (a part `#extract_obligations` declared for it) is tried first, so that among nodes
+stating one proposition the target's own parts win. -/
+private def candidates (nodes : Array Node) (target : Name) (body : Expr) : Array Nat :=
   let head := body.getAppFn.constName?
-  (Array.range nodes.size).filter fun j =>
+  let fit := (Array.range nodes.size).filter fun j =>
     head.isNone || conclusionHead nodes[j]!.proposition == head
+  let own := fit.filter fun j => target.isPrefixOf nodes[j]!.name && nodes[j]!.name != target
+  own ++ fit.filter fun j => !own.contains j
 
 /-- Find the first node whose proposition has the premise `T` as an instance, every argument of
 the node fixed by the unification. All assignments are rolled back; the result is the node and
 its universe instance. -/
-private def findNode (nodes : Array Node) (T : Expr) : MetaM (Option (Nat × List Level)) :=
+private def findNode (nodes : Array Node) (target : Name) (T : Expr) :
+    MetaM (Option (Nat × List Level)) :=
   forallTelescope T fun _ body => do
-    for j in candidates nodes body do
+    for j in candidates nodes target body do
       let node := nodes[j]!
       let saved ← saveState
       let us ← node.levels.mapM fun _ => mkFreshLevelMVar
@@ -185,7 +190,7 @@ def reduce (nodes : Array Node) (target : Node) (r : Name) : MetaM Edge := do
         m.mvarId!.assign x
         premises := premises.push ⟨shown, none, true⟩
         continue
-      match ← findNode nodes T with
+      match ← findNode nodes target.name T with
       | none =>
         premises := premises.push ⟨shown, none, false⟩
         loose := true
