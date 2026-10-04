@@ -31,6 +31,8 @@ open Lean Meta Elab Command
 structure Node where
   name : Name
   standing : Standing
+  /-- the axioms its proof reaches, goals excluded -/
+  axioms : Array Name := #[]
   /-- the nodes the walk from its proof reaches first -/
   nearest : Array Name := #[]
   lemmas : Nat := 0
@@ -113,7 +115,7 @@ def buildPlan (scopes : List Name) (names : Array Name) (memo : IO.Ref AxiomMemo
     let extra := disallowedAxioms axioms
     unless extra.isEmpty do throwError "plan: {n}: disallowed axioms {extra}"
     let (nearest, lemmas, definitions) ← walk scopes isNode n
-    nodes := nodes.push { name := n, standing := s, nearest, lemmas, definitions }
+    nodes := nodes.push { name := n, standing := s, axioms, nearest, lemmas, definitions }
   return { nodes }
 
 /-- One line per node and the statements of the goals it rests on, for the editor and receipts. -/

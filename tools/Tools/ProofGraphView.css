@@ -1,0 +1,82 @@
+/* The proof graph view of the architecture map (tools/Tools/Architecture.lean). Colours are the
+   map's tokens, so the light and dark themes follow the page. Evidence status is the card's
+   stroke and fill, the concept its stripe, the proof role its chip (controlled English W22). */
+.pg { position: relative; left: 50%; transform: translateX(-50%); width: min(1720px, calc(100vw - 32px)); margin-top: 16px;
+  --st-proved: var(--laws); --st-modulo: var(--tools); --st-goal: var(--bad); --st-req: var(--runtime); }
+.pg-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border: 1px solid var(--rule);
+  border-bottom: 0; border-radius: 8px 8px 0 0; background: var(--panel); font-size: 13px; }
+.pg-bar select, .pg-bar input[type=search], .pg-bar button { font: 13px var(--sans); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 5px; padding: 4px 10px; min-height: 30px; }
+.pg-bar select { max-width: 340px; }
+.pg-bar input[type=search] { width: 210px; }
+.pg-bar button { cursor: pointer; }
+.pg-bar label { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); cursor: pointer; }
+.pg-counts { margin-left: auto; font: 12px var(--mono); color: var(--ink-3); }
+.pg-counts b { color: var(--ink); font-weight: 600; }
+.pg-legend { display: grid; gap: 6px; padding: 10px 14px; border: 1px solid var(--rule); border-bottom: 0; background: var(--panel); font-size: 12px; color: var(--ink-2); }
+.pg-legend div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.pg-legend em { font-style: normal; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); min-width: 108px; }
+.pg-legend .st::before { content: ''; display: inline-block; width: 18px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: -1px;
+  border: 1.6px solid var(--c); background: color-mix(in srgb, var(--c) 10%, transparent); }
+.pg-legend .st.proved { --c: var(--st-proved); } .pg-legend .st.modulo { --c: var(--st-modulo); }
+.pg-legend .st.goal { --c: var(--st-goal); } .pg-legend .st.goal::before { border-style: dashed; }
+.pg-legend .st.req { --c: var(--st-req); } .pg-legend .st.req::before { border-radius: 6px; }
+.pg-legend .cc::before { content: ''; display: inline-block; width: 4px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -2px; background: var(--c); }
+.pg-legend .rl b { font: 600 10px var(--mono); color: var(--ink-3); letter-spacing: 0.04em; }
+.pg-body { display: grid; grid-template-columns: minmax(0, 1fr) 390px; border: 1px solid var(--rule); border-radius: 0 0 8px 8px; background: var(--panel); overflow: hidden; }
+.pg-canvas { position: relative; height: min(80vh, 920px); border-right: 1px solid var(--rule); background:
+  radial-gradient(circle, color-mix(in srgb, var(--ink-3) 22%, transparent) 1px, transparent 1px) 0 0 / 22px 22px, var(--paper); cursor: grab; }
+.pg-canvas:active { cursor: grabbing; }
+.pg-canvas svg { display: block; max-width: none; width: 100%; height: 100%; font-family: var(--sans); }
+.pg-panel { overflow: auto; height: min(80vh, 920px); padding: 16px 18px; font-size: 13px; line-height: 1.5; }
+.pg-panel h4 { margin: 0 0 3px; font: 600 14px/1.35 var(--mono); word-break: break-all; }
+.pg-panel .sub { color: var(--ink-3); font: 12px var(--mono); margin: 0 0 10px; word-break: break-all; }
+.pg-panel dl { margin: 12px 0 0; }
+.pg-panel dt { margin-top: 12px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); }
+.pg-panel dd { margin: 4px 0 0; }
+.pg-panel pre { margin: 4px 0 0; padding: 9px 10px; overflow: auto; max-height: 240px; font: 11.5px/1.5 var(--mono); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 6px; white-space: pre-wrap; }
+.pg-panel a { color: var(--accent); text-decoration: none; cursor: pointer; }
+.pg-panel a:hover { text-decoration: underline; }
+.pg-panel ul { margin: 2px 0 0; padding-left: 18px; }
+.pg-panel ul.reqs { padding-left: 0; list-style: none; }
+.pg-panel li { margin: 3px 0; word-break: break-word; }
+.pg-panel .hint { color: var(--ink-3); }
+.pg-badge { display: inline-block; margin: 0 6px 4px 0; padding: 1px 8px; border-radius: 10px; font: 11px var(--mono); border: 1px solid var(--rule); color: var(--ink-2); }
+.pg-badge.proved { border-color: var(--st-proved); color: var(--st-proved); }
+.pg-badge.modulo { border-color: var(--st-modulo); color: var(--st-modulo); }
+.pg-badge.goal, .pg-badge.open { border-color: var(--st-goal); color: var(--st-goal); }
+/* the drawing */
+.pg-edge { fill: none; stroke: var(--ink-3); stroke-opacity: 0.2; stroke-width: 1; transition: stroke-opacity 0.15s; }
+.pg-edge.frame { stroke: var(--st-req); stroke-opacity: 0.16; }
+.pg-edge.found { stroke-opacity: 0; }
+.pg-edge.found.hot { stroke-opacity: 0.95; }
+.pg-edge.rests { stroke: var(--st-modulo); stroke-opacity: 0.8; stroke-width: 1.3; stroke-dasharray: 4 3; }
+.pg-edge.hot { stroke: var(--accent); stroke-opacity: 0.9; stroke-width: 1.8; }
+.pg-edge.dim { stroke-opacity: 0.06; }
+.pg-node { cursor: pointer; transition: opacity 0.15s; }
+.pg-node.dim { opacity: 0.16; }
+.pg-node .card { fill: var(--panel); stroke: var(--c); stroke-width: 1.5; }
+.pg-node.proved { --c: var(--st-proved); }
+.pg-node.modulo { --c: var(--st-modulo); }
+.pg-node.modulo .card { fill: color-mix(in srgb, var(--st-modulo) 9%, var(--panel)); }
+.pg-node.goal { --c: var(--st-goal); }
+.pg-node.goal .card { fill: color-mix(in srgb, var(--st-goal) 9%, var(--panel)); stroke-dasharray: 5 3; stroke-width: 1.8; }
+.pg-node.req { --c: var(--st-req); }
+.pg-node.req .card, .pg-node.proved .card.req { fill: color-mix(in srgb, var(--st-req) 10%, var(--panel)); }
+.pg-node:hover .card, .pg-node:focus .card { stroke-width: 2.4; }
+.pg-node:focus { outline: none; }
+.pg-node.sel .card { stroke-width: 3; filter: drop-shadow(0 1px 4px color-mix(in srgb, var(--c) 45%, transparent)); }
+.pg-node text { pointer-events: none; fill: var(--ink); }
+.pg-node .name { font: 11.5px var(--mono); }
+.pg-node .role { font: 600 9px var(--mono); fill: var(--ink-3); letter-spacing: 0.05em; }
+.pg-node .rid { font: 700 12.5px var(--sans); fill: var(--c); }
+.pg-node .rtitle { font: 11.5px var(--sans); fill: var(--ink-2); }
+.pg-node .uses { font: 600 10px var(--mono); fill: var(--ink-3); }
+.pg-legend .fd b { font: 600 10px var(--mono); color: var(--ink-3); }
+@media (max-width: 960px) {
+  .pg-body { grid-template-columns: 1fr; }
+  .pg-canvas { border-right: 0; border-bottom: 1px solid var(--rule); height: 62vh; }
+  .pg-panel { height: auto; max-height: 70vh; }
+  .pg-legend em { min-width: 0; width: 100%; }
+}

@@ -7,8 +7,8 @@ declaration counts from the loaded roots, sizes from disk, the generated groups 
 `docs/GENERATED.md`, the pinned packages from `lakefile.toml`. What the tree cannot say is
 *what a directory is for* and *which direction imports are supposed to run*. That is this
 module: one area per directory with its column, its height in the column and its role; the
-layering rule; the imports a document names and accepts; the milestone's modules, planned and
-landed, so the map's proof stack updates itself as slices land.
+layering rule; the imports a document names and accepts. The proof graph the map draws is derived
+from the semantics report (`make gen-semantics`), not declared here.
 
 The table is total in both directions, the same way `Typed/Sources.lean` is: a Lean file
 under no declared area, or a declared path that does not exist, stops the driver with the
@@ -79,6 +79,7 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Effects", .laws, 0, "Laws/Effects", "layer 0 of the typed-state invariant: the protocol-typed predicate on the free monad, its lifts and order, and the signature sum as the coproduct of the free monads; imports the pinned `Effects` only", false, true⟩,
   ⟨"src/Effect4/Laws/Auto", .laws, 1, "Laws/Auto", "the instruments: the censuses, the position gate, `#typed_state`, `#frame_rules`, the obligation ledger, the aesop banks", false, true⟩,
   ⟨"src/Effect4/Laws/Store", .laws, 1, "Laws/Store", "the store's laws", false, true⟩,
+  ⟨"src/Effect4/Laws/Data", .laws, 1, "Laws/Data", "the data language's laws", false, true⟩,
   ⟨"src/Effect4/Laws/Store/Folds", .laws, 1, "Laws/Store/Folds", "fold connectors for store values", true, true⟩,
   ⟨"src/Effect4/Laws/Machine", .laws, 2, "Laws/Machine", "store and frame invariants, the store kernel, `Book` and `BMeans`, observations, approximation and scheduling laws", false, true⟩,
   ⟨"src/Effect4/Laws/Machine/Folds", .laws, 2, "Laws/Machine/Folds", "fold connectors for machine stores", true, true⟩,
@@ -118,6 +119,8 @@ def areas : List Area := [
   ⟨"src/OCaml5/Tools", .tools, 3, "OCaml5/Tools", "the `--run` cuts: the engine, the `Eff` library, the wire goldens, the store goldens", true, true⟩,
   ⟨"tools/Conform/Effect4", .tools, 4, "Conform/Effect4", "the Effect4 adapters: profiles, fixtures, the LCNF and layout worlds, the native target", false, true⟩,
   ⟨"tools/Effect4Gen", .tools, 5, "Effect4Gen", "the deriving generator (`Canonical`, folds, views, rows, atoms, forms) and its projection guard; `guards/` holds the fragments appended to generated files, not modules", false, true⟩,
+  ⟨"tools/BankCensusRun.lean", .tools, 5, "BankCensusRun", "the rule-bank census runner (`make bank-census`)", false, true⟩,
+  ⟨"tools/ProofStyleRecord.lean", .tools, 5, "ProofStyleRecord", "the proof-style baseline recorder (`make record-proof-style`)", false, true⟩,
   ⟨"tools/conform-red", .tools, 6, "conform-red", "negative probes for Conform, deliberately red, in no root", false, true⟩,
   -- the batteries
   ⟨"Test", .tests, 0, "Test", "`Test/All.lean` is the green battery and the gate's root; the areas mirror the runtime's", false, true⟩,
@@ -211,33 +214,6 @@ def roots : List String := [
   "Conform.Spec.Reflect", "Conform.Effect4.Fixtures.Traffic", "Conform.Effect4.LayoutWorld",
   "Conform.Effect4.NormalizationInputs", "Conform.Effect4.TargetLeanNative",
   "Conform.Cli.BoundaryControls", "Conform.Cli.Selftest"
-]
-
-/-- One row of the typed-state proof stack: a slice and the modules it lands, by module name,
-in measured import order. A module is drawn solid once its file exists, dashed until then; a
-solid module shows the ledger goals it declares (`Obligation`), proved and open, measured from
-the loaded environment. The milestone's statements live in `Typed/Assembly.lean` (M5
-initialization, M6 one goal per command); the planned modules are where their proofs land. -/
-structure Slice where
-  name : String
-  what : String
-  modules : List String
-deriving Repr, Inhabited
-
-def milestone : List Slice := [
-  ⟨"layer 0", "the protocol-typed predicate on the free monad", ["Effect4.Laws.Effects.Protocol"]⟩,
-  ⟨"T1", "the checked evidence seam", ["ProofGraph.Proof", "ProofGraph.Search", "ProofGraph.Goal", "ProofGraph.Plan", "ProofGraph.Sketch"]⟩,
-  ⟨"T2", "the census, the source table, the skeleton in place", ["Effect4.Laws.Auto.Positions", "Effect4.Laws.Program.Typed.Vocabulary", "Effect4.Laws.Program.Typed.Sources", "Effect4.Laws.Program.Typed.TypedSources", "Effect4.Laws.Program.Typed.TypedStateDecl", "Effect4.Laws.Program.Typed.PositionGate", "Effect4.Laws.Program.Typed.State"]⟩,
-  ⟨"T3 · T4", "frames and the ledger", ["Effect4.Laws.Auto.Frames", "Effect4.Laws.Program.Typed.Frames", "Effect4.Laws.Auto.Obligations"]⟩,
-  ⟨"M2", "the world and its order; validity; a fiber's type from its fork site; the saved-frame contracts", ["Effect4.Laws.Program.Typed.World", "Effect4.Laws.Program.Typed.Validity", "Effect4.Laws.Program.Typed.ForkSource", "Effect4.Laws.Program.Typed.Contracts", "Effect4.Laws.Program.Typed.ProtocolObligations"]⟩,
-  ⟨"M3b", "admission: the value judgment Fits, and the admitted source", ["Effect4.Laws.Program.Typed.Membership", "Effect4.Laws.Program.Typed.Admission"]⟩,
-  ⟨"M3", "the residual protocol under an answer gate; the handler-adequacy rules (seat B); the seqR sequencing lemma (seat E)", ["Effect4.Laws.Program.Typed.Residual", "Effect4.Laws.Auto.AnswerGate", "Effect4.Laws.Program.Typed.Adequacy", "Effect4.Laws.Program.Typed.Seq"]⟩,
-  ⟨"M4", "the unary ladder and the typed stack walk", ["Effect4.Laws.Machine.Keeps", "Effect4.Laws.Program.Typed.Stack"]⟩,
-  ⟨"slice 5", "the typed state assembled, with the scheduler's queue and observer facts (H1); M5 (initialization) and M6 (one goal per command) declared", ["Effect4.Laws.Program.Typed.Scheduler", "Effect4.Laws.Program.Typed.Assembly"]⟩,
-  ⟨"D · row 110", "the generic lifts through commands, decisions and replay; their first native user", ["Effect4.Laws.Machine.Lift", "Effect4.Laws.Program.Guard.MemoIds"]⟩,
-  ⟨"M6", "the per-command preservation proofs, generic cells first", ["Effect4.Laws.Program.Typed.Step"]⟩,
-  ⟨"M7", "the transfer to the compiled machine's exits", ["Effect4.Laws.Program.Typed.Transfer"]⟩,
-  ⟨"P2", "the storage interface the store kernel is restated over", ["Effect4.Laws.Machine.Arena"]⟩
 ]
 
 end Tools.Architecture

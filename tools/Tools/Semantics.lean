@@ -191,13 +191,17 @@ standing and what its proof brings in, the edges to its nearest nodes, and the n
 private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement) : MetaM Json := do
   let env ← getEnv
   let tops := requirements.foldl (init := #[]) fun acc r => acc ++ r.top.toArray
-  let nodes := plan.nodes.map fun n => obj [("name", text n.name.toString),
+  let mut nodes : Array Json := #[]
+  for n in plan.nodes do
+    nodes := nodes.push (obj [("name", text n.name.toString),
       ("kind", text (if ProofGraph.isGoal env n.name then "goal" else "theorem")),
       ("status", text n.standing.word),
       ("restsOn", names n.restsOn.toList),
       ("module", text (semanticsModule env n.name).toString),
+      ("statement", text (← Display.expression (← getConstInfo n.name).type)),
+      ("axioms", names (n.axioms.qsort (·.toString < ·.toString)).toList),
       ("broughtIn", obj [("nearest", names n.nearest.toList),
-        ("lemmas", toJson n.lemmas), ("definitions", toJson n.definitions)])]
+        ("lemmas", toJson n.lemmas), ("definitions", toJson n.definitions)])])
   let word (n : Name) : String := ((plan.find? n).map (·.standing.word)).getD "missing"
   let reqs := requirements.toArray.map fun r =>
     let proved := r.openParts.isEmpty && r.top.all (word · == "proved")

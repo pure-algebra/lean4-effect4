@@ -342,8 +342,11 @@ check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration thro
 # `make check` runs it as `check-proof-style`, and record-proof-style rewrites the baseline after a
 # cleanup. The scan reads the sources and the baseline at elaboration, which Lake's trace of
 # Test.Audit.ProofStyle does not cover: the marker's inputs do, so a baseline-only or a
-# comment-only edit reruns it.
+# comment-only edit reruns it. The red fixtures and their baselines are inputs too, and the source
+# inventory reruns it when a scanned source is added or deleted.
 $(CHK)/proof-style: $(filter src/Effect4/%,$(LEAN_SOURCES)) Test/fixtures/proof-style/baseline.tsv \
+  Test/fixtures/proof-style/red/Sample.lean Test/fixtures/proof-style/red-baseline.tsv \
+  Test/fixtures/proof-style/red-stale.tsv $(CHK)/inventory \
   tools/ProofGraph/ProofStyle.lean Test/Audit/ProofStyle.lean | build
 	$(LAKE) env lean -DwarningAsError=true Test/Audit/ProofStyle.lean
 	@mkdir -p $(CHK) && touch $@
@@ -470,9 +473,10 @@ gen-corpus-results: | build harness/truth/node_modules ## promote a fresh corpus
 # The architecture map (docs/GENERATED.md, group `architecture`): measured from the tree by a
 # Lean driver that parses every import header, loads the roots for declaration counts and
 # walks the estates; the role register tools/Tools/ArchitectureRoles.lean is its one hand
-# input. A report under .lake/gen, never committed and not in `check`.
+# input. Its proof graph is drawn from the semantics report's JSON, which gen-semantics writes.
+# A report under .lake/gen, never committed and not in `check`.
 .PHONY: gen-architecture
-gen-architecture: | build ## the architecture map, measured from the tree, into .lake/gen/architecture-map.html (a report)
+gen-architecture: gen-semantics | build ## the architecture map, measured from the tree, into .lake/gen/architecture-map.html (a report)
 	$(LAKE) build architecture-map
 	@mkdir -p $(GEN)
 	$(LAKE) exe architecture-map --out $(GEN)/architecture-map.html

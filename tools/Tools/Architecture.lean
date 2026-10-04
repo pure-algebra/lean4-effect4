@@ -9,8 +9,8 @@ import ProofGraph.Population
     lake env lean -M6144 --run tools/Tools/Architecture.lean [--out <path>]
 
 Writes the architecture map (`.lake/gen/architecture-map.html` by default, a build artifact):
-the roots and their measured import direction, the typed-state proof stack with its planned
-modules, the file map by role, the generated groups, the pinned packages, and an audit of what
+the roots and their measured import direction, the proof graph (derived from the semantics
+report's JSON, which `make gen-semantics` writes), the file map by role, the generated groups, the pinned packages, and an audit of what
 the tree says against what the role register declares. `make gen-architecture` runs it. It is
 not in `make check`: the map is a report, regenerated when wanted and never committed.
 
@@ -28,7 +28,7 @@ What is measured, and how:
   describe is shown as such.
 
 What is declared, in `Tools.ArchitectureRoles`: the areas and their roles, the column and
-height of each, the layering rule, the accepted exceptions, the milestone's modules. The
+height of each, the layering rule, the accepted exceptions. The
 register is total: a Lean file under no area, or an area whose path does not exist, stops the
 run with the name.
 
@@ -544,52 +544,26 @@ def renderStack (f : Facts) : String := Id.run do
   out := out.push "</svg>"
   return String.intercalate "\n" out.toList
 
-/-- The file or directory a module name denotes, in whichever root holds it, and whether it
-exists; a module not yet written resolves under `src/` for `Effect4.*` and `tools/` otherwise. -/
-def pathOfModule (m : String) : IO (String × Bool) := do
-  let rel := String.intercalate "/" (m.splitOn ".")
-  for root in ["src/", "tools/", ""] do
-    let file := root ++ rel ++ ".lean"
-    if ← (file : FilePath).pathExists then return (file, true)
-    if ← (root ++ rel : FilePath).isDir then return (root ++ rel, true)
-  let root := if m.startsWith "Effect4." then "src/" else "tools/"
-  return (root ++ rel ++ ".lean", false)
+/-- The semantics report the proof graph is drawn from: `make gen-semantics` writes it. -/
+def semanticsJson : FilePath := ".lake/gen/semantics-report/semantics.json"
 
-/-- The typed-state proof stack: one row per slice, its modules solid once their source is
-present, each with the theorems it declares. -/
-def renderMilestone (counts : Std.HashMap Name Counts) : IO String := do
-  let rowH := 60
-  let labelW := 150
-  let width := 1080
-  let height := 24 + milestone.length * rowH
-  let mut out := #[s!"<svg viewBox=\"0 0 {width} {height}\" role=\"img\" aria-label=\"The typed-state proof stack by slice, landed modules solid with their theorem counts, planned modules dashed\">"]
-  let mut r := 0
-  for s in milestone do
-    let y := 14 + r * rowH
-    out := out.push s!"<text x=\"0\" y=\"{y + 18}\" font-size=\"12\" font-weight=\"600\" fill=\"var(--ink)\">{esc s.name}</text>"
-    out := out.push s!"<text x=\"0\" y=\"{y + 33}\" font-size=\"10\" fill=\"var(--ink-3)\">{esc s.what}</text>"
-    let k := s.modules.length
-    let avail := width - labelW
-    let w := min 250 ((avail - (k - 1) * 8) / k)
-    let mut i := 0
-    for mod in s.modules do
-      let (m, landed) ← pathOfModule mod
-      let bx := labelW + i * (w + 8)
-      let stroke := if landed then "var(--laws)" else "var(--ink-3)"
-      let dash := if landed then "" else " stroke-dasharray=\"5 4\""
-      let fill := if landed then "var(--panel)" else "transparent"
-      out := out.push s!"<rect x=\"{bx}\" y=\"{y}\" width=\"{w}\" height=\"42\" rx=\"4\" fill=\"{fill}\" stroke=\"{stroke}\" stroke-width=\"1.5\"{dash}/>"
-      let name := (m.splitOn "/").getLast?.getD m
-      let dir := if m.startsWith "src/Effect4/Laws/" then dropRightStr (dropStr m 17) (name.length + 1)
-        else if m.startsWith "tools/" then dropRightStr (dropStr m 6) (name.length + 1) else m
-      out := out.push s!"<text x=\"{bx + 8}\" y=\"{y + 17}\" font-size=\"11\" font-weight=\"600\" fill=\"{if landed then "var(--ink)" else "var(--ink-3)"}\">{esc name}</text>"
-      let c := counts.getD (nameOfString mod) {}
-      let ledger := if !landed then " · planned" else s!" · {c.theorems} theorems"
-      out := out.push s!"<text x=\"{bx + 8}\" y=\"{y + 32}\" font-size=\"9.5\" font-family=\"var(--mono)\" fill=\"var(--ink-3)\">{esc dir}{ledger}</text>"
-      i := i + 1
-    r := r + 1
-  out := out.push "</svg>"
-  return String.intercalate "\n" out.toList
+/-- Text that may sit inside a `<script>` element: no `</` closes it early. -/
+def scriptSafe (s : String) : String := s.replace "</" "<\\/"
+
+/-- The proof graph, derived from the semantics report's plan and claims: the report's JSON is
+embedded as data, and `tools/Tools/ProofGraphView.js`, an ES module, lays it out with d3-dag's
+Sugiyama method and draws it with d3 in the browser, both from a pinned CDN
+(`tools/Tools/ProofGraphView.css` styles it). Nothing here is declared by hand. -/
+def renderProofGraph : IO String := do
+  unless ← semanticsJson.pathExists do
+    throw <| IO.userError s!"architecture: {semanticsJson} is missing; run make gen-semantics first"
+  let data ← IO.FS.readFile semanticsJson
+  let style ← IO.FS.readFile "tools/Tools/ProofGraphView.css"
+  let script ← IO.FS.readFile "tools/Tools/ProofGraphView.js"
+  return "<style>" ++ style ++ "</style>" ++
+    "<div id=\"pg\" class=\"pg\"><div class=\"pg-bar\"></div><div class=\"pg-body\"><div class=\"pg-canvas\"></div><aside class=\"pg-panel\"></aside></div></div>" ++
+    "<script type=\"application/json\" id=\"pg-data\">" ++ scriptSafe data ++ "</script>" ++
+    "<script type=\"module\">" ++ scriptSafe script ++ "</script>"
 
 /-- The import matrix over the non-detail Lean areas and the external packages. -/
 def renderMatrix (f : Facts) : String := Id.run do
@@ -699,15 +673,15 @@ def page (f : Facts) : IO String := do
   let leanLines := linesOf f.leanFiles
   let loaded := (f.leanFiles.filter fun x => f.counts.contains x.module).size
   let thms := (f.countsOf f.leanFiles).theorems
-  let milestoneSvg ← renderMilestone f.counts
+  let proofGraph ← renderProofGraph
   let head := "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n<title>Effect4 Architecture Map</title>\n<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap\">\n<style>" ++ css ++ "</style>\n</head>\n<body>\n<!-- " ++ Tools.GeneratedStamp.note "tools/Tools/Architecture.lean (make gen-architecture)" ++ " -->\n<div class=\"wrap\">\n"
-  let header := s!"<header><h1>Effect4 Architecture Map</h1><p>The tree as it is: the four Lean roots and the direction their imports run, the estates around them, the typed-state proof stack as it lands, and what the tree says against what the role register declares. Measured by <code>tools/Tools/Architecture.lean</code>; the roles and the layering are declared in <code>tools/Tools/ArchitectureRoles.lean</code>.</p><div class=\"stamp\">{f.leanFiles.size} Lean modules · {fmt leanLines} lines · {loaded} loaded for counts · {fmt thms} theorems · regenerate with <code>make gen-architecture</code></div>" ++
-    "<nav><a href=\"#roots\">The roots</a><a href=\"#matrix\">The import matrix</a><a href=\"#against\">Against the direction</a><a href=\"#stack\">The typed-state stack</a><a href=\"#map\">The file map</a><a href=\"#faces\">Faces and generated groups</a><a href=\"#pins\">Pinned references</a><a href=\"#audit\">Audit</a></nav>" ++
+  let header := s!"<header><h1>Effect4 Architecture Map</h1><p>The tree as it is: the four Lean roots and the direction their imports run, the estates around them, the proof graph derived from the semantics report, and what the tree says against what the role register declares. Measured by <code>tools/Tools/Architecture.lean</code>; the roles and the layering are declared in <code>tools/Tools/ArchitectureRoles.lean</code>.</p><div class=\"stamp\">{f.leanFiles.size} Lean modules · {fmt leanLines} lines · {loaded} loaded for counts · {fmt thms} theorems · regenerate with <code>make gen-architecture</code></div>" ++
+    "<nav><a href=\"#roots\">The roots</a><a href=\"#matrix\">The import matrix</a><a href=\"#against\">Against the direction</a><a href=\"#proofs\">The proof graph</a><a href=\"#map\">The file map</a><a href=\"#faces\">Faces and generated groups</a><a href=\"#pins\">Pinned references</a><a href=\"#audit\">Audit</a></nav>" ++
     "<div class=\"legend\"><span class=\"runtime\">runtime</span><span class=\"laws\">proofs</span><span class=\"tools\">tools</span><span class=\"tests\">batteries</span><span class=\"planned\">planned, not yet a file</span><span class=\"bad\">imports against the declared direction</span></div></header>"
   let roots := "<section id=\"roots\"><h2>The roots and their direction</h2><p class=\"lede\">Each column is a lake root; each box an area at the height the register declares. Inside a column an import may point at the same height or lower; the runtime imports only itself; the proof graph imports the runtime and <code>ProofGraph</code>; the tool roots import the runtime, the proof graph and lower tools; the batteries import everything. A red count on a box is the number of that area's imports that break one of those rules.</p><figure><div class=\"scroll\">" ++ renderStack f ++ "</div><figcaption>Arrows at the top aggregate the import statements between columns. Counts on the boxes are the area with its detail directories; theorems, definitions and inductives are counted from the loaded environment, auxiliaries excluded.</figcaption></figure></section>"
   let matrix := "<section id=\"matrix\"><h2>The import matrix</h2><p class=\"lede\">Rows import columns. A red cell is an import against the direction; a dot is none. The external columns are the packages the tree imports, by first component.</p><div class=\"scroll\">" ++ renderMatrix f ++ "</div></section>"
   let against := "<section id=\"against\"><h2>Against the direction</h2><p class=\"lede\">Every import statement the register does not allow, by file. An accepted row names the document that accepts it; the rest are the organization questions the map exists to surface.</p><div class=\"scroll\">" ++ renderAgainst f ++ "</div></section>"
-  let stack := s!"<section id=\"stack\"><h2>The typed-state stack</h2><p class=\"lede\">The milestone's modules by slice, in measured import order. A box is solid once its file exists and dashed until then. A solid box carries the theorems its module declares, measured from the loaded environment.</p><figure><div class=\"scroll\">" ++ milestoneSvg ++ "</div><figcaption>Presence is a file. The counts come from the loaded environment, not from the register.</figcaption></figure></section>"
+  let stack := "<section id=\"proofs\"><h2>The proof graph</h2><p class=\"lede\">The requirements of the system map, the theorems that state them, the claims' witnesses and the planned goals, derived from the semantics report (<code>make gen-semantics</code>). A node's status is read from its proof, with goals as leaves: proved, modulo the goals it rests on, or a goal. An edge goes from a node to the nodes its proof reaches first. Select a node for its statement, its axioms and what its proof brings in.</p>" ++ proofGraph ++ "</section>"
   let map := "<section id=\"map\"><h2>The file map</h2><p class=\"lede\">Every area by column, top of the column first, with its detail directories indented. Files and lines are the area's own; a tag counts its <code>--run</code> drivers and any module without a built olean.</p>" ++
     renderLeanColumn f .runtime ++ renderLeanColumn f .laws ++ renderLeanColumn f .tools ++ renderLeanColumn f .tests ++
     renderEstates f .ocaml ++ renderEstates f .ts ++ renderEstates f .host ++ renderEstates f .docs ++ "</section>"
