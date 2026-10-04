@@ -30,14 +30,15 @@ This battery ports the model probe's program 1 and its form laws
   add (section 6). The key-value cache holds strings (DB-15), so the program still keeps the
   body as text.
 * The forms and the program are the probe's, unchanged.
-* The error payload carrier landed (decisions row 120, part E1). `HttpError{status, url}` with a
+* The error payload landed (decisions row 120, parts E1 and E2). `HttpError{status, url}` with a
   natural `status` builds as a typed failure and runs to `Err.payload` carrying rc.112's recorded
-  404 error; the printer refuses it by name until E2 prints the class (section 6). The program
-  still fails with the pair, which prints.
+  404 error. It prints as a module that declares its `Data.TaggedError` class and fails with
+  `new HttpError({ … })`, and the module reads back (section 7). The program still fails with
+  the pair, which prints.
 
 **What the language refuses** (section 6): `status: number` (row 121: admission refuses a signed
 field by its path); a `Quote` record in the cache; the forms `retry` and `catchTag` (DI-89, DI-39) and
-`timeout`; the payload's face until E2. The
+`timeout`. The
 retry test compares the status text with `"503"`, where rc.112 reads `status >= 500`. When the
 timeout gives up on attempt 1, the session retires the call and records it
 (`Run.Observation.retired`), where rc.112 aborts the call's `AbortSignal`; the host protocol has
@@ -45,7 +46,7 @@ no retirement edge (R6, parked). The retry loop's cursor annotation keeps the pr
 readable domain (DI-91).
 
 **Waits on:** R10 with DI-89, DI-39 and DI-91 (the forms, with a readable expansion); R3 with
-row 120's face (E2) and row 121 (`status: number`); R7 and row 82 (`Cache` keeps code); R6, parked (the retirement
+row 121 (`status: number`); R7 and row 82 (`Cache` keeps code); R6, parked (the retirement
 notice). The slices of row 204 that move it: error payloads (row 120), and the derived forms
 beside them.
 -/
@@ -367,9 +368,9 @@ def sumPricesModule : Module NativeOp :=
       let again ← Row.call getQuoteRecord (str "EFX")
       succeed (app "add" [field first "price", field again "price"]) }
 
--- The error payload carrier (row 120, part E1): the record is a typed failure. It builds, its
--- run fails with `Err.payload` carrying rc.112's recorded 404 error, and the printer refuses it by
--- name until E2 prints the class (section 7).
+-- The error payload (row 120, parts E1 and E2): the record is a typed failure. It builds, its
+-- run fails with `Err.payload` carrying rc.112's recorded 404 error, and it prints as its class
+-- and reads back (section 7).
 #guard verdict httpErrorModule = "built"
 #guard (built? httpErrorModule).map (fun b => (b.ty.error, b.runSync)) =
   some (.record [("_tag", false, .lit "HttpError"), ("status", false, .nat), ("url", false, .string)],
@@ -415,14 +416,16 @@ def stage : Reach :=
 
 #guard measured = stage
 
-/-- How far the payload part gets (decisions row 120, part E1). -/
+/-- How far the payload part gets (decisions row 120, parts E1 and E2). -/
 def payloadMeasured : List (String × PartReach) :=
   [("HttpError{status, url} as a typed failure", partReach httpErrorModule httpError404)]
 
 /-- The payload part's stage, as `Test/Dogfood/README.md` quotes it: built, run to `Err.payload`
-with rc.112's recorded 404 error, and refused by the printer by name until E2. -/
+with rc.112's recorded 404 error, printed as a module that declares
+`class HttpError extends Data.TaggedError("HttpError")<{ readonly status: number; readonly url: string }>`
+and fails with `new HttpError({ … })`, and read back. -/
 def payloadStage : List (String × PartReach) :=
-  [("HttpError{status, url} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩)]
+  [("HttpError{status, url} as a typed failure", ⟨"built", true, "printed", true⟩)]
 
 #guard payloadMeasured = payloadStage
 

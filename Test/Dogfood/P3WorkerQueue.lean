@@ -31,12 +31,13 @@ program is a different one: the encoding counts closes and finished jobs instead
   2026-09-17, before the probe). Both spellings run to the same observations. The verifier read
   the refusal as a dropped flag, from `Api.readable`'s note in `src/Effect4/Api.lean`, which still
   says so.
-* The error payload carrier landed (decisions row 120, part E1). `JobFailed{id, reason}` builds
-  as a typed failure and runs to `Err.payload`; the printer refuses it by name until E2 prints the
-  class (section 7). The worker still catches the host's pair.
+* The error payload landed (decisions row 120, parts E1 and E2). `JobFailed{id, reason}` builds
+  as a typed failure and runs to `Err.payload`. It prints as a module that declares its
+  `Data.TaggedError` class and fails with `new JobFailed({ … })`, and the module reads back
+  (section 7). The worker still catches the host's pair.
 
 **What the language refuses** (section 6): the log, a `Ref` holding a list (`requestNotSubtype`);
-the payload's face until E2; `Deferred<void>`, since the
+`Deferred<void>`, since the
 native deferred is `Deferred<number, number>`, whose `await` fails with a number (so the pool's
 error column is `nat` where rc.112's is `never`); the forms `forEach` and `catchTag`. A queue has
 no spelling inside a program: DI-11 rules it a composite over `Ref`, `Deferred` and a wait list.
@@ -44,8 +45,8 @@ When the scope interrupts a worker parked on the host's `take`, the session reti
 rc.112's take is in-process.
 
 **Waits on:** R4 with rows 42–43 steps 3–5 (a list cell, `Deferred<void>`, `Ref.modify` with a
-binder); R10 with DI-11 (the queue composite) and DI-89 (`forEach`); R3 with row 120's face
-(E2); row 131 (the log lines interpolate numbers); R11 (release on interruption, the whole
+binder); R10 with DI-11 (the queue composite) and DI-89 (`forEach`); R3 with row 130
+(`catchTag`'s residual over records); row 131 (the log lines interpolate numbers); R11 (release on interruption, the whole
 run). The slices of row 204 that move it: state at any type, then queues.
 -/
 
@@ -283,14 +284,15 @@ def stage : Reach :=
 def jobFailed2 : Val :=
   recordOf ["_tag", "id", "reason"] [.str "JobFailed", .nat 2, .str "bad payload"]
 
-/-- How far the payload part gets (decisions row 120, part E1). -/
+/-- How far the payload part gets (decisions row 120, parts E1 and E2). -/
 def payloadMeasured : List (String × PartReach) :=
   [("JobFailed{id, reason} as a typed failure", partReach jobFailedModule jobFailed2)]
 
 /-- The payload part's stage, as `Test/Dogfood/README.md` quotes it: built, run to `Err.payload`,
-and refused by the printer by name until E2. -/
+printed as a module that declares its `JobFailed` class and fails with `new JobFailed({ … })`, and
+read back. -/
 def payloadStage : List (String × PartReach) :=
-  [("JobFailed{id, reason} as a typed failure", ⟨"built", true, "refused: Err.payload"⟩)]
+  [("JobFailed{id, reason} as a typed failure", ⟨"built", true, "printed", true⟩)]
 
 #guard payloadMeasured = payloadStage
 
