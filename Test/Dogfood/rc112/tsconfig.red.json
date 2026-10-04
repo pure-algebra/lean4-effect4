@@ -1,0 +1,36 @@
+{
+  "//": "Red control: must fail with three errors.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [],
+    "paths": {
+      "effect": [
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/index.d.ts"
+      ],
+      "effect/unstable/*": [
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/unstable/*/index.d.ts"
+      ],
+      "effect/*": [
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/dist/*.d.ts"
+      ],
+      "@effect/sql-sqlite-bun": [
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@effect/sql-sqlite-bun/dist/index.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "red-control.ts"
+  ]
+}
