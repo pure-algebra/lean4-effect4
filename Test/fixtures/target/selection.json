@@ -36,6 +36,8 @@
     "pTagTwoFail",
     "pOptionSome",
     "pOptionNone",
+    "pFailPayload",
+    "pTagPayload",
     "pInterruptEscape"
   ],
   "handles": {

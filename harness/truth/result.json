@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 36 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
+  "summary": "PASS: 38 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -5897,6 +5897,129 @@
           "0:Success",
           "0:OnSuccess",
           "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pFailPayload",
+      "leanExit": "fail [{\"fail\":{\"payload\":{\"id\":9,\"_tag\":\"NotFound\"}}}]",
+      "hostExit": "fail [{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one",
+        "same failure reasons and payloads"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "fail": {
+                  "payload": {
+                    "_tag": "NotFound",
+                    "id": 9
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 fail"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"failure\":{\"reasons\":[{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]}}"
+        ],
+        "frames": [
+          "0:Failure"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "failure": {
+            "reasons": [
+              {
+                "fail": {
+                  "payload": {
+                    "_tag": "NotFound",
+                    "id": 9
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "parked": false,
+        "schedule": [],
+        "events": [],
+        "frames": [],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pTagPayload",
+      "leanExit": "success 1",
+      "hostExit": "success 1",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": 1
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":1}"
+        ],
+        "frames": [
+          "0:OnFailure",
+          "0:Failure",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": 1
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":1}"
+        ],
+        "frames": [
+          "0:OnFailure",
+          "0:Failure",
           "0:Success"
         ],
         "late": [],

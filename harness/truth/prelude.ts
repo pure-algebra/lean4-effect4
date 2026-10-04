@@ -253,12 +253,19 @@ const describeRaw = (value: unknown): string => {
  *     it (`reason.cause.message`, else `reason.message`); the outer `_tag` is implied by the
  *     row and is not in the pair (ruling G1). What is lost: the outer tag, `operation`,
  *     `isRetryable`, and the driver error's `code`;
- *  3. a flat tagged error with a string `message` (`Data.TaggedError`: `KeyValueStoreError`,
- *     `vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts:183-195`) — its
- *     own tag and message. What is lost: `method`, `key`, `cause`;
+ *  3. a flat tagged error with a string `message` and no other data — its own tag and
+ *     message. Its data is what rc.112 writes for it (`taggedData`), so a class's `message`
+ *     counts whether or not the instance holds it enumerable. A message-only class is the pair
+ *     (decisions row 120, ruling (c));
  *  4. anything else — a plain `Error` with no `_tag`, a non-`Error` value, a tagged value
  *     whose message is not a string — has **no pair**. A plain `Error` in particular has no
- *     tag and one must never be invented.
+ *     tag and one must never be invented. Since decisions row 120 (part E2) a flat tagged error
+ *     with data beyond `message` is here too: it is a payload class (ruling (b)), and dropping
+ *     its fields would give one class two spellings. A printed program's own payload is wired
+ *     whole (`payloadOf`); a host row that fails with one (`KeyValueStoreError`, whose
+ *     `method` and `key` go beyond `message`,
+ *     `vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts:182-195`) has no
+ *     pair, so the adapter makes it a defect until a host may answer a payload (R6, parked).
  *
  * A defect (`Die`) and an interruption never reach here: the projection is applied with
  * `Effect.mapError`, which rewrites only the first `Fail` reason of a cause and leaves
@@ -278,7 +285,61 @@ export const pairOf = (e: unknown): Pair | null => {
     return typeof driver === "string" ? [inner["_tag"] as string, driver] : null
   }
   const message = record["message"]
-  return typeof message === "string" ? [record["_tag"] as string, message] : null
+  if (typeof message !== "string") return null
+  const data = taggedData(e)
+  return data !== null && Object.keys(data).every((key) => key === "_tag" || key === "message")
+    ? [record["_tag"] as string, message]
+    : null
+}
+
+// ---- the payload classes (decisions row 120, part E2) ---------------------------------------
+//
+// A printed program fails with `new Tag({ … })`, an instance of the module's
+// `Data.TaggedError` class. The Lean face writes the payload through the program's error
+// column (`Truth.lean` `errJsonAt`), as rc.112 writes the instance; the recorder writes the
+// instance's own JSON image. Both sort every object's keys by their UTF-8 bytes.
+
+/** The order of two keys by code point, which is the order of their UTF-8 bytes and of a
+ * `Lean.Json` object's keys, which the Lean face writes. (A string's own `<` compares UTF-16
+ * code units, which differs above U+FFFF.) */
+const byUtf8 = (a: string, b: string): number => {
+  const x = Array.from(a), y = Array.from(b)
+  for (let i = 0; i < x.length && i < y.length; i++) {
+    const d = x[i]!.codePointAt(0)! - y[i]!.codePointAt(0)!
+    if (d !== 0) return d
+  }
+  return x.length - y.length
+}
+
+/** A JSON value with every object's keys in UTF-8 byte order, at every depth. */
+export const canonicalJson = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalJson)
+  if (value === null || typeof value !== "object") return value
+  const record = value as Record<string, unknown>
+  return Object.fromEntries(Object.keys(record).sort(byUtf8).map((key) => [key, canonicalJson(record[key])]))
+}
+
+/** The data a tagged value holds, as rc.112 writes it: its JSON image. A `Data.TaggedError`
+ * instance writes `{ ...plainArgs, ...this }` (`Data.Error`'s `toJSON`,
+ * `vendor/effect-4.0.0-rc.112/src/internal/core.ts:602-604`), so its `message` and a `cause`
+ * appear although the instance holds them unenumerable (`ErrorOptions`, tested in
+ * `records.test.ts`). `null` when the value has no JSON object image. */
+export const taggedData = (e: object): Record<string, unknown> | null => {
+  try {
+    const image: unknown = JSON.parse(JSON.stringify(e))
+    return image !== null && typeof image === "object" && !Array.isArray(image) ? image as Record<string, unknown> : null
+  } catch {
+    return null
+  }
+}
+
+/** A payload class instance's data (decisions row 120, ruling (b)): a tagged `Error` that
+ * `pairOf` does not project, as its JSON image with its keys in UTF-8 byte order; `null` for
+ * anything else. */
+export const payloadOf = (e: unknown): unknown => {
+  if (!(e instanceof Error) || typeof (e as { readonly _tag?: unknown })._tag !== "string" || pairOf(e) !== null) return null
+  const data = taggedData(e)
+  return data === null ? null : canonicalJson(data)
 }
 
 /** The projection at the adapter: `pairOf` where it answers, a defect where it does not.
@@ -338,8 +399,9 @@ export const Sql = {
  * method rows are the store's own; `get`'s `string | undefined` crosses as the row's
  * `.option string`, and `set`/`remove` answer `void` where the store answers its `Map`'s
  * results (`{}`, `true`). Each of the four carries the pair as its error column, so each
- * projects (`toPair`); the memory store itself never fails, and the projection is exercised
- * on a stubbed `KeyValueStoreError` in the seat's probes. */
+ * projects (`toPair`); the memory store itself never fails. A `KeyValueStoreError` holds
+ * `method` and `key` beyond its `message`, so since decisions row 120 (part E2) it has no
+ * pair and the adapter makes it a defect (`pairOf`, case 4; tested in `records.test.ts`). */
 export class KvHandle {
   readonly ["~effect4/ExternalHandle"] = "KeyValueStore.KeyValueStore"
   constructor(readonly store: KeyValueStore.KeyValueStore) {}

@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
-import { Effect, Option } from "effect"
+import { Data, Effect, Exit, Option } from "effect"
+import { KeyValueStore } from "effect/unstable/persistence"
+import { canonicalJson, pairOf, payloadOf, toPair, UnsupportedHostFailure } from "./prelude.ts"
 import { caseTagR, recordRequired, recordOptional, recordSet, recordValue } from "./records.ts"
 
 describe("record target helpers", () => {
@@ -91,4 +93,49 @@ test("record overwrite copies before the replacement and each impossible branch 
     caseTagR(input, "Absent", hit => Effect.succeed(recordRequired("extra")(recordSet("extra")(recordRequired("child")(hit))(1))), miss => Effect.succeed(miss.id))
   ]
   for (const program of programs) expect(await Effect.runPromise(program)).toBe(7)
+})
+
+
+// Decisions row 120, part E2: the classes a printed module declares, as rc.112 builds them.
+class NotFound extends Data.TaggedError("NotFound")<{ readonly id: number }> {}
+class Wrapped extends Data.TaggedError("Wrapped")<{ readonly cause: string }> {}
+class Coded extends Data.TaggedError("Coded")<{ readonly message: string; readonly code: number }> {}
+class MessageOnly extends Data.TaggedError("MessageOnly")<{ readonly message: string }> {}
+
+describe("payload classes: one image, never a pair (decisions row 120, part E2)", () => {
+  test("a class with data beyond its message is a payload, wired whole with sorted keys", () => {
+    expect(pairOf(new NotFound({ id: 9 }))).toBeNull()
+    expect(JSON.stringify(payloadOf(new NotFound({ id: 9 })))).toBe('{"_tag":"NotFound","id":9}')
+    expect(JSON.stringify(payloadOf(new Coded({ message: "m", code: 1 })))).toBe('{"_tag":"Coded","code":1,"message":"m"}')
+  })
+
+  test("a cause the instance holds unenumerable is still its data", () => {
+    const disk = new Wrapped({ cause: "disk" })
+    expect(Object.keys(disk)).toEqual(["_tag"])
+    expect(JSON.stringify(payloadOf(disk))).toBe('{"_tag":"Wrapped","cause":"disk"}')
+    const empty = new Wrapped({ cause: "" })
+    expect(Object.keys(empty)).toEqual(["cause", "_tag"])
+    expect(JSON.stringify(payloadOf(empty))).toBe('{"_tag":"Wrapped","cause":""}')
+  })
+
+  test("a message-only class stays the pair (ruling (c)); a pair and a plain value are no payload", () => {
+    expect(pairOf(new MessageOnly({ message: "m" }))).toEqual(["MessageOnly", "m"])
+    expect(payloadOf(new MessageOnly({ message: "m" }))).toBeNull()
+    expect(payloadOf(["SqlError", "boom"])).toBeNull()
+    expect(payloadOf({ _tag: "NotFound", id: 9 })).toBeNull()
+  })
+
+  test("a host failure with data beyond its message is a defect at the adapter, not a pair", async () => {
+    const error = new KeyValueStore.KeyValueStoreError({ message: "m", method: "get", key: "k" })
+    expect(pairOf(error)).toBeNull()
+    expect(() => toPair(error)).toThrow(UnsupportedHostFailure)
+    const exit = await Effect.runPromiseExit(Effect.mapError(Effect.fail(error), toPair))
+    expect(Exit.isFailure(exit) && exit.cause.reasons.map((reason) => reason._tag)).toEqual(["Die"])
+  })
+
+  test("keys sort by code point, which is UTF-8 byte order, not UTF-16 order", () => {
+    const sorted = canonicalJson({ "😀": 3, "\uffff": 4, "é": 1, z: 2, _tag: "x", nested: { b: 1, a: [{ d: 1, c: 2 }] } })
+    expect(Object.keys(sorted as object)).toEqual(["_tag", "nested", "z", "é", "\uffff", "😀"])
+    expect(JSON.stringify((sorted as { nested: unknown }).nested)).toBe('{"a":[{"c":2,"d":1}],"b":1}')
+  })
 })

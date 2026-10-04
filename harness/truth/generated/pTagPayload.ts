@@ -2,4 +2,5 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv, recordValue, recordOptional, recordSet } from "../prelude.ts"
-export const main: Effect.Effect<void, never, never> = Effect.scoped(Effect.flatMap(Scope.make("parallel"), (a0) => Effect.flatMap(Effect.exit(Effect.succeed(1)), (a1) => Scope.close(a0, a1))))
+export class NotFound extends Data.TaggedError("NotFound")<{ readonly id: number }> {}
+export const main: Effect.Effect<number, NotFound, never> = Effect.catchIf(Effect.fail(new NotFound({ id: 9 })), (a0) => tagIs("NotFound", a0), (a0) => Effect.succeed(1), undefined)
