@@ -2,22 +2,21 @@ import Effect4.Laws.Codegen.ReadLeaf
 import Effect4.Schema.Bridge
 import Effect4.Schema.OfShape
 import Effect4.Codegen.Read
+import Effect4.Laws.Codegen.ReadLeaf
 
 /-!
-# Dialect contract — the store's shapes against the program's types, through the schema
+# Store shapes and program types through Schema
 
-Two descriptions of data land in one schema `Representation`: the store's `Shape`
-(`Effect4.Store.render`) and the program's `Ty` (`Bridge.schema`, read back by `Bridge.ofSchema`).
-No theorem relates them. This battery pins what the composite `Bridge.ofSchema ∘ Store.render`
-answers today on every shape former, so that an edit to either rendering is a red row and not a
-silent change (scout C, 2026-09-17, §2.2a; the findings ledger, C-1).
+`Store.render` and `Bridge.schema` produce the same Schema representation sort.
+This finite battery checks `Bridge.ofSchema ∘ Store.render` on each store shape constructor.
+It establishes no general agreement theorem between the two descriptions.
 
-Three rows DISAGREE with what the former means, and are pinned as they are, not blessed:
-`unit` and `option` are lost; `nat` reads back as `int`, the reserved type admission refuses as
-uninhabited. `bytes` and `digest` are refused since decisions row 6 landed (2026-09-18): their
-pattern check is one `Ty` cannot represent, and `ofSchema` no longer widens it to `string`.
-`anyRef`, a named reference, a sum and a structure have no `Ty` at all, which is the gap a
-nominal `Ty.data` would close (ledger, C-P10).
+The unit and option faces still refuse.
+The natural-number shape reads as `Ty.int`; the program admission rule still refuses that type.
+The byte and digest faces retain pattern checks that `Ty` does not represent, so they refuse.
+Structures read as structural records, retaining field names without nominal identity.
+Unrestricted references, named references, and sums still refuse.
+These results concern Schema reading, not value membership or program admission.
 -/
 
 set_option autoImplicit false
@@ -43,11 +42,12 @@ def shapeTy (s : Shape) : Option Ty := Bridge.ofSchema (Effect4.Store.render s)
 #guard shapeTy .bytes = none
 #guard shapeTy .digest = none
 
--- no program type exists for these today
+-- These shape faces remain outside the Schema reader profile.
 #guard shapeTy .anyRef = none
 #guard shapeTy (.named "Tree") = none
 #guard shapeTy (.sum "Tree" [("leaf", 0, [("value", .nat)])]) = none
-#guard shapeTy (.struct "P" [("x", .nat)]) = none
+-- A structure reads as a record; the natural-number field retains the existing int face.
+#guard shapeTy (.struct "P" [("x", .nat)]) = some (.record [("x", false, .int)])
 
 /-! ## A requirement's key in an effect document (decisions row 8)
 

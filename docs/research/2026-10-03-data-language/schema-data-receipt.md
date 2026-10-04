@@ -1,11 +1,13 @@
 # Schema data bridge receipt
 
 The Schema laws pass with their existing statements and premises.
-The coordinator must refresh case evidence and repair one stale Schema dialect control before integration closes.
+The Schema dialect control also passes after its expected record result and reader-law import change.
+The coordinator retains case evidence and producer refreshes during integration.
 The JSON codec work remains separate.
 
 Base: `e7ef57c3e7e5d5c2a7862a1f2fba4f0cd0b5074b` on `codex/record-operations`.
-The source commit records the head for this receipt.
+Source head: `f5e54c31`.
+The dialect follow-up uses the checked reader-law dependency `e3f987a4`, copied here as `21057864`.
 
 ## Changes
 
@@ -68,11 +70,27 @@ LEAN_NUM_THREADS=3 lake build Test.Schema.DataBridge Test.Program.TyTables Effec
 ```
 
 `Test.Schema.DataBridge`, `Test.Program.TyTables`, `Effect4.Api`, and `Test.Codegen.SchemaGenerationContract` pass.
-The command fails only at `Test.Schema.DialectContract`.
-Its former struct-refusal control needs the successful record result.
-Its service-key proof needs the earlier reader-law import relocation.
-The coordinator receives both exact diagnostics; this file remains outside the current edit fence.
-Log: `/private/tmp/effect4-schema-api.log`.
+That initial command fails only at `Test.Schema.DialectContract`.
+The coordinator extends this slice to its stale control and reader-law import.
+The structure control now expects a record with the existing integer field face.
+The fixture imports the earlier checked reader-law relocation.
+Initial log: `/private/tmp/effect4-schema-api.log`.
+
+```sh
+LEAN_NUM_THREADS=3 lake build Test.Schema.DialectContract
+LEAN_NUM_THREADS=3 lake env lean /private/tmp/effect4-schema-dialect-axioms.lean
+```
+
+The repaired fixture passes, 269 jobs.
+The scratch file imports the fixture and queries these existing declarations:
+
+```lean
+#print axioms Test.Schema.DialectContract.requirementKey_eq_keyText
+#print axioms Test.Schema.DialectContract.requirementKey_injective
+```
+
+Their outputs are `[propext]` and `[propext, Quot.sound]`.
+Logs: `/private/tmp/effect4-schema-dialect-final.log` and `/private/tmp/effect4-schema-dialect-axioms.log`.
 
 `Test.Schema.DataBridge` contains 40 finite guards.
 Its 13 axiom queries and the table agreement query remain within `[propext, Quot.sound]`.
@@ -81,7 +99,7 @@ The writer equations and table agreement use `[propext]`.
 No trust exception is added.
 
 `git diff --check` passes for the changed tracked source and fixture paths.
-The brief passes `python3 scripts/check-language.py --strict`.
+The brief and this receipt pass `python3 scripts/check-language.py --strict`.
 The coordinator owns case-policy changes, root imports, producer refreshes, and any final sweep.
 
 ## Files
@@ -92,6 +110,7 @@ The coordinator owns case-policy changes, root imports, producer refreshes, and 
 - `Test/Schema/DataBridge.lean`
 - `Test/Program/TyTables.lean`
 - `Test/Program/TyWave.lean`
+- `Test/Schema/DialectContract.lean`, the struct control, its scope wording, and the reader-law import
 - `docs/research/2026-10-03-data-language/schema-data-brief.md`
 - This receipt
 

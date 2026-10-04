@@ -63,6 +63,7 @@ The public normalized two-item example does not extend the raw theorem domain.
 - `Test/Schema/DataBridge.lean`
 - `Test/Program/TyTables.lean`
 - `Test/Program/TyWave.lean`
+- `Test/Schema/DialectContract.lean`, the struct control and reader-law import only
 - `Test/Codegen/SchemaGenerationContract.lean`, only if a direct consumer needs repair
 - This brief and `docs/research/2026-10-03-data-language/schema-data-receipt.md`
 
