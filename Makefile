@@ -64,6 +64,10 @@ build: ## lake build: the core, the proof graph, the batteries and the axiom gat
 build-profile: ## where the last `make build` spent its time: the critical path and the slowest modules (.lake/gen/build-profile.md)
 	@$(PY) scripts/build-profile.py $(GEN)/build.log
 
+profile-module: ## FILE=<src/…/X.lean>: re-elaborate one built module with the profiler and aesop's statistics; summary here, raw logs in .lake/gen/profile/
+	@test -n "$(FILE)" || { echo "usage: make profile-module FILE=src/Effect4/Laws/…/X.lean"; exit 2; }
+	$(PY) scripts/profile-module.py $(FILE)
+
 build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen)
 	$(LAKE) build Tools
 	$(LAKE) build OCaml5
