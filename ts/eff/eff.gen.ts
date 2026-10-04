@@ -26,7 +26,7 @@
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
-//   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string)
+//   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string) recordTag(tag: string)
 //   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
@@ -241,11 +241,13 @@ export type Decision =
   | { readonly _tag: "bool" }
   | { readonly _tag: "option" }
   | { readonly _tag: "tag"; readonly tag: string }
+  | { readonly _tag: "recordTag"; readonly tag: string }
 
 export const Decision = Schema.TaggedUnion({
   bool: {},
   option: {},
   tag: { tag: Schema.String },
+  recordTag: { tag: Schema.String },
 })
 
 export type Eff =

@@ -18,7 +18,7 @@ import { parseSync } from "oxc-parser"
 import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
-import { targetType, legacyType, targetIdentifier, recordKeyForm, quoteType } from "./target-types.ts"
+import { targetType, legacyType, recordKeyForm, quoteType } from "./target-types.ts"
 import { heads, rows, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
@@ -756,11 +756,6 @@ const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
 /** Canonical records and field operations; undefined means this is another term form. */
 const readRecordTerm = (n: number, x: Expr): Read<Term> | undefined => {
   const malformed = (what: string) => refuse({ _tag: "shape", what: `record ${what}` })
-  if (x._tag === "member" || x._tag === "index") {
-    const name = x._tag === "member" ? x.name : x.key._tag === "str" ? x.key.value : undefined
-    if (name === undefined || targetIdentifier(name) !== (x._tag === "member")) return malformed("field spelling")
-    return Result.map(readTerm(n, x.base), (target): Term => ({ _tag: "field", mode: "required", target, name }))
-  }
   if (x._tag !== "call") return undefined
   const fn = x.fn
   if (fn._tag === "generic" && fn.fn._tag === "ident" && ["recordValue", "recordRaw"].includes(fn.fn.name)) {
@@ -797,23 +792,23 @@ const readRecordTerm = (n: number, x: Expr): Read<Term> | undefined => {
     }
     return Result.map(readTerms(n, values), (values): Term => ({ _tag: "record", fields: declared.fields, presentNames: names, values }))
   }
+  const update = fn._tag === "call" && fn.fn._tag === "call" ? fn.fn : undefined
+  if (update?.fn._tag === "generic" && update.fn.fn._tag === "ident" && update.fn.fn.name === "recordSet") {
+    if (fn._tag !== "call" || x.args.length !== 1 || fn.args.length !== 1 || update.args.length !== 1 ||
+        update.fn.typeArgs.length !== 1 || update.args[0]?._tag !== "str" ||
+        update.fn.typeArgs[0] !== quoteType(update.args[0].value)) return malformed("update key or arity")
+    const name = update.args[0].value
+    const target = readTerm(n, fn.args[0]!)
+    if (failed(target)) return again(target)
+    return Result.map(readTerm(n, x.args[0]!), (value): Term => ({ _tag: "recordSet", target: target.success, name, value }))
+  }
   if (fn._tag !== "call" || fn.fn._tag !== "generic" || fn.fn.fn._tag !== "ident") return undefined
   const head = fn.fn.fn.name
-  if (head !== "recordOptional" && head !== "recordSet") return undefined
-  if (fn.fn.typeArgs.length !== 1 || x.args.length !== 1) return malformed("curried arity")
-  if (head === "recordOptional") {
-    if (fn.args.length !== 1 || fn.args[0]?._tag !== "str" || fn.fn.typeArgs[0] !== quoteType(fn.args[0].value)) return malformed("optional key")
-    const name = fn.args[0].value
-    return Result.map(readTerm(n, x.args[0]!), (target): Term => ({ _tag: "field", mode: "optional", target, name }))
-  }
-  const object = x.args[0]!
-  if (fn.args.length !== 0 || object._tag !== "objectWith" || object.entries.length !== 2) return malformed("update frame")
-  const base = object.entries[0]!, replacement = object.entries[1]!
-  if (base._tag !== "spread" || replacement._tag !== "property" || object.keys !== recordKeyForm([replacement.name]) ||
-      fn.fn.typeArgs[0] !== quoteType(replacement.name)) return malformed("update order or key")
-  const target = readTerm(n, base.value)
-  if (failed(target)) return again(target)
-  return Result.map(readTerm(n, replacement.value), (value): Term => ({ _tag: "recordSet", target: target.success, name: replacement.name, value }))
+  if (head !== "recordRequired" && head !== "recordOptional") return undefined
+  if (fn.fn.typeArgs.length !== 1 || x.args.length !== 1 || fn.args.length !== 1 ||
+      fn.args[0]?._tag !== "str" || fn.fn.typeArgs[0] !== quoteType(fn.args[0].value)) return malformed("field key or arity")
+  const name = fn.args[0].value
+  return Result.map(readTerm(n, x.args[0]!), (target): Term => ({ _tag: "field", mode: head === "recordRequired" ? "required" : "optional", target, name }))
 }
 
 export const readTerm = (n: number, x: Expr): Read<Term> => {
@@ -1301,6 +1296,7 @@ const holds = (p: ArgPat, v: unknown): boolean => {
     case "decisionBool": return (v as { _tag?: string } | null)?._tag === "bool"
     case "decisionOption": return (v as { _tag?: string } | null)?._tag === "option"
     case "decisionTag": return (v as { _tag?: string } | null)?._tag === "tag"
+    case "decisionRecordTag": return (v as { _tag?: string } | null)?._tag === "recordTag"
     case "optTermNone": case "optTyNone": return v === null
     case "optTermSome": case "optTySome": return v !== null && v !== undefined
     case "daemon": return (v as { daemon?: boolean } | null)?.daemon === p.value
@@ -1339,6 +1335,7 @@ const readLeaf = (d: number, daemon: boolean, sort: ArgSort, a: Arg): Read<unkno
   if (a._tag === "expr") {
     switch (sort) {
       case "term": case "optTerm": return readTerm(d, a.e)
+      case "decision": return a.e._tag === "str" ? ok({ _tag: "recordTag", tag: a.e.value }) : refuse({ _tag: "shape", what: "record tag" })
       case "cause": return readCause(d, a.e)
       case "lit": return readLiteral(a.e)
       case "key": return readKey(a.e)

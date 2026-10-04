@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Effect, Option } from "effect"
-import { caseTagR, recordOptional, recordSet, recordValue } from "./records.ts"
+import { caseTagR, recordRequired, recordOptional, recordSet, recordValue } from "./records.ts"
 
 describe("record target helpers", () => {
   test("absence, present undefined, and nested none remain distinct", () => {
@@ -27,14 +27,14 @@ describe("record target helpers", () => {
     const original = { id: 1, nickname: "old" }
     const target = () => { calls.push("target"); return original }
     const replacement = () => { calls.push("replacement"); return 7 }
-    const result = recordSet<"nickname">()({ ...target(), nickname: replacement() })
+    const result = recordSet<"nickname">("nickname")(target())(replacement())
     expect(calls).toEqual(["target", "replacement"])
     expect(result).toEqual({ id: 1, nickname: 7 })
     expect(original).toEqual({ id: 1, nickname: "old" })
   })
 
   test("computed prototype updates create an own value without changing the prototype", () => {
-    const result = recordSet<"__proto__">()({ ...{ x: 1 }, ["__proto__"]: { x: 2 } })
+    const result = recordSet<"__proto__">("__proto__")({ x: 1 })({ x: 2 })
     expect(Object.getPrototypeOf(result)).toBe(Object.prototype)
     expect(Object.hasOwn(result, "__proto__")).toBe(true)
     expect(result["__proto__"]).toEqual({ x: 2 })
@@ -71,4 +71,24 @@ describe("whole-record tag selection", () => {
     expect(await Effect.runPromise(caseTagR(value, "__proto__",
       record => Effect.succeed(record["__proto__"]), () => Effect.succeed(0)))).toBe(9)
   })
+})
+
+
+test("record overwrite copies before the replacement and each impossible branch stays dormant", async () => {
+  const calls: string[] = []
+  const original = { get old() { calls.push("copy"); return 1 } }
+  const target = () => { calls.push("target"); return original }
+  const replacement = () => { calls.push("replacement"); return 2 }
+  const result = recordSet("__proto__")(target())(replacement())
+  expect(calls).toEqual(["target", "copy", "replacement"])
+  expect(Object.hasOwn(result, "__proto__")).toBe(true)
+  expect(Object.getPrototypeOf(result)).toBe(Object.prototype)
+  const input = { _tag: "Found" as const, id: 7 }
+  const programs: readonly Effect.Effect<number>[] = [
+    caseTagR(input, "Absent", hit => Effect.succeed(recordRequired("id")(hit)), miss => Effect.succeed(miss.id)),
+    caseTagR(input, "Absent", hit => Effect.succeed(recordOptional("id")(hit)), miss => Effect.succeed(miss.id)),
+    caseTagR(input, "Absent", hit => Effect.succeed(recordSet("id")(hit)(8)), miss => Effect.succeed(miss.id)),
+    caseTagR(input, "Absent", hit => Effect.succeed(recordRequired("extra")(recordSet("extra")(recordRequired("child")(hit))(1))), miss => Effect.succeed(miss.id))
+  ]
+  for (const program of programs) expect(await Effect.runPromise(program)).toBe(7)
 })

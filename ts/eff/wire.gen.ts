@@ -318,6 +318,7 @@ const writeDecision = (w: Writer, v: Decision): void => {
     case "bool": return w.ctor(0, [])
     case "option": return w.ctor(1, [])
     case "tag": return w.ctor(2, [() => w.str(v.tag)])
+    case "recordTag": return w.ctor(3, [() => w.str(v.tag)])
     default: throw new TypeError("wire Decision constructor")
   }
 }
@@ -514,5 +515,5 @@ export const typeMetadataConstructors: ReadonlyArray<TypeMetadataConstructor> = 
 export const metadataFrameTags = {"nat":2,"bool":1,"string":3,"list":4,"pair":5,"ctor":10} as const
 export const typeLeafEdges: ReadonlyArray<readonly [string, string]> = [["lit","string"],["nat","int"],["int","number"],["undefined","unit"]]
 export const targetReservedIdentifiers: ReadonlyArray<string> = ["await","break","case","catch","class","const","continue","debugger","default","delete","do","else","enum","export","extends","false","finally","for","function","if","import","in","instanceof","let","new","null","return","super","switch","this","throw","true","try","typeof","var","void","while","with","yield","interface","implements","package","private","protected","public","static"]
-export const recordHelperNames: ReadonlyArray<string> = ["recordValue","recordRaw","recordOptional","recordSet"]
+export const recordHelperNames: ReadonlyArray<string> = ["recordValue","recordRaw","recordRequired","recordOptional","recordSet"]
 export const typeVariances: Readonly<Record<string, ReadonlyArray<string>>> = {"Ref.Ref":["inv"],"Deferred.Deferred":["inv","inv"],"Fiber.Fiber":["co","co"],"Cause.Cause":["co"],"Cause.Reason":["co"],"Cause.Fail":["co"],"Cause.Done":["inv"],"Exit.Exit":["co","co"],"Exit.Success":["co","co"],"Exit.Failure":["co","co"],"Effect.Effect":["co","co","co"],"Effect.EffectUnify":["inv"],"Effect.Variance":["inv","inv","inv"],"Effect.Success":["inv"],"Effect.Error":["inv"],"Effect.Services":["inv"],"Effect.EffectIterator":["inv"],"Effect.TagsWithReason":["inv"],"Context.Key":["co","co"],"Context.Service":["inv","inv"],"Context.ServiceClass":["inv","inv","inv"],"Context.Reference":["inv"],"Context.Context":["contra"],"Layer.Layer":["contra","co","co"],"Layer.LayerUnify":["inv"],"Layer.Variance":["contra","co","co"],"Layer.Services":["inv"],"Layer.Error":["inv"],"Layer.Success":["inv"],"Layer.PartialEffectful":["inv"],"Queue.Enqueue":["contra","contra"],"Queue.Dequeue":["co","co"],"Queue.Queue":["inv","inv"],"PubSub.PubSub":["inv"],"PubSub.Subscription":["co"],"Option.Option":["co"],"Option.None":["co"],"Option.OptionIterator":["inv"],"Option.Some":["co"],"Option.OptionUnify":["inv"]}

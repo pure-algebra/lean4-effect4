@@ -145,6 +145,7 @@ export const decisionJson = (v: Decision): Json => {
     case "bool": return ["bool"]
     case "option": return ["option"]
     case "tag": return ["tag", v.tag]
+    case "recordTag": return ["recordTag", v.tag]
   }
 }
 

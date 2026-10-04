@@ -44,7 +44,7 @@ import { SqliteClient } from "@effect/sql-sqlite-bun"
 // runner's import header and `select-controls.ts` keep importing them from `./prelude.ts`.
 
 export * from "./prelude-atoms.gen.ts"
-export { recordValue, recordOptional, recordSet, caseTagR } from "./records.ts"
+export { recordValue, recordRequired, recordOptional, recordSet, caseTagR } from "./records.ts"
 import * as Atoms from "./prelude-atoms.gen.ts"
 
 // ---- `select`'s printed heads (`Codegen/Print.lean`, `Head.optionCase`/`Head.caseTag`) ----

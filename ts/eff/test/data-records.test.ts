@@ -54,16 +54,16 @@ describe("named record term source reading", () => {
   })
   test("required access, optional access and overwrite remain distinct", () => {
     const record = term(constructor)
-    expect(term(`${constructor}.id`)).toEqual({ _tag: "field", mode: "required", target: record, name: "id" })
+    expect(term(`recordRequired<"id">("id")(${constructor})`)).toEqual({ _tag: "field", mode: "required", target: record, name: "id" })
     expect(term(`recordOptional<"nickname">("nickname")(${constructor})`)).toEqual({ _tag: "field", mode: "optional", target: record, name: "nickname" })
-    expect(term(`recordSet<"nickname">()({ ...${constructor}, nickname: "Ada" })`)).toEqual({ _tag: "recordSet", target: record, name: "nickname", value: { _tag: "lit", value: { _tag: "str", value: "Ada" } } })
+    expect(term(`recordSet<"nickname">("nickname")(${constructor})("Ada")`)).toEqual({ _tag: "recordSet", target: record, name: "nickname", value: { _tag: "lit", value: { _tag: "str", value: "Ada" } } })
   })
-  test("computed prototype keys and bracket reads retain field names", () => {
+  test("computed prototype keys and explicit reads retain field names", () => {
     const made = `recordValue<${special.annotation}>(${special.metadata}, { ["__proto__"]: undefined })`
     const record = term(made)
     expect(record._tag === "record" && record.presentNames).toEqual(["__proto__"])
-    expect(term(`${made}["a-b"]`)).toEqual({ _tag: "field", mode: "required", target: record, name: "a-b" })
-    expect(term(`recordSet<"__proto__">()({ ...${constructor}, ["__proto__"]: 7 })`)._tag).toBe("recordSet")
+    expect(term(`recordRequired<"a-b">("a-b")(${made})`)).toEqual({ _tag: "field", mode: "required", target: record, name: "a-b" })
+    expect(term(`recordSet<"__proto__">("__proto__")(${constructor})(7)`)._tag).toBe("recordSet")
   })
   test("raw fallback is readable only when the canonical writer requires it", () => {
     expect(term(`recordRaw<unknown>(${person.metadata}, ["id"], [])`)._tag).toBe("record")
@@ -76,6 +76,11 @@ describe("named record term source reading", () => {
       `recordValue<${person.annotation}>(${person.metadata}, { ...${constructor} })`,
       `recordValue<${special.annotation}>(${special.metadata}, { "__proto__": undefined })`,
       `${constructor}["id"]`,
+      `${constructor}.id`,
+      `recordRequired<"nickname">("id")(${constructor})`,
+      `recordSet<"nickname">("id")(${constructor})(7)`,
+      `recordSet<"id">("id")(${constructor}, 1)(7)`,
+      `recordSet<"id">("id")(${constructor})(7, 8)`,
       `recordOptional<"id">("nickname")(${constructor})`,
       `recordSet<"id">()({ id: 1, ...${constructor} })`,
       `recordSet<"id">()({ ...${constructor}, id: 1, nickname: "Ada" })`,
@@ -83,9 +88,9 @@ describe("named record term source reading", () => {
     ]) refused(source)
   })
   test("both printed-source walks reconstruct the same record terms", () => {
-    for (const value of [constructor, `${constructor}.id`,
+    for (const value of [constructor, `recordRequired<"id">("id")(${constructor})`,
       `recordOptional<"nickname">("nickname")(${constructor})`,
-      `recordSet<"nickname">()({ ...${constructor}, nickname: "Ada" })`,
+      `recordSet<"nickname">("nickname")(${constructor})("Ada")`,
       `recordRaw<unknown>(${person.metadata}, ["id"], [])`]) {
       const source = `export const program = Effect.succeed(${value})`
       const expected = { _tag: "succeed" as const, value: term(value) }

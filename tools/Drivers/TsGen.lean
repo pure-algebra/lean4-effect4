@@ -992,9 +992,11 @@ def argPatJs : ArgPat → Except String String
   | .is (.decision .bool) => .ok (tagged "decisionBool" [])
   | .is (.decision .option) => .ok (tagged "decisionOption" [])
   | .is (.decision (.tag _)) => .error "a fixed tag decision (the tag is a hole: use `decisionTag`)"
+  | .is (.decision (.recordTag _)) => .error "a fixed record tag decision (use `decisionRecordTag`)"
   | .is .noTerm => .ok (tagged "optTermNone" [])
   | .is .noTy => .ok (tagged "optTyNone" [])
   | .decisionTag => .ok (tagged "decisionTag" [])
+  | .decisionRecordTag => .ok (tagged "decisionRecordTag" [])
   | .someTerm => .ok (tagged "optTermSome" [])
   | .someTy => .ok (tagged "optTySome" [])
   | .daemon b => .ok (tagged "daemon" [("value", toString b)])
@@ -1075,7 +1077,7 @@ def templateTypes : String :=
   "  | { readonly _tag: \"term\"; readonly value: unknown }\n" ++
   "  | { readonly _tag: \"bool\" | \"daemon\"; readonly value: boolean }\n" ++
   "  | { readonly _tag: \"mode\"; readonly value: \"joinEffect\" | \"awaitValue\" }\n" ++
-  "  | { readonly _tag: \"decisionBool\" | \"decisionOption\" | \"decisionTag\" | \"optTermNone\" | \"optTermSome\" | \"optTyNone\" | \"optTySome\" }\n" ++
+  "  | { readonly _tag: \"decisionBool\" | \"decisionOption\" | \"decisionTag\" | \"decisionRecordTag\" | \"optTermNone\" | \"optTermSome\" | \"optTyNone\" | \"optTySome\" }\n" ++
   "export type Depth = { readonly _tag: \"rel\"; readonly k: number } | { readonly _tag: \"closed\" }\n" ++
   "export interface TemplateRow {\n" ++
   "  readonly fam: Fam\n  readonly ctor: string\n" ++

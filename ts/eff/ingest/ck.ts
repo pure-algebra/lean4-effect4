@@ -23,7 +23,7 @@ import { childNodes, parseTypeScript } from "./oxc.ts"
 import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
 import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import { readTypeMetadata } from "../metadata.ts"
-import { targetType, legacyType, targetIdentifier, recordKeyForm, quoteType } from "../target-types.ts"
+import { targetType, legacyType, recordKeyForm, quoteType } from "../target-types.ts"
 import type { Expr } from "../read.ts"
 
 class Decline extends Error {}
@@ -225,12 +225,6 @@ class CompilerReader {
     return { keys: keys ?? "plain", entries }
   }
   recordTerm(x: Ex, env: readonly string[]): Term | undefined {
-    if (x.type === "MemberExpression") {
-      if (x.optional) return bad("optional field syntax")
-      const name = x.computed ? isString(x.property) ? x.property.value : bad("field key") : memberName(x)
-      if (targetIdentifier(name) === x.computed) return bad("field spelling")
-      return { _tag: "field", mode: "required", target: this.term(x.object, env), name }
-    }
     if (x.type !== "CallExpression" || x.optional) return undefined
     const fn = this.unwrap(x.callee)
     if (fn.type === "Identifier" && x.typeArguments && ["recordValue", "recordRaw"].includes(fn.name)) {
@@ -259,22 +253,23 @@ class CompilerReader {
       }
       return { _tag: "record", fields: declared.fields, presentNames: names, values: values.map(value => this.term(value, env)) }
     }
+    const update = fn.type === "CallExpression" ? this.unwrap(fn.callee) : undefined
+    if (update?.type === "CallExpression" && update.callee.type === "Identifier" && update.callee.name === "recordSet") {
+      if (fn.type !== "CallExpression" || fn.optional || update.optional || x.typeArguments || fn.typeArguments ||
+          !update.typeArguments || update.typeArguments.params.length !== 1) return bad("record update arguments")
+      this.arity(x.arguments, 1); this.arity(fn.arguments, 1); this.arity(update.arguments, 1)
+      const key = this.at(update.arguments, 0)
+      if (!isString(key) || this.text(update.typeArguments.params[0]!) !== quoteType(key.value)) return bad("record update key")
+      return { _tag: "recordSet", target: this.term(this.at(fn.arguments, 0), env), name: key.value, value: this.term(this.at(x.arguments, 0), env) }
+    }
     if (fn.type !== "CallExpression" || fn.optional || !fn.typeArguments || fn.callee.type !== "Identifier") return undefined
     const head = fn.callee.name
-    if (head !== "recordOptional" && head !== "recordSet") return undefined
-    if (fn.typeArguments.params.length !== 1 || x.arguments.length !== 1) return bad("record curried arity")
-    const annotation = this.text(fn.typeArguments.params[0]!)
-    if (head === "recordOptional") {
-      this.arity(fn.arguments, 1)
-      const key = this.at(fn.arguments, 0)
-      if (!isString(key) || annotation !== quoteType(key.value)) return bad("optional record key")
-      return { _tag: "field", mode: "optional", target: this.term(this.at(x.arguments, 0), env), name: key.value }
-    }
-    this.arity(fn.arguments, 0)
-    const object = this.recordEntries(this.at(x.arguments, 0)), base = object.entries[0], value = object.entries[1]
-    if (object.entries.length !== 2 || base === undefined || !("spread" in base) || value === undefined || !("name" in value) ||
-        object.keys !== recordKeyForm([value.name]) || annotation !== quoteType(value.name)) return bad("record update frame")
-    return { _tag: "recordSet", target: this.term(base.spread, env), name: value.name, value: this.term(value.value, env) }
+    if (head !== "recordRequired" && head !== "recordOptional") return undefined
+    if (x.typeArguments || fn.typeArguments.params.length !== 1) return bad("record field type arguments")
+    this.arity(x.arguments, 1); this.arity(fn.arguments, 1)
+    const key = this.at(fn.arguments, 0)
+    if (!isString(key) || this.text(fn.typeArguments.params[0]!) !== quoteType(key.value)) return bad("record field key")
+    return { _tag: "field", mode: head === "recordRequired" ? "required" : "optional", target: this.term(this.at(x.arguments, 0), env), name: key.value }
   }
   term(x: Ex, env: readonly string[]): Term {
     x = this.unwrap(x)
@@ -381,8 +376,20 @@ class CompilerReader {
     }
     return out
   }
+  recordSelect(x: Ex, env: readonly string[]): Eff | undefined {
+    if (x.type !== "CallExpression" || x.optional || x.typeArguments || x.callee.type !== "Identifier" || x.callee.name !== "caseTagR") return undefined
+    this.arity(x.arguments, 4)
+    const tag = this.at(x.arguments, 1)
+    if (!isString(tag)) return bad("record decision tag")
+    const hit = this.arrow(this.at(x.arguments, 2), env, 1)
+    const miss = this.arrow(this.at(x.arguments, 3), env, 1)
+    return { _tag: "select", scrutinee: this.term(this.at(x.arguments, 0), env), decision: { _tag: "recordTag", tag: tag.value },
+      arm0: this.eff(this.expression(hit.body), hit.env), arm1: this.eff(this.expression(miss.body), miss.env) }
+  }
   eff(x: Ex, env: readonly string[]): Eff {
     x = this.unwrap(x)
+    const selected = this.recordSelect(x, env)
+    if (selected !== undefined) return selected
     // DI-72: the three positions `deferred` names; the walk reads them as it did.
     const variable = this.variable(x, env)
     if (variable !== undefined) { this.defer("shape"); return { _tag: "fail", error: { _tag: "var", index: variable } } }
@@ -739,6 +746,7 @@ class ForeignCompilerReader extends CompilerReader {
     try { return super.literal(y) } catch (e) { if (e instanceof Decline) return refuseForeign("E-ARG-DYNAMIC", "literal"); throw e }
   }
   override recordTerm(_x: Ex, _env: readonly string[]): Term | undefined { return undefined }
+  override recordSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
   override term(x: Ex, env: readonly string[]): Term {
     const y = this.unwrap(x)
     if (y.type === "Identifier" && y.name !== "undefined" && this.variable(y, env) === undefined) return refuseForeign("E-REF-UNBOUND", y.name)

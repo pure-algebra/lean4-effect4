@@ -23,8 +23,8 @@ const refusal = (source: string): Refusal => {
 }
 
 describe("the profile", () => {
-  test("has the reader's 56 heads and one entry per NativeOp value", () => {
-    expect(heads.length).toBe(56)
+  test("retains the declared head and native row inventory", () => {
+    expect(heads.length).toBe(57)
     expect(rows.length).toBe(55)
     expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(22)
     expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(55)
