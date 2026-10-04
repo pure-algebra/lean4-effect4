@@ -211,6 +211,15 @@ Effect4.Program` narrows it. Rows are `class ⟨tab⟩ module:line ⟨tab⟩ nam
 ⟨tab⟩ (family member) ⟨tab⟩ detail` (no detail column when it is empty), sorted by class, module,
 line. `#traversal_class T for a b …` prints only the class of the named definitions.
 
+## Data-language fold connections
+
+`Schema.Bridge.schema` directly uses `schemaAlg` in `src/Effect4/Schema/Bridge.lean`.
+`Schema.Codec.wire` directly uses `wireAlgebra` in `src/Effect4/Schema/Codec.lean`.
+The JSON layout, support, encoder and decoder project that one fold result.
+`src/Effect4/Laws/Program/Folds/Ty.lean` retains their named connectors and adds the `Tuple.project` connector.
+The historical conversion counts below describe their cited commits.
+The traversal tool measures current classifications; these connections establish no host execution claim.
+
 ## 7. The converter, landed (`fb7a5784`)
 
 `fold_of f` is `src/Effect4/Program/FoldOf.lean` (a command elaborator, in the axiom gate's meta

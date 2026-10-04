@@ -157,6 +157,8 @@ export const selfTestCases: ReadonlyArray<{
   { atom: "mod", name: "mod 10 3", apply: () => Atoms.mod(10, 3), expected: 1 },
   { atom: "mod", name: "mod 10 0 is the dividend", apply: () => Atoms.mod(10, 0), expected: 10 },
   { atom: "concat", name: "concat foo bar", apply: () => Atoms.concat("foo", "bar"), expected: "foobar" },
+  { atom: "tuple", name: "empty tuple retains zero positions", apply: () => Atoms.tuple().length, expected: 0 },
+  { atom: "tuple", name: "tuple retains every positional value", apply: () => Atoms.tuple(7, "ready", true)[1], expected: "ready" },
   { atom: "mapEmpty", name: "empty map has no entries", apply: () => Atoms.mapKeys(Atoms.mapEmpty()).length, expected: 0 },
   { atom: "mapGet", name: "missing map key is none", apply: () => Option.isNone(Atoms.mapGet(Atoms.mapEmpty(), "missing")), expected: true },
   { atom: "mapSet", name: "computed prototype key stays a value", apply: () => Option.getOrUndefined(Atoms.mapGet(Atoms.mapSet(Atoms.mapEmpty(), "__proto__", 7), "__proto__")), expected: 7 },

@@ -88,6 +88,29 @@ A missing key differs from a present unit or empty option.
 `Authoring.mapFromEntries` constructs a map from ordinary pairs and retains the last value for each repeated key.
 The application examples and execution controls are in `Test/Api/MapAuthoring.lean`.
 
+## Tuples and record tags
+
+`Authoring.tuple` constructs a tuple at any fixed arity.
+`Authoring.tupleAt value index` reads a statically known position and retains its declared type.
+The checker refuses an index missing from any possible tuple alternative.
+Two-item tuples share the existing product type after normalization.
+
+```lean
+def entry : Authoring.TermSrc :=
+  Authoring.tuple [Authoring.nat 7, Authoring.str "ready", Authoring.bool true]
+
+def selected : Authoring.Src NativeOp :=
+  Authoring.bind "entry" (Authoring.succeed entry)
+    (Authoring.succeed (Authoring.tupleAt (Authoring.var "entry") 1))
+```
+
+`Effect4.Api.author selected` checks this program at the literal answer type `"ready"`.
+The application example in `Test/Api/TupleAuthoring.lean` constructs, selects, checks, prints and executes a three-item tuple.
+
+`Authoring.selectRecordTag` branches on a required literal `_tag` field.
+Each branch receives the whole narrowed record, including its field names.
+`Test/Program/RecordTag.lean` checks branch typing and impossible branches.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact

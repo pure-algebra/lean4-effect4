@@ -19,6 +19,7 @@ import Test.Codegen.Record
 import Test.Codegen.RecordTerms
 import Test.Codegen.RecordEmission
 import Test.Codegen.RecordTag
+import Test.Codegen.Tuple
 import Test.Codegen.SchemaGenerationContract
 import Test.Codegen.SchemaGenerationCoverage
 import Test.Machine.Semantics.CauseExitContract
@@ -54,6 +55,12 @@ import Test.Program.RecordRefusals
 import Test.Program.RecordTerms
 import Test.Program.RecordTag
 import Test.Program.AuthoringRecords
+import Test.Program.TupleTerms
+import Test.Program.TupleRefusals
+import Test.Program.TupleTyping
+import Test.Program.TupleMembership
+import Test.Program.TupleHandles
+import Test.Program.AuthoringTuples
 import Test.Program.TypedWorldValidity
 import Test.Program.ProtocolCertificates
 import Test.Program.ProtocolLaws
@@ -167,6 +174,7 @@ import Test.Program.ConfigContract
 import Test.Api.ApiContract
 import Test.Api.RecordAuthoring
 import Test.Api.MapAuthoring
+import Test.Api.TupleAuthoring
 import Test.Api.TestClockContract
 import Test.Program.ScopedTypingContract
 import Test.Program.NativeAtomContract
