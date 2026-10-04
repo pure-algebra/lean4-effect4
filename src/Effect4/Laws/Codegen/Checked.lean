@@ -23,8 +23,12 @@ theorem emitFormedModule_ok (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
     {declarations : List TypeScript.ConstDecl}
     (printed : Program.printEntry table (nativeSignature table) name typing.ty program =
-      .ok declarations) :
-    emitFormedModule name formed typing = .ok ⟨formed, typing, declarations, printed⟩ := by
+      .ok declarations)
+    {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
+    (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
+      .ok (classes, classDecls)) :
+    emitFormedModule name formed typing =
+      .ok ⟨formed, typing, classes, classDecls, classified, declarations, printed⟩ := by
   unfold emitFormedModule
   split
   · rename_i why refused
@@ -33,34 +37,46 @@ theorem emitFormedModule_ok (formed : Formation.InputFormed program table)
   · rename_i found result
     have same := Except.ok.inj (result.symm.trans printed)
     cases same
-    rfl
+    split
+    · rename_i why refused
+      rw [classified] at refused
+      cases refused
+    · rename_i cs cds result'
+      have same' := Except.ok.inj (result'.symm.trans classified)
+      simp only [Prod.mk.injEq] at same'
+      obtain ⟨rfl, rfl⟩ := same'
+      rfl
 
 /-- The typed entry still checks raw formation before printing (`raw-formation`). -/
 theorem emitTypedModule_ok (formed : Formation.InputFormed program table)
     (typing : TypedProgram (nativeSignature table) program)
     {declarations : List TypeScript.ConstDecl}
     (printed : Program.printEntry table (nativeSignature table) name typing.ty program =
-      .ok declarations) :
-    emitTypedModule name typing = .ok ⟨formed, typing, declarations, printed⟩ := by
+      .ok declarations)
+    {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
+    (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
+      .ok (classes, classDecls)) :
+    emitTypedModule name typing =
+      .ok ⟨formed, typing, classes, classDecls, classified, declarations, printed⟩ := by
   unfold emitTypedModule
   split
   · rename_i why refused
     rw [(Formation.checkInput_eq_none_iff program table).mpr formed] at refused
     cases refused
-  · exact emitFormedModule_ok formed typing printed
+  · exact emitFormedModule_ok formed typing printed classified
 
 /-- A completed emission is exactly the result of the computed producer. -/
 theorem ModuleEmission.recheck (emission : ModuleEmission program table name) :
     emitModule name program table = .ok emission := by
   cases emission with
-  | mk formed typing declarations generated =>
+  | mk formed typing classes classDecls classified declarations generated =>
     unfold emitModule
     split
     · rename_i why refused
       rw [(Formation.checkInput_eq_none_iff program table).mpr formed] at refused
       cases refused
     · rw [checkTypedProgram_eq_some typing]
-      exact emitFormedModule_ok formed typing generated
+      exact emitFormedModule_ok formed typing generated classified
 
 /-- One fixed input has one emitted syntax and one retained typing receipt. -/
 theorem ModuleEmission.unique (left right : ModuleEmission program table name) :
@@ -74,9 +90,12 @@ theorem emitModule_erasure (name : String) (program : NativeEff) (table : RowTab
     (emitModule name program table).toOption.map (·.module) =
       match typeOfProgram (nativeSignature table) program with
       | some ty =>
-        match Program.printEntry table (nativeSignature table) name ty program with
-        | .ok decls => some { header := [], imports := [], decls := decls.map .const }
-        | .error _ => none
+        match Program.printEntry table (nativeSignature table) name ty program,
+            ClassTable.moduleClasses (nativeSignature table) name ty program with
+        | .ok decls, .ok (_, classDecls) =>
+          some { header := [], imports := []
+                 decls := classDecls.map .classDecl ++ decls.map .const }
+        | _, _ => none
       | none => none := by
   unfold emitModule
   split
@@ -95,7 +114,11 @@ theorem emitModule_erasure (name : String) (program : NativeEff) (table : RowTab
       · rename_i why printed
         simp only [printed, Except.toOption, Option.map_none]
       · rename_i declarations printed
-        simp only [printed, Except.toOption, ModuleEmission.module, Option.map_some]
+        split
+        · rename_i why classified
+          simp only [printed, classified, Except.toOption, Option.map_none]
+        · rename_i classes classDecls classified
+          simp only [printed, classified, Except.toOption, ModuleEmission.module, Option.map_some]
 
 /-- R5/R8: a checked emission retains an explicit answer, error and complete
 requirement annotation on its main declaration. This certifies generated syntax,
@@ -127,7 +150,9 @@ theorem emitModule_illTyped_iff (formed : Formation.InputFormed program table) :
     | some typing =>
       dsimp only
       unfold emitFormedModule
-      split <;> simp only [typing.typed, Except.error.injEq, reduceCtorEq]
+      split
+      · simp only [typing.typed, Except.error.injEq, reduceCtorEq]
+      · split <;> simp only [typing.typed, Except.error.injEq, reduceCtorEq]
 
 /-- The same core typing judgment belongs to the emitted program's certificate.
 This is the declarative program judgment, not a TypeScript judgment. -/

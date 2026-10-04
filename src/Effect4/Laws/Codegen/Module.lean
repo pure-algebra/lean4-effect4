@@ -21,6 +21,10 @@ namespace Effect4.Program
 
 variable {Op : Type}
 
+open Effect4.Codegen.Classes (Classes)
+
+variable {classes : Classes}
+
 open scoped Effect4.Program.Path
 
 private abbrev History (Op : Type) := List (List Nat × LayerTerm Op)
@@ -95,14 +99,15 @@ private def printCaptured (sig : Signature Op) (history : History Op) (target : 
     .ok { doc := [], name := LayerTerm.refName target, value := x }
   | none => .error (.layerRef target)
 
-private def readCaptured (sig : Signature Op) (spell : String → List String → Option Op)
+private def readCaptured (classes : Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op)
     (decl : TypeScript.Decl) : Except ReadRefusal (List Nat × LayerTerm Op) :=
   match decl with
   | .const c =>
     match LayerTerm.readRefName c.name with
     | some target =>
       if LayerTerm.refName target = c.name then do
-        let layer ← readLayer sig spell c.value
+        let layer ← readLayer classes sig spell c.value
         .ok (target, layer)
       else .error (.shape "module")
     | none => .error (.shape "module")
@@ -111,13 +116,13 @@ private def readCaptured (sig : Signature Op) (spell : String → List String �
 private theorem readCaptured_printCaptured {sig : Signature Op}
     {spell : String → List String → Option Op}
     {history : History Op}
-    (layers : ∀ entry ∈ history, entry.2.ReadsBack sig spell)
+    (layers : ∀ entry ∈ history, entry.2.ReadsBack classes sig spell)
     (names : ∀ entry ∈ history,
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {target : List Nat} {entry : List Nat × LayerTerm Op} {decl : TypeScript.ConstDecl}
     (found : history.find? (·.1 == target) = some entry)
     (printed : printCaptured sig history target = .ok decl) :
-    readCaptured sig spell (.const decl) = .ok entry := by
+    readCaptured classes sig spell (.const decl) = .ok entry := by
   have mem := List.mem_of_find?_eq_some found
   have key : entry.1 = target := by
     simpa only [beq_iff_eq] using List.find?_some found
@@ -130,12 +135,12 @@ private theorem readCaptured_printCaptured {sig : Signature Op}
 private theorem readCaptured_mapM {sig : Signature Op}
     {spell : String → List String → Option Op}
     {history : History Op}
-    (layers : ∀ entry ∈ history, entry.2.ReadsBack sig spell)
+    (layers : ∀ entry ∈ history, entry.2.ReadsBack classes sig spell)
     (names : ∀ entry ∈ history,
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     (targets : List (List Nat)) {decls : List TypeScript.ConstDecl}
     (printed : targets.mapM (printCaptured sig history) = .ok decls) :
-    (decls.map TypeScript.Decl.const).mapM (readCaptured sig spell) =
+    (decls.map TypeScript.Decl.const).mapM (readCaptured classes sig spell) =
       .ok (selectHistory history targets) := by
   induction targets generalizing decls with
   | nil => cases printed; rfl
@@ -151,11 +156,22 @@ private theorem readCaptured_mapM {sig : Signature Op}
       simp [List.mapM_cons, hr, ih hrest, selectHistory, found]
       rfl
 
+/-- A block of class declarations, then constants, splits there. -/
+theorem splitClasses_append (cs : List TypeScript.ClassDecl) (ds : List TypeScript.ConstDecl) :
+    splitClasses (cs.map TypeScript.Decl.classDecl ++ ds.map TypeScript.Decl.const) =
+      (cs, ds.map TypeScript.Decl.const) := by
+  induction cs with
+  | nil => cases ds <;> rfl
+  | cons c cs ih => simp only [List.map_cons, List.cons_append, splitClasses, ih]
+
 /-- Reading the declaration block produced by the module printer recovers the original
-program, including shared-layer references, when each piece successful hoisting produced
-reads back from its own printing (`ReadsBack`, which `readable` gives) and the emitted
-reference names decode. The premises concern the pieces, never the module read itself, and
-they are stated of any expression reader: this law is the hoisting inverse composed with them.
+program, including shared-layer references, when its leading class declarations read back to
+the module's payload classes (decisions row 120, part E2), each piece successful hoisting
+produced reads back from its own printing under those classes (`ReadsBack`, which `readable`
+gives), and the emitted reference names decode. The premises concern the pieces, never the
+module read itself, and they are stated of any expression reader: this law is the hoisting
+inverse composed with them. Placed at R8 (`translation-simulation`): the module face's round
+trip, the class section included.
 
 This is a structural AST equation: it does not validate the declaration's claimed
 type, imports, rendered TypeScript bytes, or target execution. -/
@@ -163,13 +179,16 @@ theorem readModule_printModule {sig : Signature Op}
     {spell : String → List String → Option Op}
     {root main : Eff Op} {history : List (List Nat × LayerTerm Op)}
     (hoisted : root.hoistAll = .ok (main, history))
-    (mainReadable : ReadsBack sig spell 0 main)
-    (layersReadable : ∀ entry ∈ history, entry.2.ReadsBack sig spell)
+    {classDecls : List TypeScript.ClassDecl}
+    (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
+    (mainReadable : ReadsBack classes sig spell 0 main)
+    (layersReadable : ∀ entry ∈ history, entry.2.ReadsBack classes sig spell)
     (namesReadable : ∀ entry ∈ history,
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
     (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell (decls.map TypeScript.Decl.const) = .ok root := by
+    readModule sig spell
+      (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
   have ordered := Eff.hoistAll_ordered hoisted
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by
     intro a b before equal
@@ -193,11 +212,12 @@ theorem readModule_printModule {sig : Signature Op}
     have perm := selectHistory_ordered_perm history unique
     rw [Eff.restoreAll_perm main perm ((perm.map Prod.fst).symm.nodup unique)]
     exact Eff.restoreAll_hoistAll hoisted
-  simp only [List.map_append, List.map_cons, List.map_nil, readModule,
+  rw [readModule, blockClasses, splitClasses_append, classesRead]
+  simp only [List.map_append, List.map_cons, List.map_nil,
     List.getLast?_append, List.getLast?_singleton, Option.some_or,
     List.dropLast_append_cons, List.dropLast_singleton, List.append_nil, value]
-  change (readEff sig spell 0 body >>= fun e =>
-    (ds.map TypeScript.Decl.const).mapM (readCaptured sig spell) >>= fun entries =>
+  change (readEff classes sig spell 0 body >>= fun e =>
+    (ds.map TypeScript.Decl.const).mapM (readCaptured classes sig spell) >>= fun entries =>
     match e.restoreAll entries with
     | some out => .ok out
     | none => .error (.shape "module")) = .ok root
