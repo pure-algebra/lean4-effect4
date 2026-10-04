@@ -1841,10 +1841,11 @@ flowchart LR
 
 ### R4: State: the world types every cell at any type, with rows as templates
 
-- Open: rows as templates (decisions rows 42–43, step 3): the native spellings still read as cells at nat (row 96 D2)
-- Open: a function row takes a binder term: FnName retires (decisions row 43, step 3)
-- Open: the per-cell table in the straight soundness, replacing HeapNat (decisions rows 42–43, step 4)
-- Open: the faces of Ref<A> and Deferred<A, E>: printer, reader, TypeScript profile and OCaml (decisions rows 42–43, step 5)
+- Open: an operation's data is scope-checked: scopedAlgebra's perform arm ignores the operation (state plan T0)
+- Open: the straight soundness without HeapNat: derived from the typed state or restated over the per-cell table (decisions rows 42–43, step 4; state plan T1)
+- Open: the store runs binder terms, FnName retires (decisions row 43; state plan T2–T3)
+- Open: rows as templates: Ref and Deferred rows over parameters, Deferred.make carrying its type arguments, modify answering B while storing A; until then the native spellings read as cells at nat (decisions row 42, row 96 D2; state plan T3)
+- Open: the faces of Ref<A> and Deferred<A, E>: printer, readers, TypeScript profile and OCaml, binder terms printed (decisions rows 42–43, step 5; state plan T5)
 
 ```mermaid
 flowchart LR

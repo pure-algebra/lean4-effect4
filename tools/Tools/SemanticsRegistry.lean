@@ -708,10 +708,11 @@ def registry : Registry where
       top := [`Effect4.Program.Typed.order_refl, `Effect4.Program.Typed.order_trans,
         `Effect4.Program.Typed.refMake_extension, `Effect4.Program.Typed.deferredMake_extension,
         `Effect4.Program.Typed.memoBuild_extension]
-      openParts := ["rows as templates (decisions rows 42–43, step 3): the native spellings still read as cells at nat (row 96 D2)",
-        "a function row takes a binder term: FnName retires (decisions row 43, step 3)",
-        "the per-cell table in the straight soundness, replacing HeapNat (decisions rows 42–43, step 4)",
-        "the faces of Ref<A> and Deferred<A, E>: printer, reader, TypeScript profile and OCaml (decisions rows 42–43, step 5)"] },
+      openParts := ["an operation's data is scope-checked: scopedAlgebra's perform arm ignores the operation (state plan T0)",
+        "the straight soundness without HeapNat: derived from the typed state or restated over the per-cell table (decisions rows 42–43, step 4; state plan T1)",
+        "the store runs binder terms, FnName retires (decisions row 43; state plan T2–T3)",
+        "rows as templates: Ref and Deferred rows over parameters, Deferred.make carrying its type arguments, modify answering B while storing A; until then the native spellings read as cells at nat (decisions row 42, row 96 D2; state plan T3)",
+        "the faces of Ref<A> and Deferred<A, E>: printer, readers, TypeScript profile and OCaml, binder terms printed (decisions rows 42–43, step 5; state plan T5)"] },
     { id := "R5", title := "Services: the service table, layers and provision"
       top := [`Effect4.Program.Provision.build_total]
       openParts := ["lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)",

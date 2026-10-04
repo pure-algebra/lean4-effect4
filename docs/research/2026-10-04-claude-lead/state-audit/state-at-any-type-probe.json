@@ -1,0 +1,38 @@
+{
+  "observedAt": "2026-10-04T15:29:57.778Z",
+  "version": "4.0.0-rc.112",
+  "node": "v22.23.2",
+  "evidence": "Finite host probe against installed pinned Effect; not a Lean theorem, target admission check, or concurrency proof.",
+  "modify": {
+    "answer": true,
+    "stored": {
+      "label": "after",
+      "count": 2
+    },
+    "bodyExecutions": 1
+  },
+  "completeWith": {
+    "accepted": true,
+    "executionsAtRegistration": 0,
+    "first": {
+      "label": "before"
+    },
+    "replaced": false,
+    "second": {
+      "label": "after"
+    },
+    "bodyExecutions": 2
+  },
+  "complete": {
+    "accepted": true,
+    "executionsAtRegistration": 1,
+    "first": {
+      "label": "before"
+    },
+    "second": {
+      "label": "before"
+    },
+    "bodyExecutions": 1
+  },
+  "status": "PASS"
+}

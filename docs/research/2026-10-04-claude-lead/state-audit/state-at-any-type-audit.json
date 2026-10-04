@@ -1,0 +1,138 @@
+{
+  "observed_at_utc": "2026-10-04T15:33:02.834388+00:00",
+  "head": "9b5881f528ca5de5fad3f513f4740f1c5316992d",
+  "scope": "Advisory source audit and finite installed-runtime probe; no repository changes or Lean builds.",
+  "rulings": "Rows 204-207 and amendments at 37289464 are ratified. State at any type precedes queues and streams. Lowering/R6 remain parked until a program needs them.",
+  "current_work": "Claude coordinator plans state at any type; seat D recovers acceptance programs; a survey maps existing state foundations. Seat P committed the conditional bridge at 01bf3f6d.",
+  "existing_foundations": [
+    {
+      "source": "src/Effect4/Laws/Program/Typed/World.lean; Membership.lean; Adequacy.lean",
+      "evidence": "Inspected current source definitions and proofs; no new proof compilation by monitor.",
+      "finding": "World, Fits/FitsExit, StoreTyped, StoreImplements and storeStep_typed already connect declared location types, nested-handle membership and concrete steps."
+    },
+    {
+      "source": "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+      "finding": "refMake_world, refMake_implements, refGet_implements, refSet_implements, refGetAndSet_implements and deferredMake_implements already use generic types. Reuse these; the function-taking rows and public native rows still need their cutover."
+    },
+    {
+      "source": "src/Effect4/Program/Native.lean; src/Effect4/Laws/Program/Progress.lean; src/Effect4/Laws/Program/MeaningSound.lean; src/Effect4/Laws/Program/LoopSound.lean",
+      "finding": "The native state rows and the straight/looped proof path still carry number-specific assumptions, including HeapNat. General storage alone does not establish generic public operations."
+    }
+  ],
+  "obligation_candidates": [
+    {
+      "id": "state-declared-instance",
+      "status": "Suggested placement for the new slice; no new theorem or goal created.",
+      "concept": "subtyping-algebra; residual-program-typing",
+      "claim": "R4: row-template instantiation and checker admission",
+      "consumer": "Generic NativeOp checking and typed compilation",
+      "hypotheses": "Declared types are formed; templates are admissible and well scoped; the reference declaration anchors writes.",
+      "observation": "The checked answer/error types are the intended instantiation. Empty Deferred allocation carries its value/error types explicitly.",
+      "immediate_prerequisite": "Re-cut the historical rows-42-43 plan against current checkRow, Ty.matchTemplate and LawfulSig.",
+      "controls": "Reject incompatible writes through a widened mutable alias. Preserve explicit Deferred.make type arguments and invariant Ref/Deferred parameters.",
+      "exclusions": "Does not establish storage safety, profile support or host reply admission.",
+      "source": "docs/research/2026-09-18-rows-42-43-plan.md; src/Effect4/Program/Typing/Rules.lean; src/Effect4/Program/Ty.lean; src/Effect4/Laws/Program/Template.lean"
+    },
+    {
+      "id": "state-binder-and-capture",
+      "status": "Preflight requirement already identified by the historical plan; still relevant in current generated source.",
+      "concept": "residual-program-typing; initial-algebras-folds",
+      "claim": "R4 function rows; R7 capture; R10 lexical scope",
+      "consumer": "Compilation of first-order Ref update/modify terms",
+      "hypotheses": "A typed environment fits its context; current state fits A; the term checks under context extended by A.",
+      "observation": "An update term produces A; modify produces [B,A], returning B while storing A. Captured variables refer to the intended environment.",
+      "immediate_prerequisite": "Give operation-carried terms a scoping interface, then extend the existing generated fold/traversal.",
+      "controls": "Reject an out-of-scope variable inside the operation, even when the request is closed. Include an outer capture and a result type different from the stored type.",
+      "exclusions": "Pure Ref terms do not gain effectful SynchronizedRef behavior. A scoping check alone is not term typing.",
+      "source": "src/Effect4/Program/Scoped.lean: scopedAlgebra.eff_perform currently ignores the operation; tools/Effect4Gen/Authoring.lean; vendor/effect-4.0.0-rc.112/src/Ref.ts: modify"
+    },
+    {
+      "id": "state-step-preservation",
+      "status": "Reuse existing generic allocation/read/write laws; extend function-taking rows.",
+      "concept": "store-typing",
+      "claim": "store-safety; R4; M6",
+      "consumer": "StoreImplements -> storeStep_typed -> scheduled preservation; generalized straight/looped soundness",
+      "hypotheses": "StoreTyped, a matching store certificate, typed arguments/captured environment and the row precondition.",
+      "observation": "The actual store step produces a fitting answer, preserves stored value membership and gives an extending declaration world. Ref.modify stays atomic.",
+      "immediate_prerequisite": "Typed evaluation of operation-carried terms, including [B,A] modify results.",
+      "controls": "Fresh allocation preserves old declarations. Writes preserve nested-handle membership. A split get/set model must not stand in for atomic modify.",
+      "exclusions": "World accessibility alone is neither reachability nor StoreTyped. The finite probe does not prove concurrent atomicity.",
+      "source": "src/Effect4/Laws/Program/Typed/Adequacy.lean; src/Effect4/Laws/Program/Typed/Membership.lean; vendor/effect-4.0.0-rc.112/src/Ref.ts"
+    },
+    {
+      "id": "deferred-completion-observation",
+      "status": "Existing first-order completion model must retain its behavior through generic typing.",
+      "concept": "store-typing; reactive-scheduling; translation-simulation",
+      "claim": "R4 Deferred operations; R8 named observation",
+      "consumer": "deferredCompleteWith_implements, await typing and eventual target-facing acceptance examples",
+      "hypotheses": "Declared A/E, admitted first-order completion, typed stores and actual completion/await steps; fixed choices for any scheduled comparison.",
+      "observation": "completeWith stores a computation that can run per await; complete evaluates once and stores its exit. The second completion does not replace the first.",
+      "immediate_prerequisite": "State which completion representation each public operation compiles to and connect its result membership to the declared columns.",
+      "controls": "The retained finite probe changes a record-valued Ref between two awaits. completeWith sees before/after; complete sees before/before.",
+      "exclusions": "The probe proves neither all schedules nor cancellation/liveness. Do not identify stored code with an evaluated exit.",
+      "source": "src/Effect4/Machine/Stores.lean: Completion, completionPrim; src/Effect4/Laws/Program/Typed/Adequacy.lean: deferredCompleteWith_implements; vendor/effect-4.0.0-rc.112/src/Deferred.ts: complete, completeWith, doneUnsafe"
+    },
+    {
+      "id": "state-consumers-and-faces",
+      "status": "Slice completion requirement, to be split using real acceptance programs.",
+      "concept": "residual-program-typing; translation-simulation",
+      "claim": "R4, R8, R10 and the applicable M5-M6-M7 fragment",
+      "consumer": "Straight-line, looped and scheduled programs; application authoring and target readers/printers",
+      "hypotheses": "The actual admission certificate, declared world, named supported profile and each existing theorem fragment.",
+      "observation": "New generic operations type and run under the declared observation; roundtrips preserve explicit type arguments and binder layout.",
+      "immediate_prerequisite": "Generic row and store-step bridges; application-signature codegen before authoring under row21.",
+      "controls": "Use recovered tracked acceptance programs; include non-number state and nested handles where the profile admits them. Preserve explicit refSet/deferredPoll exceptions.",
+      "exclusions": "No automatic host safety, full lowering, arbitrary TypeScript support or whole-runtime equivalence."
+    }
+  ],
+  "finite_probe": {
+    "script": "/private/tmp/codex-effect4-overnight-monitor/state-at-any-type-probe.mjs",
+    "receipt": "/private/tmp/codex-effect4-overnight-monitor/state-at-any-type-probe.json",
+    "result": {
+      "observedAt": "2026-10-04T15:29:57.778Z",
+      "version": "4.0.0-rc.112",
+      "node": "v22.23.2",
+      "evidence": "Finite host probe against installed pinned Effect; not a Lean theorem, target admission check, or concurrency proof.",
+      "modify": {
+        "answer": true,
+        "stored": {
+          "label": "after",
+          "count": 2
+        },
+        "bodyExecutions": 1
+      },
+      "completeWith": {
+        "accepted": true,
+        "executionsAtRegistration": 0,
+        "first": {
+          "label": "before"
+        },
+        "replaced": false,
+        "second": {
+          "label": "after"
+        },
+        "bodyExecutions": 2
+      },
+      "complete": {
+        "accepted": true,
+        "executionsAtRegistration": 1,
+        "first": {
+          "label": "before"
+        },
+        "second": {
+          "label": "before"
+        },
+        "bodyExecutions": 1
+      },
+      "status": "PASS"
+    },
+    "replay": "node /private/tmp/codex-effect4-overnight-monitor/state-at-any-type-probe.mjs"
+  },
+  "admission_bridge": {
+    "commit": "01bf3f6d",
+    "observed": "lawfulSig_of_admitted is now a theorem, not a planned goal. It still requires AdmissionGap.",
+    "reported_checks": "Commit receipt reports narrow builds, axiom output [propext, Quot.sound], proof-style check and goal gate. No checks rerun by monitor.",
+    "open": "Actual admission must establish the missing served/scoped/template premises before the conditional bridge closes that API gap."
+  },
+  "guidance_sent": false
+}

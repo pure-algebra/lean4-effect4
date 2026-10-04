@@ -94,6 +94,9 @@ The owner ratified the coordinator's recommendations (decisions rows 21, 120, 20
 - **The host protocol** (row 201): armed work with no runnable fiber reads `parked`.
 
 The evidence is in the [roadmap note](research/2026-10-04-claude-lead/next-after-sigapp.md).
+State at any type runs in seven slices, T0–T6, in the
+[state plan](research/2026-10-04-claude-lead/state-any-type-plan.md). Its §5 asks the owner four
+questions.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
