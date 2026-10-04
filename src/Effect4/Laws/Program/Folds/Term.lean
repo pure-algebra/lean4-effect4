@@ -23,7 +23,7 @@ fold_of Effect4.Program.noRow
 fold_of Effect4.Program.Terms.toList
 fold_of Effect4.Program.Term.scoped
 fold_of Effect4.Program.Term.weaken
-fold_of Effect4.Program.evalTerm
-fold_of Effect4.Program.argTy
+fold_of Effect4.Program.evalTerm (family := Effect4.Program.Term)
+fold_of Effect4.Program.argTy (family := Effect4.Program.Term)
 
 end Effect4.Program

@@ -18,10 +18,10 @@ cata_eff denote.alg e vs`; and the four measures of the agreement proofs (`depth
 
 namespace Effect4.Program
 
-fold_of Effect4.Program.Denote.denote
-fold_of Effect4.Program.Denote.denoteB
-fold_of Effect4.Program.Denote.denoteWith
-fold_of Effect4.Program.Denote.denoteBWith
+fold_of Effect4.Program.Denote.denote (family := Effect4.Program.Eff)
+fold_of Effect4.Program.Denote.denoteB (family := Effect4.Program.Eff)
+fold_of Effect4.Program.Denote.denoteWith (family := Effect4.Program.Eff)
+fold_of Effect4.Program.Denote.denoteBWith (family := Effect4.Program.Eff)
 fold_of Effect4.Program.Agreement.depth
 fold_of Effect4.Program.Agreement.steps
 fold_of Effect4.Program.Agreement.depthB
