@@ -10,7 +10,7 @@
 // nowhere else: a family whose constructors are exactly `nil` and `cons head tail` is
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
-import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
 
 // The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and
 // inductive lists do not consume the JavaScript call stack. Frame lengths are patched
@@ -146,11 +146,26 @@ export const litWire = (v: Lit): Uint8Array => {
   return w.finish(() => writeLit(w, v))
 }
 
+const writeFieldReadMode = (w: Writer, v: FieldReadMode): void => {
+  switch (v) {
+    case "required": return w.ctor(0, [])
+    case "optional": return w.ctor(1, [])
+    default: throw new TypeError("wire FieldReadMode constructor")
+  }
+}
+export const fieldReadModeWire = (v: FieldReadMode): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeFieldReadMode(w, v))
+}
+
 const writeTerm = (w: Writer, v: Term): void => {
   switch (v._tag) {
     case "var": return w.ctor(0, [() => w.nat(v.index)])
     case "lit": return w.ctor(1, [() => writeLit(w, v.value)])
     case "app": return w.ctor(2, [() => w.str(v.atom), () => writeTerms(w, v.args)])
+    case "record": return w.ctor(3, [() => w.list(v.fields, (y) => w.frame(5, [() => w.str(y[0]), () => w.frame(5, [() => w.bool(y[1][0]), () => writeTy(w, y[1][1])])])), () => w.list(v.presentNames, (y) => w.str(y)), () => writeTerms(w, v.values)])
+    case "field": return w.ctor(4, [() => writeFieldReadMode(w, v.mode), () => writeTerm(w, v.target), () => w.str(v.name)])
+    case "recordSet": return w.ctor(5, [() => writeTerm(w, v.target), () => w.str(v.name), () => writeTerm(w, v.value)])
     default: throw new TypeError("wire Term constructor")
   }
 }
@@ -488,3 +503,16 @@ export const effTyWire = (v: EffTy): Uint8Array => {
 }
 
 export const encodeProgram = effWire
+
+/** Existing Ty canonical value fields, read from the closed world. */
+export type TypeMetadataShape =
+  | { readonly kind: "nat" | "bool" | "string" | "ty" }
+  | { readonly kind: "list"; readonly inner: TypeMetadataShape }
+  | { readonly kind: "pair"; readonly left: TypeMetadataShape; readonly right: TypeMetadataShape }
+export interface TypeMetadataConstructor { readonly name: string; readonly tag: number; readonly keyTag: number; readonly fields: ReadonlyArray<{ readonly name: string; readonly shape: TypeMetadataShape }> }
+export const typeMetadataConstructors: ReadonlyArray<TypeMetadataConstructor> = [{"name":"never","tag":0,"keyTag":0,"fields":[]},{"name":"unit","tag":1,"keyTag":1,"fields":[]},{"name":"nat","tag":2,"keyTag":2,"fields":[]},{"name":"int","tag":3,"keyTag":3,"fields":[]},{"name":"string","tag":4,"keyTag":4,"fields":[]},{"name":"bool","tag":5,"keyTag":5,"fields":[]},{"name":"handle","tag":6,"keyTag":6,"fields":[{"name":"target","shape":{"kind":"string"}}]},{"name":"option","tag":7,"keyTag":7,"fields":[{"name":"inner","shape":{"kind":"ty"}}]},{"name":"list","tag":8,"keyTag":8,"fields":[{"name":"inner","shape":{"kind":"ty"}}]},{"name":"prod","tag":9,"keyTag":9,"fields":[{"name":"left","shape":{"kind":"ty"}},{"name":"right","shape":{"kind":"ty"}}]},{"name":"except","tag":10,"keyTag":10,"fields":[{"name":"error","shape":{"kind":"ty"}},{"name":"value","shape":{"kind":"ty"}}]},{"name":"exitOf","tag":11,"keyTag":11,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"causeOf","tag":12,"keyTag":12,"fields":[{"name":"error","shape":{"kind":"ty"}}]},{"name":"fiberOf","tag":13,"keyTag":13,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"union","tag":14,"keyTag":14,"fields":[{"name":"left","shape":{"kind":"ty"}},{"name":"right","shape":{"kind":"ty"}}]},{"name":"lit","tag":15,"keyTag":15,"fields":[{"name":"value","shape":{"kind":"string"}}]},{"name":"refOf","tag":16,"keyTag":16,"fields":[{"name":"value","shape":{"kind":"ty"}}]},{"name":"deferredOf","tag":17,"keyTag":17,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"var","tag":18,"keyTag":18,"fields":[{"name":"index","shape":{"kind":"nat"}}]},{"name":"unknown","tag":19,"keyTag":19,"fields":[]},{"name":"record","tag":20,"keyTag":20,"fields":[{"name":"fields","shape":{"kind":"list","inner":{"kind":"pair","left":{"kind":"string"},"right":{"kind":"pair","left":{"kind":"bool"},"right":{"kind":"ty"}}}}}]},{"name":"map","tag":21,"keyTag":21,"fields":[{"name":"key","shape":{"kind":"ty"}},{"name":"value","shape":{"kind":"ty"}}]},{"name":"tuple","tag":22,"keyTag":22,"fields":[{"name":"items","shape":{"kind":"list","inner":{"kind":"ty"}}}]},{"name":"app","tag":23,"keyTag":23,"fields":[{"name":"name","shape":{"kind":"string"}},{"name":"args","shape":{"kind":"list","inner":{"kind":"ty"}}}]},{"name":"null","tag":24,"keyTag":24,"fields":[]},{"name":"undefined","tag":25,"keyTag":25,"fields":[]},{"name":"number","tag":26,"keyTag":26,"fields":[]},{"name":"bytes","tag":27,"keyTag":27,"fields":[]}]
+export const metadataFrameTags = {"nat":2,"bool":1,"string":3,"list":4,"pair":5,"ctor":10} as const
+export const typeLeafEdges: ReadonlyArray<readonly [string, string]> = [["lit","string"],["nat","int"],["int","number"],["undefined","unit"]]
+export const targetReservedIdentifiers: ReadonlyArray<string> = ["await","break","case","catch","class","const","continue","debugger","default","delete","do","else","enum","export","extends","false","finally","for","function","if","import","in","instanceof","let","new","null","return","super","switch","this","throw","true","try","typeof","var","void","while","with","yield","interface","implements","package","private","protected","public","static"]
+export const recordHelperNames: ReadonlyArray<string> = ["recordValue","recordRaw","recordOptional","recordSet"]
+export const typeVariances: Readonly<Record<string, ReadonlyArray<string>>> = {"Ref.Ref":["inv"],"Deferred.Deferred":["inv","inv"],"Fiber.Fiber":["co","co"],"Cause.Cause":["co"],"Cause.Reason":["co"],"Cause.Fail":["co"],"Cause.Done":["inv"],"Exit.Exit":["co","co"],"Exit.Success":["co","co"],"Exit.Failure":["co","co"],"Effect.Effect":["co","co","co"],"Effect.EffectUnify":["inv"],"Effect.Variance":["inv","inv","inv"],"Effect.Success":["inv"],"Effect.Error":["inv"],"Effect.Services":["inv"],"Effect.EffectIterator":["inv"],"Effect.TagsWithReason":["inv"],"Context.Key":["co","co"],"Context.Service":["inv","inv"],"Context.ServiceClass":["inv","inv","inv"],"Context.Reference":["inv"],"Context.Context":["contra"],"Layer.Layer":["contra","co","co"],"Layer.LayerUnify":["inv"],"Layer.Variance":["contra","co","co"],"Layer.Services":["inv"],"Layer.Error":["inv"],"Layer.Success":["inv"],"Layer.PartialEffectful":["inv"],"Queue.Enqueue":["contra","contra"],"Queue.Dequeue":["co","co"],"Queue.Queue":["inv","inv"],"PubSub.PubSub":["inv"],"PubSub.Subscription":["co"],"Option.Option":["co"],"Option.None":["co"],"Option.OptionIterator":["inv"],"Option.Some":["co"],"Option.OptionUnify":["inv"]}

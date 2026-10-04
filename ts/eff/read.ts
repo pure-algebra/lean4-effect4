@@ -17,6 +17,8 @@ import { Result } from "effect"
 import { parseSync } from "oxc-parser"
 import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
+import { readTypeMetadata } from "./metadata.ts"
+import { targetType, legacyType, targetIdentifier, recordKeyForm, quoteType } from "./target-types.ts"
 import { heads, rows, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
@@ -164,7 +166,7 @@ const unitRequest = (e: Entry): boolean => e.row.request._tag === "unit"
 
 // `Expr` and `Stmt` retain the structural target forms used by the Lean printer.
 // This adapter recognizes syntax; § 3 checks each form against the program printer image.
-// Record forms remain outside term admission until their reading rules land.
+// Record wrappers retain raw declaration data; the program checker separately decides admission.
 // This section is the one place that knows what oxc calls things.
 // Two facts of oxc's output are folded
 // here: a dotted head such as `Effect.flatMap` arrives as a member chain of identifiers, and
@@ -259,6 +261,10 @@ const quotedTypeString = (value: string): string =>
 /** The structural type arguments emitted by the pinned target printer. */
 const typeName = (t: Node): string | undefined => {
   switch (t.type) {
+    case "TSAnyKeyword": return "any"
+    case "TSObjectKeyword": return "object"
+    case "TSSymbolKeyword": return "symbol"
+    case "TSBigIntKeyword": return "bigint"
     case "TSNumberKeyword": return "number"
     case "TSStringKeyword": return "string"
     case "TSBooleanKeyword": return "boolean"
@@ -747,7 +753,72 @@ const headOf = (s: string): Head | undefined => ((heads as ReadonlyArray<string>
 
 const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
 
-const readTerm = (n: number, x: Expr): Read<Term> => {
+/** Canonical records and field operations; undefined means this is another term form. */
+const readRecordTerm = (n: number, x: Expr): Read<Term> | undefined => {
+  const malformed = (what: string) => refuse({ _tag: "shape", what: `record ${what}` })
+  if (x._tag === "member" || x._tag === "index") {
+    const name = x._tag === "member" ? x.name : x.key._tag === "str" ? x.key.value : undefined
+    if (name === undefined || targetIdentifier(name) !== (x._tag === "member")) return malformed("field spelling")
+    return Result.map(readTerm(n, x.base), (target): Term => ({ _tag: "field", mode: "required", target, name }))
+  }
+  if (x._tag !== "call") return undefined
+  const fn = x.fn
+  if (fn._tag === "generic" && fn.fn._tag === "ident" && ["recordValue", "recordRaw"].includes(fn.fn.name)) {
+    const raw = fn.fn.name === "recordRaw"
+    if (fn.typeArgs.length !== 1 || x.args.length !== (raw ? 3 : 2)) return malformed("arity")
+    const declared = readTypeMetadata(x.args[0]!)
+    if (declared?._tag !== "record") return malformed("type metadata")
+    const expected = targetType(declared, legacyType)
+    let names: string[], values: ReadonlyArray<Expr>
+    if (raw) {
+      const supplied = x.args[1]!, children = x.args[2]!
+      if (fn.typeArgs[0] !== "unknown" || supplied._tag !== "arr" || children._tag !== "arr") return malformed("raw frame")
+      names = []
+      for (const name of supplied.items) {
+        if (name._tag !== "str") return malformed("supplied name")
+        names.push(name.value)
+      }
+      values = children.items
+      if (names.length === values.length && expected !== undefined) return malformed("unnecessary raw frame")
+    } else {
+      const object = x.args[1]!
+      // Source text erases the distinction between plain object and objectWith/plain.
+      const entries: ReadonlyArray<ObjectEntry> | undefined = object._tag === "objectWith" ? object.entries :
+        object._tag === "object" ? object.fields.map(([name, value]) => ({ _tag: "property", name, value })) : undefined
+      const form = object._tag === "objectWith" ? object.keys : "plain"
+      if (entries === undefined || entries.some(entry => entry._tag !== "property")) return malformed("object entries")
+      names = []; const children: Expr[] = []
+      for (const entry of entries) {
+        if (entry._tag !== "property") return malformed("spread in construction")
+        names.push(entry.name); children.push(entry.value)
+      }
+      values = children
+      if (form !== recordKeyForm(names) || expected === undefined || fn.typeArgs[0] !== expected) return malformed("annotation or key form")
+    }
+    return Result.map(readTerms(n, values), (values): Term => ({ _tag: "record", fields: declared.fields, presentNames: names, values }))
+  }
+  if (fn._tag !== "call" || fn.fn._tag !== "generic" || fn.fn.fn._tag !== "ident") return undefined
+  const head = fn.fn.fn.name
+  if (head !== "recordOptional" && head !== "recordSet") return undefined
+  if (fn.fn.typeArgs.length !== 1 || x.args.length !== 1) return malformed("curried arity")
+  if (head === "recordOptional") {
+    if (fn.args.length !== 1 || fn.args[0]?._tag !== "str" || fn.fn.typeArgs[0] !== quoteType(fn.args[0].value)) return malformed("optional key")
+    const name = fn.args[0].value
+    return Result.map(readTerm(n, x.args[0]!), (target): Term => ({ _tag: "field", mode: "optional", target, name }))
+  }
+  const object = x.args[0]!
+  if (fn.args.length !== 0 || object._tag !== "objectWith" || object.entries.length !== 2) return malformed("update frame")
+  const base = object.entries[0]!, replacement = object.entries[1]!
+  if (base._tag !== "spread" || replacement._tag !== "property" || object.keys !== recordKeyForm([replacement.name]) ||
+      fn.fn.typeArgs[0] !== quoteType(replacement.name)) return malformed("update order or key")
+  const target = readTerm(n, base.value)
+  if (failed(target)) return again(target)
+  return Result.map(readTerm(n, replacement.value), (value): Term => ({ _tag: "recordSet", target: target.success, name: replacement.name, value }))
+}
+
+export const readTerm = (n: number, x: Expr): Read<Term> => {
+  const record = readRecordTerm(n, x)
+  if (record !== undefined) return record
   switch (x._tag) {
     case "ident": {
       const i = varRead(n, x.name)

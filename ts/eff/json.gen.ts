@@ -12,7 +12,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
@@ -61,11 +61,16 @@ export const litJson = (v: Lit): Json => {
   }
 }
 
+export const fieldReadModeJson = (v: FieldReadMode): Json => [v]
+
 export const termJson = (v: Term): Json => {
   switch (v._tag) {
     case "var": return ["var", v.index]
     case "lit": return ["lit", litJson(v.value)]
     case "app": return ["app", v.atom, termsJson(v.args)]
+    case "record": return ["record", v.fields.map((y) => [y[0], [y[1][0], tyJson(y[1][1])]]), v.presentNames.map((y) => y), termsJson(v.values)]
+    case "field": return ["field", fieldReadModeJson(v.mode), termJson(v.target), v.name]
+    case "recordSet": return ["recordSet", termJson(v.target), v.name, termJson(v.value)]
   }
 }
 

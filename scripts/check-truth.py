@@ -41,13 +41,12 @@ def main():
     with tempfile.TemporaryDirectory(prefix='truth-check-', dir=truth) as work:
         # Generated modules import ../prelude.ts and resolve Effect from their parent tree.
         # Keep the temporary run beneath the selected installation link, as the real run is.
-        shutil.copyfile(truth/'prelude.ts', Path(work)/'prelude.ts')
-        # The prelude re-exports the generated atom block beside it (make gen-derived).
-        shutil.copyfile(truth/'prelude-atoms.gen.ts', Path(work)/'prelude-atoms.gen.ts')
+        truth_host.copy_prelude(truth, Path(work))
         # The narrowing controls of `caseTag` and `optionCase` import ./prelude.ts and are named
         # by the tsconfig's `include`; without the copy that pattern matched nothing and no
         # lane compiled them.
         shutil.copyfile(truth/'select-controls.ts', Path(work)/'select-controls.ts')
+        shutil.copyfile(truth/'records.typecheck.ts', Path(work)/'records.typecheck.ts')
         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),

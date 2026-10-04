@@ -23,6 +23,7 @@
   },
   "include": [
     "prelude.ts",
+    "records.typecheck.ts",
     "select-controls.ts",
     "generated",
     "run-truth.ts",

@@ -61,3 +61,9 @@ def select(root: Path, truth: Path):
 def compiler(modules: Path):
     """The command that runs the one compiler's CLI over a project."""
     return [shutil.which('node') or 'node', str(modules / '@typescript/native-preview/bin/tsgo')]
+
+
+def copy_prelude(source: Path, destination: Path):
+    """Copy the runtime prelude and its sibling implementations for either truth lane."""
+    for name in ['prelude.ts', 'prelude-atoms.gen.ts', 'records.ts']:
+        shutil.copyfile(source / name, destination / name)

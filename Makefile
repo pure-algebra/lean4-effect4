@@ -50,7 +50,7 @@ CORE := .lake/build/lib/lean/Effect4.trace
 LAWS := .lake/build/lib/lean/Effect4/Laws.trace
 TRACE := .lake/build/lib/lean/Effect4
 LEAN_SOURCES := $(shell find src Test -name '*.lean')
-TS_EFF_SOURCES := $(wildcard ts/eff/*.ts ts/eff/test/*.ts ts/eff/ingest/*.ts ts/eff/ingest/test/*.ts) ts/eff/package.json ts/eff/bun.lock ts/eff/tsconfig.json
+TS_EFF_SOURCES := $(wildcard ts/eff/*.ts ts/eff/test/*.ts ts/eff/ingest/*.ts ts/eff/ingest/test/*.ts) ts/eff/package.json ts/eff/bun.lock ts/eff/tsconfig.json ts/eff/test/type-projection.gen.json
 VENDOR_SOURCES := $(wildcard vendor/effect-4.0.0-rc.112/src/*.ts vendor/effect-4.0.0-rc.112/src/internal/*.ts)
 
 # ---------------------------------------------------------------------------- build
@@ -151,7 +151,7 @@ $(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(PRODUCER_COMMON) $(CO
 	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 
-TS_SOURCES := $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) $(WIRE_TAGS) src/Effect4/Codegen/Print.lean lakefile.toml \
+TS_SOURCES := $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) $(WIRE_TAGS) $(VARIANCES) src/Effect4/Codegen/Print.lean lakefile.toml \
   vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts \
   vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts scripts/generate.py
 $(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE)
@@ -169,7 +169,7 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 # The truth harness: Lean writes the corpus from the committed tapes, then the real
 # runtime prints the modules, re-records the tapes and writes the result. Both are
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
-TRUTH_SOURCES := harness/truth/Truth.lean harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/run-truth.ts \
+TRUTH_SOURCES := harness/truth/Truth.lean harness/truth/records.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
 $(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(CORE) $(LAWS)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
@@ -230,7 +230,7 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.le
   ocaml/gen/api_gen.ml ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/engine/api_engine.ml \
   ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-fibers_gen.tsv ocaml/gen/closure-machine_gen.tsv ocaml/gen/closure-api_engine.tsv \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/forms.gen.ts \
-  ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/ingest/README.md \
+  ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \
   harness/truth/prelude-atoms.gen.ts \
   harness/truth/corpus.json harness/truth/generated harness/truth/result.json harness/truth/result.md \
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
@@ -403,8 +403,8 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 # The host controls beside the lane: rc.112's `catchIf` clause, the prelude's cause queries,
 # and the inventory guard (every generated atom has a prelude case that runs). Named one by
 # one: `bun test harness/truth` would also pick up the lane's work directories.
-TRUTH_HOST_TESTS := harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py \
+TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
+$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts \
     $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
 	$(BUN) test $(TRUTH_HOST_TESTS)
 	$(PY) scripts/check-truth.py

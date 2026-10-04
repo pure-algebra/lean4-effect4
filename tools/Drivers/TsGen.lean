@@ -9,13 +9,14 @@ import Effect4.Codegen.Read
 import Effect4.Codegen.Templates
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
+import Effect4.Codegen.Metadata
 
 /-!
 # Tools.TsGen — the TypeScript estate's generated files, from the Lean environment
 
     lake env lean -M4096 --run tools/Drivers/TsGen.lean ts/eff
 
-Writes eight files, all `GENERATED`, none ever edited:
+Writes eight library files and one test fixture, all `GENERATED`, none ever edited:
 
 * `eff.gen.ts` — one Effect Schema per family of the closed world `OCaml5.Eff.World.blocks`
   reads off the environment (the same world `ocaml/eff` is generated from): `Schema.TaggedUnion`
@@ -45,6 +46,7 @@ Writes eight files, all `GENERATED`, none ever edited:
   clause: what `ts/eff/read.ts`'s one matcher runs over, as Lean's `readT` does. The reserved
   heads are cross-checked against the identifiers the table's skeletons write (data, not a
   source scan) and `PrintLeaf.lean`'s literals.
+* `test/type-projection.gen.json` — finite type metadata, normalization and annotation fixtures, evaluated by the core functions.
 * `packages.gen.ts` — the canonical package tables (`Effect4.Program.Packages.all`, the host
   rows slice): per package its rc.112 key string, service type code, handle target and its
   rows in table order, decoded at import through the `Row` schema; the row at position `i` is
@@ -61,7 +63,7 @@ inductives out of the environment and refuses if their constructor lists moved. 
 printer here that disagrees with a generated schema fails the decode at import, loudly.
 
 `make gen-ts` (`scripts/generate.py --only ts`) runs this; `make check-gen` is the drift check
-over the eight files. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
+over these files. A tool (`IO`, `Lean.Meta`; `lakefile.toml`, the `Tools`
 library): outside the axiom gate, imported by nothing.
 -/
 
@@ -475,6 +477,119 @@ def tagged (ctor : String) (fields : List (String × String)) : String :=
   obj (("_tag", lit ctor) :: fields)
 
 def arr (xs : List String) : String := "[" ++ ",".intercalate xs ++ "]"
+
+/-- Field carriers for type metadata come from the same environment and wire tags as the codecs. -/
+def metadataShape (self : String) : OTy → Except String String
+  | .int => pure "{\"kind\":\"nat\"}"
+  | .bool => pure "{\"kind\":\"bool\"}"
+  | .string => pure "{\"kind\":\"string\"}"
+  | .named name =>
+      if name == self then pure "{\"kind\":\"ty\"}"
+      else throw s!"unexpected type metadata family {name}"
+  | .list inner => do pure (obj [("kind", lit "list"), ("inner", ← metadataShape self inner)])
+  | .prod left right => do
+      pure (obj [("kind", lit "pair"), ("left", ← metadataShape self left),
+        ("right", ← metadataShape self right)])
+  | _ => throw "unsupported type metadata carrier"
+
+/-- A finite constructor witness uses existing canonical field values. -/
+def metadataSample (self : String) (emptyTag : Nat) : OTy → Except String Effect4.Store.Val
+  | .int => pure (.nat 0)
+  | .bool => pure (.bool false)
+  | .string => pure (.str "")
+  | .named name => if name == self then pure (.ctor emptyTag []) else throw s!"unknown sample family {name}"
+  | .list _ => pure (.list [])
+  | .prod left right => do pure (.pair (← metadataSample self emptyTag left) (← metadataSample self emptyTag right))
+  | _ => throw "unsupported type metadata sample"
+
+def metadataSampleType (family : Family) (ctor : Ctor) : Except String Effect4.Program.Ty := do
+  let some empty := family.ctors.find? (·.args.isEmpty) | throw "type metadata has no childless base"
+  let args ← ctor.args.mapM fun (_, type) => metadataSample family.spec.oname empty.tag type
+  let some value := (Effect4.Store.Canonical.ofVal (.ctor ctor.tag args) : Option Effect4.Program.Ty)
+    | throw s!"type metadata sample fails canonical reading: {ctor.short}"
+  pure value
+
+/-- An inspection table, not a second type signature: every entry is derived from the existing family. -/
+def emitTypeMetadata (fs : List Family) : Except String String := do
+  let some family := fs.find? (·.spec.leanName == `Effect4.Program.Ty)
+    | throw "type metadata: missing Ty family"
+  let constructors ← family.ctors.mapM fun c => do
+    let fields ← c.args.mapM fun (name, type) => do
+      pure (obj [("name", lit name), ("shape", ← metadataShape family.spec.oname type)])
+    let sample ← metadataSampleType family c
+    let some keyTag := sample.key.head? | throw "empty structural type key"
+    pure (obj [("name", lit c.short), ("tag", toString c.tag), ("keyTag", toString keyTag), ("fields", arr fields)])
+  let leafName (head : Effect4.Program.Ty.LeafHead) := (reprStr head).splitOn "." |>.getLast!
+  let edges := Effect4.Program.Ty.leafEdges.map fun (a, b) => arr [lit (leafName a), lit (leafName b)]
+  pure ("\n/** Existing Ty canonical value fields, read from the closed world. */\n" ++
+    "export type TypeMetadataShape =\n" ++
+    "  | { readonly kind: \"nat\" | \"bool\" | \"string\" | \"ty\" }\n" ++
+    "  | { readonly kind: \"list\"; readonly inner: TypeMetadataShape }\n" ++
+    "  | { readonly kind: \"pair\"; readonly left: TypeMetadataShape; readonly right: TypeMetadataShape }\n" ++
+    "export interface TypeMetadataConstructor { readonly name: string; readonly tag: number; readonly keyTag: number; readonly fields: ReadonlyArray<{ readonly name: string; readonly shape: TypeMetadataShape }> }\n" ++
+    "export const typeMetadataConstructors: ReadonlyArray<TypeMetadataConstructor> = " ++ arr constructors ++ "\n" ++
+    "export const metadataFrameTags = " ++ obj
+      [("nat", toString Effect4.Store.Tag.nat.toNat), ("bool", toString Effect4.Store.Tag.bool.toNat),
+       ("string", toString Effect4.Store.Tag.string.toNat), ("list", toString Effect4.Store.Tag.list.toNat),
+       ("pair", toString Effect4.Store.Tag.pair.toNat), ("ctor", toString Effect4.Store.Tag.ctor.toNat)] ++ " as const\n" ++
+
+    "export const typeLeafEdges: ReadonlyArray<readonly [string, string]> = " ++ arr edges ++ "\n" ++
+    "export const targetReservedIdentifiers: ReadonlyArray<string> = " ++
+      arr (TypeScript.reservedIdentifiers.map lit) ++ "\n" ++
+    "export const recordHelperNames: ReadonlyArray<string> = " ++
+      arr (Effect4.Codegen.Record.helperNames.map lit) ++ "\n")
+
+/-- Enumerate existing variance declarations, then evaluate their core-owned policy. -/
+def emitTypeVariances (source : Json) : Except String String := do
+  let declarations ← (← source.getObjVal? "declarations").getArr?
+  let names ← declarations.toList.mapM fun declaration => do
+    pure ((← (← declaration.getObjVal? "module").getStr?) ++ "." ++
+      (← (← declaration.getObjVal? "name").getStr?))
+  let values := names.eraseDups.filterMap fun name =>
+    let variances := Effect4.Program.Ty.declaredVariance name
+    if variances.isEmpty then none else
+      some (name, arr (variances.map fun variance => lit ((reprStr variance).splitOn "." |>.getLast!)))
+  pure ("export const typeVariances: Readonly<Record<string, ReadonlyArray<string>>> = " ++ obj values ++ "\n")
+
+/-- Finite source-adapter fixtures, evaluated by the actual core normalization and projection. -/
+def emitTypeProjectionCases (fs : List Family) : Except String String := do
+  let some family := fs.find? (·.spec.leanName == `Effect4.Program.Ty) | throw "missing Ty samples"
+  let samples ← family.ctors.mapM (metadataSampleType family)
+  let leaves : List Effect4.Program.Ty := [.nat, .int, .number, .string, .lit "a | b", .undefined,
+    .unit, .unknown, .never, .bytes, .handle "Context.Context<unknown>", .handle " ( A | B ) | B "]
+  let extra : List Effect4.Program.Ty :=
+    [.record [("nickname", true, .string), ("id", false, .nat)],
+     .record [("__proto__", false, .option .undefined), ("a-b", true, .bytes)],
+     .record [("x", false, .string), ("x", true, .nat)],
+     .record [("😀", false, .string), ("é", true, .nat), ("z", false, .bool)],
+     .record [("items", false, .map .string (.tuple [.nat, .string, .bytes]))],
+     .map (.union .never .string) .nat, .tuple [.union .nat .string, .bool],
+     .union (.handle "A | B") (.handle "B"), .app "Ref.Ref" [.nat],
+     .union (.record [("x", true, .nat)]) (.record [("x", true, .number)])]
+  let legacy : List Effect4.Program.Ty :=
+    (["readonly [A, B,]", "[A | B, C]", "Box<(A | B)>", "A<B,>",
+      "Readonly<Record<string, number>>", "keyof A", "Foo.while", "readonly X",
+      "Array<>", "number<A>", "A[]", "A & B", "(A | B)", "null", "undefined",
+      "'a\\n'", "'\\u{1f600}'", "'\\uD83D\\uDE00'", "'\\x41'", "'\\0'",
+      "'\\uD800'", "'\\u{110000}'"] : List String).map Effect4.Program.Ty.handle
+  let nested : List Effect4.Program.Ty :=
+    [.union (.app "ReadonlyArray" [.nat]) (.app "ReadonlyArray" [.number]),
+     .union (.map .string .nat) (.map .string .number),
+     .union (.refOf .nat) (.refOf .number),
+     .prod (.union .string .nat) (.union .bool .bytes),
+     .union (.tuple [.nat, .string, .bytes]) (.tuple [.number, .string, .bytes]),
+     .record [("function", true, .union .nat .int), ("", false, .option .undefined)]]
+  let all := samples ++ extra ++ legacy ++ nested ++ leaves.flatMap fun a => leaves.map (Effect4.Program.Ty.union a)
+  let cases := all.map fun type =>
+    Json.mkObj [("raw", Tools.ProfileJson.tyJson type),
+      ("normal", Tools.ProfileJson.tyJson type.normalize), ("key", toJson type.key),
+      ("annotation", match Effect4.Codegen.Types.ofTy type with
+        | none => Json.null
+        | some projected => .str (TypeScript.Render.type {} projected)),
+      ("metadata", .str (TypeScript.Render.expr {} 0 (Effect4.Codegen.Metadata.writeTy type)))]
+  pure ((Json.mkObj [("generated", .str "tools/Drivers/TsGen.lean; regenerate with make gen-ts"),
+    ("scope", .str "Finite normalization, metadata and target annotation controls"),
+    ("cases", toJson cases)]).pretty ++ "\n")
 
 def fnJs : Effect4.Machine.FnName → String
   | .incr => lit "incr"
@@ -1128,14 +1243,25 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (out / "eff.gen.ts") (stampHeader ++ schemas)
   IO.FS.writeFile (out / "json.gen.ts") (stampHeader ++ json)
   IO.FS.writeFile (out / "profile.gen.ts") (stampHeader ++ profile)
-  IO.FS.writeFile (out / "wire.gen.ts") (stampHeader ++ (emitWire fs))
+  let metadata ← match emitTypeMetadata fs with
+    | .ok text => pure text
+    | .error why => throw (IO.userError s!"TsGen: {why}")
+  let variances ← match Json.parse (← IO.FS.readFile "tools/Effect4Gen/variances.json") >>= emitTypeVariances with
+    | .ok text => pure text
+    | .error why => throw (IO.userError s!"TsGen: variance metadata: {why}")
+  IO.FS.writeFile (out / "wire.gen.ts") (stampHeader ++ emitWire fs ++ metadata ++ variances)
   IO.FS.writeFile (out / "taxonomy.gen.ts") (stampHeader ++ emitTaxonomy)
   IO.FS.writeFile (out / "forms.gen.ts") (stampHeader ++ emitForms)
   IO.FS.writeFile (out / "packages.gen.ts") (stampHeader ++ emitPackages)
   match emitTemplates fs with
   | .ok text => IO.FS.writeFile (out / "templates.gen.ts") (stampHeader ++ text)
   | .error why => throw (IO.userError s!"TsGen: templates: {why}")
+  let projectionCases ← match emitTypeProjectionCases fs with
+    | .ok text => pure text
+    | .error why => throw (IO.userError s!"TsGen: projection fixtures: {why}")
+  IO.FS.createDirAll (out / "test")
+  IO.FS.writeFile (out / "test" / "type-projection.gen.json") projectionCases
   let kinds := fs.map fun f => match kindOf f with
     | .enum => "literals" | .struct => "struct" | .consList _ => "array" | .tagged => "tagged"
   IO.println s!"TsGen: {fs.length} families ({(kinds.filter (· == "tagged")).length} tagged, {(kinds.filter (· == "literals")).length} literals, {(kinds.filter (· == "struct")).length} struct, {(kinds.filter (· == "array")).length} array), {fs.foldl (fun n f => n + f.ctors.length) 0} constructors; profile {Effect4.Program.reserved.length} heads, {atomRows.length} atoms, {allNativeOps.length} rows; packages {Effect4.Program.Packages.all.length} tables, {Effect4.Program.Packages.all.foldl (fun n p => n + p.rows.length) 0} rows, address {address}"
-  IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts under {out}"
+  IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts, test/type-projection.gen.json under {out}"

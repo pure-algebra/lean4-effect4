@@ -22,6 +22,9 @@ import type { ArrayExpression, Class, Directive, Expression, ExportDefaultDeclar
 import { childNodes, parseTypeScript } from "./oxc.ts"
 import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
 import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
+import { readTypeMetadata } from "../metadata.ts"
+import { targetType, legacyType, targetIdentifier, recordKeyForm, quoteType } from "../target-types.ts"
+import type { Expr } from "../read.ts"
 
 class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
@@ -194,10 +197,91 @@ class CompilerReader {
     if (isString(x)) return { _tag: "str", value: x.value }
     return bad("literal")
   }
+  /** Independent source walk for the printed record forms. The shared metadata decoder
+   * validates data after this walk; foreign admission retains its existing profile. */
+  metadata(x: Ex): Expr {
+    x = this.unwrap(x)
+    if (x.type === "ArrayExpression") return { _tag: "arr", items: elementsOf(x).map(item => this.metadata(item)) }
+    if (isNumeric(x) && Number.isSafeInteger(x.value) && x.value >= 0) return { _tag: "int", value: x.value }
+    if (isString(x)) return { _tag: "str", value: x.value }
+    if (isTrue(x) || isFalse(x)) return { _tag: "bool", value: isTrue(x) }
+    return bad("metadata expression")
+  }
+  recordEntries(x: Ex): { keys: "plain" | "quoted" | "computed"; entries: Array<{ name: string; value: Ex } | { spread: Ex }> } {
+    x = this.unwrap(x)
+    if (x.type !== "ObjectExpression") return bad("record object")
+    let keys: "plain" | "quoted" | "computed" | undefined
+    const entries: Array<{ name: string; value: Ex } | { spread: Ex }> = []
+    for (const property of x.properties) {
+      if (property.type === "SpreadElement") { entries.push({ spread: property.argument }); continue }
+      if (property.kind !== "init" || property.method || property.shorthand) return bad("record property")
+      const key = property.key
+      const form = property.computed ? "computed" : key.type === "Identifier" ? "plain" : "quoted"
+      const name = key.type === "Identifier" && !property.computed ? key.name :
+        key.type === "Literal" && typeof key.value === "string" ? key.value : bad("record key")
+      if (keys !== undefined && keys !== form) return bad("record key forms")
+      keys = form; entries.push({ name, value: property.value })
+    }
+    return { keys: keys ?? "plain", entries }
+  }
+  recordTerm(x: Ex, env: readonly string[]): Term | undefined {
+    if (x.type === "MemberExpression") {
+      if (x.optional) return bad("optional field syntax")
+      const name = x.computed ? isString(x.property) ? x.property.value : bad("field key") : memberName(x)
+      if (targetIdentifier(name) === x.computed) return bad("field spelling")
+      return { _tag: "field", mode: "required", target: this.term(x.object, env), name }
+    }
+    if (x.type !== "CallExpression" || x.optional) return undefined
+    const fn = this.unwrap(x.callee)
+    if (fn.type === "Identifier" && x.typeArguments && ["recordValue", "recordRaw"].includes(fn.name)) {
+      const raw = fn.name === "recordRaw", types = x.typeArguments.params
+      this.arity(x.arguments, raw ? 3 : 2)
+      if (types.length !== 1) return bad("record type arguments")
+      const declared = readTypeMetadata(this.metadata(this.at(x.arguments, 0)))
+      if (declared?._tag !== "record") return bad("record metadata")
+      const expected = targetType(declared, legacyType)
+      let names: string[], values: readonly Ex[]
+      if (raw) {
+        const supplied = this.unwrap(this.at(x.arguments, 1)), children = this.unwrap(this.at(x.arguments, 2))
+        if (this.text(types[0]!) !== "unknown" || supplied.type !== "ArrayExpression" || children.type !== "ArrayExpression") return bad("raw record frame")
+        names = elementsOf(supplied).map(value => isString(value) ? value.value : bad("record supplied name"))
+        values = elementsOf(children)
+        if (names.length === values.length && expected !== undefined) return bad("unnecessary raw record frame")
+      } else {
+        const object = this.recordEntries(this.at(x.arguments, 1))
+        names = []; const children: Ex[] = []
+        for (const entry of object.entries) {
+          if ("spread" in entry) return bad("record construction spread")
+          names.push(entry.name); children.push(entry.value)
+        }
+        values = children
+        if (expected === undefined || this.text(types[0]!) !== expected || object.keys !== recordKeyForm(names)) return bad("record annotation or keys")
+      }
+      return { _tag: "record", fields: declared.fields, presentNames: names, values: values.map(value => this.term(value, env)) }
+    }
+    if (fn.type !== "CallExpression" || fn.optional || !fn.typeArguments || fn.callee.type !== "Identifier") return undefined
+    const head = fn.callee.name
+    if (head !== "recordOptional" && head !== "recordSet") return undefined
+    if (fn.typeArguments.params.length !== 1 || x.arguments.length !== 1) return bad("record curried arity")
+    const annotation = this.text(fn.typeArguments.params[0]!)
+    if (head === "recordOptional") {
+      this.arity(fn.arguments, 1)
+      const key = this.at(fn.arguments, 0)
+      if (!isString(key) || annotation !== quoteType(key.value)) return bad("optional record key")
+      return { _tag: "field", mode: "optional", target: this.term(this.at(x.arguments, 0), env), name: key.value }
+    }
+    this.arity(fn.arguments, 0)
+    const object = this.recordEntries(this.at(x.arguments, 0)), base = object.entries[0], value = object.entries[1]
+    if (object.entries.length !== 2 || base === undefined || !("spread" in base) || value === undefined || !("name" in value) ||
+        object.keys !== recordKeyForm([value.name]) || annotation !== quoteType(value.name)) return bad("record update frame")
+    return { _tag: "recordSet", target: this.term(base.spread, env), name: value.name, value: this.term(value.value, env) }
+  }
   term(x: Ex, env: readonly string[]): Term {
     x = this.unwrap(x)
     const i = this.variable(x, env)
     if (i !== undefined) return { _tag: "var", index: i }
+    const record = this.recordTerm(x, env)
+    if (record !== undefined) return record
     if (x.type === "CallExpression") return { _tag: "app", atom: this.name(x.callee), args: x.arguments.map(a => this.term(a, env)) }
     return { _tag: "lit", value: this.literal(x) }
   }
@@ -654,6 +738,7 @@ class ForeignCompilerReader extends CompilerReader {
     if (isString(y) && this.text(y).slice(1, -1) !== JSON.stringify(y.value).slice(1, -1)) return refuseForeign("E-ARG-DYNAMIC", "string")
     try { return super.literal(y) } catch (e) { if (e instanceof Decline) return refuseForeign("E-ARG-DYNAMIC", "literal"); throw e }
   }
+  override recordTerm(_x: Ex, _env: readonly string[]): Term | undefined { return undefined }
   override term(x: Ex, env: readonly string[]): Term {
     const y = this.unwrap(x)
     if (y.type === "Identifier" && y.name !== "undefined" && this.variable(y, env) === undefined) return refuseForeign("E-REF-UNBOUND", y.name)
