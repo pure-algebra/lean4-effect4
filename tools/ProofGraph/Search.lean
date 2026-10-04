@@ -50,9 +50,10 @@ private def closeOverFresh (base : Kernel.Environment) (input : Expr) : TermElab
       | _ => none
   throwError "search temporary declaration closure did not finish"
 
-/-- Check a declaration synchronously without publishing the resulting environment.
-Use only the remainder of the current search budget, without resetting its origin. -/
-private def checkDeclaration (base : Kernel.Environment) (declaration : Declaration) : MetaM Unit := do
+/-- Check a declaration synchronously in the kernel without publishing the resulting
+environment. Use only the remainder of the current search budget, without resetting its origin.
+The planning graph (`ProofGraph.Plan`) checks its edge implications through it. -/
+def checkDeclaration (base : Kernel.Environment) (declaration : Declaration) : MetaM Unit := do
   Core.checkMaxHeartbeats "ProofGraph.search.checkDeclaration"
   let context ← readThe Core.Context
   let elapsed := (← IO.getNumHeartbeats) - context.initHeartbeats

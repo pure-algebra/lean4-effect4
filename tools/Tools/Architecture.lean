@@ -1,6 +1,7 @@
 import Lean
 import Tools.GeneratedStamp
 import Tools.ArchitectureRoles
+import ProofGraph.Population
 
 /-!
 # Tools.Architecture — the architecture map, measured from the tree
@@ -147,27 +148,15 @@ structure Against where
   accepted : Option String
 deriving Inhabited
 
-/-- Auxiliary declarations the compiler and the deriving handlers mint: not the module's
-own count. -/
-def isNoise (n : Name) : Bool :=
-  n.isInternal || n.hasMacroScopes || n.components.any fun c =>
-    match c with
-    | .str _ s =>
-      s.startsWith "_" || s.startsWith "match_" || s.startsWith "proof_" || s.startsWith "eq_" ||
-        s == "rec" || s == "recOn" || s == "casesOn" || s == "below" || s == "brecOn" ||
-        s == "binductionOn" || s == "ibelow" || s == "noConfusion" || s == "noConfusionType" ||
-        s == "inj" || s == "injEq" || s == "sizeOf_spec" || s.startsWith "instSizeOf" ||
-        s == "ctorIdx" || s == "ctorElim"
-    | _ => true
-
 /-- Load the declared roots and count what every loaded module declares. -/
 def loadCounts : IO (Std.HashMap Name Counts) := do
   initSearchPath (← findSysroot)
   let imports := roots.toArray.map fun r => ({ module := nameOfString r } : Import)
   let env ← importModules imports {} 0
   let mods := env.header.moduleNames
+  -- auxiliaries the elaborator and the compiler mint are not the module's own count
   return env.constants.fold (init := {}) fun acc name ci =>
-    if isNoise name then acc else
+    if ProofGraph.isAuxiliary env name then acc else
     match env.getModuleIdxFor? name with
     | none => acc
     | some idx =>
