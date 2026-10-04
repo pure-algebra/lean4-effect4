@@ -133,11 +133,13 @@ certificate. Neither producer accepts a separate claimed answer/error type.
 
 `checkTypedProgram_type`, `checkTypedProgram_refusal_iff` and
 `TypedProgram.hasTy` relate the evidence to the one checker and the declarative
-judgment on `expandRefs`. `emitModule_erasure` and `Api.printDecl_erasure` retain
-every previous output/refusal without restricting their inputs.
-`emitModule_complete` establishes production on the same readable/lawful/representable
-domain; `ModuleEmission.readModule` reconstructs the original program there, and
-`ModuleEmission.unique` rules out two different certified outputs for one input.
+judgment on `expandRefs`. **Formation amendment (2026-10-03, decisions rows 192 and 193).**
+`emitModule_erasure` and `Api.printDecl_erasure` retain every previous output and refusal on
+formed input (`Formation.InputFormed`). `Api.printDecl_erasure` also requires that no stored
+annotation refuses (`annotationRefusal`). Malformed input now refuses before printing.
+`emitModule_complete` and `admitModule_complete` take both premises beside the
+readable, lawful and representable domain. There `ModuleEmission.readModule` reconstructs
+the original program, and `ModuleEmission.unique` rules out two certified outputs for one input.
 The existing `Api.printModule_roundTrip` statement is unchanged and now composes
 those results. Original source annotations/imports, nominal service requirements,
 contextual target annotations and target typing/execution remain separate obligations.

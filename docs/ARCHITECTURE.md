@@ -41,8 +41,10 @@ OCaml5.Lcnf consumes the generic Source/Lcnf utilities, never Conform.Effect4
 ```
 
 Arrows point from what is imported to what imports it. `Api` imports the
-Program and Schema faces; callers and selected batteries import `Api`; `Machine` never imports
-`Program`. The persisted Schema data plane stays below Machine. The type-directed
+Program and Schema faces; callers and selected batteries import `Api`. From `Program`,
+`Machine` imports only the type data a record term stores, `Program.TyCore` and `Program.TyEq`
+([record contract](research/2026-10-03-data-language/record-contract.md)). It never imports
+`Eff`, typing or the checker. The persisted Schema data plane stays below Machine. The type-directed
 boundary in `Schema/Codec` sits above Program's value admission and uses Machine's
 existing value images; `Api` imports that boundary, and its proofs live under
 `Laws/Schema/Codec`. Machine does not import the boundary. The external packages are pinned
