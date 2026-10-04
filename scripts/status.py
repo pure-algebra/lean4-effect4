@@ -155,6 +155,15 @@ def claims() -> Counter:
     return counts
 
 
+def plan_rows() -> str:
+    """The requirement rows of the plan section, by derived status (`| R… | status | … |`)."""
+    counts: Counter = Counter()
+    for cells in table_rows("generated/semantics.md"):
+        if len(cells) == 4 and re.fullmatch(r"R\d+", cells[0]):
+            counts[cells[1]] += 1
+    return summarise(counts, ("proved", "ready", "reduced", "declared", "open")) if counts else "no rows"
+
+
 def plan_next() -> str:
     """The plan's next goals, as the semantics report renders them (`**Next goals** (N): …`)."""
     for line in (ROOT / "generated/semantics.md").read_text().split("\n"):
@@ -303,7 +312,7 @@ def main() -> int:
 
     print(f"claims    {summarise(claims(), ('proved', 'absent', 'refuted', 'assumed', 'wanted'))}  (generated/semantics.md)")
     print(f"ledger    {ledger_goals()} open goal(s) (#proof_wanted)")
-    print(f"plan      {plan_next()}  (generated/semantics.md)")
+    print(f"plan      requirements {plan_rows()}; {plan_next()}  (generated/semantics.md)")
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")
     print(f"issues    {summarise(design_issues(), ('open', 'ruled', 'basis'))}  (docs/DESIGN-ISSUES.md)")
     print(f"counterex {summarise(counterexamples(), ('seeded', 'repaired', 'pinned', 'retired'))}  (Test/Counterexamples/REGISTER.md)")
