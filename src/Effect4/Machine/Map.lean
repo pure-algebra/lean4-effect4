@@ -1,4 +1,4 @@
-import Effect4.Store.Carrier.Val
+import Effect4.Machine.Alphabets
 import Effect4.Data.FieldOrder
 
 /-! String-map value operations for decisions rows 125, 166 and 197.
@@ -52,9 +52,9 @@ def entries (value : Val) : Option Val :=
     .list ((Field.canonBy Field.bytesKey entries).map fun entry => .list [.str entry.1, entry.2])
 
 /-- Build from ordinary pairs. Reversal makes the first-occurrence canonicalizer keep the last input. -/
-def fromEntries : Val → Option Val
-  | .list entries => (readTuples entries).map fun pairs =>
-      write (Field.canonBy Field.bytesKey pairs.reverse)
-  | _ => none
+def fromEntries (value : Val) : Option Val := do
+  let entries ← Machine.Val.asList? value
+  let pairs ← readTuples entries
+  pure (write (Field.canonBy Field.bytesKey pairs.reverse))
 
 end Effect4.Machine.Map

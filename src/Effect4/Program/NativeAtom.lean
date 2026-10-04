@@ -290,6 +290,26 @@ def spec : NativeAtom → Spec
       { scheme := .mono [.string, .string] .string,
         cite := "`\"concat\", [str a, str b] => str (a ++ b)`" }
 
+  | .mapEmpty =>
+      { scheme := .mono [] (.map .string .never),
+        cite := "Decisions rows 125, 166 and 197: the empty string map at bottom value type." }
+  | .mapGet =>
+      { scheme := .poly [.map .string (.var 0), .string] (.option (.var 0)),
+        cite := "Decisions rows 125 and 166: own-key lookup returns an outer presence option." }
+  | .mapSet =>
+      { scheme := .poly [.map .string (.var 0), .string, .var 1]
+          (.map .string (.union (.var 0) (.var 1))),
+        cite := "Decision row 197: insertion retains old and new value types as separate union members." }
+  | .mapKeys =>
+      { scheme := .poly [.map .string (.var 0)] (.list .string),
+        cite := "Decisions rows 125 and 166: string-map keys in canonical UTF-8 order." }
+  | .mapEntries =>
+      { scheme := .poly [.map .string (.var 0)] (.list (.prod .string (.var 0))),
+        cite := "Decisions rows 125 and 166: ordered entries as ordinary program pairs." }
+  | .mapFromEntries =>
+      { scheme := .poly [.list (.prod .string (.var 0))] (.map .string (.var 0)),
+        cite := "Decision row 197: ordinary input pairs become sorted map entries, with the last repeated key retained." }
+
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause):
 the atom's scheme, applied. -/
 def typeOf (atom : NativeAtom) : List Ty → Option Ty := (spec atom).scheme.apply

@@ -27,6 +27,9 @@ def two : Val := .list [.pair (.str "b") (.nat 2), .pair (.str "d") (.nat 4)]
   some (.list [.list [.str "b", .nat 2], .list [.str "d", .nat 4]])
 
 #guard NativeAtom.eval .mapFromEntries [.list []] = some empty
+-- The existing list view also accepts an empty fiber snapshot.
+#guard NativeAtom.eval .mapFromEntries [Machine.Val.fibers []] = some empty
+#guard NativeAtom.eval .mapFromEntries [Machine.Val.fibers [⟨0⟩]] = none
 #guard NativeAtom.eval .mapFromEntries [.list
     [.list [.str "x", .nat 1], .list [.str "x", .nat 2]]] =
   some (.list [.pair (.str "x") (.nat 2)])

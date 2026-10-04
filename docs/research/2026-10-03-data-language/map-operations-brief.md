@@ -9,6 +9,9 @@ This seat implements only the six map atoms.
 
 The machine carrier stays a list of `Store.Val.pair` entries with string keys.
 Ordinary entry pairs remain `Store.Val.list [key, value]`.
+Construction reads its outer list through the existing `Val.asList?` interface.
+An empty fiber snapshot passes the existing list membership check at every element type.
+A nonempty fiber snapshot cannot supply the required pair elements.
 The two entry readers keep those images distinct.
 Output maps use `Field.canonBy Field.bytesKey` for sorted, distinct keys.
 Construction reverses supplied entries first, so the existing first-occurrence canonicalizer retains the last supplied value.
@@ -51,8 +54,9 @@ They establish actual pure-term result membership and evaluation existence, serv
 They establish neither scheduler progress nor host execution.
 
 Successful raw map operations produce only handles already present in their inputs.
-This is a helper for `m7-exit-handles-valid` under Scope Lifetime & Finalization.
-Its direct consumers are `nativeAtom_keys` and `evalTerm_keys`; it serves the existing M6/M7 path and R3.
+This is a helper for `straight-meaning-typed` under Residual Program Typing.
+The raw-handle consumers are `MeaningSound.evalTerm_validIn` and `Denote.meaning_typed`.
+Decoded key containment serves `nativeAtom_keys`, `evalTerm_keys`, hooks and layers under R4.
 It adds neither handle allocation nor finalization guarantees.
 
 ## Stages and done criteria
