@@ -71,6 +71,7 @@ export const termJson = (v: Term): Json => {
     case "record": return ["record", v.fields.map((y) => [y[0], [y[1][0], tyJson(y[1][1])]]), v.presentNames.map((y) => y), termsJson(v.values)]
     case "field": return ["field", fieldReadModeJson(v.mode), termJson(v.target), v.name]
     case "recordSet": return ["recordSet", termJson(v.target), v.name, termJson(v.value)]
+    case "tupleAt": return ["tupleAt", termJson(v.target), v.index]
   }
 }
 

@@ -229,3 +229,8 @@ export const mapEntries = <A>(map: Readonly<Record<string, A>>): ReadonlyArray<r
  * Decision row 197: ordinary input pairs become sorted map entries, with the last repeated key retained.
  */
 export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)
+
+/**
+ * Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary.
+ */
+export const tuple = <const A extends readonly unknown[]>(...items: A): A => items

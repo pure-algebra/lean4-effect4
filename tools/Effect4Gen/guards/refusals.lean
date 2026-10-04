@@ -77,7 +77,9 @@ def reasons : List TypeReason :=
    .mergeAllEmpty, .returnNotLast, .breakOutsideLoop, .literalOutsideAlphabet (.str "x"),
    .instantiatedFormation "Db.get" ⟨["row", "answer", "type", "0"], .map .nat .string, .mapKey⟩,
    .recordTerm ⟨[0], .missingRequired "x"⟩,
-   .recordCause ⟨[1], ⟨[0], .missingRequired "x"⟩⟩]
+   .recordCause ⟨[1], ⟨[0], .missingRequired "x"⟩⟩,
+   .tupleTerm ⟨[0], 2, .outOfBounds 2⟩,
+   .tupleCause ⟨[1], ⟨[0], 0, .nonTuple .nat⟩⟩]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/
@@ -161,3 +163,18 @@ def printedHead : Effect4.Json → String
 #guard typings.all fun x => Canonical.head x == "TypeRefusal" && printedHead (Canonical.print x) == ""
 
 end RefusalsAcceptance
+
+namespace TupleRefusalAcceptance
+open Effect4 Effect4.Program Effect4.Store
+
+def controls : List TypeReason :=
+  [.tupleTerm ⟨[1, 0], 2, .outOfBounds 2⟩,
+   .tupleTerm ⟨[], 0, .nonTuple (.list .nat)⟩,
+   .tupleCause ⟨[1], ⟨[0], 900719925474099312345678901, .outOfBounds 1⟩⟩]
+
+#guard controls.all fun reason =>
+  Canonical.decode (α := TypeReason) (Canonical.encode reason) = some reason
+#guard controls.all fun reason =>
+  Canonical.decode (α := TypeReason) (Canonical.encode reason ++ [0]) = none
+
+end TupleRefusalAcceptance

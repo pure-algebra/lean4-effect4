@@ -537,7 +537,9 @@ def emitTypeMetadata (fs : List Family) : Except String String := do
     "export const targetReservedIdentifiers: ReadonlyArray<string> = " ++
       arr (TypeScript.reservedIdentifiers.map lit) ++ "\n" ++
     "export const recordHelperNames: ReadonlyArray<string> = " ++
-      arr (Effect4.Codegen.Record.helperNames.map lit) ++ "\n")
+      arr (Effect4.Codegen.Record.helperNames.map lit) ++ "\n" ++
+    "export const tupleHelperNames: ReadonlyArray<string> = " ++
+      arr (Effect4.Codegen.Tuple.helperNames.map lit) ++ "\n")
 
 /-- Enumerate existing variance declarations, then evaluate their core-owned policy. -/
 def emitTypeVariances (source : Json) : Except String String := do
