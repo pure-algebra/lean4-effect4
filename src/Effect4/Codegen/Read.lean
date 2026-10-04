@@ -363,21 +363,22 @@ def keyFromText (text : String) : ServiceKey :=
   ⟨⟨decodeBytes (bytes.takeWhile (· != 95))⟩,
     ⟨decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
 
-def keyText (key : ServiceKey) : String :=
-  "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
-
-/-- Only the exact printed key is admitted, including its optional type argument. -/
+/-- Only the exact printed key is admitted. Identifier, runtime spelling and carrier
+must agree; the distinguished scope is represented only by the genuine `Scope.Scope`. -/
 def readKey {Op : Type} (sig : Signature Op) : Expr → Except ReadRefusal ServiceKey
+  | .ident head =>
+    if head = "Scope.Scope" then .ok sig.scopeKey else .error (.shape "service key")
   | .call (.ident head) [.str text] =>
     let key := keyFromText text
-    if head = "Context.Service" ∧ sig.serviceTy key = none ∧ text = keyText key then
+    if key ≠ sig.scopeKey ∧ head = "Context.Service" ∧ sig.serviceTy key = none ∧ text = keyText key then
       .ok key
     else .error (.shape "service key")
-  | .call (.generic (.ident head) [arg]) [.str text] =>
+  | .call (.generic (.ident head) [identity, arg]) [.str text] =>
     let key := keyFromText text
     match sig.serviceTy key with
     | some ty =>
-      if head = "Context.Service" ∧ Effect4.Codegen.Types.ofTy ty = some arg ∧ text = keyText key then
+      if key ≠ sig.scopeKey ∧ head = "Context.Service" ∧ identity = .literal (keyText key) ∧
+          Effect4.Codegen.Types.ofTy ty = some arg ∧ text = keyText key then
         .ok key
       else .error (.shape "service key")
     | none => .error (.shape "service key")
@@ -883,8 +884,9 @@ def tupleRequestReadable (n : Nat) (request : Term) : Bool :=
       | .lit .unit => true
       | _ => false
 
-/-- A service key can be printed exactly when its optional signature type has a
-structural target representation. This premise replaces the old total string spelling. -/
+/-- A sufficient readable-domain condition for service keys: an ordinary key
+with a known carrier needs its structural target representation. The distinguished
+scope key prints directly as `Scope.Scope`, independently of its carrier. -/
 def keyReadable (sig : Signature Op) (key : ServiceKey) : Bool :=
   match sig.serviceTy key with
   | none => true

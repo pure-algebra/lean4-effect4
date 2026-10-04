@@ -2,4 +2,4 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv, recordValue, recordOptional, recordSet } from "../prelude.ts"
-export const main: Effect.Effect<number, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))
+export const main: Effect.Effect<number, never, never> = Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.scoped(Effect.acquireRelease(Effect.succeed(7), (a1, a2) => Ref.set(a0, a1))), (a1) => Ref.get(a0)))

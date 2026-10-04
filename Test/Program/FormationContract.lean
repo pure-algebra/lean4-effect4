@@ -66,7 +66,7 @@ def typedBadTable : TypedProgram (nativeSignature badTable) pureProgram :=
 def source : TypeScript.Module :=
   { header := [], imports := [.named ["Effect"] "effect"], decls := [.const
       { doc := [], name := "main", value := .call (.ident "Effect.succeed") [.int 1],
-        exported := true, type := some (.name ["Effect", "Effect"] [.name ["number"] [], .name ["never"] []]) }] }
+        exported := true, type := some (.name ["Effect", "Effect"] [.name ["number"] [], .name ["never"] [], .name ["never"] []]) }] }
 #guard match Effect4.Codegen.admitModule "main" source badTable with
   | .error (.formation why) => why.ty = duplicate
   | _ => false

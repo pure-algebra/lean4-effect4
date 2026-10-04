@@ -97,6 +97,20 @@ theorem emitModule_erasure (name : String) (program : NativeEff) (table : RowTab
       · rename_i declarations printed
         simp only [printed, Except.toOption, ModuleEmission.module, Option.map_some]
 
+/-- R5/R8: a checked emission retains an explicit answer, error and complete
+requirement annotation on its main declaration. This certifies generated syntax,
+not TypeScript execution. -/
+theorem ModuleEmission.annotation_complete (emission : ModuleEmission program table name) :
+    ∃ layers main body answer error,
+      emission.declarations = layers ++ [main] ∧
+      Program.printDecl name emission.typing.ty body nativeScopeKey = .ok main ∧
+      main.type = some (.name ["Effect", "Effect"]
+        [answer, error, requirementType nativeScopeKey emission.typing.ty.requires]) := by
+  have printed := (printEntry_ok emission.generated).2.2
+  obtain ⟨layers, main, body, block, _, declaration⟩ := printModule_shape printed
+  obtain ⟨answer, error, annotation⟩ := declarationType_complete (printDecl_fields declaration).2.2.2
+  exact ⟨layers, main, body, answer, error, block, declaration, annotation⟩
+
 /-- On raw formed input, a core typing refusal remains distinguishable. -/
 theorem emitModule_illTyped_iff (formed : Formation.InputFormed program table) :
     emitModule name program table = .error .illTyped ↔

@@ -8,7 +8,7 @@ import TypeScript.Render
 Plan: `docs/research/2026-09-04-ast-relation-plan.md` §5.1. One `#guard` per constructor of
 `Effect4.Program.Eff` (the 28 rows of `arms`), per statement form of a generator body, per
 `awaitFiber` mode, per fork shape (both `daemon` values against all three `MaskMode`s), per
-refusal, and two for `printDecl`. Every pin is the rendered bytes of
+refusal, and complete service requirement annotations. Every pin is the rendered bytes of
 `TypeScript.Render.expr TypeScript.house0 0`, so the battery fails on a spelling change and
 on a layout change alike.
 
@@ -350,15 +350,54 @@ same frame shape. Each refusal names itself, so a refusal is data rather than a 
 #guard (print sig 1 (.withFiber (.setContext (.var 0)))).map (expr house0 0)
   = .error (.internalAction "setContext")
 
-/-! ## `printDecl`: the two-parameter type exactly when the requirement is empty -/
+/-! ## Full service identity and all three declaration parameters
+
+Placement: Concept 5's print/read embedding at the service boundary (DI-24/DI-76).
+These finite controls serve `declarationType_complete` and the checked module annotation
+consumer. They fix the signature, full key and representable answer/error types; unknown
+keys below exercise raw printing, not typed service admission. They establish neither a
+general target typing theorem nor runtime agreement. They serve R5 service identity and
+R8's named printer/reader connection.
+-/
+
+#guard (printKey nativeSignature ⟨⟨4⟩, ⟨4⟩⟩).map (expr house0 0) =
+  .ok "Context.Service<\"k4_4\", number>(\"k4_4\")"
+#guard (printKey nativeSignature ⟨⟨5⟩, ⟨4⟩⟩).map (expr house0 0) =
+  .ok "Context.Service<\"k5_4\", number>(\"k5_4\")"
+#guard (printKey nativeSignature ⟨⟨4⟩, ⟨99⟩⟩).map (expr house0 0) =
+  .ok "Context.Service(\"k4_99\")"
+#guard (printKey { nativeSignature with serviceTy := fun _ => some .unknown }
+    ⟨⟨4⟩, ⟨99⟩⟩).map (expr house0 0) =
+  .ok "Context.Service<\"k4_99\", unknown>(\"k4_99\")"
+#guard (printKey nativeSignature nativeScopeKey).map (expr house0 0) = .ok "Scope.Scope"
+#guard (print nativeSignature 0 (.scoped (.service nativeScopeKey))).map (expr house0 0) =
+  .ok "Effect.scoped(Effect.service(Scope.Scope))"
 
 #guard (printDecl "program" ⟨.nat, .never, Requirement.empty⟩
       (.call (.ident "Effect.succeed") [.int 1])).map (constDecl house0)
-  = .ok "export const program: Effect.Effect<number, never> = Effect.succeed(1)\n"
+  = .ok "export const program: Effect.Effect<number, never, never> = Effect.succeed(1)\n"
 
 #guard (printDecl "program" ⟨.nat, .never, Requirement.single ⟨⟨1⟩, ⟨2⟩⟩⟩
       (.call (.ident "Effect.succeed") [.int 1])).map (constDecl house0)
-  = .ok "export const program = Effect.succeed(1)\n"
+  = .ok "export const program: Effect.Effect<number, never, \"k1_2\"> = Effect.succeed(1)\n"
+
+#guard (printDecl "program"
+      ⟨.nat, .never, Requirement.ofList [⟨⟨5⟩, ⟨4⟩⟩, ⟨⟨4⟩, ⟨4⟩⟩, ⟨⟨5⟩, ⟨4⟩⟩]⟩
+      (.call (.ident "Effect.succeed") [.int 1])).map (constDecl house0) =
+  .ok "export const program: Effect.Effect<number, never, \"k4_4\" | \"k5_4\"> = Effect.succeed(1)\n"
+
+-- A generic module must use the signature's scope key in both its expression and its R.
+#guard
+  let customKey : Effect4.ServiceKey := ⟨⟨7⟩, ⟨2⟩⟩
+  let customSig := { nativeSignature with scopeKey := customKey }
+  (printModule customSig "program" ⟨.scope, .never, Requirement.single customKey⟩
+      (.service customKey)).map (fun ds => ds.map (constDecl house0)) =
+    .ok ["export const program: Effect.Effect<Scope.Scope, never, Scope.Scope> = Effect.service(Scope.Scope)\n"]
+#guard
+  let customKey : Effect4.ServiceKey := ⟨⟨7⟩, ⟨2⟩⟩
+  let customSig := { nativeSignature with scopeKey := customKey }
+  (printKey customSig nativeScopeKey).map (expr house0 0) =
+    .ok "Context.Service<\"k0_0\", Scope.Scope>(\"k0_0\")"
 
 -- The raw declaration printer now exposes its type domain. A closed body
 -- alone cannot make an arbitrary legacy handle spelling representable.
@@ -369,6 +408,13 @@ same frame shape. Each refusal names itself, so a refusal is data rather than a 
   | _ => false
 #guard declarationTypeRepresentable
     ⟨.handle "not a type !", .never, Requirement.empty⟩ = false
+#guard match printDecl "program"
+    ⟨.handle "not a type !", .never, Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
+    (.call (.ident "Effect.succeed") [.int 1]) with
+  | .error (.typeSpelling spelling) => spelling == "not a type !"
+  | _ => false
+#guard declarationTypeRepresentable
+    ⟨.handle "not a type !", .never, Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩ = false
 
 /-! ## `printEntry`: an export name the reader can tell from everything it decodes
 

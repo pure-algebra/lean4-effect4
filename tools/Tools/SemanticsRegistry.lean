@@ -383,6 +383,9 @@ def registry : Registry where
     { id := "record-codec-layout", concept := "exact-codecs", role := .compatibility
       title := "Record JSON decoding is exact under normJ; named record values retain optional presence"
       pointer := .witness `Effect4.Schema.decode_iff },
+    { id := "service-identifier-injective", concept := "exact-codecs", role := .compatibility
+      title := "At one signature's scope key, distinct service keys print distinct target Identifier types"
+      pointer := .witness `Effect4.Program.keyIdentifier_injective },
 
     -- 6. subtyping-algebra
     { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility
@@ -450,6 +453,9 @@ def registry : Registry where
     { id := "satisfies-weaken", concept := "context-requirements", role := .weakening
       title := "Context satisfaction is monotone under requirement row inclusion"
       pointer := .witness `Effect4.Machine.Env.Context.satisfies_weaken },
+    { id := "emission-requirements-complete", concept := "context-requirements", role := .compatibility
+      title := "A checked emission's main declaration carries its answer, error and complete requirement row"
+      pointer := .witness `Effect4.Codegen.ModuleEmission.annotation_complete },
     { id := "provide-discharges", concept := "context-requirements", role := .preservation
       title := "Providing a layer discharges its output services from requirement rows"
       pointer := .witness `Effect4.Program.Provision.LayerTy.provide_discharges

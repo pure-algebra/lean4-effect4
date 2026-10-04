@@ -2,7 +2,7 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv, recordValue, recordOptional, recordSet } from "../prelude.ts"
-export const main: Effect.Effect<boolean, never> = Effect.gen(function* () {
+export const main: Effect.Effect<boolean, never, never> = Effect.gen(function* () {
   const a0 = yield* Effect.succeed(3)
   if (isZero(a0)) {
     return true

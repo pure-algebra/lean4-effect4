@@ -486,6 +486,10 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   (`readTerm_printTerm`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
   This includes raw record declarations and every natural tuple index.
   The scope premise remains unchanged; rendered-source recognition and target execution remain separate boundaries.
+- **Service key identity (`service-identifier-injective`)**: at one signature's scope key, distinct service keys print
+  distinct target Identifier types (`keyIdentifier_injective`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
+  An ordinary key prints its full key text; the scope key prints `Scope.Scope`.
+  Identity holds within one pinned link table, not across modules; tsgo controls test the target reading.
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.
@@ -618,6 +622,10 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
   (`satisfies_union` (`src/Effect4/Machine/Context.lean`)).
 - **Weakening monotonicity (`satisfies-weaken`)**: Monotonicity under context extension.
   (`satisfies_weaken` (`src/Effect4/Machine/Context.lean`)).
+- **Complete emitted requirements (`emission-requirements-complete`)**: a checked emission's main declaration carries
+  `Effect.Effect<A, E, R>` with its complete requirement row
+  (`ModuleEmission.annotation_complete`, `src/Effect4/Laws/Codegen/Checked.lean`).
+  It certifies generated syntax, not target type checking or execution.
 - **Service capability discharge (`provide-discharges`)**: Layer provision discharges output capabilities.
   (`provide_discharges` (`src/Effect4/Program/Provision.lean`)).
 - **Closed layer composition (`provide-closed`)**: Composing closed layers yields closed requirements.

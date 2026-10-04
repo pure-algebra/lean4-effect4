@@ -2,4 +2,4 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, incr, double, takeAndBump, zeroWhenPositive, noChange, Host, Sql, Kv, recordValue, recordOptional, recordSet } from "../prelude.ts"
-export const main: Effect.Effect<never, string> = Effect.fail("lost")
+export const main: Effect.Effect<never, string, never> = Effect.fail("lost")

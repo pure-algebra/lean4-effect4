@@ -95,6 +95,7 @@ The following tables are generated from the profile, forms and taxonomy.
 | undefined |
 | Effect.withFiber |
 | Context.Service |
+| Scope.Scope |
 | Effect.provide |
 | Effect.service |
 | Effect.provideService |

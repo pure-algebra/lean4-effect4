@@ -47,7 +47,7 @@ inductive Head
   | interrupt | interruptAll | interruptAllAs | awaitAll | raceAll | context | fiberId
   | scopeClose | scoped | acquireRelease | causeFail | causeDie | causeInterrupt
   | causeCombine | undefined | withFiber
-  | contextService | provide | service | provideService
+  | contextService | scopeService | provide | service | provideService
   | layerSucceed | layerEffect | layerEffectDiscard | layerProvide | layerProvideMerge
   | layerMerge | layerFresh | layerOrDie
   | layerMergeAll
@@ -107,6 +107,7 @@ def Head.spelling : Head → String
   | .undefined => "undefined"
   | .withFiber => "Effect.withFiber"
   | .contextService => "Context.Service"
+  | .scopeService => "Scope.Scope"
   | .provide => "Effect.provide"
   | .service => "Effect.service"
   | .provideService => "Effect.provideService"
@@ -128,7 +129,7 @@ def heads : List Head :=
   , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .context, .fiberId
   , .scopeClose, .scoped, .acquireRelease, .causeFail, .causeDie, .causeInterrupt
   , .causeCombine, .undefined, .withFiber
-  , .contextService, .provide, .service, .provideService
+  , .contextService, .scopeService, .provide, .service, .provideService
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
   , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf
   , .optionCase, .caseTag, .caseTagR, .map ]
@@ -309,17 +310,27 @@ def printForkOptions (options : Effect4.Supervision.ForkOptions) : TypeScript.Ex
 
 variable {Op : Type}
 
-/-- A service key as rc.112 spells one — `Context.Service<Shape>("key")`
-(`Context.ts:201-215`): the key's two numbers as the string that is its runtime identity
-(`:219`, so two spellings of one key are one service), with its carrier from the signature's
-service table as the type argument when the table has one. Minted from the key's own data,
-as `Var.name` mints a binder from its position: the printer invents no name. -/
-def printKey (sig : Signature Op) (key : ServiceKey) : Except PrintRefusal TypeScript.Expr := do
-  let head ← match sig.serviceTy key with
-    | some ty => match Effect4.Codegen.Types.ofTy ty with
-      | some target => .ok (.generic (.ident "Context.Service") [target])
-      | none => .error (.typeSpelling ty.render)
-    | none => .ok (.ident "Context.Service")
-  .ok (.call head [.str ("k" ++ toString key.name.value ++ "_" ++ toString key.service.value)])
+/-- Canonical runtime spelling for an ordinary service key. Its full pair is the identity;
+its carrier is deliberately not its identity. -/
+def keyText (key : ServiceKey) : String :=
+  "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
+
+/-- The requirement identity at a fixed signature. Scope uses Effect's own identity;
+ordinary services use their full key, including when their carriers coincide. -/
+def keyIdentifier (scopeKey key : ServiceKey) : TypeScript.TypeRef :=
+  if key = scopeKey then .name ["Scope", "Scope"] [] else .literal (keyText key)
+
+/-- A known ordinary key has separate Identifier and Shape arguments (rc.112
+`Context.ts:201-219`). Scope is the genuine `Scope.Scope` service (`internal/effect.ts:3772`),
+not a new key with the same carrier. Unknown keys retain the raw printer's bare-call profile;
+checked program admission owns whether a service is known. -/
+def printKey (sig : Signature Op) (key : ServiceKey) : Except PrintRefusal TypeScript.Expr :=
+  if key = sig.scopeKey then .ok (.ident "Scope.Scope") else do
+    let head ← match sig.serviceTy key with
+      | some ty => match Effect4.Codegen.Types.ofTy ty with
+        | some target => .ok (.generic (.ident "Context.Service") [.literal (keyText key), target])
+        | none => .error (.typeSpelling ty.render)
+      | none => .ok (.ident "Context.Service")
+    .ok (.call head [.str (keyText key)])
 
 end Effect4.Program

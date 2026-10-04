@@ -32,32 +32,56 @@ test("the receiver of a selected member is the object type the compiler parsed",
   expect(receiverOfSubject(repo, "typeof Adapter.Host.acquire")).toBeUndefined()
 }, 60_000)
 
-test("full requirement keys have explicit, bounded and injective target bindings", () => {
+test("requirements: full keys have bounded identities and only the exact scope key is special", () => {
   const scope = { name: 7, service: 2 }
   expect(requirements([], scope)).toBe("never")
   expect(requirements([scope], scope)).toBe("(Scope.Scope)")
-  expect(() => requirements([{ name: 8, service: 2 }], scope)).toThrow("unbound")
+  expect(requirements([{ name: 8, service: 2 }], scope)).toBe('("k8_2")')
+  expect(requirements([{ name: 7, service: 3 }], scope)).toBe('("k7_3")')
+  expect(requirements([scope], undefined)).toBe('("k7_2")')
   expect(() => requirements(undefined, scope)).toThrow("full requires")
   expect(() => key({ name: Number.MAX_SAFE_INTEGER + 1, service: 2 })).toThrow("safe natural")
   expect(() => key({ name: -1, service: 2 })).toThrow("safe natural")
-  expect(() => requirements([{ name: 1, service: 3, shape: "C.Service" }, { name: 2, service: 3, shape: "C.Service" }], scope)).toThrow("noninjective")
+  expect(() => key({ name: 1, service: 1.5 })).toThrow("safe natural")
 })
 
-test("a required key is bound by the shape its manifest entry carries, in both lanes (DI-93)", () => {
+test("requirements: distinct keys keep distinct identities when their carriers coincide", () => {
   const scope = { name: 0, service: 0 }
-  // by its shape, as the printed `Context.Service<shape>("k<name>_<service>")` requires it
-  expect(requirements([{ name: 8, service: 4, shape: "number" }], scope)).toBe("(number)")
-  // a handle-shaped key is carried verbatim and bound by the query's declarations
-  expect(requirements([{ name: 12, service: 8, shape: "SqlClient.SqlClient" }], scope)).toBe("(SqlClient.SqlClient)")
-  // no shape, no binding: `null` is what the manifest writes for a key the signature does not type
-  expect(() => requirements([{ name: 8, service: 4, shape: null }], scope)).toThrow("unbound")
-  // red control for the defect: a key with no shape binds nothing, whatever the handle table says
-  expect(() => requirements([{ name: 8, service: 4 }], scope)).toThrow("unbound")
+  expect(requirements([
+    { name: 8, service: 4, shape: "number" },
+    { name: 9, service: 4, shape: "number" },
+    { name: 8, service: 5, shape: "number" },
+    { name: 8, service: 4, shape: "number" },
+  ], scope)).toBe('("k8_4") | ("k9_4") | ("k8_5")')
+  expect(requirements([{ name: 12, service: 8, shape: "SqlClient.SqlClient" }], scope)).toBe('("k12_8")')
+})
+
+test("requirements: unknown and absent carriers retain the key identity", () => {
+  const scope = { name: 0, service: 0 }
+  for (const metadata of [{ shape: "unknown" }, { shape: null }, {}]) {
+    expect(requirements([{ name: 8, service: 4, ...metadata }], scope)).toBe('("k8_4")')
+  }
+  expect(requirements([
+    { name: 8, service: 4, shape: "unknown" },
+    { name: 9, service: 4, shape: "unknown" },
+  ], scope)).toBe('("k8_4") | ("k9_4")')
+})
+
+test("requirements: malformed carrier metadata is rejected", () => {
+  const scope = { name: 0, service: 0 }
+  for (const shape of ["", " \t", 4, false, {}, []]) {
+    expect(() => requirements([{ name: 8, service: 4, shape }], scope)).toThrow("invalid service shape")
+    expect(() => requirements([{ ...scope, shape }], scope)).toThrow("invalid service shape")
+  }
+})
+
+test("the hand-selection lane binds the same full requirement identity as the corpus lane (DI-93)", () => {
+  const scope = { name: 0, service: 0 }
   // the hand-selection lane binds a program's key the same way the corpus lane does
   const selection = { programs: ["p1"], handles: {}, rows: [] }
   const corpus = { scopeKey: scope, programs: [{ name: "p1", type: { answer: "number", error: "never", requires: [{ name: 8, service: 4, shape: "number" }] } }] }
   const [q] = queriesFromInputs(repo, selection, corpus, [])
-  expect(q?.expected.R).toBe("(number)")
+  expect(q?.expected.R).toBe('("k8_4")')
   expect(q?.inputIssues).toEqual([])
 })
 

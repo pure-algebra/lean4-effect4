@@ -67,13 +67,18 @@ theorem readKey_exact {Op : Type} {sig : Signature Op} {x : Expr} {key : Service
     (h : readKey sig x = .ok key) : printKey sig key = .ok x := by
   unfold readKey at h
   split at h
+  · split at h
+    · rename_i heq
+      cases h
+      subst heq
+      simp only [printKey, if_true]
+    · cases h
   · dsimp only at h
     split at h
     · rename_i heq
       cases h
-      simp only [printKey, heq.2.1, ok_bind, heq.1, Except.ok.injEq,
-        Expr.call.injEq, List.cons.injEq, Expr.str.injEq, and_true, true_and]
-      exact heq.2.2.symm
+      simp only [printKey, if_neg heq.1, heq.2.2.1, ok_bind, heq.2.1,
+        ← heq.2.2.2]
     · cases h
   · dsimp only at h
     split at h
@@ -81,9 +86,8 @@ theorem readKey_exact {Op : Type} {sig : Signature Op} {x : Expr} {key : Service
       split at h
       · rename_i heq
         cases h
-        simp only [printKey, hty, heq.2.1, ok_bind, heq.1, Except.ok.injEq,
-          Expr.call.injEq, List.cons.injEq, Expr.str.injEq, and_true, true_and]
-        exact heq.2.2.symm
+        simp only [printKey, if_neg heq.1, hty, heq.2.2.2.1, ok_bind,
+          heq.2.1, heq.2.2.1, ← heq.2.2.2.2]
       · cases h
     · cases h
   · cases h
@@ -152,32 +156,65 @@ theorem keyFromText_print (name service : Nat) :
     (split_separator _ _ (repr_no_separator name)).2]
   simp only [List.drop_succ_cons, List.drop_zero, decodeBytes_repr]
 
+/-- Full key text is injective because its decoder is a left inverse. Helper for
+`keyIdentifier_injective`, the generated requirement identity claim (R5/R8). -/
+theorem keyText_injective : Function.Injective keyText := by
+  intro a b h
+  have decoded := congrArg keyFromText h
+  rcases a with ⟨⟨an⟩, ⟨asvc⟩⟩
+  rcases b with ⟨⟨bn⟩, ⟨bt⟩⟩
+  simpa only [keyText, keyFromText_print] using decoded
+
+/-- At one fixed signature's scope identity, different keys have different target
+Identifier syntax, independently of their carriers. This is a syntax theorem; the
+pinned TypeScript assignment controls separately test the target interpretation. -/
+theorem keyIdentifier_injective (scopeKey : ServiceKey) :
+    Function.Injective (keyIdentifier scopeKey) := by
+  intro a b h
+  by_cases ha : a = scopeKey
+  · by_cases hb : b = scopeKey
+    · exact ha.trans hb.symm
+    · simp only [keyIdentifier, if_pos ha, if_neg hb] at h
+      cases h
+  · by_cases hb : b = scopeKey
+    · simp only [keyIdentifier, if_neg ha, if_pos hb] at h
+      cases h
+    · simp only [keyIdentifier, if_neg ha, if_neg hb, TypeScript.TypeRef.literal.injEq] at h
+      exact keyText_injective h
+
 /-- The successful structural key image reads back. Unsupported legacy type text
 now refuses printing, so success is explicit instead of assuming a total string printer. -/
 theorem readKey_printKey {Op : Type} (sig : Signature Op) (key : ServiceKey)
     {x : Expr} (hp : printKey sig key = .ok x) : readKey sig x = .ok key := by
-  obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
-  cases ht : sig.serviceTy ⟨⟨name⟩, ⟨service⟩⟩ with
-  | none =>
-    simp only [printKey, ht, ok_bind, Except.ok.injEq] at hp
+  by_cases hs : key = sig.scopeKey
+  · subst key
+    simp only [printKey, if_true, Except.ok.injEq] at hp
     subst x
-    simp only [readKey, keyFromText_print, ht, keyText, and_self, if_true]
-  | some ty =>
-    cases hty : Effect4.Codegen.Types.ofTy ty with
-    | none => simp [printKey, ht, hty, bind_eq_ok] at hp
-    | some target =>
-      simp only [printKey, ht, hty, ok_bind, Except.ok.injEq] at hp
+    simp only [readKey, if_true]
+  · obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
+    cases ht : sig.serviceTy ⟨⟨name⟩, ⟨service⟩⟩ with
+    | none =>
+      simp only [printKey, if_neg hs, ht, ok_bind, Except.ok.injEq] at hp
       subst x
-      simp only [readKey, keyFromText_print, ht, hty, keyText, and_self, if_true]
+      simp only [readKey, keyText, keyFromText_print, ht, and_self, and_true, if_pos hs]
+    | some ty =>
+      cases hty : Effect4.Codegen.Types.ofTy ty with
+      | none => simp only [printKey, if_neg hs, ht, hty, bind, Except.bind] at hp; cases hp
+      | some target =>
+        simp only [printKey, if_neg hs, ht, hty, ok_bind, Except.ok.injEq] at hp
+        subst x
+        simp only [readKey, keyText, keyFromText_print, ht, hty, and_self, and_true, if_pos hs]
 
 theorem printKey_readable (sig : Signature Op) (key : ServiceKey)
     (hr : keyReadable sig key = true) : ∃ x, printKey sig key = .ok x := by
-  cases ht : sig.serviceTy key with
-  | none => exact ⟨_, by simp only [printKey, ht, ok_bind]; rfl⟩
-  | some ty =>
-    simp only [keyReadable, ht, Option.isSome_iff_exists] at hr
-    obtain ⟨target, htarget⟩ := hr
-    exact ⟨_, by simp only [printKey, ht, htarget, ok_bind]; rfl⟩
+  by_cases hs : key = sig.scopeKey
+  · exact ⟨.ident "Scope.Scope", by simp only [printKey, if_pos hs]⟩
+  · cases ht : sig.serviceTy key with
+    | none => exact ⟨_, by simp only [printKey, if_neg hs, ht, ok_bind]; rfl⟩
+    | some ty =>
+      simp only [keyReadable, ht, Option.isSome_iff_exists] at hr
+      obtain ⟨target, htarget⟩ := hr
+      exact ⟨_, by simp only [printKey, if_neg hs, ht, htarget, ok_bind]; rfl⟩
 
 theorem repr_inj {a b : Nat} (h : Nat.repr a = Nat.repr b) : a = b := by
   have := congrArg (fun s => decodeBytes s.toByteArray.data.toList) h

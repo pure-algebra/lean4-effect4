@@ -1,0 +1,7 @@
+'Effect4.Program.keyText_injective' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.keyIdentifier_injective' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.declarationType_complete' depends on axioms: [propext, Quot.sound]
+'Effect4.Codegen.ModuleEmission.annotation_complete' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.readKey_exact' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.readKey_printKey' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.readModule_printModule' depends on axioms: [propext, Quot.sound]

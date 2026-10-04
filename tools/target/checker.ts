@@ -256,7 +256,7 @@ function report(repo: string, profile: string, queries: readonly Query[]): Repor
       globalDiagnostics: globals.map(diagnostic), observations, sourceHashes,
       limitations: [`Compiler: ${COMPILER} ${version} (tsgo, decisions row 57), under ts/eff/tsconfig.json.`,
         "Finite TypeScript assignments under explicit target bindings: program E is an upper bound; every other column and primitive binding requires mutual assignability. No Lean semantic equivalence claim.",
-        "Requirement carrier equality does not establish Lean service-key identity.",
+        "Requirement assignments test the emitted full-key identifiers; they do not establish globally fresh identities across independently linked modules.",
         "Any/unknown inspection covers compared roots, generic payloads and local record fields; library implementation fields and class internals are opaque.",
         "Diagnostic line and column are counted over the file as a JavaScript string; every queried module is ASCII."],
       conforms: !globals.length && observations.every(o => o.status === "agree") }

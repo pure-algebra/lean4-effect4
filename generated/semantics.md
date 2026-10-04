@@ -635,6 +635,7 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | of-schema-schema | compatibility | proved | Effect4.Schema.Bridge.ofSchema_schema | yes |  |
 | collection-term-print-read | compatibility | proved | Effect4.Program.readTerm_printTerm | yes |  |
 | record-codec-layout | compatibility | proved | Effect4.Schema.decode_iff | yes |  |
+| service-identifier-injective | compatibility | proved | Effect4.Program.keyIdentifier_injective | yes |  |
 
 ### Printed statements
 
@@ -707,6 +708,12 @@ Literature: RendelOstermann2010, audit P32 — adaptedResult
     (Exists fun j' =>
       And (Eq (Effect4.Schema.encode t v) (Option.some j'))
         (Eq (Effect4.Schema.Codec.normJ j') (Effect4.Schema.Codec.normJ j)))
+```
+
+**service-identifier-injective**
+
+```lean
+∀ (scopeKey : Effect4.ServiceKey), Function.Injective (Effect4.Program.keyIdentifier scopeKey)
 ```
 
 ## subtyping-algebra
@@ -840,6 +847,7 @@ Context Requirements: Graded coeffects, requirement rows, and layer discharge
 | satisfies-single | inversion | proved | Effect4.Machine.Env.Context.satisfies_single | yes |  |
 | satisfies-union | compatibility | proved | Effect4.Machine.Env.Context.satisfies_union | yes |  |
 | satisfies-weaken | weakening | proved | Effect4.Machine.Env.Context.satisfies_weaken | yes |  |
+| emission-requirements-complete | compatibility | proved | Effect4.Codegen.ModuleEmission.annotation_complete | yes |  |
 | provide-discharges | preservation | proved | Effect4.Program.Provision.LayerTy.provide_discharges | yes |  |
 | provide-closed | fundamentalProperty | proved | Effect4.Program.Provision.LayerTy.provide_closed | yes |  |
 
@@ -876,6 +884,35 @@ Literature: PetricekOrchardMycroft2014, audit C8 — analogy
 ∀ {U : Effect4.ServiceUniverse} (self : Effect4.Machine.Env.Context U)
   {r s : Effect4.Machine.Env.Requirement},
   self.Satisfies s → Effect4.Row.Subset r s → self.Satisfies r
+```
+
+**emission-requirements-complete**
+
+```lean
+∀ {program : Effect4.Program.NativeEff} {table : Effect4.Program.RowTable} {name : String}
+  (emission : Effect4.Codegen.ModuleEmission program table name),
+  Exists fun layers =>
+    Exists fun main =>
+      Exists fun body =>
+        Exists fun answer =>
+          Exists fun error =>
+            And
+              (Eq emission.declarations
+                (instHAppendOfAppend.hAppend layers (List.cons main List.nil)))
+              (And
+                (Eq
+                  (Effect4.Program.printDecl name emission.typing.ty body
+                    Effect4.Program.nativeScopeKey)
+                  (Except.ok main))
+                (Eq main.type
+                  (Option.some
+                    (TypeScript.TypeRef.name (List.cons "Effect" (List.cons "Effect" List.nil))
+                      (List.cons answer
+                        (List.cons error
+                          (List.cons
+                            (Effect4.Program.requirementType Effect4.Program.nativeScopeKey
+                              emission.typing.ty.requires)
+                            List.nil)))))))
 ```
 
 **provide-discharges**

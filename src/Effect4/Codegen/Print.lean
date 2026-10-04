@@ -46,72 +46,71 @@ def printLayer (sig : Signature Op) (l : LayerTerm Op) : Except PrintRefusal Typ
 theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     print sig n (.perform op request) = printRow (sig.rowOf op) request := rfl
 
-/-- The declared type of the main declaration, as target syntax.
+/-- The complete requirement row as target syntax. The empty union is `never`. -/
+def requirementType (scopeKey : ServiceKey) (requires : Requirement) : TypeScript.TypeRef :=
+  match requires.elems.map (keyIdentifier scopeKey) with
+  | [] => .name ["never"] []
+  | [one] => one
+  | many => .union many
 
-**What this does today.** The declared type is `Effect.Effect<A, E>` — the two parameters
-`EffTy` spells — exactly when the requirement row is empty. A program *with* a requirement has
-no two-parameter spelling here, so it prints with **no declared type at all** and the host
-infers one.
-
-**The policy this owes (DI-24, `docs/DESIGN-ISSUES.md`).** A program prints its declared type
-*always*, with three parameters — `Effect.Effect<A, E, R>` — because a printed program with no
-declared type is the one case where the printed image carries less than the program's own
-typing, and the type oracle (DI-29) cannot check what is not printed. What is not settled, and
-so is not implemented here, is the *spelling* of `R`: the requirement row is a set of
-`ServiceKey`s, and the target spells a requirement as the union of the services' `Identifier`
-types, which is the same open question as the class spelling of keys in `printLayer` above.
-Until that spelling is fixed under `tsc` on the truth harness, this arm stays two-parameter
-and a requirement-carrying program stays untyped in its printed image; the reader
-(`Codegen/Read.lean`) reads both shapes.
-
-This function decides that annotation, and the reading boundary
-(`Codegen/Admit.lean`) compares a declared annotation with its answer, so the rule has
-exactly one owner and DI-24's omission or a later `R` spelling changes one place. -/
-def declarationType (ty : EffTy) : Except PrintRefusal (Option TypeScript.TypeRef) :=
-  if ty.requires = Requirement.empty then do
-    let answer ← match Effect4.Codegen.Types.ofTy ty.answer with
-      | some target => .ok target
-      | none => .error (.typeSpelling ty.answer.render)
-    let error ← match Effect4.Codegen.Types.ofTy ty.error with
-      | some target => .ok target
-      | none => .error (.typeSpelling ty.error.render)
-    .ok (some (.name ["Effect", "Effect"] [answer, error]))
-  else .ok none
+/-- The complete declared type `Effect.Effect<A, E, R>`. The native API defaults to
+its reserved scope key; generic module printing passes the signature's scope key.
+This is structural annotation evidence, not a general target typing theorem. -/
+def declarationType (ty : EffTy) (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
+    Except PrintRefusal (Option TypeScript.TypeRef) := do
+  let answer ← match Effect4.Codegen.Types.ofTy ty.answer with
+    | some target => .ok target
+    | none => .error (.typeSpelling ty.answer.render)
+  let error ← match Effect4.Codegen.Types.ofTy ty.error with
+    | some target => .ok target
+    | none => .error (.typeSpelling ty.error.render)
+  .ok (some (.name ["Effect", "Effect"] [answer, error, requirementType scopeKey ty.requires]))
 
 /-- The printed program as an exported constant carrying `declarationType`'s annotation. -/
-def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr) :
+def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr)
+    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
     Except PrintRefusal TypeScript.ConstDecl := do
-  let annotation ← declarationType ty
+  let annotation ← declarationType ty scopeKey
   .ok { doc := [], name := name, value := body, type := annotation }
 
-/-- The raw declaration printer can represent its emitted annotation. This is
-not target type checking: requirement-bearing declarations still omit it. -/
+/-- Answer and error types must both be representable; a nonempty requirement row
+never bypasses that check. Requirement identifiers have a total structural spelling. -/
 def declarationTypeRepresentable (ty : EffTy) : Bool :=
-  ty.requires != Requirement.empty ||
-    (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome
+  (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome
 
-/-- Legacy malformed type strings now refuse instead of becoming raw target text.
-The representability premise states that change in the declaration printer's domain. -/
-theorem declarationType_ok {ty : EffTy} (hr : declarationTypeRepresentable ty = true) :
-    ∃ annotation, declarationType ty = .ok annotation := by
-  unfold declarationTypeRepresentable at hr
-  unfold declarationType
-  split
-  · rename_i h
-    simp only [h, bne_self_eq_false, Bool.false_or, Bool.and_eq_true] at hr
-    cases ha : Effect4.Codegen.Types.ofTy ty.answer <;>
-      cases he : Effect4.Codegen.Types.ofTy ty.error <;> simp_all [bind, Except.bind]
-  · exact ⟨_, rfl⟩
+/-- Representability suffices for a complete annotation at every scope identity. -/
+theorem declarationType_ok {ty : EffTy} (hr : declarationTypeRepresentable ty = true)
+    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
+    ∃ annotation, declarationType ty scopeKey = .ok annotation := by
+  simp only [declarationTypeRepresentable, Bool.and_eq_true, Option.isSome_iff_exists] at hr
+  obtain ⟨⟨answer, ha⟩, ⟨error, he⟩⟩ := hr
+  exact ⟨_, by simp only [declarationType, ha, he, bind, Except.bind]; rfl⟩
+
+/-- A successful declaration always retains all three slots, including the complete
+requirement row. Consumer: checked module production and its annotation admission check. -/
+theorem declarationType_complete {ty : EffTy} {scopeKey : ServiceKey}
+    {annotation : Option TypeScript.TypeRef} (h : declarationType ty scopeKey = .ok annotation) :
+    ∃ answer error, annotation = some (.name ["Effect", "Effect"]
+      [answer, error, requirementType scopeKey ty.requires]) := by
+  unfold declarationType at h
+  cases ha : Effect4.Codegen.Types.ofTy ty.answer with
+  | none => simp only [ha, bind, Except.bind] at h; cases h
+  | some answer =>
+    cases he : Effect4.Codegen.Types.ofTy ty.error with
+    | none => simp only [ha, he, bind, Except.bind] at h; cases h
+    | some error =>
+      simp only [ha, he, bind, Except.bind, Except.ok.injEq] at h
+      exact ⟨answer, error, h.symm⟩
 
 /-- Everything a successful declaration retains: its requested name, its body unchanged,
 its export flag, and the annotation this type's one owner decided. -/
-theorem printDecl_fields {name : String} {ty : EffTy} {body : TypeScript.Expr}
-    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body = .ok decl) :
+theorem printDecl_fields {scopeKey : ServiceKey} {name : String} {ty : EffTy} {body : TypeScript.Expr}
+    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body scopeKey = .ok decl) :
     decl.name = name ∧ decl.value = body ∧ decl.exported = true ∧
-      declarationType ty = .ok decl.type := by
+      declarationType ty scopeKey = .ok decl.type := by
   unfold printDecl at hp
-  cases h : declarationType ty with
-  | error why => simp [h, bind, Except.bind] at hp
+  cases h : declarationType ty scopeKey with
+  | error why => simp only [h, bind, Except.bind] at hp; cases hp
   | ok annotation =>
     rw [h] at hp
     simp only [bind, Except.bind] at hp
@@ -119,16 +118,17 @@ theorem printDecl_fields {name : String} {ty : EffTy} {body : TypeScript.Expr}
     exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- A successful raw declaration retains its expression exactly. -/
-theorem printDecl_value {name : String} {ty : EffTy} {body : TypeScript.Expr}
-    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body = .ok decl) :
+theorem printDecl_value {scopeKey : ServiceKey} {name : String} {ty : EffTy} {body : TypeScript.Expr}
+    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body scopeKey = .ok decl) :
     decl.value = body :=
   (printDecl_fields hp).2.1
 
 /-- A representable declaration type prints, at every name and body. -/
 theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
-    (hr : declarationTypeRepresentable ty = true) :
-    ∃ decl, printDecl name ty body = .ok decl := by
-  obtain ⟨annotation, ha⟩ := declarationType_ok hr
+    (hr : declarationTypeRepresentable ty = true)
+    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
+    ∃ decl, printDecl name ty body scopeKey = .ok decl := by
+  obtain ⟨annotation, ha⟩ := declarationType_ok hr scopeKey
   refine ⟨{ doc := [], name := name, value := body, type := annotation }, ?_⟩
   simp only [printDecl, ha, bind, Except.bind]
 
@@ -152,7 +152,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
         .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
       | none => .error (.layerRef t)
     let m ← print sig 0 main
-    let declaration ← printDecl name ty m
+    let declaration ← printDecl name ty m sig.scopeKey
     .ok (ds ++ [declaration])
 
 /-- Check stored declarations, including records discarded before the final result.

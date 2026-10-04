@@ -116,13 +116,13 @@ theorem printModule_readable {sig : Signature Op} {root : Eff Op}
   obtain ⟨body, hbody⟩ := print_of_readable hmain
   obtain ⟨ds, hds⟩ := captured_mapM_ok hlayers (Path.sortBy Path.declBefore (history.map (·.1)))
     (fun t ht => (Path.sortBy_perm Path.declBefore _).mem_iff.mp ht)
-  obtain ⟨decl, hdecl⟩ := printDecl_readable name ty body types
+  obtain ⟨decl, hdecl⟩ := printDecl_readable name ty body types sig.scopeKey
   refine ⟨ds ++ [decl], ?_⟩
   unfold printModule
   rw [hoisted]
   change ((Path.sortBy Path.declBefore (history.map (·.1))).mapM (capturedDecl sig history) >>=
     fun ds => print sig 0 main >>= fun body =>
-    printDecl name ty body >>= fun decl => .ok (ds ++ [decl])) = _
+    printDecl name ty body sig.scopeKey >>= fun decl => .ok (ds ++ [decl])) = _
   simp only [hds, ok_bind, hbody, hdecl]
 
 end Effect4.Program

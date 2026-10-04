@@ -576,10 +576,10 @@ def outcomeText : Api.Outcome → String
   | .frontier => "frontier"
   | .stuck why => s!"stuck {repr why}"
 
-/-- One required key, with the shape the signature types it at: a key printed as
-`Context.Service<shape>("k<name>_<service>")` is, on the host, a requirement of exactly that
-shape type (rc.112 `Context.Service<Identifier, Shape = Identifier>`), which is what the type
-oracle binds the key to (DI-76). `null` when the signature does not type the key. -/
+/-- One required key and its service value shape (`null` when the signature does not type it).
+The target oracle binds an ordinary requirement to the full literal `"k<name>_<service>"`,
+independently of this shape, matching rc.112 `Context.Service<Identifier, Shape>` in the printer.
+The signature's scope key instead uses the built-in `Scope.Scope` identity. -/
 def requireJson (sig : Signature NativeOp) (key : ServiceKey) : J :=
   Lean.Json.mkObj
     [ ("name", toJson key.name.value), ("service", toJson key.service.value)

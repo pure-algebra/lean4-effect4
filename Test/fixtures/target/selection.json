@@ -35,7 +35,8 @@
     "pTagMiss",
     "pTagTwoFail",
     "pOptionSome",
-    "pOptionNone"
+    "pOptionNone",
+    "pInterruptEscape"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

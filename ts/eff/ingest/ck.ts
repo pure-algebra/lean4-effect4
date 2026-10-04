@@ -42,6 +42,9 @@ const isFalse = (x: Ex): boolean => x.type === "Literal" && x.value === false
 const isNull = (x: Ex): boolean => x.type === "Literal" && x.value === null && !("regex" in x)
 const isNumeric = (x: Ex): x is NumericLiteral => x.type === "Literal" && typeof x.value === "number"
 const isString = (x: Ex): x is StringLiteral => x.type === "Literal" && typeof x.value === "string"
+const scopeKey = serviceTypes.reserved.find(entry => entry.rendered === "Scope.Scope")?.key
+const isScopeKey = (key: ServiceKey): boolean => scopeKey !== undefined &&
+  key.name.value === scopeKey.name.value && key.service.value === scopeKey.service.value
 /** TypeScript's `NodeFlags.Const`: `const`, and `await using` (whose flags are `Const | Using`). */
 const constLike = (d: VariableDeclaration): boolean => d.kind === "const" || d.kind === "await using"
 /** TypeScript's `isIdentifier(parameter.name)`: an identifier pattern, with or without a default
@@ -314,7 +317,10 @@ class CompilerReader {
     return out
   }
   field(m: Map<string, Ex>, k: string): Ex { return m.get(k) ?? bad(`field ${k}`) }
-  key(x: Ex): ServiceKey {
+  key(x: Ex, _env: readonly string[] = []): ServiceKey {
+    x = this.unwrap(x)
+    if (x.type === "MemberExpression" && !x.computed && !x.optional && this.name(x) === "Scope.Scope")
+      return scopeKey ?? bad("scope key")
     const c = this.call(x)
     if (this.name(c.callee) !== "Context.Service" || c.arguments.length !== 1) return bad("key")
     const v = this.literal(this.at(c.arguments, 0))
@@ -322,7 +328,19 @@ class CompilerReader {
     const m = /^k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)$/.exec(v.value)
     if (!m) return bad("key number")
     const name = Number(m[1]), service = Number(m[2])
-    return { name: { value: name }, service: { value: service } }
+    if (!Number.isSafeInteger(name) || !Number.isSafeInteger(service)) return bad("key number")
+    const key = { name: { value: name }, service: { value: service } }
+    if (isScopeKey(key)) return bad("key type")
+    const ty = serviceTypeFor(key)?.rendered
+    const types = c.typeArguments?.params ?? []
+    if (ty === undefined) {
+      if (types.length !== 0) return bad("key type")
+    } else {
+      const identity = types[0]
+      const matches = identity?.type === "TSLiteralType" && isString(identity.literal) && identity.literal.value === v.value
+      if (types.length !== 2 || !matches || this.text(types[1]!) !== ty) return bad("key type")
+    }
+    return key
   }
   cause(x: Ex, env: readonly string[]): CauseTerm {
     const c = this.call(x), h = this.name(c.callee), a = c.arguments
@@ -464,8 +482,8 @@ class CompilerReader {
         return { _tag: tag, body: e(0) }
       }
       case "Effect.yieldNowWith": { this.arity(a, 1); const l = this.literal(arg(0)); return l._tag === "nat" ? { _tag: "yieldNow", priority: l.value } : bad("priority") }
-      case "Effect.service": this.arity(a, 1); return { _tag: "service", key: this.key(arg(0)) }
-      case "Effect.provideService": this.arity(a, 3); return { _tag: "provideService", body: e(0), key: this.key(arg(1)), value: t(2) }
+      case "Effect.service": this.arity(a, 1); return { _tag: "service", key: this.key(arg(0), env) }
+      case "Effect.provideService": this.arity(a, 3); return { _tag: "provideService", body: e(0), key: this.key(arg(1), env), value: t(2) }
       case "Effect.provide": {
         if (a.length !== 2 && a.length !== 3) return bad("provide")
         if (a.length === 3) { const m = this.fields(arg(2)), l = this.literal(this.field(m, "local")); if (m.size !== 1 || l._tag !== "bool" || !l.value) return bad("local") }
@@ -728,6 +746,7 @@ class ForeignCompilerReader extends CompilerReader {
     const oldKeys = [...this.keys]
     this.keys.length = 0
     return decodeEff(walkProgram(restored, l => l, key => {
+      if (isScopeKey(key)) return key
       const old = oldKeys.find(k => k.ordinal === key.name.value)
       if (!old) return refuseForeign("E-REF-UNBOUND", "service key")
       let entry = this.keys.find(k => k.sourceId === old.sourceId)
@@ -918,8 +937,30 @@ class ForeignCompilerReader extends CompilerReader {
     }
     return this.sqlPart(a, tag, env)
   }
-  override key(x: Ex): ServiceKey {
+  /** A native scope reference must still denote its imported namespace. Inline
+   * layers have a closed IR environment, so check their source captures before
+   * resetting that environment; a top-level layer reference is checked at its definition. */
+  checkScopeBindings(x: Ex, env: readonly string[]): void {
+    if (env.length === 0 || x.type === "Hole") return
+    const visit = (n: TreeNode): void => {
+      if (n.type === "MemberExpression" && !n.computed && !n.optional) {
+        let root: Ex = n
+        while (root.type === "MemberExpression" && !root.computed && !root.optional) root = this.unwrap(root.object)
+        if (root.type === "Identifier" && env.includes(root.name)) {
+          const origin = this.bindings.get(root.name)
+          if (origin !== undefined && origin !== "opaque" && this.name(n) === "Scope.Scope")
+            refuseForeign("E-OP-RECEIVER", "shadowed scope namespace")
+        }
+      }
+      for (const child of childNodes(n)) visit(child)
+    }
+    visit(x)
+  }
+  override key(x: Ex, env: readonly string[] = []): ServiceKey {
     x = this.unwrap(x)
+    this.checkScopeBindings(x, env)
+    if (x.type === "MemberExpression" && !x.computed && !x.optional && this.name(x) === "Scope.Scope")
+      return scopeKey ?? refuseForeign("E-OP-UNKNOWN", "scope key")
     const pkg = this.packageOf(x)
     if (pkg) return this.packageKey(pkg)
     if (x.type === "Identifier") x = this.declaration(x)
@@ -928,7 +969,9 @@ class ForeignCompilerReader extends CompilerReader {
     const factory = inner.type === "CallExpression" ? inner : c
     if (this.name(factory.callee) !== "Context.Service") return refuseForeign("E-OP-UNKNOWN", "key")
     this.arity(c.arguments, 1)
-    const last = factory.typeArguments?.params.at(-1)
+    const types = factory.typeArguments?.params ?? []
+    if (types.length < 1 || types.length > 2) return refuseForeign("E-TYPE-PARAM", "service type arguments")
+    const last = types.at(-1)
     const shape = last ? this.text(last) : ""
     const [root, ...tail] = shape.split("."), binding = this.bindings.get(root!)
     if (binding === "opaque") return refuseForeign("E-IMPORT-OPAQUE", shape)
@@ -938,6 +981,15 @@ class ForeignCompilerReader extends CompilerReader {
       ?? refuseForeign("E-TYPE-PARAM", "service shape")
     const id = this.literal(this.at(c.arguments, 0))
     if (id._tag !== "str") return refuseForeign("E-ARG-DYNAMIC", "service identifier")
+    if (types.length === 2) {
+      const identity = types[0]!
+      // Class-style factories retain their nominal Self parameter. A direct call's
+      // explicit Identifier must name the same runtime key; it cannot be erased.
+      if (identity.type === "TSLiteralType") {
+        if (!isString(identity.literal) || identity.literal.value !== id.value)
+          return refuseForeign("E-TYPE-PARAM", "service identifier does not match runtime key")
+      } else if (factory === c) return refuseForeign("E-TYPE-PARAM", "service identifier must be a string literal")
+    }
     const interned = internServiceKey(this.keys, id.value, service)
     if (!interned.ok) return refuseForeign("E-TYPE-PARAM", "service identity has conflicting shapes")
     const entry = interned.key
@@ -1014,10 +1066,11 @@ class ForeignCompilerReader extends CompilerReader {
       return lowerForm("matchCauseEffect", env.length, { effects: [fixedEffect(first),
         effectArm("onSuccess"), effectArm("onFailure")] })
     }
-    if (head === "Effect.provideService") { this.arity(args, 2); const key = this.key(at(0)); return { _tag: "provideService", body: first, key, value: { _tag: "lit", value: this.provided(key, at(1)) } } }
+    if (head === "Effect.provideService") { this.arity(args, 2); const key = this.key(at(0), env); return { _tag: "provideService", body: first, key, value: { _tag: "lit", value: this.provided(key, at(1)) } } }
     if (head === "Effect.provide") {
       if (args.length < 1 || args.length > 2) return refuseForeign("E-BIND-SHAPE", "arity")
       if (this.unwrap(at(0)).type === "ArrayExpression") return refuseForeign("E-OP-UNKNOWN", "Layer.mergeAll")
+      this.checkScopeBindings(at(0), env)
       const layer = this.layer(at(0))
       let isLocal = false
       if (args.length === 2) { const m = this.fields(at(1)), l = this.literal(this.field(m, "local")); if (m.size !== 1 || l._tag !== "bool" || !l.value) return refuseForeign("E-BIND-SHAPE", "provide options"); isLocal = true }
@@ -1217,7 +1270,7 @@ class ForeignCompilerReader extends CompilerReader {
     }
     if (x.type === "Identifier" && this.variable(x, env) === undefined && x.name !== "undefined" && !this.bindings.has(x.name)) {
       const decl = this.unwrap(this.declaration(x))
-      if (decl.type === "CallExpression" && this.name(this.unwrap(decl.callee).type === "CallExpression" ? this.call(decl.callee).callee : decl.callee) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(x)] })
+      if (decl.type === "CallExpression" && this.name(this.unwrap(decl.callee).type === "CallExpression" ? this.call(decl.callee).callee : decl.callee) === "Context.Service") return lowerForm("yieldKey", env.length, { effects: [], keys: [this.key(x, env)] })
       const previous = this.referenceCut
       this.referenceCut = this.declarations.get(x.name)!.at
       try { return this.eff(decl, env) }
@@ -1283,7 +1336,7 @@ class ForeignCompilerReader extends CompilerReader {
       }
       if (h === "Effect.provideService") {
         this.arity(x.arguments, 3)
-        const body = this.eff(this.at(x.arguments, 0), env), key = this.key(this.at(x.arguments, 1)), value = this.provided(key, this.at(x.arguments, 2))
+        const body = this.eff(this.at(x.arguments, 0), env), key = this.key(this.at(x.arguments, 1), env), value = this.provided(key, this.at(x.arguments, 2))
         return { _tag: "provideService", body, key, value: { _tag: "lit", value } }
       }
       if (x.arguments.some(a => this.unwrap(a).type === "ArrowFunctionExpression") && rows.some(r => r.row.spelling === h)) {

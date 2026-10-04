@@ -14,13 +14,11 @@
  * annotated block would hand Lean's rendered type back to the comparison (the annotation *is*
  * that type), which the audit of 2026-09-13 showed reports agreement on a widened annotation.
  *
- * A required service key is bound by the shape the manifest renders beside it, by the one rule
- * both type lanes share (`requirements` in `profile.ts`, DI-93). Two keys of one shape collapse
- * into one host type; that is a `noninjective` refusal, reported by reason, never an agreement
- * (DI-24, DI-76).
- *
- * A program the printer refused, or whose requirement row names a key with no binding, is
- * reported as `refused` with the reason; an ill-typed program is not queried.
+ * A required service key uses its full-key string literal identity; the signature's scope
+ * key uses Scope.Scope. Both type lanes share `requirements` in `profile.ts` (DI-93).
+ * Carriers describe service values and never collapse distinct identities.
+ * A printer refusal or malformed requirement metadata is reported as refused;
+ * an ill-typed program is not queried.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, resolve } from "node:path"

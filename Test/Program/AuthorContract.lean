@@ -104,7 +104,7 @@ def twice : Module NativeOp :=
 
 -- And it prints on its own.
 #guard (Effect4.Api.checkLayer counter).toOption.map (fun l => l.print.map (expr house0 0))
-  = some (.ok "Layer.effect(Context.Service<number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5))))")
+  = some (.ok "Layer.effect(Context.Service<\"k4_4\", number>(\"k4_4\"), Effect.flatMap(Effect.service(Context.Service<\"k6_7\", Ref.Ref<number>>(\"k6_7\")), (a0) => Effect.flatMap(Ref.update(a0, incr), (a1) => Effect.succeed(5))))")
 
 theorem counter_scoped : LayerSrc.Scoped counter := by
   unfold counter; authoring_scoped

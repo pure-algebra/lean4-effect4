@@ -20,7 +20,7 @@ import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
 import { readTupleIndex } from "./tuple-index.ts"
 import { targetType, legacyType, recordKeyForm, quoteType } from "./target-types.ts"
-import { heads, rows, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
+import { heads, rows, serviceTypes, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
 export type { Eff } from "./eff.gen.ts"
@@ -1031,21 +1031,26 @@ const readRowMethod = (n: number, receiver: Expr, s: string, typeArgs: ReadonlyA
   return ok(rowAnswer(spelled, { _tag: "app", atom: "pair", args: [recv.success, eff.request] }))
 }
 
-/** The exact numeric spelling and type argument of Lean's `printKey`. */
+/** The exact numeric spelling, full-key identity and carrier of Lean's `printKey`. */
 const readKey = (x: Expr): Read<ServiceKey> => {
   const bad = () => refuse({ _tag: "shape", what: "service key" })
+  const scopeKey = serviceTypes.reserved.find(entry => entry.rendered === "Scope.Scope")?.key
+  if (x._tag === "ident" && x.name === "Scope.Scope") return scopeKey ? ok(scopeKey) : bad()
   if (x._tag !== "call" || x.args.length !== 1 || x.args[0]?._tag !== "str") return bad()
   const fields = /^k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)$/.exec(x.args[0].value)
   if (!fields) return bad()
   const name = Number(fields[1])
   const service = Number(fields[2])
   if (!Number.isSafeInteger(name) || !Number.isSafeInteger(service)) return bad()
+  if (scopeKey !== undefined && name === scopeKey.name.value && service === scopeKey.service.value) return bad()
   const ty = serviceTypeFor({ name: { value: name }, service: { value: service } })?.rendered
+  const identity = JSON.stringify(x.args[0].value)
   if (ty === undefined) {
     if (x.fn._tag !== "ident" || x.fn.name !== "Context.Service") return bad()
   } else {
     if (x.fn._tag !== "generic" || x.fn.fn._tag !== "ident" || x.fn.fn.name !== "Context.Service" ||
-      x.fn.typeArgs.length !== 1 || x.fn.typeArgs[0] !== ty) return bad()
+      x.fn.typeArgs.length !== 2 || x.fn.typeArgs[0] !== identity ||
+      x.fn.typeArgs[1] !== ty) return bad()
   }
   return ok({ name: { value: name }, service: { value: service } })
 }
