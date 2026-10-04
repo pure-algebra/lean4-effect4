@@ -1,6 +1,7 @@
 (* prop_wire — the property test of the wire on random untyped values (hand-written).
    Generator: size-bounded random walks through program syntax and types.
-   Focused record controls retain raw metadata, list lengths, and read modes,
+   Focused controls retain record metadata, list lengths, read modes, tuple indices,
+   and record-tag strings,
    with nats spread over 0 .. 2^62 - 1 and strings drawn from a list of valid UTF-8 (ASCII,
    two-, three- and four-byte scalars, quotes, backslashes, control characters).
    Properties, N = 400 programs, 400 types, 200 rows, 200 eff_tys, seed 42:
@@ -54,7 +55,7 @@ let rand_lit () =
 let rec rand_term d =
   if d <= 0 then (if rb () then Term_var (ri 20) else Term_lit (rand_lit ()))
   else
-    match ri 6 with
+    match ri 7 with
     | 0 -> Term_var (rand_nat ())
     | 1 -> Term_lit (rand_lit ())
     | 2 -> Term_app (rand_string (), rand_terms (d - 1))
@@ -63,7 +64,8 @@ let rec rand_term d =
          List.init (ri 4) (fun _ -> rand_string ()), rand_terms (d - 1))
     | 4 -> Term_field
         (pick [Field_read_mode_required; Field_read_mode_optional], rand_term (d - 1), rand_string ())
-    | _ -> Term_recordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
+    | 5 -> Term_recordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
+    | _ -> Term_tupleAt (rand_term (d - 1), rand_nat ())
 
 and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_term (d - 1), rand_terms (d - 1))
 
@@ -73,6 +75,10 @@ let rec rand_cause d =
   | 1 -> Cause_term_die (rand_term d)
   | 2 -> Cause_term_interrupt (if rb () then None else Some (rand_term d))
   | _ -> Cause_term_both (rand_cause (d - 1), rand_cause (d - 1))
+
+let rand_decision () =
+  pick [Decision_bool; Decision_option; Decision_tag (rand_string ());
+        Decision_recordTag (rand_string ())]
 
 let rec rand_eff d =
   let t () = rand_term (min d 2) in
@@ -100,7 +106,7 @@ let rec rand_eff d =
     | 12 -> Eff_exit (e ())
     | 13 -> Eff_uninterruptible (e ())
     | 14 -> Eff_interruptible (e ())
-    | 15 -> Eff_select (t (), Decision_bool, e (), e ())
+    | 15 -> Eff_select (t (), rand_decision (), e (), e ())
     | 16 -> Eff_iterate ((if rb () then None else Some Ty_nat), t (), t (), t (), t (), e ())
     | 17 -> Eff_yieldNow (rand_nat ())
     | 18 -> Eff_perform (rand_op (), t ())
@@ -235,6 +241,17 @@ let record_controls =
     Term_field (Field_read_mode_optional, raw, "a-b");
     Term_recordSet (raw, "a-b", Term_var 3) ]
 
+let tuple_controls =
+  [ Term_tupleAt (Term_var 0, 0);
+    Term_tupleAt (Term_var 1, 9007199254740993);
+    Term_tupleAt (Term_tupleAt (Term_var 2, 65537), max_int);
+    Term_field (Field_read_mode_optional, Term_tupleAt (Term_var 3, 1), "a-b") ]
+
+let decision_controls =
+  [ Decision_bool; Decision_option; Decision_tag "Found";
+    Decision_recordTag "Found"; Decision_recordTag "";
+    Decision_recordTag "é\n\"raw" ]
+
 let () =
   let at d s p l = d s p l in
   List.iteri (fun i term ->
@@ -242,6 +259,16 @@ let () =
         Eff_wire.encode_term Eff_wire.decode_term_exact
         (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
     record_controls;
+  List.iteri (fun i term ->
+      property ("tuple-term-" ^ string_of_int i) 1 (fun () -> term)
+        Eff_wire.encode_term Eff_wire.decode_term_exact
+        (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
+    tuple_controls;
+  List.iteri (fun i decision ->
+      property ("decision-" ^ string_of_int i) 1 (fun () -> decision)
+        Eff_wire.encode_decision Eff_wire.decode_decision_exact
+        (fun s -> at Eff_wire.decode_decision s 0 (String.length s)) Eff_json.print_decision)
+    decision_controls;
   property "eff" 400 (fun () -> rand_eff (ri 7)) Eff_wire.encode_eff Eff_wire.decode_eff_exact
     (fun s -> at Eff_wire.decode_eff s 0 (String.length s)) Eff_json.print_eff;
   property "ty" 400 (fun () -> rand_ty (ri 6)) Eff_wire.encode_ty Eff_wire.decode_ty_exact

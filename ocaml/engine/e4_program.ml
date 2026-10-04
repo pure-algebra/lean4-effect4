@@ -184,6 +184,7 @@ module Make (A : PROGRAM_TYPES) = struct
       A.Term_field (of_field_read_mode mode, of_term target, name)
     | Eff_types.Term_recordSet (target, name, value) ->
       A.Term_recordSet (of_term target, name, of_term value)
+    | Eff_types.Term_tupleAt (target, index) -> A.Term_tupleAt (of_term target, index)
 
   and of_terms : Eff_types.terms -> A.terms = function
     | Eff_types.Terms_nil -> A.Terms_nil
@@ -255,6 +256,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Decision_bool -> A.Decision_bool
     | Eff_types.Decision_option -> A.Decision_option
     | Eff_types.Decision_tag t -> A.Decision_tag t
+    | Eff_types.Decision_recordTag t -> A.Decision_recordTag t
 
   let rec of_eff : Eff_types.eff -> A.native_op A.eff = function
     | Eff_types.Eff_succeed t -> A.Eff_succeed (of_term t)
@@ -362,6 +364,7 @@ module Make (A : PROGRAM_TYPES) = struct
   let ctor_index_term : A.term -> int = function
     | A.Term_var _ -> 0 | A.Term_lit _ -> 1 | A.Term_app _ -> 2
     | A.Term_record _ -> 3 | A.Term_field _ -> 4 | A.Term_recordSet _ -> 5
+    | A.Term_tupleAt _ -> 6
 
   let ctor_index_terms : A.terms -> int = function
     | A.Terms_nil -> 0 | A.Terms_cons _ -> 1
@@ -408,6 +411,10 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.NativeOp_sleep -> 20
     | A.NativeOp_clockNow -> 21
     | A.NativeOp_external _ -> 22
+
+  let ctor_index_decision : A.decision -> int = function
+    | A.Decision_bool -> 0 | A.Decision_option -> 1 | A.Decision_tag _ -> 2
+    | A.Decision_recordTag _ -> 3
 
   let ctor_index_eff : 'op A.eff -> int = function
     | A.Eff_succeed _ -> 0

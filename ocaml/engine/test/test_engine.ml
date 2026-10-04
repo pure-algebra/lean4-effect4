@@ -288,7 +288,11 @@ let sample_terms =
   [ E.Term_var 0; E.Term_lit E.Lit_unit; E.Term_app ("pair", E.Terms_nil);
     E.Term_record (["x", (true, E.Ty_nat)], [], E.Terms_nil);
     E.Term_field (E.Field_read_mode_required, a_term, "a-b");
-    E.Term_recordSet (a_term, "__proto__", E.Term_lit E.Lit_unit) ]
+    E.Term_recordSet (a_term, "__proto__", E.Term_lit E.Lit_unit);
+    E.Term_tupleAt (a_term, 1) ]
+
+let sample_decisions =
+  [ E.Decision_bool; E.Decision_option; E.Decision_tag "Found"; E.Decision_recordTag "Found" ]
 
 let sample_terms_l = [ E.Terms_nil; E.Terms_cons (a_term, E.Terms_nil) ]
 
@@ -408,6 +412,32 @@ module Ord (A : E4_program.PROGRAM_TYPES) = struct
         | A.Term_recordSet (target, "__proto__", A.Term_var 3) -> raw_fields target
         | _ -> false) ]
 
+  let tuple_and_tag_shapes () =
+    [ "tuple index beyond exact JavaScript integers", (match P.of_term
+          (E.Term_tupleAt (a_term, 9007199254740993)) with
+        | A.Term_tupleAt (A.Term_var 0, 9007199254740993) -> true
+        | _ -> false);
+      "nested tuple targets and maximum OCaml int", (match P.of_term
+          (E.Term_tupleAt (E.Term_tupleAt (E.Term_var 2, 65537), max_int)) with
+        | A.Term_tupleAt (A.Term_tupleAt (A.Term_var 2, 65537), index) -> index = max_int
+        | _ -> false);
+      "record access over tuple projection", (match P.of_term
+          (E.Term_field (E.Field_read_mode_optional, E.Term_tupleAt (a_term, 0), "a-b")) with
+        | A.Term_field (A.FieldReadMode_optional, A.Term_tupleAt (A.Term_var 0, 0), "a-b") -> true
+        | _ -> false);
+      "record tag exact string", (match P.of_decision (E.Decision_recordTag "é\n\"raw") with
+        | A.Decision_recordTag "é\n\"raw" -> true | _ -> false);
+      "record tag empty string", (match P.of_decision (E.Decision_recordTag "") with
+        | A.Decision_recordTag "" -> true | _ -> false);
+      "record tag stays distinct from sum tag", (match P.of_decision (E.Decision_tag "Found") with
+        | A.Decision_tag "Found" -> true | _ -> false);
+      "selection keeps decision and both branches", (match P.of_eff
+          (E.Eff_select (E.Term_tupleAt (a_term, 1), E.Decision_recordTag "Found",
+            E.Eff_succeed (E.Term_var 2), E.Eff_fail (E.Term_var 3))) with
+        | A.Eff_select (A.Term_tupleAt (A.Term_var 0, 1), A.Decision_recordTag "Found",
+            A.Eff_succeed (A.Term_var 2), A.Eff_fail (A.Term_var 3)) -> true
+        | _ -> false) ]
+
   let go () =
     List.iteri (fun i v -> one "lit" i (E.ctor_index_lit v) (P.ctor_index_lit (P.of_lit v)))
       sample_lits;
@@ -446,6 +476,8 @@ module Ord (A : E4_program.PROGRAM_TYPES) = struct
          one "native_op" i (E.ctor_index_native_op v)
            (P.ctor_index_native_op (P.of_native_op v)))
       sample_ops;
+    List.iteri (fun i v -> one "decision" i (E.ctor_index_decision v)
+        (P.ctor_index_decision (P.of_decision v))) sample_decisions;
     List.iteri (fun i v -> one "eff" i (E.ctor_index_eff v) (P.ctor_index_eff (P.of_eff v)))
       sample_effs;
     List.iteri (fun i v -> one "stmt" i (E.ctor_index_stmt v) (P.ctor_index_stmt (P.of_stmt v)))
@@ -475,6 +507,11 @@ let ordinals () =
   check "field read mode samples cover every source constructor"
     (List.sort_uniq Int.compare (List.map E.ctor_index_field_read_mode sample_field_read_modes) =
      List.init (List.length E.ctor_names_field_read_mode) Fun.id);
+  check "decision samples cover every source constructor"
+    (List.sort_uniq Int.compare (List.map E.ctor_index_decision sample_decisions) =
+     List.init (List.length E.ctor_names_decision) Fun.id);
+  List.iter (fun (name, ok) -> check ("Fast tuple/tag conversion: " ^ name) ok) (OrdF.tuple_and_tag_shapes ());
+  List.iter (fun (name, ok) -> check ("Ref tuple/tag conversion: " ^ name) ok) (OrdR.tuple_and_tag_shapes ());
   List.iter (fun (name, ok) -> check ("Fast record conversion: " ^ name) ok) (OrdF.record_shapes ());
   List.iter (fun (name, ok) -> check ("Ref record conversion: " ^ name) ok) (OrdR.record_shapes ());
   (match E4_program.pin () with

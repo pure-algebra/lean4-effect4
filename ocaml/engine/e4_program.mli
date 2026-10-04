@@ -91,6 +91,7 @@ module Make (A : PROGRAM_TYPES) : sig
   val of_finalizer_strategy : Eff_types.finalizer_strategy -> A.finalizer_strategy
   val of_fn_name : Eff_types.fn_name -> A.fn_name
   val of_native_op : Eff_types.native_op -> A.native_op
+  val of_decision : Eff_types.decision -> A.decision
   val of_eff : Eff_types.eff -> A.native_op A.eff
   val of_stmt : Eff_types.stmt -> A.native_op A.stmt
   val of_stmts : Eff_types.stmts -> A.native_op A.stmts
@@ -118,6 +119,7 @@ module Make (A : PROGRAM_TYPES) : sig
   val ctor_index_finalizer_strategy : A.finalizer_strategy -> int
   val ctor_index_fn_name : A.fn_name -> int
   val ctor_index_native_op : A.native_op -> int
+  val ctor_index_decision : A.decision -> int
   val ctor_index_eff : 'op A.eff -> int
   val ctor_index_stmt : 'op A.stmt -> int
   val ctor_index_stmts : 'op A.stmts -> int
