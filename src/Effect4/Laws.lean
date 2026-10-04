@@ -97,6 +97,7 @@ import Effect4.Laws.Program.Typed.PositionGate
 import Effect4.Laws.Program.Typed.TypedStateDecl
 import Effect4.Laws.Auto.Frames
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Auto.BankCensus
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Effects.Sum
