@@ -19,6 +19,12 @@ private def u : Eff Unit := .succeed (.lit .unit)
 #guard Eff.scopedAt 0 (.bind (v 0) u) = false
 #guard Eff.scopedAt 0 (.matchCause u (v 0) (v 0)) = true
 #guard Eff.scopedAt 0 (.catchIf (.var 0) u (v 0)) = true
+-- `perform`: the operation's own data by its alphabet's `ScopedOp` (the unit alphabet carries
+-- none), the request at the node's level; the red controls over an alphabet whose operation
+-- carries a term are `Test/Program/ScopedOpContract.lean`
+#guard Eff.scopedAt 0 (.perform () (.lit .unit) : Eff Unit) = true
+#guard Eff.scopedAt 0 (.perform () (.var 0) : Eff Unit) = false
+#guard Eff.scopedAt 1 (.perform () (.var 0) : Eff Unit) = true
 -- `select`: the arms are one deeper exactly where the decision binds
 #guard Eff.scopedAt 0 (.select (.lit .unit) .bool u u) = true
 #guard Eff.scopedAt 0 (.select (.lit .unit) .bool u (v 0)) = false

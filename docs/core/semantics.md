@@ -685,6 +685,9 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
 - **Fold congruence (`cata-eff-congr-on`)**: Fold congruence over agreeing algebra implementations
   (`cata_eff_congr_on` (`src/Effect4/Laws/Program/Signature.lean`)).
 - **Traversal census maintenance**: 100% fold coverage enforced by `#traversal_census`.
+- **Operation data scoped (`operation-data-scoped`)**: the scope fold decides a `perform` node
+  from its operation's own data, read by the alphabet's `ScopedOp`, and from its request
+  (`Eff.perform_scoped_iff` (`src/Effect4/Laws/Program/Authoring.lean`)). Scope is not typing.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 

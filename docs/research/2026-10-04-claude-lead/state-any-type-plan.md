@@ -82,7 +82,24 @@ flowchart TD
   T5 --> T6
 ```
 
-### T0. Operation data is scope-checked (now; no behaviour change)
+### T0. Operation data is scope-checked (landed 2026-10-04, seat T0, merged `c8f01acf`)
+
+Landed as a class, `ScopedOp (Op : Type)` (`src/Effect4/Program/ScopedOp.lean`): scope is decided
+from the program alone, and the authoring lifts hold no signature. `NativeOp` answers `true` until
+T3. The claim `operation-data-scoped` points at `Eff.perform_scoped_iff`. The red controls are in
+`Test/Program/ScopedOpContract.lean`. The seat's findings for later slices:
+
+- T3 authors a term-carrying row by a row lift that elaborates the term under the current value's
+  binder, as `iterate`'s step is elaborated. Row 43 rules it ("exactly as `iterate` does"). The raw
+  `perform` lift stays for operations scoped at every level.
+- T3: `NativeOp` is a case-site policy family (`unlisted: refuse`). The instance at the term rows
+  adds its policy row and runs `make check-cases`.
+- T3: `authoring_scoped` has no step for the operation hypothesis. It names a nonexistent
+  `Bool.true_scoped` on it. No source hits this today.
+- T5: the read/print domain (`leafReadable`, `rowDom`, `src/Effect4/Laws/Codegen/ReadPrint.lean`)
+  checks the request, not the operation's data. T5 adds it.
+
+The design as planned:
 
 - The generator (`tools/Effect4Gen/Authoring.lean`, group `Scoped`) emits
   `scopedAlgebra (Op) (opScoped : Op → Nat → Bool)`. Its `eff_perform` is

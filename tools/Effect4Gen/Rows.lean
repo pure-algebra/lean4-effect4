@@ -16,7 +16,8 @@ and emits:
   `perform`, the one invocation form: the row's kind selects the route at the compile, so an
   authored row lands in the printer's image whatever its kind (DI-89's native half).
 * group `RowsLaws` → `src/Effect4/Laws/Program/Authoring/Rows.lean`: the scope lemma of
-  every wrapper, one application of `perform_scoped`.
+  every wrapper, one application of `perform_scoped`, whose operation hypothesis is the native
+  alphabet's `NativeOp.scopedAt_eq_true` (no native operation carries a variable yet).
 
     lake exe effect4gen-catalogue Rows --group Rows
       --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Program/Authoring/Rows.lean
@@ -81,10 +82,12 @@ def emitOne (op : NativeOp) (params : List (String × String)) : Option Emitted 
   let ctorParamText := String.intercalate " " (params.map fun (n, t) => s!"({n} : {t})")
   let lemmaParams := (if ctorParamText.isEmpty then "" else ctorParamText ++ " ") ++ implicitReq ++ String.intercalate " " hyps
   let app := String.intercalate " " ([defName] ++ params.map (·.1) ++ reqParams)
+  -- the operation is data: its scope at every level, once for the native alphabet
+  let opScoped := "(NativeOp.scopedAt_eq_true _)"
   let proof := match reqParams with
-    | [] => s!"{lift}_scoped _ unit_scoped"
-    | [_] => s!"{lift}_scoped _ h0"
-    | _ => s!"{lift}_scoped _ (app_scoped \"pair\" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))"
+    | [] => s!"{lift}_scoped _ {opScoped} unit_scoped"
+    | [_] => s!"{lift}_scoped _ {opScoped} h0"
+    | _ => s!"{lift}_scoped _ {opScoped} (app_scoped \"pair\" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))"
   let lemma := s!"theorem {defName}_scoped {lemmaParams} :\n    ({app}).Scoped :=\n  {proof}\n"
   let lemma := lemma.replace "theorem " "theorem " |>.replace "_scoped  :" "_scoped :"
   some { namespaceParts := nsParts, defName, wrapper, lemma,

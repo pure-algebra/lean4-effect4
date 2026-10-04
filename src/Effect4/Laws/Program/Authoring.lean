@@ -3,6 +3,7 @@ import Effect4.Program.Binders
 import Effect4.Program.Authoring
 import Effect4.Laws.Program.Authoring.Tactic
 import Effect4.Laws.Auto.Inversion
+import Effect4.Laws.Auto.Semantics
 
 /-!
 # Laws.Program.Authoring — scope safety of the authoring surface
@@ -18,6 +19,10 @@ own), the spines, and the membership lemmas the lists and options need. The tact
 `authoring_scoped` (`Authoring/Tactic.lean`, meta code inside the gate's implementation
 boundary) discharges the predicate for any program built from the lifts by reading the head
 of each goal and applying the lemma named after it.
+
+The scope check is generic in the operation alphabet: an operation's own data is read by the
+alphabet's `ScopedOp` instance (`Program/ScopedOp.lean`), so every statement over an arbitrary
+alphabet takes `[ScopedOp Op]`. `Eff.perform_scoped_iff` reads the operation arm as a decision.
 
 `Node.scopedAt_child` is the agreement between the table's two projections: a child of a
 scoped node is scoped at the level `Node.childLevel` assigns it.
@@ -39,17 +44,17 @@ structure TermSrc.Scoped (t : TermSrc) : Prop where
   holds : ∀ env p x, t env p = .ok x → Term.scoped env.names.length x = true
 
 /-- Every program the source elaborates is scoped at the scope's depth. -/
-structure Src.Scoped {Op : Type} (s : Src Op) : Prop where
+structure Src.Scoped {Op : Type} [ScopedOp Op] (s : Src Op) : Prop where
   holds : ∀ env p e, s env p = .ok e → Eff.scopedAt env.names.length e = true
 
 structure CauseSrc.Scoped (c : CauseSrc) : Prop where
   holds : ∀ env p x, c env p = .ok x → CauseTerm.scoped env.names.length x = true
 
-structure ActionSrc.Scoped {Op : Type} (a : ActionSrc Op) : Prop where
+structure ActionSrc.Scoped {Op : Type} [ScopedOp Op] (a : ActionSrc Op) : Prop where
   holds : ∀ env p x, a env p = .ok x → ActionTerm.scopedAt env.names.length x = true
 
 /-- A layer is closed: its bodies are checked at level `0`, whatever the scope. -/
-structure LayerSrc.Scoped {Op : Type} (l : LayerSrc Op) : Prop where
+structure LayerSrc.Scoped {Op : Type} [ScopedOp Op] (l : LayerSrc Op) : Prop where
   holds : ∀ env p x, l env p = .ok x → LayerTerm.scoped x = true
 
 /-! ## The two facts every lift proof uses -/
@@ -150,7 +155,8 @@ theorem app_scoped (atom : String) {args : List TermSrc} (h : ∀ a ∈ args, a.
   exact (h a ha).holds env p v hfa
 
 /-- A declared layer by name is a reference, and a reference is closed. -/
-theorem Layer.ref_scoped {Op : Type} (name : String) : (Layer.ref name : LayerSrc Op).Scoped := by
+theorem Layer.ref_scoped {Op : Type} [ScopedOp Op]
+    (name : String) : (Layer.ref name : LayerSrc Op).Scoped := by
   refine ⟨fun env p x h => ?_⟩
   unfold Layer.ref at h
   split at h <;> cases h
@@ -158,7 +164,7 @@ theorem Layer.ref_scoped {Op : Type} (name : String) : (Layer.ref name : LayerSr
 
 /-! ## Spines and options -/
 
-theorem elabEffs_scoped {Op : Type} {l : List (Src Op)} (h : ∀ s ∈ l, s.Scoped) :
+theorem elabEffs_scoped {Op : Type} [ScopedOp Op] {l : List (Src Op)} (h : ∀ s ∈ l, s.Scoped) :
     ∀ {env : Env} {spine : List Nat} {es : Effs Op}, elabEffs l env spine = .ok es →
       Effs.scopedAt env.names.length es = true := by
   induction l with
@@ -172,7 +178,8 @@ theorem elabEffs_scoped {Op : Type} {l : List (Src Op)} (h : ∀ s ∈ l, s.Scop
     simp only [Effs.scopedAt_cons, Bool.and_eq_true]
     exact ⟨(h s (by simp)).holds env _ x hx0, ih (fun t ht => h t (by simp [ht])) hxs⟩
 
-theorem elabLayers_scoped {Op : Type} {l : List (LayerSrc Op)} (h : ∀ s ∈ l, s.Scoped) :
+theorem elabLayers_scoped {Op : Type} [ScopedOp Op]
+    {l : List (LayerSrc Op)} (h : ∀ s ∈ l, s.Scoped) :
     ∀ {env : Env} {spine : List Nat} {ls : LayerTerms Op}, elabLayers l env spine = .ok ls →
       LayerTerms.scoped ls = true := by
   induction l with
@@ -210,29 +217,31 @@ theorem TermSrc.Scoped_some {a : TermSrc} (h : a.Scoped) : ∀ x ∈ some a, x.S
 theorem TermSrc.Scoped_none : ∀ x ∈ (none : Option TermSrc), x.Scoped := by
   intro x hx; cases hx
 
-theorem Src.Scoped_cons {Op : Type} {a : Src Op} {l : List (Src Op)} (h : a.Scoped)
+theorem Src.Scoped_cons {Op : Type} [ScopedOp Op] {a : Src Op} {l : List (Src Op)} (h : a.Scoped)
     (hl : ∀ x ∈ l, x.Scoped) : ∀ x ∈ a :: l, x.Scoped := by
   intro x hx; simp only [List.mem_cons] at hx; rcases hx with rfl | hx; exact h; exact hl x hx
-theorem Src.Scoped_nil {Op : Type} : ∀ x ∈ ([] : List (Src Op)), x.Scoped := by
+theorem Src.Scoped_nil {Op : Type} [ScopedOp Op] : ∀ x ∈ ([] : List (Src Op)), x.Scoped := by
   intro x hx; simp at hx
 
-theorem LayerSrc.Scoped_cons {Op : Type} {a : LayerSrc Op} {l : List (LayerSrc Op)}
+theorem LayerSrc.Scoped_cons {Op : Type} [ScopedOp Op] {a : LayerSrc Op} {l : List (LayerSrc Op)}
     (h : a.Scoped) (hl : ∀ x ∈ l, x.Scoped) : ∀ x ∈ a :: l, x.Scoped := by
   intro x hx; simp only [List.mem_cons] at hx; rcases hx with rfl | hx; exact h; exact hl x hx
-theorem LayerSrc.Scoped_nil {Op : Type} : ∀ x ∈ ([] : List (LayerSrc Op)), x.Scoped := by
+theorem LayerSrc.Scoped_nil {Op : Type} [ScopedOp Op] :
+    ∀ x ∈ ([] : List (LayerSrc Op)), x.Scoped := by
   intro x hx; simp at hx
 
 /-! ## The table and the algebra agree -/
 
 /-- The one head-dependent row, as the table spells it and as the algebra spells it. -/
-theorem Node.childLevel_stmts_cons {Op : Type} (n : Nat) (h : Stmt Op) (t : Stmts Op) :
+theorem Node.childLevel_stmts_cons {Op : Type} [ScopedOp Op]
+    (n : Nat) (h : Stmt Op) (t : Stmts Op) :
     Node.childLevel n (.stmts (.cons h t)) 1 = if h.bindsNext then n + 1 else n := by
   cases h <;> rfl
 
 /-- A child of a scoped node is scoped at the level the binder table assigns it: the two
 projections of `tools/Effect4Gen/binders.json`, `Node.childLevel` and `scopedAlgebra`, agree
 at every child of every constructor. -/
-theorem Node.scopedAt_child {Op : Type} {n : Nat} {node c : Node Op} {i : Nat}
+theorem Node.scopedAt_child {Op : Type} [ScopedOp Op] {n : Nat} {node c : Node Op} {i : Nat}
     (hs : Node.scopedAt n node = true) (hc : Node.child node i = some c) :
     Node.scopedAt (Node.childLevel n node i) c = true := by
   unfold Node.child at hc
@@ -241,3 +250,27 @@ theorem Node.scopedAt_child {Op : Type} {n : Nat} {node c : Node Op} {i : Nat}
     simp_all [Node.scopedAt, Node.childLevel, Node.binders, Node.closedChild]
 
 end Effect4.Program.Authoring
+
+namespace Effect4.Program
+
+/-! ## The operation's own data -/
+
+/-- **An operation's own data is scope-checked.** A `perform` node is scoped at level `n`
+exactly when its operation's data is, by the alphabet's `ScopedOp` instance, and its request
+is: the generated operation arm of the scope fold (`scopedAlgebra`, `Program/Scoped.lean`),
+read as a decision.
+
+Concept `initial-algebras-folds`, claim `operation-data-scoped` (role decidability), serving
+R4 (state plan T0). Reach: the scope check `Eff.scopedAt`, at every level, at every alphabet
+with a `ScopedOp` instance, with no other hypothesis. It does not establish term typing: scope
+is not typing, and the type of a term an operation carries is state plan T3's (`rowTy`). It
+does not establish that an instance follows `ScopedOp`'s binder convention, which is each
+instance's contract. Consumer: T3's term rows, where the checker refuses an unscoped term
+before typing it; the red controls are `Test/Program/ScopedOpContract.lean`. -/
+@[semantics "initial-algebras-folds" (requirement := R4)]
+theorem Eff.perform_scoped_iff {Op : Type} [ScopedOp Op] (n : Nat) (op : Op) (arg : Term) :
+    Eff.scopedAt n (.perform op arg) = true ↔
+      ScopedOp.scopedAt op n = true ∧ arg.scoped n = true := by
+  simp only [Eff.scopedAt_perform, Bool.and_eq_true]
+
+end Effect4.Program

@@ -323,11 +323,11 @@
       ]
     },
     {
-      "Note": "The scope predicate (every variable below its level) as the binder table's algebra on the carrier Nat -> Bool, run by the fold; one equation per constructor.",
+      "Note": "The scope predicate (every variable below its level) as the binder table's algebra on the carrier Nat -> Bool, run by the fold; one equation per constructor. An operation's own data is read by the alphabet's ScopedOp instance (state plan T0).",
       "Name": "Scoped",
-      "Flags": ["--module", "--meta-imports", "Effect4.Program.Fold,Effect4.Program.Refs"],
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Fold,Effect4.Program.Refs,Effect4.Program.ScopedOp"],
       "Tool": "tools/Effect4Gen/Authoring.lean",
-      "Imports": "Effect4.Program.Fold,Effect4.Program.Refs",
+      "Imports": "Effect4.Program.Fold,Effect4.Program.Refs,Effect4.Program.ScopedOp",
       "Out": "src\\Effect4\\Program\\Scoped.lean",
       "Guards": "tools\\Effect4Gen\\guards\\scoped.lean",
       "Kinds": [],

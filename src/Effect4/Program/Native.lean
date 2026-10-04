@@ -3,6 +3,7 @@ module
 public import Effect4.Program.NativeAtom
 public import Effect4.Program.ErrorImage
 public import Effect4.Program.Typing
+public import Effect4.Program.ScopedOp
 public import Effect4.Machine.Stores
 
 /-!
@@ -82,6 +83,17 @@ inductive NativeOp
   /-- A position in the row table supplied beside the program. -/
   | external (index : Nat)
 deriving DecidableEq
+
+/-- The scope of a native operation's own data (`Program/ScopedOp.lean`). No native operation
+carries a term yet: a read-modify-write row names its function (`FnName`), which has no
+variable. So every native operation is in scope at every level. State plan T3 gives those rows
+binder terms, and this instance then checks each at `n + 1`, by `ScopedOp`'s convention. -/
+instance : ScopedOp NativeOp := ⟨fun _ _ => true⟩
+
+/-- No native operation carries a variable: the hypothesis the operation lift's scope lemma
+(`Authoring.perform_scoped`) asks of an operation, discharged once for the native alphabet. -/
+theorem NativeOp.scopedAt_eq_true (op : NativeOp) (n : Nat) : ScopedOp.scopedAt op n = true :=
+  rfl
 
 /-- Rows are unit content beside the program's bytes. -/
 abbrev RowTable := List Row
