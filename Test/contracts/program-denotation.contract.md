@@ -13,7 +13,7 @@ lists):
 `src/Effect4/Laws/Program/Agreement.lean` (the frame machine's local run reaches the meaning),
 `src/Effect4/Laws/Program/Agreement/Machine.lean` (the command loop is the local run;
 `run_eq_meaning`),
-`src/Effect4/Laws/Program/Progress.lean` (the first join: `answer_typed`, `progress`)
+`src/Effect4/Laws/Program/Progress.lean` (the first join: `Denote.StoreFits`, `progress`)
 
 Lean batteries:
 `Test/Program/TypedContract.lean`,
@@ -267,13 +267,24 @@ cleanup wrapper. The local/command proof port and repaired-tree gate pass:
 282 jobs, 276 modules / 39,572 declarations at the unchanged ceiling/boundary.
 This closes the wrapper correction, not the remaining scoped or P3 obligations.
 
-32. `Stores.HeapNat`: every cell of the heap holds a `.nat`; decidable; `Stores.empty` has it.
-33. `answer_typed`: on a `HeapNat` store, a typed request decoded through `syncOpOf` that
-    steps answers a value of the row's answer type; `step_heapNat`: the step keeps `HeapNat`.
-    `Stores.WF` alone is not enough (`E4-PROGRESS-CE-001`).
-34. `syncOpOf_validIn`: a typed, valid request decodes to a valid operation.
-35. `progress`: under `WF`, `HeapNat`, a `sync` row, and a typed, valid request, the step
-    exists, answers a typed and valid value, and keeps `WF` and `HeapNat`.
+Items 32–35 were restated at a world on 2026-10-04 (decisions row 209, the state plan's T1). The
+numeric heap predicate `Stores.HeapNat` and its lemmas are deleted.
+
+32. `Denote.StoreFits w`: the store half at a world. It holds the cell columns
+    (`Typed.CellsTyped`) and `Stores.WF`. The cell columns say that the world declares exactly
+    the allocated cells and Deferred cells, and that every stored value fits its cell's declared
+    type. The typed state's `StoreTyped` shares them. `StoreFits.initial`: the store fits at
+    `Typed.initialWorld`.
+33. `NativeOp.syncOpOf_cellImplements`: every store operation a request decodes to fulfils its
+    row on the cell columns (`Typed.CellImplements`). The heap kernels are one theorem
+    (`Typed.kernel_step`) over one table (`Typed.kernel_typed`). `Stores.WF` alone is not enough
+    (`E4-PROGRESS-CE-001`).
+34. `StoreFits.step`: a store step keeps `Stores.WF` when the cell columns are typed at the new
+    world. A value that fits is valid in a store whose cell columns are typed
+    (`Typed.CellsTyped.fits_validIn`).
+35. `progress`: take a `sync` row's `perform` node in an environment typed at a world whose store
+    fits. The node denotes one store operation, which steps without a frontier. Its answer has the
+    node's type at a later world whose store fits again.
 
 The error-image and allocation lane, `Effect4.Program.ErrorImage` and the laws above `Typed`
 (landed 2026-09-09 in `23e5717` as S2's preparation; the instantiation of the folds into
@@ -341,8 +352,8 @@ appears only in the batteries.
 | `E4-STORES-CE-003` | SEEDED | `Stores.WF` validates the payload handles of a completed Deferred | `deferredCompleteWith ⟨0⟩ (Completion.ofRefGet ⟨9⟩)` on a fresh cell is valid, steps, and leaves a `WF` store whose stored completion reads a cell the heap never minted | `WF` is not widened; the missing-reference boundary remains |
 | `E4-STORES-CE-004` | SEEDED | The memo world's refcount law holds by store steps alone | it needs the build-after-miss protocol (`Stores.MemoKeysNodup`); a second `memoBuild` on a present layer leaves an unobserved entry after a release (`StoresLawsContract` §Rows) |
 | `E4-DEN-CE-004` | SEEDED | `run_eq_meaning` covers the whole straight-line fragment | `Straight pOnExit = true`; the copy `Plain pOnExit` was `false` at the first landing and `true` since the repair; `Plain` deleted 2026-09-16 (B5) | the finalizer mask is modelled (`exitFrom`, `maskStack`); the theorem is stated on `Straight` |
-| `E4-PROGRESS-CE-001` | SEEDED | `answer_typed` needs no more than `Stores.WF` | the heap `[Val.bool true]` is `WF`; `refGet ⟨0⟩` answers `Val.bool true`, not a `.nat` | `answer_typed` carries `Stores.HeapNat` |
-| `E4-PROGRESS-CE-002` | SEEDED | `HeapNat` is preserved by every valid step | `refMake (Val.bool true)` is valid on the empty store, steps, and leaves a heap that is not `HeapNat` | `step_heapNat` is stated on a typed request |
+| `E4-PROGRESS-CE-001` | SEEDED | `progress` needs no more than `Stores.WF` | the heap `[Val.bool true]` is `WF`; `refGet ⟨0⟩` answers `Val.bool true`, not a `.nat`; a world where `Val.cell ⟨0⟩` fits the request has no typed cell columns | `progress` carries `Denote.StoreFits`, the cell columns at a world |
+| `E4-PROGRESS-CE-002` | SEEDED | The store half survives every valid step, so `progress` can take a valid request | `refMake (Val.bool true)` is valid on the empty store and steps; no world over the store it leaves has typed cell columns and admits the answer at the row's answer type | `progress` is stated on a typed `perform` node |
 | `E4-DEN-CE-005` | SEEDED | The command loop never yields on a plain program | under `[yieldVerdict root true, evaluate, flush]` the first iteration injects a yield and the run still finishes with the meaning; `pLong` (`2100` binds, `4200` steps) yields twice under the ordinary run and still finishes with the meaning | repaired: the theorem carries no budget hypothesis; the yield, the park, the fire and the rounds of `flush` are on the proved path (ENSURES 30–31), `pLong_agrees` is the instance |
 
 ## Falsifiers
