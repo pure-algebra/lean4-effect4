@@ -99,7 +99,21 @@ flowchart TD
   - Consumer: T3's term rows; the checker refuses an unscoped term before typing it.
   - Does not establish term typing: scope is not typing.
 
-### T1. The straight soundness leaves `HeapNat` (now; no behaviour change)
+### T1. The straight soundness leaves `HeapNat` (landed 2026-10-04, seat T1, merged `236df2ff`)
+
+Landed as designed in `docs/research/2026-10-04-seat-T1-design.md`, with the coordinator's D1
+refinement: the cell columns are defined once (`Typed.CellsTyped`), and each native store row is
+proved once on them (`Typed.CellImplements`). Left for T3 and T4 (the seat's receipt):
+
+- a third copy of the native rows at machine level: `Typed/Commands/Clauses/StoreRef.lean`,
+  `StoreDeferred.lean` and `Commands/Evaluate.lean`, through `poke_world`, `cell_readable` and
+  `nat_cell`. T4 reads them through `CellImplements` with one bridge;
+- `NativeAtom.isSome_validIn` and `NativeAtom.getOrElse_validIn` (`Progress.lean`) have no
+  consumer; the next slice that touches the file deletes them;
+- `Typed/Denotation.lean`'s term, cause and decision lemmas could sit below the straight
+  theorems, shrinking `MeaningSound.lean`'s closure (212 modules).
+
+The design as planned:
 
 `HeapNat` breaks the moment `refMake` admits a non-number value. FR-03
 (`docs/research/2026-09-21-foundations-monotonicity-and-refinement-review.md`) rules out forcing it
