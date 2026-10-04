@@ -48,6 +48,7 @@ next goals: [Test.ProofGraphPlan.leafA, Test.ProofGraphPlan.leafB]
 theorem leafA.checked : ∀ n, A n := fun _ => rfl
 theorem leafB.checked : ∀ n, B n := fun _ => rfl
 
+-- The printed closing command is the one run below: applied in full and kernel-checked.
 /--
 info: Test.ProofGraphPlan.top: ready
   via Test.ProofGraphPlan.top_of (checked)
@@ -56,6 +57,7 @@ info: Test.ProofGraphPlan.top: ready
 Test.ProofGraphPlan.leafA: proved
 Test.ProofGraphPlan.leafB: proved
 next goals: [Test.ProofGraphPlan.top]
+close Test.ProofGraphPlan.top with: #obligation_close Test.ProofGraphPlan.top via Test.ProofGraphPlan.top_of for Test.ProofGraphPlan.top
 -/
 #guard_msgs in
 #plan_status top via top_of for top

@@ -375,6 +375,16 @@ def Plan.describe (p : Plan) (tops : Array Name) : MetaM String := do
         out := out ++ s!"    {by_} ⊢ {m.premise}\n"
   let next := p.next tops
   out := out ++ s!"next goals: {next.toList}"
+  -- a ready goal's closing command, with the edge and the premise nodes it needs
+  for n in next do
+    if p.status n == .ready then
+      let proved (m : Name) := (p.nodes.find? (·.name == m)).any (·.proved)
+      if let some e := p.edges.find? fun e =>
+          e.target == n && e.checked && e.premises.all fun m => m.byHypothesis || m.node.any proved then
+        let froms := e.premises.filterMap (·.node) |>.filter fun m =>
+          (p.nodes.find? (·.name == m)).any (!·.isGoal)
+        let fromText := if froms.isEmpty then "" else s!" from {" ".intercalate (froms.map toString).toList}"
+        out := out ++ s!"\nclose {n} with: #obligation_close {n} via {e.reduction} for {n}{fromText}"
   let loose := (p.loose).filter fun (t, _, _) => (p.reachable tops).contains t
   unless loose.isEmpty do
     out := out ++ s!"\nloose premises: {loose.size}"
