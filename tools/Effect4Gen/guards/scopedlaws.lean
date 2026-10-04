@@ -12,6 +12,12 @@ open Effect4.Program Effect4.Program.Authoring
 example : Src.Scoped (Op := Unit) (bind "r" (succeed (nat 0)) (succeed (var "r"))) := by
   authoring_scoped
 
+-- the operation lift takes its operation as data: the operation's scope at every level is the
+-- caller's hypothesis, before the request's (`rfl` at the unit alphabet; the native rows' lemmas
+-- pass `NativeOp.scopedAt_eq_true`); `authoring_scoped` has no step for it
+example : Src.Scoped (Op := Unit) (perform () (nat 0)) :=
+  perform_scoped () (fun _ => rfl) (nat_scoped 0)
+
 example : Src.Scoped (Op := Unit)
     (acquireRelease "a" "x" (succeed (nat 0)) (succeed (app "pair" [var "a", var "x"]))) := by
   authoring_scoped

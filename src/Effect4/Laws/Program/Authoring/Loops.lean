@@ -15,7 +15,7 @@ namespace Effect4.Program.Authoring
 
 open Effect4.Program
 
-theorem iterateWith_scoped {Op : Type} {initial : TermSrc} {spec : LoopSpec Op}
+theorem iterateWith_scoped {Op : Type} [ScopedOp Op] {initial : TermSrc} {spec : LoopSpec Op}
     (h0 : initial.Scoped)
     (hw : ∀ c : TermSrc, c.Scoped → (spec.while_ c).Scoped)
     (hb : ∀ c : TermSrc, c.Scoped → (spec.body c).Scoped)
@@ -26,7 +26,7 @@ theorem iterateWith_scoped {Op : Type} {initial : TermSrc} {spec : LoopSpec Op}
     iterate_scoped c a spec.cursorTy h0 (hw _ (minted_scoped c))
       (hs _ _ (minted_scoped c) (minted_scoped a)) (hr _ (minted_scoped c)) (hb _ (minted_scoped c))
 
-theorem forRange_scoped {Op : Type} {lo hi : TermSrc} {body : TermSrc → Src Op}
+theorem forRange_scoped {Op : Type} [ScopedOp Op] {lo hi : TermSrc} {body : TermSrc → Src Op}
     (h0 : lo.Scoped) (h1 : hi.Scoped) (h2 : ∀ i : TermSrc, i.Scoped → (body i).Scoped) :
     (forRange lo hi body).Scoped :=
   iterateWith_scoped h0
@@ -35,7 +35,8 @@ theorem forRange_scoped {Op : Type} {lo hi : TermSrc} {body : TermSrc → Src Op
     (fun _ _ hc _ => app_scoped "succ" (TermSrc.Scoped_cons hc TermSrc.Scoped_nil))
     (fun _ hc => hc)
 
-theorem foldRange_scoped {Op : Type} {lo hi zero : TermSrc} {f : TermSrc → TermSrc → Src Op}
+theorem foldRange_scoped {Op : Type} [ScopedOp Op]
+    {lo hi zero : TermSrc} {f : TermSrc → TermSrc → Src Op}
     (h0 : lo.Scoped) (h1 : hi.Scoped) (h2 : zero.Scoped)
     (h3 : ∀ i acc : TermSrc, i.Scoped → acc.Scoped → (f i acc).Scoped) :
     (foldRange lo hi zero f).Scoped :=
@@ -50,7 +51,7 @@ theorem foldRange_scoped {Op : Type} {lo hi zero : TermSrc} {f : TermSrc → Ter
     (fun _ _ hc ha => two (one (one hc)) ha)
     (fun _ hc => one hc)
 
-theorem repeatWhile_scoped {Op : Type} {cond body : Src Op} (h0 : cond.Scoped)
+theorem repeatWhile_scoped {Op : Type} [ScopedOp Op] {cond body : Src Op} (h0 : cond.Scoped)
     (h1 : body.Scoped) : (repeatWhile cond body).Scoped :=
   bindWith_scoped h0 fun _ hfirst =>
     iterateWith_scoped hfirst (fun _ hc => hc) (fun _ _ => andThen_scoped h1 h0)

@@ -16,55 +16,55 @@ namespace Ref
 
 theorem make_scoped {request : TermSrc} (h0 : request.Scoped) :
     (make request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem get_scoped {request : TermSrc} (h0 : request.Scoped) :
     (get request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem set_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (set x0 x1).Scoped :=
-  perform_scoped _ (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem getAndSet_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (getAndSet x0 x1).Scoped :=
-  perform_scoped _ (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem setAndGet_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (setAndGet x0 x1).Scoped :=
-  perform_scoped _ (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem update_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (update f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem getAndUpdate_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (getAndUpdate f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem updateAndGet_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (updateAndGet f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem updateSome_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (updateSome f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem getAndUpdateSome_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (getAndUpdateSome f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem updateSomeAndGet_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (updateSomeAndGet f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem modify_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (modify f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem modifySome_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
     (modifySome f request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 end Ref
 
@@ -72,27 +72,27 @@ namespace Deferred
 
 theorem make_scoped :
     (make).Scoped :=
-  perform_scoped _ unit_scoped
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) unit_scoped
 
 theorem isDone_scoped {request : TermSrc} (h0 : request.Scoped) :
     (isDone request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem poll_scoped {request : TermSrc} (h0 : request.Scoped) :
     (poll request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem succeed_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (succeed x0 x1).Scoped :=
-  perform_scoped _ (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem fail_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (fail x0 x1).Scoped :=
-  perform_scoped _ (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem await_scoped {request : TermSrc} (h0 : request.Scoped) :
     (await request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 end Deferred
 
@@ -100,7 +100,7 @@ namespace Scope
 
 theorem make_scoped (strategy : Effect4.FinalizerStrategy)  :
     (make strategy).Scoped :=
-  perform_scoped _ unit_scoped
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) unit_scoped
 
 end Scope
 
@@ -108,11 +108,11 @@ namespace Effect
 
 theorem sleep_scoped {request : TermSrc} (h0 : request.Scoped) :
     (sleep request).Scoped :=
-  perform_scoped _ h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
 
 theorem currentTimeMillis_scoped :
     (currentTimeMillis).Scoped :=
-  perform_scoped _ unit_scoped
+  perform_scoped _ (NativeOp.scopedAt_eq_true _) unit_scoped
 
 end Effect
 

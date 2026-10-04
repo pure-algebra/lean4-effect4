@@ -869,6 +869,7 @@ Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniquenes
 | inhabited-iff-fits | decidability | proved | Effect4.Program.Typed.inhabited_iff_fits | yes |  |
 | cata-eff-congr-on | compatibility | proved | Effect4.Program.cata_eff_congr_on | yes |  |
 | addressed-replacement | compatibility | proved | Effect4.Program.Node.replaceAt_spec | yes |  |
+| operation-data-scoped | decidability | proved | Effect4.Program.Eff.perform_scoped_iff | yes |  |
 
 ### Printed statements
 
@@ -914,6 +915,14 @@ Literature: TAPL, §16.1, p. 210 — adaptedResult
       (And (Eq result.ctorIdx node.ctorIdx)
         (∀ (old : Effect4.Program.Node Op),
           Eq (node.at_ path) (Option.some old) → Eq (result.replaceAt path old) (Option.some node)))
+```
+
+**operation-data-scoped**
+
+```lean
+∀ {Op : Type} [inst : Effect4.Program.ScopedOp Op] (n : Nat) (op : Op) (arg : Effect4.Program.Term),
+  Iff (Eq (Effect4.Program.Eff.scopedAt n (Effect4.Program.Eff.perform op arg)) Bool.true)
+    (And (Eq (inst.scopedAt op n) Bool.true) (Eq (Effect4.Program.Term.scoped n arg) Bool.true))
 ```
 
 ## context-requirements
@@ -1482,7 +1491,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved) | — | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | — | — |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | `perform_scoped_iff` (proved) | — |
 | R5 | open | `build_total` (proved) | — | — |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | — | — |
 | R7 | open | — | — | — |
@@ -1856,7 +1865,6 @@ flowchart LR
 
 ### R4: State: the world types every cell at any type, with rows as templates
 
-- Open: an operation's data is scope-checked: scopedAlgebra's perform arm ignores the operation (state plan T0)
 - Open: the store runs binder terms, FnName retires (decisions row 43; state plan T2–T3)
 - Open: rows as templates: Ref and Deferred rows over parameters, Deferred.make carrying its type arguments, modify answering B while storing A; until then the native spellings read as cells at nat (decisions row 42, row 96 D2; state plan T3)
 - Open: the faces of Ref<A> and Deferred<A, E>: printer, readers, TypeScript profile and OCaml, binder terms printed (decisions rows 42–43, step 5; state plan T5)
@@ -1868,6 +1876,7 @@ flowchart LR
   n2["refMake_extension<br/>proved"]
   n3["deferredMake_extension<br/>proved"]
   n4["memoBuild_extension<br/>proved"]
+  n5["perform_scoped_iff<br/>proved"]
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -1877,6 +1886,7 @@ flowchart LR
 | `refMake_extension` | proved | — | — | 110 | 294 |
 | `deferredMake_extension` | proved | — | — | 109 | 294 |
 | `memoBuild_extension` | proved | — | — | 108 | 294 |
+| `perform_scoped_iff` | proved | — | — | 0 | 71 |
 
 ### R5: Services: the service table, layers and provision
 
