@@ -409,6 +409,7 @@ private def renderPlan (plan : Json) : String := Id.run do
   for req in array plan "requirements" do
     let tops := String.intercalate ", " ((array req "top").toList.map fun t =>
       s!"`{shortName (field t "name")}` ({field t "status"})")
+    let tops := if tops.isEmpty then "—" else tops
     let next := (nested req "next").getArr?.toOption.getD #[]
     let nextText := if next.isEmpty then "—" else
       String.intercalate ", " (next.toList.map fun n => s!"`{shortName (n.getStr?.toOption.getD "")}`")
