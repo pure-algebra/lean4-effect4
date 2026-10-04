@@ -42,7 +42,7 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   modulo or proved. `#plan_status` works in the editor.
 - **The plan in the report.** `generated/semantics.md` has a plan section. Per requirement it
   shows a derived status, the open parts, the next goals and a Mermaid graph. Per proved node it
-  shows what the proof brings in. R9's M7 is the first edge (`m7_of_ledger`); R9 and R12 stay open through
+  shows what the proof brings in. Edges are read from proof terms; R9 and R12 stay open through
   their listed open parts.
 - **All thirteen requirement rows** are plan rows, each with its checked top nodes and its open
   parts. Four stale cells of the system map's §8 (R1, R2, R3, R6) were corrected with evidence.
@@ -52,8 +52,8 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   - `build_total` restored (decisions row 147's first half).
   - Meaning, loop and run soundness at an application's signature (R1, `SoundAnySignature.lean`).
   - Every shared form has its typing lemma (R10, `Laws/Codegen/Forms.lean`).
-- **`E4-SCHED-CE-021`**: a live frontier names no reason while work is armed. Decisions row 201
-  proposes the repair.
+- **`E4-SCHED-CE-021`**: repaired by decisions row 201 (b) (seat R); R12-b is proved
+  (`frontier_empty_iff_deadlocked`). See the [seat R receipt](research/2026-10-04-seat-R-receipt.md).
 - **`proof_sketch`**: a proof sketch's open goals become planned goals, and the sketch a theorem
   proved modulo them.
 - **The battery is green again** after the data wave (the `formed` field, the native alphabet).
@@ -63,11 +63,20 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   kernel in one environment.
 - **The proof-style ratchet** (`Test/Audit/ProofStyle.lean`): no new `simp_all`, `first`, `try`
   or `simp` without `only` under `src/Effect4`.
-- **The module system** (decisions rows 200 and 202). 96 of the 103 package-free core modules
-  outside `Laws` are modules, merged from `modules/cutover` (`cb8f510a`). M1 holds, and M2 holds as
-  amended, with 168 renumbered auxiliaries. Seven specialization sites stay non-module (T13, row
-  202). `hash` is converted on a local branch, not pushed (`/Users/pooks/Dev/lean4-hash`, branch
-  `module-system`). See the [seat M receipt](research/2026-10-04-seat-M-receipt.md).
+- **The module system** (decisions rows 200 and 202). 116 core modules outside `Laws` are modules:
+  the 96 that reach no package (`cb8f510a`) and the 20 whose package closure is only `hash` (chain
+  E). M1 holds, and M2 holds as amended. `hash` is pushed (branch `module-system`) and re-pinned
+  at `ab7eda4`. Seven specialization sites stay non-module: row 202's ruling (b) measured not
+  reachable, and options (a), (c) and (d) wait on the owner. See the
+  [seat M receipt](research/2026-10-04-seat-M-receipt.md) and the
+  [row 202 receipt](research/2026-10-04-seat-M-row202-receipt.md).
+- **The Σ_app slice** (decisions row 21, R1). The
+  [slice plan](research/2026-10-04-claude-lead/sigapp-slice-plan.md) threads the application's
+  signature through program admission in six steps. Step 0 landed
+  (`Laws/Program/Typed/AdmittedSource.lean`): `m7_admitted` is proved, and
+  `reachable_typed_admitted` is proved modulo the planned goal `lawfulSig_of_admitted`. That goal
+  needs a served premise: `E4-TYPED-CE-041` shows that program admission checks no served key.
+- **Four empty aesop banks deleted** (decisions row 65): `Inversion`, `Reader`, `Rows`, `TyOrder`.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 

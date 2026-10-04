@@ -369,6 +369,9 @@ def registry : Registry where
     { id := "fair-tape-drains-armed", concept := "reactive-scheduling", role := .adequacy
       title := "A fair finite tape that suffices leaves no armed owner at its live end (R12-a: the finite endpoint consequence of FairTape's final prefix; not general fairness, not infinite tapes)"
       pointer := .witness `Effect4.Machine.Scheduling.fairTape_unarmed },
+    { id := "frontier-names-work", concept := "reactive-scheduling", role := .inversion
+      title := "R12-b: at a live, unfinished machine whose tape ran out, the frontier is empty exactly at a deadlock: nothing runnable, nothing armed, no host request, no timer, no compile budget (not progress, not liveness)"
+      pointer := .witness `Effect4.Api.frontier_empty_iff_deadlocked },
     { id := "decision-keeps-typed", concept := "reactive-scheduling", role := .preservation
       title := "M6b: one tape decision keeps J when its host answer, if any, is admitted"
       pointer := .witness `Effect4.Program.Typed.decision_preserves },
@@ -771,9 +774,10 @@ def registry : Registry where
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
         "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)"] },
     { id := "R12", title := "Frontiers name what they await"
-      top := [`Effect4.Machine.Scheduling.fairTape_unarmed]
-      openParts := ["R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet; refuted today by E4-SCHED-CE-021)",
-        "R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)"] },
+      top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]
+      openParts := ["R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)",
+        "stability over the allowed internal decisions, with a named progress observation (not stated)",
+        "divergence by compatible prefixes (DB-03; not stated)"] },
     { id := "R13", title := "A run's inputs are data: equal recorded inputs give equal replay observations"
       top := [`Effect4.Run.journal_replays]
       openParts := ["load inputs, the environment snapshot and the seed: designed (the 2026-09-10 Config route B), not implemented (decisions rows 51, 83)",

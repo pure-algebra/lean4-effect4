@@ -444,6 +444,13 @@ inductive RunDecision ...
   (`fairTape_unarmed` (`src/Effect4/Laws/Machine/Scheduling.lean`)). It is the finite half of R12.
   It says nothing about infinite tapes, termination or host progress. `flush_fair` permits
   rearming, so it is not general scheduler fairness.
+- **Frontier names work (`frontier-names-work`)**: At a live, unfinished machine whose tape ran
+  out, the frontier is empty exactly at a deadlock: no runnable fiber, no armed owner, no host
+  request, no timer and no compile budget.
+  `m.stuck = none → m.finished = false → (frontierReasons .tape m = [] ↔ Deadlocked m)`
+  (`frontier_empty_iff_deadlocked` (`src/Effect4/Laws/Api/Frontier.lean`)). It is R12-b, the
+  frontier half of `scheduler-progress`'s classification. It says nothing about what a decision
+  does at a deadlock, about progress or about infinite tapes.
 - **Decision preservation (`decision-keeps-typed`)**: One tape decision keeps `J` when its host
   answer, if any, is admitted (`decision_preserves`
   (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`)). It is a premise node of M7's

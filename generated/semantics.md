@@ -440,6 +440,7 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | run-work-selection | compatibility | proved | Effect4.Run.nextControl_spec | yes |  |
 | scheduler-progress | progress | absent | Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence | — |  |
 | fair-tape-drains-armed | adequacy | proved | Effect4.Machine.Scheduling.fairTape_unarmed | yes |  |
+| frontier-names-work | inversion | proved | Effect4.Api.frontier_empty_iff_deadlocked | yes |  |
 | decision-keeps-typed | preservation | proved | Effect4.Program.Typed.decision_preserves | yes |  |
 | fair-scheduling | adequacy | absent | Weak fairness progress is open (R12; decisions row 86) | — |  |
 
@@ -672,6 +673,24 @@ Literature: PFPL, ch. 28, pp. 261–268 — proofTechnique
             (Effect4.Prim ν σ β ε δ ι α) (Effect4.FrameFiber ν σ β ε δ ι α)
             (Effect4.FrameEvent ν σ β ε δ ι α))
           List.nil
+```
+
+**frontier-names-work**
+
+```lean
+∀ (m : Effect4.Program.NativeMachine),
+  Eq
+      (m.stuck
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+      Option.none →
+    Eq (Effect4.Machine.RunMachine.finished m) Bool.false →
+      Iff (Eq (Effect4.Api.frontierReasons Effect4.Machine.Exhaustion.tape m) List.nil)
+        (Effect4.Api.Deadlocked m)
 ```
 
 **decision-keeps-typed**
@@ -1475,7 +1494,7 @@ A requirement is proved when every top node is proved and no open part remains. 
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | — |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | — |
-| R12 | open | `fairTape_unarmed` (proved) | — |
+| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — |
 | R13 | open | `journal_replays` (proved) | — |
 
 **Next goals** (1): `lawfulSig_of_admitted`
@@ -2492,17 +2511,20 @@ flowchart LR
 
 ### R12: Frontiers name what they await
 
-- Open: R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet; refuted today by E4-SCHED-CE-021)
 - Open: R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)
+- Open: stability over the allowed internal decisions, with a named progress observation (not stated)
+- Open: divergence by compatible prefixes (DB-03; not stated)
 
 ```mermaid
 flowchart LR
   n0["fairTape_unarmed<br/>proved"]
+  n1["frontier_empty_iff_deadlocked<br/>proved"]
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `fairTape_unarmed` | proved | — | — | 3 | 284 |
+| `frontier_empty_iff_deadlocked` | proved | — | — | 1 | 42 |
 
 ### R13: A run's inputs are data: equal recorded inputs give equal replay observations
 

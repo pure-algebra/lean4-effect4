@@ -257,6 +257,11 @@ owner approval are retained in the P2b receipt. The one-fiber equality has this
 same reachable scope and excludes cancellations and matching-key replies.
 `Interrupted f` remains `interruptPending f = true ∨ f.exit.isSome`.
 
+**Row 201 amendment (owner ruled 2026-10-04).** The decision reason is present iff the tag is tape
+and some fiber is runnable or some owner is armed. Under the tape tag and no host reason, the
+decision reason is present iff the observer reads idle or some owner is armed. The alphabet and
+`HostProtocol.observe` are unchanged: an armed owner with no runnable fiber reads parked.
+
 **Evaluate repair** (owner ruled 2026-09-12). Only a reply or an interruption removes a
 guard. A bare evaluate decision on a fiber parked with a guard is a no-op, as it already is
 for a running or exited fiber, and the evaluate arm's park-clearing assignment goes. Every
