@@ -199,3 +199,33 @@ export const mod = (a: number, b: number): number => (b === 0 ? a : a % b)
  * `"concat", [str a, str b] => str (a ++ b)`
  */
 export const concat = (a: string, b: string): string => a + b
+
+/**
+ * Decisions rows 125, 166 and 197: the empty string map at bottom value type.
+ */
+export const mapEmpty = (): Readonly<Record<string, never>> => ({})
+
+/**
+ * Decisions rows 125 and 166: own-key lookup returns an outer presence option.
+ */
+export const mapGet = <A>(map: Readonly<Record<string, A>>, key: string): Option.Option<A> => Object.prototype.hasOwnProperty.call(map, key) ? Option.some(map[key] as A) : Option.none()
+
+/**
+ * Decision row 197: insertion retains old and new value types as separate union members.
+ */
+export const mapSet = <A, B>(map: Readonly<Record<string, A>>, key: string, value: B): Readonly<Record<string, A | B>> => ({ ...map, [key]: value })
+
+/**
+ * Decisions rows 125 and 166: string-map keys in canonical UTF-8 order.
+ */
+export const mapKeys = <A>(map: Readonly<Record<string, A>>): ReadonlyArray<string> => Object.keys(map).sort((a, b) => { const encoder = new TextEncoder(); const x = encoder.encode(a), y = encoder.encode(b); for (let i = 0; i < Math.min(x.length, y.length); i++) { const delta = (x[i] as number) - (y[i] as number); if (delta !== 0) return delta; } return x.length - y.length; })
+
+/**
+ * Decisions rows 125 and 166: ordered entries as ordinary program pairs.
+ */
+export const mapEntries = <A>(map: Readonly<Record<string, A>>): ReadonlyArray<readonly [string, A]> => mapKeys(map).map(key => [key, map[key] as A] as const)
+
+/**
+ * Decision row 197: ordinary input pairs become sorted map entries, with the last repeated key retained.
+ */
+export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [string, A]>): Readonly<Record<string, A>> => Object.fromEntries(entries)
