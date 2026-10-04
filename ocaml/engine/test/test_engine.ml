@@ -8,7 +8,7 @@
         converted by `E4_program`, where `ocaml/gen/api_check.ml` writes them directly in
         the generated type -- give `finished ... success 42`, `finished fibers=2 success
         ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers what `Ref` answers.
-     2  The differential D1 in miniature: the 37 programs of ocaml/eff/goldens/*.bin,
+     2  The differential D1 in miniature: the programs of ocaml/eff/goldens/*.bin,
         decoded by `Eff_wire`, converted by `E4_program`, run at fuel 1000
         on both instances.  Outcome, answer, exits, the fiber-table projection, the trace
         rows and the store row must be EQUAL between `Fast` and `Ref` for every one, and
@@ -16,7 +16,7 @@
      3  The ordinal pin (CAS amendment M17): `Eff_types`' alphabet against the engine's,
         against `ocaml/eff/eff_manifest.txt`, plus the per-constructor law
         `ctor_index (of_x v) = Eff_types.ctor_index v` over a sample of EVERY arm of all
-        fourteen families, on both instances -- and a mutation check that a transposed
+        sampled families, on both instances -- and a mutation check that a transposed
         manifest is refused.
      4  `replay_steps` yields |tape| + 1 machines and its last equals `replay`'s.
      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
@@ -282,8 +282,13 @@ let goldens () =
 let sample_lits = [ E.Lit_unit; E.Lit_nat 1; E.Lit_bool true; E.Lit_str "s" ]
 let a_term = E.Term_var 0
 
+let sample_field_read_modes = [ E.Field_read_mode_required; E.Field_read_mode_optional ]
+
 let sample_terms =
-  [ E.Term_var 0; E.Term_lit E.Lit_unit; E.Term_app ("pair", E.Terms_nil) ]
+  [ E.Term_var 0; E.Term_lit E.Lit_unit; E.Term_app ("pair", E.Terms_nil);
+    E.Term_record (["x", (true, E.Ty_nat)], [], E.Terms_nil);
+    E.Term_field (E.Field_read_mode_required, a_term, "a-b");
+    E.Term_recordSet (a_term, "__proto__", E.Term_lit E.Lit_unit) ]
 
 let sample_terms_l = [ E.Terms_nil; E.Terms_cons (a_term, E.Terms_nil) ]
 
@@ -380,9 +385,34 @@ module Ord (A : E4_program.PROGRAM_TYPES) = struct
     if src <> eng then
       bad := Printf.sprintf "%s[%d]: wire %d, engine %d" family i src eng :: !bad
 
+  let record_shapes () =
+    let raw = E.Term_record
+        (["z", (true, E.Ty_int); "z", (false, E.Ty_number); "__proto__", (true, E.Ty_nat)],
+         ["unknown"; "unknown"], E.Terms_cons (E.Term_lit (E.Lit_nat 1), E.Terms_nil)) in
+    let raw_fields = function
+      | A.Term_record
+          (["z", (true, A.Ty_int); "z", (false, A.Ty_number); "__proto__", (true, A.Ty_nat)],
+           ["unknown"; "unknown"], A.Terms_cons (A.Term_lit (A.Lit_nat 1), A.Terms_nil)) -> true
+      | _ -> false in
+    [ "raw declaration order, optional flags, and extra names", raw_fields (P.of_term raw);
+      "extra values", (match P.of_term
+          (E.Term_record (["x", (true, E.Ty_nat)], [], E.Terms_cons (a_term, E.Terms_nil))) with
+        | A.Term_record (["x", (true, A.Ty_nat)], [], A.Terms_cons (A.Term_var 0, A.Terms_nil)) -> true
+        | _ -> false);
+      "optional field mode and raw target", (match P.of_term
+          (E.Term_field (E.Field_read_mode_optional, raw, "a-b")) with
+        | A.Term_field (A.FieldReadMode_optional, target, "a-b") -> raw_fields target
+        | _ -> false);
+      "record replacement and raw target", (match P.of_term
+          (E.Term_recordSet (raw, "__proto__", E.Term_var 3)) with
+        | A.Term_recordSet (target, "__proto__", A.Term_var 3) -> raw_fields target
+        | _ -> false) ]
+
   let go () =
     List.iteri (fun i v -> one "lit" i (E.ctor_index_lit v) (P.ctor_index_lit (P.of_lit v)))
       sample_lits;
+    List.iteri (fun i v -> one "field_read_mode" i (E.ctor_index_field_read_mode v)
+        (P.ctor_index_field_read_mode (P.of_field_read_mode v))) sample_field_read_modes;
     List.iteri (fun i v -> one "term" i (E.ctor_index_term v) (P.ctor_index_term (P.of_term v)))
       sample_terms;
     List.iteri
@@ -439,6 +469,14 @@ module OrdR = Ord (Api_engine_ref)
 let ordinals () =
   print_endline "";
   print_endline "== 3. the ordinal pin (M17) ==";
+  check "term samples cover every source constructor"
+    (List.sort_uniq Int.compare (List.map E.ctor_index_term sample_terms) =
+     List.init (List.length E.ctor_names_term) Fun.id);
+  check "field read mode samples cover every source constructor"
+    (List.sort_uniq Int.compare (List.map E.ctor_index_field_read_mode sample_field_read_modes) =
+     List.init (List.length E.ctor_names_field_read_mode) Fun.id);
+  List.iter (fun (name, ok) -> check ("Fast record conversion: " ^ name) ok) (OrdF.record_shapes ());
+  List.iter (fun (name, ok) -> check ("Ref record conversion: " ^ name) ok) (OrdR.record_shapes ());
   (match E4_program.pin () with
    | Ok () -> check "the wire's alphabet is a PREFIX of the engine's, every family" true
    | Error e -> fail_note "E4_program.pin" e);

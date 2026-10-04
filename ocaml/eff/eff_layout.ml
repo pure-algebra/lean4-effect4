@@ -3,7 +3,8 @@
 let wire_families = [
   ("Ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"; "record"; "map"; "tuple"; "app"; "null"; "undefined"; "number"; "bytes"]);
   ("Lit", ["unit"; "nat"; "bool"; "str"]);
-  ("Term", ["var"; "lit"; "app"]);
+  ("FieldReadMode", ["required"; "optional"]);
+  ("Term", ["var"; "lit"; "app"; "record"; "field"; "recordSet"]);
   ("Terms", ["nil"; "cons"]);
   ("CauseTerm", ["fail"; "die"; "interrupt"; "both"]);
   ("MaskMode", ["interruptible"; "uninterruptible"; "inherit"]);
@@ -35,7 +36,8 @@ let wire_families = [
 let wire_tags = [
   ("Ty", [("never", 0); ("unit", 1); ("nat", 2); ("int", 3); ("string", 4); ("bool", 5); ("handle", 6); ("option", 7); ("list", 8); ("prod", 9); ("except", 10); ("exitOf", 11); ("causeOf", 12); ("fiberOf", 13); ("union", 14); ("lit", 15); ("refOf", 16); ("deferredOf", 17); ("var", 18); ("unknown", 19); ("record", 20); ("map", 21); ("tuple", 22); ("app", 23); ("null", 24); ("undefined", 25); ("number", 26); ("bytes", 27)]);
   ("Lit", [("unit", 0); ("nat", 1); ("bool", 2); ("str", 3)]);
-  ("Term", [("var", 0); ("lit", 1); ("app", 2)]);
+  ("FieldReadMode", [("required", 0); ("optional", 1)]);
+  ("Term", [("var", 0); ("lit", 1); ("app", 2); ("record", 3); ("field", 4); ("recordSet", 5)]);
   ("Terms", [("nil", 0); ("cons", 1)]);
   ("CauseTerm", [("fail", 0); ("die", 1); ("interrupt", 2); ("both", 3)]);
   ("MaskMode", [("interruptible", 0); ("uninterruptible", 1); ("inherit", 2)]);

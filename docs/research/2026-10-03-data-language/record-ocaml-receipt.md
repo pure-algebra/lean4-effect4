@@ -1,10 +1,11 @@
 # Record constructors in the OCaml program mirror
 
-The manual conversions need the refreshed generated alphabets before OCaml compilation.
-The coordinator owns every generated output and serializes the Lean checks.
+The record conversions, generated alphabets and focused OCaml checks pass together.
+The generated files come from their declared producers.
 
-Base: `6d784566` on `codex/record-operations`.
-The Lean source check passes. Generated output and OCaml checks remain pending.
+Source base: `6d784566` on `codex/record-operations`.
+Integration base: `e3f3099c` on `codex/data-language-wave`, descended from `82d34358`.
+The commit containing this updated receipt supplies the integration head.
 
 ## Placement
 
@@ -38,24 +39,34 @@ It adds no premise or conclusion to M5, M6, or M7.
 - `ocaml/engine/test/test_engine.ml`: retain every constructor position and raw field detail in finite controls.
 - `ocaml/eff/test/prop_wire.ml`: exercise the new wire forms and both modes.
 
-## Planned checks
+## Commands and results
 
-The coordinator regenerates the LCNF group before the Eff group.
-The Eff producer reads the generated engine declarations.
-Then it regenerates the wire and CAS groups.
+The Lean source check passes for `OCaml5.Eff.Goldens`, `OCaml5.Tools.EffGen` and `OCaml5.Tools.EffWire`.
+It reports 91 jobs.
+The Eff producer compares every corpus tree with the canonical Lean encoding.
 
-```text
-LEAN_NUM_THREADS=3 lake build OCaml5.Eff.Goldens OCaml5.Tools.EffGen OCaml5.Tools.EffWire
-python3 scripts/generate.py --only lcnf
-python3 scripts/generate.py --only eff
-python3 scripts/generate.py --only wire
-python3 scripts/generate.py --only cas
-cd ocaml
-opam exec --switch=effect4 -- dune build
-```
+| Command | Result |
+| --- | --- |
+| `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only lcnf` | Passed; each generated module passes `Ml.checkModule` |
+| `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only eff` | Passed; 28 families and 60 corpus programs |
+| `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only wire` | Passed |
+| `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only cas` | Passed |
+| Repeat each of `eff`, `wire`, `cas` with `--output-dir /private/tmp/effect4-record-repeat` | Passed; all 324 emitted files match the working outputs |
+| Repeat `lcnf` and compare retained SHA-256 values | Passed; all eight output and closure files match |
+| `opam exec --switch=effect4 -- dune build -j 3` from `ocaml` | Passed |
+| `opam exec --switch=effect4 -- dune exec --root ../.. -j 3 ./eff/test/test_eff.exe` from `ocaml/eff/test` | Passed; 507 checks, zero failures |
+| `opam exec --switch=effect4 -- dune exec --root ../.. -j 3 ./eff/test/prop_wire.exe` from `ocaml/eff/test` | Passed; 6,280 checks, zero failures, seed 42 |
+| `opam exec --switch=effect4 -- dune exec --root ../.. -j 3 ./engine/test/test_engine.exe` from `ocaml/eff/test` | Passed; 92 checks, zero failures |
 
-The narrow Lean check passes with `Build completed successfully (91 jobs)`.
-It compiles the conversion and both producer consumers.
-The Eff producer compares each corpus tree with the canonical Lean encoding.
-The OCaml checks require the generated outputs and remain pending.
+The first direct golden invocation used the wrong directory and refused the missing relative corpus path.
+Running from the declared test directory resolves that failure.
+The build reports an existing non-exhaustive display match in `ocaml/gen/api_check.ml` for negative integers and floats.
+The record tests encounter no such display failure.
+
+`Ml.renderDeclAt` and `Ml.renderModTy` now omit indentation on empty generated lines.
+The source is `src/OCaml5/Ml/Render.lean`.
+The regenerated engine therefore removes existing whitespace-only lines.
+No generated file receives a manual edit.
+
 No new theorem or axiom query belongs to this finite conversion slice.
+The full OCaml corpus sweep and a universal lowering theorem remain outside this evidence.

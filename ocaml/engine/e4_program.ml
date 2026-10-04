@@ -168,10 +168,22 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Lit_bool b -> A.Lit_bool b
     | Eff_types.Lit_str s -> A.Lit_str s
 
+  let of_field_read_mode : Eff_types.field_read_mode -> A.field_read_mode = function
+    | Eff_types.Field_read_mode_required -> A.FieldReadMode_required
+    | Eff_types.Field_read_mode_optional -> A.FieldReadMode_optional
+
   let rec of_term : Eff_types.term -> A.term = function
     | Eff_types.Term_var i -> A.Term_var i
     | Eff_types.Term_lit l -> A.Term_lit (of_lit l)
     | Eff_types.Term_app (f, ts) -> A.Term_app (f, of_terms ts)
+    | Eff_types.Term_record (fields, names, values) ->
+      A.Term_record
+        (List.map (fun (name, (optional, ty)) -> (name, (optional, of_ty ty))) fields,
+         names, of_terms values)
+    | Eff_types.Term_field (mode, target, name) ->
+      A.Term_field (of_field_read_mode mode, of_term target, name)
+    | Eff_types.Term_recordSet (target, name, value) ->
+      A.Term_recordSet (of_term target, name, of_term value)
 
   and of_terms : Eff_types.terms -> A.terms = function
     | Eff_types.Terms_nil -> A.Terms_nil
@@ -344,8 +356,12 @@ module Make (A : PROGRAM_TYPES) = struct
   let ctor_index_lit : A.lit -> int = function
     | A.Lit_unit -> 0 | A.Lit_nat _ -> 1 | A.Lit_bool _ -> 2 | A.Lit_str _ -> 3
 
+  let ctor_index_field_read_mode : A.field_read_mode -> int = function
+    | A.FieldReadMode_required -> 0 | A.FieldReadMode_optional -> 1
+
   let ctor_index_term : A.term -> int = function
     | A.Term_var _ -> 0 | A.Term_lit _ -> 1 | A.Term_app _ -> 2
+    | A.Term_record _ -> 3 | A.Term_field _ -> 4 | A.Term_recordSet _ -> 5
 
   let ctor_index_terms : A.terms -> int = function
     | A.Terms_nil -> 0 | A.Terms_cons _ -> 1

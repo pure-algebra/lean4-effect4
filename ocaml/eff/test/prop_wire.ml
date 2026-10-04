@@ -1,6 +1,6 @@
 (* prop_wire — the property test of the wire on random untyped values (hand-written).
-   Generator: a size-bounded random walk over every constructor of eff, stmt, stmts, effs,
-   action_term, term, terms, cause_term, lit, ty, native_op, fork_options, row and eff_ty,
+   Generator: size-bounded random walks through program syntax and types.
+   Focused record controls retain raw metadata, list lengths, and read modes,
    with nats spread over 0 .. 2^62 - 1 and strings drawn from a list of valid UTF-8 (ASCII,
    two-, three- and four-byte scalars, quotes, backslashes, control characters).
    Properties, N = 400 programs, 400 types, 200 rows, 200 eff_tys, seed 42:
@@ -54,10 +54,16 @@ let rand_lit () =
 let rec rand_term d =
   if d <= 0 then (if rb () then Term_var (ri 20) else Term_lit (rand_lit ()))
   else
-    match ri 3 with
+    match ri 6 with
     | 0 -> Term_var (rand_nat ())
     | 1 -> Term_lit (rand_lit ())
-    | _ -> Term_app (rand_string (), rand_terms (d - 1))
+    | 2 -> Term_app (rand_string (), rand_terms (d - 1))
+    | 3 -> Term_record
+        (List.init (ri 4) (fun _ -> rand_string (), (rb (), pick [Ty_nat; Ty_int; Ty_number; Ty_string])),
+         List.init (ri 4) (fun _ -> rand_string ()), rand_terms (d - 1))
+    | 4 -> Term_field
+        (pick [Field_read_mode_required; Field_read_mode_optional], rand_term (d - 1), rand_string ())
+    | _ -> Term_recordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
 
 and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_term (d - 1), rand_terms (d - 1))
 
@@ -218,8 +224,24 @@ let property (what : string) (n : int) (gen : unit -> 'a) (encode : 'a -> string
     if String.length (print v) = 0 then fail (what ^ ": P5 JSON") i
   done
 
+let record_controls =
+  let raw = Term_record
+      (["z", (true, Ty_int); "z", (false, Ty_number); "__proto__", (true, Ty_nat)],
+       ["unknown"; "unknown"], Terms_cons (Term_lit (Lit_nat 1), Terms_nil)) in
+  [ raw;
+    Term_record (["x", (true, Ty_nat)], [], Terms_cons (Term_lit (Lit_nat 1), Terms_nil));
+    Term_record (["x", (true, Ty_nat)], [], Terms_nil);
+    Term_field (Field_read_mode_required, raw, "__proto__");
+    Term_field (Field_read_mode_optional, raw, "a-b");
+    Term_recordSet (raw, "a-b", Term_var 3) ]
+
 let () =
   let at d s p l = d s p l in
+  List.iteri (fun i term ->
+      property ("record-term-" ^ string_of_int i) 1 (fun () -> term)
+        Eff_wire.encode_term Eff_wire.decode_term_exact
+        (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
+    record_controls;
   property "eff" 400 (fun () -> rand_eff (ri 7)) Eff_wire.encode_eff Eff_wire.decode_eff_exact
     (fun s -> at Eff_wire.decode_eff s 0 (String.length s)) Eff_json.print_eff;
   property "ty" 400 (fun () -> rand_ty (ri 6)) Eff_wire.encode_ty Eff_wire.decode_ty_exact

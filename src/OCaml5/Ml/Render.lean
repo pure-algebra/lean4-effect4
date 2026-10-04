@@ -637,7 +637,7 @@ def renderModTy (ind : Nat) : ModTy → String
   | .path n => n
   | .sig items =>
       "sig\n" ++ String.join ((renderSigItems (ind + 1) items).map
-        (fun s => indentOf (ind + 1) ++ s ++ "\n")) ++ indentOf ind ++ "end"
+        (fun s => (if s.isEmpty then "" else indentOf (ind + 1)) ++ s ++ "\n")) ++ indentOf ind ++ "end"
   | .functor arg argTy res =>
       "functor (" ++ arg ++ " : " ++ renderModTy ind argTy ++ ") -> " ++ renderModTy ind res
   | .withType base name params ty =>
@@ -702,7 +702,7 @@ def renderDeclAt (ind : Nat) : Decl → String
         ++ (match ascribe with | none => "" | some mt => " : " ++ renderModTy ind mt)
         ++ " = struct\n"
         ++ String.join ((renderDecls (ind + 1) body).map
-             (fun s => indentOf (ind + 1) ++ s ++ "\n"))
+             (fun s => (if s.isEmpty then "" else indentOf (ind + 1)) ++ s ++ "\n"))
         ++ indentOf ind ++ "end"
   | .moduleAliasD n target => "module " ++ n ++ " = " ++ target
   | .moduleTypeD n mt => "module type " ++ n ++ " = " ++ renderModTy ind mt

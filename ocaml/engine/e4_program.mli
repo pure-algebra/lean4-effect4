@@ -26,7 +26,7 @@
    P1  `of_eff` covers every source constructor, with explicit refusal for constructors
        the frozen engine cannot execute. Exhaustiveness does not establish total admission.
    P2  Ordinal-preserving: for every arm, `Eff_types.ctor_index_<t> v` equals
-       `ctor_index_<t> (of_<t> v)`, for each of the fourteen families.  This is what closes
+       `ctor_index_<t> (of_<t> v)`, for each sampled family.  This is what closes
        the transposition hole a plain structural map leaves (two same-arity arms swapped).
                                                                           tested (test_engine
                                                                           check 3)
@@ -81,6 +81,7 @@ val check_manifest : string -> (unit, string) result
 
 module Make (A : PROGRAM_TYPES) : sig
   val of_lit : Eff_types.lit -> A.lit
+  val of_field_read_mode : Eff_types.field_read_mode -> A.field_read_mode
   val of_term : Eff_types.term -> A.term
   val of_terms : Eff_types.terms -> A.terms
   val of_cause_term : Eff_types.cause_term -> A.cause_term
@@ -108,6 +109,7 @@ module Make (A : PROGRAM_TYPES) : sig
       statement about two independently written tables. *)
 
   val ctor_index_lit : A.lit -> int
+  val ctor_index_field_read_mode : A.field_read_mode -> int
   val ctor_index_term : A.term -> int
   val ctor_index_terms : A.terms -> int
   val ctor_index_cause_term : A.cause_term -> int

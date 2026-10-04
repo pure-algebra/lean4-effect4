@@ -51,3 +51,10 @@ pIllCauseBool	ill-typed
 pCatchError	well-typed
 pCatchIf	well-typed
 pIllCatchIf	ill-typed
+pRecord	well-typed
+pRecordRequired	well-typed
+pRecordOptionalAbsent	well-typed
+pRecordOptionalPresent	well-typed
+pRecordSet	well-typed
+pIllRecordRaw	ill-typed
+pIllRecordExtraValue	ill-typed

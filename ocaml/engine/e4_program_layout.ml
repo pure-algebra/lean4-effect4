@@ -32,7 +32,13 @@ module type PROGRAM_TYPES = sig
   | Lit_nat of int
   | Lit_bool of bool
   | Lit_str of string
-  type term = Term_var of int | Term_lit of lit | Term_app of string * terms
+  type field_read_mode = FieldReadMode_required | FieldReadMode_optional
+  type term = | Term_var of int
+  | Term_lit of lit
+  | Term_app of string * terms
+  | Term_record of (string * (bool * ty)) list * string list * terms
+  | Term_field of field_read_mode * term * string
+  | Term_recordSet of term * string * term
   and terms = Terms_nil | Terms_cons of term * terms
   type cause_term = | CauseTerm_fail of term
   | CauseTerm_die of term
@@ -159,6 +165,7 @@ end
 let source_ctor_names = [
   ("ty", Eff_types.ctor_names_ty);
   ("lit", Eff_types.ctor_names_lit);
+  ("field_read_mode", Eff_types.ctor_names_field_read_mode);
   ("term", Eff_types.ctor_names_term);
   ("terms", Eff_types.ctor_names_terms);
   ("cause_term", Eff_types.ctor_names_cause_term);
@@ -183,7 +190,8 @@ let source_ctor_names = [
 let engine_ctor_names = [
   ("ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"; "record"; "map"; "tuple"; "app"; "null"; "undefined"; "number"; "bytes"]);
   ("lit", ["unit"; "nat"; "bool"; "str"]);
-  ("term", ["var"; "lit"; "app"]);
+  ("field_read_mode", ["required"; "optional"]);
+  ("term", ["var"; "lit"; "app"; "record"; "field"; "recordSet"]);
   ("terms", ["nil"; "cons"]);
   ("cause_term", ["fail"; "die"; "interrupt"; "both"]);
   ("mask_mode", ["interruptible"; "uninterruptible"; "inherit"]);

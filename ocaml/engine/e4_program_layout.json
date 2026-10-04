@@ -4,6 +4,7 @@
   "families": [
     "Effect4.Program.Ty",
     "Effect4.Program.Lit",
+    "Effect4.Program.FieldReadMode",
     "Effect4.Program.Term",
     "Effect4.Program.Terms",
     "Effect4.Program.CauseTerm",

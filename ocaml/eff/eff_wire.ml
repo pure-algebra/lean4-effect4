@@ -212,11 +212,34 @@ let rec decode_lit (s : string) (pos : int) (limit : int) : (lit * int) option =
 
 let decode_lit_exact (s : string) : lit option = Eff_frame.exact decode_lit s
 
+let rec emit_field_read_mode (b : Buffer.t) (v : field_read_mode) : unit =
+  match v with
+  | Field_read_mode_required -> Eff_frame.emit_ctor b 0 (fun _ -> ())
+  | Field_read_mode_optional -> Eff_frame.emit_ctor b 1 (fun _ -> ())
+
+let encode_field_read_mode (v : field_read_mode) : string = Eff_frame.to_string emit_field_read_mode v
+
+let rec decode_field_read_mode (s : string) (pos : int) (limit : int) : (field_read_mode * int) option =
+  match Eff_frame.read_ctor s pos limit with
+  | None -> None
+  | Some (i, p, e, next) ->
+    (match i with
+    | 0 ->
+      if p = e then Some (Field_read_mode_required, next) else None
+    | 1 ->
+      if p = e then Some (Field_read_mode_optional, next) else None
+    | _ -> None)
+
+let decode_field_read_mode_exact (s : string) : field_read_mode option = Eff_frame.exact decode_field_read_mode s
+
 let rec emit_term (b : Buffer.t) (v : term) : unit =
   match v with
   | Term_var a0 -> Eff_frame.emit_ctor b 0 (fun b -> Eff_frame.emit_nat b a0)
   | Term_lit a0 -> Eff_frame.emit_ctor b 1 (fun b -> emit_lit b a0)
   | Term_app (a0, a1) -> Eff_frame.emit_ctor b 2 (fun b -> Eff_frame.emit_string b a0; emit_terms b a1)
+  | Term_record (a0, a1, a2) -> Eff_frame.emit_ctor b 3 (fun b -> Eff_frame.emit_list b (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_string b y) (fun b y -> Eff_frame.emit_pair b (fun b y -> Eff_frame.emit_bool b y) (fun b y -> emit_ty b y) y) y) a0; Eff_frame.emit_list b (fun b y -> Eff_frame.emit_string b y) a1; emit_terms b a2)
+  | Term_field (a0, a1, a2) -> Eff_frame.emit_ctor b 4 (fun b -> emit_field_read_mode b a0; emit_term b a1; Eff_frame.emit_string b a2)
+  | Term_recordSet (a0, a1, a2) -> Eff_frame.emit_ctor b 5 (fun b -> emit_term b a0; Eff_frame.emit_string b a1; emit_term b a2)
 and emit_terms (b : Buffer.t) (v : terms) : unit =
   match v with
   | Terms_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
@@ -248,6 +271,39 @@ let rec decode_term (s : string) (pos : int) (limit : int) : (term * int) option
          | None -> None
          | Some (a1, p) ->
           if p = e then Some (Term_app (a0, a1), next) else None))
+    | 3 ->
+      (match (Eff_frame.decode_list (Eff_frame.decode_pair Eff_frame.decode_string (Eff_frame.decode_pair Eff_frame.decode_bool decode_ty))) s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match (Eff_frame.decode_list Eff_frame.decode_string) s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_terms s p e with
+           | None -> None
+           | Some (a2, p) ->
+            if p = e then Some (Term_record (a0, a1, a2), next) else None)))
+    | 4 ->
+      (match decode_field_read_mode s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_term s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match Eff_frame.decode_string s p e with
+           | None -> None
+           | Some (a2, p) ->
+            if p = e then Some (Term_field (a0, a1, a2), next) else None)))
+    | 5 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match Eff_frame.decode_string s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_term s p e with
+           | None -> None
+           | Some (a2, p) ->
+            if p = e then Some (Term_recordSet (a0, a1, a2), next) else None)))
     | _ -> None)
 and decode_terms (s : string) (pos : int) (limit : int) : (terms * int) option =
   match Eff_frame.read_ctor s pos limit with

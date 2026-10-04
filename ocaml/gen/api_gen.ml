@@ -609,7 +609,14 @@ and 'op layer_term =
   | LayerTerm_mergeAll of 'op layer_terms
 and combine_mode = CombineMode_provide | CombineMode_provideMerge
 and service_universe = unit
-and term = Term_var of int | Term_lit of lit | Term_app of string * terms
+and term =
+  | Term_var of int
+  | Term_lit of lit
+  | Term_app of string * terms
+  | Term_record of (string * (bool * ty)) list * string list * terms
+  | Term_field of field_read_mode * term * string
+  | Term_recordSet of term * string * term
+and field_read_mode = FieldReadMode_required | FieldReadMode_optional
 and ('e, 'd, 'i, 'a) reason = Reason_fail of 'e * 'a reason_annotations | Reason_die of 'd * 'a reason_annotations | Reason_interrupt of 'i option * 'a reason_annotations
 and decision = Decision_bool | Decision_option | Decision_tag of string
 and ty =
@@ -3310,6 +3317,381 @@ let program_native_atom (name : string) (values : val_ list) : val_ option =
 
 
 
+(* LCNF mono: Effect4.Machine.Record.zipNames._redArg (x.1 : List String) (x.2 : List lcAny) : Option (List (Prod String lcAny)) *)
+
+let rec record_zip_names (x_1 : string list) (x_2 : _ list) : (string * _) list option =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = [] in
+          let _x_4 = Some _x_3 in
+          _x_4)
+        | _ -> (let _x_5 = None in
+          _x_5))
+    | head_6 :: tail_7 -> (match x_2 with
+        | head_8 :: tail_9 -> (let _x_10 = record_zip_names tail_7 tail_9 in
+          match _x_10 with
+            | None -> _x_10
+            | Some val__11 -> (let _x_12 = head_6, head_8 in
+              let _x_13 = _x_12 :: val__11 in
+              let _x_14 = Some _x_13 in
+              _x_14))
+        | _ -> (let _x_15 = None in
+          _x_15))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Field.bytesKey.spec_0 (a.1 : List UInt8) (a.2 : List Nat) : List Nat *)
+
+let rec list_map_tr_loop_at_field_bytes_key_spec_0 (a_1 : int list) (a_2 : int list) : int list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (let _x_6 = head_4 in
+      let _x_7 = _x_6 :: a_2 in
+      let _x_8 = list_map_tr_loop_at_field_bytes_key_spec_0 tail_5 _x_7 in
+      _x_8)
+
+
+
+(* LCNF mono: Effect4.Field.bytesKey (s : String) : List Nat *)
+
+let field_bytes_key (s : string) : int list =
+  let _x_1 = lcnf_utf8_bytes s in
+  let _x_2 = _x_1 in
+  let _x_3 = _x_2 in
+  let _x_4 = [] in
+  let _x_5 = list_map_tr_loop_at_field_bytes_key_spec_0 _x_3 _x_4 in
+  _x_5
+
+
+
+(* LCNF mono: Effect4.Field.ltKey (x.1 : List Nat) (x.2 : List Nat) : Bool *)
+
+let rec field_lt_key (x_1 : int list) (x_2 : int list) : bool =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = false in
+          _x_3)
+        | _ :: _ -> (let _x_6 = true in
+          _x_6))
+    | head_7 :: tail_8 -> (match x_2 with
+        | [] -> (let _x_9 = false in
+          _x_9)
+        | head_10 :: tail_11 -> (let _x_12 = head_7 < head_10 in
+          if _x_12 then _x_12 else (let _x_13 = head_10 < head_7 in
+            if _x_13 then _x_12 else (let _x_14 = field_lt_key tail_8 tail_11 in
+              _x_14))))
+
+
+
+(* LCNF mono: List.hasDecEq._redArg (inst.1 : lcAny -> lcAny -> Bool) (x.2 : List lcAny) (x.3 : List lcAny) : Bool *)
+
+let rec list_has_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ list) (x_3 : _ list) : bool =
+  match x_2 with
+    | [] -> (match x_3 with
+        | [] -> (let _x_4 = true in
+          _x_4)
+        | _ :: _ -> (let _x_7 = false in
+          _x_7))
+    | head_8 :: tail_9 -> (let _x_10 = false in
+      match x_3 with
+        | [] -> _x_10
+        | head_11 :: tail_12 -> (let _x_13 = list_has_dec_eq inst_1 tail_9 tail_12 in
+          let _x_14 = inst_1 head_8 head_11 in
+          if _x_14 then (if _x_13 then _x_13 else _x_10) else _x_10))
+
+
+
+(* LCNF mono: instDecidableEqList._redArg (inst.1 : lcAny -> lcAny -> Bool) (xs : List lcAny) (ys : List lcAny) : Bool *)
+
+let inst_decidable_eq_list (inst_1 : _ -> _ -> bool) (xs : _ list) (ys : _ list) : bool =
+  match xs with
+    | [] -> (match ys with
+        | [] -> (let _x_2 = true in
+          _x_2)
+        | _ :: _ -> (let _x_5 = false in
+          _x_5))
+    | head_6 :: tail_7 -> (match ys with
+        | [] -> (let _x_8 = false in
+          _x_8)
+        | head_9 :: tail_10 -> (let _x_11 = list_has_dec_eq inst_1 tail_7 tail_10 in
+          let _x_12 = inst_1 head_6 head_9 in
+          if _x_12 then _x_11 else _x_12))
+
+
+
+(* LCNF mono: Effect4.Field.insertBy._redArg (key : String -> (List Nat)) (p : Prod String lcAny) (x.1 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+
+let rec field_insert_by (key : string -> int list) (p : string * _) (x_1 : (string * _) list) : (string * _) list =
+  match x_1 with
+    | [] -> (let _x_2 = p :: x_1 in
+      _x_2)
+    | head_3 :: tail_4 -> (match p with
+        | fst_1, _ -> (match head_3 with
+            | fst_2, _ -> (let _x_5 = key fst_1 in
+              let _x_6 = key fst_2 in
+              let _x_7 = field_lt_key _x_5 _x_6 in
+              if _x_7 then (let _x_12 = p :: x_1 in
+                _x_12) else (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
+                let _x_9 = inst_decidable_eq_list _x_8 _x_5 _x_6 in
+                if _x_9 then x_1 else (let _x_10 = field_insert_by key p tail_4 in
+                  let _x_11 = head_3 :: _x_10 in
+                  _x_11)))))
+
+
+
+(* LCNF mono: List.foldl._at_.Effect4.Field.canonBy.spec_0._redArg (key : String -> (List Nat)) (x.1 : List (Prod String lcAny)) (x.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
+
+let rec list_foldl_at_field_canon_by_spec_0 (key : string -> int list) (x_1 : (string * _) list) (x_2 : (string * _) list) : (string * _) list =
+  match x_2 with
+    | [] -> x_1
+    | head_3 :: tail_4 -> (let _x_5 = field_insert_by key head_3 x_1 in
+      let _x_6 = list_foldl_at_field_canon_by_spec_0 key _x_5 tail_4 in
+      _x_6)
+
+
+
+(* LCNF mono: Effect4.Field.canonBy._redArg (key : String -> (List Nat)) (fs : List (Prod String lcAny)) : List (Prod String lcAny) *)
+
+let field_canon_by (key : string -> int list) (fs : (string * _) list) : (string * _) list =
+  let _x_1 = [] in
+  let _x_2 = list_foldl_at_field_canon_by_spec_0 key _x_1 fs in
+  _x_2
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Record.frame.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_record_frame_spec_0 (a_1 : (string * val_) list) (a_2 : val_ list) : val_ list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, _ -> (let _x_6 = Val_str fst_1 in
+          let _x_7 = _x_6 :: a_2 in
+          let _x_8 = list_map_tr_loop_at_record_frame_spec_0 tail_5 _x_7 in
+          _x_8))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Record.frame.spec_1 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List Effect4.Store.Val) : List Effect4.Store.Val *)
+
+let rec list_map_tr_loop_at_record_frame_spec_1 (a_1 : (string * val_) list) (a_2 : val_ list) : val_ list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | _, snd_1 -> (let _x_6 = snd_1 :: a_2 in
+          let _x_7 = list_map_tr_loop_at_record_frame_spec_1 tail_5 _x_6 in
+          _x_7))
+
+
+
+(* LCNF mono: Effect4.Machine.Record.frame (entries : List (Prod String Effect4.Store.Val)) : Effect4.Store.Val *)
+
+let record_frame (entries : (string * val_) list) : val_ =
+  let _x_1 = 0 in
+  let _x_2 = [] in
+  let _x_3 = list_map_tr_loop_at_record_frame_spec_0 entries _x_2 in
+  let _x_4 = Val_list _x_3 in
+  let _x_5 = list_map_tr_loop_at_record_frame_spec_1 entries _x_2 in
+  let _x_6 = Val_list _x_5 in
+  let _x_7 = _x_6 :: _x_2 in
+  let _x_8 = _x_4 :: _x_7 in
+  let _x_9 = Val_ctor (_x_1, _x_8) in
+  _x_9
+
+
+
+(* LCNF mono: Effect4.Machine.Record.build (names : List String) (values : List Effect4.Store.Val) : Option Effect4.Store.Val *)
+
+let record_build (names : string list) (values : val_ list) : val_ option =
+  let _x_1 = record_zip_names names values in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = fun _b1 _b2 -> _b1 = _b2 in
+      let _x_5 = list_nodup_decidable _x_4 names in
+      if _x_5 then (let _x_7 = field_bytes_key in
+        let _x_8 = field_canon_by _x_7 val__3 in
+        let _x_9 = record_frame _x_8 in
+        let _x_10 = Some _x_9 in
+        _x_10) else (let _x_6 = None in
+        _x_6))
+
+
+
+(* LCNF mono: Effect4.Program.FieldReadMode.ctorIdx (x : Effect4.Program.FieldReadMode) : Nat *)
+
+let program_field_read_mode_ctor_idx (x : field_read_mode) : int =
+  match (x : field_read_mode) with
+    | FieldReadMode_required -> (let _x_1 = 0 in
+      _x_1)
+    | FieldReadMode_optional -> (let _x_2 = 1 in
+      _x_2)
+
+
+
+(* LCNF mono: Effect4.Program.instDecidableEqFieldReadMode (x.1 : Effect4.Program.FieldReadMode) (y.2 : Effect4.Program.FieldReadMode) : Bool *)
+
+let program_inst_decidable_eq_field_read_mode (x_1 : field_read_mode) (y_2 : field_read_mode) : bool =
+  let _x_3 = program_field_read_mode_ctor_idx x_1 in
+  let _x_4 = program_field_read_mode_ctor_idx y_2 in
+  let _x_5 = _x_3 = _x_4 in
+  _x_5
+
+
+
+(* LCNF mono: Effect4.Program.recordParts? (x.1 : Effect4.Store.Val) : Option (Prod (List Effect4.Store.Val) (List Effect4.Store.Val)) *)
+
+let program_record_parts_opt (x_1 : val_) : (val_ list * val_ list) option =
+  match (x_1 : val_) with
+    | Val_ctor (index_2, args_3) -> (let _x_4 = 0 in
+      let _x_5 = index_2 = _x_4 in
+      if _x_5 then (match args_3 with
+          | head_7 :: tail_8 -> (match (head_7 : val_) with
+              | Val_list xs_9 -> (match tail_8 with
+                  | head_10 :: tail_11 -> (match (head_10 : val_) with
+                      | Val_list xs_12 -> (match tail_11 with
+                          | [] -> (let _x_13 = xs_9, xs_12 in
+                            let _x_14 = Some _x_13 in
+                            _x_14)
+                          | _ -> (let _x_15 = None in
+                            _x_15))
+                      | _ -> (let _x_16 = None in
+                        _x_16))
+                  | _ -> (let _x_17 = None in
+                    _x_17))
+              | _ -> (let _x_18 = None in
+                _x_18))
+          | _ -> (let _x_19 = None in
+            _x_19)) else (let _x_6 = None in
+        _x_6))
+    | _ -> (let _x_20 = None in
+      _x_20)
+
+
+
+(* LCNF mono: Effect4.Machine.Record.readColumns (x.1 : List Effect4.Store.Val) (x.2 : List Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
+
+let rec record_read_columns (x_1 : val_ list) (x_2 : val_ list) : (string * val_) list option =
+  match x_1 with
+    | [] -> (match x_2 with
+        | [] -> (let _x_3 = [] in
+          let _x_4 = Some _x_3 in
+          _x_4)
+        | _ -> (let _x_5 = None in
+          _x_5))
+    | head_6 :: tail_7 -> (match (head_6 : val_) with
+        | Val_str s_8 -> (match x_2 with
+            | head_9 :: tail_10 -> (let _x_11 = record_read_columns tail_7 tail_10 in
+              match _x_11 with
+                | None -> _x_11
+                | Some val__12 -> (let _x_13 = s_8, head_9 in
+                  let _x_14 = _x_13 :: val__12 in
+                  let _x_15 = Some _x_14 in
+                  _x_15))
+            | _ -> (let _x_16 = None in
+              _x_16))
+        | _ -> (let _x_17 = None in
+          _x_17))
+
+
+
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.Record.entries.spec_0 (a.1 : List (Prod String Effect4.Store.Val)) (a.2 : List String) : List String *)
+
+let rec list_map_tr_loop_at_record_entries_spec_0 (a_1 : (string * val_) list) (a_2 : string list) : string list =
+  match a_1 with
+    | [] -> (let _x_3 = List.rev a_2 in
+      _x_3)
+    | head_4 :: tail_5 -> (match head_4 with
+        | fst_1, _ -> (let _x_6 = fst_1 :: a_2 in
+          let _x_7 = list_map_tr_loop_at_record_entries_spec_0 tail_5 _x_6 in
+          _x_7))
+
+
+
+(* LCNF mono: Effect4.Machine.Record.entries (value : Effect4.Store.Val) : Option (List (Prod String Effect4.Store.Val)) *)
+
+let record_entries (value : val_) : (string * val_) list option =
+  let _x_1 = program_record_parts_opt value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (match val__3 with
+        | fst_4, snd_5 -> (let _x_6 = record_read_columns fst_4 snd_5 in
+          match _x_6 with
+            | None -> _x_6
+            | Some val__7 -> (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
+              let _x_9 = [] in
+              let _x_10 = list_map_tr_loop_at_record_entries_spec_0 val__7 _x_9 in
+              let _x_11 = list_nodup_decidable _x_8 _x_10 in
+              if _x_11 then _x_6 else (let _x_12 = None in
+                _x_12))))
+
+
+
+(* LCNF mono: Effect4.Field.firstOf._redArg (n : String) (x.1 : List (Prod String lcAny)) : Option lcAny *)
+
+let rec field_first_of (n : string) (x_1 : (string * _) list) : _ option =
+  match x_1 with
+    | [] -> (let _x_2 = None in
+      _x_2)
+    | head_3 :: tail_4 -> (match head_3 with
+        | fst_5, snd_6 -> (let _x_7 = fst_5 = n in
+          if _x_7 then (let _x_9 = Some snd_6 in
+            _x_9) else (let _x_8 = field_first_of n tail_4 in
+            _x_8)))
+
+
+
+(* LCNF mono: Effect4.Machine.Record.lookup (value : Effect4.Store.Val) (name : String) : Option (Option Effect4.Store.Val) *)
+
+let record_lookup (value : val_) (name : string) : val_ option option =
+  let _x_1 = record_entries value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = field_first_of name val__3 in
+      let _x_5 = Some _x_4 in
+      _x_5)
+
+
+
+(* LCNF mono: Effect4.Machine.Record.read (optional : Bool) (value : Effect4.Store.Val) (name : String) : Option Effect4.Store.Val *)
+
+let record_read (optional : bool) (value : val_) (name : string) : val_ option =
+  let _x_1 = record_lookup value name in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> if optional then (match val__3 with
+          | None -> (let _x_4 = Val_none in
+            let _x_5 = Some _x_4 in
+            _x_5)
+          | Some val__6 -> (let _x_7 = Val_some val__6 in
+            let _x_8 = Some _x_7 in
+            _x_8)) else val__3
+
+
+
+(* LCNF mono: Effect4.Machine.Record.set (value : Effect4.Store.Val) (name : String) (replacement : Effect4.Store.Val) : Option Effect4.Store.Val *)
+
+let record_set (value : val_) (name : string) (replacement : val_) : val_ option =
+  let _x_1 = record_entries value in
+  match _x_1 with
+    | None -> (let _x_2 = None in
+      _x_2)
+    | Some val__3 -> (let _x_4 = field_bytes_key in
+      let _x_5 = name, replacement in
+      let _x_6 = _x_5 :: val__3 in
+      let _x_7 = field_canon_by _x_4 _x_6 in
+      let _x_8 = record_frame _x_7 in
+      let _x_9 = Some _x_8 in
+      _x_9)
+
+
+
 (* LCNF mono: Effect4.Program.evalTerm (env : List Effect4.Store.Val) (x.1 : Effect4.Program.Term) : Option Effect4.Store.Val
    Effect4.Program.evalTerms (env : List Effect4.Store.Val) (x.1 : Effect4.Program.Terms) : Option (List Effect4.Store.Val) *)
 
@@ -3325,6 +3707,27 @@ let rec program_eval_term (env : val_ list) (x_1 : term) : val_ option =
           _x_9)
         | Some val__10 -> (let _x_11 = program_native_atom atom_6 val__10 in
           _x_11))
+    | Term_record (_, present_names_13, values_14) -> (let _x_15 = program_eval_terms env values_14 in
+      match _x_15 with
+        | None -> (let _x_16 = None in
+          _x_16)
+        | Some val__17 -> (let _x_18 = record_build present_names_13 val__17 in
+          _x_18))
+    | Term_field (mode_19, target_20, name_21) -> (let _x_22 = program_eval_term env target_20 in
+      match _x_22 with
+        | None -> _x_22
+        | Some val__23 -> (let _x_24 = FieldReadMode_optional in
+          let _x_25 = program_inst_decidable_eq_field_read_mode mode_19 _x_24 in
+          let _x_26 = record_read _x_25 val__23 name_21 in
+          _x_26))
+    | Term_recordSet (target_27, name_28, value_29) -> (let _x_30 = program_eval_term env target_27 in
+      match _x_30 with
+        | None -> _x_30
+        | Some val__31 -> (let _x_32 = program_eval_term env value_29 in
+          match _x_32 with
+            | None -> _x_32
+            | Some val__33 -> (let _x_34 = record_set val__31 name_28 val__33 in
+              _x_34)))
 
 and program_eval_terms (env : val_ list) (x_1 : terms) : val_ list option =
   match (x_1 : terms) with
@@ -3540,42 +3943,6 @@ let inst_decidable_eq_reason_annotations_dec_eq__red_arg__lam_0 (inst_1 : _ -> _
   let _x_2 = fun _b1 _b2 -> _b1 = _b2 in
   let _x_3 = inst_decidable_eq_prod _x_2 inst_1 a b in
   _x_3
-
-
-
-(* LCNF mono: List.hasDecEq._redArg (inst.1 : lcAny -> lcAny -> Bool) (x.2 : List lcAny) (x.3 : List lcAny) : Bool *)
-
-let rec list_has_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ list) (x_3 : _ list) : bool =
-  match x_2 with
-    | [] -> (match x_3 with
-        | [] -> (let _x_4 = true in
-          _x_4)
-        | _ :: _ -> (let _x_7 = false in
-          _x_7))
-    | head_8 :: tail_9 -> (let _x_10 = false in
-      match x_3 with
-        | [] -> _x_10
-        | head_11 :: tail_12 -> (let _x_13 = list_has_dec_eq inst_1 tail_9 tail_12 in
-          let _x_14 = inst_1 head_8 head_11 in
-          if _x_14 then (if _x_13 then _x_13 else _x_10) else _x_10))
-
-
-
-(* LCNF mono: instDecidableEqList._redArg (inst.1 : lcAny -> lcAny -> Bool) (xs : List lcAny) (ys : List lcAny) : Bool *)
-
-let inst_decidable_eq_list (inst_1 : _ -> _ -> bool) (xs : _ list) (ys : _ list) : bool =
-  match xs with
-    | [] -> (match ys with
-        | [] -> (let _x_2 = true in
-          _x_2)
-        | _ :: _ -> (let _x_5 = false in
-          _x_5))
-    | head_6 :: tail_7 -> (match ys with
-        | [] -> (let _x_8 = false in
-          _x_8)
-        | head_9 :: tail_10 -> (let _x_11 = list_has_dec_eq inst_1 tail_7 tail_10 in
-          let _x_12 = inst_1 head_6 head_9 in
-          if _x_12 then _x_11 else _x_12))
 
 
 
@@ -9400,90 +9767,6 @@ let program_ty_sub__lam_1 (_f_1 : bool -> bool -> bool) (a : string * bool) (b :
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Field.bytesKey.spec_0 (a.1 : List UInt8) (a.2 : List Nat) : List Nat *)
-
-let rec list_map_tr_loop_at_field_bytes_key_spec_0 (a_1 : int list) (a_2 : int list) : int list =
-  match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
-    | head_4 :: tail_5 -> (let _x_6 = head_4 in
-      let _x_7 = _x_6 :: a_2 in
-      let _x_8 = list_map_tr_loop_at_field_bytes_key_spec_0 tail_5 _x_7 in
-      _x_8)
-
-
-
-(* LCNF mono: Effect4.Field.bytesKey (s : String) : List Nat *)
-
-let field_bytes_key (s : string) : int list =
-  let _x_1 = lcnf_utf8_bytes s in
-  let _x_2 = _x_1 in
-  let _x_3 = _x_2 in
-  let _x_4 = [] in
-  let _x_5 = list_map_tr_loop_at_field_bytes_key_spec_0 _x_3 _x_4 in
-  _x_5
-
-
-
-(* LCNF mono: Effect4.Field.ltKey (x.1 : List Nat) (x.2 : List Nat) : Bool *)
-
-let rec field_lt_key (x_1 : int list) (x_2 : int list) : bool =
-  match x_1 with
-    | [] -> (match x_2 with
-        | [] -> (let _x_3 = false in
-          _x_3)
-        | _ :: _ -> (let _x_6 = true in
-          _x_6))
-    | head_7 :: tail_8 -> (match x_2 with
-        | [] -> (let _x_9 = false in
-          _x_9)
-        | head_10 :: tail_11 -> (let _x_12 = head_7 < head_10 in
-          if _x_12 then _x_12 else (let _x_13 = head_10 < head_7 in
-            if _x_13 then _x_12 else (let _x_14 = field_lt_key tail_8 tail_11 in
-              _x_14))))
-
-
-
-(* LCNF mono: Effect4.Field.insertBy._redArg (key : String -> (List Nat)) (p : Prod String lcAny) (x.1 : List (Prod String lcAny)) : List (Prod String lcAny) *)
-
-let rec field_insert_by (key : string -> int list) (p : string * _) (x_1 : (string * _) list) : (string * _) list =
-  match x_1 with
-    | [] -> (let _x_2 = p :: x_1 in
-      _x_2)
-    | head_3 :: tail_4 -> (match p with
-        | fst_1, _ -> (match head_3 with
-            | fst_2, _ -> (let _x_5 = key fst_1 in
-              let _x_6 = key fst_2 in
-              let _x_7 = field_lt_key _x_5 _x_6 in
-              if _x_7 then (let _x_12 = p :: x_1 in
-                _x_12) else (let _x_8 = fun _b1 _b2 -> _b1 = _b2 in
-                let _x_9 = inst_decidable_eq_list _x_8 _x_5 _x_6 in
-                if _x_9 then x_1 else (let _x_10 = field_insert_by key p tail_4 in
-                  let _x_11 = head_3 :: _x_10 in
-                  _x_11)))))
-
-
-
-(* LCNF mono: List.foldl._at_.Effect4.Field.canonBy.spec_0._redArg (key : String -> (List Nat)) (x.1 : List (Prod String lcAny)) (x.2 : List (Prod String lcAny)) : List (Prod String lcAny) *)
-
-let rec list_foldl_at_field_canon_by_spec_0 (key : string -> int list) (x_1 : (string * _) list) (x_2 : (string * _) list) : (string * _) list =
-  match x_2 with
-    | [] -> x_1
-    | head_3 :: tail_4 -> (let _x_5 = field_insert_by key head_3 x_1 in
-      let _x_6 = list_foldl_at_field_canon_by_spec_0 key _x_5 tail_4 in
-      _x_6)
-
-
-
-(* LCNF mono: Effect4.Field.canonBy._redArg (key : String -> (List Nat)) (fs : List (Prod String lcAny)) : List (Prod String lcAny) *)
-
-let field_canon_by (key : string -> int list) (fs : (string * _) list) : (string * _) list =
-  let _x_1 = [] in
-  let _x_2 = list_foldl_at_field_canon_by_spec_0 key _x_1 fs in
-  _x_2
-
-
-
 (* LCNF mono: List.mapTR.loop._at_.Effect4.Program.Ty.heads.spec_0 (a.1 : List (Prod String (Prod Bool Effect4.Program.Ty))) (a.2 : List (Prod String Bool)) : List (Prod String Bool) *)
 
 let rec list_map_tr_loop_at_program_ty_heads_spec_0 (a_1 : (string * (bool * ty)) list) (a_2 : (string * bool) list) : (string * bool) list =
@@ -10490,36 +10773,6 @@ let option_inst_beq_beq_at_program_val__has_ty_spec_2 (x_1 : handle_kind option)
 
 
 
-(* LCNF mono: Effect4.Program.recordParts? (x.1 : Effect4.Store.Val) : Option (Prod (List Effect4.Store.Val) (List Effect4.Store.Val)) *)
-
-let program_record_parts_opt (x_1 : val_) : (val_ list * val_ list) option =
-  match (x_1 : val_) with
-    | Val_ctor (index_2, args_3) -> (let _x_4 = 0 in
-      let _x_5 = index_2 = _x_4 in
-      if _x_5 then (match args_3 with
-          | head_7 :: tail_8 -> (match (head_7 : val_) with
-              | Val_list xs_9 -> (match tail_8 with
-                  | head_10 :: tail_11 -> (match (head_10 : val_) with
-                      | Val_list xs_12 -> (match tail_11 with
-                          | [] -> (let _x_13 = xs_9, xs_12 in
-                            let _x_14 = Some _x_13 in
-                            _x_14)
-                          | _ -> (let _x_15 = None in
-                            _x_15))
-                      | _ -> (let _x_16 = None in
-                        _x_16))
-                  | _ -> (let _x_17 = None in
-                    _x_17))
-              | _ -> (let _x_18 = None in
-                _x_18))
-          | _ -> (let _x_19 = None in
-            _x_19)) else (let _x_6 = None in
-        _x_6))
-    | _ -> (let _x_20 = None in
-      _x_20)
-
-
-
 (* LCNF mono: Effect4.Program.namedHasTy (x.1 : List (Prod String (Prod Bool (Effect4.Store.Val -> Bool)))) (x.2 : List Effect4.Store.Val) (x.3 : List Effect4.Store.Val) : Bool *)
 
 let rec program_named_has_ty (x_1 : (string * (bool * (val_ -> bool))) list) (x_2 : val_ list) (x_3 : val_ list) : bool =
@@ -11070,6 +11323,46 @@ let program_external_value (ty : ty) (allocated : string list) (value : val_) : 
 
 
 
+(* LCNF mono: Effect4.Program.reservedDefect (x.1 : Effect4.Machine.Defect) : Bool *)
+
+let program_reserved_defect (x_1 : defect) : bool =
+  match (x_1 : defect) with
+    | Defect_asyncFiber -> (let _x_2 = false in
+      _x_2)
+    | Defect_missingService -> (let _x_3 = false in
+      _x_3)
+    | Defect_user _ -> (let _x_5 = false in
+      _x_5)
+    | Defect_error _ -> (let _x_7 = false in
+      _x_7)
+    | _ -> (let _x_8 = true in
+      _x_8)
+
+
+
+(* LCNF mono: Effect4.Program.reservedDie (x.1 : Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Bool *)
+
+let program_reserved_die (x_1 : (err, defect, int, unit) reason) : bool =
+  match (x_1 : (_, _, _, _) reason) with
+    | Reason_die (defect_2, _) -> (let _x_4 = program_reserved_defect defect_2 in
+      _x_4)
+    | _ -> (let _x_5 = false in
+      _x_5)
+
+
+
+(* LCNF mono: List.any._at_.Effect4.Program.externalAdmits.spec_0 (x.1 : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Bool *)
+
+let rec list_any_at_program_external_admits_spec_0 (x_1 : (err, defect, int, unit) reason list) : bool =
+  match x_1 with
+    | [] -> (let _x_2 = false in
+      _x_2)
+    | head_3 :: tail_4 -> (let _x_5 = program_reserved_die head_3 in
+      if _x_5 then _x_5 else (let _x_6 = list_any_at_program_external_admits_spec_0 tail_4 in
+        _x_6))
+
+
+
 (* LCNF mono: Effect4.Program.errAdmits._lam_0 (v : Effect4.Store.Val) (t : Effect4.Program.Ty) : Bool *)
 
 let program_err_admits__lam_0 (v : val_) (t : ty) : bool =
@@ -11088,14 +11381,14 @@ let program_err_admits (ty : ty) (a_1 : (err, defect, int, unit) reason) : bool 
 
 
 
-(* LCNF mono: List.all._at_.Effect4.Program.externalAdmits.spec_0 (_x.1 : Effect4.Program.Ty) (x.2 : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Bool *)
+(* LCNF mono: List.all._at_.Effect4.Program.externalAdmits.spec_1 (_x.1 : Effect4.Program.Ty) (x.2 : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Bool *)
 
-let rec list_all_at_program_external_admits_spec_0 (_x_1 : ty) (x_2 : (err, defect, int, unit) reason list) : bool =
+let rec list_all_at_program_external_admits_spec_1 (_x_1 : ty) (x_2 : (err, defect, int, unit) reason list) : bool =
   match x_2 with
     | [] -> (let _x_3 = true in
       _x_3)
     | head_4 :: tail_5 -> (let _x_6 = program_err_admits _x_1 head_4 in
-      if _x_6 then (let _x_7 = list_all_at_program_external_admits_spec_0 _x_1 tail_5 in
+      if _x_6 then (let _x_7 = list_all_at_program_external_admits_spec_1 _x_1 tail_5 in
         _x_7) else _x_6)
 
 
@@ -11115,13 +11408,15 @@ let program_external_admits (table : row list) (i : int) (answer : (val_, err, d
                     | Some _ -> (let _x_8 = store_val__handles value_4 in
                       let _x_9 = _x_8 = [] in
                       _x_9)))
-            | Exit_failure cause_10 -> (match (val__2 : row) with
-                | { error = error; _ } -> (let _x_11 = list_all_at_program_external_admits_spec_0 error cause_10 in
-                  _x_11)))
-        | _ -> (let _x_12 = false in
-          _x_12))
-    | _ -> (let _x_13 = false in
-      _x_13)
+            | Exit_failure cause_10 -> (let _x_11 = list_any_at_program_external_admits_spec_0 cause_10 in
+              if _x_11 then (let _x_13 = false in
+                _x_13) else (match (val__2 : row) with
+                  | { error = error; _ } -> (let _x_12 = list_all_at_program_external_admits_spec_1 error cause_10 in
+                    _x_12))))
+        | _ -> (let _x_14 = false in
+          _x_14))
+    | _ -> (let _x_15 = false in
+      _x_15)
 
 
 
@@ -14338,26 +14633,26 @@ let frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_
       let _x_10 = events @ _x_9 in
       let _x_11 = _x_6, _x_10 in
       _x_11) in
-  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_14 _y_16 _y_18 in
+  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_13 _y_14 _y_18 in
   match _x_19 with
-    | None -> _jp_4 _y_13
+    | None -> _jp_4 _y_16
     | Some val__20 -> (match val__20 with
         | fst_21, _ -> (let _x_23 = [] in
           match (_y_17 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_24 = _x_23 @ stack in
               let _x_25 = ({ current = fst_21; stack = _x_24; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_26 = FrameStep_running _x_25 in
-              let _x_27 = prim_finalizer_events _y_14 _y_13 in
+              let _x_27 = prim_finalizer_events _y_13 _y_16 in
               let _x_28 = _y_15 @ _x_27 in
               let _x_29 = list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12 _x_23 _x_23 in
               let _x_30 = _x_28 @ _x_29 in
               let _x_31 = _x_26, _x_30 in
               _x_31))) in
   let _jp_32 = fun _y_33 _y_34 _y_35 _y_36 _y_37 -> match provided with
-    | None -> _jp_12 _y_33 _y_34 _y_35 _y_37 _y_36 provided
+    | None -> _jp_12 _y_33 _y_37 _y_34 _y_35 _y_36 provided
     | Some val__38 -> (let _x_39 = frame_pop_delivered_exit pop val__38 in
       let _x_40 = Some _x_39 in
-      _jp_12 _y_33 _y_34 _y_35 _y_37 _y_36 _x_40) in
+      _jp_12 _y_33 _y_37 _y_34 _y_35 _y_36 _x_40) in
   let _jp_41 = fun _y_42 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_42 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -14373,8 +14668,8 @@ let frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_
               let _x_51 = _x_50, events_1 in
               _x_51))
         | ContAnswer_frame frame_52 -> (match carried_cause with
-            | None -> _jp_32 delivered frame_52 events_1 fiber cause
-            | Some val__53 -> _jp_32 delivered frame_52 events_1 fiber val__53)
+            | None -> _jp_32 frame_52 events_1 delivered fiber cause
+            | Some val__53 -> _jp_32 frame_52 events_1 delivered fiber val__53)
         | ContAnswer_empty -> _jp_4 delivered) in
   match provided with
     | None -> (let _x_54 = Exit_failure cause in
@@ -15338,7 +15633,7 @@ let run_machine_race_opt (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) 
 
 let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim) with_fiber_action) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
   let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_3 @ _y_6 in
-  let _x_8 = ({ machine = _y_2; fiber = _y_4; yielding = yielding; outcome = _y_5; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _x_8 = ({ machine = _y_5; fiber = _y_4; yielding = yielding; outcome = _y_2; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   _x_8 in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
     | WithFiberAction_fork (program_9, options_10, site_11) -> (match (options_10 : fork_options) with
@@ -15354,10 +15649,10 @@ let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec
                                   let _x_25 = evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4__red_arg__lam_0 fst_22 _x_24 in
                                   let _x_26 = Effect4_machine_outcome_continue_ in
                                   if daemon then (let _x_30 = [] in
-                                    _jp_1 fst_20 snd_23 _x_25 _x_26 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
+                                    _jp_1 _x_26 snd_23 _x_25 fst_20 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
                                     let _x_28 = [] in
                                     let _x_29 = _x_27 :: _x_28 in
-                                    _jp_1 fst_20 snd_23 _x_25 _x_26 _x_29))))))) in
+                                    _jp_1 _x_26 snd_23 _x_25 fst_20 _x_29))))))) in
           if daemon then _jp_12 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks; _ } -> (let _x_31 = true in
                 let _x_32 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_31; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
@@ -16016,11 +16311,11 @@ let stores_close_scope_unsafe (scope : int) (exit_ : (val_, err, defect, int, un
 
 let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_8; interruptible = _y_3; interrupted_cause = _y_5; deferred_interrupt = _y_9 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_4; prevent_yield = _y_7; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_6; interruptible = _y_3; interrupted_cause = _y_7; deferred_interrupt = _y_4 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_2; prevent_yield = _y_8; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_9 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
-      let _x_15 = ({ machine = _y_6; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+      let _x_15 = ({ machine = _y_5; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       _x_15 in
       let _x_16 = run_machine_completed_exits m in
       let _x_17 = [] in
@@ -16048,13 +16343,13 @@ let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, 
                                     | Some val__35 -> (match val__35 with
                                         | fst_36, snd_37 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_36; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_37 with
-                                            | None -> _jp_1 previous_26 interruptible max_ops_before_yield interrupted_cause m_2 prevent_yield stack deferred_interrupt _x_29
+                                            | None -> _jp_1 max_ops_before_yield interruptible deferred_interrupt m_2 stack interrupted_cause prevent_yield previous_26 _x_29
                                             | Some val__38 -> (let _x_39 = RunEvent_finalizerProgram (id, finalizer_24, exit__2) in
                                               let _x_40 = _x_39 :: _x_17 in
                                               let _x_41 = run_machine_emit m_2 _x_40 in
                                               let _x_42 = program_embed val__38 in
                                               let _x_43 = finalizer_code interp exit__2 _x_42 in
-                                              _jp_1 previous_26 interruptible max_ops_before_yield interrupted_cause _x_41 prevent_yield stack deferred_interrupt _x_43)))))))
+                                              _jp_1 max_ops_before_yield interruptible deferred_interrupt _x_41 stack interrupted_cause prevent_yield previous_26 _x_43)))))))
                     | _ -> (let _x_44 = evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding in
                       _x_44))
                 | _ -> (let _x_45 = evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding in
@@ -17738,20 +18033,28 @@ let api_timer_reasons (m : (eff_name, eff_thunk, val_, err, defect, int, unit, c
 
 
 
+(* LCNF mono: Effect4.Api.isRunnable (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Bool *)
+
+let api_is_runnable (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) : bool =
+  match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+    | { parked = parked; exit_ = exit_; _ } -> (match exit_ with
+        | None -> (let _x_1 = Parked_notParked in
+          let _x_2 = inst_decidable_eq_parked_dec_eq parked _x_1 in
+          _x_2)
+        | Some _ -> (let _x_4 = false in
+          _x_4))
+
+
+
 (* LCNF mono: List.any._at_.Effect4.Api.hasRunnable.spec_0 (x.1 : List (Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit))) : Bool *)
 
 let rec list_any_at_api_has_runnable_spec_0 (x_1 : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber list) : bool =
   match x_1 with
     | [] -> (let _x_2 = false in
       _x_2)
-    | head_3 :: tail_4 -> (match (head_3 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-        | { parked = parked; exit_ = exit_; _ } -> (match exit_ with
-            | None -> (let _x_5 = Parked_notParked in
-              let _x_6 = inst_decidable_eq_parked_dec_eq parked _x_5 in
-              if _x_6 then _x_6 else (let _x_7 = list_any_at_api_has_runnable_spec_0 tail_4 in
-                _x_7))
-            | Some _ -> (let _x_9 = list_any_at_api_has_runnable_spec_0 tail_4 in
-              _x_9)))
+    | head_3 :: tail_4 -> (let _x_5 = api_is_runnable head_3 in
+      if _x_5 then _x_5 else (let _x_6 = list_any_at_api_has_runnable_spec_0 tail_4 in
+        _x_6))
 
 
 

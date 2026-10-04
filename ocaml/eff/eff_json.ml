@@ -46,11 +46,21 @@ let rec json_lit (v : lit) : Eff_json_text.t =
 
 let print_lit (v : lit) : string = Eff_json_text.render (json_lit v)
 
+let rec json_field_read_mode (v : field_read_mode) : Eff_json_text.t =
+  match v with
+  | Field_read_mode_required -> Eff_json_text.Array [Eff_json_text.String "required"]
+  | Field_read_mode_optional -> Eff_json_text.Array [Eff_json_text.String "optional"]
+
+let print_field_read_mode (v : field_read_mode) : string = Eff_json_text.render (json_field_read_mode v)
+
 let rec json_term (v : term) : Eff_json_text.t =
   match v with
   | Term_var a0 -> Eff_json_text.Array [Eff_json_text.String "var"; Eff_json_text.Int a0]
   | Term_lit a0 -> Eff_json_text.Array [Eff_json_text.String "lit"; json_lit a0]
   | Term_app (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "app"; Eff_json_text.String a0; json_terms a1]
+  | Term_record (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "record"; Eff_json_text.Array (List.map (fun y -> (let (y0, y1) = y in Eff_json_text.Array [Eff_json_text.String y0; (let (y0, y1) = y1 in Eff_json_text.Array [Eff_json_text.Bool y0; json_ty y1])])) a0); Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) a1); json_terms a2]
+  | Term_field (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "field"; json_field_read_mode a0; json_term a1; Eff_json_text.String a2]
+  | Term_recordSet (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "recordSet"; json_term a0; Eff_json_text.String a1; json_term a2]
 and json_terms (v : terms) : Eff_json_text.t =
   match v with
   | Terms_nil -> Eff_json_text.Array [Eff_json_text.String "nil"]

@@ -146,10 +146,29 @@ let ctor_name_lit : lit -> string = function
 let ctor_names_lit : string list = ["unit"; "nat"; "bool"; "str"]
 
 
+type field_read_mode =
+  | Field_read_mode_required
+  | Field_read_mode_optional
+
+let ctor_index_field_read_mode : field_read_mode -> int = function
+  | Field_read_mode_required -> 0
+  | Field_read_mode_optional -> 1
+let wire_tag_field_read_mode : field_read_mode -> int = function
+  | Field_read_mode_required -> 0
+  | Field_read_mode_optional -> 1
+let ctor_name_field_read_mode : field_read_mode -> string = function
+  | Field_read_mode_required -> "required"
+  | Field_read_mode_optional -> "optional"
+let ctor_names_field_read_mode : string list = ["required"; "optional"]
+
+
 type term =
   | Term_var of int
   | Term_lit of lit
   | Term_app of string * terms
+  | Term_record of (string * (bool * ty)) list * string list * terms
+  | Term_field of field_read_mode * term * string
+  | Term_recordSet of term * string * term
 
 and terms =
   | Terms_nil
@@ -159,15 +178,24 @@ let ctor_index_term : term -> int = function
   | Term_var _ -> 0
   | Term_lit _ -> 1
   | Term_app _ -> 2
+  | Term_record _ -> 3
+  | Term_field _ -> 4
+  | Term_recordSet _ -> 5
 let wire_tag_term : term -> int = function
   | Term_var _ -> 0
   | Term_lit _ -> 1
   | Term_app _ -> 2
+  | Term_record _ -> 3
+  | Term_field _ -> 4
+  | Term_recordSet _ -> 5
 let ctor_name_term : term -> string = function
   | Term_var _ -> "var"
   | Term_lit _ -> "lit"
   | Term_app _ -> "app"
-let ctor_names_term : string list = ["var"; "lit"; "app"]
+  | Term_record _ -> "record"
+  | Term_field _ -> "field"
+  | Term_recordSet _ -> "recordSet"
+let ctor_names_term : string list = ["var"; "lit"; "app"; "record"; "field"; "recordSet"]
 
 let ctor_index_terms : terms -> int = function
   | Terms_nil -> 0
