@@ -374,6 +374,7 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
     (hty : a.typeOf tys = some ty) (hfit : FitsAll w vs tys) :
     (NativeAtom.eval a vs).isSome = true := by
   cases a with
+  | tuple => rfl
   | succ => exact progress_of_shape .nat1 rfl (fun _ => ⟨_, rfl⟩) w tys ty vs hty hfit
   | pred => exact progress_of_shape .nat1 rfl (fun _ => ⟨_, rfl⟩) w tys ty vs hty hfit
   | isZero => exact progress_of_shape .natTest rfl (fun _ => ⟨_, rfl⟩) w tys ty vs hty hfit
@@ -603,6 +604,14 @@ theorem evalTerm_progress (hatom : sig.atomOf = nativeAtomTy) (hfit : FitsAll w 
     show ((evalTerm vals target).bind fun value => (evalTerm vals replacement).bind
       fun next => Machine.Record.set value name next) = some out
     rw [he, Option.bind_some, hn, Option.bind_some, hout]
+  | .tupleAt target index, ty, hty => by
+    have ht : (termTy sig env target).bind (fun targetType => Tuple.typeAt targetType index) = some ty := hty
+    obtain ⟨targetType, ht, hp⟩ := Option.bind_eq_some_iff.mp ht
+    obtain ⟨value, he, hm⟩ := evalTerm_progress hatom hfit target targetType ht
+    obtain ⟨out, hout, hfitout⟩ := tuple_typeAt_fits hp hm
+    refine ⟨out, ?_, hfitout⟩
+    show (evalTerm vals target).bind (fun value => Val.tupleAt? value index) = some out
+    rw [he, Option.bind_some, hout]
 termination_by t => sizeOf t
 
 /-- The argument list's form. -/

@@ -414,6 +414,17 @@ theorem evalTerm_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = native
     rw [hout] at hv
     cases hv
     exact hfitout
+  | tupleAt target index =>
+    have ht : (termTy sig tys target).bind
+        (fun targetType => Tuple.typeAt targetType index) = some ty := hty
+    obtain ⟨targetType, ht, hp⟩ := Option.bind_eq_some_iff.mp ht
+    have he : (evalTerm env target).bind (fun value => Val.tupleAt? value index) = some v := hev
+    obtain ⟨value, he, hv⟩ := Option.bind_eq_some_iff.mp he
+    obtain ⟨out, hout, hfitout⟩ := tuple_typeAt_fits hp
+      (evalTerm_fitsAll sig hatom hconst w target env tys targetType value hfit ht he)
+    rw [hout] at hv
+    cases hv
+    exact hfitout
 termination_by structural t
 
 /-- The list form: the values of typed arguments fit their argument types. -/

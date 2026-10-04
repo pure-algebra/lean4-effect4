@@ -66,6 +66,30 @@ private theorem native_keys_of_handles {value : Val} {inputs : List Val}
   rw [Val.keys_eq_handles]
   exact List.mem_filterMap.mpr ⟨code, hc, hk⟩
 
+/-- A successful static projection selects an existing member of its plain tuple frame.
+The key and raw-handle consumers below use this fact without a typing premise. -/
+theorem Val.tupleAt?_mem {value out : Val} {index : Nat}
+    (h : Val.tupleAt? value index = some out) :
+    ∃ items, value = .list items ∧ out ∈ items := by
+  obtain ⟨items, hv, hi⟩ := Option.bind_eq_some_iff.mp h
+  exact ⟨items, Val.tuple?_exact hv, List.mem_of_getElem? hi⟩
+
+/-- Static tuple projection introduces no decoded key; consumed by `evalTerm_keys`. -/
+theorem tupleAt_keys {value out : Val} {index : Nat}
+    (h : Val.tupleAt? value index = some out) : out.keys ⊆ value.keys := by
+  obtain ⟨items, rfl, hi⟩ := Val.tupleAt?_mem h
+  rw [Val.keys_list]
+  exact fun key hk => List.mem_flatMap.mpr ⟨out, hi, hk⟩
+
+/-- Static tuple projection introduces no raw handle; consumed by straight meaning typing. -/
+theorem tupleAt_handles {value out : Val} {index : Nat}
+    (h : Val.tupleAt? value index = some out) :
+    Store.Val.handles out ⊆ Store.Val.handles value := by
+  obtain ⟨items, rfl, hi⟩ := Val.tupleAt?_mem h
+  change Store.Val.handles out ⊆ Store.Val.handlesList items
+  rw [Store.Val.handlesList_eq_flatMap]
+  exact fun key hk => List.mem_flatMap.mpr ⟨out, hi, hk⟩
+
 theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAtom atom vs = some v) :
     v.keys ⊆ vs.flatMap Val.keys := by
   unfold nativeAtom at h
@@ -145,6 +169,10 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
     apply native_keys_of_handles
     simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
       using Machine.Map.fromEntries_handles h
+  case h_43 =>
+    cases h
+    rw [Val.keys_list]
+    exact List.Subset.refl _
   all_goals cases h
   all_goals sub_tac norm [Val.tuple]
 
@@ -308,6 +336,10 @@ theorem evalTerm_keys (t : Term) (env : List Val) (v : Val) (h : evalTerm env t 
     obtain ⟨next, hn, hs⟩ := Option.bind_eq_some_iff.mp hr
     exact List.Subset.trans (RecordHandles.set_keys hs) (List.append_subset.mpr
       ⟨evalTerm_keys replacement env next hn, evalTerm_keys target env value he⟩)
+  | tupleAt target index =>
+    have h' : (evalTerm env target).bind (fun value => Val.tupleAt? value index) = some v := h
+    obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
+    exact List.Subset.trans (tupleAt_keys hr) (evalTerm_keys target env value he)
 termination_by structural t
 theorem evalTerms_keys (ts : Terms) (env : List Val) (vs : List Val) (h : evalTerms env ts = some vs) :
     vs.flatMap Val.keys ⊆ env.flatMap Val.keys := by
@@ -520,6 +552,10 @@ theorem nativeAtom_handles (atom : String) (vs : List Val) (v : Val)
   case h_42 =>
     simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil]
       using Machine.Map.fromEntries_handles h
+  case h_43 =>
+    cases h
+    rw [handles_list]
+    exact List.Subset.refl _
   all_goals cases h
   all_goals sub_tac norm [Val.tuple, Store.Val.handles, Store.Val.handlesList]
 
@@ -554,6 +590,10 @@ mutual
      obtain ⟨next, hn, hs⟩ := Option.bind_eq_some_iff.mp hr
      exact List.Subset.trans (RecordHandles.set hs) (List.append_subset.mpr
        ⟨evalTerm_handles replacement env next hn, evalTerm_handles target env value he⟩)
+   | tupleAt target index =>
+     have h' : (evalTerm env target).bind (fun value => Val.tupleAt? value index) = some v := h
+     obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
+     exact List.Subset.trans (tupleAt_handles hr) (evalTerm_handles target env value he)
  termination_by structural t
  theorem evalTerms_handles (ts : Terms) (env : List Val) (vs : List Val)
      (h : evalTerms env ts = some vs) :

@@ -2811,6 +2811,70 @@ theorem atomFits_of_shape {a : NativeAtom} (s : NativeAtom.Shape)
 
 /-! ### The projection and cause atoms -/
 
+/-- Fitted arguments form an exact tuple; consumed by the tuple atom membership law. -/
+theorem FitsAll.tuple {w : World} {values : List Val} {types : List Ty}
+    (h : FitsAll w values types) : Fits w (.list values) (.tuple types) := by
+  rw [fits_tuple]
+  induction h with
+  | nil => trivial
+  | cons hx _ ih => exact ⟨hx, ih⟩
+
+/-- An admitted position in `ItemsFit` supplies its exact member.
+This helper feeds tuple projection and world-indexed term progress. -/
+theorem tupleItem_fits (w : World) :
+    ∀ (types : List Ty) (values : List Val) (index : Nat) (answer : Ty),
+      types[index]? = some answer →
+      ItemsFit (types.map (fun t x => Fits w x t)) values →
+      ∃ value, values[index]? = some value ∧ Fits w value answer
+  | [], _, _, _, h, _ => by cases h
+  | _ :: _, [], _, _, _, h => h.elim
+  | t :: ts, value :: values, 0, answer, h, hv => by
+    cases h
+    exact ⟨value, rfl, hv.1⟩
+  | t :: ts, value :: values, index + 1, answer, h, hv =>
+    tupleItem_fits w ts values index answer h hv.2
+
+/-- Plain tuple projection supplies a member in the same world. -/
+theorem tupleAt_fits {w : World} {types : List Ty} {value : Val}
+    {index : Nat} {answer : Ty} (hi : types[index]? = some answer)
+    (hv : Fits w value (.tuple types)) :
+    ∃ out, Val.tupleAt? value index = some out ∧ Fits w out answer := by
+  simp only [Fits] at hv
+  split at hv
+  · next values =>
+    rw [itemFitters_eq_map] at hv
+    exact tupleItem_fits w types values index answer hi hv
+  · exact hv.elim
+
+/-- Every admitted tuple alternative supplies the selected member.
+This serves `denote-typed` through `evalTerm_progress`; no host or scheduler premise changes. -/
+theorem tuple_project_fits (w : World) (index : Nat) (input output : Ty) (value : Val)
+    (hp : Tuple.project index input = some output) (hv : Fits w value input) :
+    ∃ out, Val.tupleAt? value index = some out ∧ Fits w out output := by
+  induction input generalizing output with
+  | never => exact hv.elim
+  | tuple items _ => exact tupleAt_fits hp hv
+  | prod a b _ _ =>
+    apply tupleAt_fits hp
+    exact (fits_tuple_pair w value a b).mpr hv
+  | union a b iha ihb =>
+    obtain ⟨left, hl, rest⟩ := Option.bind_eq_some_iff.mp hp
+    obtain ⟨right, hr, heq⟩ := Option.bind_eq_some_iff.mp rest
+    cases heq
+    rcases hv with ha | hb
+    · obtain ⟨out, he, hm⟩ := iha left hl ha
+      exact ⟨out, he, fits_join_left w left right out hm⟩
+    · obtain ⟨out, he, hm⟩ := ihb right hr hb
+      exact ⟨out, he, fits_join_right w left right out hm⟩
+  | _ => simp only [Tuple.project, reduceCtorEq] at hp
+
+/-- Normalization retains the world-indexed tuple projection premise. -/
+theorem tuple_typeAt_fits {w : World} {index : Nat} {input output : Ty} {value : Val}
+    (hp : Tuple.typeAt input index = some output) (hv : Fits w value input) :
+    ∃ out, Val.tupleAt? value index = some out ∧ Fits w out output :=
+  tuple_project_fits w index input.normalize output value hp
+    ((fits_normalize w input value).mpr hv)
+
 /-- Projecting a typed product, or a union of them, keeps membership: a direct product's
 column fits its component, and a union's projections fit the join of the arms' projections. -/
 theorem projectProduct_fits (w : World) (second : Bool) :
@@ -3236,6 +3300,12 @@ theorem atomFits (a : NativeAtom) : AtomFits a := by
     rw [he] at hv
     cases hv
     exact ho
+  | tuple =>
+    refine atomFits_of_custom rfl fun w types answer values out ht hv he => ?_
+    cases ht
+    cases he
+    exact (fits_normalize w (.tuple types) (.list values)).mpr hv.tuple
+
 
 /-! ### Terms -/
 

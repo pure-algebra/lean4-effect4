@@ -386,6 +386,11 @@ theorem Decision.decide_validIn (d : Decision) (s : Stores) {v x : Val} {first :
         · cases hp
       · cases hp
 
+  | recordTag name =>
+    simp only [Decision.decide, Option.some.injEq, Prod.mk.injEq] at h
+    cases h.2
+    exact hv
+
 /-- The invariant under what a decision binds. -/
 theorem TypedAt.bound {tys : TyEnv} {env : List Val} {s : Stores} (h : TypedAt tys env s)
     {bound : Option Val} {arm : List Ty} (hb : Decision.BoundTyped [] bound arm)

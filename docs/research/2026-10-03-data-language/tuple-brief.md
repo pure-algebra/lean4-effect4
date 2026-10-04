@@ -50,7 +50,7 @@ Its existing scope-only premise must remain unchanged for every raw natural inde
    The diagnostic fold returns a record/tuple sum; old `locate` wrappers keep their record-only result types.
    Tuple packets retain an exact index, term path, reason and separate cause path.
    The rule `Tuple.project` remains the only projection acceptance owner.
-3. Proof consumers: `Laws/Program/Typed.lean`, `Laws/Program/Typed/Membership.lean`, `Laws/Program/Typed/Denotation.lean`, `Laws/Program/Handles/Term.lean`, `Laws/Program/Signature.lean` and `Laws/Program/Authoring/Tuples.lean`.
+3. Proof consumers: `Laws/Program/Typed.lean`, `Laws/Program/Typed/Membership.lean`, `Laws/Program/Typed/RecordOperations.lean`, `Laws/Program/Typed/Denotation.lean`, `Laws/Program/Handles/Term.lean`, `Laws/Program/Signature.lean` and `Laws/Program/Authoring/Tuples.lean`.
    Add only the `Tuple.project` connector line to `Laws/Program/Folds/Ty.lean`.
    Update `Laws/Program/MeaningSound.lean` only if needed.
    A dedicated tuple value helper module belongs here only if it serves both proof families.
@@ -70,3 +70,17 @@ Accept only the existing ceiling `[propext, Quot.sound]`.
 Each checkpoint runs `git diff --check` and commits explicit paths.
 The receipt records exact commands, source/generated dependencies, axiom output, unchanged statements, open integration work and finite evidence.
 No full sweep or push is authorized by this seat's brief.
+
+## Combined proof completion
+
+The final proof stage starts from coordinator integration `c101f5cf` on `codex/tuple-proof-completion`.
+The original branch remains available, and every pending draft has an exact saved copy.
+`Typed/RecordOperations.lean` now owns the existing `evalTerm_fitsAll` consumer.
+Its tuple projection arm consumes `tuple_typeAt_fits` under the same world, signature and environment premises.
+This is a direct step of `denote-typed`; it changes no statement or acceptance rule.
+The preexisting FormationContract draft is byte-identical to the integrated file.
+
+The combined check also reaches `MeaningSound.Decision.decide_validIn`.
+Its missing record-tag arm binds the unchanged whole input on either branch.
+The coordinator approved this statement-preserving direct repair.
+It serves `straight-meaning-typed` through `TypedAt.bound` and `Denote.sound`; it establishes no branch reachability or host property.
