@@ -66,8 +66,8 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
 - **The module system** (decisions rows 200 and 202). 116 core modules outside `Laws` are modules:
   the 96 that reach no package (`cb8f510a`) and the 20 whose package closure is only `hash` (chain
   E). M1 holds, and M2 holds as amended. `hash` is pushed (branch `module-system`) and re-pinned
-  at `ab7eda4`. Seven specialization sites stay non-module: row 202's ruling (b) measured not
-  reachable, and options (a), (c) and (d) wait on the owner. See the
+  at `ab7eda4`. Seven specialization sites stay non-module (row 202, ruled (a)): as modules
+  they lose the compiler's cross-module specialization. See the
   [seat M receipt](research/2026-10-04-seat-M-receipt.md) and the
   [row 202 receipt](research/2026-10-04-seat-M-row202-receipt.md).
 - **The Σ_app slice** (decisions row 21, R1). The

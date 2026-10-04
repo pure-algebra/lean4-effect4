@@ -134,8 +134,9 @@ its arrows. Anything else is a leak.
   `AxiomGate.lean`, never by module.
 - A battery `def` over rendered text reaches `Classical.choice`: keep rendered bytes inside
   `#guard`s.
-- A new core module outside `Laws` that reaches no package opens with `module`, `public import`
-  and `@[expose] public section` (decisions row 200).
+- A new core module outside `Laws` whose packages are at most `hash` opens with `module`,
+  `public import` and `@[expose] public section` (decisions row 200). The seven specialization
+  sites of decisions row 202 and their importers stay non-module.
 - Every library source must be reachable from `Effect4` or `Effect4.Laws`, and `Effect4` must never
   import the Laws graph. The library-root gate checks both roots.
 - Every battery file under `Test/` must be reachable from `Test/All.lean`, or the module-closure

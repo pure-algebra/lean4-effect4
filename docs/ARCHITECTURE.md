@@ -56,11 +56,11 @@ that boundary. It does not import the renderer; stored `Ty` and `Row` data remai
 unchanged. The target carrier retains source annotations and binding distinctions
 for validation above the canonical expression reader.
 
-Lean's module system (decisions row 200) covers 96 of the 103 core modules outside `Laws` that
-reach no package. Such a module opens with `module`, imports with `public import`, and declares in
+Lean's module system (decisions row 200) covers 116 core modules outside `Laws`: those that reach
+no package or only `hash`. Such a module opens with `module`, imports with `public import`, and declares in
 `@[expose] public section`. A proof edit inside one leaves its importers fresh. Seven
-specialization sites stay non-module (decisions row 202). `Laws`, the core modules that reach a
-package, `Test`, `tools` and `OCaml5` stay non-module. The audit roots stay non-module too, so the
+specialization sites and their importers stay non-module (decisions row 202, ruled (a)). `Laws`,
+the core modules that reach `effects` or `typescript`, `Test`, `tools` and `OCaml5` stay non-module. The audit roots stay non-module too, so the
 axiom gate reads every proof body, and the gate refuses a module root.
 
 ## Source tree
