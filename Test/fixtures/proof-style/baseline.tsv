@@ -857,10 +857,6 @@ src/Effect4/Laws/Program/PathOrder.lean	lt_trans	simp-without-only	3
 src/Effect4/Laws/Program/PathOrder.lean	lt_trichotomy	simp-without-only	4
 src/Effect4/Laws/Program/PathOrder.lean	sortBy_pairwise	simp-without-only	3
 src/Effect4/Laws/Program/PathOrder.lean	sortBy_perm	simp-without-only	1
-src/Effect4/Laws/Program/Progress.lean	FnName.modifySome_hasTy_nat	simp-without-only	1
-src/Effect4/Laws/Program/Progress.lean	FnName.modify_hasTy_nat	simp-without-only	1
-src/Effect4/Laws/Program/Progress.lean	FnName.partialUpdate_hasTy_nat	simp-without-only	3
-src/Effect4/Laws/Program/Progress.lean	FnName.total_hasTy_nat	simp-without-only	1
 src/Effect4/Laws/Program/Progress.lean	NativeAtom.getOrElse_validIn	first	1
 src/Effect4/Laws/Program/ReasonsR.lean	filter_compileReasons	simp-without-only	1
 src/Effect4/Laws/Program/ReasonsR.lean	filter_compileReasonsR	simp-without-only	1

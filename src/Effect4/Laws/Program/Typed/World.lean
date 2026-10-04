@@ -1,5 +1,4 @@
 import Effect4.Laws.Machine.Handles
-import Effect4.Laws.Program.Progress
 import Effect4.Laws.Program.Typed
 import Effect4.Laws.Program.Typed.State
 import Effect4.Laws.Effects.Protocol
@@ -402,23 +401,6 @@ theorem promise_coverage_iff (w : World) :
       obtain ⟨types, htypes, _⟩ := typed ⟨i⟩ cell hcell
       exact ⟨types, htypes⟩
 
-theorem heapNat_iff (w : World)
-    (types : ∀ cell value, refPeek w.state.refs cell = some value → w.Ρ cell = some .nat) :
-    HeapTable w ↔ Effect4.Program.Stores.HeapNat w.state := by
-  constructor
-  · intro table v hv
-    obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hv
-    have typed : ValueOk w .nat v := table i v hi .nat (types ⟨i⟩ v hi)
-    unfold ValueOk at typed
-    rw [hasTy_nat_allocated] at typed
-    exact typed
-  · intro hnat i v hv ty hty
-    have same := Option.some.inj ((types ⟨i⟩ v hv).symm.trans hty)
-    subst same
-    unfold ValueOk
-    rw [hasTy_nat_allocated]
-    exact hnat v (List.mem_of_getElem? hv)
-
 /-- Completion typing only grows with the heap table when the allocation table is unchanged. -/
 theorem completionOk_extends (w newer : World) (types : Ty × Ty)
     (hΡ : TableExtends w.Ρ newer.Ρ)
@@ -681,10 +663,14 @@ theorem world_order_refuses : ¬ worldGood.le worldBad := by
 
 theorem invalid_refl : worldBad.le worldBad := order_refl _
 
+/-- **Store growth alone does not keep the heap column** (the red control for `CellCompatible` in
+`World.le`): `worldGood`'s store grows into `worldBad`'s under `Stores.le` at the same declarations,
+and the column holds at the first and fails at the second. The world order refuses the pair
+(`world_order_refuses`). -/
 theorem heapNotMonotone :
-    ¬ (∀ state newer : Stores, state.le newer →
-      Effect4.Program.Stores.HeapNat state → Effect4.Program.Stores.HeapNat newer) :=
-  fun h => absurd (h _ _ stores_ordered (by decide)) (by decide)
+    ¬ (∀ (w : World) (newer : Stores), w.state.le newer → HeapTable w →
+      HeapTable { w with state := newer }) :=
+  fun h => heap_bad (h worldGood worldBad.state stores_ordered heap_good)
 
 attribute [aesop unsafe 90% apply (rule_sets := [Effect4.TypedState])]
   table_refl table_trans insert_extends insert_here insert_other order_refl order_trans
@@ -694,7 +680,7 @@ attribute [aesop safe -100 apply (rule_sets := [Effect4.TypedState])]
   fork_extension refMake_extension deferredMake_extension memoBuild_extension
 
 attribute [aesop norm simp (rule_sets := [Effect4.TypedState])]
-  ref_completion_inv heap_coverage_iff promise_coverage_iff heapNat_iff
+  ref_completion_inv heap_coverage_iff promise_coverage_iff
   stores_ordered heap_good heap_bad world_order_refuses invalid_refl heapNotMonotone
 
 end Effect4.Program.Typed

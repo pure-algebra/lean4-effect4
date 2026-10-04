@@ -63,7 +63,7 @@ def KindLive (w : World) (index : Nat) : Option HandleKind → Prop
 /-- **Capability membership** (finding F-WF, owner's ruling 2026-10-02: membership at `unknown` is
 validity): every raw handle frame of the value (`Store.Val.handles`, unregistered bytes included)
 is live in its kind's column (`KindLive`). Cells, deferreds and fibers are read in the declaration
-tables, as allocation posts supply them; with the store's forward bounds (`StoreTyped.heap`,
+tables, as allocation posts supply them; with the store's forward bounds (`CellsTyped.heap`,
 `.promises`) this is the store's validity (`live_validIn`), which `Stores.WF` asks of every stored
 value and closing exit. Before the ruling only the registered cell, deferred and fiber frames
 were read (`Val.keys`), so `.handle 255 7` fit `unknown` (`E4-TYPED-CE-040`). -/
@@ -928,7 +928,7 @@ theorem live_pair {w : World} {a x : Val} (ha : Live w a) (hx : Live w x) : Live
   · exact hx k h
 
 /-- **Capability membership is the store's validity**, given the store's forward bounds (the
-heap and the Deferred cells hold every declared index; `StoreTyped.heap`, `.promises`). Codex's
+heap and the Deferred cells hold every declared index; `CellsTyped.heap`, `.promises`). Codex's
 `rawLive_validIn` (`m6-adoption-next/RawLiveBridge.lean`), on the restated `Live`. -/
 theorem live_validIn {w : World} {v : Val}
     (heap : ∀ k, (w.Ρ k).isSome = true → k.index < w.state.refs.length)

@@ -94,8 +94,6 @@ example (w : Typed.World) (key : RefKey) (h : ¬ Typed.RefDeclared w key .nat) :
 #print axioms Typed.atomFits
 #print axioms Typed.atom_progress
 #print axioms Typed.evalTerm_progress
-#print axioms Denote.NativeAtom.eval_validIn
-#print axioms Denote.evalTerm_validIn
 #print axioms Denote.sound
 
 end Effect4.Test.MapTyping

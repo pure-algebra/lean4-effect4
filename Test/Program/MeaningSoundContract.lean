@@ -6,7 +6,9 @@ import Test.Program.CompileContract
 
 The theorems of `Laws/Program/MeaningSound.lean` read on programs: a typed straight program's
 exit has its type, and its run does not depend on the wrong-shape exit. The negative pins show
-the premise is needed: an ill-typed program does depend on it.
+the premise is needed: an ill-typed program does depend on it. The restated invariant (decisions
+row 209: the environment fits at a world, and the store fits) is ascribed at its exact
+proposition, so a declaration that keeps a frozen name but weakens the statement fails here.
 -/
 
 set_option autoImplicit false
@@ -34,6 +36,34 @@ def pBadSelect : NativeEff :=
 #guard Straight pBadSelect && (Api.typeOf pBadSelect).isNone && !neverWrong pBadSelect
 #guard (runP (denoteWith marker pUnbound []) Stores.empty).1 == marker
 
+/-! ## The restated statements, ascribed (decisions row 209) -/
+
+/-- What a run keeps: the environment fits at the world, and the store fits. -/
+example (tys : TyEnv) (env : List Val) (w : Typed.World) :
+    TypedAt tys env w ↔ Typed.EnvTyped w tys env ∧ StoreFits w :=
+  ⟨fun h => ⟨h.fits, h.store⟩, fun h => ⟨h.1, h.2⟩⟩
+
+/-- One run of a pair of programs: they run alike, and the run reaches a later world over the
+stores it leaves, whose store fits, at which the exit satisfies `Typed.ExitOk`. -/
+example (pw pd : Effects.Program StoreSig ExitV) (w : Typed.World) (a e : Ty) :
+    SoundP pw pd w a e ↔ runP pw w.state = runP pd w.state ∧
+      ∃ w', w'.state = (runP pd w.state).2 ∧ StoreOk w w' ∧
+        Typed.ExitOk w' ⟨a, e, Env.Requirement.empty⟩ (runP pd w.state).1 :=
+  ⟨fun h => ⟨h.independent, h.reaches⟩, fun h => ⟨h.1, h.2⟩⟩
+
+/-- `sound`: from every world whose store fits, in every environment typed there. -/
+example : ∀ (bad : ExitV) (e : NativeEff) (tys : TyEnv) (env : List Val) (w : Typed.World)
+    (t : EffTy), Straight e = true → effTy nativeSignature tys e = some t →
+    TypedAt tys env w → Sound bad e env w t :=
+  @sound
+
+/-- `meaning_stores`: the stores a typed straight program leaves are the state of a world whose
+store fits. -/
+example : ∀ (e : NativeEff) (t : EffTy), Straight e = true →
+    effTy nativeSignature [] e = some t →
+    ∃ w : Typed.World, w.state = (meaning e [] Stores.empty).2 ∧ StoreFits w :=
+  @meaning_stores
+
 /-- info: 'Effect4.Program.Denote.sound' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms sound
 /-- info: 'Effect4.Program.Denote.meaning_never_wrong' depends on axioms: [propext, Quot.sound] -/
@@ -42,5 +72,7 @@ def pBadSelect : NativeEff :=
 #guard_msgs in #print axioms meaning_typed
 /-- info: 'Effect4.Program.Denote.run_typed' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms run_typed
+/-- info: 'Effect4.Program.Denote.meaning_stores' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms meaning_stores
 
 end Test.Program.MeaningSoundContract

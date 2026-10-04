@@ -3,7 +3,6 @@ import Effect4.Laws.Program.Agreement.LoopSteps
 import Effect4.Laws.Program.DenoteB
 import Effect4.Laws.Program.LoopAgreement
 import Effect4.Laws.Program.Intro.Weight
-import Effect4.Laws.Program.LoopSound
 
 /-!
 # The loop agreement: the local run, the budgeted meaning, and the machine

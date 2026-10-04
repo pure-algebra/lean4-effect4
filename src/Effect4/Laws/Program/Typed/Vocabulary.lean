@@ -8,8 +8,9 @@ data types, with no meta import, so that anything may name them.
 
 The world is the tables plus the store: the fiber table `Γ` (every fiber ever forked, at the
 type it was forked at), the promise table `Π` (every deferred cell, at the type it was made
-at: the row's types for `deferredMake`, the layer's type for `memoBuild`), and the heap column
-(`HeapNat` at this cut). Handles carry no type in `Val.hasTy` (DI-17, decisions row 44), so
+at: the row's types for `deferredMake`, the layer's type for `memoBuild`), and the cell table `Ρ`
+(every allocated cell, at the type it was made at; every stored value fits it, `CellsTyped` in
+`Typed/Adequacy.lean`). Handles carry no type in `Val.hasTy` (DI-17, decisions row 44), so
 every handle is typed by the world.
 -/
 
@@ -39,7 +40,7 @@ inductive Source
   /-- An interpreter hook: typed at what its consumer installs it as; `none` when the reference
   never calls it (the read census checks). -/
   | hook (consumer : Option String)
-  /-- A store column carried as its own clause (`HeapNat`, the promise table). -/
+  /-- A store column carried as its own clause (the cell columns `CellsTyped`, the promise table). -/
   | column (name : String) (keyConstructor : Option String := none)
   /-- Written, never read back as an answer (the read census checks). -/
   | journal
