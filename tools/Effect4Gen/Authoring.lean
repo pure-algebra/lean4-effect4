@@ -759,6 +759,11 @@ structure Args where
   out : Option String := none
   headerOut : Option String := none
   append : Option String := none
+  /-- `--module`: write the header of Lean's module system
+  (`Tools.GeneratedStamp.moduleText`). -/
+  moduleHeader : Bool := false
+  /-- `--meta-imports A,B`: under `--module`, the modules whose code the appended guards run. -/
+  metaImports : List String := []
   table : String := "tools/Effect4Gen/binders.json"
   kinds : List String := []
   types : List String := []
@@ -771,6 +776,9 @@ partial def parseArgs : List String → Args → Except String Args
   | "--out" :: o :: rest, a => parseArgs rest { a with out := some o }
   | "--header-out" :: o :: rest, a => parseArgs rest { a with headerOut := some o }
   | "--append" :: p :: rest, a => parseArgs rest { a with append := some p }
+  | "--module" :: rest, a => parseArgs rest { a with moduleHeader := true }
+  | "--meta-imports" :: i :: rest, a =>
+    parseArgs rest { a with metaImports := (i.splitOn ",").filter (· != "") }
   | "--table" :: p :: rest, a => parseArgs rest { a with table := p }
   | "--kind" :: k :: rest, a => parseArgs rest { a with kinds := a.kinds ++ [k] }
   | "--" :: rest, a => parseArgs rest a
@@ -785,7 +793,7 @@ def run (args : Args) : MetaM (Array String) := do
     | .ok t => pure t
     | .error e => throwError "{args.table}: {e}"
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake exe effect4gen Authoring --group " ++ args.group
+  let head := "lake exe effect4gen Authoring --group " ++ args.group ++ Tools.GeneratedStamp.moduleFlags args.moduleHeader args.metaImports
     ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
@@ -843,6 +851,8 @@ def Effect4Gen.Authoring.cli (argv : List String) : IO Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Authoring.lean"
     let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
+    let text := if args.moduleHeader then Tools.GeneratedStamp.moduleText args.metaImports text
+      else text
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

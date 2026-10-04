@@ -15,7 +15,12 @@
     "those paths for the host filesystem. Main prints forward-slash reproduction paths",
     "in the generated header, including when a checker redirects the output to a temporary file.",
     "",
-    "An applied type is one word with `@` for the space, so no shell ever splits it."
+    "An applied type is one word with `@` for the space, so no shell ever splits it.",
+    "",
+    "A group's `Flags` may hold `--module` (and `--meta-imports A,B`): the emitter writes the",
+    "file with the header of Lean's module system (decisions row 200), and a `meta import` of each",
+    "module whose code the appended guards run. Absent, the file keeps its bytes. The top-level",
+    "`VariancesFlags` does the same for tools/Tools/Variances.lean's core module."
   ],
   "groups": [
     {

@@ -1,5 +1,6 @@
 import Lean
 import Effect4.Store.Carrier.Digest
+import Tools.GeneratedStamp
 
 /-!
 # Tools.Variances — declaration-site variance, read off rc.112
@@ -705,6 +706,9 @@ def main (argv : List String) : IO Unit := do
   let leanImports := match argv.dropWhile (· != "--lean-import") with
     | _ :: i :: _ => [i]
     | _ => []
+  -- `--module` writes the core module with the header of Lean's module system (decisions row
+  -- 200); `scripts/generate.py` passes it when the manifest's `VariancesFlags` holds it
+  let moduleHeader := argv.contains "--module"
   let out := argv.head?.getD defaultOut
   let r ← read fun m => IO.FS.readFile ⟨s!"{root}/{m}.ts"⟩
   checkRedControls r
@@ -743,7 +747,8 @@ def main (argv : List String) : IO Unit := do
      ("declarations", Json.arr declRows.toArray)]
   IO.FS.writeFile ⟨out⟩ (doc.pretty 100 ++ "\n")
   if let some p := leanOut then
-    IO.FS.writeFile ⟨p⟩ (leanModule r leanNs leanImports)
+    let text := leanModule r leanNs leanImports
+    IO.FS.writeFile ⟨p⟩ (if moduleHeader then Tools.GeneratedStamp.moduleText [] text else text)
     IO.println s!"variances: the core module -> {p}"
   IO.println s!"variances: {r.decls.length} declarations \
     ({withVariance.length} declaring in/out) from {modules.length} modules -> {out}"

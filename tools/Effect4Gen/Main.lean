@@ -953,6 +953,11 @@ structure Args where
   /-- Stable reproduction target when a checker redirects the output to a temporary file. -/
   headerOut : Option String := none
   append : Option String := none
+  /-- `--module`: write the header of Lean's module system
+  (`Tools.GeneratedStamp.moduleText`). -/
+  moduleHeader : Bool := false
+  /-- `--meta-imports A,B`: under `--module`, the modules whose code the appended guards run. -/
+  metaImports : List String := []
   /-- `--kind <Type>=<kind>`, in the order given. -/
   kinds : List (String × String) := []
   types : List String := []
@@ -965,6 +970,9 @@ partial def parseArgs : List String → Args → Except String Args
   | "--out" :: o :: rest, a => parseArgs rest { a with out := some o }
   | "--header-out" :: o :: rest, a => parseArgs rest { a with headerOut := some o }
   | "--append" :: p :: rest, a => parseArgs rest { a with append := some p }
+  | "--module" :: rest, a => parseArgs rest { a with moduleHeader := true }
+  | "--meta-imports" :: i :: rest, a =>
+    parseArgs rest { a with metaImports := (i.splitOn ",").filter (· != "") }
   | "--kind" :: k :: rest, a =>
     match k.splitOn "=" with
     | [ty, kind] => if ty.isEmpty || kind.isEmpty then .error s!"--kind {k}: expected <Type>=<kind>"
@@ -981,7 +989,7 @@ def run (args : Args) : MetaM (Array String) := do
   let mut out : Out := {}
   -- The regenerating command, wrapped over `--`-comment lines so that no header line runs long.
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake exe effect4gen Main --group " ++ args.group
+  let head := "lake exe effect4gen Main --group " ++ args.group ++ Tools.GeneratedStamp.moduleFlags args.moduleHeader args.metaImports
     ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
@@ -1078,6 +1086,8 @@ def Effect4Gen.Main.cli (argv : List String) : IO Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Main.lean"
     let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
+    let text := if args.moduleHeader then Tools.GeneratedStamp.moduleText args.metaImports text
+      else text
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

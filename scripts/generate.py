@@ -60,6 +60,7 @@ ALL = ['variances', 'derived', 'eff', 'wire', 'cas', 'ts', 'readme']
 # module the same run writes: the declared variances `sub` reads at a nominal reference
 # (`Ty.argVariance`, decisions row 158).
 VARIANCES = 'tools/Effect4Gen/variances.json'
+MANIFEST = 'tools/Effect4Gen/manifest.json'
 TY_VARIANCE = 'src/Effect4/Program/TyVariance.lean'
 
 # The LCNF artefacts and their arguments. Until 2026-09-19 this list held the four paths and
@@ -151,8 +152,12 @@ def generate(families, output):
             temp.parent.mkdir(parents=True, exist_ok=True)
             core = out / TY_VARIANCE
             core.parent.mkdir(parents=True, exist_ok=True)
+            # The manifest's top-level `VariancesFlags` (absent: none) carries this producer's
+            # mode flags, as a group's `Flags` does: `--module` writes the core module with the
+            # header of Lean's module system (decisions row 200).
+            flags = json.loads((ROOT / MANIFEST).read_text()).get('VariancesFlags', [])
             run(['lake', 'env', 'lean', '-M4096', '--run',
-                 'tools/Tools/Variances.lean', str(temp), '--lean-out', str(core)])
+                 'tools/Tools/Variances.lean', str(temp), '--lean-out', str(core), *flags])
             install(temp, ROOT / VARIANCES, checking)
             install(core, ROOT / TY_VARIANCE, checking)
         if 'derived' in families:

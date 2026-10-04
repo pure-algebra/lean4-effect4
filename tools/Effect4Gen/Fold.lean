@@ -2555,6 +2555,11 @@ structure Args where
   out : Option String := none
   headerOut : Option String := none
   append : Option String := none
+  /-- `--module`: write the header of Lean's module system
+  (`Tools.GeneratedStamp.moduleText`). -/
+  moduleHeader : Bool := false
+  /-- `--meta-imports A,B`: under `--module`, the modules whose code the appended guards run. -/
+  metaImports : List String := []
   kinds : List (String × String) := []
   types : List String := []
   /-- Emit only the generic fold families of each (plain) block, into `ns` (probe U). -/
@@ -2569,6 +2574,9 @@ partial def parseArgs : List String → Args → Except String Args
   | "--out" :: o :: rest, a => parseArgs rest { a with out := some o }
   | "--header-out" :: o :: rest, a => parseArgs rest { a with headerOut := some o }
   | "--append" :: p :: rest, a => parseArgs rest { a with append := some p }
+  | "--module" :: rest, a => parseArgs rest { a with moduleHeader := true }
+  | "--meta-imports" :: i :: rest, a =>
+    parseArgs rest { a with metaImports := (i.splitOn ",").filter (· != "") }
   | "--extras" :: rest, a => parseArgs rest { a with extras := true }
   | "--namespace" :: n :: rest, a => parseArgs rest { a with ns := some n }
   | "--kind" :: k :: rest, a =>
@@ -2584,7 +2592,7 @@ partial def parseArgs : List String → Args → Except String Args
 def runExtras (args : Args) : MetaM (Array String) := do
   let ns := args.ns.getD "Effect4.Program"
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake exe effect4gen Fold --extras --group " ++ args.group
+  let head := "lake exe effect4gen Fold --extras --group " ++ args.group ++ Tools.GeneratedStamp.moduleFlags args.moduleHeader args.metaImports
     ++ " --imports " ++ String.intercalate "," args.imports ++ " --out " ++ outPath
     ++ (match args.ns with | some n => " --namespace " ++ n | none => "")
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
@@ -2638,7 +2646,7 @@ def run (args : Args) : MetaM (Array String) := do
 
   let mut lines : Array String := #[]
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
-  let head := "lake exe effect4gen Fold --group " ++ args.group
+  let head := "lake exe effect4gen Fold --group " ++ args.group ++ Tools.GeneratedStamp.moduleFlags args.moduleHeader args.metaImports
     ++ " --imports " ++ String.intercalate "," args.imports
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
@@ -2720,6 +2728,8 @@ def Effect4Gen.Fold.cli (argv : List String) : IO Unit := do
     let lines ← run args
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/Fold.lean"
     let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
+    let text := if args.moduleHeader then Tools.GeneratedStamp.moduleText args.metaImports text
+      else text
     match args.out with
     | some p => IO.FS.writeFile p text
     | none => IO.println text

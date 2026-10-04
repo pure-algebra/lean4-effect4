@@ -32,4 +32,36 @@ def trimBlankTail (lines : Array String) : Array String := Id.run do
     out := out.set! (out.size - 1) (String.ofList (last.toList.reverse.dropWhile (· == '\n')).reverse)
   return out
 
+/-- The flags that turn a generated file's module header on, as a generator's regenerate line
+spells them: nothing when the header is off, so a group without them keeps its bytes. -/
+def moduleFlags (moduleHeader : Bool) (metaImports : List String) : String :=
+  if moduleHeader then
+    " --module" ++ (if metaImports.isEmpty then "" else
+      " --meta-imports " ++ String.intercalate "," metaImports)
+  else ""
+
+/-- A generated file's text under Lean's module system (decisions row 200), written only under
+`--module`, which a manifest group turns on through its `Flags`. `module` goes after the leading
+comment lines. Each header `import` becomes `public import`, followed by one `meta import` per
+module in `metaImports`, the modules whose code the appended guards run. `@[expose] public section`
+goes after the module docstring that follows the header, or right after the header when none
+follows, and stays open to the end of the file. -/
+def moduleText (metaImports : List String) (text : String) : String :=
+  let ls := (text.splitOn "\n").toArray
+  let i := (ls.findIdx? fun l => !(l.startsWith "--" || l.isEmpty)).getD ls.size
+  let j := ((ls.extract i ls.size).findIdx? fun l => !l.startsWith "import ").map (i + ·)
+    |>.getD ls.size
+  let rest := ls.extract j ls.size
+  let k := (rest.findIdx? fun l => !l.isEmpty).getD rest.size
+  let cut :=
+    if (rest[k]?.map (·.startsWith "/-!")).getD false then
+      (((rest.extract k rest.size).findIdx? (·.endsWith "-/")).map (k + · + 1)).getD k
+    else k
+  let openSection :=
+    if cut == k then #["@[expose] public section", ""] else #["", "@[expose] public section"]
+  let header := #["module", ""] ++ (ls.extract i j).map ("public " ++ ·) ++
+    metaImports.toArray.map ("meta import " ++ ·)
+  String.intercalate "\n" (ls.extract 0 i ++ header ++ rest.extract 0 cut ++ openSection ++
+    rest.extract cut rest.size).toList
+
 end Tools.GeneratedStamp
