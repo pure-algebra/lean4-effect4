@@ -134,6 +134,15 @@ private def negativeCases : Array ReportCase := #[
     expected := #[#["fixture-claim", "E4-TEST-CE-003", "duplicate"]] },
   { label := "missing decision", registry := { base with cuts := [cut "fixture-one" 999] }
     expected := #[#["999", "unknown decision row"]] },
+  { label := "requirement without evidence or open part"
+    registry := { base with requirements := [{ id := "R0", title := "Fixture requirement", top := [] }] }
+    expected := #[#["requirement R0", "no top node and no open part"]] },
+  { label := "plan scope matching no module", registry := { base with planScope := [`Missing.Scope] }
+    expected := #[#["Missing.Scope", "matches no loaded module"]] },
+  { label := "duplicate requirement id"
+    registry := { base with requirements := [{ id := "R0", title := "A", top := [], openParts := ["x"] },
+                                             { id := "R0", title := "B", top := [], openParts := ["y"] }] }
+    expected := #[#["requirement R0", "duplicate"]] },
   { label := "plain definition is not a witness", registry := withPointer (.witness (fixtureName `semantics))
     expected := #[#["fixture-claim", "semantics", "not a theorem"]] },
   { label := "plain witness outside axiom ceiling", registry := withPointer (.witness `Classical.em)

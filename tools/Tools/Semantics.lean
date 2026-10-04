@@ -317,6 +317,17 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     | none =>
       let old := (unplaced.find? (·.1 == mod)).map (·.2) |>.getD 0
       unplaced := (unplaced.filter (·.1 != mod)).push (mod, old + 1)
+  -- A requirement with neither a node nor an open part would read as proved over nothing, and a
+  -- plan-scope prefix that matches no loaded module adds no goal silently: both are refused.
+  let mut reqIds : List String := []
+  for req in registry.requirements do
+    if reqIds.contains req.id then errors := errors.push s!"requirement {req.id}: duplicate id"
+    reqIds := req.id :: reqIds
+    if req.top.isEmpty && req.openParts.isEmpty then
+      errors := errors.push s!"requirement {req.id}: no top node and no open part"
+  for pre in registry.planScope do
+    unless env.header.moduleNames.any (pre.isPrefixOf ·) do
+      errors := errors.push s!"plan scope {pre}: matches no loaded module"
   -- The plan (`ProofGraph.Plan`): the ledger goals of the plan scope, the claims' witnesses and
   -- the requirements' top nodes are the nodes; the authored reductions become checked edges.
   let mut plan : Json := .null
