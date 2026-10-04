@@ -155,6 +155,16 @@ def claims() -> Counter:
     return counts
 
 
+def plan_next() -> str:
+    """The plan's next goals, as the semantics report renders them (`**Next goals** (N): …`)."""
+    for line in (ROOT / "generated/semantics.md").read_text().split("\n"):
+        match = re.match(r"\*\*Next goals\*\* \((\d+)\): ?(.*)", line)
+        if match:
+            names = [name.rsplit(".", 1)[-1] for name in match.group(2).split(", ") if name]
+            return f"{match.group(1)} next goal(s){': ' + ' '.join(names) if names else ''}"
+    return "no plan section"
+
+
 STATUS_WORDS = ("open", "ruled", "landed", "basis", "seeded", "repaired", "pinned", "retired", "closed")
 
 
@@ -293,6 +303,7 @@ def main() -> int:
 
     print(f"claims    {summarise(claims(), ('proved', 'absent', 'refuted', 'assumed', 'wanted'))}  (generated/semantics.md)")
     print(f"ledger    {ledger_goals()} open goal(s) (#proof_wanted)")
+    print(f"plan      {plan_next()}  (generated/semantics.md)")
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")
     print(f"issues    {summarise(design_issues(), ('open', 'ruled', 'basis'))}  (docs/DESIGN-ISSUES.md)")
     print(f"counterex {summarise(counterexamples(), ('seeded', 'repaired', 'pinned', 'retired'))}  (Test/Counterexamples/REGISTER.md)")

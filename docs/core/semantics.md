@@ -428,6 +428,16 @@ inductive RunDecision ...
 - **Finite queue fairness (`flush-fair`)**: Callback entry within rounds bound.
   `m.armed.Nodup → FlushReady interp fuel m.armed.length m = true → m.armed.length ≤ rounds → ∀ owner ∈ m.armed, FiredWithin interp fuel rounds m owner = true`
   (`flush_fair` (`src/Effect4/Laws/Machine/Scheduling.lean`)).
+- **Finite fair-tape endpoint (`fair-tape-drains-armed`)**: A fair finite tape that suffices leaves
+  no armed owner at its live end.
+  `FairTape interp fuel m tape → Suffices interp fuel tape m = true → (replayEval interp fuel tape m).machine.stuck = none → (replayEval interp fuel tape m).machine.armed = []`
+  (`fairTape_unarmed` (`src/Effect4/Laws/Machine/Scheduling.lean`)). It is the finite half of R12.
+  It says nothing about infinite tapes, termination or host progress. `flush_fair` permits
+  rearming, so it is not general scheduler fairness.
+- **Decision preservation (`decision-keeps-typed`)**: One tape decision keeps `J` when its host
+  answer, if any, is admitted (`decision_preserves`
+  (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`)). It is a premise node of M7's
+  plan edge.
 - **Step invariant lifting (`drivestate-lift`)**: Step invariant lifting for sequential command loops
   (`driveState_lift` (`src/Effect4/Laws/Machine/Lift.lean`)).
 - **Scheduler step preservation (`step-loop-preserves`, `step-deliver-preserves`)**: Preservation of `ConfigTyped`

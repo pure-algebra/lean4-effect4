@@ -4,6 +4,7 @@ import Tools.GeneratedStamp
 import Effect4.Laws.Auto.Semantics
 import ProofGraph.Ledger
 import ProofGraph.Axioms
+import ProofGraph.Plan
 
 /-! A measured report of selected claims. English claim-to-witness associations are authored;
 ProofGraph checks their actual propositions. This library neither proves the descriptions nor
@@ -187,6 +188,45 @@ private def claimStatus (memo : IO.Ref ProofGraph.AxiomMemo) (index : Registers)
 private def literatureJson (r : LiteratureRef) : Json :=
   obj [("work", text r.work), ("locator", text r.locator), ("relation", text r.relation)]
 
+/-- The plan's report section: the requirements with their derived statuses, the nodes reachable
+from their top nodes and every ledger goal, the checked and unchecked edges, the loose premises and
+the next goals (`ProofGraph.Plan`). -/
+private def planJson (plan : ProofGraph.Plan) (requirements : List Requirement) (scopes : List Name) :
+    MetaM Json := do
+  let env ← getEnv
+  let tops := requirements.foldl (init := #[]) fun acc r => acc ++ r.top.toArray
+  let reach := plan.reachable tops
+  let goals := (plan.nodes.filter (·.isGoal)).map (·.name)
+  let shown := plan.nodes.filter fun n => reach.contains n.name || n.isGoal
+  let mut nodes : Array Json := #[]
+  for n in shown do
+    let brought ← ProofGraph.broughtIn scopes plan n
+    nodes := nodes.push (obj [("name", text n.name.toString),
+      ("kind", text (if n.isGoal then "goal" else "theorem")),
+      ("status", text (plan.status n.name).word),
+      ("module", text (semanticsModule env n.name).toString),
+      ("broughtIn", obj [("nearest", toJson (brought.nearest.map Name.toString)),
+        ("lemmas", toJson brought.lemmas), ("definitions", toJson brought.definitions)])])
+  let edges := plan.edges.map fun e => obj [("target", text e.target.toString),
+    ("reduction", text e.reduction.toString), ("checked", toJson e.checked),
+    ("premises", toJson (e.premises.map fun m => obj [("premise", text m.premise),
+      ("node", match m.node with | some d => text d.toString | none => .null),
+      ("byHypothesis", toJson m.byHypothesis)]))]
+  let reqs := requirements.toArray.map fun r =>
+    let statuses := r.top.map plan.status
+    let word := if statuses.all (· == .proved) then "proved"
+      else if statuses.any (· == .ready) then "ready"
+      else if statuses.any (· == .reduced) then "reduced" else "declared"
+    obj [("id", text r.id), ("title", text r.title), ("status", text word),
+      ("top", toJson (r.top.map fun n =>
+        obj [("name", text n.toString), ("status", text (plan.status n).word)])),
+      ("reachable", toJson ((plan.reachable r.top.toArray).map Name.toString)),
+      ("next", toJson ((plan.next r.top.toArray).map Name.toString))]
+  let loose := plan.loose.map fun (t, r, premise) =>
+    obj [("target", text t.toString), ("reduction", text r.toString), ("premise", text premise)]
+  return obj [("requirements", toJson reqs), ("nodes", toJson nodes), ("edges", toJson edges),
+    ("loose", toJson loose), ("next", toJson ((plan.next (tops ++ goals)).map Name.toString))]
+
 /-- Validate and collect all located refusals. No status is accepted from authored input. -/
 def buildReport (registry : Registry) (registers : Registers) (toolchain : String) :
     MetaM (Except (Array String) Json) := do
@@ -275,6 +315,21 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     | none =>
       let old := (unplaced.find? (·.1 == mod)).map (·.2) |>.getD 0
       unplaced := (unplaced.filter (·.1 != mod)).push (mod, old + 1)
+  -- The plan (`ProofGraph.Plan`): the ledger goals of the plan scope, the claims' witnesses and
+  -- the requirements' top nodes are the nodes; the authored reductions become checked edges.
+  let mut plan : Json := .null
+  try
+    let mut nodes ← (← ProofGraph.goalsIn registry.planScope).mapM fun g => ProofGraph.Node.ofGoal g
+    let mut named : Array Name := #[]
+    for claim in registry.claims do
+      if let .witness w := claim.pointer then named := named.push w
+    for req in registry.requirements do named := named ++ req.top.toArray
+    for n in named do
+      unless nodes.any (·.name == n) do nodes := nodes.push (← ProofGraph.Node.ofName n)
+    let built ← ProofGraph.buildPlan nodes
+      (registry.reductions.toArray.map fun r => (r.target, r.reduction))
+    plan ← planJson built registry.requirements registry.planScope
+  catch ex => errors := errors.push s!"plan: {← ex.toMessageData.toString}"
   let concepts := registry.concepts.map fun concept =>
     let members := rows.filter (·.1 == concept.id)
     let counts := ("claims", toJson members.size) ::
@@ -285,7 +340,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
   if !errors.isEmpty then return .error errors
   unplaced := unplaced.qsort (·.1.toString < ·.1.toString)
   return .ok <| obj [
-    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (3 : Nat)),
+    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (4 : Nat)),
     ("producer", text (Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)")),
     ("command", text "make gen-semantics"),
     ("inputs", toJson (["tools/Tools/SemanticsRegistry.lean", "tools/Tools/Semantics.lean",
@@ -295,7 +350,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     ("provenance", obj [("toolchain", text toolchain), ("roots", names registry.roots),
       ("policy", obj [("gate", text "Test/Audit/AxiomGate.lean"),
         ("ceiling", toJson (["propext", "Quot.sound"] : List String))])]),
-    ("concepts", toJson concepts), ("claims", toJson (rows.map (·.2.2))), ("cuts", toJson cuts),
+    ("concepts", toJson concepts), ("claims", toJson (rows.map (·.2.2))), ("cuts", toJson cuts), ("plan", plan),
     ("placement", obj [
       ("universe", text "theorems of the registry's concept-named modules; auxiliary names, ledger goals and their checked witnesses excluded"),
       ("declarations", toJson placements),
@@ -337,6 +392,53 @@ private def cell (s : String) : String := s.replace "|" "\\|" |>.replace "\n" " 
 
 /-- Display a validated report. Generated statements/statuses have one owner; handwritten
 language explanations live in docs/core. Code fences are longer than any statement run. -/
+private def shortName (name : String) : String := (name.splitOn ".").getLast!
+
+/-- The plan section: the requirements table, the next goals, the loose premises, and one Mermaid
+diagram per requirement over the nodes it reaches. -/
+private def renderPlan (plan : Json) : String := Id.run do
+  if plan == .null then return ""
+  let nodes := array plan "nodes"
+  let statusOf (name : String) : String :=
+    ((nodes.find? (field · "name" == name)).map (field · "status")).getD "declared"
+  let mut out := "\n## Plan\n\nThe requirements that have plan nodes. A node is a ledger goal or a proved theorem; an edge is an authored reduction whose implication from its premise nodes to its target the kernel checked within the semantic ceiling (`tools/ProofGraph/Plan.lean`). Statuses are derived: declared, reduced, ready, proved. A loose premise is one no node discharges; it keeps its target from being ready.\n\n"
+  out := out ++ "| Requirement | Status | Top nodes | Next goals |\n| --- | --- | --- | --- |\n"
+  for req in array plan "requirements" do
+    let tops := String.intercalate ", " ((array req "top").toList.map fun t =>
+      s!"`{shortName (field t "name")}` ({field t "status"})")
+    let next := (nested req "next").getArr?.toOption.getD #[]
+    let nextText := if next.isEmpty then "—" else
+      String.intercalate ", " (next.toList.map fun n => s!"`{shortName (n.getStr?.toOption.getD "")}`")
+    out := out ++ s!"| {field req "id"} | {field req "status"} | {tops} | {nextText} |\n"
+  let next := (nested plan "next").getArr?.toOption.getD #[]
+  out := out ++ s!"\n**Next goals** ({next.size}): {String.intercalate ", " (next.toList.map fun n => n.getStr?.toOption.getD "")}\n"
+  let loose := array plan "loose"
+  unless loose.isEmpty do
+    out := out ++ s!"\n**Loose premises** ({loose.size}):\n\n"
+    for l in loose do
+      out := out ++ s!"- `{shortName (field l "target")}` via `{shortName (field l "reduction")}`: `{cell (field l "premise")}`\n"
+  for req in array plan "requirements" do
+    let reach := ((nested req "reachable").getArr?.toOption.getD #[]).toList.map fun n => n.getStr?.toOption.getD ""
+    out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n```mermaid\nflowchart LR\n"
+    for (n, i) in reach.zipIdx do
+      out := out ++ s!"  n{i}[\"{shortName n}<br/>{statusOf n}\"]\n"
+    for e in array plan "edges" do
+      let some src := reach.idxOf? (field e "target") | continue
+      for m in array e "premises" do
+        let dst := field m "node"
+        if let some j := reach.idxOf? dst then
+          let arrow := if (e.getObjValAs? Bool "checked").toOption == some true then "-->" else "-.->"
+          out := out ++ s!"  n{src} {arrow}|\"{shortName (field e "reduction")}\"| n{j}\n"
+    out := out ++ "```\n\n| Node | Status | Nearest nodes | Lemmas | Definitions |\n| --- | --- | --- | --- | --- |\n"
+    for n in reach do
+      let some node := nodes.find? (field · "name" == n) | continue
+      let b := nested node "broughtIn"
+      let nearest := ((nested b "nearest").getArr?.toOption.getD #[]).toList.map fun d =>
+        s!"`{shortName (d.getStr?.toOption.getD "")}`"
+      let count (key : String) := ((b.getObjValAs? Nat key).toOption.getD 0)
+      out := out ++ s!"| `{shortName n}` | {statusOf n} | {if nearest.isEmpty then "—" else String.intercalate ", " nearest} | {count "lemmas"} | {count "definitions"} |\n"
+  return out
+
 def renderMarkdown (report : Json) : String := Id.run do
   let inputs := String.intercalate ", " ((array report "inputs").toList.map fun value => value.getStr?.toOption.getD "")
   let mut out := s!"<!-- {field report "producer"}\nformat: {field report "format"} v{(nested report "schemaVersion").compress}\ncommand: {field report "command"}\ninputs: {inputs}\n-->\n# Semantics evidence\n\n"
@@ -387,5 +489,6 @@ def renderMarkdown (report : Json) : String := Id.run do
   let tagged := declarations.filter (field · "placement" == "tagged")
   let inherited := declarations.filter (field · "placement" == "inherited")
   out := out ++ s!"\n## Placement\n\n{field placement "universe"}\n\nTagged: {tagged.size}; inherited (provisional): {inherited.size}; unplaced: {(nested placement "unplacedCount").compress}.\n"
+  out := out ++ renderPlan (nested report "plan")
   return out
 end Tools.Semantics

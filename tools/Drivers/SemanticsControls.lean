@@ -197,7 +197,8 @@ private def checkPositive : MetaM Unit := do
   let placements ← arrayField (← field report "placement") "declarations"
   for (suffix, concept, kind) in #[("firstWitness", "fixture-one", "tagged"),
                                   ("secondWitness", "fixture-two", "tagged"),
-                                  ("untaggedWitness", "fixture-one", "inherited")] do
+                                  ("untaggedWitness", "fixture-one", "inherited"),
+                                  ("eq_cata", "fixture-one", "inherited")] do
     let placed ← named placements "name" s!"{fixtureModule}.{suffix}"
     expectString placed "concept" concept
     expectString placed "placement" kind

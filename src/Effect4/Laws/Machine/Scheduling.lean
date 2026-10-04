@@ -439,4 +439,27 @@ def FairTape (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
         Suffices interp fuel (pre ++ before) m = true ∧
         Services interp fuel (replayEval interp fuel (pre ++ before) m).machine owner decision = true
 
+/-- **A fair finite tape leaves nothing armed at its live end** (R12-a, the finite endpoint
+consequence): when the whole tape suffices and its replay is not stuck, `FairTape` at the split
+`tape ++ []` asks each armed owner for a later servicing decision inside the empty suffix, so no
+owner is armed. Concept `reactive-scheduling`, claim `fair-tape-drains-armed`. Reach: one finite
+tape, at any interpreter and fuel. It does not establish liveness on infinite tapes, termination,
+host progress, general scheduler fairness (`flush_fair` permits rearming), or that the frontier
+names the remaining waits (R12-b). It serves R12 as the finite half of "liveness under
+`FairTape`". -/
+theorem fairTape_unarmed (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+    (m : RunMachine ν σ β ε δ ι α χ St) (tape : List (RunDecision ν σ β ε δ ι α))
+    (fair : FairTape interp fuel m tape) (enough : Suffices interp fuel tape m = true)
+    (live : (replayEval interp fuel tape m).machine.stuck = none) :
+    (replayEval interp fuel tape m).machine.armed = [] := by
+  match h : (replayEval interp fuel tape m).machine.armed with
+  | [] => rfl
+  | owner :: _ =>
+    have armed : owner ∈ (replayEval interp fuel tape m).machine.armed := by
+      rw [h]
+      exact List.mem_cons_self
+    obtain ⟨before, decision, after, split, _, _⟩ :=
+      fair tape [] (List.append_nil tape).symm enough live owner armed
+    cases before <;> cases split
+
 end Effect4.Machine.Scheduling

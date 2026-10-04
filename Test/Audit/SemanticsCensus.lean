@@ -6,6 +6,9 @@ namespace Test.Audit.SemanticsCensus
 @[semantics "fixture-one"] theorem firstWitness : True := True.intro
 @[semantics "fixture-two"] theorem secondWitness : 1 = 1 := rfl
 theorem untaggedWitness : True := True.intro
+-- An authored name that begins with `eq_` is counted: the population is decided by Lean's own
+-- auxiliary predicates (`ProofGraph.isAuxiliary`), not by spelling.
+theorem eq_cata : True := True.intro
 
 -- The attribute keyword stays available as an ordinary identifier.
 def semantics : Nat := 1
@@ -31,7 +34,8 @@ attribute [semantics "fixture-one"] Nat.add_comm
 info: semantics census
 fixture-one	Test.Audit.SemanticsCensus.firstWitness	theorem	#[]
 fixture-two	Test.Audit.SemanticsCensus.secondWitness	theorem	#[]
-untagged: 1 theorems in 1 modules (universe: Test.Audit.SemanticsCensus)
+untagged: 2 theorems in 1 modules (universe: Test.Audit.SemanticsCensus)
+Test.Audit.SemanticsCensus	Test.Audit.SemanticsCensus.eq_cata
 Test.Audit.SemanticsCensus	Test.Audit.SemanticsCensus.untaggedWitness
 -/
 #guard_msgs in

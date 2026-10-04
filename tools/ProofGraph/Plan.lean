@@ -1,5 +1,6 @@
 import ProofGraph.Ledger
 import ProofGraph.Search
+import ProofGraph.Population
 
 /-!
 # The planning graph
@@ -309,6 +310,51 @@ def closeReady (p : Plan) (name : Name) : MetaM ProofRef := do
       | throwError "plan: premise {n} has no proof"
     proof := mkApp proof (mkConst premise us)
   addTheorem (name ++ `checked) node.levels node.proposition (← instantiateMVars proof)
+
+/-- What a proved node's proof brings in, walked from its proof and stopping at nodes
+(LeanArchitect's `CollectUsed.collect` semantics, on an explicit stack): the nodes it reaches
+first, and the declarations of the tree (modules a prefix in `scopes` selects) it passes through
+on the way, theorems and definitions apart. An instance counts as the definition it is: the
+instance table is an extension that an environment imported without its extensions does not fill.
+Auxiliaries (`isAuxiliary`) are walked through and not counted. Aesop rule banks leave no trace in
+a proof term; the banks a proof called come from its syntax. -/
+structure BroughtIn where
+  nearest : Array Name := #[]
+  lemmas : Nat := 0
+  definitions : Nat := 0
+  deriving Inhabited
+
+def broughtIn (scopes : List Name) (p : Plan) (node : Node) : MetaM BroughtIn := do
+  let env ← getEnv
+  let some proof := node.proof | return {}
+  let some info := env.find? proof | return {}
+  let isNode (c : Name) : Bool := c != node.name && c != proof &&
+    p.nodes.any fun n => n.name == c || n.proof == some c
+  let inTree (c : Name) : Bool := match env.getModuleIdxFor? c with
+    | some i => scopes.any (·.isPrefixOf env.header.moduleNames[i.toNat]!)
+    | none => false
+  let mut out : BroughtIn := {}
+  let mut seen : Std.HashSet Name := {}
+  let mut stack := (info.value? (allowOpaque := true)).map (·.getUsedConstants) |>.getD #[]
+  -- each constant is entered once; the bound is a loop bound
+  for _ in [0:10000000] do
+    let some c := stack.back? | break
+    stack := stack.pop
+    if seen.contains c then continue
+    seen := seen.insert c
+    if isNode c then
+      let target := (p.nodes.find? fun n => n.name == c || n.proof == some c).get!.name
+      unless out.nearest.contains target do out := { out with nearest := out.nearest.push target }
+      continue
+    unless inTree c do continue
+    let some ci := env.find? c | continue
+    unless isAuxiliary env c do
+      match ci with
+      | .thmInfo _ => out := { out with lemmas := out.lemmas + 1 }
+      | .defnInfo _ | .opaqueInfo _ => out := { out with definitions := out.definitions + 1 }
+      | _ => pure ()
+    stack := stack ++ ci.type.getUsedConstants ++ ((ci.value? (allowOpaque := true)).map (·.getUsedConstants) |>.getD #[])
+  return out
 
 /-- One line per edge and status, for the editor and the receipts. -/
 def Plan.describe (p : Plan) (tops : Array Name) : MetaM String := do

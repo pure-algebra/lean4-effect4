@@ -199,11 +199,16 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 # loaded roots and rendered once. Pure Lean, no host; the JSON form is a build artifact under
 # .lake/gen/semantics-report. It reads no other generation group, so it is a hermetic group of
 # its own and `check-gen` holds its drift like any other committed generated file.
+# The registry's two Test roots are loaded beside Effect4.Laws (`registry.roots`), so their traces
+# are inputs too, and the plan reads the ProofGraph modules.
+SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
+  .lake/build/lib/lean/Test/Program/ProtocolPosts.trace
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
+  $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
-$(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) | build
-	$(LAKE) build semantics-report
+$(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) $(SEMANTICS_ROOTS) | build
+	$(LAKE) build semantics-report Test.Program.TypedProgBindRed Test.Program.ProtocolPosts
 	rm -rf $(GEN)/semantics-report && mkdir -p $(GEN)/semantics-report
 	$(LAKE) exe semantics-report $(GEN)/semantics-report
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md

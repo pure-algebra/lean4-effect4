@@ -69,11 +69,31 @@ structure Cut where
   reason : String
 deriving Repr, Inhabited
 
+/-- A requirement row of the system map (`docs/core/system-map.md` §8) with the plan nodes that
+state it in Lean: ledger goals or proved theorems. Its status is derived from theirs. -/
+structure Requirement where
+  id : String                     -- the row, `R1` … `R13`
+  title : String
+  top : List Name
+deriving Repr, Inhabited
+
+/-- An authored reduction: the conditional theorem `reduction` reduces the plan node `target`
+(`ProofGraph.Plan`). The association is authored; the edge is kernel-checked, never trusted. -/
+structure Reduction where
+  target : Name
+  reduction : Name
+deriving Repr, Inhabited
+
 structure Registry where
   roots : List Name               -- loaded with `importModules`; stated in the report
   concepts : List Concept
   claims : List Claim
   cuts : List Cut
+  /-- the requirements with plan nodes, in the system map's order -/
+  requirements : List Requirement := []
+  reductions : List Reduction := []
+  /-- module prefixes whose ledger goals join the plan as nodes -/
+  planScope : List Name := []
 deriving Repr, Inhabited
 
 def registry : Registry where
@@ -348,6 +368,12 @@ def registry : Registry where
     { id := "scheduler-progress", concept := "reactive-scheduling", role := .progress
       title := "Operational progress with successor transitions or live frontier classification"
       pointer := .absent "Operational progress is an open obligation; machineTyped_not_halted provides an invariant consequence (stuck = none) without successor existence" },
+    { id := "fair-tape-drains-armed", concept := "reactive-scheduling", role := .adequacy
+      title := "A fair finite tape that suffices leaves no armed owner at its live end (R12-a: the finite endpoint consequence of FairTape's final prefix; not general fairness, not infinite tapes)"
+      pointer := .witness `Effect4.Machine.Scheduling.fairTape_unarmed },
+    { id := "decision-keeps-typed", concept := "reactive-scheduling", role := .preservation
+      title := "M6b: one tape decision keeps J when its host answer, if any, is admitted"
+      pointer := .witness `Effect4.Program.Typed.decision_preserves },
     { id := "fair-scheduling", concept := "reactive-scheduling", role := .adequacy
       title := "Progress under weak fairness"
       pointer := .absent "Weak fairness progress is open (R12; decisions row 86)"
@@ -639,5 +665,15 @@ def registry : Registry where
       excluded := "open requirement rows: M7Fragment enforces rootTy.requires = empty"
       reason := "rc.112 runs closed rows (Effect.ts:17494-17497)" }
   ]
+  requirements := [
+    { id := "R9", title := "Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)"
+      top := [`Effect4.Program.Typed.m7_proved] },
+    { id := "R12", title := "Frontiers name what they await: so far the finite fair-tape endpoint (R12-a)"
+      top := [`Effect4.Machine.Scheduling.fairTape_unarmed] }
+  ]
+  reductions := [
+    { target := `Effect4.Program.Typed.m7_proved, reduction := `Effect4.Program.Typed.m7_of_ledger }
+  ]
+  planScope := [`Effect4]
 
 end Tools.Semantics

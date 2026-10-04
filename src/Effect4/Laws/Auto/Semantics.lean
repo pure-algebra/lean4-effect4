@@ -1,4 +1,5 @@
 import Lean
+import ProofGraph.Population
 
 /-!
 Concept placement metadata for declarations, separate from claims and proof status.
@@ -32,19 +33,6 @@ initialize semanticsAttribute : ParametricAttribute String ← do
   cell.set (some attr)
   return attr
 
-/-- Same auxiliary-name population as Tools.Architecture.isNoise; that executable cannot be
-imported here. Kept here once for both the command and the report producer. -/
-def semanticsNoise (n : Name) : Bool :=
-  n.isInternal || n.hasMacroScopes || n.components.any fun c =>
-    match c with
-    | .str _ s =>
-      s.startsWith "_" || s.startsWith "match_" || s.startsWith "proof_" || s.startsWith "eq_" ||
-        s == "rec" || s == "recOn" || s == "casesOn" || s == "below" || s == "brecOn" ||
-        s == "binductionOn" || s == "ibelow" || s == "noConfusion" || s == "noConfusionType" ||
-        s == "inj" || s == "injEq" || s == "sizeOf_spec" || s.startsWith "instSizeOf" ||
-        s == "ctorIdx" || s == "ctorElim"
-    | _ => true
-
 private def goalMarker : Expr → Bool
   | .forallE _ _ body _ => goalMarker body
   | e => e.isAppOfArity `ProofGraph.Obligation 1
@@ -59,7 +47,7 @@ an actual obligation marker. Population selection is owned by the caller. -/
 def semanticsTheorems (env : Environment) : Array Name :=
   (env.constants.toList.filterMap fun (name, ci) => do
     let .thmInfo info := ci | none
-    if semanticsNoise name || goalMarker info.type then none else do
+    if ProofGraph.isAuxiliary env name || goalMarker info.type then none else do
       if name.getString! == "checked" then
         if let some parent := env.find? name.getPrefix then
           if goalMarker parent.type then return ← none

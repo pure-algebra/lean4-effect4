@@ -229,7 +229,10 @@ of §5, which keeps the generated sugar inside the proofs.
 ## 8. What a full program must satisfy: the requirements (2026-10-01)
 
 Each requirement is a theorem shape over the open signature of §1.1, not a capability. **Status
-lives in this table only**; a basis row or a note that needs it links here. The shapes and their
+lives in this table only**; a basis row or a note that needs it links here. A requirement with plan
+nodes also has a derived status, in the plan section of `generated/semantics.md`. The plan reads it
+from the ledger goals and theorems the registry names (`tools/ProofGraph/Plan.lean`). Where the two differ,
+the derived status holds and this table is stale. The shapes and their
 pedigree are in the model probe's synthesis (§2.2, §3.1) as Codex's audit amended them (§1–§6);
 the detail of each lives with the owner named. Status words are the document's: proved, exists,
 open.
