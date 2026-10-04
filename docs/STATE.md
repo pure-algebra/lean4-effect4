@@ -45,8 +45,19 @@ projects (`vendor/refs/MANIFEST.tsv`). What landed on this branch:
   shows a derived status, the open parts, the next goals and a Mermaid graph. Per proved node it
   shows what the proof brings in. R9's M7 is the first edge (`m7_of_ledger`); R9 and R12 stay open through
   their listed open parts.
-- **R12-a** (`fairTape_unarmed`): a fair finite tape that suffices leaves nothing armed at its
-  live end. It is the finite endpoint only.
+- **All thirteen requirement rows** are plan rows, each with its checked top nodes and its open
+  parts. Four stale cells of the system map's §8 (R1, R2, R3, R6) were corrected with evidence.
+- **Proofs.**
+  - R12-a (`fairTape_unarmed`): a fair finite tape that suffices leaves nothing armed at its live
+    end. It is the finite endpoint only.
+  - `build_total` restored (decisions row 147's first half).
+  - Meaning, loop and run soundness at an application's signature (R1, `SoundAnySignature.lean`).
+  - Every shared form has its typing lemma (R10, `Laws/Codegen/Forms.lean`).
+- **`E4-SCHED-CE-021`**: a live frontier names no reason while work is armed. Decisions row 201
+  proposes the repair.
+- **`#extract_obligations`**: a proof sketch's open goals become ledger goals, and the sketch the
+  checked reduction.
+- **The battery is green again** after the data wave (the `formed` field, the native alphabet).
 - **One population filter** (`ProofGraph.isAuxiliary`) for the census, the report and the
   architecture map. The old string filter dropped authored theorems such as `eq_cata`.
 - **`make check-kernel`** (the sweep tier): every compiled declaration replayed through the

@@ -40,6 +40,7 @@ import Effect4.Laws.Program.Typed.RecordOperations
 import Effect4.Laws.Program.ScopedTyping
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Provision
+import Effect4.Laws.Program.BuildTotal
 import Effect4.Laws.Program.Template
 import Effect4.Laws.Program.Residual
 import Effect4.Laws.Program.Decision
@@ -97,6 +98,7 @@ import Effect4.Laws.Program.Typed.PositionGate
 import Effect4.Laws.Program.Typed.TypedStateDecl
 import Effect4.Laws.Auto.Frames
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Auto.BankCensus
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Effects.Sum
@@ -156,6 +158,7 @@ import Effect4.Laws.Program.Typed.HostWalk
 import Effect4.Laws.Program.Typed.LayerArm
 import Effect4.Laws.Program.Typed.Body
 import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.SoundAnySignature
 import Effect4.Laws.Auto.AnswerGate
 import Effect4.Laws.Machine.Handshake
 import Effect4.Laws.Machine.Keeps

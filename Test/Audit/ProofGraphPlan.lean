@@ -1,4 +1,5 @@
 import ProofGraph.Plan
+import ProofGraph.Extract
 import Effect4.Laws.Program.Typed.Commands.Clauses.All
 
 /-!
@@ -47,6 +48,7 @@ next goals: [Test.ProofGraphPlan.leafA, Test.ProofGraphPlan.leafB]
 theorem leafA.checked : ∀ n, A n := fun _ => rfl
 theorem leafB.checked : ∀ n, B n := fun _ => rfl
 
+-- The printed closing command is the one run below: applied in full and kernel-checked.
 /--
 info: Test.ProofGraphPlan.top: ready
   via Test.ProofGraphPlan.top_of (checked)
@@ -55,6 +57,7 @@ info: Test.ProofGraphPlan.top: ready
 Test.ProofGraphPlan.leafA: proved
 Test.ProofGraphPlan.leafB: proved
 next goals: [Test.ProofGraphPlan.top]
+close Test.ProofGraphPlan.top with: #obligation_close Test.ProofGraphPlan.top via Test.ProofGraphPlan.top_of for Test.ProofGraphPlan.top
 -/
 #guard_msgs in
 #plan_status top via top_of for top
@@ -140,5 +143,60 @@ info: 'Test.ProofGraphPlan.m7Goal.checked' depends on axioms: [propext, Quot.sou
 -/
 #guard_msgs in
 #print axioms m7Goal.checked
+
+-- 5. Extraction: a proof sketch's holes become ledger goals, and the sketch the checked
+-- reduction. The plan then walks the goal from reduced through ready to proved.
+theorem sketched : Obligation (∀ n, C n) := ⟨⟩
+
+/--
+info: Test.ProofGraphPlan.sketched: 2 part(s), reduced by Test.ProofGraphPlan.sketched.reduce
+  Test.ProofGraphPlan.sketched.part1 : ∀ (n : Nat), A n
+  Test.ProofGraphPlan.sketched.part2 : ∀ (n : Nat), B n
+-/
+#guard_msgs in
+#extract_obligations sketched using
+  intro n
+  refine ⟨?_, ?_⟩
+
+/--
+info: Test.ProofGraphPlan.sketched: reduced
+  via Test.ProofGraphPlan.sketched.reduce (checked)
+    Test.ProofGraphPlan.sketched.part1 ⊢ ∀ (n : Nat), A n
+    Test.ProofGraphPlan.sketched.part2 ⊢ ∀ (n : Nat), B n
+Test.ProofGraphPlan.sketched.part1: declared
+Test.ProofGraphPlan.sketched.part2: declared
+next goals: [Test.ProofGraphPlan.sketched.part1, Test.ProofGraphPlan.sketched.part2]
+-/
+#guard_msgs in
+#plan_status sketched via sketched.reduce for sketched
+
+theorem sketched.part1.checked : ∀ n, A n := fun _ => rfl
+theorem sketched.part2.checked : ∀ n, B n := fun _ => rfl
+
+#obligation_close sketched via sketched.reduce for sketched
+
+/--
+info: 'Test.ProofGraphPlan.sketched.checked' does not depend on any axioms
+-/
+#guard_msgs in
+#print axioms sketched.checked
+
+-- A script that reports an error is refused, never extracted from.
+theorem broken : Obligation (∀ n, C n) := ⟨⟩
+
+/-- error: extract: the script reported an error; extraction needs a script that elaborates -/
+#guard_msgs (error) in
+#extract_obligations broken using
+  intro n
+  exact ⟨?_, ?_⟩
+
+-- A script that leaves nothing open is refused: the goal is proved directly instead.
+theorem direct : Obligation (∀ n, A n) := ⟨⟩
+
+/-- error: extract: the script closes Test.ProofGraphPlan.direct; prove it with #obligation_proved -/
+#guard_msgs in
+#extract_obligations direct using
+  intro n
+  rfl
 
 end Test.ProofGraphPlan

@@ -298,7 +298,7 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   `typeOfProgram root.sig root.prog = some ty → TypedProg root w ty (denoteR root)`
   (`denoteR_typed` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)), proved at every source by
   `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`); the load
-  (`load-typed`, `typedState_load`, `Assembly.lean:1674`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
+  (`load-typed`) by `loadsTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`), through
   the load connector whose race-marker premise the root code's typing discharges
   (`loadsTyped_of_denotesTyped_typed`, `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
   The displayed implication abbreviates the premises of `DenotesTyped`. They are well-formed layer
@@ -338,6 +338,8 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   (`src/Effect4/Laws/Program/Typed/Commands/Finish.lean`) discharges the marker premise, and a
   checked layer-free program loads into `J` (`loadsTyped_of_layerFree`,
   `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
+
+The `sound-at-app-signature` claim carries `meaning_typed`, `run_typed` and `meaningB_typed` to an application's signature: any table, service declarations at fresh codes (`src/Effect4/Laws/Program/SoundAnySignature.lean`). A looped program is a program of the built-in signature, so C3's reflection (`effTy_restrict`) transfers its typing.
 
 The `straight-meaning-typed` claim requires `Straight e = true` and successful native program typing in the empty environment.
 `Denote.meaning_typed` establishes `ExitHasTy` at the resulting stores, starting from empty stores.
@@ -714,6 +716,10 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
   (`provide_discharges` (`src/Effect4/Program/Provision.lean`)).
 - **Closed layer composition (`provide-closed`)**: Composing closed layers yields closed requirements.
   (`provide_closed` (`src/Effect4/Program/Provision.lean`)).
+- **Build totality (`build-total`)**: Under a typed leaf semantics, a layer the checker types
+  builds under every context that satisfies its requirement row, and the built context satisfies
+  its output row (`build_total` (`src/Effect4/Laws/Program/BuildTotal.lean`), restored under
+  decisions row 147). The machine's build refining `build` is the row's other half, still owed.
 - **Layer sharing invariants (`layer-sharing-contract`)**: Dynamic layer memoization and sharing invariants
   (`LayerSharingContract.lean`).
 

@@ -194,6 +194,8 @@ import Test.Audit.FrameRules
 import Test.Audit.ProofGraph
 import Test.Audit.ProofGraphPlan
 import Test.Audit.ProofStyle
+import Test.Machine.StoreKernelBank
+import Test.Counterexamples.Machine.Runtime.ArmedFrontier
 import Test.Audit.Obligations
 import Test.Audit.SemanticsCensus
 import Test.Program.TypeAlgebraContract

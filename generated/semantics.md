@@ -75,6 +75,7 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | instantiated-formation | compatibility | proved | Effect4.Program.rowTy_instantiated_formed | yes |  |
 | seq-typed | compatibility | proved | Effect4.Program.Typed.seq_typed | yes |  |
 | close-typed | preservation | proved | Effect4.Program.Typed.close_typed | yes |  |
+| sound-at-app-signature | compatibility | proved | Effect4.Program.Denote.run_typed_app | yes |  |
 | straight-meaning-typed | fundamentalProperty | proved | Effect4.Program.Denote.meaning_typed | yes |  |
 | denote-typed | fundamentalProperty | proved | Effect4.Program.Typed.denotesTyped | yes | E4-TYPED-CE-020, E4-TYPED-CE-021, E4-TYPED-CE-022, E4-TYPED-CE-023, E4-TYPED-CE-031 |
 | rebuild-admission | compatibility | proved | Effect4.Program.Authoring.rebuild_spec | yes |  |
@@ -138,6 +139,26 @@ Literature: ATTAPL, ch. 3, pp. 87–136 — adaptedResult
 ```
 
 Literature: deVilhenaPottier2021, audit P8 — proofTechnique
+
+**sound-at-app-signature**
+
+```lean
+∀ (t : Effect4.Program.RowTable) (s : List (Prod Effect4.ServiceKey Effect4.Program.Ty)),
+  (∀ (entry : Prod Effect4.ServiceKey Effect4.Program.Ty),
+      List.instMembership.mem s entry → { rows := t }.FreshCode entry) →
+    ∀ (e : Effect4.Program.NativeEff) (ty : Effect4.Program.EffTy) (fuel : Nat),
+      Eq (Effect4.Program.Denote.Straight e) Bool.true →
+        Eq (Effect4.Program.effTy { rows := t, services := s }.signature List.nil e)
+            (Option.some ty) →
+          instLENat.le (Effect4.Program.Agreement.depth e) fuel →
+            instLENat.le (instHAdd.hAdd (instHMul.hMul 2 (Effect4.Program.Agreement.steps e)) 6)
+                fuel →
+              And (Eq (Effect4.Api.run e fuel).outcome Effect4.Api.Outcome.finished)
+                (Exists fun ex =>
+                  And (Eq (Effect4.Api.run e fuel).exit (Option.some ex))
+                    (Effect4.Program.Denote.ExitHasTy ty.answer ty.error
+                      (Effect4.Api.run e fuel).stores ex))
+```
 
 **straight-meaning-typed**
 
@@ -881,6 +902,7 @@ Context Requirements: Graded coeffects, requirement rows, and layer discharge
 | emission-requirements-complete | compatibility | proved | Effect4.Codegen.ModuleEmission.annotation_complete | yes |  |
 | provide-discharges | preservation | proved | Effect4.Program.Provision.LayerTy.provide_discharges | yes |  |
 | provide-closed | fundamentalProperty | proved | Effect4.Program.Provision.LayerTy.provide_closed | yes |  |
+| build-total | progress | proved | Effect4.Program.Provision.build_total | yes |  |
 
 ### Printed statements
 
@@ -962,6 +984,20 @@ Literature: Leijen2014, audit P22 — adaptedResult
 ```lean
 ∀ (s t : Effect4.Program.LayerTy),
   t.Closed → Effect4.Row.Subset s.requires t.out → (s.provide t).Closed
+```
+
+**build-total**
+
+```lean
+∀ {Op : Type} (sig : Effect4.Program.Signature Op) (sem : Effect4.Program.Provision.LeafSem Op),
+  Effect4.Program.Provision.LeafSem.Typed sig sem →
+    ∀ (l : Effect4.Program.LayerTerm Op) (t : Effect4.Program.LayerTy)
+      (ctx : Effect4.Machine.Env.Ctx),
+      Eq (Effect4.Program.layerTy sig l) (Option.some t) →
+        Effect4.Machine.Env.Context.Satisfies ctx t.requires →
+          Exists fun out =>
+            And (Eq (Effect4.Program.Provision.build sem l ctx) (Option.some out))
+              (Effect4.Machine.Env.Context.Satisfies out t.out)
 ```
 
 ## host-session-protocol
@@ -1394,10 +1430,201 @@ A requirement with an open part not yet stated as a plan node is open, whatever 
 
 | Requirement | Status | Top nodes | Next goals |
 | --- | --- | --- | --- |
+| R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved) | — |
+| R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — |
+| R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved) | — |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | — |
+| R5 | open | `build_total` (proved) | — |
+| R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | — |
+| R7 | open | — | — |
+| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | — |
 | R9 | open | `m7_proved` (proved) | — |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | — |
+| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | — |
 | R12 | open | `fairTape_unarmed` (proved) | — |
+| R13 | open | `journal_replays` (proved) | — |
 
 **Next goals** (0): 
+
+### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
+
+- Open: admission pinned to the built-in signature: AdmittedProgram and code generation's admission check at nativeSignature table (decisions row 21, ruled 2026-10-01: thread it in the Σ_app slice)
+- Open: the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the Σ_app slice; C7, conditional on decisions row 115)
+- Open: meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)
+- Open: structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)
+
+```mermaid
+flowchart LR
+  n0["check_sound<br/>proved"]
+  n1["check_complete<br/>proved"]
+  n2["admitSig_ok_iff<br/>proved"]
+  n3["meaning_typed_app<br/>proved"]
+  n4["run_typed_app<br/>proved"]
+  n5["meaningB_typed_app<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `check_sound` | proved | — | 133 | 217 |
+| `check_complete` | proved | — | 68 | 220 |
+| `admitSig_ok_iff` | proved | — | 44 | 151 |
+| `meaning_typed_app` | proved | `check_restrict`, `meaning_typed` | 75 | 331 |
+| `run_typed_app` | proved | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 102 | 1102 |
+| `meaningB_typed_app` | proved | `check_restrict`, `normalize_idem`, `hom_eq_cata_ty`, `check_sound`, `check_complete` | 740 | 735 |
+
+### R2: Extension is conservative: C1–C8 over DI-47's relation on Σ_app
+
+- Open: C2 for host rows: operational until DI-69's row meaning lands
+- Open: C4 for TypedProg (the generic judgment is proved both ways)
+- Open: C5: the world projection with its back condition (its red controls are proved)
+- Open: C7: conditional on decisions row 115
+- Open: C8: per form
+
+```mermaid
+flowchart LR
+  n0["check_ext<br/>proved"]
+  n1["check_restrict<br/>proved"]
+  n2["lawful_append<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `check_ext` | proved | `check_sound`, `check_complete` | 65 | 210 |
+| `check_restrict` | proved | `cata_eff_congr_on`, `hom_eq_cata_eff` | 70 | 282 |
+| `lawful_append` | proved | — | 40 | 146 |
+
+### R3: Data: the type language closed under records and variants as Ty growth
+
+- Open: variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130
+- Open: recursive types are row 124 (open): nominal Σ_app declarations through Ty.app
+- Open: error payloads: a handle-free payload carrier with an exact embedding into Val (decisions row 120, DI-62; ratification owed)
+- Open: int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121), not landed; the admission's int scan still refuses it
+- Open: the Schema and JSON images of app, null, undefined, number and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161)
+- Open: equality at records: eq stays refused at records until a program compares them (decisions row 126)
+
+```mermaid
+flowchart LR
+  n0["checkInput_eq_none_iff<br/>proved"]
+  n1["fits_normalize<br/>proved"]
+  n2["fits_subN<br/>proved"]
+  n3["inhabited_iff_fits<br/>proved"]
+  n4["hom_eq_cata_ty<br/>proved"]
+  n5["decode_iff<br/>proved"]
+  n6["ofSchema_exact<br/>proved"]
+  n7["readTerm_printTerm<br/>proved"]
+  n8["type_metadata_exact<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `checkInput_eq_none_iff` | proved | — | 38 | 88 |
+| `fits_normalize` | proved | `subN_trans`, `normalize_idem` | 261 | 220 |
+| `fits_subN` | proved | `subN_trans`, `fits_normalize` | 244 | 220 |
+| `inhabited_iff_fits` | proved | `subN_refl` | 152 | 315 |
+| `hom_eq_cata_ty` | proved | — | 28 | 35 |
+| `decode_iff` | proved | — | 168 | 248 |
+| `ofSchema_exact` | proved | — | 41 | 144 |
+| `readTerm_printTerm` | proved | — | 131 | 168 |
+| `type_metadata_exact` | proved | — | 61 | 86 |
+
+### R4: State: the world types every cell at any type, with rows as templates
+
+- Open: rows as templates (decisions rows 42–43, step 3): the native spellings still read as cells at nat (row 96 D2)
+- Open: a function row takes a binder term: FnName retires (decisions row 43, step 3)
+- Open: the per-cell table in the straight soundness, replacing HeapNat (decisions rows 42–43, step 4)
+- Open: the faces of Ref<A> and Deferred<A, E>: printer, reader, TypeScript profile and OCaml (decisions rows 42–43, step 5)
+
+```mermaid
+flowchart LR
+  n0["order_refl<br/>proved"]
+  n1["order_trans<br/>proved"]
+  n2["refMake_extension<br/>proved"]
+  n3["deferredMake_extension<br/>proved"]
+  n4["memoBuild_extension<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `order_refl` | proved | — | 56 | 195 |
+| `order_trans` | proved | — | 56 | 196 |
+| `refMake_extension` | proved | — | 110 | 294 |
+| `deferredMake_extension` | proved | — | 109 | 294 |
+| `memoBuild_extension` | proved | — | 108 | 294 |
+
+### R5: Services: the service table, layers and provision
+
+- Open: lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)
+- Open: reference keys, Config, minted keys, and context validation at any runtime bridge (system map §8, R5)
+
+```mermaid
+flowchart LR
+  n0["build_total<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `build_total` | proved | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 170 | 242 |
+
+### R6: The host: a lawful HostSpec, receipt and application, DI-57's table-aware reference
+
+- Open: admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)
+- Open: DI-57's table-aware reference relation: run_eq_ref holds at the empty table only (parked by the owner, 2026-09-30)
+- Open: DI-69: the row table's meaning in code
+- Open: H related to the machine: M6's premise is a predicate on tapes (decisions row 95), not a host relation
+- Open: receipt and application on the keyed lifecycle, and their converse (host-boundary §4.5; decisions rows 98–100, parked by the owner, 2026-09-30)
+- Open: a world extension meeting C5, a retirement edge, per-row cancellation, one root (DI-58, DI-65)
+- Open: the public typed guarantee for programs using host services (decisions row 99)
+
+```mermaid
+flowchart LR
+  n0["reachable_typed<br/>proved"]
+  n1["preflight_success_prepared_fits<br/>proved"]
+  n2["preflight_failure_noShapeDefect<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `reachable_typed` | proved | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 85 | 1208 |
+| `preflight_success_prepared_fits` | proved | — | 100 | 743 |
+| `preflight_failure_noShapeDefect` | proved | — | 65 | 269 |
+
+### R7: Retained behaviour: a resolved code entry is typed at its reference's type
+
+- Open: resolve_typed: a resolved code entry is typed at its reference's type, with capture layout fixed at resolution and identity by allocation or structure (decisions row 82, open)
+- Open: code-valued services with a capture law, R5's through R7 (decisions row 82)
+
+```mermaid
+flowchart LR
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+
+### R8: Runs and faces as named connections: equal to the reference inside a profile, refused outside it
+
+- Open: typed lowering open: what verified lowering means (decisions row 28); the OCaml engine is outside M7 until it is ruled
+- Open: numbers open (decisions row 108): each face equal to the reference inside its bounded profile and refusing outside it, intermediates included (DI-56)
+- Open: K2 holds on the readable domain, which excludes annotated loops (DI-91; its fallback (a) is unscheduled)
+- Open: one identity bijection across faces: the fiber identity carrier is ruled, not landed (DI-81)
+- Open: the TypeScript face against rc.112: finite truth-harness checks only (DI-49)
+- Open: the profile as data, named by each face's law (decisions row 79, R79.5)
+
+```mermaid
+flowchart LR
+  n0["read_print<br/>proved"]
+  n1["read_exact<br/>proved"]
+  n2["run_eq_meaning<br/>proved"]
+  n3["loopAgreement<br/>proved"]
+  n4["run_eq_ref<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `read_print` | proved | `readTerm_printTerm` | 273 | 489 |
+| `read_exact` | proved | — | 225 | 452 |
+| `run_eq_meaning` | proved | — | 309 | 902 |
+| `loopAgreement` | proved | — | 338 | 913 |
+| `run_eq_ref` | proved | — | 876 | 1055 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
 
@@ -1408,19 +1635,105 @@ flowchart LR
   n0["m7_proved<br/>proved"]
   n1["loadsTyped<br/>proved"]
   n2["decision_preserves<br/>proved"]
+  n3["denotesTyped<br/>proved"]
+  n4["provideLayerArm<br/>proved"]
   n0 -->|"m7_of_ledger"| n1
   n0 -->|"m7_of_ledger"| n2
+  n1 -->|"loadsTyped_of_denotesTyped_typed"| n3
+  n3 -->|"denotesTyped_of_provideLayer"| n4
 ```
 
 | Node | Status | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- |
 | `m7_proved` | proved | `decision_preserves`, `loadsTyped`, `m7_of_ledger` | 0 | 3 |
-| `loadsTyped` | proved | `denotesTyped` | 188 | 1147 |
-| `decision_preserves` | proved | `fits_subN`, `subN_trans`, `configTyped_frame`, `fits_mono`, `wake_preserves`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1039 | 1481 |
+| `loadsTyped` | proved | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1132 |
+| `decision_preserves` | proved | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1003 | 1482 |
+| `denotesTyped` | proved | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `allGuard_typed`, `rowTy_instantiated_formed` | 787 | 859 |
+| `provideLayerArm` | proved | `fits_subN`, `order_refl`, `subN_refl`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 813 | 881 |
+
+### R10: Library code inherits theorems: a composed module's law is Agrees profile module expansion
+
+- Open: a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)
+- Open: no form has a behaviour law (DI-89)
+- Open: none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators
+- Open: per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)
+- Open: DI-39's six rows not landed
+- Open: a composite's contract by a stuttering route (post-Phase C §11.4)
+
+```mermaid
+flowchart LR
+  n0["andThenEffect_typed<br/>proved"]
+  n1["andThenContinuation_typed<br/>proved"]
+  n2["andThenThunk_typed<br/>proved"]
+  n3["as_typed<br/>proved"]
+  n4["asVoid_typed<br/>proved"]
+  n5["tapContinuation_typed<br/>proved"]
+  n6["tapEffect_typed<br/>proved"]
+  n7["ensuring_typed<br/>proved"]
+  n8["void_typed<br/>proved"]
+  n9["die_typed<br/>proved"]
+  n10["yieldKey_typed<br/>proved"]
+  n11["matchCause_typed<br/>proved"]
+  n12["matchCauseEffect_typed<br/>proved"]
+  n13["yieldNow_typed<br/>proved"]
+  n14["forkChildDefault_typed<br/>proved"]
+  n15["forkDetachDefault_typed<br/>proved"]
+  n16["forkInDefault_typed<br/>proved"]
+  n17["forkScopedDefault_typed<br/>proved"]
+  n18["releaseOne_typed<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `andThenEffect_typed` | proved | `check_sound`, `check_complete` | 72 | 230 |
+| `andThenContinuation_typed` | proved | `check_sound`, `check_complete` | 57 | 220 |
+| `andThenThunk_typed` | proved | `andThenEffect_typed` | 53 | 206 |
+| `as_typed` | proved | `check_sound`, `check_complete` | 99 | 226 |
+| `asVoid_typed` | proved | `as_typed` | 53 | 206 |
+| `tapContinuation_typed` | proved | `normalize_idem`, `check_sound`, `check_complete` | 165 | 233 |
+| `tapEffect_typed` | proved | `normalize_idem`, `check_sound`, `check_complete` | 179 | 243 |
+| `ensuring_typed` | proved | `check_sound`, `check_complete` | 72 | 230 |
+| `void_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `die_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `yieldKey_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `matchCause_typed` | proved | `check_sound`, `check_complete` | 59 | 221 |
+| `matchCauseEffect_typed` | proved | `check_sound`, `check_complete` | 59 | 221 |
+| `yieldNow_typed` | proved | `check_complete`, `check_sound` | 57 | 220 |
+| `forkChildDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `forkDetachDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `forkInDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `forkScopedDefault_typed` | proved | `check_sound`, `check_complete` | 59 | 220 |
+| `releaseOne_typed` | proved | `check_sound`, `check_complete` | 75 | 230 |
+
+### R11: Resources are released: at most once per registration, exactly once in close order
+
+- Open: the whole run open: release at most once per registration, counted by identity (DB-07)
+- Open: the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)
+- Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
+- Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
+
+```mermaid
+flowchart LR
+  n0["runState_complete<br/>proved"]
+  n1["runState_restore<br/>proved"]
+  n2["runState_prefix<br/>proved"]
+  n3["close_twice<br/>proved"]
+  n4["close_reentrant_add<br/>proved"]
+  n5["closeOrder_eq<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `runState_complete` | proved | — | 0 | 15 |
+| `runState_restore` | proved | `runState_complete` | 0 | 33 |
+| `runState_prefix` | proved | — | 0 | 16 |
+| `close_twice` | proved | `close_idempotent` | 1 | 15 |
+| `close_reentrant_add` | proved | — | 2 | 11 |
+| `closeOrder_eq` | proved | — | 0 | 4 |
 
 ### R12: Frontiers name what they await
 
-- Open: R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet)
+- Open: R12-b: the frontier names armed work (waits on a ruling on the frontier alphabet; refuted today by E4-SCHED-CE-021)
 - Open: R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)
 
 ```mermaid
@@ -1430,4 +1743,19 @@ flowchart LR
 
 | Node | Status | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- |
-| `fairTape_unarmed` | proved | — | 3 | 283 |
+| `fairTape_unarmed` | proved | — | 3 | 284 |
+
+### R13: A run's inputs are data: equal recorded inputs give equal replay observations
+
+- Open: load inputs, the environment snapshot and the seed: designed (the 2026-09-10 Config route B), not implemented (decisions rows 51, 83)
+- Open: supplied values fit the admitted load requirements: restates M5 (loadsTyped, the retired ledger's typedState_load) when Config lands
+- Open: the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)
+
+```mermaid
+flowchart LR
+  n0["journal_replays<br/>proved"]
+```
+
+| Node | Status | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- |
+| `journal_replays` | proved | — | 77 | 926 |

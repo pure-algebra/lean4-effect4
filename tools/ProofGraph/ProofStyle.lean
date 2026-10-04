@@ -18,8 +18,10 @@ with a committed baseline that records the occurrences written before the rule:
 - `#proof_style_record` rewrites the baseline, which makes any change to it a reviewed diff.
 
 The declaration is the first `declId` of the command; a command without one (an `example`, an
-unnamed instance) is keyed by its command kind. A command the parser cannot read (a scoped syntax
-whose namespace the scan does not open) is reported, since its occurrences may be missed.
+unnamed instance) is keyed by its command kind. A command the parser cannot read (syntax local to
+its file, or a scoped syntax whose namespace the scan does not open) is an occurrence of kind
+`unread`, recorded like the others: an old gap is accepted by its baseline entry, a new unread
+command is refused, since banned uses inside it would go uncounted.
 This reflection is tooling only; it never enters stored program content.
 -/
 namespace ProofGraph.ProofStyle
@@ -58,9 +60,8 @@ structure Occurrence where
   line : Nat
   deriving Inhabited
 
-/-- Scan one file: its occurrences, and the lines of the commands the parser could not read. -/
-def scanFile (env : Environment) (path : System.FilePath) :
-    IO (Array Occurrence × Array Nat) := do
+/-- Scan one file: its occurrences, an unread command among them as kind `unread`. -/
+def scanFile (env : Environment) (path : System.FilePath) : IO (Array Occurrence) := do
   let input ← IO.FS.readFile path
   let inputCtx := Parser.mkInputContext input path.toString
   let (_, state, messages) ← Parser.parseHeader inputCtx
@@ -68,7 +69,6 @@ def scanFile (env : Environment) (path : System.FilePath) :
   let mut st := state
   let mut msgs := messages
   let mut out : Array Occurrence := #[]
-  let mut unread : Array Nat := #[]
   for _ in [0:1000000] do
     let before := msgs.toList.length
     let (cmd, st', msgs') := Parser.parseCommand inputCtx pmctx st msgs
@@ -76,11 +76,12 @@ def scanFile (env : Environment) (path : System.FilePath) :
     msgs := msgs'
     if Parser.isTerminalCommand cmd then break
     let line := (inputCtx.fileMap.toPosition (cmd.getPos?.getD 0)).line
-    if msgs.toList.length > before then unread := unread.push line
+    if msgs.toList.length > before then
+      out := out.push { file := path.toString, decl := commandKey cmd, kind := "unread", line }
     for (k, s) in occurrences cmd do
       let at_ := (inputCtx.fileMap.toPosition (s.getPos?.getD 0)).line
       out := out.push { file := path.toString, decl := commandKey cmd, kind := k, line := at_ }
-  return (out, unread)
+  return out
 
 /-- Every `.lean` file under `dir`, sorted. -/
 def leanFiles (dir : System.FilePath) : IO (Array System.FilePath) := do
@@ -102,15 +103,12 @@ def renderBaseline (c : Std.HashMap (String × String × String) Nat) : String :
   let rows := c.toArray.map fun ((file, decl, kind), n) => s!"{file}\t{decl}\t{kind}\t{n}"
   "\n".intercalate (rows.qsort (· < ·)).toList ++ "\n"
 
-private def scanAll (dir : String) : CommandElabM (Array Occurrence × Array (String × Nat)) := do
+private def scanAll (dir : String) : CommandElabM (Array Occurrence) := do
   let env ← getEnv
   let mut occs : Array Occurrence := #[]
-  let mut unread : Array (String × Nat) := #[]
   for f in ← leanFiles dir do
-    let (o, u) ← scanFile env f
-    occs := occs ++ o
-    unread := unread ++ u.map (f.toString, ·)
-  return (occs, unread)
+    occs := occs ++ (← scanFile env f)
+  return occs
 
 /-- `#proof_style_check "dir" "baseline"`: refuse a new use or a stale baseline entry. -/
 syntax (name := proofStyleCheck) "#proof_style_check " str str : command
@@ -118,7 +116,7 @@ syntax (name := proofStyleCheck) "#proof_style_check " str str : command
 @[command_elab proofStyleCheck] def elabProofStyleCheck : CommandElab := fun stx => do
   let some dir := stx[1].isStrLit? | throwError "proof style: expected a directory"
   let some baselinePath := stx[2].isStrLit? | throwError "proof style: expected a baseline path"
-  let (occs, unread) ← scanAll dir
+  let occs ← scanAll dir
   let now := counts occs
   let base := parseBaseline (← IO.FS.readFile baselinePath)
   let mut problems : Array String := #[]
@@ -127,14 +125,19 @@ syntax (name := proofStyleCheck) "#proof_style_check " str str : command
     let allowed := base.getD (file, decl, kind) 0
     if n > allowed then
       let lines := (occs.filter fun o => o.file == file && o.decl == decl && o.kind == kind).map (·.line)
-      problems := problems.push s!"new use: {kind} in {decl} ({file}, lines {lines.toList}); {n} > {allowed} recorded"
+      problems := problems.push <| if kind == "unread" then
+          s!"new unread command: {decl} ({file}, lines {lines.toList}): the scan cannot parse it, so banned uses in it go uncounted; {n} > {allowed} recorded"
+        else s!"new use: {kind} in {decl} ({file}, lines {lines.toList}); {n} > {allowed} recorded"
   for ((file, decl, kind), n) in base.toArray.qsort (fun a b => keyText a.1 < keyText b.1) do
     let found := now.getD (file, decl, kind) 0
     if found < n then
       problems := problems.push s!"stale entry: {kind} in {decl} ({file}): {found} < {n} recorded; rerun #proof_style_record"
   unless problems.isEmpty do
     throwError "proof style: {problems.size} finding(s)\n{"\n".intercalate problems.toList}"
-  logInfo m!"proof style: {occs.size} recorded occurrences in {now.size} entries; {unread.size} unread commands {unread.toList.take 5}"
+  let unread := occs.filter (·.kind == "unread")
+  let uses := occs.size - unread.size
+  let where_ := "\n".intercalate (unread.toList.map fun o => s!"  {o.file}:{o.line} {o.decl}")
+  logInfo m!"proof style: {uses} recorded uses and {unread.size} recorded unread commands in {now.size} entries; the unread commands:\n{where_}"
 
 /-- `#proof_style_record "dir" "baseline"`: write the baseline from the tree as it stands. -/
 syntax (name := proofStyleRecord) "#proof_style_record " str str : command
@@ -142,8 +145,9 @@ syntax (name := proofStyleRecord) "#proof_style_record " str str : command
 @[command_elab proofStyleRecord] def elabProofStyleRecord : CommandElab := fun stx => do
   let some dir := stx[1].isStrLit? | throwError "proof style: expected a directory"
   let some baselinePath := stx[2].isStrLit? | throwError "proof style: expected a baseline path"
-  let (occs, unread) ← scanAll dir
+  let occs ← scanAll dir
   IO.FS.writeFile baselinePath (renderBaseline (counts occs))
-  logInfo m!"proof style: recorded {occs.size} occurrences; {unread.size} unread commands"
+  let unread := (occs.filter (·.kind == "unread")).size
+  logInfo m!"proof style: recorded {occs.size - unread} uses and {unread} unread commands"
 
 end ProofGraph.ProofStyle

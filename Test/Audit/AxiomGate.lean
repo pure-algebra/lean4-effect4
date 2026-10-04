@@ -125,6 +125,9 @@ private def auditImplementationModules : List Name :=
   -- `keys_norm` simp set's initializer; meta code, no theorem in the module (the theory it
   -- applies, `Effect4.Laws.Auto.ListSubset`, is held at the ceiling like any other).
   , `Effect4.Laws.Auto.SubsetTac
+  -- The rule-bank census (`#bank_census`): a command over aesop's rule-set extension and the
+  -- source text of the `rule_sets` clauses; meta code, no theorem in the module.
+  , `Effect4.Laws.Auto.BankCensus
   ]
 
 /--

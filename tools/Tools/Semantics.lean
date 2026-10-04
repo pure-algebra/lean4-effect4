@@ -5,6 +5,7 @@ import Effect4.Laws.Auto.Semantics
 import ProofGraph.Ledger
 import ProofGraph.Axioms
 import ProofGraph.Plan
+import ProofGraph.Extract
 
 /-! A measured report of selected claims. English claim-to-witness associations are authored;
 ProofGraph checks their actual propositions. This library neither proves the descriptions nor
@@ -171,6 +172,11 @@ private def claimStatus (memo : IO.Ref ProofGraph.AxiomMemo) (index : Registers)
       discard <| ProofGraph.check #[goal] #[⟨name, .wanted wanted⟩] 1
       return ("wanted", obj [("_tag", text "wanted"),
         ("goal", ← declaration memo name (some goal.proposition)), ("placeholder", text wanted.toString)])
+    -- a part `#extract_obligations` declared is pending without a placeholder: its tag holds
+    -- its place; a part with a `wanted` too is refused above as stale only if also proved
+    if ProofGraph.isExtractedPart env name then
+      return ("wanted", obj [("_tag", text "wanted"), ("by", text "extraction"),
+        ("goal", ← declaration memo name (some goal.proposition)), ("placeholder", .null)])
     throwError "{name}: missing proof or placeholder"
   | .refutedBy id name =>
     let status ← counterexample index id
@@ -317,6 +323,17 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     | none =>
       let old := (unplaced.find? (·.1 == mod)).map (·.2) |>.getD 0
       unplaced := (unplaced.filter (·.1 != mod)).push (mod, old + 1)
+  -- A requirement with neither a node nor an open part would read as proved over nothing, and a
+  -- plan-scope prefix that matches no loaded module adds no goal silently: both are refused.
+  let mut reqIds : List String := []
+  for req in registry.requirements do
+    if reqIds.contains req.id then errors := errors.push s!"requirement {req.id}: duplicate id"
+    reqIds := req.id :: reqIds
+    if req.top.isEmpty && req.openParts.isEmpty then
+      errors := errors.push s!"requirement {req.id}: no top node and no open part"
+  for pre in registry.planScope do
+    unless env.header.moduleNames.any (pre.isPrefixOf ·) do
+      errors := errors.push s!"plan scope {pre}: matches no loaded module"
   -- The plan (`ProofGraph.Plan`): the ledger goals of the plan scope, the claims' witnesses and
   -- the requirements' top nodes are the nodes; the authored reductions become checked edges.
   let mut plan : Json := .null
@@ -409,6 +426,7 @@ private def renderPlan (plan : Json) : String := Id.run do
   for req in array plan "requirements" do
     let tops := String.intercalate ", " ((array req "top").toList.map fun t =>
       s!"`{shortName (field t "name")}` ({field t "status"})")
+    let tops := if tops.isEmpty then "—" else tops
     let next := (nested req "next").getArr?.toOption.getD #[]
     let nextText := if next.isEmpty then "—" else
       String.intercalate ", " (next.toList.map fun n => s!"`{shortName (n.getStr?.toOption.getD "")}`")

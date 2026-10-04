@@ -64,6 +64,10 @@ build: ## lake build: the core, the proof graph, the batteries and the axiom gat
 build-profile: ## where the last `make build` spent its time: the critical path and the slowest modules (.lake/gen/build-profile.md)
 	@$(PY) scripts/build-profile.py $(GEN)/build.log
 
+bank-census: ## every Effect4 aesop rule bank: its rules, simp lemmas and the clauses that name it (an instrument)
+	$(LAKE) build Effect4Laws
+	$(LAKE) env lean tools/BankCensusRun.lean
+
 profile-module: ## FILE=<src/…/X.lean>: re-elaborate one built module with the profiler and aesop's statistics; summary here, raw logs in .lake/gen/profile/
 	@test -n "$(FILE)" || { echo "usage: make profile-module FILE=src/Effect4/Laws/…/X.lean"; exit 2; }
 	$(PY) scripts/profile-module.py $(FILE)
@@ -305,12 +309,12 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots proof-style cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs language
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
-check: build check-roots check-gen check-tsgo check-docs ## after every change: the build with its axiom gate, the fresh root elaboration, the generated-file drift, no TypeScript below 7, the authority documents' references
+check: build check-roots check-proof-style check-gen check-tsgo check-docs ## after every change: the build with its axiom gate, the fresh root elaboration, the proof-style ratchet, the generated-file drift, no TypeScript below 7, the authority documents' references
 check-full: check check-slow check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
@@ -334,12 +338,15 @@ check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration thro
 	$(LAKE) exe kernel-replay --self-test
 	$(LAKE) exe kernel-replay Test Test.Slow
 
-# The proof-style ratchet (AGENTS.md: no new simp_all, first, try or simp without only under src/).
-# It runs inside `make check` through the battery (Test/Audit/ProofStyle.lean); this target reruns
-# the scan without a build cache, and record-proof-style rewrites the baseline after a cleanup.
-check-proof-style: ## rescan src/Effect4 for simp_all, first, try and simp without only against the recorded baseline
-	$(LAKE) build ProofGraph.ProofStyle Effect4 Effect4Laws
-	$(LAKE) env lean Test/Audit/ProofStyle.lean
+# The proof-style ratchet (AGENTS.md: no new simp_all, first, try or simp without only under src/):
+# `make check` runs it as `check-proof-style`, and record-proof-style rewrites the baseline after a
+# cleanup. The scan reads the sources and the baseline at elaboration, which Lake's trace of
+# Test.Audit.ProofStyle does not cover: the marker's inputs do, so a baseline-only or a
+# comment-only edit reruns it.
+$(CHK)/proof-style: $(filter src/Effect4/%,$(LEAN_SOURCES)) Test/fixtures/proof-style/baseline.tsv \
+  tools/ProofGraph/ProofStyle.lean Test/Audit/ProofStyle.lean | build
+	$(LAKE) env lean -DwarningAsError=true Test/Audit/ProofStyle.lean
+	@mkdir -p $(CHK) && touch $@
 
 record-proof-style: ## rewrite Test/fixtures/proof-style/baseline.tsv from the tree (a reviewed diff)
 	$(LAKE) build ProofGraph.ProofStyle Effect4 Effect4Laws

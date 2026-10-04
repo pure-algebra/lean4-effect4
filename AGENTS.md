@@ -151,8 +151,9 @@ its arrows. Anything else is a leak.
      statement (2026-10-03). A helper names the claim it is a step of, and the consumer that uses
      it. A decomposition is a conditional theorem, registered as a reduction of its target in
      the semantics registry. The plan (`tools/ProofGraph/Plan.lean`) checks it in the kernel and derives the
-     statuses: declared, reduced, ready, proved. `#plan_status` shows a goal's plan, and
-     `#obligation_close` proves a ready goal. A requirement row lists the parts that no node
+     statuses: declared, reduced, ready, proved. `#extract_obligations` turns a proof sketch's
+     open goals into parts and the sketch into the reduction. `#plan_status` shows a goal's plan,
+     and `#obligation_close` proves a ready goal. A requirement row lists the parts that no node
      states yet as its open parts;
   3. its reach: the exact judgment, observation, fragment and hypotheses, with the decisions rows
      and register lines that bound it;

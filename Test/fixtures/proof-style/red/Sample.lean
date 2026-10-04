@@ -10,3 +10,10 @@ theorem plain (n : Nat) : n + 0 = n := by
 
 def caught : IO Unit := do
   try pure () catch _ => pure ()
+
+-- A tactic local to this file: the scan's parser tables do not hold it, so the command that uses
+-- it is unread, and a banned use inside it would go uncounted.
+local macro "fixture_rfl" : tactic => `(tactic| rfl)
+
+theorem localSyntax (n : Nat) : n = n := by
+  fixture_rfl

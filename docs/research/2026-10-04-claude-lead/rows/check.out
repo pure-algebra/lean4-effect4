@@ -1,0 +1,395 @@
+@Conform.Effect4.Typing.check_sound : ∀ {Op : Type} (sig : Effect4.Program.Signature Op) (e : Effect4.Program.Eff Op)
+  (env : Effect4.Program.TyEnv) (p : List Nat) (t : Effect4.Program.EffTy),
+  Effect4.Program.Checker.check sig env p e = Except.ok t → Conform.Effect4.Typing.HasTy sig env e t
+'Conform.Effect4.Typing.check_sound' depends on axioms: [propext, Quot.sound]
+@Conform.Effect4.Typing.check_complete : ∀ {Op : Type} (sig : Effect4.Program.Signature Op) (e : Effect4.Program.Eff Op)
+  (env : Effect4.Program.TyEnv) (t : Effect4.Program.EffTy),
+  Conform.Effect4.Typing.HasTy sig env e t → ∀ (p : List Nat), Effect4.Program.Checker.check sig env p e = Except.ok t
+'Conform.Effect4.Typing.check_complete' depends on axioms: [propext, Quot.sound]
+Effect4.Program.admitSig_ok_iff : ∀ (app : Effect4.Program.SigApp),
+  Effect4.Program.admitSig app = Except.ok () ↔ Effect4.Program.LawfulSig app
+'Effect4.Program.admitSig_ok_iff' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.loadsTyped : ∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (fuel compileFuel : Nat), Effect4.Program.Typed.LoadsTyped root rootTy fuel compileFuel
+'Effect4.Program.Typed.loadsTyped' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.m7_proved : ∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (fuel : Nat) (tape : List Effect4.Api.Decision),
+  Effect4.Program.Typed.M7Exits root rootTy fuel tape ∧
+    Effect4.Program.Typed.M7Stores root rootTy fuel tape ∧ Effect4.Program.Typed.M7NoHalt root rootTy fuel tape
+'Effect4.Program.Typed.m7_proved' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Denote.meaning_typed : ∀ (e : Effect4.Program.NativeEff) (t : Effect4.Program.EffTy),
+  Effect4.Program.Denote.Straight e = true →
+    Effect4.Program.effTy Effect4.Program.nativeSignature [] e = some t →
+      Effect4.Program.Denote.ExitHasTy t.answer t.error
+        (Effect4.Program.Denote.meaning e [] Effect4.Machine.Stores.empty).snd
+        (Effect4.Program.Denote.meaning e [] Effect4.Machine.Stores.empty).fst
+'Effect4.Program.Denote.meaning_typed' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.Denote.TypedProgram.run_sound : ∀ {e : Effect4.Program.NativeEff}
+  (tp : Effect4.Program.TypedProgram Effect4.Program.nativeSignature e),
+  Effect4.Program.Denote.Straight e = true →
+    ∀ (fuel : Nat),
+      Effect4.Program.Agreement.depth e ≤ fuel →
+        2 * Effect4.Program.Agreement.steps e + 6 ≤ fuel →
+          (Effect4.Api.run e fuel).outcome = Effect4.Api.Outcome.finished ∧
+            ∃ ex,
+              (Effect4.Api.run e fuel).exit = some ex ∧
+                Effect4.Program.Denote.ExitHasTy tp.ty.answer tp.ty.error (Effect4.Api.run e fuel).stores ex
+'Effect4.Program.Denote.TypedProgram.run_sound' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.Formation.checkInput_eq_none_iff : ∀ {Op : Type} (program : Effect4.Program.Eff Op)
+  (table : List Effect4.Program.Row),
+  Effect4.Program.Formation.checkInput program table = none ↔ Effect4.Program.Formation.InputFormed program table
+'Effect4.Program.Formation.checkInput_eq_none_iff' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.fits_normalize : ∀ (w : Effect4.Program.Typed.World) (t : Effect4.Program.Ty)
+  (v : Effect4.Machine.Val), Effect4.Program.Typed.Fits w v t.normalize ↔ Effect4.Program.Typed.Fits w v t
+'Effect4.Program.Typed.fits_normalize' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.fits_subN : ∀ (w : Effect4.Program.Typed.World) {a b : Effect4.Program.Ty},
+  a.subN b = true → ∀ (v : Effect4.Machine.Val), Effect4.Program.Typed.Fits w v a → Effect4.Program.Typed.Fits w v b
+'Effect4.Program.Typed.fits_subN' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.inhabited_iff_fits : ∀ (t : Effect4.Program.Ty),
+  Effect4.Program.inhabited t = true ↔ ∃ w v, Effect4.Program.Typed.Fits w v t
+'Effect4.Program.Typed.inhabited_iff_fits' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.hom_eq_cata_ty : ∀ {R : Effect4.Program.TyFam → Type u_1} {alg : Effect4.Program.TyAlgebra R}
+  (hom : Effect4.Program.TyHom alg) (node : Effect4.Program.Ty), hom.f_ty node = Effect4.Program.cata_ty alg node
+'Effect4.Program.hom_eq_cata_ty' depends on axioms: [propext]
+@Effect4.Schema.decode_iff : ∀ {t : Effect4.Program.Ty} {j : Effect4.Json} {v : Effect4.Machine.Val},
+  Effect4.Schema.decode t j = some v ↔
+    ∃ j', Effect4.Schema.encode t v = some j' ∧ Effect4.Schema.Codec.normJ j' = Effect4.Schema.Codec.normJ j
+'Effect4.Schema.decode_iff' depends on axioms: [propext, Quot.sound]
+Effect4.Schema.Bridge.ofSchema_exact : ∀ (r : Effect4.Representation) (t : Effect4.Program.Ty),
+  Effect4.Schema.Bridge.ofSchema r = some t → Effect4.Schema.Bridge.normS r = Effect4.Schema.Bridge.schema t
+'Effect4.Schema.Bridge.ofSchema_exact' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.readTerm_printTerm : ∀ {n : Nat} (t : Effect4.Program.Term),
+  Effect4.Program.Term.scoped n t = true → Effect4.Program.readTerm n (Effect4.Program.printTerm t) = Except.ok t
+'Effect4.Program.readTerm_printTerm' depends on axioms: [propext, Quot.sound]
+Effect4.Codegen.Metadata.type_metadata_exact : (∀ (t : Effect4.Program.Ty),
+    Effect4.Codegen.Metadata.readTy (Effect4.Codegen.Metadata.writeTy t) = some t) ∧
+  ∀ (e : TypeScript.Expr) (t : Effect4.Program.Ty),
+    Effect4.Codegen.Metadata.readTy e = some t → Effect4.Codegen.Metadata.writeTy t = e
+'Effect4.Codegen.Metadata.type_metadata_exact' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.fits_normalize_record : ∀ (w : Effect4.Program.Typed.World)
+  (fs : List (String × Bool × Effect4.Program.Ty)) (v : Effect4.Machine.Val),
+  (∀ (p : String × Bool × Effect4.Program.Ty),
+      p ∈ fs →
+        ∀ (v : Effect4.Machine.Val),
+          Effect4.Program.Typed.Fits w v p.snd.snd.normalize ↔ Effect4.Program.Typed.Fits w v p.snd.snd) →
+    (Effect4.Program.Typed.Fits w v (Effect4.Program.Ty.record fs).normalize ↔
+      Effect4.Program.Typed.Fits w v (Effect4.Program.Ty.record fs))
+'Effect4.Program.Typed.fits_normalize_record' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.Typed.record_build_fits : ∀ {w : Effect4.Program.Typed.World}
+  {fields : List (String × Bool × Effect4.Program.Ty)} {names : List String} {types : List Effect4.Program.Ty}
+  {values : List Effect4.Machine.Val} {answer : Effect4.Program.Ty},
+  Effect4.Program.Record.check fields names types = some answer →
+    Effect4.Program.Typed.FitsAll w values types →
+      ∃ value, Effect4.Machine.Record.build names values = some value ∧ Effect4.Program.Typed.Fits w value answer
+'Effect4.Program.Typed.record_build_fits' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.order_refl : ∀ (w : Effect4.Program.Typed.World), w.le w
+'Effect4.Program.Typed.order_refl' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.order_trans : ∀ (a b c : Effect4.Program.Typed.World), a.le b → b.le c → a.le c
+'Effect4.Program.Typed.order_trans' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.leHost_refl : ∀ (w : Effect4.Program.Typed.World), w.leHost w
+'Effect4.Program.Typed.leHost_refl' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.leHost_trans : ∀ (a b c : Effect4.Program.Typed.World), a.leHost b → b.leHost c → a.leHost c
+'Effect4.Program.Typed.leHost_trans' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.refMake_extension : ∀ (w : Effect4.Program.Typed.World) (value : Effect4.Machine.Val)
+  (ty : Effect4.Program.Ty) (state : Effect4.Machine.Stores) (key : Effect4.Machine.RefKey),
+  Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.refMake value) w.state =
+      some (state, Effect4.Machine.Val.cell key) →
+    w.Ρ key = none →
+      Effect4.Program.Typed.ValueOk w ty value →
+        w.le (w.addRef state key ty) ∧
+          Effect4.Program.Typed.HeapTypedAt (w.addRef state key ty) key ty ∧
+            (Effect4.Program.Typed.HeapTable w → Effect4.Program.Typed.HeapTable (w.addRef state key ty)) ∧
+              (Effect4.Program.Typed.PromiseTable w → Effect4.Program.Typed.PromiseTable (w.addRef state key ty)) ∧
+                (Effect4.Program.Typed.HeapCoverage w → Effect4.Program.Typed.HeapCoverage (w.addRef state key ty)) ∧
+                  (Effect4.Program.Typed.PromiseCoverage w →
+                    Effect4.Program.Typed.PromiseCoverage (w.addRef state key ty))
+'Effect4.Program.Typed.refMake_extension' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.deferredMake_extension : ∀ (w : Effect4.Program.Typed.World)
+  (types : Effect4.Program.Ty × Effect4.Program.Ty) (state : Effect4.Machine.Stores)
+  (key : Effect4.Machine.DeferredKey),
+  Effect4.Machine.syncOpStep Effect4.Machine.SyncOp.deferredMake w.state =
+      some (state, Effect4.Machine.Val.promise key) →
+    w.«Π» key = none →
+      w.le (w.addPromise state key types) ∧
+        Effect4.Program.Typed.PromiseTypedAt (w.addPromise state key types) key types ∧
+          (Effect4.Program.Typed.HeapTable w → Effect4.Program.Typed.HeapTable (w.addPromise state key types)) ∧
+            (Effect4.Program.Typed.PromiseTable w → Effect4.Program.Typed.PromiseTable (w.addPromise state key types)) ∧
+              (Effect4.Program.Typed.HeapCoverage w →
+                  Effect4.Program.Typed.HeapCoverage (w.addPromise state key types)) ∧
+                (Effect4.Program.Typed.PromiseCoverage w →
+                  Effect4.Program.Typed.PromiseCoverage (w.addPromise state key types))
+'Effect4.Program.Typed.deferredMake_extension' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.memoBuild_extension : ∀ (w : Effect4.Program.Typed.World)
+  (types : Effect4.Program.Ty × Effect4.Program.Ty) (state : Effect4.Machine.Stores) (layer : Effect4.Machine.LayerId)
+  (memoMap : Effect4.Machine.MemoMapId) (answer : Effect4.Machine.Val),
+  Effect4.Machine.syncOpStep (Effect4.Machine.SyncOp.memoBuild layer memoMap) w.state = some (state, answer) →
+    w.«Π» w.state.deferreds.make.fst = none →
+      w.le (w.addPromise state w.state.deferreds.make.fst types) ∧
+        Effect4.Program.Typed.PromiseTypedAt (w.addPromise state w.state.deferreds.make.fst types)
+            w.state.deferreds.make.fst types ∧
+          (Effect4.Program.Typed.HeapTable w →
+              Effect4.Program.Typed.HeapTable (w.addPromise state w.state.deferreds.make.fst types)) ∧
+            (Effect4.Program.Typed.PromiseTable w →
+                Effect4.Program.Typed.PromiseTable (w.addPromise state w.state.deferreds.make.fst types)) ∧
+              (Effect4.Program.Typed.HeapCoverage w →
+                  Effect4.Program.Typed.HeapCoverage (w.addPromise state w.state.deferreds.make.fst types)) ∧
+                (Effect4.Program.Typed.PromiseCoverage w →
+                  Effect4.Program.Typed.PromiseCoverage (w.addPromise state w.state.deferreds.make.fst types))
+'Effect4.Program.Typed.memoBuild_extension' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.Typed.fits_mono : ∀ {w w' : Effect4.Program.Typed.World},
+  w.leHost w' →
+    ∀ {ty : Effect4.Program.Ty} {v : Effect4.Machine.Val},
+      Effect4.Program.Typed.Fits w v ty → Effect4.Program.Typed.Fits w' v ty
+'Effect4.Program.Typed.fits_mono' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.reachable_typed : ∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
+  (fuel : Nat),
+  Effect4.Program.typeOfProgram root.signature root.program = some rootTy →
+    ∀ (tape : List Effect4.Api.Decision),
+      Effect4.Program.Typed.AdmittedTape root rootTy fuel tape →
+        ∃ w,
+          Effect4.Program.Typed.MachineTyped root rootTy w
+            (Effect4.Machine.ReplayResult.machine (Effect4.Program.Sched.replayR root.program fuel tape))
+'Effect4.Program.Typed.reachable_typed' depends on axioms: [propext, Quot.sound]
+@Effect4.Api.HostSession.preflight_success_prepared_fits : ∀ {program : Effect4.Api.Program}
+  {table : Effect4.Program.RowTable} (s : Effect4.Api.HostSession.Session program table)
+  (reply : Effect4.Api.HostSession.Reply) (decision : Effect4.Program.NativeDecision) (value : Effect4.Machine.Val),
+  s.machine.stuck
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann) =
+      none →
+    reply.completion = Effect4.Machine.Completion.ofExit (Effect4.Exit.success value) →
+      Effect4.Api.HostSession.preflight s reply = Except.ok decision →
+        Effect4.Api.HostSession.PreparedSuccess s reply decision
+'Effect4.Api.HostSession.preflight_success_prepared_fits' depends on axioms: [propext, Quot.sound]
+@Effect4.Api.HostSession.preflight_failure_noShapeDefect : ∀ {program : Effect4.Api.Program}
+  {table : Effect4.Program.RowTable} (s : Effect4.Api.HostSession.Session program table)
+  (reply : Effect4.Api.HostSession.Reply) (decision : Effect4.Program.NativeDecision) (c : Effect4.Machine.CauseV),
+  reply.completion = Effect4.Machine.Completion.ofExit (Effect4.Exit.failure c) →
+    Effect4.Api.HostSession.preflight s reply = Except.ok decision →
+      ∀ (ty : Effect4.Program.EffTy), Effect4.Program.Typed.NoShapeDefect ty (Effect4.Exit.failure c)
+'Effect4.Api.HostSession.preflight_failure_noShapeDefect' depends on axioms: [propext, Quot.sound]
+@Effect4.Api.HostSession.submit_success_prepared_fits : ∀ {program : Effect4.Api.Program}
+  {table : Effect4.Program.RowTable} (s : Effect4.Api.HostSession.Session program table)
+  (reply : Effect4.Api.HostSession.Reply) (value : Effect4.Machine.Val),
+  s.machine.stuck
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann) =
+      none →
+    reply.completion = Effect4.Machine.Completion.ofExit (Effect4.Exit.success value) →
+      (Effect4.Api.HostSession.submit s reply).phase = Effect4.Api.HostSession.Phase.preflight →
+        ∃ decision,
+          Effect4.Api.HostSession.preflight s reply = Except.ok decision ∧
+            Effect4.Api.HostSession.PreparedSuccess s reply decision
+'Effect4.Api.HostSession.submit_success_prepared_fits' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Typed.decision_preserves : ∀ (root : Effect4.Program.Typed.ProgramSource)
+  (rootTy : Effect4.Program.EffTy) (fuel : Nat) (d : Effect4.Api.Decision),
+  Effect4.Program.Typed.DecisionKeeps root rootTy fuel d
+'Effect4.Program.Typed.decision_preserves' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.read_print : ∀ {Op : Type} {sig : Effect4.Program.Signature Op}
+  {spell : String → List String → Option Op},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {n : Nat} {e : Effect4.Program.Eff Op},
+      Effect4.Program.Readable sig n e = true →
+        ∀ {x : TypeScript.Expr},
+          Effect4.Program.print sig n e = Except.ok x → Effect4.Program.readEff sig spell n x = Except.ok e
+'Effect4.Program.read_print' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.read_exact : ∀ {Op : Type} {sig : Effect4.Program.Signature Op}
+  {spell : String → List String → Option Op},
+  Effect4.Program.LawfulSpelling sig spell →
+    ∀ {n : Nat} {x : TypeScript.Expr} {e : Effect4.Program.Eff Op},
+      Effect4.Program.readEff sig spell n x = Except.ok e → Effect4.Program.print sig n e = Except.ok x
+'Effect4.Program.read_exact' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Agreement.run_eq_meaning : ∀ (e : Effect4.Program.NativeEff) (fuel : Nat),
+  Effect4.Program.Denote.Straight e = true →
+    Effect4.Program.Agreement.depth e ≤ fuel →
+      2 * Effect4.Program.Agreement.steps e + 6 ≤ fuel →
+        (Effect4.Api.run e fuel).outcome = Effect4.Api.Outcome.finished ∧
+          (Effect4.Api.run e fuel).exit = some (Effect4.Program.Denote.meaning e [] Effect4.Machine.Stores.empty).fst ∧
+            (Effect4.Api.run e fuel).stores = (Effect4.Program.Denote.meaning e [] Effect4.Machine.Stores.empty).snd
+'Effect4.Program.Agreement.run_eq_meaning' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Agreement.loopAgreement : ∀ (e : Effect4.Program.NativeEff),
+  Effect4.Program.Denote.Looped e = true → Effect4.Program.Agreement.LoopAgreement e
+'Effect4.Program.Agreement.loopAgreement' depends on axioms: [propext, Quot.sound]
+Effect4.Program.Sched.run_eq_ref : ∀ (e : Effect4.Program.NativeEff) (fuel : Nat) (tape : List Effect4.Api.Decision),
+  (Effect4.Api.replay e fuel tape).outcome =
+      Effect4.Program.Sched.classify (Effect4.Program.Sched.replayR e fuel tape) ∧
+    Effect4.Machine.obs (Effect4.Api.replay e fuel tape).machine =
+      Effect4.Program.Sched.obsR (Effect4.Machine.ReplayResult.machine (Effect4.Program.Sched.replayR e fuel tape))
+'Effect4.Program.Sched.run_eq_ref' depends on axioms: [propext, Quot.sound]
+Effect4.Codegen.Forms.effTy_insert : ∀ (sig : Effect4.Program.Signature Effect4.Program.NativeOp)
+  (pre inserted post : Effect4.Program.TyEnv) (program : Effect4.Program.Eff Effect4.Program.NativeOp),
+  Effect4.Program.effTy sig (pre ++ inserted ++ post)
+      (Effect4.Codegen.Forms.insert (List.length pre) (List.length inserted) program) =
+    Effect4.Program.effTy sig (pre ++ post) program
+'Effect4.Codegen.Forms.effTy_insert' depends on axioms: [propext, Quot.sound]
+Effect4.Codegen.Forms.ensuring_typed : ∀ (sig : Effect4.Program.Signature Effect4.Program.NativeOp)
+  (env : Effect4.Program.TyEnv) (body finalizer : Effect4.Program.Eff Effect4.Program.NativeOp)
+  (a b : Effect4.Program.EffTy),
+  Effect4.Program.effTy sig env body = some a →
+    Effect4.Program.effTy sig env finalizer = some b →
+      ((List.find? (fun f => f.id == "ensuring") Effect4.Codegen.Forms.all).bind fun f =>
+              Effect4.Codegen.Forms.Template.expand (List.length env) { effects := [body, finalizer] } f.expansion).bind
+          (Effect4.Program.effTy sig env) =
+        some { answer := a.answer, error := a.error.join b.error, requires := a.requires.union b.requires }
+'Effect4.Codegen.Forms.ensuring_typed' depends on axioms: [propext, Quot.sound]
+@Effect4.Program.Authoring.Forms.ensuring_scoped : ∀
+  {effect effect1 : Effect4.Program.Authoring.Src Effect4.Program.NativeOp},
+  effect.Scoped → effect1.Scoped → (Effect4.Program.Authoring.Forms.ensuring effect effect1).Scoped
+'Effect4.Program.Authoring.Forms.ensuring_scoped' depends on axioms: [propext, Quot.sound]
+@Effect4.ScopeMachine.runState_complete : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α σ : Type u_1}
+  (handler : φ → Effect4.Exit β ε δ ι α → StateT σ Id (Effect4.Exit Unit ε δ ι α)) (scope : Effect4.Scope κ φ β ε δ ι α)
+  (original : Effect4.Exit β ε δ ι α) (world : σ),
+  Effect4.ScopeMachine.runState handler (Effect4.ScopeMachine.bound scope) (Effect4.ScopeMachine.start scope original)
+      world =
+    have result := (Effect4.Scope.closeExitsM handler scope original).run world;
+    ({ scope := scope.closeState original, original := original, pending := [],
+        captured := scope.closeOrder.zip result.fst, phase := Effect4.ScopeMachine.Phase.complete },
+      result.snd)
+'Effect4.ScopeMachine.runState_complete' depends on axioms: [propext, Quot.sound]
+@Effect4.ScopeMachine.runState_prefix : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α σ : Type u_1}
+  (handler : φ → Effect4.Exit β ε δ ι α → StateT σ Id (Effect4.Exit Unit ε δ ι α)) (budget : Nat)
+  (scope : Effect4.Scope κ φ β ε δ ι α) (original : Effect4.Exit β ε δ ι α) (world : σ),
+  have result := Effect4.ScopeMachine.runState handler budget (Effect4.ScopeMachine.start scope original) world;
+  result.fst.scope = scope.closeState original ∧
+    result.fst.original = original ∧
+      (List.map Prod.fst result.fst.captured ++
+              match result.fst.phase with
+              | Effect4.ScopeMachine.Phase.waiting operation => [operation]
+              | x => []) ++
+            result.fst.pending =
+          scope.closeOrder ∧
+        (result.fst.phase = Effect4.ScopeMachine.Phase.complete → result.fst.pending = []) ∧
+          (List.mapM (fun operation => handler operation original) (List.map Prod.fst result.fst.captured)).run world =
+            (List.map Prod.snd result.fst.captured, result.snd)
+'Effect4.ScopeMachine.runState_prefix' depends on axioms: [propext, Quot.sound]
+@Effect4.ScopeMachine.runState_restore : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α σ : Type u_1} [inst : DecidableEq ε]
+  [inst_1 : DecidableEq δ] [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α]
+  (handler : φ → Effect4.Exit β ε δ ι α → StateT σ Id (Effect4.Exit Unit ε δ ι α)) (scope : Effect4.Scope κ φ β ε δ ι α)
+  (original : Effect4.Exit β ε δ ι α) (world : σ),
+  (have result :=
+      Effect4.ScopeMachine.runState handler (Effect4.ScopeMachine.bound scope)
+        (Effect4.ScopeMachine.start scope original) world;
+    (Effect4.ScopeMachine.restore? result.fst, result.snd)) =
+    have result := (Effect4.Scope.closeExitsM handler scope original).run world;
+    have cleanup :=
+      match result.fst with
+      | [] => Effect4.Exit.void
+      | [only] => only
+      | first :: second :: rest => Effect4.Exit.asVoidAll (first :: second :: rest);
+    (some (original.restoreAfterFinalizer cleanup), result.snd)
+'Effect4.ScopeMachine.runState_restore' depends on axioms: [propext, Quot.sound]
+@Effect4.ScopeMachine.runState_result : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α σ : Type u_1}
+  (callback : φ → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) (scope : Effect4.Scope κ φ β ε δ ι α)
+  (original : Effect4.Exit β ε δ ι α) (world : σ),
+  Effect4.ScopeMachine.result?
+      (Effect4.ScopeMachine.runState (fun operation exit world => (callback operation exit, world))
+          (Effect4.ScopeMachine.bound scope) (Effect4.ScopeMachine.start scope original) world).fst =
+    some (Effect4.Scope.closeResult callback scope original)
+'Effect4.ScopeMachine.runState_result' depends on axioms: [propext, Quot.sound]
+@Effect4.Scope.close_twice : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α : Type u_1}
+  (run : φ → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) (self : Effect4.Scope κ φ β ε δ ι α)
+  (first second : Effect4.Exit β ε δ ι α),
+  Effect4.Scope.close run (Effect4.Scope.close run self first).fst second =
+    ((Effect4.Scope.close run self first).fst, Effect4.Exit.void)
+'Effect4.Scope.close_twice' does not depend on any axioms
+@Effect4.Scope.close_idempotent : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α : Type u_1}
+  (run : φ → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) (self : Effect4.Scope κ φ β ε δ ι α)
+  (exit : Effect4.Exit β ε δ ι α), self.isClosed = true → Effect4.Scope.close run self exit = (self, Effect4.Exit.void)
+'Effect4.Scope.close_idempotent' does not depend on any axioms
+@Effect4.Scope.close_reentrant_add : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α : Type u_1} [inst : DecidableEq κ]
+  (run : φ → Effect4.Exit β ε δ ι α → Effect4.Exit Unit ε δ ι α) (self : Effect4.Scope κ φ β ε δ ι α)
+  (exit : Effect4.Exit β ε δ ι α) (key : κ) (finalizer : φ),
+  self.isClosed = false →
+    Effect4.Scope.addExit run (self.closeState exit) key finalizer = (self.closeState exit, run finalizer exit)
+'Effect4.Scope.close_reentrant_add' does not depend on any axioms
+@Effect4.Scope.closeOrder_eq : ∀ {κ φ : Type u_1} {β : Type u_2} {ε δ ι α : Type u_1}
+  (self : Effect4.Scope κ φ β ε δ ι α), self.closeOrder = (List.map Prod.snd self.finalizers).reverse
+'Effect4.Scope.closeOrder_eq' does not depend on any axioms
+Effect4.Run.journal_replays : ∀ (s : Effect4.Run),
+  s.Reached → (Effect4.Run.open s.built s.id s.budget s.profile).play s.journal = s
+'Effect4.Run.journal_replays' depends on axioms: [propext, Quot.sound]
+Effect4.Api.Runner.replay_unique : ∀ (h : List Effect4.Api.Runner.Command → Effect4.Api.Runner.Play),
+  h [] = Effect4.Api.Runner.Play.id →
+    (∀ (c : Effect4.Api.Runner.Command), h [c] = Effect4.Api.Runner.stepPlay c) →
+      (∀ (a b : List Effect4.Api.Runner.Command), h (a ++ b) = (h a).comp (h b)) →
+        ∀ (journal : List Effect4.Api.Runner.Command), h journal = Effect4.Api.Runner.replayPlay journal
+'Effect4.Api.Runner.replay_unique' depends on axioms: [propext, Quot.sound]
+Conform.Effect4.Typing.check_sound: theorem; module Effect4.Laws.Program.Typing.CheckSound; axioms [propext, Quot.sound]; outside ceiling []
+Conform.Effect4.Typing.check_complete: theorem; module Effect4.Laws.Program.Typing.CheckSound; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.admitSig_ok_iff: theorem; module Effect4.Laws.Program.Signature; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.loadsTyped: theorem; module Effect4.Laws.Program.Typed.LayerArm; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.m7_proved: theorem; module Effect4.Laws.Program.Typed.Commands.Clauses.All; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Denote.meaning_typed: theorem; module Effect4.Laws.Program.MeaningSound; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Denote.TypedProgram.run_sound: theorem; module Effect4.Laws.Program.TypedRun; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Formation.checkInput_eq_none_iff: theorem; module Effect4.Program.Formation; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.fits_normalize: theorem; module Effect4.Laws.Program.Typed.Membership; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.fits_subN: theorem; module Effect4.Laws.Program.Typed.Membership; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.inhabited_iff_fits: theorem; module Effect4.Laws.Program.Typed.Membership; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.hom_eq_cata_ty: theorem; module Effect4.Program.Fold; axioms [propext]; outside ceiling []
+Effect4.Schema.decode_iff: theorem; module Effect4.Laws.Schema.Codec; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Schema.Bridge.ofSchema_exact: theorem; module Effect4.Schema.Bridge; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.readTerm_printTerm: theorem; module Effect4.Laws.Codegen.ReadLeaf; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Codegen.Metadata.type_metadata_exact: theorem; module Effect4.Laws.Codegen.Metadata; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.fits_normalize_record: theorem; module Effect4.Laws.Program.Typed.Membership; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.record_build_fits: theorem; module Effect4.Laws.Program.Typed.RecordOperations; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.order_refl: theorem; module Effect4.Laws.Program.Typed.World; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.order_trans: theorem; module Effect4.Laws.Program.Typed.World; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.leHost_refl: theorem; module Effect4.Laws.Program.Typed.Validity; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.leHost_trans: theorem; module Effect4.Laws.Program.Typed.Validity; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.refMake_extension: theorem; module Effect4.Laws.Program.Typed.World; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.deferredMake_extension: theorem; module Effect4.Laws.Program.Typed.World; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.memoBuild_extension: theorem; module Effect4.Laws.Program.Typed.World; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.fits_mono: theorem; module Effect4.Laws.Program.Typed.Membership; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.reachable_typed: theorem; module Effect4.Laws.Program.Typed.Commands.Clauses.All; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Api.HostSession.preflight_success_prepared_fits: theorem; module Effect4.Laws.Api.HostSession; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Api.HostSession.preflight_failure_noShapeDefect: theorem; module Effect4.Laws.Api.HostSession; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Api.HostSession.submit_success_prepared_fits: theorem; module Effect4.Laws.Api.HostSession; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Typed.decision_preserves: theorem; module Effect4.Laws.Program.Typed.Commands.Clauses.All; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.read_print: theorem; module Effect4.Laws.Codegen.ReadPrint; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.read_exact: theorem; module Effect4.Laws.Codegen.Read; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Agreement.run_eq_meaning: theorem; module Effect4.Laws.Program.Agreement.Machine; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Agreement.loopAgreement: theorem; module Effect4.Laws.Program.Agreement.Loop; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Sched.run_eq_ref: theorem; module Effect4.Laws.Program.RuntimeR; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Codegen.Forms.effTy_insert: theorem; module Effect4.Laws.Codegen.Forms; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Codegen.Forms.ensuring_typed: theorem; module Effect4.Laws.Codegen.Forms; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Program.Authoring.Forms.ensuring_scoped: theorem; module Effect4.Laws.Program.Authoring.Forms; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.ScopeMachine.runState_complete: theorem; module Effect4.Laws.Machine.ScopeMachine; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.ScopeMachine.runState_prefix: theorem; module Effect4.Laws.Machine.ScopeMachine; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.ScopeMachine.runState_restore: theorem; module Effect4.Laws.Machine.ScopeMachine; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.ScopeMachine.runState_result: theorem; module Effect4.Laws.Machine.ScopeMachine; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Scope.close_twice: theorem; module Effect4.Machine.Scope; axioms []; outside ceiling []
+Effect4.Scope.close_idempotent: theorem; module Effect4.Machine.Scope; axioms []; outside ceiling []
+Effect4.Scope.close_reentrant_add: theorem; module Effect4.Machine.Scope; axioms []; outside ceiling []
+Effect4.Scope.closeOrder_eq: theorem; module Effect4.Machine.Scope; axioms []; outside ceiling []
+Effect4.Run.journal_replays: theorem; module Effect4.Laws.Run; axioms [propext, Quot.sound]; outside ceiling []
+Effect4.Api.Runner.replay_unique: theorem; module Effect4.Laws.Api.Runner; axioms [propext, Quot.sound]; outside ceiling []
+R1: 3 top nodes, 4 open parts
+R2: 3 top nodes, 5 open parts
+R3: 9 top nodes, 6 open parts
+R4: 5 top nodes, 4 open parts
+R5: 1 top nodes, 2 open parts
+R6: 3 top nodes, 7 open parts
+R7: 0 top nodes, 2 open parts
+R8: 5 top nodes, 6 open parts
+R9: 1 top nodes, 1 open parts
+R10: 0 top nodes, 7 open parts
+R11: 6 top nodes, 4 open parts
+R12: 1 top nodes, 2 open parts
+R13: 1 top nodes, 3 open parts
+ids in order: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13]; distinct: true
+problems: 0
+red control:
+control Effect4.Program.no_such_theorem: missing
+control Effect4.Program.admitSig: not a theorem
+control Classical.em: outside the ceiling [Classical.choice]
+control: 3 top nodes, 0 open parts
+ids in order: [control]; distinct: true
+problems: 3 (expected 3)

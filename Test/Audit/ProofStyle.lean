@@ -11,16 +11,18 @@ scan parses with this module's environment, which holds every syntax `src/Effect
 baseline.
 
 The red controls scan a fixture. Against an empty baseline, its four uses are refused by kind,
-and neither the comment nor the `try … catch` of `do` notation is counted. Against a baseline
-with one entry too many, the extra entry is refused as stale.
+and so is the command the scan cannot parse (a tactic local to the fixture): an unread command is
+a gap the baseline must name. Neither the comment nor the `try … catch` of `do` notation is
+counted. Against a baseline with one entry too many, the extra entry is refused as stale.
 -/
 
 /--
-error: proof style: 4 finding(s)
+error: proof style: 5 finding(s)
 new use: first in banned (Test/fixtures/proof-style/red/Sample.lean, lines [6]); 1 > 0 recorded
 new use: simp-without-only in banned (Test/fixtures/proof-style/red/Sample.lean, lines [6]); 1 > 0 recorded
 new use: simp_all in banned (Test/fixtures/proof-style/red/Sample.lean, lines [5]); 1 > 0 recorded
 new use: try in banned (Test/fixtures/proof-style/red/Sample.lean, lines [5]); 1 > 0 recorded
+new unread command: localSyntax (Test/fixtures/proof-style/red/Sample.lean, lines [18]): the scan cannot parse it, so banned uses in it go uncounted; 1 > 0 recorded
 -/
 #guard_msgs (error) in
 #proof_style_check "Test/fixtures/proof-style/red" "Test/fixtures/proof-style/red-baseline.tsv"
