@@ -66,3 +66,10 @@ Atom	sub	mono		[number, number]	number
 Atom	div	mono		[number, number]	number		
 Atom	mod	mono		[number, number]	number		
 Atom	concat	mono		[string, string]	string		
+Atom	mapEmpty	mono		[]	Readonly<Record<string, never>>		
+Atom	mapGet	poly		[Readonly<Record<string, "p0">>, string]	Option.Option<"p0">		<"p0">
+Atom	mapSet	poly		[Readonly<Record<string, "p0">>, string, "p1"]	Readonly<Record<string, "p0" | "p1">>		<"p0", "p1">
+Atom	mapKeys	poly		[Readonly<Record<string, "p0">>]	ReadonlyArray<string>		<"p0">
+Atom	mapEntries	poly		[Readonly<Record<string, "p0">>]	ReadonlyArray<readonly [string, "p0"]>		<"p0">
+Atom	mapFromEntries	poly		[ReadonlyArray<readonly [string, "p0"]>]	Readonly<Record<string, "p0">>		<"p0">
+Atom	tuple	custom					

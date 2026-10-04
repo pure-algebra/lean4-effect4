@@ -480,8 +480,12 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   (`ofSchema_exact` (`src/Effect4/Schema/Bridge.lean`)).
 - **Schema retraction (`of-schema-schema`)**: Inverting schema representations on reserved-free types
   (`ofSchema_schema` (`src/Effect4/Schema/Bridge.lean`)).
-- **Record codecs (`record-codec-layout`)**: exact JSON and Schema codecs for record values, which carry
-  their canonical names (decisions row 165 (a)); open.
+- **Record codecs (`record-codec-layout`)**: JSON decoding reconstructs named record values exactly under `normJ`
+  (`decode_iff`, `src/Effect4/Laws/Schema/Codec.lean`; decisions row 165 (a)).
+- **Term reconstruction (`collection-term-print-read`)**: structural reading reconstructs every scoped term after printing
+  (`readTerm_printTerm`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
+  This includes raw record declarations and every natural tuple index.
+  The scope premise remains unchanged; rendered-source recognition and target execution remain separate boundaries.
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.

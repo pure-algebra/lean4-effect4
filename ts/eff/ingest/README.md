@@ -111,6 +111,7 @@ The following tables are generated from the profile, forms and taxonomy.
 | Effect.catchIf |
 | optionCase |
 | caseTag |
+| caseTagR |
 | Effect.map |
 
 ## Native rows

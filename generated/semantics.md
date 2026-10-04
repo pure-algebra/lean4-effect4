@@ -633,7 +633,8 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | decode-encode | compatibility | proved | Effect4.Schema.decode_encode | yes |  |
 | of-schema-exact | compatibility | proved | Effect4.Schema.Bridge.ofSchema_exact | yes |  |
 | of-schema-schema | compatibility | proved | Effect4.Schema.Bridge.ofSchema_schema | yes |  |
-| record-codec-layout | compatibility | absent | Open: the JSON codec has no record arm and the Schema face refuses record by name; record values carry canonical names (decisions row 165 (a)) | — |  |
+| collection-term-print-read | compatibility | proved | Effect4.Program.readTerm_printTerm | yes |  |
+| record-codec-layout | compatibility | proved | Effect4.Schema.decode_iff | yes |  |
 
 ### Printed statements
 
@@ -688,6 +689,24 @@ Literature: RendelOstermann2010, audit P32 — adaptedResult
   Eq t.closed Bool.true →
     Eq (Effect4.Schema.Bridge.reservedFree t) Bool.true →
       Eq (Effect4.Schema.Bridge.ofSchema (Effect4.Schema.Bridge.schema t)) (Option.some t)
+```
+
+**collection-term-print-read**
+
+```lean
+∀ {n : Nat} (t : Effect4.Program.Term),
+  Eq (Effect4.Program.Term.scoped n t) Bool.true →
+    Eq (Effect4.Program.readTerm n (Effect4.Program.printTerm t)) (Except.ok t)
+```
+
+**record-codec-layout**
+
+```lean
+∀ {t : Effect4.Program.Ty} {j : Effect4.Json} {v : Effect4.Machine.Val},
+  Iff (Eq (Effect4.Schema.decode t j) (Option.some v))
+    (Exists fun j' =>
+      And (Eq (Effect4.Schema.encode t v) (Option.some j'))
+        (Eq (Effect4.Schema.Codec.normJ j') (Effect4.Schema.Codec.normJ j)))
 ```
 
 ## subtyping-algebra
@@ -1297,4 +1316,4 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names, ledger goals and their checked witnesses excluded
 
-Tagged: 2; inherited (provisional): 1277; unplaced: 0.
+Tagged: 2; inherited (provisional): 1314; unplaced: 0.

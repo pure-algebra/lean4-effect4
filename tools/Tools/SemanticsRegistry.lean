@@ -377,6 +377,9 @@ def registry : Registry where
     { id := "of-schema-schema", concept := "exact-codecs", role := .compatibility
       title := "Retraction of Schema generation on reserved-free types"
       pointer := .witness `Effect4.Schema.Bridge.ofSchema_schema },
+    { id := "collection-term-print-read", concept := "exact-codecs", role := .compatibility
+      title := "Every scoped term reconstructs after structural printing, including records and every static tuple index"
+      pointer := .witness `Effect4.Program.readTerm_printTerm },
     { id := "record-codec-layout", concept := "exact-codecs", role := .compatibility
       title := "Record JSON decoding is exact under normJ; named record values retain optional presence"
       pointer := .witness `Effect4.Schema.decode_iff },
