@@ -18,7 +18,7 @@ def all : List NativeAtom :=
    .causeError, .causeIsDie, .causeIsInterrupt, .boolOr, .boolAnd, .tagIs, .isSome, .getOrElse,
    .ite, .optSome, .optNone, .mul, .listNil, .listCons, .listGet, .listLength, .listAppend,
    .natSub, .natDiv, .natMod, .strConcat, .mapEmpty, .mapGet, .mapSet, .mapKeys, .mapEntries,
-   .mapFromEntries]
+   .mapFromEntries, .tuple]
 
 /-- Every atom's name, in the inventory's order. -/
 def names : List String := all.map name
