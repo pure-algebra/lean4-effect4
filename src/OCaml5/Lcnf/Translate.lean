@@ -26,8 +26,10 @@ ordering that decides how to emit them.
   *by construction*; *tested* on `Dispatcher.insert` (the field `priority` versus the
   parameter `priority`) and on `List.mapTR.loop._at_.RunMachine.update.spec_0` (fifteen
   fields bound twice).
-* **ANF is preserved.** A `let` is a `let`, a `cases` is a `match` in tail position, a join
-  point is a local function; no expression is duplicated or inlined — *by construction*.
+* **Evaluation order is preserved.** An intermediate `let` stays a `let`, a `cases` is a
+  `match` in tail position, and a join point is a local function. Only `let x = v in x`
+  becomes `v`: no substitution, duplication, or reordering — *by construction*;
+  *tested* by the `lcnf-idioms` generator fixture, including callback observations.
 * **Erasure is explicit.** A `◾` argument to a constructor or a builtin is dropped (it is a
   type or a proof, and `Types` dropped the field); a `◾` argument anywhere else is `()`, so
   the arity of a call is always the arity LCNF wrote — *by construction*.
@@ -915,7 +917,13 @@ partial def code (declName : Name) (c : Code .pure) : TM Ml.Expr := do
     if let some c := carr? then setCarrier decl.fvarId c
     if let some f := lit? then
       modify fun s => { s with listLit := s.listLit.insert decl.fvarId f }
-    return .letIn x v (← code declName k)
+    let body ← code declName k
+    -- LCNF names every intermediate result, including a returned result. OCaml can
+    -- return that expression directly: no substitution, duplication, or reordering.
+    -- Translate the continuation first so all carrier and name checks still run.
+    match body with
+    | .var y => return if x == y then v else .letIn x v body
+    | _ => return .letIn x v body
   | .fun decl k => localFun declName decl k
   | .jp decl k => localFun declName decl k
   | .jmp j args =>

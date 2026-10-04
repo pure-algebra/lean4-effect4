@@ -15,6 +15,11 @@
  (modules prop_wire)
  (libraries effect4_eff))
 
+(test
+ (name test_frame)
+ (modules test_frame)
+ (libraries effect4_eff))
+
 ; The two frames the shared value foundation adds on top of Canonical.lean's ten: ref (11)
 ; and handle (12), the last two constructors of Effect4.Store.Val. Its two goldens
 ; (goldens/val_handle.hex, goldens/val_ref.hex) are HAND-DERIVED from Val.lean's encoder and

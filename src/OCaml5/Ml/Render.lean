@@ -818,6 +818,8 @@ it is the text this file is supposed to produce. -/
   == "module type S = sig\n  val f : int -> int\nend"
 #guard renderDecl (.moduleD "M" [] none [.openM "Effect"])
   == "module M = struct\n  open Effect\nend"
+#guard renderDecl (.moduleD "M" [] none [.blank, .openM "Effect", .blank])
+  == "module M = struct\n\n  open Effect\n\nend"
 #guard renderDecl (.typeExt "Effect.t" [] [{ name := "E", args := [Ty.int],
                                              result := some (Ty.effect Ty.unit) }])
   == "type Effect.t +=\n  | E : int -> unit Effect.t"

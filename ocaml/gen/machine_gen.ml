@@ -138,24 +138,20 @@ let rec dispatcher_insert (priority : int) (task : (_, _, _, _, _, _, _, _) task
     | [] -> (let _x_2 = [] in
       let _x_3 = task :: _x_2 in
       let _x_4 = ({ priority = priority; tasks = _x_3 } : (_, _, _, _, _, _, _, _) bucket) in
-      let _x_5 = _x_4 :: _x_2 in
-      _x_5)
+      _x_4 :: _x_2)
     | head_6 :: tail_7 -> (match (head_6 : (_, _, _, _, _, _, _, _) bucket) with
         | { priority = priority_1; tasks = tasks } -> (let _x_8 = priority_1 = priority in
           if _x_8 then (let _x_17 = [] in
             let _x_18 = task :: _x_17 in
             let _x_19 = tasks @ _x_18 in
             let _x_20 = ({ priority = priority_1; tasks = _x_19 } : (_, _, _, _, _, _, _, _) bucket) in
-            let _x_21 = _x_20 :: tail_7 in
-            _x_21) else (let _x_9 = priority < priority_1 in
+            _x_20 :: tail_7) else (let _x_9 = priority < priority_1 in
             if _x_9 then (let _x_12 = [] in
               let _x_13 = task :: _x_12 in
               let _x_14 = ({ priority = priority; tasks = _x_13 } : (_, _, _, _, _, _, _, _) bucket) in
               let _x_15 = head_6 :: tail_7 in
-              let _x_16 = _x_14 :: _x_15 in
-              _x_16) else (let _x_10 = dispatcher_insert priority task tail_7 in
-              let _x_11 = head_6 :: _x_10 in
-              _x_11))))
+              _x_14 :: _x_15) else (let _x_10 = dispatcher_insert priority task tail_7 in
+              head_6 :: _x_10))))
 
 
 
@@ -165,8 +161,7 @@ let dispatcher_enqueue (d : (_, _, _, _, _, _, _, _) dispatcher) (priority : int
   match (d : (_, _, _, _, _, _, _, _) dispatcher) with
     | { buckets = buckets; _ } -> (let _x_1 = dispatcher_insert priority task buckets in
       let _x_2 = true in
-      let _x_3 = ({ buckets = _x_1; armed = _x_2 } : (_, _, _, _, _, _, _, _) dispatcher) in
-      _x_3)
+      ({ buckets = _x_1; armed = _x_2 } : (_, _, _, _, _, _, _, _) dispatcher))
 
 
 
@@ -174,12 +169,10 @@ let dispatcher_enqueue (d : (_, _, _, _, _, _, _, _) dispatcher) (priority : int
 
 let rec list_map_tr_loop_at_dispatcher_drain_spec_0 (a_1 : (_, _, _, _, _, _, _, _) bucket list) (a_2 : (_, _, _, _, _, _, _, _) task list list) : (_, _, _, _, _, _, _, _) task list list =
   match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
+    | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match (head_4 : (_, _, _, _, _, _, _, _) bucket) with
         | { tasks = tasks; _ } -> (let _x_6 = tasks :: a_2 in
-          let _x_7 = list_map_tr_loop_at_dispatcher_drain_spec_0 tail_5 _x_6 in
-          _x_7))
+          list_map_tr_loop_at_dispatcher_drain_spec_0 tail_5 _x_6))
 
 
 
@@ -187,11 +180,9 @@ let rec list_map_tr_loop_at_dispatcher_drain_spec_0 (a_1 : (_, _, _, _, _, _, _,
 
 let rec list_flat_map_tr_go_at_dispatcher_drain_spec_1 (a_1 : (_, _, _, _, _, _, _, _) task list list) (a_2 : (_, _, _, _, _, _, _, _) task list) : (_, _, _, _, _, _, _, _) task list =
   match a_1 with
-    | [] -> (let _x_3 = a_2 in
-      _x_3)
+    | [] -> a_2
     | head_4 :: tail_5 -> (let _x_6 = a_2 @ head_4 in
-      let _x_7 = list_flat_map_tr_go_at_dispatcher_drain_spec_1 tail_5 _x_6 in
-      _x_7)
+      list_flat_map_tr_go_at_dispatcher_drain_spec_1 tail_5 _x_6)
 
 
 
@@ -206,8 +197,7 @@ let dispatcher_drain (d : (_, _, _, _, _, _, _, _) dispatcher) : (_, _, _, _, _,
       let _x_5 = list_flat_map_tr_go_at_dispatcher_drain_spec_1 _x_2 _x_4 in
       let _x_6 = false in
       let _x_7 = ({ buckets = _x_1; armed = _x_6 } : (_, _, _, _, _, _, _, _) dispatcher) in
-      let _x_8 = _x_5, _x_7 in
-      _x_8)
+      _x_5, _x_7)
 
 
 
@@ -215,11 +205,9 @@ let dispatcher_drain (d : (_, _, _, _, _, _, _, _) dispatcher) : (_, _, _, _, _,
 
 let rec list_map_tr_loop_at_run_machine_update_spec_0 (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) (a_1 : (_, _, _, _, _, _, _, _, _, _) run_fiber list) (a_2 : (_, _, _, _, _, _, _, _, _, _) run_fiber list) : (_, _, _, _, _, _, _, _, _, _) run_fiber list =
   match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
+    | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
-      let _x_9 = list_map_tr_loop_at_run_machine_update_spec_0 f tail_5 _x_8 in
-      _x_9 in
+      list_map_tr_loop_at_run_machine_update_spec_0 f tail_5 _x_8 in
       match (head_4 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
         | { id = id; _ } -> (match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
             | { id = id_1; _ } -> (let _x_10 = id = id_1 in
@@ -233,8 +221,7 @@ let run_machine_update (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } -> (let _x_1 = [] in
       let _x_2 = list_map_tr_loop_at_run_machine_update_spec_0 f fibers _x_1 in
-      let _x_3 = ({ fibers = _x_2; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-      _x_3)
+      ({ fibers = _x_2; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine))
 
 
 
@@ -242,13 +229,10 @@ let run_machine_update (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (f
 
 let rec list_find_opt_at_run_machine_fiber_opt_spec_0 (id : int) (x_1 : (_, _, _, _, _, _, _, _, _, _) run_fiber list) : (_, _, _, _, _, _, _, _, _, _) run_fiber option =
   match x_1 with
-    | [] -> (let _x_2 = None in
-      _x_2)
+    | [] -> None
     | head_3 :: tail_4 -> (match (head_3 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
         | { id = id_1; _ } -> (let _x_5 = id_1 = id in
-          if _x_5 then (let _x_7 = Some head_3 in
-            _x_7) else (let _x_6 = list_find_opt_at_run_machine_fiber_opt_spec_0 id tail_4 in
-            _x_6)))
+          if _x_5 then Some head_3 else list_find_opt_at_run_machine_fiber_opt_spec_0 id tail_4))
 
 
 
@@ -256,8 +240,7 @@ let rec list_find_opt_at_run_machine_fiber_opt_spec_0 (id : int) (x_1 : (_, _, _
 
 let run_machine_fiber_opt (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (id : int) : (_, _, _, _, _, _, _, _, _, _) run_fiber option =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
-    | { fibers = fibers; _ } -> (let _x_1 = list_find_opt_at_run_machine_fiber_opt_spec_0 id fibers in
-      _x_1)
+    | { fibers = fibers; _ } -> list_find_opt_at_run_machine_fiber_opt_spec_0 id fibers
 
 
 
@@ -266,10 +249,8 @@ let run_machine_fiber_opt (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine)
 let run_machine_emit (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (events : (_, _, _, _, _, _, _, _, _, _) run_event list) : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
     | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } -> (let _x_1 = events = [] in
-      if _x_1 then (let _x_4 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-        _x_4) else (let _x_2 = trace @ events in
-        let _x_3 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = _x_2; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
-        _x_3))
+      if _x_1 then ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) else (let _x_2 = trace @ events in
+        ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = state; trace = _x_2; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine)))
 
 
 
@@ -277,14 +258,11 @@ let run_machine_emit (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (eve
 
 let rec list_all_at_run_machine_finished_spec_0 (x_1 : (_, _, _, _, _, _, _, _, _, _) run_fiber list) : bool =
   match x_1 with
-    | [] -> (let _x_2 = true in
-      _x_2)
+    | [] -> true
     | head_3 :: tail_4 -> (match (head_3 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
         | { exit_ = exit_; _ } -> (match exit_ with
-            | None -> (let _x_5 = false in
-              _x_5)
-            | Some _ -> (let _x_7 = list_all_at_run_machine_finished_spec_0 tail_4 in
-              _x_7)))
+            | None -> false
+            | Some _ -> list_all_at_run_machine_finished_spec_0 tail_4))
 
 
 
@@ -292,8 +270,7 @@ let rec list_all_at_run_machine_finished_spec_0 (x_1 : (_, _, _, _, _, _, _, _, 
 
 let run_machine_finished (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) : bool =
   match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
-    | { fibers = fibers; _ } -> (let _x_1 = list_all_at_run_machine_finished_spec_0 fibers in
-      _x_1)
+    | { fibers = fibers; _ } -> list_all_at_run_machine_finished_spec_0 fibers
 
 
 
@@ -302,23 +279,19 @@ let run_machine_finished (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) 
 let rec countdown_walk (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (x_1 : int list) (x_2 : (_, _, _, _, _) exit_ list) =
   match x_1 with
     | [] -> (let _x_3 = None in
-      let _x_4 = x_2, _x_3 in
-      _x_4)
+      x_2, _x_3)
     | head_5 :: tail_6 -> (let _x_7 = run_machine_fiber_opt m head_5 in
       match _x_7 with
-        | None -> (let _x_8 = countdown_walk m tail_6 x_2 in
-          _x_8)
+        | None -> countdown_walk m tail_6 x_2
         | Some val__9 -> (match (val__9 : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
             | { exit_ = exit_; _ } -> (match exit_ with
                 | None -> (let _x_10 = head_5, tail_6 in
                   let _x_11 = Some _x_10 in
-                  let _x_12 = x_2, _x_11 in
-                  _x_12)
+                  x_2, _x_11)
                 | Some val__13 -> (let _x_14 = [] in
                   let _x_15 = val__13 :: _x_14 in
                   let _x_16 = x_2 @ _x_15 in
-                  let _x_17 = countdown_walk m tail_6 _x_16 in
-                  _x_17))))
+                  countdown_walk m tail_6 _x_16))))
 
 
 
@@ -327,8 +300,7 @@ let rec countdown_walk (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) (x
 let cause_interrupt (interruptor : _ option) : (_, _, _, _) reason list =
   let _x_1 = [] in
   let _x_2 = Reason_interrupt (interruptor, _x_1) in
-  let _x_3 = _x_2 :: _x_1 in
-  _x_3
+  _x_2 :: _x_1
 
 
 
@@ -336,13 +308,10 @@ let cause_interrupt (interruptor : _ option) : (_, _, _, _) reason list =
 
 let rec list_find_opt_at_reason_annotations_lookup_spec_0 (key : string) (x_1 : (string * _) list) : (string * _) option =
   match x_1 with
-    | [] -> (let _x_2 = None in
-      _x_2)
+    | [] -> None
     | head_3 :: tail_4 -> (match head_3 with
         | fst_1, _ -> (let _x_5 = fst_1 = key in
-          if _x_5 then (let _x_7 = Some head_3 in
-            _x_7) else (let _x_6 = list_find_opt_at_reason_annotations_lookup_spec_0 key tail_4 in
-            _x_6)))
+          if _x_5 then Some head_3 else list_find_opt_at_reason_annotations_lookup_spec_0 key tail_4))
 
 
 
@@ -351,11 +320,9 @@ let rec list_find_opt_at_reason_annotations_lookup_spec_0 (key : string) (x_1 : 
 let reason_annotations_lookup (self : (string * _) list) (key : string) : _ option =
   let _x_1 = list_find_opt_at_reason_annotations_lookup_spec_0 key self in
   match _x_1 with
-    | None -> (let _x_2 = None in
-      _x_2)
+    | None -> None
     | Some val__3 -> (match val__3 with
-        | _, snd_1 -> (let _x_4 = Some snd_1 in
-          _x_4))
+        | _, snd_1 -> Some snd_1)
 
 
 
@@ -363,11 +330,9 @@ let reason_annotations_lookup (self : (string * _) list) (key : string) : _ opti
 
 let rec list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0 (overwrite : bool) (extra : (string * _) list) (a_1 : (string * _) list) (a_2 : (string * _) list) : (string * _) list =
   match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
+    | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
-      let _x_9 = list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0 overwrite extra tail_5 _x_8 in
-      _x_9 in
+      list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0 overwrite extra tail_5 _x_8 in
       if overwrite then (match head_4 with
           | fst_1, _ -> (let _x_10 = reason_annotations_lookup extra fst_1 in
             match _x_10 with
@@ -380,8 +345,7 @@ let rec list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_anno
 (* LCNF mono: instBEqOfDecidableEq._redArg._lam_0 (inst.1 : lcAny -> lcAny -> Bool) (a : lcAny) (b : lcAny) : Bool *)
 
 let inst_beq_of_decidable_eq__red_arg__lam_0 (inst_1 : _ -> _ -> bool) a b : bool =
-  let _x_2 = inst_1 a b in
-  _x_2
+  inst_1 a b
 
 
 
@@ -389,12 +353,10 @@ let inst_beq_of_decidable_eq__red_arg__lam_0 (inst_1 : _ -> _ -> bool) a b : boo
 
 let rec list_map_tr_loop_at_reason_annotations_keys_spec_0 (a_1 : (string * _) list) (a_2 : string list) : string list =
   match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
+    | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, _ -> (let _x_6 = fst_1 :: a_2 in
-          let _x_7 = list_map_tr_loop_at_reason_annotations_keys_spec_0 tail_5 _x_6 in
-          _x_7))
+          list_map_tr_loop_at_reason_annotations_keys_spec_0 tail_5 _x_6))
 
 
 
@@ -402,8 +364,7 @@ let rec list_map_tr_loop_at_reason_annotations_keys_spec_0 (a_1 : (string * _) l
 
 let reason_annotations_keys (self : (string * _) list) : string list =
   let _x_1 = [] in
-  let _x_2 = list_map_tr_loop_at_reason_annotations_keys_spec_0 self _x_1 in
-  _x_2
+  list_map_tr_loop_at_reason_annotations_keys_spec_0 self _x_1
 
 
 
@@ -411,17 +372,14 @@ let reason_annotations_keys (self : (string * _) list) : string list =
 
 let rec list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 (self : (string * _) list) (a_1 : (string * _) list) (a_2 : (string * _) list) : (string * _) list =
   match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
+    | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
         | fst_1, _ -> (let _x_6 = fun _b1 _b2 -> _b1 = _b2 in
           let _f_7 = inst_beq_of_decidable_eq__red_arg__lam_0 _x_6 in
           let _x_8 = reason_annotations_keys self in
           let _x_9 = List.exists (_f_7 fst_1) _x_8 in
-          if _x_9 then (let _x_12 = list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self tail_5 a_2 in
-            _x_12) else (let _x_10 = head_4 :: a_2 in
-            let _x_11 = list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self tail_5 _x_10 in
-            _x_11)))
+          if _x_9 then list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self tail_5 a_2 else (let _x_10 = head_4 :: a_2 in
+            list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self tail_5 _x_10)))
 
 
 
@@ -431,8 +389,7 @@ let reason_annotations_annotate_entries (self : (string * _) list) (extra : (str
   let _x_1 = [] in
   let _x_2 = list_map_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_0 overwrite extra self _x_1 in
   let _x_3 = list_filter_tr_loop_at__private_effect4_machine_cause_0_effect4_reason_annotations_annotate_entries_spec_1 self extra _x_1 in
-  let _x_4 = _x_2 @ _x_3 in
-  _x_4
+  _x_2 @ _x_3
 
 
 
@@ -441,14 +398,11 @@ let reason_annotations_annotate_entries (self : (string * _) list) (extra : (str
 let reason_annotate (x_1 : (_, _, _, _) reason) (x_2 : (string * _) list) (x_3 : bool) : (_, _, _, _) reason =
   match (x_1 : (_, _, _, _) reason) with
     | Reason_fail (error_4, annotations_5) -> (let _x_6 = reason_annotations_annotate_entries annotations_5 x_2 x_3 in
-      let _x_7 = Reason_fail (error_4, _x_6) in
-      _x_7)
+      Reason_fail (error_4, _x_6))
     | Reason_die (defect_8, annotations_9) -> (let _x_10 = reason_annotations_annotate_entries annotations_9 x_2 x_3 in
-      let _x_11 = Reason_die (defect_8, _x_10) in
-      _x_11)
+      Reason_die (defect_8, _x_10))
     | Reason_interrupt (interruptor_12, annotations_13) -> (let _x_14 = reason_annotations_annotate_entries annotations_13 x_2 x_3 in
-      let _x_15 = Reason_interrupt (interruptor_12, _x_14) in
-      _x_15)
+      Reason_interrupt (interruptor_12, _x_14))
 
 
 
@@ -456,12 +410,10 @@ let reason_annotate (x_1 : (_, _, _, _) reason) (x_2 : (string * _) list) (x_3 :
 
 let rec list_map_tr_loop_at_cause_annotate_spec_0 (extra : (string * _) list) (overwrite : bool) (a_1 : (_, _, _, _) reason list) (a_2 : (_, _, _, _) reason list) : (_, _, _, _) reason list =
   match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
+    | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = reason_annotate head_4 extra overwrite in
       let _x_7 = _x_6 :: a_2 in
-      let _x_8 = list_map_tr_loop_at_cause_annotate_spec_0 extra overwrite tail_5 _x_7 in
-      _x_8)
+      list_map_tr_loop_at_cause_annotate_spec_0 extra overwrite tail_5 _x_7)
 
 
 
@@ -469,8 +421,7 @@ let rec list_map_tr_loop_at_cause_annotate_spec_0 (extra : (string * _) list) (o
 
 let cause_annotate (self : (_, _, _, _) reason list) (extra : (string * _) list) (overwrite : bool) : (_, _, _, _) reason list =
   let _x_1 = [] in
-  let _x_2 = list_map_tr_loop_at_cause_annotate_spec_0 extra overwrite self _x_1 in
-  _x_2
+  list_map_tr_loop_at_cause_annotate_spec_0 extra overwrite self _x_1
 
 
 
@@ -479,8 +430,7 @@ let cause_annotate (self : (_, _, _, _) reason list) (extra : (string * _) list)
 let supervision_interrupt_cause (encode : int -> _) (requester : int option) (annotations : (string * _) list) : (_, _, _, _) reason list =
   let _jp_1 = fun _y_2 -> let _x_3 = cause_interrupt _y_2 in
   let _x_4 = false in
-  let _x_5 = cause_annotate _x_3 annotations _x_4 in
-  _x_5 in
+  cause_annotate _x_3 annotations _x_4 in
   match requester with
     | None -> (let _x_6 = None in
       _jp_1 _x_6)
@@ -496,8 +446,7 @@ let inst_decidable_eq_prod (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (
   match x_3 with
     | fst_5, snd_6 -> (match x_4 with
         | fst_7, snd_8 -> (let _x_9 = inst_1 fst_5 fst_7 in
-          if _x_9 then (let _x_10 = inst_2 snd_6 snd_8 in
-            _x_10) else _x_9))
+          if _x_9 then inst_2 snd_6 snd_8 else _x_9))
 
 
 
@@ -505,8 +454,7 @@ let inst_decidable_eq_prod (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (
 
 let inst_decidable_eq_reason_annotations_dec_eq__red_arg__lam_0 (inst_1 : _ -> _ -> bool) (a : string * _) (b : string * _) : bool =
   let _x_2 = fun _b1 _b2 -> _b1 = _b2 in
-  let _x_3 = inst_decidable_eq_prod _x_2 inst_1 a b in
-  _x_3
+  inst_decidable_eq_prod _x_2 inst_1 a b
 
 
 
@@ -515,10 +463,8 @@ let inst_decidable_eq_reason_annotations_dec_eq__red_arg__lam_0 (inst_1 : _ -> _
 let rec list_has_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ list) (x_3 : _ list) : bool =
   match x_2 with
     | [] -> (match x_3 with
-        | [] -> (let _x_4 = true in
-          _x_4)
-        | _ :: _ -> (let _x_7 = false in
-          _x_7))
+        | [] -> true
+        | _ :: _ -> false)
     | head_8 :: tail_9 -> (let _x_10 = false in
       match x_3 with
         | [] -> _x_10
@@ -533,13 +479,10 @@ let rec list_has_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : _ list) (x_3 : _ list) 
 let inst_decidable_eq_list (inst_1 : _ -> _ -> bool) (xs : _ list) (ys : _ list) : bool =
   match xs with
     | [] -> (match ys with
-        | [] -> (let _x_2 = true in
-          _x_2)
-        | _ :: _ -> (let _x_5 = false in
-          _x_5))
+        | [] -> true
+        | _ :: _ -> false)
     | head_6 :: tail_7 -> (match ys with
-        | [] -> (let _x_8 = false in
-          _x_8)
+        | [] -> false
         | head_9 :: tail_10 -> (let _x_11 = list_has_dec_eq inst_1 tail_7 tail_10 in
           let _x_12 = inst_1 head_6 head_9 in
           if _x_12 then _x_11 else _x_12))
@@ -550,8 +493,7 @@ let inst_decidable_eq_list (inst_1 : _ -> _ -> bool) (xs : _ list) (ys : _ list)
 
 let inst_decidable_eq_reason_annotations_dec_eq (inst_1 : _ -> _ -> bool) (x_2 : (string * _) list) (x_3 : (string * _) list) : bool =
   let _f_4 = inst_decidable_eq_reason_annotations_dec_eq__red_arg__lam_0 inst_1 in
-  let _x_5 = inst_decidable_eq_list _f_4 x_2 x_3 in
-  _x_5
+  inst_decidable_eq_list _f_4 x_2 x_3
 
 
 
@@ -560,15 +502,11 @@ let inst_decidable_eq_reason_annotations_dec_eq (inst_1 : _ -> _ -> bool) (x_2 :
 let option_inst_decidable_eq (inst : _ -> _ -> bool) (a : _ option) (b : _ option) : bool =
   match a with
     | None -> (match b with
-        | None -> (let _x_1 = true in
-          _x_1)
-        | Some _ -> (let _x_3 = false in
-          _x_3))
+        | None -> true
+        | Some _ -> false)
     | Some val__4 -> (match b with
-        | None -> (let _x_5 = false in
-          _x_5)
-        | Some val__6 -> (let _x_7 = inst val__4 val__6 in
-          _x_7))
+        | None -> false
+        | Some val__6 -> inst val__4 val__6)
 
 
 
@@ -578,22 +516,16 @@ let inst_decidable_eq_reason_dec_eq (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -
   match (x_5 : (_, _, _, _) reason) with
     | Reason_fail (error_7, annotations_8) -> (match (x_6 : (_, _, _, _) reason) with
         | Reason_fail (error_9, annotations_10) -> (let _x_11 = inst_1 error_7 error_9 in
-          if _x_11 then (let _x_12 = inst_decidable_eq_reason_annotations_dec_eq inst_4 annotations_8 annotations_10 in
-            _x_12) else _x_11)
-        | _ -> (let _x_13 = false in
-          _x_13))
+          if _x_11 then inst_decidable_eq_reason_annotations_dec_eq inst_4 annotations_8 annotations_10 else _x_11)
+        | _ -> false)
     | Reason_die (defect_14, annotations_15) -> (match (x_6 : (_, _, _, _) reason) with
         | Reason_die (defect_16, annotations_17) -> (let _x_18 = inst_2 defect_14 defect_16 in
-          if _x_18 then (let _x_19 = inst_decidable_eq_reason_annotations_dec_eq inst_4 annotations_15 annotations_17 in
-            _x_19) else _x_18)
-        | _ -> (let _x_20 = false in
-          _x_20))
+          if _x_18 then inst_decidable_eq_reason_annotations_dec_eq inst_4 annotations_15 annotations_17 else _x_18)
+        | _ -> false)
     | Reason_interrupt (interruptor_21, annotations_22) -> (match (x_6 : (_, _, _, _) reason) with
         | Reason_interrupt (interruptor_23, annotations_24) -> (let _x_25 = option_inst_decidable_eq inst_3 interruptor_21 interruptor_23 in
-          if _x_25 then (let _x_26 = inst_decidable_eq_reason_annotations_dec_eq inst_4 annotations_22 annotations_24 in
-            _x_26) else _x_25)
-        | _ -> (let _x_27 = false in
-          _x_27))
+          if _x_25 then inst_decidable_eq_reason_annotations_dec_eq inst_4 annotations_22 annotations_24 else _x_25)
+        | _ -> false)
 
 
 
@@ -601,9 +533,7 @@ let inst_decidable_eq_reason_dec_eq (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -
 
 let cause_dedup__red_arg__lam_0 (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (head_5 : (_, _, _, _) reason) (other : (_, _, _, _) reason) : bool =
   let _x_6 = inst_decidable_eq_reason_dec_eq inst_1 inst_2 inst_3 inst_4 other head_5 in
-  if _x_6 then (let _x_8 = false in
-    _x_8) else (let _x_7 = true in
-    _x_7)
+  if _x_6 then false else true
 
 
 
@@ -611,13 +541,10 @@ let cause_dedup__red_arg__lam_0 (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bo
 
 let rec list_filter_tr_loop (p : _ -> bool) (a_1 : _ list) (a_2 : _ list) : _ list =
   match a_1 with
-    | [] -> (let _x_3 = List.rev a_2 in
-      _x_3)
+    | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _x_6 = p head_4 in
       if _x_6 then (let _x_8 = head_4 :: a_2 in
-        let _x_9 = list_filter_tr_loop p tail_5 _x_8 in
-        _x_9) else (let _x_7 = list_filter_tr_loop p tail_5 a_2 in
-        _x_7))
+        list_filter_tr_loop p tail_5 _x_8) else list_filter_tr_loop p tail_5 a_2)
 
 
 
@@ -630,8 +557,7 @@ let rec cause_dedup (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 
       let _x_9 = cause_dedup inst_1 inst_2 inst_3 inst_4 tail_7 in
       let _x_10 = [] in
       let _x_11 = list_filter_tr_loop _f_8 _x_9 _x_10 in
-      let _x_12 = head_6 :: _x_11 in
-      _x_12)
+      head_6 :: _x_11)
 
 
 
@@ -641,8 +567,7 @@ let cause_combine (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
   let _x_5 = self = [] in
   if _x_5 then that else (let _x_6 = that = [] in
     if _x_6 then self else (let _x_7 = self @ that in
-      let _x_8 = cause_dedup inst_1 inst_2 inst_3 inst_4 _x_7 in
-      _x_8))
+      cause_dedup inst_1 inst_2 inst_3 inst_4 _x_7))
 
 
 
@@ -660,15 +585,12 @@ let interrupt_record (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3
                   let _x_10 = interruptible _x_9 in
                   if _x_10 then (if running then (let _x_18 = set_deferred _x_9 _x_6 in
                       let _x_19 = ({ id = id; frame = _x_18; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                      let _x_20 = _x_19, _x_5 in
-                      _x_20) else (let _x_12 = failure _y_8 in
+                      _x_19, _x_5) else (let _x_12 = failure _y_8 in
                       let _x_13 = answer_with _x_9 _x_12 in
                       let _x_14 = Parked_notParked in
                       let _x_15 = [] in
                       let _x_16 = ({ id = id; frame = _x_13; running = running; parked = _x_14; pending = _x_15; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                      let _x_17 = _x_16, _x_6 in
-                      _x_17)) else (let _x_11 = f_1, _x_5 in
-                    _x_11) in
+                      _x_16, _x_6)) else f_1, _x_5 in
                   let _x_21 = stack_annotations id in
                   let _x_22 = supervision_interrupt_cause encode_fiber interruptor _x_21 in
                   let cause = cause_annotate _x_22 extra _x_5 in
@@ -678,8 +600,7 @@ let interrupt_record (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3
                     | Some val__24 -> (let _x_25 = cause_combine inst_1 inst_2 inst_3 inst_4 val__24 cause in
                       _jp_7 _x_25))))
         | Some _ -> (let _x_27 = false in
-          let _x_28 = f, _x_27 in
-          _x_28))
+          f, _x_27))
 
 
 

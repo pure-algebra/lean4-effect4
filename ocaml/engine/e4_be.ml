@@ -17,7 +17,7 @@ let be64 (n : int) : string =
 (* eff_frame.ml:159 read_be64, with the window check of D3.  A top byte >= 0x40 is a
    length at or above 2^62: outside E4_nat.fits_wire, refused. *)
 let read_be64 (s : string) (pos : int) : int option =
-  if pos < 0 || pos + 8 > String.length s then None
+  if pos < 0 || pos > String.length s - 8 then None
   else if Char.code (String.unsafe_get s pos) >= 0x40 then None
   else begin
     let n = ref 0 in
@@ -41,7 +41,7 @@ let framed (tag : int) (payload : string) : string =
 
 (* eff_frame.ml:170 read_frame: (tag, payload_start, payload_end, next). *)
 let read_frame (s : string) (pos : int) (limit : int) : (int * int * int * int) option =
-  if pos < 0 || limit > String.length s || pos + header_length > limit then None
+  if pos < 0 || limit < pos || limit > String.length s || limit - pos < header_length then None
   else
     match read_be64 s (pos + 1) with
     | None -> None

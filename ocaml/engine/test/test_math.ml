@@ -306,11 +306,28 @@ let test_be () =
     (E4_be.read_be64 "\000\000\000\000\000\000\000" 0 = None
      && E4_be.read_be64 (E4_be.be64 1) 1 = None
      && E4_be.read_be64 (E4_be.be64 1) (-1) = None);
+  check "B6 read_be64 refuses extreme positions without overflowing its bounds check"
+    (List.for_all (fun pos -> E4_be.read_be64 (E4_be.be64 1) pos = None)
+       [min_int; -1; max_int - 8; max_int - 1; max_int]);
+  check "B4 read_be64 accepts an exact nonzero window"
+    (E4_be.read_be64 ("xx" ^ E4_be.be64 42) 2 = Some 42);
   check "B4 be64 raises Invalid_argument on a negative int"
     (try ignore (E4_be.be64 (-1)); false with Invalid_argument _ -> true | _ -> false);
   (* frames *)
   check "B4 read_frame refuses a header shorter than 9 bytes"
     (E4_be.read_frame "\010\000\000\000\000" 0 5 = None && E4_be.read_frame "" 0 0 = None);
+  check "B6 read_frame refuses invalid and extreme windows without overflowing"
+    (let s = E4_be.framed 9 "" in
+     let positions = [min_int; -1; 0; 1; 8; 9; 10; max_int - 8; max_int - 1; max_int] in
+     let limits = [min_int; -1; 0; 1; 8; 9; 10; max_int] in
+     List.for_all (fun pos -> List.for_all (fun limit ->
+       let expected = if pos = 0 && limit = 9 then Some (9, 9, 9, 9) else None in
+       E4_be.read_frame s pos limit = expected) limits) positions);
+  check "B4 read_frame accepts an exact embedded window and leaves trailing bytes"
+    (let s = "xx" ^ E4_be.framed 3 "abc" ^ "tail" in
+     E4_be.read_frame s 2 14 = Some (3, 11, 14, 14)
+     && E4_be.read_frame s 2 (String.length s) = Some (3, 11, 14, 14)
+     && E4_be.read_frame s 2 13 = None);
   check "B4 read_frame refuses a length that runs past the limit"
     (let f = E4_be.framed 4 "abcd" in
      E4_be.read_frame f 0 (String.length f - 1) = None);

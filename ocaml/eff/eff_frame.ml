@@ -55,30 +55,7 @@ let tag_float = 14
 
 (* ---- UTF-8 (RFC 3629: no overlongs, no surrogates, at most U+10FFFF) ---- *)
 
-let utf8_valid (s : string) : bool =
-  let n = String.length s in
-  let byte i = Char.code (String.unsafe_get s i) in
-  let cont i = i < n && byte i land 0xc0 = 0x80 in
-  let rec go i =
-    if i >= n then true
-    else
-      let b = byte i in
-      if b < 0x80 then go (i + 1)
-      else if b < 0xc2 then false
-      else if b < 0xe0 then cont (i + 1) && go (i + 2)
-      else if b < 0xf0 then
-        cont (i + 1) && cont (i + 2)
-        && (let b1 = byte (i + 1) in
-            (b <> 0xe0 || b1 >= 0xa0) && (b <> 0xed || b1 < 0xa0))
-        && go (i + 3)
-      else if b < 0xf5 then
-        cont (i + 1) && cont (i + 2) && cont (i + 3)
-        && (let b1 = byte (i + 1) in
-            (b <> 0xf0 || b1 >= 0x90) && (b <> 0xf4 || b1 < 0x90))
-        && go (i + 4)
-      else false
-  in
-  go 0
+let utf8_valid (s : string) : bool = String.is_valid_utf_8 s
 
 (* ---- encoding ---- *)
 
@@ -95,7 +72,9 @@ let emit_frame (b : Buffer.t) (tag : int) (payload : string) : unit =
 let with_payload (b : Buffer.t) (tag : int) (f : Buffer.t -> unit) : unit =
   let p = Buffer.create 32 in
   f p;
-  emit_frame b tag (Buffer.contents p)
+  Buffer.add_char b (Char.chr tag);
+  emit_be64 b (Buffer.length p);
+  Buffer.add_buffer b p
 
 (* Base-256 digits, big-endian, no leading zero; 0 is the empty string. *)
 let nat_digits (n : int) : string =
@@ -172,7 +151,7 @@ let read_be64 (s : string) (pos : int) : int option =
 
 (* (tag, payload_start, payload_end, next) *)
 let read_frame (s : string) (pos : int) (limit : int) : (int * int * int * int) option =
-  if pos < 0 || limit > String.length s || pos + 9 > limit then None
+  if pos < 0 || limit < pos || limit > String.length s || limit - pos < 9 then None
   else
     match read_be64 s (pos + 1) with
     | None -> None
