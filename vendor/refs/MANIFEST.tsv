@@ -1,0 +1,18 @@
+# repo	ref	commit	purpose
+leanprover-community/mathlib4	v4.33.1	0df444a360eaa60ab8c11dca51a86af692955474	module-system idioms at scale; tactic frameworks; linters
+hanwenzhu/LeanArchitect	v4.33.1	c74a8acc9e8a1a82096867dd3aeec18fbfc560b9	blueprint nodes as an attribute; inferred uses; Lake facets
+PatrickMassot/leanblueprint	master	56e066d30fb7b608a63f4241fee80982d7eae3ef	blueprint statuses and the dependency graph
+leanprover-community/import-graph	v4.33.0	16f02aa7642864af59f1ff0e384a015994db9118	module graph tools; workspace model
+leanprover/doc-gen4	v4.33.1	e2af49a7b7e5e1a9224008c1f15e7aa4f58a4015	declaration extraction from the environment
+digama0/lean4lean	master	8223d223ed98661882e95d9d6a7126df7097cd76	the kernel in Lean; replay
+leanprover-community/repl	v4.33.0	bbeedf38e0898869fc3b7c009e1ea877b46204e4	machine interaction; proof states
+lenianiva/Pantograph	dev	92d4818a4b343d7be293731e03359a19e8082626	goal graphs and machine interaction
+frenzymath/jixia	main	755fde27a9cf1fb25c17a015b1cc4ac68384aa63	static analysis of declarations and tactics
+leanprover/cslib	v4.33.1	98e395a701f2027a413ad24729e1a11a6c772eb4	semantics: transition systems, bisimulation, calculi
+leanprover-community/iris-lean	v4.33.1	ec3bd660b7c19d1f6540d8777cff02925f82114f	separation logic and logical relations in Lean
+verse-lab/loom	master	78928abc9054b31d0bea85985496490baae95244	monadic program logics
+verse-lab/veil	main	e82c09071cfa48c94ee298a2e1fed31ea13115a8	verified distributed protocols; invariants
+opencompl/lean-mlir	main	b8c4a771319a044854a4bbb49b8821381ef86ff8	compiler IR semantics and verified rewrites
+AeneasVerif/aeneas	main	557eff83ecef5083b98a52a94ca7fae63d6c1dab	Rust-to-Lean verification backend
+leanprover-community/lean-auto	v4.33.0	a66de83d4eea7f2811613d7b24ce87cf46bb3ac2	automation interface to external provers
+leanprover-community/plausible	v4.33.0	b7eb3304aeae834b12dda98993a37f6a41f6f0bb	property testing
