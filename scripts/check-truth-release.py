@@ -236,6 +236,19 @@ def judge_runs(builds, manifest, results, skipped, ledger_text):
     return findings + truth_ledger.judge(builds, order, lines, programs, observed), observed, lines
 
 
+def unpromotable(ledger_text, lines):
+    """Why a promote must not overwrite the ledger on disk, or `None`. The hand columns are
+    carried from the lines that were read, so a line that was not read would lose its reason
+    and its slice."""
+    if ledger_text is None:
+        return None
+    written = [text for text in ledger_text.split('\n') if text and not text.startswith('#')][1:]
+    if len(written) == len(lines):
+        return None
+    return (f'the ledger on disk has {len(written)} line(s) and {len(lines)} could be read; repair or '
+            f'remove it first, or its hand columns are lost')
+
+
 def tests_passed(status, said):
     """How many tests a `bun test` run passed, as text, or `None` when the run is refused: a
     nonzero exit status, a failed test, no count, or no test at all."""
@@ -615,13 +628,9 @@ def lane(promote, tests):
     write(WORK / 'run.json', json.dumps(dict(kept, local=local, findings=findings), indent=2) + '\n')
 
     if promote:
-        # The hand columns are carried from the ledger on disk, so a line of it that was not read
-        # would lose its reason and its slice: refuse instead.
-        unread = [] if ledger_text is None else [text for text in ledger_text.split('\n')
-                                                 if text and not text.startswith('#')][1:]
-        if ledger_text is not None and len(unread) != len(lines):
-            raise LaneError(f'{LEDGER.relative_to(root)} has {len(unread)} line(s) and {len(lines)} could be '
-                            f'read; repair or remove it first, or its hand columns are lost')
+        refusal = unpromotable(ledger_text, lines)
+        if refusal:
+            raise LaneError(refusal)
         write(LEDGER, fresh)
         write(RECORD, kept_text)
         print(f'promoted {LEDGER.relative_to(root)} and {RECORD.relative_to(root)}')
@@ -759,6 +768,15 @@ def self_test():
     control('green: the ledger of the observations holds', judged(green)[0] == [], judged(green)[0])
     control('green: promote keeps the hand columns and is a fixed point',
             L.render(BUILDS, *carry(BUILDS, L.parse(green, BUILDS)[1], names, observed)) == green)
+    control('green: a ledger that was read whole may be promoted over, and so may no ledger',
+            unpromotable(green, L.parse(green, BUILDS)[1]) is None and unpromotable(None, {}) is None)
+    short = green.replace(written['pD'], written['pD'].rsplit('\t', 1)[0])
+    red('a promote over a ledger with a line that was not read',
+        [unpromotable(short, judged(short)[2]) or ''], 'has 4 line(s) and 3 could be read')
+    red('a promote over a ledger for other builds',
+        [unpromotable(green.replace(f'{release} exit', '4.0.2 exit'),
+                      judged(green.replace(f'{release} exit', '4.0.2 exit'))[2]) or ''],
+        'has 4 line(s) and 0 could be read')
     control('the expected differences of a ledger are listed by program and build, with slice and reason',
             L.known(BUILDS, order, lines) == [
                 f'pB: {release} schedule: no: the host lacks machine rows 1-3 (forked 0 1, started 1, exited 1 success) '
