@@ -24,6 +24,7 @@ properties that are properties of the *syntax*, and leaves typing to `ocamlc`. W
 | `duplicate-type` | one module that declares a type name twice |
 | `duplicate-binding` | one `let … and …` group that binds a name twice |
 | `bad-name` | a name outside the identifier profile of `OCaml5.Ml.Identifier`, a deriver included |
+| `shadowed-value` | a binder whose name is already in scope, only when the environment asks (`Env.noShadow`) |
 
 and, against an `OCaml5.Ml.Profile`, four more (`Check.profile`):
 
@@ -108,6 +109,12 @@ structure Env where
   switched off rather than made to lie. It is the price of `open`, and it is why a generator
   that wants the check should qualify instead. -/
   openScope : Bool := false
+  /-- When set, a binder whose name is already in scope is a `shadowed-value` diagnostic: an
+  enclosing binder, a value of `values`, or one of these protected names. Unset by default,
+  because shadowing is ordinary OCaml. A generator whose contract gives every binder of a
+  declaration its own name sets it, and then a reference cannot resolve to a binder other than
+  the one the generator meant. -/
+  noShadow : Option (List String) := none
 deriving Repr, Inhabited
 
 namespace Env
@@ -147,6 +154,15 @@ def knowsValue (e : Env) (n : String) : Bool :=
 
 /-- Enter the scope of an `open` or an `include`. -/
 def opened (e : Env) : Env := { e with openScope := true }
+
+/-- The `shadowed-value` diagnostics of binding `ns` at this scope: empty unless `noShadow` is
+set. `_` and `()` bind nothing. -/
+def shadows (e : Env) (site : String) (ns : List String) : List Diag :=
+  match e.noShadow with
+  | none => []
+  | some guarded =>
+    (ns.filter fun n => n != "_" && n != "()" && (e.values.contains n || guarded.contains n)).map
+      fun n => { code := "shadowed-value", site := site, detail := "`" ++ n ++ "`" }
 
 private def lookupArity : List (String × Nat) → String → Option Nat
   | [], _ => none
@@ -317,18 +333,21 @@ def checkExpr (env : Env) (site : String) (tp : TailPosition) : Expr → List Di
   | .app f args => checkExpr env site .nonTail f ++ checkExprsN env site args
   | .appL f args => checkExpr env site .nonTail f ++ checkLabelled env site args
   | .binop _ l r => checkExpr env site .nonTail l ++ checkExpr env site .nonTail r
-  | .fn ps b => checkExpr (env.withValues ps) site .tail b
+  | .fn ps b => env.shadows site ps ++ checkExpr (env.withValues ps) site .tail b
   | .lam ps b =>
-      checkParams env site ps ++ checkExpr (env.withValues (paramVars ps)) site .tail b
+      env.shadows site (paramVars ps) ++ checkParams env site ps
+        ++ checkExpr (env.withValues (paramVars ps)) site .tail b
   | .functionE arms => checkArms env site tp arms
-  | .letIn n v b => checkExpr env site .nonTail v ++ checkExpr (env.withValue n) site tp b
+  | .letIn n v b =>
+      env.shadows site [n] ++ checkExpr env site .nonTail v
+        ++ checkExpr (env.withValue n) site tp b
   | .letPat p v b =>
-      checkPat env site p ++ checkExpr env site .nonTail v
+      env.shadows site (patVars p) ++ checkPat env site p ++ checkExpr env site .nonTail v
         ++ checkExpr (env.withValues (patVars p)) site tp b
   | .letRecIn bs b =>
       let names := bs.map (·.1)
       let inner := env.withValues names
-      dup "duplicate-binding" site names
+      env.shadows site names ++ dup "duplicate-binding" site names
         ++ checkLocalBinds inner site bs
         ++ checkExpr inner site tp b
   | .openIn _ b => checkExpr env.opened site tp b
@@ -338,7 +357,7 @@ def checkExpr (env : Env) (site : String) (tp : TailPosition) : Expr → List Di
   | .ifThenOnly c t => checkExpr env site .nonTail c ++ checkExpr env site tp t
   | .whileE c b => checkExpr env site .nonTail c ++ checkExpr env site .nonTail b
   | .forE n lo hi _ b =>
-      checkExpr env site .nonTail lo ++ checkExpr env site .nonTail hi
+      env.shadows site [n] ++ checkExpr env site .nonTail lo ++ checkExpr env site .nonTail hi
         ++ checkExpr (env.withValue n) site .nonTail b
   | .matchE s arms => checkExpr env site .nonTail s ++ checkArms env site tp arms
   | .tryWith b arms => checkExpr env site .nonTail b ++ checkArms env site tp arms
@@ -379,6 +398,7 @@ def checkExpr (env : Env) (site : String) (tp : TailPosition) : Expr → List Di
   | .matchWith comp arg answer retcVar retc exnc effc =>
       checkExpr env site .nonTail comp ++ checkExpr env site .nonTail arg
         ++ checkAnswer site answer
+        ++ env.shadows site [retcVar]
         ++ checkExpr (env.withValue retcVar) site .nonTail retc
         ++ checkArms env site .nonTail exnc
         ++ checkEffc env site effc
@@ -391,7 +411,7 @@ def checkExpr (env : Env) (site : String) (tp : TailPosition) : Expr → List Di
       checkAnswer site answer
         ++ (match retc with
             | none => []
-            | some (v, r) => checkExpr (env.withValue v) site .nonTail r)
+            | some (v, r) => env.shadows site [v] ++ checkExpr (env.withValue v) site .nonTail r)
         ++ checkArms env site .nonTail exnc ++ checkEffc env site effc
   | .annot e _ => checkExpr env site tp e
   | .hole _ fill => checkExpr env site tp fill
@@ -416,14 +436,15 @@ def checkLocalBinds (env : Env) (site : String) :
     List (String × List String × Expr) → List Diag
   | [] => []
   | (_, ps, b) :: rest =>
-      checkExpr (env.withValues ps) site .tail b ++ checkLocalBinds env site rest
+      env.shadows site ps ++ checkExpr (env.withValues ps) site .tail b
+        ++ checkLocalBinds env site rest
 
 /-- Arm bodies inherit the polarity of the `match` (`make_branch`, `bytegen.ml:78-83`). -/
 def checkArms (env : Env) (site : String) (tp : TailPosition) : List Arm → List Diag
   | [] => []
   | .mk p g b :: rest =>
       let inner := env.withValues (patVars p)
-      checkPat env site p
+      env.shadows site (patVars p) ++ checkPat env site p
         ++ (match g with | none => [] | some ge => checkExpr inner site .nonTail ge)
         ++ checkExpr inner site tp b
         ++ checkArms env site tp rest
@@ -446,6 +467,7 @@ def checkEffc (env : Env) (site : String) : List Effc → List Diag
         [{ code := "effc-unknown", site := site,
            detail := "`" ++ name ++ "` is not a declared effect constructor" }])
         ++ arityDiag
+        ++ env.shadows site (args.flatMap patVars ++ [k])
         ++ checkPats env site args
         ++ checkExpr ((env.withValues (args.flatMap patVars)).withValue k) site .tail body
         ++ checkEffc env site rest
@@ -499,6 +521,16 @@ end
 /-- The checker at a non-tail position: an operand. -/
 def checkExprN (env : Env) (site : String) (e : Expr) : List Diag :=
   checkExpr env site .nonTail e
+
+/-- The `shadowed-value` diagnostics of one binding taken alone: its parameters and every binder
+of its body, against each other and against `guarded`. The scope starts empty, so a name of the
+enclosing module counts only when `guarded` lists it: the caller says which free names the
+binding means. Empty means that no binder of the binding hides another one or a guarded name. -/
+def shadowDiags (guarded : List String) (b : Bind) : List Diag :=
+  let env : Env := { noShadow := some guarded }
+  let ps := b.params.map (·.1) ++ paramVars b.lparams
+  env.shadows b.name ps
+    ++ (checkExpr (env.withValues ps) b.name .tail b.body).filter (·.code == "shadowed-value")
 
 /-! ## Declarations -/
 

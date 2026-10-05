@@ -1,0 +1,13 @@
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/gen/fibers_gen.ml and ocaml/gen/closure-fibers_gen.tsv
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/gen/machine_gen.ml and ocaml/gen/closure-machine_gen.tsv
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/gen/api_gen.ml and ocaml/gen/closure-api_gen.tsv
+Ml.checkModule: PASS (0 diagnostics)
+name hygiene: PASS (0 problems)
+wrote ocaml/engine/api_engine.ml and ocaml/gen/closure-api_engine.tsv
+PASS generate: requested producers ran in dependency order

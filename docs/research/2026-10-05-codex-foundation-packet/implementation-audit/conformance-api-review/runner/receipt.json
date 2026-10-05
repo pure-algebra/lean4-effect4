@@ -1,0 +1,32 @@
+{
+  "reviewed_utc": "2026-10-05T19:02:14.900974+00:00",
+  "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "status": "",
+  "files_sha256": {
+    "scripts/check-conform.py": "43bef5cd30b4c8fc1cdb65818c8c810a6f54d09bdd3bb197b9b2f4f8723758ae",
+    "scripts/lib/conform_report.py": "a75eaefc9eca59acff09059c2a6659f9eb5e97c58ce3d469cba1997c0f650a40",
+    "tools/Conform/Effect4/Normalization.lean": "7a9edae21ee486f2c9f5d3d66e6ccdd26d37c7b7452dc1f69b4014f7f1cedeee",
+    "tools/Conform/Effect4/CompilerControls.lean": "d31073d2feeeebda32d38875925970d0a1846dcc19d8d9f1fb9d35983d198084",
+    "tools/Conform/Effect4/NativeMain.lean": "45994dba2ab04b549694ab5e4753d3aa6e56e366e7d61eb90437ac2ea5f3ae31",
+    "tools/Conform/Core/Report.lean": "22cb35550b231565d1d27fd478347db06e15c95421f9b549b7d1c06f8b9d9ed3",
+    "tools/Conform/Core/Evidence.lean": "b0783a3cac562bc2542090f81c5ddb40d2f1770913c2ffe8701d5e2e2c7afc4d",
+    "tools/Conform/Lcnf/Semantics.lean": "31213ad99494c434ac7d59f19b7de664f0520658496de38054ee3347de0a876f",
+    "tools/Conform/Lcnf/SemanticsTarget.lean": "60c84600aaad58214889bb98597ddcaa8ea071f49800d65f76c9d13b722ced0d"
+  },
+  "probe_command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-conformance-api-review/runner/probe.py",
+  "probe_kind": "Actual Python runner/validator with synthetic reports and mocked Lean/compiler/runtime outcomes; no native execution",
+  "assertions": 19,
+  "probe_sha256": "7f408d6ec1e004b83b5c46515f87b359eaf6ec7225f1708f966a5da4161d7903",
+  "results_sha256": "6455d98358e697a94d67aeaa66c8a5630b464dfd43e0612598a61dddac0859fb",
+  "historical_artifact": "/Users/pooks/Dev/lean4-effect4/.lake/conform/artifacts/995ec3cc73580d9734f5daf68511b7bb5ab236fa44cd10c05227859eef816a78",
+  "historical_observation": "expected.txt and actual.txt have111 lines; mutation.txt names12 FAIL; output hashes match; current check-conform.py and Normalization.lean input hashes differ, so no current-HEAD runtime claim",
+  "not_run": [
+    "Lean",
+    "OCaml compiler",
+    "runtime fixture executable",
+    "build",
+    "generator",
+    "installation"
+  ],
+  "repo_writes": false
+}

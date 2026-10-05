@@ -1,0 +1,63 @@
+{
+  "time_utc": "2026-10-05T19:06:30.675581+00:00",
+  "reviewed_head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "final_heads": {
+    "main": {
+      "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+      "status": ""
+    },
+    "t3b": {
+      "head": "67e6ec205103ecb14fc2588ede6d66982fc43499",
+      "status": ""
+    },
+    "m0": {
+      "head": "aded1cecdaee2b78f0996f59b2d8366b98e36c1b",
+      "status": ""
+    }
+  },
+  "scope": "Source review and actual Python API probes; compiler subprocesses mocked. No Lean/OCaml execution, builds, generators, installs, or repository edits by the monitor.",
+  "agents": [
+    "lowering_proof_scout",
+    "ocaml_lowering_scout",
+    "ocaml_semantics_references"
+  ],
+  "parent_verification": [
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-conformance-api-review/core/validator_probe.py",
+      "exit": 0,
+      "checks": 16
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-conformance-api-review/runner/probe.py",
+      "exit": 0,
+      "checks": 19
+    }
+  ],
+  "delivery": {
+    "coordinator": "Queues plan and design decisions",
+    "url": "https://claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+    "message": 72,
+    "normal_send": true,
+    "verified_message_and_empty_prompt": true,
+    "interrupted_or_force_sent": false,
+    "consumption": "not yet verified"
+  },
+  "automation": {
+    "id": "support-effect4-overnight-proof-work",
+    "status": "ACTIVE",
+    "updated": true
+  },
+  "artifacts_sha256": {
+    "recommendations.md": "a438c77586dd1f97f21a353a2d793c8f8645d4473334088d90bdab9b8851a1f6",
+    "core/recommendations.md": "306419c32cc0775f70a9c7b81e207ebb17ca28c966343a7fedb8fed2c7c3c33d",
+    "core/receipt.json": "7c40a88fb2908c5c07b62c2fefe1ba171ed30f2abd1afc83f1f6277142b140eb",
+    "core/validator_probe.json": "0ba32b127de5501d55d5690130a5331ebd1221d573d3fec056a9923535e431cd",
+    "core/fresh_run_probe.json": "04403a76fee6e69e3df2ec065be97d2fbf4edd72adb92381f618d57a78466338",
+    "runner/review.md": "1141b203019b9000cbfc3ed53452178a5f3cdef4eb3af528ded97a5321f7d023",
+    "runner/receipt.json": "bb8a304fd0f37b5d88c9e183af0185ed6d9d36fd913b16f1830e9bdf3bc96e2e",
+    "runner/probe-results.json": "6455d98358e697a94d67aeaa66c8a5630b464dfd43e0612598a61dddac0859fb",
+    "semantics/review.md": "65ecddcbe3c4ccff88c11d2533109c663a7d6720a422e0bd4a538faa870c1513",
+    "semantics/receipt.json": "43def06782542466bb543db54eaa463fa7e097e595f86d69ba3a05db3c48e6c7",
+    "semantics/source-evidence.json": "af7f6bdbe2b0c2483f2db2483b7014223b65d866a9c0e97528b378c4e658cd29"
+  }
+}

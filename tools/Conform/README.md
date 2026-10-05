@@ -68,7 +68,7 @@ the whole input without a second decoder. `Test.Program.TypingCheckContract` exe
 | `Lcnf.Index`, `Lcnf.Validity` | One persisted mono index per walk, structural checks, explicit opt-in on-demand compilation with phase diagnostics |
 | `Lcnf.Cases`, `Lcnf.Rules`, `Manifest` | Compiler walkers and indexed lookups, with deterministic output ordering |
 | `Lcnf.Semantics`, `Lcnf.SemanticsTarget` | Bounded source and target interpreters with separate fuel bounds |
-| `Effect4` | Named profiles, actual fixtures, primitive fidelity table and target adapters |
+| `Effect4` | Named profiles, actual fixtures, the fidelity inventory read off the OCaml builtin table, the name fixtures and target adapters |
 | `Cli` | Thin executable drivers; reusable LCNF modules expose namespaced entry points |
 
 The generic modules do not import Effect4 or OCaml5. The OCaml emitter consumes the generic

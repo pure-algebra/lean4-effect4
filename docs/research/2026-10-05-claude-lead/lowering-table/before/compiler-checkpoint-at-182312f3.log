@@ -1,0 +1,19 @@
+lake exited 2
+
+unresolved lcnf.decl.available declaration:Array.uget: no mono code: extern (def, module system: true)
+unresolved lcnf.decl.available declaration:Nat.sub: no mono code: extern (def, module system: true)
+unresolved lcnf.decl.available declaration:USize.decEq: no mono code: extern (def, module system: true)
+unresolved lcnf.decl.available declaration:USize.ofNat: no mono code: extern (def, module system: true)
+unresolved lcnf.decl.available declaration:USize.sub: no mono code: extern (def, module system: true)
+conform-lcnf-validity: 82/82 subjects, 77 pass, 0 refused, 0 counterexample, 5 unresolved, exit 2
+refused normalization.source case:49/Conform.Effect4.NormalizationInputs.mergeColumns/49/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+refused normalization.source case:53/Conform.Effect4.NormalizationInputs.mergeColumns/53/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+refused normalization.source case:56/Conform.Effect4.NormalizationInputs.mergeColumns/56/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+refused normalization.source case:88/Conform.Effect4.NormalizationInputs.mergeColumns/88/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+conform.normalization: 208/208 subjects, 204 pass, 4 refused, 0 counterexample, 0 unresolved, exit 1
+case:49/Conform.Effect4.NormalizationInputs.mergeColumns/49/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+case:53/Conform.Effect4.NormalizationInputs.mergeColumns/53/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+case:56/Conform.Effect4.NormalizationInputs.mergeColumns/56/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+case:88/Conform.Effect4.NormalizationInputs.mergeColumns/88/merge: Conform.Effect4.NormalizationInputs.mergeColumns: no primitive rule for the extern Nat.sub
+
+exit 2

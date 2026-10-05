@@ -230,7 +230,8 @@ above. The rule the backend now follows, and the reason it is a *rule* and not a
   and `Val.wf` (`src/Effect4/Store/Carrier/Val.lean`) decide `… .length < 2 ^ 64` at every
   frame. A wrapping `2 ^ 64` is `0` in 63-bit `int`, so `wf` would answer `false` for every
   value and `Api.ofBytes` would answer `none` for every program — **a wrong answer, not a
-  compile error**. `Translate.powClamped` computes `a ^ b` by repeated multiplication that
+  compile error**. The support function `lcnf_nat_pow` (`OCaml5.Lcnf.Builtins.support`; before
+  2026-10-05 the local `powClamped` of `Translate`) computes `a ^ b` by repeated multiplication that
   stops at `max_int`, so **`… < 2 ^ 64` reads as `… < max_int`**, and every list OCaml can
   hold is shorter than `max_int`: the guard keeps the meaning it has in Lean.
 * **A `Nat` literal ≥ `2 ^ 62` is `max_int`** (`Translate.letValueExpr`), the same reading —
@@ -252,7 +253,7 @@ profile enforced on the hand kernel.
 
 | gap | reason / consequence |
 | --- | --- |
-| `Nat` → `int` | OCaml `int` is 63-bit; `Nat.sub` is emitted as `max 0 (a - b)`, and `Nat.pow` and literals ≥ 2^62 saturate at `max_int` (the rule above). Division by zero **is** guarded: `Translate.builtin?` emits `if b = 0 then 0 else a / b` for `Nat.div` and `if b = 0 then a else a mod b` for `Nat.mod`, which is what Lean answers, so no emitted expression can raise `Division_by_zero`. Not hit by `Fibers.lean` (counters, tokens, priorities) either way |
+| `Nat` → `int` | OCaml `int` is 63-bit; `Nat.sub` is emitted as `max 0 (a - b)`, and `Nat.pow` and literals ≥ 2^62 saturate at `max_int` (the rule above). Division by zero **is** guarded: the builtin table (`OCaml5.Lcnf.builtins`) emits `if b = 0 then 0 else a / b` for `Nat.div` and `if b = 0 then a else a mod b` for `Nat.mod`, which is what Lean answers, so no emitted expression can raise `Division_by_zero`. Not hit by `Fibers.lean` (counters, tokens, priorities) either way |
 | `Array` as `list` | `Array.mkEmpty/push/toList/appendList/size` are a list shim; `push` is O(n). Only the stdlib's `flatMapTR` accumulator uses it here |
 | `LetValue.proj` on a non-structure | a hole; never produced by 4.33.1's mono phase (`structProjCases`) |
 | `extern` / `implemented_by` / `noncomputable` callees | listed as `missing`; a `partial def` compiles to `f._unsafe_rec` and is reached through the wrapper. None in `Fibers.lean` (the only "missing" root, `Step`, is a `Prop`) |

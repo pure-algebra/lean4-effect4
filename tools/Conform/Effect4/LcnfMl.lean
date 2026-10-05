@@ -153,6 +153,43 @@ def ofBind (b : OCaml5.Ml.Bind) : Except String (String × List String × Target
   unless b.lparams.isEmpty do throw "Ml.Bind.lparams"
   return (b.name, b.params.map (·.1), ← ofExpr b.body)
 
+/-! ## 1b. The program an emitted module is
+
+An emitted module is its prelude and then its declarations. The target program is assembled the
+same way, from the same data: each support function is read from the definition the prelude
+prints (`OCaml5.Lcnf.support`), so the evaluator runs the body that OCaml compiles. The two
+verbatim primitives and the target's own library are not read: they are the evaluator's
+primitives (`Target.applyPrim`), named assumptions. -/
+
+/-- The bindings every emitted module starts from: `max_int` for the profile's word, and the
+support functions. A support function called from another binding starts from its parameters
+alone (`Target.applyNamed`), so `max_int` is a binding of the program and not of a caller's
+environment. A body the reader refuses, a name bound twice and a name the evaluator already
+answers as a primitive are errors here, never missing bindings. -/
+def supportBinds (word : Target.Word := { bits := 63 })
+    (support : List OCaml5.Lcnf.Support := OCaml5.Lcnf.support) :
+    Except String (Std.HashMap String (List String × Target.Expr)) := do
+  let mut binds : Std.HashMap String (List String × Target.Expr) := {}
+  binds := binds.insert "max_int" ([], .int word.maxInt)
+  for s in support do
+    if isPrimName s.name then throw s!"support `{s.name}`: the evaluator has a primitive of this name"
+    let (name, ps, body) ← (ofBind s.bind).mapError fun why => s!"support `{s.name}`: {why}"
+    if binds.contains name then throw s!"support `{name}`: bound twice"
+    binds := binds.insert name (ps, body)
+  return binds
+
+/-- The target program of a translated closure: the support bindings, then the closure's own
+declarations. A declaration that takes a name already bound is refused. -/
+def assemble (decls : Array OCaml5.Lcnf.Translated) (word : Target.Word := { bits := 63 })
+    (support : List OCaml5.Lcnf.Support := OCaml5.Lcnf.support) :
+    Except String Target.Program := do
+  let mut binds ← supportBinds word support
+  for d in decls do
+    let (name, ps, body) ← (ofBind d.bind).mapError fun why => s!"{d.leanName}: {why}"
+    if binds.contains name then throw s!"{d.leanName}: `{name}` is already bound"
+    binds := binds.insert name (ps, body)
+  return { binds, pe := { word } }
+
 /-! ## 2. Marshalling `Ty` into the OCaml value domain
 
 The OCaml constructor names come from `OCaml5.Lcnf.ctorName` — the same function the
@@ -321,7 +358,11 @@ def main (argv : List String) : IO UInt32 := do
   let act : CoreM UInt32 := do
     let rs := roots
     let closure ← OCaml5.Lcnf.translateClosure rs 4000 {} {}
-    let mut binds : Std.HashMap String (List String × Target.Expr) := {}
+    -- the program starts from the support bindings, as the emitted module starts from its prelude
+    let mut binds : Std.HashMap String (List String × Target.Expr) ←
+      match supportBinds { bits := args.bits } with
+      | .ok support => pure support
+      | .error why => throwError why
     let mut refusals : Array String := #[]
     for t in closure.decls do
       match ofBind t.bind with

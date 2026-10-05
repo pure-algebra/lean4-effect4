@@ -1,0 +1,33 @@
+{
+  "scope": "actual fresh_run; only Python producers in scratch",
+  "checks": [
+    {
+      "mode": "both",
+      "result": {
+        "accepted": true,
+        "exit": 0
+      }
+    },
+    {
+      "mode": "removed-report-tag",
+      "result": {
+        "accepted": true,
+        "exit": 0
+      }
+    },
+    {
+      "mode": "bad-report-tag",
+      "result": {
+        "accepted": false,
+        "diagnostic": "unsupported report format"
+      }
+    },
+    {
+      "mode": "missing-file",
+      "result": {
+        "accepted": false,
+        "diagnostic": "producer output set differs: {'two.json'}; exit 0\n"
+      }
+    }
+  ]
+}

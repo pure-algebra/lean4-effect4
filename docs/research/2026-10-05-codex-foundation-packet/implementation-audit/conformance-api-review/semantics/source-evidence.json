@@ -1,0 +1,103 @@
+{
+  "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "kind": "static source assertions, not interpreter execution",
+  "callback_rows": [
+    {
+      "name": "List.exists",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "List.map",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "List.filter",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "List.fold_left",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "List.for_all",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "List.find_opt",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "List.filter_map",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "Option.map",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    },
+    {
+      "name": "Option.bind",
+      "emitted_by_existing_builtin": true,
+      "primitive_rule_available": false
+    }
+  ],
+  "controls": {
+    "ordinary_named_application": true,
+    "local_closure_application": true,
+    "partial_target_application": true,
+    "surplus_target_application": true,
+    "labelled_application_refused": true,
+    "labelled_option_emitted": true,
+    "expected_target_exception_not_supported": true,
+    "known_scalar_primitive_control": true
+  },
+  "files": [
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Lcnf/Semantics.lean",
+      "sha256": "31213ad99494c434ac7d59f19b7de664f0520658496de38054ee3347de0a876f"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Lcnf/SemanticsTarget.lean",
+      "sha256": "60c84600aaad58214889bb98597ddcaa8ea071f49800d65f76c9d13b722ced0d"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Effect4/LcnfMl.lean",
+      "sha256": "66efd67d4b33c4b19d477b2d5ec825b3e91b3852ea9fbffdc2e25f7f9417ced4"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Effect4/Normalization.lean",
+      "sha256": "7a9edae21ee486f2c9f5d3d66e6ccdd26d37c7b7452dc1f69b4014f7f1cedeee"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Effect4/CompilerControls.lean",
+      "sha256": "d31073d2feeeebda32d38875925970d0a1846dcc19d8d9f1fb9d35983d198084"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Core/Evidence.lean",
+      "sha256": "b0783a3cac562bc2542090f81c5ddb40d2f1770913c2ffe8701d5e2e2c7afc4d"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Core/Obligation.lean",
+      "sha256": "1f5f8c3e22fa17a958055569c16a6a2b926446e772f22dae26da855bf8086c8a"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/OCaml5/Lcnf/Translate.lean",
+      "sha256": "d75c9fb81cd4cff2ab8e76b0606ee169fda08e7b32ea4eacbe1c622cdde21b26"
+    },
+    {
+      "path": "/Users/pooks/.opam/effect4/lib/ocaml/list.ml",
+      "sha256": "5d2ae91355a7cd1e8ffbe445ada9389b23ef95d88056cdd46c7659730babd950"
+    },
+    {
+      "path": "/Users/pooks/.opam/effect4/lib/ocaml/option.ml",
+      "sha256": "8f352a597520d772f41ae1ac81e4b9d08b2341a19db99de05042353ca951a28f"
+    }
+  ]
+}

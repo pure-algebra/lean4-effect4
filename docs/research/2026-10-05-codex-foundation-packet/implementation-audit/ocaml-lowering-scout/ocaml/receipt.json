@@ -1,0 +1,45 @@
+{
+  "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "evidence": "Source inspection and finite installed OCaml interpreter probes. No Lean run, dune build, generator, installation or repository modification.",
+  "commands": [
+    {
+      "command": [
+        "/Users/pooks/.opam/effect4/bin/ocaml",
+        "-noinit",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-ocaml-lowering-scout/ocaml/probe.ml"
+      ],
+      "exit": 0,
+      "stdout": "{\"ocaml\":\"5.1.1\",\"int_bits\":63,\"assertions\":9757,\"failures\":0,\"mul_capture\":9,\"mul_control\":15,\"partial_capture\":10,\"partial_control\":8,\"shift_capture\":16,\"shift_control\":12}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/Users/pooks/.opam/effect4/bin/ocaml",
+        "-noinit",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-ocaml-lowering-scout/ocaml/probe-pow.ml"
+      ],
+      "exit": 0,
+      "stdout": "{\"ocaml\":\"5.1.1\",\"old_result\":\"1\",\"existing_fixed_point_result\":1,\"positive_control\":1024}\n",
+      "stderr": ""
+    }
+  ],
+  "sources": {
+    "src/OCaml5/Lcnf/Translate.lean": "d75c9fb81cd4cff2ab8e76b0606ee169fda08e7b32ea4eacbe1c622cdde21b26",
+    "src/OCaml5/Lcnf/Naming.lean": "511afe79d5c9dd063666f8100ecb4b2323c538a364e9173c311aacbbe778d9b8",
+    "src/OCaml5/Lcnf/Native.lean": "f46727f3b757aefc4489ac9f4f8431ceb64c42d9fd4d221a945442562e320c5d",
+    "src/OCaml5/Tools/LcnfGen.lean": "6326272eaddf51b304de96f055d0c4313b899a25659fd9cbadeb1e007ea3b2bd",
+    "ocaml/engine/e4_be.ml": "612733c57c0d3df3a5aa1b1d247d324eb12f27e1404decd5acd881ff60daff5e",
+    "ocaml/engine/e4_be.mli": "f87ae10d3b78daaef4879b1906b2673fa47f53ecb2619d2c9f1d0213f1a6c396",
+    "ocaml/eff/eff_frame.ml": "7895fe2e86f1e7495a713cc1f5dd0464e2d12c2754fbe091e209b61abb862c88",
+    "ocaml/engine/dune": "f0d275c8b9311d330cddfa3936b7466bea870e7d9cd269f588178e1065b804e7",
+    "ocaml/engine/e4_nat.ml": "d16c7604930d01cc8ed72f10849fca129d09982b04db43047b73fca67ba22487",
+    "ocaml/engine/test/test_math.ml": "8f491a167bd346a0ae19f0953d2bc957c04d81ead4f85993965b26175d0e0451",
+    "docs/research/2026-10-02-ocaml-idioms/receipt.md": "b39c82b60f8bbd5a63a8a4f24abccfd10b143cd1567fc359b5715e93f34cf397"
+  },
+  "limits": [
+    "Hygiene witnesses mirror exact builtin expansions over constructed argument names. Persisted LCNF reachability not measured.",
+    "Framing tests are finite. Tests run on OCaml5.1.1 with63-bit integers.",
+    "Power probe showed equal results, no stack overflow.",
+    "No proof of compiler or host correctness."
+  ]
+}

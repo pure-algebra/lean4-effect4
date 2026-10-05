@@ -1,0 +1,29 @@
+{
+  "observed_at": "2026-10-05T19:02:59.795804+00:00",
+  "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "scope": "read-only conformance API source review and actual isolated Python validator/runner calls",
+  "sha256": {
+    "tools/Conform/Core/Evidence.lean": "b0783a3cac562bc2542090f81c5ddb40d2f1770913c2ffe8701d5e2e2c7afc4d",
+    "tools/Conform/Core/Obligation.lean": "1f5f8c3e22fa17a958055569c16a6a2b926446e772f22dae26da855bf8086c8a",
+    "tools/Conform/Core/Policy.lean": "01c892d336f69feeedf14e1f07a16c043eed73b6335e8f840a65f3f4187e0a0a",
+    "tools/Conform/Core/Proof.lean": "fa556a0f2158f6f505f60497a9e184deee8f587e1f00f3c6f452ea1d44e1a023",
+    "tools/Conform/Core/Report.lean": "22cb35550b231565d1d27fd478347db06e15c95421f9b549b7d1c06f8b9d9ed3",
+    "tools/ProofGraph/Proof.lean": "283b11563eb0328e1b354c257b5436d64d957ef51596defa738699fe5b9e62d7",
+    "tools/Conform/README.md": "1ce6b057e356ee424e018ff9a436787b7ba59ab5c96ef3677f48a6fa0ef0b4be",
+    "scripts/lib/conform_report.py": "a75eaefc9eca59acff09059c2a6659f9eb5e97c58ce3d469cba1997c0f650a40",
+    "scripts/check-conform.py": "43bef5cd30b4c8fc1cdb65818c8c810a6f54d09bdd3bb197b9b2f4f8723758ae",
+    "tools/Conform/Effect4/Normalization.lean": "7a9edae21ee486f2c9f5d3d66e6ccdd26d37c7b7452dc1f69b4014f7f1cedeee",
+    "tools/Conform/Effect4/NativeMain.lean": "45994dba2ab04b549694ab5e4753d3aa6e56e366e7d61eb90437ac2ea5f3ae31",
+    "tools/Conform/Model/Container.lean": "7ce0cf2cbcaf5ce50f72ec6b205813148f288866b70c5cc6633262a8daeb7271"
+  },
+  "validator_checks": 16,
+  "runner_checks": 4,
+  "limits": [
+    "No Lean theorem checked or build run",
+    "No current Conform proved producer found falsely claiming a proof",
+    "dependsOn is display subject text, not an enforced closed graph",
+    "Current compiler step validates reports internally too",
+    "No active repo edits"
+  ],
+  "status_at_close": []
+}

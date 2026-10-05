@@ -1,0 +1,206 @@
+{
+  "evidence": "finite Python mirror of displayed Lean equations; not kernel checked",
+  "shifted_fuel_cases": [
+    {
+      "case": "literal",
+      "n": 0,
+      "result": [
+        "value",
+        7
+      ]
+    },
+    {
+      "case": "literal",
+      "n": 1,
+      "result": [
+        "value",
+        7
+      ]
+    },
+    {
+      "case": "literal",
+      "n": 2,
+      "result": [
+        "value",
+        7
+      ]
+    },
+    {
+      "case": "literal",
+      "n": 3,
+      "result": [
+        "value",
+        7
+      ]
+    },
+    {
+      "case": "shadowing",
+      "n": 0,
+      "result": [
+        "value",
+        99
+      ]
+    },
+    {
+      "case": "shadowing",
+      "n": 1,
+      "result": [
+        "value",
+        99
+      ]
+    },
+    {
+      "case": "shadowing",
+      "n": 2,
+      "result": [
+        "value",
+        99
+      ]
+    },
+    {
+      "case": "shadowing",
+      "n": 3,
+      "result": [
+        "value",
+        99
+      ]
+    },
+    {
+      "case": "other variable",
+      "n": 0,
+      "result": [
+        "value",
+        8
+      ]
+    },
+    {
+      "case": "other variable",
+      "n": 1,
+      "result": [
+        "value",
+        8
+      ]
+    },
+    {
+      "case": "other variable",
+      "n": 2,
+      "result": [
+        "value",
+        8
+      ]
+    },
+    {
+      "case": "other variable",
+      "n": 3,
+      "result": [
+        "value",
+        8
+      ]
+    },
+    {
+      "case": "unbound",
+      "n": 0,
+      "result": [
+        "stuck",
+        "z"
+      ]
+    },
+    {
+      "case": "unbound",
+      "n": 1,
+      "result": [
+        "stuck",
+        "z"
+      ]
+    },
+    {
+      "case": "unbound",
+      "n": 2,
+      "result": [
+        "stuck",
+        "z"
+      ]
+    },
+    {
+      "case": "unbound",
+      "n": 3,
+      "result": [
+        "stuck",
+        "z"
+      ]
+    },
+    {
+      "case": "target exception",
+      "n": 0,
+      "result": [
+        "exn",
+        "failure"
+      ]
+    },
+    {
+      "case": "target exception",
+      "n": 1,
+      "result": [
+        "exn",
+        "failure"
+      ]
+    },
+    {
+      "case": "target exception",
+      "n": 2,
+      "result": [
+        "exn",
+        "failure"
+      ]
+    },
+    {
+      "case": "target exception",
+      "n": 3,
+      "result": [
+        "exn",
+        "failure"
+      ]
+    },
+    {
+      "case": "nested evaluation",
+      "n": 0,
+      "result": [
+        "outOfFuel"
+      ]
+    },
+    {
+      "case": "nested evaluation",
+      "n": 1,
+      "result": [
+        "value",
+        2
+      ]
+    },
+    {
+      "case": "nested evaluation",
+      "n": 2,
+      "result": [
+        "value",
+        2
+      ]
+    },
+    {
+      "case": "nested evaluation",
+      "n": 3,
+      "result": [
+        "value",
+        2
+      ]
+    }
+  ],
+  "same_fuel_countercontrol": {
+    "fuel": 1,
+    "lhs": [
+      "outOfFuel"
+    ],
+    "rhs": [
+      "value",
+      7
+    ]
+  }
+}

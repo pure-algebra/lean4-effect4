@@ -5,11 +5,11 @@ import OCaml5.Lcnf.Translate
 # Conform.Effect4.Lcnf — Effect4 as the first configuration of the LCNF tooling
 
 **What it is.** The `--run` driver that points `Conform.Lcnf.Validity` at this repository's
-mono closure, and the *fidelity table*: one row per entry of `OCaml5.Lcnf.Translate.builtin?`
-and `OCaml5.Lcnf.Types.builtinTy?` saying how faithfully the OCaml form reproduces the Lean
-meaning. The generic half knows none of this — the roots, the primitive predicate and the
-fidelity classes all live here, on the Effect4 side of the extensibility rule
-(`docs/research/type-tooling/brief-common.md`).
+mono closure, and the *fidelity inventory*: how faithfully each OCaml form reproduces the Lean
+meaning. The value rows are read off `OCaml5.Lcnf.builtins`, where a row and its contract are
+one datum. The type rows of `OCaml5.Lcnf.Types.builtinTy?` are listed here. The generic half
+knows none of this: the roots and the primitive predicate live here, on the Effect4 side of
+the extensibility rule (`docs/research/type-tooling/brief-common.md`).
 
     lake env lean -M4096 --run tools/Conform/Effect4/Lcnf.lean \
       --import Effect4.Api --out <dir> --cap 2000 Effect4.Api.run Effect4.Api.replay
@@ -23,40 +23,21 @@ open Conform Conform.Lcnf
 
 namespace Conform.Effect4.Lcnf
 
-/-! ## 1. The fidelity table
+/-! ## 1. The fidelity inventory
 
-How faithfully an OCaml builtin row reproduces the Lean constant it stands for. The classes
-are the brief's: *exact*, *exact under a stated domain*, *approximate*, *unsound*. The class
-is a claim about the **rule**, checked against the Lean definition and, where a probe settles
-it, against `ocaml` — the receipts are in `docs/research/type-tooling/lcnf/`. -/
+How faithfully an OCaml row reproduces the Lean constant it stands for. The classes are the
+brief's: *exact*, *exact under a stated domain*, *approximate*, *unsound*
+(`OCaml5.Lcnf.Fidelity`). The class is a claim about the **row**, read against the Lean
+definition. No theorem proves a row. A row names the finite controls that run it (`controls`);
+a control is evidence only in the report of the run that executed it. -/
 
-inductive Fidelity
-  /-- The OCaml form denotes the same function on the whole Lean domain. -/
-  | exact
-  /-- The OCaml form denotes the same function on a stated sub-domain, and something else
-  outside it. The domain is the row's `domain` field. -/
-  | domain
-  /-- The OCaml form denotes a different function that agrees on the values this tree
-  produces, or differs in a way the row states. -/
-  | approximate
-  /-- The OCaml form denotes a different function and the difference can be reached. -/
-  | unsound
-  deriving DecidableEq, Repr, Inhabited
+open OCaml5.Lcnf (Fidelity)
 
-namespace Fidelity
-protected def toString : Fidelity → String
-  | .exact => "exact"
-  | .domain => "exact-under-domain"
-  | .approximate => "approximate"
-  | .unsound => "unsound"
-instance : ToString Fidelity := ⟨Fidelity.toString⟩
-end Fidelity
-
-/-- One row of the fidelity table. -/
+/-- One entry of the inventory. -/
 structure FidRow where
-  /-- The Lean constant the `builtin?` table matches on. -/
+  /-- The Lean constant. -/
   lean : Name
-  /-- The OCaml form, as the table writes it. -/
+  /-- The OCaml form, as a report spells it. -/
   ocaml : String
   fidelity : Fidelity
   /-- The domain on which the row is exact (`""` when the class is `exact`). -/
@@ -65,118 +46,21 @@ structure FidRow where
   note : String
   deriving Inhabited
 
-/-- The whole `builtin?` table of `src/OCaml5/Lcnf/Translate.lean:144-244`, one row per
-matched name, classified. Transcription is guarded: `fidelityTableCovers` below checks that
-every `lean` name here really is a `builtin?` row, so a rename in `Translate` shows up as a
-failure rather than as a silently stale table. -/
-def fidelityTable : List FidRow :=
-  [ -- Nat comparisons: `Nat` is `int`, and the comparison is exact wherever both operands are
-    -- representable.
-    ⟨`Nat.decEq, "=", .domain, "0 ≤ a, b < 2^62", "Lean `Nat` is unbounded; OCaml `int` is 63-bit. `=` on `int` is structural equality of the machine word, which agrees with `Nat` equality on the representable range."⟩
-  , ⟨`Nat.beq, "=", .domain, "0 ≤ a, b < 2^62", "as `Nat.decEq`."⟩
-  , ⟨`instDecidableEqNat, "=", .domain, "0 ≤ a, b < 2^62", "as `Nat.decEq`; `Decidable` is `Bool` at mono."⟩
-  , ⟨`Nat.decLt, "<", .domain, "0 ≤ a, b < 2^62", "OCaml's `<` on `int` is signed; a saturated or wrapped operand can compare wrongly, which is why literals and `pow` saturate rather than wrap."⟩
-  , ⟨`Nat.blt, "<", .domain, "0 ≤ a, b < 2^62", "as `Nat.decLt`."⟩
-  , ⟨`Nat.decLe, "<=", .domain, "0 ≤ a, b < 2^62", "as `Nat.decLt`."⟩
-  , ⟨`Nat.ble, "<=", .domain, "0 ≤ a, b < 2^62", "as `Nat.decLt`."⟩
-  , ⟨`Nat.add, "+", .domain, "a + b < 2^62", "OCaml `+` wraps at 2^62 without a trap; Lean's `Nat.add` does not."⟩
-  , ⟨`Nat.mul, "*", .domain, "a * b < 2^62", "as `Nat.add`."⟩
-  , ⟨`Nat.div, "if b = 0 then 0 else a / b", .domain, "0 ≤ a, b < 2^62", "Includes Lean's total value at zero; unbounded input representation remains outside this target profile."⟩
-  , ⟨`Nat.mod, "if b = 0 then a else a mod b", .domain, "0 ≤ a, b < 2^62", "Includes Lean's remainder value at zero."⟩
-  , ⟨`Nat.sub, "max 0 (a - b)", .domain, "0 ≤ a, b < 2^62", "truncated subtraction, spelled out; exact on the representable range."⟩
-  , ⟨`Nat.succ, "a + 1", .domain, "a + 1 < 2^62", "as `Nat.add`."⟩
-  , ⟨`Nat.pred, "max 0 (a - 1)", .domain, "a < 2^62", "truncated predecessor."⟩
-  , ⟨`Nat.pow, "_pow_clamped a b", .approximate, "a ^ b < max_int", "saturating: `2 ^ 64` reads as `max_int` rather than wrapping to 0. The host profile of `ocaml/gen/NOTES.md` §5. Note the helper's own multiplications are checked against `max_int / a`, so the saturation is monotone."⟩
-  , ⟨`Nat.shiftLeft, "checked a * _pow_clamped 2 b", .approximate, "a * 2^b ≤ max_int", "Checks both the power and final multiplication; larger results saturate at max_int."⟩
-  , ⟨`Nat.shiftRight, "if b >= 63 then 0 else a lsr b", .domain, "a < 2^62", "OCaml's `lsr` is undefined at shift ≥ 63, so the row guards it; `lsr` on a non-negative `int` is Lean's `shiftRight` below 2^62."⟩
-  , ⟨`Nat.land, "land", .domain, "a, b < 2^62", "bitwise and on the 63-bit word."⟩
-  , ⟨`Nat.lor, "lor", .domain, "a, b < 2^62", "bitwise or on the 63-bit word."⟩
-  , ⟨`Nat.xor, "lxor", .domain, "a, b < 2^62", "bitwise xor on the 63-bit word."⟩
-    -- UInt8: `int` with an explicit truncation on the way in.
-  , ⟨`UInt8.decEq, "=", .exact, "", "`UInt8` is `int`; both sides are already reduced mod 256 by `ofNat`."⟩
-  , ⟨`instDecidableEqUInt8, "=", .exact, "", "as `UInt8.decEq`."⟩
-  , ⟨`UInt8.beq, "=", .exact, "", "as `UInt8.decEq`."⟩
-  , ⟨`UInt8.ofNat, "a land 255", .exact, "", "`UInt8.ofNat` is `n % 256`, and `land 255` is `% 256` on a non-negative `int`."⟩
-  , ⟨`UInt8.ofNatLT, "a land 255", .exact, "", "the argument is already < 256; the mask is a no-op."⟩
-  , ⟨`UInt8.ofNatTruncate, "min a 255", .domain, "a is a representable non-negative int", "Clamps at 255, matching Lean; the 256 counterexample is a permanent control."⟩
-  , ⟨`UInt8.ofNatClamp, "min a 255", .domain, "a is a representable non-negative int", "The current spelling of the same clamping operation."⟩
-  , ⟨`UInt8.toNat, "a", .exact, "", "identity on the representation."⟩
-  , ⟨`UInt8.toUInt64, "a", .exact, "", "identity on the representation; `UInt64` is `int` too."⟩
-  , ⟨`UInt8.toUInt32, "a", .exact, "", "identity on the representation."⟩
-    -- Bool
-  , ⟨`Bool.decEq, "=", .exact, "", "OCaml `bool` is Lean `Bool`."⟩
-  , ⟨`instDecidableEqBool, "=", .exact, "", "as `Bool.decEq`."⟩
-  , ⟨`Bool.not, "not", .exact, "", ""⟩
-  , ⟨`not, "not", .exact, "", ""⟩
-  , ⟨`Bool.and, "&&", .approximate, "", "OCaml's `&&` is short-circuiting and Lean's `Bool.and` is a strict function of two already-evaluated arguments. At mono LCNF both arguments are already `let`-bound values, so the difference is unobservable *here* — but the row is not exact as a function-level claim, and an emitter that inlined the arguments would change evaluation order."⟩
-  , ⟨`and, "&&", .approximate, "", "as `Bool.and`."⟩
-  , ⟨`Bool.or, "||", .approximate, "", "as `Bool.and`."⟩
-  , ⟨`or, "||", .approximate, "", "as `Bool.and`."⟩
-    -- String: the interesting one.
-  , ⟨`String.decEq, "=", .exact, "", "OCaml's structural `=` on `string` is byte equality; two Lean strings are equal iff their UTF-8 encodings are equal, and the route's strings *are* their UTF-8 bytes."⟩
-  , ⟨`instDecidableEqString, "=", .exact, "", "as `String.decEq`."⟩
-  , ⟨`String.append, "^", .exact, "", "concatenation of UTF-8 byte sequences is the encoding of the concatenation."⟩
-  , ⟨`String.length, "_lean_utf8_length", .domain, "valid UTF-8; scalar count fits int", "Counts leading UTF-8 bytes, hence Unicode scalar values for represented Lean strings."⟩
-  , ⟨`String.toUTF8, "_lean_utf8_bytes", .domain, "valid UTF-8", "Emitted helper returns the actual encoded bytes, including non-ASCII keys."⟩
-  , ⟨`ByteArray.data, "identity", .exact, "", "Byte arrays use the same list-of-byte representation as their data array."⟩
-    -- List
-  , ⟨`List.appendTR, "@", .exact, "", "`appendTR` is `append` (the tail-recursive spelling the mono phase leaves behind)."⟩
-  , ⟨`List.append, "@", .exact, "", ""⟩
-  , ⟨`List.reverse, "List.rev", .exact, "", ""⟩
-  , ⟨`List.reverseAux, "List.rev_append", .exact, "", "`List.reverseAux as bs = List.rev_append as bs`."⟩
-  , ⟨`List.length, "List.length", .domain, "length < 2^62", "the result is a `Nat` spelled as `int`."⟩
-  , ⟨`List.lengthTR, "List.length", .domain, "length < 2^62", "as `List.length`."⟩
-  , ⟨`List.instDecidableEqNil, "l = []", .exact, "", "the structural comparison of a list against the empty list is `isEmpty`."⟩
-  , ⟨`List.isEmpty, "l = []", .exact, "", ""⟩
-  , ⟨`List.elem, "List.exists (inst a) l", .exact, "", "`[BEq α]` is a one-field structure at mono, so the instance is a relevant argument. Lean's `List.elem a (b :: l)` tests `a == b`, i.e. `inst a b`; `List.exists (inst a) l` tests the same, in the same order."⟩
-  , ⟨`List.contains, "List.exists (fun b -> inst a b) l", .exact, "", "`contains as a` is `elem a as`, so the target is the first BEq argument, as in the `elem` row; an asymmetric instance sees the same order on both sides (the `contains-order` control)."⟩
-  , ⟨`List.map, "List.map", .exact, "", ""⟩
-  , ⟨`List.mapTR, "List.map", .exact, "", ""⟩
-  , ⟨`List.filter, "List.filter", .exact, "", ""⟩
-  , ⟨`List.filterTR, "List.filter", .exact, "", ""⟩
-  , ⟨`List.foldl, "List.fold_left", .exact, "", "same argument order (`f`, `init`, `l`) and same associativity."⟩
-  , ⟨`List.all, "List.for_all p l", .exact, "", "Lean takes the list first, OCaml the predicate first; the row swaps."⟩
-  , ⟨`List.any, "List.exists p l", .exact, "", "as `List.all`."⟩
-  , ⟨`List.find?, "List.find_opt", .exact, "", ""⟩
-  , ⟨`List.flatten, "List.concat", .exact, "", "OCaml's `List.concat` is `flatten`."⟩
-  , ⟨`List.flattenTR, "List.concat", .exact, "", ""⟩
-  , ⟨`List.filterMap, "List.filter_map", .exact, "", ""⟩
-  , ⟨`List.filterMapTR, "List.filter_map", .exact, "", ""⟩
-    -- Array as list: the shim.
-  , ⟨`Array.mkEmpty, "[]", .exact, "", "`Array` is `list`; the capacity hint is dropped."⟩
-  , ⟨`Array.emptyWithCapacity, "[]", .exact, "", ""⟩
-  , ⟨`Array.toList, "a", .exact, "", "identity under the shim."⟩
-  , ⟨`List.toArray, "a", .exact, "", "identity under the shim."⟩
-  , ⟨`Array.push, "a @ [x]", .approximate, "", "denotationally exact; **O(n) per push** where Lean's `Array.push` is amortised O(1). A `push` in a loop is quadratic. This is the one row whose defect is complexity rather than meaning."⟩
-  , ⟨`Array.size, "List.length", .approximate, "", "denotationally exact, O(n) where Lean's is O(1)."⟩
-  , ⟨`Array.appendList, "@", .exact, "", ""⟩
-  , ⟨`List.foldl._at_.Array.appendList.spec_0, "@", .exact, "", "the specialisation of the fold that `Array.appendList` compiles to."⟩
-  , ⟨`USize.ofNat, "a", .domain, "a < 2^62", "`USize` is the shim's index type and is `int`."⟩
-  , ⟨`USize.toNat, "a", .exact, "", ""⟩
-  , ⟨`USize.ofNatLT, "a", .exact, "", ""⟩
-  , ⟨`USize.decEq, "=", .domain, "a, b < 2^62", ""⟩
-  , ⟨`USize.beq, "=", .domain, "a, b < 2^62", ""⟩
-  , ⟨`USize.sub, "max 0 (a - b)", .unsound, "a ≥ b", "`USize.sub` in Lean **wraps** (it is `Fin (2^64)` subtraction: `0 - 1 = 2^64 - 1`); the row **truncates** to 0. Every use in this closure is a bounded index decrement where `a ≥ b`, so the difference is not reached, but the row is not the Lean function."⟩
-  , ⟨`USize.add, "+", .unsound, "a + b < 2^62", "`USize.add` wraps at 2^64 in Lean; OCaml's `+` wraps at 2^62. Two different wrapping points."⟩
-  , ⟨`Array.uget, "List.nth", .unsound, "i < length", "Lean's `Array.uget a i h` is total (`h` proves `i` in range) and the row is `List.nth`, which **raises** `Failure \"nth\"` out of range and `Invalid_argument` on a negative index. Under the shim it is also O(i) rather than O(1)."⟩
-  , ⟨`Array.get!, "List.nth_opt with supplied default", .domain, "represented non-negative index; returned-value observation", "Out-of-range lookup returns the supplied default. Lean panic diagnostics are not reproduced; lookup is linear in the index."⟩
-  , ⟨`Array.fget, "List.nth", .domain, "i < length", "The source carries a bounded index; list lookup agrees on that domain, with linear cost."⟩
-    -- Option, Prod, panic
-  , ⟨`Option.isSome, "Option.is_some", .exact, "", ""⟩
-  , ⟨`Option.isNone, "Option.is_none", .exact, "", ""⟩
-  , ⟨`Option.getD, "Option.value ~default", .exact, "", ""⟩
-  , ⟨`Option.map, "Option.map", .exact, "", ""⟩
-  , ⟨`Option.bind, "Option.bind", .exact, "", ""⟩
-  , ⟨`Prod.fst, "fst", .exact, "", ""⟩
-  , ⟨`Prod.snd, "snd", .exact, "", ""⟩
-  , ⟨`panic, "failwith", .approximate, "", "Lean's `panic` logs and **returns `default`**: the caller continues with a junk value. OCaml's `failwith` raises `Failure`. The OCaml behaviour is arguably the better one, but it is not the Lean one, and a Lean theorem about a program that panics says nothing about an OCaml run that aborts."⟩
-  , ⟨`panicCore, "failwith", .approximate, "", "as `panic`."⟩ ]
+/-- An entry for a value row: the two columns a type row has no use for. -/
+structure ValueRow extends FidRow where
+  /-- The finite controls that run the row (`Conform.Effect4.CompilerControls.hostChecks`). -/
+  controls : List String
+  /-- The cost where it differs from Lean's. -/
+  cost : String
+  deriving Inhabited
 
-/-- Every row of `fidelityTable` names a constant `OCaml5.Lcnf.builtin?` really matches.
-A row whose name `builtin?` does not know is a stale transcription. -/
-def fidelityTableCovers : List Name :=
-  fidelityTable.filterMap fun r =>
-    if (OCaml5.Lcnf.builtin? r.lean).isSome then none else some r.lean
+/-- The value rows: one entry per row of `OCaml5.Lcnf.builtins`, computed. The table is the one
+owner of a row and of its contract, so no row lacks an entry and no entry names a constant
+that the route does not match. -/
+def fidelityTable : List ValueRow :=
+  OCaml5.Lcnf.builtins.map fun b =>
+    { lean := b.lean, ocaml := b.form.spelling, fidelity := b.fidelity, domain := b.domain,
+      note := b.note, controls := b.controls, cost := b.cost }
 
 /-- The `builtinTy?` table, classified the same way (`src/OCaml5/Lcnf/Types.lean:48-62`). -/
 def typeFidelityTable : List FidRow :=
@@ -201,8 +85,8 @@ def typeFidelityTable : List FidRow :=
 
 /-! ## 2. The primitive predicate
 
-What the OCaml route does *not* descend into: a `builtin?` row and (when a table is given)
-an `Extract Constant` row. This is the argument the generic walker takes. -/
+What the OCaml route does *not* descend into: a row of the builtin table and (when a table is
+given) an `Extract Constant` row. This is the argument the generic walker takes. -/
 
 def ocamlPrimitive (ex : OCaml5.Lcnf.Externs) : Name → Bool := fun n =>
   (OCaml5.Lcnf.builtin? n).isSome || ex.hasFn n
@@ -243,9 +127,9 @@ def main (argv : List String) : IO UInt32 := do
   let env ← importModules (args.imports.map fun m => { module := m }) {} 0
   let ctx : Core.Context := { fileName := "<conform-lcnf>", fileMap := default }
   let act : CoreM UInt32 := do
-    -- the transcription guard first: a stale fidelity row is a stale audit
-    unless fidelityTableCovers.isEmpty do
-      IO.eprintln s!"fidelity table names constants `builtin?` does not match: {fidelityTableCovers}"
+    -- the table's own check first: a row outside its contract is a stale audit
+    unless OCaml5.Lcnf.problems.isEmpty do
+      IO.eprintln s!"the builtin table is refused: {OCaml5.Lcnf.problems}"
       return 3
     let cfg : Walk.Config :=
       { primitive := if args.noBuiltins then (fun _ => false) else ocamlPrimitive {}
@@ -344,7 +228,9 @@ def main (argv : List String) : IO UInt32 := do
         Json.mkObj
           [ ("lean", Json.str r.lean.toString), ("ocaml", Json.str r.ocaml)
           , ("fidelity", Json.str (toString r.fidelity)), ("domain", Json.str r.domain)
-          , ("note", Json.str r.note), ("hit", Json.bool (hit.contains r.lean)) ])
+          , ("note", Json.str r.note), ("cost", Json.str r.cost)
+          , ("controls", Json.arr (r.controls.toArray.map Json.str))
+          , ("hit", Json.bool (hit.contains r.lean)) ])
       let tyFidJson := Json.arr (typeFidelityTable.toArray.map fun r =>
         Json.mkObj
           [ ("lean", Json.str r.lean.toString), ("ocaml", Json.str r.ocaml)

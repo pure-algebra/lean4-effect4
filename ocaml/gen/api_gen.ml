@@ -865,6 +865,20 @@ let lcnf_utf8_bytes s =
 let lcnf_utf8_length s =
   String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
 
+let lcnf_nat_mul a b =
+  if a = 0 then 0 else if b > max_int / a then max_int else a * b
+
+let rec lcnf_nat_pow a b =
+  if b = 0 then 1 else (let h = lcnf_nat_pow a (b - 1) in
+    if a = 0 then 0 else if h > max_int / a then max_int else h * a)
+
+let lcnf_nat_shift_left a b =
+  let s = lcnf_nat_pow 2 b in
+  if a = 0 then 0 else if s > max_int / a then max_int else a * s
+
+let lcnf_list_contains inst l a =
+  List.exists (fun e -> inst a e) l
+
 
 
 (* LCNF mono: Effect4.Api.evaluate : Effect4.Machine.RunDecision Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit *)
@@ -3237,9 +3251,7 @@ let program_native_atom_eval (x_1 : native_atom) (x_2 : val_ list) : val_ option
             | Val_nat n_248 -> (match tail_247 with
                 | head_249 :: tail_250 -> (match (head_249 : val_) with
                     | Val_nat n_251 -> (match tail_250 with
-                        | [] -> (let _x_252 = let _mula = n_248 in
-                          let _mulb = n_251 in
-                          if _mula = 0 then 0 else if _mulb > max_int / _mula then max_int else _mula * _mulb in
+                        | [] -> (let _x_252 = lcnf_nat_mul n_248 n_251 in
                           let _x_253 = Val_nat _x_252 in
                           Some _x_253)
                         | _ -> None)
@@ -9742,9 +9754,7 @@ let store_val__float_frame (b : int) : bool =
         let _x_13 = _x_12 <= _x_4 in
         if _x_13 then _x_11 else (let _x_14 = 2 in
           let _x_15 = max 0 (_x_12 - _x_4) in
-          let _x_16 = let rec _pow_clamped _pa _pb = if _pb = 0 then 1 else (let _ph = _pow_clamped _pa (_pb - 1) in
-              if _pa = 0 then 0 else if _ph > max_int / _pa then max_int else _ph * _pa) in
-          _pow_clamped _x_14 _x_15 in
+          let _x_16 = lcnf_nat_pow _x_14 _x_15 in
           let _x_17 = if _x_16 = 0 then fraction else fraction mod _x_16 in
           let _x_18 = _x_17 = _x_8 in
           if _x_18 then _x_13 else true))))

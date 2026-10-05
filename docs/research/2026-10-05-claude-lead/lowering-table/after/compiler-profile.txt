@@ -1,0 +1,4 @@
+info: tools/Conform/Layout/Laws.lean:266:0: 'Conform.Layout.Laws.wrappingNat_collides' depends on axioms: [propext, Quot.sound]
+Build completed successfully (419 jobs).
+conform compiler: PASS, exit 0; .lake/conform/compiler.json
+exit 0

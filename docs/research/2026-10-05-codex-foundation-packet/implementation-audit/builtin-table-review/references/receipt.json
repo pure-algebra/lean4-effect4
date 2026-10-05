@@ -1,0 +1,47 @@
+{
+  "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "evidence": "read-only source and official documentation",
+  "builds": false,
+  "compiler_runs": false,
+  "benchmarks": false,
+  "files": [
+    {
+      "path": "/Users/pooks/.opam/effect4/lib/ocaml/stdlib.ml",
+      "sha256": "38634e53f8d083222cd188ed36cd4219865f670b4448384ac4a6ef12543d82c6",
+      "bytes": 22254
+    },
+    {
+      "path": "/Users/pooks/.opam/effect4/lib/ocaml/stdlib.mli",
+      "sha256": "b2f4709b0454d49aa70d0ad9f7caa86fb7f82ae476e4e0acb98d4687ae4e7a1b",
+      "bytes": 55232
+    },
+    {
+      "path": "/Users/pooks/.opam/effect4/lib/ocaml/Makefile.config",
+      "sha256": "dfb32f99118610a65e0f6be3b4a96cf4e3753ef479b01b9b0fafaef494acbe1f",
+      "bytes": 7055
+    },
+    {
+      "path": "/Users/pooks/.opam/effect4/lib/ocaml/compiler-libs/translprim.mli",
+      "sha256": "19753d8522d49d5d9b33e037f4f35ff4502cc96ae09facfbdbe41bd66e71d140",
+      "bytes": 2212
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/OCaml5/Lcnf/Translate.lean",
+      "sha256": "d75c9fb81cd4cff2ab8e76b0606ee169fda08e7b32ea4eacbe1c622cdde21b26",
+      "bytes": 61811
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Lcnf/SemanticsTarget.lean",
+      "sha256": "60c84600aaad58214889bb98597ddcaa8ea071f49800d65f76c9d13b722ced0d",
+      "bytes": 24537
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Conform/Effect4/CompilerControls.lean",
+      "sha256": "d31073d2feeeebda32d38875925970d0a1846dcc19d8d9f1fb9d35983d198084",
+      "bytes": 3585
+    }
+  ],
+  "note_sha256": "1faa0d31c970fb5ed94d03a7d04c7b89c8735a7d2ead7f59a946c34021e910cc",
+  "correction": "Traced full builtin operand path through argAsList/useAsList; no blanket atomicity claim. Eta requires capture disjointness, not mandatory fresh spellings.",
+  "placement_correction": "Typed lowering belongs to R8; R6 remains the host lane."
+}

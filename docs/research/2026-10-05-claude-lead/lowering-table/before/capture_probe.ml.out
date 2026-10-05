@@ -1,0 +1,7 @@
+RESULT	capture_probe_mul_cap 3 5	lean=15	ocaml=9	DIFFER
+RESULT	capture_probe_mul_ok 3 5	lean=15	ocaml=15	agree
+RESULT	capture_probe_shift_cap 3 2	lean=12	ocaml=16	DIFFER
+RESULT	capture_probe_shift_ok 3 2	lean=12	ocaml=12	agree
+RESULT	capture_probe_add_cap 3 5	lean=8	ocaml=10	DIFFER
+RESULT	capture_probe_add_ok 3 5	lean=8	ocaml=8	agree
+exit 0

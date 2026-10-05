@@ -1,0 +1,109 @@
+{
+  "python": "3.13.14 (main, Aug  5 2026, 15:33:38) [Clang 22.1.3 ]",
+  "scope": "actual Python validation/runner code; mocked compiler/Lean process outcomes; no host compiler execution",
+  "assertions": [
+    {
+      "name": "valid_report",
+      "observed": 0,
+      "expected": 0
+    },
+    {
+      "name": "self_declared_empty_domain",
+      "observed": 0,
+      "expected": 0
+    },
+    {
+      "name": "empty_domain_with_existing_expected_ids_API",
+      "observed": "rejected",
+      "expected": "rejected"
+    },
+    {
+      "name": "missing_row_positive_detector",
+      "observed": "rejected",
+      "expected": "rejected"
+    },
+    {
+      "name": "two_valid_report_roles_control",
+      "observed": 0,
+      "expected": 0
+    },
+    {
+      "name": "second_expected_report_without_format_accepted",
+      "observed": 0,
+      "expected": 0
+    },
+    {
+      "name": "unformatted_report_missing_from_validated_reports",
+      "observed": [
+        "one.json"
+      ],
+      "expected": [
+        "one.json"
+      ]
+    },
+    {
+      "name": "second_expected_report_treated_as_raw_artifact",
+      "observed": 0,
+      "expected": 0
+    },
+    {
+      "name": "demoted_report_missing_from_validated_reports",
+      "observed": [
+        "one.json"
+      ],
+      "expected": [
+        "one.json"
+      ]
+    },
+    {
+      "name": "complete_reported_failure_retained",
+      "observed": 1,
+      "expected": 1
+    },
+    {
+      "name": "complete_failure_receipt_exists",
+      "observed": true,
+      "expected": true
+    },
+    {
+      "name": "incomplete_failure_rejected",
+      "observed": "rejected",
+      "expected": "rejected"
+    },
+    {
+      "name": "incomplete_failure_artifacts_lost",
+      "observed": true,
+      "expected": true
+    },
+    {
+      "name": "selected_failure_accepted",
+      "observed": "accepted",
+      "expected": "accepted"
+    },
+    {
+      "name": "unrelated_mutation_failure_accepted",
+      "observed": "accepted",
+      "expected": "accepted"
+    },
+    {
+      "name": "wrong_mutation_exit_rejected",
+      "observed": "rejected",
+      "expected": "rejected"
+    },
+    {
+      "name": "failure_without_marker_rejected",
+      "observed": "rejected",
+      "expected": "rejected"
+    },
+    {
+      "name": "normal_output_mismatch_rejected",
+      "observed": "rejected",
+      "expected": "rejected"
+    },
+    {
+      "name": "normal_output_mismatch_not_written",
+      "observed": false,
+      "expected": false
+    }
+  ]
+}

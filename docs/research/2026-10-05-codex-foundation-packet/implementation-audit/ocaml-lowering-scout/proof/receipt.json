@@ -1,0 +1,38 @@
+{
+  "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "scope": "read-only source review; no Lean or OCaml build, generator or runtime run",
+  "python": "3.13.14 (main, Aug  5 2026, 15:33:38) [Clang 22.1.3 ]",
+  "sourceHashes": {
+    "AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "docs/core/lcnf-route.md": "50f2c8b4e25938f1cf8f8533f72d59fce2ebeaf911ed0493b6f6a03ad1f7ea1c",
+    "docs/core/decisions.md": "a75b7d4340f10bbb73089ddada74fdac62a1e7c478ed105636d81b818696dbc2",
+    "tools/Conform/Lcnf/Semantics.lean": "31213ad99494c434ac7d59f19b7de664f0520658496de38054ee3347de0a876f",
+    "tools/Conform/Lcnf/SemanticsTarget.lean": "60c84600aaad58214889bb98597ddcaa8ea071f49800d65f76c9d13b722ced0d",
+    "tools/Conform/Effect4/Lcnf.lean": "65091e7806e4d2a4b4d05d72be731f08c680c26f253c1036fba8cce814edc8f8",
+    "tools/Conform/Effect4/LcnfMl.lean": "66efd67d4b33c4b19d477b2d5ec825b3e91b3852ea9fbffdc2e25f7f9417ced4",
+    "tools/Conform/Effect4/Normalization.lean": "7a9edae21ee486f2c9f5d3d66e6ccdd26d37c7b7452dc1f69b4014f7f1cedeee",
+    "tools/Conform/Effect4/CompilerControls.lean": "d31073d2feeeebda32d38875925970d0a1846dcc19d8d9f1fb9d35983d198084",
+    "src/OCaml5/Lcnf/Translate.lean": "d75c9fb81cd4cff2ab8e76b0606ee169fda08e7b32ea4eacbe1c622cdde21b26",
+    "src/OCaml5/Lcnf/Clock.lean": "24b8ffb59c1b521bed203bcd5c33638f5a936c4bbe3b13236e7a246174c63e14",
+    "scripts/check-conform.py": "43bef5cd30b4c8fc1cdb65818c8c810a6f54d09bdd3bb197b9b2f4f8723758ae"
+  },
+  "commands": [
+    {
+      "command": "python3 primitive-inventory.py",
+      "exit": 0,
+      "output": "primitive-inventory.json"
+    },
+    {
+      "command": "python3 let_return_probe.py",
+      "exit": 0,
+      "output": "let_return_probe.json"
+    }
+  ],
+  "earlier_scanner_correction": "An initial assertion treated Array.mk as a builtin. Inspection shows it is handled outside builtin?, and that assertion was removed before the recorded successful inventory.",
+  "findings": [
+    "Partial helper calls lie inside semantic evaluation paths.",
+    "The fidelity inventory misses thirteen literal names matched by the production builtin table."
+  ],
+  "status": "proposed slices, not implementation or proof completion",
+  "placementCorrection": "Verified lakefile.toml independent Laws/Conform roots, existing Test-to-Conform import, and Test planned-goal allowance. Proposed proofs now start in Test fixtures with coordinator-owned build/report roots, not Laws imports of Conform."
+}

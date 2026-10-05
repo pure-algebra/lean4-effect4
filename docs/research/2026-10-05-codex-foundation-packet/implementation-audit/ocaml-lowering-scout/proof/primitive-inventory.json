@@ -1,0 +1,28 @@
+{
+  "kind": "bounded source inventory, not Lean reflection or runtime evidence",
+  "main_literals": 97,
+  "delegated_clock_literals": 9,
+  "fidelity_names": 93,
+  "missing_literal_names": [
+    "Effect4.ClockMillis.add",
+    "Effect4.ClockMillis.beq",
+    "Effect4.ClockMillis.decLe",
+    "Effect4.ClockMillis.decLt",
+    "Effect4.ClockMillis.ofDecimal",
+    "Effect4.ClockMillis.ofNat",
+    "Effect4.ClockMillis.toDecimal",
+    "Effect4.ClockMillis.toNat",
+    "Effect4.instDecidableEqClockMillis",
+    "UInt64.beq",
+    "UInt64.decEq",
+    "UInt64.toNat",
+    "instDecidableEqUInt64"
+  ],
+  "positive_controls": [
+    "Nat.add",
+    "Nat.div",
+    "String.length",
+    "Array.mkEmpty"
+  ],
+  "negative_control": "dropping Nat.add from copied fidelity inventory creates missing Nat.add"
+}

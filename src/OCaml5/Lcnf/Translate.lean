@@ -6,6 +6,8 @@ import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Native
 import OCaml5.Lcnf.ClockFlow
+import OCaml5.Lcnf.Builtins
+import OCaml5.Ml.Check
 
 /-!
 # OCaml5.Lcnf.Translate
@@ -16,8 +18,9 @@ closure that decides *which* definitions to translate and the strongly-connected
 ordering that decides how to emit them.
 
 **Depends on.** `OCaml5.Lcnf.Dump` (`monoDecl?`), `OCaml5.Lcnf.Naming`,
-`OCaml5.Lcnf.Types` (`builtinTy?`), `OCaml5.Ml.Syntax`, `Lean.Compiler.LCNF.Basic`
-(`Code.collectUsed`).
+`OCaml5.Lcnf.Types` (`builtinTy?`), `OCaml5.Lcnf.Builtins` (the builtin table, its prelude and
+its reserved names), `OCaml5.Ml.Syntax`, `OCaml5.Ml.Check` (`shadowDiags`),
+`Lean.Compiler.LCNF.Basic` (`Code.collectUsed`).
 
 **Properties.**
 * **Scoping is by `FVarId`.** Every binder gets an OCaml name unique within its declaration
@@ -26,10 +29,21 @@ ordering that decides how to emit them.
   *by construction*; *tested* on `Dispatcher.insert` (the field `priority` versus the
   parameter `priority`) and on `List.mapTR.loop._at_.RunMachine.update.spec_0` (fifteen
   fields bound twice).
+* **No binder takes a name the body means as free.** `fresh` never gives a reserved name
+  (`reservedFor`: the builtin table's, the translator's own, the eta binders). `translateDecl`
+  records each unqualified name a body leaves free, and names the binders again when one of
+  them took such a name — *by construction*. `hygieneProblems` reads the result and refuses a
+  capture; the generator stops on it — *checked* on every generated module, and *tested* by
+  the name fixtures of the compiler checkpoint (`Conform.Effect4.LoweringNames`). Before
+  2026-10-05 three builtin forms bound fixed names at their call sites, and a Lean binder
+  `_mula`, `_shift_scale` or `_b1` captured a reference.
 * **Evaluation order is preserved.** An intermediate `let` stays a `let`, a `cases` is a
   `match` in tail position, and a join point is a local function. Only `let x = v in x`
-  becomes `v`: no substitution, duplication, or reordering — *by construction*;
-  *tested* by the `lcnf-idioms` generator fixture, including callback observations.
+  becomes `v`: no substitution, duplication, or reordering — *by construction*. An argument of
+  a builtin that is not a variable is a carrier turned back into its list; `applyBuiltin`
+  leaves it in place only where the form evaluates it exactly once, and binds it first
+  anywhere else. The fixture that tested callback observations (`lcnf-idioms`) was retired
+  with the generator harness on 2026-09-19.
 * **Erasure is explicit.** A `◾` argument to a constructor or a builtin is dropped (it is a
   type or a proof, and `Types` dropped the field); a `◾` argument anywhere else is `()`, so
   the arity of a call is always the arity LCNF wrote — *by construction*.
@@ -119,180 +133,6 @@ def tyIsAnon : Ml.Ty → Bool
   | .anon => true
   | _ => false
 
-/-! ## The builtin table -/
-
-/-- A builtin: its arity over *relevant* (non-erased) arguments and the OCaml form. -/
-abbrev Builtin := Nat × (List Ml.Expr → Ml.Expr)
-
-private def bin (op : String) : Builtin :=
-  (2, fun | [a, b] => .binop op a b | _ => .unit)
-private def call1 (f : String) : Builtin :=
-  (1, fun | [a] => Ml.Expr.call f [a] | _ => .unit)
-private def call2 (f : String) : Builtin :=
-  (2, fun | [a, b] => Ml.Expr.call f [a, b] | _ => .unit)
-private def call3 (f : String) : Builtin :=
-  (3, fun | [a, b, c] => Ml.Expr.call f [a, b, c] | _ => .unit)
-
-/-- The 63-bit rule for `Nat.pow`: `a ^ b` computed by repeated multiplication that **saturates
-at `max_int`** instead of wrapping. `Nat` is unbounded and OCaml's `int` is 63-bit, so a
-faithful `a ** b` does not exist; a wrapping one is worse than a saturating one, because
-`Effect4.Store.Val.wf`'s `… < 2 ^ 64` would then read as `… < 0` and answer `false` for every
-value — a silently wrong `Api.ofBytes`, not a compile error. Saturating makes `2 ^ 64` read as
-`max_int`, and every list OCaml can hold is shorter than `max_int`, so the guard keeps its
-meaning. Recorded in `ocaml/gen/NOTES.md` §5. -/
-private def powClamped (a b : Ml.Expr) : Ml.Expr :=
-  .letRecIn
-    [("_pow_clamped", ["_pa", "_pb"],
-      .ifThen (.binop "=" (.var "_pb") (.int 0)) (.int 1)
-        (.letIn "_ph"
-          (Ml.Expr.call "_pow_clamped" [.var "_pa", .binop "-" (.var "_pb") (.int 1)])
-          (.ifThen (.binop "=" (.var "_pa") (.int 0)) (.int 0)
-            (.ifThen (.binop ">" (.var "_ph") (.binop "/" (.var "max_int") (.var "_pa")))
-              (.var "max_int")
-              (.binop "*" (.var "_ph") (.var "_pa"))))))]
-    (Ml.Expr.call "_pow_clamped" [a, b])
-
-/-- The Lean constants with a native OCaml spelling. Names are unchecked literals: several
-are specialisations that only exist in the target's environment. -/
-def builtin? (n : Name) : Option Builtin :=
-  (Clock.builtin? (stripRedArg n)).orElse fun _ =>
-  match stripRedArg n with
-  -- Nat (63-bit caveat throughout)
-  | `Nat.decEq | `Nat.beq | `instDecidableEqNat => some (bin "=")
-  | `Nat.decLt | `Nat.blt => some (bin "<")
-  | `Nat.decLe | `Nat.ble => some (bin "<=")
-  | `Nat.add => some (bin "+")
-  | `Nat.mul => some (2, fun
-      | [a, b] => .letIn "_mula" a
-        (.letIn "_mulb" b
-          (.ifThen (.binop "=" (.var "_mula") (.int 0)) (.int 0)
-            (.ifThen (.binop ">" (.var "_mulb") (.binop "/" (.var "max_int") (.var "_mula")))
-              (.var "max_int") (.binop "*" (.var "_mula") (.var "_mulb")))))
-      | _ => .unit)
-  | `Nat.div => some (2, fun | [a, b] => .ifThen (.binop "=" b (.int 0)) (.int 0) (.binop "/" a b) | _ => .unit)
-  | `Nat.mod => some (2, fun | [a, b] => .ifThen (.binop "=" b (.int 0)) a (.binop "mod" a b) | _ => .unit)
-  | `Nat.sub => some (2, fun
-      | [a, b] => Ml.Expr.call "max" [.int 0, .binop "-" a b]
-      | _ => .unit)
-  | `Nat.succ => some (1, fun | [a] => .binop "+" a (.int 1) | _ => .unit)
-  | `Nat.pred => some (1, fun | [a] => Ml.Expr.call "max" [.int 0, .binop "-" a (.int 1)] | _ => .unit)
-  -- The 63-bit rule. `Nat.pow` is `@[extern]`, so without a row it becomes a hole; with the
-  -- obvious `a ** b` (a float operator) or a plain multiplication loop it *overflows silently*,
-  -- and `Effect4.Store.Val.wf`'s `… < 2 ^ 64` would then read as `… < 0` and answer `false` for
-  -- every value. The row clamps at `max_int`: `2 ^ 64` becomes `max_int`, and every list OCaml
-  -- can hold is shorter than that, so the guard means what it means in Lean.
-  | `Nat.pow => some (2, fun
-      | [a, b] => powClamped a b
-      | _ => .unit)
-  -- Clamp the multiplication too; clamping only the power still allowed a wrap.
-  | `Nat.shiftLeft => some (2, fun
-      | [a, b] => .letIn "_shift_scale" (powClamped (.int 2) b)
-        (.ifThen (.binop "=" a (.int 0)) (.int 0)
-          (.ifThen (.binop ">" (.var "_shift_scale") (.binop "/" (.var "max_int") a))
-            (.var "max_int") (.binop "*" a (.var "_shift_scale"))))
-      | _ => .unit)
-  -- `a >>> b` and `a &&& b`; OCaml's shifts are undefined at ≥ 63, so the shift is clamped.
-  | `Nat.shiftRight => some (2, fun
-      | [a, b] => .ifThen (.binop ">=" b (.int 63)) (.int 0) (.binop "lsr" a b)
-      | _ => .unit)
-  | `Nat.land => some (bin "land")
-  | `Nat.lor => some (bin "lor")
-  | `Nat.xor => some (bin "lxor")
-  -- UInt8 as `int` (`Types.builtinTy?`): equality, the truncating injection, the identity out
-  | `UInt8.decEq | `instDecidableEqUInt8 | `UInt8.beq => some (bin "=")
-  | `UInt8.ofNat | `UInt8.ofNatLT =>
-    some (1, fun | [a] => .binop "land" a (.int 255) | _ => .unit)
-  | `UInt8.ofNatTruncate | `UInt8.ofNatClamp => some (1, fun | [a] => Ml.Expr.call "min" [a, .int 255] | _ => .unit)
-  | `UInt8.toNat | `UInt8.toUInt64 | `UInt8.toUInt32 =>
-    some (1, fun | [a] => a | _ => .unit)
-  -- UInt64 as `int` too: the float frame's bits (`Store.Val.float`); equality and the identity
-  -- out. Not exact: a pattern at `2 ^ 62` or above (negative zero, the infinities, every NaN)
-  -- has no carrier here. The generated closure constructs no float (no decoder or operation in
-  -- it produces one), so none reaches it today; the repair is an exact 64-bit carrier (`Int64`
-  -- or eight bytes) before a float producer does. Open, not supported.
-  | `UInt64.decEq | `instDecidableEqUInt64 | `UInt64.beq => some (bin "=")
-  | `UInt64.toNat => some (1, fun | [a] => a | _ => .unit)
-  -- Bool
-  | `Bool.decEq | `instDecidableEqBool => some (bin "=")
-  | `Bool.not | `not => some (call1 "not")
-  | `Bool.and | `and => some (bin "&&")
-  | `Bool.or | `or => some (bin "||")
-  -- String
-  | `String.decEq | `instDecidableEqString => some (bin "=")
-  | `String.append => some (bin "^")
-  | `String.length => some (call1 "lcnf_utf8_length")
-  | `String.toUTF8 => some (call1 "lcnf_utf8_bytes")
-  | `ByteArray.data => some (1, fun | [a] => a | _ => .unit)
-  -- List
-  | `List.appendTR | `List.append => some (bin "@")
-  | `List.reverse => some (call1 "List.rev")
-  | `List.reverseAux => some (call2 "List.rev_append")
-  | `List.length | `List.lengthTR => some (call1 "List.length")
-  | `List.instDecidableEqNil | `List.isEmpty => some (1, fun | [l] => .binop "=" l Ml.Expr.nil | _ => .unit)
-  -- `[BEq α]` is a one-field structure: mono passes the `beq` function itself as a relevant
-  -- argument, so both take three
-  | `List.elem => some (3, fun
-      | [inst, a, l] => Ml.Expr.call "List.exists" [.app inst [a], l]
-      | _ => .unit)
-  | `List.contains => some (3, fun
-      | [inst, l, a] => Ml.Expr.call "List.exists" [.fn ["_elem"] (.app inst [a, .var "_elem"]), l]
-      | _ => .unit)
-  | `List.map | `List.mapTR => some (call2 "List.map")
-  | `List.filter | `List.filterTR => some (call2 "List.filter")
-  | `List.foldl => some (call3 "List.fold_left")
-  -- Lean takes the list first, OCaml the predicate first
-  | `List.all => some (2, fun | [l, p] => Ml.Expr.call "List.for_all" [p, l] | _ => .unit)
-  | `List.any => some (2, fun | [l, p] => Ml.Expr.call "List.exists" [p, l] | _ => .unit)
-  | `List.find? => some (call2 "List.find_opt")
-  | `List.flatten | `List.flattenTR => some (call1 "List.concat")
-  | `List.filterMap | `List.filterMapTR => some (call2 "List.filter_map")
-  -- Array as list: the LCNF route's shim
-  | `Array.mkEmpty | `Array.emptyWithCapacity => some (1, fun _ => Ml.Expr.nil)
-  | `Array.toList | `List.toArray => some (1, fun | [a] => a | _ => .unit)
-  | `Array.push => some (2, fun | [a, x] => .binop "@" a (.listLit [x]) | _ => .unit)
-  | `Array.size => some (call1 "List.length")
-  | `Array.appendList | `List.foldl._at_.Array.appendList.spec_0 => some (bin "@")
-  -- `USize` is the shim's index type, so it is `int` like every other `Nat`; `Array.uget`'s
-  -- erased `α` and bounds proof are dropped, leaving the list lookup. Without these four rows
-  -- `List.setTR.go`'s `Array.foldrMUnsafe.fold` is four `extern` holes, so `List.set` — and
-  -- therefore `DeferredStore.setCell` and `RefHeap.set` — is `assert false` at run time.
-  | `USize.ofNat | `USize.toNat | `USize.ofNatLT => some (1, fun | [a] => a | _ => .unit)
-  | `USize.decEq | `USize.beq => some (bin "=")
-  | `USize.sub => some (2, fun
-      | [a, b] => Ml.Expr.call "max" [.int 0, .binop "-" a b]
-      | _ => .unit)
-  | `USize.add => some (bin "+")
-  | `Array.uget | `Array.fget => some (call2 "List.nth")
-  | `Array.get! => some (3, fun
-      | [defaultValue, a, i] => .ifThen (.binop "<" i (Ml.Expr.call "List.length" [a]))
-          (Ml.Expr.call "List.nth" [a, i]) defaultValue
-      | _ => .unit)
-  -- Option
-  | `Option.isSome => some (call1 "Option.is_some")
-  | `Option.isNone => some (call1 "Option.is_none")
-  | `Option.getD => some (2, fun
-      | [o, d] => .appL (.var "Option.value") [(.nolabel, o), (.lbl "default", d)]
-      | _ => .unit)
-  | `Option.map => some (call2 "Option.map")
-  | `Option.bind => some (call2 "Option.bind")
-  -- Prod
-  | `Prod.fst => some (call1 "fst")
-  | `Prod.snd => some (call1 "snd")
-  -- panics
-  | `panic | `panicCore => some (call1 "failwith")
-  | _ => none
-
-/-- Apply a builtin to its relevant arguments: saturated, eta-expanded when under-applied,
-applied to the rest when over-applied. -/
-def applyBuiltin (b : Builtin) (args : List Ml.Expr) : Ml.Expr :=
-  let (arity, mk) := b
-  if args.length == arity then mk args
-  else if args.length < arity then
-    let extra := (List.range (arity - args.length)).map fun i => s!"_b{i + 1}"
-    .fn extra (mk (args ++ extra.map Ml.Expr.var))
-  else
-    .app (mk (args.take arity)) (args.drop arity)
-
 /-! ## The translation state -/
 
 structure St where
@@ -348,6 +188,12 @@ structure St where
   an O(depth) copy; the report prints them so a missing `carg` row is visible rather than
   silently slow. -/
   toLists : Array String := #[]
+  /-- Every name `fresh` handed out in this pass: the binders of the declaration. -/
+  binders : Array String := #[]
+  /-- The unqualified names this pass left free in the body, in order of first use: generated
+  declarations, hand functions of the prelude, the names of builtin forms. A binder that took
+  one of them would capture the reference, so `translateDecl` names the binders again. -/
+  freeRefs : Array String := #[]
 
 /-- What a translation reads: the environment constructors are looked up in, and the decided
 OCaml names of the type constants whose short name is claimed twice (`TypeNames`). Both halves
@@ -369,24 +215,37 @@ def readTypeNames : TM TypeNames := return (← read).tn
 /-- The extern table. -/
 def readExterns : TM Externs := return (← read).ex
 
-/-- OCaml names the builtin forms use unqualified, which a local must not shadow. -/
-def preUsed : List String :=
-  ["max", "fst", "snd", "not", "failwith", "ignore", "ref", "max_int", "_pow_clamped", "_pa",
-   "_pb", "_ph"]
+/-- The unqualified names the translator's own forms leave free: the pair projections of
+`letValueExpr` and its saturated literal. -/
+def translatorNames : List String := ["fst", "snd", "max_int"]
 
-/-- A unique OCaml name from a base. -/
+/-- The names no source binder of a declaration may take: the builtin table's
+(`reservedNames`, computed from the rows), the translator's own, and the eta binders of the
+run's extern table. -/
+def reservedFor (ex : Externs) : List String :=
+  (reservedNames ++ translatorNames ++ ex.etaBinders).eraseDups
+
+/-- A unique OCaml name from a base. Every binder of a declaration comes from here. -/
 def fresh (base : String) : TM String := do
   let s ← get
   match s.used[base]? with
   | none =>
-    set { s with used := s.used.insert base 0 }
+    set { s with used := s.used.insert base 0, binders := s.binders.push base }
     return base
   | some k =>
     let mut k := k + 1
     while s.used.contains s!"{base}_{k}" do k := k + 1
     let name := s!"{base}_{k}"
-    set { s with used := (s.used.insert base k).insert name 0 }
+    set { s with used := (s.used.insert base k).insert name 0, binders := s.binders.push name }
     return name
+
+/-- Record names that the body leaves free. A qualified name is not recorded: no value binder
+can hide it. -/
+def noteFree (ns : List String) : TM Unit :=
+  modify fun s =>
+    let refs := ns.foldl (init := s.freeRefs) fun acc n =>
+      if isQualified n || acc.contains n then acc else acc.push n
+    { s with freeRefs := refs }
 
 /-- Bind a free variable to a fresh OCaml name. -/
 def bindVar (id : FVarId) (n : Name) : TM String := do
@@ -471,6 +330,29 @@ def argExpr? : Arg .pure → TM (Option Ml.Expr)
 /-- An argument in a position that must be filled: erased becomes `()`. -/
 def argExpr (a : Arg .pure) : TM Ml.Expr := do
   return (← argExpr? a).getD .unit
+
+/-- A value that needs no evaluation: a variable or a literal. -/
+def isAtom : Ml.Expr → Bool
+  | .var _ | .int _ | .str _ | .bool _ | .unit => true
+  | _ => false
+
+/-- Apply a builtin row to its relevant arguments. An argument that is not an atom is a carrier
+turned back into its list (`useAsList`). It stays in place only where the form evaluates it
+exactly once: a `strict` form with every argument present. Anywhere else it is bound first,
+under a fresh name and in the order Lean wrote the arguments, so that an inline form
+substitutes a value and an eta-expansion closes over one. -/
+def applyBuiltin (b : Builtin) (args : List Ml.Expr) : TM Ml.Expr := do
+  noteFree b.form.freeNames
+  if args.all isAtom || (b.form.strict && args.length ≥ b.arity) then return b.apply args
+  let mut lets : List (String × Ml.Expr) := []
+  let mut atoms : List Ml.Expr := []
+  for a in args do
+    if isAtom a then atoms := atoms ++ [a]
+    else
+      let x ← fresh "_arg"
+      lets := lets ++ [(x, a)]
+      atoms := atoms ++ [.var x]
+  return lets.foldr (fun (x, v) body => .letIn x v body) (b.apply atoms)
 
 /-- The natural literal an argument originated from, before target integer lowering. -/
 def argNatLit? : Arg .pure → TM (Option Nat)
@@ -558,7 +440,8 @@ def carrierOp? (c op : String) (args : List Ml.Expr) : TM (Option Ml.Expr) := do
   match ex.op? c op with
   | none => return none
   | some f =>
-    let deps := f.spec.filterMap fun | .lit d => some d | _ => none
+    let deps := f.literals
+    noteFree f.headNames
     modify fun s =>
       { s with usedOps := if s.usedOps.contains s!"{c}#{op}" then s.usedOps
                           else s.usedOps.push s!"{c}#{op}",
@@ -796,7 +679,8 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     match exx.fn? n (some relCount) with
     | some f =>
       let key := (exx.fnRowKey? n (some relCount)).getD n
-      let deps := f.spec.filterMap fun | .lit d => some d | _ => none
+      let deps := f.literals
+      noteFree f.headNames
       modify fun s =>
         { s with usedExterns := if s.usedExterns.contains key then s.usedExterns
                                 else s.usedExterns.push key,
@@ -814,9 +698,10 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
       match builtin? n with
       | some b =>
         let as ← args.toList.filterMapM (argAsList s!"{declName}: builtin {n}")
-        return (applyBuiltin b as, none)
+        return (← applyBuiltin b as, none)
       | none =>
         noteCall n
+        noteFree [globalName n]
         let g := Ml.Expr.var (globalName n)
         -- A wrapper is called under its twin's name, so the call passes the twin exactly the
         -- parameters the wrapper kept. When the reference is *unsaturated* — mono LCNF passes
@@ -1000,6 +885,9 @@ structure Translated where
   callees : Array Name
   /-- OCaml names an extern row hands to a hand body: an emission-order dependency. -/
   externDeps : Array String := #[]
+  /-- The unqualified names the body leaves free (`St.freeRefs`): what `hygieneProblems` holds
+  the binders against. -/
+  freeRefs : Array String := #[]
   /-- The LCNF signature, for the reader. -/
   signature : String
   recursive : Bool
@@ -1012,9 +900,10 @@ instance : Inhabited Translated :=
 /-- Translate one mono decl under an OCaml name. -/
 def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (ocamlName : String)
     (tn : TypeNames := {}) (ex : Externs := {}) : Translated × St :=
-  let act : TM Translated := do
-    -- reserve the names the builtin forms use
-    modify fun s => { s with used := preUsed.foldl (fun m n => m.insert n 0) s.used }
+  let act (reserved : List String) : TM Translated := do
+    -- reserve the names the forms leave free, the eta binders, and what an earlier pass asked for
+    modify fun s =>
+      { s with used := (reservedFor ex ++ reserved).foldl (fun m n => m.insert n 0) s.used }
     let mut params : List (String × Option Ml.Ty) := []
     let mut i := 0
     for p in d.params do
@@ -1056,22 +945,36 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     let callees := (← get).calls
     let sig := s!"{d.name}{sketchParams d.params} : {sketchType rty}"
     return { leanName := d.name, userName := userName, ocamlName := ocamlName, bind := b,
-             callees := callees, externDeps := (← get).externDeps, signature := sig,
+             callees := callees, externDeps := (← get).externDeps,
+             freeRefs := (← get).freeRefs, signature := sig,
              recursive := d.recursive || callees.contains d.name }
   -- A join point is translated before the jumps to it, so which of its parameters are handed
   -- a carrier is known only after a pass: translate again with those parameters seeded until
   -- a pass finds nothing new. The variables are the declaration's own, so they are the same
   -- in every pass.
-  let run (seeds : Std.HashMap FVarId String) : Translated × St :=
-    Id.run ((act { env := env, tn := tn, ex := ex }).run { localSeeds := seeds })
+  --
+  -- The names the body leaves free are known only after a pass too. When a binder took one of
+  -- them, the reference would resolve to the binder, so the next pass reserves them all and
+  -- names the binders around them. The free names do not depend on how a binder is spelled, so
+  -- one more pass settles it.
+  let run (seeds : Std.HashMap FVarId String) (reserved : List String) : Translated × St :=
+    Id.run ((act reserved { env := env, tn := tn, ex := ex }).run { localSeeds := seeds })
+  let captured (st : St) : Array String := st.binders.filter st.freeRefs.contains
   Id.run do
     let mut seeds : Std.HashMap FVarId String := {}
-    let mut out := run seeds
+    let mut reserved : List String := []
+    let mut out := run seeds reserved
     for _ in [:16] do
-      let fresh := out.2.localWanted.filter fun (p, _) => !seeds.contains p
-      if fresh.isEmpty then break
-      for (p, c) in fresh do seeds := seeds.insert p c
-      out := run seeds
+      let wanted := out.2.localWanted.filter fun (p, _) => !seeds.contains p
+      let clash := !(captured out.2).isEmpty
+      if wanted.isEmpty && !clash then break
+      for (p, c) in wanted do seeds := seeds.insert p c
+      if clash then reserved := out.2.freeRefs.toList
+      out := run seeds reserved
+    -- unreachable while `fresh` honours a reserved name; a refusal if it ever is not
+    unless (captured out.2).isEmpty do
+      let why := s!"{d.name}: a binder takes a name the body leaves free: {captured out.2}"
+      out := (out.1, { out.2 with todos := out.2.todos.push why })
     return out
 
 /-- What the closure produced. -/
@@ -1207,28 +1110,18 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
 
 /-! ## Emission: strongly connected components, dependencies first -/
 
-/-- Pure OCaml primitive implementations. Strings admitted by this profile are valid UTF-8;
-`ByteArray` and `Array UInt8` both use a byte list. These definitions are emitted by the
-production backend and are part of the manifest, never patched into a generated file. -/
--- Declarations, not `rawD`: a top-level `rawD` is text `Ml.Check` cannot see into, so a module
--- holding one has to be checked with its value scope open and `unbound-value` stops deciding
--- anything there (tooling plan 4.3). The binder and its parameter are structure the checker
--- reads; only the body stays verbatim, which is all these two need.
-def primitivePrelude : List Ml.Decl := [
-  .letD false [{ name := "lcnf_utf8_bytes", params := [("s", none)],
-                 body := .raw "List.init (String.length s) (fun i -> Char.code (String.get s i))" }],
-  .letD false [{ name := "lcnf_utf8_length", params := [("s", none)],
-                 body := .raw "String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s" }],
-  .blank]
-
 /-- Dependencies first on the translated-name graph. Wrapper/twin aliases and the
 extern leading-argument dependencies use this same graph. Duplicate output names are a
-refusal before any map insertion, because overwriting a vertex loses a declaration. -/
+refusal before any map insertion, because overwriting a vertex loses a declaration. A
+declaration whose name a builtin form leaves free, or the prelude defines, is a refusal too: it
+would stand between every later declaration and that name. -/
 def emissionGroups (ds : Array Translated) : Except String (List (List Nat)) := do
   let mut byName : Std.HashMap String Nat := {}
   for i in [:ds.size] do
     let name := ds[i]!.ocamlName
     if byName.contains name then throw s!"duplicate emitted name: {name}"
+    if reservedNames.contains name || translatorNames.contains name then
+      throw s!"emitted name is reserved: {name}"
     byName := byName.insert name i
   let adj := ds.map fun t =>
     (t.callees.filterMap fun c => byName[globalName c]?) ++
@@ -1238,10 +1131,28 @@ def emissionGroups (ds : Array Translated) : Except String (List (List Nat)) := 
 /-- One binding group per component, preserving input/successor order and origin comments. -/
 def emit (ds : Array Translated) : Except String (List Ml.Decl) := do
   let groups ← emissionGroups ds
-  return primitivePrelude ++ groups.flatMap fun comp =>
+  return prelude ++ groups.flatMap fun comp =>
     let binds := comp.map fun v => ds[v]!.bind
     let isRec := comp.length > 1 || comp.any fun v => ds[v]!.recursive
     let origin := String.intercalate "\n   " (comp.map fun v => ds[v]!.signature)
     [.comment ("LCNF mono: " ++ origin), .letD isRec binds, .blank]
+
+/-! ## Name hygiene, checked on the result
+
+`fresh` and `translateDecl` keep every binder away from the names a body leaves free. This
+check does not trust them: it reads the translated declarations. -/
+
+/-- The name hygiene of translated declarations. In each one, no binder hides an enclosing
+binder, and no binder takes a name that the body means as free: a reserved name, a name the
+translator recorded (`Translated.freeRefs`), or a literal argument of an extern row that names
+a declaration of this closure. Empty means every reference resolves to the binder or the
+declaration the translator meant. A literal argument that names no declaration is a binder of
+its caller by design (`root`), and stays outside the check. -/
+def hygieneProblems (ds : Array Translated) : List String :=
+  let emitted := ds.map (·.ocamlName)
+  ds.toList.flatMap fun d =>
+    let guarded := protectedNames ++ translatorNames ++ d.freeRefs.toList
+      ++ (d.externDeps.filter emitted.contains).toList
+    (Ml.shadowDiags guarded d.bind).map fun diag => s!"{d.leanName}: {diag.toLine}"
 
 end OCaml5.Lcnf

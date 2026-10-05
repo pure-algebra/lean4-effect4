@@ -1,0 +1,94 @@
+{
+  "time_utc": "2026-10-05T18:34:06.494724+00:00",
+  "scope": "Three dedicated scouts; synthesis; read-only advisory to Claude. No implementation dispatch.",
+  "reviewed_main": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "observed_seats": {
+    "t3b": {
+      "head": "1ff9a94a01eb76254ebbc23a0f5d86754fce8006",
+      "worktree_clean": true,
+      "integration_not_claimed": true
+    },
+    "m0": {
+      "head": "f3086de1d8a395d39480cbd361622f919a069996",
+      "active_edits": true
+    }
+  },
+  "scouts": [
+    "ocaml_lowering_scout",
+    "lowering_proof_scout",
+    "ocaml_semantics_references"
+  ],
+  "parent_verification": [
+    {
+      "command": "/Users/pooks/.opam/effect4/bin/ocaml -noinit /private/tmp/codex-effect4-overnight-monitor/2026-10-05-ocaml-lowering-scout/ocaml/probe.ml",
+      "exit": 0,
+      "output": {
+        "ocaml": "5.1.1",
+        "int_bits": 63,
+        "assertions": 9757,
+        "failures": 0,
+        "mul_capture": 9,
+        "mul_control": 15,
+        "partial_capture": 10,
+        "partial_control": 8,
+        "shift_capture": 16,
+        "shift_control": 12
+      }
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-ocaml-lowering-scout/proof/primitive-inventory.py",
+      "exit": 0,
+      "missing_names": 13,
+      "positive_controls": 4,
+      "negative_control": "missing Nat.add"
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-ocaml-lowering-scout/proof/let_return_probe.py",
+      "exit": 0,
+      "shifted_budget_cases": 24,
+      "same_budget_countercontrol": true
+    },
+    {
+      "check": "Recomputed every source hash in the two implementation/proof scout receipts",
+      "checks": 23,
+      "all_match": true
+    }
+  ],
+  "delivery": {
+    "destination": "Queues plan and design decisions",
+    "url": "https://claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+    "normal_send": true,
+    "message_number": 66,
+    "message_visible": true,
+    "prompt_empty_after": true,
+    "coordinator_began_responding": true,
+    "force_send_or_interrupt": false,
+    "draft_before": "one whitespace character; preserved during paste"
+  },
+  "boundaries": {
+    "repository_edits": false,
+    "lean_or_dune_builds": false,
+    "generators": false,
+    "installations": false,
+    "new_lean_proofs": false,
+    "hygiene_scope": "constructed translation-input expansions; persisted LCNF reachability unmeasured",
+    "framing_scope": "finite installed interpreter checks, not all-input proof",
+    "web": "Primary paper and OCaml5.1 documentation read; download failures retained separately"
+  },
+  "artifacts": {
+    "recommendations.md": "1a6de3e8c9c78eac92420fae7944a611fe3cc715db4716c8ea0ef92e68f7a57b",
+    "ocaml/recommendations.md": "31c1cc49f5109778b3e6a833a43dc80dba6cff79d0d592fa08c848706e2d2107",
+    "ocaml/receipt.json": "72aee41d18625665934ab997cd6e2139249943fa5c11b5e5524160033fdd7be3",
+    "ocaml/probe.ml": "0ee82a24a2c2479d43ffc2c557cb810f03b14e1aff805c19ac1a4443e392249a",
+    "ocaml/probe.ml.out": "bd936c9230a2a48221fb81d2259ce6aded6ae89e99b4494e4e7d1f6a70724143",
+    "proof/review.md": "4bfb7ff8d084b63d91022295815947826cdcde3cdcb4feee462c8a4e62966728",
+    "proof/receipt.json": "5e89088eda797f2672cd980dba70564bb5c1cac6146aca7988a9b55386e0abb2",
+    "proof/primitive-inventory.py": "bcee85fada0b68c128db8356843dd7957c5e9170750d1d097aa14d063ad71809",
+    "proof/primitive-inventory.json": "03b5e9a9584e333163a3adf71bf8156d273ab09a277c5ad38ac5d0c7a1c284cd",
+    "proof/let_return_probe.py": "d14a558dd4140d9e6b4b139e0699de3c09b629dcd44c7f4ab1ad375d7a601735",
+    "proof/let_return_probe.json": "28d96562d0f5d984ebb734aad5f852501a3c91a8353c3052a114ebd5bdb6f9a7",
+    "references/recommendations.md": "65316247afb7fa6c1af4d3b98eff710afa75da59db352122ce7fec93a1994866",
+    "references/installed-source-receipt.json": "5f07f1db45d3cd9cd69ed52f4b416a160b3eed3deebd939475766e87f9e075f9",
+    "references/downloads.json": "4ace5d59ccd814157103443eae277c6e7db4f442c422f7c3647f5ae2e57fb507"
+  }
+}

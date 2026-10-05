@@ -1,0 +1,8 @@
+{
+  "note_sha256": "65ecddcbe3c4ccff88c11d2533109c663a7d6720a422e0bd4a538faa870c1513",
+  "source_evidence_sha256": "af7f6bdbe2b0c2483f2db2483b7014223b65d866a9c0e97528b378c4e658cd29",
+  "kind": "read-only source audit",
+  "builds": false,
+  "runtime_probes": false,
+  "repo_writes": false
+}

@@ -1,0 +1,43 @@
+{
+  "reviewed_utc": "2026-10-05T18:51:55.980004+00:00",
+  "head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "status": "",
+  "evidence": "read-only source inspection; no new executable probe",
+  "files_sha256": {
+    "src/OCaml5/Lcnf/Translate.lean": "d75c9fb81cd4cff2ab8e76b0606ee169fda08e7b32ea4eacbe1c622cdde21b26",
+    "src/OCaml5/Lcnf/Externs.lean": "b661396bc00d843aadaf5aa7f4cb4f7c37849e959d94f8c0ae6953ba3fc61a47",
+    "src/OCaml5/Lcnf/Clock.lean": "24b8ffb59c1b521bed203bcd5c33638f5a936c4bbe3b13236e7a246174c63e14",
+    "src/OCaml5/Lcnf/Naming.lean": "511afe79d5c9dd063666f8100ecb4b2323c538a364e9173c311aacbbe778d9b8",
+    "src/OCaml5/Ml/Syntax.lean": "1869f4e9c140077b53c29e43784cae9f8db91cb6b03c1484efb465f60ee5ec37",
+    "src/OCaml5/Ml/Check.lean": "ecbfdb18654d88089744dcbbba400125cb7709c4a7b53456d0398070c9c9f0f0",
+    "src/OCaml5/Ml/Render.lean": "18e89d6bafeee7dca3254aefe41f79eec92786163fa4206d8bc2a419d7cdd931",
+    "src/OCaml5/Tools/LcnfGen.lean": "6326272eaddf51b304de96f055d0c4313b899a25659fd9cbadeb1e007ea3b2bd",
+    "ocaml/gen/roots.json": "ef3a3ce460f6befad83f1dad9641201a319b3e76948ab61531a7169b6f54960c",
+    "tools/Tools/SemanticsRegistry.lean": "06fddbdf1f723b2047f1eaf81b4501bbab6188272c285f4e45a486581a0d8270",
+    "docs/core/decisions.md": "a75b7d4340f10bbb73089ddada74fdac62a1e7c478ed105636d81b818696dbc2"
+  },
+  "authorities": [
+    "AGENTS.md (read earlier in this task tree)",
+    "docs/core/decisions.md rows28,79,108,202",
+    "tools/Tools/SemanticsRegistry.lean R8"
+  ],
+  "recommendation": "Accept data direction; preserve application, name, dependency and domain contracts in staged cutover",
+  "not_run": [
+    "Lean",
+    "dune",
+    "generators",
+    "runtime probes",
+    "installation"
+  ],
+  "external_reference": "https://ocaml.org/manual/5.1/ocaml-5.1-refman.pdf",
+  "memory_used": "MEMORY.md:89 trust distinction; live boundaries verified against R8",
+  "reconciled_utc": "2026-10-05T18:55:52.073381+00:00",
+  "latest_design_evidence": "Parent report of coordinator UI70; not directly inspected by this no-UI subagent",
+  "latest_design": {
+    "inline": "binder-free and linear; parameter use at most once, zero allowed",
+    "support": "Ml.Bind",
+    "eta": "computed reserved _b1..maxarity permitted with free-variable disjointness over all entry points",
+    "sequencing": "explicit choice: atom/let-binding observation, or total-pure conversions with allocation/cost excluded; no universal hoisting mandate"
+  },
+  "review_sha256": "e4c3db93b02d7988dc0c8629234fb14b01a11795028858b5dfa2de527397acfb"
+}

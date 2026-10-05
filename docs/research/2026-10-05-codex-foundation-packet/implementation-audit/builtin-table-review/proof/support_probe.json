@@ -1,0 +1,171 @@
+{
+  "scope": "finite Python mirror; not Lean or OCaml execution",
+  "checks": [
+    {
+      "name": "inline caller global",
+      "actual": [
+        "value",
+        63
+      ],
+      "expected": [
+        "value",
+        63
+      ],
+      "passed": true
+    },
+    {
+      "name": "named helper drops caller environment",
+      "actual": [
+        "stuck",
+        "unbound max_int"
+      ],
+      "expected": [
+        "stuck",
+        "unbound max_int"
+      ],
+      "passed": true
+    },
+    {
+      "name": "declared profile global restores helper",
+      "actual": [
+        "value",
+        63
+      ],
+      "expected": [
+        "value",
+        63
+      ],
+      "passed": true
+    },
+    {
+      "name": "local closure captures caller global",
+      "actual": [
+        "value",
+        63
+      ],
+      "expected": [
+        "value",
+        63
+      ],
+      "passed": true
+    },
+    {
+      "name": "inline one unit of fuel",
+      "actual": [
+        "value",
+        7
+      ],
+      "expected": [
+        "value",
+        7
+      ],
+      "passed": true
+    },
+    {
+      "name": "named helper same fuel is frontier",
+      "actual": [
+        "outOfFuel"
+      ],
+      "expected": [
+        "outOfFuel"
+      ],
+      "passed": true
+    },
+    {
+      "name": "named helper enough fuel",
+      "actual": [
+        "value",
+        7
+      ],
+      "expected": [
+        "value",
+        7
+      ],
+      "passed": true
+    },
+    {
+      "name": "local mutual helper has no sibling binding",
+      "actual": [
+        "stuck",
+        "unbound g"
+      ],
+      "expected": [
+        "stuck",
+        "unbound g"
+      ],
+      "passed": true
+    },
+    {
+      "name": "top level helper graph resolves sibling",
+      "actual": [
+        "value",
+        7
+      ],
+      "expected": [
+        "value",
+        7
+      ],
+      "passed": true
+    },
+    {
+      "name": "strict call retains failing unused argument",
+      "actual": [
+        "exn",
+        "boom"
+      ],
+      "expected": [
+        "exn",
+        "boom"
+      ],
+      "passed": true
+    },
+    {
+      "name": "affine zero use drops failing argument",
+      "actual": [
+        "value",
+        7
+      ],
+      "expected": [
+        "value",
+        7
+      ],
+      "passed": true
+    },
+    {
+      "name": "strict call evaluates argument before branch",
+      "actual": [
+        "exn",
+        "boom"
+      ],
+      "expected": [
+        "exn",
+        "boom"
+      ],
+      "passed": true
+    },
+    {
+      "name": "one affine use in unselected branch skips argument",
+      "actual": [
+        "value",
+        7
+      ],
+      "expected": [
+        "value",
+        7
+      ],
+      "passed": true
+    },
+    {
+      "name": "total value argument positive control",
+      "actual": [
+        "value",
+        7
+      ],
+      "expected": [
+        "value",
+        7
+      ],
+      "passed": true
+    }
+  ]
+}

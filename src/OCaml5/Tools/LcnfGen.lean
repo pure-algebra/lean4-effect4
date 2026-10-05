@@ -249,6 +249,14 @@ def main (argv : List String) : IO Unit := do
       throwError s!"Ml.checkModule (fatal): {diags.length} diagnostic(s)\n  " ++
         "\n  ".intercalate (diags.map Ml.Diag.toLine)
     IO.println "Ml.checkModule: PASS (0 diagnostics)"
+    -- The names, FATAL. `Ml.checkModule` decides that every name is bound; it cannot decide
+    -- that a name is bound by the declaration the translator meant. `hygieneProblems` reads
+    -- each translated declaration against the names its body leaves free.
+    let captures := hygieneProblems closure.decls
+    unless captures.isEmpty do
+      throwError s!"name hygiene (fatal): {captures.length} problem(s)\n  " ++
+        "\n  ".intercalate captures
+    IO.println "name hygiene: PASS (0 problems)"
     -- G10: the extern ledger. Every row is reported; a row nothing hit is fatal, because a
     -- stale row is a claim about the generated file that the generated file does not make.
     if args.externs.isSome then

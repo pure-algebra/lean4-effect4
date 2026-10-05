@@ -5,7 +5,12 @@ import Conform.Effect4.LcnfSemantics
 
 /-! A bounded production checkpoint for normalization, canonical construction and generator
 merging. The two interpreters and compiled OCaml consume the same named input selection.
-Primitives are explicit target assumptions; exhaustion remains an unresolved frontier. -/
+Primitives are explicit target assumptions; exhaustion remains an unresolved frontier.
+
+The name fixtures (`Conform.Effect4.LoweringNames`) take part on the target side and in the
+compiled OCaml only. Their expected answers are the compiled Lean definitions' own. The source
+interpreter is not their reference: it refuses a primitive applied to fewer arguments than it
+takes, and one fixture is such an application. -/
 namespace Conform.Effect4.Normalization
 open Lean Compiler LCNF Conform Conform.Lcnf
 open _root_.Effect4.Program NormalizationInputs
@@ -78,7 +83,7 @@ def main (args : List String) : IO UInt32 := do
   initSearchPath (← findSysroot)
   let out : System.FilePath := args.headD ".lake/conform/normalization"
   IO.FS.createDirAll out
-  let imports := #[`Conform.Effect4.NormalizationInputs]
+  let imports := #[`Conform.Effect4.NormalizationInputs, `Conform.Effect4.LoweringNames]
   let env ← importModules (imports.map fun module => { module }) {} 0
   let action : CoreM UInt32 := do
     let source ← walkClosure roots { primitive := fun n => (Conform.Effect4.LcnfSemantics.tyPrims.lookup? n).isSome, cap := 4000 }
@@ -90,18 +95,31 @@ def main (args : List String) : IO UInt32 := do
         args := f.sourceArgs
         expected := f.sourceExpected } : Case)
     let sourceRows := differential ctx 20000 "normalization.source" cases
-    let translated ← OCaml5.Lcnf.translateClosure roots 4000 {} {}
-    let mut binds := {}
-    for decl in translated.decls do
-      match Conform.Effect4.LcnfMl.ofBind decl.bind with
-      | .ok (name, ps, body) => binds := binds.insert name (ps, body)
-      | .error why => throwError "{decl.leanName}: {why}"
-    let target : Target.Program := { binds, pe := { word := { bits := 63 } } }
-    let targetCases := fixtures.map fun f => ({
+    let nameRoots := Conform.Effect4.CompilerControls.nameRoots
+    let translated ← OCaml5.Lcnf.translateClosure (roots ++ nameRoots) 4000 {} {}
+    -- No binder of a translated declaration hides a name its body means as free.
+    let captures := OCaml5.Lcnf.hygieneProblems translated.decls
+    unless captures.isEmpty do
+      throwError "name hygiene: {captures}"
+    -- The target program is the emitted module's: the prelude's support functions, then the
+    -- declarations. A body the reader refuses stops the checkpoint here.
+    let target ← match Conform.Effect4.LcnfMl.assemble translated.decls with
+      | .ok program => pure program
+      | .error why => throwError "target program: {why}"
+    let nameCases : Array Target.TCase :=
+      (Conform.Effect4.LoweringNames.entries.filterMap fun (name, args) =>
+        (Conform.Effect4.LoweringNames.leanAnswer name args).map fun answer => ({
+          label := "names"
+          bind := OCaml5.Lcnf.globalName name
+          args := args.toArray.map fun a => Target.TValue.int (Int.ofNat a)
+          expected := .int (Int.ofNat answer) } : Target.TCase)).toArray
+    unless nameCases.size == Conform.Effect4.LoweringNames.entries.length do
+      throwError "name fixtures: an entry has no Lean answer"
+    let targetCases := (fixtures.map fun f => ({
         label := f.label
         bind := OCaml5.Lcnf.globalName f.name
         args := f.targetArgs
-        expected := f.targetExpected } : Target.TCase)
+        expected := f.targetExpected } : Target.TCase)) ++ nameCases
     let targetRows := Target.differentialT target 40000 "normalization.target" targetCases
     let gen ← (OCaml5.Lcnf.generate translated.realTypes translated.mentioned {} {}).run'
     unless gen.unknown.isEmpty do
@@ -115,8 +133,12 @@ def main (args : List String) : IO UInt32 := do
     let host := Conform.Effect4.CompilerControls.hostChecks
     let checks := checks ++ host.map fun (id, expression, expected) =>
       s!"let () = if ({OCaml5.Ml.renderExpr 0 expression}) = ({OCaml5.Ml.renderExpr 0 expected}) then Printf.printf \"{id}\\tPASS\\n\" else (Printf.eprintf \"{id}\\tFAIL\\n\"; exit 1)"
+    -- The name fixtures as the emitted module calls them, against Lean's own answers.
+    let names := Conform.Effect4.CompilerControls.nameChecks
+    let checks := checks ++ names.map fun (id, call, answer) =>
+      s!"let () = if ({call}) = ({answer}) then Printf.printf \"{id}\\tPASS\\n\" else (Printf.eprintf \"{id}\\tFAIL\\n\"; exit 1)"
     IO.FS.writeFile (out / "normalization.ml") (OCaml5.Ml.render module ++ "\n" ++ String.intercalate "\n" checks ++ "\n")
-    IO.FS.writeFile (out / "expected.txt") (String.intercalate "\n" ((fixtures.toList.mapIdx fun i _ => s!"{i}\tPASS") ++ host.map fun (id, _, _) => s!"{id}\tPASS") ++ "\n")
+    IO.FS.writeFile (out / "expected.txt") (String.intercalate "\n" ((fixtures.toList.mapIdx fun i _ => s!"{i}\tPASS") ++ (host.map fun (id, _, _) => s!"{id}\tPASS") ++ names.map fun (id, _, _) => s!"{id}\tPASS") ++ "\n")
     let required : Array CheckId := (cases.mapIdx fun i c => ⟨"normalization.source", ⟨"case", [toString i, c.decl.toString, c.label]⟩⟩) ++
       (targetCases.mapIdx fun i c => ⟨"normalization.target", ⟨"case", [toString i, c.bind, c.label]⟩⟩)
     let mutants := #[Conform.Effect4.LcnfSemantics.Mutant.natLitShift,
@@ -129,6 +151,21 @@ def main (args : List String) : IO UInt32 := do
         Row.pass "normalization.control" subject .tested "the mutated source fails a selected comparison"
       else Row.refused "normalization.control" subject "mutation did not produce a counterexample"
     let required := required ++ mutants.map fun m => ⟨"normalization.control", ⟨"mutation", [m.label]⟩⟩
+    -- A wrong support body must reach the target evaluator: the program assembled from an
+    -- altered `lcnf_nat_mul` fails a comparison that the name fixtures select.
+    let squaring := OCaml5.Lcnf.support.map fun s =>
+      if s.name == "lcnf_nat_mul" then { s with body := .binop "*" (.var "a") (.var "a") } else s
+    let supportSubject : Subject := ⟨"mutation", ["support-body"]⟩
+    let supportRow :=
+      match Conform.Effect4.LcnfMl.assemble translated.decls (support := squaring) with
+      | .error why =>
+        Row.refused "normalization.control" supportSubject s!"the altered program did not assemble: {why}"
+      | .ok altered =>
+        if (Target.differentialT altered 40000 "mutation" nameCases).any (·.outcome == .counterexample) then
+          Row.pass "normalization.control" supportSubject .tested "the altered support body fails a selected comparison"
+        else Row.refused "normalization.control" supportSubject "the altered support body produced no counterexample"
+    let mutationRows := mutationRows.push supportRow
+    let required := required.push ⟨"normalization.control", supportSubject⟩
     let report : Report := {
       tool := "conform.normalization"
       expected := required.size

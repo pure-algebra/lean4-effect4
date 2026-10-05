@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-05",
+  "reviewed_head": "182312f30194f0beefa7a6273eb1144aa834c0f0",
+  "owner_scope": "Claude builtin table refactor authorized; monitor advisory only; ongoing literature, Lean semantics, documentation and small cleanup scouting added",
+  "evidence": "source review, primary reference review, finite Python mirror",
+  "parent_probe": {
+    "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-builtin-table-review/proof/support_probe.py",
+    "exit_code": 0,
+    "passed": 14,
+    "not_established": "Lean proof, OCaml execution, reachable carrier-conversion bug, performance, compiler correctness"
+  },
+  "files": {
+    "recommendations.md": "a603b3b78cb02a2730d299ccb2eb20f37b24b4cba7321702c54621941342b0ea",
+    "source/review.md": "e4c3db93b02d7988dc0c8629234fb14b01a11795028858b5dfa2de527397acfb",
+    "source/receipt.json": "b3894ac9fb75839a1af4d54fb822cc127a440934f5149599846601b648b4e500",
+    "proof/recommendations.md": "dc51f434fd901fc3e3517e9b3839eb264260f386f0fbf000ea59f0a5bf9d8ad1",
+    "proof/receipt.json": "64334183cc1b25ab49331b752c322c1f33c4624201474a2d6572ebfd629d2eea",
+    "proof/support_probe.py": "e3e4777333fa283b50118cef7906e7cd28ac2a57a51e1b6cb93cadb1ec39b7e3",
+    "proof/support_probe.json": "498ffd66d8204e42cc0f1fb40d19430d4464f2d5fdb3331da4a673296e7f5c65",
+    "references/review.md": "1faa0d31c970fb5ed94d03a7d04c7b89c8735a7d2ead7f59a946c34021e910cc",
+    "references/receipt.json": "568032fe559ab8bc48de2d0e7d6a051af5a547ca5f132d0b336a20c9bac8e4ec"
+  },
+  "advisory": {
+    "recipient": "Queues plan and design decisions",
+    "url": "https://claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+    "method": "normal Send while running",
+    "verified_ui_message": 70,
+    "prompt_empty_after": true,
+    "interrupt": false,
+    "force_send": false,
+    "earlier_attempt": "concurrent user activity blocked paste; fresh state confirmed empty prompt before retry"
+  },
+  "monitor": {
+    "id": "support-effect4-overnight-proof-work",
+    "status": "ACTIVE",
+    "schedule": "FREQ=MINUTELY;INTERVAL=30",
+    "context_updated": true
+  },
+  "actions": {
+    "active_repository_edits": false,
+    "Lean_builds": false,
+    "OCaml_builds": false,
+    "generators": false,
+    "installations": false,
+    "seat_dispatch": false
+  }
+}

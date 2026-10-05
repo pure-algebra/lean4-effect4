@@ -1,0 +1,145 @@
+-- LCNF CaptureProbe.subCap
+def CaptureProbe.subCap max a b : Nat :=
+  let _x.1 := Nat.sub a b;
+  let _x.2 := max _x.1 b;
+  return _x.2
+
+-- LCNF CaptureProbe.helperCap
+def CaptureProbe.helperCap lcnf_nat_mul a b : Nat :=
+  let _x.1 := Nat.mul a b;
+  let _x.2 := lcnf_nat_mul _x.1 b;
+  return _x.2
+
+-- LCNF CaptureProbe.globalCap
+def CaptureProbe.globalCap capture_probe_apply_to y : Nat :=
+  let _x.1 := 2;
+  let _x.2 := Nat.add _x.1;
+  let _x.3 := 1;
+  let _x.4 := Nat.add _x.3;
+  let _x.5 := CaptureProbe.applyTo _x.4 y;
+  let _x.6 := capture_probe_apply_to _x.2 _x.5;
+  return _x.6
+
+-- closure: 10 declarations; todos=#[]; missing=#[]; frontier=#[]
+-- hygiene: []
+-- free names of capture_probe_mul_cap: #[lcnf_nat_mul]
+-- free names of capture_probe_mul_ok: #[lcnf_nat_mul]
+-- free names of capture_probe_shift_cap: #[lcnf_nat_shift_left]
+-- free names of capture_probe_shift_ok: #[lcnf_nat_shift_left]
+-- free names of capture_probe_add_cap: #[capture_probe_apply_to]
+-- free names of capture_probe_add_ok: #[capture_probe_apply_to]
+-- free names of capture_probe_sub_cap: #[max]
+-- free names of capture_probe_helper_cap: #[lcnf_nat_mul]
+-- free names of capture_probe_global_cap: #[capture_probe_apply_to]
+-- free names of capture_probe_apply_to: #[]
+-- OCAML BEGIN
+let lcnf_utf8_bytes s =
+  List.init (String.length s) (fun i -> Char.code (String.get s i))
+
+let lcnf_utf8_length s =
+  String.fold_left (fun n c -> if Char.code c land 192 = 128 then n else n + 1) 0 s
+
+let lcnf_nat_mul a b =
+  if a = 0 then 0 else if b > max_int / a then max_int else a * b
+
+let rec lcnf_nat_pow a b =
+  if b = 0 then 1 else (let h = lcnf_nat_pow a (b - 1) in
+    if a = 0 then 0 else if h > max_int / a then max_int else h * a)
+
+let lcnf_nat_shift_left a b =
+  let s = lcnf_nat_pow 2 b in
+  if a = 0 then 0 else if s > max_int / a then max_int else a * s
+
+let lcnf_list_contains inst l a =
+  List.exists (fun e -> inst a e) l
+
+
+
+(* LCNF mono: CaptureProbe.mulCap (x : Nat) (_mula : Nat) : Nat *)
+
+let capture_probe_mul_cap (x : int) (_mula : int) : int =
+  lcnf_nat_mul x _mula
+
+
+
+(* LCNF mono: CaptureProbe.mulOk (x : Nat) (y : Nat) : Nat *)
+
+let capture_probe_mul_ok (x : int) (y : int) : int =
+  lcnf_nat_mul x y
+
+
+
+(* LCNF mono: CaptureProbe.shiftCap (_shift_scale : Nat) (b : Nat) : Nat *)
+
+let capture_probe_shift_cap (_shift_scale : int) (b : int) : int =
+  lcnf_nat_shift_left _shift_scale b
+
+
+
+(* LCNF mono: CaptureProbe.shiftOk (a : Nat) (b : Nat) : Nat *)
+
+let capture_probe_shift_ok (a : int) (b : int) : int =
+  lcnf_nat_shift_left a b
+
+
+
+(* LCNF mono: CaptureProbe.applyTo (f : Nat -> Nat) (x : Nat) : Nat *)
+
+let capture_probe_apply_to (f : int -> int) (x : int) : int =
+  f x
+
+
+
+(* LCNF mono: CaptureProbe.addCap (_b1 : Nat) (y : Nat) : Nat *)
+
+let capture_probe_add_cap (_b1_1 : int) (y : int) : int =
+  let _x_1 = fun _b1 -> _b1_1 + _b1 in
+  capture_probe_apply_to _x_1 y
+
+
+
+(* LCNF mono: CaptureProbe.addOk (a : Nat) (y : Nat) : Nat *)
+
+let capture_probe_add_ok (a : int) (y : int) : int =
+  let _x_1 = fun _b1 -> a + _b1 in
+  capture_probe_apply_to _x_1 y
+
+
+
+(* LCNF mono: CaptureProbe.subCap (max : Nat -> Nat -> Nat) (a : Nat) (b : Nat) : Nat *)
+
+let capture_probe_sub_cap (max_1 : int -> int -> int) (a : int) (b : int) : int =
+  let _x_1 = max 0 (a - b) in
+  max_1 _x_1 b
+
+
+
+(* LCNF mono: CaptureProbe.helperCap (lcnf_nat_mul : Nat -> Nat -> Nat) (a : Nat) (b : Nat) : Nat *)
+
+let capture_probe_helper_cap (lcnf_nat_mul_1 : int -> int -> int) (a : int) (b : int) : int =
+  let _x_1 = lcnf_nat_mul a b in
+  lcnf_nat_mul_1 _x_1 b
+
+
+
+(* LCNF mono: CaptureProbe.globalCap (capture_probe_apply_to : (Nat -> Nat) -> Nat -> Nat) (y : Nat) : Nat *)
+
+let capture_probe_global_cap (capture_probe_apply_to_1 : (int -> int) -> int -> int) (y : int) : int =
+  let _x_1 = 2 in
+  let _x_2 = fun _b1 -> _x_1 + _b1 in
+  let _x_3 = 1 in
+  let _x_4 = fun _b1 -> _x_3 + _b1 in
+  let _x_5 = capture_probe_apply_to _x_4 y in
+  capture_probe_apply_to_1 _x_2 _x_5
+
+
+
+
+-- OCAML END
+RESULT	CaptureProbe.mulCap	[3, 5]	lean=15	target=15
+RESULT	CaptureProbe.mulOk	[3, 5]	lean=15	target=15
+RESULT	CaptureProbe.shiftCap	[3, 2]	lean=12	target=12
+RESULT	CaptureProbe.shiftOk	[3, 2]	lean=12	target=12
+RESULT	CaptureProbe.addCap	[3, 5]	lean=8	target=8
+RESULT	CaptureProbe.addOk	[3, 5]	lean=8	target=8
+exit 0

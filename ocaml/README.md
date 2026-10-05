@@ -39,7 +39,7 @@ The Lean half, `src/OCaml5/`:
 | --- | --- |
 | `Ml/*` | the part of the OCaml language model the LCNF backend prints through: typed syntax, the canonical printer, the profile (an allowlist of constructs and library signatures) and its checker. The runtime reification, the library carriers, the type reflection, the mutation pass and `MlTest` were removed on 2026-09-17 (owner rule: only what is made directly from LCNF stays); they are at `git:ddb51b6c` |
 | `Eff/*` | the `Eff` program IR as OCaml: the closed world read off the environment (`World`), the emitters of the `eff/` library (`Emit`), the goldens and corpus (`Goldens`) |
-| `Lcnf/*` | the LCNF → OCaml backend: dump, naming, types, the translation rules and the builtin table |
+| `Lcnf/*` | the LCNF → OCaml backend: dump, naming, types, the translation rules, and the builtin table as data (`Builtins`: one row for each Lean constant with its OCaml form and its contract; the prelude's support functions; the reserved names) |
 | `Tools/*` | the `--run` drivers, each a thin `main` over a library module: `LcnfDump`/`LcnfGen` (route 2 and the engine), `EffGen` (over `Eff`), `EffWire` (the wire goldens), `CasGoldens` (the CAS goldens) |
 
 The rest of the OCaml 5 reification (the handler machine's invariants and witnesses, the

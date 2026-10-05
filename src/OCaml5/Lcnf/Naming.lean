@@ -25,7 +25,9 @@ construction rather than by convention.
   body `Translate` makes binder names unique by a numeric suffix, keyed on the LCNF
   `FVarId`, so shadowing in the source can never become capture in the target — *tested*
   (`Dispatcher.insert`, whose `Bucket.mk priority tasks` alternative shadows the parameter
-  `priority`).
+  `priority`). That is the binder-against-binder half. A binder against a name the body
+  leaves free (a generated declaration, a function of the prelude, a name of a builtin form)
+  is `Translate`'s reservation and its `hygieneProblems`, not a property of this module.
 
 **Table.**
 

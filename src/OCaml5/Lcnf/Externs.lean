@@ -294,13 +294,34 @@ def carrierAnnot (chain : List String) (t : Ml.Ty) : Ml.Ty :=
   | .con "list" [elem] => applyChain chain [elem]
   | _ => applyChain chain [t]
 
+/-- A name of another compilation unit: `List.map`, `D.enqueue`. A value binder cannot hide
+one. -/
+def isQualified (n : String) : Bool := n.contains '.'
+
+/-- The *i*-th binder of an under-applied row's eta-expansion: `_ex1`, `_ex2`, …. -/
+def externEtaBinder (i : Nat) : String := s!"_ex{i + 1}"
+
+/-- The eta binders that a `fn` row of this table can introduce: one per argument of its widest
+row. `Translate` gives none of them to a source binder. -/
+def Externs.etaBinders (ex : Externs) : List String :=
+  (List.range (ex.fns.fold (fun k _ f => max k f.arity) 0)).map externEtaBinder
+
+/-- The row's head, when a value binder could hide it: a hand function of the prelude. -/
+def ExternFn.headNames (f : ExternFn) : List String :=
+  if isQualified f.head then [] else [f.head]
+
+/-- The row's literal arguments: names in scope at the call site. Most are generated
+declarations (`program_node_child`); one row names a binder of its only caller (`root`). -/
+def ExternFn.literals (f : ExternFn) : List String :=
+  f.spec.filterMap fun | .lit d => some d | _ => none
+
 /-- The row applied to the arguments the call site passes: saturated, eta-expanded when the
-call is under-applied and applied to the rest when it is over-applied — the same three cases
-`Translate.applyBuiltin` handles. -/
+call is under-applied and applied to the rest when it is over-applied, the same three cases as
+`Builtin.apply`. The arguments of a row are variables: a row takes a carrier raw. -/
 def ExternFn.apply (f : ExternFn) (args : List Ml.Expr) : Ml.Expr :=
   if args.length == f.arity then f.build args
   else if args.length < f.arity then
-    let extra := (List.range (f.arity - args.length)).map fun i => s!"_ex{i + 1}"
+    let extra := (List.range (f.arity - args.length)).map externEtaBinder
     .fn extra (f.build (args ++ extra.map Ml.Expr.var))
   else .app (f.build (args.take f.arity)) (args.drop f.arity)
 

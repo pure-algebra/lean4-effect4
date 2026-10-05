@@ -42,7 +42,7 @@ not made from LCNF (memory `ocaml-only-from-lcnf`).
 | `cases` on an inductive | `match` with alternative patterns | `altPat` (`:777`); default arm kept |
 | `return` / `unreach` | variable / `assert false` | |
 | calls to globals | `g' args` and enqueue `g` | the closure; `redArgTarget?`, `wrapperKeep?` strip Lean's wrappers (`:400-431`) |
-| builtins | a 50-row table (`builtin?`, `:154`) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` clamped (`powClamped`, `:140`); `Nat.sub` truncated as Lean's |
+| builtins | one table of rows, `builtins` in `src/OCaml5/Lcnf/Builtins.lean` (§9; 106 rows since 2026-10-05) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` saturates (`lcnf_nat_pow`); `Nat.sub` truncated as Lean's |
 | stdlib functions | translated from their own mono decls | `List.hasDecEq`, `instDecidableEqProd`, `List.filterTR.loop` came out this way (NOTES §260); a table row only where the stdlib body is an `extern` |
 | externs (strings, floats, `IO`) | `Externs.lean` table | a call with no row is a refusal |
 | carriers (`List`-like op rows) | `carrierRewrite?` (`:607`), `useAsList` (`:500`) | a carrier without a `to_list` row is a refusal |
@@ -104,7 +104,7 @@ lane. Target-specific, to write:
    become a `while (true)` with reassignment, or a trampoline; the machine's stepping functions
    are the case that matters (`Machine/Fibers.lean`'s loops).
 5. **Numbers.** `Nat` as `bigint` (exact) or `number` (fast, wrong past 2^53): a policy row, as
-   `max_int`/`powClamped` are for OCaml. The wire already fixes `Nat` as JSON numbers with the
+   `max_int` and the saturating `lcnf_nat_pow` are for OCaml. The wire already fixes `Nat` as JSON numbers with the
    `isInt`/non-negative checks.
 6. **Strings and bytes.** OCaml strings are bytes; JavaScript strings are UTF-16. The estate's
    codec is bytes (`Store/Utf8.lean`, strict UTF-8), so string externs need the same rows the
@@ -203,12 +203,15 @@ Neither route supplies a self-application theorem.
 - A universal claim needs a kernel-checked certificate or a proved checker; finite tests are never
   promoted to certificates.
 
-**Numbers, as they stand.** Verified at the translation table
-(`src/OCaml5/Lcnf/Translate.lean`):
-- natural addition lowers to raw 63-bit `+` (line 162), and so does successor (line 175), so a
-  large enough sum wraps;
-- multiplication and powers saturate at the largest integer (lines 163, 182);
-- subtraction floors at zero.
+**Numbers, as they stand.** Verified at the builtin table (`builtins` in
+`src/OCaml5/Lcnf/Builtins.lean`):
+- natural addition lowers to raw 63-bit `+` (the row `Nat.add`), and so does successor (the row
+  `Nat.succ`), so a large enough sum wraps;
+- multiplication, powers and the left shift saturate at the largest integer (the support
+  functions `lcnf_nat_mul`, `lcnf_nat_pow` and `lcnf_nat_shift_left`);
+- subtraction floors at zero (the row `Nat.sub`).
+
+The table became data on 2026-10-05 (§9). That change moved no number.
 
 The TypeScript face prints `nat` as a JavaScript number, exact only up to 2^53. The profile's
 `natBound` (`src/Effect4/Program/Profile.lean`, DI-56) bounds requests and answers, not intermediate values.
@@ -236,3 +239,79 @@ paths that carry their proof.
 
 Rows 28, 29 and 31 remain open: full proof or a fragment-and-rule strategy, the common target and
 legalization design, and TypeScript read-back ordering.
+
+## 9. The builtin table as data (2026-10-05)
+
+The owner asked for the table as data on 2026-10-05. §7 already named that direction for the
+high tier. This section states what the OCaml table is now. Decisions rows 28 and 29 stay open:
+the wider lowering design is not ruled here.
+
+**The fault that started it.** Three builtin forms bound fixed names at their call sites, and
+the name supply did not reserve them. A Lean binder with one of those names captured a
+reference. Three definitions gave wrong answers, through the translator and on OCaml 5.1.1.
+A product was 9 where Lean answers 15. A shift was 16 for 12, and a partial sum 10 for 8. The
+generated modules of that day held no such binder. The reproducers are kept as fixtures
+(`tools/Conform/Effect4/LoweringNames.lean`).
+
+**The table.** `builtins` (`src/OCaml5/Lcnf/Builtins.lean`) has one row for each Lean constant
+that the route does not translate from its own body. A row is data:
+
+| Field | Content |
+| --- | --- |
+| `lean` | the constant, as `stripRedArg` leaves it |
+| `form` | the OCaml realization: an inline body, a support function, or a library function |
+| `fidelity`, `domain` | the class of the row against the Lean definition, and where it is exact |
+| `controls` | the identifiers of the finite controls that run the row |
+| `note`, `cost` | the reason for the class; the cost where it differs from Lean's |
+
+The contract's fields have no default, so Lean refuses a row that lacks one of them. The
+lookup, the prelude, the reserved names and the fidelity inventory are computed from the rows.
+No second list names a row.
+
+**The three forms.** Each form denotes one closed function of the target.
+- An inline form is `fun params -> body`, written in place. Its body binds nothing.
+- A support function is a definition of the prelude (`support`). A form that binds a name, or
+  that calls itself, is a support function: `lcnf_nat_mul`, `lcnf_nat_pow`,
+  `lcnf_nat_shift_left` and `lcnf_list_contains`.
+- A library function is a trusted leaf of the target (`libraries`), such as `List.map`.
+
+**Application.** `Builtin.apply` puts the arguments in an inline body's place. That is exact
+for a variable or a literal. An argument can also be a carrier turned back into its list. It
+stays in place only where the form evaluates it exactly once. Anywhere else
+`Translate.applyBuiltin` binds it first, in Lean's argument order. An under-applied row is
+eta-expanded with the binders `_b1`, `_b2` and `_b3`.
+
+**Names.** Three mechanisms keep a reference at the declaration it means.
+1. `fresh` names every binder of a declaration. It never gives a reserved name: an eta binder,
+   a name the prelude defines, or a name a form leaves free (`reservedNames`).
+2. `translateDecl` records each name that a body leaves free. When a binder took one of them,
+   it names the binders again around those names.
+3. `hygieneProblems` reads the translated declarations and refuses a binder that hides another
+   binder or a recorded name. The generator stops on a refusal.
+
+One extern row names a binder of its only caller (`root`). That literal stays outside the
+check, as the row intends.
+
+**What checks it.** Each line names its evidence.
+- The table's own check is `problemsOf`. It holds the keys normalized, with one row for each.
+  It holds each body inside its fragment and each free name declared. It holds the support
+  definitions in dependency order. Nine altered copies are refused, each for a stated reason
+  (`#guard`, finite).
+- The compiler checkpoint is the `compiler` profile of `scripts/check-conform.py`, run by
+  name. The target evaluator reads each support body from the definition that the prelude
+  prints. Ten name fixtures agree with the compiled Lean
+  definitions, on the evaluator and in compiled OCaml 5.1.1 (tested, finite). An altered
+  support body fails the first fixture that reads it, on both.
+- The four generated modules: `Ml.checkModule` and `hygieneProblems` pass on each (tested at
+  generation). Their text changed at two call sites and in the prelude.
+
+**What this does not establish.**
+- No theorem relates a row to its Lean constant. A class is a reading, and a control is finite.
+- The evaluator has no rule for a callback library function such as `List.exists`. It refuses
+  `lcnf_list_contains`, and only compiled OCaml runs that body.
+- `hygieneProblems` refuses a capture. It does not prove that every source translates.
+- A carrier's `to_list` is taken as total and pure. The observation excludes allocation and
+  cost.
+- The numbers are the ones the route had. Decisions row 108 is open.
+- The cost of the four support calls against the inline forms they replace is not measured.
+
