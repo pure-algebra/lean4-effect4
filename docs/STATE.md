@@ -184,6 +184,14 @@ Open at this landing:
 - the mask's second note; the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
+- the release audit, landed on 2026-10-05
+  ([the audit](research/2026-10-05-seat-A401/audit.md),
+  [its receipt](research/2026-10-05-seat-A401-receipt.md)). For this tree 4.0.1 is a new runtime
+  revision, and the pin stays at rc.112. The owner's migration ruling is open, with the seat's
+  proposals A to I. Three small repairs wait for a seat:
+  - the citations that miss in the pin itself;
+  - one census row that holds its digest twice;
+  - a role row for `vendor/effect-4.0.1`;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness reports a module error on every typed program;
   - `check-schema-ts`: its host packages are not installed.

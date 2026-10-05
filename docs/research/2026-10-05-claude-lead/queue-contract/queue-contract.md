@@ -351,6 +351,7 @@ The first Queue slice owes these runs, beyond the four of the waiting design:
   offerer was run.
 - That the messages leave in the order of acceptance is argued from the consuming step. No
   control checks it over a long run.
-- The release's `Queue.ts` was read from the installed package. The vendored 4.0.1 source is
-  not in the tree yet (row 236), so this note cites no line of it.
+- The release's `Queue.ts` was read from the installed package, whose bytes equal the vendored
+  `vendor/effect-4.0.1/src/Queue.ts` (the audit of seat A401). This note cites no line of it;
+  the packet of the first Queue slice does (row 236).
 - No Lean of the tree was written, and no proof.

@@ -20,6 +20,16 @@ finite runs with bun 1.4.2 on the named builds. A finite difference alone does n
 upstream defect (decisions row 232). The queues review and the transactions note of 2026-10-05
 hold the probes and their outputs.
 
+The release audit of 2026-10-05 (`docs/research/2026-10-05-seat-A401/audit.md`, F6 and F7) adds
+two facts about the rows above. Each is a reading and a finite run, and neither row changes
+until the owner rules on the migration.
+
+- **`U-01`:** 4.0.1 answers the row's reproduction with the interrupt, as the tree's signed
+  divergence does. Where no handler is skipped, the release also adds the interrupt reasons,
+  and the tree does not.
+- **`U-02`:** 4.0.1 keeps it. A forked scope with one finalizer now answers that finalizer's
+  value too.
+
 | Candidate | Effect 3.22.2 | rc.112 | 4.0.0 and 4.0.1 | Probe |
 | --- | --- | --- | --- | --- |
 | A later taker receives each message while an earlier taker waits | the earlier taker is served | yes | yes | P1, `docs/research/2026-10-05-claude-lead/queue-probes/queue-faults.ts` |
@@ -27,4 +37,5 @@ hold the probes and their outputs.
 | The test clock keeps each deadline as a floating-point count of milliseconds. At a realistic time a sleep of 100 ns returns at once, and a sleeper of 200 ns wakes after 150 ns | not run | yes | yes | C5, `docs/research/2026-10-05-claude-lead/tx-probes/clock-probes.ts` |
 | At capacity zero a single offer to a `sliding` queue stores its message while a taker waits, and the taker is not woken. The candidate is narrow: at capacity one the taker receives the message, a batch at capacity zero leaves nothing buffered, and on 4.0.1 a `flush` delivers the parked message | not run | yes | 4.0.1: yes; 4.0.0 not run | D5, `docs/research/2026-10-05-claude-lead/queue-contract/native-differences.ts`; `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/full-queue-review/capacity/review.md` |
 | A queue of capacity zero buffers a message. In one run a batch of two is offered to one waiting taker, who is then interrupted. In the other a message is offered while only a peek waits | not run | yes | 4.0.1: yes; 4.0.0 not run | D3 and D7, the same file |
+| Four more behaviours of the pin that the release changes: a loser forked while a race settles is never interrupted; the await of a fiber's children is masked; a cancel effect that fails loses the interrupt; a memo observer of a layer can be stranded | not compared | yes | 4.0.1: changed | R1 to R3 and F9 of `docs/research/2026-10-05-seat-A401/audit.md`; the memo map by reading only |
 | Five defects of the pin that the release repairs: `takeBetween` drops its minimum after a wait; an ending queue leaves a batch taker parked; an interrupted pending offer is still delivered in a closing queue; a transaction that retries on a stale read waits for ever; a plain read wakes waiting transactions | not compared | yes | repaired | P2, P3, P4, TX1 and TX2, in the same two folders |
