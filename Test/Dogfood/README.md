@@ -20,6 +20,7 @@ of row 204 moves at least one program forward.
   each requirement keeps waiting.
 - `Scenario.lean` holds what the scenarios share: the script alphabet, the driver, the readers of a
   run's session part, the driver's laws and the gate `#scenario_gate`.
+- `Scenario/` holds one battery per scenario. `Test/All.lean` imports each one.
 
 ## The reference texts
 
@@ -142,6 +143,10 @@ checks the record against the environment and runs the controls once. It refuses
 So no control stands outside a scenario, and no scenario stands without a placed claim. Each
 control is a finite probe: one script on the Lean machine. A claim's standing is derived from its
 proof: `#plan_status` prints it, with the planned goals the claim rests on.
+
+| Scenario | Program | Observation | Claim and clauses | Lowered runs |
+| --- | --- | --- | --- | --- |
+| workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers`. Clauses: `receipt_inert`, `applied_selects`, `control_retires` and `replays` (theorems of `Scenario.lean`), and the planned goal `releases_once`: under every script the crew releases no connection twice. | Waiting. The printer refuses the crew's log rows by name (`binderTerm`) until the state plan's T5. `Observation.machine` is the part a machine replay shows. |
 
 ## The earlier dogfood programs
 
