@@ -162,7 +162,7 @@ Open at this landing:
 
 - the Queue's whole transition contract, as a packet in `Test/contracts/`;
 - the design note for waiting, tasks, masks and the atomic frontier;
-- seat T3b's slices E and F;
+- seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness reports a module error on every typed program;
   - `check-schema-ts`: its host packages are not installed.
