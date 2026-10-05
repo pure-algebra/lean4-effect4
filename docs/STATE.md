@@ -180,35 +180,64 @@ More rulings of the same day (rows 235 to 248):
 - the Lean TypeScript package is upgraded as needed (row 247);
 - the pin moves to 4.0.1 in increments, and development does not pause (row 248).
 
+Landed later on 2026-10-05:
+
+- **Seat T3b is merged** (`57b261a0`;
+  [its receipt](research/2026-10-04-seat-T3b-receipt.md)). The eight read-modify-write rows
+  carry a binder term, and the store step runs it with the node's environment. The faces spell
+  a term by one of five names and refuse any other. The faces of a binder term wait for T5.
+- **Seat M0 is merged** (`ba0b6d38`;
+  [its receipt](research/2026-10-05-seat-M0-receipt.md),
+  [the lane note](../harness/truth/RELEASE-LANE.md)). `make check-truth-release` runs the truth
+  harness on effect 4.0.1 beside the pin, and one build ledger holds each program's expected
+  agreement. The target is in no sweep: no tracked recipe installs the release.
+- **The builtin table of the OCaml route is data** (`8b236fa7`;
+  [`lcnf-route.md`](core/lcnf-route.md) §9;
+  [the note](research/2026-10-05-claude-lead/lowering-table/lowering-table.md)). A Lean binder
+  named as a form's temporary captured a reference, and three definitions gave wrong answers.
+  No generated module held such a binder. A form now binds nothing at a call site, and a check
+  reads each translated declaration. The numbers did not move.
+- **The compiler checkpoint passes again** (`21b7da47`). It was red since the generator merge
+  reached five constants with no source rule.
+- **The semantics registry follows the mask's rulings** (`cdf7551f`): two parts reworded and
+  three added, all as proposed claims.
+- **The compatibility policy names two host-lane rows** that the sweep moved (`d226d7a1`), and
+  `check-conservativity` passes on the range again.
+
 Open at this landing:
 
 - the Queue's whole transition contract is written
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   It is owed as a packet in `Test/contracts/` with the first Queue slice;
+- the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
+  with its model. Its slice is the next one of the foundation seat;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
-  (rows 244 to 246). Its slice follows seat T3b's merge. The semantics registry still holds the
-  mask's parts in older words and lacks three; the coordinator reconciles it at that merge;
+  (rows 244 to 246). Its slice follows the fold's;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
-  for review (row 248). Each area is cut over in place, and the truth lane runs both builds
-  with one ledger. Its first slice, the release's truth lane, is with seat M0 since 2026-10-05
-  (branch `seat/m0-release-lane`, from `f3086de1`);
-- the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
-  with its model. It has one constructor of `Term`, the identity of a handle as one atom, and
-  the six steps of the groundwork plan as terms. Its slice follows seat T3b's merge;
-- seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
+  for review (row 248). Its first slice landed with seat M0. Its second slice, the census by
+  row and the impact query, waits for the owner's reading of the plan's mechanics;
 - the release audit, landed on 2026-10-05
   ([the audit](research/2026-10-05-seat-A401/audit.md),
   [its receipt](research/2026-10-05-seat-A401-receipt.md)). For this tree 4.0.1 is a new runtime
-  revision. The owner ruled the migration in increments (row 248), and the seat's proposals A,
-  B and D to I stay open inside its plan. Three small repairs wait for a seat:
+  revision. The seat's proposals A, B and D to I stay open inside the migration plan. Three
+  small repairs wait for a seat:
   - the citations that miss in the pin itself;
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;
+- the OCaml route's next slices, from Codex's three packets
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/`), each small and apart:
+  - callback library functions in the target evaluator, so that it runs `lcnf_list_contains`;
+  - three repairs of the conformance runner;
+  - `E4_be` forwards to `Eff_frame`;
+  - the law of `let x = e in x` as a placed fixture;
+  - the emitted OCaml read back by the compiler's own parser;
+- the proposed decisions rows of the two seats' receipts, for the owner;
 - two red lanes of the sweep of 2026-10-05:
-  - `check-tsdiag`: its harness reports a module error on every typed program;
+  - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
+    typed program reports a module error (seat T3b's reading);
   - `check-schema-ts`: its host packages are not installed.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
