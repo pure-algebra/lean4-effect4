@@ -43,17 +43,33 @@ function validatePlan(report) {
     names.add(n.name);
     if (!['proved', 'modulo', 'goal'].includes(n.status)) problems.push(`plan node ${n.name} has status ${n.status}`);
   }
-  const known = (where, list) => {
-    if (list === undefined) return;
-    if (!isArr(list)) { problems.push(`${where} is not a list`); return; }
-    for (const t of list) {
+  // A field the drawings read must be present with its type. An empty list is a value. An absent
+  // list is a broken report, because the view would draw it as empty and hide edges or open work.
+  const list = (where, value) => {
+    if (value === undefined) { problems.push(`${where} is missing`); return false; }
+    if (!isArr(value)) { problems.push(`${where} is not a list`); return false; }
+    return true;
+  };
+  const known = (where, value) => {
+    if (!list(where, value)) return;
+    for (const t of value) {
       const name = t && typeof t === 'object' ? t.name : t;
       if (!names.has(name)) problems.push(`${where} names ${name}, which is not a plan node`);
     }
   };
   for (const n of plan.nodes) {
     if (!n || !isStr(n.name)) continue;
-    known(`${n.name}'s nearest nodes`, (n.broughtIn || {}).nearest);
+    if (typeof n.statement !== 'string') problems.push(`${n.name}'s statement is missing`);
+    if (typeof n.module !== 'string') problems.push(`${n.name}'s module is missing`);
+    list(`${n.name}'s axioms`, n.axioms);
+    const brought = n.broughtIn;
+    if (!brought || typeof brought !== 'object') problems.push(`${n.name}'s dependency summary is missing`);
+    else {
+      known(`${n.name}'s nearest nodes`, brought.nearest);
+      for (const key of ['lemmas', 'definitions']) {
+        if (typeof brought[key] !== 'number') problems.push(`${n.name}'s count of ${key} is missing`);
+      }
+    }
     known(`${n.name}'s goals`, n.restsOn);
   }
   for (const r of plan.requirements) {
@@ -61,6 +77,7 @@ function validatePlan(report) {
     known(`${r.id}'s top nodes`, r.top);
     known(`${r.id}'s placed nodes`, r.placed);
     known(`${r.id}'s next goals`, r.next);
+    list(`${r.id}'s open parts`, r.openParts);
   }
   known('the next goals', plan.next);
   known('the unplaced goals', plan.unplacedGoals);

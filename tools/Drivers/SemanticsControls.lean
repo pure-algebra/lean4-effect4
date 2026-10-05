@@ -338,13 +338,33 @@ private def checkUnloadedWitness : MetaM Unit := do
     (← buildReport (withPointer (.witness name)) registers toolchain)
     #[#["fixture-claim", "currentWitness", "witness module is not loaded"]]
 
+/-- The traversal of a requirement's nodes (`reachThrough`). A name is queued once, so a node
+below a shared dependency is reached: the six-node graph is Codex's witness of 2026-10-05, in
+which the earlier loop left out `L`. A bound that is too small answers what it did not visit. -/
+private def checkReach : MetaM Nat := do
+  let shared : String → List String
+    | "T" => ["A", "B", "C"] | "A" => ["D"] | "B" => ["D"] | "C" => ["D"] | "D" => ["L"] | _ => []
+  let chain : String → List String
+    | "T" => ["A"] | "A" => ["B"] | "B" => ["C"] | "C" => ["D"] | "D" => ["L"] | _ => []
+  let whole := ["T", "A", "B", "C", "D", "L"]
+  let cases : List (String × (List String × List String) × (List String × List String)) := [
+    ("a shared dependency is reached whole", reachThrough shared 6 ["T"], (whole, [])),
+    ("a chain is reached whole", reachThrough chain 6 ["T"], (whole, [])),
+    ("a repeated start name is visited once", reachThrough shared 6 ["T", "T"], (whole, [])),
+    ("a bound that is too small answers its queue", reachThrough shared 3 ["T"], (["T", "A", "B"], ["C", "D"]))]
+  for (label, got, expected) in cases do
+    unless got == expected do
+      throwError "semantics controls: {label}: expected {expected}, got {got}"
+  return cases.length
+
 def run : MetaM Unit := do
   checkPositive
   for test in negativeCases do
     refused test.label (← buildReport test.registry registers toolchain) test.expected
   checkUnloadedWitness
   let parsing ← checkParsing
-  IO.println s!"PASS semantics controls: imported tags and all statuses; {negativeCases.size + 1} report refusals; {parsing} register controls"
+  let reach ← checkReach
+  IO.println s!"PASS semantics controls: imported tags and all statuses; {negativeCases.size + 1} report refusals; {parsing} register controls; {reach} traversal controls"
 
 end Tools.Semantics.Controls
 

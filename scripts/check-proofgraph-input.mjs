@@ -5,7 +5,10 @@
 //
 // - the generated report passes;
 // - a report with no plan, a plan whose nodes are not a list, a node whose nearest node is unknown,
-//   and a requirement whose top node is unknown each fail, with a problem naming the cause.
+//   and a requirement whose top node is unknown each fail, with a problem naming the cause;
+// - a copy that lacks one field the drawings read fails, with a problem naming the field: an
+//   absent list is not an empty one (Codex's dogfooding review, 2026-10-05);
+// - a copy with that field present and empty passes.
 //
 // Usage: node scripts/check-proofgraph-input.mjs [semantics.json]
 import { readFileSync } from 'node:fs';
@@ -45,4 +48,32 @@ for (const [label, mutate, expected] of cases) {
   const problems = validatePlan(broken);
   if (!problems.some((p) => p.includes(expected))) fail(`${label}: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
 }
-console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused`);
+
+// A field that the drawings read: absent, it is a problem that names it; empty, it is a value.
+const node = (r) => r.plan.nodes.find((m) => m.name === withNearest.name);
+const fields = [
+  ["a node's statement", (r) => { delete node(r).statement; }, (r) => { node(r).statement = ''; }, 'statement is missing'],
+  ["a node's module", (r) => { delete node(r).module; }, (r) => { node(r).module = ''; }, 'module is missing'],
+  ["a node's axioms", (r) => { delete node(r).axioms; }, (r) => { node(r).axioms = []; }, 'axioms is missing'],
+  ["a node's goals", (r) => { delete node(r).restsOn; }, (r) => { node(r).restsOn = []; }, 'goals is missing'],
+  ["a node's nearest nodes", (r) => { delete node(r).broughtIn.nearest; }, (r) => { node(r).broughtIn.nearest = []; }, 'nearest nodes is missing'],
+  ["a node's dependency summary", (r) => { delete node(r).broughtIn; }, (r) => { node(r).broughtIn = { nearest: [], lemmas: 0, definitions: 0 }; }, 'dependency summary is missing'],
+  ["a node's count of lemmas", (r) => { delete node(r).broughtIn.lemmas; }, (r) => { node(r).broughtIn.lemmas = 0; }, 'count of lemmas is missing'],
+  ["a requirement's open parts", (r) => { delete r.plan.requirements[0].openParts; }, (r) => { r.plan.requirements[0].openParts = []; }, 'open parts is missing'],
+  ["a requirement's top nodes", (r) => { delete r.plan.requirements[0].top; }, (r) => { r.plan.requirements[0].top = []; }, 'top nodes is missing'],
+  ["a requirement's placed nodes", (r) => { delete r.plan.requirements[0].placed; }, (r) => { r.plan.requirements[0].placed = []; }, 'placed nodes is missing'],
+  ["a requirement's next goals", (r) => { delete r.plan.requirements[0].next; }, (r) => { r.plan.requirements[0].next = []; }, 'next goals is missing'],
+  ["the plan's next goals", (r) => { delete r.plan.next; }, (r) => { r.plan.next = []; }, 'the next goals is missing'],
+  ["the plan's unplaced goals", (r) => { delete r.plan.unplacedGoals; }, (r) => { r.plan.unplacedGoals = []; }, 'the unplaced goals is missing'],
+];
+for (const [label, remove, empty, expected] of fields) {
+  const absent = copy();
+  remove(absent);
+  const problems = validatePlan(absent);
+  if (!problems.some((p) => p.includes(expected))) fail(`${label} absent: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
+  const emptied = copy();
+  empty(emptied);
+  const none = validatePlan(emptied);
+  if (none.length) fail(`${label} empty: expected no problem, got ${JSON.stringify(none.slice(0, 3))}`);
+}
+console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${fields.length} absent fields refused, and the same fields accepted when empty`);

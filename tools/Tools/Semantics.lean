@@ -500,6 +500,23 @@ private def renderAcceptance (programs : Array Json) : String := Id.run do
     out := out ++ s!"- {id}: {String.intercalate ", " (waiting.map fun p => s!"`{shortProgram p}`")}\n"
   return out
 
+/-- The names that a list of names reaches through `nearestOf`, breadth first, and the names
+still queued when the bound ran out. A name is queued once: when it is neither reached nor
+queued. So each step reaches one new name, and a bound of the count of distinct names is
+enough. A queue that is not empty at the end is answered, never dropped. Before 2026-10-05 the
+loop queued a name at every edge into it, and the repeated visits spent the bound: a node
+below a shared dependency could be left out (Codex's dogfooding review). -/
+def reachThrough (nearestOf : String → List String) (bound : Nat) (start : List String) :
+    List String × List String := Id.run do
+  let mut reach : List String := []
+  let mut todo := start.eraseDups
+  for _ in [0:bound] do
+    let some n := todo.head? | break
+    todo := todo.tail
+    reach := reach ++ [n]
+    todo := todo ++ ((nearestOf n).eraseDups.filter fun d => !reach.contains d && !todo.contains d)
+  return (reach, todo)
+
 /-- The plan section: the requirements table, the next goals, the loose premises, and one Mermaid
 diagram per requirement over the nodes it reaches. -/
 private def renderPlan (plan : Json) : String := Id.run do
@@ -526,17 +543,16 @@ private def renderPlan (plan : Json) : String := Id.run do
   let unplaced := strings (nested plan "unplacedGoals")
   unless unplaced.isEmpty do
     out := out ++ s!"\n**Goals no requirement reaches** ({unplaced.length}): {ticked unplaced}\n"
+  -- every name that a traversal can meet: the nodes, and every name a node's edge names
+  let names := (nodes.toList.flatMap fun n =>
+    field n "name" :: strings (nested (nested n "broughtIn") "nearest")).eraseDups
   for req in array plan "requirements" do
     -- the nodes the requirement's top and placed nodes reach through their nearest nodes
-    let mut reach : List String := []
-    let mut todo := ((array req "top") ++ (array req "placed")).toList.map (field · "name")
-    for _ in [0:nodes.size + 1] do
-      let some n := todo.head? | break
-      todo := todo.tail
-      if reach.contains n then continue
-      reach := reach ++ [n]
-      todo := todo ++ nearestOf n
+    let start := ((array req "top") ++ (array req "placed")).toList.map (field · "name")
+    let (reach, pending) := reachThrough nearestOf (names.length + start.length) start
     out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n"
+    unless pending.isEmpty do
+      out := out ++ s!"- **Incomplete:** the traversal stopped with {pending.length} names not visited ({ticked pending}).\n"
     for part in strings (nested req "openParts") do
       out := out ++ s!"- Open: {part}\n"
     out := out ++ "\n```mermaid\nflowchart LR\n"
