@@ -317,8 +317,9 @@ def zeroBounds : TakeReply × Nat × TakeReply × Nat :=
 
 /-- Codex's timing trace. T1 needs two messages and T2 needs one. `10` arrives and T2 is
 signalled. `early := true`: T2 runs its step before `20` arrives. `early := false`: `20`
-arrives first. No request is withdrawn. Under `readyFirst` the answers differ; under `strict`
-they do not. -/
+arrives first. No request is withdrawn. Under `readyFirst` the answers differ. Under `strict`
+they agree on this one trace of exact-size batches; `batchTiming` and `scalarTiming` below show
+that `strict` gives no such law in general. -/
 def timing (p : Policy) (early : Bool) : TakeReply × TakeReply :=
   let t1 := T 1 2 2
   let s := (take { policy := p } t1).1
@@ -337,6 +338,75 @@ def timing (p : Policy) (early : Bool) : TakeReply × TakeReply :=
 #guard timing .readyFirst false = (.got [10, 20], .wait)
 #guard timing .strict true = (.got [10, 20], .wait)
 #guard timing .strict false = (.got [10, 20], .wait)
+
+/-! ### The time of a retry, under either turn policy
+
+Codex's third review. A turn policy fixes which request may consume at its step. It does not fix
+what that step returns. `early := true`: the signalled request runs its step before the second
+offer. `early := false`: the second offer comes first. No request is withdrawn in any of them.
+The host probe `queue-timing.ts` (P5, P6, P7) measures the same three traces: Effect 3.22.2
+answers as `early` whether or not the offering fiber yields between its offers, and rc.112,
+4.0.0 and 4.0.1 answer as `late` when it does not yield. -/
+
+/-- One taker waits for one to two messages. `10` arrives, then `20`. -/
+def batchTiming (p : Policy) (early : Bool) : TakeReply :=
+  let t := T 1 1 2
+  let s := (take { policy := p } t).1
+  let s := (offer s 100 10).1
+  if early then (take s t).2.1 else (take (offer s 101 20).1 t).2.1
+
+#guard batchTiming .strict true = .got [10]
+#guard batchTiming .strict false = .got [10, 20]
+#guard batchTiming .readyFirst true = .got [10]
+#guard batchTiming .readyFirst false = .got [10, 20]
+
+/-- One taker waits for one message at capacity one. Under `sliding` the second offer discards
+`10`, so a late retry returns `20`. Under `suspend` both retries return `10`: the positive
+control. -/
+def scalarTiming (st : Strategy) (early : Bool) : TakeReply :=
+  let t := T 1
+  let s := (take { capacity := some 1, strategy := st, policy := .strict } t).1
+  let s := (offer s 100 10).1
+  if early then (take s t).2.1 else (take (offer s 101 20).1 t).2.1
+
+#guard scalarTiming .sliding true = .got [10]
+#guard scalarTiming .sliding false = .got [20]
+#guard scalarTiming .suspend true = .got [10]
+#guard scalarTiming .suspend false = .got [10]
+
+/-- The same under `dropping`. The take returns `10` either way; the second offer's own answer
+changes: accepted after an early retry, refused before a late one. -/
+def droppingTiming (early : Bool) : TakeReply × OfferReply :=
+  let t := T 1
+  let s := (take { capacity := some 1, strategy := .dropping, policy := .strict } t).1
+  let s := (offer s 100 10).1
+  if early then
+    let r := take s t
+    (r.2.1, (offer r.1 101 20).2.1)
+  else
+    let o := offer s 101 20
+    ((take o.1 t).2.1, o.2.1)
+
+#guard droppingTiming true = (.got [10], .accepted true)
+#guard droppingTiming false = (.got [10], .accepted false)
+
+/-- What the turn policy does decide. T1 needs two messages and waits first. Three times, one
+message arrives, T1 runs its step if it still waits, and a new take of one message follows.
+Under `readyFirst` each single take is served and T1 still waits after three messages. Under
+`strict` T1 is served at the second message and the single takes wait their turn. A finite
+run: it is no liveness theorem. -/
+def batchBehindSingles (p : Policy) : TakeReply × List TakeReply :=
+  let t1 := T 1 2 2
+  let init : State × TakeReply × List TakeReply := ((take { policy := p } t1).1, .wait, [])
+  let out := [1, 2, 3].foldl (fun (acc : State × TakeReply × List TakeReply) k =>
+    let s := (offer acc.1 (100 + k) (10 * k)).1
+    let r1 := if acc.2.1 = .wait then take s t1 else (s, acc.2.1, [])
+    let r2 := take r1.1 (T (k + 1))
+    (r2.1, r1.2.1, acc.2.2 ++ [r2.2.1])) init
+  (out.2.1, out.2.2)
+
+#guard batchBehindSingles .readyFirst = (.wait, [.got [10], .got [20], .got [30]])
+#guard batchBehindSingles .strict = (.got [10, 20], [.wait, .wait, .wait])
 
 /-- `poll` under each policy, with one message buffered and a batch of three at the head. -/
 def pollAtBatchHead (p : Policy) : Option Nat :=

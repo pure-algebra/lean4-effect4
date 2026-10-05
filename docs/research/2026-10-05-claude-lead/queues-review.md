@@ -21,6 +21,9 @@ The note was amended on 2026-10-05 after Codex's review. The section "What Codex
 changed" lists the claims of the first draft that it refuted, and F5 to F13 state the corrected
 contract.
 
+Codex's third review, of the same day, narrowed the timing claim once more. Probes P5 to P7 of
+F2 measure what it found. Proposal 10 states the choice that it leaves open.
+
 ## Question
 
 The owner asked four things on 2026-10-05:
@@ -44,6 +47,8 @@ The owner asked four things on 2026-10-05:
 | npm's latest version of `effect` | read: 4.0.1. Downloaded on the owner's word; its `Queue.ts` equals 4.0.0's byte for byte (tested) |
 | Codex's review of the first draft, `plan-review.md`, in `/private/tmp/codex-effect4-overnight-monitor/2026-10-05-deferred-latch-probes/`, and its follow-up on the amendment | read; each finding checked by reading; its model assertions were not run again |
 | `docs/research/2026-10-05-claude-lead/queue-probes/QueueModel.lean`, a pure model of the corrected contract | tested: every control holds, and the bounded exploration passes |
+| Codex's third review, `review.md`, in `/private/tmp/codex-effect4-overnight-monitor/2026-10-05-strict-timing-review/` | read; its two witnesses and its control are pinned in the model |
+| `docs/research/2026-10-05-claude-lead/queue-probes/queue-timing.ts` on rc.112, on 4.0.0, on 4.0.1 and on Effect 3.22.2, with bun 1.4.2; each output sits beside it | tested |
 | Any Lean file of the tree, any proof | not written |
 
 ## Findings
@@ -57,15 +62,16 @@ The owner asked four things on 2026-10-05:
   cell and awaits that `Deferred`. `open` sets the flag and resolves it. `release` swaps in a new
   `Deferred` and resolves the old one. Each is one atomic update and one resolution.
 - **The one difference.** rc.112's Latch posts its wake as a task. A `Deferred` wakes its waiters
-  inside the resolving step. The queue of F6 needs no posted wake.
+  inside the resolving step. Which of the two the queue's signal uses is a choice (F5.9,
+  proposal 10).
 - **`Deferred` is the blocking cell this tree chose.** A program holds it as first-order data. The machine
   already gives it a waiter list with a cancel rule (`WakeList.cancel`,
   `src/Effect4/Machine/Wake.lean`) and typed-state clauses.
 - **Effect's own practice.** rc.112's `PubSub` parks each waiter on its own `Deferred` and removes
   it on interrupt (`pollForItem`, `vendor/effect-4.0.0-rc.112/src/PubSub.ts`: reading).
 - **The machine's posted wake stays internal.** `WakeMode.scheduled` and `Task.wake`
-  (`src/Effect4/Machine/Fibers.lean`) exist, and no program-visible row reaches them. The queue
-  does not need them.
+  (`src/Effect4/Machine/Fibers.lean`) exist, and no program-visible row reaches them. Proposal 10
+  says when the queue needs them.
 
 So the answer to question 1: keep `Deferred`, and add no Latch for the queue. The derivation
 above is a sketch. It does not discharge row 81, which asks what a Latch module owes on its
@@ -82,6 +88,9 @@ Each row is one finite run with bun 1.4.2. The probe file states each schedule.
 | P2. `takeBetween(3, 5)` parks; messages arrive one at a time | it waits for three | waits; then `[1, 2, 3]` | **`[1]` after the first** | waits; then `[1, 2, 3]` |
 | P3. One message is buffered; `takeBetween(3, 5)` parks; the queue ends | the taker receives what is left | not run | **the taker stays parked** | `[1]` |
 | P4. A full queue; an offer of `b` parks; the queue ends; the offerer is interrupted | `b` is withdrawn | not run | **a later take receives `b`** | the take fails with `Done` |
+| P5. A taker parks in `takeBetween(1, 2)`. One fiber offers `1`, then `2`, with no yield between | either batch | `[1]` | `[1, 2]` | `[1, 2]` |
+| P6. A sliding queue of capacity one; a taker parks; one fiber offers `1`, then `2`, with no yield between | no message is lost while a taker waits | the taker receives `1`; `2` stays | **the taker receives `2`; `1` is discarded** | **the taker receives `2`; `1` is discarded** |
+| P7. A dropping queue of capacity one; a taker parks; one fiber offers `1`, then `2`, with no yield between | both offers are accepted while a taker waits | both accepted | **the second offer answers `false`** | **the second offer answers `false`** |
 
 - **P2, P3 and P4 are defects of the pin.** Each contradicts rc.112's own documentation or leaves
   a fiber parked for ever. 4.0.0 changed the code at each point (F4).
@@ -92,6 +101,12 @@ Each row is one finite run with bun 1.4.2. The probe file states each schedule.
   In six rounds the first taker receives none. 4.0.1 is the latest release on npm. Codex's own
   run of eight rounds shows the same, with a control. This is a finite bypass, not a proof of
   starvation.
+- **P5 to P7 are a second change from Effect 3.** Effect 3.22.2 answers as a queue that hands
+  the first message to the parked taker inside the offer (the runs; its source was not read).
+  Every Effect 4 build posts the wake, so the second offer runs before the parked taker does. A sliding queue then discards a message, and a dropping queue
+  refuses one, while a taker waits.
+- **In Effect 4 these answers depend on a yield.** When the offering fiber yields between its two
+  offers, every build answers as Effect 3 does. No Effect 3 answer changes with the yield.
 - **A correction.** The first run of these probes loaded 4.0.0 from bun's cache, not the pin. The
   probe now takes its package directory from `EFFECT_DIR` and prints the version it loaded.
 
@@ -146,10 +161,11 @@ Two waiting protocols live in this one module:
 
 1. **The order of takers is a choice, and Effect 4 changed it.** In the run of F2, Effect 3 hands
    the first message to the taker that waited longest. Effect 4 wakes a taker and lets it race.
-2. **An answer depends on the schedule when a new take may pass a waiting one.** A turn check
-   inside the atomic step stops a take from passing an earlier request that is eligible.
-   Eligibility can still change before a signalled request runs its step (Codex's follow-up).
-   Under `strict` order, and with no withdrawal, the answers no longer depend on the schedule.
+2. **A turn check fixes who may consume. It does not fix what a retry returns.** A turn check
+   inside the atomic step stops a take from passing an earlier request that is eligible. Under
+   `strict` order the oldest waiting taker consumes next. Under either policy the time of a
+   retry can still change an answer (Codex's third review). P5 to P7 show three: a batch's
+   length, a sliding queue's value, and a dropping offer's answer.
 3. **A batch minimum and the batch taker's turn can both be kept.** rc.112 dropped the minimum
    (P2). 4.0.1 keeps it and lets a new take pass. A retry that checks its turn and its minimum
    inside the atomic step keeps both (Codex's review).
@@ -161,6 +177,11 @@ Two waiting protocols live in this one module:
    pending offer, as 4.0.1 does.
 8. **Consumption needs one irreversible point.** The proposal: the atomic step of the taker that
    receives the message. A request that is withdrawn then never held a message.
+9. **The time of a retry is the delivery of its signal, and that is a choice.** A `Deferred`
+   wakes its waiters inside the resolving step. The signalled request then runs its step before
+   the signalling fiber's next step, which gives Effect 3's answers on P5 to P7. A posted signal
+   runs it after the signalling fiber stops, which gives Effect 4's answers. The model's early
+   and late retries are these two positions.
 
 ### F6. The proposed design: Effect 4's protocol with a turn check, in one cell
 
@@ -217,8 +238,13 @@ A pure Lean model states this contract and runs it:
   bounded queue never exceeds its capacity. A taker that is ready and has the turn was signalled.
 - A red control drops the signal of a withdrawal, and the exploration then fails.
 - A take with a zero bound answers the empty batch, as 4.0.1 does.
-- Codex's timing trace is a control: under `readyFirst` its answers differ with the time of a
-  retry, and under `strict` they do not.
+- Codex's timing traces are controls. On the first, the answers under `readyFirst` differ with
+  the time of a retry. On `batchTiming`, `scalarTiming` and `droppingTiming` they differ under
+  either policy. The early retry answers as Effect 3 does on P5 to P7, and the late retry as
+  Effect 4 does.
+- `batchBehindSingles` is the control for the turn policy. Under `readyFirst`, single takes keep
+  a batch of two waiting after three messages. Under `strict` the batch is served at the second
+  message. It is a finite run and no liveness theorem.
 
 ### F7. The full API on this design
 
@@ -320,10 +346,12 @@ window with a finite run that interrupts at every step boundary.
   that is signalled, and a signal that is not yet resolved.
 - **The profile** is the queue's own (row 79): the private cell and `Deferred`s hidden, and the
   direction "included". No common profile is signed for every derived module.
-- **Timing.** With no withdrawal, each answer is fixed by the order of the atomic steps. Under
-  `readyFirst` that order includes each retry step, so the time of a wake can still change an
-  answer. Under `strict` it cannot. With a withdrawal, the time of a wake can change which
-  request receives a message under either policy (Codex's review).
+- **Timing.** With no withdrawal, each answer is fixed by the order of the atomic steps. That
+  order includes each retry step. So the time of a wake can change an answer under either
+  policy: a batch's length, a sliding queue's value, a dropping offer's answer. Under
+  `readyFirst` it can also change which request consumes. With a withdrawal it can change which
+  request receives a message under either policy (Codex's reviews). The law names the position
+  of each retry as a decision (row 79), or the signal's delivery fixes it (proposal 10).
 - **Progress, as far as it is provable now.** At a quiet machine no eligible request waits
   without its signal. A head batch that needs three may wait with one message buffered.
   `frontier_empty_iff_deadlocked` (`src/Effect4/Laws/Api/Frontier.lean`) classifies the machine's
@@ -353,6 +381,7 @@ Each name is a proposal. None is declared. The first four rows follow Codex's re
 - Each step copies the message list. Measure before changing the representation.
 - The turn policy is a choice (proposal 4). Under `strict`, a batch taker at the head blocks the
   takers behind it. Under `readyFirst`, single takers may pass a batch taker that is not ready.
+- The delivery of a signal is a choice (proposal 10). It decides the answers of P5 to P7.
 - At capacity zero an offer waits until a taker's step takes its message. Effect accepts the
   offer at once when a taker waits.
 - `sliding` at capacity zero stores one message in 4.0.1. The contract must refuse that
@@ -386,6 +415,16 @@ three more corrections. Each is applied above and in the model:
 - The exploration covered `suspend` only, and `sliding` at capacity zero breaks the capacity
   bound.
 
+Codex's third review
+(`/private/tmp/codex-effect4-overnight-monitor/2026-10-05-strict-timing-review/review.md`) made
+one more correction. It is applied above and in the model:
+
+- The amendment said that `strict` order removes the time of a wake from every answer. It does
+  not. `strict` fixes who may consume at its step. The batch's length, a sliding queue's value
+  and a dropping offer's answer still depend on the time of the retry.
+- So `strict` alone does not show that the queue can do without a posted wake. P5 to P7 measure
+  the three cases on the four builds.
+
 Claims that the review narrowed:
 
 - `Deferred` is the blocking basis this tree chose. No theorem says it is the only possible one.
@@ -403,12 +442,12 @@ Claims that the review narrowed:
 2. **The contract of F6.** Effect 4's wake-and-retry with a turn check, and consumption at the
    taker's own step. The turn check is the one divergence from 4.0.1. P1 is its control.
 3. **Follow 4.0.1 at P2, P3 and P4.** They are defects of the pin, not of the latest release.
-4. **The turn policy.** Under `strict`, with no withdrawal, the queue's answers do not depend on
-   the time of a wake. That is the property that lets the queue do without a posted wake. Its
-   cost: a batch at the head blocks the takers behind it, which 4.0.1 does not do. `readyFirst`
-   is 4.0.1's order of service without the bypass, and its answers can depend on the time of a
-   retry. Recommended: `strict`. This recommendation changed twice; Codex's timing trace is the
-   reason for the last change.
+4. **The turn policy.** `strict`: the oldest waiting taker consumes next. Its cost: a batch at
+   the head blocks the takers behind it, which 4.0.1 does not do. `readyFirst` is 4.0.1's order
+   of service without the bypass. Its cost: single takes can keep a batch waiting
+   (`batchBehindSingles`), and the time of a retry can change which request consumes. Neither
+   policy removes the time of a retry from the answers. Recommended: `strict`, for its order
+   law alone. The reason that the amendment gave for it was wrong (Codex's third review).
 5. **Iteration.** The fold, as the owner chose. Bulk atoms only where a named consumer needs
    them.
 6. **The law's clients.** State the law over abstract queue operations and their expansion.
@@ -425,6 +464,19 @@ Claims that the review narrowed:
    5. `end`, `fail`, `shutdown`, `await`, and row 205's named connection.
    6. The faces after T5, and the documentation examples as the finite check.
 
+10. **The delivery of a signal.** Two deliveries exist in the machine (`WakeMode`,
+    `src/Effect4/Machine/Wake.lean`), and programs reach only the first.
+    - Inside the resolving step, as a `Deferred` does. The parked request runs its step before
+      the signalling fiber's next step. This gives Effect 3's answers on P5 to P7, loses no
+      message while a taker waits, and needs no new row.
+    - Posted, as Effect 4 does. This gives Effect 4's answers on P5 to P7, and it needs a posted
+      wake that programs can reach (row 81).
+
+    Under either, the queue's profile names the position of each retry (row 79). Recommended:
+    inside the resolving step, with the difference from Effect 4 signed in the queue's profile.
+    The transactions note says why both deliveries belong in the groundwork
+    (`docs/research/2026-10-05-claude-lead/transactions-and-clock.md`, F4).
+
 ## What this does not establish
 
 - Each probe is one finite run on one schedule with bun 1.4.2. None is a proof, and none says
@@ -436,4 +488,8 @@ Claims that the review narrowed:
   and it does not model the wrapper or an interrupt inside the wrapper. It proves nothing.
 - The timing clause of F11 is an argument from reading. The simulation is its proof, and it is
   not written.
+- That a signal inside the resolving step gives Effect 3's answers rests on the model's early
+  retry and on reading. No composite queue was built or run. An injected yield between a step
+  and its signal would move the retry. The transactions note's atomic region is the answer to
+  that, and it is not designed.
 - Codex's 27 model assertions were read, not run again.
