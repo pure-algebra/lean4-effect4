@@ -640,9 +640,72 @@ answers the program the printer kept. -/
 
 /-! ## The native profile through `Api`: trailing names and the two `Scope.make` rows -/
 
-open Effect4.Api in
-#guard roundTrip (.bind (.perform .refMake (.lit (.nat 0))) (.perform (.refUpdate .double) (.var 0)))
-  = .ok (.bind (.perform .refMake (.lit (.nat 0))) (.perform (.refUpdate .double) (.var 0)))
+open Effect4.Api Effect4.Machine in
+#guard roundTrip (.bind (.perform .refMake (.lit (.nat 0)))
+    (.perform (.refUpdateWith (FnName.image .update 1 .double)) (.var 0)))
+  = .ok (.bind (.perform .refMake (.lit (.nat 0)))
+    (.perform (.refUpdateWith (FnName.image .update 1 .double)) (.var 0)))
+
+/-! ### Binder terms (the state plan's T3b, until T5 reads a term itself)
+
+The faces spell a read-modify-write row's binder term by a name. The printer prints the row's
+form at level 0 and the reader moves what it read to the node's level
+(`Signature.opAtLevel`; `NativeOp.atLevel`), so a name read under `n` binders is the name's image
+at level `n`. A term that is no name's image at its node's level has no spelling: the printer
+refuses it, it is not `readable`, and no reader yields it. -/
+
+/-- A program under `n` binders, each a `flatMap` over `undefined`. -/
+def under : Nat → Effect4.Api.Program → Effect4.Api.Program
+  | 0, p => p
+  | n + 1, p => .bind (.succeed (.lit .unit)) (under n p)
+
+-- every one of the forty images reads back as itself, under 0 to 3 binders
+open Effect4.Api Effect4.Machine in
+#guard (List.range 4).all fun n => NativeOp.termRows.all fun row => fnNames.all fun g =>
+  let p := under n (.perform (row.1 (FnName.image row.2 n g)) (.lit (.nat 0)))
+  readable p && decide (roundTrip p = .ok p)
+
+-- the reader yields the name's image at the node's level: one text, a term per level
+open Effect4.Machine in
+#guard (List.range 4).all fun n =>
+  decide (readEff [] nativeSignature nativeSpell (n + 1)
+      (.call (.ident "Ref.update") [.ident "a0", .ident "incr"]) =
+    .ok (.perform (.refUpdateWith (FnName.image .update (n + 1) .incr)) (.var 0)))
+#guard readEff [] nativeSignature nativeSpell 3
+    (.call (.ident "Ref.modify") [.ident "a1", .ident "takeAndBump"]) =
+  .ok (.perform (.refModifyWith (.app "pair" (.cons (.var 3)
+    (.cons (.app "add" (.cons (.var 3) (.cons (.lit (.nat 1)) .nil))) .nil)))) (.var 1))
+-- a name the alphabet does not hold is no row
+#guard (readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .ident "triple"])).toOption.isNone
+
+-- a term that is no name's image is not readable, and the round trip stops at the printer: a
+-- capture, a composed term, and a name's image at another level
+open Effect4.Api Effect4.Machine in
+#guard [ NativeOp.refUpdateWith (.app "add" (.cons (.var 1) (.cons (.var 0) .nil)))
+       , .refUpdateWith (.app "succ" (.cons (.app "succ" (.cons (.var 1) .nil)) .nil))
+       , .refUpdateWith (FnName.image .update 0 .incr)
+       , .refModifyWith (.app "pair" (.cons (.lit (.str "s")) (.cons (.var 1) .nil))) ].all fun op =>
+  let p : Effect4.Api.Program := .bind (.perform .refMake (.lit (.nat 0))) (.perform op (.var 0))
+  !readable p && decide (roundTrip p = .error (.shape "printer")) &&
+    match print p with
+    | .error (.binderTerm spelling) => spelling == (NativeOp.row op).spelling
+    | _ => false
+
+/-- The native signature's level law, at its exact proposition (`nativeLawful`'s field): an
+operation moved between two levels moves back. -/
+example : ∀ (a b : Nat) (op op' : NativeOp), nativeSignature.opAtLevel a b op = some op' →
+    nativeSignature.opAtLevel b a op' = some op :=
+  (nativeLawful).opAtLevel_symm
+
+-- the move, read on values: a name's image moves to the name's image, and back; an operation
+-- with no term stays; a term that is no image moves nowhere
+open Effect4.Machine in
+#guard NativeOp.termRows.all fun row => fnNames.all fun g => [(0, 3), (3, 0), (2, 5)].all fun l =>
+  NativeOp.atLevel l.1 l.2 (row.1 (FnName.image row.2 l.1 g)) ==
+    some (row.1 (FnName.image row.2 l.2 g))
+#guard NativeOp.atLevel 0 4 .refGet = some .refGet
+#guard NativeOp.atLevel 2 0 (.refUpdateWith (.var 5)) = none
 
 open Effect4.Api in
 #guard roundTrip (.bind (.perform (.scopeMake .parallel) (.lit .unit))

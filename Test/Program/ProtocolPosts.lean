@@ -344,24 +344,32 @@ Decisions row 136 restricted the two `modify` rows to a cell declared at `nat`. 
 plan's T2 (decisions row 43) a read-modify-write row runs a binder term, and its pre demands that
 the term map the cell's type into the row's result type at every later world (`TermMaps`): for
 `modify`, `[B, A]` with `B` the certificate. The old pre (`oldStorePre`) still admits a `bool`
-cell. There the machine now stops: `incr`'s lowering `pair(a, succ(a))` does not evaluate on a
-`bool`. Before T2 the name `incr` answered the `bool` unchanged, outside the `nat` post
-(`refModify_bool_answer` at `git:c58bcc43:Test/Program/ProtocolPosts.lean`). -/
+cell. There the machine now stops: the term `pair(a, succ(a))` does not evaluate on a `bool`.
+Before T2 the row named a function, and the name `incr` answered the `bool` unchanged, outside
+the `nat` post (`refModify_bool_answer` at `git:c58bcc43:Test/Program/ProtocolPosts.lean`).
+Since the state plan's T3b the rows carry their own terms, and the controls step literal
+terms, the current value at level 0. -/
 
 namespace Modify
 
 def boolCellStore : Stores :=
   (syncOpStep (.refMake (.bool true)) Stores.empty).map (·.1) |>.getD Stores.empty
 
-/-- At a `bool` cell `incr`'s lowering does not evaluate: the step is a frontier. -/
+/-- `pair(a, succ(a))`: answer the value read, write its successor. -/
+def bumpTerm : Term :=
+  .app "pair" (.cons (.var 0) (.cons (.app "succ" (.cons (.var 0) .nil)) .nil))
+
+/-- `pair(a, none())`: answer the value read, write nothing. -/
+def keepTerm : Term := .app "pair" (.cons (.var 0) (.cons (.app "none" .nil) .nil))
+
+/-- At a `bool` cell `pair(a, succ(a))` does not evaluate: the step is a frontier. -/
 theorem refModify_bool_frontier :
-    syncOpStep (.refModify ⟨0⟩ FnName.incr.modifyTerm []) boolCellStore = none := by
+    syncOpStep (.refModify ⟨0⟩ bumpTerm []) boolCellStore = none := by
   decide +kernel
 
-/-- `noChange`'s lowering `pair(a, none())` evaluates on any value: the `bool` cell answers its
-value and keeps it. -/
+/-- `pair(a, none())` evaluates on any value: the `bool` cell answers its value and keeps it. -/
 theorem refModifySome_bool_answer :
-    ((syncOpStep (.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []) boolCellStore).map
+    ((syncOpStep (.refModifySome ⟨0⟩ keepTerm []) boolCellStore).map
       (·.2)) = some (Val.bool true) := by
   decide +kernel
 
@@ -369,42 +377,42 @@ theorem refModifySome_bool_answer :
 def wb : W := { initialWorld (EffTy.pure .nat) with Ρ := tableInsert (fun _ => none) ⟨0⟩ .bool }
 
 theorem refModify_pre (root : ProgramSource)
-    (cert : StoreCert (.refModify ⟨0⟩ FnName.incr.modifyTerm [])) :
-    oldStorePre root wb (.refModify ⟨0⟩ FnName.incr.modifyTerm []) cert := ⟨.bool, rfl⟩
+    (cert : StoreCert (.refModify ⟨0⟩ bumpTerm [])) :
+    oldStorePre root wb (.refModify ⟨0⟩ bumpTerm []) cert := ⟨.bool, rfl⟩
 
 /-- At the native row's certificate `nat` the post excludes a `bool` answer. -/
 theorem refModify_post_excludes (w' : W) :
-    ¬ storePost w' (.refModify ⟨0⟩ FnName.incr.modifyTerm []) Ty.nat (Val.bool true) :=
+    ¬ storePost w' (.refModify ⟨0⟩ bumpTerm []) Ty.nat (Val.bool true) :=
   fun h => h
 
 /-- Historical, restated at T2: adequacy at this row under the old pre is false. The pre holds,
 and the handler takes no step at the `bool` cell, where the handler rule asks for one
 (`StoreImplements`). Before T2 it stepped to an answer that no world admits. -/
 theorem adequacy_false_refModify (root : ProgramSource)
-    (cert : StoreCert (.refModify ⟨0⟩ FnName.incr.modifyTerm [])) :
-    oldStorePre root wb (.refModify ⟨0⟩ FnName.incr.modifyTerm []) cert ∧
-      syncOpStep (.refModify ⟨0⟩ FnName.incr.modifyTerm []) boolCellStore = none :=
+    (cert : StoreCert (.refModify ⟨0⟩ bumpTerm [])) :
+    oldStorePre root wb (.refModify ⟨0⟩ bumpTerm []) cert ∧
+      syncOpStep (.refModify ⟨0⟩ bumpTerm []) boolCellStore = none :=
   ⟨refModify_pre root cert, refModify_bool_frontier⟩
 
 theorem refModifySome_post_excludes (w' : W) :
-    ¬ storePost w' (.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []) Ty.nat
+    ¬ storePost w' (.refModifySome ⟨0⟩ keepTerm []) Ty.nat
       (Val.bool true) :=
   fun h => h
 
 /-- The flip on the real answer: at the certificate `nat` the post admits every number
 (`refModify_implements`, `Typed/Adequacy.lean`, for every cell whose term maps its type). -/
 theorem refModify_post_admits (w' : W) (n : Nat) :
-    storePost w' (.refModify ⟨0⟩ FnName.incr.modifyTerm []) Ty.nat (Val.nat n) := trivial
+    storePost w' (.refModify ⟨0⟩ bumpTerm []) Ty.nat (Val.nat n) := trivial
 
-/-- `incr`'s lowering takes no `bool` to a value. -/
+/-- `pair(a, succ(a))` takes no `bool` to a value. -/
 theorem incr_modify_bool_none :
-    Program.evalTerm ([] ++ [Val.bool true]) FnName.incr.modifyTerm = none := rfl
+    Program.evalTerm ([] ++ [Val.bool true]) bumpTerm = none := rfl
 
-/-- The flip: the current pre refuses the `bool` cell at every certificate, since `incr`'s
-lowering does not map `bool` into `[B, bool]`: on `true` it does not evaluate. -/
+/-- The flip: the current pre refuses the `bool` cell at every certificate, since
+`pair(a, succ(a))` does not map `bool` into `[B, bool]`: on `true` it does not evaluate. -/
 theorem refModify_pre_refuses (root : ProgramSource)
-    (cert : StoreCert (.refModify ⟨0⟩ FnName.incr.modifyTerm [])) :
-    ¬ storePre root wb (.refModify ⟨0⟩ FnName.incr.modifyTerm []) cert := by
+    (cert : StoreCert (.refModify ⟨0⟩ bumpTerm [])) :
+    ¬ storePre root wb (.refModify ⟨0⟩ bumpTerm []) cert := by
   rintro ⟨t, ht, maps⟩
   change tableInsert (fun _ : RefKey => (none : Option Ty)) ⟨0⟩ Ty.bool ⟨0⟩ = some t at ht
   rw [insert_here] at ht
@@ -413,10 +421,10 @@ theorem refModify_pre_refuses (root : ProgramSource)
   rw [incr_modify_bool_none] at hr
   cases hr
 
-/-- The flip at `modifySome`: `noChange`'s lowering answers the `bool` it read, so the pre refuses
+/-- The flip at `modifySome`: `pair(a, none())` answers the `bool` it read, so the pre refuses
 the cell at the certificate `nat`. -/
 theorem refModifySome_pre_refuses (root : ProgramSource) :
-    ¬ storePre root wb (.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []) Ty.nat := by
+    ¬ storePre root wb (.refModifySome ⟨0⟩ keepTerm []) Ty.nat := by
   rintro ⟨t, ht, maps⟩
   change tableInsert (fun _ : RefKey => (none : Option Ty)) ⟨0⟩ Ty.bool ⟨0⟩ = some t at ht
   rw [insert_here] at ht
@@ -430,8 +438,8 @@ theorem refModifySome_pre_refuses (root : ProgramSource) :
 /-- The store at any type: at the certificate `bool` the same pre admits the `bool` cell, the
 machine answers the value read, and the post admits it. -/
 theorem refModifySome_bool_typed (root : ProgramSource) :
-    storePre root wb (.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []) Ty.bool ∧
-      storePost wb (.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []) Ty.bool
+    storePre root wb (.refModifySome ⟨0⟩ keepTerm []) Ty.bool ∧
+      storePost wb (.refModifySome ⟨0⟩ keepTerm []) Ty.bool
         (Val.bool true) := by
   refine ⟨⟨.bool, rfl, fun w' _ a ha => ⟨_, rfl, (fits_prod_iff _ _ _ _).mpr ⟨_, _, rfl, ha, trivial⟩⟩⟩,
     trivial⟩
@@ -1495,13 +1503,13 @@ error: Application type mismatch: The argument
 has type
   ?m.7 = ?m.7
 but is expected to have type
-  Modify.wb.Ρ { index := 0 } = some Ty.bool ∧ TermMaps Modify.wb FnName.incr.modifyTerm [] Ty.bool (Ty.nat.prod Ty.bool)
+  Modify.wb.Ρ { index := 0 } = some Ty.bool ∧ TermMaps Modify.wb Modify.bumpTerm [] Ty.bool (Ty.nat.prod Ty.bool)
 in the application
   Exists.intro Ty.bool rfl
 -/
 #guard_msgs (error) in
 example (root : ProgramSource) :
-    storePre root Modify.wb (.refModify ⟨0⟩ FnName.incr.modifyTerm []) Ty.nat := ⟨.bool, rfl⟩
+    storePre root Modify.wb (.refModify ⟨0⟩ Modify.bumpTerm []) Ty.nat := ⟨.bool, rfl⟩
 
 /--
 error: Type mismatch

@@ -422,8 +422,9 @@ def allFnNames : List Effect4.Machine.FnName :=
   [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
 /-- The 55 built-in rows, one per spelling key: the core's `NativeOp.spelled`
-(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell. External
-indices are supplied by row tables and are not enumerated. -/
+(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell and each
+read-modify-write row at each of the five names' images at level 0. External indices are
+supplied by row tables and are not enumerated. -/
 def allNativeOps : List Effect4.Program.NativeOp := Effect4.Program.NativeOp.spelled
 
 -- Refuse if any of the three inductives grew, shrank or was reordered: the enumeration the core
@@ -434,16 +435,17 @@ run_cmd do
     [ (``Effect4.Program.NativeOp,
         [``Effect4.Program.NativeOp.refMake, ``Effect4.Program.NativeOp.refGet,
          ``Effect4.Program.NativeOp.refSet, ``Effect4.Program.NativeOp.refGetAndSet,
-         ``Effect4.Program.NativeOp.refSetAndGet, ``Effect4.Program.NativeOp.refUpdate,
-         ``Effect4.Program.NativeOp.refGetAndUpdate, ``Effect4.Program.NativeOp.refUpdateAndGet,
-         ``Effect4.Program.NativeOp.refUpdateSome, ``Effect4.Program.NativeOp.refGetAndUpdateSome,
-         ``Effect4.Program.NativeOp.refUpdateSomeAndGet, ``Effect4.Program.NativeOp.refModify,
-         ``Effect4.Program.NativeOp.refModifySome,
+         ``Effect4.Program.NativeOp.refSetAndGet,
          ``Effect4.Program.NativeOp.deferredIsDone, ``Effect4.Program.NativeOp.deferredPoll,
          ``Effect4.Program.NativeOp.deferredSucceed, ``Effect4.Program.NativeOp.deferredFail,
          ``Effect4.Program.NativeOp.deferredAwait, ``Effect4.Program.NativeOp.scopeMake,
          ``Effect4.Program.NativeOp.sleep, ``Effect4.Program.NativeOp.clockNow,
-         ``Effect4.Program.NativeOp.external, ``Effect4.Program.NativeOp.deferredMakeOf])
+         ``Effect4.Program.NativeOp.external, ``Effect4.Program.NativeOp.deferredMakeOf,
+         ``Effect4.Program.NativeOp.refUpdateWith, ``Effect4.Program.NativeOp.refGetAndUpdateWith,
+         ``Effect4.Program.NativeOp.refUpdateAndGetWith, ``Effect4.Program.NativeOp.refUpdateSomeWith,
+         ``Effect4.Program.NativeOp.refGetAndUpdateSomeWith,
+         ``Effect4.Program.NativeOp.refUpdateSomeAndGetWith,
+         ``Effect4.Program.NativeOp.refModifyWith, ``Effect4.Program.NativeOp.refModifySomeWith])
     , (``Effect4.Machine.FnName,
         [``Effect4.Machine.FnName.incr, ``Effect4.Machine.FnName.double,
          ``Effect4.Machine.FnName.zeroWhenPositive, ``Effect4.Machine.FnName.noChange,
@@ -605,20 +607,49 @@ def strategyJs : Effect4.FinalizerStrategy → String
   | .sequential => lit "sequential"
   | .parallel => lit "parallel"
 
+def litJs : Effect4.Program.Lit → String
+  | .unit => tagged "unit" []
+  | .nat n => tagged "nat" [("value", toString n)]
+  | .bool b => tagged "bool" [("value", toString b)]
+  | .str s => tagged "str" [("value", lit s)]
+
+mutual
+/-- A term in the encoded form of the `Term` schema: the binder term a read-modify-write row of
+the profile carries, its current value at level 0. -/
+def termJs : Effect4.Program.Term → String
+  | .var i => tagged "var" [("index", toString i)]
+  | .lit l => tagged "lit" [("value", litJs l)]
+  | .app atom args => tagged "app" [("atom", lit atom), ("args", arr (termsJs args))]
+  | .record fields names values => tagged "record"
+      [("fields", arr (fields.map fun (name, optional, ty) =>
+          arr [lit name, arr [toString optional, (Tools.ProfileJson.tyJson ty).compress]])),
+       ("presentNames", arr (names.map lit)), ("values", arr (termsJs values))]
+  | .field mode target name => tagged "field"
+      [("mode", match mode with | .required => lit "required" | .optional => lit "optional"),
+       ("target", termJs target), ("name", lit name)]
+  | .recordSet target name value => tagged "recordSet"
+      [("target", termJs target), ("name", lit name), ("value", termJs value)]
+  | .tupleAt target index => tagged "tupleAt" [("target", termJs target), ("index", toString index)]
+/-- An argument list: the `Terms` family is carried as an array. -/
+def termsJs : Effect4.Program.Terms → List String
+  | .nil => []
+  | .cons head tail => termJs head :: termsJs tail
+end
+
 def opJs : Effect4.Program.NativeOp → String
   | .refMake => tagged "refMake" []
   | .refGet => tagged "refGet" []
   | .refSet => tagged "refSet" []
   | .refGetAndSet => tagged "refGetAndSet" []
   | .refSetAndGet => tagged "refSetAndGet" []
-  | .refUpdate f => tagged "refUpdate" [("f", fnJs f)]
-  | .refGetAndUpdate f => tagged "refGetAndUpdate" [("f", fnJs f)]
-  | .refUpdateAndGet f => tagged "refUpdateAndGet" [("f", fnJs f)]
-  | .refUpdateSome f => tagged "refUpdateSome" [("f", fnJs f)]
-  | .refGetAndUpdateSome f => tagged "refGetAndUpdateSome" [("f", fnJs f)]
-  | .refUpdateSomeAndGet f => tagged "refUpdateSomeAndGet" [("f", fnJs f)]
-  | .refModify f => tagged "refModify" [("f", fnJs f)]
-  | .refModifySome f => tagged "refModifySome" [("f", fnJs f)]
+  | .refUpdateWith f => tagged "refUpdateWith" [("f", termJs f)]
+  | .refGetAndUpdateWith f => tagged "refGetAndUpdateWith" [("f", termJs f)]
+  | .refUpdateAndGetWith f => tagged "refUpdateAndGetWith" [("f", termJs f)]
+  | .refUpdateSomeWith f => tagged "refUpdateSomeWith" [("f", termJs f)]
+  | .refGetAndUpdateSomeWith f => tagged "refGetAndUpdateSomeWith" [("f", termJs f)]
+  | .refUpdateSomeAndGetWith f => tagged "refUpdateSomeAndGetWith" [("f", termJs f)]
+  | .refModifyWith f => tagged "refModifyWith" [("f", termJs f)]
+  | .refModifySomeWith f => tagged "refModifySomeWith" [("f", termJs f)]
   | .deferredMakeOf value error => tagged "deferredMakeOf"
       [("value", (Tools.ProfileJson.tyJson value).compress),
        ("error", (Tools.ProfileJson.tyJson error).compress)]

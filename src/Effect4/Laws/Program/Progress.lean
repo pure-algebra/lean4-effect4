@@ -70,85 +70,22 @@ theorem StoreFits.step {w w' : Typed.World} {o : SyncOp} {st' : Stores} {a : Val
 
 end Denote
 
-/-! ## The cutover's connector (the state plan's T2)
-
-The store runs binder terms since T2 (decisions row 43). A read-modify-write row of `NativeOp` still
-names its function, and `syncOpOf` hands the store the name's lowering (`FnName.updateTerm` and its
-three siblings, `Machine/Stores.lean`). The connector says that the lowered row runs, on every
-number, the heap kernel the name ran before the cutover (`NativeOp.fnKernel`, the table that
-`git:c58bcc43:src/Effect4/Laws/Machine/RefKernel.lean` held). On a value that is not a number the
-two differ: the name answered it unchanged and the term stops (the state plan's T2, ruling D1;
-the red controls of `Test/Program/ProgressContract.lean`). Both retire with `FnName` at T3. -/
-
-/-- The read-modify-write rows' heap kernels at a function name, as the store ran them before it
-took terms. -/
-def NativeOp.fnKernel : NativeOp → Option RefKernel
-  | .refUpdate f => some fun a => some (Val.unit, some (f.total a))
-  | .refGetAndUpdate f => some fun a => some (a, some (f.total a))
-  | .refUpdateAndGet f => some fun a => some (f.total a, some (f.total a))
-  | .refUpdateSome f => some fun a => some (Val.unit, f.partialUpdate a)
-  | .refGetAndUpdateSome f => some fun a => some (a, f.partialUpdate a)
-  | .refUpdateSomeAndGet f => some fun a => some ((f.partialUpdate a).getD a, f.partialUpdate a)
-  | .refModify f => some fun a => some ((f.modify a).1, some (f.modify a).2)
-  | .refModifySome f =>
-    some fun a => some ((f.modifySome a).1, some ((f.modifySome a).2.getD a))
-  | _ => none
-
-/-- **The cutover's connector**: a read-modify-write row, lowered through its name's binder term,
-runs on every number the heap kernel the name ran. -/
-@[semantics "translation-simulation" (requirement := R4)]
-theorem kernel_term_agrees {op : NativeOp} {k : RefKernel} (hk : op.fnKernel = some k)
-    (cell : RefKey) :
-    ∃ o k', op.syncOpOf [] (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
-      ∀ n, k' (.nat n) = k (.nat n) := by
-  cases op <;> cases hk
-  case refUpdate f | refGetAndUpdate f | refUpdateAndGet f =>
-    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
-    show ((Program.evalTerm ([] ++ [Val.nat n]) f.updateTerm).bind some).map _ = _
-    rw [List.nil_append, FnName.updateTerm_agrees]
-    rfl
-  case refUpdateSome f | refGetAndUpdateSome f | refUpdateSomeAndGet f =>
-    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
-    show ((Program.evalTerm ([] ++ [Val.nat n]) f.updateSomeTerm).bind
-      (Store.Image.ofOption Store.Image.ident)).map _ = _
-    rw [List.nil_append, FnName.updateSomeTerm_agrees, Option.bind_some,
-      show Store.Image.ofOption Store.Image.ident
-          (Store.Image.toOption Store.Image.ident (f.partialUpdate (Val.nat n))) =
-        some (f.partialUpdate (Val.nat n)) from
-        (Store.Image.option Store.Image.ident).ofVal_toVal _]
-    rfl
-  case refModify f =>
-    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
-    show ((Program.evalTerm ([] ++ [Val.nat n]) f.modifyTerm).bind
-      (Store.Image.ofTuple2 Store.Image.ident Store.Image.ident)).map _ = _
-    rw [List.nil_append, FnName.modifyTerm_agrees, Option.bind_some,
-      show Store.Image.ofTuple2 Store.Image.ident Store.Image.ident
-          (Program.Val.tuple [(f.modify (Val.nat n)).1, (f.modify (Val.nat n)).2]) =
-        some ((f.modify (Val.nat n)).1, (f.modify (Val.nat n)).2) from
-        (Store.Image.tuple2 Store.Image.ident Store.Image.ident).ofVal_toVal _]
-    rfl
-  case refModifySome f =>
-    refine ⟨_, _, rfl, rfl, fun n => ?_⟩
-    show ((Program.evalTerm ([] ++ [Val.nat n]) f.modifySomeTerm).bind
-      (Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident))).map _ = _
-    rw [List.nil_append, FnName.modifySomeTerm_agrees, Option.bind_some,
-      show Store.Image.ofTuple2 Store.Image.ident (Store.Image.option Store.Image.ident)
-          (Program.Val.tuple [(f.modifySome (Val.nat n)).1,
-            Store.Image.toOption Store.Image.ident (f.modifySome (Val.nat n)).2]) =
-        some ((f.modifySome (Val.nat n)).1, (f.modifySome (Val.nat n)).2) from
-        (Store.Image.tuple2 Store.Image.ident (Store.Image.option Store.Image.ident)).ofVal_toVal _]
-    rfl
-
 /-! ## The faces' images agree with the names on every number (the state plan's T3b)
 
 Until the state plan's T5 the faces spell a read-modify-write row's binder term by a name
 (`FnName.image`, `Program/FnName.lean`). The image of a name at a shape and a node's level
 evaluates, on every number and over every outer environment, to the value the name answers at
-that shape (`FnName.valueAt`): the value T2's lowering of the name evaluated to
-(`FnName.lowering_agrees`). So a program that named its function runs the same store step on a
-number cell once its row carries the name's image. Two names whose plain terms would repeat have
-distinct images (`takeAndBump` at `add(a, 1)`, `zeroWhenPositive` at `add(a, 0)`), and the
-agreement is what says the re-imaging moves no value. -/
+that shape (`FnName.valueAt`). Before the rows carried terms a row named its function and
+`syncOpOf` handed the store the name's lowering at level 0; on every number that lowering
+evaluated to the same value (`FnName.lowering_agrees` and `FnName.image_agrees_lowering` at
+`git:0ab2ef09:src/Effect4/Program/FnName.lean` and
+`git:0ab2ef09:src/Effect4/Laws/Program/Progress.lean`, proved before the lowerings were deleted).
+So a program that named its function runs the same store step on a number cell now that its row
+carries the name's image. Two names whose plain terms would repeat have distinct images
+(`takeAndBump` at `add(a, 1)`, `zeroWhenPositive` at `add(a, 0)`), and the agreement is what
+says the re-imaging moves no value. On a value that is not a number an image of a computing name
+stops, since every atom that reads a number refuses any other value: the step is a frontier
+there, as it has been since the store ran terms (decisions row 43). -/
 
 /-- **The image of a name agrees with the name on every number**, at every shape, level and outer
 environment: at `env ++ [n]` the image at level `env.length` evaluates to the name's value at the
@@ -164,16 +101,6 @@ theorem _root_.Effect4.Machine.FnName.image_agrees (s : FnShape) (f : FnName) (e
     case zeroWhenPositive => cases n <;> rfl
     all_goals rfl
   all_goals cases f <;> rfl
-
-/-- **The image of a name agrees with T2's lowering of it on every number**: the image at a
-node's level, over any outer environment, evaluates as the lowering did at `[]`. The statement
-that the cutover (slice E of the state plan's T3b) moves no store step on a number cell; it
-leaves with T2's lowerings, and `FnName.image_agrees` stays. -/
-theorem _root_.Effect4.Machine.FnName.image_agrees_lowering (s : FnShape) (f : FnName)
-    (env : List Val) (n : Nat) :
-    evalTerm (env ++ [Val.nat n]) (FnName.image s env.length f) =
-      evalTerm [Val.nat n] (f.lowering s) := by
-  rw [FnName.image_agrees, FnName.lowering_agrees]
 
 /-! ## The native rows' store steps, one row each -/
 
@@ -222,7 +149,9 @@ theorem progress (op : NativeOp) (r : Term) (tys : TyEnv) (env : List Val) (w : 
     rw [← NativeOp.row_kind]
     exact hkind
   let root : Typed.ProgramSource := { program := .perform op r }
-  obtain ⟨o, ho, typed⟩ := Typed.syncRow_typed root (req := Env.Requirement.empty) op hk (env := env)
+  have hsig : root.signature = nativeSignature := rfl
+  rw [← hsig] at hrow
+  obtain ⟨o, ho, typed⟩ := Typed.syncRow_typed root (req := Env.Requirement.empty) op hk henv
     hrow x hxfit
   obtain ⟨cert, pre, next⟩ := Typed.TypedProg.store_inv typed
   obtain ⟨st', a, step, w', ord, hstate, cells, post⟩ :=

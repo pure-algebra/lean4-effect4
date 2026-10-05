@@ -679,7 +679,8 @@ private def pMissCatch : Api.Program :=
 private def pLoopProg : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.iterate none (.lit (.nat 0)) (.app "isZero" (.cons (.var 1) .nil))
-      (.app "succ" (.cons (.var 1) .nil)) (.lit .unit) (.perform (.refUpdate .incr) (.var 0)))
+      (.app "succ" (.cons (.var 1) .nil)) (.lit .unit)
+      (.perform (.refUpdateWith (Effect4.Machine.FnName.image .update 2 .incr)) (.var 0)))
 
 #guard Api.wellTyped pLoopProg
 #guard Api.typeOf pLoopProg = some (.pure .unit)

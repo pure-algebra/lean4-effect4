@@ -14,7 +14,8 @@ def allocate : NativeEff := .perform .refMake (.lit (.nat 0))
 def writeThenFail : NativeEff :=
   .bind (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
     (.fail (.lit (.nat 5)))
-def cleanup : NativeEff := .perform (.refUpdate FnName.incr) (.var 0)
+/-- `Ref.update(cell, incr)` at level 2: under the cell's binder and the exit's. -/
+def cleanup : NativeEff := .perform (.refUpdateWith (FnName.image .update 2 .incr)) (.var 0)
 def original : NativeEff := .bind allocate (.onExit (.suspend writeThenFail) (.suspend cleanup))
 def rewritten : NativeEff := .bind allocate (.onExit writeThenFail cleanup)
 

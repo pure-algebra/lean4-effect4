@@ -1333,11 +1333,13 @@ end Rows
 theorem name_notin (l : List String) (h : ∀ s ∈ l, s.toByteArray.data.toList.head? ≠ some 97)
     (i : Nat) : Var.name i ∉ l := fun hm => Var.name_ne (h _ hm) i rfl
 
-/-- No external operation is a built-in representative. -/
+/-- No external operation is a built-in representative: every representative is a built-in row,
+whose kind is not a host row's. -/
 theorem NativeOp.external_not_mem_spelled (i : Nat) : NativeOp.external i ∉ NativeOp.spelled := by
   intro h
-  simp only [NativeOp.spelled, fnNames, List.mem_append, List.mem_cons, List.flatMap_cons,
-    List.flatMap_nil, List.map_cons, List.map_nil, List.mem_nil_iff, reduceCtorEq, or_self] at h
+  have hall : NativeOp.spelled.all (fun op => decide (NativeOp.kind op ≠ .program)) = true := by
+    decide
+  exact of_decide_eq_true (List.all_eq_true.mp hall _ h) rfl
 
 /-- A built-in operation keeps its own row whatever the supplied table. -/
 theorem nativeRowOf_builtin (table : RowTable) (op : NativeOp) (h : ∀ i, op ≠ .external i) :
@@ -1351,13 +1353,19 @@ theorem nativeRowOf_external (table : RowTable) (i : Nat) (hi : i < table.length
   simp [nativeRowOf, List.getElem?_eq_getElem hi]
 
 /-- Every native row's names are hygienic: the spelling and the trailing names are fixed by the
-operation's key, never by a type argument it carries. -/
+operation's key, never by a type argument it carries. A term row's trailing name is one of the
+five names' spellings, or it has none (`NativeOp.termFace`). -/
 theorem NativeOp.row_hygiene (op : NativeOp) :
     (op.row.shape = .value → op.row.trailing = []) ∧ rowNamesSafe op.row = true := by
   cases op with
-  | refUpdate f | refGetAndUpdate f | refUpdateAndGet f | refUpdateSome f
-  | refGetAndUpdateSome f | refUpdateSomeAndGet f | refModify f | refModifySome f =>
-    cases f <;> decide
+  | refUpdateWith f | refGetAndUpdateWith f | refUpdateAndGetWith f | refUpdateSomeWith f
+  | refGetAndUpdateSomeWith f | refUpdateSomeAndGetWith f | refModifyWith f
+  | refModifySomeWith f =>
+    refine ⟨fun hs => (by cases hs), ?_⟩
+    simp only [NativeOp.row, NativeOp.termFace, NativeOp.kind]
+    split
+    · next g _ => cases g <;> decide
+    · decide
   | scopeMake s => cases s <;> decide
   | deferredMakeOf value error => exact ⟨fun hs => (by cases hs), rfl⟩
   | external i =>
@@ -1395,7 +1403,29 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     LawfulSpelling (nativeSignature table) (nativeSpell table) where
   spell_row := by
     intro op hd hh
+    cases hb : op.binder? with
+    | some st =>
+      -- a term row: only a name's image at level 0 has a head that reads back (until T5)
+      obtain ⟨s, f⟩ := st
+      cases hdec : Machine.FnName.decode? s 0 f with
+      | none =>
+        -- no name: the row carries the empty type-argument spelling, which no reading parses
+        cases op <;> cases hb <;>
+          (change (decide (RowShape.call = .value) ||
+              ((NativeOp.termFace _ _).2.mapM Effect4.Codegen.Types.parseLegacy).isSome) = true
+            at hh
+           rw [NativeOp.termFace_none hdec] at hh
+           exact absurd hh (by decide))
+      | some g =>
+        -- the name's image: the row spells the name, and the spelling reads the image back
+        have hf := Machine.FnName.image_of_decode? hdec
+        subst hf
+        cases op <;> cases hb <;> cases g <;> rfl
+    | none =>
     cases op with
+    | refUpdateWith f | refGetAndUpdateWith f | refUpdateAndGetWith f | refUpdateSomeWith f
+    | refGetAndUpdateSomeWith f | refUpdateSomeAndGetWith f | refModifyWith f
+    | refModifySomeWith f => cases hb
     | external i =>
       have hi : i < table.length := of_decide_eq_true hd
       change nativeSpell table (nativeRowOf table (.external i)).spelling
@@ -1411,9 +1441,6 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
       unfold nativeSpell rowKey
       rw [hb, hf]
       rfl
-    | refUpdate f | refGetAndUpdate f | refUpdateAndGet f | refUpdateSome f
-    | refGetAndUpdateSome f | refUpdateSomeAndGet f | refModify f | refModifySome f =>
-      cases f <;> rfl
     | scopeMake s => cases s <;> rfl
     | deferredMakeOf value error =>
       -- only the instance whose type arguments the faces spell reads back (until T5)
@@ -1477,9 +1504,7 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     have hn := hn.1
     have ht := List.all_eq_true.mp hn.2 "undefined" hm
     simp at ht
-  opAtLevel_symm := by
-    intro a b op op' h
-    cases h
-    rfl
+  -- the names are an exact embedding into terms at each shape and level
+  opAtLevel_symm := fun _ _ _ _ h => NativeOp.atLevel_symm h
 
 end Effect4.Program

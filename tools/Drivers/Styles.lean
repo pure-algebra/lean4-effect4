@@ -135,8 +135,10 @@ def products : List Case := Id.run do
 
 def composite : Eff NativeOp :=
   .bind (.perform .refMake (.lit (.nat 0)))
-    (.scoped (.gen (.cons (.yieldDiscard (.perform (.refUpdate .incr) (.var 0)))
-      (.cons (.yieldDiscard (.perform (.refUpdate .takeAndBump) (.var 0)))
+    (.scoped (.gen (.cons (.yieldDiscard (.perform
+          (.refUpdateWith (Effect4.Machine.FnName.image .update 1 .incr)) (.var 0)))
+      (.cons (.yieldDiscard (.perform
+          (.refUpdateWith (Effect4.Machine.FnName.image .update 1 .takeAndBump)) (.var 0)))
       (.cons (.yieldDiscard (.perform .sleep (.lit (.nat 604800000))))
       (.cons (.yieldDiscard (.withFiber (.fork (.succeed (.lit .unit)) (Forms.defaults false))))
       (.cons (.yieldDiscard (.acquireRelease (.succeed (.lit (.nat 8))) (.succeed (.lit .unit))))
@@ -150,7 +152,8 @@ def probes : List (String × Eff NativeOp) :=
   [("composite", composite), ("fractionalDuration", .perform .sleep (.lit (.nat 1500)))] ++
   [Effect4.Machine.FnName.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump].map
     (fun f => (fnSpelling f,
-      .bind (.perform .refMake (.lit (.nat 2))) (.perform (.refUpdate f) (.var 0))))
+      .bind (.perform .refMake (.lit (.nat 2)))
+        (.perform (.refUpdateWith (Effect4.Machine.FnName.image .update 1 f)) (.var 0))))
 
 def write (dir : System.FilePath) (name : String) (c : Case) (expr : Expr)
     (oracle : Eff NativeOp) (key : Bool := false)

@@ -2349,102 +2349,94 @@ theorem refRead {w : World} {key : RefKey} {A ty : Ty} {ans : Val}
   cases hlookup'
   exact fits_subN w hequiv.1 ans hfit
 
-/-! #### The names' lowerings at a cell declared equivalent to `nat`
+/-! #### A term row's store pre, from its binder term's typing
 
-Each read-modify-write row runs its name's lowering (`FnName.updateTerm` and its three siblings,
-`Machine/Stores.lean`). At a cell declared equivalent to `nat` the cell holds a number, the
-lowering evaluates to the name's answer on it (`FnName.updateTerm_agrees`), and a number fits
-wherever another does (`fits_nat_irrel`). So each lowering maps the cell's type into its shape's
-result type at every later world (`TermMaps`): the four discharges `syncRow_typed` reads. They
-retire at T3 of the state plan, when the rows carry terms that the checker types. -/
+A read-modify-write row carries a binder term (decisions row 43), and the store's pre asks that
+the term map the cell's declared type into the row's result type at every later world
+(`TermMaps`, `storePre`). The checker types the term at the instance's element type and matches
+its type against the shape's result template (`bindTerm`), so the pre follows from the term's
+typing: `termMaps_of_typed` gives the term relation at the instance, the guard and the cell's
+declaration move it to the declared type (`TermMaps.widen`'s two directions, read at values), and
+the request's binding of the element type is the one the columns keep (`bindTerm_keeps`). -/
 
-/-- On a `nat` cell, `modify` answers the old value and writes a `nat`. -/
-theorem modify_nat (f : FnName) (n : Nat) :
-    (f.modify (.nat n)).1 = .nat n ∧ ∃ m, (f.modify (.nat n)).2 = .nat m := by
-  cases f <;> exact ⟨rfl, _, rfl⟩
-
-theorem modifySome_nat (f : FnName) (n : Nat) :
-    (f.modifySome (.nat n)).1 = .nat n ∧ ∃ m, (f.modifySome (.nat n)).2.getD (.nat n) = .nat m := by
-  cases f <;> exact ⟨rfl, _, rfl⟩
-
-/-- A total read-modify-write keeps the cell's value at its declared type: it writes a number for
-a number (`fits_nat_irrel`) and leaves every other value as it is. -/
-theorem fits_total {w : World} (f : FnName) {a : Val} {t : Ty} (h : Fits w a t) :
-    Fits w (f.total a) t := by
-  unfold FnName.total
-  split
-  · exact fits_nat_irrel w _ _ t h
-  · exact fits_nat_irrel w _ _ t h
-  · exact fits_nat_irrel w _ _ t h
-  · exact h
-
-/-- A partial read-modify-write that writes keeps the cell's value at its declared type: it writes
-`0` for a positive number, or the total update. -/
-theorem fits_partialUpdate {w : World} (f : FnName) {a a' : Val} {t : Ty} (h : Fits w a t)
-    (hp : f.partialUpdate a = some a') : Fits w a' t := by
-  unfold FnName.partialUpdate at hp
-  split at hp
-  · cases hp
-  · cases hp
-    exact fits_nat_irrel w _ 0 t h
-  · cases hp
-  · cases hp
-    exact fits_total _ h
-
-/-- A member of a type equivalent to `nat` is a number. -/
-theorem nat_of_equiv {w : World} {t : Ty} (equiv : Equiv t .nat) {a : Val} (h : Fits w a t) :
-    ∃ n, a = .nat n :=
-  fits_nat_inv (fits_subN w equiv.1 a h)
-
-/-- The option image of members of `t` is a member of `Option<t>`. -/
-theorem fits_toOption {w : World} {t : Ty} {o : Option Val}
-    (h : ∀ a, o = some a → Fits w a t) :
-    Fits w (Store.Image.toOption Store.Image.ident o) (.option t) := by
-  cases o with
-  | none => exact trivial
-  | some a => exact h a rfl
-
-/-- The `A → A` lowering maps a cell type equivalent to `nat` into itself. -/
-theorem updateTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
-    TermMaps w f.updateTerm [] t t := by
-  intro w' _ a ha
-  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
-  exact ⟨_, FnName.updateTerm_agrees f n, fits_total f ha⟩
-
-/-- The `A → Option<A>` lowering maps a cell type equivalent to `nat` into its option. -/
-theorem updateSomeTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
-    TermMaps w f.updateSomeTerm [] t (.option t) := by
-  intro w' _ a ha
-  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
-  exact ⟨_, FnName.updateSomeTerm_agrees f n,
-    fits_toOption fun _ h => fits_partialUpdate f ha h⟩
-
-/-- The `A → [B, A]` lowering maps a cell type equivalent to `nat` into `[nat, A]`. -/
-theorem modifyTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
-    TermMaps w f.modifyTerm [] t (.prod .nat t) := by
-  intro w' _ a ha
-  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
-  obtain ⟨answer, m, written⟩ := modify_nat f n
-  refine ⟨_, FnName.modifyTerm_agrees f n, (fits_prod_iff _ _ _ _).mpr ⟨_, _, rfl, ?_, ?_⟩⟩
-  · rw [answer]
-    exact trivial
-  · rw [written]
-    exact fits_nat_irrel w' n m t ha
-
-/-- The `A → [B, Option<A>]` lowering maps a cell type equivalent to `nat` into
-`[nat, Option<A>]`. -/
-theorem modifySomeTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnName) :
-    TermMaps w f.modifySomeTerm [] t (.prod .nat (.option t)) := by
-  intro w' _ a ha
-  obtain ⟨n, rfl⟩ := nat_of_equiv equiv ha
-  refine ⟨_, FnName.modifySomeTerm_agrees f n, (fits_prod_iff _ _ _ _).mpr ⟨_, _, rfl, ?_, ?_⟩⟩
-  · rw [(modifySome_nat f n).1]
-    exact trivial
-  · refine fits_toOption fun a' h => ?_
-    obtain ⟨_, m, written⟩ := modifySome_nat f n
-    rw [h] at written
-    cases written
-    exact fits_nat_irrel w' n m t ha
+/-- **A term row's checked use discharges its store pre.** The use binds the term at the shape's
+templates from the request's bindings `σ` (`bindTerm`), and the cell is declared at a type
+equivalent to the request's element type. Then the term maps the declared type into the shape's
+result at the declared type and the answer type `B` the term bound, at every later world; and
+every member of the declared type is a member of the element type the columns are instantiated
+at. When the request bound no element type its instance is `never`, the cell's type has no
+member, and both hold vacuously: such a node is dead. A step of `denote-typed`; its consumer is
+`syncRow_typed` at the eight term rows. It says nothing of a term the checker refuses. -/
+theorem bindTerm_termMaps {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
+    {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env) {f : Term}
+    (s : FnShape) {σ σ' : Ty.Subst}
+    (hbind : bindTerm σ (some ⟨s.param, s.result, fun A => termTy sig (tys ++ [A]) f⟩) = .ok σ')
+    {ty : Ty} (hequiv : Equiv ty (Ty.instantiate σ (.var 0))) :
+    TermMaps w f env ty (Ty.instantiate [(0, ty), (1, Ty.instantiate σ' (.var 1))] s.result) ∧
+      ∀ w' a, Fits w' a ty → Fits w' a (Ty.instantiate σ' (.var 0)) := by
+  obtain ⟨r, hr, hm⟩ := bindTerm_some_ok hbind
+  have hguard := Ty.matchTemplate_sound σ _ r σ' hm
+  have hparam : (Ty.instantiate σ s.param.normalize).normalize =
+      (Ty.instantiate σ (.var 0)).normalize := rfl
+  have hmaps : TermMaps w f env (Ty.instantiate σ (.var 0)).normalize r :=
+    termMaps_of_typed hatom henv (hparam ▸ hr)
+  cases hσ : σ.lookup 0 with
+  | none =>
+    -- the request bound no element type: the cell's type is below `never`, which has no member
+    have hvar : Ty.instantiate σ (.var 0) = .never := by
+      simp only [Ty.instantiate, hσ, Option.getD_none]
+    have hnever : ∀ w' a, ¬ Fits w' a ty := fun w' a ha => by
+      have h := fits_subN w' hequiv.1 a ha
+      rw [hvar] at h
+      exact h
+    exact ⟨fun w' _ a ha => (hnever w' a ha).elim, fun w' a ha => (hnever w' a ha).elim⟩
+  | some u =>
+    have hσ' : σ'.lookup 0 = some u := bindTerm_keeps hbind 0 u hσ
+    have hu : Ty.instantiate σ (.var 0) = u := by
+      simp only [Ty.instantiate, hσ, Option.getD_some]
+    have hu' : Ty.instantiate σ' (.var 0) = u := by
+      simp only [Ty.instantiate, hσ', Option.getD_some]
+    rw [hu] at hequiv hmaps
+    refine ⟨?_, fun w' a ha => by rw [hu']; exact fits_subN w' hequiv.1 a ha⟩
+    intro w' ord a ha
+    obtain ⟨x, hx, hfit⟩ :=
+      hmaps w' ord a ((fits_normalize w' u a).mpr (fits_subN w' hequiv.1 a ha))
+    refine ⟨x, hx, ?_⟩
+    -- the guard: the term's value fits the result template's instance at the term's bindings
+    have hinst : Fits w' x (Ty.instantiate σ' s.result.normalize) :=
+      (fits_normalize w' _ x).mp (fits_sub w' hguard x ((fits_normalize w' r x).mpr hfit))
+    -- shape by shape: the instance reads `u` where the store reads the cell's declared type
+    cases s with
+    | update =>
+      have hx' : Fits w' x (Ty.instantiate σ' (.var 0)) := hinst
+      rw [hu'] at hx'
+      exact fits_subN w' hequiv.2 x hx'
+    | updateSome =>
+      have hx' : Fits w' x (.option (Ty.instantiate σ' (.var 0))) := hinst
+      rw [hu'] at hx'
+      rcases fits_option_inv hx' with rfl | ⟨y, rfl, hy⟩
+      · exact trivial
+      · exact fits_subN w' hequiv.2 y hy
+    | modify =>
+      have hn : FnShape.modify.result.normalize = .prod (.var 1) (.var 0) := by decide +kernel
+      rw [hn] at hinst
+      have hx' : Fits w' x (.prod (Ty.instantiate σ' (.var 1)) (Ty.instantiate σ' (.var 0))) :=
+        hinst
+      rw [hu'] at hx'
+      obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w' x _ _).mp hx'
+      exact (fits_prod_iff w' _ _ _).mpr ⟨p, q, rfl, hp, fits_subN w' hequiv.2 q hq⟩
+    | modifySome =>
+      have hn : FnShape.modifySome.result.normalize = .prod (.var 1) (.option (.var 0)) := by
+        decide +kernel
+      rw [hn] at hinst
+      have hx' : Fits w' x (.prod (Ty.instantiate σ' (.var 1))
+          (.option (Ty.instantiate σ' (.var 0)))) := hinst
+      rw [hu'] at hx'
+      obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w' x _ _).mp hx'
+      refine (fits_prod_iff w' _ _ _).mpr ⟨p, q, rfl, hp, ?_⟩
+      rcases fits_option_inv hq with rfl | ⟨y, rfl, hy⟩
+      · exact trivial
+      · exact fits_subN w' hequiv.2 y hy
 
 /-- **A checked row use places the request's values under the instance** (the inversion of the
 row rule, `checkRow`): the request's bindings `σ` put every member of the request's type under
@@ -2501,23 +2493,150 @@ theorem Formation.headFormed_of_nodes {template : Bool} {path : List String} {ty
     List.mem_zipIdx_iff_getElem?.mpr (List.getElem?_eq_getElem hi)
   exact h _ (List.mem_map_of_mem hmem)
 
-/-- **The store rows, per instantiation** (the state plan's T3a): a request fitting the checked
-type of a `sync` row's use decodes to the row's store operation (`NativeOp.syncOpOf`), whose pre
-it meets at a certificate the instance fixes, and whose post answers at the node's checked
-columns at every later world. A `Ref` row runs at the cell's declared type through `refRead`; a
+/-- A member of a term row's request, at the request's bindings, is a cell declared at a type
+equivalent to the element type the bindings give. A step of `syncRow_typed` at the term rows. -/
+theorem fits_termRequest_inv {w : World} {v : Val} {σ : Ty.Subst}
+    (h : Fits w v (Ty.instantiate σ (Ty.refOf (.var 0)).normalize.normalize)) :
+    ∃ k ty, v = Val.cell k ∧ w.Ρ k = some ty ∧ Equiv ty (Ty.instantiate σ (.var 0)) := by
+  have hn : (Ty.refOf (.var 0)).normalize.normalize = .refOf (.var 0) := by decide +kernel
+  rw [hn] at h
+  obtain ⟨k, rfl, ty, hlookup, hequiv⟩ := fits_refOf_inv h
+  exact ⟨k, ty, rfl, hlookup, hequiv⟩
+
+/-- A member of the instance of a row parameter is a member of the node's checked column at that
+parameter: the column is the parameter's instance, normalized. A step of `syncRow_typed` at the
+term rows that answer the cell's value or `Ref.modify`'s `B`. -/
+theorem fits_paramColumn {w : World} {ans : Val} {σ : Ty.Subst} (i : Nat)
+    (h : Fits w ans (Ty.instantiate σ (.var i))) :
+    Fits w ans (Ty.instantiate σ (Ty.var i).normalize).normalize :=
+  (fits_normalize w _ ans).mpr h
+
+/-- **The store rows, per instantiation** (the state plan's T3a and T3b): a request fitting the
+checked type of a `sync` row's use decodes to the row's store operation (`NativeOp.syncOpOf`) at
+the point's environment, whose pre it meets at a certificate the instance fixes, and whose post
+answers at the node's checked columns at every later world. A `Ref` row runs at the cell's
+declared type through `refRead`; a read-modify-write row discharges its term's pre from the
+term's typing, over an environment that fits the node's (`bindTerm_termMaps`), and `Ref.modify`
+certifies at the answer type `B` its term bound, which may differ from the cell's; a
 `Deferred.make` declares its promise at its own type arguments' instance; a completion fits the
 promise's declared columns, and a failure's value is in the error alphabet by the formation rule on
 a deferred's error column. A step of the claims `denote-typed` and `straight-meaning-typed`; its
-consumers are `syncPerform_arm`, `inlineYield_typed` and `progress`. -/
+consumers are `syncPerform_arm`, `inlineYield_typed` and `progress`. It covers native `sync` rows
+at every instance and term the checker admits, at every world; it says nothing of a host row
+(R6), and one store step is atomic in the model only. -/
+@[semantics "residual-program-typing" (requirement := R4)]
 theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
-    (op : NativeOp) (hk : NativeOp.kind op = .sync) {env : List Val} {tys : TyEnv} {reqTy : Ty}
-    {t : EffTy}
+    (op : NativeOp) (hk : NativeOp.kind op = .sync) {env : List Val} {tys : TyEnv}
+    (henv : EnvTyped w tys env) {reqTy : Ty} {t : EffTy}
     (hrow : rowTy (NativeOp.row op).normalizeTypes reqTy (root.signature.termUse tys op) = some t)
     (v : Val) (hfit : Fits w v reqTy) :
     ∃ o, NativeOp.syncOpOf op env v = some o ∧
       TypedProg root w ⟨t.answer, t.error, req⟩ (.vis (.inl o) fun ans => .pure (.success ans)) := by
+  cases hb : op.binder? with
+  | some st =>
+    -- the eight term rows: the request is a declared cell, and the term's typing is its pre
+    obtain ⟨σ, σ', hinst, hbind, -, rfl, -⟩ := rowTy_fits hrow hfit
+    cases op with
+    | refUpdateWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl henv .update hbind hequiv
+      refine ⟨SyncOp.refUpdate k f env, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.refUpdate k f env) (cert := ()) ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      subst post
+      exact TypedProg.pure (strongExit_success w' _ Val.unit trivial)
+    | refGetAndUpdateWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, hcell⟩ :=
+        bindTerm_termMaps (sig := root.signature) rfl henv .update hbind hequiv
+      refine ⟨SyncOp.refGetAndUpdate k f env, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.refGetAndUpdate k f env) (cert := ())
+        ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      obtain ⟨ty, hlookup', hfit'⟩ := post
+      rw [ord.1.2.2.2.1 _ _ hlookup] at hlookup'
+      cases hlookup'
+      exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 0 (hcell w' ans hfit')))
+    | refUpdateAndGetWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, hcell⟩ :=
+        bindTerm_termMaps (sig := root.signature) rfl henv .update hbind hequiv
+      refine ⟨SyncOp.refUpdateAndGet k f env, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.refUpdateAndGet k f env) (cert := ())
+        ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      obtain ⟨ty, hlookup', hfit'⟩ := post
+      rw [ord.1.2.2.2.1 _ _ hlookup] at hlookup'
+      cases hlookup'
+      exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 0 (hcell w' ans hfit')))
+    | refUpdateSomeWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, -⟩ :=
+        bindTerm_termMaps (sig := root.signature) rfl henv .updateSome hbind hequiv
+      refine ⟨SyncOp.refUpdateSome k f env, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.refUpdateSome k f env) (cert := ())
+        ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      subst post
+      exact TypedProg.pure (strongExit_success w' _ Val.unit trivial)
+    | refGetAndUpdateSomeWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, hcell⟩ :=
+        bindTerm_termMaps (sig := root.signature) rfl henv .updateSome hbind hequiv
+      refine ⟨SyncOp.refGetAndUpdateSome k f env, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.refGetAndUpdateSome k f env) (cert := ())
+        ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      obtain ⟨ty, hlookup', hfit'⟩ := post
+      rw [ord.1.2.2.2.1 _ _ hlookup] at hlookup'
+      cases hlookup'
+      exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 0 (hcell w' ans hfit')))
+    | refUpdateSomeAndGetWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, hcell⟩ :=
+        bindTerm_termMaps (sig := root.signature) rfl henv .updateSome hbind hequiv
+      refine ⟨SyncOp.refUpdateSomeAndGet k f env, rfl, ?_⟩
+      refine TypedProg.store (op := SyncOp.refUpdateSomeAndGet k f env) (cert := ())
+        ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      obtain ⟨ty, hlookup', hfit'⟩ := post
+      rw [ord.1.2.2.2.1 _ _ hlookup] at hlookup'
+      cases hlookup'
+      exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 0 (hcell w' ans hfit')))
+    | refModifyWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, -⟩ := bindTerm_termMaps (sig := root.signature) rfl henv .modify hbind hequiv
+      refine ⟨SyncOp.refModify k f env, rfl, ?_⟩
+      -- the certificate is the answer type `B` the term bound: it may differ from the cell's
+      refine TypedProg.store (op := SyncOp.refModify k f env)
+        (cert := Ty.instantiate σ' (.var 1)) ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 1 post))
+    | refModifySomeWith f =>
+      obtain ⟨k, t', rfl, hlookup, hequiv⟩ := fits_termRequest_inv hinst
+      obtain ⟨hmaps, -⟩ :=
+        bindTerm_termMaps (sig := root.signature) rfl henv .modifySome hbind hequiv
+      refine ⟨SyncOp.refModifySome k f env, rfl, ?_⟩
+      -- the certificate is the answer type `B` the term bound: it may differ from the cell's
+      refine TypedProg.store (op := SyncOp.refModifySome k f env)
+        (cert := Ty.instantiate σ' (.var 1)) ⟨t', hlookup, hmaps⟩ ?_
+      intro w' ord ans post
+      exact TypedProg.pure (strongExit_success w' _ ans (fits_paramColumn 1 post))
+    | refMake | refGet | refSet | refGetAndSet | refSetAndGet | deferredIsDone | deferredPoll
+    | deferredSucceed | deferredFail | deferredAwait | scopeMake _ | sleep | clockNow | external _
+    | deferredMakeOf _ _ => cases hb
+  | none =>
+  -- the rows without a term: the request's bindings stand
+  have huse : root.signature.termUse tys op = none := by
+    show (op.binder?.map _).map _ = none
+    rw [hb]
+    rfl
+  rw [huse] at hrow
   obtain ⟨σ, hinst, rfl, hformed⟩ := rowTy_fits_none hrow hfit
   cases op with
+  | refUpdateWith f | refGetAndUpdateWith f | refUpdateAndGetWith f | refUpdateSomeWith f
+  | refGetAndUpdateSomeWith f | refUpdateSomeAndGetWith f | refModifyWith f
+  | refModifySomeWith f => cases hb
   | refMake =>
     refine ⟨SyncOp.refMake v, rfl, ?_⟩
     refine TypedProg.store (op := SyncOp.refMake v) (cert := Ty.instantiate σ (.var 0)) hinst ?_
@@ -2586,90 +2705,6 @@ theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
     refine TypedProg.pure ?_
     refine strongExit_success w' _ ans ((fits_normalize w' _ _).mpr ?_)
     exact refRead (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
-  | refUpdate f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refUpdate k f.updateTerm [], rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdate k f.updateTerm []) (cert := ())
-      ⟨t', hlookup, updateTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    subst post
-    refine TypedProg.pure ?_
-    exact strongExit_success w' _ Val.unit trivial
-  | refGetAndUpdate f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refGetAndUpdate k f.updateTerm [], rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refGetAndUpdate k f.updateTerm []) (cert := ())
-      ⟨t', hlookup, updateTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    obtain ⟨ty, hlookup', hfit'⟩ := post
-    refine TypedProg.pure ?_
-    refine strongExit_success w' _ ans ?_
-    exact refRead (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
-  | refUpdateAndGet f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refUpdateAndGet k f.updateTerm [], rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdateAndGet k f.updateTerm []) (cert := ())
-      ⟨t', hlookup, updateTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    obtain ⟨ty, hlookup', hfit'⟩ := post
-    refine TypedProg.pure ?_
-    refine strongExit_success w' _ ans ?_
-    exact refRead (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
-  | refUpdateSome f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refUpdateSome k f.updateSomeTerm [], rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdateSome k f.updateSomeTerm []) (cert := ())
-      ⟨t', hlookup, updateSomeTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    subst post
-    refine TypedProg.pure ?_
-    exact strongExit_success w' _ Val.unit trivial
-  | refGetAndUpdateSome f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refGetAndUpdateSome k f.updateSomeTerm [], rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refGetAndUpdateSome k f.updateSomeTerm []) (cert := ())
-      ⟨t', hlookup, updateSomeTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    obtain ⟨ty, hlookup', hfit'⟩ := post
-    refine TypedProg.pure ?_
-    refine strongExit_success w' _ ans ?_
-    exact refRead (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
-  | refUpdateSomeAndGet f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refUpdateSomeAndGet k f.updateSomeTerm [], rfl, ?_⟩
-    refine TypedProg.store (op := SyncOp.refUpdateSomeAndGet k f.updateSomeTerm []) (cert := ())
-      ⟨t', hlookup, updateSomeTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    obtain ⟨ty, hlookup', hfit'⟩ := post
-    refine TypedProg.pure ?_
-    refine strongExit_success w' _ ans ?_
-    exact refRead (refDeclared_mono ord ⟨t', hlookup, hequiv⟩) hlookup' hfit'
-  | refModify f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refModify k f.modifyTerm [], rfl, ?_⟩
-    -- the certificate is the answer column `nat`, the row's
-    refine TypedProg.store (op := SyncOp.refModify k f.modifyTerm []) (cert := .nat)
-      ⟨t', hlookup, modifyTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    refine TypedProg.pure ?_
-    exact strongExit_success w' _ ans post
-  | refModifySome f =>
-    obtain ⟨k, rfl, hdecl⟩ := fits_refOf_inv hinst
-    obtain ⟨t', hlookup, hequiv⟩ := hdecl
-    refine ⟨SyncOp.refModifySome k f.modifySomeTerm [], rfl, ?_⟩
-    -- the certificate is the answer column `nat`, the row's
-    refine TypedProg.store (op := SyncOp.refModifySome k f.modifySomeTerm []) (cert := .nat)
-      ⟨t', hlookup, modifySomeTerm_maps hequiv f⟩ ?_
-    intro w' ord ans post
-    refine TypedProg.pure ?_
-    exact strongExit_success w' _ ans post
   | deferredMakeOf value error =>
     have hv : v = Val.unit := fits_unit_inv hinst
     subst hv
@@ -2850,8 +2885,9 @@ theorem syncPerform_arm {op : NativeOp} {r : Term} (hk : NativeOp.kind op = .syn
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.perform op r) p) := by
-  obtain ⟨tys, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
-  obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk (env := p.env) hrow v hfit
+  obtain ⟨tys, v, reqTy, henv, hv, hfit, hrow⟩ :=
+    builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
+  obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk henv hrow v hfit
   rw [denoteR_perform_sync _ _ _ hfuel ((NativeOp.row_kind op).trans hk), hv, Option.bind_some, ho]
   exact htyped
 
@@ -3185,9 +3221,9 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
           NativeOp.awaitCellOf] at hinline
         exact nomatch hinline
       | _ =>
-        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ :=
+        obtain ⟨_, v, reqTy, henv, hv, hfit, hrow⟩ :=
           builtinPerform_inv (kind_ne_program_of_sync rfl) hat hpt
-        obtain ⟨o, ho, -⟩ := syncRow_typed root (req := Env.Requirement.empty) _ rfl (env := p.env)
+        obtain ⟨o, ho, -⟩ := syncRow_typed root (req := Env.Requirement.empty) _ rfl henv
           hrow v hfit
         simp only [NativeOp.row_kind, NativeOp.kind, hv, Option.bind_some, ho] at hinline
         exact nomatch hinline

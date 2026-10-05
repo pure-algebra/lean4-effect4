@@ -60,18 +60,20 @@ theorem joinAll_typed (root : ProgramSource) (w : W) (targets : List FiberId) (a
     (fun w' _ ans hpost => TypedProg.pure (strongExit_success w' _ ans hpost))
 
 /-- A performed store operation, in the shape `denoteR`'s `.perform` arm emits for a sync row:
-the row runs its name's lowering (decisions row 43). -/
-def modifyCode (cell : RefKey) (f : FnName) : RProgram :=
-  .vis (.inl (.refModify cell f.modifyTerm [])) fun v => .pure (.success v)
+the row runs its binder term at the point's environment (decisions row 43). -/
+def modifyCode (cell : RefKey) (f : Term) (env : List Val) : RProgram :=
+  .vis (.inl (.refModify cell f env)) fun v => .pure (.success v)
 
-/-- `Ref.modify` answers a `nat`, the row's answer column and its certificate, on a cell declared
-at the native row's cell type: the name's lowering maps the cell's type into `[nat, A]`
-(`modifyTerm_maps`, `Typed/Denotation.lean`), so the post at `nat` is the handler's. -/
-theorem modify_typed (root : ProgramSource) (w : W) (cell : RefKey) (f : FnName)
-    (declared : RefDeclared w cell .nat) :
-    TypedProg root w (EffTy.pure .nat) (modifyCode cell f) := by
-  obtain ⟨t, hlookup, hequiv⟩ := declared
-  refine TypedProg.store (cert := Ty.nat) ⟨t, hlookup, modifyTerm_maps hequiv f⟩ ?_
+/-- `Ref.modify` answers its term's first component, at the certificate `B`, on a cell declared
+at `A`: a term the checker types at `[B, A]` over the cell's type maps it there at every later
+world (`termMaps_of_typed`, `Typed/Denotation.lean`), so the post at `B` is the handler's. `B`
+is the term's, not the cell's: the row answers another type than it stores. -/
+theorem modify_typed (root : ProgramSource) (w : W) (cell : RefKey) {tys : TyEnv}
+    {env : List Val} (henv : EnvTyped w tys env) {f : Term} {A B : Ty}
+    (declared : w.Ρ cell = some A)
+    (hty : termTy root.signature (tys ++ [A]) f = some (.prod B A)) :
+    TypedProg root w (EffTy.pure B) (modifyCode cell f env) := by
+  refine TypedProg.store (cert := B) ⟨A, declared, termMaps_of_typed rfl henv hty⟩ ?_
   intro w' _ ans hpost
   exact TypedProg.pure (strongExit_success w' _ ans hpost)
 

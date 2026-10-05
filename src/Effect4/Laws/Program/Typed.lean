@@ -1819,28 +1819,28 @@ theorem syncOpOf_isSome (op : NativeOp) (σ : Ty.Subst) (env : List Val) (v : Va
     obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hx
     rfl
-  | refUpdate f =>
+  | refUpdateWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | refGetAndUpdate f =>
+  | refGetAndUpdateWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | refUpdateAndGet f =>
+  | refUpdateAndGetWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | refUpdateSome f =>
+  | refUpdateSomeWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | refGetAndUpdateSome f =>
+  | refGetAndUpdateSomeWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | refUpdateSomeAndGet f =>
+  | refUpdateSomeAndGetWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | refModify f =>
+  | refModifyWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | refModifySome f =>
+  | refModifySomeWith f =>
     obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | deferredMakeOf value error =>

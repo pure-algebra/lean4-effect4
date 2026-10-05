@@ -342,6 +342,47 @@ theorem matchTemplateArgs_widens {join : Bool} {σ σ' : Subst} {ps rs : List Ty
       obtain ⟨σ₁, h₁, hrest⟩ := h
       exact (matchTemplate_widens h₁).trans (ih hrest)
 
+/-- **The checker's inference keeps every binding of its seed, unchanged.** Without the join
+rule a parameter binds at its first occurrence and a bound parameter is never rebound, so a
+binding the seed holds is the binding the result holds. `infer_widensSub` gives a binding above
+the seed's; here it is the same one. A step of `denote-typed` through `syncRow_typed`'s term
+rows: the element type the request bound is the one the columns are instantiated at after the
+binder term binds (`bindTerm_keeps`). -/
+theorem infer_keeps (σ : Subst) (t r : Ty) :
+    ∀ j u, σ.lookup j = some u → (infer σ t r).lookup j = some u := by
+  induction σ, t, r using infer.induct_unfolding false
+      (motive_2 := fun σ _ _ result => ∀ j u, σ.lookup j = some u → result.lookup j = some u)
+      (motive_3 := fun σ _ _ result => ∀ j u, σ.lookup j = some u → result.lookup j = some u)
+  case case1 σ i r hnone =>
+    intro j u hj
+    rw [List.lookup_append, hj, Option.some_or]
+  case case2 hjoin =>
+    rw [Bool.false_and] at hjoin
+    exact Bool.noConfusion hjoin
+  case case3 => exact fun _ _ h => h
+  case case4 ih | case5 ih | case6 ih | case7 ih => exact ih
+  case case8 ih₁ ih₂ | case9 ih₁ ih₂ | case10 ih₁ ih₂ | case11 ih₁ ih₂ | case12 ih₁ ih₂
+  | case13 ih₁ ih₂ | case14 ih₁ ih₂ => exact fun j u h => ih₂ j u (ih₁ j u h)
+  case case15 ih | case16 ih | case17 ih => exact ih
+  case case18 => exact fun _ _ h => h
+  case case19 ih₁ ih₂ => exact fun j u h => ih₂ j u (ih₁ j u h)
+  case case20 => exact fun _ _ h => h
+  -- the list motives: the statement's binders are the case's last three names
+  case case21 _ _ h => exact h
+  case case22 ih j u h => exact ih j u h
+  case case23 ih₁ ih₂ j u h => exact ih₂ j u (ih₁ j u h)
+  case case24 ih₁ ih₂ j u h => exact ih₂ j u (ih₁ j u h)
+  case case25 _ _ h => exact h
+
+/-- A match at the checker's rule keeps every binding of its seed, unchanged. -/
+theorem matchTemplate_keeps {σ σ' : Subst} {t r : Ty} (h : matchTemplate σ t r = some σ') :
+    ∀ j u, σ.lookup j = some u → σ'.lookup j = some u := by
+  dsimp only [matchTemplate] at h
+  split at h
+  · cases h
+    exact infer_keeps σ t r
+  · exact nomatch h
+
 end Ty
 
 /-- A binder term binds by its result template's match at its own type (`bindTerm`). A step of
@@ -369,6 +410,18 @@ theorem bindTerm_widens {σ σ' : Ty.Subst} {use : Option TermUse} (h : bindTerm
   | some u =>
     obtain ⟨_, _, hm⟩ := bindTerm_some_ok h
     exact Ty.matchTemplate_widens hm
+
+/-- **A binder term keeps the request's bindings, unchanged**: its result template's match keeps
+its seed (`Ty.matchTemplate_keeps`), and no term binds nothing. So the element type `A` the
+request bound is the one the row's columns are instantiated at; the term adds `Ref.modify`'s `B`
+and moves nothing. A step of `syncRow_typed` (`Typed/Denotation.lean`) at the term rows. -/
+theorem bindTerm_keeps {σ σ' : Ty.Subst} {use : Option TermUse} (h : bindTerm σ use = .ok σ') :
+    ∀ j u, σ.lookup j = some u → σ'.lookup j = some u := by
+  cases use with
+  | none => cases h; exact fun _ _ hj => hj
+  | some u =>
+    obtain ⟨_, _, hm⟩ := bindTerm_some_ok h
+    exact Ty.matchTemplate_keeps hm
 
 /-- A binder term's refusal is its own: no term use refuses as the request. A step of
 `checkRow_request_iff`. -/
@@ -512,7 +565,12 @@ theorem checkRow_request_iff (row : Row) (request : Ty) (use : Option TermUse) :
 Three properties of the calculus, stated as theorems rather than left in prose.
 
 `templateAdmissible` and `Row.wellScoped` are the two shapes a row's template must have for
-inference to mean anything, and both hold of every native row of this cut. `sub_sound` and
+inference to mean anything. Every native row of this cut is admissible, and every native row
+whose operation carries no term is well scoped. A term row's answer may also name a parameter
+its term's result template binds, `Ref.modify`'s `B`: the checker binds it from the term's type
+(`bindTerm`), so the native profile reads the result template beside the request
+(`NativeOp.row_wellScoped`). A host row carries no term, and the signature's admission keeps
+`Row.wellScoped` for it. `sub_sound` and
 `sub_not_complete` are the two halves of what the guard is worth: the order NEVER admits a
 value the target would refuse, and it DOES refuse pairs whose value sets agree. A checker
 built on it can lose a program, never mistype one — L4's anchored completeness is the
@@ -616,16 +674,28 @@ theorem NativeOp.row_templateAdmissible (op : NativeOp) (h : op.typeArgsClosed =
   | _ => exact ⟨rfl, rfl, rfl⟩
 
 /-- Every native row whose type arguments are closed is well scoped: every parameter of its
-answer and error is one its request mentions, so inference binds it from the request. -/
+answer and error is one its request mentions or, at a term row, one its term's result template
+mentions (`Ref.modify`'s `B`, which `bindTerm` binds from the term's type). So inference binds
+every parameter the row answers. -/
 theorem NativeOp.row_wellScoped (op : NativeOp) (h : op.typeArgsClosed = true) :
-    (NativeOp.row op).wellScoped = true := by
+    ((NativeOp.row op).answer.varsOf ++ (NativeOp.row op).error.varsOf).all (fun i =>
+      (NativeOp.row op).request.varsOf.contains i ||
+        op.binder?.any fun b => b.1.result.varsOf.contains i) = true := by
   cases op with
   | scopeMake strategy => cases strategy <;> rfl
   | deferredMakeOf value error =>
     have hc := Bool.and_eq_true_iff.mp h
-    simp only [Row.wellScoped, NativeOp.row, Ty.varsOf, Ty.varsOf_eq_nil_of_closed _ hc.1,
+    simp only [NativeOp.row, Ty.varsOf, Ty.varsOf_eq_nil_of_closed _ hc.1,
       Ty.varsOf_eq_nil_of_closed _ hc.2, List.append_nil, List.all_nil]
   | _ => rfl
+
+/-- A native row whose operation carries no term is well scoped as a host row is
+(`Row.wellScoped`): its request mentions every parameter it answers. -/
+theorem NativeOp.row_wellScoped_of_none (op : NativeOp) (h : op.typeArgsClosed = true)
+    (hb : op.binder? = none) : (NativeOp.row op).wellScoped = true := by
+  have hs := NativeOp.row_wellScoped op h
+  rw [hb] at hs
+  simpa only [Row.wellScoped, Option.any_none, Bool.or_false] using hs
 
 /-! ## The match's completeness on anchored templates
 

@@ -85,7 +85,8 @@ def atoms : List (String × Nat) :=
   [("succ", 1), ("pred", 1), ("isZero", 1), ("not", 1), ("add", 2), ("lt", 2), ("eq", 2),
    ("pair", 2), ("fst", 1), ("snd", 1)]
 
-/-- `Effect4.Machine.FnName`, the pure functions a `Ref` row carries. -/
+/-- `Effect4.Machine.FnName`, the five names the faces spell a `Ref` row's binder term by. A
+drawn row carries the name's image at the row's shape and the node's level (`FnName.image`). -/
 def fns : List Effect4.Machine.FnName :=
   [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
@@ -150,24 +151,26 @@ def genOpts : M Effect4.Supervision.ForkOptions := do
   pure ⟨(← pick 2) == 0, (← pick 2) == 0,
     if m == 0 then .interruptible else if m == 1 then .uninterruptible else .inherit⟩
 
-/-- A native row: the thirteen `Ref` rows, the five `Deferred` rows the printer prints as
-calls, and `Scope.make` at both finalizer strategies. `deferredAwait` is not drawn here — it
-is the asynchronous leaf arm's row. -/
-def genOp : M NativeOp := do
+/-- A native row at a node of level `n`: the thirteen `Ref` rows, the five `Deferred` rows the
+printer prints as calls, and `Scope.make` at both finalizer strategies. A read-modify-write row
+carries the binder term of the drawn name: its image at the row's shape and the node's level
+(the same draw as when the row named its function, so the corpus prints as it did).
+`deferredAwait` is not drawn here — it is the asynchronous leaf arm's row. -/
+def genOp (n : Nat) : M NativeOp := do
   match ← pick 20 with
   | 0 => pure .refMake
   | 1 => pure .refGet
   | 2 => pure .refSet
   | 3 => pure .refGetAndSet
   | 4 => pure .refSetAndGet
-  | 5 => pure (.refUpdate (fns.getD (← pick 5) .incr))
-  | 6 => pure (.refGetAndUpdate (fns.getD (← pick 5) .incr))
-  | 7 => pure (.refUpdateAndGet (fns.getD (← pick 5) .incr))
-  | 8 => pure (.refUpdateSome (fns.getD (← pick 5) .incr))
-  | 9 => pure (.refGetAndUpdateSome (fns.getD (← pick 5) .incr))
-  | 10 => pure (.refUpdateSomeAndGet (fns.getD (← pick 5) .incr))
-  | 11 => pure (.refModify (fns.getD (← pick 5) .incr))
-  | 12 => pure (.refModifySome (fns.getD (← pick 5) .incr))
+  | 5 => pure (.refUpdateWith (Effect4.Machine.FnName.image .update n (fns.getD (← pick 5) .incr)))
+  | 6 => pure (.refGetAndUpdateWith (Effect4.Machine.FnName.image .update n (fns.getD (← pick 5) .incr)))
+  | 7 => pure (.refUpdateAndGetWith (Effect4.Machine.FnName.image .update n (fns.getD (← pick 5) .incr)))
+  | 8 => pure (.refUpdateSomeWith (Effect4.Machine.FnName.image .updateSome n (fns.getD (← pick 5) .incr)))
+  | 9 => pure (.refGetAndUpdateSomeWith (Effect4.Machine.FnName.image .updateSome n (fns.getD (← pick 5) .incr)))
+  | 10 => pure (.refUpdateSomeAndGetWith (Effect4.Machine.FnName.image .updateSome n (fns.getD (← pick 5) .incr)))
+  | 11 => pure (.refModifyWith (Effect4.Machine.FnName.image .modify n (fns.getD (← pick 5) .incr)))
+  | 12 => pure (.refModifySomeWith (Effect4.Machine.FnName.image .modifySome n (fns.getD (← pick 5) .incr)))
   | 13 => pure (.deferredMakeOf .nat .nat)
   | 14 => pure .deferredIsDone
   | 15 => pure .deferredPoll
@@ -218,7 +221,7 @@ def genEffLeaf (n : Nat) : Nat → M (Eff NativeOp)
   -- `fail` again: `yieldError` was drawn here until it retired into `fail` (the same draw)
   | 3 => do pure (.fail (← genTerm n 2))
   | 4 => do pure (.sync (← genTerm n 2))
-  | 5 => do pure (.perform (← genOp) (← genTerm n 2))
+  | 5 => do pure (.perform (← genOp n) (← genTerm n 2))
   | 6 => do pure (.yieldNow (← pick 3))
   | _ => do
     match ← pick 3 with

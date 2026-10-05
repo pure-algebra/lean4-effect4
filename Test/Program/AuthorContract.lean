@@ -60,7 +60,7 @@ def TheRef : ServiceDef := { key := ⟨⟨6⟩, ⟨7⟩⟩, carrier := .refOf .n
 /-- The layer that builds the counter: it takes the cell, bumps it, and provides `5`. -/
 def counter : LayerSrc NativeOp := Counter.layer <| eff do
   let ref ← TheRef.use
-  Ref.update .incr ref
+  Ref.update "n" (app "succ" [var "n"]) ref
   return 5
 
 /-- The whole application: the cell provided as a value, the counter layer used twice by

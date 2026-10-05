@@ -248,7 +248,7 @@ earlier, then reads the cell back. -/
 def pOnExit : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.bind (.onExit (.succeed (.lit (.nat 1)))
-              (.perform (.refUpdate FnName.incr) (.var 0)))
+              (.perform (.refUpdateWith (FnName.image .update 2 .incr)) (.var 0)))
       (.perform .refGet (.var 0)))
 
 #guard (typeOf nativeSignature pOnExit).isSome
@@ -298,7 +298,8 @@ def pRefSet : NativeEff :=
 /-- `Ref.make(5)`, `Ref.update(ref, incr)`, `Ref.get(ref)`. -/
 def pRefUpdate : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 5)))
-    (.bind (.perform (.refUpdate FnName.incr) (.var 0)) (.perform .refGet (.var 0)))
+    (.bind (.perform (.refUpdateWith (FnName.image .update 1 .incr)) (.var 0))
+      (.perform .refGet (.var 0)))
 
 #guard (typeOf nativeSignature pRefUpdate).isSome
 #guard exitOf (replayEff pRefUpdate [evaluateRoot]) 0 = some (Exit.success (Val.nat 6))
@@ -306,11 +307,60 @@ def pRefUpdate : NativeEff :=
 /-- `Ref.modify(ref, takeAndBump)` answers the old value and leaves the bumped one. -/
 def pRefModify : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 5)))
-    (.perform (.refModify FnName.takeAndBump) (.var 0))
+    (.perform (.refModifyWith (FnName.image .modify 1 .takeAndBump)) (.var 0))
 
 #guard (typeOf nativeSignature pRefModify).isSome
 #guard exitOf (replayEff pRefModify [evaluateRoot]) 0 = some (Exit.success (Val.nat 5))
 #guard refsOf (replayEff pRefModify [evaluateRoot]) = [Val.nat 6]
+
+/-! ### Binder terms: the outer capture, and `modify` at another answer type (state plan T3b)
+
+A read-modify-write row carries a binder term run at `env ++ [current]` (decisions row 43). The
+store step runs it at the point's environment, so a variable below the node's level reads a
+value bound around the node, and the variable at the node's level reads the cell. `Ref.modify`
+answers its term's first component at that component's own type. -/
+
+/-- `Ref.make(5)`, a bound `10`, then `Ref.update(ref, a => add(a, x))`: the term captures the
+outer `x` (`var 1`) and reads the cell's value at the node's level (`var 2`). -/
+def pRefUpdateCapture : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 5)))
+    (.bind (.succeed (.lit (.nat 10)))
+      (.bind (.perform (.refUpdateWith (.app "add" (.cons (.var 2) (.cons (.var 1) .nil))))
+          (.var 0))
+        (.perform .refGet (.var 0))))
+
+#guard typeOf nativeSignature pRefUpdateCapture = some (EffTy.pure .nat)
+#guard exitOf (replayEff pRefUpdateCapture [evaluateRoot]) 0 = some (Exit.success (Val.nat 15))
+-- Red control: with the environment dropped the term's `var 2` is out of range and the step is a
+-- frontier; before the state plan's T3b `syncOpOf` handed the store `[]`.
+#guard (refStep (SyncOp.refUpdate ⟨0⟩ (.app "add" (.cons (.var 2) (.cons (.var 1) .nil))) [])
+  [Val.nat 5]).isNone
+#guard (refStep (SyncOp.refUpdate ⟨0⟩ (.app "add" (.cons (.var 2) (.cons (.var 1) .nil)))
+  [Val.cell ⟨0⟩, Val.nat 10]) [Val.nat 5]).map Prod.snd = some [Val.nat 15]
+
+/-- `Ref.modify(ref, a => ["s", a])` on a number cell: the row answers a string, at the literal
+type `"s"`, and stores the number it read. `B` is the term's, not the cell's. -/
+def pRefModifyOther : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 5)))
+    (.perform (.refModifyWith (.app "pair" (.cons (.lit (.str "s")) (.cons (.var 1) .nil))))
+      (.var 0))
+
+#guard typeOf nativeSignature pRefModifyOther = some (EffTy.pure (.lit "s"))
+#guard exitOf (replayEff pRefModifyOther [evaluateRoot]) 0 = some (Exit.success (Val.str "s"))
+#guard refsOf (replayEff pRefModifyOther [evaluateRoot]) = [Val.nat 5]
+
+/-- `Ref.modify(ref, a => [lt(a, 3), add(a, 1)])`: the answer is a boolean and the cell stays a
+number, decided and written in one store step. -/
+def pRefModifyDecide : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 5)))
+    (.bind (.perform (.refModifyWith (.app "pair"
+          (.cons (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
+            (.cons (.app "add" (.cons (.var 1) (.cons (.lit (.nat 1)) .nil))) .nil)))) (.var 0))
+      (.succeed (.var 1)))
+
+#guard typeOf nativeSignature pRefModifyDecide = some (EffTy.pure .bool)
+#guard exitOf (replayEff pRefModifyDecide [evaluateRoot]) 0 = some (Exit.success (Val.bool false))
+#guard refsOf (replayEff pRefModifyDecide [evaluateRoot]) = [Val.nat 6]
 
 /-! ## Deferred: W4's shape
 
@@ -522,7 +572,7 @@ cell's value. -/
 def pGenLoop : NativeEff :=
   .gen (.cons (.bindYield (.perform .refMake (.lit (.nat 0))))
     (.cons (.whileTrue
-        (.cons (.bindYield (.perform (.refUpdate FnName.incr) (.var 0)))
+        (.cons (.bindYield (.perform (.refUpdateWith (FnName.image .update 1 .incr)) (.var 0)))
           (.cons (.bindYield (.perform .refGet (.var 0)))
             (.cons (.ifElse (.app "eq" (.cons (.var 2) (.cons (.lit (.nat 3)) .nil)))
                     (.cons .breakLoop .nil) .nil) .nil))))
@@ -541,7 +591,7 @@ then block and only the `break` sits in the else block: the loop does count to `
 def pGenLoopBreakInElse : NativeEff :=
   .gen (.cons (.bindYield (.perform .refMake (.lit (.nat 0))))
     (.cons (.whileTrue
-        (.cons (.bindYield (.perform (.refUpdate FnName.incr) (.var 0)))
+        (.cons (.bindYield (.perform (.refUpdateWith (FnName.image .update 1 .incr)) (.var 0)))
           (.cons (.bindYield (.perform .refGet (.var 0)))
             (.cons (.ifElse (.app "lt" (.cons (.var 2) (.cons (.lit (.nat 3)) .nil)))
                     .nil (.cons .breakLoop .nil)) .nil))))
@@ -565,7 +615,7 @@ def pWhileLoop : NativeEff :=
               (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
               (.app "succ" (.cons (.var 1) .nil))
               (.var 1)
-              (.perform (.refUpdate FnName.incr) (.var 0)))
+              (.perform (.refUpdateWith (FnName.image .update 2 .incr)) (.var 0)))
       (.perform .refGet (.var 0)))
 
 #guard (typeOf nativeSignature pWhileLoop).isSome
@@ -620,7 +670,7 @@ def pIterateRef : NativeEff :=
     (.iterate none (.lit (.nat 0))
       (.app "lt" (.cons (.var 1) (.cons (.lit (.nat 3)) .nil)))
       (.app "succ" (.cons (.var 1) .nil)) (.var 1)
-      (.perform (.refUpdate FnName.incr) (.var 0)))
+      (.perform (.refUpdateWith (FnName.image .update 2 .incr)) (.var 0)))
 
 /-- The annotation is wider than the initial cursor: `nat` under `nat | string`. -/
 def pIterateWide : NativeEff :=

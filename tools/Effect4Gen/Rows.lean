@@ -7,17 +7,22 @@ import Effect4.Program.Native
 
 Reads `NativeOp.spelled` (`Program/Native.lean`, one operation per spelling key) for each row's
 spelling, shape and request, and the `NativeOp` constructor declarations for the parameters a row
-carries (`refUpdate f`, `deferredMakeOf value error`), and emits:
+carries (`refUpdateWith f`, `deferredMakeOf value error`), and emits:
 
 * group `Rows` → `src/Effect4/Program/Authoring/Rows.lean`: one `Src NativeOp` wrapper per
   row, named as the printed image spells it (`Ref.make`, `Deferred.await`), its request
   built as the shape says: nothing for a unit request, one term for a call, a `pair` of two
   for a tuple call. The wrapper is the operation on that request and nothing else, a
   `perform`, the one invocation form: the row's kind selects the route at the compile, so an
-  authored row lands in the printer's image whatever its kind (DI-89's native half).
+  authored row lands in the printer's image whatever its kind (DI-89's native half). A row whose
+  constructor carries a binder term (its one parameter is a `Term`) is one application of the
+  term-row lift `performTerm` (`Program/Authoring.lean`): the term is a source term elaborated
+  under a name for the current value, as `iterate`'s step is (decisions row 43).
 * group `RowsLaws` → `src/Effect4/Laws/Program/Authoring/Rows.lean`: the scope lemma of
-  every wrapper, one application of `perform_scoped`, whose operation hypothesis is the native
-  alphabet's `NativeOp.scopedAt_eq_true` (no native operation carries a variable yet).
+  every wrapper. A term-free row's is one application of `perform_scoped`, whose operation
+  hypothesis is the native alphabet's `NativeOp.scopedAt_eq_true` at an operation with no term;
+  a term row's is one application of `performTerm_scoped`, whose hypothesis is the native
+  instance's own equation.
 
     lake exe effect4gen-catalogue Rows --group Rows
       --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Program/Authoring/Rows.lean
@@ -60,9 +65,39 @@ def requestOf (row : Row) : List String × String :=
     | .tupleCall, .prod _ _ => (["x0", "x1"], "(app \"pair\" [x0, x1])")
     | _, _ => (["request"], "request")
 
+/-- The type text of a binder term parameter (`srcOf` prints full names). -/
+def termTypeText : String := "Effect4.Program.Term"
+
+/-- A term row's wrapper and lemma: one application of the term-row lift. `f` is the constructor's
+one parameter, the binder term; `current` names the current value inside it. -/
+def emitTermRow (row : Row) (f : String) : Emitted :=
+  let parts := row.spelling.splitOn "."
+  let defName := parts.getLast!
+  let nsParts := parts.dropLast
+  let (reqParams, reqTerm) := requestOf row
+  let srcParams := String.intercalate " " ([f] ++ reqParams)
+  let header := s!"def {defName} (current : String) ({srcParams} : TermSrc) : Src NativeOp :="
+  let wrapper := s!"/-- `{row.spelling}` (`{row.cite}`).\n`{f}` is the binder term, written under the name `current` of the cell's current value. -/\n{header}\n  performTerm .{row.name} current {f} {reqTerm}\n"
+  let hyps := ([f] ++ reqParams).zipIdx.map fun (x, i) => s!"(h{i} : {x}.Scoped)"
+  let app := String.intercalate " " ([defName, "current", f] ++ reqParams)
+  let requestProof := match reqParams with
+    | [] => "unit_scoped"
+    | [_] => "h1"
+    | _ => "(app_scoped \"pair\" (TermSrc.Scoped_cons h1 (TermSrc.Scoped_cons h2 TermSrc.Scoped_nil)))"
+  let lemma := s!"theorem {defName}_scoped (current : String) \{{srcParams} : TermSrc} {String.intercalate " " hyps} :\n    ({app}).Scoped :=\n  performTerm_scoped (fun _ _ => rfl) current h0 {requestProof}\n"
+  { namespaceParts := nsParts, defName, wrapper, lemma,
+    receipt := "Effect4.Program.Authoring." ++ String.intercalate "." (nsParts ++ [defName]) }
+
+/-- The binder term a row's constructor carries: its one parameter, of type `Term`. -/
+def termParam? : List (String × String) → Option String
+  | [(f, ty)] => if ty == termTypeText then some f else none
+  | _ => none
+
 def emitOne (op : NativeOp) (params : List (String × String)) : Option Emitted :=
   let row := op.row
   if row.spelling.isEmpty then none else
+  -- a row whose constructor carries one binder term goes through the term-row lift
+  if let some f := termParam? params then some (emitTermRow row f) else
   let parts := row.spelling.splitOn "."
   let defName := parts.getLast!
   let nsParts := parts.dropLast
@@ -82,8 +117,8 @@ def emitOne (op : NativeOp) (params : List (String × String)) : Option Emitted 
   let ctorParamText := String.intercalate " " (params.map fun (n, t) => s!"({n} : {t})")
   let lemmaParams := (if ctorParamText.isEmpty then "" else ctorParamText ++ " ") ++ implicitReq ++ String.intercalate " " hyps
   let app := String.intercalate " " ([defName] ++ params.map (·.1) ++ reqParams)
-  -- the operation is data: its scope at every level, once for the native alphabet
-  let opScoped := "(NativeOp.scopedAt_eq_true _)"
+  -- the operation is data with no term: its scope at every level, once for the native alphabet
+  let opScoped := "(NativeOp.scopedAt_eq_true _ rfl)"
   let proof := match reqParams with
     | [] => s!"{lift}_scoped _ {opScoped} unit_scoped"
     | [_] => s!"{lift}_scoped _ {opScoped} h0"

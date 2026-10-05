@@ -75,14 +75,14 @@ forever, handle a failed job, and count each finished job. The job that makes th
 completes the gate. -/
 def worker (closes count gate : TermSrc) (total : Nat) : Src NativeOp :=
   scope (eff do
-    let _conn ← acquireRelease "conn" "exit" (succeed unit) (Ref.update .incr closes)
+    let _conn ← acquireRelease "conn" "exit" (succeed unit) (Ref.update "n" (app "succ" [var "n"]) closes)
     iterateWith (bool true)
       { while_ := fun _ => bool true
         body := fun _ => eff do
           let job ← Row.call take unit
           let _ ← catchIf "e" (app "tagIs" [str "JobFailed", var "e"])
             (Row.call runJob job) (succeed unit)
-          let n ← Ref.updateAndGet .incr count
+          let n ← Ref.updateAndGet "n" (app "succ" [var "n"]) count
           ifElse (app "eq" [n, nat total])
             (Deferred.succeed gate (nat 0)) (succeed (bool false))
         step := fun c _ => c })

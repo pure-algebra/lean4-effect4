@@ -27,12 +27,14 @@ parameters (decisions row 42, the state plan's T3a): `Ref<A>` is `refOf (var 0)`
 `Deferred<A, E>` is `deferredOf (var 0) (var 1)`, and the checker instantiates them at the
 request's type (`checkRow`, `Typing/Rules.lean`). `Deferred.make`'s request fixes no parameter,
 so its operation carries its type arguments (`deferredMakeOf`), as rc.112's
-`Deferred.make<A, E>()` does. The read-modify-write rows carry their pure function as a
-`FnName` *in the operation* (`Ref.update(ref, incr)` is the row `refUpdate FnName.incr` on the
-request `ref`) and stay closed at `refOf nat`: rc.112 takes a JavaScript function, and DB-02
-forbids storing one. The store runs binder terms (decisions row 43), so `syncOpOf` hands it the
-name's lowering at the row's shape; the rows carry terms themselves at T3b. The Layer and
-Context rows (`RowKind.program`) are not in this first cut.
+`Deferred.make<A, E>()` does. The eight read-modify-write rows carry their function as a binder
+term *in the operation* (decisions row 43, the state plan's T3b): rc.112 takes a JavaScript
+function, and DB-02 forbids storing one. The term runs at `env ++ [current]`, in the one store
+step `syncOpOf` decodes the row to, and the checker types it at the instance's element type
+(`nativeSignature`'s `termOf`). The rows are templates too: `Ref.modify` answers its own
+parameter `B`, bound from the term's type. Until T5 the faces spell a term by one of five names
+(`Program/FnName.lean`; `NativeOp.atLevel`). The Layer and Context rows (`RowKind.program`) are
+not in this first cut.
 -/
 
 @[expose] public section
@@ -59,21 +61,15 @@ theorem nativeAtomTy_strings (tys : List Ty) :
 /-! ## The rows -/
 
 /-- The native operations this cut performs: the `Ref`, `Deferred` and `Scope.make` rows of
-the standard library that the stores model. -/
+the standard library that the stores model. Wire tags 5 to 12 and 13 are retired
+(`tools/Effect4Gen/wire-tags.json`): the eight rows that named their function, and
+`deferredMake`. -/
 inductive NativeOp
   | refMake
   | refGet
   | refSet
   | refGetAndSet
   | refSetAndGet
-  | refUpdate (f : FnName)
-  | refGetAndUpdate (f : FnName)
-  | refUpdateAndGet (f : FnName)
-  | refUpdateSome (f : FnName)
-  | refGetAndUpdateSome (f : FnName)
-  | refUpdateSomeAndGet (f : FnName)
-  | refModify (f : FnName)
-  | refModifySome (f : FnName)
   | deferredIsDone
   | deferredPoll
   | deferredSucceed
@@ -95,19 +91,118 @@ inductive NativeOp
   `Deferred<unknown, never>`. Appended: `deferredMake`, which carried none, is retired at wire
   tag 13 (`tools/Effect4Gen/wire-tags.json`). -/
   | deferredMakeOf (value error : Ty)
+  /-- `Ref.update(self, f)` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276`): `f` is a binder
+  term run at `env ++ [current]` (decisions row 43). Appended at wire tag 24: `refUpdate`, which
+  named its function, is retired at 5 (decisions row 210), and so are its seven siblings at 6 to
+  12, each replaced by the constructor below at 25 to 31. -/
+  | refUpdateWith (f : Term)
+  /-- `Ref.getAndUpdate(self, f)` (`Ref.ts:496-501`). -/
+  | refGetAndUpdateWith (f : Term)
+  /-- `Ref.updateAndGet(self, f)` (`Ref.ts:1368`). -/
+  | refUpdateAndGetWith (f : Term)
+  /-- `Ref.updateSome(self, pf)` (`Ref.ts:1502-1508`): the term answers an option. -/
+  | refUpdateSomeWith (f : Term)
+  /-- `Ref.getAndUpdateSome(self, pf)` (`Ref.ts:635-643`). -/
+  | refGetAndUpdateSomeWith (f : Term)
+  /-- `Ref.updateSomeAndGet(self, pf)` (`Ref.ts:1639-1646`). -/
+  | refUpdateSomeAndGetWith (f : Term)
+  /-- `Ref.modify(self, f)` (`Ref.ts:896-901`): the term answers a pair `[b, a]`; the row answers
+  `b`, at its own type `B`, and stores `a`. -/
+  | refModifyWith (f : Term)
+  /-- `Ref.modifySome(self, pf)` (`Ref.ts:1159-1163`): the term answers `[b, Option<a>]`. -/
+  | refModifySomeWith (f : Term)
 deriving DecidableEq
 
-/-- The scope of a native operation's own data (`Program/ScopedOp.lean`). No native operation
-carries a term yet: a read-modify-write row names its function (`FnName`), which has no
-variable, and `Deferred.make`'s type arguments are types, which bind no term variable. So every
-native operation is in scope at every level. State plan T3b gives the read-modify-write rows
-binder terms, and this instance then checks each at `n + 1`, by `ScopedOp`'s convention. -/
-instance : ScopedOp NativeOp where
-  scopedAt _ _ := true
+namespace NativeOp
 
-/-- No native operation carries a variable: the hypothesis the operation lift's scope lemma
-(`Authoring.perform_scoped`) asks of an operation, discharged once for the native alphabet. -/
-theorem NativeOp.scopedAt_eq_true (op : NativeOp) (n : Nat) : ScopedOp.scopedAt op n = true :=
+/-- The binder term an operation carries, with the shape of its row's function type; `none` for
+an operation that carries none. With `withTerm`, the one place that names the eight term rows
+by case. -/
+def binder? : NativeOp → Option (FnShape × Term)
+  | refUpdateWith f | refGetAndUpdateWith f | refUpdateAndGetWith f => some (.update, f)
+  | refUpdateSomeWith f | refGetAndUpdateSomeWith f | refUpdateSomeAndGetWith f =>
+    some (.updateSome, f)
+  | refModifyWith f => some (.modify, f)
+  | refModifySomeWith f => some (.modifySome, f)
+  | refMake | refGet | refSet | refGetAndSet | refSetAndGet | deferredIsDone | deferredPoll
+  | deferredSucceed | deferredFail | deferredAwait | scopeMake _ | sleep | clockNow | external _
+  | deferredMakeOf _ _ => none
+
+/-- The operation with its binder term replaced; an operation that carries none is unchanged. -/
+def withTerm : NativeOp → Term → NativeOp
+  | refUpdateWith _, t => refUpdateWith t
+  | refGetAndUpdateWith _, t => refGetAndUpdateWith t
+  | refUpdateAndGetWith _, t => refUpdateAndGetWith t
+  | refUpdateSomeWith _, t => refUpdateSomeWith t
+  | refGetAndUpdateSomeWith _, t => refGetAndUpdateSomeWith t
+  | refUpdateSomeAndGetWith _, t => refUpdateSomeAndGetWith t
+  | refModifyWith _, t => refModifyWith t
+  | refModifySomeWith _, t => refModifySomeWith t
+  | refMake, _ => refMake
+  | refGet, _ => refGet
+  | refSet, _ => refSet
+  | refGetAndSet, _ => refGetAndSet
+  | refSetAndGet, _ => refSetAndGet
+  | deferredIsDone, _ => deferredIsDone
+  | deferredPoll, _ => deferredPoll
+  | deferredSucceed, _ => deferredSucceed
+  | deferredFail, _ => deferredFail
+  | deferredAwait, _ => deferredAwait
+  | scopeMake strategy, _ => scopeMake strategy
+  | sleep, _ => sleep
+  | clockNow, _ => clockNow
+  | external index, _ => external index
+  | deferredMakeOf value error, _ => deferredMakeOf value error
+
+/-- Replacing the term keeps the shape and installs the term. -/
+theorem binder?_withTerm (op : NativeOp) (t : Term) :
+    (op.withTerm t).binder? = op.binder?.map fun b => (b.1, t) := by
+  cases op <;> rfl
+
+/-- Replacing the term twice is replacing it once. -/
+theorem withTerm_withTerm (op : NativeOp) (t t' : Term) :
+    (op.withTerm t).withTerm t' = op.withTerm t' := by
+  cases op <;> rfl
+
+/-- Replacing an operation's term by itself is the operation. -/
+theorem withTerm_binder? {op : NativeOp} {s : FnShape} {t : Term}
+    (h : op.binder? = some (s, t)) : op.withTerm t = op := by
+  cases op <;> cases h <;> rfl
+
+/-- An operation that carries no term is fixed by `withTerm`. -/
+theorem withTerm_of_none {op : NativeOp} (h : op.binder? = none) (t : Term) :
+    op.withTerm t = op := by
+  cases op <;> cases h <;> rfl
+
+end NativeOp
+
+/-- The scope of a native operation's own data (`Program/ScopedOp.lean`): the binder term of a
+read-modify-write row, checked at `n + 1` by `ScopedOp`'s convention, the current value at index
+`n` and an outer capture below it. An operation that carries no term is in scope at every level:
+`Deferred.make`'s type arguments are types, which bind no term variable. The term map replaces
+the term (`NativeOp.withTerm`), so weakening shifts it with the rest of the program. -/
+instance : ScopedOp NativeOp where
+  scopedAt op n := op.binder?.all fun b => b.2.scoped (n + 1)
+  mapTerm g op :=
+    match op.binder? with
+    | some (_, t) => op.withTerm (g t)
+    | none => op
+
+/-- A native operation that carries no term is in scope at every level: the hypothesis the
+operation lift's scope lemma (`Authoring.perform_scoped`) asks of an operation, discharged once
+for the term-free rows of the native alphabet. -/
+theorem NativeOp.scopedAt_eq_true (op : NativeOp) (h : op.binder? = none) (n : Nat) :
+    ScopedOp.scopedAt op n = true := by
+  show (op.binder?.all fun b => b.2.scoped (n + 1)) = true
+  rw [h]
+  rfl
+
+/-- A term row is in scope exactly when its term is, one level up: `ScopedOp`'s convention at
+the native alphabet. -/
+theorem NativeOp.scopedAt_of_binder {op : NativeOp} {s : FnShape} {t : Term}
+    (h : op.binder? = some (s, t)) (n : Nat) : ScopedOp.scopedAt op n = t.scoped (n + 1) := by
+  show (op.binder?.all fun b => b.2.scoped (n + 1)) = t.scoped (n + 1)
+  rw [h]
   rfl
 
 /-- Rows are unit content beside the program's bytes. -/
@@ -140,6 +235,30 @@ def externalPlaceholder : Row :=
   { name := "external", spelling := "", shape := .value, kind := .program,
     request := .never, answer := .never, cite := "", registration := .external }
 
+/-- The faces' two columns of a term row, its trailing names and its type arguments. A term that
+is a name's image at level 0 prints that name after the request (`Ref.update(ref, incr)`,
+`FnName.decode?`). Any other term has no name until T5: its row carries no trailing name and
+the empty type-argument spelling, which no reading parses (`parseLegacy_empty`), so its head
+does not read back (`rowHeadReadable`, `Codegen/Read.lean`) and no reader yields it. The printer
+never reaches such a row: it prints an operation's form at level 0 (`NativeOp.atLevel`) and
+refuses an operation with none by its spelling (`PrintRefusal.binderTerm`). -/
+def termFace (s : FnShape) (f : Term) : List String × List String :=
+  match FnName.decode? s 0 f with
+  | some g => ([fnSpelling g], [])
+  | none => ([], [""])
+
+/-- A term that is a name's image at level 0 carries that name after its request. -/
+theorem termFace_some {s : FnShape} {f : Term} {g : FnName} (h : FnName.decode? s 0 f = some g) :
+    termFace s f = ([fnSpelling g], []) := by
+  unfold termFace
+  rw [h]
+
+/-- A term that is no name's image at level 0 carries the empty type-argument spelling. -/
+theorem termFace_none {s : FnShape} {f : Term} (h : FnName.decode? s 0 f = none) :
+    termFace s f = ([], [""]) := by
+  unfold termFace
+  rw [h]
+
 /-- The scheduling kind of each operation: `.async` for `deferredAwait` and `sleep`, `.program`
 for external placeholders, and `.sync` for every heap and deferred operation. Split off `row`
 so the compiler and engine closure do not drag `Row` or `Ty` into native engine headers (plan 3.5). -/
@@ -147,9 +266,9 @@ so the compiler and engine closure do not drag `Row` or `Ty` into native engine 
   | deferredAwait | sleep => .async
   | external _ => .program
   | refMake | refGet | refSet | refGetAndSet | refSetAndGet
-  | refUpdate _ | refGetAndUpdate _ | refUpdateAndGet _
-  | refUpdateSome _ | refGetAndUpdateSome _ | refUpdateSomeAndGet _
-  | refModify _ | refModifySome _
+  | refUpdateWith _ | refGetAndUpdateWith _ | refUpdateAndGetWith _
+  | refUpdateSomeWith _ | refGetAndUpdateSomeWith _ | refUpdateSomeAndGetWith _
+  | refModifyWith _ | refModifySomeWith _
   | deferredIsDone | deferredPoll | deferredSucceed | deferredFail | deferredMakeOf _ _
   | scopeMake _ | clockNow => .sync
 
@@ -173,10 +292,14 @@ value, so the machine answers its `isSome`), and `refSet` answers the cell where
 answers `void` (DI-98 — the machine answers the cell, `Stores.refStep`, and restating it is a
 machine change scheduled with L4).
 
-The `Ref` rows without a function and the `Deferred` rows are templates (decisions row 42): `A`
-is `var 0` and `E` is `var 1`. Every request parameter first occurs as the direct argument of an
-invariant handle (row 55), except `Ref.make`'s bare `A`, which the match binds to the whole
-request. The eight read-modify-write rows stay closed at `refOf nat` until T3b. -/
+The `Ref` and `Deferred` rows are templates (decisions row 42): `A` is `var 0` and `E` is
+`var 1`. Every request parameter first occurs as the direct argument of an invariant handle
+(row 55), except `Ref.make`'s bare `A`, which the match binds to the whole request. The eight
+read-modify-write rows take a cell at any element type, `refOf (var 0)`. The three that answer
+nothing answer `unit` and the three that answer the cell's value answer `var 0`. `Ref.modify`
+and `Ref.modifySome` answer `var 1`, the parameter `B` their request does not mention: the
+checker binds it from the binder term's type (`bindTerm`, `Typing/Rules.lean`). A term row's
+columns do not depend on its term; its trailing name and type arguments do (`termFace`). -/
 def row (op : NativeOp) : Row :=
   match op with
   | refMake =>
@@ -194,30 +317,38 @@ def row (op : NativeOp) : Row :=
   | refSetAndGet =>
     ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], kind op, .prod (.refOf (.var 0)) (.var 0),
       .var 0, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:747", [], .deferred⟩
-  | refUpdate f =>
-    ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], kind op, .refOf .nat, .unit, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276", [], .deferred⟩
-  | refGetAndUpdate f =>
-    ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], kind op, .refOf .nat, .nat,
-      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501", [], .deferred⟩
-  | refUpdateAndGet f =>
-    ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], kind op, .refOf .nat, .nat,
-      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1368", [], .deferred⟩
-  | refUpdateSome f =>
-    ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], kind op, .refOf .nat, .unit,
-      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508", [], .deferred⟩
-  | refGetAndUpdateSome f =>
-    ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], kind op, .refOf .nat,
-      .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643", [], .deferred⟩
-  | refUpdateSomeAndGet f =>
-    ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], kind op, .refOf .nat,
-      .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646", [], .deferred⟩
-  | refModify f =>
-    ⟨"refModify", "Ref.modify", .call, [fnSpelling f], kind op, .refOf .nat, .nat, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901", [], .deferred⟩
-  | refModifySome f =>
-    ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], kind op, .refOf .nat, .nat,
-      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163", [], .deferred⟩
+  | refUpdateWith f =>
+    ⟨"refUpdateWith", "Ref.update", .call, (termFace .update f).1, kind op, .refOf (.var 0),
+      .unit, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276",
+      (termFace .update f).2, .deferred⟩
+  | refGetAndUpdateWith f =>
+    ⟨"refGetAndUpdateWith", "Ref.getAndUpdate", .call, (termFace .update f).1, kind op,
+      .refOf (.var 0), .var 0, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501",
+      (termFace .update f).2, .deferred⟩
+  | refUpdateAndGetWith f =>
+    ⟨"refUpdateAndGetWith", "Ref.updateAndGet", .call, (termFace .update f).1, kind op,
+      .refOf (.var 0), .var 0, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1368",
+      (termFace .update f).2, .deferred⟩
+  | refUpdateSomeWith f =>
+    ⟨"refUpdateSomeWith", "Ref.updateSome", .call, (termFace .updateSome f).1, kind op,
+      .refOf (.var 0), .unit, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508",
+      (termFace .updateSome f).2, .deferred⟩
+  | refGetAndUpdateSomeWith f =>
+    ⟨"refGetAndUpdateSomeWith", "Ref.getAndUpdateSome", .call, (termFace .updateSome f).1,
+      kind op, .refOf (.var 0), .var 0, .never, [],
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643", (termFace .updateSome f).2, .deferred⟩
+  | refUpdateSomeAndGetWith f =>
+    ⟨"refUpdateSomeAndGetWith", "Ref.updateSomeAndGet", .call, (termFace .updateSome f).1,
+      kind op, .refOf (.var 0), .var 0, .never, [],
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646", (termFace .updateSome f).2, .deferred⟩
+  | refModifyWith f =>
+    ⟨"refModifyWith", "Ref.modify", .call, (termFace .modify f).1, kind op, .refOf (.var 0),
+      .var 1, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901",
+      (termFace .modify f).2, .deferred⟩
+  | refModifySomeWith f =>
+    ⟨"refModifySomeWith", "Ref.modifySome", .call, (termFace .modifySome f).1, kind op,
+      .refOf (.var 0), .var 1, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163",
+      (termFace .modifySome f).2, .deferred⟩
   | deferredMakeOf value error =>
     ⟨"deferredMakeOf", "Deferred.make", .call, [], kind op, .unit, .deferredOf value error,
       .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", deferredTypeArgs value error,
@@ -265,25 +396,24 @@ does the same for a continuation applied to the wrong value). Any value is a cel
 value, a written value and a deferred's success, as at the template rows (decisions row 42); a
 failed value becomes its error through `errOf` (`Machine/Term.lean`, decisions row 120's
 carrier), which the checker keeps inside the error alphabet by the deferred's formation rule
-(`Formation.HeadFormed`). A read-modify-write row runs its name's lowering at the row's shape,
-with the environment `[]` (`FnName.updateTerm` and its three siblings, `Program/FnName.lean`);
-the rows carry their own terms, run at `env`, at the state plan's T3b cutover. -/
+(`Formation.HeadFormed`). A read-modify-write row hands the store its own binder term and the
+point's environment: the store step evaluates the term at `env ++ [current]`
+(`refStep`, `Machine/Stores.lean`; decisions row 43), so the term reads the values bound around
+the node below the node's level and the cell's value at it. -/
 def syncOpOf : NativeOp → List Val → Val → Option SyncOp
   | refMake, _, v => some (SyncOp.refMake v)
   | refGet, _, Val.cell ⟨k⟩ => some (SyncOp.refGet ⟨k⟩)
   | refSet, _, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSet ⟨k⟩ v)
   | refGetAndSet, _, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refGetAndSet ⟨k⟩ v)
   | refSetAndGet, _, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSetAndGet ⟨k⟩ v)
-  | refUpdate f, _, Val.cell ⟨k⟩ => some (SyncOp.refUpdate ⟨k⟩ f.updateTerm [])
-  | refGetAndUpdate f, _, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdate ⟨k⟩ f.updateTerm [])
-  | refUpdateAndGet f, _, Val.cell ⟨k⟩ => some (SyncOp.refUpdateAndGet ⟨k⟩ f.updateTerm [])
-  | refUpdateSome f, _, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSome ⟨k⟩ f.updateSomeTerm [])
-  | refGetAndUpdateSome f, _, Val.cell ⟨k⟩ =>
-    some (SyncOp.refGetAndUpdateSome ⟨k⟩ f.updateSomeTerm [])
-  | refUpdateSomeAndGet f, _, Val.cell ⟨k⟩ =>
-    some (SyncOp.refUpdateSomeAndGet ⟨k⟩ f.updateSomeTerm [])
-  | refModify f, _, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f.modifyTerm [])
-  | refModifySome f, _, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f.modifySomeTerm [])
+  | refUpdateWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refUpdate ⟨k⟩ f env)
+  | refGetAndUpdateWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdate ⟨k⟩ f env)
+  | refUpdateAndGetWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refUpdateAndGet ⟨k⟩ f env)
+  | refUpdateSomeWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSome ⟨k⟩ f env)
+  | refGetAndUpdateSomeWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdateSome ⟨k⟩ f env)
+  | refUpdateSomeAndGetWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSomeAndGet ⟨k⟩ f env)
+  | refModifyWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f env)
+  | refModifySomeWith f, env, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f env)
   | deferredMakeOf _ _, _, Val.unit => some SyncOp.deferredMake
   | deferredIsDone, _, Val.promise ⟨k⟩ => some (SyncOp.deferredIsDone ⟨k⟩)
   | deferredPoll, _, Val.promise ⟨k⟩ => some (SyncOp.deferredPoll ⟨k⟩)
@@ -334,21 +464,58 @@ def nativeServiceTy (key : ServiceKey) : Option Ty :=
     if key.name.value < Effect4.Machine.Env.firstFreeName then none
     else (nativeServiceTypes.find? (fun entry => entry.1 == key.service.value)).map Prod.snd
 
+/-- The eight term rows' constructors, each with the shape of its function type, row by row. -/
+def NativeOp.termRows : List ((Term → NativeOp) × FnShape) :=
+  [(.refUpdateWith, .update), (.refGetAndUpdateWith, .update), (.refUpdateAndGetWith, .update),
+   (.refUpdateSomeWith, .updateSome), (.refGetAndUpdateSomeWith, .updateSome),
+   (.refUpdateSomeAndGetWith, .updateSome), (.refModifyWith, .modify),
+   (.refModifySomeWith, .modifySome)]
+
 /-- One native operation per spelling key (`rowKey`, `Program/Table.lean`): every operation
-whose row carries no type argument, each read-modify-write row at each of the five names (row by
-row, the order the tools' profiles print), and `Deferred.make` at the one instance the faces
-spell until T5 (`deferredTypeArgs`). No list holds every operation, since `deferredMakeOf`
-ranges over `Ty`; a row's key does not depend on the type arguments its operation carries
-(`NativeOp.rowKey_mem`), so the built-in keys are this list's. The table's collision check, the
-reader's `nativeSpell` and the tools' enumerations read it. -/
+whose row carries no type argument, each read-modify-write row at each of the five names' images
+at level 0 (row by row, the order the tools' profiles print), and `Deferred.make` at the one
+instance the faces spell until T5 (`deferredTypeArgs`). No list holds every operation, since
+`deferredMakeOf` ranges over `Ty` and a term row over `Term`; these are the operations the faces
+spell, so the built-in keys are this list's (`NativeOp.rowKey_mem`). The table's collision
+check, the reader's `nativeSpell` and the tools' enumerations read it. -/
 def NativeOp.spelled : List NativeOp :=
   [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet]
-  ++ ([.refUpdate, .refGetAndUpdate, .refUpdateAndGet, .refUpdateSome, .refGetAndUpdateSome,
-       .refUpdateSomeAndGet, .refModify, .refModifySome] :
-      List (Effect4.Machine.FnName → NativeOp)).flatMap
-      (fun con => fnNames.map con)
+  ++ NativeOp.termRows.flatMap (fun row => fnNames.map fun g => row.1 (FnName.image row.2 0 g))
   ++ [.deferredMakeOf .nat .nat, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
       .deferredAwait, .scopeMake .sequential, .scopeMake .parallel, .sleep, .clockNow]
+
+/-- **An operation's binder term moved between two levels** through its name: the term at level
+`src` is read as a name (`FnName.decode?`) and written as that name's image at level `dst`.
+`none` for a term that is no name's image at `src`; an operation that carries no term is
+unchanged. The native signature's `opAtLevel`: the faces print a term row's form at level 0 and
+read it back to the node's level (the state plan's T3b, until T5 prints a term itself). -/
+def NativeOp.atLevel (src dst : Nat) (op : NativeOp) : Option NativeOp :=
+  match op.binder? with
+  | none => some op
+  | some (s, t) => (FnName.decode? s src t).map fun g => op.withTerm (FnName.image s dst g)
+
+/-- **Moving an operation between two levels moves back**: the names are an exact embedding into
+terms at each shape and level (`FnName.decode?_image`, `FnName.image_of_decode?`), so the term
+written at the target level reads as the same name, whose image at the source level is the term
+moved. The native signature's `LawfulSpelling.opAtLevel_symm` (`nativeLawful`,
+`Laws/Codegen/ReadLeaf.lean`), a step of `read_print` and `read_exact`. -/
+theorem NativeOp.atLevel_symm {a b : Nat} {op op' : NativeOp} (h : op.atLevel a b = some op') :
+    op'.atLevel b a = some op := by
+  unfold NativeOp.atLevel at h ⊢
+  cases hb : op.binder? with
+  | none =>
+    rw [hb] at h
+    cases h
+    rw [hb]
+  | some st =>
+    obtain ⟨s, t⟩ := st
+    rw [hb] at h
+    obtain ⟨g, hg, rfl⟩ := Option.map_eq_some_iff.mp h
+    rw [NativeOp.binder?_withTerm, hb]
+    show (FnName.decode? s b (FnName.image s b g)).map
+      (fun g' => (op.withTerm (FnName.image s b g)).withTerm (FnName.image s a g')) = some op
+    rw [FnName.decode?_image, Option.map_some, NativeOp.withTerm_withTerm,
+      FnName.image_of_decode? hg, NativeOp.withTerm_binder? hb]
 
 /-- An external index reads its supplied row. Built-ins keep their original row. -/
 def nativeRowOf (table : RowTable) : NativeOp → Row
@@ -364,7 +531,20 @@ def nativeSignature (table : RowTable := []) : Signature NativeOp :=
   { rowOf := fun op => (nativeRowOf table op).normalizeTypes, atomOf := nativeAtomTy, scopeKey := nativeScopeKey,
     serviceTy := nativeServiceTy,
     dom := fun | .external i => decide (i < table.length) | _ => true,
-    constAtom := nativeConstAtom }
+    constAtom := nativeConstAtom,
+    -- a read-modify-write row's binder term, at its shape's parameter and result templates
+    termOf := fun op => op.binder?.map fun b => ⟨b.2, b.1.param, b.1.result⟩,
+    opAtLevel := NativeOp.atLevel }
+
+/-- **The native signature types an operation alike once its binder term is weakened**
+(`Signature.WeakenNatural`, `Program/Typing.lean`): weakening replaces a term row's term and
+nothing else, a row's columns do not depend on its term, and the domain reads only an external
+position. The premise of `check_weaken` at every native signature; its consumers are the forms'
+typing laws that insert a slot (`effTy_insert`, `Laws/Codegen/Forms.lean`). -/
+theorem nativeSignature_weakenNatural (table : RowTable := []) :
+    (nativeSignature table).WeakenNatural := by
+  intro cut op
+  cases op <;> exact ⟨rfl, rfl, rfl⟩
 
 /-! ## Which supplied tables this runner can register (v2 DI-61 (b))
 

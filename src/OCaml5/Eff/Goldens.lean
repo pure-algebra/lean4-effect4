@@ -178,27 +178,20 @@ def stratV : FinalizerStrategy → V
   | .sequential => .ctor ``Effect4.FinalizerStrategy.sequential []
   | .parallel => .ctor ``Effect4.FinalizerStrategy.parallel []
 
-def fnV : FnName → V
-  | .incr => .ctor ``Effect4.Machine.FnName.incr []
-  | .double => .ctor ``Effect4.Machine.FnName.double []
-  | .zeroWhenPositive => .ctor ``Effect4.Machine.FnName.zeroWhenPositive []
-  | .noChange => .ctor ``Effect4.Machine.FnName.noChange []
-  | .takeAndBump => .ctor ``Effect4.Machine.FnName.takeAndBump []
-
 def opV : NativeOp → V
   | .refMake => .ctor ``NativeOp.refMake []
   | .refGet => .ctor ``NativeOp.refGet []
   | .refSet => .ctor ``NativeOp.refSet []
   | .refGetAndSet => .ctor ``NativeOp.refGetAndSet []
   | .refSetAndGet => .ctor ``NativeOp.refSetAndGet []
-  | .refUpdate f => .ctor ``NativeOp.refUpdate [fnV f]
-  | .refGetAndUpdate f => .ctor ``NativeOp.refGetAndUpdate [fnV f]
-  | .refUpdateAndGet f => .ctor ``NativeOp.refUpdateAndGet [fnV f]
-  | .refUpdateSome f => .ctor ``NativeOp.refUpdateSome [fnV f]
-  | .refGetAndUpdateSome f => .ctor ``NativeOp.refGetAndUpdateSome [fnV f]
-  | .refUpdateSomeAndGet f => .ctor ``NativeOp.refUpdateSomeAndGet [fnV f]
-  | .refModify f => .ctor ``NativeOp.refModify [fnV f]
-  | .refModifySome f => .ctor ``NativeOp.refModifySome [fnV f]
+  | .refUpdateWith f => .ctor ``NativeOp.refUpdateWith [termV f]
+  | .refGetAndUpdateWith f => .ctor ``NativeOp.refGetAndUpdateWith [termV f]
+  | .refUpdateAndGetWith f => .ctor ``NativeOp.refUpdateAndGetWith [termV f]
+  | .refUpdateSomeWith f => .ctor ``NativeOp.refUpdateSomeWith [termV f]
+  | .refGetAndUpdateSomeWith f => .ctor ``NativeOp.refGetAndUpdateSomeWith [termV f]
+  | .refUpdateSomeAndGetWith f => .ctor ``NativeOp.refUpdateSomeAndGetWith [termV f]
+  | .refModifyWith f => .ctor ``NativeOp.refModifyWith [termV f]
+  | .refModifySomeWith f => .ctor ``NativeOp.refModifySomeWith [termV f]
   | .deferredMakeOf value error => .ctor ``NativeOp.deferredMakeOf [tyV value, tyV error]
   | .deferredIsDone => .ctor ``NativeOp.deferredIsDone []
   | .deferredPoll => .ctor ``NativeOp.deferredPoll []
@@ -389,7 +382,9 @@ def pActions : P :=
     , .exit (.succeed (n 1))                                              -- v14 : exitOf nat never
     , .withFiber (.closeScope (v 1) (v 14)) ]                             -- v15
     (.withFiber (.raceAll (es [child, .succeed (n 3)])))
-/-- Every native operation, one after another; the asynchronous row last. -/
+/-- Every native operation, one after another; the asynchronous row last. The statement at
+index `i` sits under `i` binders, so a read-modify-write row carries its name's image at level
+`i` (`FnName.image`): the same eight functions the rows named before they carried terms. -/
 def pOps : P :=
   binds
     [ .perform .refMake (n 1)                                             -- v0 : ref
@@ -397,14 +392,14 @@ def pOps : P :=
     , .perform .refSet (.app "pair" (ts [v 0, n 2]))                      -- v2 : ref
     , .perform .refGetAndSet (.app "pair" (ts [v 0, n 3]))                -- v3
     , .perform .refSetAndGet (.app "pair" (ts [v 0, n 4]))                -- v4
-    , .perform (.refUpdate .incr) (v 0)                                   -- v5
-    , .perform (.refGetAndUpdate .double) (v 0)                           -- v6
-    , .perform (.refUpdateAndGet .zeroWhenPositive) (v 0)                 -- v7
-    , .perform (.refUpdateSome .noChange) (v 0)                           -- v8
-    , .perform (.refGetAndUpdateSome .takeAndBump) (v 0)                  -- v9
-    , .perform (.refUpdateSomeAndGet .incr) (v 0)                         -- v10
-    , .perform (.refModify .double) (v 0)                                 -- v11
-    , .perform (.refModifySome .noChange) (v 0)                           -- v12
+    , .perform (.refUpdateWith (FnName.image .update 5 .incr)) (v 0)      -- v5
+    , .perform (.refGetAndUpdateWith (FnName.image .update 6 .double)) (v 0)             -- v6
+    , .perform (.refUpdateAndGetWith (FnName.image .update 7 .zeroWhenPositive)) (v 0)   -- v7
+    , .perform (.refUpdateSomeWith (FnName.image .updateSome 8 .noChange)) (v 0)         -- v8
+    , .perform (.refGetAndUpdateSomeWith (FnName.image .updateSome 9 .takeAndBump)) (v 0) -- v9
+    , .perform (.refUpdateSomeAndGetWith (FnName.image .updateSome 10 .incr)) (v 0)      -- v10
+    , .perform (.refModifyWith (FnName.image .modify 11 .double)) (v 0)                  -- v11
+    , .perform (.refModifySomeWith (FnName.image .modifySome 12 .noChange)) (v 0)        -- v12
     , .perform (.deferredMakeOf .nat .nat) u                              -- v13 : deferred
     , .perform .deferredIsDone (v 13)                                     -- v14
     , .perform .deferredPoll (v 13)                                       -- v15

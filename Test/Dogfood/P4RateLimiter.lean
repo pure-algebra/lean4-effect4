@@ -28,8 +28,10 @@ encoding is dogfood 1's design: three number cells, and a request that reads, th
 cell builds, and it is read and written (section 4). The measured program keeps its three number
 cells, since the atomic decision still waits.
 
-**What the language refuses** (section 4): the atomic decision, which needs `Ref.modify` with a
-binder term. `Ref.update` takes one of the five names of `fnNames` (`src/Effect4/Program/Native.lean`).
+**Changes in the state plan's T3b.** The update rows carry binder terms: `Ref.update` takes a term
+over the cell's current value, here `n => succ(n)`. The measured program still reads and then
+updates in two store steps; the atomic decision in one `Ref.modify` is the next change to this
+battery.
 
 **Waits on:** R4, rows 42–43 steps 3–5 (a function row with a binder term, the state plan's T3b), and
 R10 (DI-89's `all`). The slice of row 204 that moves it: state at any type.
@@ -59,9 +61,9 @@ def request (yielding : Bool) (used admitted rejected : TermSrc) : Src NativeOp 
   bindName "current" (Ref.get used) fun current =>
     andThen (if yielding then yieldNow 0 else succeed unit)
       (ifElse (app "lt" [current, nat 3])
-        (andThen (Ref.update .incr used)
-          (andThen (Ref.update .incr admitted) (succeed (bool true))))
-        (andThen (Ref.update .incr rejected) (succeed (bool false))))
+        (andThen (Ref.update "n" (app "succ" [var "n"]) used)
+          (andThen (Ref.update "n" (app "succ" [var "n"]) admitted) (succeed (bool true))))
+        (andThen (Ref.update "n" (app "succ" [var "n"]) rejected) (succeed (bool false))))
 
 /-- One accepted request as a count. -/
 def countOne (decision : TermSrc) : TermSrc := app "ite" [decision, nat 1, nat 0]
@@ -178,11 +180,8 @@ def window1 : Val := recordOf ["admitted", "rejected", "used"] [.nat 1, .nat 0, 
 -- The same state as a pair builds the same way (the model probe's `ProbeRefusals.lean` refused it).
 #guard (built? (program (Ref.make (app "pair" [nat 1, nat 2])))).map (fun b => b.ty.answer) =
   some (.refOf (.prod .nat .nat))
--- Green control: a number cell builds, and so does the nearest update, `incr`.
-#guard verdict (program (bindName "r" (Ref.make (nat 0)) fun r => Ref.update .incr r)) = "built"
--- The decision step `w.used < limit ? … : …` is a function the update rows cannot take: they take
--- one of five names (row 43 step 3 retires the alphabet for a binder term).
-#guard Effect4.Program.fnNames.length = 5
+-- Green control: a number cell builds, and so does an update by a binder term, `n => succ(n)`.
+#guard verdict (program (bindName "r" (Ref.make (nat 0)) fun r => Ref.update "n" (app "succ" [var "n"]) r)) = "built"
 
 -- The form table admits `Effect.forkDetach`, the daemon's rc.112 spelling, and not `Effect.all`
 -- (DI-89) or `Effect.forever`.

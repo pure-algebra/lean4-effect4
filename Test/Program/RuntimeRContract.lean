@@ -520,7 +520,7 @@ def scopedCompletionInterrupt : NativeEff :=
 
 def onExitRef : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 0)))
-    (.bind (.onExit (.succeed one) (.perform (.refUpdate FnName.incr) (.var 0)))
+    (.bind (.onExit (.succeed one) (.perform (.refUpdateWith (FnName.image .update 2 .incr)) (.var 0)))
       (.perform .refGet (.var 0)))
 def maskedCleanup : NativeEff :=
   .onExit (.uninterruptible (.succeed one)) (.perform .refMake (.lit (.nat 9)))

@@ -141,10 +141,12 @@ def pProvide : Api.Program :=
   .provideLayer (.effect kA (.succeed (.lit (.nat 7)))) false (.service kA)
 
 /-- A layer whose construction acquires a resource and whose release bumps the root's cell,
-reached as the service `kRef`; the release is typed over `[ref, a, exit]`. -/
+reached as the service `kRef`; the release is typed over `[ref, a, exit]`, so its `Ref.update`
+sits at level 3 and carries `incr`'s image there, `succ(var 3)`. -/
 def layerBump (k : ServiceKey) : LayerTerm NativeOp :=
   .effect k (.bind (.service kRef)
-    (.acquireRelease (.succeed (.lit (.nat 1))) (.perform (.refUpdate .incr) (.var 0))))
+    (.acquireRelease (.succeed (.lit (.nat 1)))
+      (.perform (.refUpdateWith (Effect4.Machine.FnName.image .update 3 .incr)) (.var 0))))
 
 /-- Two layers merged (`Layer.ts:1587-1602`), each acquiring in its own layer scope; when
 `Effect.provide` closes its scope on the way out (`internal/effect.ts:3967`) both memo entries
@@ -155,10 +157,12 @@ def pProvideMerge : Api.Program :=
       (.bind (.scoped (.provideLayer (.merge (layerBump kA) (layerBump kB)) false (.service kB)))
         (.perform .refGet (.var 0))))
 
-/-- A layer whose construction bumps the root's cell and provides `5`. -/
+/-- A layer whose construction bumps the root's cell and provides `5`: the `Ref.update` sits
+under the service's binder, at level 1, and carries `incr`'s image there. -/
 def layerCount (k : ServiceKey) : LayerTerm NativeOp :=
   .effect k (.bind (.service kRef)
-    (.bind (.perform (.refUpdate .incr) (.var 0)) (.succeed (.lit (.nat 5)))))
+    (.bind (.perform (.refUpdateWith (Effect4.Machine.FnName.image .update 1 .incr)) (.var 0))
+      (.succeed (.lit (.nat 5)))))
 
 /-- Two literal copies have different LayerId paths and print separate layer objects
 (`Layer.ts:411`). Both builds run, so the root cell reads `2` on both faces. -/
@@ -676,6 +680,7 @@ def refusalText : PrintRefusal → String
   | .unsafeName spelling => s!"unsafe name {spelling}"
   | .typeSpelling text => s!"type spelling {text}"
   | .payloadClass tag why => s!"payload class {tag}: {classRefusalText why}"
+  | .binderTerm spelling => s!"binder term of {spelling}"
 
 def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J :=
   Lean.Json.mkObj

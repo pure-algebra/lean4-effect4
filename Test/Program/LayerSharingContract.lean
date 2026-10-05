@@ -13,7 +13,7 @@ def kA : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
 def kRef : ServiceKey := ⟨⟨6⟩, ⟨7⟩⟩
 def layerCount : LayerTerm NativeOp :=
   .effect kA (.bind (.service kRef)
-    (.bind (.perform (.refUpdate .incr) (.var 0)) (.succeed (.lit (.nat 5)))))
+    (.bind (.perform (.refUpdateWith (FnName.image .update 1 .incr)) (.var 0)) (.succeed (.lit (.nat 5)))))
 def refTarget : LayerId := [1, 0, 0, 0]
 def once : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))

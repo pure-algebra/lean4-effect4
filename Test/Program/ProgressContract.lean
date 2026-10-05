@@ -14,10 +14,12 @@ a declaration that keeps the frozen name but weakens the statement fails here
 over first-order values: the store operations the compile contract's programs perform
 (`Test/Program/CompileContract.lean`: `pRefSet`, `pRefUpdate`, `pRefModify`), one Deferred and
 one Scope sequence for the store rows, the pure functions on numbers, and the two register rows.
-Every helper is a store or an answer, never a rendering. The read-modify-write rows run their
-names' lowerings (decisions row 43): on numbers they run the names' kernels (`kernel_term_agrees`),
-and on a non-number a computing name's lowering stops, where the name answered the value
-unchanged (the guards of section `Functions`). `Stores.WF` is decided through the
+Every helper is a store or an answer, never a rendering. The read-modify-write rows carry binder
+terms (decisions row 43; the state plan's T3b): the compile contract's programs carry the images
+of their names at the node's level, run over the point's environment. On numbers an image
+evaluates to the name's value (`FnName.image_agrees`), and on a non-number a computing name's
+image stops, where the name answered the value unchanged (the guards of section `Functions`).
+`Stores.WF` is decided through the
 instance the modules supply. The `Ref` and `Deferred` rows are templates since the state plan's
 T3a: every guard reads a row at its `nat` instance (`atNat`), the instance the compile contract's
 programs check at, and every cell they reach holds a number, the guard `refs.all (Val.hasTy · .nat)`.
@@ -67,11 +69,17 @@ def answer (o : SyncOp) (s : Stores) : Option Val := (syncOpStep o s).map Prod.s
 def s1 : Stores := after (SyncOp.refMake (Val.nat 5)) Stores.empty
 /-- `Ref.set(ref, 7)` after `Ref.make(5)`: `pRefSet`'s second step. -/
 def s1set : Stores := after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1
-/-- `Ref.update(ref, incr)` after `Ref.make(5)`: `pRefUpdate`'s second step, running `incr`'s
-lowering (decisions row 43). -/
-def s1upd : Stores := after (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) s1
+/-- The environment of `pRefUpdate`'s and `pRefModify`'s second node: the cell bound in front. -/
+def cellEnv : List Val := [Val.cell ⟨0⟩]
+/-- `incr`'s image at that node's level 1, `succ(var 1)`: `pRefUpdate`'s binder term. -/
+def incrAt1 : Term := FnName.image .update 1 .incr
+/-- `takeAndBump`'s image at level 1, `pair(var 1, add(var 1, 1))`: `pRefModify`'s binder term. -/
+def bumpAt1 : Term := FnName.image .modify 1 .takeAndBump
+/-- `Ref.update(ref, incr)` after `Ref.make(5)`: `pRefUpdate`'s second step, running its term at
+the node's environment (decisions row 43). -/
+def s1upd : Stores := after (SyncOp.refUpdate ⟨0⟩ incrAt1 cellEnv) s1
 /-- `Ref.modify(ref, takeAndBump)` after `Ref.make(5)`: `pRefModify`'s second step. -/
-def s1mod : Stores := after (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) s1
+def s1mod : Stores := after (SyncOp.refModify ⟨0⟩ bumpAt1 cellEnv) s1
 /-- `Deferred.make()` on the empty store. -/
 def s2 : Stores := after SyncOp.deferredMake Stores.empty
 /-- `Deferred.succeed(d, 1)` after `Deferred.make()`. -/
@@ -110,12 +118,13 @@ example (w : Typed.World) : Denote.StoreFits w ↔ Typed.CellsTyped w ∧ w.stat
 example (w w' : Typed.World) : Denote.StoreOk w w' ↔ w.leHost w' ∧ Denote.StoreFits w' :=
   ⟨fun h => ⟨h.le, h.store⟩, fun h => ⟨h.1, h.2⟩⟩
 
-/-- The cutover's connector (the state plan's T2), at its exact proposition: a read-modify-write
-row lowered through its name's term runs on every number the kernel the name ran. -/
-example : ∀ {op : NativeOp} {k : RefKernel}, op.fnKernel = some k → ∀ (cell : RefKey),
-    ∃ o k', op.syncOpOf [] (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
-      ∀ n, k' (.nat n) = k (.nat n) :=
-  @kernel_term_agrees
+/-- The cutover's connector (the state plan's T3b), at its exact proposition: the image of a name
+at a shape and a node's level evaluates, on every number and over every outer environment, to the
+name's value at the shape. -/
+example : ∀ (s : FnShape) (f : FnName) (env : List Val) (n : Nat),
+    Program.evalTerm (env ++ [Val.nat n]) (FnName.image s env.length f) =
+      some (f.valueAt s (.nat n)) :=
+  @FnName.image_agrees
 
 /-! ## The register rows -/
 
@@ -272,12 +281,15 @@ end RefSet
 
 section RefUpdate
 
-#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refUpdate .incr)).request)
-#guard NativeOp.syncOpOf (.refUpdate .incr) [] (Val.cell ⟨0⟩)
-  = some (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
-#guard SyncOp.validIn s1 (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) = true
-#guard answer (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) s1 = some Val.unit
-#guard Val.hasTy Val.unit (atNat (NativeOp.row (.refUpdate .incr)).answer)
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refUpdateWith incrAt1)).request)
+-- the row hands the store its own term and the node's environment
+#guard NativeOp.syncOpOf (.refUpdateWith incrAt1) cellEnv (Val.cell ⟨0⟩)
+  = some (SyncOp.refUpdate ⟨0⟩ incrAt1 cellEnv)
+#guard SyncOp.validIn s1 (SyncOp.refUpdate ⟨0⟩ incrAt1 cellEnv) = true
+#guard answer (SyncOp.refUpdate ⟨0⟩ incrAt1 cellEnv) s1 = some Val.unit
+#guard Val.hasTy Val.unit (atNat (NativeOp.row (.refUpdateWith incrAt1)).answer)
+-- red control: the level-1 term over the empty environment reads past the cell's value
+#guard answer (SyncOp.refUpdate ⟨0⟩ incrAt1 []) s1 = none
 #guard Stores.WF s1upd
 #guard s1upd.refs.all (Val.hasTy · .nat)
 #guard s1upd.refs = [Val.nat 6]
@@ -290,19 +302,21 @@ end RefUpdate
 
 section RefModify
 
-#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refModify .takeAndBump)).request)
-#guard NativeOp.syncOpOf (.refModify .takeAndBump) [] (Val.cell ⟨0⟩)
-  = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
-#guard SyncOp.validIn s1 (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) = true
-#guard answer (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) s1 = some (Val.nat 5)
-#guard Val.hasTy (Val.nat 5) (atNat (NativeOp.row (.refModify .takeAndBump)).answer)
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refModifyWith bumpAt1)).request)
+#guard NativeOp.syncOpOf (.refModifyWith bumpAt1) cellEnv (Val.cell ⟨0⟩)
+  = some (SyncOp.refModify ⟨0⟩ bumpAt1 cellEnv)
+#guard SyncOp.validIn s1 (SyncOp.refModify ⟨0⟩ bumpAt1 cellEnv) = true
+#guard answer (SyncOp.refModify ⟨0⟩ bumpAt1 cellEnv) s1 = some (Val.nat 5)
+-- the row answers its own parameter `B`, `var 1`, here at the `nat` instance
+#guard (NativeOp.row (.refModifyWith bumpAt1)).answer = .var 1
+#guard Val.hasTy (Val.nat 5) (atNat (NativeOp.row (.refModifyWith bumpAt1)).answer)
 #guard Stores.WF s1mod
 #guard s1mod.refs.all (Val.hasTy · .nat)
 #guard s1mod.refs = [Val.nat 6]
 
 end RefModify
 
-/-! ## The pure functions on numbers (`Stores.lean:458-482`) -/
+/-! ## The names' meaning on numbers (`FnName.total` and its siblings, `Program/FnName.lean`) -/
 
 section Functions
 
@@ -318,22 +332,29 @@ section Functions
 #guard Val.hasTy ((FnName.modifySome .noChange (Val.nat 5)).2.getD (Val.nat 5)) .nat
 -- the functions fix a non-number, so the typing of the result is the typing of the argument
 #guard Val.hasTy (FnName.total .incr (Val.bool true)) .nat = false
--- the connector holds on numbers only (the state plan's T2, ruling D1): a computing name fixes a
--- non-number, and its lowering stops there; the identity names agree on every value
+-- the connector holds on numbers only (`FnName.image_agrees`; the state plan's T2, ruling D1): a
+-- computing name fixes a non-number, and its image stops there; `noChange`'s image is the value
 #guard FnName.total .incr (Val.bool true) = Val.bool true
-#guard Program.evalTerm [Val.bool true] FnName.incr.updateTerm = none
+#guard Program.evalTerm [Val.bool true] (FnName.image .update 0 .incr) = none
 #guard FnName.modify .incr (Val.bool true) = (Val.bool true, Val.bool true)
-#guard Program.evalTerm [Val.bool true] FnName.incr.modifyTerm = none
+#guard Program.evalTerm [Val.bool true] (FnName.image .modify 0 .incr) = none
 #guard FnName.partialUpdate .zeroWhenPositive (Val.bool true) = none
-#guard Program.evalTerm [Val.bool true] FnName.zeroWhenPositive.updateSomeTerm = none
-#guard Program.evalTerm [Val.bool true] FnName.noChange.updateTerm =
+#guard Program.evalTerm [Val.bool true] (FnName.image .updateSome 0 .zeroWhenPositive) = none
+#guard Program.evalTerm [Val.bool true] (FnName.image .update 0 .noChange) =
   some (FnName.total .noChange (Val.bool true))
--- on a number the lowered row runs the name's kernel (`kernel_term_agrees`)
-#guard answer (SyncOp.refUpdate ⟨0⟩ FnName.double.updateTerm []) s1 = some Val.unit
-#guard (after (SyncOp.refUpdate ⟨0⟩ FnName.double.updateTerm []) s1).refs = [Val.nat 10]
-#guard answer (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) s1 =
-  some (Val.nat 0)
-#guard answer (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []) s1 = some (Val.nat 5)
+-- on numbers every image evaluates to its name's value, at levels 0 to 3 over outer values that
+-- are no numbers (a finite reading of `FnName.image_agrees`)
+#guard [FnShape.update, .updateSome, .modify, .modifySome].all fun s =>
+  fnNames.all fun f => (List.range 4).all fun level => [0, 1, 5].all fun k =>
+    Program.evalTerm (List.replicate level (Val.bool true) ++ [Val.nat k])
+        (FnName.image s level f) == some (f.valueAt s (Val.nat k))
+-- on a number the row at a name's image runs the name's function
+#guard answer (SyncOp.refUpdate ⟨0⟩ (FnName.image .update 0 .double) []) s1 = some Val.unit
+#guard (after (SyncOp.refUpdate ⟨0⟩ (FnName.image .update 0 .double) []) s1).refs = [Val.nat 10]
+#guard answer (SyncOp.refUpdateSomeAndGet ⟨0⟩ (FnName.image .updateSome 0 .zeroWhenPositive) [])
+  s1 = some (Val.nat 0)
+#guard answer (SyncOp.refModifySome ⟨0⟩ (FnName.image .modifySome 0 .noChange) []) s1 =
+  some (Val.nat 5)
 
 end Functions
 

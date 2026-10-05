@@ -24,7 +24,6 @@ def blocks : List (List Spec) :=
   , [⟨`Effect4.Supervision.ForkOptions, "fork_options", []⟩]
   , [⟨`Effect4.Supervision.ObserverMode, "observer_mode", []⟩]
   , [⟨`Effect4.FinalizerStrategy, "finalizer_strategy", []⟩]
-  , [⟨`Effect4.Machine.FnName, "fn_name", []⟩]
   , [⟨`Effect4.Program.NativeOp, "native_op", []⟩]
   -- the service key before the `Eff` group since the join (2026-09-07): `provideLayer`,
   -- `service`, `provideService` and `LayerTerm` carry a `ServiceKey`
