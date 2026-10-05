@@ -172,7 +172,7 @@
     ]
   },
   {
-    "name": "G2 a retirement the policy names leaves the count table and the manifest",
+    "name": "G2 a retirement the policy names leaves the count table and the three manifests",
     "expect": "PASS",
     "edits": [
       {
@@ -184,6 +184,16 @@
         "path": "ocaml/goldens/eff/manifest.txt",
         "old": " deferredIsDone deferredPoll",
         "new": " deferredPoll"
+      },
+      {
+        "path": "ocaml/eff/eff_manifest.txt",
+        "old": " deferredIsDone deferredPoll",
+        "new": " deferredPoll"
+      },
+      {
+        "path": "ocaml/goldens/eff/wire-tags.txt",
+        "old": " deferredIsDone=14 deferredPoll=15",
+        "new": " deferredPoll=15"
       },
       {
         "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
