@@ -1,0 +1,6 @@
+docs/research/2026-10-04-seat-T3b/ProbesRed.lean:131:0: error: Expression
+  !reqT.anchored
+did not evaluate to `true`
+docs/research/2026-10-04-seat-T3b/ProbesRed.lean:140:0: error: Expression
+  decide (Ty.matchTemplate σ0 (Ty.var 0) Ty.string = some σ0)
+did not evaluate to `true`

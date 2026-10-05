@@ -1,0 +1,4 @@
+## OCaml golden programs
+pOps	rows [Effect4.Program.NativeOp.refUpdate, Effect4.Program.NativeOp.refGetAndUpdate, Effect4.Program.NativeOp.refUpdateAndGet, Effect4.Program.NativeOp.refUpdateSome, Effect4.Program.NativeOp.refGetAndUpdateSome, Effect4.Program.NativeOp.refUpdateSomeAndGet, Effect4.Program.NativeOp.refModify, Effect4.Program.NativeOp.refModifySome]	prints true	wellTyped true
+## The wire corpus
+pLoop	rows [Effect4.Program.NativeOp.refUpdate]	prints true	wellTyped true
