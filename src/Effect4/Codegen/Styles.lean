@@ -201,7 +201,7 @@ def Form.foreign (f : Form) (style : Style) (n : Nat) : Option Expr := do
     some (expression style e)
   let term (i : Nat) : Option Expr := do
     let t ← args.terms[i]?
-    some (expression style (printTerm t))
+    some (expression style (printTerm n t))
   let call (args : List Expr) := applyHead style f.head args
   let a := "a" ++ toString n
   let result ← match f.id with

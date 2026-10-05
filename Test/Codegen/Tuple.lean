@@ -44,14 +44,14 @@ def pair : Term := .app "tuple" (.cons (.lit (.nat 7)) (.cons (.lit (.str "x")) 
 def larger : Term := .app "tuple" (.cons (.lit (.nat 7))
   (.cons (.lit (.str "x")) (.cons (.lit (.bool true)) .nil)))
 
-#guard readTerm [] 0 (printTerm empty) == .ok empty
-#guard readTerm [] 0 (printTerm singleton) == .ok singleton
-#guard readTerm [] 0 (printTerm pair) == .ok pair
-#guard readTerm [] 0 (printTerm larger) == .ok larger
-#guard readTerm [] 0 (printTerm (.tupleAt larger 2)) == .ok (.tupleAt larger 2)
-#guard readTerm [] 1 (printTerm (.tupleAt (.var 0) 123456789012345678901234567890)) ==
+#guard readTerm [] 0 (printTerm 0 empty) == .ok empty
+#guard readTerm [] 0 (printTerm 0 singleton) == .ok singleton
+#guard readTerm [] 0 (printTerm 0 pair) == .ok pair
+#guard readTerm [] 0 (printTerm 0 larger) == .ok larger
+#guard readTerm [] 0 (printTerm 0 (.tupleAt larger 2)) == .ok (.tupleAt larger 2)
+#guard readTerm [] 1 (printTerm 1 (.tupleAt (.var 0) 123456789012345678901234567890)) ==
   .ok (.tupleAt (.var 0) 123456789012345678901234567890)
-#guard readTerm [] 0 (printTerm (.app "tupleAt" .nil)) == .ok (.app "tupleAt" .nil)
+#guard readTerm [] 0 (printTerm 0 (.app "tupleAt" .nil)) == .ok (.app "tupleAt" .nil)
 
 example (index : Nat) (target : Expr) :
     Tuple.readAt (Tuple.writeAt index target) = some (index, target) := Tuple.readAt_writeAt index target
@@ -59,7 +59,7 @@ example (e : Expr) (index : Nat) (target : Expr) (h : Tuple.readAt e = some (ind
     Tuple.writeAt index target = e := Tuple.readAt_exact e index target h
 example (classes : Effect4.Codegen.Classes.Classes) (n index : Nat) (target : Term)
     (h : Term.scoped n target = true) (hc : target.covers classes = true) :
-    readTerm classes n (printTerm (.tupleAt target index)) = .ok (.tupleAt target index) :=
+    readTerm classes n (printTerm n (.tupleAt target index)) = .ok (.tupleAt target index) :=
   readTerm_printTerm _ h hc
 
 end Effect4.Test.TupleCodegen

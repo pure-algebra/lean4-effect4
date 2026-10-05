@@ -49,7 +49,7 @@ refused by its row's spelling. -/
 theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     print sig n (.perform op request) =
       match sig.opAtLevel n 0 op with
-      | some face => printRow (sig.rowOf face) request
+      | some face => printRow n (sig.rowOf face) request
       | none => .error (.binderTerm (sig.rowOf op).spelling) := rfl
 
 /-- The complete requirement row as target syntax. The empty union is `never`. -/

@@ -275,7 +275,7 @@ mutual
   `read_print`, and at R3 as the record terms' printed form. -/
   theorem readTerm_printTerm {classes : Classes} {n : Nat} (t : Term)
       (h : Term.scoped n t = true) (hc : t.covers classes = true) :
-      readTerm classes n (printTerm t) = .ok t :=
+      readTerm classes n (printTerm n t) = .ok t :=
     match t, h, hc with
     | .var i, h, _ => by
       simp only [Term.scoped, decide_eq_true_eq] at h
@@ -309,7 +309,7 @@ mutual
       | some tag =>
         obtain ⟨_, _, hnames, hvalues, _, hlen⟩ := Effect4.Codegen.Classes.classTag?_some hct
         have hlookup := coverNode_class hnode hct
-        have htail : readTerms classes n (printTerms (Effect4.Codegen.Classes.restTerms values)) =
+        have htail : readTerms classes n (printTerms n (Effect4.Codegen.Classes.restTerms values)) =
             .ok (Effect4.Codegen.Classes.restTerms values) := by
           rw [hvalues] at hr
           simp only [printTerms, readTerms, bind_eq_ok] at hr
@@ -317,7 +317,7 @@ mutual
           simp only [Except.ok.injEq, Terms.cons.injEq] at hcons
           rw [hcons.2] at hts'
           exact hts'
-        have hlen' : names.tail.length = (printTerms values).tail.length := by
+        have hlen' : names.tail.length = (printTerms n values).tail.length := by
           rw [Effect4.Codegen.Classes.printTerms_restTerms,
             Effect4.Codegen.Classes.printTerms_length, hlen]
         have hw := Effect4.Codegen.Classes.readClass_writeClass tag names.tail _ hlen'
@@ -341,7 +341,7 @@ mutual
         · next tag' names' values' hcls =>
           rw [Effect4.Codegen.Classes.readClass_writeRecord] at hcls
           exact nomatch hcls
-        · have hs := Effect4.Codegen.Record.readRecord_writeRecord fields names (printTerms values)
+        · have hs := Effect4.Codegen.Record.readRecord_writeRecord fields names (printTerms n values)
           split
           · next fields' names' values' hrec =>
             rw [hrec] at hs
@@ -357,12 +357,12 @@ mutual
       · next tag' names' values' hcls =>
         rw [Effect4.Codegen.Classes.readClass_writeField] at hcls; exact nomatch hcls
       · have hr0 := Effect4.Codegen.Record.readRecord_writeField
-          (decide (mode = .optional)) name (printTerm target)
+          (decide (mode = .optional)) name (printTerm n target)
         split
         · next fields names values hr => rw [hr] at hr0; exact nomatch hr0
         ·
           have hs := Effect4.Codegen.Record.readField_writeField
-            (decide (mode = .optional)) name (printTerm target)
+            (decide (mode = .optional)) name (printTerm n target)
           split
           · next optional name' target' hf =>
             rw [hf] at hs
@@ -379,7 +379,7 @@ mutual
         rw [Effect4.Codegen.Classes.readClass_writeSet] at hcls; exact nomatch hcls
       · simp only [Effect4.Codegen.Record.readRecord_writeSet,
           Effect4.Codegen.Record.readField_writeSet]
-        have hs := Effect4.Codegen.Record.readSet_writeSet name (printTerm target) (printTerm value)
+        have hs := Effect4.Codegen.Record.readSet_writeSet name (printTerm n target) (printTerm n value)
         split
         · next name' target' value' hr =>
           rw [hr] at hs
@@ -396,7 +396,7 @@ mutual
         rw [Effect4.Codegen.Classes.readClass_writeAt] at hcls; exact nomatch hcls
       · simp only [Effect4.Codegen.Tuple.readRecord_writeAt,
           Effect4.Codegen.Tuple.readField_writeAt, Effect4.Codegen.Tuple.readSet_writeAt]
-        have hs := Effect4.Codegen.Tuple.readAt_writeAt index (printTerm target)
+        have hs := Effect4.Codegen.Tuple.readAt_writeAt index (printTerm n target)
         split
         · next index' target' hr =>
           rw [hr] at hs
@@ -408,7 +408,7 @@ mutual
 
   theorem readTerms_printTerms {classes : Classes} {n : Nat} (ts : Terms)
       (h : Terms.scoped n ts = true) (hc : ts.covers classes = true) :
-      readTerms classes n (printTerms ts) = .ok ts :=
+      readTerms classes n (printTerms n ts) = .ok ts :=
     match ts, h, hc with
     | .nil, _, _ => by rw [printTerms, readTerms]
     | .cons t ts, h, hc => by
@@ -425,7 +425,7 @@ mutual
   the term it reads to as that construction, and a structural record only when it does not.
   Placed at R8 (`translation-simulation`) as a step of `read_exact`. -/
   theorem readTerm_exact {classes : Classes} {n : Nat} (x : Expr) {t : Term}
-      (h : readTerm classes n x = .ok t) : printTerm t = x := by
+      (h : readTerm classes n x = .ok t) : printTerm n t = x := by
     rw [readTerm] at h
     split at h
     · next tag names values hcls =>
@@ -503,7 +503,7 @@ mutual
   decreasing_by all_goals subst_vars; all_goals simp_wf; all_goals omega
 
   theorem readTerms_exact {classes : Classes} {n : Nat} (xs : List Expr) {ts : Terms}
-      (h : readTerms classes n xs = .ok ts) : printTerms ts = xs := by
+      (h : readTerms classes n xs = .ok ts) : printTerms n ts = xs := by
     cases hxs : xs with
     | nil =>
       rw [hxs] at h
@@ -546,7 +546,7 @@ theorem headOf_lit (h : Head) (s : String) (hs : h.spelling = s) : headOf s = so
   hs ▸ headOf_spelling h
 
 theorem readCause_printCause {n : Nat} (c : CauseTerm) (h : CauseTerm.scoped n c = true)
-    (hc : c.covers classes = true) : readCause classes n (printCause c) = .ok c := by
+    (hc : c.covers classes = true) : readCause classes n (printCause n c) = .ok c := by
   induction c with
   | fail e =>
     simp only [CauseTerm.scoped] at h
@@ -569,7 +569,7 @@ theorem readCause_printCause {n : Nat} (c : CauseTerm) (h : CauseTerm.scoped n c
     rw [printCause]; unfold readCause; simp [headOf_lit .causeCombine "Cause.combine" rfl, ihl h.1 hc.1, ihr h.2 hc.2]
 
 theorem readCause_exact {n : Nat} (x : Expr) {c : CauseTerm} (h : readCause classes n x = .ok c) :
-    printCause c = x := by
+    printCause n c = x := by
   induction x using readCause.induct generalizing c with
   | case1 s e hh =>
     unfold readCause at h; simp only [hh, map_eq_ok] at h
@@ -631,7 +631,7 @@ theorem idents?_cons_none {e : Expr} {l : List Expr} (h : ∀ x, e ≠ Expr.iden
     idents? (e :: l) = none := by
   cases e <;> first | exact absurd rfl (h _) | (unfold idents?; simp)
 
-theorem idents?_printTerms : ∀ ts : Terms, idents? (printTerms ts) = ts.names?
+theorem idents?_printTerms {n : Nat} : ∀ ts : Terms, idents? (printTerms n ts) = ts.names?
   | .nil => rfl
   | .cons t rest => by
     cases t with
@@ -649,7 +649,7 @@ theorem idents?_printTerms : ∀ ts : Terms, idents? (printTerms ts) = ts.names?
     | recordSet target name value => rfl
     | tupleAt target index => rfl
 
-theorem printTerm_ident {t : Term} {x : String} (h : printTerm t = .ident x) :
+theorem printTerm_ident {n : Nat} {t : Term} {x : String} (h : printTerm n t = .ident x) :
     (∃ i, t = .var i ∧ x = Var.name i) ∨ (t = .lit .unit ∧ x = "undefined") := by
   cases t with
   | var i => exact .inl ⟨i, rfl, (Expr.ident.inj h).symm⟩
@@ -668,8 +668,8 @@ theorem printTerm_ident {t : Term} {x : String} (h : printTerm t = .ident x) :
   | recordSet target name value => exact nomatch h
   | tupleAt target index => exact nomatch h
 
-theorem printTerm_eq_bool (term : Term) (value : Bool) :
-    printTerm term = .bool value ↔ term = .lit (.bool value) := by
+theorem printTerm_eq_bool {n : Nat} (term : Term) (value : Bool) :
+    printTerm n term = .bool value ↔ term = .lit (.bool value) := by
   cases term with
   | var _ => simp only [printTerm, reduceCtorEq]
   | app _ _ => simp only [printTerm, reduceCtorEq]
@@ -692,7 +692,7 @@ theorem printTerm_eq_bool (term : Term) (value : Bool) :
 term. -/
 theorem readRowCall_none {sig : Signature Op} {spell : String → List String → Option Op} {n : Nat}
     {atom : String} {args : Terms} (h : noRow spell atom args = true) :
-    readRowCall classes sig spell n atom [] (printTerms args) = none := by
+    readRowCall classes sig spell n atom [] (printTerms n args) = none := by
   cases args with
   | nil =>
     simp only [noRow, Bool.and_true, Option.isNone_iff_eq_none] at h
@@ -753,8 +753,8 @@ theorem readRowCall_request {sig : Signature Op} {spell : String → List String
     {typeArgs : List TypeScript.TypeRef}
     (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
     readRowCall classes sig spell n (sig.rowOf op).spelling typeArgs
-        (printTerm r :: (sig.rowOf op).trailing.map Expr.ident)
-      = some ((readTerm classes n (printTerm r)).map (rowAnswer (sig.rowOf op) op)) := by
+        (printTerm n r :: (sig.rowOf op).trailing.map Expr.ident)
+      = some ((readTerm classes n (printTerm n r)).map (rowAnswer (sig.rowOf op) op)) := by
   have key : ∀ x, (∀ op', x ∉ (sig.rowOf op').trailing) →
       spell (sig.rowOf op).spelling (x :: (sig.rowOf op).trailing) = none := by
     intro x hx
@@ -764,9 +764,9 @@ theorem readRowCall_request {sig : Signature Op} {spell : String → List String
       exfalso
       obtain ⟨_, htr⟩ := hl.row_of_spell _ _ _ hsp
       exact hx op' (htr ▸ List.mem_cons_self)
-  have hA : ((idents? (printTerm r :: (sig.rowOf op).trailing.map Expr.ident)).bind
+  have hA : ((idents? (printTerm n r :: (sig.rowOf op).trailing.map Expr.ident)).bind
       (spell (sig.rowOf op).spelling)) = none := by
-    cases he : printTerm r with
+    cases he : printTerm n r with
     | ident name =>
       rcases printTerm_ident he with ⟨i, _, hn⟩ | ⟨_, hn⟩
       · subst name
@@ -798,9 +798,9 @@ theorem readable_row_request {row : Row} {n : Nat} {r : Term} (hshape : row.shap
 
 /-- A printed term is an identifier only as a binder or as `undefined`, never as a trailing
 name of any row. -/
-theorem printTerm_ident_not_trailing {sig : Signature Op}
+theorem printTerm_ident_not_trailing {sig : Signature Op} {n : Nat}
     {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) (r : Term)
-    (op : Op) (v : String) (h : printTerm r = .ident v) : v ∉ (sig.rowOf op).trailing := by
+    (op : Op) (v : String) (h : printTerm n r = .ident v) : v ∉ (sig.rowOf op).trailing := by
   rcases printTerm_ident h with ⟨i, _, hv⟩ | ⟨_, hv⟩
   · subst v; exact hl.trailing_ne_name op i
   · subst v; exact hl.trailing_ne_undefined op
@@ -858,7 +858,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
     {typeArgs : List TypeScript.TypeRef}
     (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
     readRowCall classes sig spell n (sig.rowOf op).spelling typeArgs
-      (printTupleArgs r ++ (sig.rowOf op).trailing.map Expr.ident) =
+      (printTupleArgs n r ++ (sig.rowOf op).trailing.map Expr.ident) =
       some (.ok (rowAnswer (sig.rowOf op) op r)) := by
   simp only [tupleRequestReadable] at h
   rcases hpa : pairArgs? r with _ | ⟨x, y⟩
@@ -918,7 +918,7 @@ theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List Str
     {typeArgs : List TypeScript.TypeRef}
     (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
     readRowCall classes (methodSignature sig) spell n (sig.rowOf op).spelling typeArgs
-      (printMethodArgs (sig.rowOf op) args) = some (.ok (rowAnswer (sig.rowOf op) op args)) := by
+      (printMethodArgs n (sig.rowOf op) args) = some (.ok (rowAnswer (sig.rowOf op) op args)) := by
   have hm := methodLawful hl
   rcases methodArgsRow_shape (sig.rowOf op) with hs | hs
   · simp only [hs, reduceCtorEq, if_false] at h
@@ -951,8 +951,8 @@ theorem readRowMethod_print {sig : Signature Op} {spell : String → List String
       else args.scoped n) = true) (hcr : receiver.covers classes = true)
     (hca : args.covers classes = true) {typeArgs : List TypeScript.TypeRef}
     (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
-    readRowMethod classes sig spell n (printTerm receiver) (sig.rowOf op).spelling typeArgs
-      (printMethodArgs (sig.rowOf op) args) =
+    readRowMethod classes sig spell n (printTerm n receiver) (sig.rowOf op).spelling typeArgs
+      (printMethodArgs n (sig.rowOf op) args) =
       .ok (rowAnswer (sig.rowOf op) op (.app "pair" (.cons receiver (.cons args .nil)))) := by
   simp only [readRowMethod, readTerm_printTerm receiver hr hcr, ok_bind,
     readRowCall_methodArgs hl op hd args ha hca hta, Option.getD_some]
@@ -966,7 +966,7 @@ def Signature.atFaces (sig : Signature Op) : Signature Op :=
 
 /-- The printed form of a row answer at the faces' level is the row's printed call. -/
 theorem print_rowAnswer {sig : Signature Op} {n : Nat} (op : Op) (r : Term) :
-    print sig.atFaces n (rowAnswer (sig.rowOf op) op r) = printRow (sig.rowOf op) r := by
+    print sig.atFaces n (rowAnswer (sig.rowOf op) op r) = printRow n (sig.rowOf op) r := by
   simp only [rowAnswer, print_perform]
   rfl
 
@@ -994,7 +994,7 @@ theorem readPerform_printRowHead {sig : Signature Op} {spell : String → List S
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
     (h : requestReadable (sig.rowOf op) n r = true) (hc : r.covers classes = true)
-    {x : Expr} (hp : printRow (sig.rowOf op) r = .ok x) :
+    {x : Expr} (hp : printRow n (sig.rowOf op) r = .ok x) :
     readPerformFace classes sig spell n x = .ok (rowAnswer (sig.rowOf op) op r) := by
   have hname : ∀ i, Var.name i ≠ (sig.rowOf op).spelling := fun i => (hl.spelling_ne_name op i).symm
   have hhead : headOf (sig.rowOf op).spelling = none := headOf_none (hl.spelling_not_reserved op)
@@ -1065,7 +1065,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
 /-- The tuple reading reconstructs its two arguments: a saved variable prints as its two
 component reads, any other pair as the printed components. -/
 theorem readTupleArgs_exact {n : Nat} {x y : Expr} {r : Term}
-    (h : readTupleArgs classes n x y = .ok r) : printTupleArgs r = [x, y] := by
+    (h : readTupleArgs classes n x y = .ok r) : printTupleArgs n r = [x, y] := by
   unfold readTupleArgs at h
   split at h
   · rename_i v hv
@@ -1096,7 +1096,7 @@ theorem readRowCall_method_parts {sig : Signature Op} {spell : String → List S
     {e : Eff Op}
     (h : readRowCall classes (methodSignature sig) spell n s ta args = some (.ok e)) :
     ∃ op r, e = rowAnswer (sig.rowOf op) op r ∧ (sig.rowOf op).spelling = s ∧
-      rowTypeArgs (sig.rowOf op) = some ta ∧ printMethodArgs (sig.rowOf op) r = args := by
+      rowTypeArgs (sig.rowOf op) = some ta ∧ printMethodArgs n (sig.rowOf op) r = args := by
   unfold readRowCall at h
   split at h
   · rename_i op hA

@@ -102,11 +102,13 @@ theorem classTag?_some {fields : Fields} {names : List String} {values : Terms} 
   · exact nomatch h
 
 /-- The tail of a list's printing is the printing of its tail. -/
-theorem printTerms_restTerms (values : Terms) : (printTerms values).tail = printTerms (restTerms values) := by
+theorem printTerms_restTerms {n : Nat} (values : Terms) :
+    (printTerms n values).tail = printTerms n (restTerms values) := by
   cases values <;> rfl
 
 /-- The printed tail's length is the tail's. -/
-theorem printTerms_length : ∀ (values : Terms), (printTerms values).length = values.toList.length
+theorem printTerms_length {n : Nat} :
+    ∀ (values : Terms), (printTerms n values).length = values.toList.length
   | .nil => rfl
   | .cons _ tail => by
     simp only [printTerms, List.length_cons, Terms.toList, printTerms_length tail]

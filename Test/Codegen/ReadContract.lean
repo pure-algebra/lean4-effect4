@@ -139,7 +139,7 @@ def genericSpell (s : String) (names : List String) : Option Bool :=
   if s = "Deferred.make" ∧ names = [] then some true else none
 
 -- the printed head carries the declared arguments, and reads back to the row
-#guard (printRow (genericSig.rowOf true) (.lit .unit)).map
+#guard (printRow 0 (genericSig.rowOf true) (.lit .unit)).map
   (TypeScript.Render.expr TypeScript.house0 0) = .ok "Deferred.make<number, number>()"
 
 #guard roundTrip genericSig genericSpell 0 (.perform true (.lit .unit))

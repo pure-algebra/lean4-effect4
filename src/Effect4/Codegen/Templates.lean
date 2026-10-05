@@ -343,17 +343,17 @@ def argSortOf {R : EffFam → Type} : ArgF Op R → ArgSort
 
 /-- One argument as what its hole captures, by sort; `none` for an argument that is only a
 classifier. A child is its folded printer applied at the row's depth; a leaf goes through its own
-printer (`Codegen/PrintLeaf.lean`). -/
+printer (`Codegen/PrintLeaf.lean`), a term or a cause at the same depth. -/
 def printArg (sig : Signature Op) (d : Nat) :
     ArgF Op Carrier → Except PrintRefusal (Option Arg)
   | .child .eff r | .child .action r | .child .layer r => do return some (.expr (← r d))
   | .child .effs r | .child .layers r => do return some (.exprs (← r d))
   | .child .stmts r => do return some (.stmts (← r d))
   | .child .stmt _ => .ok none
-  | .term t => .ok (some (.expr (printTerm t)))
-  | .optTerm (some t) => .ok (some (.expr (printTerm t)))
+  | .term t => .ok (some (.expr (printTerm d t)))
+  | .optTerm (some t) => .ok (some (.expr (printTerm d t)))
   | .optTerm none => .ok none
-  | .cause c => .ok (some (.expr (printCause c)))
+  | .cause c => .ok (some (.expr (printCause d c)))
   | .lit l => .ok (some (.expr (printLit l)))
   | .key k => do return some (.expr (← printKey sig k))
   | .decision (.tag t) => .ok (some (.str t))
@@ -427,7 +427,7 @@ where
         -- the operation's form at level 0 (`Signature.opAtLevel`) is what the row spells
         | [.op op, .term request] =>
           match sig.opAtLevel n 0 op with
-          | some face => printRow (sig.rowOf face) request
+          | some face => printRow n (sig.rowOf face) request
           | none => .error (.binderTerm (sig.rowOf op).spelling)
         | _ => .error (tableDefect ctor)
       | .tpl t => do

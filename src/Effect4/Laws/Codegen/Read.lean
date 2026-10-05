@@ -292,10 +292,11 @@ attribute [aesop safe forward] readTerm_exact readCause_exact readLiteral_exact 
   readForkOptions_exact
 
 set_option maxRecDepth 4096 in
-/-- A leaf read has the sort it was read at, and prints back, at any depth, to what was read. -/
+/-- A leaf read has the sort it was read at, and prints back to what was read at the depth it
+was read at: a term's printing reads the environment's length (`printTerm`). -/
 theorem readLeaf_exact {sig : Signature Op} {d : Nat} {daemon : Bool} {s : ArgSort} {a : Arg}
     {v : ArgF Op (EffSelfCarrier Op)} (h : readLeaf classes sig d daemon s a = .ok v) :
-    argSortOf v = s ∧ ∀ d', printArg sig d' (ArgF.fold (printAlg sig) v) = .ok (some a) := by
+    argSortOf v = s ∧ printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a) := by
   unfold readLeaf at h
   aesop (add norm simp [ArgF.fold, printArg, argSortOf, Int.toNat_of_nonneg],
     safe apply Int.max_eq_left)
@@ -358,7 +359,7 @@ theorem readCapture_exact
     argSortOf v = s ∧ printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a) := by
   have leaf : ∀ {a' : Arg}, (readLeaf classes sig d daemon s a').mapError ReadFailure.here = .ok v →
       argSortOf v = s ∧ printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a') :=
-    fun hl => let ⟨hs, hp⟩ := readLeaf_exact (Laws.Auto.mapError_eq_ok.mp hl); ⟨hs, hp d⟩
+    fun hl => readLeaf_exact (Laws.Auto.mapError_eq_ok.mp hl)
   cases a with
   | expr y =>
     simp only [readCapture] at h
@@ -645,9 +646,12 @@ theorem readRow_exact (hl : LawfulSpelling sig spell) {fam : EffFam} {n : Nat} {
               · rename_i a ha
                 obtain ⟨e, hb, h⟩ := Option.map_eq_some_iff.mp h
                 cases h
-                exact accepted_prints hk hout (Laws.Auto.toOption_eq_some.mp hb)
-                  (printArgs_single ((readLeaf_exact ha).2 _))
-                  (by simp only [inst, lookup_cons_self])
+                -- the leaf was read at the depth the printer prints it at
+                obtain ⟨hsort, hprint⟩ := readLeaf_exact ha
+                refine accepted_prints hk hout (Laws.Auto.toOption_eq_some.mp hb)
+                  (printArgs_single (c := .expr x) ?_) (by simp only [inst, lookup_cons_self])
+                rw [argSortOf_fold, hsort]
+                exact hprint
               · cases h
             · cases h
           | _ => exact absurd rfl hrigid

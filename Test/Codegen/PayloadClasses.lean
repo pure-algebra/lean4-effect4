@@ -122,7 +122,7 @@ def twoClasses : NativeEff :=
 -- construction prints from, exactly, and the checker refuses that term
 #guard match readTerm [("NotFound", [("_tag", false, .lit "NotFound"), ("code", false, .nat)])] 0
     (Classes.writeClass "NotFound" ["id"] [.int 9]) with
-  | .ok t => printTerm t == Classes.writeClass "NotFound" ["id"] [.int 9] &&
+  | .ok t => printTerm 0 t == Classes.writeClass "NotFound" ["id"] [.int 9] &&
     (termTy nativeSignature [] t).isNone
   | .error _ => false
 -- the class declaration reads back, exactly

@@ -700,8 +700,11 @@ def readRow (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (sp
                   let c ← r.mapError (·.under row.ctor 0)
                   buildRow fam row.ctor [.child fam' c] k
               else none
+            -- one leaf read of the whole tree, at the depth the printer prints it at
+            -- (`Templates.argDepth`), as the child above is handed its depth
             | [sort] =>
-              match readLeaf (R := EffSelfCarrier Op) classes sig n true sort (.expr x) with
+              match readLeaf (R := EffSelfCarrier Op) classes sig
+                  (Templates.argDepth fam sort n 0) true sort (.expr x) with
               | .ok a => (buildRow fam row.ctor [a] k).toOption.map .ok
               | .error _ => none
             | _ => none
@@ -937,7 +940,8 @@ printed components spell the saved-variable form `fst(a)`, `snd(a)` reads back a
 variable and is outside the image (source-repairs §18). -/
 def tupleRequestReadable (n : Nat) (request : Term) : Bool :=
     match pairArgs? request with
-    | some (x, y) => x.scoped n && y.scoped n && (savedVar? (printTerm x) (printTerm y)).isNone
+    | some (x, y) =>
+      x.scoped n && y.scoped n && (savedVar? (printTerm n x) (printTerm n y)).isNone
     | none =>
       -- the requests whose printed form is one identifier: a binder, or `undefined`
       match request with
