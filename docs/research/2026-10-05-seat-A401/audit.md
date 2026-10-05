@@ -41,7 +41,7 @@ The scripts name their inputs in their headers.
 | The census's anchor and digest test, applied to the release | tested | `scripts/census_against_release.py`, `out/census-against-release.tsv` |
 | The sentence of every census row that is not equal | reading | `scripts/census-summaries.tsv` |
 | The run loop, the scheduler, the completion store, the scopes and the memo map, in both trees | reading | F4 to F9 |
-| Four probes on both builds, bun 1.4.2, loaded by directory | tested (finite runs) | `probes/*.mjs`, `probes/*.out` |
+| Three probes on both builds, bun 1.4.2, loaded by directory | tested (finite runs) | `probes/*.mjs`, `probes/*.out` |
 | The truth harness's host phase, in a copy outside the repository | reproduced on the pin, tested on the release | F12, `out/truth-401/` |
 
 The pin's build is `ts/eff/node_modules/effect` of the main checkout. The release's build is the
@@ -81,8 +81,10 @@ its compiled JavaScript shows whether a change is more than types.
 
 - The brief's list holds for 4.0.1 itself. `Ref.ts`, `Latch.ts`, `Clock.ts` and
   `testing/TestClock.ts` are equal in bytes, and `Semaphore.ts` differs in comments only.
-- `internal/effect.ts` has 236 hunks: 208 change compiled code, 27 are types only and 1 is an
-  import.
+- `internal/effect.ts` loses 464 code lines and gains 671. It has 236 hunks: 208 change compiled
+  code, 27 are types only and 1 is an import.
+- `Fiber.ts` and `Scope.ts` change in types only. The other files of the brief's changed list
+  change in compiled code.
 - Of its 499 declarations, 373 have an equal TypeScript syntax tree, 104 compile to different JavaScript and
   16 are gone. The release adds 44 (`scripts/unit_status.py`).
 
