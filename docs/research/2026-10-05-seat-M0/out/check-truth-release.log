@@ -1,0 +1,161 @@
+bun test harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
+bun test v1.4.2 (744846f84)
+
+ 23 pass
+ 0 fail
+ 175 expect() calls
+Ran 23 tests across 4 files. [282.00ms]
+python3 scripts/check-truth.py
+wrote 39 programs to /Users/pooks/Dev/lean4-effect4-m0/harness/truth/truth-check-tfdics99/corpus.json
+{"kind":"signed-divergence-controls","checks":9,"failures":[]}
+| program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
+|---|---|---|---|---|---|---|---|
+| p42 | success 42 | success 42 | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value |
+| pBind | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
+| pFork | success {"success":7} | success {"success":7} | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"success":7}; same value |
+| pAwait | parked (frontier, root parked) | parked (deadline) | yes | yes | yes | runPromiseExit | both park (deadline 300 ms on rc.112); rc.112: no exit before the deadline; the fiber was then interrupted |
+| pGen | success false | success false | yes | yes | yes | runSyncExit | same value |
+| pLoop | success null | success null | yes | yes | yes | runSyncExit | same value |
+| pCatch | success null | success null | yes | yes | yes | runSyncExit | same value |
+| pScope | success null | success null | yes | yes | yes | runSyncExit | same value |
+| pTwo | success {"success":2} | success {"success":2} | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"success":2}; same value |
+| pAcquire | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pAcquireClosed | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pProvide | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pProvideMerge | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
+| pProvideTwice | success 2 | success 2 | yes | yes | yes | runSyncExit | same value |
+| pDiamond | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
+| pMergeAll | success 3 | success 3 | yes | yes | yes | runSyncExit | same value |
+| pAcquireHandle | success [{"external":0},1] | success [{"external":0},1] | yes | yes | yes | runSyncExit | same value |
+| pFailTagged | fail [{"fail":["SqlError","boom"]}] | fail [{"fail":["SqlError","boom"]}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pSqlite | success [[["a","7"],["b","\"x\""]]] | success [[["a","7"],["b","\"x\""]]] | yes | yes | yes | runSyncExit | same value; tape: 5 calls |
+| pKv | success [{"some":"1"},true] | success [{"some":"1"},true] | yes | yes | yes | runSyncExit | same value; tape: 5 calls |
+| pSqlFail | fail [{"fail":["UnknownError","no such table: missing"]}] | fail [{"fail":["UnknownError","no such table: missing"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads; tape: 3 calls |
+| pSqlCatch | success "recovered" | success "recovered" | yes | yes | yes | runSyncExit | same value; tape: 3 calls |
+| pSqlExit | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | yes | yes | yes | runSyncExit | same value; tape: 3 calls |
+| pSqlOrDie | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | yes | yes | yes | runSyncExit | same represented-defect cause; tape: 3 calls |
+| pFailText | fail [{"fail":"lost"}] | fail [{"fail":"lost"}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pFailBoomText | fail [{"fail":"boom"}] | fail [{"fail":"boom"}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pTextOrDie | die [{"die":{"error":"lost"}}] | die [{"die":{"error":"lost"}}] | yes | yes | yes | runSyncExit | same represented-defect cause |
+| pCatchError | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pCatchIfHit | success 7 | success 7 | yes | yes | yes | runSyncExit | same value |
+| pCatchIfMiss | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
+| pCatchIfRetained | success 9 | success 9 | yes | yes | yes | runSyncExit | same value |
+| pTagHit | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
+| pTagMiss | fail [{"fail":["A","m"]}] | fail [{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
+| pTagTwoFail | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | yes | yes | yes | runSyncExit | same failure reasons and payloads |
+| pOptionSome | success [true,7] | success [true,7] | yes | yes | yes | runSyncExit | same value |
+| pOptionNone | success [false,9] | success [false,9] | yes | yes | yes | runSyncExit | same value |
+| pFailPayload | fail [{"fail":{"payload":{"id":9,"_tag":"NotFound"}}}] | fail [{"fail":{"payload":{"_tag":"NotFound","id":9}}}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pTagPayload | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
+| pInterruptEscape | interrupt [{"interrupt":0}] | fail [{"fail":42}] | NO | NO | yes | runPromiseExit | kind: Lean interrupt, rc.112 fail; schedule differ at row 4: Lean "exited 0 interrupt", rc.112 "exited 0 fail"; U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42 |
+PASS: 38 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS truth: pinned corpus, bounded differential and signed U-01 divergence checked; the regenerated modules type-check
+python3 scripts/check-truth-release.py --self-test
+--- control an agreeing program is three `yes`: ok
+--- control a schedule difference is the exact edit, without the `scheduled` rows: ok
+--- control an exit difference carries both exits: ok
+--- control a program the lane did not select is three `not-run`: ok
+--- control a sync difference carries both sync exits: ok
+--- control a module that does not load has no path in its entry: ok
+--- control red: a schedule verdict that the compared schedules contradict is refused: ok
+--- control red: a schedule verdict without the host schedule is refused: ok
+--- control green: the ledger of the observations holds: ok
+--- control green: promote keeps the hand columns and is a fixed point: ok
+--- control green: a ledger that was read whole may be promoted over, and so may no ledger: ok
+--- control red: a promote over a ledger with a line that was not read: ok
+--- control red: a promote over a ledger for other builds: ok
+--- control the expected differences of a ledger are listed by program and build, with slice and reason: ok
+--- control red: a `yes` entry changed to `no` in the ledger: ok
+--- control red: a `no` entry changed to `yes` in the ledger: ok
+--- control red: a `no` whose difference changed shape: ok
+--- control red: a program that leaves its line in the host run: ok
+--- control red: a known schedule difference, and the exit moves in the host run: ok
+--- control red: a known schedule difference, and the sync exit moves in the host run: ok
+--- control red: a known schedule difference, and the expected exit is altered in the ledger: ok
+--- control red: a required observation removed from the release result: ok
+--- control red: a required observation removed from the committed pin result: ok
+--- control red: a field of a program that ran is null: ok
+--- control red: a field of a program that ran is absent: ok
+--- control red: a program that was not run where the ledger says `yes`: ok
+--- control red: a program that ran where the ledger says `not-run`: ok
+--- control red: a `not-run` line without its reason: ok
+--- control red: a program the lane did not select and the runner reports: ok
+--- control red: a program the manifest does not name: ok
+--- control red: a line missing: ok
+--- control red: a line for no program: ok
+--- control red: lines out of the manifest's order: ok
+--- control red: a second line for one program: ok
+--- control red: a difference without its reason: ok
+--- control red: a difference without its slice: ok
+--- control red: a slice the plan does not name: ok
+--- control red: a reason left on an agreeing line: ok
+--- control red: an entry that is none of the four: ok
+--- control red: a `no` without its difference: ok
+--- control red: a line with a column too few: ok
+--- control red: a header for other builds: ok
+--- control red: an empty file: ok
+--- control red: no file: ok
+--- control green: the record of this host run is accepted: ok
+--- control red: the record of other modules: ok
+--- control red: the record of another runtime: ok
+--- control red: the record of a host run that ran every program: ok
+--- control red: a record with a field this host run does not have: ok
+--- control red: no record: ok
+--- control red: a record that is no JSON: ok
+--- control the digest of a set names its files and does not depend on their order: ok
+--- control green: the committed modules of the programs that ran, and their committed tapes: ok
+--- control red: a module that is not the committed module: ok
+--- control red: a module of a program that did not run: ok
+--- control red: a program that ran without its module: ok
+--- control red: a tape that is not the committed tape: ok
+--- control red: a committed tape that the build did not record: ok
+--- control red: a tape that the pin does not have: ok
+--- control red: a tape of a program that did not run: ok
+--- control green: a `bun test` run that passes gives its count: ok
+--- control red: a `bun test` run with a failed test, a nonzero status, no test or no count is refused: ok
+--- control the rewrite moves each import of the table and nothing else: ok
+--- control the specifiers of a source are its static imports and re-exports: ok
+--- control the closure is what the entries reach, the entries first: ok
+--- control red: an import of no file is refused: ok
+--- control red: an import that leaves the repository is refused: ok
+--- control an exact export, a pattern, and the patterns that close a path: ok
+--- control the accepted specifiers: effect, an exported path, a builtin, a present driver: ok
+--- control red: an entry point the table does not map is refused: ok
+--- control red: a closed path of effect is refused: ok
+--- control red: the driver is refused when the install has none: ok
+--- control red: any other package is refused: ok
+--- control a module that mentions `Sql.` needs the driver, and no other does: ok
+--- control red: no selection, no default: ok
+--- control red: an install without effect: ok
+--- control red: the pin where the release is asked: ok
+--- control red: the release with the pin's driver: ok
+--- control green: the release without the driver is accepted: ok
+--- control green: the release with its driver is accepted: ok
+--- control red: an install without the compiler: ok
+--- control red: an install with another compiler: ok
+--- control green: an install with the pinned compiler: ok
+--- control green: the table is true of a pin-shaped and a release-shaped package: ok
+--- control red: the table against two packages of the pin's shape: ok
+self-test: 85 of 85 controls as expected
+python3 scripts/check-truth-release.py --host-tests harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
+truth-release: the control: effect@4.0.0-rc.112 through the work copy (33 sources) reproduces result.json, result.md, 39 modules and 6 tapes byte for byte
+truth-release: the release: effect@4.0.1, 34 of 39 programs run; not run, the install has no @effect/sql-sqlite-bun: pSqlite, pSqlFail, pSqlCatch, pSqlExit, pSqlOrDie
+truth-release: the work copy of harness/truth/prelude.ts imports "effect/persistence" for "effect/unstable/persistence"
+truth-release: the work copy of harness/truth/prelude.ts imports "effect/reactivity/Reactivity" for "effect/unstable/reactivity/Reactivity"
+truth-release: the work copy of harness/truth/prelude.ts imports "./sqlite-driver-absent.ts" for "@effect/sql-sqlite-bun"
+truth-release: the work copy of harness/truth/session/keyed-bindings.ts imports "effect/persistence" for "effect/unstable/persistence"
+truth-release: the work copy of harness/truth/records.test.ts imports "effect/persistence" for "effect/unstable/persistence"
+truth-release: effect@4.0.0-rc.112 ran on bun 1.4.2; tsgo 7.0.0-dev.20260629.1 type-checks its 68 sources; modules: 39, sha256 07ac4adeb4adea7c; tapes: 6, sha256 0f40a831dab3bd86; host tests: 23 pass in 4 file(s)
+truth-release: effect@4.0.1 ran on bun 1.4.2; tsgo 7.0.0-dev.20260629.1 type-checks its 64 sources; modules: 34, sha256 60a2893025fd06a1; tapes: 1, sha256 b3832d633fddddd0; host tests: 23 pass in 4 file(s)
+truth-release: expected: pProvideMerge: 4.0.1 schedule: no: the host lacks machine rows 13-15 (forked 0 5, started 5, exited 5 success) (M2 scopes: one fork fewer on the release (the scope link, by reading))
+truth-release: expected: pProvideTwice: 4.0.1 schedule: no: the host lacks machine rows 13-15 (forked 0 5, started 5, exited 5 success) (M2 scopes: one fork fewer on the release (the scope link, by reading))
+truth-release: expected: pMergeAll: 4.0.1 schedule: no: the host lacks machine rows 19-21 (forked 0 7, started 7, exited 7 success) (M2 scopes: one fork fewer on the release (the scope link, by reading))
+truth-release: expected: pSqlite: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlFail: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlCatch: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlExit: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlOrDie: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pInterruptEscape: 4.0.0-rc.112 exit: no: machine interrupt [{"interrupt":0}], host fail [{"fail":42}] (M5 the failure walk: U-01: the pin lets the typed failure escape, and the release answers the interrupt as the machine does)
+truth-release: expected: pInterruptEscape: 4.0.0-rc.112 schedule: no: machine row 4 (exited 0 interrupt) is host row 4 (exited 0 fail) (M5 the failure walk: U-01: the pin lets the typed failure escape, and the release answers the interrupt as the machine does)
+PASS truth-release: 39 programs match harness/truth/build-ledger.tsv: 30 agree with both builds, 8 with effect@4.0.0-rc.112 only (5 not run on effect@4.0.1), 1 with effect@4.0.1 only, 0 with neither

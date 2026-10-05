@@ -1,0 +1,11 @@
+git diff --exit-code f3086de1 -- <the pinned lane's sources and committed artifacts>
+exit status 0 (0: no byte differs)
+git diff --numstat f3086de1 -- scripts/lib/truth_host.py (added, removed):
+108	0	scripts/lib/truth_host.py
+git status --short:
+ M harness/truth/RELEASE-LANE.md
+(end)
+
+The pinned lane's printed lines at the base f3086de1 (check-truth.at-base.log) against the head's (check-truth.log),
+with the temporary folder's name and the test time replaced:
+no line differs

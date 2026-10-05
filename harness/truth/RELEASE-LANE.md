@@ -118,7 +118,7 @@ program, the build, the field and both values:
 FAIL truth-release: pProvideMerge: 4.0.1 exit: the ledger says "yes", observed "no: machine success 2, host success 3"
 ```
 
-A passing lane prints each entry that is not `yes`, with its `slice` and its `reason`. Its last
+A passing lane lists each entry that is not `yes`, with its `slice` and its `reason`. Its last
 line counts the programs that agree with both builds, with one build only, and with neither.
 
 The run record says what the host run that wrote the entries ran on. For each build it holds

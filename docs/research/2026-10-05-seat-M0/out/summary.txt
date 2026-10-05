@@ -1,0 +1,14 @@
+make check-truth: exit status 0
+make check-truth-release: exit status 0
+after the red controls: PASS truth-release: 39 programs match harness/truth/build-le
+the lane, direct: exit status 0
+red-controls.py: exit status 0; red controls on real data: 14 of 14 as expected
+--self-test: exit status 0; self-test: 85 of 85 controls as expected
+curl exit status: 6
+lane exit status: 0
+six runs: 6 pass, 1 distinct SHA-256 of the release result
+selection refusals: 3 of 3
+the audit: effect 4.0.1, bun 1.4.2, 39 rows; this lane: effect 4.0.1, bun 1.4.2, 34 rows
+rows of this lane equal to the audit's in every field: 34; different: 0 []
+rows of the audit only: ['pSqlCatch', 'pSqlExit', 'pSqlFail', 'pSqlOrDie', 'pSqlite']
+33 sources, 107 static import and re-export specifiers by oxc-parser 0.147.0; the lane's scanner differs on 0 source(s)

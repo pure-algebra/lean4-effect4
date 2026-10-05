@@ -1,0 +1,12 @@
+PASS truth-release: 39 programs match harness/truth/build-
+63a77094a9eed3d336669d6dad86a1c366c8f200bad5113af3ba9e8ad3b32572
+PASS truth-release: 39 programs match harness/truth/build-
+63a77094a9eed3d336669d6dad86a1c366c8f200bad5113af3ba9e8ad3b32572
+PASS truth-release: 39 programs match harness/truth/build-
+63a77094a9eed3d336669d6dad86a1c366c8f200bad5113af3ba9e8ad3b32572
+PASS truth-release: 39 programs match harness/truth/build-
+63a77094a9eed3d336669d6dad86a1c366c8f200bad5113af3ba9e8ad3b32572
+PASS truth-release: 39 programs match harness/truth/build-
+63a77094a9eed3d336669d6dad86a1c366c8f200bad5113af3ba9e8ad3b32572
+PASS truth-release: 39 programs match harness/truth/build-
+63a77094a9eed3d336669d6dad86a1c366c8f200bad5113af3ba9e8ad3b32572

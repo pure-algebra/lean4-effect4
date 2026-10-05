@@ -1,0 +1,8 @@
+RED CONTROL C: the run record names other modules and another runtime than this host run
+changed builds.4.0.1.modules.sha256 and builds.4.0.1.runtime.bun in the record
+FAIL truth-release: harness/truth/build-ledger.run.json: builds.4.0.1.modules.sha256: recorded "0000000000000000000000000000000000000000000000000000000000000000", this run "60a2893025fd06a11a662eac63e733b3fe266e9b0d6c7f0f5019d57b16dbf86e"; `make gen-truth-ledger` writes the record of this host run
+FAIL truth-release: harness/truth/build-ledger.run.json: builds.4.0.1.runtime.bun: recorded "1.4.1", this run "1.4.2"; `make gen-truth-ledger` writes the record of this host run
+truth-release: 2 finding(s); compare harness/truth/build-ledger.tsv with .lake/truth-release/observed.tsv, and read the runner's table in .lake/truth-release/release/harness/truth/result.md
+make: *** [.lake/check/truth-release] Error 1
+make exit status: 2
+harness/truth/build-ledger.run.json is put back from the kept copy: git diff is empty

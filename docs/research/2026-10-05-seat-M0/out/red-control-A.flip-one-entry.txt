@@ -1,0 +1,8 @@
+RED CONTROL A (the brief's): one entry of the ledger is flipped
+changed p42 | 4.0.1 exit: "yes" -> "no: x"
+FAIL truth-release: line 9: p42: an entry is not `yes`, so the line needs a reason and a slice
+FAIL truth-release: p42: 4.0.1 exit: the ledger says "no: x", observed "yes"
+truth-release: 2 finding(s); compare harness/truth/build-ledger.tsv with .lake/truth-release/observed.tsv, and read the runner's table in .lake/truth-release/release/harness/truth/result.md
+make: *** [.lake/check/truth-release] Error 1
+make exit status: 2
+harness/truth/build-ledger.tsv is put back from the kept copy: git diff is empty
