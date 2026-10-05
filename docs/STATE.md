@@ -246,7 +246,8 @@ Open at this landing:
      ([its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md));
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
      The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
-     No seat has it yet: two seats run;
+     Its design is [written](research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md)
+     for Codex's review, with five open choices. No seat has it yet: two seats run;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
      its law, and the printed form. It follows T5 and the mask (row 251).
 
@@ -274,7 +275,8 @@ Open at this landing:
   `take` and `drop`, the typing of `sameHandle` by the raw head, and a list of number literals
   on the target, whose literal type does not widen under tsgo 7;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
-  (rows 244 to 246). Its slice follows those two;
+  (rows 244 to 246). Its slice follows T5, and
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md) is written ahead;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
