@@ -1,0 +1,37 @@
+{
+ "effect": "3.22.2",
+ "p1_bStartsAtOnce": {
+  "aGot": 1,
+  "bGot": 5,
+  "order": "A got 1, B got 2, B got 3, B got 4, B got 5, B got 6"
+ },
+ "p1_bYieldsFirst": {
+  "aGot": 1,
+  "bGot": 5,
+  "order": "A got 1, B got 2, B got 3, B got 4, B got 5, B got 6"
+ },
+ "p2_min3": {
+  "min": 3,
+  "max": 5,
+  "afterEachArrival": [
+   "waiting",
+   "waiting",
+   [
+    1,
+    2,
+    3
+   ]
+  ]
+ },
+ "p2_min2": {
+  "min": 2,
+  "max": 5,
+  "afterEachArrival": [
+   "waiting",
+   [
+    1,
+    2
+   ]
+  ]
+ }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "url": "https://www.w3.org/TR/2019/REC-hr-time-2-20191121/",
+    "file": "w3c-hr-time2.html",
+    "retrieved_at_utc": "2026-10-05T15:07:12.450390+00:00",
+    "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+  },
+  {
+    "url": "https://www.w3.org/TR/2026/WD-hr-time-3-20260901/",
+    "file": "w3c-hr-time3-20260901.html",
+    "retrieved_at_utc": "2026-10-05T15:07:12.460194+00:00",
+    "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+  },
+  {
+    "url": "https://nodejs.org/docs/v26.10.0/api/process.html",
+    "file": "node-process-v26.10.0.html",
+    "retrieved_at_utc": "2026-10-05T15:07:12.460741+00:00",
+    "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+  },
+  {
+    "url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/clock_gettime.html",
+    "file": "posix-clock-gettime.html",
+    "retrieved_at_utc": "2026-10-05T15:07:12.461081+00:00",
+    "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+  }
+]

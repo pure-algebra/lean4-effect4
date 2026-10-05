@@ -735,7 +735,11 @@ def registry : Registry where
         `Effect4.Program.Typed.memoBuild_extension]
       openParts := ["FnName retires: the store runs binder terms since T2, and a NativeOp row hands it its name's lowering, which runs the name's kernel on every number (kernel_term_agrees); the rows carry terms at T3b (decisions row 43; state plan T3b)",
         "the read-modify-write rows as templates: the eight rows stay at refOf nat, and modify answering B while storing A, until their binder terms land (decisions rows 42–43; state plan T3b); the Ref and Deferred rows are templates and Deferred.make carries its type arguments since T3a",
-        "the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed (decisions rows 42–43, step 5; state plan T5)"] },
+        "the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed (decisions rows 42–43, step 5; state plan T5)",
+        "fold-typed-atomic-update (proposed claim; store-typing): the pure list fold with two binders, the accumulator and the element, at any types; listTake and listDrop only for a demonstrated consumer, and no counted loop: typing, scoping, capture, compilation, printing and exact reading, with Ref.modify one step that answers B and stores A; its first consumer is the Queue's service pass (decisions row 228; after T3b)",
+        "handle-identity-laws (proposed claim; store-typing): the identity of a handle in a term: equality of two Ref handles or two Deferred handles of one kind by identity, never by payload; a cell that holds a list of handles, with membership, fresh allocation and world extension laws, and the identity correspondence in each target's relation (decisions row 229)",
+        "atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)",
+        "scoped-body-substitution-boundary (proposed claim; residual-program-typing): for the first new scoped constructor, the code after a scope runs only after the scope, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227)"] },
     { id := "R5", title := "Services: the service table, layers and provision"
       top := [`Effect4.Program.Provision.build_total]
       openParts := ["lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)",
@@ -754,7 +758,9 @@ def registry : Registry where
     { id := "R7", title := "Retained behaviour: a resolved code entry is typed at its reference's type"
       top := []
       openParts := ["resolve_typed: a resolved code entry is typed at its reference's type, with capture layout fixed at resolution and identity by allocation or structure (decisions row 82, open)",
-        "code-valued services with a capture law, R5's through R7 (decisions row 82)"] },
+        "code-valued services with a capture law, R5's through R7 (decisions row 82)",
+        "the reserved contract of a retained behaviour: its entry, captures, invocation context and lifetime, designed now for the planned Cache, Pool and callback modules; the value form and its evaluator wait for the first of them (decisions row 234)",
+        "posted-body-entry-typed (proposed claim; residual-program-typing): a checked Eff body supplied at a posting site, with its resolved entry, typed lexical environment and selected service policy, stays typed under world extension (decisions rows 82, 225)"] },
     { id := "R8", title := "Runs and faces as named connections: equal to the reference inside a profile, refused outside it"
       top := [`Effect4.Program.read_print, `Effect4.Program.read_exact,
         `Effect4.Program.Agreement.run_eq_meaning, `Effect4.Program.Agreement.loopAgreement,
@@ -788,7 +794,11 @@ def registry : Registry where
         "none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators",
         "per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)",
         "DI-39's six rows not landed",
-        "a composite's contract by a stuttering route (post-Phase C §11.4)"] },
+        "a composite's contract by a stuttering route (post-Phase C §11.4)",
+        "queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230)",
+        "posted-wake-profile-agrees (proposed claim; translation-simulation): one producer's posted delivery, with its dispatch owner, priority, receiver and token, capture time, coalescing and cancellation, agrees with its module expansion; the Queue's producer is first (decisions rows 81, 220, 225; DB-13)",
+        "atomic-attempt-agreement (proposed claim; translation-simulation): the restricted transaction profile against the named release, with flat nesting, immutable payloads and explicit retry; then tx-choice-rollback-union for the retry-only alternative (decisions rows 80, 84, 223, 224)",
+        "fair composition of tickets that are enrolled apart is outside the first profile: the opposing-ticket cycle stays a refused case until an enrolment protocol resolves it (decisions row 223)"] },
     { id := "R11", title := "Resources are released: at most once per registration, exactly once in close order"
       top := [`Effect4.ScopeMachine.runState_complete, `Effect4.ScopeMachine.runState_restore,
         `Effect4.ScopeMachine.runState_prefix, `Effect4.Scope.close_twice,
@@ -796,17 +806,24 @@ def registry : Registry where
       openParts := ["the whole run open: release at most once per registration, counted by identity (DB-07)",
         "the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)",
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
-        "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)"] },
+        "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
+        "saved-mask-restoration (proposed claim; scope-lifetime-finalization): restore reinstates its mask's saved incoming interruptibility on success, failure, interruption and nested entry, and is the identity under a masked caller; cleanup is installed before an interruption can observe an acquired resource or a committed registration (decisions row 227)",
+        "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; a cancellation before consumption withdraws the request and consumes nothing, and a commit stays after it; an old token is inert after rearming (decisions rows 221, 222)"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]
       openParts := ["R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)",
         "stability over the allowed internal decisions, with a named progress observation (not stated)",
-        "divergence by compatible prefixes (DB-03; not stated)"] },
+        "divergence by compatible prefixes (DB-03; not stated)",
+        "driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)",
+        "wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean)",
+        "posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)",
+        "posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)"] },
     { id := "R13", title := "A run's inputs are data: equal recorded inputs give equal replay observations"
       top := [`Effect4.Run.journal_replays]
       openParts := ["load inputs, the environment snapshot and the seed: designed (the 2026-09-10 Config route B), not implemented (decisions rows 51, 83)",
         "supplied values fit the admitted load requirements: restates M5 (loadsTyped, the retired ledger's typedState_load) when Config lands",
-        "the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)"] }
+        "the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)",
+        "clock-unit-compatibility (proposed claim; translation-simulation): exact nanoseconds inside, with every recorded millisecond input kept in meaning by an explicit conversion; public nanosecond readings wait for the target's bigint contract (decisions rows 83, 231)"] }
   ]
   planScope := [`Effect4]
 

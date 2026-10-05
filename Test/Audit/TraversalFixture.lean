@@ -66,7 +66,8 @@ def isOption : Ty → Bool
   | .option _ => true
   | .never | .unit | .nat | .int | .string | .bool | .handle _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ | .union _ _ | .lit _ | .refOf _
-  | .deferredOf _ _ | .var _ | .unknown => false
+  | .deferredOf _ _ | .var _ | .unknown | .record _ | .map _ _ | .tuple _ | .app _ _ | .null
+  | .undefined | .number | .bytes => false
 
 /-- Structural recursion on the family. -/
 def depth : Ty → Nat

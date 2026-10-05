@@ -1,0 +1,20 @@
+Lynch and Vaandrager, Forward and Backward Simulations I: Untimed Systems.
+Information and Computation 121(2), 1995, pp. 214-233; CWI final PDF.
+Source: https://ir.cwi.nl/pub/1393/1393D.pdf
+SHA256: fac099bf3462b90c58b8ed1077abef0808f5412f21879a5d1024ecdfdd5ff050
+
+Inspected definitions:
+- Section 2.1, printed pp. 216-217: states, starting states, actions, steps, executions, external traces, and finite moves.
+- Section 3.1, printed p. 218: refinement maps starting states and matches each step with a move carrying the same external actions.
+- Section 3.2, printed p. 219: forward simulation uses a state relation, related starting states, and matching moves from each related state.
+- Section 6, printed pp. 227-228: the restricted step obligations use separately established invariants.
+
+Effect4 application:
+Define the Queue observation and initialization relation before hiding private state or helper steps.
+The existing store Projects structure has a narrower one-operation correspondence.
+The paper supplies a reference for the proposed connection; no theorem from it proves an Effect4 result.
+Deleting internal actions from traces does not supply request fairness or a divergence-sensitive observation.
+Driver budget splitting still needs the existing command semantics and its own continuation equation.
+
+Inspection uses pdftotext -layout output retained beside the PDF.
+downloads.json records the exact command, source, retrieval time, headers path, byte count, and both hashes.

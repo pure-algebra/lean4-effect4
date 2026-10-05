@@ -1,0 +1,178 @@
+{
+  "verified_at_utc": "2026-10-05T15:23:07.444095+00:00",
+  "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/verify-literature.py",
+  "downloads_verified": [
+    {
+      "file": "literature/stm/harris-2005-composable-memory-transactions.pdf",
+      "sha256": "3072226686dce29a00d483e76eaa2ca92ea8f6748a11a26966c3b18f0df4dae3",
+      "url": "https://www.microsoft.com/en-us/research/wp-content/uploads/2005/01/2005-ppopp-composable.pdf"
+    },
+    {
+      "file": "literature/stm/guerraoui-kapalka-2008-opacity.pdf",
+      "sha256": "145510bcd897695456c34e61b0a6ef39cd322fc09f4ebb9ef2df39a2d2523972",
+      "url": "https://kapalka.eu/files/opacity-ppopp08.pdf"
+    },
+    {
+      "file": "literature/stm/ghc-9.12.2-STM.h",
+      "sha256": "c5a26d0f8c50645eff52daacefb4ae7a1d65a67307a83bff5f70d4c7115eac90",
+      "url": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/rts/STM.h"
+    },
+    {
+      "file": "literature/stm/ghc-9.12.2-STM.c",
+      "sha256": "cdb5d71b29b85ef9c5b598c7d17114ffdae7e4976e7120c1f29d1dc1ffd5cf0c",
+      "url": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/rts/STM.c"
+    },
+    {
+      "file": "literature/stm/ghc-9.12.2-Sync.hs",
+      "sha256": "0e184aee23032845d03ecd192d90e9e2e0f654ef6f55e0ad1b171f3456d1e79f",
+      "url": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/libraries/ghc-internal/src/GHC/Internal/Conc/Sync.hs"
+    },
+    {
+      "file": "literature/tasks/resources/marlow-async-pldi2001.pdf",
+      "sha256": "710fa03d8578572179a05225ee296a240887f9b2091d7e59b377b838f8fb33b0",
+      "url": "https://simonmar.github.io/bib/papers/async.pdf"
+    },
+    {
+      "file": "literature/tasks/resources/trio-v0.30.0-reference-core.html",
+      "sha256": "efd68ce285e518909ac470c0aaf518230f166981ecca2e038a03a2437e33f2ca",
+      "url": "https://trio.readthedocs.io/en/v0.30.0/reference-core.html"
+    },
+    {
+      "file": "literature/tasks/resources/trio-v0.30.0-reference-lowlevel.html",
+      "sha256": "95277a04186c768656eee1856d32f5e4147893b2f9727cfab6b967b9cb4466be",
+      "url": "https://trio.readthedocs.io/en/v0.30.0/reference-lowlevel.html"
+    },
+    {
+      "file": "literature/tasks/resources/trio-v0.30.0-run.py",
+      "sha256": "91450411fe5d55db3c37e63c6917b571690c1c1318ed15633c74663e4f31ed43",
+      "url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_run.py"
+    },
+    {
+      "file": "literature/tasks/resources/trio-v0.30.0-entry-queue.py",
+      "sha256": "4c02ca7ec3e1726d5d79451349e440eff20607a18294f5135141e9c516efe784",
+      "url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_entry_queue.py"
+    },
+    {
+      "file": "literature/tasks/resources/trio-v0.30.0-parking-lot.py",
+      "sha256": "c1141153f9bd292b444e161eb4ef0f2c70567bcf0ba11bcf90d04d5c164af99d",
+      "url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_parking_lot.py"
+    },
+    {
+      "file": "literature/tasks/resources/posix2024-cond-wait.html",
+      "sha256": "59661e8808655b7d6efdb7455fe752ce705b599b5246e390f7ef15b358230882",
+      "url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_clockwait.html"
+    },
+    {
+      "file": "literature/tasks/resources/posix2024-cond-signal.html",
+      "sha256": "c9cdd8c4a7ddd2c81d6fb9921715f7bcc958ca293f12d352ff5af95b428e33aa",
+      "url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_signal.html"
+    },
+    {
+      "file": "literature/tasks/resources/ghc9.12.2-library-index.html",
+      "sha256": "4ff9e09932bc0eafb95fc9cd80289f8fd2cbe13bf33a0ad9318a019749d7744d",
+      "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/index.html"
+    },
+    {
+      "file": "literature/tasks/resources/ghc9.12.2-Control-Exception.html",
+      "sha256": "362bd205382e44a6b091e6533d2cbf52d9e0bff74398d1ddc0abc32e3b576a89",
+      "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/base-4.21.0.0-8bb5/Control-Exception.html"
+    },
+    {
+      "file": "literature/tasks/resources/ghc9.12.2-Internal-IO.html",
+      "sha256": "ab9c50d119270619c65bb7e6097df9c9799763d6efef6e5af0224cd7bc1496ee",
+      "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/ghc-internal-9.1202.0-a87f/src/GHC.Internal.IO.html"
+    },
+    {
+      "file": "literature/tasks/resources/ghc9.12.2-Exception-Base.html",
+      "sha256": "0563af22604054ad7fc317deecaa374fbcf4a178f197d9fd73f435f7d61f22b5",
+      "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/ghc-internal-9.1202.0-a87f/src/GHC.Internal.Control.Exception.Base.html"
+    },
+    {
+      "file": "literature/tasks/resources/trio-v0.30.0-git-ref.json",
+      "sha256": "0b492c8a514e21bbf7e142f599a5bb089f4b6683da05d0a0bd1ad9e61e3a3681",
+      "url": "https://api.github.com/repos/python-trio/trio/git/ref/tags/v0.30.0"
+    },
+    {
+      "file": "literature/clocks/w3c-hr-time2.html",
+      "sha256": "36ae5edd9829699c45ec69bf85a181509d0053bbdbf48b73228d142f52bcced8",
+      "url": "https://www.w3.org/TR/2019/REC-hr-time-2-20191121/"
+    },
+    {
+      "file": "literature/clocks/w3c-hr-time3-20260901.html",
+      "sha256": "2c263286856eace560a8618be46fd47c18ce99cc7c8daeecfc97f2d9d844ba4d",
+      "url": "https://www.w3.org/TR/2026/WD-hr-time-3-20260901/"
+    },
+    {
+      "file": "literature/clocks/node-process-v26.10.0.html",
+      "sha256": "845ec5d06e1f6aeef3ec3be7f262e638263f71683b535216658acc65b3079452",
+      "url": "https://nodejs.org/docs/v26.10.0/api/process.html"
+    },
+    {
+      "file": "literature/clocks/posix-clock-gettime.html",
+      "sha256": "71b134895b554e33f242b05f3c2a12934109053bbe77af83e814892a5ac3638c",
+      "url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/clock_gettime.html"
+    },
+    {
+      "file": "literature/scopes/handlers-in-scope-2014.pdf",
+      "sha256": "de10648921e657149928e91ec81e8acbda170f1b09bc3e23a80e5986fd73111b",
+      "url": "https://people.cs.kuleuven.be/~tom.schrijvers/Research/papers/haskell2014.pdf"
+    },
+    {
+      "file": "literature/scopes/scoped-effects-esop2024.pdf",
+      "sha256": "a56bb858963838d449cf299b6a4b90b8bc8e82d137df45f4d34d7b685d56eada",
+      "url": "https://www.cs.ox.ac.uk/people/samuel.staton/papers/esop2024.pdf"
+    },
+    {
+      "file": "literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf",
+      "sha256": "fac099bf3462b90c58b8ed1077abef0808f5412f21879a5d1024ecdfdd5ff050",
+      "url": "https://ir.cwi.nl/pub/1393/1393D.pdf"
+    }
+  ],
+  "unavailable_downloads": [
+    {
+      "manifest": "literature/tasks/resources/manifest.json",
+      "url": "https://www.microsoft.com/en-us/research/wp-content/uploads/1980/01/Lampson-and-Redell-Experience-with-Processes-and-Monitors-in-Mesa-CACM-version.pdf",
+      "reason": "HTTP Error 403: Forbidden"
+    }
+  ],
+  "cancellation_cases_checked": 10,
+  "cancellation_runtime_versions": [
+    {
+      "bun": "1.4.2",
+      "effect": "4.0.0-rc.112",
+      "effectDir": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect",
+      "entry": "installed src",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Effect-TS/effect.git",
+        "directory": "packages/effect"
+      }
+    },
+    {
+      "bun": "1.4.2",
+      "effect": "4.0.1",
+      "effectDir": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1",
+      "entry": "installed src",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Effect-TS/effect.git",
+        "directory": "packages/effect"
+      }
+    }
+  ],
+  "local_links_checked": 22,
+  "report_hashes": {
+    "contracts-and-literature.md": "2c4aa82918ff4ed8b4d0413fd17813dc06fa42ae34adf5400dce368e4a15d89f",
+    "review.md": "79b53778e806050718429d2b757e4adc85b1b65b313fc747e5e2a6fc9cdfb194",
+    "foundation-audit.md": "01f1e527f380842d543ed8110eadbfcbf9adedaf06189c0ddaa37a8d11723c93",
+    "literature/stm/contract-findings.md": "d5585ba5f66423aa122f3123a6cd78d45316f6fc91566be2769be8749b7f8b81",
+    "literature/tasks/contracts.md": "d3fb2b93dbdbe0738d9e6fd99b04fba39b29e747bf8e82a549386200c939a4f4",
+    "literature/clocks/review.md": "30329f4cc2781ff3246d1f5577ea612042cb33d2a50dcc1488d6e5de7b08a912",
+    "literature/scopes/review.md": "67232523e81ef7437b8016f2aa683a59278a703220c79a47c020ff58074f0d3c"
+  },
+  "limits": [
+    "Sources inform design; no imported theorem is a project proof",
+    "Downloaded source files were not executed",
+    "Cancellation probes are finite host evidence"
+  ]
+}

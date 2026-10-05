@@ -1,0 +1,1005 @@
+{
+  "python": "3.13.14",
+  "source_sha256": "118299d69bc31765d8aa28b72398cda6c87b3e5534b159cdd46f259984f6e588",
+  "source_unchanged_during_run": true,
+  "checks": [
+    "retry rolls back ticket 1",
+    "unticketed waiters both signalled",
+    "later request consumes 10",
+    "opposite ticket orders force both retries",
+    "both retries roll back payload and ticket removal",
+    "the model quiet condition accepts the blocked cycle",
+    "coordinated ticket order permits atomic composition",
+    "capacity 0 expected offer status",
+    "capacity 0 expected take status",
+    "capacity 1 expected offer status",
+    "capacity 1 expected take status",
+    "orElse mutant=False expected answer",
+    "orElse keeps outer write and rolls back left write",
+    "orElse retains left read dependencies",
+    "orElse mutant=True expected answer",
+    "both alternatives retry on both cells before write 0",
+    "write to alternative 0 signals request",
+    "both alternatives retry on both cells before write 1",
+    "write to alternative 1 signals request",
+    "waiter-only cancellation leaves ticket obstruction",
+    "ticket cleanup signals the follower",
+    "ticket cleanup control lets follower consume"
+  ],
+  "checks_passed": 22,
+  "results": {
+    "enrollment_inside_body": [
+      {
+        "operation": "request 1: enlist then serve",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "writes": [
+          1
+        ],
+        "state": {
+          "store": [
+            [],
+            []
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                0,
+                1,
+                1,
+                1
+              ]
+            ]
+          ],
+          "attempts": 1
+        }
+      },
+      {
+        "operation": "request 2: enlist then serve",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0,
+          1,
+          1,
+          1
+        ],
+        "writes": [
+          1
+        ],
+        "state": {
+          "store": [
+            [],
+            []
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                0,
+                1,
+                1,
+                1
+              ]
+            ],
+            [
+              2,
+              [
+                0,
+                1,
+                1,
+                1
+              ]
+            ]
+          ],
+          "attempts": 2
+        }
+      },
+      {
+        "operation": "offer 10",
+        "status": "ok",
+        "value": null,
+        "signals": [
+          1,
+          2
+        ],
+        "reads": [
+          0,
+          0
+        ],
+        "writes": [
+          0
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            []
+          ],
+          "waiting": [],
+          "attempts": 3
+        }
+      },
+      {
+        "operation": "request 2 retries first",
+        "status": "ok",
+        "value": 10,
+        "signals": [],
+        "reads": [
+          1,
+          0,
+          0,
+          1,
+          1,
+          1
+        ],
+        "writes": [
+          1,
+          0,
+          1
+        ],
+        "state": {
+          "store": [
+            [],
+            []
+          ],
+          "waiting": [],
+          "attempts": 4
+        }
+      }
+    ],
+    "fair_composition_ticket_cycle": [
+      {
+        "operation": "enlist request 1 on ticket cell 2",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          2,
+          2
+        ],
+        "writes": [
+          2
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1
+            ],
+            []
+          ],
+          "waiting": [],
+          "attempts": 1
+        }
+      },
+      {
+        "operation": "enlist request 2 on ticket cell 3",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          3,
+          3
+        ],
+        "writes": [
+          3
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          "waiting": [],
+          "attempts": 2
+        }
+      },
+      {
+        "operation": "enlist request 1 on ticket cell 3",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          3,
+          3
+        ],
+        "writes": [
+          3
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "waiting": [],
+          "attempts": 3
+        }
+      },
+      {
+        "operation": "enlist request 2 on ticket cell 2",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          2,
+          2
+        ],
+        "writes": [
+          2
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "waiting": [],
+          "attempts": 4
+        }
+      },
+      {
+        "operation": "P serves A then B atomically",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          3,
+          2,
+          0,
+          0,
+          2
+        ],
+        "writes": [
+          2,
+          0
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                3,
+                2,
+                0,
+                0,
+                2
+              ]
+            ]
+          ],
+          "attempts": 5
+        }
+      },
+      {
+        "operation": "Q serves B then A atomically",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          2,
+          3,
+          1,
+          1,
+          3
+        ],
+        "writes": [
+          3,
+          1
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                3,
+                2,
+                0,
+                0,
+                2
+              ]
+            ],
+            [
+              2,
+              [
+                2,
+                3,
+                1,
+                1,
+                3
+              ]
+            ]
+          ],
+          "attempts": 6
+        }
+      }
+    ],
+    "coordinated_enrollment_control": [
+      {
+        "operation": "enlist request 1 on both queues in one commit",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          3,
+          3,
+          2,
+          2
+        ],
+        "writes": [
+          3,
+          2
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1
+            ],
+            [
+              1
+            ]
+          ],
+          "waiting": [],
+          "attempts": 1
+        }
+      },
+      {
+        "operation": "enlist request 2 on both queues in one commit",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          3,
+          3,
+          2,
+          2
+        ],
+        "writes": [
+          3,
+          2
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              20
+            ],
+            [
+              1,
+              2
+            ],
+            [
+              1,
+              2
+            ]
+          ],
+          "waiting": [],
+          "attempts": 2
+        }
+      },
+      {
+        "operation": "P serves both queues atomically",
+        "status": "ok",
+        "value": [
+          10,
+          20
+        ],
+        "signals": [],
+        "reads": [
+          3,
+          1,
+          1,
+          3,
+          2,
+          0,
+          0,
+          2
+        ],
+        "writes": [
+          3,
+          1,
+          2,
+          0
+        ],
+        "state": {
+          "store": [
+            [],
+            [],
+            [
+              2
+            ],
+            [
+              2
+            ]
+          ],
+          "waiting": [],
+          "attempts": 3
+        }
+      }
+    ],
+    "capacity_0": [
+      {
+        "operation": "take waits",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0
+        ],
+        "writes": [],
+        "state": {
+          "store": [
+            []
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                0
+              ]
+            ]
+          ],
+          "attempts": 1
+        }
+      },
+      {
+        "operation": "offer 10 capacity 0",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0
+        ],
+        "writes": [],
+        "state": {
+          "store": [
+            []
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                0
+              ]
+            ],
+            [
+              2,
+              [
+                0
+              ]
+            ]
+          ],
+          "attempts": 2
+        }
+      },
+      {
+        "operation": "take retries",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0
+        ],
+        "writes": [],
+        "state": {
+          "store": [
+            []
+          ],
+          "waiting": [
+            [
+              2,
+              [
+                0
+              ]
+            ],
+            [
+              1,
+              [
+                0
+              ]
+            ]
+          ],
+          "attempts": 3
+        }
+      }
+    ],
+    "capacity_1": [
+      {
+        "operation": "take waits",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0
+        ],
+        "writes": [],
+        "state": {
+          "store": [
+            []
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                0
+              ]
+            ]
+          ],
+          "attempts": 1
+        }
+      },
+      {
+        "operation": "offer 10 capacity 1",
+        "status": "ok",
+        "value": null,
+        "signals": [
+          1
+        ],
+        "reads": [
+          0,
+          0
+        ],
+        "writes": [
+          0
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ]
+          ],
+          "waiting": [],
+          "attempts": 2
+        }
+      },
+      {
+        "operation": "take retries",
+        "status": "ok",
+        "value": 10,
+        "signals": [],
+        "reads": [
+          0,
+          0
+        ],
+        "writes": [
+          0
+        ],
+        "state": {
+          "store": [
+            []
+          ],
+          "waiting": [],
+          "attempts": 3
+        }
+      }
+    ],
+    "orElse_keep_left_writes_False": {
+      "status": "ok",
+      "value": [
+        5
+      ],
+      "signals": [],
+      "reads": [
+        0,
+        1,
+        0,
+        0,
+        2
+      ],
+      "writes": [
+        2
+      ],
+      "state": {
+        "store": [
+          [
+            5
+          ],
+          [
+            8
+          ],
+          [
+            99
+          ]
+        ],
+        "waiting": [],
+        "attempts": 1
+      }
+    },
+    "orElse_keep_left_writes_True": {
+      "status": "ok",
+      "value": [],
+      "signals": [],
+      "reads": [
+        0,
+        1,
+        0,
+        0,
+        2
+      ],
+      "writes": [
+        0,
+        2
+      ],
+      "state": {
+        "store": [
+          [],
+          [
+            8
+          ],
+          [
+            99
+          ]
+        ],
+        "waiting": [],
+        "attempts": 1
+      }
+    },
+    "orElse_dependency_0": {
+      "status": "ok",
+      "value": null,
+      "signals": [
+        1
+      ],
+      "reads": [
+        0,
+        0
+      ],
+      "writes": [
+        0
+      ],
+      "state": {
+        "store": [
+          [
+            7
+          ],
+          []
+        ],
+        "waiting": [],
+        "attempts": 2
+      }
+    },
+    "orElse_dependency_1": {
+      "status": "ok",
+      "value": null,
+      "signals": [
+        1
+      ],
+      "reads": [
+        1,
+        1
+      ],
+      "writes": [
+        1
+      ],
+      "state": {
+        "store": [
+          [],
+          [
+            7
+          ]
+        ],
+        "waiting": [],
+        "attempts": 2
+      }
+    },
+    "cancellation_extension": [
+      {
+        "operation": "enlist request 1",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          1,
+          1
+        ],
+        "writes": [
+          1
+        ],
+        "state": {
+          "store": [
+            [],
+            [
+              1
+            ]
+          ],
+          "waiting": [],
+          "attempts": 1
+        }
+      },
+      {
+        "operation": "request 1 serves empty queue",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0,
+          1
+        ],
+        "writes": [],
+        "state": {
+          "store": [
+            [],
+            [
+              1
+            ]
+          ],
+          "waiting": [
+            [
+              1,
+              [
+                0,
+                1
+              ]
+            ]
+          ],
+          "attempts": 2
+        }
+      },
+      {
+        "operation": "HYPOTHETICAL cancellation: remove retry waiter only",
+        "state": {
+          "store": [
+            [],
+            [
+              1
+            ]
+          ],
+          "waiting": [],
+          "attempts": 2
+        }
+      },
+      {
+        "operation": "enlist request 2",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          1,
+          1
+        ],
+        "writes": [
+          1
+        ],
+        "state": {
+          "store": [
+            [],
+            [
+              1,
+              2
+            ]
+          ],
+          "waiting": [],
+          "attempts": 3
+        }
+      },
+      {
+        "operation": "request 2 attempts serve",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          1
+        ],
+        "writes": [],
+        "state": {
+          "store": [
+            [],
+            [
+              1,
+              2
+            ]
+          ],
+          "waiting": [
+            [
+              2,
+              [
+                1
+              ]
+            ]
+          ],
+          "attempts": 4
+        }
+      },
+      {
+        "operation": "offer 10",
+        "status": "ok",
+        "value": null,
+        "signals": [],
+        "reads": [
+          0,
+          0
+        ],
+        "writes": [
+          0
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              1,
+              2
+            ]
+          ],
+          "waiting": [
+            [
+              2,
+              [
+                1
+              ]
+            ]
+          ],
+          "attempts": 5
+        }
+      },
+      {
+        "operation": "request 2 retries",
+        "status": "retry",
+        "value": null,
+        "signals": [],
+        "reads": [
+          1
+        ],
+        "writes": [],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              1,
+              2
+            ]
+          ],
+          "waiting": [
+            [
+              2,
+              [
+                1
+              ]
+            ]
+          ],
+          "attempts": 6
+        }
+      },
+      {
+        "operation": "CONTROL remove cancelled ticket by committed write",
+        "status": "ok",
+        "value": null,
+        "signals": [
+          2
+        ],
+        "reads": [
+          1,
+          1
+        ],
+        "writes": [
+          1
+        ],
+        "state": {
+          "store": [
+            [
+              10
+            ],
+            [
+              2
+            ]
+          ],
+          "waiting": [],
+          "attempts": 7
+        }
+      },
+      {
+        "operation": "request 2 retries after ticket cleanup",
+        "status": "ok",
+        "value": 10,
+        "signals": [],
+        "reads": [
+          1,
+          0,
+          0,
+          1
+        ],
+        "writes": [
+          1,
+          0
+        ],
+        "state": {
+          "store": [
+            [],
+            []
+          ],
+          "waiting": [],
+          "attempts": 8
+        }
+      }
+    ]
+  },
+  "limits": "Finite Python mirror. Cancellation operation is hypothetical and explicitly absent from TxModel. No Lean, runtime, theorem, or production reachability claim."
+}

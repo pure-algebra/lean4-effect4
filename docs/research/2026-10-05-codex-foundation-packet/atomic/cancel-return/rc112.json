@@ -1,0 +1,208 @@
+{
+  "evidence": "Finite deterministic host probe, no Lean proof",
+  "runtime": {
+    "bun": "1.4.2",
+    "effect": "4.0.0-rc.112",
+    "effectDir": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect",
+    "entry": "installed src",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Effect-TS/effect.git",
+      "directory": "packages/effect"
+    }
+  },
+  "sourceHashes": {
+    "package.json": "0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d",
+    "src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "src/Deferred.ts": "78b5d3cd2ad37f9e4f8ebaf465c9375bb982a00bd22a9f3d50ed02e0cb65f0e9",
+    "src/Queue.ts": "dc355d1a09662ae7b023c98ad47b7fe71051becaf9d461f244c37ad0a4d3dc35"
+  },
+  "precommitControl": {
+    "name": "cancel-before-consumption",
+    "target": {
+      "tag": "Failure",
+      "reasons": [
+        "Interrupt"
+      ]
+    },
+    "canceller": {
+      "tag": "Success",
+      "value": null
+    },
+    "events": [],
+    "laterPoll": {
+      "tag": "Some",
+      "value": "retained-message"
+    },
+    "queueSize": 0,
+    "tasksExecuted": 0
+  },
+  "cases": [
+    {
+      "style": "uninterruptible",
+      "cancel": false,
+      "incomingMasked": false,
+      "events": [
+        {
+          "event": "state-consumed",
+          "value": "message"
+        },
+        {
+          "event": "commit-observed-control"
+        },
+        {
+          "event": "observer-or-canceller-finished"
+        },
+        {
+          "event": "protected-body-ready",
+          "value": "message"
+        },
+        {
+          "event": "operation-exit",
+          "tag": "Success",
+          "reasons": [],
+          "value": "message"
+        },
+        {
+          "event": "caller-continuation-entered",
+          "value": "message"
+        }
+      ],
+      "target": {
+        "tag": "Success",
+        "value": "message"
+      },
+      "canceller": {
+        "tag": "Success",
+        "value": null
+      },
+      "queueSize": 0,
+      "tasksExecuted": 0
+    },
+    {
+      "style": "uninterruptible",
+      "cancel": true,
+      "incomingMasked": false,
+      "events": [
+        {
+          "event": "state-consumed",
+          "value": "message"
+        },
+        {
+          "event": "cancel-requested-by-separate-fiber"
+        },
+        {
+          "event": "protected-body-ready",
+          "value": "message"
+        },
+        {
+          "event": "operation-exit",
+          "tag": "Failure",
+          "reasons": [
+            "Interrupt"
+          ],
+          "value": null
+        },
+        {
+          "event": "observer-or-canceller-finished"
+        }
+      ],
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "canceller": {
+        "tag": "Success",
+        "value": null
+      },
+      "queueSize": 0,
+      "tasksExecuted": 0
+    },
+    {
+      "style": "uninterruptibleMask",
+      "cancel": true,
+      "incomingMasked": false,
+      "events": [
+        {
+          "event": "state-consumed",
+          "value": "message"
+        },
+        {
+          "event": "cancel-requested-by-separate-fiber"
+        },
+        {
+          "event": "protected-body-ready",
+          "value": "message"
+        },
+        {
+          "event": "operation-exit",
+          "tag": "Failure",
+          "reasons": [
+            "Interrupt"
+          ],
+          "value": null
+        },
+        {
+          "event": "observer-or-canceller-finished"
+        }
+      ],
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "canceller": {
+        "tag": "Success",
+        "value": null
+      },
+      "queueSize": 0,
+      "tasksExecuted": 0
+    },
+    {
+      "style": "uninterruptibleMask",
+      "cancel": true,
+      "incomingMasked": true,
+      "events": [
+        {
+          "event": "state-consumed",
+          "value": "message"
+        },
+        {
+          "event": "cancel-requested-by-separate-fiber"
+        },
+        {
+          "event": "protected-body-ready",
+          "value": "message"
+        },
+        {
+          "event": "operation-exit",
+          "tag": "Success",
+          "reasons": [],
+          "value": "message"
+        },
+        {
+          "event": "caller-continuation-entered",
+          "value": "message"
+        },
+        {
+          "event": "observer-or-canceller-finished"
+        }
+      ],
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "canceller": {
+        "tag": "Success",
+        "value": null
+      },
+      "queueSize": 0,
+      "tasksExecuted": 0
+    }
+  ]
+}

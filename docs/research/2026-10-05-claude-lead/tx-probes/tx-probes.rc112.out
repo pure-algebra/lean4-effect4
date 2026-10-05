@@ -1,0 +1,1 @@
+{"effect":"4.0.0-rc.112","tx1_staleReadThenRetry":{"result":"waiting","runs":1},"tx2_wakeOnReadOrEqualWrite":{"runsBefore":1,"runsAfterReads":4,"runsAfterEqualWrite":5,"runsAtEnd":6,"result":7},"tx4_pairsSeen":{"seen":[[0,-1],[1,-1]],"result":0},"tx5_twoCommits":[{"gap":false,"result":2,"runs":2},{"gap":true,"result":1,"runs":2}]}

@@ -1,0 +1,54 @@
+{
+  "runtime": "bun 1.4.2",
+  "scope": "Finite live Clock implementation runs with process-local Date.now simulated 5-second backwards adjustment. No TestClock.setTime, OS clock change, timers, or system setting changes. Not a bug claim.",
+  "results": [
+    {
+      "version": "4.0.0-rc.112",
+      "before": {
+        "wallMillis": 1700000000000,
+        "wallNanos": "1700000000000000000",
+        "monotonicNanos": "20943208"
+      },
+      "control": {
+        "wallMillis": 1700000000000,
+        "wallNanos": "1700000000000049542",
+        "monotonicNanos": "20986125"
+      },
+      "adjusted": {
+        "wallMillis": 1699999995000,
+        "wallNanos": "1699999995000000000",
+        "monotonicNanos": "20997708"
+      },
+      "checks": {
+        "controlWallNondecreasing": true,
+        "controlMonotonicNondecreasing": true,
+        "hostWallWentBack": true,
+        "monotonicDidNotGoBack": true
+      }
+    },
+    {
+      "version": "4.0.1",
+      "before": {
+        "wallMillis": 1700000000000,
+        "wallNanos": "1700000000000000000",
+        "monotonicNanos": "38810833"
+      },
+      "control": {
+        "wallMillis": 1700000000000,
+        "wallNanos": "1700000000000045750",
+        "monotonicNanos": "38850625"
+      },
+      "adjusted": {
+        "wallMillis": 1699999995000,
+        "wallNanos": "1699999995000000000",
+        "monotonicNanos": "38864792"
+      },
+      "checks": {
+        "controlWallNondecreasing": true,
+        "controlMonotonicNondecreasing": true,
+        "hostWallWentBack": true,
+        "monotonicDidNotGoBack": true
+      }
+    }
+  ]
+}

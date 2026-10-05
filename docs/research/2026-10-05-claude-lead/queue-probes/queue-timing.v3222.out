@@ -1,0 +1,1 @@
+{"effect":"3.22.2","p5_batchOneToTwo":[{"gap":false,"taker":[1],"left":1},{"gap":true,"taker":[1],"left":1}],"p6_slidingOne":[{"gap":false,"taker":1,"left":1},{"gap":true,"taker":1,"left":1}],"p7_droppingOne":[{"gap":false,"taker":1,"offers":[true,true],"left":1},{"gap":true,"taker":1,"offers":[true,true],"left":1}]}

@@ -1,0 +1,107 @@
+[
+  {
+    "file": "marlow-async-pldi2001.pdf",
+    "url": "https://simonmar.github.io/bib/papers/async.pdf",
+    "final_url": "https://simonmar.github.io/bib/papers/async.pdf",
+    "bytes": 263410,
+    "sha256": "710fa03d8578572179a05225ee296a240887f9b2091d7e59b377b838f8fb33b0",
+    "content_type": "application/pdf"
+  },
+  {
+    "file": "mesa-cacm1980.pdf",
+    "url": "https://www.microsoft.com/en-us/research/wp-content/uploads/1980/01/Lampson-and-Redell-Experience-with-Processes-and-Monitors-in-Mesa-CACM-version.pdf",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "trio-v0.30.0-reference-core.html",
+    "url": "https://trio.readthedocs.io/en/v0.30.0/reference-core.html",
+    "final_url": "https://trio.readthedocs.io/en/v0.30.0/reference-core.html",
+    "bytes": 486060,
+    "sha256": "efd68ce285e518909ac470c0aaf518230f166981ecca2e038a03a2437e33f2ca",
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "file": "trio-v0.30.0-reference-lowlevel.html",
+    "url": "https://trio.readthedocs.io/en/v0.30.0/reference-lowlevel.html",
+    "final_url": "https://trio.readthedocs.io/en/v0.30.0/reference-lowlevel.html",
+    "bytes": 274714,
+    "sha256": "95277a04186c768656eee1856d32f5e4147893b2f9727cfab6b967b9cb4466be",
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "file": "trio-v0.30.0-run.py",
+    "url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_run.py",
+    "final_url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_run.py",
+    "bytes": 124064,
+    "sha256": "91450411fe5d55db3c37e63c6917b571690c1c1318ed15633c74663e4f31ed43",
+    "content_type": "text/plain; charset=utf-8"
+  },
+  {
+    "file": "trio-v0.30.0-entry-queue.py",
+    "url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_entry_queue.py",
+    "final_url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_entry_queue.py",
+    "bytes": 9427,
+    "sha256": "4c02ca7ec3e1726d5d79451349e440eff20607a18294f5135141e9c516efe784",
+    "content_type": "text/plain; charset=utf-8"
+  },
+  {
+    "file": "trio-v0.30.0-parking-lot.py",
+    "url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_parking_lot.py",
+    "final_url": "https://raw.githubusercontent.com/python-trio/trio/v0.30.0/src/trio/_core/_parking_lot.py",
+    "bytes": 11970,
+    "sha256": "c1141153f9bd292b444e161eb4ef0f2c70567bcf0ba11bcf90d04d5c164af99d",
+    "content_type": "text/plain; charset=utf-8"
+  },
+  {
+    "file": "posix2024-cond-wait.html",
+    "url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_clockwait.html",
+    "final_url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_clockwait.html",
+    "bytes": 27790,
+    "sha256": "59661e8808655b7d6efdb7455fe752ce705b599b5246e390f7ef15b358230882",
+    "content_type": "text/html; charset=UTF-8"
+  },
+  {
+    "file": "posix2024-cond-signal.html",
+    "url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_signal.html",
+    "final_url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/pthread_cond_signal.html",
+    "bytes": 13372,
+    "sha256": "c9cdd8c4a7ddd2c81d6fb9921715f7bcc958ca293f12d352ff5af95b428e33aa",
+    "content_type": "text/html; charset=UTF-8"
+  },
+  {
+    "file": "ghc9.12.2-library-index.html",
+    "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/index.html",
+    "final_url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/index.html",
+    "bytes": 300634,
+    "sha256": "4ff9e09932bc0eafb95fc9cd80289f8fd2cbe13bf33a0ad9318a019749d7744d",
+    "content_type": "text/html"
+  },
+  {
+    "file": "ghc9.12.2-Control-Exception.html",
+    "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/base-4.21.0.0-8bb5/Control-Exception.html",
+    "final_url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/base-4.21.0.0-8bb5/Control-Exception.html",
+    "bytes": 343847,
+    "sha256": "362bd205382e44a6b091e6533d2cbf52d9e0bff74398d1ddc0abc32e3b576a89"
+  },
+  {
+    "file": "ghc9.12.2-Internal-IO.html",
+    "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/ghc-internal-9.1202.0-a87f/src/GHC.Internal.IO.html",
+    "final_url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/ghc-internal-9.1202.0-a87f/src/GHC.Internal.IO.html",
+    "bytes": 176085,
+    "sha256": "ab9c50d119270619c65bb7e6097df9c9799763d6efef6e5af0224cd7bc1496ee"
+  },
+  {
+    "file": "ghc9.12.2-Exception-Base.html",
+    "url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/ghc-internal-9.1202.0-a87f/src/GHC.Internal.Control.Exception.Base.html",
+    "final_url": "https://downloads.haskell.org/ghc/9.12.2/docs/libraries/ghc-internal-9.1202.0-a87f/src/GHC.Internal.Control.Exception.Base.html",
+    "bytes": 154707,
+    "sha256": "0563af22604054ad7fc317deecaa374fbcf4a178f197d9fd73f435f7d61f22b5"
+  },
+  {
+    "file": "trio-v0.30.0-git-ref.json",
+    "url": "https://api.github.com/repos/python-trio/trio/git/ref/tags/v0.30.0",
+    "final_url": "https://api.github.com/repos/python-trio/trio/git/ref/tags/v0.30.0",
+    "bytes": 343,
+    "sha256": "0b492c8a514e21bbf7e142f599a5bb089f4b6683da05d0a0bd1ad9e61e3a3681"
+  }
+]

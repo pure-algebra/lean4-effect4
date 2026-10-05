@@ -16,7 +16,8 @@ namespace Test.Audit.ExhaustiveFixture
 
 open Effect4.Program (Ty Term)
 
-/-- Twenty arms, no wildcard: appending a constructor to `Ty` refuses this definition. -/
+/-- Every constructor of `Ty` named, no wildcard: appending a constructor refuses this
+definition. The data wave of 2026-10-03 appended the last eight arms. -/
 def catchAllAbsent : Ty → Nat
   | .never => 0
   | .unit => 1
@@ -38,6 +39,14 @@ def catchAllAbsent : Ty → Nat
   | .deferredOf _ _ => 17
   | .var _ => 18
   | .unknown => 19
+  | .record _ => 20
+  | .map _ _ => 21
+  | .tuple _ => 22
+  | .app _ _ => 23
+  | .null => 24
+  | .undefined => 25
+  | .number => 26
+  | .bytes => 27
 
 /-- The same match closed by a wildcard: appending a constructor leaves it compiling. -/
 def catchAllPresent : Ty → Nat
@@ -56,5 +65,9 @@ def onTerm : Term → Nat
   | .var index => index
   | .lit _ => 0
   | .app _ _ => 1
+  | .record _ _ _ => 2
+  | .field _ _ _ => 3
+  | .recordSet _ _ _ => 4
+  | .tupleAt _ _ => 5
 
 end Test.Audit.ExhaustiveFixture

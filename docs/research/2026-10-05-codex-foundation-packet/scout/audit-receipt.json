@@ -1,0 +1,66 @@
+{
+  "utc": "2026-10-05T14:45:13.145479+00:00",
+  "kind": "finite host probes plus source audit",
+  "reviewedDocument": {
+    "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/transactions-and-clock.md",
+    "sha256": "06ba7be3bcfc28b5f6429886c6572312a0ede0b5e1be45e803f388c3b73dd1c1",
+    "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/transactions-and-clock.snapshot.md"
+  },
+  "executions": [
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/composition.mjs rc112",
+      "exitCode": 0,
+      "assertions": "output matches expected controls",
+      "output": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/composition.rc112.out"
+    },
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/composition.mjs v401",
+      "exitCode": 0,
+      "assertions": "output matches expected controls",
+      "output": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/composition.v401.out"
+    },
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/alternatives-v3.mjs",
+      "exitCode": 0,
+      "assertions": "passed",
+      "output": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/alternatives-v3.out"
+    }
+  ],
+  "scope": {
+    "compiler": "no compiler invoked; Bun 1.4.2 loader",
+    "schedules": "default runtime, bounded; no custom scheduler",
+    "limitations": [
+      "No Lean build or proof",
+      "No scheduler liveness claim",
+      "No active repository edits",
+      "No immutable-payload rollback defect claimed",
+      "Mutable payload case lies outside snapshot purity premise"
+    ]
+  },
+  "corrections": [
+    {
+      "id": "nested-tx",
+      "target": "F6 pattern 4",
+      "observation": "Caught nested tx failure retains the shared write; uncaught outer failure rolls it back. SQL nesting instead has explicit savepoints.",
+      "action": "Keep shared bracket shape separate from nesting and rollback contract."
+    },
+    {
+      "id": "caught-retry",
+      "target": "F5 pure control versus Effect admission",
+      "observation": "Catching txRetry allows handler and following effects, but sticky retry flag reruns the outer body.",
+      "action": "Either exclude cause-catching retry from admission or specify its flag and replay behavior."
+    },
+    {
+      "id": "alternative-name",
+      "target": "TxModel.orElse comment and F6 alternatives",
+      "observation": "The model combines left-read retention with left-write rollback and retry-only fallback. In Effect 3.22.2 orElse resets reads and writes and also handles failure; orTry retains writes.",
+      "action": "Describe the model as its own proposed alternative and remove exact Effect 3 attribution."
+    },
+    {
+      "id": "payload-ownership",
+      "target": "F4/F6 snapshot rollback wording",
+      "observation": "In-place object mutation survives failure with version unchanged; replacement through TxRef.set is rolled back.",
+      "action": "State immutable payload or explicit heap ownership as a target-profile premise."
+    }
+  ]
+}

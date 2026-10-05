@@ -1,0 +1,18 @@
+{
+  "time_utc": "2026-10-05T14:44:14.693384+00:00",
+  "files": {
+    "tx-probes/TxModel.lean": {
+      "sha256": "118299d69bc31765d8aa28b72398cda6c87b3e5534b159cdd46f259984f6e588",
+      "mtime_ns": 1791210896559644610
+    },
+    "transactions-and-clock.md": {
+      "sha256": "06ba7be3bcfc28b5f6429886c6572312a0ede0b5e1be45e803f388c3b73dd1c1",
+      "mtime_ns": 1791211265518641906
+    },
+    "queues-review.md": {
+      "sha256": "b8790e2593913dbe3065ef233557a5ca9294a4b488e954bb4cbd560296802e7b",
+      "mtime_ns": 1791211340356609016
+    }
+  },
+  "model_matches_tested_source": true
+}

@@ -1,0 +1,126 @@
+The coordinator should keep the proposed shared wrapper, but strengthen its queue acceptance cases.
+The current controls establish unticketed atomic composition and isolated ticket fairness separately.
+They do not establish their combination or the full queue profile.
+
+Evidence and scope
+
+The source is TxModel.lean in docs/research/2026-10-05-claude-lead/tx-probes/.
+Declaration anchors below refer to namespace TxModel in that file.
+The model imports no Effect4 declaration and explicitly excludes fibers, interruption, and signal delivery.
+Its saved output is (137257, true), from depth six over the seven entries of bodies.
+Those entries include scalar take, offer at capacity one, transfer, and takeEither.
+They contain no enlist, serve, cancellation, or capacity-zero offer.
+attemptWith drives that exploration; it repeats the core rule of attempt rather than calling it.
+No Lean or production runtime was run in this review.
+Python 3.13.14 passes 22 assertions on finite mirrors, controls, and one explicit cancellation extension.
+
+1. Fair atomic composition needs a defined ticket-enrollment protocol.
+
+Anchors: enlist, serve, ticketTrace, transfer, transferTrace, attempt.
+Plan: transactions-and-clock.md F5, F6 pattern 2, proposal 6.
+
+The note correctly calls pattern 2 a candidate and says no queue serving both uses exists yet.
+This is a material acceptance gap, not a refutation of a completed implementation.
+
+First witness: placing enrollment inside the retrying body loses arrival order.
+P attempts enlist(ticketCell,P) followed by serve(emptyQueue,ticketCell,P).
+It retries, so attempt discards its ticket write.
+Q runs the same body later; it also retries with no committed ticket.
+An offer writes 10 and signals both requests.
+If Q retries first, Q enrolls and consumes 10 before P.
+The complete trace has four attempts and no cancellation.
+
+The existing ticketTrace avoids this by committing enlist in a separate attempt.
+That separate commit is part of the fairness protocol, not an ordinary retrying body.
+
+Second witness: separately committed tickets can create a cycle across two ready queues.
+Queues A and B hold [10] and [20].
+P enrolls on A, Q on B, P on B, and Q on A.
+The ticket cells become A:[P,Q] and B:[Q,P].
+P atomically serves A then B; its tentative first service succeeds, but B has Q first.
+P retries, restoring A's message and its ticket.
+Q atomically serves B then A; A still has P first, so Q also retries and restores B.
+Both payloads and all tickets remain. Neither attempt commits or signals a waiter.
+Reevaluating either body still retries, so the model's quiet predicate accepts this blocked state.
+That does not contradict quiet; quiet is not a progress property.
+
+Positive control: commit each request's two enrollments together, in the same order on both queues.
+P then serves both queues in one successful attempt and receives [10,20].
+
+Smallest plan correction: retain transferTrace as unticketed composition evidence.
+Before claiming one fair queue definition serves both uses, test both witnesses above.
+Specify enrollment scope, identity, rollback, and the admitted composition order.
+If coordination of enrollment is required, state that condition rather than assuming arbitrary composition.
+
+2. The current queue bodies do not implement capacity-zero rendezvous.
+
+Anchors: offer, take, queueTrace, bodies.
+Plan: F5's queue instance versus the queues review's admitted capacity-zero profile.
+
+Trace: take an empty queue; offer 10 at capacity zero; retry the take.
+Both requests wait on the same unchanged cell, and no step signals either one.
+The predicate in offer is length >= cap, so capacity zero always chooses retry.
+Generic read-set registration introduces no pending-offer value that take can consume.
+
+Positive control: capacity one lets the offer commit, signal the take, and deliver 10.
+
+Smallest plan correction: state positive capacity as the current queue-instance domain.
+For capacity zero, retain a separate pending-offer protocol and its acknowledgment/cancellation contract,
+or explicitly reject that configuration in this candidate.
+This does not show that transactions cannot express rendezvous; these two bodies do not express it.
+
+3. Ticket cleanup is additional state beyond generic retry deregistration.
+
+Anchors: World.waiting, attempt, enlist, serve, ticketTrace.
+Plan: F6 pattern 1 and F8's shared cleanup contract.
+
+Interruption is explicitly excluded from TxModel; no current cancellation declaration is defective.
+The following is a hypothetical extension that removes only a request from World.waiting.
+
+P commits its ticket and waits on an empty queue, then that cancellation removes its generic waiter.
+Q commits a later ticket and attempts serve, which reads only the ticket cell and retries.
+An offer writes 10 to the queue cell. It cannot signal Q, whose head ticket is still P.
+Q retries and remains blocked beside the buffered message.
+
+Positive control: remove P's ticket by a committed transaction.
+The ticket-cell write signals Q, and its next attempt consumes 10.
+
+Smallest plan correction: the wrapper contract must account for committed object enrollment,
+or restrict its cleanup claim to bodies without such enrollment.
+Test cancellation between enrollment and the first serve attempt, and after signalling but before retry.
+Do not generalize the model's absent interruption semantics into one completed cleanup law.
+
+4. orElse passes the stronger rollback and dependency controls.
+
+Anchors: orElse, Acc, get, put, eitherTrace, attempt.
+
+Initial store: source [5], full target [8], outer cell [].
+Write [99] to the outer cell before entering orElse.
+The left branch tentatively takes 5, then retries when offering to the full target.
+The right branch reads the source.
+Observed result: [5]; final store [[5],[8],[99]]; only the outer cell is committed as written.
+The read dependency set retains both queues and the outer cell.
+A planted mutant that runs the right branch on the left's modified store returns [] and loses 5.
+The detector distinguishes that mutant from the inspected implementation.
+
+When both alternative takes retry, the wait set contains both queue cells.
+Writing either cell signals the request in separate positive checks.
+No orElse defect was found in this tested fragment.
+The original eitherTrace did not test left-branch writes before retry; this control does.
+
+Meaning of the generic claim
+
+The snapshot law needs complete read tracking: all store-dependent behavior uses the recorded footprint.
+TxM is represented as Acc -> Step, so the finite model does not enforce that discipline by its type.
+The inspected bodies use get and put, which record their accesses.
+The planned admission/representation must retain that premise before claiming the law for any body.
+No universal wrapper theorem, cancellation theorem, fairness theorem, or production reachability result follows here.
+
+Reproduction
+
+Command: python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/model/probes.py
+Exit: 0
+Output: {"checks_passed": 22, "python": "3.13.14", "source_sha256": "118299d69bc31765d8aa28b72398cda6c87b3e5534b159cdd46f259984f6e588", "source_unchanged_during_run": true}
+The executable holds exact inputs; results.json retains each state, reply, read/write set, and signal.
+TxModel.snapshot.lean and TxModel.snapshot.out retain the inspected source and recorded output.
+The live source was rechecked before delivery; recheck.json records the result.

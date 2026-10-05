@@ -1,0 +1,35 @@
+{
+  "utc": "2026-10-05T14:39:38.925123+00:00",
+  "files": [
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean",
+      "sha256": "118299d69bc31765d8aa28b72398cda6c87b3e5534b159cdd46f259984f6e588",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/docs__research__2026-10-05-claude-lead__tx-probes__TxModel.lean"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/tx-probes/tx-probes.ts",
+      "sha256": "64e65408450ae18a81942be9a7c61cd925fd4855bfba4b2788e492997337264f",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/docs__research__2026-10-05-claude-lead__tx-probes__tx-probes.ts"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/tx-probes/tx-probes.rc112.out",
+      "sha256": "8a4ba430378dc4cebcb58854791cace45d960c3a36a14fab8dbded6a24b6ace3",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/docs__research__2026-10-05-claude-lead__tx-probes__tx-probes.rc112.out"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/tx-probes/tx-probes.v401.out",
+      "sha256": "7efb098722ac4c4bc3f89cc0ca83cafa011d7a487be56c08b6fb120f785ce8ee",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/docs__research__2026-10-05-claude-lead__tx-probes__tx-probes.v401.out"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/machine-state.md",
+      "sha256": "f99cfd06cd72f262b970051dafbb5d48d610c2c93791e06a6ef3ca7f4febc1c3",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/docs__core__machine-state.md"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+      "sha256": "76a598f6056a9d84758431e6eaaae034fa13d299efdf2ca9ded097f8686231b4",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/scout/docs__core__decisions.md"
+    }
+  ]
+}

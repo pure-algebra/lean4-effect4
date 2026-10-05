@@ -1,0 +1,22 @@
+{
+  "utc": "2026-10-05T14:41:15.405396+00:00",
+  "package": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect",
+  "version": "4.0.0-rc.112",
+  "sourceFiles": [
+    {
+      "file": "src/Effect.ts",
+      "installedSHA256": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718",
+      "equalsVendor": true
+    },
+    {
+      "file": "src/TxRef.ts",
+      "installedSHA256": "bb4891f9cf42b98e69301404177676d10f52a3b5d2f09f2e318f63451fae1b43",
+      "equalsVendor": true
+    },
+    {
+      "file": "src/internal/effect.ts",
+      "installedSHA256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+      "equalsVendor": true
+    }
+  ]
+}

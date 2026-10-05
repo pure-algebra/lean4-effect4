@@ -150,18 +150,20 @@ def claims() -> Counter:
     counts: Counter = Counter()
     for cells in table_rows("generated/semantics.md"):
         if len(cells) == 6 and re.fullmatch(r"[a-z0-9-]+", cells[0]) and cells[2] in (
-                "proved", "absent", "refuted", "assumed", "wanted", "open"):
+                "proved", "modulo", "absent", "refuted", "assumed", "wanted", "open"):
             counts[cells[2]] += 1
     return counts
 
 
 def plan_rows() -> str:
-    """The requirement rows of the plan section, by derived status (`| R… | status | … |`)."""
+    """The requirement rows of the plan section, by derived status (`| R… | status | … |`).
+    The table has five columns since decisions row 207 added the placed nodes; a requirement
+    reads `proved` or `open` (`tools/Tools/Semantics.lean`)."""
     counts: Counter = Counter()
     for cells in table_rows("generated/semantics.md"):
-        if len(cells) == 4 and re.fullmatch(r"R\d+", cells[0]):
+        if len(cells) in (4, 5) and re.fullmatch(r"R\d+", cells[0]):
             counts[cells[1]] += 1
-    return summarise(counts, ("proved", "ready", "reduced", "declared", "open")) if counts else "no rows"
+    return summarise(counts, ("proved", "open")) if counts else "no rows"
 
 
 def plan_next() -> str:
