@@ -211,6 +211,14 @@ Landed later on 2026-10-05:
   three added, all as proposed claims.
 - **The compatibility policy names two host-lane rows** that the sweep moved (`d226d7a1`), and
   `check-conservativity` passes on the range again.
+- **Seat FOLD is merged** (`87c9b562`;
+  [its receipt](research/2026-10-05-seat-FOLD-receipt.md); rows 228 and 229). `Term.fold` is
+  one constructor of `Term`, and the atoms `take`, `drop` and `sameHandle` are added. Both
+  claims are proved: `fold-typed-atomic-update` and `handle-identity-laws`
+  (`src/Effect4/Laws/Program/Typed/ListFold.lean`). The raw annotation collector reads an
+  operation's binder term. A fold prints and reads back in a term position, and one printed
+  fold agrees with both builds. The coordinator pinned the case policy again and promoted the
+  build ledger.
 - **Seat LOWER is merged** (`c09826c0`;
   [its receipt](research/2026-10-05-seat-LOWER-receipt.md); row 252). The conformance runner
   declares its roles and keeps a refused attempt. The target evaluator runs a list scan with a
@@ -233,12 +241,12 @@ Open at this landing:
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   The Queue's path lands in three parts:
   1. **The pure contract and its first capacity proof.** Landed on 2026-10-05 (`9abf99b6`).
-     Open: the step's capacity goal, and the registry's join, which waits for seat FOLD's
-     merge. Codex keeps the proof's route
+     Open: the step's capacity goal. The registry's join waits until the Queue's laws enter
+     the law graph: the registry's roots do not load a battery. Codex keeps the proof's route
      ([its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md));
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
-     It needs the fold and part 1, and neither T5 nor the mask. The coordinator proposes it as
-     a slice beside T5;
+     The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
+     No seat has it yet: two seats run;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
      its law, and the printed form. It follows T5 and the mask (row 251).
 
@@ -255,11 +263,15 @@ Open at this landing:
   cleanup, and replies at a timeout's boundary. Seat DOGFOOD has them since 2026-10-05
   (branch `seat/scenarios`, from `c09826c0`;
   [the brief](research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md));
-- the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
-  with its model. Its slice is with seat FOLD since 2026-10-05 (branch `seat/fold`, from
-  `a53e5e15`; [the brief](research/2026-10-05-claude-lead/briefs/seat-fold-brief.md));
-- the faces of an operation's binder term, the state plan's T5, follow the fold. The Queue's
-  printed form needs them, because its step is one `Ref.modify` whose term folds;
+- the faces of an operation's binder term, the state plan's T5, are with seat T5 since
+  2026-10-05 (branch `seat/t5`, from `6214dcb8`;
+  [the brief](research/2026-10-05-claude-lead/briefs/seat-t5-brief.md)). Part A prints a term
+  as a function and reads it back. Part B derives, prints and reads an operation's type
+  arguments. The Queue's printed form needs both;
+- seat FOLD left three points for the owner or for T5
+  ([its receipt](research/2026-10-05-seat-FOLD-receipt.md), item 9): the argument order of
+  `take` and `drop`, the typing of `sameHandle` by the raw head, and a list of number literals
+  on the target, whose literal type does not widen under tsgo 7;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
   (rows 244 to 246). Its slice follows those two;
 - the design of waiting, tasks and the atomic frontier is
