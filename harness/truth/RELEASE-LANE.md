@@ -78,7 +78,8 @@ When the lane does not run a program, it gives the runner the manifest without t
 
 The build ledger has one ledger line for each program of the manifest, in the manifest's
 order. A line has six entries, one for each build and each field. It has two more columns,
-`reason` and `slice`.
+`reason` and `slice`. The columns are separated by tabs. A line may end before its empty
+columns, so an editor that trims trailing white space does not break the file.
 
 The three fields are the runner's:
 

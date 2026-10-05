@@ -79,6 +79,7 @@ def parse(text, builds):
     `(build, field)`), its `reason` and its `slice`. `findings` lists every defect of a line,
     each with its line number in the file. A line with a defect is still judged where it was
     read, so one changed entry gives both its defect and the finding that names both values.
+    A line that ends before its hand columns has them empty.
     """
     want = columns(builds)
     order, lines, findings = [], {}, []
@@ -92,6 +93,10 @@ def parse(text, builds):
                          f'(the builds are {" and ".join(builds)})')
     for number, text_line in body[1:]:
         values = text_line.split('\t')
+        # A line may end before its empty hand columns: an editor that trims trailing white
+        # space removes them, and the line still says the same.
+        if len(want) - len(HAND) <= len(values) < len(want):
+            values += [''] * (len(want) - len(values))
         if len(values) != len(want):
             findings.append(f'line {number}: {len(values)} columns, the header has {len(want)}')
             continue

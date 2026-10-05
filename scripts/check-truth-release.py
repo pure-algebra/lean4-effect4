@@ -782,7 +782,7 @@ def self_test():
             L.render(BUILDS, *carry(BUILDS, L.parse(green, BUILDS)[1], names, observed)) == green)
     control('green: a ledger that was read whole may be promoted over, and so may no ledger',
             unpromotable(green, L.parse(green, BUILDS)[1]) is None and unpromotable(None, {}) is None)
-    short = green.replace(written['pD'], written['pD'].rsplit('\t', 1)[0])
+    short = green.replace(written['pD'], '\t'.join(written['pD'].split('\t')[:5]))
     red('a promote over a ledger with a line that was not read',
         [unpromotable(short, judged(short)[2]) or ''], 'has 4 line(s) and 3 could be read')
     red('a promote over a ledger for other builds',
@@ -880,8 +880,18 @@ def self_test():
         f'pA: {pin} exit: "maybe" is not')
     red('a `no` without its difference', judged(with_entry('pA', f'{pin} exit', 'no:'))[0],
         f'pA: {pin} exit: "no:" is not')
-    red('a line with a column too few', judged(green.replace(written['pA'], written['pA'][:-1]))[0],
-        '8 columns, the header has 9')
+    red('a line with an entry too few',
+        judged(green.replace(written['pA'], '\t'.join(written['pA'].split('\t')[:6])))[0],
+        '6 columns, the header has 9', 'pA: the manifest has this program and the ledger has no line for it')
+    red('a line with a column too many', judged(green.replace(written['pA'], written['pA'] + '\textra'))[0],
+        '10 columns, the header has 9')
+    trimmed = '\n'.join(text.rstrip('\t') for text in green.split('\n'))
+    control('green: a ledger whose trailing empty columns were trimmed says the same',
+            trimmed != green and judged(trimmed)[0] == [] and L.parse(trimmed, BUILDS)[:2] == L.parse(green, BUILDS)[:2],
+            judged(trimmed)[0])
+    red('a trimmed line that still needs its slice',
+        judged(green.replace('\tM5 the failure walk', ''))[0],
+        'pD: an entry is not `yes`, so the line needs a reason and a slice')
     red('a header for other builds', judged(green.replace(f'{release} exit', '4.0.2 exit'))[0],
         f'the ledger is not read: line {L.HEAD.count(chr(10)) + 1}: the header must be program | {pin} exit')
     red('an empty file', judged('')[0], 'the ledger is not read: the ledger has no header')
