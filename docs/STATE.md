@@ -211,6 +211,17 @@ Landed later on 2026-10-05:
   three added, all as proposed claims.
 - **The compatibility policy names two host-lane rows** that the sweep moved (`d226d7a1`), and
   `check-conservativity` passes on the range again.
+- **Seat LOWER is merged** (`c09826c0`;
+  [its receipt](research/2026-10-05-seat-LOWER-receipt.md); row 252). The conformance runner
+  declares its roles and keeps a refused attempt. The target evaluator runs a list scan with a
+  callback. `E4_be` forwards to `Eff_frame`. The law of `let x = e in x` is kernel-checked in
+  the tool library, outside the trust ceiling: the target evaluator reaches `Classical.choice`
+  through two `String` rules.
+- **The Queue's abstract contract is in the tree** (`9abf99b6`): the packet
+  `Test/contracts/queue.contract.md`, the model and its small controls, and the first general
+  statement. Codex prepared them, and the coordinator built them. `acceptLoop_length_le`
+  (`Test/Program/QueueCapacity.lean`) is proved. `positive_suspend_step_capacity` is a planned
+  goal.
 - **Seventeen worktrees of finished seats are removed,** on the owner's word. Their unique
   notes and one uncommitted patch are kept under
   `research/recovered-worktrees/2026-10-05/` (on disk, not tracked).
@@ -221,23 +232,29 @@ Open at this landing:
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   The Queue's path lands in three parts:
-  1. **The pure contract and its first capacity proof.** Codex prepares them for integration,
-     on the owner's word to Codex (relayed 2026-10-05;
-     [its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md)).
-     They are a packet named `queue.contract.md` in `Test/contracts/`, and the modules
-     `QueueModel`, `QueueContract` and `QueueCapacity` under `Test/Program/`. The coordinator
-     owns the import in `Test/All.lean`, the registry's join, the base and the Lean slot. It
-     integrates them when a seat frees a slot. The capacity proof is not compiled yet;
+  1. **The pure contract and its first capacity proof.** Landed on 2026-10-05 (`9abf99b6`).
+     Open: the step's capacity goal, and the registry's join, which waits for seat FOLD's
+     merge. Codex keeps the proof's route
+     ([its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md));
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
      It needs the fold and part 1, and neither T5 nor the mask. The coordinator proposes it as
      a slice beside T5;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
-     its law, and the printed form. It follows T5 and the mask (row 251);
+     its law, and the printed form. It follows T5 and the mask (row 251).
+
+  A probe ran `take` and `offer` as programs on the machine, with stand-ins for the fold and
+  the mask (`research/2026-10-05-claude-lead/queue-readiness/QueueSkeleton.lean`; a finite
+  probe, fifteen programs). They build and run with the constructs of today: the posted helper
+  of row 238, a wait and a second attempt, strict order with two takers, and a withdrawal that
+  keeps the interruptor. The cleanup is the pin's `onInterrupt`: `onExit` with
+  `causeIsInterrupt` on the exit. Not probed: the generated engine, and the printed module on
+  a host, which waits for T5;
 - the acceptance programs gain four scenarios (row 254;
   [Codex's review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/dogfood/review.md)):
   two workers with two pending replies, exact handler routing, atomic state with failure and
-  cleanup, and replies at a timeout's boundary. A seat takes them when seat LOWER ends
-  ([the brief](research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md));
+  cleanup, and replies at a timeout's boundary. Seat DOGFOOD has them since 2026-10-05
+  (branch `seat/scenarios`, from `c09826c0`;
+  [the brief](research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md));
 - the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
   with its model. Its slice is with seat FOLD since 2026-10-05 (branch `seat/fold`, from
   `a53e5e15`; [the brief](research/2026-10-05-claude-lead/briefs/seat-fold-brief.md));
@@ -265,17 +282,17 @@ Open at this landing:
   - the citations that miss in the pin itself;
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;
-- the OCaml route's next slices, from Codex's three packets
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/`). Four are with seat
-  LOWER since 2026-10-05 (row 252; branch `seat/lower`):
-  - callback library functions in the target evaluator, so that it runs `lcnf_list_contains`;
-  - three repairs of the conformance runner;
-  - `E4_be` forwards to `Eff_frame`;
-  - the law of `let x = e in x` as a placed fixture.
-
-  The fifth waits for a design of its own: the emitted OCaml read back by the compiler's own
-  parser;
-- the proposed decisions rows of the two seats' receipts, for the owner;
+- the OCaml route, after seat LOWER's merge:
+  - the target evaluator is outside the trust ceiling. Its rules for the length of a string
+    and for the order of two strings reach `Classical.choice`. The seat proposes their byte
+    forms as a slice of its own, with a control for the order of strings. Then a lowering law
+    is a declaration of a battery. This is the owner's to rule;
+  - the registry's claim for the law of `let x = e in x` waits on that ruling;
+  - seven callback names of the builtin table have no rule in the evaluator, and a call is a
+    refusal;
+  - no lane runs the runner's tests or the compiler checkpoint without a person;
+  - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
+- the proposed decisions rows of the three seats' receipts (T3b, M0, LOWER), for the owner;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);
