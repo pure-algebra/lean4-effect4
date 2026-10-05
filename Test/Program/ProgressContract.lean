@@ -358,6 +358,78 @@ section Functions
 
 end Functions
 
+/-! ## T2's lowerings against the images (the state plan's T3b, ruling D5 (b))
+
+Before the rows carried terms a row named its function, and `syncOpOf` handed the store the
+name's lowering: one term per shape, the cell's value at level 0 (seat T2;
+`git:0ab2ef09:src/Effect4/Program/FnName.lean`). The cutover deleted the lowerings from the
+library. They are kept here as they were written, so that their agreement with the faces' images
+stays a theorem: on every number, at every shape, name, level and outer environment, a name's
+image evaluates as its lowering did. Two pairs of names shared a lowering at a shape (`incr` with
+`takeAndBump`, `zeroWhenPositive` with `noChange`). The images separate them (`takeAndBump` at
+`add(a, 1)`, `zeroWhenPositive` at `add(a, 0)`), and the theorem says that this moved no value on
+a number. -/
+
+namespace T2
+
+/-- T2's term of a name at `A → A`. -/
+def updateTerm : FnName → Term
+  | .incr | .takeAndBump => .app "succ" (.cons (.var 0) .nil)
+  | .double => .app "mul" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil))
+  | .zeroWhenPositive | .noChange => .var 0
+
+/-- T2's term of a name at `A → Option<A>`. -/
+def updateSomeTerm : FnName → Term
+  | .noChange => .app "none" .nil
+  | .zeroWhenPositive =>
+    .app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
+      (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil)))
+  | f => .app "some" (.cons (updateTerm f) .nil)
+
+/-- T2's term of a name at `A → [B, A]`. -/
+def modifyTerm (f : FnName) : Term := .app "pair" (.cons (.var 0) (.cons (updateTerm f) .nil))
+
+/-- T2's term of a name at `A → [B, Option<A>]`. -/
+def modifySomeTerm : FnName → Term
+  | .noChange => .app "pair" (.cons (.var 0) (.cons (.app "none" .nil) .nil))
+  | f => .app "pair" (.cons (.var 0) (.cons (.app "some" (.cons (updateTerm f) .nil)) .nil))
+
+/-- T2's lowering of a name at a shape. -/
+def lowering (f : FnName) : FnShape → Term
+  | .update => updateTerm f
+  | .updateSome => updateSomeTerm f
+  | .modify => modifyTerm f
+  | .modifySome => modifySomeTerm f
+
+/-- On every number T2's lowering evaluates to the name's value at the shape. -/
+theorem lowering_agrees (f : FnName) (s : FnShape) (n : Nat) :
+    Program.evalTerm [.nat n] (lowering f s) = some (f.valueAt s (.nat n)) := by
+  cases s
+  case updateSome =>
+    cases f
+    case zeroWhenPositive => cases n <;> rfl
+    all_goals rfl
+  all_goals cases f <;> rfl
+
+/-- **A name's image evaluates as T2's lowering did**, on every number, at every shape, name and
+outer environment: the image at the node's level over `env ++ [n]`, the lowering over `[n]`. -/
+theorem image_agrees_lowering (s : FnShape) (f : FnName) (env : List Val) (n : Nat) :
+    Program.evalTerm (env ++ [Val.nat n]) (FnName.image s env.length f) =
+      Program.evalTerm [Val.nat n] (lowering f s) := by
+  rw [FnName.image_agrees, lowering_agrees]
+
+-- The lowerings repeated a term where the images do not: the two pairs of names.
+#guard lowering .incr .update = lowering .takeAndBump .update
+#guard FnName.image .update 0 .incr != FnName.image .update 0 .takeAndBump
+#guard lowering .zeroWhenPositive .update = lowering .noChange .update
+#guard FnName.image .update 0 .zeroWhenPositive != FnName.image .update 0 .noChange
+-- The agreement's reach is the numbers. On a boolean `zeroWhenPositive`'s lowering at `update`
+-- answered the value, and its image `add(a, 0)` stops.
+#guard Program.evalTerm [Val.bool true] (lowering .zeroWhenPositive .update) = some (Val.bool true)
+#guard Program.evalTerm [Val.bool true] (FnName.image .update 0 .zeroWhenPositive) = none
+
+end T2
+
 /-! ## The Deferred rows (`Stores.lean:1210-1219`) -/
 
 section Deferred

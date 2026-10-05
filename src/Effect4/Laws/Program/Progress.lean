@@ -77,9 +77,10 @@ Until the state plan's T5 the faces spell a read-modify-write row's binder term 
 evaluates, on every number and over every outer environment, to the value the name answers at
 that shape (`FnName.valueAt`). Before the rows carried terms a row named its function and
 `syncOpOf` handed the store the name's lowering at level 0; on every number that lowering
-evaluated to the same value (`FnName.lowering_agrees` and `FnName.image_agrees_lowering` at
-`git:0ab2ef09:src/Effect4/Program/FnName.lean` and
-`git:0ab2ef09:src/Effect4/Laws/Program/Progress.lean`, proved before the lowerings were deleted).
+evaluated to the same value. The lowerings left the library at the cutover
+(`git:0ab2ef09:src/Effect4/Program/FnName.lean`); the battery keeps them as a control, with the
+agreement as a theorem (`T2.lowering_agrees` and `T2.image_agrees_lowering`,
+`Test/Program/ProgressContract.lean`).
 So a program that named its function runs the same store step on a number cell now that its row
 carries the name's image. Two names whose plain terms would repeat have distinct images
 (`takeAndBump` at `add(a, 1)`, `zeroWhenPositive` at `add(a, 0)`), and the agreement is what
