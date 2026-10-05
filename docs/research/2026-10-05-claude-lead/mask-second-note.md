@@ -378,6 +378,10 @@ An earlier version of this section said that it did.
 The coordinator reconciles the semantics registry with rows 244 to 246 at seat T3b's merge, because that
 seat edits the same file now. Every unrelated open part stays. No goal is stated before that.
 
+**Reconciled on 2026-10-05, after the merge `57b261a0`.** The two older parts are reworded, and
+the three absent parts are added as proposed claims: `saved-mask-image-membership` (R4),
+`mask-rows-table-premises` (R8) and `mask-printed-form-profile` (R10). No goal is stated.
+
 The order of the proofs, with what each reuses (the same scouting; each name was found in the
 tree):
 
