@@ -37,6 +37,9 @@
     "retired cell spelling denoted. verdict_moves names each corpus row whose verdict moved, as",
     "`path:key`: g158 (`Ref.make(\"hi\")`) types at `Ref<string>`, and g277's first refusal moved from",
     "`Ref.make(a0)` to the term `lt(9, undefined)` after it.",
+    "The host lane's table followed at the sweep of 2026-10-05 (`50700443`): g158 now runs and",
+    "agrees, and g309's note names the declared type that the printed module now carries. Its",
+    "verdict did not move.",
     "",
     "The state plan's T3b (decisions rows 42, 43, 210, 228). The eight read-modify-write `Ref` rows",
     "carry a binder term: `NativeOp.refUpdate` … `refModifySome (f : FnName)` retired at tags 5 to 12",
@@ -179,6 +182,8 @@
   ],
   "verdict_moves": [
     "generated/corpus-index.tsv:g158",
-    "generated/corpus-index.tsv:g277"
+    "generated/corpus-index.tsv:g277",
+    "harness/truth/corpus-results.tsv:g158",
+    "harness/truth/corpus-results.tsv:g309"
   ]
 }
