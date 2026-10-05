@@ -6,6 +6,9 @@
                                                         of this host run (`make gen-truth-ledger`)
     python3 scripts/check-truth-release.py --self-test  the controls; no install and no host run
 
+    --host-tests FILE...   after the other arguments: bun test files to run on both builds too.
+                           The make targets name the pinned lane's own (`TRUTH_HOST_TESTS`).
+
 Decisions row 248 moves the pin to 4.0.1 in increments. Until the last area moves, the machine
 is checked against both builds, and `harness/truth/build-ledger.tsv` says what each program's
 comparison with each build must give (`scripts/lib/truth_ledger.py` owns the file's grammar).
@@ -26,7 +29,9 @@ What the lane does, in order:
    program whose module mentions the prelude's `Sql` is then not run, and the driver's import
    becomes a stub that dies if a program reaches it. The modules the release ran must be the
    committed ones, byte for byte, and must type-check against the release's declarations under
-   the pinned compiler (the pinned lane's DI-49 refusal).
+   the pinned compiler (the pinned lane's DI-49 refusal). The host controls that the pinned
+   lane runs beside itself (`bun test`, the Makefile's `TRUTH_HOST_TESTS`) run on both work
+   copies too, when the caller names them.
 3. The comparison. Each program's entries on both builds against its ledger line. The pin's
    entries are read from the committed `result.json`, which step 1 has just reproduced. A
    program that leaves its line fails the lane with a finding that names the program, the
@@ -231,6 +236,16 @@ def judge_runs(builds, manifest, results, skipped, ledger_text):
     return findings + truth_ledger.judge(builds, order, lines, programs, observed), observed, lines
 
 
+def tests_passed(status, said):
+    """How many tests a `bun test` run passed, as text, or `None` when the run is refused: a
+    nonzero exit status, a failed test, no count, or no test at all."""
+    passed = re.search(r'^\s*(\d+) pass$', said, re.M)
+    failed = re.search(r'^\s*(\d+) fail$', said, re.M)
+    if status != 0 or passed is None or passed[1] == '0' or failed is None or failed[1] != '0':
+        return None
+    return passed[1]
+
+
 def digest(files):
     """The SHA-256 of a set of files: each name and its bytes, in name order."""
     sha = hashlib.sha256()
@@ -304,14 +319,14 @@ def type_roots():
     return roots
 
 
-def build_work_copy(work, modules, table, driver):
-    """The work copy for one build: the import closure of the runner and of the type-checked
-    sources, in the repository's layout; the compiler options beside each source; and the
-    install linked where the pinned layout has it. Returns `(files, rewrites)`; refuses a
-    specifier it cannot place."""
+def build_work_copy(work, modules, table, driver, extra=()):
+    """The work copy for one build: the import closure of the runner, of the type-checked
+    sources and of the `extra` sources, in the repository's layout; the compiler options
+    beside each source; and the install linked where the pinned layout has it. Returns
+    `(files, rewrites)`; refuses a specifier it cannot place."""
     if work.exists():
         shutil.rmtree(work)
-    files = closure(read_repository, [RUNNER] + type_roots())
+    files = closure(read_repository, [RUNNER] + type_roots() + list(extra))
     table = dict(table)
     if not driver:
         table[truth_host.DRIVER] = './' + STUB
@@ -409,6 +424,19 @@ def host_run(bun, host_path, work, modules, manifest_bytes):
     return result
 
 
+def host_tests(bun, host_path, work, tests):
+    """The pinned lane's host controls on one work copy: `bun test` over the named files.
+    Returns the tests' own count line; refuses a failing or an empty run."""
+    ran = subprocess.run([bun, '--no-install', 'test'] + [host_path(work / test) for test in tests],
+                         cwd=work, text=True, encoding='utf-8', capture_output=True, timeout=300)
+    said = ran.stdout + ran.stderr
+    write(work / 'host-tests.txt', said)
+    passed = tests_passed(ran.returncode, said)
+    if passed is None:
+        raise LaneError(f'the host tests failed in {work.relative_to(root)} (exit {ran.returncode}):\n{said[-3000:]}')
+    return f'{passed} pass in {len(tests)} file(s)'
+
+
 def type_check(modules, host_path, work):
     """The pinned lane's DI-49 refusal on one work copy: the modules the build just ran, the
     prelude, the runner and the session sources under the pinned compiler, against the selected
@@ -481,13 +509,18 @@ def identity(here, ran, build):
     return modules, tapes, moved, findings
 
 
-def run_build(role, bun, host_path, modules, table, driver, manifest, manifest_bytes):
-    """One build end to end: the work copy, the runner, the compiler, the identity of what ran.
-    Returns the run's record, with its result and its tape findings under `_result`, `_tapes`."""
+def run_build(role, bun, host_path, modules, table, driver, manifest, manifest_bytes, tests):
+    """One build end to end: the work copy, the runner, the compiler, the host tests, the
+    identity of what ran. Returns the run's record, with its result and its tape findings under
+    `_result`, `_tapes`."""
     work = WORK / role
     skipped = [] if driver else [program['name'] for program in manifest['programs'] if needs_driver(program)]
     ran = [program for program in manifest['programs'] if program['name'] not in skipped]
-    files, rewrites = build_work_copy(work, modules, table, driver)
+    files, rewrites = build_work_copy(work, modules, table, driver, tests)
+    # The record names each rewritten specifier once, among the sources every run copies: it
+    # does not depend on which host tests the caller names.
+    always = set(closure(read_repository, [RUNNER] + type_roots()))
+    moved_imports = sorted({(old, new) for path, old, new in rewrites if path in always})
     # The runner gets the committed manifest, or the same manifest without the programs not run.
     given = manifest_bytes if not skipped else (json.dumps(dict(manifest, programs=ran), indent=1) + '\n').encode()
     result = host_run(bun, host_path, work, modules, given)
@@ -496,6 +529,7 @@ def run_build(role, bun, host_path, modules, table, driver, manifest, manifest_b
         raise LaneError(f'{", ".join(reached)}: the program reached the absent {truth_host.DRIVER}; '
                         f'`needs_driver` did not select it')
     compiler, compiled = type_check(modules, host_path, work)
+    tested = host_tests(bun, host_path, work, tests) if tests else None
     generated, tapes, moved, tape_findings = identity(work / HERE, ran, result['effect'])
     if moved:
         raise LaneError(f'{work.relative_to(root)}: the run did not use the committed modules: {", ".join(moved)}')
@@ -508,16 +542,17 @@ def run_build(role, bun, host_path, modules, table, driver, manifest, manifest_b
         'programs': {'ran': len(result['rows']), 'notRun': skipped},
         'modules': {'count': len(generated), 'sha256': digest(generated)},
         'tapes': {'count': len(tapes), 'sha256': digest(tapes)},
-        'imports': [list(item) for item in rewrites],
+        'imports': [list(pair) for pair in moved_imports],
         # and what only this machine's run has
         '_local': {'role': role, 'install': str(modules), 'work': work.relative_to(root).as_posix(),
                    'sourcesCopied': len(files), 'sourcesCompiled': compiled, 'diagnostics': 0,
+                   'hostTests': tested, 'rewrites': [list(item) for item in rewrites],
                    'modulesAre': f'each {HERE}/{OUTPUT}/<name>.ts byte for byte'},
         '_result': result, '_tapes': tape_findings,
     }
 
 
-def lane(promote):
+def lane(promote, tests):
     pin, release = BUILDS
     manifest_bytes = (truth / 'corpus.json').read_bytes()
     manifest = json.loads(manifest_bytes)
@@ -530,14 +565,14 @@ def lane(promote):
                         'installs: ' + '; '.join(wrong))
 
     # 1. the control: the pin through the work copy
-    control = run_build('pin', bun, host_path, pin_modules, {}, True, manifest, manifest_bytes)
+    control = run_build('pin', bun, host_path, pin_modules, {}, True, manifest, manifest_bytes, tests)
     committed, local = control.pop('_result'), {pin: control.pop('_local')}
     here = WORK / 'pin' / HERE
     moved = [name for name in ('result.json', 'result.md') if (here / name).read_bytes() != (truth / name).read_bytes()]
     moved += control.pop('_tapes')
-    if control['imports'] or moved:
+    if local[pin]['rewrites'] or moved:
         raise LaneError(f'the control failed: the work copy on effect@{pin} does not reproduce the committed '
-                        f'artifacts ({"; ".join(moved) or control["imports"]}); run `make check-truth` first, '
+                        f'artifacts ({"; ".join(moved) or local[pin]["rewrites"]}); run `make check-truth` first, '
                         f'then read {local[pin]["work"]}')
     print(f'truth-release: the control: effect@{pin} through the work copy ({local[pin]["sourcesCopied"]} '
           f'sources) reproduces result.json, result.md, {control["modules"]["count"]} modules and '
@@ -545,19 +580,20 @@ def lane(promote):
 
     # 2. the release
     record = run_build('release', bun, host_path, modules, truth_host.RELEASE_ENTRY_POINTS, driver,
-                       manifest, manifest_bytes)
+                       manifest, manifest_bytes, tests)
     result, tape_findings, local[release] = record.pop('_result'), record.pop('_tapes'), record.pop('_local')
     skipped = record['programs']['notRun']
     print(f'truth-release: the release: effect@{record["effect"]}, {record["programs"]["ran"]} of '
           f'{len(programs)} programs run'
           + (f'; not run, the install has no {truth_host.DRIVER}: {", ".join(skipped)}' if skipped else ''))
-    for path, old, new in record['imports']:
+    for path, old, new in local[release]['rewrites']:
         print(f'truth-release: the work copy of {path} imports "{new}" for "{old}"')
     for build, run in ((pin, control), (release, record)):
         print(f'truth-release: effect@{build} ran on bun {run["runtime"]["bun"]}; tsgo '
               f'{run["compiler"]["version"]} type-checks its {local[build]["sourcesCompiled"]} sources; '
               f'modules: {run["modules"]["count"]}, sha256 {run["modules"]["sha256"][:16]}; '
-              f'tapes: {run["tapes"]["count"]}, sha256 {run["tapes"]["sha256"][:16]}')
+              f'tapes: {run["tapes"]["count"]}, sha256 {run["tapes"]["sha256"][:16]}; host tests: '
+              + (local[build]['hostTests'] or 'none named'))
 
     # 3. the comparison: the record of what the host run ran on, then the entries
     kept = {
@@ -844,6 +880,13 @@ def self_test():
             and len({digest({'a': b'1', 'b': b'2'}), digest({'a': b'12', 'b': b''}), digest({'a': b'1'}),
                      digest({'a': b'1', 'c': b'2'})}) == 4)
 
+    # the host tests' count
+    counted = 'bun test v1.4.2\n\n 23 pass\n 0 fail\n 175 expect() calls\nRan 23 tests across 4 files. [1.00ms]\n'
+    control('green: a `bun test` run that passes gives its count', tests_passed(0, counted) == '23')
+    control('red: a `bun test` run with a failed test, a nonzero status, no test or no count is refused',
+            [tests_passed(0, counted.replace(' 0 fail', ' 1 fail')), tests_passed(1, counted),
+             tests_passed(0, counted.replace(' 23 pass', ' 0 pass')), tests_passed(0, 'bun test v1.4.2\n')] == [None] * 4)
+
     # the import rewrite and the closure
     source = ('import { Effect } from "effect"\nimport { KeyValueStore } from "effect/unstable/persistence"\n'
               'import * as Reactivity from \'effect/unstable/reactivity/Reactivity\'\n'
@@ -970,11 +1013,18 @@ def self_test():
 def main(argv):
     if argv == ['--self-test']:
         return self_test()
+    tests = []
+    if '--host-tests' in argv:
+        at = argv.index('--host-tests')
+        argv, tests = argv[:at], argv[at + 1:]
+        if not tests or any(test.startswith('-') for test in tests):
+            print(__doc__)
+            return 2
     if argv not in ([], ['--promote']):
         print(__doc__)
         return 2
     try:
-        return lane(promote=bool(argv))
+        return lane(promote=bool(argv), tests=tests)
     except (LaneError, truth_ledger.Inconsistent) as refusal:
         print(f'FAIL truth-release: {refusal}')
         return 1

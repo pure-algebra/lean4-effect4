@@ -63,24 +63,16 @@
       },
       "imports": [
         [
-          "harness/truth/prelude.ts",
-          "effect/unstable/persistence",
-          "effect/persistence"
-        ],
-        [
-          "harness/truth/prelude.ts",
-          "effect/unstable/reactivity/Reactivity",
-          "effect/reactivity/Reactivity"
-        ],
-        [
-          "harness/truth/prelude.ts",
           "@effect/sql-sqlite-bun",
           "./sqlite-driver-absent.ts"
         ],
         [
-          "harness/truth/session/keyed-bindings.ts",
           "effect/unstable/persistence",
           "effect/persistence"
+        ],
+        [
+          "effect/unstable/reactivity/Reactivity",
+          "effect/reactivity/Reactivity"
         ]
       ]
     }

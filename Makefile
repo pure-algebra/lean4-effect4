@@ -468,9 +468,9 @@ $(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard har
 # to a fresh run, so the pinned marker is its prerequisite; the rest is what it reads besides. The
 # release install is selected by EFFECT4_RELEASE_NODE_MODULES only (no default, no download; bun
 # runs with --no-install), and its manifests are prerequisites when the variable names one. Its
-# controls run first. `make gen-truth-ledger` promotes a fresh host run to the two committed files
-# (the hand columns `reason` and `slice` are kept). Not in `check` and not in `check-full`: no
-# tracked recipe installs the release.
+# controls run first, and the pinned lane's host tests run on both builds. `make gen-truth-ledger`
+# promotes a fresh host run to the two committed files (the hand columns `reason` and `slice` are
+# kept). Not in `check` and not in `check-full`: no tracked recipe installs the release.
 TRUTH_RELEASE_LANE := scripts/check-truth-release.py scripts/lib/truth_ledger.py scripts/lib/truth_host.py \
   harness/truth/build-ledger.tsv harness/truth/build-ledger.run.json \
   harness/truth/select-controls.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts \
@@ -483,12 +483,12 @@ $(CHK)/truth-release-install: FORCE
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
 $(CHK)/truth-release: $(CHK)/truth $(TRUTH_RELEASE_LANE) $(CHK)/truth-release-install
 	$(PY) scripts/check-truth-release.py --self-test
-	$(PY) scripts/check-truth-release.py
+	$(PY) scripts/check-truth-release.py --host-tests $(TRUTH_HOST_TESTS)
 	@mkdir -p $(CHK) && touch $@
 
 .PHONY: gen-truth-ledger
 gen-truth-ledger: $(CHK)/truth ## promote a fresh host run of both builds to harness/truth/build-ledger.tsv and build-ledger.run.json
-	$(PY) scripts/check-truth-release.py --promote
+	$(PY) scripts/check-truth-release.py --promote --host-tests $(TRUTH_HOST_TESTS)
 
 # The corpus lane: every program of the generated corpus (Test/Program/Gen.lean, 400 at
 # depth 4) printed and type-checked, the admitted ones run on rc.112, its rc.112 exit,

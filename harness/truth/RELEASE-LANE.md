@@ -27,7 +27,8 @@ the build ledger, says what each comparison must give.
 
 ## What the lane runs
 
-The diagram shows the order of the lane's steps. It claims no agreement of any program.
+The diagram shows the order of the lane's steps. It claims no agreement of any program. The
+control runs steps 5 and 6 on the pin too.
 
 ```mermaid
 flowchart TD
@@ -36,13 +37,15 @@ flowchart TD
   CON["control<br/>work copy on the pin"]
   REL["host run<br/>work copy on the release"]
   TYP["type check<br/>the compiler, tsgo 7"]
+  TST["host tests<br/>bun test"]
   JUD["comparison<br/>build ledger and run record"]
   PIN -->|holds to a fresh host run| MAN
   MAN -->|is read by| CON
   MAN -->|is read by| REL
   CON -->|must reproduce the committed result before| REL
   REL -->|writes the modules for| TYP
-  TYP -->|must pass before| JUD
+  TYP -->|must pass before| TST
+  TST -->|must pass before| JUD
 ```
 
 1. **The pinned lane runs first.** `make check-truth` holds the manifest, the result, the
@@ -54,7 +57,9 @@ flowchart TD
 4. **The host run executes the runner on the release.** It reads the committed manifest, so
    Lean does not run again.
 5. **The compiler type-checks each work copy** against the declarations of its own install.
-6. **The lane compares both builds** with the build ledger and the run record.
+6. **The pinned lane's host tests run on each work copy.** The make targets name them: the
+   files of the Makefile's `TRUTH_HOST_TESTS`.
+7. **The lane compares both builds** with the build ledger and the run record.
 
 The work copy differs from the committed sources in two places only:
 
