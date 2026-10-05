@@ -4,6 +4,7 @@ public import Effect4.Program.NativeAtom
 public import Effect4.Program.ErrorImage
 public import Effect4.Program.Typing
 public import Effect4.Program.ScopedOp
+public import Effect4.Program.FnName
 public import Effect4.Machine.Stores
 
 /-!
@@ -132,14 +133,6 @@ def sqlTarget : String := "SqlClient.SqlClient"
 def sqlTy : Ty := .handle sqlTarget
 def kvTarget : String := "KeyValueStore.KeyValueStore"
 def kvTy : Ty := .handle kvTarget
-
-/-- The printed name of a pure function, `Ref.update(ref, incr)`. -/
-def fnSpelling : FnName → String
-  | .incr => "incr"
-  | .double => "double"
-  | .zeroWhenPositive => "zeroWhenPositive"
-  | .noChange => "noChange"
-  | .takeAndBump => "takeAndBump"
 
 /-- An absent external position cannot type as a callback. Its empty spelling is
 outside the admitted table domain. -/
@@ -273,7 +266,7 @@ value, a written value and a deferred's success, as at the template rows (decisi
 failed value becomes its error through `errOf` (`Machine/Term.lean`, decisions row 120's
 carrier), which the checker keeps inside the error alphabet by the deferred's formation rule
 (`Formation.HeadFormed`). A read-modify-write row runs its name's lowering at the row's shape,
-with the environment `[]` (`FnName.updateTerm` and its three siblings, `Machine/Stores.lean`);
+with the environment `[]` (`FnName.updateTerm` and its three siblings, `Program/FnName.lean`);
 the rows carry their own terms, run at `env`, at the state plan's T3b cutover. -/
 def syncOpOf : NativeOp → List Val → Val → Option SyncOp
   | refMake, _, v => some (SyncOp.refMake v)
@@ -340,8 +333,6 @@ def nativeServiceTy (key : ServiceKey) : Option Ty :=
   | none =>
     if key.name.value < Effect4.Machine.Env.firstFreeName then none
     else (nativeServiceTypes.find? (fun entry => entry.1 == key.service.value)).map Prod.snd
-
-def fnNames : List Effect4.Machine.FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
 /-- One native operation per spelling key (`rowKey`, `Program/Table.lean`): every operation
 whose row carries no type argument, each read-modify-write row at each of the five names (row by

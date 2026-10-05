@@ -51,6 +51,15 @@ def answer (o : SyncOp) (s : Stores) : Option Val := (syncOpStep o s).map Prod.s
 def s1 : Stores := after (SyncOp.refMake (Val.nat 5)) Stores.empty
 /-- `Deferred.make()` on the empty store. -/
 def s2 : Stores := after SyncOp.deferredMake Stores.empty
+
+/-- `succ(a)`, the current value at level 0: a binder term a read-modify-write row runs. -/
+def succTerm : Program.Term := .app "succ" (.cons (.var 0) .nil)
+
+/-- `ite(lt(0, a), some(0), none())`, the current value at level 0: `Some 0` on a positive
+cell, `None` otherwise. -/
+def zeroWhenPositiveTerm : Program.Term :=
+  .app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
+    (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil)))
 /-- `Deferred.succeed(d, 1)` after `Deferred.make()`. -/
 def s2done : Stores :=
   after (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 1)))) s2
@@ -155,8 +164,8 @@ section Heap
 #guard answer (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1 = some (Val.cell ⟨0⟩)
 #guard answer (SyncOp.refGet ⟨0⟩) (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1) = some (Val.nat 7)
 #guard (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1).refs.length = 1
-#guard answer (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) s1 = some (Val.nat 0)
-#guard Stores.WF (after (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) s1)
+#guard answer (SyncOp.refUpdateSomeAndGet ⟨0⟩ zeroWhenPositiveTerm []) s1 = some (Val.nat 0)
+#guard Stores.WF (after (SyncOp.refUpdateSomeAndGet ⟨0⟩ zeroWhenPositiveTerm []) s1)
 -- a handle stored in a cell: valid when it exists, and the argument is part of validity
 #guard SyncOp.validIn s1 (SyncOp.refMake (Val.cell ⟨0⟩)) = true
 #guard Stores.WF (after (SyncOp.refMake (Val.cell ⟨0⟩)) s1)
@@ -168,7 +177,7 @@ section Heap
 #guard answer (SyncOp.refGet ⟨0⟩) s1 = some (Val.nat 5)
 #guard (after (SyncOp.refSet ⟨0⟩ (Val.nat 6)) (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1)).refs =
   [Val.nat 6]
-#guard (after (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
+#guard (after (SyncOp.refUpdate ⟨0⟩ succTerm [])
   (after (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1)).refs = [Val.nat 8]
 
 end Heap
@@ -182,15 +191,15 @@ def viaKernel (o : SyncOp) (heap : RefHeap) : Option (Option (Val × RefHeap)) :
   o.refKernel.map fun (cell, k) => refStepOf cell k heap
 
 -- the one row that reads again after its write agrees with the machine on both branches
-#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 3] =
-  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 3])
-#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 0] =
-  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []) [Val.nat 0])
+#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ zeroWhenPositiveTerm []) [Val.nat 3] =
+  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ zeroWhenPositiveTerm []) [Val.nat 3])
+#guard viaKernel (SyncOp.refUpdateSomeAndGet ⟨0⟩ zeroWhenPositiveTerm []) [Val.nat 0] =
+  some (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ zeroWhenPositiveTerm []) [Val.nat 0])
 -- a dangling cell is the kernel row's frontier, as it is the machine's; `refMake` has no kernel
 #guard viaKernel (SyncOp.refGet ⟨1⟩) [Val.nat 3] = some none
 -- a term that does not evaluate on the value read is the frontier of both (decisions row 43)
-#guard viaKernel (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) [Val.bool true] = some none
-#guard refStep (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) [Val.bool true] = none
+#guard viaKernel (SyncOp.refUpdate ⟨0⟩ succTerm []) [Val.bool true] = some none
+#guard refStep (SyncOp.refUpdate ⟨0⟩ succTerm []) [Val.bool true] = none
 #guard viaKernel (SyncOp.refMake (Val.nat 1)) [] = none
 -- the red control: a kernel line that disagrees with its `refStep` arm (`getAndSet` answering
 -- the value it wrote rather than the one it read) differs at the first heap with a live cell,

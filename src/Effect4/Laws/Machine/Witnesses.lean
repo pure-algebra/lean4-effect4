@@ -1090,25 +1090,34 @@ def oneRef : Stores := { Stores.empty with refs := [Val.nat 1] }
 def w7Set : M :=
   replay oneRef (ProgName.syncOp (SyncOp.refSet ⟨0⟩ (Val.nat 5))) [RunDecision.evaluate ⟨0⟩]
 
--- the read-modify-write rows run the names' lowerings (`FnName.updateTerm` and kin)
+-- the read-modify-write rows run literal binder terms, the current value at level 0:
+-- `succ(a)`, `pair(a, none())` and `ite(lt(0, a), some(0), none())`
 def w7Update : M :=
-  replay oneRef (ProgName.syncOp (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []))
+  replay oneRef (ProgName.syncOp (SyncOp.refUpdate ⟨0⟩ (.app "succ" (.cons (.var 0) .nil)) []))
     [RunDecision.evaluate ⟨0⟩]
 
 def w7ModifySome : M :=
-  replay oneRef (ProgName.syncOp (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm []))
+  replay oneRef
+    (ProgName.syncOp (SyncOp.refModifySome ⟨0⟩
+      (.app "pair" (.cons (.var 0) (.cons (.app "none" .nil) .nil))) []))
     [RunDecision.evaluate ⟨0⟩]
 
 def w7UpdateSomeAndGet : M :=
   replay { Stores.empty with refs := [Val.nat 3] }
     (ProgName.syncOp
-      (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []))
+      (SyncOp.refUpdateSomeAndGet ⟨0⟩
+        (.app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
+          (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil))))
+        []))
     [RunDecision.evaluate ⟨0⟩]
 
 def w7GetAndUpdateSome : M :=
   replay { Stores.empty with refs := [Val.nat 3] }
     (ProgName.syncOp
-      (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm []))
+      (SyncOp.refGetAndUpdateSome ⟨0⟩
+        (.app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
+          (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil))))
+        []))
     [RunDecision.evaluate ⟨0⟩]
 
 /-- `ref.set-void-returns-cell` / `ref.cell-set-returns-self`: the effect succeeds with the

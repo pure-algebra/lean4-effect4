@@ -149,7 +149,7 @@ fractional duration spelling, all tuple functions and the option/empty-else axes
 def probes : List (String × Eff NativeOp) :=
   [("composite", composite), ("fractionalDuration", .perform .sleep (.lit (.nat 1500)))] ++
   [Effect4.Machine.FnName.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump].map
-    (fun f => (NativeOp.fnSpelling f,
+    (fun f => (fnSpelling f,
       .bind (.perform .refMake (.lit (.nat 2))) (.perform (.refUpdate f) (.var 0))))
 
 def write (dir : System.FilePath) (name : String) (c : Case) (expr : Expr)

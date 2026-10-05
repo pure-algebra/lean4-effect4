@@ -139,6 +139,42 @@ theorem kernel_term_agrees {op : NativeOp} {k : RefKernel} (hk : op.fnKernel = s
         (Store.Image.tuple2 Store.Image.ident (Store.Image.option Store.Image.ident)).ofVal_toVal _]
     rfl
 
+/-! ## The faces' images agree with the names on every number (the state plan's T3b)
+
+Until the state plan's T5 the faces spell a read-modify-write row's binder term by a name
+(`FnName.image`, `Program/FnName.lean`). The image of a name at a shape and a node's level
+evaluates, on every number and over every outer environment, to the value the name answers at
+that shape (`FnName.valueAt`): the value T2's lowering of the name evaluated to
+(`FnName.lowering_agrees`). So a program that named its function runs the same store step on a
+number cell once its row carries the name's image. Two names whose plain terms would repeat have
+distinct images (`takeAndBump` at `add(a, 1)`, `zeroWhenPositive` at `add(a, 0)`), and the
+agreement is what says the re-imaging moves no value. -/
+
+/-- **The image of a name agrees with the name on every number**, at every shape, level and outer
+environment: at `env ++ [n]` the image at level `env.length` evaluates to the name's value at the
+shape. -/
+@[semantics "translation-simulation" (requirement := R4)]
+theorem _root_.Effect4.Machine.FnName.image_agrees (s : FnShape) (f : FnName) (env : List Val)
+    (n : Nat) :
+    evalTerm (env ++ [Val.nat n]) (FnName.image s env.length f) = some (f.valueAt s (.nat n)) := by
+  rw [FnName.image_eval]
+  cases s
+  case updateSome =>
+    cases f
+    case zeroWhenPositive => cases n <;> rfl
+    all_goals rfl
+  all_goals cases f <;> rfl
+
+/-- **The image of a name agrees with T2's lowering of it on every number**: the image at a
+node's level, over any outer environment, evaluates as the lowering did at `[]`. The statement
+that the cutover (slice E of the state plan's T3b) moves no store step on a number cell; it
+leaves with T2's lowerings, and `FnName.image_agrees` stays. -/
+theorem _root_.Effect4.Machine.FnName.image_agrees_lowering (s : FnShape) (f : FnName)
+    (env : List Val) (n : Nat) :
+    evalTerm (env ++ [Val.nat n]) (FnName.image s env.length f) =
+      evalTerm [Val.nat n] (f.lowering s) := by
+  rw [FnName.image_agrees, FnName.lowering_agrees]
+
 /-! ## The native rows' store steps, one row each -/
 
 /-- **Each native `sync` row fulfils itself on the cell columns**: the store operation a request
