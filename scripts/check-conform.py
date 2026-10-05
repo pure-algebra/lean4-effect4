@@ -13,10 +13,10 @@ are kept under `.lake/conform/attempts/<profile>/`.
 
 `compiler` is a Python step of this file (`--step`): one production compiler checkpoint. Lean
 writes the requested fixture selection (`selection.json`) and then the emitted OCaml for
-normalization. The step compiles that OCaml and runs it against the selection. Two
-emitted-code mutations follow, and each must fail the observation that reads it. The step
-takes every expectation from the selection: the identities a report must plan, its pins and
-its inputs. It never takes one from the report that came back.
+normalization. The step compiles that OCaml and runs it against the selection. The
+emitted-code mutations follow (`MUTATIONS`), and each must fail the observation that reads it.
+The step takes every expectation from the selection: the identities a report must plan, its
+pins and its inputs. It never takes one from the report that came back.
 
 The runner's finite controls are `scripts/test-conform-runner.py`. They run without Lean and
 without a compiler. The `models`, `types`, `layouts` and `target` profiles were retired on
@@ -45,8 +45,8 @@ PROFILES = {
                     "validity.json": "conform-lcnf-validity",
                     "ocaml.json": "conform.normalization.ocaml"},
         "artifacts": ["selection.json", "closure.json", "normalization.ml", "expected.txt",
-                      "actual.txt", "mutated.ml", "mutated-support.ml", "mutation.txt",
-                      "processes.json"],
+                      "actual.txt", "mutated.ml", "mutated-support.ml", "mutated-contains.ml",
+                      "mutation.txt", "processes.json"],
     },
     "native": {
         "command": ["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Effect4/NativeMain.lean", "{out}"],
@@ -63,13 +63,16 @@ PROFILES = {
 
 # The emitted-code mutations of the compiler checkpoint. Each alters one definition of the
 # emitted prelude and names the first observation that reads the altered definition: the key
-# of the handle type whose name is not ASCII, and the product of the first name fixture. The
+# of the handle type whose name is not ASCII, the product of the first name fixture, and the
+# membership test under an asymmetric instance, whose two arguments the third one swaps. The
 # name is a host fixture of the selection, never a position in a list.
 MUTATIONS = [
     {"id": "utf8-mutation", "file": "mutated", "original": "Char.code (String.get s i)",
      "replacement": "0", "fails": {"key/handle-utf8"}},
     {"id": "support-mutation", "file": "mutated-support", "original": "max_int else a * b",
      "replacement": "max_int else a * a", "fails": {"names/mulCap"}},
+    {"id": "contains-mutation", "file": "mutated-contains", "original": "(fun e -> inst a e)",
+     "replacement": "(fun e -> inst e a)", "fails": {"contains-order"}},
 ]
 
 SELECTION_FORMAT = "conform-selection-v1"

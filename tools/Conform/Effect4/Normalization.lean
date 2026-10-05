@@ -103,11 +103,13 @@ structure Selected where
   host : Bool := false
 
 /-- The requested selection, in the order the lanes run it. One list names every fixture. A
-normalization fixture takes part in all three lanes. A builtin control runs in compiled OCaml.
-A name fixture runs on the target evaluator and in compiled OCaml. -/
+normalization fixture takes part in all three lanes. A builtin control and a name fixture run
+on the target evaluator and in compiled OCaml: the source interpreter has no expression of a
+builtin's form, and it refuses an under-applied primitive. -/
 def selection : Array Selected :=
   (fixtures.map fun f => { name := f.name, source := true, target := true, host := true }) ++
-  (CompilerControls.hostChecks.map fun (id, _, _) => ({ name := id, host := true } : Selected)).toArray ++
+  (CompilerControls.hostChecks.map fun (id, _, _) =>
+    ({ name := id, target := true, host := true } : Selected)).toArray ++
   (CompilerControls.nameChecks.map fun (id, _, _) =>
     ({ name := id, target := true, host := true } : Selected)).toArray
 
@@ -197,16 +199,26 @@ def main (args : List String) : IO UInt32 := do
           label := Conform.Effect4.CompilerControls.nameId name
           bind := OCaml5.Lcnf.globalName name
           args := args.toArray.map fun a => Target.TValue.int (Int.ofNat a)
-          expected := .int (Int.ofNat answer) } : Target.TCase)).toArray
+          expected := .value (.int (Int.ofNat answer)) } : Target.TCase)).toArray
     unless nameCases.size == Conform.Effect4.LoweringNames.entries.length do
       throwError "name fixtures: an entry has no Lean answer"
     let targetCases := (fixtures.map fun f => ({
         label := f.name
         bind := OCaml5.Lcnf.globalName f.decl
         args := f.targetArgs
-        expected := f.targetExpected } : Target.TCase)) ++ nameCases
+        expected := .value f.targetExpected } : Target.TCase)) ++ nameCases
     let targetRows := named (Target.differentialT target targetFuel "normalization.target" targetCases)
       (targetCases.map (·.label))
+    -- The builtin controls on the evaluator too: each expression in the assembled program,
+    -- against what the control expects, a value or a named exception.
+    let host := Conform.Effect4.CompilerControls.hostChecks
+    let controlRows := host.toArray.map fun (id, expression, expected) =>
+      let subject : Subject := ⟨"fixture", [id]⟩
+      match Conform.Effect4.CompilerControls.onTarget target targetFuel expression expected with
+      | (observed, some wanted) =>
+        Target.judgeT "normalization.target" subject id targetFuel observed wanted
+      | (_, none) =>
+        Row.refused "normalization.target" subject s!"{id}: the expected expression gave no value"
     let gen ← (OCaml5.Lcnf.generate translated.realTypes translated.mentioned {} {}).run'
     unless gen.unknown.isEmpty do
       throwError "target types: {gen.unknown}"
@@ -219,9 +231,13 @@ def main (args : List String) : IO UInt32 := do
     let observe (id condition : String) : String :=
       s!"let () = if ({condition}) then Printf.printf \"{id}\\tPASS\\n\" else (Printf.eprintf \"{id}\\tFAIL\\n\"; exit 1)"
     let checks := fixtures.toList.map fun f => observe f.name f.mlCheck
-    let host := Conform.Effect4.CompilerControls.hostChecks
+    -- A control that expects a value compares; one that expects an exception catches it by
+    -- its name, and any answer or any other exception fails the observation.
     let checks := checks ++ host.map fun (id, expression, expected) =>
-      observe id s!"({OCaml5.Ml.renderExpr 0 expression}) = ({OCaml5.Ml.renderExpr 0 expected})"
+      let rendered := OCaml5.Ml.renderExpr 0 expression
+      observe id (match expected with
+        | .value e => s!"({rendered}) = ({OCaml5.Ml.renderExpr 0 e})"
+        | .raises exn => s!"match ({rendered}) with _ -> false | exception {exn} -> true")
     -- The name fixtures as the emitted module calls them, against Lean's own answers.
     let checks := checks ++ Conform.Effect4.CompilerControls.nameChecks.map fun (id, call, answer) =>
       observe id s!"({call}) = ({answer})"
@@ -260,7 +276,7 @@ def main (args : List String) : IO UInt32 := do
       tool := "conform.normalization"
       expected := required.size
       required
-      rows := sourceRows ++ targetRows ++ mutationRows
+      rows := sourceRows ++ targetRows ++ controlRows ++ mutationRows
       pins := ⟨"lean", Lean.versionString⟩ :: pins
       inputs := [selected] }
     let validity : Manifest := { leanVersion := Lean.versionString, phase, roots, imports, closure := source }

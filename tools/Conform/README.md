@@ -100,7 +100,9 @@ silently replace persisted compiler input with on-demand compilation.
 The normalization checkpoint exercises `Ty.key`, `Ty.normalize`, `CTy.ofRaw`, and generator
 answer merging with nonempty requirement rows. It compares compiled Lean observations with
 the mono interpreter, interpretation of actual emitted OCaml syntax, and `ocamlopt` execution.
-Structural `Decl.check` results are reported separately. The target remains bounded by its
+Structural `Decl.check` results are reported separately. The builtin controls and the name
+fixtures run on the target evaluator and in compiled OCaml. A control expects a value or a
+named exception. The target remains bounded by its
 integer representation, UTF-8 input assumptions and stated primitive contracts; finite
 agreement does not prove the translator or establish general host equivalence.
 

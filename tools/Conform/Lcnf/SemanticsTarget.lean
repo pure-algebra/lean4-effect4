@@ -27,12 +27,21 @@ this repository — in particular **not** `OCaml5.*`: that is the extensibility 
 * **Strings are byte sequences.** `TValue.str` carries the target's own string; the primitive
   `strLength` answers the **byte** length, because that is what OCaml's `String.length` does.
   A backend whose strings are scalar-value sequences supplies a different primitive.
-* **The evaluator is total.** `evalT`, `evalArgs`, `evalArms`, `applyT` and `applyNamed` are
-  structurally recursive on fuel; none is `partial` and there is no `sorry` anywhere. (Four
-  helpers that walk a finite value or pattern — `TValue.beq`, `TValue.render`, `asListV`,
-  `matchPat` — are `partial`; none is part of the semantics.) `stuck` is a refusal,
-  `outOfFuel` is the frontier, and `exn` is the target's own exception — the third thing an
-  OCaml expression can do, which a Lean function cannot.
+* **The evaluator is total.** `evalT`, `evalArgs`, `evalArms`, `applyT`, `applyNamed`, `primT`
+  and `scanT` are structurally recursive on fuel; none is `partial` and there is no `sorry`
+  anywhere. `stuck` is a refusal, `outOfFuel` is the frontier, and `exn` is the target's own
+  exception — the third thing an OCaml expression can do, which a Lean function cannot.
+* **Four helpers are `partial`, and three of them take part in evaluation.** They walk a finite
+  value or pattern: `matchPat` (called by `evalArms`), `asListV` and `TValue.beq` (called by
+  `applyPrim`), and `TValue.render` (a refusal's text only). The kernel has no equation for a
+  `partial` definition. A proof about a pattern match, a list primitive or `=` needs a total
+  helper first; a proof that leaves an inner evaluation opaque does not.
+* **A library function that takes a function is evaluated here, not in `applyPrim`.**
+  `List.exists` and `List.for_all` apply their callback through `applyT`, one element for one
+  unit of fuel (`primT`, `scanT`), and walk the list value by the same fuel. A callback's
+  exception, its refusal and its frontier are the scan's. The other such names of the OCaml
+  builtin table have no rule, and a call of one is a refusal: `List.map`, `List.filter`,
+  `List.fold_left`, `List.find_opt`, `List.filter_map`, `Option.map` and `Option.bind`.
 -/
 
 namespace Conform.Lcnf.Target
@@ -368,6 +377,13 @@ def applyPrim (pe : PrimEnv) (op : String) (args : Array TValue) : TOutcome :=
   | "id" => match args with
     | #[a] => .value a
     | _ => .stuck "id: arity"
+  -- `Option.value o ~default:d`, the one labelled call a reader may admit. The spelling is
+  -- not an OCaml identifier, so no emitted name reads as this primitive. Both arguments are
+  -- values here: the call evaluates its default whatever the option is.
+  | "Option.value~default" => match args with
+    | #[.ctorV "Some" #[v], _] => .value v
+    | #[.ctorV "None" #[], d] => .value d
+    | _ => .stuck "Option.value: not an option and a default"
   | _ => .stuck s!"no rule for the primitive `{op}`"
 
 /-- The arity of a primitive, so an under-applied one becomes a partial application rather
@@ -378,7 +394,17 @@ def primArity : String → Option Nat
   | "utf8_bytes" | "lcnf_utf8_bytes" | "lcnf_utf8_length" | "id" => some 1
   | "+" | "-" | "*" | "/" | "mod" | "land" | "lor" | "lxor" | "lsr" | "lsl"
   | "=" | "<>" | "<" | "<=" | ">" | ">=" | "&&" | "||" | "^" | "max" | "min"
-  | "@" | "List.rev_append" | "List.nth" => some 2
+  | "@" | "List.rev_append" | "List.nth" | "Option.value~default"
+  | "List.exists" | "List.for_all" => some 2
+  | _ => none
+
+/-- The library functions that take a function and scan a list with it. `applyPrim` cannot
+apply a function value, so the evaluator answers these itself (`primT`, `scanT`). The Boolean
+is the callback's answer that ends the scan: `List.exists` stops at the first `true`, and
+`List.for_all` at the first `false`. -/
+def scanStop? : String → Option Bool
+  | "List.exists" => some true
+  | "List.for_all" => some false
   | _ => none
 
 /-! ## 5. The evaluator -/
@@ -484,10 +510,10 @@ def evalT (prog : Program) : Nat → TEnv → Expr → TOutcome
       | .value (.tupleV vs) =>
         match primArity op with
         | some k =>
-          if vs.size == k then applyPrim prog.pe op vs
+          if vs.size == k then primT prog fuel op vs
           else if vs.size < k then .value (.papp op vs)
           else
-            match applyPrim prog.pe op (vs.extract 0 k) with
+            match primT prog fuel op (vs.extract 0 k) with
             | .value f => applyT prog fuel f (vs.extract k vs.size)
             | o => o
         | none => .stuck s!"no rule for the primitive `{op}`"
@@ -565,13 +591,46 @@ def applyNamed (prog : Program) : Nat → String → Array TValue → TOutcome
     | none =>
       match primArity n with
       | some k =>
-        if vs.size == k then applyPrim prog.pe n vs
+        if vs.size == k then primT prog fuel n vs
         else if vs.size < k then .value (.papp n vs)
         else
-          match applyPrim prog.pe n (vs.extract 0 k) with
+          match primT prog fuel n (vs.extract 0 k) with
           | .value g => applyT prog fuel g (vs.extract k vs.size)
           | o => o
       | none => .stuck s!"unbound name `{n}`"
+
+/-- A primitive applied to exactly its arity. A scan of a list goes to `scanT`, and costs one
+unit of fuel here. Every other primitive is `applyPrim`, at any fuel: its answer does not
+depend on the fuel that is left. -/
+def primT (prog : Program) : Nat → String → Array TValue → TOutcome
+  | 0, op, vs =>
+    match scanStop? op with
+    | some _ => .outOfFuel
+    | none => applyPrim prog.pe op vs
+  | fuel + 1, op, vs =>
+    match scanStop? op with
+    | some stop =>
+      match vs with
+      | #[p, l] => scanT prog fuel op stop p l
+      | _ => .stuck s!"{op}: arity"
+    | none => applyPrim prog.pe op vs
+
+/-- `List.exists p l` and `List.for_all p l`: the callback on each element in the list's
+order, through `applyT`, until an answer is `stop` or the list ends. An element costs one unit
+of fuel. The callback's exception, refusal or frontier ends the scan with that outcome, so no
+later element is reached. -/
+def scanT (prog : Program) : Nat → String → Bool → TValue → TValue → TOutcome
+  | 0, _, _, _, _ => .outOfFuel
+  | fuel + 1, op, stop, p, l =>
+    match l with
+    | .ctorV "[]" #[] => .value (.bool (!stop))
+    | .ctorV "::" #[h, t] =>
+      match applyT prog fuel p #[h] with
+      | .value (.bool b) =>
+        if b == stop then .value (.bool stop) else scanT prog fuel op stop p t
+      | .value v => .stuck s!"{op}: the callback did not answer a boolean ({v.render})"
+      | o => o
+    | v => .stuck s!"{op}: not a list ({v.render})"
 
 end
 
@@ -581,26 +640,50 @@ def runT (prog : Program) (fuel : Nat) (n : String) (args : Array TValue) : TOut
 
 /-! ## 6. A differential against a reference answer -/
 
+/-- What a target case expects: a value, or the target's own exception by its name. Nothing
+else can be expected. An out-of-fuel result is the frontier and a stuck one is a refusal,
+whatever the case expects (`judgeT`). -/
+inductive TExpect where
+  | value (v : TValue)
+  | raises (exn : String)
+  deriving Inhabited
+
+def TExpect.render : TExpect → String
+  | .value v => v.render
+  | .raises m => "raises " ++ m
+
 structure TCase where
   label : String
   bind : String
   args : Array TValue
-  expected : TValue
+  expected : TExpect
 
 open Conform in
-/-- Run every case against the reference. Evidence is `tested`. -/
+/-- One row for one observed outcome of `what`, against what the case expects. Evidence is
+`tested`. A value or an exception is compared. A refusal is refused and the frontier is
+unresolved: neither is ever an expected answer. -/
+def judgeT (check : String) (subj : Subject) (what : String) (fuel : Nat)
+    (observed : TOutcome) (expected : TExpect) : Row :=
+  let differs (message : String) : Row :=
+    Row.counterexample check subj message
+      (Json.mkObj [("target", Json.str observed.render), ("reference", Json.str expected.render)])
+  match observed, expected with
+  | .stuck r, _ => Row.refused check subj s!"{what}: {r}"
+  | .outOfFuel, _ => Row.unresolved check subj s!"{what}: out of fuel at {fuel}"
+  | .value v, .value w =>
+    if v.beq w then Row.pass check subj .tested s!"{what} agrees"
+    else differs s!"{what}: target gave {v.render}, reference gave {w.render}"
+  | .exn m, .raises n =>
+    if m == n then Row.pass check subj .tested s!"{what} raises {m}, as the reference"
+    else differs s!"{what}: the target raised {m}, the reference raises {n}"
+  | .value v, .raises n => differs s!"{what}: target gave {v.render}, the reference raises {n}"
+  | .exn m, .value _ => differs s!"{what}: the target raised {m}"
+
+/-- Run every case against the reference. -/
 def differentialT (prog : Program) (fuel : Nat) (check : String) (cases : Array TCase) :
-    Array Row :=
+    Array Conform.Row :=
   cases.mapIdx fun i c =>
-    let subj : Subject := { kind := "case", path := [toString i, c.bind, c.label] }
-    match runT prog fuel c.bind c.args with
-    | .value v =>
-      if v.beq c.expected then Row.pass check subj .tested s!"{c.bind} agrees"
-      else Row.counterexample check subj
-        s!"{c.bind}: target gave {v.render}, reference gave {c.expected.render}"
-        (Json.mkObj [("target", Json.str v.render), ("reference", Json.str c.expected.render)])
-    | .stuck r => Row.refused check subj s!"{c.bind}: {r}"
-    | .exn m => Row.counterexample check subj s!"{c.bind}: the target raised {m}" (Json.str m)
-    | .outOfFuel => Row.unresolved check subj s!"{c.bind}: out of fuel at {fuel}"
+    judgeT check { kind := "case", path := [toString i, c.bind, c.label] } c.bind fuel
+      (runT prog fuel c.bind c.args) c.expected
 
 end Conform.Lcnf.Target

@@ -368,7 +368,8 @@ class CompilerStep(unittest.TestCase):
         prefix = lambda name: "".join(f"{n}\tPASS\n" for n in self.host[:self.host.index(name)])
         self.actual = compiled(stdout="".join(f"{n}\tPASS\n" for n in self.host))
         self.mutants = {"mutated": compiled(1, prefix("key/handle-utf8"), "key/handle-utf8\tFAIL\n"),
-                        "mutated-support": compiled(1, prefix("names/mulCap"), "names/mulCap\tFAIL\n")}
+                        "mutated-support": compiled(1, prefix("names/mulCap"), "names/mulCap\tFAIL\n"),
+                        "mutated-contains": compiled(1, prefix("contains-order"), "contains-order\tFAIL\n")}
         self.files = self.produced()
         self.calls = []
 
@@ -399,7 +400,9 @@ class CompilerStep(unittest.TestCase):
                                                [("lcnf.decl.valid", "declaration", r) for r in self.roots + ["Reached.helper"]],
                                                pins={"lean": lean, "phase": "mono"}, inputs=bound)),
             "closure.json": json.dumps({"format": "conform-lcnf-manifest-v1", "roots": self.roots}),
-            "normalization.ml": "let f s i = Char.code (String.get s i)\nlet m a b = if a = 0 then 0 else if b > max_int / a then max_int else a * b\n",
+            "normalization.ml": "let f s i = Char.code (String.get s i)\n"
+                                "let m a b = if a = 0 then 0 else if b > max_int / a then max_int else a * b\n"
+                                "let c inst l a = List.exists (fun e -> inst a e) l\n",
             "expected.txt": "".join(f"{n}\tPASS\n" for n in lane("host")),
         }
 
@@ -430,15 +433,17 @@ class CompilerStep(unittest.TestCase):
     def test_intended_failures_pass(self):
         self.assertEqual(self.step(), 0)
         self.assertEqual(self.printed.getvalue(),
-                         "compiler checkpoint: 4 actual OCaml checks and 2 emitted-code mutations passed\n")
+                         "compiler checkpoint: 4 actual OCaml checks and 3 emitted-code mutations passed\n")
         made = json.loads((self.out / "ocaml.json").read_text())
         planned = [(item["check"], item["subject"]["path"][0]) for item in made["required"]]
         self.assertEqual(planned, [("normalization.ocaml", n) for n in self.host]
                          + [("normalization.ocaml.control", "utf8-mutation"),
-                            ("normalization.ocaml.control", "support-mutation")])
+                            ("normalization.ocaml.control", "support-mutation"),
+                            ("normalization.ocaml.control", "contains-mutation")])
         self.assertEqual([i["name"] for i in made["inputs"]], ["selection", "normalization.ml", "expected.txt"])
         self.assertEqual((self.out / "actual.txt").read_text(), self.actual.stdout)
-        self.assertEqual((self.out / "mutation.txt").read_text(), "key/handle-utf8\tFAIL\nnames/mulCap\tFAIL\n")
+        self.assertEqual((self.out / "mutation.txt").read_text(),
+                         "key/handle-utf8\tFAIL\nnames/mulCap\tFAIL\ncontains-order\tFAIL\n")
         # The outputs are exactly the profile's: the compiled programs are removed.
         declared = checkpoint.PROFILES["compiler"]
         self.assertEqual({p.name for p in self.out.iterdir()}, set(declared["reports"]) | set(declared["artifacts"]))
@@ -449,6 +454,7 @@ class CompilerStep(unittest.TestCase):
         self.assertEqual(processes[2], {"command": ["{out}/normalization"], "exit": 0, "stdout": self.actual.stdout, "stderr": ""})
         self.assertNotIn(str(self.out), (self.out / "processes.json").read_text())
         self.assertIn("a * a", (self.out / "mutated-support.ml").read_text())
+        self.assertIn("inst e a", (self.out / "mutated-contains.ml").read_text())
 
     def test_repaired_unrelated_mutation_failure_is_refused(self):
         self.mutants["mutated"] = compiled(1, "", "NOT-IN-THE-PLAN\tFAIL\n")
@@ -490,6 +496,12 @@ class CompilerStep(unittest.TestCase):
         self.files = self.produced([f for f in self.fixtures if f[0] != "names/mulCap"])
         self.actual = compiled(stdout="key/never\tPASS\nkey/handle-utf8\tPASS\ncontains-order\tPASS\n")
         self.refused(r"mutated-support: \['names/mulCap'\] is not a host fixture of the selection")
+
+    def test_swapped_callback_arguments_must_fail_the_order_control(self):
+        # The asymmetric control is what tells the two orders apart: a later failure is not it.
+        self.mutants["mutated-contains"] = compiled(1, "".join(f"{n}\tPASS\n" for n in self.host[:3]),
+                                                    "names/mulCap\tFAIL\n")
+        self.refused(r"mutated-contains: the mutation failed names/mulCap, not one of \['contains-order'\]")
 
     def test_repaired_mismatch_writes_the_observation_first(self):
         self.actual = compiled(stdout="key/never\tPASS\nkey/handle-utf8\tWRONG\n")
