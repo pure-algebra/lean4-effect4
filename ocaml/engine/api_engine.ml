@@ -4162,7 +4162,7 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
       let _x_20 = Terms_cons (_x_13, _x_19) in
       Term_app (_x_11, _x_20))
 
-  (* LCNF mono: Effect4.Program.NativeOp.syncOpOf (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
+  (* LCNF mono: Effect4.Program.NativeOp.syncOpOf._redArg (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
   let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_) : sync_op option =
   match (x_1 : native_op) with
     | NativeOp_refMake -> (let _x_3 = SyncOp_refMake x_2 in

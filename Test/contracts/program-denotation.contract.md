@@ -169,7 +169,7 @@ Lane 1, `Effect4.Program`:
    evaluates to a value of its type.
 7. `evalTerm_isSome`, `evalTerms_isSome`: under `Fits`, a term that types evaluates.
 8. `syncOpOf_isSome`: a request value of a `sync` row's request type, at every instance of the
-   row's template, decodes. The `Ref` and `Deferred` rows are templates since the state plan's
+   row's template and at every environment, decodes. The `Ref` and `Deferred` rows are templates since the state plan's
    T3a (`(NativeOp.row op).request.instantiate σ`); the decoder reads any value, so the
    instance never decides the decoding.
 9. `syncOpOf_async_none`.
@@ -328,7 +328,7 @@ meaning (bind a b) env s     = let (ex, s') := meaning a env s
                                            | failure c => (failure c, s')
 meaning (perform op r) env s = match syncOpStep o s with some (s', v) => (success v, s')
                                                      | none => (success unit, s)
-                               where some o = (evalTerm env r).bind (syncOpOf op)
+                               where some o = (evalTerm env r).bind (syncOpOf op env)
 meaning (suspend b) env s    = meaning b env s
 meaning (exit b) env s       = let (ex, s') := meaning b env s; (success (reifyExitVal ex), s')
 meaning (catchCause b h)     = on failure c, meaning h (env ++ [exitErr c])

@@ -495,52 +495,52 @@ def atNat (t : Ty) : Ty := t.instantiate [(0, .nat), (1, .nat)]
 
 #guard Val.hasTy (Val.nat 0) (atNat (NativeOp.row .refMake).request)
 #guard !Val.hasTy (Val.nat 0) (NativeOp.row .refMake).request
-#guard NativeOp.syncOpOf .refMake (Val.nat 0) = some (SyncOp.refMake (Val.nat 0))
+#guard NativeOp.syncOpOf .refMake [] (Val.nat 0) = some (SyncOp.refMake (Val.nat 0))
 -- `Ref.make` decodes any initial value: the instance never decides the decoding
-#guard NativeOp.syncOpOf .refMake (Val.str "x") = some (SyncOp.refMake (Val.str "x"))
+#guard NativeOp.syncOpOf .refMake [] (Val.str "x") = some (SyncOp.refMake (Val.str "x"))
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)
-#guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
+#guard NativeOp.syncOpOf .refGet [] (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
 #guard Val.hasTy (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) (atNat (NativeOp.row .refSet).request)
 #guard Val.hasTy (Val.tuple [Val.cell ⟨0⟩, Val.str "a"])
   ((NativeOp.row .refSet).request.instantiate [(0, .string)])
-#guard NativeOp.syncOpOf .refSet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSet ⟨0⟩ (Val.nat 1))
-#guard NativeOp.syncOpOf .refGetAndSet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refGetAndSet ⟨0⟩ (Val.nat 1))
-#guard NativeOp.syncOpOf .refSetAndGet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSetAndGet ⟨0⟩ (Val.nat 1))
-#guard NativeOp.syncOpOf (.refUpdate .incr) (Val.cell ⟨0⟩) = some (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
-#guard NativeOp.syncOpOf (.refGetAndUpdate .incr) (Val.cell ⟨0⟩) = some (SyncOp.refGetAndUpdate ⟨0⟩ FnName.incr.updateTerm [])
-#guard NativeOp.syncOpOf (.refUpdateAndGet .incr) (Val.cell ⟨0⟩) = some (SyncOp.refUpdateAndGet ⟨0⟩ FnName.incr.updateTerm [])
-#guard NativeOp.syncOpOf (.refUpdateSome .zeroWhenPositive) (Val.cell ⟨0⟩) = some (SyncOp.refUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
-#guard NativeOp.syncOpOf (.refGetAndUpdateSome .zeroWhenPositive) (Val.cell ⟨0⟩) = some (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
-#guard NativeOp.syncOpOf (.refUpdateSomeAndGet .zeroWhenPositive) (Val.cell ⟨0⟩) = some (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
-#guard NativeOp.syncOpOf (.refModify .takeAndBump) (Val.cell ⟨0⟩) = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
-#guard NativeOp.syncOpOf (.refModifySome .noChange) (Val.cell ⟨0⟩) = some (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm [])
+#guard NativeOp.syncOpOf .refSet [] (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSet ⟨0⟩ (Val.nat 1))
+#guard NativeOp.syncOpOf .refGetAndSet [] (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refGetAndSet ⟨0⟩ (Val.nat 1))
+#guard NativeOp.syncOpOf .refSetAndGet [] (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSetAndGet ⟨0⟩ (Val.nat 1))
+#guard NativeOp.syncOpOf (.refUpdate .incr) [] (Val.cell ⟨0⟩) = some (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
+#guard NativeOp.syncOpOf (.refGetAndUpdate .incr) [] (Val.cell ⟨0⟩) = some (SyncOp.refGetAndUpdate ⟨0⟩ FnName.incr.updateTerm [])
+#guard NativeOp.syncOpOf (.refUpdateAndGet .incr) [] (Val.cell ⟨0⟩) = some (SyncOp.refUpdateAndGet ⟨0⟩ FnName.incr.updateTerm [])
+#guard NativeOp.syncOpOf (.refUpdateSome .zeroWhenPositive) [] (Val.cell ⟨0⟩) = some (SyncOp.refUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
+#guard NativeOp.syncOpOf (.refGetAndUpdateSome .zeroWhenPositive) [] (Val.cell ⟨0⟩) = some (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
+#guard NativeOp.syncOpOf (.refUpdateSomeAndGet .zeroWhenPositive) [] (Val.cell ⟨0⟩) = some (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
+#guard NativeOp.syncOpOf (.refModify .takeAndBump) [] (Val.cell ⟨0⟩) = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
+#guard NativeOp.syncOpOf (.refModifySome .noChange) [] (Val.cell ⟨0⟩) = some (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm [])
 #guard Val.hasTy Val.unit (NativeOp.row (.deferredMakeOf .nat .nat)).request
-#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) Val.unit = some SyncOp.deferredMake
+#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) [] Val.unit = some SyncOp.deferredMake
 #guard Val.hasTy (Val.promise ⟨0⟩) (atNat (NativeOp.row .deferredIsDone).request)
-#guard NativeOp.syncOpOf .deferredIsDone (Val.promise ⟨0⟩) = some (SyncOp.deferredIsDone ⟨0⟩)
-#guard NativeOp.syncOpOf .deferredPoll (Val.promise ⟨0⟩) = some (SyncOp.deferredPoll ⟨0⟩)
+#guard NativeOp.syncOpOf .deferredIsDone [] (Val.promise ⟨0⟩) = some (SyncOp.deferredIsDone ⟨0⟩)
+#guard NativeOp.syncOpOf .deferredPoll [] (Val.promise ⟨0⟩) = some (SyncOp.deferredPoll ⟨0⟩)
 #guard Val.hasTy (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) (atNat (NativeOp.row .deferredSucceed).request)
-#guard NativeOp.syncOpOf .deferredSucceed (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
+#guard NativeOp.syncOpOf .deferredSucceed [] (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
   some (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 7))))
-#guard NativeOp.syncOpOf .deferredFail (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
+#guard NativeOp.syncOpOf .deferredFail [] (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
   some (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.failure (Cause.fail (Err.tag 7)))))
 #guard Val.hasTy Val.unit (NativeOp.row (.scopeMake .sequential)).request
-#guard NativeOp.syncOpOf (.scopeMake .sequential) Val.unit = some (SyncOp.scopeMake .sequential)
-#guard NativeOp.syncOpOf (.scopeMake .parallel) Val.unit = some (SyncOp.scopeMake .parallel)
+#guard NativeOp.syncOpOf (.scopeMake .sequential) [] Val.unit = some (SyncOp.scopeMake .sequential)
+#guard NativeOp.syncOpOf (.scopeMake .parallel) [] Val.unit = some (SyncOp.scopeMake .parallel)
 -- the async row decodes to nothing, and a wrong shape decodes to nothing
 #guard (NativeOp.row .deferredAwait).kind = .async
-#guard NativeOp.syncOpOf .deferredAwait (Val.promise ⟨0⟩) = none
-#guard NativeOp.syncOpOf .refGet (Val.nat 0) = none
+#guard NativeOp.syncOpOf .deferredAwait [] (Val.promise ⟨0⟩) = none
+#guard NativeOp.syncOpOf .refGet [] (Val.nat 0) = none
 #guard Val.hasTy (Val.nat 0) (atNat (NativeOp.row .refGet).request) = false
 -- the timer (A4): the sleep row is async and decodes to no store operation; the clock read is a
 -- value row on `unit` decoding to `clockNow`
 #guard (NativeOp.row .sleep).kind = .async ∧ (NativeOp.row .sleep).shape = .call
 #guard Val.hasTy (Val.nat 5) (NativeOp.row .sleep).request
-#guard NativeOp.syncOpOf .sleep (Val.nat 5) = none
+#guard NativeOp.syncOpOf .sleep [] (Val.nat 5) = none
 #guard (NativeOp.row .clockNow).kind = .sync ∧ (NativeOp.row .clockNow).shape = .value
 #guard Val.hasTy Val.unit (NativeOp.row .clockNow).request
-#guard NativeOp.syncOpOf .clockNow Val.unit = some SyncOp.clockNow
-#guard NativeOp.syncOpOf .clockNow (Val.nat 0) = none
+#guard NativeOp.syncOpOf .clockNow [] Val.unit = some SyncOp.clockNow
+#guard NativeOp.syncOpOf .clockNow [] (Val.nat 0) = none
 
 end Rows20
 

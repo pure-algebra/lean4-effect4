@@ -2473,10 +2473,10 @@ promise's declared columns, and a failure's value is in the error alphabet by th
 a deferred's error column. A step of the claims `denote-typed` and `straight-meaning-typed`; its
 consumers are `syncPerform_arm`, `inlineYield_typed` and `progress`. -/
 theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
-    (op : NativeOp) (hk : NativeOp.kind op = .sync) {reqTy : Ty} {t : EffTy}
+    (op : NativeOp) (hk : NativeOp.kind op = .sync) {env : List Val} {reqTy : Ty} {t : EffTy}
     (hrow : rowTy (NativeOp.row op).normalizeTypes reqTy = some t)
     (v : Val) (hfit : Fits w v reqTy) :
-    ∃ o, NativeOp.syncOpOf op v = some o ∧
+    ∃ o, NativeOp.syncOpOf op env v = some o ∧
       TypedProg root w ⟨t.answer, t.error, req⟩ (.vis (.inl o) fun ans => .pure (.success ans)) := by
   obtain ⟨σ, hinst, rfl, hformed⟩ := rowTy_fits hrow hfit
   cases op with
@@ -2813,7 +2813,7 @@ theorem syncPerform_arm {op : NativeOp} {r : Term} (hk : NativeOp.kind op = .syn
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.perform op r) p) := by
   obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
-  obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk hrow v hfit
+  obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk (env := p.env) hrow v hfit
   rw [denoteR_perform_sync _ _ _ hfuel ((NativeOp.row_kind op).trans hk), hv, Option.bind_some, ho]
   exact htyped
 
@@ -3148,7 +3148,8 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         exact nomatch hinline
       | _ =>
         obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (kind_ne_program_of_sync rfl) hat hpt
-        obtain ⟨o, ho, -⟩ := syncRow_typed root (req := Env.Requirement.empty) _ rfl hrow v hfit
+        obtain ⟨o, ho, -⟩ := syncRow_typed root (req := Env.Requirement.empty) _ rfl (env := p.env)
+          hrow v hfit
         simp only [NativeOp.row_kind, NativeOp.kind, hv, Option.bind_some, ho] at hinline
         exact nomatch hinline
     | awaitFiber target mode =>

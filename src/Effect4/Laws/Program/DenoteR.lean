@@ -506,7 +506,7 @@ def inlineYield : NativeEff → Point → Option ExitV
       match op with
       | .external _ => inlineAsyncYield op request p
       | _ => match (NativeOp.row op).kind with
-        | .sync => match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
+        | .sync => match (evalTerm p.env request).bind (NativeOp.syncOpOf op p.env) with
           | some _ => none | none => some badShapeExit
         | .async => inlineAsyncYield op request p
         | .program => none
@@ -591,7 +591,7 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     | .external _ => denoteAsyncRoute op request p
     | _ => match (NativeOp.row op).kind with
       | .sync =>
-        match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
+        match (evalTerm p.env request).bind (NativeOp.syncOpOf op p.env) with
         | some operation => .vis (.inl operation) fun v => .pure (.success v)
         | none => .pure badShapeExit
       | .async => denoteAsyncRoute op request p
@@ -924,7 +924,7 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
        | .external _ => denoteAsyncRoute op r p
        | _ => match (NativeOp.row op).kind with
          | .sync =>
-           match (evalTerm p.env r).bind (NativeOp.syncOpOf op) with
+           match (evalTerm p.env r).bind (NativeOp.syncOpOf op p.env) with
            | some operation => .vis (.inl operation) fun v => .pure (.success v)
            | none => .pure badShapeExit
          | .async => denoteAsyncRoute op r p
@@ -937,7 +937,7 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
 theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)
     (hk : (NativeOp.row op).kind = .sync) :
     denoteR root (.perform op r) p =
-      (match (evalTerm p.env r).bind (NativeOp.syncOpOf op) with
+      (match (evalTerm p.env r).bind (NativeOp.syncOpOf op p.env) with
        | some operation => .vis (.inl operation) fun v => .pure (.success v)
        | none => .pure badShapeExit) := by
   rw [denoteR_perform root op r h]
@@ -1238,10 +1238,10 @@ theorem headExit_eq_asExit? (c : NCode) : headExit c = c.asExit? := by
 
 /-- The synchronous classifier and code use the same request/operation decoding. -/
 theorem inlineSyncYield_eq_headExit (op : NativeOp) (request : Term) (p : Point) :
-    (match (evalTerm p.env request).bind (NativeOp.syncOpOf op) with
+    (match (evalTerm p.env request).bind (NativeOp.syncOpOf op p.env) with
      | some _ => none | none => some badShapeExit) =
       headExit (match evalTerm p.env request with
-        | some value => match NativeOp.syncOpOf op value with
+        | some value => match NativeOp.syncOpOf op p.env value with
           | some operation => Prim.sync (EffThunk.op operation)
           | none => badShape
         | none => badShape) := by aesop
@@ -1331,7 +1331,7 @@ theorem inlineYield_perform_sync (op : NativeOp) (r : Term) (q : Point)
     (hk : (NativeOp.row op).kind = .sync) :
     inlineYield (.perform op r) q =
       if q.fuel = 0 then none else
-        match (evalTerm q.env r).bind (NativeOp.syncOpOf op) with
+        match (evalTerm q.env r).bind (NativeOp.syncOpOf op q.env) with
         | some _ => none | none => some badShapeExit := by
   cases op with
   | scopeMake strategy => cases strategy <;> rfl
@@ -1373,7 +1373,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
         subst h
         simp only [denote, hk, hx, Option.bind]
         rfl
-      · rcases ho : NativeOp.syncOpOf op x with _ | o
+      · rcases ho : NativeOp.syncOpOf op q.env x with _ | o
         · simp only [hx, ho, Option.bind, Option.some.injEq] at h
           subst h
           simp only [denote, hk, hx, ho, Option.bind]
@@ -1455,7 +1455,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
       have hk := Straight.perform_sync hs
       rw [denoteR_perform_sync root op request (by rw [hf]; exact Nat.succ_ne_zero f) hk]
       simp only [denote, hk]
-      cases (evalTerm p.env request).bind (NativeOp.syncOpOf op) <;> rfl
+      cases (evalTerm p.env request).bind (NativeOp.syncOpOf op p.env) <;> rfl
   | .bind a b, p, hs, hp => by
     have hpos : p.fuel ≠ 0 := by have := Agreement.depth_pos (.bind a b); omega
     have hab := Straight.bind hs

@@ -249,7 +249,8 @@ theorem awaitCellOf_keys (v : Val) (cell : DeferredKey) (h : NativeOp.awaitCellO
     simp only [Val.keys, Handle.ofCode_promise, Option.toList, List.mem_singleton]
   · exact nomatch h
 
-theorem syncOpOf_keys (op : NativeOp) (v : Val) (o : SyncOp) (h : NativeOp.syncOpOf op v = some o) :
+theorem syncOpOf_keys (op : NativeOp) (env : List Val) (v : Val) (o : SyncOp)
+    (h : NativeOp.syncOpOf op env v = some o) :
     o.keys ⊆ v.keys := by
   unfold NativeOp.syncOpOf at h
   split at h <;> cases h <;> sub_tac

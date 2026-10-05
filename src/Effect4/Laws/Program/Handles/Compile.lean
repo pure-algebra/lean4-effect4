@@ -111,7 +111,7 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
           · next val hval =>
             split
             · next operation hop =>
-              exact List.Subset.trans (syncOpOf_keys op val operation hop) (evalTerm_point_keys r p val hval)
+              exact List.Subset.trans (syncOpOf_keys op p.env val operation hop) (evalTerm_point_keys r p val hval)
             · exact List.nil_subset _
           · exact List.nil_subset _
         · exact asyncRoute_keys op r p

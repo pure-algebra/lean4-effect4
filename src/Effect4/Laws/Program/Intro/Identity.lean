@@ -43,7 +43,7 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
       | perform op r =>
         by_cases hk : (NativeOp.row op).kind = .sync
         · rw [denoteR_perform_sync root op r hpos hk]
-          cases (evalTerm p.env r).bind (NativeOp.syncOpOf op) <;> rfl
+          cases (evalTerm p.env r).bind (NativeOp.syncOpOf op p.env) <;> rfl
         · rw [denoteR_perform_nonsync root op r hpos hk]
           exact prepareR_denoteAsyncRoute op r p completed
       | bind a b =>

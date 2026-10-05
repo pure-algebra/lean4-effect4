@@ -1799,9 +1799,9 @@ patterns of `NativeOp.syncOpOf`, each request shape recovered by the inversions 
 a promise fits its handle at any argument (`Val.hasTy_refOf_inv`, `Val.hasTy_deferredOf_inv`), and
 the value a `Ref` row writes or a `Deferred` row completes with is decoded at any type, so the
 instance never decides the decoding (the state plan's T3a). -/
-theorem syncOpOf_isSome (op : NativeOp) (σ : Ty.Subst) (v : Val)
+theorem syncOpOf_isSome (op : NativeOp) (σ : Ty.Subst) (env : List Val) (v : Val)
     (hv : Val.hasTy v ((NativeOp.row op).request.instantiate σ) = true)
-    (hk : (NativeOp.row op).kind = .sync) : (NativeOp.syncOpOf op v).isSome = true := by
+    (hk : (NativeOp.row op).kind = .sync) : (NativeOp.syncOpOf op env v).isSome = true := by
   cases op with
   | refMake => rfl
   | refGet =>
@@ -1878,8 +1878,8 @@ theorem syncOpOf_isSome (op : NativeOp) (σ : Ty.Subst) (v : Val)
 /-- An `async` row never decodes to a store operation (plan §2.2, ENSURES 9): the one async
 row is `deferredAwait` (`Native.lean:195-197`), which `syncOpOf` sends to `none` on every
 value (`:232`). -/
-theorem syncOpOf_async_none (op : NativeOp) (v : Val) (hk : (NativeOp.row op).kind = .async) :
-    NativeOp.syncOpOf op v = none := by
+theorem syncOpOf_async_none (op : NativeOp) (env : List Val) (v : Val)
+    (hk : (NativeOp.row op).kind = .async) : NativeOp.syncOpOf op env v = none := by
   cases op with
   | deferredAwait => rfl
   | external _ => rfl

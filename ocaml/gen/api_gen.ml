@@ -4146,7 +4146,7 @@ let fn_name_modify_some_term (x_1 : fn_name) : term =
 
 
 
-(* LCNF mono: Effect4.Program.NativeOp.syncOpOf (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
+(* LCNF mono: Effect4.Program.NativeOp.syncOpOf._redArg (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
 
 let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_) : sync_op option =
   match (x_1 : native_op) with

@@ -136,7 +136,7 @@ Effect4.Cause.die._redArg	cause_die	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	
 Effect4.Program.frontier	program_frontier	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	7	2	0	0	0	1	0	10259387794993651991
 Effect4.Program.Decision.decide	program_decision_decide	false	25	0	0	0	4	8	0	0	0	0	25	0	0	0	0	0	0	0	0	25	25	0	9	2	1	0	12471847611341883036
 Effect4.Program.Point.childBind	program_point_child_bind	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	5	0	2	0	1	0	5900893559955576992
-Effect4.Program.compileEff	program_compile_eff	true	89	0	1	3	17	35	0	2	0	0	87	0	1	0	1	0	0	0	0	161	117	0	48	5	1	0	13274814522809716433
+Effect4.Program.compileEff	program_compile_eff	true	89	0	1	3	17	35	0	2	0	0	87	0	1	0	1	0	0	0	0	161	117	0	48	5	1	0	2036830730200680697
 Effect4.Machine.progOf	prog_of	true	91	0	0	0	2	27	0	0	0	0	91	0	0	0	0	0	0	0	0	221	109	0	28	0	1	0	9809952371676580223
 Effect4.Program.Point.ofCapture	program_point_of_capture	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	6	0	1	0	1	0	6782708975492097927
 Effect4.Machine.DeferredStore.wakeBatch._redArg	deferred_store_wake_batch	false	13	0	0	0	8	3	0	0	0	0	13	0	0	0	0	0	0	0	0	5	26	0	10	0	1	0	13911034005123845060
@@ -310,7 +310,7 @@ Effect4.Program.errOf	program_err_of	false	7	0	1	6	8	5	0	0	0	0	6	1	0	0	0	0	0	0	0
 Effect4.Program.causeOf	program_cause_of	true	24	0	0	0	8	11	0	0	0	0	24	0	0	0	0	0	0	0	0	11	25	0	16	2	1	0	9457042485382529284
 Effect4.Program.asyncRoute	program_async_route	false	35	0	0	0	11	10	0	2	0	0	33	0	2	0	0	0	0	0	0	31	35	0	18	2	1	0	7262553214963935438
 Effect4.Program.NativeOp.kind	program_native_op_kind	false	14	0	0	0	1	14	0	0	0	0	14	0	0	0	0	0	0	0	0	0	0	0	13	1	1	0	16771004769390360757
-Effect4.Program.NativeOp.syncOpOf	program_native_op_sync_op_of	false	150	0	0	0	56	76	0	16	0	0	134	0	0	0	16	0	0	0	0	104	105	0	91	40	1	0	12402446176968863565
+Effect4.Program.NativeOp.syncOpOf._redArg	program_native_op_sync_op_of	false	150	0	0	0	56	76	0	16	0	0	134	0	0	0	16	0	0	0	0	104	105	0	91	40	1	0	6572439292234622774
 Effect4.Program.Point.awaitExit	program_point_await_exit	false	6	0	0	0	5	3	0	0	0	0	6	0	0	0	0	0	0	0	0	8	6	0	7	0	1	0	14222100522500772345
 Effect4.Machine.WakeList.runBatch._redArg	wake_list_run_batch	false	4	0	1	2	2	1	0	0	0	0	4	0	0	0	0	0	0	0	0	5	7	0	3	0	1	0	7329157058882427048
 List.mapTR.loop._at_.Effect4.Machine.DeferredStore.complete.spec_0._redArg	list_map_tr_loop_at_deferred_store_complete_spec_0	true	5	0	0	0	2	2	0	0	0	0	5	0	0	0	0	0	0	0	0	2	10	0	3	0	1	0	14889061139683581634

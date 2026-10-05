@@ -99,7 +99,7 @@ runs on every number the heap kernel the name ran. -/
 @[semantics "translation-simulation" (requirement := R4)]
 theorem kernel_term_agrees {op : NativeOp} {k : RefKernel} (hk : op.fnKernel = some k)
     (cell : RefKey) :
-    ∃ o k', op.syncOpOf (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
+    ∃ o k', op.syncOpOf [] (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
       ∀ n, k' (.nat n) = k (.nat n) := by
   cases op <;> cases hk
   case refUpdate f | refGetAndUpdate f | refUpdateAndGet f =>
@@ -145,8 +145,9 @@ theorem kernel_term_agrees {op : NativeOp} {k : RefKernel} (hk : op.fnKernel = s
 decodes to is one of the native table's, whose `CellImplements` (`Typed/Adequacy.lean`) holds. One
 case a row, `syncOpOf`'s own: the twelve heap kernels by `kernel_cellImplements`, the allocations,
 the Deferred reads and completions, the scope and the clock by theirs. -/
-theorem NativeOp.syncOpOf_cellImplements (root : Typed.ProgramSource) {op : NativeOp} {v : Val}
-    {o : SyncOp} (ho : NativeOp.syncOpOf op v = some o) : Typed.CellImplements root o := by
+theorem NativeOp.syncOpOf_cellImplements (root : Typed.ProgramSource) {op : NativeOp}
+    {env : List Val} {v : Val} {o : SyncOp} (ho : NativeOp.syncOpOf op env v = some o) :
+    Typed.CellImplements root o := by
   unfold NativeOp.syncOpOf at ho
   split at ho <;> cases ho
   case h_1 => exact Typed.refMake_cellImplements root _
@@ -185,7 +186,8 @@ theorem progress (op : NativeOp) (r : Term) (tys : TyEnv) (env : List Val) (w : 
     rw [← NativeOp.row_kind]
     exact hkind
   let root : Typed.ProgramSource := { program := .perform op r }
-  obtain ⟨o, ho, typed⟩ := Typed.syncRow_typed root (req := Env.Requirement.empty) op hk hrow x hxfit
+  obtain ⟨o, ho, typed⟩ := Typed.syncRow_typed root (req := Env.Requirement.empty) op hk (env := env)
+    hrow x hxfit
   obtain ⟨cert, pre, next⟩ := Typed.TypedProg.store_inv typed
   obtain ⟨st', a, step, w', ord, hstate, cells, post⟩ :=
     NativeOp.syncOpOf_cellImplements root ho w cert store.toCellsTyped pre

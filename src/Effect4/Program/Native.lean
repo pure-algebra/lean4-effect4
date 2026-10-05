@@ -265,40 +265,41 @@ def row (op : NativeOp) : Row :=
   case scopeMake s => cases s <;> rfl
   all_goals rfl
 
-/-- The store operation a row runs on a request value; `none` is a request of the wrong
-shape, which the compile turns into the `badName` defect (`Deep.Stores` does the same for a
-continuation applied to the wrong value). Any value is a cell's initial value, a written value
-and a deferred's success, as at the template rows (decisions row 42); a failed value becomes its
-error through `errOf` (`Machine/Term.lean`, decisions row 120's carrier), which the checker keeps
-inside the error alphabet by the deferred's formation rule (`Formation.HeadFormed`). A
-read-modify-write row runs its name's lowering at the row's shape, with the environment `[]`
-(`FnName.updateTerm` and its three siblings, `Machine/Stores.lean`). -/
-def syncOpOf : NativeOp → Val → Option SyncOp
-  | refMake, v => some (SyncOp.refMake v)
-  | refGet, Val.cell ⟨k⟩ => some (SyncOp.refGet ⟨k⟩)
-  | refSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSet ⟨k⟩ v)
-  | refGetAndSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refGetAndSet ⟨k⟩ v)
-  | refSetAndGet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSetAndGet ⟨k⟩ v)
-  | refUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refUpdate ⟨k⟩ f.updateTerm [])
-  | refGetAndUpdate f, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdate ⟨k⟩ f.updateTerm [])
-  | refUpdateAndGet f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateAndGet ⟨k⟩ f.updateTerm [])
-  | refUpdateSome f, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSome ⟨k⟩ f.updateSomeTerm [])
-  | refGetAndUpdateSome f, Val.cell ⟨k⟩ =>
+/-- The store operation a row runs on a request value at a point's environment `env`; `none` is
+a request of the wrong shape, which the compile turns into the `badName` defect (`Deep.Stores`
+does the same for a continuation applied to the wrong value). Any value is a cell's initial
+value, a written value and a deferred's success, as at the template rows (decisions row 42); a
+failed value becomes its error through `errOf` (`Machine/Term.lean`, decisions row 120's
+carrier), which the checker keeps inside the error alphabet by the deferred's formation rule
+(`Formation.HeadFormed`). A read-modify-write row runs its name's lowering at the row's shape,
+with the environment `[]` (`FnName.updateTerm` and its three siblings, `Machine/Stores.lean`);
+the rows carry their own terms, run at `env`, at the state plan's T3b cutover. -/
+def syncOpOf : NativeOp → List Val → Val → Option SyncOp
+  | refMake, _, v => some (SyncOp.refMake v)
+  | refGet, _, Val.cell ⟨k⟩ => some (SyncOp.refGet ⟨k⟩)
+  | refSet, _, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSet ⟨k⟩ v)
+  | refGetAndSet, _, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refGetAndSet ⟨k⟩ v)
+  | refSetAndGet, _, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSetAndGet ⟨k⟩ v)
+  | refUpdate f, _, Val.cell ⟨k⟩ => some (SyncOp.refUpdate ⟨k⟩ f.updateTerm [])
+  | refGetAndUpdate f, _, Val.cell ⟨k⟩ => some (SyncOp.refGetAndUpdate ⟨k⟩ f.updateTerm [])
+  | refUpdateAndGet f, _, Val.cell ⟨k⟩ => some (SyncOp.refUpdateAndGet ⟨k⟩ f.updateTerm [])
+  | refUpdateSome f, _, Val.cell ⟨k⟩ => some (SyncOp.refUpdateSome ⟨k⟩ f.updateSomeTerm [])
+  | refGetAndUpdateSome f, _, Val.cell ⟨k⟩ =>
     some (SyncOp.refGetAndUpdateSome ⟨k⟩ f.updateSomeTerm [])
-  | refUpdateSomeAndGet f, Val.cell ⟨k⟩ =>
+  | refUpdateSomeAndGet f, _, Val.cell ⟨k⟩ =>
     some (SyncOp.refUpdateSomeAndGet ⟨k⟩ f.updateSomeTerm [])
-  | refModify f, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f.modifyTerm [])
-  | refModifySome f, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f.modifySomeTerm [])
-  | deferredMakeOf _ _, Val.unit => some SyncOp.deferredMake
-  | deferredIsDone, Val.promise ⟨k⟩ => some (SyncOp.deferredIsDone ⟨k⟩)
-  | deferredPoll, Val.promise ⟨k⟩ => some (SyncOp.deferredPoll ⟨k⟩)
-  | deferredSucceed, .list [Val.promise ⟨k⟩, v] =>
+  | refModify f, _, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f.modifyTerm [])
+  | refModifySome f, _, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f.modifySomeTerm [])
+  | deferredMakeOf _ _, _, Val.unit => some SyncOp.deferredMake
+  | deferredIsDone, _, Val.promise ⟨k⟩ => some (SyncOp.deferredIsDone ⟨k⟩)
+  | deferredPoll, _, Val.promise ⟨k⟩ => some (SyncOp.deferredPoll ⟨k⟩)
+  | deferredSucceed, _, .list [Val.promise ⟨k⟩, v] =>
     some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.success v)))
-  | deferredFail, .list [Val.promise ⟨k⟩, v] =>
+  | deferredFail, _, .list [Val.promise ⟨k⟩, v] =>
     some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.failure (Cause.fail (errOf v)))))
-  | scopeMake strategy, Val.unit => some (SyncOp.scopeMake strategy)
-  | clockNow, Val.unit => some SyncOp.clockNow
-  | _, _ => none
+  | scopeMake strategy, _, Val.unit => some (SyncOp.scopeMake strategy)
+  | clockNow, _, Val.unit => some SyncOp.clockNow
+  | _, _, _ => none
 
 /-- The deferred an `await` row registers on. -/
 def awaitCellOf : Val → Option DeferredKey

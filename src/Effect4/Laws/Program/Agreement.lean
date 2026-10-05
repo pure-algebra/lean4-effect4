@@ -499,7 +499,7 @@ theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :
          | .sync =>
            match evalTerm p.env r with
            | some val =>
-             match NativeOp.syncOpOf op val with
+             match NativeOp.syncOpOf op p.env val with
              | some operation => Prim.sync (EffThunk.op operation)
              | none => badShape
            | none => badShape
@@ -512,7 +512,7 @@ theorem compileEff_perform_sync (op : NativeOp) (r : Term) (hf : p.fuel = k + 1)
     compileEff (.perform op r) p =
       (match evalTerm p.env r with
        | some val =>
-         match NativeOp.syncOpOf op val with
+         match NativeOp.syncOpOf op p.env val with
          | some operation => Prim.sync (EffThunk.op operation)
          | none => badShape
        | none => badShape) := by
@@ -1450,7 +1450,7 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
       · simp only [hx, badShape, Prim.asExit?_failure, Option.some.injEq] at h
         subst h
         exact meaning_perform_noEval op r q.env s hk hx
-      · rcases ho : NativeOp.syncOpOf op x with _ | o
+      · rcases ho : NativeOp.syncOpOf op q.env x with _ | o
         · simp only [hx, ho, badShape, Prim.asExit?_failure, Option.some.injEq] at h
           subst h
           exact meaning_perform_noDecode op r q.env s hk hx ho
@@ -1631,7 +1631,7 @@ theorem localRun_compile (root : NativeEff) :
     rcases hx : evalTerm p.env r with _ | x
     · rw [meaning_perform_noEval op r p.env s hkind hx]
       exact ⟨0, Nat.zero_le _, Reaches.refl root _ s⟩
-    · rcases ho : NativeOp.syncOpOf op x with _ | o
+    · rcases ho : NativeOp.syncOpOf op p.env x with _ | o
       · rw [meaning_perform_noDecode op r p.env s hkind hx ho]
         simp only [ho]
         exact ⟨0, Nat.zero_le _, Reaches.refl root _ s⟩

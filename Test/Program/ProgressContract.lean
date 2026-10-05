@@ -113,7 +113,7 @@ example (w w' : Typed.World) : Denote.StoreOk w w' ↔ w.leHost w' ∧ Denote.St
 /-- The cutover's connector (the state plan's T2), at its exact proposition: a read-modify-write
 row lowered through its name's term runs on every number the kernel the name ran. -/
 example : ∀ {op : NativeOp} {k : RefKernel}, op.fnKernel = some k → ∀ (cell : RefKey),
-    ∃ o k', op.syncOpOf (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
+    ∃ o k', op.syncOpOf [] (Val.cell cell) = some o ∧ o.refKernel = some (cell, k') ∧
       ∀ n, k' (.nat n) = k (.nat n) :=
   @kernel_term_agrees
 
@@ -139,7 +139,7 @@ theorem bool_cell_not_ref (w : Typed.World) (cells : Typed.CellsTyped w)
 #guard Stores.WF boolCell
 #guard SyncOp.validIn boolCell (SyncOp.refGet ⟨0⟩) = true
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)
-#guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
+#guard NativeOp.syncOpOf .refGet [] (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
 #guard answer (SyncOp.refGet ⟨0⟩) boolCell = some (Val.bool true)
 #guard Val.hasTy (Val.bool true) (atNat (NativeOp.row .refGet).answer) = false
 #guard !boolCell.refs.all (Val.hasTy · .nat)
@@ -160,7 +160,7 @@ theorem ce001_columns (w : Typed.World) (hs : w.state = boolCell)
 #guard !(after (SyncOp.refMake (Val.bool true)) Stores.empty).refs.all (Val.hasTy · .nat)
 #guard Val.hasTy (Val.bool true) (atNat (NativeOp.row .refMake).request) = false
 -- the decoder reads any value since the state plan's T3a: the instance keeps the column
-#guard NativeOp.syncOpOf .refMake (Val.bool true) = some (SyncOp.refMake (Val.bool true))
+#guard NativeOp.syncOpOf .refMake [] (Val.bool true) = some (SyncOp.refMake (Val.bool true))
 
 /-- `E4-PROGRESS-CE-002` at worlds: no world over the store `refMake (Val.bool true)` leaves has
 typed cell columns and admits the answer `Val.cell ⟨0⟩` at the row's answer type. -/
@@ -237,7 +237,7 @@ section RefSet
 -- `Ref.make(5)` on the empty store
 #guard Stores.empty.refs.all (Val.hasTy · .nat)
 #guard Val.hasTy (Val.nat 5) (atNat (NativeOp.row .refMake).request)
-#guard NativeOp.syncOpOf .refMake (Val.nat 5) = some (SyncOp.refMake (Val.nat 5))
+#guard NativeOp.syncOpOf .refMake [] (Val.nat 5) = some (SyncOp.refMake (Val.nat 5))
 #guard SyncOp.validIn Stores.empty (SyncOp.refMake (Val.nat 5)) = true
 #guard answer (SyncOp.refMake (Val.nat 5)) Stores.empty = some (Val.cell ⟨0⟩)
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refMake).answer)
@@ -249,7 +249,7 @@ section RefSet
 -- `Ref.set(ref, 7)`: the request is the pair, the answer is the cell
 #guard Val.hasTy setRequest (atNat (NativeOp.row .refSet).request)
 #guard Val.validIn s1 setRequest
-#guard NativeOp.syncOpOf .refSet setRequest = some (SyncOp.refSet ⟨0⟩ (Val.nat 7))
+#guard NativeOp.syncOpOf .refSet [] setRequest = some (SyncOp.refSet ⟨0⟩ (Val.nat 7))
 #guard SyncOp.validIn s1 (SyncOp.refSet ⟨0⟩ (Val.nat 7)) = true
 #guard answer (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1 = some (Val.cell ⟨0⟩)
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refSet).answer)
@@ -260,7 +260,7 @@ section RefSet
 
 -- `Ref.get(ref)`: the answer is the cell's number
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)
-#guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
+#guard NativeOp.syncOpOf .refGet [] (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
 #guard SyncOp.validIn s1set (SyncOp.refGet ⟨0⟩) = true
 #guard answer (SyncOp.refGet ⟨0⟩) s1set = some (Val.nat 7)
 #guard Val.hasTy (Val.nat 7) (atNat (NativeOp.row .refGet).answer)
@@ -273,7 +273,7 @@ end RefSet
 section RefUpdate
 
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refUpdate .incr)).request)
-#guard NativeOp.syncOpOf (.refUpdate .incr) (Val.cell ⟨0⟩)
+#guard NativeOp.syncOpOf (.refUpdate .incr) [] (Val.cell ⟨0⟩)
   = some (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
 #guard SyncOp.validIn s1 (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) = true
 #guard answer (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) s1 = some Val.unit
@@ -291,7 +291,7 @@ end RefUpdate
 section RefModify
 
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refModify .takeAndBump)).request)
-#guard NativeOp.syncOpOf (.refModify .takeAndBump) (Val.cell ⟨0⟩)
+#guard NativeOp.syncOpOf (.refModify .takeAndBump) [] (Val.cell ⟨0⟩)
   = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
 #guard SyncOp.validIn s1 (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) = true
 #guard answer (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) s1 = some (Val.nat 5)
@@ -342,7 +342,7 @@ end Functions
 section Deferred
 
 #guard Val.hasTy Val.unit (atNat (NativeOp.row (.deferredMakeOf .nat .nat)).request)
-#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) Val.unit = some SyncOp.deferredMake
+#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) [] Val.unit = some SyncOp.deferredMake
 #guard answer SyncOp.deferredMake Stores.empty = some (Val.promise ⟨0⟩)
 #guard Val.hasTy (Val.promise ⟨0⟩) (atNat (NativeOp.row (.deferredMakeOf .nat .nat)).answer)
 #guard Val.validIn s2 (Val.promise ⟨0⟩)
@@ -351,7 +351,7 @@ section Deferred
 
 #guard Val.hasTy succeedRequest (atNat (NativeOp.row .deferredSucceed).request)
 #guard Val.validIn s2 succeedRequest
-#guard NativeOp.syncOpOf .deferredSucceed succeedRequest
+#guard NativeOp.syncOpOf .deferredSucceed [] succeedRequest
   = some (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 1))))
 #guard SyncOp.validIn s2
   (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 1)))) = true
@@ -363,7 +363,7 @@ section Deferred
 #guard s2done.refs.all (Val.hasTy · .nat)
 
 #guard Val.hasTy (Val.promise ⟨0⟩) (atNat (NativeOp.row .deferredIsDone).request)
-#guard NativeOp.syncOpOf .deferredIsDone (Val.promise ⟨0⟩)
+#guard NativeOp.syncOpOf .deferredIsDone [] (Val.promise ⟨0⟩)
   = some (SyncOp.deferredIsDone ⟨0⟩)
 #guard answer (SyncOp.deferredIsDone ⟨0⟩) s2done = some (Val.bool true)
 #guard Val.hasTy (Val.bool true) (atNat (NativeOp.row .deferredIsDone).answer)
@@ -372,7 +372,7 @@ section Deferred
 
 -- the async row decodes to nothing: `progress` is stated at `sync` rows only
 #guard (NativeOp.row .deferredAwait).kind = .async
-#guard NativeOp.syncOpOf .deferredAwait (Val.promise ⟨0⟩) = none
+#guard NativeOp.syncOpOf .deferredAwait [] (Val.promise ⟨0⟩) = none
 
 end Deferred
 
@@ -381,7 +381,7 @@ end Deferred
 section Scope
 
 #guard Val.hasTy Val.unit (NativeOp.row (.scopeMake .sequential)).request
-#guard NativeOp.syncOpOf (.scopeMake .sequential) Val.unit = some (SyncOp.scopeMake .sequential)
+#guard NativeOp.syncOpOf (.scopeMake .sequential) [] Val.unit = some (SyncOp.scopeMake .sequential)
 #guard answer (SyncOp.scopeMake .sequential) Stores.empty = some (Val.scopeHandle 0)
 #guard Val.hasTy (Val.scopeHandle 0) (NativeOp.row (.scopeMake .sequential)).answer
 #guard Val.hasTy (Val.scopeHandle 0) (NativeOp.row (.scopeMake .parallel)).answer
