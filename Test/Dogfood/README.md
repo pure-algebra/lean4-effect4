@@ -18,6 +18,8 @@ of row 204 moves at least one program forward.
   - `waitsOn`, the requirements of the system map's §8 that its row below explains.
   `generated/semantics.md` prints them in its section "Acceptance programs", with the programs
   each requirement keeps waiting.
+- `Scenario.lean` holds what the scenarios share: the script alphabet, the driver, the readers of a
+  run's session part, the driver's laws and the gate `#scenario_gate`.
 
 ## The reference texts
 
@@ -108,6 +110,38 @@ theorem. An equal answer is a test on one recorded run, and the battery claims n
 3. Rewrite the battery's program with the spelling the slice lands.
 4. Update the battery's `stage`, then the program's row in this file.
 5. Name the moved program in the slice's receipt.
+
+## The scenarios
+
+Decisions row 254 (owner, 2026-10-05) adds scenarios to the acceptance programs. A scenario tests
+the semantics where features compose. It is one unit with six parts.
+
+| Part | Content |
+| --- | --- |
+| Program | One program through `Api.Author.build`, built on the consumer of a battery above |
+| Script | A `List Move` (`Scenario.lean`): control decisions, held calls, reply receipts and reply applications |
+| Observation | One named structure read from the run. Every control compares it |
+| Claim | One theorem that assembles the clauses. Each clause is a theorem or a planned goal with its placement |
+| Controls | For each clause a green control and at least one red control |
+| Lowered runs | The same observation on the generated OCaml engine and on the printed TypeScript module, or the stage that run waits on |
+
+The driver plays a script into the run's own journal. It keeps the reply receipt and the reply
+application apart, and it selects a live call by its key. The run a script reaches is the run its
+journal reaches (`replays`, `Scenario.lean`), so a replay calls no fixture.
+
+A scenario's record names its program, its observation and its claims as declarations
+(`Scenario`, `Scenario.lean`). `#scenario_gate` stands at the foot of each scenario's battery. It
+checks the record against the environment and runs the controls once. It refuses:
+
+- a program or an observation that does not resolve to a declaration;
+- a claim that is no theorem and no planned goal;
+- a claim with no placement at a requirement (decisions row 207);
+- a clause with no green control, or with no red control;
+- a control that names no clause, or that fails.
+
+So no control stands outside a scenario, and no scenario stands without a placed claim. Each
+control is a finite probe: one script on the Lean machine. A claim's standing is derived from its
+proof: `#plan_status` prints it, with the planned goals the claim rests on.
 
 ## The earlier dogfood programs
 
