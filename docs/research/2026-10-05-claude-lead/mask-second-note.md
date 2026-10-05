@@ -88,7 +88,7 @@ has no spelling for that use. So the selection also needs a checker of its own.
 
 | Piece | What it is | Its cost |
 | --- | --- | --- |
-| The type `Ty.maskRestore` | An opaque host type, written `.handle` with its own target, as `Ty.scope` and `Ty.context` are. Its value is the saved Boolean | One named target; one arm of `Val.hasTy` |
+| The type `Ty.maskRestore` | An opaque host type, written `.handle` with its own target, as `Ty.scope` and `Ty.context` are. Its value is the saved Boolean | One named target; one arm of `Val.hasTy` and one of `Fits` (`src/Effect4/Laws/Program/Typed/Membership.lean`) |
 | The action `getInterruptible` | The fiber action of row 239. It answers the entry flag at the type `Ty.maskRestore` | One constructor of `ActionTerm`, appended |
 | The node `restore saved body` | `body` under `interruptible` when `saved` is true, and `body` as it is otherwise | One constructor of `Eff`, appended |
 
@@ -313,4 +313,7 @@ its definitions before it proves one.
 - tsgo 7 checked four programs and one red control. It did not check a printed module.
 - The two builds' mask combinators are equal as text. Their behaviour was compared only on
   the eight scenarios.
+- The saved bit's carrier is not measured. A Boolean value needs one arm of the two membership
+  definitions. A handle of a new kind that holds the bit needs one kind instead. The typing
+  rules are the same for both, and the slice chooses by what the membership lemmas cost.
 - The dual mask is not designed.

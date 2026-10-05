@@ -184,6 +184,9 @@ Open at this landing:
 - the mask's second note is [written](research/2026-10-05-claude-lead/mask-second-note.md), and
   its two amendments to row 239 await the owner; the design of waiting, tasks and the atomic
   frontier is [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
+- the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
+  with its model: one constructor of `Term`, the identity of a handle as one atom, and the six
+  steps of the groundwork plan as terms. Its slice follows seat T3b's merge;
 - seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
 - the release audit, landed on 2026-10-05
   ([the audit](research/2026-10-05-seat-A401/audit.md),
