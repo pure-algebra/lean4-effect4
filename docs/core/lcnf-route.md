@@ -286,8 +286,9 @@ eta-expanded with the binders `_b1`, `_b2` and `_b3`.
    a name the prelude defines, or a name a form leaves free (`reservedNames`).
 2. `translateDecl` records each name that a body leaves free. When a binder took one of them,
    it names the binders again around those names.
-3. `hygieneProblems` reads the translated declarations and refuses a binder that hides another
-   binder or a recorded name. The generator stops on a refusal.
+3. `hygieneProblems` reads the translated declarations. It refuses a binder that hides another
+   binder, an earlier parameter or a recorded name. It also refuses a generated declaration
+   named as a hand function that an extern row calls. The generator stops on a refusal.
 
 One extern row names a binder of its only caller (`root`). That literal stays outside the
 check, as the row intends.

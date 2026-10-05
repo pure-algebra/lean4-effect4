@@ -178,7 +178,11 @@ More rulings of the same day (rows 235 to 248):
 - a restore site is one node, and the mask prints as two rows of public API (row 245);
 - the saved value may be passed as data (row 246);
 - the Lean TypeScript package is upgraded as needed (row 247);
-- the pin moves to 4.0.1 in increments, and development does not pause (row 248).
+- the pin moves to 4.0.1 in increments, and development does not pause (row 248);
+- `Scope.close` on a forked scope keeps `void`, the tree's answer to `U-02` (row 249);
+- the release's SQLite driver is downloaded, with a tracked install recipe (row 250);
+- after the fold come the faces of a binder term, then the mask, then the Queue (row 251);
+- a second seat lands Codex's follow-ups of the OCaml route (row 252).
 
 Landed later on 2026-10-05:
 
@@ -203,6 +207,9 @@ Landed later on 2026-10-05:
   three added, all as proposed claims.
 - **The compatibility policy names two host-lane rows** that the sweep moved (`d226d7a1`), and
   `check-conservativity` passes on the range again.
+- **Seventeen worktrees of finished seats are removed,** on the owner's word. Their unique
+  notes and one uncommitted patch are kept under
+  `research/recovered-worktrees/2026-10-05/` (on disk, not tracked).
 
 Open at this landing:
 
@@ -222,6 +229,10 @@ Open at this landing:
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
   for review (row 248). Its first slice landed with seat M0. Its second slice, the census by
   row and the impact query, waits for the owner's reading of the plan's mechanics;
+- the release's driver is installed by the tracked recipe `ts/release`. It changes one type:
+  `SqliteClient.make` can fail with `SqlError`. The five SQL programs then fail the release's
+  type check. The release lane still runs on an install without the driver
+  ([the lane note](../harness/truth/RELEASE-LANE.md); the plan's F7);
 - the release audit, landed on 2026-10-05
   ([the audit](research/2026-10-05-seat-A401/audit.md),
   [its receipt](research/2026-10-05-seat-A401-receipt.md)). For this tree 4.0.1 is a new runtime
@@ -231,12 +242,15 @@ Open at this landing:
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;
 - the OCaml route's next slices, from Codex's three packets
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/`), each small and apart:
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/`). Four are with seat
+  LOWER since 2026-10-05 (row 252; branch `seat/lower`):
   - callback library functions in the target evaluator, so that it runs `lcnf_list_contains`;
   - three repairs of the conformance runner;
   - `E4_be` forwards to `Eff_frame`;
-  - the law of `let x = e in x` as a placed fixture;
-  - the emitted OCaml read back by the compiler's own parser;
+  - the law of `let x = e in x` as a placed fixture.
+
+  The fifth waits for a design of its own: the emitted OCaml read back by the compiler's own
+  parser;
 - the proposed decisions rows of the two seats' receipts, for the owner;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every

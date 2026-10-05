@@ -1,0 +1,16 @@
+{
+  "name": "effect4-release-lane",
+  "private": true,
+  "type": "module",
+  "description": "The install of the release lane (harness/truth/RELEASE-LANE.md): effect 4.0.1, its SQLite driver, the pinned compiler and the bun types. Nothing imports this package; make check-truth-release reads its node_modules.",
+  "dependencies": {
+    "@effect/sql-sqlite-bun": "4.0.1",
+    "effect": "4.0.1"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.1",
+    "@types/node": "26.4.1",
+    "@typescript/native-preview": "7.0.0-dev.20260629.1",
+    "undici-types": "8.3.0"
+  }
+}

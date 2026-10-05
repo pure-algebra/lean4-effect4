@@ -151,6 +151,10 @@ A slice stops when a program leaves the ledger's expectation for a reason outsid
 
 ### F6. What needs the owner's word
 
+**Answered on 2026-10-05** (decisions rows 249 and 250). The driver is downloaded, and
+`Scope.close` on a forked scope keeps `void`. The driver brought one finding, which F7 states.
+Item 3 can still wait for M8.
+
 1. **One download.** The release's truth lane needs `@effect/sql-sqlite-bun@4.0.1` from the npm
    registry. The pin's copy is 484 KB installed. `effect@4.0.1` itself is installed on this
    machine already, and its bytes equal the vendored tree. Until the word is given, M0 leaves
@@ -160,6 +164,21 @@ A slice stops when a program leaves the ledger's expectation for a reason outsid
    plan keeps that disposition for the new case, and M2 needs it confirmed.
 3. **The pin's vendored tree after M8.** It stays for the history of the citations, or it goes.
    This can wait for M8.
+
+### F7. The driver, once installed (2026-10-05)
+
+The release's driver changes one type. The pin types `SqliteClient.make` as
+`Effect<SqliteClient, never, …>`. The release types it `Effect<SqliteClient, SqlError, …>`, and
+fails with `SqlError` when the database cannot be opened or configured (read in the file
+`SqliteClient.ts` of each driver's sources).
+
+- The row `sqliteOpen` (`src/Effect4/Program/Packages/SqliteBun.lean`) has the error column
+  `never`, and the prelude's `Sql.open` does not project an error.
+- With the driver present, the five SQL programs fail the release's type check, so the release
+  lane does not pass on the tracked install `ts/release` (tested, tsgo 7).
+- The move belongs to M7, the data plane: the row's error column, the prelude's projection at
+  `Sql.open`, and the five ledger lines.
+- The release audit did not read the driver. This is the first difference found in it.
 
 ## Proposals (not rulings)
 

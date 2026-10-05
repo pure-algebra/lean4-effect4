@@ -174,6 +174,37 @@ make check-truth-release
 On 2026-10-05 seat M0 linked bun's cache copy, `~/.bun/install/cache/effect@4.0.1@@@1`. Its
 `src` folder equals `vendor/effect-4.0.1/src` (tested by `diff -rq`).
 
+### The tracked install, with the driver
+
+The owner approved the download of the release's driver on 2026-10-05 (decisions row 250).
+`ts/release` holds a tracked recipe: `package.json` and `bun.lock`. It names `effect@4.0.1`,
+the driver at `4.0.1`, the compiler at the pinned version, and the bun types at the versions
+of the pin's lockfile.
+
+```sh
+cd ts/release && bun install --frozen-lockfile
+export EFFECT4_RELEASE_NODE_MODULES="$PWD/node_modules"
+```
+
+**The lane does not pass on this install yet.** With the driver present the lane runs the five
+SQL programs, and their modules fail the release's type check (tested, tsgo
+7.0.0-dev.20260629.1):
+
+```text
+generated/pSqlCatch.ts(5,14): error TS2375: Type 'Effect<string, SqlError, never>' is not assignable to type 'Effect<string, never, never>'
+```
+
+The cause is one change of the driver. The pin types `SqliteClient.make` as
+`Effect<SqliteClient, never, …>`, and a file that cannot be opened is a defect. The release
+types it `Effect<SqliteClient, SqlError, …>`. It fails with `SqlError` when the database
+cannot be opened or configured. Both were read on 2026-10-05, in the file `SqliteClient.ts` of
+each driver's sources. The row `sqliteOpen` (`src/Effect4/Program/Packages/SqliteBun.lean`)
+has the error column `never`.
+
+A slice of the migration moves that row and the prelude's `Sql.open`. Until then, run the lane
+on an install without the driver, as the recipe above this section assembles. The five ledger
+lines stay `not-run`.
+
 ## How to change the ledger
 
 Change the ledger when the manifest or the printed program modules change, and when a slice
