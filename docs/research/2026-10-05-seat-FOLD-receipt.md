@@ -27,7 +27,7 @@ Three more facts stand beside it.
 | Slice A | `246295ee`: the term printer takes the environment's length |
 | Slice B | `4ea95a3f`: the fold, the three atoms, the laws, the claims, the regenerated estates |
 | Slice C | `c8cf45fb`: one truth program, the fold's compiler controls |
-| Slice D | the commit that adds this receipt and the README section |
+| Slice D | `c3339d65`: this receipt and the README section; one later commit corrects two lines of the receipt |
 
 Nothing is pushed.
 
@@ -60,6 +60,8 @@ and each generated family.
 Each Lean or Lake command ran through `/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh`,
 named `SLOT` below. Each `make` call carried `-o build -o ts/eff/node_modules`. The checks ran
 on the working tree of slices B and C together. No check ran on an intermediate commit alone.
+`SLOT lake build` ran once more on slice D's commit, `c3339d65`, with the same result and the
+same three gate lines.
 
 | Command | Result | Evidence |
 | --- | --- | --- |
@@ -519,4 +521,4 @@ each build, and `pFold` has none. The release lane would also meet the new impor
   lane, the documents' references, the language rules and the semantics controls. Each is in
   the list of commands not run.
 - **Not established by any check:** that the host's `===` on two handles agrees with the
-  model's key comparison beyond the eight self-test rows.
+  model's key comparison beyond the four self-test rows of `sameHandle`.
