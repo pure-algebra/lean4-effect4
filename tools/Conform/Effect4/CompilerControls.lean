@@ -148,12 +148,14 @@ captured. The compiled OCaml of the same entries runs in `Conform.Effect4.Normal
 /-- The roots of the name fixtures. -/
 def nameRoots : Array Name := (LoweringNames.entries.map (·.1)).toArray
 
+/-- The stable name of a name fixture, in every lane that runs it. -/
+def nameId (name : Name) : String := s!"names/{name.getString!}"
+
 /-- One entry as the emitted OCaml calls it, with Lean's own answer. -/
 def nameChecks : List (String × String × Nat) :=
   LoweringNames.entries.filterMap fun (name, args) =>
     (LoweringNames.leanAnswer name args).map fun answer =>
-      (s!"names/{name.getString!}",
-       String.intercalate " " (Lcnf.globalName name :: args.map toString), answer)
+      (nameId name, String.intercalate " " (Lcnf.globalName name :: args.map toString), answer)
 
 #guard nameChecks.length == LoweringNames.entries.length
 
