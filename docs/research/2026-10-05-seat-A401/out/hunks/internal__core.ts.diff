@@ -1,0 +1,198 @@
+# internal/core.ts (rc.112) against internal/core.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin 116-116 release 116-116 cited ranges 0
+   pin units: isEffect=erased
+   release units: isEffect=erased
+-   116 export const isEffect = (u: unknown): u is Effect.Effect<any, any, any> => hasProperty(u, EffectTypeId)
++   116 export const isEffect = (u: unknown): u is Effect.Effect<unknown, unknown, unknown> => hasProperty(u, EffectTypeId)
+
+@@ hunk 2 [code] pin 139-140 release 139-140 cited ranges 1
+   pin units: CauseImpl.CauseTypeId=code; CauseImpl.reasons=code
+   release units: CauseImpl.CauseTypeId=code; CauseImpl.reasons=code
+-   139 readonly [CauseTypeId]: typeof CauseTypeId
+-   140 readonly reasons: ReadonlyArray<
++   139 declare readonly [CauseTypeId]: typeof CauseTypeId
++   140 declare readonly reasons: ReadonlyArray<
+
+@@ hunk 3 [code] pin 246-246 release 246-246 cited ranges 1
+   pin units: Fail.error=code
+   release units: Fail.error=code
+-   246 readonly error: E
++   246 declare readonly error: E
+
+@@ hunk 4 [code] pin before 283 release 282-322 cited ranges 1
+   pin units: 
+   release units: dedupeReasons=absent; causeCombine=absent
++   282 const dedupeReasons = <E>(
++   283 self: ReadonlyArray<Cause.Reason<E>>,
++   284 that: ReadonlyArray<Cause.Reason<E>>
++   285 ): Array<Cause.Reason<E>> => {
++   288 const buckets = new Map<number, Array<Cause.Reason<E>>>()
++   289 const out: Array<Cause.Reason<E>> = []
++   290 for (const reason of self.concat(that)) {
++   291 const hash = Hash.hash(reason)
++   292 const bucket = buckets.get(hash)
++   293 if (bucket === undefined) {
++   294 buckets.set(hash, [reason])
++   295 } else if (bucket.some((previous) => Equal.equals(previous, reason))) {
++   296 continue
++   297 } else {
++   298 bucket.push(reason)
++   299 }
++   300 out.push(reason)
++   301 }
++   302 return out
++   303 }
++   306 export const causeCombine: {
++   307 <E2>(that: Cause.Cause<E2>): <E>(self: Cause.Cause<E>) => Cause.Cause<E | E2>
++   308 <E, E2>(self: Cause.Cause<E>, that: Cause.Cause<E2>): Cause.Cause<E | E2>
++   309 } = dual(
++   310 2,
++   311 <E, E2>(self: Cause.Cause<E>, that: Cause.Cause<E2>): Cause.Cause<E | E2> => {
++   312 if (self.reasons.length === 0) {
++   313 return that as Cause.Cause<E | E2>
++   314 } else if (that.reasons.length === 0) {
++   315 return self as Cause.Cause<E | E2>
++   316 }
++   317 const newCause = new CauseImpl<E | E2>(
++   318 dedupeReasons<E | E2>(self.reasons, that.reasons)
++   319 )
++   320 return Equal.equals(self, newCause) ? self : newCause
++   321 }
++   322 )
+
+@@ hunk 5 [code] pin 290-290 release 332-332 cited ranges 1
+   pin units: Die.defect=code
+   release units: Die.defect=code
+-   290 readonly defect: unknown
++   332 declare readonly defect: unknown
+
+@@ hunk 6 [erased] pin before 383 release 425-428 cited ranges 0
+   pin units: 
+   release units: PrimitiveClass=absent
++   425 interface PrimitiveClass {
++   426 new(value: any): Primitive
++   427 prototype: any
++   428 }
+
+@@ hunk 7 [erased] pin 396-396 release 443-444 cited ranges 0
+   pin units: makePrimitiveProto=erased
+   release units: makePrimitiveProto=erased
+-   396 fiber: FiberImpl
++   443 fiber: FiberImpl,
++   444 exit?: Exit.Exit<any, any>
+
+@@ hunk 8 [erased] pin 401-401 release 449-450 cited ranges 0
+   pin units: makePrimitiveProto=erased
+   release units: makePrimitiveProto=erased
+-   401 fiber: FiberImpl
++   449 fiber: FiberImpl,
++   450 exit?: Exit.Exit<any, any>
+
+@@ hunk 9 [erased] pin 419-420 release 468-468 cited ranges 0
+   pin units: makePrimitive=code
+   release units: makePrimitive=code
+-   419 Fn extends (...args: Array<any>) => any,
+-   420 Single extends boolean = true
++   468 Fn extends (...args: Array<any>) => any
+
+@@ hunk 10 [erased] pin 423-423 release before 471 cited ranges 0
+   pin units: makePrimitive=code
+   release units: 
+-   423 readonly single?: Single
+
+@@ hunk 11 [erased] pin 426-426 release 473-473 cited ranges 0
+   pin units: makePrimitive=code
+   release units: makePrimitive=code
+-   426 readonly [args]: Single extends true ? Parameters<Fn>[0] : Parameters<Fn>
++   473 readonly [args]: Parameters<Fn>[0]
+
+@@ hunk 12 [erased] pin 432-432 release 479-479 cited ranges 0
+   pin units: makePrimitive=code
+   release units: makePrimitive=code
+-   432 readonly [args]: Single extends true ? Parameters<Fn>[0] : Parameters<Fn>
++   479 readonly [args]: Parameters<Fn>[0]
+
+@@ hunk 13 [erased] pin 440-440 release 487-487 cited ranges 0
+   pin units: makePrimitive=code
+   release units: makePrimitive=code
+-   440 readonly [args]: Single extends true ? Parameters<Fn>[0] : Parameters<Fn>
++   487 readonly [args]: Parameters<Fn>[0]
+
+@@ hunk 14 [erased] pin 448-448 release 495-495 cited ranges 0
+   pin units: makePrimitive=code
+   release units: makePrimitive=code
+-   448 readonly [args]: Single extends true ? Parameters<Fn>[0] : Parameters<Fn>
++   495 readonly [args]: Parameters<Fn>[0]
+
+@@ hunk 15 [code] pin 454-457 release 501-506 cited ranges 0
+   pin units: makePrimitive=code
+   release units: makePrimitive=code
+-   454 return function() {
+-   455 const self = Object.create(Proto)
+-   456 self[args] = options.single === false ? arguments : arguments[0]
+-   457 return self
++   501 const PrimitiveImpl = function(this: any, value: any) {
++   502 this[args] = value
++   503 } as unknown as PrimitiveClass
++   504 PrimitiveImpl.prototype = Proto
++   505 return function(value: any) {
++   506 return new PrimitiveImpl(value)
+
+@@ hunk 16 [code] pin before 501 release 550-553 cited ranges 0
+   pin units: 
+   release units: makeExit=code
++   550 const ExitPrimitive = function(this: any, value: unknown) {
++   551 this[args] = value
++   552 } as unknown as PrimitiveClass
++   553 ExitPrimitive.prototype = Proto
+
+@@ hunk 17 [code] pin 502-504 release 555-555 cited ranges 0
+   pin units: makeExit=code
+   release units: makeExit=code
+-   502 const self = Object.create(Proto)
+-   503 self[args] = value
+-   504 return self
++   555 return new ExitPrimitive(value)
+
+@@ hunk 18 [code] pin 535-536 release 586-587 cited ranges 2
+   pin units: exitFailCause=code
+   release units: exitFailCause=code
+-   535 if (fiber.currentStackFrame) {
+-   536 cause = causeAnnotate(cause, { mapUnsafe: new Map([[StackTraceKey.key, fiber.currentStackFrame]]) } as any)
++   586 if (fiber.cache.stackFrame) {
++   587 cause = causeAnnotate(cause, { mapUnsafe: new Map([[StackTraceKey.key, fiber.cache.stackFrame]]) } as any)
+
+@@ hunk 19 [code] pin 540-540 release 591-597 cited ranges 7
+   pin units: exitFailCause=code
+   release units: exitFailCause=code
+-   540 while (fiber.interruptible && fiber._interruptedCause && cont) {
++   591 const interruptedCause = fiber._interruptedCause
++   592 if (interruptedCause && fiber.interruptible) {
++   595 let skippedHandler = false
++   596 while (cont && fiber.interruptible) {
++   597 skippedHandler ||= identifier in cont
+
+@@ hunk 20 [code] pin before 543 release 600-605 cited ranges 5
+   pin units: 
+   release units: exitFailCause=code
++   600 if (skippedHandler) {
++   601 cause = causeFromReasons(cause.reasons.filter((reason) => reason._tag !== "Fail"))
++   602 }
++   603 cause = causeCombine(cause, interruptedCause)
++   604 annotated = true
++   605 }
+
+@@ hunk 21 [code] pin before 566 release 634-643 cited ranges 0
+   pin units: 
+   release units: withFiberSucceed=absent
++   634 export const withFiberSucceed: <A, R = never>(
++   635 evaluate: (fiber: FiberImpl<unknown, unknown>) => A
++   636 ) => Effect.Effect<A, never, R> = makePrimitive({
++   637 op: "WithFiberSucceed",
++   638 [evaluate](fiber) {
++   639 const value = this[args](fiber)
++   640 const cont = fiber.getCont(contA)
++   641 return cont ? cont[contA](value, fiber) : fiber.yieldWith(exitSucceed(value))
++   642 }
++   643 })

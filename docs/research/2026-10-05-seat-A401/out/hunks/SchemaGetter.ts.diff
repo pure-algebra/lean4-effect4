@@ -1,0 +1,404 @@
+# SchemaGetter.ts (rc.112) against SchemaGetter.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 14 release 14-14 cited ranges 0
+   pin units: 
+   release units: import ./Array.ts=absent
++    14 import * as Arr from "@tree/Array.ts"
+
+@@ hunk 2 [code] pin 16-16 release 17-20 cited ranges 0
+   pin units: import ./Encoding.ts=absent
+   release units: import ./encoding/Base64.ts=absent; import ./encoding/Base64Url.ts=absent; import ./encoding/Hex.ts=absent; import ./Function.ts=absent
+-    16 import * as Encoding from "@tree/Encoding.ts"
++    17 import * as Base64 from "@tree/encoding/Base64.ts"
++    18 import * as Base64Url from "@tree/encoding/Base64Url.ts"
++    19 import * as Hex from "@tree/encoding/Hex.ts"
++    20 import { dual } from "@tree/Function.ts"
+
+@@ hunk 3 [code] pin 64-65 release 37-85 cited ranges 0
+   pin units: Getter.run=absent
+   release units: Passthrough=absent; Transform=absent; TransformOptional=absent; TransformEffect=absent; TransformOptionalEffect=absent
+-    64 export class Getter<out T, in E, R = never> extends Pipeable.Class {
+-    65 readonly run: (
++    37 export interface Passthrough extends Pipeable.Pipeable {
++    38 readonly _tag: "Passthrough"
++    39 }
++    47 export interface Transform<out T, in E> extends Pipeable.Pipeable {
++    48 readonly _tag: "Transform"
++    49 readonly transform: (input: E) => T
++    50 }
++    58 export interface TransformOptional<out T, in E> extends Pipeable.Pipeable {
++    59 readonly _tag: "TransformOptional"
++    60 readonly transform: (input: Option.Option<E>) => Option.Option<T>
++    61 }
++    69 export interface TransformEffect<out T, in E, R> extends Pipeable.Pipeable {
++    70 readonly _tag: "TransformEffect"
++    71 readonly transform: (
++    72 input: E,
++    73 options: SchemaAST.ParseOptions
++    74 ) => Effect.Effect<T, SchemaIssue.Issue, R>
++    75 }
++    83 export interface TransformOptionalEffect<out T, in E, R> extends Pipeable.Pipeable {
++    84 readonly _tag: "TransformOptionalEffect"
++    85 readonly transform: (
+
+@@ hunk 4 [code] pin 70-71 release 89-136 cited ranges 0
+   pin units: Getter.constructor=absent
+   release units: TransformOptionalEffect=absent; Getter=type-decl; runGetter=absent
+-    70 constructor(
+-    71 run: (
++    89 }
++   128 export type Getter<T, E, R = never> =
++   129 | Passthrough
++   130 | Transform<T, E>
++   131 | TransformOptional<T, E>
++   132 | TransformEffect<T, E, R>
++   133 | TransformOptionalEffect<T, E, R>
++   135 const runGetter = <T, E, R>(
++   136 self: Getter<T, E, R>,
+
+@@ hunk 5 [code] pin 74-89 release 139-152 cited ranges 0
+   pin units: Getter.constructor=absent; Getter.map=absent; Getter.compose=absent
+   release units: runGetter=absent
+-    74 ) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
+-    75 ) {
+-    76 super()
+-    77 this.run = run
+-    78 }
+-    79 map<T2>(f: (t: T) => T2): Getter<T2, E, R> {
+-    80 return new Getter((oe, options) => this.run(oe, options).pipe(Effect.mapEager(Option.map(f))))
+-    81 }
+-    82 compose<T2, R2>(other: Getter<T2, T, R2>): Getter<T2, E, R | R2> {
+-    83 if (isPassthrough(this)) {
+-    84 return other as any
+-    85 }
+-    86 if (isPassthrough(other)) {
+-    87 return this as any
+-    88 }
+-    89 return new Getter((oe, options) => this.run(oe, options).pipe(Effect.flatMapEager((ot) => other.run(ot, options))))
++   139 ): Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R> => {
++   140 switch (self._tag) {
++   141 case "Passthrough":
++   142 return Effect.succeed(input as unknown as Option.Option<T>)
++   143 case "Transform":
++   144 return Effect.succeed(Option.map(input, self.transform))
++   145 case "TransformOptional":
++   146 return Effect.succeed(self.transform(input))
++   147 case "TransformEffect":
++   148 return Option.isNone(input)
++   149 ? Effect.succeedNone
++   150 : Effect.mapEager(self.transform(input.value, options), Option.some)
++   151 case "TransformOptionalEffect":
++   152 return self.transform(input, options)
+
+@@ hunk 6 [code] pin before 121 release 181-478 cited ranges 0
+   pin units: 
+   release units: run=absent; makeGetter=absent; composeOptionalEffect=absent; compose=absent; map=absent
++   181 export const run: {
++   207 <E>(input: Option.Option<E>, options: SchemaAST.ParseOptions): <T, R>(self: Getter<T, E, R>) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
++   233 <T, E, R>(
++   234 self: Getter<T, E, R>,
++   235 input: Option.Option<E>,
++   236 options: SchemaAST.ParseOptions
++   237 ): Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
++   238 } = dual(3, runGetter)
++   240 const makeGetter = <const A extends object>(fields: A): A & Pipeable.Pipeable =>
++   241 Object.assign(Object.create(Pipeable.Prototype), fields)
++   243 const composeOptionalEffect = <T, E, R, T2, R2>(
++   244 first: Getter<T, E, R>,
++   245 second: Getter<T2, T, R2>
++   246 ): Getter<T2, E, R | R2> =>
++   247 transformOptionalEffect((input, options) =>
++   248 Effect.flatMapEager(runGetter(first, input, options), (output) => runGetter(second, output, options))
++   249 )
++   281 export const compose: {
++   312 <T, T2, R2>(other: Getter<T2, T, R2>): <E, R>(self: Getter<T, E, R>) => Getter<T2, E, R | R2>
++   343 <T, E, R, T2, R2>(self: Getter<T, E, R>, other: Getter<T2, T, R2>): Getter<T2, E, R | R2>
++   344 } = dual(2, <T, E, R, T2, R2>(
++   345 self: Getter<T, E, R>,
++   346 other: Getter<T2, T, R2>
++   347 ): Getter<T2, E, R | R2> => {
++   348 if (self._tag === "Passthrough") return other as Getter<T2, E, R | R2>
++   349 if (other._tag === "Passthrough") return self as unknown as Getter<T2, E, R | R2>
++   350 switch (self._tag) {
++   351 case "Transform": {
++   352 switch (other._tag) {
++   353 case "Transform":
++   354 return transform((input: E) => other.transform(self.transform(input)))
++   355 case "TransformOptional":
++   356 return transformOptional((input) => other.transform(Option.map(input, self.transform)))
++   357 case "TransformEffect":
++   358 return transformEffect((input: E, options) => other.transform(self.transform(input), options))
++   359 case "TransformOptionalEffect":
++   360 return composeOptionalEffect(self, other)
++   361 }
++   362 }
++   363 case "TransformOptional": {
++   364 switch (other._tag) {
++   365 case "Transform":
++   366 return transformOptional((input) => Option.map(self.transform(input), other.transform))
++   367 case "TransformOptional":
++   368 return transformOptional((input) => other.transform(self.transform(input)))
++   369 case "TransformEffect":
++   370 case "TransformOptionalEffect":
++   371 return composeOptionalEffect(self, other)
++   372 }
++   373 }
++   374 case "TransformEffect": {
++   375 switch (other._tag) {
++   376 case "Transform":
++   377 return transformEffect((input: E, options) =>
++   378 Effect.mapEager(self.transform(input, options), other.transform)
++   379 )
++   380 case "TransformOptional":
++   381 case "TransformOptionalEffect":
++   382 return composeOptionalEffect(self, other)
++   383 case "TransformEffect":
++   384 return transformEffect((input: E, options) =>
++   385 Effect.flatMapEager(self.transform(input, options), (output) => other.transform(output, options))
++   386 )
++   387 }
++   388 }
++   389 case "TransformOptionalEffect":
++   390 return composeOptionalEffect(self, other)
++   391 }
++   392 })
++   421 export const map: {
++   449 <T, T2>(f: (value: T) => T2): <E, R>(self: Getter<T, E, R>) => Getter<T2, E, R>
++   477 <T, E, R, T2>(self: Getter<T, E, R>, f: (value: T) => T2): Getter<T2, E, R>
++   478 } = dual(2, <T, E, R, T2>(self: Getter<T, E, R>, f: (value: T) => T2): Getter<T2, E, R> => compose(self, transform(f)))
+
+@@ hunk 7 [code] pin 122-122 release 509-509 cited ranges 0
+   pin units: succeed=code
+   release units: succeed=code
+-   122 return new Getter(() => Effect.succeedSome(t))
++   509 return transformOptional(() => Option.some(t))
+
+@@ hunk 8 [code] pin 160-160 release 549-549 cited ranges 0
+   pin units: fail=code
+   release units: fail=code
+-   160 return new Getter((oe, options) => Effect.fail(f(oe, options)))
++   549 return transformOptionalEffect((oe, options) => Effect.fail(f(oe, options)))
+
+@@ hunk 9 [code] pin 203-207 release 622-624 cited ranges 0
+   pin units: passthrough_=code; isPassthrough=absent
+   release units: forbiddenEncoding=absent; passthrough_=code
+-   203 const passthrough_ = new Getter<any, any>(Effect.succeed)
+-   205 function isPassthrough<T, E, R>(getter: Getter<T, E, R>): getter is typeof passthrough_ {
+-   206 return getter.run === passthrough_.run
+-   207 }
++   622 export const forbiddenEncoding: Getter<never, unknown> = forbidden(() => "Encoding is not supported")
++   624 const passthrough_: Passthrough = makeGetter({ _tag: "Passthrough" })
+
+@@ hunk 10 [code] pin 351-355 release before 766 cited ranges 0
+   pin units: onNone=absent
+   release units: 
+-   351 export function onNone<T, E extends T = T, R = never>(
+-   352 f: (options: SchemaAST.ParseOptions) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
+-   353 ): Getter<T, E, R> {
+-   354 return new Getter((ot, options) => Option.isNone(ot) ? f(options) : Effect.succeed(ot))
+-   355 }
+
+@@ hunk 11 [code] pin 388-427 release 767-769 cited ranges 0
+   pin units: required=code; onSome=absent
+   release units: required=code
+-   388 return onNone(() => Effect.fail(new SchemaIssue.MissingKey(annotations)))
+-   389 }
+-   424 export function onSome<T, E, R = never>(
+-   425 f: (e: E, options: SchemaAST.ParseOptions) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
+-   426 ): Getter<T, E, R> {
+-   427 return new Getter((oe, options) => Option.isNone(oe) ? Effect.succeedNone : f(oe.value, options))
++   767 return transformOptionalEffect((input) =>
++   768 Option.isNone(input) ? Effect.fail(new SchemaIssue.MissingKey(annotations)) : Effect.succeed(input)
++   769 )
+
+@@ hunk 12 [code] pin 474-474 release 816-816 cited ranges 0
+   pin units: checkEffect=code
+   release units: checkEffect=code
+-   474 return onSome((t, options) => {
++   816 return transformEffect((t, options) => {
+
+@@ hunk 13 [code] pin 479-479 release 821-821 cited ranges 0
+   pin units: checkEffect=code
+   release units: checkEffect=code
+-   479 Effect.succeed(Option.some(t))
++   821 Effect.succeed(t)
+
+@@ hunk 14 [code] pin 522-522 release 864-864 cited ranges 0
+   pin units: transform=code
+   release units: transform=code
+-   522 return transformOptional(Option.map(f))
++   864 return makeGetter({ _tag: "Transform", transform: f })
+
+@@ hunk 15 [code] pin 561-561 release 903-903 cited ranges 0
+   pin units: transformOrFail=absent
+   release units: transformEffect=absent
+-   561 export function transformOrFail<T, E, R = never>(
++   903 export function transformEffect<T, E, R = never>(
+
+@@ hunk 16 [code] pin 564-564 release 906-906 cited ranges 0
+   pin units: transformOrFail=absent
+   release units: transformEffect=absent
+-   564 return onSome((e, options) => f(e, options).pipe(Effect.mapEager(Option.some)))
++   906 return makeGetter({ _tag: "TransformEffect", transform: f })
+
+@@ hunk 17 [code] pin 598-598 release 940-955 cited ranges 0
+   pin units: transformOptional=code
+   release units: transformOptional=code; transformOptionalEffect=absent
+-   598 return new Getter((oe) => Effect.succeed(f(oe)))
++   940 return makeGetter({ _tag: "TransformOptional", transform: f })
++   941 }
++   949 export function transformOptionalEffect<T, E, R = never>(
++   950 f: (
++   951 input: Option.Option<E>,
++   952 options: SchemaAST.ParseOptions
++   953 ) => Effect.Effect<Option.Option<T>, SchemaIssue.Issue, R>
++   954 ): Getter<T, E, R> {
++   955 return makeGetter({ _tag: "TransformOptionalEffect", transform: f })
+
+@@ hunk 18 [code] pin 630-630 release 987-987 cited ranges 0
+   pin units: omit=code
+   release units: omit=code
+-   630 return new Getter(() => Effect.succeedNone)
++   987 return transformOptional(() => Option.none())
+
+@@ hunk 19 [code] pin 665-665 release 1022-1022 cited ranges 0
+   pin units: withDefault=code
+   release units: withDefault=code
+-   665 return new Getter((o) => {
++  1022 return transformOptionalEffect((o) => {
+
+@@ hunk 20 [code] pin 1028-1028 release 1386-1386 cited ranges 0
+   pin units: parseJson#3=code
+   release units: parseJson#3=code
+-  1028 return onSome((input, parseOptions) =>
++  1386 return transformEffect((input, parseOptions) =>
+
+@@ hunk 21 [code] pin 1030-1030 release 1388-1388 cited ranges 0
+   pin units: parseJson#3=code
+   release units: parseJson#3=code
+-  1030 try: () => Option.some(JSON.parse(input, options?.reviver)),
++  1388 try: () => JSON.parse(input, options?.reviver),
+
+@@ hunk 22 [code] pin 1088-1088 release 1447-1447 cited ranges 0
+   pin units: stringifyJson=code
+   release units: stringifyJson=code
+-  1088 return onSome((input, parseOptions) =>
++  1447 return transformEffect((input, parseOptions) =>
+
+@@ hunk 23 [code] pin 1095-1095 release 1454-1454 cited ranges 0
+   pin units: stringifyJson=code
+   release units: stringifyJson=code
+-  1095 return Option.some(output)
++  1454 return output
+
+@@ hunk 24 [code] pin 1250-1250 release 1613-1613 cited ranges 0
+   pin units: encodeBase64=code
+   release units: encodeBase64=code
+-  1250 return transform(Encoding.encodeBase64)
++  1613 return transform(Base64.encode)
+
+@@ hunk 25 [code] pin 1277-1277 release 1641-1641 cited ranges 0
+   pin units: encodeBase64Url=code
+   release units: encodeBase64Url=code
+-  1277 return transform(Encoding.encodeBase64Url)
++  1641 return transform(Base64Url.encode)
+
+@@ hunk 26 [code] pin 1303-1303 release 1668-1668 cited ranges 0
+   pin units: encodeHex=code
+   release units: encodeHex=code
+-  1303 return transform(Encoding.encodeHex)
++  1668 return transform(Hex.encode)
+
+@@ hunk 27 [code] pin 1330-1330 release 1695-1695 cited ranges 0
+   pin units: decodeBase64=code
+   release units: decodeBase64=code
+-  1330 return transformOrFail((input, options) =>
++  1695 return transformEffect((input, options) =>
+
+@@ hunk 28 [code] pin 1332-1332 release 1697-1697 cited ranges 0
+   pin units: decodeBase64=code
+   release units: decodeBase64=code
+-  1332 Effect.fromResult(Encoding.decodeBase64(input)),
++  1697 Effect.fromResult(Base64.decode(input)),
+
+@@ hunk 29 [code] pin 1366-1367 release 1732-1733 cited ranges 0
+   pin units: decodeBase64String=code
+   release units: decodeBase64String=code
+-  1366 return transformOrFail((input, options) =>
+-  1367 Result.match(Encoding.decodeBase64String(input), {
++  1732 return transformEffect((input, options) =>
++  1733 Result.match(Base64.decodeString(input), {
+
+@@ hunk 30 [code] pin 1405-1406 release 1771-1772 cited ranges 0
+   pin units: decodeBase64Url=code
+   release units: decodeBase64Url=code
+-  1405 return transformOrFail((input, options) =>
+-  1406 Result.match(Encoding.decodeBase64Url(input), {
++  1771 return transformEffect((input, options) =>
++  1772 Result.match(Base64Url.decode(input), {
+
+@@ hunk 31 [code] pin 1443-1444 release 1810-1811 cited ranges 0
+   pin units: decodeBase64UrlString=code
+   release units: decodeBase64UrlString=code
+-  1443 return transformOrFail((input, options) =>
+-  1444 Result.match(Encoding.decodeBase64UrlString(input), {
++  1810 return transformEffect((input, options) =>
++  1811 Result.match(Base64Url.decodeString(input), {
+
+@@ hunk 32 [code] pin 1482-1483 release 1849-1850 cited ranges 0
+   pin units: decodeHex=code
+   release units: decodeHex=code
+-  1482 return transformOrFail((input, options) =>
+-  1483 Result.match(Encoding.decodeHex(input), {
++  1849 return transformEffect((input, options) =>
++  1850 Result.match(Hex.decode(input), {
+
+@@ hunk 33 [code] pin 1520-1521 release 1888-1889 cited ranges 0
+   pin units: decodeHexString=code
+   release units: decodeHexString=code
+-  1520 return transformOrFail((input, options) =>
+-  1521 Result.match(Encoding.decodeHexString(input), {
++  1888 return transformEffect((input, options) =>
++  1889 Result.match(Hex.decodeString(input), {
+
+@@ hunk 34 [code] pin 1584-1584 release 1954-1954 cited ranges 0
+   pin units: decodeUriComponent=code
+   release units: decodeUriComponent=code
+-  1584 return transformOrFail((input, options) => {
++  1954 return transformEffect((input, options) => {
+
+@@ hunk 35 [code] pin 1632-1632 release 2004-2004 cited ranges 0
+   pin units: dateTimeUtcFromInput=code
+   release units: dateTimeUtcFromInput=code
+-  1632 return transformOrFail((input, options) => {
++  2004 return transformEffect((input, options) => {
+
+@@ hunk 36 [code] pin 1803-1803 release before 2177 cited ranges 0
+   pin units: INDEX_REGEXP=absent
+   release units: 
+-  1803 const INDEX_REGEXP = /^\d+$/
+
+@@ hunk 37 [code] pin 1818-1818 release 2190-2190 cited ranges 0
+   pin units: bracketPathToTokens=code
+   release units: bracketPathToTokens=code
+-  1818 .map((part) => (INDEX_REGEXP.test(part) ? globalThis.Number(part) : part))
++  2190 .map((part) => (Arr.isCanonicalArrayIndex(part) ? globalThis.Number(part) : part))
+
+@@ hunk 38 [code] pin before 1873 release 2246-2246 cited ranges 0
+   pin units: 
+   release units: makeTreeRecord=code
++  2246 const duplicates = new WeakSet<object>()
+
+@@ hunk 39 [code] pin 1905-1905 release 2280-2280 cited ranges 0
+   pin units: makeTreeRecord=code
+   release units: makeTreeRecord=code
+-  1905 if (hasOwn && Array.isArray(cur[token])) {
++  2280 if (hasOwn && Array.isArray(cur[token]) && (containers.has(cur[token]) || duplicates.has(cur[token]))) {
+
+@@ hunk 40 [code] pin 1908-1908 release 2283-2285 cited ranges 0
+   pin units: makeTreeRecord=code
+   release units: makeTreeRecord=code
+-  1908 InternalRecord.assignProperty(cur, token, [cur[token], value])
++  2283 const values = [cur[token], value]
++  2284 duplicates.add(values)
++  2285 InternalRecord.assignProperty(cur, token, values)

@@ -1,0 +1,7 @@
+# internal/schema/toRepresentation.ts (rc.112) against internal/schema/toRepresentation.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 286-286 release 286-286 cited ranges 0
+   pin units: toRepresentations=code
+   release units: toRepresentations=code
+-   286 mode: ast.mode,
++   286 ...(ast.options === undefined ? {} : { options: ast.options }),

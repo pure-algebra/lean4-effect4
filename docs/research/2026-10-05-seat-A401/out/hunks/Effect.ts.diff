@@ -1,0 +1,314 @@
+# Effect.ts (rc.112) against Effect.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [import] pin 43-43 release 43-43 cited ranges 0
+   pin units: import ./Schedule.ts=import
+   release units: import ./Schedule.ts=import
+-    43 import type { Schedule } from "@tree/Schedule.ts"
++    43 import type { Metadata as ScheduleMetadata, Schedule } from "@tree/Schedule.ts"
+
+@@ hunk 2 [code] pin 75-75 release before 82 cited ranges 0
+   pin units: import ./Utils.ts=absent
+   release units: 
+-    75 import { internalCall } from "@tree/Utils.ts"
+
+@@ hunk 3 [erased] pin 230-230 release 229-229 cited ranges 0
+   pin units: isEffect=erased
+   release units: isEffect=erased
+-   230 export const isEffect: (u: unknown) => u is Effect<any, any, any> = core.isEffect
++   229 export const isEffect: (u: unknown) => u is Effect<unknown, unknown, unknown> = core.isEffect
+
+@@ hunk 4 [erased] pin 334-340 release 334-335 cited ranges 0
+   pin units: All=type-decl
+   release units: All=type-decl
+-   334 Mode extends true ? never
+-   335 : keyof T extends never ? never
+-   336 : T[keyof T] extends Effect<infer _A, infer _E, infer _R> ? _E
+-   337 : never,
+-   338 keyof T extends never ? never
+-   339 : T[keyof T] extends Effect<infer _A, infer _E, infer _R> ? _R
+-   340 : never
++   334 Mode extends true ? never : Error<ObjectValues<T>>,
++   335 Services<ObjectValues<T>>
+
+@@ hunk 5 [erased] pin before 380 release 376-376 cited ranges 0
+   pin units: 
+   release units: All=type-decl
++   376 type ObjectValues<T> = T extends unknown ? T[keyof T] : never
+
+@@ hunk 6 [erased] pin 566-566 release 563-563 cited ranges 0
+   pin units: partition=erased
+   release units: partition=erased
+-   566 ): (elements: Iterable<A>) => Effect<[excluded: Array<E>, satisfying: Array<B>], never, R>
++   563 ): (elements: Iterable<A>) => Effect<[passes: Array<B>, fails: Array<E>], never, R>
+
+@@ hunk 7 [erased] pin 598-598 release 595-595 cited ranges 0
+   pin units: partition=erased
+   release units: partition=erased
+-   598 ): Effect<[excluded: Array<E>, satisfying: Array<B>], never, R>
++   595 ): Effect<[passes: Array<B>, fails: Array<E>], never, R>
+
+@@ hunk 8 [erased] pin 1406-1410 release 1403-1548 cited ranges 1
+   pin units: tryPromise=erased
+   release units: tryPromise=erased
+-  1406 export const tryPromise: <A, E = Cause.UnknownError>(
+-  1407 options:
+-  1408 | { readonly try: (signal: AbortSignal) => PromiseLike<A>; readonly catch: (error: unknown) => E }
+-  1409 | ((signal: AbortSignal) => PromiseLike<A>)
+-  1410 ) => Effect<A, E> = internal.tryPromise
++  1403 export const tryPromise: {
++  1474 <A>(options: (signal: AbortSignal) => PromiseLike<A>): Effect<A, Cause.UnknownError>
++  1545 <A, E>(
++  1546 options: { readonly try: (signal: AbortSignal) => PromiseLike<A>; readonly catch: (error: unknown) => E }
++  1547 ): Effect<A, E>
++  1548 } = internal.tryPromise
+
+@@ hunk 9 [erased] pin 2254-2255 release 2393-2395 cited ranges 0
+   pin units: try_=erased
+   release units: try_=erased
+-  2254 const try_: <A, E = Cause.UnknownError>(
+-  2255 options: {
++  2393 const try_: {
++  2394 <A>(options: LazyArg<A>): Effect<A, Cause.UnknownError>
++  2395 <A, E>(options: {
+
+@@ hunk 10 [erased] pin 2258-2259 release 2398-2399 cited ranges 0
+   pin units: try_=erased
+   release units: try_=erased
+-  2258 } | LazyArg<A>
+-  2259 ) => Effect<A, E> = internal.try
++  2398 }): Effect<A, E>
++  2399 } = internal.try
+
+@@ hunk 11 [code] pin before 2423 release 2552-2554 cited ranges 0
+   pin units: 
+   release units: withFiberSucceed=absent
++  2552 export const withFiberSucceed: <A, R = never>(
++  2553 evaluate: (fiber: Fiber<unknown, unknown>) => A
++  2554 ) => Effect<A, never, R> = core.withFiberSucceed
+
+@@ hunk 12 [erased] pin 7015-7015 release 7175-7175 cited ranges 0
+   pin units: tapDefect=erased
+   release units: tapDefect=erased
+-  7015 <E, B, E2, R2>(f: (defect: unknown) => Effect<B, E2, R2>): <A, R>(self: Effect<A, E, R>) => Effect<A, E | E2, R | R2>
++  7175 <B, E2, R2>(f: (defect: unknown) => Effect<B, E2, R2>): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E | E2, R | R2>
+
+@@ hunk 13 [erased] pin 8083-8084 release 8244-8245 cited ranges 0
+   pin units: withErrorReporting=erased
+   release units: withErrorReporting=erased
+-  8083 ) => [Arg] extends [Effect<infer _A, infer _E, infer _R>] ? Arg : <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, R> =
+-  8084 internal.withErrorReporting
++  8244 ) => [Arg] extends [Effect<infer A, infer E, infer R>] ? Effect<A, E, R>
++  8245 : <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, R> = internal.withErrorReporting
+
+@@ hunk 14 [erased] pin 8163-8202 release 8326-8366 cited ranges 0
+   pin units: orElseSucceed=erased
+   release units: orElseSucceed=erased
+-  8163 <A2>(evaluate: LazyArg<A2>): <A, E, R>(self: Effect<A, E, R>) => Effect<A2 | A, never, R>
+-  8202 <A, E, R, A2>(self: Effect<A, E, R>, evaluate: LazyArg<A2>): Effect<A | A2, never, R>
++  8326 <E, A2>(f: (error: NoInfer<E>) => A2): <A, R>(self: Effect<A, E, R>) => Effect<A2 | A, never, R>
++  8366 <A, E, R, A2>(self: Effect<A, E, R>, f: (error: E) => A2): Effect<A | A2, never, R>
+
+@@ hunk 15 [erased] pin before 13922 release 14122-14122 cited ranges 0
+   pin units: 
+   release units: cachedWithTTL=erased
++ 14122 <A, E>(timeToLive: (exit: Exit.Exit<A, E>) => Duration.Input): <R>(self: Effect<A, E, R>) => Effect<Effect<A, E, R>>
+
+@@ hunk 16 [erased] pin 13975-13975 release 14292-14380 cited ranges 0
+   pin units: cachedWithTTL=erased
+   release units: cachedWithTTL=erased
+- 13975 <A, E, R>(self: Effect<A, E, R>, timeToLive: Duration.Input): Effect<Effect<A, E, R>>
++ 14292 <A, E>(timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)): <R>(self: Effect<A, E, R>) => Effect<Effect<A, E, R>>
++ 14377 <A, E, R>(
++ 14378 self: Effect<A, E, R>,
++ 14379 timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)
++ 14380 ): Effect<Effect<A, E, R>>
+
+@@ hunk 17 [erased] pin before 14095 release 14500-14500 cited ranges 0
+   pin units: 
+   release units: cachedInvalidateWithTTL=erased
++ 14500 <A, E>(timeToLive: (exit: Exit.Exit<A, E>) => Duration.Input): <R>(self: Effect<A, E, R>) => Effect<[Effect<A, E, R>, Effect<void>]>
+
+@@ hunk 18 [erased] pin 14154-14154 release 14618-14680 cited ranges 0
+   pin units: cachedInvalidateWithTTL=erased
+   release units: cachedInvalidateWithTTL=erased
+- 14154 <A, E, R>(self: Effect<A, E, R>, timeToLive: Duration.Input): Effect<[Effect<A, E, R>, Effect<void>]>
++ 14618 <A, E>(timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)): <R>(self: Effect<A, E, R>) => Effect<[Effect<A, E, R>, Effect<void>]>
++ 14677 <A, E, R>(
++ 14678 self: Effect<A, E, R>,
++ 14679 timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)
++ 14680 ): Effect<[Effect<A, E, R>, Effect<void>]>
+
+@@ hunk 19 [erased] pin 14427-14427 release 14954-14956 cited ranges 0
+   pin units: Repeat=type-decl
+   release units: Repeat=type-decl
+- 14427 O extends { until: Predicate.Refinement<A, infer B> } ? B
++ 14954 O extends unknown ? "schedule" extends keyof O ? A
++ 14955 : "times" extends keyof O ? A
++ 14956 : O extends { until: Predicate.Refinement<A, infer B> } ? B
+
+@@ hunk 20 [erased] pin 14429-14429 release 14958-14959 cited ranges 0
+   pin units: Repeat=type-decl
+   release units: Repeat=type-decl
+- 14429 : A,
++ 14958 : A
++ 14959 : never,
+
+@@ hunk 21 [erased] pin 15180-15180 release 15710-15710 cited ranges 0
+   pin units: repeatOrElse=erased
+   release units: repeatOrElse=erased
+- 15180 orElse: (error: E | E2, option: Option<B>) => Effect<B, E3, R3>
++ 15710 orElse: (error: E | E2, option: Option<ScheduleMetadata<B, A>>) => Effect<B, E3, R3>
+
+@@ hunk 22 [erased] pin 15236-15236 release 15766-15766 cited ranges 0
+   pin units: repeatOrElse=erased
+   release units: repeatOrElse=erased
+- 15236 orElse: (error: E | E2, option: Option<B>) => Effect<B, E3, R3>
++ 15766 orElse: (error: E | E2, option: Option<ScheduleMetadata<B, A>>) => Effect<B, E3, R3>
+
+@@ hunk 23 [erased] pin 22411-22472 release 22946-23010 cited ranges 0
+   pin units: withLogger=erased
+   release units: withLogger=erased
+- 22411 export const withLogger = dual<
+- 22441 <Output>(logger: Logger<unknown, Output>) => <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>,
+- 22471 <A, E, R, Output>(effect: Effect<A, E, R>, logger: Logger<unknown, Output>) => Effect<A, E, R>
+- 22472 >(2, (effect, logger) =>
++ 22946 export const withLogger: {
++ 22976 <Output>(logger: Logger<unknown, Output>): <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>
++ 23006 <A, E, R, Output>(effect: Effect<A, E, R>, logger: Logger<unknown, Output>): Effect<A, E, R>
++ 23007 } = dual(2, <A, E, R, Output>(
++ 23008 effect: Effect<A, E, R>,
++ 23009 logger: Logger<unknown, Output>
++ 23010 ): Effect<A, E, R> =>
+
+@@ hunk 24 [erased] pin 22514-22605 release 23052-23197 cited ranges 0
+   pin units: annotateLogs=erased
+   release units: annotateLogs=erased
+- 22514 export const annotateLogs = dual<
+- 22550 {
+- 22551 (
+- 22552 key: string,
+- 22553 value: unknown
+- 22554 ): <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>;
+- 22555 (
+- 22556 values: Record<string, unknown>
+- 22557 ): <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>;
+- 22558 },
+- 22594 {
+- 22595 <A, E, R>(
+- 22596 effect: Effect<A, E, R>,
+- 22597 key: string,
+- 22598 value: unknown
+- 22599 ): Effect<A, E, R>;
+- 22600 <A, E, R>(
+- 22601 effect: Effect<A, E, R>,
+- 22602 values: Record<string, unknown>
+- 22603 ): Effect<A, E, R>;
+- 22604 }
+- 22605 >(
++ 23052 export const annotateLogs: {
++ 23088 (key: string, value: unknown): <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>
++ 23124 (values: Record<string, unknown>): <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>
++ 23160 <A, E, R>(effect: Effect<A, E, R>, key: string, value: unknown): Effect<A, E, R>
++ 23196 <A, E, R>(effect: Effect<A, E, R>, values: Record<string, unknown>): Effect<A, E, R>
++ 23197 } = dual(
+
+@@ hunk 25 [erased] pin 22779-22852 release 23371-23444 cited ranges 0
+   pin units: withLogSpan=erased
+   release units: withLogSpan=erased
+- 22779 export const withLogSpan = dual<
+- 22815 (label: string) => <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>,
+- 22851 <A, E, R>(effect: Effect<A, E, R>, label: string) => Effect<A, E, R>
+- 22852 >(
++ 23371 export const withLogSpan: {
++ 23407 (label: string): <A, E, R>(effect: Effect<A, E, R>) => Effect<A, E, R>
++ 23443 <A, E, R>(effect: Effect<A, E, R>, label: string): Effect<A, E, R>
++ 23444 } = dual(
+
+@@ hunk 26 [erased] pin 22854-22854 release 23446-23446 cited ranges 0
+   pin units: withLogSpan=erased
+   release units: withLogSpan=erased
+- 22854 (effect, label) =>
++ 23446 <A, E, R>(effect: Effect<A, E, R>, label: string): Effect<A, E, R> =>
+
+@@ hunk 27 [erased] pin 22973-22973 release 23555-23555 cited ranges 0
+   pin units: track=code
+   release units: track=code
+- 22973 <Input, State, E, A>(metric: Metric.Metric<Input, State>, f: (exit: Exit.Exit<A, E>) => Input): <E, R>(self: Effect<A, E, R>) => Effect<A, E, R>
++ 23555 <Input, State, E, A>(metric: Metric.Metric<Input, State>, f: (exit: Exit.Exit<A, E>) => Input): <E2 extends E, R>(self: Effect<A, E2, R>) => Effect<A, E2, R>
+
+@@ hunk 28 [code] pin 23157-23157 release 23724-23724 cited ranges 0
+   pin units: track=code
+   release units: track=code
+- 23157 const input = f === undefined ? exit : internalCall(() => f(exit))
++ 23724 const input = f === undefined ? exit : f(exit)
+
+@@ hunk 29 [code] pin 23661-23661 release 24228-24228 cited ranges 0
+   pin units: trackErrors=code
+   release units: trackErrors=code
+- 23661 const input = f === undefined ? error : internalCall(() => f(error))
++ 24228 const input = f === undefined ? error : f(error)
+
+@@ hunk 30 [code] pin 23919-23919 release 24486-24486 cited ranges 0
+   pin units: trackDefects=code
+   release units: trackDefects=code
+- 23919 const input = f === undefined ? defect : internalCall(() => f(defect))
++ 24486 const input = f === undefined ? defect : f(defect)
+
+@@ hunk 31 [code] pin 24171-24171 release 24738-24738 cited ranges 0
+   pin units: trackDuration=code
+   release units: trackDuration=code
+- 24171 const input = f === undefined ? duration : internalCall(() => f(duration))
++ 24738 const input = f === undefined ? duration : f(duration)
+
+@@ hunk 32 [erased] pin before 24220 release 24787-24787 cited ranges 0
+   pin units: 
+   release units: Transaction=erased
++ 24787 written: boolean
+
+@@ hunk 33 [code] pin 24323-24323 release 24891-24897 cited ranges 0
+   pin units: awaitPendingTransaction=code
+   release units: awaitPendingTransaction=code
+- 24323 suspend(() => {
++ 24891 callback<void>((resume) => {
++ 24895 if (!isTransactionConsistent(state)) {
++ 24896 return resume(void_)
++ 24897 }
+
+@@ hunk 34 [code] pin 24331-24331 release before 24905 cited ranges 0
+   pin units: awaitPendingTransaction=code
+   release units: 
+- 24331 return callback<void>((resume) => {
+
+@@ hunk 35 [code] pin 24341-24341 release before 24915 cited ranges 0
+   pin units: awaitPendingTransaction=code
+   release units: 
+- 24341 })
+
+@@ hunk 36 [code] pin 24344-24345 release 24916-24918 cited ranges 0
+   pin units: commitTransaction=code
+   release units: commitTransaction=code
+- 24344 for (const [ref, { value }] of state.journal) {
+- 24345 if (value !== ref.value) {
++ 24916 for (const [ref, { value, written }] of state.journal) {
++ 24917 if (!written) continue
++ 24918 if (!Object.is(value, ref.value)) {
+
+@@ hunk 37 [erased] pin before 24702 release 25224-25225 cited ranges 0
+   pin units: 
+   release units: EffectifyArgs=absent
++ 25224 type EffectifyArgs<F extends (...args: Array<any>) => any> = Parameters<F> extends [...infer Args, any] ? Args
++ 25225 : Parameters<F>
+
+@@ hunk 38 [erased] pin 24810-24810 release 25387-25387 cited ranges 0
+   pin units: effectify=erased
+   release units: effectify=erased
+- 24810 onError: (error: Effectify.EffectifyError<F>, args: Parameters<F>) => E
++ 25387 onError: (error: Effectify.EffectifyError<F>, args: EffectifyArgs<F>) => E
+
+@@ hunk 39 [erased] pin 24866-24867 release 25443-25444 cited ranges 0
+   pin units: effectify=erased
+   release units: effectify=erased
+- 24866 onError: (error: Effectify.EffectifyError<F>, args: Parameters<F>) => E,
+- 24867 onSyncError: (error: unknown, args: Parameters<F>) => E2
++ 25443 onError: (error: Effectify.EffectifyError<F>, args: EffectifyArgs<F>) => E,
++ 25444 onSyncError: (error: unknown, args: EffectifyArgs<F>) => E2

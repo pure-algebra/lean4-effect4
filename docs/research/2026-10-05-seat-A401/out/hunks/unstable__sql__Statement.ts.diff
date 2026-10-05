@@ -1,0 +1,147 @@
+# unstable/sql/Statement.ts (rc.112) against sql/Statement.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 24-25 release 25-26 cited ranges 0
+   pin units: import ../../Tracer.ts=absent; import ./SqlConnection.ts=import
+   release units: import ../Tracer.ts=absent; import ./SqlConnection.ts=import
+-    24 import type * as Tracer from "@tree/Tracer.ts"
+-    25 import type { Acquirer, Connection, Row } from "@tree/sql/SqlConnection.ts"
++    25 import * as Tracer from "@tree/Tracer.ts"
++    26 import type { Acquirer, Borrower, Connection, Row } from "@tree/sql/SqlConnection.ts"
+
+@@ hunk 2 [code] pin 28-28 release 29-29 cited ranges 0
+   pin units: FragmentTypeId=code
+   release units: FragmentTypeId=code
+-    28 const FragmentTypeId = "~effect/sql/Fragment"
++    29 const FragmentTypeId = "~effect/sql/Statement/Fragment"
+
+@@ hunk 3 [code] pin before 115 release 124-126 cited ranges 0
+   pin units: 
+   release units: SpanPropagationEnabled=absent
++   124 export const SpanPropagationEnabled = Context.Reference<boolean>("effect/sql/SpanPropagationEnabled", {
++   125 defaultValue: () => false
++   126 })
+
+@@ hunk 4 [code] pin 259-259 release 292-292 cited ranges 0
+   pin units: RecordInsertHelperProto=code
+   release units: RecordInsertHelperProto=code
+-   259 returningIdentifier: sql
++   292 returningIdentifier: typeof sql === "string" || isFragment(sql) ? sql : fragment([sql])
+
+@@ hunk 5 [code] pin 536-536 release 584-585 cited ranges 1
+   pin units: make=code
+   release units: make=code
+-   536 transformRows: (<A extends object>(row: ReadonlyArray<A>) => ReadonlyArray<A>) | undefined
++   584 transformRows: (<A extends object>(row: ReadonlyArray<A>) => ReadonlyArray<A>) | undefined,
++   585 borrower?: Borrower | undefined
+
+@@ hunk 6 [code] pin 553-553 release 602-603 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   553 transformRows
++   602 transformRows,
++   603 borrower
+
+@@ hunk 7 [code] pin 569-569 release 619-620 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   569 transformRows
++   619 transformRows,
++   620 borrower
+
+@@ hunk 8 [code] pin 624-624 release 676-677 cited ranges 1
+   pin units: statement=code
+   release units: statement=code
+-   624 transformRows: (<A extends object>(row: ReadonlyArray<A>) => ReadonlyArray<A>) | undefined
++   676 transformRows: (<A extends object>(row: ReadonlyArray<A>) => ReadonlyArray<A>) | undefined,
++   677 borrower?: Borrower | undefined
+
+@@ hunk 9 [code] pin 644-644 release 697-697 cited ranges 0
+   pin units: statement=code
+   release units: statement=code
+-   644 return makeUnsafe(segments, acquirer, compiler, spanAttributes, transformRows)
++   697 return makeUnsafe(segments, acquirer, compiler, spanAttributes, transformRows, borrower)
+
+@@ hunk 10 [code] pin 846-846 release 908-908 cited ranges 0
+   pin units: CompilerProto=code
+   release units: CompilerProto=code
+-   846 if (cached !== undefined) {
++   908 if (cached !== undefined && placeholderOverride === undefined) {
+
+@@ hunk 11 [erased] pin before 1234 release 1299-1299 cited ranges 0
+   pin units: 
+   release units: StatementImpl=type-decl
++  1299 readonly borrower: Borrower | undefined
+
+@@ hunk 12 [code] pin 1260-1260 release 1327-1328 cited ranges 0
+   pin units: makeUnsafe=code
+   release units: makeUnsafe=code
+-  1260 transformRows: (<A extends object>(row: ReadonlyArray<A>) => ReadonlyArray<A>) | undefined
++  1327 transformRows: (<A extends object>(row: ReadonlyArray<A>) => ReadonlyArray<A>) | undefined,
++  1328 borrower: Borrower | undefined
+
+@@ hunk 13 [code] pin before 1268 release 1336-1336 cited ranges 0
+   pin units: 
+   release units: makeUnsafe=code
++  1336 self.borrower = borrower
+
+@@ hunk 14 [erased] pin 1274-1274 release 1343-1343 cited ranges 0
+   pin units: StatementProto=code
+   release units: StatementProto=code
+-  1274 "segments" | "acquirer" | "compiler" | "spanAttributes" | "transformRows"
++  1343 "segments" | "acquirer" | "compiler" | "spanAttributes" | "transformRows" | "borrower"
+
+@@ hunk 15 [code] pin 1310-1310 release 1379-1379 cited ranges 0
+   pin units: StatementProto=code
+   release units: StatementProto=code
+-  1310 return withStatement(this, span, (statement) => {
++  1379 return withStatement(this, span, (statement, fiber) => {
+
+@@ hunk 16 [code] pin 1317-1317 release 1386-1391 cited ranges 0
+   pin units: StatementProto=code
+   release units: StatementProto=code
+-  1317 return Effect.scoped(Effect.flatMap(this.acquirer, (_) => f(_, sql, params)))
++  1386 const execute = this.borrower === undefined
++  1387 ? Effect.scoped(Effect.flatMap(this.acquirer, (_) => f(_, sql, params)))
++  1388 : this.borrower((connection: Connection) => f(connection, sql, params))
++  1389 return fiber.cache.tracerEnabled && fiber.getRef(SpanPropagationEnabled)
++  1390 ? Effect.provideService(execute, Tracer.ParentSpan, span)
++  1391 : execute
+
+@@ hunk 17 [code] pin 1342-1342 release 1416-1416 cited ranges 0
+   pin units: StatementProto=code
+   release units: StatementProto=code
+-  1342 withStatement(self, span, (statement) => {
++  1416 withStatement(self, span, (statement, fiber) => {
+
+@@ hunk 18 [code] pin 1349-1349 release 1423-1426 cited ranges 0
+   pin units: StatementProto=code
+   release units: StatementProto=code
+-  1349 return Effect.map(self.acquirer, (_) => _.executeStream(sql, params, self.transformRows))
++  1423 const acquire = Effect.map(self.acquirer, (_) => _.executeStream(sql, params, self.transformRows))
++  1424 return fiber.cache.tracerEnabled && fiber.getRef(SpanPropagationEnabled)
++  1425 ? Effect.succeed(Stream.provideService(Stream.unwrap(acquire), Tracer.ParentSpan, span))
++  1426 : acquire
+
+@@ hunk 19 [erased] pin 1417-1417 release 1494-1494 cited ranges 0
+   pin units: withStatement=code
+   release units: withStatement=code
+-  1417 f: (statement: StatementImpl<A>) => Effect.Effect<X, E, R>
++  1494 f: (statement: StatementImpl<A>, fiber: Fiber.Fiber<unknown, unknown>) => Effect.Effect<X, E, R>
+
+@@ hunk 20 [code] pin 1422-1422 release 1499-1499 cited ranges 0
+   pin units: withStatement=code
+   release units: withStatement=code
+-  1422 return f(self)
++  1499 return f(self, fiber)
+
+@@ hunk 21 [code] pin 1427-1427 release 1504-1504 cited ranges 0
+   pin units: withStatement=code
+   release units: withStatement=code
+-  1427 make(self.acquirer, self.compiler, self.spanAttributes, self.transformRows),
++  1504 make(self.acquirer, self.compiler, self.spanAttributes, self.transformRows, self.borrower),
+
+@@ hunk 22 [code] pin 1431-1431 release 1508-1508 cited ranges 0
+   pin units: withStatement=code
+   release units: withStatement=code
+-  1431 f
++  1508 (statement) => f(statement, fiber)

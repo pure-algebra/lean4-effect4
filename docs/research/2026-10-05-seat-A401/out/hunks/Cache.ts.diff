@@ -1,0 +1,115 @@
+# Cache.ts (rc.112) against Cache.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 618-618 release 618-618 cited ranges 0
+   pin units: get=code
+   release units: get=code
+-   618 if (Option.isSome(oentry) && !hasExpired(oentry.value, fiber)) {
++   618 if (Option.isSome(oentry)) {
+
+@@ hunk 2 [code] pin before 621 release 620-620 cited ranges 0
+   pin units: 
+   release units: get=code
++   620 if (!hasExpired(oentry.value, fiber)) {
+
+@@ hunk 3 [code] pin 624-629 release before 625 cited ranges 0
+   pin units: get=code
+   release units: 
+-   624 const entry = new EntryImpl(fiber, self.lookup(key))
+-   625 entry.fiber.addObserver((exit) => {
+-   626 if (effect.exitHasInterrupts(exit)) {
+-   627 const current = MutableHashMap.get(self.map, key)
+-   628 if (Option.isSome(current) && current.value === entry) {
+-   629 MutableHashMap.remove(self.map, key)
+
+@@ hunk 4 [code] pin before 631 release 626-633 cited ranges 0
+   pin units: 
+   release units: get=code
++   626 const entry = new EntryImpl(fiber, self.lookup(key))
++   627 entry.onInterrupt = () => removeEntry(self, key, entry)
++   628 let skipCache = false
++   629 entry.fiber.addObserver((exit) => {
++   631 entry.onInterrupt = undefined
++   632 if (effect.exitHasInterrupts(exit)) {
++   633 removeEntry(self, key, entry)
+
+@@ hunk 5 [code] pin 634-634 release 637-640 cited ranges 0
+   pin units: get=code
+   release units: get=code
+-   634 if (Duration.isFinite(ttl)) {
++   637 if (Duration.isZero(ttl)) {
++   638 skipCache = true
++   639 removeEntry(self, key, entry)
++   640 } else if (Duration.isFinite(ttl)) {
+
+@@ hunk 6 [code] pin 636-637 release before 642 cited ranges 0
+   pin units: get=code
+   release units: 
+-   636 } else if (Duration.isZero(ttl)) {
+-   637 MutableHashMap.remove(self.map, key)
+
+@@ hunk 7 [code] pin before 640 release 644-645 cited ranges 0
+   pin units: 
+   release units: get=code
++   644 const exit = entry.fiber.pollUnsafe()
++   645 if (!skipCache && (exit === undefined || !effect.exitHasInterrupts(exit))) {
+
+@@ hunk 8 [code] pin before 641 release 647-647 cited ranges 0
+   pin units: 
+   release units: get=code
++   647 }
+
+@@ hunk 9 [code] pin before 653 release 659-659 cited ranges 0
+   pin units: 
+   release units: EntryImpl.onInterrupt=absent
++   659 onInterrupt: (() => void) | undefined
+
+@@ hunk 10 [code] pin before 669 release 679-679 cited ranges 0
+   pin units: 
+   release units: EntryImpl.await=code
++   679 this.onInterrupt?.()
+
+@@ hunk 11 [code] pin before 674 release 685-690 cited ranges 0
+   pin units: 
+   release units: removeEntry=absent
++   685 const removeEntry = <Key, A, E, R>(self: Cache<Key, A, E, R>, key: Key, entry: Entry<A, E>): void => {
++   686 const current = MutableHashMap.get(self.map, key)
++   687 if (Option.isSome(current) && current.value === entry) {
++   688 MutableHashMap.remove(self.map, key)
++   689 }
++   690 }
+
+@@ hunk 12 [code] pin before 2112 release 2130-2133 cited ranges 0
+   pin units: 
+   release units: invalidateWhen=code
++  2130 const current = MutableHashMap.get(self.map, key)
++  2131 if (Option.isNone(current) || current.value !== oentry) {
++  2132 return false
++  2133 }
+
+@@ hunk 13 [code] pin before 2427 release 2449-2449 cited ranges 0
+   pin units: 
+   release units: refresh=code
++  2449 entry.onInterrupt = () => removeEntry(self, key, entry)
+
+@@ hunk 14 [code] pin before 2433 release 2457-2457 cited ranges 0
+   pin units: 
+   release units: refresh=code
++  2457 entry.onInterrupt = undefined
+
+@@ hunk 15 [code] pin 2434-2434 release 2459-2459 cited ranges 0
+   pin units: refresh=code
+   release units: refresh=code
+-  2434 if (!existing) MutableHashMap.remove(self.map, key)
++  2459 removeEntry(self, key, entry)
+
+@@ hunk 16 [code] pin 2439-2439 release 2464-2465 cited ranges 0
+   pin units: refresh=code
+   release units: refresh=code
+-  2439 MutableHashMap.remove(self.map, key)
++  2464 if (existing) MutableHashMap.remove(self.map, key)
++  2465 else removeEntry(self, key, entry)
+
+@@ hunk 17 [code] pin before 2447 release 2473-2473 cited ranges 0
+   pin units: 
+   release units: refresh=code
++  2473 checkCapacity(self)

@@ -1,0 +1,1144 @@
+# Stream.ts (rc.112) against Stream.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 15 release 15-15 cited ranges 0
+   pin units: 
+   release units: import ./ByteSize.ts=absent
++    15 import * as ByteSize from "@tree/ByteSize.ts"
+
+@@ hunk 2 [erased] pin 25-25 release before 26 cited ranges 0
+   pin units: import ./FileSystem.ts=absent
+   release units: 
+-    25 import type { SizeInput } from "@tree/FileSystem.ts"
+
+@@ hunk 3 [code] pin before 30 release 30-30 cited ranges 0
+   pin units: 
+   release units: import ./internal/count.ts=absent
++    30 import * as Count from "@tree/internal/count.ts"
+
+@@ hunk 4 [import] pin before 56 release 57-57 cited ranges 0
+   pin units: 
+   release units: import ./Types.ts=import
++    57 Concurrency,
+
+@@ hunk 5 [import] pin before 64 release 66-66 cited ranges 0
+   pin units: 
+   release units: import ./Types.ts=import
++    66 ReasonOf,
+
+@@ hunk 6 [import] pin before 65 release 68-68 cited ranges 0
+   pin units: 
+   release units: import ./Types.ts=import
++    68 Simplify,
+
+@@ hunk 7 [erased] pin 219-260 release 223-263 cited ranges 0
+   pin units: Success=type-decl; Error=type-decl; Services=type-decl
+   release units: Success=type-decl; Error=type-decl; Services=type-decl
+-   219 export type Success<T extends Stream<any, any, any>> = [T] extends [Stream<infer _A, infer _E, infer _R>] ? _A : never
+-   237 export type Error<T extends Stream<any, any, any>> = [T] extends [Stream<infer _A, infer _E, infer _R>] ? _E : never
+-   259 export type Services<T extends Stream<any, any, any>> = [T] extends [Stream<infer _A, infer _E, infer _R>] ? _R
+-   260 : never
++   223 export type Success<T> = T extends Stream<infer _A, infer _E, infer _R> ? _A : never
++   241 export type Error<T> = T extends Stream<infer _A, infer _E, infer _R> ? _E : never
++   263 export type Services<T> = T extends Stream<infer _A, infer _E, infer _R> ? _R : never
+
+@@ hunk 8 [erased] pin 1353-1353 release 1360-1360 cited ranges 0
+   pin units: EventListener=type-decl
+   release units: EventListener=type-decl
+-  1353 export interface EventListener<A> {
++  1360 export interface EventListener<A = unknown> {
+
+@@ hunk 9 [erased] pin 1406-1406 release 1413-1413 cited ranges 0
+   pin units: fromEventListener=code
+   release units: fromEventListener=code
+-  1406 target: EventListener<A>,
++  1413 target: EventListener,
+
+@@ hunk 10 [code] pin 1416-1416 release 1423-1425 cited ranges 0
+   pin units: fromEventListener=code
+   release units: fromEventListener=code
+-  1416 function emit(event: A) {
++  1423 const once = typeof options === "object" && options.once
++  1425 function emit(event: any) {
+
+@@ hunk 11 [code] pin before 1418 release 1427-1427 cited ranges 0
+   pin units: 
+   release units: fromEventListener=code
++  1427 if (once) Queue.endUnsafe(queue)
+
+@@ hunk 12 [code] pin 1573-1573 release 1584-1584 cited ranges 0
+   pin units: range=code
+   release units: range=code
+-  1573 const size = Math.max(1, chunkSize)
++  1584 const size = Count.normalizeNonEmpty(chunkSize)
+
+@@ hunk 13 [code] pin before 1761 release 1762-1813 cited ranges 0
+   pin units: 
+   release units: as=absent
++  1762 export const as: {
++  1787 <B>(value: B): <A, E, R>(self: Stream<A, E, R>) => Stream<B, E, R>
++  1812 <A, E, R, B>(self: Stream<A, E, R>, value: B): Stream<B, E, R>
++  1813 } = dual(2, <A, E, R, B>(self: Stream<A, E, R>, value: B): Stream<B, E, R> => map(self, () => value))
+
+@@ hunk 14 [erased] pin 1796-1797 release 1884-1885 cited ranges 0
+   pin units: mapBoth=code
+   release units: mapBoth=code
+-  1796 <E, E2, A, A2>(
+-  1797 options: { readonly onFailure: (e: E) => E2; readonly onSuccess: (a: A) => A2 }
++  1884 <A, A2, E, E2>(
++  1885 options: { readonly onElement: (a: A) => A2; readonly onError: (e: E) => E2 }
+
+@@ hunk 15 [erased] pin 1833-1833 release 1921-1921 cited ranges 0
+   pin units: mapBoth=code
+   release units: mapBoth=code
+-  1833 <A, E, R, E2, A2>(
++  1921 <A, E, R, A2, E2>(
+
+@@ hunk 16 [erased] pin 1835-1835 release 1923-1923 cited ranges 0
+   pin units: mapBoth=code
+   release units: mapBoth=code
+-  1835 options: { readonly onFailure: (e: E) => E2; readonly onSuccess: (a: A) => A2 }
++  1923 options: { readonly onElement: (a: A) => A2; readonly onError: (e: E) => E2 }
+
+@@ hunk 17 [code] pin 1837-1837 release 1925-1925 cited ranges 0
+   pin units: mapBoth=code
+   release units: mapBoth=code
+-  1837 } = dual(2, <A, E, R, E2, A2>(
++  1925 } = dual(2, <A, E, R, A2, E2>(
+
+@@ hunk 18 [code] pin 1839-1839 release 1927-1927 cited ranges 0
+   pin units: mapBoth=code
+   release units: mapBoth=code
+-  1839 options: { readonly onFailure: (e: E) => E2; readonly onSuccess: (a: A) => A2 }
++  1927 options: { readonly onElement: (a: A) => A2; readonly onError: (e: E) => E2 }
+
+@@ hunk 19 [code] pin 1842-1843 release 1930-1931 cited ranges 0
+   pin units: mapBoth=code
+   release units: mapBoth=code
+-  1842 map(options.onSuccess),
+-  1843 mapError(options.onFailure)
++  1930 map(options.onElement),
++  1931 mapError(options.onError)
+
+@@ hunk 20 [erased] pin 2006-2006 release 2094-2094 cited ranges 0
+   pin units: mapEffect=erased
+   release units: mapEffect=erased
+-  2006 readonly concurrency?: number | "unbounded" | undefined
++  2094 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 21 [erased] pin 2051-2051 release 2139-2139 cited ranges 0
+   pin units: mapEffect=erased
+   release units: mapEffect=erased
+-  2051 readonly concurrency?: number | "unbounded" | undefined
++  2139 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 22 [erased] pin 2059-2059 release 2147-2147 cited ranges 0
+   pin units: mapEffect=erased
+   release units: mapEffect=erased
+-  2059 readonly concurrency?: number | "unbounded" | undefined
++  2147 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 23 [erased] pin 2098-2098 release 2186-2186 cited ranges 0
+   pin units: flattenEffect=erased
+   release units: flattenEffect=erased
+-  2098 readonly concurrency?: number | "unbounded" | undefined
++  2186 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 24 [erased] pin 2101-2101 release 2189-2189 cited ranges 0
+   pin units: flattenEffect=erased
+   release units: flattenEffect=erased
+-  2101 readonly concurrency?: number | "unbounded" | undefined
++  2189 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 25 [erased] pin 2107-2107 release 2195-2195 cited ranges 0
+   pin units: flattenEffect=erased
+   release units: flattenEffect=erased
+-  2107 readonly concurrency?: number | "unbounded" | undefined
++  2195 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 26 [erased] pin 2117-2117 release 2205-2205 cited ranges 0
+   pin units: flattenEffect=erased
+   release units: flattenEffect=erased
+-  2117 readonly concurrency?: number | "unbounded" | undefined
++  2205 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 27 [erased] pin 2321-2321 release 2409-2409 cited ranges 0
+   pin units: tap=erased
+   release units: tap=erased
+-  2321 readonly concurrency?: number | "unbounded" | undefined
++  2409 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 28 [erased] pin 2355-2355 release 2443-2443 cited ranges 0
+   pin units: tap=erased
+   release units: tap=erased
+-  2355 readonly concurrency?: number | "unbounded" | undefined
++  2443 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 29 [erased] pin 2362-2362 release 2450-2450 cited ranges 0
+   pin units: tap=erased
+   release units: tap=erased
+-  2362 readonly concurrency?: number | "unbounded" | undefined
++  2450 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 30 [erased] pin 2434-2434 release 2522-2522 cited ranges 0
+   pin units: tapBoth=erased
+   release units: tapBoth=erased
+-  2434 readonly concurrency?: number | "unbounded" | undefined
++  2522 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 31 [erased] pin 2471-2471 release 2559-2559 cited ranges 0
+   pin units: tapBoth=erased
+   release units: tapBoth=erased
+-  2471 readonly concurrency?: number | "unbounded" | undefined
++  2559 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 32 [erased] pin 2479-2479 release 2567-2567 cited ranges 0
+   pin units: tapBoth=erased
+   release units: tapBoth=erased
+-  2479 readonly concurrency?: number | "unbounded" | undefined
++  2567 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 33 [erased] pin 2701-2701 release 2789-2789 cited ranges 0
+   pin units: flatMap=erased
+   release units: flatMap=erased
+-  2701 readonly concurrency?: number | "unbounded" | undefined
++  2789 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 34 [erased] pin 2738-2738 release 2826-2826 cited ranges 0
+   pin units: flatMap=erased
+   release units: flatMap=erased
+-  2738 readonly concurrency?: number | "unbounded" | undefined
++  2826 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 35 [erased] pin 2746-2746 release 2834-2834 cited ranges 0
+   pin units: flatMap=erased
+   release units: flatMap=erased
+-  2746 readonly concurrency?: number | "unbounded" | undefined
++  2834 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 36 [erased] pin 2806-2806 release 2894-2894 cited ranges 0
+   pin units: switchMap=erased
+   release units: switchMap=erased
+-  2806 readonly concurrency?: number | "unbounded" | undefined
++  2894 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 37 [erased] pin 2837-2837 release 2925-2925 cited ranges 0
+   pin units: switchMap=erased
+   release units: switchMap=erased
+-  2837 readonly concurrency?: number | "unbounded" | undefined
++  2925 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 38 [erased] pin 2845-2845 release 2933-2933 cited ranges 0
+   pin units: switchMap=erased
+   release units: switchMap=erased
+-  2845 readonly concurrency?: number | "unbounded" | undefined
++  2933 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 39 [erased] pin 2889-2889 release 2977-2977 cited ranges 0
+   pin units: flatten=erased
+   release units: flatten=erased
+-  2889 readonly concurrency?: number | "unbounded" | undefined
++  2977 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 40 [erased] pin 2892-2892 release 2980-2980 cited ranges 0
+   pin units: flatten=erased
+   release units: flatten=erased
+-  2892 readonly concurrency?: number | "unbounded" | undefined
++  2980 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 41 [erased] pin 2898-2898 release 2986-2986 cited ranges 0
+   pin units: flatten=erased
+   release units: flatten=erased
+-  2898 readonly concurrency?: number | "unbounded" | undefined
++  2986 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 42 [erased] pin 2907-2907 release 2995-2995 cited ranges 0
+   pin units: flatten=erased
+   release units: flatten=erased
+-  2907 readonly concurrency?: number | "unbounded" | undefined
++  2995 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 43 [code] pin 3708-3729 release 3796-3858 cited ranges 0
+   pin units: concat=code
+   release units: concat=code
+-  3708 <A, E, R, A2, E2, R2>(self: Stream<A, E, R>, that: Stream<A2, E2, R2>): Stream<A | A2, E | E2, R | R2> =>
+-  3709 flatten(fromArray<
+-  3729 Stream<A | A2, E | E2, R | R2>>([self, that]))
++  3796 <A, E, R, A2, E2, R2>(self: Stream<A, E, R>, that: Stream<A2, E2, R2>): Stream<A | A2, E | E2, R | R2> => {
++  3797 const stream = fromChannel(
++  3798 Channel.flatten(Channel.fromIterator(() => concatChannels<
++  3818 A | A2,
++  3838 E | E2,
++  3858 R | R2>(self, that)))
+
+@@ hunk 44 [code] pin before 3755 release 3860-3878 cited ranges 0
+   pin units: 
+   release units: concat=code; concatParts=absent; concatChannels=absent
++  3860 concatParts.set(stream, [self, that])
++  3861 return stream
++  3862 }
++  3863 )
++  3867 const concatParts = new WeakMap<Stream<any, any, any>, readonly [Stream<any, any, any>, Stream<any, any, any>]>()
++  3870 function* concatChannels<A, E, R>(self: Stream<A, E, R>, that: Stream<A, E, R>) {
++  3871 const stack = [that, self]
++  3872 while (stack.length > 0) {
++  3873 const stream = stack.pop()!
++  3874 const parts = concatParts.get(stream)
++  3875 if (parts === undefined) yield stream.channel
++  3876 else stack.push(parts[1], parts[0])
++  3877 }
++  3878 }
+
+@@ hunk 45 [erased] pin 4472-4472 release 4620-4620 cited ranges 0
+   pin units: mergeAll=erased
+   release units: mergeAll=erased
+-  4472 readonly concurrency: number | "unbounded"
++  4620 readonly concurrency: Concurrency
+
+@@ hunk 46 [erased] pin 4519-4519 release 4667-4667 cited ranges 0
+   pin units: mergeAll=erased
+   release units: mergeAll=erased
+-  4519 readonly concurrency: number | "unbounded"
++  4667 readonly concurrency: Concurrency
+
+@@ hunk 47 [erased] pin 4526-4526 release 4674-4674 cited ranges 0
+   pin units: mergeAll=erased
+   release units: mergeAll=erased
+-  4526 readonly concurrency: number | "unbounded"
++  4674 readonly concurrency: Concurrency
+
+@@ hunk 48 [erased] pin 4611-4611 release 4759-4759 cited ranges 0
+   pin units: cross=erased
+   release units: cross=erased
+-  4611 <AL, ER, RR, AR, EL, RL>(left: Stream<AL, ER, RR>, right: Stream<AR, EL, RL>): Stream<[AL, AR], EL | ER, RL | RR>
++  4759 <AL, EL, RL, AR, ER, RR>(left: Stream<AL, EL, RL>, right: Stream<AR, ER, RR>): Stream<[AL, AR], EL | ER, RL | RR>
+
+@@ hunk 49 [erased] pin 6701-6701 release 6849-6849 cited ranges 0
+   pin units: partitionEffect=erased
+   release units: partitionEffect=erased
+-  6701 readonly concurrency?: number | "unbounded" | undefined
++  6849 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 50 [erased] pin 6738-6738 release 6886-6886 cited ranges 0
+   pin units: partitionEffect=erased
+   release units: partitionEffect=erased
+-  6738 readonly concurrency?: number | "unbounded" | undefined
++  6886 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 51 [erased] pin 6755-6755 release 6903-6903 cited ranges 0
+   pin units: partitionEffect=erased
+   release units: partitionEffect=erased
+-  6755 readonly concurrency?: number | "unbounded" | undefined
++  6903 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 52 [erased] pin 6950-6950 release 7102-7104 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  6950 options?: { readonly bufferSize?: number | undefined }
++  7102 options?: {
++  7103 readonly capacity?: number | "unbounded" | undefined
++  7104 }
+
+@@ hunk 53 [erased] pin 6954-6954 release 7108-7108 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  6954 [excluded: Stream<Fail, E>, satisfying: Stream<Pass, E>],
++  7108 [passes: Stream<Pass, E>, fails: Stream<Fail, E>],
+
+@@ hunk 54 [erased] pin 6992-6992 release 7148-7150 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  6992 options?: { readonly bufferSize?: number | undefined }
++  7148 options?: {
++  7149 readonly capacity?: number | "unbounded" | undefined
++  7150 }
+
+@@ hunk 55 [erased] pin 6994-6994 release 7152-7152 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  6994 [excluded: Stream<Fail, E>, satisfying: Stream<Pass, E>],
++  7152 [passes: Stream<Pass, E>, fails: Stream<Fail, E>],
+
+@@ hunk 56 [erased] pin 7003-7003 release 7161-7163 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  7003 options?: { readonly bufferSize?: number | undefined }
++  7161 options?: {
++  7162 readonly capacity?: number | "unbounded" | undefined
++  7163 }
+
+@@ hunk 57 [erased] pin 7005-7005 release 7165-7165 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  7005 [excluded: Stream<Fail, E>, satisfying: Stream<Pass, E>],
++  7165 [passes: Stream<Pass, E>, fails: Stream<Fail, E>],
+
+@@ hunk 58 [code] pin 7010-7011 release 7170-7171 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  7010 partitionQueue(self, filter, { capacity: options?.bufferSize ?? 16 }),
+-  7011 ([passes, fails]) => [fromQueue(fails), fromQueue(passes)] as const
++  7170 partitionQueue(self, filter, { capacity: options?.capacity ?? 16 }),
++  7171 ([passes, fails]) => [fromQueue(passes), fromQueue(fails)] as const
+
+@@ hunk 59 [code] pin before 7565 release 7720-7776 cited ranges 0
+   pin units: 
+   release units: catchDefect=absent
++  7720 export const catchDefect: {
++  7744 <A2, E2, R2>(f: (defect: unknown) => Stream<A2, E2, R2>): <A, E, R>(self: Stream<A, E, R>) => Stream<A | A2, E | E2, R | R2>
++  7768 <A, E, R, A2, E2, R2>(self: Stream<A, E, R>, f: (defect: unknown) => Stream<A2, E2, R2>): Stream<A | A2, E | E2, R | R2>
++  7769 } = dual(2, <A, E, R, A2, E2, R2>(
++  7770 self: Stream<A, E, R>,
++  7771 f: (defect: unknown) => Stream<A2, E2, R2>
++  7772 ): Stream<A | A2, E | E2, R | R2> =>
++  7773 self.channel.pipe(
++  7774 Channel.catchDefect((defect) => f(defect).channel),
++  7775 fromChannel
++  7776 ))
+
+@@ hunk 60 [code] pin before 7803 release 8049-8277 cited ranges 0
+   pin units: 
+   release units: tapErrorTag=absent; tapDefect=absent
++  8049 export const tapErrorTag: {
++  8088 <const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>, E, A1, E1, R1>(
++  8089 k: K,
++  8090 f: (
++  8091 e: ExtractTag<NoInfer<E>, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>
++  8092 ) => Effect.Effect<A1, E1, R1>
++  8093 ): <A, R>(self: Stream<A, E, R>) => Stream<A, E | E1, R1 | R>
++  8132 <
++  8133 A,
++  8134 E,
++  8135 R,
++  8136 const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>,
++  8137 R1,
++  8138 E1,
++  8139 A1
++  8140 >(
++  8141 self: Stream<A, E, R>,
++  8142 k: K,
++  8143 f: (e: ExtractTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>) => Effect.Effect<A1, E1, R1>
++  8144 ): Stream<A, E | E1, R | R1>
++  8145 } = dual(
++  8146 3,
++  8147 <
++  8148 A,
++  8149 E,
++  8150 R,
++  8151 const K extends Tags<E> | Arr.NonEmptyReadonlyArray<Tags<E>>,
++  8152 R1,
++  8153 E1,
++  8154 A1
++  8155 >(
++  8156 self: Stream<A, E, R>,
++  8157 k: K,
++  8158 f: (e: ExtractTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>) => Effect.Effect<A1, E1, R1>
++  8159 ): Stream<A, E | E1, R | R1> => {
++  8160 const predicate = Array.isArray(k)
++  8161 ? ((e: E): e is ExtractTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K> =>
++  8162 hasProperty(e, "_tag") && k.includes(e._tag))
++  8163 : isTagged(k as string)
++  8164 return tapError(
++  8165 self,
++  8166 (error) =>
++  8167 predicate(error)
++  8168 ? f(error as ExtractTag<E, K extends Arr.NonEmptyReadonlyArray<string> ? K[number] : K>)
++  8169 : Effect.void
++  8170 )
++  8171 }
++  8172 )
++  8205 export const tapDefect: {
++  8237 <B, E2, R2>(f: (defect: unknown) => Effect.Effect<B, E2, R2>): <A, E, R>(self: Stream<A, E, R>) => Stream<A, E | E2, R | R2>
++  8269 <A, E, R, B, E2, R2>(self: Stream<A, E, R>, f: (defect: unknown) => Effect.Effect<B, E2, R2>): Stream<A, E | E2, R | R2>
++  8270 } = dual(2, <A, E, R, B, E2, R2>(
++  8271 self: Stream<A, E, R>,
++  8272 f: (defect: unknown) => Effect.Effect<B, E2, R2>
++  8273 ): Stream<A, E | E2, R | R2> =>
++  8274 tapCause(self, (cause) => {
++  8275 const defect = Cause.findDefect(cause)
++  8276 return Result.isSuccess(defect) ? f(defect.success) : Effect.void
++  8277 }))
+
+@@ hunk 61 [erased] pin 8350-8353 release 8859-8861 cited ranges 0
+   pin units: catchTags=erased
+   release units: catchTags=erased
+-  8350 Cases extends (E extends { _tag: string } ? {
+-  8351 [K in E["_tag"]]+?: (error: Extract<E, { _tag: K }>) => Stream<any, any, any>
+-  8352 } :
+-  8353 {}),
++  8859 Cases extends
++  8860 & { [K in Extract<E, { _tag: string }>["_tag"]]+?: ((error: Extract<E, { _tag: K }>) => Stream<any, any, any>) }
++  8861 & (unknown extends E ? {} : { [K in Exclude<keyof Cases, Extract<E, { _tag: string }>["_tag"]>]: never }),
+
+@@ hunk 62 [erased] pin 8418-8421 release 8926-8928 cited ranges 0
+   pin units: catchTags=erased
+   release units: catchTags=erased
+-  8418 Cases extends (E extends { _tag: string } ? {
+-  8419 [K in E["_tag"]]+?: (error: Extract<E, { _tag: K }>) => Stream<any, any, any>
+-  8420 } :
+-  8421 {}),
++  8926 Cases extends
++  8927 & { [K in Extract<E, { _tag: string }>["_tag"]]+?: ((error: Extract<E, { _tag: K }>) => Stream<any, any, any>) }
++  8928 & (unknown extends E ? {} : { [K in Exclude<keyof Cases, Extract<E, { _tag: string }>["_tag"]>]: never }),
+
+@@ hunk 63 [code] pin before 8951 release 9478-9596 cited ranges 0
+   pin units: 
+   release units: unwrapReason=absent
++  9478 export const unwrapReason: {
++  9522 <
++  9523 K extends Effect.TagsWithReason<E>,
++  9524 E
++  9525 >(errorTag: K): <A, R>(self: Stream<A, E, R>) => Stream<A, ExcludeTag<E, K> | ReasonOf<ExtractTag<E, K>>, R>
++  9569 <
++  9570 A,
++  9571 E,
++  9572 R,
++  9573 K extends Effect.TagsWithReason<E>
++  9574 >(self: Stream<A, E, R>, errorTag: K): Stream<A, ExcludeTag<E, K> | ReasonOf<ExtractTag<E, K>>, R>
++  9575 } = dual(
++  9576 2,
++  9577 <
++  9578 A,
++  9579 E,
++  9580 R,
++  9581 K extends Effect.TagsWithReason<E>
++  9582 >(
++  9583 self: Stream<A, E, R>,
++  9584 errorTag: K
++  9585 ): Stream<A, ExcludeTag<E, K> | ReasonOf<ExtractTag<E, K>>, R> =>
++  9586 catchFilter(
++  9587 self,
++  9588 (e: any) => {
++  9589 if (isTagged(e, errorTag) && hasProperty(e, "reason")) {
++  9590 return Result.succeed(e.reason)
++  9591 }
++  9592 return Result.fail(e)
++  9593 },
++  9594 fail as any
++  9595 ) as any
++  9596 )
+
+@@ hunk 64 [code] pin 10037-10038 release 10722-10725 cited ranges 0
+   pin units: take=code
+   release units: take=code
+- 10037 <A, E, R>(self: Stream<A, E, R>, n: number): Stream<A, E, R> =>
+- 10038 n < 1 ? empty : takeUntil(self, (_, i) => i === (n - 1))
++ 10722 <A, E, R>(self: Stream<A, E, R>, n: number): Stream<A, E, R> => {
++ 10723 const count = Count.normalize(n)
++ 10724 return count === 0 ? empty : takeUntil(self, (_, i) => i === (count - 1))
++ 10725 }
+
+@@ hunk 65 [erased] pin 10090-10090 release 10777-10777 cited ranges 0
+   pin units: limitBytes=code
+   release units: limitBytes=code
+- 10090 <E, R>(bytes: SizeInput, onLimitReached: LazyArg<Stream<Uint8Array, E, R>>): (self: Stream<Uint8Array, E, R>) => Stream<Uint8Array, E, R>
++ 10777 <E, R>(bytes: ByteSize.Input, onLimitReached: LazyArg<Stream<Uint8Array, E, R>>): (self: Stream<Uint8Array, E, R>) => Stream<Uint8Array, E, R>
+
+@@ hunk 66 [erased] pin 10117-10117 release 10804-10804 cited ranges 0
+   pin units: limitBytes=code
+   release units: limitBytes=code
+- 10117 bytes: SizeInput,
++ 10804 bytes: ByteSize.Input,
+
+@@ hunk 67 [erased] pin 10122-10122 release 10809-10809 cited ranges 0
+   pin units: limitBytes=code
+   release units: limitBytes=code
+- 10122 bytes: SizeInput,
++ 10809 bytes: ByteSize.Input,
+
+@@ hunk 68 [code] pin 10126-10126 release 10813-10813 cited ranges 0
+   pin units: limitBytes=code
+   release units: limitBytes=code
+- 10126 const limit = BigInt(bytes)
++ 10813 const limit = ByteSize.fromInputUnsafe(bytes)
+
+@@ hunk 69 [code] pin 10214-10215 release 10916-10919 cited ranges 0
+   pin units: takeRight=code
+   release units: takeRight=code
+- 10214 <A, E, R>(self: Stream<A, E, R>, n: number): Stream<A, E, R> =>
+- 10215 mapAccumArray(self, MutableList.make<A>, (list, arr) => {
++ 10916 <A, E, R>(self: Stream<A, E, R>, n: number): Stream<A, E, R> => {
++ 10917 const count = Count.normalize(n)
++ 10918 if (count === 0) return empty
++ 10919 return mapAccumArray(self, MutableList.make<A>, (list, arr) => {
+
+@@ hunk 70 [code] pin 10217-10218 release 10921-10922 cited ranges 0
+   pin units: takeRight=code
+   release units: takeRight=code
+- 10217 if (list.length > n) {
+- 10218 MutableList.takeNVoid(list, list.length - n)
++ 10921 if (list.length > count) {
++ 10922 MutableList.takeNVoid(list, list.length - count)
+
+@@ hunk 71 [code] pin before 10226 release 10930-10930 cited ranges 0
+   pin units: 
+   release units: takeRight=code
++ 10930 }
+
+@@ hunk 72 [code] pin 10893-10894 release 11613-11616 cited ranges 0
+   pin units: drop=code
+   release units: drop=code
+- 10893 <A, E, R>(self: Stream<A, E, R>, n: number): Stream<A, E, R> =>
+- 10894 transformPull(self, (pull, _scope) =>
++ 11613 <A, E, R>(self: Stream<A, E, R>, n: number): Stream<A, E, R> => {
++ 11614 const count = Count.normalize(n)
++ 11615 if (count === 0) return self
++ 11616 return transformPull(self, (pull, _scope) =>
+
+@@ hunk 73 [code] pin 10899-10899 release 11621-11621 cited ranges 0
+   pin units: drop=code
+   release units: drop=code
+- 10899 if (dropped >= n) return Effect.succeed(chunk)
++ 11621 if (dropped >= count) return Effect.succeed(chunk)
+
+@@ hunk 74 [code] pin 10901-10902 release 11623-11624 cited ranges 0
+   pin units: drop=code
+   release units: drop=code
+- 10901 if (dropped <= n) return pump
+- 10902 return Effect.succeed(chunk.slice(n - dropped) as Arr.NonEmptyArray<A>)
++ 11623 if (dropped <= count) return pump
++ 11624 return Effect.succeed(chunk.slice(count - dropped) as Arr.NonEmptyArray<A>)
+
+@@ hunk 75 [code] pin before 10907 release 11629-11629 cited ranges 0
+   pin units: 
+   release units: drop=code
++ 11629 }
+
+@@ hunk 76 [code] pin 11440-11440 release 12169-12170 cited ranges 0
+   pin units: dropRight=code
+   release units: dropRight=code
+- 11440 if (n <= 0) return self
++ 12169 const count = Count.normalize(n)
++ 12170 if (count === 0) return self
+
+@@ hunk 77 [code] pin 11472-11472 release 12204-12204 cited ranges 0
+   pin units: dropRight=code
+   release units: dropRight=code
+- 11472 const toTake = list.length - n
++ 12204 const toTake = list.length - count
+
+@@ hunk 78 [code] pin 11595-11595 release 12330-12330 cited ranges 0
+   pin units: rechunk=code
+   release units: rechunk=code
+- 11595 target = Math.max(1, target)
++ 12330 target = Count.normalizeNonEmpty(target)
+
+@@ hunk 79 [code] pin 11637-11637 release 12373-12375 cited ranges 0
+   pin units: rechunk=code
+   release units: rechunk=code
+- 11637 chunk.push(...arr)
++ 12373 for (let i = 0; i < arr.length; i++) {
++ 12374 chunk.push(arr[i])
++ 12375 }
+
+@@ hunk 80 [code] pin 11810-11811 release 12578-12581 cited ranges 0
+   pin units: slidingSize=code
+   release units: slidingSize=code
+- 11810 <A, E, R>(self: Stream<A, E, R>, chunkSize: number, stepSize: number): Stream<Arr.NonEmptyReadonlyArray<A>, E, R> =>
+- 11811 transformPull(self, (upstream, _scope) =>
++ 12578 <A, E, R>(self: Stream<A, E, R>, chunkSize: number, stepSize: number): Stream<Arr.NonEmptyReadonlyArray<A>, E, R> => {
++ 12579 const windowSize = Count.normalizeNonEmpty(chunkSize)
++ 12580 const step = Count.normalizeNonEmpty(stepSize)
++ 12581 return transformPull(self, (upstream, _scope) =>
+
+@@ hunk 81 [code] pin 11850-11850 release 12625-12625 cited ranges 0
+   pin units: slidingSize=code
+   release units: slidingSize=code
+- 11850 if (list.length < chunkSize) return pull
++ 12625 if (list.length < windowSize) return pull
+
+@@ hunk 82 [code] pin 11853-11859 release 12628-12630 cited ranges 0
+   pin units: slidingSize=code
+   release units: slidingSize=code
+- 11853 while (list.length >= chunkSize) {
+- 11854 if (chunkSize === stepSize) {
+- 11855 chunks.push(MutableList.takeN(list, chunkSize) as any)
+- 11856 } else {
+- 11857 chunks.push(MutableList.toArrayN(list, chunkSize) as any)
+- 11858 if (chunkSize === 1 && stepSize <= 0) {
+- 11859 MutableList.take(list)
++ 12628 while (list.length >= windowSize) {
++ 12629 if (windowSize === step) {
++ 12630 chunks.push(MutableList.takeN(list, windowSize) as any)
+
+@@ hunk 83 [code] pin before 11861 release 12632-12632 cited ranges 0
+   pin units: 
+   release units: slidingSize=code
++ 12632 chunks.push(MutableList.toArrayN(list, windowSize) as any)
+
+@@ hunk 84 [code] pin 11862-11864 release 12634-12635 cited ranges 0
+   pin units: slidingSize=code
+   release units: slidingSize=code
+- 11862 MutableList.takeNVoid(list, stepSize)
+- 11863 skip = Math.max(0, stepSize - length)
+- 11864 }
++ 12634 MutableList.takeNVoid(list, step)
++ 12635 skip = Math.max(0, step - length)
+
+@@ hunk 85 [code] pin 11870-11870 release 12641-12641 cited ranges 0
+   pin units: slidingSize=code
+   release units: slidingSize=code
+- 11870 if (emitted) MutableList.takeNVoid(list, chunkSize - stepSize)
++ 12641 if (emitted) MutableList.takeNVoid(list, windowSize - step)
+
+@@ hunk 86 [code] pin 11878-11878 release 12649-12650 cited ranges 0
+   pin units: slidingSize=code
+   release units: slidingSize=code
+- 11878 }))
++ 12649 }));
++ 12650 }
+
+@@ hunk 87 [erased] pin 12626-12626 release 13398-13398 cited ranges 0
+   pin units: mapAccumArray=erased
+   release units: mapAccumArray=erased
+- 12626 readonly onHalt?: ((state: S) => Array<B>) | undefined
++ 13398 readonly onHalt?: ((state: S) => ReadonlyArray<B>) | undefined
+
+@@ hunk 88 [erased] pin 13062-13085 release 13834-13857 cited ranges 0
+   pin units: scan=code
+   release units: scan=code
+- 13062 <S, A>(initial: S, f: (s: S, a: A) => S): <E, R>(self: Stream<A, E, R>) => Stream<S, E, R>
+- 13085 <A, E, R, S>(self: Stream<A, E, R>, initial: S, f: (s: S, a: A) => S): Stream<S, E, R>
++ 13834 <S, A>(initial: LazyArg<S>, f: (s: S, a: A) => S): <E, R>(self: Stream<A, E, R>) => Stream<S, E, R>
++ 13857 <A, E, R, S>(self: Stream<A, E, R>, initial: LazyArg<S>, f: (s: S, a: A) => S): Stream<S, E, R>
+
+@@ hunk 89 [erased] pin 13088-13088 release 13860-13860 cited ranges 0
+   pin units: scan=code
+   release units: scan=code
+- 13088 initial: S,
++ 13860 initial: LazyArg<S>,
+
+@@ hunk 90 [code] pin 13092-13093 release 13864-13867 cited ranges 0
+   pin units: scan=code
+   release units: scan=code
+- 13092 let isFirst = true
+- 13093 return fromChannel(Channel.mapAccum(self.channel, constant(initial), (state, arr) => {
++ 13864 const seed = initial()
++ 13865 return concat(
++ 13866 succeed(seed),
++ 13867 fromChannel(Channel.mapAccum(self.channel, () => seed, (state, arr) => {
+
+@@ hunk 91 [code] pin 13117-13120 release before 13891 cited ranges 0
+   pin units: scan=code
+   release units: 
+- 13117 if (isFirst) {
+- 13118 isFirst = false
+- 13119 states.push(state)
+- 13120 }
+
+@@ hunk 92 [code] pin 13126-13126 release 13896-13897 cited ranges 0
+   pin units: scan=code
+   release units: scan=code
+- 13126 }));
++ 13896 }))
++ 13897 );
+
+@@ hunk 93 [erased] pin 13172-13172 release 13943-13943 cited ranges 0
+   pin units: scanEffect=code
+   release units: scanEffect=code
+- 13172 <S, A, E2, R2>(initial: S, f: (s: S, a: A) => Effect.Effect<S, E2, R2>): <E, R>(self: Stream<A, E, R>) => Stream<S, E | E2, R | R2>
++ 13943 <S, A, E2, R2>(initial: LazyArg<S>, f: (s: S, a: A) => Effect.Effect<S, E2, R2>): <E, R>(self: Stream<A, E, R>) => Stream<S, E | E2, R | R2>
+
+@@ hunk 94 [erased] pin 13196-13196 release 13967-13967 cited ranges 0
+   pin units: scanEffect=code
+   release units: scanEffect=code
+- 13196 initial: S,
++ 13967 initial: LazyArg<S>,
+
+@@ hunk 95 [code] pin 13201-13201 release 13972-13972 cited ranges 0
+   pin units: scanEffect=code
+   release units: scanEffect=code
+- 13201 initial: S,
++ 13972 initial: LazyArg<S>,
+
+@@ hunk 96 [code] pin before 13204 release 13975-13975 cited ranges 0
+   pin units: 
+   release units: scanEffect=code
++ 13975 suspend(() =>
+
+@@ hunk 97 [code] pin 13206-13206 release 13978-13978 cited ranges 0
+   pin units: scanEffect=code
+   release units: scanEffect=code
+- 13206 Channel.scanEffect(initial, f),
++ 13978 Channel.scanEffect(initial(), f),
+
+@@ hunk 98 [code] pin before 13209 release 13981-13981 cited ranges 0
+   pin units: 
+   release units: scanEffect=code
++ 13981 )
+
+@@ hunk 99 [code] pin 13558-13558 release 14331-14331 cited ranges 0
+   pin units: throttleShapeEffect=code
+   release units: throttleShapeEffect=code
+- 13558 let timestampMs = clock.currentTimeMillisUnsafe()
++ 14331 let timestampNanos = clock.monotonicTimeNanosUnsafe()
+
+@@ hunk 100 [code] pin 13562-13563 release 14335-14336 cited ranges 0
+   pin units: throttleShapeEffect=code
+   release units: throttleShapeEffect=code
+- 13562 const currentMs = clock.currentTimeMillisUnsafe()
+- 13563 const elapsed = currentMs - timestampMs
++ 14335 const currentNanos = clock.monotonicTimeNanosUnsafe()
++ 14336 const elapsed = Number(currentNanos - timestampNanos) / 1_000_000
+
+@@ hunk 101 [code] pin 13566-13566 release 14339-14339 cited ranges 0
+   pin units: throttleShapeEffect=code
+   release units: throttleShapeEffect=code
+- 13566 const available = sum < 0 ? max : Math.min(sum, max)
++ 14339 const available = Math.min(sum, max)
+
+@@ hunk 102 [code] pin 13571-13571 release 14344-14344 cited ranges 0
+   pin units: throttleShapeEffect=code
+   release units: throttleShapeEffect=code
+- 13571 timestampMs = currentMs
++ 14344 timestampNanos = currentNanos
+
+@@ hunk 103 [code] pin 13582-13582 release 14354-14354 cited ranges 0
+   pin units: throttleShapeEffect=code
+   release units: throttleShapeEffect=code
+- 13582 timestampMs = currentMs
++ 14354 timestampNanos = currentNanos
+
+@@ hunk 104 [code] pin 13588-13588 release 14360-14360 cited ranges 0
+   pin units: throttleShapeEffect=code
+   release units: throttleShapeEffect=code
+- 13588 timestampMs = currentMs
++ 14360 timestampNanos = currentNanos
+
+@@ hunk 105 [code] pin 13925-13925 release 14721-14721 cited ranges 0
+   pin units: groupedWithin=code
+   release units: groupedWithin=code
+- 13925 Sink.take(chunkSize),
++ 14721 Sink.take(Count.normalizeNonEmpty(chunkSize)),
+
+@@ hunk 106 [erased] pin 14463-14510 release 15259-15306 cited ranges 0
+   pin units: transduce=erased
+   release units: transduce=erased
+- 14463 export const transduce = dual<
+- 14486 <A2, A, E2, R2>(sink: Sink.Sink<A2, A, A, E2, R2>) => <E, R>(self: Stream<A, E, R>) => Stream<A2, E2 | E, R2 | R>,
+- 14509 <A, E, R, A2, E2, R2>(self: Stream<A, E, R>, sink: Sink.Sink<A2, A, A, E2, R2>) => Stream<A2, E2 | E, R2 | R>
+- 14510 >(
++ 15259 export const transduce: {
++ 15282 <A2, A, E2, R2>(sink: Sink.Sink<A2, A, A, E2, R2>): <E, R>(self: Stream<A, E, R>) => Stream<A2, E2 | E, R2 | R>
++ 15305 <A, E, R, A2, E2, R2>(self: Stream<A, E, R>, sink: Sink.Sink<A2, A, A, E2, R2>): Stream<A2, E2 | E, R2 | R>
++ 15306 } = dual(
+
+@@ hunk 107 [code] pin before 14818 release 15673-15677 cited ranges 0
+   pin units: 
+   release units: aggregateWithin=code
++ 15673 const clock = yield* Clock
++ 15674 const step = yield* Schedule.toStep(schedule)
++ 15675 const hasInput = Latch.makeUnsafe(false)
++ 15676 let scheduleTime = clock.currentTimeMillisUnsafe()
++ 15677 let openedAt = 0
+
+@@ hunk 108 [code] pin 14848-14865 release 15720-15722 cited ranges 0
+   pin units: aggregateWithin=code
+   release units: aggregateWithin=code
+- 14848 let sinkHasInput = false
+- 14849 const step = yield* Schedule.toStepWithSleep(schedule)
+- 14850 const stepLoop = Effect.suspend(function loop(): Pull.Pull<void, E3, C | void, R3> {
+- 14851 return Effect.flatMap(step(lastOutput), () => !sinkHasInput ? loop() : Queue.offer(buffer, scheduleStep))
+- 14852 })
+- 14853 const stepToBuffer: Pull.Pull<never, E3, void, R3> = stepLoop.pipe(
+- 14854 Effect.flatMap(() => Effect.never),
+- 14855 Pull.catchDone(() => Cause.done())
+- 14856 )
+- 14859 const pullFromBuffer: Pull.Pull<
+- 14860 Arr.NonEmptyReadonlyArray<A>,
+- 14861 E
+- 14862 > = Queue.take(buffer).pipe(
+- 14863 Effect.flatMap((arr) => {
+- 14864 if (arr === scheduleStep) {
+- 14865 return Cause.done()
++ 15720 const onInput = <X>(chunk: X): Effect.Effect<X> => {
++ 15721 if (hasInput.openUnsafe()) {
++ 15722 openedAt = clock.currentTimeMillisUnsafe()
+
+@@ hunk 109 [code] pin 14867-14869 release 15724-15732 cited ranges 0
+   pin units: aggregateWithin=code
+   release units: aggregateWithin=code
+- 14867 sinkHasInput = true
+- 14868 return Effect.succeed(arr)
+- 14869 })
++ 15724 return Effect.succeed(chunk)
++ 15725 }
++ 15726 const stepToBuffer: Pull.Pull<never, E3, void, R3> = hasInput.await.pipe(
++ 15727 Effect.flatMap(() => step(scheduleTime, lastOutput)),
++ 15728 Effect.flatMap(([, delay]) => Effect.sleep(delay)),
++ 15729 Effect.flatMap(() => Queue.offer(buffer, scheduleStep)),
++ 15731 Pull.catchDone(() => Queue.end(buffer)),
++ 15732 Effect.flatMap(() => Effect.never)
+
+@@ hunk 110 [code] pin 14876-14877 release 15739-15739 cited ranges 0
+   pin units: aggregateWithin=code
+   release units: aggregateWithin=code
+- 14876 sinkHasInput = true
+- 14877 return Effect.succeed(chunk)
++ 15739 return onInput(chunk)
+
+@@ hunk 111 [code] pin before 14879 release 15741-15741 cited ranges 0
+   pin units: 
+   release units: aggregateWithin=code
++ 15741 if (buffer.state._tag === "Open") {
+
+@@ hunk 112 [code] pin 14880-14880 release 15743-15744 cited ranges 0
+   pin units: aggregateWithin=code
+   release units: aggregateWithin=code
+- 14880 return pullFromBuffer
++ 15743 }
++ 15744 return Effect.flatMap(Queue.take(buffer), (arr) => arr === scheduleStep ? Cause.done() : onInput(arr))
+
+@@ hunk 113 [code] pin 14882-14884 release 15746-15751 cited ranges 0
+   pin units: aggregateWithin=code
+   release units: aggregateWithin=code
+- 14882 const catchSinkHalt = Effect.flatMap(([value, leftover_]: Sink.End<B, A2>) => {
+- 14884 if (!sinkHasInput && buffer.state._tag === "Done") return Cause.done()
++ 15746 const emit = Effect.flatMap(([value, leftover_]: Sink.End<B, A2>) => {
++ 15747 if (hasInput.isOpen()) {
++ 15748 scheduleTime += clock.currentTimeMillisUnsafe() - openedAt
++ 15749 } else if (buffer.state._tag === "Done") {
++ 15750 return Cause.done()
++ 15751 }
+
+@@ hunk 114 [erased] pin 14890-14890 release 15757-15757 cited ranges 0
+   pin units: aggregateWithin=code
+   release units: aggregateWithin=code
+- 14890 return Effect.suspend(() => {
++ 15757 return Effect.suspend((): Pull.Pull<Arr.NonEmptyReadonlyArray<B>, E | E2 | E3, void, R2 | R3> => {
+
+@@ hunk 115 [code] pin 14895-14899 release 15761-15764 cited ranges 0
+   pin units: aggregateWithin=code
+   release units: aggregateWithin=code
+- 14895 sinkHasInput = leftover !== undefined
+- 14896 return Effect.succeed(Effect.suspend(() => sink.transform(sinkUpstream as any, scope)))
+- 14897 }).pipe(
+- 14898 Effect.flatMap((pull) => Effect.raceFirst(catchSinkHalt(pull), stepToBuffer))
+- 14899 )
++ 15761 hasInput.closeUnsafe()
++ 15762 const pull = emit(Effect.suspend(() => sink.transform(sinkUpstream as any, scope)))
++ 15763 return buffer.state._tag === "Open" ? Effect.raceFirst(pull, stepToBuffer) : pull
++ 15764 })
+
+@@ hunk 116 [code] pin before 15057 release 15925-15925 cited ranges 0
+   pin units: 
+   release units: broadcastN=code
++ 15925 const n = Count.normalize(options.n)
+
+@@ hunk 117 [code] pin 15096-15096 release 15966-15966 cited ranges 0
+   pin units: broadcastN=code
+   release units: broadcastN=code
+- 15096 const streams = new Array(options.n)
++ 15966 const streams = new Array(n)
+
+@@ hunk 118 [code] pin 15098-15098 release 15968-15968 cited ranges 0
+   pin units: broadcastN=code
+   release units: broadcastN=code
+- 15098 for (let i = 0; i < options.n; i++) {
++ 15968 for (let i = 0; i < n; i++) {
+
+@@ hunk 119 [code] pin 15109-15109 release 15979-15979 cited ranges 0
+   pin units: broadcastN=code
+   release units: broadcastN=code
+- 15109 Effect.onExit((exit) => PubSub.publish(pubsub, exit)),
++ 15979 Effect.onExit((exit) => PubSub.end(pubsub, exit)),
+
+@@ hunk 120 [erased] pin 18206-18207 release 19076-19077 cited ranges 0
+   pin units: let_=erased
+   release units: let_=erased
+- 18206 <N extends string, A extends object, B>(
+- 18207 name: Exclude<N, keyof A>,
++ 19076 <N extends string, A extends Record<string, any>, B>(
++ 19077 name: N,
+
+@@ hunk 121 [erased] pin 18209-18210 release 19079-19080 cited ranges 0
+   pin units: let_=erased
+   release units: let_=erased
+- 18209 ): <E, R>(self: Stream<A, E, R>) => Stream<{ [K in N | keyof A]: K extends keyof A ? A[K] : B }, E, R>
+- 18210 <A extends object, E, R, N extends string, B>(
++ 19079 ): <E, R>(self: Stream<A, E, R>) => Stream<Simplify<Omit<A, N> & Record<N, B>>, E, R>
++ 19080 <A extends Record<string, any>, E, R, B, N extends string>(
+
+@@ hunk 122 [erased] pin 18212-18212 release 19082-19082 cited ranges 0
+   pin units: let_=erased
+   release units: let_=erased
+- 18212 name: Exclude<N, keyof A>,
++ 19082 name: N,
+
+@@ hunk 123 [erased] pin 18214-18215 release 19084-19085 cited ranges 0
+   pin units: let_=erased
+   release units: let_=erased
+- 18214 ): Stream<{ [K in N | keyof A]: K extends keyof A ? A[K] : B }, E, R>
+- 18215 } = dual(3, <A extends object, E, R, N extends string, B>(
++ 19084 ): Stream<Simplify<Omit<A, N> & Record<N, B>>, E, R>
++ 19085 } = dual(3, <A extends Record<string, any>, E, R, B, N extends string>(
+
+@@ hunk 124 [erased] pin 18217-18217 release 19087-19087 cited ranges 0
+   pin units: let_=erased
+   release units: let_=erased
+- 18217 name: Exclude<N, keyof A>,
++ 19087 name: N,
+
+@@ hunk 125 [erased] pin 18219-18220 release 19089-19089 cited ranges 0
+   pin units: let_=erased
+   release units: let_=erased
+- 18219 ): Stream<{ [K in N | keyof A]: K extends keyof A ? A[K] : B }, E, R> =>
+- 18220 map(self, (a) => ({ ...a, [name]: f(a) } as any)))
++ 19089 ): Stream<Simplify<Omit<A, N> & Record<N, B>>, E, R> => map(self, (a) => ({ ...a, [name]: f(a) } as any)))
+
+@@ hunk 126 [erased] pin 18292-18294 release 19161-19163 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18292 <N extends string, A, B, E2, R2>(
+- 18293 tag: Exclude<N, keyof A>,
+- 18294 f: (_: NoInfer<A>) => Stream<B, E2, R2>,
++ 19161 <N extends string, A extends Record<string, any>, B, E2, R2>(
++ 19162 name: N,
++ 19163 f: (a: NoInfer<A>) => Stream<B, E2, R2>,
+
+@@ hunk 127 [erased] pin 18296-18296 release 19165-19165 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18296 readonly concurrency?: number | "unbounded" | undefined
++ 19165 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 128 [erased] pin 18299-18321 release 19168-19190 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18299 ): <E, R>(self: Stream<A, E, R>) => Stream<{ [K in N | keyof A]: K extends keyof A ? A[K] : B }, E2 | E, R2 | R>
+- 18321 <A, E, R, N extends string, B, E2, R2>(
++ 19168 ): <E, R>(self: Stream<A, E, R>) => Stream<Simplify<Omit<A, N> & Record<N, B>>, E2 | E, R2 | R>
++ 19190 <A extends Record<string, any>, E, R, B, E2, R2, N extends string>(
+
+@@ hunk 129 [erased] pin 18323-18324 release 19192-19193 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18323 tag: Exclude<N, keyof A>,
+- 18324 f: (_: NoInfer<A>) => Stream<B, E2, R2>,
++ 19192 name: N,
++ 19193 f: (a: NoInfer<A>) => Stream<B, E2, R2>,
+
+@@ hunk 130 [erased] pin 18326-18326 release 19195-19195 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18326 readonly concurrency?: number | "unbounded" | undefined
++ 19195 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 131 [code] pin 18329-18330 release 19198-19199 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18329 ): Stream<{ [K in N | keyof A]: K extends keyof A ? A[K] : B }, E | E2, R | R2>
+- 18330 } = dual((args) => isStream(args[0]), <A, E, R, N extends string, B, E2, R2>(
++ 19198 ): Stream<Simplify<Omit<A, N> & Record<N, B>>, E | E2, R | R2>
++ 19199 } = dual((args) => isStream(args[0]), <A extends Record<string, any>, E, R, B, E2, R2, N extends string>(
+
+@@ hunk 132 [code] pin 18332-18333 release 19201-19202 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18332 tag: Exclude<N, keyof A>,
+- 18333 f: (_: NoInfer<A>) => Stream<B, E2, R2>,
++ 19201 name: N,
++ 19202 f: (a: NoInfer<A>) => Stream<B, E2, R2>,
+
+@@ hunk 133 [erased] pin 18335-18335 release 19204-19204 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18335 readonly concurrency?: number | "unbounded" | undefined
++ 19204 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 134 [code] pin 18338-18339 release 19207-19208 cited ranges 0
+   pin units: bind=code
+   release units: bind=code
+- 18338 ): Stream<{ [K in N | keyof A]: K extends keyof A ? A[K] : B }, E | E2, R | R2> =>
+- 18339 flatMap(self, (a) => map(f(a), (b) => ({ ...a, [tag]: b } as any)), options))
++ 19207 ): Stream<Simplify<Omit<A, N> & Record<N, B>>, E | E2, R | R2> =>
++ 19208 flatMap(self, (a) => map(f(a), (b) => ({ ...a, [name]: b } as any)), options))
+
+@@ hunk 135 [erased] pin 18390-18392 release 19259-19261 cited ranges 0
+   pin units: bindEffect=code
+   release units: bindEffect=code
+- 18390 <N extends string, A, B, E2, R2>(
+- 18391 tag: Exclude<N, keyof A>,
+- 18392 f: (_: NoInfer<A>) => Effect.Effect<B, E2, R2>,
++ 19259 <N extends string, A extends Record<string, any>, B, E2, R2>(
++ 19260 name: N,
++ 19261 f: (a: NoInfer<A>) => Effect.Effect<B, E2, R2>,
+
+@@ hunk 136 [code] pin 18394-18438 release 19263-19263 cited ranges 0
+   pin units: bindEffect=code
+   release units: bindEffect=code
+- 18394 readonly concurrency?: number | "unbounded" | undefined
+- 18395 readonly bufferSize?: number | undefined
+- 18396 readonly unordered?: boolean | undefined
+- 18397 }
+- 18398 ): <E, R>(self: Stream<A, E, R>) => Stream<{ [K in keyof A | N]: K extends keyof A ? A[K] : B }, E | E2, R | R2>
+- 18423 <A, E, R, N extends string, B, E2, R2>(
+- 18424 self: Stream<A, E, R>,
+- 18425 tag: Exclude<N, keyof A>,
+- 18426 f: (_: NoInfer<A>) => Effect.Effect<B, E2, R2>,
+- 18427 options?: {
+- 18428 readonly concurrency?: number | "unbounded" | undefined
+- 18429 readonly bufferSize?: number | undefined
+- 18430 readonly unordered?: boolean | undefined
+- 18431 }
+- 18432 ): Stream<{ [K in keyof A | N]: K extends keyof A ? A[K] : B }, E | E2, R | R2>
+- 18433 } = dual((args) => isStream(args[0]), <A, E, R, N extends string, B, E2, R2>(
+- 18434 self: Stream<A, E, R>,
+- 18435 tag: Exclude<N, keyof A>,
+- 18436 f: (_: NoInfer<A>) => Effect.Effect<B, E2, R2>,
+- 18437 options?: {
+- 18438 readonly concurrency?: number | "unbounded" | undefined
++ 19263 readonly concurrency?: Concurrency | undefined
+
+@@ hunk 137 [code] pin 18442-18443 release 19267-19312 cited ranges 0
+   pin units: bindEffect=code
+   release units: bindEffect=code
+- 18442 ): Stream<{ [K in keyof A | N]: K extends keyof A ? A[K] : B }, E | E2, R | R2> =>
+- 18443 mapEffect(self, (a) => Effect.map(f(a), (b) => ({ ...a, [tag]: b } as any)), options))
++ 19267 ): <E, R>(self: Stream<A, E, R>) => Stream<Simplify<Omit<A, N> & Record<N, B>>, E | E2, R | R2>
++ 19292 <A extends Record<string, any>, E, R, B, E2, R2, N extends string>(
++ 19293 self: Stream<A, E, R>,
++ 19294 name: N,
++ 19295 f: (a: NoInfer<A>) => Effect.Effect<B, E2, R2>,
++ 19296 options?: {
++ 19297 readonly concurrency?: Concurrency | undefined
++ 19298 readonly bufferSize?: number | undefined
++ 19299 readonly unordered?: boolean | undefined
++ 19300 } | undefined
++ 19301 ): Stream<Simplify<Omit<A, N> & Record<N, B>>, E | E2, R | R2>
++ 19302 } = dual((args) => isStream(args[0]), <A extends Record<string, any>, E, R, B, E2, R2, N extends string>(
++ 19303 self: Stream<A, E, R>,
++ 19304 name: N,
++ 19305 f: (a: NoInfer<A>) => Effect.Effect<B, E2, R2>,
++ 19306 options?: {
++ 19307 readonly concurrency?: Concurrency | undefined
++ 19308 readonly bufferSize?: number | undefined
++ 19309 readonly unordered?: boolean | undefined
++ 19310 } | undefined
++ 19311 ): Stream<Simplify<Omit<A, N> & Record<N, B>>, E | E2, R | R2> =>
++ 19312 mapEffect(self, (a) => Effect.map(f(a), (b) => ({ ...a, [name]: b } as any)), options))
+
+@@ hunk 138 [erased] pin 19338-19338 release 20207-20207 cited ranges 0
+   pin units: toReadableStreamWith=erased
+   release units: toReadableStreamWith=erased
+- 19338 export const toReadableStreamWith = dual<
++ 20207 export const toReadableStreamWith: {
+
+@@ hunk 139 [erased] pin 19368-19368 release 20237-20237 cited ranges 0
+   pin units: toReadableStreamWith=erased
+   release units: toReadableStreamWith=erased
+- 19368 ) => <E, R extends XR>(self: Stream<A, E, R>) => ReadableStream<A>,
++ 20237 ): <E, R extends XR>(self: Stream<A, E, R>) => ReadableStream<A>
+
+@@ hunk 140 [erased] pin 19399-19400 release 20268-20269 cited ranges 0
+   pin units: toReadableStreamWith=erased
+   release units: toReadableStreamWith=erased
+- 19399 ) => ReadableStream<A>
+- 19400 >(
++ 20268 ): ReadableStream<A>
++ 20269 } = dual(
+
+@@ hunk 141 [erased] pin 19969-19969 release 20838-20838 cited ranges 0
+   pin units: runIntoPubSub=erased
+   release units: runIntoPubSub=erased
+- 19969 ): Effect.Effect<void, never, R>
++ 20838 ): Effect.Effect<void, E, R>

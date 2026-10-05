@@ -1,0 +1,1917 @@
+# SchemaAST.ts (rc.112) against SchemaAST.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [import] pin 20-20 release 20-20 cited ranges 0
+   pin units: import ./internal/effect.ts=import
+   release units: import ./internal/effect.ts=import
+-    20 import { effectIsExit, iterateEager } from "@tree/internal/effect.ts"
++    20 import { effectIsExit, iterateConcurrent, iterateEager, resolveConcurrency } from "@tree/internal/effect.ts"
+
+@@ hunk 2 [erased] pin 33-33 release 33-33 cited ranges 0
+   pin units: import ./testing/FastCheck.ts=absent
+   release units: import ./Types.ts=absent
+-    33 import type * as FastCheck from "@tree/testing/FastCheck.ts"
++    33 import type * as Types from "@tree/Types.ts"
+
+@@ hunk 3 [code] pin 401-401 release 400-418 cited ranges 0
+   pin units: Link=code
+   release units: Link=type-decl; Link#2=code
+-   401 export class Link {
++   400 export interface Link {
++   401 readonly to: AST
++   402 readonly transformation:
++   403 | SchemaTransformation.Transformation<any, any, any, any>
++   404 | SchemaTransformation.Middleware<any, any, any, any, any, any>
++   405 }
++   413 export const Link: new(
++   414 to: AST,
++   415 transformation:
++   416 | SchemaTransformation.Transformation<any, any, any, any>
++   417 | SchemaTransformation.Middleware<any, any, any, any, any, any>
++   418 ) => Link = class {
+
+@@ hunk 4 [erased] pin 484-507 release 511-511 cited ranges 0
+   pin units: ParseOptions=type-decl
+   release units: ParseOptions=type-decl
+-   484 readonly onExcessProperty?: "ignore" | "error" | "preserve" | undefined
+-   507 readonly propertyOrder?: "none" | "original" | undefined
++   511 readonly onExcessProperty?: "ignore" | "error" | undefined
+
+@@ hunk 5 [erased] pin 520-520 release 542-542 cited ranges 0
+   pin units: ParseOptions=type-decl
+   release units: ParseOptions=type-decl
+-   520 readonly concurrency?: number | "unbounded" | undefined
++   542 readonly concurrency?: Types.Concurrency | undefined
+
+@@ hunk 6 [code] pin 576-576 release 597-597 cited ranges 0
+   pin units: Context=code
+   release units: Context=type-decl
+-   576 export class Context {
++   597 export interface Context {
+
+@@ hunk 7 [code] pin 580-580 release 601-620 cited ranges 0
+   pin units: Context.constructorDefault=absent
+   release units: Context=type-decl; Context#2=code
+-   580 readonly constructorDefault: Link | undefined
++   601 readonly constructorDefault: Effect.Effect<unknown, SchemaIssue.Issue> | undefined
++   602 readonly annotations: Schema.Annotations.Key<unknown> | undefined
++   603 }
++   611 export const Context: new(
++   612 isOptional: boolean,
++   613 isMutable: boolean,
++   614 constructorDefault?: Effect.Effect<unknown, SchemaIssue.Issue> | undefined,
++   615 annotations?: Schema.Annotations.Key<unknown> | undefined
++   616 ) => Context = class {
++   617 readonly isOptional: boolean
++   618 readonly isMutable: boolean
++   620 readonly constructorDefault: Effect.Effect<unknown, SchemaIssue.Issue> | undefined
+
+@@ hunk 8 [erased] pin 587-587 release 627-627 cited ranges 0
+   pin units: Context.constructor=absent
+   release units: Context#2=code
+-   587 constructorDefault: Link | undefined = undefined,
++   627 constructorDefault: Effect.Effect<unknown, SchemaIssue.Issue> | undefined = undefined,
+
+@@ hunk 9 [code] pin 636-636 release 655-665 cited ranges 0
+   pin units: Base=absent
+   release units: ASTNode=absent; ASTNodeImpl=absent
+-   636 export abstract class Base {
++   655 interface ASTNode {
++   656 readonly [TypeId]: typeof TypeId
++   657 readonly _tag: string
++   658 readonly annotations: Schema.Annotations.Annotations | undefined
++   659 readonly checks: Checks | undefined
++   660 readonly encoding: Encoding | undefined
++   661 readonly context: Context | undefined
++   662 toString(): string
++   663 }
++   665 abstract class ASTNodeImpl implements ASTNode {
+
+@@ hunk 10 [erased] pin 666-666 release 689-689 cited ranges 0
+   pin units: DeclarationRun=type-decl
+   release units: DeclarationRun=type-decl
+-   666 export type DeclarationRun = (
++   689 type DeclarationRun = (
+
+@@ hunk 11 [code] pin 668-689 release 691-752 cited ranges 0
+   pin units: DeclarationRun=type-decl; Declaration=code
+   release units: DeclarationRun=type-decl; Declaration=type-decl; Declaration#2=code
+-   668 ) => (input: unknown, self: Declaration, options: ParseOptions) => Effect.Effect<any, SchemaIssue.Issue, any>
+-   689 export class Declaration extends Base {
++   691 ) => (input: unknown, self: Declaration, options: ParseOptions) => Effect.Effect<any, SchemaIssue.Issue>
++   713 export interface Declaration extends ASTNode {
++   714 readonly _tag: "Declaration"
++   715 readonly typeParameters: ReadonlyArray<AST>
++   716 readonly run: DeclarationRun
++   717 readonly encodingChecks: Checks | undefined
++   722 readonly encodingRun: DeclarationRun | undefined
++   725 getParser(): SchemaParser.Parser
++   728 recur(recur: (ast: AST) => AST): Declaration
++   731 flip(recur: (ast: AST) => AST): Declaration
++   734 getExpected(): string
++   735 }
++   743 export const Declaration: new(
++   744 typeParameters: ReadonlyArray<AST>,
++   745 run: DeclarationRun,
++   746 annotations?: Schema.Annotations.Annotations,
++   747 checks?: Checks,
++   748 encoding?: Encoding,
++   749 context?: Context,
++   750 encodingChecks?: Checks,
++   751 encodingRun?: DeclarationRun
++   752 ) => Declaration = class extends ASTNodeImpl {
+
+@@ hunk 12 [code] pin 765-765 release 828-849 cited ranges 0
+   pin units: Null=code
+   release units: Null=type-decl; Null#2=code
+-   765 export class Null extends Base {
++   828 export interface Null extends ASTNode {
++   829 readonly _tag: "Null"
++   832 getParser(): SchemaParser.Parser
++   835 getExpected(): string
++   836 }
++   844 export const Null: new(
++   845 annotations?: Schema.Annotations.Annotations | undefined,
++   846 checks?: Checks | undefined,
++   847 encoding?: Encoding | undefined,
++   848 context?: Context | undefined
++   849 ) => Null = class extends ASTNodeImpl {
+
+@@ hunk 13 [code] pin 805-805 release 889-913 cited ranges 0
+   pin units: Undefined=code
+   release units: Undefined=type-decl; Undefined#2=code
+-   805 export class Undefined extends Base {
++   889 export interface Undefined extends ASTNode {
++   890 readonly _tag: "Undefined"
++   893 getParser(): SchemaParser.Parser
++   896 toCodecJson(): AST
++   899 getExpected(): string
++   900 }
++   908 export const Undefined: new(
++   909 annotations?: Schema.Annotations.Annotations | undefined,
++   910 checks?: Checks | undefined,
++   911 encoding?: Encoding | undefined,
++   912 context?: Context | undefined
++   913 ) => Undefined = class extends ASTNodeImpl {
+
+@@ hunk 14 [code] pin 865-865 release 973-999 cited ranges 0
+   pin units: Void=code
+   release units: Void=type-decl; Void#2=code
+-   865 export class Void extends Base {
++   973 export interface Void extends ASTNode {
++   974 readonly _tag: "Void"
++   977 getParser(): (
++   978 input: unknown
++   979 ) => InternalParser.Success<undefined, never> | InternalParser.Success<typeof InternalParser.missing, never>
++   982 toCodecJson(): AST
++   985 getExpected(): string
++   986 }
++   994 export const Void: new(
++   995 annotations?: Schema.Annotations.Annotations | undefined,
++   996 checks?: Checks | undefined,
++   997 encoding?: Encoding | undefined,
++   998 context?: Context | undefined
++   999 ) => Void = class extends ASTNodeImpl {
+
+@@ hunk 15 [code] pin 920-920 release 1054-1075 cited ranges 0
+   pin units: Never=code
+   release units: Never=type-decl; Never#2=code
+-   920 export class Never extends Base {
++  1054 export interface Never extends ASTNode {
++  1055 readonly _tag: "Never"
++  1058 getParser(): SchemaParser.Parser
++  1061 getExpected(): string
++  1062 }
++  1070 export const Never: new(
++  1071 annotations?: Schema.Annotations.Annotations | undefined,
++  1072 checks?: Checks | undefined,
++  1073 encoding?: Encoding | undefined,
++  1074 context?: Context | undefined
++  1075 ) => Never = class extends ASTNodeImpl {
+
+@@ hunk 16 [code] pin 957-957 release 1112-1133 cited ranges 0
+   pin units: Any=code
+   release units: Any=type-decl; Any#2=code
+-   957 export class Any extends Base {
++  1112 export interface Any extends ASTNode {
++  1113 readonly _tag: "Any"
++  1116 getParser(): SchemaParser.Parser
++  1119 getExpected(): string
++  1120 }
++  1128 export const Any: new(
++  1129 annotations?: Schema.Annotations.Annotations | undefined,
++  1130 checks?: Checks | undefined,
++  1131 encoding?: Encoding | undefined,
++  1132 context?: Context | undefined
++  1133 ) => Any = class extends ASTNodeImpl {
+
+@@ hunk 17 [code] pin 997-997 release 1173-1194 cited ranges 0
+   pin units: Unknown=code
+   release units: Unknown=type-decl; Unknown#2=code
+-   997 export class Unknown extends Base {
++  1173 export interface Unknown extends ASTNode {
++  1174 readonly _tag: "Unknown"
++  1177 getParser(): SchemaParser.Parser
++  1180 getExpected(): string
++  1181 }
++  1189 export const Unknown: new(
++  1190 annotations?: Schema.Annotations.Annotations | undefined,
++  1191 checks?: Checks | undefined,
++  1192 encoding?: Encoding | undefined,
++  1193 context?: Context | undefined
++  1194 ) => Unknown = class extends ASTNodeImpl {
+
+@@ hunk 18 [code] pin 1034-1034 release 1231-1252 cited ranges 0
+   pin units: ObjectKeyword=code
+   release units: ObjectKeyword=type-decl; ObjectKeyword#2=code
+-  1034 export class ObjectKeyword extends Base {
++  1231 export interface ObjectKeyword extends ASTNode {
++  1232 readonly _tag: "ObjectKeyword"
++  1235 getParser(): SchemaParser.Parser
++  1238 getExpected(): string
++  1239 }
++  1247 export const ObjectKeyword: new(
++  1248 annotations?: Schema.Annotations.Annotations | undefined,
++  1249 checks?: Checks | undefined,
++  1250 encoding?: Encoding | undefined,
++  1251 context?: Context | undefined
++  1252 ) => ObjectKeyword = class extends ASTNodeImpl {
+
+@@ hunk 19 [code] pin 1074-1074 release 1292-1328 cited ranges 0
+   pin units: Enum=code
+   release units: Enum=type-decl; Enum#2=code
+-  1074 export class Enum extends Base {
++  1292 export interface Enum extends ASTNode {
++  1293 readonly _tag: "Enum"
++  1294 readonly enums: ReadonlyArray<
++  1295 readonly [
++  1296 string,
++  1297 string | number
++  1298 ]
++  1299 >
++  1302 getParser(): SchemaParser.Parser
++  1305 toCodecStringTree(): AST
++  1308 getExpected(): string
++  1309 }
++  1317 export const Enum: new(
++  1318 enums: ReadonlyArray<
++  1319 readonly [
++  1320 string,
++  1321 string | number
++  1322 ]
++  1323 >,
++  1324 annotations?: Schema.Annotations.Annotations,
++  1325 checks?: Checks,
++  1326 encoding?: Encoding,
++  1327 context?: Context
++  1328 ) => Enum = class extends ASTNodeImpl {
+
+@@ hunk 20 [code] pin before 1086 release 1340-1344 cited ranges 0
+   pin units: 
+   release units: Enum#2=code
++  1340 for (const [, value] of enums) {
++  1341 if (typeof value === "number" && !globalThis.Number.isFinite(value)) {
++  1342 throw new Error(`A numeric enum value must be finite, got ${format(value)}`)
++  1343 }
++  1344 }
+
+@@ hunk 21 [code] pin 1102-1102 release 1361-1361 cited ranges 0
+   pin units: Enum.toCodecStringTree=absent
+   release units: Enum#2=code
+-  1102 new Union(Object.keys(coercions).map((k) => new Literal(k)), "anyOf"),
++  1361 new Union(Object.keys(coercions).map((k) => new Literal(k))),
+
+@@ hunk 22 [code] pin 1126-1126 release 1385-1398 cited ranges 0
+   pin units: isTemplateLiteralPart=code
+   release units: formatTemplateLiteralPath=absent; isTemplateLiteralPart=code
+-  1126 function isTemplateLiteralPart(ast: AST): ast is TemplateLiteralPart {
++  1385 function formatTemplateLiteralPath(path: string | number): string {
++  1386 return typeof path === "number" ? `parts[${path}]` : path
++  1387 }
++  1389 function isTemplateLiteralPart(
++  1390 ast: AST,
++  1391 path: string | number,
++  1392 validated: Set<AST>
++  1393 ): ast is TemplateLiteralPart {
++  1394 if (validated.has(ast)) return true
++  1395 if (ast.encoding) {
++  1396 throw new Error(`TemplateLiteral parts cannot have an encoding at ${formatTemplateLiteralPath(path)}`)
++  1397 }
++  1398 let valid: boolean
+
+@@ hunk 23 [code] pin 1131-1131 release 1403-1404 cited ranges 0
+   pin units: isTemplateLiteralPart=code
+   release units: isTemplateLiteralPart=code
+-  1131 return true
++  1403 valid = true
++  1404 break
+
+@@ hunk 24 [code] pin 1133-1136 release 1406-1419 cited ranges 0
+   pin units: isTemplateLiteralPart=code
+   release units: isTemplateLiteralPart=code
+-  1133 case "TemplateLiteral":
+-  1134 return !ast.checks
+-  1135 case "Union":
+-  1136 return !ast.checks && ast.types.every(isTemplateLiteralPart)
++  1406 valid = !ast.checks
++  1407 break
++  1408 case "TemplateLiteral": {
++  1409 const currentPath = formatTemplateLiteralPath(path)
++  1410 valid = !ast.checks &&
++  1411 ast.parts.every((part, index) => isTemplateLiteralPart(part, `${currentPath}.parts[${index}]`, validated))
++  1412 break
++  1413 }
++  1414 case "Union": {
++  1415 const currentPath = formatTemplateLiteralPath(path)
++  1416 valid = !ast.checks &&
++  1417 ast.types.every((part, index) => isTemplateLiteralPart(part, `${currentPath}.types[${index}]`, validated))
++  1418 break
++  1419 }
+
+@@ hunk 25 [code] pin before 1140 release 1423-1424 cited ranges 0
+   pin units: 
+   release units: isTemplateLiteralPart=code
++  1423 if (valid) validated.add(ast)
++  1424 return valid
+
+@@ hunk 26 [code] pin 1155-1155 release 1440-1477 cited ranges 0
+   pin units: TemplateLiteral=code
+   release units: TemplateLiteral=type-decl; TemplateLiteral#2=code
+-  1155 export class TemplateLiteral extends Base {
++  1440 export interface TemplateLiteral extends ASTNode {
++  1441 readonly _tag: "TemplateLiteral"
++  1442 readonly parts: ReadonlyArray<AST>
++  1444 readonly encodedParts: ReadonlyArray<TemplateLiteralPart>
++  1446 readonly literals: ReadonlyArray<string | undefined>
++  1448 readonly suffixLengths: ReadonlyArray<number>
++  1451 getParser(compile: SchemaParser.Compiler): SchemaParser.Parser
++  1454 getExpected(): string
++  1457 matchPart(s: string, options: ParseOptions): string | undefined
++  1458 }
++  1471 export const TemplateLiteral: new(
++  1472 parts: ReadonlyArray<AST>,
++  1473 annotations?: Schema.Annotations.Annotations,
++  1474 checks?: Checks,
++  1475 encoding?: Encoding,
++  1476 context?: Context
++  1477 ) => TemplateLiteral = class extends ASTNodeImpl {
+
+@@ hunk 27 [code] pin 1175-1181 release 1497-1501 cited ranges 0
+   pin units: TemplateLiteral.constructor=absent
+   release units: TemplateLiteral#2=code
+-  1175 for (const part of parts) {
+-  1176 const encoded = toEncoded(part)
+-  1177 if (isTemplateLiteralPart(encoded)) {
+-  1178 encodedParts.push(encoded)
+-  1179 literals.push(encoded._tag === "Literal" ? globalThis.String(encoded.literal) : undefined)
+-  1180 } else {
+-  1181 throw new Error(`Invalid TemplateLiteral part ${encoded._tag}`)
++  1497 const validated = new Set<AST>()
++  1498 for (let index = 0; index < parts.length; index++) {
++  1499 const part = parts[index]
++  1500 if (!isTemplateLiteralPart(part, index, validated)) {
++  1501 throw new Error(`Invalid TemplateLiteral part ${part._tag}`)
+
+@@ hunk 28 [code] pin before 1183 release 1503-1504 cited ranges 0
+   pin units: 
+   release units: TemplateLiteral#2=code
++  1503 encodedParts.push(part)
++  1504 literals.push(part._tag === "Literal" ? globalThis.String(part.literal) : undefined)
+
+@@ hunk 29 [code] pin 1196-1196 release 1518-1519 cited ranges 0
+   pin units: TemplateLiteral.getParser=absent
+   release units: TemplateLiteral#2=code
+-  1196 const parser = compile(this.asTemplateLiteralParser())
++  1518 const tuple = new Arrays(false, this.parts.map(partFromString), [])
++  1519 const parser = compile(decodeTo(string, tuple, templateLiteralTransformation(this)))
+
+@@ hunk 30 [code] pin 1218-1225 release 1540-1568 cited ranges 0
+   pin units: TemplateLiteral.asTemplateLiteralParser=absent
+   release units: TemplateLiteral#2=code; templateLiteralParser=absent; templateLiteralTransformation=absent
+-  1218 asTemplateLiteralParser(): Arrays {
+-  1219 const tuple = new Arrays(false, this.parts.map(partFromString), [])
+-  1220 return decodeTo(
+-  1221 string,
+-  1222 tuple,
+-  1223 new SchemaTransformation.Transformation(
+-  1224 SchemaGetter.transformOrFail((s: string, options) => {
+-  1225 const segments = segmentTemplateLiteralParts(this, s, options)
++  1540 }
++  1543 export function templateLiteralParser(parts: ReadonlyArray<AST>): Arrays {
++  1546 const normalize = memoize((encoded: AST): AST => {
++  1547 if (encoded._tag !== "Union") return encoded
++  1548 const types = mapOrSame(encoded.types, normalize)
++  1549 return (encoded.options?.mode ?? "anyOf") === "anyOf" && types === encoded.types
++  1550 ? encoded
++  1551 : new Union(
++  1552 types,
++  1553 encoded.options === undefined ? undefined : { ...encoded.options, mode: "anyOf" },
++  1554 encoded.annotations,
++  1555 encoded.checks,
++  1556 undefined,
++  1557 encoded.context
++  1558 )
++  1559 })
++  1560 const template = new TemplateLiteral(parts.map((part) => normalize(toEncoded(part))))
++  1561 const tuple = new Arrays(false, parts.map(partFromString), [])
++  1562 return decodeTo(template, tuple, templateLiteralTransformation(template))
++  1563 }
++  1565 function templateLiteralTransformation(template: TemplateLiteral) {
++  1566 return new SchemaTransformation.Transformation(
++  1567 SchemaGetter.transformEffect((s: string, options) => {
++  1568 const segments = segmentTemplateLiteralParts(template, s, options)
+
+@@ hunk 31 [code] pin 1235-1236 release 1578-1578 cited ranges 0
+   pin units: TemplateLiteral.asTemplateLiteralParser=absent
+   release units: templateLiteralTransformation=absent
+-  1235 SchemaGetter.transform((parts) => parts.join(""))
+-  1236 )
++  1578 SchemaGetter.transform((parts: ReadonlyArray<string>) => parts.join(""))
+
+@@ hunk 32 [erased] pin before 1239 release 1594-1605 cited ranges 0
+   pin units: 
+   release units: UniqueSymbol=type-decl
++  1594 export interface UniqueSymbol extends ASTNode {
++  1595 readonly _tag: "UniqueSymbol"
++  1596 readonly symbol: symbol
++  1599 getParser(): SchemaParser.Parser
++  1602 toCodecStringTree(): AST
++  1605 getExpected(): string
+
+@@ hunk 33 [code] pin 1253-1253 release 1614-1620 cited ranges 0
+   pin units: UniqueSymbol=code
+   release units: UniqueSymbol#2=code
+-  1253 export class UniqueSymbol extends Base {
++  1614 export const UniqueSymbol: new(
++  1615 symbol: symbol,
++  1616 annotations?: Schema.Annotations.Annotations,
++  1617 checks?: Checks,
++  1618 encoding?: Encoding,
++  1619 context?: Context
++  1620 ) => UniqueSymbol = class extends ASTNodeImpl {
+
+@@ hunk 34 [code] pin 1273-1273 release 1640-1646 cited ranges 0
+   pin units: UniqueSymbol.toCodecStringTree=absent
+   release units: UniqueSymbol#2=code
+-  1273 return replaceEncoding(this, [symbolToString])
++  1640 const key = globalThis.Symbol.keyFor(this.symbol)
++  1641 return replaceEncoding(this, [
++  1642 new Link(
++  1643 key === undefined ? never : new Literal(globalThis.String(this.symbol)),
++  1644 symbolToString.transformation
++  1645 )
++  1646 ])
+
+@@ hunk 35 [code] pin 1315-1315 release 1690-1722 cited ranges 0
+   pin units: Literal=code
+   release units: Literal=type-decl; Literal#2=code
+-  1315 export class Literal extends Base {
++  1690 export interface Literal extends ASTNode {
++  1691 readonly _tag: "Literal"
++  1692 readonly literal: LiteralValue
++  1695 getParser(): SchemaParser.Parser
++  1698 matchPart(s: string, _options: ParseOptions): LiteralValue | undefined
++  1701 toCodecJson(): AST
++  1704 toCodecStringTree(): AST
++  1707 getExpected(): string
++  1708 }
++  1716 export const Literal: new(
++  1717 literal: LiteralValue,
++  1718 annotations?: Schema.Annotations.Annotations,
++  1719 checks?: Checks,
++  1720 encoding?: Encoding,
++  1721 context?: Context
++  1722 ) => Literal = class extends ASTNodeImpl {
+
+@@ hunk 36 [code] pin 1376-1376 release 1783-1807 cited ranges 0
+   pin units: String=code
+   release units: String=type-decl; String#2=code
+-  1376 export class String extends Base {
++  1783 export interface String extends ASTNode {
++  1784 readonly _tag: "String"
++  1787 getParser(): SchemaParser.Parser
++  1790 matchPart(s: string, options: ParseOptions): string | undefined
++  1793 getExpected(): string
++  1794 }
++  1802 export const String: new(
++  1803 annotations?: Schema.Annotations.Annotations | undefined,
++  1804 checks?: Checks | undefined,
++  1805 encoding?: Encoding | undefined,
++  1806 context?: Context | undefined
++  1807 ) => String = class extends ASTNodeImpl {
+
+@@ hunk 37 [code] pin 1427-1427 release 1858-1891 cited ranges 0
+   pin units: Number=code
+   release units: Number=type-decl; Number#2=code
+-  1427 export class Number extends Base {
++  1858 export interface Number extends ASTNode {
++  1859 readonly _tag: "Number"
++  1862 getParser(): SchemaParser.Parser
++  1865 matchKey(s: string, options: ParseOptions): number | undefined
++  1868 matchPart(s: string, options: ParseOptions): number | undefined
++  1871 toCodecJson(): AST
++  1874 toCodecStringTree(): AST
++  1877 getExpected(): string
++  1878 }
++  1886 export const Number: new(
++  1887 annotations?: Schema.Annotations.Annotations | undefined,
++  1888 checks?: Checks | undefined,
++  1889 encoding?: Encoding | undefined,
++  1890 context?: Context | undefined
++  1891 ) => Number = class extends ASTNodeImpl {
+
+@@ hunk 38 [code] pin 1502-1502 release 1966-1987 cited ranges 0
+   pin units: Boolean=code
+   release units: Boolean=type-decl; Boolean#2=code
+-  1502 export class Boolean extends Base {
++  1966 export interface Boolean extends ASTNode {
++  1967 readonly _tag: "Boolean"
++  1970 getParser(): SchemaParser.Parser
++  1973 getExpected(): string
++  1974 }
++  1982 export const Boolean: new(
++  1983 annotations?: Schema.Annotations.Annotations | undefined,
++  1984 checks?: Checks | undefined,
++  1985 encoding?: Encoding | undefined,
++  1986 context?: Context | undefined
++  1987 ) => Boolean = class extends ASTNodeImpl {
+
+@@ hunk 39 [code] pin 1548-1548 release 2033-2060 cited ranges 0
+   pin units: Symbol=code
+   release units: Symbol=type-decl; Symbol#2=code
+-  1548 export class Symbol extends Base {
++  2033 export interface Symbol extends ASTNode {
++  2034 readonly _tag: "Symbol"
++  2037 getParser(): SchemaParser.Parser
++  2040 matchKey(s: symbol, options: ParseOptions): symbol | undefined
++  2043 toCodecStringTree(): AST
++  2046 getExpected(): string
++  2047 }
++  2055 export const Symbol: new(
++  2056 annotations?: Schema.Annotations.Annotations | undefined,
++  2057 checks?: Checks | undefined,
++  2058 encoding?: Encoding | undefined,
++  2059 context?: Context | undefined
++  2060 ) => Symbol = class extends ASTNodeImpl {
+
+@@ hunk 40 [code] pin 1602-1602 release 2114-2141 cited ranges 0
+   pin units: BigInt=code
+   release units: BigInt=type-decl; BigInt#2=code
+-  1602 export class BigInt extends Base {
++  2114 export interface BigInt extends ASTNode {
++  2115 readonly _tag: "BigInt"
++  2118 getParser(): SchemaParser.Parser
++  2121 matchPart(s: string, options: ParseOptions): bigint | undefined
++  2124 toCodecStringTree(): AST
++  2127 getExpected(): string
++  2128 }
++  2136 export const BigInt: new(
++  2137 annotations?: Schema.Annotations.Annotations | undefined,
++  2138 checks?: Checks | undefined,
++  2139 encoding?: Encoding | undefined,
++  2140 context?: Context | undefined
++  2141 ) => BigInt = class extends ASTNodeImpl {
+
+@@ hunk 41 [code] pin 1683-1683 release 2222-2260 cited ranges 0
+   pin units: Arrays=code
+   release units: Arrays=type-decl; Arrays#2=code
+-  1683 export class Arrays extends Base {
++  2222 export interface Arrays extends ASTNode {
++  2223 readonly _tag: "Arrays"
++  2224 readonly isMutable: boolean
++  2225 readonly elements: ReadonlyArray<AST>
++  2226 readonly rest: ReadonlyArray<AST>
++  2227 readonly encodingChecks: Checks | undefined
++  2230 getParser(
++  2231 compile: SchemaParser.Compiler,
++  2232 compileField?: SchemaParser.Compiler
++  2233 ): SchemaParser.Parser
++  2236 recur(recur: (ast: AST) => AST): Arrays
++  2239 flip(recur: (ast: AST) => AST): Arrays
++  2242 getExpected(): string
++  2243 }
++  2251 export const Arrays: new(
++  2252 isMutable: boolean,
++  2253 elements: ReadonlyArray<AST>,
++  2254 rest: ReadonlyArray<AST>,
++  2255 annotations?: Schema.Annotations.Annotations,
++  2256 checks?: Checks,
++  2257 encoding?: Encoding,
++  2258 context?: Context,
++  2259 encodingChecks?: Checks
++  2260 ) => Arrays = class extends ASTNodeImpl {
+
+@@ hunk 42 [code] pin 1728-1728 release 2305-2305 cited ranges 0
+   pin units: Arrays.getParser=absent
+   release units: Arrays#2=code
+-  1728 compileConstructorDefault: SchemaParser.Compiler = compile
++  2305 compileField: SchemaParser.Compiler = compile
+
+@@ hunk 43 [code] pin 1750-1780 release 2327-2328 cited ranges 0
+   pin units: Arrays.getParser=absent
+   release units: Arrays#2=code
+-  1750 return Effect.fnUntracedEager(function*(input, options) {
+-  1751 if (input === InternalParser.missing) {
+-  1752 return InternalParser.missing
+-  1753 }
+-  1756 if (!Array.isArray(input)) {
+-  1757 return yield* Effect.fail(new SchemaIssue.InvalidType(ast, input, options))
+-  1758 }
+-  1759 if (!elements) {
+-  1760 elements = ast.elements.map((ast) => ({ ast, parser: compileConstructorDefault(ast) }))
+-  1761 rest = ast.rest.map((ast) => ({ ast, parser: compileConstructorDefault(ast) }))
+-  1762 }
+-  1764 const len = input.length
+-  1765 const state = {
+-  1766 ast,
+-  1767 getParser,
+-  1768 input,
+-  1769 len,
+-  1770 tailThreshold: Math.max(elementLen, len - tailLen),
+-  1771 output: new globalThis.Array(len),
+-  1772 issues: undefined as Arr.NonEmptyArray<SchemaIssue.Issue> | undefined,
+-  1773 options
+-  1774 }
+-  1775 const concurrency = resolveConcurrency(options?.concurrency)
+-  1776 const eff = parseArray(state, input, {
+-  1777 concurrency: concurrency?.concurrency,
+-  1778 end: ast.rest.length === 0 ? elementLen : Math.max(len, elementLen + tailLen)
+-  1779 })
+-  1780 if (eff) yield* eff
++  2327 const finish = (state: ArrayParserState): Effect.Effect<unknown, SchemaIssue.Issue, any> => {
++  2328 const { input, len, options } = state
+
+@@ hunk 44 [code] pin 1786-1786 release 2330-2330 cited ranges 0
+   pin units: Arrays.getParser=absent
+   release units: Arrays#2=code
+-  1786 for (let i = elementLen; i <= len - 1; i++) {
++  2330 for (let i = elementLen; i < len; i++) {
+
+@@ hunk 45 [code] pin 1793-1795 release 2337-2337 cited ranges 0
+   pin units: Arrays.getParser=absent
+   release units: Arrays#2=code
+-  1793 return yield* Effect.fail(
+-  1794 new SchemaIssue.Composite(ast, [issue], input, options)
+-  1795 )
++  2337 return Effect.fail(new SchemaIssue.Composite(ast, [issue], input, options))
+
+@@ hunk 46 [code] pin 1800-1802 release 2342-2342 cited ranges 0
+   pin units: Arrays.getParser=absent
+   release units: Arrays#2=code
+-  1800 return yield* Effect.fail(
+-  1801 new SchemaIssue.Composite(ast, state.issues, input, options)
+-  1802 )
++  2342 return Effect.fail(new SchemaIssue.Composite(ast, state.issues, input, options))
+
+@@ hunk 47 [code] pin 1804-1804 release 2344-2374 cited ranges 0
+   pin units: Arrays.getParser=absent
+   release units: Arrays#2=code
+-  1804 return state.output
++  2344 return InternalParser.succeed(state.output)
++  2345 }
++  2347 const parse = (
++  2348 input: ReadonlyArray<unknown>,
++  2349 options: ParseOptions
++  2350 ): Effect.Effect<unknown, SchemaIssue.Issue, any> => {
++  2351 const len = input.length
++  2352 const state: ArrayParserState = {
++  2353 ast,
++  2354 getParser,
++  2355 input,
++  2356 len,
++  2357 tailThreshold: Math.max(elementLen, len - tailLen),
++  2358 output: new globalThis.Array(len),
++  2359 issues: undefined,
++  2360 options
++  2361 }
++  2362 const end = ast.rest.length === 0 ? elementLen : Math.max(len, elementLen + tailLen)
++  2363 const concurrency = options.concurrency === undefined ? 1 : resolveConcurrency(options.concurrency)
++  2364 const eff = concurrency === 1
++  2365 ? parseArray(state, input, 0, end)
++  2366 : parseArrayConcurrent(state, input, { concurrency, end })
++  2367 if (!eff) return finish(state)
++  2368 if (effectIsExit(eff)) return Effect.flatMapEager(eff, () => finish(state))
++  2370 let first = true
++  2371 return Effect.suspend(() => {
++  2372 if (!first) return parse(input, options)
++  2373 first = false
++  2374 return Effect.flatMap(eff, () => finish(state))
+
+@@ hunk 48 [code] pin before 1807 release 2378-2393 cited ranges 0
+   pin units: 
+   release units: Arrays#2=code
++  2378 return (input, options) => {
++  2379 if (input === InternalParser.missing) return InternalParser.missingExit
++  2380 try {
++  2381 if (!Array.isArray(input)) {
++  2382 return Effect.fail(new SchemaIssue.InvalidType(ast, input, options))
++  2383 }
++  2384 if (!elements) {
++  2385 elements = ast.elements.map((ast) => ({ ast, parser: compileField(ast) }))
++  2386 rest = ast.rest.map((ast) => ({ ast, parser: compileField(ast) }))
++  2387 }
++  2388 return parse(input, options)
++  2389 } catch (error) {
++  2390 return Effect.die(error)
++  2391 }
++  2392 }
++  2393 }
+
+@@ hunk 49 [code] pin 1837-1837 release 2425-2425 cited ranges 0
+   pin units: parseArray=code
+   release units: ArrayParserState=absent
+-  1837 const parseArray = iterateEager<{
++  2425 type ArrayParserState = {
+
+@@ hunk 50 [erased] pin 1839-1839 release 2427-2427 cited ranges 0
+   pin units: parseArray=code
+   release units: ArrayParserState=absent
+-  1839 readonly input: unknown
++  2427 readonly input: ReadonlyArray<unknown>
+
+@@ hunk 51 [code] pin 1848-1854 release 2436-2445 cited ranges 0
+   pin units: parseArray=code
+   release units: ArrayParserState=absent; stepArray=absent
+-  1848 issues: Array<SchemaIssue.Issue> | undefined
+-  1849 }, unknown>()({
+-  1850 onItem(s, item, i) {
+-  1851 const value = i < s.len ? item : InternalParser.missing
+-  1852 return s.getParser(s.tailThreshold, i).parser(value, s.options)
+-  1853 },
+-  1854 step(s, item, exit, i) {
++  2436 issues: Arr.NonEmptyArray<SchemaIssue.Issue> | undefined
++  2437 }
++  2440 export function stepArray(
++  2441 s: ArrayParserState,
++  2442 item: unknown,
++  2443 exit: Exit.Exit<unknown, SchemaIssue.Issue>,
++  2444 i: number
++  2445 ) {
+
+@@ hunk 52 [code] pin 1877-1881 release 2469-2474 cited ranges 0
+   pin units: parseArray=code; resolveConcurrency=absent
+   release units: parseArrayOptions=absent
+-  1877 })
+-  1879 const resolveConcurrency = (value: number | "unbounded" | undefined) => {
+-  1880 value = value === "unbounded" ? Infinity : value ?? 1
+-  1881 return value > 1 ? { concurrency: value } : undefined
++  2469 const parseArrayOptions = {
++  2470 onItem(s: ArrayParserState, item: unknown, i: number) {
++  2471 const value = i < s.len ? item : InternalParser.missing
++  2472 return s.getParser(s.tailThreshold, i).parser(value, s.options)
++  2473 },
++  2474 step: stepArray
+
+@@ hunk 53 [code] pin before 1884 release 2478-2479 cited ranges 0
+   pin units: 
+   release units: parseArray=code; parseArrayConcurrent=absent
++  2478 export const parseArray = iterateEager<ArrayParserState, unknown>()(parseArrayOptions)
++  2479 const parseArrayConcurrent = iterateConcurrent<ArrayParserState, unknown>()(parseArrayOptions)
+
+@@ hunk 54 [code] pin 1950-1950 release 2547-2547 cited ranges 0
+   pin units: getIndexSignatureKeys=code
+   release units: getIndexSignatureKeys=code
+-  1950 parameter.matchKey(k, options) !== undefined
++  2547 Object.prototype.propertyIsEnumerable.call(input, k) && parameter.matchKey(k, options) !== undefined
+
+@@ hunk 55 [code] pin 1974-1974 release 2571-2582 cited ranges 0
+   pin units: PropertySignature=code
+   release units: PropertySignature=type-decl; PropertySignature#2=code
+-  1974 export class PropertySignature {
++  2571 export interface PropertySignature {
++  2572 readonly name: PropertyKey
++  2573 readonly type: AST
++  2574 }
++  2582 export const PropertySignature: new(name: PropertyKey, type: AST) => PropertySignature = class {
+
+@@ hunk 56 [code] pin 2008-2009 release 2616-2627 cited ranges 0
+   pin units: isIndexSignatureParameter=code
+   release units: isIndexSignatureParameterEncodedSide=absent
+-  2008 function isIndexSignatureParameter(ast: AST): ast is IndexSignatureParameter {
+-  2009 return isIndexSignatureParameterSide(ast) && isIndexSignatureParameterSide(toEncoded(ast))
++  2616 function isIndexSignatureParameterEncodedSide(ast: AST): boolean {
++  2617 const encoded = getLastEncoding(ast)
++  2618 switch (encoded._tag) {
++  2619 case "String":
++  2620 case "Number":
++  2621 case "Symbol":
++  2622 case "TemplateLiteral":
++  2623 return true
++  2624 case "Union":
++  2625 return encoded.types.every(isIndexSignatureParameterEncodedSide)
++  2626 default:
++  2627 return false
+
+@@ hunk 57 [code] pin 2036-2036 release 2629-2670 cited ranges 0
+   pin units: IndexSignature=code
+   release units: isIndexSignatureParameterEncodedSide=absent; isIndexSignatureParameter=code; IndexSignature=type-decl; IndexSignature#2=code
+-  2036 export class IndexSignature {
++  2629 }
++  2631 function isIndexSignatureParameter(ast: AST): ast is IndexSignatureParameter {
++  2632 return isIndexSignatureParameterSide(ast) && isIndexSignatureParameterEncodedSide(ast)
++  2633 }
++  2659 export interface IndexSignature {
++  2660 readonly parameter: IndexSignatureParameter
++  2661 readonly type: AST
++  2662 }
++  2670 export const IndexSignature: new(parameter: AST, type: AST) => IndexSignature = class {
+
+@@ hunk 58 [code] pin 2097-2097 release 2731-2767 cited ranges 0
+   pin units: Objects=code
+   release units: Objects=type-decl; Objects#2=code
+-  2097 export class Objects extends Base {
++  2731 export interface Objects extends ASTNode {
++  2732 readonly _tag: "Objects"
++  2733 readonly propertySignatures: ReadonlyArray<PropertySignature>
++  2734 readonly indexSignatures: ReadonlyArray<IndexSignature>
++  2735 readonly encodingChecks: Checks | undefined
++  2738 getParser(
++  2739 compile: SchemaParser.Compiler,
++  2740 compileField?: SchemaParser.Compiler
++  2741 ): SchemaParser.Parser
++  2744 flip(recur: (ast: AST) => AST): AST
++  2747 recur(recur: (ast: AST) => AST, recurParameter?: (ast: AST) => AST): AST
++  2750 getExpected(): string
++  2751 }
++  2759 export const Objects: new(
++  2760 propertySignatures: ReadonlyArray<PropertySignature>,
++  2761 indexSignatures: ReadonlyArray<IndexSignature>,
++  2762 annotations?: Schema.Annotations.Annotations,
++  2763 checks?: Checks,
++  2764 encoding?: Encoding,
++  2765 context?: Context,
++  2766 encodingChecks?: Checks
++  2767 ) => Objects = class extends ASTNodeImpl {
+
+@@ hunk 59 [code] pin 2118-2121 release before 2786 cited ranges 0
+   pin units: Objects.constructor=absent
+   release units: 
+-  2118 const duplicates = propertySignatures.map((ps) => ps.name).filter((name, i, arr) => arr.indexOf(name) !== i)
+-  2119 if (duplicates.length > 0) {
+-  2120 throw new Error(`Duplicate identifiers: ${JSON.stringify(duplicates)}. ts(2300)`)
+-  2121 }
+
+@@ hunk 60 [code] pin 2126-2126 release 2790-2790 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2126 compileConstructorDefault: SchemaParser.Compiler = compile
++  2790 compileField: SchemaParser.Compiler = compile
+
+@@ hunk 61 [code] pin 2130-2134 release 2794-2794 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2130 const expectedKeys: Array<PropertyKey> = []
+-  2131 for (const ps of ast.propertySignatures) {
+-  2132 expectedKeys.push(ps.name)
+-  2133 }
+-  2134 const hasProperties = expectedKeys.length
++  2794 const hasProperties = ast.propertySignatures.length
+
+@@ hunk 62 [code] pin 2136-2136 release before 2799 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: 
+-  2136 let expectedKeysSet = hasProperties && indexCount ? new Set(expectedKeys) : undefined
+
+@@ hunk 63 [code] pin before 2153 release 2812-2833 cited ranges 0
+   pin units: 
+   release units: Objects#2=code
++  2812 const compileMembers = (): Array<ParsedProperty> => {
++  2813 if (!properties) {
++  2814 properties = ast.propertySignatures.map((ps) => ({
++  2815 parser: compileField(ps.type),
++  2816 name: ps.name,
++  2817 type: ps.type
++  2818 }))
++  2819 indexes = indexCount
++  2820 ? ast.indexSignatures.map((is) => ({
++  2821 is,
++  2822 parserKey: compile(parameterFromPropertyKey(is.parameter)),
++  2823 parserValue: compileField(is.type)
++  2824 }))
++  2825 : undefined
++  2826 }
++  2827 return properties
++  2828 }
++  2830 const makeFallback = (): SchemaParser.Parser => {
++  2831 const expectedKeys = new Set<PropertyKey>(
++  2832 ast.propertySignatures.map((ps) => typeof ps.name === "number" ? globalThis.String(ps.name) : ps.name)
++  2833 )
+
+@@ hunk 64 [code] pin 2167-2167 release 2848-2851 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2167 if (hasProperties && (expectedKeysSet!.has(key) || expectedKeysSet!.has(k2))) return Exit.void
++  2848 if (
++  2849 hasProperties &&
++  2850 (expectedKeys.has(key) || expectedKeys.has(typeof k2 === "number" ? globalThis.String(k2) : k2))
++  2851 ) return Exit.void
+
+@@ hunk 65 [code] pin 2208-2227 release 2892-2897 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2208 const parseIndexes = indexCount ?
+-  2209 iterateEager<ObjectParserState, [key: PropertyKey, index: Index]>()({
+-  2210 onItem: (s, [key, index]) => parseIndex(s, key, index),
+-  2211 step: (_s, _, exit: Exit.Exit<void, SchemaIssue.Issue>) => exit._tag === "Failure" ? exit : undefined
+-  2212 }) :
+-  2213 undefined
+-  2215 const compileMembers = (): Array<ParsedProperty> => {
+-  2216 if (!properties) {
+-  2217 properties = ast.propertySignatures.map((ps) => ({
+-  2218 parser: compileConstructorDefault(ps.type),
+-  2219 name: ps.name,
+-  2220 type: ps.type
+-  2221 }))
+-  2222 indexes = indexCount
+-  2223 ? ast.indexSignatures.map((is) => ({
+-  2224 is,
+-  2225 parserKey: compile(parameterFromPropertyKey(is.parameter)),
+-  2226 parserValue: compileConstructorDefault(is.type)
+-  2227 }))
++  2892 const parseIndexes = indexCount
++  2893 ? iterateConcurrent<ObjectParserState, readonly [key: PropertyKey, index: Index]>()({
++  2894 onItem: (s, [key, index]) =>
++  2895 index.is.parameter === string ? parseStringIndex(s, key, index) : parseIndex(s, key, index),
++  2896 step: (_s, _item, exit) => exit._tag === "Failure" ? exit : undefined
++  2897 })
+
+@@ hunk 66 [code] pin 2229-2233 release 2899-2899 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2229 }
+-  2230 return properties
+-  2231 }
+-  2233 const fallback: SchemaParser.Parser = Effect.fnUntracedEager(function*(input, options) {
++  2899 return Effect.fnUntracedEager(function*(input, options) {
+
+@@ hunk 67 [code] pin 2255-2263 release 2921-2938 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2255 const onExcessPropertyPreserve = options.onExcessProperty === "preserve"
+-  2260 let inputKeys: Array<PropertyKey> | undefined
+-  2261 if (!indexCount && (onExcessPropertyError || onExcessPropertyPreserve)) {
+-  2262 expectedKeysSet ??= new Set(expectedKeys)
+-  2263 inputKeys = Reflect.ownKeys(record)
++  2921 const concurrency = options.concurrency === undefined ? 1 : resolveConcurrency(options.concurrency)
++  2926 const indexKeys = indexCount && onExcessPropertyError
++  2927 ? ast.indexSignatures.map((index) => getIndexSignatureKeys(record, index.parameter, options))
++  2928 : undefined
++  2929 if (onExcessPropertyError) {
++  2930 const coveredKeys = indexKeys ? new Set(expectedKeys) : expectedKeys
++  2931 if (indexKeys) {
++  2932 for (const keys of indexKeys) {
++  2933 for (const key of keys) coveredKeys.add(key)
++  2934 }
++  2935 }
++  2938 const inputKeys = Reflect.ownKeys(record)
+
+@@ hunk 68 [code] pin 2266-2268 release 2941-2941 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2266 if (!expectedKeysSet.has(key)) {
+-  2268 if (onExcessPropertyError) {
++  2941 if (!coveredKeys.has(key) && Object.prototype.propertyIsEnumerable.call(record, key)) {
+
+@@ hunk 69 [code] pin 2283-2285 release before 2957 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: 
+-  2283 } else {
+-  2285 InternalRecord.assignProperty(out, key, record[key])
+
+@@ hunk 70 [code] pin 2289-2291 release before 2964 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: 
+-  2289 }
+-  2291 const concurrency = resolveConcurrency(options?.concurrency)
+
+@@ hunk 71 [code] pin 2297-2297 release 2965-2967 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2297 const eff = parseProperties(state, properties!, concurrency)
++  2965 const eff = concurrency === 1
++  2966 ? parseProperties(state, properties!)
++  2967 : parsePropertiesConcurrent(state, properties!, { concurrency })
+
+@@ hunk 72 [code] pin 2304-2304 release 2974-2974 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2304 if (indexCount && !concurrency) {
++  2974 if (indexCount && concurrency === 1) {
+
+@@ hunk 73 [code] pin 2308-2308 release 2978-2978 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2308 const keys = index.is.parameter === string
++  2978 const keys = indexKeys?.[i] ?? (index.is.parameter === string
+
+@@ hunk 74 [code] pin 2310-2310 release 2980-2980 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2310 : getIndexSignatureKeys(record, index.is.parameter, options)
++  2980 : getIndexSignatureKeys(record, index.is.parameter, options))
+
+@@ hunk 75 [erased] pin 2318-2318 release 2988-2988 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2318 const keyPairs = Arr.empty<[PropertyKey, Index]>()
++  2988 const keyPairs = Arr.empty<readonly [PropertyKey, Index]>()
+
+@@ hunk 76 [code] pin 2321-2321 release 2991-2993 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2321 const keys = getIndexSignatureKeys(record, index.is.parameter, options)
++  2991 const keys = indexKeys?.[i] ?? (index.is.parameter === string
++  2992 ? Object.keys(record)
++  2993 : getIndexSignatureKeys(record, index.is.parameter, options))
+
+@@ hunk 77 [code] pin 2326-2326 release 2998-2998 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2326 const eff = parseIndexes(state, keyPairs, concurrency)
++  2998 const eff = parseIndexes(state, keyPairs, { concurrency })
+
+@@ hunk 78 [code] pin 2335-2345 release before 3007 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: 
+-  2335 if (options.propertyOrder === "original") {
+-  2337 const keys = (inputKeys ?? Reflect.ownKeys(record)).concat(expectedKeys)
+-  2338 const preserved: Record<PropertyKey, unknown> = {}
+-  2339 for (const key of keys) {
+-  2340 if (Object.hasOwn(out, key)) {
+-  2341 InternalRecord.assignProperty(preserved, key, out[key])
+-  2342 }
+-  2343 }
+-  2344 return preserved
+-  2345 }
+
+@@ hunk 79 [code] pin 2349-2349 release 3009-3013 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2349 if (indexCount) return fallback
++  3009 }
++  3011 if (indexCount) return makeFallback()
++  3013 let fallback: SchemaParser.Parser | undefined
+
+@@ hunk 80 [code] pin 2375-2376 release 3039-3039 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2375 options.propertyOrder === "original" ||
+-  2376 options.concurrency !== undefined
++  3039 (options.concurrency !== undefined && resolveConcurrency(options.concurrency) !== 1)
+
+@@ hunk 81 [code] pin 2378-2378 release 3041-3041 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2378 return fallback(input, options)
++  3041 return (fallback ??= makeFallback())(input, options)
+
+@@ hunk 82 [code] pin 2391-2391 release 3054-3054 cited ranges 0
+   pin units: Objects.getParser=absent
+   release units: Objects#2=code
+-  2391 const hasKey = Object.hasOwn(record, name)
++  3054 const hasKey = hasPropertySignature(record, name)
+
+@@ hunk 83 [erased] pin 2463-2463 release 3125-3125 cited ranges 0
+   pin units: ObjectParserState=type-decl
+   release units: ObjectParserState=type-decl
+-  2463 issues: Array<SchemaIssue.Issue> | undefined
++  3125 issues: Arr.NonEmptyArray<SchemaIssue.Issue> | undefined
+
+@@ hunk 84 [code] pin 2472-2472 release 3135-3135 cited ranges 0
+   pin units: stepProperty=code
+   release units: stepProperty=code
+-  2472 function stepProperty(
++  3135 export function stepProperty(
+
+@@ hunk 85 [code] pin 2501-2503 release 3164-3166 cited ranges 0
+   pin units: parseProperties=code
+   release units: parsePropertiesOptions=absent
+-  2501 const parseProperties = iterateEager<ObjectParserState, ParsedProperty>()({
+-  2502 onItem(s, p) {
+-  2503 if (!Object.hasOwn(s.input, p.name)) {
++  3164 const parsePropertiesOptions = {
++  3165 onItem(s: ObjectParserState, p: ParsedProperty) {
++  3166 if (!hasPropertySignature(s.input, p.name)) {
+
+@@ hunk 86 [code] pin 2511-2511 release 3174-3178 cited ranges 0
+   pin units: parseProperties=code
+   release units: parsePropertiesOptions=absent; parseProperties=code; parsePropertiesConcurrent=absent
+-  2511 })
++  3174 }
++  3177 export const parseProperties = iterateEager<ObjectParserState, ParsedProperty>()(parsePropertiesOptions)
++  3178 const parsePropertiesConcurrent = iterateConcurrent<ObjectParserState, ParsedProperty>()(parsePropertiesOptions)
+
+@@ hunk 87 [code] pin 2551-2551 release 3218-3218 cited ranges 0
+   pin units: union=code
+   release units: union=code
+-  2551 mode: "anyOf" | "oneOf",
++  3218 options: UnionOptions | undefined,
+
+@@ hunk 88 [code] pin 2554-2554 release 3221-3221 cited ranges 0
+   pin units: union=code
+   release units: union=code
+-  2554 return new Union(members.map(getAST), mode, undefined, checks)
++  3221 return new Union(members.map(getAST), options, undefined, checks)
+
+@@ hunk 89 [code] pin before 2566 release 3233-3237 cited ranges 0
+   pin units: 
+   release units: structWithRest=code
++  3233 for (const propertySignature of record.propertySignatures) {
++  3234 if (propertySignatures.some((ps) => ps.name === propertySignature.name)) {
++  3235 throw new Error(`Duplicate identifier: ${JSON.stringify(propertySignature.name)}. ts(2300)`)
++  3236 }
++  3237 }
+
+@@ hunk 90 [code] pin before 2581 release 3254-3268 cited ranges 0
+   pin units: 
+   release units: mutable=absent
++  3254 export function mutable(ast: Arrays): Arrays {
++  3255 if (ast.encoding) {
++  3256 throw new Error("mutable does not support encodings")
++  3257 }
++  3258 return new Arrays(
++  3259 true,
++  3260 ast.elements,
++  3261 ast.rest,
++  3262 ast.annotations,
++  3263 ast.checks,
++  3264 undefined,
++  3265 ast.context,
++  3266 ast.encodingChecks
++  3267 )
++  3268 }
+
+@@ hunk 91 [erased] pin 2708-2708 release 3398-3398 cited ranges 0
+   pin units: CandidateIndex=type-decl
+   release units: CandidateIndex=type-decl
+-  2708 type CandidateIndex = (input: any, isConstructor: boolean) => ReadonlyArray<AST>
++  3398 export type CandidateIndex = (input: any, isConstructor: boolean) => ReadonlyArray<number>
+
+@@ hunk 92 [code] pin 2718-2718 release 3408-3414 cited ranges 0
+   pin units: getIndex=absent
+   release units: getRuntimeType=absent; hasPropertySignature=absent; getCandidateIndex=absent
+-  2718 function getIndex(types: ReadonlyArray<AST>): CandidateIndex {
++  3408 const getRuntimeType = (input: unknown): Type => input === null ? "null" : Array.isArray(input) ? "array" : typeof input
++  3410 const hasPropertySignature = (input: object, key: PropertyKey): boolean =>
++  3411 key === "__proto__" ? Object.hasOwn(input, key) : key in input
++  3414 export function getCandidateIndex(types: ReadonlyArray<AST>): CandidateIndex {
+
+@@ hunk 93 [erased] pin 2725-2725 release 3421-3421 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2725 let literalCandidates: Map<LiteralValue | symbol, Array<AST>> | undefined
++  3421 let literalCandidates: Map<LiteralValue | symbol, Array<number>> | undefined
+
+@@ hunk 94 [code] pin before 2727 release 3423-3423 cited ranges 0
+   pin units: 
+   release units: getCandidateIndex=absent
++  3423 const literalOf: Array<LiteralValue | symbol | undefined> = []
+
+@@ hunk 95 [code] pin 2732-2732 release before 3429 cited ranges 0
+   pin units: getIndex=absent
+   release units: 
+-  2732 if (onlyLiterals) {
+
+@@ hunk 96 [code] pin before 2736 release 3432-3432 cited ranges 0
+   pin units: 
+   release units: getCandidateIndex=absent
++  3432 literalOf[i] = literal
+
+@@ hunk 97 [code] pin 2738-2738 release 3435-3435 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2738 arr.push(a)
++  3435 arr.push(i)
+
+@@ hunk 98 [code] pin 2742-2742 release before 3440 cited ranges 0
+   pin units: getIndex=absent
+   release units: 
+-  2742 }
+
+@@ hunk 99 [code] pin before 2764 release 3461-3463 cited ranges 0
+   pin units: 
+   release units: getCandidateIndex=absent
++  3461 const fallbacks: { [K in Type]?: ReadonlyArray<number> } = {}
++  3462 const getFallback = (type: Type): ReadonlyArray<number> =>
++  3463 fallbacks[type] ??= Object.freeze(otherwise?.[type] ?? emptyCandidates)
+
+@@ hunk 100 [code] pin 2769-2769 release 3470-3470 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2769 const candidates = byValue as unknown as Map<LiteralValue | symbol, ReadonlyArray<AST>>
++  3470 const candidates = new Map<LiteralValue | symbol, ReadonlyArray<number>>()
+
+@@ hunk 101 [code] pin 2771-2771 release 3472-3472 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2771 candidates.set(literal, Object.freeze(Array.from(indexes, (index) => types[index])))
++  3472 candidates.set(literal, Object.freeze(Array.from(indexes)))
+
+@@ hunk 102 [code] pin before 2773 release 3474-3474 cited ranges 0
+   pin units: 
+   release units: getCandidateIndex=absent
++  3474 const all = Object.freeze(types.map((_, i) => i))
+
+@@ hunk 103 [code] pin 2775-2775 release 3477-3477 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2775 const value = Object.hasOwn(input, key) ? (input as any)[key] : undefined
++  3477 const value = hasPropertySignature(input, key) ? (input as any)[key] : undefined
+
+@@ hunk 104 [code] pin 2777-2777 release 3479-3479 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2777 if (isConstructor) return types
++  3479 if (isConstructor) return all
+
+@@ hunk 105 [code] pin 2796-2801 release 3498-3502 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2796 const runtimeType: Type = input === null ? "null" : Array.isArray(input) ? "array" : typeof input
+-  2797 const base = otherwise?.[runtimeType] ?? emptyCandidates
+-  2798 if (!Predicate.isObjectKeyword(input)) return base.map((i) => types[i])
+-  2801 const selected = new Set(base)
++  3498 const runtimeType = getRuntimeType(input)
++  3499 if (!Predicate.isObjectKeyword(input)) return getFallback(runtimeType)
++  3502 const selected = new Set(otherwise?.[runtimeType])
+
+@@ hunk 106 [code] pin 2807-2807 release 3508-3508 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2807 const hasKey = Object.hasOwn(input, key)
++  3508 const hasKey = hasPropertySignature(input, key)
+
+@@ hunk 107 [code] pin 2811-2811 release 3512-3512 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2811 if (!match) return base.map((i) => types[i])
++  3512 if (!match) return getFallback(runtimeType)
+
+@@ hunk 108 [code] pin 2821-2821 release 3522-3522 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2821 const hasKey = Object.hasOwn(input, key)
++  3522 const hasKey = hasPropertySignature(input, key)
+
+@@ hunk 109 [code] pin 2836-2836 release 3537-3537 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2836 const hasKey = Object.hasOwn(input, key)
++  3537 const hasKey = hasPropertySignature(input, key)
+
+@@ hunk 110 [code] pin 2845-2845 release 3546-3546 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2845 return Array.from(selected).sort((a, b) => a - b).map((i) => types[i])
++  3546 return Array.from(selected).sort((a, b) => a - b)
+
+@@ hunk 111 [code] pin 2849-2850 release 3550-3551 cited ranges 0
+   pin units: getIndex=absent
+   release units: getCandidateIndex=absent
+-  2849 const runtimeType: Type = input === null ? "null" : Array.isArray(input) ? "array" : typeof input
+-  2850 return (otherwise?.[runtimeType] ?? emptyCandidates).map((i) => types[i]).filter(filterLiterals(input))
++  3550 const fallback = getFallback(getRuntimeType(input))
++  3551 return literalCandidates ? fallback.filter((i) => literalOf[i] === undefined || literalOf[i] === input) : fallback
+
+@@ hunk 112 [code] pin 2858-2865 release 3589-3608 cited ranges 0
+   pin units: filterLiterals=absent
+   release units: Union=type-decl
+-  2858 function filterLiterals(input: any) {
+-  2859 return (ast: AST) => {
+-  2860 const encoded = toCandidate(ast)
+-  2861 return encoded._tag === "Literal" ?
+-  2862 encoded.literal === input
+-  2863 : encoded._tag === "UniqueSymbol" ?
+-  2864 encoded.symbol === input
+-  2865 : true
++  3589 export interface Union<A extends AST = AST> extends ASTNode {
++  3590 readonly _tag: "Union"
++  3591 readonly types: ReadonlyArray<A>
++  3592 readonly options: UnionOptions | undefined
++  3593 readonly encodingChecks: Checks | undefined
++  3596 getParser(compile: SchemaParser.Compiler, compileField?: SchemaParser.Compiler): SchemaParser.Parser
++  3599 recur(recur: (ast: AST) => AST): Union<AST>
++  3602 flip(recur: (ast: AST) => AST): Union<AST>
++  3605 matchPart(s: string, options: ParseOptions): LiteralValue | undefined
++  3608 getExpected(getExpected: (ast: AST) => string): string
+
+@@ hunk 113 [erased] pin before 2867 release 3617-3619 cited ranges 0
+   pin units: 
+   release units: UnionOptions=absent
++  3617 export interface UnionOptions {
++  3619 readonly mode?: "anyOf" | "oneOf" | undefined
+
+@@ hunk 114 [code] pin 2875-2913 release 3628-3636 cited ranges 0
+   pin units: getCandidates=absent; Union=code
+   release units: Union#2=code
+-  2875 export function getCandidates(
+-  2876 input: any,
+-  2877 types: ReadonlyArray<AST>,
+-  2878 isConstructor = false
+-  2879 ): ReadonlyArray<AST> {
+-  2880 return getIndex(types)(input, isConstructor)
+-  2881 }
+-  2913 export class Union<A extends AST = AST> extends Base {
++  3628 export const Union: new<A extends AST = AST>(
++  3629 types: ReadonlyArray<A>,
++  3630 options?: UnionOptions,
++  3631 annotations?: Schema.Annotations.Annotations,
++  3632 checks?: Checks,
++  3633 encoding?: Encoding,
++  3634 context?: Context,
++  3635 encodingChecks?: Checks
++  3636 ) => Union<A> = class<A extends AST = AST> extends ASTNodeImpl {
+
+@@ hunk 115 [code] pin 2916-2916 release 3639-3639 cited ranges 0
+   pin units: Union.mode=absent
+   release units: Union#2=code
+-  2916 readonly mode: "anyOf" | "oneOf"
++  3639 readonly options: UnionOptions | undefined
+
+@@ hunk 116 [code] pin 2921-2921 release 3644-3644 cited ranges 0
+   pin units: Union.constructor=absent
+   release units: Union#2=code
+-  2921 mode: "anyOf" | "oneOf",
++  3644 options?: UnionOptions,
+
+@@ hunk 117 [code] pin 2930-2930 release 3653-3653 cited ranges 0
+   pin units: Union.constructor=absent
+   release units: Union#2=code
+-  2930 this.mode = mode
++  3653 this.options = options
+
+@@ hunk 118 [code] pin 2936-2936 release 3659-3659 cited ranges 0
+   pin units: Union.getParser=absent
+   release units: Union#2=code
+-  2936 compileConstructorDefault?: SchemaParser.Compiler
++  3659 compileField?: SchemaParser.Compiler
+
+@@ hunk 119 [code] pin before 2941 release 3663-3666 cited ranges 0
+   pin units: 
+   release units: Union#2=code
++  3663 const isConstructor = compileField !== undefined
++  3664 const parsers: Array<SchemaParser.Parser> = []
++  3665 const parser = (i: number): SchemaParser.Parser => parsers[i] ??= compile(ast.types[i])
++  3666 let index: CandidateIndex | undefined
+
+@@ hunk 120 [code] pin 2945-2945 release 3672-3676 cited ranges 0
+   pin units: Union.getParser=absent
+   release units: Union#2=code
+-  2945 const candidates = getCandidates(input, ast.types, compileConstructorDefault !== undefined)
++  3672 const candidates = (index ??= getCandidateIndex(ast.types))(input, isConstructor)
++  3674 if (candidates.length === 0) {
++  3675 return Effect.fail(new SchemaIssue.AnyOf(ast, [], input, options))
++  3676 }
+
+@@ hunk 121 [code] pin 2948-2948 release 3678-3678 cited ranges 0
+   pin units: Union.getParser=absent
+   release units: Union#2=code
+-  2948 const result = compile(candidates[0])(input, options)
++  3678 const result = parser(candidates[0])(input, options)
+
+@@ hunk 122 [code] pin 2952-2952 release 3682-3682 cited ranges 0
+   pin units: Union.getParser=absent
+   release units: Union#2=code
+-  2952 : Effect.catchCause(result, (cause) => failSingleUnionCandidate(ast, cause, input, options))
++  3682 : catchSingleUnionCandidate(ast, result, input, options)
+
+@@ hunk 123 [code] pin 2955-2974 release 3684-3684 cited ranges 0
+   pin units: Union.getParser=absent
+   release units: Union#2=code
+-  2955 const state = {
+-  2956 ast,
+-  2957 compile,
+-  2958 input,
+-  2959 out: undefined,
+-  2960 successes: ast.mode === "oneOf" ? [] : undefined,
+-  2961 issues: undefined as Arr.NonEmptyArray<SchemaIssue.Issue> | undefined,
+-  2962 options
+-  2963 }
+-  2964 const concurrency = resolveConcurrency(options?.concurrency)
+-  2965 const eff = parseUnion(state, candidates, concurrency ? { ...concurrency, orderedStep: true } : undefined)
+-  2966 if (!eff) {
+-  2967 if (state.out) return state.out
+-  2968 return Effect.fail(new SchemaIssue.AnyOf(ast, state.issues ?? [], input, options))
+-  2969 }
+-  2970 return Effect.flatMapEager(eff, (_) => {
+-  2971 if (state.out === InternalParser.sameExit) return Effect.succeed(input)
+-  2972 if (state.out) return state.out
+-  2973 return Effect.fail(new SchemaIssue.AnyOf(ast, state.issues ?? [], input, options))
+-  2974 })
++  3684 return parseUnionCandidates(ast, parser, candidates, input, options)
+
+@@ hunk 124 [erased] pin 2977-2977 release 3687-3691 cited ranges 0
+   pin units: Union._rebuild=absent
+   release units: Union#2=code
+-  2977 private _rebuild(recur: (ast: AST) => AST, checks: Checks | undefined, encodingChecks: Checks | undefined) {
++  3687 private _rebuild(
++  3688 recur: (ast: AST) => AST,
++  3689 checks: Checks | undefined,
++  3690 encodingChecks: Checks | undefined
++  3691 ): Union<AST> {
+
+@@ hunk 125 [code] pin 2981-2981 release 3695-3695 cited ranges 0
+   pin units: Union._rebuild=absent
+   release units: Union#2=code
+-  2981 new Union(types, this.mode, this.annotations, checks, undefined, this.context, encodingChecks)
++  3695 new Union(types, this.options, this.annotations, checks, undefined, this.context, encodingChecks)
+
+@@ hunk 126 [erased] pin 2984-2984 release 3698-3698 cited ranges 0
+   pin units: Union.recur=absent
+   release units: Union#2=code
+-  2984 recur(recur: (ast: AST) => AST) {
++  3698 recur(recur: (ast: AST) => AST): Union<AST> {
+
+@@ hunk 127 [erased] pin 2988-2988 release 3702-3702 cited ranges 0
+   pin units: Union.flip=absent
+   release units: Union#2=code
+-  2988 flip(recur: (ast: AST) => AST) {
++  3702 flip(recur: (ast: AST) => AST): Union<AST> {
+
+@@ hunk 128 [code] pin 3049-3050 release 3763-3773 cited ranges 0
+   pin units: parseUnion=code
+   release units: catchSingleUnionCandidate=absent; UnionParserState=absent
+-  3049 const parseUnion = iterateEager<{
+-  3050 readonly compile: (ast: AST) => SchemaParser.Parser
++  3763 function catchSingleUnionCandidate(
++  3764 ast: Union,
++  3765 result: Effect.Effect<unknown, SchemaIssue.Issue, unknown>,
++  3766 input: unknown,
++  3767 options: ParseOptions
++  3768 ) {
++  3769 return Effect.catchCause(result, (cause) => failSingleUnionCandidate(ast, cause, input, options))
++  3770 }
++  3772 type UnionParserState = {
++  3773 readonly parser: (i: number) => SchemaParser.Parser
+
+@@ hunk 129 [code] pin 3057-3060 release 3780-3819 cited ranges 0
+   pin units: parseUnion=code
+   release units: UnionParserState=absent; parseUnionCandidates=absent; resumeUnion=absent; parseUnion=code
+-  3057 }, AST>()({
+-  3058 onItem(s, ast) {
+-  3059 const parser = s.compile(ast)
+-  3060 return parser(s.input, s.options)
++  3780 }
++  3782 function parseUnionCandidates(
++  3783 ast: Union,
++  3784 parser: (i: number) => SchemaParser.Parser,
++  3785 candidates: ReadonlyArray<number>,
++  3786 input: unknown,
++  3787 options: ParseOptions
++  3788 ): Effect.Effect<unknown, SchemaIssue.Issue, any> {
++  3789 const state: UnionParserState = {
++  3790 ast,
++  3791 parser,
++  3792 input,
++  3793 out: undefined,
++  3794 successes: ast.options?.mode === "oneOf" ? [] : undefined,
++  3795 issues: undefined,
++  3796 options
++  3797 }
++  3798 const eff = parseUnion(state, candidates)
++  3799 if (!eff) {
++  3800 if (state.out) return state.out
++  3801 return Effect.fail(new SchemaIssue.AnyOf(ast, state.issues ?? [], input, options))
++  3802 }
++  3803 return resumeUnion(eff, state)
++  3804 }
++  3806 function resumeUnion(
++  3807 eff: Effect.Effect<void, SchemaIssue.Issue, any>,
++  3808 state: UnionParserState
++  3809 ): Effect.Effect<unknown, SchemaIssue.Issue, any> {
++  3810 return Effect.flatMapEager(eff, (_) => {
++  3811 if (state.out === InternalParser.sameExit) return Effect.succeed(state.input)
++  3812 if (state.out) return state.out
++  3813 return Effect.fail(new SchemaIssue.AnyOf(state.ast, state.issues ?? [], state.input, state.options))
++  3814 })
++  3815 }
++  3817 const parseUnion = iterateEager<UnionParserState, number>()({
++  3818 onItem(s, i) {
++  3819 return s.parser(i)(s.input, s.options)
+
+@@ hunk 130 [code] pin 3062-3062 release 3821-3821 cited ranges 0
+   pin units: parseUnion=code
+   release units: parseUnion=code
+-  3062 step(s, candidate, exit) {
++  3821 step(s, i, exit) {
+
+@@ hunk 131 [code] pin 3072-3072 release 3831-3831 cited ranges 0
+   pin units: parseUnion=code
+   release units: parseUnion=code
+-  3072 s.successes.push(candidate)
++  3831 s.successes.push(s.ast.types[i])
+
+@@ hunk 132 [code] pin 3077-3077 release 3836-3836 cited ranges 0
+   pin units: parseUnion=code
+   release units: parseUnion=code
+-  3077 s.successes.push(candidate)
++  3836 s.successes.push(s.ast.types[i])
+
+@@ hunk 133 [code] pin 3089-3089 release 3848-3848 cited ranges 1
+   pin units: nonFiniteLiterals=code
+   release units: nonFiniteLiterals=code
+-  3089 ], "anyOf")
++  3848 ])
+
+@@ hunk 134 [code] pin 3100-3105 release 3889-3900 cited ranges 0
+   pin units: memoizeThunk=absent
+   release units: Suspend=type-decl
+-  3100 export function memoizeThunk<A>(f: () => A): () => A {
+-  3101 let done = false
+-  3102 let a: A
+-  3103 return () => {
+-  3104 if (done) {
+-  3105 return a
++  3889 export interface Suspend extends ASTNode {
++  3890 readonly _tag: "Suspend"
++  3891 readonly thunk: () => AST
++  3894 getParser(compile: SchemaParser.Compiler): SchemaParser.Parser
++  3897 recur(recur: (ast: AST) => AST): Suspend
++  3900 getExpected(getExpected: (ast: AST) => string): string
+
+@@ hunk 135 [code] pin 3107-3144 release 3909-3915 cited ranges 0
+   pin units: memoizeThunk=absent; Suspend=code
+   release units: Suspend#2=code
+-  3107 a = f()
+-  3108 done = true
+-  3109 return a
+-  3110 }
+-  3111 }
+-  3144 export class Suspend extends Base {
++  3909 export const Suspend: new(
++  3910 thunk: () => AST,
++  3911 annotations?: Schema.Annotations.Annotations,
++  3912 checks?: Checks,
++  3913 encoding?: Encoding,
++  3914 context?: Context
++  3915 ) => Suspend = class extends ASTNodeImpl {
+
+@@ hunk 136 [code] pin 3159-3159 release 3930-3931 cited ranges 0
+   pin units: Suspend.constructor=absent
+   release units: Suspend#2=code
+-  3159 this.thunk = memoizeThunk(thunk)
++  3930 let ast: AST
++  3931 this.thunk = () => ast ??= thunk()
+
+@@ hunk 137 [code] pin 3207-3207 release 3979-4004 cited ranges 0
+   pin units: Filter=code
+   release units: Filter=type-decl; Filter#2=code
+-  3207 export class Filter<in E> extends Pipeable.Class {
++  3979 export interface Filter<in E> extends Pipeable.Pipeable {
++  3980 readonly _tag: "Filter"
++  3981 readonly run: (input: E, self: AST, options: ParseOptions) => SchemaIssue.Issue | undefined
++  3982 readonly annotations: Schema.Annotations.Filter | undefined
++  3986 readonly aborted: boolean
++  3987 annotate(annotations: Schema.Annotations.Filter): Filter<E>
++  3988 abort(): Filter<E>
++  3989 and(other: Check<E>, annotations?: Schema.Annotations.Filter): FilterGroup<E>
++  3990 }
++  3998 export const Filter: new<E>(
++  3999 run: (input: E, self: AST, options: ParseOptions) => SchemaIssue.Issue | undefined,
++  4000 annotations?: Schema.Annotations.Filter | undefined,
++  4003 aborted?: boolean
++  4004 ) => Filter<E> = class<in E> extends Pipeable.Class {
+
+@@ hunk 138 [code] pin 3255-3255 release 4052-4075 cited ranges 0
+   pin units: FilterGroup=code
+   release units: FilterGroup=type-decl; FilterGroup#2=code
+-  3255 export class FilterGroup<in E> extends Pipeable.Class {
++  4052 export interface FilterGroup<in E> extends Pipeable.Pipeable {
++  4053 readonly _tag: "FilterGroup"
++  4054 readonly checks: readonly [
++  4055 Check<E>,
++  4056 ...Array<Check<E>>
++  4057 ]
++  4058 readonly annotations: Schema.Annotations.Filter | undefined
++  4059 annotate(annotations: Schema.Annotations.Filter): FilterGroup<E>
++  4060 and(other: Check<E>, annotations?: Schema.Annotations.Filter): FilterGroup<E>
++  4061 }
++  4069 export const FilterGroup: new<E>(
++  4070 checks: readonly [
++  4071 Check<E>,
++  4072 ...Array<Check<E>>
++  4073 ],
++  4074 annotations?: Schema.Annotations.Filter | undefined
++  4075 ) => FilterGroup<E> = class<in E> extends Pipeable.Class {
+
+@@ hunk 139 [code] pin 3329-3333 release 4149-4150 cited ranges 0
+   pin units: isFinite=code
+   release units: isFinite=code
+-  3329 arbitrary: {
+-  3330 constraint: {
+-  3331 noInfinity: true,
+-  3332 noNaN: true
+-  3333 }
++  4149 arbitraryConstraint: {
++  4150 number: "finite"
+
+@@ hunk 140 [code] pin 3344-3344 release 4161-4161 cited ranges 1
+   pin units: numberToJson=code
+   release units: numberToJson=code
+-  3344 new Union([finite, nonFiniteLiterals], "anyOf"),
++  4161 new Union([finite, nonFiniteLiterals]),
+
+@@ hunk 141 [code] pin 3388-3389 release 4209-4210 cited ranges 0
+   pin units: isPattern=code
+   release units: isPattern=code
+-  3388 const source = regExp.source
+-  3389 const pattern = new globalThis.RegExp(source, regExp.flags)
++  4209 const copy = new globalThis.RegExp(regExp)
++  4210 const payload = { source: copy.source, flags: copy.flags }
+
+@@ hunk 142 [code] pin 3392-3393 release 4213-4214 cited ranges 0
+   pin units: isPattern=code
+   release units: isPattern=code
+-  3392 pattern.lastIndex = 0
+-  3393 return pattern.test(s)
++  4213 copy.lastIndex = 0
++  4214 return copy.test(s)
+
+@@ hunk 143 [code] pin 3396-3396 release 4217-4217 cited ranges 0
+   pin units: isPattern=code
+   release units: isPattern=code
+-  3396 expected: `a string matching the RegExp ${source}`,
++  4217 expected: `a string matching the RegExp ${payload.source}`,
+
+@@ hunk 144 [code] pin 3399-3399 release 4220-4220 cited ranges 0
+   pin units: isPattern=code
+   release units: isPattern=code
+-  3399 payload: { source, flags: regExp.flags }
++  4220 payload
+
+@@ hunk 145 [code] pin 3401-3405 release 4224-4226 cited ranges 0
+   pin units: isPattern=code
+   release units: isPattern=code
+-  3401 toJsonSchema: () => ({ pattern: source }),
+-  3402 arbitrary: {
+-  3403 constraint: {
+-  3404 patterns: [regExp.source]
+-  3405 }
++  4224 toJsonSchema: () => [{}, true],
++  4225 arbitraryConstraint: {
++  4226 patterns: [payload]
+
+@@ hunk 146 [code] pin 3412-3420 release 4235-4241 cited ranges 0
+   pin units: modifyOwnPropertyDescriptors=absent
+   release units: bodyOwners=absent; copy=absent
+-  3412 function modifyOwnPropertyDescriptors<A extends AST>(
+-  3413 ast: A,
+-  3414 f: (
+-  3415 d: { [P in keyof A]: TypedPropertyDescriptor<A[P]> }
+-  3416 ) => void
+-  3417 ): A {
+-  3418 const d = Object.getOwnPropertyDescriptors(ast)
+-  3419 f(d)
+-  3420 return Object.create(Object.getPrototypeOf(ast), d)
++  4235 const bodyOwners = new WeakMap<AST, AST>()
++  4237 function copy<A extends AST>(ast: A, changes: Partial<AST>): A {
++  4239 const out = Object.assign(Object.create(Object.getPrototypeOf(ast)), ast, changes) as A
++  4240 if (Reflect.ownKeys(changes).every((key) => key === "context" || key === "encoding")) {
++  4241 bodyOwners.set(out, getContextOwner(ast))
+
+@@ hunk 147 [code] pin 3423-3427 release 4243-4254 cited ranges 0
+   pin units: contextOwners=absent; getContextOwner=code
+   release units: copy=absent; getContextOwner=code
+-  3423 const contextOwners = new WeakMap<AST, AST>()
+-  3426 export function getContextOwner(ast: AST): AST {
+-  3427 return contextOwners.get(ast) ?? ast
++  4243 return out
++  4244 }
++  4247 export function getContextOwner<A extends AST>(ast: A): A {
++  4248 const existing = bodyOwners.get(ast)
++  4249 if (existing !== undefined) return existing as A
++  4250 if (ast.encoding === undefined) return ast
++  4252 const owner = Object.assign(Object.create(Object.getPrototypeOf(ast)), ast, { encoding: undefined }) as A
++  4253 bodyOwners.set(ast, owner)
++  4254 return owner
+
+@@ hunk 148 [code] pin 3432-3437 release 4259-4259 cited ranges 0
+   pin units: replaceEncoding=code
+   release units: replaceEncoding=code
+-  3432 if (ast.encoding === encoding) {
+-  3433 return ast
+-  3434 }
+-  3435 return modifyOwnPropertyDescriptors(ast, (d) => {
+-  3436 d.encoding.value = encoding
+-  3437 })
++  4259 return ast.encoding === encoding ? ast : copy(ast, { encoding })
+
+@@ hunk 149 [code] pin 3446-3447 release 4268-4269 cited ranges 0
+   pin units: replaceContext=code
+   release units: replaceContext=code
+-  3446 if (owner.context === context) {
+-  3447 return owner as A
++  4268 if (owner.context === context && owner.encoding === ast.encoding) {
++  4269 return owner
+
+@@ hunk 150 [code] pin 3449-3453 release 4271-4271 cited ranges 0
+   pin units: replaceContext=code
+   release units: replaceContext=code
+-  3449 const out = modifyOwnPropertyDescriptors(ast, (d) => {
+-  3450 d.context.value = context
+-  3451 })
+-  3452 contextOwners.set(out, owner)
+-  3453 return out
++  4271 return copy(ast, { context })
+
+@@ hunk 151 [code] pin 3467-3469 release 4285-4285 cited ranges 0
+   pin units: annotate=code
+   release units: annotate=code
+-  3467 return modifyOwnPropertyDescriptors(ast, (d) => {
+-  3468 d.annotations.value = { ...d.annotations.value, ...annotations }
+-  3469 })
++  4285 return copy(ast, { annotations: { ...ast.annotations, ...annotations } })
+
+@@ hunk 152 [code] pin 3480-3482 release 4296-4296 cited ranges 0
+   pin units: replaceChecks=code
+   release units: replaceChecks=code
+-  3480 return modifyOwnPropertyDescriptors(ast, (d) => {
+-  3481 d.checks.value = checks
+-  3482 })
++  4296 return copy(ast, { checks })
+
+@@ hunk 153 [code] pin 3564-3568 release before 4381 cited ranges 0
+   pin units: brand=absent
+   release units: 
+-  3564 export function brand(ast: AST, brand: string): AST {
+-  3565 const existing = InternalAnnotations.resolveBrands(ast)
+-  3566 const brands = existing ? [...existing, brand] : [brand]
+-  3567 return annotate(ast, { brands })
+-  3568 }
+
+@@ hunk 154 [code] pin 3577-3578 release 4384-4384 cited ranges 0
+   pin units: mapOrSame#3=code
+   release units: mapOrSame#3=code
+-  3577 let changed = false
+-  3578 const out: Array<A> = new Array(as.length)
++  4384 let out: Array<A> | undefined
+
+@@ hunk 155 [code] pin 3582-3583 release 4388-4393 cited ranges 0
+   pin units: mapOrSame#3=code
+   release units: mapOrSame#3=code
+-  3582 if (fa !== a) {
+-  3583 changed = true
++  4388 if (out) {
++  4389 out[i] = fa
++  4390 } else if (fa !== a) {
++  4391 out = new Array(as.length)
++  4392 for (let j = 0; j < i; j++) {
++  4393 out[j] = as[j]
+
+@@ hunk 156 [code] pin 3587-3587 release 4397-4398 cited ranges 0
+   pin units: mapOrSame#3=code
+   release units: mapOrSame#3=code
+-  3587 return changed ? out : as
++  4397 }
++  4398 return out ?? as
+
+@@ hunk 157 [code] pin 3617-3617 release 4428-4428 cited ranges 0
+   pin units: optional=code
+   release units: optional=code
+-  3617 optionalKey(new Union([ast, undefined_], "anyOf"))
++  4428 optionalKey(new Union([ast, undefined_]))
+
+@@ hunk 158 [code] pin 3637-3641 release before 4448 cited ranges 0
+   pin units: withConstructorDefault=code
+   release units: 
+-  3637 const transformation = new SchemaTransformation.Transformation(
+-  3638 SchemaGetter.withDefault(defaultValue),
+-  3639 SchemaGetter.passthrough()
+-  3640 )
+-  3641 const constructorDefault = new Link(unknown, transformation)
+
+@@ hunk 159 [code] pin 3643-3644 release 4449-4450 cited ranges 0
+   pin units: withConstructorDefault=code
+   release units: withConstructorDefault=code
+-  3643 new Context(ast.context.isOptional, ast.context.isMutable, constructorDefault, ast.context.annotations) :
+-  3644 new Context(false, false, constructorDefault)
++  4449 new Context(ast.context.isOptional, ast.context.isMutable, defaultValue, ast.context.annotations) :
++  4450 new Context(false, false, defaultValue)
+
+@@ hunk 160 [code] pin 3683-3683 release 4488-4488 cited ranges 0
+   pin units: parseParameter=code
+   release units: parseParameter=code
+-  3683 if (Predicate.isPropertyKey(ast.literal)) {
++  4488 if (Predicate.isPropertyKey(ast.literal) && !literals.includes(ast.literal)) {
+
+@@ hunk 161 [code] pin before 3688 release 4493-4493 cited ranges 0
+   pin units: 
+   release units: parseParameter=code
++  4493 if (!literals.includes(ast.symbol)) {
+
+@@ hunk 162 [code] pin before 3689 release 4495-4495 cited ranges 0
+   pin units: 
+   release units: parseParameter=code
++  4495 }
+
+@@ hunk 163 [code] pin 3779-3781 release 4561-4566 cited ranges 0
+   pin units: toType=code
+   release units: canPreserveEncodingChecks=absent
+-  3779 export const toType = memoizeIdempotent(<A extends AST>(ast: A): A => {
+-  3780 if (ast.encoding) {
+-  3781 return toType(replaceEncoding(ast, undefined))
++  4561 function canPreserveEncodingChecks(ast: AST): boolean {
++  4562 let preserve = true
++  4563 function visit(child: AST): AST {
++  4564 preserve = preserve && !child.encoding && !isSuspend(child)
++  4565 if (preserve && "recur" in child) child.recur(visit)
++  4566 return child
+
+@@ hunk 164 [code] pin 3783-3788 release 4568-4606 cited ranges 0
+   pin units: toType=code
+   release units: canPreserveEncodingChecks=absent; toType=code
+-  3783 const out: any = ast
+-  3784 const type = out.recur?.(toType) ?? out
+-  3785 const encodingChecks: Checks | undefined = type.encodingChecks
+-  3786 if (encodingChecks) {
+-  3787 const checks = type === ast
+-  3788 ? encodingChecks
++  4568 if ("recur" in ast) ast.recur(visit)
++  4569 return preserve
++  4570 }
++  4597 export const toType = memoizeIdempotent(<A extends AST>(ast: A): A => {
++  4598 const owner = getContextOwner(ast)
++  4599 if (owner !== ast) {
++  4600 const type = toType(owner)
++  4601 return type === owner && ast.encoding === undefined ? ast : replaceContext(type, ast.context)
++  4602 }
++  4603 const type = ("recur" in ast ? ast.recur(toType) : ast) as A
++  4604 if ("encodingChecks" in type && type.encodingChecks) {
++  4605 const checks = canPreserveEncodingChecks(ast)
++  4606 ? type.encodingChecks
+
+@@ hunk 165 [code] pin 3790-3790 release 4608-4608 cited ranges 0
+   pin units: toType=code
+   release units: toType=code
+-  3790 ? extractStructuralChecks(encodingChecks)
++  4608 ? extractStructuralChecks(type.encodingChecks)
+
+@@ hunk 166 [code] pin 3792-3794 release 4610-4612 cited ranges 0
+   pin units: toType=code
+   release units: toType=code
+-  3792 return modifyOwnPropertyDescriptors(type, (d) => {
+-  3793 d.encodingChecks.value = undefined
+-  3794 d.checks.value = combineChecks(type.checks, checks)
++  4610 return copy(type, {
++  4611 encodingChecks: undefined,
++  4612 checks: combineChecks(type.checks, checks)
+
+@@ hunk 167 [code] pin 3869-3870 release 4687-4692 cited ranges 0
+   pin units: flip=code
+   release units: flip=code
+-  3869 const out: any = ast
+-  3870 return out.flip?.(flip) ?? out.recur?.(flip) ?? out
++  4687 const owner = getContextOwner(ast)
++  4688 if (owner !== ast) {
++  4689 const flipped = flip(owner)
++  4690 return flipped === owner ? ast : replaceContext(flipped, ast.context)
++  4691 }
++  4692 return "flip" in ast ? ast.flip(flip) : "recur" in ast ? ast.recur(flip) : ast
+
+@@ hunk 168 [code] pin 3889-3889 release 4711-4711 cited ranges 0
+   pin units: fromConst=code
+   release units: fromConst=code
+-  3889 const succeed = InternalParser.succeed(value)
++  4711 const succeed = value === 0 ? InternalParser.sameExit : InternalParser.succeed(value)
+
+@@ hunk 169 [code] pin 3963-3970 release 4785-4785 cited ranges 0
+   pin units: enumsToLiterals=absent; parameterFromPropertyKey=code
+   release units: parameterFromPropertyKey=code
+-  3963 export const enumsToLiterals = memoize((ast: Enum): Union<Literal> => {
+-  3964 return new Union(
+-  3965 ast.enums.map((e) => new Literal(e[1], { title: e[0] })),
+-  3966 "anyOf"
+-  3967 )
+-  3968 })
+-  3970 const parameterFromPropertyKey = applyToSelfOrLastLinkEncodingIdempotent((ast) => {
++  4785 export const parameterFromPropertyKey = applyToSelfOrLastLinkEncodingIdempotent((ast) => {
+
+@@ hunk 170 [code] pin 4041-4041 release 4856-4856 cited ranges 0
+   pin units: numberToString=code
+   release units: numberToString=code
+-  4041 new Union([finiteString, nonFiniteLiterals], "anyOf"),
++  4856 new Union([finiteString, nonFiniteLiterals]),
+
+@@ hunk 171 [code] pin 4078-4078 release 4893-4893 cited ranges 0
+   pin units: REGEXP_PATTERN=code
+   release units: REGEXP_PATTERN=code
+-  4078 const REGEXP_PATTERN = "Symbol\\((.*)\\)"
++  4893 const REGEXP_PATTERN = "Symbol\\(([\\s\\S]*)\\)"
+
+@@ hunk 172 [code] pin 4092-4092 release 4907-4907 cited ranges 0
+   pin units: symbolToString=code
+   release units: symbolToString=code
+-  4092 SchemaGetter.transformOrFail((sym: symbol, options) => {
++  4907 SchemaGetter.transformEffect((sym: symbol, options) => {
+
+@@ hunk 173 [code] pin 4365-4366 release 5180-5180 cited ranges 1
+   pin units: Json=code
+   release units: Json=code
+-  4365 toCodecStringTree: () => unknownToStringTree,
+-  4366 toArbitrary: () => (fc: typeof FastCheck) => fc.jsonValue()
++  5180 toCodecStringTree: () => unknownToStringTree
+
+@@ hunk 174 [code] pin 4389-4389 release 5203-5203 cited ranges 0
+   pin units: objectKeywordToJson=code
+   release units: objectKeywordToJson=code
+-  4389 ], "anyOf"),
++  5203 ]),

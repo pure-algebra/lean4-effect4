@@ -1,0 +1,5 @@
+claim	concept	pointer_kind	pointer	why
+close-idempotent	scope-lifetime-finalization	witness	Effect4.Scope.close_idempotent	scope.close-state-first:behaviour
+close-twice	scope-lifetime-finalization	witness	Effect4.Scope.close_twice	scope.close-state-first:behaviour
+close-order-eq	scope-lifetime-finalization	witness	Effect4.Scope.closeOrder_eq	scope.close-lifo:host
+close-reentrant-add	scope-lifetime-finalization	witness	Effect4.Scope.close_reentrant_add	rule.scope-close-lifo-state-first:behaviour;scope.close-state-first:behaviour

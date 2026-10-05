@@ -1,0 +1,444 @@
+# unstable/httpapi/HttpApiBuilder.ts (rc.112) against http-api/HttpApiBuilder.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 15-15 release 16-17 cited ranges 0
+   pin units: import ../../Encoding.ts=absent
+   release units: import ../encoding/Base64.ts=absent; import ../encoding/Sse.ts=same
+-    15 import * as Encoding from "@tree/Encoding.ts"
++    16 import * as Base64 from "@tree/encoding/Base64.ts"
++    17 import * as Sse from "@tree/encoding/Sse.ts"
+
+@@ hunk 2 [erased] pin before 19 release 21-32 cited ranges 0
+   pin units: 
+   release units: import ../http/Cookies.ts=same; import ../http/Etag.ts=same; import ../http/HttpEffect.ts=same; import ../http/HttpMethod.ts=same; import ../http/HttpPlatform.ts=same; import ../http/HttpRouter.ts=same; import ../http/HttpServerRequest.ts=same; import ../http/HttpServerRequest.ts#2=same; import ../http/HttpServerResponse.ts=same; import ../http/HttpServerResponse.ts#2=same; import ../http/Multipart.ts=same; import ../http/UrlParams.ts=same
++    21 import type { Cookie } from "@tree/http/Cookies.ts"
++    22 import type * as Etag from "@tree/http/Etag.ts"
++    23 import * as HttpEffect from "@tree/http/HttpEffect.ts"
++    24 import * as HttpMethod from "@tree/http/HttpMethod.ts"
++    25 import type { HttpPlatform } from "@tree/http/HttpPlatform.ts"
++    26 import * as HttpRouter from "@tree/http/HttpRouter.ts"
++    27 import * as Request from "@tree/http/HttpServerRequest.ts"
++    28 import { HttpServerRequest } from "@tree/http/HttpServerRequest.ts"
++    29 import * as Response from "@tree/http/HttpServerResponse.ts"
++    30 import type { HttpServerResponse } from "@tree/http/HttpServerResponse.ts"
++    31 import * as Multipart from "@tree/http/Multipart.ts"
++    32 import * as UrlParams from "@tree/http/UrlParams.ts"
+
+@@ hunk 3 [erased] pin 34-47 release 48-48 cited ranges 0
+   pin units: import ../encoding/Sse.ts=same; import ../http/Cookies.ts=same; import ../http/Etag.ts=same; import ../http/HttpEffect.ts=same; import ../http/HttpMethod.ts=same; import ../http/HttpPlatform.ts=same; import ../http/HttpRouter.ts=same; import ../http/HttpServerRequest.ts=same; import ../http/HttpServerRequest.ts#2=same; import ../http/HttpServerResponse.ts=same; import ../http/HttpServerResponse.ts#2=same; import ../http/Multipart.ts=same; import ../http/UrlParams.ts=same; import ./HttpApi.ts=import
+   release units: import ./HttpApi.ts=import
+-    34 import * as Sse from "@tree/encoding/Sse.ts"
+-    35 import type { Cookie } from "@tree/http/Cookies.ts"
+-    36 import type * as Etag from "@tree/http/Etag.ts"
+-    37 import * as HttpEffect from "@tree/http/HttpEffect.ts"
+-    38 import * as HttpMethod from "@tree/http/HttpMethod.ts"
+-    39 import type { HttpPlatform } from "@tree/http/HttpPlatform.ts"
+-    40 import * as HttpRouter from "@tree/http/HttpRouter.ts"
+-    41 import * as Request from "@tree/http/HttpServerRequest.ts"
+-    42 import { HttpServerRequest } from "@tree/http/HttpServerRequest.ts"
+-    43 import * as Response from "@tree/http/HttpServerResponse.ts"
+-    44 import type { HttpServerResponse } from "@tree/http/HttpServerResponse.ts"
+-    45 import * as Multipart from "@tree/http/Multipart.ts"
+-    46 import * as UrlParams from "@tree/http/UrlParams.ts"
+-    47 import type * as HttpApi from "@tree/http-api/HttpApi.ts"
++    48 import * as HttpApi from "@tree/http-api/HttpApi.ts"
+
+@@ hunk 4 [code] pin before 55 release 56-56 cited ranges 0
+   pin units: 
+   release units: import ./internal/path.ts=absent
++    56 import * as HttpApiPath from "@tree/http-api/internal/path.ts"
+
+@@ hunk 5 [code] pin 88-88 release 91-91 cited ranges 0
+   pin units: layer=code
+   release units: layer=code
+-    88 key.startsWith("effect/httpapi/HttpApiGroup/")
++    91 key.startsWith("effect/http-api/HttpApiGroup/")
+
+@@ hunk 6 [code] pin 153-153 release 157-157 cited ranges 0
+   pin units: group=code
+   release units: group=code
+-   153 routes.push(handlerToRoute(group as any, item, services))
++   157 routes.push(handlerToRoute(api, group as any, item, services))
+
+@@ hunk 7 [code] pin 163-163 release 180-213 cited ranges 0
+   pin units: HandlersTypeId=code
+   release units: handler=absent; HandlersTypeId=code
+-   163 const HandlersTypeId = "~effect/httpapi/HttpApiBuilder/Handlers"
++   180 export const handler = <
++   181 ApiId extends string,
++   182 Groups extends HttpApiGroup.Constraint,
++   183 const GroupIdentifier extends HttpApiGroup.Identifier<Groups>,
++   184 const EndpointIdentifier extends HttpApiGroup.EndpointsWithIdentifier<Groups, GroupIdentifier>["identifier"],
++   185 R
++   186 >(
++   187 _api: HttpApi.HttpApi<ApiId, Groups>,
++   188 _groupIdentifier: GroupIdentifier,
++   189 _endpointIdentifier: EndpointIdentifier,
++   190 f: HttpApiEndpoint.HandlerWithIdentifier<
++   191 HttpApiGroup.EndpointsWithIdentifier<Groups, GroupIdentifier>,
++   192 EndpointIdentifier,
++   193 HttpApiEndpoint.MiddlewareError<
++   194 HttpApiEndpoint.WithIdentifier<
++   195 HttpApiGroup.EndpointsWithIdentifier<Groups, GroupIdentifier>,
++   196 EndpointIdentifier
++   197 >
++   198 >,
++   199 R
++   200 >
++   201 ): HttpApiEndpoint.HandlerWithIdentifier<
++   202 HttpApiGroup.EndpointsWithIdentifier<Groups, GroupIdentifier>,
++   203 EndpointIdentifier,
++   204 HttpApiEndpoint.MiddlewareError<
++   205 HttpApiEndpoint.WithIdentifier<
++   206 HttpApiGroup.EndpointsWithIdentifier<Groups, GroupIdentifier>,
++   207 EndpointIdentifier
++   208 >
++   209 >,
++   210 R
++   211 > => f
++   213 const HandlersTypeId = "~effect/http-api/HttpApiBuilder/Handlers"
+
+@@ hunk 8 [code] pin before 466 release 529-529 cited ranges 0
+   pin units: 
+   release units: endpoint=code
++   529 api,
+
+@@ hunk 9 [code] pin 525-525 release 590-590 cited ranges 0
+   pin units: securityDecode=code
+   release units: securityDecode=code
+-   525 const decoded = Result.getOrUndefined(Encoding.decodeBase64String(encoded))
++   590 const decoded = Result.getOrUndefined(Base64.decodeString(encoded))
+
+@@ hunk 10 [code] pin 678-678 release 744-745 cited ranges 0
+   pin units: buildPayloadDecoders=code
+   release units: buildPayloadDecoders=code
+-   678 payloadMap: HttpApiEndpoint.PayloadMap
++   744 payloadMap: HttpApiEndpoint.PayloadMap,
++   745 options: SchemaAST.ParseOptions | undefined
+
+@@ hunk 11 [code] pin 682-682 release 749-749 cited ranges 0
+   pin units: buildPayloadDecoders=code
+   release units: buildPayloadDecoders=code
+-   682 const decode = Schema.decodeUnknownEffect(Schema.Union(schemas))
++   749 const decode = Schema.decodeUnknownEffect(Schema.Union(schemas), options)
+
+@@ hunk 12 [code] pin before 757 release 824-824 cited ranges 0
+   pin units: 
+   release units: handlerToHttpEffect=code
++   824 api: Pick<HttpApi.Top, "annotations">,
+
+@@ hunk 13 [code] pin 763-766 release 831-839 cited ranges 0
+   pin units: handlerToHttpEffect=code
+   release units: handlerToHttpEffect=code
+-   763 const encodeSuccess = Schema.encodeUnknownEffect(makeSuccessSchema(endpoint))
+-   764 const encodeError = Schema.encodeUnknownEffect(makeErrorSchema(endpoint))
+-   765 const decodeParams = UndefinedOr.map(endpoint.params, Schema.decodeUnknownEffect)
+-   766 const decodeHeaders = UndefinedOr.map(endpoint.headers, Schema.decodeUnknownEffect)
++   831 const annotations = Context.merge(Context.merge(api.annotations, group.annotations), endpoint.annotations)
++   832 const options = HttpApi.getSlotParseOptions(annotations)
++   833 const encodeSuccess = Schema.encodeUnknownEffect(makeSuccessSchema(endpoint, options.headers), options.success)
++   834 const encodeError = Schema.encodeUnknownEffect(makeErrorSchema(endpoint, options.headers), options.error)
++   835 const decodeParams = UndefinedOr.map(endpoint.params, (schema) => Schema.decodeUnknownEffect(schema, options.params))
++   836 const decodeHeaders = UndefinedOr.map(
++   837 endpoint.headers,
++   838 (schema) => Schema.decodeUnknownEffect(schema, options.headers)
++   839 )
+
+@@ hunk 14 [code] pin 769-769 release 842-842 cited ranges 0
+   pin units: handlerToHttpEffect=code
+   release units: handlerToHttpEffect=code
+-   769 (schema) => Schema.decodeUnknownEffect(Schema.toCodecArrayFromSingle(schema))
++   842 (schema) => Schema.decodeUnknownEffect(Schema.toCodecArrayFromSingle(schema), options.query)
+
+@@ hunk 15 [code] pin 771-772 release 844-845 cited ranges 0
+   pin units: handlerToHttpEffect=code
+   release units: handlerToHttpEffect=code
+-   771 const encodeStream = makeStreamEncoder(endpoint)
+-   772 const encodeWithHeaders = makeWithHeadersEncoder(endpoint)
++   844 const encodeStream = makeStreamEncoder(endpoint, options.success)
++   845 const encodeWithHeaders = makeWithHeadersEncoder(endpoint, options.success, options.headers)
+
+@@ hunk 16 [code] pin 775-775 release 848-848 cited ranges 0
+   pin units: handlerToHttpEffect=code
+   release units: handlerToHttpEffect=code
+-   775 const payloadBy = shouldParsePayload ? buildPayloadDecoders(endpoint.payload) : undefined
++   848 const payloadBy = shouldParsePayload ? buildPayloadDecoders(endpoint.payload, options.payload) : undefined
+
+@@ hunk 17 [code] pin before 843 release 918-918 cited ranges 0
+   pin units: 
+   release units: handlerToRoute=code
++   918 api: Pick<HttpApi.Top, "annotations">,
+
+@@ hunk 18 [code] pin 850-851 release 926-927 cited ranges 0
+   pin units: handlerToRoute=code
+   release units: handlerToRoute=code
+-   850 endpoint.path as HttpRouter.PathInput,
+-   851 handlerToHttpEffect(group, endpoint, context, handler.handler, handler.isRaw),
++   926 HttpApiPath.toRouterPath(endpoint.path, endpoint.params) as HttpRouter.PathInput,
++   927 handlerToHttpEffect(api, group, endpoint, context, handler.handler, handler.isRaw),
+
+@@ hunk 19 [code] pin 926-926 release 1002-1002 cited ranges 0
+   pin units: HandlerErrorTypeId=code
+   release units: HandlerErrorTypeId=code
+-   926 const HandlerErrorTypeId = "~effect/httpapi/HttpApiBuilder/HandlerError" as const
++  1002 const HandlerErrorTypeId = "~effect/http-api/HttpApiBuilder/HandlerError" as const
+
+@@ hunk 20 [code] pin 949-949 release 1025-1029 cited ranges 0
+   pin units: makeWithHeadersEncoder=code
+   release units: makeWithHeadersEncoder=code
+-   949 function makeWithHeadersEncoder(endpoint: HttpApiEndpoint.Top): WithHeadersEncoders | undefined {
++  1025 function makeWithHeadersEncoder(
++  1026 endpoint: HttpApiEndpoint.Top,
++  1027 options: SchemaAST.ParseOptions | undefined,
++  1028 headersOptions: SchemaAST.ParseOptions | undefined
++  1029 ): WithHeadersEncoders | undefined {
+
+@@ hunk 21 [code] pin 954-954 release 1034-1037 cited ranges 0
+   pin units: makeWithHeadersEncoder=code
+   release units: makeWithHeadersEncoder=code
+-   954 encodeHeaders.set(HttpApiSchema.getStatusSuccessSchema(schema), Schema.encodeUnknownEffect(schema.headers))
++  1034 encodeHeaders.set(
++  1035 HttpApiSchema.getStatusSuccessSchema(schema),
++  1036 Schema.encodeUnknownEffect(schema.headers, headersOptions)
++  1037 )
+
+@@ hunk 22 [code] pin 956-956 release 1039-1039 cited ranges 0
+   pin units: makeWithHeadersEncoder=code
+   release units: makeWithHeadersEncoder=code
+-   956 bodySchemas.push(toResponseSuccessSchema(schema))
++  1039 bodySchemas.push(toResponseSuccessSchema(schema, headersOptions))
+
+@@ hunk 23 [code] pin 968-968 release 1051-1051 cited ranges 0
+   pin units: makeWithHeadersEncoder=code
+   release units: makeWithHeadersEncoder=code
+-   968 encodeBody: Schema.encodeUnknownEffect(bodySchema),
++  1051 encodeBody: Schema.encodeUnknownEffect(bodySchema, options),
+
+@@ hunk 24 [code] pin 973-975 release 1056-1061 cited ranges 0
+   pin units: makeStreamEncoder=code
+   release units: makeStreamEncoder=code
+-   973 function makeStreamEncoder(endpoint: HttpApiEndpoint.Top): StreamEncoder | undefined {
+-   974 const streamSchema = getStreamSuccessSchema(endpoint)
+-   975 if (streamSchema === undefined) {
++  1056 function makeStreamEncoder(
++  1057 endpoint: HttpApiEndpoint.Top,
++  1058 options: SchemaAST.ParseOptions | undefined
++  1059 ): StreamEncoder | undefined {
++  1060 const successSchema = getStreamSuccessSchema(endpoint)
++  1061 if (successSchema === undefined) {
+
+@@ hunk 25 [code] pin before 979 release 1065-1065 cited ranges 0
+   pin units: 
+   release units: makeStreamEncoder=code
++  1065 const streamSchema = successSchema.body
+
+@@ hunk 26 [code] pin 980-980 release 1067-1067 cited ranges 0
+   pin units: makeStreamEncoder=code
+   release units: makeStreamEncoder=code
+-   980 const status = HttpApiSchema.getStatusStream(streamSchema)
++  1067 const status = HttpApiSchema.getStatusSuccessSchema(successSchema.schema)
+
+@@ hunk 27 [code] pin 1001-1001 release 1088-1088 cited ranges 0
+   pin units: makeStreamEncoder=code
+   release units: makeStreamEncoder=code
+-  1001 const sseEncoder = makeSseEncoder(streamSchema)
++  1088 const sseEncoder = makeSseEncoder(streamSchema, options)
+
+@@ hunk 28 [code] pin 1024-1024 release 1111-1111 cited ranges 0
+   pin units: getStreamSuccessSchema=code
+   release units: getStreamSuccessSchema=code
+-  1024 return body
++  1111 return { schema, body }
+
+@@ hunk 29 [code] pin 1046-1046 release 1133-1134 cited ranges 0
+   pin units: makeSseEncoder=code
+   release units: makeSseEncoder=code
+-  1046 streamSchema: HttpApiSchema.StreamSse<Events, Error, unknown>
++  1133 streamSchema: HttpApiSchema.StreamSse<Events, Error, unknown>,
++  1134 options: SchemaAST.ParseOptions | undefined
+
+@@ hunk 30 [code] pin 1051-1052 release 1139-1140 cited ranges 0
+   pin units: makeSseEncoder=code
+   release units: makeSseEncoder=code
+-  1051 encodeEvents: Schema.encodeUnknownEffect(Schema.Array(streamSchema.events)) as any,
+-  1052 encodeCause: Schema.encodeUnknownEffect(Schema.fromJsonString(CauseSchema))
++  1139 encodeEvents: Schema.encodeUnknownEffect(Schema.Array(streamSchema.events), options) as any,
++  1140 encodeCause: Schema.encodeUnknownEffect(Schema.fromJsonString(CauseSchema), options)
+
+@@ hunk 31 [code] pin 1086-1086 release 1174-1174 cited ranges 0
+   pin units: reservedStreamFailureEvent=code
+   release units: reservedStreamFailureEvent=code
+-  1086 const reservedStreamFailureEvent = "effect/httpapi/stream/failure"
++  1174 const reservedStreamFailureEvent = "effect/http-api/stream/failure"
+
+@@ hunk 32 [code] pin 1101-1101 release 1189-1190 cited ranges 0
+   pin units: toResponseErrorSchema=code
+   release units: toResponseErrorSchema=code
+-  1101 schema: Schema.Constraint
++  1189 schema: Schema.Constraint,
++  1190 headersOptions: SchemaAST.ParseOptions | undefined
+
+@@ hunk 33 [code] pin 1103-1120 release 1192-1201 cited ranges 0
+   pin units: toResponseErrorSchema=code
+   release units: toResponseErrorSchema=code
+-  1103 if (!HttpApiSchema.isWithHeaders(schema)) return toResponseErrorSchemaPlain(schema)
+-  1105 const encodeBody = Schema.encodeUnknownEffect(schema.schema)
+-  1106 const encodeHeaders = Schema.encodeUnknownEffect(schema.headers)
+-  1107 const encodeResponse = getResponseEncode(
+-  1108 HttpApiSchema.getStatusErrorSchema(schema),
+-  1109 HttpApiSchema.getResponseEncodingSchema(schema),
+-  1110 HttpApiSchema.isNoContent(schema.schema.ast)
+-  1111 )
+-  1112 const transformation = withHeadersTransformation<HttpApiSchema.withHeaders<unknown, Schema.StringTree>>(
+-  1113 (body, options) =>
+-  1114 encodeBody(body, options).pipe(
+-  1115 Effect.mapError((error) => error.issue),
+-  1116 Effect.flatMap((body) => encodeResponse(body, options))
+-  1117 ),
+-  1118 encodeHeaders
+-  1119 )
+-  1120 return $HttpServerResponse.pipe(Schema.decodeTo(schema, transformation))
++  1192 if (!HttpApiSchema.isWithHeaders(schema)) return toResponseErrorSchemaPlain(schema, headersOptions)
++  1193 return toWithHeadersResponseSchema({
++  1194 schema,
++  1195 status: HttpApiSchema.getStatusErrorSchema(schema),
++  1196 encoding: HttpApiSchema.getResponseEncodingSchema(schema),
++  1197 body: schema.schema,
++  1198 headers: schema.headers,
++  1199 headersOptions,
++  1200 toPair: (value) => value as HttpApiSchema.withHeaders<unknown, unknown>
++  1201 })
+
+@@ hunk 34 [code] pin 1124-1124 release 1205-1206 cited ranges 0
+   pin units: makeSuccessSchema=code
+   release units: makeSuccessSchema=code
+-  1124 endpoint: HttpApiEndpoint.Top
++  1205 endpoint: HttpApiEndpoint.Top,
++  1206 headersOptions: SchemaAST.ParseOptions | undefined
+
+@@ hunk 35 [code] pin 1126-1126 release 1208-1210 cited ranges 0
+   pin units: makeSuccessSchema=code
+   release units: makeSuccessSchema=code
+-  1126 const schemas = HttpApiEndpoint.getSuccessSchemas(endpoint).map(toResponseSuccessSchema)
++  1208 const schemas = HttpApiEndpoint.getSuccessSchemas(endpoint).map((schema) =>
++  1209 toResponseSuccessSchema(schema, headersOptions)
++  1210 )
+
+@@ hunk 36 [code] pin 1131-1131 release 1215-1216 cited ranges 0
+   pin units: makeErrorSchema=code
+   release units: makeErrorSchema=code
+-  1131 endpoint: HttpApiEndpoint.Top
++  1215 endpoint: HttpApiEndpoint.Top,
++  1216 headersOptions: SchemaAST.ParseOptions | undefined
+
+@@ hunk 37 [code] pin 1133-1133 release 1218-1220 cited ranges 0
+   pin units: makeErrorSchema=code
+   release units: makeErrorSchema=code
+-  1133 const schemas = HttpApiEndpoint.getErrorSchemas(endpoint).map(toResponseErrorSchema)
++  1218 const schemas = HttpApiEndpoint.getErrorSchemas(endpoint).map((schema) =>
++  1219 toResponseErrorSchema(schema, headersOptions)
++  1220 )
+
+@@ hunk 38 [code] pin 1142-1142 release 1229-1245 cited ranges 0
+   pin units: toResponseSchema=code
+   release units: toResponseSchema=code
+-  1142 return (schema: Schema.Constraint): Schema.ConstraintEncoder<HttpServerResponse, unknown> => {
++  1229 return (
++  1230 schema: Schema.Constraint,
++  1231 headersOptions: SchemaAST.ParseOptions | undefined
++  1232 ): Schema.ConstraintEncoder<HttpServerResponse, unknown> => {
++  1233 const withHeaders = HttpApiSchema.getWithHeadersAnnotation(schema.ast)
++  1234 if (withHeaders !== undefined) {
++  1236 return toWithHeadersResponseSchema({
++  1237 schema: Schema.toType(schema),
++  1238 status: getStatus(withHeaders.body),
++  1239 encoding: HttpApiSchema.getResponseEncoding(withHeaders.body.ast),
++  1240 body: withHeaders.bodyCodec,
++  1241 headers: withHeaders.headersCodec,
++  1242 headersOptions,
++  1243 toPair: withHeaders.transformation.encode
++  1244 })
++  1245 }
+
+@@ hunk 39 [code] pin 1161-1169 release before 1264 cited ranges 0
+   pin units: getResponseTransformation=code
+   release units: 
+-  1161 const withHeaders = HttpApiSchema.getWithHeadersAnnotation(schema.ast)
+-  1162 if (withHeaders !== undefined) {
+-  1163 const encodeBody = getResponseEncode(
+-  1164 getStatus(withHeaders.body),
+-  1165 HttpApiSchema.getResponseEncoding(withHeaders.body.ast),
+-  1166 HttpApiSchema.isNoContent(withHeaders.body.ast)
+-  1167 )
+-  1168 return withHeadersTransformation(encodeBody, Schema.encodeUnknownEffect(withHeaders.headersCodec))
+-  1169 }
+
+@@ hunk 40 [code] pin 1178-1178 release 1271-1271 cited ranges 0
+   pin units: getResponseTransformation=code
+   release units: getResponseTransformation=code
+-  1178 return SchemaTransformation.transformOrFail({
++  1271 return SchemaTransformation.transformEffect({
+
+@@ hunk 41 [code] pin 1187-1197 release 1282-1299 cited ranges 0
+   pin units: withHeadersTransformation=absent
+   release units: toWithHeadersResponseSchema=absent
+-  1187 function withHeadersTransformation<T = unknown>(
+-  1188 encodeBody: (
+-  1189 body: unknown,
+-  1190 options?: SchemaAST.ParseOptions
+-  1191 ) => Effect.Effect<Response.HttpServerResponse, SchemaIssue.Issue, unknown>,
+-  1192 encodeHeaders: (
+-  1193 headers: unknown,
+-  1194 options?: SchemaAST.ParseOptions
+-  1195 ) => Effect.Effect<unknown, Schema.SchemaError, unknown>
+-  1196 ): SchemaTransformation.Transformation<T, Response.HttpServerResponse, never, unknown> {
+-  1197 return SchemaTransformation.transformOrFail<T, Response.HttpServerResponse, never, unknown>({
++  1282 function toWithHeadersResponseSchema(options: {
++  1283 readonly schema: Schema.Top
++  1284 readonly status: number
++  1285 readonly encoding: HttpApiSchema.ResponseEncoding
++  1286 readonly body: Schema.Top
++  1287 readonly headers: Schema.Top
++  1288 readonly headersOptions: SchemaAST.ParseOptions | undefined
++  1289 readonly toPair: (value: unknown) => { readonly body: unknown; readonly headers: unknown }
++  1290 }): Schema.ConstraintEncoder<HttpServerResponse, unknown> {
++  1291 const encodeBody = Schema.encodeUnknownEffect(options.body)
++  1292 const encodeHeaders = Schema.encodeUnknownEffect(options.headers, options.headersOptions)
++  1293 const encodeResponse = getResponseEncode(
++  1294 options.status,
++  1295 options.encoding,
++  1296 HttpApiSchema.isNoContent(options.body.ast)
++  1297 )
++  1298 const toIssue = (error: Schema.SchemaError) => error.issue
++  1299 const transformation = SchemaTransformation.transformEffect<unknown, Response.HttpServerResponse, never, unknown>({
+
+@@ hunk 42 [code] pin 1202-1204 release 1304-1309 cited ranges 0
+   pin units: withHeadersTransformation=absent
+   release units: toWithHeadersResponseSchema=absent
+-  1202 encode: (value, options) => {
+-  1203 const pair = value as { readonly body: unknown; readonly headers: unknown }
+-  1204 return Effect.flatMap(encodeBody(pair.body, options), (response) =>
++  1304 encode: (value, parseOptions) => {
++  1305 const pair = options.toPair(value)
++  1306 return encodeBody(pair.body, parseOptions).pipe(
++  1307 Effect.mapError(toIssue),
++  1308 Effect.flatMap((body) => encodeResponse(body, parseOptions)),
++  1309 Effect.flatMap((response) =>
+
+@@ hunk 43 [code] pin 1206-1206 release 1311-1311 cited ranges 0
+   pin units: withHeadersTransformation=absent
+   release units: toWithHeadersResponseSchema=absent
+-  1206 encodeHeaders(pair.headers, options).pipe(Effect.mapError((error) => error.issue)),
++  1311 Effect.mapError(encodeHeaders(pair.headers), toIssue),
+
+@@ hunk 44 [code] pin 1208-1208 release 1313-1315 cited ranges 0
+   pin units: withHeadersTransformation=absent
+   release units: toWithHeadersResponseSchema=absent
+-  1208 ))
++  1313 )
++  1314 )
++  1315 )
+
+@@ hunk 45 [code] pin before 1211 release 1318-1318 cited ranges 0
+   pin units: 
+   release units: toWithHeadersResponseSchema=absent
++  1318 return $HttpServerResponse.pipe(Schema.decodeTo(options.schema, transformation))

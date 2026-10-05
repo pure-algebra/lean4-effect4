@@ -1,0 +1,566 @@
+# Config.ts (rc.112) against Config.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin 118-134 release 115-115 cited ranges 5
+   pin units: Resolved=absent; Absent=absent; Resolution=type-decl; EvaluationFailure=absent
+   release units: Resolution=type-decl
+-   118 interface Resolved<out T> {
+-   119 readonly _tag: "Resolved"
+-   120 readonly value: T
+-   121 readonly hasInput: boolean
+-   122 }
+-   124 interface Absent {
+-   125 readonly _tag: "Absent"
+-   126 readonly error: ConfigError
+-   127 }
+-   129 type Resolution<T> = Resolved<T> | Absent
+-   131 interface EvaluationFailure {
+-   132 readonly error: ConfigError
+-   133 readonly hasInput: boolean
+-   134 }
++   115 type Resolution<T> = Result.Result<T, ConfigError>
+
+@@ hunk 2 [erased] pin 139-139 release 120-120 cited ranges 1
+   pin units: Evaluator=type-decl
+   release units: Evaluator=type-decl
+-   139 ) => Effect.Effect<Resolution<T>, EvaluationFailure>
++   120 ) => Effect.Effect<Resolution<T>, ConfigError>
+
+@@ hunk 3 [code] pin 166-171 release 147-147 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   166 evaluator(provider, []).pipe(
+-   167 Effect.mapErrorEager((failure) => failure.error),
+-   168 Effect.flatMapEager((resolution) =>
+-   169 resolution._tag === "Resolved" ? Effect.succeed(resolution.value) : Effect.fail(resolution.error)
+-   170 )
+-   171 )
++   147 Effect.flatMapEager(evaluator(provider, []), Effect.fromResult)
+
+@@ hunk 4 [code] pin 179-224 release 155-155 cited ranges 3
+   pin units: evaluateAt=erased; resolved=absent; absent=absent; evaluationFailure=absent; isSourceError=same; catchSourceError=absent; preserveInputEvidence=absent
+   release units: evaluateAt=erased
+-   179 ): Effect.Effect<Resolution<T>, EvaluationFailure> => (self as ConfigImpl<T>).evaluator(provider, pathPrefix)
+-   181 const resolved = <T>(value: T, hasInput: boolean): Resolution<T> => ({
+-   182 _tag: "Resolved",
+-   183 value,
+-   184 hasInput
+-   185 })
+-   187 const absent = (error: ConfigError): Absent => ({
+-   188 _tag: "Absent",
+-   189 error
+-   190 })
+-   192 const evaluationFailure = (error: ConfigError, hasInput: boolean): EvaluationFailure => ({
+-   193 error,
+-   194 hasInput
+-   195 })
+-   197 const isSourceError = (u: unknown): u is ConfigProvider.SourceError => Predicate.isTagged(u, "SourceError")
+-   199 const catchSourceError = <A, E, R>(
+-   200 self: Effect.Effect<A, E, R>,
+-   201 hasInput: boolean
+-   202 ): Effect.Effect<A, E | EvaluationFailure, R> =>
+-   203 self.pipe(
+-   204 Effect.catchDefect((defect) =>
+-   205 isSourceError(defect)
+-   206 ? Effect.fail(evaluationFailure(new ConfigError(defect), hasInput))
+-   207 : Effect.die(defect)
+-   208 )
+-   209 )
+-   211 const preserveInputEvidence = <T>(
+-   212 self: Effect.Effect<Resolution<T>, EvaluationFailure>,
+-   213 hasInput: boolean
+-   214 ): Effect.Effect<Resolution<T>, EvaluationFailure> => {
+-   215 if (!hasInput) return self
+-   216 return self.pipe(
+-   217 Effect.mapErrorEager((failure) => evaluationFailure(failure.error, true)),
+-   218 Effect.flatMapEager((resolution) =>
+-   219 resolution._tag === "Resolved"
+-   220 ? Effect.succeed(resolved(resolution.value, true))
+-   221 : Effect.fail(evaluationFailure(resolution.error, true))
+-   222 )
+-   223 )
+-   224 }
++   155 ): Effect.Effect<Resolution<T>, ConfigError> => (self as ConfigImpl<T>).evaluator(provider, pathPrefix)
+
+@@ hunk 5 [code] pin before 308 release 239-425 cited ranges 0
+   pin units: 
+   release units: map=code; flatMap=absent
++   239 return make((provider, pathPrefix) => Effect.map(evaluateAt(self, provider, pathPrefix), Result.map(f)))
++   240 })
++   302 export const flatMap: {
++   363 <A, B>(f: (a: A) => Config<B>): (self: Config<A>) => Config<B>
++   424 <A, B>(self: Config<A>, f: (a: A) => Config<B>): Config<B>
++   425 } = dual(2, <A, B>(self: Config<A>, f: (a: A) => Config<B>): Config<B> => {
+
+@@ hunk 6 [code] pin 309-312 release 427-433 cited ranges 0
+   pin units: map=code
+   release units: flatMap=absent
+-   309 Effect.map(evaluateAt(self, provider, pathPrefix), (resolution) =>
+-   310 resolution._tag === "Resolved"
+-   311 ? resolved(f(resolution.value), resolution.hasInput)
+-   312 : resolution)
++   427 Effect.flatMap(
++   428 evaluateAt(self, provider, pathPrefix),
++   429 Result.match({
++   430 onSuccess: (success) => evaluateAt(f(success), provider, pathPrefix),
++   431 onFailure: (error) => Effect.succeed(Result.fail(error))
++   432 })
++   433 )
+
+@@ hunk 7 [code] pin 341-341 release 462-462 cited ranges 0
+   pin units: mapOrFail=absent
+   release units: mapEffect=absent
+-   341 export const mapOrFail: {
++   462 export const mapEffect: {
+
+@@ hunk 8 [code] pin 396-400 release 517-522 cited ranges 0
+   pin units: mapOrFail=absent
+   release units: mapEffect=absent
+-   396 Effect.flatMap(evaluateAt(self, provider, pathPrefix), (resolution) =>
+-   397 resolution._tag === "Resolved"
+-   398 ? f(resolution.value).pipe(
+-   399 Effect.mapEager((value) => resolved(value, resolution.hasInput)),
+-   400 Effect.mapErrorEager((error) => evaluationFailure(error, resolution.hasInput))
++   517 Effect.flatMap(
++   518 evaluateAt(self, provider, pathPrefix),
++   519 (resolution): Effect.Effect<Resolution<B>, ConfigError> =>
++   520 Result.isSuccess(resolution)
++   521 ? Effect.mapEager(f(resolution.success), Result.succeed)
++   522 : Effect.succeed(Result.fail(resolution.failure))
+
+@@ hunk 9 [code] pin 402-402 release before 524 cited ranges 0
+   pin units: mapOrFail=absent
+   release units: 
+-   402 : Effect.succeed(resolution))
+
+@@ hunk 10 [code] pin 564-571 release 697-700 cited ranges 3
+   pin units: orElse=code
+   release units: orElse=code
+-   564 onFailure: (failure) =>
+-   565 preserveInputEvidence(
+-   566 evaluateAt(that(failure.error), provider, pathPrefix),
+-   567 failure.hasInput
+-   568 ),
+-   569 onSuccess: (resolution): Effect.Effect<Resolution<A | A2>, EvaluationFailure> =>
+-   570 resolution._tag === "Absent"
+-   571 ? evaluateAt(that(resolution.error), provider, pathPrefix)
++   697 onFailure: (error) => evaluateAt(that(error), provider, pathPrefix),
++   698 onSuccess: (resolution): Effect.Effect<Resolution<A | A2>, ConfigError> =>
++   699 Result.isFailure(resolution)
++   700 ? evaluateAt(that(resolution.failure), provider, pathPrefix)
+
+@@ hunk 11 [code] pin 628-628 release 760-760 cited ranges 0
+   pin units: all=code
+   release units: all=code
+-   628 const configs: Array<Config<any>> | Record<string, Config<any>> = Array.isArray(arg)
++   760 const configs: Array<Config<any>> | Record<string, Config<any>> = globalThis.Array.isArray(arg)
+
+@@ hunk 12 [code] pin 633-637 release 765-773 cited ranges 0
+   pin units: all=code
+   release units: all=code
+-   633 if (Array.isArray(configs)) {
+-   634 return make((provider, pathPrefix) =>
+-   635 Effect.flatMapEager(
+-   636 Effect.all(configs.map((config) => Effect.result(evaluateAt(config, provider, pathPrefix)))),
+-   637 resolveArray
++   765 return make<any>((provider, pathPrefix) =>
++   766 globalThis.Array.isArray(configs)
++   767 ? Effect.mapEager(
++   768 Effect.all(configs.map((config) => evaluateAt(config, provider, pathPrefix))),
++   769 Result.all
++   770 )
++   771 : Effect.mapEager(
++   772 Effect.all(Rec.map(configs, (config) => evaluateAt(config, provider, pathPrefix))),
++   773 Result.all
+
+@@ hunk 13 [code] pin 640-708 release before 776 cited ranges 2
+   pin units: all=code; resolveArray=absent; resolveRecord=absent
+   release units: 
+-   640 } else {
+-   641 return make((provider, pathPrefix) =>
+-   642 Effect.flatMapEager(
+-   643 Effect.all(Rec.map(configs, (config) => Effect.result(evaluateAt(config, provider, pathPrefix)))),
+-   644 resolveRecord
+-   645 )
+-   646 ) as any
+-   647 }
+-   648 }
+-   650 const resolveArray = (
+-   651 results: ReadonlyArray<Result.Result<Resolution<any>, EvaluationFailure>>
+-   652 ): Effect.Effect<Resolution<Array<any>>, EvaluationFailure> => {
+-   653 const values: Array<any> = []
+-   654 let firstFailure: EvaluationFailure | undefined
+-   655 let firstAbsent: Absent | undefined
+-   656 let hasInput = false
+-   657 for (const result of results) {
+-   658 if (Result.isFailure(result)) {
+-   659 firstFailure ??= result.failure
+-   660 hasInput = hasInput || result.failure.hasInput
+-   661 continue
+-   662 }
+-   663 const resolution = result.success
+-   664 if (resolution._tag === "Absent") {
+-   665 firstAbsent ??= resolution
+-   666 } else {
+-   667 values.push(resolution.value)
+-   668 hasInput = hasInput || resolution.hasInput
+-   669 }
+-   670 }
+-   671 if (firstFailure !== undefined) {
+-   672 return Effect.fail(evaluationFailure(firstFailure.error, hasInput))
+-   673 }
+-   674 if (firstAbsent !== undefined) {
+-   675 return hasInput ? Effect.fail(evaluationFailure(firstAbsent.error, true)) : Effect.succeed(firstAbsent)
+-   676 }
+-   677 return Effect.succeed(resolved(values, hasInput))
+-   678 }
+-   680 const resolveRecord = (
+-   681 results: Record<string, Result.Result<Resolution<any>, EvaluationFailure>>
+-   682 ): Effect.Effect<Resolution<Record<string, any>>, EvaluationFailure> => {
+-   683 const values: Record<string, any> = {}
+-   684 let firstFailure: EvaluationFailure | undefined
+-   685 let firstAbsent: Absent | undefined
+-   686 let hasInput = false
+-   687 for (const key in results) {
+-   688 const result = results[key]
+-   689 if (Result.isFailure(result)) {
+-   690 firstFailure ??= result.failure
+-   691 hasInput = hasInput || result.failure.hasInput
+-   692 continue
+-   693 }
+-   694 const resolution = result.success
+-   695 if (resolution._tag === "Absent") {
+-   696 firstAbsent ??= resolution
+-   697 } else {
+-   698 InternalRecord.assignProperty(values, key, resolution.value)
+-   699 hasInput = hasInput || resolution.hasInput
+-   700 }
+-   701 }
+-   702 if (firstFailure !== undefined) {
+-   703 return Effect.fail(evaluationFailure(firstFailure.error, hasInput))
+-   704 }
+-   705 if (firstAbsent !== undefined) {
+-   706 return hasInput ? Effect.fail(evaluationFailure(firstAbsent.error, true)) : Effect.succeed(firstAbsent)
+-   707 }
+-   708 return Effect.succeed(resolved(values, hasInput))
+
+@@ hunk 14 [code] pin 850-850 release 925-925 cited ranges 2
+   pin units: withDefault=code
+   release units: withDefault=code
+-   850 (resolution) => resolution._tag === "Absent" ? resolved(defaultValue, false) : resolution
++   925 (resolution) => Result.isFailure(resolution) ? Result.succeed(defaultValue) : resolution
+
+@@ hunk 15 [erased] pin before 985 release 1061-1061 cited ranges 0
+   pin units: 
+   release units: isSourceError=same
++  1061 const isSourceError = (u: unknown): u is ConfigProvider.SourceError => Predicate.isTagged(u, "SourceError")
+
+@@ hunk 16 [code] pin 999-999 release before 1077 cited ranges 0
+   pin units: getScalar=absent
+   release units: 
+-   999 const getScalar = (node: ConfigProvider.Node | undefined): string | undefined => node?.value
+
+@@ hunk 17 [code] pin 1009-1009 release 1085-1085 cited ranges 0
+   pin units: decodeFromCursor=code
+   release units: decodeFromCursor=code
+-  1009 SchemaGetter.transformOrFail((input: unknown) => decode(input as ConfigCursor)),
++  1085 SchemaGetter.transformEffect((input: unknown) => decode(input as ConfigCursor)),
+
+@@ hunk 18 [code] pin 1041-1041 release 1117-1117 cited ranges 1
+   pin units: hasProviderInput=code
+   release units: hasProviderInput=code
+-  1041 return getScalar(node) !== undefined
++  1117 return node?.value !== undefined
+
+@@ hunk 19 [code] pin 1092-1094 release 1168-1169 cited ranges 0
+   pin units: toConfigCursorAST=code
+   release units: toConfigCursorAST=code
+-  1092 return isScalarInput(ast)
+-  1093 ? decodeFromCursor(ast, (cursor) => Effect.succeed(getScalar(cursor.node)))
+-  1094 : ast.recur(recur)
++  1168 if (!isScalarInput(ast)) return ast.recur(recur)
++  1169 break
+
+@@ hunk 20 [code] pin 1104-1105 release before 1179 cited ranges 0
+   pin units: toConfigCursorAST=code
+   release units: 
+-  1104 default:
+-  1105 return decodeFromCursor(ast, (cursor) => Effect.succeed(getScalar(cursor.node)))
+
+@@ hunk 21 [code] pin before 1107 release 1180-1180 cited ranges 0
+   pin units: 
+   release units: toConfigCursorAST=code
++  1180 return decodeFromCursor(ast, (cursor) => Effect.succeed(cursor.node?.value))
+
+@@ hunk 22 [code] pin 1201-1204 release 1275-1276 cited ranges 1
+   pin units: schema=code
+   release units: schema=code
+-  1201 return catchSourceError(loadCursor(provider, fullPath), false).pipe(
+-  1202 Effect.flatMapEager((cursor) => {
+-  1203 const hasInput = hasProviderInput(encodedAst, cursor.node)
+-  1204 return catchSourceError(
++  1275 return loadCursor(provider, fullPath).pipe(
++  1276 Effect.flatMapEager((cursor) =>
+
+@@ hunk 23 [code] pin 1206-1206 release 1278-1278 cited ranges 1
+   pin units: schema=code
+   release units: schema=code
+-  1206 Effect.mapEager((value) => resolved(value, hasInput)),
++  1278 Effect.mapEager(Result.succeed),
+
+@@ hunk 24 [code] pin 1211-1213 release 1283-1285 cited ranges 3
+   pin units: schema=code
+   release units: schema=code
+-  1211 return hasInput
+-  1212 ? Effect.fail(evaluationFailure(error, true))
+-  1213 : Effect.succeed(absent(error))
++  1283 return hasProviderInput(encodedAst, cursor.node)
++  1284 ? Effect.fail(error)
++  1285 : Effect.succeed(Result.fail(error))
+
+@@ hunk 25 [code] pin 1215-1216 release before 1287 cited ranges 1
+   pin units: schema=code
+   release units: 
+-  1215 ),
+-  1216 hasInput
+
+@@ hunk 26 [code] pin 1218-1218 release 1288-1289 cited ranges 1
+   pin units: schema=code
+   release units: schema=code
+-  1218 })
++  1288 ),
++  1289 Effect.catchDefect((defect) => isSourceError(defect) ? Effect.fail(new ConfigError(defect)) : Effect.die(defect))
+
+@@ hunk 27 [code] pin 1224-1333 release 1294-1302 cited ranges 3
+   pin units: TrueValues=absent; FalseValues=absent; Boolean=code; Port=code; LogLevel=code; Record=code
+   release units: PortSchema=absent; LogLevelSchema=absent; ArrayOptions=absent; RecordOptions=absent
+-  1224 export const TrueValues = Schema.Literals(["true", "yes", "on", "1", "y"])
+-  1227 export const FalseValues = Schema.Literals(["false", "no", "off", "0", "n"])
+-  1247 export const Boolean = Schema.Literals([...TrueValues.literals, ...FalseValues.literals]).pipe(
+-  1248 Schema.decodeTo(
+-  1249 Schema.Boolean,
+-  1250 SchemaTransformation.transform({
+-  1251 decode: (value) => value === "true" || value === "yes" || value === "on" || value === "1" || value === "y",
+-  1252 encode: (value) => value ? "true" : "false"
+-  1253 })
+-  1254 )
+-  1255 )
+-  1270 export const Port = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))
+-  1290 export const LogLevel = Schema.Literals(LogLevel_.values)
+-  1333 export const Record = <K extends Schema.Record.Key, V extends Schema.Constraint>(key: K, value: V, options?: {
++  1294 const PortSchema = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))
++  1296 const LogLevelSchema = Schema.Literals(LogLevel_.values)
++  1298 interface ArrayOptions {
++  1299 readonly separator?: string | undefined
++  1300 }
++  1302 interface RecordOptions {
+
+@@ hunk 28 [code] pin 1336-1348 release before 1305 cited ranges 0
+   pin units: Record=code
+   release units: 
+-  1336 }) => {
+-  1337 const record = Schema.Record(key, value)
+-  1338 const split = SchemaTransformation.splitKeyValue(options)
+-  1339 const recordString = Schema.String.pipe(
+-  1340 Schema.decodeTo(Schema.toCodecStringTree(record), {
+-  1341 decode: split.decode,
+-  1342 encode: SchemaGetter.passthrough<Record<string, string>, Schema.StringTree>({ strict: false }).compose(
+-  1343 split.encode
+-  1344 )
+-  1345 })
+-  1346 )
+-  1348 return Schema.Union([record, recordString])
+
+@@ hunk 29 [code] pin 1351-1353 release 1307-1576 cited ranges 0
+   pin units: ArrayConfig=absent
+   release units: isPath=absent; fail=code; succeed=code; String=absent; NonEmptyString=absent; Number=absent; Finite=absent; Int=absent; Literal=absent; Literals=absent; Array=absent; Array#2=absent; Array#3=absent
+-  1351 const ArrayConfig = <V extends Schema.Constraint>(value: V, options?: {
+-  1352 readonly separator?: string | undefined
+-  1353 }) => {
++  1307 const isPath = (u: unknown): u is string | Path => Predicate.isString(u) || globalThis.Array.isArray(u)
++  1324 export function fail(err: SourceError | Schema.SchemaError): Config<never> {
++  1325 return make(() => Effect.fail(new ConfigError(err)))
++  1326 }
++  1352 export function succeed<T>(value: T) {
++  1353 return make(() => Effect.succeed(Result.succeed(value)))
++  1354 }
++  1384 export function String(name?: string) {
++  1385 return schema(Schema.String, name)
++  1386 }
++  1405 export function NonEmptyString(name?: string) {
++  1406 return schema(Schema.NonEmptyString, name)
++  1407 }
++  1427 export function Number(name?: string) {
++  1428 return schema(Schema.Number, name)
++  1429 }
++  1448 export function Finite(name?: string) {
++  1449 return schema(Schema.Finite, name)
++  1450 }
++  1469 export function Int(name?: string) {
++  1470 return schema(Schema.Int, name)
++  1471 }
++  1498 export function Literal<L extends SchemaAST.LiteralValue>(literal: L, name?: string) {
++  1499 return schema(Schema.Literal(literal), name)
++  1500 }
++  1528 export function Literals<const L extends ReadonlyArray<SchemaAST.LiteralValue>>(literals: L, name?: string) {
++  1529 return schema(Schema.Literals(literals), name)
++  1530 }
++  1561 export function Array<V extends Schema.ConstraintCodec<unknown, unknown>>(
++  1562 value: V,
++  1563 options?: ArrayOptions
++  1564 ): Config<ReadonlyArray<V["Type"]>>
++  1565 export function Array<V extends Schema.ConstraintCodec<unknown, unknown>>(
++  1566 value: V,
++  1567 path: string | Path,
++  1568 options?: ArrayOptions
++  1569 ): Config<ReadonlyArray<V["Type"]>>
++  1570 export function Array<V extends Schema.ConstraintCodec<unknown, unknown>>(
++  1571 value: V,
++  1572 pathOrOptions?: string | Path | ArrayOptions,
++  1573 options?: ArrayOptions
++  1574 ) {
++  1575 const hasPath = isPath(pathOrOptions)
++  1576 const resolvedOptions = hasPath ? options : pathOrOptions
+
+@@ hunk 30 [code] pin 1355-1355 release 1578-1578 cited ranges 0
+   pin units: ArrayConfig=absent
+   release units: Array#3=absent
+-  1355 const separator = options?.separator ?? ","
++  1578 const separator = resolvedOptions?.separator ?? ","
+
+@@ hunk 31 [code] pin 1358-1359 release 1581-1583 cited ranges 0
+   pin units: ArrayConfig=absent
+   release units: Array#3=absent
+-  1358 decode: SchemaGetter.split(options),
+-  1359 encode: SchemaGetter.passthrough<ReadonlyArray<string>, Schema.StringTree>({ strict: false }).compose(
++  1581 decode: SchemaGetter.split(resolvedOptions),
++  1582 encode: SchemaGetter.compose(
++  1583 SchemaGetter.passthrough<ReadonlyArray<string>, Schema.StringTree>({ strict: false }),
+
+@@ hunk 32 [code] pin 1365-1365 release 1588-1588 cited ranges 0
+   pin units: ArrayConfig=absent
+   release units: Array#3=absent
+-  1365 return Schema.Union([arrayString, array])
++  1588 return schema(Schema.Union([arrayString, array]), hasPath ? pathOrOptions : undefined)
+
+@@ hunk 33 [code] pin 1368-1387 release 1628-1666 cited ranges 0
+   pin units: export {Array}=absent
+   release units: Record=code; Record#2=code; Record#3=code
+-  1368 export {
+-  1387 ArrayConfig as Array
++  1628 export function Record<
++  1629 K extends Schema.Record.Key & Schema.ConstraintCodec<unknown, unknown>,
++  1630 V extends Schema.ConstraintCodec<unknown, unknown>
++  1631 >(
++  1632 key: K,
++  1633 value: V,
++  1634 options?: RecordOptions
++  1635 ): Config<Schema.Record.Type<K, V>>
++  1636 export function Record<
++  1637 K extends Schema.Record.Key & Schema.ConstraintCodec<unknown, unknown>,
++  1638 V extends Schema.ConstraintCodec<unknown, unknown>
++  1639 >(
++  1640 key: K,
++  1641 value: V,
++  1642 path: string | Path,
++  1643 options?: RecordOptions
++  1644 ): Config<Schema.Record.Type<K, V>>
++  1645 export function Record<
++  1646 K extends Schema.Record.Key & Schema.ConstraintCodec<unknown, unknown>,
++  1647 V extends Schema.ConstraintCodec<unknown, unknown>
++  1648 >(
++  1649 key: K,
++  1650 value: V,
++  1651 pathOrOptions?: string | Path | RecordOptions,
++  1652 options?: RecordOptions
++  1653 ) {
++  1654 const hasPath = isPath(pathOrOptions)
++  1655 const record = Schema.Record(key, value)
++  1656 const split = SchemaTransformation.splitKeyValue(hasPath ? options : pathOrOptions)
++  1657 const recordString = Schema.String.pipe(
++  1658 Schema.decodeTo(Schema.toCodecStringTree(record), {
++  1659 decode: split.decode,
++  1660 encode: SchemaGetter.compose(
++  1661 SchemaGetter.passthrough<Record<string, string>, Schema.StringTree>({ strict: false }),
++  1662 split.encode
++  1663 )
++  1664 })
++  1665 )
++  1666 return schema(Schema.Union([record, recordString]), hasPath ? pathOrOptions : undefined)
+
+@@ hunk 34 [code] pin 1405-1406 release 1703-1704 cited ranges 0
+   pin units: fail=code
+   release units: Boolean=code
+-  1405 export function fail(err: SourceError | Schema.SchemaError) {
+-  1406 return make(() => Effect.fail(evaluationFailure(new ConfigError(err), false)))
++  1703 export function Boolean(name?: string) {
++  1704 return schema(Schema.BooleanLiterals, name)
+
+@@ hunk 35 [code] pin 1433-1693 release 1745-1745 cited ranges 1
+   pin units: succeed=code; string=absent; nonEmptyString=absent; number=absent; finite=absent; int=absent; literal=absent; literals=absent; boolean=absent; duration=absent
+   release units: Duration=absent
+-  1433 export function succeed<T>(value: T) {
+-  1434 return make(() => Effect.succeed(resolved(value, false)))
+-  1435 }
+-  1465 export function string(name?: string) {
+-  1466 return schema(Schema.String, name)
+-  1467 }
+-  1486 export function nonEmptyString(name?: string) {
+-  1487 return schema(Schema.NonEmptyString, name)
+-  1488 }
+-  1508 export function number(name?: string) {
+-  1509 return schema(Schema.Number, name)
+-  1510 }
+-  1529 export function finite(name?: string) {
+-  1530 return schema(Schema.Finite, name)
+-  1531 }
+-  1550 export function int(name?: string) {
+-  1551 return schema(Schema.Int, name)
+-  1552 }
+-  1579 export function literal<L extends SchemaAST.LiteralValue>(literal: L, name?: string) {
+-  1580 return schema(Schema.Literal(literal), name)
+-  1581 }
+-  1609 export function literals<const L extends ReadonlyArray<SchemaAST.LiteralValue>>(literals: L, name?: string) {
+-  1610 return schema(Schema.Literals(literals), name)
+-  1611 }
+-  1651 export function boolean(name?: string) {
+-  1652 return schema(Boolean, name)
+-  1653 }
+-  1693 export function duration(name?: string) {
++  1745 export function Duration(name?: string) {
+
+@@ hunk 36 [code] pin 1732-1733 release 1760-1761 cited ranges 0
+   pin units: port=absent
+   release units: ByteSize=absent
+-  1732 export function port(name?: string) {
+-  1733 return schema(Port, name)
++  1760 export function ByteSize(name?: string) {
++  1761 return schema(Schema.ByteSize, name)
+
+@@ hunk 37 [code] pin 1773-1774 release 1798-1799 cited ranges 0
+   pin units: logLevel=absent
+   release units: Port=code
+-  1773 export function logLevel(name?: string) {
+-  1774 return schema(LogLevel, name)
++  1798 export function Port(name?: string) {
++  1799 return schema(PortSchema, name)
+
+@@ hunk 38 [code] pin 1813-1813 release 1835-1875 cited ranges 0
+   pin units: redacted=absent
+   release units: LogLevel=code; Redacted=absent
+-  1813 export function redacted(name?: string) {
++  1835 export function LogLevel(name?: string) {
++  1836 return schema(LogLevelSchema, name)
++  1837 }
++  1875 export function Redacted(name?: string) {
+
+@@ hunk 39 [code] pin 1855-1855 release 1917-1917 cited ranges 0
+   pin units: url=absent
+   release units: URL=absent
+-  1855 export function url(name?: string) {
++  1917 export function URL(name?: string) {
+
+@@ hunk 40 [code] pin 1888-1888 release 1950-1950 cited ranges 0
+   pin units: date=absent
+   release units: Date=absent
+-  1888 export function date(name?: string) {
++  1950 export function Date(name?: string) {

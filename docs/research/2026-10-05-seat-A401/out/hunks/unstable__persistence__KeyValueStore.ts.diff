@@ -1,0 +1,41 @@
+# unstable/persistence/KeyValueStore.ts (rc.112) against persistence/KeyValueStore.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 16-16 release 17-17 cited ranges 0
+   pin units: import ../../Encoding.ts=absent
+   release units: import ../encoding/Base64.ts=absent
+-    16 import * as Encoding from "@tree/Encoding.ts"
++    17 import * as Base64 from "@tree/encoding/Base64.ts"
+
+@@ hunk 2 [code] pin 26-26 release before 27 cited ranges 0
+   pin units: import ../../UndefinedOr.ts=absent
+   release units: 
+-    26 import * as UndefinedOr from "@tree/UndefinedOr.ts"
+
+@@ hunk 3 [code] pin before 30 release 29-29 cited ranges 0
+   pin units: 
+   release units: import ../UndefinedOr.ts=absent
++    29 import * as UndefinedOr from "@tree/UndefinedOr.ts"
+
+@@ hunk 4 [code] pin 277-277 release 286-286 cited ranges 0
+   pin units: makeStringOnly=code
+   release units: makeStringOnly=code
+-   277 Result.match(Encoding.decodeBase64(value), {
++   286 Result.match(Base64.decode(value), {
+
+@@ hunk 5 [code] pin 286-286 release 295-295 cited ranges 0
+   pin units: makeStringOnly=code
+   release units: makeStringOnly=code
+-   286 : Effect.suspend(() => options.set(key, Encoding.encodeBase64(value)))
++   295 : Effect.suspend(() => options.set(key, Base64.encode(value)))
+
+@@ hunk 6 [code] pin 339-339 release 352-352 cited ranges 1
+   pin units: layerMemory=code
+   release units: layerMemory=code
+-   339 return value === undefined ? undefined : typeof value === "string" ? value : Encoding.encodeBase64(value)
++   352 return value === undefined ? undefined : typeof value === "string" ? value : Base64.encode(value)
+
+@@ hunk 7 [code] pin 618-618 release 634-634 cited ranges 0
+   pin units: layerSql=code
+   release units: layerSql=code
+-   618 return Effect.succeed(Encoding.encodeBase64(row.value))
++   634 return Effect.succeed(Base64.encode(row.value))

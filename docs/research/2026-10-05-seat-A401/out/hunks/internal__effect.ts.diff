@@ -1,0 +1,2080 @@
+# internal/effect.ts (rc.112) against internal/effect.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin 21-21 release before 21 cited ranges 0
+   pin units: import ../Metric.ts=absent
+   release units: 
+-    21 import type * as Metric from "@tree/Metric.ts"
+
+@@ hunk 2 [import] pin before 54 release 53-53 cited ranges 0
+   pin units: 
+   release units: import ./core.ts#2=import
++    53 causeCombine,
+
+@@ hunk 3 [code] pin 108-108 release 108-108 cited ranges 1
+   pin units: Interrupt.fiberId=code
+   release units: Interrupt.fiberId=code
+-   108 readonly fiberId: number | undefined
++   108 declare readonly fiberId: number | undefined
+
+@@ hunk 4 [code] pin 242-258 release before 242 cited ranges 4
+   pin units: causeCombine=absent
+   release units: 
+-   242 export const causeCombine: {
+-   243 <E2>(that: Cause.Cause<E2>): <E>(self: Cause.Cause<E>) => Cause.Cause<E | E2>
+-   244 <E, E2>(self: Cause.Cause<E>, that: Cause.Cause<E2>): Cause.Cause<E | E2>
+-   245 } = dual(
+-   246 2,
+-   247 <E, E2>(self: Cause.Cause<E>, that: Cause.Cause<E2>): Cause.Cause<E | E2> => {
+-   248 if (self.reasons.length === 0) {
+-   249 return that as Cause.Cause<E | E2>
+-   250 } else if (that.reasons.length === 0) {
+-   251 return self as Cause.Cause<E | E2>
+-   252 }
+-   253 const newCause = new CauseImpl<E | E2>(
+-   254 Arr.union(self.reasons, that.reasons)
+-   255 )
+-   256 return Equal.equals(self, newCause) ? self : newCause
+-   257 }
+-   258 )
+
+@@ hunk 5 [code] pin 280-296 release before 261 cited ranges 0
+   pin units: causePartition=absent
+   release units: 
+-   280 export const causePartition = <E>(
+-   281 self: Cause.Cause<E>
+-   282 ): {
+-   283 readonly Fail: ReadonlyArray<Cause.Fail<E>>
+-   284 readonly Die: ReadonlyArray<Cause.Die>
+-   285 readonly Interrupt: ReadonlyArray<Cause.Interrupt>
+-   286 } => {
+-   287 const obj = {
+-   288 Fail: [] as Array<Cause.Fail<E>>,
+-   289 Die: [] as Array<Cause.Die>,
+-   290 Interrupt: [] as Array<Cause.Interrupt>
+-   291 }
+-   292 for (let i = 0; i < self.reasons.length; i++) {
+-   293 obj[self.reasons[i]._tag].push(self.reasons[i] as any)
+-   294 }
+-   295 return obj
+-   296 }
+
+@@ hunk 6 [code] pin 300-306 release 262-265 cited ranges 1
+   pin units: causeSquash=code
+   release units: causeSquash=code
+-   300 const partitioned = causePartition(self)
+-   301 if (partitioned.Fail.length > 0) {
+-   302 return partitioned.Fail[0].error
+-   303 } else if (partitioned.Die.length > 0) {
+-   304 return partitioned.Die[0].defect
+-   305 } else if (partitioned.Interrupt.length > 0) {
+-   306 return new globalThis.Error("All fibers interrupted without error")
++   262 let die: Cause.Die | undefined
++   263 for (const reason of self.reasons) {
++   264 if (reason._tag === "Fail") return reason.error
++   265 if (reason._tag === "Die") die ??= reason
+
+@@ hunk 7 [code] pin before 308 release 267-268 cited ranges 1
+   pin units: 
+   release units: causeSquash=code
++   267 if (die !== undefined) return die.defect
++   268 if (self.reasons.length > 0) return new globalThis.Error("All fibers interrupted without error")
+
+@@ hunk 8 [code] pin 320-320 release 281-283 cited ranges 0
+   pin units: causePrettyErrors=code
+   release units: causePrettyErrors=code
+-   320 setStackTraceLimit(1)
++   281 if (prevStackLimit !== 0) setStackTraceLimit(1)
++   283 try {
+
+@@ hunk 9 [code] pin 345-345 release 306-308 cited ranges 0
+   pin units: causePrettyErrors=code
+   release units: causePrettyErrors=code
+-   345 setStackTraceLimit(prevStackLimit)
++   306 } finally {
++   307 if (prevStackLimit !== 0) setStackTraceLimit(prevStackLimit)
++   308 }
+
+@@ hunk 10 [code] pin 416-416 release 380-380 cited ranges 0
+   pin units: cleanErrorStack=code
+   release units: cleanErrorStack=code
+-   416 if (/(?:Generator\.next|~effect\/Effect)/.test(lines[i])) {
++   380 if (/Generator\.next|~effect\/(?:Effect|Utils)/.test(lines[i])) {
+
+@@ hunk 11 [code] pin before 502 release 465-478 cited ranges 0
+   pin units: 
+   release units: AsyncContext=absent; AsyncResource=absent; captureAsyncContext=absent
++   465 interface AsyncContext {
++   466 runInAsyncScope<This, Arg, R>(fn: (this: This, arg: Arg) => R, thisArg: This, arg: Arg): R
++   467 }
++   469 const AsyncResource: (new(type: string) => AsyncContext) | undefined = (() => {
++   470 try {
++   471 return (globalThis as any).process?.getBuiltinModule?.("node:async_hooks")?.AsyncResource
++   472 } catch {
++   473 return undefined
++   474 }
++   475 })()
++   477 const captureAsyncContext = (): AsyncContext | undefined =>
++   478 AsyncResource === undefined ? undefined : new AsyncResource("effect/Fiber")
+
+@@ hunk 12 [code] pin 510-510 release before 489 cited ranges 1
+   pin units: FiberImpl.constructor=code
+   release units: 
+-   510 this[FiberTypeId] = fiberVariance as any
+
+@@ hunk 13 [code] pin 516-516 release 494-494 cited ranges 1
+   pin units: FiberImpl.constructor=code
+   release units: FiberImpl.constructor=code
+-   516 this._observers = []
++   494 this._observers = undefined
+
+@@ hunk 14 [code] pin 523-523 release 501-503 cited ranges 1
+   pin units: FiberImpl.constructor=code
+   release units: FiberImpl.constructor=code
+-   523 this.runtimeMetrics?.recordFiberStart(this.context)
++   501 this._parent = undefined
++   502 this._asyncContext = undefined
++   503 this.cache.runtimeMetrics?.recordFiberStart(this.context)
+
+@@ hunk 15 [code] pin 526-552 release 506-528 cited ranges 12
+   pin units: FiberImpl.FiberTypeId=absent; FiberImpl.id=code; FiberImpl.interruptible=code; FiberImpl.currentOpCount=code; FiberImpl._stack=code; FiberImpl._observers=code; FiberImpl._exit=code; FiberImpl._children=code; FiberImpl._interruptedCause=code; FiberImpl._yielded=code; FiberImpl._running=code; FiberImpl._deferredInterrupt=code; FiberImpl.context=code; FiberImpl.currentScheduler=absent; FiberImpl.currentTracerContext=absent; FiberImpl.currentSpan=absent; FiberImpl.currentLogLevel=absent; FiberImpl.minimumLogLevel=absent; FiberImpl.currentStackFrame=absent; FiberImpl.runtimeMetrics=absent; FiberImpl.maxOpsBeforeYield=absent; FiberImpl.currentPreventYield=absent; FiberImpl._dispatcher=code
+   release units: get FiberImpl.FiberTypeId=absent; FiberImpl.id=code; FiberImpl.interruptible=code; FiberImpl.currentOpCount=code; FiberImpl._stack=code; FiberImpl._observers=code; FiberImpl._exit=code; FiberImpl._children=code; FiberImpl._interruptedCause=code; FiberImpl._yielded=code; FiberImpl._running=code; FiberImpl._deferredInterrupt=code; FiberImpl._parent=absent; FiberImpl._asyncContext=absent; FiberImpl.context=code; FiberImpl.cache=absent; FiberImpl._dispatcher=code
+-   526 readonly [FiberTypeId]: Fiber.Fiber.Variance<A, E>
+-   528 readonly id: number
+-   529 interruptible: boolean
+-   530 currentOpCount: number
+-   531 readonly _stack: Array<Primitive>
+-   532 readonly _observers: Array<(exit: Exit.Exit<A, E>) => void>
+-   533 _exit: Exit.Exit<A, E> | undefined
+-   534 _children: Set<FiberImpl<any, any>> | undefined
+-   535 _interruptedCause: Cause.Cause<never> | undefined
+-   536 _yielded: Exit.Exit<any, any> | (() => void) | undefined
+-   537 _running: boolean
+-   538 _deferredInterrupt: boolean
+-   541 context!: Context.Context<never>
+-   542 currentScheduler!: Scheduler.Scheduler
+-   543 currentTracerContext: Tracer.Tracer["context"]
+-   544 currentSpan: Tracer.AnySpan | undefined
+-   545 currentLogLevel!: LogLevel.LogLevel
+-   546 minimumLogLevel!: LogLevel.LogLevel
+-   547 currentStackFrame: StackFrame | undefined
+-   548 runtimeMetrics: Metric.FiberRuntimeMetricsService | undefined
+-   549 maxOpsBeforeYield!: number
+-   550 currentPreventYield!: boolean
+-   552 _dispatcher: Scheduler.SchedulerDispatcher | undefined = undefined
++   506 get [FiberTypeId](): Fiber.Fiber.Variance<A, E> {
++   507 return fiberVariance
++   508 }
++   510 declare readonly id: number
++   511 declare interruptible: boolean
++   512 declare currentOpCount: number
++   513 declare readonly _stack: Array<Primitive>
++   514 declare _observers: Array<(exit: Exit.Exit<A, E>) => void> | undefined
++   515 declare _exit: Exit.Exit<A, E> | undefined
++   516 declare _children: Set<FiberImpl<any, any>> | undefined
++   517 declare _interruptedCause: Cause.Cause<never> | undefined
++   518 declare _yielded: Exit.Exit<any, any> | (() => void) | undefined
++   519 declare _running: boolean
++   520 declare _deferredInterrupt: boolean
++   521 declare _parent: FiberImpl<any, any> | undefined
++   522 declare _asyncContext: AsyncContext | undefined
++   525 declare context: Context.Context<never>
++   526 declare cache: Fiber.Fiber.Cache
++   528 declare _dispatcher: Scheduler.SchedulerDispatcher | undefined
+
+@@ hunk 16 [code] pin 554-554 release 530-530 cited ranges 4
+   pin units: get FiberImpl.currentDispatcher=code
+   release units: get FiberImpl.currentDispatcher=code
+-   554 return this._dispatcher ??= this.currentScheduler.makeDispatcher()
++   530 return this._dispatcher ??= this.cache.scheduler.makeDispatcher()
+
+@@ hunk 17 [code] pin before 565 release 541-543 cited ranges 1
+   pin units: 
+   release units: FiberImpl.addObserver=code
++   541 if (this._observers === undefined) {
++   542 this._observers = [cb]
++   543 } else {
+
+@@ hunk 18 [code] pin 566-567 release 545-549 cited ranges 1
+   pin units: FiberImpl.addObserver=code
+   release units: FiberImpl.addObserver=code; FiberImpl.removeObserver=absent
+-   566 return () => {
+-   567 if (this._exit) return
++   545 }
++   546 return () => this.removeObserver(cb)
++   547 }
++   548 removeObserver(cb: (exit: Exit.Exit<A, E>) => void): void {
++   549 if (this._exit || this._observers === undefined) return
+
+@@ hunk 19 [erased] pin 573-573 release before 555 cited ranges 1
+   pin units: FiberImpl.addObserver=code
+   release units: 
+-   573 }
+
+@@ hunk 20 [code] pin 579-580 release 560-561 cited ranges 6
+   pin units: FiberImpl.interruptUnsafe=code
+   release units: FiberImpl.interruptUnsafe=code
+-   579 if (this.currentStackFrame) {
+-   580 cause = causeAnnotate(cause, Context.make(CauseStackTrace, this.currentStackFrame))
++   560 if (this.cache.stackFrame) {
++   561 cause = causeAnnotate(cause, Context.make(CauseStackTrace, this.cache.stackFrame))
+
+@@ hunk 21 [code] pin before 602 release 583-586 cited ranges 1
+   pin units: 
+   release units: FiberImpl.evaluate=code
++   583 } else if (this._asyncContext !== undefined) {
++   584 const asyncContext = this._asyncContext
++   585 this._asyncContext = undefined
++   586 return asyncContext.runInAsyncScope(this.evaluate, this, effect)
+
+@@ hunk 22 [code] pin before 609 release 594-594 cited ranges 1
+   pin units: 
+   release units: FiberImpl.evaluate=code
++   594 this._asyncContext = captureAsyncContext()
+
+@@ hunk 23 [code] pin 620-622 release 606-616 cited ranges 7
+   pin units: FiberImpl.evaluate=code
+   release units: FiberImpl.evaluate=code
+-   620 this.runtimeMetrics?.recordFiberEnd(this.context, this._exit)
+-   621 for (let i = 0; i < this._observers.length; i++) {
+-   622 this._observers[i](exit)
++   606 this.cache.runtimeMetrics?.recordFiberEnd(this.context, this._exit)
++   607 if (this._parent) {
++   608 this._parent._children?.delete(this)
++   609 this._parent = undefined
++   610 }
++   611 if (this._observers !== undefined) {
++   612 const observers = this._observers
++   613 this._observers = undefined
++   614 for (let i = 0; i < observers.length; i++) {
++   615 observers[i](exit)
++   616 }
+
+@@ hunk 24 [code] pin 624-624 release before 618 cited ranges 5
+   pin units: FiberImpl.evaluate=code
+   release units: 
+-   624 this._observers.length = 0
+
+@@ hunk 25 [code] pin before 644 release 638-638 cited ranges 4
+   pin units: 
+   release units: FiberImpl.runLoop=code
++   638 const cache = this.cache
+
+@@ hunk 26 [code] pin 646-647 release 641-642 cited ranges 9
+   pin units: FiberImpl.runLoop=code
+   release units: FiberImpl.runLoop=code
+-   646 !this.currentPreventYield &&
+-   647 this.currentScheduler.shouldYield(this as any)
++   641 !cache.preventYield &&
++   642 cache.scheduler.shouldYield(this as any)
+
+@@ hunk 27 [code] pin 653-654 release 648-649 cited ranges 6
+   pin units: FiberImpl.runLoop=code
+   release units: FiberImpl.runLoop=code
+-   653 current = this.currentTracerContext
+-   654 ? this.currentTracerContext(current as any, this)
++   648 current = cache.tracerContext
++   649 ? cache.tracerContext(current as any, this)
+
+@@ hunk 28 [code] pin 691-691 release 686-688 cited ranges 1
+   pin units: FiberImpl.getCont=code
+   release units: FiberImpl.getCont=code
+-   691 const cont = op[contAll] && op[contAll](this)
++   686 const all = op[contAll]
++   687 if (all !== undefined) {
++   688 const cont = all.call(op, this)
+
+@@ hunk 29 [code] pin before 696 release 693-693 cited ranges 1
+   pin units: 
+   release units: FiberImpl.getCont=code
++   693 }
+
+@@ hunk 30 [code] pin before 699 release 701-707 cited ranges 0
+   pin units: 
+   release units: FiberImpl.succeedWith=absent
++   701 succeedWith(value: unknown): Primitive | Yield {
++   702 if ((++this.currentOpCount & (maxInlineSteps - 1)) === 0) {
++   703 return exitSucceed(value) as any
++   704 }
++   705 const cont = this.getCont(contA)
++   706 return cont ? cont[contA](value, this) : this.yieldWith(exitSucceed(value))
++   707 }
+
+@@ hunk 31 [code] pin 715-717 release 727-729 cited ranges 2
+   pin units: FiberImpl.setContext=code
+   release units: FiberImpl.setContext=code
+-   715 const scheduler = this.getRef(Scheduler.Scheduler)
+-   716 if (scheduler !== this.currentScheduler) {
+-   717 this.currentScheduler = scheduler
++   727 const root: any = (context as any).cacheRoot
++   728 const cache: Fiber.Fiber.Cache = root._fiberCache ??= makeFiberContextCache(context)
++   729 if (this.cache?.scheduler !== cache.scheduler) {
+
+@@ hunk 32 [code] pin 722-730 release 732-732 cited ranges 4
+   pin units: FiberImpl.setContext=code
+   release units: FiberImpl.setContext=code
+-   722 this.currentSpan = Context.getOrUndefinedUnsafe(context, Tracer.ParentSpanKey)
+-   723 this.currentLogLevel = this.getRef(CurrentLogLevel)
+-   724 this.minimumLogLevel = this.getRef(MinimumLogLevel)
+-   725 this.currentStackFrame = this.getRef(CurrentStackFrame)
+-   726 this.maxOpsBeforeYield = this.getRef(Scheduler.MaxOpsBeforeYield)
+-   727 this.currentPreventYield = this.getRef(Scheduler.PreventSchedulerYield)
+-   728 this.runtimeMetrics = Context.getOrUndefinedUnsafe(context, InternalMetric.FiberRuntimeMetricsKey)
+-   729 const currentTracer = Context.getOrUndefinedUnsafe<Tracer.Tracer>(context, Tracer.TracerKey)
+-   730 this.currentTracerContext = currentTracer ? currentTracer["context"] : undefined
++   732 this.cache = cache
+
+@@ hunk 33 [code] pin 733-733 release 735-755 cited ranges 0
+   pin units: get FiberImpl.currentSpanLocal=code
+   release units: get FiberImpl.currentSpanLocal=code; makeFiberContextCache=absent
+-   733 return this.currentSpan?._tag === "Span" ? this.currentSpan : undefined
++   735 const span = this.cache.span
++   736 return span?._tag === "Span" ? span : undefined
++   737 }
++   738 }
++   740 const makeFiberContextCache = (context: Context.Context<never>): Fiber.Fiber.Cache => {
++   743 const currentTracer = Context.getOrUndefinedUnsafe<Tracer.Tracer>(context, Tracer.TracerKey)
++   744 return {
++   745 scheduler: Context.get(context, Scheduler.Scheduler),
++   746 tracer: currentTracer,
++   747 tracerContext: currentTracer ? currentTracer["context"] : undefined,
++   748 tracerEnabled: Context.get(context, TracerEnabled),
++   749 span: Context.getOrUndefinedUnsafe(context, Tracer.ParentSpanKey),
++   750 logLevel: Context.get(context, CurrentLogLevel),
++   751 minimumLogLevel: Context.get(context, MinimumLogLevel),
++   752 stackFrame: Context.get(context, CurrentStackFrame),
++   753 runtimeMetrics: Context.getOrUndefinedUnsafe(context, InternalMetric.FiberRuntimeMetricsKey),
++   754 maxOpsBeforeYield: Context.get(context, Scheduler.MaxOpsBeforeYield),
++   755 preventYield: Context.get(context, Scheduler.PreventSchedulerYield)
+
+@@ hunk 34 [code] pin before 746 release 769-769 cited ranges 0
+   pin units: 
+   release units: maxInlineSteps=absent
++   769 const maxInlineSteps = 32
+
+@@ hunk 35 [code] pin 753-753 release 778-778 cited ranges 0
+   pin units: fiberStackAnnotations=code
+   release units: fiberStackAnnotations=code
+-   753 if (!fiber.currentStackFrame) return undefined
++   778 if (!fiber.cache.stackFrame) return undefined
+
+@@ hunk 36 [code] pin 755-755 release 780-780 cited ranges 0
+   pin units: fiberStackAnnotations=code
+   release units: fiberStackAnnotations=code
+-   755 annotations.set(InterruptorStackTrace.key, fiber.currentStackFrame)
++   780 annotations.set(InterruptorStackTrace.key, fiber.cache.stackFrame)
+
+@@ hunk 37 [erased] pin 829-829 release 854-854 cited ranges 0
+   pin units: fiberJoinAll=code
+   release units: fiberJoinAll=code
+-   829 const fibers = Array.from(self)
++   854 const fibers = Array.from(self) as Array<FiberImpl>
+
+@@ hunk 38 [code] pin 832-832 release 857-862 cited ranges 0
+   pin units: fiberJoinAll=code
+   release units: fiberJoinAll=code
+-   832 const cancels = Arr.empty<() => void>()
++   857 const observers = Arr.empty<(exit: Exit.Exit<any, any>) => void>()
++   858 const removeObservers = () => {
++   859 for (let i = 0; i < observers.length; i++) {
++   860 fibers[i].removeObserver(observers[i])
++   861 }
++   862 }
+
+@@ hunk 39 [code] pin 837-837 release 867-867 cited ranges 0
+   pin units: fiberJoinAll=code
+   release units: fiberJoinAll=code
+-   837 cancels.push(fibers[i].addObserver((exit) => {
++   867 const observer = (exit: Exit.Exit<any, any>) => {
+
+@@ hunk 40 [code] pin 841-841 release 871-871 cited ranges 0
+   pin units: fiberJoinAll=code
+   release units: fiberJoinAll=code
+-   841 cancels.forEach((cancel) => cancel())
++   871 removeObservers()
+
+@@ hunk 41 [code] pin 848-848 release 878-880 cited ranges 0
+   pin units: fiberJoinAll=code
+   release units: fiberJoinAll=code
+-   848 }))
++   878 }
++   879 observers.push(observer)
++   880 fibers[i].addObserver(observer)
+
+@@ hunk 42 [code] pin 852-852 release 884-884 cited ranges 0
+   pin units: fiberJoinAll=code
+   release units: fiberJoinAll=code
+-   852 cancels.forEach((cancel) => cancel())
++   884 removeObservers()
+
+@@ hunk 43 [code] pin 1015-1015 release 1047-1047 cited ranges 0
+   pin units: failCauseSync=code
+   release units: failCauseSync=code
+-  1015 ): Effect.Effect<never, E> => suspend(() => failCause(internalCall(evaluate)))
++  1047 ): Effect.Effect<never, E> => suspend(() => failCause(evaluate()))
+
+@@ hunk 44 [code] pin 1021-1021 release 1053-1053 cited ranges 1
+   pin units: failSync=code
+   release units: failSync=code
+-  1021 export const failSync = <E>(error: LazyArg<E>): Effect.Effect<never, E> => suspend(() => fail(internalCall(error)))
++  1053 export const failSync = <E>(error: LazyArg<E>): Effect.Effect<never, E> => suspend(() => fail(error()))
+
+@@ hunk 45 [code] pin 1041-1041 release 1073-1073 cited ranges 0
+   pin units: try_=code
+   release units: try_=code
+-  1041 return succeed(internalCall(evaluate))
++  1073 return succeed(evaluate())
+
+@@ hunk 46 [code] pin 1043-1043 release 1075-1075 cited ranges 0
+   pin units: try_=code
+   release units: try_=code
+-  1043 return fail(internalCall(() => catcher(err)) as E)
++  1075 return fail(catcher(err) as E)
+
+@@ hunk 47 [code] pin 1055-1055 release 1087-1087 cited ranges 0
+   pin units: promise=code
+   release units: promise=code
+-  1055 internalCall(() => evaluate(signal!)).then(
++  1087 evaluate(signal!).then(
+
+@@ hunk 48 [code] pin 1073-1073 release 1106-1107 cited ranges 1
+   pin units: tryPromise=code
+   release units: tryPromise=code
+-  1073 const failWithCatch = (cause: unknown) => {
++  1106 const failWithCatch = (cause: unknown) =>
++  1107 suspend(() => {
+
+@@ hunk 49 [code] pin 1075-1075 release 1109-1109 cited ranges 1
+   pin units: tryPromise=code
+   release units: tryPromise=code
+-  1075 resume(fail(internalCall(() => catcher(cause)) as E))
++  1109 return fail(internalCall(() => catcher(cause)) as E)
+
+@@ hunk 50 [code] pin 1077-1078 release 1111-1111 cited ranges 1
+   pin units: tryPromise=code
+   release units: tryPromise=code
+-  1077 resume(die(err))
+-  1078 }
++  1111 return die(err)
+
+@@ hunk 51 [code] pin before 1080 release 1113-1113 cited ranges 1
+   pin units: 
+   release units: tryPromise=code
++  1113 })
+
+@@ hunk 52 [code] pin 1081-1081 release 1115-1115 cited ranges 1
+   pin units: tryPromise=code
+   release units: tryPromise=code
+-  1081 internalCall(() => f(signal!)).then(
++  1115 f(signal!).then(
+
+@@ hunk 53 [code] pin 1083-1083 release 1117-1117 cited ranges 1
+   pin units: tryPromise=code
+   release units: tryPromise=code
+-  1083 failWithCatch
++  1117 (e) => resume(failWithCatch(e))
+
+@@ hunk 54 [code] pin 1086-1086 release 1120-1120 cited ranges 1
+   pin units: tryPromise=code
+   release units: tryPromise=code
+-  1086 failWithCatch(err)
++  1120 resume(failWithCatch(err))
+
+@@ hunk 55 [erased] pin 1107-1107 release 1141-1141 cited ranges 1
+   pin units: callbackOptions=code
+   release units: callbackOptions=code
+-  1107 ) => void | Effect.Effect<void, never, R>,
++  1141 ) => void | Effect.Effect<void, E, R>,
+
+@@ hunk 56 [code] pin 1109-1109 release 1143-1144 cited ranges 2
+   pin units: callbackOptions=code
+   release units: callbackOptions=code
+-  1109 ) => Effect.Effect<A, E, R> = makePrimitive({
++  1143 ) => Effect.Effect<A, E, R> = (function() {
++  1144 const Proto = makePrimitiveProto({
+
+@@ hunk 57 [code] pin 1111-1113 release 1146-1146 cited ranges 2
+   pin units: callbackOptions=code
+   release units: callbackOptions=code
+-  1111 single: false,
+-  1112 [evaluate](fiber) {
+-  1113 const register = internalCall(() => this[args][0].bind(fiber.currentScheduler))
++  1146 [evaluate](this: any, fiber) {
+
+@@ hunk 58 [code] pin 1116-1117 release 1149-1150 cited ranges 4
+   pin units: callbackOptions=code
+   release units: callbackOptions=code
+-  1116 const controller = this[args][1] ? new AbortController() : undefined
+-  1117 const onCancel = register((effect) => {
++  1149 const controller = this.withSignal ? new AbortController() : undefined
++  1150 const onCancel = this.register.call(fiber.cache.scheduler, (effect: Effect.Effect<any, any, any>) => {
+
+@@ hunk 59 [code] pin before 1145 release 1177-1185 cited ranges 0
+   pin units: 
+   release units: callbackOptions=code
++  1177 const AsyncImpl = function(this: any, register: any, withSignal: boolean) {
++  1178 this.register = register
++  1179 this.withSignal = withSignal
++  1180 } as unknown as PrimitiveCtor<[register: any, withSignal: boolean]>
++  1181 AsyncImpl.prototype = Proto
++  1182 return function(register: any, withSignal: boolean) {
++  1183 return new AsyncImpl(register, withSignal)
++  1184 } as any
++  1185 })()
+
+@@ hunk 60 [code] pin 1157-1157 release 1199-1199 cited ranges 4
+   pin units: asyncFinalizer=code
+   release units: asyncFinalizer=code
+-  1157 ? flatMap(this[args](), () => failCause(cause))
++  1199 ? flatMap(combineFinalizerCause(exitFailCause(cause), this[args]()), () => failCause(cause))
+
+@@ hunk 61 [erased] pin 1168-1168 release 1210-1210 cited ranges 1
+   pin units: callback=erased
+   release units: callback=erased
+-  1168 ) => void | Effect.Effect<void, never, R>
++  1210 ) => void | Effect.Effect<void, E, R>
+
+@@ hunk 62 [code] pin 1191-1196 release 1233-1240 cited ranges 1
+   pin units: gen=code
+   release units: gen=code
+-  1191 > =>
+-  1192 suspend(() =>
+-  1193 fromIteratorUnsafe(
+-  1194 args.length === 1 ? args[0]() : (args[1].call(args[0].self) as any)
+-  1195 )
+-  1196 )
++  1233 > => {
++  1234 if (args.length === 1) {
++  1235 const body = args[0]
++  1236 return suspend(() => fromIteratorUnsafe(body()))
++  1237 }
++  1238 const [options, body] = args
++  1239 return suspend(() => fromIteratorUnsafe(body.call(options.self) as any))
++  1240 }
+
+@@ hunk 63 [code] pin before 1232 release 1276-1277 cited ranges 0
+   pin units: 
+   release units: fn=code
++  1276 let defError: Error | undefined
++  1277 if (prevLimit !== 0) {
+
+@@ hunk 64 [code] pin 1233-1233 release 1279-1279 cited ranges 0
+   pin units: fn=code
+   release units: fn=code
+-  1233 const defError = new globalThis.Error()
++  1279 defError = new globalThis.Error()
+
+@@ hunk 65 [code] pin before 1236 release 1281-1281 cited ranges 0
+   pin units: 
+   release units: fn=code
++  1281 }
+
+@@ hunk 66 [erased] pin 1254-1254 release 1301-1301 cited ranges 0
+   pin units: makeFn=code
+   release units: makeFn=code
+-  1254 defError: Error,
++  1301 defError: Error | undefined,
+
+@@ hunk 67 [code] pin before 1263 release 1309-1310 cited ranges 0
+   pin units: 
+   release units: makeFn=code
++  1309 const definitionName = `${name} (definition)`
++  1310 const definitionStack = defError ? fnStackCleaner(() => defError.stack) : constUndefined
+
+@@ hunk 68 [code] pin before 1275 release 1324-1325 cited ranges 0
+   pin units: 
+   release units: makeFn=code
++  1324 let callError: Error | undefined
++  1325 if (prevLimit !== 0) {
+
+@@ hunk 69 [code] pin 1276-1276 release 1327-1327 cited ranges 0
+   pin units: makeFn=code
+   release units: makeFn=code
+-  1276 const callError = new globalThis.Error()
++  1327 callError = new globalThis.Error()
+
+@@ hunk 70 [code] pin before 1278 release 1329-1329 cited ranges 0
+   pin units: 
+   release units: makeFn=code
++  1329 }
+
+@@ hunk 71 [code] pin 1285-1285 release 1337-1337 cited ranges 0
+   pin units: makeFn=code
+   release units: makeFn=code
+-  1285 stack: fnStackCleaner(() => callError.stack),
++  1337 stack: callError ? fnStackCleaner(() => callError.stack) : constUndefined,
+
+@@ hunk 72 [code] pin 1287-1288 release 1339-1340 cited ranges 0
+   pin units: makeFn=code
+   release units: makeFn=code
+-  1287 name: `${name} (definition)`,
+-  1288 stack: fnStackCleaner(() => defError.stack),
++  1339 name: definitionName,
++  1340 stack: definitionStack,
+
+@@ hunk 73 [code] pin 1310-1310 release 1362-1362 cited ranges 0
+   pin units: fnUntracedEager=code
+   release units: fnUntracedEager=code
+-  1310 effect = pipeable(effect)
++  1362 effect = pipeable(effect, ...arguments)
+
+@@ hunk 74 [code] pin 1359-1359 release 1411-1412 cited ranges 2
+   pin units: fromIteratorUnsafe=code
+   release units: fromIteratorUnsafe=code
+-  1359 ) => Effect.Effect<any, any, any> = makePrimitive({
++  1411 ) => Effect.Effect<any, any, any> = (function() {
++  1412 const Proto = makePrimitiveProto({
+
+@@ hunk 75 [code] pin 1361-1363 release 1414-1415 cited ranges 5
+   pin units: fromIteratorUnsafe=code
+   release units: fromIteratorUnsafe=code
+-  1361 single: false,
+-  1362 [contA](value, fiber) {
+-  1363 const iter = this[args][0]
++  1414 [contA](this: any, value, fiber) {
++  1415 const iter = this.iterator
+
+@@ hunk 76 [code] pin 1377-1377 release 1429-1429 cited ranges 3
+   pin units: fromIteratorUnsafe=code
+   release units: fromIteratorUnsafe=code
+-  1377 return this[contA](this[args][1], fiber)
++  1429 return this[contA](this.initial, fiber)
+
+@@ hunk 77 [code] pin before 1386 release 1432-1440 cited ranges 0
+   pin units: 
+   release units: fromIteratorUnsafe=code
++  1432 const IteratorImpl = function(this: any, iterator: any, initial: any) {
++  1433 this.iterator = iterator
++  1434 this.initial = initial
++  1435 } as unknown as PrimitiveCtor<[iterator: any, initial: any]>
++  1436 IteratorImpl.prototype = Proto
++  1437 return function(iterator: any, initial?: undefined) {
++  1438 return new IteratorImpl(iterator, initial)
++  1439 } as any
++  1440 })()
+
+@@ hunk 78 [code] pin 1396-1399 release 1457-1457 cited ranges 1
+   pin units: as=code
+   release units: as=code
+-  1396 ): Effect.Effect<B, E, R> => {
+-  1397 const b = succeed(value)
+-  1398 return flatMap(self, (_) => b)
+-  1399 }
++  1457 ): Effect.Effect<B, E, R> => new ContImpl(self, returnPayload, succeed(value))
+
+@@ hunk 79 [code] pin before 1403 release 1460-1528 cited ranges 1
+   pin units: 
+   release units: evaluateCont=absent; PrimitiveCtor=absent; OnSuccessProto=code; ContImpl=absent; statement=absent; returnPayload=absent; succeedPayload=absent; continuationMarksStack=absent; mapCont=absent; andThenCont=absent; tapCont=absent; tapEffectCont=absent
++  1460 const evaluateCont = function(this: any, fiber: FiberImpl): Primitive {
++  1461 fiber._stack.push(this)
++  1462 return this[args]
++  1463 }
++  1465 interface PrimitiveCtor<Args extends Array<any>> {
++  1466 new(...args: Args): Primitive & Effect.Effect<any, any, any>
++  1467 prototype: any
++  1468 }
++  1470 const OnSuccessProto = makePrimitiveProto({
++  1471 op: "OnSuccess",
++  1472 [evaluate]: evaluateCont
++  1473 })
++  1479 const ContImpl = function(
++  1480 this: any,
++  1481 self: Effect.Effect<any, any, any>,
++  1482 cont: (this: { readonly payload: any }, value: any, fiber: FiberImpl) => unknown,
++  1483 payload: unknown
++  1484 ) {
++  1485 this[args] = self
++  1486 this[contA] = cont
++  1487 this.payload = payload
++  1488 } as unknown as PrimitiveCtor<
++  1489 [
++  1490 self: Effect.Effect<any, any, any>,
++  1491 cont: (this: { readonly payload: any }, value: any, fiber: FiberImpl) => unknown,
++  1492 payload: unknown
++  1493 ]
++  1494 >
++  1495 ContImpl.prototype = OnSuccessProto
++  1497 const returnPayload = function(this: { readonly payload: any }) {
++  1498 return this.payload
++  1499 }
++  1500 const succeedPayload = function(this: { readonly payload: any }, _value: unknown, fiber: FiberImpl) {
++  1501 return fiber.succeedWith(this.payload)
++  1502 }
++  1505 const continuationMarksStack = (() => {
++  1506 const marker = "~effect/Effect/stackProbe"
++  1507 const probe = {
++  1508 [marker]: function stackProbe() {
++  1509 return new Error().stack
++  1510 }
++  1511 }
++  1512 return probe[marker]()?.includes("[as " + marker + "]") === true
++  1513 })()
++  1514 const mapCont = function(this: { readonly payload: any }, value: any, fiber: FiberImpl) {
++  1515 const f = this.payload
++  1516 return fiber.succeedWith(continuationMarksStack ? f(value) : internalCall(() => f(value)))
++  1517 }
++  1518 const andThenCont = function(this: { readonly payload: any }, value: any) {
++  1519 const f = this.payload
++  1520 return f(value)
++  1521 }
++  1522 const tapCont = function(this: { readonly payload: any }, value: any) {
++  1523 const f = this.payload
++  1524 return new ContImpl(f(value), succeedPayload, value)
++  1525 }
++  1526 const tapEffectCont = function(this: { readonly payload: any }, value: any) {
++  1527 return new ContImpl(this.payload, succeedPayload, value)
++  1528 }
+
+@@ hunk 80 [code] pin 1437-1438 release 1565-1565 cited ranges 1
+   pin units: andThen=code
+   release units: andThen=code
+-  1437 ): Effect.Effect<B, E | E2, R | R2> =>
+-  1438 flatMap(self, (a) => isEffect(f) ? f : internalCall(() => (f as (a: A) => Effect.Effect<B, E2, R2>)(a)))
++  1565 ): Effect.Effect<B, E | E2, R | R2> => new ContImpl(self, isEffect(f) ? returnPayload : andThenCont, f)
+
+@@ hunk 81 [code] pin 1462-1463 release 1589-1589 cited ranges 2
+   pin units: tap=code
+   release units: tap=code
+-  1462 ): Effect.Effect<A, E | E2, R | R2> =>
+-  1463 flatMap(self, (a) => as(isEffect(f) ? f : internalCall(() => (f as (a: A) => Effect.Effect<B, E2, R2>)(a)), a))
++  1589 ): Effect.Effect<A, E | E2, R | R2> => new ContImpl(self, isEffect(f) ? tapEffectCont : tapCont, f)
+
+@@ hunk 82 [code] pin 1469-1469 release 1595-1595 cited ranges 0
+   pin units: asVoid=code
+   release units: asVoid=code
+-  1469 ): Effect.Effect<void, E, R> => flatMap(self, (_) => exitVoid)
++  1595 ): Effect.Effect<void, E, R> => new ContImpl(self, returnPayload, exitVoid)
+
+@@ hunk 83 [code] pin 1491-1492 release 1617-1621 cited ranges 3
+   pin units: raceAll=code
+   release units: raceAll=code
+-  1491 withFiber((parent) =>
+-  1492 callback((resume) => {
++  1617 withFiber((parent) => {
++  1618 const fibers = new Set<Fiber.Fiber<any, any>>()
++  1620 onExitUnsafe(parent, () => fibers.size === 0 ? undefined : fiberInterruptAll(fibers))
++  1621 return callback((resume) => {
+
+@@ hunk 84 [code] pin 1497-1497 release before 1626 cited ranges 4
+   pin units: raceAll=code
+   release units: 
+-  1497 const fibers = new Set<Fiber.Fiber<any, any>>()
+
+@@ hunk 85 [code] pin 1510-1514 release 1638-1638 cited ranges 7
+   pin units: raceAll=code
+   release units: raceAll=code
+-  1510 resume(
+-  1511 fibers.size === 0
+-  1512 ? exit
+-  1513 : flatMap(uninterruptible(fiberInterruptAll(fibers)), () => exit)
+-  1514 )
++  1638 resume(exit)
+
+@@ hunk 86 [code] pin 1530-1530 release before 1653 cited ranges 5
+   pin units: raceAll=code
+   release units: 
+-  1530 return fiberInterruptAll(fibers)
+
+@@ hunk 87 [code] pin 1532-1532 release 1654-1654 cited ranges 2
+   pin units: raceAll=code
+   release units: raceAll=code
+-  1532 )
++  1654 })
+
+@@ hunk 88 [code] pin 1549-1551 release 1671-1671 cited ranges 0
+   pin units: raceAllFirst=code
+   release units: raceAllFirst=code
+-  1549 withFiber((parent) =>
+-  1550 callback((resume) => {
+-  1551 let done = false
++  1671 withFiber((parent) => {
+
+@@ hunk 89 [code] pin 1553-1560 release 1673-1675 cited ranges 0
+   pin units: raceAllFirst=code
+   release units: raceAllFirst=code
+-  1553 const onExit = (exit: Exit.Exit<any, any>) => {
+-  1554 done = true
+-  1555 resume(
+-  1556 fibers.size === 0
+-  1557 ? exit
+-  1558 : flatMap(uninterruptible(fiberInterruptAll(fibers)), () => exit)
+-  1559 )
+-  1560 }
++  1673 onExitUnsafe(parent, () => fibers.size === 0 ? undefined : fiberInterruptAll(fibers))
++  1674 return callback((resume) => {
++  1675 let done = false
+
+@@ hunk 90 [code] pin 1571-1571 release 1685-1686 cited ranges 0
+   pin units: raceAllFirst=code
+   release units: raceAllFirst=code
+-  1571 onExit(exit)
++  1685 done = true
++  1686 resume(exit)
+
+@@ hunk 91 [code] pin 1578-1578 release before 1692 cited ranges 0
+   pin units: raceAllFirst=code
+   release units: 
+-  1578 return fiberInterruptAll(fibers)
+
+@@ hunk 92 [code] pin 1580-1580 release 1693-1693 cited ranges 0
+   pin units: raceAllFirst=code
+   release units: raceAllFirst=code
+-  1580 )
++  1693 })
+
+@@ hunk 93 [code] pin 1676-1681 release 1789-1789 cited ranges 2
+   pin units: flatMap=code
+   release units: flatMap=code
+-  1676 ): Effect.Effect<B, E | E2, R | R2> => {
+-  1677 const onSuccess = Object.create(OnSuccessProto)
+-  1678 onSuccess[args] = self
+-  1679 onSuccess[contA] = f.length !== 1 ? (a: A) => f(a) : f
+-  1680 return onSuccess
+-  1681 }
++  1789 ): Effect.Effect<B, E | E2, R | R2> => new ContImpl(self, andThenCont, f)
+
+@@ hunk 94 [code] pin 1683-1689 release before 1793 cited ranges 2
+   pin units: OnSuccessProto=code
+   release units: 
+-  1683 const OnSuccessProto = makePrimitiveProto({
+-  1684 op: "OnSuccess",
+-  1685 [evaluate](this: any, fiber: FiberImpl): Primitive {
+-  1686 fiber._stack.push(this)
+-  1687 return this[args]
+-  1688 }
+-  1689 })
+
+@@ hunk 95 [code] pin 1725-1725 release 1826-1827 cited ranges 0
+   pin units: effectIsExit=code
+   release units: effectIsExit=code
+-  1725 export const effectIsExit = <A, E, R>(effect: Effect.Effect<A, E, R>): effect is Exit.Exit<A, E> => ExitTypeId in effect
++  1826 export const effectIsExit = <A, E, R>(effect: Effect.Effect<A, E, R>): effect is Exit.Exit<A, E> =>
++  1827 (effect as any)[ExitTypeId] !== undefined
+
+@@ hunk 96 [code] pin 1772-1772 release 1874-1874 cited ranges 0
+   pin units: map=code
+   release units: map=code
+-  1772 ): Effect.Effect<B, E, R> => flatMap(self, (a) => succeed(internalCall(() => f(a))))
++  1874 ): Effect.Effect<B, E, R> => new ContImpl(self, mapCont, f)
+
+@@ hunk 97 [code] pin 2092-2092 release 2194-2194 cited ranges 6
+   pin units: updateContext=code
+   release units: updateContext=code
+-  2092 return onExitPrimitive(self, () => {
++  2194 onExitUnsafe(fiber, () => {
+
+@@ hunk 98 [code] pin before 2096 release 2198-2198 cited ranges 2
+   pin units: 
+   release units: updateContext=code
++  2198 return self as any
+
+@@ hunk 99 [code] pin 2138-2138 release 2241-2243 cited ranges 0
+   pin units: updateServiceScoped=code
+   release units: updateServiceScoped=code
+-  2138 const current = Context.getUnsafe(fiber.context, service)
++  2241 const currentOption = Context.getOption(fiber.context, service)
++  2242 if (Option.isNone(currentOption)) return void_
++  2243 const current = currentOption.value
+
+@@ hunk 100 [code] pin 2306-2307 release 2411-2412 cited ranges 0
+   pin units: zipWith=code
+   release units: zipWith=code
+-  2306 ? map(all([self, that], { concurrency: 2 }), ([a, a2]) => internalCall(() => f(a, a2)))
+-  2307 : flatMap(self, (a) => map(that, (a2) => internalCall(() => f(a, a2))))
++  2411 ? map(all([self, that], { concurrency: 2 }), ([a, a2]) => f(a, a2))
++  2412 : flatMap(self, (a) => map(that, (a2) => f(a, a2)))
+
+@@ hunk 101 [code] pin 2488-2493 release 2593-2594 cited ranges 2
+   pin units: catchCause=code
+   release units: catchCause=code
+-  2488 ): Effect.Effect<A | B, E2, R | R2> => {
+-  2489 const onFailure = Object.create(OnFailureProto)
+-  2490 onFailure[args] = self
+-  2491 onFailure[contE] = f.length !== 1 ? (cause: Cause.Cause<E>) => f(cause) : f
+-  2492 return onFailure
+-  2493 }
++  2593 ): Effect.Effect<A | B, E2, R | R2> =>
++  2594 new OnFailureImpl(self, f.length !== 1 ? (cause: Cause.Cause<E>) => f(cause) : f)
+
+@@ hunk 102 [code] pin 2497-2500 release 2598-2598 cited ranges 2
+   pin units: OnFailureProto=code
+   release units: OnFailureProto=code
+-  2497 [evaluate](this: any, fiber: FiberImpl): Primitive {
+-  2498 fiber._stack.push(this as any)
+-  2499 return this[args]
+-  2500 }
++  2598 [evaluate]: evaluateCont
+
+@@ hunk 103 [code] pin before 2504 release 2600-2604 cited ranges 0
+   pin units: 
+   release units: OnFailureImpl=absent; statement#2=absent
++  2600 const OnFailureImpl = function(this: any, self: Effect.Effect<any, any, any>, f: any) {
++  2601 this[args] = self
++  2602 this[contE] = f
++  2603 } as unknown as PrimitiveCtor<[self: Effect.Effect<any, any, any>, f: any]>
++  2604 OnFailureImpl.prototype = OnFailureProto
+
+@@ hunk 104 [code] pin 2527-2527 release 2630-2630 cited ranges 0
+   pin units: catchCauseIf=code
+   release units: catchCauseIf=code
+-  2527 return internalCall(() => f(cause))
++  2630 return f(cause)
+
+@@ hunk 105 [code] pin 2553-2553 release 2656-2656 cited ranges 0
+   pin units: catchCauseFilter=code
+   release units: catchCauseFilter=code
+-  2553 return Result.isFailure(eb) ? failCause(eb.failure) : internalCall(() => f(eb.success, cause))
++  2656 return Result.isFailure(eb) ? failCause(eb.failure) : f(eb.success, cause)
+
+@@ hunk 106 [code] pin 2619-2620 release 2722-2722 cited ranges 0
+   pin units: tapCause=code
+   release units: tapCause=code
+-  2619 ): Effect.Effect<A, E | E2, R | R2> =>
+-  2620 catchCause(self, (cause) => andThen(internalCall(() => f(cause)), failCause(cause)))
++  2722 ): Effect.Effect<A, E | E2, R | R2> => catchCause(self, (cause) => andThen(f(cause), failCause(cause)))
+
+@@ hunk 107 [code] pin 2644-2644 release 2746-2746 cited ranges 0
+   pin units: tapCauseIf=code
+   release units: tapCauseIf=code
+-  2644 (cause) => andThen(internalCall(() => f(cause)), failCause(cause))
++  2746 (cause) => andThen(f(cause), failCause(cause))
+
+@@ hunk 108 [code] pin 2671-2671 release 2773-2773 cited ranges 0
+   pin units: tapCauseFilter=code
+   release units: tapCauseFilter=code
+-  2671 return andThen(internalCall(() => f(result.success, cause)), failCause(cause))
++  2773 return andThen(f(result.success, cause), failCause(cause))
+
+@@ hunk 109 [erased] pin 2744-2744 release 2846-2846 cited ranges 0
+   pin units: tapDefect=erased
+   release units: tapDefect=erased
+-  2744 <E, B, E2, R2>(
++  2846 <B, E2, R2>(
+
+@@ hunk 110 [erased] pin 2746-2746 release 2848-2848 cited ranges 0
+   pin units: tapDefect=erased
+   release units: tapDefect=erased
+-  2746 ): <A, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E | E2, R | R2>
++  2848 ): <A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A, E | E2, R | R2>
+
+@@ hunk 111 [code] pin 2807-2807 release 2909-2909 cited ranges 2
+   pin units: catchIf=code
+   release units: catchIf=code
+-  2807 return orElse ? internalCall(() => orElse(error.success as any)) : failCause(cause as any as Cause.Cause<E3>)
++  2909 return orElse ? orElse(error.success as any) : failCause(cause as any as Cause.Cause<E3>)
+
+@@ hunk 112 [code] pin 2809-2809 release 2911-2911 cited ranges 2
+   pin units: catchIf=code
+   release units: catchIf=code
+-  2809 return internalCall(() => f(error.success as any))
++  2911 return f(error.success as any)
+
+@@ hunk 113 [code] pin 2841-2841 release 2943-2943 cited ranges 0
+   pin units: catchFilter=code
+   release units: catchFilter=code
+-  2841 return orElse ? internalCall(() => orElse(result.failure as any)) : failCause(cause as any as Cause.Cause<E3>)
++  2943 return orElse ? orElse(result.failure as any) : failCause(cause as any as Cause.Cause<E3>)
+
+@@ hunk 114 [code] pin 2843-2843 release 2945-2945 cited ranges 0
+   pin units: catchFilter=code
+   release units: catchFilter=code
+-  2843 return internalCall(() => f(result.success))
++  2945 return f(result.success)
+
+@@ hunk 115 [code] pin 3001-3001 release 3103-3103 cited ranges 0
+   pin units: catchTags=code
+   release units: catchTags=code
+-  3001 (e: any) => internalCall(() => cases[e["_tag"] as string](e)),
++  3103 (e: any) => cases[e["_tag"] as string](e),
+
+@@ hunk 116 [code] pin 3101-3101 release 3203-3206 cited ranges 0
+   pin units: catchReason=code
+   release units: catchReason=code
+-  3101 ((e: any) => isTagged(e, errorTag) && hasProperty(e, "reason")) as any,
++  3203 ((e: any) =>
++  3204 isTagged(e, errorTag) &&
++  3205 hasProperty(e, "reason") &&
++  3206 (orElse !== undefined || isTagged(e.reason, reasonTag))) as any,
+
+@@ hunk 117 [code] pin 3105-3105 release 3210-3210 cited ranges 0
+   pin units: catchReason=code
+   release units: catchReason=code
+-  3105 return orElse ? internalCall(() => orElse(reason, e)) : fail(e)
++  3210 return orElse ? orElse(reason, e) : fail(e)
+
+@@ hunk 118 [code] pin 3201-3201 release 3306-3307 cited ranges 0
+   pin units: catchReasons=code
+   release units: catchReasons=code
+-  3201 isString(e.reason._tag)) as any,
++  3306 isString(e.reason._tag) &&
++  3307 (orElse !== undefined || (keys ??= Object.keys(cases)).includes(e.reason._tag))) as any,
+
+@@ hunk 119 [code] pin 3206-3206 release 3312-3312 cited ranges 0
+   pin units: catchReasons=code
+   release units: catchReasons=code
+-  3206 return internalCall(() => (cases as any)[reason._tag](reason, e))
++  3312 return (cases as any)[reason._tag](reason, e)
+
+@@ hunk 120 [code] pin 3208-3208 release 3314-3314 cited ranges 0
+   pin units: catchReasons=code
+   release units: catchReasons=code
+-  3208 return orElse ? internalCall(() => orElse(reason, e)) : fail(e)
++  3314 return orElse ? orElse(reason, e) : fail(e)
+
+@@ hunk 121 [erased] pin 3295-3297 release 3401-3403 cited ranges 0
+   pin units: orElseSucceed=code
+   release units: orElseSucceed=code
+-  3295 <B>(
+-  3296 f: LazyArg<B>
+-  3297 ): <A, E, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A | B, never, R>
++  3401 <E, B>(
++  3402 f: (error: NoInfer<E>) => B
++  3403 ): <A, R>(self: Effect.Effect<A, E, R>) => Effect.Effect<A | B, never, R>
+
+@@ hunk 122 [erased] pin 3300-3300 release 3406-3406 cited ranges 0
+   pin units: orElseSucceed=code
+   release units: orElseSucceed=code
+-  3300 f: LazyArg<B>
++  3406 f: (error: E) => B
+
+@@ hunk 123 [code] pin 3306-3307 release 3412-3413 cited ranges 0
+   pin units: orElseSucceed=code
+   release units: orElseSucceed=code
+-  3306 f: LazyArg<B>
+-  3307 ): Effect.Effect<A | B, never, R> => catch_(self, (_) => sync(f))
++  3412 f: (error: E) => B
++  3413 ): Effect.Effect<A | B, never, R> => catch_(self, (error) => sync(() => f(error)))
+
+@@ hunk 124 [code] pin 3449-3453 release 3555-3559 cited ranges 3
+   pin units: matchCauseEffect=code
+   release units: matchCauseEffect=code
+-  3449 ): Effect.Effect<A2 | A3, E2 | E3, R2 | R3 | R> => {
+-  3450 const primitive = Object.create(OnSuccessAndFailureProto)
+-  3451 primitive[args] = self
+-  3452 primitive[contA] = options.onSuccess.length !== 1 ? (a: A) => options.onSuccess(a) : options.onSuccess
+-  3453 primitive[contE] = options.onFailure.length !== 1
++  3555 ): Effect.Effect<A2 | A3, E2 | E3, R2 | R3 | R> =>
++  3556 new OnSuccessAndFailureImpl(
++  3557 self,
++  3558 options.onSuccess.length !== 1 ? (a: A) => options.onSuccess(a) : options.onSuccess,
++  3559 options.onFailure.length !== 1
+
+@@ hunk 125 [code] pin 3456-3457 release 3562-3562 cited ranges 3
+   pin units: matchCauseEffect=code
+   release units: matchCauseEffect=code
+-  3456 return primitive
+-  3457 }
++  3562 )
+
+@@ hunk 126 [code] pin 3461-3463 release 3566-3586 cited ranges 2
+   pin units: OnSuccessAndFailureProto=code
+   release units: OnSuccessAndFailureProto=code; OnSuccessAndFailureImpl=absent; statement#3=absent; matchSuccess=absent
+-  3461 [evaluate](this: any, fiber: FiberImpl): Primitive {
+-  3462 fiber._stack.push(this)
+-  3463 return this[args]
++  3566 [evaluate]: evaluateCont
++  3567 })
++  3568 const OnSuccessAndFailureImpl = function(
++  3569 this: any,
++  3570 self: Effect.Effect<any, any, any>,
++  3571 onSuccess: any,
++  3572 onFailure: any
++  3573 ) {
++  3574 this[args] = self
++  3575 this[contA] = onSuccess
++  3576 this[contE] = onFailure
++  3577 } as unknown as PrimitiveCtor<[self: Effect.Effect<any, any, any>, onSuccess: any, onFailure: any]>
++  3578 OnSuccessAndFailureImpl.prototype = OnSuccessAndFailureProto
++  3582 const matchSuccess = function(this: any, value: any, fiber: FiberImpl) {
++  3583 const handlers = this.payload
++  3584 return fiber.succeedWith(
++  3585 continuationMarksStack ? handlers.onSuccess(value) : internalCall(() => handlers.onSuccess(value))
++  3586 )
+
+@@ hunk 127 [code] pin before 3465 release 3588-3620 cited ranges 2
+   pin units: 
+   release units: makeMatch=absent; MatchImpl=absent; MatchCauseImpl=absent
++  3588 const makeMatch = (
++  3589 op: string,
++  3590 onFailure: (this: any, cause: Cause.Cause<any>, fiber: FiberImpl) => Primitive | Yield
++  3591 ) => {
++  3592 const Proto = makePrimitiveProto({
++  3593 op,
++  3594 [evaluate]: evaluateCont,
++  3595 [contA]: matchSuccess,
++  3596 [contE]: onFailure
++  3597 })
++  3598 const MatchImpl = function(this: any, self: Effect.Effect<any, any, any>, handlers: any) {
++  3599 this[args] = self
++  3600 this.payload = handlers
++  3601 } as unknown as {
++  3602 new(self: Effect.Effect<any, any, any>, handlers: any): Effect.Effect<any, never, any>
++  3603 prototype: any
++  3604 }
++  3605 MatchImpl.prototype = Proto
++  3606 return MatchImpl
++  3607 }
++  3608 const MatchImpl = makeMatch("Match", function(cause, fiber) {
++  3609 const fail = cause.reasons.find(isFailReason)
++  3610 if (fail === undefined) return failCause(cause) as any
++  3611 const handlers = this.payload
++  3612 return fiber.succeedWith(
++  3613 continuationMarksStack ? handlers.onFailure(fail.error) : internalCall(() => handlers.onFailure(fail.error))
++  3614 )
++  3615 })
++  3616 const MatchCauseImpl = makeMatch("MatchCause", function(cause, fiber) {
++  3617 const handlers = this.payload
++  3618 return fiber.succeedWith(
++  3619 continuationMarksStack ? handlers.onFailure(cause) : internalCall(() => handlers.onFailure(cause))
++  3620 )
+
+@@ hunk 128 [code] pin 3488-3492 release 3644-3644 cited ranges 1
+   pin units: matchCause=code
+   release units: matchCause=code
+-  3488 ): Effect.Effect<A2 | A3, never, R> =>
+-  3489 matchCauseEffect(self, {
+-  3490 onFailure: (cause) => sync(() => options.onFailure(cause)),
+-  3491 onSuccess: (value) => sync(() => options.onSuccess(value))
+-  3492 })
++  3644 ): Effect.Effect<A2 | A3, never, R> => new MatchCauseImpl(self, options)
+
+@@ hunk 129 [code] pin 3523-3523 release 3675-3675 cited ranges 0
+   pin units: matchEffect=code
+   release units: matchEffect=code
+-  3523 ? internalCall(() => options.onFailure(fail.error))
++  3675 ? options.onFailure(fail.error)
+
+@@ hunk 130 [code] pin 3551-3555 release 3703-3703 cited ranges 0
+   pin units: match=code
+   release units: match=code
+-  3551 ): Effect.Effect<A2 | A3, never, R> =>
+-  3552 matchEffect(self, {
+-  3553 onFailure: (error) => sync(() => options.onFailure(error)),
+-  3554 onSuccess: (value) => sync(() => options.onSuccess(value))
+-  3555 })
++  3703 ): Effect.Effect<A2 | A3, never, R> => new MatchImpl(self, options)
+
+@@ hunk 131 [code] pin 3631-3632 release 3779-3780 cited ranges 3
+   pin units: exitPrimitive=code
+   release units: exitPrimitive=code
+-  3631 [contA](value, _, exit) {
+-  3632 return succeed(exit ?? exitSucceed(value))
++  3779 [contA](value, fiber, exit) {
++  3780 return fiber.succeedWith(exit ?? exitSucceed(value))
+
+@@ hunk 132 [code] pin 3634-3635 release 3782-3783 cited ranges 3
+   pin units: exitPrimitive=code
+   release units: exitPrimitive=code
+-  3634 [contE](cause, _, exit) {
+-  3635 return succeed(exit ?? exitFailCause(cause))
++  3782 [contE](cause, fiber, exit) {
++  3783 return fiber.succeedWith(exit ?? exitFailCause(cause))
+
+@@ hunk 133 [code] pin 3700-3702 release 3848-3850 cited ranges 1
+   pin units: timeoutOrElse=code
+   release units: timeoutOrElse=code
+-  3700 raceFirst(
+-  3701 self,
+-  3702 flatMap(sleep(options.duration), options.orElse)
++  3848 flatMap(
++  3849 timeoutOption(self, options.duration),
++  3850 (option): Effect.Effect<A | A2, E2, R2> => Option.isNone(option) ? options.orElse() : succeed(option.value)
+
+@@ hunk 134 [code] pin before 3707 release 3855-3856 cited ranges 1
+   pin units: 
+   release units: timeoutErrorFromDuration=absent
++  3855 const timeoutErrorFromDuration = (duration: Duration.Duration): TimeoutError =>
++  3856 new TimeoutError(`Operation timed out after '${Duration.format(duration)}'`)
+
+@@ hunk 135 [code] pin 3722-3725 release 3874-3878 cited ranges 2
+   pin units: timeout=code
+   release units: timeout=code
+-  3722 ): Effect.Effect<A, E | TimeoutError, R> =>
+-  3723 timeoutOrElse(self, {
+-  3724 duration,
+-  3725 orElse: () => fail(new TimeoutError())
++  3874 ): Effect.Effect<A, E | TimeoutError, R> => {
++  3875 const decoded = Duration.fromInputUnsafe(duration)
++  3876 return timeoutOrElse(self, {
++  3877 duration: decoded,
++  3878 orElse: () => fail(timeoutErrorFromDuration(decoded))
+
+@@ hunk 136 [code] pin before 3727 release 3880-3880 cited ranges 2
+   pin units: 
+   release units: timeout=code
++  3880 }
+
+@@ hunk 137 [code] pin 3776-3776 release 3930-3935 cited ranges 1
+   pin units: scopeClose=code
+   release units: scopeClose=code
+-  3776 suspend(() => scopeCloseUnsafe(self, exit_) ?? void_)
++  3930 withFiber((fiber) => {
++  3931 const close = scopeCloseUnsafe(self, exit_)
++  3932 if (close === undefined) return void_
++  3933 fiberEnterUninterruptibleUnsafe(fiber)
++  3934 return close
++  3935 })
+
+@@ hunk 138 [code] pin 3780-3785 release before 3939 cited ranges 6
+   pin units: scopeCloseUnsafe=code
+   release units: 
+-  3780 if (self.state._tag === "Closed") return
+-  3781 const closed: Scope.State.Closed = { _tag: "Closed", exit: exit_ }
+-  3782 if (self.state._tag === "Empty") {
+-  3783 self.state = closed
+-  3784 return
+-  3785 }
+
+@@ hunk 139 [code] pin 3787-3789 release 3940-3943 cited ranges 6
+   pin units: scopeCloseUnsafe=code
+   release units: scopeCloseUnsafe=code
+-  3787 self.state = closed
+-  3788 if (state.finalizer !== undefined) {
+-  3789 return state.finalizer(exit_)
++  3940 if (state._tag === "Closed") return
++  3941 self.state = { _tag: "Closed", exit: exit_ }
++  3942 if (self.parent !== undefined) {
++  3943 scopeRemoveFinalizerUnsafe(self.parent, self)
+
+@@ hunk 140 [code] pin 3791-3795 release 3945-3951 cited ranges 6
+   pin units: scopeCloseUnsafe=code
+   release units: scopeCloseUnsafe=code
+-  3791 const finalizers = state.finalizers
+-  3792 if (finalizers === undefined || finalizers.size === 0) {
+-  3793 return
+-  3794 } else if (finalizers.size === 1) {
+-  3795 return finalizers.values().next().value!(exit_)
++  3945 if (state._tag === "Empty") return
++  3946 if (state.finalizer !== undefined) {
++  3947 return runFinalizer(state.finalizer, exit_)
++  3948 }
++  3949 const finalizers = state.finalizers!
++  3950 if (finalizers.size === 1) {
++  3951 return runFinalizer(finalizers.values().next().value!, exit_)
+
+@@ hunk 141 [code] pin before 3800 release 3956-3965 cited ranges 2
+   pin units: 
+   release units: runFinalizer=absent
++  3956 const runFinalizer = (
++  3957 finalizer: (exit: Exit.Exit<any, any>) => Effect.Effect<unknown>,
++  3958 exit_: Exit.Exit<any, any>
++  3959 ): Effect.Effect<unknown> => {
++  3960 try {
++  3961 return finalizer(exit_)
++  3962 } catch (defect) {
++  3963 return exitDie(defect)
++  3964 }
++  3965 }
+
+@@ hunk 142 [code] pin 3818-3818 release 3985-3985 cited ranges 8
+   pin units: scopeCloseFinalizers=code
+   release units: scopeCloseFinalizers=code
+-  3818 exits.push(yield* exit(finalizer(exit_)))
++  3985 exits.push(yield* exit(runFinalizer(finalizer, exit_)))
+
+@@ hunk 143 [code] pin 3820-3820 release 3987-3987 cited ranges 10
+   pin units: scopeCloseFinalizers=code
+   release units: scopeCloseFinalizers=code
+-  3820 fibers.push(forkUnsafe(parent, finalizer(exit_), true, true, "inherit"))
++  3987 fibers.push(forkUnsafe(parent, runFinalizer(finalizer, exit_), true, true, "inherit"))
+
+@@ hunk 144 [code] pin 3835-3835 release 4002-4002 cited ranges 3
+   pin units: scopeForkUnsafe=code
+   release units: scopeForkUnsafe=code
+-  3835 const newScope = scopeMakeUnsafe(finalizerStrategy)
++  4002 const child = makeScope(finalizerStrategy, scope)
+
+@@ hunk 145 [code] pin 3837-3838 release 4004-4005 cited ranges 3
+   pin units: scopeForkUnsafe=code
+   release units: scopeForkUnsafe=code
+-  3837 newScope.state = scope.state
+-  3838 return newScope
++  4004 child.state = scope.state
++  4005 return child
+
+@@ hunk 146 [code] pin 3840-3843 release 4007-4008 cited ranges 4
+   pin units: scopeForkUnsafe=code
+   release units: scopeForkUnsafe=code
+-  3840 const key = {}
+-  3841 scopeAddFinalizerUnsafe(scope, key, (exit) => scopeClose(newScope, exit))
+-  3842 scopeAddFinalizerUnsafe(newScope, key, (_) => sync(() => scopeRemoveFinalizerUnsafe(scope, key)))
+-  3843 return newScope
++  4007 scopeAddFinalizerUnsafe(scope, child, (exit) => scopeClose(child, exit))
++  4008 return child
+
+@@ hunk 147 [code] pin 3881-3883 release before 4046 cited ranges 2
+   pin units: scopeAddFinalizerUnsafe=code
+   release units: 
+-  3881 } else if (state.finalizers === undefined) {
+-  3882 state.finalizerKey = key
+-  3883 state.finalizer = finalizer
+
+@@ hunk 148 [erased] pin 3885-3885 release 4047-4047 cited ranges 2
+   pin units: scopeAddFinalizerUnsafe=code
+   release units: scopeAddFinalizerUnsafe=code
+-  3885 state.finalizers.set(key, finalizer)
++  4047 state.finalizers!.set(key, finalizer)
+
+@@ hunk 149 [code] pin 3895-3895 release 4057-4057 cited ranges 2
+   pin units: scopeRemoveFinalizerUnsafe=code
+   release units: scopeRemoveFinalizerUnsafe=code
+-  3895 if (scope.state._tag === "Open") {
++  4057 if (scope.state._tag !== "Open") return
+
+@@ hunk 150 [code] pin 3898-3899 release 4060-4060 cited ranges 2
+   pin units: scopeRemoveFinalizerUnsafe=code
+   release units: scopeRemoveFinalizerUnsafe=code
+-  3898 state.finalizerKey = undefined
+-  3899 state.finalizer = undefined
++  4060 scope.state = constScopeEmpty
+
+@@ hunk 151 [code] pin before 3902 release 4063-4064 cited ranges 2
+   pin units: 
+   release units: scopeRemoveFinalizerUnsafe=code
++  4063 if (state.finalizers.size === 0) {
++  4064 scope.state = constScopeEmpty
+
+@@ hunk 152 [code] pin 3907-3915 release 4070-4076 cited ranges 2
+   pin units: scopeFinalizerCountUnsafe=absent; scopeMakeUnsafe=code
+   release units: scopeMakeUnsafe=code; makeScope=absent
+-  3907 export const scopeFinalizerCountUnsafe = (scope: Scope.Scope): number =>
+-  3908 scope.state._tag !== "Open"
+-  3909 ? 0
+-  3910 : scope.state.finalizer !== undefined
+-  3911 ? 1
+-  3912 : (scope.state.finalizers?.size ?? 0)
+-  3915 export const scopeMakeUnsafe = (finalizerStrategy: "sequential" | "parallel" = "sequential"): Scope.Closeable => ({
++  4070 export const scopeMakeUnsafe = (finalizerStrategy?: "sequential" | "parallel"): Scope.Closeable =>
++  4071 makeScope(finalizerStrategy, undefined)
++  4073 const makeScope = (
++  4074 finalizerStrategy: "sequential" | "parallel" = "sequential",
++  4075 parent: Scope.Scope | undefined
++  4076 ): Scope.Closeable => ({
+
+@@ hunk 153 [code] pin before 3919 release 4080-4080 cited ranges 2
+   pin units: 
+   release units: makeScope=absent
++  4080 parent,
+
+@@ hunk 154 [code] pin 3943-3943 release 4105-4105 cited ranges 3
+   pin units: scoped=code
+   release units: scoped=code
+-  3943 return onExitPrimitive(self, (exit) => {
++  4105 onExitUnsafe<A, E>(fiber, (exit) => {
+
+@@ hunk 155 [code] pin before 3947 release 4109-4109 cited ranges 4
+   pin units: 
+   release units: scoped=code
++  4109 return self
+
+@@ hunk 156 [code] pin 4002-4006 release 4164-4165 cited ranges 3
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4002 export const onExitPrimitive: <A, E, R, XE = never, XR = never>(
+-  4003 self: Effect.Effect<A, E, R>,
+-  4004 f: (exit: Exit.Exit<A, E>) => Effect.Effect<void, XE, XR> | undefined,
+-  4005 interruptible?: boolean
+-  4006 ) => Effect.Effect<A, E | XE, R | XR> = makePrimitive({
++  4164 const OnExitImpl = (function() {
++  4165 const Proto = makePrimitiveProto({
+
+@@ hunk 157 [code] pin 4008-4009 release 4167-4167 cited ranges 2
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4008 single: false,
+-  4009 [evaluate](fiber: FiberImpl) {
++  4167 [evaluate](this: any, fiber: FiberImpl) {
+
+@@ hunk 158 [code] pin 4011-4011 release 4169-4169 cited ranges 2
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4011 return this[args][0]
++  4169 return this.effect
+
+@@ hunk 159 [code] pin 4013-4014 release 4171-4172 cited ranges 3
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4013 [contAll](fiber) {
+-  4014 if (fiber.interruptible && this[args][2] !== true) {
++  4171 [contAll](this: any, fiber) {
++  4172 if (fiber.interruptible && this.interruptible !== true) {
+
+@@ hunk 160 [erased] pin 4019-4019 release 4177-4177 cited ranges 4
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4019 [contA](value, _, exit) {
++  4177 [contA](this: any, value, _, exit) {
+
+@@ hunk 161 [code] pin 4021-4021 release 4179-4184 cited ranges 6
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4021 const eff = this[args][1](exit)
++  4179 let eff: Effect.Effect<void, any, any> | undefined
++  4180 try {
++  4181 eff = this.onExit(exit)
++  4182 } catch (defect) {
++  4183 eff = exitDie(defect)
++  4184 }
+
+@@ hunk 162 [erased] pin 4024-4024 release 4187-4187 cited ranges 6
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4024 [contE](cause, _, exit) {
++  4187 [contE](this: any, cause, _, exit) {
+
+@@ hunk 163 [code] pin 4026-4026 release 4189-4194 cited ranges 6
+   pin units: onExitPrimitive=code
+   release units: OnExitImpl=absent
+-  4026 const eff = this[args][1](exit)
++  4189 let eff: Effect.Effect<void, any, any> | undefined
++  4190 try {
++  4191 eff = this.onExit(exit)
++  4192 } catch (defect) {
++  4193 eff = exitDie(defect)
++  4194 }
+
+@@ hunk 164 [code] pin before 4032 release 4198-4224 cited ranges 0
+   pin units: 
+   release units: OnExitImpl=absent; onExitPrimitive=code; onExitUnsafe=absent
++  4198 const OnExitImpl = function(this: any, effect: any, onExit: any, interruptible: any) {
++  4199 this.effect = effect
++  4200 this.onExit = onExit
++  4201 this.interruptible = interruptible
++  4202 } as unknown as PrimitiveCtor<[effect: any, onExit: any, interruptible: any]>
++  4203 OnExitImpl.prototype = Proto
++  4204 return OnExitImpl
++  4205 })()
++  4208 export const onExitPrimitive: <A, E, R, XE = never, XR = never>(
++  4209 self: Effect.Effect<A, E, R>,
++  4210 f: (exit: Exit.Exit<A, E>) => Effect.Effect<void, XE, XR> | undefined,
++  4211 interruptible?: boolean
++  4212 ) => Effect.Effect<A, E | XE, R | XR> = (effect, onExit, interruptible) =>
++  4213 new OnExitImpl(effect, onExit, interruptible) as any
++  4219 export const onExitUnsafe = <A = unknown, E = unknown>(
++  4220 fiber: Fiber.Fiber<unknown, unknown>,
++  4221 f: (exit: Exit.Exit<A, E>) => Effect.Effect<void, unknown, unknown> | undefined
++  4222 ): void => {
++  4223 ;(fiber as FiberImpl)._stack.push(new OnExitImpl(undefined, f, undefined))
++  4224 }
+
+@@ hunk 165 [code] pin 4209-4209 release 4404-4404 cited ranges 0
+   pin units: acquireUseRelease=code
+   release units: acquireUseRelease=code
+-  4209 restore(use(a)),
++  4404 suspend(() => restore(use(a))),
+
+@@ hunk 166 [erased] pin before 4230 release 4425-4427 cited ranges 0
+   pin units: 
+   release units: cachedInvalidateWithTTL=code
++  4425 <A, E>(timeToLive: (exit: Exit.Exit<A, E>) => Duration.Input): <R>(
++  4426 self: Effect.Effect<A, E, R>
++  4427 ) => Effect.Effect<[Effect.Effect<A, E, R>, Effect.Effect<void>]>
+
+@@ hunk 167 [erased] pin before 4233 release 4431-4433 cited ranges 0
+   pin units: 
+   release units: cachedInvalidateWithTTL=code
++  4431 <A, E>(timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)): <R>(
++  4432 self: Effect.Effect<A, E, R>
++  4433 ) => Effect.Effect<[Effect.Effect<A, E, R>, Effect.Effect<void>]>
+
+@@ hunk 168 [erased] pin 4235-4235 release 4436-4436 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: cachedInvalidateWithTTL=code
+-  4235 timeToLive: Duration.Input
++  4436 timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)
+
+@@ hunk 169 [code] pin 4239-4239 release 4440-4440 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: cachedInvalidateWithTTL=code
+-  4239 ttl: Duration.Input
++  4440 ttl: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)
+
+@@ hunk 170 [code] pin 4241-4244 release 4442-4461 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: cachedInvalidateWithTTL=code; infiniteTTL=absent; CachedRun=absent; makeCachedUnsafe=absent
+-  4241 sync(() => {
+-  4242 const ttlMillis = Duration.toMillis(Duration.fromInputUnsafe(ttl))
+-  4243 const isFinite = Number.isFinite(ttlMillis)
+-  4244 const latch = makeLatchUnsafe(false)
++  4442 sync(() =>
++  4443 makeCachedUnsafe(
++  4444 self,
++  4445 typeof ttl === "function"
++  4446 ? (exit: Exit.Exit<A, E>) => Duration.toMillis(Duration.fromInputUnsafe(ttl(exit)))
++  4447 : constant(Duration.toMillis(Duration.fromInputUnsafe(ttl)))
++  4448 )
++  4449 ))
++  4451 const infiniteTTL = constant(Infinity)
++  4453 interface CachedRun<A, E> {
++  4454 fiber: FiberImpl<A, E> | undefined
++  4455 awaiters: number
++  4456 }
++  4458 const makeCachedUnsafe = <A, E, R>(
++  4459 self: Effect.Effect<A, E, R>,
++  4460 ttlMillis: (exit: Exit.Exit<A, E>) => number
++  4461 ): [Effect.Effect<A, E, R>, Effect.Effect<void>] => {
+
+@@ hunk 171 [code] pin 4246-4246 release before 4463 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: 
+-  4246 let running = false
+
+@@ hunk 172 [code] pin 4248-4248 release 4464-4477 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: makeCachedUnsafe=absent
+-  4248 const wait = flatMap(latch.await, () => exit!)
++  4464 let current: CachedRun<A, E> | undefined
++  4466 const join = (fiber: Fiber.Fiber<unknown, unknown>, run: CachedRun<A, E>): Effect.Effect<A, E> => {
++  4467 run.awaiters++
++  4468 onExitUnsafe(fiber, () => {
++  4470 if (--run.awaiters > 0 || current !== run) return
++  4473 current = undefined
++  4474 return fiberInterrupt(run.fiber!)
++  4475 })
++  4476 return fiberJoin(run.fiber!)
++  4477 }
+
+@@ hunk 173 [code] pin 4251-4255 release 4481-4487 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: makeCachedUnsafe=absent
+-  4251 const clock = fiber.getRef(ClockRef)
+-  4252 const now = isFinite ? clock.currentTimeMillisUnsafe() : 0
+-  4253 if (running || now < expiresAt) return exit ?? wait
+-  4254 running = true
+-  4255 latch.closeUnsafe()
++  4481 if (current !== undefined) return join(fiber, current)
++  4482 if (
++  4483 exit !== undefined &&
++  4484 (expiresAt === Infinity || fiber.getRef(ClockRef).currentTimeMillisUnsafe() < expiresAt)
++  4485 ) {
++  4486 return exit
++  4487 }
+
+@@ hunk 174 [code] pin 4257-4260 release 4489-4501 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: makeCachedUnsafe=absent
+-  4257 return onExit(self, (exit_) =>
+-  4258 sync(() => {
+-  4259 running = false
+-  4260 expiresAt = clock.currentTimeMillisUnsafe() + ttlMillis
++  4489 const clock = fiber.getRef(ClockRef)
++  4490 const run: CachedRun<A, E> = { fiber: undefined, awaiters: 0 }
++  4491 current = run
++  4492 run.fiber = forkUnsafe(
++  4493 fiber,
++  4494 onExitPrimitive(self, (exit_) => {
++  4496 if (current !== run) return
++  4497 current = undefined
++  4499 if (exitHasInterrupts(exit_)) return
++  4500 const duration = ttlMillis(exit_)
++  4501 expiresAt = duration === Infinity ? Infinity : clock.currentTimeMillisUnsafe() + duration
+
+@@ hunk 175 [code] pin 4262-4263 release 4503-4507 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: makeCachedUnsafe=absent
+-  4262 latch.openUnsafe()
+-  4263 }))
++  4503 }),
++  4504 true,
++  4505 true
++  4506 )
++  4507 return run.fiber._exit ?? join(fiber, run)
+
+@@ hunk 176 [code] pin 4266-4267 release before 4510 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: 
+-  4266 expiresAt = 0
+-  4267 latch.closeUnsafe()
+
+@@ hunk 177 [code] pin 4271-4271 release 4513-4513 cited ranges 0
+   pin units: cachedInvalidateWithTTL=code
+   release units: makeCachedUnsafe=absent
+-  4271 }))
++  4513 }
+
+@@ hunk 178 [erased] pin before 4275 release 4517-4519 cited ranges 0
+   pin units: 
+   release units: cachedWithTTL=erased
++  4517 <A, E>(
++  4518 timeToLive: (exit: Exit.Exit<A, E>) => Duration.Input
++  4519 ): <R>(self: Effect.Effect<A, E, R>) => Effect.Effect<Effect.Effect<A, E, R>>
+
+@@ hunk 179 [erased] pin before 4278 release 4523-4525 cited ranges 0
+   pin units: 
+   release units: cachedWithTTL=erased
++  4523 <A, E>(
++  4524 timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)
++  4525 ): <R>(self: Effect.Effect<A, E, R>) => Effect.Effect<Effect.Effect<A, E, R>>
+
+@@ hunk 180 [erased] pin 4280-4280 release 4528-4528 cited ranges 0
+   pin units: cachedWithTTL=erased
+   release units: cachedWithTTL=erased
+-  4280 timeToLive: Duration.Input
++  4528 timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)
+
+@@ hunk 181 [erased] pin 4286-4286 release 4534-4534 cited ranges 0
+   pin units: cachedWithTTL=erased
+   release units: cachedWithTTL=erased
+-  4286 timeToLive: Duration.Input
++  4534 timeToLive: Duration.Input | ((exit: Exit.Exit<A, E>) => Duration.Input)
+
+@@ hunk 182 [code] pin 4292-4292 release 4540-4540 cited ranges 0
+   pin units: cached=code
+   release units: cached=code
+-  4292 cachedWithTTL(self, Duration.infinity)
++  4540 sync(() => makeCachedUnsafe(self, infiniteTTL)[0])
+
+@@ hunk 183 [code] pin before 4331 release 4584-4604 cited ranges 0
+   pin units: 
+   release units: fiberEnterUninterruptibleUnsafe=absent; fiberEnterInterruptibleUnsafe=absent
++  4584 export const fiberEnterUninterruptibleUnsafe = (fiber: Fiber.Fiber<unknown, unknown>): void => {
++  4585 const impl = fiber as FiberImpl
++  4586 if (!impl.interruptible) return
++  4587 impl.interruptible = false
++  4588 impl._stack.push(setInterruptibleTrue)
++  4589 }
++  4598 export const fiberEnterInterruptibleUnsafe = (
++  4599 fiber: Fiber.Fiber<unknown, unknown>
++  4600 ): Effect.Effect<never> | undefined => {
++  4601 const impl = fiber as FiberImpl
++  4602 if (impl.interruptible) return undefined
++  4603 return setFiberInterruptible(impl)
++  4604 }
+
+@@ hunk 184 [erased] pin 4429-4429 release 4705-4705 cited ranges 0
+   pin units: partition=erased
+   release units: partition=erased
+-  4429 ): (elements: Iterable<A>) => Effect.Effect<[excluded: Array<E>, satisfying: Array<B>], never, R>
++  4705 ): (elements: Iterable<A>) => Effect.Effect<[passes: Array<B>, fails: Array<E>], never, R>
+
+@@ hunk 185 [erased] pin 4434-4434 release 4710-4710 cited ranges 0
+   pin units: partition=erased
+   release units: partition=erased
+-  4434 ): Effect.Effect<[excluded: Array<E>, satisfying: Array<B>], never, R>
++  4710 ): Effect.Effect<[passes: Array<B>, fails: Array<E>], never, R>
+
+@@ hunk 186 [erased] pin 4441-4441 release 4717-4717 cited ranges 0
+   pin units: partition=erased
+   release units: partition=erased
+-  4441 ): Effect.Effect<[excluded: Array<E>, satisfying: Array<B>], never, R> =>
++  4717 ): Effect.Effect<[passes: Array<B>, fails: Array<E>], never, R> =>
+
+@@ hunk 187 [code] pin 4530-4532 release 4806-4808 cited ranges 0
+   pin units: validate=code
+   release units: validate=code
+-  4530 ([excluded, satisfying]) => {
+-  4531 if (Arr.isArrayNonEmpty(excluded)) {
+-  4532 return fail(excluded)
++  4806 ([passes, fails]) => {
++  4807 if (Arr.isArrayNonEmpty(fails)) {
++  4808 return fail(fails)
+
+@@ hunk 188 [code] pin 4534-4534 release 4810-4810 cited ranges 0
+   pin units: validate=code
+   release units: validate=code
+-  4534 return options?.discard ? void_ : succeed(satisfying)
++  4810 return options?.discard ? void_ : succeed(passes)
+
+@@ hunk 189 [code] pin 4675-4678 release 4951-4951 cited ranges 2
+   pin units: forEach=code
+   release units: forEach=code
+-  4675 const concurrencyOption = options?.concurrency ?? 1
+-  4676 const concurrency = concurrencyOption === "unbounded"
+-  4677 ? Number.POSITIVE_INFINITY
+-  4678 : Math.max(1, concurrencyOption)
++  4951 const concurrency = resolveConcurrency(options?.concurrency)
+
+@@ hunk 190 [code] pin 4731-4737 release 5005-5008 cited ranges 0
+   pin units: IterateEagerOptions=absent; iterateEagerImpl=absent
+   release units: resolveConcurrency=absent; IterateOptions=absent
+-  4731 type IterateEagerOptions = {
+-  4732 readonly concurrency?: number | undefined
+-  4733 readonly end?: number | undefined
+-  4734 readonly orderedStep?: boolean | undefined
+-  4735 }
+-  4737 const iterateEagerImpl = <S, A, X, E, R, E2>(options: {
++  5005 export const resolveConcurrency = (concurrency: Concurrency | undefined): number =>
++  5006 concurrency === "unbounded" ? Number.POSITIVE_INFINITY : Math.max(1, concurrency ?? 1)
++  5008 type IterateOptions<S, A, X, E, R, E2> = {
+
+@@ hunk 191 [code] pin 4740-4740 release 5011-5015 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: IterateOptions=absent; iterateEager=code
+-  4740 }): (
++  5011 }
++  5014 export const iterateEager = <S, A>() =>
++  5015 <X, E, R, E2>(options: IterateOptions<S, A, X, E, R, E2>): (
+
+@@ hunk 192 [erased] pin 4743-4743 release 5018-5019 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateEager=code
+-  4743 options?: IterateEagerOptions
++  5018 start?: number,
++  5019 end?: number
+
+@@ hunk 193 [code] pin 4748-4748 release 5024-5024 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateEager=code
+-  4748 const runSequential = (
++  5024 const resumeSequential = (
+
+@@ hunk 194 [code] pin 4752-4752 release 5028-5040 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateEager=code
+-  4752 end: number
++  5028 end: number,
++  5029 effect: Effect.Effect<X, E, R>
++  5030 ): Effect.Effect<void, E | E2, R> =>
++  5031 flatMap(
++  5032 exit(effect),
++  5033 (itemExit) => step(state, items[index], itemExit, index) ?? runSequential(state, items, index + 1, end) ?? void_
++  5034 )
++  5036 const runSequential = (
++  5037 state: S,
++  5038 items: ReadonlyArray<A>,
++  5039 index = 0,
++  5040 end = items.length
+
+@@ hunk 195 [code] pin 4758-4761 release 5046-5046 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateEager=code
+-  4758 return flatMap(
+-  4759 exit(effect),
+-  4760 (itemExit) => step(state, item, itemExit, index) ?? runSequential(state, items, index + 1, end) ?? void_
+-  4761 )
++  5046 return resumeSequential(state, items, index, end, effect)
+
+@@ hunk 196 [code] pin before 4768 release 5053-5058 cited ranges 0
+   pin units: 
+   release units: iterateEager=code; iterateConcurrentImpl=absent
++  5053 return runSequential
++  5054 }
++  5056 const iterateConcurrentImpl = <S, A, X, E, R, E2>(options: IterateOptions<S, A, X, E, R, E2>) => {
++  5057 const onItem = options.onItem
++  5058 const step = options.step
+
+@@ hunk 197 [erased] pin 4771-4771 release 5062-5062 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4771 opts: IterateEagerOptions | undefined
++  5062 opts: { readonly concurrency: number; readonly end?: number | undefined }
+
+@@ hunk 198 [code] pin 4774-4779 release 5065-5066 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4774 const end = opts?.end ?? items.length
+-  4775 const concurrency = opts?.concurrency ?? 1
+-  4776 if (concurrency === 1) {
+-  4777 return runSequential(state, items, 0, end)
+-  4778 }
+-  4779 const orderedStep = opts?.orderedStep === true
++  5065 const end = opts.end ?? items.length
++  5066 const concurrency = opts.concurrency
+
+@@ hunk 199 [code] pin 4784-4784 release before 5071 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: 
+-  4784 let interrupted = false
+
+@@ hunk 200 [code] pin 4787-4788 release before 5074 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: 
+-  4787 let nextIndex = index
+-  4788 const exits: Array<Exit.Exit<X, E> | undefined> | undefined = orderedStep ? new Array(end) : undefined
+
+@@ hunk 201 [code] pin 4794-4794 release before 5078 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: 
+-  4794 interrupted = true
+
+@@ hunk 202 [code] pin 4796-4796 release 5079-5079 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4796 ? flatMap(uninterruptible(fiberInterruptAll(Array.from(fibers))), () => defect)
++  5079 ? flatMap(uninterruptible(fiberInterruptAll(Array.from(fibers))), () => terminal ?? defect)
+
+@@ hunk 203 [code] pin 4800-4812 release before 5083 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: 
+-  4800 const runStep = (item: A, exit: Exit.Exit<X, E>, currentIndex: number): Exit.Exit<void, E | E2> | void => {
+-  4801 if (!orderedStep) return step(state, item, exit, currentIndex)
+-  4802 if (terminal) return terminal
+-  4803 exits![currentIndex] = exit
+-  4804 while (nextIndex < end) {
+-  4805 const nextExit = exits![nextIndex]
+-  4806 if (nextExit === undefined) return
+-  4807 exits![nextIndex] = undefined
+-  4808 const index = nextIndex++
+-  4809 const result = step(state, items[index], nextExit, index)
+-  4810 if (result) return result
+-  4811 }
+-  4812 }
+
+@@ hunk 204 [code] pin 4822-4822 release 5090-5090 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4822 terminal = runStep(item, eff, index)
++  5090 terminal = step(state, item, eff, index)
+
+@@ hunk 205 [code] pin 4840-4842 release 5106-5110 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4840 terminal = exitVoid
+-  4841 interrupted = true
+-  4842 return fibers ? fiberInterruptAll(fibers) : void_
++  5106 terminal ??= exitVoid
++  5107 return flatMap(
++  5108 fibers ? fiberInterruptAll(fibers) : void_,
++  5109 () => terminal?._tag === "Failure" ? terminal : void_
++  5110 )
+
+@@ hunk 206 [code] pin 4853-4853 release 5119-5119 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4853 terminal = runStep(item, fiber._exit, index)
++  5119 terminal = step(state, item, fiber._exit, index)
+
+@@ hunk 207 [code] pin 4866-4873 release 5131-5135 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4866 if (!interrupted && exit._tag === "Failure") {
+-  4867 for (const reason of exit.cause.reasons) {
+-  4868 if (reason._tag === "Interrupt") continue
+-  4869 else if (terminal._tag === "Failure") {
+-  4870 ;(terminal.cause.reasons as Array<any>).push(reason)
+-  4871 } else {
+-  4872 terminal = exitFailCause(causeFromReasons([reason]))
+-  4873 }
++  5131 if (exit._tag === "Failure") {
++  5132 const reasons = exit.cause.reasons.filter((reason) => reason._tag !== "Interrupt")
++  5133 if (reasons.length > 0) {
++  5134 const cause = causeFromReasons(reasons)
++  5135 terminal = exitFailCause(terminal._tag === "Failure" ? causeCombine(terminal.cause, cause) : cause)
+
+@@ hunk 208 [code] pin 4877-4877 release 5139-5139 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4877 const result = runStep(item, exit, currentIndex)
++  5139 const result = step(state, item, exit, currentIndex)
+
+@@ hunk 209 [code] pin 4879-4881 release 5141-5141 cited ranges 0
+   pin units: iterateEagerImpl=absent
+   release units: iterateConcurrentImpl=absent
+-  4879 terminal = result._tag === "Failure"
+-  4880 ? exitFailCause(causeFromReasons(result.cause.reasons.slice()))
+-  4881 : result
++  5141 terminal = result
+
+@@ hunk 210 [code] pin 4930-4939 release 5189-5192 cited ranges 0
+   pin units: iterateEager=code; forEachConcurrent=code
+   release units: iterateConcurrent=absent; forEachConcurrent=code
+-  4930 export const iterateEager = <S, A>(): <X, E, R, E2>(options: {
+-  4931 readonly onItem: (state: S, item: A, index: number) => Effect.Effect<X, E, R>
+-  4932 readonly step: (state: NoInfer<S>, item: A, exit: Exit.Exit<X, E>, index: number) => Exit.Exit<void, E2> | void
+-  4933 }) => (
+-  4934 initialState: S,
+-  4935 items: ReadonlyArray<A>,
+-  4936 options?: IterateEagerOptions
+-  4937 ) => Effect.Effect<void, E | E2, R> | undefined => iterateEagerImpl
+-  4939 const forEachConcurrent = iterateEagerImpl({
++  5189 export const iterateConcurrent = <S, A>() => <X, E, R, E2>(options: IterateOptions<S, A, X, E, R, E2>) =>
++  5190 iterateConcurrentImpl<S, A, X, E, R, E2>(options)
++  5192 const forEachConcurrent = iterateConcurrentImpl({
+
+@@ hunk 211 [code] pin before 5277 release 5531-5531 cited ranges 4
+   pin units: 
+   release units: forkUnsafe=code
++  5531 child._asyncContext = captureAsyncContext()
+
+@@ hunk 212 [code] pin 5281-5281 release 5536-5536 cited ranges 7
+   pin units: forkUnsafe=code
+   release units: forkUnsafe=code
+-  5281 child.addObserver(() => parentRuntime._children!.delete(child))
++  5536 child._parent = parentRuntime
+
+@@ hunk 213 [code] pin 5319-5319 release 5574-5575 cited ranges 6
+   pin units: awaitAllChildren=code
+   release units: awaitAllChildren=code
+-  5319 return onExit(
++  5574 const isInterruptible = fiber.interruptible
++  5575 return onExitPrimitive(
+
+@@ hunk 214 [code] pin 5331-5331 release 5587-5588 cited ranges 5
+   pin units: awaitAllChildren=code
+   release units: awaitAllChildren=code
+-  5331 return asVoid(fiberAwaitAll(children))
++  5587 const awaitChildren = asVoid(fiberAwaitAll(children))
++  5588 return isInterruptible ? interruptible(awaitChildren) : awaitChildren
+
+@@ hunk 215 [code] pin 5730-5730 release 5987-5987 cited ranges 0
+   pin units: makeSpanUnsafe=code
+   release units: makeSpanUnsafe=code
+-  5730 const disablePropagation = !fiber.getRef(TracerEnabled) ||
++  5987 const disablePropagation = !fiber.cache.tracerEnabled ||
+
+@@ hunk 216 [code] pin 5736-5736 release 5993-5993 cited ranges 0
+   pin units: makeSpanUnsafe=code
+   release units: makeSpanUnsafe=code
+-  5736 : filterDisablePropagation(fiber.currentSpan)
++  5993 : filterDisablePropagation(fiber.cache.span)
+
+@@ hunk 217 [code] pin 5751-5751 release 6009-6009 cited ranges 0
+   pin units: makeSpanUnsafe=code
+   release units: makeSpanUnsafe=code
+-  5751 const tracer = fiber.getRef(Tracer.Tracer)
++  6009 const tracer = fiber.cache.tracer ?? Tracer.nativeTracer
+
+@@ hunk 218 [code] pin 5769-5769 release 6027-6027 cited ranges 0
+   pin units: makeSpanUnsafe=code
+   release units: makeSpanUnsafe=code
+-  5769 startTime: timingEnabled ? clock.currentTimeNanosUnsafe() : BigInt(0),
++  6027 startTime: timingEnabled ? clock.currentTimeNanosUnsafe() : bigint0,
+
+@@ hunk 219 [code] pin 5913-5913 release 6171-6172 cited ranges 0
+   pin units: useSpan=code
+   release units: useSpan=code
+-  5913 return onExit(internalCall(() => evaluate(span)), (exit) => endSpan(span, exit, clock, timingEnabled))
++  6171 onExitUnsafe(fiber, (exit) => endSpan(span, exit, clock, timingEnabled))
++  6172 return evaluate(span)
+
+@@ hunk 220 [code] pin 6223-6223 release 6482-6482 cited ranges 0
+   pin units: ConsoleRef=code
+   release units: ConsoleRef=code
+-  6223 "effect/Console/CurrentConsole",
++  6482 "effect/Console",
+
+@@ hunk 221 [code] pin 6266-6266 release 6525-6525 cited ranges 0
+   pin units: CurrentLoggers=code
+   release units: CurrentLoggers=code
+-  6266 >("effect/Loggers/CurrentLoggers", {
++  6525 >("effect/Logger/CurrentLoggers", {
+
+@@ hunk 222 [code] pin 6296-6296 release 6555-6555 cited ranges 0
+   pin units: annotateLogsScoped=code
+   release units: annotateLogsScoped=code
+-  6296 if (current[key] !== value) continue
++  6555 if (current[key] !== value && !Object.is(current[key], value)) continue
+
+@@ hunk 223 [code] pin 6384-6385 release 6643-6644 cited ranges 0
+   pin units: logWithLevel=code
+   release units: logWithLevel=code
+-  6384 const logLevel = level ?? fiber.currentLogLevel
+-  6385 if (isLogLevelGreaterThan(fiber.minimumLogLevel, logLevel)) {
++  6643 const logLevel = level ?? fiber.cache.logLevel
++  6644 if (isLogLevelGreaterThan(fiber.cache.minimumLogLevel, logLevel)) {
+
+@@ hunk 224 [code] pin before 6461 release 6720-6734 cited ranges 0
+   pin units: 
+   release units: consolePretty=code; prettyLoggerTty=code
++  6720 const process = (globalThis as { readonly process?: { readonly stdout?: unknown } }).process
++  6721 const hasProcessStdout = typeof process?.stdout === "object" && process.stdout !== null
++  6722 const isDeno = "Deno" in globalThis
++  6723 const mode = options?.mode ?? "auto"
++  6724 const isTtyLogger = mode === "auto" ? hasProcessStdout || isDeno : mode === "tty"
++  6726 return isTtyLogger ? prettyLoggerTty(options) : prettyLoggerBrowser(options)
++  6727 }
++  6730 export const prettyLoggerTty = (options?: {
++  6731 readonly colors?: "auto" | boolean | undefined
++  6732 readonly formatDate?: ((date: Date) => string) | undefined
++  6733 }) => {
++  6734 const formatDate = options?.formatDate ?? defaultDateFormat
+
+@@ hunk 225 [erased] pin 6462-6462 release 6738-6741 cited ranges 0
+   pin units: consolePretty=code
+   release units: prettyLoggerTty=code
+-  6462 readonly process?: { readonly stdout?: { readonly isTTY?: boolean } }
++  6738 readonly process?: {
++  6739 readonly stdout?: { readonly isTTY?: unknown }
++  6740 readonly isBun?: boolean
++  6741 }
+
+@@ hunk 226 [code] pin 6465-6483 release 6745-6749 cited ranges 0
+   pin units: consolePretty=code; prettyLoggerTty=code
+   release units: prettyLoggerTty=code
+-  6465 const processStdoutIsTTY = hasProcessStdout &&
+-  6466 process.stdout.isTTY === true
+-  6467 const hasProcessStdoutOrDeno = hasProcessStdout || "Deno" in globalThis
+-  6468 const mode_ = options?.mode ?? "auto"
+-  6469 const mode = mode_ === "auto" ? (hasProcessStdoutOrDeno ? "tty" : "browser") : mode_
+-  6470 const isBrowser = mode === "browser"
+-  6471 const showColors = typeof options?.colors === "boolean" ? options.colors : processStdoutIsTTY || isBrowser
+-  6472 const formatDate = options?.formatDate ?? defaultDateFormat
+-  6473 return isBrowser
+-  6474 ? prettyLoggerBrowser({ colors: showColors, formatDate })
+-  6475 : prettyLoggerTty({ colors: showColors, formatDate })
+-  6476 }
+-  6478 const prettyLoggerTty = (options: {
+-  6479 readonly colors: boolean
+-  6480 readonly formatDate: (date: Date) => string
+-  6481 }) => {
+-  6482 const processIsBun = (globalThis as { readonly process?: { readonly isBun?: boolean } }).process?.isBun === true
+-  6483 const color = options.colors ? withColor : withColorNoop
++  6745 const processStdoutIsTTY = hasProcessStdout && process.stdout.isTTY === true
++  6746 const showColors = typeof options?.colors === "boolean" ? options.colors : processStdoutIsTTY
++  6747 const color = showColors ? withColor : withColorNoop
++  6749 const processIsBun = process?.isBun === true
+
+@@ hunk 227 [code] pin 6492-6492 release 6758-6758 cited ranges 0
+   pin units: prettyLoggerTty=code
+   release units: prettyLoggerTty=code
+-  6492 let firstLine = color(`[${options.formatDate(date)}]`, colors.white)
++  6758 let firstLine = color(`[${formatDate(date)}]`, colors.white)
+
+@@ hunk 228 [code] pin 6537-6539 release 6804-6806 cited ranges 0
+   pin units: prettyLoggerBrowser=code
+   release units: prettyLoggerBrowser=code
+-  6537 const prettyLoggerBrowser = (options: {
+-  6538 readonly colors: boolean
+-  6539 readonly formatDate: (date: Date) => string
++  6804 export const prettyLoggerBrowser = (options?: {
++  6805 readonly colors?: "auto" | boolean | undefined
++  6806 readonly formatDate?: ((date: Date) => string) | undefined
+
+@@ hunk 229 [code] pin 6541-6541 release 6808-6810 cited ranges 0
+   pin units: prettyLoggerBrowser=code
+   release units: prettyLoggerBrowser=code
+-  6541 const color = options.colors ? "%c" : ""
++  6808 const showColors = options?.colors !== false
++  6809 const color = showColors ? "%c" : ""
++  6810 const formatDate = options?.formatDate ?? defaultDateFormat
+
+@@ hunk 230 [code] pin 6548-6548 release 6817-6817 cited ranges 0
+   pin units: prettyLoggerBrowser=code
+   release units: prettyLoggerBrowser=code
+-  6548 let firstLine = `${color}[${options.formatDate(date)}]`
++  6817 let firstLine = `${color}[${formatDate(date)}]`
+
+@@ hunk 231 [code] pin 6550-6550 release 6819-6819 cited ranges 0
+   pin units: prettyLoggerBrowser=code
+   release units: prettyLoggerBrowser=code
+-  6550 if (options.colors) {
++  6819 if (showColors) {
+
+@@ hunk 232 [code] pin 6554-6554 release 6823-6823 cited ranges 0
+   pin units: prettyLoggerBrowser=code
+   release units: prettyLoggerBrowser=code
+-  6554 if (options.colors) {
++  6823 if (showColors) {
+
+@@ hunk 233 [code] pin 6571-6571 release 6840-6840 cited ranges 0
+   pin units: prettyLoggerBrowser=code
+   release units: prettyLoggerBrowser=code
+-  6571 if (options.colors) {
++  6840 if (showColors) {
+
+@@ hunk 234 [code] pin 6596-6596 release 6865-6865 cited ranges 0
+   pin units: prettyLoggerBrowser=code
+   release units: prettyLoggerBrowser=code
+-  6596 if (options.colors) {
++  6865 if (showColors) {
+
+@@ hunk 235 [code] pin 6637-6637 release 6906-6906 cited ranges 0
+   pin units: tracerLogger=code
+   release units: tracerLogger=code
+-  6637 const span = fiber.currentSpan
++  6906 const span = fiber.cache.span
+
+@@ hunk 236 [erased] pin 6682-6682 release 6951-6951 cited ranges 1
+   pin units: withErrorReporting=erased
+   release units: withErrorReporting=erased
+-  6682 ) => [Arg] extends [Effect.Effect<infer _A, infer _E, infer _R>] ? Arg
++  6951 ) => [Arg] extends [Effect.Effect<infer A, infer E, infer R>] ? Effect.Effect<A, E, R>

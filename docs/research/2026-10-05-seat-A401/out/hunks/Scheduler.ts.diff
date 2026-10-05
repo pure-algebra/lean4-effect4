@@ -1,0 +1,40 @@
+# Scheduler.ts (rc.112) against Scheduler.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 83-93 release before 83 cited ranges 1
+   pin units: setImmediate=code
+   release units: 
+-    83 const setImmediate = "setImmediate" in globalThis
+-    84 ? (f: () => void) => {
+-    86 const timer = globalThis.setImmediate(f)
+-    88 return (): void => globalThis.clearImmediate(timer)
+-    89 }
+-    90 : (f: () => void) => {
+-    91 const timer = setTimeout(f, 0)
+-    92 return (): void => clearTimeout(timer)
+-    93 }
+
+@@ hunk 2 [code] pin before 105 release 93-113 cited ranges 0
+   pin units: 
+   release units: setTimer=absent; setImmediate=code
++    93 const setTimer: (f: () => void) => () => void = "setImmediate" in globalThis
++    94 ? (f) => {
++    96 const timer = globalThis.setImmediate(f)
++    98 return (): void => globalThis.clearImmediate(timer)
++    99 }
++   100 : (f) => {
++   101 const timer = setTimeout(f, 0)
++   102 return (): void => clearTimeout(timer)
++   103 }
++   107 const setImmediate = (f: () => void) => {
++   108 try {
++   109 return setTimer(f)
++   110 } catch {
++   111 return setMicrotask(f)
++   112 }
++   113 }
+
+@@ hunk 3 [code] pin 175-175 release 185-185 cited ranges 1
+   pin units: MixedScheduler.shouldYield=code
+   release units: MixedScheduler.shouldYield=code
+-   175 return fiber.currentOpCount >= fiber.maxOpsBeforeYield
++   185 return fiber.currentOpCount >= fiber.cache.maxOpsBeforeYield

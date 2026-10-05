@@ -1,0 +1,227 @@
+# Chunk.ts (rc.112) against Chunk.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 22 release 22-22 cited ranges 0
+   pin units: 
+   release units: import ./internal/count.ts=absent
++    22 import * as Count from "@tree/internal/count.ts"
+
+@@ hunk 2 [code] pin 33-33 release 34-34 cited ranges 0
+   pin units: TypeId=code
+   release units: TypeId=code
+-    33 const TypeId = "~effect/collections/Chunk"
++    34 const TypeId = "~effect/Chunk"
+
+@@ hunk 3 [code] pin 171-173 release 172-184 cited ranges 0
+   pin units: makeEquivalence=code
+   release units: makeEquivalence=code
+-   171 Equivalence.make((self, that) =>
+-   172 self.length === that.length && toReadonlyArray(self).every((value, i) => isEquivalent(value, getUnsafe(that, i)))
+-   173 )
++   172 Equivalence.make((self, that) => {
++   173 if (self.length !== that.length) {
++   174 return false
++   175 }
++   176 const as = toReadonlyArray(self)
++   177 const bs = toReadonlyArray(that)
++   178 for (let i = 0; i < as.length; i++) {
++   179 if (!isEquivalent(as[i], bs[i])) {
++   180 return false
++   181 }
++   182 }
++   183 return true
++   184 })
+
+@@ hunk 4 [code] pin 251-251 release 262-262 cited ranges 0
+   pin units: makeChunk=code
+   release units: makeChunk=code
+-   251 chunk.depth = backing.chunk.depth + 1
++   262 chunk.depth = 0
+
+@@ hunk 5 [code] pin 406-412 release 417-417 cited ranges 0
+   pin units: copyToArray=code
+   release units: copyToArray=code
+-   406 let i = 0
+-   407 let j = initial
+-   408 while (i < self.length) {
+-   409 array[j] = getUnsafe(self, i)
+-   410 i += 1
+-   411 j += 1
+-   412 }
++   417 copy(toReadonlyArray(self.backing.chunk), self.backing.offset, array, initial, self.length)
+
+@@ hunk 6 [code] pin 994-994 release 1002-1002 cited ranges 0
+   pin units: take=code
+   release units: take=code
+-   994 const n = Math.floor(_n)
++  1002 const n = Count.normalize(_n)
+
+@@ hunk 7 [code] pin 1081-1081 release 1092-1092 cited ranges 0
+   pin units: drop=code
+   release units: drop=code
+-  1081 const n = Math.floor(_n)
++  1092 const n = Count.normalize(_n)
+
+@@ hunk 8 [code] pin 1166-1166 release 1180-1183 cited ranges 0
+   pin units: dropRight=code
+   release units: dropRight=code
+-  1166 } = dual(2, <A>(self: Chunk<A>, n: number): Chunk<A> => take(self, Math.max(0, self.length - n)))
++  1180 } = dual(
++  1181 2,
++  1182 <A>(self: Chunk<A>, n: number): Chunk<A> => take(self, self.length - Math.min(Count.normalize(n), self.length))
++  1183 )
+
+@@ hunk 9 [code] pin 1609-1609 release 1626-1626 cited ranges 0
+   pin units: filterMap=code
+   release units: filterMap=code
+-  1609 const as = RA.fromIterable(self)
++  1626 const as = toReadonlyArray(self)
+
+@@ hunk 10 [code] pin 1733-1733 release 1750-1750 cited ranges 0
+   pin units: filter=code
+   release units: filter=code
+-  1733 <A>(self: Chunk<A>, predicate: Predicate<A>): Chunk<A> => fromArrayUnsafe(RA.filter(self, predicate))
++  1750 <A>(self: Chunk<A>, predicate: Predicate<A>): Chunk<A> => fromArrayUnsafe(RA.filter(toReadonlyArray(self), predicate))
+
+@@ hunk 11 [code] pin 1966-1969 release 1983-1986 cited ranges 0
+   pin units: flatMap=code
+   release units: flatMap=code
+-  1966 let out: Chunk<B> = _empty
+-  1967 let i = 0
+-  1968 for (const k of self) {
+-  1969 out = appendAll(out, f(k, i++))
++  1983 const as = toReadonlyArray(self)
++  1984 const chunks = new Array<Chunk<B>>(as.length)
++  1985 for (let i = 0; i < as.length; i++) {
++  1986 chunks[i] = f(as[i], i)
+
+@@ hunk 12 [code] pin 1971-1971 release 1988-1993 cited ranges 0
+   pin units: flatMap=code
+   release units: flatMap=code
+-  1971 return out
++  1988 for (let step = 1; step < chunks.length; step *= 2) {
++  1989 for (let i = 0; i + step < chunks.length; i += 2 * step) {
++  1990 chunks[i] = appendAll(chunks[i], chunks[i + step])
++  1991 }
++  1992 }
++  1993 return chunks.length === 0 ? _empty : chunks[0]
+
+@@ hunk 13 [code] pin before 2216 release 2241-2241 cited ranges 0
+   pin units: 
+   release units: chunksOf=code
++  2241 const size = Count.normalizeNonEmpty(n)
+
+@@ hunk 14 [code] pin 2220-2220 release 2246-2246 cited ranges 0
+   pin units: chunksOf=code
+   release units: chunksOf=code
+-  2220 if (current.length >= n) {
++  2246 if (current.length >= size) {
+
+@@ hunk 15 [erased] pin 2877-2901 release 2903-2927 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  2877 <A, Pass, Fail>(f: (input: NoInfer<A>, i: number) => Result<Pass, Fail>): (self: Chunk<A>) => [excluded: Chunk<Fail>, satisfying: Chunk<Pass>]
+-  2901 <A, Pass, Fail>(self: Chunk<A>, f: (input: A, i: number) => Result<Pass, Fail>): [excluded: Chunk<Fail>, satisfying: Chunk<Pass>]
++  2903 <A, Pass, Fail>(f: (input: NoInfer<A>, i: number) => Result<Pass, Fail>): (self: Chunk<A>) => [passes: Chunk<Pass>, fails: Chunk<Fail>]
++  2927 <A, Pass, Fail>(self: Chunk<A>, f: (input: A, i: number) => Result<Pass, Fail>): [passes: Chunk<Pass>, fails: Chunk<Fail>]
+
+@@ hunk 16 [code] pin 2907-2909 release 2933-2935 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  2907 ): [excluded: Chunk<Fail>, satisfying: Chunk<Pass>] => {
+-  2908 const [excluded, satisfying] = RA.partition(self, f)
+-  2909 return [fromArrayUnsafe(excluded), fromArrayUnsafe(satisfying)]
++  2933 ): [passes: Chunk<Pass>, fails: Chunk<Fail>] => {
++  2934 const [passes, fails] = RA.partition(self, f)
++  2935 return [fromArrayUnsafe(passes), fromArrayUnsafe(fails)]
+
+@@ hunk 17 [erased] pin 2949-2949 release 2975-2975 cited ranges 0
+   pin units: separate=erased
+   release units: separate=erased
+-  2949 export const separate = <A, B>(self: Chunk<Result<B, A>>): [Chunk<A>, Chunk<B>] =>
++  2975 export const separate = <A, B>(self: Chunk<Result<B, A>>): [Chunk<B>, Chunk<A>] =>
+
+@@ hunk 18 [code] pin 3329-3329 release 3355-3355 cited ranges 0
+   pin units: splitNonEmptyAt=code
+   release units: splitNonEmptyAt=code
+-  3329 const _n = Math.max(1, Math.floor(n))
++  3355 const _n = Count.normalizeNonEmpty(n)
+
+@@ hunk 19 [code] pin 3428-3428 release 3457-3457 cited ranges 0
+   pin units: split=code
+   release units: split=code
+-  3428 } = dual(2, <A>(self: Chunk<A>, n: number) => chunksOf(self, Math.ceil(self.length / Math.floor(n))))
++  3457 } = dual(2, <A>(self: Chunk<A>, n: number) => chunksOf(self, Math.ceil(self.length / Count.normalizeNonEmpty(n))))
+
+@@ hunk 20 [code] pin 3640-3640 release 3672-3675 cited ranges 0
+   pin units: takeRight=code
+   release units: takeRight=code
+-  3640 } = dual(2, <A>(self: Chunk<A>, n: number): Chunk<A> => drop(self, self.length - n))
++  3672 } = dual(
++  3673 2,
++  3674 <A>(self: Chunk<A>, n: number): Chunk<A> => drop(self, self.length - Math.min(Count.normalize(n), self.length))
++  3675 )
+
+@@ hunk 21 [code] pin 3919-3919 release 3954-3954 cited ranges 0
+   pin units: unzip=code
+   release units: unzip=code
+-  3919 const [left, right] = RA.unzip(self)
++  3954 const [left, right] = RA.unzip(toReadonlyArray(self))
+
+@@ hunk 22 [code] pin 3992-3992 release 4027-4027 cited ranges 0
+   pin units: zipWith=code
+   release units: zipWith=code
+-  3992 fromArrayUnsafe(RA.zipWith(self, that, f))
++  4027 fromArrayUnsafe(RA.zipWith(toReadonlyArray(self), toReadonlyArray(that), f))
+
+@@ hunk 23 [code] pin 4813-4813 release 4851-4851 cited ranges 0
+   pin units: findLast=code
+   release units: findLast=code
+-  4813 } = RA.findLast
++  4851 } = dual(2, <A>(self: Chunk<A>, predicate: Predicate<A>): Option<A> => RA.findLast(toReadonlyArray(self), predicate))
+
+@@ hunk 24 [code] pin 4883-4883 release 4921-4921 cited ranges 0
+   pin units: findLastIndex=code
+   release units: findLastIndex=code
+-  4883 <A>(self: Chunk<A>, predicate: Predicate<A>): O.Option<number> => RA.findLastIndex(self, predicate)
++  4921 <A>(self: Chunk<A>, predicate: Predicate<A>): O.Option<number> => RA.findLastIndex(toReadonlyArray(self), predicate)
+
+@@ hunk 25 [code] pin 5018-5019 release 5056-5064 cited ranges 0
+   pin units: every=code
+   release units: every=code
+-  5018 <A, B extends A>(self: Chunk<A>, refinement: Refinement<A, B>): self is Chunk<B> =>
+-  5019 RA.fromIterable(self).every(refinement)
++  5056 <A, B extends A>(self: Chunk<A>, refinement: Refinement<A, B>): self is Chunk<B> => {
++  5057 const as = toReadonlyArray(self)
++  5058 for (let i = 0; i < as.length; i++) {
++  5059 if (!refinement(as[i])) {
++  5060 return false
++  5061 }
++  5062 }
++  5063 return true
++  5064 }
+
+@@ hunk 26 [code] pin 5096-5096 release 5141-5149 cited ranges 0
+   pin units: some=code
+   release units: some=code
+-  5096 <A>(self: Chunk<A>, predicate: Predicate<A>): self is NonEmptyChunk<A> => RA.fromIterable(self).some(predicate)
++  5141 <A>(self: Chunk<A>, predicate: Predicate<A>): self is NonEmptyChunk<A> => {
++  5142 const as = toReadonlyArray(self)
++  5143 for (let i = 0; i < as.length; i++) {
++  5144 if (predicate(as[i])) {
++  5145 return true
++  5146 }
++  5147 }
++  5148 return false
++  5149 }
+
+@@ hunk 27 [code] pin 5174-5174 release 5227-5227 cited ranges 0
+   pin units: join=code
+   release units: join=code
+-  5174 } = RA.join
++  5227 } = dual(2, (self: Chunk<string>, sep: string): string => toReadonlyArray(self).join(sep))
+
+@@ hunk 28 [code] pin 5450-5450 release 5503-5503 cited ranges 0
+   pin units: difference=code
+   release units: difference=code
+-  5450 <A>(self: Chunk<A>, that: Chunk<A>): Chunk<A> => fromArrayUnsafe(RA.difference(self, that))
++  5503 <A>(self: Chunk<A>, that: Chunk<A>): Chunk<A> => fromArrayUnsafe(RA.difference(self, toReadonlyArray(that)))

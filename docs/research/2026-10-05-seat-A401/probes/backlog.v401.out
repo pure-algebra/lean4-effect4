@@ -1,0 +1,79 @@
+{
+ "effect": "4.0.1",
+ "u01": {
+  "quiet": {
+   "tag": "Success",
+   "value": 0
+  },
+  "poison": {
+   "tag": "Failure",
+   "cause": "Cause([Interrupt(undefined)])"
+  },
+  "poisonNoHandler": {
+   "tag": "Failure",
+   "cause": "Cause([Fail(42),Interrupt(undefined)])"
+  },
+  "poisonDie": {
+   "tag": "Failure",
+   "cause": "Cause([Die(\"boom\"),Interrupt(undefined)])"
+  },
+  "quietOuterHandler": {
+   "tag": "Success",
+   "value": "undefined",
+   "notes": [
+    "inner handler saw Cause([Fail(42)])"
+   ]
+  },
+  "poisonOuterHandler": {
+   "tag": "Failure",
+   "cause": "Cause([Interrupt(undefined)])",
+   "notes": [
+    "outer handler saw Cause([Interrupt(undefined)])"
+   ]
+  },
+  "poisonFinalizerSees": {
+   "tag": "Failure",
+   "cause": "Cause([Interrupt(undefined)])",
+   "notes": [
+    "finalizer saw Cause([Interrupt(undefined)])"
+   ]
+  }
+ },
+ "u02": {
+  "zero": {
+   "tag": "Success",
+   "value": "undefined"
+  },
+  "inline": {
+   "tag": "Success",
+   "value": 5
+  },
+  "mapOne": {
+   "tag": "Success",
+   "value": 5
+  },
+  "two": {
+   "tag": "Success",
+   "value": "undefined"
+  },
+  "loneDie": {
+   "tag": "Failure",
+   "cause": "Cause([Die(\"boom\")])"
+  },
+  "forkedChildOne": {
+   "tag": "Success",
+   "value": 7
+  },
+  "parentAfterChildClose": {
+   "tag": "Success",
+   "value": "Open -> Empty"
+  },
+  "closeInterruptedMidFinalizer": {
+   "tag": "Success",
+   "value": {
+    "log": "finalizer started, finalizer finished",
+    "closer": "Failure"
+   }
+  }
+ }
+}

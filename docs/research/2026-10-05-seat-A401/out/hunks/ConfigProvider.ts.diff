@@ -1,0 +1,35 @@
+# ConfigProvider.ts (rc.112) against ConfigProvider.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 12 release 12-12 cited ranges 0
+   pin units: 
+   release units: import ./Array.ts=absent
++    12 import * as Arr from "@tree/Array.ts"
+
+@@ hunk 2 [import] pin 17-17 release 18-18 cited ranges 0
+   pin units: import ./Function.ts=import
+   release units: import ./Function.ts=import
+-    17 import { dual, flow } from "@tree/Function.ts"
++    18 import { dual } from "@tree/Function.ts"
+
+@@ hunk 3 [code] pin 373-373 release 374-374 cited ranges 2
+   pin units: makeSource=code
+   release units: makeSource=code
+-   373 (f) => makeSource(get, flow(transform, f))
++   374 (f) => makeSource(get, (path) => f(transform(path)))
+
+@@ hunk 4 [code] pin 1219-1219 release before 1220 cited ranges 1
+   pin units: NUMERIC_INDEX=absent
+   release units: 
+-  1219 const NUMERIC_INDEX = /^(0|[1-9][0-9]*)$/
+
+@@ hunk 5 [code] pin 1237-1237 release 1236-1236 cited ranges 2
+   pin units: nodeAtEnv=code
+   release units: nodeAtEnv=code
+-  1237 const allNumeric = children.every((k) => NUMERIC_INDEX.test(k))
++  1236 const allNumeric = children.every(Arr.isCanonicalArrayIndex)
+
+@@ hunk 6 [code] pin 1397-1397 release 1396-1396 cited ranges 2
+   pin units: interpolate=code
+   release units: interpolate=code
+-  1397 envValue.replace(group, value),
++  1396 envValue.replace(group, () => value),

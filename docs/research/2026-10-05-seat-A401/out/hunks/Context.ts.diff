@@ -1,0 +1,12 @@
+# Context.ts (rc.112) against Context.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 691-691 release 693-693 cited ranges 0
+   pin units: lookup=code
+   release units: lookup=code
+-   691 if (impl.overlay && ++impl.baseHits >= FlattenAfterBaseHits) {
++   693 if (impl.overlay && ++impl.baseHits >= impl.base.size && impl.baseHits >= FlattenAfterBaseHits) {
+
+@@ hunk 2 [erased] pin before 1548 release 1550-1550 cited ranges 0
+   pin units: 
+   release units: get=erased
++  1550 <I, S>(service: Key<I, S>): (self: Context<I>) => S

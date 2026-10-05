@@ -1,0 +1,60 @@
+# unstable/observability/OtlpMetrics.ts (rc.112) against observability/OtlpMetrics.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin before 19 release 20-22 cited ranges 0
+   pin units: 
+   release units: import ../http/Headers.ts=same; import ../http/HttpBody.ts=same; import ../http/HttpClient.ts=same
++    20 import type * as Headers from "@tree/http/Headers.ts"
++    21 import type { HttpBody } from "@tree/http/HttpBody.ts"
++    22 import type * as HttpClient from "@tree/http/HttpClient.ts"
+
+@@ hunk 2 [erased] pin 23-25 release before 27 cited ranges 0
+   pin units: import ../http/Headers.ts=same; import ../http/HttpBody.ts=same; import ../http/HttpClient.ts=same
+   release units: 
+-    23 import type * as Headers from "@tree/http/Headers.ts"
+-    24 import type { HttpBody } from "@tree/http/HttpBody.ts"
+-    25 import type * as HttpClient from "@tree/http/HttpClient.ts"
+
+@@ hunk 3 [code] pin 159-159 release 162-162 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   159 if (reportValue < BigInt(0)) {
++   162 if (state.state.incremental && reportValue < BigInt(0)) {
+
+@@ hunk 4 [code] pin 167-167 release 170-170 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   167 if (reportValue < 0) {
++   170 if (state.state.incremental && reportValue < 0) {
+
+@@ hunk 5 [code] pin before 464 release 467-467 cited ranges 0
+   pin units: 
+   release units: make=code
++   467 exportEmpty: true,
+
+@@ hunk 6 [code] pin 506-506 release 512-512 cited ranges 1
+   pin units: layerFromConfig=code
+   release units: layerFromConfig=code
+-   506 disabled: Config.boolean("OTEL_SDK_DISABLED").pipe(Config.withDefault(false)),
++   512 disabled: Config.Boolean("OTEL_SDK_DISABLED").pipe(Config.withDefault(false)),
+
+@@ hunk 7 [code] pin 515-517 release 521-523 cited ranges 1
+   pin units: layerFromConfig=code
+   release units: layerFromConfig=code
+-   515 baseTimeout: Config.option(Config.int("OTEL_EXPORTER_OTLP_TIMEOUT")),
+-   516 metricsTimeout: Config.option(Config.int("OTEL_EXPORTER_OTLP_METRICS_TIMEOUT")),
+-   517 exportTimeout: Config.option(Config.int("OTEL_METRIC_EXPORT_TIMEOUT")),
++   521 baseTimeout: Config.option(Config.Int("OTEL_EXPORTER_OTLP_TIMEOUT")),
++   522 metricsTimeout: Config.option(Config.Int("OTEL_EXPORTER_OTLP_METRICS_TIMEOUT")),
++   523 exportTimeout: Config.option(Config.Int("OTEL_METRIC_EXPORT_TIMEOUT")),
+
+@@ hunk 8 [code] pin 519-519 release 525-525 cited ranges 1
+   pin units: layerFromConfig=code
+   release units: layerFromConfig=code
+-   519 Config.int("OTEL_METRIC_EXPORT_INTERVAL").pipe(
++   525 Config.Int("OTEL_METRIC_EXPORT_INTERVAL").pipe(
+
+@@ hunk 9 [code] pin 524-524 release 530-530 cited ranges 1
+   pin units: layerFromConfig=code
+   release units: layerFromConfig=code
+-   524 Config.literals(["delta", "cumulative"], "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE")
++   530 Config.Literals(["delta", "cumulative"], "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE")

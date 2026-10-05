@@ -1,0 +1,23 @@
+# unstable/http/HttpTraceContext.ts (rc.112) against http/HttpTraceContext.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 97-97 release 102-102 cited ranges 1
+   pin units: b3=code
+   release units: b3=code
+-    97 sampled: parts[2] ? parts[2] === "1" : true
++   102 sampled: parts[2] ? parts[2] === "1" || parts[2] === "d" : true
+
+@@ hunk 2 [code] pin 119-119 release 125-126 cited ranges 1
+   pin units: xb3=code
+   release units: xb3=code
+-   119 sampled: headers["x-b3-sampled"] ? headers["x-b3-sampled"] === "1" : true
++   125 sampled: headers["x-b3-flags"] === "1" ||
++   126 (headers["x-b3-sampled"] ? headers["x-b3-sampled"] === "1" || headers["x-b3-sampled"] === "true" : true)
+
+@@ hunk 3 [code] pin 147-147 release 155-158 cited ranges 0
+   pin units: w3c=code
+   release units: w3c=code
+-   147 if (w3cTraceId.test(traceId) === false || w3cSpanId.test(spanId) === false) {
++   155 if (
++   156 w3cTraceId.test(traceId) === false || w3cSpanId.test(spanId) === false ||
++   157 traceId === "00000000000000000000000000000000" || spanId === "0000000000000000"
++   158 ) {

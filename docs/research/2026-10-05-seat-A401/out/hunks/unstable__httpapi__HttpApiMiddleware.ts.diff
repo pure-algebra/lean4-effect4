@@ -1,0 +1,55 @@
+# unstable/httpapi/HttpApiMiddleware.ts (rc.112) against http-api/HttpApiMiddleware.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin before 18 release 19-23 cited ranges 0
+   pin units: 
+   release units: import ../http/HttpClientError.ts=same; import ../http/HttpClientRequest.ts=same; import ../http/HttpClientResponse.ts=same; import ../http/HttpRouter.ts=same; import ../http/HttpServerResponse.ts=same
++    19 import type * as HttpClientError from "@tree/http/HttpClientError.ts"
++    20 import type * as HttpClientRequest from "@tree/http/HttpClientRequest.ts"
++    21 import type * as HttpClientResponse from "@tree/http/HttpClientResponse.ts"
++    22 import type * as HttpRouter from "@tree/http/HttpRouter.ts"
++    23 import type { HttpServerResponse } from "@tree/http/HttpServerResponse.ts"
+
+@@ hunk 2 [erased] pin 24-28 release before 30 cited ranges 0
+   pin units: import ../http/HttpClientError.ts=same; import ../http/HttpClientRequest.ts=same; import ../http/HttpClientResponse.ts=same; import ../http/HttpRouter.ts=same; import ../http/HttpServerResponse.ts=same
+   release units: 
+-    24 import type * as HttpClientError from "@tree/http/HttpClientError.ts"
+-    25 import type * as HttpClientRequest from "@tree/http/HttpClientRequest.ts"
+-    26 import type * as HttpClientResponse from "@tree/http/HttpClientResponse.ts"
+-    27 import type * as HttpRouter from "@tree/http/HttpRouter.ts"
+-    28 import type { HttpServerResponse } from "@tree/http/HttpServerResponse.ts"
+
+@@ hunk 3 [code] pin 34-36 release 35-37 cited ranges 0
+   pin units: TypeId=code; SecurityTypeId=code
+   release units: TypeId=code; SecurityTypeId=code
+-    34 const TypeId = "~effect/httpapi/HttpApiMiddleware"
+-    36 const SecurityTypeId = "~effect/httpapi/HttpApiMiddleware/Security"
++    35 const TypeId = "~effect/http-api/HttpApiMiddleware"
++    37 const SecurityTypeId = "~effect/http-api/HttpApiMiddleware/Security"
+
+@@ hunk 4 [code] pin 355-355 release before 375 cited ranges 0
+   pin units: Service=code
+   release units: 
+-   355 const Err = globalThis.Error as any
+
+@@ hunk 5 [code] pin before 357 release 376-377 cited ranges 0
+   pin units: 
+   release units: Service=code
++   376 let creationError: globalThis.Error | undefined
++   377 if (limit !== 0) {
+
+@@ hunk 6 [code] pin 358-358 release 379-379 cited ranges 0
+   pin units: Service=code
+   release units: Service=code
+-   358 const creationError = new Err()
++   379 creationError = new globalThis.Error()
+
+@@ hunk 7 [code] pin before 361 release 381-381 cited ranges 0
+   pin units: 
+   release units: Service=code
++   381 }
+
+@@ hunk 8 [code] pin 365-365 release 387-387 cited ranges 0
+   pin units: Service=code
+   release units: Service=code
+-   365 return creationError.stack
++   387 return creationError?.stack

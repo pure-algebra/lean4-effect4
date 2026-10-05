@@ -1,0 +1,20 @@
+files: pin 452 release 496 by status {'absent': 5, 'comments-layout': 33, 'identical': 61, 'moved-only': 55, 'new': 49, 'runtime-code': 284, 'types-only': 14}
+files at the same path: 180 byte-equal: 54 differ: 126
+files moved: 267
+citation rows: 3190 of a pin file: 2980 not of a pin file (cont): 210
+by domain/archive: {('extended', 'live'): 286, ('brief', 'live'): 2503, ('brief', 'archive'): 191}
+by form: {'full': 321, 'bare': 1367, 'cont': 1155, 'census-row': 137}
+by status: {'file-only': 59, 'same': 2223, 'changed': 550, 'same-comment': 71, 'comment-changed': 8, 'removed': 68, 'moved': 1}
+brief live by status: {'same': 1852, 'changed': 479, 'file-only': 43, 'same-comment': 60, 'comment-changed': 7, 'removed': 61, 'moved': 1}
+distinct ranges: 1190 cited files: 60
+name check of line citations (bare, full, cont): {'unnamed': 744, 'read': 27, 'named': 719, 'exact': 819, 'unconfirmed': 346, 'census': 129}
+changed or removed: 618 by class: {'host': 49, 'cosmetic': 129, 'api': 46, 'behaviour': 287, 'refactor': 107}
+  by class and reach: {('host', 'outside'): 49, ('cosmetic', 'none'): 129, ('api', 'outside'): 16, ('behaviour', 'corner'): 164, ('behaviour', 'main'): 104, ('api', 'main'): 14, ('behaviour', 'outside'): 4, ('refactor', 'none'): 107, ('api', 'none'): 16, ('behaviour', 'budget'): 15}
+  live brief-domain by class: {'host': 46, 'cosmetic': 114, 'behaviour': 255, 'refactor': 92, 'api': 33}
+census rows: 137 by verdict: {'equal': 83, 'drifted': 44, 'anchor-absent': 10}
+census sentences of the rows that are not equal: {'changes': 12, 'holds': 31, 'reword': 11}
+hunks of cited files: 1727 by class: {'code': 1296, 'erased': 397, 'import': 20, 'layout': 14} meeting a cited range: 184
+Lean declarations that carry a changed citation: 287 by class: {'host': 23, 'cosmetic': 50, 'behaviour': 158, 'refactor': 49, 'api': 7}
+  citing files: 58
+stale-in-pin candidates: 77
+top cited files: [('internal/effect.ts', 1318), ('Layer.ts', 345), ('SchemaRepresentation.ts', 245), ('Ref.ts', 127), ('Deferred.ts', 127), ('ConfigProvider.ts', 92), ('Config.ts', 69), ('Effect.ts', 69), ('Scheduler.ts', 64), ('SchemaAST.ts', 40), ('testing/TestClock.ts', 39), ('unstable/httpapi/HttpApiBuilder.ts', 38)]

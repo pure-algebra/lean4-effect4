@@ -1,0 +1,138 @@
+kind	id	file	pin_lines	verdict	release_lines	code	hunks	units
+op	op.Success	internal/core.ts	508-516	equal	559-567	same		exitSucceed=same
+op	op.Failure	internal/core.ts	528-547	drifted	579-598	changed:code	18:code,19:code,20:code	exitFailCause=code
+op	op.WithFiber	internal/core.ts	555-563	equal	618-626	same		withFiber=same
+op	op.YieldableError	internal/core.ts	565-583	equal	645-663	same		YieldableError=same
+op	op.Sync	internal/effect.ts	928-936	equal	960-968	same		sync=same
+op	op.Suspend	internal/effect.ts	938-946	equal	970-978	same		suspend=same
+op	op.Yield	internal/effect.ts	981-994	equal	1013-1026	same		yieldNowWith=same
+op	op.Async	internal/effect.ts	1102-1143	drifted	1137-1178	changed:code	55:erased,56:code,57:code,58:code	callbackOptions=code
+op	op.AsyncFinalizer	internal/effect.ts	1145-1160	drifted	1187-1202	changed:code	60:code	asyncFinalizer=code
+op	op.Iterator	internal/effect.ts	1356-1379	drifted	1409-1432	changed:code	74:code,75:code,76:code	fromIteratorUnsafe=code
+op	op.OnSuccess	internal/effect.ts	1662-1689	drifted	1449-1476	changed:code	93:code,94:code	flatMap=code;OnSuccessProto=code
+op	op.OnFailure	internal/effect.ts	2474-2501	drifted	2575-2602	changed:code	101:code,102:code	catchCause=code;OnFailureProto=code
+op	op.OnSuccessAndFailure	internal/effect.ts	3426-3465	drifted	3531-3570	changed:code	124:code,125:code,126:code,127:code	matchCauseEffect=code;OnSuccessAndFailureProto=code
+op	op.Exit	internal/effect.ts	3620-3637	drifted	3768-3785	changed:code	131:code,132:code	exit=same;exitPrimitive=code
+op	op.OnExit	internal/effect.ts	4001-4029	drifted	4160-4188	changed:code	156:code,157:code,158:code,159:code,160:erased,161:code,162:erased,163:code	onExitPrimitive=code
+op	op.SetInterruptible	internal/effect.ts	4312-4322	equal	4560-4570	same		setInterruptible=same;setInterruptibleTrue=same;setInterruptibleFalse=same
+op	op.While	internal/effect.ts	4623-4645	equal	4899-4921	same		whileLoop=same
+frame-arm	frame-arm.OnSuccess	internal/effect.ts	1677-1689	drifted	1464-1476	changed:code	93:code,94:code	flatMap=code;OnSuccessProto=code
+frame-arm	frame-arm.OnFailure	internal/effect.ts	2489-2501	drifted	2590-2602	changed:code	101:code,102:code	catchCause=code;OnFailureProto=code
+frame-arm	frame-arm.OnSuccessAndFailure	internal/effect.ts	3450-3465	drifted	3555-3570	changed:code	124:code,125:code,126:code,127:code	matchCauseEffect=code;OnSuccessAndFailureProto=code
+frame-arm	frame-arm.Exit	internal/effect.ts	3627-3636	drifted	3775-3784	changed:code	131:code,132:code	exitPrimitive=code
+frame-arm	frame-arm.OnExit	internal/effect.ts	4013-4028	drifted	4172-4187	changed:code	159:code,160:erased,161:code,162:erased,163:code	onExitPrimitive=code
+frame-arm	frame-arm.SetInterruptible	internal/effect.ts	4314-4319	equal	4562-4567	same		setInterruptible=same
+frame-arm	frame-arm.AsyncFinalizer	internal/effect.ts	1149-1159	drifted	1191-1201	changed:code	60:code	asyncFinalizer=code
+frame-arm	frame-arm.While	internal/effect.ts	4630-4644	equal	4906-4920	same		whileLoop=same
+frame-arm	frame-arm.Iterator	internal/effect.ts	1362-1378	drifted	1415-1431	changed:code	75:code,76:code	fromIteratorUnsafe=code
+checkpoint	checkpoint.runloop-top	internal/effect.ts	638-642	equal	631-635	same		FiberImpl.runLoop=code
+checkpoint	checkpoint.getcont-deferred	internal/effect.ts	684-687	equal	679-682	same		FiberImpl.getCont=code
+checkpoint	checkpoint.post-yield-cancel	internal/effect.ts	656-668	equal	651-663	same		FiberImpl.runLoop=code
+checkpoint	checkpoint.exit-failcause-skip	internal/core.ts	539-545	drifted	590-596	changed:code	19:code,20:code	exitFailCause=code
+checkpoint	checkpoint.set-fiber-interruptible	internal/effect.ts	4324-4328	equal	4572-4576	same		setFiberInterruptible=same
+checkpoint	checkpoint.set-interruptible-contall	internal/effect.ts	4316-4318	equal	4564-4566	same		setInterruptible=same
+interrupt	interrupt.unsafe-entry	internal/effect.ts	574-595	drifted	555-576	changed:code	20:code	FiberImpl.interruptUnsafe=code
+interrupt	interrupt.accumulate	internal/effect.ts	585-587	equal	566-568	same		FiberImpl.interruptUnsafe=code
+fork	fork.unsafe	internal/effect.ts	5263-5284	drifted	5516-5537	changed:code	211:code,212:code	forkUnsafe=code
+fork	fork.child	internal/effect.ts	5227-5261	equal	5480-5514	same		forkChild=same
+fork	fork.detach	internal/effect.ts	5286-5311	equal	5541-5566	same		forkDetach=same
+fork	fork.in	internal/effect.ts	5336-5379	equal	5593-5636	same		forkIn=same
+fork	fork.scoped	internal/effect.ts	5381-5406	equal	5638-5663	same		forkScoped=same
+fork	fork.race-all	internal/effect.ts	1476-1532	drifted	1602-1658	changed:code	83:code,84:code,85:code,86:code,87:code	raceAll=code
+fork	fork.await-all-children	internal/effect.ts	5313-5334	drifted	5568-5589	changed:code	213:code,214:code	awaitAllChildren=code
+fork	fork.fiber-run-in	internal/effect.ts	5440-5461	equal	5697-5718	same		fiberRunIn=same
+fork	fork.join	internal/effect.ts	813-821	equal	838-846	same		fiberJoin=same
+fork	fork.await	internal/effect.ts	766-776	equal	791-801	same		fiberAwait=same
+fork	fork.interrupt	internal/effect.ts	856-885	equal	888-917	same		fiberInterrupt=same;fiberInterruptAs=same
+fork	fork.interrupt-all	internal/effect.ts	887-899	equal	919-931	same		fiberInterruptAll=same
+scope	scope.states	Scope.ts	99-187	drifted	99-187	same		State=same
+scope	scope.make	internal/effect.ts	3914-3922	drifted	4069-4077	changed:code	152:code,153:code	scopeMakeUnsafe=code;constScopeEmpty=same
+scope	scope.add-finalizer	internal/effect.ts	3866-3888	drifted	4031-4053	changed:code	147:code,148:erased	scopeAddFinalizerUnsafe=code
+scope	scope.add-after-closed	internal/effect.ts	3846-3858	equal	4011-4023	same		scopeAddFinalizerExit=same
+scope	scope.remove-finalizer	internal/effect.ts	3890-3904	drifted	4052-4066	changed:code	149:code,150:code,151:code	scopeRemoveFinalizerUnsafe=code
+scope	scope.close-state-first	internal/effect.ts	3778-3798	drifted	3937-3957	changed:code	138:code,139:code,140:code	scopeCloseUnsafe=code
+scope	scope.close-lifo	internal/effect.ts	3813-3822	drifted	3980-3989	changed:code	142:code,143:code	scopeCloseFinalizers=code
+scope	scope.close-sequential	internal/effect.ts	3817-3818	drifted	3984-3985	changed:code	142:code	scopeCloseFinalizers=code
+scope	scope.close-parallel	internal/effect.ts	3819-3821	anchor-absent		changed:code	143:code	scopeCloseFinalizers=code
+scope	scope.close-merge	internal/effect.ts	3823-3826	equal	3990-3993	same		scopeCloseFinalizers=code
+scope	scope.exit-as-void-all	internal/effect.ts	2024-2038	equal	2126-2140	same		exitAsVoidAll=same
+scope	scope.fork-linkage	internal/effect.ts	3833-3844	drifted	4000-4011	changed:code	144:code,145:code,146:code	scopeForkUnsafe=code
+scope	scope.scoped	internal/effect.ts	3937-3947	drifted	4099-4109	changed:code	154:code,155:code	scoped=code
+scope	scope.acquire-release	internal/effect.ts	3970-3987	equal	4133-4150	same		acquireRelease=same
+scheduler	scheduler.should-yield	Scheduler.ts	174-176	drifted	184-186	changed:code	3:code	MixedScheduler.shouldYield=code
+scheduler	scheduler.priority-buckets	Scheduler.ts	105-131	equal	115-141	same		PriorityBuckets.buckets=same;PriorityBuckets.scheduleTask=same;PriorityBuckets.drain=same
+scheduler	scheduler.dispatcher-arming	Scheduler.ts	207-212	equal	217-222	same		MixedSchedulerDispatcher.scheduleTask=same
+scheduler	scheduler.run-tasks-drain-once	Scheduler.ts	225-233	equal	235-243	same		MixedSchedulerDispatcher.runTasks=same
+scheduler	scheduler.flush	Scheduler.ts	238-246	equal	248-256	same		MixedSchedulerDispatcher.flush=same
+scheduler	scheduler.yield-now-resume-guard	internal/effect.ts	984-993	equal	1016-1025	same		yieldNowWith=same
+scheduler	scheduler.max-ops-default	Scheduler.ts	269-272	equal	279-282	same		MaxOpsBeforeYield=same
+scheduler	scheduler.prevent-yield-default	Scheduler.ts	295-298	equal	305-308	same		PreventSchedulerYield=same
+scheduler	scheduler.host-loop	Scheduler.ts	83-103	anchor-absent		changed:code	1:code	setImmediate=code;setMicrotask=same
+exit	exit.success-failure	Exit.ts	118-157	equal	118-157	same		Success=same;Failure=same
+exit	exit.reason-alphabet	Cause.ts	144-144	equal	144-144	same		Reason=same
+cause	cause.flat-reasons	internal/core.ts	137-176	drifted	137-176	changed:code	2:code	CauseImpl.CauseTypeId=code;CauseImpl.reasons=code;CauseImpl.constructor=same;CauseImpl.pipe=same;CauseImpl.toJSON=same;CauseImpl.toString=same;CauseImpl.NodeInspectSymbol=same;CauseImpl.[Equal.symbol]=same;CauseImpl.[Hash.symbol]=same
+cause	cause.reason-fail	internal/core.ts	244-286	drifted	244-286	changed:code	3:code,4:code	Fail.error=code;Fail.constructor=same;Fail.toString=same;Fail.toJSON=same;Fail.[Equal.symbol]=same;Fail.[Hash.symbol]=same;causeFromReasons=same;causeEmpty=same;causeFail=same
+cause	cause.reason-die	internal/core.ts	288-322	drifted	330-364	changed:code	5:code	Die.defect=code;Die.constructor=same;Die.toString=same;Die.toJSON=same;Die.[Equal.symbol]=same;Die.[Hash.symbol]=same;causeDie=same
+cause	cause.reason-interrupt	internal/effect.ts	106-145	drifted	106-145	changed:code	3:code	Interrupt.fiberId=code;Interrupt.constructor=same;Interrupt.toString=same;Interrupt.toJSON=same;Interrupt.[Equal.symbol]=same;Interrupt.[Hash.symbol]=same;makeInterruptReason=same;causeInterrupt=same
+cause	cause.combine-union	internal/effect.ts	241-258	anchor-absent		removed:code	4:code	causeCombine=absent
+cause	cause.finalizer-merge	internal/effect.ts	3800-3804	equal	3967-3971	same		combineFinalizerCause=same
+cause	cause.squash	internal/effect.ts	298-309	drifted	260-271	changed:code	6:code,7:code	causeSquash=code
+cause	cause.union-first-occurrence	Array.ts	7009-7016	equal	7060-7067	same		union=same
+cause	cause.dedupe-first-occurrence	Array.ts	9242-9255	anchor-absent		changed:code	24:code,25:code,26:code	dedupeWith=code
+cause	cause.annotations	internal/core.ts	178-239	equal	178-239	same		annotationsMap=same;ReasonBase.CauseReasonTypeId=same;ReasonBase.annotations=same;ReasonBase._tag=same;ReasonBase.constructor=same;ReasonBase.annotate=same;ReasonBase.pipe=same;ReasonBase.toJSON=same;ReasonBase.[Equal.symbol]=same;ReasonBase.[Hash.symbol]=same;ReasonBase.toString=same;ReasonBase.NodeInspectSymbol=same
+entry	entry.run-fork-with	internal/effect.ts	5412-5438	equal	5669-5695	same		runForkWith=same
+entry	entry.abort-signal	internal/effect.ts	5425-5433	equal	5682-5690	same		runForkWith=same
+entry	entry.run-callback-with	internal/effect.ts	5469-5488	equal	5726-5745	same		runCallbackWith=same
+entry	entry.run-promise-exit-with	internal/effect.ts	5493-5505	equal	5750-5762	same		runPromiseExitWith=same
+entry	entry.run-promise-with	internal/effect.ts	5510-5525	equal	5767-5782	same		runPromiseWith=same
+entry	entry.run-sync-exit-with	internal/effect.ts	5535-5545	equal	5792-5802	same		runSyncExitWith=same
+entry	entry.async-fiber-error	internal/effect.ts	6184-6196	equal	6443-6455	same		AsyncFiberError.AsyncFiberErrorTypeId=same;AsyncFiberError.constructor=same
+entry	entry.with-error-reporting	internal/effect.ts	6670-6696	drifted	6939-6965	changed:erased	236:erased	withErrorReporting=erased
+rule	rule.frames-are-primitives	internal/effect.ts	688-697	drifted	683-692	changed:code	28:code,29:code	FiberImpl.getCont=code
+rule	rule.interrupt-bypasses-handlers	internal/core.ts	539-542	drifted	590-593	changed:code	19:code	exitFailCause=code
+rule	rule.yield-is-overloaded	internal/effect.ts	656-668	equal	651-663	same		FiberImpl.runLoop=code
+rule	rule.only-fork-child-tracks	internal/effect.ts	5279-5282	drifted	5534-5537	changed:code	212:code	forkUnsafe=code
+rule	rule.children-interrupted-after-exit	internal/effect.ts	611-617	equal	597-603	same		FiberImpl.evaluate=code
+rule	rule.scope-close-lifo-state-first	internal/effect.ts	3780-3787	anchor-absent		changed:code	138:code,139:code	scopeCloseUnsafe=code
+rule	rule.cause-has-no-structure	internal/effect.ts	247-257	anchor-absent		removed:code	4:code	causeCombine=absent
+rule	rule.start-is-asymmetric	internal/effect.ts	5274-5278	drifted	5527-5531	changed:code	211:code	forkUnsafe=code
+rule	rule.record-and-apply-separate	internal/effect.ts	585-594	equal	566-575	same		FiberImpl.interruptUnsafe=code
+rule	rule.budget-per-runloop-entry	internal/effect.ts	634-652	drifted	627-645	changed:code	25:code,26:code	FiberImpl.runLoop=code
+ref	ref.make	Ref.ts	142-173	equal	142-173	same		makeUnsafe=same;make=same
+ref	ref.get	Ref.ts	200-200	equal	200-200	same		get=same
+ref	ref.set-void-returns-cell	Ref.ts	306-307	equal	306-307	same		set=same
+ref	ref.cell-set-returns-self	MutableRef.ts	1063-1070	equal	1063-1070	same		set=same
+ref	ref.get-and-set	Ref.ts	399-404	equal	399-404	same		getAndSet=same
+ref	ref.set-and-get-assignment	Ref.ts	747-747	equal	747-747	same		setAndGet=same
+ref	ref.update	Ref.ts	1273-1276	equal	1273-1276	same		update=same
+ref	ref.modify	Ref.ts	896-901	equal	896-901	same		modify=same
+ref	ref.modify-some-no-reread	Ref.ts	1159-1163	equal	1159-1163	same		modifySome=same
+ref	ref.update-some-and-get-reread	Ref.ts	1639-1646	equal	1639-1646	same		updateSomeAndGet=same
+deferred	deferred.make	Deferred.ts	140-145	anchor-absent		changed:code	1:code	makeUnsafe=code
+deferred	deferred.is-done	Deferred.ts	1382-1382	equal	1383-1383	same		isDoneUnsafe=same
+deferred	deferred.await	Deferred.ts	173-186	equal	174-187	same		_await=same
+deferred	deferred.single-completion	Deferred.ts	1648-1650	equal	1649-1651	same		doneUnsafe=same
+deferred	deferred.completion-order	Deferred.ts	1651-1662	equal	1652-1663	same		doneUnsafe=same
+deferred	deferred.complete-with-stores-effect	Deferred.ts	456-461	equal	457-462	same		completeWith=same
+deferred	deferred.done-is-complete-with	Deferred.ts	570-571	equal	571-572	same		done=same
+deferred	deferred.complete-runs-once	Deferred.ts	330-335	equal	331-336	same		complete=same
+deferred	deferred.into-uninterruptible	Deferred.ts	1774-1784	equal	1775-1785	same		into=same
+deferred	deferred.interrupt	Deferred.ts	1231-1232	equal	1232-1233	same		interrupt=same
+deferred	deferred.interrupt-with	Deferred.ts	1332-1337	equal	1333-1338	same		interruptWith=same
+deferred	deferred.poll	Deferred.ts	1414-1416	equal	1415-1417	same		poll=same
+layer	layer.from-build-unsafe	Layer.ts	289-298	equal	304-313	same		fromBuildUnsafe=same
+layer	layer.from-build-child-scope	Layer.ts	333-345	equal	348-360	same		fromBuild=same
+layer	layer.build-with-memo-map-service	Layer.ts	756-765	equal	754-763	same		buildWithMemoMap=same
+layer	layer.memo-build-once	Layer.ts	390-419	anchor-absent		removed:code	4:code	memoMapBuild=absent
+layer	layer.memo-finalizer-last-observer	Layer.ts	401-410	anchor-absent		removed:code	4:code	memoMapBuild=absent
+layer	layer.memo-reuse-observer-count	Layer.ts	241-250	anchor-absent		changed:code	2:code,3:code	memoMapReuse=absent
+layer	layer.memo-map-parent-lookup	Layer.ts	434-443	drifted	418-427	changed:code	5:code	MemoMapImpl.get=code
+layer	layer.memo-get-or-else	Layer.ts	445-457	drifted	430-442	changed:code	6:code,7:code,8:code	MemoMapImpl.getOrElseMemoize=code
+layer	layer.current-memo-map-fork-or-create	Layer.ts	585-588	equal	583-586	same		CurrentMemoMap.forkOrCreate=same
+layer	layer.build-uses-ambient-scope	Layer.ts	800-809	equal	798-807	same		build=same
+layer	layer.build-with-scope-still-forks-memo	Layer.ts	970-980	equal	968-978	same		buildWithScope=same
+layer	layer.merge-parallel-scopes	Layer.ts	1587-1602	equal	1584-1599	same		mergeAllEffect=same
+layer	layer.provide-dependency-first	Layer.ts	1907-1926	equal	1904-1923	same		provideWith=same
+layer	layer.fresh-drops-memoization	Layer.ts	3850-3851	equal	3889-3890	same		fresh=same
+layer	layer.launch-holds-scope	Layer.ts	3897-3898	equal	3936-3937	same		launch=same
+layer	layer.provide-effect-scope	internal/layer.ts	8-22	equal	8-22	same		provideLayer=same

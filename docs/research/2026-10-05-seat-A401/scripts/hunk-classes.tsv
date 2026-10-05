@@ -1,0 +1,91 @@
+# Seat A401: the class of every hunk that a cited range meets, read by hand (2026-10-05).
+# file	hunks	class	reach	note
+#
+# class:  cosmetic   a rename, a field move, an object shape, a type, a stack-trace helper
+#         refactor   the same exits in the same order, by the argument in the note
+#         behaviour  an exit, a cause, an order, a mask or a state differs on some input
+#         host       differs only at the host boundary (async context, a host function that throws)
+#         api        a public name, a signature or an entry point changes; source that names it changes
+# reach:  main       on an ordinary path of the modelled fragment
+#         budget     only where one run-loop entry spends the operation budget
+#         corner     on a named corner (the note says which)
+#         outside    outside the fragment this tree models
+#         none       no behaviour changes
+internal/effect.ts	3	cosmetic	none	`declare` on a class field: no field initialiser is emitted; the constructor still assigns it
+internal/effect.ts	4	refactor	none	`causeCombine` moved to `internal/core.ts`; `Arr.union` became `dedupeReasons` (hash buckets, then `Equal.equals`): the same union in order of first occurrence, if `Hash` agrees with `Equal`
+internal/effect.ts	6,7	refactor	none	`causeSquash`: first `Fail`, else first `Die`, else an interrupt error, else an empty-cause error; the same answer by cases on the three reason tags
+internal/effect.ts	12,14,15,16,20	cosmetic	none	the cached context fields moved from the fiber into `fiber.cache`; `declare` fields; `_parent` and `_asyncContext` are new
+internal/effect.ts	13,17,18,19,24	refactor	none	the observer array is allocated at the first observer and handed off at the exit; observers still run once, in registration order; `removeObserver` is the old cancel closure
+internal/effect.ts	21,22,211	host	outside	the fiber captures a node `AsyncResource` when it parks or starts deferred, and re-enters `evaluate` inside it; no exit and no order changes
+internal/effect.ts	23,212	behaviour	corner	a child is removed from its parent's set by a parent pointer, before every observer; the pin removed it in the observer registered at the fork. They differ only when an observer was registered on the child during its immediate start
+internal/effect.ts	25,26,27	cosmetic	none	the run loop reads `this.cache` once per iteration; the same three tests in the same order
+internal/effect.ts	28,29	refactor	none	`getCont` calls the frame's `contAll` through a local; the same pops and the same answer
+internal/effect.ts	31,32	refactor	none	`setContext` computes one cache object per context root; the same values, by the release's rule that contexts of one root resolve the cached keys alike (assumed, read in the comment)
+internal/effect.ts	44,111,112	cosmetic	none	`internalCall` removed: it only names a stack frame
+internal/effect.ts	48,49,50,51,52,53,54	host	outside	`tryPromise` runs the catcher inside a `suspend` on the fiber, not in the promise callback: one more operation, and the catcher runs later
+internal/effect.ts	55,61,148,160,162,236	cosmetic	none	types only (the compiled JavaScript of the lines is equal)
+internal/effect.ts	56,57,58	refactor	none	the `Async` primitive is an object with named fields; the same statements in the same order, `register` still called with the scheduler as `this`
+internal/effect.ts	60	behaviour	corner	`AsyncFinalizer`: a cancel effect that fails is merged into the interrupt cause (`combineFinalizerCause`); the pin answered the cancel effect's failure alone. One more `OnFailure` frame on the interrupt path (probe R3)
+internal/effect.ts	62	refactor	none	`gen` picks its body before the `suspend`; the same `suspend` of `fromIteratorUnsafe`
+internal/effect.ts	74,75,76	cosmetic	none	the `Iterator` primitive is an object with named fields; the same loop
+internal/effect.ts	78,80,81,93,94	refactor	none	`as`, `andThen`, `tap` and `flatMap` build a `ContImpl` frame with a shared continuation; the same frames, the same operation counts (probe R4)
+internal/effect.ts	79	behaviour	budget	the new `ContImpl` continuations; `mapCont` and `succeedPayload` hand their value to `fiber.succeedWith`, which counts an operation and calls the next continuation without a loop iteration, so the budget's yield lands later (probe R5)
+internal/effect.ts	83,84,85,86,87	behaviour	corner	`raceAll` decides the clean-up of the losers at the race's exit, through an `OnExit` frame, not at the winner's resume; a loser forked while the race settles is now interrupted (probe R1). The callback has no cancel effect any more
+internal/effect.ts	97,98	refactor	none	`updateContext` pushes its `OnExit` frame directly (`onExitUnsafe`): one operation fewer (probe R4, `provideService`)
+internal/effect.ts	101,102	cosmetic	none	`catchCause` builds its frame with a constructor
+internal/effect.ts	124,125	cosmetic	none	`matchCauseEffect` builds its frame with a constructor
+internal/effect.ts	126,127,128	behaviour	budget	`match` and `matchCause` are two new primitives (`Match`, `MatchCause`) whose arms pass their value to `fiber.succeedWith`; the same operation counts (probe R4), a later budget yield
+internal/effect.ts	131,132	behaviour	budget	the `Exit` frame passes the reified exit to `fiber.succeedWith`; the same operation count (probe R4), a later budget yield
+internal/effect.ts	133,134,135,136	behaviour	main	`timeout` fails with a `TimeoutError` that carries a message; `timeoutOrElse` is built on `timeoutOption` (probe R7)
+internal/effect.ts	137	behaviour	main	`Scope.close` enters an uninterruptible region before the finalizers run; the pin ran them with the caller's mask (probe `closeInterruptedMidFinalizer`)
+internal/effect.ts	138,139,140	behaviour	main	`scopeCloseUnsafe` detaches the scope from its parent as it closes; a forked scope with one finalizer now takes the lone-finalizer branch and answers that finalizer's value (probe `forkedChildOne`)
+internal/effect.ts	141,142,143	host	outside	`runFinalizer`: a finalizer function that throws becomes a defect effect, so the walk goes on
+internal/effect.ts	144,145,146	behaviour	main	`scopeForkUnsafe` links by a parent pointer and one finalizer on the parent, keyed by the child; the child holds no finalizer that removes it
+internal/effect.ts	147	refactor	none	`scopeAddFinalizerUnsafe` drops the branch for an open scope with no finalizer, a state that the release no longer reaches
+internal/effect.ts	149,150,151	behaviour	main	`scopeRemoveFinalizerUnsafe` resets a scope with no finalizer left to `Empty`; the pin left it `Open` (probe `parentAfterChildClose`)
+internal/effect.ts	152,153	api	none	`scopeFinalizerCountUnsafe` is gone; a scope carries its `parent`
+internal/effect.ts	154,155	refactor	none	`scoped` pushes its `OnExit` frame directly: one operation fewer (probe R4)
+internal/effect.ts	156,157,158,159	cosmetic	none	the `OnExit` frame is an object with named fields
+internal/effect.ts	161,163	host	outside	an `onExit` function that throws becomes a defect effect, merged as a finalizer failure
+internal/effect.ts	189	cosmetic	none	`forEach` resolves its concurrency through `resolveConcurrency`: the same number
+internal/effect.ts	213,214	behaviour	main	`awaitAllChildren` awaits its children interruptibly when the fiber was interruptible; the pin awaited inside the masked finalizer (probe R2)
+internal/core.ts	2,3,5	cosmetic	none	`declare` on class fields
+internal/core.ts	4	refactor	none	`causeCombine` now lives here, over `dedupeReasons` (see internal/effect.ts hunk 4)
+internal/core.ts	18	cosmetic	none	the stack frame is read from `fiber.cache`
+internal/core.ts	19,20	behaviour	main	the `Failure` evaluator: a failure that passes while the fiber is interrupted and interruptible loses its `Fail` reasons when it skipped a recovery handler, and always gains the interrupt reasons. This repairs U-01 (probe `backlog`)
+Scheduler.ts	1	host	outside	arming falls back to a microtask when the timer call throws
+Scheduler.ts	3	cosmetic	none	`maxOpsBeforeYield` is read from `fiber.cache`
+Deferred.ts	1	cosmetic	none	`makeUnsafe` builds the Deferred with a constructor; the same two fields
+Array.ts	24,25,26	refactor	none	`dedupeWith` keeps the first of each class of equivalent elements, in order; the same result
+Layer.ts	1	cosmetic	none	the type of a memo entry: a `deferred` and a `scope` replace `effect`
+Layer.ts	2,3,4,6,7,8	behaviour	corner	the memo map counts and registers an observer in one synchronous step, installs the exit handler before it publishes an entry, and builds without an entry in a closed scope. The pin registered by an effect, so an interrupt between two steps could strand an observer or an entry
+Layer.ts	5	refactor	none	a memo hit answers the Deferred's stored effect or its await; the same effect as the pin's `entry.effect`
+Queue.ts	15	behaviour	main	`takeBetween` keeps its minimum after a wait and normalises its counts (P2)
+Queue.ts	21,22,23,24	behaviour	main	the posted wake clears `scheduleRunning` itself and skips each taker that is not ready (P2, P3)
+Scope.ts	2	api	none	`Scope.close` takes a `Closeable`, by type
+Effect.ts	8	cosmetic	none	types only
+Pool.ts	30	cosmetic	none	types only
+Config.ts	1,2	api	main	the resolution type is `Result<T, ConfigError>`; the failure channel carries a `ConfigError`, no input evidence
+Config.ts	4,10,13,14,22,23,24,25,26	behaviour	main	the evaluation carries no input evidence: `orElse` does not keep it, `all` fails at the first failing member and is absent when a member is, `withDefault` fires on every absent resolution
+Config.ts	18	cosmetic	none	`getScalar(node)` is inlined as `node?.value`
+Config.ts	27,35	api	main	the constructors are renamed (`Config.string` to `Config.String`, `int` to `Int`, `boolean` to `Boolean`, `url` to `URL`); `TrueValues` and `FalseValues` are gone
+ConfigProvider.ts	3	cosmetic	none	`flow(transform, f)` written out
+ConfigProvider.ts	4,5	behaviour	corner	an array index is canonical below 2^32 - 1 only; the pin's pattern accepted every decimal numeral
+ConfigProvider.ts	6	behaviour	corner	an interpolated value that holds a `$` pattern is inserted literally
+Schema.ts	344	refactor	none	`toCodecJsonReorder` moved to `internal/schema/toCodec.ts`; it sorts by priority with the engine's stable sort in place of an index tie-break: the same order. The rest of the rebuilt `toCodecJson` was not read
+SchemaAST.ts	133,140	api	outside	`Union` takes no mode argument; the mode lives in an options record
+SchemaAST.ts	173	api	outside	the `toArbitrary` annotation left the AST
+SchemaRepresentation.ts	3	cosmetic	none	types only
+SchemaRepresentation.ts	5	api	outside	`makeDeclarationReviver` is `makeReviverDeclaration`
+SchemaRepresentation.ts	9	cosmetic	none	layout only
+SchemaRepresentation.ts	10,11	cosmetic	none	the getter helpers are imported under another name
+unstable/persistence/KeyValueStore.ts	6	cosmetic	none	`Encoding.encodeBase64` is `Base64.encode`
+unstable/sql/Statement.ts	5,8	api	none	an optional `borrower` parameter is added
+unstable/httpapi/HttpApiEndpoint.ts	11	behaviour	outside	the reserved stream-failure event name changed with the module's name
+unstable/httpapi/HttpApiEndpoint.ts	12,13	refactor	none	`transformResponseSchema` is memoised
+unstable/http/HttpTraceContext.ts	1,2	behaviour	outside	the B3 sampled flag accepts more spellings
+unstable/observability/OtlpLogger.ts	3,4	api	outside	renamed `Config` constructors
+unstable/observability/OtlpMetrics.ts	6,7,8,9	api	outside	renamed `Config` constructors
+unstable/observability/OtlpResource.ts	1,2,3	api	outside	renamed `Config` constructors
+unstable/observability/OtlpTracer.ts	7,8,9,10	api	outside	renamed `Config` constructors
+unstable/observability/internal/otlpEnv.ts	4,5,6,7	api	outside	renamed `Config` constructors

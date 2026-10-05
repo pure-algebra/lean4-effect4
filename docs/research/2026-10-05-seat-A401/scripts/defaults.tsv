@@ -1,0 +1,9 @@
+# citing file	default pin file	how the seat knows
+src/Effect4/Machine/Fibers.lean	internal/effect.ts	declared in the module docstring: "`internal/effect.ts` unless another file is named"
+src/Effect4/Program/Eff.lean	internal/effect.ts	declared in a docstring of the file: "unless another file is named"
+src/Effect4/Laws/Program/Typing/HasTy.lean	internal/effect.ts	declared in the module docstring: "the file is ... internal/effect.ts unless another is named"
+src/Effect4/Laws/Machine/Clauses.lean	internal/effect.ts	read: the header says "cited by line as the census rows are", and every census-tagged row of the file resolves there
+src/Effect4/Program/Compile.lean	internal/effect.ts	read: the header's first citation is the full path of internal/effect.ts and the bare line parts continue it
+src/Effect4/Laws/Machine/Witnesses.lean	internal/effect.ts	read: the witnesses run the machine of Fibers.lean and follow its convention
+Test/contracts/schema-payload.contract.md	SchemaRepresentation.ts	read: the packet's subject is the persisted representation, and its table cells cite that file's lines
+Test/Counterexamples/Schema/ATTACKS.md	SchemaRepresentation.ts	read: the attacks are on the persisted representation

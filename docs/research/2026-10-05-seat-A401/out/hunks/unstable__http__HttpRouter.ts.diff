@@ -1,0 +1,145 @@
+# unstable/http/HttpRouter.ts (rc.112) against http/HttpRouter.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 16 release 17-17 cited ranges 0
+   pin units: 
+   release units: import ../internal/effect.ts=absent
++    17 import { fiberEnterInterruptibleUnsafe } from "@tree/internal/effect.ts"
+
+@@ hunk 2 [erased] pin 54-54 release 57-57 cited ranges 0
+   pin units: HttpRouter=type-decl
+   release units: HttpRouter=type-decl
+-    54 method: "*" | "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS",
++    57 method: "*" | "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "QUERY",
+
+@@ hunk 3 [code] pin before 166 release 172-172 cited ranges 0
+   pin units: 
+   release units: make=code
++   172 prefix = removeTrailingSlash(prefix as PathInput)
+
+@@ hunk 4 [code] pin 168-168 release 175-175 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   168 prefixed: (newPrefix: string) => this.prefixed(prefixPath(prefix, newPrefix)),
++   175 prefixed: (newPrefix: string) => this.prefixed(prefixPath(newPrefix, prefix)),
+
+@@ hunk 5 [code] pin before 221 release 228-228 cited ranges 0
+   pin units: 
+   release units: make=code
++   228 if (fiber.getRef(Tracer.Tracer) !== Tracer.nativeTracer) {
+
+@@ hunk 6 [code] pin 222-222 release 230-230 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   222 if (span && span._tag === "Span") {
++   230 if (span !== undefined && span._tag === "Span" && span.sampled) {
+
+@@ hunk 7 [code] pin 225-228 release 233-240 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   225 return Effect.updateContext(
+-   226 (route.uninterruptible ?
+-   227 route.handler :
+-   228 Effect.interruptible(route.handler)) as Effect.Effect<
++   233 }
++   235 fiber.setContext(context)
++   236 if (!route.uninterruptible) {
++   237 const interrupted = fiberEnterInterruptibleUnsafe(fiber)
++   238 if (interrupted !== undefined) return interrupted
++   239 }
++   240 return route.handler as Effect.Effect<
+
+@@ hunk 8 [code] pin 231-233 release 243-243 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   231 >,
+-   232 () => context
+-   233 )
++   243 >
+
+@@ hunk 9 [code] pin 296-296 release 309-311 cited ranges 0
+   pin units: params=code
+   release units: params=code
+-   296 > = Effect.map(RouteContext, (_) => _.params)
++   309 > = Effect.withFiberSucceed((fiber) =>
++   310 Context.getUnsafe(fiber.context as Context.Context<RouteContext>, RouteContext).params
++   311 )
+
+@@ hunk 10 [erased] pin 505-505 release 526-526 cited ranges 0
+   pin units: add=erased
+   release units: add=erased
+-   505 method: "*" | "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS",
++   526 method: "*" | "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "QUERY",
+
+@@ hunk 11 [code] pin 593-594 release 622-625 cited ranges 0
+   pin units: toHttpEffect=code
+   release units: toHttpEffect=code
+-   593 Effect.gen(function*() {
+-   594 const context = yield* Layer.build(Layer.provideMerge(appLayer, layer))
++   622 Effect.contextWith((context) => {
++   623 const scope = Context.get(context, Scope.Scope)
++   624 const memoMap = Layer.CurrentMemoMap.forkOrCreate(context)
++   625 return Effect.map(Layer.buildWithMemoMap(Layer.provideMerge(appLayer, layer), memoMap, scope), (context) => {
+
+@@ hunk 12 [erased] pin before 598 release 628-628 cited ranges 0
+   pin units: 
+   release units: toHttpEffect=code
++   628 })
+
+@@ hunk 13 [code] pin 794-794 release 837-837 cited ranges 0
+   pin units: prefixRoute=code
+   release units: prefixRoute=code
+-   794 onNone: () => prefix as string,
++   837 onNone: () => removeTrailingSlash(prefix as PathInput),
+
+@@ hunk 14 [code] pin 1307-1307 release 1376-1378 cited ranges 0
+   pin units: serve=code
+   release units: serve=code
+-  1307 const RouterLayer = options?.routerConfig
++  1376 const layerWithRouter = Layer.provideMerge(
++  1377 appLayer,
++  1378 options?.routerConfig
+
+@@ hunk 15 [code] pin 1310-1313 release 1381-1384 cited ranges 0
+   pin units: serve=code
+   release units: serve=code
+-  1310 return Effect.gen(function*() {
+-  1311 const router = yield* HttpRouter
+-  1312 const handler = router.asHttpEffect()
+-  1313 return middleware ? HttpServer.serve(handler, middleware) : HttpServer.serve(handler)
++  1381 )
++  1382 return Effect.contextWith((context) => {
++  1383 const memoMap = Layer.CurrentMemoMap.forkOrCreate(context)
++  1384 return Layer.buildWithMemoMap(layerWithRouter, memoMap, Context.get(context, Scope.Scope))
+
+@@ hunk 16 [code] pin before 1315 release 1386-1393 cited ranges 0
+   pin units: 
+   release units: serve=code
++  1386 Effect.map((context) => {
++  1387 const router = Context.get(context, HttpRouter)
++  1388 const handler = router.asHttpEffect()
++  1389 return Layer.merge(
++  1390 middleware ? HttpServer.serve(handler, middleware) : HttpServer.serve(handler),
++  1391 Layer.succeedContext(context)
++  1392 )
++  1393 }),
+
+@@ hunk 17 [code] pin 1316-1317 release before 1395 cited ranges 0
+   pin units: serve=code
+   release units: 
+-  1316 Layer.provideMerge(appLayer),
+-  1317 Layer.provide(RouterLayer),
+
+@@ hunk 18 [layout] pin 1390-1390 release 1472-1474 cited ranges 0
+   pin units: toWebHandler=same
+   release units: toWebHandler=same
+-  1390 return HttpEffect.toWebHandlerLayerWith(Layer.provideMerge(appLayer, RouterLayer) as Layer.Layer<A | HttpRouter, E>, {
++  1472 return HttpEffect.toWebHandlerLayerWith(
++  1473 Layer.provideMerge(appLayer, RouterLayer) as Layer.Layer<A | HttpRouter, E>,
++  1474 {
+
+@@ hunk 19 [layout] pin 1394-1394 release 1478-1479 cited ranges 0
+   pin units: toWebHandler=same
+   release units: toWebHandler=same
+-  1394 })
++  1478 }
++  1479 )

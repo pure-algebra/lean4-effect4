@@ -1,0 +1,13 @@
+# Cause.ts (rc.112) against Cause.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin 264-264 release 264-264 cited ranges 0
+   pin units: Cause#2=type-decl
+   release units: Cause#2=type-decl
+-   264 annotate(annotations: Context.Context<never> | ReadonlyMap<string, unknown>, options?: {
++   264 annotate(annotations: Context.Context<never>, options?: {
+
+@@ hunk 2 [code] pin 817-817 release 817-817 cited ranges 0
+   pin units: combine=code
+   release units: combine=code
+-   817 } = effect.causeCombine
++   817 } = core.causeCombine

@@ -1,0 +1,386 @@
+# Pool.ts (rc.112) against Pool.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 22-22 release before 22 cited ranges 0
+   pin units: import ./Iterable.ts=absent
+   release units: 
+-    22 import * as Iterable from "@tree/Iterable.ts"
+
+@@ hunk 2 [code] pin before 35 release 33-33 cited ranges 0
+   pin units: 
+   release units: PoolClock=absent
++    33 const PoolClock = Symbol()
+
+@@ hunk 3 [erased] pin before 38 release 38-38 cited ranges 0
+   pin units: 
+   release units: PoolImpl=type-decl
++    38 readonly [PoolClock]: Clock
+
+@@ hunk 4 [erased] pin 126-126 release 127-127 cited ranges 0
+   pin units: State=type-decl
+   release units: State=type-decl
+-   126 readonly waiters: Set<() => void>
++   127 readonly waiters: Set<(failure?: Exit.Failure<A, E>) => void>
+
+@@ hunk 5 [erased] pin before 154 release 156-156 cited ranges 0
+   pin units: 
+   release units: PoolItem=type-decl
++   156 idleSince: number
+
+@@ hunk 6 [code] pin before 376 release 381-381 cited ranges 0
+   pin units: 
+   release units: makeWithStrategy=code
++   381 [PoolClock]: yield* Clock,
+
+@@ hunk 7 [code] pin 450-450 release 456-456 cited ranges 0
+   pin units: get=code
+   release units: get=code
+-   450 if (state.availableHead !== undefined) {
++   456 if (state.availableHead?.exit._tag === "Success") {
+
+@@ hunk 8 [code] pin 551-551 release 557-557 cited ranges 0
+   pin units: use=code
+   release units: use=code
+-   551 internal.suspend(() => {
++   557 core.withFiber((fiber) => {
+
+@@ hunk 9 [code] pin 554-554 release 560-560 cited ranges 0
+   pin units: use=code
+   release units: use=code
+-   554 if (state.availableHead !== undefined) {
++   560 if (state.availableHead?.exit._tag === "Success") {
+
+@@ hunk 10 [code] pin 557-557 release 563-563 cited ranges 0
+   pin units: use=code
+   release units: use=code
+-   557 return useItem(self, state.availableHead, f)
++   563 return useItem(self, state.availableHead, f, fiber)
+
+@@ hunk 11 [code] pin 561-561 release 567-567 cited ranges 0
+   pin units: use=code
+   release units: use=code
+-   561 return getSlowWith(self, (self, item, _fiber, restore) => useItem(self, item, f, restore))
++   567 return getSlowWith(self, (self, item, fiber, restore) => useItem(self, item, f, fiber, restore))
+
+@@ hunk 12 [code] pin before 568 release 575-575 cited ranges 0
+   pin units: 
+   release units: useItem=code
++   575 fiber: Fiber.Fiber<unknown, unknown>,
+
+@@ hunk 13 [code] pin 570-572 release 578-579 cited ranges 0
+   pin units: useItem=code
+   release units: useItem=code
+-   570 if (!leaseItemBookkeeping(self, item)) {
+-   571 return item.exit as Exit.Exit<never, E>
+-   572 }
++   578 leaseItemBookkeeping(self, item)
++   579 internal.onExitUnsafe(fiber, item.release)
+
+@@ hunk 14 [code] pin 577-577 release 584-584 cited ranges 0
+   pin units: useItem=code
+   release units: useItem=code
+-   577 return internal.flatMap(item.release(item.exit), () => core.exitDie(defect))
++   584 return core.exitDie(defect)
+
+@@ hunk 15 [code] pin 579-579 release 586-586 cited ranges 0
+   pin units: useItem=code
+   release units: useItem=code
+-   579 return internal.onExitPrimitive(restore !== undefined ? restore(body) : body, item.release)
++   586 return restore !== undefined ? restore(body) : body
+
+@@ hunk 16 [code] pin 595-595 release 602-602 cited ranges 0
+   pin units: getSlowWith=code
+   release units: getSlowWith=code
+-   595 internal.onInterrupt(
++   602 internal.onError(
+
+@@ hunk 17 [code] pin 609-611 release 617-619 cited ranges 0
+   pin units: getSlowWith=code
+   release units: getSlowWith=code
+-   609 if (state.availableHead !== undefined) {
+-   610 return lease(self, state.availableHead, fiber, restore)
+-   611 }
++   617 const item = firstHealthyAvailable(self) ??
++   618 (targetSize(self) <= activeSize(self) ? state.availableHead : undefined)
++   619 if (item === undefined) {
+
+@@ hunk 18 [code] pin before 613 release 621-626 cited ranges 0
+   pin units: 
+   release units: getSlowWith=code
++   621 }
++   622 if (item.exit._tag === "Failure") {
++   623 removeFailedItem(self, item)
++   624 return loop
++   625 }
++   626 return lease(self, item, fiber, restore)
+
+@@ hunk 19 [code] pin 631-639 release 645-645 cited ranges 0
+   pin units: leaseItemBookkeeping=code
+   release units: leaseItemBookkeeping=code
+-   631 const leaseItemBookkeeping = <A, E>(self: Pool<A, E>, item: PoolItem<A, E>): boolean => {
+-   632 const state = self.state
+-   633 if (item.exit._tag === "Failure") {
+-   634 state.usage--
+-   635 state.items.delete(item)
+-   636 state.invalidated.delete(item)
+-   637 removeAvailable(self, item)
+-   638 return false
+-   639 }
++   645 const leaseItemBookkeeping = <A, E>(self: Pool<A, E>, item: PoolItem<A, E>): void => {
+
+@@ hunk 20 [code] pin 644-644 release 650-655 cited ranges 0
+   pin units: leaseItemBookkeeping=code
+   release units: leaseItemBookkeeping=code; removeFailedItem=absent
+-   644 return true
++   650 }
++   652 const removeFailedItem = <A, E>(self: Pool<A, E>, item: PoolItem<A, E>): void => {
++   653 self.state.items.delete(item)
++   654 self.state.invalidated.delete(item)
++   655 removeAvailable(self, item)
+
+@@ hunk 21 [code] pin 652-654 release 663-663 cited ranges 0
+   pin units: leaseItem=code
+   release units: leaseItem=code
+-   652 if (!leaseItemBookkeeping(self, item)) {
+-   653 return item.exit
+-   654 }
++   663 leaseItemBookkeeping(self, item)
+
+@@ hunk 22 [code] pin 657-658 release 666-667 cited ranges 0
+   pin units: leaseItem=code
+   release units: leaseItem=code
+-   657 return internal.flatMap(item.release(item.exit), () => item.exit)
+-   658 }
++   666 internal.onExitUnsafe(fiber, item.release)
++   667 } else {
+
+@@ hunk 23 [code] pin before 660 release 669-669 cited ranges 0
+   pin units: 
+   release units: leaseItem=code
++   669 }
+
+@@ hunk 24 [code] pin before 674 release 684-686 cited ranges 0
+   pin units: 
+   release units: releaseItem=code
++   684 if (item.refCount === 0) {
++   685 item.idleSince = (self as PoolImpl<A, E>)[PoolClock].currentTimeMillisUnsafe()
++   686 }
+
+@@ hunk 25 [code] pin 677-678 release 695-696 cited ranges 0
+   pin units: releaseItem=code
+   release units: releaseItem=code
+-   677 if (item.refCount === self.config.concurrency - 1) {
+-   678 addAvailable(self, item)
++   695 if (item.refCount < self.config.concurrency) {
++   696 addAvailableFront(self, item)
+
+@@ hunk 26 [code] pin 684-684 release 702-708 cited ranges 0
+   pin units: waitForItem=code
+   release units: firstHealthyAvailable=absent; waitForItem=code
+-   684 const waitForItem = <A, E>(self: Pool<A, E>): Effect.Effect<void> =>
++   702 const firstHealthyAvailable = <A, E>(self: Pool<A, E>): PoolItem<A, E> | undefined => {
++   703 let item = self.state.availableHead
++   704 while (item !== undefined && item.exit._tag === "Failure") item = item.availableNext
++   705 return item
++   706 }
++   708 const waitForItem = <A, E>(self: Pool<A, E>): Effect.Effect<void, E> =>
+
+@@ hunk 27 [code] pin 687-687 release 711-711 cited ranges 0
+   pin units: waitForItem=code
+   release units: waitForItem=code
+-   687 if (state.availableHead !== undefined || state.isShuttingDown) {
++   711 if (firstHealthyAvailable(self) !== undefined || state.isShuttingDown) {
+
+@@ hunk 28 [code] pin 690-690 release 714-714 cited ranges 0
+   pin units: waitForItem=code
+   release units: waitForItem=code
+-   690 const observer = () => {
++   714 const observer = (failure?: Exit.Failure<A, E>) => {
+
+@@ hunk 29 [code] pin 692-692 release 716-716 cited ranges 0
+   pin units: waitForItem=code
+   release units: waitForItem=code
+-   692 resume(internal.void)
++   716 resume(failure ?? internal.void)
+
+@@ hunk 30 [erased] pin 705-705 release 729-729 cited ranges 2
+   pin units: wakeWaiters=erased
+   release units: wakeWaiters=erased
+-   705 const toWake: Array<() => void> = []
++   729 const toWake: Array<(failure?: Exit.Failure<A, E>) => void> = []
+
+@@ hunk 31 [code] pin before 722 release 747-747 cited ranges 0
+   pin units: 
+   release units: reservations=absent
++   747 const reservations = new WeakMap<PoolItem<unknown, unknown>, number>()
+
+@@ hunk 32 [code] pin 723-723 release 751-751 cited ranges 0
+   pin units: addAvailable=code
+   release units: addAvailable=code
+-   723 if (item.isAvailable) return
++   751 if (item.isAvailable || reservations.has(item)) return
+
+@@ hunk 33 [code] pin before 735 release 776-787 cited ranges 0
+   pin units: 
+   release units: addAvailableFront=absent
++   776 const addAvailableFront = <A, E>(self: Pool<A, E>, item: PoolItem<A, E>): void => {
++   777 if (item.isAvailable || reservations.has(item)) return
++   778 item.isAvailable = true
++   779 item.availablePrevious = undefined
++   780 item.availableNext = self.state.availableHead
++   781 if (self.state.availableHead !== undefined) {
++   782 self.state.availableHead.availablePrevious = item
++   783 } else {
++   784 self.state.availableTail = item
++   785 }
++   786 self.state.availableHead = item
++   787 }
+
+@@ hunk 34 [erased] pin 791-812 release 845-866 cited ranges 0
+   pin units: invalidate=erased
+   release units: invalidate=erased
+-   791 <A>(item: A): <E>(self: Pool<A, E>) => Effect.Effect<void, never, Scope.Scope>
+-   811 <A, E>(self: Pool<A, E>, item: A): Effect.Effect<void, never, Scope.Scope>
+-   812 } = dual(2, <A, E>(self: Pool<A, E>, item: A): Effect.Effect<void, never, Scope.Scope> =>
++   845 <A>(item: A): <E>(self: Pool<A, E>) => Effect.Effect<void>
++   865 <A, E>(self: Pool<A, E>, item: A): Effect.Effect<void>
++   866 } = dual(2, <A, E>(self: Pool<A, E>, item: A): Effect.Effect<void> =>
+
+@@ hunk 35 [code] pin before 824 release 889-952 cited ranges 0
+   pin units: 
+   release units: reserve=absent
++   889 export const reserve: {
++   901 <A>(item: A): <E>(self: Pool<A, E>) => Effect.Effect<void, never, Scope.Scope>
++   913 <A, E>(self: Pool<A, E>, item: A): Effect.Effect<void, never, Scope.Scope>
++   914 } = dual(
++   915 2,
++   916 <A, E>(self: Pool<A, E>, item: A): Effect.Effect<void, never, Scope.Scope> =>
++   917 Effect.asVoid(Effect.acquireRelease(
++   918 Effect.sync(() => {
++   919 if (self.config.concurrency === 1) return undefined
++   920 for (const poolItem of self.state.items) {
++   921 if (poolItem.exit._tag !== "Success" || poolItem.exit.value !== item) continue
++   922 const existing = reservations.get(poolItem)
++   923 if (existing === undefined) self.state.usage += self.config.concurrency - 1
++   924 reservations.set(poolItem, (existing ?? 0) + 1)
++   925 removeAvailable(self, poolItem)
++   926 return poolItem
++   927 }
++   928 return undefined
++   929 }),
++   930 (poolItem) =>
++   931 core.withFiber((fiber) => {
++   932 if (poolItem === undefined) return internal.void
++   933 const remaining = (reservations.get(poolItem) ?? 1) - 1
++   934 if (remaining > 0) {
++   935 reservations.set(poolItem, remaining)
++   936 return internal.void
++   937 }
++   938 reservations.delete(poolItem)
++   939 self.state.usage -= self.config.concurrency - 1
++   940 if (
++   941 !self.state.isShuttingDown &&
++   942 self.state.items.has(poolItem) &&
++   943 !self.state.invalidated.has(poolItem) &&
++   944 poolItem.refCount < self.config.concurrency
++   945 ) {
++   946 addAvailableFront(self, poolItem)
++   947 wakeWaiters(self, fiber, self.config.concurrency - poolItem.refCount)
++   948 }
++   949 return internal.void
++   950 })
++   951 ))
++   952 )
+
+@@ hunk 36 [code] pin 839-839 release 973-975 cited ranges 0
+   pin units: invalidatePoolItem=code
+   release units: invalidatePoolItem=code
+-   839 return Effect.void
++   973 return Effect.asVoid(
++   974 Effect.forkIn(Effect.interruptible(resize(self)), self.state.scope, { startImmediately: true })
++   975 )
+
+@@ hunk 37 [code] pin before 889 release 1025-1025 cited ranges 0
+   pin units: 
+   release units: allocate=code
++  1025 idleSince: impl[PoolClock].currentTimeMillisUnsafe(),
+
+@@ hunk 38 [code] pin before 896 release 1033-1046 cited ranges 0
+   pin units: 
+   release units: allocate=code
++  1033 const onAcquire = Effect.suspend(() =>
++  1035 self.state.items.has(item) ? self.config.strategy.onAcquire(item) : Effect.void
++  1036 )
++  1037 if (exit._tag === "Success") {
++  1038 self.state.items.add(item)
++  1039 addAvailable(self, item)
++  1040 return self.config.strategy === strategyNoop ? Effect.succeed(item) : Effect.as(onAcquire, item)
++  1041 }
++  1043 const waiter = firstHealthyAvailable(self) === undefined ? self.state.waiters.values().next().value : undefined
++  1044 if (waiter !== undefined) {
++  1045 waiter(exit)
++  1046 } else {
+
+@@ hunk 39 [code] pin 898-899 release before 1049 cited ranges 0
+   pin units: allocate=code
+   release units: 
+-   898 if (self.config.strategy === strategyNoop) {
+-   899 return exit._tag === "Success" ? Effect.succeed(item) : Effect.as(item.finalizer, item)
+
+@@ hunk 40 [code] pin 902-904 release 1052-1052 cited ranges 0
+   pin units: allocate=code
+   release units: allocate=code
+-   902 exit._tag === "Success"
+-   903 ? self.config.strategy.onAcquire(item)
+-   904 : Effect.flatMap(item.finalizer, () => self.config.strategy.onAcquire(item)),
++  1052 Effect.forkIn(Effect.andThen(item.finalizer, onAcquire), self.state.scope, { startImmediately: true }),
+
+@@ hunk 41 [code] pin 975-975 release 1123-1124 cited ranges 0
+   pin units: strategyUsageTTL=code
+   release units: strategyUsageTTL=code
+-   975 const queue = yield* Queue.unbounded<PoolItem<A, E>>()
++  1123 const clock = yield* Clock
++  1124 const ttlMillis = Duration.toMillis(Duration.fromInputUnsafe(ttl))
+
+@@ hunk 42 [code] pin 979-984 release 1128-1136 cited ranges 0
+   pin units: strategyUsageTTL=code
+   release units: strategyUsageTTL=code
+-   979 const excess = activeSize(pool) - targetSize(pool)
+-   980 if (excess <= 0) return Effect.void
+-   981 return Queue.take(queue).pipe(
+-   982 Effect.tap((item) => invalidatePoolItem(pool, item)),
+-   983 Effect.flatMap(() => process)
+-   984 )
++  1128 if (activeSize(pool) <= targetSize(pool)) return Effect.void
++  1129 const expired = clock.currentTimeMillisUnsafe() - ttlMillis
++  1130 let oldest: PoolItem<A, E> | undefined
++  1131 for (const item of pool.state.items) {
++  1132 if (item.refCount > 0 || item.idleSince > expired) continue
++  1133 if (pool.state.invalidated.has(item) || reservations.has(item)) continue
++  1134 if (oldest === undefined || item.idleSince < oldest.idleSince) oldest = item
++  1135 }
++  1136 return oldest === undefined ? Effect.void : Effect.flatMap(invalidatePoolItem(pool, oldest), () => process)
+
+@@ hunk 43 [code] pin 991-1009 release 1143-1144 cited ranges 0
+   pin units: strategyUsageTTL=code
+   release units: strategyUsageTTL=code
+-   991 onAcquire: (item) => Queue.offer(queue, item),
+-   992 reclaim(pool) {
+-   993 return Effect.suspend((): Effect.Effect<PoolItem<A, E> | undefined> => {
+-   994 if (pool.state.invalidated.size === 0) {
+-   995 return Effect.undefined
+-   996 }
+-   997 const item = Iterable.head(
+-   998 Iterable.filter(pool.state.invalidated, (item) => !item.disableReclaim)
+-   999 )
+-  1000 if (item._tag === "None") {
+-  1001 return Effect.undefined
+-  1002 }
+-  1003 pool.state.invalidated.delete(item.value)
+-  1004 if (item.value.refCount < pool.config.concurrency) {
+-  1005 addAvailable(pool, item.value)
+-  1006 }
+-  1007 return Effect.as(Queue.offer(queue, item.value), item.value)
+-  1008 })
+-  1009 }
++  1143 onAcquire: (_) => Effect.void,
++  1144 reclaim: (_) => Effect.undefined

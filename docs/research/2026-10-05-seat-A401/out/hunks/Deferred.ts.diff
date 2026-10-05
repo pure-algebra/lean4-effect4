@@ -1,0 +1,17 @@
+# Deferred.ts (rc.112) against Deferred.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 140-145 release 120-146 cited ranges 1
+   pin units: makeUnsafe=code
+   release units: DeferredImpl=absent; statement=absent; makeUnsafe=code
+-   140 export const makeUnsafe = <A, E = never>(): Deferred<A, E> => {
+-   141 const self = Object.create(DeferredProto)
+-   142 self.resumes = undefined
+-   143 self.effect = undefined
+-   144 return self
+-   145 }
++   120 const DeferredImpl = function(this: any) {
++   121 this.resumes = undefined
++   122 this.effect = undefined
++   123 } as unknown as { new<A, E>(): Deferred<A, E>; prototype: any }
++   124 DeferredImpl.prototype = DeferredProto
++   146 export const makeUnsafe = <A, E = never>(): Deferred<A, E> => new DeferredImpl<A, E>()

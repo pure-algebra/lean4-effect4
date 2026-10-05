@@ -5,8 +5,8 @@ target only. Effect4 never imports or executes them. No gate, generator or censu
 
 **The pin does not move.** The pinned source is `vendor/effect-4.0.0-rc.112/`, and every proof and
 every census row transcribes that tree. This directory exists by decisions rows 232 and 236 of
-`docs/core/decisions.md`: the release is audited against the pin, and a contract that follows the
-release cites this tree by path. No proof and no census row is relabelled.
+`docs/core/decisions.md`. The release is audited against the pin, and a contract that follows
+the release cites this tree by path. No proof and no census row is relabelled.
 
 - package: `effect@4.0.1`
 - tarball: `https://registry.npmjs.org/effect/-/effect-4.0.1.tgz`, 8925614 bytes
@@ -25,7 +25,7 @@ tarball matches both hashes. The record names no `gitHead`. The upstream commit 
 that the registry's provenance attestation names
 (`https://registry.npmjs.org/-/npm/v1/attestations/effect@4.0.1`, SLSA provenance v1, workflow
 `.github/workflows/release.yml`). The attestation's subject digest equals the tarball's SHA-512.
-The attestation's signature is not verified here.
+Nobody verified the attestation's signing here.
 
 `src/` is `package/src` of that tarball, and `LICENSE` is `package/LICENSE`. Every file was
 compared with the tarball's entry after the copy. The retrieval record and the registry's two

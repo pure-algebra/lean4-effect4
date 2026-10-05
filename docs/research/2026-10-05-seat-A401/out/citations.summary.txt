@@ -1,0 +1,3 @@
+rows 3190; resolved to a pin file 2980; `.ts` tokens with lines that resolve to no file: 2
+  other	SchemaReferencesPin.test.ts	not-in-pin	2	Test/Counterexamples/Schema/ATTACKS.md:205
+  other	dist/SqliteClient.d.ts	not-in-pin	1	Test/Dogfood/rc112/p2-handler-layers.ts:19

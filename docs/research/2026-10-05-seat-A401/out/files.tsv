@@ -1,0 +1,502 @@
+status	pin_path	release_path	src_removed	src_added	src_hunks	js_removed	js_added	js_hunks
+runtime-code	Array.ts	Array.ts	35	38	26	30	33	24
+runtime-code	BigDecimal.ts	BigDecimal.ts	65	52	15	67	50	13
+identical	BigInt.ts	BigInt.ts	0	0	0	0	0	0
+identical	Boolean.ts	Boolean.ts	0	0	0	0	0	0
+identical	Brand.ts	Brand.ts	0	0	0	0	0	0
+runtime-code	Cache.ts	Cache.ts	12	34	17	12	33	17
+runtime-code	Cause.ts	Cause.ts	2	2	2	1	1	1
+runtime-code	Channel.ts	Channel.ts	52	130	44	19	32	20
+runtime-code	ChannelSchema.ts	ChannelSchema.ts	3	6	4	2	2	1
+runtime-code	Chunk.ts	Chunk.ts	41	73	28	34	63	22
+identical	Clock.ts	Clock.ts	0	0	0	0	0	0
+identical	Combiner.ts	Combiner.ts	0	0	0	0	0	0
+runtime-code	Config.ts	Config.ts	245	160	40	150	74	34
+runtime-code	ConfigProvider.ts	ConfigProvider.ts	5	5	6	5	5	6
+identical	Console.ts	Console.ts	0	0	0	0	0	0
+runtime-code	Context.ts	Context.ts	1	2	2	1	1	1
+runtime-code	Cron.ts	Cron.ts	2	2	2	2	2	2
+runtime-code	Crypto.ts	Crypto.ts	2	8	5	3	6	4
+identical	Data.ts	Data.ts	0	0	0	0	0	0
+identical	DateTime.ts	DateTime.ts	0	0	0	0	0	0
+runtime-code	Deferred.ts	Deferred.ts	6	6	1	5	5	2
+identical	Differ.ts	Differ.ts	0	0	0	0	0	0
+runtime-code	Duration.ts	Duration.ts	1	1	1	1	1	1
+runtime-code	Effect.ts	Effect.ts	76	81	39	10	13	11
+runtime-code	Effectable.ts	Effectable.ts	5	24	4	4	10	4
+absent	Encoding.ts	-						
+runtime-code	Equal.ts	Equal.ts	94	65	21	87	56	21
+identical	Equivalence.ts	Equivalence.ts	0	0	0	0	0	0
+identical	ErrorReporter.ts	ErrorReporter.ts	0	0	0	0	0	0
+runtime-code	ExecutionPlan.ts	ExecutionPlan.ts	0	3	1	0	1	1
+identical	Exit.ts	Exit.ts	0	0	0	0	0	0
+types-only	Fiber.ts	Fiber.ts	8	16	5	0	0	0
+runtime-code	FiberHandle.ts	FiberHandle.ts	5	11	6	4	5	4
+runtime-code	FiberMap.ts	FiberMap.ts	7	15	9	5	8	6
+runtime-code	FiberSet.ts	FiberSet.ts	2	8	4	1	2	2
+runtime-code	FileSystem.ts	FileSystem.ts	32	25	16	19	13	9
+identical	Filter.ts	Filter.ts	0	0	0	0	0	0
+runtime-code	Formatter.ts	Formatter.ts	4	25	7	4	27	7
+runtime-code	Function.ts	Function.ts	0	2	2	0	2	2
+runtime-code	Graph.ts	Graph.ts	39	42	26	35	44	23
+identical	HKT.ts	HKT.ts	0	0	0	0	0	0
+runtime-code	Hash.ts	Hash.ts	57	57	27	54	56	24
+identical	HashMap.ts	HashMap.ts	0	0	0	0	0	0
+runtime-code	HashRing.ts	HashRing.ts	7	15	9	7	15	9
+comments-layout	HashSet.ts	HashSet.ts	0	0	0	0	0	0
+identical	Inspectable.ts	Inspectable.ts	0	0	0	0	0	0
+runtime-code	Iterable.ts	Iterable.ts	8	15	9	8	15	9
+runtime-code	JsonPatch.ts	JsonPatch.ts	3	3	3	3	3	3
+runtime-code	JsonPointer.ts	JsonPointer.ts	0	25	1	0	22	1
+runtime-code	JsonSchema.ts	JsonSchema.ts	24	8	9	22	8	8
+identical	Latch.ts	Latch.ts	0	0	0	0	0	0
+runtime-code	Layer.ts	Layer.ts	61	52	20	34	34	9
+runtime-code	LayerMap.ts	LayerMap.ts	5	9	9	3	8	8
+runtime-code	LayerRef.ts	LayerRef.ts	3	5	5	3	5	5
+identical	LogLevel.ts	LogLevel.ts	0	0	0	0	0	0
+runtime-code	Logger.ts	Logger.ts	2	13	3	1	3	2
+runtime-code	ManagedRuntime.ts	ManagedRuntime.ts	3	4	4	3	4	4
+runtime-code	Match.ts	Match.ts	13	23	14	1	1	1
+runtime-code	Metric.ts	Metric.ts	60	43	15	46	32	12
+runtime-code	MutableHashMap.ts	MutableHashMap.ts	23	5	11	23	5	11
+runtime-code	MutableHashSet.ts	MutableHashSet.ts	1	1	1	1	1	1
+runtime-code	MutableList.ts	MutableList.ts	2	29	13	3	26	13
+identical	MutableRef.ts	MutableRef.ts	0	0	0	0	0	0
+identical	Newtype.ts	Newtype.ts	0	0	0	0	0	0
+identical	NonEmptyIterable.ts	NonEmptyIterable.ts	0	0	0	0	0	0
+runtime-code	Number.ts	Number.ts	13	6	5	13	6	5
+runtime-code	Optic.ts	Optic.ts	4	8	4	4	5	4
+runtime-code	Option.ts	Option.ts	11	17	7	5	5	4
+runtime-code	Order.ts	Order.ts	1	2	2	1	2	2
+identical	Ordering.ts	Ordering.ts	0	0	0	0	0	0
+runtime-code	PartitionedSemaphore.ts	PartitionedSemaphore.ts	11	21	12	9	22	11
+runtime-code	Path.ts	Path.ts	1	1	1	1	1	1
+identical	Pipeable.ts	Pipeable.ts	0	0	0	0	0	0
+runtime-code	PlatformError.ts	PlatformError.ts	1	3	2	1	3	2
+runtime-code	Pool.ts	Pool.ts	74	139	43	61	114	37
+identical	Predicate.ts	Predicate.ts	0	0	0	0	0	0
+runtime-code	PrimaryKey.ts	PrimaryKey.ts	1	1	1	1	1	1
+runtime-code	PubSub.ts	PubSub.ts	37	81	36	29	63	32
+identical	Pull.ts	Pull.ts	0	0	0	0	0	0
+runtime-code	Queue.ts	Queue.ts	133	120	39	116	81	39
+runtime-code	Random.ts	Random.ts	4	5	3	1	1	1
+runtime-code	RcMap.ts	RcMap.ts	17	42	11	11	29	10
+comments-layout	RcRef.ts	RcRef.ts	0	0	0	0	0	0
+runtime-code	Record.ts	Record.ts	9	9	6	5	5	4
+identical	Redactable.ts	Redactable.ts	0	0	0	0	0	0
+runtime-code	Redacted.ts	Redacted.ts	1	1	1	1	1	1
+identical	Reducer.ts	Reducer.ts	0	0	0	0	0	0
+identical	Ref.ts	Ref.ts	0	0	0	0	0	0
+identical	References.ts	References.ts	0	0	0	0	0	0
+identical	RegExp.ts	RegExp.ts	0	0	0	0	0	0
+identical	Request.ts	Request.ts	0	0	0	0	0	0
+runtime-code	RequestResolver.ts	RequestResolver.ts	14	29	14	11	27	13
+identical	Resource.ts	Resource.ts	0	0	0	0	0	0
+runtime-code	Result.ts	Result.ts	1	1	1	1	1	1
+identical	Runtime.ts	Runtime.ts	0	0	0	0	0	0
+runtime-code	Schedule.ts	Schedule.ts	0	1	1	0	1	1
+runtime-code	Scheduler.ts	Scheduler.ts	10	17	3	8	15	3
+runtime-code	Schema.ts	Schema.ts	3234	2967	384	2410	1684	250
+runtime-code	SchemaAST.ts	SchemaAST.ts	377	843	174	357	427	175
+runtime-code	SchemaGetter.ts	SchemaGetter.ts	71	172	40	57	116	36
+runtime-code	SchemaIssue.ts	SchemaIssue.ts	12	109	12	23	23	14
+runtime-code	SchemaParser.ts	SchemaParser.ts	210	143	16	145	112	18
+runtime-code	SchemaRepresentation.ts	SchemaRepresentation.ts	18	604	14	12	436	7
+runtime-code	SchemaTransformation.ts	SchemaTransformation.ts	21	118	22	19	54	21
+types-only	Scope.ts	Scope.ts	2	3	2	0	0	0
+runtime-code	ScopedCache.ts	ScopedCache.ts	26	72	25	24	60	23
+runtime-code	ScopedRef.ts	ScopedRef.ts	19	21	13	17	15	6
+comments-layout	Semaphore.ts	Semaphore.ts	0	0	0	0	0	0
+runtime-code	Sink.ts	Sink.ts	11	22	11	7	20	9
+identical	StandardSchema.ts	StandardSchema.ts	0	0	0	0	0	0
+identical	Stdio.ts	Stdio.ts	0	0	0	0	0	0
+runtime-code	Stream.ts	Stream.ts	217	362	141	77	127	58
+runtime-code	String.ts	String.ts	3	4	4	3	4	3
+runtime-code	Struct.ts	Struct.ts	4	7	5	4	7	5
+identical	SubscriptionRef.ts	SubscriptionRef.ts	0	0	0	0	0	0
+identical	Symbol.ts	Symbol.ts	0	0	0	0	0	0
+types-only	SynchronizedRef.ts	SynchronizedRef.ts	5	3	3	0	0	0
+identical	Take.ts	Take.ts	0	0	0	0	0	0
+runtime-code	Terminal.ts	Terminal.ts	3	3	3	3	3	2
+runtime-code	Tracer.ts	Tracer.ts	11	20	6	10	20	6
+identical	Trie.ts	Trie.ts	0	0	0	0	0	0
+types-only	Tuple.ts	Tuple.ts	1	2	1	0	0	0
+runtime-code	TxChunk.ts	TxChunk.ts	1	3	3	1	3	3
+runtime-code	TxDeferred.ts	TxDeferred.ts	1	1	1	1	1	1
+runtime-code	TxHashMap.ts	TxHashMap.ts	1	1	1	1	1	1
+runtime-code	TxHashSet.ts	TxHashSet.ts	11	6	4	1	2	2
+runtime-code	TxPriorityQueue.ts	TxPriorityQueue.ts	24	36	9	16	25	6
+runtime-code	TxPubSub.ts	TxPubSub.ts	1	2	2	1	2	2
+runtime-code	TxQueue.ts	TxQueue.ts	11	17	11	11	19	10
+runtime-code	TxReentrantLock.ts	TxReentrantLock.ts	1	1	1	1	1	1
+runtime-code	TxRef.ts	TxRef.ts	6	16	5	8	15	6
+runtime-code	TxSemaphore.ts	TxSemaphore.ts	7	17	8	7	8	8
+runtime-code	TxSubscriptionRef.ts	TxSubscriptionRef.ts	1	1	1	1	1	1
+types-only	Types.ts	Types.ts	2	17	6	0	0	0
+identical	UndefinedOr.ts	UndefinedOr.ts	0	0	0	0	0	0
+identical	Unify.ts	Unify.ts	0	0	0	0	0	0
+runtime-code	Utils.ts	Utils.ts	17	13	6	13	12	6
+runtime-code	index.ts	index.ts	1	2	3	1	2	3
+runtime-code	internal/array.ts	internal/array.ts	0	5	1	0	5	1
+runtime-code	internal/core.ts	internal/core.ts	24	89	21	14	58	12
+runtime-code	internal/dateTime.ts	internal/dateTime.ts	16	20	7	16	14	7
+identical	internal/doNotation.ts	internal/doNotation.ts	0	0	0	0	0	0
+runtime-code	internal/effect.ts	internal/effect.ts	464	671	236	359	495	193
+runtime-code	internal/equal.ts	internal/equal.ts	0	1	1	0	1	1
+identical	internal/errors.ts	internal/errors.ts	0	0	0	0	0	0
+identical	internal/executionPlan.ts	internal/executionPlan.ts	0	0	0	0	0	0
+runtime-code	internal/graph.ts	internal/graph.ts	6	12	6	6	9	6
+identical	internal/graphCsr.ts	internal/graphCsr.ts	0	0	0	0	0	0
+runtime-code	internal/hashMap.ts	internal/hashMap.ts	108	95	29	121	99	27
+runtime-code	internal/hashSet.ts	internal/hashSet.ts	2	3	3	2	3	2
+identical	internal/layer.ts	internal/layer.ts	0	0	0	0	0	0
+runtime-code	internal/matcher.ts	internal/matcher.ts	19	29	11	1	1	1
+runtime-code	internal/metric.ts	internal/metric.ts	1	1	1	1	1	1
+runtime-code	internal/option.ts	internal/option.ts	6	6	2	5	5	3
+identical	internal/persistence.ts	internal/persistence.ts	0	0	0	0	0	0
+runtime-code	internal/random.ts	internal/random.ts	5	16	2	0	14	1
+runtime-code	internal/rcRef.ts	internal/rcRef.ts	45	90	24	30	56	22
+identical	internal/record.ts	internal/record.ts	0	0	0	0	0	0
+identical	internal/redacted.ts	internal/redacted.ts	0	0	0	0	0	0
+runtime-code	internal/references.ts	internal/references.ts	0	1	1	0	1	1
+runtime-code	internal/request.ts	internal/request.ts	7	10	10	6	11	9
+runtime-code	internal/result.ts	internal/result.ts	11	11	2	9	9	4
+identical	internal/schedule.ts	internal/schedule.ts	0	0	0	0	0	0
+runtime-code	internal/schema/annotations.ts	internal/schema/annotations.ts	8	3	5	5	1	2
+identical	internal/schema/cause.ts	internal/schema/cause.ts	0	0	0	0	0	0
+runtime-code	internal/schema/fromJsonSchemaDocument.ts	internal/schema/fromJsonSchemaDocument.ts	290	315	113	203	209	118
+runtime-code	internal/schema/fromRepresentation.ts	internal/schema/fromRepresentation.ts	3	5	5	5	5	5
+comments-layout	internal/schema/parser.ts	internal/schema/parser.ts	0	0	0	0	0	0
+absent	internal/schema/schema.ts	-						
+absent	internal/schema/toArbitrary.ts	-						
+runtime-code	internal/schema/toCodeDocument.ts	internal/schema/toCodeDocument.ts	73	52	31	54	46	25
+runtime-code	internal/schema/toEquivalence.ts	internal/schema/toEquivalence.ts	20	86	14	16	83	13
+runtime-code	internal/schema/toJsonSchemaDocument.ts	internal/schema/toJsonSchemaDocument.ts	135	250	68	131	221	64
+runtime-code	internal/schema/toRepresentation.ts	internal/schema/toRepresentation.ts	1	1	1	1	3	1
+identical	internal/stackTraceLimit.ts	internal/stackTraceLimit.ts	0	0	0	0	0	0
+runtime-code	internal/stream.ts	internal/stream.ts	6	12	2	6	5	2
+runtime-code	internal/tracer.ts	internal/tracer.ts	0	3	1	0	6	1
+runtime-code	internal/trie.ts	internal/trie.ts	6	10	7	6	7	7
+comments-layout	internal/uuid.ts	internal/uuid.ts	0	0	0	0	0	0
+absent	testing/FastCheck.ts	-						
+identical	testing/TestClock.ts	testing/TestClock.ts	0	0	0	0	0	0
+identical	testing/TestConsole.ts	testing/TestConsole.ts	0	0	0	0	0	0
+runtime-code	testing/TestSchema.ts	testing/TestSchema.ts	69	101	19	30	64	17
+runtime-code	testing/index.ts	testing/index.ts	1	0	1	1	0	1
+runtime-code	unstable/ai/AiError.ts	ai/AiError.ts	6	27	5	4	17	3
+runtime-code	unstable/ai/AnthropicStructuredOutput.ts	ai/AnthropicStructuredOutput.ts	1	4	1	1	2	1
+runtime-code	unstable/ai/Chat.ts	ai/Chat.ts	20	22	18	2	4	4
+runtime-code	unstable/ai/EmbeddingModel.ts	ai/EmbeddingModel.ts	6	10	5	2	4	2
+moved-only	unstable/ai/IdGenerator.ts	ai/IdGenerator.ts	0	0	0	0	0	0
+runtime-code	unstable/ai/LanguageModel.ts	ai/LanguageModel.ts	68	240	66	33	134	36
+runtime-code	unstable/ai/McpProtocol.ts	ai/McpProtocol.ts	15	46	7	0	2	1
+runtime-code	unstable/ai/McpSchema.ts	ai/McpSchema.ts	50	106	37	24	32	23
+runtime-code	unstable/ai/McpServer.ts	ai/McpServer.ts	662	808	182	549	551	126
+runtime-code	unstable/ai/Model.ts	ai/Model.ts	2	2	2	2	2	1
+runtime-code	unstable/ai/OpenAiStructuredOutput.ts	ai/OpenAiStructuredOutput.ts	1	4	1	1	2	1
+runtime-code	unstable/ai/Prompt.ts	ai/Prompt.ts	4	17	6	4	14	6
+runtime-code	unstable/ai/Response.ts	ai/Response.ts	123	86	40	34	35	12
+moved-only	unstable/ai/ResponseIdTracker.ts	ai/ResponseIdTracker.ts	0	0	0	0	0	0
+moved-only	unstable/ai/Telemetry.ts	ai/Telemetry.ts	0	0	0	0	0	0
+runtime-code	unstable/ai/Tokenizer.ts	ai/Tokenizer.ts	5	4	3	5	4	3
+runtime-code	unstable/ai/Tool.ts	ai/Tool.ts	20	30	9	1	10	3
+runtime-code	unstable/ai/Toolkit.ts	ai/Toolkit.ts	35	60	21	21	41	17
+runtime-code	unstable/ai/index.ts	ai/index.ts	0	2	1	0	2	1
+moved-only	unstable/ai/internal/codec-transformer.ts	ai/internal/codec-transformer.ts	0	0	0	0	0	0
+runtime-code	unstable/ai/internal/mcpCore.ts	ai/internal/mcpCore.ts	24	42	21	1	11	3
+runtime-code	unstable/ai/internal/mcpProtocol.ts	ai/internal/mcpProtocol.ts	29	204	27	16	130	19
+runtime-code	unstable/ai/internal/mcpProtocol/v2024_11_05.ts	ai/internal/mcpProtocol/v2024_11_05.ts	13	25	14	11	24	11
+runtime-code	unstable/ai/internal/mcpProtocol/v2025_03_26.ts	ai/internal/mcpProtocol/v2025_03_26.ts	13	25	14	11	24	11
+runtime-code	unstable/ai/internal/mcpProtocol/v2025_06_18.ts	ai/internal/mcpProtocol/v2025_06_18.ts	32	47	21	23	38	16
+runtime-code	unstable/ai/internal/mcpProtocol/v2025_11_25.ts	ai/internal/mcpProtocol/v2025_11_25.ts	37	52	22	27	39	19
+runtime-code	unstable/ai/internal/mcpProtocolRegistry.ts	ai/internal/mcpProtocolRegistry.ts	2	7	4	1	3	2
+runtime-code	unstable/ai/internal/mcpSchema/v2024_11_05.ts	ai/internal/mcpSchema/v2024_11_05.ts	7	11	9	6	7	8
+runtime-code	unstable/ai/internal/mcpSchema/v2025_03_26.ts	ai/internal/mcpSchema/v2025_03_26.ts	2	1	3	2	1	3
+runtime-code	unstable/ai/internal/mcpSchema/v2025_06_18.ts	ai/internal/mcpSchema/v2025_06_18.ts	2	1	3	2	1	3
+runtime-code	unstable/ai/internal/mcpSchema/v2025_11_25.ts	ai/internal/mcpSchema/v2025_11_25.ts	21	5	8	16	3	5
+runtime-code	unstable/ai/internal/structured-output.ts	ai/internal/structured-output.ts	6	6	5	6	9	4
+runtime-code	unstable/cli/Argument.ts	cli/Argument.ts	22	22	10	14	14	2
+runtime-code	unstable/cli/CliConfig.ts	cli/CliConfig.ts	1	1	1	1	1	1
+moved-only	unstable/cli/CliError.ts	cli/CliError.ts	0	0	0	0	0	0
+runtime-code	unstable/cli/CliOutput.ts	cli/CliOutput.ts	2	34	2	2	25	2
+runtime-code	unstable/cli/Command.ts	cli/Command.ts	2	2	3	1	1	1
+types-only	unstable/cli/Completions.ts	cli/Completions.ts	4	4	2	0	0	0
+runtime-code	unstable/cli/Flag.ts	cli/Flag.ts	25	25	9	16	16	1
+runtime-code	unstable/cli/GlobalFlag.ts	cli/GlobalFlag.ts	14	14	9	13	13	8
+moved-only	unstable/cli/HelpDoc.ts	cli/HelpDoc.ts	0	0	0	0	0	0
+runtime-code	unstable/cli/Param.ts	cli/Param.ts	44	44	41	39	38	35
+runtime-code	unstable/cli/Primitive.ts	cli/Primitive.ts	35	35	28	32	32	19
+runtime-code	unstable/cli/Prompt.ts	cli/Prompt.ts	90	99	81	69	73	62
+comments-layout	unstable/cli/index.ts	cli/index.ts	0	0	0	0	0	0
+comments-layout	unstable/cli/internal/ansi.ts	cli/internal/ansi.ts	0	0	0	0	0	0
+identical	unstable/cli/internal/auto-suggest.ts	cli/internal/auto-suggest.ts	0	0	0	0	0	0
+moved-only	unstable/cli/internal/command.ts	cli/internal/command.ts	0	0	0	0	0	0
+comments-layout	unstable/cli/internal/completions/bash.ts	cli/internal/completions/bash.ts	0	0	0	0	0	0
+runtime-code	unstable/cli/internal/completions/descriptor.ts	cli/internal/completions/descriptor.ts	11	22	7	11	22	13
+comments-layout	unstable/cli/internal/completions/fish.ts	cli/internal/completions/fish.ts	0	0	0	0	0	0
+runtime-code	unstable/cli/internal/completions/zsh.ts	cli/internal/completions/zsh.ts	2	2	2	2	2	2
+moved-only	unstable/cli/internal/config.ts	cli/internal/config.ts	0	0	0	0	0	0
+moved-only	unstable/cli/internal/help.ts	cli/internal/help.ts	0	0	0	0	0	0
+runtime-code	unstable/cli/internal/lexer.ts	cli/internal/lexer.ts	1	2	2	1	2	2
+runtime-code	unstable/cli/internal/parser.ts	cli/internal/parser.ts	1	1	1	1	1	1
+runtime-code	unstable/cli/internal/wizard.ts	cli/internal/wizard.ts	13	17	9	13	13	11
+runtime-code	unstable/cluster/ClusterCron.ts	cluster/ClusterCron.ts	1	1	2	1	1	2
+moved-only	unstable/cluster/ClusterError.ts	cluster/ClusterError.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/ClusterMetrics.ts	cluster/ClusterMetrics.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/ClusterSchema.ts	cluster/ClusterSchema.ts	1	11	3	1	9	2
+runtime-code	unstable/cluster/ClusterWorkflowEngine.ts	cluster/ClusterWorkflowEngine.ts	34	136	29	32	112	27
+moved-only	unstable/cluster/DeliverAt.ts	cluster/DeliverAt.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/Entity.ts	cluster/Entity.ts	4	9	8	4	7	7
+moved-only	unstable/cluster/EntityAddress.ts	cluster/EntityAddress.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/EntityId.ts	cluster/EntityId.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/EntityProxy.ts	cluster/EntityProxy.ts	8	1	3	8	1	3
+runtime-code	unstable/cluster/EntityProxyServer.ts	cluster/EntityProxyServer.ts	3	7	4	1	1	2
+moved-only	unstable/cluster/EntityResource.ts	cluster/EntityResource.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/EntityType.ts	cluster/EntityType.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/Envelope.ts	cluster/Envelope.ts	3	3	4	2	1	2
+runtime-code	unstable/cluster/HttpRunner.ts	cluster/HttpRunner.ts	4	9	7	3	6	6
+runtime-code	unstable/cluster/K8sHttpClient.ts	cluster/K8sHttpClient.ts	4	4	2	4	4	2
+comments-layout	unstable/cluster/K8sTypes.ts	cluster/K8sTypes.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/MachineId.ts	cluster/MachineId.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/Message.ts	cluster/Message.ts	1	4	4	1	1	2
+runtime-code	unstable/cluster/MessageStorage.ts	cluster/MessageStorage.ts	19	72	29	9	37	16
+runtime-code	unstable/cluster/Reply.ts	cluster/Reply.ts	6	6	3	1	1	2
+moved-only	unstable/cluster/Runner.ts	cluster/Runner.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/RunnerAddress.ts	cluster/RunnerAddress.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/RunnerHealth.ts	cluster/RunnerHealth.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/RunnerServer.ts	cluster/RunnerServer.ts	26	24	12	9	21	9
+moved-only	unstable/cluster/RunnerStorage.ts	cluster/RunnerStorage.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/Runners.ts	cluster/Runners.ts	2	2	2	1	1	2
+moved-only	unstable/cluster/ShardId.ts	cluster/ShardId.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/Sharding.ts	cluster/Sharding.ts	49	98	35	31	71	33
+runtime-code	unstable/cluster/ShardingConfig.ts	cluster/ShardingConfig.ts	22	22	21	22	22	21
+moved-only	unstable/cluster/ShardingRegistrationEvent.ts	cluster/ShardingRegistrationEvent.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/SingleRunner.ts	cluster/SingleRunner.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/Singleton.ts	cluster/Singleton.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/SingletonAddress.ts	cluster/SingletonAddress.ts	0	0	0	0	0	0
+moved-only	unstable/cluster/Snowflake.ts	cluster/Snowflake.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/SocketRunner.ts	cluster/SocketRunner.ts	2	3	3	1	2	2
+runtime-code	unstable/cluster/SqlMessageStorage.ts	cluster/SqlMessageStorage.ts	19	58	14	16	44	13
+runtime-code	unstable/cluster/SqlRunnerStorage.ts	cluster/SqlRunnerStorage.ts	74	70	32	41	50	28
+moved-only	unstable/cluster/TestRunner.ts	cluster/TestRunner.ts	0	0	0	0	0	0
+comments-layout	unstable/cluster/index.ts	cluster/index.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/internal/entityManager.ts	cluster/internal/entityManager.ts	101	134	40	77	112	32
+moved-only	unstable/cluster/internal/entityReaper.ts	cluster/internal/entityReaper.ts	0	0	0	0	0	0
+comments-layout	unstable/cluster/internal/hash.ts	cluster/internal/hash.ts	0	0	0	0	0	0
+runtime-code	unstable/cluster/internal/interruptors.ts	cluster/internal/interruptors.ts	1	43	1	1	26	1
+runtime-code	unstable/cluster/internal/resourceMap.ts	cluster/internal/resourceMap.ts	12	42	12	14	34	9
+runtime-code	unstable/cluster/internal/resourceRef.ts	cluster/internal/resourceRef.ts	85	166	21	87	154	14
+moved-only	unstable/cluster/internal/shardLock.ts	cluster/internal/shardLock.ts	0	0	0	0	0	0
+moved-only	unstable/devtools/DevTools.ts	devtools/DevTools.ts	0	0	0	0	0	0
+runtime-code	unstable/devtools/DevToolsClient.ts	devtools/DevToolsClient.ts	4	14	6	8	14	6
+moved-only	unstable/devtools/DevToolsSchema.ts	devtools/DevToolsSchema.ts	0	0	0	0	0	0
+runtime-code	unstable/devtools/DevToolsServer.ts	devtools/DevToolsServer.ts	2	2	3	2	2	3
+comments-layout	unstable/devtools/index.ts	devtools/index.ts	0	0	0	0	0	0
+comments-layout	unstable/encoding/Ini.ts	encoding/Ini.ts	0	0	0	0	0	0
+absent	unstable/encoding/Msgpack.ts	-						
+runtime-code	unstable/encoding/Ndjson.ts	encoding/Ndjson.ts	0	2	2	0	2	2
+runtime-code	unstable/encoding/SchemaBinary.ts	encoding/SchemaBinary.ts	35	107	45	31	86	41
+runtime-code	unstable/encoding/Sse.ts	encoding/Sse.ts	6	14	5	3	10	3
+runtime-code	unstable/encoding/Toml.ts	encoding/Toml.ts	5	5	4	4	4	3
+runtime-code	unstable/encoding/Yaml.ts	encoding/Yaml.ts	108	162	30	102	159	30
+runtime-code	unstable/encoding/index.ts	encoding/index.ts	1	4	2	1	4	2
+runtime-code	unstable/eventlog/Event.ts	eventlog/Event.ts	4	4	5	2	2	3
+moved-only	unstable/eventlog/EventGroup.ts	eventlog/EventGroup.ts	0	0	0	0	0	0
+runtime-code	unstable/eventlog/EventJournal.ts	eventlog/EventJournal.ts	4	4	3	4	4	3
+runtime-code	unstable/eventlog/EventLog.ts	eventlog/EventLog.ts	8	8	8	7	7	7
+moved-only	unstable/eventlog/EventLogEncryption.ts	eventlog/EventLogEncryption.ts	0	0	0	0	0	0
+runtime-code	unstable/eventlog/EventLogMessage.ts	eventlog/EventLogMessage.ts	16	21	7	16	21	7
+runtime-code	unstable/eventlog/EventLogRemote.ts	eventlog/EventLogRemote.ts	7	13	6	4	9	4
+runtime-code	unstable/eventlog/EventLogServer.ts	eventlog/EventLogServer.ts	1	5	4	0	3	1
+runtime-code	unstable/eventlog/EventLogServerEncrypted.ts	eventlog/EventLogServerEncrypted.ts	1	1	2	1	1	2
+runtime-code	unstable/eventlog/EventLogServerUnencrypted.ts	eventlog/EventLogServerUnencrypted.ts	5	16	5	3	11	5
+moved-only	unstable/eventlog/EventLogSessionAuth.ts	eventlog/EventLogSessionAuth.ts	0	0	0	0	0	0
+runtime-code	unstable/eventlog/SqlEventJournal.ts	eventlog/SqlEventJournal.ts	9	29	12	11	24	11
+runtime-code	unstable/eventlog/SqlEventLogServerEncrypted.ts	eventlog/SqlEventLogServerEncrypted.ts	1	1	2	1	1	2
+runtime-code	unstable/eventlog/SqlEventLogServerUnencrypted.ts	eventlog/SqlEventLogServerUnencrypted.ts	2	12	4	2	6	3
+comments-layout	unstable/eventlog/index.ts	eventlog/index.ts	0	0	0	0	0	0
+moved-only	unstable/eventlog/internal/identityRootSecretDerivation.ts	eventlog/internal/identityRootSecretDerivation.ts	0	0	0	0	0	0
+runtime-code	unstable/http/Cookies.ts	http/Cookies.ts	61	3	7	40	3	7
+moved-only	unstable/http/Etag.ts	http/Etag.ts	0	0	0	0	0	0
+runtime-code	unstable/http/FetchHttpClient.ts	http/FetchHttpClient.ts	1	1	1	1	1	1
+comments-layout	unstable/http/FindMyWay.ts	http/FindMyWay.ts	0	0	0	0	0	0
+identical	unstable/http/FindMyWay/internal/queryString.ts	http/FindMyWay/internal/queryString.ts	0	0	0	0	0	0
+runtime-code	unstable/http/FindMyWay/internal/router.ts	http/FindMyWay/internal/router.ts	15	92	14	15	87	14
+runtime-code	unstable/http/Headers.ts	http/Headers.ts	30	3	5	24	3	5
+runtime-code	unstable/http/HttpBody.ts	http/HttpBody.ts	28	81	21	9	47	10
+runtime-code	unstable/http/HttpClient.ts	http/HttpClient.ts	9	28	13	4	15	7
+moved-only	unstable/http/HttpClientError.ts	http/HttpClientError.ts	0	0	0	0	0	0
+runtime-code	unstable/http/HttpClientRequest.ts	http/HttpClientRequest.ts	17	12	7	8	2	3
+runtime-code	unstable/http/HttpClientResponse.ts	http/HttpClientResponse.ts	3	11	5	6	10	4
+runtime-code	unstable/http/HttpEffect.ts	http/HttpEffect.ts	46	99	20	35	76	20
+runtime-code	unstable/http/HttpIncomingMessage.ts	http/HttpIncomingMessage.ts	4	4	5	2	1	2
+runtime-code	unstable/http/HttpMethod.ts	http/HttpMethod.ts	2	5	3	2	2	1
+runtime-code	unstable/http/HttpMiddleware.ts	http/HttpMiddleware.ts	26	51	20	24	33	18
+runtime-code	unstable/http/HttpPlatform.ts	http/HttpPlatform.ts	28	71	16	12	45	12
+runtime-code	unstable/http/HttpRouter.ts	http/HttpRouter.ts	24	44	19	12	27	12
+runtime-code	unstable/http/HttpServer.ts	http/HttpServer.ts	25	11	7	13	9	4
+moved-only	unstable/http/HttpServerError.ts	http/HttpServerError.ts	0	0	0	0	0	0
+runtime-code	unstable/http/HttpServerRequest.ts	http/HttpServerRequest.ts	15	17	10	12	11	7
+runtime-code	unstable/http/HttpServerRespondable.ts	http/HttpServerRespondable.ts	1	1	2	1	1	2
+runtime-code	unstable/http/HttpServerResponse.ts	http/HttpServerResponse.ts	45	83	24	36	66	22
+runtime-code	unstable/http/HttpStaticServer.ts	http/HttpStaticServer.ts	23	35	19	14	25	15
+comments-layout	unstable/http/HttpStatus.ts	http/HttpStatus.ts	0	0	0	0	0	0
+runtime-code	unstable/http/HttpTraceContext.ts	http/HttpTraceContext.ts	3	7	3	3	3	3
+runtime-code	unstable/http/Multipart.ts	http/Multipart.ts	35	44	27	16	29	21
+types-only	unstable/http/MultipartParser.ts	http/MultipartParser.ts	3	4	2	0	0	0
+comments-layout	unstable/http/MultipartParser/HeadersParser.ts	http/MultipartParser/HeadersParser.ts	0	0	0	0	0	0
+comments-layout	unstable/http/MultipartParser/Search.ts	http/MultipartParser/Search.ts	0	0	0	0	0	0
+identical	unstable/http/MultipartParser/internal/contentType.ts	http/MultipartParser/internal/contentType.ts	0	0	0	0	0	0
+identical	unstable/http/MultipartParser/internal/headers.ts	http/MultipartParser/internal/headers.ts	0	0	0	0	0	0
+runtime-code	unstable/http/MultipartParser/internal/multipart.ts	http/MultipartParser/internal/multipart.ts	3	9	4	3	8	4
+identical	unstable/http/MultipartParser/internal/search.ts	http/MultipartParser/internal/search.ts	0	0	0	0	0	0
+moved-only	unstable/http/Template.ts	http/Template.ts	0	0	0	0	0	0
+moved-only	unstable/http/Url.ts	http/Url.ts	0	0	0	0	0	0
+runtime-code	unstable/http/UrlParams.ts	http/UrlParams.ts	69	3	8	36	3	7
+runtime-code	unstable/http/index.ts	http/index.ts	0	1	1	0	1	1
+runtime-code	unstable/http/internal/compression.ts	http/internal/compression.ts	12	11	7	11	8	8
+runtime-code	unstable/http/internal/httpBody.ts	http/internal/httpBody.ts	0	7	1	0	7	1
+moved-only	unstable/http/internal/preResponseHandler.ts	http/internal/preResponseHandler.ts	0	0	0	0	0	0
+runtime-code	unstable/httpapi/HttpApi.ts	http-api/HttpApi.ts	3	51	4	2	20	2
+runtime-code	unstable/httpapi/HttpApiBuilder.ts	http-api/HttpApiBuilder.ts	95	168	45	66	91	37
+runtime-code	unstable/httpapi/HttpApiClient.ts	http-api/HttpApiClient.ts	78	143	43	64	94	35
+runtime-code	unstable/httpapi/HttpApiEndpoint.ts	http-api/HttpApiEndpoint.ts	21	31	16	15	16	13
+runtime-code	unstable/httpapi/HttpApiError.ts	http-api/HttpApiError.ts	5	6	5	4	5	5
+runtime-code	unstable/httpapi/HttpApiGroup.ts	http-api/HttpApiGroup.ts	3	3	4	2	2	2
+runtime-code	unstable/httpapi/HttpApiMiddleware.ts	http-api/HttpApiMiddleware.ts	10	12	8	5	7	6
+types-only	unstable/httpapi/HttpApiScalar.ts	http-api/HttpApiScalar.ts	1	1	2	0	0	0
+runtime-code	unstable/httpapi/HttpApiSchema.ts	http-api/HttpApiSchema.ts	19	26	14	18	13	11
+runtime-code	unstable/httpapi/HttpApiSecurity.ts	http-api/HttpApiSecurity.ts	1	1	1	1	1	1
+types-only	unstable/httpapi/HttpApiSwagger.ts	http-api/HttpApiSwagger.ts	1	1	2	0	0	0
+runtime-code	unstable/httpapi/HttpApiTest.ts	http-api/HttpApiTest.ts	5	10	5	4	10	4
+runtime-code	unstable/httpapi/OpenApi.ts	http-api/OpenApi.ts	158	231	40	119	188	34
+comments-layout	unstable/httpapi/index.ts	http-api/index.ts	0	0	0	0	0	0
+comments-layout	unstable/httpapi/internal/html.ts	http-api/internal/html.ts	0	0	0	0	0	0
+comments-layout	unstable/httpapi/internal/httpApiScalar.ts	http-api/internal/httpApiScalar.ts	0	0	0	0	0	0
+comments-layout	unstable/httpapi/internal/httpApiSwagger.ts	http-api/internal/httpApiSwagger.ts	0	0	0	1	2	1
+comments-layout	unstable/httpapi/internal/mediaType.ts	http-api/internal/mediaType.ts	0	0	0	0	0	0
+runtime-code	unstable/observability/Otlp.ts	observability/Otlp.ts	2	2	2	1	1	2
+runtime-code	unstable/observability/OtlpExporter.ts	observability/OtlpExporter.ts	10	12	7	9	7	6
+runtime-code	unstable/observability/OtlpLogger.ts	observability/OtlpLogger.ts	11	11	5	9	9	3
+runtime-code	unstable/observability/OtlpMetrics.ts	observability/OtlpMetrics.ts	11	12	9	8	9	5
+runtime-code	unstable/observability/OtlpResource.ts	observability/OtlpResource.ts	4	5	3	2	2	1
+runtime-code	unstable/observability/OtlpSerialization.ts	observability/OtlpSerialization.ts	1	1	2	1	1	2
+runtime-code	unstable/observability/OtlpTracer.ts	observability/OtlpTracer.ts	76	90	25	51	76	19
+runtime-code	unstable/observability/PrometheusMetrics.ts	observability/PrometheusMetrics.ts	2	2	2	2	2	2
+comments-layout	unstable/observability/index.ts	observability/index.ts	0	0	0	0	0	0
+runtime-code	unstable/observability/internal/otlpEnv.ts	observability/internal/otlpEnv.ts	12	9	7	9	5	2
+identical	unstable/observability/internal/otlpProtobuf.ts	observability/internal/otlpProtobuf.ts	0	0	0	0	0	0
+identical	unstable/observability/internal/protobuf.ts	observability/internal/protobuf.ts	0	0	0	0	0	0
+runtime-code	unstable/persistence/KeyValueStore.ts	persistence/KeyValueStore.ts	6	6	7	6	6	7
+moved-only	unstable/persistence/Persistable.ts	persistence/Persistable.ts	0	0	0	0	0	0
+runtime-code	unstable/persistence/PersistedCache.ts	persistence/PersistedCache.ts	1	1	1	1	1	1
+runtime-code	unstable/persistence/PersistedQueue.ts	persistence/PersistedQueue.ts	266	952	145	183	658	126
+runtime-code	unstable/persistence/Persistence.ts	persistence/Persistence.ts	14	6	4	10	2	4
+runtime-code	unstable/persistence/RateLimiter.ts	persistence/RateLimiter.ts	32	29	16	30	22	13
+moved-only	unstable/persistence/Redis.ts	persistence/Redis.ts	0	0	0	0	0	0
+comments-layout	unstable/persistence/index.ts	persistence/index.ts	0	0	0	0	0	0
+runtime-code	unstable/process/ChildProcess.ts	process/ChildProcess.ts	2	6	2	2	6	2
+runtime-code	unstable/process/ChildProcessSpawner.ts	process/ChildProcessSpawner.ts	1	1	1	1	1	1
+comments-layout	unstable/process/index.ts	process/index.ts	0	0	0	0	0	0
+runtime-code	unstable/reactivity/AsyncResult.ts	reactivity/AsyncResult.ts	4	12	4	4	4	4
+runtime-code	unstable/reactivity/Atom.ts	reactivity/Atom.ts	5	20	12	5	20	12
+runtime-code	unstable/reactivity/AtomHttpApi.ts	reactivity/AtomHttpApi.ts	17	28	12	6	9	6
+moved-only	unstable/reactivity/AtomRef.ts	reactivity/AtomRef.ts	0	0	0	0	0	0
+runtime-code	unstable/reactivity/AtomRegistry.ts	reactivity/AtomRegistry.ts	141	220	64	142	222	65
+runtime-code	unstable/reactivity/AtomRpc.ts	reactivity/AtomRpc.ts	15	16	11	4	4	4
+runtime-code	unstable/reactivity/Hydration.ts	reactivity/Hydration.ts	4	19	8	3	15	7
+runtime-code	unstable/reactivity/Reactivity.ts	reactivity/Reactivity.ts	5	8	4	1	4	3
+comments-layout	unstable/reactivity/index.ts	reactivity/index.ts	0	0	0	0	0	0
+types-only	unstable/rpc/Rpc.ts	rpc/Rpc.ts	2	2	3	0	0	0
+runtime-code	unstable/rpc/RpcClient.ts	rpc/RpcClient.ts	56	59	25	53	57	25
+runtime-code	unstable/rpc/RpcClientError.ts	rpc/RpcClientError.ts	1	1	2	1	1	2
+types-only	unstable/rpc/RpcGroup.ts	rpc/RpcGroup.ts	1	1	2	0	0	0
+runtime-code	unstable/rpc/RpcMessage.ts	rpc/RpcMessage.ts	3	3	4	1	1	1
+runtime-code	unstable/rpc/RpcMiddleware.ts	rpc/RpcMiddleware.ts	4	6	7	3	5	5
+moved-only	unstable/rpc/RpcSchema.ts	rpc/RpcSchema.ts	0	0	0	0	0	0
+runtime-code	unstable/rpc/RpcSerialization.ts	rpc/RpcSerialization.ts	83	33	26	83	24	23
+runtime-code	unstable/rpc/RpcServer.ts	rpc/RpcServer.ts	82	132	39	61	94	35
+moved-only	unstable/rpc/RpcTest.ts	rpc/RpcTest.ts	0	0	0	0	0	0
+moved-only	unstable/rpc/RpcWorker.ts	rpc/RpcWorker.ts	0	0	0	0	0	0
+runtime-code	unstable/rpc/Utils.ts	rpc/Utils.ts	1	1	2	1	1	2
+comments-layout	unstable/rpc/index.ts	rpc/index.ts	0	0	0	0	0	0
+runtime-code	unstable/schema/Model.ts	schema/Model.ts	8	9	3	7	8	3
+runtime-code	unstable/schema/VariantSchema.ts	schema/VariantSchema.ts	0	3	1	0	3	1
+runtime-code	unstable/schema/index.ts	schema/index.ts	0	3	1	0	3	1
+runtime-code	unstable/socket/Socket.ts	socket/Socket.ts	280	412	71	187	333	31
+types-only	unstable/socket/SocketServer.ts	socket/SocketServer.ts	11	2	3	0	0	0
+comments-layout	unstable/socket/index.ts	socket/index.ts	0	0	0	0	0	0
+runtime-code	unstable/sql/Migrator.ts	sql/Migrator.ts	1	1	1	1	1	1
+runtime-code	unstable/sql/SqlClient.ts	sql/SqlClient.ts	11	106	22	9	66	11
+types-only	unstable/sql/SqlConnection.ts	sql/SqlConnection.ts	0	3	1	0	0	0
+moved-only	unstable/sql/SqlError.ts	sql/SqlError.ts	0	0	0	0	0	0
+types-only	unstable/sql/SqlModel.ts	sql/SqlModel.ts	2	2	3	0	0	0
+moved-only	unstable/sql/SqlResolver.ts	sql/SqlResolver.ts	0	0	0	0	0	0
+moved-only	unstable/sql/SqlSchema.ts	sql/SqlSchema.ts	0	0	0	0	0	0
+moved-only	unstable/sql/SqlStream.ts	sql/SqlStream.ts	0	0	0	0	0	0
+runtime-code	unstable/sql/Statement.ts	sql/Statement.ts	20	38	22	15	22	17
+comments-layout	unstable/sql/index.ts	sql/index.ts	0	0	0	0	0	0
+runtime-code	unstable/workers/Transferable.ts	workers/Transferable.ts	1	1	1	1	1	1
+runtime-code	unstable/workers/Worker.ts	workers/Worker.ts	1	1	1	1	1	1
+moved-only	unstable/workers/WorkerError.ts	workers/WorkerError.ts	0	0	0	0	0	0
+moved-only	unstable/workers/WorkerRunner.ts	workers/WorkerRunner.ts	0	0	0	0	0	0
+comments-layout	unstable/workers/index.ts	workers/index.ts	0	0	0	0	0	0
+runtime-code	unstable/workflow/Activity.ts	workflow/Activity.ts	6	8	3	4	5	1
+runtime-code	unstable/workflow/DurableClock.ts	workflow/DurableClock.ts	1	1	1	1	1	1
+runtime-code	unstable/workflow/DurableDeferred.ts	workflow/DurableDeferred.ts	3	9	6	3	3	3
+runtime-code	unstable/workflow/DurableQueue.ts	workflow/DurableQueue.ts	1	1	2	1	1	2
+runtime-code	unstable/workflow/Workflow.ts	workflow/Workflow.ts	18	73	14	13	55	12
+runtime-code	unstable/workflow/WorkflowEngine.ts	workflow/WorkflowEngine.ts	22	25	17	15	15	11
+runtime-code	unstable/workflow/WorkflowProxy.ts	workflow/WorkflowProxy.ts	1	1	2	1	1	2
+runtime-code	unstable/workflow/WorkflowProxyServer.ts	workflow/WorkflowProxyServer.ts	1	1	2	1	1	2
+comments-layout	unstable/workflow/index.ts	workflow/index.ts	0	0	0	0	0	0
+moved-only	unstable/workflow/internal/crypto.ts	workflow/internal/crypto.ts	0	0	0	0	0	0
+new	-	Arbitrary.ts						
+new	-	ByteSize.ts						
+new	-	ai/Decision.ts						
+new	-	ai/DecisionModel.ts						
+new	-	ai/internal/mcpProtocol/v2026_07_28.ts						
+new	-	ai/internal/mcpRuntime.ts						
+new	-	ai/internal/mcpSchema/v2026_07_28.ts						
+new	-	ai/internal/mcpStatefulRuntime.ts						
+new	-	cluster/internal/clusterAbandon.ts						
+new	-	cluster/internal/entityActivation.ts						
+new	-	encoding/Base64.ts						
+new	-	encoding/Base64Url.ts						
+new	-	encoding/EncodingError.ts						
+new	-	encoding/Hex.ts						
+new	-	http-api/internal/path.ts						
+new	-	http/Mime.ts						
+new	-	http/internal/headers.ts						
+new	-	http/internal/mimeTypes.ts						
+new	-	internal/arbitrary/array.ts						
+new	-	internal/arbitrary/bigDecimal.ts						
+new	-	internal/arbitrary/bigInt.ts						
+new	-	internal/arbitrary/model.ts						
+new	-	internal/arbitrary/regexp.ts						
+new	-	internal/arbitrary/runner.ts						
+new	-	internal/arbitrary/schema.ts						
+new	-	internal/count.ts						
+new	-	internal/hash.ts						
+new	-	internal/schema/codegen.ts						
+new	-	internal/schema/compilerRegistry.ts						
+new	-	internal/schema/interpreter.ts						
+new	-	internal/schema/make.ts						
+new	-	internal/schema/standardSchema.ts						
+new	-	internal/schema/toCodec.ts						
+new	-	internal/schema/toDifferJsonPatch.ts						
+new	-	internal/schema/toEncoderXml.ts						
+new	-	internal/schema/toFormatter.ts						
+new	-	internal/schema/toIso.ts						
+new	-	internal/schemaError.ts						
+new	-	internal/ulid.ts						
+new	-	net/IpInterface.ts						
+new	-	net/IpNetwork.ts						
+new	-	net/NetAddress.ts						
+new	-	net/index.ts						
+new	-	schema/SchemaAOTCompiler.ts						
+new	-	schema/SchemaAOTCompiler/Build.ts						
+new	-	schema/SchemaCompiler.ts						
+new	-	schema/SchemaCompiler/runtime.ts						
+new	-	schema/SchemaJITCompiler.ts						
+new	-	schema/SchemaJITCompiler/enable.ts						

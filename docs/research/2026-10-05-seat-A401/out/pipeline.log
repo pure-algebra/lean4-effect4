@@ -1,0 +1,25 @@
+452 files stripped from vendor/effect-4.0.0-rc.112/src; 0 with parse errors or a bad comment span
+496 files stripped from vendor/effect-4.0.1/src; 0 with parse errors or a bad comment span
+452 files stripped from <main checkout>/ts/eff/node_modules/effect/dist; 0 with parse errors or a bad comment span
+496 files stripped from <installed 4.0.1>/node_modules/effect/dist; 0 with parse errors or a bad comment span
+452 files, 18116 units from vendor/effect-4.0.0-rc.112/src
+496 files, 19770 units from vendor/effect-4.0.1/src
+452 files, 14549 units from <main checkout>/ts/eff/node_modules/effect/dist
+496 files, 15767 units from <installed 4.0.1>/node_modules/effect/dist
+pin files 452; release files 496; matched 447 (moved 267); by status {'absent': 5, 'comments-layout': 33, 'identical': 61, 'moved-only': 55, 'new': 49, 'runtime-code': 284, 'types-only': 14}
+rows 3190; resolved to a pin file 2980; `.ts` tokens with lines that resolve to no file: 2
+distinct ranges 1190; cited files 60; citations by status {'changed': 550, 'comment-changed': 8, 'file-only': 59, 'moved': 1, 'removed': 68, 'same': 2223, 'same-comment': 71}
+census rows against the release: {'anchor-absent': 10, 'drifted': 44, 'equal': 83}
+changed or removed citations 618; unclassified hunks 0
+  164	behaviour	corner
+  129	cosmetic	none
+  107	refactor	none
+  104	behaviour	main
+  49	host	outside
+  16	api	outside
+  16	api	none
+  15	behaviour	budget
+  14	api	main
+  4	behaviour	outside
+census rows 137; declarations with a changed citation 287; registry claims joined directly 4; register rows 7
+candidates 77

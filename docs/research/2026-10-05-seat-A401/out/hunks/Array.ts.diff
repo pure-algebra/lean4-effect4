@@ -1,0 +1,178 @@
+# Array.ts (rc.112) against Array.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 19 release 19-19 cited ranges 0
+   pin units: 
+   release units: import ./internal/count.ts=absent
++    19 import * as Count from "@tree/internal/count.ts"
+
+@@ hunk 2 [code] pin 176-176 release 178-178 cited ranges 0
+   pin units: allocate=code
+   release units: allocate=code
+-   176 export const allocate = <A = never>(n: number): Array<A | undefined> => new Array(n)
++   178 export const allocate = <A = never>(n: number): Array<A | undefined> => new Array(Count.normalize(n))
+
+@@ hunk 3 [code] pin 263-263 release 265-265 cited ranges 0
+   pin units: makeBy=code
+   release units: makeBy=code
+-   263 const max = Math.max(1, Math.floor(n))
++   265 const max = Count.normalizeNonEmpty(n)
+
+@@ hunk 4 [code] pin before 1663 release 1671-1674 cited ranges 0
+   pin units: 
+   release units: isCanonicalArrayIndex=absent
++  1671 export function isCanonicalArrayIndex(key: string): boolean {
++  1672 const index = Number(key)
++  1673 return String(index) === key && Number.isInteger(index) && index >= 0 && index < 2 ** 32 - 1
++  1674 }
+
+@@ hunk 5 [code] pin 1667-1667 release before 1710 cited ranges 0
+   pin units: clamp=absent
+   release units: 
+-  1667 const clamp = <A>(i: number, as: ReadonlyArray<A>): number => Math.floor(Math.min(Math.max(0, i), as.length))
+
+@@ hunk 6 [code] pin before 2153 release 2139-2139 cited ranges 0
+   pin units: 
+   release units: clampCount=absent
++  2139 const clampCount = (n: number, length: number): number => Math.min(Count.normalize(n), length)
+
+@@ hunk 7 [code] pin 2210-2210 release 2227-2227 cited ranges 0
+   pin units: take=code
+   release units: take=code
+-  2210 return input.slice(0, clamp(n, input))
++  2227 return input.slice(0, clampCount(n, input.length))
+
+@@ hunk 8 [code] pin 2293-2293 release 2313-2313 cited ranges 0
+   pin units: takeRight=code
+   release units: takeRight=code
+-  2293 const i = clamp(n, input)
++  2313 const i = clampCount(n, input.length)
+
+@@ hunk 9 [code] pin 2800-2800 release 2820-2820 cited ranges 0
+   pin units: drop=code
+   release units: drop=code
+-  2800 return input.slice(clamp(n, input), input.length)
++  2820 return input.slice(clampCount(n, input.length), input.length)
+
+@@ hunk 10 [code] pin 2883-2883 release 2903-2903 cited ranges 0
+   pin units: dropRight=code
+   release units: dropRight=code
+-  2883 return input.slice(0, input.length - clamp(n, input))
++  2903 return input.slice(0, input.length - clampCount(n, input.length))
+
+@@ hunk 11 [code] pin 5772-5772 release 5792-5792 cited ranges 0
+   pin units: splitAt=code
+   release units: splitAt=code
+-  5772 const _n = Math.floor(n)
++  5792 const _n = Count.normalize(n)
+
+@@ hunk 12 [code] pin 5852-5852 release 5884-5884 cited ranges 0
+   pin units: splitAtNonEmpty=code
+   release units: splitAtNonEmpty=code
+-  5852 const _n = Math.max(1, Math.floor(n))
++  5884 const _n = Count.normalizeNonEmpty(n)
+
+@@ hunk 13 [code] pin 5935-5935 release 5970-5970 cited ranges 0
+   pin units: split=code
+   release units: split=code
+-  5935 return chunksOf(input, Math.ceil(input.length / Math.floor(n)))
++  5970 return chunksOf(input, Math.ceil(input.length / Count.normalizeNonEmpty(n)))
+
+@@ hunk 14 [code] pin 6195-6196 release 6233-6235 cited ranges 0
+   pin units: pad=code
+   release units: pad=code
+-  6195 if (self.length >= n) {
+-  6196 return take(self, n)
++  6233 const length = Count.normalize(n)
++  6234 if (self.length >= length) {
++  6235 return take(self, length)
+
+@@ hunk 15 [code] pin 6200-6200 release 6239-6239 cited ranges 0
+   pin units: pad=code
+   release units: pad=code
+-  6200 makeBy(n - self.length, () => fill)
++  6239 makeBy(length - self.length, () => fill)
+
+@@ hunk 16 [code] pin 6419-6419 release 6469-6470 cited ranges 0
+   pin units: window=code
+   release units: window=code
+-  6419 if (n > 0 && isReadonlyArrayNonEmpty(input)) {
++  6469 const size = Count.normalize(n)
++  6470 if (size > 0 && size <= input.length && isReadonlyArrayNonEmpty(input)) {
+
+@@ hunk 17 [code] pin 6421-6422 release 6472-6473 cited ranges 0
+   pin units: window=code
+   release units: window=code
+-  6421 { length: input.length - (n - 1) },
+-  6422 (_, index) => input.slice(index, index + n)
++  6472 { length: input.length - (size - 1) },
++  6473 (_, index) => input.slice(index, index + size)
+
+@@ hunk 18 [erased] pin 8082-8112 release 8133-8163 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  8082 <A, Pass, Fail>(f: (input: NoInfer<A>, i: number) => Result.Result<Pass, Fail>): (self: Iterable<A>) => [excluded: Array<Fail>, satisfying: Array<Pass>]
+-  8112 <A, Pass, Fail>(self: Iterable<A>, f: (input: A, i: number) => Result.Result<Pass, Fail>): [excluded: Array<Fail>, satisfying: Array<Pass>]
++  8133 <A, Pass, Fail>(f: (input: NoInfer<A>, i: number) => Result.Result<Pass, Fail>): (self: Iterable<A>) => [passes: Array<Pass>, fails: Array<Fail>]
++  8163 <A, Pass, Fail>(self: Iterable<A>, f: (input: A, i: number) => Result.Result<Pass, Fail>): [passes: Array<Pass>, fails: Array<Fail>]
+
+@@ hunk 19 [code] pin 8118-8120 release 8169-8171 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  8118 ): [excluded: Array<Fail>, satisfying: Array<Pass>] => {
+-  8119 const excluded: Array<Fail> = []
+-  8120 const satisfying: Array<Pass> = []
++  8169 ): [passes: Array<Pass>, fails: Array<Fail>] => {
++  8170 const passes: Array<Pass> = []
++  8171 const fails: Array<Fail> = []
+
+@@ hunk 20 [code] pin 8125-8125 release 8176-8176 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  8125 satisfying.push(result.success)
++  8176 passes.push(result.success)
+
+@@ hunk 21 [code] pin 8127-8127 release 8178-8178 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  8127 excluded.push(result.failure)
++  8178 fails.push(result.failure)
+
+@@ hunk 22 [code] pin 8130-8130 release 8181-8181 cited ranges 0
+   pin units: partition=code
+   release units: partition=code
+-  8130 return [excluded, satisfying]
++  8181 return [passes, fails]
+
+@@ hunk 23 [erased] pin 8164-8165 release 8215-8216 cited ranges 0
+   pin units: separate=erased
+   release units: separate=erased
+-  8164 failures: Array<Result.Result.Failure<ReadonlyArray.Infer<T>>>,
+-  8165 successes: Array<Result.Result.Success<ReadonlyArray.Infer<T>>>
++  8215 successes: Array<Result.Result.Success<ReadonlyArray.Infer<T>>>,
++  8216 failures: Array<Result.Result.Failure<ReadonlyArray.Infer<T>>>
+
+@@ hunk 24 [code] pin 9243-9248 release 9294-9298 cited ranges 1
+   pin units: dedupeWith=code
+   release units: dedupeWith=code
+-  9243 const input = fromIterable(self)
+-  9244 if (isReadonlyArrayNonEmpty(input)) {
+-  9245 const out: NonEmptyArray<A> = [headNonEmpty(input)]
+-  9246 const rest = tailNonEmpty(input)
+-  9247 for (const r of rest) {
+-  9248 if (out.every((a) => !isEquivalent(r, a))) {
++  9294 const out: Array<A> = []
++  9295 next: for (const r of fromIterable(self)) {
++  9296 for (let i = 0; i < out.length; i++) {
++  9297 if (isEquivalent(r, out[i])) continue next
++  9298 }
+
+@@ hunk 25 [code] pin 9251-9251 release before 9301 cited ranges 1
+   pin units: dedupeWith=code
+   release units: 
+-  9251 }
+
+@@ hunk 26 [code] pin 9254-9255 release before 9303 cited ranges 1
+   pin units: dedupeWith=code
+   release units: 
+-  9254 return []
+-  9255 }

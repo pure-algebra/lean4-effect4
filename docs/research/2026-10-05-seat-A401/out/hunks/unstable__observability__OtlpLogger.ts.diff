@@ -1,0 +1,43 @@
+# unstable/observability/OtlpLogger.ts (rc.112) against observability/OtlpLogger.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin before 17 release 18-19 cited ranges 0
+   pin units: 
+   release units: import ../http/Headers.ts=same; import ../http/HttpClient.ts=same
++    18 import type * as Headers from "@tree/http/Headers.ts"
++    19 import type * as HttpClient from "@tree/http/HttpClient.ts"
+
+@@ hunk 2 [erased] pin 23-24 release before 26 cited ranges 0
+   pin units: import ../http/Headers.ts=same; import ../http/HttpClient.ts=same
+   release units: 
+-    23 import type * as Headers from "@tree/http/Headers.ts"
+-    24 import type * as HttpClient from "@tree/http/HttpClient.ts"
+
+@@ hunk 3 [code] pin 144-144 release 148-148 cited ranges 1
+   pin units: layerFromConfig=code
+   release units: layerFromConfig=code
+-   144 disabled: Config.boolean("OTEL_SDK_DISABLED").pipe(Config.withDefault(false)),
++   148 disabled: Config.Boolean("OTEL_SDK_DISABLED").pipe(Config.withDefault(false)),
+
+@@ hunk 4 [code] pin 154-158 release 158-162 cited ranges 1
+   pin units: layerFromConfig=code
+   release units: layerFromConfig=code
+-   154 baseTimeout: Config.option(Config.int("OTEL_EXPORTER_OTLP_TIMEOUT")),
+-   155 logsTimeout: Config.option(Config.int("OTEL_EXPORTER_OTLP_LOGS_TIMEOUT")),
+-   156 exportTimeout: Config.option(Config.int("OTEL_BLRP_EXPORT_TIMEOUT")),
+-   157 scheduleDelay: Config.option(Config.int("OTEL_BLRP_SCHEDULE_DELAY")),
+-   158 maxBatchSize: Config.option(Config.int("OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"))
++   158 baseTimeout: Config.option(Config.Int("OTEL_EXPORTER_OTLP_TIMEOUT")),
++   159 logsTimeout: Config.option(Config.Int("OTEL_EXPORTER_OTLP_LOGS_TIMEOUT")),
++   160 exportTimeout: Config.option(Config.Int("OTEL_BLRP_EXPORT_TIMEOUT")),
++   161 scheduleDelay: Config.option(Config.Int("OTEL_BLRP_SCHEDULE_DELAY")),
++   162 maxBatchSize: Config.option(Config.Int("OTEL_BLRP_MAX_EXPORT_BATCH_SIZE"))
+
+@@ hunk 5 [code] pin 230-232 release 235-237 cited ranges 0
+   pin units: makeLogRecord=code
+   release units: makeLogRecord=code
+-   230 if (options.fiber.currentSpan) {
+-   231 logRecord.traceId = options.fiber.currentSpan.traceId
+-   232 logRecord.spanId = options.fiber.currentSpan.spanId
++   235 if (options.fiber.cache.span) {
++   236 logRecord.traceId = options.fiber.cache.span.traceId
++   237 logRecord.spanId = options.fiber.cache.span.spanId

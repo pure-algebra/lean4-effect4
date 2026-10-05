@@ -1,0 +1,206 @@
+# unstable/sql/SqlClient.ts (rc.112) against sql/SqlClient.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin before 11 release 12-12 cited ranges 0
+   pin units: 
+   release units: import ../Cause.ts=absent
++    12 import type * as Cause from "@tree/Cause.ts"
+
+@@ hunk 2 [code] pin before 17 release 19-19 cited ranges 0
+   pin units: 
+   release units: import ../Predicate.ts=absent
++    19 import { hasProperty } from "@tree/Predicate.ts"
+
+@@ hunk 3 [erased] pin before 18 release 21-21 cited ranges 0
+   pin units: 
+   release units: import ../reactivity/Reactivity.ts=same
++    21 import { Reactivity } from "@tree/reactivity/Reactivity.ts"
+
+@@ hunk 4 [erased] pin 24-24 release before 28 cited ranges 0
+   pin units: import ../reactivity/Reactivity.ts=same
+   release units: 
+-    24 import { Reactivity } from "@tree/reactivity/Reactivity.ts"
+
+@@ hunk 5 [import] pin 26-26 release 29-29 cited ranges 0
+   pin units: import ./SqlError.ts=import
+   release units: import ./SqlError.ts=import
+-    26 import type { SqlError } from "@tree/sql/SqlError.ts"
++    29 import { ConnectionError, SqlError } from "@tree/sql/SqlError.ts"
+
+@@ hunk 6 [erased] pin before 113 release 126-126 cited ranges 0
+   pin units: 
+   release units: SqlClient#3=type-decl
++   126 readonly borrower?: Connection.Borrower | undefined
+
+@@ hunk 7 [erased] pin before 117 release 143-143 cited ranges 0
+   pin units: 
+   release units: SqlClient#3=type-decl
++   143 readonly prepareTransactionControls?: boolean | undefined
+
+@@ hunk 8 [erased] pin 119-119 release 147-149 cited ranges 0
+   pin units: SqlClient#3=type-decl
+   release units: SqlClient#3=type-decl
+-   119 readonly commit?: string | undefined
++   147 readonly commit?: string | ((conn: Connection.Connection) => Effect.Effect<void, SqlError>) | undefined
++   149 readonly onCommitFailure?: ((conn: Connection.Connection) => Effect.Effect<void, SqlError>) | undefined
+
+@@ hunk 9 [erased] pin before 121 release 156-156 cited ranges 0
+   pin units: 
+   release units: SqlClient#3=type-decl
++   156 readonly releaseSavepoint?: ((name: string) => string) | undefined
+
+@@ hunk 10 [code] pin before 154 release 191-191 cited ranges 0
+   pin units: 
+   release units: make=code
++   191 const releaseSavepoint = options.releaseSavepoint
+
+@@ hunk 11 [code] pin before 157 release 195-197 cited ranges 0
+   pin units: 
+   release units: make=code
++   195 const control = options.prepareTransactionControls === true
++   196 ? (conn: Connection.Connection, sql: string) => conn.execute(sql, [], undefined)
++   197 : (conn: Connection.Connection, sql: string) => conn.executeUnprepared(sql, [], undefined)
+
+@@ hunk 12 [code] pin 162-162 release 203-207 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   162 (scope) => Effect.map(Scope.provide(transactionAcquirer!, scope), (conn) => [scope, conn] as const)
++   203 (scope) =>
++   204 Scope.provide(transactionAcquirer!, scope).pipe(
++   205 Effect.onError((cause) => Scope.close(scope, Exit.failCause(cause))),
++   206 Effect.map((conn) => [scope, conn] as const)
++   207 )
+
+@@ hunk 13 [code] pin 164-168 release 209-217 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   164 begin: (conn) => conn.executeUnprepared(beginTransaction, [], undefined),
+-   165 savepoint: (conn, id) => conn.executeUnprepared(savepoint(`effect_sql_${id}`), [], undefined),
+-   166 commit: (conn) => conn.executeUnprepared(commit, [], undefined),
+-   167 rollback: (conn) => conn.executeUnprepared(rollback, [], undefined),
+-   168 rollbackSavepoint: (conn, id) => conn.executeUnprepared(rollbackSavepoint(`effect_sql_${id}`), [], undefined)
++   209 begin: (conn) => control(conn, beginTransaction),
++   210 savepoint: (conn, id) => control(conn, savepoint(`effect_sql_${id}`)),
++   211 releaseSavepoint: releaseSavepoint
++   212 ? (conn, id) => control(conn, releaseSavepoint(`effect_sql_${id}`))
++   213 : undefined,
++   214 commit: typeof commit === "string" ? (conn) => control(conn, commit) : commit,
++   215 onCommitFailure: options.onCommitFailure,
++   216 rollback: (conn) => control(conn, rollback),
++   217 rollbackSavepoint: (conn, id) => control(conn, rollbackSavepoint(`effect_sql_${id}`))
+
+@@ hunk 14 [code] pin before 172 release 223-230 cited ranges 0
+   pin units: 
+   release units: make=code
++   223 const borrower: Connection.Borrower | undefined = options.borrower === undefined ? undefined : (f) =>
++   224 Effect.flatMap(
++   225 Effect.serviceOption(transactionService),
++   226 Option.match({
++   227 onNone: () => options.borrower!(f),
++   228 onSome: ([conn]) => f(conn)
++   229 })
++   230 )
+
+@@ hunk 15 [code] pin 173-173 release 233-233 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   173 Statement.make(getConnection, options.compiler, options.spanAttributes, options.transformRows),
++   233 Statement.make(getConnection, options.compiler, options.spanAttributes, options.transformRows, borrower),
+
+@@ hunk 16 [code] pin 188-188 release 248-249 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   188 undefined
++   248 undefined,
++   249 borrower
+
+@@ hunk 17 [code] pin before 224 release 298-360 cited ranges 0
+   pin units: 
+   release units: makeSqliteAcquirers=absent; isNoTransactionError=absent
++   298 export const makeSqliteAcquirers = <C extends Connection.Connection>(options: {
++   299 readonly connection: Effect.Effect<C, SqlError>
++   300 readonly semaphore: Semaphore.Semaphore
++   301 readonly isTransaction?: ((conn: C) => boolean) | undefined
++   302 }): {
++   303 readonly acquirer: Effect.Effect<C, SqlError>
++   304 readonly transactionAcquirer: Effect.Effect<C, SqlError, Scope.Scope>
++   305 readonly onCommitFailure: (conn: Connection.Connection) => Effect.Effect<void, SqlError>
++   306 } => {
++   307 const { isTransaction, semaphore } = options
++   308 let poisoned: SqlError | undefined
++   309 const poison = (cause: Cause.Cause<SqlError>) =>
++   310 poisoned = new SqlError({
++   311 reason: new ConnectionError({
++   312 message: "SQLite connection cannot be reused after failed COMMIT cleanup",
++   313 operation: "rollback",
++   314 cause
++   315 })
++   316 })
++   318 const rollback = (conn: C): Effect.Effect<void, SqlError> => {
++   319 if (isTransaction) {
++   320 return isTransaction(conn) ? Effect.asVoid(conn.executeUnprepared("ROLLBACK", [], undefined)) : Effect.void
++   321 }
++   322 return conn.executeUnprepared("ROLLBACK", [], undefined).pipe(
++   323 Effect.asVoid,
++   324 Effect.catchIf(isNoTransactionError, () => Effect.void)
++   325 )
++   326 }
++   328 const available = Effect.flatMap(options.connection, (conn) => {
++   329 if (poisoned === undefined) return Effect.succeed(conn)
++   330 return Effect.matchCauseEffect(rollback(conn), {
++   331 onFailure: (cause) => Effect.fail(poison(cause)),
++   332 onSuccess: () => {
++   333 poisoned = undefined
++   334 return Effect.succeed(conn)
++   335 }
++   336 })
++   337 })
++   339 return {
++   340 acquirer: semaphore.withPermits(1)(available),
++   341 transactionAcquirer: Effect.uninterruptibleMask((restore) =>
++   342 Effect.flatMap(Effect.scope, (scope) =>
++   343 restore(semaphore.take(1)).pipe(
++   344 Effect.andThen(Scope.addFinalizer(scope, semaphore.release(1))),
++   345 Effect.andThen(available)
++   346 ))
++   347 ),
++   348 onCommitFailure: (conn) => Effect.tapCause(rollback(conn as C), (cause) => Effect.sync(() => poison(cause)))
++   349 }
++   350 }
++   352 const isNoTransactionError = (error: SqlError): boolean => {
++   353 const cause = error.reason.cause
++   354 const message = typeof cause === "string"
++   355 ? cause
++   356 : hasProperty(cause, "message") && typeof cause.message === "string"
++   357 ? cause.message
++   358 : ""
++   359 return /no transaction is active/i.test(message);
++   360 }
+
+@@ hunk 18 [erased] pin before 230 release 383-383 cited ranges 0
+   pin units: 
+   release units: makeWithTransaction=code
++   383 readonly releaseSavepoint?: ((conn: NoInfer<S>, id: number) => Effect.Effect<void, SqlError>) | undefined
+
+@@ hunk 19 [erased] pin before 231 release 386-386 cited ranges 0
+   pin units: 
+   release units: makeWithTransaction=code
++   386 readonly onCommitFailure?: ((conn: NoInfer<S>) => Effect.Effect<void, SqlError>) | undefined
+
+@@ hunk 20 [code] pin before 275 release 431-431 cited ranges 0
+   pin units: 
+   release units: makeWithTransaction=code
++   431 const onCommitFailure = options.onCommitFailure
+
+@@ hunk 21 [code] pin before 276 release 433-435 cited ranges 0
+   pin units: 
+   release units: makeWithTransaction=code
++   433 if (onCommitFailure) {
++   434 effect = Effect.onError(effect, () => Effect.orDie(onCommitFailure(conn)))
++   435 }
+
+@@ hunk 22 [code] pin before 288 release 448-450 cited ranges 0
+   pin units: 
+   release units: makeWithTransaction=code
++   448 if (id > 0 && options.releaseSavepoint) {
++   449 effect = Effect.andThen(effect, Effect.orDie(options.releaseSavepoint(conn, id)))
++   450 }

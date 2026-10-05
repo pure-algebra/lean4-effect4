@@ -1,0 +1,11 @@
+metadata url      https://registry.npmjs.org/effect/4.0.1
+metadata retrieved 2026-10-05T15:57:57Z
+tarball url       https://registry.npmjs.org/effect/-/effect-4.0.1.tgz
+tarball retrieved 2026-10-05T15:58:13Z
+tarball bytes     8925614
+tarball sha1      823e6870716e77902666874a24834ec7cdda50d8
+tarball sha256    717bd819cd9656eec72df3789031a50610b8617aac9c2611bedae1090b36be91
+tarball sha512    sha512-b1VlQG9g8fwxE5QnIZuPoOP/0MsqHJSRKxUijjoM80E5q95FXrX5yWtY5XI8G+GJsBQAVSDbLS458z9a++uVvw==
+tarball etag      "b195998ef048bc11fe0d2591432979a8"
+tarball last-modified Mon, 05 Oct 2026 01:15:39 GMT
+attestations url  https://registry.npmjs.org/-/npm/v1/attestations/effect@4.0.1
