@@ -158,6 +158,14 @@ Where to read:
 - [the landing review](research/2026-10-05-claude-lead/landing-review.md): what the session of
   2026-10-04 landed.
 
+Three more rulings of the same day (rows 235 to 237):
+
+- the Queue's TypeScript face prints the expansion by default, and the native queue only under a
+  narrower named profile;
+- 4.0.1's source is vendored beside rc.112's for citation, and the pin does not move;
+- the coordinator staffs one seat for each slice in row 233's order, at most two at once;
+- the owner signs off the posted signal's construct before a seat builds it.
+
 Open at this landing:
 
 - the Queue's whole transition contract, as a packet in `Test/contracts/`;
