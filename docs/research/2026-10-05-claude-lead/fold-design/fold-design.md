@@ -52,7 +52,7 @@ Term.fold (accTy : Option Ty) (list init body : Term)
 | Capture | `body` reads every outer variable below `n` unchanged |
 | Evaluation | `list` and `init` are evaluated once. The body runs once for each element, from the head. An empty list answers `init`, and the body is not evaluated |
 | Failure | A body that refuses on one element refuses the whole fold. No partial answer exists |
-| Weakening | One map of every variable at or above the cut, bound or free. A binder needs no case of its own, because variables are levels |
+| Weakening | One map of every variable at or above the cut, bound or free, for a cut at or below the environment's length. A binder needs no case of its own, because variables are levels |
 | Typing | `list : list A` and `init : B0`. The accumulator's type `B` is `accTy` when it is stated, and `B0` otherwise. `B0` is a subtype of `B`. Under `B` at `n` and `A` at `n + 1`, `body` has a subtype of `B`. The fold has type `B` |
 
 - **The binder order is `iterate`'s.** Its step reads the cursor and then the body's answer. The
@@ -126,8 +126,9 @@ The laws that the slice owes, each over `Fits` and the world's order:
 5. The handles in a fold's answer are handles of its environment. `RawHandles.evalTerm_handles`
    (`src/Effect4/Laws/Machine/TermHandles.lean`) states this for the constructors of today.
 
-Each target's relation must map one handle to one host object, so that `sameHandle` prints as
-the host's identity test (row 229).
+Each target's relation owes one statement in both directions: two handles have equal keys
+exactly when their host objects are one object. A stable mapping gives one direction only
+(Codex's review). `sameHandle` then prints as the host's identity test (row 229).
 
 ### F5. The faces
 

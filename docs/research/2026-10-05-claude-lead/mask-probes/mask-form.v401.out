@@ -109,5 +109,35 @@
   "restoreSiteUnderMask": 2,
   "nativeMask": 2,
   "printedMask": 5
+ },
+ "s9_flagInRegions": {
+  "native": {
+   "bodyOutsideRestore": false,
+   "explicitInterruptibleOutsideRestore": true,
+   "insideRestore": true,
+   "explicitUninterruptibleInsideRestore": false,
+   "insideRestoreUnderMaskedCaller": false
+  },
+  "printed": {
+   "bodyOutsideRestore": false,
+   "explicitInterruptibleOutsideRestore": true,
+   "insideRestore": true,
+   "explicitUninterruptibleInsideRestore": false,
+   "insideRestoreUnderMaskedCaller": false
+  },
+  "same": true
+ },
+ "s10_savedValueLater": {
+  "native": {
+   "falseChoiceUnderOpenCaller": true,
+   "falseChoiceUnderMaskedCaller": false,
+   "trueChoiceUnderMaskedCaller": true
+  },
+  "printed": {
+   "falseChoiceUnderOpenCaller": true,
+   "falseChoiceUnderMaskedCaller": false,
+   "trueChoiceUnderMaskedCaller": true
+  },
+  "same": true
  }
 }

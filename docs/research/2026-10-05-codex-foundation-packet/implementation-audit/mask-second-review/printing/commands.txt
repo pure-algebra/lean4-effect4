@@ -1,0 +1,13 @@
+git rev-parse HEAD
+git status --short
+sed -n '1,160p' src/Effect4/Program/NodeLenses.lean
+sed -n '62,86p' docs/research/2026-10-05-claude-lead/mask-second-note.md
+sed -n '164,200p' docs/research/2026-10-05-claude-lead/mask-second-note.md
+sed -n '822,874p' src/Effect4/Laws/Codegen/ReadPrint.lean
+sed -n '1900,1914p' src/Effect4/Laws/Codegen/ReadPrint.lean
+sed -n '887,899p' src/Effect4/Laws/Codegen/Read.lean
+sed -n '99,145p' docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean
+sed -n '231,252p' docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean
+cat docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.out
+git show --stat --oneline e5ae130d
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-mask-second-review/printing/review.md

@@ -1,6 +1,6 @@
 // The mask's printed form, as the printer would write it, for the type oracle (2026-10-05).
 // Checked by tsgo 7 against effect@4.0.0-rc.112 and against effect@4.0.1; not run.
-import { Deferred, Effect } from "effect"
+import { Deferred, Effect, pipe } from "effect"
 
 // `uninterruptibleMask (restore => restore (await d))`, as nested calls.
 export const maskedCalls = (d: Deferred.Deferred<number>): Effect.Effect<number> =>
@@ -37,6 +37,23 @@ export const failing = (d: Deferred.Deferred<number, "boom">): Effect.Effect<num
   Effect.flatMap(
     Effect.uninterruptibleMask((a0) => Effect.succeed(a0)),
     (a0) => Effect.uninterruptible(Deferred.await(d).pipe(a0))
+  )
+
+// The restore site as a call of the root export `pipe`, whose head is a reserved name.
+export const maskedPipeCall = (d: Deferred.Deferred<number, "boom">): Effect.Effect<number, "boom"> =>
+  Effect.flatMap(
+    Effect.uninterruptibleMask((a0) => Effect.succeed(a0)),
+    (a0) => Effect.uninterruptible(pipe(Deferred.await(d), a0))
+  )
+
+// The saved value returned from its mask, and applied later.
+export const returned = (d: Deferred.Deferred<number>): Effect.Effect<number> =>
+  Effect.flatMap(
+    Effect.flatMap(
+      Effect.uninterruptibleMask((a0) => Effect.succeed(a0)),
+      (a0) => Effect.uninterruptible(Effect.succeed(a0))
+    ),
+    (a0) => pipe(Deferred.await(d), a0)
   )
 
 // The red control: a saved value is not a Boolean. This line must be the file's only error.

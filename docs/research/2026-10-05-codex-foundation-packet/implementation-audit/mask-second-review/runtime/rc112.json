@@ -1,0 +1,727 @@
+{
+  "version": "4.0.0-rc.112",
+  "runtime": "Bun 1.4.2",
+  "root": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect",
+  "entry": "dist/index.js",
+  "defaultCases": {
+    "native": {
+      "bodyMaskedControl": false,
+      "explicitInterruptibleOutsideRestore": true,
+      "restoredOpenControl": true,
+      "explicitUninterruptibleInsideRestore": false,
+      "maskedIncomingControl": false
+    },
+    "printed": {
+      "bodyMaskedControl": false,
+      "explicitInterruptibleOutsideRestore": true,
+      "restoredOpenControl": true,
+      "explicitUninterruptibleInsideRestore": false,
+      "maskedIncomingControl": false
+    }
+  },
+  "counts": {
+    "native": {
+      "open": {
+        "checks": [
+          {
+            "op": 1,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 2,
+            "interruptible": false,
+            "pending": false
+          }
+        ],
+        "schedulerCheckCount": 2,
+        "finalOpCount": 2,
+        "exit": {
+          "tag": "Success",
+          "value": 1,
+          "reasons": []
+        }
+      },
+      "masked": {
+        "checks": [
+          {
+            "op": 1,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 2,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 3,
+            "interruptible": false,
+            "pending": false
+          }
+        ],
+        "schedulerCheckCount": 3,
+        "finalOpCount": 3,
+        "exit": {
+          "tag": "Success",
+          "value": 1,
+          "reasons": []
+        }
+      },
+      "mappedBody": {
+        "checks": [
+          {
+            "op": 1,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 2,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 3,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 4,
+            "interruptible": false,
+            "pending": false
+          }
+        ],
+        "schedulerCheckCount": 4,
+        "finalOpCount": 4,
+        "exit": {
+          "tag": "Success",
+          "value": 2,
+          "reasons": []
+        }
+      }
+    },
+    "printed": {
+      "open": {
+        "checks": [
+          {
+            "op": 1,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 2,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 3,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 4,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 5,
+            "interruptible": false,
+            "pending": false
+          }
+        ],
+        "schedulerCheckCount": 5,
+        "finalOpCount": 5,
+        "exit": {
+          "tag": "Success",
+          "value": 1,
+          "reasons": []
+        }
+      },
+      "masked": {
+        "checks": [
+          {
+            "op": 1,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 2,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 3,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 4,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 5,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 6,
+            "interruptible": false,
+            "pending": false
+          }
+        ],
+        "schedulerCheckCount": 6,
+        "finalOpCount": 6,
+        "exit": {
+          "tag": "Success",
+          "value": 1,
+          "reasons": []
+        }
+      },
+      "mappedBody": {
+        "checks": [
+          {
+            "op": 1,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 2,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 3,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 4,
+            "interruptible": true,
+            "pending": false
+          },
+          {
+            "op": 5,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 6,
+            "interruptible": false,
+            "pending": false
+          },
+          {
+            "op": 7,
+            "interruptible": false,
+            "pending": false
+          }
+        ],
+        "schedulerCheckCount": 7,
+        "finalOpCount": 7,
+        "exit": {
+          "tag": "Success",
+          "value": 2,
+          "reasons": []
+        }
+      }
+    }
+  },
+  "cancellation": [
+    {
+      "name": "printed-getter-pop",
+      "cut": 3,
+      "cancel": true,
+      "incomingMasked": false,
+      "atCut": {
+        "interruptible": false,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": false,
+        "pending": true,
+        "exit": {
+          "tag": "Pending"
+        }
+      },
+      "events": [],
+      "exit": {
+        "tag": "Failure",
+        "value": null,
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 3,
+          "interruptible": true,
+          "pending": true
+        }
+      ]
+    },
+    {
+      "name": "printed-getter-pop-control",
+      "cut": 3,
+      "cancel": false,
+      "incomingMasked": false,
+      "atCut": {
+        "interruptible": false,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": false,
+        "pending": false,
+        "exit": {
+          "tag": "Pending"
+        }
+      },
+      "events": [
+        "body"
+      ],
+      "exit": {
+        "tag": "Success",
+        "value": 7,
+        "reasons": []
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 4,
+          "interruptible": false,
+          "pending": false
+        }
+      ]
+    },
+    {
+      "name": "native-before-body",
+      "cut": 2,
+      "cancel": true,
+      "incomingMasked": false,
+      "atCut": {
+        "interruptible": false,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": false,
+        "pending": true,
+        "exit": {
+          "tag": "Pending"
+        }
+      },
+      "events": [
+        "body"
+      ],
+      "exit": {
+        "tag": "Failure",
+        "value": null,
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 3,
+          "interruptible": true,
+          "pending": true
+        }
+      ]
+    },
+    {
+      "name": "native-before-body-control",
+      "cut": 2,
+      "cancel": false,
+      "incomingMasked": false,
+      "atCut": {
+        "interruptible": false,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": false,
+        "pending": false,
+        "exit": {
+          "tag": "Pending"
+        }
+      },
+      "events": [
+        "body"
+      ],
+      "exit": {
+        "tag": "Success",
+        "value": 7,
+        "reasons": []
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": false
+        }
+      ]
+    },
+    {
+      "name": "printed-open-window",
+      "cut": 4,
+      "cancel": true,
+      "incomingMasked": false,
+      "atCut": {
+        "interruptible": true,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": true,
+        "pending": true,
+        "exit": {
+          "tag": "Failure",
+          "value": null,
+          "reasons": [
+            "Interrupt"
+          ]
+        }
+      },
+      "events": [],
+      "exit": {
+        "tag": "Failure",
+        "value": null,
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 4,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": true
+        }
+      ]
+    },
+    {
+      "name": "printed-open-window-control",
+      "cut": 4,
+      "cancel": false,
+      "incomingMasked": false,
+      "atCut": {
+        "interruptible": true,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": true,
+        "pending": false,
+        "exit": {
+          "tag": "Pending"
+        }
+      },
+      "events": [
+        "body"
+      ],
+      "exit": {
+        "tag": "Success",
+        "value": 7,
+        "reasons": []
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 4,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        }
+      ]
+    },
+    {
+      "name": "printed-masked-getter-pop",
+      "cut": 4,
+      "cancel": true,
+      "incomingMasked": true,
+      "atCut": {
+        "interruptible": false,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": false,
+        "pending": true,
+        "exit": {
+          "tag": "Pending"
+        }
+      },
+      "events": [
+        "body"
+      ],
+      "exit": {
+        "tag": "Failure",
+        "value": null,
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 4,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 4,
+          "interruptible": false,
+          "pending": true
+        },
+        {
+          "op": 5,
+          "interruptible": true,
+          "pending": true
+        }
+      ]
+    },
+    {
+      "name": "printed-masked-getter-pop-control",
+      "cut": 4,
+      "cancel": false,
+      "incomingMasked": true,
+      "atCut": {
+        "interruptible": false,
+        "pending": false,
+        "events": []
+      },
+      "afterRequest": {
+        "interruptible": false,
+        "pending": false,
+        "exit": {
+          "tag": "Pending"
+        }
+      },
+      "events": [
+        "body"
+      ],
+      "exit": {
+        "tag": "Success",
+        "value": 7,
+        "reasons": []
+      },
+      "checks": [
+        {
+          "op": 1,
+          "interruptible": true,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 4,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 1,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 2,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 3,
+          "interruptible": false,
+          "pending": false
+        },
+        {
+          "op": 4,
+          "interruptible": false,
+          "pending": false
+        }
+      ]
+    }
+  ],
+  "evidence": "Finite default-runtime flag controls; separate custom scheduler loop checks and forced-yield cancellation cases. No Lean execution.",
+  "hashes": {
+    "package.json": "0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d",
+    "dist/index.js": "c0d5efdfd7396d61e64a05ff5558ce19c2540e1cb97decc853ac27cd1380ccfe",
+    "dist/internal/effect.js": "269e711472b84dcd04862f11e842acc1095cc5d22948af36cda76e9a9185828e",
+    "dist/internal/core.js": "00a904f9f06154abb87daa77956475567de0f154e78fbb27f67f7cf8458123cf",
+    "src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "src/internal/core.ts": "233b7a1fb3a53b9f49f63c01f810052cb174cc13742f52ea2e8bd482f302fd11"
+  }
+}

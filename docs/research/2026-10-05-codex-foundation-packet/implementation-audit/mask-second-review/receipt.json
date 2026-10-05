@@ -1,0 +1,76 @@
+{
+  "time": "2026-10-05T17:23:34.116941+00:00",
+  "heads": {
+    "/Users/pooks/Dev/lean4-effect4": "c3263529a0edeb35c9aa89c10cf62ba9978b9c4d",
+    "/Users/pooks/Dev/lean4-effect4-t3b": "0ab2ef0955b99ad88b55aa6788d4b019b7f326dd",
+    "/Users/pooks/Dev/lean4-effect4-audit401": "27c33a13f10dd5b877706a3db62cdf9dbf37b64b"
+  },
+  "finishing_criteria": [
+    "Inspect coordinator and current seats",
+    "Verify earlier Queue corrections",
+    "Assess three mask proposals and precise admission contract",
+    "Retain bounded evidence and smallest corrections",
+    "Send at most one new advisory and verify delivery"
+  ],
+  "source_hashes": {
+    "AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "docs/core/decisions.md": "0f8e66ac98e71d7a7ddde5cccb78e5bc63421d7b35d9be11cdd83afe93fb26f4",
+    "docs/research/2026-10-05-claude-lead/mask-second-note.md": "7762914ddcb7ea294833fa4bce4ef678fb632ff113517379fb718578150538e4",
+    "docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean": "17910cf6d42ab9782896435e55022b66c1386d21aacf0b2c7ca0bdc0fe30755a",
+    "docs/research/2026-10-05-seat-A401/audit.md": "c723bdb6a0eee8015a4418bd364d2e52c03b6905de0aad888fe62e8f07ba50b1"
+  },
+  "vendor_manifest": {
+    "checked": 496,
+    "mismatches": []
+  },
+  "ui": {
+    "coordinator": "Queues plan and design decisions",
+    "running_seat": "Resume seat T3b: slices E, F",
+    "A401": "Completed and merged",
+    "prompt": "empty"
+  },
+  "no_repo_writes_builds_installs": true,
+  "runtime_receipts_verified": {
+    "rc112": {
+      "version": "4.0.0-rc.112",
+      "runtime": "Bun 1.4.2",
+      "installed_hashes_match": true,
+      "default_cases_per_form": 5,
+      "count_cases": 6,
+      "cancellation_cases": 8
+    },
+    "v401": {
+      "version": "4.0.1",
+      "runtime": "Bun 1.4.2",
+      "installed_hashes_match": true,
+      "default_cases_per_form": 5,
+      "count_cases": 6,
+      "cancellation_cases": 8
+    }
+  },
+  "recheck_head": "c49f2ba1f4b8b199d796fea6602e33b16159248c",
+  "queue_review": "e5ae130d fixes verified by source and retained outputs; no Lean rerun",
+  "fold_review": "c49f2ba1 sameHandle restriction resolves unfinished-model concern; no new actionable defect in bounded source review",
+  "advisory": {
+    "status": "normal_submission_verified",
+    "coordinator": "Queues plan and design decisions",
+    "url": "claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+    "evidence": "UI Message56 heading You said: Codex review, rechecked at c49f2ba1.; prompt empty; Claude responding. Sent with normal Send while coordinator idle. T3b remains active. No stop, restart or Send now."
+  },
+  "completed_at": "2026-10-05T17:32:21.522801+00:00",
+  "head_at_delivery": "c49f2ba1f4b8b199d796fea6602e33b16159248c",
+  "proof_status": "No Lean proof or build run. Source findings and finite host evidence only.",
+  "language_check": "PASS strict recommendations.md",
+  "artifacts": {
+    "coordinator-note.txt": "114ea6d754b606c5ece4cb194b7728d471313138a2f75bb986c3206c350bece4",
+    "recommendations.md": "3e2e6528cf164dcb73b8ed6d6153cb87a1d8da043a1044af53e6079aeef0525b",
+    "runtime/probe.mjs": "f8db1dbc93796412e1521837a1c2d1a6bb60c1bd4c0e000d443855d637dd09dd",
+    "runtime/rc112.json": "961882d3f7bea8dee2064559226a735951aea651008b0518bd99b46e9d0b0a55",
+    "runtime/v401.json": "c6e03a1087f7957f3d1eeae304cc739887c3eb06cf1aa89708214f4743e69e58",
+    "runtime/review.md": "8fd74cd8a857be59e0dddafdb1e476efb56ebc8ad9f4518e0fbfe984cabcfbee",
+    "printing/commands.txt": "bcfca5927bd2d51dda52d11fcf9940c67d694d52554ccff827ada6b44bd13324",
+    "printing/review.md": "1b06f2aa0a4a0179eca0e259490776b33fccf92c2ce35ca19b5bde1dac2222bb",
+    "basis/review.md": "36c174aa6f292bb66e9076d2814fdda763a53b50dfdcdb2e47cc9f3fd41847ff"
+  },
+  "automation_update_verified": true
+}

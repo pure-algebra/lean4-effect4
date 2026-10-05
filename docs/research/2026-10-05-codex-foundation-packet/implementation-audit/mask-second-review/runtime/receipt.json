@@ -1,0 +1,36 @@
+{
+  "reviewed_commit": "c3263529a0edeb35c9aa89c10cf62ba9978b9c4d",
+  "note_sha256": "7762914ddcb7ea294833fa4bce4ef678fb632ff113517379fb718578150538e4",
+  "commands": [
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-mask-second-review/runtime/probe.mjs /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect /private/tmp/codex-effect4-overnight-monitor/2026-10-05-mask-second-review/runtime/rc112.json",
+      "exit": 0
+    },
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-mask-second-review/runtime/probe.mjs /Users/pooks/.bun/install/cache/effect@4.0.1@@@1 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-mask-second-review/runtime/v401.json",
+      "exit": 0
+    }
+  ],
+  "parsed_checks": {
+    "4.0.0-rc.112": {
+      "default_flag_controls": 10,
+      "instrumented_count_controls": 6,
+      "forced_yield_controls": 8,
+      "parsed_outcomes": "passed"
+    },
+    "4.0.1": {
+      "default_flag_controls": 10,
+      "instrumented_count_controls": 6,
+      "forced_yield_controls": 8,
+      "parsed_outcomes": "passed"
+    }
+  },
+  "sha256": {
+    "probe.mjs": "f8db1dbc93796412e1521837a1c2d1a6bb60c1bd4c0e000d443855d637dd09dd",
+    "rc112.json": "961882d3f7bea8dee2064559226a735951aea651008b0518bd99b46e9d0b0a55",
+    "v401.json": "c6e03a1087f7957f3d1eeae304cc739887c3eb06cf1aa89708214f4743e69e58",
+    "review.md": "8fd74cd8a857be59e0dddafdb1e476efb56ebc8ad9f4518e0fbfe984cabcfbee"
+  },
+  "head_at_verification": "c3263529a0edeb35c9aa89c10cf62ba9978b9c4d",
+  "limits": "No Lean execution; default flag observations separate from manual-scheduler counts and cancellation cases."
+}

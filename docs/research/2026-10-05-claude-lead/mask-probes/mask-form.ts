@@ -8,7 +8,7 @@
 import { readFileSync } from "node:fs"
 const dir = process.env.EFFECT_DIR!
 const version: string = JSON.parse(readFileSync(`${dir}/package.json`, "utf8")).version
-const { Effect, Fiber, Deferred, Exit, Cause } = await import(`${dir}/dist/index.js`)
+const { Effect, Fiber, Deferred, Exit, Cause, pipe } = await import(`${dir}/dist/index.js`)
 
 type Restore = (e: any) => any
 type Mask = (body: (restore: Restore) => any) => any
@@ -166,6 +166,32 @@ const s8 = Effect.gen(function*() {
   }
 })
 
+// S9. The flag at five places of a body (Codex's second review). An explicit region inside
+// the body follows its own rule, in a restore site and outside one.
+const flag = Effect.withFiber((fiber: any) => Effect.succeed(fiber.interruptible as boolean))
+const s9 = (mask: Mask) => Effect.gen(function*() {
+  return {
+    bodyOutsideRestore: yield* mask((_r) => flag),
+    explicitInterruptibleOutsideRestore: yield* mask((_r) => Effect.interruptible(flag)),
+    insideRestore: yield* mask((r) => pipe(flag, r)),
+    explicitUninterruptibleInsideRestore: yield* mask((r) => pipe(Effect.uninterruptible(flag), r)),
+    insideRestoreUnderMaskedCaller: yield* Effect.uninterruptible(mask((r) => pipe(flag, r)))
+  }
+})
+
+// S10. A saved value of a masked caller, applied later under an interruptible caller: it is
+// the identity, so the fiber stays interruptible. And the saved value of an interruptible
+// caller, applied later under a masked caller: the region is interruptible.
+const s10 = (mask: Mask) => Effect.gen(function*() {
+  const fromMasked: Restore = yield* Effect.uninterruptible(mask((r) => Effect.succeed(r)))
+  const fromOpen: Restore = yield* mask((r) => Effect.succeed(r))
+  return {
+    falseChoiceUnderOpenCaller: yield* pipe(flag, fromMasked),
+    falseChoiceUnderMaskedCaller: yield* Effect.uninterruptible(pipe(flag, fromMasked)),
+    trueChoiceUnderMaskedCaller: yield* Effect.uninterruptible(pipe(flag, fromOpen))
+  }
+})
+
 const both = (name: string, run: (mask: Mask) => any) => Effect.gen(function*() {
   const n = yield* run(native)
   const p = yield* run(printed)
@@ -183,6 +209,8 @@ const main = Effect.gen(function*() {
   out.s6_restoreLeavesItsMask = yield* both("s6", s6)
   out.s7_flagAfterEachExit = yield* both("s7", s7)
   out.s8_iterations = yield* s8
+  out.s9_flagInRegions = yield* both("s9", s9)
+  out.s10_savedValueLater = yield* both("s10", s10)
   return out
 })
 Effect.runPromise(main).then((r: unknown) => console.log(JSON.stringify(r, null, 1)))
