@@ -839,7 +839,7 @@ Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
 | subn-equiv-iff | decidability | proved | Effect4.Program.Ty.subN_equiv_iff | yes |  |
 | normalize-idem | compatibility | proved | Effect4.Program.Ty.normalize_idem | yes |  |
 | sub-antisymm-canonical | antisymmetry | proved | Effect4.Program.Ty.sub_antisymm_canonical | yes |  |
-| template-match-anchored | decidability | wanted | Effect4.Program.Ty.matchTemplate_complete_anchored | yes |  |
+| template-match-anchored | decidability | proved | Effect4.Program.Ty.matchTemplate_complete_anchored | yes |  |
 
 ### Printed statements
 
@@ -1537,7 +1537,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (goal), `mono` (proved), `kernel_term_agrees` (proved) | `matchTemplate_complete_anchored` |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `kernel_term_agrees` (proved) | — |
 | R5 | open | `build_total` (proved) | — | — |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved) | — |
 | R7 | open | — | — | — |
@@ -1548,7 +1548,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — | — |
 | R13 | open | `journal_replays` (proved) | — | — |
 
-**Next goals** (1): `matchTemplate_complete_anchored`
+**Next goals** (0): —
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -1963,9 +1963,11 @@ flowchart LR
   n3["deferredMake_extension<br/>proved"]
   n4["memoBuild_extension<br/>proved"]
   n5["perform_scoped_iff<br/>proved"]
-  n6["matchTemplate_complete_anchored<br/>goal"]
+  n6["matchTemplate_complete_anchored<br/>proved"]
   n7["mono<br/>proved"]
   n8["kernel_term_agrees<br/>proved"]
+  n9["normalize_idem<br/>proved"]
+  n6 --> n9
   n7 --> n1
 ```
 
@@ -1977,9 +1979,10 @@ flowchart LR
 | `deferredMake_extension` | proved | — | — | 112 | 335 |
 | `memoBuild_extension` | proved | — | — | 111 | 335 |
 | `perform_scoped_iff` | proved | — | — | 0 | 71 |
-| `matchTemplate_complete_anchored` | goal | `matchTemplate_complete_anchored` | — | 37 | 87 |
+| `matchTemplate_complete_anchored` | proved | — | `normalize_idem` | 233 | 124 |
 | `mono` | proved | — | `order_trans` | 57 | 266 |
 | `kernel_term_agrees` | proved | — | — | 13 | 124 |
+| `normalize_idem` | proved | — | — | 77 | 51 |
 
 ### R5: Services: the service table, layers and provision
 
