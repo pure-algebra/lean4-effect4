@@ -178,7 +178,7 @@ def exit_kind(exit):
 
 
 def render_exit(exit):
-    """A wired exit as the runner prints one (`renderExit`)."""
+    """A wired exit as the runner renders one (`renderExit`)."""
     if exit is None:
         return 'no exit'
     compact = lambda value: json.dumps(value, separators=(',', ':'), ensure_ascii=False)  # noqa: E731
