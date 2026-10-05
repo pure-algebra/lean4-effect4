@@ -2,6 +2,12 @@
 
 Status: research note (history, not authority). Base: `9b372555` (`refactor/phase1-phase3`).
 
+**Ruled 2026-10-05.** The owner ruled on these proposals: decisions rows 221 to 227, 231 and 232
+are the authority. Three corrections from Codex's review hold against this note. The wrapper
+takes a checked body profile, not any body (row 221). A fork is not a posted program: a deferred
+fork allocates a supervised child and posts its first run (row 225). The alternative is the rule
+of Harris et al., and it is neither of Effect 3's forms (row 224).
+
 **The one thing to know first.** The owner asked how the queue design bears on transactions,
 whether to prepare for them now, and whether the clock should be finer. Six results:
 

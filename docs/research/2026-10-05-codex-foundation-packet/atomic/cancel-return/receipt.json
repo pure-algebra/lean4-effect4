@@ -1,0 +1,23 @@
+{
+  "runtime": "bun 1.4.2",
+  "comparison": "identical cases and precommit control",
+  "files": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/atomic/cancel-return/probe.mjs",
+      "sha256": "eb7ae9dbd32c80bc3fbdc66ac32d416e30481f083b24da54f116ead8a4b35bb1"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/atomic/cancel-return/rc112.json",
+      "sha256": "016f538acc1970bb4bcf38558aa2d4d5de78bc8bd85a2d8a24568f99f97e1db1"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/atomic/cancel-return/v401.json",
+      "sha256": "67d270b49d745fa55ef95cf96f2f409ba57d18f6ed933666ae15d642cedce5db"
+    }
+  ],
+  "vendorComparison": {
+    "internal/effect.ts": true,
+    "Deferred.ts": true,
+    "Queue.ts": true
+  }
+}

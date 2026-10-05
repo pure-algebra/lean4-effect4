@@ -109,9 +109,63 @@ in two parts, E1 (the carrier) before T3 and E2 (the face), in the
 merged `db504f03`): a program fails with a tagged record; p1, p2, p3 and p5 build their errors. E2
 landed (seat E2, merged `a917b768`): payloads print and read back as `Data.TaggedError` classes.
 The derived forms (DI-89, R10) are planned in the
-[derived forms plan](research/2026-10-04-claude-lead/derived-forms-plan.md); its §3 asks the owner
-seven questions. Queues (DI-11) are planned in the
-[queues plan](research/2026-10-04-claude-lead/queues-plan.md); its §3 asks four.
+[derived forms plan](research/2026-10-04-claude-lead/derived-forms-plan.md). The owner ruled its
+seven questions on 2026-10-05 (rows 130 and 214 to 218). Queues (DI-11) were planned in the
+[queues plan](research/2026-10-04-claude-lead/queues-plan.md). The review of 2026-10-05 below
+replaces its four questions.
+
+## Next, ruled 2026-10-05
+
+The owner ruled the foundations of the composed modules (decisions rows 214 to 234). The rulings
+rest on finite runs, finite models, source reading and literature; none is a Lean proof.
+
+- **The Queue** (rows 219 to 222). It serves in strict request order. A message is consumed at
+  the taker's atomic step. The signal is posted, as Effect 4 does. A cancellation before
+  consumption consumes nothing, and a commit stays after it.
+- **The shared foundations** (rows 221, 223 to 227, 230 and 234):
+  - one waiting wrapper with a checked body profile;
+  - a restricted atomic body;
+  - posted work as an `Eff` body with task metadata;
+  - an embedded budget first, and a retained driver suspension later;
+  - a mask that restores the caller's state;
+  - a module's public behaviour, defined before its private state is hidden;
+  - the contract of a retained behaviour, designed now.
+- **The term groundwork** (rows 228 and 229). Seat T3b finishes. Then come a list fold with two
+  binders and the identity of handles.
+- **The clock and the pin** (rows 231 and 232). The clock counts nanoseconds inside, and every
+  millisecond input keeps its meaning. The release 4.0.1 is audited before the pin moves.
+- **The order** (row 233):
+  1. the contracts;
+  2. the term groundwork;
+  3. one Queue path with a positive capacity;
+  4. batches, strategies, terminal operations and rendezvous;
+  5. Semaphore;
+  6. restricted transactions.
+
+  The design of waiting, tasks, masks and the atomic frontier comes before the Queue. The clock
+  slice and the release audit run beside these.
+
+Where to read:
+
+- [the foundation contracts](research/2026-10-05-claude-lead/foundation-contracts.md): the
+  obligations in one table, the acceptance cases, and an owner for each slice;
+- [the queues review](research/2026-10-05-claude-lead/queues-review.md),
+  [the transactions note](research/2026-10-05-claude-lead/transactions-and-clock.md) and
+  [the groundwork plan](research/2026-10-05-claude-lead/groundwork-plan.md): the evidence and the
+  probes on rc.112, 4.0.0, 4.0.1 and Effect 3.22.2;
+- [Codex's packet](research/2026-10-05-codex-foundation-packet/README.md): the selections as
+  ratified, the foundation audit and the literature notes;
+- [the landing review](research/2026-10-05-claude-lead/landing-review.md): what the session of
+  2026-10-04 landed.
+
+Open at this landing:
+
+- the Queue's whole transition contract, as a packet in `Test/contracts/`;
+- the design note for waiting, tasks, masks and the atomic frontier;
+- seat T3b's slices E and F;
+- two red lanes of the sweep of 2026-10-05:
+  - `check-tsdiag`: its harness reports a module error on every typed program;
+  - `check-schema-ts`: its host packages are not installed.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 

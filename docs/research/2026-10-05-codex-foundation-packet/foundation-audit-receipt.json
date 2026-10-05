@@ -1,0 +1,241 @@
+{
+  "utc": "2026-10-05T15:14:04.454651+00:00",
+  "head": "0741ab17cc99d1c3944e1cf52e838b93bf5fec65",
+  "python": "3.13.14 (main, Aug  5 2026, 15:33:38) [Clang 22.1.3 ]",
+  "scope": "Read-only source and receipt inspection; no Lean, build, generator, production mutation, or new model run.",
+  "sha256": {
+    "src/Effect4/Machine/Fibers.lean": "00cf4375cef366719b63904f0df534bf10ab7d94213fcbfb212c66a4b5aa9fb8",
+    "src/Effect4/Api/HostSession.lean": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece",
+    "src/Effect4/Laws/Program/Typed/Assembly.lean": "3b4b82b088c749b463a233be6642d3c3e79851596b541bdf9ecb38203ff32777",
+    "src/Effect4/Program/Eff.lean": "cf518d3a9570be5ec176408fc2de63150be4eab8d25eed5f6c250fa6f876c143",
+    "src/Effect4/Program/Compile.lean": "c3ec96eff1a5ab1bf97551becc6bfa76e27c2448e1631a3538080adaeac4cef7",
+    "docs/core/machine-state.md": "f99cfd06cd72f262b970051dafbb5d48d610c2c93791e06a6ef3ca7f4febc1c3",
+    "docs/core/system-map.md": "1e8788671719f713871953402e20d4c5dedeed7994cbd3675de6a085e181311b",
+    "docs/core/semantics.md": "06219d76b7cc0b88088268fdfd89946818cf03bbe9094eafcc56f4469b5d165d",
+    "docs/research/2026-10-05-claude-lead/groundwork-plan.md": "07e0f0e6bcac1b5eb57eae513a4a3c7490b84d0754df9d315bc84fa733fea93b",
+    "docs/research/2026-10-05-claude-lead/transactions-and-clock.md": "06ba7be3bcfc28b5f6429886c6572312a0ede0b5e1be45e803f388c3b73dd1c1",
+    "docs/research/2026-10-05-claude-lead/queues-review.md": "b8790e2593913dbe3065ef233557a5ca9294a4b488e954bb4cbd560296802e7b",
+    "docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean": "118299d69bc31765d8aa28b72398cda6c87b3e5534b159cdd46f259984f6e588"
+  },
+  "anchor_checks": [
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "def driveState",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "def fireStep",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "def fireState",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "def stepDecisionState",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "def drainOwed",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "def evaluatePrim",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "setInterruptible",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Api/HostSession.lean",
+      "anchor": "def advance",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "anchor": "structure QueueOk",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "anchor": "ConfigTyped",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Approximation.lean",
+      "anchor": "theorem driveState_add",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Lift.lean",
+      "anchor": "theorem driveState_lift",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Clauses.lean",
+      "anchor": "theorem evaluatePrim_async_parks",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Clauses.lean",
+      "anchor": "theorem drive_resume_wrong_token",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Clauses.lean",
+      "anchor": "theorem injectYield_prevented",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+      "anchor": "theorem completionStrong_await",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Behaviour.lean",
+      "anchor": "structure Obs",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Refinement.lean",
+      "anchor": "structure Projects",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Refinement.lean",
+      "anchor": "structure Refines",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Scheduling.lean",
+      "anchor": "theorem flush_fair",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Scheduling.lean",
+      "anchor": "theorem fairTape_unarmed",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "anchor": "structure TimerStore",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "anchor": "def sleep",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "anchor": "def fireNext",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "anchor": "def clockStep",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Stores.lean",
+      "anchor": "structure Capture",
+      "present": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean",
+      "anchor": "def TxM",
+      "present": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean",
+      "anchor": "def lostWakeWhenSplit",
+      "present": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean",
+      "anchor": "def noLostWake",
+      "present": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean",
+      "anchor": "def orElse",
+      "present": true
+    }
+  ],
+  "audit_sha256": "01f1e527f380842d543ed8110eadbfcbf9adedaf06189c0ddaa37a8d11723c93",
+  "prior_model_results_sha256": "156b0014f52994ef826ac1245976bf1bb86bdad494ebf49ef2b58ee7e2ff0267",
+  "final_recheck_utc": "2026-10-05T15:14:42.862066+00:00",
+  "final_head": "0741ab17cc99d1c3944e1cf52e838b93bf5fec65",
+  "changed_since_pin": [],
+  "verification": "30 declaration anchors present; reviewed source files unchanged on final recheck. This is source validation, not execution or a proof.",
+  "amendment_utc": "2026-10-05T15:19:22.240437+00:00",
+  "amendment_head": "0741ab17cc99d1c3944e1cf52e838b93bf5fec65",
+  "language_check": {
+    "command": [
+      "python3",
+      "scripts/check-language.py",
+      "--strict",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/foundation-audit.md"
+    ],
+    "environment": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "exit_code": 0,
+    "output_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/foundation-audit-language-check.txt",
+    "scope": "Strict target is the scratch audit only; tool also prints its ordinary informational count for other documents."
+  },
+  "literature": {
+    "stm": {
+      "name": "harris-2005-composable-memory-transactions.pdf",
+      "url": "https://www.microsoft.com/en-us/research/wp-content/uploads/2005/01/2005-ppopp-composable.pdf",
+      "retrievedUTC": "2026-10-05T15:07:14.527745+00:00",
+      "finalURL": "https://www.microsoft.com/en-us/research/wp-content/uploads/2005/01/2005-ppopp-composable.pdf",
+      "contentType": "application/pdf",
+      "lastModified": "Fri, 28 Feb 2025 22:09:34 GMT",
+      "bytes": 170186,
+      "sha256": "3072226686dce29a00d483e76eaa2ca92ea8f6748a11a26966c3b18f0df4dae3",
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/harris-2005-composable-memory-transactions.pdf"
+    },
+    "refinement": {
+      "title": "Forward and Backward Simulations I. Untimed Systems",
+      "authors": [
+        "Nancy Lynch",
+        "Frits Vaandrager"
+      ],
+      "version": "Information and Computation 121(2), 1995, pp. 214-233; CWI final version",
+      "url": "https://ir.cwi.nl/pub/1393/1393D.pdf",
+      "retrieved_utc": "2026-10-05T15:18:05.210714+00:00",
+      "bytes": 5477685,
+      "sha256": "fac099bf3462b90c58b8ed1077abef0808f5412f21879a5d1024ecdfdd5ff050",
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf",
+      "headers_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.headers",
+      "download_command": "curl --fail --location --max-time 45 --dump-header /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.headers --output /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf https://ir.cwi.nl/pub/1393/1393D.pdf",
+      "download_exit": 0,
+      "prior_attempt": "urllib under sandbox failed DNS; explicit download then succeeded with network approval.",
+      "extraction_tool": "/opt/homebrew/bin/pdftotext",
+      "extraction_command": [
+        "/opt/homebrew/bin/pdftotext",
+        "-layout",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.txt"
+      ],
+      "extraction_exit": 0,
+      "extraction_output": "",
+      "text_sha256": "4d263a4a92b4fecabf2163696af54b2597ab4ff5f4cb96ae100a9429dd8faded"
+    }
+  },
+  "amendment_source_changes": [],
+  "amendment_notes": [
+    "Initial pure Ref.modify Queue can use an embedded sufficient-budget contract; general driver resumption is required only for incremental and generic ownership claims.",
+    "Planned consumers justify freezing contracts and useful small foundation slices now.",
+    "STM citation uses retained 2006-08-18 post-publication version.",
+    "Lynch and Vaandrager final PDF downloaded, hashed, extracted, and relevant definitions inspected."
+  ]
+}

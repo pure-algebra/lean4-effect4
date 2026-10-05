@@ -1,0 +1,42 @@
+[
+  {
+    "url": "https://www.w3.org/TR/2019/REC-hr-time-2-20191121/",
+    "file": "w3c-hr-time2.html",
+    "retrieved_at_utc": "2026-10-05T15:07:51.054520+00:00",
+    "status": 200,
+    "final_url": "https://www.w3.org/TR/2019/REC-hr-time-2-20191121/",
+    "content_type": "text/html; charset=utf-8",
+    "bytes": 89129,
+    "sha256": "36ae5edd9829699c45ec69bf85a181509d0053bbdbf48b73228d142f52bcced8"
+  },
+  {
+    "url": "https://www.w3.org/TR/2026/WD-hr-time-3-20260901/",
+    "file": "w3c-hr-time3-20260901.html",
+    "retrieved_at_utc": "2026-10-05T15:07:51.175309+00:00",
+    "status": 200,
+    "final_url": "https://www.w3.org/TR/2026/WD-hr-time-3-20260901/",
+    "content_type": "text/html; charset=utf-8",
+    "bytes": 184617,
+    "sha256": "2c263286856eace560a8618be46fd47c18ce99cc7c8daeecfc97f2d9d844ba4d"
+  },
+  {
+    "url": "https://nodejs.org/docs/v26.10.0/api/process.html",
+    "file": "node-process-v26.10.0.html",
+    "retrieved_at_utc": "2026-10-05T15:07:51.280933+00:00",
+    "status": 200,
+    "final_url": "https://nodejs.org/docs/v26.10.0/api/process.html",
+    "content_type": "text/html; charset=utf-8",
+    "bytes": 716756,
+    "sha256": "845ec5d06e1f6aeef3ec3be7f262e638263f71683b535216658acc65b3079452"
+  },
+  {
+    "url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/clock_gettime.html",
+    "file": "posix-clock-gettime.html",
+    "retrieved_at_utc": "2026-10-05T15:07:51.462797+00:00",
+    "status": 200,
+    "final_url": "https://pubs.opengroup.org/onlinepubs/9799919799/functions/clock_gettime.html",
+    "content_type": "text/html; charset=UTF-8",
+    "bytes": 17141,
+    "sha256": "71b134895b554e33f242b05f3c2a12934109053bbe77af83e814892a5ac3638c"
+  }
+]

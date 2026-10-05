@@ -1,0 +1,17 @@
+The owner has now said: “When ready, provide your recommendations, I ratify as recommended, and get that ... to Claude.” The owner also asks for forward-looking foundations based on planned work, without implementing everything at once.
+
+Please record the final selections from this package in tracked authority, consolidate its proposed obligations under the existing claims, and sequence the slices through your existing owners:
+/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/contracts-and-literature.md
+Companion foundation audit: /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/foundation-audit.md
+
+Principal selections: strict Queue order with consumption at the taker's step, but POSTED delivery for the default Effect4 profile; first-order Eff bodies with explicit task/lifetime metadata; restricted atomic-body admission; caller-state mask restoration; two-binder pure fold and same-kind handle identity; exact nanoseconds with legacy-millisecond compatibility. Audit 4.0.1 before changing the pin. The packet supersedes earlier advisory holds only within its stated scope; T3b may resume its existing bounded assignment after your base/ownership check.
+
+New decisive evidence: on BOTH rc.112 and 4.0.1, a protected Queue.take consumes a message and reaches its result, yet restoring interruptibility delivers pending cancellation before caller continuation. Five controls per version pass. Use the target-compatible contract: if withdrawal wins before consumption, consume nothing; after consumption, keep committed state even if the caller is interrupted. Observe commit, operation exit, continuation entry, and fiber exit separately. Do not derive Trio's stronger no-effect-on-cancellation guarantee from masking. See atomic/cancel-return/README.md in the package.
+
+The 22-check finite TxModel mirror also retains an opposing-ticket cycle across two ready queues. Shared transition bodies are useful, but arbitrary fair composition is excluded initially. Retry-only alternatives discard left writes, retain enclosing writes, and union both-retry dependencies. Effect3's tested orElse/orTry do not establish that exact contract.
+
+Primary literature and pinned references are retained under literature/: corrected Harris STM paper plus GHC9.12.2, opacity, masking, Trio callback/cancellation protocols, POSIX, scoped-effect papers, clock standards, and simulation relations. Their contract notes distinguish original versus revised rules. Recovery inside a transaction and allocation remain outside the first profile.
+
+Design request ownership, driver suspension, masks, task delivery, rollback, and observations together NOW. A proved sufficient embedded budget can serve the initial finite Queue path; full retained driver work is required before promising incremental resumption. Planned streams/Pool/Cache justify reserving retained-behavior contracts now, while their general evaluator can wait.
+
+Order: tracked contracts/goals → bounded term groundwork → positive-capacity Queue with cancellation and one posted producer → batches/strategies/terminal/rendezvous slices → Semaphore → restricted transactions and transfer, then alternatives. Clock compatibility and the release audit can proceed separately. Each obligation has placement, premises, observation, exclusions, consumer, and prerequisite in the reports. These are finite probes/source findings, not Lean proofs. Please relay relevant pieces through existing seats; preserve other held or frozen scopes.

@@ -1,0 +1,62 @@
+{
+  "runtime": "bun 1.4.2",
+  "question": "Do masking and prevented scheduler yields exclude inline entry into another fiber?",
+  "results": [
+    {
+      "version": "4.0.0-rc.112",
+      "package": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect",
+      "cases": [
+        {
+          "signalBetweenWrites": false,
+          "observed": 2,
+          "finalValue": 2,
+          "scheduled": 0,
+          "yieldChecks": 9
+        },
+        {
+          "signalBetweenWrites": true,
+          "observed": 1,
+          "finalValue": 2,
+          "scheduled": 0,
+          "yieldChecks": 9
+        }
+      ],
+      "sources": {
+        "Effect.ts": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718",
+        "Ref.ts": "69dc695dbe042baec090178dcc261f9a171e15a9fe6034d1c479408d6369d8fc",
+        "Deferred.ts": "78b5d3cd2ad37f9e4f8ebaf465c9375bb982a00bd22a9f3d50ed02e0cb65f0e9",
+        "Scheduler.ts": "e4c35925d7586a82f93975390f08a67bfff4261d35d8382db7c18c9acc349680",
+        "internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0"
+      }
+    },
+    {
+      "version": "4.0.1",
+      "package": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1",
+      "cases": [
+        {
+          "signalBetweenWrites": false,
+          "observed": 2,
+          "finalValue": 2,
+          "scheduled": 0,
+          "yieldChecks": 9
+        },
+        {
+          "signalBetweenWrites": true,
+          "observed": 1,
+          "finalValue": 2,
+          "scheduled": 0,
+          "yieldChecks": 9
+        }
+      ],
+      "sources": {
+        "Effect.ts": "d39dc35b3dd3afe81c9b939147078822f26fcf8ba5b33735d9d903596bce9519",
+        "Ref.ts": "69dc695dbe042baec090178dcc261f9a171e15a9fe6034d1c479408d6369d8fc",
+        "Deferred.ts": "3cb80cc3c17148d8c6cc264e80f196ca7799c49423497ca7929d98179c797198",
+        "Scheduler.ts": "c8d81c991fe44824f998ee1ece00fbba9741521de02066a955bf14937adbfca3",
+        "internal/effect.ts": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73"
+      }
+    }
+  ],
+  "conclusion": "No. A Deferred completion between two ordinary Ref writes lets the registered fiber read the intermediate value. The after-write signal is the positive control.",
+  "scope": "Four finite actual runtime cases, no tx wrapper or Lean implementation claim. No task is flushed or scheduled. No compiler/typecheck claim."
+}

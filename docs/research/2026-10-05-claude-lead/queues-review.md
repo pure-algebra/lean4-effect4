@@ -2,6 +2,10 @@
 
 Status: research note (history, not authority). Base: `4520f3a3` (`refactor/phase1-phase3`).
 
+**Ruled 2026-10-05.** The owner ruled on these proposals, and decisions rows 219 to 222 are the
+authority. One ruling differs from this note: proposal 10 leans to the inline signal, and row 220
+selects the posted one. Row 219 also refuses `sliding` at capacity zero and sets rendezvous apart.
+
 **The one thing to know first.** Five results change the queues plan.
 
 1. The queue needs `Deferred`, the blocking cell this tree already has, and no Latch.

@@ -1,0 +1,64 @@
+{
+  "verifiedUTC": "2026-10-05T15:10:34.888438+00:00",
+  "downloadCount": 5,
+  "allRecordedBytesAndHashesMatch": true,
+  "pdfSignaturesChecked": 2,
+  "manifestSTMMatches": 0,
+  "pins": {
+    "harris": "PPoPP 2005; post-publication 2006-08-18",
+    "opacity": "PPoPP 2008",
+    "ghc": "ghc-9.12.2-release"
+  },
+  "files": [
+    {
+      "name": "contract-findings.md",
+      "sha256": "69bebb198252bc03c33806f6309d98b155c6c63e4d6f1e4e67f6bf97b613c571",
+      "bytes": 7355
+    },
+    {
+      "name": "download_sources.py",
+      "sha256": "8bf7c0f1c39bc3e1e4fae0bd08b16c7a7068fdf700e1612acecd811237ec195c",
+      "bytes": 1457
+    },
+    {
+      "name": "downloads.json",
+      "sha256": "441857d9f085d22bb62c99133ed36901ce2b925c19ec870dfbdc186dad628b6c",
+      "bytes": 3093
+    },
+    {
+      "name": "ghc-9.12.2-STM.c",
+      "sha256": "cdb5d71b29b85ef9c5b598c7d17114ffdae7e4976e7120c1f29d1dc1ffd5cf0c",
+      "bytes": 54289
+    },
+    {
+      "name": "ghc-9.12.2-STM.h",
+      "sha256": "c5a26d0f8c50645eff52daacefb4ae7a1d65a67307a83bff5f70d4c7115eac90",
+      "bytes": 7067
+    },
+    {
+      "name": "ghc-9.12.2-Sync.hs",
+      "sha256": "0e184aee23032845d03ecd192d90e9e2e0f654ef6f55e0ad1b171f3456d1e79f",
+      "bytes": 35753
+    },
+    {
+      "name": "guerraoui-kapalka-2008-opacity.pdf",
+      "sha256": "145510bcd897695456c34e61b0a6ef39cd322fc09f4ebb9ef2df39a2d2523972",
+      "bytes": 211809
+    },
+    {
+      "name": "guerraoui-kapalka-2008-opacity.txt",
+      "sha256": "981ad4e7b76cb3f539d721f8d5a1e40c65f16311746f292d67aa748b19d224f4",
+      "bytes": 89055
+    },
+    {
+      "name": "harris-2005-composable-memory-transactions.pdf",
+      "sha256": "3072226686dce29a00d483e76eaa2ca92ea8f6748a11a26966c3b18f0df4dae3",
+      "bytes": 170186
+    },
+    {
+      "name": "harris-2005-composable-memory-transactions.txt",
+      "sha256": "80e411a3b95cc4e4e8045259c0ec829ad5b198a62cbfe0728c08dff3d76330fb",
+      "bytes": 113067
+    }
+  ]
+}

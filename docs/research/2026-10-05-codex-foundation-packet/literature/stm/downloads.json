@@ -1,0 +1,57 @@
+[
+  {
+    "name": "harris-2005-composable-memory-transactions.pdf",
+    "url": "https://www.microsoft.com/en-us/research/wp-content/uploads/2005/01/2005-ppopp-composable.pdf",
+    "retrievedUTC": "2026-10-05T15:07:14.527745+00:00",
+    "finalURL": "https://www.microsoft.com/en-us/research/wp-content/uploads/2005/01/2005-ppopp-composable.pdf",
+    "contentType": "application/pdf",
+    "lastModified": "Fri, 28 Feb 2025 22:09:34 GMT",
+    "bytes": 170186,
+    "sha256": "3072226686dce29a00d483e76eaa2ca92ea8f6748a11a26966c3b18f0df4dae3",
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/harris-2005-composable-memory-transactions.pdf"
+  },
+  {
+    "name": "guerraoui-kapalka-2008-opacity.pdf",
+    "url": "https://kapalka.eu/files/opacity-ppopp08.pdf",
+    "retrievedUTC": "2026-10-05T15:07:16.205811+00:00",
+    "finalURL": "https://kapalka.eu/files/opacity-ppopp08.pdf",
+    "contentType": "application/pdf",
+    "lastModified": "Wed, 13 Oct 2010 19:43:20 GMT",
+    "bytes": 211809,
+    "sha256": "145510bcd897695456c34e61b0a6ef39cd322fc09f4ebb9ef2df39a2d2523972",
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/guerraoui-kapalka-2008-opacity.pdf"
+  },
+  {
+    "name": "ghc-9.12.2-STM.h",
+    "url": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/rts/STM.h",
+    "retrievedUTC": "2026-10-05T15:07:17.275850+00:00",
+    "finalURL": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/rts/STM.h",
+    "contentType": "text/plain; charset=utf-8",
+    "lastModified": null,
+    "bytes": 7067,
+    "sha256": "c5a26d0f8c50645eff52daacefb4ae7a1d65a67307a83bff5f70d4c7115eac90",
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/ghc-9.12.2-STM.h"
+  },
+  {
+    "name": "ghc-9.12.2-STM.c",
+    "url": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/rts/STM.c",
+    "retrievedUTC": "2026-10-05T15:07:17.498514+00:00",
+    "finalURL": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/rts/STM.c",
+    "contentType": "text/plain; charset=utf-8",
+    "lastModified": null,
+    "bytes": 54289,
+    "sha256": "cdb5d71b29b85ef9c5b598c7d17114ffdae7e4976e7120c1f29d1dc1ffd5cf0c",
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/ghc-9.12.2-STM.c"
+  },
+  {
+    "name": "ghc-9.12.2-Sync.hs",
+    "url": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/libraries/ghc-internal/src/GHC/Internal/Conc/Sync.hs",
+    "retrievedUTC": "2026-10-05T15:07:17.674111+00:00",
+    "finalURL": "https://raw.githubusercontent.com/ghc/ghc/ghc-9.12.2-release/libraries/ghc-internal/src/GHC/Internal/Conc/Sync.hs",
+    "contentType": "text/plain; charset=utf-8",
+    "lastModified": null,
+    "bytes": 35753,
+    "sha256": "0e184aee23032845d03ecd192d90e9e2e0f654ef6f55e0ad1b171f3456d1e79f",
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/ghc-9.12.2-Sync.hs"
+  }
+]

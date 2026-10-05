@@ -1,0 +1,1 @@
+PASS check-language: no finding in /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/foundation-audit.md; the other documents carry 1789 finding(s) (report: python3 scripts/check-language.py)

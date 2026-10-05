@@ -177,6 +177,21 @@ not a rewrite of every store.
 scheduled waking, stored behaviors, and Clock/Random profiles. DI-11 remains the existing
 composition ruling; correcting a contradictory summary does not require ruling it again.
 
+**Ruled 2026-10-05 (rows 219 to 234).** The owner ruled the first profiles of this section:
+
+- the Queue's contract (rows 219 to 222): strict order, consumption at the taker's step, a posted
+  signal, and a cancellation that keeps a commit;
+- the shared waiting wrapper, with a checked body profile (row 221);
+- the atomic body and its alternatives (rows 223 and 224), and its work limits (row 226);
+- posted work as an `Eff` body with task metadata (row 225);
+- the mask that restores (row 227);
+- the public behaviour that a module's profile defines (row 230);
+- the clock's unit (row 231), the release audit (row 232) and the reserved contract of a
+  retained behaviour (row 234).
+
+Row 233 orders the slices. §5's conditions on a transaction still hold. Rows 223 and 226 select
+how the first profile meets them, and the relation to the source's behaviour stays open (row 80).
+
 `docs/research/history/post-phase-c-synthesis.md` now owns the proposed staged sequence and acceptance;
 `docs/research/2026-09-19-state-refinement-plan.md` is its historical contract basis:
 contracts and observations, completion/memo migration, generic-cell/world tooling and the

@@ -2,6 +2,11 @@
 
 Status: research note (history, not authority). Base: `50700443` (`refactor/phase1-phase3`).
 
+**Ruled 2026-10-05.** The owner ruled on these proposals: decisions rows 221 and 225 to 234 are
+the authority, and `docs/research/2026-10-05-claude-lead/foundation-contracts.md` holds the
+obligations and the order. Item 7's "any body" is withdrawn: row 221 asks for a checked body
+profile.
+
 **The one thing to know first.** The owner's direction of 2026-10-05 is to lay the groundwork
 before any module. No module should send the work back for an atom, a table or a language
 feature. This note lists every base abstraction that Effect's stateful modules need from this

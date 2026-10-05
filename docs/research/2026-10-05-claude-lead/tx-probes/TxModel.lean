@@ -15,8 +15,10 @@ retries? The model has one wrapper, `attempt`, and no queue-specific step:
 * **A queue is a cell and three small bodies.** `take`, `offer` and the ticket bodies below are
   programs in the same monad. Two of them compose into one atomic body with `do`.
 
-Every `#guard` is a finite check on the named trace. The model has no fibers, no scheduler and
-no interruption. It records a wake as the list of requests to signal; each signalled request
+Every `#guard` is a finite check on the named trace. A body here is any Lean function of the
+snapshot; only the combinators below record what they read, so the law of the exploration needs
+that premise for a body (Codex's review). The model has no fibers, no scheduler and no
+interruption. It records a wake as the list of requests to signal; each signalled request
 runs its body again. It proves nothing about the tree.
 -/
 
@@ -59,8 +61,11 @@ def put (c : Nat) (v : List Nat) : TxM Unit := fun acc =>
 def retry {α : Type} : TxM α := fun acc => .retry acc
 
 /-- The left body, or the right one when the left retries. The left body's writes are dropped,
-because the snapshot is a value. Its reads stay in the wait set. Effect 3's `STM.orElse` is
-this; Effect 4's `Effect.tx` has no such form. -/
+because the snapshot is a value. Its reads stay in the wait set. A failure of the left body is
+not caught. This is the rule of Harris et al. and the project's selected contract (decisions
+row 224). It is neither of Effect 3's forms: Codex's runs on 3.22.2 show that `STM.orElse` also
+catches a failure and drops the left reads, and that `STM.orTry` keeps the left writes. Effect
+4's `Effect.tx` has no such form. -/
 def orElse {α : Type} (t u : TxM α) : TxM α := fun acc =>
   match t acc with
   | .retry left => u { acc with reads := left.reads }
@@ -181,6 +186,62 @@ def ticketTrace : List Nat × List Nat × List Nat × Reply Nat × Reply Nat × 
   (e2.2.2, o.2.2, e3.2.2, r3.2.1, r1.2.1, r1.2.2)
 
 #guard ticketTrace = ([1], [1], [2], .waiting, .done 10, [2, 3])
+
+/-! ### Tickets do not compose by themselves (Codex's review of this model)
+
+Two findings of Codex's 22-check mirror, replayed here. Both are limits of the candidate, and
+neither is a defect of code in the tree. -/
+
+def takeBoth (qa ta qb tb id : Nat) : TxM Nat := do
+  let x ← serve qa ta id
+  let y ← serve qb tb id
+  pure (x + y)
+
+def wouldRetry {α : Type} (w : World) (t : TxM α) : Bool :=
+  match t { store := w.store } with
+  | .retry _ => true
+  | _ => false
+
+/-- The opposing-ticket cycle. Queue A (cells 0 and 1) holds `10` with tickets `[P, Q]`. Queue B
+(cells 2 and 3) holds `20` with tickets `[Q, P]`. P takes from A and then from B in one body; Q
+takes from B and then from A. Each finds the other first at its second queue and retries. Both
+messages stay, both requests wait, and each would still retry: the wrapper's law holds and
+nothing moves. So that law is no progress property, and tickets that are enrolled apart do not
+compose. -/
+def opposingTickets : Reply Nat × Reply Nat × Store × Bool :=
+  let w : World := { store := [[10], [1, 2], [20], [2, 1]] }
+  let p := attempt w 1 (takeBoth 0 1 2 3 1)
+  let q := attempt p.1 2 (takeBoth 2 3 0 1 2)
+  (p.2.1, q.2.1, q.1.store,
+    wouldRetry q.1 (takeBoth 0 1 2 3 1) && wouldRetry q.1 (takeBoth 2 3 0 1 2))
+
+#guard opposingTickets = (.waiting, .waiting, [[10], [1, 2], [20], [2, 1]], true)
+
+/-- The control: both enrolments in one order on both queues. P then takes both messages. -/
+def jointTickets : Reply Nat :=
+  (attempt { store := [[10], [1, 2], [20], [1, 2]] } 1 (takeBoth 0 1 2 3 1)).2.1
+
+#guard jointTickets = .done 30
+
+def leave (t id : Nat) : TxM Unit := do
+  put t ((← get t).filter (· != id))
+
+/-- A ticket is state that the generic cleanup does not own. Request 1 holds the oldest ticket
+and is cancelled. When only its registration is removed, its ticket stays and request 2 never
+receives the message. When its ticket is withdrawn too, request 2 receives it. So the module
+owns its enrolment and its withdrawal. -/
+def abandonedTicket (withdraw : Bool) : Reply Nat :=
+  let w := (attempt { store := [[], []] } 1 (enlist 1 1)).1
+  let w := (attempt w 1 (serve 0 1 1)).1
+  let w := (attempt w 2 (enlist 1 2)).1
+  let w := (attempt w 2 (serve 0 1 2)).1
+  let w : World := { w with waiting := w.waiting.filter (·.1 != 1) }
+  let w := if withdraw then (attempt w 1 (leave 1 1)).1 else w
+  let w := (attempt w 9 (offer 0 9 10)).1
+  (attempt w 2 (serve 0 1 2)).2.1
+
+#guard abandonedTicket false = .waiting
+#guard abandonedTicket true = .done 10
 
 /-- Without tickets, both takes read the buffer, so one message names both. The first takes
 it and the second waits again: one attempt is spent for nothing, and no answer changes. -/

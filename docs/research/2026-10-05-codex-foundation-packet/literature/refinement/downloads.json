@@ -1,0 +1,27 @@
+{
+  "title": "Forward and Backward Simulations I. Untimed Systems",
+  "authors": [
+    "Nancy Lynch",
+    "Frits Vaandrager"
+  ],
+  "version": "Information and Computation 121(2), 1995, pp. 214-233; CWI final version",
+  "url": "https://ir.cwi.nl/pub/1393/1393D.pdf",
+  "retrieved_utc": "2026-10-05T15:18:05.210714+00:00",
+  "bytes": 5477685,
+  "sha256": "fac099bf3462b90c58b8ed1077abef0808f5412f21879a5d1024ecdfdd5ff050",
+  "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf",
+  "headers_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.headers",
+  "download_command": "curl --fail --location --max-time 45 --dump-header /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.headers --output /private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf https://ir.cwi.nl/pub/1393/1393D.pdf",
+  "download_exit": 0,
+  "prior_attempt": "urllib under sandbox failed DNS; explicit download then succeeded with network approval.",
+  "extraction_tool": "/opt/homebrew/bin/pdftotext",
+  "extraction_command": [
+    "/opt/homebrew/bin/pdftotext",
+    "-layout",
+    "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf",
+    "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.txt"
+  ],
+  "extraction_exit": 0,
+  "extraction_output": "",
+  "text_sha256": "4d263a4a92b4fecabf2163696af54b2597ab4ff5f4cb96ae100a9429dd8faded"
+}
