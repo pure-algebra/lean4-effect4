@@ -421,23 +421,13 @@ the decode at import. -/
 def allFnNames : List Effect4.Machine.FnName :=
   [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
-/-- The rows with a pure function in the operation (`Ref.update(ref, incr)`). -/
-def rmwOps : List (Effect4.Machine.FnName → Effect4.Program.NativeOp) :=
-  [.refUpdate, .refGetAndUpdate, .refUpdateAndGet, .refUpdateSome, .refGetAndUpdateSome,
-   .refUpdateSomeAndGet, .refModify, .refModifySome]
+/-- The 55 built-in rows, one per spelling key: the core's `NativeOp.spelled`
+(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell. External
+indices are supplied by row tables and are not enumerated. -/
+def allNativeOps : List Effect4.Program.NativeOp := Effect4.Program.NativeOp.spelled
 
-/-- The 55 built-in rows. External indices are supplied by row tables and are not enumerated. -/
-def allNativeOps : List Effect4.Program.NativeOp :=
-  [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet] ++
-  rmwOps.flatMap (fun con => allFnNames.map con) ++
-  [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
-   .deferredAwait] ++
-  Effect4.FinalizerStrategy.all.map .scopeMake ++
-  -- the timer (A4, 2026-09-08)
-  [.sleep, .clockNow]
-
--- Refuse if any of the three inductives grew, shrank or was reordered: the enumeration
--- above is then stale and the profile would silently miss a row.
+-- Refuse if any of the three inductives grew, shrank or was reordered: the enumeration the core
+-- keeps and `opJs` below are then stale, and the profile would silently miss a row.
 run_cmd do
   let env ← Lean.getEnv
   let expect : List (Lean.Name × List Lean.Name) :=
@@ -448,12 +438,12 @@ run_cmd do
          ``Effect4.Program.NativeOp.refGetAndUpdate, ``Effect4.Program.NativeOp.refUpdateAndGet,
          ``Effect4.Program.NativeOp.refUpdateSome, ``Effect4.Program.NativeOp.refGetAndUpdateSome,
          ``Effect4.Program.NativeOp.refUpdateSomeAndGet, ``Effect4.Program.NativeOp.refModify,
-         ``Effect4.Program.NativeOp.refModifySome, ``Effect4.Program.NativeOp.deferredMake,
+         ``Effect4.Program.NativeOp.refModifySome,
          ``Effect4.Program.NativeOp.deferredIsDone, ``Effect4.Program.NativeOp.deferredPoll,
          ``Effect4.Program.NativeOp.deferredSucceed, ``Effect4.Program.NativeOp.deferredFail,
          ``Effect4.Program.NativeOp.deferredAwait, ``Effect4.Program.NativeOp.scopeMake,
          ``Effect4.Program.NativeOp.sleep, ``Effect4.Program.NativeOp.clockNow,
-         ``Effect4.Program.NativeOp.external])
+         ``Effect4.Program.NativeOp.external, ``Effect4.Program.NativeOp.deferredMakeOf])
     , (``Effect4.Machine.FnName,
         [``Effect4.Machine.FnName.incr, ``Effect4.Machine.FnName.double,
          ``Effect4.Machine.FnName.zeroWhenPositive, ``Effect4.Machine.FnName.noChange,
@@ -629,7 +619,9 @@ def opJs : Effect4.Program.NativeOp → String
   | .refUpdateSomeAndGet f => tagged "refUpdateSomeAndGet" [("f", fnJs f)]
   | .refModify f => tagged "refModify" [("f", fnJs f)]
   | .refModifySome f => tagged "refModifySome" [("f", fnJs f)]
-  | .deferredMake => tagged "deferredMake" []
+  | .deferredMakeOf value error => tagged "deferredMakeOf"
+      [("value", (Tools.ProfileJson.tyJson value).compress),
+       ("error", (Tools.ProfileJson.tyJson error).compress)]
   | .deferredIsDone => tagged "deferredIsDone" []
   | .deferredPoll => tagged "deferredPoll" []
   | .deferredSucceed => tagged "deferredSucceed" []

@@ -20,14 +20,14 @@ the one fragment that runs: `settle` on the logical clock, the verifier's altern
 row (its finding X11).
 
 **Changes since 2026-09-30.** Records landed (row 119): the `Account` value types, list field and
-variants included, but a cell still holds a number only. The error payload landed
+variants included. Since the state plan's T3a a cell holds any type: the `Account` record in one
+`Ref` builds, and it is read and written (section 1). The error payload landed
 (decisions row 120, parts E1 and E2): `InsufficientFunds{needed, available}` with natural fields
 builds as a typed failure and runs to `Err.payload`. It prints as a module that declares its
 `Data.TaggedError` class and fails with `new InsufficientFunds({ … })`, and the module reads back
 (section 5).
 
-**What the language refuses** (sections 1 and 2): the `Account` record, the account id and the
-history in a cell (`requestNotSubtype`); `needed` and `available` as rc.112 types them, signed
+**What the language refuses** (section 2): `needed` and `available` as rc.112 types them, signed
 numbers (admission refuses `int` by the field's path; row 121); a
 signed number (table admission refuses an `int` column as uninhabited,
 and `sub` truncates, so `10 - 25` answers `0` where rc.112 answers `-15`). A listener is code,
@@ -64,16 +64,37 @@ def account0 : TermSrc :=
 /-- `Ref.make<Account>(…)`, the service's one cell. -/
 def accountCell : Module NativeOp := program (Ref.make account0)
 
+/-- `{ id: "acc-1", balance: 1, history: [{ _tag: "Deposit", amount: 1 }] }`, a deposit's result. -/
+def account1 : TermSrc :=
+  record accountFields [("id", str "acc-1"), ("balance", nat 1),
+    ("history", app "cons" [record [("_tag", false, .lit "Deposit"), ("amount", false, .nat)]
+      [("_tag", str "Deposit"), ("amount", nat 1)], app "nil" []])]
+
+/-- The account in one cell, written and read: `Ref.set(state, account1)`, `Ref.get(state)`. -/
+def accountReadWrite : Module NativeOp :=
+  program (bindName "state" (Ref.make account0) fun state =>
+    andThen (Ref.set state account1) (Ref.get state))
+
+def built? (m : Module NativeOp) : Option Effect4.Api.Built := (Effect4.Api.Author.build m).toOption
+
+/-- The record type of `Account`, its fields in canonical order. -/
+def accountTy : Ty := (Ty.record accountFields).normalize
+
 -- Since the data wave the account types as a value, its list of variants included.
 #guard verdict (program (succeed account0)) = "built"
--- A cell holds a number only (rows 42–43): the checker refuses the record at the cell's request.
-#guard verdict accountCell = "typing: requestNotSubtype"
--- The checker refuses the account id alone, and a list (the history; the listeners' list), the same way
--- (the model probe's `ProbeRefusals.lean`).
-#guard typingReason? (program (Ref.make (str "acc-1"))) =
-  some (.requestNotSubtype "refMake" .string .nat)
-#guard typingReason? (program (Ref.make (app "cons" [nat 1, app "nil" []]))) =
-  some (.requestNotSubtype "refMake" (.list .nat) .nat)
+-- A cell holds any type since the state plan's T3a: the account builds at `Ref<Account>`.
+#guard verdict accountCell = "built"
+#guard (built? accountCell).map (fun b => b.ty.answer) = some (.refOf accountTy)
+-- Written and read, it answers the account it holds.
+#guard (built? accountReadWrite).map (fun b => (b.ty.answer,
+    match b.runSync with | .success v => Record.read false v "balance" | .failure _ => none)) =
+  some (accountTy, some (.nat 1))
+-- The account id alone and a list (the history; the listeners' list) build the same way (the model
+-- probe's `ProbeRefusals.lean` refused them).
+#guard (built? (program (Ref.make (str "acc-1")))).map (fun b => b.ty.answer) =
+  some (.refOf .string)
+#guard (built? (program (Ref.make (app "cons" [nat 1, app "nil" []])))).map (fun b => b.ty.answer) =
+  some (.refOf (.list .nat))
 
 /-! ## 2. The failure and its arithmetic -/
 
@@ -154,16 +175,15 @@ payload part is measured on its own (decisions row 120, part E1). -/
 
 def measured : Reach :=
   { refused :=
-      [ ("the Account record in one Ref", verdict accountCell)
-      , ("a signed number", verdict intModule) ]
+      [ ("a signed number", verdict intModule) ]
     admitted := false, answer := .notRun, printed := false, readBack := false }
 
 /-- The stage p5 reaches today, as `Test/Dogfood/README.md` quotes it: no encoding of the program
-builds, and the language refuses its state and its signed answer. -/
+builds, and the language refuses its signed answer. The `Account` record in one `Ref` builds since
+the state plan's T3a (section 1). -/
 def stage : Reach :=
   { refused :=
-      [ ("the Account record in one Ref", "typing: requestNotSubtype")
-      , ("a signed number", "admission") ]
+      [ ("a signed number", "admission") ]
     admitted := false, answer := .notRun, printed := false, readBack := false }
 
 #guard measured = stage

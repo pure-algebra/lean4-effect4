@@ -157,8 +157,7 @@ decides, so this is one proof for every program written against such declaration
 theorem build_table_lawful (rows : List RowDef)
     (hcall : ∀ r ∈ rows, r.row.shape = .call)
     (hplain : ∀ r ∈ rows, r.row.trailing = [])
-    (hfresh : ∀ r ∈ rows,
-      (NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r.row) = false)
+    (hfresh : ∀ r ∈ rows, builtinKeys.contains (rowKey r.row) = false)
     (hnodup : RowDef.duplicate? rows = none) :
     Table.lawful (RowDef.table rows) = true := by
   have hkeys := RowDef.nodup_keys rows hplain hnodup

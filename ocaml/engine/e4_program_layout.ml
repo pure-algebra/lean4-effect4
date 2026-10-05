@@ -67,7 +67,6 @@ module type PROGRAM_TYPES = sig
   | NativeOp_refUpdateSomeAndGet of fn_name
   | NativeOp_refModify of fn_name
   | NativeOp_refModifySome of fn_name
-  | NativeOp_deferredMake
   | NativeOp_deferredIsDone
   | NativeOp_deferredPoll
   | NativeOp_deferredSucceed
@@ -77,6 +76,7 @@ module type PROGRAM_TYPES = sig
   | NativeOp_sleep
   | NativeOp_clockNow
   | NativeOp_external of int
+  | NativeOp_deferredMakeOf of ty * ty
   type service_name = int
   type service_type_code = int
   type service_key = { name : service_name; service : service_type_code }
@@ -202,7 +202,7 @@ let engine_ctor_names = [
   ("observer_mode", ["awaitValue"; "joinEffect"]);
   ("finalizer_strategy", ["sequential"; "parallel"]);
   ("fn_name", ["incr"; "double"; "zeroWhenPositive"; "noChange"; "takeAndBump"]);
-  ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredMake"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"]);
+  ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"]);
   ("decision", ["bool"; "option"; "tag"; "recordTag"]);
   ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]);
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);

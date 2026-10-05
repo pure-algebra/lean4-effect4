@@ -70,15 +70,12 @@ were read (`Val.keys`), so `.handle 255 7` fit `unknown` (`E4-TYPED-CE-040`). -/
 def Live (w : World) (v : Val) : Prop :=
   ∀ h ∈ Store.Val.handles v, KindLive w h.2 (HandleKind.ofByte? h.1)
 
-/-- The reserved and external handle spellings (`Val.hasTy`'s `.handle` arm), with the native
-cell and deferred spellings read as their declarations: `Ref.Ref<number>` is a cell declared at
-`nat`, `Deferred.Deferred<number, number>` a deferred declared at `(nat, nat)`. A scope handle
-names a scope the world's store holds (`ScopeLive`, decisions rows 139 and 156), as the cell,
-promise and external arms read their tables. -/
+/-- The reserved and external handle spellings (`Val.hasTy`'s `.handle` arm). A cell or a
+promise fits no spelling: it fits `refOf _` or `deferredOf _ _` at its declaration (the state
+plan's T3a; decisions row 96 D2 retired). A scope handle names a scope the world's store holds
+(`ScopeLive`, decisions rows 139 and 156), as the external arm reads its table. -/
 def HandleFits (w : World) (kind : UInt8) (index : Nat) (target : String) : Prop :=
   match HandleKind.ofByte? kind with
-  | some .cell => target = NativeOp.refTarget ∧ RefDeclared w ⟨index⟩ .nat
-  | some .promise => target = NativeOp.deferredTarget ∧ PromiseDeclared w ⟨index⟩ .nat .nat
   | some .scope => target = Ty.scopeTarget ∧ ScopeLive w index
   -- a memo map is read through a guard, so its handle has its own type; it names a memo map the
   -- world's store holds (decisions row 187, amended 2026-10-02 by finding F-WF: capability
@@ -89,8 +86,9 @@ def HandleFits (w : World) (kind : UInt8) (index : Nat) (target : String) : Prop
   | _ => False
 
 /-- Membership at a service's static type (decision row 90): the service table's types are
-scalars and non-context handles (`nativeServiceTypes`, `nativeReservedServiceTypes`), so this
-needs no recursion; `flatFits_fits` connects it to `Fits`. -/
+scalars, non-context handles and a cell (`nativeServiceTypes`, `nativeReservedServiceTypes`), so
+this needs no recursion: a cell reads its declaration at its argument and never recurses into it.
+`flatFits_fits` connects it to `Fits`. -/
 def FlatFits (w : World) (v : Val) : Ty → Prop
   | .unit => match v with | .unit => True | _ => False
   | .nat => match v with | .nat _ => True | _ => False
@@ -98,6 +96,7 @@ def FlatFits (w : World) (v : Val) : Ty → Prop
   | .string => match v with | .str _ => True | _ => False
   | .handle target =>
     match v with | .handle kind index => HandleFits w kind index target | _ => False
+  | .refOf t => match v with | Value.cell index => RefDeclared w ⟨index⟩ t | _ => False
   | _ => False
 
 /-- A context's services fit their keys' static types, read off the world's static service
@@ -378,6 +377,11 @@ theorem flatFits_fits {w : World} {v : Val} {t : Ty} (h : FlatFits w v t) :
     split at h
     · exact h
     · exact h.elim
+  case refOf t =>
+    simp only [FlatFits] at h
+    split at h
+    · exact h
+    · exact h.elim
   all_goals exact h.elim
 
 /-! ## The judgment is a fold (the census rule: every traversal is a fold)
@@ -415,12 +419,6 @@ theorem handle_fits_hasTy (w : World) {v : Val} {target : String} (h : Fits w v 
     simp only [HandleFits] at h
     simp only [Val.hasTy]
     split at h
-    · rename_i hk
-      simp only [hk]
-      exact beq_iff_eq.mpr h.1
-    · rename_i hk
-      simp only [hk]
-      exact beq_iff_eq.mpr h.1
     · rename_i hk
       simp only [hk]
       exact beq_iff_eq.mpr h.1
@@ -903,12 +901,6 @@ theorem live_handle {w : World} {kind : UInt8} {index : Nat} {target : String}
   split at h
   · rename_i hk
     rw [HandleKind.ofByte?_exact hk]
-    exact live_cell h.2
-  · rename_i hk
-    rw [HandleKind.ofByte?_exact hk]
-    exact live_promise h.2
-  · rename_i hk
-    rw [HandleKind.ofByte?_exact hk]
     exact live_kind (k := .scope) h.2
   · rename_i hk
     rw [HandleKind.ofByte?_exact hk]
@@ -1245,22 +1237,21 @@ theorem promiseDeclared_map {key : DeferredKey} {a e : Ty} (h : PromiseDeclared 
   exact ⟨a', e', hPi key (a', e') hs, ha, he⟩
 
 include halloc hstore in
-omit hΓ in
-/-- A handle's membership moves along the tables and the store (row 156: a scope handle needs
-its scope present in the later world too; row 187 amended: a memo map handle its map). -/
+omit hΓ hPi hRho in
+/-- A handle's membership moves along the store and the allocation table (row 156: a scope handle
+needs its scope present in the later world too; row 187 amended: a memo map handle its map). No
+handle spelling reads a declaration table since the state plan's T3a. -/
 theorem handleFits_map {kind : UInt8} {index : Nat} {target : String}
     (h : HandleFits w1 kind index target) : HandleFits w2 kind index target := by
   simp only [HandleFits] at h ⊢
   split at h
-  · exact ⟨h.1, refDeclared_map hRho h.2⟩
-  · exact ⟨h.1, promiseDeclared_map hPi h.2⟩
   · exact ⟨h.1, hstore.2.2.1 index h.2⟩
   · exact ⟨h.1, hstore.2.2.2.2.1 ⟨index⟩ h.2⟩
   · exact ⟨h.1, halloc index target h.2⟩
   · exact h.elim
 
 include halloc hstore in
-omit hΓ in
+omit hΓ hPi in
 theorem flatFits_map {v : Val} {t : Ty} (h : FlatFits w1 v t) : FlatFits w2 v t := by
   cases t
   case unit => exact h
@@ -1270,7 +1261,12 @@ theorem flatFits_map {v : Val} {t : Ty} (h : FlatFits w1 v t) : FlatFits w2 v t 
   case handle target =>
     simp only [FlatFits] at h ⊢
     split at h
-    · exact handleFits_map hPi hRho halloc hstore h
+    · exact handleFits_map halloc hstore h
+    · exact h.elim
+  case refOf t =>
+    simp only [FlatFits] at h ⊢
+    split at h
+    · exact refDeclared_map hRho h
     · exact h.elim
   all_goals exact h.elim
 
@@ -1283,7 +1279,7 @@ theorem servicesFit_map {services : Env.Ctx}
     (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty)
     (h : ServicesFit w1 services) : ServicesFit w2 services :=
   ⟨fun key sv sty hget hty =>
-    flatFits_map hPi hRho halloc hstore (h.1 key sv sty hget (hsvc key sty hty)),
+    flatFits_map hRho halloc hstore (h.1 key sv sty hget (hsvc key sty hty)),
    fun e he => live_map hΓ hPi hRho halloc hstore (h.2 e he)⟩
 
 end Map
@@ -1341,7 +1337,7 @@ theorem handle_fits_map {w1 w2 : World}
     {v : Val} {target : String} (h : Fits w1 v (.handle target)) : Fits w2 v (.handle target) := by
   simp only [Fits] at h
   split at h
-  · exact handleFits_map hPi hRho halloc hstore h
+  · exact handleFits_map halloc hstore h
   · obtain ⟨ht, ctx, hctx, hs, hl⟩ := h
     simp only [Fits]
     exact ⟨ht, ctx, hctx, servicesFit_map hΓ hPi hRho halloc hstore hsvc hs, live_map hΓ hPi hRho halloc hstore hl⟩
@@ -1508,8 +1504,6 @@ theorem fits_scope_inv {w : World} {v : Val} (h : Fits w v Ty.scope) :
   · rename_i kind index
     simp only [HandleFits] at h
     split at h
-    · exact absurd h.1 (by decide)
-    · exact absurd h.1 (by decide)
     · rename_i hk
       have hkind : kind = HandleKind.scope.byte := HandleKind.ofByte?_exact hk
       subst hkind
@@ -2335,8 +2329,6 @@ theorem fits_context_inv {w : World} {v : Val} (h : Fits w v (.handle Ty.context
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
-    · exact absurd h.1 (by decide)
-    · exact absurd h.1 (by decide)
     · exact h.elim
   · obtain ⟨_, ctx, hctx, services, _⟩ := h
     exact ⟨ctx, hctx, services⟩
@@ -2687,7 +2679,9 @@ theorem FitsAll.instantiate {w : World} {join : Bool} :
     obtain ⟨σ₁, h₁, hrest⟩ := hmatch
     exact .cons
       (fits_instantiate_widens (Ty.matchTemplateArgs_widensSub hrest) w p
-        (hps p List.mem_cons_self) _ (fits_sub w (Ty.matchTemplate_sound σ₀ p r σ₁ h₁) _ hv))
+        (hps p List.mem_cons_self) _
+        ((fits_normalize w _ _).mp (fits_sub w (Ty.matchTemplate_sound σ₀ p r σ₁ h₁) _
+          ((fits_normalize w r _).mpr hv))))
       (FitsAll.instantiate (fun q hq => hps q (List.mem_cons_of_mem p hq)) hrest hfit)
 
 /-! ### Atom soundness, once per scheme -/
@@ -3397,8 +3391,24 @@ theorem inhabited_of_hasTy :
   induction t with
   | never => intro v alloc h; exact Bool.noConfusion h
   | var _ => intro v alloc h; exact Bool.noConfusion h
-  | unit | nat | int | string | bool | handle | option | list | exitOf | causeOf | fiberOf | lit
-  | refOf | deferredOf | unknown | map | app | null | undefined | number | bytes => intro _ _ _; rfl
+  | unit | nat | int | string | bool | option | list | exitOf | causeOf | fiberOf | lit
+  | refOf | deferredOf | unknown | map | null | undefined | number | bytes => intro _ _ _; rfl
+  | handle target =>
+    intro v alloc h
+    cases hr : retiredHandleTargets.contains target
+    · show (!retiredHandleTargets.contains target) = true
+      rw [hr]
+      rfl
+    · rw [Val.hasTy_handle_retired hr] at h
+      exact Bool.noConfusion h
+  | app name args _ =>
+    intro v alloc h
+    cases hr : retiredHandleTargets.contains name
+    · show (!retiredHandleTargets.contains name) = true
+      rw [hr]
+      rfl
+    · rw [hasTy_app_eq, Val.hasTy_handle_retired hr] at h
+      exact Bool.noConfusion h
   | record fs ih =>
     intro v alloc h
     rw [inhabited_record, List.all_eq_true]
@@ -3858,8 +3868,19 @@ theorem FreshFrom.allocMemo {w : World} {n : Nat} (h : FreshFrom w n) :
         fun _ hm => MemoWorld.mapAt_append_isSome hm, Nat.le_refl _⟩, rfl⟩,
     ⟨h.fiber, h.promise, h.cell⟩, MemoWorld.mapAt_append_self _ ⟨⟨w.state.nextName⟩, none, []⟩⟩
 
-/-- The `handle` former at every target, in a world grown from any world with fresh keys. -/
-theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFrom w n) :
+/-- An inhabited handle names a spelling some kind owns. -/
+theorem not_retired_of_inhabited {target : String}
+    (h : (!retiredHandleTargets.contains target) = true) :
+    retiredHandleTargets.contains target = false := by
+  cases hc : retiredHandleTargets.contains target
+  · rfl
+  · rw [hc] at h
+    cases h
+
+/-- The `handle` former at every target a kind owns, in a world grown from any world with fresh
+keys: an external allocation, or the scope, context or memo map at its own spelling. -/
+theorem fits_handle_fresh (target : String) (hr : retiredHandleTargets.contains target = false)
+    (w : World) (n : Nat) (hn : FreshFrom w n) :
     ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧
       Fits w' v (.handle target) := by
   cases hc : internalHandleTargets.contains target with
@@ -3875,12 +3896,9 @@ theorem fits_handle_fresh (target : String) (w : World) (n : Nat) (hn : FreshFro
     have hm : target ∈ internalHandleTargets := List.contains_iff_mem.mp hc
     simp only [internalHandleTargets, List.mem_cons, List.not_mem_nil, or_false] at hm
     rcases hm with rfl | rfl | rfl | rfl | rfl
-    · obtain ⟨hg, hf⟩ := hn.addRef .nat
-      exact ⟨_, n + 1, Val.handle HandleKind.cell.byte n, hg, hf, rfl, .nat, insert_here _ _ _,
-        Ty.subN_refl _, Ty.subN_refl _⟩
-    · obtain ⟨hg, hf⟩ := hn.addPromise (.nat, .nat)
-      exact ⟨_, n + 1, Val.handle HandleKind.promise.byte n, hg, hf, rfl, .nat, .nat,
-        insert_here _ _ _, ⟨Ty.subN_refl _, Ty.subN_refl _⟩, ⟨Ty.subN_refl _, Ty.subN_refl _⟩⟩
+    -- the retired spellings: no kind owns them
+    · exact absurd hr (by decide)
+    · exact absurd hr (by decide)
     · obtain ⟨hg, hf, hlive⟩ := hn.allocScope
       exact ⟨_, n, Val.handle HandleKind.scope.byte w.state.nextName, hg, hf,
         (rfl : Ty.scopeTarget = Ty.scopeTarget), hlive⟩
@@ -3962,7 +3980,7 @@ theorem fits_of_inhabited_fresh : ∀ (t : Ty), inhabited t = true → ∀ (w : 
   | null => intro _ w n hn; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
   | undefined => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, trivial⟩
   | bytes => intro _ w n hn; exact ⟨w, n, .bytes [], Grows.refl w, hn, trivial⟩
-  | app name _ _ => intro _ w n hn; exact fits_handle_fresh name w n hn
+  | app name _ _ => intro hi w n hn; exact fits_handle_fresh name (not_retired_of_inhabited hi) w n hn
   | map _ _ _ _ =>
     intro _ w n hn
     exact ⟨w, n, .list [], Grows.refl w, hn, rfl, fun _ he => nomatch he⟩
@@ -4000,7 +4018,9 @@ theorem fits_of_inhabited_fresh : ∀ (t : Ty), inhabited t = true → ∀ (w : 
     simp only [Fits, hc]
     intro _ hr
     nomatch hr
-  | handle target => intro _ w n hn; exact fits_handle_fresh target w n hn
+  | handle target =>
+    intro hi w n hn
+    exact fits_handle_fresh target (not_retired_of_inhabited hi) w n hn
   | fiberOf a e _ _ =>
     intro _ w n hn
     obtain ⟨hg, hf⟩ := hn.addFiber ⟨a, e, Env.Requirement.empty⟩
@@ -4086,10 +4106,15 @@ theorem promise_inhabited (a e : Ty) :
       (.deferredOf a e) :=
   ⟨a, e, rfl, ⟨Ty.subN_refl _, Ty.subN_refl _⟩, ⟨Ty.subN_refl _, Ty.subN_refl _⟩⟩
 
-/-- Every `handle` target has a member in some world: the four internal spellings and an
-external allocation (the types verifier's `handle_inhabited`). -/
-theorem handle_inhabited (target : String) : ∃ (w : World) (v : Val), Fits w v (.handle target) :=
-  (inhabited_iff_fits (.handle target)).mp rfl
+/-- Every `handle` target a kind owns has a member in some world: the three internal spellings
+and an external allocation (the types verifier's `handle_inhabited`). The two retired spellings
+have none (`Val.hasTy_handle_retired`, the state plan's T3a). -/
+theorem handle_inhabited (target : String) (hr : retiredHandleTargets.contains target = false) :
+    ∃ (w : World) (v : Val), Fits w v (.handle target) := by
+  refine (inhabited_iff_fits (.handle target)).mp ?_
+  show (!retiredHandleTargets.contains target) = true
+  rw [hr]
+  rfl
 
 /-! ### Closure: the raw order, the checker's order, normalization and the join -/
 
@@ -4158,14 +4183,14 @@ theorem admitColumn_prod_never_nat : admitColumn (.prod .never .nat) = false := 
 theorem admitColumn_except_never_never : admitColumn (.except .never .never) = false := by
   decide +kernel
 
-/-! ## Flat carriers, tag payloads, fiber handles, templates (granted 2026-10-01, seat D2)
+/-! ## Flat carriers, tag payloads, fiber handles (granted 2026-10-01, seat D2)
 
 The case analyses on `Ty` that M5's denotation lemma (`Laws/Program/Typed/Denotation.lean`)
 reads and that row 132 keeps in this module. -/
 
 /-- **Membership at a flat carrier is `FlatFits`** (proved): the converse of `flatFits_fits` on
-the carriers `flatCarrier` admits (`Program/SigApp.lean`: the scalars and every handle
-but the context). `provideService`'s denotation sets a context binding the provided value under
+the carriers `flatCarrier` admits (`Program/SigApp.lean`: the scalars, every handle but the
+context, and a cell at any type). `provideService`'s denotation sets a context binding the provided value under
 its key, and the `setContext` row demands `ServicesFit` (`Typed/Residual.lean`'s `fiberPre`),
 which reads the key's carrier through `FlatFits`; the checker gives the value's membership at
 that carrier, and a lawful signature's carriers are flat (`LawfulSig.services`). -/
@@ -4181,6 +4206,12 @@ theorem fits_flatFits {w : World} {v : Val} {t : Ty} (hflat : flatCarrier t = tr
     cases v with
     | handle kind index => exact h
     | _ => exact absurd h.1 hne
+  | refOf t =>
+    simp only [Fits] at h
+    simp only [FlatFits]
+    split at h
+    · exact h
+    · exact h.elim
   | _ => exact Bool.noConfusion hflat
 
 /-- **A tag hit's payload fits the payload type** (proved): the membership form of
@@ -4244,452 +4275,5 @@ theorem fiberTy_eq_some {t : Ty} {pair : Ty × Ty} (h : fiberTy t = some pair) :
     cases h
     rfl
   | _ => nomatch h
-
-/-- **Membership at a template is membership at each of its instances** (proved): a parameter
-has no member (`Fits` at `var` is `False`), and under `Ty.valueVars` every handle former's
-arguments are closed, which instantiation leaves alone (`Ty.instantiate_of_noVars`). The host-row
-arm of M5's denotation lemma (`perform_arm`, `Typed/Denotation.lean`) reads it: `bitEntry` holds
-a certificate raw-above the row's template columns, so the continuation is typed at the checked
-instance through this lemma, because the template's post has no member at a parameter, not
-because a host answer can meet it there (decisions row 183, proposed). -/
-theorem fits_instantiate (σ : Ty.Subst) (w : World) :
-    ∀ (t : Ty), Ty.valueVars t = true → ∀ v, Fits w v t → Fits w v (Ty.instantiate σ t) := by
-  intro t
-  induction t with
-  | var i => intro _ v h; exact h.elim
-  | option a ih =>
-    intro hv v h
-    change Ty.valueVars a = true at hv
-    show Fits w v (.option (Ty.instantiate σ a))
-    rcases fits_option_inv h with rfl | ⟨x, rfl, hx⟩
-    · trivial
-    · exact ih hv x hx
-  | list a ih =>
-    intro hv v h
-    change Ty.valueVars a = true at hv
-    show Fits w v (.list (Ty.instantiate σ a))
-    obtain ⟨xs, hxs, hall⟩ := (fits_list_iff w v _).mp h
-    exact (fits_list_iff w v _).mpr ⟨xs, hxs, fun x hx => ih hv x (hall x hx)⟩
-  | prod a b iha ihb =>
-    intro hv v h
-    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hv
-    show Fits w v (.prod (Ty.instantiate σ a) (Ty.instantiate σ b))
-    obtain ⟨p, q, rfl, hp, hq⟩ := (fits_prod_iff w v _ _).mp h
-    exact (fits_prod_iff w _ _ _).mpr ⟨p, q, rfl, iha ha p hp, ihb hb q hq⟩
-  | except e a ihe iha =>
-    intro hv v h
-    obtain ⟨he, ha⟩ := Bool.and_eq_true_iff.mp hv
-    show Fits w v (.except (Ty.instantiate σ e) (Ty.instantiate σ a))
-    simp only [Fits] at h
-    split at h
-    · exact ihe he _ h
-    · exact iha ha _ h
-    · exact h.elim
-  | exitOf a e iha ihe =>
-    intro hv v h
-    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
-    show Fits w v (.exitOf (Ty.instantiate σ a) (Ty.instantiate σ e))
-    simp only [Fits] at h
-    split at h
-    · exact iha ha _ h
-    · rename_i written
-      split at h
-      · rename_i c hc
-        simp only [Fits, hc]
-        exact ⟨causeFits_map (fun x hx => ihe he x hx) h.1, h.2⟩
-      · exact h.elim
-    · exact h.elim
-  | causeOf e ih =>
-    intro hv v h
-    change Ty.valueVars e = true at hv
-    show Fits w v (.causeOf (Ty.instantiate σ e))
-    simp only [Fits] at h
-    split at h
-    · rename_i c hc
-      simp only [Fits, hc]
-      exact causeFits_map (fun x hx => ih hv x hx) h
-    · exact h.elim
-  | union l r ihl ihr =>
-    intro hv v h
-    obtain ⟨hl, hr⟩ := Bool.and_eq_true_iff.mp hv
-    exact h.imp (ihl hl v) (ihr hr v)
-  | fiberOf a e _ _ =>
-    intro hv v h
-    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
-    show Fits w v (.fiberOf (Ty.instantiate σ a) (Ty.instantiate σ e))
-    rw [Ty.instantiate_of_noVars σ a ha, Ty.instantiate_of_noVars σ e he]
-    exact h
-  | refOf a _ =>
-    intro hv v h
-    show Fits w v (.refOf (Ty.instantiate σ a))
-    rw [Ty.instantiate_of_noVars σ a hv]
-    exact h
-  | deferredOf a e _ _ =>
-    intro hv v h
-    obtain ⟨ha, he⟩ := Bool.and_eq_true_iff.mp hv
-    show Fits w v (.deferredOf (Ty.instantiate σ a) (Ty.instantiate σ e))
-    rw [Ty.instantiate_of_noVars σ a ha, Ty.instantiate_of_noVars σ e he]
-    exact h
-  | never => intro _ v h; exact h
-  | unit => intro _ v h; exact h
-  | nat => intro _ v h; exact h
-  | int => intro _ v h; exact h
-  | string => intro _ v h; exact h
-  | bool => intro _ v h; exact h
-  | handle _ => intro _ v h; exact h
-  | lit _ => intro _ v h; exact h
-  | unknown => intro _ v h; exact h
-  | null => intro _ v h; exact h
-  | undefined => intro _ v h; exact h
-  | number => intro _ v h; exact h
-  | bytes => intro _ v h; exact h
-  | app _ _ _ => intro _ v h; exact h
-  | map a b iha ihb =>
-    intro hv v h
-    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp hv
-    show Fits w v (.map (Ty.instantiate σ a) (Ty.instantiate σ b))
-    simp only [Fits] at h ⊢
-    split at h
-    · refine ⟨h.1, fun e he => ?_⟩
-      have hx := h.2 e he
-      cases e
-      case pair x y => exact ⟨iha ha x hx.1, ihb hb y hx.2⟩
-      all_goals exact hx.elim
-    · exact h.elim
-  | record fs ih =>
-    intro hv v h
-    have hvs := valueVars_record_fields hv
-    show Fits w v (.record (Ty.instantiateFields σ fs))
-    rw [Ty.instantiateFields_eq_map]
-    obtain ⟨ns, xs, hp, hfit⟩ := fits_record_inv w v fs h
-    rw [fits_record w hp, canon_instantiate, List.map_map]
-    exact namedFit_map (fun t x => Fits w x t) (fun t x => Fits w x (Ty.instantiate σ t))
-      (Ty.canon fs) ns xs (fun q hq x hx => ih q (Ty.mem_canon hq) (hvs q (Ty.mem_canon hq)) x hx) hfit
-  | tuple ts ih =>
-    intro hv v h
-    have hvs := valueVars_tuple_items hv
-    show Fits w v (.tuple (Ty.instantiateItems σ ts))
-    rw [Ty.instantiateItems_eq_map]
-    cases v
-    case list xs =>
-      rw [fits_tuple] at h
-      rw [fits_tuple, List.map_map]
-      exact itemsFit_map (fun t x => Fits w x t) (fun t x => Fits w x (Ty.instantiate σ t))
-        ts xs (fun t ht x hx => ih t ht (hvs t ht) x hx) h
-    all_goals exact h.elim
-
-/-! The two halves of `Ty.valueVarsAlg` ("no parameter", "parameters under value formers") are
-kept by `normalize`, which only regroups a union's members and a product's factors. Each helper
-below is stated for one half `k`, which reads a union or a value former as a conjunction. -/
-
-private theorem valueVarsAlg_ofMembers (k : Bool × Bool → Bool)
-    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
-    (htt : k (true, true) = true) :
-    ∀ (xs : List Ty), (∀ x ∈ xs, k (cata_ty Ty.valueVarsAlg x) = true) →
-      k (cata_ty Ty.valueVarsAlg (Ty.ofMembers xs)) = true
-  | [], _ => htt
-  | [x], h => h x List.mem_cons_self
-  | x :: y :: rest, h => by
-    show k ((cata_ty Ty.valueVarsAlg x).1 && (cata_ty Ty.valueVarsAlg (Ty.ofMembers (y :: rest))).1,
-      (cata_ty Ty.valueVarsAlg x).2 && (cata_ty Ty.valueVarsAlg (Ty.ofMembers (y :: rest))).2) = true
-    rw [hk]
-    exact Bool.and_eq_true_iff.mpr ⟨h x List.mem_cons_self,
-      valueVarsAlg_ofMembers k hk htt (y :: rest) fun z hz => h z (List.mem_cons_of_mem x hz)⟩
-
-private theorem valueVarsAlg_members (k : Bool × Bool → Bool)
-    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b)) {t x : Ty}
-    (hx : x ∈ t.members) (h : k (cata_ty Ty.valueVarsAlg t) = true) :
-    k (cata_ty Ty.valueVarsAlg x) = true := by
-  induction t with
-  | union a b iha ihb =>
-    have h' : k ((cata_ty Ty.valueVarsAlg a).1 && (cata_ty Ty.valueVarsAlg b).1,
-        (cata_ty Ty.valueVarsAlg a).2 && (cata_ty Ty.valueVarsAlg b).2) = true := h
-    rw [hk] at h'
-    obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h'
-    rcases List.mem_append.mp hx with hx | hx
-    · exact iha hx ha
-    · exact ihb hx hb
-  | never => exact absurd hx List.not_mem_nil
-  | _ =>
-    simp only [Ty.members, List.mem_singleton] at hx
-    subst hx
-    exact h
-
-private theorem valueVarsAlg_factors (k : Bool × Bool → Bool)
-    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
-    (htt : k (true, true) = true) {t x : Ty} (hx : x ∈ t.factors)
-    (h : k (cata_ty Ty.valueVarsAlg t) = true) : k (cata_ty Ty.valueVarsAlg x) = true := by
-  unfold Ty.factors at hx
-  split at hx
-  · simp only [List.mem_singleton] at hx
-    subst hx
-    exact htt
-  · exact valueVarsAlg_members k hk hx h
-
-private theorem valueVarsAlg_normalizeRow (k : Bool × Bool → Bool)
-    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
-    (htt : k (true, true) = true) {xs : List Ty}
-    (h : ∀ x ∈ xs, k (cata_ty Ty.valueVarsAlg x) = true) :
-    k (cata_ty Ty.valueVarsAlg (Ty.ofMembers (Ty.normalizeRow xs).elems)) = true :=
-  valueVarsAlg_ofMembers k hk htt _ fun x hx => h x ((Ty.mem_normalizeRow x xs).mp hx).1
-
-private theorem valueVarsAlg_union_normalize (k : Bool × Bool → Bool)
-    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
-    (htt : k (true, true) = true) {a b : Ty} (ha : k (cata_ty Ty.valueVarsAlg a.normalize) = true)
-    (hb : k (cata_ty Ty.valueVarsAlg b.normalize) = true) :
-    k (cata_ty Ty.valueVarsAlg (Ty.normalize (.union a b))) = true :=
-  valueVarsAlg_normalizeRow k hk htt fun _ hx => (List.mem_append.mp hx).elim
-    (fun hx => valueVarsAlg_members k hk hx ha) (fun hx => valueVarsAlg_members k hk hx hb)
-
-private theorem valueVarsAlg_prod_normalize (k : Bool × Bool → Bool)
-    (hk : ∀ a b : Bool × Bool, k (a.1 && b.1, a.2 && b.2) = (k a && k b))
-    (htt : k (true, true) = true) {a b : Ty} (ha : k (cata_ty Ty.valueVarsAlg a.normalize) = true)
-    (hb : k (cata_ty Ty.valueVarsAlg b.normalize) = true) :
-    k (cata_ty Ty.valueVarsAlg (Ty.normalize (.prod a b))) = true := by
-  refine valueVarsAlg_normalizeRow k hk htt fun x hx => ?_
-  obtain ⟨y, hy, hx⟩ := List.mem_flatMap.mp hx
-  obtain ⟨z, hz, rfl⟩ := List.mem_map.mp hx
-  show k ((cata_ty Ty.valueVarsAlg y).1 && (cata_ty Ty.valueVarsAlg z).1,
-    (cata_ty Ty.valueVarsAlg y).2 && (cata_ty Ty.valueVarsAlg z).2) = true
-  rw [hk]
-  exact Bool.and_eq_true_iff.mpr
-    ⟨valueVarsAlg_factors k hk htt hy ha, valueVarsAlg_factors k hk htt hz hb⟩
-
-private theorem valueVarsAlg_fst_and (a b : Bool × Bool) :
-    Prod.fst (a.1 && b.1, a.2 && b.2) = (Prod.fst a && Prod.fst b) := rfl
-
-private theorem valueVarsAlg_snd_and (a b : Bool × Bool) :
-    Prod.snd (a.1 && b.1, a.2 && b.2) = (Prod.snd a && Prod.snd b) := rfl
-
-/-- **Normalization keeps parameters under value formers** (proved), with its "no parameter" half:
-the checker's host rows are the table's rows normalized (`Row.normalizeTypes`, `nativeSignature`),
-so the host-row arm reads `fits_instantiate` at a normalized template, whose parameters this
-lemma keeps where the table put them. -/
-theorem valueVars_normalize : ∀ (t : Ty),
-    ((cata_ty Ty.valueVarsAlg t).1 = true → (cata_ty Ty.valueVarsAlg t.normalize).1 = true) ∧
-      (Ty.valueVars t = true → Ty.valueVars t.normalize = true) := by
-  intro t
-  induction t with
-  | union a b iha ihb =>
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact valueVarsAlg_union_normalize Prod.fst valueVarsAlg_fst_and rfl (iha.1 ha) (ihb.1 hb)
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact valueVarsAlg_union_normalize Prod.snd valueVarsAlg_snd_and rfl (iha.2 ha) (ihb.2 hb)
-  | prod a b iha ihb =>
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact valueVarsAlg_prod_normalize Prod.fst valueVarsAlg_fst_and rfl (iha.1 ha) (ihb.1 hb)
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact valueVarsAlg_prod_normalize Prod.snd valueVarsAlg_snd_and rfl (iha.2 ha) (ihb.2 hb)
-  | option a ih => exact ih
-  | list a ih => exact ih
-  | causeOf a ih => exact ih
-  | except a b iha ihb =>
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.2 ha, ihb.2 hb⟩
-  | exitOf a b iha ihb =>
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.2 ha, ihb.2 hb⟩
-  | fiberOf a b iha ihb =>
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
-  | refOf a ih => exact ⟨ih.1, ih.1⟩
-  | deferredOf a b iha ihb =>
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
-  | var i => exact ⟨id, id⟩
-  | never => exact ⟨id, id⟩
-  | unit => exact ⟨id, id⟩
-  | nat => exact ⟨id, id⟩
-  | int => exact ⟨id, id⟩
-  | string => exact ⟨id, id⟩
-  | bool => exact ⟨id, id⟩
-  | handle _ => exact ⟨id, id⟩
-  | lit _ => exact ⟨id, id⟩
-  | unknown => exact ⟨id, id⟩
-  | null => exact ⟨id, id⟩
-  | undefined => exact ⟨id, id⟩
-  | number => exact ⟨id, id⟩
-  | bytes => exact ⟨id, id⟩
-  | map a b iha ihb =>
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.1 ha, ihb.1 hb⟩
-    · obtain ⟨ha, hb⟩ := Bool.and_eq_true_iff.mp h
-      exact Bool.and_eq_true_iff.mpr ⟨iha.2 ha, ihb.2 hb⟩
-  | record fs ih =>
-    have hn := Ty.normalize_record fs
-    refine ⟨fun h => ?_, fun h => ?_⟩
-    · rw [hn, valueVarsAlg_record]
-      rw [valueVarsAlg_record] at h
-      refine List.all_eq_true.mpr fun q hq => ?_
-      obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hq
-      exact (ih p (Ty.mem_canon hp)).1 (List.all_eq_true.mp h p (Ty.mem_canon hp))
-    · unfold Ty.valueVars at h ⊢
-      rw [hn, valueVarsAlg_record]
-      rw [valueVarsAlg_record] at h
-      refine List.all_eq_true.mpr fun q hq => ?_
-      obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hq
-      exact (ih p (Ty.mem_canon hp)).2 (List.all_eq_true.mp h p (Ty.mem_canon hp))
-  | tuple ts ih =>
-    by_cases h2 : ts.length = 2
-    · obtain ⟨a, b, rfl⟩ : ∃ a b, ts = [a, b] := by
-        match ts, h2 with
-        | [a, b], _ => exact ⟨a, b, rfl⟩
-        | [], h => exact absurd h (by decide)
-        | [_], h => exact absurd (Nat.succ.inj h) Nat.zero_ne_one
-        | _ :: _ :: _ :: _, h => exact absurd (Nat.succ.inj (Nat.succ.inj h)) (Nat.succ_ne_zero _)
-      have iha := ih a List.mem_cons_self
-      have ihb := ih b (List.mem_cons_of_mem _ List.mem_cons_self)
-      rw [Ty.normalize_tuple_pair]
-      refine ⟨fun h => ?_, fun h => ?_⟩
-      · simp only [valueVarsAlg_tuple, List.all_cons, List.all_nil, Bool.and_true,
-          Bool.and_eq_true] at h
-        exact valueVarsAlg_prod_normalize Prod.fst valueVarsAlg_fst_and rfl (iha.1 h.1) (ihb.1 h.2)
-      · unfold Ty.valueVars at h ⊢
-        simp only [valueVarsAlg_tuple, List.all_cons, List.all_nil, Bool.and_true,
-          Bool.and_eq_true] at h
-        exact valueVarsAlg_prod_normalize Prod.snd valueVarsAlg_snd_and rfl (iha.2 h.1) (ihb.2 h.2)
-    · rw [Ty.normalize_tuple_of_ne ts h2, Ty.normalizeItems_eq_map]
-      refine ⟨fun h => ?_, fun h => ?_⟩
-      · rw [valueVarsAlg_tuple] at h
-        rw [valueVarsAlg_tuple]
-        refine List.all_eq_true.mpr fun u hu => ?_
-        obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hu
-        exact (ih t ht).1 (List.all_eq_true.mp h t ht)
-      · unfold Ty.valueVars at h ⊢
-        rw [valueVarsAlg_tuple] at h
-        rw [valueVarsAlg_tuple]
-        refine List.all_eq_true.mpr fun u hu => ?_
-        obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hu
-        exact (ih t ht).2 (List.all_eq_true.mp h t ht)
-  | app n ts ih =>
-    -- a case split on the list, not `by_cases` on `ts = []`, which would decide it classically
-    cases ts with
-    | nil =>
-      rw [Ty.normalize_app_nil]
-      exact ⟨fun _ => rfl, fun _ => rfl⟩
-    | cons t0 ts0 =>
-      rw [Ty.normalize_app_of_ne n (t0 :: ts0) (List.cons_ne_nil t0 ts0), Ty.normalizeItems_eq_map]
-      refine ⟨fun h => ?_, fun _ => ?_⟩
-      · rw [valueVarsAlg_app] at h
-        rw [valueVarsAlg_app]
-        refine List.all_eq_true.mpr fun u hu => ?_
-        obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hu
-        exact (ih t ht).1 (List.all_eq_true.mp h t ht)
-      · exact (congrArg Prod.snd (valueVarsAlg_app n ((t0 :: ts0).map Ty.normalize))).trans rfl
-
-private theorem orElse_eq_none_parts {x y : Option Path} (h : (x <|> y) = none) :
-    x = none ∧ y = none := by
-  cases x with
-  | none => exact ⟨rfl, h⟩
-  | some _ => exact nomatch h
-
-/-- A right fold of first answers that answers `none` answered `none` at every element. -/
-private theorem foldr_orElse_eq_none {α : Type} (f : α → Option Path) :
-    ∀ (l : List α), l.foldr (fun p acc => f p <|> acc) none = none → ∀ p ∈ l, f p = none
-  | [], _ => fun _ hp => absurd hp List.not_mem_nil
-  | q :: l, h => by
-    obtain ⟨hq, hl⟩ := orElse_eq_none_parts h
-    intro p hp
-    rcases List.mem_cons.mp hp with rfl | hp
-    · exact hq
-    · exact foldr_orElse_eq_none f l hl p hp
-
-/-- The tuple scan's fold: every item answered `none` at its own position. -/
-private theorem zipIdx_foldr_eq_none (pos : Path) :
-    ∀ (items : List (Path → Option Path)) (n : Nat),
-      (items.zipIdx n).foldr (fun p acc => p.1 (pos ++ [toString p.2]) <|> acc) none = none →
-      ∀ f ∈ items, ∃ i : Nat, f (pos ++ [toString i]) = none
-  | [], _, _ => fun _ hf => absurd hf List.not_mem_nil
-  | g :: items, n, h => by
-    obtain ⟨hg, hrest⟩ := orElse_eq_none_parts h
-    intro f hf
-    rcases List.mem_cons.mp hf with rfl | hf
-    · exact ⟨n, hg⟩
-    · exact zipIdx_foldr_eq_none pos items (n + 1) hrest f hf
-
-/-- **A column with no internal handle former keeps its parameters under value formers**
-(proved): `findInternalHandle` (`Program/Columns.lean`) answers at every `refOf`, `deferredOf`
-and `fiberOf`, the only formers `Ty.valueVars` constrains. A lawful row's answer and error
-columns pass that scan (`rowChecks`, `Program/SigApp.lean`), so the host-row arm of M5's
-denotation lemma reads `fits_instantiate` at them. -/
-theorem valueVars_of_noInternalHandle : ∀ (t : Ty) (pos : Path),
-    findInternalHandle pos t = none → Ty.valueVars t = true := by
-  intro t
-  induction t with
-  | option a ih => exact fun pos h => ih (pos ++ ["inner"]) h
-  | list a ih => exact fun pos h => ih (pos ++ ["inner"]) h
-  | causeOf a ih => exact fun pos h => ih (pos ++ ["error"]) h
-  | prod a b iha ihb =>
-    intro pos h
-    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
-    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
-  | except a b iha ihb =>
-    intro pos h
-    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
-    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
-  | exitOf a b iha ihb =>
-    intro pos h
-    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
-    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
-  | union a b iha ihb =>
-    intro pos h
-    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
-    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
-  | fiberOf a b _ _ => intro pos h; exact nomatch h
-  | refOf a _ => intro pos h; exact nomatch h
-  | deferredOf a b _ _ => intro pos h; exact nomatch h
-  | var i => intro _ _; rfl
-  | never => intro _ _; rfl
-  | unit => intro _ _; rfl
-  | nat => intro _ _; rfl
-  | int => intro _ _; rfl
-  | string => intro _ _; rfl
-  | bool => intro _ _; rfl
-  | handle _ => intro _ _; rfl
-  | lit _ => intro _ _; rfl
-  | unknown => intro _ _; rfl
-  | null => intro _ _; rfl
-  | undefined => intro _ _; rfl
-  | number => intro _ _; rfl
-  | bytes => intro _ _; rfl
-  | app n ts _ => intro _ _; exact (congrArg Prod.snd (valueVarsAlg_app n ts)).trans rfl
-  | map a b iha ihb =>
-    intro pos h
-    obtain ⟨ha, hb⟩ := orElse_eq_none_parts h
-    exact Bool.and_eq_true_iff.mpr ⟨iha _ ha, ihb _ hb⟩
-  | record fs ih =>
-    intro pos h
-    unfold findInternalHandle at h
-    rw [cata_ty_record] at h
-    have hall := foldr_orElse_eq_none (fun p : String × Bool × (Path → Option Path) => p.2.2 (pos ++ [p.1]))
-      _ h
-    unfold Ty.valueVars
-    rw [valueVarsAlg_record]
-    exact List.all_eq_true.mpr fun p hp => ih p hp (pos ++ [p.1]) (hall _ (List.mem_map_of_mem hp))
-  | tuple ts ih =>
-    intro pos h
-    unfold findInternalHandle at h
-    rw [cata_ty_tuple] at h
-    have hall := zipIdx_foldr_eq_none pos (ts.map (cata_ty internalHandleScan)) 0 h
-    unfold Ty.valueVars
-    rw [valueVarsAlg_tuple]
-    refine List.all_eq_true.mpr fun t ht => ?_
-    obtain ⟨i, hi⟩ := hall _ (List.mem_map_of_mem ht)
-    exact ih t ht (pos ++ [toString i]) hi
 
 end Effect4.Program.Typed

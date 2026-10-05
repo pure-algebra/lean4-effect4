@@ -51,7 +51,7 @@ signature types them at, and the program reads like the language. -/
 def Counter : ServiceDef := { key := ⟨⟨4⟩, ⟨4⟩⟩, carrier := .nat }
 
 /-- The cell the counter counts in. -/
-def TheRef : ServiceDef := { key := ⟨⟨6⟩, ⟨7⟩⟩, carrier := NativeOp.refTy }
+def TheRef : ServiceDef := { key := ⟨⟨6⟩, ⟨7⟩⟩, carrier := .refOf .nat }
 
 -- The declarations and the signature say the same thing, decided at the declaration site.
 #guard Counter.Agrees (nativeSignature) && TheRef.Agrees (nativeSignature)

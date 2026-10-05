@@ -62,8 +62,9 @@ def genDecode (b : Bytes) : Option (Eff NativeOp) :=
 #guard [NativeOp.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet, .refUpdate .incr,
     .refGetAndUpdate .double, .refUpdateAndGet .noChange, .refUpdateSome .incr,
     .refGetAndUpdateSome .incr, .refUpdateSomeAndGet .incr, .refModify .takeAndBump,
-    .refModifySome .incr, .deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed,
-    .deferredFail, .deferredAwait, .scopeMake .parallel].all fun o =>
+    .refModifySome .incr, .deferredMakeOf .nat .nat, .deferredMakeOf .string (.lit "E"),
+    .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail, .deferredAwait,
+    .scopeMake .parallel].all fun o =>
   ProgramGen.NativeOpC.ofVal (ProgramGen.NativeOpC.toVal o) = some o
 #guard [CauseTerm.fail (.lit (.nat 1)), .die (.var 0), .interrupt none,
     .interrupt (some (.var 1)), .both (.fail (.var 0)) (.die (.var 1))].all fun c =>

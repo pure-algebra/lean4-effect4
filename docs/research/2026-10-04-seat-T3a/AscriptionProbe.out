@@ -1,0 +1,11 @@
+(some (Effect4.Program.Ty.refOf (Effect4.Program.Ty.list (Effect4.Program.Ty.never))))
+"typing: requestNotSubtype"
+"typing: requestNotSubtype"
+(some (Effect4.Program.Ty.refOf (Effect4.Program.Ty.list (Effect4.Program.Ty.string))))
+"built"
+"built"
+some "(Val.list [(Val.str \"open 1\")])"
+some (true, true)
+some (true, true)
+some
+  "Effect.flatMap(Ref.make(recordRequired<\"v\">(\"v\")(recordValue<{ readonly v: ReadonlyArray<string> }>([10, [20], [[4, [[5, [3, \"v\"], [5, [1, false], [10, [8], [[10, [4], []]]]]]]]]], { v: nil() }))), (a0) => Effect.flatMap(Ref.set(a0, cons(\"open 1\", nil())), (a1) => Ref.get(a0)))"

@@ -168,7 +168,10 @@ Lane 1, `Effect4.Program`:
 6. `evalTerm_hasTy`, `evalTerms_hasTy`: under `Fits`, a term that types and evaluates
    evaluates to a value of its type.
 7. `evalTerm_isSome`, `evalTerms_isSome`: under `Fits`, a term that types evaluates.
-8. `syncOpOf_isSome`: a request value of a `sync` row's request type decodes.
+8. `syncOpOf_isSome`: a request value of a `sync` row's request type, at every instance of the
+   row's template, decodes. The `Ref` and `Deferred` rows are templates since the state plan's
+   T3a (`(NativeOp.row op).request.instantiate σ`); the decoder reads any value, so the
+   instance never decides the decoding.
 9. `syncOpOf_async_none`.
 
 Lane 2, `Effect4.Machine`:

@@ -125,7 +125,7 @@ def pForkJoin : NativeEff :=
 
 /-- The parent makes a Deferred, forks a child that awaits it, completes it and joins. -/
 def pDeferred : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) immediateChild))
       (.bind (.perform .deferredSucceed
                 (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))

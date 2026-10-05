@@ -49,7 +49,8 @@ export function queries(repo: string, signatures: Map<string, RowSignature>): Qu
     const [table, name] = id.split("/") as [string, string]
     if (table !== "Native" && table !== "Atom") continue
     const atom = table === "Atom"
-    const subject = atom ? `typeof Atoms.${name}${signature.typeArgs}` : `typeof ${nativeSpelling(name)}`
+    // A template row (the `Ref` and `Deferred` rows) is queried at its probes, as a template atom is.
+    const subject = atom ? `typeof Atoms.${name}${signature.typeArgs}` : `typeof ${nativeSpelling(name)}${signature.typeArgs}`
     // A `value` row is not called: `Effect.currentTimeMillis` is an `Effect`, not a function.
     const value = signature.shape === "value"
     const q: Query = {
@@ -78,7 +79,7 @@ const spellings: Record<string, string> = {
   refSetAndGet: "Ref.setAndGet", refUpdate: "Ref.update", refGetAndUpdate: "Ref.getAndUpdate",
   refUpdateAndGet: "Ref.updateAndGet", refUpdateSome: "Ref.updateSome",
   refGetAndUpdateSome: "Ref.getAndUpdateSome", refUpdateSomeAndGet: "Ref.updateSomeAndGet",
-  refModify: "Ref.modify", refModifySome: "Ref.modifySome", deferredMake: "Deferred.make",
+  refModify: "Ref.modify", refModifySome: "Ref.modifySome", deferredMakeOf: "Deferred.make",
   deferredIsDone: "Deferred.isDone", deferredPoll: "Deferred.poll",
   deferredSucceed: "Deferred.succeed", deferredFail: "Deferred.fail", deferredAwait: "Deferred.await",
   scopeMake: "Scope.make", sleep: "Effect.sleep", clockNow: "Effect.currentTimeMillis",

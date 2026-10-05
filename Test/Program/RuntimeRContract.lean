@@ -502,7 +502,7 @@ def scopedPrefixViews : Bool := scopedTimingRows.all fun e =>
 the waiter interrupts this still-running owner, so the scope closes with that
 interruption rather than the thunk's success. -/
 def scopedCompletionInterrupt : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork
       (.scoped (.perform .deferredSucceed (.app "pair" (.cons (.var 0) (.cons one .nil)))))
       { immediateDaemon with startImmediately := false }))
@@ -748,7 +748,7 @@ def injectedInterruptTape : List Api.Decision :=
 -- The wave-2 audit's scheduling witnesses: a context budget of six supplied through
 -- Completion, then a sync; both machines now finish.
 def withBudgetProgram : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.perform .deferredAwait (.var 0))
       (.bind (.withFiber (.setContext (.var 1))) (.sync (.lit (.nat 5)))))
 def budgetTape (n : Nat) : List Api.Decision :=
@@ -925,12 +925,12 @@ def scopedDaemon : Supervision.ForkOptions := ⟨true, true, .inherit⟩
 count, and the close of a scope whose one finalizer the finished child already removed. -/
 def forkScopedDone : NativeEff := .scoped (.withFiber (.forkScoped (.succeed one) scopedDaemon))
 /-- One live scoped child: the close runs its one finalizer directly. -/
-def seqOne : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
+def seqOne : NativeEff := .scoped (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
   (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
     (.succeed (.lit .unit))))
 /-- Two live scoped children: the close walks two finalizers through the sequential
 generator, each under the `Exit` primitive. -/
-def seqTwo : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
+def seqTwo : NativeEff := .scoped (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
   (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
     (.bind (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedDaemon))
       (.succeed (.lit .unit)))))
@@ -938,7 +938,7 @@ def seqTwo : NativeEff := .scoped (.bind (.perform .deferredMake (.lit .unit))
 step forks both finalizers as immediate daemons and awaits them. -/
 def parTwo : NativeEff :=
   .bind (.perform (.scopeMake .parallel) (.lit .unit))
-    (.bind (.perform .deferredMake (.lit .unit))
+    (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
       (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) scopedDaemon (.var 0)))
         (.bind (.withFiber (.forkIn (.perform .deferredAwait (.var 1)) scopedDaemon (.var 0)))
           (.bind (.exit (.succeed (.lit .unit))) (.withFiber (.closeScope (.var 0) (.var 4)))))))

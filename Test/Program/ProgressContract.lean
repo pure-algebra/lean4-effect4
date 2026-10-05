@@ -18,22 +18,25 @@ Every helper is a store or an answer, never a rendering. The read-modify-write r
 names' lowerings (decisions row 43): on numbers they run the names' kernels (`kernel_term_agrees`),
 and on a non-number a computing name's lowering stops, where the name answered the value
 unchanged (the guards of section `Functions`). `Stores.WF` is decided through the
-instance the modules supply. Every cell today's rows reach holds a number, the guard
-`refs.all (Val.hasTy · .nat)`: the cell spelling reads as a cell declared at `nat` (decisions
-row 96 D2). `Val.hasTy` is well-founded, so its guards are evaluations, never `decide`.
+instance the modules supply. The `Ref` and `Deferred` rows are templates since the state plan's
+T3a: every guard reads a row at its `nat` instance (`atNat`), the instance the compile contract's
+programs check at, and every cell they reach holds a number, the guard `refs.all (Val.hasTy · .nat)`.
+`Val.hasTy` is well-founded, so its guards are evaluations, never `decide`.
 
 Register rows (`Test/Counterexamples/REGISTER.md`), each a group of guards and a theorem at worlds:
 
 * `E4-PROGRESS-CE-001` — a well-formed store answers typed values, so `progress` needs no more
   than `Stores.WF`. Refuted: the heap `[Val.bool true]` is `WF`, `refGet ⟨0⟩` is valid in it,
-  and its answer `Val.bool true` has not the row's answer type `.nat`. At a world where the
-  request `Val.cell ⟨0⟩` fits the row's request type, the cell columns fail (`ce001_columns`);
-  `progress` carries them (`Denote.StoreFits`).
+  and its answer `Val.bool true` has not the answer type `.nat` of the row's `nat` instance. At a
+  world where the request `Val.cell ⟨0⟩` fits that instance's request type, the cell columns fail
+  (`ce001_columns`); `progress` carries them (`Denote.StoreFits`).
 * `E4-PROGRESS-CE-002` — the store half survives every valid step, so `progress` can be stated
   on `SyncOp.validIn`. Refuted: `refMake (Val.bool true)` is valid on the empty store and steps;
-  no world over the store it leaves has typed cell columns and admits its answer at the row's
-  answer type (`ce002_answer`). `progress` is stated on a typed `perform` node, and
-  `Val.bool true` has not `refMake`'s request type.
+  no world over the store it leaves has typed cell columns and admits its answer at the answer
+  type of the row's `nat` instance (`ce002_answer`). `progress` is stated on a typed `perform`
+  node: the decoder reads any value since T3a, and the node's checked instance is what keeps the
+  columns (`Val.bool true` checks `refMake` at `bool`, whose answer `refOf bool` the store's
+  column then declares).
 
 The red control of the coarse column (the seat's design note, finding F3): `HeapTable` reads a
 stored value with `Val.hasTy`, which accepts every cell handle at `Ref<A>` (decisions row 44).
@@ -74,6 +77,9 @@ def s2 : Stores := after SyncOp.deferredMake Stores.empty
 /-- `Deferred.succeed(d, 1)` after `Deferred.make()`. -/
 def s2done : Stores :=
   after (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 1)))) s2
+/-- A row's type at the `nat` instance, the one the battery's programs check at. -/
+def atNat (t : Ty) : Ty := t.instantiate [(0, .nat), (1, .nat)]
+
 /-- A heap holding a boolean: well-formed, not numeric. -/
 def boolCell : Stores := { Stores.empty with refs := [Val.bool true] }
 
@@ -116,12 +122,12 @@ example : ∀ {op : NativeOp} {k : RefKernel}, op.fnKernel = some k → ∀ (cel
 section Rows
 
 /-- At a world whose cell columns are typed and whose cell 0 holds a boolean, the cell's handle
-does not fit the cell spelling `Ref.Ref<number>`, which reads a cell declared at `nat`. -/
+does not fit `refOf nat`, which reads a cell declared at a type equivalent to `nat`. -/
 theorem bool_cell_not_ref (w : Typed.World) (cells : Typed.CellsTyped w)
     (h0 : w.state.refs[0]? = some (Val.bool true)) :
-    ¬ Typed.Fits w (Val.cell ⟨0⟩) NativeOp.refTy := by
+    ¬ Typed.Fits w (Val.cell ⟨0⟩) (.refOf .nat) := by
   intro hfit
-  obtain ⟨k, hk, t, declared, equiv⟩ := Typed.fits_refTy_inv hfit
+  obtain ⟨k, hk, t, declared, equiv⟩ := Typed.fits_refOf_inv hfit
   cases k with
   | mk index =>
     cases hk
@@ -132,16 +138,16 @@ theorem bool_cell_not_ref (w : Typed.World) (cells : Typed.CellsTyped w)
 -- E4-PROGRESS-CE-001: `WF` is the handle half only; the answer's type needs the cell columns
 #guard Stores.WF boolCell
 #guard SyncOp.validIn boolCell (SyncOp.refGet ⟨0⟩) = true
-#guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refGet).request
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)
 #guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
 #guard answer (SyncOp.refGet ⟨0⟩) boolCell = some (Val.bool true)
-#guard Val.hasTy (Val.bool true) (NativeOp.row .refGet).answer = false
+#guard Val.hasTy (Val.bool true) (atNat (NativeOp.row .refGet).answer) = false
 #guard !boolCell.refs.all (Val.hasTy · .nat)
 
 /-- `E4-PROGRESS-CE-001` at worlds: over the heap `[Val.bool true]`, a world at which `refGet`'s
 request `Val.cell ⟨0⟩` fits the row's request type has no typed cell columns. -/
 theorem ce001_columns (w : Typed.World) (hs : w.state = boolCell)
-    (hreq : Typed.Fits w (Val.cell ⟨0⟩) (NativeOp.row .refGet).request) :
+    (hreq : Typed.Fits w (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)) :
     ¬ Typed.CellsTyped w :=
   fun cells => bool_cell_not_ref w cells (by rw [hs]; rfl) hreq
 
@@ -152,15 +158,16 @@ theorem ce001_columns (w : Typed.World) (hs : w.state = boolCell)
 #guard (syncOpStep (SyncOp.refMake (Val.bool true)) Stores.empty).isSome
 #guard answer (SyncOp.refMake (Val.bool true)) Stores.empty = some (Val.cell ⟨0⟩)
 #guard !(after (SyncOp.refMake (Val.bool true)) Stores.empty).refs.all (Val.hasTy · .nat)
-#guard Val.hasTy (Val.bool true) (NativeOp.row .refMake).request = false
-#guard NativeOp.syncOpOf .refMake (Val.bool true) = none
+#guard Val.hasTy (Val.bool true) (atNat (NativeOp.row .refMake).request) = false
+-- the decoder reads any value since the state plan's T3a: the instance keeps the column
+#guard NativeOp.syncOpOf .refMake (Val.bool true) = some (SyncOp.refMake (Val.bool true))
 
 /-- `E4-PROGRESS-CE-002` at worlds: no world over the store `refMake (Val.bool true)` leaves has
 typed cell columns and admits the answer `Val.cell ⟨0⟩` at the row's answer type. -/
 theorem ce002_answer (w : Typed.World)
     (hs : w.state = after (SyncOp.refMake (Val.bool true)) Stores.empty)
     (cells : Typed.CellsTyped w) :
-    ¬ Typed.Fits w (Val.cell ⟨0⟩) (NativeOp.row .refMake).answer := by
+    ¬ Typed.Fits w (Val.cell ⟨0⟩) (atNat (NativeOp.row .refMake).answer) := by
   refine bool_cell_not_ref w cells ?_
   rw [hs, after, Typed.syncOpStep_refMake]
   rfl
@@ -229,34 +236,34 @@ section RefSet
 
 -- `Ref.make(5)` on the empty store
 #guard Stores.empty.refs.all (Val.hasTy · .nat)
-#guard Val.hasTy (Val.nat 5) (NativeOp.row .refMake).request
+#guard Val.hasTy (Val.nat 5) (atNat (NativeOp.row .refMake).request)
 #guard NativeOp.syncOpOf .refMake (Val.nat 5) = some (SyncOp.refMake (Val.nat 5))
 #guard SyncOp.validIn Stores.empty (SyncOp.refMake (Val.nat 5)) = true
 #guard answer (SyncOp.refMake (Val.nat 5)) Stores.empty = some (Val.cell ⟨0⟩)
-#guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refMake).answer
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refMake).answer)
 #guard Val.validIn s1 (Val.cell ⟨0⟩)
 #guard Stores.WF s1
 #guard s1.refs.all (Val.hasTy · .nat)
 #guard s1.refs = [Val.nat 5]
 
 -- `Ref.set(ref, 7)`: the request is the pair, the answer is the cell
-#guard Val.hasTy setRequest (NativeOp.row .refSet).request
+#guard Val.hasTy setRequest (atNat (NativeOp.row .refSet).request)
 #guard Val.validIn s1 setRequest
 #guard NativeOp.syncOpOf .refSet setRequest = some (SyncOp.refSet ⟨0⟩ (Val.nat 7))
 #guard SyncOp.validIn s1 (SyncOp.refSet ⟨0⟩ (Val.nat 7)) = true
 #guard answer (SyncOp.refSet ⟨0⟩ (Val.nat 7)) s1 = some (Val.cell ⟨0⟩)
-#guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refSet).answer
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refSet).answer)
 #guard Val.validIn s1set (Val.cell ⟨0⟩)
 #guard Stores.WF s1set
 #guard s1set.refs.all (Val.hasTy · .nat)
 #guard s1set.refs = [Val.nat 7]
 
 -- `Ref.get(ref)`: the answer is the cell's number
-#guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refGet).request
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)
 #guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
 #guard SyncOp.validIn s1set (SyncOp.refGet ⟨0⟩) = true
 #guard answer (SyncOp.refGet ⟨0⟩) s1set = some (Val.nat 7)
-#guard Val.hasTy (Val.nat 7) (NativeOp.row .refGet).answer
+#guard Val.hasTy (Val.nat 7) (atNat (NativeOp.row .refGet).answer)
 #guard after (SyncOp.refGet ⟨0⟩) s1set = s1set
 
 end RefSet
@@ -265,17 +272,17 @@ end RefSet
 
 section RefUpdate
 
-#guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row (.refUpdate .incr)).request
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refUpdate .incr)).request)
 #guard NativeOp.syncOpOf (.refUpdate .incr) (Val.cell ⟨0⟩)
   = some (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
 #guard SyncOp.validIn s1 (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) = true
 #guard answer (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm []) s1 = some Val.unit
-#guard Val.hasTy Val.unit (NativeOp.row (.refUpdate .incr)).answer
+#guard Val.hasTy Val.unit (atNat (NativeOp.row (.refUpdate .incr)).answer)
 #guard Stores.WF s1upd
 #guard s1upd.refs.all (Val.hasTy · .nat)
 #guard s1upd.refs = [Val.nat 6]
 #guard answer (SyncOp.refGet ⟨0⟩) s1upd = some (Val.nat 6)
-#guard Val.hasTy (Val.nat 6) (NativeOp.row .refGet).answer
+#guard Val.hasTy (Val.nat 6) (atNat (NativeOp.row .refGet).answer)
 
 end RefUpdate
 
@@ -283,12 +290,12 @@ end RefUpdate
 
 section RefModify
 
-#guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row (.refModify .takeAndBump)).request
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refModify .takeAndBump)).request)
 #guard NativeOp.syncOpOf (.refModify .takeAndBump) (Val.cell ⟨0⟩)
   = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
 #guard SyncOp.validIn s1 (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) = true
 #guard answer (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm []) s1 = some (Val.nat 5)
-#guard Val.hasTy (Val.nat 5) (NativeOp.row (.refModify .takeAndBump)).answer
+#guard Val.hasTy (Val.nat 5) (atNat (NativeOp.row (.refModify .takeAndBump)).answer)
 #guard Stores.WF s1mod
 #guard s1mod.refs.all (Val.hasTy · .nat)
 #guard s1mod.refs = [Val.nat 6]
@@ -334,15 +341,15 @@ end Functions
 
 section Deferred
 
-#guard Val.hasTy Val.unit (NativeOp.row .deferredMake).request
-#guard NativeOp.syncOpOf .deferredMake Val.unit = some SyncOp.deferredMake
+#guard Val.hasTy Val.unit (atNat (NativeOp.row (.deferredMakeOf .nat .nat)).request)
+#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) Val.unit = some SyncOp.deferredMake
 #guard answer SyncOp.deferredMake Stores.empty = some (Val.promise ⟨0⟩)
-#guard Val.hasTy (Val.promise ⟨0⟩) (NativeOp.row .deferredMake).answer
+#guard Val.hasTy (Val.promise ⟨0⟩) (atNat (NativeOp.row (.deferredMakeOf .nat .nat)).answer)
 #guard Val.validIn s2 (Val.promise ⟨0⟩)
 #guard Stores.WF s2
 #guard s2.refs.all (Val.hasTy · .nat)
 
-#guard Val.hasTy succeedRequest (NativeOp.row .deferredSucceed).request
+#guard Val.hasTy succeedRequest (atNat (NativeOp.row .deferredSucceed).request)
 #guard Val.validIn s2 succeedRequest
 #guard NativeOp.syncOpOf .deferredSucceed succeedRequest
   = some (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 1))))
@@ -351,17 +358,17 @@ section Deferred
 #guard answer
   (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 1)))) s2
   = some (Val.bool true)
-#guard Val.hasTy (Val.bool true) (NativeOp.row .deferredSucceed).answer
+#guard Val.hasTy (Val.bool true) (atNat (NativeOp.row .deferredSucceed).answer)
 #guard Stores.WF s2done
 #guard s2done.refs.all (Val.hasTy · .nat)
 
-#guard Val.hasTy (Val.promise ⟨0⟩) (NativeOp.row .deferredIsDone).request
+#guard Val.hasTy (Val.promise ⟨0⟩) (atNat (NativeOp.row .deferredIsDone).request)
 #guard NativeOp.syncOpOf .deferredIsDone (Val.promise ⟨0⟩)
   = some (SyncOp.deferredIsDone ⟨0⟩)
 #guard answer (SyncOp.deferredIsDone ⟨0⟩) s2done = some (Val.bool true)
-#guard Val.hasTy (Val.bool true) (NativeOp.row .deferredIsDone).answer
+#guard Val.hasTy (Val.bool true) (atNat (NativeOp.row .deferredIsDone).answer)
 #guard answer (SyncOp.deferredPoll ⟨0⟩) s2 = some (Val.bool false)
-#guard Val.hasTy (Val.bool false) (NativeOp.row .deferredPoll).answer
+#guard Val.hasTy (Val.bool false) (atNat (NativeOp.row .deferredPoll).answer)
 
 -- the async row decodes to nothing: `progress` is stated at `sync` rows only
 #guard (NativeOp.row .deferredAwait).kind = .async

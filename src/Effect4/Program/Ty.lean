@@ -860,7 +860,15 @@ fallback). With it the binding moves to the new candidate when the bound is belo
 in front where `lookup` reads it first: TypeScript's own inference at an unannotated
 parameter, the common supertype of the candidates (`getCommonSupertype`). Two incomparable
 candidates are never joined into a union — tsgo refuses `ite(b, n, s)` at `n: number`,
-`s: string` with TS2345 — so the binding stays, and the guard refuses the application too. -/
+`s: string` with TS2345 — so the binding stays, and the guard refuses the application too.
+
+A request union against a template that is neither a parameter nor a union is read member by
+member, from the left, as `sub` reads a union on the left. Normalization distributes a product
+over a union member, so the request of `Ref.set(cell, x)` with a union-typed `x` is a union of
+products; without this arm inference bound nothing there and the guard refused a request some
+substitution admits (`E4-CHECK-CE-018`, the state plan's T3a). Every recursive call is at a
+subterm of the request, so the recursion is structural on it; a record request is read field by
+field (`inferFields`). -/
 def infer (σ : Subst) (template request : Ty) (join : Bool := false) : Subst :=
   match template, request with
   | .var i, r =>
@@ -882,17 +890,22 @@ def infer (σ : Subst) (template request : Ty) (join : Bool := false) : Subst :=
   | .tuple ts, .tuple rs => inferItems σ ts rs join
   | .app name ts, .app other rs =>
     if name = other then inferItems σ ts rs join else σ
+  | t, .union c d => infer (infer σ t c join) t d join
   | _, _ => σ
+termination_by structural request
 
-/-- Infer record parameters by field name. The match guard checks flags and shape. -/
+/-- Infer record parameters by field name, in the request's field order: each request field
+reads the template field of its name. A normal record's fields are in canonical order on both
+sides. The match guard checks flags and shape. -/
 def inferFields (σ : Subst) (templates requests : List (String × Bool × Ty))
     (join : Bool) : Subst :=
-  match templates with
+  match requests with
   | [] => σ
-  | (name, _, ty) :: rest =>
-    match requests.lookup name with
-    | none => inferFields σ rest requests join
-    | some (_, request) => inferFields (infer σ ty request join) rest requests join
+  | (name, _, request) :: rest =>
+    match templates.lookup name with
+    | none => inferFields σ templates rest join
+    | some (_, ty) => inferFields (infer σ ty request join) templates rest join
+termination_by structural requests
 
 /-- Infer tuple and nominal arguments by position. The match guard checks arity. -/
 def inferItems (σ : Subst) (templates requests : List Ty) (join : Bool) : Subst :=
@@ -900,44 +913,8 @@ def inferItems (σ : Subst) (templates requests : List Ty) (join : Bool) : Subst
   | ty :: rest, request :: remaining =>
     inferItems (infer σ ty request join) rest remaining join
   | _, _ => σ
+termination_by structural requests
 end
-
-/-- The match of a request against a template from a seed: the bindings inference reads,
-kept exactly when the request is a subtype of the template instantiated at them. The guard is
-the law, so inference can only lose completeness, never soundness — whichever rule `join`
-picks. -/
-def matchTemplate (σ : Subst) (template request : Ty) (join : Bool := false) : Option Subst :=
-  let σ' := infer σ template request join
-  if sub request (instantiate σ' template) then some σ' else none
-
-/-- Match an argument list against a parameter template list, threading the bindings each
-match reads. The list-level fold of `matchTemplate`, whose guard is its own law
-(`matchTemplate_sound`, `Laws/Program/Template.lean`); a longer or shorter argument list is
-refused, never padded. -/
-def matchTemplateArgs (σ : Subst) (params requests : List Ty) (join : Bool := false) :
-    Option Subst :=
-  match params, requests with
-  | [], [] => some σ
-  | p :: ps, r :: rs => (matchTemplate σ p r join).bind fun σ' => matchTemplateArgs σ' ps rs join
-  | [], _ :: _ => none
-  | _ :: _, [] => none
-
-/-- A match fixes the argument count. The two lists walk together, and only the empty pair
-answers, so an argument list of another length is refused before any guard is read. -/
-theorem matchTemplateArgs_length {σ σ' : Subst} {ps rs : List Ty} {join : Bool}
-    (h : matchTemplateArgs σ ps rs join = some σ') : rs.length = ps.length := by
-  induction ps generalizing rs σ with
-  | nil =>
-    cases rs with
-    | nil => rfl
-    | cons _ _ => exact nomatch h
-  | cons p ps ih =>
-    cases rs with
-    | nil => exact nomatch h
-    | cons r rs =>
-      simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
-      obtain ⟨σ'', _, hrest⟩ := h
-      simp only [List.length_cons, ih hrest]
 
 /-! ### The template profile (decisions row 42)
 
@@ -1375,6 +1352,48 @@ theorem Normal.fixed {t : Ty} (h : Normal t) : normalize t = t := by
 /-- Construction is total; no checked partial constructor is needed. -/
 theorem normalize_idem (t : Ty) : normalize (normalize t) = normalize t :=
   (normal_normalize t).fixed
+
+/-- The match of a request against a template from a seed: the bindings inference reads,
+kept exactly when the request is below the template instantiated at them in the checker's order,
+both sides normalized (`subN`, `Laws/Program/TypeAlgebra.lean`). The guard is the law, so
+inference can only lose completeness, never soundness — whichever rule `join` picks. The instance
+is normalized because a binding substituted under a product breaks the normal form a normal
+request has (the 2026-09-18 plan §2d), and the request is normalized with it because an atom's
+argument type need not be normal: raw `sub` never distributes a product over a union, so a raw
+request under a normalized instance would be refused (`E4-TYPED-CE-009`). Normalizing both sides
+admits more than the raw comparison, never less (`sub_normalize_of_sub`). -/
+def matchTemplate (σ : Subst) (template request : Ty) (join : Bool := false) : Option Subst :=
+  let σ' := infer σ template request join
+  if sub request.normalize (instantiate σ' template).normalize then some σ' else none
+
+/-- Match an argument list against a parameter template list, threading the bindings each
+match reads. The list-level fold of `matchTemplate`, whose guard is its own law
+(`matchTemplate_sound`, `Laws/Program/Template.lean`); a longer or shorter argument list is
+refused, never padded. -/
+def matchTemplateArgs (σ : Subst) (params requests : List Ty) (join : Bool := false) :
+    Option Subst :=
+  match params, requests with
+  | [], [] => some σ
+  | p :: ps, r :: rs => (matchTemplate σ p r join).bind fun σ' => matchTemplateArgs σ' ps rs join
+  | [], _ :: _ => none
+  | _ :: _, [] => none
+
+/-- A match fixes the argument count. The two lists walk together, and only the empty pair
+answers, so an argument list of another length is refused before any guard is read. -/
+theorem matchTemplateArgs_length {σ σ' : Subst} {ps rs : List Ty} {join : Bool}
+    (h : matchTemplateArgs σ ps rs join = some σ') : rs.length = ps.length := by
+  induction ps generalizing rs σ with
+  | nil =>
+    cases rs with
+    | nil => rfl
+    | cons _ _ => exact nomatch h
+  | cons p ps ih =>
+    cases rs with
+    | nil => exact nomatch h
+    | cons r rs =>
+      simp only [matchTemplateArgs, Option.bind_eq_some_iff] at h
+      obtain ⟨σ'', _, hrest⟩ := h
+      simp only [List.length_cons, ih hrest]
 
 /-- Public TypeScript spelling uses the canonical type at entry. -/
 def render (t : Ty) : String := renderRaw t.normalize

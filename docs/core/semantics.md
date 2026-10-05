@@ -329,12 +329,14 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   (`mergeContexts_typed`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`), and the protocol around the build is typed
   (`provideLayer_arm`, `src/Effect4/Laws/Program/Typed/LayerArm.lean`). The store-row arm
   is the textbook's reference-read argument in its adapted form (TAPL §13.4's store typing; PLF
-  `References.v`'s `store_weakening`): membership in the cell type exposes a declaration
-  (`fits_refTy_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean`) at a type equivalent to
-  `nat` under normalized subtyping, not syntactic equality; `leHost` keeps the declaration; the reply's
-  lookup identifies it, and `fits_subN` transports the reply (`refRead_nat`,
-  `src/Effect4/Laws/Program/Typed/Denotation.lean`), consumed by `syncRow_typed`
-  (`src/Effect4/Laws/Program/Typed/Denotation.lean`) and `perform_arm`
+  `References.v`'s `store_weakening`): membership in `refOf A` exposes a declaration
+  (`fits_refOf_inv`, `src/Effect4/Laws/Program/Typed/Denotation.lean`) at a type equivalent to
+  `A` under normalized subtyping, not syntactic equality; `leHost` keeps the declaration; the reply's
+  lookup identifies it, and `fits_subN` transports the reply (`refRead`,
+  `src/Effect4/Laws/Program/Typed/Denotation.lean`). The `Ref` and `Deferred` rows are templates
+  (the state plan's T3a). `syncRow_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)
+  reads the node's checked instance off the row's match (`rowTy_fits`). It is consumed by
+  `perform_arm`
   (`src/Effect4/Laws/Program/Typed/Denotation.lean`). The service arm keeps the source/world
   service-table agreement as a premise and admits the missing-service defect, which is not a service
   value (`service_arm`, `src/Effect4/Laws/Program/Typed/Denotation.lean`); `exit` covers its inline
@@ -354,7 +356,7 @@ Its declaration lives in `src/Effect4/Laws/Program/MeaningSound.lean`.
 A value that fits is valid in a store whose cell columns are typed (`CellsTyped.fits_validIn`, `src/Effect4/Laws/Program/Typed/Adequacy.lean`).
 It establishes no scheduled-program liveness or external host execution property.
 
-The `instantiated-formation` claim requires actual row use to check map keys after substitution.
+The `instantiated-formation` claim requires actual row use to check map keys and a deferred's error column after substitution.
 It serves `rowTy` and M5 under decision row 193.
 It establishes no host reply admission or liveness property.
 
@@ -627,6 +629,10 @@ It establishes no execution property for generated TypeScript.
 - **Exclusion & Repair of Raw Subtyping (Row 137, `E4-TYPED-CE-009`)**: Raw `sub` does not distribute products
   over unions; subtyping equivalence and comparisons are defined through `subN`.
 - **Exclusion of Function Types (Row 163)**: No function arrow types exist in `Ty`; arrow subtyping is excluded.
+- **Row templates and the match (row 42; the state plan's T3a)**: A row's columns may hold parameters.
+  `Ty.matchTemplate` infers bindings from the request, reading a request union member by member.
+  It keeps them exactly when the request is below the template's instance, both sides normalized.
+  The guard is the law (`matchTemplate_sound`), so inference can lose completeness and never soundness.
 - **Records, maps, tuples and applications (rows 119, 162)**: the constructors are in `Ty`. `Ty.sub` compares
   records with the same canonical names and optionality field by field, covariantly (no width rule); maps
   exactly in the key and covariantly in the value; tuples of one length pointwise; and applications of one
@@ -642,9 +648,10 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
 (`src/Effect4/Laws/Program/TypeAlgebra.lean:1067`). Canonical types `CTy` form a bounded join-semilattice.
 
 #### 4. Required Properties and Obligations
-- **Raw formation (`raw-formation`)**: The raw check agrees with distinct record names and the admitted map-key predicate.
+- **Raw formation (`raw-formation`)**: The raw check agrees with distinct record names, the admitted map-key predicate
+  and a deferred's admitted error column.
   Rows 192 and 193 require this check before normalization at each checked public boundary.
-  Open map keys are deferred only in row templates.
+  Open map keys and open error columns are deferred only in row templates.
   Formation establishes no inhabitance, codec admission or execution property.
 - **Reflexivity (`subn-refl`)**: Normalized subtyping is reflexive.
   (`subN_refl` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
@@ -656,6 +663,15 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   (`normalize_idem` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
 - **Antisymmetry on canonical types (`sub-antisymm-canonical`)**: `subN` is antisymmetric on canonical representatives.
   (`sub_antisymm_canonical` (`src/Effect4/Laws/Program/TypeAlgebra.lean`)).
+- **Anchored completeness of the match (`template-match-anchored`)**: The statement fixes a normal, admissible
+  template whose parameters each first occur as an invariant handle's argument (`Ty.anchored`).
+  A normal request that some substitution places under its instance then has a match.
+  The request holds no `never` outside such an argument (`Ty.bottomFree`); without that premise the
+  statement is false (`E4-CHECK-CE-018`'s boundary).
+  It is a planned goal (`Ty.matchTemplate_complete_anchored`, `src/Effect4/Laws/Program/Template.lean`),
+  tested on a finite pool (`docs/research/2026-10-04-seat-T3a/AnchoredGoal.lean`).
+  It establishes no match at a parameter first met covariantly, under a union template or under a
+  nominal reference.
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 

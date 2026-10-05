@@ -117,7 +117,7 @@ let p_fork : E.eff =
 
 let p_await : E.eff =
   E.Eff_bind
-    ( E.Eff_perform (E.Native_op_deferredMake, E.Term_lit E.Lit_unit),
+    ( E.Eff_perform (E.Native_op_deferredMakeOf (E.Ty_nat, E.Ty_nat), E.Term_lit E.Lit_unit),
       E.Eff_perform (E.Native_op_deferredAwait, E.Term_var 0) )
 
 (* `chain 0 = succeed unit`, `chain (n+1) = bind (perform refMake (lit (nat n))) (chain n)`
@@ -323,7 +323,8 @@ let sample_ops =
     E.Native_op_refUpdateSomeAndGet E.Fn_name_incr;
     E.Native_op_refModify E.Fn_name_incr;
     E.Native_op_refModifySome E.Fn_name_incr;
-    E.Native_op_deferredMake; E.Native_op_deferredIsDone; E.Native_op_deferredPoll;
+    E.Native_op_deferredMakeOf (E.Ty_nat, E.Ty_nat); E.Native_op_deferredIsDone;
+    E.Native_op_deferredPoll;
     E.Native_op_deferredSucceed; E.Native_op_deferredFail; E.Native_op_deferredAwait;
     E.Native_op_scopeMake E.Finalizer_strategy_sequential ]
 

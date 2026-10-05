@@ -1,0 +1,216 @@
+## Effect4.Program.NativeOp.refTy: 12 declarations in 9 modules
+  Effect4.Laws.Program.Typed (2): Effect4.Program.Val.hasTy_refTy_inv, Effect4.Program.syncOpOf_isSome
+  Effect4.Laws.Program.Typed.Denotation (2): Effect4.Program.Typed.fits_refTy_inv, Effect4.Program.Typed.syncRow_typed
+  Effect4.Program.Native (2): Effect4.Program.NativeOp.row, Effect4.Program.nativeServiceTypes
+  Test.Api.ExternalContract (1): Test.Api.ExternalContract.table
+  Test.Codegen.ReadContract (1): Test.Codegen.ReadContract.nativeServiceTy_profile
+  Test.Counterexamples.Machine.Runtime.HostHandleForgery (1): Test.Counterexamples.Machine.Runtime.HostHandleForgery.internalTypes
+  Test.Program.AuthorContract (1): Test.Program.AuthorContract.TheRef
+  Test.Program.ProgressContract (1): Test.Program.ProgressContract.bool_cell_not_ref
+  Test.Program.SignatureControls (1): Test.Program.SignatureControls.cellRow
+## Effect4.Program.NativeOp.deferredTy: 6 declarations in 4 modules
+  Effect4.Laws.Program.Typed (2): Effect4.Program.Val.hasTy_deferredTy_inv, Effect4.Program.syncOpOf_isSome
+  Effect4.Laws.Program.Typed.Denotation (2): Effect4.Program.Typed.fits_deferredTy_inv, Effect4.Program.Typed.syncRow_typed
+  Effect4.Program.Native (1): Effect4.Program.NativeOp.row
+  Test.Counterexamples.Machine.Runtime.HostHandleForgery (1): Test.Counterexamples.Machine.Runtime.HostHandleForgery.internalTypes
+## Effect4.Program.NativeOp.refTarget: 32 declarations in 12 modules
+  Effect4.Laws.Program.Admit (1): Effect4.Program.externalValue_typed
+  Effect4.Laws.Program.Admits (1): Effect4.Program.Val.hasTy_admitsExtend
+  Effect4.Laws.Program.Folds.Ty (2): Effect4.Program.Val.hasTy.alg, Effect4.Program.Val.hasTy.hom
+  Effect4.Laws.Program.Typed (2): Effect4.Program.Val.hasTy_deferredTy_inv, Effect4.Program.Val.hasTy_refTy_inv
+  Effect4.Laws.Program.Typed.Denotation (3): Effect4.Program.Typed.fits_deferredTy_inv, Effect4.Program.Typed.fits_refTy_inv, Effect4.Program.Typed.syncRow_typed
+  Effect4.Laws.Program.Typed.LayerArm (1): Effect4.Program.Typed.fits_memoMap_inv
+  Effect4.Laws.Program.Typed.Membership (7): Effect4.Program.Typed.HandleFits, Effect4.Program.Typed.fits_context_inv, Effect4.Program.Typed.fits_handle_fresh, Effect4.Program.Typed.fits_scope_inv, Effect4.Program.Typed.handleFits_map, Effect4.Program.Typed.handle_fits_hasTy, Effect4.Program.Typed.live_handle
+  Effect4.Program.Native (1): Effect4.Program.NativeOp.refTy
+  Effect4.Program.Typed (4): Effect4.Program.Val.hasTy, Effect4.Program.Val.hasTy._f, Effect4.Program.Val.hasTy._unsafe_rec, Effect4.Program.internalHandleTargets
+  Test.Counterexamples.Machine.Semantics.FitsOrder (1): Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.HandleFits
+  Test.Counterexamples.Machine.Semantics.ValueMembership (8): Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.HandleFits, Test.Counterexamples.Machine.Semantics.ValueMembership.ReviewedLoad.refTy, Test.Counterexamples.Machine.Semantics.ValueMembership.g6_control, Test.Counterexamples.Machine.Semantics.ValueMembership.g6_old, Test.Counterexamples.Machine.Semantics.ValueMembership.g6_refused, Test.Counterexamples.Machine.Semantics.ValueMembership.getProg_typedF, Test.Counterexamples.Machine.Semantics.ValueMembership.refProg_typedF, Test.Counterexamples.Machine.Semantics.ValueMembership.typedStateF_load_ref
+  Test.Program.InvocationContract (1): Test.Program.InvocationContract.requestFor
+## Effect4.Program.NativeOp.deferredTarget: 25 declarations in 11 modules
+  Effect4.Laws.Program.Admit (1): Effect4.Program.externalValue_typed
+  Effect4.Laws.Program.Admits (1): Effect4.Program.Val.hasTy_admitsExtend
+  Effect4.Laws.Program.Folds.Ty (2): Effect4.Program.Val.hasTy.alg, Effect4.Program.Val.hasTy.hom
+  Effect4.Laws.Program.Typed (2): Effect4.Program.Val.hasTy_deferredTy_inv, Effect4.Program.Val.hasTy_refTy_inv
+  Effect4.Laws.Program.Typed.Denotation (3): Effect4.Program.Typed.fits_deferredTy_inv, Effect4.Program.Typed.fits_refTy_inv, Effect4.Program.Typed.syncRow_typed
+  Effect4.Laws.Program.Typed.LayerArm (1): Effect4.Program.Typed.fits_memoMap_inv
+  Effect4.Laws.Program.Typed.Membership (7): Effect4.Program.Typed.HandleFits, Effect4.Program.Typed.fits_context_inv, Effect4.Program.Typed.fits_handle_fresh, Effect4.Program.Typed.fits_scope_inv, Effect4.Program.Typed.handleFits_map, Effect4.Program.Typed.handle_fits_hasTy, Effect4.Program.Typed.live_handle
+  Effect4.Program.Native (1): Effect4.Program.NativeOp.deferredTy
+  Effect4.Program.Typed (4): Effect4.Program.Val.hasTy, Effect4.Program.Val.hasTy._f, Effect4.Program.Val.hasTy._unsafe_rec, Effect4.Program.internalHandleTargets
+  Test.Counterexamples.Machine.Semantics.FitsOrder (1): Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.HandleFits
+  Test.Counterexamples.Machine.Semantics.ValueMembership (2): Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.HandleFits, Test.Counterexamples.Machine.Semantics.ValueMembership.getProg_typedF
+## Effect4.Program.NativeOp.deferredTypeArgs: 1 declarations in 1 modules
+  Effect4.Program.Native (1): Effect4.Program.NativeOp.row
+## Effect4.Program.NativeOp.all: 15 declarations in 8 modules
+  Effect4.Codegen.Read (1): Effect4.Program.nativeSpell
+  Effect4.Laws.Api.ModuleReadable (1): Effect4.Codegen.lawful_rowNamesSafe
+  Effect4.Laws.Codegen.ReadLeaf (6): Effect4.Program.NativeOp.all_complete, Effect4.Program.NativeOp.external_not_mem_all, Effect4.Program.lawfulTable_member, Effect4.Program.nativeLawful, Effect4.Program.nativeRowOf_mem_all, Effect4.Program.nativeRow_hygiene
+  Effect4.Laws.Program.Author (1): Effect4.Program.Authoring.build_table_lawful
+  Effect4.Laws.Program.Signature (2): Effect4.Program.LawfulSig.registered, Effect4.Program.LawfulSig.tableLawful
+  Effect4.Laws.Program.Typed.Denotation (1): Effect4.Program.Typed.hostRow_valueVars
+  Effect4.Program.SigApp (1): Effect4.Program.rowChecks
+  Effect4.Program.Table (2): Effect4.Program.Table.lawful, Effect4.Program.builtinLookup_none
+## Effect4.Program.fnNames: 2 declarations in 2 modules
+  Effect4.Laws.Codegen.ReadLeaf (1): Effect4.Program.NativeOp.external_not_mem_all
+  Effect4.Program.Native (1): Effect4.Program.NativeOp.all
+## Effect4.Program.NativeOp.row_closed: 4 declarations in 2 modules
+  Effect4.Laws.Program.Template (3): Effect4.Program.NativeOp.row_templateAdmissible, Effect4.Program.NativeOp.row_wellScoped, Effect4.Program.nativeSignature_row_closed
+  Effect4.Laws.Program.Typed.Denotation (1): Effect4.Program.Typed.builtinPerform_inv
+## Effect4.Program.nativeSignature_row_closed: 1 declarations in 1 modules
+  Effect4.Laws.Program.Progress (1): Effect4.Program.progress
+## Effect4.Program.NativeOp.row_templateAdmissible: 0 declarations in 0 modules
+## Effect4.Program.NativeOp.row_wellScoped: 0 declarations in 0 modules
+## Effect4.Program.rowTy_closed: 0 declarations in 0 modules
+## Effect4.Program.rowTy_closed_some: 2 declarations in 2 modules
+  Effect4.Laws.Program.Progress (1): Effect4.Program.progress
+  Effect4.Laws.Program.Typed.Denotation (1): Effect4.Program.Typed.builtinPerform_inv
+## Effect4.Program.Typed.syncRow_typed: 3 declarations in 2 modules
+  Effect4.Laws.Program.Progress (1): Effect4.Program.progress
+  Effect4.Laws.Program.Typed.Denotation (2): Effect4.Program.Typed.inlineYield_typed, Effect4.Program.Typed.syncPerform_arm
+## Effect4.Program.Typed.fits_refTy_inv: 2 declarations in 2 modules
+  Effect4.Laws.Program.Typed.Denotation (1): Effect4.Program.Typed.syncRow_typed
+  Test.Program.ProgressContract (1): Test.Program.ProgressContract.bool_cell_not_ref
+## Effect4.Program.Typed.fits_deferredTy_inv: 3 declarations in 1 modules
+  Effect4.Laws.Program.Typed.Denotation (3): Effect4.Program.Typed.deferredAwait_arm, Effect4.Program.Typed.inlineYield_typed, Effect4.Program.Typed.syncRow_typed
+## Effect4.Program.Typed.refRead_nat: 1 declarations in 1 modules
+  Effect4.Laws.Program.Typed.Denotation (1): Effect4.Program.Typed.syncRow_typed
+## Effect4.Program.Typed.HandleFits: 20 declarations in 4 modules
+  Effect4.Laws.Program.Typed.Denotation (3): Effect4.Program.Typed.fits_deferredTy_inv, Effect4.Program.Typed.fits_refTy_inv, Effect4.Program.Typed.syncRow_typed
+  Effect4.Laws.Program.Typed.LayerArm (1): Effect4.Program.Typed.fits_memoMap_inv
+  Effect4.Laws.Program.Typed.Membership (15): Effect4.Program.Typed.Fits, Effect4.Program.Typed.Fits._f, Effect4.Program.Typed.Fits._unsafe_rec, Effect4.Program.Typed.Fits.alg, Effect4.Program.Typed.Fits.hom, Effect4.Program.Typed.FlatFits, Effect4.Program.Typed.fits_context_inv, Effect4.Program.Typed.fits_scope_inv, Effect4.Program.Typed.flatFits_fits, Effect4.Program.Typed.flatFits_map, Effect4.Program.Typed.handleFits_map, Effect4.Program.Typed.handle_fits_hasTy, Effect4.Program.Typed.handle_fits_live, Effect4.Program.Typed.handle_fits_map, Effect4.Program.Typed.live_handle
+  Test.Counterexamples.Machine.Semantics.ValueMembership (1): Test.Counterexamples.Machine.Semantics.ValueMembership.getProg_typedF
+## Effect4.Program.Typed.FlatFits: 46 declarations in 11 modules
+  Effect4.Laws.Program.Typed.Admission (1): Effect4.Program.Typed.servicesFit_restrict
+  Effect4.Laws.Program.Typed.Assembly (1): Effect4.Program.Typed.ambientScope_live
+  Effect4.Laws.Program.Typed.Commands.Clauses.Answer (1): Effect4.Program.Typed.live_context_of_servicesFit
+  Effect4.Laws.Program.Typed.Commands.Evaluate (1): Effect4.Program.Typed.clause_scoped
+  Effect4.Laws.Program.Typed.Denotation (4): Effect4.Program.Typed.fits_deferredTy_inv, Effect4.Program.Typed.fits_refTy_inv, Effect4.Program.Typed.provideService_arm, Effect4.Program.Typed.service_arm
+  Effect4.Laws.Program.Typed.LayerArm (10): Effect4.Program.Typed.addCurrentMemoMap_typed, Effect4.Program.Typed.bindService_typed, Effect4.Program.Typed.buildWithMemoMap_typed, Effect4.Program.Typed.construction_typed, Effect4.Program.Typed.effectDiscard_builds, Effect4.Program.Typed.effect_builds, Effect4.Program.Typed.fits_memoMap_inv, Effect4.Program.Typed.servicesFit_addV, Effect4.Program.Typed.servicesFit_merge, Effect4.Program.Typed.succeed_builds
+  Effect4.Laws.Program.Typed.Membership (24): Effect4.Program.Typed.Fits, Effect4.Program.Typed.Fits._f, Effect4.Program.Typed.Fits._unsafe_rec, Effect4.Program.Typed.Fits.alg, Effect4.Program.Typed.Fits.hom, Effect4.Program.Typed.MapFits.map_inv, Effect4.Program.Typed.ServicesFit, Effect4.Program.Typed.fits_bool_inv, Effect4.Program.Typed.fits_context_inv, Effect4.Program.Typed.fits_flatFits, Effect4.Program.Typed.fits_handle_fresh, Effect4.Program.Typed.fits_hasTy, Effect4.Program.Typed.fits_live, Effect4.Program.Typed.fits_nat_inv, Effect4.Program.Typed.fits_scope_inv, Effect4.Program.Typed.fits_string_inv, Effect4.Program.Typed.fits_unit_inv, Effect4.Program.Typed.flatFits_fits, Effect4.Program.Typed.flatFits_map, Effect4.Program.Typed.handle_fits_hasTy, Effect4.Program.Typed.handle_fits_live, Effect4.Program.Typed.handle_fits_map, Effect4.Program.Typed.servicesFit_empty, Effect4.Program.Typed.servicesFit_map
+  Test.Counterexamples.Machine.Semantics.ValueMembership (1): Test.Counterexamples.Machine.Semantics.ValueMembership.getProg_typedF
+  Test.Program.LoadedAdmission (1): Test.Program.LoadedAdmission.lookup_typed
+  Test.Program.ProtocolPosts (1): Test.Program.ProtocolPosts.CloseIter.capturedOk_append
+  Test.Program.TypedDenotation (1): Test.Program.TypedDenotation.strCtx_fits
+## Effect4.Program.internalHandleTargets: 3 declarations in 3 modules
+  Effect4.Laws.Program.Typed.Membership (1): Effect4.Program.Typed.fits_handle_fresh
+  Effect4.Program.Columns (1): Effect4.Program.internalHandleScan
+  Effect4.Program.Typed (1): Effect4.Program.externalHandleTarget
+## Effect4.Program.externalHandleTarget: 28 declarations in 13 modules
+  Effect4.Laws.Program.Admit (4): Effect4.Program.externalValue_input_handleFree, Effect4.Program.externalValue_internalFree, Effect4.Program.externalValue_typed, Effect4.Program.external_prepared_answer_internalFree
+  Effect4.Laws.Program.Admits (1): Effect4.Program.Val.hasTy_admitsExtend
+  Effect4.Laws.Program.Folds.Ty (2): Effect4.Program.Val.hasTy.alg, Effect4.Program.Val.hasTy.hom
+  Effect4.Laws.Program.Handles.Hooks (1): Effect4.Program.externalValue_minted
+  Effect4.Laws.Program.Typed (2): Effect4.Program.Val.hasTy_deferredTy_inv, Effect4.Program.Val.hasTy_refTy_inv
+  Effect4.Laws.Program.Typed.Denotation (2): Effect4.Program.Typed.fits_deferredTy_inv, Effect4.Program.Typed.fits_refTy_inv
+  Effect4.Laws.Program.Typed.LayerArm (1): Effect4.Program.Typed.fits_memoMap_inv
+  Effect4.Laws.Program.Typed.Membership (7): Effect4.Program.Typed.HandleFits, Effect4.Program.Typed.fits_context_inv, Effect4.Program.Typed.fits_handle_fresh, Effect4.Program.Typed.fits_scope_inv, Effect4.Program.Typed.handleFits_map, Effect4.Program.Typed.handle_fits_hasTy, Effect4.Program.Typed.live_handle
+  Effect4.Program.Compile (1): Effect4.Program.externalValue
+  Effect4.Program.Typed (3): Effect4.Program.Val.hasTy, Effect4.Program.Val.hasTy._f, Effect4.Program.Val.hasTy._unsafe_rec
+  Test.Counterexamples.Machine.Semantics.FitsOrder (1): Test.Counterexamples.Machine.Semantics.FitsOrder.Reviewed.HandleFits
+  Test.Counterexamples.Machine.Semantics.ValueMembership (2): Test.Counterexamples.Machine.Semantics.ValueMembership.ExactSpelling.HandleFits, Test.Counterexamples.Machine.Semantics.ValueMembership.getProg_typedF
+  Test.Program.ExitConnector (1): Test.Program.ExitConnector.redB_external
+## Effect4.Program.nativeSpell: 25 declarations in 6 modules
+  Effect4.Api (5): Effect4.Api.read, Effect4.Api.readAt, Effect4.Api.readModule, Effect4.Api.readable, Effect4.Api.roundTrip
+  Effect4.Codegen.Admit (10): Effect4.Codegen.ModuleReading, Effect4.Codegen.ModuleReading._sizeOf_1, Effect4.Codegen.ModuleReading.casesOn, Effect4.Codegen.ModuleReading.mk, Effect4.Codegen.ModuleReading.mk._flat_ctor, Effect4.Codegen.ModuleReading.noConfusionType, Effect4.Codegen.ModuleReading.read, Effect4.Codegen.ModuleReading.rec, Effect4.Codegen.ModuleReading.recOn, Effect4.Codegen.admitModule
+  Effect4.Codegen.Forms (1): Effect4.Codegen.Forms.Form.checkExample
+  Effect4.Laws.Api.ModuleReadable (1): Effect4.Codegen.ModuleEmission.readModule
+  Effect4.Laws.Codegen.Admit (6): Effect4.Codegen.ModuleEmission.admit, Effect4.Codegen.ModuleReading.mk.congr_simp, Effect4.Codegen.ModuleReading.recheck, Effect4.Codegen.admitModule_complete, Effect4.Codegen.admitModule_module, Effect4.Codegen.admitModule_read
+  Effect4.Laws.Codegen.ReadLeaf (2): Effect4.Program.nativeLawful, Effect4.Program.nativeSpell.match_1.splitter
+## Effect4.Program.Table.lawful: 5 declarations in 4 modules
+  Effect4.Codegen.Read (1): Effect4.Program.LawfulTable
+  Effect4.Laws.Program.Author (2): Effect4.Program.Authoring.build_lawful, Effect4.Program.Authoring.build_table_lawful
+  Effect4.Laws.Program.Signature (1): Effect4.Program.LawfulSig.tableLawful
+  Test.Program.AdmissionColumns (1): Test.Program.AdmissionColumns.dupTable_located
+## Effect4.Program.rowChecks: 11 declarations in 3 modules
+  Effect4.Laws.Program.Signature (9): Effect4.Program.LawfulSig.casesOn, Effect4.Program.LawfulSig.mk, Effect4.Program.LawfulSig.mk._flat_ctor, Effect4.Program.LawfulSig.rec, Effect4.Program.LawfulSig.recOn, Effect4.Program.LawfulSig.rows, Effect4.Program.SigApp.lawful_empty, Effect4.Program.lawful_append, Effect4.Program.sigRefusal?_eq_none_iff
+  Effect4.Laws.Program.Typed.Denotation (1): Effect4.Program.Typed.hostRow_valueVars
+  Effect4.Program.SigApp (1): Effect4.Program.sigRefusal?
+## Effect4.Program.Val.hasTy_refTy_inv: 1 declarations in 1 modules
+  Effect4.Laws.Program.Typed (1): Effect4.Program.syncOpOf_isSome
+## Effect4.Program.Val.hasTy_deferredTy_inv: 1 declarations in 1 modules
+  Effect4.Laws.Program.Typed (1): Effect4.Program.syncOpOf_isSome
+## Effect4.Program.nativeServiceTypes: 4 declarations in 4 modules
+  Effect4.Laws.Program.Typed.Denotation (1): Effect4.Program.Typed.serviceTy_flat
+  Effect4.Program.Native (1): Effect4.Program.nativeServiceTy
+  Effect4.Program.SigApp (1): Effect4.Program.SigApp.builtinCodeTy
+  Test.Codegen.ReadContract (1): Test.Codegen.ReadContract.nativeServiceTy_profile
+## Effect4.Program.NativeOp.deferredMake: 166 declarations in 60 modules
+  Effect4.Api.TestClock (1): Effect4.Api.TestClock.sleepDeadlines._sparseCasesOn_2
+  Effect4.Laws.Codegen.ReadLeaf (6): Effect4.Program.NativeOp.all_complete, Effect4.Program.NativeOp.external_not_mem_all, Effect4.Program.nativeLawful, Effect4.Program.nativeRowOf.match_1.splitter._sparseCasesOn_2, Effect4.Program.nativeRowOf_mem_all, Effect4.Program.nativeRow_hygiene
+  Effect4.Laws.Program.Admit (4): Effect4.Program.admit._sparseCasesOn_4.else_eq, Effect4.Program.admit.match_3.splitter._sparseCasesOn_4, Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_9, Effect4.Program.prepareExternalAnswer.match_5.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Agreement (5): Effect4.Program.Agreement.compileEff_perform, Effect4.Program.Agreement.compileEff_perform._sparseCasesOn_5, Effect4.Program.Agreement.compileEff_perform_sync, Effect4.Program.compileEff._sparseCasesOn_7.else_eq, Effect4.Program.compileEff.match_7.splitter._sparseCasesOn_2
+  Effect4.Laws.Program.Agreement.Machine (1): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_9
+  Effect4.Laws.Program.Authoring.Rows (1): Effect4.Program.Authoring.Deferred.make_scoped
+  Effect4.Laws.Program.Denote (2): Effect4.Program.Denote.Straight.perform_sync, Effect4.Program.NativeOp.kind.match_1.splitter
+  Effect4.Laws.Program.DenoteB (1): Effect4.Program.NativeOp.kind.match_1.splitter
+  Effect4.Laws.Program.DenoteR (13): Effect4.Program.NativeOp.row.match_1.splitter, Effect4.Program.Sched.denoteAsyncRoute, Effect4.Program.Sched.denoteAsyncRoute._sparseCasesOn_4, Effect4.Program.Sched.denoteAsyncRoute._sparseCasesOn_4.else_eq, Effect4.Program.Sched.denoteR_perform_sync, Effect4.Program.Sched.inlineAsyncYield_eq_headExit, Effect4.Program.Sched.inlineYield, Effect4.Program.Sched.inlineYield._sparseCasesOn_7, Effect4.Program.Sched.inlineYield._sparseCasesOn_7.else_eq, Effect4.Program.Sched.inlineYield_eq_headExit._f, Effect4.Program.Sched.inlineYield_perform_sync, Effect4.Program.asyncRoute._sparseCasesOn_10.else_eq, Effect4.Program.asyncRoute.match_10.splitter._sparseCasesOn_3
+  Effect4.Laws.Program.Guard.AnswerDecision (1): Effect4.Program.prepareExternalAnswer.match_5.splitter._sparseCasesOn_5
+  Effect4.Laws.Program.Guard.Core (3): Effect4.Program.Guard.registerExternal_internal_state, Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7, Effect4.Program.prepareExternalAnswer.match_5.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Guard.FrameOwned (2): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7, Effect4.Program.prepareExternalAnswer.match_5.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Guard.MemoIds (3): Effect4.Program.Guard.MemoIds.registerAsync, Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7, Effect4.Program.prepareExternalAnswer.match_5.splitter._sparseCasesOn_5
+  Effect4.Laws.Program.Guard.NativeState (1): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Guard.NativeStateExternal (1): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Guard.RaceSites (3): Effect4.Program.asyncRoute.match_10.splitter._sparseCasesOn_3, Effect4.Program.compileEff.match_7.splitter._sparseCasesOn_2, Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_9
+  Effect4.Laws.Program.Guard.RegistrationDone (1): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Handles.Compile (3): Effect4.Program.Agreement.compileEff_perform._sparseCasesOn_5.else_eq, Effect4.Program.Agreement.compileEff_perform.match_5.splitter._sparseCasesOn_2, Effect4.Program.asyncRoute_keys
+  Effect4.Laws.Program.Handles.Evaluation (1): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Handles.Hooks (3): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7, Effect4.Program.interpOf_keyBounded, Effect4.Program.prepareExternalAnswer.match_5.splitter._sparseCasesOn_5
+  Effect4.Laws.Program.Handles.Term (3): Effect4.Program.NativeOp.syncOpOf.match_1.splitter, Effect4.Program.NativeOp.syncOpOf.match_1.splitter._sparseCasesOn_21, Effect4.Program.syncOpOf_keys
+  Effect4.Laws.Program.Intro.Elementary (1): Effect4.Program.Sched.asyncRoute_means
+  Effect4.Laws.Program.Intro.Equations (2): Effect4.Program.Sched.compileEff_perform_nonsync, Effect4.Program.Sched.denoteR_perform_nonsync
+  Effect4.Laws.Program.Intro.Identity (1): Effect4.Program.Sched.prepareR_denoteAsyncRoute
+  Effect4.Laws.Program.Invocation (3): Effect4.Program.NativeOp.row.match_1.splitter, Effect4.Program.compileEff.match_7.splitter._sparseCasesOn_2, Effect4.Program.compileEff_perform_eq_asyncRoute
+  Effect4.Laws.Program.LinkedRows (1): Effect4.Program.nativeRowOf.match_1.splitter._sparseCasesOn_2
+  Effect4.Laws.Program.Progress (6): Effect4.Program.NativeOp.fnKernel._sparseCasesOn_1, Effect4.Program.NativeOp.syncOpOf._sparseCasesOn_1.else_eq, Effect4.Program.NativeOp.syncOpOf.match_1.splitter, Effect4.Program.NativeOp.syncOpOf.match_1.splitter._sparseCasesOn_21, Effect4.Program.NativeOp.syncOpOf_cellImplements, Effect4.Program.kernel_term_agrees
+  Effect4.Laws.Program.Signature (3): Effect4.Program.nativeRowOf._sparseCasesOn_1.else_eq, Effect4.Program.nativeRowOf.match_1.splitter._sparseCasesOn_2, Effect4.Program.rows_append
+  Effect4.Laws.Program.Simulation.Drive (2): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7, Effect4.Program.prepareExternalAnswer.match_5.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Simulation.Evaluate (1): Effect4.Program.Sched.registerAsync_foreign
+  Effect4.Laws.Program.Simulation.Walk (1): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_9
+  Effect4.Laws.Program.SoundAnySignature (1): Effect4.Program.Denote.nativeSignature_dom_sync
+  Effect4.Laws.Program.Template (1): Effect4.Program.NativeOp.row_closed
+  Effect4.Laws.Program.Typed (3): Effect4.Program.NativeOp.row.match_1.splitter, Effect4.Program.syncOpOf_async_none, Effect4.Program.syncOpOf_isSome
+  Effect4.Laws.Program.Typed.Commands.Bookkeeping (1): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7
+  Effect4.Laws.Program.Typed.Denotation (4): Effect4.Program.Typed.inlineYield_typed, Effect4.Program.Typed.nativeRowOf_builtin, Effect4.Program.Typed.perform_arm, Effect4.Program.Typed.syncRow_typed
+  Effect4.Laws.Run (2): Effect4.Run.rowOf._sparseCasesOn_1.else_eq, Effect4.Run.rowOf.match_1.splitter._sparseCasesOn_2
+  Effect4.Program.Admit (2): Effect4.Program.admit, Effect4.Program.admit._sparseCasesOn_4
+  Effect4.Program.Authoring.Rows (1): Effect4.Program.Authoring.Deferred.make
+  Effect4.Program.Compile (6): Effect4.Program.asyncRoute, Effect4.Program.asyncRoute._sparseCasesOn_10, Effect4.Program.compileEff, Effect4.Program.compileEff._sparseCasesOn_7, Effect4.Program.interpOf, Effect4.Program.prepareExternalAnswer
+  Effect4.Program.Native (19): Effect4.Program.NativeOp.all, Effect4.Program.NativeOp.casesOn, Effect4.Program.NativeOp.ctorElim, Effect4.Program.NativeOp.ctorElimType, Effect4.Program.NativeOp.deferredMake.elim, Effect4.Program.NativeOp.kind, Effect4.Program.NativeOp.kind.match_1.splitter, Effect4.Program.NativeOp.match_on_same_ctor._@.Effect4.Program.Native.3716835856._hygCtx._hyg, Effect4.Program.NativeOp.match_on_same_ctor.het._@.Effect4.Program.Native.3716835856._hygCtx._hyg, Effect4.Program.NativeOp.rec, Effect4.Program.NativeOp.recOn, Effect4.Program.NativeOp.row, Effect4.Program.NativeOp.row_kind, Effect4.Program.NativeOp.syncOpOf, Effect4.Program.NativeOp.syncOpOf._sparseCasesOn_1, Effect4.Program.instDecidableEqNativeOp.decEq, Effect4.Program.nativeRowOf, Effect4.Program.nativeRowOf._sparseCasesOn_1, Effect4.Program.nativeRowOf_nil
+  Effect4.Run (2): Effect4.Run.rowOf, Effect4.Run.rowOf._sparseCasesOn_1
+  Effect4.Store.Domain.Derived.Program (6): Effect4.Store.ProgramGen.NativeOpC.fits, Effect4.Store.ProgramGen.NativeOpC.ofVal, Effect4.Store.ProgramGen.NativeOpC.ofVal_exact, Effect4.Store.ProgramGen.NativeOpC.ofVal_toVal, Effect4.Store.ProgramGen.NativeOpC.toVal, Effect4.Store.ProgramGen.NativeOpC.toVal.match_1.splitter
+  Effect4.Store.Domain.ProgramWire (1): Effect4.Program.Wire.Corpus.pAwait
+  Test.Api.HostSessionContract (1): Effect4.Program.nativeRowOf.match_1.splitter._sparseCasesOn_2
+  Test.Api.KeyedHostContract (1): Effect4.Program.nativeRowOf.match_1.splitter._sparseCasesOn_2
+  Test.Counterexamples.Machine.Semantics.InterruptEscape (1): Test.Counterexamples.InterruptEscape.waiting
+  Test.Dogfood.P1HttpCache (1): Test.Dogfood.P1HttpCache.hostAnswer._sparseCasesOn_1
+  Test.Dogfood.P3WorkerQueue (1): Test.Dogfood.P3WorkerQueue.hostAnswer._sparseCasesOn_1
+  Test.Machine.Runtime.CompletionContract (1): Test.Runtime.CompletionContract.waiting
+  Test.Machine.Runtime.HandlesContract (1): Test.Runtime.HandlesContract.pDeferred
+  Test.Program.CompileContract (6): Test.Syntax.CompileContract.pDaemon, Test.Syntax.CompileContract.pDeferred, Test.Syntax.CompileContract.pMasked, Test.Syntax.CompileContract.pMiddleware, Test.Syntax.CompileContract.pScoped, Test.Syntax.CompileContract.pUnmasked
+  Test.Program.Gen (1): Test.Program.Gen.genOp
+  Test.Program.InvocationContract (1): Test.Program.InvocationContract.expected._sparseCasesOn_1
+  Test.Program.RuntimeRContract (6): Effect4.Program.interpOf.match_30.splitter._sparseCasesOn_7, Test.Program.RuntimeRContract.parTwo, Test.Program.RuntimeRContract.scopedCompletionInterrupt, Test.Program.RuntimeRContract.seqOne, Test.Program.RuntimeRContract.seqTwo, Test.Program.RuntimeRContract.withBudgetProgram
+  Test.Program.RuntimeRReference (12): Test.Program.RuntimeRReference.asyncCleanup, Test.Program.RuntimeRReference.dueDeferredFailure, Test.Program.RuntimeRReference.immediateDeferred, Test.Program.RuntimeRReference.middlewareChild, Test.Program.RuntimeRReference.orderedInterrupt, Test.Program.RuntimeRReference.parTwo, Test.Program.RuntimeRReference.racePending, Test.Program.RuntimeRReference.raceWinner, Test.Program.RuntimeRReference.seqOne, Test.Program.RuntimeRReference.seqTwo, Test.Program.RuntimeRReference.waiting, Test.Program.RuntimeRReference.waitingWithRef
+  Test.Program.RuntimeRShapesContract (1): Test.Program.RuntimeRShapesContract.dueInterrupt
+  Test.Program.SimulationContract (1): Test.Program.SimulationContract.ScopeRegistrationCollision.repeated
+  Test.Program.TypedCorpus (1): Test.Program.TypedCorpus.withPromise
+  Test.Run.RunContract (1): Effect4.Program.nativeRowOf.match_1.splitter._sparseCasesOn_2
+## Effect4.Program.NativeOp.syncOpOf: 56 declarations in 17 modules
+  Effect4.Laws.Program.Agreement (5): Effect4.Program.Agreement.compileEff_at_zero, Effect4.Program.Agreement.compileEff_perform, Effect4.Program.Agreement.compileEff_perform_sync, Effect4.Program.Agreement.localRun_compile._f, Effect4.Program.Agreement.meaning_of_asExit._f
+  Effect4.Laws.Program.Agreement.Machine (2): Effect4.Program.Agreement.compileEff_zero, Effect4.Program.Agreement.plainCode_compileEff._f
+  Effect4.Laws.Program.Denote (6): Effect4.Program.Denote.denote, Effect4.Program.Denote.denote._f, Effect4.Program.Denote.denote._unsafe_rec, Effect4.Program.Denote.meaning_perform_noDecode, Effect4.Program.Denote.meaning_perform_noEval, Effect4.Program.Denote.meaning_perform_sync
+  Effect4.Laws.Program.DenoteR (11): Effect4.Program.Sched.denoteEffBody, Effect4.Program.Sched.denoteR_perform, Effect4.Program.Sched.denoteR_perform_sync, Effect4.Program.Sched.denoteR_straight._f, Effect4.Program.Sched.denote_of_inlineYield._f, Effect4.Program.Sched.inlineSyncYield_eq_headExit, Effect4.Program.Sched.inlineYield, Effect4.Program.Sched.inlineYield._f, Effect4.Program.Sched.inlineYield._unsafe_rec, Effect4.Program.Sched.inlineYield_eq_headExit._f, Effect4.Program.Sched.inlineYield_perform_sync
+  Effect4.Laws.Program.Folds.Denote (4): Effect4.Program.Denote.denote.alg, Effect4.Program.Denote.denote.hom, Effect4.Program.Denote.denoteWith.alg, Effect4.Program.Denote.denoteWith.hom
+  Effect4.Laws.Program.Guard.RaceSites (1): Effect4.Program.Guard.raceSites_compileEff._unary
+  Effect4.Laws.Program.Handles.Compile (1): Effect4.Program.compileEff_keys._f
+  Effect4.Laws.Program.Handles.Term (1): Effect4.Program.syncOpOf_keys
+  Effect4.Laws.Program.Intro.Elementary (1): Effect4.Program.Sched.intro_perform
+  Effect4.Laws.Program.Intro.Equations (2): Effect4.Program.Sched.compileEff_perform_nonsync, Effect4.Program.Sched.denoteR_perform_nonsync
+  Effect4.Laws.Program.Intro.Identity (1): Effect4.Program.Sched.prepareR_denoteR._f
+  Effect4.Laws.Program.Invocation (2): Effect4.Program.compileEff_perform_eq_asyncRoute, Effect4.Program.compile_zero_fuel
+  Effect4.Laws.Program.MeaningSound (5): Effect4.Program.Denote.denoteWith, Effect4.Program.Denote.denoteWith._f, Effect4.Program.Denote.denoteWith._unsafe_rec, Effect4.Program.Denote.denoteWith_badShape._f, Effect4.Program.Denote.sound._f
+  Effect4.Laws.Program.Progress (3): Effect4.Program.NativeOp.syncOpOf_cellImplements, Effect4.Program.kernel_term_agrees, Effect4.Program.progress
+  Effect4.Laws.Program.Typed (2): Effect4.Program.syncOpOf_async_none, Effect4.Program.syncOpOf_isSome
+  Effect4.Laws.Program.Typed.Denotation (6): Effect4.Program.Typed.deferredAwait_arm, Effect4.Program.Typed.external_arm, Effect4.Program.Typed.inlineYield_typed, Effect4.Program.Typed.sleep_arm, Effect4.Program.Typed.syncPerform_arm, Effect4.Program.Typed.syncRow_typed
+  Effect4.Program.Compile (3): Effect4.Program.compileEff, Effect4.Program.compileEff._f, Effect4.Program.compileEff._unsafe_rec
+## Effect4.Program.builtinLookup_none: 1 declarations in 1 modules
+  Effect4.Laws.Codegen.ReadLeaf (1): Effect4.Program.nativeLawful

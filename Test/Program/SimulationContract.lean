@@ -159,7 +159,7 @@ namespace ScopeRegistrationCollision
 open Test.Program.RuntimeRContract
 
 def repeated (n : Nat) : NativeEff :=
-  .scoped (.bind (.perform .deferredMake (.lit .unit))
+  .scoped (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.iterate none (.lit (.nat 0))
       (.app "lt" (.cons (.var 1) (.cons (.lit (.nat n)) .nil)))
       (.app "succ" (.cons (.var 1) .nil))

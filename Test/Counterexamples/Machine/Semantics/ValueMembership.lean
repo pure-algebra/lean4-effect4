@@ -484,8 +484,8 @@ cell and deferred spellings read as their declarations: `Ref.Ref<number>` is a c
 `nat`, `Deferred.Deferred<number, number>` a deferred declared at `(nat, nat)`. -/
 def HandleFits (w : W) (inv : Inv) (kind : UInt8) (index : Nat) (target : String) : Prop :=
   match HandleKind.ofByte? kind with
-  | some .cell => target = NativeOp.refTarget ∧ RefDeclared w inv ⟨index⟩ .nat
-  | some .promise => target = NativeOp.deferredTarget ∧ PromiseDeclared w inv ⟨index⟩ .nat .nat
+  | some .cell => target = "Ref.Ref<number>" ∧ RefDeclared w inv ⟨index⟩ .nat
+  | some .promise => target = "Deferred.Deferred<number, number>" ∧ PromiseDeclared w inv ⟨index⟩ .nat .nat
   | some .scope => target = Ty.scopeTarget
   | some .external => externalHandleTarget target = true ∧
       w.state.externals.allocated[index]? = some target
@@ -722,23 +722,22 @@ theorem g5_control : Fits wNat (Val.fibers [⟨1⟩]) (.list (.fiberOf .nat .nev
   subst hid
   exact fiber1_accepted
 
--- G6: the native cell spelling `Ref.Ref<number>` at a cell declared `bool`.
-theorem g6_old : Reviewed.StrongValue wBoolCell (.handle NativeOp.refTarget) (Value.cell 0) := by
-  refine ⟨beq_iff_eq.mpr rfl, fun _ ctx hctx => ?_, fun k hk => ?_⟩
-  · exact nomatch hctx
-  · have hk' : k ∈ (Val.cell ⟨0⟩).keys := hk
-    rw [Val.keys_cell, List.mem_singleton] at hk'
-    subst hk'
-    exact Nat.zero_lt_one
-theorem g6_refused : ¬ Fits wBoolCell (Value.cell 0) (.handle NativeOp.refTarget) := by
-  rintro ⟨_, t', hs, hsub, _⟩
+-- G6: the native cell spelling `Ref.Ref<number>` at a cell declared `bool`. The old strong
+-- judgment accepted it: its coarse check read the cell's kind byte at the spelling, and
+-- `HandlesFit` has no arm for a spelling (the proof at `a917b768`). The state plan's T3a retired
+-- the spelling: no value fits it (`Val.hasTy_handle_retired`), so the old side is pinned as that
+-- refusal, and the cell type the spelling denoted, `refOf nat`, carries the pair.
+theorem g6_old : ¬ Reviewed.StrongValue wBoolCell (.handle "Ref.Ref<number>") (Value.cell 0) :=
+  fun h => Bool.noConfusion ((Val.hasTy_handle_retired (by decide)).symm.trans h.1)
+theorem g6_refused : ¬ Fits wBoolCell (Value.cell 0) (.refOf .nat) := by
+  rintro ⟨t', hs, hsub, _⟩
   rw [wBoolCell_zero] at hs
   cases hs
   change Ty.sub .bool .nat = true at hsub
   rw [bool_not_sub_nat] at hsub
   exact Bool.noConfusion hsub
-theorem g6_control : Fits wNatCell (Value.cell 0) (.handle NativeOp.refTarget) :=
-  ⟨rfl, .nat, wNatCell_zero, Ty.sub_refl _, Ty.sub_refl _⟩
+theorem g6_control : Fits wNatCell (Value.cell 0) (.refOf .nat) :=
+  ⟨.nat, wNatCell_zero, Ty.sub_refl _, Ty.sub_refl _⟩
 
 /-! ## G7: invariance spelled as equality is not closed under the checker's subtyping
 
@@ -803,7 +802,8 @@ namespace ReviewedLoad
 
 `loadsTyped` (`Typed/Assembly.lean:148-150`, `#proof_wanted`) promises a typed
 initial state for every checked source with closed columns. The one-line program below checks at
-`Ref.Ref<number>` (kernel, `decide +kernel`); its loaded code is the store protocol's
+`refOf nat` (kernel, `decide +kernel`; the cell spelling `Ref.Ref<number>` before the state plan's
+T3a); its loaded code is the store protocol's
 `refMake` step followed by returning the answer (`loaded_root`, by `rfl`). Every typed state of the
 loaded machine types that code at the root's type, and `refProg_untypable` refutes that at every
 world with an empty heap and an undeclared cell 0, which `WorldValid` forces for the loaded
@@ -811,7 +811,7 @@ machine. The obstruction is G8's: `HandlesLive` reads the heap length, the post 
 table. -/
 
 def refProg : NativeEff := .perform .refMake (.lit (.nat 5))
-abbrev refTy : EffTy := EffTy.pure (.handle NativeOp.refTarget)
+abbrev refTy : EffTy := EffTy.pure (.refOf .nat)
 
 theorem refProg_checks : Api.typeOf refProg [] = some refTy := by decide +kernel
 
@@ -882,12 +882,12 @@ def getProg : NativeEff := .bind (.perform .refMake (.lit (.nat 5))) (.perform .
 
 /-- The seat's `refProg_typedF`, re-proved here: allocate and return, at every world. -/
 theorem refProg_typedF (w : W) :
-    TypedProg (refProg : ProgramSource) w (EffTy.pure (.handle NativeOp.refTarget))
+    TypedProg (refProg : ProgramSource) w (EffTy.pure (.refOf .nat))
       (denoteR refProg refProg (rootPoint 20)) := by
   refine TypedProg.store (cert := Ty.nat) trivial ?_
   intro w' _ ans hpost
   obtain ⟨key, rfl, hs⟩ := hpost
-  exact TypedProg.pure ⟨⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
+  exact TypedProg.pure ⟨⟨.nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
 
 /-- The continuation after the guard, for a cell: the read. -/
 theorem getProg_after (index : Nat) (completed : List (FiberId × ExitV)) :
@@ -896,50 +896,36 @@ theorem getProg_after (index : Nat) (completed : List (FiberId × ExitV)) :
       .vis (.inl (.refGet ⟨index⟩)) fun v => .pure (.success v) := rfl
 
 /-- `Ref.make(5).flatMap(r => Ref.get(r))` at every world. The guard's body allocates and
-unguards the cell at `Ref.Ref<number>`; the declaration the post names is the fit. The run arm
+unguards the cell at `refOf nat`; the declaration the post names is the fit. The run arm
 reads the cell's declaration from the value's fit (the only link across the guard), carries it
 to the later worlds, and reads the answer through `fits_subN` from the declaration's `Equiv` to
 `nat` (the checker's order, row 137). The skip arm is a clean failure. -/
 theorem getProg_typedF (w : W) :
     TypedProg (getProg : ProgramSource) w (EffTy.pure .nat)
       (denoteR getProg getProg (rootPoint 20)) := by
-  refine TypedProg.guard (EffTy.pure (.handle NativeOp.refTarget)) ?_ ?_ ?_
+  refine TypedProg.guard (EffTy.pure (.refOf .nat)) ?_ ?_ ?_
   · refine TypedProg.store (cert := Ty.nat) trivial ?_
     intro w' _ ans hpost
     obtain ⟨key, rfl, hs⟩ := hpost
-    exact TypedProg.unguard ⟨⟨rfl, .nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
+    exact TypedProg.unguard ⟨⟨.nat, hs, Ty.sub_refl _, Ty.sub_refl _⟩, trivial⟩
   · intro w' _ ex hpost
     cases ex with
     | failure c => exact Bool.noConfusion hpost.1
     | success v =>
-      have hv : Fits w' v (.handle NativeOp.refTarget) := hpost.2.1
-      simp only [Effect4.Program.Typed.Fits] at hv
-      split at hv
-      · rename_i kind index
-        simp only [HandleFits] at hv
-        split at hv
-        · rename_i hk
-          obtain ⟨_, t', hΡ, hsub, _⟩ := hv
-          have hkind := HandleKind.ofByte?_exact hk
-          subst hkind
-          refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
-            (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial ?_
-          intro w'' hle' completed _
-          rw [show Val.handle HandleKind.cell.byte index = Val.cell ⟨index⟩ from rfl, getProg_after]
-          refine TypedProg.store (cert := ()) ⟨t', hle'.1.2.2.2.1 _ _ hΡ⟩ ?_
-          intro w''' hle'' ans hpost'
-          obtain ⟨ty, hty, hfit⟩ := hpost'
-          have hsame : w'''.Ρ ⟨index⟩ = some t' := hle''.1.2.2.2.1 _ _ (hle'.1.2.2.2.1 _ _ hΡ)
-          change w'''.Ρ ⟨index⟩ = some ty at hty
-          rw [hsame] at hty
-          cases hty
-          exact TypedProg.pure ⟨fits_subN w''' hsub ans hfit, trivial⟩
-        · exact absurd hv.1 (by decide)
-        · exact absurd hv.1 (by decide)
-        · exact absurd hv.1 (by decide)
-        · exact absurd hv.1 (by decide)
-        · exact hv.elim
-      · exact absurd hv.1 (by decide)
+      have hv : Fits w' v (.refOf .nat) := hpost.2.1
+      obtain ⟨⟨index⟩, rfl, t', hΡ, hsub, _⟩ := fits_refOf_inv hv
+      refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial ?_
+      intro w'' hle' completed _
+      rw [getProg_after]
+      refine TypedProg.store (cert := ()) ⟨t', hle'.1.2.2.2.1 _ _ hΡ⟩ ?_
+      intro w''' hle'' ans hpost'
+      obtain ⟨ty, hty, hfit⟩ := hpost'
+      have hsame : w'''.Ρ ⟨index⟩ = some t' := hle''.1.2.2.2.1 _ _ (hle'.1.2.2.2.1 _ _ hΡ)
+      change w'''.Ρ ⟨index⟩ = some ty at hty
+      rw [hsame] at hty
+      cases hty
+      exact TypedProg.pure ⟨fits_subN w''' hsub ans hfit, trivial⟩
   · intro w' _ ex hex miss
     cases ex with
     | success v => exact Bool.noConfusion miss
@@ -963,7 +949,7 @@ theorem typedStateF_load (root : ProgramSource) (ty : EffTy) (fuel compileFuel :
   typedState_load_of_code root ty fuel compileFuel noMarker code
 
 theorem typedStateF_load_ref :
-    ∃ w, TypedState (refProg : ProgramSource) (EffTy.pure (.handle NativeOp.refTarget)) w
+    ∃ w, TypedState (refProg : ProgramSource) (EffTy.pure (.refOf .nat)) w
       (loadR refProg 20 20) :=
   typedStateF_load refProg _ 20 20 rfl refProg_typedF
 

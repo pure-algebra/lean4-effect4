@@ -96,16 +96,19 @@ namespace FormationReasonC
 def shapeDoc : ShapeDoc :=
   ⟨.sum "FormationReason"
      [("repeatedField", 0, [("name", (shape _root_.String).root)]),
-      ("mapKey", 1, [])],
+      ("mapKey", 1, []),
+      ("deferredError", 2, [])],
    (shape _root_.String).defs⟩
 
 def toVal : _root_.Effect4.Program.FormationReason → Val
   | .repeatedField a0 => .ctor 0 [Canonical.toVal a0]
   | .mapKey => .ctor 1 []
+  | .deferredError => .ctor 2 []
 
 def ofVal : Val → Option (_root_.Effect4.Program.FormationReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.String) v0).map .repeatedField
   | .ctor 1 [] => some .mapKey
+  | .ctor 2 [] => some .deferredError
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -137,6 +140,8 @@ theorem fits (a : _root_.Effect4.Program.FormationReason) : shapeDoc.accepts (to
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0) (acceptsFields_nil _))
   | «mapKey» =>
     exact accepts_sum _ _ _ 1 "mapKey" [] [] rfl (acceptsFields_nil _)
+  | «deferredError» =>
+    exact accepts_sum _ _ _ 2 "deferredError" [] [] rfl (acceptsFields_nil _)
 
 instance instCanonical : Canonical (_root_.Effect4.Program.FormationReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩

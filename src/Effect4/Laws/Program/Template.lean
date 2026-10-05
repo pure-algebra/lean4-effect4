@@ -1,4 +1,6 @@
 import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Auto.Semantics
 import Effect4.Program.Typing
 import Effect4.Program.Native
 import Effect4.Program.SigApp
@@ -8,16 +10,17 @@ import Aesop
 # Laws.Program.Template — the row-template calculus (decisions row 42)
 
 `Ty.instantiate`, `Ty.infer` and `Ty.matchTemplate` (`Program/Ty.lean`) with their laws. A
-match is sound by its own guard (`matchTemplate_sound`), whichever rule `join` picks, and a
-list match puts every argument at its parameter's instance under the bindings of the LAST
-step, because inference only widens (`matchTemplateArgs_widens`) and instantiation carries a
-widening to every template (`cata_admits_instantiate`). On a closed template the calculus is
-the identity and subsumption (`instantiate_closed`, `infer_closed`, `matchTemplate_closed`),
-so a row with no parameter types exactly as it did before the templates (`rowTy_closed`,
-`rowTy_closed_some`). `closed` survives `normalize` (`closed_normalize`), which carries a
-row's closedness through the signature's canonical view (`Row.normalizeTypes`). The native
-rows of this cut are all closed (`NativeOp.row_closed`): no row is a template until step 3
-of `docs/research/2026-09-18-rows-42-43-plan.md`.
+match is sound by its own guard (`matchTemplate_sound`), whichever rule `join` picks, at the
+normalized instance, and a list match puts every argument at its parameter's instance under the
+bindings of the LAST step, because inference only widens (`matchTemplateArgs_widens`) and
+instantiation carries a widening to every template (`cata_admits_instantiate`). On a closed
+template the calculus is the identity and subsumption (`instantiate_closed`, `infer_closed`,
+`matchTemplate_closed`), so a closed row types exactly as it did before the templates
+(`rowTy_closed`, `rowTy_closed_some`). `closed` survives `normalize` (`closed_normalize`). The
+`Ref` and `Deferred` rows are templates over their type parameters (the state plan's T3a), so the
+native rows' profile holds at every operation whose own type arguments are closed
+(`NativeOp.row_templateAdmissible`, `NativeOp.row_wellScoped`). The match's completeness on
+anchored templates is a planned goal (`Ty.matchTemplate_complete_anchored`).
 -/
 
 namespace Effect4.Program
@@ -119,6 +122,21 @@ theorem instantiate_closed (σ : Subst) (t : Ty) (h : closed t = true) : instant
     exact List.map_congr_left fun t ht => ih t ht (h t ht)
   | _ => aesop (add norm simp [closed, instantiate])
 
+/-- The field a closed record's lookup finds is closed: the step of `infer_closed` at a
+record field, which `inferFields` reads by name. -/
+theorem closed_of_lookup {fs : List (String × Bool × Ty)} {n : String} {o : Bool} {ty : Ty}
+    (hl : fs.lookup n = some (o, ty)) (h : closedFields fs = true) : closed ty = true := by
+  induction fs with
+  | nil => cases hl
+  | cons p fs ih =>
+    obtain ⟨m, o', t'⟩ := p
+    have hc := Bool.and_eq_true_iff.mp h
+    simp only [List.lookup] at hl
+    split at hl
+    · cases hl
+      exact hc.1
+    · exact ih hl hc.2
+
 theorem infer_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t = true) :
     infer σ t r join = σ := by
   revert h
@@ -164,26 +182,30 @@ theorem infer_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t = true)
   case case16 ih => exact ih
   case case17 ih => exact ih
   case case18 => intro _; rfl
-  case case19 => intro _; rfl
-  case case20 => rfl
-  case case21 ih h => exact ih (Bool.and_eq_true_iff.mp h).2
-  case case22 ih₁ ih₂ h =>
+  -- a request union, member by member (`E4-CHECK-CE-018`): the template stays closed
+  case case19 ih₁ ih₂ =>
+    intro h
+    exact (ih₂ h).trans (ih₁ h)
+  case case20 => intro _; rfl
+  case case21 => rfl
+  case case22 ih h => exact ih h
+  case case23 hl ih₁ ih₂ h => exact (ih₂ h).trans (ih₁ (closed_of_lookup hl h))
+  case case24 ih₁ ih₂ h =>
     have hc := Bool.and_eq_true_iff.mp h
     exact (ih₂ hc.2).trans (ih₁ hc.1)
-  case case23 ih₁ ih₂ h =>
-    have hc := Bool.and_eq_true_iff.mp h
-    exact (ih₂ hc.2).trans (ih₁ hc.1)
-  case case24 => rfl
+  case case25 => rfl
 
-/-- A match is sound: the request is a subtype of the template at the bindings. -/
+/-- A match is sound: the request is below the template's instance at the bindings in the
+checker's order, both sides normalized. -/
 theorem matchTemplate_sound {join : Bool} (σ : Subst) (t r : Ty) (σ' : Subst)
-    (h : matchTemplate σ t r join = some σ') : sub r (instantiate σ' t) = true := by
+    (h : matchTemplate σ t r join = some σ') :
+    sub r.normalize (instantiate σ' t).normalize = true := by
   unfold matchTemplate at h
   aesop
 
-/-- On a closed template the match is subsumption and the seed. -/
+/-- On a closed template the match is subsumption of the normal forms, and the seed. -/
 theorem matchTemplate_closed {join : Bool} (σ : Subst) (t r : Ty) (h : closed t = true) :
-    matchTemplate σ t r join = if sub r t then some σ else none := by
+    matchTemplate σ t r join = if sub r.normalize t.normalize then some σ else none := by
   simp only [matchTemplate, infer_closed σ t r h, instantiate_closed σ t h]
 
 /-! ### What a list match binds, at the end of the list
@@ -332,10 +354,10 @@ theorem rowTy_closed (row : Row) (r : Ty) (hreq : row.request.closed = true)
   cases hsub : Ty.sub r.normalize row.request.normalize with
   | false =>
     simp only [rowTy, checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
-      hsub, Bool.false_eq_true, ↓reduceIte, Except.toOption]
+      Ty.normalize_idem, hsub, Bool.false_eq_true, ↓reduceIte, Except.toOption]
   | true =>
     simp only [rowTy, checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
-      hsub, ↓reduceIte, hformed, Except.toOption,
+      Ty.normalize_idem, hsub, ↓reduceIte, hformed, Except.toOption,
       Ty.instantiate_closed _ _ hans, Ty.instantiate_closed _ _ herr]
 
 /-- A successful closed-row match still exposes subsumption and its own columns.
@@ -349,11 +371,11 @@ theorem rowTy_closed_some {row : Row} {r : Ty} {t : EffTy} (hreq : row.request.c
   cases hsub : Ty.sub r.normalize row.request.normalize with
   | false =>
     simp only [checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
-      hsub, Bool.false_eq_true, ↓reduceIte] at h
+      Ty.normalize_idem, hsub, Bool.false_eq_true, ↓reduceIte] at h
     cases h
   | true =>
     simp only [checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
-      hsub, ↓reduceIte] at h
+      Ty.normalize_idem, hsub, ↓reduceIte] at h
     split at h
     · cases h
     · simp only [Ty.instantiate_closed _ _ hans, Ty.instantiate_closed _ _ herr,
@@ -408,27 +430,6 @@ theorem checkRow_request_iff (row : Row) (request : Ty) :
   | some bindings =>
     simp only [checkRow, matched, reduceCtorEq]
     split <;> simp only [Except.error.injEq, reduceCtorEq]
-
-/-- Every native row of this cut is closed: no row is a template yet. -/
-theorem NativeOp.row_closed (op : NativeOp) :
-    (NativeOp.row op).request.closed = true ∧ (NativeOp.row op).answer.closed = true ∧
-      (NativeOp.row op).error.closed = true := by
-  cases op with
-  | scopeMake strategy => cases strategy <;> exact ⟨rfl, rfl, rfl⟩
-  | _ => exact ⟨rfl, rfl, rfl⟩
-
-/-- The native signature's canonical rows are closed. -/
-theorem nativeSignature_row_closed (op : NativeOp) :
-    (nativeSignature.rowOf op).request.closed = true ∧
-      (nativeSignature.rowOf op).answer.closed = true ∧
-      (nativeSignature.rowOf op).error.closed = true := by
-  show ((nativeRowOf [] op).normalizeTypes).request.closed = true ∧
-    ((nativeRowOf [] op).normalizeTypes).answer.closed = true ∧
-    ((nativeRowOf [] op).normalizeTypes).error.closed = true
-  rw [nativeRowOf_nil]
-  exact ⟨Ty.closed_normalize _ (NativeOp.row_closed op).1,
-    Ty.closed_normalize _ (NativeOp.row_closed op).2.1,
-    Ty.closed_normalize _ (NativeOp.row_closed op).2.2⟩
 
 /-! ## What a row's template may say, and what the guard buys (plan 1.8)
 
@@ -514,23 +515,168 @@ theorem varsOf_eq_nil_of_closed (t : Ty) (h : closed t = true) : varsOf t = [] :
 
 end Ty
 
-/-- Every native row of this cut has an admissible template. Vacuously, because every row is
-closed (`row_closed`) — but the statement is the one that survives step 3 of
-`docs/research/2026-09-18-rows-42-43-plan.md`, when the rows stop being closed. -/
-theorem NativeOp.row_templateAdmissible (op : NativeOp) :
+/-- The operations whose own type arguments are closed: every one but a `Deferred.make` spelled
+at a parameter. The checker's rows are closed in their type arguments, since a program's
+annotations are closed types; a type argument with a parameter would make the answer bind a
+parameter its request does not mention. -/
+def NativeOp.typeArgsClosed : NativeOp → Bool
+  | .deferredMakeOf value error => value.closed && error.closed
+  | _ => true
+
+/-- Every native row whose type arguments are closed has an admissible template: a parameter sits
+only under a handle or a product, never under a union. -/
+theorem NativeOp.row_templateAdmissible (op : NativeOp) (h : op.typeArgsClosed = true) :
     (NativeOp.row op).request.templateAdmissible = true ∧
       (NativeOp.row op).answer.templateAdmissible = true ∧
-      (NativeOp.row op).error.templateAdmissible = true :=
-  ⟨Ty.templateAdmissible_of_closed _ (NativeOp.row_closed op).1,
-    Ty.templateAdmissible_of_closed _ (NativeOp.row_closed op).2.1,
-    Ty.templateAdmissible_of_closed _ (NativeOp.row_closed op).2.2⟩
+      (NativeOp.row op).error.templateAdmissible = true := by
+  cases op with
+  | scopeMake strategy => cases strategy <;> exact ⟨rfl, rfl, rfl⟩
+  | deferredMakeOf value error =>
+    have hc := Bool.and_eq_true_iff.mp h
+    refine ⟨rfl, ?_, rfl⟩
+    show (Ty.deferredOf value error).templateAdmissible = true
+    simp only [Ty.templateAdmissible, Ty.templateAdmissible_of_closed _ hc.1,
+      Ty.templateAdmissible_of_closed _ hc.2, Bool.and_self]
+  | _ => exact ⟨rfl, rfl, rfl⟩
 
-/-- Every native row of this cut is well scoped, for the same reason and with the same
-future: a row that binds a parameter on its answer without binding it on its request fails
-here rather than in the printer. -/
-theorem NativeOp.row_wellScoped (op : NativeOp) : (NativeOp.row op).wellScoped = true := by
-  simp only [Row.wellScoped, Ty.varsOf_eq_nil_of_closed _ (NativeOp.row_closed op).2.1,
-    Ty.varsOf_eq_nil_of_closed _ (NativeOp.row_closed op).2.2, List.append_nil, List.all_nil]
+/-- Every native row whose type arguments are closed is well scoped: every parameter of its
+answer and error is one its request mentions, so inference binds it from the request. -/
+theorem NativeOp.row_wellScoped (op : NativeOp) (h : op.typeArgsClosed = true) :
+    (NativeOp.row op).wellScoped = true := by
+  cases op with
+  | scopeMake strategy => cases strategy <;> rfl
+  | deferredMakeOf value error =>
+    have hc := Bool.and_eq_true_iff.mp h
+    simp only [Row.wellScoped, NativeOp.row, Ty.varsOf, Ty.varsOf_eq_nil_of_closed _ hc.1,
+      Ty.varsOf_eq_nil_of_closed _ hc.2, List.append_nil, List.all_nil]
+  | _ => rfl
+
+/-! ## The match's completeness on anchored templates (planned goal)
+
+`matchTemplate_sound` is the guard's half. The other half says which requests the match finds a
+substitution for. A parameter whose first occurrence in `infer`'s walk is an invariant handle's
+argument (`refOf`, `deferredOf`) is bound there to a type equivalent to every substitution's, so
+the later occurrences need no rebinding. The walk reaches that argument in every union member
+unless a member holds `never` on the way, which the order admits below any handle; then a
+covariant occurrence binds first (`docs/research/2026-10-04-seat-T3a/AnchoredGoal.lean`). -/
+
+namespace Ty
+
+/-- The carrier of `paramOccurrences`: the node's own parameter when it is one, and its
+occurrence list. -/
+abbrev OccCarrier := Option Nat × List (Nat × Bool)
+
+/-- A handle argument's occurrences: the argument itself, flagged as an anchor, when it is a
+parameter, else its own occurrences. -/
+def anchorOcc : OccCarrier → List (Nat × Bool)
+  | (some i, _) => [(i, true)]
+  | (none, occ) => occ
+
+/-- The occurrence fold. A record's fields are read in canonical order, as `infer` reads a
+normal request's. A nominal argument is read at its declaration's variance, which may be
+contravariant, so no occurrence under a reference is an anchor. -/
+def paramOccurrencesAlg : TyAlgebra (fun _ => OccCarrier) where
+  ty_never := (none, [])
+  ty_unit := (none, [])
+  ty_nat := (none, [])
+  ty_int := (none, [])
+  ty_string := (none, [])
+  ty_bool := (none, [])
+  ty_handle _ := (none, [])
+  ty_option a := (none, a.2)
+  ty_list a := (none, a.2)
+  ty_prod a b := (none, a.2 ++ b.2)
+  ty_except e a := (none, e.2 ++ a.2)
+  ty_exitOf a e := (none, a.2 ++ e.2)
+  ty_causeOf e := (none, e.2)
+  ty_fiberOf a e := (none, a.2 ++ e.2)
+  ty_union a b := (none, a.2 ++ b.2)
+  ty_lit _ := (none, [])
+  ty_refOf a := (none, anchorOcc a)
+  ty_deferredOf a e := (none, anchorOcc a ++ anchorOcc e)
+  ty_var i := (some i, [(i, false)])
+  ty_unknown := (none, [])
+  ty_record fs := (none, (canon fs).flatMap fun p => p.2.2.2)
+  ty_map k v := (none, k.2 ++ v.2)
+  ty_tuple ts := (none, ts.flatMap Prod.snd)
+  ty_app _ ts := (none, ts.flatMap fun r => r.2.map fun o => (o.1, false))
+  ty_null := (none, [])
+  ty_undefined := (none, [])
+  ty_number := (none, [])
+  ty_bytes := (none, [])
+
+/-- A template's parameter occurrences in `infer`'s order, each flagged when it is the direct
+argument of an invariant handle. -/
+def paramOccurrences (t : Ty) : List (Nat × Bool) := (cata_ty paramOccurrencesAlg t).2
+
+/-- Each parameter's first occurrence in the list is flagged, `seen` the parameters already met. -/
+def anchoredFrom (seen : List Nat) : List (Nat × Bool) → Bool
+  | [] => true
+  | (i, anchor) :: rest => (anchor || seen.contains i) && anchoredFrom (i :: seen) rest
+
+/-- Every parameter of the template first occurs as an invariant handle's argument. -/
+def anchored (t : Ty) : Bool := anchoredFrom [] t.paramOccurrences
+
+/-- No `never` outside an invariant handle's argument, where a member of a request union could
+stand below a handle the template walks to. -/
+def bottomFreeAlg : TyAlgebra (fun _ => Bool) where
+  ty_never := false
+  ty_unit := true
+  ty_nat := true
+  ty_int := true
+  ty_string := true
+  ty_bool := true
+  ty_handle _ := true
+  ty_option a := a
+  ty_list a := a
+  ty_prod a b := a && b
+  ty_except e a := e && a
+  ty_exitOf a e := a && e
+  ty_causeOf e := e
+  ty_fiberOf a e := a && e
+  ty_union a b := a && b
+  ty_lit _ := true
+  ty_refOf _ := true
+  ty_deferredOf _ _ := true
+  ty_var _ := true
+  ty_unknown := true
+  ty_record fs := fs.all fun p => p.2.2
+  ty_map k v := k && v
+  ty_tuple ts := ts.all id
+  ty_app _ ts := ts.all id
+  ty_null := true
+  ty_undefined := true
+  ty_number := true
+  ty_bytes := true
+
+/-- A request type with no `never` outside an invariant handle's argument. -/
+def bottomFree (t : Ty) : Bool := cata_ty bottomFreeAlg t
+
+#guard anchored (.refOf (.var 0))
+#guard anchored (.prod (.refOf (.var 0)) (.var 0))
+#guard anchored (.prod (.deferredOf (.var 0) (.var 1)) (.var 1))
+-- `Ref.make`'s bare parameter is not anchored: the match binds it at its first arm
+#guard !anchored (.var 0)
+#guard !anchored (.prod (.var 0) (.refOf (.var 0)))
+#guard !bottomFree (.union (.prod .never (.lit "a")) (.prod (.refOf .string) (.lit "b")))
+#guard bottomFree (.prod (.deferredOf .nat .never) .nat)
+
+/-- **The match is complete on anchored templates** (planned goal; the claim
+`template-match-anchored`, R4): at a normal, admissible template whose every parameter first
+occurs as an invariant handle's argument, every normal request with no `never` outside such an
+argument that some substitution puts under the instance has a match. Its soundness half is
+`matchTemplate_sound`. The `bottomFree` premise is needed, not a convenience: a union member whose
+anchor holds `never` binds the parameter at a covariant occurrence first, and the statement
+without it is false for the repaired `infer` (tested,
+`docs/research/2026-10-04-seat-T3a/AnchoredGoal.lean`). It does not establish completeness where
+a parameter first occurs covariantly, under a union template, or under a nominal reference. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
+proof_goal matchTemplate_complete_anchored {t r : Ty} {τ : Subst} (ht : Normal t)
+    (hadm : t.templateAdmissible = true) (hanch : t.anchored = true) (hr : Normal r)
+    (hbot : r.bottomFree = true) (hτ : sub r.normalize (t.instantiate τ).normalize = true) :
+    ∃ σ, matchTemplate [] t r = some σ
+
+end Ty
 
 /-- **The order is sound for membership.** Whatever the guard admits, the value really does
 inhabit the template's instance: this is `hasTy_sub`, named here as the half of the guard's

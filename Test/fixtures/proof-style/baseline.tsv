@@ -93,8 +93,6 @@ src/Effect4/Laws/Codegen/PrintReadable.lean	kind_stmts	simp_all	1
 src/Effect4/Laws/Codegen/PrintReadable.lean	kind_str	simp_all	1
 src/Effect4/Laws/Codegen/PrintReadable.lean	kind_type	simp_all	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	<Lean.Parser.Command.macro>	first	2
-src/Effect4/Laws/Codegen/ReadLeaf.lean	NativeOp.all_complete	first	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	NativeOp.external_not_mem_all	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	Var.read_exact	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	addReceiver_rowAnswer	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	bind_eq_ok	simp-without-only	1
@@ -104,11 +102,8 @@ src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_exact	simp-without-only	3
 src/Effect4/Laws/Codegen/ReadLeaf.lean	idents?_map	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	map_eq_ok	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	methodLawful	simp-without-only	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeLawful	first	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeLawful	simp-without-only	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeRowOf_external	simp-without-only	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeRowOf_mem_all	first	1
-src/Effect4/Laws/Codegen/ReadLeaf.lean	nativeRow_hygiene	first	1
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readCause_exact	simp-without-only	5
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readCause_exact	simp_all	2
 src/Effect4/Laws/Codegen/ReadLeaf.lean	readCause_printCause	simp-without-only	5
@@ -851,7 +846,6 @@ src/Effect4/Laws/Program/PathOrder.lean	lt_trans	simp-without-only	3
 src/Effect4/Laws/Program/PathOrder.lean	lt_trichotomy	simp-without-only	4
 src/Effect4/Laws/Program/PathOrder.lean	sortBy_pairwise	simp-without-only	3
 src/Effect4/Laws/Program/PathOrder.lean	sortBy_perm	simp-without-only	1
-src/Effect4/Laws/Program/Progress.lean	NativeAtom.getOrElse_validIn	first	1
 src/Effect4/Laws/Program/ReasonsR.lean	filter_compileReasons	simp-without-only	1
 src/Effect4/Laws/Program/ReasonsR.lean	filter_compileReasonsR	simp-without-only	1
 src/Effect4/Laws/Program/ReasonsR.lean	replayRel_reasons_nonCompile	first	1

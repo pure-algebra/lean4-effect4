@@ -1007,8 +1007,7 @@ are `Table.lawful`'s uniqueness clause, and each row's local checks contain its 
 and value-row clauses. So the typed state's `LawfulSource`, which reads this structure, contains
 the `Table.lawful` premise it read before seat A's field (integration seat I2). -/
 theorem LawfulSig.tableLawful {app : SigApp} (h : LawfulSig app) : Table.lawful app.rows = true := by
-  have collision : ∀ r ∈ app.rows,
-      (!(NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r)) = true :=
+  have collision : ∀ r ∈ app.rows, (!builtinKeys.contains (rowKey r)) = true :=
     fun r hr => h.rows r hr _ (List.mem_cons_of_mem _ (List.mem_cons_of_mem _ List.mem_cons_self))
   have trailing : ∀ r ∈ app.rows, (!(r.shape == .value) || r.trailing.isEmpty) = true :=
     fun r hr => h.rows r hr _

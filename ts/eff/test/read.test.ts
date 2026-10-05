@@ -76,14 +76,17 @@ describe("rows: the shape the grammar could not decide", () => {
   })
   test("an async row reads back as perform", () => {
     expect(json("Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))")).toBe(
-      '["bind",["perform",["deferredMake"],["lit",["unit"]]],["perform",["deferredAwait"],["var",0]]]',
+      '["bind",["perform",["deferredMakeOf",["nat"],["nat"]],["lit",["unit"]]],["perform",["deferredAwait"],["var",0]]]',
     )
   })
   // E4-CHECK-CE-013: a row that declares type arguments is read at exactly that spelling
-  // (`Deferred.make<number, number>()`); a bare call, the wrong arguments, a row that declares
-  // none, and a reserved head carrying any are refused, as the Lean reader refuses them.
+  // (`Deferred.make<number, number>()`, the instance the faces spell until T5: `deferredMakeOf`
+  // at `nat, nat`); a bare call, the wrong arguments, a row that declares none, and a reserved
+  // head carrying any are refused, as the Lean reader refuses them.
   test("Deferred.make<number, number>() is the row with its declared type arguments", () => {
-    expect(json("Deferred.make<number, number>()")).toBe('["perform",["deferredMake"],["lit",["unit"]]]')
+    expect(json("Deferred.make<number, number>()")).toBe(
+      '["perform",["deferredMakeOf",["nat"],["nat"]],["lit",["unit"]]]',
+    )
   })
   test("Deferred.make() without its type arguments is refused", () => {
     expect(refusal("Deferred.make()")).toEqual({ _tag: "arity", head: "Deferred.make" })

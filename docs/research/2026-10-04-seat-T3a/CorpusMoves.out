@@ -1,0 +1,29 @@
+g19	refGet	path [0, 0, 0]	request number	expected Ref.Ref<number>	T3a template accepts: false
+g25	deferredFail	path [0, 0, 0, 2]	request boolean	expected readonly [Deferred.Deferred<number, number>, number]	T3a template accepts: false
+g26	deferredAwait	path [0, 0, 0]	request string	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g27	deferredFail	path []	request number	expected readonly [Deferred.Deferred<number, number>, number]	T3a template accepts: false
+g31	deferredPoll	path []	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g42	deferredAwait	path []	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g70	refGetAndSet	path []	request number	expected readonly [Ref.Ref<number>, number]	T3a template accepts: false
+g86	deferredAwait	path [0, 0, 0, 0, 0, 0, 0]	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g92	deferredIsDone	path [0, 0, 0, 0]	request string	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g97	deferredAwait	path [0, 0]	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g119	deferredAwait	path [0, 0, 1, 0]	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g158	refMake	path [0, 0, 0]	request string	expected number	T3a template accepts: true
+g187	deferredAwait	path []	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g196	refGetAndSet	path []	request number	expected readonly [Ref.Ref<number>, number]	T3a template accepts: false
+g200	refGet	path []	request number	expected Ref.Ref<number>	T3a template accepts: false
+g207	deferredFail	path [0, 0]	request number	expected readonly [Deferred.Deferred<number, number>, number]	T3a template accepts: false
+g261	deferredAwait	path [0, 0]	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g277	refMake	path [0, 0, 1, 0, 0, 0, 0]	request Exit.Exit<never, number>	expected number	T3a template accepts: true
+g296	refGetAndSet	path [0, 0]	request void	expected readonly [Ref.Ref<number>, number]	T3a template accepts: false
+g315	deferredIsDone	path [0, 0, 0, 0, 0]	request void	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g323	deferredAwait	path [0, 0, 0, 0, 0]	request readonly ["hi", void]	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g340	deferredAwait	path [0, 0, 0, 1, 0]	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g349	deferredAwait	path [1]	request void	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g354	refGetAndSet	path [0, 0, 0, 0]	request string	expected readonly [Ref.Ref<number>, number]	T3a template accepts: false
+g356	deferredAwait	path []	request number	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g361	deferredAwait	path [1]	request boolean	expected Deferred.Deferred<number, number>	T3a template accepts: false
+g395	deferredAwait	path []	request boolean	expected Deferred.Deferred<number, number>	T3a template accepts: false
+refused at a templated row: 27; of them the template accepts: 2
+programs naming a native handle spelling in an annotation or their type: 0

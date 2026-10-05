@@ -199,7 +199,7 @@ def opV : NativeOp → V
   | .refUpdateSomeAndGet f => .ctor ``NativeOp.refUpdateSomeAndGet [fnV f]
   | .refModify f => .ctor ``NativeOp.refModify [fnV f]
   | .refModifySome f => .ctor ``NativeOp.refModifySome [fnV f]
-  | .deferredMake => .ctor ``NativeOp.deferredMake []
+  | .deferredMakeOf value error => .ctor ``NativeOp.deferredMakeOf [tyV value, tyV error]
   | .deferredIsDone => .ctor ``NativeOp.deferredIsDone []
   | .deferredPoll => .ctor ``NativeOp.deferredPoll []
   | .deferredSucceed => .ctor ``NativeOp.deferredSucceed []
@@ -325,7 +325,7 @@ def pFork : P := .bind (.withFiber (.fork child opts)) (.awaitFiber (v 0) .await
 def pTwo : P :=
   binds [.withFiber (.fork child opts), .withFiber (.fork child ⟨true, false, .interruptible⟩),
          .awaitFiber (v 0) .awaitValue] (.awaitFiber (v 1) .awaitValue)
-def pAwait : P := .bind (.perform .deferredMake u) (.perform .deferredAwait (v 0))
+def pAwait : P := .bind (.perform (.deferredMakeOf .nat .nat) u) (.perform .deferredAwait (v 0))
 def pGen : P := .gen (st [.bindYield (.succeed (n 1)), .ret (.app "succ" (ts [v 0]))])
 /-- Kept under its name (DI-60: no fixture is renamed). `whileLoop` retired into `iterate`:
 the same loop written with `iterate` at no cursor annotation (DI-91) and answering `.lit .unit`. -/
@@ -358,7 +358,7 @@ def pSelectTag : P :=
   .select (.app "pair" (ts [.lit (.str "A"), n 5])) (.tag "A") (.succeed (v 0)) (.succeed (n 0))
 /-- Kept under its name (DI-60). `callback` retired into `perform`, the one invocation form;
 the asynchronous row is invoked like every other. -/
-def pCallback : P := .bind (.perform .deferredMake u) (.perform .deferredAwait (v 0))
+def pCallback : P := .bind (.perform (.deferredMakeOf .nat .nat) u) (.perform .deferredAwait (v 0))
 def pJoin : P := .bind (.withFiber (.fork child ⟨false, true, .uninterruptible⟩)) (.awaitFiber (v 0) .joinEffect)
 def pScoped : P :=
   .scoped (.bind (.perform (.scopeMake .parallel) u)
@@ -405,7 +405,7 @@ def pOps : P :=
     , .perform (.refUpdateSomeAndGet .incr) (v 0)                         -- v10
     , .perform (.refModify .double) (v 0)                                 -- v11
     , .perform (.refModifySome .noChange) (v 0)                           -- v12
-    , .perform .deferredMake u                                            -- v13 : deferred
+    , .perform (.deferredMakeOf .nat .nat) u                              -- v13 : deferred
     , .perform .deferredIsDone (v 13)                                     -- v14
     , .perform .deferredPoll (v 13)                                       -- v15
     , .perform .deferredSucceed (.app "pair" (ts [v 13, n 1]))            -- v16

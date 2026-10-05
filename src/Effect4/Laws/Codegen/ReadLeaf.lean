@@ -716,6 +716,25 @@ theorem readRowCall_none {sig : Signature Op} {spell : String → List String �
       dsimp only
       rw [idents?_printTerms names, h.2.2]
 
+/-- A row whose type arguments parse has a readable head. -/
+theorem rowHeadReadable_of_typeArgs {row : Row} {typeArgs : List TypeScript.TypeRef}
+    (h : rowTypeArgs row = some typeArgs) : rowHeadReadable row = true := by
+  simp only [rowHeadReadable, h, Option.isSome_some, Bool.or_true]
+
+/-- A value row has a readable head: it prints none. -/
+theorem rowHeadReadable_of_value {row : Row} (h : row.shape = .value) :
+    rowHeadReadable row = true := by
+  simp only [rowHeadReadable, h, decide_true, Bool.true_or]
+
+/-- A method's argument row has a readable head only when the method's row does: the projection
+keeps the type arguments and is never a value row. -/
+theorem rowHeadReadable_of_method {row : Row} (h : rowHeadReadable (methodArgsRow row) = true) :
+    rowHeadReadable row = true := by
+  simp only [rowHeadReadable, Bool.or_eq_true, decide_eq_true_eq] at h ⊢
+  rcases h with h | h
+  · rcases methodArgsRow_shape row with hs | hs <;> rw [hs] at h <;> cases h
+  · exact Or.inr h
+
 theorem readRowCall_unit {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
     (hshape : (sig.rowOf op).shape = .call) (hreq : (sig.rowOf op).request = Ty.unit)
@@ -725,7 +744,7 @@ theorem readRowCall_unit {sig : Signature Op} {spell : String → List String �
         ((sig.rowOf op).trailing.map Expr.ident)
       = some (.ok (rowAnswer (sig.rowOf op) op (.lit .unit))) := by
   unfold readRowCall
-  rw [idents?_map, Option.bind_some, hl.spell_row op hd]
+  rw [idents?_map, Option.bind_some, hl.spell_row op hd (rowHeadReadable_of_typeArgs hta)]
   simp [hshape, hreq, hta]
 
 theorem readRowCall_request {sig : Signature Op} {spell : String → List String → Option Op}
@@ -760,7 +779,7 @@ theorem readRowCall_request {sig : Signature Op} {spell : String → List String
   unfold readRowCall
   rw [hA]
   dsimp only
-  rw [idents?_map, Option.bind_some, hl.spell_row op hd]
+  rw [idents?_map, Option.bind_some, hl.spell_row op hd (rowHeadReadable_of_typeArgs hta)]
   simp [hshape, hreq, hta]
 
 /-! ## `read_print`: what the printer prints of a readable program reads back to it -/
@@ -828,7 +847,7 @@ theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String �
   dsimp only
   rw [hB]
   dsimp only
-  rw [idents?_map, Option.bind_some, hl.spell_row op hd]
+  rw [idents?_map, Option.bind_some, hl.spell_row op hd (rowHeadReadable_of_typeArgs hta)]
   simp [hshape, hta]
 
 /-- The tuple request round trip is shared by free calls and receiver methods. -/
@@ -878,7 +897,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
 /-- Method projection keeps the same row identities and name hygiene. -/
 theorem methodLawful {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) : LawfulSpelling (methodSignature sig) spell where
-  spell_row := hl.spell_row
+  spell_row := fun op hd hh => hl.spell_row op hd (rowHeadReadable_of_method hh)
   row_of_spell := hl.row_of_spell
   value_trailing := by
     intro op hv
@@ -976,7 +995,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     have hr := readable_row_value hshape h
     subst r
     have htr := hl.value_trailing op hshape
-    have hsp := hl.spell_row op hd
+    have hsp := hl.spell_row op hd (rowHeadReadable_of_value hshape)
     rw [htr] at hsp
     simp only [printRow, hshape, Except.ok.injEq] at hp
     subst x
@@ -1280,27 +1299,41 @@ end Rows
 theorem name_notin (l : List String) (h : ∀ s ∈ l, s.toByteArray.data.toList.head? ≠ some 97)
     (i : Nat) : Var.name i ∉ l := fun hm => Var.name_ne (h _ hm) i rfl
 
-theorem NativeOp.external_not_mem_all (i : Nat) : NativeOp.external i ∉ NativeOp.all := by
-  simp [NativeOp.all, fnNames]
+/-- No external operation is a built-in representative. -/
+theorem NativeOp.external_not_mem_spelled (i : Nat) : NativeOp.external i ∉ NativeOp.spelled := by
+  intro h
+  simp only [NativeOp.spelled, fnNames, List.mem_append, List.mem_cons, List.flatMap_cons,
+    List.flatMap_nil, List.map_cons, List.map_nil, List.mem_nil_iff, reduceCtorEq, or_self] at h
 
-theorem NativeOp.all_complete (op : NativeOp) (h : ∀ i, op ≠ .external i) :
-    op ∈ NativeOp.all := by
-  cases op <;> first
-    | decide
-    | (rename_i f; cases f <;> decide)
-    | exact (h _ rfl).elim
-
-theorem nativeRowOf_mem_all (table : RowTable) (op : NativeOp) (h : op ∈ NativeOp.all) :
+/-- A built-in operation keeps its own row whatever the supplied table. -/
+theorem nativeRowOf_builtin (table : RowTable) (op : NativeOp) (h : ∀ i, op ≠ .external i) :
     nativeRowOf table op = op.row := by
-  cases op <;> first | rfl | exact (NativeOp.external_not_mem_all _ h).elim
+  cases op with
+  | external i => exact absurd rfl (h i)
+  | _ => rfl
 
 theorem nativeRowOf_external (table : RowTable) (i : Nat) (hi : i < table.length) :
     nativeRowOf table (.external i) = table[i] := by
   simp [nativeRowOf, List.getElem?_eq_getElem hi]
 
+/-- Every native row's names are hygienic: the spelling and the trailing names are fixed by the
+operation's key, never by a type argument it carries. -/
+theorem NativeOp.row_hygiene (op : NativeOp) :
+    (op.row.shape = .value → op.row.trailing = []) ∧ rowNamesSafe op.row = true := by
+  cases op with
+  | refUpdate f | refGetAndUpdate f | refUpdateAndGet f | refUpdateSome f
+  | refGetAndUpdateSome f | refUpdateSomeAndGet f | refModify f | refModifySome f =>
+    cases f <;> decide
+  | scopeMake s => cases s <;> decide
+  | deferredMakeOf value error => exact ⟨fun hs => (by cases hs), rfl⟩
+  | external i =>
+    exact (by decide : (NativeOp.externalPlaceholder.shape = .value →
+      NativeOp.externalPlaceholder.trailing = []) ∧ rowNamesSafe NativeOp.externalPlaceholder = true)
+  | _ => decide
+
 theorem lawfulTable_member (table : RowTable) (h : LawfulTable table = true)
     (row : Row) (hr : row ∈ table) :
-    rowKey row ∉ NativeOp.all.map (rowKey ∘ NativeOp.row) ∧
+    rowKey row ∉ builtinKeys ∧
     (row.shape = .value → row.trailing = []) ∧ rowNamesSafe row = true := by
   simp only [LawfulTable, Table.lawful, Bool.and_eq_true] at h
   refine ⟨?_, ?_, List.all_eq_true.mp h.2 row hr⟩
@@ -1320,14 +1353,14 @@ theorem nativeRow_hygiene (table : RowTable) (h : LawfulTable table = true) (op 
       exact (lawfulTable_member table h _ (List.getElem_mem hi)).2
     · simp only [nativeRowOf, List.getElem?_eq_none (Nat.le_of_not_gt hi), Option.getD_none]
       decide
-  | _ => first
-    | (simp only [nativeRowOf]; decide)
-    | (rename_i f; cases f <;> simp only [nativeRowOf] <;> decide)
+  | _ =>
+    simp only [nativeRowOf]
+    exact NativeOp.row_hygiene _
 
 theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := by decide) :
     LawfulSpelling (nativeSignature table) (nativeSpell table) where
   spell_row := by
-    intro op hd
+    intro op hd hh
     cases op with
     | external i =>
       have hi : i < table.length := of_decide_eq_true hd
@@ -1344,9 +1377,22 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
       unfold nativeSpell rowKey
       rw [hb, hf]
       rfl
-    | _ => first
-      | rfl
-      | (rename_i f; cases f <;> rfl)
+    | refUpdate f | refGetAndUpdate f | refUpdateAndGet f | refUpdateSome f
+    | refGetAndUpdateSome f | refUpdateSomeAndGet f | refModify f | refModifySome f =>
+      cases f <;> rfl
+    | scopeMake s => cases s <;> rfl
+    | deferredMakeOf value error =>
+      -- only the instance whose type arguments the faces spell reads back (until T5)
+      by_cases hve : value = .nat ∧ error = .nat
+      · obtain ⟨rfl, rfl⟩ := hve
+        rfl
+      · have hargs : NativeOp.deferredTypeArgs value error = [""] := if_neg hve
+        change (decide (RowShape.call = .value) ||
+          ((NativeOp.deferredTypeArgs value error).mapM
+            Effect4.Codegen.Types.parseLegacy).isSome) = true at hh
+        rw [hargs] at hh
+        exact absurd hh (by decide)
+    | _ => rfl
   row_of_spell := by
     intro s names op hs
     unfold nativeSpell at hs
@@ -1358,7 +1404,8 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
       have hk := List.find?_some
         (p := fun op : NativeOp => decide (rowKey op.row = (s, names))) hfound
       change (nativeRowOf table found).spelling = s ∧ (nativeRowOf table found).trailing = names
-      rw [nativeRowOf_mem_all table found hm]
+      rw [nativeRowOf_builtin table found
+        (fun i he => NativeOp.external_not_mem_spelled i (he ▸ hm))]
       exact Prod.mk.inj (of_decide_eq_true hk)
     · obtain ⟨i, hi, rfl⟩ := Option.map_eq_some_iff.mp hs
       obtain ⟨hlt, hk⟩ := rowIndex_exact table (s, names) i hi

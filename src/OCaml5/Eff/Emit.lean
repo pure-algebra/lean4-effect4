@@ -403,21 +403,6 @@ def itemsO : List Ty → List String
   | t :: rest => tyO t :: itemsO rest
 end
 
-def kindO : RowKind → String
-  | .sync => octor "row_kind" "sync"
-  | .async => octor "row_kind" "async"
-  | .program => octor "row_kind" "program"
-
-def shapeO : RowShape → String
-  | .call => octor "row_shape" "call"
-  | .value => octor "row_shape" "value"
-  | .tupleCall => octor "row_shape" "tupleCall"
-  | .method => octor "row_shape" "method"
-
-def registrationO : Registration → String
-  | .deferred => octor "registration" "deferred"
-  | .external => octor "registration" "external"
-
 def keyO (k : ServiceKey) : String :=
   "{ " ++ ofield "service_key" "name" ++ " = { " ++ ofield "service_name" "value" ++ " = " ++
   toString k.name.value ++ " }; " ++
@@ -425,21 +410,6 @@ def keyO (k : ServiceKey) : String :=
   toString k.service.value ++ " } }"
 
 def listO (xs : List String) : String := "[" ++ "; ".intercalate xs ++ "]"
-
-def rowO (r : Row) : String :=
-  "{ " ++ "; ".intercalate
-    [ ofield "row" "name" ++ " = " ++ ostr r.name
-    , ofield "row" "spelling" ++ " = " ++ ostr r.spelling
-    , ofield "row" "shape" ++ " = " ++ shapeO r.shape
-    , ofield "row" "trailing" ++ " = " ++ listO (r.trailing.map ostr)
-    , ofield "row" "kind" ++ " = " ++ kindO r.kind
-    , ofield "row" "request" ++ " = " ++ tyO r.request
-    , ofield "row" "answer" ++ " = " ++ tyO r.answer
-    , ofield "row" "error" ++ " = " ++ tyO r.error
-    , ofield "row" "requires" ++ " = " ++ listO (r.requires.map keyO)
-    , ofield "row" "cite" ++ " = " ++ ostr r.cite
-    , ofield "row" "typeArgs" ++ " = " ++ listO (r.typeArgs.map ostr)
-    , ofield "row" "registration" ++ " = " ++ registrationO r.registration ] ++ " }"
 
 def fnO : FnName → String
   | .incr => octor "fn_name" "incr"
@@ -466,7 +436,7 @@ def opO : NativeOp → String
   | .refUpdateSomeAndGet f => s!"({octor "native_op" "refUpdateSomeAndGet"} {fnO f})"
   | .refModify f => s!"({octor "native_op" "refModify"} {fnO f})"
   | .refModifySome f => s!"({octor "native_op" "refModifySome"} {fnO f})"
-  | .deferredMake => octor "native_op" "deferredMake"
+  | .deferredMakeOf value error => s!"({octor "native_op" "deferredMakeOf"} ({tyO value}, {tyO error}))"
   | .deferredIsDone => octor "native_op" "deferredIsDone"
   | .deferredPoll => octor "native_op" "deferredPoll"
   | .deferredSucceed => octor "native_op" "deferredSucceed"
@@ -479,38 +449,26 @@ def opO : NativeOp → String
 
 def fnNames : List FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
-/-- The finite built-in alphabet in declaration order. External row indices range over
-`Nat` and are supplied by a separate table. `main` checks both constructor classes. -/
-def allOps : List NativeOp :=
-  [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet] ++
-  (fnNames.map NativeOp.refUpdate) ++ (fnNames.map NativeOp.refGetAndUpdate) ++
-  (fnNames.map NativeOp.refUpdateAndGet) ++ (fnNames.map NativeOp.refUpdateSome) ++
-  (fnNames.map NativeOp.refGetAndUpdateSome) ++ (fnNames.map NativeOp.refUpdateSomeAndGet) ++
-  (fnNames.map NativeOp.refModify) ++ (fnNames.map NativeOp.refModifySome) ++
-  [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail, .deferredAwait] ++
-  (FinalizerStrategy.all.map NativeOp.scopeMake) ++
-  -- the timer (A4, 2026-09-08)
-  [.sleep, .clockNow]
+/-- The finite built-in alphabet, one operation per spelling key: the core's `NativeOp.spelled`
+(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell. External
+row indices range over `Nat` and are supplied by a separate table. `main` checks the
+constructor classes. -/
+def allOps : List NativeOp := NativeOp.spelled
 
 /-- The const-generic atoms by name (`NativeAtom.constGeneric`, the literal rule's flag). -/
 def constAtomNames : List String :=
   (NativeAtom.all.filter NativeAtom.constGeneric).map NativeAtom.name
 
-def emitNative (nullaryOps fnOps stratOps : Nat) : String :=
-  header "Eff_native: the native alphabet as data. atom names and const-generic metadata project the complete NativeAtom inventory (src/Effect4/Program/NativeAtom.lean). Typing remains in Lean; no second atom checker is emitted. row_of is NativeOp.row evaluated on the finite built-in alphabet, with the empty-table placeholder for external indices (the constructor table checks both classes). scope_key is nativeScopeKey." ++
+def emitNative (nullaryOps typedOps fnOps stratOps : Nat) : String :=
+  header "Eff_native: the native alphabet as data. atom names and const-generic metadata project the complete NativeAtom inventory (src/Effect4/Program/NativeAtom.lean). Typing remains in Lean; no second atom checker is emitted. all_ops is NativeOp.spelled, one operation per spelling key (the constructor table checks the classes). scope_key is nativeScopeKey." ++
   "open Eff_types\n\n" ++
   "let atom_names : string list = " ++ listO (NativeAtom.names.map ostr) ++ "\n\n" ++
   "(* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)\n" ++
   "let const_atoms : string list = " ++ listO (constAtomNames.map ostr) ++ "\n" ++
   "let const_atom (name : string) : bool = List.mem name const_atoms\n\n" ++
-  s!"(* {nullaryOps} nullary operations, {fnOps} over every fn_name, {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
+  s!"(* {nullaryOps} nullary operations, {typedOps} at the faces' type arguments, {fnOps} over every fn_name, {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
   "let all_ops : native_op list =\n  [ " ++ "\n  ; ".intercalate (allOps.map opO) ++ " ]\n\n" ++
-  "let row_of : native_op -> row = function\n" ++
-  "\n".intercalate (allOps.map fun op => s!"  | {opO op} ->\n    {rowO op.row}") ++
-  s!"\n  | {octor "native_op" "external"} _ ->\n    {rowO NativeOp.externalPlaceholder}\n\n" ++
   "let scope_key : service_key = " ++ keyO nativeScopeKey ++ "\n" ++
-  "let ref_ty : ty = " ++ tyO NativeOp.refTy ++ "\n" ++
-  "let deferred_ty : ty = " ++ tyO NativeOp.deferredTy ++ "\n" ++
   "let scope_ty : ty = " ++ tyO Ty.scope ++ "\n" ++
   "let context_ty : ty = " ++ tyO Ty.context ++ "\n"
 

@@ -135,8 +135,8 @@ def FiberDeclared (w : Typed.World) (id : FiberId) (a e : Ty) : Prop :=
 
 def HandleFits (w : Typed.World) (kind : UInt8) (index : Nat) (target : String) : Prop :=
   match HandleKind.ofByte? kind with
-  | some .cell => target = NativeOp.refTarget ∧ RefDeclared w ⟨index⟩ .nat
-  | some .promise => target = NativeOp.deferredTarget ∧ PromiseDeclared w ⟨index⟩ .nat .nat
+  | some .cell => target = "Ref.Ref<number>" ∧ RefDeclared w ⟨index⟩ .nat
+  | some .promise => target = "Deferred.Deferred<number, number>" ∧ PromiseDeclared w ⟨index⟩ .nat .nat
   | some .scope => target = Ty.scopeTarget
   | some .external => externalHandleTarget target = true ∧
       w.state.externals.allocated[index]? = some target

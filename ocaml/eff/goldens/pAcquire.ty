@@ -1,1 +1,1 @@
-{"answer":["handle","Ref.Ref<number>"],"error":["never"],"requires":[{"name":{"value":0},"service":{"value":0}}]}
+{"answer":["refOf",["nat"]],"error":["never"],"requires":[{"name":{"value":0},"service":{"value":0}}]}

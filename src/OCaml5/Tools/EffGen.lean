@@ -52,14 +52,18 @@ open Effect4.Machine (FnName)
 
 namespace OCaml5.Eff
 
-def countOps (nativeOp : Family) : Nat × Nat × Nat × Nat :=
-  nativeOp.ctors.foldl (init := (0, 0, 0, 0)) fun (nul, fn, st, indexed) c =>
+/-- The `NativeOp` constructors by argument shape: nullary, over a `fn_name`, over a
+`finalizer_strategy`, over an index, and over type arguments (`deferredMakeOf`, enumerated at the
+one instance the faces spell, `NativeOp.spelled`). -/
+def countOps (nativeOp : Family) : Nat × Nat × Nat × Nat × Nat :=
+  nativeOp.ctors.foldl (init := (0, 0, 0, 0, 0)) fun (nul, fn, st, indexed, typed) c =>
     match c.args with
-    | [] => (nul + 1, fn, st, indexed)
-    | [(_, .named "fn_name")] => (nul, fn + 1, st, indexed)
-    | [(_, .named "finalizer_strategy")] => (nul, fn, st + 1, indexed)
-    | [(_, .int)] => (nul, fn, st, indexed + 1)
-    | _ => (nul, fn, st, indexed)
+    | [] => (nul + 1, fn, st, indexed, typed)
+    | [(_, .named "fn_name")] => (nul, fn + 1, st, indexed, typed)
+    | [(_, .named "finalizer_strategy")] => (nul, fn, st + 1, indexed, typed)
+    | [(_, .int)] => (nul, fn, st, indexed + 1, typed)
+    | [(_, .named "ty"), (_, .named "ty")] => (nul, fn, st, indexed, typed + 1)
+    | _ => (nul, fn, st, indexed, typed)
 
 end OCaml5.Eff
 
@@ -98,11 +102,11 @@ def main (args : List String) : IO Unit := do
   unless FinalizerStrategy.all.length == ctorCount `Effect4.FinalizerStrategy do
     throw (IO.userError "EffGen: FinalizerStrategy.all does not enumerate FinalizerStrategy")
   let some nativeOp := famOf `Effect4.Program.NativeOp | throw (IO.userError "EffGen: NativeOp missing")
-  let (nul, fn, st, indexed) := countOps nativeOp
-  unless nul + fn + st + indexed == nativeOp.ctors.length do
+  let (nul, fn, st, indexed, typed) := countOps nativeOp
+  unless nul + fn + st + indexed + typed == nativeOp.ctors.length do
     throw (IO.userError "EffGen: a NativeOp constructor has an argument shape this tool does not enumerate")
-  unless allOps.length == nul + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length do
-    throw (IO.userError s!"EffGen: allOps has {allOps.length} values, the constructor table implies {nul + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length}")
+  unless allOps.length == nul + typed + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length do
+    throw (IO.userError s!"EffGen: allOps has {allOps.length} values, the constructor table implies {nul + typed + fn * OCaml5.Eff.fnNames.length + st * FinalizerStrategy.all.length}")
   unless allOps.eraseDups.length == allOps.length do throw (IO.userError "EffGen: allOps repeats a value")
   -- the corpus: every constructor name resolves in the environment
   let trees := Corpus.corpus.map fun (nm, p) => (nm, p, effV p)
@@ -159,7 +163,7 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile (out / "eff_wire.ml") ("(* " ++ stamp ++ " *)\n" ++ emitWire bs)
   IO.FS.writeFile (out / "eff_subterm.ml") ("(* " ++ stamp ++ " *)\n" ++ subtermText)
   IO.FS.writeFile (out / "eff_json.ml") ("(* " ++ stamp ++ " *)\n" ++ emitJson bs)
-  IO.FS.writeFile (out / "eff_native.ml") ("(* " ++ stamp ++ " *)\n" ++ emitNative nul fn st)
+  IO.FS.writeFile (out / "eff_native.ml") ("(* " ++ stamp ++ " *)\n" ++ emitNative nul typed fn st)
   IO.FS.writeFile (out / "eff_manifest.txt") (manifest bs)
   let mut corpusLines : Array String := #[]
   let mut coverage : NameMap Nat := {}

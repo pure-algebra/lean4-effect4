@@ -50,7 +50,10 @@ def subMutant (a b : Ty) : Bool :=
   | .refOf x, .refOf y => Ty.sub x y
   | _, _ => Ty.sub a b
 
-def refT : Ty := .handle NativeOp.refTarget
+/-- The retired cell spelling, a handle at `Ref.Ref<number>`: no value fits it since the state
+plan's T3a (`Val.hasTy_handle_retired`), and its target spelling is `refOf nat`'s, which the
+`spelling` family asks. -/
+def refT : Ty := .handle "Ref.Ref<number>"
 
 /-- One type per head, plus the top, the bottom and a literal: every pair of these is asked.
 `int` is not here: it and `nat` are one type in the target (`renderRaw` prints `number` for

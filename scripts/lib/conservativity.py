@@ -27,14 +27,16 @@ an unresolved revision or a failed git command (with the message); 2 on a usage 
                 policy name. A key repeated inside one JSON object is refused (decisions row 174:
                 `json.loads`, like Lean's `Json.parse`, keeps the last, so this loader refuses it).
                 The generated manifests (ocaml/eff/eff_manifest.txt, ocaml/goldens/eff/manifest.txt,
-                ocaml/goldens/eff/wire-tags.txt): each BASE family line is a prefix of CAND's
-                (names and argument shapes), so an existing constructor is neither moved nor re-typed.
+                ocaml/goldens/eff/wire-tags.txt): each BASE family line, less the constructors the
+                policy names as retired (constructor_retirements), is a prefix of CAND's (names and
+                argument shapes), so an existing constructor is neither moved nor re-typed.
   C3 verdicts:  generated/corpus-index.tsv (Lean's wellTyped/readable verdict per program),
                 ocaml/eff/goldens/corpus.txt (the golden programs' typing verdicts),
                 harness/truth/corpus-results.tsv (the host lane, as committed): every BASE row is in
-                CAND unchanged. The golden tables (metadata.tsv, cases.txt, the CAS manifest,
-                same-programs.txt) keep every BASE line in order; the coverage tables keep every BASE
-                key at a count no smaller.
+                CAND unchanged, unless the policy names its move (`verdict_moves`, `path:key`). The
+                golden tables (metadata.tsv, cases.txt, the CAS manifest, same-programs.txt) keep
+                every BASE line in order; the coverage tables keep every BASE key at a count no
+                smaller, except a constructor the policy names as retired, whose row may leave.
   C4 policy:    every constructor added or retired between BASE and CAND (read off wire-tags.json)
                 is named in CAND's Test/fixtures/baseline/66ee4657-supplement-v1.policy.json.
                 Reported, refused only with --strict: the additions since the frozen baseline
@@ -43,10 +45,12 @@ an unresolved revision or a failed git command (with the message); 2 on a usage 
   C5 record:    `git diff --stat` of GENERATED_PATHS (the Makefile's list) between BASE and CAND.
 
 The controls (`--self-test`): the ten of probe Q, each a mutation of a scratch extract of HEAD
-judged against HEAD (R1-R9 refuse on the clause they name, G1 the wave appended and named passes),
-and six on the revisions themselves, each run as this command: an invalid BASE, an invalid CAND
-and both invalid, each with and without --strict, all refused with exit 1 and the message naming
-the revision.
+judged against HEAD (R1-R9 refuse on the clause they name, G1 the wave appended and named passes);
+the four of the named retirement and the named verdict move (seat T3a: R10 and R11 a retirement
+the policy does not name, refused by C3 and C2; G2 the same retirement named, G3 R6's verdict move
+named, both pass); and six on the revisions themselves, each run as this command: an invalid
+BASE, an invalid CAND and both invalid, each with and without --strict, all refused with exit 1
+and the message naming the revision.
 """
 import json
 import os
@@ -196,6 +200,22 @@ def policy_of(side):
     return json.loads(text) if text else {}
 
 
+def retired_names(pol):
+    """The constructors the policy names as retired, as (family, constructor) pairs: the family's
+    full name and its last component, since a manifest keys a family either way."""
+    out = set()
+    for full in pol.get('constructor_retirements', []):
+        fam, _, name = full.rpartition('.')
+        out.add((fam, name))
+        out.add((fam.rpartition('.')[2], name))
+    return out
+
+
+def item_name(item):
+    """A manifest item's constructor name: `lit(string)` and `lit=3` are `lit`."""
+    return re.split(r'[(=]', item, maxsplit=1)[0]
+
+
 # ------------------------------------------------------------------ C1 goldens
 def c1(base, cand, pol):
     migrations = set(pol.get('vector_migrations', [])) | set(pol.get('vector_removals', []))
@@ -285,12 +305,15 @@ def c2(base, cand, pol):
             for name, tag in rows['active'].items():
                 if name not in before['active'] and name not in before['retired'] and tag in old:
                     problems.append(f'wire-tags: new {fam}.{name} reuses tag {tag}')
+    gone = retired_names(pol)
     for path in MANIFESTS:
         mb, mc = manifest_lines(base.read(path)), manifest_lines(cand.read(path))
         for fam, items in mb.items():
             got = mc.get(fam)
             if got is None:
                 problems.append(f'{path}: family {fam} left'); continue
+            # a constructor the policy names as retired leaves its family's line
+            items = [x for x in items if (fam, item_name(x)) not in gone]
             if got[:len(items)] != items:
                 i = next(i for i, (x, y) in enumerate(zip(items, got + [None] * len(items))) if x != y)
                 problems.append(f'{path}: {fam} position {i}: BASE {items[i]!r}, CAND {got[i] if i < len(got) else None!r}')
@@ -318,7 +341,9 @@ def keyed(text):
 
 
 def c3(base, cand, pol):
-    problems, judged = [], 0
+    problems, judged, moved, left = [], 0, [], []
+    named_moves = set(pol.get('verdict_moves', []))
+    retired = set(pol.get('constructor_retirements', []))
     for path in VERDICTS:
         tb, tc = base.read(path), cand.read(path)
         if tb is None:
@@ -327,7 +352,10 @@ def c3(base, cand, pol):
         judged += len(kb)
         for k, line in kb.items():
             if kc.get(k) != line:
-                problems.append(f'{path}: {k}: BASE {line!r} CAND {kc.get(k)!r}')
+                if f'{path}:{k}' in named_moves:
+                    moved.append(f'{path}:{k}')
+                else:
+                    problems.append(f'{path}: {k}: BASE {line!r} CAND {kc.get(k)!r}')
     for path in ORDERED_TABLES:
         lb, lc = rows(base.read(path)), rows(cand.read(path))
         it = iter(lc)
@@ -340,11 +368,18 @@ def c3(base, cand, pol):
             n_b = int(line.split('\t')[-1]); got = kc.get(k)
             n_c = int(got.split('\t')[-1]) if got else -1
             if n_c < n_b:
-                problems.append(f'{path}: {k}: count {n_b} became {n_c}')
+                # a constructor the policy names as retired may leave the count tables
+                if got is None and k in retired:
+                    left.append(f'{path}: {k}')
+                else:
+                    problems.append(f'{path}: {k}: count {n_b} became {n_c}')
     ok = not problems
     print(f'C3 verdicts: {"PASS" if ok else "REFUSE"}: {judged} verdict rows at BASE over {len(VERDICTS)} '
-          f'lanes; {len(ORDERED_TABLES)} ordered and {len(COUNT_TABLES)} count tables')
+          f'lanes; {len(ORDERED_TABLES)} ordered and {len(COUNT_TABLES)} count tables; '
+          f'{len(moved)} verdict moves and {len(left)} retired count rows named by policy')
     for p in problems[:20]: print(f'  {p}')
+    for m in moved: print(f'  moved by policy name: {m}')
+    for m in left: print(f'  retired by policy name: {m}')
     return ok
 
 

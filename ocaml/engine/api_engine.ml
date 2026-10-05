@@ -583,7 +583,6 @@ and native_op =
   | NativeOp_refUpdateSomeAndGet of fn_name
   | NativeOp_refModify of fn_name
   | NativeOp_refModifySome of fn_name
-  | NativeOp_deferredMake
   | NativeOp_deferredIsDone
   | NativeOp_deferredPoll
   | NativeOp_deferredSucceed
@@ -593,6 +592,7 @@ and native_op =
   | NativeOp_sleep
   | NativeOp_clockNow
   | NativeOp_external of int
+  | NativeOp_deferredMakeOf of ty * ty
 and row_kind = RowKind_sync | RowKind_async | RowKind_program
 and context_update = ContextUpdate_setTo of val_ context | ContextUpdate_provide of val_ context | ContextUpdate_provideService of service_key * val_
 and region =
@@ -4014,6 +4014,7 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
     | NativeOp_scopeMake _ -> RowKind_sync
     | NativeOp_sleep -> RowKind_async
     | NativeOp_external _ -> RowKind_program
+    | NativeOp_deferredMakeOf (_, _) -> RowKind_sync
     | _ -> RowKind_sync
 
   (* LCNF mono: Effect4.Program.NativeOp.awaitCellOf (x.1 : Effect4.Store.Val) : Option Nat *)
@@ -4164,123 +4165,121 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   (* LCNF mono: Effect4.Program.NativeOp.syncOpOf (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
   let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_) : sync_op option =
   match (x_1 : native_op) with
-    | NativeOp_refMake -> (match (x_2 : val_) with
-        | Val_nat _ -> (let _x_4 = SyncOp_refMake x_2 in
-          Some _x_4)
-        | _ -> None)
+    | NativeOp_refMake -> (let _x_3 = SyncOp_refMake x_2 in
+      Some _x_3)
     | NativeOp_refGet -> (match (x_2 : val_) with
-        | Val_handle (kind_7, key_8) -> (let _x_9 = 2 in
-          let _x_10 = kind_7 = _x_9 in
-          if _x_10 then (let _x_12 = SyncOp_refGet key_8 in
-            Some _x_12) else None)
+        | Val_handle (kind_5, key_6) -> (let _x_7 = 2 in
+          let _x_8 = kind_5 = _x_7 in
+          if _x_8 then (let _x_10 = SyncOp_refGet key_6 in
+            Some _x_10) else None)
         | _ -> None)
     | NativeOp_refSet -> (match (x_2 : val_) with
-        | Val_list xs_15 -> (match xs_15 with
-            | head_16 :: tail_17 -> (match (head_16 : val_) with
-                | Val_handle (kind_18, key_19) -> (let _x_20 = 2 in
-                  let _x_21 = kind_18 = _x_20 in
-                  if _x_21 then (match tail_17 with
-                      | head_23 :: tail_24 -> (match tail_24 with
-                          | [] -> (let _x_25 = SyncOp_refSet (key_19, head_23) in
-                            Some _x_25)
+        | Val_list xs_13 -> (match xs_13 with
+            | head_14 :: tail_15 -> (match (head_14 : val_) with
+                | Val_handle (kind_16, key_17) -> (let _x_18 = 2 in
+                  let _x_19 = kind_16 = _x_18 in
+                  if _x_19 then (match tail_15 with
+                      | head_21 :: tail_22 -> (match tail_22 with
+                          | [] -> (let _x_23 = SyncOp_refSet (key_17, head_21) in
+                            Some _x_23)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeOp_refGetAndSet -> (match (x_2 : val_) with
-        | Val_list xs_32 -> (match xs_32 with
-            | head_33 :: tail_34 -> (match (head_33 : val_) with
-                | Val_handle (kind_35, key_36) -> (let _x_37 = 2 in
-                  let _x_38 = kind_35 = _x_37 in
-                  if _x_38 then (match tail_34 with
-                      | head_40 :: tail_41 -> (match tail_41 with
-                          | [] -> (let _x_42 = SyncOp_refGetAndSet (key_36, head_40) in
-                            Some _x_42)
+        | Val_list xs_30 -> (match xs_30 with
+            | head_31 :: tail_32 -> (match (head_31 : val_) with
+                | Val_handle (kind_33, key_34) -> (let _x_35 = 2 in
+                  let _x_36 = kind_33 = _x_35 in
+                  if _x_36 then (match tail_32 with
+                      | head_38 :: tail_39 -> (match tail_39 with
+                          | [] -> (let _x_40 = SyncOp_refGetAndSet (key_34, head_38) in
+                            Some _x_40)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeOp_refSetAndGet -> (match (x_2 : val_) with
-        | Val_list xs_49 -> (match xs_49 with
-            | head_50 :: tail_51 -> (match (head_50 : val_) with
-                | Val_handle (kind_52, key_53) -> (let _x_54 = 2 in
-                  let _x_55 = kind_52 = _x_54 in
-                  if _x_55 then (match tail_51 with
-                      | head_57 :: tail_58 -> (match tail_58 with
-                          | [] -> (let _x_59 = SyncOp_refSetAndGet (key_53, head_57) in
-                            Some _x_59)
+        | Val_list xs_47 -> (match xs_47 with
+            | head_48 :: tail_49 -> (match (head_48 : val_) with
+                | Val_handle (kind_50, key_51) -> (let _x_52 = 2 in
+                  let _x_53 = kind_50 = _x_52 in
+                  if _x_53 then (match tail_49 with
+                      | head_55 :: tail_56 -> (match tail_56 with
+                          | [] -> (let _x_57 = SyncOp_refSetAndGet (key_51, head_55) in
+                            Some _x_57)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_refUpdate f_66 -> (match (x_2 : val_) with
-        | Val_handle (kind_67, key_68) -> (let _x_69 = 2 in
-          let _x_70 = kind_67 = _x_69 in
-          if _x_70 then (let _x_72 = fn_name_update_term f_66 in
-            let _x_73 = [] in
-            let _x_74 = SyncOp_refUpdate (key_68, _x_72, _x_73) in
-            Some _x_74) else None)
+    | NativeOp_refUpdate f_64 -> (match (x_2 : val_) with
+        | Val_handle (kind_65, key_66) -> (let _x_67 = 2 in
+          let _x_68 = kind_65 = _x_67 in
+          if _x_68 then (let _x_70 = fn_name_update_term f_64 in
+            let _x_71 = [] in
+            let _x_72 = SyncOp_refUpdate (key_66, _x_70, _x_71) in
+            Some _x_72) else None)
         | _ -> None)
-    | NativeOp_refGetAndUpdate f_77 -> (match (x_2 : val_) with
-        | Val_handle (kind_78, key_79) -> (let _x_80 = 2 in
-          let _x_81 = kind_78 = _x_80 in
-          if _x_81 then (let _x_83 = fn_name_update_term f_77 in
-            let _x_84 = [] in
-            let _x_85 = SyncOp_refGetAndUpdate (key_79, _x_83, _x_84) in
-            Some _x_85) else None)
+    | NativeOp_refGetAndUpdate f_75 -> (match (x_2 : val_) with
+        | Val_handle (kind_76, key_77) -> (let _x_78 = 2 in
+          let _x_79 = kind_76 = _x_78 in
+          if _x_79 then (let _x_81 = fn_name_update_term f_75 in
+            let _x_82 = [] in
+            let _x_83 = SyncOp_refGetAndUpdate (key_77, _x_81, _x_82) in
+            Some _x_83) else None)
         | _ -> None)
-    | NativeOp_refUpdateAndGet f_88 -> (match (x_2 : val_) with
-        | Val_handle (kind_89, key_90) -> (let _x_91 = 2 in
-          let _x_92 = kind_89 = _x_91 in
-          if _x_92 then (let _x_94 = fn_name_update_term f_88 in
-            let _x_95 = [] in
-            let _x_96 = SyncOp_refUpdateAndGet (key_90, _x_94, _x_95) in
-            Some _x_96) else None)
+    | NativeOp_refUpdateAndGet f_86 -> (match (x_2 : val_) with
+        | Val_handle (kind_87, key_88) -> (let _x_89 = 2 in
+          let _x_90 = kind_87 = _x_89 in
+          if _x_90 then (let _x_92 = fn_name_update_term f_86 in
+            let _x_93 = [] in
+            let _x_94 = SyncOp_refUpdateAndGet (key_88, _x_92, _x_93) in
+            Some _x_94) else None)
         | _ -> None)
-    | NativeOp_refUpdateSome f_99 -> (match (x_2 : val_) with
-        | Val_handle (kind_100, key_101) -> (let _x_102 = 2 in
-          let _x_103 = kind_100 = _x_102 in
-          if _x_103 then (let _x_105 = fn_name_update_some_term f_99 in
-            let _x_106 = [] in
-            let _x_107 = SyncOp_refUpdateSome (key_101, _x_105, _x_106) in
-            Some _x_107) else None)
+    | NativeOp_refUpdateSome f_97 -> (match (x_2 : val_) with
+        | Val_handle (kind_98, key_99) -> (let _x_100 = 2 in
+          let _x_101 = kind_98 = _x_100 in
+          if _x_101 then (let _x_103 = fn_name_update_some_term f_97 in
+            let _x_104 = [] in
+            let _x_105 = SyncOp_refUpdateSome (key_99, _x_103, _x_104) in
+            Some _x_105) else None)
         | _ -> None)
-    | NativeOp_refGetAndUpdateSome f_110 -> (match (x_2 : val_) with
-        | Val_handle (kind_111, key_112) -> (let _x_113 = 2 in
-          let _x_114 = kind_111 = _x_113 in
-          if _x_114 then (let _x_116 = fn_name_update_some_term f_110 in
-            let _x_117 = [] in
-            let _x_118 = SyncOp_refGetAndUpdateSome (key_112, _x_116, _x_117) in
-            Some _x_118) else None)
+    | NativeOp_refGetAndUpdateSome f_108 -> (match (x_2 : val_) with
+        | Val_handle (kind_109, key_110) -> (let _x_111 = 2 in
+          let _x_112 = kind_109 = _x_111 in
+          if _x_112 then (let _x_114 = fn_name_update_some_term f_108 in
+            let _x_115 = [] in
+            let _x_116 = SyncOp_refGetAndUpdateSome (key_110, _x_114, _x_115) in
+            Some _x_116) else None)
         | _ -> None)
-    | NativeOp_refUpdateSomeAndGet f_121 -> (match (x_2 : val_) with
-        | Val_handle (kind_122, key_123) -> (let _x_124 = 2 in
-          let _x_125 = kind_122 = _x_124 in
-          if _x_125 then (let _x_127 = fn_name_update_some_term f_121 in
-            let _x_128 = [] in
-            let _x_129 = SyncOp_refUpdateSomeAndGet (key_123, _x_127, _x_128) in
-            Some _x_129) else None)
+    | NativeOp_refUpdateSomeAndGet f_119 -> (match (x_2 : val_) with
+        | Val_handle (kind_120, key_121) -> (let _x_122 = 2 in
+          let _x_123 = kind_120 = _x_122 in
+          if _x_123 then (let _x_125 = fn_name_update_some_term f_119 in
+            let _x_126 = [] in
+            let _x_127 = SyncOp_refUpdateSomeAndGet (key_121, _x_125, _x_126) in
+            Some _x_127) else None)
         | _ -> None)
-    | NativeOp_refModify f_132 -> (match (x_2 : val_) with
-        | Val_handle (kind_133, key_134) -> (let _x_135 = 2 in
-          let _x_136 = kind_133 = _x_135 in
-          if _x_136 then (let _x_138 = fn_name_modify_term f_132 in
-            let _x_139 = [] in
-            let _x_140 = SyncOp_refModify (key_134, _x_138, _x_139) in
-            Some _x_140) else None)
+    | NativeOp_refModify f_130 -> (match (x_2 : val_) with
+        | Val_handle (kind_131, key_132) -> (let _x_133 = 2 in
+          let _x_134 = kind_131 = _x_133 in
+          if _x_134 then (let _x_136 = fn_name_modify_term f_130 in
+            let _x_137 = [] in
+            let _x_138 = SyncOp_refModify (key_132, _x_136, _x_137) in
+            Some _x_138) else None)
         | _ -> None)
-    | NativeOp_refModifySome f_143 -> (match (x_2 : val_) with
-        | Val_handle (kind_144, key_145) -> (let _x_146 = 2 in
-          let _x_147 = kind_144 = _x_146 in
-          if _x_147 then (let _x_149 = fn_name_modify_some_term f_143 in
-            let _x_150 = [] in
-            let _x_151 = SyncOp_refModifySome (key_145, _x_149, _x_150) in
-            Some _x_151) else None)
+    | NativeOp_refModifySome f_141 -> (match (x_2 : val_) with
+        | Val_handle (kind_142, key_143) -> (let _x_144 = 2 in
+          let _x_145 = kind_142 = _x_144 in
+          if _x_145 then (let _x_147 = fn_name_modify_some_term f_141 in
+            let _x_148 = [] in
+            let _x_149 = SyncOp_refModifySome (key_143, _x_147, _x_148) in
+            Some _x_149) else None)
         | _ -> None)
-    | NativeOp_deferredMake -> (match (x_2 : val_) with
+    | NativeOp_deferredMakeOf (_, _) -> (match (x_2 : val_) with
         | Val_unit -> (let _x_154 = SyncOp_deferredMake in
           Some _x_154)
         | _ -> None)
@@ -4302,45 +4301,41 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                 | Val_handle (kind_176, key_177) -> (let _x_178 = 3 in
                   let _x_179 = kind_176 = _x_178 in
                   if _x_179 then (match tail_175 with
-                      | head_181 :: tail_182 -> (match (head_181 : val_) with
-                          | Val_nat _ -> (match tail_182 with
-                              | [] -> (let _x_184 = Exit_success head_181 in
-                                let _x_185 = Completion_ofExit _x_184 in
-                                let _x_186 = SyncOp_deferredCompleteWith (key_177, _x_185) in
-                                Some _x_186)
-                              | _ -> None)
+                      | head_181 :: tail_182 -> (match tail_182 with
+                          | [] -> (let _x_183 = Exit_success head_181 in
+                            let _x_184 = Completion_ofExit _x_183 in
+                            let _x_185 = SyncOp_deferredCompleteWith (key_177, _x_184) in
+                            Some _x_185)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
     | NativeOp_deferredFail -> (match (x_2 : val_) with
-        | Val_list xs_194 -> (match xs_194 with
-            | head_195 :: tail_196 -> (match (head_195 : val_) with
-                | Val_handle (kind_197, key_198) -> (let _x_199 = 3 in
-                  let _x_200 = kind_197 = _x_199 in
-                  if _x_200 then (match tail_196 with
-                      | head_202 :: tail_203 -> (match (head_202 : val_) with
-                          | Val_nat n_204 -> (match tail_203 with
-                              | [] -> (let _x_205 = Err_tag n_204 in
-                                let _x_206 = cause_fail _x_205 in
-                                let _x_207 = Exit_failure _x_206 in
-                                let _x_208 = Completion_ofExit _x_207 in
-                                let _x_209 = SyncOp_deferredCompleteWith (key_198, _x_208) in
-                                Some _x_209)
-                              | _ -> None)
+        | Val_list xs_192 -> (match xs_192 with
+            | head_193 :: tail_194 -> (match (head_193 : val_) with
+                | Val_handle (kind_195, key_196) -> (let _x_197 = 3 in
+                  let _x_198 = kind_195 = _x_197 in
+                  if _x_198 then (match tail_194 with
+                      | head_200 :: tail_201 -> (match tail_201 with
+                          | [] -> (let _x_202 = program_err_of head_200 in
+                            let _x_203 = cause_fail _x_202 in
+                            let _x_204 = Exit_failure _x_203 in
+                            let _x_205 = Completion_ofExit _x_204 in
+                            let _x_206 = SyncOp_deferredCompleteWith (key_196, _x_205) in
+                            Some _x_206)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_scopeMake strategy_217 -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_218 = SyncOp_scopeMake strategy_217 in
-          Some _x_218)
+    | NativeOp_scopeMake strategy_213 -> (match (x_2 : val_) with
+        | Val_unit -> (let _x_214 = SyncOp_scopeMake strategy_213 in
+          Some _x_214)
         | _ -> None)
     | NativeOp_clockNow -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_221 = SyncOp_clockNow in
-          Some _x_221)
+        | Val_unit -> (let _x_217 = SyncOp_clockNow in
+          Some _x_217)
         | _ -> None)
     | _ -> None
 
@@ -8593,158 +8588,150 @@ and program_ty_normalize_items (x_1 : ty list) : ty list =
         | Val_handle (kind_13, key_14) -> (let _x_15 = handle_kind_of_byte_opt kind_13 in
           match _x_15 with
             | Some val__16 -> (match (val__16 : handle_kind) with
-                | HandleKind_cell -> (let _x_17 = "Ref.Ref<number>" in
+                | HandleKind_scope -> (let _x_17 = "Scope.Scope" in
                   target_12 = _x_17)
-                | HandleKind_promise -> (let _x_19 = "Deferred.Deferred<number, number>" in
+                | HandleKind_memoMap -> (let _x_19 = "Layer.MemoMap" in
                   target_12 = _x_19)
-                | HandleKind_scope -> (let _x_21 = "Scope.Scope" in
-                  target_12 = _x_21)
-                | HandleKind_memoMap -> (let _x_23 = "Layer.MemoMap" in
-                  target_12 = _x_23)
-                | HandleKind_external -> (let _x_25 = program_external_handle_target target_12 in
-                  if _x_25 then (let _x_26 = list_get_opt_internal allocated key_14 in
-                    let _x_27 = Some target_12 in
-                    option_inst_beq_beq_at_std_http_header_transfer_encoding_validate_spec_0 _x_26 _x_27) else _x_25)
+                | HandleKind_external -> (let _x_21 = program_external_handle_target target_12 in
+                  if _x_21 then (let _x_22 = list_get_opt_internal allocated key_14 in
+                    let _x_23 = Some target_12 in
+                    option_inst_beq_beq_at_std_http_header_transfer_encoding_validate_spec_0 _x_22 _x_23) else _x_21)
                 | _ -> false)
             | _ -> false)
-        | _ -> (let _x_31 = "Context.Context<unknown>" in
-          let _x_32 = target_12 = _x_31 in
-          if _x_32 then (let _x_33 = val__context_opt v in
-            match _x_33 with
+        | _ -> (let _x_27 = "Context.Context<unknown>" in
+          let _x_28 = target_12 = _x_27 in
+          if _x_28 then (let _x_29 = val__context_opt v in
+            match _x_29 with
               | None -> false
-              | Some _ -> _x_32) else _x_32))
-    | Ty_option inner_36 -> (match (v : val_) with
+              | Some _ -> _x_28) else _x_28))
+    | Ty_option inner_32 -> (match (v : val_) with
         | Val_none -> true
-        | Val_some a_38 -> program_val__has_ty a_38 inner_36 allocated
+        | Val_some a_34 -> program_val__has_ty a_34 inner_32 allocated
         | _ -> false)
-    | Ty_list inner_41 -> (match (v : val_) with
-        | Val_ctor (index_42, args_43) -> (let _x_44 = 3 in
-          let _x_45 = index_42 = _x_44 in
-          if _x_45 then (match args_43 with
-              | _ :: tail_47 -> (match tail_47 with
-                  | [] -> (let _x_48 = val__snapshot_opt v in
-                    match _x_48 with
+    | Ty_list inner_37 -> (match (v : val_) with
+        | Val_ctor (index_38, args_39) -> (let _x_40 = 3 in
+          let _x_41 = index_38 = _x_40 in
+          if _x_41 then (match args_39 with
+              | _ :: tail_43 -> (match tail_43 with
+                  | [] -> (let _x_44 = val__snapshot_opt v in
+                    match _x_44 with
                       | None -> false
-                      | Some val__50 -> list_all_at_program_val__has_ty_spec_0 inner_41 allocated val__50)
+                      | Some val__46 -> list_all_at_program_val__has_ty_spec_0 inner_37 allocated val__46)
                   | _ -> false)
-              | _ -> false) else _x_45)
-        | Val_list xs_54 -> list_all_at_program_val__has_ty_spec_1 inner_41 allocated xs_54
+              | _ -> false) else _x_41)
+        | Val_list xs_50 -> list_all_at_program_val__has_ty_spec_1 inner_37 allocated xs_50
         | _ -> false)
-    | Ty_prod (left_57, right_58) -> (match (v : val_) with
-        | Val_list xs_59 -> (match xs_59 with
-            | head_60 :: tail_61 -> (match tail_61 with
-                | head_62 :: tail_63 -> (match tail_63 with
-                    | [] -> (let _x_64 = program_val__has_ty head_60 left_57 allocated in
-                      if _x_64 then program_val__has_ty head_62 right_58 allocated else _x_64)
+    | Ty_prod (left_53, right_54) -> (match (v : val_) with
+        | Val_list xs_55 -> (match xs_55 with
+            | head_56 :: tail_57 -> (match tail_57 with
+                | head_58 :: tail_59 -> (match tail_59 with
+                    | [] -> (let _x_60 = program_val__has_ty head_56 left_53 allocated in
+                      if _x_60 then program_val__has_ty head_58 right_54 allocated else _x_60)
                     | _ -> false)
                 | _ -> false)
             | _ -> false)
         | _ -> false)
-    | Ty_except (error_70, value_71) -> (match (v : val_) with
-        | Val_ctor (index_72, args_73) -> (let _x_74 = 0 in
-          let _x_75 = index_72 = _x_74 in
-          if _x_75 then (match args_73 with
-              | head_81 :: tail_82 -> (match tail_82 with
-                  | [] -> program_val__has_ty head_81 error_70 allocated
+    | Ty_except (error_66, value_67) -> (match (v : val_) with
+        | Val_ctor (index_68, args_69) -> (let _x_70 = 0 in
+          let _x_71 = index_68 = _x_70 in
+          if _x_71 then (match args_69 with
+              | head_77 :: tail_78 -> (match tail_78 with
+                  | [] -> program_val__has_ty head_77 error_66 allocated
                   | _ -> false)
-              | _ -> false) else (let _x_76 = 1 in
-            let _x_77 = index_72 = _x_76 in
-            if _x_77 then (match args_73 with
-                | head_78 :: tail_79 -> (match tail_79 with
-                    | [] -> program_val__has_ty head_78 value_71 allocated
-                    | _ -> _x_75)
-                | _ -> _x_75) else _x_77))
+              | _ -> false) else (let _x_72 = 1 in
+            let _x_73 = index_68 = _x_72 in
+            if _x_73 then (match args_69 with
+                | head_74 :: tail_75 -> (match tail_75 with
+                    | [] -> program_val__has_ty head_74 value_67 allocated
+                    | _ -> _x_71)
+                | _ -> _x_71) else _x_73))
         | _ -> false)
-    | Ty_exitOf (value_87, error_88) -> (match (v : val_) with
-        | Val_ctor (index_89, args_90) -> (let _x_91 = 0 in
-          let _x_92 = index_89 = _x_91 in
-          if _x_92 then (match args_90 with
-              | head_102 :: tail_103 -> (match tail_103 with
-                  | [] -> program_val__has_ty head_102 value_87 allocated
+    | Ty_exitOf (value_83, error_84) -> (match (v : val_) with
+        | Val_ctor (index_85, args_86) -> (let _x_87 = 0 in
+          let _x_88 = index_85 = _x_87 in
+          if _x_88 then (match args_86 with
+              | head_98 :: tail_99 -> (match tail_99 with
+                  | [] -> program_val__has_ty head_98 value_83 allocated
                   | _ -> false)
-              | _ -> false) else (let _x_93 = 1 in
-            let _x_94 = index_89 = _x_93 in
-            if _x_94 then (match args_90 with
-                | head_95 :: tail_96 -> (match tail_96 with
-                    | [] -> (let _x_97 = cause_image in
-                      match (_x_97 : _ image) with
-                        | { of_val = of_val; _ } -> (let _x_98 = of_val head_95 in
-                          match _x_98 with
-                            | None -> _x_92
-                            | Some val__99 -> (let _f_100 = program_val__has_ty__lam_0 error_88 allocated in
-                              list_all_at_program_cause_admits_spec_0 _f_100 error_88 val__99)))
-                    | _ -> _x_92)
-                | _ -> _x_92) else _x_94))
+              | _ -> false) else (let _x_89 = 1 in
+            let _x_90 = index_85 = _x_89 in
+            if _x_90 then (match args_86 with
+                | head_91 :: tail_92 -> (match tail_92 with
+                    | [] -> (let _x_93 = cause_image in
+                      match (_x_93 : _ image) with
+                        | { of_val = of_val; _ } -> (let _x_94 = of_val head_91 in
+                          match _x_94 with
+                            | None -> _x_88
+                            | Some val__95 -> (let _f_96 = program_val__has_ty__lam_0 error_84 allocated in
+                              list_all_at_program_cause_admits_spec_0 _f_96 error_84 val__95)))
+                    | _ -> _x_88)
+                | _ -> _x_88) else _x_90))
         | _ -> false)
-    | Ty_causeOf error_108 -> (let _x_109 = val__cause_opt v in
-      match _x_109 with
+    | Ty_causeOf error_104 -> (let _x_105 = val__cause_opt v in
+      match _x_105 with
         | None -> false
-        | Some val__111 -> (let _f_112 = program_val__has_ty__lam_0 error_108 allocated in
-          list_all_at_program_cause_admits_spec_0 _f_112 error_108 val__111))
+        | Some val__107 -> (let _f_108 = program_val__has_ty__lam_0 error_104 allocated in
+          list_all_at_program_cause_admits_spec_0 _f_108 error_104 val__107))
     | Ty_fiberOf (_, _) -> (match (v : val_) with
-        | Val_handle (kind_116, _) -> (let _x_118 = 1 in
-          kind_116 = _x_118)
+        | Val_handle (kind_112, _) -> (let _x_114 = 1 in
+          kind_112 = _x_114)
         | _ -> false)
-    | Ty_union (left_121, right_122) -> (let _x_123 = program_val__has_ty v left_121 allocated in
-      if _x_123 then _x_123 else program_val__has_ty v right_122 allocated)
-    | Ty_lit value_125 -> (match (v : val_) with
-        | Val_str s_126 -> s_126 = value_125
+    | Ty_union (left_117, right_118) -> (let _x_119 = program_val__has_ty v left_117 allocated in
+      if _x_119 then _x_119 else program_val__has_ty v right_118 allocated)
+    | Ty_lit value_121 -> (match (v : val_) with
+        | Val_str s_122 -> s_122 = value_121
         | _ -> false)
     | Ty_refOf _ -> (match (v : val_) with
-        | Val_handle (kind_130, _) -> (let _x_132 = handle_kind_of_byte_opt kind_130 in
-          let _x_133 = HandleKind_cell in
-          let _x_134 = Some _x_133 in
-          option_inst_beq_beq_at_program_val__has_ty_spec_2 _x_132 _x_134)
+        | Val_handle (kind_126, _) -> (let _x_128 = handle_kind_of_byte_opt kind_126 in
+          let _x_129 = HandleKind_cell in
+          let _x_130 = Some _x_129 in
+          option_inst_beq_beq_at_program_val__has_ty_spec_2 _x_128 _x_130)
         | _ -> false)
     | Ty_deferredOf (_, _) -> (match (v : val_) with
-        | Val_handle (kind_139, _) -> (let _x_141 = handle_kind_of_byte_opt kind_139 in
-          let _x_142 = HandleKind_promise in
-          let _x_143 = Some _x_142 in
-          option_inst_beq_beq_at_program_val__has_ty_spec_2 _x_141 _x_143)
+        | Val_handle (kind_135, _) -> (let _x_137 = handle_kind_of_byte_opt kind_135 in
+          let _x_138 = HandleKind_promise in
+          let _x_139 = Some _x_138 in
+          option_inst_beq_beq_at_program_val__has_ty_spec_2 _x_137 _x_139)
         | _ -> false)
     | Ty_var _ -> false
     | Ty_unknown -> true
-    | Ty_record fields_149 -> (let _x_150 = program_record_parts_opt v in
-      match _x_150 with
+    | Ty_record fields_145 -> (let _x_146 = program_record_parts_opt v in
+      match _x_146 with
         | None -> false
-        | Some val__152 -> (match val__152 with
-            | fst_153, snd_154 -> (let _x_155 = program_val__field_checkers fields_149 allocated in
-              let _x_156 = field_bytes_key in
-              let _x_157 = field_canon_by _x_156 _x_155 in
-              program_named_has_ty _x_157 fst_153 snd_154)))
-    | Ty_map (key_159, value_160) -> (match (v : val_) with
-        | Val_list xs_161 -> (let _f_162 = program_val__has_ty__lam_2 value_160 allocated in
-          let _f_163 = program_val__has_ty__lam_1 key_159 allocated in
-          program_entries_has_ty _f_163 _f_162 xs_161)
+        | Some val__148 -> (match val__148 with
+            | fst_149, snd_150 -> (let _x_151 = program_val__field_checkers fields_145 allocated in
+              let _x_152 = field_bytes_key in
+              let _x_153 = field_canon_by _x_152 _x_151 in
+              program_named_has_ty _x_153 fst_149 snd_150)))
+    | Ty_map (key_155, value_156) -> (match (v : val_) with
+        | Val_list xs_157 -> (let _f_158 = program_val__has_ty__lam_2 value_156 allocated in
+          let _f_159 = program_val__has_ty__lam_1 key_155 allocated in
+          program_entries_has_ty _f_159 _f_158 xs_157)
         | _ -> false)
-    | Ty_tuple items_166 -> (match (v : val_) with
-        | Val_list xs_167 -> (let _x_168 = program_val__item_checkers items_166 allocated in
-          program_items_has_ty _x_168 xs_167)
+    | Ty_tuple items_162 -> (match (v : val_) with
+        | Val_list xs_163 -> (let _x_164 = program_val__item_checkers items_162 allocated in
+          program_items_has_ty _x_164 xs_163)
         | _ -> false)
-    | Ty_app (name_171, _) -> (match (v : val_) with
-        | Val_handle (kind_173, key_174) -> (let _x_175 = handle_kind_of_byte_opt kind_173 in
-          match _x_175 with
-            | Some val__176 -> (match (val__176 : handle_kind) with
-                | HandleKind_cell -> (let _x_177 = "Ref.Ref<number>" in
-                  name_171 = _x_177)
-                | HandleKind_promise -> (let _x_179 = "Deferred.Deferred<number, number>" in
-                  name_171 = _x_179)
-                | HandleKind_scope -> (let _x_181 = "Scope.Scope" in
-                  name_171 = _x_181)
-                | HandleKind_memoMap -> (let _x_183 = "Layer.MemoMap" in
-                  name_171 = _x_183)
-                | HandleKind_external -> (let _x_185 = program_external_handle_target name_171 in
-                  if _x_185 then (let _x_186 = list_get_opt_internal allocated key_174 in
-                    let _x_187 = Some name_171 in
-                    option_inst_beq_beq_at_std_http_header_transfer_encoding_validate_spec_0 _x_186 _x_187) else _x_185)
+    | Ty_app (name_167, _) -> (match (v : val_) with
+        | Val_handle (kind_169, key_170) -> (let _x_171 = handle_kind_of_byte_opt kind_169 in
+          match _x_171 with
+            | Some val__172 -> (match (val__172 : handle_kind) with
+                | HandleKind_scope -> (let _x_173 = "Scope.Scope" in
+                  name_167 = _x_173)
+                | HandleKind_memoMap -> (let _x_175 = "Layer.MemoMap" in
+                  name_167 = _x_175)
+                | HandleKind_external -> (let _x_177 = program_external_handle_target name_167 in
+                  if _x_177 then (let _x_178 = list_get_opt_internal allocated key_170 in
+                    let _x_179 = Some name_167 in
+                    option_inst_beq_beq_at_std_http_header_transfer_encoding_validate_spec_0 _x_178 _x_179) else _x_177)
                 | _ -> false)
             | _ -> false)
-        | _ -> (let _x_191 = "Context.Context<unknown>" in
-          let _x_192 = name_171 = _x_191 in
-          if _x_192 then (let _x_193 = val__context_opt v in
-            match _x_193 with
+        | _ -> (let _x_183 = "Context.Context<unknown>" in
+          let _x_184 = name_167 = _x_183 in
+          if _x_184 then (let _x_185 = val__context_opt v in
+            match _x_185 with
               | None -> false
-              | Some _ -> _x_192) else _x_192))
+              | Some _ -> _x_184) else _x_184))
     | Ty_null -> (match (v : val_) with
         | Val_none -> true
         | _ -> false)
@@ -10893,7 +10880,7 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
       let _x_9 = _x_7 :: _x_8 in
       let _x_10 = events @ _x_9 in
       _x_6, _x_10) in
-  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_15 _y_13 _y_18 in
+  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_15 _y_17 _y_18 in
   match _x_19 with
     | None -> _jp_4 _y_14
     | Some val__20 -> (match val__20 with
@@ -10903,15 +10890,15 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
               let _x_25 = ({ current = fst_21; stack = _x_24; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_26 = FrameStep_running _x_25 in
               let _x_27 = prim_finalizer_events _y_15 _y_14 in
-              let _x_28 = _y_17 @ _x_27 in
+              let _x_28 = _y_13 @ _x_27 in
               let _x_29 = list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12 _x_23 _x_23 in
               let _x_30 = _x_28 @ _x_29 in
               _x_26, _x_30))) in
   let _jp_32 = fun _y_33 _y_34 _y_35 _y_36 _y_37 -> match provided with
-    | None -> _jp_12 _y_37 _y_34 _y_33 _y_35 _y_36 provided
+    | None -> _jp_12 _y_34 _y_33 _y_35 _y_36 _y_37 provided
     | Some val__38 -> (let _x_39 = frame_pop_delivered_exit pop val__38 in
       let _x_40 = Some _x_39 in
-      _jp_12 _y_37 _y_34 _y_33 _y_35 _y_36 _x_40) in
+      _jp_12 _y_34 _y_33 _y_35 _y_36 _y_37 _x_40) in
   let _jp_41 = fun _y_42 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_42 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -10925,8 +10912,8 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
               let _x_50 = FrameStep_running _x_49 in
               _x_50, events_1))
         | ContAnswer_frame frame_52 -> (match carried_cause with
-            | None -> _jp_32 frame_52 delivered fiber events_1 cause
-            | Some val__53 -> _jp_32 frame_52 delivered fiber events_1 val__53)
+            | None -> _jp_32 delivered events_1 frame_52 fiber cause
+            | Some val__53 -> _jp_32 delivered events_1 frame_52 fiber val__53)
         | ContAnswer_empty -> _jp_4 delivered) in
   match provided with
     | None -> (let _x_54 = Exit_failure cause in
@@ -11576,8 +11563,8 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
 
   (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4._redArg (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.Iter lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim) with_fiber_action) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
-  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_5 @ _y_6 in
-  ({ machine = _y_2; fiber = _y_4; yielding = yielding; outcome = _y_3; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_4 @ _y_6 in
+  ({ machine = _y_5; fiber = _y_2; yielding = yielding; outcome = _y_3; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
     | WithFiberAction_fork (program_9, options_10, site_11) -> (match (options_10 : fork_options) with
         | { start_immediately = start_immediately; daemon = daemon; _ } -> (let _jp_12 = fun _y_13 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
@@ -11592,10 +11579,10 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
                                   let _x_25 = evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4__red_arg__lam_0 fst_22 _x_24 in
                                   let _x_26 = Effect4_machine_outcome_continue_ in
                                   if daemon then (let _x_30 = [] in
-                                    _jp_1 fst_20 _x_26 _x_25 snd_23 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
+                                    _jp_1 _x_25 _x_26 snd_23 fst_20 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
                                     let _x_28 = [] in
                                     let _x_29 = _x_27 :: _x_28 in
-                                    _jp_1 fst_20 _x_26 _x_25 snd_23 _x_29))))))) in
+                                    _jp_1 _x_25 _x_26 snd_23 fst_20 _x_29))))))) in
           if daemon then _jp_12 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks; _ } -> (let _x_31 = true in
                 let _x_32 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_31; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
@@ -12165,15 +12152,15 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
   (* LCNF mono: Effect4.Program.exitScoped (root : Effect4.Program.Eff Effect4.Program.NativeOp) (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Machine.Iter Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_4; interruptible = _y_3; interrupted_cause = _y_8; deferred_interrupt = _y_9 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_6; prevent_yield = _y_7; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_5 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_3; interruptible = _y_4; interrupted_cause = _y_2; deferred_interrupt = _y_7 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_6; prevent_yield = _y_5; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_9 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
-      ({ machine = _y_2; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+      ({ machine = _y_8; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       let _x_16 = sh_machine_completed_exits m in
       let _x_17 = [] in
       let interp = program_interp_at root _x_16 _x_17 in
-      let _jp_18 = fun _y_19 _y_20 _y_21 -> let pop = frame_fiber_get_cont_at_program_exit_scoped_spec_0 frame _y_20 _y_19 _y_21 in
+      let _jp_18 = fun _y_19 _y_20 _y_21 -> let pop = frame_fiber_get_cont_at_program_exit_scoped_spec_0 frame _y_19 _y_20 _y_21 in
       match (pop : (_, _, _, _, _, _, _) frame_pop) with
         | { answer = answer; events = events; fiber = fiber; _ } -> (match (answer : (_, _, _, _, _, _, _) cont_answer) with
             | ContAnswer_frame frame_22 -> (match (frame_22 : (_, _, _, _, _, _, _) prim) with
@@ -12195,21 +12182,21 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
                                     | Some val__35 -> (match val__35 with
                                         | fst_36, snd_37 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_36; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_37 with
-                                            | None -> _jp_1 m_2 interruptible stack previous_26 max_ops_before_yield prevent_yield interrupted_cause deferred_interrupt _x_29
+                                            | None -> _jp_1 interrupted_cause stack interruptible prevent_yield max_ops_before_yield deferred_interrupt m_2 previous_26 _x_29
                                             | Some val__38 -> (let _x_39 = RunEvent_finalizerProgram (id, finalizer_24, exit__2) in
                                               let _x_40 = _x_39 :: _x_17 in
                                               let _x_41 = sh_machine_emit m_2 _x_40 in
                                               let _x_42 = program_embed val__38 in
                                               let _x_43 = finalizer_code interp exit__2 _x_42 in
-                                              _jp_1 _x_41 interruptible stack previous_26 max_ops_before_yield prevent_yield interrupted_cause deferred_interrupt _x_43)))))))
+                                              _jp_1 interrupted_cause stack interruptible prevent_yield max_ops_before_yield deferred_interrupt _x_41 previous_26 _x_43)))))))
                     | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
                 | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
             | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding) in
       let _jp_47 = fun _y_48 _y_49 -> match (exit_ : (_, _, _, _, _) exit_) with
         | Exit_success _ -> (let _x_51 = None in
-          _jp_18 _y_49 _y_48 _x_51)
+          _jp_18 _y_48 _y_49 _x_51)
         | Exit_failure cause_52 -> (let _x_53 = Some cause_52 in
-          _jp_18 _y_49 _y_48 _x_53) in
+          _jp_18 _y_48 _y_49 _x_53) in
       let _jp_54 = fun _y_55 -> match (exit_ : (_, _, _, _, _) exit_) with
         | Exit_success _ -> (let _x_57 = false in
           _jp_47 _y_55 _x_57)

@@ -115,7 +115,6 @@ export const nativeOpJson = (v: NativeOp): Json => {
     case "refUpdateSomeAndGet": return ["refUpdateSomeAndGet", fnNameJson(v.f)]
     case "refModify": return ["refModify", fnNameJson(v.f)]
     case "refModifySome": return ["refModifySome", fnNameJson(v.f)]
-    case "deferredMake": return ["deferredMake"]
     case "deferredIsDone": return ["deferredIsDone"]
     case "deferredPoll": return ["deferredPoll"]
     case "deferredSucceed": return ["deferredSucceed"]
@@ -125,6 +124,7 @@ export const nativeOpJson = (v: NativeOp): Json => {
     case "sleep": return ["sleep"]
     case "clockNow": return ["clockNow"]
     case "external": return ["external", v.index]
+    case "deferredMakeOf": return ["deferredMakeOf", tyJson(v.value), tyJson(v.error)]
   }
 }
 

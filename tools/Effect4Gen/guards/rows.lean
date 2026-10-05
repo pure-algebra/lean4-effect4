@@ -16,6 +16,7 @@ open Effect4.Program Effect4.Program.Authoring
 #guard elaborate (Ref.update .incr (nat 0)) = .ok (.perform (.refUpdate .incr) (.lit (.nat 0)))
 -- An async row authors as the reader reads it: a `perform`, the one invocation form.
 #guard elaborate (Effect.sleep (nat 5)) = .ok (.perform .sleep (.lit (.nat 5)))
-#guard elaborate Deferred.make = .ok (.perform .deferredMake (.lit .unit))
+-- `Deferred.make` takes its type arguments: the operation carries them (decisions row 42).
+#guard elaborate (Deferred.make .nat .nat) = .ok (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
 
 end Effect4.Program.AuthoringRowsGuards

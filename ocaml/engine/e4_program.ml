@@ -241,7 +241,6 @@ module Make (A : PROGRAM_TYPES) = struct
       A.NativeOp_refUpdateSomeAndGet (of_fn_name f)
     | Eff_types.Native_op_refModify f -> A.NativeOp_refModify (of_fn_name f)
     | Eff_types.Native_op_refModifySome f -> A.NativeOp_refModifySome (of_fn_name f)
-    | Eff_types.Native_op_deferredMake -> A.NativeOp_deferredMake
     | Eff_types.Native_op_deferredIsDone -> A.NativeOp_deferredIsDone
     | Eff_types.Native_op_deferredPoll -> A.NativeOp_deferredPoll
     | Eff_types.Native_op_deferredSucceed -> A.NativeOp_deferredSucceed
@@ -251,6 +250,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_sleep -> A.NativeOp_sleep
     | Eff_types.Native_op_clockNow -> A.NativeOp_clockNow
     | Eff_types.Native_op_external d -> A.NativeOp_external d
+    | Eff_types.Native_op_deferredMakeOf (v, e) -> A.NativeOp_deferredMakeOf (of_ty v, of_ty e)
 
   let of_decision : Eff_types.decision -> A.decision = function
     | Eff_types.Decision_bool -> A.Decision_bool
@@ -401,16 +401,16 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.NativeOp_refUpdateSomeAndGet _ -> 10
     | A.NativeOp_refModify _ -> 11
     | A.NativeOp_refModifySome _ -> 12
-    | A.NativeOp_deferredMake -> 13
-    | A.NativeOp_deferredIsDone -> 14
-    | A.NativeOp_deferredPoll -> 15
-    | A.NativeOp_deferredSucceed -> 16
-    | A.NativeOp_deferredFail -> 17
-    | A.NativeOp_deferredAwait -> 18
-    | A.NativeOp_scopeMake _ -> 19
-    | A.NativeOp_sleep -> 20
-    | A.NativeOp_clockNow -> 21
-    | A.NativeOp_external _ -> 22
+    | A.NativeOp_deferredIsDone -> 13
+    | A.NativeOp_deferredPoll -> 14
+    | A.NativeOp_deferredSucceed -> 15
+    | A.NativeOp_deferredFail -> 16
+    | A.NativeOp_deferredAwait -> 17
+    | A.NativeOp_scopeMake _ -> 18
+    | A.NativeOp_sleep -> 19
+    | A.NativeOp_clockNow -> 20
+    | A.NativeOp_external _ -> 21
+    | A.NativeOp_deferredMakeOf _ -> 22
 
   let ctor_index_decision : A.decision -> int = function
     | A.Decision_bool -> 0 | A.Decision_option -> 1 | A.Decision_tag _ -> 2

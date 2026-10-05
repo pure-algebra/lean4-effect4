@@ -55,7 +55,7 @@ def fiberHeader : Header := ⟨version, "forgery", "forgery-v1", fiberTable⟩
 /-- Pin every internal constructor and the reserved spellings at table admission. -/
 def internalTypes : List Ty :=
   [.fiberOf .nat .never, .refOf .nat, .deferredOf .nat .never,
-   NativeOp.refTy, NativeOp.deferredTy, .scope, .context]
+   .handle "Ref.Ref<number>", .handle "Deferred.Deferred<number, number>", .scope, .context]
 #guard internalTypes.all fun ty =>
   admitSig ⟨[{ fiberRow with answer := ty }], []⟩ = .error (.row 0 (.internalHandle "answer"))
 #guard internalTypes.all fun ty =>

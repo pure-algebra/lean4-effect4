@@ -344,7 +344,6 @@ type native_op =
   | Native_op_refUpdateSomeAndGet of fn_name
   | Native_op_refModify of fn_name
   | Native_op_refModifySome of fn_name
-  | Native_op_deferredMake
   | Native_op_deferredIsDone
   | Native_op_deferredPoll
   | Native_op_deferredSucceed
@@ -354,6 +353,7 @@ type native_op =
   | Native_op_sleep
   | Native_op_clockNow
   | Native_op_external of int
+  | Native_op_deferredMakeOf of ty * ty
 
 let ctor_index_native_op : native_op -> int = function
   | Native_op_refMake -> 0
@@ -369,16 +369,16 @@ let ctor_index_native_op : native_op -> int = function
   | Native_op_refUpdateSomeAndGet _ -> 10
   | Native_op_refModify _ -> 11
   | Native_op_refModifySome _ -> 12
-  | Native_op_deferredMake -> 13
-  | Native_op_deferredIsDone -> 14
-  | Native_op_deferredPoll -> 15
-  | Native_op_deferredSucceed -> 16
-  | Native_op_deferredFail -> 17
-  | Native_op_deferredAwait -> 18
-  | Native_op_scopeMake _ -> 19
-  | Native_op_sleep -> 20
-  | Native_op_clockNow -> 21
-  | Native_op_external _ -> 22
+  | Native_op_deferredIsDone -> 13
+  | Native_op_deferredPoll -> 14
+  | Native_op_deferredSucceed -> 15
+  | Native_op_deferredFail -> 16
+  | Native_op_deferredAwait -> 17
+  | Native_op_scopeMake _ -> 18
+  | Native_op_sleep -> 19
+  | Native_op_clockNow -> 20
+  | Native_op_external _ -> 21
+  | Native_op_deferredMakeOf _ -> 22
 let wire_tag_native_op : native_op -> int = function
   | Native_op_refMake -> 0
   | Native_op_refGet -> 1
@@ -393,7 +393,6 @@ let wire_tag_native_op : native_op -> int = function
   | Native_op_refUpdateSomeAndGet _ -> 10
   | Native_op_refModify _ -> 11
   | Native_op_refModifySome _ -> 12
-  | Native_op_deferredMake -> 13
   | Native_op_deferredIsDone -> 14
   | Native_op_deferredPoll -> 15
   | Native_op_deferredSucceed -> 16
@@ -403,6 +402,7 @@ let wire_tag_native_op : native_op -> int = function
   | Native_op_sleep -> 20
   | Native_op_clockNow -> 21
   | Native_op_external _ -> 22
+  | Native_op_deferredMakeOf _ -> 23
 let ctor_name_native_op : native_op -> string = function
   | Native_op_refMake -> "refMake"
   | Native_op_refGet -> "refGet"
@@ -417,7 +417,6 @@ let ctor_name_native_op : native_op -> string = function
   | Native_op_refUpdateSomeAndGet _ -> "refUpdateSomeAndGet"
   | Native_op_refModify _ -> "refModify"
   | Native_op_refModifySome _ -> "refModifySome"
-  | Native_op_deferredMake -> "deferredMake"
   | Native_op_deferredIsDone -> "deferredIsDone"
   | Native_op_deferredPoll -> "deferredPoll"
   | Native_op_deferredSucceed -> "deferredSucceed"
@@ -427,7 +426,8 @@ let ctor_name_native_op : native_op -> string = function
   | Native_op_sleep -> "sleep"
   | Native_op_clockNow -> "clockNow"
   | Native_op_external _ -> "external"
-let ctor_names_native_op : string list = ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredMake"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"]
+  | Native_op_deferredMakeOf _ -> "deferredMakeOf"
+let ctor_names_native_op : string list = ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"]
 
 
 type service_name = {

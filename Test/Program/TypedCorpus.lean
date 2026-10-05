@@ -36,7 +36,7 @@ def key : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
 def key2 : ServiceKey := ⟨⟨5⟩, ⟨4⟩⟩
 def forked : E := .withFiber (.fork (.succeed (n 1)) opts)
 def withCell (k : E) : E := .bind (.perform .refMake (n 1)) k
-def withPromise (k : E) : E := .bind (.perform .deferredMake u) k
+def withPromise (k : E) : E := .bind (.perform (.deferredMakeOf .nat .nat) u) k
 def withScope (k : E) : E := .bind (.perform (.scopeMake .sequential) u) k
 /-- A corpus program with the row table it is checked and run under. -/
 structure Entry where

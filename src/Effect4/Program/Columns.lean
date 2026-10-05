@@ -10,7 +10,8 @@ Three scans of one raw type, each run before normalization can discard syntax:
   path.
 * `findInternalHandle`: the first internal handle kind, with its path (decisions row 97 interim).
 * `admitColumn`: the column is the designed bottom or has a member (`inhabited`, rows 127 and
-  149).
+  149); `admitRowColumn` reads a row's template column with every parameter inhabited (row 155
+  (a)).
 
 The signature's admission reads each of them at the root of every row column (`rowChecks`,
 `Program/SigApp.lean`). Program admission reads `findInt` and `admitColumn` at the program's own
@@ -54,11 +55,13 @@ def findIntItems (pos : Path) (i : Nat) : List Ty → Option Path
   | t :: rest => findInt (pos ++ [toString i]) t <|> findIntItems pos (i + 1) rest
 end
 
-/-- Inhabitance as a fold (decisions row 127; DI-67): `never` and a template parameter have no
-member; a product needs both columns, a result or a union either, a tuple every item, a record
-every canonical field that is not optional (an absent optional field is a member's, decisions row
-157); every other former has a member at every argument in some world (`none`, `[]`, a failure
-with no typed reason, the empty cause, a declared handle, the empty map, an integer, the leaves). The laws are `Laws/Program/Typed/Membership.lean`'s:
+/-- Inhabitance as a fold (decisions row 127; DI-67): `never`, a template parameter and a handle
+at a spelling no kind owns (`retiredHandleTargets`) have no member; a product needs both columns, a
+result or a union either, a tuple every item, a record every canonical field that is not optional
+(an absent optional field is a member's, decisions row 157); every other former has a member at
+every argument in some world (`none`, `[]`, a failure with no typed reason, the empty cause, a
+declared handle, the empty map, an integer, the leaves). The laws are
+`Laws/Program/Typed/Membership.lean`'s:
 `inhabited_iff_fits` (agreement with `Fits` on every type, one world for every handle position by
 fresh keys), `inhabited_of_hasTy` (sound against DI-67's `Val.hasTy`),
 `fits_of_inhabited_handleFree` (a world-free witness on the data fragment) and the handle
@@ -70,7 +73,8 @@ def inhabitedAlg : TyAlgebra (fun _ => Bool) where
   ty_int := true
   ty_string := true
   ty_bool := true
-  ty_handle _ := true
+  -- a spelling no handle kind owns has no member (the state plan's T3a)
+  ty_handle target := !retiredHandleTargets.contains target
   ty_option _ := true
   ty_list _ := true
   ty_prod a b := a && b
@@ -87,7 +91,7 @@ def inhabitedAlg : TyAlgebra (fun _ => Bool) where
   ty_record fs := (Ty.canon fs).all fun p => p.2.1 || p.2.2
   ty_map _ _ := true
   ty_tuple ts := ts.all id
-  ty_app _ _ := true
+  ty_app name _ := !retiredHandleTargets.contains name
   ty_null := true
   ty_undefined := true
   ty_number := true
@@ -101,6 +105,18 @@ a member. `prod never nat` and `except never never` are canonical, not `never`, 
 they are refused; `list int` has a member and is the `int` scan's to refuse (DB-15), not this
 check's. -/
 def admitColumn (t : Ty) : Bool := t.normalize == .never || inhabited t
+
+/-- Inhabitance at a row's template column (decisions row 155 (a)): `inhabitedAlg` with a template
+parameter read as inhabited. A parameter alone has no member (`inhabited_iff_fits`), so without
+this reading a well-scoped template row (`request := var 0`) would be refused at its columns; its
+instances are the program's, whose own columns `admitColumn` checks. -/
+def rowColumnInhabitedAlg : TyAlgebra (fun _ => Bool) :=
+  { inhabitedAlg with ty_var := fun _ => true }
+
+/-- The column check of a row's template columns (`rowChecks`, `Program/SigApp.lean`): the
+designed bottom, or a column that is inhabited with every parameter read as inhabited. On a
+closed column it is `admitColumn`. -/
+def admitRowColumn (t : Ty) : Bool := t.normalize == .never || cata_ty rowColumnInhabitedAlg t
 
 /-- Locate internal handle types with the generated type fold. Raw syntax is inspected
 before normalization, including every nested answer and error column. -/

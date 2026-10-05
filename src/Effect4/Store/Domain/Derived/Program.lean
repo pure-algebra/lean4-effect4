@@ -4,13 +4,13 @@
 --   lake exe effect4gen Main --group Program --module --meta-imports Effect4.Program.Native,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.RowCanonical --imports Effect4.Program.Native,Effect4.Store.Domain.Canonical,Effect4.Store.Domain.RowCanonical --out src/Effect4/Store/Domain/Derived/Program.lean --append tools/Effect4Gen/guards/program.lean \
 --     Effect4.Program.Lit Effect4.Machine.FnName Effect4.FinalizerStrategy \
 --    Effect4.Supervision.MaskMode Effect4.Supervision.ObserverMode Effect4.Program.Decision \
---    Effect4.Program.NativeOp Effect4.Supervision.ForkOptions Effect4.Program.Ty \
+--    Effect4.Program.Ty Effect4.Program.NativeOp Effect4.Supervision.ForkOptions \
 --    Effect4.Program.FieldReadMode Effect4.Program.Term Effect4.Program.CauseTerm \
 --    Effect4.ServiceName Effect4.ServiceTypeCode Effect4.ServiceKey \
 --    Effect4.Program.Eff@Effect4.Program.NativeOp Effect4.Program.RowKind \
 --    Effect4.Program.RowShape Effect4.Program.Registration Effect4.Program.Row \
 --    Effect4.Program.EffTy
--- Carriers read from: Effect4.Machine.Term, Effect4.Machine.Stores, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.Native, Effect4.Program.TyCore, Effect4.Program.Eff, Effect4.Machine.Key, Effect4.Program.Typing.Rules
+-- Carriers read from: Effect4.Machine.Term, Effect4.Machine.Stores, Effect4.Machine.Scope, Effect4.Machine.Supervision, Effect4.Program.Decision, Effect4.Program.TyCore, Effect4.Program.Native, Effect4.Program.Eff, Effect4.Machine.Key, Effect4.Program.Typing.Rules
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/program.lean
 module
 
@@ -395,249 +395,6 @@ instance instCanonical : Canonical (_root_.Effect4.Program.Decision) :=
 #guard shapeDoc.wellTagged
 
 end DecisionC
-
-namespace NativeOpC
-
-def shapeDoc : ShapeDoc :=
-  ⟨.sum "NativeOp"
-     [("refMake", 0, []),
-      ("refGet", 1, []),
-      ("refSet", 2, []),
-      ("refGetAndSet", 3, []),
-      ("refSetAndGet", 4, []),
-      ("refUpdate", 5, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refGetAndUpdate", 6, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refUpdateAndGet", 7, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refUpdateSome", 8, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refGetAndUpdateSome", 9, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refUpdateSomeAndGet", 10, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refModify", 11, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("refModifySome", 12, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
-      ("deferredMake", 13, []),
-      ("deferredIsDone", 14, []),
-      ("deferredPoll", 15, []),
-      ("deferredSucceed", 16, []),
-      ("deferredFail", 17, []),
-      ("deferredAwait", 18, []),
-      ("scopeMake", 19, [("strategy", (shape _root_.Effect4.FinalizerStrategy).root)]),
-      ("sleep", 20, []),
-      ("clockNow", 21, []),
-      ("external", 22, [("index", (shape _root_.Nat).root)])],
-   (shape _root_.Effect4.Machine.FnName).defs ++ (shape _root_.Effect4.FinalizerStrategy).defs ++
-     (shape _root_.Nat).defs⟩
-
-def toVal : _root_.Effect4.Program.NativeOp → Val
-  | .refMake => .ctor 0 []
-  | .refGet => .ctor 1 []
-  | .refSet => .ctor 2 []
-  | .refGetAndSet => .ctor 3 []
-  | .refSetAndGet => .ctor 4 []
-  | .refUpdate a0 => .ctor 5 [Canonical.toVal a0]
-  | .refGetAndUpdate a0 => .ctor 6 [Canonical.toVal a0]
-  | .refUpdateAndGet a0 => .ctor 7 [Canonical.toVal a0]
-  | .refUpdateSome a0 => .ctor 8 [Canonical.toVal a0]
-  | .refGetAndUpdateSome a0 => .ctor 9 [Canonical.toVal a0]
-  | .refUpdateSomeAndGet a0 => .ctor 10 [Canonical.toVal a0]
-  | .refModify a0 => .ctor 11 [Canonical.toVal a0]
-  | .refModifySome a0 => .ctor 12 [Canonical.toVal a0]
-  | .deferredMake => .ctor 13 []
-  | .deferredIsDone => .ctor 14 []
-  | .deferredPoll => .ctor 15 []
-  | .deferredSucceed => .ctor 16 []
-  | .deferredFail => .ctor 17 []
-  | .deferredAwait => .ctor 18 []
-  | .scopeMake a0 => .ctor 19 [Canonical.toVal a0]
-  | .sleep => .ctor 20 []
-  | .clockNow => .ctor 21 []
-  | .external a0 => .ctor 22 [Canonical.toVal a0]
-
-def ofVal : Val → Option (_root_.Effect4.Program.NativeOp)
-  | .ctor 0 [] => some .refMake
-  | .ctor 1 [] => some .refGet
-  | .ctor 2 [] => some .refSet
-  | .ctor 3 [] => some .refGetAndSet
-  | .ctor 4 [] => some .refSetAndGet
-  | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdate
-  | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refGetAndUpdate
-  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdateAndGet
-  | .ctor 8 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdateSome
-  | .ctor 9 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refGetAndUpdateSome
-  | .ctor 10 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdateSomeAndGet
-  | .ctor 11 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refModify
-  | .ctor 12 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refModifySome
-  | .ctor 13 [] => some .deferredMake
-  | .ctor 14 [] => some .deferredIsDone
-  | .ctor 15 [] => some .deferredPoll
-  | .ctor 16 [] => some .deferredSucceed
-  | .ctor 17 [] => some .deferredFail
-  | .ctor 18 [] => some .deferredAwait
-  | .ctor 19 [v0] => (Canonical.ofVal (α := _root_.Effect4.FinalizerStrategy) v0).map .scopeMake
-  | .ctor 20 [] => some .sleep
-  | .ctor 21 [] => some .clockNow
-  | .ctor 22 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .external
-  | _ => none
-
-set_option linter.unusedSimpArgs false in
-theorem ofVal_toVal (a : _root_.Effect4.Program.NativeOp) : ofVal (toVal a) = some a := by
-  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.NativeOp} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  all_goals first
-    | (injection h with h; subst h; rfl)
-    | (rename_i w
-       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
-       subst hj
-       simp only [toVal]
-       rw [Canonical.ofVal_exact hx])
-    | exact nomatch h
-
-theorem lift_FnName (x : _root_.Effect4.Machine.FnName) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.Machine.FnName).root
-      (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
-    _ _ (Canonical.fits x)
-theorem lift_FinalizerStrategy (x : _root_.Effect4.FinalizerStrategy) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.FinalizerStrategy).root
-      (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
-    _ _ (Canonical.fits x)
-theorem lift_Nat (x : _root_.Nat) :
-    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
-    _ _ (Canonical.fits x)
-
-theorem fits (a : _root_.Effect4.Program.NativeOp) : shapeDoc.accepts (toVal a) = true := by
-  cases a with
-  | «refMake» =>
-    exact accepts_sum _ _ _ 0 "refMake" [] [] rfl (acceptsFields_nil _)
-  | «refGet» =>
-    exact accepts_sum _ _ _ 1 "refGet" [] [] rfl (acceptsFields_nil _)
-  | «refSet» =>
-    exact accepts_sum _ _ _ 2 "refSet" [] [] rfl (acceptsFields_nil _)
-  | «refGetAndSet» =>
-    exact accepts_sum _ _ _ 3 "refGetAndSet" [] [] rfl (acceptsFields_nil _)
-  | «refSetAndGet» =>
-    exact accepts_sum _ _ _ 4 "refSetAndGet" [] [] rfl (acceptsFields_nil _)
-  | «refUpdate» a0 =>
-    exact accepts_sum _ _ _ 5 "refUpdate" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «refGetAndUpdate» a0 =>
-    exact accepts_sum _ _ _ 6 "refGetAndUpdate" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «refUpdateAndGet» a0 =>
-    exact accepts_sum _ _ _ 7 "refUpdateAndGet" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «refUpdateSome» a0 =>
-    exact accepts_sum _ _ _ 8 "refUpdateSome" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «refGetAndUpdateSome» a0 =>
-    exact accepts_sum _ _ _ 9 "refGetAndUpdateSome" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «refUpdateSomeAndGet» a0 =>
-    exact accepts_sum _ _ _ 10 "refUpdateSomeAndGet" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «refModify» a0 =>
-    exact accepts_sum _ _ _ 11 "refModify" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «refModifySome» a0 =>
-    exact accepts_sum _ _ _ 12 "refModifySome" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
-  | «deferredMake» =>
-    exact accepts_sum _ _ _ 13 "deferredMake" [] [] rfl (acceptsFields_nil _)
-  | «deferredIsDone» =>
-    exact accepts_sum _ _ _ 14 "deferredIsDone" [] [] rfl (acceptsFields_nil _)
-  | «deferredPoll» =>
-    exact accepts_sum _ _ _ 15 "deferredPoll" [] [] rfl (acceptsFields_nil _)
-  | «deferredSucceed» =>
-    exact accepts_sum _ _ _ 16 "deferredSucceed" [] [] rfl (acceptsFields_nil _)
-  | «deferredFail» =>
-    exact accepts_sum _ _ _ 17 "deferredFail" [] [] rfl (acceptsFields_nil _)
-  | «deferredAwait» =>
-    exact accepts_sum _ _ _ 18 "deferredAwait" [] [] rfl (acceptsFields_nil _)
-  | «scopeMake» a0 =>
-    exact accepts_sum _ _ _ 19 "scopeMake" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_FinalizerStrategy a0) (acceptsFields_nil _))
-  | «sleep» =>
-    exact accepts_sum _ _ _ 20 "sleep" [] [] rfl (acceptsFields_nil _)
-  | «clockNow» =>
-    exact accepts_sum _ _ _ 21 "clockNow" [] [] rfl (acceptsFields_nil _)
-  | «external» a0 =>
-    exact accepts_sum _ _ _ 22 "external" _ _ rfl
-      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
-
-instance instCanonical : Canonical (_root_.Effect4.Program.NativeOp) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
-
--- No sum of the document gives one wire tag to two cases.
-#guard shapeDoc.wellTagged
-
-end NativeOpC
-
-namespace ForkOptionsC
-
-def shapeDoc : ShapeDoc :=
-  ⟨.struct "ForkOptions" [("startImmediately", (shape _root_.Bool).root),
-     ("daemon", (shape _root_.Bool).root),
-     ("maskMode", (shape _root_.Effect4.Supervision.MaskMode).root)],
-   (shape _root_.Bool).defs ++ (shape _root_.Effect4.Supervision.MaskMode).defs⟩
-
-def toVal : _root_.Effect4.Supervision.ForkOptions → Val
-  | .mk a0 a1 a2 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2]
-
-def ofVal : Val → Option (_root_.Effect4.Supervision.ForkOptions)
-  | .ctor 0 [v0, v1, v2] =>
-    match Canonical.ofVal (α := _root_.Bool) v0, Canonical.ofVal (α := _root_.Bool) v1,
-        Canonical.ofVal (α := _root_.Effect4.Supervision.MaskMode) v2 with
-    | some a0, some a1, some a2 => some ⟨a0, a1, a2⟩
-    | _, _, _ => none
-  | _ => none
-
-theorem ofVal_toVal (a : _root_.Effect4.Supervision.ForkOptions) : ofVal (toVal a) = some a := by
-  obtain ⟨a0, a1, a2⟩ := a
-  simp [toVal, ofVal, Canonical.ofVal_toVal]
-
-theorem ofVal_exact {v : Val} {a : _root_.Effect4.Supervision.ForkOptions} (h : ofVal v = some a) :
-    v = toVal a := by
-  unfold ofVal at h
-  split at h
-  · next v0 v1 v2 =>
-    split at h
-    · next b0 b1 b2 h0 h1 h2 =>
-      injection h with h
-      subst h
-      simp only [toVal]
-      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
-    · exact nomatch h
-  · exact nomatch h
-
-theorem lift_Bool (x : _root_.Bool) :
-    acceptsIn shapeDoc.defs (shape _root_.Bool).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
-    _ _ (Canonical.fits x)
-theorem lift_MaskMode (x : _root_.Effect4.Supervision.MaskMode) :
-    acceptsIn shapeDoc.defs (shape _root_.Effect4.Supervision.MaskMode).root
-      (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
-    _ _ (Canonical.fits x)
-
-theorem fits (a : _root_.Effect4.Supervision.ForkOptions) : shapeDoc.accepts (toVal a) = true := by
-  obtain ⟨a0, a1, a2⟩ := a
-  apply accepts_struct
-  exact
-    (acceptsFields_cons _ _ _ _ _ _ (lift_Bool a0)
-      (acceptsFields_cons _ _ _ _ _ _ (lift_Bool a1)
-        (acceptsFields_cons _ _ _ _ _ _ (lift_MaskMode a2) (acceptsFields_nil _))))
-
-instance instCanonical : Canonical (_root_.Effect4.Supervision.ForkOptions) :=
-  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
-
--- No sum of the document gives one wire tag to two cases.
-#guard shapeDoc.wellTagged
-
-end ForkOptionsC
 
 namespace TyC
 
@@ -1076,6 +833,268 @@ instance instCanonicalTy : Canonical (_root_.Effect4.Program.Ty) :=
 #guard wellTaggedFields defs
 
 end TyC
+
+namespace NativeOpC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "NativeOp"
+     [("refMake", 0, []),
+      ("refGet", 1, []),
+      ("refSet", 2, []),
+      ("refGetAndSet", 3, []),
+      ("refSetAndGet", 4, []),
+      ("refUpdate", 5, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refGetAndUpdate", 6, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refUpdateAndGet", 7, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refUpdateSome", 8, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refGetAndUpdateSome", 9, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refUpdateSomeAndGet", 10, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refModify", 11, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("refModifySome", 12, [("f", (shape _root_.Effect4.Machine.FnName).root)]),
+      ("deferredIsDone", 14, []),
+      ("deferredPoll", 15, []),
+      ("deferredSucceed", 16, []),
+      ("deferredFail", 17, []),
+      ("deferredAwait", 18, []),
+      ("scopeMake", 19, [("strategy", (shape _root_.Effect4.FinalizerStrategy).root)]),
+      ("sleep", 20, []),
+      ("clockNow", 21, []),
+      ("external", 22, [("index", (shape _root_.Nat).root)]),
+      ("deferredMakeOf", 23, [("value", (shape _root_.Effect4.Program.Ty).root),
+        ("error", (shape _root_.Effect4.Program.Ty).root)])],
+   (shape _root_.Effect4.Machine.FnName).defs ++ (shape _root_.Effect4.FinalizerStrategy).defs ++
+     (shape _root_.Nat).defs ++ (shape _root_.Effect4.Program.Ty).defs⟩
+
+def toVal : _root_.Effect4.Program.NativeOp → Val
+  | .refMake => .ctor 0 []
+  | .refGet => .ctor 1 []
+  | .refSet => .ctor 2 []
+  | .refGetAndSet => .ctor 3 []
+  | .refSetAndGet => .ctor 4 []
+  | .refUpdate a0 => .ctor 5 [Canonical.toVal a0]
+  | .refGetAndUpdate a0 => .ctor 6 [Canonical.toVal a0]
+  | .refUpdateAndGet a0 => .ctor 7 [Canonical.toVal a0]
+  | .refUpdateSome a0 => .ctor 8 [Canonical.toVal a0]
+  | .refGetAndUpdateSome a0 => .ctor 9 [Canonical.toVal a0]
+  | .refUpdateSomeAndGet a0 => .ctor 10 [Canonical.toVal a0]
+  | .refModify a0 => .ctor 11 [Canonical.toVal a0]
+  | .refModifySome a0 => .ctor 12 [Canonical.toVal a0]
+  | .deferredIsDone => .ctor 14 []
+  | .deferredPoll => .ctor 15 []
+  | .deferredSucceed => .ctor 16 []
+  | .deferredFail => .ctor 17 []
+  | .deferredAwait => .ctor 18 []
+  | .scopeMake a0 => .ctor 19 [Canonical.toVal a0]
+  | .sleep => .ctor 20 []
+  | .clockNow => .ctor 21 []
+  | .external a0 => .ctor 22 [Canonical.toVal a0]
+  | .deferredMakeOf a0 a1 => .ctor 23 [Canonical.toVal a0, Canonical.toVal a1]
+
+def ofVal : Val → Option (_root_.Effect4.Program.NativeOp)
+  | .ctor 0 [] => some .refMake
+  | .ctor 1 [] => some .refGet
+  | .ctor 2 [] => some .refSet
+  | .ctor 3 [] => some .refGetAndSet
+  | .ctor 4 [] => some .refSetAndGet
+  | .ctor 5 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdate
+  | .ctor 6 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refGetAndUpdate
+  | .ctor 7 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdateAndGet
+  | .ctor 8 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdateSome
+  | .ctor 9 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refGetAndUpdateSome
+  | .ctor 10 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refUpdateSomeAndGet
+  | .ctor 11 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refModify
+  | .ctor 12 [v0] => (Canonical.ofVal (α := _root_.Effect4.Machine.FnName) v0).map .refModifySome
+  | .ctor 14 [] => some .deferredIsDone
+  | .ctor 15 [] => some .deferredPoll
+  | .ctor 16 [] => some .deferredSucceed
+  | .ctor 17 [] => some .deferredFail
+  | .ctor 18 [] => some .deferredAwait
+  | .ctor 19 [v0] => (Canonical.ofVal (α := _root_.Effect4.FinalizerStrategy) v0).map .scopeMake
+  | .ctor 20 [] => some .sleep
+  | .ctor 21 [] => some .clockNow
+  | .ctor 22 [v0] => (Canonical.ofVal (α := _root_.Nat) v0).map .external
+  | .ctor 23 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1 with
+    | some a0, some a1 => some (.deferredMakeOf a0 a1)
+    | _, _ => none
+  | _ => none
+
+set_option linter.unusedSimpArgs false in
+theorem ofVal_toVal (a : _root_.Effect4.Program.NativeOp) : ofVal (toVal a) = some a := by
+  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.NativeOp} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  all_goals first
+    | (injection h with h; subst h; rfl)
+    | (rename_i w
+       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+       subst hj
+       simp only [toVal]
+       rw [Canonical.ofVal_exact hx])
+    | (split at h
+       · rename_i b0 b1 h0 h1
+         injection h with h
+         subst h
+         simp only [toVal]
+         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+         done
+       all_goals exact nomatch h)
+    | exact nomatch h
+
+theorem lift_FnName (x : _root_.Effect4.Machine.FnName) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Machine.FnName).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_FinalizerStrategy (x : _root_.Effect4.FinalizerStrategy) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.FinalizerStrategy).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_Nat (x : _root_.Nat) :
+    acceptsIn shapeDoc.defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.NativeOp) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «refMake» =>
+    exact accepts_sum _ _ _ 0 "refMake" [] [] rfl (acceptsFields_nil _)
+  | «refGet» =>
+    exact accepts_sum _ _ _ 1 "refGet" [] [] rfl (acceptsFields_nil _)
+  | «refSet» =>
+    exact accepts_sum _ _ _ 2 "refSet" [] [] rfl (acceptsFields_nil _)
+  | «refGetAndSet» =>
+    exact accepts_sum _ _ _ 3 "refGetAndSet" [] [] rfl (acceptsFields_nil _)
+  | «refSetAndGet» =>
+    exact accepts_sum _ _ _ 4 "refSetAndGet" [] [] rfl (acceptsFields_nil _)
+  | «refUpdate» a0 =>
+    exact accepts_sum _ _ _ 5 "refUpdate" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «refGetAndUpdate» a0 =>
+    exact accepts_sum _ _ _ 6 "refGetAndUpdate" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «refUpdateAndGet» a0 =>
+    exact accepts_sum _ _ _ 7 "refUpdateAndGet" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «refUpdateSome» a0 =>
+    exact accepts_sum _ _ _ 8 "refUpdateSome" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «refGetAndUpdateSome» a0 =>
+    exact accepts_sum _ _ _ 9 "refGetAndUpdateSome" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «refUpdateSomeAndGet» a0 =>
+    exact accepts_sum _ _ _ 10 "refUpdateSomeAndGet" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «refModify» a0 =>
+    exact accepts_sum _ _ _ 11 "refModify" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «refModifySome» a0 =>
+    exact accepts_sum _ _ _ 12 "refModifySome" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FnName a0) (acceptsFields_nil _))
+  | «deferredIsDone» =>
+    exact accepts_sum _ _ _ 14 "deferredIsDone" [] [] rfl (acceptsFields_nil _)
+  | «deferredPoll» =>
+    exact accepts_sum _ _ _ 15 "deferredPoll" [] [] rfl (acceptsFields_nil _)
+  | «deferredSucceed» =>
+    exact accepts_sum _ _ _ 16 "deferredSucceed" [] [] rfl (acceptsFields_nil _)
+  | «deferredFail» =>
+    exact accepts_sum _ _ _ 17 "deferredFail" [] [] rfl (acceptsFields_nil _)
+  | «deferredAwait» =>
+    exact accepts_sum _ _ _ 18 "deferredAwait" [] [] rfl (acceptsFields_nil _)
+  | «scopeMake» a0 =>
+    exact accepts_sum _ _ _ 19 "scopeMake" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FinalizerStrategy a0) (acceptsFields_nil _))
+  | «sleep» =>
+    exact accepts_sum _ _ _ 20 "sleep" [] [] rfl (acceptsFields_nil _)
+  | «clockNow» =>
+    exact accepts_sum _ _ _ 21 "clockNow" [] [] rfl (acceptsFields_nil _)
+  | «external» a0 =>
+    exact accepts_sum _ _ _ 22 "external" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a0) (acceptsFields_nil _))
+  | «deferredMakeOf» a0 a1 =>
+    exact accepts_sum _ _ _ 23 "deferredMakeOf" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1) (acceptsFields_nil _)))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.NativeOp) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end NativeOpC
+
+namespace ForkOptionsC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "ForkOptions" [("startImmediately", (shape _root_.Bool).root),
+     ("daemon", (shape _root_.Bool).root),
+     ("maskMode", (shape _root_.Effect4.Supervision.MaskMode).root)],
+   (shape _root_.Bool).defs ++ (shape _root_.Effect4.Supervision.MaskMode).defs⟩
+
+def toVal : _root_.Effect4.Supervision.ForkOptions → Val
+  | .mk a0 a1 a2 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1, Canonical.toVal a2]
+
+def ofVal : Val → Option (_root_.Effect4.Supervision.ForkOptions)
+  | .ctor 0 [v0, v1, v2] =>
+    match Canonical.ofVal (α := _root_.Bool) v0, Canonical.ofVal (α := _root_.Bool) v1,
+        Canonical.ofVal (α := _root_.Effect4.Supervision.MaskMode) v2 with
+    | some a0, some a1, some a2 => some ⟨a0, a1, a2⟩
+    | _, _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Supervision.ForkOptions) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1, a2⟩ := a
+  simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Supervision.ForkOptions} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 v2 =>
+    split at h
+    · next b0 b1 b2 h0 h1 h2 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1, Canonical.ofVal_exact h2]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_Bool (x : _root_.Bool) :
+    acceptsIn shapeDoc.defs (shape _root_.Bool).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
+theorem lift_MaskMode (x : _root_.Effect4.Supervision.MaskMode) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Supervision.MaskMode).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Supervision.ForkOptions) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1, a2⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_Bool a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Bool a1)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_MaskMode a2) (acceptsFields_nil _))))
+
+instance instCanonical : Canonical (_root_.Effect4.Supervision.ForkOptions) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end ForkOptionsC
 
 namespace FieldReadModeC
 
@@ -3085,8 +3104,9 @@ def genDecode (b : Bytes) : Option (Eff NativeOp) :=
 #guard [NativeOp.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet, .refUpdate .incr,
     .refGetAndUpdate .double, .refUpdateAndGet .noChange, .refUpdateSome .incr,
     .refGetAndUpdateSome .incr, .refUpdateSomeAndGet .incr, .refModify .takeAndBump,
-    .refModifySome .incr, .deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed,
-    .deferredFail, .deferredAwait, .scopeMake .parallel].all fun o =>
+    .refModifySome .incr, .deferredMakeOf .nat .nat, .deferredMakeOf .string (.lit "E"),
+    .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail, .deferredAwait,
+    .scopeMake .parallel].all fun o =>
   ProgramGen.NativeOpC.ofVal (ProgramGen.NativeOpC.toVal o) = some o
 #guard [CauseTerm.fail (.lit (.nat 1)), .die (.var 0), .interrupt none,
     .interrupt (some (.var 1)), .both (.fail (.var 0)) (.die (.var 1))].all fun c =>

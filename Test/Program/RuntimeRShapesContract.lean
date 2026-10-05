@@ -133,7 +133,7 @@ def dueInterrupt : NativeEff :=
     (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil)))
   let parent : NativeEff := .onExit (.bind done (.perform .refMake (.lit (.nat 99))))
     (.perform .refMake (.lit (.nat 9)))
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork parent ⟨false, true, .inherit⟩))
       (.bind (.withFiber (.fork child ⟨true, true, .inherit⟩))
         (.awaitFiber (.var 1) .joinEffect)))

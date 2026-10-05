@@ -174,10 +174,10 @@ def registry : Registry where
       title := "Structural TypeScript metadata retains the exact stored Ty declaration"
       pointer := .witness `Effect4.Codegen.Metadata.type_metadata_exact },
     { id := "raw-formation", concept := "subtyping-algebra", role := .decidability
-      title := "Raw formation checking agrees with distinct record names and admitted map keys"
+      title := "Raw formation checking agrees with distinct record names, admitted map keys and a deferred's admitted error column"
       pointer := .witness `Effect4.Program.Formation.checkInput_eq_none_iff },
     { id := "instantiated-formation", concept := "residual-program-typing", role := .compatibility
-      title := "Successful row template use checks instantiated map keys"
+      title := "Successful row template use checks instantiated map keys and deferred error columns"
       pointer := .witness `Effect4.Program.rowTy_instantiated_formed },
     -- 1. store-typing
     { id := "fits-mono", concept := "store-typing", role := .monotonicity
@@ -461,6 +461,9 @@ def registry : Registry where
       literature := [
         { work := "Castagna2024", locator := "audit P6", relation := "adaptedResult" }
       ] },
+    { id := "template-match-anchored", concept := "subtyping-algebra", role := .decidability
+      title := "The row match is complete on anchored templates: a normal request with no never outside an invariant handle's argument, below some instance, has a match (the state plan's T3a)"
+      pointer := .witness `Effect4.Program.Ty.matchTemplate_complete_anchored },
 
     -- 7. initial-algebras-folds
     { id := "hom-eq-cata-eff", concept := "initial-algebras-folds", role := .fundamentalProperty
@@ -730,9 +733,9 @@ def registry : Registry where
       top := [`Effect4.Program.Typed.order_refl, `Effect4.Program.Typed.order_trans,
         `Effect4.Program.Typed.refMake_extension, `Effect4.Program.Typed.deferredMake_extension,
         `Effect4.Program.Typed.memoBuild_extension]
-      openParts := ["FnName retires: the store runs binder terms since T2, and a NativeOp row hands it its name's lowering, which runs the name's kernel on every number (kernel_term_agrees); the rows carry terms at T3 (decisions row 43; state plan T3)",
-        "rows as templates: Ref and Deferred rows over parameters, Deferred.make carrying its type arguments, modify answering B while storing A; until then the native spellings read as cells at nat (decisions row 42, row 96 D2; state plan T3)",
-        "the faces of Ref<A> and Deferred<A, E>: printer, readers, TypeScript profile and OCaml, binder terms printed (decisions rows 42–43, step 5; state plan T5)"] },
+      openParts := ["FnName retires: the store runs binder terms since T2, and a NativeOp row hands it its name's lowering, which runs the name's kernel on every number (kernel_term_agrees); the rows carry terms at T3b (decisions row 43; state plan T3b)",
+        "the read-modify-write rows as templates: the eight rows stay at refOf nat, and modify answering B while storing A, until their binder terms land (decisions rows 42–43; state plan T3b); the Ref and Deferred rows are templates and Deferred.make carries its type arguments since T3a",
+        "the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed (decisions rows 42–43, step 5; state plan T5)"] },
     { id := "R5", title := "Services: the service table, layers and provision"
       top := [`Effect4.Program.Provision.build_total]
       openParts := ["lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)",

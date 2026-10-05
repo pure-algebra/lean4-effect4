@@ -956,14 +956,21 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
         else args.scoped n
     | none => false
 
+/-- A row's printed head reads back (`printRowHead`): a value row prints none, and another
+row's declared type arguments have a legacy spelling (`rowTypeArgs`). A row the printer refuses
+by name (`PrintRefusal.typeSpelling`) is outside: `Deferred.make` at an instance other than the
+faces' until T5 (`NativeOp.deferredTypeArgs`). -/
+def rowHeadReadable (row : Row) : Bool :=
+  decide (row.shape = .value) || (rowTypeArgs row).isSome
+
 /-! ## What the reader needs of a signature -/
 
-/-- `spell` inverts the row table on (spelling, trailing names), a value row has no trailing
-names (the printer drops them), and no spelling or trailing name is a binder name,
-`undefined`, or a reserved head. -/
+/-- `spell` inverts the row table on (spelling, trailing names) at every row whose head reads
+back (`rowHeadReadable`), a value row has no trailing names (the printer drops them), and no
+spelling or trailing name is a binder name, `undefined`, or a reserved head. -/
 structure LawfulSpelling (sig : Signature Op) (spell : String → List String → Option Op) :
     Prop where
-  spell_row : ∀ op, sig.dom op = true →
+  spell_row : ∀ op, sig.dom op = true → rowHeadReadable (sig.rowOf op) = true →
     spell (sig.rowOf op).spelling (sig.rowOf op).trailing = some op
   row_of_spell : ∀ s names op, spell s names = some op →
     (sig.rowOf op).spelling = s ∧ (sig.rowOf op).trailing = names
@@ -975,9 +982,10 @@ structure LawfulSpelling (sig : Signature Op) (spell : String → List String �
 
 /-! ## The native profile
 
-`nativeSpell` inverts `NativeOp.row` on (spelling, trailing names): the forty read-modify-write
-rows share eight spellings and are told apart by the pure function's name, the two `Scope.make`
-rows by the `"parallel"` strategy. `nativeLawful` is the receipt that the native table meets
+`nativeSpell` inverts `NativeOp.row` on (spelling, trailing names) over one representative per
+key (`NativeOp.spelled`): the forty read-modify-write rows share eight spellings and are told
+apart by the pure function's name, the two `Scope.make` rows by the `"parallel"` strategy, and
+`Deferred.make` reads as the one instance whose type arguments the faces spell until T5. `nativeLawful` is the receipt that the native table meets
 `LawfulSpelling`; the two theorems specialise to it below. -/
 
 /-- The four table requirements: unique keys, no built-in collision, no dropped
@@ -989,7 +997,7 @@ def LawfulTable (table : RowTable) : Bool :=
 /-- Built-ins are checked first; the external key identifies its position in the
 supplied table. No external index is recovered by parsing an identifier. -/
 def nativeSpell (table : RowTable := []) (s : String) (names : List String) : Option NativeOp :=
-  match NativeOp.all.find? (fun op => decide (rowKey op.row = (s, names))) with
+  match NativeOp.spelled.find? (fun op => decide (rowKey op.row = (s, names))) with
   | some op => some op
   | none => (table.findIdx? (fun row => decide (rowKey row = (s, names)))).map NativeOp.external
 

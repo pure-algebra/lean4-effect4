@@ -31,7 +31,7 @@ def replyRoot (answer : Completion Val Err Defect FiberId Ann) (token : Nat := 0
     Api.Decision := .answerAsync Api.root token answer
 /-- Park on a fresh deferred: the masked region has to be suspended for a decision to land. -/
 def waiting : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 0))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit)) (.perform .deferredAwait (.var 0))
 
 /-- `catchAll(uninterruptible(await >> fail 42), _ => succeed 0)`. -/
 def escape : NativeEff :=
