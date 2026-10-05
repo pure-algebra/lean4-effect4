@@ -319,7 +319,7 @@ the child. The completion resumes the waiter inside the completing `sync` (M1), 
 finds the child already exited. -/
 
 def pDeferred : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) immediateChild))
       (.bind (.perform .deferredSucceed
                 (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
@@ -390,7 +390,7 @@ The non-daemon `fork` latches the interrupt-children middleware itself (R2-6), s
 parent's exit interrupts the child whether or not the tape installs it. -/
 
 def pMiddleware : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) immediateChild))
       (.succeed (.lit .unit)))
 
@@ -413,7 +413,7 @@ def middlewareTape : List DC := [RunDecision.installMiddleware, evaluateRoot]
 /-- A daemon child is untracked and does not latch the middleware: it survives the parent's
 exit (`forkDaemon`). -/
 def pDaemon : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork (.perform .deferredAwait (.var 0)) daemonChild))
       (.succeed (.lit .unit)))
 
@@ -433,7 +433,7 @@ this registration (`E4-CHECK-CE-016`, `internal/effect.ts:5366`): the scoped ent
 `0` for the scope handle, so the registration takes `1`. -/
 
 def pScoped : NativeEff :=
-  .scoped (.bind (.perform .deferredMake (.lit .unit))
+  .scoped (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.withFiber (.forkScoped (.perform .deferredAwait (.var 0)) scopedChild)))
 
 #guard (typeOf nativeSignature pScoped).isSome
@@ -688,7 +688,7 @@ A daemon child (so the parent's exit leaves it; R2-6) parked on a `Deferred.awai
 restoring frame when the park is answered (W2's and W10's shape). -/
 
 def pMasked : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork (.uninterruptible (.perform .deferredAwait (.var 0)))
               daemonChild))
       (.succeed (.lit .unit)))
@@ -707,7 +707,7 @@ def maskTapeAnswered : List DC :=
 
 /-- The same child under `Effect.interruptible`: the interrupt applies at once. -/
 def pUnmasked : NativeEff :=
-  .bind (.perform .deferredMake (.lit .unit))
+  .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.withFiber (.fork (.interruptible (.perform .deferredAwait (.var 0)))
               daemonChild))
       (.succeed (.lit .unit)))

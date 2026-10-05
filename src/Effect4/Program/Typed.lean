@@ -7,12 +7,25 @@ The associated inversions and term-typing proofs stay in `Laws/Program/Typed.lea
 namespace Effect4.Program
 open Effect4 Effect4.Machine
 
-/-- The handle spellings the internal kinds own, each defined once beside its type
-(`NativeOp.refTy`, `NativeOp.deferredTy`, `Ty.scope`, `Ty.context`, `Ty.memoMap`). The `hasTy`
-arms below read the same names, so this list and those arms cannot drift apart. -/
+/-- The spellings an external handle may not take: the printed types of today's native
+instances, `refOf nat` and `deferredOf nat nat` (their agreement with `Ty.render` is a guard
+below), and the targets of the internal kinds (`Ty.scope`, `Ty.context`, `Ty.memoMap`), which
+the `hasTy` arms below read. An external handle spelled so would print as a native handle's
+type. A cell or a promise fits no spelling since the state plan's T3a (decisions row 96 D2
+retired): it fits `refOf _` or `deferredOf _ _`. -/
 def internalHandleTargets : List String :=
-  [NativeOp.refTarget, NativeOp.deferredTarget, Ty.scopeTarget, Ty.contextTarget,
+  ["Ref.Ref<number>", "Deferred.Deferred<number, number>", Ty.scopeTarget, Ty.contextTarget,
     Ty.memoMapTarget]
+
+#guard internalHandleTargets.take 2 == [(Ty.refOf .nat).render, (Ty.deferredOf .nat .nat).render]
+
+/-- The spellings no handle kind owns: the printed types of `refOf nat` and `deferredOf nat nat`.
+A cell or a promise fits its handle type at any argument, and an external handle may not take an
+internal spelling, so `.handle` at either has no member (`Val.hasTy_handle_retired`). The
+inhabitance fold reads this list (`inhabitedAlg`, `Program/Columns.lean`). -/
+def retiredHandleTargets : List String := ["Ref.Ref<number>", "Deferred.Deferred<number, number>"]
+
+#guard retiredHandleTargets == internalHandleTargets.take 2
 
 /-- An external allocation may not reuse an internal spelling: a byte-7 handle would
 otherwise read as a Ref, Deferred, Scope, Context or MemoMap handle by its target alone. -/
@@ -92,9 +105,9 @@ def numberImage (v : Val) : Bool :=
 mutual
 /-- Which values inhabit which types of the native cut (plan §2.1, ENSURES 1), by the type.
 The scalars against the carrier's own frames; a handle against the spelling of its kind byte
-(`HandleKind`, `Machine/Value.lean`): `Val.cell` against `NativeOp.refTy`, `Val.promise` against
-`NativeOp.deferredTy` (`Native.lean`), `Val.scopeHandle` against `Ty.scope`, and a context — a
-value `Val.context?` reads back — against `Ty.context` (`Eff.lean`); an external handle at byte 7
+(`HandleKind`, `Machine/Value.lean`): `Val.scopeHandle` against `Ty.scope`, and a context — a
+value `Val.context?` reads back — against `Ty.context` (`Eff.lean`); a cell against `.refOf` and a
+promise against `.deferredOf`, at any argument; an external handle at byte 7
 must name its exact target in the supplied allocation table (the default empty table admits
 none), and a nominal reference reads the handle arm at its name; the fiber handle against `.fiberOf`, and a snapshot of fiber handles
 (`Val.snapshot?`) against a `.list` of them; a reified exit against `.exitOf` — a failure's
@@ -122,8 +135,6 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
     match v with
     | .handle kind index =>
       match HandleKind.ofByte? kind with
-      | some .cell => target == NativeOp.refTarget
-      | some .promise => target == NativeOp.deferredTarget
       | some .scope => target == Ty.scopeTarget
       | some .memoMap => target == Ty.memoMapTarget
       | some .external => externalHandleTarget target && allocated[index]? == some target
@@ -194,8 +205,6 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
     match v with
     | .handle kind index =>
       match HandleKind.ofByte? kind with
-      | some .cell => name == NativeOp.refTarget
-      | some .promise => name == NativeOp.deferredTarget
       | some .scope => name == Ty.scopeTarget
       | some .memoMap => name == Ty.memoMapTarget
       | some .external => externalHandleTarget name && allocated[index]? == some name

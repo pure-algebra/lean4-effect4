@@ -21,12 +21,17 @@ module owns:
 * `SyncOp.ofRow`, the decoding of a row and a request value into the store operation the
   machine runs.
 
-The read-modify-write rows carry their pure function as a `FnName` *in the operation*
-(`Ref.update(ref, incr)` is the row `refUpdate FnName.incr` on the request `ref`): rc.112
-takes a JavaScript function, and DB-02 forbids storing one. The store runs binder terms
-(decisions row 43), so `syncOpOf` hands it the name's lowering at the row's shape. The rows
-carry terms themselves at T3 of the state plan. The Layer and Context rows (`RowKind.program`)
-are not in this first cut.
+The `Ref` rows without a function and the `Deferred` rows are templates over their type
+parameters (decisions row 42, the state plan's T3a): `Ref<A>` is `refOf (var 0)` and
+`Deferred<A, E>` is `deferredOf (var 0) (var 1)`, and the checker instantiates them at the
+request's type (`checkRow`, `Typing/Rules.lean`). `Deferred.make`'s request fixes no parameter,
+so its operation carries its type arguments (`deferredMakeOf`), as rc.112's
+`Deferred.make<A, E>()` does. The read-modify-write rows carry their pure function as a
+`FnName` *in the operation* (`Ref.update(ref, incr)` is the row `refUpdate FnName.incr` on the
+request `ref`) and stay closed at `refOf nat`: rc.112 takes a JavaScript function, and DB-02
+forbids storing one. The store runs binder terms (decisions row 43), so `syncOpOf` hands it the
+name's lowering at the row's shape; the rows carry terms themselves at T3b. The Layer and
+Context rows (`RowKind.program`) are not in this first cut.
 -/
 
 @[expose] public section
@@ -68,7 +73,6 @@ inductive NativeOp
   | refUpdateSomeAndGet (f : FnName)
   | refModify (f : FnName)
   | refModifySome (f : FnName)
-  | deferredMake
   | deferredIsDone
   | deferredPoll
   | deferredSucceed
@@ -84,11 +88,18 @@ inductive NativeOp
   | clockNow
   /-- A position in the row table supplied beside the program. -/
   | external (index : Nat)
+  /-- `Deferred.make<A, E>()` (`vendor/effect-4.0.0-rc.112/src/Deferred.ts:171`) with its type
+  arguments: the request is `unit`, so no parameter of the row is fixed by it, and the operation
+  carries them (decisions row 42). An unbound template is never defaulted to rc.112's
+  `Deferred<unknown, never>`. Appended: `deferredMake`, which carried none, is retired at wire
+  tag 13 (`tools/Effect4Gen/wire-tags.json`). -/
+  | deferredMakeOf (value error : Ty)
 deriving DecidableEq
 
 /-- The scope of a native operation's own data (`Program/ScopedOp.lean`). No native operation
 carries a term yet: a read-modify-write row names its function (`FnName`), which has no
-variable. So every native operation is in scope at every level. State plan T3 gives those rows
+variable, and `Deferred.make`'s type arguments are types, which bind no term variable. So every
+native operation is in scope at every level. State plan T3b gives the read-modify-write rows
 binder terms, and this instance then checks each at `n + 1`, by `ScopedOp`'s convention. -/
 instance : ScopedOp NativeOp := ⟨fun _ _ => true⟩
 
@@ -102,19 +113,17 @@ abbrev RowTable := List Row
 
 namespace NativeOp
 
-/-- The handle types this cut spells: cells hold numbers, deferreds carry numbers and fail
-with numbers (the error alphabet's `Err.tag`). Each spelling is written once, here; the
-typing arms (`Program/Typed.lean`) and the service table below read these names. -/
-def refTarget : String := "Ref.Ref<number>"
-def refTy : Ty := .handle refTarget
-/-- The type arguments of the `Deferred` handle this cut spells, in order. They are what
-`Deferred.make` must be *called* with: the export's own parameters have defaults
-(`Deferred<unknown, never>`), so without them the host types the cell at those defaults and
-rejects every later use at this row's declared types (`E4-CHECK-CE-013`,
-`Deferred.ts:171`). -/
-def deferredTypeArgs : List String := ["number", "number"]
-def deferredTarget : String := "Deferred.Deferred<number, number>"
-def deferredTy : Ty := .handle deferredTarget
+/-- The type arguments `Deferred.make` is printed with, as legacy target spellings
+(`Row.typeArgs`), until T5 derives them from the instance. `Deferred.make` must be *called* with
+them: the export's own parameters have defaults (`Deferred<unknown, never>`), so without them the
+host types the cell at those defaults and rejects every later use (`E4-CHECK-CE-013`,
+`Deferred.ts:171`). Only today's instance, `(nat, nat)`, has a spelling the readers read back.
+Another instance carries the empty spelling, which no reading parses (`parseLegacy_empty`), so the
+printer refuses the row by name (`PrintRefusal.typeSpelling "Deferred.make"`) and no reader yields
+it (the state plan's T3a). -/
+def deferredTypeArgs (value error : Ty) : List String :=
+  if value = .nat ∧ error = .nat then ["number", "number"] else [""]
+
 /-- The two external service handles of the host rows slice (service type codes 8 and 9,
 `nativeServiceTy`; the package tables of `Program/Packages`): a SQL client and a key-value
 store. Written once, here. -/
@@ -147,7 +156,7 @@ so the compiler and engine closure do not drag `Row` or `Ty` into native engine 
   | refUpdate _ | refGetAndUpdate _ | refUpdateAndGet _
   | refUpdateSome _ | refGetAndUpdateSome _ | refUpdateSomeAndGet _
   | refModify _ | refModifySome _
-  | deferredMake | deferredIsDone | deferredPoll | deferredSucceed | deferredFail
+  | deferredIsDone | deferredPoll | deferredSucceed | deferredFail | deferredMakeOf _ _
   | scopeMake _ | clockNow => .sync
 
 /-- The row of each operation.
@@ -168,61 +177,74 @@ citation errors: `deferredPoll` answers `bool` where `poll` answers
 `Effect<Option<Effect<A, E>>>` (DI-97 — the language has no carrier for an `Effect` as a
 value, so the machine answers its `isSome`), and `refSet` answers the cell where `Ref.set`
 answers `void` (DI-98 — the machine answers the cell, `Stores.refStep`, and restating it is a
-machine change scheduled with L4). -/
+machine change scheduled with L4).
+
+The `Ref` rows without a function and the `Deferred` rows are templates (decisions row 42): `A`
+is `var 0` and `E` is `var 1`. Every request parameter first occurs as the direct argument of an
+invariant handle (row 55), except `Ref.make`'s bare `A`, which the match binds to the whole
+request. The eight read-modify-write rows stay closed at `refOf nat` until T3b. -/
 def row (op : NativeOp) : Row :=
   match op with
-  | refMake => ⟨"refMake", "Ref.make", .call, [], kind op, .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:173", [], .deferred⟩
-  | refGet => ⟨"refGet", "Ref.get", .call, [], kind op, refTy, .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:200", [], .deferred⟩
+  | refMake =>
+    ⟨"refMake", "Ref.make", .call, [], kind op, .var 0, .refOf (.var 0), .never, [],
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:173", [], .deferred⟩
+  | refGet =>
+    ⟨"refGet", "Ref.get", .call, [], kind op, .refOf (.var 0), .var 0, .never, [],
+      "vendor/effect-4.0.0-rc.112/src/Ref.ts:200", [], .deferred⟩
   | refSet =>
-    ⟨"refSet", "Ref.set", .tupleCall, [], kind op, .prod refTy .nat, refTy, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:306-307", [], .deferred⟩
+    ⟨"refSet", "Ref.set", .tupleCall, [], kind op, .prod (.refOf (.var 0)) (.var 0),
+      .refOf (.var 0), .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:306-307", [], .deferred⟩
   | refGetAndSet =>
-    ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], kind op, .prod refTy .nat, .nat, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:399-404", [], .deferred⟩
+    ⟨"refGetAndSet", "Ref.getAndSet", .tupleCall, [], kind op, .prod (.refOf (.var 0)) (.var 0),
+      .var 0, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:399-404", [], .deferred⟩
   | refSetAndGet =>
-    ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], kind op, .prod refTy .nat, .nat, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:747", [], .deferred⟩
+    ⟨"refSetAndGet", "Ref.setAndGet", .tupleCall, [], kind op, .prod (.refOf (.var 0)) (.var 0),
+      .var 0, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:747", [], .deferred⟩
   | refUpdate f =>
-    ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], kind op, refTy, .unit, .never, [],
+    ⟨"refUpdate", "Ref.update", .call, [fnSpelling f], kind op, .refOf .nat, .unit, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276", [], .deferred⟩
   | refGetAndUpdate f =>
-    ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501", [], .deferred⟩
+    ⟨"refGetAndUpdate", "Ref.getAndUpdate", .call, [fnSpelling f], kind op, .refOf .nat, .nat,
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501", [], .deferred⟩
   | refUpdateAndGet f =>
-    ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1368", [], .deferred⟩
+    ⟨"refUpdateAndGet", "Ref.updateAndGet", .call, [fnSpelling f], kind op, .refOf .nat, .nat,
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1368", [], .deferred⟩
   | refUpdateSome f =>
-    ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], kind op, refTy, .unit, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508", [], .deferred⟩
+    ⟨"refUpdateSome", "Ref.updateSome", .call, [fnSpelling f], kind op, .refOf .nat, .unit,
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508", [], .deferred⟩
   | refGetAndUpdateSome f =>
-    ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], kind op, refTy, .nat,
-      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643", [], .deferred⟩
+    ⟨"refGetAndUpdateSome", "Ref.getAndUpdateSome", .call, [fnSpelling f], kind op, .refOf .nat,
+      .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643", [], .deferred⟩
   | refUpdateSomeAndGet f =>
-    ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], kind op, refTy, .nat,
-      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646", [], .deferred⟩
+    ⟨"refUpdateSomeAndGet", "Ref.updateSomeAndGet", .call, [fnSpelling f], kind op, .refOf .nat,
+      .nat, .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646", [], .deferred⟩
   | refModify f =>
-    ⟨"refModify", "Ref.modify", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
+    ⟨"refModify", "Ref.modify", .call, [fnSpelling f], kind op, .refOf .nat, .nat, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901", [], .deferred⟩
   | refModifySome f =>
-    ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], kind op, refTy, .nat, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163", [], .deferred⟩
-  | deferredMake =>
-    ⟨"deferredMake", "Deferred.make", .call, [], kind op, .unit, deferredTy, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", deferredTypeArgs, .deferred⟩
+    ⟨"refModifySome", "Ref.modifySome", .call, [fnSpelling f], kind op, .refOf .nat, .nat,
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163", [], .deferred⟩
+  | deferredMakeOf value error =>
+    ⟨"deferredMakeOf", "Deferred.make", .call, [], kind op, .unit, .deferredOf value error,
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171", deferredTypeArgs value error,
+      .deferred⟩
   | deferredIsDone =>
-    ⟨"deferredIsDone", "Deferred.isDone", .call, [], kind op, deferredTy, .bool, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1366", [], .deferred⟩
+    ⟨"deferredIsDone", "Deferred.isDone", .call, [], kind op, .deferredOf (.var 0) (.var 1),
+      .bool, .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1366", [], .deferred⟩
   | deferredPoll =>
-    ⟨"deferredPoll", "Deferred.poll", .call, [], kind op, deferredTy, .bool, .never, [],
-      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1414-1416", [], .deferred⟩
+    ⟨"deferredPoll", "Deferred.poll", .call, [], kind op, .deferredOf (.var 0) (.var 1), .bool,
+      .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1414-1416", [], .deferred⟩
   | deferredSucceed =>
-    ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], kind op, .prod deferredTy .nat, .bool, .never,
-      [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1514", [], .deferred⟩
+    ⟨"deferredSucceed", "Deferred.succeed", .tupleCall, [], kind op,
+      .prod (.deferredOf (.var 0) (.var 1)) (.var 0), .bool, .never, [],
+      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:1514", [], .deferred⟩
   | deferredFail =>
-    ⟨"deferredFail", "Deferred.fail", .tupleCall, [], kind op, .prod deferredTy .nat, .bool, .never, [],
+    ⟨"deferredFail", "Deferred.fail", .tupleCall, [], kind op,
+      .prod (.deferredOf (.var 0) (.var 1)) (.var 1), .bool, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Deferred.ts:669", [], .deferred⟩
   | deferredAwait =>
-    ⟨"deferredAwait", "Deferred.await", .call, [], kind op, deferredTy, .nat, .nat, [],
-      "vendor/effect-4.0.0-rc.112/src/Deferred.ts:223", [], .deferred⟩
+    ⟨"deferredAwait", "Deferred.await", .call, [], kind op, .deferredOf (.var 0) (.var 1),
+      .var 0, .var 1, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:223", [], .deferred⟩
   | scopeMake .sequential =>
     ⟨"scopeMake", "Scope.make", .call, [], kind op, .unit, Ty.scope, .never, [],
       "vendor/effect-4.0.0-rc.112/src/Scope.ts:240", [], .deferred⟩
@@ -245,11 +267,14 @@ def row (op : NativeOp) : Row :=
 
 /-- The store operation a row runs on a request value; `none` is a request of the wrong
 shape, which the compile turns into the `badName` defect (`Deep.Stores` does the same for a
-continuation applied to the wrong value). A read-modify-write row runs its name's lowering at
-the row's shape, with the environment `[]` (`FnName.updateTerm` and its three siblings,
-`Machine/Stores.lean`). -/
+continuation applied to the wrong value). Any value is a cell's initial value, a written value
+and a deferred's success, as at the template rows (decisions row 42); a failed value becomes its
+error through `errOf` (`Machine/Term.lean`, decisions row 120's carrier), which the checker keeps
+inside the error alphabet by the deferred's formation rule (`Formation.HeadFormed`). A
+read-modify-write row runs its name's lowering at the row's shape, with the environment `[]`
+(`FnName.updateTerm` and its three siblings, `Machine/Stores.lean`). -/
 def syncOpOf : NativeOp → Val → Option SyncOp
-  | refMake, Val.nat n => some (SyncOp.refMake (Val.nat n))
+  | refMake, v => some (SyncOp.refMake v)
   | refGet, Val.cell ⟨k⟩ => some (SyncOp.refGet ⟨k⟩)
   | refSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refSet ⟨k⟩ v)
   | refGetAndSet, .list [Val.cell ⟨k⟩, v] => some (SyncOp.refGetAndSet ⟨k⟩ v)
@@ -264,13 +289,13 @@ def syncOpOf : NativeOp → Val → Option SyncOp
     some (SyncOp.refUpdateSomeAndGet ⟨k⟩ f.updateSomeTerm [])
   | refModify f, Val.cell ⟨k⟩ => some (SyncOp.refModify ⟨k⟩ f.modifyTerm [])
   | refModifySome f, Val.cell ⟨k⟩ => some (SyncOp.refModifySome ⟨k⟩ f.modifySomeTerm [])
-  | deferredMake, Val.unit => some SyncOp.deferredMake
+  | deferredMakeOf _ _, Val.unit => some SyncOp.deferredMake
   | deferredIsDone, Val.promise ⟨k⟩ => some (SyncOp.deferredIsDone ⟨k⟩)
   | deferredPoll, Val.promise ⟨k⟩ => some (SyncOp.deferredPoll ⟨k⟩)
-  | deferredSucceed, .list [Val.promise ⟨k⟩, Val.nat n] =>
-    some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.success (Val.nat n))))
-  | deferredFail, .list [Val.promise ⟨k⟩, Val.nat n] =>
-    some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.failure (Cause.fail (Err.tag n)))))
+  | deferredSucceed, .list [Val.promise ⟨k⟩, v] =>
+    some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.success v)))
+  | deferredFail, .list [Val.promise ⟨k⟩, v] =>
+    some (SyncOp.deferredCompleteWith ⟨k⟩ (Completion.ofExit (Exit.failure (Cause.fail (errOf v)))))
   | scopeMake strategy, Val.unit => some (SyncOp.scopeMake strategy)
   | clockNow, Val.unit => some SyncOp.clockNow
   | _, _ => none
@@ -297,14 +322,14 @@ def nativeReservedServiceTypes : List (ServiceKey × Ty) := [(nativeScopeKey, .s
 /-- Service carriers available under a free name. This is the finite owner of the
 code-to-carrier mapping, also projected into the source-reader profile. -/
 def nativeServiceTypes : List (Nat × Ty) :=
-  [(4, .nat), (5, .bool), (6, .unit), (7, NativeOp.refTy),
+  [(4, .nat), (5, .bool), (6, .unit), (7, .refOf .nat),
    (8, NativeOp.sqlTy), (9, NativeOp.kvTy)]
 
 /-- The native signature's service table (the join, 2026-09-07), read off the key: the ambient
 `Scope` under its reserved key, nothing under the other reserved names (`Env.firstFreeName`:
 the scheduler's two references and `CurrentMemoMap` are the machine's, not a program's), and
 for a free name the carrier its type code spells — `4` a number, `5` a boolean, `6` unit, `7`
-a `Ref.Ref<number>` handle, `8` a `SqlClient.SqlClient` handle and `9` a
+a cell at `nat` (`refOf nat`, printed `Ref.Ref<number>`), `8` a `SqlClient.SqlClient` handle and `9` a
 `KeyValueStore.KeyValueStore` handle. A key is typed by its own data, which is what `Machine/Key.lean`
 means a `ServiceTypeCode` to be read as. -/
 def nativeServiceTy (key : ServiceKey) : Option Ty :=
@@ -316,13 +341,20 @@ def nativeServiceTy (key : ServiceKey) : Option Ty :=
 
 def fnNames : List Effect4.Machine.FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
-/-- Every native operation, once. -/
-def NativeOp.all : List NativeOp :=
+/-- One native operation per spelling key (`rowKey`, `Program/Table.lean`): every operation
+whose row carries no type argument, each read-modify-write row at each of the five names (row by
+row, the order the tools' profiles print), and `Deferred.make` at the one instance the faces
+spell until T5 (`deferredTypeArgs`). No list holds every operation, since `deferredMakeOf`
+ranges over `Ty`; a row's key does not depend on the type arguments its operation carries
+(`NativeOp.rowKey_mem`), so the built-in keys are this list's. The table's collision check, the
+reader's `nativeSpell` and the tools' enumerations read it. -/
+def NativeOp.spelled : List NativeOp :=
   [.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet]
-  ++ fnNames.flatMap (fun f =>
-      [.refUpdate f, .refGetAndUpdate f, .refUpdateAndGet f, .refUpdateSome f,
-       .refGetAndUpdateSome f, .refUpdateSomeAndGet f, .refModify f, .refModifySome f])
-  ++ [.deferredMake, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
+  ++ ([.refUpdate, .refGetAndUpdate, .refUpdateAndGet, .refUpdateSome, .refGetAndUpdateSome,
+       .refUpdateSomeAndGet, .refModify, .refModifySome] :
+      List (Effect4.Machine.FnName → NativeOp)).flatMap
+      (fun con => fnNames.map con)
+  ++ [.deferredMakeOf .nat .nat, .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail,
       .deferredAwait, .scopeMake .sequential, .scopeMake .parallel, .sleep, .clockNow]
 
 /-- An external index reads its supplied row. Built-ins keep their original row. -/

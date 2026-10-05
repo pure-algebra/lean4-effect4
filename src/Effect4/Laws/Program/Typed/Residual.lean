@@ -167,16 +167,19 @@ def FiberCert : FiberOp → Type
   | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren | .getContext => Ty
   | _ => PUnit
 
-/-- **Row 116's host-row entry**: the operation is in the source signature's domain, and the
-row's columns are below the certificate. Outside the table the row is the placeholder, whose
-`never` columns are below every certificate, so without the bit the entry held at every
-certificate at a short table and constrained at a longer one
-(`Test/Program/TypedProgRows.lean`, `typedProg_not_table_monotone_of`); with it `TypedProg` is
-monotone along an appended table (`typedProg_rows_append`). -/
+/-- **Row 116's host-row entry, at the row's instance** (decisions row 183, ratified 2026-10-04):
+the operation is in the source signature's domain, and the row's check at some request type
+(`rowTy`: the template's instance at the request's match) gives columns below the certificate.
+Outside the table the row is the placeholder, whose `never` columns are below every certificate,
+so without the bit the entry held at every certificate at a short table and constrained at a
+longer one (`Test/Program/TypedProgRows.lean`, `typedProg_not_table_monotone_of`); with it
+`TypedProg` is monotone along an appended table (`typedProg_rows_append`). Read at the template
+instead, the entry admitted no certificate a host success could meet at a parameter's position:
+the checked type is the instance, so the host-row arm certifies at it with no bridge. -/
 def bitEntry (root : ProgramSource) (op : NativeOp) (cert : EffTy) : Prop :=
   root.signature.dom op = true ∧
-    (root.signature.rowOf op).answer.sub cert.answer = true ∧
-    (root.signature.rowOf op).error.sub cert.error = true
+    ∃ reqTy t, rowTy (root.signature.rowOf op) reqTy = some t ∧
+      t.answer.sub cert.answer = true ∧ t.error.sub cert.error = true
 
 /-- The type an async registration's answer is certified at: a timer's `unit`, a deferred's
 completion at the promise table's columns, a host row's columns from the source's row table
@@ -963,17 +966,18 @@ an appended table (`typedProg_rows_append`), beside its monotonicity along the w
 the entry's transport as a hypothesis; the bit makes it hold outright. -/
 
 /-- **Row 116's entry transports along an appended table** (proved): the bit puts the operation in
-the shorter domain, where the longer table's row is the same. -/
+the shorter domain, where the longer table's row is the same, so its check at the request type is
+too. -/
 theorem bitEntry_rows_append (src src' : ProgramSource) (t' : RowTable)
     (htab : src'.table = src.table ++ t') (op : NativeOp) (cert : EffTy)
     (h : bitEntry src op cert) : bitEntry src' op cert := by
-  obtain ⟨hdom, ha, he⟩ := h
+  obtain ⟨hdom, reqTy, t, hrowTy, ha, he⟩ := h
   have hrow := (rows_append src.table t').row op hdom
   show (nativeSignature src'.table).dom op = true ∧
-    ((nativeSignature src'.table).rowOf op).answer.sub cert.answer = true ∧
-    ((nativeSignature src'.table).rowOf op).error.sub cert.error = true
+    ∃ reqTy t, rowTy ((nativeSignature src'.table).rowOf op) reqTy = some t ∧
+      t.answer.sub cert.answer = true ∧ t.error.sub cert.error = true
   rw [htab, hrow.2]
-  exact ⟨hrow.1, ha, he⟩
+  exact ⟨hrow.1, reqTy, t, hrowTy, ha, he⟩
 
 section RowsAppend
 

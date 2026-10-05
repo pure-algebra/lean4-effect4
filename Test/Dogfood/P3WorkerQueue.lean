@@ -36,16 +36,21 @@ program is a different one: the encoding counts closes and finished jobs instead
   `Data.TaggedError` class and fails with `new JobFailed({ … })`, and the module reads back
   (section 7). The worker still catches the host's pair.
 
-**What the language refuses** (section 6): the log, a `Ref` holding a list (`requestNotSubtype`);
-`Deferred<void>`, since the
-native deferred is `Deferred<number, number>`, whose `await` fails with a number (so the pool's
-error column is `nat` where rc.112's is `never`); the forms `forEach` and `catchTag`. A queue has
-no spelling inside a program: DI-11 rules it a composite over `Ref`, `Deferred` and a wait list.
-When the scope interrupts a worker parked on the host's `take`, the session retires the call;
-rc.112's take is in-process.
+**Changes in the state plan's T3a.** `Ref` and `Deferred` are templates over their types. The log
+`Ref.make([])` builds at `Ref<never[]>`, and its first append is refused, since the cell is
+invariant. `Deferred.make` carries its type arguments, so the gate builds at `Deferred<void, never>`,
+runs, and its `await` cannot fail; the printer refuses it by name until T5 spells the type
+arguments. The measured pool keeps today's instance, `Deferred<number, number>`, so it still prints
+and reads back.
 
-**Waits on:** R4 with rows 42–43 steps 3–5 (a list cell, `Deferred<void>`, `Ref.modify` with a
-binder); R10 with DI-11 (the queue composite) and DI-89 (`forEach`); R3 with row 130
+**What the language refuses** (section 6): the log's append at `Ref<never[]>`
+(`requestNotSubtype`); the gate `Deferred<void, never>` in TypeScript (the printer, by name); the
+forms `forEach` and `catchTag`. A queue has no spelling inside a program: DI-11 rules it a composite
+over `Ref`, `Deferred` and a wait list. When the scope interrupts a worker parked on the host's
+`take`, the session retires the call; rc.112's take is in-process.
+
+**Waits on:** R4 with rows 42–43 steps 3–5 (the log's element type, the gate's printing,
+`Ref.modify` with a binder); R10 with DI-11 (the queue composite) and DI-89 (`forEach`); R3 with row 130
 (`catchTag`'s residual over records); row 131 (the log lines interpolate numbers); R11 (release on interruption, the whole
 run). The slices of row 204 that move it: state at any type, then queues.
 -/
@@ -89,7 +94,7 @@ def poolWith (options : Effect4.Supervision.ForkOptions) (total : Nat) : Module 
     main := eff do
       let closes ← Ref.make (nat 0)
       let count ← Ref.make (nat 0)
-      let gate ← Deferred.make
+      let gate ← Deferred.make .nat .nat
       let _ ← scope (eff do
         let _w1 ← withFiber (Action.forkScoped (worker closes count gate total) options)
         let _w2 ← withFiber (Action.forkScoped (worker closes count gate total) options)
@@ -110,8 +115,9 @@ def built? (m : Module NativeOp) : Option Effect4.Api.Built := (Effect4.Api.Auth
 
 #guard verdict (pool 5) = "built"
 #guard verdict (poolChild 5) = "built"
--- The error column is `nat`, not `never`: the gate is the native `Deferred<number, number>`,
--- whose `await` row fails with a number. rc.112's `Deferred<void>` cannot fail.
+-- The error column is `nat`, not `never`: the measured gate is `Deferred<number, number>`, whose
+-- `await` fails with a number, the instance the printer spells today. rc.112's `Deferred<void>`
+-- cannot fail; it builds since T3a (section 6).
 #guard (built? (pool 5)).map (fun b => (b.ty.answer, b.ty.error, b.closed)) =
   some (.prod .nat .nat, .nat, true)
 
@@ -122,7 +128,7 @@ def poolNoGate (total : Nat) : Module NativeOp :=
     main := eff do
       let closes ← Ref.make (nat 0)
       let count ← Ref.make (nat 0)
-      let gate ← Deferred.make
+      let gate ← Deferred.make .nat .nat
       let _ ← scope (eff do
         let _w1 ← withFiber (Action.forkScoped (worker closes count gate total)
           (Effect4.Codegen.Forms.defaults true))
@@ -232,8 +238,19 @@ open Effect4.Program.Denote in
 
 /-! ## 6. What the language refuses -/
 
-/-- `Ref.make<ReadonlyArray<string>>([])`: the log. -/
+/-- `Ref.make<ReadonlyArray<string>>([])`: the log. With no type argument the empty list types at
+`never[]`. -/
 def logCell : Module NativeOp := program (Ref.make (app "nil" []))
+
+/-- The log's first append, `Ref.set(log, ["open 1"])`. -/
+def logAppend : Module NativeOp :=
+  program (bindName "log" (Ref.make (app "nil" [])) fun log =>
+    Ref.set log (app "cons" [str "open 1", app "nil" []]))
+
+/-- rc.112's gate, `Deferred.make<void>()`, completed and awaited. -/
+def gateModule : Module NativeOp :=
+  program (bindName "g" (Deferred.make .unit .never) fun g =>
+    andThen (Deferred.succeed g unit) (Deferred.await g))
 
 /-- `new JobFailed({ id, reason })`: a payload with a number and a string. -/
 def jobFailedModule : Module NativeOp :=
@@ -241,10 +258,19 @@ def jobFailedModule : Module NativeOp :=
     [("_tag", false, .lit "JobFailed"), ("id", false, .nat), ("reason", false, .string)]
     [("_tag", str "JobFailed"), ("id", nat 2), ("reason", str "bad payload")]))
 
--- A cell holds a number only: the checker refuses the list at the cell's request (rows 42–43).
-#guard typingReason? logCell = some (.requestNotSubtype "refMake" (.list .never) .nat)
-#guard typingReason? (program (Ref.make (app "cons" [str "open 1", app "nil" []]))) =
-  some (.requestNotSubtype "refMake" (.list .string) .nat)
+-- A cell holds any type (the state plan's T3a): the empty log builds at `Ref<never[]>`, and a cell
+-- is invariant, so its first append is refused at `Ref.set`'s request.
+#guard (built? logCell).map (fun b => b.ty.answer) = some (.refOf (.list .never))
+#guard typingReason? logAppend = some (.requestNotSubtype "refSet"
+  (.prod (.refOf (.list .never)) (.list .string)) (.prod (.refOf (.var 0)) (.var 0)))
+-- Green control: a log made with a line types at its element.
+#guard (built? (program (Ref.make (app "cons" [str "open 1", app "nil" []])))).map
+  (fun b => b.ty.answer) = some (.refOf (.list .string))
+-- The gate at `Deferred<void, never>` builds and runs: its `await` cannot fail.
+#guard (built? gateModule).map (fun b => (b.ty.answer, b.ty.error)) = some (.unit, .never)
+#guard (built? gateModule).map (·.runSync) = some (.success .unit)
+-- The printer refuses it by name: the faces spell `Deferred.make` at one instance until T5.
+#guard (built? gateModule).map printVerdict = some "refused: typeSpelling Deferred.make"
 -- The error payload carrier (row 120, part E1): the record is a typed failure (section 7); the
 -- tag with a string message still types as the pair.
 #guard verdict jobFailedModule = "built"
@@ -254,15 +280,18 @@ def jobFailedModule : Module NativeOp :=
     (fail (record [("_tag", false, .lit "JobFailed"), ("id", false, .nat), ("reason", false, .string)]
       [("_tag", str "JobFailed"), ("id", nat 2), ("reason", str "bad payload")]))
     (succeed (field (var "e") "reason"))))).map (·.runSync) = some (.success (.str "bad payload"))
--- `Deferred.make` answers the one native deferred, `Deferred<number, number>`.
-#guard (built? (program Deferred.make)).map (fun b => b.ty.answer) =
-  some (.handle "Deferred.Deferred<number, number>")
+-- `Deferred.make` at the faces' instance answers `Deferred<number, number>`, prints and reads back.
+#guard (built? (program (Deferred.make .nat .nat))).map (fun b => b.ty.answer) =
+  some (.deferredOf .nat .nat)
+#guard (built? (program (Deferred.make .nat .nat))).map printedOf = some (true, true)
 
 /-! ## 7. The stage -/
 
 def measured : Reach :=
   { refused :=
-      [ ("the log as a Ref of a list", verdict logCell) ]
+      [ ("the log's append at Ref<never[]>", verdict logAppend)
+      , ("the gate as Deferred<void> in TypeScript",
+          ((built? gateModule).map printVerdict).getD "not built") ]
     admitted := verdict (pool 5) == "built"
     answer := match runPool (pool 5) with
       | some r => answerOf r.1 rc112
@@ -274,7 +303,8 @@ def measured : Reach :=
 scripted host, with counts where rc.112 answers the log; printed and read back. -/
 def stage : Reach :=
   { refused :=
-      [ ("the log as a Ref of a list", "typing: requestNotSubtype") ]
+      [ ("the log's append at Ref<never[]>", "typing: requestNotSubtype")
+      , ("the gate as Deferred<void> in TypeScript", "refused: typeSpelling Deferred.make") ]
     admitted := true, answer := .differs, printed := true, readBack := true }
 
 #guard measured = stage

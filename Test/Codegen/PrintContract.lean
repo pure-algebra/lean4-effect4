@@ -104,7 +104,7 @@ def genericRow : Row :=
 
 -- The tuple may be saved in a variable; its components are read from the binder.
 #guard (print nativeSignature 0
-    (.bind (.perform .deferredMake (.lit .unit))
+    (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
       (.bind (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
         (.perform .deferredSucceed (.var 1))))).map (expr house0 0) =
   .ok ("Effect.flatMap(Deferred.make<number, number>(), (a0) => " ++

@@ -32,17 +32,22 @@ open Effect4.Program
 
 /-! ## The 55 × 2 route matrix
 
-`NativeOp.all` is every built-in operation value: 23 constructors, five function names and two
-scope strategies expanded, external indices excluded (`Native.lean`, `Read.lean:2912`). The
-request representatives satisfy each row's declared request type; that is not a claim that
-their synthetic handles are live in a running store. -/
+`NativeOp.spelled` holds one built-in operation per spelling key: 22 constructors, five function
+names and two scope strategies expanded, `Deferred.make` at the instance the faces spell, external
+indices excluded (`Native.lean`). The request representatives satisfy each row's request at the
+`nat` instance (the rows are templates since the state plan's T3a); that is not a claim that their
+synthetic handles are live in a running store. -/
+
+/-- A row's request at the `nat` instance, the one today's battery programs use. -/
+def requestTyFor (op : NativeOp) : Ty := op.row.request.instantiate [(0, .nat), (1, .nat)]
 
 def requestFor (op : NativeOp) : Val :=
-  match op.row.request with
+  match requestTyFor op with
   | .nat => .nat 1
-  | .handle target => if target = NativeOp.refTarget then Val.cell ⟨0⟩ else Val.promise ⟨0⟩
-  | .prod (.handle target) .nat =>
-    .list [if target = NativeOp.refTarget then Val.cell ⟨0⟩ else Val.promise ⟨0⟩, .nat 1]
+  | .refOf _ => Val.cell ⟨0⟩
+  | .deferredOf _ _ => Val.promise ⟨0⟩
+  | .prod (.refOf _) .nat => .list [Val.cell ⟨0⟩, .nat 1]
+  | .prod (.deferredOf _ _) .nat => .list [Val.promise ⟨0⟩, .nat 1]
   | _ => .unit
 
 /-- The four compiled shapes this matrix distinguishes: the synchronous thunk, an async
@@ -69,17 +74,18 @@ def expected : NativeOp → Route
   | .external _ => .async
   | _ => .sync
 
-#guard NativeOp.all.all (fun op => Val.hasTy (requestFor op) op.row.request)
-#guard NativeOp.all.all (fun op => observed op == expected op)
-#guard (NativeOp.all.filter (fun op => observed op == .sync)).length = 53
+#guard NativeOp.spelled.length = 55
+#guard NativeOp.spelled.all (fun op => Val.hasTy (requestFor op) (requestTyFor op))
+#guard NativeOp.spelled.all (fun op => observed op == expected op)
+#guard (NativeOp.spelled.filter (fun op => observed op == .sync)).length = 53
 -- Both asynchronous built-ins compile to .async.
-#guard (NativeOp.all.filter (fun op => (NativeOp.row op).kind == .async)).length = 2
-#guard (NativeOp.all.filter (fun op => observed op == .async)).length = 2
+#guard (NativeOp.spelled.filter (fun op => (NativeOp.row op).kind == .async)).length = 2
+#guard (NativeOp.spelled.filter (fun op => observed op == .async)).length = 2
 #guard observed .sleep == .async
 #guard observed (.external 0) == .async
 #guard observed .deferredAwait == .async
 -- No built-in reaches an unclassified shape.
-#guard (NativeOp.all.filter (fun op => observed op == .other)).length = 0
+#guard (NativeOp.spelled.filter (fun op => observed op == .other)).length = 0
 
 /-! ## The timed sleep: raw `run` parks, `replay` with an advance finishes
 
@@ -183,7 +189,7 @@ def counterexample : Api.Program :=
 #guard (Api.typeOf (.perform (.external 0) (.lit (.nat 7)))).isNone
 #guard (Api.typeOf (.perform (.external 1) (.lit (.nat 7))) [goodRow]).isNone
 -- Built-ins are always in domain; the guards changed nothing for them.
-#guard (Api.typeOf (.perform .deferredMake (.lit .unit))).isSome
+#guard (Api.typeOf (.perform (.deferredMakeOf .nat .nat) (.lit .unit))).isSome
 #guard (Api.typeOf Wire.Corpus.pAwait).isSome
 
 /-! ## Admission and the print-image certificate

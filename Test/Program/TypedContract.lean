@@ -65,8 +65,17 @@ section Inhabited
 #guard Val.hasTy Val.unit .unit
 #guard Val.hasTy (Val.nat 3) .nat
 #guard Val.hasTy (Val.bool true) .bool
-#guard Val.hasTy (Val.cell ⟨0⟩) NativeOp.refTy
-#guard Val.hasTy (Val.promise ⟨0⟩) NativeOp.deferredTy
+#guard Val.hasTy (Val.cell ⟨0⟩) (.refOf .nat)
+#guard Val.hasTy (Val.promise ⟨0⟩) (.deferredOf .nat .nat)
+-- a cell or a promise fits its handle type at any argument (the state plan's T3a): what it holds
+-- is the world's tables' to type
+#guard Val.hasTy (Val.cell ⟨0⟩) (.refOf (.record [("n", false, .string)]))
+#guard Val.hasTy (Val.promise ⟨0⟩) (.deferredOf .unit .never)
+-- red: the retired spellings have no member (`Val.hasTy_handle_retired`)
+#guard !Val.hasTy (Val.cell ⟨0⟩) (.handle "Ref.Ref<number>")
+#guard !Val.hasTy (Val.promise ⟨0⟩) (.handle "Deferred.Deferred<number, number>")
+#guard !inhabited (.handle "Ref.Ref<number>")
+#guard !inhabited (.app "Deferred.Deferred<number, number>" [])
 #guard Val.hasTy (Val.scopeHandle 0) Ty.scope
 #guard Val.hasTy (Val.context emptyCtx) Ty.context
 #guard Val.hasTy (Val.fiber ⟨1⟩) (.fiberOf .nat .never)
@@ -120,7 +129,7 @@ section Refused
 #guard Val.hasTy (Val.exitErr (Cause.fail (Err.tag 1))) (.causeOf .bool) = false
 #guard Val.hasTy Val.unit .never = false
 #guard Val.hasTy (Val.cell ⟨0⟩) (.handle "Ref.Ref<string>") = false
-#guard Val.hasTy (Val.cell ⟨0⟩) NativeOp.deferredTy = false
+#guard Val.hasTy (Val.cell ⟨0⟩) (.deferredOf .nat .nat) = false
 #guard Val.hasTy (Val.exitOk (Val.nat 1)) (.exitOf .bool .nat) = false
 #guard Val.hasTy (Val.tuple [Val.nat 1]) (.prod .nat .nat) = false
 #guard Val.hasTy (Val.list [Val.nat 1, Val.bool true]) (.list .nat) = false
@@ -129,7 +138,7 @@ section Refused
 #guard Val.hasTy Store.Val.none .nat = false
 #guard Val.hasTy (Store.Val.some (Val.bool true)) (.option .nat) = false
 #guard Val.hasTy (Val.str "x") (.option .string) = false
-#guard Val.hasTy (Store.Val.handle 9 0) NativeOp.refTy = false
+#guard Val.hasTy (Store.Val.handle 9 0) (.refOf .nat) = false
 #guard Val.hasTy (Value.exitErr (Val.nat 1)) (.exitOf .nat .nat) = false
 #guard Val.hasTy (Value.fiberSnapshot (Val.list [Val.nat 1])) (.list (.fiberOf .nat .never)) = false
 #guard Val.hasTy (Value.fiberContext (Val.nat 1) (Val.nat 2) (Val.nat 3)) Ty.context = false
@@ -278,7 +287,7 @@ def notFoundTy : Ty := .record [("_tag", false, .lit "NotFound"), ("id", false, 
 #guard !supportedErrTy (.record [("_tag", true, .lit "E"), ("id", false, .nat)])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("n", false, .int)])
-#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("ref", false, NativeOp.refTy)])
+#guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("ref", false, .refOf .nat)])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("at", false, .option (.handle "Db"))])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E"), ("message", false, .string)])
 #guard !supportedErrTy (.record [("_tag", false, .lit "E")])
@@ -474,15 +483,26 @@ private def optionDefault : Term := .app "getOrElse" (.cons (.var 0) (.cons (.va
 
 end Atoms
 
-/-! ## `NativeOp.syncOpOf` on each sync row's request shape (`Native.lean:145-232`) -/
+/-! ## `NativeOp.syncOpOf` on each sync row's request shape (`NativeOp.row`, `NativeOp.syncOpOf`)
+
+The `Ref` and `Deferred` rows are templates (the state plan's T3a): a value fits a row's request at
+an instance, and a bare template admits no value (a parameter has no member, decisions row 155). -/
 
 section Rows20
 
-#guard Val.hasTy (Val.nat 0) (NativeOp.row .refMake).request
+/-- The instance at `nat`, the one today's battery programs use. -/
+def atNat (t : Ty) : Ty := t.instantiate [(0, .nat), (1, .nat)]
+
+#guard Val.hasTy (Val.nat 0) (atNat (NativeOp.row .refMake).request)
+#guard !Val.hasTy (Val.nat 0) (NativeOp.row .refMake).request
 #guard NativeOp.syncOpOf .refMake (Val.nat 0) = some (SyncOp.refMake (Val.nat 0))
-#guard Val.hasTy (Val.cell ⟨0⟩) (NativeOp.row .refGet).request
+-- `Ref.make` decodes any initial value: the instance never decides the decoding
+#guard NativeOp.syncOpOf .refMake (Val.str "x") = some (SyncOp.refMake (Val.str "x"))
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)
 #guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
-#guard Val.hasTy (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) (NativeOp.row .refSet).request
+#guard Val.hasTy (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) (atNat (NativeOp.row .refSet).request)
+#guard Val.hasTy (Val.tuple [Val.cell ⟨0⟩, Val.str "a"])
+  ((NativeOp.row .refSet).request.instantiate [(0, .string)])
 #guard NativeOp.syncOpOf .refSet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSet ⟨0⟩ (Val.nat 1))
 #guard NativeOp.syncOpOf .refGetAndSet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refGetAndSet ⟨0⟩ (Val.nat 1))
 #guard NativeOp.syncOpOf .refSetAndGet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSetAndGet ⟨0⟩ (Val.nat 1))
@@ -494,12 +514,12 @@ section Rows20
 #guard NativeOp.syncOpOf (.refUpdateSomeAndGet .zeroWhenPositive) (Val.cell ⟨0⟩) = some (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
 #guard NativeOp.syncOpOf (.refModify .takeAndBump) (Val.cell ⟨0⟩) = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
 #guard NativeOp.syncOpOf (.refModifySome .noChange) (Val.cell ⟨0⟩) = some (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm [])
-#guard Val.hasTy Val.unit (NativeOp.row .deferredMake).request
-#guard NativeOp.syncOpOf .deferredMake Val.unit = some SyncOp.deferredMake
-#guard Val.hasTy (Val.promise ⟨0⟩) (NativeOp.row .deferredIsDone).request
+#guard Val.hasTy Val.unit (NativeOp.row (.deferredMakeOf .nat .nat)).request
+#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) Val.unit = some SyncOp.deferredMake
+#guard Val.hasTy (Val.promise ⟨0⟩) (atNat (NativeOp.row .deferredIsDone).request)
 #guard NativeOp.syncOpOf .deferredIsDone (Val.promise ⟨0⟩) = some (SyncOp.deferredIsDone ⟨0⟩)
 #guard NativeOp.syncOpOf .deferredPoll (Val.promise ⟨0⟩) = some (SyncOp.deferredPoll ⟨0⟩)
-#guard Val.hasTy (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) (NativeOp.row .deferredSucceed).request
+#guard Val.hasTy (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) (atNat (NativeOp.row .deferredSucceed).request)
 #guard NativeOp.syncOpOf .deferredSucceed (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
   some (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 7))))
 #guard NativeOp.syncOpOf .deferredFail (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
@@ -511,7 +531,7 @@ section Rows20
 #guard (NativeOp.row .deferredAwait).kind = .async
 #guard NativeOp.syncOpOf .deferredAwait (Val.promise ⟨0⟩) = none
 #guard NativeOp.syncOpOf .refGet (Val.nat 0) = none
-#guard Val.hasTy (Val.nat 0) (NativeOp.row .refGet).request = false
+#guard Val.hasTy (Val.nat 0) (atNat (NativeOp.row .refGet).request) = false
 -- the timer (A4): the sleep row is async and decodes to no store operation; the clock read is a
 -- value row on `unit` decoding to `clockNow`
 #guard (NativeOp.row .sleep).kind = .async ∧ (NativeOp.row .sleep).shape = .call

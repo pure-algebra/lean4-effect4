@@ -78,7 +78,7 @@ inductive RowReason
   | notExternal
   /-- `checkTable`: only asynchronous rows. -/
   | notAsync
-  /-- `Table.lawful`: the row's key collides with a built-in operation's. -/
+  /-- `Table.lawful`: the row's key collides with a built-in spelling key (`builtinKeys`). -/
   | builtinCollision
   /-- `Table.lawful`: a value row has trailing names. -/
   | valueRowTrailing
@@ -86,7 +86,8 @@ inductive RowReason
   | intType (column : String)
   /-- Row 97: the answer or error column mentions an internal handle kind. -/
   | internalHandle (column : String)
-  /-- Row 127: the column is empty and is not `never`. -/
+  /-- Row 127: the column is empty and is not `never`, with every template parameter read as
+  inhabited (row 155 (a), `admitRowColumn`). -/
   | emptyColumn (column : String)
   /-- Row 42: a template parameter sits under a union in the column. -/
   | templateNotAdmissible (column : String)
@@ -98,16 +99,16 @@ deriving DecidableEq, Repr
 def rowChecks (r : Row) : List (Bool × RowReason) :=
   [(r.registration == .external, .notExternal),
    (r.kind == .async, .notAsync),
-   (!(NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey r), .builtinCollision),
+   (!builtinKeys.contains (rowKey r), .builtinCollision),
    (!(r.shape == .value) || r.trailing.isEmpty, .valueRowTrailing),
    ((findInt [] r.request).isNone, .intType "request"),
    ((findInt [] r.answer).isNone, .intType "answer"),
    ((findInt [] r.error).isNone, .intType "error"),
    ((findInternalHandle [] r.answer).isNone, .internalHandle "answer"),
    ((findInternalHandle [] r.error).isNone, .internalHandle "error"),
-   (admitColumn r.request, .emptyColumn "request"),
-   (admitColumn r.answer, .emptyColumn "answer"),
-   (admitColumn r.error, .emptyColumn "error"),
+   (admitRowColumn r.request, .emptyColumn "request"),
+   (admitRowColumn r.answer, .emptyColumn "answer"),
+   (admitRowColumn r.error, .emptyColumn "error"),
    (r.request.templateAdmissible, .templateNotAdmissible "request"),
    (r.answer.templateAdmissible, .templateNotAdmissible "answer"),
    (r.error.templateAdmissible, .templateNotAdmissible "error"),
@@ -123,7 +124,7 @@ inductive ServiceReason
   | conflictsBuiltin
 deriving DecidableEq, Repr
 
-/-- The flat carriers, as a fold: the scalars and every handle but the context. -/
+/-- The flat carriers, as a fold: the scalars, every handle but the context, and a cell. -/
 def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_never := false
   ty_unit := true
@@ -141,7 +142,9 @@ def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_fiberOf _ _ := false
   ty_union _ _ := false
   ty_lit _ := false
-  ty_refOf _ := false
+  -- a cell's membership reads the world's table at its argument, with no recursion into it, so
+  -- `refOf t` is flat at every `t` (service code 7 is `refOf nat`, the state plan's T3a)
+  ty_refOf _ := true
   ty_deferredOf _ _ := false
   ty_var _ := false
   ty_unknown := false
@@ -155,7 +158,8 @@ def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_number := false
   ty_bytes := false
 
-/-- A flat carrier (row 114; row 118 owns structured carriers). -/
+/-- A flat carrier (row 114; row 118 owns structured carriers): the scalars, a non-context
+handle, and a cell at any type. -/
 def flatCarrier (t : Ty) : Bool := cata_ty flatCarrierAlg t
 
 /-- A declaration's local checks, in order. -/

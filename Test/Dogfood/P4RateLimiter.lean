@@ -24,11 +24,14 @@ encoding is dogfood 1's design: three number cells, and a request that reads, th
   encoding's, not the language's.
 * No construct the probe used changed its spelling.
 
-**What the language refuses** (section 4): the `Window` record in one cell (`requestNotSubtype`,
-the cell row expects `nat`), and the atomic decision, which needs `Ref.modify` with a binder term.
-`Ref.update` takes one of the five names of `fnNames` (`src/Effect4/Program/Native.lean`).
+**Changes in the state plan's T3a.** `Ref` is a template over its type: the `Window` record in one
+cell builds, and it is read and written (section 4). The measured program keeps its three number
+cells, since the atomic decision still waits.
 
-**Waits on:** R4, rows 42–43 steps 3–5 (a record cell and a function row with a binder term), and
+**What the language refuses** (section 4): the atomic decision, which needs `Ref.modify` with a
+binder term. `Ref.update` takes one of the five names of `fnNames` (`src/Effect4/Program/Native.lean`).
+
+**Waits on:** R4, rows 42–43 steps 3–5 (a function row with a binder term, the state plan's T3b), and
 R10 (DI-89's `all`). The slice of row 204 that moves it: state at any type.
 -/
 
@@ -142,7 +145,7 @@ open Effect4.Program.Denote in
 #guard (limiterProgram false).map (fun p => (Effect4.Api.run p 4000).outcome) =
   some Effect4.Api.Outcome.finished
 
-/-! ## 4. What the language refuses -/
+/-! ## 4. The record cell, and what the language refuses -/
 
 /-- `interface Window { used, admitted, rejected }`, every field a number. -/
 def windowFields : List (String × Bool × Ty) :=
@@ -152,13 +155,29 @@ def windowFields : List (String × Bool × Ty) :=
 def windowCell : Module NativeOp :=
   program (Ref.make (record windowFields [("used", nat 0), ("admitted", nat 0), ("rejected", nat 0)]))
 
--- Refused at the cell's request: the row `refMake` expects a number. Generic cells (rows 42–43,
--- steps 3–5) lift it, and this pin turns red.
-#guard typingReason? windowCell = some (.requestNotSubtype "refMake"
-  (.record [("admitted", false, .nat), ("rejected", false, .nat), ("used", false, .nat)]) .nat)
--- The checker refuses the same state as a pair the same way (the model probe's `ProbeRefusals.lean`).
-#guard typingReason? (program (Ref.make (app "pair" [nat 1, nat 2]))) =
-  some (.requestNotSubtype "refMake" (.prod .nat .nat) .nat)
+def built? (m : Module NativeOp) : Option Effect4.Api.Built := (Effect4.Api.Author.build m).toOption
+
+/-- The `Window` record in one cell, written and read: `Ref.set(w, { used: 1, … })`, `Ref.get(w)`. -/
+def windowReadWrite : Module NativeOp :=
+  program (bindName "w" (Ref.make
+      (record windowFields [("used", nat 0), ("admitted", nat 0), ("rejected", nat 0)])) fun w =>
+    andThen (Ref.set w (record windowFields [("used", nat 1), ("admitted", nat 1), ("rejected", nat 0)]))
+      (Ref.get w))
+
+/-- The window `{ used: 1, admitted: 1, rejected: 0 }`, its fields in canonical order. -/
+def window1 : Val := recordOf ["admitted", "rejected", "used"] [.nat 1, .nat 0, .nat 1]
+
+-- A cell holds any type since the state plan's T3a: the window builds at `Ref<Window>`.
+#guard verdict windowCell = "built"
+#guard (built? windowCell).map (fun b => b.ty.answer) = some (.refOf
+  (.record [("admitted", false, .nat), ("rejected", false, .nat), ("used", false, .nat)]))
+-- Written and read, it answers the window it holds.
+#guard (built? windowReadWrite).map (fun b => (b.ty.answer, b.runSync)) = some
+  (.record [("admitted", false, .nat), ("rejected", false, .nat), ("used", false, .nat)],
+    .success window1)
+-- The same state as a pair builds the same way (the model probe's `ProbeRefusals.lean` refused it).
+#guard (built? (program (Ref.make (app "pair" [nat 1, nat 2])))).map (fun b => b.ty.answer) =
+  some (.refOf (.prod .nat .nat))
 -- Green control: a number cell builds, and so does the nearest update, `incr`.
 #guard verdict (program (bindName "r" (Ref.make (nat 0)) fun r => Ref.update .incr r)) = "built"
 -- The decision step `w.used < limit ? … : …` is a function the update rows cannot take: they take
@@ -173,15 +192,16 @@ def windowCell : Module NativeOp :=
 /-! ## 5. The stage -/
 
 def measured : Reach :=
-  { refused := [("the Window record in one Ref", verdict windowCell)]
+  { refused := []
     admitted := verdict (limiterModule false) == "built"
     answer := answerOf (answer false) rc112
     printed := ((limiterProgram false).map fun p => (Effect4.Api.print p).isOk) == some true
     readBack := ((limiterProgram false).map fun p => Effect4.Api.readable p) == some true }
 
-/-- The stage p4 reaches today, as `Test/Dogfood/README.md` quotes it. -/
+/-- The stage p4 reaches today, as `Test/Dogfood/README.md` quotes it. The `Window` record in one
+`Ref` builds since the state plan's T3a (section 4); the atomic decision waits on T3b. -/
 def stage : Reach :=
-  { refused := [("the Window record in one Ref", "typing: requestNotSubtype")]
+  { refused := []
     admitted := true, answer := .rc112, printed := true, readBack := true }
 
 #guard measured = stage

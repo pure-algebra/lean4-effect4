@@ -40,7 +40,7 @@ theorem nativeServiceTy_profile (key : Effect4.ServiceKey) :
         | 4 => some .nat
         | 5 => some .bool
         | 6 => some .unit
-        | 7 => some Effect4.Program.NativeOp.refTy
+        | 7 => some (.refOf .nat)
         | 8 => some Effect4.Program.NativeOp.sqlTy
         | 9 => some Effect4.Program.NativeOp.kvTy
         | _ => none := by
@@ -155,6 +155,24 @@ def genericSpell (s : String) (names : List String) : Option Bool :=
 -- and a row that declares none still refuses a call that carries some
 #guard (readEff [] sig spell 1
   (.call (.generic (.ident "Ref.get") [.name ["number"] []]) [.ident "a0"])).isOk = false
+
+/-! The native `Deferred.make` (the state plan's T3a): the operation carries its type arguments
+(`NativeOp.deferredMakeOf`), and the faces spell one instance until T5, `Deferred<number,
+number>`, which prints and reads back. The native reader refuses the bare call
+(`E4-CHECK-CE-013`) and another instance's spelling; the printer refuses another instance by
+name; the checker admits it. -/
+
+#guard roundTrip nativeSignature nativeSpell 0 (.perform (.deferredMakeOf .nat .nat) (.lit .unit)) =
+  .ok (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
+#guard (readEff [] nativeSignature nativeSpell 0 (.call (.ident "Deferred.make") [])).isOk = false
+#guard (readEff [] nativeSignature nativeSpell 0
+  (.call (.generic (.ident "Deferred.make") [.name ["string"] [], .name ["number"] []]) [])).isOk =
+  false
+#guard match Effect4.Api.print (.perform (.deferredMakeOf .string .nat) (.lit .unit)) with
+  | .error refusal => refusal == .typeSpelling "Deferred.make"
+  | .ok _ => false
+#guard Effect4.Api.typeOf (.perform (.deferredMakeOf .string .nat) (.lit .unit)) =
+  some (EffTy.pure (.deferredOf .string .nat))
 
 def tupleRowOf : Bool → Row
   | false => ⟨"tuple", "Fixture.tuple", .tupleCall, [], .sync,
@@ -294,10 +312,10 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
 -- A native request tuple may pass through a bound variable before the call.
 open Effect4.Api in
 #guard roundTrip
-    (.bind (.perform .deferredMake (.lit .unit))
+    (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
       (.bind (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
         (.perform .deferredSucceed (.var 1)))) =
-  .ok (.bind (.perform .deferredMake (.lit .unit))
+  .ok (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.succeed (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil))))
       (.perform .deferredSucceed (.var 1))))
 
@@ -624,8 +642,8 @@ open Effect4.Api in
   = .ok (.bind (.perform (.scopeMake .parallel) (.lit .unit)) (.perform (.scopeMake .sequential) (.lit .unit)))
 
 open Effect4.Api in
-#guard roundTrip (.bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 0)))
-  = .ok (.bind (.perform .deferredMake (.lit .unit)) (.perform .deferredAwait (.var 0)))
+#guard roundTrip (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit)) (.perform .deferredAwait (.var 0)))
+  = .ok (.bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit)) (.perform .deferredAwait (.var 0)))
 -- the timer (A4): `Effect.sleep(5)` is the async row's callback, `Effect.currentTimeMillis`
 -- the value row
 open Effect4.Api in

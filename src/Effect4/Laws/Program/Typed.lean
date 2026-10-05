@@ -118,37 +118,49 @@ theorem Val.hasTy_option_inv {v : Val} {t : Ty} (h : Val.hasTy v (.option t) = t
     v = Store.Val.none ∨ ∃ x, v = Store.Val.some x ∧ Val.hasTy x t = true :=
   Val.hasTy_option_inv_at h
 
-/-- A `NativeOp.refTy` is a `Val.cell`: the other handle spellings and the context's differ
-from `"Ref.Ref<number>"`, decided on the literals; the kind byte is the cell's by
-`HandleKind.ofByte?_exact`. -/
-theorem Val.hasTy_refTy_inv {v : Val} (h : Val.hasTy v NativeOp.refTy = true) :
-    ∃ k, v = Val.cell k := by
-  simp only [Val.hasTy, NativeOp.refTy] at h
+/-- A value at `refOf A` is a `Val.cell`, at any `A`: the kind byte is the cell's
+(`HandleKind.ofByte?_exact`); what the cell holds is typed by the world's tables. -/
+theorem Val.hasTy_refOf_inv {v : Val} {A : Ty} {allocated : List String}
+    (h : Val.hasTy v (.refOf A) allocated = true) : ∃ k, v = Val.cell k := by
+  simp only [Val.hasTy] at h
   split at h
   · next kind index =>
-    split at h
-    · next hk => exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl⟩
-    · exact absurd h (by decide)
-    · exact absurd h (by decide)
-    · exact absurd h (by decide)
-    · exact nomatch h
-    · exact nomatch h
-  · exact absurd (Bool.and_eq_true_iff.mp h).1 (by decide)
+    exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact (beq_iff_eq.mp h)]; rfl⟩
+  · exact nomatch h
 
-/-- A `NativeOp.deferredTy` is a `Val.promise`. -/
-theorem Val.hasTy_deferredTy_inv {v : Val} (h : Val.hasTy v NativeOp.deferredTy = true) :
-    ∃ k, v = Val.promise k := by
-  simp only [Val.hasTy, NativeOp.deferredTy] at h
+/-- A value at `deferredOf A E` is a `Val.promise`, at any `A` and `E`. -/
+theorem Val.hasTy_deferredOf_inv {v : Val} {A E : Ty} {allocated : List String}
+    (h : Val.hasTy v (.deferredOf A E) allocated = true) : ∃ k, v = Val.promise k := by
+  simp only [Val.hasTy] at h
   split at h
   · next kind index =>
-    split at h
-    · exact absurd h (by decide)
-    · next hk => exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl⟩
-    · exact absurd h (by decide)
-    · exact absurd h (by decide)
-    · exact nomatch h
-    · exact nomatch h
-  · exact absurd (Bool.and_eq_true_iff.mp h).1 (by decide)
+    exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact (beq_iff_eq.mp h)]; rfl⟩
+  · exact nomatch h
+
+/-- **A spelling no handle kind owns has no member** (the state plan's T3a): a retired spelling is
+not the scope's, the memo map's or the context's, and an external handle may not take it
+(`internalHandleTargets`). The inhabitance fold reads the same list (`inhabitedAlg`). -/
+theorem Val.hasTy_handle_retired {v : Val} {target : String} {allocated : List String}
+    (hr : retiredHandleTargets.contains target = true) :
+    Val.hasTy v (.handle target) allocated = false := by
+  have hm : target ∈ retiredHandleTargets := List.contains_iff_mem.mp hr
+  simp only [retiredHandleTargets, List.mem_cons, List.not_mem_nil, or_false] at hm
+  have hext : externalHandleTarget target = false := by
+    rcases hm with rfl | rfl <;> decide
+  have hscope : (target == Ty.scopeTarget) = false := by
+    rcases hm with rfl | rfl <;> decide
+  have hmemo : (target == Ty.memoMapTarget) = false := by
+    rcases hm with rfl | rfl <;> decide
+  have hctx : (target == Ty.contextTarget) = false := by
+    rcases hm with rfl | rfl <;> decide
+  simp only [Val.hasTy]
+  split
+  · split
+    · exact hscope
+    · exact hmemo
+    · rw [hext, Bool.false_and]
+    · rfl
+  · rw [hctx, Bool.false_and]
 
 /-- Product membership retains the allocation table of both component values. -/
 theorem Val.hasTy_prod_inv_at {v : Val} {a b : Ty} {allocated : List String}
@@ -446,8 +458,11 @@ theorem Fits.instantiate {σ₀ σ : Ty.Subst} {ps : TyEnv} {join : Bool} :
       obtain ⟨σ₁, h₁, hrest⟩ := hmatch
       cases hfit with
       | cons hv hfit' =>
+        have hinst := hasTy_sub r.normalize _ _ []
+          (Ty.matchTemplate_sound σ₀ p r σ₁ h₁) ((hasTy_normalize r _ []).trans hv)
+        rw [hasTy_normalize] at hinst
         exact .cons (Ty.hasTy_instantiate_widens (Ty.matchTemplateArgs_widens hrest) p _ []
-          (hasTy_sub r _ _ [] (Ty.matchTemplate_sound σ₀ p r σ₁ h₁) hv)) (ih hrest hfit')
+          hinst) (ih hrest hfit')
 
 /-! ### Environments at an allocation state
 
@@ -1778,74 +1793,72 @@ end
 
 /-! ## Rows -/
 
-/-- A request value of a `sync` row's request type decodes to a store operation
-(plan §2.2, ENSURES 8): the twenty rows of `NativeOp.row` (`Native.lean:145-203`) against the
-patterns of `NativeOp.syncOpOf` (`:208-232`), each request shape recovered by the inversions
-above. -/
-theorem syncOpOf_isSome (op : NativeOp) (v : Val)
-    (hv : Val.hasTy v (NativeOp.row op).request = true)
+/-- A request value of a `sync` row's request type, at any instance of the row's template,
+decodes to a store operation (plan §2.2, ENSURES 8): every row of `NativeOp.row` against the
+patterns of `NativeOp.syncOpOf`, each request shape recovered by the inversions above. A cell or
+a promise fits its handle at any argument (`Val.hasTy_refOf_inv`, `Val.hasTy_deferredOf_inv`), and
+the value a `Ref` row writes or a `Deferred` row completes with is decoded at any type, so the
+instance never decides the decoding (the state plan's T3a). -/
+theorem syncOpOf_isSome (op : NativeOp) (σ : Ty.Subst) (v : Val)
+    (hv : Val.hasTy v ((NativeOp.row op).request.instantiate σ) = true)
     (hk : (NativeOp.row op).kind = .sync) : (NativeOp.syncOpOf op v).isSome = true := by
   cases op with
-  | refMake =>
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hv
-    rfl
+  | refMake => rfl
   | refGet =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refSet =>
     obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hx
     rfl
   | refGetAndSet =>
     obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hx
     rfl
   | refSetAndGet =>
     obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hx
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hx
     rfl
   | refUpdate f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refGetAndUpdate f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refUpdateAndGet f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refUpdateSome f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refGetAndUpdateSome f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refUpdateSomeAndGet f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refModify f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
   | refModifySome f =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_refTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hv
     rfl
-  | deferredMake =>
+  | deferredMakeOf value error =>
     obtain rfl := Val.hasTy_unit_inv hv
     rfl
   | deferredIsDone =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_deferredOf_inv hv
     rfl
   | deferredPoll =>
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_deferredOf_inv hv
     rfl
   | deferredSucceed =>
-    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hx
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
+    obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_deferredOf_inv hx
     rfl
   | deferredFail =>
-    obtain ⟨x, y, rfl, hx, hy⟩ := Val.hasTy_prod_inv hv
-    obtain ⟨k, rfl⟩ := Val.hasTy_deferredTy_inv hx
-    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hy
+    obtain ⟨x, y, rfl, hx, _⟩ := Val.hasTy_prod_inv hv
+    obtain ⟨k, rfl⟩ := Val.hasTy_deferredOf_inv hx
     rfl
   | deferredAwait => simp [NativeOp.row] at hk
   | external _ => simp [NativeOp.row, NativeOp.externalPlaceholder] at hk

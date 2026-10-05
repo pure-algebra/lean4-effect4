@@ -172,7 +172,7 @@ def memoKey : ServiceKey := ⟨⟨3⟩, ⟨3⟩⟩
 def emptyRequestRow : Row := { rowA with request := .prod .never .nat }
 
 /-- A row that answers a cell handle (row 97). -/
-def cellRow : Row := { rowA with answer := NativeOp.refTy }
+def cellRow : Row := { rowA with answer := .refOf .nat }
 
 -- tested: each clause refuses, located
 #guard admitSig (SigApp.mk [] [(memoKey, .nat)]) = .error (.service 0 .reservedName)
@@ -197,5 +197,17 @@ theorem empty_request_not_lawful : ¬ LawfulSig (SigApp.mk [emptyRequestRow] [])
 theorem rowA_lawful : LawfulSig (SigApp.mk [rowA] []) := (admitSig_ok_iff _).mp (by decide +kernel)
 
 /-! The step's own theorems: shape A (`World.lean`, `Membership.lean`) and the signature. -/
+
+/-! Decisions row 155 (a): a supplied row's template columns read a parameter as inhabited
+(`admitRowColumn`), so a well-scoped template row is admitted; a program's own column reads it as
+uninhabited (`admitColumn`: no value fits a parameter). -/
+
+/-- A host row from `List<A>` to `Option<A>`. -/
+def templateRow : Row := { rowA with request := .list (.var 0), answer := .option (.var 0) }
+
+#guard admitSig (SigApp.mk [templateRow] []) = .ok ()
+#guard admitRowColumn (.var 0) = true
+-- red: the program's column check refuses a bare parameter
+#guard admitColumn (.var 0) = false
 
 end Test.Program.SignatureControls

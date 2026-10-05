@@ -26,9 +26,9 @@ T1, `docs/research/2026-10-04-claude-lead/state-any-type-plan.md` §3). Packet:
   Stated at the node, it names no row, no decoder and no function name, so the rows of the state
   plan's T3 (templates, terms in rows) change its proof and not its statement.
 
-Until T3 every native row is closed and the cell spelling `Ref.Ref<number>` reads as a cell declared
-at `nat` (decisions row 96 D2), so every world today's rows reach declares every allocated cell at
-`nat`. The statements quantify over every world.
+Since the state plan's T3a the `Ref` and `Deferred` rows are templates: `progress` reads the node's
+checked instance (`syncRow_typed`), so a cell or a deferred is declared at the instance's types.
+The statements quantify over every world.
 -/
 
 set_option autoImplicit false
@@ -38,32 +38,12 @@ namespace Effect4.Program
 open Effect4 Effect4.Machine
 open Conform.Effect4.Typing (inv_perform)
 
-/-! ## Pure option selection retains store validity -/
-
-/-- A presence test constructs only a Boolean; raw malformed option inputs refuse. -/
-theorem NativeAtom.isSome_validIn (s : Stores) (input result : Val)
-    (heval : NativeAtom.eval .isSome [input] = some result) :
-    Val.validIn s result = true := by
-  cases input <;> simp only [NativeAtom.eval, reduceCtorEq] at heval
-  all_goals cases heval; rfl
-
-/-- Option selection retains store validity of the selected argument. This does not
-replace the separate minted-fiber invariant, which uses the machine's whole handle world. -/
-theorem NativeAtom.getOrElse_validIn (s : Stores) (input fallback result : Val)
-    (hinput : Val.validIn s input = true) (hfallback : Val.validIn s fallback = true)
-    (heval : NativeAtom.eval .getOrElse [input, fallback] = some result) :
-    Val.validIn s result = true := by
-  cases input <;> simp only [NativeAtom.eval, reduceCtorEq] at heval
-  all_goals cases heval
-  all_goals first | exact hfallback | exact hinput
-
 /-! ## The store half at a world -/
 
 namespace Denote
 
 /-- **The store half at a world**: the cell columns the typed state shares (`Typed.CellsTyped`) and
-`Stores.WF`. A store of a world reached by today's rows declares every cell at `nat`, and then the
-columns say that every cell holds a number. -/
+`Stores.WF`: every cell holds a value of its declared type. -/
 structure StoreFits (w : Typed.World) : Prop extends Typed.CellsTyped w where
   wf : w.state.WF
 
@@ -169,7 +149,7 @@ theorem NativeOp.syncOpOf_cellImplements (root : Typed.ProgramSource) {op : Nati
     {o : SyncOp} (ho : NativeOp.syncOpOf op v = some o) : Typed.CellImplements root o := by
   unfold NativeOp.syncOpOf at ho
   split at ho <;> cases ho
-  case h_1 n => exact Typed.refMake_cellImplements root (Val.nat n)
+  case h_1 => exact Typed.refMake_cellImplements root _
   case h_2 | h_3 | h_4 | h_5 | h_6 | h_7 | h_8 | h_9 | h_10 | h_11 | h_12 | h_13 =>
     exact Typed.kernel_cellImplements root rfl
   case h_14 => exact Typed.deferredMake_cellImplements root
@@ -195,23 +175,17 @@ theorem progress (op : NativeOp) (r : Term) (tys : TyEnv) (env : List Val) (w : 
       syncOpStep o w.state = some (w'.state, a) ∧ Denote.StoreOk w w' ∧
       Typed.Fits w' a t.answer := by
   obtain ⟨requestTy, _, hr, hrow⟩ := inv_perform nativeSignature tys op r t hty
-  obtain ⟨hcreq, hcans, hcerr⟩ := nativeSignature_row_closed op
-  obtain ⟨hsub, rfl⟩ := rowTy_closed_some hcreq hcans hcerr hrow
   obtain ⟨x, hx, hxfit⟩ := Typed.evalTerm_progress (sig := nativeSignature) rfl
     (Typed.fitsAll_of_pointwise henv.1 henv.2) r requestTy hr
-  have hrowOf : ∀ (f : Row → Ty), f (nativeSignature.rowOf op) = f (NativeOp.row op).normalizeTypes :=
-    fun f => by
-      show f ((nativeRowOf [] op).normalizeTypes) = _
-      rw [nativeRowOf_nil]
-  have hreq : Typed.Fits w x (NativeOp.row op).request := by
-    have h := Typed.fits_sub w hsub x ((Typed.fits_normalize w requestTy x).mpr hxfit)
-    rw [hrowOf Row.request] at h
-    exact (Typed.fits_normalize w _ x).mp ((Typed.fits_normalize w _ x).mp h)
+  have hrowOf : nativeSignature.rowOf op = (NativeOp.row op).normalizeTypes := by
+    show (nativeRowOf [] op).normalizeTypes = _
+    rw [nativeRowOf_nil]
+  rw [hrowOf] at hrow
   have hk : NativeOp.kind op = .sync := by
     rw [← NativeOp.row_kind]
     exact hkind
   let root : Typed.ProgramSource := { program := .perform op r }
-  obtain ⟨o, ho, typed⟩ := Typed.syncRow_typed root (req := Env.Requirement.empty) op hk x hreq
+  obtain ⟨o, ho, typed⟩ := Typed.syncRow_typed root (req := Env.Requirement.empty) op hk hrow x hxfit
   obtain ⟨cert, pre, next⟩ := Typed.TypedProg.store_inv typed
   obtain ⟨st', a, step, w', ord, hstate, cells, post⟩ :=
     NativeOp.syncOpOf_cellImplements root ho w cert store.toCellsTyped pre
@@ -219,8 +193,6 @@ theorem progress (op : NativeOp) (r : Term) (tys : TyEnv) (env : List Val) (w : 
   refine ⟨o, w', a, ?_, by rw [step, hstate], ⟨ord, store.step step hstate cells⟩, ?_⟩
   · rw [Denote.denote]
     simp only [hkind, hx, Option.bind_some, ho]
-  · show Typed.Fits w' a ((nativeSignature.rowOf op).answer).normalize
-    rw [hrowOf Row.answer]
-    exact (Typed.fits_normalize w' _ a).mpr ((Typed.fits_normalize w' _ a).mpr hans)
+  · exact hans
 
 end Effect4.Program

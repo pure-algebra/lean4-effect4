@@ -135,6 +135,7 @@ def printVerdict (b : Effect4.Api.Built) : String :=
   | .ok _ => "printed"
   | .error (.print (.payloadClass tag why)) => "refused: payloadClass " ++ tag ++ " " ++ classReason why
   | .error (.print (.internalAction name)) => "refused: " ++ name
+  | .error (.print (.typeSpelling name)) => "refused: typeSpelling " ++ name
   | .error _ => "refused"
 
 /-- Whether the printed module reads back to the built program. -/
@@ -160,15 +161,15 @@ def partReach (m : Module NativeOp) (record : Effect4.Machine.Val) : PartReach :
 
 -- `verdict`: a green control and one red control per kind the batteries pin.
 #guard verdict (program (succeed (nat 1))) = "built"
-#guard verdict (program (Ref.make (str "x"))) = "typing: requestNotSubtype"
+#guard verdict (program (Ref.get (str "x"))) = "typing: requestNotSubtype"
 #guard verdict (program (fail (app "pair" [str "T", nat 1]))) = "typing: errorNotAdmitted"
 #guard verdict (program (succeed (var "unbound"))) = "scope"
 #guard verdict
     { services := [{ key := ⟨⟨12⟩, ⟨12⟩⟩, carrier := .string }]
       main := succeed unit } = "serviceCarrier: signature none"
 -- `typingReason?`: the reason of a refused build, and nothing for a built one.
-#guard typingReason? (program (Ref.make (str "x"))) =
-  some (.requestNotSubtype "refMake" .string .nat)
+#guard typingReason? (program (Ref.get (str "x"))) =
+  some (.requestNotSubtype "refGet" .string (.refOf (.var 0)))
 #guard typingReason? (program (succeed (nat 1))) = none
 -- `answerOf`: the three readings of a root exit.
 #guard answerOf (some (.success (.nat 1))) (.success (.nat 1)) = .rc112

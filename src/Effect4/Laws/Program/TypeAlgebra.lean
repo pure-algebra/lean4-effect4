@@ -1447,12 +1447,14 @@ theorem infer_widensSub (σ : Subst) (t r : Ty) (join : Bool) : WidensSub σ (in
   case case16 ih => exact ih
   case case17 ih => exact ih
   case case18 => exact WidensSub.refl _
-  case case19 => exact WidensSub.refl _
+  -- a request union, member by member (`E4-CHECK-CE-018`)
+  case case19 ih₁ ih₂ => exact ih₁.trans ih₂
   case case20 => exact WidensSub.refl _
-  case case21 ih => exact ih
-  case case22 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case21 => exact WidensSub.refl _
+  case case22 ih => exact ih
   case case23 ih₁ ih₂ => exact ih₁.trans ih₂
-  case case24 => exact WidensSub.refl _
+  case case24 ih₁ ih₂ => exact ih₁.trans ih₂
+  case case25 => exact WidensSub.refl _
 
 /-- A match widens its seed in the raw order. -/
 theorem matchTemplate_widensSub {join : Bool} {σ σ' : Subst} {t r : Ty}

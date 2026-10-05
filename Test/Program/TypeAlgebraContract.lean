@@ -93,9 +93,12 @@ private def canonicalUniverse : List Ty := scoutUniverse.map Ty.normalize
 
 -- Normalization at both row comparisons preserves domain, shape and request refusals.
 #guard (effTy nativeSignature [.union .nat .never] (.perform .refMake (.var 0))).isSome
-#guard (effTy nativeSignature [.union NativeOp.deferredTy .never]
+#guard (effTy nativeSignature [.union (.deferredOf .nat .nat) .never]
   (.perform .deferredAwait (.var 0))).isSome
-#guard (effTy nativeSignature [.union .bool .never] (.perform .refMake (.var 0))).isNone
+-- `Ref.make` is a template (the state plan's T3a): a cell at any initial value's type
+#guard effTy nativeSignature [.union .bool .never] (.perform .refMake (.var 0)) =
+  some (EffTy.pure (.refOf .bool))
+#guard (effTy nativeSignature [.union .bool .never] (.perform .refGet (.var 0))).isNone
 #guard (effTy nativeSignature [.union .nat .never] (.perform .deferredAwait (.var 0))).isNone
 #guard (effTy nativeSignature [.never] (.perform (.external 999) (.var 0))).isNone
 
@@ -181,6 +184,39 @@ top would be caught here and not only in a proof. -/
 -- the top is strictly above a proper member: `unknown` is not below `nat`
 #guard ¬ CTy.unknown ≤ CTy.ofRaw .nat
 #guard CTy.ofRaw .nat < CTy.unknown
+
+/-! ### `E4-CHECK-CE-018`: a request union against a product template (the state plan's T3a)
+
+`Ref.set(cell, x)` with `x : "a" | "b"` has a normal request that is a union of two products. The
+match infers a request union member by member (`Ty.infer`), so it finds the substitution the
+instance needs; before the repair it bound nothing there and refused. A member whose anchor holds
+`never` binds the parameter at a covariant occurrence first: that boundary is the premise of the
+planned goal `Ty.matchTemplate_complete_anchored` (`Ty.bottomFree`). -/
+
+/-- `Ref.set`'s template, `[Ref<A>, A]`. -/
+def setT : Ty := .prod (.refOf (.var 0)) (.var 0)
+/-- `pair(cell, x)` with `cell : Ref<string>` and `x : "a" | "b"`. -/
+def setR : Ty := .prod (.refOf .string) (.union (.lit "a") (.lit "b"))
+
+#guard setR.normalize ==
+  .union (.prod (.refOf .string) (.lit "a")) (.prod (.refOf .string) (.lit "b"))
+#guard Ty.matchTemplate [] setT setR.normalize = some [(0, .string)]
+-- `Deferred.fail` with a union-typed error
+#guard Ty.matchTemplate [] (.prod (.deferredOf (.var 0) (.var 1)) (.var 1))
+    (Ty.prod (.deferredOf .nat .string) (.union (.lit "x") (.lit "y"))).normalize =
+  some [(0, .nat), (1, .string)]
+-- the checker: `Ref.set` with a union-typed value answers the cell at its declared type
+#guard (effTy nativeSignature [.refOf .string, .union (.lit "a") (.lit "b")]
+    (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))))).map (·.answer) =
+  some (.refOf .string)
+-- red: an invariant handle with no witness stays refused
+#guard Ty.matchTemplate [] (.refOf (.var 0)) (Ty.union (.refOf .nat) (.refOf .string)).normalize = none
+-- the boundary: `never` at the first member's anchor; a substitution exists, the match refuses,
+-- and the goal's premise excludes the request
+def neverR : Ty := .union (.prod .never (.lit "a")) (.prod (.refOf .string) (.lit "b"))
+#guard Ty.sub neverR.normalize (setT.instantiate [(0, .string)]).normalize
+#guard Ty.matchTemplate [] setT neverR.normalize = none
+#guard !Ty.bottomFree neverR
 
 end Test.Program.TypeAlgebraContract
 

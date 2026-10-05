@@ -82,10 +82,11 @@ def source : TypeScript.Module :=
   | .error (.uninhabited _) => true
   | _ => false
 
--- Inference traverses names and positions, including seed widening under join.
+-- Inference traverses names and positions, including seed widening under join. A record is
+-- read in the request's field order (a normal request's is canonical, `Ty.inferFields`).
 #guard Ty.infer []
     (.record [("a", false, .var 0), ("b", false, .var 1)])
-    (.record [("b", false, .string), ("a", false, .nat)]) = [(0, .nat), (1, .string)]
+    (.record [("b", false, .string), ("a", false, .nat)]) = [(1, .string), (0, .nat)]
 #guard Ty.infer [] (.map (.var 0) (.var 1)) (.map .string .nat) =
   [(0, .string), (1, .nat)]
 #guard Ty.infer [] (.tuple [.var 0, .bool, .var 1]) (.tuple [.string, .bool, .nat]) =
@@ -164,5 +165,16 @@ example {fuel : Nat} {tape : List Api.Decision} {inspection : Api.Inspection}
 #print axioms Ty.infer_widens
 #print axioms Effect4.Codegen.ModuleEmission.recheck
 #print axioms Effect4.Codegen.ModuleReading.recheck
+
+/-! The formation rule on a deferred's error column (the state plan's T3a, its D4): a deferred
+fails only with a value the error alphabet carries, so `Deferred.make<A, boolean>()` is refused at
+its instance, at the row's answer column; `Deferred.make<void, never>()` is formed. -/
+#guard match checkRow (NativeOp.row (.deferredMakeOf .nat .bool)).normalizeTypes .unit with
+  | .error (.formation why) =>
+    why.path == ["row", "answer", "type", "0"] && why.ty == .deferredOf .nat .bool &&
+      why.reason == .deferredError
+  | _ => false
+#guard (checkRow (NativeOp.row (.deferredMakeOf .unit .never)).normalizeTypes .unit).toOption =
+  some (EffTy.pure (.deferredOf .unit .never))
 
 end Test.Program.FormationContract

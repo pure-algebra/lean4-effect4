@@ -12,7 +12,7 @@ def row (name : String) (answer : Ty) (error : Ty := .never) : Row :=
   { name, spelling := "Host." ++ name, kind := .async, registration := .external,
     request := .nat, answer, error, cite := "" }
 
-def table : RowTable := [row "query" .nat, row "cell" NativeOp.refTy,
+def table : RowTable := [row "query" .nat, row "cell" (.refOf .nat),
   row "flag" .bool, row "tagged" .nat .nat, row "sql" .nat (.prod .string .string),
   row "text" .nat .string]
 
@@ -61,7 +61,7 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
 #guard refusal (program 1) [Api.evaluate,
   .answerAsync Api.root 0 (.ofExit (.success (Val.cell ⟨0⟩)))] =
   -- The handle-free reply rule refuses the shape before the liveness check.
-  some (.answerType Api.root 0 NativeOp.refTy)
+  some (.answerType Api.root 0 (.refOf .nat))
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 (.ofRefGet ⟨0⟩)] =
   some (.unknownCell ⟨0⟩)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 accepted,

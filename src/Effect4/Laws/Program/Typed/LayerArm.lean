@@ -132,15 +132,6 @@ theorem fitsExit_of_exitOfVal {w : World} {v : Val} {a e : Ty} {ex : ExitV}
   subst hv
   exact h
 
-/-- A member of a deferred type is a promise declared at those columns. -/
-theorem fits_deferredOf_inv {w : World} {x : Val} {a e : Ty} (h : Fits w x (.deferredOf a e)) :
-    ∃ c, x = Val.promise c ∧ PromiseDeclared w c a e := by
-  simp only [Fits] at h
-  split at h
-  · rename_i index
-    exact ⟨⟨index⟩, rfl, h⟩
-  · exact h.elim
-
 /-- A present memo map's handle is a member of the memo map type (decisions row 187, amended by
 F-WF). -/
 theorem fits_memoMap (w : World) (o : MemoMapId) (h : MemoLive w o) : Fits w (Val.memoMap o) Ty.memoMap := by
@@ -155,8 +146,6 @@ theorem fits_memoMap_inv {w : World} {y : Val} (h : Fits w y Ty.memoMap) :
   · rename_i kind index
     simp only [HandleFits] at h
     split at h
-    · exact absurd h.1 (by decide)
-    · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · rename_i hk
       exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl, h.2⟩

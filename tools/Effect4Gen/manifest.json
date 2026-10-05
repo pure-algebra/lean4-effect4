@@ -89,9 +89,9 @@
         "Effect4.Supervision.MaskMode",
         "Effect4.Supervision.ObserverMode",
         "Effect4.Program.Decision",
+        "Effect4.Program.Ty",
         "Effect4.Program.NativeOp",
         "Effect4.Supervision.ForkOptions",
-        "Effect4.Program.Ty",
         "Effect4.Program.FieldReadMode",
         "Effect4.Program.Term",
         "Effect4.Program.CauseTerm",
@@ -350,7 +350,7 @@
       ]
     },
     {
-      "Note": "The native rows as authoring wrappers, named as the printed image spells them, from NativeOp.all and the NativeOp declarations (DI-89's native half).",
+      "Note": "The native rows as authoring wrappers, named as the printed image spells them, from NativeOp.spelled and the NativeOp declarations (DI-89's native half).",
       "Name": "Rows",
       "Flags": ["--module", "--meta-imports", "Effect4.Program.Authoring.Lifts"],
       "Tool": "tools/Effect4Gen/Rows.lean",

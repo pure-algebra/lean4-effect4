@@ -7,7 +7,8 @@ public import Effect4.Program.Native
 
 `Table.lawful` is the three program-plane requirements on a supplied `RowTable`:
 1. Unique keys (`(table.map rowKey).Nodup`).
-2. No collision with built-in native operations (`NativeOp.all`).
+2. No collision with a built-in spelling key (`builtinKeys`): checked by key, since no list holds
+   every built-in operation (`Deferred.make` carries its type arguments).
 3. Value rows (`shape = .value`) have no trailing names (`row.trailing = []`).
 
 Name safety (avoiding binder collision with `a0`, `a1`, ... and reserved expression heads)
@@ -57,9 +58,25 @@ theorem rowIndex_exact (table : List Row) (key : String × List String) (i : Nat
       obtain ⟨hlt, hk⟩ := ih j hj
       exact ⟨Nat.succ_lt_succ hlt, hk⟩
 
-theorem builtinLookup_none (key : String × List String)
-    (h : key ∉ NativeOp.all.map (rowKey ∘ NativeOp.row)) :
-    NativeOp.all.find? (fun op => decide (rowKey op.row = key)) = none := by
+/-- The built-in spelling keys: one per representative of `NativeOp.spelled`. -/
+def builtinKeys : List (String × List String) := NativeOp.spelled.map (rowKey ∘ NativeOp.row)
+
+/-- **Every built-in operation's key is a built-in key**: a row's spelling and trailing names do
+not depend on the type arguments its operation carries, so `NativeOp.spelled`'s keys cover every
+operation but an external one. -/
+theorem NativeOp.rowKey_mem (op : NativeOp) (h : ∀ i, op ≠ .external i) :
+    rowKey op.row ∈ builtinKeys := by
+  cases op with
+  | external i => exact absurd rfl (h i)
+  | deferredMakeOf _ _ => exact (by decide : ("Deferred.make", ([] : List String)) ∈ builtinKeys)
+  | scopeMake s => cases s <;> decide
+  | refUpdate f | refGetAndUpdate f | refUpdateAndGet f | refUpdateSome f
+  | refGetAndUpdateSome f | refUpdateSomeAndGet f | refModify f | refModifySome f =>
+    cases f <;> decide
+  | _ => decide
+
+theorem builtinLookup_none (key : String × List String) (h : key ∉ builtinKeys) :
+    NativeOp.spelled.find? (fun op => decide (rowKey op.row = key)) = none := by
   apply List.find?_eq_none.mpr
   intro op hop heq
   apply h
@@ -69,11 +86,11 @@ namespace Table
 
 /-- The three program-plane table requirements:
 1. Unique keys (`table.map rowKey`).
-2. No collision with `NativeOp.all` (`(nativeRowOf [] op).key`).
+2. No collision with a built-in spelling key (`builtinKeys`).
 3. Value rows (`shape = .value`) have empty trailing names (`row.trailing.isEmpty`). -/
 def lawful (table : RowTable) : Bool :=
   decide (table.map rowKey).Nodup &&
-    table.all (fun row => !(NativeOp.all.map (fun op => (nativeRowOf [] op).key)).contains (rowKey row)) &&
+    table.all (fun row => !builtinKeys.contains (rowKey row)) &&
     table.all (fun row => !decide (row.shape = .value) || row.trailing.isEmpty)
 
 end Table

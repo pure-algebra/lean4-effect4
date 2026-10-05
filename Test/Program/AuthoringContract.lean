@@ -245,7 +245,7 @@ def twiceByName : Module NativeOp :=
 
 /-- Fork a child that awaits a deferred, complete it, join the child. -/
 def rendezvous : Src NativeOp :=
-  bind "d" Authoring.Deferred.make <|
+  bind "d" (Authoring.Deferred.make .nat .nat) <|
   bind "f" (withFiber (Action.fork (Authoring.Deferred.await (var "d")) immediateChild)) <|
   andThen (Authoring.Deferred.succeed (var "d") (nat 7)) <|
   awaitFiber (var "f") .joinEffect

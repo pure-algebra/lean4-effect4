@@ -6,9 +6,12 @@ public import Effect4.Program.LayerView
 # Raw type formation
 
 Rows 192 and 193 require distinct record names and string map keys before a
-normalizer can discard syntax. Row templates may defer an open map key until
-instantiation. Program annotations cannot defer it. The generated folds collect
-raw occurrences; this module supplies their local judgment and located check.
+normalizer can discard syntax. A deferred's error column is an error type the error
+alphabet admits (`admittedErrTy`), since a deferred fails only with a value `errOf`
+carries (decisions rows 42 and 120, the state plan's T3a). Row templates may defer an
+open map key or an open error column until instantiation. Program annotations cannot
+defer either. The generated folds collect raw occurrences; this module supplies their
+local judgment and located check.
 
 The coordinator places `raw-formation` under decidability of the type algebra.
 Its consumers are runtime admission, checked module reading and production, and
@@ -22,6 +25,9 @@ namespace Effect4.Program
 inductive FormationReason where
   | repeatedField (name : String)
   | mapKey
+  /-- A deferred's error column that the error alphabet does not admit (`admittedErrTy`):
+  `Deferred.fail` would fail it with a value `errOf` cannot carry (decisions rows 42, 120). -/
+  | deferredError
   deriving DecidableEq, Repr
 
 /-- A refusal retains the raw type; its path ends in a preorder occurrence index. -/
@@ -37,6 +43,7 @@ namespace Formation
 def HeadFormed (template : Bool) : Ty → Prop
   | .record fields => (fields.map Prod.fst).Nodup
   | .map key _ => key.normalize = .string ∨ (template = true ∧ key.closed = false)
+  | .deferredOf _ error => admittedErrTy error = true ∨ (template = true ∧ error.closed = false)
   | _ => True
 
 instance (template : Bool) (ty : Ty) : Decidable (HeadFormed template ty) := by
@@ -56,6 +63,7 @@ abbrev Refusal := FormationRefusal
 def reason (ty : Ty) : Reason :=
   match ty with
   | .record fields => .repeatedField ((Field.firstRepeated fields).getD "")
+  | .deferredOf _ _ => .deferredError
   | _ => .mapKey
 
 /-- Raw occurrences, including the root, collected without normalization. -/

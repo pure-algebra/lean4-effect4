@@ -33,7 +33,7 @@ set_option maxRecDepth 8192
 #guard sqliteBun.map (·.error) = [.never, sqlError, .never]
 -- every cite is a repository-relative path (decision 10; the citation gate resolves them)
 #guard (sqliteBun ++ keyValueStoreMemory).all fun row => row.cite.startsWith "vendor/effect-4.0.0-rc.112/src/"
-#guard NativeOp.all.all fun op => op.row.cite.startsWith "vendor/effect-4.0.0-rc.112/src/"
+#guard NativeOp.spelled.all fun op => op.row.cite.startsWith "vendor/effect-4.0.0-rc.112/src/"
 
 -- the strings atom: the one list a term builds
 #guard nativeAtomTy "strings" [] = some (.list .string)
