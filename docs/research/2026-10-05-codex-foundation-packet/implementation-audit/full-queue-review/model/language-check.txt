@@ -1,0 +1,1 @@
+PASS check-language: no finding in /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/model/review.md; the other documents carry 1808 finding(s) (report: python3 scripts/check-language.py)

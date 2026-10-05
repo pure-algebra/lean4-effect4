@@ -1,0 +1,56 @@
+{
+  "checkedAtUTC": "2026-10-05T16:45:04.561772+00:00",
+  "mainHead": "a3954d03f2787b856e4f13c6eb63573cac885e34",
+  "python": "3.13.14",
+  "assertionsPassed": 15,
+  "evidence": "Finite Python mirrors; retained Lean output inspected, not rerun",
+  "commands": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/model/probe.py > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/model/results.json",
+      "exitCode": 0
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/model/review.md",
+      "exitCode": 0
+    }
+  ],
+  "modelSources": {
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md": {
+      "sha256": "3d2b9ec4b6e1c4bc23a4e1774d79a9fa969cefbf86f4043821285481799bbbf1",
+      "matchesReviewedCommit": false
+    },
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean": {
+      "sha256": "09d47d4f227bf343bcf8ae4ba272adaad76a07627f948fe8b9fad67b1e8b7d43",
+      "matchesReviewedCommit": true
+    },
+    "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.out": {
+      "sha256": "2a4331abc1d738599b624d1aca3a7dd72eeca37be66c297a51945bfb9f4d2ea1",
+      "matchesReviewedCommit": true
+    }
+  },
+  "nativeSource": {
+    "path": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/src/Queue.ts",
+    "sha256": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+    "declarations": [
+      "clear",
+      "takeAllUnsafe"
+    ]
+  },
+  "scope": [
+    "No Lean/build/generator/install/repository mutation",
+    "Model mirror covers only named fragments; no equivalence theorem",
+    "Actual shutdown emits terminal signals; signal-deletion example is an explicit mutant",
+    "Three owner choices ratified in session; no new approval sought"
+  ],
+  "files": {
+    "QueueContract.lean": "09d47d4f227bf343bcf8ae4ba272adaad76a07627f948fe8b9fad67b1e8b7d43",
+    "language-check.txt": "fd7fe47b7a16fd1c82c3136b091ce8bf772dabaeadf9dc1f4ab20a9f426adcef",
+    "results.json": "6885afef7bbab3fb2e010acc3db7ddd2256202a73f72c66ec5beeb1419b6f1b7",
+    "probe.py": "557c5ac58d9dd5d035c47466e218b8c427b6182679c8162aac290f79c3501e3d",
+    "commands.txt": "90aed2248afcf822a16a1727a962f03482513a7d070ec148bf1bc0abc9129ec0",
+    "review.md": "983f1cf9a6a9bb8026dad77533eff85a8cd459aa6c0b3196ab45dde409e36dd3",
+    "queue-contract.md": "3d2b9ec4b6e1c4bc23a4e1774d79a9fa969cefbf86f4043821285481799bbbf1",
+    "QueueContract.out": "2a4331abc1d738599b624d1aca3a7dd72eeca37be66c297a51945bfb9f4d2ea1"
+  },
+  "finalRecheck": "At e7bdbba8, QueueContract.lean and QueueContract.out match a3954d03; queue-contract.md only records owner ratification and backlog placement."
+}

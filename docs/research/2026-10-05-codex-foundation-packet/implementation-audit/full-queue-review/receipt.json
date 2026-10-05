@@ -1,0 +1,100 @@
+{
+  "observed_at": "2026-10-05T16:44:55.628722+00:00",
+  "base_reviewed": "a3954d03f2787b856e4f13c6eb63573cac885e34",
+  "head_now": "a3954d03f2787b856e4f13c6eb63573cac885e34",
+  "finishing_criteria": [
+    "Inspect live coordinator and seats",
+    "Assess all three choices and named exclusions",
+    "Retain falsifiable controls and positive cases",
+    "Recheck before one advisory",
+    "Verify advisory submission"
+  ],
+  "checks": [
+    {
+      "area": "capacity",
+      "version": "rc112",
+      "source_dist_results_equal": true
+    },
+    {
+      "area": "capacity",
+      "version": "v401",
+      "source_dist_results_equal": true
+    },
+    {
+      "area": "delivery",
+      "version": "rc112",
+      "source_dist_results_equal": true
+    },
+    {
+      "area": "delivery",
+      "version": "v401",
+      "source_dist_results_equal": true
+    }
+  ],
+  "model_checks": 15,
+  "model_limits": "Finite Python mirrors of named transition fragments; no Lean execution or mirror equivalence theorem",
+  "source_hashes": {
+    "AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "docs/core/decisions.md": "bfee7a66028f70cfaead079edd77d6b1ca55656a8f5adc8de0e37b5f906171df",
+    "docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md": "3d2b9ec4b6e1c4bc23a4e1774d79a9fa969cefbf86f4043821285481799bbbf1",
+    "docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean": "09d47d4f227bf343bcf8ae4ba272adaad76a07627f948fe8b9fad67b1e8b7d43",
+    "docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.out": "2a4331abc1d738599b624d1aca3a7dd72eeca37be66c297a51945bfb9f4d2ea1",
+    "docs/research/2026-10-05-claude-lead/waiting-design.md": "27283f33a7cdc1c73f43b0df6ed8cb65854272420af1879e26866a2c71c06a5a"
+  },
+  "native_versions": [
+    "4.0.0-rc.112",
+    "4.0.1"
+  ],
+  "bun": "1.4.2",
+  "lean_or_builds_run": false,
+  "active_repository_writes": false,
+  "advisory": {
+    "status": "normal_submission_verified",
+    "destination": "claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+    "title": "Queues plan and design decisions",
+    "ui_evidence": "Message heading You said: Codex review of a3954d03, rechecked at e7bdbba8; prompt empty; Stop remains visible. First click was blocked by changed UI state; re-read showed unsent draft; one subsequent ordinary Send succeeded. No Send now or Stop clicked.",
+    "payload_summary": [
+      "remove million sentinel",
+      "split pre/post acceptance cancellation and missing-entry shutdown case",
+      "keep dropping0 refusal with corrected rationale",
+      "native poll bypass and capacity0 clear wording",
+      "terminal signals coverage boundary"
+    ]
+  },
+  "release_verification": {
+    "official_4_0_1": "https://github.com/Effect-TS/effect/releases/tag/effect@4.0.1",
+    "release_time_as_page": "04 Oct 21:51",
+    "latest_tag_refresh": "npm/registry endpoints inaccessible; GitHub monorepo latest is unrelated package. No assertion no newer Effect release exists."
+  },
+  "completed_at": "2026-10-05T16:48:37.622549+00:00",
+  "head_rechecked": "e7bdbba8f0cd4cffe62d5438334ab3767ca55d61",
+  "language_check": {
+    "command": "python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/recommendations.md",
+    "exit": 0
+  },
+  "artifacts": {
+    "recommendations.md": "a272a5e48964fdb10081cd4396810a961a89c4b7bd2482e5158358fd98998a0f",
+    "capacity/probe.mjs": "fca95d2131d08392068d5514ab66cc01ba8772d5326f31093a8907614866c943",
+    "capacity/rc112.json": "4d9805ceda0bfd4517b05b07eee963104736595018071020e7a41814ebe3129b",
+    "capacity/v401-dist.json": "317101b8fd04764030294c5c75a3a7bc91650989375e21bba5fa170e27bfd851",
+    "capacity/probe-dist.mjs": "bd61a6fc036a3ab1c5630855553c6eda07de1a4165f8542ed68d3c2feab33e9d",
+    "capacity/v401.json": "f8b59862feffeffda981df23666906dcb25ad7d1af4574ca3690f32226c15ee6",
+    "capacity/review.md": "d206fde0af63eeac620f7a3fd266ae5a0ff00c7dbcee65504c69cee65cb67d19",
+    "capacity/rc112-dist.json": "819dcf9d21b65c4986365ee49519fd8bdb6af111cd9cdce8fc0ba6ced0d2f03a",
+    "model/QueueContract.lean": "09d47d4f227bf343bcf8ae4ba272adaad76a07627f948fe8b9fad67b1e8b7d43",
+    "model/language-check.txt": "fd7fe47b7a16fd1c82c3136b091ce8bf772dabaeadf9dc1f4ab20a9f426adcef",
+    "model/results.json": "6885afef7bbab3fb2e010acc3db7ddd2256202a73f72c66ec5beeb1419b6f1b7",
+    "model/probe.py": "557c5ac58d9dd5d035c47466e218b8c427b6182679c8162aac290f79c3501e3d",
+    "model/commands.txt": "90aed2248afcf822a16a1727a962f03482513a7d070ec148bf1bc0abc9129ec0",
+    "model/review.md": "983f1cf9a6a9bb8026dad77533eff85a8cd459aa6c0b3196ab45dde409e36dd3",
+    "model/queue-contract.md": "3d2b9ec4b6e1c4bc23a4e1774d79a9fa969cefbf86f4043821285481799bbbf1",
+    "model/QueueContract.out": "2a4331abc1d738599b624d1aca3a7dd72eeca37be66c297a51945bfb9f4d2ea1",
+    "delivery/probe.mjs": "9b0c954bc14cda71c1bcc84c7339ae459118cea6683db637d944cd7b8dae0b3d",
+    "delivery/rc112.json": "59ac88b97eda843e58bcaf214bf02c9cfb2e91adf735101cd8cad09626fb7bd7",
+    "delivery/v401-dist.json": "a34179eca16fa7d384fd2a5273eae6e0bcbf0b89bcecbd407f0ec95ca5fb0100",
+    "delivery/v401.json": "a7d09e81d70d7d6ac27347c95f9b99dbd6b1910444d547482a97f3ec731811d4",
+    "delivery/review.md": "8a891995197595f93f9947da5bfbcc4d0246a89a489ab0e7e621854db462090f",
+    "delivery/rc112-dist.json": "0bd4520faaae1361ffb1825a6c8ad34fcf1e91914dea0988760064a9783b0b85"
+  },
+  "automation_update_verified": true
+}

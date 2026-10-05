@@ -1,0 +1,92 @@
+{
+  "evidence": "Finite Python mirrors of named transition fragments; no Lean execution or mirror equivalence theorem",
+  "python": "3.13.14",
+  "checks": 15,
+  "modelSHA256": "09d47d4f227bf343bcf8ae4ba272adaad76a07627f948fe8b9fad67b1e8b7d43",
+  "unboundedBatch": {
+    "inputCount": 1000001,
+    "reply": [
+      "wait"
+    ],
+    "bufferCount": 1000000,
+    "pendingCounts": [
+      1
+    ],
+    "room": 1000000,
+    "tidy": false
+  },
+  "clear": {
+    "inputCount": 1000001,
+    "outputCount": 1000000,
+    "remaining": [
+      1000000
+    ],
+    "positiveInputCount": 1000000,
+    "positiveRemaining": 0
+  },
+  "rendezvousClear": {
+    "initialBuffer": [],
+    "initialPending": [
+      10
+    ],
+    "reply": [
+      "got",
+      [
+        10
+      ]
+    ],
+    "signals": [
+      [
+        100,
+        [
+          "offered",
+          true
+        ]
+      ]
+    ],
+    "remainingOffers": 0
+  },
+  "terminalSearchLimit": {
+    "reachablePrefix": [
+      "take 1 1 1",
+      "peek 5",
+      "awaitQ 7",
+      "shutdown"
+    ],
+    "actualSignals": [
+      [
+        1,
+        [
+          "again"
+        ]
+      ],
+      [
+        5,
+        [
+          "again"
+        ]
+      ],
+      [
+        7,
+        [
+          "over",
+          "interrupted"
+        ]
+      ]
+    ],
+    "positiveSearchCheck": true,
+    "mutantSignals": [],
+    "mutantSearchCheck": true
+  },
+  "searchScope": {
+    "sourceGuardCommands": 32,
+    "namedControlsBeforeExploration": 28,
+    "searchConfigurationGuards": 3,
+    "redControlGuards": 1,
+    "operations": 11,
+    "maximumDepth": 5,
+    "prefixCountPerConfiguration": 177156,
+    "configurations": 8,
+    "note": "Count and retained outputs inspected; exploration not rerun. Fixed IDs and fixed take/offer parameters. No awaitQ/dropPeek/dropAwait operation; closed reason only ended."
+  }
+}

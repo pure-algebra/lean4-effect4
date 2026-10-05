@@ -1,0 +1,20 @@
+{
+  "evidence": "finite native controls; no Lean or composite proof",
+  "controls_per_entry": 4,
+  "entries": [
+    "rc112 src",
+    "rc112 dist",
+    "4.0.1 src",
+    "4.0.1 dist"
+  ],
+  "all_commands_exit": 0,
+  "source_distribution_observations_equal": true,
+  "sha256": {
+    "probe.mjs": "9b0c954bc14cda71c1bcc84c7339ae459118cea6683db637d944cd7b8dae0b3d",
+    "rc112.json": "59ac88b97eda843e58bcaf214bf02c9cfb2e91adf735101cd8cad09626fb7bd7",
+    "v401.json": "a7d09e81d70d7d6ac27347c95f9b99dbd6b1910444d547482a97f3ec731811d4",
+    "rc112-dist.json": "0bd4520faaae1361ffb1825a6c8ad34fcf1e91914dea0988760064a9783b0b85",
+    "v401-dist.json": "a34179eca16fa7d384fd2a5273eae6e0bcbf0b89bcecbd407f0ec95ca5fb0100",
+    "review.md": "8a891995197595f93f9947da5bfbcc4d0246a89a489ab0e7e621854db462090f"
+  }
+}

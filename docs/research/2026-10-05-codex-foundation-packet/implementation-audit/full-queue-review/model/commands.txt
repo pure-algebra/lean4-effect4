@@ -1,0 +1,2 @@
+PYTHONDONTWRITEBYTECODE=1 python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/model/probe.py > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/model/results.json
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/model/review.md

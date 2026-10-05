@@ -1,0 +1,175 @@
+{
+  "version": "4.0.1",
+  "runtime": "Bun 1.4.2",
+  "root": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1",
+  "observation": "Default runtime; eight explicit yields settle each receiver; finite schedules only.",
+  "sourceHashes": {
+    "Queue": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+    "Effect": "d39dc35b3dd3afe81c9b939147078822f26fcf8ba5b33735d9d903596bce9519",
+    "Fiber": "0823a06049643e1b3efbfaabdccc03be1a08b5ae165841d3ef18916e297ee057",
+    "internal/effect": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73"
+  },
+  "result": {
+    "noReceiverAccepted": false,
+    "droppingSingle": {
+      "accepted": true,
+      "immediateSize": 0,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "received",
+          7
+        ],
+        [
+          "offer-return",
+          true
+        ]
+      ],
+      "afterSettle": {
+        "size": 0,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "received",
+            7
+          ],
+          [
+            "offer-return",
+            true
+          ]
+        ],
+        "receiverDone": true
+      },
+      "afterFlush": null
+    },
+    "droppingPeek": {
+      "accepted": true,
+      "immediateSize": 1,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "received",
+          7
+        ],
+        [
+          "offer-return",
+          true
+        ]
+      ],
+      "afterSettle": {
+        "size": 1,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "received",
+            7
+          ],
+          [
+            "offer-return",
+            true
+          ]
+        ],
+        "receiverDone": true
+      },
+      "afterFlush": null
+    },
+    "droppingBatch": {
+      "remaining": [],
+      "beforeCancel": {
+        "size": 1,
+        "receiverDone": false
+      },
+      "afterCancelSize": 1,
+      "laterPoll": {
+        "some": 7
+      }
+    },
+    "slidingSingleZero": {
+      "accepted": true,
+      "immediateSize": 1,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "offer-return",
+          true
+        ]
+      ],
+      "afterSettle": {
+        "size": 1,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "offer-return",
+            true
+          ]
+        ],
+        "receiverDone": false
+      },
+      "afterFlush": {
+        "size": 0,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "offer-return",
+            true
+          ],
+          [
+            "received",
+            7
+          ]
+        ],
+        "receiverDone": true
+      }
+    },
+    "slidingBatchZero": {
+      "remaining": [],
+      "size": 0,
+      "receiverDone": false
+    },
+    "slidingSingleOne": {
+      "accepted": true,
+      "immediateSize": 1,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "offer-return",
+          true
+        ]
+      ],
+      "afterSettle": {
+        "size": 0,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "offer-return",
+            true
+          ],
+          [
+            "received",
+            7
+          ]
+        ],
+        "receiverDone": true
+      },
+      "afterFlush": null
+    }
+  }
+}

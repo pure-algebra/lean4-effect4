@@ -115,7 +115,10 @@ post d  :=  withFiber (fork (perform deferredSucceed [d, unit])
                             { startImmediately := false, daemon := true, maskMode := uninterruptible })
 ```
 
-It discards the fork's answer. Row 225 asks that the task's metadata stay explicit:
+It discards the fork's answer. For a taker, a peeker and an awaiter the hint's value is unit,
+or the queue's end. For an offerer the hint's value is the answer that the accepting step
+decided. That form is `post d answer`, with the same fork (rows 238 and 240). Row 225 asks that
+the task's metadata stay explicit:
 
 | Metadata | In this form |
 | --- | --- |
@@ -258,8 +261,16 @@ The acceptance traces of row 221, and what answers each:
 | A notification before the await | The hint resolves only in the helper's task. A request that awaits before that task parks; one that awaits after it answers at once. In both cases the next attempt follows the dispatch. The control asserts no attempt before the task fires, and one after it. An ordinary `Deferred` keeps its inline control |
 | A cancellation after the selection and before the delivery | Under an interruptible caller the wait is interruptible: the withdrawal wins and passes the signal on (F2's last row). Under a masked caller the request stays registered and may consume; that control stays beside it |
 | A late delivery with an old token after rearming | Each wait has a fresh hint; the old helper resolves a hint that nobody awaits. This trace is still owed as a run |
-| A blocked offerer is cancelled before its posted hint runs | Owed with the first slice: its message is absent, the old message is consumed once, and a later offer can progress. The offerer that is not cancelled is the control |
+| A blocked offerer is cancelled before any step accepts its message | Owed with the first slice: the withdrawal removes the pending message, the old message is consumed once, and a later offer can progress |
+| A blocked offerer is cancelled after a step accepted its message and before its posted answer runs | Owed with the first slice: the message stays accepted and a consumer can receive it; the offerer may exit interrupted and never read its answer. The offerer that is not cancelled is the control: the helper delivers `true` |
+| A blocked offerer's entry is removed by `shutdown` | Owed with the first slice: the posted answer is `false`, and nothing of the offer was accepted. So a missing entry alone does not say that an offer was accepted |
 | The signalling taker exits before the dispatch | The helper is a daemon, and its start is already posted (F3) |
+
+An offerer's wrapper differs in one point (corrected 2026-10-05 after Codex's review of the
+Queue contract). The step that frees room accepts the offer and decides its answer. The posted
+helper carries that answer: it resolves the offerer's hint with the answer, and not with unit.
+The offerer reads its answer there and runs no second step. Nothing reads the answer from a
+later state of the queue. An offerer's cleanup removes only what is still pending.
 
 The wrapper uses the mask around its wait. So the mask lands before the Queue's first slice, not
 with `Semaphore`.

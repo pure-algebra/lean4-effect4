@@ -1,0 +1,150 @@
+{
+  "entry": "dist",
+  "importedHashes": {
+    "Queue": "d0be1bdc84bfc0bee2e89204a4800177f416e95e901f157a3f1fef9919a489f2",
+    "Effect": "5b6d577c5e18e391ab74794930fa38d54f9506997680bdaf2f2d843f830c5a71",
+    "Fiber": "8e8433ea84b971792c3903e3cd62182c6c61a567ec73fee98f3e33cb520d4aee",
+    "Option": "a4774a217c2466c6408449ebaf5189fbb5d981b479e4ef8bb314cef64e234d1a"
+  },
+  "version": "4.0.0-rc.112",
+  "runtime": "Bun 1.4.2",
+  "root": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect",
+  "observation": "Default runtime; eight explicit yields settle each receiver; finite schedules only.",
+  "sourceHashes": {
+    "Queue": "dc355d1a09662ae7b023c98ad47b7fe71051becaf9d461f244c37ad0a4d3dc35",
+    "Effect": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718",
+    "Fiber": "53b9006580b03d9f7036229f20712595852521a29370f0fcb2d3a8efa4bba291",
+    "internal/effect": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0"
+  },
+  "result": {
+    "noReceiverAccepted": false,
+    "droppingSingle": {
+      "accepted": false,
+      "immediateSize": 0,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "offer-return",
+          false
+        ]
+      ],
+      "afterSettle": {
+        "size": 0,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "offer-return",
+            false
+          ]
+        ],
+        "receiverDone": false
+      },
+      "afterFlush": null
+    },
+    "droppingPeek": {
+      "accepted": false,
+      "immediateSize": 0,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "offer-return",
+          false
+        ]
+      ],
+      "afterSettle": {
+        "size": 0,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "offer-return",
+            false
+          ]
+        ],
+        "receiverDone": false
+      },
+      "afterFlush": null
+    },
+    "droppingBatch": {
+      "remaining": [],
+      "beforeCancel": {
+        "size": 1,
+        "receiverDone": false
+      },
+      "afterCancelSize": 1,
+      "laterPoll": {
+        "some": 7
+      }
+    },
+    "slidingSingleZero": {
+      "accepted": true,
+      "immediateSize": 1,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "offer-return",
+          true
+        ]
+      ],
+      "afterSettle": {
+        "size": 1,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "offer-return",
+            true
+          ]
+        ],
+        "receiverDone": false
+      },
+      "afterFlush": null
+    },
+    "slidingBatchZero": {
+      "remaining": [],
+      "size": 0,
+      "receiverDone": false
+    },
+    "slidingSingleOne": {
+      "accepted": true,
+      "immediateSize": 1,
+      "immediateLog": [
+        [
+          "before-offer"
+        ],
+        [
+          "offer-return",
+          true
+        ]
+      ],
+      "afterSettle": {
+        "size": 0,
+        "log": [
+          [
+            "before-offer"
+          ],
+          [
+            "offer-return",
+            true
+          ],
+          [
+            "received",
+            7
+          ]
+        ],
+        "receiverDone": true
+      },
+      "afterFlush": null
+    }
+  }
+}

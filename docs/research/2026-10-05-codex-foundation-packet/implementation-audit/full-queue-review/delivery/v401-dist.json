@@ -1,0 +1,82 @@
+{
+  "evidence": "Finite native controls; no composite Queue or Lean proof",
+  "runtime": {
+    "bun": "1.4.2",
+    "effect": "4.0.1",
+    "dir": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1",
+    "entry": "installed dist",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Effect-TS/effect.git",
+      "directory": "packages/effect"
+    }
+  },
+  "hashes": {
+    "package.json": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "dist/Queue.js": "cbde7467b98c206cb5b119959b4699d19bda39387fb7ffac26f7d2df5f91524f",
+    "dist/internal/effect.js": "cd1d12a5d8336f65877efabc55301a97e526fc3397a1c21a798a4c268858746f"
+  },
+  "poll": [
+    {
+      "olderTaker": false,
+      "before": 1,
+      "polled": {
+        "tag": "Some",
+        "value": 1
+      },
+      "after": 0,
+      "waiter": null,
+      "tasksExecuted": 0
+    },
+    {
+      "olderTaker": true,
+      "before": 1,
+      "polled": {
+        "tag": "Some",
+        "value": 1
+      },
+      "after": 0,
+      "waiter": {
+        "tag": "Pending"
+      },
+      "tasksExecuted": 0
+    }
+  ],
+  "batch": [
+    {
+      "cancel": false,
+      "taken": [
+        1,
+        2
+      ],
+      "remaining": [
+        3,
+        4
+      ],
+      "producerExit": {
+        "tag": "Success",
+        "value": []
+      },
+      "sizeAfterClear": 0,
+      "tasksExecuted": 0
+    },
+    {
+      "cancel": true,
+      "taken": [
+        1
+      ],
+      "remaining": [
+        2,
+        3
+      ],
+      "producerExit": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "sizeAfterClear": 0,
+      "tasksExecuted": 0
+    }
+  ]
+}

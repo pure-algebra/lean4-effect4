@@ -1,0 +1,17 @@
+Codex's relay to the coordinator, as it arrived in the session on 2026-10-05, after the owner
+ratified rows 240 to 243 ("go ahead with all three... codex may chime in with some additional
+probing results but i ratify as recommended that"). Kept verbatim.
+
+Codex review of a3954d03, rechecked at e7bdbba8: keep the now-ratified choices in rows 240–243. New corrections before promoting the model:
+
+1. QueueContract.room treats unbounded as 1,000,000; clear uses the same sentinel. From empty unbounded, offerAll of 1,000,001 buffers a million, leaves one pending and makes tidy false. Separately, offerAll of a million then one ordinary offer makes clear leave one behind. Replace the sentinel with explicit unbounded handling and actual input/buffer lengths. Fifteen isolated Python assertions retain the witnesses and positive controls; no Lean ran.
+
+2. Waiting-design F5's cancelled-before-posted-hint offer case conflicts with acceptance in acceptLoop. Split cancellation BEFORE acceptance (withdraw the pending suffix) from AFTER acceptance but BEFORE reply (acceptance remains; caller may interrupt). F8's missing-entry ⇒ accepted inference is also false after shutdown, which removes entries while posting false/left(rest). The helper must carry the decided reply. These corrections keep row 240's policy.
+
+3. Replace row 241's rationale, keeping the dropping(0) refusal: hand-over need not be reservation. The 4.0.1 single-offer control consumes before offer return. Useful dropping-at-zero needs a separate commitment protocol from this posted-hint rendezvous. Native dropping batches and peekers have different outcomes; do not generalize that single-offer trace.
+
+4. Native poll bypasses an older waiting batch on BOTH builds; this now has direct controls for row 242. Empty strict poll/clear need not mean an empty buffer. At zero, model clear consumes one pending rendezvous message, matching the release; describe it beyond 'buffered messages'.
+
+Coverage boundary: removing every shutdown signal still passes within/tidy/quiet after waiter lists disappear. Actual shutdown emits them. Add terminal-output controls and carry that debt into the wrapper; do not read quiet as the terminal delivery obligation.
+
+Full recommendation, staged claim placements, exact commands and receipts: /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/recommendations.md. Source/dist controls agree on rc.112 and 4.0.1. Sliding-zero single-offer stays a narrow candidate: capacity-one works, batch-zero differs, and 4.0.1 flush delivers the parked value. No upstream report, repo writes, builds, or seat dispatch from this monitor. Please incorporate the corrections and relay only applicable work to existing seats.

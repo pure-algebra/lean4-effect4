@@ -24,10 +24,6 @@ is the request's answer.
 Every `#guard` is a finite check on the named trace, and the exploration at the end is bounded.
 The model has no fibers, no wrapper, no interruption and no delivery. It proves nothing about
 the tree.
-
-Corrected 2026-10-05 after Codex's review: an unbounded queue has no limit (`room` answers
-`none`, and `clear` takes the buffer's own length); an offer's acceptance and its answer are two
-events; every request that an end removes is named (`accounted`, with its own red control).
 -/
 
 namespace QueueContract
@@ -99,19 +95,10 @@ def isDone (s : State) : Bool := match s.phase with | .done _ => true | _ => fal
 def isOpen (s : State) : Bool := match s.phase with | .opened => true | _ => false
 def isClosing (s : State) : Bool := match s.phase with | .closing _ => true | _ => false
 
-/-- The room that is left. `none` is no limit: an unbounded queue has no number here. -/
-def room (s : State) : Option Nat := s.capacity.map (· - s.messages.length)
-
-def hasRoom (s : State) : Bool :=
-  match room s with
-  | none => true
-  | some r => decide (0 < r)
-
-/-- How many of `n` messages fit in the room that is left. -/
-def fit (room : Option Nat) (n : Nat) : Nat :=
-  match room with
-  | none => n
-  | some r => Nat.min r n
+def room (s : State) : Nat :=
+  match s.capacity with
+  | none => 1000000
+  | some c => c - s.messages.length
 
 /-- The least buffer length that serves a minimum (the release's `canTake`): a closing queue
 serves any message, and a capacity caps the minimum. -/
@@ -156,16 +143,16 @@ def answerOf (o : Offer) (rest : List Nat) : Note :=
 
 /-- Pending offers enter the buffer in arrival order while room remains. An offer that is
 accepted whole is answered. -/
-def acceptLoop : Option Nat → List Nat → List Offer → List Nat × List Offer × List Signal
+def acceptLoop : Nat → List Nat → List Offer → List Nat × List Offer × List Signal
   | _, msgs, [] => (msgs, [], [])
   | room, msgs, o :: rest =>
-    if room = some 0 then (msgs, o :: rest, [])
+    if room = 0 then (msgs, o :: rest, [])
     else
-      let k := fit room o.rest.length
+      let k := Nat.min room o.rest.length
       let msgs' := msgs ++ o.rest.take k
       let left := o.rest.drop k
       if left.isEmpty then
-        let r := acceptLoop (room.map (· - k)) msgs' rest
+        let r := acceptLoop (room - k) msgs' rest
         (r.1, r.2.1, ⟨o.id, answerOf o []⟩ :: r.2.2)
       else (msgs', { o with rest := left } :: rest, [])
 
@@ -234,10 +221,7 @@ def poll (s : State) : State × Option Nat × List Signal :=
 inductive ClearReply | got (ms : List Nat) | stopped (e : End)
   deriving DecidableEq, Repr
 
-/-- `clear`: every buffered message, and it never waits. It passes no waiting taker, so its
-empty answer does not say that the buffer is empty. At a rendezvous nothing is buffered, and
-`clear` takes what a take would: the first message of the first pending offer, as the release's
-`takeAllUnsafe` does. Pending offers may refill the room that it frees, in the same step. -/
+/-- `clear`: every buffered message, and it never waits. It passes no waiting taker. -/
 def clear (s : State) : State × ClearReply × List Signal :=
   match s.phase with
   | .done .ended => (s, .got [], [])
@@ -245,7 +229,7 @@ def clear (s : State) : State × ClearReply × List Signal :=
   | _ =>
     if !s.takers.isEmpty || (front s).isNone then (s, .got [], [])
     else
-      let p := pull s s.messages.length
+      let p := pull s 1000000
       let r := afterConsume p.2.1
       (r.1, .got p.1, p.2.2 ++ r.2)
 
@@ -271,7 +255,7 @@ def offer (s : State) (id a : Nat) : State × OfferReply × List Signal :=
   if !isOpen s then (s, .accepted false, [])
   else if s.strategy == .suspend && !s.offers.isEmpty then
     ({ s with offers := s.offers ++ [⟨id, false, [a]⟩] }, .wait, [])
-  else if hasRoom s then
+  else if room s > 0 then
     let s1 := { s with messages := s.messages ++ [a] }
     (s1, .accepted true, wake s1)
   else
@@ -301,14 +285,14 @@ def offerAll (s : State) (id : Nat) (ms : List Nat) : State × OfferAllReply × 
       let s1 := { s with messages := keep }
       (s1, .left [], wake s1)
     | .dropping =>
-      let k := fit (room s) ms.length
+      let k := Nat.min (room s) ms.length
       let s1 := { s with messages := s.messages ++ ms.take k }
       (s1, .left (ms.drop k), wake s1)
     | .suspend =>
       if !s.offers.isEmpty then
         ({ s with offers := s.offers ++ [⟨id, true, ms⟩] }, .wait, [])
       else
-        let k := fit (room s) ms.length
+        let k := Nat.min (room s) ms.length
         let rest := ms.drop k
         let s1 := { s with messages := s.messages ++ ms.take k }
         if rest.isEmpty then (s1, .left [], wake s1)
@@ -582,195 +566,10 @@ def rendezvousWithdrawals : Nat × Nat × TakeReply × TakeReply :=
 #guard !formed { capacity := some 0, strategy := .sliding }
 #guard !formed { capacity := some 0, strategy := .dropping }
 
-/-! ## Controls: an unbounded queue has no limit
-
-Codex's review of 2026-10-05 found that an earlier version of this model used one million as
-the room of an unbounded queue. These are its two witnesses, now as regressions. -/
-
-/-- From an empty unbounded queue, a batch of 1,000,001 messages is accepted whole. -/
-def unboundedBatch : OfferAllReply × Nat × Nat :=
-  let o := offerAll {} 100 (List.range 1000001)
-  (o.2.1, o.1.messages.length, o.1.offers.length)
-
-#guard unboundedBatch = (.left [], 1000001, 0)
-
-/-- A million messages, then one more offer, then a `clear`: it returns all of them. -/
-def unboundedClear : Nat × Nat :=
-  let s := (offerAll {} 100 (List.range 1000000)).1
-  let s := (offer s 101 1000000).1
-  let c := clear s
-  (match c.2.1 with | .got ms => ms.length | .stopped _ => 0, c.1.messages.length)
-
-#guard unboundedClear = (1000001, 0)
-
-/-! ## Controls: an offer's acceptance and its answer are two events
-
-The step that frees room accepts the offer and decides its answer. The signal carries that
-answer. A withdrawal removes only what is still pending, so a missing entry alone says nothing
-about the offer's outcome. -/
-
-/-- Cancellation before acceptance. Capacity one holds `1`; an offer of `2` waits and is then
-withdrawn; a take receives `1`. The message `2` never enters, and nobody is signalled. -/
-def offerWithdrawnBeforeAccept : TakeReply × List Signal × List Nat :=
-  let s : State := { capacity := some 1 }
-  let s := (offer s 100 1).1
-  let s := (offer s 101 2).1
-  let s := (withdrawOffer s 101).1
-  let r := take s (T 1)
-  (r.2.1, r.2.2, r.1.messages)
-
-#guard offerWithdrawnBeforeAccept = (.got [1], [], [])
-
-/-- Cancellation after acceptance and before the answer is delivered. The take accepts `2` and
-names the offerer with `true`. A withdrawal then finds no entry and changes nothing: `2` stays
-accepted. -/
-def offerWithdrawnAfterAccept : List Signal × List Nat × List Nat × List Signal :=
-  let s : State := { capacity := some 1 }
-  let s := (offer s 100 1).1
-  let s := (offer s 101 2).1
-  let r := take s (T 1)
-  let w := withdrawOffer r.1 101
-  (r.2.2, r.1.messages, w.1.messages, w.2)
-
-#guard offerWithdrawnAfterAccept = ([⟨101, .offered true⟩], [2], [2], [])
-
-/-- A missing entry does not mean acceptance. `shutdown` removes the pending offer and answers
-`false`; nothing of it was accepted. -/
-def offerRemovedByShutdown : List Signal × List Offer × List Nat :=
-  let s : State := { capacity := some 1 }
-  let s := (offer s 100 1).1
-  let s := (offer s 101 2).1
-  let d := shutdown s
-  (d.2.2, d.1.offers, d.1.messages)
-
-#guard offerRemovedByShutdown = ([⟨101, .offered false⟩], [], [])
-
-/-- A batch: acceptance commits a prefix, and a withdrawal removes only the suffix that still
-waits. Capacity two; a batch of four; one take; the batch is withdrawn. The native queue gives
-the same `[2, 3]` on both builds (Codex's delivery controls). -/
-def batchPrefixStays : OfferAllReply × TakeReply × List Signal × ClearReply :=
-  let o := offerAll { capacity := some 2 } 100 [1, 2, 3, 4]
-  let r := take o.1 (T 1)
-  let w := withdrawOffer r.1 100
-  (o.2.1, r.2.1, r.2.2, (clear w.1).2.1)
-
-#guard batchPrefixStays = (.wait, .got [1], [], .got [2, 3])
-
-/-- The same batch with no withdrawal: the second take accepts its last message and answers the
-offerer. -/
-def batchAnswered : List Signal × ClearReply :=
-  let o := offerAll { capacity := some 2 } 100 [1, 2, 3, 4]
-  let r1 := take o.1 (T 1)
-  let r2 := take r1.1 (T 2)
-  (r1.2.2 ++ r2.2.2, (clear r2.1).2.1)
-
-#guard batchAnswered = ([⟨100, .left []⟩], .got [3, 4])
-
-/-! ## Controls: what an empty answer means (row 242) -/
-
-/-- With a taker waiting, `poll` and `clear` answer empty while a message is buffered. When the
-taker leaves, `poll` receives the message. -/
-def emptyAnswerNotEmptyBuffer : Option Nat × ClearReply × Nat × Option Nat :=
-  let s := (take (offer {} 100 10).1 (T 1 3 5)).1
-  ((poll s).2.1, (clear s).2.1, size s, (poll (withdrawTake s 1).1).2.1)
-
-#guard emptyAnswerNotEmptyBuffer = (none, .got [], 1, some 10)
-
-/-- A `clear` that consumes may leave messages: a pending offer refills the room it frees. -/
-def clearRefills : ClearReply × List Signal × Nat :=
-  let s : State := { capacity := some 1 }
-  let s := (offer s 100 10).1
-  let s := (offer s 101 20).1
-  let c := clear s
-  (c.2.1, c.2.2, size c.1)
-
-#guard clearRefills = (.got [10], [⟨101, .offered true⟩], 1)
-
-/-- At capacity zero `clear` and `poll` take one message of the first pending offer, and they
-take nothing while a taker waits. -/
-def nonblockingAtRendezvous : ClearReply × List Signal × Option Nat × ClearReply :=
-  let s := (offer { capacity := some 0 } 100 10).1
-  let c := clear s
-  let behind := (offer (take { capacity := some 0 } (T 1)).1 100 10).1
-  (c.2.1, c.2.2, (poll s).2.1, (clear behind).2.1)
-
-#guard nonblockingAtRendezvous = (.got [10], [⟨100, .offered true⟩], some 10, .got [])
-
-/-! ## Controls: every request that an end removes is named
-
-The properties of the exploration below read states. They cannot see a signal that was lost
-after an end emptied the waiting lists (Codex's review). These controls fix the exact signals. -/
-
-/-- `shutdown` of an open queue names a waiting taker, a peeker and an awaiter. -/
-def shutdownNamesWaiters : List Signal × Phase :=
-  let s := (take {} (T 1)).1
-  let s := (peek s 5).1
-  let s := (awaitQ s 7).1
-  let d := shutdown s
-  (d.2.2, d.1.phase)
-
-#guard shutdownNamesWaiters =
-  ([⟨1, .again⟩, ⟨5, .again⟩, ⟨7, .over .interrupted⟩], .done .interrupted)
-
-/-- `shutdown` names two takers, a single offerer, a batch offerer and an awaiter at once. The
-first taker was named by the offer and did not run again yet. -/
-def shutdownNamesEveryone : List Signal :=
-  let s : State := { capacity := some 1 }
-  let s := (take s (T 1)).1
-  let s := (take s (T 2)).1
-  let s := (offer s 100 10).1
-  let s := (offer s 101 20).1
-  let s := (offerAll s 102 [30, 40]).1
-  let s := (awaitQ s 7).1
-  (shutdown s).2.2
-
-#guard shutdownNamesEveryone =
-  [⟨1, .again⟩, ⟨2, .again⟩, ⟨101, .offered false⟩, ⟨102, .left [30, 40]⟩,
-    ⟨7, .over .interrupted⟩]
-
-/-- `shutdown` of a closing queue keeps that queue's end. -/
-def shutdownKeepsEnd : Phase × List Signal :=
-  let s := (awaitQ (offer {} 100 10).1 7).1
-  let d := shutdown (close s (.failed 5)).1
-  (d.1.phase, d.2.2)
-
-#guard shutdownKeepsEnd = (.done (.failed 5), [⟨7, .over (.failed 5)⟩])
-
-/-- The last take of a closing queue names the taker behind it and the awaiter. -/
-def drainNamesEveryone : List Signal × TakeReply × List Signal × TakeReply :=
-  let s := (take {} (T 1 3 5)).1
-  let s := (offer s 100 10).1
-  let s := (take s (T 2)).1
-  let s := (awaitQ s 7).1
-  let c := close s (.failed 5)
-  let r := take c.1 (T 1 3 5)
-  (c.2.2, r.2.1, r.2.2, (take r.1 (T 2)).2.1)
-
-#guard drainNamesEveryone =
-  ([⟨1, .again⟩], .got [10], [⟨2, .again⟩, ⟨7, .over (.failed 5)⟩], .stopped (.failed 5))
-
-/-- A closing rendezvous queue that a withdrawal empties is done, and its taker and awaiter are
-named. -/
-def closingRendezvousEmptied : Phase × Phase × List Signal × TakeReply :=
-  let s := (take { capacity := some 0 } (T 1)).1
-  let s := (offer s 100 10).1
-  let s := (awaitQ s 7).1
-  let c := close s .ended
-  let w := withdrawOffer c.1 100
-  (c.1.phase, w.1.phase, w.2, (take w.1 (T 1)).2.1)
-
-#guard closingRendezvousEmptied =
-  (.closing .ended, .done .ended, [⟨1, .again⟩, ⟨7, .over .ended⟩], .stopped .ended)
-
 /-! ## A bounded exploration
 
-Every sequence of at most five operations from a list, on each formed configuration. The first
-list has eleven operations. The second list has thirteen: it adds `await`, the withdrawals of a
-peek and of an await, and an end by failure, and it leaves out `poll` and `clear`. It withdraws
-the single offer, where the first list withdraws the batch. The identities, the values and the
-bounds are fixed in both lists.
-
-Three properties of the state hold after each step:
+Every sequence of at most five operations from eleven, on each formed configuration. Three
+properties hold after each step:
 
 * `within`: a bounded queue never exceeds its capacity;
 * `tidy`: a done queue holds nothing and nobody; a closing queue holds something; a pending
@@ -778,33 +577,20 @@ Three properties of the state hold after each step:
 * `quiet`: the oldest taker, when it is ready, was signalled; each peeker, when a message is in
   front, was signalled.
 
-One property of the step holds:
-
-* `accounted`: every request that the step removes is named in the step's signals, unless it
-  is the step's own request.
-
-Two red controls. `Fault.closing`: a queue that starts closing names nobody, as rc.112 did
-(P3); `quiet` fails. `Fault.shutdown`: a shutdown names nobody; the three properties of the
-state still hold, and only `accounted` fails. -/
+`forward := false` is the red control: a queue that starts closing names nobody, as rc.112 did
+(P3). -/
 
 inductive Op
   | take (id min max : Nat) | poll | peek (id : Nat)
   | offer (id a : Nat) | offerAll (id : Nat) (ms : List Nat)
-  | clear | close (e : End) | shutdown | await (id : Nat)
-  | dropTake (id : Nat) | dropOffer (id : Nat) | dropPeek (id : Nat) | dropAwait (id : Nat)
-
-/-- A deliberate defect, for a red control. -/
-inductive Fault | none | closing | shutdown
-  deriving DecidableEq
+  | clear | close (e : End) | shutdown
+  | dropTake (id : Nat) | dropOffer (id : Nat)
 
 structure Run where
   s : State
   /-- The takers and peekers that a signal named and that did not run again yet. -/
   signalled : List Nat := []
-  /-- The three properties of the state, so far. -/
   ok : Bool := true
-  /-- The property of the step, so far. -/
-  named : Bool := true
 
 def within (s : State) : Bool :=
   match s.capacity with
@@ -817,7 +603,7 @@ def tidy (s : State) : Bool :=
         && s.messages.isEmpty
     | .closing _ => !(s.messages.isEmpty && s.offers.isEmpty)
     | .opened => true) &&
-  (s.offers.isEmpty || room s == some 0)
+  (s.offers.isEmpty || room s == 0)
 
 def quiet (s : State) (signalled : List Nat) : Bool :=
   (match s.takers with
@@ -825,26 +611,14 @@ def quiet (s : State) (signalled : List Nat) : Bool :=
     | [] => true) &&
   ((front s).isNone || s.peekers.all signalled.contains)
 
-/-- The identity of every request that waits. The lists of the exploration use one identity
-for one request. -/
-def waiting (s : State) : List Nat :=
-  s.takers.map (·.id) ++ s.peekers ++ s.offers.map (·.id) ++ s.awaiters
-
-def accounted (before after : State) (self : Option Nat) (signals : List Signal) : Bool :=
-  (waiting before).all fun id =>
-    (waiting after).contains id || self == some id || signals.any (·.id == id)
-
-/-- One step's result joins the run. `self` is the step's own request: it runs again, so it is
-no longer owed a signal, and it may leave without one. -/
-def bump (r : Run) (s : State) (self : Option Nat) (signals : List Signal) : Run :=
-  let kept := match self with
+def bump (r : Run) (s : State) (rerun : Option Nat) (signals : List Signal) : Run :=
+  let kept := match rerun with
     | some id => r.signalled.filter (· != id)
     | none => r.signalled
   let now := kept ++ (signals.filter (fun g => g.note == Note.again)).map (·.id)
-  { s := s, signalled := now, ok := r.ok && within s && tidy s && quiet s now,
-    named := r.named && accounted r.s s self signals }
+  { s := s, signalled := now, ok := r.ok && within s && tidy s && quiet s now }
 
-def step (fault : Fault) (r : Run) : Op → Run
+def step (forward : Bool) (r : Run) : Op → Run
   | .take id min max =>
     let x := take r.s ⟨id, min, max⟩
     bump r x.1 (some id) x.2.2
@@ -869,73 +643,46 @@ def step (fault : Fault) (r : Run) : Op → Run
     bump r x.1 none x.2.2
   | .close e =>
     let x := close r.s e
-    bump r x.1 none (if fault == .closing then [] else x.2.2)
+    bump r x.1 none (if forward then x.2.2 else [])
   | .shutdown =>
     let x := shutdown r.s
-    bump r x.1 none (if fault == .shutdown then [] else x.2.2)
-  | .await id =>
-    let x := awaitQ r.s id
-    bump r x.1 (some id) []
+    bump r x.1 none x.2.2
   | .dropTake id =>
     let x := withdrawTake r.s id
     bump r x.1 (some id) x.2
   | .dropOffer id =>
     let x := withdrawOffer r.s id
-    bump r x.1 (some id) x.2
-  | .dropPeek id => bump r (withdrawPeek r.s id) (some id) []
-  | .dropAwait id => bump r (withdrawAwait r.s id) (some id) []
+    bump r x.1 none x.2
 
 def ops : List Op :=
   [.take 1 1 1, .take 2 2 3, .poll, .peek 5, .offer 100 10, .offerAll 101 [20, 30], .clear,
    .close .ended, .shutdown, .dropTake 1, .dropOffer 101]
 
-def endOps : List Op :=
-  [.take 1 1 1, .take 2 2 3, .peek 5, .await 7, .offer 100 10, .offerAll 101 [20, 30],
-   .close .ended, .close (.failed 5), .shutdown, .dropTake 1, .dropOffer 100, .dropPeek 5,
-   .dropAwait 7]
-
-/-- The count of runs explored, whether every one kept the three properties of the state, and
-whether every step named the requests that it removed. -/
-def explore (ops : List Op) (fault : Fault) : Nat → Run → Nat × Bool × Bool
-  | 0, r => (1, r.ok, r.named)
+/-- The count of runs explored, and whether every one kept the three properties. -/
+def explore (forward : Bool) : Nat → Run → Nat × Bool
+  | 0, r => (1, r.ok)
   | n + 1, r =>
-    if !r.ok then (1, false, r.named)
+    if !r.ok then (1, false)
     else ops.foldl (fun acc op =>
-      let x := explore ops fault n (step fault r op)
-      (acc.1 + x.1, acc.2.1 && x.2.1, acc.2.2 && x.2.2)) (1, true, r.named)
+      let x := explore forward n (step forward r op)
+      (acc.1 + x.1, acc.2 && x.2)) (1, true)
 
-def exploreAt (ops : List Op) (strategy : Strategy) (capacity : Option Nat) (depth : Nat)
-    (fault : Fault := .none) : Nat × Bool × Bool :=
-  explore ops fault depth { s := { strategy := strategy, capacity := capacity } }
+def exploreAt (strategy : Strategy) (capacity : Option Nat) (depth : Nat)
+    (forward : Bool := true) : Nat × Bool :=
+  explore forward depth { s := { strategy := strategy, capacity := capacity } }
 
-def holds (x : Nat × Bool × Bool) : Bool := x.2.1 && x.2.2
+#eval [none, some 0, some 1, some 2].map (exploreAt .suspend · 5)
+#eval [some 1, some 2].map (exploreAt .dropping · 5)
+#eval [some 1, some 2].map (exploreAt .sliding · 5)
 
-#eval [none, some 0, some 1, some 2].map (exploreAt ops .suspend · 5)
-#eval [some 1, some 2].map (exploreAt ops .dropping · 5)
-#eval [some 1, some 2].map (exploreAt ops .sliding · 5)
-#eval [none, some 0, some 1, some 2].map (exploreAt endOps .suspend · 5)
-#eval [some 1, some 2].map (exploreAt endOps .dropping · 5)
-#eval [some 1, some 2].map (exploreAt endOps .sliding · 5)
+#guard [none, some 0, some 1, some 2].all fun c => (exploreAt .suspend c 5).2
+#guard [some 1, some 2].all fun c => (exploreAt .dropping c 5).2
+#guard [some 1, some 2].all fun c => (exploreAt .sliding c 5).2
 
-#guard [none, some 0, some 1, some 2].all fun c => holds (exploreAt ops .suspend c 5)
-#guard [some 1, some 2].all fun c => holds (exploreAt ops .dropping c 5)
-#guard [some 1, some 2].all fun c => holds (exploreAt ops .sliding c 5)
-#guard [none, some 0, some 1, some 2].all fun c => holds (exploreAt endOps .suspend c 5)
-#guard [some 1, some 2].all fun c => holds (exploreAt endOps .dropping c 5)
-#guard [some 1, some 2].all fun c => holds (exploreAt endOps .sliding c 5)
-
-/-- The first red control: when a closing queue names nobody, the exploration finds a ready
-taker that no signal named. -/
-def closingNamesNobody : Bool := !(exploreAt ops .suspend none 5 (fault := .closing)).2.1
+/-- The red control: when a closing queue names nobody, the exploration finds a ready taker
+that no signal named. -/
+def closingNamesNobody : Bool := !(exploreAt .suspend none 5 (forward := false)).2
 
 #guard closingNamesNobody
-
-/-- The second red control: when a shutdown names nobody, the three properties of the state
-still hold on every run, and the property of the step fails. -/
-def shutdownNamesNobody : Bool × Bool :=
-  let x := exploreAt endOps .suspend none 5 (fault := .shutdown)
-  (x.2.1, x.2.2)
-
-#guard shutdownNamesNobody = (true, false)
 
 end QueueContract

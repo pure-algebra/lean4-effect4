@@ -1,0 +1,39 @@
+{
+  "commands": [
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/probe.mjs /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/rc112.json",
+      "exit": 0,
+      "assertions": 16
+    },
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/probe.mjs /Users/pooks/.bun/install/cache/effect@4.0.1@@@1 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/v401.json",
+      "exit": 0,
+      "assertions": 19
+    },
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/probe-dist.mjs /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/rc112-dist.json",
+      "exit": 0,
+      "assertions": 16
+    },
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/probe-dist.mjs /Users/pooks/.bun/install/cache/effect@4.0.1@@@1 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-full-queue-review/capacity/v401-dist.json",
+      "exit": 0,
+      "assertions": 19
+    }
+  ],
+  "parsed_verification": "passed",
+  "sha256": {
+    "probe.mjs": "fca95d2131d08392068d5514ab66cc01ba8772d5326f31093a8907614866c943",
+    "probe-dist.mjs": "bd61a6fc036a3ab1c5630855553c6eda07de1a4165f8542ed68d3c2feab33e9d",
+    "rc112.json": "4d9805ceda0bfd4517b05b07eee963104736595018071020e7a41814ebe3129b",
+    "v401.json": "f8b59862feffeffda981df23666906dcb25ad7d1af4574ca3690f32226c15ee6",
+    "rc112-dist.json": "819dcf9d21b65c4986365ee49519fd8bdb6af111cd9cdce8fc0ba6ced0d2f03a",
+    "v401-dist.json": "317101b8fd04764030294c5c75a3a7bc91650989375e21bba5fa170e27bfd851",
+    "review.md": "d206fde0af63eeac620f7a3fd266ae5a0ff00c7dbcee65504c69cee65cb67d19"
+  },
+  "head": "a3954d03f2787b856e4f13c6eb63573cac885e34",
+  "reference": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/concurrent/SynchronousQueue.html#offer(E)",
+  "src_dist_results_identical": true,
+  "head_at_final_verification": "a3954d03f2787b856e4f13c6eb63573cac885e34",
+  "working_tree_status": " M docs/core/decisions.md\n"
+}
