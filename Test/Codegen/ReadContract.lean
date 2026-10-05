@@ -110,6 +110,10 @@ theorem lawful : LawfulSpelling sig spell where
       decide
     exact name_notin _ (h op) i
   trailing_ne_undefined := by decide
+  opAtLevel_symm := by
+    intro a b op op' h
+    cases h
+    rfl
 
 /-! ## Tuple-call rows: the canonical wrapper, scoping and trailing-name order
 
@@ -208,6 +212,10 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
     intro op i
     cases op <;> exact name_notin _ (by decide) i
   trailing_ne_undefined := by decide
+  opAtLevel_symm := by
+    intro a b op op' h
+    cases h
+    rfl
 
 -- The wrapper head is gone: `Reflect.apply` is an ordinary unknown atom (source-repairs §18).
 #guard headOf "Reflect.apply" = none

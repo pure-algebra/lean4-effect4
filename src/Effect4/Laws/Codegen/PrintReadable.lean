@@ -498,7 +498,7 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
       tableLayer sig fam ctor (args.map (ArgF.fold (printAlg sig))) :=
     cata_build (tableLayer sig) fam ctor args e hbuild
   rw [hcata]
-  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, r, hout, hargs, hd', hreq⟩
+  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, face, r, hout, hargs, hface, hd', hreq⟩
   · -- a skeleton row: the arguments print and the skeleton instantiates
     obtain ⟨τ, hτ⟩ := printArgs_ok args 0 hr' ih'
     have hkinds : Kinds τ (RowOut.holeKinds row.out) := by
@@ -520,7 +520,7 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
       simpa only [List.map_cons, List.map_nil, ArgF.fold] using hfind'
     rcases hfam with rfl | rfl | rfl <;>
       exact ⟨x, by simp only [tableLayer, tableLayer.rowPrint, List.map_cons, List.map_nil,
-        ArgF.fold, hfind'', hout, hx]⟩
+        ArgF.fold, hfind'', hout, hface, hx]⟩
 
 /-- A readable statement prints, with the binders the domain counted. -/
 theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableAlg classes sig) st n = some d)

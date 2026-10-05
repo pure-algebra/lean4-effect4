@@ -68,7 +68,7 @@ def prints : List PrintRefusal :=
   [.internalAction "fork", .layerRef [0, 2], .unsafeName "a0", .typeSpelling "Date",
    .payloadClass "not-a-tag" .notIdentifier, .payloadClass "Effect" .collides,
    .payloadClass "NotFound" .fieldsDiffer, .payloadClass "NotFound" .construction,
-   .payloadClass "Rate" .unreadable]
+   .payloadClass "Rate" .unreadable, .binderTerm "Ref.modify"]
 
 def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",

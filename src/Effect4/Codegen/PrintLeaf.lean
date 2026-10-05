@@ -58,6 +58,9 @@ inductive PrintRefusal
   | typeSpelling (text : String)
   /-- An error payload class the module cannot declare, named by its tag (decisions row 120). -/
   | payloadClass (tag : String) (why : ClassRefusal)
+  /-- An operation whose binder term has no form at level 0 (`Signature.opAtLevel`), named by its
+  row's spelling: until the state plan's T5 the faces print a term only as a name's image. -/
+  | binderTerm (spelling : String)
 deriving DecidableEq, Repr
 
 /-- The first UTF-8 byte; no traversal of a `String` enters the proof graph. -/

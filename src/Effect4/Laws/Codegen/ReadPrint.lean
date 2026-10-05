@@ -420,10 +420,15 @@ where
     | some row => match row.out with
       | .refuse _ | .stmt _ => none
       | .rowCall => match args with
+        -- the row the printer prints is the operation's form at level 0 (`Signature.opAtLevel`)
         | [.op op, .term request] =>
-          if sig.dom op && requestReadable (sig.rowOf op) n request && request.covers classes then
-            some 0
-          else none
+          match sig.opAtLevel n 0 op with
+          | some face =>
+            if sig.dom face && requestReadable (sig.rowOf face) n request &&
+                request.covers classes then
+              some 0
+            else none
+          | none => none
         | _ => none
       | .tpl t => if argsReadable classes sig fam n (.tpl t) (rowDaemon row) args 0 then some 0 else none
 
@@ -895,8 +900,8 @@ theorem rowPrint_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Carrie
     ∃ row, table.find? (fun r => r.selects fam ctor args) = some row ∧
       ((∃ t τ, row.out = .tpl t ∧ printArgs sig fam n (.tpl t) args 0 = .ok τ ∧
           inst n τ t = some x) ∨
-       (∃ op r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
-          printRow (sig.rowOf op) r = .ok x)) := by
+       (∃ op face r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
+          sig.opAtLevel n 0 op = some face ∧ printRow (sig.rowOf face) r = .ok x)) := by
   unfold tableLayer.rowPrint at h
   aesop
 
@@ -905,8 +910,9 @@ theorem rowDom_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Dom)} {n
     (h : domLayer.rowDom classes sig fam ctor args n = some d) :
     ∃ row, table.find? (fun r => r.selects fam ctor args) = some row ∧
       ((∃ t, row.out = .tpl t ∧ argsReadable classes sig fam n (.tpl t) (rowDaemon row) args 0 = true) ∨
-       (∃ op r, row.out = .rowCall ∧ args = [.op op, .term r] ∧ sig.dom op = true ∧
-          requestReadable (sig.rowOf op) n r = true ∧ r.covers classes = true)) := by
+       (∃ op face r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
+          sig.opAtLevel n 0 op = some face ∧ sig.dom face = true ∧
+          requestReadable (sig.rowOf face) n r = true ∧ r.covers classes = true)) := by
   unfold domLayer.rowDom at h
   aesop
 
@@ -1111,12 +1117,16 @@ theorem readRow_path_print {row : Templates.Row} (hk : table[k]? = some row)
   simp only [↓reduceIte, matchT, hsorts, Tpl.rigid, Bool.false_eq_true, ↓reduceDIte, readLeaf, hr,
     ↓reduceIte, hb, Except.toOption, Option.map_some]
 
-/-- The row call reads its image back: the printed row of `perform` reads to `perform`. -/
+/-- The row call reads its image back: the printed row of `perform` reads to `perform`. The
+printer printed the operation's face (its form at level 0), the face reader reads the face back
+(`read_printRow`), and the reader moves it to the node's level, where it is the operation again
+(`LawfulSpelling.opAtLevel_symm`). -/
 theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.Row}
-    (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op : Op} {r : Term}
-    (hd : sig.dom op = true) (hreq : requestReadable (sig.rowOf op) n r = true)
+    (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op face : Op} {r : Term}
+    (hface : sig.opAtLevel n 0 op = some face)
+    (hd : sig.dom face = true) (hreq : requestReadable (sig.rowOf face) n r = true)
     (hc : r.covers classes = true)
-    (hp : printRow (sig.rowOf op) r = .ok x) (hfam' : fam = .eff) :
+    (hp : printRow (sig.rowOf face) r = .ok x) (hfam' : fam = .eff) :
     readRow classes sig spell fam n x row k child children block same =
       some (.ok (hfam' ▸ (Eff.perform op r : EffSelfCarrier Op .eff))) := by
   subst hfam'
@@ -1124,7 +1134,8 @@ theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.R
   simp only at hfam hrow
   subst hfam hrow
   unfold readRow
-  simp only [↓reduceIte, read_printRow hl op hd r hreq hc hp, rowAnswer, Except.mapError]
+  simp only [↓reduceIte, readPerform, read_printRow hl face hd r hreq hc hp, rowAnswer,
+    Except.bind, atNodeLevel, hl.opAtLevel_symm n 0 op face hface, Except.mapError]
 
 /-! ## No row before the printing row fires -/
 
@@ -1315,7 +1326,7 @@ theorem action_image_head {c : EffSelfCarrier Op .action} {d : Nat} {x : Expr}
     exact (selects_fam_ctor this).1
   have hshape := table_fact table_actionHeaded hmem
   simp only [actionRowHeaded, hfam, bne_self_eq_false, Bool.false_or] at hshape
-  rcases hcase with ⟨t, τ, hout, _, hinst⟩ | ⟨_, _, hout, _, _⟩
+  rcases hcase with ⟨t, τ, hout, _, hinst⟩ | ⟨_, _, _, hout, _, _, _⟩
   · rw [hout] at hshape
     simp only [Bool.and_eq_true, Option.any_eq_true] at hshape
     obtain ⟨_, h, hh, _⟩ := hshape
@@ -1463,9 +1474,9 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
   -- an earlier row of another family reads nothing
   have hother : ∀ j < k, ∀ rj, table[j]? = some rj → rj.fam ≠ fam ∨ rowsApart rj row = true :=
     fun j hj rj hrj => by rw [← hfamrow]; exact apart_of_lt hrj hk hj
-  rcases hcase with ⟨t, τ, hout, hτ, hinst⟩ | ⟨op, r, hout, hargs, hp'⟩
+  rcases hcase with ⟨t, τ, hout, hτ, hinst⟩ | ⟨op, face, r, hout, hargs, hface, hp'⟩
   · -- a skeleton row
-    rcases hcase' with ⟨t', hout', hr'⟩ | ⟨_, _, hout', _⟩
+    rcases hcase' with ⟨t', hout', hr'⟩ | ⟨_, _, _, hout', _⟩
     swap; · rw [hout] at hout'; cases hout'
     rw [hout, RowOut.tpl.injEq] at hout'
     subst hout'
@@ -1564,7 +1575,7 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
           | _ => cases ha
       | _ => exact absurd rfl hrigid
   · -- the row call
-    rcases hcase' with ⟨_, hout', _⟩ | ⟨op', r', hout', hargs', hd', hreq, hcov⟩
+    rcases hcase' with ⟨_, hout', _⟩ | ⟨op', face', r', hout', hargs', hface', hd', hreq, hcov⟩
     · rw [hout] at hout'; cases hout'
     have hfamily := table_fact table_family hmem
     simp only [rowFamily, hout, beq_iff_eq] at hfamily
@@ -1574,13 +1585,14 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     have hargs' := fold_eq_op_term (readableAlg classes sig) hargs'
     rw [hargs, List.cons.injEq, List.cons.injEq, ArgF.op.injEq, ArgF.term.injEq] at hargs'
     obtain ⟨rfl, rfl, _⟩ := hargs'
+    obtain rfl : face' = face := Option.some.inj (hface'.symm.trans hface)
     have he : e = .perform op r := eff_of_view_op_term e op r (by rw [hview]; exact hargs)
     subst he
     refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, printRow_nodeLike hp'⟩
     · rcases hother j hj rj hrj with hne | hap
       · exact readRow_none_of_fam hne
       · exact earlier_none_rowCall hap hl hout hp' (fun hk d => readT_action_none_of_printRow hl hp' d)
-    · exact readRow_rowCall_print hl hout hfamily hd' hreq hcov hp' rfl
+    · exact readRow_rowCall_print hl hout hfamily hface hd' hreq hcov hp' rfl
 
 end Step
 

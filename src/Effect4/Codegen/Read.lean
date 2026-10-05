@@ -586,8 +586,9 @@ def programHeads : List String :=
 
 /-- What is not a skeleton, read as the hand fields print it: a bare identifier as a value row,
 a call as a call row, a method call as a method row. A reserved head no row matched is refused
-by its argument list when it heads a program clause, and by its name otherwise. -/
-def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
+by its argument list when it heads a program clause, and by its name otherwise. What it reads is
+the operation's form at level 0, the one the row spells (`readPerform` moves it to the node). -/
+def readPerformFace (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
     (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match x with
   | .ident s =>
@@ -608,6 +609,20 @@ def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
   | .call (.generic (.ident s) (ta :: tas)) args =>
     (readRowCall classes sig spell n s (ta :: tas) args).getD (.error (.unknownHead s))
   | _ => readMethod classes sig spell n x
+
+/-- A row call read at its face, moved to a node of level `n`: the operation the row spells is
+its form at level 0, and the program carries its form at the node (`Signature.opAtLevel`). -/
+def atNodeLevel (sig : Signature Op) (n : Nat) : Eff Op → Except ReadRefusal (Eff Op)
+  | .perform op r =>
+    match sig.opAtLevel 0 n op with
+    | some op' => .ok (.perform op' r)
+    | none => .error (.shape "operation data")
+  | _ => .error (.shape "operation data")
+
+/-- The row call at a node of level `n`: its face (`readPerformFace`), moved to the node. -/
+def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
+  (readPerformFace classes sig spell n x).bind (atNodeLevel sig n)
 
 /-- The refusal of a tree that no row of its family matches, named by the family. -/
 def unread : EffFam → ReadRefusal
@@ -966,8 +981,9 @@ def rowHeadReadable (row : Row) : Bool :=
 /-! ## What the reader needs of a signature -/
 
 /-- `spell` inverts the row table on (spelling, trailing names) at every row whose head reads
-back (`rowHeadReadable`), a value row has no trailing names (the printer drops them), and no
-spelling or trailing name is a binder name, `undefined`, or a reserved head. -/
+back (`rowHeadReadable`), a value row has no trailing names (the printer drops them), no
+spelling or trailing name is a binder name, `undefined`, or a reserved head, and an operation
+moved between levels moves back (`Signature.opAtLevel`). -/
 structure LawfulSpelling (sig : Signature Op) (spell : String → List String → Option Op) :
     Prop where
   spell_row : ∀ op, sig.dom op = true → rowHeadReadable (sig.rowOf op) = true →
@@ -979,6 +995,9 @@ structure LawfulSpelling (sig : Signature Op) (spell : String → List String �
   spelling_not_reserved : ∀ op, (sig.rowOf op).spelling ∉ reserved
   trailing_ne_name : ∀ op i, Var.name i ∉ (sig.rowOf op).trailing
   trailing_ne_undefined : ∀ op, "undefined" ∉ (sig.rowOf op).trailing
+  /-- An operation moved between two levels moves back (the state plan's T3b): the faces print
+  an operation's form at level 0 and the readers move it back to the node. -/
+  opAtLevel_symm : ∀ a b op op', sig.opAtLevel a b op = some op' → sig.opAtLevel b a op' = some op
 
 /-! ## The native profile
 

@@ -89,6 +89,12 @@ structure Signature (Op : Type) where
   for an operation that carries none. The checker types the term at the node's environment
   extended by the current value (`termUse`, `checkRow`). -/
   termOf : Op → Option BinderTerm := fun _ => none
+  /-- An operation's own data written for a node of level `src`, as data for a node of level
+  `dst`. A binder term reads its current value at the node's level, so the faces print and read
+  an operation as its form at level 0 (`Codegen/Templates.lean`, `Codegen/Read.lean`). `none`
+  where the faces have no form for it (the state plan's T3b, until T5). The identity by
+  default. -/
+  opAtLevel : Nat → Nat → Op → Option Op := fun _ _ op => some op
 
 variable {Op : Type}
 
