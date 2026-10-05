@@ -110,7 +110,8 @@ merged `db504f03`): a program fails with a tagged record; p1, p2, p3 and p5 buil
 landed (seat E2, merged `a917b768`): payloads print and read back as `Data.TaggedError` classes.
 The derived forms (DI-89, R10) are planned in the
 [derived forms plan](research/2026-10-04-claude-lead/derived-forms-plan.md); its §3 asks the owner
-seven questions.
+seven questions. Queues (DI-11) are planned in the
+[queues plan](research/2026-10-04-claude-lead/queues-plan.md); its §3 asks four.
 
 ## Current milestone (2026-09-23; the milestone is M5–M7, system map §3)
 
