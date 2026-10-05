@@ -130,9 +130,11 @@ def vectors : List Ty := (d1full ++ c2 ++ packageTys).eraseDups
 
 /-! ## 3. The primitive table this closure needs
 
-Nine rows. They are exactly the constants the `Ty` closure reaches that have **no mono
-body** — measured, not guessed (`docs/research/type-tooling/lcnf/tynb/run.log`). Everything
-else the interpreter reads out of the compiler's own output. -/
+The constants the checkpoint's closure reaches that have **no mono body**: measured, not
+guessed (`docs/research/type-tooling/lcnf/tynb/run.log` for the first nine; the validity report
+of the compiler checkpoint for the rest). Everything else the interpreter reads out of the
+compiler's own output. A row here is the Lean meaning of a constant. The OCaml route's row for
+the same constant (`OCaml5.Lcnf.builtins`) is the target's, and the two are kept apart. -/
 
 def tyPrims : PrimTable :=
   [ (``Nat.add, .natAdd)
@@ -150,7 +152,18 @@ def tyPrims : PrimTable :=
   , (``Array.emptyWithCapacity, .arrayMkEmpty)
   , (``Array.push, .arrayPush)
   , (``Array.size, .arraySize)
-  , (``UInt8.toNat, .identity) ]
+  , (``UInt8.toNat, .identity)
+  -- The checkpoint's closure reaches five more constants with no mono body since generator
+  -- merging updates a row in place (`List.set`, through `Array.foldrMUnsafe`): the truncated
+  -- subtraction, and the unchecked index walk of the array shim. Measured on 2026-10-05: the
+  -- validity report listed the five as unresolved and four merge cases were refused with
+  -- "no primitive rule for the extern Nat.sub". `USize` is 64 bits on the hosts this runs on
+  -- (`System.Platform.numBits`), and its subtraction wraps.
+  , (``Nat.sub, .natSub)
+  , (``Array.uget, .arrayGet)
+  , (``USize.ofNat, .uintOfNat 64)
+  , (``USize.decEq, .natDecEq)
+  , (``USize.sub, .uintSub 64) ]
 
 /-! ## 4. The mutants — the negative controls
 

@@ -172,6 +172,9 @@ inductive Prim where
   | identity
   /-- `UIntN.ofNat`: reduce mod `2 ^ bits`. -/
   | uintOfNat (bits : Nat)
+  /-- `UIntN.sub`: subtraction mod `2 ^ bits`. It wraps below zero, where `Nat.sub` stops:
+  `0 - 1` is `2 ^ bits - 1`. -/
+  | uintSub (bits : Nat)
   | arrayToList | listToArray | arrayMkEmpty | arrayPush | arraySize
   /-- `Array.uget`/`get!`/`fget`: Lean's `get!` answers a default on an out-of-range index;
   this row is *stuck* there instead, because "the default of the element type" is not
@@ -195,6 +198,7 @@ def arity : Prim → Nat
   | .strLength | .strToUTF8 => 1
   | .identity => 1
   | .uintOfNat _ => 1
+  | .uintSub _ => 2
   | .arrayToList | .listToArray | .arrayMkEmpty | .arraySize | .listLength => 1
   | .arrayPush | .arrayGet => 2
 
@@ -240,6 +244,9 @@ def apply : Prim → Array Value → Option Value
       return .array (((← a.toStr?).toUTF8.data).map fun b => Value.nat b.toNat)
   | .identity, #[a] => some a
   | .uintOfNat bits, #[a] => do return .nat ((← a.toNat?) % (2 ^ bits))
+  | .uintSub bits, #[a, b] => do
+      let m := 2 ^ bits
+      return .nat (((← a.toNat?) % m + (m - (← b.toNat?) % m)) % m)
   | .arrayToList, #[a] => match a with
     | .array xs => some (Value.ofList xs.toList)
     | _ => none
@@ -259,6 +266,7 @@ def apply : Prim → Array Value → Option Value
 
 protected def toString : Prim → String
   | .uintOfNat bits => s!"uintOfNat {bits}"
+  | .uintSub bits => s!"uintSub {bits}"
   | p => (repr p).pretty.replace "Conform.Lcnf.Prim." ""
 
 instance : ToString Prim := ⟨Prim.toString⟩
