@@ -2,6 +2,7 @@ import Effect4.Codegen.Read
 import Effect4.Laws.Codegen.Record
 import Effect4.Laws.Codegen.Tuple
 import Effect4.Laws.Codegen.Classes
+import Effect4.Laws.Codegen.ListFold
 
 /-!
 # Leaf and row reconstruction laws
@@ -9,7 +10,8 @@ import Effect4.Laws.Codegen.Classes
 Concept: Exact Codecs & Data Plane Embeddings. Claim served: `printed-modules` (R2/R3).
 The term retraction keeps scope as its premise, and, since the payload class face (decisions row
 120, part E2), coverage: the module's classes declare every class construction's fields
-(`Term.covers`). Exactness assumes successful reading under any classes. These declarations moved
+(`Term.covers`). Since the list fold (decisions row 228) it also takes a term that states no
+accumulator type (`Term.unannotated`): a stated type is printed and not read. Exactness assumes successful reading under any classes. These declarations moved
 from the core reader so record cases can use the Laws graph. Names and namespaces remain
 unchanged. No target execution or host equivalence is claimed. The placement and consumers are in
 the record-wrapper brief.
@@ -267,6 +269,39 @@ theorem Var.read_none : ∀ {n : Nat} {s : String}, (∀ i, Var.name i ≠ s) �
 
 open Effect4.Codegen.Classes (Classes)
 
+/-- A term prints to no function: a list fold's step is the only function in a term's image, and
+it is an argument of the fold's call. Step of the `app` case of `readTerm_printTerm`. -/
+theorem binders_read_printTerm {n m : Nat} {bs : List Nat} (t : Term) :
+    Effect4.Codegen.Binders.read m bs (printTerm n t) = none := by
+  cases t with
+  | var _ => rfl
+  | lit v => cases v <;> rfl
+  | app _ _ => rfl
+  | record fields names values =>
+    simp only [printTerm]
+    split
+    · rfl
+    · simp only [Effect4.Codegen.Record.writeRecord]
+      split <;> rfl
+  | field _ _ _ => rfl
+  | recordSet _ _ _ => rfl
+  | tupleAt _ _ => rfl
+  | fold _ _ _ _ => rfl
+
+/-- An atom application is no list fold, whatever its name: where its image has three
+arguments, the third is a term's image, and that is no function. Step of the `app` case of
+`readTerm_printTerm`. -/
+theorem listFold_read_app {n : Nat} (atom : String) (args : Terms) :
+    Effect4.Codegen.ListFold.read n (.call (.ident atom) (printTerms n args)) = none := by
+  match args with
+  | .nil => rfl
+  | .cons _ .nil => rfl
+  | .cons _ (.cons _ .nil) => rfl
+  | .cons _ (.cons _ (.cons c .nil)) =>
+    simp only [printTerms, Effect4.Codegen.ListFold.read, binders_read_printTerm c,
+      Option.map_none, ite_self]
+  | .cons _ (.cons _ (.cons _ (.cons _ _))) => rfl
+
 mutual
   /-- **The term round trip** (`collection-term-print-read`): a scoped term whose class
   constructions the classes cover reads back from its printing. Since decisions row 120, part E2,
@@ -274,36 +309,47 @@ mutual
   `_tag` restored first (`Classes.classTag?`); placed at R8 (`translation-simulation`) as a step of
   `read_print`, and at R3 as the record terms' printed form. -/
   theorem readTerm_printTerm {classes : Classes} {n : Nat} (t : Term)
-      (h : Term.scoped n t = true) (hc : t.covers classes = true) :
+      (h : Term.scoped n t = true) (hc : t.covers classes = true)
+      (hu : t.unannotated = true) :
       readTerm classes n (printTerm n t) = .ok t :=
-    match t, h, hc with
-    | .var i, h, _ => by
+    match t, h, hc, hu with
+    | .var i, h, _, _ => by
       simp only [Term.scoped, decide_eq_true_eq] at h
       simp only [printTerm, readTerm, Effect4.Codegen.Classes.readClass,
         Effect4.Codegen.Record.readRecord, Effect4.Codegen.Record.readField,
-        Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt, Var.read_name h]
-    | .lit .unit, _, _ => by
+        Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt,
+        Effect4.Codegen.ListFold.read, Var.read_name h]
+    | .lit .unit, _, _, _ => by
       simp only [printTerm, printLit, readTerm, Effect4.Codegen.Classes.readClass,
         Effect4.Codegen.Record.readRecord, Effect4.Codegen.Record.readField,
         Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt,
-        Var.read_none Var.name_ne_undefined, ↓reduceIte]
-    | .lit (.nat k), _, _ => by
+        Effect4.Codegen.ListFold.read, Var.read_none Var.name_ne_undefined, ↓reduceIte]
+    | .lit (.nat k), _, _, _ => by
       rw [printTerm, printLit, readTerm]
       rfl
-    | .lit (.bool b), _, _ => by rw [printTerm, printLit, readTerm]; rfl
-    | .lit (.str s), _, _ => by rw [printTerm, printLit, readTerm]; rfl
-    | .app atom args, h, hc => by
+    | .lit (.bool b), _, _, _ => by rw [printTerm, printLit, readTerm]; rfl
+    | .lit (.str s), _, _, _ => by rw [printTerm, printLit, readTerm]; rfl
+    | .app atom args, h, hc, hu => by
       simp only [Term.scoped] at h
       rw [Term.covers_app] at hc
-      simp only [printTerm, readTerm, Effect4.Codegen.Classes.readClass,
+      rw [Term.unannotated_app] at hu
+      rw [printTerm, readTerm]
+      simp only [Effect4.Codegen.Classes.readClass,
         Effect4.Codegen.Record.readRecord, Effect4.Codegen.Record.readField,
-        Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt,
-        readTerms_printTerms args h hc, Except.map]
-    | .record fields names values, h, hc => by
+        Effect4.Codegen.Record.readSet, Effect4.Codegen.Tuple.readAt]
+      -- an atom application is no fold, whatever its name
+      split
+      · next list init body hl =>
+        rw [listFold_read_app] at hl
+        exact nomatch hl
+      · rw [readTerms_printTerms args h hc hu]
+        rfl
+    | .record fields names values, h, hc, hu => by
       simp only [Term.scoped] at h
       rw [Term.covers_record, Bool.and_eq_true] at hc
+      rw [Term.unannotated_record] at hu
       obtain ⟨hnode, hvals⟩ := hc
-      have hr := readTerms_printTerms values h hvals
+      have hr := readTerms_printTerms values h hvals hu
       rw [printTerm]
       cases hct : Effect4.Codegen.Classes.classTag? fields names values with
       | some tag =>
@@ -349,9 +395,10 @@ mutual
             rw [hr, ok_bind, hct]
             rfl
           · next hrec => rw [hrec] at hs; exact nomatch hs
-    | .field mode target name, h, hc => by
+    | .field mode target name, h, hc, hu => by
       simp only [Term.scoped] at h
       rw [Term.covers_field] at hc
+      rw [Term.unannotated_field] at hu
       rw [printTerm, readTerm]
       split
       · next tag' names' values' hcls =>
@@ -367,12 +414,13 @@ mutual
           · next optional name' target' hf =>
             rw [hf] at hs
             cases hs
-            rw [readTerm_printTerm target h hc]
+            rw [readTerm_printTerm target h hc hu]
             cases mode <;> rfl
           · next hf => rw [hf] at hs; exact nomatch hs
-    | .recordSet target name value, h, hc => by
+    | .recordSet target name value, h, hc, hu => by
       simp only [Term.scoped, Bool.and_eq_true] at h
       rw [Term.covers_recordSet, Bool.and_eq_true] at hc
+      rw [Term.unannotated_recordSet, Bool.and_eq_true] at hu
       rw [printTerm, readTerm]
       split
       · next tag' names' values' hcls =>
@@ -384,12 +432,13 @@ mutual
         · next name' target' value' hr =>
           rw [hr] at hs
           cases hs
-          rw [readTerm_printTerm target h.1 hc.1]
-          simp only [ok_bind, readTerm_printTerm value h.2 hc.2]
+          rw [readTerm_printTerm target h.1 hc.1 hu.1]
+          simp only [ok_bind, readTerm_printTerm value h.2 hc.2 hu.2]
         · next hr => rw [hr] at hs; exact nomatch hs
-    | .tupleAt target index, h, hc => by
+    | .tupleAt target index, h, hc, hu => by
       simp only [Term.scoped] at h
       rw [Term.covers_tupleAt] at hc
+      rw [Term.unannotated_tupleAt] at hu
       rw [printTerm, readTerm]
       split
       · next tag' names' values' hcls =>
@@ -401,21 +450,48 @@ mutual
         · next index' target' hr =>
           rw [hr] at hs
           cases hs
-          rw [readTerm_printTerm target h hc]
+          rw [readTerm_printTerm target h hc hu]
           rfl
+        · next hr => rw [hr] at hs; exact nomatch hs
+    -- the fold with no stated type: its image is none of the earlier readers', and its own
+    -- reader returns the three printed parts, the body's two levels up
+    | .fold accTy list init body, h, hc, hu => by
+      simp only [Term.scoped, Bool.and_eq_true] at h
+      rw [Term.covers_fold, Bool.and_eq_true, Bool.and_eq_true] at hc
+      rw [Term.unannotated_fold, Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true,
+        Option.isNone_iff_eq_none] at hu
+      obtain ⟨rfl, hul, hui, hub⟩ := hu
+      rw [printTerm, Option.map_none, readTerm]
+      split
+      · next tag' names' values' hcls =>
+        rw [Effect4.Codegen.ListFold.readClass_write] at hcls; exact nomatch hcls
+      · simp only [Effect4.Codegen.ListFold.readRecord_write,
+          Effect4.Codegen.ListFold.readField_write, Effect4.Codegen.ListFold.readSet_write,
+          Effect4.Codegen.ListFold.readAt_write]
+        have hs := Effect4.Codegen.ListFold.read_write n (printTerm n list) (printTerm n init)
+          (printTerm (n + 2) body)
+        split
+        · next list' init' body' hr =>
+          rw [hr] at hs
+          cases hs
+          rw [readTerm_printTerm list h.1.1 hc.1 hul]
+          simp only [ok_bind, readTerm_printTerm init h.1.2 hc.2.1 hui,
+            readTerm_printTerm body h.2 hc.2.2 hub]
         · next hr => rw [hr] at hs; exact nomatch hs
   termination_by structural t
 
   theorem readTerms_printTerms {classes : Classes} {n : Nat} (ts : Terms)
-      (h : Terms.scoped n ts = true) (hc : ts.covers classes = true) :
+      (h : Terms.scoped n ts = true) (hc : ts.covers classes = true)
+      (hu : ts.unannotated = true) :
       readTerms classes n (printTerms n ts) = .ok ts :=
-    match ts, h, hc with
-    | .nil, _, _ => by rw [printTerms, readTerms]
-    | .cons t ts, h, hc => by
+    match ts, h, hc, hu with
+    | .nil, _, _, _ => by rw [printTerms, readTerms]
+    | .cons t ts, h, hc, hu => by
       simp only [Terms.scoped, Bool.and_eq_true] at h
       rw [Terms.covers_cons, Bool.and_eq_true] at hc
-      simp only [printTerms, readTerms, readTerm_printTerm t h.1 hc.1,
-        readTerms_printTerms ts h.2 hc.2, ok_bind]
+      rw [Terms.unannotated_cons, Bool.and_eq_true] at hu
+      simp only [printTerms, readTerms, readTerm_printTerm t h.1 hc.1 hu.1,
+        readTerms_printTerms ts h.2 hc.2 hu.2, ok_bind]
   termination_by structural ts
 end
 
@@ -477,28 +553,39 @@ mutual
               rw [printTerm, readTerm_exact target hterm]
               exact Effect4.Codegen.Tuple.readAt_exact x index target ht
             · split at h
-              · next s =>
-                split at h
-                · next i hi =>
-                  cases h
-                  obtain ⟨hs, _⟩ := Var.read_exact hi
-                  exact congrArg Expr.ident hs.symm
-                · split at h
-                  · next hs => cases h; exact congrArg Expr.ident hs.symm
-                  · exact nomatch h
-              · next k =>
-                split at h
-                · next hk =>
-                  cases h
-                  exact congrArg Expr.int (Int.toNat_of_nonneg hk)
-                · exact nomatch h
-              · cases h; rfl
-              · cases h; rfl
-              ·
-                obtain ⟨terms, hterms, ht⟩ := map_eq_ok.mp h
+              -- a fold: its three parts print back, the body two levels up, to the image
+              -- without a type argument, which is the expression read
+              · next list init body hl =>
+                have := Effect4.Codegen.ListFold.read_size n x list init body hl
+                simp only [bind_eq_ok] at h
+                obtain ⟨l, hlist, i, hinit, b, hbody, ht⟩ := h
                 cases ht
-                rw [printTerm, readTerms_exact _ hterms]
-              · exact nomatch h
+                rw [printTerm, Option.map_none, readTerm_exact list hlist,
+                  readTerm_exact init hinit, readTerm_exact body hbody]
+                exact Effect4.Codegen.ListFold.read_exact n x list init body hl
+              · split at h
+                · next s =>
+                  split at h
+                  · next i hi =>
+                    cases h
+                    obtain ⟨hs, _⟩ := Var.read_exact hi
+                    exact congrArg Expr.ident hs.symm
+                  · split at h
+                    · next hs => cases h; exact congrArg Expr.ident hs.symm
+                    · exact nomatch h
+                · next k =>
+                  split at h
+                  · next hk =>
+                    cases h
+                    exact congrArg Expr.int (Int.toNat_of_nonneg hk)
+                  · exact nomatch h
+                · cases h; rfl
+                · cases h; rfl
+                ·
+                  obtain ⟨terms, hterms, ht⟩ := map_eq_ok.mp h
+                  cases ht
+                  rw [printTerm, readTerms_exact _ hterms]
+                · exact nomatch h
   termination_by sizeOf x
   decreasing_by all_goals subst_vars; all_goals simp_wf; all_goals omega
 
@@ -520,7 +607,8 @@ end
 
 theorem readLiteral_print (value : Lit) : readLiteral (printLit value) = .ok value := by
   unfold readLiteral
-  have ht := readTerm_printTerm (classes := []) (n := 0) (.lit value) rfl (Term.covers_lit_nil value)
+  have ht := readTerm_printTerm (classes := []) (n := 0) (.lit value) rfl
+    (Term.covers_lit_nil value) rfl
   change readTerm [] 0 (printLit value) = .ok (.lit value) at ht
   rw [ht]
   rfl
@@ -530,7 +618,8 @@ theorem readLiteral_exact {x : Expr} {value : Lit} (h : readLiteral x = .ok valu
   simp only [readLiteral, bind_eq_ok] at h
   obtain ⟨term, ht, h⟩ := h
   cases term with
-  | var _ | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => cases h
+  | var _ | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _
+  | fold _ _ _ _ => cases h
   | lit v =>
     cases h
     exact readTerm_exact x ht
@@ -546,27 +635,32 @@ theorem headOf_lit (h : Head) (s : String) (hs : h.spelling = s) : headOf s = so
   hs ▸ headOf_spelling h
 
 theorem readCause_printCause {n : Nat} (c : CauseTerm) (h : CauseTerm.scoped n c = true)
-    (hc : c.covers classes = true) : readCause classes n (printCause n c) = .ok c := by
+    (hc : c.covers classes = true) (hu : c.unannotated = true) :
+    readCause classes n (printCause n c) = .ok c := by
   induction c with
   | fail e =>
     simp only [CauseTerm.scoped] at h
     rw [CauseTerm.covers_fail] at hc
-    rw [printCause]; unfold readCause; simp [headOf_lit .causeFail "Cause.fail" rfl, readTerm_printTerm e h hc]
+    rw [CauseTerm.unannotated_fail] at hu
+    rw [printCause]; unfold readCause; simp [headOf_lit .causeFail "Cause.fail" rfl, readTerm_printTerm e h hc hu]
   | die d =>
     simp only [CauseTerm.scoped] at h
     rw [CauseTerm.covers_die] at hc
-    rw [printCause]; unfold readCause; simp [headOf_lit .causeDie "Cause.die" rfl, readTerm_printTerm d h hc]
+    rw [CauseTerm.unannotated_die] at hu
+    rw [printCause]; unfold readCause; simp [headOf_lit .causeDie "Cause.die" rfl, readTerm_printTerm d h hc hu]
   | interrupt who =>
     cases who with
     | none => rw [printCause]; unfold readCause; simp [headOf_lit .causeInterrupt "Cause.interrupt" rfl]
     | some w =>
       simp only [CauseTerm.scoped] at h
       rw [CauseTerm.covers_interrupt, Option.all_some] at hc
-      rw [printCause]; unfold readCause; simp [headOf_lit .causeInterrupt "Cause.interrupt" rfl, readTerm_printTerm w h hc]
+      rw [CauseTerm.unannotated_interrupt, Option.all_some] at hu
+      rw [printCause]; unfold readCause; simp [headOf_lit .causeInterrupt "Cause.interrupt" rfl, readTerm_printTerm w h hc hu]
   | both l r ihl ihr =>
     simp only [CauseTerm.scoped, Bool.and_eq_true] at h
     rw [CauseTerm.covers_both, Bool.and_eq_true] at hc
-    rw [printCause]; unfold readCause; simp [headOf_lit .causeCombine "Cause.combine" rfl, ihl h.1 hc.1, ihr h.2 hc.2]
+    rw [CauseTerm.unannotated_both, Bool.and_eq_true] at hu
+    rw [printCause]; unfold readCause; simp [headOf_lit .causeCombine "Cause.combine" rfl, ihl h.1 hc.1 hu.1, ihr h.2 hc.2 hu.2]
 
 theorem readCause_exact {n : Nat} (x : Expr) {c : CauseTerm} (h : readCause classes n x = .ok c) :
     printCause n c = x := by
@@ -648,6 +742,7 @@ theorem idents?_printTerms {n : Nat} : ∀ ts : Terms, idents? (printTerms n ts)
     | field mode target name => rfl
     | recordSet target name value => rfl
     | tupleAt target index => rfl
+    | fold accTy list init body => rfl
 
 theorem printTerm_ident {n : Nat} {t : Term} {x : String} (h : printTerm n t = .ident x) :
     (∃ i, t = .var i ∧ x = Var.name i) ∨ (t = .lit .unit ∧ x = "undefined") := by
@@ -667,6 +762,7 @@ theorem printTerm_ident {n : Nat} {t : Term} {x : String} (h : printTerm n t = .
   | field mode target name => exact nomatch h
   | recordSet target name value => exact nomatch h
   | tupleAt target index => exact nomatch h
+  | fold accTy list init body => exact nomatch h
 
 theorem printTerm_eq_bool {n : Nat} (term : Term) (value : Bool) :
     printTerm n term = .bool value ↔ term = .lit (.bool value) := by
@@ -687,6 +783,8 @@ theorem printTerm_eq_bool {n : Nat} (term : Term) (value : Bool) :
     simp only [printTerm, Effect4.Codegen.Record.writeSet, reduceCtorEq]
   | tupleAt target index =>
     simp only [printTerm, Effect4.Codegen.Tuple.writeAt, reduceCtorEq]
+  | fold accTy list init body =>
+    simp only [printTerm, Effect4.Codegen.ListFold.write, reduceCtorEq]
 
 /-- An atom application that is no row reads as no row call, so the caller may read it as a
 term. -/
@@ -855,7 +953,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
     (hshape : (sig.rowOf op).shape = .tupleCall) (r : Term)
     (h : tupleRequestReadable n r = true) (hc : r.covers classes = true)
-    {typeArgs : List TypeScript.TypeRef}
+    (hu : r.unannotated = true) {typeArgs : List TypeScript.TypeRef}
     (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
     readRowCall classes sig spell n (sig.rowOf op).spelling typeArgs
       (printTupleArgs n r ++ (sig.rowOf op).trailing.map Expr.ident) =
@@ -870,7 +968,7 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
       rw [readRowCall_tuple hl op hd _ _ hshape
         (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy) hta]
       have hv : readTerm classes n (.ident (Var.name i)) = .ok (.var i) :=
-        readTerm_printTerm (.var i) h rfl
+        readTerm_printTerm (.var i) h rfl rfl
       simp [readTupleArgs, savedVar?, hv]
     | lit value =>
       cases value with
@@ -879,20 +977,24 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
         rw [readRowCall_tuple hl op hd _ _ hshape
           (fun _ _ hx => by cases hx) (fun _ _ hy => by cases hy) hta]
         have hv : readTerm classes n (.ident "undefined") = .ok (.lit .unit) :=
-          readTerm_printTerm (.lit .unit) rfl rfl
+          readTerm_printTerm (.lit .unit) rfl rfl rfl
         simp [readTupleArgs, savedVar?, hv]
       | nat _ | bool _ | str _ => simp at h
-    | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => cases h
+    | app _ _ | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _
+    | fold _ _ _ _ => cases h
   · simp only [hpa, Bool.and_eq_true, Option.isNone_iff_eq_none] at h
     obtain ⟨⟨hx, hy⟩, hsv⟩ := h
     obtain rfl := pairArgs?_some hpa
     rw [Term.covers_app, Terms.covers_cons, Terms.covers_cons, Bool.and_eq_true,
       Bool.and_eq_true] at hc
+    rw [Term.unannotated_app, Terms.unannotated_cons, Terms.unannotated_cons, Bool.and_eq_true,
+      Bool.and_eq_true] at hu
     simp only [printTupleArgs, hpa, List.cons_append, List.nil_append]
     rw [readRowCall_tuple hl op hd _ _ hshape
       (fun op' v hv => printTerm_ident_not_trailing hl x op' v hv)
       (fun op' v hv => printTerm_ident_not_trailing hl y op' v hv) hta]
-    simp [readTupleArgs, hsv, readTerm_printTerm x hx hc.1, readTerm_printTerm y hy hc.2.1]
+    simp [readTupleArgs, hsv, readTerm_printTerm x hx hc.1 hu.1,
+      readTerm_printTerm y hy hc.2.1 hu.2.1]
 
 /-- Method projection keeps the same row identities and name hygiene. -/
 theorem methodLawful {sig : Signature Op} {spell : String → List String → Option Op}
@@ -915,7 +1017,7 @@ theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List Str
     (h : (if (methodArgsRow (sig.rowOf op)).shape = .tupleCall then tupleRequestReadable n args
       else if (methodArgsRow (sig.rowOf op)).request = Ty.unit then decide (args = .lit .unit)
       else args.scoped n) = true) (hc : args.covers classes = true)
-    {typeArgs : List TypeScript.TypeRef}
+    (hu : args.unannotated = true) {typeArgs : List TypeScript.TypeRef}
     (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
     readRowCall classes (methodSignature sig) spell n (sig.rowOf op).spelling typeArgs
       (printMethodArgs n (sig.rowOf op) args) = some (.ok (rowAnswer (sig.rowOf op) op args)) := by
@@ -932,13 +1034,14 @@ theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List Str
     · simp only [ht, if_false] at h
       simp only [printMethodArgs, hs, reduceCtorEq, if_false, ht]
       have result := readRowCall_request (classes := classes) (n := n) hm op hd args hs ht hta
-      rw [readTerm_printTerm args h hc] at result
+      rw [readTerm_printTerm args h hc hu] at result
       simp only [map_ok] at result
       dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
       exact result
   · simp only [hs, if_true] at h
     simp only [printMethodArgs, hs, if_true]
-    have result := readRowCall_printTupleArgs (classes := classes) (n := n) hm op hd hs args h hc hta
+    have result :=
+      readRowCall_printTupleArgs (classes := classes) (n := n) hm op hd hs args h hc hu hta
     dsimp +instances only [methodSignature, methodArgsRow, rowAnswer] at result ⊢
     exact result
 
@@ -949,13 +1052,14 @@ theorem readRowMethod_print {sig : Signature Op} {spell : String → List String
     (ha : (if (methodArgsRow (sig.rowOf op)).shape = .tupleCall then tupleRequestReadable n args
       else if (methodArgsRow (sig.rowOf op)).request = Ty.unit then decide (args = .lit .unit)
       else args.scoped n) = true) (hcr : receiver.covers classes = true)
-    (hca : args.covers classes = true) {typeArgs : List TypeScript.TypeRef}
+    (hca : args.covers classes = true) (hur : receiver.unannotated = true)
+    (hua : args.unannotated = true) {typeArgs : List TypeScript.TypeRef}
     (hta : rowTypeArgs (sig.rowOf op) = some typeArgs) :
     readRowMethod classes sig spell n (printTerm n receiver) (sig.rowOf op).spelling typeArgs
       (printMethodArgs n (sig.rowOf op) args) =
       .ok (rowAnswer (sig.rowOf op) op (.app "pair" (.cons receiver (.cons args .nil)))) := by
-  simp only [readRowMethod, readTerm_printTerm receiver hr hcr, ok_bind,
-    readRowCall_methodArgs hl op hd args ha hca hta, Option.getD_some]
+  simp only [readRowMethod, readTerm_printTerm receiver hr hcr hur, ok_bind,
+    readRowCall_methodArgs hl op hd args ha hca hua hta, Option.getD_some]
   simp only [rowAnswer, addReceiver, hs, if_true]
 
 /-- The signature at the faces' level: every operation is its own form at level 0
@@ -994,7 +1098,7 @@ theorem readPerform_printRowHead {sig : Signature Op} {spell : String → List S
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
     (h : requestReadable (sig.rowOf op) n r = true) (hc : r.covers classes = true)
-    {x : Expr} (hp : printRow n (sig.rowOf op) r = .ok x) :
+    (hu : r.unannotated = true) {x : Expr} (hp : printRow n (sig.rowOf op) r = .ok x) :
     readPerformFace classes sig spell n x = .ok (rowAnswer (sig.rowOf op) op r) := by
   have hname : ∀ i, Var.name i ≠ (sig.rowOf op).spelling := fun i => (hl.spelling_ne_name op i).symm
   have hhead : headOf (sig.rowOf op).spelling = none := headOf_none (hl.spelling_not_reserved op)
@@ -1026,7 +1130,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
       subst x
       rw [readPerform_printRowHead op _ _ hhead hta
         (readRowCall_request hl op hd r hshape hreq hta) hprint]
-      simp [readTerm_printTerm r (readable_row_request hshape hreq h) hc]
+      simp [readTerm_printTerm r (readable_row_request hshape hreq h) hc hu]
   | tupleCall =>
     simp only [requestReadable, hshape, Bool.and_eq_true] at h
     obtain ⟨typeArgs, hta⟩ := Option.isSome_iff_exists.mp h.1
@@ -1035,7 +1139,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     simp only [Except.ok.injEq] at hp
     subst x
     exact readPerform_printRowHead op _ _ hhead hta
-      (readRowCall_printTupleArgs hl op hd hshape r h.2 hc hta) hprint
+      (readRowCall_printTupleArgs hl op hd hshape r h.2 hc hu hta) hprint
   | method =>
     simp only [requestReadable, hshape, Bool.and_eq_true] at h
     obtain ⟨typeArgs, hta⟩ := Option.isSome_iff_exists.mp h.1
@@ -1049,7 +1153,10 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
       obtain rfl := pairArgs?_some hpair
       rw [Term.covers_app, Terms.covers_cons, Terms.covers_cons, Bool.and_eq_true,
         Bool.and_eq_true] at hc
-      have hm := readRowMethod_print hl op hd receiver args hshape hr ha hc.1 hc.2.1 hta
+      rw [Term.unannotated_app, Terms.unannotated_cons, Terms.unannotated_cons,
+        Bool.and_eq_true, Bool.and_eq_true] at hu
+      have hm :=
+        readRowMethod_print hl op hd receiver args hshape hr ha hc.1 hc.2.1 hu.1 hu.2.1 hta
       cases typeArgs with
       | nil =>
         simp only [printRow, hshape, pairArgs?, ↓reduceIte, printMethod, hta,

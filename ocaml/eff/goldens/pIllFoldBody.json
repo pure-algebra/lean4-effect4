@@ -1,0 +1,1 @@
+["succeed",["fold",null,["app","cons",["cons",["lit",["nat",1]],["cons",["app","nil",["nil"]],["nil"]]]],["app","nil",["nil"]],["app","cons",["cons",["var",1],["cons",["var",0],["nil"]]]]]]

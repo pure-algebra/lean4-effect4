@@ -48,7 +48,14 @@
     "world (family_retirements); the five names stay the faces' spelling of five terms per shape",
     "(`FnName.image`, src/Effect4/Program/FnName.lean). Old bytes of a retired row refuse. The",
     "retained vectors that perform such a row (pOps, and pLoop of the wire corpus) are the same",
-    "programs with each name's image at its node's level. No corpus verdict moved."
+    "programs with each name's image at its node's level. No corpus verdict moved.",
+    "",
+    "The list fold (decisions rows 228, 229). `Term.fold (accTy : Option Ty) (list init body : Term)`",
+    "appended at tag 7 of `Effect4.Program.Term`. No tag moved and no constructor left. The three",
+    "atoms `take`, `drop` and `sameHandle` are spelled by name on the wire, so they add no tag. No",
+    "retained vector changed bytes: eight golden programs were appended to the OCaml corpus (pFold,",
+    "pFoldCapture, pFoldNested, pFoldInOp, pFoldAtoms, pIllFoldNotList, pIllFoldBody,",
+    "pIllSameHandle). No corpus verdict moved."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -74,7 +81,8 @@
     "Effect4.Program.NativeOp.refGetAndUpdateSomeWith",
     "Effect4.Program.NativeOp.refUpdateSomeAndGetWith",
     "Effect4.Program.NativeOp.refModifyWith",
-    "Effect4.Program.NativeOp.refModifySomeWith"
+    "Effect4.Program.NativeOp.refModifySomeWith",
+    "Effect4.Program.Term.fold"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",

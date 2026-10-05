@@ -835,7 +835,9 @@ def TermShape : Shape :=
         ("target", .named "Term"), ("name", (shape _root_.String).root)]),
       ("recordSet", 5, [("target", .named "Term"), ("name", (shape _root_.String).root),
         ("value", .named "Term")]),
-      ("tupleAt", 6, [("target", .named "Term"), ("index", (shape _root_.Nat).root)])]
+      ("tupleAt", 6, [("target", .named "Term"), ("index", (shape _root_.Nat).root)]),
+      ("fold", 7, [("accTy", (shape (@_root_.Option (_root_.Effect4.Program.Ty))).root),
+        ("list", .named "Term"), ("init", .named "Term"), ("body", .named "Term")])]
 
 def TermsShape : Shape :=
   .sum "Terms"
@@ -849,7 +851,8 @@ def defs : List (String × Shape) :=
       (shape _root_.String).defs ++
       (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))))).defs ++
       (shape (@_root_.List (_root_.String))).defs ++
-      (shape _root_.Effect4.Program.FieldReadMode).defs)
+      (shape _root_.Effect4.Program.FieldReadMode).defs ++
+      (shape (@_root_.Option (_root_.Effect4.Program.Ty))).defs)
 
 mutual
 def toValTerm : _root_.Effect4.Program.Term → Val
@@ -860,6 +863,7 @@ def toValTerm : _root_.Effect4.Program.Term → Val
   | .field a0 a1 a2 => .ctor 4 [Canonical.toVal a0, toValTerm a1, Canonical.toVal a2]
   | .recordSet a0 a1 a2 => .ctor 5 [toValTerm a0, Canonical.toVal a1, toValTerm a2]
   | .tupleAt a0 a1 => .ctor 6 [toValTerm a0, Canonical.toVal a1]
+  | .fold a0 a1 a2 a3 => .ctor 7 [Canonical.toVal a0, toValTerm a1, toValTerm a2, toValTerm a3]
 def toValTerms : _root_.Effect4.Program.Terms → Val
   | .nil => .ctor 0 []
   | .cons a0 a1 => .ctor 1 [toValTerm a0, toValTerms a1]
@@ -901,6 +905,11 @@ def rawTerm : Val → Option (_root_.Effect4.Program.Term)
     match rawTerm v0, Canonical.ofVal (α := _root_.Nat) v1 with
     | some a0, some a1 => some (.tupleAt a0 a1)
     | _, _ => none
+  | .ctor 7 [v0, v1, v2, v3] =>
+    match Canonical.ofVal (α := (@_root_.Option (_root_.Effect4.Program.Ty))) v0, rawTerm v1,
+        rawTerm v2, rawTerm v3 with
+    | some a0, some a1, some a2, some a3 => some (.fold a0 a1 a2 a3)
+    | _, _, _, _ => none
   | _ => none
 def rawTerms : Val → Option (_root_.Effect4.Program.Terms)
   | .ctor 0 [] => some .nil
@@ -929,6 +938,9 @@ theorem rawTerm_toValTerm (a : _root_.Effect4.Program.Term) :
     simp [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal, rawTerm_toValTerm a2]
   | «tupleAt» a0 a1 =>
     simp [toValTerm, rawTerm, rawTerm_toValTerm a0, Canonical.ofVal_toVal]
+  | «fold» a0 a1 a2 a3 =>
+    simp [toValTerm, rawTerm, Canonical.ofVal_toVal, rawTerm_toValTerm a1, rawTerm_toValTerm a2,
+      rawTerm_toValTerm a3]
 termination_by structural a
 theorem rawTerms_toValTerms (a : _root_.Effect4.Program.Terms) :
     rawTerms (toValTerms a) = some a := by
@@ -950,36 +962,43 @@ theorem mem_tail {p : String × Shape}
       (shape _root_.String).defs ++
       (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))))).defs ++
       (shape (@_root_.List (_root_.String))).defs ++
-      (shape _root_.Effect4.Program.FieldReadMode).defs) : p ∈ defs :=
+      (shape _root_.Effect4.Program.FieldReadMode).defs ++
+      (shape (@_root_.Option (_root_.Effect4.Program.Ty))).defs) : p ∈ defs :=
   List.Mem.tail _ (List.Mem.tail _ (h))
 
 theorem lift_Nat (x : _root_.Nat) :
     acceptsIn defs (shape _root_.Nat).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp)))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_Lit (x : _root_.Effect4.Program.Lit) :
     acceptsIn defs (shape _root_.Effect4.Program.Lit).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_String (x : _root_.String) :
     acceptsIn defs (shape _root_.String).root (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_ListProdStringProdBoolTy (x : (@_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))))) :
     acceptsIn defs (shape (@_root_.List (@_root_.Prod (_root_.String) (@_root_.Prod (_root_.Bool) (_root_.Effect4.Program.Ty))))).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset
-    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_ListString (x : (@_root_.List (_root_.String))) :
     acceptsIn defs (shape (@_root_.List (_root_.String))).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset
+    (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_FieldReadMode (x : _root_.Effect4.Program.FieldReadMode) :
     acceptsIn defs (shape _root_.Effect4.Program.FieldReadMode).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_OptionTy (x : (@_root_.Option (_root_.Effect4.Program.Ty))) :
+    acceptsIn defs (shape (@_root_.Option (_root_.Effect4.Program.Ty))).root
+      (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_tail (mem_append_of_right (hp)))
     _ _ (Canonical.fits x)
 
@@ -1017,6 +1036,12 @@ theorem fitsTerm (a : _root_.Effect4.Program.Term) :
     exact acceptsAt_sum _ _ _ 6 "tupleAt" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (fitsTerm a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_Nat a1) (acceptsFields_nil _)))
+  | «fold» a0 a1 a2 a3 =>
+    exact acceptsAt_sum _ _ _ 7 "fold" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_OptionTy a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsTerm a1)
+          (acceptsFields_cons _ _ _ _ _ _ (fitsTerm a2)
+            (acceptsFields_cons _ _ _ _ _ _ (fitsTerm a3) (acceptsFields_nil _)))))
 termination_by structural a
 theorem fitsTerms (a : _root_.Effect4.Program.Terms) :
     acceptsIn defs (.named "Terms") (toValTerms a) = true := by
@@ -3195,5 +3220,34 @@ open Effect4 Effect4.Program Effect4.Store
   (.ctor 6 [Canonical.toVal (Term.var 0), Canonical.toVal ("2" : String)]) = none
 
 end TupleWireAcceptance
+
+namespace FoldWireAcceptance
+open Effect4 Effect4.Program Effect4.Store
+
+/-- A list fold with no stated type, and one with a stated type (decisions row 228). -/
+def bare : Term := .fold none (.var 0) (.lit (.nat 0)) (.app "add" (.cons (.var 1) (.cons (.var 2) .nil)))
+def stated : Term := .fold (some (.list .nat)) (.var 0) (.app "nil" .nil) (.var 1)
+
+-- The appended constructor holds tag 7, with its four fields in order.
+#guard Canonical.toVal bare =
+  .ctor 7 [Canonical.toVal (none : Option Ty), Canonical.toVal (Term.var 0),
+    Canonical.toVal (Term.lit (.nat 0)),
+    Canonical.toVal (Term.app "add" (.cons (.var 1) (.cons (.var 2) .nil)))]
+#guard Canonical.decode (α := Term) (Canonical.encode bare) = some bare
+#guard Canonical.decode (α := Term) (Canonical.encode stated) = some stated
+#guard Canonical.encode bare != Canonical.encode stated
+-- A fold inside an operation's term and inside a program reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.perform (Op := NativeOp) (.refModifyWith bare) (.var 0))) =
+  some (.perform (.refModifyWith bare) (.var 0))
+-- Three fields, or a number where the list's term is due, refuse.
+#guard Canonical.ofVal (α := Term) (.ctor 7 [Canonical.toVal (none : Option Ty),
+    Canonical.toVal (Term.var 0), Canonical.toVal (Term.var 1)]) = none
+#guard Canonical.ofVal (α := Term) (.ctor 7 [Canonical.toVal (none : Option Ty),
+    Canonical.toVal (2 : Nat), Canonical.toVal (Term.var 0), Canonical.toVal (Term.var 1)]) = none
+-- No constructor of `Term` holds tag 8.
+#guard Canonical.ofVal (α := Term) (.ctor 8 []) = none
+
+end FoldWireAcceptance
 
 end Effect4.Store

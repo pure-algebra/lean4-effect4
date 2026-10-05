@@ -58,9 +58,10 @@ example (index : Nat) (target : Expr) :
 example (e : Expr) (index : Nat) (target : Expr) (h : Tuple.readAt e = some (index, target)) :
     Tuple.writeAt index target = e := Tuple.readAt_exact e index target h
 example (classes : Effect4.Codegen.Classes.Classes) (n index : Nat) (target : Term)
-    (h : Term.scoped n target = true) (hc : target.covers classes = true) :
+    (h : Term.scoped n target = true) (hc : target.covers classes = true)
+    (hu : target.unannotated = true) :
     readTerm classes n (printTerm n (.tupleAt target index)) = .ok (.tupleAt target index) :=
-  readTerm_printTerm _ h hc
+  readTerm_printTerm _ h hc hu
 
 end Effect4.Test.TupleCodegen
 

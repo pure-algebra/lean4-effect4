@@ -7,8 +7,8 @@ import Effect4.Laws.Auto.SubsetTac
 
 A term's value carries only the raw handle frames of its environment (`RawHandles.evalTerm_handles`):
 atom by atom (`RawHandles.nativeAtom_handles`), record operation by record operation
-(`RecordHandles.build`, `read`, `set`) and static projection by static projection
-(`tupleAt_handles`). Its subject is `src/Effect4/Machine/Term.lean`, so the law sits at Machine
+(`RecordHandles.build`, `read`, `set`), static projection by static projection
+(`tupleAt_handles`) and list fold by list fold (`foldlM_keeps`, decisions row 228). Its subject is `src/Effect4/Machine/Term.lean`, so the law sits at Machine
 height. The store laws read it once a store step evaluates a term (decisions row 43; the state
 plan's T2): `SyncOp.refKernel_handles` (`src/Effect4/Laws/Machine/RefKernel.lean`) bounds what every
 heap row answers and writes, and the store's validity (`src/Effect4/Laws/Machine/StoresLaws.lean`)
@@ -197,6 +197,60 @@ existing Val.keys collector drops unregistered kind bytes; its subset law cannot
 supply registration of all output frames.
 -/
 
+/-! ## The list fold's evaluation (decisions row 228)
+
+The fold's clause of `evalTerm` as nested `Option.bind`s, and the two facts every law about it
+reads: a fold keeps what each step keeps, and a fold answers where each step answers. They are
+stated of any step, so the handle laws below, the two value judgments
+(`src/Effect4/Laws/Program/Typed.lean`, `src/Effect4/Laws/Program/Typed/RecordOperations.lean`)
+and term progress (`src/Effect4/Laws/Program/Typed/Denotation.lean`) read the same two. Steps of
+`fold-typed-atomic-update` and `handle-identity-laws` (R4). -/
+
+namespace Effect4.Program
+open Effect4 Effect4.Machine
+
+/-- The fold's evaluation: the list and the initial value once, then the body once for each
+element from the head, at the environment extended by the accumulator and the element. -/
+theorem evalTerm_fold (env : List Val) (accTy : Option Ty) (list init body : Term) :
+    evalTerm env (.fold accTy list init body) =
+      (evalTerm env list).bind fun value => (Val.asList? value).bind fun items =>
+        (evalTerm env init).bind fun start =>
+          items.foldlM (fun acc item => evalTerm (env ++ [acc, item]) body) start := rfl
+
+/-- **A fold keeps what each step keeps**: when a step that answers keeps `P` of its accumulator
+on the members `Q` of the list, a fold that answers keeps it. It needs successful evaluation and
+no typing. -/
+theorem foldlM_keeps {α β : Type} {P : β → Prop} {Q : α → Prop} {step : β → α → Option β}
+    (hstep : ∀ acc x v, P acc → Q x → step acc x = some v → P v) :
+    ∀ (xs : List α) (acc v : β), (∀ x ∈ xs, Q x) → P acc → xs.foldlM step acc = some v → P v
+  | [], acc, v, _, hacc, h => by
+    have h' : some acc = some v := h
+    cases h'
+    exact hacc
+  | x :: xs, acc, v, hxs, hacc, h => by
+    have h' : (step acc x).bind (fun next => xs.foldlM step next) = some v := h
+    obtain ⟨next, hnext, hrest⟩ := Option.bind_eq_some_iff.mp h'
+    exact foldlM_keeps hstep xs next v (fun y hy => hxs y (List.mem_cons_of_mem _ hy))
+      (hstep acc x next hacc (hxs x List.mem_cons_self) hnext) hrest
+
+/-- **A fold answers where each step answers**: when a step answers and keeps `P` on the members
+`Q` of the list, the fold answers and keeps `P`. The empty list answers the initial value, and
+no step runs. -/
+theorem foldlM_answers {α β : Type} {P : β → Prop} {Q : α → Prop} {step : β → α → Option β}
+    (hstep : ∀ acc x, P acc → Q x → ∃ v, step acc x = some v ∧ P v) :
+    ∀ (xs : List α) (acc : β), (∀ x ∈ xs, Q x) → P acc → ∃ v, xs.foldlM step acc = some v ∧ P v
+  | [], acc, _, hacc => ⟨acc, rfl, hacc⟩
+  | x :: xs, acc, hxs, hacc => by
+    obtain ⟨next, hnext, hP⟩ := hstep acc x hacc (hxs x List.mem_cons_self)
+    obtain ⟨v, hv, hPv⟩ :=
+      foldlM_answers hstep xs next (fun y hy => hxs y (List.mem_cons_of_mem _ hy)) hP
+    refine ⟨v, ?_, hPv⟩
+    show (step acc x).bind (fun next => xs.foldlM step next) = some v
+    rw [hnext]
+    exact hv
+
+end Effect4.Program
+
 namespace Effect4.Program.RawHandles
 open Effect4 Effect4.Machine Effect4.Program
 
@@ -323,6 +377,27 @@ theorem nativeAtom_handles (atom : String) (vs : List Val) (v : Val)
     cases h
     rw [handles_list]
     exact List.Subset.refl _
+  -- a prefix and its rest hold members of the list argument (decisions row 228)
+  case h_44 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    rw [handles_list] at hk
+    obtain ⟨e, he, hke⟩ := List.mem_flatMap.mp hk
+    simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.mem_append]
+    exact .inl (asList_handles hl (List.mem_flatMap.mpr ⟨e, List.mem_of_mem_take he, hke⟩))
+  case h_45 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    rw [handles_list] at hk
+    obtain ⟨e, he, hke⟩ := List.mem_flatMap.mp hk
+    simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.mem_append]
+    exact .inl (asList_handles hl (List.mem_flatMap.mpr ⟨e, List.mem_of_mem_drop he, hke⟩))
+  -- the identity test answers a Boolean, which holds no frame (decisions row 229)
+  case h_46 =>
+    split at h
+    · cases h
+      exact List.nil_subset _
+    · cases h
   all_goals cases h
   -- the list laws `keys_norm` gains only in `Laws/Machine/Handles.lean`, above this module
   all_goals sub_tac norm [Val.tuple, Store.Val.handles, Store.Val.handlesList, List.flatMap_cons,
@@ -363,6 +438,28 @@ mutual
      have h' : (evalTerm env target).bind (fun value => Val.tupleAt? value index) = some v := h
      obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
      exact List.Subset.trans (tupleAt_handles hr) (evalTerm_handles target env value he)
+   -- the accumulator's frames stay inside the environment's: the initial value's are, each
+   -- element's are (they are the list value's), and a step adds only the frames of the
+   -- accumulator and of the element to the environment it runs in
+   | fold accTy list init body =>
+     rw [evalTerm_fold] at h
+     obtain ⟨value, hlist, h⟩ := Option.bind_eq_some_iff.mp h
+     obtain ⟨items, hitems, h⟩ := Option.bind_eq_some_iff.mp h
+     obtain ⟨start, hstart, h⟩ := Option.bind_eq_some_iff.mp h
+     refine foldlM_keeps (P := fun acc => Store.Val.handles acc ⊆ env.flatMap Store.Val.handles)
+       (Q := fun item => Store.Val.handles item ⊆ env.flatMap Store.Val.handles) ?_ items start v
+       ?_ (evalTerm_handles init env start hstart) h
+     · intro acc item next hacc hitem hnext k hk
+       have hbody := evalTerm_handles body (env ++ [acc, item]) next hnext hk
+       simp only [List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil,
+         List.mem_append] at hbody
+       rcases hbody with hin | hin | hin
+       · exact hin
+       · exact hacc hin
+       · exact hitem hin
+     · intro item hitem k hk
+       exact evalTerm_handles list env value hlist
+         (asList_handles hitems (List.mem_flatMap.mpr ⟨item, hitem, hk⟩))
  termination_by structural t
  theorem evalTerms_handles (ts : Terms) (env : List Val) (vs : List Val)
      (h : evalTerms env ts = some vs) :

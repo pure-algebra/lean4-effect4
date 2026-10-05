@@ -354,6 +354,16 @@ theorem Fits.append {env : List Val} {tys : TyEnv} (h : Fits env tys) {v : Val} 
   | nil => exact Fits.cons hvt Fits.nil
   | cons hx _ ih => exact Fits.cons hx ih
 
+/-- Appending the two binders of a list fold keeps the fit: the accumulator at the fold's level
+and the element one above it (decisions row 228). Step of the fold cases of `evalTerm_hasTy` and
+`evalTerm_isSome`. -/
+theorem Fits.append_pair {env : List Val} {tys : TyEnv} (h : Fits env tys) {v w : Val}
+    {t u : Ty} (hv : Val.hasTy v t = true) (hw : Val.hasTy w u = true) :
+    Fits (env ++ [v, w]) (tys ++ [t, u]) := by
+  induction h with
+  | nil => exact Fits.cons hv (Fits.cons hw Fits.nil)
+  | cons hx _ ih => exact Fits.cons hx ih
+
 /-- A fit against one type is one value of that type. -/
 theorem Fits.singleton_inv {vs : List Val} {t : Ty} (h : Fits vs [t]) :
     ∃ v, vs = [v] ∧ Val.hasTy v t = true := by
@@ -1150,6 +1160,43 @@ theorem sound (a : NativeAtom) : Sound a := by
     refine ⟨.list values, rfl, ?_⟩
     rw [hasTy_normalize]
     exact hv.tuple
+  -- a prefix and its rest hold members of the list (decisions row 228)
+  | listTake =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨xs, i, rfl, hxs, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hi
+    obtain ⟨elems, hl, helems⟩ := Val.hasTy_list_inv hxs
+    exact ⟨.list (elems.take n), by simp only [eval, hl, Option.map_some],
+      List.all_eq_true.mpr fun y hy => helems y (List.mem_of_mem_take hy)⟩
+  | listDrop =>
+    refine sound_of_poly rfl fun σ vs hfit => ?_
+    obtain ⟨xs, i, rfl, hxs, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := Val.hasTy_nat_inv hi
+    obtain ⟨elems, hl, helems⟩ := Val.hasTy_list_inv hxs
+    exact ⟨.list (elems.drop n), by simp only [eval, hl, Option.map_some],
+      List.all_eq_true.mpr fun y hy => helems y (List.mem_of_mem_drop hy)⟩
+  -- two handles of one admitted kind carry one kind byte, so the test answers (decisions
+  -- row 229): the typing excludes the two-kinds refusal of the evaluation
+  | sameHandle =>
+    refine sound_of_custom rfl ?_
+    intro tys ty vs hty hfit
+    simp only [CustomScheme.apply, sameHandleRule] at hty
+    split at hty
+    · cases hty
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨k, rfl⟩ := Val.hasTy_refOf_inv hx
+      obtain ⟨k', rfl⟩ := Val.hasTy_refOf_inv hy
+      refine ⟨Val.bool (k.index = k'.index), ?_, rfl⟩
+      show (if (2 : UInt8) = 2 then some (Val.bool (decide (k.index = k'.index))) else none) = _
+      exact if_pos rfl
+    · cases hty
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨k, rfl⟩ := Val.hasTy_deferredOf_inv hx
+      obtain ⟨k', rfl⟩ := Val.hasTy_deferredOf_inv hy
+      refine ⟨Val.bool (k.index = k'.index), ?_, rfl⟩
+      show (if (3 : UInt8) = 3 then some (Val.bool (decide (k.index = k'.index))) else none) = _
+      exact if_pos rfl
+    · exact nomatch hty
 
 end NativeAtom
 
@@ -1595,6 +1642,49 @@ theorem termTy_record_inv {Op : Type} {sig : Signature Op} {env : TyEnv}
   · cases h
   · exact Option.bind_eq_some_iff.mp h
 
+/-- Fold typing supplies its parts (decisions row 228): the list's type has the list head; the
+fold's type is the stated accumulator type, or the initial value's where none is stated; the
+initial value's type and the body's are below it in the checker's order; and the body is typed
+under the accumulator at the fold's level and the element one above it. Step of
+`fold-typed-atomic-update` (R4); its consumers are the fold cases of both value judgments. -/
+theorem termTy_fold_inv {Op : Type} {sig : Signature Op} {env : TyEnv} {accTy : Option Ty}
+    {list init body : Term} {ty : Ty}
+    (h : termTy sig env (.fold accTy list init body) = some ty) :
+    ∃ item initType bodyType,
+      termTy sig env list = some (.list item) ∧
+      termTy sig env init = some initType ∧
+      ty = accTy.getD initType ∧
+      Ty.subN initType ty = true ∧
+      termTy sig (env ++ [ty, item]) body = some bodyType ∧
+      Ty.subN bodyType ty = true := by
+  unfold termTy argTy at h
+  obtain ⟨listType, hlist, h1⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨item, hitem, h2⟩ := Option.bind_eq_some_iff.mp h1
+  obtain ⟨initType, hinit, h3⟩ := Option.bind_eq_some_iff.mp h2
+  -- the element type that `Checker.listOf?` reads is the argument of the list head
+  obtain rfl : listType = .list item := by
+    match listType, hitem with
+    | .list _, rfl => rfl
+  dsimp only at h3
+  split at h3
+  · next hsubInit =>
+    obtain ⟨bodyType, hbody, h4⟩ := Option.bind_eq_some_iff.mp h3
+    split at h4
+    · next hsubBody =>
+      cases h4
+      exact ⟨item, initType, bodyType, hlist, hinit, rfl, hsubInit, hbody, hsubBody⟩
+    · exact nomatch h4
+  · exact nomatch h3
+
+/-- Boolean membership is closed under the checker's order, the comparison of normal forms. A
+fold's accumulator is typed through it. -/
+theorem Val.hasTy_subN {a b : Ty} (hsub : Ty.subN a b = true) {v : Val}
+    (hv : Val.hasTy v a = true) : Val.hasTy v b = true := by
+  rw [← hasTy_normalize b v []]
+  refine hasTy_sub a.normalize b.normalize v [] hsub ?_
+  rw [hasTy_normalize]
+  exact hv
+
 mutual
 /-- Under `Fits`, an admitted native term returns a value accepted by its checked type.
 Actual successful evaluation remains a premise. Record cases use `RecordChecks`.
@@ -1665,6 +1755,26 @@ theorem evalTerm_hasTy (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty) (v : 
     rw [hout] at hv
     cases hv
     exact hm
+  -- the accumulator keeps the fold's type: the initial value is below it, every element is of
+  -- the element type, and a step answers a value of the body's type, which is below it
+  | fold accTy list init body =>
+    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+      termTy_fold_inv hty
+    rw [evalTerm_fold] at hev
+    obtain ⟨value, hlv, hev⟩ := Option.bind_eq_some_iff.mp hev
+    obtain ⟨items, hitems, hev⟩ := Option.bind_eq_some_iff.mp hev
+    obtain ⟨start, hstart, hev⟩ := Option.bind_eq_some_iff.mp hev
+    obtain ⟨items', hitems', hall⟩ :=
+      Val.hasTy_list_inv (evalTerm_hasTy list env tys (.list item) value hfit hlist hlv)
+    rw [hitems] at hitems'
+    cases hitems'
+    refine foldlM_keeps (P := fun acc => Val.hasTy acc ty = true)
+      (Q := fun x => Val.hasTy x item = true) ?_ items start v hall
+      (Val.hasTy_subN hsubInit (evalTerm_hasTy init env tys initType start hfit hinit hstart))
+      hev
+    intro acc x next hacc hx hnext
+    exact Val.hasTy_subN hsubBody (evalTerm_hasTy body (env ++ [acc, x]) (tys ++ [ty, item])
+      bodyType next (hfit.append_pair hacc hx) hbody hnext)
 termination_by structural t
 /-- The list form of `evalTerm_hasTy`: the values fit the types (ENSURES 6), under either
 const flag — a literal argument fits its literal-rule type (`Lit.toVal_hasTy_arg`). -/
@@ -1765,6 +1875,33 @@ theorem evalTerm_isSome (t : Term) (env : List Val) (tys : TyEnv) (ty : Ty)
     obtain ⟨out, hout, _⟩ := Tuple.typeAt_typed hp (evalTerm_hasTy target env tys targetType value hfit ht he)
     show ((evalTerm env target).bind (fun value => Val.tupleAt? value index)).isSome = true
     rw [he, Option.bind_some, hout]
+    rfl
+  -- the list and the initial value evaluate; the list's value reads as a list of the element
+  -- type; each step evaluates at a fitting environment and keeps the fold's type, so the fold
+  -- answers (the empty list answers the initial value)
+  | fold accTy list init body =>
+    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+      termTy_fold_inv hty
+    obtain ⟨value, hlv⟩ :=
+      Option.isSome_iff_exists.mp (evalTerm_isSome list env tys (.list item) hfit hlist)
+    obtain ⟨items, hitems, hall⟩ :=
+      Val.hasTy_list_inv (evalTerm_hasTy list env tys (.list item) value hfit hlist hlv)
+    obtain ⟨start, hstart⟩ :=
+      Option.isSome_iff_exists.mp (evalTerm_isSome init env tys initType hfit hinit)
+    have hstep : ∀ acc x, Val.hasTy acc ty = true → Val.hasTy x item = true →
+        ∃ next, evalTerm (env ++ [acc, x]) body = some next ∧ Val.hasTy next ty = true := by
+      intro acc x hacc hx
+      have hfit' := hfit.append_pair hacc hx
+      obtain ⟨next, hnext⟩ := Option.isSome_iff_exists.mp
+        (evalTerm_isSome body (env ++ [acc, x]) (tys ++ [ty, item]) bodyType hfit' hbody)
+      exact ⟨next, hnext, Val.hasTy_subN hsubBody
+        (evalTerm_hasTy body (env ++ [acc, x]) (tys ++ [ty, item]) bodyType next hfit' hbody
+          hnext)⟩
+    obtain ⟨v, hv, _⟩ := foldlM_answers (P := fun acc => Val.hasTy acc ty = true)
+      (Q := fun x => Val.hasTy x item = true) hstep items start hall
+      (Val.hasTy_subN hsubInit (evalTerm_hasTy init env tys initType start hfit hinit hstart))
+    rw [evalTerm_fold, hlv, Option.bind_some, hitems, Option.bind_some, hstart,
+      Option.bind_some, hv]
     rfl
 termination_by structural t
 /-- The list form of `evalTerm_isSome` (ENSURES 7), under either const flag. -/

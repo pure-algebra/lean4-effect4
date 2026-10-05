@@ -4,6 +4,7 @@ import Effect4.Codegen.Types
 import Effect4.Codegen.Record
 import Effect4.Codegen.Classes
 import Effect4.Codegen.Tuple
+import Effect4.Codegen.ListFold
 import TypeScript
 
 /-!
@@ -167,7 +168,8 @@ def reserved : List String := heads.map Head.spelling
 
 /-- Pure term helpers share one exclusion list for row and export names. -/
 def termHelperNames : List String :=
-  Effect4.Codegen.Record.helperNames ++ Effect4.Codegen.Tuple.helperNames
+  Effect4.Codegen.Record.helperNames ++ Effect4.Codegen.Tuple.helperNames ++
+    Effect4.Codegen.ListFold.helperNames
 
 /-- The names in a row cannot capture a printed binder or a reserved program head. -/
 def rowNamesSafe (row : Row) : Bool :=
@@ -201,9 +203,9 @@ mutual
   retain raw declarations and distinguish construction, access and update from existing atom
   calls. A construction in the class form (`Classes.classTag?`, decisions row 120) is
   `new Tag({ … })`, `_tag` omitted: its class carries the declaration, so a reader restores it
-  from the module's classes. A variable prints by its own position, so no clause of today
-  reads `n`: a term that binds reads it for its parameters' names (decisions row 228), as the
-  reader does (`readTerm`). -/
+  from the module's classes. A variable prints by its own position. A list fold (decisions row
+  228) reads `n` for its two parameters' names, `a{n}` and `a{n + 1}`, and prints its body two
+  levels up; a stated accumulator type is the call's type argument (`ListFold.typeArg`). -/
   def printTerm (n : Nat) : Term → TypeScript.Expr
     | .var index => .ident (Var.name index)
     | .lit value => printLit value
@@ -218,6 +220,9 @@ mutual
       Effect4.Codegen.Record.writeSet name (printTerm n target) (printTerm n value)
     | .tupleAt target index =>
       Effect4.Codegen.Tuple.writeAt index (printTerm n target)
+    | .fold accTy list init body =>
+      Effect4.Codegen.ListFold.write n (accTy.map Effect4.Codegen.ListFold.typeArg)
+        (printTerm n list) (printTerm n init) (printTerm (n + 2) body)
 
   /-- The argument list of an atom application, in order. -/
   def printTerms (n : Nat) : Terms → List TypeScript.Expr

@@ -425,6 +425,29 @@ theorem evalTerm_fitsAll (sig : Signature NativeOp) (hatom : sig.atomOf = native
     rw [hout] at hv
     cases hv
     exact hfitout
+  -- the accumulator keeps the fold's type at the world: the initial value is below it, every
+  -- element fits the element type, and a step answers a member of the body's type, which is
+  -- below it (decisions row 228)
+  | fold accTy list init body =>
+    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+      termTy_fold_inv hty
+    rw [evalTerm_fold] at hev
+    obtain ⟨value, hlv, hev⟩ := Option.bind_eq_some_iff.mp hev
+    obtain ⟨items, hitems, hev⟩ := Option.bind_eq_some_iff.mp hev
+    obtain ⟨start, hstart, hev⟩ := Option.bind_eq_some_iff.mp hev
+    obtain ⟨items', hitems', hall⟩ := (fits_list_iff w value item).mp
+      (evalTerm_fitsAll sig hatom hconst w list env tys (.list item) value hfit hlist hlv)
+    rw [hitems] at hitems'
+    cases hitems'
+    refine foldlM_keeps (P := fun acc => Fits w acc ty) (Q := fun x => Fits w x item) ?_
+      items start v hall
+      (fits_subN w hsubInit start
+        (evalTerm_fitsAll sig hatom hconst w init env tys initType start hfit hinit hstart))
+      hev
+    intro acc x next hacc hx hnext
+    exact fits_subN w hsubBody next
+      (evalTerm_fitsAll sig hatom hconst w body (env ++ [acc, x]) (tys ++ [ty, item]) bodyType
+        next (hfit.append_pair hacc hx) hbody hnext)
 termination_by structural t
 
 /-- The list form: the values of typed arguments fit their argument types. -/

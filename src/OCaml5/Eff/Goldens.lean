@@ -149,6 +149,10 @@ partial def termV : PTerm → V
   | .recordSet target name value =>
     .ctor ``Term.recordSet [termV target, .str name, termV value]
   | .tupleAt target index => .ctor ``Term.tupleAt [termV target, .nat index]
+  | .fold accTy list init body =>
+    .ctor ``Term.fold
+      [match accTy with | none => .none | some ty => .some (tyV ty), termV list, termV init,
+        termV body]
 partial def termsV : Terms → V
   | .nil => .ctor ``Terms.nil []
   | .cons h t => .ctor ``Terms.cons [termV h, termsV t]
@@ -521,6 +525,47 @@ def pSelectRecordTagMiss : P := .select taggedRecordExample (.recordTag "Other")
 def pIllRecordTagRaw : P := .select (v 999) (.recordTag "é\n\"raw")
   (.succeed (v 0)) (.succeed (v 0))
 
+/-! The list fold with two binders and its three atoms (decisions rows 228 and 229). A fold's
+body reads the accumulator at the fold's level and the element one above it. -/
+
+/-- A list of numbers, built by `cons` from `nil`. -/
+def natList (xs : List Nat) : PTerm := xs.foldr (fun x acc => .app "cons" (ts [n x, acc])) (.app "nil" .nil)
+/-- A list with one more element at its end. -/
+def snoc (xs x : PTerm) : PTerm := .app "append" (ts [xs, .app "cons" (ts [x, .app "nil" .nil])])
+
+/-- From the head: `((10 - 1) - 2) - 3`. -/
+def pFold : P := .succeed (.fold none (natList [1, 2, 3]) (n 10) (.app "sub" (ts [v 0, v 1])))
+/-- The body reads an outer variable below the fold's level: `(0 + (1 + 100)) + (2 + 100)`. -/
+def pFoldCapture : P := .bind (.succeed (n 100))
+  (.succeed (.fold none (natList [1, 2]) (n 0) (.app "add" (ts [v 1, .app "add" (ts [v 2, v 0])]))))
+/-- A fold inside a fold, with a stated accumulator type: the accumulator starts as the empty
+list and the body answers a list of pairs. The inner body reads the outer element (`v 2`): each
+item is paired with the length of its own list. -/
+def pFoldNested : P :=
+  .bind (.succeed (.app "cons" (ts [natList [1, 2], .app "cons" (ts [natList [3], .app "nil" .nil])])))
+    (.succeed (.fold (some (.list (.prod .nat .nat))) (v 0) (.app "nil" .nil)
+      (.fold none (v 2) (v 1) (snoc (v 3) (.app "tuple" (ts [v 4, .app "length" (ts [v 2])]))))))
+/-- A fold inside an operation's term: `Ref.modify(ref, a => [fold(xs, a, (b, x) => b + x), a])`
+is one store step. The term's binder is `v 1`, so the fold binds `v 2` and `v 3`. -/
+def pFoldInOp : P :=
+  .bind (.perform .refMake (n 5))
+    (.perform (.refModifyWith (.app "pair" (ts
+      [.fold none (natList [1, 2, 3]) (v 1) (.app "add" (ts [v 2, v 3])), v 1]))) (v 0))
+/-- The three atoms: a prefix, its rest, and the identity of a handle. -/
+def pFoldAtoms : P :=
+  .bind (.perform (.deferredMakeOf .nat .nat) u)
+    (.succeed (.app "tuple" (ts
+      [.app "take" (ts [natList [1, 2, 3], n 2]), .app "drop" (ts [natList [1, 2, 3], n 2]),
+        .app "sameHandle" (ts [v 0, v 0])])))
+
+-- ill-typed: a fold over a number, a body outside its accumulator's type, two kinds of handle
+def pIllFoldNotList : P := .succeed (.fold none (n 1) (n 0) (v 0))
+def pIllFoldBody : P :=
+  .succeed (.fold none (natList [1]) (.app "nil" .nil) (.app "cons" (ts [v 1, v 0])))
+def pIllSameHandle : P :=
+  binds [.perform .refMake (n 1), .perform (.deferredMakeOf .nat .nat) u]
+    (.succeed (.app "sameHandle" (ts [v 0, v 1])))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -543,7 +588,11 @@ def corpus : List (String × P) :=
   , ("pTupleAt", pTupleAt), ("pTupleAtNested", pTupleAtNested)
   , ("pIllTupleAtIndex", pIllTupleAtIndex)
   , ("pSelectRecordTag", pSelectRecordTag), ("pSelectRecordTagMiss", pSelectRecordTagMiss)
-  , ("pIllRecordTagRaw", pIllRecordTagRaw) ]
+  , ("pIllRecordTagRaw", pIllRecordTagRaw)
+  , ("pFold", pFold), ("pFoldCapture", pFoldCapture), ("pFoldNested", pFoldNested)
+  , ("pFoldInOp", pFoldInOp), ("pFoldAtoms", pFoldAtoms)
+  , ("pIllFoldNotList", pIllFoldNotList), ("pIllFoldBody", pIllFoldBody)
+  , ("pIllSameHandle", pIllSameHandle) ]
 
 end Corpus
 

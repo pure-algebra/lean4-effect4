@@ -531,7 +531,9 @@ def emitTypeMetadata (fs : List Family) : Except String String := do
     "export const recordHelperNames: ReadonlyArray<string> = " ++
       arr (Effect4.Codegen.Record.helperNames.map lit) ++ "\n" ++
     "export const tupleHelperNames: ReadonlyArray<string> = " ++
-      arr (Effect4.Codegen.Tuple.helperNames.map lit) ++ "\n")
+      arr (Effect4.Codegen.Tuple.helperNames.map lit) ++ "\n" ++
+    "export const foldHelperNames: ReadonlyArray<string> = " ++
+      arr (Effect4.Codegen.ListFold.helperNames.map lit) ++ "\n")
 
 /-- Enumerate existing variance declarations, then evaluate their core-owned policy. -/
 def emitTypeVariances (source : Json) : Except String String := do
@@ -630,6 +632,11 @@ def termJs : Effect4.Program.Term → String
   | .recordSet target name value => tagged "recordSet"
       [("target", termJs target), ("name", lit name), ("value", termJs value)]
   | .tupleAt target index => tagged "tupleAt" [("target", termJs target), ("index", toString index)]
+  | .fold accTy list init body => tagged "fold"
+      [("accTy", match accTy with
+          | none => "null"
+          | some ty => (Tools.ProfileJson.tyJson ty).compress),
+       ("list", termJs list), ("init", termJs init), ("body", termJs body)]
 /-- An argument list: the `Terms` family is carried as an array. -/
 def termsJs : Effect4.Program.Terms → List String
   | .nil => []

@@ -102,7 +102,9 @@ def reasons : List TypeReason :=
    .errorPayloadField (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
      ["cause"] .unknown,
    .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E"),
-   .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never)]
+   .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never),
+   .foldTerm ⟨[0], .notList .nat⟩,
+   .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/
@@ -211,3 +213,21 @@ def controls : List TypeReason :=
   Canonical.decode (α := TypeReason) (Canonical.encode reason ++ [0]) = none
 
 end TupleRefusalAcceptance
+
+namespace FoldRefusalAcceptance
+open Effect4 Effect4.Program Effect4.Store
+
+/-- The three reasons a list fold has no type (decisions row 228), in a term and in a cause. -/
+def controls : List TypeReason :=
+  [.foldTerm ⟨[1, 0], .notList .nat⟩,
+   .foldTerm ⟨[], .initialNotAccumulator (.list .nat) (.list .never)⟩,
+   .foldTerm ⟨[2], .bodyNotAccumulator .string .nat⟩,
+   .foldCause ⟨[1], ⟨[0], .notList (.option .nat)⟩⟩]
+
+#guard controls.all fun reason =>
+  Canonical.decode (α := TypeReason) (Canonical.encode reason) = some reason
+#guard controls.all fun reason =>
+  Canonical.decode (α := TypeReason) (Canonical.encode reason ++ [0]) = none
+#guard controls.all fun reason => Canonical.head reason == RefusalsAcceptance.printedHead (Canonical.print reason)
+
+end FoldRefusalAcceptance

@@ -52,7 +52,7 @@ let rand_lit () =
 let rec rand_term d =
   if d <= 0 then (if rb () then Term_var (ri 20) else Term_lit (rand_lit ()))
   else
-    match ri 7 with
+    match ri 8 with
     | 0 -> Term_var (rand_nat ())
     | 1 -> Term_lit (rand_lit ())
     | 2 -> Term_app (rand_string (), rand_terms (d - 1))
@@ -62,7 +62,10 @@ let rec rand_term d =
     | 4 -> Term_field
         (pick [Field_read_mode_required; Field_read_mode_optional], rand_term (d - 1), rand_string ())
     | 5 -> Term_recordSet (rand_term (d - 1), rand_string (), rand_term (d - 1))
-    | _ -> Term_tupleAt (rand_term (d - 1), rand_nat ())
+    | 6 -> Term_tupleAt (rand_term (d - 1), rand_nat ())
+    | _ -> Term_fold
+        ((if rb () then None else Some (pick [Ty_nat; Ty_string; Ty_list Ty_nat])),
+         rand_term (d - 1), rand_term (d - 1), rand_term (d - 1))
 
 and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_term (d - 1), rand_terms (d - 1))
 
@@ -267,6 +270,14 @@ let tuple_controls =
     Term_tupleAt (Term_tupleAt (Term_var 2, 65537), max_int);
     Term_field (Field_read_mode_optional, Term_tupleAt (Term_var 3, 1), "a-b") ]
 
+(* The list fold (decisions row 228): with no stated type and with one, and a fold inside a
+   fold's body. *)
+let fold_controls =
+  [ Term_fold (None, Term_var 0, Term_lit (Lit_nat 0), Term_var 1);
+    Term_fold (Some (Ty_list Ty_nat), Term_var 0, Term_app ("nil", Terms_nil), Term_var 1);
+    Term_fold (None, Term_var 0, Term_var 1,
+      Term_fold (Some Ty_never, Term_var 3, Term_var 2, Term_tupleAt (Term_var 5, 0))) ]
+
 let decision_controls =
   [ Decision_bool; Decision_option; Decision_tag "Found";
     Decision_recordTag "Found"; Decision_recordTag "";
@@ -284,6 +295,11 @@ let () =
         Eff_wire.encode_term Eff_wire.decode_term_exact
         (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
     tuple_controls;
+  List.iteri (fun i term ->
+      property ("fold-term-" ^ string_of_int i) 1 (fun () -> term)
+        Eff_wire.encode_term Eff_wire.decode_term_exact
+        (fun s -> at Eff_wire.decode_term s 0 (String.length s)) Eff_json.print_term)
+    fold_controls;
   List.iteri (fun i decision ->
       property ("decision-" ^ string_of_int i) 1 (fun () -> decision)
         Eff_wire.encode_decision Eff_wire.decode_decision_exact

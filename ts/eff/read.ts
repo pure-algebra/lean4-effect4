@@ -1026,6 +1026,21 @@ const readTupleTerm = (n: number, x: Expr): Read<Term> | undefined => {
   return Result.map(readTerm(n, x.args[0]!), (target): Term => ({ _tag: "tupleAt", target, index }))
 }
 
+/** A list fold, `fold(list, init, (aN, aM) => body)` (`Codegen/ListFold.lean`, decisions row
+ * 228): the two parameters are the binders of levels `n` and `n + 1`, and the body is read two
+ * levels up. A call of `fold` on any other argument list is no fold. It falls through to the
+ * atom application, whose arguments are terms, and a function is no term. */
+const readFoldTerm = (n: number, x: Expr): Read<Term> | undefined => {
+  if (x._tag !== "call" || x.fn._tag !== "ident" || x.fn.name !== "fold" || x.args.length !== 3) return undefined
+  const step = x.args[2]!
+  if (step._tag !== "lambda" || !sameParams(n, [0, 1], step.params)) return undefined
+  const list = readTerm(n, x.args[0]!)
+  if (failed(list)) return again(list)
+  const init = readTerm(n, x.args[1]!)
+  if (failed(init)) return again(init)
+  return Result.map(readTerm(n + 2, step.body), (body): Term => ({ _tag: "fold", accTy: null, list: list.success, init: init.success, body }))
+}
+
 export const readTerm = (n: number, x: Expr): Read<Term> => {
   const construction = readClassTerm(n, x)
   if (construction !== undefined) return construction
@@ -1033,6 +1048,8 @@ export const readTerm = (n: number, x: Expr): Read<Term> => {
   if (tuple !== undefined) return tuple
   const record = readRecordTerm(n, x)
   if (record !== undefined) return record
+  const fold = readFoldTerm(n, x)
+  if (fold !== undefined) return fold
   switch (x._tag) {
     case "ident": {
       const i = varRead(n, x.name)
@@ -1047,6 +1064,10 @@ export const readTerm = (n: number, x: Expr): Read<Term> => {
       return ok({ _tag: "lit", value: { _tag: "str", value: x.value } })
     case "call": {
       const fn = x.fn
+      // A fold's stated accumulator type is printed and not read: no reader of types exists
+      // (Lean's `ReadRefusal.annotation "fold accumulator"`, `Codegen/Read.lean`).
+      if (fn._tag === "generic" && fn.fn._tag === "ident" && fn.fn.name === "fold")
+        return refuse({ _tag: "shape", what: "fold accumulator annotation" })
       if (fn._tag !== "ident") return refuse({ _tag: "shape", what: "term" })
       return Result.map(readTerms(n, x.args), (args): Term => ({ _tag: "app", atom: fn.name, args }))
     }

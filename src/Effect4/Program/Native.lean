@@ -180,13 +180,15 @@ end NativeOp
 read-modify-write row, checked at `n + 1` by `ScopedOp`'s convention, the current value at index
 `n` and an outer capture below it. An operation that carries no term is in scope at every level:
 `Deferred.make`'s type arguments are types, which bind no term variable. The term map replaces
-the term (`NativeOp.withTerm`), so weakening shifts it with the rest of the program. -/
+the term (`NativeOp.withTerm`), so weakening shifts it with the rest of the program. The term's
+reading view is the same term, so the raw annotation collector reads what the row runs. -/
 instance : ScopedOp NativeOp where
   scopedAt op n := op.binder?.all fun b => b.2.scoped (n + 1)
   mapTerm g op :=
     match op.binder? with
     | some (_, t) => op.withTerm (g t)
     | none => op
+  term? op := op.binder?.map (·.2)
 
 /-- A native operation that carries no term is in scope at every level: the hypothesis the
 operation lift's scope lemma (`Authoring.perform_scoped`) asks of an operation, discharged once

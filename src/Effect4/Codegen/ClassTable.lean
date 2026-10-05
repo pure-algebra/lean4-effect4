@@ -117,8 +117,8 @@ def checkedDecl (entry : String × Fields) : Except PrintRefusal TypeScript.Clas
 /-- **The module's classes and their declarations** (decisions row 120, ruling (b)): one class per
 tagged payload type its program constructs or its printed types mention, in first-occurrence
 order, constructions first; or the refusal, named by the tag. -/
-def moduleClasses {Op : Type} (sig : Signature Op) (name : String) (ty : EffTy) (program : Eff Op) :
-    Except PrintRefusal (Classes × List TypeScript.ClassDecl) := do
+def moduleClasses {Op : Type} [ScopedOp Op] (sig : Signature Op) (name : String) (ty : EffTy)
+    (program : Eff Op) : Except PrintRefusal (Classes × List TypeScript.ClassDecl) := do
   let built ← (programRecords program).mapM siteClass
   let typed := ([ty.answer, ty.error] ++ (Formation.programAnnotations program).map Prod.snd).flatMap
     typeClasses

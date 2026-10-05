@@ -6,7 +6,7 @@
 // One export per atom of the alphabet (`Effect4.Program.NativeAtom`). `prelude.ts`
 // re-exports every name below and keeps the hand-written self-test table that exercises
 // them; `run-truth.ts` refuses an atom of the generated profile that has no case there.
-import { Cause, Exit, Option } from "effect"
+import { Cause, Deferred, Exit, Option, Ref } from "effect"
 
 /** The two query inputs advertised by NativeAtom (`Effect4.Program.queryReasons?`): a
  * cause, or an exit, whose success side has no reasons. */
@@ -238,3 +238,25 @@ export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [strin
  * Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary.
  */
 export const tuple = <const A extends readonly unknown[]>(...items: A): A => items
+
+/**
+ * `"take", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a natural count
+ * (vendor/effect-4.0.0-rc.112/src/Array.ts:2208-2211). Decisions row 228: a fold with a counter, added for a demonstrated consumer.
+ */
+export const take = <A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(0, n)
+
+/**
+ * `"drop", [list vs, nat n] => list (vs.drop n)` — rc.112 `Array.drop` at a natural count
+ * (vendor/effect-4.0.0-rc.112/src/Array.ts:2798-2801). Decisions row 228: a fold with a counter, added for a demonstrated consumer.
+ */
+export const drop = <A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(n)
+
+/**
+ * Decisions row 229: the identity of two `Ref` handles, or of two `Deferred` handles, at any payload types.
+ * The model compares the two keys of one kind and reads no payload; the host compares the two objects (`===`).
+ * That the two agree is each target's relation, not this table's.
+ */
+export const sameHandle = ((a: unknown, b: unknown): boolean => a === b) as {
+  <A, B>(a: Ref.Ref<A>, b: Ref.Ref<B>): boolean
+  <A, E, B, F>(a: Deferred.Deferred<A, E>, b: Deferred.Deferred<B, F>): boolean
+}

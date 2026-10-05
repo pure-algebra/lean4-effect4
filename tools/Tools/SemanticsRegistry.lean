@@ -217,6 +217,18 @@ def registry : Registry where
       literature := [
         { work := "Ahmed2004", locator := "audit P1", relation := "adaptedResult" }
       ] },
+    { id := "fold-typed-atomic-update", concept := "store-typing", role := .compatibility
+      title := "The list fold with two binders, the accumulator and the element: its scope, evaluation, failure, weakening and typing rules; a fold the checker types answers a member of its type over values that fit, in a fixed world; a term reads back from its printed image; one Ref.modify whose term the checker types is one store step that answers B and stores A (decisions row 228)"
+      pointer := .witness `Effect4.Program.Typed.fold_typed_atomic_update
+      literature := [
+        { work := "Ahmed2004", locator := "audit P1", relation := "adaptedResult" }
+      ] },
+    { id := "handle-identity-laws", concept := "store-typing", role := .canonicalForms
+      title := "The identity of a handle in a term: sameHandle is total on two members of one handle type at any payload types, reflexive and symmetric, and it decides key equality; a handle an allocation just made is the same as no handle of a value that fits the earlier world; a later world keeps a list's membership; a term's handles are its environment's (decisions row 229)"
+      pointer := .witness `Effect4.Program.Typed.handle_identity_laws
+      literature := [
+        { work := "Ahmed2004", locator := "audit P1", relation := "analogy" }
+      ] },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
       pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
@@ -738,10 +750,11 @@ def registry : Registry where
     { id := "R4", title := "State: the world types every cell at any type, with rows as templates"
       top := [`Effect4.Program.Typed.order_refl, `Effect4.Program.Typed.order_trans,
         `Effect4.Program.Typed.refMake_extension, `Effect4.Program.Typed.deferredMake_extension,
-        `Effect4.Program.Typed.memoBuild_extension]
-      openParts := ["the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed and read as lambdas (since T3b the faces spell a read-modify-write row's term by one of five names, FnName.image, and refuse any other term by name, binderTerm), and an operation's binder term as a program annotation with the integer scan over it (decisions rows 42–43, step 5, and row 212; state plan T5)",
-        "fold-typed-atomic-update (proposed claim; store-typing): the pure list fold with two binders, the accumulator and the element, at any types; listTake and listDrop only for a demonstrated consumer, and no counted loop: typing, scoping, capture, compilation, printing and exact reading, with Ref.modify one step that answers B and stores A; its first consumer is the Queue's service pass (decisions row 228; after T3b)",
-        "handle-identity-laws (proposed claim; store-typing): the identity of a handle in a term: equality of two Ref handles or two Deferred handles of one kind by identity, never by payload; a cell that holds a list of handles, with membership, fresh allocation and world extension laws, and the identity correspondence in each target's relation (decisions row 229)",
+        `Effect4.Program.Typed.memoBuild_extension,
+        `Effect4.Program.Typed.fold_typed_atomic_update,
+        `Effect4.Program.Typed.handle_identity_laws]
+      openParts := ["the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed and read as lambdas (since T3b the faces spell a read-modify-write row's term by one of five names, FnName.image, and refuse any other term by name, binderTerm; a term that holds a list fold is among the refused), and an operation's type arguments as program annotations (decisions rows 42–43, step 5, and row 212; state plan T5); since the fold's slice the raw annotation collector and the integer scan read an operation's binder term (ScopedOp.term?)",
+        "the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws",
         "atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)",
         "scoped-body-substitution-boundary (proposed claim; residual-program-typing): the mask adds no scoped constructor: a restore site is one node that binds nothing, with its checked body at child 0; both saved choices resolve that one body in one environment, with a typed stack, typed captures and no lookup that fails; a saved value passed as data keeps its choice and no activation of its mask (decisions rows 245, 246); for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); it states no agreement with a target",
         "saved-mask-image-membership (proposed claim; store-typing): the mask's saved state is at an opaque host type with a reserved target; membership at it is exactly one of the two canonical images of the saved bit, so the value is no Boolean even after widening; no external handle and no host answer column takes the type, and no service carries it in the first profile; typed stores, typed environments and a later world keep the membership (decisions row 244; the first of the mask's obligations); it states no reply admission"] },

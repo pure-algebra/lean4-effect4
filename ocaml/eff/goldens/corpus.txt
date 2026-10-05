@@ -64,3 +64,11 @@ pIllTupleAtIndex	ill-typed
 pSelectRecordTag	well-typed
 pSelectRecordTagMiss	well-typed
 pIllRecordTagRaw	ill-typed
+pFold	well-typed
+pFoldCapture	well-typed
+pFoldNested	well-typed
+pFoldInOp	well-typed
+pFoldAtoms	well-typed
+pIllFoldNotList	ill-typed
+pIllFoldBody	ill-typed
+pIllSameHandle	ill-typed

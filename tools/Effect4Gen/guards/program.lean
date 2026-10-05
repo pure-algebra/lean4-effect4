@@ -219,3 +219,32 @@ open Effect4 Effect4.Program Effect4.Store
   (.ctor 6 [Canonical.toVal (Term.var 0), Canonical.toVal ("2" : String)]) = none
 
 end TupleWireAcceptance
+
+namespace FoldWireAcceptance
+open Effect4 Effect4.Program Effect4.Store
+
+/-- A list fold with no stated type, and one with a stated type (decisions row 228). -/
+def bare : Term := .fold none (.var 0) (.lit (.nat 0)) (.app "add" (.cons (.var 1) (.cons (.var 2) .nil)))
+def stated : Term := .fold (some (.list .nat)) (.var 0) (.app "nil" .nil) (.var 1)
+
+-- The appended constructor holds tag 7, with its four fields in order.
+#guard Canonical.toVal bare =
+  .ctor 7 [Canonical.toVal (none : Option Ty), Canonical.toVal (Term.var 0),
+    Canonical.toVal (Term.lit (.nat 0)),
+    Canonical.toVal (Term.app "add" (.cons (.var 1) (.cons (.var 2) .nil)))]
+#guard Canonical.decode (α := Term) (Canonical.encode bare) = some bare
+#guard Canonical.decode (α := Term) (Canonical.encode stated) = some stated
+#guard Canonical.encode bare != Canonical.encode stated
+-- A fold inside an operation's term and inside a program reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.perform (Op := NativeOp) (.refModifyWith bare) (.var 0))) =
+  some (.perform (.refModifyWith bare) (.var 0))
+-- Three fields, or a number where the list's term is due, refuse.
+#guard Canonical.ofVal (α := Term) (.ctor 7 [Canonical.toVal (none : Option Ty),
+    Canonical.toVal (Term.var 0), Canonical.toVal (Term.var 1)]) = none
+#guard Canonical.ofVal (α := Term) (.ctor 7 [Canonical.toVal (none : Option Ty),
+    Canonical.toVal (2 : Nat), Canonical.toVal (Term.var 0), Canonical.toVal (Term.var 1)]) = none
+-- No constructor of `Term` holds tag 8.
+#guard Canonical.ofVal (α := Term) (.ctor 8 []) = none
+
+end FoldWireAcceptance

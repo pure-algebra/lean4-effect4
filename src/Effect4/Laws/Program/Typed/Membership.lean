@@ -2290,6 +2290,30 @@ theorem fits_unit_inv {w : World} {v : Val} (h : Fits w v .unit) : v = Val.unit 
   · rfl
   · exact h.elim
 
+/-- A member of `refOf A` is a cell declared at a type equivalent to `A` in the checker's order
+(`RefDeclared`: both `subN` directions, not syntactic equality). A step of `denote-typed`; its
+consumers are `syncRow_typed`'s `Ref` arms and the identity atom's cases (`atomFits`,
+`atom_progress`). Moved here from `Typed/Denotation.lean`, name and statement kept. -/
+theorem fits_refOf_inv {w : World} {v : Val} {A : Ty} (h : Fits w v (.refOf A)) :
+    ∃ k, v = Val.cell k ∧ RefDeclared w k A := by
+  simp only [Fits] at h
+  split at h
+  · rename_i index
+    exact ⟨⟨index⟩, rfl, h⟩
+  · exact h.elim
+
+/-- A member of `deferredOf A E` is a deferred declared at columns equivalent to `(A, E)` in the
+checker's order. A step of `denote-typed`; its consumers are `syncRow_typed`'s `Deferred` arms,
+`deferredAwait_arm`, `inlineYield_typed` and the identity atom's cases. Moved here from
+`Typed/Denotation.lean`, name and statement kept. -/
+theorem fits_deferredOf_inv {w : World} {v : Val} {A E : Ty} (h : Fits w v (.deferredOf A E)) :
+    ∃ k, v = Val.promise k ∧ PromiseDeclared w k A E := by
+  simp only [Fits] at h
+  split at h
+  · rename_i index
+    exact ⟨⟨index⟩, rfl, h⟩
+  · exact h.elim
+
 theorem fits_nat_inv {w : World} {v : Val} (h : Fits w v .nat) : ∃ n, v = Val.nat n := by
   simp only [Fits] at h
   split at h
@@ -2434,6 +2458,16 @@ theorem sub {vs : List Val} {tys params : List Ty} (h : FitsAll w vs tys)
       simp only [List.length_cons, Nat.add_right_cancel_iff] at hlen
       exact .cons (fits_sub w hall.1 _ hv) (ih hlen hall.2)
 
+/-- Appending the two binders of a list fold keeps the fit: the accumulator at the fold's level
+and the element one above it (decisions row 228). Step of `fold-typed-atomic-update` (R4); its
+consumers are the fold cases of `evalTerm_fitsAll` and `evalTerm_progress`. -/
+theorem append_pair {vs : List Val} {tys : List Ty} (h : FitsAll w vs tys) {v x : Val}
+    {t u : Ty} (hv : Fits w v t) (hx : Fits w x u) :
+    FitsAll w (vs ++ [v, x]) (tys ++ [t, u]) := by
+  induction h with
+  | nil => exact .cons hv (.cons hx .nil)
+  | cons hy _ ih => exact .cons hy ih
+
 /-- Values each below one type: the variadic guard. -/
 theorem all_sub {vs : List Val} {tys : List Ty} (h : FitsAll w vs tys) {t : Ty}
     (hall : tys.all (·.sub t) = true) : ∀ v ∈ vs, Fits w v t := by
@@ -2448,6 +2482,30 @@ theorem all_sub {vs : List Val} {tys : List Ty} (h : FitsAll w vs tys) {t : Ty}
     | tail _ hx => exact ih hrest x hx
 
 end FitsAll
+
+/-- **The list fold's semantic typing rule** (decisions row 228), in a fixed world. The list
+evaluates to a member of `list A` and the initial value to a member of `B`. The body maps a
+member of `B` and a member of `A`, at the environment extended by both, to a member of `B`.
+Then the fold answers a member of `B`. The list is read through its decoded element view
+(`fits_list_iff`), so an admitted snapshot of handles is a list here too. The empty list answers
+the initial value, and no step runs.
+
+It assumes no rule of the checker: `evalTerm_progress` (`Typed/Denotation.lean`) discharges its
+premises from the term typer's rule. A step of `fold-typed-atomic-update` (R4). It says nothing
+of a body that refuses on a member, and nothing of a target. -/
+theorem fold_fits {w : World} {vals : List Val} {accTy : Option Ty} {list init body : Term}
+    {A B : Ty} {value start : Val}
+    (hlist : evalTerm vals list = some value) (hvalue : Fits w value (.list A))
+    (hinit : evalTerm vals init = some start) (hstart : Fits w start B)
+    (hbody : ∀ acc x, Fits w acc B → Fits w x A →
+      ∃ next, evalTerm (vals ++ [acc, x]) body = some next ∧ Fits w next B) :
+    ∃ v, evalTerm vals (.fold accTy list init body) = some v ∧ Fits w v B := by
+  obtain ⟨items, hitems, hall⟩ := (fits_list_iff w value A).mp hvalue
+  obtain ⟨v, hv, hfitv⟩ := foldlM_answers (P := fun acc => Fits w acc B)
+    (Q := fun x => Fits w x A) hbody items start hall hstart
+  refine ⟨v, ?_, hfitv⟩
+  rw [evalTerm_fold, hlist, Option.bind_some, hitems, Option.bind_some, hinit, Option.bind_some]
+  exact hv
 
 /-- An environment judged pointwise is an argument-list judgment (the bridge from `EnvTyped`). -/
 theorem fitsAll_of_pointwise {w : World} :
@@ -3299,6 +3357,50 @@ theorem atomFits (a : NativeAtom) : AtomFits a := by
     cases ht
     cases he
     exact (fits_normalize w (.tuple types) (.list values)).mpr hv.tuple
+  -- a prefix and its rest hold members of the list (decisions row 228)
+  | listTake =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨xs, i, rfl, hxs, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := fits_nat_inv hi
+    obtain ⟨elems, hl, helems⟩ := (fits_list_iff w xs _).mp hxs
+    simp only [NativeAtom.eval, hl, Option.map_some, Option.some.injEq] at hv
+    subst hv
+    exact (fits_list_iff w _ _).mpr ⟨elems.take n, rfl,
+      fun y hy => helems y (List.mem_of_mem_take hy)⟩
+  | listDrop =>
+    refine atomFits_of_poly rfl (by decide) fun w σ vs v hfit hv => ?_
+    obtain ⟨xs, i, rfl, hxs, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := fits_nat_inv hi
+    obtain ⟨elems, hl, helems⟩ := (fits_list_iff w xs _).mp hxs
+    simp only [NativeAtom.eval, hl, Option.map_some, Option.some.injEq] at hv
+    subst hv
+    exact (fits_list_iff w _ _).mpr ⟨elems.drop n, rfl,
+      fun y hy => helems y (List.mem_of_mem_drop hy)⟩
+  -- the identity test answers a Boolean at both admitted kinds (decisions row 229)
+  | sameHandle =>
+    refine atomFits_of_custom rfl ?_
+    intro w tys ty vs v hty hfit hv
+    simp only [NativeAtom.CustomScheme.apply, NativeAtom.sameHandleRule] at hty
+    split at hty
+    · cases hty
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨k, rfl, _⟩ := fits_refOf_inv hx
+      obtain ⟨k', rfl, _⟩ := fits_refOf_inv hy
+      have hv' : (if (2 : UInt8) = 2 then some (Val.bool (decide (k.index = k'.index)))
+          else none) = some v := hv
+      rw [if_pos rfl] at hv'
+      cases hv'
+      trivial
+    · cases hty
+      obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨k, rfl, _⟩ := fits_deferredOf_inv hx
+      obtain ⟨k', rfl, _⟩ := fits_deferredOf_inv hy
+      have hv' : (if (3 : UInt8) = 3 then some (Val.bool (decide (k.index = k'.index)))
+          else none) = some v := hv
+      rw [if_pos rfl] at hv'
+      cases hv'
+      trivial
+    · exact nomatch hty
 
 
 /-! ### Terms -/

@@ -235,6 +235,9 @@ theorem Term.covers_recordSet (target : Term) (name : String) (value : Term) :
       (Term.covers classes target && Term.covers classes value) := rfl
 theorem Term.covers_tupleAt (target : Term) (index : Nat) :
     Term.covers classes (.tupleAt target index) = Term.covers classes target := rfl
+theorem Term.covers_fold (accTy : Option Ty) (list init body : Term) :
+    Term.covers classes (.fold accTy list init body) =
+      (Term.covers classes list && (Term.covers classes init && Term.covers classes body)) := rfl
 theorem Terms.covers_cons (t : Term) (ts : Terms) :
     Terms.covers classes (.cons t ts) = (Term.covers classes t && Terms.covers classes ts) := rfl
 

@@ -120,6 +120,8 @@ import Effect4.Laws.Schema.Codec
 import Effect4.Laws.Program.Authoring
 import Effect4.Laws.Program.Authoring.Records
 import Effect4.Laws.Program.Authoring.Tuples
+import Effect4.Laws.Program.Authoring.Folds
+import Effect4.Laws.Program.Typed.ListFold
 import Effect4.Laws.Program.Authoring.Lifts
 import Effect4.Laws.Program.Authoring.Rows
 import Effect4.Laws.Program.Authoring.Forms

@@ -108,10 +108,13 @@ def instantiatedSites (row : Row) (bindings : Ty.Subst) : List Site :=
   sites false ["row", "answer"] (row.answer.instantiate bindings) ++
   sites false ["row", "error"] (row.error.instantiate bindings)
 
-/-- Raw declarations in a term, collected by the generated term fold. -/
+/-- Raw declarations in a term, collected by the generated term fold: a record's fields, and
+the accumulator type a list fold states (decisions row 228), as a loop's cursor annotation is a
+program annotation. -/
 def termAnnotations (path : List String) (term : Term) : List (List String × Ty) :=
   foldMapAt_term [] (· ++ ·) [] term (f_term := fun term pos => match term with
     | .record fields _ _ => [(path ++ ["term"] ++ pos.map toString ++ ["fields"], .record fields)]
+    | .fold (some accTy) _ _ _ => [(path ++ ["term"] ++ pos.map toString ++ ["accTy"], accTy)]
     | _ => [])
 
 /-- Cause leaves carry terms too; the generated cause fold retains their order. -/
@@ -124,24 +127,30 @@ def causeAnnotations (path : List String) (cause : CauseTerm) : List (List Strin
     cause_both := fun left right pos => left (pos ++ ["left"]) ++ right (pos ++ ["right"])
   } cause path
 
-/-- Read type-bearing leaves from a generated program-family view. -/
-def argumentAnnotations {Op : Type} (path : List String) (index : Nat) :
+/-- Read type-bearing leaves from a generated program-family view. An operation argument is
+read through the alphabet's own view of its binder term (`ScopedOp.term?`), at the path segment
+`op`: the term a read-modify-write row runs is program syntax, so a declaration or a stated type
+inside it is an annotation like any other. An operation's type arguments are not read here
+(decisions row 212). -/
+def argumentAnnotations {Op : Type} [ScopedOp Op] (path : List String) (index : Nat) :
     ArgF Op (EffSelfCarrier Op) → List (List String × Ty)
   | .term term => termAnnotations (path ++ ["argument", toString index]) term
   | .cause cause => causeAnnotations (path ++ ["argument", toString index]) cause
   | .optTerm term => term.toList.flatMap (termAnnotations (path ++ ["argument", toString index]))
   | .optTy ty => ty.toList.map fun t => (path ++ ["cursorTy"], t)
+  | .op op => (ScopedOp.term? op).toList.flatMap
+      (termAnnotations (path ++ ["argument", toString index, "op"]))
   | _ => []
 
 /-- The generated view supplies every leaf without a second program-constructor match. -/
-def nodeAnnotations {Op : Type} (fam : EffFam) (node : EffSelfCarrier Op fam)
+def nodeAnnotations {Op : Type} [ScopedOp Op] (fam : EffFam) (node : EffSelfCarrier Op fam)
     (path : List Nat) : List (List String × Ty) :=
   ((view fam node).2.zipIdx).flatMap fun (argument, index) =>
     argumentAnnotations ("program" :: path.map toString) index argument
 
 /-- Every raw program annotation. Formation and the integer profile share this collector.
 The existing iteration annotation retains its `cursorTy` path. -/
-def programAnnotations {Op : Type} (program : Eff Op) : List (List String × Ty) :=
+def programAnnotations {Op : Type} [ScopedOp Op] (program : Eff Op) : List (List String × Ty) :=
   foldMapAt_eff [] (· ++ ·) [] program
     (f_eff := nodeAnnotations .eff) (f_stmt := nodeAnnotations .stmt)
     (f_stmts := nodeAnnotations .stmts) (f_effs := nodeAnnotations .effs)
@@ -149,23 +158,24 @@ def programAnnotations {Op : Type} (program : Eff Op) : List (List String × Ty)
     (f_layers := nodeAnnotations .layers)
 
 /-- Strict raw formation reaches every program annotation, including nested record terms. -/
-def programSites {Op : Type} (program : Eff Op) : List Site :=
+def programSites {Op : Type} [ScopedOp Op] (program : Eff Op) : List Site :=
   (programAnnotations program).flatMap fun (path, ty) => sites false path ty
 
 /-- The shared raw input of every checked public boundary. -/
-def input {Op : Type} (program : Eff Op) (table : List Row) : List Site :=
+def input {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) : List Site :=
   tableSites table ++ programSites program
 
 /-- Raw formation of the exact program and table, before typing or printing. -/
-def InputFormed {Op : Type} (program : Eff Op) (table : List Row) : Prop :=
+def InputFormed {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) : Prop :=
   Formed (input program table)
 
 /-- The shared checked boundary; no consumer owns a separate type traversal. -/
-def checkInput {Op : Type} (program : Eff Op) (table : List Row) : Option Refusal :=
+def checkInput {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) :
+    Option Refusal :=
   check (input program table)
 
 /-- The `raw-formation` claim, used by every checked boundary's certificate. -/
-theorem checkInput_eq_none_iff {Op : Type} (program : Eff Op) (table : List Row) :
+theorem checkInput_eq_none_iff {Op : Type} [ScopedOp Op] (program : Eff Op) (table : List Row) :
     checkInput program table = none ↔ InputFormed program table :=
   check_eq_none_iff (input program table)
 

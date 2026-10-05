@@ -241,6 +241,7 @@ let rec emit_term (b : Buffer.t) (v : term) : unit =
   | Term_field (a0, a1, a2) -> Eff_frame.emit_ctor b 4 (fun b -> emit_field_read_mode b a0; emit_term b a1; Eff_frame.emit_string b a2)
   | Term_recordSet (a0, a1, a2) -> Eff_frame.emit_ctor b 5 (fun b -> emit_term b a0; Eff_frame.emit_string b a1; emit_term b a2)
   | Term_tupleAt (a0, a1) -> Eff_frame.emit_ctor b 6 (fun b -> emit_term b a0; Eff_frame.emit_nat b a1)
+  | Term_fold (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 7 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3)
 and emit_terms (b : Buffer.t) (v : terms) : unit =
   match v with
   | Terms_nil -> Eff_frame.emit_ctor b 0 (fun _ -> ())
@@ -313,6 +314,20 @@ let rec decode_term (s : string) (pos : int) (limit : int) : (term * int) option
          | None -> None
          | Some (a1, p) ->
           if p = e then Some (Term_tupleAt (a0, a1), next) else None))
+    | 7 ->
+      (match (Eff_frame.decode_option decode_ty) s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_term s p e with
+         | None -> None
+         | Some (a1, p) ->
+          (match decode_term s p e with
+           | None -> None
+           | Some (a2, p) ->
+            (match decode_term s p e with
+             | None -> None
+             | Some (a3, p) ->
+              if p = e then Some (Term_fold (a0, a1, a2, a3), next) else None))))
     | _ -> None)
 and decode_terms (s : string) (pos : int) (limit : int) : (terms * int) option =
   match Eff_frame.read_ctor s pos limit with

@@ -136,6 +136,14 @@ theorem mem_reserved_of_headOf {s : String} {h : Head} (hh : headOf s = some h) 
 
 /-! ## Terms -/
 
+/-- The refusal of an expression that no term arm reads: a list fold with a type argument by
+name, since a stated accumulator type is printed and not read (B19; decisions row 228), and the
+term shape otherwise. -/
+def termRefusal : Expr → ReadRefusal
+  | .call (.generic (.ident head) _) _ =>
+    if head = "fold" then .annotation "fold accumulator" else .shape "term"
+  | _ => .shape "term"
+
 mutual
   /-- Recover a pure term from its target expression, including raw record declarations.
   Generic wrapper heads distinguish the new forms from arbitrary legacy atom calls.
@@ -143,7 +151,10 @@ mutual
   A class construction `new Tag({ … })` (decisions row 120) reads as the record term whose
   fields the module's `classes` declare for `Tag`, with `_tag` restored first; it is accepted
   only when the printer prints that term as this construction (`Classes.classTag?`), and a
-  structural record the printer would print as a construction is refused. -/
+  structural record the printer would print as a construction is refused. A list fold
+  `fold(list, init, (aN, aM) => body)` (decisions row 228) reads its list and its initial value
+  at the level `n` and its body at `n + 2`; its two parameters are the binders due there
+  (`ListFold.read`). -/
   def readTerm (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x : Expr) :
       Except ReadRefusal Term :=
     match hc : Effect4.Codegen.Classes.readClass x with
@@ -183,16 +194,24 @@ mutual
             have := Effect4.Codegen.Tuple.readAt_size x index target ht
             (readTerm classes n target).map fun t => .tupleAt t index
           | none =>
-            match x with
-            | .ident s =>
-              match Var.read n s with
-              | some i => .ok (.var i)
-              | none => if s = "undefined" then .ok (.lit .unit) else .error (.unknownIdent s)
-            | .int k => if 0 ≤ k then .ok (.lit (.nat k.toNat)) else .error (.negative k)
-            | .bool b => .ok (.lit (.bool b))
-            | .str s => .ok (.lit (.str s))
-            | .call (.ident atom) args => (readTerms classes n args).map (.app atom)
-            | _ => .error (.shape "term")
+            match hl : Effect4.Codegen.ListFold.read n x with
+            | some (list, init, body) => do
+              have := Effect4.Codegen.ListFold.read_size n x list init body hl
+              let l ← readTerm classes n list
+              let i ← readTerm classes n init
+              let b ← readTerm classes (n + 2) body
+              .ok (.fold none l i b)
+            | none =>
+              match x with
+              | .ident s =>
+                match Var.read n s with
+                | some i => .ok (.var i)
+                | none => if s = "undefined" then .ok (.lit .unit) else .error (.unknownIdent s)
+              | .int k => if 0 ≤ k then .ok (.lit (.nat k.toNat)) else .error (.negative k)
+              | .bool b => .ok (.lit (.bool b))
+              | .str s => .ok (.lit (.str s))
+              | .call (.ident atom) args => (readTerms classes n args).map (.app atom)
+              | _ => .error (termRefusal x)
   termination_by sizeOf x
   decreasing_by all_goals simp_wf; all_goals omega
 

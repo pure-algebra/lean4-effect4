@@ -1,7 +1,7 @@
 Effect4.Program.Ty (ty) inductive: never unit nat int string bool handle(string) option(ty) list(ty) prod(ty,ty) except(ty,ty) exitOf(ty,ty) causeOf(ty) fiberOf(ty,ty) union(ty,ty) lit(string) refOf(ty) deferredOf(ty,ty) var(int) unknown record((string * (bool * ty)) list) map(ty,ty) tuple(ty list) app(string,ty list) null undefined number bytes
 Effect4.Program.Lit (lit) inductive: unit nat(int) bool(bool) str(string)
 Effect4.Program.FieldReadMode (field_read_mode) inductive: required optional
-Effect4.Program.Term (term) inductive: var(int) lit(lit) app(string,terms) record((string * (bool * ty)) list,string list,terms) field(field_read_mode,term,string) recordSet(term,string,term) tupleAt(term,int)
+Effect4.Program.Term (term) inductive: var(int) lit(lit) app(string,terms) record((string * (bool * ty)) list,string list,terms) field(field_read_mode,term,string) recordSet(term,string,term) tupleAt(term,int) fold(ty option,term,term,term)
 Effect4.Program.Terms (terms) inductive: nil cons(term,terms)
 Effect4.Program.CauseTerm (cause_term) inductive: fail(term) die(term) interrupt(term option) both(cause_term,cause_term)
 Effect4.Supervision.MaskMode (mask_mode) inductive: interruptible uninterruptible inherit

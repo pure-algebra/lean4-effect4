@@ -58,6 +58,12 @@ theorem argTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂
     simp only [argTy, argTy_congr ha hc env false target, argTy_congr ha hc env true value]
   | _, .tupleAt target index => by
     simp only [argTy, argTy_congr ha hc env false target]
+  -- the body is typed under the fold's two binders, in both signatures alike
+  | _, .fold accTy list init body => by
+    have hbody : ∀ acc item : Ty,
+        argTy s₁ (env ++ [acc, item]) false body = argTy s₂ (env ++ [acc, item]) false body :=
+      fun acc item => argTy_congr ha hc (env ++ [acc, item]) false body
+    simp only [argTy, argTy_congr ha hc env false list, argTy_congr ha hc env false init, hbody]
 
 theorem argsTy_congr (ha : s₁.atomOf = s₂.atomOf) (hc : s₁.constAtom = s₂.constAtom)
     (env : TyEnv) : ∀ (c : Bool) (ts : Terms), argsTy s₁ env c ts = argsTy s₂ env c ts
@@ -776,10 +782,12 @@ This serves checker/refusal agreement through the extension helpers below. -/
 theorem termDiagnostic_ext {Op : Type} {s s' : Signature Op} (h : SigExtends s s') :
     TermRefusal.diagnose s' = TermRefusal.diagnose s := by
   funext env term
-  have harg : argTy s' env = argTy s env :=
-    funext fun flag => funext fun value => argTy_congr h.atomOf h.constAtom env flag value
-  have hargs : argsTy s' env = argsTy s env :=
-    funext fun flag => funext fun terms => argsTy_congr h.atomOf h.constAtom env flag terms
+  have harg : argTy s' = argTy s :=
+    funext fun env => funext fun flag => funext fun value =>
+      argTy_congr h.atomOf h.constAtom env flag value
+  have hargs : argsTy s' = argsTy s :=
+    funext fun env => funext fun flag => funext fun terms =>
+      argsTy_congr h.atomOf h.constAtom env flag terms
   simp only [TermRefusal.diagnose, harg, hargs, h.constAtom]
 
 /-- The record-only compatibility projection follows the same diagnostic agreement. -/

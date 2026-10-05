@@ -170,6 +170,7 @@ type term =
   | Term_field of field_read_mode * term * string
   | Term_recordSet of term * string * term
   | Term_tupleAt of term * int
+  | Term_fold of ty option * term * term * term
 
 and terms =
   | Terms_nil
@@ -183,6 +184,7 @@ let ctor_index_term : term -> int = function
   | Term_field _ -> 4
   | Term_recordSet _ -> 5
   | Term_tupleAt _ -> 6
+  | Term_fold _ -> 7
 let wire_tag_term : term -> int = function
   | Term_var _ -> 0
   | Term_lit _ -> 1
@@ -191,6 +193,7 @@ let wire_tag_term : term -> int = function
   | Term_field _ -> 4
   | Term_recordSet _ -> 5
   | Term_tupleAt _ -> 6
+  | Term_fold _ -> 7
 let ctor_name_term : term -> string = function
   | Term_var _ -> "var"
   | Term_lit _ -> "lit"
@@ -199,7 +202,8 @@ let ctor_name_term : term -> string = function
   | Term_field _ -> "field"
   | Term_recordSet _ -> "recordSet"
   | Term_tupleAt _ -> "tupleAt"
-let ctor_names_term : string list = ["var"; "lit"; "app"; "record"; "field"; "recordSet"; "tupleAt"]
+  | Term_fold _ -> "fold"
+let ctor_names_term : string list = ["var"; "lit"; "app"; "record"; "field"; "recordSet"; "tupleAt"; "fold"]
 
 let ctor_index_terms : terms -> int = function
   | Terms_nil -> 0
