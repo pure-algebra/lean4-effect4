@@ -601,6 +601,8 @@ def lane(promote):
               f'{(WORK / "observed.tsv").relative_to(root)}, and read the runner\'s table in '
               f'{(WORK / "release" / HERE / "result.md").relative_to(root)}')
         return 1
+    for text in truth_ledger.known(BUILDS, fresh_order, lines):
+        print(f'truth-release: expected: {text}')
     count = truth_ledger.classes(BUILDS, fresh_order, lines)
     print(f'PASS truth-release: {len(programs)} programs match {LEDGER.relative_to(root)}: '
           f'{count["both"]} agree with both builds, {count["pin only"]} with effect@{pin} only '
@@ -721,6 +723,15 @@ def self_test():
     control('green: the ledger of the observations holds', judged(green)[0] == [], judged(green)[0])
     control('green: promote keeps the hand columns and is a fixed point',
             L.render(BUILDS, *carry(BUILDS, L.parse(green, BUILDS)[1], names, observed)) == green)
+    control('the expected differences of a ledger are listed by program and build, with slice and reason',
+            L.known(BUILDS, order, lines) == [
+                f'pB: {release} schedule: no: the host lacks machine rows 1-3 (forked 0 1, started 1, exited 1 success) '
+                '(M2 scopes: one fork fewer on the release)',
+                f'pC: {release} exit, schedule, sync: not-run (driver: the driver is not installed)',
+                f'pD: {pin} exit: no: machine interrupt [{{"interrupt":0}}], host fail [{{"fail":42}}] '
+                '(M5 the failure walk: U-01)',
+                f'pD: {pin} schedule: no: machine row 1 (exited 0 interrupt) is host row 1 (exited 0 fail) '
+                '(M5 the failure walk: U-01)'], L.known(BUILDS, order, lines))
 
     # an entry that leaves its line, in the ledger or in the host run
     red('a `yes` entry changed to `no` in the ledger', judged(with_entry('pA', f'{pin} exit', 'no: x'))[0],

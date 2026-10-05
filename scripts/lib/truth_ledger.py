@@ -302,6 +302,23 @@ def judge(builds, order, lines, programs, observed):
     return findings
 
 
+def known(builds, order, lines):
+    """The entries of a ledger that are not `yes`, one text for each program and build, with
+    the line's slice and reason: what a passing lane still does not claim."""
+    out = []
+    for name in order:
+        line = lines[name]
+        for build in builds:
+            by_entry = {}
+            for field in FIELDS:
+                entry = line['entries'][(build, field)]
+                if entry != YES:
+                    by_entry.setdefault(entry, []).append(field)
+            for entry, fields in by_entry.items():
+                out.append(f'{name}: {build} {", ".join(fields)}: {entry} ({line["slice"]}: {line["reason"]})')
+    return out
+
+
 def classes(builds, order, lines):
     """How many programs agree with both builds, with one only, or with neither, and how many
     the release lane did not run: the counts of the summary."""

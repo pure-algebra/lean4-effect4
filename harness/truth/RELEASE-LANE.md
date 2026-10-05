@@ -113,6 +113,9 @@ program, the build, the field and both values:
 FAIL truth-release: pProvideMerge: 4.0.1 exit: the ledger says "yes", observed "no: machine success 2, host success 3"
 ```
 
+A passing lane prints each entry that is not `yes`, with its `slice` and its `reason`. Its last
+line counts the programs that agree with both builds, with one build only, and with neither.
+
 The run record says what the host run that wrote the entries ran on. For each build it holds
 the `effect` version, the driver, the bun version, the compiler version, and the digests of
 the modules and the tapes. It also holds the SHA-256 of the manifest. The lane refuses a host
@@ -129,7 +132,7 @@ for f in $(ls *.ts | LC_ALL=C sort); do printf '%s\0' "$f"; cat "$f"; printf '\0
 ## How to point the lane at an install
 
 The lane accepts the release only where `EFFECT4_RELEASE_NODE_MODULES` names it. The variable
-has no default, and the lane installs and downloads nothing. bun runs with `--no-install`.
+has no default, and the lane installs and downloads nothing. It starts bun with `--no-install`.
 
 The install must hold three things:
 
@@ -138,6 +141,9 @@ The install must hold three things:
 - the types that `harness/truth/tsconfig.json` names (`@types/bun` and what it imports).
 
 The install may hold the driver at `4.0.1`. The lane refuses a driver of any other version.
+Put the driver and `effect` in one real install. Do not link the driver from another directory.
+Under bun a linked package resolves its imports from its real path. A linked driver therefore
+does not find `effect` (a finite probe on bun 1.4.2, 2026-10-05).
 
 No tracked recipe installs the release yet. To assemble an install from directories that a
 machine already has:
