@@ -249,6 +249,34 @@ def unpromotable(ledger_text, lines):
             f'remove it first, or its hand columns are lost')
 
 
+def same_as_committed(ran, build, modules, kept_modules, tapes, kept_tapes):
+    """The modules and tapes of one run against the committed ones, each set as name to bytes.
+
+    Returns `(moved, tape findings)`. `moved` names each module that is not the committed
+    module byte for byte, and each difference between the modules written and the programs
+    that ran. A tape finding names a program that ran whose tape is not the committed tape,
+    and a tape recorded for a program that did not run. The pin's lane holds the committed
+    sets to a fresh run, so they are the identity of what a build ran."""
+    expected = {f'{program["name"]}.ts' for program in ran
+                if program['decl'] is not None or program['expr'] is not None}
+    moved = [f'{OUTPUT}/{name}' for name in sorted(set(modules) ^ expected)]
+    moved += [f'{OUTPUT}/{name}' for name in sorted(set(modules) & expected)
+              if kept_modules.get(name) != modules[name]]
+    findings = []
+    names = {program['name'] for program in ran}
+    for name in sorted(set(tapes) - {f'{n}.jsonl' for n in names}):
+        findings.append(f'{name}: {build} tape: recorded for a program the lane did not run')
+    for name in sorted(names):
+        fresh, kept = tapes.get(f'{name}.jsonl'), kept_tapes.get(f'{name}.jsonl')
+        if (fresh is None) != (kept is None):
+            findings.append(f'{name}: {build} tape: {"recorded" if fresh is not None else "not recorded"} on '
+                            f'this build, {"committed" if kept is not None else "not committed"} for the pin')
+        elif fresh is not None and fresh != kept:
+            findings.append(f'{name}: {build} tape: the build answered a host row differently from '
+                            f'{HERE}/tapes/{name}.jsonl, which the manifest replays')
+    return moved, findings
+
+
 def tests_passed(status, said):
     """How many tests a `bun test` run passed, as text, or `None` when the run is refused: a
     nonzero exit status, a failed test, no count, or no test at all."""
@@ -495,30 +523,14 @@ def type_check(modules, host_path, work):
 
 
 def identity(here, ran, build):
-    """The modules and tapes of one run against the committed ones.
+    """The modules and tapes of one run against the committed ones: `same_as_committed` over
+    the files of the work copy and of `harness/truth`. Returns the two fresh sets too."""
+    def files(folder, pattern):
+        return {file.name: file.read_bytes() for file in folder.glob(pattern)} if folder.is_dir() else {}
 
-    Returns `(modules, tapes, moved, tape findings)`: the two sets as name to bytes; the
-    modules that are not the committed module byte for byte, with every difference of the
-    inventory; and, for a program that ran, a tape that is not the committed tape."""
-    modules = {file.name: file.read_bytes() for file in (here / OUTPUT).glob('*.ts')} if (here / OUTPUT).is_dir() else {}
-    tapes = {file.name: file.read_bytes() for file in (here / 'tapes').glob('*')} if (here / 'tapes').is_dir() else {}
-    expected = {f'{program["name"]}.ts' for program in ran
-                if program['decl'] is not None or program['expr'] is not None}
-    moved = [f'{OUTPUT}/{name}' for name in sorted(set(modules) ^ expected)]
-    moved += [f'{OUTPUT}/{name}' for name in sorted(set(modules) & expected)
-              if not (truth / OUTPUT / name).is_file() or (truth / OUTPUT / name).read_bytes() != modules[name]]
-    findings = []
-    names = {program['name'] for program in ran}
-    for name in sorted(set(tapes) - {f'{n}.jsonl' for n in names}):
-        findings.append(f'{name}: {build} tape: recorded for a program the lane did not run')
-    for name in sorted(names):
-        fresh, kept = tapes.get(f'{name}.jsonl'), truth / 'tapes' / f'{name}.jsonl'
-        if (fresh is not None) != kept.is_file():
-            findings.append(f'{name}: {build} tape: {"recorded" if fresh is not None else "not recorded"} on '
-                            f'this build, {"committed" if kept.is_file() else "not committed"} for the pin')
-        elif fresh is not None and fresh != kept.read_bytes():
-            findings.append(f'{name}: {build} tape: the build answered a host row differently from '
-                            f'{HERE}/tapes/{name}.jsonl, which the manifest replays')
+    modules, tapes = files(here / OUTPUT, '*.ts'), files(here / 'tapes', '*')
+    moved, findings = same_as_committed(ran, build, modules, files(truth / OUTPUT, '*.ts'),
+                                        tapes, files(truth / 'tapes', '*'))
     return modules, tapes, moved, findings
 
 
@@ -897,6 +909,29 @@ def self_test():
             digest({'a': b'1', 'b': b'2'}) == digest({'b': b'2', 'a': b'1'})
             and len({digest({'a': b'1', 'b': b'2'}), digest({'a': b'12', 'b': b''}), digest({'a': b'1'}),
                      digest({'a': b'1', 'c': b'2'})}) == 4)
+
+    # the identity of what a build ran: its modules and its tapes against the committed ones
+    ran = [by_name['pA'], by_name['pB']]
+    kept_modules = {'pA.ts': b'a', 'pB.ts': b'b', 'pC.ts': b'c'}
+    kept_tapes = {'pB.jsonl': b't'}
+    same = lambda modules, tapes: same_as_committed(ran, release, modules, kept_modules, tapes, kept_tapes)  # noqa: E731
+    control('green: the committed modules of the programs that ran, and their committed tapes',
+            same({'pA.ts': b'a', 'pB.ts': b'b'}, {'pB.jsonl': b't'}) == ([], []))
+    red('a module that is not the committed module', same({'pA.ts': b'a', 'pB.ts': b'B'}, {'pB.jsonl': b't'})[0],
+        'generated/pB.ts')
+    red('a module of a program that did not run', same({'pA.ts': b'a', 'pB.ts': b'b', 'pC.ts': b'c'},
+                                                       {'pB.jsonl': b't'})[0], 'generated/pC.ts')
+    red('a program that ran without its module', same({'pA.ts': b'a'}, {'pB.jsonl': b't'})[0], 'generated/pB.ts')
+    red('a tape that is not the committed tape', same({'pA.ts': b'a', 'pB.ts': b'b'}, {'pB.jsonl': b'T'})[1],
+        f'pB: {release} tape: the build answered a host row differently from harness/truth/tapes/pB.jsonl')
+    red('a committed tape that the build did not record', same({'pA.ts': b'a', 'pB.ts': b'b'}, {})[1],
+        f'pB: {release} tape: not recorded on this build, committed for the pin')
+    red('a tape that the pin does not have', same({'pA.ts': b'a', 'pB.ts': b'b'},
+                                                  {'pA.jsonl': b'x', 'pB.jsonl': b't'})[1],
+        f'pA: {release} tape: recorded on this build, not committed for the pin')
+    red('a tape of a program that did not run', same({'pA.ts': b'a', 'pB.ts': b'b'},
+                                                     {'pB.jsonl': b't', 'pC.jsonl': b'x'})[1],
+        f'pC.jsonl: {release} tape: recorded for a program the lane did not run')
 
     # the host tests' count
     counted = 'bun test v1.4.2\n\n 23 pass\n 0 fail\n 175 expect() calls\nRan 23 tests across 4 files. [1.00ms]\n'
