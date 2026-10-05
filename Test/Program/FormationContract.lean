@@ -176,5 +176,11 @@ its instance, at the row's answer column; `Deferred.make<void, never>()` is form
   | _ => false
 #guard (checkRow (NativeOp.row (.deferredMakeOf .unit .never)).normalizeTypes .unit).toOption =
   some (EffTy.pure (.deferredOf .unit .never))
+-- A parameter inside the operation's own type arguments is accepted and types at `never` (the
+-- T3a design's D5 (a)): the request binds nothing, and an operation's types are not program
+-- annotations until T5 (`Formation.programAnnotations` reads `.op` as nothing).
+#guard (Effect4.Api.typeOf (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit))).map (·.answer) =
+  some (.deferredOf .never .nat)
+#guard (admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], []⟩).isOk
 
 end Test.Program.FormationContract
