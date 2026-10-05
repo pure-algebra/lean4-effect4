@@ -3,6 +3,11 @@
 Status: research note (history, not authority). Base: `73e931bc` (`refactor/phase1-phase3`).
 A design for review, before any seat builds it. No file of the tree changed.
 
+**Revised 2026-10-05, after Codex's review** of this note at its first commit
+(`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-queue-steps-2311/review.md`).
+The review found two places where the probe's notifications left the model's, and three gaps
+in this text. F6 lists each with its repair. The probe is rerun.
+
 **The one thing to know first.** One part of the Queue's first path needs neither T5 nor the
 mask. It is the cell's encoding, and each step as one term that agrees with the abstract
 model's step. The probe `QueueSteps.lean` beside this note already runs those steps. This note
@@ -39,7 +44,7 @@ now, so that a later step adds no field.
 | `cap` | an option of a number | `capacity` | read |
 | `strategy` | one of three literals | `strategy` | read: the first profile is `suspend` |
 | `takers` | a list of records: identity, hint, minimum, maximum | `takers` | yes |
-| `offers` | a list of records: identity, hint, the messages not yet accepted | `offers` | yes |
+| `offers` | a list of records: identity, hint, the batch flag, the messages not yet accepted | `offers` | yes |
 | `peekers`, `awaiters` | lists of records: identity, hint | `peekers`, `awaiters` | no |
 | `phase` | a tagged value: opened, closing with an end, done with an end | `phase` | read: the first steps test `opened` |
 
@@ -48,10 +53,21 @@ now, so that a later step adds no field.
 - **A hint is a `Deferred`.** A taker's hint carries nothing. An offerer's hint carries its
   decided answer (row 240).
 - **The message type `A` is a parameter of the module.** Every export takes it as a `Ty`.
+- **An offer's batch flag is false in this slice,** and its list holds one message. The field
+  is there so that a batch adds no field. The step relation of F3 requires the flag false.
 
 ### F2. The steps
 
-Each step is one term for a `Ref.modify`. It answers a reply and the hints to post.
+Each step is one term for a `Ref.modify`. It answers a reply and the requests to notify.
+
+- **A step names its notifications as the model does, and in the model's order.** The offers
+  that the step accepted come first, and then the taker to wake. They are two lists of
+  request records. The wrapper posts the first list and then the second.
+- **The first offer at a full buffer waits and still wakes the earliest taker,** as the
+  model's `offer` does. An offer behind a pending offer notifies nobody.
+- **No fold of a step states its accumulator's type.** An empty list of the right type is
+  `take xs 0`. So each step term is inside the reader's domain, and the laws `read_print` and
+  `read_exact` reach it once seat T5's faces land.
 
 | Step | Model's function | Its folds |
 | --- | --- | --- |
@@ -62,7 +78,8 @@ Each step is one term for a `Ref.modify`. It answers a reply and the hints to po
 | `withdrawTake id` | `withdrawTake` | remove the request, name the hint to wake |
 | `withdrawOffer id` | `withdrawOffer` | remove the pending offer |
 
-The probe holds four of the six. `pollStep` and `sizeStep` follow the same parts.
+The probe holds four of the six. `pollStep` and `sizeStep` follow the same parts. The probe's
+take step has 765 nodes and 11 folds, where one accept pass has 138 nodes and one fold.
 
 ### F3. The relation to the model
 
@@ -73,15 +90,38 @@ by a handle, and a signal by a hint. So the connector is a relation, and no func
   The map is injective on identities.
 - **The state relation** says that the cell's value is the model's state. Each identity and
   each signal is read through the table, and each message through its value image.
+- **A step changes the table in two ways, and frames the rest.** It extends the table by a
+  fresh request that it enrols. It replaces the current hint of a request that waits already:
+  the model's state is then unchanged, and the cell's value changes at that hint. Every other
+  entry stays.
 - **The step statement:** from related states, a step term's answer and stored value are
-  related to the model's reply, state and signals. The table grows by the request that the
-  step enrols.
+  related to the model's reply and state. Its two lists, read in order, are the model's
+  signals. A new notification is related to the hint that the table holds after the step.
+- **An earlier posted hint is not this relation's.** A helper that was posted for a hint since
+  replaced belongs to the wrapper's relation, which counts each occurrence.
+- **The premises of the first goals** are five. The queue is opened, its capacity is positive
+  and its strategy is `suspend`. An offer holds one message, with the batch flag false. A
+  take has the bounds one and one.
 - **What gives it:** `ListFoldRules.step` gives one typed store step for a term that folds.
   `HandleIdentityLaws.notMemberDeferred` gives that a fresh identity is in no stored list.
   `contained` keeps the handles of an answer inside the environment's.
 
 The slice states the step statement as one planned goal for each step, with finite controls
-on the contract's named traces. It proves a goal where the proof is short.
+on the contract's named traces. It proves a goal where the proof is short. The statement
+establishes no delivery, no cancellation law and no liveness.
+
+The probe checks the relation on six states (`QueueSteps.lean`, "The steps against the
+model"). Each check compares the term's whole result with the encoding of the model's.
+
+| Control | The model's step | The term |
+| --- | --- | --- |
+| C1. Takers 1 and 2 wait, message 1 is buffered, an offer is pending; taker 1 takes | message 1; the offerer's answer, then taker 2's wake | agrees, in that order |
+| C2. The first offer at a full buffer, with a taker waiting | it waits; taker 1 is woken again | agrees |
+| C2b. An offer behind a pending offer | it waits; nobody is notified | agrees |
+| C3. A taker that waits already, and no message | it waits; the state is unchanged | agrees: that request's hint is replaced, and no other entry |
+| C4. A new taker behind a waiting one; an offer into room | it enrols; the offer wakes the earliest taker | agrees |
+
+Two red controls compare a step with another state's encoding, and both fail as they must.
 
 ### F4. Where the module lives, and what it exports
 
@@ -110,10 +150,23 @@ profile is defined. That is the wrapper's slice.
 
 ### F5. Two points of friction that the slice must decide
 
-1. **No local binding in a term.** The take step holds eleven folds where six are distinct
-   (the readiness note's F4). The slice either repeats the passes or adds a binding form.
+1. **No local binding in a term.** The take step holds eleven folds where six are distinct,
+   and its accept pass occurs three times (the readiness note's F4). The slice either repeats
+   the passes or adds a binding form.
 2. **The loop's empty arm.** It belongs to the wrapper's slice. It is listed here so that the
    step's reply type is chosen with it in mind: the reply is an option of the message.
+
+### F6. What Codex's review changed
+
+| Point of the first draft | Correction | Where |
+| --- | --- | --- |
+| The take wrapper posted the taker's wake before the accepted offers' answers | The model names the answers first. The step answers two lists in that order, and the wrapper posts them so. A run shows it: the offerer goes on before the next taker (R8) | F2; the probe |
+| An offer that waits notified nobody | The model wakes the earliest taker when the first offer meets a full buffer. The step does the same, and stays silent behind a pending offer | F2; controls C2 and C2b |
+| The table only grows | A waiting request's hint is replaced, with the model's state unchanged. The relation names both changes and frames the rest | F3; control C3 |
+| The offer's record had no batch flag | The flag is a field now, false in this slice | F1 |
+| The steps' folds stated their accumulator's type, outside the reader's domain | No fold states a type: an empty list of the right type is `take xs 0` | F2 |
+
+The public answers of the seven earlier scenarios did not change.
 
 ## Proposals (not rulings)
 
@@ -127,11 +180,14 @@ profile is defined. That is the wrapper's slice.
    of `queue-expansion-agrees`. Its consumer is the wrapper's law.
 5. **The slice repeats the passes** and adds no binding form. It measures each step's size.
    A binding form is proposed again with the batches, where a step holds more passes.
-6. **Acceptance** has three parts:
+6. **Acceptance** has four parts:
    - each step against the model, on the contract's named traces of the first profile, with
-     one red control for each;
-   - the seven scenarios of the probe, kept as a battery;
-   - the engine on two of them, through the wire.
+     one red control for each. The observation is the reply, the stored value and the ordered
+     notifications;
+   - the eight scenarios of the probe, kept as a battery;
+   - the engine on two of them, through the wire;
+   - the program R4 printed and read back, once seat T5's faces land. Until then the printer's
+     refusal is pinned.
 
 ## What this does not establish
 

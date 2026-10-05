@@ -1,0 +1,70 @@
+{
+  "time_utc": "2026-10-05T23:15:05.587731+00:00",
+  "reviewed_commit": "b1d8cb2f93e35700dd87b20c914aba5e9830aad8",
+  "head_at_end": "61fecd0c44ec4e15503a5f892d28e7abfce7a390",
+  "source_sha256": {
+    "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean": "0a84d9df432988f51ad2d8612637f28806a8f1aec5eb5bbcc2927addacf5ca69",
+    "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.out": "b130118beb3236ea1329f957a844ccc90403d7dd5f9d0ac6852dc79431727be5",
+    "docs/research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md": "8a71267bbe9dd62cc5e31f4ba7b788fee9e69b055503816cfb64eec97abd668f",
+    "Test/Program/QueueModel.lean": "8922b6f6930c8a8ca703ac8bbfdf09a1f29bc6ee25e2f43b77461d0756c71dfe",
+    "Test/Program/QueueCapacity.lean": "07c29391873e46a0dee5948a0deabfdd89982c78be31536c08179fa09d16497a",
+    "docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md": "0c3b61d97c8c6a9b4def21641430a5c6d8639457851681492e85d72abcf3fd4c",
+    "src/Effect4/Laws/Program/Typed/ListFold.lean": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+    "docs/research/2026-10-05-seat-FOLD-receipt.md": "dc2415495f2ab442b66f879e597009890367c8fec5c8e96907ad698063894c7c",
+    "Test/contracts/queue.contract.md": "40d96176e35d1b2c68ab18bc97aa12b82dfbdb4dbb57767fd19de1e83d2b9f2c"
+  },
+  "retained_lean_evidence": "QueueSteps.out only; no rerun and no theorem claimed",
+  "new_finding": "Research probe posts taker hints before accepted-offer answers, opposite QueueModel.afterConsume when both are present. Missing mixed-signal comparison. No host or public-answer failure claimed.",
+  "additional_boundary": "QueueSteps uses stated fold accumulator types outside T5 unannotated reader domain; direct real-R4 readback control remains needed.",
+  "finite_probe": {
+    "command": "python3 /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-05T231132Z/queue/mixed_signals.py",
+    "exit_code": 0,
+    "python": "3.13.14",
+    "assertions": 12,
+    "positive_controls": [
+      "taker hint only",
+      "offer answer only",
+      "full buffer without taker",
+      "earlier pending offer"
+    ],
+    "output": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-05T231132Z/queue/mixed_signals.json",
+    "limitation": "Pure finite Python mirror; no Lean, wrapper or target execution."
+  },
+  "reused_prior_finding": "onExit plus causeIsInterrupt adopted; not repeated",
+  "repo_edits": false,
+  "builds_generators_installs_ui_dispatch": false,
+  "artifacts": {
+    "review.md": "5029ba62f94101df56feab60a80e0ba6e57171677510173b54883cc38857cfcd",
+    "mixed_signals.py": "4ecab0a7e9f8c8099e97a225ff5cac0a986f0f8f1fbf6c023b87221c9c14dfc7",
+    "mixed_signals.json": "ff3838a201601095e0818aedb8f864cab96ecc2d94d2dd4c9d728105bcb67c35"
+  },
+  "design_recheck": {
+    "commit": "61fecd0c",
+    "source": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+    "sha256": "a2bb678df77f4cd1646b2e73ef8c681fc7946bce6c4db7b093e3856f8a458367",
+    "findings": [
+      "F3 must permit current-hint replacement, not only identity-table extension",
+      "Keep model-order mixed-signal comparison",
+      "First-profile relation restricts offer.batch=false; full future-field promise needs qualifier or passive discriminator"
+    ]
+  },
+  "parent_recheck": {
+    "time_utc": "2026-10-05T23:20:39.035440+00:00",
+    "source_checks": {
+      "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean": true,
+      "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.out": true,
+      "docs/research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md": true,
+      "Test/Program/QueueModel.lean": true,
+      "Test/Program/QueueCapacity.lean": true,
+      "docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md": true,
+      "src/Effect4/Laws/Program/Typed/ListFold.lean": true,
+      "docs/research/2026-10-05-seat-FOLD-receipt.md": true,
+      "Test/contracts/queue.contract.md": true,
+      "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md": true
+    },
+    "finite_assertions": 12,
+    "finite_exit_code": 0,
+    "python_evidence_only": true
+  },
+  "additional_finding": "First full-buffer suspended offer omits the model wake output when a ready taker remains. No liveness or public-result failure claimed."
+}

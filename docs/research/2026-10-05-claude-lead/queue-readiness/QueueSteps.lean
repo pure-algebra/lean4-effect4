@@ -2,25 +2,32 @@ import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Folds
+import Effect4.Codegen.ListFold
 import Test.Program.QueueModel
 
 /-!
 # Probe: the Queue's first profile with the real steps, after seat FOLD's merge
 
-Status: research evidence (2026-10-05, base `0dbb17c3`). A finite probe: one schedule for each
-scenario, on the Lean machine only. `QueueSteps.out` beside this file is its output.
+Status: research evidence (2026-10-05, base `61fecd0c`; revised the same day after Codex's
+review of the step design). A finite probe: one schedule for each scenario, on the Lean machine
+only. `QueueSteps.out` beside this file is its output.
 
     lake env lean docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean
 
 The cell is one record: the buffer, the waiting takers, the pending offers and the capacity.
 A request's identity is a `Deferred` that nobody resolves. Each step is one `Ref.modify` whose
 term folds: it finds a request by `sameHandle`, removes it, accepts pending offers into freed
-room, and names the hints to post. The first profile is the contract's: a positive capacity and
-the `suspend` strategy, with `take` and `offer` of one message.
+room, and names the requests to notify. The first profile is the contract's: a positive
+capacity and the `suspend` strategy, with `take` and `offer` of one message.
+
+A step names its notifications as the abstract model does (`Test/Program/QueueModel.lean`), and
+in the model's order: the offers that the step accepted, then the taker to wake. Section
+"The steps against the model" compares a step's answer, stored value and notifications with
+the model's on three states. No fold of a step states a type: an empty list of the right type
+is `take xs 0`, so every step term is inside the reader's domain.
 
 `uninterruptible` stands for the mask and `interruptible` for its restore, which is right under
-an interruptible caller only. The answers are compared with the abstract model of
-`Test/Program/QueueModel.lean` on the same operations.
+an interruptible caller only.
 -/
 
 set_option autoImplicit false
@@ -39,9 +46,14 @@ def answerTy : Ty := .deferredOf .bool .never
 
 def takerFields : List (String × Bool × Ty) := [("id", false, idTy), ("hint", false, idTy)]
 def takerTy : Ty := .record [("hint", false, idTy), ("id", false, idTy)]
+/-- A pending offer, with the model's fields: `batch` is false in the first profile, and `rest`
+holds one message. -/
 def offerFields : List (String × Bool × Ty) :=
-  [("id", false, idTy), ("hint", false, answerTy), ("msg", false, .nat)]
-def offerTy : Ty := .record [("hint", false, answerTy), ("id", false, idTy), ("msg", false, .nat)]
+  [("id", false, idTy), ("hint", false, answerTy), ("batch", false, .bool),
+   ("rest", false, .list .nat)]
+def offerTy : Ty := .record
+  [("batch", false, .bool), ("hint", false, answerTy), ("id", false, idTy),
+   ("rest", false, .list .nat)]
 def stateFields : List (String × Bool × Ty) :=
   [("msgs", false, .list .nat), ("takers", false, .list takerTy),
    ("offers", false, .list offerTy), ("cap", false, .nat)]
@@ -56,15 +68,18 @@ def orT (a b : TermSrc) : TermSrc := app "or" [a, b]
 def empty (xs : TermSrc) : TermSrc := app "isZero" [len xs]
 def ite (c t f : TermSrc) : TermSrc := app "ite" [c, t, f]
 def same (a b : TermSrc) : TermSrc := app "sameHandle" [a, b]
+/-- The empty list at the type of `xs`: no fold has to state its accumulator's type. -/
+def none_of (xs : TermSrc) : TermSrc := app "take" [xs, nat 0]
+def minT (a b : TermSrc) : TermSrc := ite (app "lt" [a, b]) a b
 
 def state0 (cap : Nat) : TermSrc :=
   record stateFields [("msgs", nilT), ("takers", nilT), ("offers", nilT), ("cap", nat cap)]
 
 def mkTaker (id hint : TermSrc) : TermSrc := record takerFields [("id", id), ("hint", hint)]
-def mkOffer (id hint msg : TermSrc) : TermSrc :=
-  record offerFields [("id", id), ("hint", hint), ("msg", msg)]
+def mkOffer (id hint batch rest : TermSrc) : TermSrc :=
+  record offerFields [("id", id), ("hint", hint), ("batch", batch), ("rest", rest)]
 
-/-! ## The pure parts, each one fold -/
+/-! ## The pure parts -/
 
 /-- Whether the request `id` waits among the takers. -/
 def enrolled (takers id : TermSrc) : TermSrc :=
@@ -77,45 +92,51 @@ def isHead (takers id : TermSrc) : TermSrc :=
 
 /-- The takers without the request `id`. -/
 def removeTaker (takers id : TermSrc) : TermSrc :=
-  fold "r_acc" "r_t" (some (.list takerTy)) takers nilT
+  fold "r_acc" "r_t" none takers (none_of takers)
     (ite (same (field (var "r_t") "id") id) (var "r_acc") (snoc (var "r_acc") (var "r_t")))
 
 /-- The takers, with the hint of the request `id` replaced. -/
 def renewHint (takers id hint : TermSrc) : TermSrc :=
-  fold "n_acc" "n_t" (some (.list takerTy)) takers nilT
+  fold "n_acc" "n_t" none takers (none_of takers)
     (snoc (var "n_acc") (ite (same (field (var "n_t") "id") id) (mkTaker id hint) (var "n_t")))
 
 /-- The pending offers without the request `id`. -/
 def removeOffer (offers id : TermSrc) : TermSrc :=
-  fold "o_acc" "o_t" (some (.list offerTy)) offers nilT
+  fold "o_acc" "o_t" none offers (none_of offers)
     (ite (same (field (var "o_t") "id") id) (var "o_acc") (snoc (var "o_acc") (var "o_t")))
 
-/-- The hint of the earliest taker, as a list of at most one, when a message is ready. -/
+/-- The model's `wake` in the first profile: the earliest taker, when a message is ready. A
+list of at most one taker. -/
 def wake (takers msgs : TermSrc) : TermSrc :=
-  ite (empty msgs) nilT
-    (fold "w_acc" "w_t" (some (.list idTy)) (app "take" [takers, nat 1]) nilT
-      (snoc (var "w_acc") (field (var "w_t") "hint")))
+  ite (empty msgs) (none_of takers) (app "take" [takers, nat 1])
 
-/-- The accumulator of the accept pass: room, buffer, kept offers, answered hints. -/
-def acceptTy : Ty := .tuple [.nat, .list .nat, .list offerTy, .list answerTy]
-
-/-- Pending offers enter freed room in arrival order (the model's `acceptLoop`, one message
-for each offer). An offer behind one that stays also stays. -/
+/-- The model's `acceptLoop` at a finite room. The accumulator: room, buffer, kept offers,
+accepted offers, a stop flag. An offer that fits whole is accepted; the first that does not
+keeps its rest, and every later one stays. -/
 def accept (room msgs offers : TermSrc) : TermSrc :=
-  fold "a_acc" "a_o" (some acceptTy) offers (tuple [room, msgs, nilT, nilT])
-    (ite (andT (notT (app "isZero" [tupleAt (var "a_acc") 0])) (empty (tupleAt (var "a_acc") 2)))
-      (tuple [app "pred" [tupleAt (var "a_acc") 0],
-        snoc (tupleAt (var "a_acc") 1) (field (var "a_o") "msg"),
-        tupleAt (var "a_acc") 2,
-        snoc (tupleAt (var "a_acc") 3) (field (var "a_o") "hint")])
-      (tuple [tupleAt (var "a_acc") 0, tupleAt (var "a_acc") 1,
-        snoc (tupleAt (var "a_acc") 2) (var "a_o"), tupleAt (var "a_acc") 3]))
+  let acc := var "a_acc"
+  let o := var "a_o"
+  let room' := tupleAt acc 0
+  let msgs' := tupleAt acc 1
+  let kept := tupleAt acc 2
+  let done := tupleAt acc 3
+  let rest := field o "rest"
+  let k := minT room' (len rest)
+  let taken := app "append" [msgs', app "take" [rest, k]]
+  fold "a_acc" "a_o" none offers
+    (tuple [room, msgs, none_of offers, none_of offers, bool false])
+    (ite (orT (tupleAt acc 4) (app "isZero" [room']))
+      (tuple [room', msgs', snoc kept o, done, bool true])
+      (ite (app "eq" [len rest, k])
+        (tuple [app "sub" [room', k], taken, kept, snoc done o, bool false])
+        (tuple [nat 0, taken, snoc kept (recordSet o "rest" (app "drop" [rest, k])), done,
+          bool true])))
 
 /-! ## The steps, each one term of a `Ref.modify` -/
 
-/-- A take of one message. Answer: `[message?, hints of takers to wake, hints of offers
-answered]`. It consumes when a message is there and no earlier taker waits. Otherwise it
-enrols the request, or renews its hint. -/
+/-- The model's `take` at bounds one and one. Answer: `[message?, accepted offers, takers to
+wake]`, the notifications in the model's order. It consumes when a message is there and no
+earlier taker waits. Otherwise it enrols the request, or renews its hint. -/
 def takeStep (id hint s : TermSrc) : TermSrc :=
   let msgs := field s "msgs"
   let takers := field s "takers"
@@ -129,40 +150,49 @@ def takeStep (id hint s : TermSrc) : TermSrc :=
   let waiting := recordSet s "takers"
     (ite (enrolled takers id) (renewHint takers id hint) (snoc takers (mkTaker id hint)))
   ite (andT (notT (empty msgs)) turn)
-    (app "pair" [tuple [app "get" [msgs, nat 0], wake takers1 (tupleAt acc 1), tupleAt acc 3],
+    (app "pair" [tuple [app "get" [msgs, nat 0], tupleAt acc 3, wake takers1 (tupleAt acc 1)],
       consumed])
-    (app "pair" [tuple [noneT, nilT, nilT], waiting])
+    (app "pair" [tuple [noneT, none_of offers, none_of takers], waiting])
 
-/-- An offer of one message. Answer: `[decided?, hints of takers to wake]`. It is accepted
-when room is left and no earlier offer is pending. Otherwise it stays pending with its hint. -/
+/-- The model's `offer` under `suspend`. Answer: `[decided?, takers to wake]`. Behind a pending
+offer it waits and notifies nobody. With room it is accepted. At a full buffer it waits, and
+the model still wakes the earliest taker. -/
 def offerStep (id hint a s : TermSrc) : TermSrc :=
   let msgs := field s "msgs"
+  let offers := field s "offers"
+  let takers := field s "takers"
+  let pending := recordSet s "offers"
+    (snoc offers (mkOffer id hint (bool false) (app "cons" [a, nilT])))
   let accepted := recordSet s "msgs" (snoc msgs a)
-  let pending := recordSet s "offers" (snoc (field s "offers") (mkOffer id hint a))
-  ite (andT (app "lt" [len msgs, field s "cap"]) (empty (field s "offers")))
-    (app "pair" [tuple [app "some" [bool true], wake (field s "takers") (snoc msgs a)], accepted])
-    (app "pair" [tuple [noneT, nilT], pending])
+  ite (notT (empty offers))
+    (app "pair" [tuple [noneT, none_of takers], pending])
+    (ite (app "lt" [len msgs, field s "cap"])
+      (app "pair" [tuple [app "some" [bool true], wake takers (snoc msgs a)], accepted])
+      (app "pair" [tuple [noneT, wake takers msgs], pending]))
 
-/-- A waiting taker leaves. Answer: the hints to wake. -/
+/-- The model's `withdrawTake`. Answer: the takers to wake. -/
 def withdrawTake (id s : TermSrc) : TermSrc :=
   let takers1 := removeTaker (field s "takers") id
   app "pair" [wake takers1 (field s "msgs"), recordSet s "takers" takers1]
 
-/-- A pending offer leaves. An offer that a step already accepted is not there, so nothing
-changes. -/
+/-- The model's `withdrawOffer` in an opened queue. Answer: the takers to wake. An offer that
+a step already accepted is not there, so only the wake remains. -/
 def withdrawOffer (id s : TermSrc) : TermSrc :=
-  recordSet s "offers" (removeOffer (field s "offers") id)
+  app "pair" [wake (field s "takers") (field s "msgs"),
+    recordSet s "offers" (removeOffer (field s "offers") id)]
 
 /-! ## The operations -/
 
 def posted : Effect4.Supervision.ForkOptions := ⟨false, true, .uninterruptible⟩
 
-/-- Post every hint of a list with one answer: one helper for each (decisions row 238). -/
-def postAll (hints answer : TermSrc) : Src NativeOp :=
+/-- Post one helper for each request of a list: it resolves the request's hint with one answer
+(decisions rows 238 and 240). -/
+def postAll (requests answer : TermSrc) : Src NativeOp :=
   iterateWith (nat 0)
-    { while_ := fun i => app "lt" [i, len hints]
-      body := fun i => selectOption "h" (app "get" [hints, i]) (succeed unit)
-        (andThen (withFiber (Action.fork (Deferred.succeed (var "h") answer) posted))
+    { while_ := fun i => app "lt" [i, len requests]
+      body := fun i => selectOption "r" (app "get" [requests, i]) (succeed unit)
+        (andThen
+          (withFiber (Action.fork (Deferred.succeed (field (var "r") "hint") answer) posted))
           (succeed unit))
       step := fun i _ => app "succ" [i] }
 
@@ -170,6 +200,8 @@ def postAll (hints answer : TermSrc) : Src NativeOp :=
 def onInterrupt (body cleanup : Src NativeOp) : Src NativeOp :=
   onExit "e" body (ifElse (app "causeIsInterrupt" [var "e"]) cleanup (succeed unit))
 
+/-- `take`. A step's notifications are posted in the model's order: the accepted offers'
+answers, then the taker's wake. -/
 def take (q : TermSrc) : Src NativeOp :=
   uninterruptible (eff do
     let id ← Deferred.make .unit .never
@@ -179,14 +211,14 @@ def take (q : TermSrc) : Src NativeOp :=
         body := fun _ => eff do
           let hint ← Deferred.make .unit .never
           let r ← Ref.modify "s" (takeStep id hint (var "s")) q
-          let _ ← postAll (tupleAt r 1) unit
-          let _ ← postAll (tupleAt r 2) (bool true)
+          let _ ← postAll (tupleAt r 1) (bool true)
+          let _ ← postAll (tupleAt r 2) unit
           selectOption "m" (tupleAt r 0)
             (andThen
               (onInterrupt (interruptible (Deferred.await hint))
                 (eff do
-                  let hints ← Ref.modify "s" (withdrawTake id (var "s")) q
-                  postAll hints unit))
+                  let woken ← Ref.modify "s" (withdrawTake id (var "s")) q
+                  postAll woken unit))
               (succeed noneT))
             (succeed (app "some" [var "m"]))
         step := fun _ a => a }
@@ -201,7 +233,9 @@ def offer (q a : TermSrc) : Src NativeOp :=
     let _ ← postAll (tupleAt r 1) unit
     selectOption "ok" (tupleAt r 0)
       (onInterrupt (interruptible (Deferred.await hint))
-        (Ref.update "s" (withdrawOffer id (var "s")) q))
+        (eff do
+          let woken ← Ref.modify "s" (withdrawOffer id (var "s")) q
+          postAll woken unit))
       (succeed (var "ok")))
 
 def size (q : TermSrc) : Src NativeOp := eff do
@@ -307,8 +341,32 @@ def r7 : Src NativeOp := eff do
   let e ← await f
   return e
 
+/-- R8: the order of a step's notifications (Codex's control). Capacity one; takers A and B
+wait; message 1 is offered; a second offer waits at the full buffer. A's take frees room: it
+accepts the second offer and leaves B ready. The model names the offerer first and B second.
+Each fiber writes its mark when it goes on, so the log shows the order of the two resumptions:
+A's own mark, then the offerer's `101`, then B's message. -/
+def r8 : Src NativeOp := eff do
+  let q ← Ref.make (state0 1)
+  let log ← Ref.make (app "take" [app "cons" [nat 0, nilT], nat 0])
+  let fa ← fork (eff do
+    let x ← take q
+    Ref.update "l" (snoc (var "l") x) log)
+  let fb ← fork (eff do
+    let x ← take q
+    Ref.update "l" (snoc (var "l") x) log)
+  let _ ← offer q (nat 1)
+  let fc ← fork (eff do
+    let _ ← offer q (nat 2)
+    Ref.update "l" (snoc (var "l") (nat 101)) log)
+  let _ ← join fa
+  let _ ← join fb
+  let _ ← join fc
+  let l ← Ref.get log
+  return l
+
 #eval (verdict (mk r1), verdict (mk r2), verdict (mk r3), verdict (mk r4), verdict (mk r5),
-  verdict (mk r6), verdict (mk r7))
+  verdict (mk r6), verdict (mk r7), verdict (mk r8))
 #eval (Effect4.Api.Author.build (mk r4)).toOption.map fun b =>
   toString (repr (b.ty.answer, b.ty.error))
 #eval exitOf r1
@@ -318,6 +376,7 @@ def r7 : Src NativeOp := eff do
 #eval exitOf r5
 #eval exitOf r6
 #eval exitOf r7
+#eval exitOf r8
 
 /-! ## The same operations on the abstract model -/
 
@@ -344,6 +403,107 @@ def model4 : QueueContract.OfferReply × QueueContract.OfferReply × QueueContra
 
 #eval toString (repr model1)
 #eval toString (repr model4)
+
+/-! ## The steps against the model
+
+A control evaluates one step term on the encoding of a model state, and compares its answer,
+its stored value and its notifications with the model's step. Model request `n` has the
+identity handle `i<n>` and a current hint `h<n>`. A step that enrols a taker, or renews its
+hint, changes that request's entry of the table and no other. -/
+
+def ids : List Nat := [1, 2, 100, 101, 102]
+def idName (n : Nat) : String := s!"i{n}"
+def hintName (n : Nat) : String := s!"h{n}"
+def envNames : List String := ids.flatMap (fun n => [idName n, hintName n]) ++ ["fresh"]
+def envVals : List Val :=
+  ids.flatMap (fun n => [Val.promise ⟨n⟩, Val.promise ⟨1000 + n⟩]) ++ [Val.promise ⟨9999⟩]
+
+def evalAt (src : TermSrc) : Option Val :=
+  (src { names := envNames } []).toOption.bind (evalTerm envVals ·)
+
+def natList (xs : List Nat) : TermSrc := xs.foldr (fun x acc => app "cons" [nat x, acc]) nilT
+def listOf (xs : List TermSrc) : TermSrc := xs.foldr (fun x acc => app "cons" [x, acc]) nilT
+
+/-- The table: a request's current hint. -/
+abbrev Table := Nat → TermSrc
+def table0 : Table := fun n => var (hintName n)
+def Table.set (tb : Table) (id : Nat) (hint : TermSrc) : Table :=
+  fun n => if n = id then hint else tb n
+
+def takerTerm (tb : Table) (t : QueueContract.Taker) : TermSrc := mkTaker (var (idName t.id)) (tb t.id)
+def offerTerm (o : QueueContract.Offer) : TermSrc :=
+  mkOffer (var (idName o.id)) (var (hintName o.id)) (bool o.batch) (natList o.rest)
+def stateTerm (tb : Table) (s : QueueContract.State) : TermSrc :=
+  record stateFields [("msgs", natList s.messages),
+    ("takers", listOf (s.takers.map (takerTerm tb))),
+    ("offers", listOf (s.offers.map offerTerm)), ("cap", nat (s.capacity.getD 0))]
+
+/-- The model's signals, split as a step answers them: the accepted offers, then the takers. -/
+def offered (signals : List QueueContract.Signal) : List Nat :=
+  signals.filterMap fun g => match g.note with | .offered _ => some g.id | _ => none
+def again (signals : List QueueContract.Signal) : List Nat :=
+  signals.filterMap fun g => match g.note with | .again => some g.id | _ => none
+
+/-- A take of request `id` with the hint `fresh`, on the encoding of `s`: the term's whole
+result is the encoding of the model's, and the model names the accepted offers before the
+takers. -/
+def takeAgrees (s : QueueContract.State) (id : Nat) : Bool :=
+  let r := QueueContract.take s ⟨id, 1, 1⟩
+  let tb' := if r.2.1 = .wait then table0.set id (var "fresh") else table0
+  let reply : TermSrc := match r.2.1 with
+    | .got [m] => app "some" [nat m]
+    | _ => noneT
+  let accepted := (offered r.2.2).filterMap fun n => s.offers.find? (·.id == n)
+  let woken := (again r.2.2).filterMap fun n => r.1.takers.find? (·.id == n)
+  let expected := app "pair" [tuple [reply, listOf (accepted.map offerTerm),
+    listOf (woken.map (takerTerm tb'))], stateTerm tb' r.1]
+  decide (evalAt (takeStep (var (idName id)) (var "fresh") (stateTerm table0 s)) = evalAt expected)
+    && (evalAt expected).isSome
+    && r.2.2.map (·.id) == offered r.2.2 ++ again r.2.2
+
+/-- An offer of `a` by request `id`, on the encoding of `s`. -/
+def offerAgrees (s : QueueContract.State) (id a : Nat) : Bool :=
+  let r := QueueContract.offer s id a
+  let reply : TermSrc := match r.2.1 with
+    | .accepted ok => app "some" [bool ok]
+    | .wait => noneT
+  let woken := (again r.2.2).filterMap fun n => r.1.takers.find? (·.id == n)
+  let expected := app "pair" [tuple [reply, listOf (woken.map (takerTerm table0))],
+    stateTerm table0 r.1]
+  decide (evalAt (offerStep (var (idName id)) (var (hintName id)) (nat a) (stateTerm table0 s))
+      = evalAt expected)
+    && (evalAt expected).isSome
+
+def T (n : Nat) : QueueContract.Taker := ⟨n, 1, 1⟩
+
+/-- Codex's prefix, before its last step: capacity one, takers 1 and 2, message 1 buffered,
+the offer of message 2 by request 101 pending. -/
+def mixed : QueueContract.State :=
+  { capacity := some 1, messages := [1], takers := [T 1, T 2], offers := [⟨101, false, [2]⟩] }
+
+-- The model's last step: message 1, then the offerer's answer before taker 2's wake.
+#eval toString (repr (QueueContract.take mixed (T 1)).2)
+-- C1. The mixed notifications: the term agrees, in the model's order.
+#eval takeAgrees mixed 1
+-- C2. The first offer at a full buffer waits, and the model wakes the earliest taker again.
+#eval toString (repr (QueueContract.offer { mixed with offers := [] } 101 2).2)
+#eval offerAgrees { mixed with offers := [] } 101 2
+-- C2b. An offer behind a pending offer waits and notifies nobody.
+#eval toString (repr (QueueContract.offer mixed 102 3).2)
+#eval offerAgrees mixed 102 3
+-- C3. A taker that waits already, and no message: the model's state is unchanged, and the
+-- term renews that request's hint and no other entry.
+#eval toString (repr (QueueContract.take { capacity := some 1, takers := [T 1, T 2] } (T 1)).2)
+#eval takeAgrees { capacity := some 1, takers := [T 1, T 2] } 1
+-- C4. A new taker enrols behind a waiting one; and an offer into room wakes the earliest.
+#eval takeAgrees { capacity := some 1, takers := [T 1] } 2
+#eval offerAgrees { capacity := some 2, takers := [T 1] } 100 7
+-- Red controls: the same checks against another model state fail.
+#eval !decide (evalAt (takeStep (var (idName 1)) (var "fresh") (stateTerm table0 mixed)) =
+  evalAt (stateTerm table0 mixed))
+#eval !decide (evalAt (offerStep (var (idName 102)) (var (hintName 102)) (nat 3)
+    (stateTerm table0 mixed)) =
+  evalAt (app "pair" [tuple [app "some" [bool true], listOf []], stateTerm table0 mixed]))
 
 /-! ## The size of the take step
 
@@ -385,6 +545,11 @@ def stepTerm (step : TermSrc) : Option Term :=
 #eval (stepTerm (accept (nat 1) nilT nilT)).map fun t => (termSize t, foldCount t)
 #eval (stepTerm (offerStep (var "id") (var "hint") (nat 1) (var "s"))).map fun t =>
   (termSize t, foldCount t)
+-- No step states an accumulator's type, so each is inside the reader's domain.
+#eval ((stepTerm (takeStep (var "id") (var "hint") (var "s"))).map (·.unannotated),
+  (stepTerm (offerStep (var "id") (var "hint") (nat 1) (var "s"))).map (·.unannotated),
+  (stepTerm (withdrawTake (var "id") (var "s"))).map (·.unannotated),
+  (stepTerm (withdrawOffer (var "id") (var "s"))).map (·.unannotated))
 
 /-! ## What the faces answer today
 

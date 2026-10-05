@@ -21,7 +21,7 @@ yet there?
 | Item | How |
 | --- | --- |
 | `QueueSkeleton.lean`, before seat FOLD's merge: no fold, a cell with two indexes | run: 15 programs on the machine; output `QueueSkeleton.out` |
-| `QueueSteps.lean`, after the merge: the real steps with `fold`, `take`, `drop` and `sameHandle` | run: 7 programs on the machine, two of them beside the model; output `QueueSteps.out` |
+| `QueueSteps.lean`, after the merge: the real steps with `fold`, `take`, `drop` and `sameHandle` | run: 8 programs on the machine, and 6 step controls against the model; output `QueueSteps.out` |
 | `Test/Program/QueueModel.lean`, the abstract model | run on the same operations for R1 and R4 |
 | `Test/Program/QueueCapacity.lean` | built: the helper `acceptLoop_length_le` is proved |
 | Seat FOLD's receipt, its two claims and its fixture | read |
@@ -53,8 +53,15 @@ and `offer` of one message.
 | R5. A waiting taker is interrupted; a later offer stays | `[5, 0]`: the message, and no taker left | row 222 |
 | R6. Capacity one: a pending offer is interrupted before a step accepts it | `[1, 0, 0]`: its message never enters | row 222 |
 | R7. The interrupted taker's own exit | interrupt by fiber 0, with its annotations | the same as a wait with no cleanup |
+| R8. Capacity one, two takers, an offer pending: the order of a step's notifications | the log `[1, 101, 2]`: the offerer goes on before the next taker | the model: the answer, then the wake |
 
-Each of the seven programs is typed with the error column `never`.
+Each of the eight programs builds. R4 is typed with the error column `never`.
+
+**Revised the same day, after Codex's review.** The first run posted a taker's wake before an
+accepted offer's answer, and an offer that waited notified nobody. The model does otherwise in
+both places. The steps follow the model now. Six controls evaluate a step term against the
+model's step, and the answer, the stored value and the ordered notifications agree
+(`queue-steps-design.md` beside this note, F3 and F6). The seven public answers did not change.
 
 ### F2. Cleanup on interruption needs no new construct
 
@@ -90,8 +97,8 @@ and the type arguments of `Deferred.make`.
 ### F4. Three points of friction, none a blocker
 
 1. **The term language has no local binding.** The take step is written once in Lean, and its
-   parts occur several times in the term. It has 379 nodes and 11 folds, where one accept pass
-   has 50 nodes and one fold. The repeated passes are pure, so the step stays one machine step
+   parts occur several times in the term. It has 765 nodes and 11 folds, where one accept pass
+   has 138 nodes and one fold. The repeated passes are pure, so the step stays one machine step
    and its answer is the same. The cost is a constant factor and a long printed term.
 2. **A loop that ends with a value needs an arm that never runs.** `iterate` answers its
    cursor, an option of the message. The program after it selects on that option, and the
@@ -129,8 +136,8 @@ and the type arguments of `Deferred.make`.
   with a host is tested.
 - The generated OCaml engine did not run these programs.
 - No Queue program is printed yet, so tsgo and bun have seen none.
-- The model comparison covers R1 and R4, by reading both outputs. No connector between a step
-  term and the model's step is stated.
+- Six controls compare a step term with the model's step, each on one state. No connector
+  between a step term and the model's step is stated as a law.
 - The masked caller, batches, hint renewal, the terminal operations and the other strategies
   are not probed.
 - The budget of a delivery is not measured. The runs used a fuel of 20000.

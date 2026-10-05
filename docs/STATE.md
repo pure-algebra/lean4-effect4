@@ -255,7 +255,9 @@ Open at this landing:
   ([the note](research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md); finite
   probes). The second uses the real steps: one `Ref.modify` whose term folds, the posted helper
   of row 238, strict order, an offer that waits at capacity, and a withdrawal that keeps the
-  interruptor. Seven scenarios answer as expected, and two were read beside the model. The
+  interruptor. Eight scenarios answer as expected. Six controls evaluate a step term against
+  the model's step, with its notifications in the model's order (revised after Codex's
+  review). The
   cleanup is the pin's `onInterrupt`: `onExit` with `causeIsInterrupt` on the exit. Not
   probed: the generated engine, a masked caller, batches, and the printed module on a host,
   which waits for T5;
