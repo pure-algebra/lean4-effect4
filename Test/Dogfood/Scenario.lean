@@ -206,6 +206,10 @@ def retired (s : Run) : List (Seen × Bool) :=
   s.session.retired.filterMap fun call =>
     (seenOf s (call.bound.call, call.bound.token)).map fun seen => (seen, call.pending.isSome)
 
+/-- The requests of the calls the host held on one row, in order. -/
+def requestsOn (s : Run) (row : String) : List Val :=
+  ((held s).filter (·.row == row)).map (·.request)
+
 /-- The value a cell holds, by its allocation index: a program's log, read from the store. -/
 def cell (s : Run) (index : Nat) : Option Val := s.machine.state.refs[index]?
 
@@ -527,8 +531,9 @@ environment and runs its controls once. It fails, naming every finding, when:
 
 * the program or the observation does not resolve to a declaration;
 * the claim, or a clause's claim, does not resolve to a theorem or a planned goal;
-* such a claim has no placement at a requirement (`@[semantics "concept" (requirement := Rn)]`,
-  decisions row 207);
+* such a claim has no placement: a declaration of a battery carries its own at a requirement
+  (`@[semantics "concept" (requirement := Rn)]`, decisions row 207), and a theorem of the law
+  graph (a module under `Effect4.Laws`) has the placement the semantics registry gives it;
 * a clause has no green control, or no red control (`Scenario.problems`);
 * a control names no clause of its scenario, or fails (`Scenario.problems`).
 
@@ -549,7 +554,9 @@ open Lean in
             findings := findings.push s!"{scenario.name}: {name} does not resolve to a declaration"
         for name in scenario.claims do
           if (env.find? name) matches some (.thmInfo _) then
-            unless ((Effect4.Laws.Auto.semanticsAttribute.getParam? env name).bind
+            let lawGraph := (env.getModuleIdxFor? name).any fun index =>
+              (`Effect4.Laws).isPrefixOf env.header.moduleNames[index.toNat]!
+            unless lawGraph || ((Effect4.Laws.Auto.semanticsAttribute.getParam? env name).bind
                 (·.requirement)).isSome do
               findings := findings.push
                 s!"{scenario.name}: the claim {name} has no placement at a requirement"
@@ -566,11 +573,13 @@ The fixtures name this module's own declarations, so they add no placed declarat
 
 namespace Fixture
 
-/-- Green control: a claim and a clause that are placed theorems, with both controls. -/
+/-- Green control: a claim and a clause that are placed theorems, and a clause that is a theorem
+of the law graph, each with both controls. -/
 def sound : Scenario :=
   { name := "sound", program := ``play, observation := ``receipts, claim := ``replays
-    clauses := [⟨"inert", ``receipt_inert⟩]
-    controls := [green "inert" "a run the clause allows" true, red "inert" "a fault" true] }
+    clauses := [⟨"inert", ``receipt_inert⟩, ⟨"law", ``Effect4.Run.journal_replays⟩]
+    controls := [green "inert" "a run the clause allows" true, red "inert" "a fault" true,
+      green "law" "a run the law allows" true, red "law" "a fault" true] }
 
 /-- Red control: a program that names no declaration. -/
 def unresolved : Scenario := { sound with name := "unresolved", program := `Nowhere.program }
@@ -578,22 +587,26 @@ def unresolved : Scenario := { sound with name := "unresolved", program := `Nowh
 /-- Red control: a claim that is a definition. -/
 def noTheorem : Scenario := { sound with name := "noTheorem", claim := ``play }
 
-/-- Red control: a clause whose claim is a theorem with no placement. -/
+/-- Red control: a clause whose claim is a battery's theorem with no placement. -/
 def unplaced : Scenario :=
-  { sound with name := "unplaced", clauses := [⟨"inert", ``play_id⟩] }
+  { sound with
+    name := "unplaced"
+    clauses := [⟨"inert", ``play_id⟩]
+    controls := [green "inert" "a run the clause allows" true, red "inert" "a fault" true] }
 
 /-- Red control: a clause with no red control, a control of no clause, and a control that
 fails. -/
 def loose : Scenario :=
   { sound with
     name := "loose"
+    clauses := [⟨"inert", ``receipt_inert⟩]
     controls := [green "inert" "a run the clause allows" true, red "other" "a stray run" true,
       green "inert" "a false run" false] }
 
 end Fixture
 
-#scenario_gate Fixture.sound
-
+-- One run of the gate over the five fixtures. The green control is that no finding names
+-- `sound`; each red control is one finding or more, by its fixture's name.
 /--
 error: unresolved: Nowhere.program does not resolve to a declaration
 noTheorem: the claim Test.Dogfood.Scenario.play is no theorem and no planned goal
@@ -603,7 +616,7 @@ loose: the control "a stray run" names no clause
 loose: the control "a false run" fails
 -/
 #guard_msgs (error) in
-#scenario_gate Fixture.unresolved Fixture.noTheorem Fixture.unplaced Fixture.loose
+#scenario_gate Fixture.sound Fixture.unresolved Fixture.noTheorem Fixture.unplaced Fixture.loose
 
 #guard Fixture.sound.problems = []
 
