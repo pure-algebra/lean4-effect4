@@ -424,11 +424,8 @@ where
       | .refuse name => .error (.internalAction name)
       | .stmt _ => .error (tableDefect ctor)
       | .rowCall => match args with
-        -- the operation's form at level 0 (`Signature.opAtLevel`) is what the row spells
-        | [.op op, .term request] =>
-          match sig.opAtLevel n 0 op with
-          | some face => printRow n (sig.rowOf face) request
-          | none => .error (.binderTerm (sig.rowOf op).spelling)
+        -- the row's call, and after it the operation's binder term as a function (`printPerform`)
+        | [.op op, .term request] => printPerform sig n op request
         | _ => .error (tableDefect ctor)
       | .tpl t => do
         let σ ← printArgs sig fam n (.tpl t) args 0

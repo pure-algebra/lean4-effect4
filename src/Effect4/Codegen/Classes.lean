@@ -252,19 +252,25 @@ def causeRecords (c : CauseTerm) : List RecordSite :=
     | .both _ _ => [])
 
 /-- The record constructions of one node's leaves, through the generated view (no second
-program-constructor match), as `Formation.argumentAnnotations` reads them. -/
-def argumentRecords {Op : Type} : ArgF Op (EffSelfCarrier Op) → List RecordSite
+program-constructor match), as `Formation.argumentAnnotations` reads them. An operation
+argument is read through the alphabet's own view of its binder term (`ScopedOp.term?`): the
+faces print that term (the state plan's T5), so a class construction inside it is a
+construction of the module, whose class the module declares with the construction's own
+fields. -/
+def argumentRecords {Op : Type} [ScopedOp Op] : ArgF Op (EffSelfCarrier Op) → List RecordSite
   | .term t => termRecords t
   | .cause c => causeRecords c
   | .optTerm t => t.toList.flatMap termRecords
+  | .op op => (ScopedOp.term? op).toList.flatMap termRecords
   | _ => []
 
 /-- One node's record constructions. -/
-def nodeRecords {Op : Type} (fam : EffFam) (node : EffSelfCarrier Op fam) : List RecordSite :=
+def nodeRecords {Op : Type} [ScopedOp Op] (fam : EffFam) (node : EffSelfCarrier Op fam) :
+    List RecordSite :=
   (view fam node).2.flatMap argumentRecords
 
 /-- Every record construction of a program, layers included, by the generated program fold. -/
-def programRecords {Op : Type} (program : Eff Op) : List RecordSite :=
+def programRecords {Op : Type} [ScopedOp Op] (program : Eff Op) : List RecordSite :=
   foldMap_eff [] (· ++ ·) program
     (f_eff := nodeRecords .eff) (f_stmt := nodeRecords .stmt) (f_stmts := nodeRecords .stmts)
     (f_effs := nodeRecords .effs) (f_action := nodeRecords .action)
@@ -273,7 +279,7 @@ def programRecords {Op : Type} (program : Eff Op) : List RecordSite :=
 /-- The classes a program's constructions name, each with its declared fields, in preorder: the
 reading environment its module declares (`Codegen/ClassTable.lean` checks that the
 constructions agree). -/
-def classesOf {Op : Type} (program : Eff Op) : Classes :=
+def classesOf {Op : Type} [ScopedOp Op] (program : Eff Op) : Classes :=
   (programRecords program).filterMap fun (fields, names, values) =>
     (classTag? fields names values).map fun tag => (tag, fields)
 

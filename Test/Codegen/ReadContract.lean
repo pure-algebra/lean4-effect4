@@ -59,6 +59,15 @@ theorem nativeServiceTy_profile (key : Effect4.ServiceKey) :
 
 open Effect4.Program
 
+/-- The fixture alphabets carry no binder term, so each operation is in scope at every level.
+The round trip reads a program's class constructions through the alphabet's view of an
+operation's term (`classesOf`, `ScopedOp.term?`), which is empty here. -/
+instance : ScopedOp (Fin 4) where
+  scopedAt _ _ := true
+
+instance : ScopedOp Bool where
+  scopedAt _ _ := true
+
 /-- The four rows: a call row on a handle request, a value row, an async row, and a
 read-modify-write row whose pure function trails the request. -/
 def rowOf : Fin 4 → Row
@@ -110,10 +119,12 @@ theorem lawful : LawfulSpelling sig spell where
       decide
     exact name_notin _ (h op) i
   trailing_ne_undefined := by decide
-  opAtLevel_symm := by
-    intro a b op op' h
-    cases h
-    rfl
+  -- the default hooks: no operation carries a term
+  withTerm_row := fun _ _ => rfl
+  termOf_withTerm := fun _ _ => rfl
+  withTerm_termOf := fun _ _ h => nomatch h
+  withTerm_withTerm := fun _ _ _ => rfl
+  withTerm_none := fun _ _ _ => rfl
 
 /-! ## Tuple-call rows: the canonical wrapper, scoping and trailing-name order
 
@@ -212,10 +223,12 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
     intro op i
     cases op <;> exact name_notin _ (by decide) i
   trailing_ne_undefined := by decide
-  opAtLevel_symm := by
-    intro a b op op' h
-    cases h
-    rfl
+  -- the default hooks: no operation carries a term
+  withTerm_row := fun _ _ => rfl
+  termOf_withTerm := fun _ _ => rfl
+  withTerm_termOf := fun _ _ h => nomatch h
+  withTerm_withTerm := fun _ _ _ => rfl
+  withTerm_none := fun _ _ _ => rfl
 
 -- The wrapper head is gone: `Reflect.apply` is an ordinary unknown atom (source-repairs §18).
 #guard headOf "Reflect.apply" = none
@@ -646,13 +659,14 @@ open Effect4.Api Effect4.Machine in
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
     (.perform (.refUpdateWith (FnName.image .update 1 .double)) (.var 0)))
 
-/-! ### Binder terms (the state plan's T3b, until T5 reads a term itself)
+/-! ### Binder terms (the state plan's T5)
 
-The faces spell a read-modify-write row's binder term by a name. The printer prints the row's
-form at level 0 and the reader moves what it read to the node's level
-(`Signature.opAtLevel`; `NativeOp.atLevel`), so a name read under `n` binders is the name's image
-at level `n`. A term that is no name's image at its node's level has no spelling: the printer
-refuses it, it is not `readable`, and no reader yields it. -/
+A read-modify-write row's binder term prints as a function of the current value after the row's
+call, and reads back. The reader reads the call to the operation's face (`Signature.face`), reads
+the function's body one level up, where the current value is the binder at the node's level, and
+installs the term (`NativeOp.withTerm`). A term out of scope, a stated accumulator type and a
+term row called without its function are outside the reader's image. The five old names are no
+row's trailing names any more. -/
 
 /-- A program under `n` binders, each a `flatMap` over `undefined`. -/
 def under : Nat → Effect4.Api.Program → Effect4.Api.Program
@@ -660,53 +674,98 @@ def under : Nat → Effect4.Api.Program → Effect4.Api.Program
   | n + 1, p => .bind (.succeed (.lit .unit)) (under n p)
 
 -- every one of the forty images reads back as itself, under 0 to 3 binders
+-- (`Test/Codegen/TermRows.lean` pins their printed texts)
 open Effect4.Api Effect4.Machine in
 #guard (List.range 4).all fun n => NativeOp.termRows.all fun row => fnNames.all fun g =>
   let p := under n (.perform (row.1 (FnName.image row.2 n g)) (.lit (.nat 0)))
   readable p && decide (roundTrip p = .ok p)
 
--- the reader yields the name's image at the node's level: one text, a term per level
+-- the reader yields the term it read at the node's level: the parameter is that level's binder
 open Effect4.Machine in
 #guard (List.range 4).all fun n =>
   decide (readEff [] nativeSignature nativeSpell (n + 1)
-      (.call (.ident "Ref.update") [.ident "a0", .ident "incr"]) =
+      (.call (.ident "Ref.update") [.ident "a0",
+        .lambda [{ name := Var.name (n + 1) }]
+          (.call (.ident "succ") [.ident (Var.name (n + 1))])]) =
     .ok (.perform (.refUpdateWith (FnName.image .update (n + 1) .incr)) (.var 0)))
 #guard readEff [] nativeSignature nativeSpell 3
-    (.call (.ident "Ref.modify") [.ident "a1", .ident "takeAndBump"]) =
+    (.call (.ident "Ref.modify") [.ident "a1", .lambda [{ name := "a3" }]
+      (.call (.ident "pair") [.ident "a3", .call (.ident "add") [.ident "a3", .int 1]])]) =
   .ok (.perform (.refModifyWith (.app "pair" (.cons (.var 3)
     (.cons (.app "add" (.cons (.var 3) (.cons (.lit (.nat 1)) .nil))) .nil)))) (.var 1))
--- a name the alphabet does not hold is no row: refused by the row's head, as the TypeScript
--- reader refuses it (`ts/eff/test/read.test.ts`)
-#guard readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0", .ident "triple"]) = .error (.unknownHead "Ref.update")
 
--- a term that is no name's image is not readable, and the round trip stops at the printer: a
--- capture, a composed term, and a name's image at another level
+-- terms that no name spelled read back: an outer capture, a composed term, a term that reads
+-- the outer binder alone, and `Ref.modify` at another answer type
 open Effect4.Api Effect4.Machine in
 #guard [ NativeOp.refUpdateWith (.app "add" (.cons (.var 1) (.cons (.var 0) .nil)))
        , .refUpdateWith (.app "succ" (.cons (.app "succ" (.cons (.var 1) .nil)) .nil))
        , .refUpdateWith (FnName.image .update 0 .incr)
        , .refModifyWith (.app "pair" (.cons (.lit (.str "s")) (.cons (.var 1) .nil))) ].all fun op =>
   let p : Effect4.Api.Program := .bind (.perform .refMake (.lit (.nat 0))) (.perform op (.var 0))
-  !readable p && decide (roundTrip p = .error (.shape "printer")) &&
-    match print p with
-    | .error (.binderTerm spelling) => spelling == (NativeOp.row op).spelling
-    | _ => false
+  readable p && decide (roundTrip p = .ok p)
 
-/-- The native signature's level law, at its exact proposition (`nativeLawful`'s field): an
-operation moved between two levels moves back. -/
-example : ∀ (a b : Nat) (op op' : NativeOp), nativeSignature.opAtLevel a b op = some op' →
-    nativeSignature.opAtLevel b a op' = some op :=
-  (nativeLawful).opAtLevel_symm
+-- a term out of scope prints and does not read back: at a node of level 1 the term stands at
+-- level 2, so `var 2` names no binder
+open Effect4.Api in
+#guard
+  let p : Effect4.Api.Program :=
+    .bind (.perform .refMake (.lit (.nat 0))) (.perform (.refUpdateWith (.var 2)) (.var 0))
+  !readable p && (print p).isOk && decide (roundTrip p = .error (.unknownIdent "a2"))
+-- a stated accumulator type inside the term is printed and not read (B19)
+open Effect4.Api in
+#guard
+  let p : Effect4.Api.Program := .bind (.perform .refMake (.lit (.nat 0)))
+    (.perform (.refModifyWith (.fold (some .nat) (.app "nil" .nil) (.var 1) (.var 2))) (.var 0))
+  !readable p && (print p).isOk &&
+    decide (roundTrip p = .error (.annotation "fold accumulator"))
 
--- the move, read on values: a name's image moves to the name's image, and back; an operation
--- with no term stays; a term that is no image moves nowhere
-open Effect4.Machine in
-#guard NativeOp.termRows.all fun row => fnNames.all fun g => [(0, 3), (3, 0), (2, 5)].all fun l =>
-  NativeOp.atLevel l.1 l.2 (row.1 (FnName.image row.2 l.1 g)) ==
-    some (row.1 (FnName.image row.2 l.2 g))
-#guard NativeOp.atLevel 0 4 .refGet = some .refGet
-#guard NativeOp.atLevel 2 0 (.refUpdateWith (.var 5)) = none
+-- the five names are no row's trailing names: an identifier in the function's place is an
+-- argument list the row does not print, as the TypeScript reader refuses it
+-- (`ts/eff/test/read.test.ts`)
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .ident "incr"]) = .error (.arity "Ref.update")
+-- a term row called without its function is refused by its spelling, never read at its face's
+-- placeholder term
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0"]) = .error (.arity "Ref.update")
+-- a row that carries no term refuses a function
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.get") [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
+  .error (.arity "Ref.get")
+-- the parameter is the binder due at the node's level, unannotated, with no declared result
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
+  .ok (.perform (.refUpdateWith (.var 1)) (.var 0))
+#guard (readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a0" }] (.ident "a0")])).isOk =
+  false
+#guard (readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a1", type := some (.name ["number"] []) }] (.ident "a1")])).isOk = false
+#guard (readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a1" }] (.ident "a1") (some (.name ["number"] []))])).isOk = false
+#guard (readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a1" }, { name := "a2" }] (.ident "a1")])).isOk = false
+
+/-- The native signature's term laws, at their exact propositions (`nativeLawful`'s fields): a
+row does not depend on its operation's term, and replacing the term twice is replacing it
+once. -/
+example : ∀ (op : NativeOp) (f : Term),
+    nativeSignature.rowOf (nativeSignature.withTerm op f) = nativeSignature.rowOf op :=
+  (nativeLawful).withTerm_row
+example : ∀ (op : NativeOp) (f g : Term),
+    nativeSignature.withTerm (nativeSignature.withTerm op f) g = nativeSignature.withTerm op g :=
+  (nativeLawful).withTerm_withTerm
+
+-- the face, read on values: a term row's face holds the unit literal, an operation with no term
+-- is its own face, and each term row's key spells its face
+#guard nativeSignature.face (.refUpdateWith (.var 5)) = .refUpdateWith (.lit .unit)
+#guard nativeSignature.face .refGet = .refGet
+#guard NativeOp.termRows.all fun row =>
+  nativeSpell [] (row.1 (.var 0)).row.spelling (row.1 (.var 0)).row.trailing ==
+    some (row.1 (.lit .unit))
 
 open Effect4.Api in
 #guard roundTrip (.bind (.perform (.scopeMake .parallel) (.lit .unit))

@@ -131,8 +131,10 @@ def depositModule (amount : Nat) : Module NativeOp :=
 -- a number, `B`, and stores an account, `A`. It runs to the new balance and one history entry.
 #guard (built? (depositModule 10)).map (fun b => (b.ty.answer, b.runSync)) =
   some (.prod .nat .nat, .success (.list [.nat 10, .nat 1]))
--- Its term is no name's image: the printer refuses the row by name until the state plan's T5.
-#guard (built? (depositModule 10)).map printVerdict = some "refused: binderTerm Ref.modify"
+-- Its term captures the amount bound outside it. Since the state plan's T5 it prints as a
+-- function of the account, and the module reads back.
+#guard (built? (depositModule 10)).map printVerdict = some "printed"
+#guard (built? (depositModule 10)).map readBackVerdict = some true
 -- Red control: a deposit whose answer and next account are swapped is refused at the term's result.
 #guard (typingReason? (program (bindName "state" (Ref.make account0) fun state =>
     Ref.modify "a" (app "pair" [deposited (var "a") (nat 10), field (var "a") "balance"]) state))).map

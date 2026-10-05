@@ -6,7 +6,7 @@ import Effect4.Laws.Program.Invocation
 
 DI-54 and DI-61. The production compiler routes asynchronous built-ins and
 external rows through `asyncRoute` under `perform`. The universal compiler theorem
-is ascribed below; the 55-operation route matrix is an independently written finite table.
+is ascribed below; the 23-operation route matrix is an independently written finite table.
 
 The domain counterexample remains independent of the generated corpus and is now also an
 actual `.ty` golden (`OCaml5.Eff.Corpus.pIllExternalDomain`). Existing historical corpus
@@ -30,11 +30,12 @@ open Effect4
 open Effect4.Machine
 open Effect4.Program
 
-/-! ## The 55 × 2 route matrix
+/-! ## The 23 × 2 route matrix
 
-`NativeOp.spelled` holds one built-in operation per spelling key: 22 constructors, five function
-names and two scope strategies expanded, `Deferred.make` at the instance the faces spell, external
-indices excluded (`Native.lean`). The request representatives satisfy each row's request at the
+`NativeOp.spelled` holds one built-in operation per spelling key: 22 constructors, the two scope
+strategies expanded, each read-modify-write row at its face (the unit literal for its term, since
+the state plan's T5), `Deferred.make` at the instance the faces spell, external indices excluded
+(`Native.lean`). The request representatives satisfy each row's request at the
 `nat` instance (the rows are templates since the state plan's T3a); that is not a claim that their
 synthetic handles are live in a running store. -/
 
@@ -74,10 +75,10 @@ def expected : NativeOp → Route
   | .external _ => .async
   | _ => .sync
 
-#guard NativeOp.spelled.length = 55
+#guard NativeOp.spelled.length = 23
 #guard NativeOp.spelled.all (fun op => Val.hasTy (requestFor op) (requestTyFor op))
 #guard NativeOp.spelled.all (fun op => observed op == expected op)
-#guard (NativeOp.spelled.filter (fun op => observed op == .sync)).length = 53
+#guard (NativeOp.spelled.filter (fun op => observed op == .sync)).length = 21
 -- Both asynchronous built-ins compile to .async.
 #guard (NativeOp.spelled.filter (fun op => (NativeOp.row op).kind == .async)).length = 2
 #guard (NativeOp.spelled.filter (fun op => observed op == .async)).length = 2

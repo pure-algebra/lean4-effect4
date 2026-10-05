@@ -246,12 +246,11 @@ def printRefusal (p : Effect4.Api.Program) : Option String :=
 #guard verdict (program (bindName "s" (Ref.make window0) fun s =>
     Ref.modify "w" (decision (var "v")) s)) = "scope"
 
--- The term of a request is no name's image, so the printer refuses the row by name and the
--- program does not read back, until the state plan's T5. The first such row in print order is
--- the daemon's `Ref.update`; the request alone is refused at its `Ref.modify`.
-#guard (limiterProgram false).map printRefusal = some (some "binderTerm Ref.update")
-#guard requestEff.map printRefusal = some (some "binderTerm Ref.modify")
-#guard (limiterProgram false).map (fun p => Effect4.Api.readable p) = some false
+-- Since the state plan's T5 a row's term prints as a function of the current value: the
+-- daemon's `Ref.update` and the request's `Ref.modify` print, and the limiter reads back.
+#guard (limiterProgram false).map printRefusal = some none
+#guard requestEff.map printRefusal = some none
+#guard (limiterProgram false).map (fun p => Effect4.Api.readable p) = some true
 
 -- `Straight` and `Looped` are the fragments of `run_eq_meaning` and `loopAgreement`. The whole
 -- limiter is in neither.
@@ -307,12 +306,12 @@ def measured : Reach :=
     readBack := ((limiterProgram false).map fun p => Effect4.Api.readable p) == some true }
 
 /-- The stage p4 reaches today, as `Test/Dogfood/README.md` quotes it. Since the state plan's T3b
-the measured program is rc.112's, one `Window` cell and one atomic `Ref.modify` a request. Its
-terms are no name's image, so it is not printed and not read back until the state plan's T5
+the measured program is rc.112's, one `Window` cell and one atomic `Ref.modify` a request. Since
+the state plan's T5 its terms print as functions of the window, so it is printed and read back
 (section 4). -/
 def stage : Reach :=
   { refused := []
-    admitted := true, answer := .rc112, printed := false, readBack := false }
+    admitted := true, answer := .rc112, printed := true, readBack := true }
 
 #guard measured = stage
 

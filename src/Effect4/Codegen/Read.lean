@@ -606,7 +606,8 @@ def programHeads : List String :=
 /-- What is not a skeleton, read as the hand fields print it: a bare identifier as a value row,
 a call as a call row, a method call as a method row. A reserved head no row matched is refused
 by its argument list when it heads a program clause, and by its name otherwise. What it reads is
-the operation's form at level 0, the one the row spells (`readPerform` moves it to the node). -/
+the operation the row spells, its face (`Signature.face`): the row's call shows no binder term,
+and `readPerform` installs the function that follows the call's arguments. -/
 def readPerformFace (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op) (spell : String → List String → Option Op)
     (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match x with
@@ -629,19 +630,52 @@ def readPerformFace (classes : Effect4.Codegen.Classes.Classes) (sig : Signature
     (readRowCall classes sig spell n s (ta :: tas) args).getD (.error (.unknownHead s))
   | _ => readMethod classes sig spell n x
 
-/-- A row call read at its face, moved to a node of level `n`: the operation the row spells is
-its form at level 0, and the program carries its form at the node (`Signature.opAtLevel`). -/
-def atNodeLevel (sig : Signature Op) (n : Nat) : Eff Op → Except ReadRefusal (Eff Op)
+/-- The row call an expression holds before its last argument, and that argument's body, when
+the last argument is a function of the current value at level `n`: `(aN) => body`, the binder due
+at the node's level, unannotated (`Binders.read n [0]`). The printer writes an operation's
+binder term there (`withFunction`, `Codegen/PrintLeaf.lean`). `none` for any other tree. -/
+def splitFunction (n : Nat) : Expr → Option (Expr × Expr)
+  | .call head args =>
+    args.getLast?.bind fun last =>
+      (Effect4.Codegen.Binders.read n [0] last).map fun body => (.call head args.dropLast, body)
+  | .method receiver name args =>
+    args.getLast?.bind fun last =>
+      (Effect4.Codegen.Binders.read n [0] last).map fun body =>
+        (.method receiver name args.dropLast, body)
+  | _ => none
+
+/-- A row call read at its face, with the function that followed its arguments installed as the
+operation's binder term (`Signature.withTerm`). An operation that carries no term takes no
+function: the call is refused by its row's spelling, as an argument list the row does not
+print. -/
+def installTerm (sig : Signature Op) (f : Term) : Eff Op → Except ReadRefusal (Eff Op)
   | .perform op r =>
-    match sig.opAtLevel 0 n op with
-    | some op' => .ok (.perform op' r)
-    | none => .error (.shape "operation data")
+    if (sig.termOf op).isSome then .ok (.perform (sig.withTerm op f) r)
+    else .error (.arity (sig.rowOf op).spelling)
   | _ => .error (.shape "operation data")
 
-/-- The row call at a node of level `n`: its face (`readPerformFace`), moved to the node. -/
+/-- A row call read at its face with no function after its arguments: an operation that carries
+no binder term. A term row called without its function is refused by its spelling, never read
+at the face's placeholder term. -/
+def termFree (sig : Signature Op) : Eff Op → Except ReadRefusal (Eff Op)
+  | .perform op r =>
+    if (sig.termOf op).isNone then .ok (.perform op r)
+    else .error (.arity (sig.rowOf op).spelling)
+  | _ => .error (.shape "operation data")
+
+/-- The row call at a node of level `n`. A call whose last argument is the function of the
+current value is a term row's: the call before it is read at its face (`readPerformFace`), the
+function's body as a term one level up, where the current value is the binder at `n`
+(`ScopedOp`'s convention), and the term is installed in the spelled operation. Any other tree is
+read at its face and must name an operation that carries no term. -/
 def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
-  (readPerformFace classes sig spell n x).bind (atNodeLevel sig n)
+  match splitFunction n x with
+  | some (call, body) => do
+    let face ← readPerformFace classes sig spell n call
+    let f ← readTerm classes (n + 1) body
+    installTerm sig f face
+  | none => (readPerformFace classes sig spell n x).bind (termFree sig)
 
 /-- The refusal of a tree that no row of its family matches, named by the family. -/
 def unread : EffFam → ReadRefusal
@@ -884,24 +918,25 @@ def readModule (sig : Signature Op) (spell : String → List String → Option O
     | _, _ => .error (.shape "module")
 
 /-- The reader after the printer: the executed shadow of `read_print`, under the classes the
-program's constructions name (`classesOf`, what its module declares). The printer's refusal
-alphabet is not the reader's, so a printer refusal is reported as the `shape` named `printer`. -/
-def roundTrip (sig : Signature Op) (spell : String → List String → Option Op) (n : Nat)
-    (e : Eff Op) : Except ReadRefusal (Eff Op) :=
+program's constructions name (`classesOf`, what its module declares; an operation's binder term
+is read through `ScopedOp.term?`). The printer's refusal alphabet is not the reader's, so a
+printer refusal is reported as the `shape` named `printer`. -/
+def roundTrip [ScopedOp Op] (sig : Signature Op) (spell : String → List String → Option Op)
+    (n : Nat) (e : Eff Op) : Except ReadRefusal (Eff Op) :=
   match print sig n e with
   | .ok x => readEff (classesOf e) sig spell n x
   | .error _ => .error (.shape "printer")
 
 /-- The program comes back from its own printing: the domain of the round trip, as the round
 trip. What it excludes is listed in the module note. -/
-def readable [DecidableEq Op] (sig : Signature Op) (spell : String → List String → Option Op)
-    (n : Nat) (e : Eff Op) : Bool :=
+def readable [DecidableEq Op] [ScopedOp Op] (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat) (e : Eff Op) : Bool :=
   match roundTrip sig spell n e with
   | .ok e' => decide (e' = e)
   | .error _ => false
 
 /-- `readable` is the round trip. -/
-theorem roundTrip_eq [DecidableEq Op] {sig : Signature Op}
+theorem roundTrip_eq [DecidableEq Op] [ScopedOp Op] {sig : Signature Op}
     {spell : String → List String → Option Op} {n : Nat} {e : Eff Op}
     (hr : readable sig spell n e = true) : roundTrip sig spell n e = .ok e := by
   unfold readable at hr
@@ -921,7 +956,7 @@ def LayerTerm.ReadsBack (classes : Effect4.Codegen.Classes.Classes) (sig : Signa
     (spell : String → List String → Option Op) (l : LayerTerm Op) : Prop :=
   ∀ x, printLayer sig l = .ok x → readLayer classes sig spell x = .ok l
 
-theorem ReadsBack.of_readable [DecidableEq Op] {sig : Signature Op}
+theorem ReadsBack.of_readable [DecidableEq Op] [ScopedOp Op] {sig : Signature Op}
     {spell : String → List String → Option Op} {n : Nat} {e : Eff Op}
     (hr : readable sig spell n e = true) : ReadsBack (classesOf e) sig spell n e := by
   intro x hp
@@ -997,20 +1032,35 @@ def requestReadable (row : Row) (n : Nat) (request : Term) : Bool :=
 /-- A row's printed head reads back (`printRowHead`): a value row prints none, and another
 row's declared type arguments have a legacy spelling (`rowTypeArgs`). A row the printer refuses
 by name (`PrintRefusal.typeSpelling`) is outside: `Deferred.make` at an instance other than the
-faces' until T5 (`NativeOp.deferredTypeArgs`). -/
+faces' (`NativeOp.deferredTypeArgs`). -/
 def rowHeadReadable (row : Row) : Bool :=
   decide (row.shape = .value) || (rowTypeArgs row).isSome
+
+/-- An operation's binder term reads back at a node of level `n` on its row: the term is in
+scope one level up (the current value is the binder at `n`, `ScopedOp`'s convention), the
+module's classes cover its class constructions, no list fold in it states its accumulator's
+type (a stated type is printed and not read), and the row prints a call, which carries the
+term's function (`withFunction`). An operation that carries no term reads back. -/
+def termReadable (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (row : Row) :
+    Option Term → Bool
+  | none => true
+  | some f =>
+    f.scoped (n + 1) && f.covers classes && f.unannotated && !decide (row.shape = .value)
 
 /-! ## What the reader needs of a signature -/
 
 /-- `spell` inverts the row table on (spelling, trailing names) at every row whose head reads
-back (`rowHeadReadable`), a value row has no trailing names (the printer drops them), no
-spelling or trailing name is a binder name, `undefined`, or a reserved head, and an operation
-moved between levels moves back (`Signature.opAtLevel`). -/
+back (`rowHeadReadable`), up to the operation's binder term: it answers the operation's face
+(`Signature.face`), since a row's key does not show the term. A value row has no trailing names
+(the printer drops them), and no spelling or trailing name is a binder name, `undefined`, or a
+reserved head. The last five laws are what a reader needs of an operation's binder term
+(`Signature.termOf`, `Signature.withTerm`): the row does not depend on it, and replacing it is
+an exact update. A signature with the default hooks, which carries no term, meets each by
+computation. -/
 structure LawfulSpelling (sig : Signature Op) (spell : String → List String → Option Op) :
     Prop where
   spell_row : ∀ op, sig.dom op = true → rowHeadReadable (sig.rowOf op) = true →
-    spell (sig.rowOf op).spelling (sig.rowOf op).trailing = some op
+    spell (sig.rowOf op).spelling (sig.rowOf op).trailing = some (sig.face op)
   row_of_spell : ∀ s names op, spell s names = some op →
     (sig.rowOf op).spelling = s ∧ (sig.rowOf op).trailing = names
   value_trailing : ∀ op, (sig.rowOf op).shape = .value → (sig.rowOf op).trailing = []
@@ -1018,17 +1068,28 @@ structure LawfulSpelling (sig : Signature Op) (spell : String → List String �
   spelling_not_reserved : ∀ op, (sig.rowOf op).spelling ∉ reserved
   trailing_ne_name : ∀ op i, Var.name i ∉ (sig.rowOf op).trailing
   trailing_ne_undefined : ∀ op, "undefined" ∉ (sig.rowOf op).trailing
-  /-- An operation moved between two levels moves back (the state plan's T3b): the faces print
-  an operation's form at level 0 and the readers move it back to the node. -/
-  opAtLevel_symm : ∀ a b op op', sig.opAtLevel a b op = some op' → sig.opAtLevel b a op' = some op
+  /-- An operation's row does not depend on its binder term: the faces print the term as a
+  function after the row's call (the state plan's T5). -/
+  withTerm_row : ∀ op f, sig.rowOf (sig.withTerm op f) = sig.rowOf op
+  /-- Replacing an operation's term installs the term, and an operation that carries none still
+  carries none. -/
+  termOf_withTerm : ∀ op f,
+    (sig.termOf (sig.withTerm op f)).map (·.term) = (sig.termOf op).map fun _ => f
+  /-- Replacing an operation's term by itself is the operation. -/
+  withTerm_termOf : ∀ op b, sig.termOf op = some b → sig.withTerm op b.term = op
+  /-- Replacing the term twice is replacing it once. -/
+  withTerm_withTerm : ∀ op f g, sig.withTerm (sig.withTerm op f) g = sig.withTerm op g
+  /-- An operation that carries no term is fixed. -/
+  withTerm_none : ∀ op f, sig.termOf op = none → sig.withTerm op f = op
 
 /-! ## The native profile
 
 `nativeSpell` inverts `NativeOp.row` on (spelling, trailing names) over one representative per
-key (`NativeOp.spelled`): the forty read-modify-write rows share eight spellings and are told
-apart by the pure function's name, the two `Scope.make` rows by the `"parallel"` strategy, and
-`Deferred.make` reads as the one instance whose type arguments the faces spell until T5. `nativeLawful` is the receipt that the native table meets
-`LawfulSpelling`; the two theorems specialise to it below. -/
+key (`NativeOp.spelled`): each of the eight read-modify-write rows at its face, whose term the
+reader replaces by the function it read (`NativeOp.withTerm`), the two `Scope.make` rows told
+apart by the `"parallel"` strategy, and `Deferred.make` as the one instance whose type arguments
+the faces spell. `nativeLawful` is the receipt that the native table meets `LawfulSpelling`; the
+two theorems specialise to it below. -/
 
 /-- The four table requirements: unique keys, no built-in collision, no dropped
 trailing names on a value row, and names outside the reserved/binder alphabets.
