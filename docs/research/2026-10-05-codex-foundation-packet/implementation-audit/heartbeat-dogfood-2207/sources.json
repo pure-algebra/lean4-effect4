@@ -1,0 +1,66 @@
+{
+  "head": "944897edf2d5bb867179423c482f6a40cab09076",
+  "status": "",
+  "files": [
+    {
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md",
+      "sha256": "52ca2bd521afa8e5a07032636dd12bc5053ce36ccba1a2c1fb8d976b5620fa7c"
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844"
+    },
+    {
+      "path": "src/Effect4/Api/Runner.lean",
+      "sha256": "57a2f1a0ecd32bf67cc5c8821df4ad44d857a221e28cdfddf2b02a81688aab5a"
+    },
+    {
+      "path": "src/Effect4/Api/HostSession.lean",
+      "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece"
+    },
+    {
+      "path": "ocaml/engine/e4_engine.mli",
+      "sha256": "564002f00b13ab30504ecfb0884f260765369adb22c4fc28d98a8367a4bf42ec"
+    },
+    {
+      "path": "ocaml/engine/api_engine_inst.ml",
+      "sha256": "98c43cf153aef1f868ace20c451b40e366b879a49e7a10b6f352f30b6e387e47"
+    },
+    {
+      "path": "ocaml/engine/api_engine_ref.ml",
+      "sha256": "17ec02d1456205c37a3551ea55ab6834e5a63d0de4faf35d11b7812f1ae547de"
+    },
+    {
+      "path": "ocaml/engine/api_engine.ml",
+      "sha256": "e9eaba233e87f1a76cbe35eca01fa89df42f3ccfdfded54b7c3d01746a5e9104"
+    },
+    {
+      "path": "ocaml/eff/eff_wire.ml",
+      "sha256": "450fd9d7e5fe0df4f542fc0da3c01253793f4ea65eaf13b81ab4791ed209a664"
+    },
+    {
+      "path": "harness/truth/Truth.lean",
+      "sha256": "6c4284e820d50ae95e930ec0d009a18df3c31c6a7b10ab410bf688766ce6ef44"
+    },
+    {
+      "path": "harness/truth/session/Keyed.lean",
+      "sha256": "7bfdce6a4a961ea8797979e2ebc5a1935da84e0dc1eb09e80daf5b658c446cf6"
+    },
+    {
+      "path": "harness/truth/session/run-keyed.ts",
+      "sha256": "74198e3c56d8f2482c498d99f0d7aa31dd6ddcfab206ad6ed56d47e54ef51a9c"
+    },
+    {
+      "path": "harness/truth/session/keyed-recorder.ts",
+      "sha256": "7b8e14956de4ad1ed11e3ccdf9abb922a30c7fce74ffa16b593338528f96de9a"
+    },
+    {
+      "path": "harness/truth/session/check-keyed.ts",
+      "sha256": "e45edd9f20596267952fca2dd2114967a3a87d676ec54feb31977a4a7bf355f0"
+    },
+    {
+      "path": "Test/Dogfood/P3WorkerQueue.lean",
+      "sha256": "6f4afa7336cfa4d168816ca3dbf8588821150868b75c4e372c44d6f368b82f42"
+    }
+  ]
+}

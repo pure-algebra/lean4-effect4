@@ -1,0 +1,31 @@
+{
+  "head": "944897edf2d5bb867179423c482f6a40cab09076",
+  "scope": "bounded source review of new DOGFOOD brief and existing Lean/OCaml/printed-host connector",
+  "review": "review.md",
+  "source_manifest": "sources.json",
+  "brief_snapshot": "brief-snapshot.md",
+  "source_files": 15,
+  "commands": [
+    "git rev-parse HEAD",
+    "git status --porcelain",
+    "rg and sed on listed files; cat the new brief once"
+  ],
+  "executed_probes": [],
+  "builds": [],
+  "repo_writes": false,
+  "guidance_sent": "parent only; no Claude UI or messages",
+  "new_actionable": [
+    "Use .apply after Rows.receive, not Rows.answer",
+    "Use keyed host lane for the scripted receipt/application scenario",
+    "Current OCaml wrapper fixes empty table; generated api_replay already accepts table",
+    "Do not claim engine session metadata from raw machine replay"
+  ],
+  "limits": [
+    "No generated closure change or compile test",
+    "No current host execution",
+    "New brief was a draft; source hash retained"
+  ],
+  "initial_head": "c3ac5f9c5bf14b63d0be3aabf14813f674ff657e",
+  "end_change": "944897ed commits DOGFOOD brief and updates STATE; implementation files unchanged",
+  "final_clean": true
+}

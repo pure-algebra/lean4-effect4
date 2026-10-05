@@ -52,6 +52,8 @@ language and its faces. Your files and its files do not meet in slices 1 to 3.
 3. Codex's review, your specification:
    `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/dogfood/review.md`.
    It gives each scenario its concept, observation, hypotheses, reuse, controls and exclusions.
+   Then its follow-up on the two lowered routes:
+   `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-dogfood-2207/review.md`.
 4. The five batteries, `Test/Dogfood/P1HttpCache.lean` to `P5LedgerService.lean`.
 5. The run API and its laws: `src/Effect4/Run.lean`, `src/Effect4/Laws/Run.lean` and
    `src/Effect4/Laws/Api/HostSession.lean`. Then their batteries: `Test/Run/RunContract.lean`
@@ -87,7 +89,11 @@ A new module, `Test/Dogfood/Scenario.lean`.
 
 - It selects a live call by its key, through `Api.HostSession.Call.at`
   (`src/Effect4/Run.lean`).
-- It keeps receipt and application apart: `Rows.receive` and `Rows.answer`, in the same file.
+- It keeps receipt and application apart. `Rows.receive` is the receipt. The application is the
+  command `.apply key`, through `Run.step` or `Run.play`, as the driver of
+  `Test/Dogfood/P3WorkerQueue.lean` does.
+- Do not use `Rows.answer` after a receipt. It binds, submits and applies in one, so the journal
+  would hold a second receipt that the session refuses.
 - Every decision goes into the existing journal. Replaying the journal must not run the host
   fixture again (`journal_replays`, `play_controls_eq_replay`, `src/Effect4/Laws/Run.lean`).
 - It holds the scenario's record: its name, its observation's name and its claim.
@@ -130,19 +136,50 @@ Extend the consumer of `Test/Dogfood/P2HandlerLayers.lean`, on its admitted `han
 Begin this slice only after the coordinator's message that the term seat is merged. Merge
 `refactor/phase1-phase3` into your branch first.
 
-- **The engine.** Run each scenario's program on the generated OCaml engine, with the
-  scenario's script. Read `ocaml/engine/test/test_host.ml` and `test_engine.ml` first. Compare
-  the named observation.
-- **The host.** A scenario's program that prints enters the truth lane: `corpus` in
-  `harness/truth/Truth.lean`. `make gen-truth` writes its files, and `make check-truth`
-  compares the exit, the schedule and the synchronous exit on the pin.
-- **A program that does not print stays out.** The printer refuses a binder term by name until
+**The host.** Two routes exist, and you add none.
+
+- **A script that keeps receipt and application apart** runs on the keyed lane:
+  `harness/truth/session/Keyed.lean`, `run-keyed.ts`, `keyed-recorder.ts` and `check-keyed.ts`.
+  Its controls `KeyedTool.two` and `KeyedTool.shared` already run two parked calls in both
+  arrival orders and both application orders, on a printed program.
+- **A script with no separate order** may enter the truth lane: `corpus` in
+  `harness/truth/Truth.lean`. Its `fixtureRun` calls `Api.run` with a list of completions, so
+  it does not keep the two commands apart.
+- The keyed recorder refuses an operation that completes after its cancellation. A scenario
+  that needs that case states it as waiting, and you propose the bounded extension.
+- A program that does not print stays out. The printer refuses a binder term by name until
   the faces of a binder term land. Record that stage as waiting. Do not rewrite a program to
   avoid the refusal.
-- **A lane that cannot carry a script is a finding.** State the gap and the smallest extension
-  that would close it. Do not write a second runner.
-- Do not run `make gen-truth-ledger` or `make check-truth-release`. The coordinator promotes
-  the build ledger at your merge.
+
+**The engine.** The production interface `E4_engine.INSTANCE` takes no row table.
+`ocaml/engine/api_engine_inst.ml` and `api_engine_ref.ml` fix the table to the empty list.
+
+- Call the generated `api_replay` (`ocaml/engine/api_engine.ml`) through an adapter that lives
+  in the test. It takes the program, the command fuel, the decision tape, the answers, the row
+  table and the compile fuel. Do not change the production interface.
+- Read the row table from its wire bytes, with `decode_row` and its helpers in
+  `ocaml/eff/eff_wire.ml`. Convert it into the instance's row type by a checked conversion.
+  Bind those bytes to the Lean fixture that `Api.Author.build` admits. Never write a table by
+  hand.
+- Compare after each control that made progress and after each applied answer. A refused
+  receipt leaves the machine unchanged. An application at budget zero leaves its reply pending.
+- Do not turn a frontier into a successful application, and keep its remainder.
+
+**The observation's boundary.** The generated engine holds no session state: no pending reply,
+no retired call, no consumed call. So a scenario's observation lands as two placed clauses.
+
+1. The session clause: the whole observation, checked in Lean and on the keyed host lane.
+2. The machine clause: a named projection of the machine, checked by the table-aware replay on
+   the engine.
+
+The engine's session clause stays waiting, and you say so. Do not copy Lean's session record
+into the OCaml result: that would test nothing of OCaml.
+
+**A lane that cannot carry a script is a finding.** State the gap and the smallest extension
+that would close it. Do not write a second runner, and change no production API.
+
+Do not run `make gen-truth-ledger` or `make check-truth-release`. The coordinator promotes the
+build ledger at your merge.
 
 ### 5. Atomic state with failure and cleanup
 
@@ -186,6 +223,12 @@ it is reported as a finite probe.
 
 - Give each goal `@[semantics "<concept>" (requirement := Rn)]`, and name its consumer in its
   docstring: the scenario.
+- The session clauses reuse the registry's `reply-commute` and its admission claims, under R6.
+  The machine clause of slice 4 belongs to `translation-simulation`, serving R8 and R13.
+  Cleanup by identity is a clause of `scope-lifetime-finalization`, under R11.
+- State the projection, the real table, the budgets, the value profile and the accepted-phase
+  premises before you state a goal. Keep receipt and application apart, safety and progress
+  apart, and a finite run and a proof apart.
 - Do not edit `tools/Tools/SemanticsRegistry.lean`. Propose each registry claim in the receipt.
 - Before a proved top node of a requirement would rest on a new goal, stop and report.
 - Keep the seven judgments apart. An accepted receipt does not establish the executable
