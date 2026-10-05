@@ -190,7 +190,9 @@ Open at this landing:
   (rows 244 to 246). Its slice follows seat T3b's merge;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
-- the migration plan to 4.0.1 is owed (row 248);
+- the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
+  for review (row 248): each area is cut over in place, and the truth lane runs both builds
+  with one ledger. Its first slice is the release's truth lane;
 - the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
   with its model. It has one constructor of `Term`, the identity of a handle as one atom, and
   the six steps of the groundwork plan as terms. Its slice follows seat T3b's merge;
