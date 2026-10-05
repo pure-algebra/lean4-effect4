@@ -1,0 +1,25 @@
+{
+  "head": "246295eee67d02af4187a105ca4566f8ad45cba8",
+  "scope": "Uncommitted core source",
+  "sources": {
+    "src/Effect4/Machine/Term.lean": "4dfebbe9d27217db0d3fca85ef7bf4fd72b437020906189b1818369877fdbff4",
+    "src/Effect4/Program/Eff.lean": "6118a369cf30f88ae41e1811d84cdf00fb9158748d9174e6692a048b28bdfb37",
+    "src/Effect4/Program/Typing/Rules.lean": "62cd540f247ca039174c1fffc9df3e9a64c1038f6b4a6603b6404f2659b8ce23",
+    "src/Effect4/Program/NativeAtom.lean": "3aa52077d92ade199ebe8cefc99f193ad45861fb6d8b08275453262167e75477",
+    "src/Effect4/Program/Formation.lean": "b29b7df835a20d6c57203af079e6951702ecf4df4cecd0ba46726e9b964bdd82",
+    "src/Effect4/Program/Typing/TermRefusal.lean": "de36cd16aea81d86bd2a4d943bce05dc1e517efb9f24f25ce09ad1c97829d82e",
+    "src/Effect4/Program/Checker.lean": "4fb555881b335887d1b7a75570f01a4a4bb818a5acdbda94f0e3cb8be087f689",
+    "src/Effect4/Program/Native.lean": "3cbc4b800b9d5b06abc6f8891b88afaa5f4bf8d3c7424107cd60ec3b078207c3",
+    "src/Effect4/Program/Admission.lean": "4ef4539a87ae5b273cbb06d318c84180513c2958370b2797b5f7fc981e6f6062",
+    "src/Effect4/Program/Fold.lean": "764ddd61a4352730f42e21db691777d975f6ee6bb364c05aef462327f3ffa93f",
+    "src/OCaml5/Eff/Goldens.lean": "681eb742391eb06eb784e4662a20a7b50c6c2dde2208babc2027983a10d780e7"
+  },
+  "diff_sha256": "f53edab123c0e1a63ca6f73d4be65310ae00b02a820c302d4c74bbee14b5fd92",
+  "finding": "Raw fold annotations carried by NativeOp binder terms are absent from Formation.argumentAnnotations traversal. Uncompiled admission candidate retained.",
+  "finding_status": "source-confirmed collector omission; end-to-end admission candidate not Lean-checked",
+  "prior_guidance_correction": "F4 explicitly allows any equal-kind raw handles; restrict refusal recommendation to typing/admission",
+  "no_lean_execution": true,
+  "no_builds_generators_installs": true,
+  "no_repo_edits": true,
+  "no_ui_or_claude_message": true
+}

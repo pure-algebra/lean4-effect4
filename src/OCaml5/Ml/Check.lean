@@ -156,13 +156,17 @@ def knowsValue (e : Env) (n : String) : Bool :=
 def opened (e : Env) : Env := { e with openScope := true }
 
 /-- The `shadowed-value` diagnostics of binding `ns` at this scope: empty unless `noShadow` is
-set. `_` and `()` bind nothing. -/
+set. The names of one batch are read in order, so a parameter that repeats an earlier one of
+the same batch is a diagnostic too (`fun x x -> …`). `_` and `()` bind nothing. -/
 def shadows (e : Env) (site : String) (ns : List String) : List Diag :=
   match e.noShadow with
   | none => []
   | some guarded =>
-    (ns.filter fun n => n != "_" && n != "()" && (e.values.contains n || guarded.contains n)).map
-      fun n => { code := "shadowed-value", site := site, detail := "`" ++ n ++ "`" }
+    (ns.foldl (init := (([] : List String), ([] : List Diag))) fun (seen, found) n =>
+      if n == "_" || n == "()" then (seen, found)
+      else if seen.contains n || e.values.contains n || guarded.contains n then
+        (n :: seen, found ++ [{ code := "shadowed-value", site := site, detail := "`" ++ n ++ "`" }])
+      else (n :: seen, found)).2
 
 private def lookupArity : List (String × Nat) → String → Option Nat
   | [], _ => none

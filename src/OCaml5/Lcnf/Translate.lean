@@ -153,6 +153,10 @@ structure St where
   /-- OCaml names an extern row hands to a hand body as a leading argument. They are ordinary
   generated declarations, so they must be **emitted before** this one: `emit` adds the edge. -/
   externDeps : Array String := #[]
+  /-- The unqualified heads of the extern rows and carrier operations this declaration used:
+  hand functions of the prelude. A generated declaration must not take one of these names, or
+  it would stand between the call and the hand function (`hygieneProblems`). -/
+  externHeads : Array String := #[]
   /-- Free variables whose value is a *carrier* rather than the list Lean writes, by the
   carrier's key. A value enters the set at a `field`-row projection, at a `carg` parameter and
   at the result of a carrier operation, and leaves it through `to_list`. -/
@@ -246,6 +250,15 @@ def noteFree (ns : List String) : TM Unit :=
     let refs := ns.foldl (init := s.freeRefs) fun acc n =>
       if isQualified n || acc.contains n then acc else acc.push n
     { s with freeRefs := refs }
+
+/-- Record the head of an extern row or of a carrier operation: free in the body, as any name
+is, and kept apart as the name of a hand function. -/
+def noteExternHead (f : ExternFn) : TM Unit := do
+  noteFree f.headNames
+  modify fun s =>
+    let heads := f.headNames.foldl (init := s.externHeads) fun acc n =>
+      if acc.contains n then acc else acc.push n
+    { s with externHeads := heads }
 
 /-- Bind a free variable to a fresh OCaml name. -/
 def bindVar (id : FVarId) (n : Name) : TM String := do
@@ -441,7 +454,7 @@ def carrierOp? (c op : String) (args : List Ml.Expr) : TM (Option Ml.Expr) := do
   | none => return none
   | some f =>
     let deps := f.literals
-    noteFree f.headNames
+    noteExternHead f
     modify fun s =>
       { s with usedOps := if s.usedOps.contains s!"{c}#{op}" then s.usedOps
                           else s.usedOps.push s!"{c}#{op}",
@@ -680,7 +693,7 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
     | some f =>
       let key := (exx.fnRowKey? n (some relCount)).getD n
       let deps := f.literals
-      noteFree f.headNames
+      noteExternHead f
       modify fun s =>
         { s with usedExterns := if s.usedExterns.contains key then s.usedExterns
                                 else s.usedExterns.push key,
@@ -888,6 +901,9 @@ structure Translated where
   /-- The unqualified names the body leaves free (`St.freeRefs`): what `hygieneProblems` holds
   the binders against. -/
   freeRefs : Array String := #[]
+  /-- The unqualified heads of the extern rows and carrier operations the body calls
+  (`St.externHeads`): names of hand functions, which no generated declaration may take. -/
+  externHeads : Array String := #[]
   /-- The LCNF signature, for the reader. -/
   signature : String
   recursive : Bool
@@ -946,7 +962,7 @@ def translateDecl (env : Environment) (d : LCNF.Decl .pure) (userName : Name) (o
     let sig := s!"{d.name}{sketchParams d.params} : {sketchType rty}"
     return { leanName := d.name, userName := userName, ocamlName := ocamlName, bind := b,
              callees := callees, externDeps := (← get).externDeps,
-             freeRefs := (← get).freeRefs, signature := sig,
+             freeRefs := (← get).freeRefs, externHeads := (← get).externHeads, signature := sig,
              recursive := d.recursive || callees.contains d.name }
   -- A join point is translated before the jumps to it, so which of its parameters are handed
   -- a carrier is known only after a pass: translate again with those parameters seeded until
@@ -1143,16 +1159,23 @@ def emit (ds : Array Translated) : Except String (List Ml.Decl) := do
 check does not trust them: it reads the translated declarations. -/
 
 /-- The name hygiene of translated declarations. In each one, no binder hides an enclosing
-binder, and no binder takes a name that the body means as free: a reserved name, a name the
-translator recorded (`Translated.freeRefs`), or a literal argument of an extern row that names
-a declaration of this closure. Empty means every reference resolves to the binder or the
-declaration the translator meant. A literal argument that names no declaration is a binder of
-its caller by design (`root`), and stays outside the check. -/
+binder or an earlier parameter, and no binder takes a name that the body means as free: a
+reserved name, a name the translator recorded (`Translated.freeRefs`), or a literal argument of
+an extern row that names a declaration of this closure. No generated declaration takes the
+name of a hand function that an extern row of some declaration calls: the hand prelude comes
+first in the module, so the generated one would stand between the call and it. Empty means
+every reference resolves to the binder, the declaration or the hand function the translator
+meant. A literal argument that names no declaration is a binder of its caller by design
+(`root`), and stays outside the check. -/
 def hygieneProblems (ds : Array Translated) : List String :=
   let emitted := ds.map (·.ocamlName)
-  ds.toList.flatMap fun d =>
+  let binders := ds.toList.flatMap fun d =>
     let guarded := protectedNames ++ translatorNames ++ d.freeRefs.toList
       ++ (d.externDeps.filter emitted.contains).toList
     (Ml.shadowDiags guarded d.bind).map fun diag => s!"{d.leanName}: {diag.toLine}"
+  let heads := ds.toList.flatMap fun d =>
+    (d.externHeads.filter emitted.contains).toList.map fun head =>
+      s!"{d.leanName}: the extern head `{head}` is also the name of a generated declaration"
+  binders ++ heads
 
 end OCaml5.Lcnf

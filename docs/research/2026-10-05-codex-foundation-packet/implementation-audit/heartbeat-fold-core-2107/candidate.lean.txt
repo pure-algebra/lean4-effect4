@@ -1,0 +1,23 @@
+-- Uncompiled candidate for the seat. No monitor Lean execution.
+-- Suggested imports: Effect4.Program.Admission.
+-- Use the project's existing open namespaces and NativeEff alias.
+
+def badFold (level : Nat) : Term :=
+  .fold (some (.list (.map .nat .nat)))
+    (.app "nil" .nil) (.app "nil" .nil) (.var level)
+
+def hiddenBadFold : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.perform (.refModifyWith
+      (.app "pair" (.cons
+        (.app "length" (.cons (badFold 2) .nil))
+        (.cons (.var 1) .nil)))) (.var 0))
+
+def visibleBadFold : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.succeed (.app "length" (.cons (badFold 1) .nil)))
+
+-- Compare Formation.checkInput on hiddenBadFold and visibleBadFold.
+-- Check ordinary admitProgram on hiddenBadFold.
+-- Positive accepted control: replace .map .nat .nat with .map .string .nat.
+-- Desired corrected behavior: both bad placements refuse the annotation.

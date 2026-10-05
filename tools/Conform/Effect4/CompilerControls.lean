@@ -219,6 +219,26 @@ private def captured (guarded : List String) (params : List String) (body : Ml.E
 #guard captured [] ["x"]
   (.letIn "p" (.fn ["_b1"] (.var "_b1")) (.letIn "q" (.fn ["_b1"] (.var "_b1")) (.var "x")))
     == []
+-- a parameter that repeats an earlier one of its own batch, at the top and in a function
+#guard captured [] ["x", "x"] (.var "x") == ["`x`"]
+#guard captured [] ["x"] (.fn ["y", "y"] (.var "y")) == ["`y`"]
+-- `_` and `()` bind nothing, however often they stand
+#guard captured [] ["_", "_"] (.fn ["()"] (.fn ["()"] .unit)) == []
+
+/-! ### Names: a generated declaration does not take a hand function's name
+
+The hand prelude comes first in the engine's module. A generated declaration with the name of a
+hand function would answer every later call of the extern row that names it. -/
+
+private def calling (name : String) (head : String) : Lcnf.Translated :=
+  { (default : Lcnf.Translated) with
+    ocamlName := name
+    leanName := Name.mkSimple name
+    externHeads := #[head]
+    bind := { name, body := Ml.Expr.call head [.unit] } }
+
+#guard (Lcnf.hygieneProblems #[decl "sh_machine_finished", calling "caller" "sh_machine_finished"]).length == 1
+#guard (Lcnf.hygieneProblems #[decl "machine_finished", calling "caller" "sh_machine_finished"]).isEmpty
 
 /-! ### A row without a contract does not elaborate
 
