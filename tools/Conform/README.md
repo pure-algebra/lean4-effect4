@@ -89,6 +89,7 @@ the whole input without a second decoder. `Test.Program.TypingCheckContract` exe
 | `Lcnf.Index`, `Lcnf.Validity` | One persisted mono index per walk, structural checks, explicit opt-in on-demand compilation with phase diagnostics |
 | `Lcnf.Cases`, `Lcnf.Rules`, `Manifest` | Compiler walkers and indexed lookups, with deterministic output ordering |
 | `Lcnf.Semantics`, `Lcnf.SemanticsTarget` | Bounded source and target interpreters with separate fuel bounds |
+| `Lcnf.TargetLaws` | Laws of the target evaluator: `let x = e in x` and `e` have one outcome at related fuels. Its axiom list holds `Classical.choice`, from the evaluator's own definition |
 | `Effect4` | Named profiles, actual fixtures, the fidelity inventory read off the OCaml builtin table, the name fixtures and target adapters |
 | `Cli` | Thin executable drivers; reusable LCNF modules expose namespaced entry points |
 

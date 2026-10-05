@@ -188,6 +188,7 @@ import Test.Program.ErrorQueriesContract
 import Test.Program.CatchIfContract
 import Test.Audit.RuntimeCoverage
 import Test.Audit.ClockLowering
+import Test.Audit.LetReturn
 import Test.Audit.AxiomGate
 import Test.Audit.PositionCensus
 import Test.Audit.PositionAnalysis
