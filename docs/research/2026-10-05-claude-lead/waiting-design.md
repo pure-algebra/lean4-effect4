@@ -3,6 +3,9 @@
 Status: research note (history, not authority). Base: `5ebacecc` (`refactor/phase1-phase3`).
 A design for review. No file of the tree changed.
 
+**Signed off 2026-10-05.** The owner signed off proposals 1, 2 and 4 in session, after Codex's
+review. Decisions rows 238 and 239 and row 227's amendment are the authority.
+
 **The one thing to know first.** Decisions row 237 asks for the exact form of the posted signal,
 and for the owner's sign-off before a seat builds it. Five results:
 

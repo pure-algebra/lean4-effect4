@@ -158,13 +158,17 @@ Where to read:
 - [the landing review](research/2026-10-05-claude-lead/landing-review.md): what the session of
   2026-10-04 landed.
 
-Three more rulings of the same day (rows 235 to 237):
+More rulings of the same day (rows 235 to 239):
 
 - the Queue's TypeScript face prints the expansion by default, and the native queue only under a
   narrower named profile;
 - 4.0.1's source is vendored beside rc.112's for citation, and the pin does not move;
 - the coordinator staffs one seat for each slice in row 233's order, at most two at once;
-- the owner signs off the posted signal's construct before a seat builds it.
+- the posted signal is a detached fork with a deferred start, and no construct is added (row
+  238);
+- the mask is a saved Boolean, with one fiber action that reads the interruptibility (row 239);
+- a second note, on the mask's admission check and its printed form, comes before any seat;
+- a recognized `restore` may escape its mask (row 227, amended).
 
 Open at this landing:
 
