@@ -4,19 +4,22 @@ Status: research note (history, not authority). Base: `4520f3a3` (`refactor/phas
 
 **The one thing to know first.** Five results change the queues plan.
 
-1. `Deferred` is needed, and it is enough. No explicit Latch is needed: a Latch is derived from one
-   cell and `Deferred`.
+1. The queue needs `Deferred`, the blocking cell this tree already has, and no Latch.
 2. The pinned `Queue` (rc.112) has three defects. Runs on the pin show each one, and the released
    4.0.0 repairs each one.
-3. A fourth behaviour is in rc.112 and in 4.0.0, and not in Effect 3.22.2. A taker that waits
-   first receives nothing, while a later taker receives every message.
+3. A fourth behaviour is in every Effect 4 build, and not in Effect 3.22.2. In the finite runs a
+   later taker receives each message while an earlier taker waits.
 4. So rc.112's source is not a fit reference for the queue. The proposal is one small abstract
-   queue that serves its waiters in arrival order, as Effect 3 serves takers.
+   queue: Effect 4's wake-and-retry with a turn check, each transition one atomic step.
 5. The full API needs list operations that the term language lacks. The plan counted two atoms;
    the batch operations need more, or need rounds.
 
 This note supersedes the recommendations of the queues plan
 (`docs/research/2026-10-04-claude-lead/queues-plan.md` §3). Nothing here is a ruling.
+
+The note was amended on 2026-10-05 after Codex's review. The section "What Codex's review
+changed" lists the claims of the first draft that it refuted, and F5 to F13 state the corrected
+contract.
 
 ## Question
 
@@ -36,10 +39,12 @@ The owner asked four things on 2026-10-05:
 | `docs/research/2026-10-05-claude-lead/queue-probes/queue-faults.ts` on rc.112, on 4.0.0, on 4.0.1 and on Effect 3.22.2, with bun 1.4.2; each output sits beside it | tested |
 | `src/Effect4/Machine/Wake.lean`, `src/Effect4/Machine/Fibers.lean`, `src/Effect4/Machine/Term.lean`, `src/Effect4/Program/Eff.lean` | read |
 | Codex's survey, `queue-questions-survey-2026-10-05.md`, and its model `queue-offerer-repoll-probe.py`, in `/private/tmp/codex-effect4-overnight-monitor/` | read |
-| The observation packet §2.5 (`docs/research/2026-09-20-open-design-issues-order-and-observation-packet.md`); decisions rows 79, 81, 204, 205 and 216; DI-11 | read |
+| The observation packet §2.5 (`docs/research/2026-09-20-open-design-issues-order-and-observation-packet.md`); decisions rows 79, 81, 204 and 205; DI-11 | read |
 | The source tree of 4.0.0 against the pin, file by file | tested (a diff) |
 | npm's latest version of `effect` | read: 4.0.1. Downloaded on the owner's word; its `Queue.ts` equals 4.0.0's byte for byte (tested) |
-| Any Lean file, any proof | not written |
+| Codex's review of the first draft, `plan-review.md`, in `/private/tmp/codex-effect4-overnight-monitor/2026-10-05-deferred-latch-probes/` | read; each finding checked by reading; its 27 model assertions were not run again |
+| `docs/research/2026-10-05-claude-lead/queue-probes/QueueModel.lean`, a pure model of the corrected contract | tested: every control holds, and the bounded exploration passes |
+| Any Lean file of the tree, any proof | not written |
 
 ## Findings
 
@@ -52,9 +57,8 @@ The owner asked four things on 2026-10-05:
   cell and awaits that `Deferred`. `open` sets the flag and resolves it. `release` swaps in a new
   `Deferred` and resolves the old one. Each is one atomic update and one resolution.
 - **The one difference.** rc.112's Latch posts its wake as a task. A `Deferred` wakes its waiters
-  inside the resolving step. F5 shows that the recommended queue never depends on that
-  difference for its answers.
-- **`Deferred` is the one cell that blocks.** A program holds it as first-order data. The machine
+  inside the resolving step. The queue of F6 needs no posted wake.
+- **`Deferred` is the blocking cell this tree chose.** A program holds it as first-order data. The machine
   already gives it a waiter list with a cancel rule (`WakeList.cancel`,
   `src/Effect4/Machine/Wake.lean`) and typed-state clauses.
 - **Effect's own practice.** rc.112's `PubSub` parks each waiter on its own `Deferred` and removes
@@ -63,8 +67,10 @@ The owner asked four things on 2026-10-05:
   (`src/Effect4/Machine/Fibers.lean`) exist, and no program-visible row reaches them. The queue
   does not need them.
 
-So the answer to question 1: keep `Deferred`, add no Latch. A Latch module lands later as a
-derived module, when a program calls it. The corpus has 3 such uses (the queues plan §1).
+So the answer to question 1: keep `Deferred`, and add no Latch for the queue. The derivation
+above is a sketch. It does not discharge row 81, which asks what a Latch module owes on its
+batch, its cancellation, its coalescing and its dispatcher. The corpus has 3 uses of Latch (the
+queues plan §1).
 
 ### F2. The probes: the pin, the release and Effect 3
 
@@ -83,7 +89,9 @@ Each row is one finite run with bun 1.4.2. The probe file states each schedule.
   first wait. The run then showed it.
 - **P1 is a change from Effect 3.** Effect 3.22.2 serves the taker that waited first. Every
   Effect 4 build lets a running taker receive a message offered while another taker was parked.
-  With this schedule the first taker never receives one. 4.0.1 is the latest release on npm.
+  In six rounds the first taker receives none. 4.0.1 is the latest release on npm. Codex's own
+  run of eight rounds shows the same, with a control. This is a finite bypass, not a proof of
+  starvation.
 - **A correction.** The first run of these probes loaded 4.0.0 from bun's cache, not the pin. The
   probe now takes its package directory from `EFFECT_DIR` and prints the version it loaded.
 
@@ -136,89 +144,98 @@ Two waiting protocols live in this one module:
 
 ### F5. What the formal reading shows
 
-1. **The order of takers is a choice, and Effect 4 changed it.** Effect 3 hands each message to
-   the taker that waited longest. Effect 4 wakes a taker and lets it race.
-2. **Wake-and-retry makes an answer depend on the schedule.** Which taker receives a message is
-   decided after the offer, by which fiber runs first. Under service in order it is decided
-   inside the atomic step. Then the time of the wake changes no answer of the queue.
-3. **Wake-and-retry cannot keep a batch minimum and also protect the batch taker.** rc.112
-   dropped the minimum (P2). 4.0.0 keeps it and lets smaller takers overtake.
-4. **The check and the registration must be one step.** rc.112 makes them two. 4.0.0 tests
+1. **The order of takers is a choice, and Effect 4 changed it.** In the run of F2, Effect 3 hands
+   the first message to the taker that waited longest. Effect 4 wakes a taker and lets it race.
+2. **An answer depends on the schedule when a new take may pass a waiting one.** A turn check
+   inside the atomic step removes that dependence, as long as no waiting request is withdrawn.
+3. **A batch minimum and the batch taker's turn can both be kept.** rc.112 dropped the minimum
+   (P2). 4.0.1 keeps it and lets a new take pass. A retry that checks its turn and its minimum
+   inside the atomic step keeps both (Codex's review).
+4. **The check and the registration must be one step.** rc.112 makes them two. 4.0.1 tests
    readiness once more as it registers. One atomic update makes the question go away.
 5. **Closing must wake the takers that wait** (P3).
 6. **A withdrawn request must leave the queue in every phase** (P4).
-7. **A waiting taker is a free slot.** Then capacity zero needs no special case.
+7. **Capacity zero needs no special state.** The taker's step takes the message from the first
+   pending offer, as 4.0.1 does.
+8. **Consumption needs one irreversible point.** The proposal: the atomic step of the taker that
+   receives the message. A request that is withdrawn then never held a message.
 
-Points 4 to 7 are the three defects and one special case of F2 and F4. Each follows from one
-rule: every transition of the queue is one atomic step on one state.
-
-### F6. The proposed design: one cell, one pure step, service in arrival order
+### F6. The proposed design: Effect 4's protocol with a turn check, in one cell
 
 The design keeps DI-11: the queue is a composite program over `Ref` and `Deferred`, and no
 machine store is added.
 
 - **One cell.** A `Ref` holds one record with these parts:
   - the buffered messages;
-  - the requests that wait;
-  - the answers of served requests that are not collected yet;
-  - the capacity, the strategy and the phase (open, closing or done).
+  - the take requests that wait, in arrival order, each with its bounds;
+  - the pending offers, in arrival order, each with its messages;
+  - the awaiters, the capacity, the strategy and the phase (open, closing or done).
 - **One pure step.** Each operation is one `Ref.modify`. Its term takes the state and the
-  request. It answers the new state, the reply to the caller, and the `Deferred`s to resolve.
-- **Service in arrival order.** A step that adds messages serves the takers that wait, oldest
-  first. A step that frees room accepts the offers that wait, oldest first. A new request never
-  overtakes a waiting one.
-- **A `Deferred` carries no data.** It tells its fiber to look at the cell. Every message stays
-  in the cell until its fiber collects it.
-- **One wrapper for every operation that waits.** It allocates the `Deferred`, runs the step,
-  resolves the answered `Deferred`s, awaits, then collects. It has no retry loop.
+  request. It answers the new state, the reply to the caller, and the requests to signal.
+- **No reservation.** A message leaves the buffer only in the step of the taker that receives
+  it.
+- **A turn check.** A take succeeds only when it is ready and no earlier waiting taker blocks it.
+  A new take registers behind the takers that wait.
+- **Offers in order.** A pending offer keeps its messages. The step that frees room accepts them
+  in arrival order, as rc.112 and 4.0.1 do.
+- **A `Deferred` is a hint.** The signalled request runs its own step again. A request that must
+  wait again takes a fresh `Deferred`.
+- **One wrapper for every operation that waits.** It installs the cleanup, runs the step,
+  resolves the signals the step answered, awaits, and runs the step again.
 
 The diagram shows the life of one request. It shows states and transitions; it proves nothing.
 
 ```mermaid
 stateDiagram-v2
   [*] --> issued: a fiber calls the operation
-  issued --> answered: the step serves it at once
-  issued --> waiting: the step registers it
-  waiting --> served: a later step serves it and resolves its Deferred
-  served --> answered: its fiber wakes and collects the answer
+  issued --> answered: its step is ready and has the turn
+  issued --> waiting: its step registers it
+  waiting --> signalled: a later step finds it ready and resolves its Deferred
+  signalled --> answered: its fiber wakes, and its step consumes the messages
+  signalled --> waiting: its step finds it not ready, and it waits again
   waiting --> withdrawn: its fiber is interrupted
-  served --> withdrawn: its fiber is interrupted before it collects
+  signalled --> withdrawn: its fiber is interrupted before its step
   answered --> [*]
   withdrawn --> [*]
 ```
 
-A served request that is withdrawn returns its messages to the front of the buffer. The same
-step then serves the next waiter.
+This is Effect 4's own wake-and-retry (F4) with one added rule, the turn check. It is not the
+signalling of Hoare's monitors: the signaller keeps running, and the woken request checks again
+(Codex's review).
 
-This is a known design, not a new one:
+A pure Lean model states this contract and runs it:
+`docs/research/2026-10-05-claude-lead/queue-probes/QueueModel.lean`, with its output beside it
+(tested). It imports nothing from the tree.
 
-- Effect 3 serves takers this way (P1), and Effect 4 serves offerers this way (F4).
-- It is the monitor in which a signal hands the condition to the waiter (Hoare, 1974,
-  *Monitors: An Operating System Structuring Concept*; by name). Wake-and-retry is the other
-  monitor, in which a signal is a hint (Lampson and Redell, 1980, *Experience with Processes and
-  Monitors in Mesa*; by name).
+- Each of Codex's countermodels is a control that holds on it.
+- So are P1, P2 and P4, and Codex's contender for the order of offers.
+- A bounded exploration runs every sequence of at most five operations from ten, at four
+  capacities and both turn policies: 111,111 runs each. Each run keeps two properties. A bounded
+  queue never exceeds its capacity. A taker that is ready and has the turn was signalled.
+- A red control drops the signal of a withdrawal, and the exploration then fails.
 
 ### F7. The full API on this design
 
-| Operation | What its one step does | Waits | Against the pin and 4.0.0 |
+| Operation | What its one step does | Waits | Against the pin and 4.0.1 |
 | --- | --- | --- | --- |
 | `make`, `bounded`, `unbounded`, `dropping`, `sliding` | Allocates the cell with its capacity and strategy | no | The same |
-| `offer` | Serves the first waiting taker, or buffers the message. On a full queue: answers `false` (dropping), drops the oldest message (sliding), or registers the offer with its message (suspend) | suspend only | The same answers |
-| `offerAll` | Accepts the prefix that fits and registers the rest as one request, so a batch stays together | suspend only | The same answers |
-| `take` | Answers the oldest free message, or registers behind the takers that wait | yes | Effect 3's order; Effect 4 lets a running taker overtake |
-| `takeBetween`, `takeN`, `takeAll` | Answers at its turn, when its minimum is free; takes up to its maximum | yes | The minimum is kept, as 4.0.0; proposal 4 rules the turn order |
-| `poll` | Answers the oldest free message, or `none` | no | Sees only messages that no waiting taker is owed |
+| `offer` | Buffers the message when room exists. On a full queue: answers `false` (dropping), drops the oldest message (sliding), or registers the offer with its message (suspend) | suspend only | The same answers |
+| `offerAll` | Accepts the prefix that fits. Registers the rest as one request (suspend) or answers it as the remainder | suspend only | The same answers |
+| `take` | Consumes the oldest message when it is ready and has the turn; otherwise registers behind the takers that wait | yes | 4.0.1 lets a new take pass a waiting one |
+| `takeBetween`, `takeN`, `takeAll` | The same, with its minimum capped as 4.0.1 caps it; takes up to its maximum | yes | The minimum is kept, as 4.0.1 |
+| `poll` | Consumes the oldest message, or answers `none`; never passes a taker that is ready | no | 4.0.1's `poll` may pass a waiting taker |
 | `peek` | Answers the oldest message and leaves it; waits at its turn | yes | The same contract |
-| `clear` | Removes every free message, then accepts the offers that wait | no | The same contract |
-| `size`, `isFull`, `isEmpty` | Reads the count of free messages | no | Counts free messages only |
-| `fail`, `failCause`, `end`, `interrupt` | Records the exit. An empty queue is done at once. Otherwise it is closing, and each waiting taker is served from what is left | no | As 4.0.0 |
-| `shutdown` | Drops the buffer, marks the queue done and answers every waiter | no | As 4.0.0 |
+| `clear` | Removes every buffered message, then accepts the offers that wait | no | The same contract |
+| `size`, `isFull`, `isEmpty` | Reads the count of buffered messages | no | The same |
+| `fail`, `failCause`, `end`, `interrupt` | Records the exit. An empty queue is done at once. Otherwise it is closing: a taker then needs one message only | no | As 4.0.1 |
+| `shutdown` | Drops the buffer, marks the queue done and signals every waiter | no | As 4.0.1 |
 | `await` | Registers until the queue is done | yes | The same |
-| The interruption of a waiter | Withdraws its request in every phase | — | As 4.0.0 |
-| `into`, `collect` | Derived from the operations above | — | `into` needs the mask that restores the caller's state (row 216) |
+| The interruption of a waiter | Withdraws its request in every phase | — | As 4.0.1 |
+| `into`, `collect` | Derived from the operations above | — | `into` needs the mask that restores the caller's state |
 
-A message is free when no waiting taker is owed it. Capacity counts free messages. A waiting
-taker therefore counts as one free slot, and `bounded(0)` works with no special case.
+Capacity counts buffered messages. A capacity of zero works through the taker's step, which
+takes from the first pending offer. The contract keeps `offerAll`'s returned remainder, and the
+separate terminal answers of `poll`, `clear` and `take` (Codex's review).
 
 ### F8. The term language has no iteration
 
@@ -228,21 +245,23 @@ A binder term is built from variables, literals, atoms, records and tuples. The 
 
 Some steps of F7 act on several list elements at once:
 
-- `offerAll` may serve several takers.
-- A batch take or `clear` may accept several pending offers.
-- A withdrawal removes one request from the middle of a list.
+- a batch offer may make several takers ready;
+- a batch take or `clear` may accept several pending offers;
+- a withdrawal removes one request from the middle of a list.
 
-Three routes are open.
+Three routes were open.
 
 | Route | What it adds | Cost |
 | --- | --- | --- |
-| (a) Bulk atoms and rounds | `listTake`, `listDrop` and a removal by a `Deferred`'s identity. A step serves one waiter; the wrapper repeats the step while more can be served | Three or four total atoms. One more invariant: no fiber is inside a round when the machine is quiet |
-| (b) A list fold in terms | One term constructor whose body binds the accumulator and the element | A change to the term language: scope, typing, evaluation, the faces. Every step is then one term with no rounds |
+| (a) Bulk atoms and rounds | `listTake`, `listDrop` and a removal by a `Deferred`'s identity. A step serves one waiter; the wrapper repeats the step | Each unfinished round needs an owner that finishes it (Codex's review) |
+| (b) A list fold in terms | One term constructor whose body binds the accumulator and the element | A change to the term language: scope, typing, evaluation, the faces |
 | (c) One atom per queue step | The step function as a native atom | The TypeScript body of each atom is written by hand and only tested |
 
-Route (a) builds on what exists. Route (b) is the general tool, and `Semaphore` and `PubSub`
-need the same kind of scan. Route (c) moves the queue's logic out of the verified language, so
-this note rejects it.
+The owner chose route (b) on 2026-10-05, in conversation: the fold, with bulk atoms where a named
+consumer needs them. The groundwork plan carries it
+(`docs/research/2026-10-05-claude-lead/groundwork-plan.md`). With the fold, one step computes the
+whole service pass, and no round is needed. The list of requests to signal still needs an owner
+(F10).
 
 ### F9. Who may write the cell
 
@@ -258,83 +277,125 @@ and its `Deferred`s, because the machine's observation holds every store (`Obs`,
 
 ### F10. Interruption
 
-| Where the interrupt lands | What the cleanup does | Why no message is lost |
+| Where the interrupt lands | What happens | What holds |
 | --- | --- | --- |
-| Before the request's step | Nothing: the cell holds no such request | The withdrawal of an unknown `Deferred` changes nothing |
-| While the request waits | Removes the request | No message was owed to it |
-| After it is served, before its fiber collects | Returns its messages to the front; the step serves the next waiter | The order of delivered messages is kept |
-| Between a step and its resolutions | Cannot land: the pair runs under `uninterruptible` | A budget cut only delays the resolutions |
-| After the fiber collects | The operation has returned | The interrupt belongs to the caller, as in rc.112 |
+| Before the request's step | The cleanup finds no request | Nothing changes |
+| While the request waits, signalled or not | The cleanup removes the request, and its step signals the next taker that is ready | The request held no message, so none is returned |
+| Between a step and its signals | It cannot land: the pair runs under `uninterruptible`. Another fiber may still run in between | The signalling fiber owns the unfinished signals, and it stays runnable |
+| After a take's step consumed a message, before the caller receives it | The message is consumed and not returned | rc.112 has the same boundary: its take removes the message before the fiber continues |
+| After the caller receives the answer | — | The interrupt belongs to the caller |
 
 - The cleanup is installed before the request's step, with `onExit`. So no window is open between
   the registration and the cleanup.
 - The wait itself runs at the caller's own interruptibility. So the queue's operations need no
-  mask that restores the caller's state. `into` does (row 216).
+  mask that restores the caller's state. `into` does.
 - An offer whose messages were accepted stays accepted when its fiber is interrupted.
+- The fourth row is the contract's stated limit. The machine replaces a success by a pending
+  interrupt when a mask is left (`ensure_setInterruptible_substitutes`,
+  `src/Effect4/Machine/Frames.lean`: reading). A rule that returns the message breaks the order
+  of successful takes (Codex's first countermodel).
 
-These are design claims (reading). The design phase tests each window with a finite run that
-interrupts at every step boundary.
+These are design claims (reading), apart from the model's controls. The design phase tests each
+window with a finite run that interrupts at every step boundary.
 
 ### F11. The law and its reference
 
-- **The reference is the pure step.** It is a transition system over the record of F6. Its laws
-  are pure. They cover order, loss, duplication, capacity, each batch minimum, the drain of a
-  closing queue and a withdrawn answer's return.
+- **The reference is the pure step.** It is a transition system over the record of F6, and the
+  model of F6 is its first draft.
+- **Conservation, with named discards.** Each accepted message is buffered, or was consumed by
+  one take step, or was discarded by a named rule: dropping, sliding, `clear` or `shutdown`.
+- **Order.** Take steps consume from the front of the buffer, so successful takes answer in the
+  order of acceptance.
+- **Eligibility.** A request is eligible by its phase, its bounds, the capacity and its turn. The
+  minimum is capped as 4.0.1 caps it, and a closing queue serves a shorter batch.
 - **The composite's law is a simulation.** A client over the composite behaves as the same
-  client over the abstract queue. The observation is the answer of each request. One
-  `Ref.modify` maps to one abstract step, and every other step maps to none.
-- **The profile** follows the observation packet §2.5. It hides the private cell and
-  `Deferred`s, and its direction is "included". It promises no progress beyond the quiet-state
-  property below.
-- **Progress, as far as it is provable now.** At a deadlocked machine no taker waits while a free
-  message exists, and no offer waits while room exists. This reads on
-  `frontier_empty_iff_deadlocked` (`src/Effect4/Laws/Api/Frontier.lean`). Fairness on infinite
-  tapes stays open (R12, part c).
-- **Against Effect.** The four probes are the controls, with the answer each version gives. The
+  client over the abstract queue. A call, an answer and a withdrawal each map to themselves.
+  Only the wrapper's private steps map to none. The relation covers a request that waits, one
+  that is signalled, and a signal that is not yet resolved.
+- **The profile** is the queue's own (row 79): the private cell and `Deferred`s hidden, and the
+  direction "included". No common profile is signed for every derived module.
+- **Timing.** With no withdrawal, each answer is fixed by the order of the atomic steps. With a
+  withdrawal, the time of a wake can change which request receives a message (Codex's review).
+- **Progress, as far as it is provable now.** At a quiet machine no eligible request waits
+  without its signal. A head batch that needs three may wait with one message buffered.
+  `frontier_empty_iff_deadlocked` (`src/Effect4/Laws/Api/Frontier.lean`) classifies the machine's
+  work; it gives no readiness theorem for the queue. Fairness on infinite tapes stays open (R12,
+  part c).
+- **Against Effect.** The probes of F2 are the controls, with the answer each version gives. The
   37 `Queue` documentation examples under `harness/streams/` are the wider finite check, once the
   composite prints (slice T5).
 
 ### F12. The obligations
 
-Each name is a proposal. None is declared.
+Each name is a proposal. None is declared. The first four rows follow Codex's review.
 
 | Property | Concept, requirement | Consumer | Does not establish |
 | --- | --- | --- | --- |
-| The pure queue's laws: order, no loss, no duplication, capacity, batch minimum, drain, withdrawal | `translation-simulation`, R10 | Every client proof; the simulation below | Anything about the machine |
+| Consumption, withdrawal and conservation, with the named discards | `translation-simulation`, R10; the cell's invariant serves R4 | The cleanup; the simulation | Liveness |
+| Eligibility and the closing drain: no eligible request waits unsignalled at a quiet machine | `reactive-scheduling`, R10 and R12 | The frontier classification; streams | Fairness on infinite tapes |
+| Ownership of signals: the cleanup is installed, the caller's interruptibility is kept, and every signal is resolved or handed on | `scope-lifetime-finalization`, R10 and R11 | Every wrapper that waits | That a whole run releases its resources |
+| The fold's evaluation and typing, with two binders at any types | `store-typing` and `translation-simulation`, R4 and R10 | The queue's atomic step; seat T3b's operation terms | The queue's invariant: a type does not carry it |
 | `queueStep_agrees`: each step term evaluates to the pure step | `translation-simulation`, R10 | The simulation | Typing; interruption |
-| `queueState_typed`: the cell's type is formed, and each operation is well typed at any element type | `store-typing`, R4 and R10 | M5 and M6 applied to the expansion | The queue's invariant: a type does not carry it |
-| `queueWaiter_cleanup`: a withdrawn request leaves the cell, and a served answer returns | `scope-lifetime-finalization`, R10 and R11 | Every operation that waits; p3's interrupts | Liveness |
-| `queueExpansion_refines`: the simulation of F11 | `translation-simulation`, R10 | The named `Agrees` claim (row 79); streams | Equal schedules with Effect; fairness |
-| The quiet-state property of F11 | `reactive-scheduling`, R12 | The frontier classification | Progress on infinite tapes |
-| The laws of the new list atoms | `store-typing`, R4 | The step terms | — |
+| `queueState_typed`: the cell's type is formed, and each operation is well typed at any element type | `store-typing`, R4 and R10 | M5 and M6 applied to the expansion | The queue's invariant |
+| `queueExpansion_refines`: the simulation of F11 | `translation-simulation`, R10, the queue's profile (row 79) | The named `Agrees` claim; p3; streams | Equal tapes with Effect; fairness |
 
 ### F13. Costs and limits
 
-- One `Deferred` is allocated for each request that waits. The native engine never reclaims it.
+- One `Deferred` is allocated each time a request waits. The native engine never reclaims it.
 - Each step copies the message list. Measure before changing the representation.
-- Under strict arrival order a batch taker at the head blocks the takers behind it (proposal 4).
+- The turn policy is a choice (proposal 4). Under `strict`, a batch taker at the head blocks the
+  takers behind it. Under `readyFirst`, single takers may pass a batch taker that is not ready.
 - The acceptance program p3 must not promise the worker that receives each job (Codex's survey).
+
+## What Codex's review changed
+
+Codex reviewed the first draft on 2026-10-05
+(`/private/tmp/codex-effect4-overnight-monitor/2026-10-05-deferred-latch-probes/plan-review.md`).
+The first draft served a taker by reserving a message for it, and returned the message when the
+taker withdrew. This review checked each finding by reading, and the model above confirms the
+replacement on each countermodel.
+
+| The first draft's claim | Codex's countermodel | The replacement |
+| --- | --- | --- |
+| A withdrawn request's served answer returns to the front | T1 holds `a`, T2 holds `b`; T1 withdraws; T2 answers `b`; a new T3 answers `a` | No reservation; consumption at the taker's own step |
+| A waiting taker counts as a free slot | Capacity one: reserve `a`, buffer `b`, withdraw the reservation: two messages | Capacity counts buffered messages |
+| The terminal phases, with a served answer not collected | The queue is done, and a late withdrawal returns an answer into it | No such state: a closing queue stays closing while a message remains |
+| Collecting an answer is returning it | An interrupt that is pending replaces the success when a mask is left | The stated limit of F10 |
+| No taker waits while a message is free | A head batch needs three, and one message is buffered | Eligibility by phase, bounds, capacity and turn |
+| Rounds, with no owner | The serving fiber stops between two rounds | The fold; an owner for the signal list |
+| The time of the wake changes no answer; every other step maps to none | A withdrawal after a message was assigned | F11's timing and simulation clauses |
+
+Claims that the review narrowed:
+
+- `Deferred` is the blocking basis this tree chose. No theorem says it is the only possible one.
+- The Latch sketch of F1 is a candidate. It does not discharge row 81's obligations.
+- The first draft said wake-and-retry cannot keep a batch minimum. A turn check inside the step
+  refutes that.
+- The first draft called its design Hoare's signalling. It is not.
+- P1 is a bypass in finite runs. It is not a proof of starvation.
+- The first draft cited a decisions row 216. The register ends at row 213: the rulings of
+  2026-10-05 on the derived forms plan are not written there yet.
 
 ## Proposals (not rulings)
 
-1. **No Latch primitive.** Close row 81 for queues. A Latch module is a derived module, later.
-2. **Serve waiters in arrival order.** Sign it as a divergence from Effect 4's order of takers,
-   with P1 as its control. The alternative is Effect 4's wake-and-retry, which keeps P1's
-   behaviour and the retry loop.
-3. **Follow 4.0.0, not the pin, at P2, P3 and P4.** Register each as a counterexample of the
-   pin's `Queue`.
-4. **The turn order of batch takers.** Strict arrival order is the simplest law. 4.0.0 serves
-   the first ready taker and may pass a larger one. Recommended: strict order.
-5. **Iteration.** Route (a) for the queue. Decide route (b) before `Semaphore` and `PubSub`.
+1. **No Latch for the queue.** Row 81's Latch obligations are separate, and they stay open.
+2. **The contract of F6.** Effect 4's wake-and-retry with a turn check, and consumption at the
+   taker's own step. The turn check is the one divergence from 4.0.1. P1 is its control.
+3. **Follow 4.0.1 at P2, P3 and P4.** They are defects of the pin, not of the latest release.
+4. **The turn policy.** `readyFirst` is 4.0.1's order of service without the bypass. `strict` is
+   the simpler law, and it lets a batch at the head block the queue. Recommended: `readyFirst`.
+5. **Iteration.** The fold, as the owner chose. Bulk atoms only where a named consumer needs
+   them.
 6. **The law's clients.** State the law over abstract queue operations and their expansion.
-7. **Upstream.** Record P1 in `docs/UPSTREAM-BACKLOG.md` as a candidate. A parked taker can be
-   starved in 4.0.1, and Effect 3 does not do this. Reporting is the owner's decision.
+7. **Upstream.** Record P1 in `docs/UPSTREAM-BACKLOG.md` as a candidate. Word it as a bypass seen
+   in finite runs of 4.0.1, which Effect 3.22.2 does not show. Reporting is the owner's decision.
 8. **The pin.** Open a decision on moving the pin from rc.112 to the release. First audit what
    F3's changes touch in the proved runtime.
-9. **The slices, re-cut.**
-   1. The pure queue and its laws in Lean. It needs nothing from T3b and can start now.
-   2. The list atoms, after T3b merges.
-   3. The wrapper, `offer`, `take`, `poll`, `size`, and p3.
+9. **The order of work.**
+   1. Fix the transition contract over the whole state: consumption, withdrawal, capacity, the
+      terminal phases, eligibility and the ownership of signals. The model is its first draft.
+   2. Design the fold with the queue's service pass as its named consumer.
+   3. The pure queue and its laws in Lean, then the wrapper, `offer`, `take`, `poll`, `size`, p3.
    4. The batch operations, the three strategies and capacity zero.
    5. `end`, `fail`, `shutdown`, `await`, and row 205's named connection.
    6. The faces after T5, and the documentation examples as the finite check.
@@ -344,8 +405,9 @@ Each name is a proposal. None is declared.
 - Each probe is one finite run on one schedule with bun 1.4.2. None is a proof, and none says
   what the maintainers intend.
 - Effect 3's source was not read here. Its row of F2 rests on the run alone.
-- The design of F6 to F10 is a proposal. No Lean was written, and the step function is not
-  written out.
-- That service in order makes each answer independent of the wake's time is an argument from
-  reading. The simulation of F11 is its proof, and it is not written.
-- The count of atoms in F8 is an estimate from the operations of F7.
+- The design of F6 to F11 is a proposal. No Lean of the tree was written.
+- The model is a finite probe. Its exploration is bounded at five operations from ten, and it
+  omits `offerAll`, `peek`, `clear` and the awaiters' registration. It proves nothing.
+- The timing clause of F11 is an argument from reading. The simulation is its proof, and it is
+  not written.
+- Codex's 27 model assertions were read, not run again.

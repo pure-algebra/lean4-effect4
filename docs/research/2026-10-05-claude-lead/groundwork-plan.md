@@ -10,6 +10,9 @@ are missing. The three largest are a list fold in terms, a mask that restores th
 interruptibility, and the kit for a module's law. Nothing here is a ruling: Codex reviews it,
 and the owner rules.
 
+The note was amended on 2026-10-05 after Codex's review of the queues review. Proposal 1 no
+longer signs one schedule difference for every module, and F4 carries Codex's list for the fold.
+
 ## Question
 
 Which base abstractions do the stateful modules need, and which exist? In which order do the
@@ -24,7 +27,7 @@ missing ones land, so that no module adds a language feature later?
 | The term language and its atoms (`src/Effect4/Machine/Term.lean`); the program syntax (`src/Effect4/Program/Eff.lean`) | read |
 | `uninterruptibleMask` in `vendor/effect-4.0.0-rc.112/src/`, by file | tested (a search) |
 | A cell that holds a list of handles, searched in `Test/` and `src/Effect4/Laws/` | tested (a search): none found |
-| Decisions rows 43, 79, 81, 82, 109, 216; DI-11; the state plan (`docs/research/2026-10-04-claude-lead/state-any-type-plan.md`) | read |
+| Decisions rows 43, 79, 81, 82 and 109; DI-11; the state plan (`docs/research/2026-10-04-claude-lead/state-any-type-plan.md`) | read |
 | Any design of an item below | not written |
 
 ## Findings
@@ -39,10 +42,10 @@ missing ones land, so that no module adds a language feature later?
 | 4 | Bulk list atoms | Missing. The list atoms are `listNil`, `listCons`, `listGet`, `listLength`, `listAppend` | `listTake` and `listDrop`, each total. Every other list function is a builder over the fold | Which builders ship with the fold |
 | 5 | The identity of a handle inside a term | Missing. `eq` compares numbers and strings only | Equality of two handles of one kind. Never deep equality of messages | Extend `eq`, or give each registration a number |
 | 6 | Handles inside a cell's value, typed | Believed landed with T3a. No test holds a list of handles in a cell | A finite probe: a cell with a list of `Deferred`s builds, types and runs | — |
-| 7 | The wrapper for an operation that waits | Missing | One derived form over `Deferred`, `onExit` and `uninterruptible`, with one law (the queues review, F6) | — |
-| 8 | A mask that restores the caller's interruptibility | Missing. Row 216 defers it | A mask construct and a `restore` construct that names its mask | The first-order form of `restore`; whether row 216's timing changes |
+| 7 | The wrapper for an operation that waits | Missing | One derived form over `Deferred`, `onExit` and `uninterruptible`: install the cleanup, run the step, resolve its signals, await, run the step again (the queues review, F6) | Who owns the signals that a step answers (the queues review, F10) |
+| 8 | A mask that restores the caller's interruptibility | Missing. The owner's ruling of 2026-10-05 on question 5 of the derived forms plan defers it; the register does not hold that ruling yet | A mask construct and a `restore` construct that names its mask | The first-order form of `restore`; whether that ruling's timing changes |
 | 9 | The kit for a module's law | Missing. `Profile` and `Agrees` are text only (row 79, R79.5) | Abstract operations for the client, their expansion, the profile as data, the simulation with stutter steps, the quiet-state lemma | The client's alphabet: an operation type beside the native one, or rows of an application signature |
-| 10 | A posted wake for programs | In the machine (`WakeMode.scheduled`, `src/Effect4/Machine/Wake.lean`); no program-visible row | None. Each module's answers are fixed at its atomic steps, and the schedule difference is signed once | Confirm the stance, or add one row |
+| 10 | A posted wake for programs | In the machine (`WakeMode.scheduled`, `src/Effect4/Machine/Wake.lean`); no program-visible row | None for the queue. Each module names its own profile (row 79), and row 81 keeps the Latch question | Decided per module, with that module's law |
 | 11 | Retained behaviour: a program kept in a value and run later | Missing. R7 and row 82 are open | A separate design | Design it now, or after the first modules |
 | 12 | A watcher fiber for another fiber's exit | Composed from fork and await | A detached fork pinned to the structure's scope | A finite probe that it lands where rc.112's observer lands |
 | 13 | The race that takes the first exit | Missing | A derived form over `raceAll` | Check it against the truth harness first |
@@ -112,7 +115,9 @@ flowchart TD
 
 ### F4. What the fold's design must show
 
-The fold's design note is accepted when it writes each step below as one term and evaluates it:
+The fold's first named consumer is the queue's service pass over its pending requests (Codex's
+review). The fold's design note is accepted when it writes each step below as one term and
+evaluates it:
 
 1. the queue serves the takers that wait, after a batch offer;
 2. the queue accepts pending offers, after a batch take;
@@ -122,19 +127,26 @@ The fold's design note is accepted when it writes each step below as one term an
 6. the oldest `k` entries leave a cache.
 
 The same note states the typing rule, the scope rule, weakening and evaluation. It also states
-the laws on handles, the wire entry (DI-47), and the printed and read forms.
+the laws on handles, the wire entry (DI-47), and the printed and read forms. From Codex's review
+it also fixes:
+
+- the order of the two binders, and how the body captures outer variables;
+- an element and an accumulator at any types, nested handles included;
+- the answer on an empty list, and the order of evaluation;
+- that the fold is pure, so `Ref.modify` stays one atomic step that answers `B` and stores `A`;
+- that a bulk atom is added only where a named consumer needs it.
 
 ## Proposals (not rulings): the questions to resolve before development
 
-1. **The stance on schedules.** A derived module's law is stated on answers fixed at atomic
-   steps. No program-visible posted wake is added, and no Latch store. One register entry signs
-   the schedule difference for every derived module.
+1. **The stance on schedules.** Each derived module names its own profile (row 79). The queue
+   needs no posted wake. Row 81's Latch question stays open, separately. No common entry signs
+   one schedule difference for every module (Codex's review).
 2. **The fold.** One constructor, with `listTake` and `listDrop` as atoms and every other list
    function as a builder. Confirm, or ask for a counted loop too.
 3. **Identity.** Extend `eq` to two handles of one kind. The alternative is a registration
    number in each module's state.
-4. **The mask with restore.** Design it now as groundwork. This changes row 216's timing, not
-   its content.
+4. **The mask with restore.** Design it now as groundwork. This changes the timing of the
+   owner's ruling on question 5 of the derived forms plan, not its content.
 5. **The law kit's client alphabet** (item 9).
 6. **Retained behaviour.** Design it after the first waiting modules, because none of them
    needs it. Confirm, or pull it forward.
