@@ -191,7 +191,7 @@ top would be caught here and not only in a proof. -/
 match infers a request union member by member (`Ty.infer`), so it finds the substitution the
 instance needs; before the repair it bound nothing there and refused. A member whose anchor holds
 `never` binds the parameter at a covariant occurrence first: that boundary is the premise of the
-planned goal `Ty.matchTemplate_complete_anchored` (`Ty.bottomFree`). -/
+theorem `Ty.matchTemplate_complete_anchored` (`Ty.bottomFree`; seat T4). -/
 
 /-- `Ref.set`'s template, `[Ref<A>, A]`. -/
 def setT : Ty := .prod (.refOf (.var 0)) (.var 0)
@@ -217,6 +217,16 @@ def neverR : Ty := .union (.prod .never (.lit "a")) (.prod (.refOf .string) (.li
 #guard Ty.sub neverR.normalize (setT.instantiate [(0, .string)]).normalize
 #guard Ty.matchTemplate [] setT neverR.normalize = none
 #guard !Ty.bottomFree neverR
+-- the other premise: a template whose parameter first occurs covariantly is not anchored, and the
+-- match refuses a request a substitution places under its instance (seat T4's control)
+/-- `[A, Ref<A>]`: the parameter is first met outside an invariant handle. -/
+def covT : Ty := .prod (.var 0) (.refOf (.var 0))
+/-- `[number, Ref<number | string>]`. -/
+def covR : Ty := .prod .nat (.refOf (Ty.union .nat .string).normalize)
+#guard covT.normalize == covT && covT.templateAdmissible && !covT.anchored
+#guard covR.normalize == covR && covR.bottomFree
+#guard Ty.sub covR.normalize (covT.instantiate [(0, (Ty.union .nat .string).normalize)]).normalize
+#guard Ty.matchTemplate [] covT covR = none
 
 end Test.Program.TypeAlgebraContract
 

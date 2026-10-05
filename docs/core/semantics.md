@@ -668,8 +668,8 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   A normal request that some substitution places under its instance then has a match.
   The request holds no `never` outside such an argument (`Ty.bottomFree`); without that premise the
   statement is false (`E4-CHECK-CE-018`'s boundary).
-  It is a planned goal (`Ty.matchTemplate_complete_anchored`, `src/Effect4/Laws/Program/Template.lean`),
-  tested on a finite pool (`docs/research/2026-10-04-seat-T3a/AnchoredGoal.lean`).
+  It is proved (`Ty.matchTemplate_complete_anchored`, `src/Effect4/Laws/Program/Template.lean`; seat
+  T4).
   It establishes no match at a parameter first met covariantly, under a union template or under a
   nominal reference.
 
