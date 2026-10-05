@@ -1,0 +1,113 @@
+{
+ "effect": "4.0.1",
+ "s1_getter": {
+  "interruptibleCaller": true,
+  "maskedCallerIsIdentity": true
+ },
+ "s2_interruptibleCaller": {
+  "native": [
+   "body entered",
+   "interrupted"
+  ],
+  "printed": [
+   "body entered",
+   "interrupted"
+  ],
+  "same": true
+ },
+ "s3_maskedCaller": {
+  "native": [
+   "body entered",
+   "still running after the interrupt",
+   "received 7",
+   "interrupted"
+  ],
+  "printed": [
+   "body entered",
+   "still running after the interrupt",
+   "received 7",
+   "interrupted"
+  ],
+  "same": true
+ },
+ "s4_bodyIsMasked": {
+  "native": [
+   "one",
+   "two",
+   "three",
+   "interrupted"
+  ],
+  "printed": [
+   "one",
+   "two",
+   "three",
+   "interrupted"
+  ],
+  "same": true
+ },
+ "s5_nestedInnerRestore": {
+  "native": [
+   "inner body entered",
+   "still running after the interrupt",
+   "received 7",
+   "interrupted"
+  ],
+  "printed": [
+   "inner body entered",
+   "still running after the interrupt",
+   "received 7",
+   "interrupted"
+  ],
+  "same": true
+ },
+ "s5_nestedOuterRestore": {
+  "native": [
+   "inner body entered",
+   "ended",
+   "interrupted"
+  ],
+  "printed": [
+   "inner body entered",
+   "ended",
+   "interrupted"
+  ],
+  "same": true
+ },
+ "s6_restoreLeavesItsMask": {
+  "native": [
+   "child entered",
+   "interrupted"
+  ],
+  "printed": [
+   "child entered",
+   "interrupted"
+  ],
+  "same": true
+ },
+ "s7_flagAfterEachExit": {
+  "native": {
+   "afterSuccess": true,
+   "afterFailure": true,
+   "afterDefect": true,
+   "maskedAfterSuccess": false,
+   "maskedAfterFailure": false
+  },
+  "printed": {
+   "afterSuccess": true,
+   "afterFailure": true,
+   "afterDefect": true,
+   "maskedAfterSuccess": false,
+   "maskedAfterFailure": false
+  },
+  "same": true
+ },
+ "s8_iterations": {
+  "succeedAlone": 2,
+  "getter": 2,
+  "getterMasked": 2,
+  "restoreSiteOpen": 2,
+  "restoreSiteUnderMask": 2,
+  "nativeMask": 2,
+  "printedMask": 5
+ }
+}

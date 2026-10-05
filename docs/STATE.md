@@ -181,8 +181,9 @@ Open at this landing:
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
   model), its choices ruled (rows 240 to 243), corrected the same day after Codex's review, and
   owed as a packet in `Test/contracts/` with the first Queue slice;
-- the mask's second note; the design of waiting, tasks and the atomic frontier is
-  [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
+- the mask's second note is [written](research/2026-10-05-claude-lead/mask-second-note.md), and
+  its two amendments to row 239 await the owner; the design of waiting, tasks and the atomic
+  frontier is [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
 - the release audit, landed on 2026-10-05
   ([the audit](research/2026-10-05-seat-A401/audit.md),
