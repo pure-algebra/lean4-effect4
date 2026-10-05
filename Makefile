@@ -320,7 +320,7 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots proof-style cases native ts-reader truth target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots proof-style cases native ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs language
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
@@ -460,6 +460,35 @@ $(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard har
 	$(BUN) test $(TRUTH_HOST_TESTS)
 	$(PY) scripts/check-truth.py
 	@mkdir -p $(CHK) && touch $@
+
+# The release lane (decisions row 248; harness/truth/RELEASE-LANE.md): the truth harness's host phase
+# on effect@4.0.1 beside the pinned run, judged by the build ledger (harness/truth/build-ledger.tsv:
+# each program's expected agreement with each build; build-ledger.run.json: what those entries
+# were measured on). It reads the committed manifest, result and tapes, which the pinned lane holds
+# to a fresh run, so the pinned marker is its prerequisite; the rest is what it reads besides. The
+# release install is selected by EFFECT4_RELEASE_NODE_MODULES only (no default, no download; bun
+# runs with --no-install), and its manifests are prerequisites when the variable names one. Its
+# controls run first, and the pinned lane's host tests run on both builds. `make gen-truth-ledger`
+# promotes a fresh host run to the two committed files (the hand columns `reason` and `slice` are
+# kept). Not in `check` and not in `check-full`: no tracked recipe installs the release.
+TRUTH_RELEASE_LANE := scripts/check-truth-release.py scripts/lib/truth_ledger.py scripts/lib/truth_host.py \
+  harness/truth/build-ledger.tsv harness/truth/build-ledger.run.json \
+  harness/truth/select-controls.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts \
+  ts/eff/eff.gen.ts ts/eff/tsconfig.json \
+  $(wildcard $(EFFECT4_RELEASE_NODE_MODULES) $(addprefix $(EFFECT4_RELEASE_NODE_MODULES)/,effect/package.json \
+    @effect/sql-sqlite-bun/package.json @typescript/native-preview/package.json))
+# Which install the variable names is an input too: the marker is stale when the name changes or goes.
+$(CHK)/truth-release-install: FORCE
+	@mkdir -p $(CHK); printf '%s\n' '$(EFFECT4_RELEASE_NODE_MODULES)' > $@.new; \
+	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
+$(CHK)/truth-release: $(CHK)/truth $(TRUTH_RELEASE_LANE) $(CHK)/truth-release-install
+	$(PY) scripts/check-truth-release.py --self-test
+	$(PY) scripts/check-truth-release.py --host-tests $(TRUTH_HOST_TESTS)
+	@mkdir -p $(CHK) && touch $@
+
+.PHONY: gen-truth-ledger
+gen-truth-ledger: $(CHK)/truth ## promote a fresh host run of both builds to harness/truth/build-ledger.tsv and build-ledger.run.json
+	$(PY) scripts/check-truth-release.py --promote --host-tests $(TRUTH_HOST_TESTS)
 
 # The corpus lane: every program of the generated corpus (Test/Program/Gen.lean, 400 at
 # depth 4) printed and type-checked, the admitted ones run on rc.112, its rc.112 exit,
@@ -644,9 +673,9 @@ status: ## one screen, measured: HEAD and dirty paths, build and check freshness
 help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
-	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, target, schema-codec,'
-	@echo '                     ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts, corpus,'
-	@echo '                     schema-pins, tools, tsgo, semantics, docs, language'
+	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, truth-release, target,'
+	@echo '                     schema-codec, ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts,'
+	@echo '                     corpus, schema-pins, tools, tsgo, semantics, docs, language'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'
 	@echo '  gen-<group>        one generated group: derived, eff, wire, cas, ts, readme, lcnf,'
 	@echo '                     truth, host-protocol, schema-ts, census, semantics'

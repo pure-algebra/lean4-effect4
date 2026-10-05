@@ -1,0 +1,26 @@
+The sandbox denies every network operation: sandbox-exec -p '(version 1)(allow default)(deny network*)'
+--- its red control: a request to the package index inside the sandbox
+curl: (6) Could not resolve host: registry.npmjs.org
+curl exit status: 6
+--- the release lane inside the sandbox, with the pinned lane's host tests
+truth-release: the control: effect@4.0.0-rc.112 through the work copy (33 sources) reproduces result.json, result.md, 39 modules and 6 tapes byte for byte
+truth-release: the release: effect@4.0.1, 34 of 39 programs run; not run, the install has no @effect/sql-sqlite-bun: pSqlite, pSqlFail, pSqlCatch, pSqlExit, pSqlOrDie
+truth-release: the work copy of harness/truth/prelude.ts imports "effect/persistence" for "effect/unstable/persistence"
+truth-release: the work copy of harness/truth/prelude.ts imports "effect/reactivity/Reactivity" for "effect/unstable/reactivity/Reactivity"
+truth-release: the work copy of harness/truth/prelude.ts imports "./sqlite-driver-absent.ts" for "@effect/sql-sqlite-bun"
+truth-release: the work copy of harness/truth/session/keyed-bindings.ts imports "effect/persistence" for "effect/unstable/persistence"
+truth-release: the work copy of harness/truth/records.test.ts imports "effect/persistence" for "effect/unstable/persistence"
+truth-release: effect@4.0.0-rc.112 ran on bun 1.4.2; tsgo 7.0.0-dev.20260629.1 type-checks its 68 sources; modules: 39, sha256 07ac4adeb4adea7c; tapes: 6, sha256 0f40a831dab3bd86; host tests: 23 pass in 4 file(s)
+truth-release: effect@4.0.1 ran on bun 1.4.2; tsgo 7.0.0-dev.20260629.1 type-checks its 64 sources; modules: 34, sha256 60a2893025fd06a1; tapes: 1, sha256 b3832d633fddddd0; host tests: 23 pass in 4 file(s)
+truth-release: expected: pProvideMerge: 4.0.1 schedule: no: the host lacks machine rows 13-15 (forked 0 5, started 5, exited 5 success) (M2 scopes: one fork fewer on the release (the scope link, by reading))
+truth-release: expected: pProvideTwice: 4.0.1 schedule: no: the host lacks machine rows 13-15 (forked 0 5, started 5, exited 5 success) (M2 scopes: one fork fewer on the release (the scope link, by reading))
+truth-release: expected: pMergeAll: 4.0.1 schedule: no: the host lacks machine rows 19-21 (forked 0 7, started 7, exited 7 success) (M2 scopes: one fork fewer on the release (the scope link, by reading))
+truth-release: expected: pSqlite: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlFail: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlCatch: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlExit: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pSqlOrDie: 4.0.1 exit, schedule, sync: not-run (driver (the owner's word, migration plan F6): the release's sqlite driver is not installed)
+truth-release: expected: pInterruptEscape: 4.0.0-rc.112 exit: no: machine interrupt [{"interrupt":0}], host fail [{"fail":42}] (M5 the failure walk: U-01: the pin lets the typed failure escape, and the release answers the interrupt as the machine does)
+truth-release: expected: pInterruptEscape: 4.0.0-rc.112 schedule: no: machine row 4 (exited 0 interrupt) is host row 4 (exited 0 fail) (M5 the failure walk: U-01: the pin lets the typed failure escape, and the release answers the interrupt as the machine does)
+PASS truth-release: 39 programs match harness/truth/build-ledger.tsv: 30 agree with both builds, 8 with effect@4.0.0-rc.112 only (5 not run on effect@4.0.1), 1 with effect@4.0.1 only, 0 with neither
+lane exit status: 0

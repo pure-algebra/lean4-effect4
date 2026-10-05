@@ -1,0 +1,9 @@
+--- the variable unset
+FAIL truth-release: set EFFECT4_RELEASE_NODE_MODULES to a node_modules directory that holds effect@4.0.1; there is no default path, and nothing is downloaded
+exit status: 1
+--- the variable names the pin's install
+FAIL truth-release: EFFECT4_RELEASE_NODE_MODULES must contain effect@4.0.1 (found effect@4.0.0-rc.112 in /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules)
+exit status: 1
+--- the variable names an install with effect@4.0.1 and no compiler
+FAIL truth-release: EFFECT4_RELEASE_NODE_MODULES must contain @typescript/native-preview@7.0.0-dev.20260629.1 (the one compiler, tsgo)
+exit status: 1

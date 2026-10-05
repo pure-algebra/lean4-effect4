@@ -1,0 +1,8 @@
+RED CONTROL B (addendum 1): pProvideMerge keeps its schedule difference; its expected exit is altered
+changed pProvideMerge | 4.0.1 exit: "yes" -> "no: machine success 2, host success 3"
+pProvideMerge	yes	yes	yes	no: machine success 2, host success 3	no: the host lacks machine rows 13-15 (forked 0 5, started 5, exited 5 success)	yes	one fork fewer on the release (the scope link, by reading)	M2 scopes
+FAIL truth-release: pProvideMerge: 4.0.1 exit: the ledger says "no: machine success 2, host success 3", observed "yes"
+truth-release: 1 finding(s); compare harness/truth/build-ledger.tsv with .lake/truth-release/observed.tsv, and read the runner's table in .lake/truth-release/release/harness/truth/result.md
+make: *** [.lake/check/truth-release] Error 1
+make exit status: 2
+harness/truth/build-ledger.tsv is put back from the kept copy: git diff is empty

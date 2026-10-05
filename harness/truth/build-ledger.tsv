@@ -1,0 +1,47 @@
+# The build ledger of the truth lanes (harness/truth/RELEASE-LANE.md; decisions row 248).
+# One line per program of harness/truth/corpus.json, in its order. An entry is the expected
+# comparison of the Lean machine with one build on one field: `yes`, `no: <the difference>`,
+# `not-run` or `n/a`. `reason` and `slice` are empty exactly when all six entries are `yes`.
+# The entries are measured: `make gen-truth-ledger` writes them and keeps `reason` and `slice`,
+# which are written by hand. `make check-truth-release` judges the file.
+# What the entries were measured on is build-ledger.run.json, which the same command writes.
+program	4.0.0-rc.112 exit	4.0.0-rc.112 schedule	4.0.0-rc.112 sync	4.0.1 exit	4.0.1 schedule	4.0.1 sync	reason	slice
+p42	yes	yes	yes	yes	yes	yes		
+pBind	yes	yes	yes	yes	yes	yes		
+pFork	yes	yes	yes	yes	yes	yes		
+pAwait	yes	yes	yes	yes	yes	yes		
+pGen	yes	yes	yes	yes	yes	yes		
+pLoop	yes	yes	yes	yes	yes	yes		
+pCatch	yes	yes	yes	yes	yes	yes		
+pScope	yes	yes	yes	yes	yes	yes		
+pTwo	yes	yes	yes	yes	yes	yes		
+pAcquire	yes	yes	yes	yes	yes	yes		
+pAcquireClosed	yes	yes	yes	yes	yes	yes		
+pProvide	yes	yes	yes	yes	yes	yes		
+pProvideMerge	yes	yes	yes	yes	no: the host lacks machine rows 13-15 (forked 0 5, started 5, exited 5 success)	yes	one fork fewer on the release (the scope link, by reading)	M2 scopes
+pProvideTwice	yes	yes	yes	yes	no: the host lacks machine rows 13-15 (forked 0 5, started 5, exited 5 success)	yes	one fork fewer on the release (the scope link, by reading)	M2 scopes
+pDiamond	yes	yes	yes	yes	yes	yes		
+pMergeAll	yes	yes	yes	yes	no: the host lacks machine rows 19-21 (forked 0 7, started 7, exited 7 success)	yes	one fork fewer on the release (the scope link, by reading)	M2 scopes
+pAcquireHandle	yes	yes	yes	yes	yes	yes		
+pFailTagged	yes	yes	yes	yes	yes	yes		
+pSqlite	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
+pKv	yes	yes	yes	yes	yes	yes		
+pSqlFail	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
+pSqlCatch	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
+pSqlExit	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
+pSqlOrDie	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
+pFailText	yes	yes	yes	yes	yes	yes		
+pFailBoomText	yes	yes	yes	yes	yes	yes		
+pTextOrDie	yes	yes	yes	yes	yes	yes		
+pCatchError	yes	yes	yes	yes	yes	yes		
+pCatchIfHit	yes	yes	yes	yes	yes	yes		
+pCatchIfMiss	yes	yes	yes	yes	yes	yes		
+pCatchIfRetained	yes	yes	yes	yes	yes	yes		
+pTagHit	yes	yes	yes	yes	yes	yes		
+pTagMiss	yes	yes	yes	yes	yes	yes		
+pTagTwoFail	yes	yes	yes	yes	yes	yes		
+pOptionSome	yes	yes	yes	yes	yes	yes		
+pOptionNone	yes	yes	yes	yes	yes	yes		
+pFailPayload	yes	yes	yes	yes	yes	yes		
+pTagPayload	yes	yes	yes	yes	yes	yes		
+pInterruptEscape	no: machine interrupt [{"interrupt":0}], host fail [{"fail":42}]	no: machine row 4 (exited 0 interrupt) is host row 4 (exited 0 fail)	yes	yes	yes	yes	U-01: the pin lets the typed failure escape, and the release answers the interrupt as the machine does	M5 the failure walk

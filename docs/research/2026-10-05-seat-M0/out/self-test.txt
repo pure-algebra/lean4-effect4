@@ -1,0 +1,89 @@
+--- control an agreeing program is three `yes`: ok
+--- control a schedule difference is the exact edit, without the `scheduled` rows: ok
+--- control an exit difference carries both exits: ok
+--- control a program the lane did not select is three `not-run`: ok
+--- control a sync difference carries both sync exits: ok
+--- control a module that does not load has no path in its entry: ok
+--- control red: a schedule verdict that the compared schedules contradict is refused: ok
+--- control red: a schedule verdict without the host schedule is refused: ok
+--- control green: the ledger of the observations holds: ok
+--- control green: promote keeps the hand columns and is a fixed point: ok
+--- control green: a ledger that was read whole may be promoted over, and so may no ledger: ok
+--- control red: a promote over a ledger with a line that was not read: ok
+--- control red: a promote over a ledger for other builds: ok
+--- control the expected differences of a ledger are listed by program and build, with slice and reason: ok
+--- control red: a `yes` entry changed to `no` in the ledger: ok
+--- control red: a `no` entry changed to `yes` in the ledger: ok
+--- control red: a `no` whose difference changed shape: ok
+--- control red: a program that leaves its line in the host run: ok
+--- control red: a known schedule difference, and the exit moves in the host run: ok
+--- control red: a known schedule difference, and the sync exit moves in the host run: ok
+--- control red: a known schedule difference, and the expected exit is altered in the ledger: ok
+--- control red: a required observation removed from the release result: ok
+--- control red: a required observation removed from the committed pin result: ok
+--- control red: a field of a program that ran is null: ok
+--- control red: a field of a program that ran is absent: ok
+--- control red: a program that was not run where the ledger says `yes`: ok
+--- control red: a program that ran where the ledger says `not-run`: ok
+--- control red: a `not-run` line without its reason: ok
+--- control red: a program the lane did not select and the runner reports: ok
+--- control red: a program the manifest does not name: ok
+--- control red: a line missing: ok
+--- control red: a line for no program: ok
+--- control red: lines out of the manifest's order: ok
+--- control red: a second line for one program: ok
+--- control red: a difference without its reason: ok
+--- control red: a difference without its slice: ok
+--- control red: a slice the plan does not name: ok
+--- control red: a reason left on an agreeing line: ok
+--- control red: an entry that is none of the four: ok
+--- control red: a `no` without its difference: ok
+--- control red: a line with an entry too few: ok
+--- control red: a line with a column too many: ok
+--- control green: a ledger whose trailing empty columns were trimmed says the same: ok
+--- control red: a trimmed line that still needs its slice: ok
+--- control red: a header for other builds: ok
+--- control red: an empty file: ok
+--- control red: no file: ok
+--- control green: the record of this host run is accepted: ok
+--- control red: the record of other modules: ok
+--- control red: the record of another runtime: ok
+--- control red: the record of a host run that ran every program: ok
+--- control red: a record with a field this host run does not have: ok
+--- control red: no record: ok
+--- control red: a record that is no JSON: ok
+--- control the digest of a set names its files and does not depend on their order: ok
+--- control green: the committed modules of the programs that ran, and their committed tapes: ok
+--- control red: a module that is not the committed module: ok
+--- control red: a module of a program that did not run: ok
+--- control red: a program that ran without its module: ok
+--- control red: a tape that is not the committed tape: ok
+--- control red: a committed tape that the build did not record: ok
+--- control red: a tape that the pin does not have: ok
+--- control red: a tape of a program that did not run: ok
+--- control green: a `bun test` run that passes gives its count: ok
+--- control red: a `bun test` run with a failed test, a nonzero status, no test or no count is refused: ok
+--- control the rewrite moves each import of the table and nothing else: ok
+--- control the specifiers of a source are its static imports and re-exports: ok
+--- control the closure is what the entries reach, the entries first: ok
+--- control red: an import of no file is refused: ok
+--- control red: an import that leaves the repository is refused: ok
+--- control an exact export, a pattern, and the patterns that close a path: ok
+--- control the accepted specifiers: effect, an exported path, a builtin, a present driver: ok
+--- control red: an entry point the table does not map is refused: ok
+--- control red: a closed path of effect is refused: ok
+--- control red: the driver is refused when the install has none: ok
+--- control red: any other package is refused: ok
+--- control a module that mentions `Sql.` needs the driver, and no other does: ok
+--- control red: no selection, no default: ok
+--- control red: an install without effect: ok
+--- control red: the pin where the release is asked: ok
+--- control red: the release with the pin's driver: ok
+--- control green: the release without the driver is accepted: ok
+--- control green: the release with its driver is accepted: ok
+--- control red: an install without the compiler: ok
+--- control red: an install with another compiler: ok
+--- control green: an install with the pinned compiler: ok
+--- control green: the table is true of a pin-shaped and a release-shaped package: ok
+--- control red: the table against two packages of the pin's shape: ok
+self-test: 88 of 88 controls as expected

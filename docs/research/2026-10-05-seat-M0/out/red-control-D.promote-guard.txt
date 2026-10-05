@@ -1,0 +1,7 @@
+RED CONTROL D: a promote over a ledger with a line that cannot be read
+cut the line of pInterruptEscape to five columns
+sha256 of the ledger before the promote: 025a0c23f02c47af
+FAIL truth-release: the ledger on disk has 39 line(s) and 38 could be read; repair or remove it first, or its hand columns are lost
+promote exit status: 1
+sha256 of the ledger after the promote:  025a0c23f02c47af
+harness/truth/build-ledger.tsv is put back from the kept copy: git diff is empty

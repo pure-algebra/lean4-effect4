@@ -1,0 +1,5 @@
+GREEN CONTROL E: the ledger with its trailing empty columns trimmed, as an editor may leave it
+trimmed the trailing tabs of 30 lines
+PASS truth-release: 39 programs match harness/truth/build-ledger.tsv: 30 agree with both builds, 8 with effect@4.0.0-rc.112 only (5 not run on effect@4.0.1), 1 with effect@4.0.1 only, 0 with neither
+make exit status: 0
+harness/truth/build-ledger.tsv is put back from the kept copy: git diff is empty

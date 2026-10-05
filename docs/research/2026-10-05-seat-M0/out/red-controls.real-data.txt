@@ -1,0 +1,29 @@
+--- green: the kept release result, unchanged: no finding, as expected
+programs whose schedule on effect@4.0.1 is a known difference: pMergeAll, pProvideMerge, pProvideTwice
+--- pMergeAll: its observed exit is altered, its schedule difference stays: refused as expected
+    FAIL truth-release: pMergeAll: 4.0.1 exit: the ledger says "yes", observed "no: machine success 3, host success 99"
+--- pMergeAll: its observed sync exit is altered, its schedule difference stays: refused as expected
+    FAIL truth-release: pMergeAll: 4.0.1 sync: the ledger says "yes", observed "no: machine success 3, host success 99"
+--- pProvideMerge: its observed exit is altered, its schedule difference stays: refused as expected
+    FAIL truth-release: pProvideMerge: 4.0.1 exit: the ledger says "yes", observed "no: machine success 2, host success 99"
+--- pProvideMerge: its observed sync exit is altered, its schedule difference stays: refused as expected
+    FAIL truth-release: pProvideMerge: 4.0.1 sync: the ledger says "yes", observed "no: machine success 2, host success 99"
+--- pProvideTwice: its observed exit is altered, its schedule difference stays: refused as expected
+    FAIL truth-release: pProvideTwice: 4.0.1 exit: the ledger says "yes", observed "no: machine success 2, host success 99"
+--- pProvideTwice: its observed sync exit is altered, its schedule difference stays: refused as expected
+    FAIL truth-release: pProvideTwice: 4.0.1 sync: the ledger says "yes", observed "no: machine success 2, host success 99"
+--- pBind: its observation is removed from the release result: refused as expected
+    FAIL truth-release: (the result is refused) pBind: the runner reports no result for it
+--- pFork: the field `runSyncAgree` is absent from its result: refused as expected
+    FAIL truth-release: pFork: 4.0.1 sync: the ledger says "yes", observed "n/a"
+--- p42: the field `scheduleAgree` is null in its result: refused as expected
+    FAIL truth-release: p42: 4.0.1 schedule: the ledger says "yes", observed "n/a"
+--- pKv: the field `exitAgree` is null in its result: refused as expected
+    FAIL truth-release: pKv: 4.0.1 exit: the ledger says "yes", observed "n/a"
+--- pGen: its observation is removed from the committed pin result: refused as expected
+    FAIL truth-release: (the result is refused) pGen: the runner reports no result for it
+--- pSqlite: not run on effect@4.0.1, and the lane is told that it ran: refused as expected
+    FAIL truth-release: (the result is refused) pSqlite: the runner reports no result for it
+--- pSqlite: not run on effect@4.0.1, and a result for it is slipped in: refused as expected
+    FAIL truth-release: (the result is refused) pSqlite: the lane did not select it, and the runner reports it
+red controls on real data: 14 of 14 as expected
