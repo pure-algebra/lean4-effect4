@@ -1,0 +1,22 @@
+# unstable/observability/OtlpResource.ts (rc.112) against observability/OtlpResource.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 102-103 release 106-108 cited ranges 1
+   pin units: fromConfig=code
+   release units: fromConfig=code
+-   102 const env = yield* Config.schema(
+-   103 Schema.UndefinedOr(Config.Record(Schema.StringFromUriComponent, Schema.StringFromUriComponent)),
++   106 const env = yield* Config.Record(
++   107 Schema.StringFromUriComponent,
++   108 Schema.StringFromUriComponent,
+
+@@ hunk 2 [code] pin 105-105 release 110-110 cited ranges 1
+   pin units: fromConfig=code
+   release units: fromConfig=code
+-   105 )
++   110 ).pipe(Config.withDefault(undefined))
+
+@@ hunk 3 [code] pin 111-111 release 116-116 cited ranges 2
+   pin units: fromConfig=code
+   release units: fromConfig=code
+-   111 ?? (yield* Config.string("OTEL_SERVICE_NAME"))
++   116 ?? (yield* Config.String("OTEL_SERVICE_NAME"))

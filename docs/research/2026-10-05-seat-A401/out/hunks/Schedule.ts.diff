@@ -1,0 +1,6 @@
+# Schedule.ts (rc.112) against Schedule.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 1952 release 1964-1964 cited ranges 0
+   pin units: 
+   release units: once=absent
++  1964 export const once: Schedule<void> = map(recurs(1), () => void 0)

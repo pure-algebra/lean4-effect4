@@ -1,0 +1,57 @@
+# Option.ts (rc.112) against Option.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 36-36 release 36-36 cited ranges 0
+   pin units: TypeId=code
+   release units: TypeId=code
+-    36 const TypeId = "~effect/data/Option"
++    36 const TypeId = "~effect/Option"
+
+@@ hunk 2 [code] pin 2704-2704 release 2704-2767 cited ranges 0
+   pin units: product=code
+   release units: product=code
+-  2704 export const product = <A, B>(self: Option<A>, that: Option<B>): Option<[A, B]> =>
++  2704 export const product: {
++  2734 <B>(that: Option<B>): <A>(self: Option<A>) => Option<[A, B]>
++  2764 <A, B>(self: Option<A>, that: Option<B>): Option<[A, B]>
++  2765 } = dual(
++  2766 2,
++  2767 <A, B>(self: Option<A>, that: Option<B>): Option<[A, B]> =>
+
+@@ hunk 3 [code] pin 2739-2742 release 2769-2870 cited ranges 0
+   pin units: productMany=code
+   release units: product=code; productMany=code
+-  2739 export const productMany = <A>(
+-  2740 self: Option<A>,
+-  2741 collection: Iterable<Option<A>>
+-  2742 ): Option<[A, ...Array<A>]> => {
++  2769 )
++  2803 export const productMany: {
++  2836 <A>(collection: Iterable<Option<A>>): (self: Option<A>) => Option<[A, ...Array<A>]>
++  2869 <A>(self: Option<A>, collection: Iterable<Option<A>>): Option<[A, ...Array<A>]>
++  2870 } = dual(2, <A>(self: Option<A>, collection: Iterable<Option<A>>): Option<[A, ...Array<A>]> => {
+
+@@ hunk 4 [code] pin 2754-2754 release 2882-2882 cited ranges 0
+   pin units: productMany=code
+   release units: productMany=code
+-  2754 }
++  2882 })
+
+@@ hunk 5 [erased] pin 3124-3159 release 3252-3287 cited ranges 0
+   pin units: partitionMap=code
+   release units: partitionMap=code
+-  3124 <A, B, C>(f: (a: A) => Result<C, B>): (self: Option<A>) => [left: Option<B>, right: Option<C>]
+-  3159 <A, B, C>(self: Option<A>, f: (a: A) => Result<C, B>): [left: Option<B>, right: Option<C>]
++  3252 <A, B, C>(f: (a: A) => Result<C, B>): (self: Option<A>) => [passes: Option<C>, fails: Option<B>]
++  3287 <A, B, C>(self: Option<A>, f: (a: A) => Result<C, B>): [passes: Option<C>, fails: Option<B>]
+
+@@ hunk 6 [erased] pin 3163-3163 release 3291-3291 cited ranges 0
+   pin units: partitionMap=code
+   release units: partitionMap=code
+-  3163 ): [excluded: Option<B>, satisfying: Option<C>] => {
++  3291 ): [passes: Option<C>, fails: Option<B>] => {
+
+@@ hunk 7 [code] pin 3168-3168 release 3296-3296 cited ranges 0
+   pin units: partitionMap=code
+   release units: partitionMap=code
+-  3168 return result.isFailure(e) ? [some(e.failure), none()] : [none(), some(e.success)]
++  3296 return result.isFailure(e) ? [none(), some(e.failure)] : [some(e.success), none()]

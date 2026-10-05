@@ -1,0 +1,263 @@
+# PubSub.ts (rc.112) against PubSub.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 20 release 20-20 cited ranges 0
+   pin units: 
+   release units: import ./internal/count.ts=absent
++    20 import * as Count from "@tree/internal/count.ts"
+
+@@ hunk 2 [code] pin before 26 release 27-27 cited ranges 0
+   pin units: 
+   release units: import ./Predicate.ts=absent
++    27 import { hasProperty } from "@tree/Predicate.ts"
+
+@@ hunk 3 [erased] pin before 74 release 76-76 cited ranges 0
+   pin units: 
+   release units: PubSub=type-decl
++    76 readonly ended: MutableRef.MutableRef<Option.Option<A>>
+
+@@ hunk 4 [code] pin before 202 release 229-229 cited ranges 0
+   pin units: 
+   release units: isPubSub=absent
++   229 export const isPubSub = <A = unknown>(u: unknown): u is PubSub<A> => hasProperty(u, TypeId)
+
+@@ hunk 5 [erased] pin before 248 release 277-277 cited ranges 0
+   pin units: 
+   release units: Subscription=type-decl
++   277 readonly ended: MutableRef.MutableRef<Option.Option<any>>
+
+@@ hunk 6 [code] pin 291-291 release 321-322 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-   291 options.strategy()
++   321 options.strategy(),
++   322 MutableRef.make(Option.none())
+
+@@ hunk 7 [code] pin before 511 release 542-544 cited ranges 0
+   pin units: 
+   release units: makeAtomicBounded=code
++   542 if (options.capacity === Infinity) {
++   543 return makeAtomicUnbounded(options)
++   544 }
+
+@@ hunk 8 [code] pin before 796 release 861-1040 cited ranges 0
+   pin units: 
+   release units: end=absent; endUnsafe=absent
++   861 export const end: {
++   922 <A>(value: A): (self: PubSub<A>) => Effect.Effect<boolean>
++   983 <A>(self: PubSub<A>, value: A): Effect.Effect<boolean>
++   984 } = dual(2, <A>(self: PubSub<A>, value: A): Effect.Effect<boolean> => Effect.sync(() => endUnsafe(self, value)))
++   996 export const endUnsafe: {
++  1007 <A>(value: A): (self: PubSub<A>) => boolean
++  1018 <A>(self: PubSub<A>, value: A): boolean
++  1019 } = dual(2, <A>(self: PubSub<A>, value: A): boolean => {
++  1020 if (self.shutdownFlag.current || Option.isSome(self.ended.current)) return false
++  1021 MutableRef.set(self.ended, Option.some(value))
++  1022 if (self.strategy instanceof BackPressureStrategy) {
++  1023 for (const [_, deferred, last] of MutableList.takeAll(self.strategy.publishers)) {
++  1024 if (last) Deferred.doneUnsafe(deferred, Exit.succeed(false))
++  1025 }
++  1026 }
++  1029 const exit = Exit.succeed(value)
++  1030 for (const pollersSet of self.subscribers.values()) {
++  1031 for (const pollers of pollersSet) {
++  1032 let poller: Deferred.Deferred<A> | MutableList.Empty
++  1033 while ((poller = MutableList.take(pollers)) !== MutableList.Empty) {
++  1034 Deferred.doneUnsafe(poller, exit)
++  1035 }
++  1036 }
++  1037 }
++  1038 self.subscribers.clear()
++  1039 return true
++  1040 })
+
+@@ hunk 9 [code] pin 996-996 release 1271-1271 cited ranges 0
+   pin units: publish=code
+   release units: publish=code
+-   996 if (self.shutdownFlag.current) {
++  1271 if (self.shutdownFlag.current || Option.isSome(self.ended.current)) {
+
+@@ hunk 10 [code] pin 1119-1119 release 1394-1394 cited ranges 0
+   pin units: publishUnsafe=code
+   release units: publishUnsafe=code
+-  1119 if (self.shutdownFlag.current) return false
++  1394 if (self.shutdownFlag.current || Option.isSome(self.ended.current)) return false
+
+@@ hunk 11 [code] pin 1237-1237 release 1512-1512 cited ranges 0
+   pin units: publishAll=code
+   release units: publishAll=code
+-  1237 if (self.shutdownFlag.current) {
++  1512 if (self.shutdownFlag.current || Option.isSome(self.ended.current)) {
+
+@@ hunk 12 [code] pin 1309-1309 release 1584-1584 cited ranges 0
+   pin units: subscribe=code
+   release units: subscribe=code
+-  1309 const subscription = makeSubscriptionUnsafe(self.pubsub, self.subscribers, self.strategy)
++  1584 const subscription = makeSubscriptionUnsafe(self.pubsub, self.subscribers, self.strategy, self.ended)
+
+@@ hunk 13 [code] pin 1439-1439 release 1714-1717 cited ranges 0
+   pin units: pollForItem=code
+   release units: pollForItem=code
+-  1439 const pollForItem = <A>(self: Subscription<A>) => {
++  1714 const pollForItem = <A>(self: Subscription<A>) =>
++  1715 Effect.callback<A>((resume) => {
++  1716 if (self.shutdownFlag.current) return resume(Effect.interrupt)
++  1717 if (Option.isSome(self.ended.current)) return resume(Effect.succeed(self.ended.current.value))
+
+@@ hunk 14 [code] pin 1454-1461 release 1732-1735 cited ranges 0
+   pin units: pollForItem=code
+   release units: pollForItem=code
+-  1454 return Effect.onInterrupt(
+-  1455 Deferred.await(deferred),
+-  1456 () => {
+-  1457 MutableList.remove(self.pollers, deferred)
+-  1458 return Effect.void
+-  1459 }
+-  1460 )
+-  1461 }
++  1732 if (deferred.effect) return resume(deferred.effect)
++  1733 deferred.resumes = [resume]
++  1734 return Effect.sync(() => MutableList.remove(self.pollers, deferred))
++  1735 })
+
+@@ hunk 15 [code] pin before 1571 release 1851-1851 cited ranges 0
+   pin units: 
+   release units: takeUpTo=code
++  1851 max = Count.normalize(max)
+
+@@ hunk 16 [code] pin 1684-1684 release 1971-1971 cited ranges 0
+   pin units: takeBetween=code
+   release units: takeBetween=code
+-  1684 Effect.suspend(() => takeRemainderLoop(self, min, max, []))
++  1971 Effect.suspend(() => takeRemainderLoop(self, Count.normalize(min), Count.normalize(max), []))
+
+@@ hunk 17 [code] pin 1846-1846 release 2133-2134 cited ranges 0
+   pin units: makeSubscriptionUnsafe=code
+   release units: makeSubscriptionUnsafe=code
+-  1846 strategy: PubSub.Strategy<A>
++  2133 strategy: PubSub.Strategy<A>,
++  2134 ended: MutableRef.MutableRef<Option.Option<A>>
+
+@@ hunk 18 [code] pin 1856-1856 release 2144-2145 cited ranges 0
+   pin units: makeSubscriptionUnsafe=code
+   release units: makeSubscriptionUnsafe=code
+-  1856 pubsub.replayWindow()
++  2144 pubsub.replayWindow(),
++  2145 ended
+
+@@ hunk 19 [code] pin before 2009 release 2298-2298 cited ranges 0
+   pin units: 
+   release units: BoundedPubSubArbSubscription.pollUpTo=code
++  2298 n = Count.normalize(n)
+
+@@ hunk 20 [code] pin before 2205 release 2495-2495 cited ranges 0
+   pin units: 
+   release units: BoundedPubSubPow2Subscription.pollUpTo=code
++  2495 n = Count.normalize(n)
+
+@@ hunk 21 [code] pin 2367-2367 release 2658-2658 cited ranges 0
+   pin units: BoundedPubSubSingleSubscription.poll=code
+   release units: BoundedPubSubSingleSubscription.poll=code
+-  2367 this.subscriberIndex += 1
++  2658 this.subscriberIndex = this.self.publisherIndex
+
+@@ hunk 22 [code] pin 2372-2372 release 2663-2663 cited ranges 0
+   pin units: BoundedPubSubSingleSubscription.pollUpTo=code
+   release units: BoundedPubSubSingleSubscription.pollUpTo=code
+-  2372 if (this.isEmpty() || n < 1) {
++  2663 if (Count.normalize(n) < 1 || this.isEmpty()) {
+
+@@ hunk 23 [code] pin 2375-2381 release 2666-2666 cited ranges 0
+   pin units: BoundedPubSubSingleSubscription.pollUpTo=code
+   release units: BoundedPubSubSingleSubscription.pollUpTo=code
+-  2375 const a = this.self.value
+-  2376 this.self.subscribers -= 1
+-  2377 if (this.self.subscribers === 0) {
+-  2378 this.self.value = AbsentValue as unknown as A
+-  2379 }
+-  2380 this.subscriberIndex += 1
+-  2381 return [a]
++  2666 return [this.poll() as A]
+
+@@ hunk 24 [code] pin 2388-2388 release 2673-2673 cited ranges 0
+   pin units: BoundedPubSubSingleSubscription.unsubscribe=code
+   release units: BoundedPubSubSingleSubscription.unsubscribe=code
+-  2388 if (this.subscriberIndex !== this.self.publisherIndex) {
++  2673 if (this.self.subscribers !== 0 && this.subscriberIndex !== this.self.publisherIndex) {
+
+@@ hunk 25 [code] pin before 2565 release 2850-2850 cited ranges 0
+   pin units: 
+   release units: UnboundedPubSubSubscription.pollUpTo=code
++  2850 n = Count.normalize(n)
+
+@@ hunk 26 [code] pin before 2612 release 2897-2897 cited ranges 0
+   pin units: 
+   release units: SubscriptionImpl.ended=absent
++  2897 readonly ended: MutableRef.MutableRef<Option.Option<A>>
+
+@@ hunk 27 [code] pin 2620-2620 release 2907-2908 cited ranges 0
+   pin units: SubscriptionImpl.constructor=code
+   release units: SubscriptionImpl.constructor=code
+-  2620 replayWindow: PubSub.ReplayWindow<A>
++  2907 replayWindow: PubSub.ReplayWindow<A>,
++  2908 ended: MutableRef.MutableRef<Option.Option<A>>
+
+@@ hunk 28 [code] pin before 2630 release 2918-2918 cited ranges 0
+   pin units: 
+   release units: SubscriptionImpl.constructor=code
++  2918 this.ended = ended
+
+@@ hunk 29 [code] pin before 2649 release 2937-2937 cited ranges 0
+   pin units: 
+   release units: PubSubImpl.ended=absent
++  2937 readonly ended: MutableRef.MutableRef<Option.Option<A>>
+
+@@ hunk 30 [code] pin 2655-2655 release 2945-2946 cited ranges 0
+   pin units: PubSubImpl.constructor=code
+   release units: PubSubImpl.constructor=code
+-  2655 strategy: PubSub.Strategy<A>
++  2945 strategy: PubSub.Strategy<A>,
++  2946 ended: MutableRef.MutableRef<Option.Option<A>>
+
+@@ hunk 31 [code] pin before 2663 release 2954-2954 cited ranges 0
+   pin units: 
+   release units: PubSubImpl.constructor=code
++  2954 this.ended = ended
+
+@@ hunk 32 [code] pin 2676-2677 release 2968-2970 cited ranges 0
+   pin units: makePubSubUnsafe=code
+   release units: makePubSubUnsafe=code
+-  2676 strategy: PubSub.Strategy<A>
+-  2677 ): PubSub<A> => new PubSubImpl(pubsub, subscribers, scope, shutdownHook, shutdownFlag, strategy)
++  2968 strategy: PubSub.Strategy<A>,
++  2969 ended: MutableRef.MutableRef<Option.Option<A>>
++  2970 ): PubSub<A> => new PubSubImpl(pubsub, subscribers, scope, shutdownHook, shutdownFlag, strategy, ended)
+
+@@ hunk 33 [code] pin 2735-2735 release 3028-3028 cited ranges 0
+   pin units: BackPressureStrategy.handleSurplus=code
+   release units: BackPressureStrategy.handleSurplus=code
+-  2735 return Effect.suspend(() => {
++  3028 return Effect.callback<boolean>((resume) => {
+
+@@ hunk 34 [code] pin 2740-2741 release 3033-3033 cited ranges 0
+   pin units: BackPressureStrategy.handleSurplus=code
+   release units: BackPressureStrategy.handleSurplus=code
+-  2740 return (MutableRef.get(isShutdown) ? Effect.interrupt : Deferred.await(deferred)).pipe(
+-  2741 Effect.onInterrupt(() => {
++  3033 if (MutableRef.get(isShutdown)) {
+
+@@ hunk 35 [code] pin 2743-2745 release 3035-3039 cited ranges 0
+   pin units: BackPressureStrategy.handleSurplus=code
+   release units: BackPressureStrategy.handleSurplus=code
+-  2743 return Effect.void
+-  2744 })
+-  2745 )
++  3035 return resume(Effect.interrupt)
++  3036 }
++  3037 if (deferred.effect) return resume(deferred.effect)
++  3038 deferred.resumes = [resume]
++  3039 return Effect.sync(() => this.removeUnsafe(deferred))
+
+@@ hunk 36 [code] pin before 3146 release 3440-3440 cited ranges 0
+   pin units: 
+   release units: ReplayWindowImpl.takeN=code
++  3440 n = Count.normalize(n)

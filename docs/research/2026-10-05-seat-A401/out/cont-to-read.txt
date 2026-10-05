@@ -1,0 +1,387 @@
+=== Test/Counterexamples/REGISTER.md
+85 :4023-4028 -> internal/effect.ts [block|unconfirmed] «},»
+    | `E4-SEM-CE-005` | SEEDED | A finalizer failure may be discarded in favour of a successful exit, or the merge itself re-raises the original exit cause | `Test/Counterexamples/Machine/Semant
+264 :32 -> plain:Test/Program/TypedProgBindRed.lean [plain|exact;skipped:carry=Test/contracts/found] «»
+    | `E4-TYPED-CE-030` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: every guard shape has its compatibility lemma); SEEDED 2026-10-01 (coordinator; the red controls landed with decisions 
+=== Test/Program/CompileContract.lean
+373 :1527 -> internal/effect.ts [dominant|unconfirmed] «if (done) break»
+    loop breaks once done, `:1527`; R2-11): two fibers, nothing interrupted. -/
+=== Test/Program/ConfigContract.lean
+262 :1211-1213 -> Config.ts [block|unconfirmed] «return hasInput»
+    -- `:1211-1213`) — which is why `withDefault` fires on it.
+273 :373 -> ConfigProvider.ts [block|unconfirmed] «(f) => makeSource(get, flow(transform, f))»
+    (`ConfigProvider.ts:883-886`), and `mapInput` post-composes (`:373`), so a `nested` applied
+=== Test/Program/ProtocolPosts.lean
+931 :3788-3789 -> internal/effect.ts [block|unconfirmed] «if (state.finalizer !== undefined) {»
+    `:3788-3789`, `:3794-3795`); the pinned source's run is row `inline` of
+931 :3794-3795 -> internal/effect.ts [block|unconfirmed] «} else if (finalizers.size === 1) {»
+    `:3788-3789`, `:3794-3795`); the pinned source's run is row `inline` of
+=== Test/contracts/schema-payload.contract.md
+625 :360 -> SchemaRepresentation.ts [default|exact;skipped:block=SchemaAST.ts] «readonly name: PropertyKey»
+    `PropertySignature.name : PropertyKey` (`:360`) with the persisted leg union at
+1282 :3343-3349 -> SchemaAST.ts [block|unconfirmed] «const numberToJson = new Link(»
+    LAW: `SchemaAST.ts:1448-1456`, `:3343-3349`, `:3085-3089` — a third behaviour,
+1282 :3085-3089 -> SchemaAST.ts [block|unconfirmed] «const nonFiniteLiterals = new Union([»
+    LAW: `SchemaAST.ts:1448-1456`, `:3343-3349`, `:3085-3089` — a third behaviour,
+=== docs/DESIGN-BASIS.md
+1137 :1432 -> Queue.ts [block|unconfirmed] «takeBetweenUnsafe(self, min, max) ?? internalEffect.andThen(awaitTake(»
+    again, consuming no frame (Queue's signal-then-repoll, `Queue.ts:1955-1975`, `:1432`). A
+=== docs/core/decisions.md
+221 :70 -> block:src/Effect4/Schema/Bridge.lean [block|unconfirmed] «»
+    | 128 | The two embeddings AGENTS.md calls exact | Call `Ty.ofSchema` and the JSON codec retractions in the vocabulary until their exactness theorems land: a whole-check comparison, the `var
+=== docs/core/lcnf-route.md
+39 :656 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | `let x := v; k` | `let` | `letValueExpr` (`:656`) — constructor applications by `ctorApp` (`:535`, field names from `ctorFieldNames`), projections on structures, calls, literals |
+39 :535 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | `let x := v; k` | `let` | `letValueExpr` (`:656`) — constructor applications by `ctorApp` (`:535`, field names from `ctorFieldNames`), projections on structures, calls, literals |
+40 :875 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | `fun` / `jp` | local function | `localFun` (`:875`); a join point is a local function, a `jmp` its call |
+41 :848-856 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | `cases` on `Bool` | `if` | both arms or a default (`:848-856`) |
+42 :777 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | `cases` on an inductive | `match` with alternative patterns | `altPat` (`:777`); default arm kept |
+45 :154 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | builtins | a 50-row table (`builtin?`, `:154`) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` clamped (`powClamped`, `:140`); `Nat.sub` truncated as Lean's |
+45 :140 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | builtins | a 50-row table (`builtin?`, `:154`) | `Nat`/`UInt8`/`Bool` arithmetic and comparisons; `Nat.pow` clamped (`powClamped`, `:140`); `Nat.sub` truncated as Lean's |
+48 :607 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | carriers (`List`-like op rows) | `carrierRewrite?` (`:607`), `useAsList` (`:500`) | a carrier without a `to_list` row is a refusal |
+48 :500 -> carry:src/OCaml5/Lcnf/Translate.lean [carry|unconfirmed] «»
+    | carriers (`List`-like op rows) | `carrierRewrite?` (`:607`), `useAsList` (`:500`) | a carrier without a `to_list` row is a refusal |
+63 :424 -> plain:tools/Conform/Lcnf/SemanticsTarget.lean [plain|exact;skipped:carry=src/OCaml5/Lcnf/Tran] «»
+    the emitted syntax (`Expr`, `Pat`, `TValue`, `evalT` at `:424`, `PrimEnv` for the named
+=== docs/design/design-language.md
+36 :223-230 -> carry:src/Effect4/Machine/Cause.lean [carry|unconfirmed] «»
+    | term | `Term`/`Terms` (`:223-230`); a variable is a position (`:217-218`) | pure, positional; terms are not nodes (`Compile.lean:61-62`) |
+36 :217-218 -> carry:src/Effect4/Machine/Cause.lean [carry|unconfirmed] «»
+    | term | `Term`/`Terms` (`:223-230`); a variable is a position (`:217-218`) | pure, positional; terms are not nodes (`Compile.lean:61-62`) |
+47 :262 -> carry:src/Effect4/Api.lean [carry|unconfirmed] «»
+    | perform / callback | `Eff.perform`, `Eff.callback` (`:262`, `:285`); `Prim.async register withSignal cancel` (`src/Effect4/Machine/Frames.lean`) | in-machine rows are answered by the store
+47 :285 -> carry:src/Effect4/Api.lean [carry|unconfirmed] «»
+    | perform / callback | `Eff.perform`, `Eff.callback` (`:262`, `:285`); `Prim.async register withSignal cancel` (`src/Effect4/Machine/Frames.lean`) | in-machine rows are answered by the store
+56 :356 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | birth, entry, exit | `forked parent child daemon` (`:356`), `started` (`:357`), `exited` (`:376`) | `started` is emitted at *every* loop entry — twice per fiber in `pFork` (corpus lines 73
+56 :357 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | birth, entry, exit | `forked parent child daemon` (`:356`), `started` (`:357`), `exited` (`:376`) | `started` is emitted at *every* loop entry — twice per fiber in `pFork` (corpus lines 73
+56 :376 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | birth, entry, exit | `forked parent child daemon` (`:356`), `started` (`:357`), `exited` (`:376`) | `started` is emitted at *every* loop entry — twice per fiber in `pFork` (corpus lines 73
+57 :124-128 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | queue, task | `Dispatcher {buckets, armed}` (`:124-128`), `Task.start / resume` (`:109-113`), `scheduledTask`/`ranTask` (`:358-359`); armed order (`:419-423`) | priority buckets, FIFO with
+57 :109-113 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | queue, task | `Dispatcher {buckets, armed}` (`:124-128`), `Task.start / resume` (`:109-113`), `scheduledTask`/`ranTask` (`:358-359`); armed order (`:419-423`) | priority buckets, FIFO with
+57 :358-359 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | queue, task | `Dispatcher {buckets, armed}` (`:124-128`), `Task.start / resume` (`:109-113`), `scheduledTask`/`ranTask` (`:358-359`); armed order (`:419-423`) | priority buckets, FIFO with
+57 :419-423 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | queue, task | `Dispatcher {buckets, armed}` (`:124-128`), `Task.start / resume` (`:109-113`), `scheduledTask`/`ranTask` (`:358-359`); armed order (`:419-423`) | priority buckets, FIFO with
+58 :98-105 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | observer | `Observer` (`:98-105`): `resumeAwait`, `untrackChild`, `dropScopeFinalizer`, `countdown`, `raceCallback`, `callback`; `observerFired` (`:366`) | the recorded link from a complet
+58 :366 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | observer | `Observer` (`:98-105`): `resumeAwait`, `untrackChild`, `dropScopeFinalizer`, `countdown`, `raceCallback`, `callback`; `observerFired` (`:366`) | the recorded link from a complet
+59 :391-403 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | race | `Race` (`:391-403`); `raceStarted/Launched/Settled` (`:371-373`) | entrants forked one per iteration; a skipped entrant never exists |
+59 :371-373 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | race | `Race` (`:391-403`); `raceStarted/Launched/Settled` (`:371-373`) | entrants forked one per iteration; a skipped entrant never exists |
+60 :363-365 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | interrupt, mask | `interruptRecorded`, `interruptDeferred`, `childrenInterrupted` (`:363-365`); `FrameFiber.interruptible` (`Frames.lean:292-293`); `Prim.setInterruptible` (`:131-132`) | a
+87 :144-148 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | outcome | `Outcome.finished / frontier / stuck why` (`:144-148`); `Stuck` (`src/Effect4/Machine/Fibers.lean`) | a frontier is live and resumable; stuck is a state rc.112 cannot reach |
+88 :425 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | trace, segment | `RunMachine.trace` (`:425`); `emit` the one writer (`:585-587`); `stepDecision` (`:1989-1991`) | each decision appends a segment `[logFrom, logUpto)` |
+88 :585-587 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    | trace, segment | `RunMachine.trace` (`:425`); `emit` the one writer (`:585-587`); `stepDecision` (`:1989-1991`) | each decision appends a segment `[logFrom, logUpto)` |
+106 :132-136 -> block:src/Effect4/Machine/Timer.lean [block|unconfirmed] «»
+    | logical clock | `Time = fin ms \| inf` (`Timer.lean:72-75`); `Timer {deadline, seq, waiter}` (`:132-136`); `advance` as a decision; fires staged in `(deadline, seq)` order (timer-semantics
+107 :133-135 -> plain:src/Effect4/Program/Compile.lean [plain|named;skipped:carry=src/Effect4/Machine/] «»
+    | fuel | `Point.fuel` (`src/Effect4/Program/Compile.lean`), one per child (`:133-135`); DB-04 | a budget; monotone in the trace (fuel-laws) |
+=== docs/design/string-diagrams-notes.md
+65 :289 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    wire. `scoped` (`:289`) and `uninterruptible` (`:272`) are the same shape: a box that contains
+65 :272 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    wire. `scoped` (`:289`) and `uninterruptible` (`:272`) are the same shape: a box that contains
+69 :286 -> carry:src/Effect4/Program/Eff.lean [carry|unconfirmed] «»
+    between that box and `awaitFiber` (`:286`), the two columns share no wire. The parallelism is
+136 :272 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    - **Scoped regions are transparent.** `uninterruptible` (`:272`) changes what the *environment*
+145 :293 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    - **D4.** A **cut** in `R` — a park, a `choose` site (`:293`), a `fire`/`flush` decision
+462 :223-230 -> carry:src/Effect4/Api.lean [carry|unconfirmed] «»
+    | classical wire (single) | value wire: `Term` (`:223-230`) | transfers; copy and delete both hold |
+473 :275 -> carry:src/Effect4/Api.lean [carry|unconfirmed] «»
+    | controlled unitary (eq. 27) | `branch` (`:275`) / `choose` (`:293`) + `choices` (`Api.lean:124`) | transfers; classical input copied to pick the arm |
+473 :293 -> carry:src/Effect4/Api.lean [carry|unconfirmed] «»
+    | controlled unitary (eq. 27) | `branch` (`:275`) / `choose` (`:293`) + `choices` (`Api.lean:124`) | transfers; classical input copied to pick the arm |
+=== generated/semantics.md
+1443 :32 -> plain:Test/Program/TypedProgBindRed.lean [plain|exact;skipped:carry=Layer.ts,global=inte] «»
+    | `E4-TYPED-CE-030` | REPAIRED 2026-10-01 (seat D2, merged `aabb1b5e`: every guard shape has its compatibility lemma); SEEDED 2026-10-01 (coordinator; the red controls landed with decisions 
+=== harness/truth/run-truth.ts
+34 :656-661 -> internal/effect.ts [dominant|named;also:plain=harness/truth/run-truth] «if (current === Yield) {»
+    *    sentinel with `_yielded` an `Exit` (`:656-661`);
+281 :5279-5281 -> internal/effect.ts [dominant|unconfirmed] «if (!daemon && !child._exit) {»
+    /** New children of `fiber` (insertion order = fork order, `:5279-5281`). */
+297 :5280-5281 -> internal/effect.ts [block|unconfirmed] «parentRuntime.children().add(child)»
+    // (`:5280-5281`), so `scanChildren` could see it only later, or never when it exits at
+598 :574 -> internal/effect.ts [block|unconfirmed] «interruptUnsafe(fiberId?: number | undefined, annotations?: Context.Co»
+    // observer; spelled out here so the deadline can interrupt the leftover fiber (`:574`).
+=== scripts/check-language.py
+65 :14 -> block:src/Effect4/Program/Eff.lean [block|unconfirmed] «»
+    ("red: a bare line after a repository path", "doc", "See `src/Effect4/Program/Eff.lean:12` and `:14`.", ["line-cite", "line-cite"]),
+=== src/Effect4/Api/Supervision.lean
+21 :961-990 -> block:src/Effect4/Machine/Fibers.lean [block|unconfirmed] «»
+    (`:961-990`, the `Observer.dropScopeFinalizer` the link leaves on the fiber), nothing at all,
+50 :1213 -> block:src/Effect4/Machine/Fibers.lean [block|unconfirmed] «»
+    `Machine/Fibers.lean:1205`, `:1213`), and a `raceAll` entrant is an immediate daemon the race
+51 :1521 -> block:src/Effect4/Machine/Fibers.lean [block|unconfirmed] «»
+    owns (`:1521`, `Machine/Fibers.lean` `launchEntrant`). -/
+182 :988-990 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    close interrupts and whose drop observer the machine left on the fiber (`:988-990`). -/
+200 :1616-1617 -> block:src/Effect4/Machine/Fibers.lean [block|unconfirmed] «»
+    `Observer.untrackChild` when the child exits (`:1616-1617`). -/
+=== src/Effect4/Laws/Api/Supervision.lean
+302 :1696-1704 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    /-- The first of the four is written in one place: `RunFiber.publish` (`:1696-1704`). -/
+330 :1903-1910 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    tracks it (tracking is `Cmd.trackChild`, run after its start, `:1903-1910`) and nothing pins
+331 :1208 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    it (`Cmd.link`, likewise after its start, `:1208`), while its origin already records the fork. Between the fork and the command that holds it, even a tracked child is
+=== src/Effect4/Laws/Machine/Lift.lean
+304 :2042-2043 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    disarmed (`:2042-2043`), the `ranTask` event (`:2030`), `yieldVerdict`'s modify (`:2117-2118`),
+304 :2030 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    disarmed (`:2042-2043`), the `ranTask` event (`:2030`), `yieldVerdict`'s modify (`:2117-2118`),
+305 :2125-2133 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    the interrupt record (`:2125-2133`), the middleware latch (`:2135`), `clockStep` (`:2072-2075`)
+305 :2135 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    the interrupt record (`:2125-2133`), the middleware latch (`:2135`), `clockStep` (`:2072-2075`)
+306 :2123-2124 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    and `prepareAnswer` (`:2123-2124`). `A` is the decision's admission (an `AnswerOk`); only the
+359 :2042-2043 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    `:2042-2043`; the `ranTask` event, `:2030`; a snapshot task queued or skipped; `clockStep` and the
+359 :2030 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    `:2042-2043`; the `ranTask` event, `:2030`; a snapshot task queued or skipped; `clockStep` and the
+=== src/Effect4/Laws/Machine/StoresLaws.lean
+662 :438-442 -> Layer.ts [block|unconfirmed] «const local = this.map.get(layer)»
+    (`Layer.ts:245`, `:438-442`). census: layer.memo-get -/
+712 :408 -> Layer.ts [carry|unconfirmed] «return internalEffect.void»
+    /-- Any other release decrements (`:408`). census: layer.memo-release -/
+739 :401-417 -> Layer.ts [block|unconfirmed] «finalizer: (exit: Exit.Exit<unknown, unknown>) =>»
+    /-! ### The join's finalizer names, as programs (`Layer.ts:343`, `:401-417`)
+=== src/Effect4/Laws/Program/Agreement.lean
+1218 :2348 -> Layer.ts [tag|unconfirmed] «) => provideWith(self, that, identity))»
+    (`:2348`). census: layer.provide-dependency-first -/
+1326 :3944-3947 -> internal/effect.ts [tag|unconfirmed] «fiber.setContext(prev)»
+    /-- The scoped callback restores the previous context before the close (`:3944-3947`), whether
+=== src/Effect4/Laws/Program/Denote.lean
+18 :552 -> block:src/Effect4/Program/Compile.lean [block|unconfirmed] «»
+    `suspendBodyAt` (`:602`), `contAOf` (`:552`), `contEOf` (`:574`), `finalizerProgram` (`:693`).
+=== src/Effect4/Laws/Program/DenoteR.lean
+257 :2180-2199 -> internal/effect.ts [block|unconfirmed] «export const provideContext: {»
+    -- context)` (`internal/effect.ts:3983`, `:2180-2199`): the current context read, the captured
+374 :439-440 -> Layer.ts [block|unconfirmed] «if (local) {»
+    the entry finalizer on the caller's scope and awaits the entry's deferred (`:439-440`,
+375 :400 -> Layer.ts [block|unconfirmed] «effect: Deferred.await(deferred),»
+    `:400`); a miss is `memoMapBuild` (`:390-419`) — the allocation, the registration, and the
+=== src/Effect4/Laws/Program/InterpR.lean
+157 :3945 -> internal/effect.ts [block|unconfirmed] «return scopeCloseUnsafe(scope, exit)»
+    region's exit reads this close as rc.112's `scoped` does (`:3945`); `Scope.close` voids the lone
+173 :3788-3789 -> internal/effect.ts [dominant|unconfirmed] «if (state.finalizer !== undefined) {»
+    effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its type
+173 :3794-3795 -> internal/effect.ts [dominant|unconfirmed] «} else if (finalizers.size === 1) {»
+    effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its type
+=== src/Effect4/Laws/Program/Typed/Assembly.lean
+394 :1005-1036 -> dominant:src/Effect4/Machine/Fibers.lean [dominant|exact;skipped:carry=src/Effect4/Machine/] «»
+    `:1474-1489`, `linkScope` `:1005-1036`). It replaced `MachineLive`'s stand-in field. -/
+=== src/Effect4/Laws/Program/Typed/Commands/Clauses/Command.lean
+300 :1026-1027 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    /-- `linkScope` on an open scope and an exited target: nothing (`:1026-1027`). -/
+310 :1028-1037 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    /-- `linkScope` on an open scope and a live target (`:1028-1037`): the store's registration and the
+=== src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean
+486 :662-667 -> internal/effect.ts [carry|unconfirmed] «} else if (this._deferredInterrupt) {»
+    · -- a deferred interrupt: the park cleared, the same entry continues (`:662-667`)
+703 :5304 -> internal/effect.ts [block|unconfirmed] «} = dual((args) => isEffect(args[0]), <A, E, R>(»
+    /-- **`await`** (`internal/effect.ts:5291`, `:5304`): the target, declared by the pre, is a fiber of
+1353 :5304 -> internal/effect.ts [block|unconfirmed] «} = dual((args) => isEffect(args[0]), <A, E, R>(»
+    `internal/effect.ts:5291`, `:5304`): the fiber parks on the fresh token, declared at the observer's
+1427 :662-667 -> internal/effect.ts [carry|unconfirmed] «} else if (this._deferredInterrupt) {»
+    · -- a deferred interrupt: the park cleared, the same entry continues (`:662-667`)
+1521 :5304 -> internal/effect.ts [block|unconfirmed] «} = dual((args) => isEffect(args[0]), <A, E, R>(»
+    /-- **`await`** (`internal/effect.ts:5291`, `:5304`), both modes: `clause_await_of_parks` at its park
+1640 :662-667 -> internal/effect.ts [carry|unconfirmed] «} else if (this._deferredInterrupt) {»
+    · -- a deferred interrupt: the park cleared, the same entry continues (`:662-667`)
+=== src/Effect4/Laws/Program/Typed/Commands/Clauses/Spawn.lean
+677 :1493 -> block:src/Effect4/Machine/Fibers.lean [block|unconfirmed] «»
+    /-- **`raceAll`** (`beginRace`, `Machine/Fibers.lean:919-933`, rc.112 `:1493`): the answer frame saved;
+=== src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean
+1961 :5368 -> internal/effect.ts [carry|unconfirmed] «if (scope.state._tag !== "Closed") {»
+    /-- **`interruptScoped`** (`:5368`, D6b): on the fiber itself, `unit` answered; on another fiber, the
+2027 :871-884 -> internal/effect.ts [carry|unconfirmed] «): Effect.Effect<void>»
+    /-- **`interruptAs`** (`:871-884`, D6b): the target is declared (the pre), so it is a fiber of the
+=== src/Effect4/Laws/Program/Typed/Commands/Finish.lean
+697 :1747 -> dominant:src/Effect4/Machine/Fibers.lean [dominant|unconfirmed] «»
+    `:1747`): the exit is written, the parks and the finalizing flag cleared, the fiber stopped. Its
+=== src/Effect4/Laws/Program/Typed/Commands/Launch.lean
+626 :1520-1528 -> block:src/Effect4/Machine/Fibers.lean [block|unconfirmed] «»
+    /-- **`launch` keeps `I`** (`Machine/Fibers.lean:1879-1896`, rc.112 `:1520-1528`): the entrant is
+=== src/Effect4/Laws/Program/Typed/Commands/Observe.lean
+8 :1669-1671 -> block:src/Effect4/Machine/Fibers.lean [block|unconfirmed] «»
+    drop on an absent scope (`:1669-1671`), is excluded by `ObserverCommandOk`'s `Stores.ScopeLive`.
+11 :1673-1705 -> plain:src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean [plain|named;skipped:block=src/Effect4/Machine/] «»
+    `observe_raceCallback` (`Bookkeeping.lean`). The countdown arm (`:1673-1705`) is the long one:
+=== src/Effect4/Laws/Program/Typed/Commands/Registration.lean
+365 :1920-1926 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    -- the accepted exit: the settle program continues the same entry (`:1920-1926`)
+428 :1927-1931 -> carry:src/Effect4/Machine/Fibers.lean [carry|unconfirmed] «»
+    · -- no answer: push the race's cancel frame and park on the race token (`:1927-1931`)
+=== src/Effect4/Laws/Program/Typed/LayerArm.lean
+800 :1440 -> Layer.ts [block|unconfirmed] «»
+    /-- A leaf's construction on its layer scope (`Layer.ts:1482`, `:1440`, `:1515`): the layer scope
+800 :1515 -> Layer.ts [block|unconfirmed] «/**»
+    /-- A leaf's construction on its layer scope (`Layer.ts:1482`, `:1440`, `:1515`): the layer scope
+=== src/Effect4/Machine/Completion.lean
+29 :570-571 -> Deferred.ts [block|unconfirmed] «<A, E>(self: Deferred<A, E>, exit: Exit.Exit<A, E>): Effect<boolean>»
+    /-- The existing Deferred completion alphabet (`Deferred.ts:456-461`, `:570-571`,
+30 :1650 -> Deferred.ts [block|unconfirmed] «self.effect = effect»
+    `:1650`), also used for external async answers. A Ref read is stored data and is
+=== src/Effect4/Machine/Fibers.lean
+117 :5591 -> internal/effect.ts [default|named;skipped:block=Effect.ts] «}»
+    (`Latch.flushScheduled` `:5591`, Queue's `releaseTakers` `Queue.ts:1974`, the permit sweep
+156 :207-212 -> Scheduler.ts [block|unconfirmed] «scheduleTask(task: () => void, priority: number) {»
+    /-- `Scheduler.ts:105-131` plus arming on the first task (`:207-212`). -/
+487 :361-367 -> testing/TestClock.ts [block|unconfirmed] «while (Arr.isArrayNonEmpty(sleeps)) {»
+    (`:361-367`), then the clock is set to the end (`:368`). A duration, never a timestamp: the
+487 :368 -> testing/TestClock.ts [block|unconfirmed] «advanceTo(endTimestamp)»
+    (`:361-367`), then the clock is set to the end (`:368`). A duration, never a timestamp: the
+=== src/Effect4/Machine/Stores.lean
+103 :726-727 -> internal/effect.ts [carry|unconfirmed] «this.maxOpsBeforeYield = this.getRef(Scheduler.MaxOpsBeforeYield)»
+    /-- The one constructor: the caches recomputed off the map (`setContext`, `:726-727`). -/
+159 :5458 -> internal/effect.ts [block|unconfirmed] «scopeAddFinalizerUnsafe(scope, key, () => fiberInterrupt(self))»
+    unless the interruptor is the child itself. `skipSelf = false` is `fiberRunIn` (`:5458`). -/
+302 :3855 -> internal/effect.ts [block|unconfirmed] «scopeAddFinalizerUnsafe(scope, {}, finalizer)»
+    allocated by the step from the store's supply (`const key = {}`, `:3855`), as
+304 :3851-3853 -> internal/effect.ts [block|unconfirmed] «return suspend(() => {»
+    exit instead (`:3851-3853`), an unknown one is a frontier. -/
+319 :396-411 -> Layer.ts [carry|unconfirmed] «const layerScope = Scope.makeUnsafe()»
+    /-- `memoMapBuild`'s synchronous half (`:396-411`): a layer scope, a Deferred, the entry with
+349 :1510-1514 -> internal/effect.ts [carry|unconfirmed] «resume(»
+    under a mask (`:1510-1514`, R2-12). -/
+389 :5264-5284 -> internal/effect.ts [carry|unconfirmed] «export const forkUnsafe = <FA, FE, A, E, R>(»
+    /-- `fork` then `join`/`await` the child (`:5264-5284`, `:5291`, `:5304`). -/
+389 :5291 -> internal/effect.ts [carry|unconfirmed] «readonly uninterruptible?: boolean | "inherit" | undefined»
+    /-- `fork` then `join`/`await` the child (`:5264-5284`, `:5291`, `:5304`). -/
+389 :5304 -> internal/effect.ts [carry|unconfirmed] «} = dual((args) => isEffect(args[0]), <A, E, R>(»
+    /-- `fork` then `join`/`await` the child (`:5264-5284`, `:5291`, `:5304`). -/
+394 :5364-5378 -> internal/effect.ts [carry|unconfirmed] «): Effect.Effect<Fiber.Fiber<A, E>, never, R> =>»
+    /-- `forkIn` (`:5364-5378`). The registration identity is not part of the name: the store
+395 :5366 -> internal/effect.ts [carry|unconfirmed] «const fiber = forkUnsafe(parent, self, options?.startImmediately, true»
+    allocates it at the executed registration (`:5366`, `E4-CHECK-CE-016`). -/
+400 :5400-5406 -> internal/effect.ts [carry|unconfirmed] «} = dual((args) => isEffect(args[0]), <A, E, R>(»
+    /-- `forkScoped` (`:5400-5406`). -/
+413 :5291 -> internal/effect.ts [carry|unconfirmed] «readonly uninterruptible?: boolean | "inherit" | undefined»
+    /-- `fiberJoin`/`fiberAwait` on an existing handle (`:5291`, `:5304`). -/
+413 :5304 -> internal/effect.ts [carry|unconfirmed] «} = dual((args) => isEffect(args[0]), <A, E, R>(»
+    /-- `fiberJoin`/`fiberAwait` on an existing handle (`:5291`, `:5304`). -/
+432 :5291 -> internal/effect.ts [carry|unconfirmed] «readonly uninterruptible?: boolean | "inherit" | undefined»
+    /-- contA on a `Val.fiber`: park as `join` (`:5291`) or `await` (`:5304`). -/
+432 :5304 -> internal/effect.ts [carry|unconfirmed] «} = dual((args) => isEffect(args[0]), <A, E, R>(»
+    /-- contA on a `Val.fiber`: park as `join` (`:5291`) or `await` (`:5304`). -/
+462 :773 -> internal/effect.ts [carry|unconfirmed] «if (impl._exit) return resume(succeed(impl._exit))»
+    `:773`, `:821`; `fiberAwaitAll`, `:812`), R2-3. -/
+462 :821 -> internal/effect.ts [carry|unconfirmed] «}»
+    `:773`, `:821`; `fiberAwaitAll`, `:812`), R2-3. -/
+562 :396 -> Layer.ts [carry|unconfirmed] «const layerScope = Scope.makeUnsafe()»
+    /-- The layer scope `memoMapBuild` allocated (`:396`). -/
+564 :397 -> Layer.ts [carry|unconfirmed] «const deferred = Deferred.makeUnsafe<Context.Context<ROut>, E>()»
+    /-- The Deferred (`:397`). -/
+611 :434-443 -> Layer.ts [carry|unconfirmed] «get<RIn, E, ROut>(»
+    /-- `MemoMapImpl.get` (`:434-443`) without the reuse side effect: own map first, else the parent
+632 :438 -> Layer.ts [block|unconfirmed] «const local = this.map.get(layer)»
+    object (`Layer.ts:411`, `:438`). The model cannot stop a program from forging a path; that
+1893 :3983 -> internal/effect.ts [carry|unconfirmed] «(a) => scopeAddFinalizerExit(scope, (exit) => provideContext(release(a»
+    -- the release closure is called when the finalizer runs (`:3983`): a suspension the
+1921 :456-461 -> Deferred.ts [block|unconfirmed] «<A, E>(self: Deferred<A, E>, effect: Effect<A, E>): Effect<boolean>»
+    (`Deferred.ts:570-571`); `ofRefGet` is a non-exit effect, stored and not run (`:456-461`). -/
+2025 :3784 -> internal/effect.ts [block|unconfirmed] «return»
+    program is built (`:3784`). The `scoped` region's exit reads this close as rc.112's `scoped`
+2026 :3945 -> internal/effect.ts [block|unconfirmed] «return scopeCloseUnsafe(scope, exit)»
+    does (`:3945`), its `OnExit` discarding the lone finalizer's value; `Scope.close` voids it
+2043 :3788-3789 -> internal/effect.ts [dominant|unconfirmed] «if (state.finalizer !== undefined) {»
+    effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its type
+2043 :3794-3795 -> internal/effect.ts [dominant|unconfirmed] «} else if (finalizers.size === 1) {»
+    effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its type
+2101 :3851-3853 -> internal/effect.ts [block|unconfirmed] «return suspend(() => {»
+    -- (`:3851-3853`); an open one registers under a key allocated from the supply (`:3855-3856`,
+2101 :3855-3856 -> internal/effect.ts [block|unconfirmed] «scopeAddFinalizerUnsafe(scope, {}, finalizer)»
+    -- (`:3851-3853`); an open one registers under a key allocated from the supply (`:3855-3856`,
+2515 :3617 -> internal/effect.ts [tag|unconfirmed] «}»
+    close order under the `Exit` primitive (`:3617`, `:3621-3637`), whose reified exit is what the
+2615 :5457 -> internal/effect.ts [block|unconfirmed] «const key = {}»
+    its own freshly allocated identity (`:5457`). census: scope.fork-linkage -/
+2634 :5457-5460 -> internal/effect.ts [block|unconfirmed] «const key = {}»
+    `internal/effect.ts:5366-5372` and `:5457-5460` allocate a brand new key object at every
+2734 :5369-5371 -> internal/effect.ts [tag|unconfirmed] «const key = {}»
+    "interrupt unless the interruptor is the fiber itself, then await" (`:5369-5371`).
+=== src/Effect4/Machine/Timer.lean
+23 :345 -> testing/TestClock.ts [dominant|named;skipped:block=internal/effect.ts] «adjustmentNanos?: bigint»
+    its `endTimestamp` under `runSemaphore.withPermits(1)` (`:345`, `:375`), and so does this store
+23 :375 -> testing/TestClock.ts [dominant|exact;skipped:block=internal/effect.ts] «}, runSemaphore.withPermits(1))»
+    its `endTimestamp` under `runSemaphore.withPermits(1)` (`:345`, `:375`), and so does this store
+27 :365 -> testing/TestClock.ts [dominant|exact;skipped:block=internal/effect.ts] «entry.latch.openUnsafe()»
+    latch there (`latch.openUnsafe()`, `:365`), whose `flushScheduled` posts the resume; that
+54 :355 -> testing/TestClock.ts [carry|unconfirmed] «}»
+    /-- An advance in progress: the `endTimestamp` of the running `adjust` (`:355`). -/
+63 :6057-6062 -> internal/effect.ts [global|unconfirmed] «else if (!Number.isFinite(millis)) return never»
+    /-- `sleep(d)` with `0 < d` (`:327-338`; live `:6057-6062`): registered at its deadline, in
+73 :337 -> testing/TestClock.ts [dominant|exact;skipped:carry=internal/effect.ts] «sleeps.sort(SleepOrder)»
+    /-- The family's choice (`SleepOrder`, `:337`): among the sleeps due at `target`, the earliest
+83 :361-367 -> testing/TestClock.ts [dominant|named;skipped:carry=internal/effect.ts] «while (Arr.isArrayNonEmpty(sleeps)) {»
+    /-- One fire of `TestClock.run`'s loop (`:361-367`): the least due sleep is popped, the clock
+94 :378 -> testing/TestClock.ts [dominant|named;skipped:carry=internal/effect.ts] «const duration = Duration.fromInputUnsafe(input)»
+    fixes the end (`now + millis`, `:355`, `:378`) and keeps it until the loop finishes; each step
+96 :368 -> testing/TestClock.ts [dominant|exact;skipped:carry=internal/effect.ts] «advanceTo(endTimestamp)»
+    (`advanceTo(endTimestamp)`, `:368`) and clears the advance. -/
+=== src/Effect4/Program/Compile.lean
+262 :343 -> Layer.ts [block|unconfirmed] «(exit) => exit._tag === "Failure" ? Scope.close(layerScope, exit) : in»
+    inner build of the layer at `q` under the finalizer that closes it on failure (`:343`). -/
+270 :412 -> Layer.ts [block|unconfirmed] «return internalEffect.scopeAddFinalizerExit(scope, entry.finalizer).pi»
+    register the entry finalizer on the caller's scope (`:412`), then build into it. -/
+284 :1597 -> Layer.ts [block|unconfirmed] «return internalEffect.forEach(layers, (layer) => layer.build(memoMap, »
+    fork the first sibling's sequential child of it (`:1597`). -/
+307 :1597 -> Layer.ts [block|unconfirmed] «return internalEffect.forEach(layers, (layer) => layer.build(memoMap, »
+    value its handle: fork the first layer's sequential child of it (`:1597`), or, with no
+770 :1596 -> Layer.ts [block|unconfirmed] «const parentScope = Scope.forkUnsafe(scope, "parallel")»
+    (`:1596`). The constructors `compileLayer` handles without a wrapper are compiled as there,
+1196 :439-440 -> Layer.ts [block|unconfirmed] «if (local) {»
+    -- owning map (`:439-440`, `:246-249`), registering the entry finalizer on the caller scope
+1196 :246-249 -> Layer.ts [block|unconfirmed] «return internalEffect.andThen(»
+    -- owning map (`:439-440`, `:246-249`), registering the entry finalizer on the caller scope
+=== src/Effect4/Program/Config.lean
+142 :372 -> ConfigProvider.ts [block|unconfirmed] «(path) => get(transform(path)),»
+    /-- `load` (`ConfigProvider.ts:286`, `:372`, `:379-383`): the transform runs, then the source;
+441 :1219 -> ConfigProvider.ts [carry|unconfirmed] «const NUMERIC_INDEX = /^(0|[1-9][0-9]*)$/»
+    /-- A segment of an env var name: a canonically spelled number is an index (`:1219`). -/
+486 :883-886 -> ConfigProvider.ts [block|unconfirmed] «(self: ConfigProvider, prefix: string | Path): ConfigProvider => {»
+    `:883-886`). Swapping the two combinators changes which env var is read. -/
+808 :211-224 -> Config.ts [block|unconfirmed] «const preserveInputEvidence = <T>(»
+    (`Config.ts:564-568`, `:211-224`). -/
+1010 :1211-1213 -> Config.ts [block|unconfirmed] «return hasInput»
+    -- `:1211-1213`) — which is why `withDefault` fires on it.
+1187 :1392-1394 -> ConfigProvider.ts [carry|unconfirmed] «const value = Object.hasOwn(parsed, variableName) && parsed[variableNa»
+    -- A name that expands to the empty string is treated as missing (`:1392-1394`).
+=== src/Effect4/Program/Eff.lean
+444 :438 -> Layer.ts [block|unconfirmed] «const local = this.map.get(layer)»
+    never a name: rc.112 keys its memo map on the layer object (`Layer.ts:411`, `:438`), and an
+=== src/Effect4/Program/Packages/KeyValueStoreMemory.lean
+10 :208-211 -> unstable/persistence/KeyValueStore.ts [block|unconfirmed] «export const KeyValueStore: Context.Service<»
+    `:38-95`, the key at `:208-211`, `layerMemory` at `:331-352`), as a `RowTable` value of
+=== src/Effect4/Program/Provision.lean
+583 :670-674 -> internal/effect.ts [block|unconfirmed] «} catch (error) {»
+    `internal/effect.ts:2134` through `:670-674`). -/
+=== src/Effect4/Schema/Document.lean
+129 :1098-1103 -> SchemaRepresentation.ts [block|unconfirmed] «const DocumentFromJson: Schema.Codec<Document, Schema.Json> = Schema.t»
+    Pin: `SchemaRepresentation.ts:480-483`, codec `:1098-1103`.
+=== src/Effect4/Schema/Representation.lean
+240 :1020 -> SchemaRepresentation.ts [block|unconfirmed] «Schema.Union([StringValueCodec, NumberValueCodec])»
+    `:1020`, and property-key alternatives at `:1041-1043`. Those spellings sit on
+=== ts/eff/ingest/test/sql-fold.test.ts
+12 :1394-1399 -> unstable/sql/Statement.ts [block|unconfirmed] «}»
+    // The oracle: a statement needs no connection to compile (`Statement.ts:513-542`, `:1394-1399`).

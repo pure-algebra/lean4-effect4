@@ -1,0 +1,8 @@
+id	status	class	changed_citations
+E4-CONF-CE-001	SEEDED	cosmetic	ConfigProvider.ts:373-373
+E4-CONF-CE-003	SEEDED	behaviour	ConfigProvider.ts:1396-1399
+E4-CONF-CE-005	SEEDED	behaviour	Config.ts:847-852 Config.ts:674-675 Config.ts:1041-1041 Config.ts:1211-1213
+E4-CONF-CE-006	SEEDED	cosmetic	ConfigProvider.ts:373-373
+E4-RUN-CE-040	SEEDED	behaviour	Queue.ts:1974-1974
+E4-SEM-CE-005	SEEDED	host	internal/effect.ts:4023-4028
+E4-STORES-CE-004	SEEDED	behaviour	Layer.ts:396-411 Layer.ts:434-443

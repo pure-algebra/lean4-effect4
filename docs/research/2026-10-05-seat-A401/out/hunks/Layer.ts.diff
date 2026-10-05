@@ -1,0 +1,194 @@
+# Layer.ts (rc.112) against Layer.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin 237-237 release 237-238 cited ranges 1
+   pin units: MemoMapEntry=type-decl
+   release units: MemoMapEntry=type-decl
+-   237 effect: Effect<Context.Context<any>, any>
++   237 readonly deferred: Deferred.Deferred<Context.Context<any>, any>
++   238 readonly scope: Scope.Closeable
+
+@@ hunk 2 [code] pin 241-244 release 243-261 cited ranges 1
+   pin units: memoMapReuse=absent
+   release units: makeMemoMapEntry=absent; memoMapObserve=absent
+-   241 const memoMapReuse = <RIn, E, ROut>(
+-   242 entry: MemoMapEntry,
+-   243 scope: Scope.Scope
+-   244 ): Effect<Context.Context<ROut>, E, RIn> => {
++   243 const makeMemoMapEntry = (memoMap: MemoMapImpl, layer: Layer<any, any, any>): MemoMapEntry => {
++   244 const entry: MemoMapEntry = {
++   245 observers: 0,
++   246 deferred: Deferred.makeUnsafe(),
++   247 scope: Scope.makeUnsafe(),
++   248 finalizer: (exit) =>
++   249 internalEffect.suspend(() => {
++   250 if (--entry.observers > 0) return internalEffect.void
++   251 memoMap.map.delete(layer)
++   252 return Scope.close(entry.scope, exit)
++   253 })
++   254 }
++   255 return entry
++   256 }
++   260 const memoMapObserve = (entry: MemoMapEntry, scope: Scope.Scope): boolean => {
++   261 if (scope.state._tag === "Closed") return false
+
+@@ hunk 3 [code] pin 246-249 release 263-264 cited ranges 3
+   pin units: memoMapReuse=absent
+   release units: memoMapObserve=absent
+-   246 return internalEffect.andThen(
+-   247 internalEffect.scopeAddFinalizerExit(scope, (exit) => entry.finalizer(exit)),
+-   248 entry.effect
+-   249 )
++   263 internalEffect.scopeAddFinalizerUnsafe(scope, {}, entry.finalizer)
++   264 return true
+
+@@ hunk 4 [code] pin 390-419 release before 405 cited ranges 21
+   pin units: memoMapBuild=absent
+   release units: 
+-   390 const memoMapBuild = <RIn, E, ROut>(
+-   391 memoMap: MemoMapImpl,
+-   392 layer: Layer<ROut, E, RIn>,
+-   393 scope: Scope.Scope,
+-   394 build: (memoMap: MemoMap, scope: Scope.Scope) => Effect<Context.Context<ROut>, E, RIn>
+-   395 ): Effect<Context.Context<ROut>, E, RIn> => {
+-   396 const layerScope = Scope.makeUnsafe()
+-   397 const deferred = Deferred.makeUnsafe<Context.Context<ROut>, E>()
+-   398 const entry: MemoMapEntry = {
+-   399 observers: 1,
+-   400 effect: Deferred.await(deferred),
+-   401 finalizer: (exit: Exit.Exit<unknown, unknown>) =>
+-   402 internalEffect.suspend(() => {
+-   403 entry.observers--
+-   404 if (entry.observers === 0) {
+-   405 memoMap.map.delete(layer)
+-   406 return Scope.close(layerScope, exit)
+-   407 }
+-   408 return internalEffect.void
+-   409 })
+-   410 }
+-   411 memoMap.map.set(layer, entry)
+-   412 return internalEffect.scopeAddFinalizerExit(scope, entry.finalizer).pipe(
+-   413 internalEffect.flatMap(() => build(memoMap, layerScope)),
+-   414 internalEffect.onExit((exit) => {
+-   415 entry.effect = exit
+-   416 return Deferred.done(deferred, exit)
+-   417 })
+-   418 )
+-   419 }
+
+@@ hunk 5 [code] pin 440-440 release 424-425 cited ranges 6
+   pin units: MemoMapImpl.get=code
+   release units: MemoMapImpl.get=code
+-   440 return memoMapReuse(local, scope)
++   424 memoMapObserve(local, scope)
++   425 return local.deferred.effect ?? Deferred.await(local.deferred)
+
+@@ hunk 6 [code] pin before 451 release 438-440 cited ranges 3
+   pin units: 
+   release units: MemoMapImpl.getOrElseMemoize=code
++   438 let deferred: Deferred.Deferred<Context.Context<ROut>, E> | undefined
++   439 return internalEffect.onExitPrimitive(
++   440 internalEffect.suspend(() => {
+
+@@ hunk 7 [code] pin 452-453 release 442-451 cited ranges 4
+   pin units: MemoMapImpl.getOrElseMemoize=code
+   release units: MemoMapImpl.getOrElseMemoize=code
+-   452 if (existing) {
+-   453 return existing
++   442 if (existing) return existing
++   443 const entry = makeMemoMapEntry(this, layer)
++   445 if (!memoMapObserve(entry, scope)) return build(this, scope)
++   446 deferred = entry.deferred
++   447 this.map.set(layer, entry)
++   448 return build(this, entry.scope)
++   449 }),
++   450 (exit) => {
++   451 if (deferred) Deferred.doneUnsafe(deferred, exit)
+
+@@ hunk 8 [code] pin 455-455 release 453-453 cited ranges 4
+   pin units: MemoMapImpl.getOrElseMemoize=code
+   release units: MemoMapImpl.getOrElseMemoize=code
+-   455 return memoMapBuild(this, layer, scope, build)
++   453 )
+
+@@ hunk 9 [code] pin before 1580 release 1544-1544 cited ranges 0
+   pin units: 
+   release units: unwrapKey=absent
++  1544 const unwrapKey = Context.Service<Layer<any, any, any>>("effect/Layer/unwrap")
+
+@@ hunk 10 [code] pin 1582-1585 release 1582-1582 cited ranges 0
+   pin units: unwrap=code
+   release units: unwrap=code
+-  1582 ): Layer<A, E | E1, R1 | Exclude<R, Scope.Scope>> => {
+-  1583 const service = Context.Service<Layer<A, E1, R1>>("effect/Layer/unwrap")
+-  1584 return flatMap(effect(service)(self), Context.get(service))
+-  1585 }
++  1582 ): Layer<A, E | E1, R1 | Exclude<R, Scope.Scope>> => flatMap(effect(unwrapKey)(self), Context.get(unwrapKey))
+
+@@ hunk 11 [erased] pin 3167-3189 release 3164-3207 cited ranges 0
+   pin units: tapError=erased
+   release units: tapError=erased
+-  3167 <E, XE extends E, RIn2, E2, X>(f: (e: XE) => Effect<X, E2, RIn2>): <RIn, ROut>(self: Layer<ROut, E, RIn>) => Layer<ROut, E | E2, RIn | Exclude<RIn2, Scope.Scope>>
+-  3188 <RIn, E, XE extends E, ROut, RIn2, E2, X>(self: Layer<ROut, E, RIn>, f: (e: XE) => Effect<X, E2, RIn2>): Layer<ROut, E | E2, RIn | Exclude<RIn2, Scope.Scope>>
+-  3189 } = dual(2, <RIn, E, XE extends E, ROut, RIn2, E2, X>(
++  3164 <E, _XE extends E, RIn2, E2, X>(f: (e: Types.NoInfer<E>) => Effect<X, E2, RIn2>): <RIn, ROut>(self: Layer<ROut, E, RIn>) => Layer<ROut, E | E2, RIn | Exclude<RIn2, Scope.Scope>>
++  3185 <E, RIn2, E2, X>(f: (e: E) => Effect<X, E2, RIn2>): <RIn, ROut, E1 extends E = E>(self: Layer<ROut, E1, RIn>) => Layer<ROut, E1 | E2, RIn | Exclude<RIn2, Scope.Scope>>
++  3206 <RIn, E, _XE extends E, ROut, RIn2, E2, X>(self: Layer<ROut, E, RIn>, f: (e: Types.NoInfer<E>) => Effect<X, E2, RIn2>): Layer<ROut, E | E2, RIn | Exclude<RIn2, Scope.Scope>>
++  3207 } = dual(2, <RIn, E, ROut, RIn2, E2, X>(
+
+@@ hunk 12 [erased] pin 3191-3191 release 3209-3209 cited ranges 0
+   pin units: tapError=erased
+   release units: tapError=erased
+-  3191 f: (e: XE) => Effect<X, E2, RIn2>
++  3209 f: (e: E) => Effect<X, E2, RIn2>
+
+@@ hunk 13 [erased] pin 3196-3196 release 3214-3214 cited ranges 0
+   pin units: tapError=erased
+   release units: tapError=erased
+-  3196 (error) => Scope.provide(internalEffect.andThen(f(error as XE), internalEffect.fail(error)), scope)
++  3214 (error) => Scope.provide(internalEffect.andThen(f(error), internalEffect.fail(error)), scope)
+
+@@ hunk 14 [erased] pin 3243-3265 release 3261-3305 cited ranges 0
+   pin units: tapCause=erased
+   release units: tapCause=erased
+-  3243 <E, XE extends E, RIn2, E2, X>(f: (cause: Cause.Cause<XE>) => Effect<X, E2, RIn2>): <RIn, ROut>(self: Layer<ROut, E, RIn>) => Layer<ROut, E | E2, RIn | Exclude<RIn2, Scope.Scope>>
+-  3265 <RIn, E, XE extends E, ROut, RIn2, E2, X>(
++  3261 <E, _XE extends E, RIn2, E2, X>(f: (cause: Cause.Cause<Types.NoInfer<E>>) => Effect<X, E2, RIn2>): <RIn, ROut>(self: Layer<ROut, E, RIn>) => Layer<ROut, E | E2, RIn | Exclude<RIn2, Scope.Scope>>
++  3283 <E, RIn2, E2, X>(f: (cause: Cause.Cause<E>) => Effect<X, E2, RIn2>): <RIn, ROut, E1 extends E = E>(self: Layer<ROut, E1, RIn>) => Layer<ROut, E1 | E2, RIn | Exclude<RIn2, Scope.Scope>>
++  3305 <RIn, E, _XE extends E, ROut, RIn2, E2, X>(
+
+@@ hunk 15 [erased] pin 3267-3267 release 3307-3307 cited ranges 0
+   pin units: tapCause=erased
+   release units: tapCause=erased
+-  3267 f: (cause: Cause.Cause<XE>) => Effect<X, E2, RIn2>
++  3307 f: (cause: Cause.Cause<Types.NoInfer<E>>) => Effect<X, E2, RIn2>
+
+@@ hunk 16 [erased] pin 3269-3269 release 3309-3309 cited ranges 0
+   pin units: tapCause=erased
+   release units: tapCause=erased
+-  3269 } = dual(2, <RIn, E, XE extends E, ROut, RIn2, E2, X>(
++  3309 } = dual(2, <RIn, E, ROut, RIn2, E2, X>(
+
+@@ hunk 17 [erased] pin 3271-3271 release 3311-3311 cited ranges 0
+   pin units: tapCause=erased
+   release units: tapCause=erased
+-  3271 f: (cause: Cause.Cause<XE>) => Effect<X, E2, RIn2>
++  3311 f: (cause: Cause.Cause<E>) => Effect<X, E2, RIn2>
+
+@@ hunk 18 [erased] pin 3276-3277 release 3316-3316 cited ranges 0
+   pin units: tapCause=erased
+   release units: tapCause=erased
+-  3276 (cause) =>
+-  3277 Scope.provide(internalEffect.andThen(f(cause as Cause.Cause<XE>), internalEffect.failCause(cause)), scope)
++  3316 (cause) => Scope.provide(internalEffect.andThen(f(cause), internalEffect.failCause(cause)), scope)
+
+@@ hunk 19 [code] pin 4599-4599 release 4638-4638 cited ranges 0
+   pin units: withSpan=code
+   release units: withSpan=code
+-  4599 (span) => withParentSpan(self, span)
++  4638 (span) => withParentSpan(self, span, options)
+
+@@ hunk 20 [code] pin 4612-4612 release 4651-4651 cited ranges 0
+   pin units: withSpan=code
+   release units: withSpan=code
+-  4612 (span) => withParentSpan(self, span)
++  4651 (span) => withParentSpan(self, span, options)

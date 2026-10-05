@@ -1,0 +1,619 @@
+domain	archive	citing_file	citing_line	declaration	form	token	pin_file	start	end	status	release_file	new_start	new_end	class	reach	hunks
+brief	live	Test/Api/TraceOrigin.lean	107	theorem Effect4.Api.forkFinalizers_forked	cont	:3820	internal/effect.ts	3820	3820	changed	internal/effect.ts	3987	3987	host	outside	143
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	81		cont	:939-948	SchemaRepresentation.ts	939	948	changed	SchemaRepresentation.ts	2619	2630	cosmetic	none	9,10
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	82		cont	:3343-3349	SchemaAST.ts	3343	3349	changed	SchemaAST.ts	4160	4166	api	outside	140
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	82		cont	:3085-3089	SchemaAST.ts	3085	3089	changed	SchemaAST.ts	3844	3848	api	outside	133
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	88		cont	:1018-1021	internal/effect.ts	1018	1021	changed	internal/effect.ts	1050	1053	cosmetic	none	44
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	111		bare	internal/effect.ts	internal/effect.ts	3815	3827	changed	internal/effect.ts	3982	3994	host	outside	142,143
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	125		bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	128		bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	132		bare	OtlpTracer.ts	unstable/observability/OtlpTracer.ts	161	179	changed	observability/OtlpTracer.ts	157	175	api	outside	7,8,9,10
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	132		bare	OtlpLogger.ts	unstable/observability/OtlpLogger.ts	144	158	changed	observability/OtlpLogger.ts	148	162	api	outside	3,4
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	132		bare	OtlpMetrics.ts	unstable/observability/OtlpMetrics.ts	506	524	changed	observability/OtlpMetrics.ts	512	530	api	outside	6,7,8,9
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	132		bare	otlpEnv.ts	unstable/observability/internal/otlpEnv.ts	16	39	changed	observability/internal/otlpEnv.ts	13	36	api	outside	4,5,6,7
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	132		bare	OtlpResource.ts	unstable/observability/OtlpResource.ts	102	115	changed	observability/OtlpResource.ts	106	120	api	outside	1,2,3
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	132		bare	OtlpResource.ts	unstable/observability/OtlpResource.ts	111	111	changed	observability/OtlpResource.ts	116	116	api	outside	3
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	134		bare	Config.ts	Config.ts	847	852	changed	Config.ts	922	927	behaviour	main	14
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	134		bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	134		cont	:1211-1212	Config.ts	1211	1212	changed	Config.ts	1283	1285	behaviour	main	24
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	134		bare	Config.ts	Config.ts	1224	1224	changed	Config.ts	1294	1302	api	main	27
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	134		cont	:1227	Config.ts	1227	1227	changed	Config.ts	1294	1302	api	main	27
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	135		bare	HttpTraceContext.ts	unstable/http/HttpTraceContext.ts	97	97	changed	http/HttpTraceContext.ts	102	102	behaviour	outside	1
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	135		bare	HttpTraceContext.ts	unstable/http/HttpTraceContext.ts	97	97	changed	http/HttpTraceContext.ts	102	102	behaviour	outside	1
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	135		cont	:119	unstable/http/HttpTraceContext.ts	119	119	changed	http/HttpTraceContext.ts	125	126	behaviour	outside	2
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	145		cont	:1155-1159	internal/effect.ts	1155	1159	changed	internal/effect.ts	1197	1201	behaviour	corner	60
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	147		bare	internal/effect.ts	internal/effect.ts	1530	1530	removed	internal/effect.ts			behaviour	corner	86
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	147		cont	:1510-1514	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	150		bare	internal/effect.ts	internal/effect.ts	5314	5333	changed	internal/effect.ts	5569	5590	behaviour	main	213,214
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	151		cont	:552-554	internal/effect.ts	552	554	changed	internal/effect.ts	506	530	cosmetic	none	15,16
+brief	archive	Test/Counterexamples/Archive/REGISTER.md	263		bare	internal/effect.ts	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	Test/Counterexamples/Machine/Runtime/Frames.lean	631	theorem Test.Counterexamples.Runtime.Frames.yieldable_error_evaluates_to_its_own_failure	bare	internal/effect.ts	internal/effect.ts	1362	1377	changed	internal/effect.ts	1414	1429	cosmetic	none	75,76
+brief	live	Test/Counterexamples/Machine/Runtime/ScopeRestorationBoundary.lean	11	(module)	full	vendor/effect-4.0.0-rc.112/src/internal/core.ts	internal/core.ts	529	548	changed	internal/core.ts	580	610	behaviour	main	18,19,20
+brief	live	Test/Counterexamples/Machine/Semantics/ATTACKS.md	88		bare	internal/effect.ts	internal/effect.ts	4023	4028	changed	internal/effect.ts	4186	4196	host	outside	162,163
+brief	live	Test/Counterexamples/REGISTER.md	85		cont	:4023-4028	internal/effect.ts	4023	4028	changed	internal/effect.ts	4186	4196	host	outside	162,163
+brief	live	Test/Counterexamples/REGISTER.md	92		bare	ConfigProvider.ts	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	Test/Counterexamples/REGISTER.md	94		bare	ConfigProvider.ts	ConfigProvider.ts	1396	1399	changed	ConfigProvider.ts	1395	1398	behaviour	corner	6
+brief	live	Test/Counterexamples/REGISTER.md	96		bare	Config.ts	Config.ts	847	852	changed	Config.ts	922	927	behaviour	main	14
+brief	live	Test/Counterexamples/REGISTER.md	96		bare	Config.ts	Config.ts	674	675	removed	Config.ts			behaviour	main	13
+brief	live	Test/Counterexamples/REGISTER.md	96		bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	live	Test/Counterexamples/REGISTER.md	96		cont	:1211-1213	Config.ts	1211	1213	changed	Config.ts	1283	1285	behaviour	main	24
+brief	live	Test/Counterexamples/REGISTER.md	97		cont	:373	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	Test/Counterexamples/REGISTER.md	126		bare	Queue.ts	Queue.ts	1974	1974	changed	Queue.ts	2462	2465	behaviour	main	24
+brief	live	Test/Counterexamples/REGISTER.md	145		bare	Layer.ts	Layer.ts	396	411	removed	Layer.ts			behaviour	corner	4
+brief	live	Test/Counterexamples/REGISTER.md	145		cont	:434-443	Layer.ts	434	443	changed	Layer.ts	418	428	refactor	none	5
+brief	live	Test/Counterexamples/Schema/ATTACKS.md	315		cont	:927-948	SchemaRepresentation.ts	927	948	changed	SchemaRepresentation.ts	2607	2630	cosmetic	none	9,10
+brief	live	Test/Counterexamples/Schema/ATTACKS.md	353		cont	:3343-3349	SchemaAST.ts	3343	3349	changed	SchemaAST.ts	4160	4166	api	outside	140
+brief	live	Test/Counterexamples/Schema/ATTACKS.md	355		cont	:3085-3089	SchemaAST.ts	3085	3089	changed	SchemaAST.ts	3844	3848	api	outside	133
+brief	live	Test/Counterexamples/Schema/ATTACKS.md	474		cont	:941	SchemaRepresentation.ts	941	941	changed	SchemaRepresentation.ts	2623	2624	cosmetic	none	10
+brief	live	Test/Dogfood/P1HttpCache.lean	69	def Test.Dogfood.P1HttpCache.timeoutForm	full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	3677	3727	changed	internal/effect.ts	3825	3881	behaviour	main	133,134,135,136
+brief	live	Test/Dogfood/P1HttpCache.lean	71	def Test.Dogfood.P1HttpCache.timeoutForm	full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	1477	1533	changed	internal/effect.ts	1603	1654	behaviour	corner	83,84,85,86,87
+brief	live	Test/Dogfood/rc112/p1-http-cache.ts	7		bare	Effect.ts	Effect.ts	1406	1410	changed	Effect.ts	1403	1548	cosmetic	none	8
+brief	live	Test/Dogfood/rc112/p1-http-cache.ts	7		bare	internal/effect.ts	internal/effect.ts	1062	1090	changed	internal/effect.ts	1094	1123	host	outside	48,49,50,51,52,53,54
+brief	live	Test/Dogfood/rc112/p1-http-cache.ts	10		bare	internal/effect.ts	internal/effect.ts	3707	3727	changed	internal/effect.ts	3859	3881	behaviour	main	135,136
+brief	live	Test/Dogfood/rc112/p2-handler-layers.ts	16		bare	Config.ts	Config.ts	1465	1465	changed	Config.ts	1745	1745	api	main	35
+brief	live	Test/Dogfood/rc112/p3-worker-queue.ts	15		bare	internal/effect.ts	internal/effect.ts	4648	4690	changed	internal/effect.ts	4924	4963	cosmetic	none	189
+brief	live	Test/Dogfood/rc112/p5-ledger-service.ts	14		bare	internal/effect.ts	internal/effect.ts	4675	4677	changed	internal/effect.ts	4951	4951	cosmetic	none	189
+brief	live	Test/Dogfood/rc112/p5-ledger-service.ts	15		bare	internal/effect.ts	internal/effect.ts	1163	1170	changed	internal/effect.ts	1205	1211	cosmetic	none	61
+brief	live	Test/Machine/Runtime/FramesContract.lean	495	(module)	bare	internal/effect.ts	internal/effect.ts	649	655	changed	internal/effect.ts	644	650	cosmetic	none	27
+brief	live	Test/Machine/Runtime/StoresLawsContract.lean	246	def Test.Runtime.StoresLawsContract.viaKernel	bare	Layer.ts	Layer.ts	396	458	changed	Layer.ts	405	456	behaviour	corner	4,5,6,7,8
+brief	live	Test/Machine/Semantics/CauseExitContract.lean	118	example (example)	bare	internal/effect.ts	internal/effect.ts	4023	4028	changed	internal/effect.ts	4186	4196	host	outside	162,163
+brief	live	Test/Program/CatchIfContract.lean	12	(module)	bare	internal/effect.ts	internal/effect.ts	2798	2810	changed	internal/effect.ts	2900	2912	cosmetic	none	111,112
+brief	live	Test/Program/CompileContract.lean	579	def Test.Syntax.CompileContract.pWhileLoop	cont	:1175-1196	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	Test/Program/CompileContract.lean	738	def Test.Syntax.CompileContract.pBadPark	bare	internal/effect.ts	internal/effect.ts	2092	2092	changed	internal/effect.ts	2194	2194	refactor	none	97
+brief	live	Test/Program/ConfigContract.lean	91	(module)	bare	ConfigProvider.ts	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	Test/Program/ConfigContract.lean	150	def Test.Program.ConfigContract.envDb	bare	ConfigProvider.ts	ConfigProvider.ts	1396	1399	changed	ConfigProvider.ts	1395	1398	behaviour	corner	6
+brief	live	Test/Program/ConfigContract.lean	243	theorem Test.Program.ConfigContract.ce004_associative	bare	Config.ts	Config.ts	847	852	changed	Config.ts	922	927	behaviour	main	14
+brief	live	Test/Program/ConfigContract.lean	244	theorem Test.Program.ConfigContract.ce004_associative	bare	Config.ts	Config.ts	674	675	removed	Config.ts			behaviour	main	13
+brief	live	Test/Program/ConfigContract.lean	261	def Test.Program.ConfigContract.ce005Term	bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	live	Test/Program/ConfigContract.lean	262	def Test.Program.ConfigContract.ce005Term	cont	:1211-1213	Config.ts	1211	1213	changed	Config.ts	1283	1285	behaviour	main	24
+brief	live	Test/Program/ConfigContract.lean	273	def Test.Program.ConfigContract.ce005Term	cont	:373	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	Test/Program/ProtocolPosts.lean	685	theorem Test.Program.ProtocolPosts.CloseScope.failing_release_untyped	bare	internal/effect.ts	internal/effect.ts	3795	3795	changed	internal/effect.ts	3945	3951	behaviour	main	140
+brief	live	Test/Program/ProtocolPosts.lean	930	theorem Test.Program.ProtocolPosts.CloseScope.closeScope_fitting_exit_typed	bare	Scope.ts	Scope.ts	567	567	changed	Scope.ts	568	595	api	none	2
+brief	live	Test/Program/ProtocolPosts.lean	930	theorem Test.Program.ProtocolPosts.CloseScope.closeScope_fitting_exit_typed	bare	internal/effect.ts	internal/effect.ts	3775	3776	changed	internal/effect.ts	3929	3935	behaviour	main	137
+brief	live	Test/Program/ProtocolPosts.lean	931	theorem Test.Program.ProtocolPosts.CloseScope.closeScope_fitting_exit_typed	cont	:3788-3789	internal/effect.ts	3788	3789	changed	internal/effect.ts	3940	3943	behaviour	main	139
+brief	live	Test/Program/ProtocolPosts.lean	931	theorem Test.Program.ProtocolPosts.CloseScope.closeScope_fitting_exit_typed	cont	:3794-3795	internal/effect.ts	3794	3795	changed	internal/effect.ts	3945	3951	behaviour	main	140
+brief	live	Test/Program/RuntimeRContract.lean	726	theorem Test.Program.RuntimeRContract.pending_finish_controls	bare	internal/core.ts	internal/core.ts	539	545	changed	internal/core.ts	590	608	behaviour	main	19,20
+brief	archive	Test/contracts/archive/surface-api.contract.md	241		bare	HttpApiEndpoint.ts	unstable/httpapi/HttpApiEndpoint.ts	1134	1306	changed	http-api/HttpApiEndpoint.ts	1204	1376	behaviour	outside	11,12,13
+brief	live	Test/contracts/cause-exit.contract.md	204		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	298	309	changed	internal/effect.ts	261	270	refactor	none	6,7
+brief	live	Test/contracts/cause-exit.contract.md	395		bare	internal/effect.ts	internal/effect.ts	248	252	removed	internal/effect.ts			refactor	none	4
+brief	live	Test/contracts/cause-exit.contract.md	407		bare	internal/effect.ts	internal/effect.ts	256	256	removed	internal/effect.ts			refactor	none	4
+brief	live	Test/contracts/cause-exit.contract.md	505		bare	internal/effect.ts	internal/effect.ts	4023	4028	changed	internal/effect.ts	4186	4196	host	outside	162,163
+brief	live	Test/contracts/frames.contract.md	173		bare	internal/effect.ts	internal/effect.ts	649	655	changed	internal/effect.ts	644	650	cosmetic	none	27
+brief	live	Test/contracts/frames.contract.md	542		bare	internal/core.ts	internal/core.ts	540	540	changed	internal/core.ts	591	597	behaviour	main	19
+brief	live	Test/contracts/frames.contract.md	793		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	649	655	changed	internal/effect.ts	644	650	cosmetic	none	27
+brief	live	Test/contracts/machine-scheduler-core.contract.md	21		bare	internal/effect.ts	internal/effect.ts	647	655	changed	internal/effect.ts	641	650	cosmetic	none	26,27
+brief	live	Test/contracts/machine-scheduler-core.contract.md	28		bare	internal/effect.ts	internal/effect.ts	688	697	changed	internal/effect.ts	683	695	refactor	none	28,29
+brief	live	Test/contracts/program-runtime-r.contract.md	62		bare	internal/effect.ts	internal/effect.ts	4019	4030	changed	internal/effect.ts	4177	4197	host	outside	160,161,162,163
+brief	live	Test/contracts/schema-payload.contract.md	203		cont	Annotations :939	SchemaRepresentation.ts	939	939	changed	SchemaRepresentation.ts	2619	2621	cosmetic	none	9
+brief	live	Test/contracts/schema-payload.contract.md	224		cont	:3343-3349	SchemaAST.ts	3343	3349	changed	SchemaAST.ts	4160	4166	api	outside	140
+brief	live	Test/contracts/schema-payload.contract.md	227		cont	:3085-3089	SchemaAST.ts	3085	3089	changed	SchemaAST.ts	3844	3848	api	outside	133
+brief	live	Test/contracts/schema-payload.contract.md	243		cont	:990-997	SchemaRepresentation.ts	990	997	changed	SchemaRepresentation.ts	2672	2679	cosmetic	none	11
+brief	live	Test/contracts/schema-payload.contract.md	290		cont	:4352-4368	SchemaAST.ts	4352	4368	changed	SchemaAST.ts	5167	5182	api	outside	173
+brief	live	Test/contracts/schema-payload.contract.md	305		cont	:939-948	SchemaRepresentation.ts	939	948	changed	SchemaRepresentation.ts	2619	2630	cosmetic	none	9,10
+brief	live	Test/contracts/schema-payload.contract.md	425		cont	:939-948	SchemaRepresentation.ts	939	948	changed	SchemaRepresentation.ts	2619	2630	cosmetic	none	9,10
+brief	live	Test/contracts/schema-payload.contract.md	428		cont	:941	SchemaRepresentation.ts	941	941	changed	SchemaRepresentation.ts	2623	2624	cosmetic	none	10
+brief	live	Test/contracts/schema-payload.contract.md	882		cont	:939-948	SchemaRepresentation.ts	939	948	changed	SchemaRepresentation.ts	2619	2630	cosmetic	none	9,10
+brief	live	Test/contracts/schema-payload.contract.md	1138		cont	:940-941	SchemaRepresentation.ts	940	941	changed	SchemaRepresentation.ts	2622	2624	cosmetic	none	10
+brief	live	Test/contracts/schema-payload.contract.md	1233		cont	:67-75	SchemaRepresentation.ts	67	75	changed	SchemaRepresentation.ts	98	121	cosmetic	none	3
+brief	live	Test/contracts/schema-payload.contract.md	1282		cont	:3343-3349	SchemaAST.ts	3343	3349	changed	SchemaAST.ts	4160	4166	api	outside	140
+brief	live	Test/contracts/schema-payload.contract.md	1282		cont	:3085-3089	SchemaAST.ts	3085	3089	changed	SchemaAST.ts	3844	3848	api	outside	133
+brief	live	Test/contracts/scope-machine.contract.md	14		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	3779	3828	changed	internal/effect.ts	3938	3994	behaviour	main	138,139,140,141,142,143
+brief	live	Test/contracts/scope-restoration.contract.md	18		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	3779	3828	changed	internal/effect.ts	3938	3994	behaviour	main	138,139,140,141,142,143
+brief	live	Test/contracts/scope-restoration.contract.md	23		full	vendor/effect-4.0.0-rc.112/src/internal/core.ts	internal/core.ts	529	548	changed	internal/core.ts	580	610	behaviour	main	18,19,20
+brief	live	Test/contracts/scope-restoration.contract.md	26		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	574	596	changed	internal/effect.ts	555	577	cosmetic	none	20
+brief	live	Test/contracts/scope-restoration.contract.md	28		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	4002	4028	changed	internal/effect.ts	4164	4196	host	outside	156,157,158,159,160,161,162,163
+brief	live	Test/fixtures/schema-representation/README.md	162		bare	Schema.ts	Schema.ts	15870	15870	changed	Schema.ts	15955	16018	refactor	none	344
+brief	live	Test/fixtures/schema-representation/README.md	602		cont	:939	SchemaRepresentation.ts	939	939	changed	SchemaRepresentation.ts	2619	2621	cosmetic	none	9
+extended	live	docs/DESIGN-BASIS.md	1016		bare	internal/effect.ts	internal/effect.ts	726	727	changed	internal/effect.ts	732	732	refactor	none	32
+extended	live	docs/DESIGN-BASIS.md	1042		bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+extended	live	docs/DESIGN-BASIS.md	1137		bare	Queue.ts	Queue.ts	1955	1975	changed	Queue.ts	2443	2466	behaviour	main	21,22,23,24
+extended	live	docs/DESIGN-BASIS.md	1137		cont	:1432	Queue.ts	1432	1432	changed	Queue.ts	1632	1845	behaviour	main	15
+extended	live	docs/DESIGN-ISSUES.md	131		bare	internal/effect.ts	internal/effect.ts	599	628	changed	internal/effect.ts	580	621	behaviour	corner	21,22,23,24
+extended	live	docs/DESIGN-ISSUES.md	148		cont	:3820	internal/effect.ts	3820	3820	changed	internal/effect.ts	3987	3987	host	outside	143
+extended	live	docs/DESIGN-ISSUES.md	172		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	3914	3922	changed	internal/effect.ts	4070	4084	api	none	152,153
+brief	live	docs/UPSTREAM-BACKLOG.md	13		bare	internal/core.ts	internal/core.ts	540	545	changed	internal/core.ts	591	608	behaviour	main	19,20
+brief	live	docs/UPSTREAM-BACKLOG.md	13		bare	core.ts	internal/core.ts	538	543	changed	internal/core.ts	589	606	behaviour	main	19,20
+brief	live	docs/UPSTREAM-BACKLOG.md	14		bare	Scope.ts	Scope.ts	567	567	changed	Scope.ts	568	595	api	none	2
+brief	live	docs/UPSTREAM-BACKLOG.md	14		cont	:592	Scope.ts	592	592	changed	Scope.ts	568	595	api	none	2
+brief	live	docs/UPSTREAM-BACKLOG.md	14		bare	internal/effect.ts	internal/effect.ts	3775	3776	changed	internal/effect.ts	3929	3935	behaviour	main	137
+brief	live	docs/UPSTREAM-BACKLOG.md	14		cont	:3788-3789	internal/effect.ts	3788	3789	changed	internal/effect.ts	3940	3943	behaviour	main	139
+brief	live	docs/UPSTREAM-BACKLOG.md	14		cont	:3794-3795	internal/effect.ts	3794	3795	changed	internal/effect.ts	3945	3951	behaviour	main	140
+brief	live	docs/core/api-surface.md	136		bare	SchemaRepresentation.ts	SchemaRepresentation.ts	574	574	changed	SchemaRepresentation.ts	630	630	api	outside	5
+brief	live	docs/core/decisions.md	244		bare	internal/effect.ts	internal/effect.ts	3795	3795	changed	internal/effect.ts	3945	3951	behaviour	main	140
+brief	live	docs/core/decisions.md	244		bare	Scope.ts	Scope.ts	567	567	changed	Scope.ts	568	595	api	none	2
+brief	live	docs/core/decisions.md	244		bare	Scope.ts	Scope.ts	567	567	changed	Scope.ts	568	595	api	none	2
+brief	live	docs/core/decisions.md	244		bare	internal/effect.ts	internal/effect.ts	3795	3795	changed	internal/effect.ts	3945	3951	behaviour	main	140
+brief	live	docs/core/decisions.md	244		bare	Scope.ts	Scope.ts	567	567	changed	Scope.ts	568	595	api	none	2
+brief	live	generated/effect-runtime-census.tsv	19		census-row	op.Failure	internal/core.ts	528	547	changed	internal/core.ts	580	610	behaviour	main	18,19,20
+brief	live	generated/effect-runtime-census.tsv	25		census-row	op.Async	internal/effect.ts	1102	1143	changed	internal/effect.ts	1136	1176	refactor	none	55,56,57,58
+brief	live	generated/effect-runtime-census.tsv	26		census-row	op.AsyncFinalizer	internal/effect.ts	1145	1160	changed	internal/effect.ts	1187	1202	behaviour	corner	60
+brief	live	generated/effect-runtime-census.tsv	27		census-row	op.Iterator	internal/effect.ts	1356	1379	changed	internal/effect.ts	1408	1431	cosmetic	none	74,75,76
+brief	live	generated/effect-runtime-census.tsv	28		census-row	op.OnSuccess	internal/effect.ts	1662	1689	changed	internal/effect.ts	1776	1790	refactor	none	93,94
+brief	live	generated/effect-runtime-census.tsv	29		census-row	op.OnFailure	internal/effect.ts	2474	2501	changed	internal/effect.ts	2580	2599	cosmetic	none	101,102
+brief	live	generated/effect-runtime-census.tsv	30		census-row	op.OnSuccessAndFailure	internal/effect.ts	3426	3465	changed	internal/effect.ts	3533	3621	behaviour	budget	124,125,126,127
+brief	live	generated/effect-runtime-census.tsv	31		census-row	op.Exit	internal/effect.ts	3620	3637	changed	internal/effect.ts	3769	3785	behaviour	budget	131,132
+brief	live	generated/effect-runtime-census.tsv	32		census-row	op.OnExit	internal/effect.ts	4001	4029	changed	internal/effect.ts	4164	4197	host	outside	156,157,158,159,160,161,162,163
+brief	live	generated/effect-runtime-census.tsv	35		census-row	frame-arm.OnSuccess	internal/effect.ts	1677	1689	changed	internal/effect.ts	1789	1790	refactor	none	93,94
+brief	live	generated/effect-runtime-census.tsv	36		census-row	frame-arm.OnFailure	internal/effect.ts	2489	2501	changed	internal/effect.ts	2593	2599	cosmetic	none	101,102
+brief	live	generated/effect-runtime-census.tsv	37		census-row	frame-arm.OnSuccessAndFailure	internal/effect.ts	3450	3465	changed	internal/effect.ts	3555	3621	behaviour	budget	124,125,126,127
+brief	live	generated/effect-runtime-census.tsv	38		census-row	frame-arm.Exit	internal/effect.ts	3627	3636	changed	internal/effect.ts	3775	3784	behaviour	budget	131,132
+brief	live	generated/effect-runtime-census.tsv	39		census-row	frame-arm.OnExit	internal/effect.ts	4013	4028	changed	internal/effect.ts	4171	4196	host	outside	159,160,161,162,163
+brief	live	generated/effect-runtime-census.tsv	41		census-row	frame-arm.AsyncFinalizer	internal/effect.ts	1149	1159	changed	internal/effect.ts	1191	1201	behaviour	corner	60
+brief	live	generated/effect-runtime-census.tsv	43		census-row	frame-arm.Iterator	internal/effect.ts	1362	1378	changed	internal/effect.ts	1414	1430	cosmetic	none	75,76
+brief	live	generated/effect-runtime-census.tsv	47		census-row	checkpoint.exit-failcause-skip	internal/core.ts	539	545	changed	internal/core.ts	590	608	behaviour	main	19,20
+brief	live	generated/effect-runtime-census.tsv	50		census-row	interrupt.unsafe-entry	internal/effect.ts	574	595	changed	internal/effect.ts	555	576	cosmetic	none	20
+brief	live	generated/effect-runtime-census.tsv	52		census-row	fork.unsafe	internal/effect.ts	5263	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	generated/effect-runtime-census.tsv	57		census-row	fork.race-all	internal/effect.ts	1476	1532	changed	internal/effect.ts	1603	1654	behaviour	corner	83,84,85,86,87
+brief	live	generated/effect-runtime-census.tsv	58		census-row	fork.await-all-children	internal/effect.ts	5313	5334	changed	internal/effect.ts	5569	5591	behaviour	main	213,214
+brief	live	generated/effect-runtime-census.tsv	65		census-row	scope.make	internal/effect.ts	3914	3922	changed	internal/effect.ts	4070	4084	api	none	152,153
+brief	live	generated/effect-runtime-census.tsv	66		census-row	scope.add-finalizer	internal/effect.ts	3866	3888	changed	internal/effect.ts	4032	4050	refactor	none	147,148
+brief	live	generated/effect-runtime-census.tsv	68		census-row	scope.remove-finalizer	internal/effect.ts	3890	3904	changed	internal/effect.ts	4053	4067	behaviour	main	149,150,151
+brief	live	generated/effect-runtime-census.tsv	69		census-row	scope.close-state-first	internal/effect.ts	3778	3798	changed	internal/effect.ts	3938	3954	behaviour	main	138,139,140
+brief	live	generated/effect-runtime-census.tsv	70		census-row	scope.close-lifo	internal/effect.ts	3813	3822	changed	internal/effect.ts	3980	3989	host	outside	142,143
+brief	live	generated/effect-runtime-census.tsv	71		census-row	scope.close-sequential	internal/effect.ts	3817	3818	changed	internal/effect.ts	3984	3985	host	outside	142
+brief	live	generated/effect-runtime-census.tsv	72		census-row	scope.close-parallel	internal/effect.ts	3819	3821	changed	internal/effect.ts	3986	3988	host	outside	143
+brief	live	generated/effect-runtime-census.tsv	75		census-row	scope.fork-linkage	internal/effect.ts	3833	3844	changed	internal/effect.ts	4001	4009	behaviour	main	144,145,146
+brief	live	generated/effect-runtime-census.tsv	76		census-row	scope.scoped	internal/effect.ts	3937	3947	changed	internal/effect.ts	4100	4110	refactor	none	154,155
+brief	live	generated/effect-runtime-census.tsv	78		census-row	scheduler.should-yield	Scheduler.ts	174	176	changed	Scheduler.ts	184	186	cosmetic	none	3
+brief	live	generated/effect-runtime-census.tsv	86		census-row	scheduler.host-loop	Scheduler.ts	83	103	changed	Scheduler.ts	83	91	host	outside	1
+brief	live	generated/effect-runtime-census.tsv	89		census-row	cause.flat-reasons	internal/core.ts	137	176	changed	internal/core.ts	138	176	cosmetic	none	2
+brief	live	generated/effect-runtime-census.tsv	90		census-row	cause.reason-fail	internal/core.ts	244	286	changed	internal/core.ts	245	328	refactor	none	3,4
+brief	live	generated/effect-runtime-census.tsv	91		census-row	cause.reason-die	internal/core.ts	288	322	changed	internal/core.ts	331	364	cosmetic	none	5
+brief	live	generated/effect-runtime-census.tsv	92		census-row	cause.reason-interrupt	internal/effect.ts	106	145	changed	internal/effect.ts	107	145	cosmetic	none	3
+brief	live	generated/effect-runtime-census.tsv	93		census-row	cause.combine-union	internal/effect.ts	241	258	removed	internal/effect.ts			refactor	none	4
+brief	live	generated/effect-runtime-census.tsv	95		census-row	cause.squash	internal/effect.ts	298	309	changed	internal/effect.ts	261	270	refactor	none	6,7
+brief	live	generated/effect-runtime-census.tsv	97		census-row	cause.dedupe-first-occurrence	Array.ts	9242	9255	changed	Array.ts	9293	9302	refactor	none	24,25,26
+brief	live	generated/effect-runtime-census.tsv	106		census-row	entry.with-error-reporting	internal/effect.ts	6670	6696	changed	internal/effect.ts	6940	6965	cosmetic	none	236
+brief	live	generated/effect-runtime-census.tsv	107		census-row	rule.frames-are-primitives	internal/effect.ts	688	697	changed	internal/effect.ts	683	695	refactor	none	28,29
+brief	live	generated/effect-runtime-census.tsv	108		census-row	rule.interrupt-bypasses-handlers	internal/core.ts	539	542	changed	internal/core.ts	590	599	behaviour	main	19
+brief	live	generated/effect-runtime-census.tsv	110		census-row	rule.only-fork-child-tracks	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	generated/effect-runtime-census.tsv	112		census-row	rule.scope-close-lifo-state-first	internal/effect.ts	3780	3787	changed	internal/effect.ts	3939	3943	behaviour	main	138,139
+brief	live	generated/effect-runtime-census.tsv	113		census-row	rule.cause-has-no-structure	internal/effect.ts	247	257	removed	internal/effect.ts			refactor	none	4
+brief	live	generated/effect-runtime-census.tsv	114		census-row	rule.start-is-asymmetric	internal/effect.ts	5274	5278	changed	internal/effect.ts	5527	5533	host	outside	211
+brief	live	generated/effect-runtime-census.tsv	116		census-row	rule.budget-per-runloop-entry	internal/effect.ts	634	652	changed	internal/effect.ts	627	647	cosmetic	none	25,26
+brief	live	generated/effect-runtime-census.tsv	127		census-row	deferred.make	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	generated/effect-runtime-census.tsv	142		census-row	layer.memo-build-once	Layer.ts	390	419	removed	Layer.ts			behaviour	corner	4
+brief	live	generated/effect-runtime-census.tsv	143		census-row	layer.memo-finalizer-last-observer	Layer.ts	401	410	removed	Layer.ts			behaviour	corner	4
+brief	live	generated/effect-runtime-census.tsv	144		census-row	layer.memo-reuse-observer-count	Layer.ts	241	250	changed	Layer.ts	243	265	behaviour	corner	2,3
+brief	live	generated/effect-runtime-census.tsv	145		census-row	layer.memo-map-parent-lookup	Layer.ts	434	443	changed	Layer.ts	418	428	refactor	none	5
+brief	live	generated/effect-runtime-census.tsv	146		census-row	layer.memo-get-or-else	Layer.ts	445	457	changed	Layer.ts	430	455	behaviour	corner	6,7,8
+extended	live	harness/truth/LANE.md	19		cont	:653-655	internal/effect.ts	653	655	changed	internal/effect.ts	648	650	cosmetic	none	27
+extended	live	harness/truth/LANE.md	19		cont	:729-730	internal/effect.ts	729	730	changed	internal/effect.ts	732	732	refactor	none	32
+extended	live	harness/truth/Truth.lean	151	def OCaml5.Truth.pProvideMerge	bare	Layer.ts	Layer.ts	404	408	removed	Layer.ts			behaviour	corner	4
+extended	live	harness/truth/Truth.lean	164	def OCaml5.Truth.pProvideTwice	bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+extended	live	harness/truth/Truth.lean	172	def OCaml5.Truth.pDiamond	bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+extended	live	harness/truth/Truth.lean	317	def OCaml5.Truth.catchMixed	bare	internal/effect.ts	internal/effect.ts	2798	2810	changed	internal/effect.ts	2900	2912	cosmetic	none	111,112
+extended	live	harness/truth/Truth.lean	569	def OCaml5.Truth.immediateFork	cont	:3820	internal/effect.ts	3820	3820	changed	internal/effect.ts	3987	3987	host	outside	143
+extended	live	harness/truth/Truth.lean	592	def OCaml5.Truth.reduce	cont	:5280-5281	internal/effect.ts	5280	5281	changed	internal/effect.ts	5535	5536	behaviour	corner	212
+extended	live	harness/truth/catch-if.test.ts	2		full	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	internal/effect.ts	2803	2810	changed	internal/effect.ts	2905	2912	cosmetic	none	111,112
+extended	live	harness/truth/run-truth.ts	29		bare	internal/effect.ts	internal/effect.ts	653	655	changed	internal/effect.ts	648	650	cosmetic	none	27
+extended	live	harness/truth/run-truth.ts	29		cont	:729-730	internal/effect.ts	729	730	changed	internal/effect.ts	732	732	refactor	none	32
+extended	live	harness/truth/run-truth.ts	31		cont	:619-623	internal/effect.ts	619	623	changed	internal/effect.ts	605	617	behaviour	corner	23
+extended	live	harness/truth/run-truth.ts	31		cont	:560-573	internal/effect.ts	560	573	changed	internal/effect.ts	536	554	refactor	none	17,18,19
+extended	live	harness/truth/run-truth.ts	35		cont	:5279-5281	internal/effect.ts	5279	5281	changed	internal/effect.ts	5534	5536	behaviour	corner	212
+extended	live	harness/truth/run-truth.ts	41		cont	:553-555	internal/effect.ts	553	555	changed	internal/effect.ts	529	531	cosmetic	none	16
+extended	live	harness/truth/run-truth.ts	60		cont	:653-655	internal/effect.ts	653	655	changed	internal/effect.ts	648	650	cosmetic	none	27
+extended	live	harness/truth/run-truth.ts	281		cont	:5279-5281	internal/effect.ts	5279	5281	changed	internal/effect.ts	5534	5536	behaviour	corner	212
+extended	live	harness/truth/run-truth.ts	292		bare	internal/effect.ts	internal/effect.ts	653	655	changed	internal/effect.ts	648	650	cosmetic	none	27
+extended	live	harness/truth/run-truth.ts	297		cont	:5280-5281	internal/effect.ts	5280	5281	changed	internal/effect.ts	5535	5536	behaviour	corner	212
+extended	live	harness/truth/run-truth.ts	603		bare	internal/effect.ts	internal/effect.ts	574	595	changed	internal/effect.ts	555	576	cosmetic	none	20
+brief	live	src/Effect4/Api.lean	199	def Effect4.Api.printModule	bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	27	def Effect4.Program.Authoring.Forms.andThenEffect	bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	31	def Effect4.Program.Authoring.Forms.andThenContinuation	bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	35	def Effect4.Program.Authoring.Forms.andThenThunk	bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	39	def Effect4.Program.Authoring.Forms.as	bare	internal/effect.ts	internal/effect.ts	1386	1414	changed	internal/effect.ts	1447	1542	behaviour	budget	78,79
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	47	def Effect4.Program.Authoring.Forms.tapContinuation	bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	51	def Effect4.Program.Authoring.Forms.tapEffect	bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	59	def Effect4.Program.Authoring.Forms.matchCause	bare	internal/effect.ts	internal/effect.ts	3468	3495	changed	internal/effect.ts	3624	3645	behaviour	budget	128
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	63	def Effect4.Program.Authoring.Forms.matchCauseEffect	bare	internal/effect.ts	internal/effect.ts	3427	3460	changed	internal/effect.ts	3533	3565	cosmetic	none	124,125
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	71	def Effect4.Program.Authoring.Forms.forkChildDefault	bare	internal/effect.ts	internal/effect.ts	5228	5284	changed	internal/effect.ts	5481	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Codegen/Authoring/Forms.lean	75	def Effect4.Program.Authoring.Forms.forkDetachDefault	bare	internal/effect.ts	internal/effect.ts	5287	5334	changed	internal/effect.ts	5542	5591	behaviour	main	213,214
+brief	live	src/Effect4/Codegen/Forms.lean	94	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+brief	live	src/Effect4/Codegen/Forms.lean	96	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+brief	live	src/Effect4/Codegen/Forms.lean	98	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+brief	live	src/Effect4/Codegen/Forms.lean	100	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	1386	1414	changed	internal/effect.ts	1447	1542	behaviour	budget	78,79
+brief	live	src/Effect4/Codegen/Forms.lean	104	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+brief	live	src/Effect4/Codegen/Forms.lean	106	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+brief	live	src/Effect4/Codegen/Forms.lean	110	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	3468	3495	changed	internal/effect.ts	3624	3645	behaviour	budget	128
+brief	live	src/Effect4/Codegen/Forms.lean	112	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	3427	3460	changed	internal/effect.ts	3533	3565	cosmetic	none	124,125
+brief	live	src/Effect4/Codegen/Forms.lean	115	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	5228	5284	changed	internal/effect.ts	5481	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Codegen/Forms.lean	117	def Effect4.Codegen.Forms.all	bare	internal/effect.ts	internal/effect.ts	5287	5334	changed	internal/effect.ts	5542	5591	behaviour	main	213,214
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	70	theorem Effect4.Machine.drive_evaluate_enters	cont	:599-628	internal/effect.ts	599	628	changed	internal/effect.ts	580	621	behaviour	corner	21,22,23,24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	102	theorem Effect4.Machine.yieldVerdict_default	bare	Scheduler.ts	Scheduler.ts	174	176	changed	Scheduler.ts	184	186	cosmetic	none	3
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	128	theorem Effect4.Machine.injectYield_no_verdict	cont	:646	internal/effect.ts	646	646	changed	internal/effect.ts	641	642	cosmetic	none	26
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	134	theorem Effect4.Machine.injectYield_fires	cont	:647-652	internal/effect.ts	647	652	changed	internal/effect.ts	641	647	cosmetic	none	26
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	154	theorem Effect4.Machine.iteration_injected	cont	:638-655	internal/effect.ts	638	655	changed	internal/effect.ts	631	650	cosmetic	none	25,26,27
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	409	theorem Effect4.Machine.settle_finished	cont	:611-628	internal/effect.ts	611	628	changed	internal/effect.ts	599	621	behaviour	corner	23,24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	443	theorem Effect4.Machine.drive_finish	cont	:611-628	internal/effect.ts	611	628	changed	internal/effect.ts	599	621	behaviour	corner	23,24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	455	theorem Effect4.Machine.drive_trackChild_live	cont	:5279-5282	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	520	def Effect4.Machine.interruptCauseOf	cont	:578-587	internal/effect.ts	578	587	changed	internal/effect.ts	559	568	cosmetic	none	20
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	530	theorem Effect4.Machine.interruptRecord_records	cont	:578-587	internal/effect.ts	578	587	changed	internal/effect.ts	559	568	cosmetic	none	20
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	616	def Effect4.Machine.spawnChild	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	629	theorem Effect4.Machine.spawn_eq	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	631	theorem Effect4.Machine.spawn_eq	cont	:5279-5282	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	644	theorem Effect4.Machine.spawnChild_fields	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	665	theorem Effect4.Machine.spawn_untracked	cont	:5279-5282	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	674	theorem Effect4.Machine.start_eq	cont	:5274-5278	internal/effect.ts	5274	5278	changed	internal/effect.ts	5527	5533	host	outside	211
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	755	theorem Effect4.Machine.withFiber_awaitNewChildren	cont	:5322-5331	internal/effect.ts	5322	5331	changed	internal/effect.ts	5578	5588	behaviour	main	214
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	957	theorem Effect4.Machine.exitFiber_eq	cont	:611-627	internal/effect.ts	611	627	changed	internal/effect.ts	599	620	behaviour	corner	23,24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1017	theorem Effect4.Machine.cleared_fields	cont	:624-627	internal/effect.ts	624	627	changed	internal/effect.ts	618	620	refactor	none	24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1027	theorem Effect4.Machine.exitStore_no_observers	cont	:619-627	internal/effect.ts	619	627	changed	internal/effect.ts	605	620	behaviour	corner	23,24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1039	theorem Effect4.Machine.exitStore_observers	cont	:619-627	internal/effect.ts	619	627	changed	internal/effect.ts	605	620	behaviour	corner	23,24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1048	theorem Effect4.Machine.drive_observe	cont	:621-623	internal/effect.ts	621	623	changed	internal/effect.ts	606	617	behaviour	corner	23
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1058	theorem Effect4.Machine.drive_exitDone	cont	:624-627	internal/effect.ts	624	627	changed	internal/effect.ts	618	620	refactor	none	24
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1130	theorem Effect4.Machine.fireObserver_untrackChild	cont	:5281	internal/effect.ts	5281	5281	changed	internal/effect.ts	5536	5536	behaviour	corner	212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1247	def Effect4.Machine.settleRace	cont	:1503-1514	internal/effect.ts	1503	1514	changed	internal/effect.ts	1631	1638	behaviour	corner	85
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1264	theorem Effect4.Machine.settleRace_eq	cont	:1510-1514	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1432	theorem Effect4.Machine.withFiber_fork	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1435	theorem Effect4.Machine.withFiber_fork	cont	:5279-5282	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1576	theorem Effect4.Machine.drive_interruptTarget	cont	:574-595	internal/effect.ts	574	595	changed	internal/effect.ts	555	576	cosmetic	none	20
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1700	theorem Effect4.Machine.withFiber_raceAll	cont	:1490-1531	internal/effect.ts	1490	1531	changed	internal/effect.ts	1616	1653	behaviour	corner	83,84,85,86
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1721	theorem Effect4.Machine.evaluatePrim_raceRegister	cont	:1117-1141	internal/effect.ts	1117	1141	changed	internal/effect.ts	1149	1174	refactor	none	58
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1749	theorem Effect4.Machine.withFiber_cancelRace	cont	:1512	internal/effect.ts	1512	1512	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1749	theorem Effect4.Machine.withFiber_cancelRace	cont	:1530	internal/effect.ts	1530	1530	removed	internal/effect.ts			behaviour	corner	86
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1834	theorem Effect4.Machine.forkFinalizers_cons	cont	:3820	internal/effect.ts	3820	3820	changed	internal/effect.ts	3987	3987	host	outside	143
+brief	live	src/Effect4/Laws/Machine/Clauses.lean	1845	theorem Effect4.Machine.withFiber_closePar	cont	:3819-3824	internal/effect.ts	3819	3824	changed	internal/effect.ts	3986	3991	host	outside	143
+brief	live	src/Effect4/Laws/Machine/Handles.lean	66	def Effect4.Machine.Handle.code	bare	Layer.ts	Layer.ts	421	458	changed	Layer.ts	405	456	behaviour	corner	5,6,7,8
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	631	theorem Effect4.Machine.syncOpStep_scopeIsClosed	bare	Layer.ts	Layer.ts	396	458	changed	Layer.ts	405	456	behaviour	corner	4,5,6,7,8
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	631	theorem Effect4.Machine.syncOpStep_scopeIsClosed	bare	internal/effect.ts	internal/effect.ts	3834	3844	changed	internal/effect.ts	4001	4009	behaviour	main	144,145,146
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	662	theorem Effect4.Machine.syncOpStep_memoGet_some	cont	:438-442	Layer.ts	438	442	changed	Layer.ts	422	427	refactor	none	5
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	671	theorem Effect4.Machine.syncOpStep_memoBuild	bare	Layer.ts	Layer.ts	396	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	689	theorem Effect4.Machine.syncOpStep_memoComplete_some	bare	Layer.ts	Layer.ts	414	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	703	theorem Effect4.Machine.syncOpStep_memoRelease_last	bare	Layer.ts	Layer.ts	403	406	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	712	theorem Effect4.Machine.syncOpStep_memoRelease_dec	cont	:408	Layer.ts	408	408	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	739	theorem Effect4.Machine.syncOpStep_memoGet_families	cont	:401-417	Layer.ts	401	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	758	theorem Effect4.Machine.finProgram_memoEntry	cont	:401-410	Layer.ts	401	410	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	766	theorem Effect4.Machine.finProgram_memoDone	cont	:414-417	Layer.ts	414	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	773	theorem Effect4.Machine.contAOf_closeIfLast_scope	cont	:406	Layer.ts	406	406	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	774	theorem Effect4.Machine.contAOf_closeIfLast_scope	cont	:408	Layer.ts	408	408	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresLaws.lean	1999	theorem Effect4.Machine.syncOpStep_read_unchanged	bare	Layer.ts	Layer.ts	396	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Machine/StoresValue.lean	29	(module)	bare	internal/effect.ts	internal/effect.ts	534	534	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	77	def Effect4.Machine.Witnesses.interruptedWith	bare	internal/effect.ts	internal/effect.ts	579	580	changed	internal/effect.ts	560	561	cosmetic	none	20
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	162	def Effect4.Machine.Witnesses.traceWellFormed	cont	:621	internal/effect.ts	621	621	changed	internal/effect.ts	606	616	behaviour	corner	23
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	355	theorem Effect4.Machine.Witnesses.w1_join_is_an_effect	bare	internal/effect.ts	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	557	def Effect4.Machine.Witnesses.w5AwaitAllChildren	bare	internal/effect.ts	internal/effect.ts	5318	5322	changed	internal/effect.ts	5573	5578	behaviour	main	213
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	596	def Effect4.Machine.Witnesses.w5AwaitAllChildrenFails	cont	:5319-5333	internal/effect.ts	5319	5333	changed	internal/effect.ts	5574	5590	behaviour	main	213,214
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	887	def Effect4.Machine.Witnesses.w6Sequential	bare	internal/effect.ts	internal/effect.ts	3813	3818	changed	internal/effect.ts	3980	3985	host	outside	142
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	892	def Effect4.Machine.Witnesses.w6Parallel	bare	internal/effect.ts	internal/effect.ts	3819	3826	changed	internal/effect.ts	3986	3993	host	outside	143
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	970	theorem Effect4.Machine.Witnesses.w10_into_completes_on_failure	bare	internal/effect.ts	internal/effect.ts	1145	1160	changed	internal/effect.ts	1187	1202	behaviour	corner	60
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	1271	def Effect4.Machine.Witnesses.w13SyncUnderOnExit	cont	:4021	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	1322	theorem Effect4.Machine.Witnesses.w13_sync_meets_the_finalizer_program	cont	:1155-1159	internal/effect.ts	1155	1159	changed	internal/effect.ts	1197	1201	behaviour	corner	60
+brief	live	src/Effect4/Laws/Machine/Witnesses.lean	1376	theorem Effect4.Machine.Witnesses.w3_settle_interrupts_the_parked_loser	cont	:1510-1514	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Laws/Program/Agreement.lean	111	def Effect4.Program.Agreement.exitFrom	bare	internal/effect.ts	internal/effect.ts	4019	4030	changed	internal/effect.ts	4177	4197	host	outside	160,161,162,163
+brief	live	src/Effect4/Laws/Program/Agreement.lean	323	theorem Effect4.Program.Agreement.step_ofExit_onExit	bare	internal/effect.ts	internal/effect.ts	4019	4030	changed	internal/effect.ts	4177	4197	host	outside	160,161,162,163
+brief	live	src/Effect4/Laws/Program/Agreement.lean	1229	theorem Effect4.Program.Agreement.updateThenK_context	bare	internal/effect.ts	internal/effect.ts	2088	2095	changed	internal/effect.ts	2190	2197	refactor	none	97
+brief	live	src/Effect4/Laws/Program/Agreement.lean	1307	theorem Effect4.Program.Agreement.enterScoped_eq	bare	internal/effect.ts	internal/effect.ts	3938	3948	changed	internal/effect.ts	4100	4110	refactor	none	154,155
+brief	live	src/Effect4/Laws/Program/Agreement.lean	1326	theorem Effect4.Program.Agreement.exitScoped_restores	cont	:3944-3947	internal/effect.ts	3944	3947	changed	internal/effect.ts	4106	4110	refactor	none	155
+brief	live	src/Effect4/Laws/Program/Agreement/Machine.lean	812	def Effect4.Program.Agreement.parkedAt	bare	effect.ts	internal/effect.ts	647	655	changed	internal/effect.ts	641	650	cosmetic	none	26,27
+brief	live	src/Effect4/Laws/Program/Agreement/Machine.lean	1475	theorem Effect4.Program.Agreement.drive_loop_yield	bare	effect.ts	internal/effect.ts	647	655	changed	internal/effect.ts	641	650	cosmetic	none	26,27
+brief	live	src/Effect4/Laws/Program/Agreement/Machine.lean	1540	theorem Effect4.Program.Agreement.fire_Myield	bare	effect.ts	internal/effect.ts	629	655	changed	internal/effect.ts	622	650	cosmetic	none	25,26,27
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	75	def Effect4.Program.Sched.finalizerR	bare	internal/effect.ts	internal/effect.ts	4021	4029	changed	internal/effect.ts	4179	4197	host	outside	161,162,163
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	275	def Effect4.Program.Sched.denoteFin	bare	Layer.ts	Layer.ts	401	410	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	282	def Effect4.Program.Sched.denoteFin	cont	:414-417	Layer.ts	414	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	293	def Effect4.Program.Sched.updateContextR	bare	internal/effect.ts	internal/effect.ts	2087	2096	changed	internal/effect.ts	2189	2199	refactor	none	97,98
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	295	def Effect4.Program.Sched.updateContextR	cont	:2091-2095	internal/effect.ts	2091	2095	changed	internal/effect.ts	2193	2197	refactor	none	97
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	373	def Effect4.Program.Sched.memoizeR	bare	Layer.ts	Layer.ts	445	457	changed	Layer.ts	430	455	behaviour	corner	6,7,8
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	374	def Effect4.Program.Sched.memoizeR	cont	:439-440	Layer.ts	439	440	changed	Layer.ts	423	425	refactor	none	5
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	375	def Effect4.Program.Sched.memoizeR	cont	:400	Layer.ts	400	400	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	375	def Effect4.Program.Sched.memoizeR	cont	:390-419	Layer.ts	390	419	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/DenoteR.lean	653	def Effect4.Program.Sched.denoteEffBody	bare	internal/effect.ts	internal/effect.ts	3938	3948	changed	internal/effect.ts	4100	4110	refactor	none	154,155
+brief	live	src/Effect4/Laws/Program/EvaluateR.lean	170	def Effect4.Program.Sched.evaluateFiberR	bare	internal/effect.ts	internal/effect.ts	3938	3948	changed	internal/effect.ts	4100	4110	refactor	none	154,155
+brief	live	src/Effect4/Laws/Program/EvaluateR.lean	193	def Effect4.Program.Sched.evaluateFiberR	bare	internal/effect.ts	internal/effect.ts	4021	4029	changed	internal/effect.ts	4179	4197	host	outside	161,162,163
+brief	live	src/Effect4/Laws/Program/EvaluateR.lean	307	def Effect4.Program.Sched.prepareScopedExitR	bare	internal/effect.ts	internal/effect.ts	3944	3947	changed	internal/effect.ts	4106	4110	refactor	none	155
+brief	live	src/Effect4/Laws/Program/Handles/Evaluation.lean	169	theorem Effect4.Program.enterScoped_minted	bare	internal/effect.ts	internal/effect.ts	3938	3948	changed	internal/effect.ts	4100	4110	refactor	none	154,155
+brief	live	src/Effect4/Laws/Program/Handles/Evaluation.lean	192	theorem Effect4.Program.exitScoped_minted	bare	internal/effect.ts	internal/effect.ts	3944	3947	changed	internal/effect.ts	4106	4110	refactor	none	155
+brief	live	src/Effect4/Laws/Program/InterpR.lean	131	def Effect4.Program.Sched.exitR	cont	:3621-3637	internal/effect.ts	3621	3637	changed	internal/effect.ts	3769	3785	behaviour	budget	131,132
+brief	live	src/Effect4/Laws/Program/InterpR.lean	155	def Effect4.Program.Sched.closeScopeUnsafeR	bare	internal/effect.ts	internal/effect.ts	3782	3797	changed	internal/effect.ts	3939	3953	behaviour	main	138,139,140
+brief	live	src/Effect4/Laws/Program/InterpR.lean	167	def Effect4.Program.Sched.closeScopeR	cont	:3775-3776	internal/effect.ts	3775	3776	changed	internal/effect.ts	3929	3935	behaviour	main	137
+brief	live	src/Effect4/Laws/Program/InterpR.lean	172	def Effect4.Program.Sched.closeScopeR	bare	Scope.ts	Scope.ts	567	567	changed	Scope.ts	568	595	api	none	2
+brief	live	src/Effect4/Laws/Program/InterpR.lean	173	def Effect4.Program.Sched.closeScopeR	cont	:3788-3789	internal/effect.ts	3788	3789	changed	internal/effect.ts	3940	3943	behaviour	main	139
+brief	live	src/Effect4/Laws/Program/InterpR.lean	173	def Effect4.Program.Sched.closeScopeR	cont	:3794-3795	internal/effect.ts	3794	3795	changed	internal/effect.ts	3945	3951	behaviour	main	140
+brief	live	src/Effect4/Laws/Program/InterpR.lean	199	def Effect4.Program.Sched.denoteRaceSettle	bare	internal/effect.ts	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Laws/Program/Intro/Memo.lean	55	theorem Effect4.Program.Sched.memoize_intro	bare	Layer.ts	Layer.ts	445	457	changed	Layer.ts	430	455	behaviour	corner	6,7,8
+brief	live	src/Effect4/Laws/Program/Intro/Region.lean	22	theorem Effect4.Program.Sched.contAOf_closeIfLast_other	bare	Layer.ts	Layer.ts	408	408	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/Intro/Region.lean	39	theorem Effect4.Program.Sched.memoEntry_means	bare	Layer.ts	Layer.ts	401	410	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/Intro/Region.lean	62	theorem Effect4.Program.Sched.memoDone_means	bare	Layer.ts	Layer.ts	414	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/Intro/Region.lean	70	theorem Effect4.Program.Sched.region_intro	bare	internal/effect.ts	internal/effect.ts	2092	2095	changed	internal/effect.ts	2194	2197	refactor	none	97
+brief	live	src/Effect4/Laws/Program/Intro/Region.lean	86	theorem Effect4.Program.Sched.updateContext_intro	bare	internal/effect.ts	internal/effect.ts	2087	2096	changed	internal/effect.ts	2189	2199	refactor	none	97,98
+brief	live	src/Effect4/Laws/Program/Sched.lean	70	inductive Effect4.Program.Sched.Body	bare	internal/effect.ts	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Laws/Program/Sched.lean	141	abbrev Effect4.Program.Sched.FiberOp.answer	cont	:1356-1372	internal/effect.ts	1356	1372	changed	internal/effect.ts	1408	1424	cosmetic	none	74,75
+brief	live	src/Effect4/Laws/Program/Simulation/Deliver.lean	402	theorem Effect4.Program.Sched.scopeCloseSnapshot_scopes	bare	internal/effect.ts	internal/effect.ts	3784	3784	removed	internal/effect.ts			behaviour	main	138
+brief	live	src/Effect4/Laws/Program/Typed/Adequacy.lean	1530	theorem Effect4.Program.Typed.closeScopeUnsafe_installs	bare	internal/effect.ts	internal/effect.ts	3944	3947	changed	internal/effect.ts	4106	4110	refactor	none	155
+brief	live	src/Effect4/Laws/Program/Typed/Admission.lean	188	def Effect4.Program.Typed.FinalizerAdmitted	bare	Layer.ts	Layer.ts	414	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean	2656	theorem Effect4.Program.Typed.scopeStoreOk_closeState	bare	internal/effect.ts	internal/effect.ts	3778	3798	changed	internal/effect.ts	3938	3954	behaviour	main	138,139,140
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean	9	(module)	bare	internal/effect.ts	internal/effect.ts	3800	3830	changed	internal/effect.ts	3967	3997	host	outside	142,143
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Clauses/Close.lean	267	theorem Effect4.Program.Typed.clause_closeIter_parallel	bare	internal/effect.ts	internal/effect.ts	3819	3826	changed	internal/effect.ts	3986	3993	host	outside	143
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean	10	(module)	bare	internal/effect.ts	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Clauses/Iter.lean	9	(module)	bare	internal/effect.ts	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Clauses/Spawn.lean	235	theorem Effect4.Program.Typed.clause_fork	bare	internal/effect.ts	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Clauses/StoreDeferred.lean	282	theorem Effect4.Program.Typed.clause_memoBuild	bare	Layer.ts	Layer.ts	396	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean	1447	theorem Effect4.Program.Typed.configTyped_closeState	bare	internal/effect.ts	internal/effect.ts	3778	3798	changed	internal/effect.ts	3938	3954	behaviour	main	138,139,140
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean	1511	theorem Effect4.Program.Typed.clause_closeScope	bare	internal/effect.ts	internal/effect.ts	3775	3776	changed	internal/effect.ts	3929	3935	behaviour	main	137
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean	1585	theorem Effect4.Program.Typed.Evaluating.settle_callback	bare	internal/effect.ts	internal/effect.ts	3944	3947	changed	internal/effect.ts	4106	4110	refactor	none	155
+brief	live	src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean	1854	theorem Effect4.Program.Typed.clause_scoped	bare	internal/effect.ts	internal/effect.ts	3938	3948	changed	internal/effect.ts	4100	4110	refactor	none	154,155
+brief	live	src/Effect4/Laws/Program/Typed/Contracts.lean	110	structure Effect4.Program.Typed.Contracts.InterruptProvenance	bare	internal/effect.ts	internal/effect.ts	575	594	changed	internal/effect.ts	556	575	cosmetic	none	20
+brief	live	src/Effect4/Laws/Program/Typed/LayerArm.lean	216	theorem Effect4.Program.Typed.memoize_typed	bare	Layer.ts	Layer.ts	445	457	changed	Layer.ts	430	455	behaviour	corner	6,7,8
+brief	live	src/Effect4/Laws/Program/Typed/LayerArm.lean	297	theorem Effect4.Program.Typed.updateContext_typed	bare	internal/effect.ts	internal/effect.ts	2087	2096	changed	internal/effect.ts	2189	2199	refactor	none	97,98
+brief	live	src/Effect4/Laws/Program/Typing/HasTy.lean	157	inductive Conform.Effect4.Typing.StmtsHasTy	cont	:4006	internal/effect.ts	4006	4006	changed	internal/effect.ts	4164	4165	cosmetic	none	156
+brief	live	src/Effect4/Laws/Program/Typing/HasTy.lean	327	inductive Conform.Effect4.Typing.LayerHasTy	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Laws/Program/Typing/HasTy.lean	376	inductive Conform.Effect4.Typing.LayerHasTy	cont	:5318-5322	internal/effect.ts	5318	5322	changed	internal/effect.ts	5573	5578	behaviour	main	213
+brief	live	src/Effect4/Laws/Program/Typing/HasTy.lean	402	inductive Conform.Effect4.Typing.LayerHasTy	cont	:709-727	internal/effect.ts	709	727	changed	internal/effect.ts	718	732	refactor	none	31,32
+brief	live	src/Effect4/Machine/Alphabets.lean	122	abbrev Effect4.Machine.Ann	bare	internal/effect.ts	internal/effect.ts	579	580	changed	internal/effect.ts	560	561	cosmetic	none	20
+brief	live	src/Effect4/Machine/Alphabets.lean	268	abbrev Effect4.Machine.Val	bare	Deferred.ts	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	src/Effect4/Machine/Alphabets.lean	271	abbrev Effect4.Machine.Val	cont	:534	internal/effect.ts	534	534	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Alphabets.lean	290	abbrev Effect4.Machine.Val.promise	bare	Deferred.ts	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	src/Effect4/Machine/Alphabets.lean	294	abbrev Effect4.Machine.Val.memoMap	bare	Layer.ts	Layer.ts	421	458	changed	Layer.ts	405	456	behaviour	corner	5,6,7,8
+brief	live	src/Effect4/Machine/Alphabets.lean	297	abbrev Effect4.Machine.Val.fibers	bare	internal/effect.ts	internal/effect.ts	534	534	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Alphabets.lean	377	def Effect4.Machine.Val.memoHit	bare	Layer.ts	Layer.ts	439	440	changed	Layer.ts	423	425	refactor	none	5
+brief	live	src/Effect4/Machine/Cause.lean	831	def Effect4.Cause.stripFail	bare	internal/core.ts	internal/core.ts	539	545	changed	internal/core.ts	590	608	behaviour	main	19,20
+brief	live	src/Effect4/Machine/Context.lean	38	(module)	cont	:715-727	internal/effect.ts	715	727	changed	internal/effect.ts	727	732	refactor	none	31,32
+brief	live	src/Effect4/Machine/Context.lean	187	inductive Effect4.Machine.Env.ContextUpdate	bare	internal/effect.ts	internal/effect.ts	2073	2097	changed	internal/effect.ts	2175	2200	refactor	none	97,98
+brief	live	src/Effect4/Machine/ContextMap.lean	275	def Effect4.Machine.Env.Context.getRef	bare	internal/effect.ts	internal/effect.ts	715	727	changed	internal/effect.ts	727	732	refactor	none	31,32
+brief	live	src/Effect4/Machine/ContextMap.lean	560	abbrev Effect4.Machine.Env.Val	bare	Layer.ts	Layer.ts	421	458	changed	Layer.ts	405	456	behaviour	corner	5,6,7,8
+brief	live	src/Effect4/Machine/ContextMap.lean	561	abbrev Effect4.Machine.Env.Val	bare	Deferred.ts	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	src/Effect4/Machine/ContextMap.lean	564	abbrev Effect4.Machine.Env.Val	bare	Layer.ts	Layer.ts	438	440	changed	Layer.ts	422	425	refactor	none	5
+brief	live	src/Effect4/Machine/ContextMap.lean	579	abbrev Effect4.Machine.Env.Val.memoMap	bare	Layer.ts	Layer.ts	421	458	changed	Layer.ts	405	456	behaviour	corner	5,6,7,8
+brief	live	src/Effect4/Machine/ContextMap.lean	581	abbrev Effect4.Machine.Env.Val.promise	bare	Deferred.ts	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	src/Effect4/Machine/ContextMap.lean	705	def Effect4.Machine.Env.budgetOf	bare	internal/effect.ts	internal/effect.ts	726	727	changed	internal/effect.ts	732	732	refactor	none	32
+brief	live	src/Effect4/Machine/Fibers.lean	59	inductive Effect4.Machine.Parked	cont	:1493-1531	internal/effect.ts	1493	1531	changed	internal/effect.ts	1622	1653	behaviour	corner	84,85,86
+brief	live	src/Effect4/Machine/Fibers.lean	101	inductive Effect4.Machine.Observer	cont	:5281	internal/effect.ts	5281	5281	changed	internal/effect.ts	5536	5536	behaviour	corner	212
+brief	live	src/Effect4/Machine/Fibers.lean	117	inductive Effect4.Machine.Task	bare	Queue.ts	Queue.ts	1974	1974	changed	Queue.ts	2462	2465	behaviour	main	24
+brief	live	src/Effect4/Machine/Fibers.lean	135	structure Effect4.Machine.Dispatcher	cont	:552-555	internal/effect.ts	552	555	changed	internal/effect.ts	506	531	cosmetic	none	15,16
+brief	live	src/Effect4/Machine/Fibers.lean	196	instance Effect4.Machine.frameCore	bare	effect.ts	internal/effect.ts	647	651	changed	internal/effect.ts	641	646	cosmetic	none	26
+brief	live	src/Effect4/Machine/Fibers.lean	229	inductive Effect4.Machine.Origin	bare	internal/effect.ts	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Machine/Fibers.lean	238	structure Effect4.Machine.ForkRecord	bare	internal/effect.ts	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Machine/Fibers.lean	247	structure Effect4.Machine.RunFiber	cont	:505-555	internal/effect.ts	505	555	changed	internal/effect.ts	484	531	refactor	none	12,13,14,15,16
+brief	live	src/Effect4/Machine/Fibers.lean	248	structure Effect4.Machine.RunFiber	cont	:537	internal/effect.ts	537	537	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	248	structure Effect4.Machine.RunFiber	cont	:536	internal/effect.ts	536	536	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	250	structure Effect4.Machine.RunFiber	cont	:533	internal/effect.ts	533	533	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	250	structure Effect4.Machine.RunFiber	cont	:530	internal/effect.ts	530	530	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	250	structure Effect4.Machine.RunFiber	cont	:549-550	internal/effect.ts	549	550	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	251	structure Effect4.Machine.RunFiber	cont	:532	internal/effect.ts	532	532	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	252	structure Effect4.Machine.RunFiber	cont	:534	internal/effect.ts	534	534	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	252	structure Effect4.Machine.RunFiber	cont	:552	internal/effect.ts	552	552	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	252	structure Effect4.Machine.RunFiber	cont	:541	internal/effect.ts	541	541	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Fibers.lean	282	def Effect4.Machine.RunFiber.make	cont	:726-727	internal/effect.ts	726	727	changed	internal/effect.ts	732	732	refactor	none	32
+brief	live	src/Effect4/Machine/Fibers.lean	314	inductive Effect4.Machine.RunEvent	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Machine/Fibers.lean	341	inductive Effect4.Machine.RunEvent	cont	:5318-5322	internal/effect.ts	5318	5322	changed	internal/effect.ts	5573	5578	behaviour	main	213
+brief	live	src/Effect4/Machine/Fibers.lean	357	inductive Effect4.Machine.RunEvent	cont	:709-727	internal/effect.ts	709	727	changed	internal/effect.ts	718	732	refactor	none	31,32
+brief	live	src/Effect4/Machine/Fibers.lean	367	inductive Effect4.Machine.RunEvent	cont	:3819-3824	internal/effect.ts	3819	3824	changed	internal/effect.ts	3986	3991	host	outside	143
+brief	live	src/Effect4/Machine/Fibers.lean	377	inductive Effect4.Machine.RunEvent	cont	:1530	internal/effect.ts	1530	1530	removed	internal/effect.ts			behaviour	corner	86
+brief	live	src/Effect4/Machine/Fibers.lean	520	def Effect4.Machine.RunMachine.fiber?	cont	:1117	internal/effect.ts	1117	1117	changed	internal/effect.ts	1149	1150	refactor	none	58
+brief	live	src/Effect4/Machine/Fibers.lean	548	def Effect4.Machine.RunMachine.fiber?	cont	:1530	internal/effect.ts	1530	1530	removed	internal/effect.ts			behaviour	corner	86
+brief	live	src/Effect4/Machine/Fibers.lean	551	def Effect4.Machine.RunMachine.fiber?	cont	:1510-1514	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Machine/Fibers.lean	557	def Effect4.Machine.RunMachine.fiber?	cont	:4021	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Machine/Fibers.lean	581	def Effect4.Machine.RunMachine.fiber?	cont	:726-727	internal/effect.ts	726	727	changed	internal/effect.ts	732	732	refactor	none	32
+brief	live	src/Effect4/Machine/Fibers.lean	609	def Effect4.Machine.RunMachine.fiber?	cont	:579-580	internal/effect.ts	579	580	changed	internal/effect.ts	560	561	cosmetic	none	20
+brief	live	src/Effect4/Machine/Fibers.lean	710	def Effect4.Machine.RunMachine.postTask	bare	Queue.ts	Queue.ts	1974	1974	changed	Queue.ts	2462	2465	behaviour	main	24
+brief	live	src/Effect4/Machine/Fibers.lean	732	def Effect4.Machine.interruptRecord	cont	:599-628	internal/effect.ts	599	628	changed	internal/effect.ts	580	621	behaviour	corner	21,22,23,24
+brief	live	src/Effect4/Machine/Fibers.lean	741	def Effect4.Machine.interruptRecord	cont	:611-628	internal/effect.ts	611	628	changed	internal/effect.ts	599	621	behaviour	corner	23,24
+brief	live	src/Effect4/Machine/Fibers.lean	757	def Effect4.Machine.interruptRecord	cont	:574-595	internal/effect.ts	574	595	changed	internal/effect.ts	555	576	cosmetic	none	20
+brief	live	src/Effect4/Machine/Fibers.lean	764	def Effect4.Machine.interruptRecord	cont	:1512	internal/effect.ts	1512	1512	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Machine/Fibers.lean	769	def Effect4.Machine.interruptRecord	cont	:5279-5282	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Machine/Fibers.lean	773	def Effect4.Machine.interruptRecord	cont	:621-623	internal/effect.ts	621	623	changed	internal/effect.ts	606	617	behaviour	corner	23
+brief	live	src/Effect4/Machine/Fibers.lean	776	def Effect4.Machine.interruptRecord	cont	:624-627	internal/effect.ts	624	627	changed	internal/effect.ts	618	620	refactor	none	24
+brief	live	src/Effect4/Machine/Fibers.lean	800	def Effect4.Machine.interruptRecord	cont	:574-595	internal/effect.ts	574	595	changed	internal/effect.ts	555	576	cosmetic	none	20
+brief	live	src/Effect4/Machine/Fibers.lean	802	def Effect4.Machine.interruptRecord	cont	:578-584	internal/effect.ts	578	584	changed	internal/effect.ts	559	565	cosmetic	none	20
+brief	live	src/Effect4/Machine/Fibers.lean	805	def Effect4.Machine.interruptRecord	cont	:1155-1159	internal/effect.ts	1155	1159	changed	internal/effect.ts	1197	1201	behaviour	corner	60
+brief	live	src/Effect4/Machine/Fibers.lean	901	structure Effect4.Machine.Iter	cont	:1117-1141	internal/effect.ts	1117	1141	changed	internal/effect.ts	1149	1174	refactor	none	58
+brief	live	src/Effect4/Machine/Fibers.lean	936	def Effect4.Machine.registerRace	cont	:1117-1141	internal/effect.ts	1117	1141	changed	internal/effect.ts	1149	1174	refactor	none	58
+brief	live	src/Effect4/Machine/Fibers.lean	949	def Effect4.Machine.spawn	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Machine/Fibers.lean	950	def Effect4.Machine.spawn	cont	:5280-5281	internal/effect.ts	5280	5281	changed	internal/effect.ts	5535	5536	behaviour	corner	212
+brief	live	src/Effect4/Machine/Fibers.lean	963	def Effect4.Machine.spawn	cont	:5279-5282	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Machine/Fibers.lean	992	def Effect4.Machine.forkFinalizers	cont	:3820	internal/effect.ts	3820	3820	changed	internal/effect.ts	3987	3987	host	outside	143
+brief	live	src/Effect4/Machine/Fibers.lean	1050	def Effect4.Machine.yieldVerdict	bare	Scheduler.ts	Scheduler.ts	174	176	changed	Scheduler.ts	184	186	cosmetic	none	3
+brief	live	src/Effect4/Machine/Fibers.lean	1055	def Effect4.Machine.injectYield	cont	:644-652	internal/effect.ts	644	652	changed	internal/effect.ts	639	647	cosmetic	none	26
+brief	live	src/Effect4/Machine/Fibers.lean	1071	def Effect4.Machine.frameExitState	bare	internal/core.ts	internal/core.ts	539	545	changed	internal/core.ts	590	608	behaviour	main	19,20
+brief	live	src/Effect4/Machine/Fibers.lean	1072	def Effect4.Machine.frameExitState	bare	internal/effect.ts	internal/effect.ts	688	697	changed	internal/effect.ts	683	695	refactor	none	28,29
+brief	live	src/Effect4/Machine/Fibers.lean	1080	def Effect4.Machine.finalizerCode	bare	internal/effect.ts	internal/effect.ts	4019	4030	changed	internal/effect.ts	4177	4197	host	outside	160,161,162,163
+brief	live	src/Effect4/Machine/Fibers.lean	1181	abbrev Effect4.Machine.FiberAction.Answer	cont	:4021	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Machine/Fibers.lean	1228	def Effect4.Machine.evaluatePrim	bare	internal/effect.ts	internal/effect.ts	688	697	changed	internal/effect.ts	683	695	refactor	none	28,29
+brief	live	src/Effect4/Machine/Fibers.lean	1250	def Effect4.Machine.evaluatePrim	cont	:5279-5282	internal/effect.ts	5279	5282	changed	internal/effect.ts	5534	5537	behaviour	corner	212
+brief	live	src/Effect4/Machine/Fibers.lean	1651	def Effect4.Machine.iteration	cont	:638-668	internal/effect.ts	638	668	changed	internal/effect.ts	631	663	cosmetic	none	25,26,27
+brief	live	src/Effect4/Machine/Fibers.lean	1661	def Effect4.Machine.fireObserver	cont	:621-623	internal/effect.ts	621	623	changed	internal/effect.ts	606	617	behaviour	corner	23
+brief	live	src/Effect4/Machine/Fibers.lean	1718	def Effect4.Machine.fireObserver	cont	:1503-1514	internal/effect.ts	1503	1514	changed	internal/effect.ts	1631	1638	behaviour	corner	85
+brief	live	src/Effect4/Machine/Fibers.lean	1760	def Effect4.Machine.RunFiber.cleared	cont	:624-627	internal/effect.ts	624	627	changed	internal/effect.ts	618	620	refactor	none	24
+brief	live	src/Effect4/Machine/Fibers.lean	1769	def Effect4.Machine.exitFiber	cont	:611-627	internal/effect.ts	611	627	changed	internal/effect.ts	599	620	behaviour	corner	23,24
+brief	live	src/Effect4/Machine/Fibers.lean	1773	def Effect4.Machine.exitFiber	cont	:619-623	internal/effect.ts	619	623	changed	internal/effect.ts	605	617	behaviour	corner	23
+brief	live	src/Effect4/Machine/Fibers.lean	1774	def Effect4.Machine.exitFiber	cont	:624-627	internal/effect.ts	624	627	changed	internal/effect.ts	618	620	refactor	none	24
+brief	live	src/Effect4/Machine/Fibers.lean	1793	def Effect4.Machine.settle	cont	:619-627	internal/effect.ts	619	627	changed	internal/effect.ts	605	620	behaviour	corner	23,24
+brief	live	src/Effect4/Machine/Fibers.lean	1847	def Effect4.Machine.driveStep	bare	internal/effect.ts	internal/effect.ts	599	628	changed	internal/effect.ts	580	621	behaviour	corner	21,22,23,24
+brief	live	src/Effect4/Machine/Frames.lean	122	theorem Effect4.Prim.cases_receipt	bare	internal/effect.ts	internal/effect.ts	649	655	changed	internal/effect.ts	644	650	cosmetic	none	27
+brief	live	src/Effect4/Machine/Frames.lean	143	theorem Effect4.Prim.cases_receipt	bare	internal/effect.ts	internal/effect.ts	1102	1143	changed	internal/effect.ts	1136	1176	refactor	none	55,56,57,58
+brief	live	src/Effect4/Machine/Frames.lean	151	theorem Effect4.Prim.cases_receipt	bare	internal/effect.ts	internal/effect.ts	1145	1160	changed	internal/effect.ts	1187	1202	behaviour	corner	60
+brief	live	src/Effect4/Machine/Frames.lean	268	structure Effect4.PrimInterp	bare	internal/effect.ts	internal/effect.ts	1362	1377	changed	internal/effect.ts	1414	1429	cosmetic	none	75,76
+brief	live	src/Effect4/Machine/Frames.lean	300	structure Effect4.FrameFiber	bare	internal/effect.ts	internal/effect.ts	1157	1157	changed	internal/effect.ts	1199	1199	behaviour	corner	60
+brief	live	src/Effect4/Machine/Frames.lean	416	def Effect4.FrameFiber.interrupted	bare	internal/core.ts	internal/core.ts	540	540	changed	internal/core.ts	591	597	behaviour	main	19
+brief	live	src/Effect4/Machine/Frames.lean	591	theorem Effect4.Prim.arms_asyncFinalizer	bare	internal/effect.ts	internal/effect.ts	1145	1160	changed	internal/effect.ts	1187	1202	behaviour	corner	60
+brief	live	src/Effect4/Machine/Frames.lean	947	def Effect4.Prim.armE	bare	internal/effect.ts	internal/effect.ts	1155	1159	changed	internal/effect.ts	1197	1201	behaviour	corner	60
+brief	live	src/Effect4/Machine/Frames.lean	1474	def Effect4.FrameFiber.skippedCause	bare	internal/core.ts	internal/core.ts	539	545	changed	internal/core.ts	590	608	behaviour	main	19,20
+brief	live	src/Effect4/Machine/Frames.lean	2984	theorem Effect4.FrameFiber.step_onSuccessConst	bare	internal/effect.ts	internal/effect.ts	649	655	changed	internal/effect.ts	644	650	cosmetic	none	27
+brief	live	src/Effect4/Machine/Stores.lean	37	(module)	cont	:3833-3844	internal/effect.ts	3833	3844	changed	internal/effect.ts	4001	4009	behaviour	main	144,145,146
+brief	live	src/Effect4/Machine/Stores.lean	85	structure Effect4.Machine.Ctx	cont	:726-727	internal/effect.ts	726	727	changed	internal/effect.ts	732	732	refactor	none	32
+brief	live	src/Effect4/Machine/Stores.lean	103	def Effect4.Machine.Ctx.withServices	cont	:726-727	internal/effect.ts	726	727	changed	internal/effect.ts	732	732	refactor	none	32
+brief	live	src/Effect4/Machine/Stores.lean	161	def Effect4.Machine.ofCtx	bare	internal/effect.ts	internal/effect.ts	3833	3844	changed	internal/effect.ts	4001	4009	behaviour	main	144,145,146
+brief	live	src/Effect4/Machine/Stores.lean	168	def Effect4.Machine.ofCtx	bare	internal/effect.ts	internal/effect.ts	5319	5333	changed	internal/effect.ts	5574	5590	behaviour	main	213,214
+brief	live	src/Effect4/Machine/Stores.lean	173	def Effect4.Machine.ofCtx	bare	internal/effect.ts	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Machine/Stores.lean	180	def Effect4.Machine.ofCtx	bare	Layer.ts	Layer.ts	401	410	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	183	def Effect4.Machine.ofCtx	bare	Layer.ts	Layer.ts	414	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	299	inductive Effect4.Machine.RaceName	bare	internal/effect.ts	internal/effect.ts	3914	3922	changed	internal/effect.ts	4070	4084	api	none	152,153
+brief	live	src/Effect4/Machine/Stores.lean	306	inductive Effect4.Machine.RaceName	bare	internal/effect.ts	internal/effect.ts	3890	3904	changed	internal/effect.ts	4053	4067	behaviour	main	149,150,151
+brief	live	src/Effect4/Machine/Stores.lean	310	inductive Effect4.Machine.RaceName	bare	internal/effect.ts	internal/effect.ts	3834	3844	changed	internal/effect.ts	4001	4009	behaviour	main	144,145,146
+brief	live	src/Effect4/Machine/Stores.lean	316	inductive Effect4.Machine.RaceName	cont	:434-443	Layer.ts	434	443	changed	Layer.ts	418	428	refactor	none	5
+brief	live	src/Effect4/Machine/Stores.lean	319	inductive Effect4.Machine.RaceName	cont	:396-411	Layer.ts	396	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	322	inductive Effect4.Machine.RaceName	cont	:414-417	Layer.ts	414	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	324	inductive Effect4.Machine.RaceName	cont	:402-408	Layer.ts	402	408	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	346	inductive Effect4.Machine.ProgName	bare	internal/effect.ts	internal/effect.ts	1530	1530	removed	internal/effect.ts			behaviour	corner	86
+brief	live	src/Effect4/Machine/Stores.lean	349	inductive Effect4.Machine.ProgName	cont	:1510-1514	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Machine/Stores.lean	365	inductive Effect4.Machine.Name	bare	internal/effect.ts	internal/effect.ts	1109	1143	changed	internal/effect.ts	1143	1176	refactor	none	56,57,58
+brief	live	src/Effect4/Machine/Stores.lean	385	inductive Effect4.Machine.Name	bare	internal/effect.ts	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Machine/Stores.lean	389	inductive Effect4.Machine.Name	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Machine/Stores.lean	392	inductive Effect4.Machine.Name	cont	:5264-5284	internal/effect.ts	5264	5284	changed	internal/effect.ts	5517	5539	behaviour	corner	211,212
+brief	live	src/Effect4/Machine/Stores.lean	406	inductive Effect4.Machine.Name	cont	:5314-5322	internal/effect.ts	5314	5322	changed	internal/effect.ts	5569	5578	behaviour	main	213
+brief	live	src/Effect4/Machine/Stores.lean	411	inductive Effect4.Machine.Name	bare	internal/effect.ts	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Machine/Stores.lean	415	inductive Effect4.Machine.Name	bare	internal/effect.ts	internal/effect.ts	3806	3827	changed	internal/effect.ts	3973	3994	host	outside	142,143
+brief	live	src/Effect4/Machine/Stores.lean	443	inductive Effect4.Machine.ActionName	cont	:5319-5333	internal/effect.ts	5319	5333	changed	internal/effect.ts	5574	5590	behaviour	main	213,214
+brief	live	src/Effect4/Machine/Stores.lean	465	inductive Effect4.Machine.ActionName	cont	:1530	internal/effect.ts	1530	1530	removed	internal/effect.ts			behaviour	corner	86
+brief	live	src/Effect4/Machine/Stores.lean	472	inductive Effect4.Machine.ActionName	bare	internal/effect.ts	internal/effect.ts	1157	1157	changed	internal/effect.ts	1199	1199	behaviour	corner	60
+brief	live	src/Effect4/Machine/Stores.lean	476	inductive Effect4.Machine.ActionName	bare	internal/effect.ts	internal/effect.ts	3813	3818	changed	internal/effect.ts	3980	3985	host	outside	142
+brief	live	src/Effect4/Machine/Stores.lean	483	inductive Effect4.Machine.ActionName	bare	Layer.ts	Layer.ts	403	408	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	521	inductive Effect4.Machine.Thunk	bare	internal/effect.ts	internal/effect.ts	3819	3824	changed	internal/effect.ts	3986	3991	host	outside	143
+brief	live	src/Effect4/Machine/Stores.lean	548	abbrev Effect4.Machine.Program	bare	Layer.ts	Layer.ts	235	239	changed	Layer.ts	235	240	cosmetic	none	1
+brief	live	src/Effect4/Machine/Stores.lean	548	abbrev Effect4.Machine.Program	cont	:421-458	Layer.ts	421	458	changed	Layer.ts	405	456	behaviour	corner	5,6,7,8
+brief	live	src/Effect4/Machine/Stores.lean	558	structure Effect4.Machine.MemoEntry	cont	:235-239	Layer.ts	235	239	changed	Layer.ts	235	240	cosmetic	none	1
+brief	live	src/Effect4/Machine/Stores.lean	558	structure Effect4.Machine.MemoEntry	cont	:396-397	Layer.ts	396	397	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	562	structure Effect4.Machine.MemoMap	cont	:396	Layer.ts	396	396	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	564	structure Effect4.Machine.MemoMap	cont	:397	Layer.ts	397	397	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	598	def Effect4.Machine.MemoWorld.insertEntry	cont	:411	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	605	def Effect4.Machine.MemoWorld.deleteEntry	cont	:405	Layer.ts	405	405	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	611	def Effect4.Machine.MemoWorld.lookup	cont	:434-443	Layer.ts	434	443	changed	Layer.ts	418	428	refactor	none	5
+brief	live	src/Effect4/Machine/Stores.lean	632	theorem Effect4.Machine.MemoWorld.find?_append_other_key	bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	728	theorem Effect4.Machine.MemoWorld.get_own	bare	Layer.ts	Layer.ts	438	442	changed	Layer.ts	422	427	refactor	none	5
+brief	live	src/Effect4/Machine/Stores.lean	1207	def Effect4.Machine.DeferredStore.make	bare	Deferred.ts	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	src/Effect4/Machine/Stores.lean	1405	theorem Effect4.Machine.deferredStore_waiter_receives_stored	bare	internal/effect.ts	internal/effect.ts	3778	3947	changed	internal/effect.ts	3938	4110	behaviour	main	138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155
+brief	live	src/Effect4/Machine/Stores.lean	1440	def Effect4.Machine.ScopeStore.make	bare	internal/effect.ts	internal/effect.ts	3914	3922	changed	internal/effect.ts	4070	4084	api	none	152,153
+brief	live	src/Effect4/Machine/Stores.lean	1454	def Effect4.Machine.ScopeStore.removeFinalizer	bare	internal/effect.ts	internal/effect.ts	3890	3904	changed	internal/effect.ts	4053	4067	behaviour	main	149,150,151
+brief	live	src/Effect4/Machine/Stores.lean	1461	def Effect4.Machine.ScopeStore.forkChild	bare	internal/effect.ts	internal/effect.ts	3833	3844	changed	internal/effect.ts	4001	4009	behaviour	main	144,145,146
+brief	live	src/Effect4/Machine/Stores.lean	1480	def Effect4.Machine.ScopeStore.closeState	bare	internal/effect.ts	internal/effect.ts	3778	3798	changed	internal/effect.ts	3938	3954	behaviour	main	138,139,140
+brief	live	src/Effect4/Machine/Stores.lean	1629	theorem Effect4.Machine.ScopeStore.keysBelow_forkChild	bare	internal/effect.ts	internal/effect.ts	3841	3842	changed	internal/effect.ts	4007	4008	behaviour	main	146
+brief	live	src/Effect4/Machine/Stores.lean	1719	def Effect4.Machine.stepOfExit	bare	internal/effect.ts	internal/effect.ts	1362	1372	changed	internal/effect.ts	1414	1424	cosmetic	none	75
+brief	live	src/Effect4/Machine/Stores.lean	1835	def Effect4.Machine.Stores.empty	bare	Layer.ts	Layer.ts	421	458	changed	Layer.ts	405	456	behaviour	corner	5,6,7,8
+brief	live	src/Effect4/Machine/Stores.lean	1876	def Effect4.Machine.finProgram	bare	internal/effect.ts	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Machine/Stores.lean	1899	def Effect4.Machine.finProgram	bare	Layer.ts	Layer.ts	401	410	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	1906	def Effect4.Machine.closeSeqStep	bare	internal/effect.ts	internal/effect.ts	3813	3818	changed	internal/effect.ts	3980	3985	host	outside	142
+brief	live	src/Effect4/Machine/Stores.lean	1908	def Effect4.Machine.closeSeqStep	cont	:3621-3637	internal/effect.ts	3621	3637	changed	internal/effect.ts	3769	3785	behaviour	budget	131,132
+brief	live	src/Effect4/Machine/Stores.lean	1977	def Effect4.Machine.progOf	cont	:3806-3827	internal/effect.ts	3806	3827	changed	internal/effect.ts	3973	3994	host	outside	142,143
+brief	live	src/Effect4/Machine/Stores.lean	1984	def Effect4.Machine.raceSettleProgram	bare	internal/effect.ts	internal/effect.ts	1510	1514	changed	internal/effect.ts	1638	1638	behaviour	corner	85
+brief	live	src/Effect4/Machine/Stores.lean	2012	def Effect4.Machine.scopeCloseSnapshot	bare	internal/effect.ts	internal/effect.ts	3782	3797	changed	internal/effect.ts	3939	3953	behaviour	main	138,139,140
+brief	live	src/Effect4/Machine/Stores.lean	2020	def Effect4.Machine.storesCloseScopeUnsafe	bare	internal/effect.ts	internal/effect.ts	3782	3797	changed	internal/effect.ts	3939	3953	behaviour	main	138,139,140
+brief	live	src/Effect4/Machine/Stores.lean	2021	def Effect4.Machine.storesCloseScopeUnsafe	cont	:3806-3827	internal/effect.ts	3806	3827	changed	internal/effect.ts	3973	3994	host	outside	142,143
+brief	live	src/Effect4/Machine/Stores.lean	2025	def Effect4.Machine.storesCloseScopeUnsafe	cont	:3784	internal/effect.ts	3784	3784	removed	internal/effect.ts			behaviour	main	138
+brief	live	src/Effect4/Machine/Stores.lean	2036	def Effect4.Machine.storesCloseScope	bare	internal/effect.ts	internal/effect.ts	3775	3776	changed	internal/effect.ts	3929	3935	behaviour	main	137
+brief	live	src/Effect4/Machine/Stores.lean	2042	def Effect4.Machine.storesCloseScope	bare	Scope.ts	Scope.ts	567	567	changed	Scope.ts	568	595	api	none	2
+brief	live	src/Effect4/Machine/Stores.lean	2043	def Effect4.Machine.storesCloseScope	cont	:3788-3789	internal/effect.ts	3788	3789	changed	internal/effect.ts	3940	3943	behaviour	main	139
+brief	live	src/Effect4/Machine/Stores.lean	2043	def Effect4.Machine.storesCloseScope	cont	:3794-3795	internal/effect.ts	3794	3795	changed	internal/effect.ts	3945	3951	behaviour	main	140
+brief	live	src/Effect4/Machine/Stores.lean	2119	def Effect4.Machine.syncOpStep	bare	internal/effect.ts	internal/effect.ts	3834	3844	changed	internal/effect.ts	4001	4009	behaviour	main	144,145,146
+brief	live	src/Effect4/Machine/Stores.lean	2201	def Effect4.Machine.contAOf	cont	:5319-5333	internal/effect.ts	5319	5333	changed	internal/effect.ts	5574	5590	behaviour	main	213,214
+brief	live	src/Effect4/Machine/Stores.lean	2210	def Effect4.Machine.contAOf	bare	Layer.ts	Layer.ts	406	406	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Machine/Stores.lean	2256	def Effect4.Machine.defaultBudget	bare	Scheduler.ts	Scheduler.ts	174	176	changed	Scheduler.ts	184	186	cosmetic	none	3
+brief	live	src/Effect4/Machine/Stores.lean	2278	def Effect4.Machine.stackAnnotationsOf	bare	internal/effect.ts	internal/effect.ts	579	580	changed	internal/effect.ts	560	561	cosmetic	none	20
+brief	live	src/Effect4/Machine/Stores.lean	2280	def Effect4.Machine.stackAnnotationsOf	cont	:579-580	internal/effect.ts	579	580	changed	internal/effect.ts	560	561	cosmetic	none	20
+brief	live	src/Effect4/Machine/Stores.lean	2313	def Effect4.Machine.stores	cont	:3806-3827	internal/effect.ts	3806	3827	changed	internal/effect.ts	3973	3994	host	outside	142,143
+brief	live	src/Effect4/Machine/Stores.lean	2323	def Effect4.Machine.stores	bare	internal/effect.ts	internal/effect.ts	1157	1157	changed	internal/effect.ts	1199	1199	behaviour	corner	60
+brief	live	src/Effect4/Machine/Stores.lean	2492	theorem Effect4.Machine.cancelThenFail_runs_then_refails	bare	internal/effect.ts	internal/effect.ts	1157	1157	changed	internal/effect.ts	1199	1199	behaviour	corner	60
+brief	live	src/Effect4/Machine/Stores.lean	2506	theorem Effect4.Machine.closeWalk_sequential	bare	internal/effect.ts	internal/effect.ts	3806	3827	changed	internal/effect.ts	3973	3994	host	outside	142,143
+brief	live	src/Effect4/Machine/Stores.lean	2515	theorem Effect4.Machine.closeSeq_step	cont	:3621-3637	internal/effect.ts	3621	3637	changed	internal/effect.ts	3769	3785	behaviour	budget	131,132
+brief	live	src/Effect4/Machine/Stores.lean	2542	theorem Effect4.Machine.closeWalk_parallel	cont	:3819-3821	internal/effect.ts	3819	3821	changed	internal/effect.ts	3986	3988	host	outside	143
+brief	live	src/Effect4/Machine/Value.lean	28	(module)	bare	internal/effect.ts	internal/effect.ts	534	534	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Value.lean	28	(module)	bare	Deferred.ts	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	src/Effect4/Machine/Value.lean	29	(module)	bare	internal/effect.ts	internal/effect.ts	3914	3922	changed	internal/effect.ts	4070	4084	api	none	152,153
+brief	live	src/Effect4/Machine/Value.lean	29	(module)	bare	Layer.ts	Layer.ts	421	458	changed	Layer.ts	405	456	behaviour	corner	5,6,7,8
+brief	live	src/Effect4/Machine/Value.lean	221	abbrev Effect4.Machine.Value.fiberSnapshot	bare	internal/effect.ts	internal/effect.ts	534	534	changed	internal/effect.ts	506	528	cosmetic	none	15
+brief	live	src/Effect4/Machine/Wake.lean	21	(module)	bare	Pool.ts	Pool.ts	703	712	changed	Pool.ts	727	736	cosmetic	none	30
+brief	live	src/Effect4/Machine/Wake.lean	51	structure Effect4.Machine.DeferredKey	bare	Deferred.ts	Deferred.ts	140	145	changed	Deferred.ts	120	146	cosmetic	none	1
+brief	live	src/Effect4/Machine/Wake.lean	142	def Effect4.Machine.WakeList.delay	bare	Queue.ts	Queue.ts	1955	1975	changed	Queue.ts	2443	2466	behaviour	main	21,22,23,24
+brief	live	src/Effect4/Machine/Wake.lean	143	def Effect4.Machine.WakeList.delay	cont	:1432	Queue.ts	1432	1432	changed	Queue.ts	1632	1845	behaviour	main	15
+brief	live	src/Effect4/Machine/Wake.lean	172	def Effect4.Machine.WakeList.wakeTake	bare	Pool.ts	Pool.ts	700	712	changed	Pool.ts	724	736	cosmetic	none	30
+brief	live	src/Effect4/Program/Compile.lean	37	(module)	cont	:1175-1196	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	src/Effect4/Program/Compile.lean	155	inductive Effect4.Program.Region	bare	internal/effect.ts	internal/effect.ts	2087	2096	changed	internal/effect.ts	2189	2199	refactor	none	97,98
+brief	live	src/Effect4/Program/Compile.lean	203	inductive Effect4.Program.EffThunk	bare	internal/effect.ts	internal/effect.ts	3944	3947	changed	internal/effect.ts	4106	4110	refactor	none	155
+brief	live	src/Effect4/Program/Compile.lean	222	inductive Effect4.Program.EffThunk	cont	:1442-1465	internal/effect.ts	1442	1465	changed	internal/effect.ts	1569	1590	refactor	none	81
+brief	live	src/Effect4/Program/Compile.lean	251	inductive Effect4.Program.EffThunk	cont	:2092-2095	internal/effect.ts	2092	2095	changed	internal/effect.ts	2194	2197	refactor	none	97
+brief	live	src/Effect4/Program/Compile.lean	264	inductive Effect4.Program.EffThunk	bare	Layer.ts	Layer.ts	445	457	changed	Layer.ts	430	455	behaviour	corner	6,7,8
+brief	live	src/Effect4/Program/Compile.lean	267	inductive Effect4.Program.EffThunk	bare	Layer.ts	Layer.ts	400	400	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Compile.lean	267	inductive Effect4.Program.EffThunk	cont	:248	Layer.ts	248	248	changed	Layer.ts	263	264	behaviour	corner	3
+brief	live	src/Effect4/Program/Compile.lean	269	inductive Effect4.Program.EffThunk	bare	Layer.ts	Layer.ts	392	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Compile.lean	270	inductive Effect4.Program.EffThunk	cont	:412	Layer.ts	412	412	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Compile.lean	273	inductive Effect4.Program.EffThunk	bare	Layer.ts	Layer.ts	413	417	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Compile.lean	347	abbrev Effect4.Program.NCode	cont	:4021	internal/effect.ts	4021	4021	changed	internal/effect.ts	4179	4184	host	outside	161
+brief	live	src/Effect4/Program/Compile.lean	350	abbrev Effect4.Program.NCode	bare	Layer.ts	Layer.ts	445	457	changed	Layer.ts	430	455	behaviour	corner	6,7,8
+brief	live	src/Effect4/Program/Compile.lean	483	def Effect4.Program.updateContextAt	bare	internal/effect.ts	internal/effect.ts	2087	2096	changed	internal/effect.ts	2189	2199	refactor	none	97,98
+brief	live	src/Effect4/Program/Compile.lean	605	def Effect4.Program.compileEff	bare	internal/effect.ts	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	src/Effect4/Program/Compile.lean	623	def Effect4.Program.compileEff	bare	internal/effect.ts	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	src/Effect4/Program/Compile.lean	851	def Effect4.Program.updateThenK	bare	internal/effect.ts	internal/effect.ts	2088	2095	changed	internal/effect.ts	2190	2197	refactor	none	97
+brief	live	src/Effect4/Program/Compile.lean	1195	def Effect4.Program.contAOf	bare	Layer.ts	Layer.ts	451	455	changed	Layer.ts	441	453	behaviour	corner	7,8
+brief	live	src/Effect4/Program/Compile.lean	1196	def Effect4.Program.contAOf	cont	:439-440	Layer.ts	439	440	changed	Layer.ts	423	425	refactor	none	5
+brief	live	src/Effect4/Program/Compile.lean	1196	def Effect4.Program.contAOf	cont	:246-249	Layer.ts	246	249	changed	Layer.ts	263	264	behaviour	corner	3
+brief	live	src/Effect4/Program/Compile.lean	1320	def Effect4.Program.suspendBodyAt	bare	internal/effect.ts	internal/effect.ts	1175	1196	changed	internal/effect.ts	1217	1240	refactor	none	62
+brief	live	src/Effect4/Program/Compile.lean	1648	def Effect4.Program.enterScoped	bare	internal/effect.ts	internal/effect.ts	3938	3948	changed	internal/effect.ts	4100	4110	refactor	none	154,155
+brief	live	src/Effect4/Program/Compile.lean	1668	def Effect4.Program.exitScoped	bare	internal/effect.ts	internal/effect.ts	3944	3947	changed	internal/effect.ts	4106	4110	refactor	none	155
+brief	live	src/Effect4/Program/Config.lean	18	(module)	bare	ConfigProvider.ts	ConfigProvider.ts	367	375	changed	ConfigProvider.ts	368	376	cosmetic	none	3
+brief	live	src/Effect4/Program/Config.lean	19	(module)	cont	:373	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	src/Effect4/Program/Config.lean	38	(module)	bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	live	src/Effect4/Program/Config.lean	39	(module)	bare	Config.ts	Config.ts	1211	1213	changed	Config.ts	1283	1285	behaviour	main	24
+brief	live	src/Effect4/Program/Config.lean	97	def Effect4.Program.Config.nodeValue	bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	live	src/Effect4/Program/Config.lean	127	inductive Effect4.Program.Config.Provider	bare	ConfigProvider.ts	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	src/Effect4/Program/Config.lean	129	def Effect4.Program.Config.Provider.make	bare	ConfigProvider.ts	ConfigProvider.ts	367	375	changed	ConfigProvider.ts	368	376	cosmetic	none	3
+brief	live	src/Effect4/Program/Config.lean	152	def Effect4.Program.Config.Provider.mapInput	bare	ConfigProvider.ts	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	src/Effect4/Program/Config.lean	327	def Effect4.Program.Config.Provider.constantCase	bare	ConfigProvider.ts	ConfigProvider.ts	373	373	changed	ConfigProvider.ts	374	374	cosmetic	none	3
+brief	live	src/Effect4/Program/Config.lean	410	def Effect4.Program.Config.indicesOf	cont	:1219	ConfigProvider.ts	1219	1219	removed	ConfigProvider.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Config.lean	410	def Effect4.Program.Config.indicesOf	cont	:1237	ConfigProvider.ts	1237	1237	changed	ConfigProvider.ts	1236	1236	behaviour	corner	5
+brief	live	src/Effect4/Program/Config.lean	416	def Effect4.Program.Config.nodeAt	bare	ConfigProvider.ts	ConfigProvider.ts	1221	1244	changed	ConfigProvider.ts	1220	1243	behaviour	corner	5
+brief	live	src/Effect4/Program/Config.lean	441	def Effect4.Program.Config.segOfString	cont	:1219	ConfigProvider.ts	1219	1219	removed	ConfigProvider.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Config.lean	564	def Effect4.Program.Config.demoTree	bare	Config.ts	Config.ts	136	139	changed	Config.ts	117	120	api	main	2
+brief	live	src/Effect4/Program/Config.lean	566	def Effect4.Program.Config.demoTree	bare	Config.ts	Config.ts	113	134	changed	Config.ts	115	115	api	main	1
+brief	live	src/Effect4/Program/Config.lean	590	inductive Effect4.Program.Config.Resolution	bare	Config.ts	Config.ts	205	206	changed	Config.ts	155	155	behaviour	main	4
+brief	live	src/Effect4/Program/Config.lean	594	inductive Effect4.Program.Config.Resolution	bare	Config.ts	Config.ts	118	129	changed	Config.ts	115	115	api	main	1
+brief	live	src/Effect4/Program/Config.lean	596	structure Effect4.Program.Config.Failure	bare	Config.ts	Config.ts	118	122	changed	Config.ts	115	115	api	main	1
+brief	live	src/Effect4/Program/Config.lean	598	structure Effect4.Program.Config.Failure	bare	Config.ts	Config.ts	124	127	changed	Config.ts	115	115	api	main	1
+brief	live	src/Effect4/Program/Config.lean	602	structure Effect4.Program.Config.Failure	bare	Config.ts	Config.ts	131	134	changed	Config.ts	115	115	api	main	1
+brief	live	src/Effect4/Program/Config.lean	611	abbrev Effect4.Program.Config.Outcome	bare	Config.ts	Config.ts	136	139	changed	Config.ts	117	120	api	main	2
+brief	live	src/Effect4/Program/Config.lean	634	def Effect4.Program.Config.trueValues	bare	Config.ts	Config.ts	1192	1220	changed	Config.ts	1266	1291	behaviour	main	22,23,24,25,26
+brief	live	src/Effect4/Program/Config.lean	636	def Effect4.Program.Config.trueValues	bare	Config.ts	Config.ts	1224	1227	changed	Config.ts	1294	1302	api	main	27
+brief	live	src/Effect4/Program/Config.lean	639	def Effect4.Program.Config.trueValues	bare	Config.ts	Config.ts	1224	1224	changed	Config.ts	1294	1302	api	main	27
+brief	live	src/Effect4/Program/Config.lean	642	def Effect4.Program.Config.falseValues	bare	Config.ts	Config.ts	1227	1227	changed	Config.ts	1294	1302	api	main	27
+brief	live	src/Effect4/Program/Config.lean	663	def Effect4.Program.Config.decodeVal	bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	live	src/Effect4/Program/Config.lean	664	def Effect4.Program.Config.decodeVal	bare	Config.ts	Config.ts	1211	1212	changed	Config.ts	1283	1285	behaviour	main	24
+brief	live	src/Effect4/Program/Config.lean	681	def Effect4.Program.Config.primOf	bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	live	src/Effect4/Program/Config.lean	683	def Effect4.Program.Config.primOf	bare	Config.ts	Config.ts	1211	1213	changed	Config.ts	1283	1285	behaviour	main	24
+brief	live	src/Effect4/Program/Config.lean	684	def Effect4.Program.Config.primOf	bare	Config.ts	Config.ts	205	206	changed	Config.ts	155	155	behaviour	main	4
+brief	live	src/Effect4/Program/Config.lean	699	def Effect4.Program.Config.defaultStep	bare	Config.ts	Config.ts	847	852	changed	Config.ts	922	927	behaviour	main	14
+brief	live	src/Effect4/Program/Config.lean	712	def Effect4.Program.Config.recover	bare	Config.ts	Config.ts	211	224	changed	Config.ts	155	155	behaviour	main	4
+brief	live	src/Effect4/Program/Config.lean	720	def Effect4.Program.Config.orElseStep	bare	Config.ts	Config.ts	562	574	changed	Config.ts	695	703	behaviour	main	10
+brief	live	src/Effect4/Program/Config.lean	727	def Effect4.Program.Config.zipRes	bare	Config.ts	Config.ts	640	678	removed	Config.ts			behaviour	main	13
+brief	live	src/Effect4/Program/Config.lean	766	def Effect4.Program.Config.eval	bare	Config.ts	Config.ts	136	139	changed	Config.ts	117	120	api	main	2
+brief	live	src/Effect4/Program/Config.lean	788	theorem Effect4.Program.Config.eval_withDefault_absent	bare	Config.ts	Config.ts	850	850	changed	Config.ts	925	925	behaviour	main	14
+brief	live	src/Effect4/Program/Config.lean	794	theorem Effect4.Program.Config.eval_withDefault_resolved	bare	Config.ts	Config.ts	850	850	changed	Config.ts	925	925	behaviour	main	14
+brief	live	src/Effect4/Program/Config.lean	801	theorem Effect4.Program.Config.eval_orElse_absent	bare	Config.ts	Config.ts	570	572	changed	Config.ts	697	701	behaviour	main	10
+brief	live	src/Effect4/Program/Config.lean	808	theorem Effect4.Program.Config.eval_orElse_failure	bare	Config.ts	Config.ts	564	568	changed	Config.ts	697	700	behaviour	main	10
+brief	live	src/Effect4/Program/Config.lean	808	theorem Effect4.Program.Config.eval_orElse_failure	cont	:211-224	Config.ts	211	224	changed	Config.ts	155	155	behaviour	main	4
+brief	live	src/Effect4/Program/Config.lean	814	theorem Effect4.Program.Config.recover_no_input	bare	Config.ts	Config.ts	215	215	changed	Config.ts	155	155	behaviour	main	4
+brief	live	src/Effect4/Program/Config.lean	982	theorem Effect4.Program.Config.eval_nested_eq_provider_nested	bare	Config.ts	Config.ts	847	852	changed	Config.ts	922	927	behaviour	main	14
+brief	live	src/Effect4/Program/Config.lean	984	theorem Effect4.Program.Config.eval_nested_eq_provider_nested	bare	Config.ts	Config.ts	674	675	removed	Config.ts			behaviour	main	13
+brief	live	src/Effect4/Program/Config.lean	1009	def Effect4.Program.Config.ce005Term	bare	Config.ts	Config.ts	1041	1041	changed	Config.ts	1117	1117	cosmetic	none	18
+brief	live	src/Effect4/Program/Config.lean	1010	def Effect4.Program.Config.ce005Term	cont	:1211-1213	Config.ts	1211	1213	changed	Config.ts	1283	1285	behaviour	main	24
+brief	live	src/Effect4/Program/Config.lean	1017	def Effect4.Program.Config.ce005Term	bare	ConfigProvider.ts	ConfigProvider.ts	1364	1408	changed	ConfigProvider.ts	1363	1407	behaviour	corner	6
+brief	live	src/Effect4/Program/Config.lean	1020	def Effect4.Program.Config.ce005Term	cont	:1396-1399	ConfigProvider.ts	1396	1399	changed	ConfigProvider.ts	1395	1398	behaviour	corner	6
+brief	live	src/Effect4/Program/Config.lean	1090	def Effect4.Program.Config.expand	bare	ConfigProvider.ts	ConfigProvider.ts	1396	1399	changed	ConfigProvider.ts	1395	1398	behaviour	corner	6
+brief	live	src/Effect4/Program/Eff.lean	379	inductive Effect4.Program.Stmt	bare	internal/effect.ts	internal/effect.ts	2798	2810	changed	internal/effect.ts	2900	2912	cosmetic	none	111,112
+brief	live	src/Effect4/Program/Eff.lean	444	inductive Effect4.Program.LayerTerm	bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Eff.lean	466	inductive Effect4.Program.LayerTerms	bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Eff.lean	566	def Effect4.Program.arms	bare	internal/effect.ts	internal/effect.ts	4006	4006	changed	internal/effect.ts	4164	4165	cosmetic	none	156
+brief	live	src/Effect4/Program/Eff.lean	578	def Effect4.Program.arms	bare	internal/effect.ts	internal/effect.ts	2798	2810	changed	internal/effect.ts	2900	2912	cosmetic	none	111,112
+brief	live	src/Effect4/Program/Packages/KeyValueStoreMemory.lean	10	(module)	cont	:331-352	unstable/persistence/KeyValueStore.ts	331	352	changed	persistence/KeyValueStore.ts	344	364	cosmetic	none	6
+brief	live	src/Effect4/Program/Packages/KeyValueStoreMemory.lean	43	def Effect4.Program.Packages.keyValueStoreMemory	full	vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts	unstable/persistence/KeyValueStore.ts	331	352	changed	persistence/KeyValueStore.ts	344	364	cosmetic	none	6
+brief	live	src/Effect4/Program/Refs.lean	18	(module)	bare	Layer.ts	Layer.ts	411	411	removed	Layer.ts			behaviour	corner	4
+brief	live	src/Effect4/Program/Stream.lean	42	def Effect4.Program.Stream.closeRow	full	vendor/effect-4.0.0-rc.112/src/Scope.ts	Scope.ts	545	567	changed	Scope.ts	568	595	api	none	2
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	1386	1414	changed	internal/effect.ts	1447	1542	behaviour	budget	78,79
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	3468	3495	changed	internal/effect.ts	3624	3645	behaviour	budget	128
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	3427	3460	changed	internal/effect.ts	3533	3565	cosmetic	none	124,125
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	5228	5284	changed	internal/effect.ts	5481	5539	behaviour	corner	211,212
+extended	live	ts/eff/forms.gen.ts	13		bare	internal/effect.ts	internal/effect.ts	5287	5334	changed	internal/effect.ts	5542	5591	behaviour	main	213,214
+extended	live	ts/eff/ingest/README.md	185		bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+extended	live	ts/eff/ingest/README.md	186		bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+extended	live	ts/eff/ingest/README.md	187		bare	internal/effect.ts	internal/effect.ts	1417	1439	changed	internal/effect.ts	1545	1566	refactor	none	80
+extended	live	ts/eff/ingest/README.md	188		bare	internal/effect.ts	internal/effect.ts	1386	1414	changed	internal/effect.ts	1447	1542	behaviour	budget	78,79
+extended	live	ts/eff/ingest/README.md	190		bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+extended	live	ts/eff/ingest/README.md	191		bare	internal/effect.ts	internal/effect.ts	1442	1464	changed	internal/effect.ts	1569	1590	refactor	none	81
+extended	live	ts/eff/ingest/README.md	193		bare	internal/effect.ts	internal/effect.ts	3468	3495	changed	internal/effect.ts	3624	3645	behaviour	budget	128
+extended	live	ts/eff/ingest/README.md	194		bare	internal/effect.ts	internal/effect.ts	3427	3460	changed	internal/effect.ts	3533	3565	cosmetic	none	124,125
+extended	live	ts/eff/ingest/README.md	196		bare	internal/effect.ts	internal/effect.ts	5228	5284	changed	internal/effect.ts	5481	5539	behaviour	corner	211,212
+extended	live	ts/eff/ingest/README.md	197		bare	internal/effect.ts	internal/effect.ts	5287	5334	changed	internal/effect.ts	5542	5591	behaviour	main	213,214
+extended	live	ts/eff/ingest/sql-fold.ts	126		bare	Statement.ts	unstable/sql/Statement.ts	616	643	changed	sql/Statement.ts	670	695	api	none	8
+extended	live	ts/eff/ingest/test/sql-fold.test.ts	12		bare	Statement.ts	unstable/sql/Statement.ts	513	542	changed	sql/Statement.ts	560	591	api	none	5
+extended	live	ts/eff/packages.gen.ts	30		full	vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts	unstable/persistence/KeyValueStore.ts	331	352	changed	persistence/KeyValueStore.ts	344	364	cosmetic	none	6

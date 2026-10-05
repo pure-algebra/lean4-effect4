@@ -1,0 +1,50 @@
+# unstable/observability/internal/otlpEnv.ts (rc.112) against observability/internal/otlpEnv.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 3-3 release before 4 cited ranges 0
+   pin units: import ../../../SchemaGetter.ts=absent
+   release units: 
+-     3 import * as SchemaGetter from "@tree/SchemaGetter.ts"
+
+@@ hunk 2 [code] pin 7-11 release 6-8 cited ranges 0
+   pin units: ExporterList=absent
+   release units: exporterList=absent
+-     7 const ExporterList = Config.Array(Schema.String).pipe(
+-     8 Schema.decode({
+-     9 decode: SchemaGetter.transform((_) => _.map((_) => _.toLowerCase().trim()).filter((_) => _ !== "")),
+-    10 encode: SchemaGetter.passthrough()
+-    11 })
++     6 const exporterList = (path: string) =>
++     7 Config.Array(Schema.String, path).pipe(
++     8 Config.map((_) => _.map((_) => _.toLowerCase().trim()).filter((_) => _ !== ""))
+
+@@ hunk 3 [code] pin 14-14 release 11-11 cited ranges 0
+   pin units: HeadersRecord=absent
+   release units: headersRecord=absent
+-    14 const HeadersRecord = Config.Record(Schema.String, Schema.StringFromUriComponent)
++    11 const headersRecord = (path: string) => Config.Record(Schema.String, Schema.StringFromUriComponent, path)
+
+@@ hunk 4 [code] pin 17-18 release 14-15 cited ranges 1
+   pin units: headers=code
+   release units: headers=code
+-    17 Config.schema(HeadersRecord, `OTEL_EXPORTER_OTLP_${signal}_HEADERS`).pipe(
+-    18 Config.orElse(() => Config.schema(HeadersRecord, "OTEL_EXPORTER_OTLP_HEADERS")),
++    14 headersRecord(`OTEL_EXPORTER_OTLP_${signal}_HEADERS`).pipe(
++    15 Config.orElse(() => headersRecord("OTEL_EXPORTER_OTLP_HEADERS")),
+
+@@ hunk 5 [code] pin 23-23 release 20-20 cited ranges 1
+   pin units: endpoint=code
+   release units: endpoint=code
+-    23 Config.url(`OTEL_EXPORTER_OTLP_${signal}_ENDPOINT`).pipe(
++    20 Config.URL(`OTEL_EXPORTER_OTLP_${signal}_ENDPOINT`).pipe(
+
+@@ hunk 6 [code] pin 25-25 release 22-22 cited ranges 1
+   pin units: endpoint=code
+   release units: endpoint=code
+-    25 Config.url("OTEL_EXPORTER_OTLP_ENDPOINT").pipe(
++    22 Config.URL("OTEL_EXPORTER_OTLP_ENDPOINT").pipe(
+
+@@ hunk 7 [code] pin 37-37 release 34-34 cited ranges 1
+   pin units: exporters=code
+   release units: exporters=code
+-    37 Config.schema(ExporterList, `OTEL_${signal}_EXPORTER`).pipe(
++    34 exporterList(`OTEL_${signal}_EXPORTER`).pipe(

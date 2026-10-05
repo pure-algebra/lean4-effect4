@@ -1,0 +1,14 @@
+# Scope.ts (rc.112) against Scope.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin before 48 release 48-48 cited ranges 0
+   pin units: 
+   release units: Scope=type-decl
++    48 readonly parent: Scope | undefined
+
+@@ hunk 2 [erased] pin 567-592 release 568-595 cited ranges 3
+   pin units: close=erased; closeUnsafe=erased
+   release units: close=erased; closeUnsafe=erased
+-   567 export const close: <A, E>(self: Scope, exit: Exit<A, E>) => Effect<void> = effect.scopeClose
+-   592 export const closeUnsafe: <A, E>(self: Scope, exit_: Exit<A, E>) => Effect<void, never, never> | undefined =
++   568 export const close: <A, E>(self: Closeable, exit: Exit<A, E>) => Effect<void> = effect.scopeClose
++   595 export const closeUnsafe: <A, E>(self: Closeable, exit_: Exit<A, E>) => Effect<void, never, never> | undefined =

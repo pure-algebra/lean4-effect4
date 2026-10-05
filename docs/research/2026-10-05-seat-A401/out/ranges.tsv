@@ -1,0 +1,1191 @@
+pin_file	start	end	citations	status	strongest_hunk_class	release_file	new_start	new_end	shift	file_status	hunks	units
+Array.ts	0	0	2	file-only		Array.ts				runtime-code		
+Array.ts	1698	1698	2	same		Array.ts	1710	1710	12	runtime-code		get=same
+Array.ts	7009	7016	1	same		Array.ts	7060	7067	51	runtime-code		union=same
+Array.ts	9242	9255	1	changed	code	Array.ts	9293	9302		runtime-code	24:code,25:code,26:code	dedupeWith=code
+Cache.ts	205	211	1	same		Cache.ts	205	211	0	runtime-code		makeWith=same
+Cache.ts	288	309	1	same		Cache.ts	288	309	0	runtime-code		make=same
+Cache.ts	420	420	1	same		Cache.ts	420	420	0	runtime-code		get=code
+Cache.ts	420	430	1	same		Cache.ts	420	430	0	runtime-code		get=code
+Cause.ts	0	0	1	file-only		Cause.ts				runtime-code		
+Cause.ts	75	75	5	same		Cause.ts	75	75	0	runtime-code		Cause=same
+Cause.ts	144	144	2	same		Cause.ts	144	144	0	runtime-code		Reason=same
+Cause.ts	326	326	2	same		Cause.ts	326	326	0	runtime-code		Die=same
+Cause.ts	361	361	2	same		Cause.ts	361	361	0	runtime-code		Fail=same
+Cause.ts	388	388	2	same		Cause.ts	388	388	0	runtime-code		Interrupt=same
+Cause.ts	1267	1267	1	same		Cause.ts	1267	1267	0	runtime-code		YieldableError=same
+Cause.ts	1319	1319	1	same		Cause.ts	1319	1319	0	runtime-code		NoSuchElementError=same
+Cause.ts	1408	1408	1	same		Cause.ts	1408	1408	0	runtime-code		Done=same
+Cause.ts	1513	1513	1	same		Cause.ts	1513	1513	0	runtime-code		TimeoutError=same
+Cause.ts	1570	1570	1	same		Cause.ts	1570	1570	0	runtime-code		IllegalArgumentError=same
+Cause.ts	1632	1632	1	same		Cause.ts	1632	1632	0	runtime-code		ExceededCapacityError=same
+Cause.ts	1716	1716	1	same		Cause.ts	1716	1716	0	runtime-code		AsyncFiberError=same
+Cause.ts	1785	1785	1	same		Cause.ts	1785	1785	0	runtime-code		UnknownError=same
+Chunk.ts	51	51	1	same		Chunk.ts	52	52	1	runtime-code		Chunk=same
+Clock.ts	51	153	1	same		Clock.ts	51	153	0	identical		Clock=same
+Config.ts	108	108	1	same		Config.ts	108	108	0	runtime-code		Config=same
+Config.ts	113	134	1	changed	erased	Config.ts	115	115		runtime-code	1:erased	Resolved=absent;Absent=absent;Resolution=type-decl;EvaluationFailure=absent
+Config.ts	118	122	1	changed	erased	Config.ts	115	115		runtime-code	1:erased	Resolved=absent
+Config.ts	118	129	1	changed	erased	Config.ts	115	115		runtime-code	1:erased	Resolved=absent;Absent=absent;Resolution=type-decl
+Config.ts	124	127	1	changed	erased	Config.ts	115	115		runtime-code	1:erased	Absent=absent
+Config.ts	131	134	1	changed	erased	Config.ts	115	115		runtime-code	1:erased	EvaluationFailure=absent
+Config.ts	136	139	3	changed	erased	Config.ts	117	120		runtime-code	2:erased	Evaluator=type-decl
+Config.ts	205	206	2	changed	code	Config.ts	155	155		runtime-code	4:code	catchSourceError=absent
+Config.ts	211	224	2	changed	code	Config.ts	155	155		runtime-code	4:code	preserveInputEvidence=absent
+Config.ts	215	215	1	changed	code	Config.ts	155	155		runtime-code	4:code	preserveInputEvidence=absent
+Config.ts	444	444	1	same		Config.ts	568	568	124	runtime-code		orElse=code
+Config.ts	562	574	1	changed	code	Config.ts	695	703		runtime-code	10:code	orElse=code
+Config.ts	564	568	1	changed	code	Config.ts	697	700		runtime-code	10:code	orElse=code
+Config.ts	570	572	1	changed	code	Config.ts	697	701		runtime-code	10:code	orElse=code
+Config.ts	589	593	4	comment-changed		Config.ts	721	725	132	runtime-code		
+Config.ts	640	678	1	removed	code	Config.ts				runtime-code	13:code	all=code;resolveArray=absent
+Config.ts	674	675	3	removed	code	Config.ts				runtime-code	13:code	resolveArray=absent
+Config.ts	744	744	1	same		Config.ts	813	813	69	runtime-code		withDefault=code
+Config.ts	847	852	5	changed	code	Config.ts	922	927		runtime-code	14:code	withDefault=code
+Config.ts	850	850	2	changed	code	Config.ts	925	925		runtime-code	14:code	withDefault=code
+Config.ts	887	887	1	same		Config.ts	963	963	76	runtime-code		option=same
+Config.ts	887	888	4	same		Config.ts	963	964	76	runtime-code		option=same
+Config.ts	1041	1041	8	changed	code	Config.ts	1117	1117		runtime-code	18:code	hasProviderInput=code
+Config.ts	1192	1220	1	changed	code	Config.ts	1266	1291		runtime-code	22:code,23:code,24:code,25:code,26:code	schema=code
+Config.ts	1208	1210	1	same		Config.ts	1280	1282	72	runtime-code		schema=code
+Config.ts	1209	1209	2	same		Config.ts	1281	1281	72	runtime-code		schema=code
+Config.ts	1211	1212	2	changed	code	Config.ts	1283	1285		runtime-code	24:code	schema=code
+Config.ts	1211	1213	5	changed	code	Config.ts	1283	1285		runtime-code	24:code	schema=code
+Config.ts	1224	1224	2	changed	code	Config.ts	1294	1302		runtime-code	27:code	TrueValues=absent
+Config.ts	1224	1227	1	changed	code	Config.ts	1294	1302		runtime-code	27:code	TrueValues=absent;FalseValues=absent
+Config.ts	1227	1227	2	changed	code	Config.ts	1294	1302		runtime-code	27:code	FalseValues=absent
+Config.ts	1239	1240	1	comment-changed		Config.ts				runtime-code		
+Config.ts	1465	1465	1	changed	code	Config.ts	1745	1745		runtime-code	35:code	string=absent
+Config.ts	1943	1943	1	same		Config.ts	2005	2005	62	runtime-code		nested=same
+Config.ts	2050	2051	3	same		Config.ts	2112	2113	62	runtime-code		nested=same
+ConfigProvider.ts	0	0	1	file-only		ConfigProvider.ts				runtime-code		
+ConfigProvider.ts	44	46	1	same-comment		ConfigProvider.ts	45	47	1	runtime-code		
+ConfigProvider.ts	55	72	2	same		ConfigProvider.ts	56	73	1	runtime-code		Node=same
+ConfigProvider.ts	56	60	1	same		ConfigProvider.ts	57	61	1	runtime-code		Node=same
+ConfigProvider.ts	61	66	1	same		ConfigProvider.ts	62	67	1	runtime-code		Node=same
+ConfigProvider.ts	67	72	1	same		ConfigProvider.ts	68	73	1	runtime-code		Node=same
+ConfigProvider.ts	207	210	2	same		ConfigProvider.ts	208	211	1	runtime-code		SourceError=same
+ConfigProvider.ts	212	215	1	same-comment		ConfigProvider.ts	213	216	1	runtime-code		
+ConfigProvider.ts	212	230	1	same-comment		ConfigProvider.ts	213	231	1	runtime-code		
+ConfigProvider.ts	227	227	1	same-comment		ConfigProvider.ts	228	228	1	runtime-code		
+ConfigProvider.ts	286	286	2	same		ConfigProvider.ts	287	287	1	runtime-code		ConfigProvider=same
+ConfigProvider.ts	341	341	1	same		ConfigProvider.ts	342	342	1	runtime-code		ConfigProvider#2=same
+ConfigProvider.ts	355	355	1	same		ConfigProvider.ts	356	356	1	runtime-code		identityPath=same
+ConfigProvider.ts	367	375	2	changed	code	ConfigProvider.ts	368	376		runtime-code	3:code	makeSource=code
+ConfigProvider.ts	368	368	1	same		ConfigProvider.ts	369	369	1	runtime-code		makeSource=code
+ConfigProvider.ts	372	372	1	same		ConfigProvider.ts	373	373	1	runtime-code		makeSource=code
+ConfigProvider.ts	373	373	8	changed	code	ConfigProvider.ts	374	374		runtime-code	3:code	makeSource=code
+ConfigProvider.ts	377	386	1	same		ConfigProvider.ts	378	387	1	runtime-code		makeOrElse=same
+ConfigProvider.ts	379	383	5	same		ConfigProvider.ts	380	384	1	runtime-code		makeOrElse=same
+ConfigProvider.ts	384	384	4	same		ConfigProvider.ts	385	385	1	runtime-code		makeOrElse=same
+ConfigProvider.ts	389	402	1	same-comment		ConfigProvider.ts	390	403	1	runtime-code		
+ConfigProvider.ts	498	499	1	same-comment		ConfigProvider.ts	499	500	1	runtime-code		orElse=same
+ConfigProvider.ts	628	631	1	same-comment		ConfigProvider.ts	629	632	1	runtime-code		mapInput=same
+ConfigProvider.ts	709	713	1	same		ConfigProvider.ts	710	714	1	runtime-code		mapInput=same
+ConfigProvider.ts	748	750	1	same		ConfigProvider.ts	749	751	1	runtime-code		constantCase=same
+ConfigProvider.ts	749	749	1	same		ConfigProvider.ts	750	750	1	runtime-code		constantCase=same
+ConfigProvider.ts	767	772	4	same-comment		ConfigProvider.ts	768	773	1	runtime-code		
+ConfigProvider.ts	883	886	6	same		ConfigProvider.ts	884	887	1	runtime-code		nested=same
+ConfigProvider.ts	1037	1042	1	same		ConfigProvider.ts	1038	1043	1	runtime-code		fromUnknown=same
+ConfigProvider.ts	1044	1065	1	same		ConfigProvider.ts	1045	1066	1	runtime-code		nodeAtJson=same
+ConfigProvider.ts	1050	1064	1	same		ConfigProvider.ts	1051	1065	1	runtime-code		nodeAtJson=same
+ConfigProvider.ts	1070	1082	2	same		ConfigProvider.ts	1071	1083	1	runtime-code		describeUnknown=same
+ConfigProvider.ts	1074	1074	1	same		ConfigProvider.ts	1075	1075	1	runtime-code		describeUnknown=same
+ConfigProvider.ts	1076	1076	1	same		ConfigProvider.ts	1077	1077	1	runtime-code		describeUnknown=same
+ConfigProvider.ts	1077	1079	1	same		ConfigProvider.ts	1078	1080	1	runtime-code		describeUnknown=same
+ConfigProvider.ts	1084	1087	1	same		ConfigProvider.ts	1085	1088	1	runtime-code		stringNode=same
+ConfigProvider.ts	1089	1091	2	same		ConfigProvider.ts	1090	1092	1	runtime-code		emptyStringAsMissing=same
+ConfigProvider.ts	1121	1128	1	same		ConfigProvider.ts	1122	1129	1	runtime-code		fromEnvRecord=same
+ConfigProvider.ts	1200	1217	1	same		ConfigProvider.ts	1201	1218	1	runtime-code		buildEnvTrie=same
+ConfigProvider.ts	1206	1207	5	same		ConfigProvider.ts	1207	1208	1	runtime-code		buildEnvTrie=same
+ConfigProvider.ts	1219	1219	2	removed	code	ConfigProvider.ts				runtime-code	4:code	NUMERIC_INDEX=absent
+ConfigProvider.ts	1221	1244	1	changed	code	ConfigProvider.ts	1220	1243		runtime-code	5:code	nodeAtEnv=code
+ConfigProvider.ts	1227	1227	5	same		ConfigProvider.ts	1226	1226	-1	runtime-code		nodeAtEnv=code
+ConfigProvider.ts	1230	1231	1	same		ConfigProvider.ts	1229	1230	-1	runtime-code		nodeAtEnv=code
+ConfigProvider.ts	1237	1237	1	changed	code	ConfigProvider.ts	1236	1236		runtime-code	5:code	nodeAtEnv=code
+ConfigProvider.ts	1246	1256	1	same		ConfigProvider.ts	1245	1255	-1	runtime-code		trieNodeAt=same
+ConfigProvider.ts	1364	1408	1	changed	code	ConfigProvider.ts	1363	1407		runtime-code	6:code	interpolate=code;searchLast=same
+ConfigProvider.ts	1387	1387	1	same		ConfigProvider.ts	1386	1386	-1	runtime-code		interpolate=code
+ConfigProvider.ts	1392	1394	3	same		ConfigProvider.ts	1391	1393	-1	runtime-code		interpolate=code
+ConfigProvider.ts	1396	1399	4	changed	code	ConfigProvider.ts	1395	1398		runtime-code	6:code	interpolate=code
+Context.ts	0	0	1	file-only		Context.ts				runtime-code		
+Context.ts	32	32	1	same		Context.ts	32	32	0	runtime-code		ServiceTypeId=same
+Context.ts	32	41	1	same		Context.ts	32	41	0	runtime-code		ServiceTypeId=same;ServiceTypeId#2=same
+Context.ts	64	64	1	same		Context.ts	64	64	0	runtime-code		Key=same
+Context.ts	98	98	1	same		Context.ts	98	98	0	runtime-code		Service=same
+Context.ts	123	123	1	same		Context.ts	123	123	0	runtime-code		ServiceClass=same
+Context.ts	160	201	2	same		Context.ts	160	201	0	runtime-code		Service#2=same
+Context.ts	178	180	1	same-comment		Context.ts	178	180	0	runtime-code		
+Context.ts	183	185	1	same-comment		Context.ts	183	185	0	runtime-code		
+Context.ts	201	219	1	same		Context.ts	201	219	0	runtime-code		Service#2=same
+Context.ts	404	406	1	same		Context.ts	404	406	0	runtime-code		Service#2=same
+Context.ts	423	423	8	same		Context.ts	423	423	0	runtime-code		ServiceProto=same
+Context.ts	485	485	2	same		Context.ts	485	485	0	runtime-code		Reference=same
+Context.ts	617	617	1	same		Context.ts	617	617	0	runtime-code		Context=same
+Context.ts	838	838	1	same		Context.ts	840	840	2	runtime-code		isReference=same
+Context.ts	864	868	1	same-comment		Context.ts	866	870	2	runtime-code		
+Context.ts	1293	1293	2	same		Context.ts	1295	1295	2	runtime-code		getOrElse=same
+Context.ts	1636	1636	1	same		Context.ts	1669	1669	33	runtime-code		getOption=same
+Context.ts	1708	1708	3	same		Context.ts	1741	1741	33	runtime-code		getOption=same
+Context.ts	1745	1745	1	same		Context.ts	1778	1778	33	runtime-code		merge=same
+Context.ts	1816	1819	1	same		Context.ts	1849	1852	33	runtime-code		merge=same
+Context.ts	1817	1819	1	same		Context.ts	1850	1852	33	runtime-code		merge=same
+Context.ts	1819	1819	1	same		Context.ts	1852	1852	33	runtime-code		merge=same
+Context.ts	2002	2002	1	same		Context.ts	2035	2035	33	runtime-code		Reference#2=same
+Data.ts	0	0	1	file-only		Data.ts				identical		
+Data.ts	1111	1111	2	same		Data.ts	1111	1111	0	identical		TaggedError=same
+DateTime.ts	37	37	1	same		DateTime.ts	37	37	0	identical		DateTime=same
+Deferred.ts	0	0	2	file-only		Deferred.ts				runtime-code		
+Deferred.ts	22	22	1	same		Deferred.ts	22	22	0	runtime-code		TypeId=same
+Deferred.ts	58	58	6	same		Deferred.ts	58	58	0	runtime-code		Deferred=same
+Deferred.ts	58	61	1	same		Deferred.ts	58	61	0	runtime-code		Deferred=same
+Deferred.ts	60	60	1	same		Deferred.ts	60	60	0	runtime-code		Deferred=same
+Deferred.ts	120	120	2	comment-changed		Deferred.ts	120	120	0	runtime-code		
+Deferred.ts	140	145	8	changed	code	Deferred.ts	120	146		runtime-code	1:code	makeUnsafe=code
+Deferred.ts	171	171	9	same		Deferred.ts	172	172	1	runtime-code		make=same
+Deferred.ts	173	177	5	same		Deferred.ts	174	178	1	runtime-code		_await=same
+Deferred.ts	173	186	4	same		Deferred.ts	174	187	1	runtime-code		_await=same
+Deferred.ts	178	185	8	same		Deferred.ts	179	186	1	runtime-code		_await=same
+Deferred.ts	181	184	3	same		Deferred.ts	182	185	1	runtime-code		_await=same
+Deferred.ts	223	223	4	same		Deferred.ts	224	224	1	runtime-code		export {await}=same
+Deferred.ts	330	335	1	same		Deferred.ts	331	336	1	runtime-code		complete=same
+Deferred.ts	456	461	4	same		Deferred.ts	457	462	1	runtime-code		completeWith=same
+Deferred.ts	570	571	4	same		Deferred.ts	571	572	1	runtime-code		done=same
+Deferred.ts	588	590	1	same-comment		Deferred.ts	589	591	1	runtime-code		
+Deferred.ts	669	669	4	same		Deferred.ts	670	670	1	runtime-code		fail=same
+Deferred.ts	680	683	1	same-comment		Deferred.ts	681	684	1	runtime-code		
+Deferred.ts	877	877	1	same		Deferred.ts	878	878	1	runtime-code		failCause=same
+Deferred.ts	1087	1087	1	same		Deferred.ts	1088	1088	1	runtime-code		die=same
+Deferred.ts	1231	1232	3	same		Deferred.ts	1232	1233	1	runtime-code		interrupt=same
+Deferred.ts	1332	1337	2	same		Deferred.ts	1333	1338	1	runtime-code		interruptWith=same
+Deferred.ts	1366	1366	6	same		Deferred.ts	1367	1367	1	runtime-code		isDone=same
+Deferred.ts	1382	1382	5	same		Deferred.ts	1383	1383	1	runtime-code		isDoneUnsafe=same
+Deferred.ts	1414	1414	1	same		Deferred.ts	1415	1415	1	runtime-code		poll=same
+Deferred.ts	1414	1416	9	same		Deferred.ts	1415	1417	1	runtime-code		poll=same
+Deferred.ts	1514	1514	4	same		Deferred.ts	1515	1515	1	runtime-code		succeed=same
+Deferred.ts	1648	1650	1	same		Deferred.ts	1649	1651	1	runtime-code		doneUnsafe=same
+Deferred.ts	1648	1662	2	same		Deferred.ts	1649	1663	1	runtime-code		doneUnsafe=same
+Deferred.ts	1650	1650	1	same		Deferred.ts	1651	1651	1	runtime-code		doneUnsafe=same
+Deferred.ts	1651	1662	1	same		Deferred.ts	1652	1663	1	runtime-code		doneUnsafe=same
+Deferred.ts	1655	1656	1	same		Deferred.ts	1656	1657	1	runtime-code		doneUnsafe=same
+Deferred.ts	1655	1658	3	same		Deferred.ts	1656	1659	1	runtime-code		doneUnsafe=same
+Deferred.ts	1655	1659	7	same		Deferred.ts	1656	1660	1	runtime-code		doneUnsafe=same
+Deferred.ts	1657	1658	1	same		Deferred.ts	1658	1659	1	runtime-code		doneUnsafe=same
+Deferred.ts	1774	1784	3	same		Deferred.ts	1775	1785	1	runtime-code		into=same
+Deferred.ts	1778	1778	1	same		Deferred.ts	1779	1779	1	runtime-code		into=same
+Deferred.ts	1778	1781	1	same		Deferred.ts	1779	1782	1	runtime-code		into=same
+Deferred.ts	1779	1782	2	same		Deferred.ts	1780	1783	1	runtime-code		into=same
+Deferred.ts	1780	1781	1	same		Deferred.ts	1781	1782	1	runtime-code		into=same
+Deferred.ts	1781	1781	1	same		Deferred.ts	1782	1782	1	runtime-code		into=same
+Duration.ts	84	84	1	same		Duration.ts	84	84	0	runtime-code		Duration=same
+Duration.ts	788	794	1	same		Duration.ts	788	794	0	runtime-code		toMillis=same
+Effect.ts	10	10	1	same-comment		Effect.ts	10	10	0	runtime-code		
+Effect.ts	83	83	1	same		Effect.ts	82	82	-1	runtime-code		TypeId=same
+Effect.ts	117	117	9	same		Effect.ts	116	116	-1	runtime-code		Effect=same
+Effect.ts	131	131	1	same		Effect.ts	130	130	-1	runtime-code		EffectUnify=same
+Effect.ts	144	144	1	same		Effect.ts	143	143	-1	runtime-code		EffectTypeLambda=same
+Effect.ts	154	154	1	same		Effect.ts	153	153	-1	runtime-code		Variance=same
+Effect.ts	154	157	3	same		Effect.ts	153	156	-1	runtime-code		Variance=same
+Effect.ts	174	174	1	same		Effect.ts	173	173	-1	runtime-code		Success=same
+Effect.ts	195	195	1	same		Effect.ts	194	194	-1	runtime-code		Error=same
+Effect.ts	212	212	1	same		Effect.ts	211	211	-1	runtime-code		Services=same
+Effect.ts	245	245	1	same		Effect.ts	244	244	-1	runtime-code		EffectIterator=same
+Effect.ts	494	494	1	same		Effect.ts	491	491	-3	runtime-code		all=same
+Effect.ts	1088	1088	2	same		Effect.ts	1085	1085	-3	runtime-code		forEach=same
+Effect.ts	1282	1282	1	same		Effect.ts	1279	1279	-3	runtime-code		whileLoop=same
+Effect.ts	1406	1410	1	changed	erased	Effect.ts	1403	1548		runtime-code	8:erased	tryPromise=erased
+Effect.ts	1667	1673	1	same		Effect.ts	1805	1811	138	runtime-code		callback=same
+Effect.ts	1947	1947	1	same		Effect.ts	2085	2085	138	runtime-code		gen=same
+Effect.ts	4370	4370	1	same		Effect.ts	4530	4530	160	runtime-code		catchTag=same
+Effect.ts	5149	5149	1	same		Effect.ts	5309	5309	160	runtime-code		TagsWithReason=same
+Effect.ts	7097	7140	1	same		Effect.ts	7258	7301	161	runtime-code		Retry=same
+Effect.ts	7192	7192	1	same		Effect.ts	7353	7353	161	runtime-code		retry=same
+Effect.ts	8293	8293	1	same		Effect.ts	8457	8457	164	runtime-code		timeout=same
+Effect.ts	8696	8696	2	same		Effect.ts	8821	8821	125	runtime-code		sleep=same
+Effect.ts	11383	11383	1	same		Effect.ts	11508	11508	125	runtime-code		provide=same
+Effect.ts	12324	12324	1	same		Effect.ts	12449	12449	125	runtime-code		provideService=same
+Effect.ts	12815	12815	2	same		Effect.ts	12940	12940	125	runtime-code		scoped=same
+Effect.ts	12815	12817	2	same		Effect.ts	12940	12942	125	runtime-code		scoped=same
+Effect.ts	12928	12932	2	same		Effect.ts	13053	13057	125	runtime-code		acquireRelease=same
+Effect.ts	12930	12930	8	same		Effect.ts	13055	13055	125	runtime-code		acquireRelease=same
+Effect.ts	14227	14227	1	same		Effect.ts	14753	14753	526	runtime-code		onInterrupt=same
+Effect.ts	14480	14480	2	same		Effect.ts	15010	15010	530	runtime-code		forever=same
+Effect.ts	16990	16990	1	same		Effect.ts	17520	17520	530	runtime-code		forkChild=same
+Effect.ts	17168	17168	2	same		Effect.ts	17698	17698	530	runtime-code		forkDetach=same
+Effect.ts	17276	17276	1	same		Effect.ts	17810	17810	534	runtime-code		RunOptions=same
+Effect.ts	17494	17497	9	same		Effect.ts	18028	18031	534	runtime-code		runPromise=same
+Effect.ts	24350	24350	2	same		Effect.ts	24923	24923	573	runtime-code		commitTransaction=code
+Exit.ts	0	0	1	file-only		Exit.ts				identical		
+Exit.ts	20	20	1	same		Exit.ts	20	20	0	identical		TypeId=same
+Exit.ts	59	59	6	same		Exit.ts	59	59	0	identical		Exit=same
+Exit.ts	86	86	1	same		Exit.ts	86	86	0	identical		Exit#2=same
+Exit.ts	118	118	4	same		Exit.ts	118	118	0	identical		Success=same
+Exit.ts	118	157	1	same		Exit.ts	118	157	0	identical		Success=same;Failure=same
+Exit.ts	119	119	1	same		Exit.ts	119	119	0	identical		Success=same
+Exit.ts	154	154	4	same		Exit.ts	154	154	0	identical		Failure=same
+Exit.ts	155	155	1	same		Exit.ts	155	155	0	identical		Failure=same
+Fiber.ts	70	70	7	same		Fiber.ts	71	71	1	types-only		Fiber=type-decl
+Fiber.ts	354	354	2	same		Fiber.ts	379	379	25	types-only		interrupt=same
+HashMap.ts	50	50	2	same		HashMap.ts	50	50	0	identical		HashMap=same
+Layer.ts	0	0	2	file-only		Layer.ts				runtime-code		
+Layer.ts	54	54	8	same		Layer.ts	54	54	0	runtime-code		Layer=same
+Layer.ts	74	74	1	same		Layer.ts	74	74	0	runtime-code		LayerUnify=same
+Layer.ts	90	90	1	same		Layer.ts	90	90	0	runtime-code		LayerUnifyIgnore=same
+Layer.ts	98	98	1	same		Layer.ts	98	98	0	runtime-code		Variance=same
+Layer.ts	127	127	1	same		Layer.ts	127	127	0	runtime-code		Any=same
+Layer.ts	148	148	1	same		Layer.ts	148	148	0	runtime-code		Services=same
+Layer.ts	165	165	1	same		Layer.ts	165	165	0	runtime-code		Error=same
+Layer.ts	180	180	1	same		Layer.ts	180	180	0	runtime-code		Success=same
+Layer.ts	222	222	1	same		Layer.ts	222	222	0	runtime-code		MemoMap=same
+Layer.ts	230	232	2	same		Layer.ts	230	232	0	runtime-code		MemoMap=same
+Layer.ts	235	239	2	changed	erased	Layer.ts	235	240		runtime-code	1:erased	MemoMapEntry=type-decl
+Layer.ts	236	236	1	same		Layer.ts	236	236	0	runtime-code		MemoMapEntry=type-decl
+Layer.ts	238	238	1	same		Layer.ts	239	239	1	runtime-code		MemoMapEntry=type-decl
+Layer.ts	241	250	1	changed	code	Layer.ts	243	265		runtime-code	2:code,3:code	memoMapReuse=absent
+Layer.ts	245	245	3	same		Layer.ts	262	262	17	runtime-code		memoMapReuse=absent
+Layer.ts	246	249	1	changed	code	Layer.ts	263	264		runtime-code	3:code	memoMapReuse=absent
+Layer.ts	248	248	1	changed	code	Layer.ts	263	264		runtime-code	3:code	memoMapReuse=absent
+Layer.ts	289	298	1	same		Layer.ts	304	313	15	runtime-code		fromBuildUnsafe=same
+Layer.ts	333	345	8	same		Layer.ts	348	360	15	runtime-code		fromBuild=same
+Layer.ts	339	344	1	same		Layer.ts	354	359	15	runtime-code		fromBuild=same
+Layer.ts	343	343	8	same		Layer.ts	358	358	15	runtime-code		fromBuild=same
+Layer.ts	386	386	3	same		Layer.ts	401	401	15	runtime-code		fromBuildMemo=same
+Layer.ts	390	419	2	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	392	411	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	396	396	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	396	397	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	396	411	5	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	396	458	2	changed	code	Layer.ts	405	456		runtime-code	4:code,5:code,6:code,7:code,8:code	memoMapBuild=absent;get MemoMapImpl.MemoMapTypeId=same;MemoMapImpl.parent=same;MemoMapImpl.constructor=same;MemoMapImpl.map=same;MemoMapImpl.get=code;MemoMapImpl.getOrElseMemoize=code
+Layer.ts	397	397	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	400	400	2	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	401	410	6	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	401	417	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	402	408	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	403	406	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	403	408	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	404	408	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	405	405	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	406	406	2	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	408	408	3	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	411	411	11	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	412	412	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	413	417	1	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	414	417	7	removed	code	Layer.ts				runtime-code	4:code	memoMapBuild=absent
+Layer.ts	421	432	2	same		Layer.ts	405	416	-16	runtime-code		get MemoMapImpl.MemoMapTypeId=same;MemoMapImpl.parent=same;MemoMapImpl.constructor=same;MemoMapImpl.map=same
+Layer.ts	421	458	7	changed	code	Layer.ts	405	456		runtime-code	5:code,6:code,7:code,8:code	get MemoMapImpl.MemoMapTypeId=same;MemoMapImpl.parent=same;MemoMapImpl.constructor=same;MemoMapImpl.map=same;MemoMapImpl.get=code;MemoMapImpl.getOrElseMemoize=code
+Layer.ts	434	443	4	changed	code	Layer.ts	418	428		runtime-code	5:code	MemoMapImpl.get=code
+Layer.ts	438	438	7	same		Layer.ts	422	422	-16	runtime-code		MemoMapImpl.get=code
+Layer.ts	438	440	1	changed	code	Layer.ts	422	425		runtime-code	5:code	MemoMapImpl.get=code
+Layer.ts	438	442	2	changed	code	Layer.ts	422	427		runtime-code	5:code	MemoMapImpl.get=code
+Layer.ts	439	440	3	changed	code	Layer.ts	423	425		runtime-code	5:code	MemoMapImpl.get=code
+Layer.ts	443	443	1	same		Layer.ts	428	428	-15	runtime-code		MemoMapImpl.get=code
+Layer.ts	445	445	1	same		Layer.ts	430	430	-15	runtime-code		MemoMapImpl.getOrElseMemoize=code
+Layer.ts	445	457	6	changed	code	Layer.ts	430	455		runtime-code	6:code,7:code,8:code	MemoMapImpl.getOrElseMemoize=code
+Layer.ts	451	451	1	same		Layer.ts	441	441	-10	runtime-code		MemoMapImpl.getOrElseMemoize=code
+Layer.ts	451	455	1	changed	code	Layer.ts	441	453		runtime-code	7:code,8:code	MemoMapImpl.getOrElseMemoize=code
+Layer.ts	456	463	1	same		Layer.ts	454	461	-2	runtime-code		MemoMapImpl.getOrElseMemoize=code
+Layer.ts	492	492	2	same		Layer.ts	490	490	-2	runtime-code		makeMemoMapUnsafe=same
+Layer.ts	511	511	1	same		Layer.ts	509	509	-2	runtime-code		forkMemoMapUnsafe=same
+Layer.ts	584	584	1	same		Layer.ts	582	582	-2	runtime-code		CurrentMemoMap=same
+Layer.ts	584	592	1	same		Layer.ts	582	590	-2	runtime-code		CurrentMemoMap.forkOrCreate=same
+Layer.ts	585	588	2	same		Layer.ts	583	586	-2	runtime-code		CurrentMemoMap.forkOrCreate=same
+Layer.ts	585	592	1	same		Layer.ts	583	590	-2	runtime-code		CurrentMemoMap.forkOrCreate=same
+Layer.ts	586	586	2	same		Layer.ts	584	584	-2	runtime-code		CurrentMemoMap.forkOrCreate=same
+Layer.ts	756	762	1	same		Layer.ts	754	760	-2	runtime-code		buildWithMemoMap=same
+Layer.ts	756	765	6	same		Layer.ts	754	763	-2	runtime-code		buildWithMemoMap=same
+Layer.ts	762	762	7	same		Layer.ts	760	760	-2	runtime-code		buildWithMemoMap=same
+Layer.ts	800	809	1	same		Layer.ts	798	807	-2	runtime-code		build=same
+Layer.ts	807	807	1	same		Layer.ts	805	805	-2	runtime-code		build=same
+Layer.ts	970	980	1	same		Layer.ts	968	978	-2	runtime-code		buildWithScope=same
+Layer.ts	974	979	3	same		Layer.ts	972	977	-2	runtime-code		buildWithScope=same
+Layer.ts	1012	1012	1	same		Layer.ts	1010	1010	-2	runtime-code		succeed=same
+Layer.ts	1074	1074	2	same		Layer.ts	1072	1072	-2	runtime-code		succeed=same
+Layer.ts	1129	1129	3	same		Layer.ts	1127	1127	-2	runtime-code		succeedContext=same
+Layer.ts	1129	1130	1	same		Layer.ts	1127	1128	-2	runtime-code		succeedContext=same
+Layer.ts	1155	1155	2	same		Layer.ts	1153	1153	-2	runtime-code		empty=same
+Layer.ts	1184	1184	1	same-comment		Layer.ts	1182	1182	-2	runtime-code		
+Layer.ts	1191	1191	2	same		Layer.ts	1189	1189	-2	runtime-code		sync=same
+Layer.ts	1347	1347	2	same		Layer.ts	1345	1345	-2	runtime-code		effect=same
+Layer.ts	1427	1427	2	same		Layer.ts	1425	1425	-2	runtime-code		effect=same
+Layer.ts	1438	1438	5	same		Layer.ts	1436	1436	-2	runtime-code		effectImpl=same
+Layer.ts	1440	1440	7	same-comment		Layer.ts	1438	1438	-2	runtime-code		
+Layer.ts	1482	1482	4	same-comment		Layer.ts	1480	1480	-2	runtime-code		
+Layer.ts	1512	1512	3	same		Layer.ts	1510	1510	-2	runtime-code		effectDiscard=same
+Layer.ts	1515	1515	7	same-comment		Layer.ts	1513	1513	-2	runtime-code		
+Layer.ts	1587	1587	3	same		Layer.ts	1584	1584	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1587	1600	1	same		Layer.ts	1584	1597	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1587	1602	11	same		Layer.ts	1584	1599	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1596	1596	4	same		Layer.ts	1593	1593	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1596	1600	2	same		Layer.ts	1593	1597	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1597	1597	10	same		Layer.ts	1594	1594	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1597	1598	4	same		Layer.ts	1594	1595	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1597	1600	5	same		Layer.ts	1594	1597	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1600	1600	11	same		Layer.ts	1597	1597	-3	runtime-code		mergeAllEffect=same
+Layer.ts	1652	1652	9	same		Layer.ts	1649	1649	-3	runtime-code		mergeAll=same
+Layer.ts	1850	1850	3	same		Layer.ts	1847	1847	-3	runtime-code		merge=same
+Layer.ts	1905	1905	2	same		Layer.ts	1902	1902	-3	runtime-code		merge=same
+Layer.ts	1907	1926	1	same		Layer.ts	1904	1923	-3	runtime-code		provideWith=same
+Layer.ts	1915	1915	4	same		Layer.ts	1912	1912	-3	runtime-code		provideWith=same
+Layer.ts	1915	1923	4	same		Layer.ts	1912	1920	-3	runtime-code		provideWith=same
+Layer.ts	1916	1919	2	same		Layer.ts	1913	1916	-3	runtime-code		provideWith=same
+Layer.ts	1920	1922	2	same		Layer.ts	1917	1919	-3	runtime-code		provideWith=same
+Layer.ts	1920	1923	2	same		Layer.ts	1917	1920	-3	runtime-code		provideWith=same
+Layer.ts	1923	1923	5	same		Layer.ts	1920	1920	-3	runtime-code		provideWith=same
+Layer.ts	2008	2008	1	same		Layer.ts	2005	2005	-3	runtime-code		provide=same
+Layer.ts	2008	2089	1	same		Layer.ts	2005	2086	-3	runtime-code		provide=same
+Layer.ts	2089	2089	3	same		Layer.ts	2086	2086	-3	runtime-code		provide=same
+Layer.ts	2258	2258	3	same		Layer.ts	2255	2255	-3	runtime-code		provide=same
+Layer.ts	2348	2348	3	same		Layer.ts	2345	2345	-3	runtime-code		provide=same
+Layer.ts	2704	2704	4	same		Layer.ts	2701	2701	-3	runtime-code		provideMerge=same
+Layer.ts	2800	2800	3	same		Layer.ts	2797	2797	-3	runtime-code		provideMerge=same
+Layer.ts	3327	3327	11	same		Layer.ts	3366	3366	39	runtime-code		orDie=same
+Layer.ts	3327	3328	6	same		Layer.ts	3366	3367	39	runtime-code		orDie=same
+Layer.ts	3328	3328	1	same		Layer.ts	3367	3367	39	runtime-code		orDie=same
+Layer.ts	3850	3850	2	same		Layer.ts	3889	3889	39	runtime-code		fresh=same
+Layer.ts	3850	3851	1	same		Layer.ts	3889	3890	39	runtime-code		fresh=same
+Layer.ts	3851	3851	6	same		Layer.ts	3890	3890	39	runtime-code		fresh=same
+Layer.ts	3897	3898	1	same		Layer.ts	3936	3937	39	runtime-code		launch=same
+Layer.ts	3920	3920	1	same		Layer.ts	3959	3959	39	runtime-code		PartialEffectful=same
+Layer.ts	4279	4279	1	same		Layer.ts	4318	4318	39	runtime-code		SpanOptions=same
+MutableRef.ts	0	0	1	file-only		MutableRef.ts				identical		
+MutableRef.ts	1063	1070	3	same		MutableRef.ts	1063	1070	0	identical		set=same
+MutableRef.ts	1068	1068	2	same		MutableRef.ts	1068	1068	0	identical		set=same
+Option.ts	0	0	8	file-only		Option.ts				runtime-code		
+Option.ts	55	55	5	same		Option.ts	55	55	0	runtime-code		Option=same
+Option.ts	75	75	4	same		Option.ts	75	75	0	runtime-code		None=same
+Option.ts	102	102	1	same		Option.ts	102	102	0	runtime-code		OptionIterator=same
+Option.ts	128	128	4	same		Option.ts	128	128	0	runtime-code		Some=same
+Option.ts	158	158	1	same		Option.ts	158	158	0	runtime-code		OptionUnify=same
+Option.ts	211	211	1	same		Option.ts	211	211	0	runtime-code		OptionUnifyIgnore=same
+Option.ts	224	224	1	same		Option.ts	224	224	0	runtime-code		OptionTypeLambda=same
+Pool.ts	700	712	1	changed	erased	Pool.ts	724	736		runtime-code	30:erased	wakeWaiters=erased
+Pool.ts	703	703	2	same		Pool.ts	727	727	24	runtime-code		wakeWaiters=erased
+Pool.ts	703	712	1	changed	erased	Pool.ts	727	736		runtime-code	30:erased	wakeWaiters=erased
+PubSub.ts	64	64	1	same		PubSub.ts	66	66	2	runtime-code		PubSub=type-decl
+PubSub.ts	236	236	1	same		PubSub.ts	265	265	29	runtime-code		Subscription=type-decl
+Pull.ts	0	0	1	file-only		Pull.ts				identical		
+Queue.ts	167	167	1	same		Queue.ts	168	168	1	runtime-code		Enqueue=same
+Queue.ts	235	235	1	same		Queue.ts	236	236	1	runtime-code		Dequeue=same
+Queue.ts	303	303	1	same		Queue.ts	304	304	1	runtime-code		Queue=same
+Queue.ts	455	455	4	same		Queue.ts	474	474	19	runtime-code		make=same
+Queue.ts	500	500	1	same		Queue.ts	519	519	19	runtime-code		bounded=same
+Queue.ts	1432	1432	2	changed	code	Queue.ts	1632	1845		runtime-code	15:code	takeBetween=code
+Queue.ts	1955	1975	2	changed	code	Queue.ts	2443	2466		runtime-code	21:code,22:code,23:code,24:code	releaseTakers=code;scheduleReleaseTaker=code
+Queue.ts	1974	1974	3	changed	code	Queue.ts	2462	2465		runtime-code	24:code	scheduleReleaseTaker=code
+Ref.ts	0	0	1	file-only		Ref.ts				identical		
+Ref.ts	21	21	1	same		Ref.ts	21	21	0	identical		TypeId=same
+Ref.ts	59	59	7	same		Ref.ts	59	59	0	identical		Ref=same
+Ref.ts	142	146	3	same		Ref.ts	142	146	0	identical		makeUnsafe=same
+Ref.ts	142	173	1	same		Ref.ts	142	173	0	identical		makeUnsafe=same;make=same
+Ref.ts	173	173	9	same		Ref.ts	173	173	0	identical		make=same
+Ref.ts	200	200	8	same		Ref.ts	200	200	0	identical		get=same
+Ref.ts	210	210	2	same-comment		Ref.ts	210	210	0	identical		
+Ref.ts	306	306	1	same		Ref.ts	306	306	0	identical		set=same
+Ref.ts	306	307	7	same		Ref.ts	306	307	0	identical		set=same
+Ref.ts	307	307	2	same		Ref.ts	307	307	0	identical		set=same
+Ref.ts	399	404	5	same		Ref.ts	399	404	0	identical		getAndSet=same
+Ref.ts	400	404	1	same		Ref.ts	400	404	0	identical		getAndSet=same
+Ref.ts	496	501	8	same		Ref.ts	496	501	0	identical		getAndUpdate=same
+Ref.ts	635	643	8	same		Ref.ts	635	643	0	identical		getAndUpdateSome=same
+Ref.ts	747	747	5	same		Ref.ts	747	747	0	identical		setAndGet=same
+Ref.ts	896	901	10	same		Ref.ts	896	901	0	identical		modify=same
+Ref.ts	898	898	1	same		Ref.ts	898	898	0	identical		modify=same
+Ref.ts	1159	1163	9	same		Ref.ts	1159	1163	0	identical		modifySome=same
+Ref.ts	1160	1162	1	same		Ref.ts	1160	1162	0	identical		modifySome=same
+Ref.ts	1161	1161	1	same		Ref.ts	1161	1161	0	identical		modifySome=same
+Ref.ts	1273	1276	11	same		Ref.ts	1273	1276	0	identical		update=same
+Ref.ts	1368	1368	8	same		Ref.ts	1368	1368	0	identical		updateAndGet=same
+Ref.ts	1502	1508	8	same		Ref.ts	1502	1508	0	identical		updateSome=same
+Ref.ts	1639	1646	9	same		Ref.ts	1639	1646	0	identical		updateSomeAndGet=same
+Result.ts	66	66	3	same		Result.ts	66	66	0	runtime-code		Result=same
+Schedule.ts	377	411	1	same		Schedule.ts	377	411	0	runtime-code		toStepWithMetadata=same
+Schedule.ts	1090	1099	1	same		Schedule.ts	1090	1099	0	runtime-code		exponential=same
+Schedule.ts	1702	1702	1	same		Schedule.ts	1702	1702	0	runtime-code		upTo=same
+Scheduler.ts	0	0	1	file-only		Scheduler.ts				runtime-code		
+Scheduler.ts	78	81	3	same		Scheduler.ts	78	81	0	runtime-code		Scheduler#2=same
+Scheduler.ts	83	103	1	changed	code	Scheduler.ts	83	91		runtime-code	1:code	setImmediate=code;setMicrotask=same
+Scheduler.ts	105	131	6	same		Scheduler.ts	115	141	10	runtime-code		PriorityBuckets.buckets=same;PriorityBuckets.scheduleTask=same;PriorityBuckets.drain=same
+Scheduler.ts	174	176	4	changed	code	Scheduler.ts	184	186		runtime-code	3:code	MixedScheduler.shouldYield=code
+Scheduler.ts	188	233	1	same		Scheduler.ts	198	243	10	runtime-code		MixedScheduler.makeDispatcher=same;MixedSchedulerDispatcher.tasks=same;MixedSchedulerDispatcher.running=same;MixedSchedulerDispatcher.setImmediate=same;MixedSchedulerDispatcher.constructor=same;MixedSchedulerDispatcher.scheduleTask=same;MixedSchedulerDispatcher.afterScheduled=same;MixedSchedulerDispatcher.runTasks=same
+Scheduler.ts	193	202	1	same		Scheduler.ts	203	212	10	runtime-code		MixedSchedulerDispatcher.tasks=same;MixedSchedulerDispatcher.running=same;MixedSchedulerDispatcher.setImmediate=same;MixedSchedulerDispatcher.constructor=same
+Scheduler.ts	193	247	1	same		Scheduler.ts	203	257	10	runtime-code		MixedSchedulerDispatcher.tasks=same;MixedSchedulerDispatcher.running=same;MixedSchedulerDispatcher.setImmediate=same;MixedSchedulerDispatcher.constructor=same;MixedSchedulerDispatcher.scheduleTask=same;MixedSchedulerDispatcher.afterScheduled=same;MixedSchedulerDispatcher.runTasks=same;MixedSchedulerDispatcher.flush=same
+Scheduler.ts	207	212	18	same		Scheduler.ts	217	222	10	runtime-code		MixedSchedulerDispatcher.scheduleTask=same
+Scheduler.ts	214	217	2	same		Scheduler.ts	224	227	10	runtime-code		MixedSchedulerDispatcher.afterScheduled=same
+Scheduler.ts	214	233	1	same		Scheduler.ts	224	243	10	runtime-code		MixedSchedulerDispatcher.afterScheduled=same;MixedSchedulerDispatcher.runTasks=same
+Scheduler.ts	217	220	1	same		Scheduler.ts	227	230	10	runtime-code		MixedSchedulerDispatcher.afterScheduled=same
+Scheduler.ts	225	233	6	same		Scheduler.ts	235	243	10	runtime-code		MixedSchedulerDispatcher.runTasks=same
+Scheduler.ts	238	246	4	same		Scheduler.ts	248	256	10	runtime-code		MixedSchedulerDispatcher.flush=same
+Scheduler.ts	269	272	5	same		Scheduler.ts	279	282	10	runtime-code		MaxOpsBeforeYield=same
+Scheduler.ts	269	298	2	same		Scheduler.ts	279	308	10	runtime-code		MaxOpsBeforeYield=same;PreventSchedulerYield=same
+Scheduler.ts	271	271	1	same		Scheduler.ts	281	281	10	runtime-code		MaxOpsBeforeYield=same
+Scheduler.ts	295	298	5	same		Scheduler.ts	305	308	10	runtime-code		PreventSchedulerYield=same
+Scheduler.ts	297	297	1	same		Scheduler.ts	307	307	10	runtime-code		PreventSchedulerYield=same
+Schema.ts	0	0	5	file-only		Schema.ts				runtime-code		
+Schema.ts	3169	3169	1	same-comment		Schema.ts	3063	3063	-106	runtime-code		
+Schema.ts	3170	3170	1	same		Schema.ts	3064	3064	-106	runtime-code		Number#2=same
+Schema.ts	3581	3581	1	same		Schema.ts	3454	3454	-127	runtime-code		Struct#3=same
+Schema.ts	7684	7684	1	same		Schema.ts	7194	7194	-490	runtime-code		Finite#2=same
+Schema.ts	8298	8304	2	same		Schema.ts	7645	7651	-653	runtime-code		isInt=code
+Schema.ts	10844	10853	1	moved		Schema.ts	9019	9028	-1825	runtime-code		Defect#2=same
+Schema.ts	15870	15870	1	changed	code	Schema.ts	15955	16018		runtime-code	344:code	toCodecJsonReorder=absent
+Schema.ts	16773	16773	1	same		Schema.ts	16366	16366	-407	runtime-code		Json=same
+Schema.ts	16807	16807	1	same		Schema.ts	16397	16397	-410	runtime-code		Json#2=same
+Schema.ts	17105	17105	2	same		Schema.ts	16646	16646	-459	runtime-code		Annotations=type-decl
+SchemaAST.ts	0	0	1	file-only		SchemaAST.ts				runtime-code		
+SchemaAST.ts	25	28	1	same		SchemaAST.ts	25	28	0	runtime-code		import ./Pipeable.ts=same;import ./Predicate.ts=same;import ./Result.ts=same;import ./Schema.ts=same
+SchemaAST.ts	36	38	1	comment-changed		SchemaAST.ts	35	37	-1	runtime-code		
+SchemaAST.ts	146	146	1	same-comment		SchemaAST.ts	145	145	-1	runtime-code		
+SchemaAST.ts	922	925	1	same		SchemaAST.ts	1077	1080	155	runtime-code		Never.getParser=absent
+SchemaAST.ts	979	979	1	same-comment		SchemaAST.ts	1155	1155	176	runtime-code		
+SchemaAST.ts	987	987	1	same-comment		SchemaAST.ts	1163	1163	176	runtime-code		
+SchemaAST.ts	1068	1068	1	same-comment		SchemaAST.ts	1286	1286	218	runtime-code		
+SchemaAST.ts	1096	1096	1	same-comment		SchemaAST.ts	1355	1355	259	runtime-code		Enum=code
+SchemaAST.ts	1289	1289	1	same		SchemaAST.ts	1662	1662	373	runtime-code		LiteralValue=same
+SchemaAST.ts	1448	1456	5	same		SchemaAST.ts	1912	1920	464	runtime-code		Number.toCodecJson=absent
+SchemaAST.ts	1541	1541	1	same-comment		SchemaAST.ts	2026	2026	485	runtime-code		
+SchemaAST.ts	1580	1580	1	same-comment		SchemaAST.ts	2092	2092	512	runtime-code		
+SchemaAST.ts	3085	3085	1	same		SchemaAST.ts	3844	3844	759	runtime-code		nonFiniteLiterals=code
+SchemaAST.ts	3085	3089	4	changed	code	SchemaAST.ts	3844	3848		runtime-code	133:code	nonFiniteLiterals=code
+SchemaAST.ts	3323	3326	1	same		SchemaAST.ts	4143	4146	820	runtime-code		isFinite=code
+SchemaAST.ts	3341	3341	3	same		SchemaAST.ts	4158	4158	817	runtime-code		finite=same
+SchemaAST.ts	3343	3343	1	same		SchemaAST.ts	4160	4160	817	runtime-code		numberToJson=code
+SchemaAST.ts	3343	3349	4	changed	code	SchemaAST.ts	4160	4166		runtime-code	140:code	numberToJson=code
+SchemaAST.ts	4093	4093	1	same		SchemaAST.ts	4908	4908	815	runtime-code		symbolToString=code
+SchemaAST.ts	4271	4274	5	same		SchemaAST.ts	5086	5089	815	runtime-code		isJsonLeaf=same
+SchemaAST.ts	4273	4273	1	same		SchemaAST.ts	5088	5088	815	runtime-code		isJsonLeaf=same
+SchemaAST.ts	4352	4362	1	same		SchemaAST.ts	5167	5177	815	runtime-code		Json=code
+SchemaAST.ts	4352	4368	1	changed	code	SchemaAST.ts	5167	5182		runtime-code	173:code	Json=code
+SchemaGetter.ts	728	728	1	same		SchemaGetter.ts	1085	1085	357	runtime-code		Number=same
+SchemaRepresentation.ts	0	0	2	file-only		SchemaRepresentation.ts				runtime-code		
+SchemaRepresentation.ts	19	31	2	same		SchemaRepresentation.ts	18	30	-1	runtime-code		RepresentationAnnotation=same
+SchemaRepresentation.ts	25	28	3	same		SchemaRepresentation.ts	24	27	-1	runtime-code		RepresentationAnnotation=same
+SchemaRepresentation.ts	26	27	2	same		SchemaRepresentation.ts	25	26	-1	runtime-code		RepresentationAnnotation=same
+SchemaRepresentation.ts	36	38	3	same		SchemaRepresentation.ts	35	37	-1	runtime-code		CheckRepresentationAnnotation=same
+SchemaRepresentation.ts	37	37	2	same		SchemaRepresentation.ts	36	36	-1	runtime-code		CheckRepresentationAnnotation=same
+SchemaRepresentation.ts	67	75	1	changed	erased	SchemaRepresentation.ts	98	121		runtime-code	3:erased	ToJsonSchema=type-decl
+SchemaRepresentation.ts	76	77	1	same		SchemaRepresentation.ts	127	128	51	runtime-code		Generation=same
+SchemaRepresentation.ts	146	146	4	same		SchemaRepresentation.ts	197	197	51	runtime-code		Declaration=same
+SchemaRepresentation.ts	148	153	1	same		SchemaRepresentation.ts	199	204	51	runtime-code		Declaration=same
+SchemaRepresentation.ts	158	163	1	same		SchemaRepresentation.ts	209	214	51	runtime-code		Suspend=same
+SchemaRepresentation.ts	161	161	1	same		SchemaRepresentation.ts	212	212	51	runtime-code		Suspend=same
+SchemaRepresentation.ts	162	162	3	same		SchemaRepresentation.ts	213	213	51	runtime-code		Suspend=same
+SchemaRepresentation.ts	171	173	2	same		SchemaRepresentation.ts	222	224	51	runtime-code		Reference=same
+SchemaRepresentation.ts	173	173	1	same		SchemaRepresentation.ts	224	224	51	runtime-code		Reference=same
+SchemaRepresentation.ts	307	307	1	same		SchemaRepresentation.ts	363	363	56	runtime-code		Enum=same
+SchemaRepresentation.ts	326	330	1	same		SchemaRepresentation.ts	382	386	56	runtime-code		Element=same
+SchemaRepresentation.ts	353	354	1	same-comment		SchemaRepresentation.ts	409	410	56	runtime-code		
+SchemaRepresentation.ts	359	365	1	same		SchemaRepresentation.ts	415	421	56	runtime-code		PropertySignature=same
+SchemaRepresentation.ts	360	360	1	same		SchemaRepresentation.ts	416	416	56	runtime-code		PropertySignature=same
+SchemaRepresentation.ts	373	376	1	same		SchemaRepresentation.ts	429	432	56	runtime-code		IndexSignature=same
+SchemaRepresentation.ts	446	446	5	same		SchemaRepresentation.ts	502	502	56	runtime-code		Filter=same
+SchemaRepresentation.ts	459	459	5	same		SchemaRepresentation.ts	515	515	56	runtime-code		FilterGroup=same
+SchemaRepresentation.ts	460	460	3	same		SchemaRepresentation.ts	516	516	56	runtime-code		FilterGroup=same
+SchemaRepresentation.ts	461	461	2	same		SchemaRepresentation.ts	517	517	56	runtime-code		FilterGroup=same
+SchemaRepresentation.ts	470	472	1	same		SchemaRepresentation.ts	526	528	56	runtime-code		References=same
+SchemaRepresentation.ts	480	483	3	same		SchemaRepresentation.ts	536	539	56	runtime-code		Document=same
+SchemaRepresentation.ts	491	494	3	same		SchemaRepresentation.ts	547	550	56	runtime-code		MultiDocument=same
+SchemaRepresentation.ts	574	574	1	changed	code	SchemaRepresentation.ts	630	630		runtime-code	5:code	makeDeclarationReviver=absent
+SchemaRepresentation.ts	859	859	1	same		SchemaRepresentation.ts	2532	2532	1673	runtime-code		toJsonSchemaDocument=same
+SchemaRepresentation.ts	917	917	1	same		SchemaRepresentation.ts	2597	2597	1680	runtime-code		RepresentationAnnotationSchema=same
+SchemaRepresentation.ts	917	925	1	same		SchemaRepresentation.ts	2597	2605	1680	runtime-code		RepresentationAnnotationSchema=same;CheckRepresentationAnnotationSchema=same
+SchemaRepresentation.ts	918	918	1	same		SchemaRepresentation.ts	2598	2598	1680	runtime-code		RepresentationAnnotationSchema=same
+SchemaRepresentation.ts	919	919	5	same		SchemaRepresentation.ts	2599	2599	1680	runtime-code		RepresentationAnnotationSchema=same
+SchemaRepresentation.ts	922	922	1	same		SchemaRepresentation.ts	2602	2602	1680	runtime-code		CheckRepresentationAnnotationSchema=same
+SchemaRepresentation.ts	922	925	2	same		SchemaRepresentation.ts	2602	2605	1680	runtime-code		CheckRepresentationAnnotationSchema=same
+SchemaRepresentation.ts	924	924	4	same		SchemaRepresentation.ts	2604	2604	1680	runtime-code		CheckRepresentationAnnotationSchema=same
+SchemaRepresentation.ts	927	927	1	same		SchemaRepresentation.ts	2607	2607	1680	runtime-code		pruneAnnotations=same
+SchemaRepresentation.ts	927	937	4	same		SchemaRepresentation.ts	2607	2617	1680	runtime-code		pruneAnnotations=same
+SchemaRepresentation.ts	927	948	1	changed	code	SchemaRepresentation.ts	2607	2630		runtime-code	9:layout,10:code	pruneAnnotations=same;AnnotationsSchema=code
+SchemaRepresentation.ts	936	936	1	same		SchemaRepresentation.ts	2616	2616	1680	runtime-code		pruneAnnotations=same
+SchemaRepresentation.ts	939	939	2	changed	layout	SchemaRepresentation.ts	2619	2621		runtime-code	9:layout	AnnotationsSchema=code
+SchemaRepresentation.ts	939	948	4	changed	code	SchemaRepresentation.ts	2619	2630		runtime-code	9:layout,10:code	AnnotationsSchema=code
+SchemaRepresentation.ts	940	940	1	same		SchemaRepresentation.ts	2622	2622	1682	runtime-code		AnnotationsSchema=code
+SchemaRepresentation.ts	940	941	1	changed	code	SchemaRepresentation.ts	2622	2624		runtime-code	10:code	AnnotationsSchema=code
+SchemaRepresentation.ts	941	941	2	changed	code	SchemaRepresentation.ts	2623	2624		runtime-code	10:code	AnnotationsSchema=code
+SchemaRepresentation.ts	952	952	1	same		SchemaRepresentation.ts	2634	2634	1682	runtime-code		KeywordFields=same
+SchemaRepresentation.ts	956	956	1	same		SchemaRepresentation.ts	2638	2638	1682	runtime-code		FilterSchema=same
+SchemaRepresentation.ts	958	958	7	same		SchemaRepresentation.ts	2640	2640	1682	runtime-code		FilterSchema=same
+SchemaRepresentation.ts	962	962	1	same		SchemaRepresentation.ts	2644	2644	1682	runtime-code		FilterGroupSchema=same
+SchemaRepresentation.ts	964	964	3	same		SchemaRepresentation.ts	2646	2646	1682	runtime-code		FilterGroupSchema=same
+SchemaRepresentation.ts	965	965	3	same		SchemaRepresentation.ts	2647	2647	1682	runtime-code		FilterGroupSchema=same
+SchemaRepresentation.ts	966	966	3	same		SchemaRepresentation.ts	2648	2648	1682	runtime-code		FilterGroupSchema=same
+SchemaRepresentation.ts	969	969	1	same-comment		SchemaRepresentation.ts	2651	2651	1682	runtime-code		
+SchemaRepresentation.ts	976	976	1	same-comment		SchemaRepresentation.ts	2658	2658	1682	runtime-code		
+SchemaRepresentation.ts	977	977	1	same		SchemaRepresentation.ts	2659	2659	1682	runtime-code		DeclarationSchema=same
+SchemaRepresentation.ts	977	983	1	same		SchemaRepresentation.ts	2659	2665	1682	runtime-code		DeclarationSchema=same
+SchemaRepresentation.ts	979	979	2	same		SchemaRepresentation.ts	2661	2661	1682	runtime-code		DeclarationSchema=same
+SchemaRepresentation.ts	982	987	1	same		SchemaRepresentation.ts	2664	2669	1682	runtime-code		DeclarationSchema=same;SuspendSchema=same
+SchemaRepresentation.ts	984	984	1	same		SchemaRepresentation.ts	2666	2666	1682	runtime-code		SuspendSchema=same
+SchemaRepresentation.ts	984	989	1	same		SchemaRepresentation.ts	2666	2671	1682	runtime-code		SuspendSchema=same
+SchemaRepresentation.ts	985	985	2	same		SchemaRepresentation.ts	2667	2667	1682	runtime-code		SuspendSchema=same
+SchemaRepresentation.ts	987	987	6	same		SchemaRepresentation.ts	2669	2669	1682	runtime-code		SuspendSchema=same
+SchemaRepresentation.ts	988	988	4	same		SchemaRepresentation.ts	2670	2670	1682	runtime-code		SuspendSchema=same
+SchemaRepresentation.ts	990	997	1	changed	code	SchemaRepresentation.ts	2672	2679		runtime-code	11:code	makeValueSchema=code
+SchemaRepresentation.ts	992	992	3	same		SchemaRepresentation.ts	2674	2674	1682	runtime-code		makeValueSchema=code
+SchemaRepresentation.ts	998	998	2	same		SchemaRepresentation.ts	2680	2680	1682	runtime-code		StringValueCodec=same
+SchemaRepresentation.ts	998	999	1	same		SchemaRepresentation.ts	2680	2681	1682	runtime-code		StringValueCodec=same;NumberValueCodec=same
+SchemaRepresentation.ts	998	1008	3	same		SchemaRepresentation.ts	2680	2690	1682	runtime-code		StringValueCodec=same;NumberValueCodec=same;LiteralSchema=same
+SchemaRepresentation.ts	999	999	10	same		SchemaRepresentation.ts	2681	2681	1682	runtime-code		NumberValueCodec=same
+SchemaRepresentation.ts	1000	1000	1	same		SchemaRepresentation.ts	2682	2682	1682	runtime-code		LiteralSchema=same
+SchemaRepresentation.ts	1005	1005	11	same		SchemaRepresentation.ts	2687	2687	1682	runtime-code		LiteralSchema=same
+SchemaRepresentation.ts	1005	1007	1	same		SchemaRepresentation.ts	2687	2689	1682	runtime-code		LiteralSchema=same
+SchemaRepresentation.ts	1006	1007	1	same		SchemaRepresentation.ts	2688	2689	1682	runtime-code		LiteralSchema=same
+SchemaRepresentation.ts	1010	1010	1	same		SchemaRepresentation.ts	2692	2692	1682	runtime-code		UniqueSymbolSchema=same
+SchemaRepresentation.ts	1013	1013	1	same		SchemaRepresentation.ts	2695	2695	1682	runtime-code		UniqueSymbolSchema=same
+SchemaRepresentation.ts	1015	1015	1	same		SchemaRepresentation.ts	2697	2697	1682	runtime-code		EnumSchema=same
+SchemaRepresentation.ts	1018	1021	1	same		SchemaRepresentation.ts	2700	2703	1682	runtime-code		EnumSchema=same
+SchemaRepresentation.ts	1020	1020	8	same		SchemaRepresentation.ts	2702	2702	1682	runtime-code		EnumSchema=same
+SchemaRepresentation.ts	1023	1023	1	same		SchemaRepresentation.ts	2705	2705	1682	runtime-code		TemplateLiteralSchema=same
+SchemaRepresentation.ts	1028	1028	1	same		SchemaRepresentation.ts	2710	2710	1682	runtime-code		ElementSchema=same
+SchemaRepresentation.ts	1028	1032	1	same		SchemaRepresentation.ts	2710	2714	1682	runtime-code		ElementSchema=same
+SchemaRepresentation.ts	1030	1030	2	same		SchemaRepresentation.ts	2712	2712	1682	runtime-code		ElementSchema=same
+SchemaRepresentation.ts	1033	1033	1	same		SchemaRepresentation.ts	2715	2715	1682	runtime-code		ArraysSchema=same
+SchemaRepresentation.ts	1036	1036	1	same		SchemaRepresentation.ts	2718	2718	1682	runtime-code		ArraysSchema=same
+SchemaRepresentation.ts	1039	1039	1	same		SchemaRepresentation.ts	2721	2721	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1039	1049	1	same		SchemaRepresentation.ts	2721	2731	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1040	1040	2	same		SchemaRepresentation.ts	2722	2722	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1040	1044	1	same		SchemaRepresentation.ts	2722	2726	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1041	1043	1	same		SchemaRepresentation.ts	2723	2725	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1042	1042	4	same		SchemaRepresentation.ts	2724	2724	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1043	1043	4	same		SchemaRepresentation.ts	2725	2725	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1045	1045	2	same		SchemaRepresentation.ts	2727	2727	1682	runtime-code		PropertySignatureSchema=same
+SchemaRepresentation.ts	1050	1050	1	same		SchemaRepresentation.ts	2732	2732	1682	runtime-code		IndexSignatureSchema=same
+SchemaRepresentation.ts	1050	1053	1	same		SchemaRepresentation.ts	2732	2735	1682	runtime-code		IndexSignatureSchema=same
+SchemaRepresentation.ts	1052	1052	2	same		SchemaRepresentation.ts	2734	2734	1682	runtime-code		IndexSignatureSchema=same
+SchemaRepresentation.ts	1054	1054	1	same		SchemaRepresentation.ts	2736	2736	1682	runtime-code		ObjectsSchema=same
+SchemaRepresentation.ts	1057	1057	1	same		SchemaRepresentation.ts	2739	2739	1682	runtime-code		ObjectsSchema=same
+SchemaRepresentation.ts	1060	1060	1	same		SchemaRepresentation.ts	2742	2742	1682	runtime-code		UnionSchema=code
+SchemaRepresentation.ts	1065	1065	2	same		SchemaRepresentation.ts	2749	2749	1684	runtime-code		UnionSchema=code
+SchemaRepresentation.ts	1066	1066	1	same		SchemaRepresentation.ts	2750	2750	1684	runtime-code		ReferenceSchema=same
+SchemaRepresentation.ts	1066	1069	1	same		SchemaRepresentation.ts	2750	2753	1684	runtime-code		ReferenceSchema=same
+SchemaRepresentation.ts	1068	1068	9	same		SchemaRepresentation.ts	2752	2752	1684	runtime-code		ReferenceSchema=same
+SchemaRepresentation.ts	1071	1094	1	same		SchemaRepresentation.ts	2755	2778	1684	runtime-code		RepresentationUnion=same
+SchemaRepresentation.ts	1093	1093	2	same		SchemaRepresentation.ts	2777	2777	1684	runtime-code		RepresentationUnion=same
+SchemaRepresentation.ts	1095	1095	1	same-comment		SchemaRepresentation.ts	2779	2779	1684	runtime-code		
+SchemaRepresentation.ts	1096	1096	5	same		SchemaRepresentation.ts	2780	2780	1684	runtime-code		ReferencesSchema=same
+SchemaRepresentation.ts	1098	1098	1	same		SchemaRepresentation.ts	2782	2782	1684	runtime-code		DocumentFromJson=same
+SchemaRepresentation.ts	1098	1103	2	same		SchemaRepresentation.ts	2782	2787	1684	runtime-code		DocumentFromJson=same
+SchemaRepresentation.ts	1100	1101	1	same		SchemaRepresentation.ts	2784	2785	1684	runtime-code		DocumentFromJson=same
+SchemaRepresentation.ts	1103	1103	1	same		SchemaRepresentation.ts	2787	2787	1684	runtime-code		DocumentFromJson=same
+SchemaRepresentation.ts	1105	1105	1	same		SchemaRepresentation.ts	2789	2789	1684	runtime-code		MultiDocumentFromJson=same
+SchemaRepresentation.ts	1105	1110	2	same		SchemaRepresentation.ts	2789	2794	1684	runtime-code		MultiDocumentFromJson=same
+SchemaRepresentation.ts	1107	1107	6	same		SchemaRepresentation.ts	2791	2791	1684	runtime-code		MultiDocumentFromJson=same
+SchemaRepresentation.ts	1250	1250	2	same-comment		SchemaRepresentation.ts	2934	2934	1684	runtime-code		
+Scope.ts	0	0	2	file-only		Scope.ts				types-only		
+Scope.ts	45	45	1	same		Scope.ts	45	45	0	types-only		Scope=type-decl
+Scope.ts	73	73	1	same		Scope.ts	74	74	1	types-only		Closeable=same
+Scope.ts	99	187	2	same		Scope.ts	99	186	0	types-only		State=same
+Scope.ts	240	240	7	same		Scope.ts	239	239	-1	types-only		make=same
+Scope.ts	545	567	1	changed	erased	Scope.ts	568	595		types-only	2:erased	close=erased
+Scope.ts	567	567	7	changed	erased	Scope.ts	568	595		types-only	2:erased	close=erased
+Scope.ts	592	592	1	changed	erased	Scope.ts	568	595		types-only	2:erased	closeUnsafe=erased
+Semaphore.ts	258	266	3	same		Semaphore.ts	265	273	7	comments-layout		SemaphoreImpl.releaseUnsafe=same
+Semaphore.ts	260	260	2	same		Semaphore.ts	267	267	7	comments-layout		SemaphoreImpl.releaseUnsafe=same
+Stream.ts	0	0	1	file-only		Stream.ts				runtime-code		
+Stream.ts	19200	19225	2	same		Stream.ts	20069	20094	869	runtime-code		toPull=same
+String.ts	1628	1654	1	same		String.ts	1639	1665	11	runtime-code		normalizeCase=same
+String.ts	1661	1661	2	same		String.ts	1672	1672	11	runtime-code		CONFIG_SPLIT_REGEXP=same
+String.ts	1664	1664	1	same		String.ts	1675	1675	11	runtime-code		STRIP_REGEXP=same
+String.ts	1753	1754	1	same-comment		String.ts	1764	1765	11	runtime-code		
+String.ts	1754	1754	1	same-comment		String.ts	1765	1765	11	runtime-code		
+String.ts	1760	1761	2	same		String.ts	1771	1772	11	runtime-code		configCase=same
+Take.ts	29	29	1	same		Take.ts	29	29	0	identical		Take=same
+Types.ts	158	158	1	same		Types.ts	160	160	2	types-only		ExcludeTag=same
+Types.ts	672	672	1	same		Types.ts	687	687	15	types-only		Covariant=same
+internal/core.ts	0	0	4	file-only		internal/core.ts				runtime-code		
+internal/core.ts	31	61	1	same		internal/core.ts	31	61	0	runtime-code		identifier=same;identifier#2=same;args=same;args#2=same;evaluate=same;evaluate#2=same;contA=same;contA#2=same;contE=same;contE#2=same;contAll=same;contAll#2=same;Yield=same
+internal/core.ts	61	61	1	same		internal/core.ts	61	61	0	runtime-code		Yield=same
+internal/core.ts	137	176	1	changed	code	internal/core.ts	138	176		runtime-code	2:code	CauseImpl.CauseTypeId=code;CauseImpl.reasons=code;CauseImpl.constructor=same;CauseImpl.pipe=same;CauseImpl.toJSON=same;CauseImpl.toString=same;CauseImpl.NodeInspectSymbol=same;CauseImpl.[Equal.symbol]=same;CauseImpl.[Hash.symbol]=same
+internal/core.ts	166	172	1	same		internal/core.ts	166	172	0	runtime-code		CauseImpl.[Equal.symbol]=same
+internal/core.ts	178	178	1	same		internal/core.ts	178	178	0	runtime-code		annotationsMap=same
+internal/core.ts	178	239	1	same		internal/core.ts	178	239	0	runtime-code		annotationsMap=same;ReasonBase.CauseReasonTypeId=same;ReasonBase.annotations=same;ReasonBase._tag=same;ReasonBase.constructor=same;ReasonBase.annotate=same;ReasonBase.pipe=same;ReasonBase.toJSON=same;ReasonBase.[Equal.symbol]=same;ReasonBase.[Hash.symbol]=same;ReasonBase.toString=same;ReasonBase.NodeInspectSymbol=same
+internal/core.ts	197	197	1	same		internal/core.ts	197	197	0	runtime-code		ReasonBase.constructor=same
+internal/core.ts	207	207	1	same		internal/core.ts	207	207	0	runtime-code		ReasonBase.constructor=same
+internal/core.ts	244	286	1	changed	code	internal/core.ts	245	328		runtime-code	3:code,4:code	Fail.error=code;Fail.constructor=same;Fail.toString=same;Fail.toJSON=same;Fail.[Equal.symbol]=same;Fail.[Hash.symbol]=same;causeFromReasons=same;causeEmpty=same;causeFail=same
+internal/core.ts	288	322	1	changed	code	internal/core.ts	331	364		runtime-code	5:code	Die.defect=code;Die.constructor=same;Die.toString=same;Die.toJSON=same;Die.[Equal.symbol]=same;Die.[Hash.symbol]=same;causeDie=same
+internal/core.ts	508	516	2	same		internal/core.ts	559	567	51	runtime-code		exitSucceed=same
+internal/core.ts	528	547	1	changed	code	internal/core.ts	580	610		runtime-code	18:code,19:code,20:code	exitFailCause=code
+internal/core.ts	529	548	2	changed	code	internal/core.ts	580	610		runtime-code	18:code,19:code,20:code	exitFailCause=code
+internal/core.ts	538	543	1	changed	code	internal/core.ts	589	606		runtime-code	19:code,20:code	exitFailCause=code
+internal/core.ts	539	542	1	changed	code	internal/core.ts	590	599		runtime-code	19:code	exitFailCause=code
+internal/core.ts	539	545	5	changed	code	internal/core.ts	590	608		runtime-code	19:code,20:code	exitFailCause=code
+internal/core.ts	540	540	2	changed	code	internal/core.ts	591	597		runtime-code	19:code	exitFailCause=code
+internal/core.ts	540	545	1	changed	code	internal/core.ts	591	608		runtime-code	19:code,20:code	exitFailCause=code
+internal/core.ts	555	563	1	same		internal/core.ts	618	626	63	runtime-code		withFiber=same
+internal/core.ts	565	583	1	same		internal/core.ts	645	663	80	runtime-code		YieldableError=same
+internal/core.ts	602	604	2	same		internal/core.ts	682	684	80	runtime-code		Error=same
+internal/effect.ts	0	0	7	file-only		internal/effect.ts				runtime-code		
+internal/effect.ts	1	1	1	same		internal/effect.ts	1	1	0	runtime-code		import ../Array.ts=same
+internal/effect.ts	106	145	1	changed	code	internal/effect.ts	107	145		runtime-code	3:code	Interrupt.fiberId=code;Interrupt.constructor=same;Interrupt.toString=same;Interrupt.toJSON=same;Interrupt.[Equal.symbol]=same;Interrupt.[Hash.symbol]=same;makeInterruptReason=same;causeInterrupt=same
+internal/effect.ts	148	148	2	same		internal/effect.ts	148	148	0	runtime-code		hasFails=same
+internal/effect.ts	154	157	2	same		internal/effect.ts	154	157	0	runtime-code		findFail=same;findError=same
+internal/effect.ts	157	157	1	same		internal/effect.ts	157	157	0	runtime-code		findError=same
+internal/effect.ts	157	165	1	same		internal/effect.ts	157	165	0	runtime-code		findError=same
+internal/effect.ts	157	168	2	same		internal/effect.ts	157	168	0	runtime-code		findError=same;findErrorOption=same
+internal/effect.ts	171	171	2	same		internal/effect.ts	171	171	0	runtime-code		hasDies=same
+internal/effect.ts	186	186	4	same		internal/effect.ts	186	186	0	runtime-code		hasInterrupts=same
+internal/effect.ts	241	258	1	removed	code	internal/effect.ts				runtime-code	4:code	causeCombine=absent
+internal/effect.ts	247	257	1	removed	code	internal/effect.ts				runtime-code	4:code	causeCombine=absent
+internal/effect.ts	248	252	1	removed	code	internal/effect.ts				runtime-code	4:code	causeCombine=absent
+internal/effect.ts	256	256	1	removed	code	internal/effect.ts				runtime-code	4:code	causeCombine=absent
+internal/effect.ts	298	309	2	changed	code	internal/effect.ts	261	270		runtime-code	6:code,7:code	causeSquash=code
+internal/effect.ts	460	460	1	same		internal/effect.ts	424	424	-36	runtime-code		currentStackTrace=same
+internal/effect.ts	492	492	1	same		internal/effect.ts	456	456	-36	runtime-code		FiberTypeId=same
+internal/effect.ts	505	555	1	changed	code	internal/effect.ts	484	531		runtime-code	12:code,13:code,14:code,15:code,16:code	FiberImpl.constructor=code;FiberImpl.FiberTypeId=absent;FiberImpl.id=code;FiberImpl.interruptible=code;FiberImpl.currentOpCount=code;FiberImpl._stack=code;FiberImpl._observers=code;FiberImpl._exit=code;FiberImpl._children=code;FiberImpl._interruptedCause=code;FiberImpl._yielded=code;FiberImpl._running=code;FiberImpl._deferredInterrupt=code;FiberImpl.context=code;FiberImpl.currentScheduler=absent;FiberImpl.currentTracerContext=absent;FiberImpl.currentSpan=absent;FiberImpl.currentLogLevel=absent;FiberImpl.minimumLogLevel=absent;FiberImpl.currentStackFrame=absent;FiberImpl.runtimeMetrics=absent;FiberImpl.maxOpsBeforeYield=absent;FiberImpl.currentPreventYield=absent;FiberImpl._dispatcher=code;get FiberImpl.currentDispatcher=code
+internal/effect.ts	512	514	1	same		internal/effect.ts	490	492	-22	runtime-code		FiberImpl.constructor=code
+internal/effect.ts	530	530	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl.currentOpCount=code
+internal/effect.ts	532	532	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl._observers=code
+internal/effect.ts	533	533	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl._exit=code
+internal/effect.ts	534	534	6	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl._children=code
+internal/effect.ts	536	536	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl._yielded=code
+internal/effect.ts	537	537	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl._running=code
+internal/effect.ts	541	541	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl.context=code
+internal/effect.ts	549	550	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl.maxOpsBeforeYield=absent;FiberImpl.currentPreventYield=absent
+internal/effect.ts	552	552	1	changed	code	internal/effect.ts	506	528		runtime-code	15:code	FiberImpl._dispatcher=code
+internal/effect.ts	552	554	1	changed	code	internal/effect.ts	506	530		runtime-code	15:code,16:code	FiberImpl._dispatcher=code;get FiberImpl.currentDispatcher=code
+internal/effect.ts	552	555	1	changed	code	internal/effect.ts	506	531		runtime-code	15:code,16:code	FiberImpl._dispatcher=code;get FiberImpl.currentDispatcher=code
+internal/effect.ts	553	555	1	changed	code	internal/effect.ts	529	531		runtime-code	16:code	get FiberImpl.currentDispatcher=code
+internal/effect.ts	557	559	2	same		internal/effect.ts	533	535	-24	runtime-code		FiberImpl.getRef=same
+internal/effect.ts	560	573	1	changed	code	internal/effect.ts	536	554		runtime-code	17:code,18:code,19:erased	FiberImpl.addObserver=code
+internal/effect.ts	561	562	5	same		internal/effect.ts	537	538	-24	runtime-code		FiberImpl.addObserver=code
+internal/effect.ts	565	565	2	same		internal/effect.ts	544	544	-21	runtime-code		FiberImpl.addObserver=code
+internal/effect.ts	574	574	3	same		internal/effect.ts	555	555	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	574	595	5	changed	code	internal/effect.ts	555	576		runtime-code	20:code	FiberImpl.interruptUnsafe=code
+internal/effect.ts	574	596	1	changed	code	internal/effect.ts	555	577		runtime-code	20:code	FiberImpl.interruptUnsafe=code;FiberImpl.pollUnsafe=same
+internal/effect.ts	575	577	2	same		internal/effect.ts	556	558	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	575	594	1	changed	code	internal/effect.ts	556	575		runtime-code	20:code	FiberImpl.interruptUnsafe=code
+internal/effect.ts	578	584	1	changed	code	internal/effect.ts	559	565		runtime-code	20:code	FiberImpl.interruptUnsafe=code
+internal/effect.ts	578	587	2	changed	code	internal/effect.ts	559	568		runtime-code	20:code	FiberImpl.interruptUnsafe=code
+internal/effect.ts	579	580	5	changed	code	internal/effect.ts	560	561		runtime-code	20:code	FiberImpl.interruptUnsafe=code
+internal/effect.ts	582	583	2	same		internal/effect.ts	563	564	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	585	587	2	same		internal/effect.ts	566	568	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	585	594	1	same		internal/effect.ts	566	575	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	588	588	1	same		internal/effect.ts	569	569	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	588	590	1	same		internal/effect.ts	569	571	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	589	590	1	same		internal/effect.ts	570	571	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	591	594	1	same		internal/effect.ts	572	575	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	595	595	1	same		internal/effect.ts	576	576	-19	runtime-code		FiberImpl.interruptUnsafe=code
+internal/effect.ts	599	628	4	changed	code	internal/effect.ts	580	621		runtime-code	21:code,22:code,23:code,24:code	FiberImpl.evaluate=code
+internal/effect.ts	600	600	1	same		internal/effect.ts	581	581	-19	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	600	601	1	same		internal/effect.ts	581	582	-19	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	601	601	1	same		internal/effect.ts	582	582	-19	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	611	611	2	same-comment		internal/effect.ts	597	597	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	611	617	1	same		internal/effect.ts	597	603	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	611	627	2	changed	code	internal/effect.ts	599	620		runtime-code	23:code,24:code	FiberImpl.evaluate=code
+internal/effect.ts	611	628	3	changed	code	internal/effect.ts	599	621		runtime-code	23:code,24:code	FiberImpl.evaluate=code
+internal/effect.ts	612	612	1	same-comment		internal/effect.ts	598	598	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	613	613	2	same		internal/effect.ts	599	599	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	613	617	8	same		internal/effect.ts	599	603	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	615	615	1	same		internal/effect.ts	601	601	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	617	617	1	same		internal/effect.ts	603	603	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	619	619	3	same		internal/effect.ts	605	605	-14	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	619	623	2	changed	code	internal/effect.ts	605	617		runtime-code	23:code	FiberImpl.evaluate=code
+internal/effect.ts	619	627	3	changed	code	internal/effect.ts	605	620		runtime-code	23:code,24:code	FiberImpl.evaluate=code
+internal/effect.ts	621	621	1	changed	code	internal/effect.ts	606	616		runtime-code	23:code	FiberImpl.evaluate=code
+internal/effect.ts	621	623	3	changed	code	internal/effect.ts	606	617		runtime-code	23:code	FiberImpl.evaluate=code
+internal/effect.ts	624	627	5	changed	code	internal/effect.ts	618	620		runtime-code	24:code	FiberImpl.evaluate=code
+internal/effect.ts	627	627	4	same		internal/effect.ts	620	620	-7	runtime-code		FiberImpl.evaluate=code
+internal/effect.ts	629	655	1	changed	code	internal/effect.ts	622	650		runtime-code	25:code,26:code,27:code	FiberImpl.runLoop=code
+internal/effect.ts	634	634	2	same		internal/effect.ts	627	627	-7	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	634	652	1	changed	code	internal/effect.ts	627	647		runtime-code	25:code,26:code	FiberImpl.runLoop=code
+internal/effect.ts	638	642	1	same		internal/effect.ts	631	635	-7	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	638	655	1	changed	code	internal/effect.ts	631	650		runtime-code	25:code,26:code,27:code	FiberImpl.runLoop=code
+internal/effect.ts	638	668	1	changed	code	internal/effect.ts	631	663		runtime-code	25:code,26:code,27:code	FiberImpl.runLoop=code
+internal/effect.ts	639	639	1	same		internal/effect.ts	632	632	-7	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	639	642	3	same		internal/effect.ts	632	635	-7	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	643	643	2	same		internal/effect.ts	636	636	-7	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	644	652	1	changed	code	internal/effect.ts	639	647		runtime-code	26:code	FiberImpl.runLoop=code
+internal/effect.ts	645	645	1	same		internal/effect.ts	640	640	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	646	646	1	changed	code	internal/effect.ts	641	642		runtime-code	26:code	FiberImpl.runLoop=code
+internal/effect.ts	647	651	1	changed	code	internal/effect.ts	641	646		runtime-code	26:code	FiberImpl.runLoop=code
+internal/effect.ts	647	652	1	changed	code	internal/effect.ts	641	647		runtime-code	26:code	FiberImpl.runLoop=code
+internal/effect.ts	647	655	3	changed	code	internal/effect.ts	641	650		runtime-code	26:code,27:code	FiberImpl.runLoop=code
+internal/effect.ts	648	648	3	same		internal/effect.ts	643	643	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	649	655	5	changed	code	internal/effect.ts	644	650		runtime-code	27:code	FiberImpl.runLoop=code
+internal/effect.ts	651	651	8	same		internal/effect.ts	646	646	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	653	655	4	changed	code	internal/effect.ts	648	650		runtime-code	27:code	FiberImpl.runLoop=code
+internal/effect.ts	655	655	3	same		internal/effect.ts	650	650	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	656	661	1	same		internal/effect.ts	651	656	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	656	668	4	same		internal/effect.ts	651	663	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	659	659	2	same		internal/effect.ts	654	654	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	662	667	7	same		internal/effect.ts	657	662	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	667	667	1	same		internal/effect.ts	662	662	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	670	674	3	same		internal/effect.ts	665	669	-5	runtime-code		FiberImpl.runLoop=code
+internal/effect.ts	680	683	1	same		internal/effect.ts	675	678	-5	runtime-code		FiberImpl.getCont=code
+internal/effect.ts	684	687	1	same		internal/effect.ts	679	682	-5	runtime-code		FiberImpl.getCont=code
+internal/effect.ts	688	697	4	changed	code	internal/effect.ts	683	695		runtime-code	28:code,29:code	FiberImpl.getCont=code
+internal/effect.ts	703	704	3	same		internal/effect.ts	712	713	9	runtime-code		FiberImpl.children=same
+internal/effect.ts	709	727	2	changed	code	internal/effect.ts	718	732		runtime-code	31:code,32:code	FiberImpl.setContext=code
+internal/effect.ts	715	727	2	changed	code	internal/effect.ts	727	732		runtime-code	31:code,32:code	FiberImpl.setContext=code
+internal/effect.ts	726	727	6	changed	code	internal/effect.ts	732	732		runtime-code	32:code	FiberImpl.setContext=code
+internal/effect.ts	729	730	2	changed	code	internal/effect.ts	732	732		runtime-code	32:code	FiberImpl.setContext=code
+internal/effect.ts	766	776	1	same		internal/effect.ts	791	801	25	runtime-code		fiberAwait=same
+internal/effect.ts	767	769	5	same		internal/effect.ts	792	794	25	runtime-code		fiberAwait=same
+internal/effect.ts	767	777	2	same		internal/effect.ts	792	802	25	runtime-code		fiberAwait=same
+internal/effect.ts	767	822	1	same		internal/effect.ts	792	847	25	runtime-code		fiberAwait=same;fiberAwaitAll=same;fiberJoin=same
+internal/effect.ts	770	775	1	same		internal/effect.ts	795	800	25	runtime-code		fiberAwait=same
+internal/effect.ts	772	774	1	same		internal/effect.ts	797	799	25	runtime-code		fiberAwait=same
+internal/effect.ts	773	773	9	same		internal/effect.ts	798	798	25	runtime-code		fiberAwait=same
+internal/effect.ts	779	779	12	same		internal/effect.ts	804	804	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	779	811	1	same		internal/effect.ts	804	836	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	779	813	6	same		internal/effect.ts	804	838	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	794	808	4	same		internal/effect.ts	819	833	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	797	800	2	same		internal/effect.ts	822	825	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	802	802	5	same		internal/effect.ts	827	827	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	804	804	2	same		internal/effect.ts	829	829	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	806	806	6	same		internal/effect.ts	831	831	25	runtime-code		fiberAwaitAll=same
+internal/effect.ts	812	812	7	same-comment		internal/effect.ts	837	837	25	runtime-code		
+internal/effect.ts	813	821	1	same		internal/effect.ts	838	846	25	runtime-code		fiberJoin=same
+internal/effect.ts	814	816	3	same		internal/effect.ts	839	841	25	runtime-code		fiberJoin=same
+internal/effect.ts	814	822	2	same		internal/effect.ts	839	847	25	runtime-code		fiberJoin=same
+internal/effect.ts	821	821	8	same		internal/effect.ts	846	846	25	runtime-code		fiberJoin=same
+internal/effect.ts	856	885	1	same		internal/effect.ts	888	917	32	runtime-code		fiberInterrupt=same;fiberInterruptAs=same
+internal/effect.ts	857	857	7	same		internal/effect.ts	889	889	32	runtime-code		fiberInterrupt=same
+internal/effect.ts	868	868	1	same		internal/effect.ts	900	900	32	runtime-code		fiberInterruptAs=same
+internal/effect.ts	871	884	8	same		internal/effect.ts	903	916	32	runtime-code		fiberInterruptAs=same
+internal/effect.ts	880	883	5	same		internal/effect.ts	912	915	32	runtime-code		fiberInterruptAs=same
+internal/effect.ts	883	883	1	same		internal/effect.ts	915	915	32	runtime-code		fiberInterruptAs=same
+internal/effect.ts	884	884	2	same		internal/effect.ts	916	916	32	runtime-code		fiberInterruptAs=same
+internal/effect.ts	887	899	1	same		internal/effect.ts	919	931	32	runtime-code		fiberInterruptAll=same
+internal/effect.ts	888	898	1	same		internal/effect.ts	920	930	32	runtime-code		fiberInterruptAll=same
+internal/effect.ts	888	915	6	same		internal/effect.ts	920	947	32	runtime-code		fiberInterruptAll=same;fiberInterruptAllAs=same
+internal/effect.ts	889	896	2	same		internal/effect.ts	921	928	32	runtime-code		fiberInterruptAll=same
+internal/effect.ts	892	895	5	same		internal/effect.ts	924	927	32	runtime-code		fiberInterruptAll=same
+internal/effect.ts	892	896	2	same		internal/effect.ts	924	928	32	runtime-code		fiberInterruptAll=same
+internal/effect.ts	896	896	3	same		internal/effect.ts	928	928	32	runtime-code		fiberInterruptAll=same
+internal/effect.ts	910	913	3	same		internal/effect.ts	942	945	32	runtime-code		fiberInterruptAllAs=same
+internal/effect.ts	927	937	1	same		internal/effect.ts	959	969	32	runtime-code		sync=same
+internal/effect.ts	928	936	1	same		internal/effect.ts	960	968	32	runtime-code		sync=same
+internal/effect.ts	929	929	2	same		internal/effect.ts	961	961	32	runtime-code		sync=same
+internal/effect.ts	931	935	4	same		internal/effect.ts	963	967	32	runtime-code		sync=same
+internal/effect.ts	932	932	1	same		internal/effect.ts	964	964	32	runtime-code		sync=same
+internal/effect.ts	932	933	1	same		internal/effect.ts	964	965	32	runtime-code		sync=same
+internal/effect.ts	933	933	1	same		internal/effect.ts	965	965	32	runtime-code		sync=same
+internal/effect.ts	933	934	3	same		internal/effect.ts	965	966	32	runtime-code		sync=same
+internal/effect.ts	938	946	1	same		internal/effect.ts	970	978	32	runtime-code		suspend=same
+internal/effect.ts	940	940	1	same		internal/effect.ts	972	972	32	runtime-code		suspend=same
+internal/effect.ts	941	941	1	same		internal/effect.ts	973	973	32	runtime-code		suspend=same
+internal/effect.ts	958	958	1	same		internal/effect.ts	990	990	32	runtime-code		fromOption=same
+internal/effect.ts	965	965	1	same		internal/effect.ts	997	997	32	runtime-code		fromOption=same
+internal/effect.ts	981	994	1	same		internal/effect.ts	1013	1026	32	runtime-code		yieldNowWith=same
+internal/effect.ts	982	990	7	same		internal/effect.ts	1014	1022	32	runtime-code		yieldNowWith=same
+internal/effect.ts	982	994	1	same		internal/effect.ts	1014	1026	32	runtime-code		yieldNowWith=same
+internal/effect.ts	984	993	1	same		internal/effect.ts	1016	1025	32	runtime-code		yieldNowWith=same
+internal/effect.ts	986	986	2	same		internal/effect.ts	1018	1018	32	runtime-code		yieldNowWith=same
+internal/effect.ts	986	992	1	same		internal/effect.ts	1018	1024	32	runtime-code		yieldNowWith=same
+internal/effect.ts	988	988	3	same		internal/effect.ts	1020	1020	32	runtime-code		yieldNowWith=same
+internal/effect.ts	990	990	1	same		internal/effect.ts	1022	1022	32	runtime-code		yieldNowWith=same
+internal/effect.ts	990	992	1	same		internal/effect.ts	1022	1024	32	runtime-code		yieldNowWith=same
+internal/effect.ts	990	993	1	same		internal/effect.ts	1022	1025	32	runtime-code		yieldNowWith=same
+internal/effect.ts	997	997	4	same		internal/effect.ts	1029	1029	32	runtime-code		yieldNow=same
+internal/effect.ts	1018	1018	5	same		internal/effect.ts	1050	1050	32	runtime-code		die=same
+internal/effect.ts	1018	1021	1	changed	code	internal/effect.ts	1050	1053		runtime-code	44:code	die=same;failSync=code
+internal/effect.ts	1024	1026	4	same		internal/effect.ts	1056	1058	32	runtime-code		void_=same;export {void}=same
+internal/effect.ts	1036	1036	1	same		internal/effect.ts	1068	1068	32	runtime-code		try_=code
+internal/effect.ts	1057	1057	1	same		internal/effect.ts	1089	1089	32	runtime-code		promise=code
+internal/effect.ts	1062	1090	1	changed	code	internal/effect.ts	1094	1123		runtime-code	48:code,49:code,50:code,51:code,52:code,53:code,54:code	tryPromise=code
+internal/effect.ts	1092	1100	3	same		internal/effect.ts	1126	1134	34	runtime-code		withFiberId=same;fiber=same;fiberId=same
+internal/effect.ts	1093	1093	2	same		internal/effect.ts	1127	1127	34	runtime-code		withFiberId=same
+internal/effect.ts	1102	1143	2	changed	code	internal/effect.ts	1136	1176		runtime-code	55:erased,56:code,57:code,58:code	callbackOptions=code
+internal/effect.ts	1109	1143	1	changed	code	internal/effect.ts	1143	1176		runtime-code	56:code,57:code,58:code	callbackOptions=code
+internal/effect.ts	1117	1117	1	changed	code	internal/effect.ts	1149	1150		runtime-code	58:code	callbackOptions=code
+internal/effect.ts	1117	1141	3	changed	code	internal/effect.ts	1149	1174		runtime-code	58:code	callbackOptions=code
+internal/effect.ts	1118	1132	1	same		internal/effect.ts	1151	1165	33	runtime-code		callbackOptions=code
+internal/effect.ts	1120	1126	7	same		internal/effect.ts	1153	1159	33	runtime-code		callbackOptions=code
+internal/effect.ts	1120	1141	1	same		internal/effect.ts	1153	1174	33	runtime-code		callbackOptions=code
+internal/effect.ts	1121	1121	6	same		internal/effect.ts	1154	1154	33	runtime-code		callbackOptions=code
+internal/effect.ts	1121	1126	3	same		internal/effect.ts	1154	1159	33	runtime-code		callbackOptions=code
+internal/effect.ts	1128	1128	1	same		internal/effect.ts	1161	1161	33	runtime-code		callbackOptions=code
+internal/effect.ts	1128	1130	1	same		internal/effect.ts	1161	1163	33	runtime-code		callbackOptions=code
+internal/effect.ts	1128	1141	9	same		internal/effect.ts	1161	1174	33	runtime-code		callbackOptions=code
+internal/effect.ts	1134	1140	2	same		internal/effect.ts	1167	1173	33	runtime-code		callbackOptions=code
+internal/effect.ts	1145	1160	4	changed	code	internal/effect.ts	1187	1202		runtime-code	60:code	asyncFinalizer=code
+internal/effect.ts	1147	1147	3	same		internal/effect.ts	1189	1189	42	runtime-code		asyncFinalizer=code
+internal/effect.ts	1149	1154	3	same		internal/effect.ts	1191	1196	42	runtime-code		asyncFinalizer=code
+internal/effect.ts	1149	1159	1	changed	code	internal/effect.ts	1191	1201		runtime-code	60:code	asyncFinalizer=code
+internal/effect.ts	1155	1159	4	changed	code	internal/effect.ts	1197	1201		runtime-code	60:code	asyncFinalizer=code
+internal/effect.ts	1157	1157	4	changed	code	internal/effect.ts	1199	1199		runtime-code	60:code	asyncFinalizer=code
+internal/effect.ts	1163	1170	1	changed	erased	internal/effect.ts	1205	1211		runtime-code	61:erased	callback=erased
+internal/effect.ts	1175	1196	8	changed	code	internal/effect.ts	1217	1240		runtime-code	62:code	gen=code
+internal/effect.ts	1184	1184	2	same		internal/effect.ts	1226	1226	42	runtime-code		gen=code
+internal/effect.ts	1199	1208	1	same		internal/effect.ts	1243	1252	44	runtime-code		fnUntraced=same
+internal/effect.ts	1227	1227	1	same		internal/effect.ts	1271	1271	44	runtime-code		fn=code
+internal/effect.ts	1272	1272	1	same		internal/effect.ts	1321	1321	49	runtime-code		makeFn=code
+internal/effect.ts	1275	1275	2	same		internal/effect.ts	1326	1326	51	runtime-code		makeFn=code
+internal/effect.ts	1306	1306	1	same		internal/effect.ts	1358	1358	52	runtime-code		fnUntracedEager=code
+internal/effect.ts	1322	1322	2	same-comment		internal/effect.ts	1374	1374	52	runtime-code		fromIteratorEagerUnsafe=same
+internal/effect.ts	1330	1330	2	same-comment		internal/effect.ts	1382	1382	52	runtime-code		fromIteratorEagerUnsafe=same
+internal/effect.ts	1356	1372	1	changed	code	internal/effect.ts	1408	1424		runtime-code	74:code,75:code	fromIteratorUnsafe=code
+internal/effect.ts	1356	1379	1	changed	code	internal/effect.ts	1408	1431		runtime-code	74:code,75:code,76:code	fromIteratorUnsafe=code
+internal/effect.ts	1362	1372	1	changed	code	internal/effect.ts	1414	1424		runtime-code	75:code	fromIteratorUnsafe=code
+internal/effect.ts	1362	1377	2	changed	code	internal/effect.ts	1414	1429		runtime-code	75:code,76:code	fromIteratorUnsafe=code
+internal/effect.ts	1362	1378	1	changed	code	internal/effect.ts	1414	1430		runtime-code	75:code,76:code	fromIteratorUnsafe=code
+internal/effect.ts	1366	1366	1	same		internal/effect.ts	1418	1418	52	runtime-code		fromIteratorUnsafe=code
+internal/effect.ts	1386	1414	4	changed	code	internal/effect.ts	1447	1542		runtime-code	78:code,79:code	as=code;asSome=same;flip=same
+internal/effect.ts	1417	1439	12	changed	code	internal/effect.ts	1545	1566		runtime-code	80:code	andThen=code
+internal/effect.ts	1442	1464	8	changed	code	internal/effect.ts	1569	1590		runtime-code	81:code	tap=code
+internal/effect.ts	1442	1465	1	changed	code	internal/effect.ts	1569	1590		runtime-code	81:code	tap=code
+internal/effect.ts	1467	1467	6	same		internal/effect.ts	1593	1593	126	runtime-code		asVoid=code
+internal/effect.ts	1476	1532	1	changed	code	internal/effect.ts	1603	1654		runtime-code	83:code,84:code,85:code,86:code,87:code	raceAll=code
+internal/effect.ts	1477	1533	1	changed	code	internal/effect.ts	1603	1654		runtime-code	83:code,84:code,85:code,86:code,87:code	raceAll=code
+internal/effect.ts	1490	1531	1	changed	code	internal/effect.ts	1616	1653		runtime-code	83:code,84:code,85:code,86:code	raceAll=code
+internal/effect.ts	1493	1493	3	same		internal/effect.ts	1622	1622	129	runtime-code		raceAll=code
+internal/effect.ts	1493	1531	1	changed	code	internal/effect.ts	1622	1653		runtime-code	84:code,85:code,86:code	raceAll=code
+internal/effect.ts	1503	1514	2	changed	code	internal/effect.ts	1631	1638		runtime-code	85:code	raceAll=code
+internal/effect.ts	1510	1514	9	changed	code	internal/effect.ts	1638	1638		runtime-code	85:code	raceAll=code
+internal/effect.ts	1512	1512	2	changed	code	internal/effect.ts	1638	1638		runtime-code	85:code	raceAll=code
+internal/effect.ts	1520	1528	7	same		internal/effect.ts	1644	1652	124	runtime-code		raceAll=code
+internal/effect.ts	1521	1521	5	same		internal/effect.ts	1645	1645	124	runtime-code		raceAll=code
+internal/effect.ts	1522	1526	4	same		internal/effect.ts	1646	1650	124	runtime-code		raceAll=code
+internal/effect.ts	1523	1523	1	same		internal/effect.ts	1647	1647	124	runtime-code		raceAll=code
+internal/effect.ts	1525	1525	1	same		internal/effect.ts	1649	1649	124	runtime-code		raceAll=code
+internal/effect.ts	1527	1527	3	same		internal/effect.ts	1651	1651	124	runtime-code		raceAll=code
+internal/effect.ts	1530	1530	6	removed	code	internal/effect.ts				runtime-code	86:code	raceAll=code
+internal/effect.ts	1590	1590	2	same		internal/effect.ts	1703	1703	113	runtime-code		race=same
+internal/effect.ts	1662	1689	1	changed	code	internal/effect.ts	1776	1790		runtime-code	93:code,94:code	flatMap=code;OnSuccessProto=code
+internal/effect.ts	1677	1689	1	changed	code	internal/effect.ts	1789	1790		runtime-code	93:code,94:code	flatMap=code;OnSuccessProto=code
+internal/effect.ts	2024	2038	8	same		internal/effect.ts	2126	2140	102	runtime-code		exitAsVoidAll=same
+internal/effect.ts	2025	2038	1	same		internal/effect.ts	2127	2140	102	runtime-code		exitAsVoidAll=same
+internal/effect.ts	2059	2059	9	same		internal/effect.ts	2161	2161	102	runtime-code		service=same
+internal/effect.ts	2073	2097	1	changed	code	internal/effect.ts	2175	2200		runtime-code	97:code,98:code	updateContext=code
+internal/effect.ts	2087	2096	5	changed	code	internal/effect.ts	2189	2199		runtime-code	97:code,98:code	updateContext=code
+internal/effect.ts	2088	2095	2	changed	code	internal/effect.ts	2190	2197		runtime-code	97:code	updateContext=code
+internal/effect.ts	2089	2089	2	same		internal/effect.ts	2191	2191	102	runtime-code		updateContext=code
+internal/effect.ts	2090	2090	4	same		internal/effect.ts	2192	2192	102	runtime-code		updateContext=code
+internal/effect.ts	2091	2091	1	same		internal/effect.ts	2193	2193	102	runtime-code		updateContext=code
+internal/effect.ts	2091	2095	1	changed	code	internal/effect.ts	2193	2197		runtime-code	97:code	updateContext=code
+internal/effect.ts	2092	2092	1	changed	code	internal/effect.ts	2194	2194		runtime-code	97:code	updateContext=code
+internal/effect.ts	2092	2095	2	changed	code	internal/effect.ts	2194	2197		runtime-code	97:code	updateContext=code
+internal/effect.ts	2134	2134	5	same		internal/effect.ts	2237	2237	103	runtime-code		updateServiceScoped=code
+internal/effect.ts	2136	2136	2	same		internal/effect.ts	2239	2239	103	runtime-code		updateServiceScoped=code
+internal/effect.ts	2152	2152	1	same		internal/effect.ts	2257	2257	105	runtime-code		context=same
+internal/effect.ts	2153	2153	3	same		internal/effect.ts	2258	2258	105	runtime-code		getContext=same
+internal/effect.ts	2156	2158	1	same		internal/effect.ts	2261	2263	105	runtime-code		contextWith=same
+internal/effect.ts	2176	2176	1	same		internal/effect.ts	2281	2281	105	runtime-code		setContext=same
+internal/effect.ts	2180	2199	7	same		internal/effect.ts	2285	2304	105	runtime-code		provideContext=same
+internal/effect.ts	2196	2196	4	same		internal/effect.ts	2301	2301	105	runtime-code		provideContext=same
+internal/effect.ts	2197	2197	5	same		internal/effect.ts	2302	2302	105	runtime-code		provideContext=same
+internal/effect.ts	2202	2232	4	same		internal/effect.ts	2307	2337	105	runtime-code		provideService=same;provideServiceImpl=same
+internal/effect.ts	2232	2232	6	same		internal/effect.ts	2337	2337	105	runtime-code		provideServiceImpl=same
+internal/effect.ts	2320	2320	2	same		internal/effect.ts	2425	2425	105	runtime-code		filterOrFail=same
+internal/effect.ts	2417	2417	2	same		internal/effect.ts	2522	2522	105	runtime-code		replicateEffect=same
+internal/effect.ts	2474	2501	1	changed	code	internal/effect.ts	2580	2599		runtime-code	101:code,102:code	catchCause=code;OnFailureProto=code
+internal/effect.ts	2489	2501	1	changed	code	internal/effect.ts	2593	2599		runtime-code	101:code,102:code	catchCause=code;OnFailureProto=code
+internal/effect.ts	2558	2572	1	same		internal/effect.ts	2661	2675	103	runtime-code		catch_=same
+internal/effect.ts	2645	2645	2	same		internal/effect.ts	2747	2747	102	runtime-code		tapCauseIf=code
+internal/effect.ts	2798	2810	4	changed	code	internal/effect.ts	2900	2912		runtime-code	111:code,112:code	catchIf=code
+internal/effect.ts	2803	2810	1	changed	code	internal/effect.ts	2905	2912		runtime-code	111:code,112:code	catchIf=code
+internal/effect.ts	3289	3289	6	same		internal/effect.ts	3395	3395	106	runtime-code		orDie=same
+internal/effect.ts	3426	3465	1	changed	code	internal/effect.ts	3533	3621		runtime-code	124:code,125:code,126:code,127:code	matchCauseEffect=code;OnSuccessAndFailureProto=code
+internal/effect.ts	3427	3460	4	changed	code	internal/effect.ts	3533	3565		runtime-code	124:code,125:code	matchCauseEffect=code;OnSuccessAndFailureProto=code
+internal/effect.ts	3450	3465	1	changed	code	internal/effect.ts	3555	3621		runtime-code	124:code,125:code,126:code,127:code	matchCauseEffect=code;OnSuccessAndFailureProto=code
+internal/effect.ts	3468	3495	4	changed	code	internal/effect.ts	3624	3645		runtime-code	128:code	matchCause=code
+internal/effect.ts	3617	3617	3	same		internal/effect.ts	3765	3765	148	runtime-code		matchCauseEager=same
+internal/effect.ts	3620	3637	1	changed	code	internal/effect.ts	3769	3785		runtime-code	131:code,132:code	exit=same;exitPrimitive=code
+internal/effect.ts	3621	3622	8	same		internal/effect.ts	3769	3770	148	runtime-code		exit=same
+internal/effect.ts	3621	3637	3	changed	code	internal/effect.ts	3769	3785		runtime-code	131:code,132:code	exit=same;exitPrimitive=code
+internal/effect.ts	3627	3636	1	changed	code	internal/effect.ts	3775	3784		runtime-code	131:code,132:code	exitPrimitive=code
+internal/effect.ts	3677	3727	1	changed	code	internal/effect.ts	3825	3881		runtime-code	133:code,134:code,135:code,136:code	timeoutOrElse=code;timeout=code
+internal/effect.ts	3707	3727	1	changed	code	internal/effect.ts	3859	3881		runtime-code	135:code,136:code	timeout=code
+internal/effect.ts	3772	3772	2	same		internal/effect.ts	3926	3926	154	runtime-code		scopeTag=same
+internal/effect.ts	3775	3776	5	changed	code	internal/effect.ts	3929	3935		runtime-code	137:code	scopeClose=code
+internal/effect.ts	3778	3798	4	changed	code	internal/effect.ts	3938	3954		runtime-code	138:code,139:code,140:code	scopeCloseUnsafe=code
+internal/effect.ts	3778	3947	1	changed	code	internal/effect.ts	3938	4110		runtime-code	138:code,139:code,140:code,141:code,142:code,143:code,144:code,145:code,146:code,147:code,148:erased,149:code,150:code,151:code,152:code,153:code,154:code,155:code	scopeCloseUnsafe=code;combineFinalizerCause=same;scopeCloseFinalizers=code;scopeFork=same;scopeForkUnsafe=code;scopeAddFinalizerExit=same;scopeAddFinalizer=same;scopeAddFinalizerUnsafe=code;scopeRemoveFinalizerUnsafe=code;scopeFinalizerCountUnsafe=absent;scopeMakeUnsafe=code;constScopeEmpty=same;scopeMake=same;scope=same;provideScope=same;scoped=code
+internal/effect.ts	3779	3828	2	changed	code	internal/effect.ts	3938	3994		runtime-code	138:code,139:code,140:code,141:code,142:code,143:code	scopeCloseUnsafe=code;combineFinalizerCause=same;scopeCloseFinalizers=code
+internal/effect.ts	3780	3787	1	changed	code	internal/effect.ts	3939	3943		runtime-code	138:code,139:code	scopeCloseUnsafe=code
+internal/effect.ts	3782	3797	3	changed	code	internal/effect.ts	3939	3953		runtime-code	138:code,139:code,140:code	scopeCloseUnsafe=code
+internal/effect.ts	3784	3784	2	removed	code	internal/effect.ts				runtime-code	138:code	scopeCloseUnsafe=code
+internal/effect.ts	3788	3789	4	changed	code	internal/effect.ts	3940	3943		runtime-code	139:code	scopeCloseUnsafe=code
+internal/effect.ts	3794	3795	4	changed	code	internal/effect.ts	3945	3951		runtime-code	140:code	scopeCloseUnsafe=code
+internal/effect.ts	3795	3795	3	changed	code	internal/effect.ts	3945	3951		runtime-code	140:code	scopeCloseUnsafe=code
+internal/effect.ts	3800	3804	11	same		internal/effect.ts	3967	3971	167	runtime-code		combineFinalizerCause=same
+internal/effect.ts	3800	3830	1	changed	code	internal/effect.ts	3967	3997		runtime-code	142:code,143:code	combineFinalizerCause=same;scopeCloseFinalizers=code;scopeFork=same
+internal/effect.ts	3806	3806	1	same		internal/effect.ts	3973	3973	167	runtime-code		scopeCloseFinalizers=code
+internal/effect.ts	3806	3827	5	changed	code	internal/effect.ts	3973	3994		runtime-code	142:code,143:code	scopeCloseFinalizers=code
+internal/effect.ts	3813	3818	3	changed	code	internal/effect.ts	3980	3985		runtime-code	142:code	scopeCloseFinalizers=code
+internal/effect.ts	3813	3822	1	changed	code	internal/effect.ts	3980	3989		runtime-code	142:code,143:code	scopeCloseFinalizers=code
+internal/effect.ts	3815	3827	1	changed	code	internal/effect.ts	3982	3994		runtime-code	142:code,143:code	scopeCloseFinalizers=code
+internal/effect.ts	3817	3818	1	changed	code	internal/effect.ts	3984	3985		runtime-code	142:code	scopeCloseFinalizers=code
+internal/effect.ts	3819	3821	2	changed	code	internal/effect.ts	3986	3988		runtime-code	143:code	scopeCloseFinalizers=code
+internal/effect.ts	3819	3824	3	changed	code	internal/effect.ts	3986	3991		runtime-code	143:code	scopeCloseFinalizers=code
+internal/effect.ts	3819	3826	2	changed	code	internal/effect.ts	3986	3993		runtime-code	143:code	scopeCloseFinalizers=code
+internal/effect.ts	3820	3820	5	changed	code	internal/effect.ts	3987	3987		runtime-code	143:code	scopeCloseFinalizers=code
+internal/effect.ts	3823	3824	1	same		internal/effect.ts	3990	3991	167	runtime-code		scopeCloseFinalizers=code
+internal/effect.ts	3823	3826	5	same		internal/effect.ts	3990	3993	167	runtime-code		scopeCloseFinalizers=code
+internal/effect.ts	3826	3826	10	same		internal/effect.ts	3993	3993	167	runtime-code		scopeCloseFinalizers=code
+internal/effect.ts	3833	3844	4	changed	code	internal/effect.ts	4001	4009		runtime-code	144:code,145:code,146:code	scopeForkUnsafe=code
+internal/effect.ts	3834	3844	3	changed	code	internal/effect.ts	4001	4009		runtime-code	144:code,145:code,146:code	scopeForkUnsafe=code
+internal/effect.ts	3841	3842	1	changed	code	internal/effect.ts	4007	4008		runtime-code	146:code	scopeForkUnsafe=code
+internal/effect.ts	3846	3858	5	same		internal/effect.ts	4011	4023	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3847	3858	4	same		internal/effect.ts	4012	4023	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3849	3849	5	same		internal/effect.ts	4014	4014	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3851	3853	7	same		internal/effect.ts	4016	4018	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3853	3853	1	same		internal/effect.ts	4018	4018	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3855	3855	1	same		internal/effect.ts	4020	4020	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3855	3856	3	same		internal/effect.ts	4020	4021	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3856	3856	1	same		internal/effect.ts	4021	4021	165	runtime-code		scopeAddFinalizerExit=same
+internal/effect.ts	3866	3888	1	changed	code	internal/effect.ts	4032	4050		runtime-code	147:code,148:erased	scopeAddFinalizerUnsafe=code
+internal/effect.ts	3890	3904	3	changed	code	internal/effect.ts	4053	4067		runtime-code	149:code,150:code,151:code	scopeRemoveFinalizerUnsafe=code
+internal/effect.ts	3914	3922	5	changed	code	internal/effect.ts	4070	4084		runtime-code	152:code,153:code	scopeMakeUnsafe=code;constScopeEmpty=same
+internal/effect.ts	3929	3929	4	same		internal/effect.ts	4091	4091	162	runtime-code		scope=same
+internal/effect.ts	3932	3935	1	same		internal/effect.ts	4094	4097	162	runtime-code		provideScope=same
+internal/effect.ts	3937	3947	1	changed	code	internal/effect.ts	4100	4110		runtime-code	154:code,155:code	scoped=code
+internal/effect.ts	3938	3948	6	changed	code	internal/effect.ts	4100	4110		runtime-code	154:code,155:code	scoped=code
+internal/effect.ts	3942	3942	4	same		internal/effect.ts	4104	4104	162	runtime-code		scoped=code
+internal/effect.ts	3944	3947	7	changed	code	internal/effect.ts	4106	4110		runtime-code	155:code	scoped=code
+internal/effect.ts	3945	3945	2	same		internal/effect.ts	4107	4107	162	runtime-code		scoped=code
+internal/effect.ts	3960	3960	2	same-comment		internal/effect.ts	4123	4123	163	runtime-code		
+internal/effect.ts	3960	3968	1	same		internal/effect.ts	4123	4131	163	runtime-code		scopedWith=same
+internal/effect.ts	3966	3966	3	same		internal/effect.ts	4129	4129	163	runtime-code		scopedWith=same
+internal/effect.ts	3966	3967	2	same		internal/effect.ts	4129	4130	163	runtime-code		scopedWith=same
+internal/effect.ts	3967	3967	4	same		internal/effect.ts	4130	4130	163	runtime-code		scopedWith=same
+internal/effect.ts	3970	3987	1	same		internal/effect.ts	4133	4150	163	runtime-code		acquireRelease=same
+internal/effect.ts	3971	3987	6	same		internal/effect.ts	4134	4150	163	runtime-code		acquireRelease=same
+internal/effect.ts	3971	4000	4	same		internal/effect.ts	4134	4163	163	runtime-code		acquireRelease=same;addFinalizer=same
+internal/effect.ts	3973	3973	5	same		internal/effect.ts	4136	4136	163	runtime-code		acquireRelease=same
+internal/effect.ts	3976	3976	2	same		internal/effect.ts	4139	4139	163	runtime-code		acquireRelease=same
+internal/effect.ts	3977	3977	1	same		internal/effect.ts	4140	4140	163	runtime-code		acquireRelease=same
+internal/effect.ts	3977	3986	3	same		internal/effect.ts	4140	4149	163	runtime-code		acquireRelease=same
+internal/effect.ts	3978	3978	2	same		internal/effect.ts	4141	4141	163	runtime-code		acquireRelease=same
+internal/effect.ts	3978	3986	2	same		internal/effect.ts	4141	4149	163	runtime-code		acquireRelease=same
+internal/effect.ts	3983	3983	8	same		internal/effect.ts	4146	4146	163	runtime-code		acquireRelease=same
+internal/effect.ts	4001	4029	1	changed	code	internal/effect.ts	4164	4197		runtime-code	156:code,157:code,158:code,159:code,160:erased,161:code,162:erased,163:code	onExitPrimitive=code
+internal/effect.ts	4002	4028	1	changed	code	internal/effect.ts	4164	4196		runtime-code	156:code,157:code,158:code,159:code,160:erased,161:code,162:erased,163:code	onExitPrimitive=code
+internal/effect.ts	4006	4006	2	changed	code	internal/effect.ts	4164	4165		runtime-code	156:code	onExitPrimitive=code
+internal/effect.ts	4013	4028	1	changed	code	internal/effect.ts	4171	4196		runtime-code	159:code,160:erased,161:code,162:erased,163:code	onExitPrimitive=code
+internal/effect.ts	4019	4030	4	changed	code	internal/effect.ts	4177	4197		runtime-code	160:erased,161:code,162:erased,163:code	onExitPrimitive=code
+internal/effect.ts	4021	4021	8	changed	code	internal/effect.ts	4179	4184		runtime-code	161:code	onExitPrimitive=code
+internal/effect.ts	4021	4029	2	changed	code	internal/effect.ts	4179	4197		runtime-code	161:code,162:erased,163:code	onExitPrimitive=code
+internal/effect.ts	4023	4028	4	changed	code	internal/effect.ts	4186	4196		runtime-code	162:erased,163:code	onExitPrimitive=code
+internal/effect.ts	4043	4057	4	same		internal/effect.ts	4238	4252	195	runtime-code		ensuring=same
+internal/effect.ts	4217	4225	1	same		internal/effect.ts	4412	4420	195	runtime-code		acquireDisposable=same
+internal/effect.ts	4302	4310	6	same		internal/effect.ts	4550	4558	248	runtime-code		uninterruptible=same
+internal/effect.ts	4302	4320	2	same		internal/effect.ts	4550	4568	248	runtime-code		uninterruptible=same;setInterruptible=same
+internal/effect.ts	4312	4319	2	same		internal/effect.ts	4560	4567	248	runtime-code		setInterruptible=same
+internal/effect.ts	4312	4320	1	same		internal/effect.ts	4560	4568	248	runtime-code		setInterruptible=same
+internal/effect.ts	4312	4322	1	same		internal/effect.ts	4560	4570	248	runtime-code		setInterruptible=same;setInterruptibleTrue=same;setInterruptibleFalse=same
+internal/effect.ts	4314	4319	1	same		internal/effect.ts	4562	4567	248	runtime-code		setInterruptible=same
+internal/effect.ts	4316	4318	1	same		internal/effect.ts	4564	4566	248	runtime-code		setInterruptible=same
+internal/effect.ts	4324	4328	1	same		internal/effect.ts	4572	4576	248	runtime-code		setFiberInterruptible=same
+internal/effect.ts	4331	4352	4	same		internal/effect.ts	4607	4628	276	runtime-code		interruptible=same;uninterruptibleMask=same
+internal/effect.ts	4340	4351	1	same		internal/effect.ts	4616	4627	276	runtime-code		uninterruptibleMask=same
+internal/effect.ts	4383	4383	1	same		internal/effect.ts	4659	4659	276	runtime-code		all=same
+internal/effect.ts	4450	4470	4	same		internal/effect.ts	4726	4746	276	runtime-code		reduce=same
+internal/effect.ts	4623	4645	1	same		internal/effect.ts	4899	4921	276	runtime-code		whileLoop=same
+internal/effect.ts	4624	4645	2	same		internal/effect.ts	4900	4921	276	runtime-code		whileLoop=same
+internal/effect.ts	4630	4644	1	same		internal/effect.ts	4906	4920	276	runtime-code		whileLoop=same
+internal/effect.ts	4648	4690	1	changed	code	internal/effect.ts	4924	4963		runtime-code	189:code	forEach=code
+internal/effect.ts	4675	4677	1	changed	code	internal/effect.ts	4951	4951		runtime-code	189:code	forEach=code
+internal/effect.ts	4851	4851	3	same		internal/effect.ts	5117	5117	266	runtime-code		iterateEagerImpl=absent
+internal/effect.ts	4950	4951	3	same		internal/effect.ts	5203	5204	253	runtime-code		forEachConcurrent=code
+internal/effect.ts	5227	5261	1	same		internal/effect.ts	5480	5514	253	runtime-code		forkChild=same
+internal/effect.ts	5228	5284	4	changed	code	internal/effect.ts	5481	5539		runtime-code	211:code,212:code	forkChild=same;forkUnsafe=code
+internal/effect.ts	5253	5253	5	same		internal/effect.ts	5506	5506	253	runtime-code		forkChild=same
+internal/effect.ts	5263	5284	1	changed	code	internal/effect.ts	5517	5539		runtime-code	211:code,212:code	forkUnsafe=code
+internal/effect.ts	5264	5269	1	same		internal/effect.ts	5517	5522	253	runtime-code		forkUnsafe=code
+internal/effect.ts	5264	5272	1	same		internal/effect.ts	5517	5525	253	runtime-code		forkUnsafe=code
+internal/effect.ts	5264	5284	11	changed	code	internal/effect.ts	5517	5539		runtime-code	211:code,212:code	forkUnsafe=code
+internal/effect.ts	5270	5271	2	same		internal/effect.ts	5523	5524	253	runtime-code		forkUnsafe=code
+internal/effect.ts	5272	5272	1	same		internal/effect.ts	5525	5525	253	runtime-code		forkUnsafe=code
+internal/effect.ts	5273	5273	2	same		internal/effect.ts	5526	5526	253	runtime-code		forkUnsafe=code
+internal/effect.ts	5274	5278	2	changed	code	internal/effect.ts	5527	5533		runtime-code	211:code	forkUnsafe=code
+internal/effect.ts	5277	5277	5	same		internal/effect.ts	5532	5532	255	runtime-code		forkUnsafe=code
+internal/effect.ts	5279	5279	4	same		internal/effect.ts	5534	5534	255	runtime-code		forkUnsafe=code
+internal/effect.ts	5279	5281	2	changed	code	internal/effect.ts	5534	5536		runtime-code	212:code	forkUnsafe=code
+internal/effect.ts	5279	5282	9	changed	code	internal/effect.ts	5534	5537		runtime-code	212:code	forkUnsafe=code
+internal/effect.ts	5280	5281	3	changed	code	internal/effect.ts	5535	5536		runtime-code	212:code	forkUnsafe=code
+internal/effect.ts	5281	5281	2	changed	code	internal/effect.ts	5536	5536		runtime-code	212:code	forkUnsafe=code
+internal/effect.ts	5286	5311	1	same		internal/effect.ts	5541	5566	255	runtime-code		forkDetach=same
+internal/effect.ts	5287	5334	4	changed	code	internal/effect.ts	5542	5591		runtime-code	213:code,214:code	forkDetach=same;awaitAllChildren=code
+internal/effect.ts	5288	5294	2	same		internal/effect.ts	5543	5549	255	runtime-code		forkDetach=same
+internal/effect.ts	5291	5291	15	same		internal/effect.ts	5546	5546	255	runtime-code		forkDetach=same
+internal/effect.ts	5304	5304	14	same		internal/effect.ts	5559	5559	255	runtime-code		forkDetach=same
+internal/effect.ts	5313	5334	1	changed	code	internal/effect.ts	5569	5591		runtime-code	213:code,214:code	awaitAllChildren=code
+internal/effect.ts	5314	5322	1	changed	code	internal/effect.ts	5569	5578		runtime-code	213:code	awaitAllChildren=code
+internal/effect.ts	5314	5333	1	changed	code	internal/effect.ts	5569	5590		runtime-code	213:code,214:code	awaitAllChildren=code
+internal/effect.ts	5318	5318	3	same		internal/effect.ts	5573	5573	255	runtime-code		awaitAllChildren=code
+internal/effect.ts	5318	5322	3	changed	code	internal/effect.ts	5573	5578		runtime-code	213:code	awaitAllChildren=code
+internal/effect.ts	5319	5333	4	changed	code	internal/effect.ts	5574	5590		runtime-code	213:code,214:code	awaitAllChildren=code
+internal/effect.ts	5322	5331	1	changed	code	internal/effect.ts	5578	5588		runtime-code	214:code	awaitAllChildren=code
+internal/effect.ts	5336	5379	1	same		internal/effect.ts	5593	5636	257	runtime-code		forkIn=same
+internal/effect.ts	5337	5379	4	same		internal/effect.ts	5594	5636	257	runtime-code		forkIn=same
+internal/effect.ts	5364	5378	6	same		internal/effect.ts	5621	5635	257	runtime-code		forkIn=same
+internal/effect.ts	5366	5366	16	same		internal/effect.ts	5623	5623	257	runtime-code		forkIn=same
+internal/effect.ts	5366	5372	6	same		internal/effect.ts	5623	5629	257	runtime-code		forkIn=same
+internal/effect.ts	5366	5376	7	same		internal/effect.ts	5623	5633	257	runtime-code		forkIn=same
+internal/effect.ts	5367	5367	2	same		internal/effect.ts	5624	5624	257	runtime-code		forkIn=same
+internal/effect.ts	5368	5368	5	same		internal/effect.ts	5625	5625	257	runtime-code		forkIn=same
+internal/effect.ts	5369	5371	2	same		internal/effect.ts	5626	5628	257	runtime-code		forkIn=same
+internal/effect.ts	5369	5372	1	same		internal/effect.ts	5626	5629	257	runtime-code		forkIn=same
+internal/effect.ts	5370	5370	6	same		internal/effect.ts	5627	5627	257	runtime-code		forkIn=same
+internal/effect.ts	5370	5372	3	same		internal/effect.ts	5627	5629	257	runtime-code		forkIn=same
+internal/effect.ts	5372	5372	1	same		internal/effect.ts	5629	5629	257	runtime-code		forkIn=same
+internal/effect.ts	5374	5374	4	same		internal/effect.ts	5631	5631	257	runtime-code		forkIn=same
+internal/effect.ts	5381	5406	4	same		internal/effect.ts	5638	5663	257	runtime-code		forkScoped=same
+internal/effect.ts	5382	5406	4	same		internal/effect.ts	5639	5663	257	runtime-code		forkScoped=same
+internal/effect.ts	5400	5400	1	same		internal/effect.ts	5657	5657	257	runtime-code		forkScoped=same
+internal/effect.ts	5400	5406	9	same		internal/effect.ts	5657	5663	257	runtime-code		forkScoped=same
+internal/effect.ts	5406	5406	12	same		internal/effect.ts	5663	5663	257	runtime-code		forkScoped=same
+internal/effect.ts	5410	5430	2	same		internal/effect.ts	5667	5687	257	runtime-code		runForkWith=same
+internal/effect.ts	5412	5438	1	same		internal/effect.ts	5669	5695	257	runtime-code		runForkWith=same
+internal/effect.ts	5413	5438	2	same		internal/effect.ts	5670	5695	257	runtime-code		runForkWith=same
+internal/effect.ts	5423	5423	1	same		internal/effect.ts	5680	5680	257	runtime-code		runForkWith=same
+internal/effect.ts	5425	5433	2	same		internal/effect.ts	5682	5690	257	runtime-code		runForkWith=same
+internal/effect.ts	5427	5429	1	same		internal/effect.ts	5684	5686	257	runtime-code		runForkWith=same
+internal/effect.ts	5440	5461	1	same		internal/effect.ts	5697	5718	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5440	5462	1	same		internal/effect.ts	5697	5719	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5447	5461	6	same		internal/effect.ts	5704	5718	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5449	5449	3	same		internal/effect.ts	5706	5706	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5451	5452	2	same		internal/effect.ts	5708	5709	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5454	5454	3	same		internal/effect.ts	5711	5711	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5457	5457	5	same		internal/effect.ts	5714	5714	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5457	5460	6	same		internal/effect.ts	5714	5717	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5458	5458	5	same		internal/effect.ts	5715	5715	257	runtime-code		fiberRunIn=same
+internal/effect.ts	5467	5467	1	same		internal/effect.ts	5724	5724	257	runtime-code		runFork=same
+internal/effect.ts	5469	5488	1	same		internal/effect.ts	5726	5745	257	runtime-code		runCallbackWith=same
+internal/effect.ts	5470	5490	4	same		internal/effect.ts	5727	5747	257	runtime-code		runCallbackWith=same
+internal/effect.ts	5491	5491	1	same		internal/effect.ts	5748	5748	257	runtime-code		runCallback=same
+internal/effect.ts	5493	5505	1	same		internal/effect.ts	5750	5762	257	runtime-code		runPromiseExitWith=same
+internal/effect.ts	5493	5525	1	same		internal/effect.ts	5750	5782	257	runtime-code		runPromiseExitWith=same;runPromiseExit=same;runPromiseWith=same
+internal/effect.ts	5494	5505	2	same		internal/effect.ts	5751	5762	257	runtime-code		runPromiseExitWith=same
+internal/effect.ts	5500	5530	1	same		internal/effect.ts	5757	5787	257	runtime-code		runPromiseExitWith=same;runPromiseExit=same;runPromiseWith=same;runPromise=same
+internal/effect.ts	5510	5525	2	same		internal/effect.ts	5767	5782	257	runtime-code		runPromiseWith=same
+internal/effect.ts	5535	5545	3	same		internal/effect.ts	5792	5802	257	runtime-code		runSyncExitWith=same
+internal/effect.ts	5536	5545	3	same		internal/effect.ts	5793	5802	257	runtime-code		runSyncExitWith=same
+internal/effect.ts	5539	5539	48	same		internal/effect.ts	5796	5796	257	runtime-code		runSyncExitWith=same
+internal/effect.ts	5542	5542	5	same		internal/effect.ts	5799	5799	257	runtime-code		runSyncExitWith=same
+internal/effect.ts	5543	5543	1	same		internal/effect.ts	5800	5800	257	runtime-code		runSyncExitWith=same
+internal/effect.ts	5575	5590	2	same		internal/effect.ts	5832	5847	257	runtime-code		Latch.constructor=same;Latch.scheduleUnsafe=same
+internal/effect.ts	5583	5583	2	same		internal/effect.ts	5840	5840	257	runtime-code		Latch.scheduleUnsafe=same
+internal/effect.ts	5591	5591	1	same		internal/effect.ts	5848	5848	257	runtime-code		Latch.scheduleUnsafe=same
+internal/effect.ts	5591	5598	2	same		internal/effect.ts	5848	5855	257	runtime-code		Latch.scheduleUnsafe=same;Latch.flushScheduled=same
+internal/effect.ts	6043	6043	1	same		internal/effect.ts	6302	6302	259	runtime-code		ClockImpl.currentTimeMillis=same
+internal/effect.ts	6052	6066	5	same		internal/effect.ts	6311	6325	259	runtime-code		ClockImpl.sleep=same;ClockImpl.sleepMillis=same
+internal/effect.ts	6054	6054	1	same		internal/effect.ts	6313	6313	259	runtime-code		ClockImpl.sleep=same
+internal/effect.ts	6054	6055	2	same		internal/effect.ts	6313	6314	259	runtime-code		ClockImpl.sleep=same;ClockImpl.sleepMillis=same
+internal/effect.ts	6057	6062	2	same		internal/effect.ts	6316	6321	259	runtime-code		ClockImpl.sleepMillis=same
+internal/effect.ts	6062	6062	1	same		internal/effect.ts	6321	6321	259	runtime-code		ClockImpl.sleepMillis=same
+internal/effect.ts	6063	6063	6	same		internal/effect.ts	6322	6322	259	runtime-code		ClockImpl.sleepMillis=same
+internal/effect.ts	6114	6116	5	same		internal/effect.ts	6373	6375	259	runtime-code		sleep=same
+internal/effect.ts	6118	6118	4	same		internal/effect.ts	6377	6377	259	runtime-code		currentTimeMillis=same
+internal/effect.ts	6184	6196	1	same		internal/effect.ts	6443	6455	259	runtime-code		AsyncFiberError.AsyncFiberErrorTypeId=same;AsyncFiberError.constructor=same
+internal/effect.ts	6656	6658	4	same		internal/effect.ts	6925	6927	269	runtime-code		interruptChildrenPatch=same
+internal/effect.ts	6670	6696	1	changed	erased	internal/effect.ts	6940	6965		runtime-code	236:erased	withErrorReporting=erased
+internal/layer.ts	0	0	1	file-only		internal/layer.ts				identical		
+internal/layer.ts	8	22	10	same		internal/layer.ts	8	22	0	identical		provideLayer=same
+internal/layer.ts	14	14	1	same		internal/layer.ts	14	14	0	identical		provideLayer=same
+internal/layer.ts	15	15	1	same		internal/layer.ts	15	15	0	identical		provideLayer=same
+internal/layer.ts	15	21	6	same		internal/layer.ts	15	21	0	identical		provideLayer=same
+internal/layer.ts	20	20	3	same		internal/layer.ts	20	20	0	identical		provideLayer=same
+internal/schedule.ts	51	80	1	same		internal/schedule.ts	51	80	0	identical		retryOrElse=same
+internal/schedule.ts	131	176	1	same		internal/schedule.ts	131	176	0	identical		retry=same
+internal/schema/fromRepresentation.ts	0	0	1	file-only		internal/schema/fromRepresentation.ts				runtime-code		
+internal/schema/fromRepresentation.ts	19	31	2	same		internal/schema/fromRepresentation.ts	21	33	2	runtime-code		ReferenceSlot.body=same;ReferenceSlot.resolving=same;ReferenceSlot.wrapper=same;ReferenceSlot.constructor=same
+internal/schema/fromRepresentation.ts	64	87	3	same		internal/schema/fromRepresentation.ts	66	89	2	runtime-code		revivePersisted=code
+internal/schema/fromRepresentation.ts	67	68	3	same		internal/schema/fromRepresentation.ts	69	70	2	runtime-code		revivePersisted=code
+internal/schema/fromRepresentation.ts	76	77	2	same		internal/schema/fromRepresentation.ts	78	79	2	runtime-code		revivePersisted=code
+internal/schema/toRepresentation.ts	0	0	1	file-only		internal/schema/toRepresentation.ts				runtime-code		
+internal/schema/toRepresentation.ts	67	75	1	same		internal/schema/toRepresentation.ts	67	75	0	runtime-code		toRepresentations=code
+internal/schema/toRepresentation.ts	172	177	2	same		internal/schema/toRepresentation.ts	172	177	0	runtime-code		toRepresentations=code
+internal/schema/toRepresentation.ts	174	174	4	same		internal/schema/toRepresentation.ts	174	174	0	runtime-code		toRepresentations=code
+internal/schema/toRepresentation.ts	175	175	4	same		internal/schema/toRepresentation.ts	175	175	0	runtime-code		toRepresentations=code
+internal/schema/toRepresentation.ts	351	357	3	same		internal/schema/toRepresentation.ts	351	357	0	runtime-code		toRepresentations=code
+testing/TestClock.ts	201	204	1	same		testing/TestClock.ts	201	204	0	identical		SleepOrder=same
+testing/TestClock.ts	249	253	2	same		testing/TestClock.ts	249	253	0	identical		make=same
+testing/TestClock.ts	257	257	2	same		testing/TestClock.ts	257	257	0	identical		make=same
+testing/TestClock.ts	262	262	1	same		testing/TestClock.ts	262	262	0	identical		make=same
+testing/TestClock.ts	327	338	3	same		testing/TestClock.ts	327	338	0	identical		make=same
+testing/TestClock.ts	337	337	4	same		testing/TestClock.ts	337	337	0	identical		make=same
+testing/TestClock.ts	345	345	1	same		testing/TestClock.ts	345	345	0	identical		make=same
+testing/TestClock.ts	345	375	4	same		testing/TestClock.ts	345	375	0	identical		make=same
+testing/TestClock.ts	355	355	2	same		testing/TestClock.ts	355	355	0	identical		make=same
+testing/TestClock.ts	361	367	3	same		testing/TestClock.ts	361	367	0	identical		make=same
+testing/TestClock.ts	362	362	1	same		testing/TestClock.ts	362	362	0	identical		make=same
+testing/TestClock.ts	365	365	2	same		testing/TestClock.ts	365	365	0	identical		make=same
+testing/TestClock.ts	366	366	2	same		testing/TestClock.ts	366	366	0	identical		make=same
+testing/TestClock.ts	368	368	4	same		testing/TestClock.ts	368	368	0	identical		make=same
+testing/TestClock.ts	375	375	1	same		testing/TestClock.ts	375	375	0	identical		make=same
+testing/TestClock.ts	377	381	3	same		testing/TestClock.ts	377	381	0	identical		make=same
+testing/TestClock.ts	378	378	1	same		testing/TestClock.ts	378	378	0	identical		make=same
+testing/TestClock.ts	383	385	1	same		testing/TestClock.ts	383	385	0	identical		make=same
+testing/TestClock.ts	507	507	1	same		testing/TestClock.ts	507	507	0	identical		adjust=same
+unstable/ai/McpServer.ts	1609	1609	1	same		ai/McpServer.ts	1971	1971	362	runtime-code		toolkit=erased
+unstable/ai/McpServer.ts	1882	1882	1	same		ai/McpServer.ts	2250	2250	368	runtime-code		resource=erased
+unstable/ai/McpServer.ts	2106	2106	1	same		ai/McpServer.ts	2490	2490	384	runtime-code		prompt=erased
+unstable/ai/Tool.ts	1204	1204	1	same		ai/Tool.ts	1264	1264	60	runtime-code		make=same
+unstable/http/HttpRouter.ts	853	857	3	same		http/HttpRouter.ts	902	906	49	runtime-code		Provided=same
+unstable/http/HttpTraceContext.ts	97	97	2	changed	code	http/HttpTraceContext.ts	102	102		runtime-code	1:code	b3=code
+unstable/http/HttpTraceContext.ts	119	119	1	changed	code	http/HttpTraceContext.ts	125	126		runtime-code	2:code	xb3=code
+unstable/httpapi/HttpApiBuilder.ts	63	63	2	same		http-api/HttpApiBuilder.ts	66	66	3	runtime-code		layer=code
+unstable/httpapi/HttpApiBuilder.ts	95	98	1	same		http-api/HttpApiBuilder.ts	98	101	3	runtime-code		layer=code
+unstable/httpapi/HttpApiBuilder.ts	126	126	3	same		http-api/HttpApiBuilder.ts	130	130	4	runtime-code		group=code
+unstable/httpapi/HttpApiBuilder.ts	126	131	1	same		http-api/HttpApiBuilder.ts	130	135	4	runtime-code		group=code
+unstable/httpapi/HttpApiBuilder.ts	137	141	2	same		http-api/HttpApiBuilder.ts	141	145	4	runtime-code		group=code
+unstable/httpapi/HttpApiBuilder.ts	139	139	2	same		http-api/HttpApiBuilder.ts	143	143	4	runtime-code		group=code
+unstable/httpapi/HttpApiBuilder.ts	140	140	2	same		http-api/HttpApiBuilder.ts	144	144	4	runtime-code		group=code
+unstable/httpapi/HttpApiBuilder.ts	169	179	3	same		http-api/HttpApiBuilder.ts	219	229	50	runtime-code		HandlerRequirements=same
+unstable/httpapi/HttpApiBuilder.ts	179	179	1	same		http-api/HttpApiBuilder.ts	229	229	50	runtime-code		HandlerRequirements=same
+unstable/httpapi/HttpApiBuilder.ts	219	221	3	same		http-api/HttpApiBuilder.ts	271	273	52	runtime-code		NotHandledIdentifier=same
+unstable/httpapi/HttpApiBuilder.ts	241	252	3	same		http-api/HttpApiBuilder.ts	293	304	52	runtime-code		MissingHandlerNames=same;ValidateHandlersReturn=same
+unstable/httpapi/HttpApiBuilder.ts	246	252	1	same		http-api/HttpApiBuilder.ts	298	304	52	runtime-code		ValidateHandlersReturn=same
+unstable/httpapi/HttpApiBuilder.ts	277	277	1	same		http-api/HttpApiBuilder.ts	334	334	57	runtime-code		Handlers=same
+unstable/httpapi/HttpApiBuilder.ts	283	296	2	same		http-api/HttpApiBuilder.ts	340	353	57	runtime-code		Handlers=same
+unstable/httpapi/HttpApiBuilder.ts	286	286	3	same		http-api/HttpApiBuilder.ts	343	343	57	runtime-code		Handlers=same
+unstable/httpapi/HttpApiBuilder.ts	317	325	1	same		http-api/HttpApiBuilder.ts	374	382	57	runtime-code		Handlers=same
+unstable/httpapi/HttpApiBuilder.ts	320	320	3	same		http-api/HttpApiBuilder.ts	377	377	57	runtime-code		Handlers=same
+unstable/httpapi/HttpApiBuilder.ts	441	441	2	same		http-api/HttpApiBuilder.ts	504	504	63	runtime-code		endpoint=code
+unstable/httpapi/HttpApiBuilder.ts	620	620	2	same		http-api/HttpApiBuilder.ts	686	686	66	runtime-code		HandlersProto=same
+unstable/httpapi/HttpApiEndpoint.ts	448	450	1	same		http-api/HttpApiEndpoint.ts	476	478	28	runtime-code		Errors=same
+unstable/httpapi/HttpApiEndpoint.ts	584	586	4	same		http-api/HttpApiEndpoint.ts	629	631	45	runtime-code		Handler=same
+unstable/httpapi/HttpApiEndpoint.ts	586	586	5	same		http-api/HttpApiEndpoint.ts	631	631	45	runtime-code		Handler=same
+unstable/httpapi/HttpApiEndpoint.ts	720	724	4	same		http-api/HttpApiEndpoint.ts	777	781	57	runtime-code		ExcludeProvided=same
+unstable/httpapi/HttpApiEndpoint.ts	1134	1134	1	same		http-api/HttpApiEndpoint.ts	1204	1204	70	runtime-code		getPayload=same
+unstable/httpapi/HttpApiEndpoint.ts	1134	1306	1	changed	code	http-api/HttpApiEndpoint.ts	1204	1376		runtime-code	11:code,12:code,13:code	getPayload=same;reservedStreamFailureEvent=code;getSuccessResponse=same;transformResponseSchema=code;getErrorResponse=same;validateSuccessResponse=same;getStatusEntry=same;validateResponseExclusivity=same;validateStreamSuccess=same
+unstable/httpapi/HttpApiEndpoint.ts	1137	1137	1	same		http-api/HttpApiEndpoint.ts	1207	1207	70	runtime-code		getPayload=same
+unstable/httpapi/HttpApiEndpoint.ts	1180	1180	1	same		http-api/HttpApiEndpoint.ts	1250	1250	70	runtime-code		getErrorResponse=same
+unstable/httpapi/HttpApiEndpoint.ts	1201	1201	2	same		http-api/HttpApiEndpoint.ts	1271	1271	70	runtime-code		validateSuccessResponse=same
+unstable/httpapi/HttpApiEndpoint.ts	1206	1206	3	same		http-api/HttpApiEndpoint.ts	1276	1276	70	runtime-code		validateSuccessResponse=same
+unstable/httpapi/HttpApiEndpoint.ts	1209	1209	2	same		http-api/HttpApiEndpoint.ts	1279	1279	70	runtime-code		validateSuccessResponse=same
+unstable/httpapi/HttpApiEndpoint.ts	1219	1219	2	same		http-api/HttpApiEndpoint.ts	1289	1289	70	runtime-code		validateSuccessResponse=same
+unstable/httpapi/HttpApiEndpoint.ts	1225	1225	1	same		http-api/HttpApiEndpoint.ts	1295	1295	70	runtime-code		validateSuccessResponse=same
+unstable/httpapi/HttpApiEndpoint.ts	1258	1299	1	same		http-api/HttpApiEndpoint.ts	1328	1369	70	runtime-code		validateResponseExclusivity=same
+unstable/httpapi/HttpApiEndpoint.ts	1290	1290	1	same		http-api/HttpApiEndpoint.ts	1360	1360	70	runtime-code		validateResponseExclusivity=same
+unstable/httpapi/HttpApiEndpoint.ts	1303	1303	1	same		http-api/HttpApiEndpoint.ts	1373	1373	70	runtime-code		validateStreamSuccess=same
+unstable/httpapi/HttpApiMiddleware.ts	199	199	1	same		http-api/HttpApiMiddleware.ts	211	211	12	runtime-code		ApplyServices=same
+unstable/observability/OtlpLogger.ts	144	158	1	changed	code	observability/OtlpLogger.ts	148	162		runtime-code	3:code,4:code	layerFromConfig=code
+unstable/observability/OtlpMetrics.ts	506	524	1	changed	code	observability/OtlpMetrics.ts	512	530		runtime-code	6:code,7:code,8:code,9:code	layerFromConfig=code
+unstable/observability/OtlpResource.ts	102	115	1	changed	code	observability/OtlpResource.ts	106	120		runtime-code	1:code,2:code,3:code	fromConfig=code
+unstable/observability/OtlpResource.ts	111	111	1	changed	code	observability/OtlpResource.ts	116	116		runtime-code	3:code	fromConfig=code
+unstable/observability/OtlpResource.ts	131	131	1	same		observability/OtlpResource.ts	136	136	5	runtime-code		fromConfig=code
+unstable/observability/OtlpTracer.ts	161	179	1	changed	code	observability/OtlpTracer.ts	157	175		runtime-code	7:code,8:code,9:code,10:code	layerFromConfig=code
+unstable/observability/internal/otlpEnv.ts	16	39	1	changed	code	observability/internal/otlpEnv.ts	13	36		runtime-code	4:code,5:code,6:code,7:code	headers=code;endpoint=code;exporters=code
+unstable/persistence/KeyValueStore.ts	0	0	4	file-only		persistence/KeyValueStore.ts				runtime-code		
+unstable/persistence/KeyValueStore.ts	38	95	1	same		persistence/KeyValueStore.ts	40	97	2	runtime-code		KeyValueStore=same
+unstable/persistence/KeyValueStore.ts	40	43	2	same		persistence/KeyValueStore.ts	42	45	2	runtime-code		KeyValueStore=same
+unstable/persistence/KeyValueStore.ts	50	53	2	same		persistence/KeyValueStore.ts	52	55	2	runtime-code		KeyValueStore=same
+unstable/persistence/KeyValueStore.ts	55	58	2	same		persistence/KeyValueStore.ts	57	60	2	runtime-code		KeyValueStore=same
+unstable/persistence/KeyValueStore.ts	86	89	2	same		persistence/KeyValueStore.ts	88	91	2	runtime-code		KeyValueStore=same
+unstable/persistence/KeyValueStore.ts	182	195	1	same		persistence/KeyValueStore.ts	187	201	5	runtime-code		KeyValueStoreError.ErrorTypeId=same
+unstable/persistence/KeyValueStore.ts	183	195	1	same		persistence/KeyValueStore.ts	188	201	5	runtime-code		KeyValueStoreError.ErrorTypeId=same
+unstable/persistence/KeyValueStore.ts	208	208	1	same		persistence/KeyValueStore.ts	215	215	7	runtime-code		KeyValueStore#2=same
+unstable/persistence/KeyValueStore.ts	208	211	1	same		persistence/KeyValueStore.ts	215	218	7	runtime-code		KeyValueStore#2=same
+unstable/persistence/KeyValueStore.ts	331	352	3	changed	code	persistence/KeyValueStore.ts	344	364		runtime-code	6:code	layerMemory=code
+unstable/sql/SqlClient.ts	0	0	3	file-only		sql/SqlClient.ts				runtime-code		
+unstable/sql/SqlClient.ts	12	12	1	same		sql/SqlClient.ts	14	14	2	runtime-code		import ../../Context.ts=absent
+unstable/sql/SqlClient.ts	30	100	1	same		sql/SqlClient.ts	33	105	3	runtime-code		TypeId=same;SqlClient=same;SqlClient#2=same
+unstable/sql/SqlClient.ts	39	84	2	same		sql/SqlClient.ts	43	88	4	runtime-code		SqlClient=same
+unstable/sql/SqlClient.ts	95	95	4	same		sql/SqlClient.ts	100	100	5	runtime-code		SqlClient#2=same
+unstable/sql/SqlError.ts	31	329	1	same		sql/SqlError.ts	33	363	2	moved-only		ConnectionError.ReasonTypeId=same;get ConnectionError.isRetryable=same;AuthenticationError.ReasonTypeId=same;get AuthenticationError.isRetryable=same;AuthorizationError.ReasonTypeId=same;get AuthorizationError.isRetryable=same;SqlSyntaxError.ReasonTypeId=same;get SqlSyntaxError.isRetryable=same;UniqueViolationFields=same;UniqueViolation.ReasonTypeId=same;get UniqueViolation.isRetryable=same;ConstraintError.ReasonTypeId=same;get ConstraintError.isRetryable=same;DeadlockError.ReasonTypeId=same;get DeadlockError.isRetryable=same;SerializationError.ReasonTypeId=same;get SerializationError.isRetryable=same;LockTimeoutError.ReasonTypeId=same;get LockTimeoutError.isRetryable=same;StatementTimeoutError.ReasonTypeId=same;get StatementTimeoutError.isRetryable=same;UnknownError.ReasonTypeId=same;get UnknownError.isRetryable=same
+unstable/sql/SqlError.ts	409	411	1	same		sql/SqlError.ts	449	451	40	moved-only		get SqlError.message=same
+unstable/sql/Statement.ts	0	0	4	file-only		sql/Statement.ts				runtime-code		
+unstable/sql/Statement.ts	71	71	1	same		sql/Statement.ts	76	76	5	runtime-code		Statement=same
+unstable/sql/Statement.ts	431	445	1	same		sql/Statement.ts	478	492	47	runtime-code		Constructor=same
+unstable/sql/Statement.ts	442	445	3	same		sql/Statement.ts	489	492	47	runtime-code		Constructor=same
+unstable/sql/Statement.ts	513	542	1	changed	code	sql/Statement.ts	560	591		runtime-code	5:code	Constructor=same;make=code
+unstable/sql/Statement.ts	616	643	1	changed	code	sql/Statement.ts	670	695		runtime-code	8:code	statement=code
+unstable/sql/Statement.ts	648	682	1	same		sql/Statement.ts	702	736	54	runtime-code		join=same
+unstable/sql/Statement.ts	891	891	1	same-comment		sql/Statement.ts	953	953	62	runtime-code		CompilerProto=code
+unstable/sql/Statement.ts	1101	1108	1	same		sql/Statement.ts	1165	1172	64	runtime-code		defaultEscape=same
+unstable/sql/Statement.ts	1383	1391	1	same		sql/Statement.ts	1460	1468	77	runtime-code		StatementProto=code
+unstable/sql/Statement.ts	1394	1399	1	same		sql/Statement.ts	1471	1476	77	runtime-code		StatementProto=code
+unstable/sql/Statement.ts	1515	1515	1	same		sql/Statement.ts	1592	1592	77	runtime-code		escapeSqlite=same

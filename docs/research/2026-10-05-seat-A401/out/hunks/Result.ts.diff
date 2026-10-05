@@ -1,0 +1,7 @@
+# Result.ts (rc.112) against Result.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 30-30 release 30-30 cited ranges 0
+   pin units: TypeId=code
+   release units: TypeId=code
+-    30 const TypeId = "~effect/data/Result"
++    30 const TypeId = "~effect/Result"

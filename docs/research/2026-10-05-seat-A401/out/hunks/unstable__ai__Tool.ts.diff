@@ -1,0 +1,87 @@
+# unstable/ai/Tool.ts (rc.112) against ai/Tool.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [import] pin 25-25 release 26-26 cited ranges 0
+   pin units: import ./AiError.ts=import
+   release units: import ./AiError.ts=import
+-    25 import type * as AiError from "@tree/ai/AiError.ts"
++    26 import * as AiError from "@tree/ai/AiError.ts"
+
+@@ hunk 2 [erased] pin 832-833 release 861-865 cited ranges 0
+   pin units: FailureResult=type-decl
+   release units: FailureResult=type-decl
+-   832 > ? _Config["failureMode"] extends "return" ? _Config["failure"]["Type"] | AiError.AiError
+-   833 : _Config["failure"]["Type"]
++   861 > ? _Config["failureMode"] extends "return" ?
++   862 | _Config["failure"]["Type"]
++   863 | typeof ExecutionFailure.Type
++   864 | AiError.AiError
++   865 : _Config["failure"]["Type"] | typeof ExecutionFailure.Type
+
+@@ hunk 3 [erased] pin 846-885 release 879-883 cited ranges 0
+   pin units: FailureResultEncoded=type-decl; Result=type-decl; ResultEncoded=type-decl
+   release units: FailureResultEncoded=type-decl
+-   846 > ? _Config["failureMode"] extends "return" ? _Config["failure"]["Encoded"] | AiError.AiErrorEncoded
+-   847 : _Config["failure"]["Encoded"]
+-   848 : never
+-   861 export type Result<T> = T extends Tool<
+-   862 infer _Name,
+-   863 infer _Config,
+-   864 infer _Requirements
+-   865 > ? _Config["failureMode"] extends "return" ? Success<T> | Failure<T> | AiError.AiError
+-   866 : Success<T> | Failure<T>
+-   867 : never
+-   880 export type ResultEncoded<T> = T extends Tool<
+-   881 infer _Name,
+-   882 infer _Config,
+-   883 infer _Requirements
+-   884 > ? _Config["failureMode"] extends "return" ? SuccessEncoded<T> | FailureEncoded<T> | AiError.AiErrorEncoded
+-   885 : SuccessEncoded<T> | FailureEncoded<T>
++   879 > ? _Config["failureMode"] extends "return" ?
++   880 | _Config["failure"]["Encoded"]
++   881 | typeof ExecutionFailure.Encoded
++   882 | AiError.AiErrorEncoded
++   883 : _Config["failure"]["Encoded"] | typeof ExecutionFailure.Encoded
+
+@@ hunk 4 [erased] pin before 894 release 893-902 cited ranges 0
+   pin units: 
+   release units: Result=type-decl; ResultEncoded=type-decl
++   893 export type Result<T> = Success<T> | FailureResult<T>
++   902 export type ResultEncoded<T> = SuccessEncoded<T> | FailureResultEncoded<T>
+
+@@ hunk 5 [erased] pin before 941 release 961-966 cited ranges 0
+   pin units: 
+   release units: ParametersEncodingServices=absent
++   961 export type ParametersEncodingServices<T> = T extends Tool<
++   962 infer _Name,
++   963 infer _Config,
++   964 infer _Requirements
++   965 > ? _Config["parameters"]["EncodingServices"]
++   966 : never
+
+@@ hunk 6 [erased] pin before 954 release 995-995 cited ranges 0
+   pin units: 
+   release units: FailureOrigin=absent
++   995 export type FailureOrigin = "parameters" | "handler" | "result"
+
+@@ hunk 7 [erased] pin before 974 release 1023-1023 cited ranges 0
+   pin units: 
+   release units: HandlerResult=type-decl
++  1023 readonly failureOrigin?: FailureOrigin
+
+@@ hunk 8 [code] pin 1054-1054 release 1113-1113 cited ranges 0
+   pin units: Proto=code
+   release units: Proto=code
+-  1054 return clone(this, { parametersSchema })
++  1113 return clone(this, { parametersSchema, jsonSchema: undefined })
+
+@@ hunk 9 [code] pin before 2053 release 2125-2145 cited ranges 0
+   pin units: 
+   release units: ExecutionFailure=absent; failureResultSchema=absent
++  2125 export const ExecutionFailure = Schema.Struct({
++  2126 type: Schema.Literals(["execution-denied", "execution-interrupted"]),
++  2127 reason: Schema.String
++  2128 }).annotate({ identifier: "ToolExecutionFailure" })
++  2142 export const failureResultSchema = <T extends Any>(
++  2143 tool: T
++  2144 ): Schema.Union<readonly [typeof AiError.AiError, T["failureSchema"], typeof ExecutionFailure]> =>
++  2145 Schema.Union([AiError.AiError, tool.failureSchema, ExecutionFailure])

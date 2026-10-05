@@ -1,0 +1,60 @@
+pin_file	js_hunks	js_hunks_that_no_source_hunk_explains	first_such_hunk
+Array.ts	24	0	
+Cache.ts	17	0	
+Cause.ts	1	0	
+Chunk.ts	22	0	
+Clock.ts	0	0	
+Config.ts	34	0	
+ConfigProvider.ts	6	0	
+Context.ts	1	0	
+Data.ts	0	0	
+DateTime.ts	0	0	
+Deferred.ts	2	0	
+Duration.ts	1	0	
+Effect.ts	11	0	
+Exit.ts	0	0	
+Fiber.ts	0	0	
+HashMap.ts	0	0	
+Layer.ts	9	0	
+MutableRef.ts	0	0	
+Option.ts	4	0	
+Pool.ts	37	0	
+PubSub.ts	32	0	
+Queue.ts	39	1	-});
+Ref.ts	0	0	
+Result.ts	1	0	
+Schedule.ts	1	0	
+Scheduler.ts	3	0	
+Schema.ts	250	9	-export function extendTo( | -fields, | +export function extendTo(fields, derive) {
+SchemaAST.ts	175	18	-} | +};
+SchemaGetter.ts	36	0	
+SchemaRepresentation.ts	7	0	
+Scope.ts	0	0	
+Semaphore.ts	0	0	
+Stream.ts	58	0	
+String.ts	3	0	
+Take.ts	0	0	
+Types.ts	0	0	
+internal/core.ts	12	0	
+internal/effect.ts	193	1	-};
+internal/layer.ts	0	0	
+internal/schedule.ts	0	0	
+internal/schema/fromRepresentation.ts	5	0	
+internal/schema/toRepresentation.ts	1	0	
+testing/TestClock.ts	0	0	
+unstable/ai/McpServer.ts	126	0	
+unstable/ai/Tool.ts	3	0	
+unstable/http/HttpRouter.ts	12	1	+});
+unstable/http/HttpTraceContext.ts	3	0	
+unstable/httpapi/HttpApiBuilder.ts	37	0	
+unstable/httpapi/HttpApiEndpoint.ts	13	0	
+unstable/httpapi/HttpApiMiddleware.ts	6	0	
+unstable/observability/OtlpLogger.ts	3	0	
+unstable/observability/OtlpMetrics.ts	5	0	
+unstable/observability/OtlpResource.ts	1	0	
+unstable/observability/OtlpTracer.ts	19	0	
+unstable/observability/internal/otlpEnv.ts	2	0	
+unstable/persistence/KeyValueStore.ts	7	0	
+unstable/sql/SqlClient.ts	11	0	
+unstable/sql/SqlError.ts	0	0	
+unstable/sql/Statement.ts	17	0	

@@ -1,0 +1,2199 @@
+# unstable/ai/McpServer.ts (rc.112) against ai/McpServer.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 17 release 18-18 cited ranges 0
+   pin units: 
+   release units: import ../Deferred.ts=absent
++    18 import * as Deferred from "@tree/Deferred.ts"
+
+@@ hunk 2 [code] pin before 18 release 20-20 cited ranges 0
+   pin units: 
+   release units: import ../ErrorReporter.ts=absent
++    20 import * as ErrorReporter from "@tree/ErrorReporter.ts"
+
+@@ hunk 3 [code] pin 20-32 release before 23 cited ranges 0
+   pin units: import ../../Layer.ts=absent; import ../../LogLevel.ts=absent; import ../../Option.ts=absent; import ../../Predicate.ts=absent; import ../../Queue.ts=absent; import ../../RcMap.ts=absent; import ../../References.ts=absent; import ../../Result.ts=absent; import ../../Schema.ts=absent; import ../../SchemaAST.ts=absent; import ../../Sink.ts=absent; import ../../Stdio.ts=absent; import ../../Stream.ts=absent
+   release units: 
+-    20 import * as Layer from "@tree/Layer.ts"
+-    21 import * as LogLevel from "@tree/LogLevel.ts"
+-    22 import * as Option from "@tree/Option.ts"
+-    23 import * as Predicate from "@tree/Predicate.ts"
+-    24 import * as Queue from "@tree/Queue.ts"
+-    25 import * as RcMap from "@tree/RcMap.ts"
+-    26 import { CurrentLogLevel } from "@tree/References.ts"
+-    27 import * as Result from "@tree/Result.ts"
+-    28 import * as Schema from "@tree/Schema.ts"
+-    29 import * as SchemaAST from "@tree/SchemaAST.ts"
+-    30 import * as Sink from "@tree/Sink.ts"
+-    31 import type { Stdio } from "@tree/Stdio.ts"
+-    32 import * as Stream from "@tree/Stream.ts"
+
+@@ hunk 4 [code] pin before 39 release 29-37 cited ranges 0
+   pin units: 
+   release units: import ../JsonSchema.ts=absent; import ../Layer.ts=absent; import ../Option.ts=absent; import ../Predicate.ts=absent; import ../PubSub.ts=absent; import ../Queue.ts=absent; import ../RcMap.ts=absent; import ../References.ts=absent; import ../Result.ts=absent
++    29 import type * as JsonSchema from "@tree/JsonSchema.ts"
++    30 import * as Layer from "@tree/Layer.ts"
++    31 import * as Option from "@tree/Option.ts"
++    32 import * as Predicate from "@tree/Predicate.ts"
++    33 import * as PubSub from "@tree/PubSub.ts"
++    34 import * as Queue from "@tree/Queue.ts"
++    35 import * as RcMap from "@tree/RcMap.ts"
++    36 import { CurrentLogLevel, Scheduler } from "@tree/References.ts"
++    37 import * as Result from "@tree/Result.ts"
+
+@@ hunk 5 [import] pin 41-41 release 40-40 cited ranges 0
+   pin units: import ../rpc/RpcGroup.ts=import
+   release units: import ../rpc/RpcGroup.ts=import
+-    41 import * as RpcGroup from "@tree/rpc/RpcGroup.ts"
++    40 import type * as RpcGroup from "@tree/rpc/RpcGroup.ts"
+
+@@ hunk 6 [code] pin before 45 release 44-48 cited ranges 0
+   pin units: 
+   release units: import ../Schema.ts=absent; import ../SchemaAST.ts=absent; import ../Scope.ts=absent; import ../Stdio.ts=absent; import ../Stream.ts=absent
++    44 import * as Schema from "@tree/Schema.ts"
++    45 import * as SchemaAST from "@tree/SchemaAST.ts"
++    46 import * as Scope from "@tree/Scope.ts"
++    47 import type { Stdio } from "@tree/Stdio.ts"
++    48 import * as Stream from "@tree/Stream.ts"
+
+@@ hunk 7 [code] pin 48-48 release 52-53 cited ranges 0
+   pin units: import ./internal/mcpProtocolRegistry.ts=absent
+   release units: import ./internal/mcpRuntime.ts=absent; import ./internal/structured-output.ts=absent
+-    48 import * as McpProtocolRegistry from "@tree/ai/internal/mcpProtocolRegistry.ts"
++    52 import * as McpRuntime from "@tree/ai/internal/mcpRuntime.ts"
++    53 import * as InternalStructuredOutput from "@tree/ai/internal/structured-output.ts"
+
+@@ hunk 8 [import] pin 56-56 release before 61 cited ranges 0
+   pin units: import ./McpSchema.ts#2=import
+   release units: 
+-    56 Initialize,
+
+@@ hunk 9 [import] pin before 61 release 65-65 cited ranges 0
+   pin units: 
+   release units: import ./McpSchema.ts#2=import
++    65 McpRequestContext,
+
+@@ hunk 10 [import] pin 64-64 release before 69 cited ranges 0
+   pin units: import ./McpSchema.ts#2=import
+   release units: 
+-    64 Ping,
+
+@@ hunk 11 [import] pin 71-71 release 75-75 cited ranges 0
+   pin units: import ./McpSchema.ts#2=import
+   release units: import ./McpSchema.ts#2=import
+-    71 ToolJsonSchema
++    75 ToolJson
+
+@@ hunk 12 [import] pin 87-87 release 91-91 cited ranges 0
+   pin units: import ./Toolkit.ts=import
+   release units: import ./Toolkit.ts=import
+-    87 import type * as Toolkit from "@tree/ai/Toolkit.ts"
++    91 import * as Toolkit from "@tree/ai/Toolkit.ts"
+
+@@ hunk 13 [erased] pin before 94 release 98-100 cited ranges 0
+   pin units: 
+   release units: QueuedServerNotification=type-decl
++    98 readonly delivered: Deferred.Deferred<void>
++    99 readonly requestContext?: McpRequestContext["Service"] | undefined
++   100 readonly requestHeaders?: Headers.Headers | undefined
+
+@@ hunk 14 [erased] pin before 99 release 106-106 cited ranges 0
+   pin units: 
+   release units: internalState=erased
++   106 readonly notificationDelivery: { consumers: number }
+
+@@ hunk 15 [erased] pin 100-100 release 108-108 cited ranges 0
+   pin units: ServerExtensions=type-decl
+   release units: ServerExtensions=type-decl
+-   100 type ServerExtensions = NonNullable<typeof ServerCapabilities.Type["extensions"]>
++   108 type ServerExtensions = NonNullable<ServerCapabilities["extensions"]>
+
+@@ hunk 16 [code] pin 107-118 release 114-114 cited ranges 0
+   pin units: validateStructuredContent=absent
+   release units: isLoggingLevel=absent
+-   107 const validateStructuredContent = (
+-   108 toolName: string,
+-   109 value: unknown
+-   110 ): Effect.Effect<Schema.Json, McpCore.ToolResultProjectionError> =>
+-   111 Schema.is(Schema.Json)(value)
+-   112 ? Effect.succeed(value)
+-   113 : Effect.fail(
+-   114 new McpCore.ToolResultProjectionError({
+-   115 name: toolName,
+-   116 message: `Tool '${toolName}' returned structured content that is not valid JSON`
+-   117 })
+-   118 )
++   114 const isLoggingLevel = Schema.is(McpSchema.LoggingLevel)
+
+@@ hunk 17 [code] pin before 173 release 158-188 cited ranges 0
+   pin units: 
+   release units: omitRequestServices=absent; provideInvocationContext=absent
++   158 const omitRequestServices = Context.omit(
++   159 McpRequestContext,
++   160 McpServerClient,
++   161 HttpServerRequest.HttpServerRequest,
++   162 CurrentLogLevel
++   163 )
++   165 const provideInvocationContext = <A, E, R>(
++   166 effect: Effect.Effect<A, E, R>,
++   167 invocation: McpCore.McpInvocation
++   168 ): Effect.Effect<A, E, Exclude<R, McpRequestContext>> => {
++   169 let provided = Effect.provideService(effect, McpRequestContext, invocation.requestContext)
++   170 const requestMetadata = invocation.requestContext.requestMetadata
++   171 const logLevel = Predicate.hasProperty(requestMetadata, "io.modelcontextprotocol/logLevel")
++   172 ? requestMetadata["io.modelcontextprotocol/logLevel"]
++   173 : undefined
++   174 if (isLoggingLevel(logLevel)) {
++   175 provided = Effect.provideService(
++   176 provided,
++   177 CurrentLogLevel,
++   178 McpProtocolInternal.mcpLogLevels[logLevel].effect
++   179 )
++   180 }
++   181 return (invocation.serverClient === undefined
++   182 ? provided
++   183 : Effect.provideService(provided, McpServerClient, invocation.serverClient)) as Effect.Effect<
++   184 A,
++   185 E,
++   186 Exclude<R, McpRequestContext>
++   187 >
++   188 }
+
+@@ hunk 18 [erased] pin 179-179 release before 209 cited ranges 0
+   pin units: McpServer=code
+   release units: 
+-   179 readonly initializedClients: Set<number>
+
+@@ hunk 19 [erased] pin 187-187 release 216-222 cited ranges 0
+   pin units: McpServer=code
+   release units: McpServer=code
+-   187 readonly handle: (payload: any) => Effect.Effect<CallToolResult, InternalError | InvalidParams, McpServerClient>
++   216 readonly handle: (
++   217 payload: any
++   218 ) => Effect.Effect<
++   219 CallToolResult | McpSchema.InputRequired,
++   220 InternalError | InvalidParams,
++   221 McpRequestContext
++   222 >
+
+@@ hunk 20 [erased] pin 200-200 release 235-239 cited ranges 0
+   pin units: McpServer=code
+   release units: McpServer=code
+-   200 readonly handle: Effect.Effect<typeof ReadResourceResult.Type, InternalError, McpServerClient>
++   235 readonly handle: Effect.Effect<
++   236 ReadResourceResult,
++   237 InternalError,
++   238 McpRequestContext
++   239 >
+
+@@ hunk 21 [erased] pin 223-223 release 262-262 cited ranges 0
+   pin units: McpServer=code
+   release units: McpServer=code
+-   223 typeof ReadResourceResult.Type,
++   262 ReadResourceResult,
+
+@@ hunk 22 [erased] pin 225-225 release 264-264 cited ranges 0
+   pin units: McpServer=code
+   release units: McpServer=code
+-   225 McpServerClient
++   264 McpRequestContext
+
+@@ hunk 23 [erased] pin 232-232 release 271-271 cited ranges 0
+   pin units: McpServer=code
+   release units: McpServer=code
+-   232 ) => Effect.Effect<typeof ReadResourceResult.Type, McpErrorBase | InvalidParams | InternalError, McpServerClient>
++   271 ) => Effect.Effect<ReadResourceResult, McpErrorBase | InvalidParams | InternalError, McpServerClient>
+
+@@ hunk 24 [erased] pin 246-246 release 285-285 cited ranges 0
+   pin units: McpServer=code
+   release units: McpServer=code
+-   246 ) => Effect.Effect<CompleteResult, InternalError, McpServerClient>
++   285 ) => Effect.Effect<CompleteResult, InternalError, McpRequestContext>
+
+@@ hunk 25 [erased] pin 250-250 release 289-289 cited ranges 0
+   pin units: McpServer=code
+   release units: McpServer=code
+-   250 ) => Effect.Effect<GetPromptResult, InternalError | InvalidParams, McpServerClient>
++   289 ) => Effect.Effect<GetPromptResult | McpSchema.InputRequired, InternalError | InvalidParams, McpRequestContext>
+
+@@ hunk 26 [code] pin 284-284 release 324-326 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   284 const listChangedHandles = new Map<string, any>()
++   324 const notificationDelivery = { consumers: 0 }
++   325 const pendingListChanges = new Set<string>()
++   326 const dispatcher = (yield* Scheduler).makeDispatcher()
+
+@@ hunk 27 [code] pin 288-288 release 330-331 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   288 Effect.suspend((): Effect.Effect<void> => {
++   330 Deferred.make<void>().pipe(Effect.flatMap((delivered) =>
++   331 Effect.withFiber((fiber): Effect.Effect<void> => {
+
+@@ hunk 28 [code] pin before 297 release 340-346 cited ranges 0
+   pin units: 
+   release units: McpServer.make=code
++   340 const queued = {
++   341 notification,
++   342 delivered,
++   343 requestContext: Context.getOrUndefined(fiber.context, McpRequestContext),
++   344 requestHeaders: Context.getOrUndefined(fiber.context, HttpServerRequest.HttpServerRequest)?.headers
++   345 }
++   346 let enqueued = false
+
+@@ hunk 29 [code] pin 298-303 release 348-353 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   298 if (!listChangedHandles.has(message.tag)) {
+-   299 listChangedHandles.set(
+-   300 message.tag,
+-   301 setTimeout(() => {
+-   302 Queue.offerUnsafe(notificationsQueue, { notification })
+-   303 listChangedHandles.delete(message.tag)
++   348 if (!pendingListChanges.has(message.tag)) {
++   349 enqueued = true
++   350 const tag = message.tag
++   351 dispatcher.scheduleTask(() => {
++   352 Queue.offerUnsafe(notificationsQueue, queued)
++   353 pendingListChanges.delete(message.tag)
+
+@@ hunk 30 [code] pin 305-305 release 355-355 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   305 )
++   355 pendingListChanges.add(tag)
+
+@@ hunk 31 [code] pin 308-308 release 358-359 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   308 Queue.offerUnsafe(notificationsQueue, { notification })
++   358 enqueued = true
++   359 Queue.offerUnsafe(notificationsQueue, queued)
+
+@@ hunk 32 [code] pin 310-310 release 362-363 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   310 return notifications.write({
++   362 const acknowledge = Effect.suspend(() =>
++   363 notifications.write({
+
+@@ hunk 33 [code] pin before 316 release 369-372 cited ranges 0
+   pin units: 
+   release units: McpServer.make=code
++   369 )
++   370 return enqueued && queued.requestContext !== undefined && notificationDelivery.consumers > 0
++   371 ? Effect.andThen(Deferred.await(delivered), acknowledge)
++   372 : acknowledge
+
+@@ hunk 34 [code] pin before 317 release 374-374 cited ranges 0
+   pin units: 
+   release units: McpServer.make=code
++   374 ))
+
+@@ hunk 35 [code] pin before 322 release 380-381 cited ranges 0
+   pin units: 
+   release units: McpServer.make=code
++   380 Deferred.make<void>().pipe(
++   381 Effect.flatMap((delivered) =>
+
+@@ hunk 36 [code] pin 324-326 release 384-392 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   324 targetClientId: clientId
+-   325 }),
+-   326 initializedClients: new Set(),
++   384 targetClientId: clientId,
++   385 delivered
++   386 }).pipe(
++   387 Effect.andThen(
++   388 Effect.suspend(() => notificationDelivery.consumers > 0 ? Deferred.await(delivered) : Effect.void)
++   389 )
++   390 )
++   391 )
++   392 ),
+
+@@ hunk 37 [code] pin 353-357 release 419-419 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   353 options.handle(call.arguments).pipe(
+-   354 Effect.provideService(
+-   355 McpServerClient,
+-   356 invocation.requestContext
+-   357 ),
++   419 provideInvocationContext(options.handle(call.arguments), invocation).pipe(
+
+@@ hunk 38 [code] pin 368-368 release 430-433 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   368 new McpCore.InvalidToolInput({
++   430 new (invocation.requestContext.requestState === undefined &&
++   431 invocation.requestContext.inputResponses === undefined
++   432 ? McpCore.InvalidToolInput
++   433 : McpCore.InvalidToolContinuation)({
+
+@@ hunk 39 [code] pin 374-379 release 439-442 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   374 Effect.flatMap((result) =>
+-   375 result.structuredContent === undefined
+-   376 ? Effect.succeed(result)
+-   377 : validateStructuredContent(options.tool.name, result.structuredContent).pipe(
+-   378 Effect.as(result)
+-   379 )
++   439 Effect.map((result) =>
++   440 Predicate.isTagged(result, "InputRequired")
++   441 ? McpCore.OperationOutcome.InputRequired(result)
++   442 : McpCore.OperationOutcome.Complete(result)
+
+@@ hunk 40 [code] pin 388-396 release 451-454 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   388 const result = yield* internalCore.tools.call(request, {
+-   389 clientId: client.clientId,
+-   390 protocol: {
+-   391 protocolVersion: client.protocolVersion,
+-   392 clientCapabilities: client.initializePayload.capabilities,
+-   393 clientInfo: client.initializePayload.clientInfo
+-   394 },
+-   395 requestContext: client
+-   396 }).pipe(
++   451 const result = yield* internalCore.tools.call(
++   452 request,
++   453 McpProtocolInternal.invocationFromClient(client)
++   454 ).pipe(
+
+@@ hunk 41 [code] pin 405-405 release 463-466 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   405 return result
++   463 if (result._tag === "InputRequired") {
++   464 return yield* new InvalidParams({ message: "Client input is not supported by this MCP protocol" })
++   465 }
++   466 return result.value
+
+@@ hunk 42 [code] pin 431-434 release 492-492 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   431 read: (invocation) =>
+-   432 options.handle.pipe(
+-   433 Effect.provideService(McpServerClient, invocation.requestContext)
+-   434 )
++   492 read: (invocation) => provideInvocationContext(options.handle, invocation)
+
+@@ hunk 43 [code] pin 471-474 release 529-529 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   471 read: (uri, params, invocation) =>
+-   472 handle(uri, Array.from(params)).pipe(
+-   473 Effect.provideService(McpServerClient, invocation.requestContext)
+-   474 )
++   529 read: (uri, params, invocation) => provideInvocationContext(handle(uri, Array.from(params)), invocation)
+
+@@ hunk 44 [code] pin 479-480 release 534-535 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   479 (request) =>
+-   480 handle(request.argument.value, request.context).pipe(
++   534 (request, invocation) =>
++   535 provideInvocationContext(handle(request.argument.value, request.context), invocation).pipe(
+
+@@ hunk 45 [code] pin 495-504 release 550-553 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   495 return yield* internalCore.resources.read(uri, {
+-   496 clientId: client.clientId,
+-   497 protocol: {
+-   498 protocolVersion: client.protocolVersion,
+-   499 clientCapabilities: client.clientCapabilities,
+-   500 clientInfo: client.clientInfo,
+-   501 requestMetadata: client.initializePayload._meta
+-   502 },
+-   503 requestContext: client
+-   504 }).pipe(
++   550 return yield* internalCore.resources.read(
++   551 uri,
++   552 McpProtocolInternal.invocationFromClient(client)
++   553 ).pipe(
+
+@@ hunk 46 [code] pin 531-532 release 580-585 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   531 options.handle(params).pipe(
+-   532 Effect.provideService(McpServerClient, invocation.requestContext)
++   580 provideInvocationContext(options.handle(params), invocation).pipe(
++   581 Effect.map((result) =>
++   582 Predicate.isTagged(result, "InputRequired")
++   583 ? McpCore.OperationOutcome.InputRequired(result)
++   584 : McpCore.OperationOutcome.Complete(result)
++   585 )
+
+@@ hunk 47 [code] pin 539-543 release 592-592 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   539 handle(request.argument.value, request.context).pipe(
+-   540 Effect.provideService(
+-   541 McpServerClient,
+-   542 invocation.requestContext
+-   543 ),
++   592 provideInvocationContext(handle(request.argument.value, request.context), invocation).pipe(
+
+@@ hunk 48 [code] pin 557-557 release 606-606 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   557 return yield* internalCore.prompts.get(
++   606 const outcome = yield* internalCore.prompts.get(
+
+@@ hunk 49 [code] pin before 564 release 613-615 cited ranges 0
+   pin units: 
+   release units: McpServer.make=code
++   613 return outcome._tag === "Complete"
++   614 ? outcome.value
++   615 : yield* new InvalidParams({ message: "Client input is not supported by this MCP protocol" })
+
+@@ hunk 50 [code] pin 585-585 release 637-637 cited ranges 0
+   pin units: McpServer.make=code
+   release units: McpServer.make=code
+-   585 internalState.set(service, { core: internalCore, notifications: notificationsQueue })
++   637 internalState.set(service, { core: internalCore, notifications: notificationsQueue, notificationDelivery })
+
+@@ hunk 51 [code] pin before 600 release 653-653 cited ranges 0
+   pin units: 
+   release units: cancelledResponses=absent
++   653 const cancelledResponses = new WeakMap<object, string | number>()
+
+@@ hunk 52 [erased] pin 602-616 release 656-658 cited ranges 0
+   pin units: SessionLogLevel=absent; Session=absent; Sessions=absent
+   release units: ActiveRequest=absent
+-   602 type SessionLogLevel =
+-   603 | { readonly _tag: "Effect"; readonly level: LogLevel.LogLevel }
+-   604 | { readonly _tag: "Mcp"; readonly level: McpSchema.LoggingLevel }
+-   606 interface Session {
+-   607 readonly initializePayload: typeof Initialize.payloadSchema.Type
+-   608 readonly negotiatedProfile: McpCore.NegotiatedProtocolProfile
+-   609 readonly protocol: McpProtocol.ProtocolAdapter
+-   610 readonly resourceSubscriptions: Set<string> | undefined
+-   611 logLevel: SessionLogLevel
+-   612 }
+-   614 interface Sessions {
+-   615 readonly bySessionId: Map<string, Session>
+-   616 readonly byClientId: Map<number, Session>
++   656 interface ActiveRequest {
++   657 readonly prepared: McpRuntime.PreparedRequest
++   658 readonly cancelled: boolean
+
+@@ hunk 53 [erased] pin 621-621 release 663-663 cited ranges 0
+   pin units: McpClientKey=erased
+   release units: McpClientKey=erased
+-   621 readonly profile: McpCore.NegotiatedProtocolProfile
++   663 readonly profile: McpCore.NegotiatedProtocolProfile<string>
+
+@@ hunk 54 [code] pin 624-647 release before 679 cited ranges 0
+   pin units: McpProtocolState=absent; makeMcpProtocolState=absent; layerMcpProtocolState=absent
+   release units: 
+-   624 class McpProtocolState extends Context.Service<McpProtocolState, {
+-   625 readonly sessions: Sessions
+-   626 readonly protocolRegistry: McpProtocolRegistry.ProtocolRegistry<McpProtocol.ProtocolAdapter>
+-   627 }>()("effect/ai/McpServer/McpProtocolState") {}
+-   629 const makeMcpProtocolState = Effect.fnUntraced(function*(
+-   630 protocols: Arr.NonEmptyReadonlyArray<McpProtocol.ProtocolAdapter>
+-   631 ) {
+-   635 return McpProtocolState.of({
+-   636 sessions: {
+-   637 bySessionId: new Map(),
+-   638 byClientId: new Map()
+-   639 },
+-   640 protocolRegistry: yield* McpProtocolRegistry.make(protocols)
+-   641 })
+-   642 })
+-   644 const layerMcpProtocolState = (
+-   645 protocols: Arr.NonEmptyReadonlyArray<McpProtocol.ProtocolAdapter>
+-   646 ): Layer.Layer<McpProtocolState, Cause.IllegalArgumentError> =>
+-   647 Layer.effect(McpProtocolState)(makeMcpProtocolState(protocols))
+
+@@ hunk 55 [erased] pin before 664 release 682-682 cited ranges 0
+   pin units: 
+   release units: run=code
++   682 readonly instructions?: string | undefined
+
+@@ hunk 56 [erased] pin before 676 release 695-695 cited ranges 0
+   pin units: 
+   release units: run=code
++   695 readonly instructions?: string | undefined
+
+@@ hunk 57 [code] pin 682-686 release 702-706 cited ranges 0
+   pin units: run=code
+   release units: run=code
+-   682 const protocolStateOption = yield* Effect.serviceOption(McpProtocolState)
+-   683 const protocolState = Option.isSome(protocolStateOption)
+-   684 ? protocolStateOption.value
+-   685 : yield* makeMcpProtocolState(options.protocols)
+-   686 return yield* runWithProtocolState(options, protocolState)
++   702 const runtimeOption = yield* Effect.serviceOption(McpRuntime.ServerRuntime)
++   703 const runtime = Option.isSome(runtimeOption)
++   704 ? runtimeOption.value
++   705 : yield* McpRuntime.make(options.protocols)
++   706 return yield* runWithRuntime(options, runtime, "custom")
+
+@@ hunk 58 [code] pin 689-689 release 709-710 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   689 const runWithProtocolState = Effect.fnUntraced(function*(options: {
++   709 const runWithRuntime = Effect.fnUntraced(function*(
++   710 options: {
+
+@@ hunk 59 [erased] pin before 692 release 713-713 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++   713 readonly instructions?: string | undefined
+
+@@ hunk 60 [code] pin 696-698 release 718-721 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   696 }, protocolState: McpProtocolState["Service"]) {
+-   697 const protocolRegistry = protocolState.protocolRegistry
+-   698 const serverScope = yield* Effect.scope
++   718 },
++   719 runtime: McpRuntime.ServerRuntimeShape,
++   720 transport: "custom" | "http" | "stdio"
++   721 ) {
+
+@@ hunk 61 [code] pin 702-710 release 725-821 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   702 const isHttp = Option.isSome(yield* Effect.serviceOption(HttpRouter.HttpRouter))
+-   703 const sessions = protocolState.sessions
+-   704 const clientProtocols = new Map<number, McpProtocol.ProtocolAdapter>()
+-   705 const activeRequests = new Map<number, Map<string, boolean>>()
+-   706 const clientProfiles = new Map<number, McpCore.NegotiatedProtocolProfile>()
+-   707 const handlers = yield* Layer.build(layerHandlers(options, {
+-   708 sessions,
+-   709 protocolRegistry
+-   710 }))
++   725 const isHttp = transport === "http"
++   726 const clientStates = new Map<number, {
++   727 protocol: McpProtocol.AnyProtocolAdapter
++   728 profile: McpCore.NegotiatedProtocolProfile<string> | undefined
++   729 sessionHeaders: Headers.Headers | undefined
++   730 }>()
++   731 const activeRequests = new Map<number, Map<string, ActiveRequest>>()
++   732 const reverseRequestClients = new Map<string, Array<McpClientKey>>()
++   733 const disconnectClient = (clientId: number) => {
++   734 activeRequests.delete(clientId)
++   735 clientStates.delete(clientId)
++   736 runtime.disconnect(clientId)
++   737 }
++   738 const sendRequestError = (clientId: number, requestId: string | number, error: unknown) =>
++   739 protocol.send(clientId, {
++   740 _tag: "Exit",
++   741 requestId,
++   742 exit: { _tag: "Failure", cause: [{ _tag: "Fail", error }] }
++   743 })
++   744 const removeReverseRequestClient = (requestId: string, key: McpClientKey) => {
++   745 const waiting = reverseRequestClients.get(requestId)
++   746 if (waiting === undefined) return
++   747 const remaining = waiting.filter((entry) => entry !== key)
++   748 if (remaining.length === 0) reverseRequestClients.delete(requestId)
++   749 else reverseRequestClients.set(requestId, remaining)
++   750 }
++   753 const serverNotifications = yield* PubSub.unbounded<McpProtocolInternal.CanonicalServerNotification>()
++   754 const sendNotification = (
++   755 protocolVersion: string,
++   756 clientId: number,
++   757 notification: McpProtocol.ProjectedNotification
++   758 ) =>
++   759 Effect.suspend(() => {
++   760 const selectedProtocol = runtime.selectProtocol(protocolVersion)
++   761 const rpc = selectedProtocol.serverNotificationRpcs.requests.get(notification.tag)
++   762 if (rpc === undefined) {
++   763 return Effect.die(
++   764 `MCP protocol ${protocolVersion} does not define server notification ${notification.tag}`
++   765 )
++   766 }
++   767 return selectedProtocol.payloadCodecs(rpc).encode(notification.payload).pipe(
++   768 Effect.orDie,
++   769 Effect.flatMap((payload) =>
++   770 protocol.send(clientId, {
++   771 _tag: "Request",
++   772 id: "",
++   773 tag: notification.tag,
++   774 payload,
++   775 headers: [],
++   776 isNotification: true
++   777 })
++   778 )
++   779 )
++   780 })
++   781 const cancelRequest = (clientId: number, requestId: RpcMessage.RequestId) => {
++   782 const requests = activeRequests.get(clientId)
++   783 const key = requestKey(requestId)
++   784 const request = requests?.get(key)
++   785 if (request === undefined) {
++   786 return false
++   787 }
++   788 requests!.set(key, { ...request, cancelled: true })
++   789 return true
++   790 }
++   791 const terminateSubscription = (
++   792 protocolVersion: string,
++   793 clientId: number,
++   794 requestId: RpcMessage.RequestId,
++   795 reason: string
++   796 ): Effect.Effect<void> =>
++   797 Effect.suspend(() => {
++   798 if (!cancelRequest(clientId, requestId)) {
++   799 return Effect.void
++   800 }
++   801 return isHttp
++   802 ? protocol.end(clientId)
++   803 : sendNotification(protocolVersion, clientId, {
++   804 tag: "notifications/cancelled",
++   805 payload: { requestId, reason }
++   806 })
++   807 })
++   808 const handlers = yield* runtime.installHandlers({
++   809 core: internalState.get(server)!.core,
++   810 subscribeServerNotifications: PubSub.subscribe(serverNotifications),
++   811 ...(!protocol.supportsNotifications ? {} : {
++   812 sendNotification,
++   813 markSubscriptionCancelled: (clientId: number, requestId: RpcMessage.RequestId) =>
++   814 Effect.sync(() => {
++   815 cancelRequest(clientId, requestId)
++   816 }),
++   817 terminateSubscription
++   818 }),
++   819 defaultLogLevel,
++   820 serverInfo: options
++   821 })
+
+@@ hunk 62 [code] pin 714-714 release 825-825 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   714 const selectedProtocol = protocolRegistry.select(key.profile.protocolVersion)
++   825 const selectedProtocol = runtime.selectProtocol(key.profile.protocolVersion)
+
+@@ hunk 63 [code] pin before 723 release 834-837 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++   834 const requestId = requestKey(request.id)
++   835 const waiting = reverseRequestClients.get(requestId) ?? []
++   836 waiting.push(key)
++   837 reverseRequestClients.set(requestId, waiting)
+
+@@ hunk 64 [code] pin 729-729 release 844-848 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   729 })
++   844 }).pipe(Effect.onError(() => Effect.sync(() => removeReverseRequestClient(requestId, key))))
++   845 }
++   846 if (request._tag === "Interrupt") {
++   848 removeReverseRequestClient(requestKey(request.requestId), key)
+
+@@ hunk 65 [code] pin 751-751 release 870-870 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   751 const session = getClientSession(sessions, client.id, headers)
++   870 const session = runtime.resolveRequest(client.id, headers)
+
+@@ hunk 66 [code] pin 769-774 release 891-899 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   769 const selectedProtocol = session?.protocol ?? protocolForInternalTag(protocolRegistry, rpc._tag)
+-   773 const initializePayload = session?.initializePayload ?? payload as typeof Initialize.payloadSchema.Type
+-   774 const profile = session?.negotiatedProfile ?? {
++   891 const initializePayload = session?.initializePayload ?? payload as typeof McpSchema.Initialize.payloadSchema.Type
++   892 const clientState = clientStates.get(client.id)
++   893 const selectedProtocol = session?.protocol ??
++   894 clientState?.protocol ??
++   895 runtime.protocolForInternalTag(rpc._tag)
++   896 if (!isProtocolVersion(selectedProtocol.protocolVersion) || selectedProtocol.protocolVersion === "2026-07-28") {
++   897 return Effect.die(`Unsupported selected MCP protocol version: ${selectedProtocol.protocolVersion}`)
++   898 }
++   899 const profile: McpCore.NegotiatedProtocolProfile = session?.negotiatedProfile ?? {
+
+@@ hunk 67 [code] pin 779-779 release 904-911 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   779 clientProfiles.set(client.id, profile)
++   904 if (clientState !== undefined) clientState.profile = profile
++   905 const requestContext = McpRequestContext.of({
++   906 clientId: client.id,
++   907 protocolVersion: profile.protocolVersion,
++   908 clientCapabilities: profile.clientCapabilities,
++   909 clientInfo: profile.clientInfo,
++   910 requestMetadata: initializePayload._meta
++   911 })
+
+@@ hunk 68 [code] pin before 782 release 914-914 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++   914 Effect.provideService(
+
+@@ hunk 69 [code] pin 786-786 release 919-919 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   786 protocolVersion: session?.negotiatedProfile.protocolVersion ?? selectedProtocol.protocolVersion,
++   919 protocolVersion: profile.protocolVersion,
+
+@@ hunk 70 [code] pin before 790 release 923-925 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++   923 requestMetadata: Predicate.isReadonlyObject(payload) && Predicate.isReadonlyObject(payload._meta)
++   924 ? payload._meta as Schema.JsonObject
++   925 : undefined,
+
+@@ hunk 71 [code] pin before 801 release 937-939 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++   937 McpRequestContext,
++   938 requestContext
++   939 ),
+
+@@ hunk 72 [code] pin 802-802 release 941-941 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   802 effectLogLevel(session?.logLevel, defaultLogLevel)
++   941 runtime.effectLogLevel(client.id, headers, defaultLogLevel)
+
+@@ hunk 73 [code] pin 812-812 release 951-951 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   812 const cancelled = requests?.get(key)
++   951 const cancelled = requests?.get(key)?.cancelled
+
+@@ hunk 74 [code] pin 817-817 release 956-958 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   817 return Effect.void
++   956 if (transport === "custom") return Effect.void
++   957 cancelledResponses.set(response, response.requestId)
++   958 return protocol.send(clientId, response)
+
+@@ hunk 75 [code] pin 868-885 release 1009-1025 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   868 const session = getClientSession(sessions, clientId, headers)
+-   869 const selectedProtocol = session?.protocol ??
+-   870 (request.tag === "initialize"
+-   871 ? protocolRegistry.select(getOfferedProtocolVersion(request.payload))
+-   872 : protocolRegistry.protocols[0])
+-   875 clientProtocols.set(clientId, selectedProtocol)
+-   876 if (request.tag === MCP_INVALID_BATCH_METHOD) {
+-   877 return protocol.send(clientId, {
+-   878 _tag: "Exit",
+-   879 requestId: request.id,
+-   880 exit: {
+-   881 _tag: "Failure",
+-   882 cause: [{
+-   883 _tag: "Fail",
+-   884 error: new InvalidRequest({ message: "JSON-RPC batches are not supported" })
+-   885 }]
++  1009 const cancellationRequest = request.tag === "notifications/cancelled" &&
++  1010 typeof request.payload === "object" && request.payload !== null && "requestId" in request.payload &&
++  1011 (typeof request.payload.requestId === "string" || typeof request.payload.requestId === "number")
++  1012 ? activeRequests.get(clientId)?.get(requestKey(request.payload.requestId))
++  1013 : undefined
++  1014 const prepare = cancellationRequest === undefined
++  1015 ? runtime.prepareRequest(clientId, headers, request)
++  1016 : Effect.succeed(cancellationRequest.prepared)
++  1017 return Effect.gen(function*() {
++  1018 const prepared = yield* prepare
++  1019 const clientState = clientStates.get(clientId)
++  1020 if (isHttp && clientState === undefined) {
++  1022 yield* Scope.addFinalizer(
++  1023 Context.getUnsafe(fiber.context, Scope.Scope),
++  1024 Effect.sync(() => disconnectClient(clientId))
++  1025 )
+
+@@ hunk 76 [code] pin before 887 release 1027-1036 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++  1027 const session = prepared.binding
++  1028 const selectedProtocol = prepared.protocol
++  1031 clientStates.set(clientId, {
++  1032 protocol: selectedProtocol,
++  1033 profile: prepared.profile ?? clientState?.profile,
++  1034 sessionHeaders: isHttp && headers[MCP_SESSION_ID_HEADER] !== undefined
++  1035 ? Headers.fromInput({ [MCP_SESSION_ID_HEADER]: headers[MCP_SESSION_ID_HEADER] })
++  1036 : clientState?.sessionHeaders
+
+@@ hunk 77 [code] pin before 888 release 1038-1043 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++  1038 if (request.tag === MCP_INVALID_BATCH_METHOD) {
++  1039 return yield* sendRequestError(
++  1040 clientId,
++  1041 request.id,
++  1042 new InvalidRequest({ message: "JSON-RPC batches are not supported" })
++  1043 )
+
+@@ hunk 78 [code] pin 889-892 release 1045-1045 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   889 if (isHttp) {
+-   890 const fiber = Fiber.getCurrent()!
+-   891 const httpRequest = Context.getUnsafe(fiber.context, HttpServerRequest.HttpServerRequest)
+-   892 if (session) {
++  1045 if (httpRequest !== undefined && session !== undefined) {
+
+@@ hunk 79 [code] pin 902-909 release 1055-1059 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   902 }
+-   903 const routedRequest = protocolRegistry.routeClientRequest(selectedProtocol, request)
+-   904 const rpc = protocolRegistry.clientRpcs.requests.get(routedRequest.tag)
+-   905 if (
+-   906 rpc &&
+-   907 selectedProtocol.clientNotificationRpcs.requests.has(request.tag)
+-   908 ) {
+-   909 if (!session) {
++  1055 const routedRequest = runtime.routeClientRequest(selectedProtocol, request)
++  1056 const rpc = runtime.clientRpcs.requests.get(routedRequest.tag)
++  1057 const isClientNotification = selectedProtocol.clientNotificationRpcs.requests.has(request.tag)
++  1058 if (rpc && isClientNotification && request.isNotification) {
++  1059 if (!session && selectedProtocol.runtime._tag === "Stateful") {
+
+@@ hunk 80 [code] pin 921-921 release 1071-1071 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   921 return Effect.void
++  1071 return
+
+@@ hunk 81 [code] pin 924-944 release 1074-1075 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   924 return decode.pipe(
+-   925 Effect.flatMap((payload) => {
+-   926 if (
+-   927 request.tag === "notifications/roots/list_changed" &&
+-   928 session.initializePayload.capabilities.roots?.listChanged === true &&
+-   929 httpRequest === undefined
+-   930 ) {
+-   931 return RcMap.get(
+-   932 clients,
+-   933 new McpClientKey({
+-   934 clientId,
+-   935 profile: session.negotiatedProfile
+-   936 })
+-   937 ).pipe(
+-   938 Effect.flatMap(({ client }) => client.listRoots()),
+-   939 Effect.scoped,
+-   940 Effect.ignoreCause,
+-   941 Effect.forkIn(serverScope),
+-   942 Effect.asVoid
+-   943 )
+-   944 }
++  1074 return yield* Effect.gen(function*() {
++  1075 const payload = yield* decode
+
+@@ hunk 82 [code] pin 946-947 release 1077-1077 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   946 return selectedProtocol.normalizeCancellation(payload).pipe(
+-   947 Effect.flatMap((cancellation) => {
++  1077 const cancellation = yield* selectedProtocol.normalizeCancellation(payload)
+
+@@ hunk 83 [code] pin 949-951 release 1079-1082 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   949 const requests = activeRequests.get(clientId)
+-   950 if (requests?.has(key) !== true) {
+-   951 return Effect.void
++  1079 let ownerClientId = clientId
++  1080 if (isHttp) {
++  1081 if (session === undefined) {
++  1082 return
+
+@@ hunk 84 [code] pin 953-958 release 1085-1086 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   953 requests.set(key, true)
+-   954 return f(clientId, {
+-   955 _tag: "Interrupt",
+-   956 requestId: String(cancellation.requestId)
+-   957 })
+-   958 })
++  1085 const owner = Array.from(activeRequests).find(([, requests]) =>
++  1086 requests.get(key)?.prepared.binding === session
+
+@@ hunk 85 [code] pin before 960 release 1088-1099 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++  1088 if (owner === undefined) {
++  1089 return
++  1090 }
++  1091 ownerClientId = owner[0]
++  1092 }
++  1093 if (!cancelRequest(ownerClientId, cancellation.requestId)) {
++  1094 return
++  1095 }
++  1096 return yield* f(ownerClientId, {
++  1097 _tag: "Interrupt",
++  1098 requestId: cancellation.requestId
++  1099 })
+
+@@ hunk 86 [code] pin 962-962 release 1102-1102 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   962 return handler
++  1102 const handled = handler
+
+@@ hunk 87 [code] pin 970-971 release 1110-1122 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   970 }),
+-   971 Effect.ignoreCause
++  1110 return yield* prepared.requestContext === undefined
++  1111 ? handled
++  1112 : Effect.provideService(handled, McpRequestContext, prepared.requestContext)
++  1113 }).pipe(Effect.ignoreCause)
++  1114 }
++  1115 if (!rpc || isClientNotification) {
++  1116 if (request.isNotification) {
++  1117 return
++  1118 }
++  1119 return yield* sendRequestError(
++  1120 clientId,
++  1121 request.id,
++  1122 new MethodNotFound({ message: `Method not found: ${request.tag}` })
+
+@@ hunk 88 [code] pin 974-976 release 1125-1129 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   974 if (!rpc) {
+-   975 if (request.isNotification) {
+-   976 return Effect.void
++  1125 const decoded = yield* Effect.result(selectedProtocol.payloadCodecs(rpc).decode(request.payload))
++  1126 if (Result.isFailure(decoded)) {
++  1127 return yield* request.isNotification
++  1128 ? Effect.void
++  1129 : sendRequestError(clientId, request.id, new InvalidParams({ message: "Invalid method parameters" }))
+
+@@ hunk 89 [code] pin 978-989 release before 1131 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: 
+-   978 return protocol.send(clientId, {
+-   979 _tag: "Exit",
+-   980 requestId: request.id,
+-   981 exit: {
+-   982 _tag: "Failure",
+-   983 cause: [{ _tag: "Fail", error: new MethodNotFound({ message: `Method not found: ${request.tag}` }) }]
+-   984 }
+-   985 })
+-   986 }
+-   987 return selectedProtocol.payloadCodecs(rpc).decode(request.payload).pipe(
+-   988 Effect.matchEffect({
+-   989 onSuccess: () => {
+
+@@ hunk 90 [code] pin 991-992 release 1132-1133 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   991 const requests = activeRequests.get(clientId) ?? new Map<string, boolean>()
+-   992 requests.set(requestKey(request.id), false)
++  1132 const requests = activeRequests.get(clientId) ?? new Map<string, ActiveRequest>()
++  1133 requests.set(requestKey(request.id), { prepared, cancelled: false })
+
+@@ hunk 91 [code] pin 995-997 release 1136-1141 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-   995 return f(clientId, routedRequest)
+-   996 },
+-   997 onFailure: () =>
++  1136 const handled = f(clientId, routedRequest)
++  1137 return yield* prepared.requestContext === undefined
++  1138 ? handled
++  1139 : Effect.provideService(handled, McpRequestContext, prepared.requestContext)
++  1140 }).pipe(
++  1141 Effect.catch((error) =>
+
+@@ hunk 92 [code] pin 1000-1008 release 1144-1151 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1000 : protocol.send(clientId, {
+-  1001 _tag: "Exit",
+-  1002 requestId: request.id,
+-  1003 exit: {
+-  1004 _tag: "Failure",
+-  1005 cause: [{ _tag: "Fail", error: new InvalidParams({ message: "Invalid method parameters" }) }]
+-  1006 }
+-  1007 })
+-  1008 })
++  1144 : sendRequestError(
++  1145 clientId,
++  1146 request.id,
++  1147 Predicate.isTagged(error, "ProtocolError")
++  1148 ? McpProtocolInternal.ProtocolError.fromFeature(error)
++  1149 : new InvalidParams({ message: "Invalid request metadata" })
++  1150 )
++  1151 )
+
+@@ hunk 93 [code] pin 1016-1018 release before 1159 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: 
+-  1016 activeRequests.delete(clientId)
+-  1017 clientProtocols.delete(clientId)
+-  1018 clientProfiles.delete(clientId)
+
+@@ hunk 94 [code] pin 1020-1020 release 1160-1160 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1020 sessions.byClientId.delete(clientId)
++  1160 disconnectClient(clientId)
+
+@@ hunk 95 [code] pin 1028-1029 release 1168-1190 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1028 const selectedProtocol = getProtocolForClient(clientProtocols, clientId, protocolRegistry)
+-  1029 const profile = clientProfiles.get(clientId) ?? {
++  1168 const requestId = request._tag === "Exit"
++  1169 ? requestKey(request.requestId)
++  1170 : undefined
++  1171 const session = isHttp
++  1172 ? runtime.resolveRequest(
++  1173 clientId,
++  1174 Context.getUnsafe(Fiber.getCurrent()!.context, HttpServerRequest.HttpServerRequest).headers
++  1175 )
++  1176 : undefined
++  1177 const waiting = requestId === undefined ? undefined : reverseRequestClients.get(requestId)
++  1178 const reverseKey = waiting?.find((key) =>
++  1179 isHttp ? key.profile === session?.negotiatedProfile : key.clientId === clientId
++  1180 )
++  1181 if (request._tag === "Exit" && reverseKey === undefined) {
++  1182 return Effect.void
++  1183 }
++  1184 if (reverseKey !== undefined && requestId !== undefined) {
++  1185 removeReverseRequestClient(requestId, reverseKey)
++  1186 }
++  1187 const targetClientId = reverseKey?.clientId ?? clientId
++  1188 const clientState = clientStates.get(targetClientId)
++  1189 const selectedProtocol = clientState?.protocol ?? runtime.protocols[0]
++  1190 const profile = reverseKey?.profile ?? clientState?.profile ?? {
+
+@@ hunk 96 [code] pin 1037-1037 release 1198-1198 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1037 clientId,
++  1198 clientId: targetClientId,
+
+@@ hunk 97 [code] pin 1049-1050 release 1210-1226 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1049 yield* Queue.take(internalState.get(server)!.notifications).pipe(
+-  1050 Effect.flatMap(Effect.fnUntraced(function*({ notification, targetClientId }) {
++  1210 const { notificationDelivery, notifications } = internalState.get(server)!
++  1211 yield* Effect.acquireRelease(
++  1212 Effect.sync(() => {
++  1213 notificationDelivery.consumers++
++  1214 }),
++  1215 () =>
++  1216 Effect.sync(() => {
++  1217 notificationDelivery.consumers--
++  1218 })
++  1219 )
++  1220 const notificationTails = new Map<number, Deferred.Deferred<void>>()
++  1221 yield* Queue.take(notifications).pipe(
++  1222 Effect.flatMap(Effect.fnUntraced(function*(queued) {
++  1223 const { delivered, notification, targetClientId, requestContext, requestHeaders } = queued
++  1224 if (McpProtocolInternal.isSubscriptionServerNotification(notification)) {
++  1225 yield* PubSub.publish(serverNotifications, { notification, targetClientId })
++  1226 }
+
+@@ hunk 98 [code] pin 1052-1052 release 1228-1228 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1052 for (const clientId of clientProtocols.keys()) {
++  1228 for (const clientId of clientStates.keys()) {
+
+@@ hunk 99 [code] pin 1054-1058 release 1230-1232 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1054 clientProtocols.delete(clientId)
+-  1055 clientProfiles.delete(clientId)
+-  1057 if (!isHttp) {
+-  1058 sessions.byClientId.delete(clientId)
++  1230 clientStates.delete(clientId)
++  1232 runtime.disconnect(clientId)
+
+@@ hunk 100 [code] pin 1061-1062 release 1235-1243 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1061 }
+-  1062 for (const clientId of server.initializedClients.keys()) {
++  1235 const requestNotification = notification._tag === "LoggingMessage" || notification._tag === "Progress"
++  1236 const deliveryClientIds = requestNotification && requestContext !== undefined
++  1237 ? [requestContext.clientId]
++  1238 : targetClientId === undefined
++  1239 ? isHttp ? clientStates.keys() : runtime.deliveryClientIds()
++  1240 : [targetClientId]
++  1241 const deliveries: Array<Effect.Effect<void>> = []
++  1242 let hasOriginDelivery = false
++  1243 for (const clientId of deliveryClientIds) {
+
+@@ hunk 101 [code] pin 1067-1067 release 1248-1248 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1067 server.initializedClients.delete(clientId)
++  1248 runtime.disconnect(clientId)
+
+@@ hunk 102 [code] pin 1075-1075 release 1256-1258 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1075 const selectedProtocol = clientProtocols.get(clientId)
++  1256 const selectedProtocol = requestNotification && requestContext !== undefined
++  1257 ? runtime.selectProtocol(requestContext.protocolVersion)
++  1258 : clientStates.get(clientId)?.protocol
+
+@@ hunk 103 [code] pin 1079-1079 release 1263-1270 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1079 yield* Effect.gen(function*() {
++  1263 const previous = notificationTails.get(clientId)
++  1264 const isOrigin = clientId === (targetClientId ?? requestContext?.clientId)
++  1265 hasOriginDelivery ||= isOrigin
++  1267 const completed = isOrigin ? delivered : Deferred.makeUnsafe<void>()
++  1268 notificationTails.set(clientId, completed)
++  1269 const delivery = Effect.gen(function*() {
++  1270 if (previous !== undefined) yield* Deferred.await(previous)
+
+@@ hunk 104 [code] pin 1084-1084 release before 1275 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: 
+-  1084 const session = sessions.byClientId.get(clientId)
+
+@@ hunk 105 [code] pin 1086-1087 release 1276-1277 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1086 notification._tag === "LoggingMessage" &&
+-  1087 !isMcpLogLevelEnabled(notification.level, session?.logLevel, defaultLogLevel)
++  1276 notification._tag === "Progress" && selectedProtocol.runtime._tag === "Stateless" &&
++  1277 requestContext?.requestMetadata?.progressToken !== notification.progressToken
+
+@@ hunk 106 [code] pin before 1091 release 1281-1285 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++  1281 if (notification._tag === "LoggingMessage" && selectedProtocol.runtime._tag === "Stateless") {
++  1282 const metadata = requestContext?.requestMetadata
++  1283 const level = Predicate.hasProperty(metadata, "io.modelcontextprotocol/logLevel")
++  1284 ? metadata["io.modelcontextprotocol/logLevel"]
++  1285 : undefined
+
+@@ hunk 107 [code] pin 1092-1093 release 1288-1302 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1092 notification._tag === "ResourceUpdated" &&
+-  1093 session?.resourceSubscriptions?.has(notification.uri) !== true
++  1288 requestContext?.clientId !== clientId ||
++  1289 !isLoggingLevel(level) ||
++  1290 McpSchema.LoggingLevel.literals.indexOf(notification.level) <
++  1291 McpSchema.LoggingLevel.literals.indexOf(level)
++  1292 ) {
++  1293 return
++  1294 }
++  1295 } else if (
++  1296 !runtime.canDeliver(
++  1297 clientId,
++  1298 (requestContext?.clientId === clientId ? requestHeaders : undefined) ??
++  1299 clientStates.get(clientId)?.sessionHeaders ?? Headers.empty,
++  1300 notification,
++  1301 defaultLogLevel
++  1302 )
+
+@@ hunk 108 [code] pin 1110-1110 release 1319-1326 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1110 }).pipe(Effect.catchCause(() => Effect.void))
++  1319 }).pipe(
++  1320 Effect.ignoreCause,
++  1321 Effect.ensuring(Effect.sync(() => {
++  1322 Deferred.doneUnsafe(completed, Exit.void)
++  1323 if (notificationTails.get(clientId) === completed) notificationTails.delete(clientId)
++  1324 }))
++  1325 )
++  1326 deliveries.push(delivery)
+
+@@ hunk 109 [code] pin before 1112 release 1328-1331 cited ranges 0
+   pin units: 
+   release units: runWithRuntime=absent
++  1328 if (!hasOriginDelivery) yield* Deferred.succeed(delivered, undefined)
++  1329 yield* Effect.all(deliveries, { concurrency: "unbounded", discard: true }).pipe(
++  1330 Effect.forkScoped({ startImmediately: true })
++  1331 )
+
+@@ hunk 110 [code] pin 1113-1113 release 1333-1333 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1113 Effect.catchCause(() => Effect.void),
++  1333 Effect.ignoreCause,
+
+@@ hunk 111 [code] pin 1118-1118 release 1338-1338 cited ranges 0
+   pin units: runWithProtocolState=absent
+   release units: runWithRuntime=absent
+-  1118 return yield* RpcServer.make(protocolRegistry.clientRpcs, {
++  1338 return yield* RpcServer.make(runtime.clientRpcs, {
+
+@@ hunk 112 [erased] pin before 1160 release 1382-1382 cited ranges 0
+   pin units: 
+   release units: layer=code
++  1382 readonly instructions?: string | undefined
+
+@@ hunk 113 [code] pin 1166-1167 release 1389-1390 cited ranges 0
+   pin units: layer=code
+   release units: layer=code
+-  1166 layerWithProtocolState(options).pipe(
+-  1167 Layer.provide(layerMcpProtocolState(options.protocols))
++  1389 layerWithRuntime(options, "custom").pipe(
++  1390 Layer.provide(McpRuntime.layer(options.protocols))
+
+@@ hunk 114 [code] pin 1170-1170 release 1393-1393 cited ranges 0
+   pin units: layerWithProtocolState=absent
+   release units: layerWithRuntime=absent
+-  1170 const layerWithProtocolState = (options: {
++  1393 const layerWithRuntime = (options: {
+
+@@ hunk 115 [erased] pin before 1173 release 1396-1396 cited ranges 0
+   pin units: 
+   release units: layerWithRuntime=absent
++  1396 readonly instructions?: string | undefined
+
+@@ hunk 116 [code] pin 1177-1177 release 1401-1405 cited ranges 0
+   pin units: layerWithProtocolState=absent
+   release units: layerWithRuntime=absent
+-  1177 }): Layer.Layer<McpServer | McpServerClient, never, RpcServer.Protocol | McpProtocolState> =>
++  1401 }, transport: "custom" | "http" | "stdio"): Layer.Layer<
++  1402 McpServer | McpServerClient,
++  1403 never,
++  1404 RpcServer.Protocol | McpRuntime.ServerRuntime
++  1405 > =>
+
+@@ hunk 117 [code] pin 1180-1181 release 1408-1409 cited ranges 0
+   pin units: layerWithProtocolState=absent
+   release units: layerWithRuntime=absent
+-  1180 const protocolState = yield* McpProtocolState
+-  1181 yield* Effect.forkScoped(runWithProtocolState(options, protocolState))
++  1408 const runtime = yield* McpRuntime.ServerRuntime
++  1409 yield* Effect.forkScoped(runWithRuntime(options, runtime, transport))
+
+@@ hunk 118 [erased] pin before 1210 release 1440-1440 cited ranges 0
+   pin units: 
+   release units: layerStdio=code
++  1440 readonly instructions?: string | undefined
+
+@@ hunk 119 [code] pin 1216-1216 release 1447-1448 cited ranges 0
+   pin units: layerStdio=code
+   release units: layerStdio=code
+-  1216 layer(options).pipe(
++  1447 layerWithRuntime(options, "stdio").pipe(
++  1448 Layer.provide(McpRuntime.layer(options.protocols)),
+
+@@ hunk 120 [code] pin 1227-1227 release 1459-1459 cited ranges 0
+   pin units: mcpStdioSerialization=code
+   release units: mcpStdioSerialization=code
+-  1227 const serialization = RpcSerialization.jsonRpc({
++  1459 const serialization = mcpJsonRpcSerialization({
+
+@@ hunk 121 [code] pin 1243-1243 release 1475-1475 cited ranges 0
+   pin units: mcpStdioSerialization=code
+   release units: mcpStdioSerialization=code
+-  1243 const acceptsBatch = selectedProtocol?.transport.acceptsJsonRpcBatches === true
++  1475 const acceptsBatch = selectedProtocol?.runtime.transport.jsonRpc.acceptsBatches === true
+
+@@ hunk 122 [code] pin before 1247 release 1479-1479 cited ranges 0
+   pin units: 
+   release units: mcpStdioSerialization=code
++  1479 frame.some(McpRuntime.hasRequestProtocolVersion) ||
+
+@@ hunk 123 [code] pin 1260-1261 release 1493-1493 cited ranges 0
+   pin units: mcpStdioSerialization=code
+   release units: mcpStdioSerialization=code
+-  1260 selectedProtocol = protocols.find((protocol) => protocol.protocolVersion === offered) ??
+-  1261 protocols[0]
++  1493 selectedProtocol = McpRuntime.selectStatefulProtocol(protocols, offered)
+
+@@ hunk 124 [code] pin 1274-1274 release before 1506 cited ranges 0
+   pin units: mcpStdioSerialization=code
+   release units: 
+-  1274 _tag: "Cause",
+
+@@ hunk 125 [code] pin 1276-1277 release 1507-1507 cited ranges 0
+   pin units: mcpStdioSerialization=code
+   release units: mcpStdioSerialization=code
+-  1276 message: "JSON-RPC batches are not supported",
+-  1277 data: invalidBatchExit.success.exit.cause
++  1507 message: "JSON-RPC batches are not supported"
+
+@@ hunk 126 [erased] pin before 1320 release 1553-1553 cited ranges 0
+   pin units: 
+   release units: layerHttp=code
++  1553 readonly instructions?: string | undefined
+
+@@ hunk 127 [code] pin 1328-1328 release 1562-1562 cited ranges 0
+   pin units: layerHttp=code
+   release units: layerHttp=code
+-  1328 const protocolState = layerMcpProtocolState(options.protocols)
++  1562 const runtime = McpRuntime.layer(options.protocols)
+
+@@ hunk 128 [code] pin 1344-1344 release 1578-1578 cited ranges 0
+   pin units: layerHttp=code
+   release units: layerHttp=code
+-  1344 return Layer.merge(layerWithProtocolState(options), routes).pipe(
++  1578 return Layer.merge(layerWithRuntime(options, "http"), routes).pipe(
+
+@@ hunk 129 [code] pin 1346-1346 release 1580-1580 cited ranges 0
+   pin units: layerHttp=code
+   release units: layerHttp=code
+-  1346 Layer.provide(protocolState),
++  1580 Layer.provide(runtime),
+
+@@ hunk 130 [erased] pin 1357-1357 release 1591-1591 cited ranges 0
+   pin units: layerMcpProtocolHttp=code
+   release units: layerMcpProtocolHttp=code
+-  1357 McpProtocolState | RpcSerialization.RpcSerialization | HttpRouter.HttpRouter
++  1591 McpRuntime.ServerRuntime | HttpRouter.HttpRouter
+
+@@ hunk 131 [code] pin 1360-1361 release 1594-1597 cited ranges 0
+   pin units: layerMcpProtocolHttp=code
+   release units: layerMcpProtocolHttp=code
+-  1360 const state = yield* McpProtocolState
+-  1361 const { httpEffect, protocol } = yield* RpcServer.makeProtocolWithHttpEffect()
++  1594 const runtime = yield* McpRuntime.ServerRuntime
++  1595 const { httpEffect, protocol } = yield* RpcServer.makeProtocolWithHttpEffect().pipe(
++  1596 Effect.provideService(RpcSerialization.RpcSerialization, mcpHttpSerialization)
++  1597 )
+
+@@ hunk 132 [code] pin 1374-1452 release 1610-1612 cited ranges 0
+   pin units: layerMcpProtocolHttp=code
+   release units: layerMcpProtocolHttp=code
+-  1374 const protocolVersion = request.headers[MCP_PROTOCOL_VERSION_HEADER]
+-  1375 const sessionId = request.headers[MCP_SESSION_ID_HEADER]
+-  1376 const session = sessionId === undefined
+-  1377 ? undefined
+-  1378 : state.sessions.bySessionId.get(sessionId)
+-  1379 if (sessionId !== undefined && session === undefined) {
+-  1380 return Effect.succeed(HttpServerResponse.empty({ status: 404 }))
+-  1381 }
+-  1382 const protocolVersionHeaderRejected = (protocolVersion !== undefined &&
+-  1383 !state.protocolRegistry.protocols.some((protocol) => protocol.protocolVersion === protocolVersion)) ||
+-  1384 (session?.protocol.transport.requiresVersionHeader === true &&
+-  1385 protocolVersion !== session.protocol.protocolVersion)
+-  1386 const parseErrorResponse = protocolVersionHeaderRejected
+-  1387 ? HttpServerResponse.empty({ status: 400 })
+-  1388 : HttpServerResponse.jsonUnsafe({
+-  1389 jsonrpc: "2.0",
+-  1390 id: null,
+-  1391 error: new McpSchema.ParseError({ message: "Parse error" })
+-  1392 })
+-  1393 return request.text.pipe(
+-  1394 Effect.flatMap(Schema.decodeUnknownEffect(Schema.UnknownFromJsonString)),
+-  1395 Effect.matchEffect({
+-  1396 onFailure: () => Effect.succeed(parseErrorResponse),
+-  1397 onSuccess: (input) => {
+-  1398 if (!Array.isArray(input)) {
+-  1399 const hasId = Predicate.hasProperty(input, "id")
+-  1400 const id = hasId && (typeof input.id === "string" || typeof input.id === "number")
+-  1401 ? input.id
+-  1402 : null
+-  1403 const isJsonRpc = Predicate.hasProperty(input, "jsonrpc") && input.jsonrpc === "2.0"
+-  1404 const hasValidRequestId = !hasId || typeof input.id === "string" || typeof input.id === "number"
+-  1405 const isRequest = isJsonRpc && hasValidRequestId &&
+-  1406 Predicate.hasProperty(input, "method") && typeof input.method === "string"
+-  1407 const hasValidResponseId = hasId &&
+-  1408 (typeof input.id === "string" || typeof input.id === "number" || input.id === null)
+-  1409 const hasResult = Predicate.hasProperty(input, "result")
+-  1410 const hasError = Predicate.hasProperty(input, "error")
+-  1411 const isResponse = isJsonRpc && hasValidResponseId && hasResult !== hasError
+-  1412 const isInitialize = isRequest && isInitializeJsonRpcMessage(input)
+-  1416 if (!isInitialize && protocolVersionHeaderRejected) {
+-  1417 return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+-  1418 }
+-  1419 if (!isRequest && !isResponse) {
+-  1420 return Effect.succeed(HttpServerResponse.jsonUnsafe({
+-  1421 jsonrpc: "2.0",
+-  1422 id,
+-  1423 error: new InvalidRequest({ message: "Invalid Request" })
+-  1424 }))
+-  1425 }
+-  1426 if (isInitialize && sessionId !== undefined) {
+-  1427 return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+-  1428 }
+-  1429 if (!isInitialize && isRequest && sessionId === undefined) {
+-  1430 return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+-  1431 }
+-  1432 return httpEffect
+-  1433 }
+-  1434 if (protocolVersionHeaderRejected) {
+-  1435 return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+-  1436 }
+-  1437 if (input.length === 0) {
+-  1438 return Effect.succeed(HttpServerResponse.jsonUnsafe({
+-  1439 jsonrpc: "2.0",
+-  1440 id: null,
+-  1441 error: new InvalidRequest({ message: "Invalid Request" })
+-  1442 }, { status: 400 }))
+-  1443 }
+-  1444 if (input.some(isInitializeJsonRpcMessage) || session === undefined) {
+-  1445 return Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+-  1446 }
+-  1447 const selectedProtocol = session.protocol
+-  1448 return selectedProtocol.transport.acceptsJsonRpcBatches
+-  1449 ? httpEffect
+-  1450 : Effect.succeed(HttpServerResponse.empty({ status: 400 }))
+-  1451 }
+-  1452 })
++  1610 return Effect.gen(function*() {
++  1611 const parsed = yield* Effect.result(
++  1612 Effect.flatMap(request.text, Schema.decodeEffect(Schema.UnknownFromJsonString))
+
+@@ hunk 133 [code] pin before 1454 release 1614-1629 cited ranges 0
+   pin units: 
+   release units: layerMcpProtocolHttp=code
++  1614 const admission = runtime.admitHttp(request.headers, parsed)
++  1615 if (admission._tag === "Rejected") {
++  1616 return admission.response
++  1617 }
++  1618 const response = Effect.map(httpEffect, (response) => {
++  1620 const hasMultipleMessages = response.body._tag === "Uint8Array" &&
++  1621 response.body.body.subarray(0, -1).includes(10)
++  1622 return admission.isSubscription || response.body._tag === "Stream" || hasMultipleMessages
++  1623 ? toServerSentEvents(response, admission.isSubscription)
++  1624 : response
++  1625 })
++  1626 return yield* admission.acknowledge
++  1627 ? Effect.catchCause(response, () => Effect.succeed(HttpServerResponse.empty({ status: 202 })))
++  1628 : response
++  1629 })
+
+@@ hunk 134 [code] pin before 1458 release 1634-1744 cited ranges 0
+   pin units: 
+   release units: mcpHttpSerialization=absent; isEncodedMcpFailureCause=absent; normalizeMcpJsonRpcResponse=absent; mcpJsonRpcSerialization=absent; toServerSentEvents=absent
++  1634 const mcpHttpSerialization: RpcSerialization.RpcSerialization["Service"] = (() => {
++  1635 const serialization = mcpJsonRpcSerialization()
++  1636 return RpcSerialization.RpcSerialization.of({
++  1637 contentType: serialization.contentType,
++  1638 includesFraming: true,
++  1639 codecFor: serialization.codecFor,
++  1640 makeUnsafe: () => {
++  1641 const parser = serialization.makeUnsafe()
++  1642 return {
++  1643 decode: parser.decode,
++  1644 encode: (response) => {
++  1645 const encoded = parser.encode(response)
++  1647 return typeof encoded === "string" ? `${encoded}\n` : encoded
++  1648 }
++  1649 }
++  1650 }
++  1651 })
++  1652 })()
++  1654 const isEncodedMcpFailureCause = Schema.is(Schema.TaggedStruct("Cause", {
++  1655 data: Schema.Tuple([Schema.TaggedStruct("Fail", {
++  1656 error: Schema.toEncoded(McpSchema.McpError)
++  1657 })])
++  1658 }))
++  1660 const normalizeMcpJsonRpcResponse = (response: unknown): unknown => {
++  1661 if (Array.isArray(response)) {
++  1662 return response.map(normalizeMcpJsonRpcResponse)
++  1663 }
++  1664 if (!Predicate.isReadonlyObject(response) || !Predicate.hasProperty(response, "error")) {
++  1665 return response
++  1666 }
++  1667 return isEncodedMcpFailureCause(response.error)
++  1668 ? { ...response, error: response.error.data[0].error }
++  1669 : response
++  1670 }
++  1672 function mcpJsonRpcSerialization(options?: {
++  1673 readonly contentType?: string | undefined
++  1674 }): RpcSerialization.RpcSerialization["Service"] {
++  1675 const serialization = RpcSerialization.jsonRpc(options)
++  1676 return RpcSerialization.RpcSerialization.of({
++  1677 ...serialization,
++  1678 makeUnsafe: () => {
++  1679 const parser = serialization.makeUnsafe()
++  1680 const cancelledIds = new Set<string | number>()
++  1681 return {
++  1682 decode: parser.decode,
++  1683 encode: (response) => {
++  1684 if (Predicate.isReadonlyObject(response)) {
++  1685 const cancelledId = cancelledResponses.get(response)
++  1686 if (cancelledId !== undefined) {
++  1687 cancelledResponses.delete(response)
++  1688 cancelledIds.add(cancelledId)
++  1689 }
++  1690 }
++  1691 const encoded = parser.encode(response)
++  1692 if (typeof encoded !== "string") return encoded
++  1693 if (cancelledIds.size === 0 && !encoded.includes("\"_tag\":\"Cause\"")) return encoded
++  1694 let message: unknown = JSON.parse(encoded)
++  1695 if (cancelledIds.size > 0) {
++  1698 const keep = (message: unknown) =>
++  1699 !(Predicate.isReadonlyObject(message) && !Predicate.hasProperty(message, "method") &&
++  1700 (typeof message.id === "string" || typeof message.id === "number") && cancelledIds.delete(message.id))
++  1701 if (Array.isArray(message)) {
++  1702 const remaining = message.filter(keep)
++  1703 if (remaining.length === 0) return undefined
++  1704 message = remaining
++  1705 } else if (!keep(message)) {
++  1706 return undefined
++  1707 }
++  1708 }
++  1709 return JSON.stringify(normalizeMcpJsonRpcResponse(message))
++  1710 }
++  1711 }
++  1712 }
++  1713 })
++  1714 }
++  1716 const toServerSentEvents = (response: HttpServerResponse.HttpServerResponse, keepAlive: boolean) => {
++  1717 const encoder = new TextEncoder()
++  1718 const decoder = new TextDecoder()
++  1719 const frame = (data: Uint8Array) =>
++  1720 encoder.encode(decoder.decode(data).trimEnd().split("\n").map((message) => `data: ${message}\n\n`).join(""))
++  1721 const options = {
++  1722 status: response.status,
++  1723 statusText: response.statusText,
++  1724 headers: Headers.remove(response.headers, "content-type"),
++  1725 cookies: response.cookies,
++  1726 contentType: "text/event-stream"
++  1727 }
++  1728 if (response.body._tag === "Stream") {
++  1729 const events = response.body.stream.pipe(Stream.map(frame))
++  1730 if (!keepAlive) {
++  1731 return HttpServerResponse.stream(events, options)
++  1732 }
++  1734 const keepAliveComments = Stream.tick("15 seconds").pipe(
++  1735 Stream.drop(1),
++  1736 Stream.map(() => encoder.encode(": keepalive\n\n"))
++  1737 )
++  1738 return HttpServerResponse.stream(Stream.merge(events, keepAliveComments, { haltStrategy: "left" }), options)
++  1739 }
++  1740 if (response.body._tag === "Uint8Array") {
++  1741 return HttpServerResponse.uint8Array(frame(response.body.body), options)
++  1742 }
++  1743 return HttpServerResponse.setHeader(response, "content-type", "text/event-stream")
++  1744 }
+
+@@ hunk 135 [code] pin before 1515 release 1797-1798 cited ranges 0
+   pin units: 
+   release units: toolResultContent=absent
++  1797 const toolResultContent = (encoded: unknown): CallToolResult["content"] =>
++  1798 encoded === undefined ? [] : [{ type: "text", text: JSON.stringify(encoded) }]
+
+@@ hunk 136 [erased] pin 1520-1520 release 1812-1812 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1520 McpServer | Tool.HandlersFor<Tools> | Exclude<Tool.HandlerServices<Tools>, McpServerClient>
++  1812 McpServer | Tool.HandlersFor<Tools> | Exclude<Tool.HandlerServices<Tools>, McpRequestContext>
+
+@@ hunk 137 [code] pin 1528-1530 release 1820-1844 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1528 Exclude<Tool.HandlersFor<Tools>, McpServerClient>
+-  1529 >)
+-  1530 const services = yield* Effect.context<never>()
++  1820 Exclude<Tool.HandlersFor<Tools>, McpRequestContext>
++  1821 >).pipe(Effect.updateContext((context: Context.Context<Exclude<Tool.HandlersFor<Tools>, McpRequestContext>>) => {
++  1823 const services = new Map(context.mapUnsafe)
++  1824 for (const tool of Object.values(toolkit.tools)) {
++  1825 const handler = services.get(tool.id) as Tool.Handler<string> | undefined
++  1826 if (handler !== undefined) {
++  1827 services.set(tool.id, { ...handler, context: omitRequestServices(handler.context) })
++  1828 }
++  1829 }
++  1830 return Context.makeUnsafe(services)
++  1831 }))
++  1832 const services = omitRequestServices(yield* Effect.context<never>())
++  1833 const reportCause = (cause: Cause.Cause<unknown>) => Effect.provideContext(ErrorReporter.report(cause), services)
++  1835 const internalToolError = (cause: Cause.Cause<unknown>) => {
++  1836 const failure = Cause.findFail(cause)
++  1837 return Result.isFailure(failure) && !Cause.hasDies(cause)
++  1838 ? Effect.failCause(failure.failure)
++  1839 : Effect.logError(cause).pipe(
++  1840 Effect.andThen(reportCause(cause)),
++  1841 Effect.as(toolErrorResult(INTERNAL_TOOL_ERROR_MESSAGE))
++  1842 )
++  1843 }
++  1844 const registrations: Array<Parameters<typeof registry.addTool>[0]> = []
+
+@@ hunk 138 [code] pin before 1532 release 1846-1856 cited ranges 0
+   pin units: 
+   release units: registerToolkit=code
++  1846 const strict = Tool.getStrictMode(tool) === true
++  1847 const rawJsonSchema = Tool.isDynamic(tool) ? tool.jsonSchema : undefined
++  1848 if (strict && rawJsonSchema !== undefined) {
++  1849 return yield* Effect.die(
++  1850 `McpServer cannot strictly validate the raw JSON Schema for tool '${tool.name}'; use an Effect Schema instead`
++  1851 )
++  1852 }
++  1853 const decodeOptions: SchemaAST.ParseOptions = {
++  1854 onExcessProperty: strict ? "error" : "ignore",
++  1855 errors: "all"
++  1856 }
+
+@@ hunk 139 [code] pin 1535-1540 release 1860-1883 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1535 const outputJsonSchema = Tool.getJsonSchemaFromSchema(tool.successSchema)
+-  1536 const outputSchema = outputJsonSchema.type === "object"
+-  1537 ? yield* Schema.decodeUnknownEffect(ToolJsonSchema)(outputJsonSchema).pipe(Effect.orDie)
+-  1538 : undefined
+-  1539 const inputSchema = yield* Schema.decodeUnknownEffect(ToolJsonSchema)(
+-  1540 Tool.getJsonSchema(tool)
++  1860 const encodeFailure = Schema.encodeUnknownEffect(tool.failureSchema) as (
++  1861 error: unknown
++  1862 ) => Effect.Effect<unknown, Schema.SchemaError, Tool.HandlerServices<Tools[keyof Tools]>>
++  1863 const declaredFailureResult = (error: unknown) =>
++  1864 error instanceof Error && error.message !== ""
++  1865 ? Effect.succeed(toolErrorResult(error.message))
++  1866 : Effect.map(encodeFailure(error), (encoded) =>
++  1867 new CallToolResult({ isError: true, content: toolResultContent(encoded) }))
++  1868 const handleCause = (cause: Cause.Cause<unknown>) => {
++  1869 const failure = Cause.findFail(cause)
++  1870 if (Result.isSuccess(failure)) {
++  1871 const error = failure.success.error
++  1872 const origin = Context.get(Cause.reasonAnnotations(failure.success), Toolkit.FailureOrigin)
++  1873 if (origin === "parameters" && isParameterValidationError(error)) {
++  1874 return Effect.fail(new InvalidParams({ message: error.reason.message }))
++  1875 }
++  1876 if (origin === "handler" && isDeclaredFailure(error)) {
++  1877 return Effect.catchCause(declaredFailureResult(error), internalToolError)
++  1878 }
++  1879 }
++  1880 return internalToolError(cause)
++  1881 }
++  1882 const outputSchema = yield* Schema.decodeUnknownEffect(McpSchema.ToolOutputJson)(
++  1883 toolJsonSchema(tool.successSchema, false)
+
+@@ hunk 140 [code] pin before 1542 release 1885-1897 cited ranges 0
+   pin units: 
+   release units: registerToolkit=code
++  1885 const inputSchema = yield* Schema.decodeUnknownEffect(ToolJson)(
++  1886 rawJsonSchema ?? toolJsonSchema(tool.parametersSchema, strict)
++  1887 ).pipe(
++  1888 Effect.catchTag("SchemaError", (error) =>
++  1889 Effect.die(
++  1890 rawJsonSchema !== undefined
++  1891 ? `McpServer cannot register tool '${tool.name}': its raw JSON Schema must have an object root ` +
++  1892 `(type: "object").\n\n${error.message}`
++  1893 : `McpServer cannot register tool '${tool.name}': its parameters must encode to a JSON Schema with an ` +
++  1894 `object root (type: "object"), such as a Schema.Struct. Use Tool.EmptyParams for a tool without ` +
++  1895 `parameters.\n\n${error.message}`
++  1896 ))
++  1897 )
+
+@@ hunk 141 [code] pin 1546-1546 release 1902-1902 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1546 ...(outputSchema === undefined ? {} : { outputSchema }),
++  1902 outputSchema,
+
+@@ hunk 142 [code] pin 1559-1559 release 1915-1915 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1559 yield* registry.addTool({
++  1915 registrations.push({
+
+@@ hunk 143 [code] pin 1563-1563 release 1919-1919 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1563 return built.handle(tool.name as keyof Tools, payload ?? {}).pipe(
++  1919 return built.handle(tool.name as keyof Tools, payload ?? {}, undefined, decodeOptions).pipe(
+
+@@ hunk 144 [code] pin 1565-1565 release 1921-1921 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1565 Stream.run(Sink.last()),
++  1921 Stream.runLast,
+
+@@ hunk 145 [code] pin 1567-1570 release 1923-1930 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1567 Effect.provideContext(
+-  1568 services as Context.Context<Tool.HandlerServices<Tools[keyof Tools]>>
+-  1569 ),
+-  1570 Effect.map((result) =>
++  1923 Effect.flatMap((result) =>
++  1925 result.isFailure && result.failureOrigin !== "handler"
++  1926 ? Effect.failCause(Cause.annotate(
++  1927 Cause.fail(result.result),
++  1928 Context.make(Toolkit.FailureOrigin, result.failureOrigin ?? "result")
++  1929 ))
++  1930 : Effect.succeed(
+
+@@ hunk 146 [code] pin 1572-1577 release 1932-1934 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1572 isError: false,
+-  1573 structuredContent: typeof result.encodedResult === "object" ? result.encodedResult : undefined,
+-  1574 content: result.encodedResult === undefined ? [] : [{
+-  1575 type: "text",
+-  1576 text: JSON.stringify(result.encodedResult)
+-  1577 }]
++  1932 isError: result.isFailure,
++  1933 structuredContent: result.isFailure ? undefined : result.encodedResult,
++  1934 content: toolResultContent(result.encodedResult)
+
+@@ hunk 147 [code] pin before 1579 release 1936-1936 cited ranges 0
+   pin units: 
+   release units: registerToolkit=code
++  1936 )
+
+@@ hunk 148 [code] pin 1580-1596 release 1938-1939 cited ranges 0
+   pin units: registerToolkit=code
+   release units: registerToolkit=code
+-  1580 Effect.tapCause(Effect.logError),
+-  1581 Effect.catch((error) => {
+-  1582 if (AiError.isAiError(error)) {
+-  1583 const reason = (error as AiError.AiError).reason
+-  1584 return reason._tag === "ToolParameterValidationError"
+-  1585 ? Effect.fail(new InvalidParams({ message: reason.message }))
+-  1586 : Effect.succeed(toolErrorResult(INTERNAL_TOOL_ERROR_MESSAGE))
+-  1587 }
+-  1588 if (isDeclaredFailure(error)) {
+-  1589 const message = error instanceof Error
+-  1590 ? error.message
+-  1591 : INTERNAL_TOOL_ERROR_MESSAGE
+-  1592 return Effect.succeed(toolErrorResult(message))
+-  1593 }
+-  1594 return Effect.succeed(toolErrorResult(INTERNAL_TOOL_ERROR_MESSAGE))
+-  1595 }),
+-  1596 Effect.catchDefect(() => Effect.succeed(toolErrorResult(INTERNAL_TOOL_ERROR_MESSAGE)))
++  1938 Effect.catchCause(handleCause),
++  1939 Effect.provideContext(services as Context.Context<Tool.HandlerServices<Tools[keyof Tools]>>)
+
+@@ hunk 149 [code] pin before 1601 release 1944-1946 cited ranges 0
+   pin units: 
+   release units: registerToolkit=code
++  1944 for (const registration of registrations) {
++  1945 yield* registry.addTool(registration)
++  1946 }
+
+@@ hunk 150 [code] pin before 1609 release 1949-1962 cited ranges 0
+   pin units: 
+   release units: isParameterValidationError=absent; toolJsonSchema=absent
++  1949 const isParameterValidationError = (
++  1950 error: unknown
++  1951 ): error is AiError.AiError & { readonly reason: AiError.ToolParameterValidationError } =>
++  1952 AiError.isAiError(error) && error.reason._tag === "ToolParameterValidationError"
++  1955 const toolJsonSchema = (schema: Schema.Constraint, strict: boolean): JsonSchema.JsonSchema => {
++  1956 const document = InternalStructuredOutput.resolveTopLevelReference(
++  1957 Schema.toJsonSchemaDocument(schema, { onExcessProperty: strict ? "error" : "ignore" })
++  1958 )
++  1959 return Object.keys(document.definitions).length === 0
++  1960 ? document.schema
++  1961 : { ...document.schema, $defs: document.definitions }
++  1962 }
+
+@@ hunk 151 [erased] pin 1614-1614 release 1976-1976 cited ranges 0
+   pin units: toolkit=erased
+   release units: toolkit=erased
+-  1614 Tool.HandlersFor<Tools> | Exclude<Tool.HandlerServices<Tools>, McpServerClient>
++  1976 Tool.HandlersFor<Tools> | Exclude<Tool.HandlerServices<Tools>, McpRequestContext>
+
+@@ hunk 152 [erased] pin 1697-1697 release 2063-2063 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1697 typeof ReadResourceResult.Type | string | Uint8Array,
++  2063 ReadResourceResult | string | Uint8Array,
+
+@@ hunk 153 [erased] pin 1703-1703 release 2069-2069 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1703 ): Effect.Effect<void, never, Exclude<R, McpServerClient> | McpServer>
++  2069 ): Effect.Effect<void, never, Exclude<R, McpRequestContext> | McpServer>
+
+@@ hunk 154 [erased] pin 1730-1730 release 2097-2097 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1730 typeof ReadResourceResult.Type | string | Uint8Array,
++  2097 ReadResourceResult | string | Uint8Array,
+
+@@ hunk 155 [erased] pin 1745-1745 release 2112-2112 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1745 McpServerClient
++  2112 McpRequestContext
+
+@@ hunk 156 [erased] pin 1758-1758 release 2125-2125 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1758 readonly content: Effect.Effect<typeof ReadResourceResult.Type | string | Uint8Array, any, any>
++  2125 readonly content: Effect.Effect<ReadResourceResult | string | Uint8Array, any, any>
+
+@@ hunk 157 [code] pin 1762-1762 release 2129-2129 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1762 const services = yield* Effect.context<any>()
++  2129 const services = omitRequestServices(yield* Effect.context<any>())
+
+@@ hunk 158 [erased] pin 1803-1803 release 2170-2170 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1803 typeof ReadResourceResult.Type | string | Uint8Array,
++  2170 ReadResourceResult | string | Uint8Array,
+
+@@ hunk 159 [code] pin 1809-1809 release 2176-2176 cited ranges 0
+   pin units: registerResource=code
+   release units: registerResource=code
+-  1809 const services = yield* Effect.context<any>()
++  2176 const services = omitRequestServices(yield* Effect.context<any>())
+
+@@ hunk 160 [erased] pin 1904-1904 release 2273-2273 cited ranges 0
+   pin units: resource=erased
+   release units: resource=erased
+-  1904 typeof ReadResourceResult.Type | string | Uint8Array,
++  2273 ReadResourceResult | string | Uint8Array,
+
+@@ hunk 161 [erased] pin 1909-1909 release 2278-2278 cited ranges 0
+   pin units: resource=erased
+   release units: resource=erased
+-  1909 ): Layer.Layer<never, never, Exclude<R, McpServerClient>>
++  2278 ): Layer.Layer<never, never, Exclude<R, McpRequestContext>>
+
+@@ hunk 162 [erased] pin 1934-1934 release 2304-2304 cited ranges 0
+   pin units: resource=erased
+   release units: resource=erased
+-  1934 typeof ReadResourceResult.Type | string | Uint8Array,
++  2304 ReadResourceResult | string | Uint8Array,
+
+@@ hunk 163 [erased] pin 1946-1946 release 2316-2316 cited ranges 0
+   pin units: resource=erased
+   release units: resource=erased
+-  1946 McpServerClient
++  2316 McpRequestContext
+
+@@ hunk 164 [erased] pin 1989-1989 release 2360-2360 cited ranges 0
+   pin units: registerPrompt=code
+   release units: registerPrompt=code
+-  1989 ) => Effect.Effect<Array<Params[K]>, any, any>
++  2360 ) => Effect.Effect<Array<Params[K]["Type"]>, any, any>
+
+@@ hunk 165 [erased] pin before 1994 release 2365-2365 cited ranges 0
+   pin units: 
+   release units: registerPrompt=code
++  2365 readonly title?: string | undefined
+
+@@ hunk 166 [erased] pin 1997-1997 release 2369-2371 cited ranges 0
+   pin units: registerPrompt=code
+   release units: registerPrompt=code
+-  1997 readonly content: (params: Params) => Effect.Effect<Array<typeof PromptMessage.Type> | string, E, R>
++  2369 readonly content: (
++  2370 params: Schema.Struct.Type<Params>
++  2371 ) => Effect.Effect<Array<PromptMessage> | string, E, R>
+
+@@ hunk 167 [erased] pin 2000-2001 release 2374-2379 cited ranges 0
+   pin units: registerPrompt=code
+   release units: registerPrompt=code
+-  2000 ): Effect.Effect<void, never, Exclude<Schema.Struct.DecodingServices<Params> | R, McpServerClient> | McpServer> => {
+-  2001 const args = Arr.empty<typeof PromptArgument.Type>()
++  2374 ): Effect.Effect<
++  2375 void,
++  2376 never,
++  2377 Exclude<Schema.Struct.DecodingServices<Params> | R, McpRequestContext> | McpServer
++  2378 > => {
++  2379 const args = Arr.empty<PromptArgument>()
+
+@@ hunk 168 [code] pin before 2012 release 2390-2390 cited ranges 0
+   pin units: 
+   release units: registerPrompt=code
++  2390 title: options.title,
+
+@@ hunk 169 [code] pin 2027-2027 release 2406-2410 cited ranges 0
+   pin units: registerPrompt=code
+   release units: registerPrompt=code
+-  2027 const services = yield* Effect.context<Exclude<R | Schema.Struct.DecodingServices<Params>, McpServerClient>>()
++  2406 const services = omitRequestServices(
++  2407 yield* Effect.context<
++  2408 Exclude<R | Schema.Struct.DecodingServices<Params>, McpRequestContext>
++  2409 >()
++  2410 )
+
+@@ hunk 170 [erased] pin 2033-2033 release 2416-2416 cited ranges 0
+   pin units: registerPrompt=code
+   release units: registerPrompt=code
+-  2033 ) => Effect.Effect<CompleteResult, InternalError, McpServerClient>
++  2416 ) => Effect.Effect<CompleteResult, InternalError, McpRequestContext>
+
+@@ hunk 171 [erased] pin before 2119 release 2503-2503 cited ranges 0
+   pin units: 
+   release units: prompt=erased
++  2503 readonly title?: string | undefined
+
+@@ hunk 172 [erased] pin 2124-2124 release 2509-2509 cited ranges 0
+   pin units: prompt=erased
+   release units: prompt=erased
+-  2124 ) => Effect.Effect<Array<typeof PromptMessage.Type> | string, E, R>
++  2509 ) => Effect.Effect<Array<PromptMessage> | string, E, R>
+
+@@ hunk 173 [erased] pin 2127-2127 release 2512-2516 cited ranges 0
+   pin units: prompt=erased
+   release units: prompt=erased
+-  2127 ): Layer.Layer<never, never, Exclude<Schema.Struct.DecodingServices<Params> | R, McpServerClient>> =>
++  2512 ): Layer.Layer<
++  2513 never,
++  2514 never,
++  2515 Exclude<Schema.Struct.DecodingServices<Params> | R, McpRequestContext>
++  2516 > =>
+
+@@ hunk 174 [code] pin 2161-2161 release 2551-2551 cited ranges 0
+   pin units: elicit=code
+   release units: elicit=code
+-  2161 requestedSchema: Tool.getJsonSchemaFromSchema(schema)
++  2551 requestedSchema: toolJsonSchema(schema, false)
+
+@@ hunk 175 [code] pin 2185-2186 release 2576-2577 cited ranges 0
+   pin units: clientCapabilities=code
+   release units: clientCapabilities=code
+-  2185 McpServerClient
+-  2186 > = McpServerClient.useSync((_) => _.clientCapabilities)
++  2576 McpRequestContext
++  2577 > = McpRequestContext.useSync((_) => _.clientCapabilities)
+
+@@ hunk 176 [code] pin 2199-2199 release 2590-2590 cited ranges 0
+   pin units: makeUriMatcher=code
+   release units: makeUriMatcher=code
+-  2199 router.on("GET", uri as any, value)
++  2590 router.on("GET", `/${uri}`, value)
+
+@@ hunk 177 [code] pin 2201-2201 release 2592-2592 cited ranges 0
+   pin units: makeUriMatcher=code
+   release units: makeUriMatcher=code
+-  2201 const find = (uri: string) => router.find("GET", uri)
++  2592 const find = (uri: string) => router.find("GET", `/${uri}`)
+
+@@ hunk 178 [code] pin 2234-2378 release before 2625 cited ranges 0
+   pin units: PingRpcs=absent; layerHandlers=absent
+   release units: 
+-  2234 const PingRpcs = RpcGroup.make(Ping).middleware(McpServerClientMiddleware)
+-  2235 const layerHandlers = (serverInfo: {
+-  2236 readonly name: string
+-  2237 readonly version: string
+-  2238 readonly description?: string | undefined
+-  2239 readonly websiteUrl?: string | undefined
+-  2240 readonly icons?: ReadonlyArray<McpSchema.Icon> | undefined
+-  2241 readonly extensions?: ServerExtensions | undefined
+-  2242 }, options: {
+-  2243 readonly sessions: Sessions
+-  2244 readonly protocolRegistry: McpProtocolRegistry.ProtocolRegistry<McpProtocol.ProtocolAdapter>
+-  2245 }) =>
+-  2246 Layer.effectContext(
+-  2247 Effect.gen(function*() {
+-  2248 const server = yield* McpServer
+-  2249 const defaultLogLevel = yield* CurrentLogLevel
+-  2250 const contextMap = new Map<string, unknown>()
+-  2251 const internalCore = internalState.get(server)!.core
+-  2252 const handlerTarget = options.protocolRegistry.handlerTarget(contextMap)
+-  2254 for (const protocol of options.protocolRegistry.protocols) {
+-  2255 const wireHandlers = PingRpcs.of({
+-  2257 ping: () => Effect.succeed({})
+-  2258 })
+-  2259 yield* handlerTarget.install(protocol, PingRpcs, wireHandlers)
+-  2260 const lifecycle: McpProtocolInternal.LifecycleRuntime = {
+-  2261 initialize: Effect.fnUntraced(
+-  2262 function*(protocolVersion, profile, clientId) {
+-  2263 const presence = yield* internalCore.registrationPresence
+-  2264 let capabilities: McpCore.CanonicalServerCapabilities = {
+-  2265 completions: true,
+-  2266 logging: true
+-  2267 }
+-  2268 if (presence.tools) {
+-  2269 capabilities = { ...capabilities, tools: { listChanged: true } }
+-  2270 }
+-  2271 if (presence.resources) {
+-  2272 capabilities = {
+-  2273 ...capabilities,
+-  2274 resources: {
+-  2275 listChanged: true,
+-  2276 subscribe: true
+-  2277 }
+-  2278 }
+-  2279 }
+-  2280 if (presence.prompts) {
+-  2281 capabilities = { ...capabilities, prompts: { listChanged: true } }
+-  2282 }
+-  2283 if (serverInfo.extensions) {
+-  2284 capabilities = {
+-  2285 ...capabilities,
+-  2286 extensions: serverInfo.extensions
+-  2287 }
+-  2288 }
+-  2289 return yield* Effect.withFiber((fiber) => {
+-  2290 const httpRequest = Context.getOrUndefined(fiber.context, HttpServerRequest.HttpServerRequest)
+-  2291 if (httpRequest !== undefined && capabilities.resources !== undefined) {
+-  2292 capabilities = {
+-  2293 ...capabilities,
+-  2294 resources: { ...capabilities.resources, subscribe: false }
+-  2295 }
+-  2296 }
+-  2297 const initializePayload = Initialize.payloadSchema.make({
+-  2298 protocolVersion,
+-  2299 capabilities: profile.clientCapabilities,
+-  2300 clientInfo: profile.clientInfo,
+-  2301 _meta: profile.requestMetadata
+-  2302 })
+-  2303 const session: Session = {
+-  2304 initializePayload,
+-  2305 negotiatedProfile: profile,
+-  2306 protocol,
+-  2307 resourceSubscriptions: httpRequest === undefined && capabilities.resources?.subscribe === true
+-  2308 ? new Set()
+-  2309 : undefined,
+-  2310 logLevel: { _tag: "Effect", level: defaultLogLevel }
+-  2311 }
+-  2312 if (httpRequest) {
+-  2313 const sessionId = crypto.randomUUID()
+-  2314 options.sessions.bySessionId.set(sessionId, session)
+-  2315 appendPreResponseHandlerUnsafe(httpRequest, (_req, res) =>
+-  2316 Effect.succeed(HttpServerResponse.setHeaders(res, {
+-  2317 [MCP_SESSION_ID_HEADER]: sessionId,
+-  2318 [MCP_PROTOCOL_VERSION_HEADER]: protocol.protocolVersion
+-  2319 })))
+-  2320 } else {
+-  2321 options.sessions.byClientId.set(clientId, session)
+-  2322 }
+-  2323 return Effect.succeed({
+-  2324 capabilities,
+-  2325 serverInfo: McpSchema.Implementation.make({
+-  2326 name: serverInfo.name,
+-  2327 version: serverInfo.version,
+-  2328 description: serverInfo.description,
+-  2329 websiteUrl: serverInfo.websiteUrl,
+-  2330 icons: serverInfo.icons
+-  2331 })
+-  2332 })
+-  2333 })
+-  2334 }
+-  2335 ),
+-  2336 setLogLevel: Effect.fnUntraced(function*(level, clientId, headers) {
+-  2337 const session = getClientSession(options.sessions, clientId, headers)
+-  2338 if (session === undefined) {
+-  2339 return
+-  2340 }
+-  2341 session.logLevel = { _tag: "Mcp", level }
+-  2342 }),
+-  2343 subscribe: Effect.fnUntraced(function*(uri, clientId, headers) {
+-  2344 const subscriptions = getClientSession(options.sessions, clientId, headers)?.resourceSubscriptions
+-  2345 if (subscriptions === undefined) {
+-  2346 return yield* new McpProtocolInternal.ProtocolError({
+-  2347 code: McpSchema.METHOD_NOT_FOUND_ERROR_CODE,
+-  2348 message: "Resource subscriptions are not supported"
+-  2349 })
+-  2350 }
+-  2351 subscriptions.add(uri)
+-  2352 }),
+-  2353 unsubscribe: Effect.fnUntraced(function*(uri, clientId, headers) {
+-  2354 const subscriptions = getClientSession(options.sessions, clientId, headers)?.resourceSubscriptions
+-  2355 if (subscriptions === undefined) {
+-  2356 return yield* new McpProtocolInternal.ProtocolError({
+-  2357 code: McpSchema.METHOD_NOT_FOUND_ERROR_CODE,
+-  2358 message: "Resource subscriptions are not supported"
+-  2359 })
+-  2360 }
+-  2361 subscriptions.delete(uri)
+-  2362 }),
+-  2363 clientNotification: Effect.fnUntraced(function*(notification, clientId) {
+-  2364 if (notification._tag === "Initialized") {
+-  2365 server.initializedClients.add(clientId)
+-  2366 }
+-  2367 return
+-  2368 })
+-  2369 }
+-  2370 yield* protocol.installHandlers(
+-  2371 internalCore,
+-  2372 lifecycle,
+-  2373 handlerTarget
+-  2374 )
+-  2375 }
+-  2376 return Context.makeUnsafe(contextMap)
+-  2377 })
+-  2378 )
+
+@@ hunk 179 [erased] pin 2382-2383 release 2627-2628 cited ranges 0
+   pin units: resolveResourceContent=erased
+   release units: resolveResourceContent=erased
+-  2382 content: typeof ReadResourceResult.Type | string | Uint8Array
+-  2383 ): typeof ReadResourceResult.Type => {
++  2627 content: ReadResourceResult | string | Uint8Array
++  2628 ): ReadResourceResult => {
+
+@@ hunk 180 [code] pin 2402-2415 release 2647-2647 cited ranges 0
+   pin units: getClientSession=absent; InvalidBatchExit=code
+   release units: InvalidBatchExit=code
+-  2402 const getClientSession = (
+-  2403 sessions: Sessions,
+-  2404 clientId: number,
+-  2405 headers: Headers.Headers
+-  2406 ) => {
+-  2407 const sessionId = headers[MCP_SESSION_ID_HEADER]
+-  2408 if (sessionId === undefined) {
+-  2409 return sessions.byClientId.get(clientId)
+-  2410 }
+-  2411 return sessions.bySessionId.get(sessionId)
+-  2412 }
+-  2414 const InvalidBatchExit = Schema.Struct({
+-  2415 _tag: Schema.Literal("Exit"),
++  2647 const InvalidBatchExit = Schema.TaggedStruct("Exit", {
+
+@@ hunk 181 [code] pin 2417-2418 release 2649-2649 cited ranges 0
+   pin units: InvalidBatchExit=code
+   release units: InvalidBatchExit=code
+-  2417 exit: Schema.Struct({
+-  2418 _tag: Schema.Literal("Failure"),
++  2649 exit: Schema.TaggedStruct("Failure", {
+
+@@ hunk 182 [code] pin 2425-2482 release 2656-2661 cited ranges 0
+   pin units: mcpLogLevels=absent; effectLogLevel=absent; isMcpLogLevelEnabled=absent; OfferedProtocolVersion=absent; getOfferedProtocolVersion=absent; protocolForInternalTag=absent; getProtocolForClient=absent
+   release units: isProtocolVersion=absent
+-  2425 const mcpLogLevels: Record<McpSchema.LoggingLevel, { readonly effect: LogLevel.LogLevel; readonly order: number }> = {
+-  2426 debug: { effect: "Debug", order: 0 },
+-  2427 info: { effect: "Info", order: 1 },
+-  2428 notice: { effect: "Info", order: 2 },
+-  2429 warning: { effect: "Warn", order: 3 },
+-  2430 error: { effect: "Error", order: 4 },
+-  2431 critical: { effect: "Fatal", order: 5 },
+-  2432 alert: { effect: "Fatal", order: 6 },
+-  2433 emergency: { effect: "Fatal", order: 7 }
+-  2434 }
+-  2436 const effectLogLevel = (logLevel: SessionLogLevel | undefined, fallback: LogLevel.LogLevel): LogLevel.LogLevel =>
+-  2437 logLevel?._tag === "Mcp" ? mcpLogLevels[logLevel.level].effect : logLevel?.level ?? fallback
+-  2439 const isMcpLogLevelEnabled = (
+-  2440 level: McpSchema.LoggingLevel,
+-  2441 minimum: SessionLogLevel | undefined,
+-  2442 fallback: LogLevel.LogLevel
+-  2443 ): boolean =>
+-  2444 minimum?._tag === "Mcp"
+-  2445 ? mcpLogLevels[level].order >= mcpLogLevels[minimum.level].order
+-  2446 : LogLevel.isGreaterThanOrEqualTo(mcpLogLevels[level].effect, minimum?.level ?? fallback)
+-  2448 const OfferedProtocolVersion = Schema.Struct({
+-  2449 protocolVersion: Schema.String
+-  2450 })
+-  2452 const getOfferedProtocolVersion = (payload: unknown): string => {
+-  2453 const decoded = Schema.decodeUnknownResult(OfferedProtocolVersion)(payload)
+-  2454 return Result.isSuccess(decoded) ? decoded.success.protocolVersion : ""
+-  2455 }
+-  2457 const protocolForInternalTag = (
+-  2458 registry: McpProtocolRegistry.ProtocolRegistry<McpProtocol.ProtocolAdapter>,
+-  2459 tag: string
+-  2460 ): McpProtocol.ProtocolAdapter => {
+-  2461 for (const protocol of registry.protocols) {
+-  2462 const routed = registry.routeClientRequest(protocol, {
+-  2463 _tag: "Request",
+-  2464 id: 0,
+-  2465 tag: "",
+-  2466 payload: undefined,
+-  2467 headers: []
+-  2468 })
+-  2469 if (tag.startsWith(routed.tag)) {
+-  2470 return protocol
+-  2471 }
+-  2472 }
+-  2473 return registry.protocols[0]
+-  2474 }
+-  2476 const getProtocolForClient = (
+-  2477 clientProtocols: Map<number, McpProtocol.ProtocolAdapter>,
+-  2478 clientId: number,
+-  2479 registry: McpProtocolRegistry.ProtocolRegistry<McpProtocol.ProtocolAdapter>
+-  2480 ): McpProtocol.ProtocolAdapter =>
+-  2481 clientProtocols.get(clientId) ??
+-  2482 registry.protocols[0]
++  2656 const isProtocolVersion = (version: string): version is McpProtocol.ProtocolVersion =>
++  2657 version === "2024-11-05" ||
++  2658 version === "2025-03-26" ||
++  2659 version === "2025-06-18" ||
++  2660 version === "2025-11-25" ||
++  2661 version === "2026-07-28"

@@ -1,0 +1,29 @@
+# internal/schema/fromRepresentation.ts (rc.112) against internal/schema/fromRepresentation.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 5 release 5-5 cited ranges 0
+   pin units: 
+   release units: import ../../SchemaParser.ts=absent
++     5 import * as SchemaParser from "@tree/SchemaParser.ts"
+
+@@ hunk 2 [code] pin before 9 release 9-9 cited ranges 0
+   pin units: 
+   release units: import ./toCodec.ts=absent
++     9 import * as InternalToCodec from "@tree/internal/schema/toCodec.ts"
+
+@@ hunk 3 [code] pin 46-46 release 48-48 cited ranges 0
+   pin units: makeReviverMap=code
+   release units: makeReviverMap=code
+-    46 payloadSchema: Schema.toCodecJson(reviver.payloadSchema)
++    48 payloadSchema: InternalToCodec.toCodecJson(reviver.payloadSchema)
+
+@@ hunk 4 [code] pin 105-105 release 107-107 cited ranges 0
+   pin units: revivePersisted=code
+   release units: revivePersisted=code
+-   105 const decoded = Schema.decodeUnknownResult(reviver.payloadSchema)(representation.payload)
++   107 const decoded = SchemaParser.decodeUnknownResult(reviver.payloadSchema)(representation.payload)
+
+@@ hunk 5 [code] pin 317-317 release 319-319 cited ranges 0
+   pin units: revivePersisted=code
+   release units: revivePersisted=code
+-   317 return finishStructural(Schema.Union(members, { mode: representation.mode }), representation, path)
++   319 return finishStructural(Schema.Union(members, representation.options), representation, path)

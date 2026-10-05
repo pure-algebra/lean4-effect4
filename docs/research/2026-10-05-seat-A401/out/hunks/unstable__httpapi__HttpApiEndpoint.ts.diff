@@ -1,0 +1,117 @@
+# unstable/httpapi/HttpApiEndpoint.ts (rc.112) against http-api/HttpApiEndpoint.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 18-18 release 19-25 cited ranges 0
+   pin units: import ../../Function.ts=absent
+   release units: import ../encoding/Sse.ts=absent; import ../Function.ts=absent; import ../http/HttpMethod.ts=same; import ../http/HttpRouter.ts=same; import ../http/HttpServerRequest.ts=same; import ../http/HttpServerResponse.ts=same; import ../http/Multipart.ts=same
+-    18 import { identity } from "@tree/Function.ts"
++    19 import type * as Sse from "@tree/encoding/Sse.ts"
++    20 import { identity, memoize } from "@tree/Function.ts"
++    21 import type { HttpMethod } from "@tree/http/HttpMethod.ts"
++    22 import * as HttpRouter from "@tree/http/HttpRouter.ts"
++    23 import type { HttpServerRequest } from "@tree/http/HttpServerRequest.ts"
++    24 import type { HttpServerResponse } from "@tree/http/HttpServerResponse.ts"
++    25 import type * as Multipart from "@tree/http/Multipart.ts"
+
+@@ hunk 2 [erased] pin 26-30 release before 33 cited ranges 0
+   pin units: import ../http/HttpMethod.ts=same; import ../http/HttpRouter.ts=same; import ../http/HttpServerRequest.ts=same; import ../http/HttpServerResponse.ts=same; import ../http/Multipart.ts=same
+   release units: 
+-    26 import type { HttpMethod } from "@tree/http/HttpMethod.ts"
+-    27 import * as HttpRouter from "@tree/http/HttpRouter.ts"
+-    28 import type { HttpServerRequest } from "@tree/http/HttpServerRequest.ts"
+-    29 import type { HttpServerResponse } from "@tree/http/HttpServerResponse.ts"
+-    30 import type * as Multipart from "@tree/http/Multipart.ts"
+
+@@ hunk 3 [code] pin 36-36 release 38-38 cited ranges 0
+   pin units: TypeId=code
+   release units: TypeId=code
+-    36 const TypeId = "~effect/httpapi/HttpApiEndpoint"
++    38 const TypeId = "~effect/http-api/HttpApiEndpoint"
+
+@@ hunk 4 [erased] pin before 194 release 195-195 cited ranges 0
+   pin units: 
+   release units: HttpApiEndpoint=type-decl
++   195 readonly disableCodecs: boolean
+
+@@ hunk 5 [code] pin before 285 release 297-297 cited ranges 0
+   pin units: 
+   release units: getErrorSchemas=code
++   297 const transform = endpoint.disableCodecs ? identity : transformResponseSchema
+
+@@ hunk 6 [code] pin 288-288 release 301-301 cited ranges 0
+   pin units: getErrorSchemas=code
+   release units: getErrorSchemas=code
+-   288 schemas.add(schema)
++   301 schemas.add(transform(schema))
+
+@@ hunk 7 [erased] pin 510-511 release 543-550 cited ranges 0
+   pin units: ClientRequest=type-decl
+   release units: ClientRequest=type-decl
+-   510 ) extends infer Req ? keyof Req extends never ? (void | { readonly responseMode?: ResponseMode }) :
+-   511 Req & { readonly responseMode?: ResponseMode } :
++   543 ) extends infer Req ? keyof Req extends never ? (void | {
++   544 readonly responseMode?: ResponseMode
++   545 readonly sseOptions?: Sse.DecodeOptions | undefined
++   546 }) :
++   547 Req & {
++   548 readonly responseMode?: ResponseMode
++   549 readonly sseOptions?: Sse.DecodeOptions | undefined
++   550 } :
+
+@@ hunk 8 [code] pin 836-836 release 895-896 cited ranges 0
+   pin units: optionsFromEndpoint=code
+   release units: optionsFromEndpoint=code
+-   836 middlewares: endpoint.middlewares
++   895 middlewares: endpoint.middlewares,
++   896 disableCodecs: endpoint.disableCodecs
+
+@@ hunk 9 [erased] pin before 863 release 923-923 cited ranges 0
+   pin units: 
+   release units: makeProto=erased
++   923 readonly disableCodecs: boolean
+
+@@ hunk 10 [code] pin 1093-1093 release 1162-1163 cited ranges 0
+   pin units: make=code
+   release units: make=code
+-  1093 middlewares: new Set()
++  1162 middlewares: new Set(),
++  1163 disableCodecs
+
+@@ hunk 11 [code] pin 1147-1147 release 1217-1217 cited ranges 1
+   pin units: reservedStreamFailureEvent=code
+   release units: reservedStreamFailureEvent=code
+-  1147 const reservedStreamFailureEvent = "effect/httpapi/stream/failure"
++  1217 const reservedStreamFailureEvent = "effect/http-api/stream/failure"
+
+@@ hunk 12 [code] pin 1160-1160 release 1230-1230 cited ranges 1
+   pin units: transformResponseSchema=code
+   release units: transformResponseSchema=code
+-  1160 function transformResponseSchema(schema: Schema.Top): Schema.Top {
++  1230 const transformResponseSchema = memoize((schema: Schema.Top): Schema.Top => {
+
+@@ hunk 13 [code] pin 1169-1169 release 1239-1239 cited ranges 1
+   pin units: transformResponseSchema=code
+   release units: transformResponseSchema=code
+-  1169 }
++  1239 })
+
+@@ hunk 14 [code] pin 1353-1357 release 1423-1423 cited ranges 0
+   pin units: transformResponse=code
+   release units: transformResponse=code
+-  1353 const headers = Schema.toEncoded(withHeaders.headers)
+-  1354 return Schema.Struct({
+-  1355 body: applyResponseEncoding(Schema.toEncoded(withHeaders.body), encoding),
+-  1356 headers
+-  1357 }).pipe(Schema.decodeTo(schema)).annotate({
++  1423 return schema.annotate({
+
+@@ hunk 15 [code] pin 1360-1360 release 1426-1427 cited ranges 0
+   pin units: transformResponse=code
+   release units: transformResponse=code
+-  1360 headersCodec: Schema.toCodecStringTree(headers)
++  1426 bodyCodec: applyResponseEncoding(withHeaders.body, encoding),
++  1427 headersCodec: Schema.toCodecStringTree(withHeaders.headers)
+
+@@ hunk 16 [code] pin before 1405 release 1474-1474 cited ranges 0
+   pin units: 
+   release units: query=absent
++  1474 export const query = make("QUERY")

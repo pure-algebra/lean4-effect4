@@ -1,0 +1,40 @@
+program	lean_exit	host_exit_rc112	host_exit_v401	agree_rc112(exit,schedule,sync)	agree_v401(exit,schedule,sync)	host_fields_that_differ
+p42	"success 42"	"success 42"	"success 42"	True,True,True	True,True,True	
+pBind	"success 2"	"success 2"	"success 2"	True,True,True	True,True,True	
+pFork	"success {\"success\":7}"	"success {\"success\":7}"	"success {\"success\":7}"	True,True,True	True,True,True	
+pAwait	"parked (frontier, root parked)"	"parked (deadline)"	"parked (deadline)"	True,True,True	True,True,True	host.frames
+pGen	"success false"	"success false"	"success false"	True,True,True	True,True,True	
+pLoop	"success null"	"success null"	"success null"	True,True,True	True,True,True	host.frames hostSync.frames
+pCatch	"success null"	"success null"	"success null"	True,True,True	True,True,True	
+pScope	"success null"	"success null"	"success null"	True,True,True	True,True,True	host.frames hostSync.frames
+pTwo	"success {\"success\":2}"	"success {\"success\":2}"	"success {\"success\":2}"	True,True,True	True,True,True	
+pAcquire	"success 7"	"success 7"	"success 7"	True,True,True	True,True,True	host.frames hostSync.frames
+pAcquireClosed	"success 7"	"success 7"	"success 7"	True,True,True	True,True,True	host.frames hostSync.frames
+pProvide	"success 7"	"success 7"	"success 7"	True,True,True	True,True,True	host.frames hostSync.frames
+pProvideMerge	"success 2"	"success 2"	"success 2"	True,True,True	True,False,True	host.events host.frames host.schedule hostSync.events hostSync.frames hostSync.schedule
+pProvideTwice	"success 2"	"success 2"	"success 2"	True,True,True	True,False,True	host.events host.frames host.schedule hostSync.events hostSync.frames hostSync.schedule
+pDiamond	"success 1"	"success 1"	"success 1"	True,True,True	True,True,True	host.frames hostSync.frames
+pMergeAll	"success 3"	"success 3"	"success 3"	True,True,True	True,False,True	host.events host.frames host.schedule hostSync.events hostSync.frames hostSync.schedule
+pAcquireHandle	"success [{\"external\":0},1]"	"success [{\"external\":0},1]"	"success [{\"external\":0},1]"	True,True,True	True,True,True	host.frames hostSync.frames
+pFailTagged	"fail [{\"fail\":[\"SqlError\",\"boom\"]}]"	"fail [{\"fail\":[\"SqlError\",\"boom\"]}]"	"fail [{\"fail\":[\"SqlError\",\"boom\"]}]"	True,True,True	True,True,True	
+pSqlite	"success [[[\"a\",\"7\"],[\"b\",\"\\\"x\\\"\"]]]"	"success [[[\"a\",\"7\"],[\"b\",\"\\\"x\\\"\"]]]"	"die [{\"die\":\"Error: A401: @effect/sql-sqlite-bun@4.0.1 is not installed\"}]"	True,True,True	False,False,False	host.events host.exit host.frames host.schedule hostSync.events hostSync.exit hostSync.frames hostSync.schedule
+pKv	"success [{\"some\":\"1\"},true]"	"success [{\"some\":\"1\"},true]"	"success [{\"some\":\"1\"},true]"	True,True,True	True,True,True	host.frames hostSync.frames
+pSqlFail	"fail [{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]"	"fail [{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]"	"die [{\"die\":\"Error: A401: @effect/sql-sqlite-bun@4.0.1 is not installed\"}]"	True,True,True	False,False,False	host.events host.exit host.frames host.schedule hostSync.events hostSync.exit hostSync.frames hostSync.schedule
+pSqlCatch	"success \"recovered\""	"success \"recovered\""	"die [{\"die\":\"Error: A401: @effect/sql-sqlite-bun@4.0.1 is not installed\"}]"	True,True,True	False,False,False	host.events host.exit host.frames host.schedule hostSync.events hostSync.exit hostSync.frames hostSync.schedule
+pSqlExit	"success {\"failure\":{\"reasons\":[{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]}}"	"success {\"failure\":{\"reasons\":[{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]}}"	"die [{\"die\":\"Error: A401: @effect/sql-sqlite-bun@4.0.1 is not installed\"}]"	True,True,True	False,False,False	host.events host.exit host.frames host.schedule hostSync.events hostSync.exit hostSync.frames hostSync.schedule
+pSqlOrDie	"die [{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]"	"die [{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]"	"die [{\"die\":\"Error: A401: @effect/sql-sqlite-bun@4.0.1 is not installed\"}]"	True,True,True	False,True,False	host.events host.exit host.frames hostSync.events hostSync.exit hostSync.frames
+pFailText	"fail [{\"fail\":\"lost\"}]"	"fail [{\"fail\":\"lost\"}]"	"fail [{\"fail\":\"lost\"}]"	True,True,True	True,True,True	
+pFailBoomText	"fail [{\"fail\":\"boom\"}]"	"fail [{\"fail\":\"boom\"}]"	"fail [{\"fail\":\"boom\"}]"	True,True,True	True,True,True	
+pTextOrDie	"die [{\"die\":{\"error\":\"lost\"}}]"	"die [{\"die\":{\"error\":\"lost\"}}]"	"die [{\"die\":{\"error\":\"lost\"}}]"	True,True,True	True,True,True	host.frames hostSync.frames
+pCatchError	"success 7"	"success 7"	"success 7"	True,True,True	True,True,True	
+pCatchIfHit	"success 7"	"success 7"	"success 7"	True,True,True	True,True,True	
+pCatchIfMiss	"fail [{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]"	"fail [{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]"	"fail [{\"fail\":7},{\"die\":{\"user\":3}},{\"fail\":9}]"	True,True,True	True,True,True	
+pCatchIfRetained	"success 9"	"success 9"	"success 9"	True,True,True	True,True,True	
+pTagHit	"success 1"	"success 1"	"success 1"	True,True,True	True,True,True	
+pTagMiss	"fail [{\"fail\":[\"A\",\"m\"]}]"	"fail [{\"fail\":[\"A\",\"m\"]}]"	"fail [{\"fail\":[\"A\",\"m\"]}]"	True,True,True	True,True,True	
+pTagTwoFail	"fail [{\"fail\":[\"B\",\"x\"]},{\"fail\":[\"A\",\"m\"]}]"	"fail [{\"fail\":[\"B\",\"x\"]},{\"fail\":[\"A\",\"m\"]}]"	"fail [{\"fail\":[\"B\",\"x\"]},{\"fail\":[\"A\",\"m\"]}]"	True,True,True	True,True,True	
+pOptionSome	"success [true,7]"	"success [true,7]"	"success [true,7]"	True,True,True	True,True,True	host.frames hostSync.frames
+pOptionNone	"success [false,9]"	"success [false,9]"	"success [false,9]"	True,True,True	True,True,True	host.frames hostSync.frames
+pFailPayload	"fail [{\"fail\":{\"payload\":{\"id\":9,\"_tag\":\"NotFound\"}}}]"	"fail [{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]"	"fail [{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]"	True,True,True	True,True,True	
+pTagPayload	"success 1"	"success 1"	"success 1"	True,True,True	True,True,True	
+pInterruptEscape	"interrupt [{\"interrupt\":0}]"	"fail [{\"fail\":42}]"	"interrupt [{\"interrupt\":0}]"	False,False,True	True,True,True	host.events host.exit host.schedule

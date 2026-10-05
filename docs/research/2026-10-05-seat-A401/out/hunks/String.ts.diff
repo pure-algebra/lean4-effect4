@@ -1,0 +1,24 @@
+# String.ts (rc.112) against String.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 16 release 16-16 cited ranges 0
+   pin units: 
+   release units: import ./internal/count.ts=absent
++    16 import * as Count from "@tree/internal/count.ts"
+
+@@ hunk 2 [code] pin 971-971 release 976-976 cited ranges 0
+   pin units: repeat=code
+   release units: repeat=code
+-   971 export const repeat = (count: number) => (self: string): string => self.repeat(count)
++   976 export const repeat = (count: number) => (self: string): string => self.repeat(Count.normalize(count))
+
+@@ hunk 3 [code] pin 1159-1159 release 1167-1167 cited ranges 0
+   pin units: takeLeft=code
+   release units: takeLeft=code
+-  1159 } = dual(2, (self: string, n: number): string => self.slice(0, Math.max(n, 0)))
++  1167 } = dual(2, (self: string, n: number): string => self.slice(0, Count.normalize(n)))
+
+@@ hunk 4 [code] pin 1235-1235 release 1246-1246 cited ranges 0
+   pin units: takeRight=code
+   release units: takeRight=code
+-  1235 (self: string, n: number): string => self.slice(Math.max(0, self.length - Math.floor(n)), Infinity)
++  1246 (self: string, n: number): string => self.slice(self.length - Math.min(Count.normalize(n), self.length), Infinity)

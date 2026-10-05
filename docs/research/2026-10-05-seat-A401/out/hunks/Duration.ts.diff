@@ -1,0 +1,7 @@
+# Duration.ts (rc.112) against Duration.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 26-26 release 26-26 cited ranges 0
+   pin units: TypeId=code
+   release units: TypeId=code
+-    26 const TypeId = "~effect/time/Duration"
++    26 const TypeId = "~effect/Duration"

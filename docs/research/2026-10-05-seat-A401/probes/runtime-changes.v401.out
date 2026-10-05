@@ -1,0 +1,125 @@
+{
+ "effect": "4.0.1",
+ "r1_raceLoserForkedDuringSettle": {
+  "winner": "A",
+  "afterTheRace": "B interrupted"
+ },
+ "r2_awaitAllChildrenInterrupted": {
+  "afterInterrupt": {
+   "tag": "Failure",
+   "cause": "Cause([Interrupt(undefined)])"
+  },
+  "afterChildEnded": {
+   "tag": "Failure",
+   "cause": "Cause([Interrupt(undefined)])"
+  }
+ },
+ "r3_asyncCancelDies": {
+  "tag": "Failure",
+  "cause": "Cause([Interrupt(7),Die(\"cancel boom\")])"
+ },
+ "r4_opsCharged": {
+  "succeed": 5,
+  "sync": 5,
+  "suspend": 6,
+  "map": 7,
+  "as": 7,
+  "asVoid": 7,
+  "flatMap": 7,
+  "andThen": 7,
+  "tap": 9,
+  "zipWith": 9,
+  "exitOfSuccess": 5,
+  "exitOfFailure": 5,
+  "catchCauseOfSuccess": 6,
+  "catchCauseOfFailure": 7,
+  "matchCauseEffect": 7,
+  "matchCause": 7,
+  "match": 7,
+  "onExit": 9,
+  "ensuring": 9,
+  "uninterruptible": 6,
+  "uninterruptibleMask": 7,
+  "interruptible": 7,
+  "scoped": 7,
+  "scopedAcquireRelease": 19,
+  "scopedTwoReleases": 33,
+  "acquireUseRelease": 14,
+  "genThreeYields": 7,
+  "forEachThree": 13,
+  "withFiber": 6,
+  "provideService": 7,
+  "forkChildThenJoin": 8
+ },
+ "r5_budgetYield_mapChain": {
+  "yieldsAfterStep": [
+   0,
+   0,
+   0,
+   0,
+   6,
+   67,
+   128,
+   189,
+   250
+  ]
+ },
+ "r5_budgetYield_flatMapChain": {
+  "yieldsAfterStep": [
+   0,
+   0,
+   0,
+   0,
+   5,
+   67,
+   129,
+   191,
+   253
+  ]
+ },
+ "r5_budgetYield_tapChain": {
+  "yieldsAfterStep": [
+   0,
+   0,
+   0,
+   0,
+   2,
+   22,
+   43,
+   63,
+   84,
+   104,
+   125,
+   145,
+   166,
+   186,
+   207,
+   227,
+   248,
+   268,
+   289
+  ]
+ },
+ "r5_budgetYield_genLoop": {
+  "yieldsAfterStep": [
+   19,
+   40,
+   60,
+   81,
+   101,
+   122,
+   142,
+   163,
+   183,
+   204,
+   224,
+   245,
+   265,
+   286
+  ]
+ },
+ "r7_timeoutMessage": {
+  "tag": "Failure",
+  "cause": "Cause([Fail(TimeoutError: Operation timed out after '5ms')])"
+ }
+}

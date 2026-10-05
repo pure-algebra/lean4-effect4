@@ -1,0 +1,44 @@
+# Types.ts (rc.112) against Types.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin 17-17 release 17-17 cited ranges 0
+   pin units: TupleOf_=type-decl
+   release units: TupleOf_=type-decl
+-    17 : R["length"] extends N ? R
++    17 : `${N}` extends `${bigint}` ? R["length"] extends N ? R
+
+@@ hunk 2 [erased] pin before 54 release 19-19 cited ranges 0
+   pin units: 
+   release units: TupleOf_=type-decl
++    19 : Array<T>
+
+@@ hunk 3 [erased] pin before 530 release 499-501 cited ranges 0
+   pin units: 
+   release units: DeepMutableIsOpaque=absent
++   499 type DeepMutableIsOpaque<T> = Extract<keyof T, symbol> extends never
++   500 ? Extract<T[keyof T], Function> extends never ? false : true
++   501 : true
+
+@@ hunk 4 [erased] pin before 532 release 545-545 cited ranges 0
+   pin units: 
+   release units: DeepMutable=type-decl
++   545 : T extends ReadonlyArray<unknown> ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
+
+@@ hunk 5 [erased] pin before 533 release 547-547 cited ranges 0
+   pin units: 
+   release units: DeepMutable=type-decl
++   547 : DeepMutableIsOpaque<T> extends true ? T
+
+@@ hunk 6 [erased] pin 1178-1178 release 1183-1201 cited ranges 0
+   pin units: RequiredKeys=type-decl
+   release units: RequiredKeysFrom_=absent; IsIndexKey_=absent; WithoutIndexSignature_=absent; RequiredKeys=type-decl
+-  1178 export type RequiredKeys<T> = { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T]
++  1183 type RequiredKeysFrom_<T> = { [K in keyof T]-?: {} extends Pick<T, K> ? never : K }[keyof T]
++  1185 type IsIndexKey_<K> = string extends K ? true : number extends K ? true : symbol extends K ? true : false
++  1187 type WithoutIndexSignature_<T> = {
++  1188 [K in keyof T as IsIndexKey_<K> extends true ? never : K]: T[K]
++  1189 }
++  1197 export type RequiredKeys<T> = RequiredKeysFrom_<
++  1198 [T] extends [ReadonlyArray<unknown>] ? T
++  1199 : IsIndexKey_<keyof T> extends true ? WithoutIndexSignature_<T>
++  1200 : T
++  1201 >

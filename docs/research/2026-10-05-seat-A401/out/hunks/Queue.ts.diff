@@ -1,0 +1,410 @@
+# Queue.ts (rc.112) against Queue.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin before 19 release 19-19 cited ranges 0
+   pin units: 
+   release units: import ./internal/count.ts=absent
++    19 import * as Count from "@tree/internal/count.ts"
+
+@@ hunk 2 [erased] pin 346-346 release 347-347 cited ranges 0
+   pin units: Queue#2=type-decl
+   release units: Queue#2=type-decl
+-   346 readonly takers: Set<(_: Effect<void, E>) => void>
++   347 readonly takers: Set<Taker<E>>
+
+@@ hunk 3 [erased] pin 352-352 release 353-353 cited ranges 0
+   pin units: Queue#2=type-decl
+   release units: Queue#2=type-decl
+-   352 readonly takers: Set<(_: Effect<void, E>) => void>
++   353 readonly takers: Set<Taker<E>>
+
+@@ hunk 4 [erased] pin before 386 release 401-404 cited ranges 0
+   pin units: 
+   release units: Queue#2=type-decl
++   401 export interface Taker<E> {
++   402 readonly ready: () => boolean
++   403 readonly resume: (_: Effect<void, E>) => void
++   404 }
+
+@@ hunk 5 [code] pin 645-669 release 664-741 cited ranges 0
+   pin units: offer=code
+   release units: offer=code
+-   645 export const offer = <A, E>(self: Enqueue<A, E>, message: Types.NoInfer<A>): Effect<boolean> =>
+-   646 internalEffect.suspend(() => {
+-   647 if (self.state._tag !== "Open") {
+-   648 return exitFalse
+-   649 } else if (self.messages.length >= self.capacity) {
+-   650 switch (self.strategy) {
+-   651 case "dropping":
+-   652 return exitFalse
+-   653 case "suspend":
+-   654 if (self.capacity <= 0 && self.state.takers.size > 0) {
+-   655 MutableList.append(self.messages, message)
+-   656 releaseTakers(self as Queue<A, E>)
+-   657 return exitTrue
+-   658 }
+-   659 return offerRemainingSingle(self as Queue<A, E>, message)
+-   660 case "sliding":
+-   661 MutableList.take(self.messages)
+-   662 MutableList.append(self.messages, message)
+-   663 return exitTrue
+-   664 }
+-   665 }
+-   666 MutableList.append(self.messages, message)
+-   667 scheduleReleaseTaker(self as Queue<A, E>)
+-   668 return exitTrue
+-   669 })
++   664 export const offer: {
++   697 <A>(message: A): <E>(self: Enqueue<A, E>) => Effect<boolean>
++   730 <A, E>(self: Enqueue<A, E>, message: Types.NoInfer<A>): Effect<boolean>
++   731 } = dual(
++   732 2,
++   733 <A, E>(self: Enqueue<A, E>, message: Types.NoInfer<A>): Effect<boolean> =>
++   734 internalEffect.suspend(() =>
++   735 offerUnsafe(self, message)
++   736 ? exitTrue
++   737 : self.state._tag === "Open" && self.strategy === "suspend"
++   738 ? offerOrWait(self, message)
++   739 : exitFalse
++   740 )
++   741 )
+
+@@ hunk 6 [code] pin 762-765 release 834-945 cited ranges 0
+   pin units: offerAll=code
+   release units: offerAll=code
+-   762 export const offerAll = <A, E>(self: Enqueue<A, E>, messages: Iterable<A>): Effect<Array<A>> =>
+-   763 internalEffect.suspend(() => {
+-   764 if (self.state._tag !== "Open") {
+-   765 return internalEffect.succeed(Arr.fromIterable(messages))
++   834 export const offerAll: {
++   869 <A>(messages: Iterable<A>): <E>(self: Enqueue<A, E>) => Effect<Array<A>>
++   904 <A, E>(self: Enqueue<A, E>, messages: Iterable<A>): Effect<Array<A>>
++   905 } = dual(2, <A, E>(self: Enqueue<A, E>, messages: Iterable<A>): Effect<Array<A>> =>
++   908 internalEffect.callback<
++   942 Array<A>>((resume) => {
++   943 const remaining = offerAllUnsafe(self, messages)
++   944 if (remaining.length === 0 || self.strategy === "dropping") {
++   945 return resume(core.exitSucceed(remaining))
+
+@@ hunk 7 [code] pin 767-774 release 947-948 cited ranges 0
+   pin units: offerAll=code
+   release units: offerAll=code
+-   767 const remaining = offerAllUnsafe(self as Queue<A, E>, messages)
+-   768 if (remaining.length === 0) {
+-   769 return core.exitSucceed([])
+-   770 } else if (self.strategy === "dropping") {
+-   771 return internalEffect.succeed(remaining)
+-   772 }
+-   773 return offerRemainingArray(self as Queue<A, E>, remaining)
+-   774 })
++   947 return waitToOffer(self, { _tag: "Array", remaining, offset: 0, resume })
++   948 }))
+
+@@ hunk 8 [code] pin 872-872 release 1046-1101 cited ranges 0
+   pin units: fail=code
+   release units: fail=code
+-   872 export const fail = <A, E>(self: Enqueue<A, E>, error: E) => failCause(self, core.causeFail(error))
++  1046 export const fail: {
++  1073 <E>(error: E): <A>(self: Enqueue<A, E>) => Effect<boolean>
++  1100 <A, E>(self: Enqueue<A, E>, error: E): Effect<boolean>
++  1101 } = dual(2, <A, E>(self: Enqueue<A, E>, error: E): Effect<boolean> => failCause(self, core.causeFail(error)))
+
+@@ hunk 9 [code] pin before 1014 release 1244-1244 cited ranges 0
+   pin units: 
+   release units: failCauseUnsafe=code
++  1244 scheduleReleaseTaker(self)
+
+@@ hunk 10 [code] pin 1191-1192 release 1423-1446 cited ranges 0
+   pin units: shutdown=code
+   release units: shutdown=code; shutdownUnsafe=absent
+-  1191 export const shutdown = <A, E>(self: Enqueue<A, E>): Effect<boolean> =>
+-  1192 internalEffect.sync(() => {
++  1423 export const shutdown = <A, E>(self: Enqueue<A, E>): Effect<boolean> => internalEffect.sync(() => shutdownUnsafe(self))
++  1446 export const shutdownUnsafe = <A, E>(self: Enqueue<A, E>): boolean => {
+
+@@ hunk 11 [code] pin 1194-1194 release 1448-1448 cited ranges 0
+   pin units: shutdown=code
+   release units: shutdownUnsafe=absent
+-  1194 return true
++  1448 return false
+
+@@ hunk 12 [code] pin 1199-1199 release before 1453 cited ranges 0
+   pin units: shutdown=code
+   release units: 
+-  1199 if (offers.size > 0) {
+
+@@ hunk 13 [code] pin 1201-1207 release 1454-1454 cited ranges 0
+   pin units: shutdown=code
+   release units: shutdownUnsafe=absent
+-  1201 if (entry._tag === "Single") {
+-  1202 entry.resume(exitFalse)
+-  1203 } else {
+-  1204 entry.resume(core.exitSucceed(entry.remaining.slice(entry.offset)))
+-  1205 }
+-  1206 }
+-  1207 offers.clear()
++  1454 resumeUnoffered(entry)
+
+@@ hunk 14 [code] pin 1210-1210 release 1457-1457 cited ranges 0
+   pin units: shutdown=code
+   release units: shutdownUnsafe=absent
+-  1210 })
++  1457 }
+
+@@ hunk 15 [code] pin 1383-1432 release 1632-1845 cited ranges 1
+   pin units: takeN=code; takeBetween=code
+   release units: takeN=code; takeBetween=code
+-  1383 export const takeN = <A, E>(
+-  1384 self: Dequeue<A, E>,
+-  1385 n: number
+-  1386 ): Effect<Array<A>, E> => takeBetween(self, n, n)
+-  1426 export const takeBetween = <A, E>(
+-  1427 self: Dequeue<A, E>,
+-  1428 min: number,
+-  1429 max: number
+-  1430 ): Effect<Array<A>, E> =>
+-  1431 internalEffect.suspend(() =>
+-  1432 takeBetweenUnsafe(self, min, max) ?? internalEffect.andThen(awaitTake(self), takeBetween(self, 1, max))
++  1632 export const takeN: {
++  1673 (n: number): <A, E>(self: Dequeue<A, E>) => Effect<Array<A>, E>
++  1714 <A, E>(self: Dequeue<A, E>, n: number): Effect<Array<A>, E>
++  1715 } = dual(2, <A, E>(self: Dequeue<A, E>, n: number): Effect<Array<A>, E> => takeBetween(self, n, n))
++  1757 export const takeBetween: {
++  1798 (min: number, max: number): <A, E>(self: Dequeue<A, E>) => Effect<Array<A>, E>
++  1839 <A, E>(self: Dequeue<A, E>, min: number, max: number): Effect<Array<A>, E>
++  1840 } = dual(3, <A, E>(self: Dequeue<A, E>, min: number, max: number): Effect<Array<A>, E> => {
++  1841 min = Count.normalize(min)
++  1842 max = Count.normalize(max)
++  1843 return internalEffect.suspend(() =>
++  1844 takeBetweenUnsafe(self, min, max) ??
++  1845 internalEffect.andThen(awaitTake(self, () => canTake(self, min)), takeBetween(self, min, max))
+
+@@ hunk 16 [code] pin before 1474 release 1847-1847 cited ranges 0
+   pin units: 
+   release units: takeBetween=code
++  1847 })
+
+@@ hunk 17 [code] pin 1475-1476 release 1889-1890 cited ranges 0
+   pin units: take=code
+   release units: take=code
+-  1475 internalEffect.suspend(
+-  1476 () => takeUnsafe(self) ?? internalEffect.andThen(awaitTake(self), take(self))
++  1889 internalEffect.suspend(() =>
++  1890 takeUnsafe(self) ?? internalEffect.andThen(awaitTake(self, () => canTake(self, 1)), take(self))
+
+@@ hunk 18 [code] pin 1560-1560 release 1975-1975 cited ranges 0
+   pin units: peek=code
+   release units: peek=code
+-  1560 return internalEffect.andThen(awaitTake(self), peek(self))
++  1975 return internalEffect.andThen(awaitTake(self, () => self.messages.length > 0), peek(self))
+
+@@ hunk 19 [code] pin 1615-1618 release 2030-2030 cited ranges 0
+   pin units: takeUnsafe=code
+   release units: takeUnsafe=code
+-  1615 self.capacity = 1
+-  1616 releaseCapacity(self)
+-  1617 self.capacity = 0
+-  1618 const message = MutableList.take(self.messages)!
++  2030 const message = takeOfferUnsafe(self.state.offers)
+
+@@ hunk 20 [code] pin before 1625 release 2073-2111 cited ranges 0
+   pin units: 
+   release units: flushUnsafe=absent; flush=absent
++  2073 export const flushUnsafe = <A, E>(self: Enqueue<A, E>): void => releaseTakers(self)
++  2111 export const flush = <A, E>(self: Enqueue<A, E>): Effect<void> => internalEffect.sync(() => flushUnsafe(self))
+
+@@ hunk 21 [code] pin 1956-1956 release before 2444 cited ranges 1
+   pin units: releaseTakers=code
+   release units: 
+-  1956 self.scheduleRunning = false
+
+@@ hunk 22 [code] pin before 1961 release 2448-2448 cited ranges 1
+   pin units: 
+   release units: releaseTakers=code
++  2448 if (!taker.ready()) continue
+
+@@ hunk 23 [code] pin 1962-1962 release 2450-2450 cited ranges 1
+   pin units: releaseTakers=code
+   release units: releaseTakers=code
+-  1962 taker(internalEffect.exitVoid)
++  2450 taker.resume(internalEffect.exitVoid)
+
+@@ hunk 24 [code] pin 1974-1974 release 2462-2465 cited ranges 2
+   pin units: scheduleReleaseTaker=code
+   release units: scheduleReleaseTaker=code
+-  1974 self.dispatcher.scheduleTask(() => releaseTakers(self), 0)
++  2462 self.dispatcher.scheduleTask(() => {
++  2463 self.scheduleRunning = false
++  2464 releaseTakers(self)
++  2465 }, 0)
+
+@@ hunk 25 [code] pin 1986-1990 release 2477-2482 cited ranges 0
+   pin units: takeBetweenUnsafe=code
+   release units: takeBetweenUnsafe=code
+-  1986 } else if (self.capacity <= 0 && self.state.offers.size > 0) {
+-  1987 self.capacity = 1
+-  1988 releaseCapacity(self)
+-  1989 self.capacity = 0
+-  1990 const messages = [MutableList.take(self.messages)!]
++  2477 } else if (!canTake(self, min)) {
++  2478 return undefined
++  2479 }
++  2480 const messages = self.messages.length > 0
++  2481 ? MutableList.takeN(self.messages, max)
++  2482 : [takeOfferUnsafe(self.state.offers)]
+
+@@ hunk 26 [code] pin 1994-2008 release 2489-2501 cited ranges 0
+   pin units: takeBetweenUnsafe=code; offerRemainingSingle=absent
+   release units: canTake=absent; awaitTake=code
+-  1994 min = Math.min(min, self.capacity || 1)
+-  1995 if (min <= self.messages.length) {
+-  1996 const messages = MutableList.takeN(self.messages, max)
+-  1997 releaseCapacity(self)
+-  1998 return core.exitSucceed(messages)
+-  1999 }
+-  2000 }
+-  2002 const offerRemainingSingle = <A, E>(self: Enqueue<A, E>, message: A) => {
+-  2003 return internalEffect.callback<boolean>((resume) => {
+-  2004 if (self.state._tag !== "Open") {
+-  2005 return resume(exitFalse)
+-  2006 }
+-  2007 const entry: Queue.OfferEntry<A> = { _tag: "Single", message, resume }
+-  2008 self.state.offers.add(entry)
++  2489 const canTake = <A, E>(self: Dequeue<A, E>, min: number): boolean =>
++  2490 self.messages.length >= (self.state._tag === "Closing" ? 1 : Math.min(min, self.capacity || 1)) ||
++  2491 (self.capacity <= 0 && self.state._tag !== "Done" && self.state.offers.size > 0)
++  2496 const awaitTake = <A, E>(self: Dequeue<A, E>, ready: () => boolean) =>
++  2497 internalEffect.callback<void, E>((resume) => {
++  2498 if (self.state._tag === "Done") return resume(self.state.exit)
++  2499 if (ready()) return resume(internalEffect.exitVoid)
++  2500 const taker = { ready, resume }
++  2501 self.state.takers.add(taker)
+
+@@ hunk 27 [code] pin 2010-2012 release 2503-2503 cited ranges 0
+   pin units: offerRemainingSingle=absent
+   release units: awaitTake=code
+-  2010 if (self.state._tag === "Open") {
+-  2011 self.state.offers.delete(entry)
+-  2012 }
++  2503 if (self.state._tag !== "Done") self.state.takers.delete(taker)
+
+@@ hunk 28 [code] pin 2015-2028 release 2507-2515 cited ranges 0
+   pin units: offerRemainingSingle=absent; offerRemainingArray=absent
+   release units: offerOrWait=absent; waitToOffer=absent
+-  2015 }
+-  2017 const offerRemainingArray = <A, E>(self: Enqueue<A, E>, remaining: Array<A>) => {
+-  2018 return internalEffect.callback<Array<A>>((resume) => {
+-  2019 if (self.state._tag !== "Open") {
+-  2020 return resume(core.exitSucceed(remaining))
+-  2021 }
+-  2022 const entry: Queue.OfferEntry<A> = {
+-  2023 _tag: "Array",
+-  2024 remaining,
+-  2025 offset: 0,
+-  2026 resume
+-  2027 }
+-  2028 self.state.offers.add(entry)
++  2507 const offerOrWait = <A, E>(self: Enqueue<A, E>, message: A) =>
++  2508 internalEffect.callback<boolean>((resume) =>
++  2509 offerUnsafe(self, message) ? resume(exitTrue) : waitToOffer(self, { _tag: "Single", message, resume })
++  2510 )
++  2512 const waitToOffer = <A, E>(self: Enqueue<A, E>, entry: Queue.OfferEntry<A>) => {
++  2513 if (self.state._tag !== "Open") return resumeUnoffered(entry)
++  2514 const offers = self.state.offers
++  2515 offers.add(entry)
+
+@@ hunk 29 [code] pin 2030-2031 release 2517-2520 cited ranges 0
+   pin units: offerRemainingArray=absent
+   release units: waitToOffer=absent
+-  2030 if (self.state._tag === "Open") {
+-  2031 self.state.offers.delete(entry)
++  2517 if (self.state._tag === "Done") return
++  2518 offers.delete(entry)
++  2519 if (self.state._tag === "Closing" && offers.size === 0 && self.messages.length === 0) {
++  2520 finalize(self, self.state.exit)
+
+@@ hunk 30 [code] pin 2034-2034 release 2523-2543 cited ranges 0
+   pin units: offerRemainingArray=absent
+   release units: waitToOffer=absent; resumeUnoffered=absent; takeOfferUnsafe=absent
+-  2034 })
++  2523 }
++  2525 const resumeUnoffered = <A>(entry: Queue.OfferEntry<A>) =>
++  2526 entry._tag === "Single"
++  2527 ? entry.resume(exitFalse)
++  2528 : entry.resume(core.exitSucceed(entry.remaining.slice(entry.offset)))
++  2531 const takeOfferUnsafe = <A>(offers: Set<Queue.OfferEntry<A>>): A => {
++  2532 const entry = offers.values().next().value!
++  2533 if (entry._tag === "Single") {
++  2534 offers.delete(entry)
++  2535 entry.resume(exitTrue)
++  2536 return entry.message
++  2537 }
++  2538 const message = entry.remaining[entry.offset++]
++  2539 if (entry.offset === entry.remaining.length) {
++  2540 offers.delete(entry)
++  2541 entry.resume(core.exitSucceed([]))
++  2542 }
++  2543 return message
+
+@@ hunk 31 [code] pin 2050-2050 release before 2560 cited ranges 0
+   pin units: releaseCapacity=code
+   release units: 
+-  2050 let n = self.capacity - self.messages.length
+
+@@ hunk 32 [code] pin 2052-2052 release 2561-2562 cited ranges 0
+   pin units: releaseCapacity=code
+   release units: releaseCapacity=code
+-  2052 if (n === 0) break
++  2561 let n = self.capacity - self.messages.length
++  2562 if (n <= 0) break
+
+@@ hunk 33 [code] pin 2055-2056 release before 2565 cited ranges 0
+   pin units: releaseCapacity=code
+   release units: 
+-  2055 n--
+-  2056 entry.resume(exitTrue)
+
+@@ hunk 34 [code] pin before 2058 release 2566-2566 cited ranges 0
+   pin units: 
+   release units: releaseCapacity=code
++  2566 entry.resume(exitTrue)
+
+@@ hunk 35 [code] pin 2064-2064 release before 2573 cited ranges 0
+   pin units: releaseCapacity=code
+   release units: 
+-  2064 entry.resume(core.exitSucceed([]))
+
+@@ hunk 36 [code] pin before 2066 release 2574-2574 cited ranges 0
+   pin units: 
+   release units: releaseCapacity=code
++  2574 entry.resume(core.exitSucceed([]))
+
+@@ hunk 37 [code] pin 2071-2082 release before 2580 cited ranges 0
+   pin units: awaitTake=code
+   release units: 
+-  2071 const awaitTake = <A, E>(self: Dequeue<A, E>) =>
+-  2072 internalEffect.callback<void, E>((resume) => {
+-  2073 if (self.state._tag === "Done") {
+-  2074 return resume(self.state.exit)
+-  2075 }
+-  2076 self.state.takers.add(resume)
+-  2077 return internalEffect.sync(() => {
+-  2078 if (self.state._tag !== "Done") {
+-  2079 self.state.takers.delete(resume)
+-  2080 }
+-  2081 })
+-  2082 })
+
+@@ hunk 38 [code] pin 2090-2093 release 2586-2586 cited ranges 0
+   pin units: takeAllUnsafe=code
+   release units: takeAllUnsafe=code
+-  2090 self.capacity = 1
+-  2091 releaseCapacity(self)
+-  2092 self.capacity = 0
+-  2093 const messages = [MutableList.take(self.messages)!]
++  2586 const messages = [takeOfferUnsafe(self.state.offers)]
+
+@@ hunk 39 [code] pin 2107-2107 release 2600-2600 cited ranges 0
+   pin units: finalize=code
+   release units: finalize=code
+-  2107 taker(exit)
++  2600 taker.resume(exit)

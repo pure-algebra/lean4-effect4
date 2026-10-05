@@ -1,0 +1,45 @@
+# Fiber.ts (rc.112) against Fiber.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [erased] pin before 16 release 16-16 cited ranges 0
+   pin units: 
+   release units: import ./Metric.ts=absent
++    16 import type { FiberRuntimeMetricsService } from "@tree/Metric.ts"
+
+@@ hunk 2 [import] pin 21-21 release 22-22 cited ranges 0
+   pin units: import ./Tracer.ts=import
+   release units: import ./Tracer.ts=import
+-    21 import type { AnySpan } from "@tree/Tracer.ts"
++    22 import type { AnySpan, Tracer } from "@tree/Tracer.ts"
+
+@@ hunk 3 [erased] pin 78-78 release 79-79 cited ranges 0
+   pin units: Fiber=type-decl
+   release units: Fiber=type-decl
+-    78 readonly currentScheduler: Scheduler
++    79 readonly cache: Fiber.Cache
+
+@@ hunk 4 [erased] pin 80-85 release before 81 cited ranges 0
+   pin units: Fiber=type-decl
+   release units: 
+-    80 readonly currentSpan?: AnySpan | undefined
+-    81 readonly currentLogLevel: LogLevel
+-    82 readonly minimumLogLevel: LogLevel
+-    83 readonly currentStackFrame?: StackFrame | undefined
+-    84 readonly maxOpsBeforeYield: number
+-    85 readonly currentPreventYield: boolean
+
+@@ hunk 5 [erased] pin before 158 release 170-182 cited ranges 0
+   pin units: 
+   release units: Fiber#2=type-decl
++   170 export interface Cache {
++   171 readonly scheduler: Scheduler
++   172 readonly tracer: Tracer | undefined
++   173 readonly tracerContext: Tracer["context"] | undefined
++   174 readonly tracerEnabled: boolean
++   175 readonly span: AnySpan | undefined
++   176 readonly logLevel: LogLevel
++   177 readonly minimumLogLevel: LogLevel
++   178 readonly stackFrame: StackFrame | undefined
++   179 readonly runtimeMetrics: FiberRuntimeMetricsService | undefined
++   180 readonly maxOpsBeforeYield: number
++   181 readonly preventYield: boolean
++   182 }

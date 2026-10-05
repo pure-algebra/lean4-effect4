@@ -1,0 +1,59 @@
+# Seat A401: does the census row's summary sentence still describe the release? Read by hand.
+# id	verdict	note
+# verdict: holds     the sentence is true of the release as written
+#          reword    true of the release once a name or a mechanism in it is renamed
+#          changes   the release does something the sentence does not say, or does not do what it says
+op.Failure	changes	the release also drops the `Fail` reasons when the walk skipped a recovery handler, and adds the interrupt reasons (U-01's repair)
+op.Async	holds	the same statements; the primitive is an object with named fields
+op.AsyncFinalizer	changes	a cancel effect that fails is merged into the interrupt cause; the sentence holds for a cancel effect that succeeds
+op.Iterator	holds	shape only
+op.OnSuccess	reword	the `ContImpl` constructor assigns `contA`, not `flatMap`
+op.OnFailure	reword	the `OnFailureImpl` constructor assigns `contE`
+op.OnSuccessAndFailure	reword	the `OnSuccessAndFailureImpl` constructor assigns both arms; `match` and `matchCause` are two further primitives
+op.Exit	changes	either arm passes the reified exit to `fiber.succeedWith`, which may call the next continuation at once; the exit that is answered is the same
+op.OnExit	reword	the mask flag is the field `interruptible`; a finalizer function that throws is a defect
+frame-arm.OnSuccess	reword	a constructor assigns `contA`
+frame-arm.OnFailure	reword	a constructor assigns `contE`
+frame-arm.OnSuccessAndFailure	reword	a constructor assigns both arms
+frame-arm.Exit	holds	the same arms
+frame-arm.OnExit	holds	the same three arms
+frame-arm.AsyncFinalizer	holds	the same two arms
+frame-arm.Iterator	holds	the same arm
+checkpoint.exit-failcause-skip	changes	the skip stands, and the release sanitises the cause after it; the reason for the signed divergence U-01 goes
+interrupt.unsafe-entry	holds	the stack frame is read from the cache
+fork.unsafe	holds	the child is tracked through a parent pointer; the sentence names no observer
+fork.race-all	changes	the clean-up is decided at the race's exit by an `OnExit` frame; the winner's resume carries the exit alone
+fork.await-all-children	changes	the await of the new children is interruptible when the fiber was
+scope.states	holds	comments only; the scope object gains a `parent` outside the state
+scope.make	holds	the scope also carries `parent`
+scope.add-finalizer	holds	one unreachable branch is gone
+scope.remove-finalizer	changes	a scope left with no finalizer is reset to `Empty`
+scope.close-state-first	holds	the close also detaches the scope from its parent
+scope.close-lifo	holds	each finalizer call is wrapped by `runFinalizer`
+scope.close-sequential	holds	a finalizer function that throws is captured too
+scope.close-parallel	holds	the anchor line changed by the `runFinalizer` wrap
+scope.fork-linkage	changes	the child holds no finalizer; a parent pointer and one finalizer on the parent, keyed by the child, link the two
+scope.scoped	reword	the `OnExit` frame is pushed directly, one operation earlier
+scheduler.should-yield	holds	the budget is read from the cache
+scheduler.host-loop	changes	arming falls back to a microtask when the timer call throws
+cause.flat-reasons	holds	`declare` fields
+cause.reason-fail	holds	`declare` fields
+cause.reason-die	holds	`declare` fields
+cause.reason-interrupt	holds	`declare` fields
+cause.combine-union	reword	`causeCombine` is in `internal/core.ts`, over `dedupeReasons`
+cause.squash	holds	the same answer by one pass
+cause.dedupe-first-occurrence	holds	`dedupeWith` keeps the same order; `causeCombine` no longer calls it
+entry.with-error-reporting	holds	a type only
+rule.frames-are-primitives	holds	the same pops
+rule.interrupt-bypasses-handlers	holds	the skip is unchanged
+rule.only-fork-child-tracks	holds	the anchor line changed with the parent pointer
+rule.scope-close-lifo-state-first	holds	the state is written first
+rule.cause-has-no-structure	reword	`causeCombine` moved to `internal/core.ts`
+rule.start-is-asymmetric	holds	a deferred start also captures the async context
+rule.budget-per-runloop-entry	changes	the span is equal in code, but `fiber.succeedWith` also counts operations and the budget is tested only at a loop iteration (probe R5)
+deferred.make	holds	a constructor builds the same two fields
+layer.memo-build-once	changes	the entry holds a Deferred and a scope; the observer is counted and registered in one synchronous step; the exit handler is installed before the entry is published; the entry's effect is not replaced
+layer.memo-finalizer-last-observer	holds	the same count and the same last close
+layer.memo-reuse-observer-count	changes	the count and the registration are one synchronous step, and a closed scope is not counted
+layer.memo-map-parent-lookup	holds	the same lookup order
+layer.memo-get-or-else	reword	there is no `memoMapBuild`; a closed caller scope builds without an entry

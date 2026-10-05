@@ -1,0 +1,679 @@
+# SchemaRepresentation.ts (rc.112) against SchemaRepresentation.ts (4.0.1): code lines, comments stripped
+
+@@ hunk 1 [code] pin 9-9 release before 9 cited ranges 0
+   pin units: import ./internal/schema/schema.ts=absent
+   release units: 
+-     9 import * as InternalSchema from "@tree/internal/schema/schema.ts"
+
+@@ hunk 2 [import] pin 17-17 release 16-16 cited ranges 0
+   pin units: import ./SchemaGetter.ts=import
+   release units: import ./SchemaGetter.ts=import
+-    17 import * as SchemaGetter from "@tree/SchemaGetter.ts"
++    16 import * as InternalGetter from "@tree/SchemaGetter.ts"
+
+@@ hunk 3 [erased] pin 69-69 release 98-120 cited ranges 1
+   pin units: ToJsonSchema=type-decl
+   release units: ToJsonSchema=type-decl
+-    69 export type Check = (input: CheckInput) => JsonSchema.JsonSchema
++    98 export type CheckOutput = JsonSchema.JsonSchema | readonly [schema: JsonSchema.JsonSchema, approximate: true]
++   120 export type Check = (input: CheckInput) => CheckOutput
+
+@@ hunk 4 [erased] pin 397-397 release 453-453 cited ranges 0
+   pin units: Union=type-decl
+   release units: Union=type-decl
+-   397 readonly mode: "anyOf" | "oneOf"
++   453 readonly options?: SchemaAST.UnionOptions | undefined
+
+@@ hunk 5 [code] pin 574-574 release 630-630 cited ranges 1
+   pin units: makeDeclarationReviver=absent
+   release units: makeReviverDeclaration=absent
+-   574 export const makeDeclarationReviver: <P>(
++   630 export const makeReviverDeclaration: <P>(
+
+@@ hunk 6 [code] pin 578-586 release 634-642 cited ranges 0
+   pin units: makeDeclarationReviver=absent; makeFilterReviver=absent
+   release units: makeReviverDeclaration=absent; makeReviverFilter=absent
+-   578 ) => DeclarationReviver<P> = InternalSchema.makeDeclarationReviver
+-   586 export const makeFilterReviver: <P>(
++   634 ) => DeclarationReviver<P> = (id, payloadSchema, revive) => ({ id, payloadSchema, revive })
++   642 export const makeReviverFilter: <P>(
+
+@@ hunk 7 [code] pin 590-598 release 646-654 cited ranges 0
+   pin units: makeFilterReviver=absent; makeFilterGroupReviver=absent
+   release units: makeReviverFilter=absent; makeReviverFilterGroup=absent
+-   590 ) => FilterReviver<P> = InternalSchema.makeFilterReviver
+-   598 export const makeFilterGroupReviver: <P>(
++   646 ) => FilterReviver<P> = (id, payloadSchema, revive) => ({ id, payloadSchema, revive })
++   654 export const makeReviverFilterGroup: <P>(
+
+@@ hunk 8 [code] pin 602-602 release 658-2257 cited ranges 0
+   pin units: makeFilterGroupReviver=absent
+   release units: makeReviverFilterGroup=absent; makeFixedDeclarationReviver=absent; IsPatternPayload=absent; ErrorRepresentationOptions=absent; ErrorRepresentationPayload=absent; ErrorOptionsPayload=absent; ErrorRepresentationPayload#2=absent; RedactedRepresentationOptions=absent; RedactedRepresentationPayload=absent; RedactedOptionsPayload=absent; RedactedRepresentationPayload#2=absent; isTrimmedReviver=absent; isPatternReviver=absent; isStringFiniteReviver=absent; isStringBigIntReviver=absent; isStringSymbolReviver=absent; isUUIDReviver=absent; isGUIDReviver=absent; isULIDReviver=absent; isBase64Reviver=absent; isBase64UrlReviver=absent; isStartingWithReviver=absent; isEndingWithReviver=absent; isIncludingReviver=absent; isUppercasedReviver=absent; isLowercasedReviver=absent; isCapitalizedReviver=absent; isUncapitalizedReviver=absent; isFiniteReviver=absent; isGreaterThanReviver=absent; isGreaterThanOrEqualToReviver=absent; isLessThanReviver=absent; isLessThanOrEqualToReviver=absent; isBetweenReviver=absent; isMultipleOfReviver=absent; isIntReviver=absent; isMinLengthReviver=absent; isMaxLengthReviver=absent; isBetweenLengthReviver=absent; isMinCodePointsReviver=absent; isMaxCodePointsReviver=absent; isBetweenCodePointsReviver=absent; isMinSizeReviver=absent; isMaxSizeReviver=absent; isBetweenSizeReviver=absent; isMinPropertiesReviver=absent; isMaxPropertiesReviver=absent; isBetweenPropertiesReviver=absent; isPropertyNamesReviver=absent; isUniqueReviver=absent; isUniqueKeyReviver=absent; OptionReviver=absent; ResultReviver=absent; RedactedReviver=absent; CauseReasonReviver=absent; CauseReviver=absent; ErrorInstanceReviver=absent; ExitReviver=absent; ReadonlyMapReviver=absent; GraphReviver=absent; HashMapReviver=absent; ReadonlySetReviver=absent; HashSetReviver=absent; ChunkReviver=absent; RegExpReviver=absent; URLReviver=absent; DateReviver=absent; DurationReviver=absent; ByteSizeReviver=absent; BigDecimalReviver=absent; FileReviver=absent; FormDataReviver=absent; URLSearchParamsReviver=absent; Uint8ArrayReviver=absent; DateTimeUtcReviver=absent; TimeZoneOffsetReviver=absent; TimeZoneNamedReviver=absent; TimeZoneReviver=absent; DateTimeZonedReviver=absent; isGreaterThanDateReviver=absent; isGreaterThanOrEqualToDateReviver=absent; isLessThanDateReviver=absent; isLessThanOrEqualToDateReviver=absent; isBetweenDateReviver=absent; isGreaterThanBigIntReviver=absent; isGreaterThanOrEqualToBigIntReviver=absent; isLessThanBigIntReviver=absent; isLessThanOrEqualToBigIntReviver=absent; isBetweenBigIntReviver=absent; JsonReviver=absent; MutableJsonReviver=absent; jsonSchemaRevivers=absent
+-   602 ) => FilterGroupReviver<P> = InternalSchema.makeFilterGroupReviver
++   658 ) => FilterGroupReviver<P> = (id, payloadSchema, revive) => ({ id, payloadSchema, revive })
++   660 function makeFixedDeclarationReviver(id: string, schema: Schema.Top): DeclarationReviver<null> {
++   661 return makeReviverDeclaration(
++   662 id,
++   663 Schema.Null,
++   664 ({ annotations }) => annotations === undefined ? schema : schema.annotate(annotations)
++   665 )
++   666 }
++   668 const IsPatternPayload = Schema.Struct({
++   669 source: Schema.String,
++   670 flags: Schema.String
++   671 }).check(Schema.makeFilter((payload: { readonly source: string; readonly flags: string }) => {
++   672 try {
++   673 const regExp = new globalThis.RegExp(payload.source, payload.flags)
++   674 return regExp.source === payload.source && regExp.flags === payload.flags
++   675 } catch {
++   676 return false
++   677 }
++   678 }))
++   680 type ErrorRepresentationOptions = {
++   681 readonly includeStack?: true | undefined
++   682 readonly excludeCause?: true | undefined
++   683 }
++   684 type ErrorRepresentationPayload = ErrorRepresentationOptions | null
++   685 const ErrorOptionsPayload = Schema.declare((input): input is ErrorRepresentationOptions => {
++   686 if (typeof input !== "object" || input === null) return false
++   687 const object = input as Record<string, unknown>
++   688 const keys = globalThis.Object.keys(input)
++   689 return keys.length > 0 &&
++   690 keys.every((key) => (key === "includeStack" || key === "excludeCause") && object[key] === true)
++   691 })
++   692 const ErrorRepresentationPayload: Schema.Decoder<ErrorRepresentationPayload> = Schema.Union([
++   693 Schema.Null,
++   694 ErrorOptionsPayload
++   695 ])
++   697 type RedactedRepresentationOptions = {
++   698 readonly label?: string | undefined
++   699 readonly disallowJsonEncode?: true | undefined
++   700 }
++   701 type RedactedRepresentationPayload = RedactedRepresentationOptions | null
++   702 const RedactedOptionsPayload = Schema.declare((input): input is RedactedRepresentationOptions => {
++   703 if (typeof input !== "object" || input === null) return false
++   704 const object = input as Record<string, unknown>
++   705 const keys = globalThis.Object.keys(input)
++   706 return keys.length > 0 && keys.every((key) => {
++   707 switch (key) {
++   708 case "label":
++   709 return typeof object[key] === "string"
++   710 case "disallowJsonEncode":
++   711 return object[key] === true
++   712 default:
++   713 return false
++   714 }
++   715 })
++   716 })
++   717 const RedactedRepresentationPayload: Schema.Decoder<RedactedRepresentationPayload> = Schema.Union([
++   718 Schema.Null,
++   719 RedactedOptionsPayload
++   720 ])
++   734 export const isTrimmedReviver: FilterReviver<null> = makeReviverFilter(
++   735 "effect/schema/isTrimmed",
++   736 Schema.Null,
++   737 ({ annotations }) => Schema.isTrimmed(annotations)
++   738 )
++   752 export const isPatternReviver: FilterReviver<{
++   753 readonly source: string
++   754 readonly flags: string
++   755 }> = makeReviverFilter(
++   756 "effect/schema/isPattern",
++   757 IsPatternPayload,
++   758 ({ annotations, payload }) => Schema.isPattern(new globalThis.RegExp(payload.source, payload.flags), annotations)
++   759 )
++   773 export const isStringFiniteReviver: FilterReviver<null> = makeReviverFilter(
++   774 "effect/schema/isStringFinite",
++   775 Schema.Null,
++   776 ({ annotations }) => Schema.isStringFinite(annotations)
++   777 )
++   791 export const isStringBigIntReviver: FilterReviver<null> = makeReviverFilter(
++   792 "effect/schema/isStringBigInt",
++   793 Schema.Null,
++   794 ({ annotations }) => Schema.isStringBigInt(annotations)
++   795 )
++   809 export const isStringSymbolReviver: FilterReviver<null> = makeReviverFilter(
++   810 "effect/schema/isStringSymbol",
++   811 Schema.Null,
++   812 ({ annotations }) => Schema.isStringSymbol(annotations)
++   813 )
++   827 export const isUUIDReviver: FilterReviver<{
++   828 readonly version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | null
++   829 }> = makeReviverFilter(
++   830 "effect/schema/isUUID",
++   831 Schema.Struct({ version: Schema.Union([Schema.Literals([1, 2, 3, 4, 5, 6, 7, 8]), Schema.Null]) }),
++   832 ({ annotations, payload }) => Schema.isUUID(payload.version ?? undefined, annotations)
++   833 )
++   847 export const isGUIDReviver: FilterReviver<null> = makeReviverFilter(
++   848 "effect/schema/isGUID",
++   849 Schema.Null,
++   850 ({ annotations }) => Schema.isGUID(annotations)
++   851 )
++   865 export const isULIDReviver: FilterReviver<null> = makeReviverFilter(
++   866 "effect/schema/isULID",
++   867 Schema.Null,
++   868 ({ annotations }) => Schema.isULID(annotations)
++   869 )
++   883 export const isBase64Reviver: FilterReviver<null> = makeReviverFilter(
++   884 "effect/schema/isBase64",
++   885 Schema.Null,
++   886 ({ annotations }) => Schema.isBase64(annotations)
++   887 )
++   901 export const isBase64UrlReviver: FilterReviver<null> = makeReviverFilter(
++   902 "effect/schema/isBase64Url",
++   903 Schema.Null,
++   904 ({ annotations }) => Schema.isBase64Url(annotations)
++   905 )
++   919 export const isStartingWithReviver: FilterReviver<{
++   920 readonly startsWith: string
++   921 }> = makeReviverFilter(
++   922 "effect/schema/isStartingWith",
++   923 Schema.Struct({ startsWith: Schema.String }),
++   924 ({ annotations, payload }) => Schema.isStartingWith(payload.startsWith, annotations)
++   925 )
++   939 export const isEndingWithReviver: FilterReviver<{
++   940 readonly endsWith: string
++   941 }> = makeReviverFilter(
++   942 "effect/schema/isEndingWith",
++   943 Schema.Struct({ endsWith: Schema.String }),
++   944 ({ annotations, payload }) => Schema.isEndingWith(payload.endsWith, annotations)
++   945 )
++   959 export const isIncludingReviver: FilterReviver<{
++   960 readonly includes: string
++   961 }> = makeReviverFilter(
++   962 "effect/schema/isIncluding",
++   963 Schema.Struct({ includes: Schema.String }),
++   964 ({ annotations, payload }) => Schema.isIncluding(payload.includes, annotations)
++   965 )
++   979 export const isUppercasedReviver: FilterReviver<null> = makeReviverFilter(
++   980 "effect/schema/isUppercased",
++   981 Schema.Null,
++   982 ({ annotations }) => Schema.isUppercased(annotations)
++   983 )
++   997 export const isLowercasedReviver: FilterReviver<null> = makeReviverFilter(
++   998 "effect/schema/isLowercased",
++   999 Schema.Null,
++  1000 ({ annotations }) => Schema.isLowercased(annotations)
++  1001 )
++  1015 export const isCapitalizedReviver: FilterReviver<null> = makeReviverFilter(
++  1016 "effect/schema/isCapitalized",
++  1017 Schema.Null,
++  1018 ({ annotations }) => Schema.isCapitalized(annotations)
++  1019 )
++  1033 export const isUncapitalizedReviver: FilterReviver<null> = makeReviverFilter(
++  1034 "effect/schema/isUncapitalized",
++  1035 Schema.Null,
++  1036 ({ annotations }) => Schema.isUncapitalized(annotations)
++  1037 )
++  1051 export const isFiniteReviver: FilterReviver<null> = makeReviverFilter(
++  1052 "effect/schema/isFinite",
++  1053 Schema.Null,
++  1054 ({ annotations }) => Schema.isFinite(annotations)
++  1055 )
++  1069 export const isGreaterThanReviver: FilterReviver<{
++  1070 readonly exclusiveMinimum: number
++  1071 }> = makeReviverFilter(
++  1072 "effect/schema/isGreaterThan",
++  1073 Schema.Struct({ exclusiveMinimum: Schema.Finite }),
++  1074 ({ annotations, payload }) => Schema.isGreaterThan(payload.exclusiveMinimum, annotations)
++  1075 )
++  1089 export const isGreaterThanOrEqualToReviver: FilterReviver<{
++  1090 readonly minimum: number
++  1091 }> = makeReviverFilter(
++  1092 "effect/schema/isGreaterThanOrEqualTo",
++  1093 Schema.Struct({ minimum: Schema.Finite }),
++  1094 ({ annotations, payload }) => Schema.isGreaterThanOrEqualTo(payload.minimum, annotations)
++  1095 )
++  1109 export const isLessThanReviver: FilterReviver<{
++  1110 readonly exclusiveMaximum: number
++  1111 }> = makeReviverFilter(
++  1112 "effect/schema/isLessThan",
++  1113 Schema.Struct({ exclusiveMaximum: Schema.Finite }),
++  1114 ({ annotations, payload }) => Schema.isLessThan(payload.exclusiveMaximum, annotations)
++  1115 )
++  1129 export const isLessThanOrEqualToReviver: FilterReviver<{
++  1130 readonly maximum: number
++  1131 }> = makeReviverFilter(
++  1132 "effect/schema/isLessThanOrEqualTo",
++  1133 Schema.Struct({ maximum: Schema.Finite }),
++  1134 ({ annotations, payload }) => Schema.isLessThanOrEqualTo(payload.maximum, annotations)
++  1135 )
++  1149 export const isBetweenReviver: FilterReviver<{
++  1150 readonly minimum: number
++  1151 readonly maximum: number
++  1152 readonly exclusiveMinimum?: true | undefined
++  1153 readonly exclusiveMaximum?: true | undefined
++  1154 }> = makeReviverFilter(
++  1155 "effect/schema/isBetween",
++  1156 Schema.Struct({
++  1157 minimum: Schema.Finite,
++  1158 maximum: Schema.Finite,
++  1159 exclusiveMinimum: Schema.optional(Schema.Literal(true)),
++  1160 exclusiveMaximum: Schema.optional(Schema.Literal(true))
++  1161 }),
++  1162 ({ annotations, payload }) => Schema.isBetween(payload, annotations)
++  1163 )
++  1177 export const isMultipleOfReviver: FilterReviver<{
++  1178 readonly divisor: number
++  1179 }> = makeReviverFilter(
++  1180 "effect/schema/isMultipleOf",
++  1181 Schema.Struct({ divisor: Schema.Finite }),
++  1182 ({ annotations, payload }) => Schema.isMultipleOf(payload.divisor, annotations)
++  1183 )
++  1197 export const isIntReviver: FilterReviver<null> = makeReviverFilter(
++  1198 "effect/schema/isInt",
++  1199 Schema.Null,
++  1200 ({ annotations }) => Schema.isInt(annotations)
++  1201 )
++  1215 export const isMinLengthReviver: FilterReviver<{
++  1216 readonly minLength: number
++  1217 }> = makeReviverFilter(
++  1218 "effect/schema/isMinLength",
++  1219 Schema.Struct({ minLength: Schema.Natural }),
++  1220 ({ annotations, payload }) => Schema.isMinLength(payload.minLength, annotations)
++  1221 )
++  1235 export const isMaxLengthReviver: FilterReviver<{
++  1236 readonly maxLength: number
++  1237 }> = makeReviverFilter(
++  1238 "effect/schema/isMaxLength",
++  1239 Schema.Struct({ maxLength: Schema.Natural }),
++  1240 ({ annotations, payload }) => Schema.isMaxLength(payload.maxLength, annotations)
++  1241 )
++  1255 export const isBetweenLengthReviver: FilterReviver<{
++  1256 readonly minimum: number
++  1257 readonly maximum: number
++  1258 }> = makeReviverFilter(
++  1259 "effect/schema/isBetweenLength",
++  1260 Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
++  1261 ({ annotations, payload }) => Schema.isBetweenLength(payload.minimum, payload.maximum, annotations)
++  1262 )
++  1271 export const isMinCodePointsReviver: FilterReviver<{
++  1272 readonly minCodePoints: number
++  1273 }> = makeReviverFilter(
++  1274 "effect/schema/isMinCodePoints",
++  1275 Schema.Struct({ minCodePoints: Schema.Natural }),
++  1276 ({ annotations, payload }) => Schema.isMinCodePoints(payload.minCodePoints, annotations)
++  1277 )
++  1286 export const isMaxCodePointsReviver: FilterReviver<{
++  1287 readonly maxCodePoints: number
++  1288 }> = makeReviverFilter(
++  1289 "effect/schema/isMaxCodePoints",
++  1290 Schema.Struct({ maxCodePoints: Schema.Natural }),
++  1291 ({ annotations, payload }) => Schema.isMaxCodePoints(payload.maxCodePoints, annotations)
++  1292 )
++  1301 export const isBetweenCodePointsReviver: FilterReviver<{
++  1302 readonly minimum: number
++  1303 readonly maximum: number
++  1304 }> = makeReviverFilter(
++  1305 "effect/schema/isBetweenCodePoints",
++  1306 Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
++  1307 ({ annotations, payload }) => Schema.isBetweenCodePoints(payload.minimum, payload.maximum, annotations)
++  1308 )
++  1322 export const isMinSizeReviver: FilterReviver<{
++  1323 readonly minSize: number
++  1324 }> = makeReviverFilter(
++  1325 "effect/schema/isMinSize",
++  1326 Schema.Struct({ minSize: Schema.Natural }),
++  1327 ({ annotations, payload }) => Schema.isMinSize(payload.minSize, annotations)
++  1328 )
++  1342 export const isMaxSizeReviver: FilterReviver<{
++  1343 readonly maxSize: number
++  1344 }> = makeReviverFilter(
++  1345 "effect/schema/isMaxSize",
++  1346 Schema.Struct({ maxSize: Schema.Natural }),
++  1347 ({ annotations, payload }) => Schema.isMaxSize(payload.maxSize, annotations)
++  1348 )
++  1362 export const isBetweenSizeReviver: FilterReviver<{
++  1363 readonly minimum: number
++  1364 readonly maximum: number
++  1365 }> = makeReviverFilter(
++  1366 "effect/schema/isBetweenSize",
++  1367 Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
++  1368 ({ annotations, payload }) => Schema.isBetweenSize(payload.minimum, payload.maximum, annotations)
++  1369 )
++  1383 export const isMinPropertiesReviver: FilterReviver<{
++  1384 readonly minProperties: number
++  1385 }> = makeReviverFilter(
++  1386 "effect/schema/isMinProperties",
++  1387 Schema.Struct({ minProperties: Schema.Natural }),
++  1388 ({ annotations, payload }) => Schema.isMinProperties(payload.minProperties, annotations)
++  1389 )
++  1403 export const isMaxPropertiesReviver: FilterReviver<{
++  1404 readonly maxProperties: number
++  1405 }> = makeReviverFilter(
++  1406 "effect/schema/isMaxProperties",
++  1407 Schema.Struct({ maxProperties: Schema.Natural }),
++  1408 ({ annotations, payload }) => Schema.isMaxProperties(payload.maxProperties, annotations)
++  1409 )
++  1423 export const isBetweenPropertiesReviver: FilterReviver<{
++  1424 readonly minimum: number
++  1425 readonly maximum: number
++  1426 }> = makeReviverFilter(
++  1427 "effect/schema/isBetweenProperties",
++  1428 Schema.Struct({ minimum: Schema.Natural, maximum: Schema.Natural }),
++  1429 ({ annotations, payload }) => Schema.isBetweenProperties(payload.minimum, payload.maximum, annotations)
++  1430 )
++  1444 export const isPropertyNamesReviver: FilterReviver<null> = makeReviverFilter(
++  1445 "effect/schema/isPropertyNames",
++  1446 Schema.Null,
++  1447 ({ annotations, schemas }) => Schema.isPropertyNames(schemas[0], annotations)
++  1448 )
++  1462 export const isUniqueReviver: FilterReviver<null> = makeReviverFilter(
++  1463 "effect/schema/isUnique",
++  1464 Schema.Null,
++  1465 ({ annotations }) => Schema.isUnique(annotations)
++  1466 )
++  1479 export const isUniqueKeyReviver: FilterReviver<null> = makeReviverFilter(
++  1480 "effect/schema/isUniqueKey",
++  1481 Schema.Null,
++  1482 ({ annotations }) => Schema.isUniqueKey(annotations)
++  1483 )
++  1497 export const OptionReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1498 "effect/schema/Option",
++  1499 Schema.Null,
++  1500 ({ annotations, typeParameters }) => {
++  1501 const schema = Schema.Option(typeParameters[0])
++  1502 return annotations === undefined ? schema : schema.annotate(annotations)
++  1503 }
++  1504 )
++  1518 export const ResultReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1519 "effect/schema/Result",
++  1520 Schema.Null,
++  1521 ({ annotations, typeParameters }) => {
++  1522 const schema = Schema.Result(typeParameters[0], typeParameters[1])
++  1523 return annotations === undefined ? schema : schema.annotate(annotations)
++  1524 }
++  1525 )
++  1539 export const RedactedReviver: DeclarationReviver<RedactedRepresentationPayload> = makeReviverDeclaration(
++  1540 "effect/schema/Redacted",
++  1541 RedactedRepresentationPayload,
++  1542 ({ annotations, payload, typeParameters }) => {
++  1543 const schema = Schema.Redacted(typeParameters[0], payload ?? undefined)
++  1544 return annotations === undefined ? schema : schema.annotate(annotations)
++  1545 }
++  1546 )
++  1560 export const CauseReasonReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1561 "effect/schema/CauseReason",
++  1562 Schema.Null,
++  1563 ({ annotations, typeParameters }) => {
++  1564 const schema = Schema.CauseReason(typeParameters[0], typeParameters[1])
++  1565 return annotations === undefined ? schema : schema.annotate(annotations)
++  1566 }
++  1567 )
++  1581 export const CauseReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1582 "effect/schema/Cause",
++  1583 Schema.Null,
++  1584 ({ annotations, typeParameters }) => {
++  1585 const schema = Schema.Cause(typeParameters[0], typeParameters[1])
++  1586 return annotations === undefined ? schema : schema.annotate(annotations)
++  1587 }
++  1588 )
++  1602 export const ErrorInstanceReviver: DeclarationReviver<ErrorRepresentationPayload> = makeReviverDeclaration(
++  1603 "effect/schema/Error",
++  1604 ErrorRepresentationPayload,
++  1605 ({ annotations, payload }) => {
++  1606 const schema = Schema.ErrorInstance(payload ?? undefined)
++  1607 return annotations === undefined ? schema : schema.annotate(annotations)
++  1608 }
++  1609 )
++  1623 export const ExitReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1624 "effect/schema/Exit",
++  1625 Schema.Null,
++  1626 ({ annotations, typeParameters }) => {
++  1627 const schema = Schema.Exit(typeParameters[0], typeParameters[1], typeParameters[2])
++  1628 return annotations === undefined ? schema : schema.annotate(annotations)
++  1629 }
++  1630 )
++  1644 export const ReadonlyMapReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1645 "effect/schema/ReadonlyMap",
++  1646 Schema.Null,
++  1647 ({ annotations, typeParameters }) => {
++  1648 const schema = Schema.ReadonlyMap(typeParameters[0], typeParameters[1])
++  1649 return annotations === undefined ? schema : schema.annotate(annotations)
++  1650 }
++  1651 )
++  1659 export const GraphReviver: DeclarationReviver<"directed" | "undirected"> = makeReviverDeclaration(
++  1660 "effect/schema/Graph",
++  1661 Schema.Literals(["directed", "undirected"]),
++  1662 ({ annotations, payload, typeParameters }) => {
++  1663 const schema = Schema.Graph(payload, typeParameters[0], typeParameters[1])
++  1664 return annotations === undefined ? schema : schema.annotate(annotations)
++  1665 }
++  1666 )
++  1680 export const HashMapReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1681 "effect/schema/HashMap",
++  1682 Schema.Null,
++  1683 ({ annotations, typeParameters }) => {
++  1684 const schema = Schema.HashMap(typeParameters[0], typeParameters[1])
++  1685 return annotations === undefined ? schema : schema.annotate(annotations)
++  1686 }
++  1687 )
++  1701 export const ReadonlySetReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1702 "effect/schema/ReadonlySet",
++  1703 Schema.Null,
++  1704 ({ annotations, typeParameters }) => {
++  1705 const schema = Schema.ReadonlySet(typeParameters[0])
++  1706 return annotations === undefined ? schema : schema.annotate(annotations)
++  1707 }
++  1708 )
++  1722 export const HashSetReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1723 "effect/schema/HashSet",
++  1724 Schema.Null,
++  1725 ({ annotations, typeParameters }) => {
++  1726 const schema = Schema.HashSet(typeParameters[0])
++  1727 return annotations === undefined ? schema : schema.annotate(annotations)
++  1728 }
++  1729 )
++  1743 export const ChunkReviver: DeclarationReviver<null> = makeReviverDeclaration(
++  1744 "effect/schema/Chunk",
++  1745 Schema.Null,
++  1746 ({ annotations, typeParameters }) => {
++  1747 const schema = Schema.Chunk(typeParameters[0])
++  1748 return annotations === undefined ? schema : schema.annotate(annotations)
++  1749 }
++  1750 )
++  1764 export const RegExpReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1765 "effect/schema/RegExp",
++  1766 Schema.RegExp
++  1767 )
++  1781 export const URLReviver: DeclarationReviver<null> = makeFixedDeclarationReviver("effect/schema/URL", Schema.URL)
++  1795 export const DateReviver: DeclarationReviver<null> = makeFixedDeclarationReviver("effect/schema/Date", Schema.Date)
++  1809 export const DurationReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1810 "effect/schema/Duration",
++  1811 Schema.Duration
++  1812 )
++  1820 export const ByteSizeReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1821 "effect/schema/ByteSize",
++  1822 Schema.ByteSize
++  1823 )
++  1837 export const BigDecimalReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1838 "effect/schema/BigDecimal",
++  1839 Schema.BigDecimal
++  1840 )
++  1854 export const FileReviver: DeclarationReviver<null> = makeFixedDeclarationReviver("effect/schema/File", Schema.File)
++  1868 export const FormDataReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1869 "effect/schema/FormData",
++  1870 Schema.FormData
++  1871 )
++  1885 export const URLSearchParamsReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1886 "effect/schema/URLSearchParams",
++  1887 Schema.URLSearchParams
++  1888 )
++  1902 export const Uint8ArrayReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1903 "effect/schema/Uint8Array",
++  1904 Schema.Uint8Array
++  1905 )
++  1919 export const DateTimeUtcReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1920 "effect/schema/DateTimeUtc",
++  1921 Schema.DateTimeUtc
++  1922 )
++  1936 export const TimeZoneOffsetReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1937 "effect/schema/TimeZoneOffset",
++  1938 Schema.TimeZoneOffset
++  1939 )
++  1953 export const TimeZoneNamedReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1954 "effect/schema/TimeZoneNamed",
++  1955 Schema.TimeZoneNamed
++  1956 )
++  1970 export const TimeZoneReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1971 "effect/schema/TimeZone",
++  1972 Schema.TimeZone
++  1973 )
++  1987 export const DateTimeZonedReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  1988 "effect/schema/DateTimeZoned",
++  1989 Schema.DateTimeZoned
++  1990 )
++  2004 export const isGreaterThanDateReviver: FilterReviver<{
++  2005 readonly exclusiveMinimum: globalThis.Date
++  2006 }> = makeReviverFilter(
++  2007 "effect/schema/isGreaterThanDate",
++  2008 Schema.Struct({ exclusiveMinimum: Schema.Date }),
++  2009 ({ annotations, payload }) => Schema.isGreaterThanDate(payload.exclusiveMinimum, annotations)
++  2010 )
++  2024 export const isGreaterThanOrEqualToDateReviver: FilterReviver<{
++  2025 readonly minimum: globalThis.Date
++  2026 }> = makeReviverFilter(
++  2027 "effect/schema/isGreaterThanOrEqualToDate",
++  2028 Schema.Struct({ minimum: Schema.Date }),
++  2029 ({ annotations, payload }) => Schema.isGreaterThanOrEqualToDate(payload.minimum, annotations)
++  2030 )
++  2044 export const isLessThanDateReviver: FilterReviver<{
++  2045 readonly exclusiveMaximum: globalThis.Date
++  2046 }> = makeReviverFilter(
++  2047 "effect/schema/isLessThanDate",
++  2048 Schema.Struct({ exclusiveMaximum: Schema.Date }),
++  2049 ({ annotations, payload }) => Schema.isLessThanDate(payload.exclusiveMaximum, annotations)
++  2050 )
++  2064 export const isLessThanOrEqualToDateReviver: FilterReviver<{
++  2065 readonly maximum: globalThis.Date
++  2066 }> = makeReviverFilter(
++  2067 "effect/schema/isLessThanOrEqualToDate",
++  2068 Schema.Struct({ maximum: Schema.Date }),
++  2069 ({ annotations, payload }) => Schema.isLessThanOrEqualToDate(payload.maximum, annotations)
++  2070 )
++  2084 export const isBetweenDateReviver: FilterReviver<{
++  2085 readonly minimum: globalThis.Date
++  2086 readonly maximum: globalThis.Date
++  2087 readonly exclusiveMinimum?: true | undefined
++  2088 readonly exclusiveMaximum?: true | undefined
++  2089 }> = makeReviverFilter(
++  2090 "effect/schema/isBetweenDate",
++  2091 Schema.Struct({
++  2092 minimum: Schema.Date,
++  2093 maximum: Schema.Date,
++  2094 exclusiveMinimum: Schema.optional(Schema.Literal(true)),
++  2095 exclusiveMaximum: Schema.optional(Schema.Literal(true))
++  2096 }),
++  2097 ({ annotations, payload }) => Schema.isBetweenDate(payload, annotations)
++  2098 )
++  2112 export const isGreaterThanBigIntReviver: FilterReviver<{
++  2113 readonly exclusiveMinimum: bigint
++  2114 }> = makeReviverFilter(
++  2115 "effect/schema/isGreaterThanBigInt",
++  2116 Schema.Struct({ exclusiveMinimum: Schema.BigInt }),
++  2117 ({ annotations, payload }) => Schema.isGreaterThanBigInt(payload.exclusiveMinimum, annotations)
++  2118 )
++  2132 export const isGreaterThanOrEqualToBigIntReviver: FilterReviver<{
++  2133 readonly minimum: bigint
++  2134 }> = makeReviverFilter(
++  2135 "effect/schema/isGreaterThanOrEqualToBigInt",
++  2136 Schema.Struct({ minimum: Schema.BigInt }),
++  2137 ({ annotations, payload }) => Schema.isGreaterThanOrEqualToBigInt(payload.minimum, annotations)
++  2138 )
++  2152 export const isLessThanBigIntReviver: FilterReviver<{
++  2153 readonly exclusiveMaximum: bigint
++  2154 }> = makeReviverFilter(
++  2155 "effect/schema/isLessThanBigInt",
++  2156 Schema.Struct({ exclusiveMaximum: Schema.BigInt }),
++  2157 ({ annotations, payload }) => Schema.isLessThanBigInt(payload.exclusiveMaximum, annotations)
++  2158 )
++  2172 export const isLessThanOrEqualToBigIntReviver: FilterReviver<{
++  2173 readonly maximum: bigint
++  2174 }> = makeReviverFilter(
++  2175 "effect/schema/isLessThanOrEqualToBigInt",
++  2176 Schema.Struct({ maximum: Schema.BigInt }),
++  2177 ({ annotations, payload }) => Schema.isLessThanOrEqualToBigInt(payload.maximum, annotations)
++  2178 )
++  2192 export const isBetweenBigIntReviver: FilterReviver<{
++  2193 readonly minimum: bigint
++  2194 readonly maximum: bigint
++  2195 readonly exclusiveMinimum?: true | undefined
++  2196 readonly exclusiveMaximum?: true | undefined
++  2197 }> = makeReviverFilter(
++  2198 "effect/schema/isBetweenBigInt",
++  2199 Schema.Struct({
++  2200 minimum: Schema.BigInt,
++  2201 maximum: Schema.BigInt,
++  2202 exclusiveMinimum: Schema.optional(Schema.Literal(true)),
++  2203 exclusiveMaximum: Schema.optional(Schema.Literal(true))
++  2204 }),
++  2205 ({ annotations, payload }) => Schema.isBetweenBigInt(payload, annotations)
++  2206 )
++  2220 export const JsonReviver: DeclarationReviver<null> = makeFixedDeclarationReviver("effect/schema/Json", Schema.Json)
++  2234 export const MutableJsonReviver: DeclarationReviver<null> = makeFixedDeclarationReviver(
++  2235 "effect/schema/MutableJson",
++  2236 Schema.MutableJson
++  2237 )
++  2239 const jsonSchemaRevivers: ReadonlyArray<AnyReviver> = [
++  2240 JsonReviver,
++  2241 isPatternReviver,
++  2242 isFiniteReviver,
++  2243 isGreaterThanReviver,
++  2244 isGreaterThanOrEqualToReviver,
++  2245 isLessThanReviver,
++  2246 isLessThanOrEqualToReviver,
++  2247 isMultipleOfReviver,
++  2248 isIntReviver,
++  2249 isMinLengthReviver,
++  2250 isMaxLengthReviver,
++  2251 isMinCodePointsReviver,
++  2252 isMaxCodePointsReviver,
++  2253 isMinPropertiesReviver,
++  2254 isMaxPropertiesReviver,
++  2255 isPropertyNamesReviver,
++  2256 isUniqueReviver
++  2257 ]
+
+@@ hunk 9 [layout] pin 939-939 release 2619-2621 cited ranges 3
+   pin units: AnnotationsSchema=code
+   release units: AnnotationsSchema=code
+-   939 const AnnotationsSchema = Schema.optional(Schema.Record(Schema.String, Schema.Unknown)).pipe(
++  2619 const AnnotationsSchema = Schema.optional(
++  2620 Schema.Record(Schema.String, Schema.Unknown)
++  2621 ).pipe(
+
+@@ hunk 10 [code] pin 941-942 release 2623-2624 cited ranges 4
+   pin units: AnnotationsSchema=code
+   release units: AnnotationsSchema=code
+-   941 decode: SchemaGetter.passthroughSubtype(),
+-   942 encode: SchemaGetter.transformOptional((annotations) =>
++  2623 decode: InternalGetter.passthroughSubtype(),
++  2624 encode: InternalGetter.transformOptional((annotations) =>
+
+@@ hunk 11 [code] pin 993-994 release 2675-2676 cited ranges 1
+   pin units: makeValueSchema=code
+   release units: makeValueSchema=code
+-   993 decode: SchemaGetter.transform((encoded: { readonly type: Type; readonly value: Value }) => encoded.value),
+-   994 encode: SchemaGetter.transform((value: Value) => ({ type, value }))
++  2675 decode: InternalGetter.transform((encoded: { readonly type: Type; readonly value: Value }) => encoded.value),
++  2676 encode: InternalGetter.transform((value: Value) => ({ type, value }))
+
+@@ hunk 12 [code] pin 1064-1064 release 2746-2748 cited ranges 0
+   pin units: UnionSchema=code
+   release units: UnionSchema=code
+-  1064 mode: Schema.Literals(["anyOf", "oneOf"])
++  2746 options: Schema.optionalKey(Schema.Struct({
++  2747 mode: Schema.optionalKey(Schema.Literals(["anyOf", "oneOf"]))
++  2748 }))
+
+@@ hunk 13 [code] pin 1310-1310 release 3007-3007 cited ranges 0
+   pin units: fromJsonSchemaDocument=code
+   release units: fromJsonSchemaDocument=code
+-  1310 return InternalFromJsonSchemaDocument.fromJsonSchemaDocument(document, options)
++  3007 return InternalFromJsonSchemaDocument.fromJsonSchemaDocument(document, options, jsonSchemaRevivers)
+
+@@ hunk 14 [code] pin 1347-1347 release 3050-3050 cited ranges 0
+   pin units: fromJsonSchemaMultiDocument=code
+   release units: fromJsonSchemaMultiDocument=code
+-  1347 return InternalFromJsonSchemaDocument.fromJsonSchemaMultiDocument(document, options)
++  3050 return InternalFromJsonSchemaDocument.fromJsonSchemaMultiDocument(document, options, jsonSchemaRevivers)
