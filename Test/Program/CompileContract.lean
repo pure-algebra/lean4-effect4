@@ -1,4 +1,5 @@
 import Effect4.Program.Compile
+import Effect4.Program.Scoped
 import Effect4.Laws.Machine.Witnesses
 
 /-!
@@ -337,6 +338,35 @@ def pRefUpdateCapture : NativeEff :=
   [Val.nat 5]).isNone
 #guard (refStep (SyncOp.refUpdate ⟨0⟩ (.app "add" (.cons (.var 2) (.cons (.var 1) .nil)))
   [Val.cell ⟨0⟩, Val.nat 10]) [Val.nat 5]).map Prod.snd = some [Val.nat 15]
+
+/-- `Ref.make(5)`, a bound `10`, then `Ref.updateAndGet(ref, f)` at a node of level 2. The
+engine's test runs this program and `pRefUpdateCapture` on both carriers of the generated engine
+(`ocaml/engine/test/test_engine.ml`, `p_level` and `p_capture`), against the values pinned here. -/
+def pRefUpdateLevel (f : Term) : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 5)))
+    (.bind (.succeed (.lit (.nat 10)))
+      (.perform (.refUpdateAndGetWith f) (.var 0)))
+
+-- `incr`'s image at the node's level reads the cell's value: the row answers `6`.
+#guard exitOf (replayEff (pRefUpdateLevel (FnName.image .update 2 .incr)) [evaluateRoot]) 0 =
+  some (Exit.success (Val.nat 6))
+#guard refsOf (replayEff (pRefUpdateLevel (FnName.image .update 2 .incr)) [evaluateRoot]) =
+  [Val.nat 6]
+-- Red control: the image at level 1 reads the outer `10`, not the cell, and the cell takes `11`.
+#guard Eff.scopedAt 0 (pRefUpdateLevel (FnName.image .update 1 .incr)) = true
+#guard exitOf (replayEff (pRefUpdateLevel (FnName.image .update 1 .incr)) [evaluateRoot]) 0 =
+  some (Exit.success (Val.nat 11))
+#guard refsOf (replayEff (pRefUpdateLevel (FnName.image .update 1 .incr)) [evaluateRoot]) =
+  [Val.nat 11]
+-- Red control: the image at level 3 is out of scope. The scope fold refuses the program; run all
+-- the same, the store step stops, the cell keeps `5`, and the machine answers the thunk's pure
+-- value, the unit.
+#guard Eff.scopedAt 0 (pRefUpdateLevel (FnName.image .update 3 .incr)) = false
+#guard typeOf nativeSignature (pRefUpdateLevel (FnName.image .update 3 .incr)) = none
+#guard exitOf (replayEff (pRefUpdateLevel (FnName.image .update 3 .incr)) [evaluateRoot]) 0 =
+  some (Exit.success Val.unit)
+#guard refsOf (replayEff (pRefUpdateLevel (FnName.image .update 3 .incr)) [evaluateRoot]) =
+  [Val.nat 5]
 
 /-- `Ref.modify(ref, a => ["s", a])` on a number cell: the row answers a string, at the literal
 type `"s"`, and stores the number it read. `B` is the term's, not the cell's. -/

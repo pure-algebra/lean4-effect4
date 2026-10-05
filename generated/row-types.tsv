@@ -16,14 +16,14 @@ Native	refGet	call		[Ref.Ref<"p0">]	"p0"	never	<"p0">
 Native	refSet	tupleCall		[Ref.Ref<"p0">, "p0"]	Ref.Ref<"p0">	never	<"p0">
 Native	refGetAndSet	tupleCall		[Ref.Ref<"p0">, "p0"]	"p0"	never	<"p0">
 Native	refSetAndGet	tupleCall		[Ref.Ref<"p0">, "p0"]	"p0"	never	<"p0">
-Native	refUpdate	call			void	never	
-Native	refGetAndUpdate	call			number	never	
-Native	refUpdateAndGet	call			number	never	
-Native	refUpdateSome	call			void	never	
-Native	refGetAndUpdateSome	call			number	never	
-Native	refUpdateSomeAndGet	call			number	never	
-Native	refModify	call			number	never	
-Native	refModifySome	call			number	never	
+Native	refUpdateWith	call			void	never	<"p0">
+Native	refGetAndUpdateWith	call			"p0"	never	<"p0">
+Native	refUpdateAndGetWith	call			"p0"	never	<"p0">
+Native	refUpdateSomeWith	call			void	never	<"p0">
+Native	refGetAndUpdateSomeWith	call			"p0"	never	<"p0">
+Native	refUpdateSomeAndGetWith	call			"p0"	never	<"p0">
+Native	refModifyWith	call			"p1"	never	<"p0", "p1">
+Native	refModifySomeWith	call			"p1"	never	<"p0", "p1">
 Native	deferredMakeOf	call			Deferred.Deferred<number, number>	never	
 Native	deferredIsDone	call		[Deferred.Deferred<"p0", "p1">]	boolean	never	<"p0", "p1">
 Native	deferredPoll	call		[Deferred.Deferred<"p0", "p1">]	boolean	never	<"p0", "p1">

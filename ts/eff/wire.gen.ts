@@ -10,7 +10,7 @@
 // nowhere else: a family whose constructors are exactly `nil` and `cons head tail` is
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
 
 // The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and
 // inductive lists do not consume the JavaScript call stack. Frame lengths are patched
@@ -242,21 +242,6 @@ export const finalizerStrategyWire = (v: FinalizerStrategy): Uint8Array => {
   return w.finish(() => writeFinalizerStrategy(w, v))
 }
 
-const writeFnName = (w: Writer, v: FnName): void => {
-  switch (v) {
-    case "incr": return w.ctor(0, [])
-    case "double": return w.ctor(1, [])
-    case "zeroWhenPositive": return w.ctor(2, [])
-    case "noChange": return w.ctor(3, [])
-    case "takeAndBump": return w.ctor(4, [])
-    default: throw new TypeError("wire FnName constructor")
-  }
-}
-export const fnNameWire = (v: FnName): Uint8Array => {
-  const w = new Writer()
-  return w.finish(() => writeFnName(w, v))
-}
-
 const writeNativeOp = (w: Writer, v: NativeOp): void => {
   switch (v._tag) {
     case "refMake": return w.ctor(0, [])
@@ -264,14 +249,6 @@ const writeNativeOp = (w: Writer, v: NativeOp): void => {
     case "refSet": return w.ctor(2, [])
     case "refGetAndSet": return w.ctor(3, [])
     case "refSetAndGet": return w.ctor(4, [])
-    case "refUpdate": return w.ctor(5, [() => writeFnName(w, v.f)])
-    case "refGetAndUpdate": return w.ctor(6, [() => writeFnName(w, v.f)])
-    case "refUpdateAndGet": return w.ctor(7, [() => writeFnName(w, v.f)])
-    case "refUpdateSome": return w.ctor(8, [() => writeFnName(w, v.f)])
-    case "refGetAndUpdateSome": return w.ctor(9, [() => writeFnName(w, v.f)])
-    case "refUpdateSomeAndGet": return w.ctor(10, [() => writeFnName(w, v.f)])
-    case "refModify": return w.ctor(11, [() => writeFnName(w, v.f)])
-    case "refModifySome": return w.ctor(12, [() => writeFnName(w, v.f)])
     case "deferredIsDone": return w.ctor(14, [])
     case "deferredPoll": return w.ctor(15, [])
     case "deferredSucceed": return w.ctor(16, [])
@@ -282,6 +259,14 @@ const writeNativeOp = (w: Writer, v: NativeOp): void => {
     case "clockNow": return w.ctor(21, [])
     case "external": return w.ctor(22, [() => w.nat(v.index)])
     case "deferredMakeOf": return w.ctor(23, [() => writeTy(w, v.value), () => writeTy(w, v.error)])
+    case "refUpdateWith": return w.ctor(24, [() => writeTerm(w, v.f)])
+    case "refGetAndUpdateWith": return w.ctor(25, [() => writeTerm(w, v.f)])
+    case "refUpdateAndGetWith": return w.ctor(26, [() => writeTerm(w, v.f)])
+    case "refUpdateSomeWith": return w.ctor(27, [() => writeTerm(w, v.f)])
+    case "refGetAndUpdateSomeWith": return w.ctor(28, [() => writeTerm(w, v.f)])
+    case "refUpdateSomeAndGetWith": return w.ctor(29, [() => writeTerm(w, v.f)])
+    case "refModifyWith": return w.ctor(30, [() => writeTerm(w, v.f)])
+    case "refModifySomeWith": return w.ctor(31, [() => writeTerm(w, v.f)])
     default: throw new TypeError("wire NativeOp constructor")
   }
 }

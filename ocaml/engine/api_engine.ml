@@ -575,14 +575,6 @@ and native_op =
   | NativeOp_refSet
   | NativeOp_refGetAndSet
   | NativeOp_refSetAndGet
-  | NativeOp_refUpdate of fn_name
-  | NativeOp_refGetAndUpdate of fn_name
-  | NativeOp_refUpdateAndGet of fn_name
-  | NativeOp_refUpdateSome of fn_name
-  | NativeOp_refGetAndUpdateSome of fn_name
-  | NativeOp_refUpdateSomeAndGet of fn_name
-  | NativeOp_refModify of fn_name
-  | NativeOp_refModifySome of fn_name
   | NativeOp_deferredIsDone
   | NativeOp_deferredPoll
   | NativeOp_deferredSucceed
@@ -593,6 +585,14 @@ and native_op =
   | NativeOp_clockNow
   | NativeOp_external of int
   | NativeOp_deferredMakeOf of ty * ty
+  | NativeOp_refUpdateWith of term
+  | NativeOp_refGetAndUpdateWith of term
+  | NativeOp_refUpdateAndGetWith of term
+  | NativeOp_refUpdateSomeWith of term
+  | NativeOp_refGetAndUpdateSomeWith of term
+  | NativeOp_refUpdateSomeAndGetWith of term
+  | NativeOp_refModifyWith of term
+  | NativeOp_refModifySomeWith of term
 and row_kind = RowKind_sync | RowKind_async | RowKind_program
 and context_update = ContextUpdate_setTo of val_ context | ContextUpdate_provide of val_ context | ContextUpdate_provideService of service_key * val_
 and region =
@@ -660,14 +660,14 @@ and sync_op =
   | SyncOp_refSet of ref_key * val_
   | SyncOp_refGetAndSet of ref_key * val_
   | SyncOp_refSetAndGet of ref_key * val_
-  | SyncOp_refUpdate of ref_key * term * val_ list
-  | SyncOp_refGetAndUpdate of ref_key * term * val_ list
-  | SyncOp_refUpdateAndGet of ref_key * term * val_ list
-  | SyncOp_refUpdateSome of ref_key * term * val_ list
-  | SyncOp_refGetAndUpdateSome of ref_key * term * val_ list
-  | SyncOp_refUpdateSomeAndGet of ref_key * term * val_ list
-  | SyncOp_refModify of ref_key * term * val_ list
-  | SyncOp_refModifySome of ref_key * term * val_ list
+  | SyncOp_refUpdate of ref_key * term * val_ E.t
+  | SyncOp_refGetAndUpdate of ref_key * term * val_ E.t
+  | SyncOp_refUpdateAndGet of ref_key * term * val_ E.t
+  | SyncOp_refUpdateSome of ref_key * term * val_ E.t
+  | SyncOp_refGetAndUpdateSome of ref_key * term * val_ E.t
+  | SyncOp_refUpdateSomeAndGet of ref_key * term * val_ E.t
+  | SyncOp_refModify of ref_key * term * val_ E.t
+  | SyncOp_refModifySome of ref_key * term * val_ E.t
   | SyncOp_deferredMake
   | SyncOp_deferredIsDone of deferred_key
   | SyncOp_deferredPoll of deferred_key
@@ -879,12 +879,6 @@ and lit =
   | Lit_bool of bool
   | Lit_str of string
 and terms = Terms_nil | Terms_cons of term * terms
-and fn_name =
-  | FnName_incr
-  | FnName_double
-  | FnName_zeroWhenPositive
-  | FnName_noChange
-  | FnName_takeAndBump
 and race_name =
   | RaceName_empty
   | RaceName_successThenSecond
@@ -1187,12 +1181,15 @@ let sh_drop_observers token fibers (_acc : 'acc list) =
    applies `List.length` and `++` to the carrier inline.  `Val.cell k` is `Val.handle 2 k`.
    A read-modify-write row carries a binder term and its environment (decisions row 43) and
    runs the term at `env ++ [a]`: `eval_term` is `Effect4.Program.evalTerm`, generated below
-   this prelude, so the row hands it in, and it reads the point environment carrier, built
-   here by `E.of_list`.  The term's answer is read as Lean's arm reads it: the option frames
+   this prelude, so the row hands it in.  The row's environment is the point environment
+   carrier of the node that performed it (`field Effect4.Machine.SyncOp.env E.t`, externs.txt;
+   the state plan's T3b), so `env ++ [a]` is `E.snoc env a`: the term reads its outer binders
+   below the current value, at the node's level.  The term's answer is read as Lean's arm
+   reads it: the option frames
    (`Store.Image.ofOption Store.Image.ident`: `Val_none`, `Val_some`) and the two-element
    tuple (`Store.Image.ofTuple2`: `Val_list [b; a]`); any other answer is a frontier. *)
 let sh_ref_step eval_term op heap =
-  let run env f a = eval_term (E.of_list (env @ [a])) f in
+  let run env f a = eval_term (E.snoc env a) f in
   let option_of = function
     | Val_none -> Some None
     | Val_some v -> Some (Some v)
@@ -4002,19 +3999,19 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
   (* LCNF mono: Effect4.Program.NativeOp.kind (x.1 : Effect4.Program.NativeOp) : Effect4.Program.RowKind *)
   let program_native_op_kind (x_1 : native_op) : row_kind =
   match (x_1 : native_op) with
-    | NativeOp_refUpdate _ -> RowKind_sync
-    | NativeOp_refGetAndUpdate _ -> RowKind_sync
-    | NativeOp_refUpdateAndGet _ -> RowKind_sync
-    | NativeOp_refUpdateSome _ -> RowKind_sync
-    | NativeOp_refGetAndUpdateSome _ -> RowKind_sync
-    | NativeOp_refUpdateSomeAndGet _ -> RowKind_sync
-    | NativeOp_refModify _ -> RowKind_sync
-    | NativeOp_refModifySome _ -> RowKind_sync
     | NativeOp_deferredAwait -> RowKind_async
     | NativeOp_scopeMake _ -> RowKind_sync
     | NativeOp_sleep -> RowKind_async
     | NativeOp_external _ -> RowKind_program
     | NativeOp_deferredMakeOf (_, _) -> RowKind_sync
+    | NativeOp_refUpdateWith _ -> RowKind_sync
+    | NativeOp_refGetAndUpdateWith _ -> RowKind_sync
+    | NativeOp_refUpdateAndGetWith _ -> RowKind_sync
+    | NativeOp_refUpdateSomeWith _ -> RowKind_sync
+    | NativeOp_refGetAndUpdateSomeWith _ -> RowKind_sync
+    | NativeOp_refUpdateSomeAndGetWith _ -> RowKind_sync
+    | NativeOp_refModifyWith _ -> RowKind_sync
+    | NativeOp_refModifySomeWith _ -> RowKind_sync
     | _ -> RowKind_sync
 
   (* LCNF mono: Effect4.Program.NativeOp.awaitCellOf (x.1 : Effect4.Store.Val) : Option Nat *)
@@ -4072,270 +4069,164 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                       Prim_async (_x_33, _x_34, _x_36)))))
         | _ -> program_bad_shape)
 
-  (* LCNF mono: Effect4.Machine.FnName.updateTerm (x.1 : Effect4.Machine.FnName) : Effect4.Program.Term *)
-  let fn_name_update_term (x_1 : fn_name) : term =
-  let _jp_2 = fun () -> let _x_3 = 0 in
-  Term_var _x_3 in
-  match (x_1 : fn_name) with
-    | FnName_double -> (let _x_5 = "mul" in
-      let _x_6 = 0 in
-      let _x_7 = Term_var _x_6 in
-      let _x_8 = 2 in
-      let _x_9 = Lit_nat _x_8 in
-      let _x_10 = Term_lit _x_9 in
-      let _x_11 = Terms_nil in
-      let _x_12 = Terms_cons (_x_10, _x_11) in
-      let _x_13 = Terms_cons (_x_7, _x_12) in
-      Term_app (_x_5, _x_13))
-    | FnName_zeroWhenPositive -> _jp_2 ()
-    | FnName_noChange -> _jp_2 ()
-    | _ -> (let _x_15 = "succ" in
-      let _x_16 = 0 in
-      let _x_17 = Term_var _x_16 in
-      let _x_18 = Terms_nil in
-      let _x_19 = Terms_cons (_x_17, _x_18) in
-      Term_app (_x_15, _x_19))
-
-  (* LCNF mono: Effect4.Machine.FnName.updateSomeTerm (x.1 : Effect4.Machine.FnName) : Effect4.Program.Term *)
-  let fn_name_update_some_term (x_1 : fn_name) : term =
-  match (x_1 : fn_name) with
-    | FnName_noChange -> (let _x_2 = "none" in
-      let _x_3 = Terms_nil in
-      Term_app (_x_2, _x_3))
-    | FnName_zeroWhenPositive -> (let _x_5 = "ite" in
-      let _x_6 = "lt" in
-      let _x_7 = 0 in
-      let _x_8 = Lit_nat _x_7 in
-      let _x_9 = Term_lit _x_8 in
-      let _x_10 = Term_var _x_7 in
-      let _x_11 = Terms_nil in
-      let _x_12 = Terms_cons (_x_10, _x_11) in
-      let _x_13 = Terms_cons (_x_9, _x_12) in
-      let _x_14 = Term_app (_x_6, _x_13) in
-      let _x_15 = "some" in
-      let _x_16 = Terms_cons (_x_9, _x_11) in
-      let _x_17 = Term_app (_x_15, _x_16) in
-      let _x_18 = "none" in
-      let _x_19 = Term_app (_x_18, _x_11) in
-      let _x_20 = Terms_cons (_x_19, _x_11) in
-      let _x_21 = Terms_cons (_x_17, _x_20) in
-      let _x_22 = Terms_cons (_x_14, _x_21) in
-      Term_app (_x_5, _x_22))
-    | _ -> (let _x_24 = "some" in
-      let _x_25 = fn_name_update_term x_1 in
-      let _x_26 = Terms_nil in
-      let _x_27 = Terms_cons (_x_25, _x_26) in
-      Term_app (_x_24, _x_27))
-
-  (* LCNF mono: Effect4.Machine.FnName.modifyTerm (f : Effect4.Machine.FnName) : Effect4.Program.Term *)
-  let fn_name_modify_term (f : fn_name) : term =
-  let _x_1 = "pair" in
-  let _x_2 = 0 in
-  let _x_3 = Term_var _x_2 in
-  let _x_4 = fn_name_update_term f in
-  let _x_5 = Terms_nil in
-  let _x_6 = Terms_cons (_x_4, _x_5) in
-  let _x_7 = Terms_cons (_x_3, _x_6) in
-  Term_app (_x_1, _x_7)
-
-  (* LCNF mono: Effect4.Machine.FnName.modifySomeTerm (x.1 : Effect4.Machine.FnName) : Effect4.Program.Term *)
-  let fn_name_modify_some_term (x_1 : fn_name) : term =
-  match (x_1 : fn_name) with
-    | FnName_noChange -> (let _x_2 = "pair" in
-      let _x_3 = 0 in
-      let _x_4 = Term_var _x_3 in
-      let _x_5 = "none" in
-      let _x_6 = Terms_nil in
-      let _x_7 = Term_app (_x_5, _x_6) in
-      let _x_8 = Terms_cons (_x_7, _x_6) in
-      let _x_9 = Terms_cons (_x_4, _x_8) in
-      Term_app (_x_2, _x_9))
-    | _ -> (let _x_11 = "pair" in
-      let _x_12 = 0 in
-      let _x_13 = Term_var _x_12 in
-      let _x_14 = "some" in
-      let _x_15 = fn_name_update_term x_1 in
-      let _x_16 = Terms_nil in
-      let _x_17 = Terms_cons (_x_15, _x_16) in
-      let _x_18 = Term_app (_x_14, _x_17) in
-      let _x_19 = Terms_cons (_x_18, _x_16) in
-      let _x_20 = Terms_cons (_x_13, _x_19) in
-      Term_app (_x_11, _x_20))
-
-  (* LCNF mono: Effect4.Program.NativeOp.syncOpOf._redArg (x.1 : Effect4.Program.NativeOp) (x.2 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
-  let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_) : sync_op option =
+  (* LCNF mono: Effect4.Program.NativeOp.syncOpOf (x.1 : Effect4.Program.NativeOp) (x.2 : List Effect4.Store.Val) (x.3 : Effect4.Store.Val) : Option Effect4.Machine.SyncOp *)
+  let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_ E.t) (x_3 : val_) =
   match (x_1 : native_op) with
-    | NativeOp_refMake -> (let _x_3 = SyncOp_refMake x_2 in
-      Some _x_3)
-    | NativeOp_refGet -> (match (x_2 : val_) with
-        | Val_handle (kind_5, key_6) -> (let _x_7 = 2 in
-          let _x_8 = kind_5 = _x_7 in
-          if _x_8 then (let _x_10 = SyncOp_refGet key_6 in
-            Some _x_10) else None)
+    | NativeOp_refMake -> (let _x_4 = SyncOp_refMake x_3 in
+      Some _x_4)
+    | NativeOp_refGet -> (match (x_3 : val_) with
+        | Val_handle (kind_6, key_7) -> (let _x_8 = 2 in
+          let _x_9 = kind_6 = _x_8 in
+          if _x_9 then (let _x_11 = SyncOp_refGet key_7 in
+            Some _x_11) else None)
         | _ -> None)
-    | NativeOp_refSet -> (match (x_2 : val_) with
-        | Val_list xs_13 -> (match xs_13 with
-            | head_14 :: tail_15 -> (match (head_14 : val_) with
-                | Val_handle (kind_16, key_17) -> (let _x_18 = 2 in
-                  let _x_19 = kind_16 = _x_18 in
-                  if _x_19 then (match tail_15 with
-                      | head_21 :: tail_22 -> (match tail_22 with
-                          | [] -> (let _x_23 = SyncOp_refSet (key_17, head_21) in
-                            Some _x_23)
+    | NativeOp_refSet -> (match (x_3 : val_) with
+        | Val_list xs_14 -> (match xs_14 with
+            | head_15 :: tail_16 -> (match (head_15 : val_) with
+                | Val_handle (kind_17, key_18) -> (let _x_19 = 2 in
+                  let _x_20 = kind_17 = _x_19 in
+                  if _x_20 then (match tail_16 with
+                      | head_22 :: tail_23 -> (match tail_23 with
+                          | [] -> (let _x_24 = SyncOp_refSet (key_18, head_22) in
+                            Some _x_24)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_refGetAndSet -> (match (x_2 : val_) with
-        | Val_list xs_30 -> (match xs_30 with
-            | head_31 :: tail_32 -> (match (head_31 : val_) with
-                | Val_handle (kind_33, key_34) -> (let _x_35 = 2 in
-                  let _x_36 = kind_33 = _x_35 in
-                  if _x_36 then (match tail_32 with
-                      | head_38 :: tail_39 -> (match tail_39 with
-                          | [] -> (let _x_40 = SyncOp_refGetAndSet (key_34, head_38) in
-                            Some _x_40)
+    | NativeOp_refGetAndSet -> (match (x_3 : val_) with
+        | Val_list xs_31 -> (match xs_31 with
+            | head_32 :: tail_33 -> (match (head_32 : val_) with
+                | Val_handle (kind_34, key_35) -> (let _x_36 = 2 in
+                  let _x_37 = kind_34 = _x_36 in
+                  if _x_37 then (match tail_33 with
+                      | head_39 :: tail_40 -> (match tail_40 with
+                          | [] -> (let _x_41 = SyncOp_refGetAndSet (key_35, head_39) in
+                            Some _x_41)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_refSetAndGet -> (match (x_2 : val_) with
-        | Val_list xs_47 -> (match xs_47 with
-            | head_48 :: tail_49 -> (match (head_48 : val_) with
-                | Val_handle (kind_50, key_51) -> (let _x_52 = 2 in
-                  let _x_53 = kind_50 = _x_52 in
-                  if _x_53 then (match tail_49 with
-                      | head_55 :: tail_56 -> (match tail_56 with
-                          | [] -> (let _x_57 = SyncOp_refSetAndGet (key_51, head_55) in
-                            Some _x_57)
+    | NativeOp_refSetAndGet -> (match (x_3 : val_) with
+        | Val_list xs_48 -> (match xs_48 with
+            | head_49 :: tail_50 -> (match (head_49 : val_) with
+                | Val_handle (kind_51, key_52) -> (let _x_53 = 2 in
+                  let _x_54 = kind_51 = _x_53 in
+                  if _x_54 then (match tail_50 with
+                      | head_56 :: tail_57 -> (match tail_57 with
+                          | [] -> (let _x_58 = SyncOp_refSetAndGet (key_52, head_56) in
+                            Some _x_58)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_refUpdate f_64 -> (match (x_2 : val_) with
-        | Val_handle (kind_65, key_66) -> (let _x_67 = 2 in
-          let _x_68 = kind_65 = _x_67 in
-          if _x_68 then (let _x_70 = fn_name_update_term f_64 in
-            let _x_71 = [] in
-            let _x_72 = SyncOp_refUpdate (key_66, _x_70, _x_71) in
-            Some _x_72) else None)
+    | NativeOp_refUpdateWith f_65 -> (match (x_3 : val_) with
+        | Val_handle (kind_66, key_67) -> (let _x_68 = 2 in
+          let _x_69 = kind_66 = _x_68 in
+          if _x_69 then (let _x_71 = SyncOp_refUpdate (key_67, f_65, x_2) in
+            Some _x_71) else None)
         | _ -> None)
-    | NativeOp_refGetAndUpdate f_75 -> (match (x_2 : val_) with
-        | Val_handle (kind_76, key_77) -> (let _x_78 = 2 in
-          let _x_79 = kind_76 = _x_78 in
-          if _x_79 then (let _x_81 = fn_name_update_term f_75 in
-            let _x_82 = [] in
-            let _x_83 = SyncOp_refGetAndUpdate (key_77, _x_81, _x_82) in
-            Some _x_83) else None)
+    | NativeOp_refGetAndUpdateWith f_74 -> (match (x_3 : val_) with
+        | Val_handle (kind_75, key_76) -> (let _x_77 = 2 in
+          let _x_78 = kind_75 = _x_77 in
+          if _x_78 then (let _x_80 = SyncOp_refGetAndUpdate (key_76, f_74, x_2) in
+            Some _x_80) else None)
         | _ -> None)
-    | NativeOp_refUpdateAndGet f_86 -> (match (x_2 : val_) with
-        | Val_handle (kind_87, key_88) -> (let _x_89 = 2 in
-          let _x_90 = kind_87 = _x_89 in
-          if _x_90 then (let _x_92 = fn_name_update_term f_86 in
-            let _x_93 = [] in
-            let _x_94 = SyncOp_refUpdateAndGet (key_88, _x_92, _x_93) in
-            Some _x_94) else None)
+    | NativeOp_refUpdateAndGetWith f_83 -> (match (x_3 : val_) with
+        | Val_handle (kind_84, key_85) -> (let _x_86 = 2 in
+          let _x_87 = kind_84 = _x_86 in
+          if _x_87 then (let _x_89 = SyncOp_refUpdateAndGet (key_85, f_83, x_2) in
+            Some _x_89) else None)
         | _ -> None)
-    | NativeOp_refUpdateSome f_97 -> (match (x_2 : val_) with
-        | Val_handle (kind_98, key_99) -> (let _x_100 = 2 in
-          let _x_101 = kind_98 = _x_100 in
-          if _x_101 then (let _x_103 = fn_name_update_some_term f_97 in
-            let _x_104 = [] in
-            let _x_105 = SyncOp_refUpdateSome (key_99, _x_103, _x_104) in
-            Some _x_105) else None)
+    | NativeOp_refUpdateSomeWith f_92 -> (match (x_3 : val_) with
+        | Val_handle (kind_93, key_94) -> (let _x_95 = 2 in
+          let _x_96 = kind_93 = _x_95 in
+          if _x_96 then (let _x_98 = SyncOp_refUpdateSome (key_94, f_92, x_2) in
+            Some _x_98) else None)
         | _ -> None)
-    | NativeOp_refGetAndUpdateSome f_108 -> (match (x_2 : val_) with
-        | Val_handle (kind_109, key_110) -> (let _x_111 = 2 in
-          let _x_112 = kind_109 = _x_111 in
-          if _x_112 then (let _x_114 = fn_name_update_some_term f_108 in
-            let _x_115 = [] in
-            let _x_116 = SyncOp_refGetAndUpdateSome (key_110, _x_114, _x_115) in
+    | NativeOp_refGetAndUpdateSomeWith f_101 -> (match (x_3 : val_) with
+        | Val_handle (kind_102, key_103) -> (let _x_104 = 2 in
+          let _x_105 = kind_102 = _x_104 in
+          if _x_105 then (let _x_107 = SyncOp_refGetAndUpdateSome (key_103, f_101, x_2) in
+            Some _x_107) else None)
+        | _ -> None)
+    | NativeOp_refUpdateSomeAndGetWith f_110 -> (match (x_3 : val_) with
+        | Val_handle (kind_111, key_112) -> (let _x_113 = 2 in
+          let _x_114 = kind_111 = _x_113 in
+          if _x_114 then (let _x_116 = SyncOp_refUpdateSomeAndGet (key_112, f_110, x_2) in
             Some _x_116) else None)
         | _ -> None)
-    | NativeOp_refUpdateSomeAndGet f_119 -> (match (x_2 : val_) with
+    | NativeOp_refModifyWith f_119 -> (match (x_3 : val_) with
         | Val_handle (kind_120, key_121) -> (let _x_122 = 2 in
           let _x_123 = kind_120 = _x_122 in
-          if _x_123 then (let _x_125 = fn_name_update_some_term f_119 in
-            let _x_126 = [] in
-            let _x_127 = SyncOp_refUpdateSomeAndGet (key_121, _x_125, _x_126) in
-            Some _x_127) else None)
+          if _x_123 then (let _x_125 = SyncOp_refModify (key_121, f_119, x_2) in
+            Some _x_125) else None)
         | _ -> None)
-    | NativeOp_refModify f_130 -> (match (x_2 : val_) with
-        | Val_handle (kind_131, key_132) -> (let _x_133 = 2 in
-          let _x_134 = kind_131 = _x_133 in
-          if _x_134 then (let _x_136 = fn_name_modify_term f_130 in
-            let _x_137 = [] in
-            let _x_138 = SyncOp_refModify (key_132, _x_136, _x_137) in
-            Some _x_138) else None)
+    | NativeOp_refModifySomeWith f_128 -> (match (x_3 : val_) with
+        | Val_handle (kind_129, key_130) -> (let _x_131 = 2 in
+          let _x_132 = kind_129 = _x_131 in
+          if _x_132 then (let _x_134 = SyncOp_refModifySome (key_130, f_128, x_2) in
+            Some _x_134) else None)
         | _ -> None)
-    | NativeOp_refModifySome f_141 -> (match (x_2 : val_) with
-        | Val_handle (kind_142, key_143) -> (let _x_144 = 2 in
+    | NativeOp_deferredMakeOf (_, _) -> (match (x_3 : val_) with
+        | Val_unit -> (let _x_139 = SyncOp_deferredMake in
+          Some _x_139)
+        | _ -> None)
+    | NativeOp_deferredIsDone -> (match (x_3 : val_) with
+        | Val_handle (kind_142, key_143) -> (let _x_144 = 3 in
           let _x_145 = kind_142 = _x_144 in
-          if _x_145 then (let _x_147 = fn_name_modify_some_term f_141 in
-            let _x_148 = [] in
-            let _x_149 = SyncOp_refModifySome (key_143, _x_147, _x_148) in
-            Some _x_149) else None)
+          if _x_145 then (let _x_147 = SyncOp_deferredIsDone key_143 in
+            Some _x_147) else None)
         | _ -> None)
-    | NativeOp_deferredMakeOf (_, _) -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_154 = SyncOp_deferredMake in
-          Some _x_154)
+    | NativeOp_deferredPoll -> (match (x_3 : val_) with
+        | Val_handle (kind_150, key_151) -> (let _x_152 = 3 in
+          let _x_153 = kind_150 = _x_152 in
+          if _x_153 then (let _x_155 = SyncOp_deferredPoll key_151 in
+            Some _x_155) else None)
         | _ -> None)
-    | NativeOp_deferredIsDone -> (match (x_2 : val_) with
-        | Val_handle (kind_157, key_158) -> (let _x_159 = 3 in
-          let _x_160 = kind_157 = _x_159 in
-          if _x_160 then (let _x_162 = SyncOp_deferredIsDone key_158 in
-            Some _x_162) else None)
-        | _ -> None)
-    | NativeOp_deferredPoll -> (match (x_2 : val_) with
-        | Val_handle (kind_165, key_166) -> (let _x_167 = 3 in
-          let _x_168 = kind_165 = _x_167 in
-          if _x_168 then (let _x_170 = SyncOp_deferredPoll key_166 in
-            Some _x_170) else None)
-        | _ -> None)
-    | NativeOp_deferredSucceed -> (match (x_2 : val_) with
-        | Val_list xs_173 -> (match xs_173 with
-            | head_174 :: tail_175 -> (match (head_174 : val_) with
-                | Val_handle (kind_176, key_177) -> (let _x_178 = 3 in
-                  let _x_179 = kind_176 = _x_178 in
-                  if _x_179 then (match tail_175 with
-                      | head_181 :: tail_182 -> (match tail_182 with
-                          | [] -> (let _x_183 = Exit_success head_181 in
-                            let _x_184 = Completion_ofExit _x_183 in
-                            let _x_185 = SyncOp_deferredCompleteWith (key_177, _x_184) in
-                            Some _x_185)
+    | NativeOp_deferredSucceed -> (match (x_3 : val_) with
+        | Val_list xs_158 -> (match xs_158 with
+            | head_159 :: tail_160 -> (match (head_159 : val_) with
+                | Val_handle (kind_161, key_162) -> (let _x_163 = 3 in
+                  let _x_164 = kind_161 = _x_163 in
+                  if _x_164 then (match tail_160 with
+                      | head_166 :: tail_167 -> (match tail_167 with
+                          | [] -> (let _x_168 = Exit_success head_166 in
+                            let _x_169 = Completion_ofExit _x_168 in
+                            let _x_170 = SyncOp_deferredCompleteWith (key_162, _x_169) in
+                            Some _x_170)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_deferredFail -> (match (x_2 : val_) with
-        | Val_list xs_192 -> (match xs_192 with
-            | head_193 :: tail_194 -> (match (head_193 : val_) with
-                | Val_handle (kind_195, key_196) -> (let _x_197 = 3 in
-                  let _x_198 = kind_195 = _x_197 in
-                  if _x_198 then (match tail_194 with
-                      | head_200 :: tail_201 -> (match tail_201 with
-                          | [] -> (let _x_202 = program_err_of head_200 in
-                            let _x_203 = cause_fail _x_202 in
-                            let _x_204 = Exit_failure _x_203 in
-                            let _x_205 = Completion_ofExit _x_204 in
-                            let _x_206 = SyncOp_deferredCompleteWith (key_196, _x_205) in
-                            Some _x_206)
+    | NativeOp_deferredFail -> (match (x_3 : val_) with
+        | Val_list xs_177 -> (match xs_177 with
+            | head_178 :: tail_179 -> (match (head_178 : val_) with
+                | Val_handle (kind_180, key_181) -> (let _x_182 = 3 in
+                  let _x_183 = kind_180 = _x_182 in
+                  if _x_183 then (match tail_179 with
+                      | head_185 :: tail_186 -> (match tail_186 with
+                          | [] -> (let _x_187 = program_err_of head_185 in
+                            let _x_188 = cause_fail _x_187 in
+                            let _x_189 = Exit_failure _x_188 in
+                            let _x_190 = Completion_ofExit _x_189 in
+                            let _x_191 = SyncOp_deferredCompleteWith (key_181, _x_190) in
+                            Some _x_191)
                           | _ -> None)
                       | _ -> None) else None)
                 | _ -> None)
             | _ -> None)
         | _ -> None)
-    | NativeOp_scopeMake strategy_213 -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_214 = SyncOp_scopeMake strategy_213 in
-          Some _x_214)
+    | NativeOp_scopeMake strategy_198 -> (match (x_3 : val_) with
+        | Val_unit -> (let _x_199 = SyncOp_scopeMake strategy_198 in
+          Some _x_199)
         | _ -> None)
-    | NativeOp_clockNow -> (match (x_2 : val_) with
-        | Val_unit -> (let _x_217 = SyncOp_clockNow in
-          Some _x_217)
+    | NativeOp_clockNow -> (match (x_3 : val_) with
+        | Val_unit -> (let _x_202 = SyncOp_clockNow in
+          Some _x_202)
         | _ -> None)
     | _ -> None
 
@@ -4439,7 +4330,7 @@ and store_val__beq_list (x_1 : val_ list) (x_2 : val_ list) : bool =
                   | RowKind_sync -> (let _x_32 = program_eval_term env request_28 in
                     match _x_32 with
                       | None -> program_bad_shape
-                      | Some val__34 -> (let _x_35 = program_native_op_sync_op_of op_27 val__34 in
+                      | Some val__34 -> (let _x_35 = program_native_op_sync_op_of op_27 env val__34 in
                         match _x_35 with
                           | None -> program_bad_shape
                           | Some val__37 -> (let _x_38 = EffThunk_op val__37 in

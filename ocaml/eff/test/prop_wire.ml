@@ -33,9 +33,6 @@ let strings =
 
 let rand_string () = pick strings
 
-(* The 55 built-in op values enumerate every FnName and FinalizerStrategy.
-   External operations additionally sample scalar row indices. *)
-let rand_op () = if ri 4 = 0 then Native_op_external (rand_nat ()) else pick Eff_native.all_ops
 let rand_mask () = pick [ Mask_mode_interruptible; Mask_mode_uninterruptible; Mask_mode_inherit ]
 let rand_mode () = pick [ Observer_mode_awaitValue; Observer_mode_joinEffect ]
 
@@ -68,6 +65,29 @@ let rec rand_term d =
     | _ -> Term_tupleAt (rand_term (d - 1), rand_nat ())
 
 and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_term (d - 1), rand_terms (d - 1))
+
+(* The 55 built-in op values (`Eff_native.all_ops`) enumerate every FinalizerStrategy and, at
+   each of the eight read-modify-write rows, the five level-0 images the faces spell by a name.
+   A row's binder term is any term (decisions row 43; the state plan's T3b), so one draw in
+   four puts a random term in one of the eight rows.  External operations additionally sample
+   scalar row indices. *)
+let rand_term_op () =
+  let f = rand_term 2 in
+  match ri 8 with
+  | 0 -> Native_op_refUpdateWith f
+  | 1 -> Native_op_refGetAndUpdateWith f
+  | 2 -> Native_op_refUpdateAndGetWith f
+  | 3 -> Native_op_refUpdateSomeWith f
+  | 4 -> Native_op_refGetAndUpdateSomeWith f
+  | 5 -> Native_op_refUpdateSomeAndGetWith f
+  | 6 -> Native_op_refModifyWith f
+  | _ -> Native_op_refModifySomeWith f
+
+let rand_op () =
+  match ri 4 with
+  | 0 -> Native_op_external (rand_nat ())
+  | 1 -> rand_term_op ()
+  | _ -> pick Eff_native.all_ops
 
 let rec rand_cause d =
   match if d <= 0 then ri 3 else ri 4 with

@@ -15,7 +15,7 @@
 
 import { Result } from "effect"
 import { parseSync } from "oxc-parser"
-import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
+import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, NativeOp, Row, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
 import { readTupleIndex } from "./tuple-index.ts"
@@ -1119,7 +1119,8 @@ const namesOf = (args: ReadonlyArray<Expr>): ReadonlyArray<string> | undefined =
   return names
 }
 
-/** The reading of a row: a `perform`, the one invocation form. The row's kind selects the route at the compile. */
+/** The reading of a row: a `perform`, the one invocation form, with the operation at its face
+ * (level 0); `readPerform` moves it to the node. The row's kind selects the route at the compile. */
 const rowAnswer = (e: Entry, request: Term): Eff => ({ _tag: "perform", op: e.op, request })
 
 /** A bare identifier as a value row. */
@@ -1623,11 +1624,98 @@ const readArgHere = (n: number, row: TemplateRow, captured: Subst, i: number, so
   return readLeaf(d, rowDaemon(row), sort, a)
 }
 
-/** What is not a skeleton, read as the printer's hand fields print it (`readPerform`): a bare
- * identifier as a value row, a call as a call row, a method call as a method row. A reserved
- * head no row matched is refused by its argument list when it heads a program clause, and by
- * its name otherwise. */
+/**
+ * A binder term at its face, moved to a node of level `n`. A read-modify-write row's term reads
+ * the cell's current value at the node's level (decisions row 43; `Program/FnName.lean`), and a
+ * profile entry holds the term at level 0, where `var 0` is the current value and nothing else
+ * is in scope. So the move renames `var 0` to `var n`: `FnName.image s n f` is `f.imageAt (var n)
+ * s`. An image is built from variables, literals and atom applications only; any other term, or
+ * any other variable, is not a face form and answers `undefined`, as `NativeOp.atLevel` answers
+ * `none` for a term that is no name's image.
+ */
+const termAtLevel = (n: number, t: Term): Term | undefined => {
+  switch (t._tag) {
+    case "var":
+      return t.index === 0 ? { _tag: "var", index: n } : undefined
+    case "lit":
+      return t
+    case "app": {
+      const args: Term[] = []
+      for (const a of t.args) {
+        const moved = termAtLevel(n, a)
+        if (moved === undefined) return undefined
+        args.push(moved)
+      }
+      return { _tag: "app", atom: t.atom, args }
+    }
+    default:
+      return undefined
+  }
+}
+
+/**
+ * An operation at its face, moved to a node of level `n` (Lean `NativeOp.atLevel 0 n`, the
+ * native signature's `opAtLevel`). The eight read-modify-write rows carry a binder term; every
+ * other operation is its own form at every level. The switch lists every constructor, so an
+ * appended one is a type error here until it is classified.
+ */
+const opAtLevel = (n: number, op: NativeOp): NativeOp | undefined => {
+  switch (op._tag) {
+    case "refUpdateWith":
+    case "refGetAndUpdateWith":
+    case "refUpdateAndGetWith":
+    case "refUpdateSomeWith":
+    case "refGetAndUpdateSomeWith":
+    case "refUpdateSomeAndGetWith":
+    case "refModifyWith":
+    case "refModifySomeWith": {
+      const f = termAtLevel(n, op.f)
+      return f === undefined ? undefined : { _tag: op._tag, f }
+    }
+    case "refMake":
+    case "refGet":
+    case "refSet":
+    case "refGetAndSet":
+    case "refSetAndGet":
+    case "deferredIsDone":
+    case "deferredPoll":
+    case "deferredSucceed":
+    case "deferredFail":
+    case "deferredAwait":
+    case "scopeMake":
+    case "sleep":
+    case "clockNow":
+    case "external":
+    case "deferredMakeOf":
+      return op
+    default: {
+      const unclassified: never = op
+      return unclassified
+    }
+  }
+}
+
+/** A row call read at its face, moved to a node of level `n` (Lean `atNodeLevel`): the
+ * operation the row spells is its form at level 0, and the program carries its form at the
+ * node. */
+const atNodeLevel = (n: number, e: Eff): Read<Eff> => {
+  if (e._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
+  const op = opAtLevel(n, e.op)
+  return op === undefined ? refuse({ _tag: "shape", what: "operation data" }) : ok({ _tag: "perform", op, request: e.request })
+}
+
+/** The row call at a node of level `n`: its face (`readPerformFace`), moved to the node
+ * (Lean `readPerform`). */
 const readPerform = (n: number, x: Expr): Read<Eff> => {
+  const face = readPerformFace(n, x)
+  return failed(face) ? face : atNodeLevel(n, face.success)
+}
+
+/** What is not a skeleton, read as the printer's hand fields print it (`readPerformFace`): a
+ * bare identifier as a value row, a call as a call row, a method call as a method row. A
+ * reserved head no row matched is refused by its argument list when it heads a program clause,
+ * and by its name otherwise. The operation it answers is the row's form at level 0. */
+const readPerformFace = (n: number, x: Expr): Read<Eff> => {
   switch (x._tag) {
     case "ident": {
       if (varRead(n, x.name) !== undefined) return refuse({ _tag: "shape", what: "bare binder" })

@@ -31,6 +31,20 @@ class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
 const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
 
+/** A read-modify-write row's binder term at a node of level `n` (decisions row 43; Lean
+ * `NativeOp.atLevel 0 n`). A profile entry holds the term at level 0, where its one variable is
+ * the cell's current value; a node reads that value at its own level, so `var 0` becomes
+ * `var n`. A name's image is variables, literals and atom applications; this engine declines
+ * any other entry term. Written apart from `read.ts`'s move: the two engines stay two walks. */
+const termAt = (n: number, t: Term): Term =>
+  t._tag === "var" ? (t.index === 0 ? { _tag: "var", index: n } : bad("binder term"))
+    : t._tag === "app" ? { _tag: "app", atom: t.atom, args: t.args.map(a => termAt(n, a)) }
+    : t._tag === "lit" ? t
+    : bad("binder term")
+type RowOp = (typeof rows)[number]["op"]
+/** A row's operation at a node of level `n`: its term moved, when it carries one. */
+const opAt = (n: number, op: RowOp): RowOp => "f" in op ? { _tag: op._tag, f: termAt(n, op.f) } : op
+
 /** An array hole (`[a, , b]`): TypeScript's `OmittedExpression`, a position no rule admits. */
 interface Hole { readonly type: "Hole"; readonly start: number; readonly end: number }
 const hole: Hole = { type: "Hole", start: -1, end: -1 }
@@ -527,7 +541,7 @@ class CompilerReader {
         }
         request = saved ? this.term(saved, env) : { _tag: "app", atom: "pair", args: [left, right] }
       }
-      return { _tag: "perform", op: r.op, request }
+      return { _tag: "perform", op: opAt(env.length, r.op), request }
     }
     const application = this.term(x, env)
     this.defer("unknownHead")
@@ -1346,7 +1360,7 @@ class ForeignCompilerReader extends CompilerReader {
           const trailing = x.arguments.slice(count).map(a => this.unwrap(a).type === "ArrowFunctionExpression" ? this.lambdaAtom(a) : this.name(a))
           if (!r.row.trailing.every((name, i) => trailing[i] === name)) continue
           const request = count === 0 ? unit : count === 1 ? this.term(this.at(x.arguments, 0), env) : { _tag: "app" as const, atom: "pair", args: [this.term(this.at(x.arguments, 0), env), this.term(this.at(x.arguments, 1), env)] }
-          return { _tag: "perform", op: r.op, request }
+          return { _tag: "perform", op: opAt(env.length, r.op), request }
         }
         return refuseForeign("E-ARG-CLOSURE", "lambda atom")
       }

@@ -10,6 +10,9 @@
     "constructor_retirements: a constructor that left. Its row moved to the retired rows of",
     "tools/Effect4Gen/wire-tags.json at the same tag, and the tag is never given again.",
     "family_additions: a family newly reached from the retained roots.",
+    "family_retirements: a family that left the program world. Its lines leave the generated",
+    "manifests and its count rows leave the coverage table; its rows stay in",
+    "tools/Effect4Gen/wire-tags.json, so its tags are reserved and never given again.",
     "consumer_additions: a family newly selected by a codec group or by the program world.",
     "vector_removals and vector_migrations: retained byte vectors (paths of",
     "66ee4657/golden-digests.sha256, relative to ocaml/) that no longer exist or changed bytes.",
@@ -33,7 +36,16 @@
     "programs at `deferredMakeOf nat nat`, and pAcquire's checked answer is `refOf nat`, the type the",
     "retired cell spelling denoted. verdict_moves names each corpus row whose verdict moved, as",
     "`path:key`: g158 (`Ref.make(\"hi\")`) types at `Ref<string>`, and g277's first refusal moved from",
-    "`Ref.make(a0)` to the term `lt(9, undefined)` after it."
+    "`Ref.make(a0)` to the term `lt(9, undefined)` after it.",
+    "",
+    "The state plan's T3b (decisions rows 42, 43, 210, 228). The eight read-modify-write `Ref` rows",
+    "carry a binder term: `NativeOp.refUpdate` … `refModifySome (f : FnName)` retired at tags 5 to 12",
+    "and `NativeOp.refUpdateWith` … `refModifySomeWith (f : Term)` appended at tags 24 to 31. No",
+    "program names a function any more, so the family `Effect4.Machine.FnName` left the program",
+    "world (family_retirements); the five names stay the faces' spelling of five terms per shape",
+    "(`FnName.image`, src/Effect4/Program/FnName.lean). Old bytes of a retired row refuse. The",
+    "retained vectors that perform such a row (pOps, and pLoop of the wire corpus) are the same",
+    "programs with each name's image at its node's level. No corpus verdict moved."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -51,18 +63,37 @@
     "Effect4.Program.Ty.number",
     "Effect4.Program.Ty.bytes",
     "Effect4.Machine.Err.payload",
-    "Effect4.Program.NativeOp.deferredMakeOf"
+    "Effect4.Program.NativeOp.deferredMakeOf",
+    "Effect4.Program.NativeOp.refUpdateWith",
+    "Effect4.Program.NativeOp.refGetAndUpdateWith",
+    "Effect4.Program.NativeOp.refUpdateAndGetWith",
+    "Effect4.Program.NativeOp.refUpdateSomeWith",
+    "Effect4.Program.NativeOp.refGetAndUpdateSomeWith",
+    "Effect4.Program.NativeOp.refUpdateSomeAndGetWith",
+    "Effect4.Program.NativeOp.refModifyWith",
+    "Effect4.Program.NativeOp.refModifySomeWith"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",
     "Effect4.Program.Eff.yieldError",
     "Effect4.Program.Eff.callback",
     "Effect4.Program.Eff.whileLoop",
-    "Effect4.Program.NativeOp.deferredMake"
+    "Effect4.Program.NativeOp.deferredMake",
+    "Effect4.Program.NativeOp.refUpdate",
+    "Effect4.Program.NativeOp.refGetAndUpdate",
+    "Effect4.Program.NativeOp.refUpdateAndGet",
+    "Effect4.Program.NativeOp.refUpdateSome",
+    "Effect4.Program.NativeOp.refGetAndUpdateSome",
+    "Effect4.Program.NativeOp.refUpdateSomeAndGet",
+    "Effect4.Program.NativeOp.refModify",
+    "Effect4.Program.NativeOp.refModifySome"
   ],
   "family_additions": [
     "Effect4.Program.Decision",
     "Effect4.Machine.Payload"
+  ],
+  "family_retirements": [
+    "Effect4.Machine.FnName"
   ],
   "consumer_additions": [
     "wire:Effect4.Program.Ty",

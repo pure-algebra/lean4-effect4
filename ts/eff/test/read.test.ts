@@ -69,10 +69,22 @@ describe("rows: the shape the grammar could not decide", () => {
   test('Scope.make("hi") is refused, not read into the wrong row', () => {
     expect(refusal('Scope.make("hi")')).toEqual({ _tag: "arity", head: "Scope.make" })
   })
-  test("a read-modify-write row carries its pure function in the operation", () => {
+  test("a read-modify-write row carries its binder term in the operation, at the node's level", () => {
+    // `incr` spells `succ(a)`, the cell's current value read at the node's level (decisions row
+    // 43; the state plan's T3b): `var 1` under one binder, `var 0` at the root, `var 2` under two.
     expect(json("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, incr))")).toBe(
-      '["bind",["perform",["refMake"],["lit",["nat",0]]],["perform",["refUpdate",["incr"]],["var",0]]]',
+      '["bind",["perform",["refMake"],["lit",["nat",0]]],["perform",["refUpdateWith",["app","succ",["cons",["var",1],["nil"]]]],["var",0]]]',
     )
+    expect(json("Ref.update(0, incr)")).toBe(
+      '["perform",["refUpdateWith",["app","succ",["cons",["var",0],["nil"]]]],["lit",["nat",0]]]',
+    )
+    expect(json("Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.succeed(7), (a1) => Ref.modify(a0, takeAndBump)))")).toBe(
+      '["bind",["perform",["refMake"],["lit",["nat",0]]],["bind",["succeed",["lit",["nat",7]]],["perform",["refModifyWith",["app","pair",["cons",["var",2],["cons",["app","add",["cons",["var",2],["cons",["lit",["nat",1]],["nil"]]]],["nil"]]]]],["var",0]]]]',
+    )
+  })
+  test("a term row's trailing name is one of the five the faces spell", () => {
+    // Lean's reader answers the same refusal (`Test/Codegen/ReadContract.lean`).
+    expect(refusal("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, triple))")).toEqual({ _tag: "unknownHead", name: "Ref.update" })
   })
   test("an async row reads back as perform", () => {
     expect(json("Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))")).toBe(

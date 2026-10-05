@@ -675,9 +675,10 @@ open Effect4.Machine in
     (.call (.ident "Ref.modify") [.ident "a1", .ident "takeAndBump"]) =
   .ok (.perform (.refModifyWith (.app "pair" (.cons (.var 3)
     (.cons (.app "add" (.cons (.var 3) (.cons (.lit (.nat 1)) .nil))) .nil)))) (.var 1))
--- a name the alphabet does not hold is no row
-#guard (readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0", .ident "triple"])).toOption.isNone
+-- a name the alphabet does not hold is no row: refused by the row's head, as the TypeScript
+-- reader refuses it (`ts/eff/test/read.test.ts`)
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .ident "triple"]) = .error (.unknownHead "Ref.update")
 
 -- a term that is no name's image is not readable, and the round trip stops at the printer: a
 -- capture, a composed term, and a name's image at another level

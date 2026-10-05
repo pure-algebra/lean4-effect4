@@ -106,16 +106,6 @@ let rec json_finalizer_strategy (v : finalizer_strategy) : Eff_json_text.t =
 
 let print_finalizer_strategy (v : finalizer_strategy) : string = Eff_json_text.render (json_finalizer_strategy v)
 
-let rec json_fn_name (v : fn_name) : Eff_json_text.t =
-  match v with
-  | Fn_name_incr -> Eff_json_text.Array [Eff_json_text.String "incr"]
-  | Fn_name_double -> Eff_json_text.Array [Eff_json_text.String "double"]
-  | Fn_name_zeroWhenPositive -> Eff_json_text.Array [Eff_json_text.String "zeroWhenPositive"]
-  | Fn_name_noChange -> Eff_json_text.Array [Eff_json_text.String "noChange"]
-  | Fn_name_takeAndBump -> Eff_json_text.Array [Eff_json_text.String "takeAndBump"]
-
-let print_fn_name (v : fn_name) : string = Eff_json_text.render (json_fn_name v)
-
 let rec json_native_op (v : native_op) : Eff_json_text.t =
   match v with
   | Native_op_refMake -> Eff_json_text.Array [Eff_json_text.String "refMake"]
@@ -123,14 +113,6 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
   | Native_op_refSet -> Eff_json_text.Array [Eff_json_text.String "refSet"]
   | Native_op_refGetAndSet -> Eff_json_text.Array [Eff_json_text.String "refGetAndSet"]
   | Native_op_refSetAndGet -> Eff_json_text.Array [Eff_json_text.String "refSetAndGet"]
-  | Native_op_refUpdate a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdate"; json_fn_name a0]
-  | Native_op_refGetAndUpdate a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdate"; json_fn_name a0]
-  | Native_op_refUpdateAndGet a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateAndGet"; json_fn_name a0]
-  | Native_op_refUpdateSome a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSome"; json_fn_name a0]
-  | Native_op_refGetAndUpdateSome a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdateSome"; json_fn_name a0]
-  | Native_op_refUpdateSomeAndGet a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeAndGet"; json_fn_name a0]
-  | Native_op_refModify a0 -> Eff_json_text.Array [Eff_json_text.String "refModify"; json_fn_name a0]
-  | Native_op_refModifySome a0 -> Eff_json_text.Array [Eff_json_text.String "refModifySome"; json_fn_name a0]
   | Native_op_deferredIsDone -> Eff_json_text.Array [Eff_json_text.String "deferredIsDone"]
   | Native_op_deferredPoll -> Eff_json_text.Array [Eff_json_text.String "deferredPoll"]
   | Native_op_deferredSucceed -> Eff_json_text.Array [Eff_json_text.String "deferredSucceed"]
@@ -141,6 +123,14 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
   | Native_op_clockNow -> Eff_json_text.Array [Eff_json_text.String "clockNow"]
   | Native_op_external a0 -> Eff_json_text.Array [Eff_json_text.String "external"; Eff_json_text.Int a0]
   | Native_op_deferredMakeOf (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "deferredMakeOf"; json_ty a0; json_ty a1]
+  | Native_op_refUpdateWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateWith"; json_term a0]
+  | Native_op_refGetAndUpdateWith a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdateWith"; json_term a0]
+  | Native_op_refUpdateAndGetWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateAndGetWith"; json_term a0]
+  | Native_op_refUpdateSomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeWith"; json_term a0]
+  | Native_op_refGetAndUpdateSomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdateSomeWith"; json_term a0]
+  | Native_op_refUpdateSomeAndGetWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeAndGetWith"; json_term a0]
+  | Native_op_refModifyWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifyWith"; json_term a0]
+  | Native_op_refModifySomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifySomeWith"; json_term a0]
 
 let print_native_op (v : native_op) : string = Eff_json_text.render (json_native_op v)
 

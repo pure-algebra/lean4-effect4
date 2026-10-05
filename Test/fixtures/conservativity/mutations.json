@@ -197,8 +197,8 @@
       },
       {
         "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
-        "old": "\"Effect4.Program.NativeOp.deferredMake\"\n",
-        "new": "\"Effect4.Program.NativeOp.deferredMake\",\n    \"Effect4.Program.NativeOp.deferredIsDone\"\n"
+        "old": "\"Effect4.Program.NativeOp.refModifySome\"\n",
+        "new": "\"Effect4.Program.NativeOp.refModifySome\",\n    \"Effect4.Program.NativeOp.deferredIsDone\"\n"
       }
     ]
   },
@@ -256,8 +256,8 @@
       },
       {
         "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
-        "old": "  \"consumer_additions\": [",
-        "new": "  \"family_retirements\": [\n    \"Effect4.Supervision.ObserverMode\"\n  ],\n  \"consumer_additions\": ["
+        "old": "\"Effect4.Machine.FnName\"\n",
+        "new": "\"Effect4.Machine.FnName\",\n    \"Effect4.Supervision.ObserverMode\"\n"
       }
     ]
   }
