@@ -167,13 +167,17 @@ More rulings of the same day (rows 235 to 239):
 - the posted signal is a detached fork with a deferred start, and no construct is added (row
   238);
 - the mask is a saved Boolean, with one fiber action that reads the interruptibility (row 239);
-- a second note, on the mask's admission check and its printed form, comes before any seat;
+- a second note, on the mask's check at program admission and its printed form, comes before
+  any seat;
 - a recognized `restore` may escape its mask (row 227, amended).
 
 Open at this landing:
 
-- the Queue's whole transition contract, as a packet in `Test/contracts/`;
-- the design note for waiting, tasks, masks and the atomic frontier;
+- the Queue's whole transition contract: drafted on 2026-10-05
+  ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
+  model), and owed as a packet in `Test/contracts/` with the first Queue slice;
+- the mask's second note; the design of waiting, tasks and the atomic frontier is
+  [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness reports a module error on every typed program;
