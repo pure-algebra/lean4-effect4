@@ -19,8 +19,11 @@ template the calculus is the identity and subsumption (`instantiate_closed`, `in
 (`rowTy_closed`, `rowTy_closed_some`). `closed` survives `normalize` (`closed_normalize`). The
 `Ref` and `Deferred` rows are templates over their type parameters (the state plan's T3a), so the
 native rows' profile holds at every operation whose own type arguments are closed
-(`NativeOp.row_templateAdmissible`, `NativeOp.row_wellScoped`). The match's completeness on
-anchored templates is a planned goal (`Ty.matchTemplate_complete_anchored`).
+(`NativeOp.row_templateAdmissible`, `NativeOp.row_wellScoped`). The match is complete on anchored
+templates (`Ty.matchTemplate_complete_anchored`): a walk of the request binds each parameter, at
+its anchor, to the normal form of its binding under any bindings that admit the request
+(`Ty.infer_recovers`), and an instance's normal form reads only its bindings' normal forms
+(`Ty.normalize_instantiate_congr`).
 -/
 
 namespace Effect4.Program
@@ -551,14 +554,15 @@ theorem NativeOp.row_wellScoped (op : NativeOp) (h : op.typeArgsClosed = true) :
       Ty.varsOf_eq_nil_of_closed _ hc.2, List.append_nil, List.all_nil]
   | _ => rfl
 
-/-! ## The match's completeness on anchored templates (planned goal)
+/-! ## The match's completeness on anchored templates
 
-`matchTemplate_sound` is the guard's half. The other half says which requests the match finds a
-substitution for. A parameter whose first occurrence in `infer`'s walk is an invariant handle's
-argument (`refOf`, `deferredOf`) is bound there to a type equivalent to every substitution's, so
-the later occurrences need no rebinding. The walk reaches that argument in every union member
-unless a member holds `never` on the way, which the order admits below any handle; then a
-covariant occurrence binds first (`docs/research/2026-10-04-seat-T3a/AnchoredGoal.lean`). -/
+`matchTemplate_sound` is the guard's half. The other half says which requests the match finds
+bindings for. A parameter whose first occurrence in `infer`'s walk is an invariant handle's
+argument (`refOf`, `deferredOf`) is bound there to the normal form of its binding under any
+bindings that admit the request, so the later occurrences need no rebinding. The walk reaches that
+argument in every union member unless a member holds `never` on the way, which the order admits
+below any handle; then a covariant occurrence binds first (`neverR`,
+`Test/Program/TypeAlgebraContract.lean`). -/
 
 namespace Ty
 
@@ -661,20 +665,1071 @@ def bottomFree (t : Ty) : Bool := cata_ty bottomFreeAlg t
 #guard !bottomFree (.union (.prod .never (.lit "a")) (.prod (.refOf .string) (.lit "b")))
 #guard bottomFree (.prod (.deferredOf .nat .never) .nat)
 
-/-- **The match is complete on anchored templates** (planned goal; the claim
-`template-match-anchored`, R4): at a normal, admissible template whose every parameter first
-occurs as an invariant handle's argument, every normal request with no `never` outside such an
-argument that some substitution puts under the instance has a match. Its soundness half is
-`matchTemplate_sound`. The `bottomFree` premise is needed, not a convenience: a union member whose
-anchor holds `never` binds the parameter at a covariant occurrence first, and the statement
-without it is false for the repaired `infer` (tested,
-`docs/research/2026-10-04-seat-T3a/AnchoredGoal.lean`). It does not establish completeness where
-a parameter first occurs covariantly, under a union template, or under a nominal reference. -/
+/-! ### The proof's pieces
+
+Each declaration below is a step of the claim `template-match-anchored` (R4). Its docstring names
+the declaration that reads it. The proof walks the request (`infer_recovers`). Its invariant is
+`Recovers τ σ`: every binding that inference has made is the normal form of `τ`'s binding. A request
+stays `UnderInstance` as the walk descends, so its head is the template's (`underInstance_args`). At
+an anchor the request's argument IS the instance's argument, by antisymmetry on normal forms. So the
+first binding is exact, and no later occurrence rebinds it. An instance's normal form reads only its
+bindings' normal forms (`normalize_instantiate_congr`). So the match's instance is `τ`'s. -/
+
+/-- `anchoredFrom` reads a concatenation's second part with the first part's parameters seen. It is
+a step of `template-match-anchored`, and `inferItems_recovers` reads it. -/
+theorem anchoredFrom_append (seen : List Nat) (xs ys : List (Nat × Bool)) :
+    anchoredFrom seen (xs ++ ys) =
+      (anchoredFrom seen xs && anchoredFrom ((xs.map Prod.fst).reverse ++ seen) ys) := by
+  induction xs generalizing seen with
+  | nil => simp only [List.nil_append, anchoredFrom, List.map_nil, List.reverse_nil, Bool.true_and]
+  | cons p xs ih =>
+    obtain ⟨i, a⟩ := p
+    simp only [List.cons_append, anchoredFrom, ih, List.map_cons, List.reverse_cons,
+      List.append_assoc, List.nil_append, Bool.and_assoc]
+
+/-- A list with every flag down is anchored only when its parameters are seen. It is a step of
+`template-match-anchored`, and `infer_recovers` reads it at a nominal reference. -/
+theorem anchoredFrom_unflagged {seen : List Nat} :
+    ∀ xs : List (Nat × Bool), (∀ p ∈ xs, p.2 = false) → anchoredFrom seen xs = true →
+      ∀ p ∈ xs, p.1 ∈ seen
+  | [], _, _, _, hp => absurd hp List.not_mem_nil
+  | (i, a) :: rest, hf, hx, p, hp => by
+    simp only [anchoredFrom, Bool.and_eq_true, Bool.or_eq_true, List.contains_iff_mem] at hx
+    have ha : a = false := hf (i, a) List.mem_cons_self
+    subst ha
+    have hi : i ∈ seen := hx.1.resolve_left Bool.false_ne_true
+    rcases List.mem_cons.mp hp with rfl | hp
+    · exact hi
+    · have hrest := anchoredFrom_unflagged rest (fun q hq => hf q (List.mem_cons_of_mem _ hq))
+        hx.2 p hp
+      rcases List.mem_cons.mp hrest with he | he
+      · rw [he]
+        exact hi
+      · exact he
+
+/-- `flatMap` respects pointwise equality on the list. It is a step of `template-match-anchored`,
+and `paramOccurrences_firsts` reads it. -/
+theorem flatMap_congr {α β : Type} {l : List α} {f g : α → List β} (h : ∀ x ∈ l, f x = g x) :
+    l.flatMap f = l.flatMap g := by
+  rw [List.flatMap_def, List.flatMap_def, List.map_congr_left h]
+
+/-- A list zipped with its own image pairs each element with its image. It is a step of
+`template-match-anchored`, and `args_zip_of_map` reads it. -/
+theorem mem_zip_map_self {α β : Type} {f : α → β} :
+    ∀ {l : List α} {p : α × β}, p ∈ l.zip (l.map f) → p.2 = f p.1
+  | [], _, hp => absurd hp List.not_mem_nil
+  | a :: l, p, hp => by
+    rw [List.map_cons, List.zip_cons_cons, List.mem_cons] at hp
+    rcases hp with rfl | hp
+    · rfl
+    · exact mem_zip_map_self hp
+
+/-- Of three aligned lists, a pair of the first two has a partner in the third at its position. It
+is a step of `template-match-anchored`, and `underInstance_args` reads it. -/
+theorem mem_zip_middle {α β γ : Type} : ∀ {xs : List α} {ys : List β} {zs : List γ},
+    xs.length = zs.length → ys.length = zs.length → ∀ {a : α} {b : β}, (a, b) ∈ xs.zip ys →
+      ∃ c, (a, c) ∈ xs.zip zs ∧ (b, c) ∈ ys.zip zs
+  | [], _, _, _, _, _, _, h => absurd h List.not_mem_nil
+  | _ :: _, [], _, _, _, _, _, h => absurd h List.not_mem_nil
+  | _ :: _, _ :: _, [], hx, _, _, _, _ =>
+    absurd hx (List.cons_ne_nil _ _ ∘ List.eq_nil_of_length_eq_zero)
+  | x :: xs, y :: ys, z :: zs, hx, hy, a, b, h => by
+    rw [List.zip_cons_cons, List.mem_cons] at h
+    rcases h with h | h
+    · rw [Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨z, List.mem_cons_self, List.mem_cons_self⟩
+    · obtain ⟨c, hac, hbc⟩ := mem_zip_middle (Nat.succ.inj hx) (Nat.succ.inj hy) h
+      exact ⟨c, List.mem_cons_of_mem _ hac, List.mem_cons_of_mem _ hbc⟩
+
+/-- Two lists with one image pair elements of one image. It is a step of `template-match-anchored`,
+and `underInstance_args` and `infer_args` read it. -/
+theorem eq_of_mem_zip_map {α β γ : Type} {f : α → γ} {g : β → γ} :
+    ∀ {xs : List α} {ys : List β}, xs.map f = ys.map g → ∀ {a : α} {b : β},
+      (a, b) ∈ xs.zip ys → f a = g b
+  | [], _, _, _, _, h => absurd h List.not_mem_nil
+  | _ :: _, [], _, _, _, h => absurd h List.not_mem_nil
+  | x :: xs, y :: ys, he, a, b, h => by
+    rw [List.map_cons, List.map_cons, List.cons.injEq] at he
+    rw [List.zip_cons_cons, List.mem_cons] at h
+    rcases h with h | h
+    · rw [Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact he.1
+    · exact eq_of_mem_zip_map he.2 h
+
+/-- A lookup in a list of distinct names finds the entry of that name. It is a step of
+`template-match-anchored`, and `infer_args` reads it at a record. -/
+theorem lookup_of_mem_nodup {β : Type} :
+    ∀ {L : List (String × β)}, (L.map Prod.fst).Nodup → ∀ {p : String × β}, p ∈ L →
+      L.lookup p.1 = some p.2
+  | [], _, _, hp => absurd hp List.not_mem_nil
+  | q :: L, hnd, p, hp => by
+    rw [List.map_cons, List.nodup_cons] at hnd
+    rw [List.lookup_cons]
+    rcases List.mem_cons.mp hp with rfl | hp
+    · rw [beq_iff_eq.mpr rfl]
+    · have hne : p.1 ≠ q.1 := fun he => hnd.1 (he ▸ List.mem_map_of_mem hp)
+      rw [beq_eq_false_iff_ne.mpr hne]
+      exact lookup_of_mem_nodup hnd.2 hp
+
+/-- A type is a parameter or is not one. It is a step of `template-match-anchored`, and
+`inferItems_recovers` reads it. -/
+theorem var_or_ne (x : Ty) : (∃ i, x = .var i) ∨ ∀ i, x ≠ .var i := by
+  cases x
+  case var i => exact Or.inl ⟨i, rfl⟩
+  all_goals exact Or.inr fun _ h => Ty.noConfusion h
+
+/-! #### The occurrence list names the template's parameters, child by child -/
+
+/-- The field companion of `varsOf` is a `flatMap`. It is a step of `template-match-anchored`, and
+`paramOccurrences_firsts` and `normalize_instantiate_congr` read it. -/
+theorem varsOfFields_eq_flatMap (fs : List (String × Bool × Ty)) :
+    varsOfFields fs = fs.flatMap fun p => varsOf p.2.2 := by
+  induction fs with
+  | nil => rfl
+  | cons p fs ih =>
+    obtain ⟨n, o, t⟩ := p
+    rw [varsOfFields, ih, List.flatMap_cons]
+
+/-- The item companion of `varsOf` is a `flatMap`. It is a step of `template-match-anchored`, and
+`paramOccurrences_firsts` and `normalize_instantiate_congr` read it. -/
+theorem varsOfItems_eq_flatMap (ts : List Ty) : varsOfItems ts = ts.flatMap varsOf := by
+  induction ts with
+  | nil => rfl
+  | cons t ts ih => rw [varsOfItems, ih, List.flatMap_cons]
+
+/-- The field a lookup finds is one of the record's, so its parameters are the record's. It is a
+step of `template-match-anchored`, and `infer_of_bound` reads it. -/
+theorem varsOf_of_lookup {fs : List (String × Bool × Ty)} {n : String} {o : Bool} {ty : Ty}
+    (hl : fs.lookup n = some (o, ty)) : ∀ i ∈ varsOf ty, i ∈ varsOfFields fs := by
+  induction fs with
+  | nil => cases hl
+  | cons p fs ih =>
+    obtain ⟨m, o', t'⟩ := p
+    simp only [List.lookup] at hl
+    intro i hi
+    simp only [varsOfFields, List.mem_append]
+    split at hl
+    · cases hl
+      exact Or.inl hi
+    · exact Or.inr (ih hl i hi)
+
+/-- An anchor flag changes no parameter of the list. It is a step of `template-match-anchored`, and
+`paramOccurrences_firsts` and the walk read it. -/
+theorem anchorOcc_firsts (x : Ty) :
+    (anchorOcc (cata_ty paramOccurrencesAlg x)).map Prod.fst =
+      (paramOccurrences x).map Prod.fst := by
+  cases x <;> rfl
+
+/-- A record's occurrences, field by field in canonical order. It is a step of
+`template-match-anchored`, and `paramOccurrences_firsts` and `paramOccurrences_args` read it. -/
+theorem paramOccurrences_record (fs : List (String × Bool × Ty)) :
+    paramOccurrences (.record fs) = (canon fs).flatMap fun p => paramOccurrences p.2.2 := by
+  rw [paramOccurrences, cata_ty_record]
+  show ((canon (fs.map fun p => (p.1, prodMapSnd (cata_ty paramOccurrencesAlg) p.2))).flatMap
+    fun p => p.2.2.2) = _
+  rw [canon, Field.canonBy_map, List.flatMap_map]
+  rfl
+
+/-- A tuple's occurrences, item by item. It is a step of `template-match-anchored`, and
+`paramOccurrences_firsts` and `paramOccurrences_args` read it. -/
+theorem paramOccurrences_tuple (ts : List Ty) :
+    paramOccurrences (.tuple ts) = ts.flatMap paramOccurrences := by
+  rw [paramOccurrences, cata_ty_tuple]
+  show (ts.map (cata_ty paramOccurrencesAlg)).flatMap Prod.snd = _
+  rw [List.flatMap_map]
+  rfl
+
+/-- A nominal reference's occurrences, argument by argument, with every flag down. It is a step of
+`template-match-anchored`, and `paramOccurrences_firsts` and `infer_recovers` read it. -/
+theorem paramOccurrences_app (n : String) (ts : List Ty) :
+    paramOccurrences (.app n ts) =
+      ts.flatMap fun x => (paramOccurrences x).map fun o => (o.1, false) := by
+  rw [paramOccurrences, cata_ty_app]
+  show (ts.map (cata_ty paramOccurrencesAlg)).flatMap
+    (fun r => r.2.map fun o => (o.1, false)) = _
+  rw [List.flatMap_map]
+  rfl
+
+/-- A union of members that each name their parameters names them too. It is a step of
+`template-match-anchored`, and `paramOccurrences_firsts` reads it. -/
+theorem paramOccurrences_firsts_ofMembers : ∀ xs : List Ty,
+    (∀ x ∈ xs, (paramOccurrences x).map Prod.fst = varsOf x) →
+      (paramOccurrences (ofMembers xs)).map Prod.fst = varsOf (ofMembers xs)
+  | [], _ => rfl
+  | [x], h => h x List.mem_cons_self
+  | x :: y :: ys, h => by
+    show (paramOccurrences x ++ paramOccurrences (ofMembers (y :: ys))).map Prod.fst =
+      varsOf x ++ varsOf (ofMembers (y :: ys))
+    rw [List.map_append, h x List.mem_cons_self,
+      paramOccurrences_firsts_ofMembers (y :: ys) fun z hz => h z (List.mem_cons_of_mem _ hz)]
+
+/-- **The occurrence list of a normal template names exactly its parameters**, in `varsOf`'s order.
+It is a step of `template-match-anchored`, and the walk (`infer_recovers`, `inferItems_recovers`)
+reads it. -/
+theorem paramOccurrences_firsts {t : Ty} (ht : Normal t) :
+    (paramOccurrences t).map Prod.fst = varsOf t := by
+  induction ht with
+  | option _ ih | list _ ih | causeOf _ ih => exact ih
+  | refOf _ ih => exact (anchorOcc_firsts _).trans ih
+  | prod _ _ _ _ iha ihb | except _ _ iha ihb | exitOf _ _ iha ihb | fiberOf _ _ iha ihb
+  | map _ _ iha ihb =>
+    exact (List.map_append ..).trans (congr (congrArg (· ++ ·) iha) ihb)
+  | deferredOf _ _ iha ihb =>
+    exact (List.map_append ..).trans (congr (congrArg (· ++ ·) ((anchorOcc_firsts _).trans iha))
+      ((anchorOcc_firsts _).trans ihb))
+  | row r _ _ _ ih =>
+    obtain ⟨elems, _⟩ := r
+    exact paramOccurrences_firsts_ofMembers elems ih
+  | record _ hasc ih =>
+    rename_i fs _
+    rw [paramOccurrences_record, show canon fs = fs from Field.canonBy_of_ascending fs hasc, varsOf,
+      varsOfFields_eq_flatMap, List.map_flatMap]
+    exact flatMap_congr fun p hp => ih p hp
+  | tuple _ _ ih =>
+    rename_i ts _ _
+    rw [paramOccurrences_tuple, varsOf, varsOfItems_eq_flatMap, List.map_flatMap]
+    exact flatMap_congr fun x hx => ih x hx
+  | app _ _ ih =>
+    rename_i n ts _ _
+    rw [paramOccurrences_app, varsOf, varsOfItems_eq_flatMap, List.map_flatMap]
+    refine flatMap_congr fun x hx => ?_
+    rw [List.map_map]
+    exact ih x hx
+  | _ => rfl
+
+/-- The heads whose arguments `paramOccurrencesAlg` flags as anchors: the invariant handles. It is a
+step of `template-match-anchored`, and `paramOccurrences_args` and the walk read it. -/
+def anchorsArgs : Ty → Bool
+  | .refOf _ | .deferredOf _ _ => true
+  | _ => false
+
+/-- A child's block of its parent's occurrence list. Under an invariant handle a parameter child's
+block is flagged as an anchor. It is a step of `template-match-anchored`, and
+`paramOccurrences_args` and the walk read it. -/
+def childOcc (h : Bool) (x : Ty) : List (Nat × Bool) :=
+  bif h then anchorOcc (cata_ty paramOccurrencesAlg x) else paramOccurrences x
+
+/-- **A parent's occurrence list is its children's blocks, in argument order.** It is a step of
+`template-match-anchored`, and `infer_recovers` reads it. -/
+theorem paramOccurrences_args {t : Ty} (hv : ∀ i, t ≠ .var i) (happ : ∀ n ts, t ≠ .app n ts) :
+    paramOccurrences t = t.args.flatMap fun p => childOcc (anchorsArgs t) p.2 := by
+  cases t
+  case var i => exact absurd rfl (hv i)
+  case app n ts => exact absurd rfl (happ n ts)
+  case record fs =>
+    rw [paramOccurrences_record]
+    simp only [args, List.flatMap_map]
+    rfl
+  case tuple ts =>
+    rw [paramOccurrences_tuple]
+    simp only [args, List.flatMap_map]
+    rfl
+  all_goals
+    simp only [args, List.flatMap_cons, List.flatMap_nil, List.append_nil]
+    rfl
+
+/-- The invariant handles read every argument invariantly. It is a step of
+`template-match-anchored`, and `infer_recovers` reads it. -/
+theorem anchorsArgs_inv {t : Ty} (h : anchorsArgs t = true) : ∀ p ∈ t.args, p.1 = .inv := by
+  cases t
+  case refOf x =>
+    intro p hp
+    simp only [args, List.mem_singleton] at hp
+    rw [hp]
+  case deferredOf a b =>
+    intro p hp
+    simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
+    rcases hp with rfl | rfl <;> rfl
+  all_goals exact absurd h Bool.false_ne_true
+
+/-- A child that is not a parameter brings its own occurrence list. It is a step of
+`template-match-anchored`, and `inferItems_recovers` reads it. -/
+theorem childOcc_of_ne_var (h : Bool) {x : Ty} (hx : ∀ i, x ≠ .var i) :
+    childOcc h x = paramOccurrences x := by
+  cases h
+  · rfl
+  · cases x
+    case var i => exact absurd rfl (hx i)
+    all_goals rfl
+
+/-! #### What an instance's normal form is made of -/
+
+/-- A child list read off the parent's by one map pairs each child with its image. It is a step of
+`template-match-anchored`, and `instance_members` reads it. -/
+theorem args_zip_of_map {τ : Subst} {t m : Ty}
+    (h : m.args = t.args.map fun p => (p.1, (instantiate τ p.2).normalize)) :
+    ∀ p ∈ t.args.zip m.args, p.1.1 = p.2.1 ∧ (p.2.2 = (instantiate τ p.1.2).normalize ∨
+      (p.1.1 = .co ∧ p.2.2 ∈ (instantiate τ p.1.2).normalize.factors)) := by
+  intro p hp
+  rw [h] at hp
+  have e := mem_zip_map_self hp
+  exact ⟨(congrArg Prod.fst e).symm, Or.inl (congrArg Prod.snd e)⟩
+
+/-- A field map that keeps every name and flag commutes with the canonical order. It is a step of
+`template-match-anchored`, and `instance_members` reads it. -/
+theorem canon_map_payload (fs : List (String × Bool × Ty)) (f : Ty → Ty) :
+    canon (fs.map fun q => (q.1, q.2.1, f q.2.2)) =
+      (canon fs).map fun q => (q.1, q.2.1, f q.2.2) :=
+  Field.canonBy_map (fun c : Bool × Ty => (c.1, f c.2)) fs
+
+/-- **The members of a template's instance, read through the template's head.** Take a normal
+template that is not a parameter, a union or a nominal reference. Every member of its instance's
+normal form has the template's head. Each of the member's children is the corresponding child's
+instance in normal form, or, under a product, one of that normal form's factors. The instance has a
+member unless the template is `never`. It is a step of `template-match-anchored`, and
+`underInstance_args` and `infer_recovers` read it. -/
+theorem instance_members (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
+    (hu : ∀ a b, t ≠ .union a b) (happ : ∀ n ts, t ≠ .app n ts) :
+    (t = .never ∨ ∃ m, m ∈ (instantiate τ t).normalize.members) ∧
+    ∀ m ∈ (instantiate τ t).normalize.members, sameHead t m = true ∧
+      ∀ p ∈ t.args.zip m.args, p.1.1 = p.2.1 ∧ (p.2.2 = (instantiate τ p.1.2).normalize ∨
+        (p.1.1 = .co ∧ p.2.2 ∈ (instantiate τ p.1.2).normalize.factors)) := by
+  induction ht with
+  | never => exact ⟨Or.inl rfl, fun m hm => absurd hm List.not_mem_nil⟩
+  | var i => exact absurd rfl (hv i)
+  | prod _ _ _ _ _ _ =>
+    rename_i a b _ _ _ _ _ _
+    have hmem : ((instantiate τ (.prod a b)).normalize).members =
+        (normalizeRow (productMembers (instantiate τ a).normalize
+          (instantiate τ b).normalize)).elems :=
+      OrderProof.members_normalize_prod _ _
+    rw [hmem]
+    refine ⟨Or.inr ?_, fun m hm => ?_⟩
+    · obtain ⟨x, hx⟩ := OrderProof.normal_factors_nonempty _ (normal_normalize (instantiate τ a))
+      obtain ⟨y, hy⟩ := OrderProof.normal_factors_nonempty _ (normal_normalize (instantiate τ b))
+      have hxy : Ty.prod x y ∈ productMembers (instantiate τ a).normalize
+          (instantiate τ b).normalize :=
+        List.mem_flatMap.mpr ⟨x, hx, List.mem_map.mpr ⟨y, hy, rfl⟩⟩
+      obtain ⟨z, hz, -⟩ := normalizeRow_coverage _ (.prod x y) hxy
+      exact ⟨z, hz⟩
+    · have hm' := ((mem_normalizeRow m _).mp hm).1
+      obtain ⟨x, hx, hm'⟩ := List.mem_flatMap.mp hm'
+      obtain ⟨y, hy, rfl⟩ := List.mem_map.mp hm'
+      refine ⟨rfl, fun p hp => ?_⟩
+      simp only [args, List.zip_cons_cons, List.zip_nil_left, List.mem_cons, List.not_mem_nil,
+        or_false] at hp
+      rcases hp with rfl | rfl
+      · exact ⟨rfl, Or.inr ⟨rfl, hx⟩⟩
+      · exact ⟨rfl, Or.inr ⟨rfl, hy⟩⟩
+  | row r _ _ _ ih =>
+    obtain ⟨elems, _⟩ := r
+    cases elems with
+    | nil => exact ⟨Or.inl rfl, fun m hm => absurd hm List.not_mem_nil⟩
+    | cons x xs =>
+      cases xs with
+      | nil => exact ih x List.mem_cons_self hv hu happ
+      | cons y ys => exact absurd rfl (hu x (ofMembers (y :: ys)))
+  | record _ hasc _ =>
+    rename_i fs _ _
+    have hc : canon fs = fs := Field.canonBy_of_ascending fs hasc
+    have hJ : (instantiate τ (.record fs)).normalize =
+        .record (fs.map fun q => (q.1, q.2.1, (instantiate τ q.2.2).normalize)) := by
+      rw [instantiate, instantiateFields_eq_map, normalize_record, canon_map_payload, hc,
+        List.map_map]
+      rfl
+    rw [hJ]
+    refine ⟨Or.inr ⟨_, List.mem_singleton_self _⟩, fun m hm => ?_⟩
+    rw [members, List.mem_singleton] at hm
+    subst hm
+    have hc' : canon (fs.map fun q => (q.1, q.2.1, (instantiate τ q.2.2).normalize)) =
+        fs.map fun q => (q.1, q.2.1, (instantiate τ q.2.2).normalize) :=
+      (canon_map_payload fs fun x => (instantiate τ x).normalize).trans (by rw [hc])
+    refine ⟨?_, args_zip_of_map ?_⟩
+    · simp only [sameHead, hc, hc', List.map_map, decide_eq_true_eq]
+      rfl
+    · simp only [args, hc, hc', List.map_map]
+      rfl
+  | tuple _ hlen _ =>
+    rename_i ts _ _
+    have hJ : (instantiate τ (.tuple ts)).normalize =
+        .tuple (ts.map fun x => (instantiate τ x).normalize) := by
+      rw [instantiate, instantiateItems_eq_map,
+        normalize_tuple_of_ne _ (by rw [List.length_map]; exact hlen), normalizeItems_eq_map,
+        List.map_map]
+      rfl
+    rw [hJ]
+    refine ⟨Or.inr ⟨_, List.mem_singleton_self _⟩, fun m hm => ?_⟩
+    rw [members, List.mem_singleton] at hm
+    subst hm
+    refine ⟨?_, args_zip_of_map ?_⟩
+    · simp only [sameHead, List.length_map, decide_eq_true_eq]
+    · simp only [args, List.map_map]
+      rfl
+  | app _ _ =>
+    rename_i n ts _ _ _
+    exact absurd rfl (happ n ts)
+  | _ =>
+    simp only [instantiate, normalize, members]
+    refine ⟨Or.inr ⟨_, List.mem_singleton_self _⟩, fun m hm => ?_⟩
+    rw [List.mem_singleton] at hm
+    subst hm
+    exact ⟨by simp only [sameHead, decide_eq_true_eq], args_zip_of_map rfl⟩
+
+/-- **An instance's normal form reads only the normal forms of the template's own bindings.** It is
+a step of `template-match-anchored`, and `matchTemplate_complete_anchored` reads it. -/
+theorem normalize_instantiate_congr {σ τ : Subst} (t : Ty)
+    (h : ∀ i ∈ varsOf t, (instantiate σ (.var i)).normalize = (instantiate τ (.var i)).normalize) :
+    (instantiate σ t).normalize = (instantiate τ t).normalize := by
+  induction t with
+  | var i => exact h i List.mem_cons_self
+  | option x ih | list x ih | causeOf x ih | refOf x ih =>
+    simp only [instantiate, normalize, ih h]
+  | prod a b iha ihb | except a b iha ihb | exitOf a b iha ihb | fiberOf a b iha ihb
+  | union a b iha ihb | deferredOf a b iha ihb | map a b iha ihb =>
+    simp only [instantiate, normalize, iha fun i hi => h i (List.mem_append_left _ hi),
+      ihb fun i hi => h i (List.mem_append_right _ hi)]
+  | record fs ih =>
+    have hf : ∀ q ∈ fs, (instantiate σ q.2.2).normalize = (instantiate τ q.2.2).normalize :=
+      fun q hq => ih q hq fun i hi => h i (by
+        rw [varsOf, varsOfFields_eq_flatMap]
+        exact List.mem_flatMap.mpr ⟨q, hq, hi⟩)
+    rw [instantiate, instantiate, normalize, normalize, instantiateFields_eq_map,
+      instantiateFields_eq_map, normalizeFields_eq_map, normalizeFields_eq_map, List.map_map,
+      List.map_map]
+    exact congrArg (fun l => Ty.record (canon l)) (List.map_congr_left fun q hq => by
+      simp only [Function.comp_def, normPayload, hf q hq])
+  | tuple ts ih | app _ ts ih =>
+    have hf : ∀ x ∈ ts, (instantiate σ x).normalize = (instantiate τ x).normalize :=
+      fun x hx => ih x hx fun i hi => h i (by
+        rw [varsOf, varsOfItems_eq_flatMap]
+        exact List.mem_flatMap.mpr ⟨x, hx, hi⟩)
+    rw [instantiate, instantiate, normalize, normalize, instantiateItems_eq_map,
+      instantiateItems_eq_map, normalizeItems_eq_map, normalizeItems_eq_map, List.map_map,
+      List.map_map]
+    exact congrArg _ (List.map_congr_left fun x hx => by simp only [Function.comp_def, hf x hx])
+  | _ => rfl
+
+/-! #### The request: under the instance, and its head -/
+
+/-- A normal union is a normal member beside a normal, non-empty rest. It is a step of
+`template-match-anchored`, and `underInstance_union` reads it. -/
+theorem normal_union_inv {c d : Ty} (h : Normal (.union c d)) :
+    Normal c ∧ Normal d ∧ isMember c = true ∧ d ≠ .never := by
+  generalize hu : Ty.union c d = u at h
+  cases h with
+  | row r children atoms maximal =>
+    obtain ⟨elems, hasc⟩ := r
+    match elems, hasc, children, atoms, maximal, hu with
+    | [], _, _, _, _, hu => exact nomatch hu
+    | [x], _, _, atoms, _, hu =>
+      have hx := atoms x List.mem_cons_self
+      simp only [ofMembers] at hu
+      rw [← hu] at hx
+      exact Bool.noConfusion hx
+    | x :: y :: ys, hasc, children, atoms, maximal, hu =>
+      simp only [ofMembers, union.injEq] at hu
+      obtain ⟨rfl, rfl⟩ := hu
+      refine ⟨children _ List.mem_cons_self, ?_, atoms _ List.mem_cons_self, ?_⟩
+      · exact Normal.row ⟨y :: ys, List.Pairwise.of_cons hasc⟩
+          (fun t ht => children t (List.mem_cons_of_mem _ ht))
+          (fun t ht => atoms t (List.mem_cons_of_mem _ ht))
+          (fun a ha b hb => maximal a (List.mem_cons_of_mem _ ha) b (List.mem_cons_of_mem _ hb))
+      · cases ys with
+        | nil =>
+          intro hy
+          have hm := atoms y (List.mem_cons_of_mem _ List.mem_cons_self)
+          simp only [ofMembers] at hy
+          rw [hy] at hm
+          exact Bool.noConfusion hm
+        | cons z zs => exact fun h => nomatch h
+  | _ => exact nomatch hu
+
+/-- A factor is below the type it factors. It is a step of `template-match-anchored`, and
+`underInstance_args` reads it. -/
+theorem sub_of_mem_factors {x y : Ty} (hx : x ∈ y.factors) : sub x y = true := by
+  unfold factors at hx
+  split at hx
+  · rw [List.mem_singleton] at hx
+    subst hx
+    exact sub_refl _
+  · exact OrderProof.member_sub_self hx
+
+/-- A factor's members are the factored type's, and a factor is `never` only of `never`. It is a
+step of `template-match-anchored`, and `underInstance_args` reads it. -/
+theorem members_of_mem_factors {x y : Ty} (hx : x ∈ y.factors) :
+    (∀ m ∈ x.members, m ∈ y.members) ∧ (x = .never → y = .never) := by
+  unfold factors at hx
+  split at hx
+  · rw [List.mem_singleton] at hx
+    subst hx
+    exact ⟨fun m hm => absurd hm List.not_mem_nil, fun _ => rfl⟩
+  · have hxm := members_isMember hx
+    refine ⟨fun m hm => ?_, fun hn => ?_⟩
+    · rw [members_atom hxm, List.mem_singleton] at hm
+      rw [hm]
+      exact hx
+    · rw [hn] at hxm
+      exact Bool.noConfusion hxm
+
+/-- `bottomFree` at a record reads every field. It is a step of `template-match-anchored`, and
+`bottomFree_args` reads it. -/
+theorem bottomFree_record (fs : List (String × Bool × Ty)) :
+    bottomFree (.record fs) = fs.all fun p => bottomFree p.2.2 := by
+  rw [bottomFree, cata_ty_record]
+  show (fs.map (prodMapSnd (prodMapSnd (cata_ty bottomFreeAlg)))).all (fun p => p.2.2) = _
+  rw [List.all_map]
+  rfl
+
+/-- `bottomFree` at a tuple reads every item. It is a step of `template-match-anchored`, and
+`bottomFree_args` reads it. -/
+theorem bottomFree_tuple (ts : List Ty) : bottomFree (.tuple ts) = ts.all bottomFree := by
+  rw [bottomFree, cata_ty_tuple]
+  show (ts.map (cata_ty bottomFreeAlg)).all id = _
+  rw [List.all_map]
+  rfl
+
+/-- `bottomFree` at a nominal reference reads every argument. It is a step of
+`template-match-anchored`, and `bottomFree_args` reads it. -/
+theorem bottomFree_app (n : String) (ts : List Ty) :
+    bottomFree (.app n ts) = ts.all bottomFree := by
+  rw [bottomFree, cata_ty_app]
+  show (ts.map (cata_ty bottomFreeAlg)).all id = _
+  rw [List.all_map]
+  rfl
+
+/-- `bottomFree` reaches every child that the order reads covariantly. It is a step of
+`template-match-anchored`, and `underInstance_args` reads it. -/
+theorem bottomFree_args {r : Ty} (h : bottomFree r = true) :
+    ∀ p ∈ r.args, p.1 = .co → bottomFree p.2 = true := by
+  intro p hp hco
+  cases r
+  case record fs =>
+    rw [bottomFree_record, List.all_eq_true] at h
+    simp only [args, List.mem_map] at hp
+    obtain ⟨q, hq, rfl⟩ := hp
+    exact h q (mem_canon hq)
+  case tuple ts =>
+    rw [bottomFree_tuple, List.all_eq_true] at h
+    simp only [args, List.mem_map] at hp
+    obtain ⟨x, hx, rfl⟩ := hp
+    exact h x hx
+  case app n ts =>
+    rw [bottomFree_app, List.all_eq_true] at h
+    simp only [args, List.mem_map] at hp
+    obtain ⟨q, hq, rfl⟩ := hp
+    exact h q.1 (List.fst_mem_of_mem_zipIdx hq)
+  all_goals simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
+  all_goals aesop (add norm simp [bottomFree, bottomFreeAlg])
+
+/-- Every head but a nominal reference reads its arguments covariantly or invariantly. It is a step
+of `template-match-anchored`, and `underInstance_args` reads it. -/
+theorem args_co_or_inv {t : Ty} (happ : ∀ n ts, t ≠ .app n ts) :
+    ∀ p ∈ t.args, p.1 = .co ∨ p.1 = .inv := by
+  intro p hp
+  cases t
+  case app n ts => exact absurd rfl (happ n ts)
+  case record fs =>
+    simp only [args, List.mem_map] at hp
+    obtain ⟨q, -, rfl⟩ := hp
+    exact Or.inl rfl
+  case tuple ts =>
+    simp only [args, List.mem_map] at hp
+    obtain ⟨x, -, rfl⟩ := hp
+    exact Or.inl rfl
+  all_goals simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
+  all_goals aesop
+
+/-- Every child of an admissible template is admissible, and a union's children are closed. It is a
+step of `template-match-anchored`, and `infer_recovers` reads it. -/
+theorem templateAdmissible_args {t : Ty} (h : templateAdmissible t = true) :
+    ∀ p ∈ t.args, templateAdmissible p.2 = true := by
+  intro p hp
+  cases t
+  case union a b =>
+    simp only [templateAdmissible, Bool.and_eq_true] at h
+    simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
+    rcases hp with rfl | rfl
+    · exact templateAdmissible_of_closed _ h.1
+    · exact templateAdmissible_of_closed _ h.2
+  case record fs =>
+    rw [templateAdmissible, templateAdmissibleFields_eq_all, List.all_eq_true] at h
+    simp only [args, List.mem_map] at hp
+    obtain ⟨q, hq, rfl⟩ := hp
+    exact h q (mem_canon hq)
+  case tuple ts =>
+    rw [templateAdmissible, templateAdmissibleItems_eq_all, List.all_eq_true] at h
+    simp only [args, List.mem_map] at hp
+    obtain ⟨x, hx, rfl⟩ := hp
+    exact h x hx
+  case app n ts =>
+    rw [templateAdmissible, templateAdmissibleItems_eq_all, List.all_eq_true] at h
+    simp only [args, List.mem_map] at hp
+    obtain ⟨q, hq, rfl⟩ := hp
+    exact h q.1 (List.fst_mem_of_mem_zipIdx hq)
+  all_goals simp only [args, List.mem_cons, List.not_mem_nil, or_false] at hp
+  all_goals aesop (add norm simp [templateAdmissible])
+
+/-- **A request under a template's instance at `τ`.** The request is normal. Either it is below the
+instance's normal form, with no `never` outside an invariant handle's argument. Or its members are
+members of that normal form, and it is `never` only where the normal form is. The theorem's request
+is of the first kind. The walk meets the second kind below an invariant handle. -/
+def UnderInstance (τ : Subst) (t r : Ty) : Prop :=
+  Normal r ∧ ((bottomFree r = true ∧ sub r (instantiate τ t).normalize = true) ∨
+    ((∀ m ∈ r.members, m ∈ (instantiate τ t).normalize.members) ∧
+      (r = .never → (instantiate τ t).normalize = .never)))
+
+/-- The instance's own normal form is under it. It is a step of `template-match-anchored`, and
+`underInstance_args` reads it. -/
+theorem underInstance_self (τ : Subst) (t : Ty) : UnderInstance τ t (instantiate τ t).normalize :=
+  ⟨normal_normalize _, Or.inr ⟨fun _ hm => hm, fun h => h⟩⟩
+
+/-- A union under an instance is under it member by member. It is a step of
+`template-match-anchored`, and `infer_recovers` reads it. -/
+theorem underInstance_union {τ : Subst} {t c d : Ty} (h : UnderInstance τ t (.union c d)) :
+    UnderInstance τ t c ∧ UnderInstance τ t d := by
+  obtain ⟨hn, hmode⟩ := h
+  obtain ⟨hc, hd, hcm, hdn⟩ := normal_union_inv hn
+  have hcn : c ≠ .never := fun he => by
+    rw [he] at hcm
+    exact Bool.noConfusion hcm
+  rcases hmode with ⟨hbot, hsub⟩ | ⟨hmem, -⟩
+  · have hb := Bool.and_eq_true_iff.mp hbot
+    have hall := (OrderProof.sub_iff_members sub_trans _ _).mp hsub
+    refine ⟨⟨hc, Or.inl ⟨hb.1, ?_⟩⟩, ⟨hd, Or.inl ⟨hb.2, ?_⟩⟩⟩
+    · exact (OrderProof.sub_iff_members sub_trans _ _).mpr fun x hx =>
+        hall x (List.mem_append_left _ hx)
+    · exact (OrderProof.sub_iff_members sub_trans _ _).mpr fun x hx =>
+        hall x (List.mem_append_right _ hx)
+  · exact ⟨⟨hc, Or.inr ⟨fun m hm => hmem m (List.mem_append_left _ hm), fun h => absurd h hcn⟩⟩,
+      ⟨hd, Or.inr ⟨fun m hm => hmem m (List.mem_append_right _ hm), fun h => absurd h hdn⟩⟩⟩
+
+/-- **A member under the instance has the template's head, and its children are under the children's
+instances.** Below an invariant position a child IS the child's instance in normal form. The two
+directions of the comparison and antisymmetry on normal forms fix it. It is a step of
+`template-match-anchored`, and `infer_recovers` reads it. -/
+theorem underInstance_args (τ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .var i)
+    (hu : ∀ a b, t ≠ .union a b) (happ : ∀ n ts, t ≠ .app n ts) (hargs : t.args ≠ [])
+    (hunder : UnderInstance τ t r) (hm : isMember r = true) :
+    sameHead t r = true ∧ ∀ p ∈ t.args.zip r.args,
+      (p.1.1 = .inv → p.2.2 = (instantiate τ p.1.2).normalize) ∧ UnderInstance τ p.1.2 p.2.2 := by
+  obtain ⟨hr, hmode⟩ := hunder
+  have hinst := (instance_members τ ht hv hu happ).2
+  have hchild : ∀ p ∈ t.args.zip r.args, Normal p.2.2 := fun p hp =>
+    OrderProof.normal_args hr hm _ (List.mem_map_of_mem (List.of_mem_zip hp).2)
+  rcases hmode with ⟨hbot, hsub⟩ | ⟨hmem, -⟩
+  · obtain ⟨m, hmJ, hrm⟩ := (OrderProof.sub_member_right_iff r _ hm).mp hsub
+    obtain ⟨htm, hzip⟩ := hinst m hmJ
+    have hmm : isMember m = true := members_isMember hmJ
+    have htmLen := args_congr htm
+    have hmargs : m.args ≠ [] := by
+      intro hnil
+      rw [hnil, List.length_nil] at htmLen
+      exact hargs (List.eq_nil_of_length_eq_zero htmLen.1)
+    have hleaf : leafRule r m = false := by
+      cases hl : leafRule r m with
+      | false => rfl
+      | true => exact absurd (leafRule_args hl).2.1 hmargs
+    have htop : topRule r m = false := by
+      refine topRule_eq_false fun hmu => hmargs ?_
+      rw [hmu]
+      rfl
+    rw [sub_eq_args r m hm hmm hleaf htop, Bool.and_eq_true] at hrm
+    obtain ⟨hrmh, hbelow⟩ := hrm
+    have hrmLen := args_congr hrmh
+    refine ⟨sameHead_trans htm (sameHead_symm hrmh), fun p hp => ?_⟩
+    obtain ⟨q, hpq, hrq⟩ := mem_zip_middle htmLen.1 hrmLen.1 hp
+    obtain ⟨hvar, hq⟩ := hzip (p.1, q) hpq
+    have hvr : p.2.1 = q.1 := eq_of_mem_zip_map hrmLen.2 hrq
+    have hholds : p.2.1.holds sub p.2.2 q.2 = true :=
+      List.all_eq_true.mp hbelow (p.2, q) hrq
+    rcases args_co_or_inv happ p.1 (List.of_mem_zip hp).1 with hco | hinv
+    · rw [hvr, ← hvar, hco] at hholds
+      have hbelowJ : sub p.2.2 (instantiate τ p.1.2).normalize = true := by
+        rcases hq with he | ⟨-, hf⟩
+        · rw [← he]
+          exact hholds
+        · exact sub_trans _ _ _ hholds (sub_of_mem_factors hf)
+      refine ⟨fun h => absurd (h.symm.trans hco) (by decide), hchild p hp, Or.inl ⟨?_, hbelowJ⟩⟩
+      exact bottomFree_args hbot p.2 (List.of_mem_zip hp).2 (hvr.trans (hvar.symm.trans hco))
+    · rw [hvr, ← hvar, hinv] at hholds
+      have he : q.2 = (instantiate τ p.1.2).normalize := by
+        rcases hq with he | ⟨hco, -⟩
+        · exact he
+        · exact absurd (hinv.symm.trans hco) (by decide)
+      rw [he] at hholds
+      have hboth := Bool.and_eq_true_iff.mp hholds
+      have heq : p.2.2 = (instantiate τ p.1.2).normalize :=
+        OrderProof.sub_antisymm_normal sub_trans _ _ (hchild p hp) (normal_normalize _)
+          hboth.1 hboth.2
+      exact ⟨fun _ => heq, heq ▸ underInstance_self τ p.1.2⟩
+  · have hrJ : r ∈ (instantiate τ t).normalize.members := by
+      refine hmem r ?_
+      rw [members_atom hm]
+      exact List.mem_singleton_self r
+    obtain ⟨htr, hzip⟩ := hinst r hrJ
+    refine ⟨htr, fun p hp => ?_⟩
+    obtain ⟨-, hq⟩ := hzip p hp
+    rcases hq with he | ⟨hco, hf⟩
+    · exact ⟨fun _ => he, he ▸ underInstance_self τ p.1.2⟩
+    · exact ⟨fun h => absurd (h.symm.trans hco) (by decide), hchild p hp,
+        Or.inr (members_of_mem_factors hf)⟩
+
+/-! #### Inference, read the checker's way (no join) -/
+
+/-- **A walk over bound parameters binds nothing.** At the checker's rule (no join), inference
+answers its seed when every parameter the template mentions is bound. It is a step of
+`template-match-anchored`, and `infer_recovers` reads it. -/
+theorem infer_of_bound (σ : Subst) (t r : Ty)
+    (h : ∀ i ∈ varsOf t, (σ.lookup i).isSome = true) : infer σ t r = σ := by
+  revert h
+  induction σ, t, r using infer.induct_unfolding false
+      (motive_2 := fun σ ts _ result => (∀ i ∈ varsOfItems ts, (σ.lookup i).isSome = true) →
+        result = σ)
+      (motive_3 := fun σ fs _ result => (∀ i ∈ varsOfFields fs, (σ.lookup i).isSome = true) →
+        result = σ)
+  case case1 σ i r hnone =>
+    intro h
+    have hi := h i List.mem_cons_self
+    rw [hnone] at hi
+    exact Bool.noConfusion hi
+  case case2 hjoin =>
+    rw [Bool.false_and] at hjoin
+    exact Bool.noConfusion hjoin
+  case case3 => intro _; rfl
+  case case4 ih | case5 ih | case6 ih | case7 ih => exact ih
+  -- the two-child heads: the first child binds nothing, then the second binds nothing
+  case case8 ih₁ ih₂ | case9 ih₁ ih₂ | case10 ih₁ ih₂ | case11 ih₁ ih₂ | case12 ih₁ ih₂
+  | case13 ih₁ ih₂ | case14 ih₁ ih₂ =>
+    intro h
+    have e₁ := ih₁ (fun i hi => h i (List.mem_append_left _ hi))
+    rw [e₁] at ih₂ ⊢
+    exact ih₂ (fun i hi => h i (List.mem_append_right _ hi))
+  case case15 ih | case16 ih | case17 ih => exact ih
+  case case18 => intro _; rfl
+  -- a request union, member by member: the template stays the same
+  case case19 σ t c d _ _ ih₁ ih₂ =>
+    intro h
+    have e₁ := ih₁ h
+    rw [e₁] at ih₂ ⊢
+    exact ih₂ h
+  case case20 => intro _; rfl
+  case case21 => rfl
+  case case22 ih h => exact ih h
+  case case23 hl ih₁ ih₂ h =>
+    have e₁ := ih₁ (fun i hi => h i (varsOf_of_lookup hl i hi))
+    rw [e₁] at ih₂ ⊢
+    exact ih₂ h
+  case case24 ih₁ ih₂ h =>
+    have e₁ := ih₁ (fun i hi => h i (List.mem_append_left _ hi))
+    rw [e₁] at ih₂ ⊢
+    exact ih₂ (fun i hi => h i (List.mem_append_right _ hi))
+  case case25 => rfl
+
+/-- Inference keeps every binding its seed has. It is a step of `template-match-anchored`, and the
+walk reads it. -/
+theorem infer_bound_mono {σ : Subst} {i : Nat} (t r : Ty) (h : (σ.lookup i).isSome = true) :
+    ((infer σ t r).lookup i).isSome = true := by
+  obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp h
+  obtain ⟨u', hu', -⟩ := infer_widensSub σ t r false i u hu
+  rw [hu']
+  rfl
+
+/-- **A request union is read member by member** at a template that is not a parameter or a union.
+This is `infer`'s arm for `E4-CHECK-CE-018`. It is a step of `template-match-anchored`, and
+`infer_recovers` reads it. -/
+theorem infer_union_right (σ : Subst) {t : Ty} (hv : ∀ i, t ≠ .var i) (hu : ∀ a b, t ≠ .union a b)
+    (c d : Ty) : infer σ t (.union c d) = infer (infer σ t c) t d := by
+  rw [infer]
+  exacts [hv, hu]
+
+/-- Field inference over aligned field lists is item inference over their types. It is a step of
+`template-match-anchored`, and `infer_args` reads it. -/
+theorem inferFields_eq_items (L : List (String × Bool × Ty)) :
+    ∀ (σ : Subst) (fs gs : List (String × Bool × Ty)), fs.length = gs.length →
+      (∀ p ∈ fs.zip gs, L.lookup p.2.1 = some p.1.2) →
+      inferFields σ L gs false = inferItems σ (fs.map fun p => p.2.2) (gs.map fun p => p.2.2) false
+  | _, [], [], _, _ => rfl
+  | _, [], _ :: _, hl, _ => absurd hl (Nat.succ_ne_zero _).symm
+  | _, _ :: _, [], hl, _ => absurd hl (Nat.succ_ne_zero _)
+  | σ, p :: fs, (n, o, r) :: gs, hl, hk => by
+    have hp := hk (p, (n, o, r)) List.mem_cons_self
+    rw [inferFields, hp, List.map_cons, List.map_cons, inferItems]
+    exact inferFields_eq_items L _ fs gs (Nat.succ.inj hl)
+      fun q hq => hk q (List.mem_cons_of_mem _ hq)
+
+/-- **A pair of one head is inferred child by child.** The template's head is not a parameter or a
+nominal reference. A request with that head is read argument by argument, a record's in canonical
+order. The case list is `sameHead`'s own. It is a step of `template-match-anchored`, and
+`infer_recovers` reads it. -/
+theorem infer_args (σ : Subst) {t r : Ty} (hv : ∀ i, t ≠ .var i) (happ : ∀ n ts, t ≠ .app n ts)
+    (hct : headCanon t = true) (hcr : headCanon r = true) (hh : sameHead t r = true) :
+    infer σ t r = inferItems σ (t.args.map Prod.snd) (r.args.map Prod.snd) false := by
+  revert hv happ hct hcr hh
+  fun_cases sameHead t r
+  case case18 =>
+    intro hv
+    exact absurd rfl (hv _)
+  case case23 =>
+    intro _ happ
+    exact absurd rfl (happ _ _)
+  case case20 fs gs =>
+    intro _ _ hct hcr hh
+    have hfs : canon fs = fs := of_decide_eq_true hct
+    have hgs : canon gs = gs := of_decide_eq_true hcr
+    have hheads := of_decide_eq_true hh
+    rw [hfs, hgs] at hheads
+    have hnd : (fs.map Prod.fst).Nodup := hfs ▸ Field.canonBy_names_nodup fs
+    show inferFields σ fs gs false = _
+    simp only [args, hfs, hgs, List.map_map]
+    refine inferFields_eq_items fs σ fs gs ?_ fun p hp => ?_
+    · rw [← List.length_map (f := fun p : String × Bool × Ty => (p.1, p.2.1)), hheads,
+        List.length_map]
+    · have hname := congrArg Prod.fst (eq_of_mem_zip_map hheads hp)
+      rw [← hname]
+      exact lookup_of_mem_nodup hnd (List.of_mem_zip hp).1
+  case case22 xs ys =>
+    intro _ _ _ _ _
+    show inferItems σ xs ys false = _
+    simp only [args, List.map_map, Function.comp_def, List.map_id']
+  case case28 =>
+    intro _ _ _ _ hh
+    exact absurd hh Bool.false_ne_true
+  all_goals
+    intro _ _ _ _ _
+    rfl
+
+/-! #### The walk -/
+
+/-- **The walk's invariant**: every binding `σ` makes is the normal form of `τ`'s binding of that
+parameter. -/
+def Recovers (τ σ : Subst) : Prop :=
+  ∀ i u, σ.lookup i = some u → u = (instantiate τ (.var i)).normalize
+
+/-- The empty bindings recover every `τ`. It is a step of `template-match-anchored`, and
+`matchTemplate_complete_anchored` reads it. -/
+theorem recovers_nil (τ : Subst) : Recovers τ [] := fun _ _ h => nomatch h
+
+/-- **The anchor step.** A parameter met against exactly its instance's normal form is bound to it,
+or kept. It is a step of `template-match-anchored`, and `inferItems_recovers` reads it. -/
+theorem infer_anchor {τ σ : Subst} (i : Nat) (hrec : Recovers τ σ) :
+    Recovers τ (infer σ (.var i) (instantiate τ (.var i)).normalize) ∧
+      ((infer σ (.var i) (instantiate τ (.var i)).normalize).lookup i).isSome = true := by
+  rw [infer]
+  split
+  · rename_i hl
+    refine ⟨fun j u hj => ?_, ?_⟩
+    · rw [List.lookup_append] at hj
+      cases hσj : σ.lookup j with
+      | some w =>
+        rw [hσj, Option.some_or] at hj
+        cases hj
+        exact hrec j _ hσj
+      | none =>
+        rw [hσj, Option.none_or, List.lookup_cons] at hj
+        cases hji : j == i with
+        | true =>
+          rw [hji] at hj
+          cases hj
+          rw [beq_iff_eq.mp hji]
+        | false =>
+          rw [hji, List.lookup_nil] at hj
+          cases hj
+    · rw [List.lookup_append, hl, Option.none_or, List.lookup_cons, beq_iff_eq.mpr rfl]
+      rfl
+  · rename_i bound hl
+    rw [if_neg (by rw [Bool.false_and]; exact Bool.false_ne_true)]
+    refine ⟨hrec, ?_⟩
+    rw [hl]
+    rfl
+
+/-- **The walk over a head's arguments.** Each argument's block of occurrences is read in turn. An
+invariant handle's parameter argument binds to exactly its instance (`infer_anchor`). Every other
+argument is walked by its own hypothesis. The bindings keep recovering `τ` and keep what they had.
+They come to bind every argument's parameters. It is a step of `template-match-anchored`, and
+`infer_recovers` reads it. -/
+theorem inferItems_recovers {τ : Subst} (hA : Bool) :
+    ∀ (ps qs : List (Variance × Ty)) (σ : Subst) (seen : List Nat), ps.length = qs.length →
+      (∀ p ∈ ps.zip qs, Normal p.1.2 ∧ (p.1.1 = .inv → p.2.2 = (instantiate τ p.1.2).normalize) ∧
+        ∀ (σ : Subst) (seen : List Nat), Recovers τ σ →
+          (∀ i ∈ seen, (σ.lookup i).isSome = true) →
+          anchoredFrom seen (paramOccurrences p.1.2) = true →
+          Recovers τ (infer σ p.1.2 p.2.2) ∧
+            ∀ i ∈ varsOf p.1.2, ((infer σ p.1.2 p.2.2).lookup i).isSome = true) →
+      (hA = true → ∀ p ∈ ps, p.1 = .inv) → Recovers τ σ →
+      (∀ i ∈ seen, (σ.lookup i).isSome = true) →
+      anchoredFrom seen (ps.flatMap fun p => childOcc hA p.2) = true →
+      Recovers τ (inferItems σ (ps.map Prod.snd) (qs.map Prod.snd) false) ∧
+        (∀ i, (σ.lookup i).isSome = true →
+          ((inferItems σ (ps.map Prod.snd) (qs.map Prod.snd) false).lookup i).isSome = true) ∧
+        ∀ p ∈ ps, ∀ i ∈ varsOf p.2,
+          ((inferItems σ (ps.map Prod.snd) (qs.map Prod.snd) false).lookup i).isSome = true
+  | [], [], _, _, _, _, _, hrec, _, _ =>
+    ⟨hrec, fun _ h => h, fun _ hp => absurd hp List.not_mem_nil⟩
+  | [], _ :: _, _, _, hl, _, _, _, _, _ => absurd hl (Nat.succ_ne_zero _).symm
+  | _ :: _, [], _, _, hl, _, _, _, _, _ => absurd hl (Nat.succ_ne_zero _)
+  | p :: ps, q :: qs, σ, seen, hl, hpairs, hinv, hrec, hseen, hanch => by
+    rw [List.flatMap_cons, anchoredFrom_append, Bool.and_eq_true] at hanch
+    obtain ⟨hhead, hrest⟩ := hanch
+    obtain ⟨hpn, hpinv, hpih⟩ := hpairs (p, q) List.mem_cons_self
+    have hstep : Recovers τ (infer σ p.2 q.2) ∧
+        ∀ i ∈ varsOf p.2, ((infer σ p.2 q.2).lookup i).isSome = true := by
+      rcases var_or_ne p.2 with ⟨i, hi⟩ | hnv
+      · cases hA with
+        | true =>
+          have hq : q.2 = (instantiate τ p.2).normalize := hpinv (hinv rfl p List.mem_cons_self)
+          rw [hq, hi]
+          obtain ⟨hrec', hb⟩ := infer_anchor i hrec
+          refine ⟨hrec', fun j hj => ?_⟩
+          rw [varsOf, List.mem_singleton] at hj
+          rw [hj]
+          exact hb
+        | false => exact hpih σ seen hrec hseen hhead
+      · rw [childOcc_of_ne_var hA hnv] at hhead
+        exact hpih σ seen hrec hseen hhead
+    obtain ⟨hrec₁, hcov₁⟩ := hstep
+    have hfirsts : (childOcc hA p.2).map Prod.fst = varsOf p.2 := by
+      cases hA
+      · exact paramOccurrences_firsts hpn
+      · exact (anchorOcc_firsts p.2).trans (paramOccurrences_firsts hpn)
+    have hseen₁ : ∀ i ∈ ((childOcc hA p.2).map Prod.fst).reverse ++ seen,
+        ((infer σ p.2 q.2).lookup i).isSome = true := by
+      intro i hi
+      rcases List.mem_append.mp hi with hi | hi
+      · rw [List.mem_reverse, hfirsts] at hi
+        exact hcov₁ i hi
+      · exact infer_bound_mono p.2 q.2 (hseen i hi)
+    obtain ⟨hrec₂, hmono₂, hcov₂⟩ := inferItems_recovers hA ps qs (infer σ p.2 q.2) _
+      (Nat.succ.inj hl) (fun x hx => hpairs x (List.mem_cons_of_mem _ hx))
+      (fun hAt x hx => hinv hAt x (List.mem_cons_of_mem _ hx)) hrec₁ hseen₁ hrest
+    rw [List.map_cons, List.map_cons, inferItems]
+    refine ⟨hrec₂, fun i hi => hmono₂ i (infer_bound_mono p.2 q.2 hi), fun x hx i hix => ?_⟩
+    rcases List.mem_cons.mp hx with rfl | hx
+    · exact hmono₂ i (hcov₁ i hix)
+    · exact hcov₂ x hx i hix
+
+/-- **The walk.** Take a normal, admissible template whose unseen parameters first occur as
+invariant handles' arguments. A request under its instance at `τ` is inferred into bindings that
+recover `τ`. They bind every parameter of the template. The induction is on the request's size,
+bounded by `n`. It is the step of `template-match-anchored` that `matchTemplate_complete_anchored`
+reads. -/
+theorem infer_recovers (τ : Subst) (n : Nat) : ∀ (r t : Ty) (σ : Subst) (seen : List Nat),
+    sizeOf r < n → Normal t → templateAdmissible t = true → UnderInstance τ t r → Recovers τ σ →
+    (∀ i ∈ seen, (σ.lookup i).isSome = true) → anchoredFrom seen (paramOccurrences t) = true →
+    Recovers τ (infer σ t r) ∧ ∀ i ∈ varsOf t, ((infer σ t r).lookup i).isSome = true := by
+  induction n with
+  | zero => exact fun _ _ _ _ hn => absurd hn (Nat.not_lt_zero _)
+  | succ n ih =>
+    intro r t σ seen hn ht hadm hunder hrec hseen hanch
+    by_cases hall : ∀ i ∈ varsOf t, (σ.lookup i).isSome = true
+    · rw [infer_of_bound σ t r hall]
+      exact ⟨hrec, hall⟩
+    -- an unbound parameter: the template is a head the walk descends through
+    have hv : ∀ i, t ≠ .var i := by
+      rintro j rfl
+      apply hall
+      intro i hi
+      rw [varsOf, List.mem_singleton] at hi
+      subst hi
+      rw [show paramOccurrences (.var i) = [(i, false)] from rfl] at hanch
+      simp only [anchoredFrom, Bool.false_or, Bool.and_true, List.contains_iff_mem] at hanch
+      exact hseen i hanch
+    have hu : ∀ a b, t ≠ .union a b := by
+      rintro a b rfl
+      apply hall
+      simp only [templateAdmissible, Bool.and_eq_true] at hadm
+      rw [varsOf, varsOf_eq_nil_of_closed a hadm.1, varsOf_eq_nil_of_closed b hadm.2]
+      exact fun i hi => absurd hi List.not_mem_nil
+    have happ : ∀ m ts, t ≠ .app m ts := by
+      rintro m ts rfl
+      apply hall
+      intro i hi
+      rw [← paramOccurrences_firsts ht, List.mem_map] at hi
+      obtain ⟨o, ho, rfl⟩ := hi
+      refine hseen o.1 (anchoredFrom_unflagged _ (fun q hq => ?_) hanch o ho)
+      rw [paramOccurrences_app] at hq
+      obtain ⟨x, -, hq⟩ := List.mem_flatMap.mp hq
+      obtain ⟨o', -, rfl⟩ := List.mem_map.mp hq
+      rfl
+    have hargs : t.args ≠ [] := by
+      intro hnil
+      apply hall
+      intro i hi
+      rw [← paramOccurrences_firsts ht, paramOccurrences_args hv happ, hnil] at hi
+      exact absurd hi List.not_mem_nil
+    have htm : isMember t = true := by
+      cases htm : isMember t with
+      | true => rfl
+      | false =>
+        rcases isMember_eq_false htm with rfl | ⟨a, b, rfl⟩
+        · exact absurd rfl hargs
+        · exact absurd rfl (hu a b)
+    cases hrm : isMember r with
+    | false =>
+      rcases isMember_eq_false hrm with rfl | ⟨c, d, rfl⟩
+      · -- the empty request is under an empty instance only, and this instance has a member
+        obtain ⟨-, hmode⟩ := hunder
+        rcases hmode with ⟨hbot, -⟩ | ⟨-, hJ⟩
+        · exact absurd hbot Bool.false_ne_true
+        · rcases (instance_members τ ht hv hu happ).1 with hnev | ⟨m, hm⟩
+          · exact absurd (by rw [hnev]; rfl) hargs
+          · rw [hJ rfl] at hm
+            exact absurd hm List.not_mem_nil
+      · obtain ⟨hc, hd⟩ := underInstance_union hunder
+        have hsize := Ty.union.sizeOf_spec c d
+        rw [infer_union_right σ hv hu c d]
+        obtain ⟨hrec₁, -⟩ := ih c t σ seen (by omega) ht hadm hc hrec hseen hanch
+        exact ih d t (infer σ t c) seen (by omega) ht hadm hd hrec₁
+          (fun i hi => infer_bound_mono t c (hseen i hi)) hanch
+    | true =>
+      obtain ⟨hh, hkids⟩ := underInstance_args τ ht hv hu happ hargs hunder hrm
+      rw [infer_args σ hv happ (OrderProof.normal_headCanon ht)
+        (OrderProof.normal_headCanon hunder.1) hh]
+      rw [paramOccurrences_args hv happ] at hanch
+      have hpairs : ∀ p ∈ t.args.zip r.args, Normal p.1.2 ∧
+          (p.1.1 = .inv → p.2.2 = (instantiate τ p.1.2).normalize) ∧
+          ∀ (σ : Subst) (seen : List Nat), Recovers τ σ →
+            (∀ i ∈ seen, (σ.lookup i).isSome = true) →
+            anchoredFrom seen (paramOccurrences p.1.2) = true →
+            Recovers τ (infer σ p.1.2 p.2.2) ∧
+              ∀ i ∈ varsOf p.1.2, ((infer σ p.1.2 p.2.2).lookup i).isSome = true := by
+        intro p hp
+        have hpt := (List.of_mem_zip hp).1
+        have hpn : Normal p.1.2 := OrderProof.normal_args ht htm _ (List.mem_map_of_mem hpt)
+        have hsize : sizeOf p.2.2 < sizeOf r := sizeOf_args (List.of_mem_zip hp).2
+        refine ⟨hpn, (hkids p hp).1, fun σ' seen' hrec' hseen' hanch' => ?_⟩
+        exact ih p.2.2 p.1.2 σ' seen' (by omega) hpn (templateAdmissible_args hadm p.1 hpt)
+          (hkids p hp).2 hrec' hseen' hanch'
+      obtain ⟨hrec', -, hcov⟩ := inferItems_recovers (anchorsArgs t) t.args r.args σ seen
+        (args_congr hh).1 hpairs (fun hA p hp => anchorsArgs_inv hA p hp) hrec hseen hanch
+      refine ⟨hrec', fun i hi => ?_⟩
+      rw [← paramOccurrences_firsts ht, paramOccurrences_args hv happ, List.mem_map] at hi
+      obtain ⟨o, ho, rfl⟩ := hi
+      obtain ⟨p, hp, ho⟩ := List.mem_flatMap.mp ho
+      have hpn : Normal p.2 := OrderProof.normal_args ht htm _ (List.mem_map_of_mem hp)
+      have hfirsts : (childOcc (anchorsArgs t) p.2).map Prod.fst = varsOf p.2 := by
+        cases anchorsArgs t
+        · exact paramOccurrences_firsts hpn
+        · exact (anchorOcc_firsts p.2).trans (paramOccurrences_firsts hpn)
+      refine hcov p hp o.1 ?_
+      rw [← hfirsts]
+      exact List.mem_map_of_mem ho
+
+/-- **The match is complete on anchored templates** (the claim `template-match-anchored`, R4). Take
+a normal, admissible template whose every parameter first occurs as an invariant handle's argument.
+Take a normal request with no `never` outside such an argument, under the instance at some bindings.
+Then the match finds bindings. Its soundness half is `matchTemplate_sound`. The walk binds each
+parameter at its anchor to the normal form of `τ`'s binding (`infer_recovers`). So the match's
+instance has `τ`'s normal form (`normalize_instantiate_congr`), and the guard is `hτ`. The
+`bottomFree` premise is needed, not a convenience. A union member whose anchor holds `never` binds
+the parameter at a covariant occurrence first (`neverR`, `Test/Program/TypeAlgebraContract.lean`).
+It establishes no match where a parameter first occurs covariantly, under a union template or under
+a nominal reference. It says nothing of the atoms' joining rule (`join := true`). -/
 @[semantics "subtyping-algebra" (requirement := R4)]
-proof_goal matchTemplate_complete_anchored {t r : Ty} {τ : Subst} (ht : Normal t)
+theorem matchTemplate_complete_anchored {t r : Ty} {τ : Subst} (ht : Normal t)
     (hadm : t.templateAdmissible = true) (hanch : t.anchored = true) (hr : Normal r)
     (hbot : r.bottomFree = true) (hτ : sub r.normalize (t.instantiate τ).normalize = true) :
-    ∃ σ, matchTemplate [] t r = some σ
+    ∃ σ, matchTemplate [] t r = some σ := by
+  rw [hr.fixed] at hτ
+  obtain ⟨hrec, hcov⟩ := infer_recovers τ (sizeOf r + 1) r t [] [] (Nat.lt_succ_self _) ht hadm
+    ⟨hr, Or.inl ⟨hbot, hτ⟩⟩ (recovers_nil τ) (fun _ h => absurd h List.not_mem_nil) hanch
+  have hsame : (instantiate (infer [] t r) t).normalize = (instantiate τ t).normalize := by
+    refine normalize_instantiate_congr t fun i hi => ?_
+    obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp (hcov i hi)
+    rw [instantiate, hu, Option.getD_some, hrec i u hu, normalize_idem]
+  refine ⟨infer [] t r, ?_⟩
+  rw [matchTemplate, hr.fixed, hsame, if_pos hτ]
 
 end Ty
 
