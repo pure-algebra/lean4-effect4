@@ -40,6 +40,7 @@ module type PROGRAM_TYPES = sig
   | Term_field of field_read_mode * term * string
   | Term_recordSet of term * string * term
   | Term_tupleAt of term * int
+  | Term_fold of ty option * term * term * term
   and terms = Terms_nil | Terms_cons of term * terms
   type cause_term = | CauseTerm_fail of term
   | CauseTerm_die of term
@@ -189,7 +190,7 @@ let engine_ctor_names = [
   ("ty", ["never"; "unit"; "nat"; "int"; "string"; "bool"; "handle"; "option"; "list"; "prod"; "except"; "exitOf"; "causeOf"; "fiberOf"; "union"; "lit"; "refOf"; "deferredOf"; "var"; "unknown"; "record"; "map"; "tuple"; "app"; "null"; "undefined"; "number"; "bytes"]);
   ("lit", ["unit"; "nat"; "bool"; "str"]);
   ("field_read_mode", ["required"; "optional"]);
-  ("term", ["var"; "lit"; "app"; "record"; "field"; "recordSet"; "tupleAt"]);
+  ("term", ["var"; "lit"; "app"; "record"; "field"; "recordSet"; "tupleAt"; "fold"]);
   ("terms", ["nil"; "cons"]);
   ("cause_term", ["fail"; "die"; "interrupt"; "both"]);
   ("mask_mode", ["interruptible"; "uninterruptible"; "inherit"]);

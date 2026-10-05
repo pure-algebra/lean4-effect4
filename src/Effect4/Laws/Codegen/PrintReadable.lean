@@ -435,7 +435,7 @@ theorem kinds_of_printArgs {sig : Signature Op} {n : Nat} {row : Templates.Row}
 /-! ## The row call prints -/
 
 theorem printRow_ok {row : Row} {n : Nat} {r : Term} (h : requestReadable row n r = true) :
-    ∃ x, printRow row r = .ok x := by
+    ∃ x, printRow n row r = .ok x := by
   unfold printRow
   unfold requestReadable at h
   cases hs : row.shape <;> rw [hs] at h <;>

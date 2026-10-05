@@ -524,6 +524,10 @@ mutual
     | .recordSet target name value =>
       .recordSet (Term.weaken cut target) name (Term.weaken cut value)
     | .tupleAt target index => .tupleAt (Term.weaken cut target) index
+    -- one map of every variable at or above the cut, bound or free: the fold's two binders are
+    -- levels above the cut, so the body needs no case of its own
+    | .fold accTy list init body =>
+      .fold accTy (Term.weaken cut list) (Term.weaken cut init) (Term.weaken cut body)
 
   def Terms.weaken (cut : Nat) : Terms → Terms
     | .nil => .nil

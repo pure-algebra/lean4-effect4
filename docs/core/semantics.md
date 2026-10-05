@@ -260,6 +260,25 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   A typed read-modify-write row takes its pre from it (decisions row 43; the state plan's T3b).
   It establishes nothing about a term that the checker refuses.
   (`termMaps_of_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)).
+- **The list fold (`fold-typed-atomic-update`)**: A list fold binds its accumulator at the fold's
+  level and its element one level above (decisions row 228).
+  The claim holds the fold's rules as one statement, `ListFoldRules`.
+  The rules are scope, evaluation, failure, weakening, typing, typed evaluation and the two
+  equations of the printed leaf.
+  A fold that the checker types answers a member of its type, over values that fit, in a fixed
+  world.
+  One `Ref.modify` whose term the checker types is one store step: it answers `B` and stores `A`.
+  It establishes nothing about a module that uses the fold, and no agreement with a target.
+  (`fold_typed_atomic_update` (`src/Effect4/Laws/Program/Typed/ListFold.lean`)).
+- **The identity of a handle (`handle-identity-laws`)**: `sameHandle` compares two handles of one
+  kind by their keys (decisions row 229). It reads no payload, no cell and no world.
+  It is total on two members of one handle type, at any payload types.
+  It is reflexive and symmetric, and it decides the equality of the two keys.
+  A handle that an allocation just made is the same as no handle of a value that fits the earlier
+  world. A later world keeps the membership of a list of handles.
+  The handles of a term's answer are handles of its environment.
+  It establishes no correspondence in a target: that is each target's relation.
+  (`handle_identity_laws` (`src/Effect4/Laws/Program/Typed/ListFold.lean`)).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 

@@ -49,7 +49,7 @@ refused by its row's spelling. -/
 theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     print sig n (.perform op request) =
       match sig.opAtLevel n 0 op with
-      | some face => printRow (sig.rowOf face) request
+      | some face => printRow n (sig.rowOf face) request
       | none => .error (.binderTerm (sig.rowOf op).spelling) := rfl
 
 /-- The complete requirement row as target syntax. The empty union is `never`. -/
@@ -163,8 +163,11 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     let declaration ← printDecl name ty m sig.scopeKey
     .ok (ds ++ [declaration])
 
-/-- Check stored declarations, including records discarded before the final result.
-The raw printer retains its exact fallback; checked entries require a target projection. -/
+variable [ScopedOp Op]
+
+/-- Check stored declarations, including records discarded before the final result and a list
+fold's stated accumulator type (decisions row 228). The raw printer retains its exact fallback;
+checked entries require a target projection. -/
 def annotationRefusal (program : Eff Op) : Option PrintRefusal :=
   (Formation.programAnnotations program).findSome? fun (_, type) =>
     match Codegen.Types.ofTy type with

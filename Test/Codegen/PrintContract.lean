@@ -45,7 +45,7 @@ def updateRow : Row :=
   ⟨"update", "Ref.update", .call, ["incr"], .sync, .handle "Ref.Ref<number>", .unit, .never, [],
     "Ref.ts:1273-1276", [], .deferred⟩
 
-#guard (printRow updateRow (.var 0)).map (expr house0 0) = .ok "Ref.update(a0, incr)"
+#guard (printRow 1 updateRow (.var 0)).map (expr house0 0) = .ok "Ref.update(a0, incr)"
 
 /-- A tuple-call fixture with two ordered trailing names. Native tuple calls currently
 have no trailing names; this fixture checks the generic row convention. -/
@@ -61,40 +61,40 @@ def genericRow : Row :=
     .handle "Deferred.Deferred<number, number>", .never, [], "vendor/effect-4.0.0-rc.112/src/Deferred.ts:171",
     ["number", "number"], .deferred⟩
 
-#guard (printRow genericRow (.lit .unit)).map (expr house0 0) = .ok "Deferred.make<number, number>()"
+#guard (printRow 0 genericRow (.lit .unit)).map (expr house0 0) = .ok "Deferred.make<number, number>()"
 
-#guard match printRow genericRow (.lit .unit) with
+#guard match printRow 0 genericRow (.lit .unit) with
   | .ok expression => expression ==
       .call (.generic (.ident "Deferred.make") [.name ["number"] [], .name ["number"] []]) []
   | .error _ => false
 
-#guard match printRow { genericRow with typeArgs := ["number); injected("] } (.lit .unit) with
+#guard match printRow 0 { genericRow with typeArgs := ["number); injected("] } (.lit .unit) with
   | .error (.typeSpelling spelling) => spelling == genericRow.spelling
   | _ => false
 
 -- A saved tuple is read once per component; a `pair` prints its components
 -- (source-repairs §18).
-#guard (printRow tupleRow (.var 0)).map (expr house0 0) =
+#guard (printRow 1 tupleRow (.var 0)).map (expr house0 0) =
   .ok "Fixture.tuple(fst(a0), snd(a0), first, second)"
 
-#guard (printRow tupleRow
+#guard (printRow 0 tupleRow
     (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))).map (expr house0 0) =
   .ok "Fixture.tuple(2, 7, first, second)"
 
 -- A request that is neither a pair nor a variable is outside the readable image and
 -- still prints, once per component.
-#guard (printRow tupleRow (.app "requestOnce" .nil)).map (expr house0 0) =
+#guard (printRow 0 tupleRow (.app "requestOnce" .nil)).map (expr house0 0) =
   .ok "Fixture.tuple(fst(requestOnce()), snd(requestOnce()), first, second)"
 
 -- A product request does not change the calling convention of an ordinary call row.
-#guard (printRow { tupleRow with shape := .call }
+#guard (printRow 0 { tupleRow with shape := .call }
     (.app "pair" (.cons (.lit (.nat 2)) (.cons (.lit (.nat 7)) .nil)))).map (expr house0 0) =
   .ok "Fixture.tuple(pair(2, 7), first, second)"
 
 -- All five corrected native exports receive the pair's components as their two
 -- arguments, the pinned two-argument signatures the host infers its types from.
 #guard ([NativeOp.refSet, .refGetAndSet, .refSetAndGet, .deferredSucceed, .deferredFail].map
-    fun op => (printRow op.row
+    fun op => (printRow 1 op.row
       (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 7)) .nil)))).map (expr house0 0)) =
   [ .ok "Ref.set(a0, 7)"
   , .ok "Ref.getAndSet(a0, 7)"

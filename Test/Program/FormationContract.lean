@@ -178,18 +178,25 @@ its instance, at the row's answer column; `Deferred.make<void, never>()` is form
   some (EffTy.pure (.deferredOf .unit .never))
 -- A parameter inside the operation's own type arguments is accepted and types at `never` (the
 -- T3a design's D5 (a)): the request binds nothing, and an operation's types are not program
--- annotations until T5 (`Formation.programAnnotations` reads `.op` as nothing).
+-- annotations until T5 (`Formation.programAnnotations` reads an operation's binder term, through
+-- `ScopedOp.term?`, and none of its type arguments; decisions row 212).
 #guard (Effect4.Api.typeOf (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit))).map (·.answer) =
   some (.deferredOf .never .nat)
 #guard (admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], []⟩).isOk
 
-/-! ### An operation's binder term is not a program annotation (the state plan's T3b, its D9 (b))
+/-! ### An operation's binder term is a program annotation (decisions row 228)
 
-Since T3b a read-modify-write row carries a binder term. `Formation.programAnnotations` reads an
-operation argument as nothing, so a record declaration inside that term is no program annotation
-until the state plan's T5 makes operation data one (decisions row 212, extended to binder terms).
-Formation does not escape: the term typer checks a record's own formation. The integer scan does
-escape: a record with an `int` field inside a binder term is admitted. This is the gap, pinned. -/
+Since T3b a read-modify-write row carries a binder term. T3b pinned a gap here, its D9 (b):
+`Formation.programAnnotations` read an operation argument as nothing, so a record declaration
+inside that term was no program annotation, and the integer scan admitted an `int` field there.
+
+The list fold's slice moved these pins. A fold states its accumulator's type, and the term typer
+compares that type after normalization, so a malformed stated type inside an operation's term
+met no check at all (Codex's review, 2026-10-05; `Test/Program/FoldContract.lean` keeps the
+candidate). The collector now reads an operation's binder term through the alphabet's own view
+(`ScopedOp.term?`), at the path segment `op`. The integer scan shares the collector, so the
+record gap closes with the fold's. An operation's type arguments stay unread (decisions row 212,
+above). -/
 
 /-- `{ n: 1 }` at the declaration `{ n: int }`. -/
 def intRecord : Term := .record [("n", false, .int)] ["n"] (.cons (.lit (.nat 1)) .nil)
@@ -208,33 +215,47 @@ def inBinderTerm (r : Term) : NativeEff :=
 /-- Green control: the same record as an ordinary term argument. -/
 def inTermArgument (r : Term) : NativeEff := .bind (.succeed r) (.succeed (.lit (.nat 0)))
 
--- The collector reads the record of a term argument and nothing of an operation's term.
+-- The collector reads the record of a term argument, and the record of an operation's term at
+-- the segment `op`.
 #guard (Formation.programAnnotations (inTermArgument intRecord)).map (·.1) =
   [["program", "0", "argument", "0", "term", "fields"]]
-#guard Formation.programAnnotations (inBinderTerm intRecord) = []
--- Raw formation therefore misses a repeated field inside a binder term, and the term typer
--- refuses it: the checker types the term, and a record term checks its own declaration.
+#guard (Formation.programAnnotations (inBinderTerm intRecord)).map (·.1) =
+  [["program", "1", "argument", "0", "op", "term", "0", "0", "0", "1", "0", "fields"]]
+-- Raw formation refuses a repeated field in both places, by its path. The term typer refuses it
+-- too: the checker types the term, and a record term checks its own declaration.
 #guard (Formation.checkInput (inTermArgument duplicateRecord) []).isSome
-#guard Formation.checkInput (inBinderTerm duplicateRecord) [] = none
+#guard match Formation.checkInput (inBinderTerm duplicateRecord) [] with
+  | some why =>
+    why.path == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "1", "0", "fields",
+      "type", "0"] && why.reason == .repeatedField "x"
+  | none => false
 #guard Effect4.Api.typeOf (inBinderTerm duplicateRecord) = none
--- The gap: the integer scan refuses an `int` field of a term argument by its path, and admits the
--- same field inside a binder term.
+-- The integer scan refuses an `int` field of a term argument by its path, and the same field
+-- inside a binder term by its path. The term typer alone admits it: the scan is the check.
 #guard match admitProgram (inTermArgument intRecord) ⟨[], []⟩ with
   | .error (.uninhabited path) => path == ["program", "0", "argument", "0", "term", "fields", "n"]
   | _ => false
 #guard (Effect4.Api.typeOf (inBinderTerm intRecord)).isSome
-#guard (admitProgram (inBinderTerm intRecord) ⟨[], []⟩).isOk
+#guard match admitProgram (inBinderTerm intRecord) ⟨[], []⟩ with
+  | .error (.uninhabited path) =>
+    path == ["program", "1", "argument", "0", "op", "term", "0", "0", "0", "1", "0", "fields", "n"]
+  | _ => false
 
 /-- `Ref.make(0)`, then `Ref.modify(cell, a => pair(r, a))`: the record is the row's answer, `B`. -/
 def asModifyAnswer (r : Term) : NativeEff :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.perform (.refModifyWith (.app "pair" (.cons r (.cons (.var 1) .nil)))) (.var 0))
 
--- The gap's edge. Where the record reaches the program's answer, the scan of the root's columns
--- refuses it by that path. Bound and dropped inside the program, it is admitted.
+-- The record is refused where it stands, in the operation's term, whether it reaches the
+-- program's answer or is bound and dropped. Before the fold's slice the first was refused at the
+-- root's answer column and the second was admitted.
 #guard match admitProgram (asModifyAnswer intRecord) ⟨[], []⟩ with
-  | .error (.uninhabited path) => path == ["program", "answer", "n"]
+  | .error (.uninhabited path) =>
+    path == ["program", "1", "argument", "0", "op", "term", "0", "0", "fields", "n"]
   | _ => false
-#guard (admitProgram (.bind (asModifyAnswer intRecord) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk
+#guard match admitProgram (.bind (asModifyAnswer intRecord) (.succeed (.lit (.nat 0)))) ⟨[], []⟩ with
+  | .error (.uninhabited path) =>
+    path == ["program", "0", "1", "argument", "0", "op", "term", "0", "0", "fields", "n"]
+  | _ => false
 
 end Test.Program.FormationContract

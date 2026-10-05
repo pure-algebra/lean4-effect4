@@ -93,6 +93,11 @@ inductive TypeReason
   /-- The binder term's type `result` is not below the result template's instance `expected`
   (the state plan's T3b). -/
   | resultNotSubtype (row : String) (result expected : Ty)
+  /-- A list fold has no type, at an address within the refused term (decisions row 228): its
+  list is no list, or its initial value or its body is outside the accumulator's type. -/
+  | foldTerm (why : FoldTermRefusal)
+  /-- A list fold has no type inside a cause leaf, at two separate addresses. -/
+  | foldCause (why : FoldCauseRefusal)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -131,6 +136,8 @@ def TypeReason.head : TypeReason → String
   | .errorSpelling _ _ => "errorSpelling"
   | .binderTerm _ _ => "binderTerm"
   | .resultNotSubtype _ _ _ => "resultNotSubtype"
+  | .foldTerm _ => "foldTerm"
+  | .foldCause _ => "foldCause"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

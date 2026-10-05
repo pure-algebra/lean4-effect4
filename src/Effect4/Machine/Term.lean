@@ -9,7 +9,8 @@ public import Effect4.Program.TyEq
 # Machine.Term — the first-order term language and its evaluation, below the stores
 
 The literals (`Lit`), the positional variables (`Var`), the terms (`Term`, `Terms`: a variable,
-a literal, an atom application, a named record operation, or a static tuple projection), their scope check, the closed atom alphabet
+a literal, an atom application, a named record operation, a static tuple projection, or a
+list fold with two binders), their scope check, the closed atom alphabet
 (`NativeAtom`: its name, arity, lookup and `eval`) and the evaluator (`evalTerm`), together with the error
 image (`errOf`, `valOfErr`) and the cause queries the query atoms read. Everything here is
 first-order data over the shared carrier `Val`. Record declarations retain `Ty` data,
@@ -129,6 +130,14 @@ mutual
     | field (mode : FieldReadMode) (target : Term) (name : String)
     | recordSet (target : Term) (name : String) (value : Term)
     | tupleAt (target : Term) (index : Nat)
+    /-- The list fold with two binders (decisions row 228). `body` is at the fold's level plus
+    two: it reads the accumulator at `var n` and the element at `var (n + 1)`, where `n` is the
+    environment's length at the fold, and every outer variable below `n` unchanged. The carried
+    value comes first, as in `Eff.iterate`'s step. `accTy` states the accumulator's type where
+    the initial value's type is too narrow for the body's answer (an accumulator that starts as
+    the empty list), as `iterate`'s `cursorTy` does (DI-91); it has no meaning at run time. The
+    fold is pure and has no early exit. Appended at wire tag 7. -/
+    | fold (accTy : Option Ty) (list init body : Term)
   inductive Terms
     | nil
     | cons (head : Term) (tail : Terms)
@@ -152,6 +161,9 @@ mutual
     | .field _ target _ => Term.scoped n target
     | .recordSet target _ value => Term.scoped n target && Term.scoped n value
     | .tupleAt target _ => Term.scoped n target
+    -- the list and the initial value at the fold's level, the body under the two binders
+    | .fold _ list init body =>
+      Term.scoped n list && Term.scoped n init && Term.scoped (n + 2) body
   def Terms.scoped (n : Nat) : Terms → Bool
     | .nil => true
     | .cons head tail => Term.scoped n head && Terms.scoped n tail
@@ -199,6 +211,16 @@ inductive NativeAtom
   | mapEmpty | mapGet | mapSet | mapKeys | mapEntries | mapFromEntries
   /-- Exact positional construction at every arity (decisions rows 159 and 197). -/
   | tuple
+  /-- A prefix of a list and its rest (decisions row 228): `take(xs, n)` and `drop(xs, n)`, the
+  list first as in `get` and in rc.112's `Array.take` and `Array.drop`
+  (`vendor/effect-4.0.0-rc.112/src/Array.ts:2208-2211`, `:2798-2801`). Each is a fold with a
+  counter, so neither adds meaning (`Test/Program/FoldContract.lean`); their consumers are a
+  batch accepted into freed room and the oldest entries that leave. -/
+  | listTake | listDrop
+  /-- The identity of a handle (decisions row 229): `sameHandle(a, b)` answers whether two
+  handles of one kind have one key. It reads no payload and no cell, and it refuses two kinds;
+  the typing admits two `Ref` handles or two `Deferred` handles and so excludes that case. -/
+  | sameHandle
   deriving DecidableEq, BEq
 
 namespace NativeAtom
@@ -356,6 +378,19 @@ def row : NativeAtom → AtomRow
   | .tuple =>
       { name := "tuple", arity := none, constGeneric := true,
         prelude := "<const A extends readonly unknown[]>(...items: A): A => items" }
+  | .listTake =>
+      { name := "take", arity := some 2, constGeneric := false,
+        prelude := "<A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(0, n)" }
+  | .listDrop =>
+      { name := "drop", arity := some 2, constGeneric := false,
+        prelude := "<A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(n)" }
+  -- the host's identity test, at the two handle families the typing admits
+  | .sameHandle =>
+      { name := "sameHandle", arity := some 2, constGeneric := false,
+        prelude := "((a: unknown, b: unknown): boolean => a === b) as {\n  \
+                    <A, B>(a: Ref.Ref<A>, b: Ref.Ref<B>): boolean\n  \
+                    <A, E, B, F>(a: Deferred.Deferred<A, E>, b: Deferred.Deferred<B, F>): \
+                    boolean\n}" }
 
 def name (atom : NativeAtom) : String := (row atom).name
 
@@ -406,6 +441,9 @@ def ofName? : String → Option NativeAtom
   | "mapEntries" => some .mapEntries
   | "mapFromEntries" => some .mapFromEntries
   | "tuple" => some .tuple
+  | "take" => some .listTake
+  | "drop" => some .listDrop
+  | "sameHandle" => some .sameHandle
   | _ => none
 
 theorem ofName?_name (atom : NativeAtom) : ofName? atom.name = some atom := by
@@ -483,6 +521,10 @@ def eval : NativeAtom → List Val → Option Val
   | .mapEntries, [value] => Machine.Map.entries value
   | .mapFromEntries, [value] => Machine.Map.fromEntries value
   | .tuple, values => some (.list values)
+  | .listTake, [xs, Val.nat count] => (Val.asList? xs).map fun vs => Val.list (vs.take count)
+  | .listDrop, [xs, Val.nat count] => (Val.asList? xs).map fun vs => Val.list (vs.drop count)
+  | .sameHandle, [Store.Val.handle kind index, Store.Val.handle kind' index'] =>
+    if kind = kind' then some (Val.bool (index = index')) else none
   | .succ, _ | .pred, _ | .isZero, _ | .boolNot, _ | .add, _ | .lt, _ | .eq, _
   | .pair, _ | .fst, _ | .snd, _
   | .causeIsFail, _ | .causeError, _ | .causeIsDie, _ | .causeIsInterrupt, _
@@ -490,7 +532,8 @@ def eval : NativeAtom → List Val → Option Val
   | .ite, _ | .optSome, _ | .optNone, _ | .mul, _
   | .listNil, _ | .listCons, _ | .listGet, _ | .listLength, _ | .listAppend, _
   | .natSub, _ | .natDiv, _ | .natMod, _ | .strConcat, _
-  | .mapEmpty, _ | .mapGet, _ | .mapSet, _ | .mapKeys, _ | .mapEntries, _ | .mapFromEntries, _ => none
+  | .mapEmpty, _ | .mapGet, _ | .mapSet, _ | .mapKeys, _ | .mapEntries, _ | .mapFromEntries, _
+  | .listTake, _ | .listDrop, _ | .sameHandle, _ => none
 
 end NativeAtom
 
@@ -523,6 +566,14 @@ mutual
     | .tupleAt target index => do
       let value ← evalTerm env target
       Val.tupleAt? value index
+    -- the list and the initial value once, then the body once for each element from the head,
+    -- at the environment extended by the accumulator and the element; a body that refuses on
+    -- one element refuses the fold
+    | .fold _ list init body => do
+      let value ← evalTerm env list
+      let items ← Val.asList? value
+      let start ← evalTerm env init
+      items.foldlM (fun acc item => evalTerm (env ++ [acc, item]) body) start
   def evalTerms (env : List Val) : Terms → Option (List Val)
     | .nil => some []
     | .cons head tail => do

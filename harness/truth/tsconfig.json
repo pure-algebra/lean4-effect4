@@ -25,6 +25,7 @@
     "prelude.ts",
     "records.typecheck.ts",
     "tuples.typecheck.ts",
+    "folds.typecheck.ts",
     "select-controls.ts",
     "generated",
     "run-truth.ts",

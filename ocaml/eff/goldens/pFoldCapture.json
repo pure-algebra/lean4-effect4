@@ -1,0 +1,1 @@
+["bind",["succeed",["lit",["nat",100]]],["succeed",["fold",null,["app","cons",["cons",["lit",["nat",1]],["cons",["app","cons",["cons",["lit",["nat",2]],["cons",["app","nil",["nil"]],["nil"]]]],["nil"]]]],["lit",["nat",0]],["app","add",["cons",["var",1],["cons",["app","add",["cons",["var",2],["cons",["var",0],["nil"]]]],["nil"]]]]]]]

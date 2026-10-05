@@ -97,6 +97,10 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   | .term (.recordSet _ _ _) => []
   | .term (.tupleAt _ _) => []
   | .tupleTerm _ | .tupleCause _ => []
+  -- A list fold: the prelude's `fold` would refuse the argument (2345), but no observation of
+  -- the lane names these reasons yet.
+  | .term (.fold _ _ _ _) => []
+  | .foldTerm _ | .foldCause _ => []
   | .cause _ => []
   | .errorNotAdmitted _ => []
   | .outsideDomain _ => []

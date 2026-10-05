@@ -14,6 +14,11 @@
         the cell's (`pModifyOther`), with two red controls, the term one level down and one
         level up (`pLevel@1`, `pLevel@3`); the values are Lean's
         (Test/Program/CompileContract.lean).
+        And the list fold with two binders (decisions row 228): from the head (`pFold`), with
+        an outer capture (`pFoldCapture`), inside a fold (`pFoldNested`) and inside an
+        operation's term (`pFoldInOp`), with two controls, the empty list and a body that
+        refuses (`pFoldEmpty`, `pFoldRefuses`); the values are Lean's
+        (Test/Program/FoldContract.lean).
      2  The differential D1 in miniature: the programs of ocaml/eff/goldens/*.bin,
         decoded by `Eff_wire`, converted by `E4_program`, run at fuel 1000
         on both instances.  Outcome, answer, exits, the fiber-table projection, the trace
@@ -182,6 +187,66 @@ let p_level (f : E.term) : E.eff =
         ( E.Eff_succeed (nat_lit 10),
           E.Eff_perform (E.Native_op_refUpdateAndGetWith f, E.Term_var 0) ) )
 
+(* The list fold with two binders (decisions row 228).  A fold's body runs at the environment
+   extended by the accumulator and the element, so it reads the accumulator at the fold's level
+   and the element one above it.  In the generated engine that environment is the point's
+   carrier, extended by `E.append` in the evaluator's own loop
+   (`list_foldl_m_at_program_eval_term_spec_0`, api_engine.ml).  The programs and their values
+   are Test/Program/FoldContract.lean's. *)
+let app f args = E.Term_app (f, List.fold_right (fun a t -> E.Terms_cons (a, t)) args E.Terms_nil)
+let nil_t = app "nil" []
+let nat_list xs = List.fold_right (fun x acc -> app "cons" [ nat_lit x; acc ]) xs nil_t
+let snoc xs x = app "append" [ xs; app "cons" [ x; nil_t ] ]
+
+(* From the head: `((10 - 1) - 2) - 3`. *)
+let p_fold : E.eff =
+  E.Eff_succeed
+    (E.Term_fold (None, nat_list [ 1; 2; 3 ], nat_lit 10, app "sub" [ E.Term_var 0; E.Term_var 1 ]))
+
+(* A bound `100`; the body reads it below the fold's level: `(0 + (1 + 100)) + (2 + 100)`. *)
+let p_fold_capture : E.eff =
+  E.Eff_bind
+    ( E.Eff_succeed (nat_lit 100),
+      E.Eff_succeed
+        (E.Term_fold
+           ( None, nat_list [ 1; 2 ], nat_lit 0,
+             app "add" [ E.Term_var 1; app "add" [ E.Term_var 2; E.Term_var 0 ] ] )) )
+
+(* A fold inside a fold, with a stated accumulator type: the inner body reads the outer element
+   (`var 2`), and pairs each item with the length of its own list. *)
+let p_fold_nested : E.eff =
+  E.Eff_bind
+    ( E.Eff_succeed (app "cons" [ nat_list [ 1; 2 ]; app "cons" [ nat_list [ 3 ]; nil_t ] ]),
+      E.Eff_succeed
+        (E.Term_fold
+           ( Some (E.Ty_list (E.Ty_prod (E.Ty_nat, E.Ty_nat))), E.Term_var 0, nil_t,
+             E.Term_fold
+               ( None, E.Term_var 2, E.Term_var 1,
+                 snoc (E.Term_var 3) (app "tuple" [ E.Term_var 4; app "length" [ E.Term_var 2 ] ]) ) )) )
+
+(* `Ref.make(5)`, then `Ref.modify(ref, a => [fold(xs, a, (b, x) => b + x), a])`: the term's
+   binder is `var 1`, so the fold inside it binds `var 2` and `var 3`.  One store step answers
+   `5 + 1 + 2 + 3` and stores the `5` it read. *)
+let p_fold_in_op : E.eff =
+  E.Eff_bind
+    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+      E.Eff_perform
+        ( E.Native_op_refModifyWith
+            (app "pair"
+               [ E.Term_fold
+                   ( None, nat_list [ 1; 2; 3 ], E.Term_var 1,
+                     app "add" [ E.Term_var 2; E.Term_var 3 ] );
+                 E.Term_var 1 ]),
+          E.Term_var 0 ) )
+
+(* An empty list answers the initial value, and the body, which would refuse, is not run. *)
+let p_fold_empty : E.eff =
+  E.Eff_succeed (E.Term_fold (None, nil_t, nat_lit 7, E.Term_tupleAt (E.Term_var 1, 5)))
+
+(* A body that refuses on an element refuses the fold: no partial answer. *)
+let p_fold_refuses : E.eff =
+  E.Eff_succeed (E.Term_fold (None, nat_list [ 1; 2 ], nat_lit 0, E.Term_tupleAt (E.Term_var 1, 0)))
+
 (* ================================================================ one report per run *)
 
 type report = {
@@ -292,7 +357,17 @@ let g0 () =
      level up is out of scope: the store step stops and the machine answers the thunk's pure
      value, the unit. *)
   one "pLevel@1" (p_level (succ_at 1)) "finished" 1 (Some "success 11");
-  one "pLevel@3" (p_level (succ_at 3)) "finished" 1 (Some "success unit")
+  one "pLevel@3" (p_level (succ_at 3)) "finished" 1 (Some "success unit");
+  (* The list fold, on both carriers, against Lean's pinned values. *)
+  one "pFold" p_fold "finished" 1 (Some "success 4");
+  one "pFoldCapture" p_fold_capture "finished" 1 (Some "success 203");
+  one "pFoldNested" p_fold_nested "finished" 1
+    (Some "success list[list[1,2],list[2,2],list[3,1]]");
+  one "pFoldInOp" p_fold_in_op "finished" 1 (Some "success 11");
+  (* Controls.  An empty list answers the initial value and never runs the body.  A body that
+     refuses on an element refuses the fold, and the machine answers its wrong-shape defect. *)
+  one "pFoldEmpty" p_fold_empty "finished" 1 (Some "success 7");
+  one "pFoldRefuses" p_fold_refuses "finished" 1 (Some "failure [die(badName)]")
 
 (* ================================================================ 2. the 37 goldens *)
 
@@ -351,7 +426,8 @@ let sample_terms =
     E.Term_record (["x", (true, E.Ty_nat)], [], E.Terms_nil);
     E.Term_field (E.Field_read_mode_required, a_term, "a-b");
     E.Term_recordSet (a_term, "__proto__", E.Term_lit E.Lit_unit);
-    E.Term_tupleAt (a_term, 1) ]
+    E.Term_tupleAt (a_term, 1);
+    E.Term_fold (Some E.Ty_nat, a_term, E.Term_lit E.Lit_unit, E.Term_var 1) ]
 
 let sample_decisions =
   [ E.Decision_bool; E.Decision_option; E.Decision_tag "Found"; E.Decision_recordTag "Found" ]

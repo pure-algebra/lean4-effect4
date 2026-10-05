@@ -37,7 +37,7 @@
  *    identifiers below are still one function each, so the finding stands until the state
  *    plan's T5 prints the term itself.
  */
-import { Cause, Effect, Exit, Option, Scope } from "effect"
+import { Cause, Deferred, Effect, Exit, Option, Ref, Scope } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
 import * as Reactivity from "effect/unstable/reactivity/Reactivity"
 import { SqliteClient } from "@effect/sql-sqlite-bun"
@@ -52,6 +52,21 @@ export * from "./prelude-atoms.gen.ts"
 export { recordValue, recordRequired, recordOptional, recordSet, caseTagR } from "./records.ts"
 export { tupleAt } from "./tuples.ts"
 import * as Atoms from "./prelude-atoms.gen.ts"
+
+// ---- the list fold's printed head (`Codegen/ListFold.lean`, decisions row 228) -------------
+
+/** `Term.fold accTy list init body`, printed `fold(list, init, (acc, x) => body)`: the body
+ * runs once for each element, from the head, and the empty list answers `init` (`evalTerm`'s
+ * clause, `src/Effect4/Machine/Term.lean`). `reduce` with an initial value has that order.
+ *
+ * Without a type argument both parameters are inferred: `B` from `init`, where a fresh literal
+ * widens as Lean's literal rule does, and `A` from the list. A stated accumulator type is the
+ * call's one type argument, `fold<B>(…)`. TypeScript infers no type argument once one is
+ * written, so the element type then takes its default, `any`: the body of a fold with a stated
+ * type is checked against `B` and not against its element. Lean's checker types the element
+ * (`argTy`'s fold arm); this lane does not repeat that check for a stated type. */
+export const fold = <B, A = any>(xs: ReadonlyArray<A>, init: B, step: (acc: B, x: A) => B): B =>
+  xs.reduce(step, init)
 
 // ---- `select`'s printed heads (`Codegen/Print.lean`, `Head.optionCase`/`Head.caseTag`) ----
 
@@ -170,6 +185,21 @@ export const selfTestCases: ReadonlyArray<{
   { atom: "mapKeys", name: "map keys follow UTF-8 order", apply: () => JSON.stringify(Atoms.mapKeys({ "2": 2, "10": 10 })), expected: '["10","2"]' },
   { atom: "mapEntries", name: "map entries use ordinary pairs", apply: () => JSON.stringify(Atoms.mapEntries({ b: 2, a: 1 })), expected: '[["a",1],["b",2]]' },
   { atom: "mapFromEntries", name: "last repeated map key wins", apply: () => Option.getOrUndefined(Atoms.mapGet(Atoms.mapFromEntries([["a", 1], ["a", 2]]), "a")), expected: 2 },
+  { atom: "take", name: "take [1, 2, 3] 2", apply: () => JSON.stringify(Atoms.take([1, 2, 3], 2)), expected: "[1,2]" },
+  { atom: "take", name: "take past the end is the list", apply: () => JSON.stringify(Atoms.take([1, 2, 3], 9)), expected: "[1,2,3]" },
+  { atom: "drop", name: "drop [1, 2, 3] 2", apply: () => JSON.stringify(Atoms.drop([1, 2, 3], 2)), expected: "[3]" },
+  { atom: "drop", name: "drop past the end is empty", apply: () => JSON.stringify(Atoms.drop([1, 2, 3], 9)), expected: "[]" },
+  { atom: "sameHandle", name: "a Ref is the same handle as itself",
+    apply: () => { const cell = Effect.runSync(Ref.make(0)); return Atoms.sameHandle(cell, cell) }, expected: true },
+  { atom: "sameHandle", name: "two Refs that hold one value are two handles",
+    apply: () => Atoms.sameHandle(Effect.runSync(Ref.make(0)), Effect.runSync(Ref.make(0))), expected: false },
+  { atom: "sameHandle", name: "a Deferred is the same handle as itself",
+    apply: () => { const cell = Effect.runSync(Deferred.make<number>()); return Atoms.sameHandle(cell, cell) }, expected: true },
+  { atom: "sameHandle", name: "two Deferreds are two handles",
+    apply: () => Atoms.sameHandle(Effect.runSync(Deferred.make<number>()), Effect.runSync(Deferred.make<number>())), expected: false },
+  { atom: "fold", name: "fold runs from the head", apply: () => fold([1, 2, 3], 10, (acc, x) => acc - x), expected: 4 },
+  { atom: "fold", name: "fold keeps the list's order", apply: () => JSON.stringify(fold<ReadonlyArray<number>>([1, 2, 3], [], (acc, x) => [...acc, x])), expected: "[1,2,3]" },
+  { atom: "fold", name: "fold of the empty list is its initial value", apply: () => fold([] as ReadonlyArray<number>, 7, (acc, x) => acc + x), expected: 7 },
   { atom: "incr", name: "incr 1", apply: () => incr(1), expected: 2 },
   { atom: "double", name: "double 4", apply: () => double(4), expected: 8 },
   { atom: "takeAndBump", name: "takeAndBump 4", apply: () => takeAndBump(4), expected: 5 },

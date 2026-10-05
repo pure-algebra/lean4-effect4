@@ -111,6 +111,33 @@ The application example in `Test/Api/TupleAuthoring.lean` constructs, selects, c
 Each branch receives the whole narrowed record, including its field names.
 `Test/Program/RecordTag.lean` checks branch typing and impossible branches.
 
+## Folds over lists
+
+`Authoring.fold acc item accTy list init body` folds a list from its head.
+The body sees the accumulator under the name `acc` and the element under the name `item`.
+It also reads every name that is in scope at the fold.
+`accTy` states the accumulator's type where it is wider than the initial value's type.
+An accumulator that starts as the empty list needs it.
+
+```lean
+def total : Authoring.Src NativeOp :=
+  Authoring.bind "base" (Authoring.succeed (Authoring.nat 100))
+    (Authoring.succeed (Authoring.fold "total" "x" none
+      (Authoring.app "cons" [Authoring.nat 1, Authoring.app "cons" [Authoring.nat 2, Authoring.app "nil" []]])
+      (Authoring.nat 0)
+      (Authoring.app "add" [Authoring.var "total",
+        Authoring.app "add" [Authoring.var "x", Authoring.var "base"]])))
+```
+
+`Effect4.Api.author total` checks this program at the answer type `nat`, and its run answers `203`.
+A fold is pure, so a `Ref.modify` whose term holds one stays one step of the store.
+The atoms `take` and `drop` split a list at a count.
+The atom `sameHandle` compares two `Ref` handles, or two `Deferred` handles, by identity.
+A fold in a term position prints as `fold(list, init, (acc, x) => body)` and reads back.
+A fold with a stated type is printed and not read.
+The printer refuses a fold inside an operation's term by the row's name.
+`Test/Program/FoldContract.lean` holds the checked examples and the refusals.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact

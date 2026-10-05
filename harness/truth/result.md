@@ -43,5 +43,6 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pFailPayload | fail [{"fail":{"payload":{"id":9,"_tag":"NotFound"}}}] | fail [{"fail":{"payload":{"_tag":"NotFound","id":9}}}] | yes | yes | yes | runSyncExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
 | pTagPayload | success 1 | success 1 | yes | yes | yes | runSyncExit | same value |
 | pInterruptEscape | interrupt [{"interrupt":0}] | fail [{"fail":42}] | NO | NO | yes | runPromiseExit | kind: Lean interrupt, rc.112 fail; schedule differ at row 4: Lean "exited 0 interrupt", rc.112 "exited 0 fail"; U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42 |
+| pFold | success 8 | success 8 | yes | yes | yes | runSyncExit | same value |
 
-PASS: 38 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 39 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

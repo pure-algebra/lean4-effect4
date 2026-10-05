@@ -18,7 +18,8 @@ open Effect4.Program
    "causeIsFail", "causeError", "causeIsDie", "causeIsInterrupt", "or", "and", "tagIs",
    "isSome", "getOrElse", "ite", "some", "none", "mul",
    "nil", "cons", "get", "length", "append", "sub", "div", "mod", "concat",
-   "mapEmpty", "mapGet", "mapSet", "mapKeys", "mapEntries", "mapFromEntries", "tuple"]
+   "mapEmpty", "mapGet", "mapSet", "mapKeys", "mapEntries", "mapFromEntries", "tuple",
+   "take", "drop", "sameHandle"]
 -- the tag test (DI-39, part 4 commit 3): a string or literal tag, any tested value; total on
 -- values — true exactly on a pair whose first component is the tag
 #guard NativeAtom.arity .tagIs = some 2

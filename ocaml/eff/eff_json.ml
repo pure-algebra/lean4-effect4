@@ -62,6 +62,7 @@ let rec json_term (v : term) : Eff_json_text.t =
   | Term_field (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "field"; json_field_read_mode a0; json_term a1; Eff_json_text.String a2]
   | Term_recordSet (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "recordSet"; json_term a0; Eff_json_text.String a1; json_term a2]
   | Term_tupleAt (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "tupleAt"; json_term a0; Eff_json_text.Int a1]
+  | Term_fold (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "fold"; (match a0 with None -> Eff_json_text.Null | Some y -> json_ty y); json_term a1; json_term a2; json_term a3]
 and json_terms (v : terms) : Eff_json_text.t =
   match v with
   | Terms_nil -> Eff_json_text.Array [Eff_json_text.String "nil"]

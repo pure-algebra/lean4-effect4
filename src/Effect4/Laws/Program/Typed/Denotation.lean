@@ -538,16 +538,53 @@ theorem atom_progress (a : NativeAtom) (w : World) (tys : List Ty) (ty : Ty) (vs
     obtain ⟨value, rfl, hf⟩ := hfit.singleton_inv
     obtain ⟨out, he, _⟩ := MapFits.fromEntries hf
     exact Option.isSome_iff_exists.mpr ⟨out, he⟩
+  -- a prefix and its rest answer on every list and every count (decisions row 228)
+  | listTake =>
+    refine progress_of_poly rfl (by decide) (fun w σ vs hfit => ?_) w tys ty vs hty hfit
+    obtain ⟨l, i, rfl, hl, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := fits_nat_inv hi
+    obtain ⟨elems, he⟩ := asList_of_fits hl
+    simp only [NativeAtom.eval, he, Option.map_some, Option.isSome_some]
+  | listDrop =>
+    refine progress_of_poly rfl (by decide) (fun w σ vs hfit => ?_) w tys ty vs hty hfit
+    obtain ⟨l, i, rfl, hl, hi⟩ := hfit.pair_inv
+    obtain ⟨n, rfl⟩ := fits_nat_inv hi
+    obtain ⟨elems, he⟩ := asList_of_fits hl
+    simp only [NativeAtom.eval, he, Option.map_some, Option.isSome_some]
+  -- two members of one admitted handle type carry one kind byte, so the identity test answers
+  -- (decisions row 229): the typing excludes the evaluation's two-kinds refusal
+  | sameHandle =>
+    simp only [NativeAtom.typeOf, NativeAtom.spec, NativeAtom.Scheme.apply,
+      NativeAtom.CustomScheme.apply, NativeAtom.sameHandleRule] at hty
+    split at hty
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨k, rfl, _⟩ := fits_refOf_inv hx
+      obtain ⟨k', rfl, _⟩ := fits_refOf_inv hy
+      show (if (2 : UInt8) = 2 then some (Val.bool (decide (k.index = k'.index)))
+        else none).isSome = true
+      rw [if_pos rfl]
+      rfl
+    · obtain ⟨x, y, rfl, hx, hy⟩ := hfit.pair_inv
+      obtain ⟨k, rfl, _⟩ := fits_deferredOf_inv hx
+      obtain ⟨k', rfl, _⟩ := fits_deferredOf_inv hy
+      show (if (3 : UInt8) = 3 then some (Val.bool (decide (k.index = k'.index)))
+        else none).isSome = true
+      rw [if_pos rfl]
+      rfl
+    · exact nomatch hty
 
 section TermProgress
 
-variable {sig : Signature NativeOp} {w : World} {vals : List Val} {env : List Ty}
+variable {sig : Signature NativeOp} {w : World}
 
 mutual
 /-- **Term progress at a world** (proved): a term the checker types, over values that fit their
 types at a world, evaluates, and its value fits the term's type (`atomFits`). Under any signature
-whose atoms are the native table's; the const-generic flag is the signature's own. -/
-theorem evalTerm_progress (hatom : sig.atomOf = nativeAtomTy) (hfit : FitsAll w vals env) :
+whose atoms are the native table's; the const-generic flag is the signature's own. The world is
+fixed. The environment is the theorem's own binder, since a list fold's body runs at the
+environment extended by its accumulator and its element (decisions row 228). -/
+theorem evalTerm_progress {vals : List Val} {env : List Ty} (hatom : sig.atomOf = nativeAtomTy)
+    (hfit : FitsAll w vals env) :
     ∀ (t : Term) (ty : Ty), termTy sig env t = some ty →
       ∃ v, evalTerm vals t = some v ∧ Fits w v ty
   | .var i, ty, hty => hfit.getElem? hty
@@ -612,10 +649,25 @@ theorem evalTerm_progress (hatom : sig.atomOf = nativeAtomTy) (hfit : FitsAll w 
     refine ⟨out, ?_, hfitout⟩
     show (evalTerm vals target).bind (fun value => Val.tupleAt? value index) = some out
     rw [he, Option.bind_some, hout]
+  -- the term typer's rule discharges the premises of the fold's semantic rule (`fold_fits`):
+  -- the list and the initial value evaluate into their types, the initial value's type is
+  -- below the fold's, and each step runs at the environment extended by a member of the
+  -- fold's type and an element, so it answers a member of the body's type, which is below it
+  | .fold accTy list init body, ty, hty => by
+    obtain ⟨item, initType, bodyType, hlist, hinit, _, hsubInit, hbody, hsubBody⟩ :=
+      termTy_fold_inv hty
+    obtain ⟨value, hlv, hfitList⟩ := evalTerm_progress hatom hfit list (.list item) hlist
+    obtain ⟨start, hstart, hfitStart⟩ := evalTerm_progress hatom hfit init initType hinit
+    refine fold_fits hlv hfitList hstart (fits_subN w hsubInit start hfitStart) ?_
+    intro acc x hacc hx
+    obtain ⟨next, hnext, hfitNext⟩ :=
+      evalTerm_progress hatom (hfit.append_pair hacc hx) body bodyType hbody
+    exact ⟨next, hnext, fits_subN w hsubBody next hfitNext⟩
 termination_by t => sizeOf t
 
 /-- The argument list's form. -/
-theorem evalTerms_progress (hatom : sig.atomOf = nativeAtomTy) (hfit : FitsAll w vals env) :
+theorem evalTerms_progress {vals : List Val} {env : List Ty}
+    (hatom : sig.atomOf = nativeAtomTy) (hfit : FitsAll w vals env) :
     ∀ (const : Bool) (ts : Terms) (tl : List Ty),
       argsTy sig env const ts = some tl → ∃ vs, evalTerms vals ts = some vs ∧ FitsAll w vs tl
   | _, .nil, tl, hty => by
@@ -2302,27 +2354,10 @@ one. `exit` reifies its body's exit, an inline exit typed by `inlineYield_typed`
 
 /-! ### Built-in rows -/
 
-/-- A member of `refOf A` is a cell declared at a type equivalent to `A` in the checker's order
-(`RefDeclared`: both `subN` directions, not syntactic equality). A step of `denote-typed`; its
-consumers are `syncRow_typed`'s `Ref` arms. -/
-theorem fits_refOf_inv {w : World} {v : Val} {A : Ty} (h : Fits w v (.refOf A)) :
-    ∃ k, v = Val.cell k ∧ RefDeclared w k A := by
-  simp only [Fits] at h
-  split at h
-  · rename_i index
-    exact ⟨⟨index⟩, rfl, h⟩
-  · exact h.elim
-
-/-- A member of `deferredOf A E` is a deferred declared at columns equivalent to `(A, E)` in the
-checker's order. A step of `denote-typed`; its consumers are `syncRow_typed`'s `Deferred` arms,
-`deferredAwait_arm` and `inlineYield_typed`. -/
-theorem fits_deferredOf_inv {w : World} {v : Val} {A E : Ty} (h : Fits w v (.deferredOf A E)) :
-    ∃ k, v = Val.promise k ∧ PromiseDeclared w k A E := by
-  simp only [Fits] at h
-  split at h
-  · rename_i index
-    exact ⟨⟨index⟩, rfl, h⟩
-  · exact h.elim
+/-! The two handle inversions `fits_refOf_inv` and `fits_deferredOf_inv` live in
+`Typed/Membership.lean` since the list fold (decisions rows 228 and 229): the identity atom's
+membership case reads them, and membership does not import the denotation. Names and statements
+are unchanged. -/
 
 /-- A cell's declaration survives compatible world extension (`leHost` extends the reference
 table). -/

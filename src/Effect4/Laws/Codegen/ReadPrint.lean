@@ -357,15 +357,15 @@ variable {classes : Classes}
 statement declares for what follows it (`0` at every other family). -/
 abbrev Dom (_ : EffFam) : Type := Nat → Option Nat
 
-/-- A leaf reads back from its printing at depth `d`: a term or cause in scope, a key whose type
-spells, fork options whose daemon flag the row spells, no type annotation (B19: types are not
-read), and a layer path whose declared name decodes (the name codec has no law of its own; the
-domain runs it). -/
+/-- A leaf reads back from its printing at depth `d`: a term or cause in scope whose folds
+state no accumulator type, a key whose type spells, fork options whose daemon flag the row
+spells, no type annotation (B19: types are not read), and a layer path whose declared name
+decodes (the name codec has no law of its own; the domain runs it). -/
 def leafReadable {R : EffFam → Type} (classes : Classes) (sig : Signature Op) (d : Nat)
     (daemon : Bool) : ArgF Op R → Bool
-  | .term t => t.scoped d && t.covers classes
-  | .optTerm (some t) => t.scoped d && t.covers classes
-  | .cause c => CauseTerm.scoped d c && c.covers classes
+  | .term t => t.scoped d && t.covers classes && t.unannotated
+  | .optTerm (some t) => t.scoped d && t.covers classes && t.unannotated
+  | .cause c => CauseTerm.scoped d c && c.covers classes && c.unannotated
   | .key k => keyReadable sig k
   | .forkOptions o => o.daemon == daemon
   | .optTy (some _) => false
@@ -425,7 +425,7 @@ where
           match sig.opAtLevel n 0 op with
           | some face =>
             if sig.dom face && requestReadable (sig.rowOf face) n request &&
-                request.covers classes then
+                request.covers classes && request.unannotated then
               some 0
             else none
           | none => none
@@ -813,12 +813,14 @@ theorem findSome?_zipIdx {α β : Type} (f : α × Nat → Option β) :
 
 /-! ## What the row call prints: its head is the spelling or none, and it is node-like -/
 
-theorem printRow_head {row : Row} {r : Term} {x : Expr} (h : printRow row r = .ok x) :
+theorem printRow_head {n : Nat} {row : Row} {r : Term} {x : Expr}
+    (h : printRow n row r = .ok x) :
     exprHead? x = none ∨ exprHead? x = some row.spelling := by
   unfold printRow at h
   aesop (add norm simp [printRowHead, printMethod, exprHead?])
 
-theorem printRow_nodeLike {row : Row} {r : Term} {x : Expr} (h : printRow row r = .ok x) :
+theorem printRow_nodeLike {n : Nat} {row : Row} {r : Term} {x : Expr}
+    (h : printRow n row r = .ok x) :
     nodeLike x = true := by
   unfold printRow at h
   aesop (add norm simp [printRowHead, printMethod, nodeLike])
@@ -901,7 +903,7 @@ theorem rowPrint_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Carrie
       ((∃ t τ, row.out = .tpl t ∧ printArgs sig fam n (.tpl t) args 0 = .ok τ ∧
           inst n τ t = some x) ∨
        (∃ op face r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
-          sig.opAtLevel n 0 op = some face ∧ printRow (sig.rowOf face) r = .ok x)) := by
+          sig.opAtLevel n 0 op = some face ∧ printRow n (sig.rowOf face) r = .ok x)) := by
   unfold tableLayer.rowPrint at h
   aesop
 
@@ -912,7 +914,8 @@ theorem rowDom_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Dom)} {n
       ((∃ t, row.out = .tpl t ∧ argsReadable classes sig fam n (.tpl t) (rowDaemon row) args 0 = true) ∨
        (∃ op face r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
           sig.opAtLevel n 0 op = some face ∧ sig.dom face = true ∧
-          requestReadable (sig.rowOf face) n r = true ∧ r.covers classes = true)) := by
+          requestReadable (sig.rowOf face) n r = true ∧ r.covers classes = true ∧
+          r.unannotated = true)) := by
   unfold domLayer.rowDom at h
   aesop
 
@@ -1125,8 +1128,8 @@ theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.R
     (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op face : Op} {r : Term}
     (hface : sig.opAtLevel n 0 op = some face)
     (hd : sig.dom face = true) (hreq : requestReadable (sig.rowOf face) n r = true)
-    (hc : r.covers classes = true)
-    (hp : printRow (sig.rowOf face) r = .ok x) (hfam' : fam = .eff) :
+    (hc : r.covers classes = true) (hu : r.unannotated = true)
+    (hp : printRow n (sig.rowOf face) r = .ok x) (hfam' : fam = .eff) :
     readRow classes sig spell fam n x row k child children block same =
       some (.ok (hfam' ▸ (Eff.perform op r : EffSelfCarrier Op .eff))) := by
   subst hfam'
@@ -1134,14 +1137,14 @@ theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.R
   simp only at hfam hrow
   subst hfam hrow
   unfold readRow
-  simp only [↓reduceIte, readPerform, read_printRow hl face hd r hreq hc hp, rowAnswer,
+  simp only [↓reduceIte, readPerform, read_printRow hl face hd r hreq hc hu hp, rowAnswer,
     Except.bind, atNodeLevel, hl.opAtLevel_symm n 0 op face hface, Except.mapError]
 
 /-! ## No row before the printing row fires -/
 
 /-- A skeleton with a reserved head does not match the row call's image. -/
-theorem matchT_none_of_reserved (hl : LawfulSpelling sig spell) {op : Op} {r : Term}
-    (hp : printRow (sig.rowOf op) r = .ok x) {t : Tpl} {h : String} (hh : t.head? = some h)
+theorem matchT_none_of_reserved (hl : LawfulSpelling sig spell) {op : Op} {r : Term} {m : Nat}
+    (hp : printRow m (sig.rowOf op) r = .ok x) {t : Tpl} {h : String} (hh : t.head? = some h)
     (hres : h ∈ reserved) : matchT n t x = none := by
   cases hm : matchT n t x with
   | none => rfl
@@ -1153,7 +1156,8 @@ theorem matchT_none_of_reserved (hl : LawfulSpelling sig spell) {op : Op} {r : T
 
 /-- No action row reads the row call's image. -/
 theorem readT_action_none_of_printRow (hl : LawfulSpelling sig spell) {op : Op} {r : Term}
-    (hp : printRow (sig.rowOf op) r = .ok x) (d : Nat) : readT classes sig spell .action d x = none := by
+    {m : Nat} (hp : printRow m (sig.rowOf op) r = .ok x) (d : Nat) :
+    readT classes sig spell .action d x = none := by
   rw [readT, List.findSome?_eq_none_iff]
   intro p hmem
   obtain ⟨row, k⟩ := p
@@ -1246,7 +1250,7 @@ theorem earlier_none_path {i : Nat} (hout : row.out = .tpl (.hole i))
 /-- Before the row call: a skeleton's head is reserved and the image's is a spelling; the
 transparent row hands the image to the action family, which reads nothing of it. -/
 theorem earlier_none_rowCall (hl : LawfulSpelling sig spell) (hrow : row.out = .rowCall)
-    {op : Op} {r : Term} (hp : printRow (sig.rowOf op) r = .ok x)
+    {op : Op} {r : Term} (hp : printRow n (sig.rowOf op) r = .ok x)
     (hsame : ∀ hk d, same .action hk d = none) :
     readRow classes sig spell fam n x rj j child children block same = none := by
   unfold rowsApart at hap
@@ -1575,7 +1579,8 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
           | _ => cases ha
       | _ => exact absurd rfl hrigid
   · -- the row call
-    rcases hcase' with ⟨_, hout', _⟩ | ⟨op', face', r', hout', hargs', hface', hd', hreq, hcov⟩
+    rcases hcase' with
+      ⟨_, hout', _⟩ | ⟨op', face', r', hout', hargs', hface', hd', hreq, hcov, hun⟩
     · rw [hout] at hout'; cases hout'
     have hfamily := table_fact table_family hmem
     simp only [rowFamily, hout, beq_iff_eq] at hfamily
@@ -1592,7 +1597,7 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     · rcases hother j hj rj hrj with hne | hap
       · exact readRow_none_of_fam hne
       · exact earlier_none_rowCall hap hl hout hp' (fun hk d => readT_action_none_of_printRow hl hp' d)
-    · exact readRow_rowCall_print hl hout hfamily hface hd' hreq hcov hp' rfl
+    · exact readRow_rowCall_print hl hout hfamily hface hd' hreq hcov hun hp' rfl
 
 end Step
 

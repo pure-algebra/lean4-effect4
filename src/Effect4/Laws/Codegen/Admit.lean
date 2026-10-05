@@ -195,7 +195,8 @@ theorem envelopeCheck_iff (name : String) (ty : EffTy) (classes : Classes.Classe
 /-- A module's classes are the classes its checked declarations read back to: the class table's
 declarations are `checkedDecl`'s (decisions row 120). Step of `ModuleEmission.admit` and of the
 emitted module's reading (R8). -/
-theorem moduleClasses_checked {Op : Type} {sig : Signature Op} {name : String} {ty : EffTy}
+theorem moduleClasses_checked {Op : Type} [ScopedOp Op] {sig : Signature Op} {name : String}
+    {ty : EffTy}
     {program : Eff Op} {classes : Classes.Classes} {classDecls : List TypeScript.ClassDecl}
     (h : ClassTable.moduleClasses sig name ty program = .ok (classes, classDecls)) :
     classes.mapM ClassTable.checkedDecl = .ok classDecls := by

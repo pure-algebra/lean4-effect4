@@ -115,6 +115,7 @@ def term? (sig : Signature Op) (env : TyEnv) (p : List Nat) (t : Term) : Except 
   | none => .error ⟨p, match TermRefusal.diagnose sig env t with
       | some (.record why) => .recordTerm why
       | some (.tuple why) => .tupleTerm why
+      | some (.fold why) => .foldTerm why
       | none => .term t⟩
 
 /-- A cause's type, or a located explanation when a leaf term failed. -/
@@ -125,12 +126,8 @@ def cause? (sig : Signature Op) (env : TyEnv) (p : List Nat) (cause : CauseTerm)
   | none => .error ⟨p, match TermRefusal.diagnoseCause sig env cause with
       | some (.record why) => .recordCause why
       | some (.tuple why) => .tupleCause why
+      | some (.fold why) => .foldCause why
       | none => .cause cause⟩
-
-/-- The element type of a list type. -/
-def listOf? : Ty → Option Ty
-  | .list t => some t
-  | _ => none
 
 /-- The value and error types of an exit type. -/
 def exitOf? : Ty → Option (Ty × Ty)

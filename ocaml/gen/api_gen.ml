@@ -618,6 +618,7 @@ and term =
   | Term_field of field_read_mode * term * string
   | Term_recordSet of term * string * term
   | Term_tupleAt of term * int
+  | Term_fold of ty option * term * term * term
 and field_read_mode = FieldReadMode_required | FieldReadMode_optional
 and ('e, 'd, 'i, 'a) reason = Reason_fail of 'e * 'a reason_annotations | Reason_die of 'd * 'a reason_annotations | Reason_interrupt of 'i option * 'a reason_annotations
 and decision =
@@ -792,6 +793,9 @@ and native_atom =
   | NativeAtom_mapEntries
   | NativeAtom_mapFromEntries
   | NativeAtom_tuple
+  | NativeAtom_listTake
+  | NativeAtom_listDrop
+  | NativeAtom_sameHandle
 and reason_tag = ReasonTag_fail | ReasonTag_die | ReasonTag_interrupt
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) bucket = { priority : int; tasks : ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) task list }
 and stuck = Stuck_unknownFiber of fiber_id | Stuck_unknownScope of int | Stuck_unknownRace of int
@@ -1346,125 +1350,134 @@ let program_lit_to_val (x_1 : lit) : val_ option =
 let program_native_atom_of_name_opt (x_1 : string) : native_atom option =
   let _x_2 = "succ" in
   let _x_3 = x_1 = _x_2 in
-  if _x_3 then (let _x_161 = NativeAtom_succ in
-    Some _x_161) else (let _x_4 = "pred" in
+  if _x_3 then (let _x_173 = NativeAtom_succ in
+    Some _x_173) else (let _x_4 = "pred" in
     let _x_5 = x_1 = _x_4 in
-    if _x_5 then (let _x_159 = NativeAtom_pred in
-      Some _x_159) else (let _x_6 = "isZero" in
+    if _x_5 then (let _x_171 = NativeAtom_pred in
+      Some _x_171) else (let _x_6 = "isZero" in
       let _x_7 = x_1 = _x_6 in
-      if _x_7 then (let _x_157 = NativeAtom_isZero in
-        Some _x_157) else (let _x_8 = "not" in
+      if _x_7 then (let _x_169 = NativeAtom_isZero in
+        Some _x_169) else (let _x_8 = "not" in
         let _x_9 = x_1 = _x_8 in
-        if _x_9 then (let _x_155 = NativeAtom_boolNot in
-          Some _x_155) else (let _x_10 = "add" in
+        if _x_9 then (let _x_167 = NativeAtom_boolNot in
+          Some _x_167) else (let _x_10 = "add" in
           let _x_11 = x_1 = _x_10 in
-          if _x_11 then (let _x_153 = NativeAtom_add in
-            Some _x_153) else (let _x_12 = "lt" in
+          if _x_11 then (let _x_165 = NativeAtom_add in
+            Some _x_165) else (let _x_12 = "lt" in
             let _x_13 = x_1 = _x_12 in
-            if _x_13 then (let _x_151 = NativeAtom_lt in
-              Some _x_151) else (let _x_14 = "eq" in
+            if _x_13 then (let _x_163 = NativeAtom_lt in
+              Some _x_163) else (let _x_14 = "eq" in
               let _x_15 = x_1 = _x_14 in
-              if _x_15 then (let _x_149 = NativeAtom_eq in
-                Some _x_149) else (let _x_16 = "pair" in
+              if _x_15 then (let _x_161 = NativeAtom_eq in
+                Some _x_161) else (let _x_16 = "pair" in
                 let _x_17 = x_1 = _x_16 in
-                if _x_17 then (let _x_147 = NativeAtom_pair in
-                  Some _x_147) else (let _x_18 = "fst" in
+                if _x_17 then (let _x_159 = NativeAtom_pair in
+                  Some _x_159) else (let _x_18 = "fst" in
                   let _x_19 = x_1 = _x_18 in
-                  if _x_19 then (let _x_145 = NativeAtom_fst in
-                    Some _x_145) else (let _x_20 = "snd" in
+                  if _x_19 then (let _x_157 = NativeAtom_fst in
+                    Some _x_157) else (let _x_20 = "snd" in
                     let _x_21 = x_1 = _x_20 in
-                    if _x_21 then (let _x_143 = NativeAtom_snd in
-                      Some _x_143) else (let _x_22 = "strings" in
+                    if _x_21 then (let _x_155 = NativeAtom_snd in
+                      Some _x_155) else (let _x_22 = "strings" in
                       let _x_23 = x_1 = _x_22 in
-                      if _x_23 then (let _x_141 = NativeAtom_strings in
-                        Some _x_141) else (let _x_24 = "causeIsFail" in
+                      if _x_23 then (let _x_153 = NativeAtom_strings in
+                        Some _x_153) else (let _x_24 = "causeIsFail" in
                         let _x_25 = x_1 = _x_24 in
-                        if _x_25 then (let _x_139 = NativeAtom_causeIsFail in
-                          Some _x_139) else (let _x_26 = "causeError" in
+                        if _x_25 then (let _x_151 = NativeAtom_causeIsFail in
+                          Some _x_151) else (let _x_26 = "causeError" in
                           let _x_27 = x_1 = _x_26 in
-                          if _x_27 then (let _x_137 = NativeAtom_causeError in
-                            Some _x_137) else (let _x_28 = "causeIsDie" in
+                          if _x_27 then (let _x_149 = NativeAtom_causeError in
+                            Some _x_149) else (let _x_28 = "causeIsDie" in
                             let _x_29 = x_1 = _x_28 in
-                            if _x_29 then (let _x_135 = NativeAtom_causeIsDie in
-                              Some _x_135) else (let _x_30 = "causeIsInterrupt" in
+                            if _x_29 then (let _x_147 = NativeAtom_causeIsDie in
+                              Some _x_147) else (let _x_30 = "causeIsInterrupt" in
                               let _x_31 = x_1 = _x_30 in
-                              if _x_31 then (let _x_133 = NativeAtom_causeIsInterrupt in
-                                Some _x_133) else (let _x_32 = "or" in
+                              if _x_31 then (let _x_145 = NativeAtom_causeIsInterrupt in
+                                Some _x_145) else (let _x_32 = "or" in
                                 let _x_33 = x_1 = _x_32 in
-                                if _x_33 then (let _x_131 = NativeAtom_boolOr in
-                                  Some _x_131) else (let _x_34 = "and" in
+                                if _x_33 then (let _x_143 = NativeAtom_boolOr in
+                                  Some _x_143) else (let _x_34 = "and" in
                                   let _x_35 = x_1 = _x_34 in
-                                  if _x_35 then (let _x_129 = NativeAtom_boolAnd in
-                                    Some _x_129) else (let _x_36 = "tagIs" in
+                                  if _x_35 then (let _x_141 = NativeAtom_boolAnd in
+                                    Some _x_141) else (let _x_36 = "tagIs" in
                                     let _x_37 = x_1 = _x_36 in
-                                    if _x_37 then (let _x_127 = NativeAtom_tagIs in
-                                      Some _x_127) else (let _x_38 = "isSome" in
+                                    if _x_37 then (let _x_139 = NativeAtom_tagIs in
+                                      Some _x_139) else (let _x_38 = "isSome" in
                                       let _x_39 = x_1 = _x_38 in
-                                      if _x_39 then (let _x_125 = NativeAtom_isSome in
-                                        Some _x_125) else (let _x_40 = "getOrElse" in
+                                      if _x_39 then (let _x_137 = NativeAtom_isSome in
+                                        Some _x_137) else (let _x_40 = "getOrElse" in
                                         let _x_41 = x_1 = _x_40 in
-                                        if _x_41 then (let _x_123 = NativeAtom_getOrElse in
-                                          Some _x_123) else (let _x_42 = "ite" in
+                                        if _x_41 then (let _x_135 = NativeAtom_getOrElse in
+                                          Some _x_135) else (let _x_42 = "ite" in
                                           let _x_43 = x_1 = _x_42 in
-                                          if _x_43 then (let _x_121 = NativeAtom_ite in
-                                            Some _x_121) else (let _x_44 = "some" in
+                                          if _x_43 then (let _x_133 = NativeAtom_ite in
+                                            Some _x_133) else (let _x_44 = "some" in
                                             let _x_45 = x_1 = _x_44 in
-                                            if _x_45 then (let _x_119 = NativeAtom_optSome in
-                                              Some _x_119) else (let _x_46 = "none" in
+                                            if _x_45 then (let _x_131 = NativeAtom_optSome in
+                                              Some _x_131) else (let _x_46 = "none" in
                                               let _x_47 = x_1 = _x_46 in
-                                              if _x_47 then (let _x_117 = NativeAtom_optNone in
-                                                Some _x_117) else (let _x_48 = "mul" in
+                                              if _x_47 then (let _x_129 = NativeAtom_optNone in
+                                                Some _x_129) else (let _x_48 = "mul" in
                                                 let _x_49 = x_1 = _x_48 in
-                                                if _x_49 then (let _x_115 = NativeAtom_mul in
-                                                  Some _x_115) else (let _x_50 = "nil" in
+                                                if _x_49 then (let _x_127 = NativeAtom_mul in
+                                                  Some _x_127) else (let _x_50 = "nil" in
                                                   let _x_51 = x_1 = _x_50 in
-                                                  if _x_51 then (let _x_113 = NativeAtom_listNil in
-                                                    Some _x_113) else (let _x_52 = "cons" in
+                                                  if _x_51 then (let _x_125 = NativeAtom_listNil in
+                                                    Some _x_125) else (let _x_52 = "cons" in
                                                     let _x_53 = x_1 = _x_52 in
-                                                    if _x_53 then (let _x_111 = NativeAtom_listCons in
-                                                      Some _x_111) else (let _x_54 = "get" in
+                                                    if _x_53 then (let _x_123 = NativeAtom_listCons in
+                                                      Some _x_123) else (let _x_54 = "get" in
                                                       let _x_55 = x_1 = _x_54 in
-                                                      if _x_55 then (let _x_109 = NativeAtom_listGet in
-                                                        Some _x_109) else (let _x_56 = "length" in
+                                                      if _x_55 then (let _x_121 = NativeAtom_listGet in
+                                                        Some _x_121) else (let _x_56 = "length" in
                                                         let _x_57 = x_1 = _x_56 in
-                                                        if _x_57 then (let _x_107 = NativeAtom_listLength in
-                                                          Some _x_107) else (let _x_58 = "append" in
+                                                        if _x_57 then (let _x_119 = NativeAtom_listLength in
+                                                          Some _x_119) else (let _x_58 = "append" in
                                                           let _x_59 = x_1 = _x_58 in
-                                                          if _x_59 then (let _x_105 = NativeAtom_listAppend in
-                                                            Some _x_105) else (let _x_60 = "sub" in
+                                                          if _x_59 then (let _x_117 = NativeAtom_listAppend in
+                                                            Some _x_117) else (let _x_60 = "sub" in
                                                             let _x_61 = x_1 = _x_60 in
-                                                            if _x_61 then (let _x_103 = NativeAtom_natSub in
-                                                              Some _x_103) else (let _x_62 = "div" in
+                                                            if _x_61 then (let _x_115 = NativeAtom_natSub in
+                                                              Some _x_115) else (let _x_62 = "div" in
                                                               let _x_63 = x_1 = _x_62 in
-                                                              if _x_63 then (let _x_101 = NativeAtom_natDiv in
-                                                                Some _x_101) else (let _x_64 = "mod" in
+                                                              if _x_63 then (let _x_113 = NativeAtom_natDiv in
+                                                                Some _x_113) else (let _x_64 = "mod" in
                                                                 let _x_65 = x_1 = _x_64 in
-                                                                if _x_65 then (let _x_99 = NativeAtom_natMod in
-                                                                  Some _x_99) else (let _x_66 = "concat" in
+                                                                if _x_65 then (let _x_111 = NativeAtom_natMod in
+                                                                  Some _x_111) else (let _x_66 = "concat" in
                                                                   let _x_67 = x_1 = _x_66 in
-                                                                  if _x_67 then (let _x_97 = NativeAtom_strConcat in
-                                                                    Some _x_97) else (let _x_68 = "mapEmpty" in
+                                                                  if _x_67 then (let _x_109 = NativeAtom_strConcat in
+                                                                    Some _x_109) else (let _x_68 = "mapEmpty" in
                                                                     let _x_69 = x_1 = _x_68 in
-                                                                    if _x_69 then (let _x_95 = NativeAtom_mapEmpty in
-                                                                      Some _x_95) else (let _x_70 = "mapGet" in
+                                                                    if _x_69 then (let _x_107 = NativeAtom_mapEmpty in
+                                                                      Some _x_107) else (let _x_70 = "mapGet" in
                                                                       let _x_71 = x_1 = _x_70 in
-                                                                      if _x_71 then (let _x_93 = NativeAtom_mapGet in
-                                                                        Some _x_93) else (let _x_72 = "mapSet" in
+                                                                      if _x_71 then (let _x_105 = NativeAtom_mapGet in
+                                                                        Some _x_105) else (let _x_72 = "mapSet" in
                                                                         let _x_73 = x_1 = _x_72 in
-                                                                        if _x_73 then (let _x_91 = NativeAtom_mapSet in
-                                                                          Some _x_91) else (let _x_74 = "mapKeys" in
+                                                                        if _x_73 then (let _x_103 = NativeAtom_mapSet in
+                                                                          Some _x_103) else (let _x_74 = "mapKeys" in
                                                                           let _x_75 = x_1 = _x_74 in
-                                                                          if _x_75 then (let _x_89 = NativeAtom_mapKeys in
-                                                                            Some _x_89) else (let _x_76 = "mapEntries" in
+                                                                          if _x_75 then (let _x_101 = NativeAtom_mapKeys in
+                                                                            Some _x_101) else (let _x_76 = "mapEntries" in
                                                                             let _x_77 = x_1 = _x_76 in
-                                                                            if _x_77 then (let _x_87 = NativeAtom_mapEntries in
-                                                                              Some _x_87) else (let _x_78 = "mapFromEntries" in
+                                                                            if _x_77 then (let _x_99 = NativeAtom_mapEntries in
+                                                                              Some _x_99) else (let _x_78 = "mapFromEntries" in
                                                                               let _x_79 = x_1 = _x_78 in
-                                                                              if _x_79 then (let _x_85 = NativeAtom_mapFromEntries in
-                                                                                Some _x_85) else (let _x_80 = "tuple" in
+                                                                              if _x_79 then (let _x_97 = NativeAtom_mapFromEntries in
+                                                                                Some _x_97) else (let _x_80 = "tuple" in
                                                                                 let _x_81 = x_1 = _x_80 in
-                                                                                if _x_81 then (let _x_83 = NativeAtom_tuple in
-                                                                                  Some _x_83) else None)))))))))))))))))))))))))))))))))))))))
+                                                                                if _x_81 then (let _x_95 = NativeAtom_tuple in
+                                                                                  Some _x_95) else (let _x_82 = "take" in
+                                                                                  let _x_83 = x_1 = _x_82 in
+                                                                                  if _x_83 then (let _x_93 = NativeAtom_listTake in
+                                                                                    Some _x_93) else (let _x_84 = "drop" in
+                                                                                    let _x_85 = x_1 = _x_84 in
+                                                                                    if _x_85 then (let _x_91 = NativeAtom_listDrop in
+                                                                                      Some _x_91) else (let _x_86 = "sameHandle" in
+                                                                                      let _x_87 = x_1 = _x_86 in
+                                                                                      if _x_87 then (let _x_89 = NativeAtom_sameHandle in
+                                                                                        Some _x_89) else None))))))))))))))))))))))))))))))))))))))))))
 
 
 
@@ -3009,6 +3022,19 @@ let map_from_entries (value : val_) : val_ option =
 
 
 
+(* LCNF mono: List.drop._redArg (x.1 : Nat) (x.2 : List lcAny) : List lcAny *)
+
+let rec list_drop (x_1 : int) (x_2 : _ list) : _ list =
+  let zero = 0 in
+  let is_zero = x_1 = zero in
+  if is_zero then x_2 else (match x_2 with
+      | [] -> x_2
+      | _ :: tail_4 -> (let one = 1 in
+        let n_5 = max 0 (x_1 - one) in
+        list_drop n_5 tail_4))
+
+
+
 (* LCNF mono: Effect4.Program.NativeAtom.eval (x.1 : Effect4.Program.NativeAtom) (x.2 : List Effect4.Store.Val) : Option Effect4.Store.Val *)
 
 let program_native_atom_eval (x_1 : native_atom) (x_2 : val_ list) : val_ option =
@@ -3404,6 +3430,50 @@ let program_native_atom_eval (x_1 : native_atom) (x_2 : val_ list) : val_ option
         | _ -> None)
     | NativeAtom_tuple -> (let _x_417 = Val_list x_2 in
       Some _x_417)
+    | NativeAtom_listTake -> (match x_2 with
+        | head_419 :: tail_420 -> (match tail_420 with
+            | head_421 :: tail_422 -> (match (head_421 : val_) with
+                | Val_nat n_423 -> (match tail_422 with
+                    | [] -> (let _x_424 = val__as_list_opt head_419 in
+                      match _x_424 with
+                        | None -> None
+                        | Some val__426 -> (let _x_427 = 0 in
+                          let _x_428 = [] in
+                          let _x_429 = list_take_tr_go val__426 val__426 n_423 _x_428 in
+                          let _x_430 = Val_list _x_429 in
+                          Some _x_430))
+                    | _ -> None)
+                | _ -> None)
+            | _ -> None)
+        | _ -> None)
+    | NativeAtom_listDrop -> (match x_2 with
+        | head_436 :: tail_437 -> (match tail_437 with
+            | head_438 :: tail_439 -> (match (head_438 : val_) with
+                | Val_nat n_440 -> (match tail_439 with
+                    | [] -> (let _x_441 = val__as_list_opt head_436 in
+                      match _x_441 with
+                        | None -> None
+                        | Some val__443 -> (let _x_444 = list_drop n_440 val__443 in
+                          let _x_445 = Val_list _x_444 in
+                          Some _x_445))
+                    | _ -> None)
+                | _ -> None)
+            | _ -> None)
+        | _ -> None)
+    | NativeAtom_sameHandle -> (match x_2 with
+        | head_451 :: tail_452 -> (match (head_451 : val_) with
+            | Val_handle (kind_453, key_454) -> (match tail_452 with
+                | head_455 :: tail_456 -> (match (head_455 : val_) with
+                    | Val_handle (kind_457, key_458) -> (match tail_456 with
+                        | [] -> (let _x_459 = kind_453 = kind_457 in
+                          if _x_459 then (let _x_461 = key_454 = key_458 in
+                            let _x_462 = Val_bool _x_461 in
+                            Some _x_462) else None)
+                        | _ -> None)
+                    | _ -> None)
+                | _ -> None)
+            | _ -> None)
+        | _ -> None)
 
 
 
@@ -3556,7 +3626,8 @@ let program_val__tuple_at_opt (value : val_) (index : int) : val_ option =
 
 
 (* LCNF mono: Effect4.Program.evalTerm (env : List Effect4.Store.Val) (x.1 : Effect4.Program.Term) : Option Effect4.Store.Val
-   Effect4.Program.evalTerms (env : List Effect4.Store.Val) (x.1 : Effect4.Program.Terms) : Option (List Effect4.Store.Val) *)
+   Effect4.Program.evalTerms (env : List Effect4.Store.Val) (x.1 : Effect4.Program.Terms) : Option (List Effect4.Store.Val)
+   List.foldlM._at_.Effect4.Program.evalTerm.spec_0 (env : List Effect4.Store.Val) (body.1 : Effect4.Program.Term) (x.2 : Effect4.Store.Val) (x.3 : List Effect4.Store.Val) : Option Effect4.Store.Val *)
 
 let rec program_eval_term (env : val_ list) (x_1 : term) : val_ option =
   match (x_1 : term) with
@@ -3587,6 +3658,16 @@ let rec program_eval_term (env : val_ list) (x_1 : term) : val_ option =
       match _x_37 with
         | None -> _x_37
         | Some val__38 -> program_val__tuple_at_opt val__38 index_36)
+    | Term_fold (_, list_41, init_42, body_43) -> (let _x_44 = program_eval_term env list_41 in
+      match _x_44 with
+        | None -> _x_44
+        | Some val__45 -> (let _x_46 = val__as_list_opt val__45 in
+          match _x_46 with
+            | None -> None
+            | Some val__48 -> (let _x_49 = program_eval_term env init_42 in
+              match _x_49 with
+                | None -> _x_49
+                | Some val__50 -> list_foldl_m_at_program_eval_term_spec_0 env body_43 val__50 val__48)))
 
 and program_eval_terms (env : val_ list) (x_1 : terms) : val_ list option =
   match (x_1 : terms) with
@@ -3600,6 +3681,18 @@ and program_eval_terms (env : val_ list) (x_1 : terms) : val_ list option =
             | None -> _x_9
             | Some val__10 -> (let _x_11 = val__8 :: val__10 in
               Some _x_11)))
+
+and list_foldl_m_at_program_eval_term_spec_0 (env : val_ list) (body_1 : term) (x_2 : val_) (x_3 : val_ list) : val_ option =
+  match x_3 with
+    | [] -> Some x_2
+    | head_5 :: tail_6 -> (let _x_7 = [] in
+      let _x_8 = head_5 :: _x_7 in
+      let _x_9 = x_2 :: _x_8 in
+      let _x_10 = env @ _x_9 in
+      let _x_11 = program_eval_term _x_10 body_1 in
+      match _x_11 with
+        | None -> _x_11
+        | Some val__12 -> list_foldl_m_at_program_eval_term_spec_0 env body_1 val__12 tail_6)
 
 
 
@@ -12664,25 +12757,25 @@ let frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_
       let _x_9 = _x_7 :: _x_8 in
       let _x_10 = events @ _x_9 in
       _x_6, _x_10) in
-  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_15 _y_17 _y_18 in
+  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_17 _y_13 _y_18 in
   match _x_19 with
-    | None -> _jp_4 _y_14
+    | None -> _jp_4 _y_15
     | Some val__20 -> (match val__20 with
         | fst_21, _ -> (let _x_23 = [] in
-          match (_y_16 : (_, _, _, _, _, _, _) frame_fiber) with
+          match (_y_14 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_24 = _x_23 @ stack in
               let _x_25 = ({ current = fst_21; stack = _x_24; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_26 = FrameStep_running _x_25 in
-              let _x_27 = prim_finalizer_events _y_15 _y_14 in
-              let _x_28 = _y_13 @ _x_27 in
+              let _x_27 = prim_finalizer_events _y_17 _y_15 in
+              let _x_28 = _y_16 @ _x_27 in
               let _x_29 = list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12 _x_23 _x_23 in
               let _x_30 = _x_28 @ _x_29 in
               _x_26, _x_30))) in
   let _jp_32 = fun _y_33 _y_34 _y_35 _y_36 _y_37 -> match provided with
-    | None -> _jp_12 _y_34 _y_33 _y_35 _y_36 _y_37 provided
+    | None -> _jp_12 _y_37 _y_33 _y_34 _y_36 _y_35 provided
     | Some val__38 -> (let _x_39 = frame_pop_delivered_exit pop val__38 in
       let _x_40 = Some _x_39 in
-      _jp_12 _y_34 _y_33 _y_35 _y_36 _y_37 _x_40) in
+      _jp_12 _y_37 _y_33 _y_34 _y_36 _y_35 _x_40) in
   let _jp_41 = fun _y_42 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_42 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -12696,8 +12789,8 @@ let frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_
               let _x_50 = FrameStep_running _x_49 in
               _x_50, events_1))
         | ContAnswer_frame frame_52 -> (match carried_cause with
-            | None -> _jp_32 delivered events_1 frame_52 fiber cause
-            | Some val__53 -> _jp_32 delivered events_1 frame_52 fiber val__53)
+            | None -> _jp_32 fiber delivered frame_52 events_1 cause
+            | Some val__53 -> _jp_32 fiber delivered frame_52 events_1 val__53)
         | ContAnswer_empty -> _jp_4 delivered) in
   match provided with
     | None -> (let _x_54 = Exit_failure cause in
@@ -13555,8 +13648,8 @@ let run_machine_race_opt (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) 
 (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4._redArg (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.Iter lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
 
 let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim) with_fiber_action) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
-  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_4 @ _y_6 in
-  ({ machine = _y_5; fiber = _y_2; yielding = yielding; outcome = _y_3; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_5 @ _y_6 in
+  ({ machine = _y_3; fiber = _y_2; yielding = yielding; outcome = _y_4; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
     | WithFiberAction_fork (program_9, options_10, site_11) -> (match (options_10 : fork_options) with
         | { start_immediately = start_immediately; daemon = daemon; _ } -> (let _jp_12 = fun _y_13 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
@@ -13571,10 +13664,10 @@ let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec
                                   let _x_25 = evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4__red_arg__lam_0 fst_22 _x_24 in
                                   let _x_26 = Effect4_machine_outcome_continue_ in
                                   if daemon then (let _x_30 = [] in
-                                    _jp_1 _x_25 _x_26 snd_23 fst_20 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
+                                    _jp_1 _x_25 fst_20 _x_26 snd_23 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
                                     let _x_28 = [] in
                                     let _x_29 = _x_27 :: _x_28 in
-                                    _jp_1 _x_25 _x_26 snd_23 fst_20 _x_29))))))) in
+                                    _jp_1 _x_25 fst_20 _x_26 snd_23 _x_29))))))) in
           if daemon then _jp_12 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks; _ } -> (let _x_31 = true in
                 let _x_32 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_31; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
@@ -13853,7 +13946,7 @@ let finalizer_code (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) p
 
 let evaluate_prim_finalizer_or_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_5 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (_, err, defect, int, unit) exit_) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
   let _jp_1 = fun _y_2 _y_3 _y_4 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let pop = frame_fiber_get_cont_at_program_exit_scoped_spec_0 frame _y_2 _y_3 _y_4 in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let pop = frame_fiber_get_cont_at_program_exit_scoped_spec_0 frame _y_3 _y_2 _y_4 in
       match (pop : (_, _, _, _, _, _, _) frame_pop) with
         | { answer = answer; events = events; fiber = fiber; _ } -> (match (answer : (_, _, _, _, _, _, _) cont_answer) with
             | ContAnswer_frame frame_5 -> (match (frame_5 : (_, _, _, _, _, _, _) prim) with
@@ -13878,9 +13971,9 @@ let evaluate_prim_finalizer_or_at_evaluate_prim_at_program_exit_scoped_spec_2_sp
             | _ -> evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3 interp m f yielding)) in
   let _jp_24 = fun _y_25 _y_26 -> match (exit_ : (_, _, _, _, _) exit_) with
     | Exit_success _ -> (let _x_28 = None in
-      _jp_1 _y_25 _y_26 _x_28)
+      _jp_1 _y_26 _y_25 _x_28)
     | Exit_failure cause_29 -> (let _x_30 = Some cause_29 in
-      _jp_1 _y_25 _y_26 _x_30) in
+      _jp_1 _y_26 _y_25 _x_30) in
   let _jp_31 = fun _y_32 -> match (exit_ : (_, _, _, _, _) exit_) with
     | Exit_success _ -> (let _x_34 = false in
       _jp_24 _y_32 _x_34)
@@ -14174,8 +14267,8 @@ let stores_close_scope_unsafe (scope : int) (exit_ : (val_, err, defect, int, un
 
 let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_3; interruptible = _y_4; interrupted_cause = _y_2; deferred_interrupt = _y_7 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_6; prevent_yield = _y_5; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_9 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_4; interruptible = _y_5; interrupted_cause = _y_2; deferred_interrupt = _y_7 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_9; prevent_yield = _y_3; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_6 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
       ({ machine = _y_8; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
@@ -14204,13 +14297,13 @@ let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, 
                                     | Some val__35 -> (match val__35 with
                                         | fst_36, snd_37 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_36; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_37 with
-                                            | None -> _jp_1 interrupted_cause stack interruptible prevent_yield max_ops_before_yield deferred_interrupt m_2 previous_26 _x_29
+                                            | None -> _jp_1 interrupted_cause prevent_yield stack interruptible previous_26 deferred_interrupt m_2 max_ops_before_yield _x_29
                                             | Some val__38 -> (let _x_39 = RunEvent_finalizerProgram (id, finalizer_24, exit__2) in
                                               let _x_40 = _x_39 :: _x_17 in
                                               let _x_41 = run_machine_emit m_2 _x_40 in
                                               let _x_42 = program_embed val__38 in
                                               let _x_43 = finalizer_code interp exit__2 _x_42 in
-                                              _jp_1 interrupted_cause stack interruptible prevent_yield max_ops_before_yield deferred_interrupt _x_41 previous_26 _x_43)))))))
+                                              _jp_1 interrupted_cause prevent_yield stack interruptible previous_26 deferred_interrupt _x_41 max_ops_before_yield _x_43)))))))
                     | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
                 | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
             | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding) in

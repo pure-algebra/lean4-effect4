@@ -72,6 +72,7 @@ export const termJson = (v: Term): Json => {
     case "field": return ["field", fieldReadModeJson(v.mode), termJson(v.target), v.name]
     case "recordSet": return ["recordSet", termJson(v.target), v.name, termJson(v.value)]
     case "tupleAt": return ["tupleAt", termJson(v.target), v.index]
+    case "fold": return ["fold", (v.accTy === null ? null : tyJson(v.accTy)), termJson(v.list), termJson(v.init), termJson(v.body)]
   }
 }
 

@@ -21,24 +21,24 @@ def nested : Term := .recordSet
     ["person"] (.cons person .nil))
   "__proto__" (.lit (.str "owned"))
 
-#guard readTerm [] 0 (printTerm person) == .ok person
-#guard readTerm [] 0 (printTerm raw) == .ok raw
-#guard readTerm [] 0 (printTerm nested) == .ok nested
-#guard readTerm [] 0 (printTerm (.field .required person "id")) == .ok (.field .required person "id")
-#guard readTerm [] 0 (printTerm (.field .optional person "nickname")) ==
+#guard readTerm [] 0 (printTerm 0 person) == .ok person
+#guard readTerm [] 0 (printTerm 0 raw) == .ok raw
+#guard readTerm [] 0 (printTerm 0 nested) == .ok nested
+#guard readTerm [] 0 (printTerm 0 (.field .required person "id")) == .ok (.field .required person "id")
+#guard readTerm [] 0 (printTerm 0 (.field .optional person "nickname")) ==
   .ok (.field .optional person "nickname")
-#guard readTerm [] 1 (printTerm (.recordSet (.var 0) "a-b" (.lit (.nat 9)))) ==
+#guard readTerm [] 1 (printTerm 1 (.recordSet (.var 0) "a-b" (.lit (.nat 9)))) ==
   .ok (.recordSet (.var 0) "a-b" (.lit (.nat 9)))
-#guard (match readTerm [] 0 (printTerm (.field .optional (.var 0) "nickname")) with
+#guard (match readTerm [] 0 (printTerm 0 (.field .optional (.var 0) "nickname")) with
   | .error _ => true
   | .ok _ => false)
 
 -- Generic wrapper heads leave existing arbitrary atom calls recoverable.
-#guard readTerm [] 0 (printTerm (.app "recordValue" .nil)) == .ok (.app "recordValue" .nil)
-#guard readTerm [] 0 (printTerm (.app "recordRaw" .nil)) == .ok (.app "recordRaw" .nil)
-#guard readTerm [] 0 (printTerm (.app "recordRequired" .nil)) == .ok (.app "recordRequired" .nil)
-#guard readTerm [] 0 (printTerm (.app "recordOptional" .nil)) == .ok (.app "recordOptional" .nil)
-#guard readTerm [] 0 (printTerm (.app "recordSet" .nil)) == .ok (.app "recordSet" .nil)
+#guard readTerm [] 0 (printTerm 0 (.app "recordValue" .nil)) == .ok (.app "recordValue" .nil)
+#guard readTerm [] 0 (printTerm 0 (.app "recordRaw" .nil)) == .ok (.app "recordRaw" .nil)
+#guard readTerm [] 0 (printTerm 0 (.app "recordRequired" .nil)) == .ok (.app "recordRequired" .nil)
+#guard readTerm [] 0 (printTerm 0 (.app "recordOptional" .nil)) == .ok (.app "recordOptional" .nil)
+#guard readTerm [] 0 (printTerm 0 (.app "recordSet" .nil)) == .ok (.app "recordSet" .nil)
 #guard Effect4.Codegen.Record.helperNames.all fun name => !exportNameSafe name
 #guard exportNameSafe "main"
 
@@ -52,12 +52,15 @@ def controlRow : Effect4.Program.Row :=
 #guard Effect4.Codegen.Record.helperNames.all fun name =>
   !rowNamesSafe { controlRow with trailing := [name] }
 
+-- Since the list fold (decisions row 228) the retraction also takes a term whose folds state no
+-- accumulator type: a stated type is printed and not read.
 example (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (term : Term)
-    (h : term.scoped n = true) (hc : term.covers classes = true) :
-    readTerm classes n (printTerm term) = .ok term := readTerm_printTerm term h hc
+    (h : term.scoped n = true) (hc : term.covers classes = true)
+    (hu : term.unannotated = true) :
+    readTerm classes n (printTerm n term) = .ok term := readTerm_printTerm term h hc hu
 
 example (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (x : TypeScript.Expr) (term : Term)
-    (h : readTerm classes n x = .ok term) : printTerm term = x := readTerm_exact x h
+    (h : readTerm classes n x = .ok term) : printTerm n term = x := readTerm_exact x h
 
 end Effect4.Test.RecordTermsCodegen
 

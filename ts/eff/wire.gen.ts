@@ -167,6 +167,7 @@ const writeTerm = (w: Writer, v: Term): void => {
     case "field": return w.ctor(4, [() => writeFieldReadMode(w, v.mode), () => writeTerm(w, v.target), () => w.str(v.name)])
     case "recordSet": return w.ctor(5, [() => writeTerm(w, v.target), () => w.str(v.name), () => writeTerm(w, v.value)])
     case "tupleAt": return w.ctor(6, [() => writeTerm(w, v.target), () => w.nat(v.index)])
+    case "fold": return w.ctor(7, [() => w.option(v.accTy, (y) => writeTy(w, y)), () => writeTerm(w, v.list), () => writeTerm(w, v.init), () => writeTerm(w, v.body)])
     default: throw new TypeError("wire Term constructor")
   }
 }
@@ -503,4 +504,5 @@ export const typeLeafEdges: ReadonlyArray<readonly [string, string]> = [["lit","
 export const targetReservedIdentifiers: ReadonlyArray<string> = ["await","break","case","catch","class","const","continue","debugger","default","delete","do","else","enum","export","extends","false","finally","for","function","if","import","in","instanceof","let","new","null","return","super","switch","this","throw","true","try","typeof","var","void","while","with","yield","interface","implements","package","private","protected","public","static"]
 export const recordHelperNames: ReadonlyArray<string> = ["recordValue","recordRaw","recordRequired","recordOptional","recordSet"]
 export const tupleHelperNames: ReadonlyArray<string> = ["tupleAt"]
+export const foldHelperNames: ReadonlyArray<string> = ["fold"]
 export const typeVariances: Readonly<Record<string, ReadonlyArray<string>>> = {"Ref.Ref":["inv"],"Deferred.Deferred":["inv","inv"],"Fiber.Fiber":["co","co"],"Cause.Cause":["co"],"Cause.Reason":["co"],"Cause.Fail":["co"],"Cause.Done":["inv"],"Exit.Exit":["co","co"],"Exit.Success":["co","co"],"Exit.Failure":["co","co"],"Effect.Effect":["co","co","co"],"Effect.EffectUnify":["inv"],"Effect.Variance":["inv","inv","inv"],"Effect.Success":["inv"],"Effect.Error":["inv"],"Effect.Services":["inv"],"Effect.EffectIterator":["inv"],"Effect.TagsWithReason":["inv"],"Context.Key":["co","co"],"Context.Service":["inv","inv"],"Context.ServiceClass":["inv","inv","inv"],"Context.Reference":["inv"],"Context.Context":["contra"],"Layer.Layer":["contra","co","co"],"Layer.LayerUnify":["inv"],"Layer.Variance":["contra","co","co"],"Layer.Services":["inv"],"Layer.Error":["inv"],"Layer.Success":["inv"],"Layer.PartialEffectful":["inv"],"Queue.Enqueue":["contra","contra"],"Queue.Dequeue":["co","co"],"Queue.Queue":["inv","inv"],"PubSub.PubSub":["inv"],"PubSub.Subscription":["co"],"Option.Option":["co"],"Option.None":["co"],"Option.OptionIterator":["inv"],"Option.Some":["co"],"Option.OptionUnify":["inv"]}

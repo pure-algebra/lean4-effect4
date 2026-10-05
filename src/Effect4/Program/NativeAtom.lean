@@ -71,6 +71,9 @@ inductive CustomScheme
   | causeError
   /-- Variadic exact tuple construction, with normalized positional answer. -/
   | tuple
+  /-- `sameHandle`: two `Ref` handles or two `Deferred` handles, at any payload types, a Boolean
+  out (decisions row 229); the input families are `sameHandleRule`'s. -/
+  | sameHandle
 deriving DecidableEq, Repr
 
 /-- The arity each custom rule accepts, so the table's `arity` column is checked against the
@@ -80,6 +83,7 @@ def CustomScheme.declaredArity : CustomScheme → Option Nat
   | .causeTest => some 1
   | .causeError => some 1
   | .tuple => none
+  | .sameHandle => some 2
 
 /-! Each rule is its own definition over the argument list, so "one rule, one definition" is
 literally true and a proof about one rule splits that rule's arms and no others. The input
@@ -102,12 +106,21 @@ def causeErrorRule : List Ty → Option Ty
   | [input] => (causeInputError? input).map Ty.option
   | [] | _ :: _ :: _ => none
 
+/-- `sameHandle` (decisions row 229): two cells or two deferreds, whatever each holds. The two
+families are the positive arms, each matched by its head; every other pair of types refuses, a
+cell beside a deferred included, so the atom never compares two kinds. -/
+def sameHandleRule : List Ty → Option Ty
+  | [.refOf _, .refOf _] => some .bool
+  | [.deferredOf _ _, .deferredOf _ _] => some .bool
+  | _ => none
+
 /-- The custom rules, verbatim from the arms they replace. -/
 def CustomScheme.apply : CustomScheme → List Ty → Option Ty
   | .project second => projectRule second
   | .causeTest => causeTestRule
   | .causeError => causeErrorRule
   | .tuple => fun types => some (Ty.normalize (.tuple types))
+  | .sameHandle => sameHandleRule
 
 /-- A fixed signature applied: each argument at a subtype of its parameter (`Ty.sub` is
 TypeScript assignability at a call site, so `succ` takes a `nat` and therefore a `never`). -/
@@ -323,6 +336,22 @@ def spec : NativeAtom → Spec
   | .tuple =>
       { scheme := .custom .tuple,
         cite := "Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary." }
+  | .listTake =>
+      { scheme := .poly [.list (.var 0), .nat] (.list (.var 0)),
+        cite := "`\"take\", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a \
+                 natural count\n(vendor/effect-4.0.0-rc.112/src/Array.ts:2208-2211). Decisions \
+                 row 228: a fold with a counter, added for a demonstrated consumer." }
+  | .listDrop =>
+      { scheme := .poly [.list (.var 0), .nat] (.list (.var 0)),
+        cite := "`\"drop\", [list vs, nat n] => list (vs.drop n)` — rc.112 `Array.drop` at a \
+                 natural count\n(vendor/effect-4.0.0-rc.112/src/Array.ts:2798-2801). Decisions \
+                 row 228: a fold with a counter, added for a demonstrated consumer." }
+  | .sameHandle =>
+      { scheme := .custom .sameHandle,
+        cite := "Decisions row 229: the identity of two `Ref` handles, or of two `Deferred` \
+                 handles, at any payload types.\nThe model compares the two keys of one kind and \
+                 reads no payload; the host compares the two objects (`===`).\nThat the two \
+                 agree is each target's relation, not this table's." }
 
 /-- The typing of an application by its argument types (DI-40; DI-15, the 2026-09-12 clause):
 the atom's scheme, applied. -/

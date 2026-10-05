@@ -146,6 +146,27 @@ theorem nativeAtom_keys (atom : String) (vs : List Val) (v : Val) (h : nativeAto
     cases h
     rw [Val.keys_list]
     exact List.Subset.refl _
+  -- a prefix and its rest hold members of the list argument (decisions row 228)
+  case h_44 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    rw [Val.keys_list] at hk
+    obtain ⟨e, he, hke⟩ := List.mem_flatMap.mp hk
+    simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.mem_append]
+    exact .inl (asList?_keys hl (List.mem_flatMap.mpr ⟨e, List.mem_of_mem_take he, hke⟩))
+  case h_45 =>
+    obtain ⟨elems, hl, rfl⟩ := Option.map_eq_some_iff.mp h
+    intro k hk
+    rw [Val.keys_list] at hk
+    obtain ⟨e, he, hke⟩ := List.mem_flatMap.mp hk
+    simp only [List.flatMap_cons, List.flatMap_nil, List.append_nil, List.mem_append]
+    exact .inl (asList?_keys hl (List.mem_flatMap.mpr ⟨e, List.mem_of_mem_drop he, hke⟩))
+  -- the identity test answers a Boolean, which names no handle (decisions row 229)
+  case h_46 =>
+    split at h
+    · cases h
+      exact List.nil_subset _
+    · cases h
   all_goals cases h
   all_goals sub_tac norm [Val.tuple]
 
@@ -209,6 +230,11 @@ theorem evalTerm_keys (t : Term) (env : List Val) (v : Val) (h : evalTerm env t 
     have h' : (evalTerm env target).bind (fun value => Val.tupleAt? value index) = some v := h
     obtain ⟨value, he, hr⟩ := Option.bind_eq_some_iff.mp h'
     exact List.Subset.trans (tupleAt_keys hr) (evalTerm_keys target env value he)
+  -- a fold's answer names only its environment's handles: the raw frames stay inside the
+  -- environment's (`RawHandles.evalTerm_handles`), on any successful evaluation, and the
+  -- decoded keys are read from the frames
+  | fold accTy list init body =>
+    exact Val.keys_subset_of_handles (RawHandles.evalTerm_handles _ env v h)
 termination_by structural t
 theorem evalTerms_keys (ts : Terms) (env : List Val) (vs : List Val) (h : evalTerms env ts = some vs) :
     vs.flatMap Val.keys ⊆ env.flatMap Val.keys := by

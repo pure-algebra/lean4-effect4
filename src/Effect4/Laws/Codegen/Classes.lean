@@ -102,11 +102,13 @@ theorem classTag?_some {fields : Fields} {names : List String} {values : Terms} 
   · exact nomatch h
 
 /-- The tail of a list's printing is the printing of its tail. -/
-theorem printTerms_restTerms (values : Terms) : (printTerms values).tail = printTerms (restTerms values) := by
+theorem printTerms_restTerms {n : Nat} (values : Terms) :
+    (printTerms n values).tail = printTerms n (restTerms values) := by
   cases values <;> rfl
 
 /-- The printed tail's length is the tail's. -/
-theorem printTerms_length : ∀ (values : Terms), (printTerms values).length = values.toList.length
+theorem printTerms_length {n : Nat} :
+    ∀ (values : Terms), (printTerms n values).length = values.toList.length
   | .nil => rfl
   | .cons _ tail => by
     simp only [printTerms, List.length_cons, Terms.toList, printTerms_length tail]
@@ -233,6 +235,9 @@ theorem Term.covers_recordSet (target : Term) (name : String) (value : Term) :
       (Term.covers classes target && Term.covers classes value) := rfl
 theorem Term.covers_tupleAt (target : Term) (index : Nat) :
     Term.covers classes (.tupleAt target index) = Term.covers classes target := rfl
+theorem Term.covers_fold (accTy : Option Ty) (list init body : Term) :
+    Term.covers classes (.fold accTy list init body) =
+      (Term.covers classes list && (Term.covers classes init && Term.covers classes body)) := rfl
 theorem Terms.covers_cons (t : Term) (ts : Terms) :
     Terms.covers classes (.cons t ts) = (Term.covers classes t && Terms.covers classes ts) := rfl
 

@@ -4,6 +4,7 @@ import Effect4.Codegen.Types
 import Effect4.Codegen.Record
 import Effect4.Codegen.Classes
 import Effect4.Codegen.Tuple
+import Effect4.Codegen.ListFold
 import TypeScript
 
 /-!
@@ -167,7 +168,8 @@ def reserved : List String := heads.map Head.spelling
 
 /-- Pure term helpers share one exclusion list for row and export names. -/
 def termHelperNames : List String :=
-  Effect4.Codegen.Record.helperNames ++ Effect4.Codegen.Tuple.helperNames
+  Effect4.Codegen.Record.helperNames ++ Effect4.Codegen.Tuple.helperNames ++
+    Effect4.Codegen.ListFold.helperNames
 
 /-- The names in a row cannot capture a printed binder or a reserved program head. -/
 def rowNamesSafe (row : Row) : Bool :=
@@ -197,39 +199,45 @@ def printLit : Lit → TypeScript.Expr
   | .str value => .str value
 
 mutual
-  /-- A pure term as target syntax. Generic record wrappers retain raw declarations and
-  distinguish construction, access and update from existing atom calls. A construction in the
-  class form (`Classes.classTag?`, decisions row 120) is `new Tag({ … })`, `_tag` omitted: its
-  class carries the declaration, so a reader restores it from the module's classes. -/
-  def printTerm : Term → TypeScript.Expr
+  /-- A pure term as target syntax, at the environment's length `n`. Generic record wrappers
+  retain raw declarations and distinguish construction, access and update from existing atom
+  calls. A construction in the class form (`Classes.classTag?`, decisions row 120) is
+  `new Tag({ … })`, `_tag` omitted: its class carries the declaration, so a reader restores it
+  from the module's classes. A variable prints by its own position. A list fold (decisions row
+  228) reads `n` for its two parameters' names, `a{n}` and `a{n + 1}`, and prints its body two
+  levels up; a stated accumulator type is the call's type argument (`ListFold.typeArg`). -/
+  def printTerm (n : Nat) : Term → TypeScript.Expr
     | .var index => .ident (Var.name index)
     | .lit value => printLit value
-    | .app atom args => .call (.ident atom) (printTerms args)
+    | .app atom args => .call (.ident atom) (printTerms n args)
     | .record fields names values =>
       match Effect4.Codegen.Classes.classTag? fields names values with
-      | some tag => Effect4.Codegen.Classes.writeClass tag names.tail (printTerms values).tail
-      | none => Effect4.Codegen.Record.writeRecord fields names (printTerms values)
+      | some tag => Effect4.Codegen.Classes.writeClass tag names.tail (printTerms n values).tail
+      | none => Effect4.Codegen.Record.writeRecord fields names (printTerms n values)
     | .field mode target name =>
-      Effect4.Codegen.Record.writeField (decide (mode = .optional)) name (printTerm target)
+      Effect4.Codegen.Record.writeField (decide (mode = .optional)) name (printTerm n target)
     | .recordSet target name value =>
-      Effect4.Codegen.Record.writeSet name (printTerm target) (printTerm value)
+      Effect4.Codegen.Record.writeSet name (printTerm n target) (printTerm n value)
     | .tupleAt target index =>
-      Effect4.Codegen.Tuple.writeAt index (printTerm target)
+      Effect4.Codegen.Tuple.writeAt index (printTerm n target)
+    | .fold accTy list init body =>
+      Effect4.Codegen.ListFold.write n (accTy.map Effect4.Codegen.ListFold.typeArg)
+        (printTerm n list) (printTerm n init) (printTerm (n + 2) body)
 
   /-- The argument list of an atom application, in order. -/
-  def printTerms : Terms → List TypeScript.Expr
+  def printTerms (n : Nat) : Terms → List TypeScript.Expr
     | .nil => []
-    | .cons head tail => printTerm head :: printTerms tail
+    | .cons head tail => printTerm n head :: printTerms n tail
 end
 
 /-- A cause as the public `Cause` constructors of rc.112. `Cause.merge` is not an export at
 the pin, so the merge of two causes is spelled `Cause.combine` (§5.1). -/
-def printCause : CauseTerm → TypeScript.Expr
-  | .fail error => .call (.ident "Cause.fail") [printTerm error]
-  | .die defect => .call (.ident "Cause.die") [printTerm defect]
+def printCause (n : Nat) : CauseTerm → TypeScript.Expr
+  | .fail error => .call (.ident "Cause.fail") [printTerm n error]
+  | .die defect => .call (.ident "Cause.die") [printTerm n defect]
   | .interrupt none => .call (.ident "Cause.interrupt") []
-  | .interrupt (some who) => .call (.ident "Cause.interrupt") [printTerm who]
-  | .both left right => .call (.ident "Cause.combine") [printCause left, printCause right]
+  | .interrupt (some who) => .call (.ident "Cause.interrupt") [printTerm n who]
+  | .both left right => .call (.ident "Cause.combine") [printCause n left, printCause n right]
 
 /-- The two components of a `pair` application, the request shape a tuple-call row
 receives from an admitted program. -/
@@ -255,10 +263,11 @@ theorem pairArgs?_some {r x y : Term} (h : pairArgs? r = some (x, y)) :
 so the host infers the export's type parameters from them; any other request, a saved
 variable in the admitted image, prints as `fst(request)` and `snd(request)`, one read
 of the value per component. -/
-def printTupleArgs (request : Term) : List TypeScript.Expr :=
+def printTupleArgs (n : Nat) (request : Term) : List TypeScript.Expr :=
   match pairArgs? request with
-  | some (x, y) => [printTerm x, printTerm y]
-  | none => [.call (.ident "fst") [printTerm request], .call (.ident "snd") [printTerm request]]
+  | some (x, y) => [printTerm n x, printTerm n y]
+  | none =>
+    [.call (.ident "fst") [printTerm n request], .call (.ident "snd") [printTerm n request]]
 
 /-- A row's called head: its `spelling`, applied to the declared type arguments when it has
 any. rc.112's `Deferred.make` has defaulted type parameters, so the arguments alone do not
@@ -293,39 +302,42 @@ theorem methodArgsRow_shape (row : Row) :
   split <;> simp
   split <;> simp
 
-def printMethodArgs (row : Row) (args : Term) : List TypeScript.Expr :=
+def printMethodArgs (n : Nat) (row : Row) (args : Term) : List TypeScript.Expr :=
   let trailing := row.trailing.map TypeScript.Expr.ident
-  if (methodArgsRow row).shape = .tupleCall then printTupleArgs args ++ trailing
+  if (methodArgsRow row).shape = .tupleCall then printTupleArgs n args ++ trailing
   else if (methodArgsRow row).request = Ty.unit then trailing
-  else printTerm args :: trailing
+  else printTerm n args :: trailing
 
-def printMethod (row : Row) (receiver args : Term) : Except PrintRefusal TypeScript.Expr :=
+def printMethod (n : Nat) (row : Row) (receiver args : Term) :
+    Except PrintRefusal TypeScript.Expr :=
   match rowTypeArgs row with
   | none => .error (.typeSpelling row.spelling)
-  | some [] => .ok (.method (printTerm receiver) row.spelling (printMethodArgs row args))
-  | some typeArgs => .ok (.call (.generic (.member (printTerm receiver) row.spelling) typeArgs)
-      (printMethodArgs row args))
+  | some [] => .ok (.method (printTerm n receiver) row.spelling (printMethodArgs n row args))
+  | some typeArgs => .ok (.call (.generic (.member (printTerm n receiver) row.spelling) typeArgs)
+      (printMethodArgs n row args))
 
 /-- A row's operation, by the row's declared shape and request type: a value row is the
 bare `spelling` (the service route's nullary rows), a call row on a `unit` request is
 `spelling()`, and every other call row is `spelling(request)`. A tuple-call row receives
 `printTupleArgs` of its request as two ordinary arguments, then the declared trailing
-names. A row that declares type arguments carries them on the head. -/
-def printRow (row : Row) (request : Term) : Except PrintRefusal TypeScript.Expr := do
+names. A row that declares type arguments carries them on the head. The request prints at the
+node's level `n` (`printTerm`). -/
+def printRow (n : Nat) (row : Row) (request : Term) : Except PrintRefusal TypeScript.Expr := do
   let trailing := row.trailing.map TypeScript.Expr.ident
   match row.shape with
   | .value => .ok (.ident row.spelling)
   | .call =>
     let head ← printRowHead row
     if row.request = Ty.unit then .ok (.call head trailing)
-    else .ok (.call head (printTerm request :: trailing))
+    else .ok (.call head (printTerm n request :: trailing))
   | .tupleCall =>
     let head ← printRowHead row
-    .ok (.call head (printTupleArgs request ++ trailing))
+    .ok (.call head (printTupleArgs n request ++ trailing))
   | .method =>
     match pairArgs? request with
-    | some (receiver, args) => printMethod row receiver args
-    | none => printMethod row (.app "fst" (.cons request .nil)) (.app "snd" (.cons request .nil))
+    | some (receiver, args) => printMethod n row receiver args
+    | none =>
+      printMethod n row (.app "fst" (.cons request .nil)) (.app "snd" (.cons request .nil))
 
 /-- The fork options object rc.112's fork family takes:
 `{ startImmediately: b, uninterruptible: true | false | "inherit" }`. `daemon` is not a

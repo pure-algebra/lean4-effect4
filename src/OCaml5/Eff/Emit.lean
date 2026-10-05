@@ -433,6 +433,11 @@ def termO : Effect4.Program.Term → String
   | .recordSet target name value =>
     s!"({octor "term" "recordSet"} ({termO target}, {ostr name}, {termO value}))"
   | .tupleAt target index => s!"({octor "term" "tupleAt"} ({termO target}, {index}))"
+  | .fold accTy list init body =>
+    let acc := match accTy with
+      | none => "None"
+      | some ty => s!"(Some {tyO ty})"
+    s!"({octor "term" "fold"} ({acc}, {termO list}, {termO init}, {termO body}))"
 /-- An argument list as an OCaml value. -/
 def termsO : Effect4.Program.Terms → String
   | .nil => octor "terms" "nil"

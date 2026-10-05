@@ -185,6 +185,8 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Term_recordSet (target, name, value) ->
       A.Term_recordSet (of_term target, name, of_term value)
     | Eff_types.Term_tupleAt (target, index) -> A.Term_tupleAt (of_term target, index)
+    | Eff_types.Term_fold (acc_ty, list, init, body) ->
+      A.Term_fold (Option.map of_ty acc_ty, of_term list, of_term init, of_term body)
 
   and of_terms : Eff_types.terms -> A.terms = function
     | Eff_types.Terms_nil -> A.Terms_nil
@@ -359,7 +361,7 @@ module Make (A : PROGRAM_TYPES) = struct
   let ctor_index_term : A.term -> int = function
     | A.Term_var _ -> 0 | A.Term_lit _ -> 1 | A.Term_app _ -> 2
     | A.Term_record _ -> 3 | A.Term_field _ -> 4 | A.Term_recordSet _ -> 5
-    | A.Term_tupleAt _ -> 6
+    | A.Term_tupleAt _ -> 6 | A.Term_fold _ -> 7
 
   let ctor_index_terms : A.terms -> int = function
     | A.Terms_nil -> 0 | A.Terms_cons _ -> 1

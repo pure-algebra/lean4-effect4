@@ -8,10 +8,12 @@
 --    Effect4.Program.Authoring.Refusal Effect4.Program.RecordTypingReason \
 --    Effect4.Program.RecordTermRefusal Effect4.Program.RecordCauseRefusal \
 --    Effect4.Program.TupleTypingReason Effect4.Program.TupleTermRefusal \
---    Effect4.Program.TupleCauseRefusal Effect4.Program.TermTypingRefusal \
---    Effect4.Program.CauseTypingRefusal Effect4.Program.TypeReason Effect4.Program.TypeRefusal \
---    Effect4.Api.AuthorRefusal Effect4.Program.ClassRefusal Effect4.Program.PrintRefusal \
---    Effect4.Program.ReadRefusal Effect4.Api.BuildRefusal
+--    Effect4.Program.TupleCauseRefusal Effect4.Program.FoldTypingReason \
+--    Effect4.Program.FoldTermRefusal Effect4.Program.FoldCauseRefusal \
+--    Effect4.Program.TermTypingRefusal Effect4.Program.CauseTypingRefusal \
+--    Effect4.Program.TypeReason Effect4.Program.TypeRefusal Effect4.Api.AuthorRefusal \
+--    Effect4.Program.ClassRefusal Effect4.Program.PrintRefusal Effect4.Program.ReadRefusal \
+--    Effect4.Api.BuildRefusal
 -- Carriers read from: Effect4.Program.Native, Effect4.Program.Formation, Effect4.Program.SigApp, Effect4.Program.Admission, Effect4.Program.Authoring, Effect4.Program.Typing.TermRefusal, Effect4.Program.Typing.Blame, Effect4.Api, Effect4.Codegen.PrintLeaf, Effect4.Codegen.Read, Effect4.Api.Author
 -- Acceptance guards appended verbatim from: tools/Effect4Gen/guards/refusals.lean
 import Effect4.Api
@@ -1201,22 +1203,232 @@ instance instCanonical : Canonical (_root_.Effect4.Program.TupleCauseRefusal) :=
 
 end TupleCauseRefusalC
 
+namespace FoldTypingReasonC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.sum "FoldTypingReason"
+     [("notList", 0, [("list", (shape _root_.Effect4.Program.Ty).root)]),
+      ("initialNotAccumulator", 1, [("initial", (shape _root_.Effect4.Program.Ty).root),
+        ("accumulator", (shape _root_.Effect4.Program.Ty).root)]),
+      ("bodyNotAccumulator", 2, [("body", (shape _root_.Effect4.Program.Ty).root),
+        ("accumulator", (shape _root_.Effect4.Program.Ty).root)])],
+   (shape _root_.Effect4.Program.Ty).defs⟩
+
+def toVal : _root_.Effect4.Program.FoldTypingReason → Val
+  | .notList a0 => .ctor 0 [Canonical.toVal a0]
+  | .initialNotAccumulator a0 a1 => .ctor 1 [Canonical.toVal a0, Canonical.toVal a1]
+  | .bodyNotAccumulator a0 a1 => .ctor 2 [Canonical.toVal a0, Canonical.toVal a1]
+
+def ofVal : Val → Option (_root_.Effect4.Program.FoldTypingReason)
+  | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0).map .notList
+  | .ctor 1 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1 with
+    | some a0, some a1 => some (.initialNotAccumulator a0 a1)
+    | _, _ => none
+  | .ctor 2 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1 with
+    | some a0, some a1 => some (.bodyNotAccumulator a0 a1)
+    | _, _ => none
+  | _ => none
+
+set_option linter.unusedSimpArgs false in
+theorem ofVal_toVal (a : _root_.Effect4.Program.FoldTypingReason) : ofVal (toVal a) = some a := by
+  cases a <;> simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FoldTypingReason} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  all_goals first
+    | (injection h with h; subst h; rfl)
+    | (rename_i w
+       obtain ⟨x, hx, hj⟩ := Option.map_eq_some_iff.mp h
+       subst hj
+       simp only [toVal]
+       rw [Canonical.ofVal_exact hx])
+    | (split at h
+       · rename_i b0 b1 h0 h1
+         injection h with h
+         subst h
+         simp only [toVal]
+         rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+         done
+       all_goals exact nomatch h)
+    | exact nomatch h
+
+theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => hp)
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.FoldTypingReason) : shapeDoc.accepts (toVal a) = true := by
+  cases a with
+  | «notList» a0 =>
+    exact accepts_sum _ _ _ 0 "notList" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0) (acceptsFields_nil _))
+  | «initialNotAccumulator» a0 a1 =>
+    exact accepts_sum _ _ _ 1 "initialNotAccumulator" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1) (acceptsFields_nil _)))
+  | «bodyNotAccumulator» a0 a1 =>
+    exact accepts_sum _ _ _ 2 "bodyNotAccumulator" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1) (acceptsFields_nil _)))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.FoldTypingReason) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end FoldTypingReasonC
+
+namespace FoldTermRefusalC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "FoldTermRefusal" [("path", (shape (@_root_.List (_root_.Nat))).root),
+     ("reason", (shape _root_.Effect4.Program.FoldTypingReason).root)],
+   (shape (@_root_.List (_root_.Nat))).defs ++
+     (shape _root_.Effect4.Program.FoldTypingReason).defs⟩
+
+def toVal : _root_.Effect4.Program.FoldTermRefusal → Val
+  | .mk a0 a1 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1]
+
+def ofVal : Val → Option (_root_.Effect4.Program.FoldTermRefusal)
+  | .ctor 0 [v0, v1] =>
+    match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.FoldTypingReason) v1 with
+    | some a0, some a1 => some ⟨a0, a1⟩
+    | _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.FoldTermRefusal) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1⟩ := a
+  simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FoldTermRefusal} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 =>
+    split at h
+    · next b0 b1 h0 h1 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_ListNat (x : (@_root_.List (_root_.Nat))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
+theorem lift_FoldTypingReason (x : _root_.Effect4.Program.FoldTypingReason) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldTypingReason).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.FoldTermRefusal) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_ListNat a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FoldTypingReason a1) (acceptsFields_nil _)))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.FoldTermRefusal) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end FoldTermRefusalC
+
+namespace FoldCauseRefusalC
+
+def shapeDoc : ShapeDoc :=
+  ⟨.struct "FoldCauseRefusal" [("causePath", (shape (@_root_.List (_root_.Nat))).root),
+     ("term", (shape _root_.Effect4.Program.FoldTermRefusal).root)],
+   (shape (@_root_.List (_root_.Nat))).defs ++
+     (shape _root_.Effect4.Program.FoldTermRefusal).defs⟩
+
+def toVal : _root_.Effect4.Program.FoldCauseRefusal → Val
+  | .mk a0 a1 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1]
+
+def ofVal : Val → Option (_root_.Effect4.Program.FoldCauseRefusal)
+  | .ctor 0 [v0, v1] =>
+    match Canonical.ofVal (α := (@_root_.List (_root_.Nat))) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.FoldTermRefusal) v1 with
+    | some a0, some a1 => some ⟨a0, a1⟩
+    | _, _ => none
+  | _ => none
+
+theorem ofVal_toVal (a : _root_.Effect4.Program.FoldCauseRefusal) : ofVal (toVal a) = some a := by
+  obtain ⟨a0, a1⟩ := a
+  simp [toVal, ofVal, Canonical.ofVal_toVal]
+
+theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.FoldCauseRefusal} (h : ofVal v = some a) :
+    v = toVal a := by
+  unfold ofVal at h
+  split at h
+  · next v0 v1 =>
+    split at h
+    · next b0 b1 h0 h1 =>
+      injection h with h
+      subst h
+      simp only [toVal]
+      rw [Canonical.ofVal_exact h0, Canonical.ofVal_exact h1]
+    · exact nomatch h
+  · exact nomatch h
+
+theorem lift_ListNat (x : (@_root_.List (_root_.Nat))) :
+    acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+    _ _ (Canonical.fits x)
+theorem lift_FoldTermRefusal (x : _root_.Effect4.Program.FoldTermRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldTermRefusal).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
+    _ _ (Canonical.fits x)
+
+theorem fits (a : _root_.Effect4.Program.FoldCauseRefusal) : shapeDoc.accepts (toVal a) = true := by
+  obtain ⟨a0, a1⟩ := a
+  apply accepts_struct
+  exact
+    (acceptsFields_cons _ _ _ _ _ _ (lift_ListNat a0)
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FoldTermRefusal a1) (acceptsFields_nil _)))
+
+instance instCanonical : Canonical (_root_.Effect4.Program.FoldCauseRefusal) :=
+  ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
+
+-- No sum of the document gives one wire tag to two cases.
+#guard shapeDoc.wellTagged
+
+end FoldCauseRefusalC
+
 namespace TermTypingRefusalC
 
 def shapeDoc : ShapeDoc :=
   ⟨.sum "TermTypingRefusal"
      [("record", 0, [("why", (shape _root_.Effect4.Program.RecordTermRefusal).root)]),
-      ("tuple", 1, [("why", (shape _root_.Effect4.Program.TupleTermRefusal).root)])],
+      ("tuple", 1, [("why", (shape _root_.Effect4.Program.TupleTermRefusal).root)]),
+      ("fold", 2, [("why", (shape _root_.Effect4.Program.FoldTermRefusal).root)])],
    (shape _root_.Effect4.Program.RecordTermRefusal).defs ++
-     (shape _root_.Effect4.Program.TupleTermRefusal).defs⟩
+     (shape _root_.Effect4.Program.TupleTermRefusal).defs ++
+     (shape _root_.Effect4.Program.FoldTermRefusal).defs⟩
 
 def toVal : _root_.Effect4.Program.TermTypingRefusal → Val
   | .record a0 => .ctor 0 [Canonical.toVal a0]
   | .tuple a0 => .ctor 1 [Canonical.toVal a0]
+  | .fold a0 => .ctor 2 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.TermTypingRefusal)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.RecordTermRefusal) v0).map .record
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TupleTermRefusal) v0).map .tuple
+  | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldTermRefusal) v0).map .fold
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -1239,10 +1451,15 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TermTypingRefusal} (h 
 theorem lift_RecordTermRefusal (x : _root_.Effect4.Program.RecordTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordTermRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
     _ _ (Canonical.fits x)
 theorem lift_TupleTermRefusal (x : _root_.Effect4.Program.TupleTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TupleTermRefusal).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_FoldTermRefusal (x : _root_.Effect4.Program.FoldTermRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldTermRefusal).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
@@ -1255,6 +1472,9 @@ theorem fits (a : _root_.Effect4.Program.TermTypingRefusal) : shapeDoc.accepts (
   | «tuple» a0 =>
     exact accepts_sum _ _ _ 1 "tuple" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_TupleTermRefusal a0) (acceptsFields_nil _))
+  | «fold» a0 =>
+    exact accepts_sum _ _ _ 2 "fold" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FoldTermRefusal a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.TermTypingRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -1269,17 +1489,21 @@ namespace CauseTypingRefusalC
 def shapeDoc : ShapeDoc :=
   ⟨.sum "CauseTypingRefusal"
      [("record", 0, [("why", (shape _root_.Effect4.Program.RecordCauseRefusal).root)]),
-      ("tuple", 1, [("why", (shape _root_.Effect4.Program.TupleCauseRefusal).root)])],
+      ("tuple", 1, [("why", (shape _root_.Effect4.Program.TupleCauseRefusal).root)]),
+      ("fold", 2, [("why", (shape _root_.Effect4.Program.FoldCauseRefusal).root)])],
    (shape _root_.Effect4.Program.RecordCauseRefusal).defs ++
-     (shape _root_.Effect4.Program.TupleCauseRefusal).defs⟩
+     (shape _root_.Effect4.Program.TupleCauseRefusal).defs ++
+     (shape _root_.Effect4.Program.FoldCauseRefusal).defs⟩
 
 def toVal : _root_.Effect4.Program.CauseTypingRefusal → Val
   | .record a0 => .ctor 0 [Canonical.toVal a0]
   | .tuple a0 => .ctor 1 [Canonical.toVal a0]
+  | .fold a0 => .ctor 2 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.CauseTypingRefusal)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.RecordCauseRefusal) v0).map .record
   | .ctor 1 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.TupleCauseRefusal) v0).map .tuple
+  | .ctor 2 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldCauseRefusal) v0).map .fold
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -1302,10 +1526,15 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.CauseTypingRefusal} (h
 theorem lift_RecordCauseRefusal (x : _root_.Effect4.Program.RecordCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordCauseRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (hp))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (hp)))
     _ _ (Canonical.fits x)
 theorem lift_TupleCauseRefusal (x : _root_.Effect4.Program.TupleCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TupleCauseRefusal).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_FoldCauseRefusal (x : _root_.Effect4.Program.FoldCauseRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldCauseRefusal).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
@@ -1318,6 +1547,9 @@ theorem fits (a : _root_.Effect4.Program.CauseTypingRefusal) : shapeDoc.accepts 
   | «tuple» a0 =>
     exact accepts_sum _ _ _ 1 "tuple" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_TupleCauseRefusal a0) (acceptsFields_nil _))
+  | «fold» a0 =>
+    exact accepts_sum _ _ _ 2 "fold" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FoldCauseRefusal a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.CauseTypingRefusal) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -1380,7 +1612,9 @@ def shapeDoc : ShapeDoc :=
         ("param", (shape _root_.Effect4.Program.Ty).root)]),
       ("resultNotSubtype", 33, [("row", (shape _root_.String).root),
         ("result", (shape _root_.Effect4.Program.Ty).root),
-        ("expected", (shape _root_.Effect4.Program.Ty).root)])],
+        ("expected", (shape _root_.Effect4.Program.Ty).root)]),
+      ("foldTerm", 34, [("why", (shape _root_.Effect4.Program.FoldTermRefusal).root)]),
+      ("foldCause", 35, [("why", (shape _root_.Effect4.Program.FoldCauseRefusal).root)])],
    (shape _root_.Effect4.Program.Term).defs ++ (shape _root_.Effect4.Program.CauseTerm).defs ++
      (shape _root_.Effect4.Program.Ty).defs ++ (shape _root_.String).defs ++
      (shape _root_.Effect4.Program.Decision).defs ++ (shape _root_.Effect4.ServiceKey).defs ++
@@ -1390,7 +1624,9 @@ def shapeDoc : ShapeDoc :=
      (shape _root_.Effect4.Program.RecordCauseRefusal).defs ++
      (shape _root_.Effect4.Program.TupleTermRefusal).defs ++
      (shape _root_.Effect4.Program.TupleCauseRefusal).defs ++
-     (shape (@_root_.List (_root_.String))).defs⟩
+     (shape (@_root_.List (_root_.String))).defs ++
+     (shape _root_.Effect4.Program.FoldTermRefusal).defs ++
+     (shape _root_.Effect4.Program.FoldCauseRefusal).defs⟩
 
 def toVal : _root_.Effect4.Program.TypeReason → Val
   | .term a0 => .ctor 0 [Canonical.toVal a0]
@@ -1431,6 +1667,8 @@ def toVal : _root_.Effect4.Program.TypeReason → Val
   | .binderTerm a0 a1 => .ctor 32 [Canonical.toVal a0, Canonical.toVal a1]
   | .resultNotSubtype a0 a1 a2 => .ctor 33 [Canonical.toVal a0, Canonical.toVal a1,
       Canonical.toVal a2]
+  | .foldTerm a0 => .ctor 34 [Canonical.toVal a0]
+  | .foldCause a0 => .ctor 35 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .term
@@ -1511,6 +1749,8 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
         Canonical.ofVal (α := _root_.Effect4.Program.Ty) v2 with
     | some a0, some a1, some a2 => some (.resultNotSubtype a0 a1 a2)
     | _, _, _ => none
+  | .ctor 34 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldTermRefusal) v0).map .foldTerm
+  | .ctor 35 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldCauseRefusal) v0).map .foldCause
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -1548,65 +1788,75 @@ theorem ofVal_exact {v : Val} {a : _root_.Effect4.Program.TypeReason} (h : ofVal
 
 theorem lift_Term (x : _root_.Effect4.Program.Term) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Term).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (hp))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_CauseTerm (x : _root_.Effect4.Program.CauseTerm) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.CauseTerm).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Ty (x : _root_.Effect4.Program.Ty) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Ty).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_String (x : _root_.String) :
     acceptsIn shapeDoc.defs (shape _root_.String).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Decision (x : _root_.Effect4.Program.Decision) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Decision).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ServiceKey (x : _root_.Effect4.ServiceKey) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.ServiceKey).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))))
     _ _ (Canonical.fits x)
 theorem lift_ListNat (x : (@_root_.List (_root_.Nat))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.Nat))).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))))
     _ _ (Canonical.fits x)
 theorem lift_Lit (x : _root_.Effect4.Program.Lit) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.Lit).root (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))))
     _ _ (Canonical.fits x)
 theorem lift_FormationRefusal (x : _root_.Effect4.Program.FormationRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FormationRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))))
     _ _ (Canonical.fits x)
 theorem lift_RecordTermRefusal (x : _root_.Effect4.Program.RecordTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordTermRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))))
     _ _ (Canonical.fits x)
 theorem lift_RecordCauseRefusal (x : _root_.Effect4.Program.RecordCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.RecordCauseRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))))
     _ _ (Canonical.fits x)
 theorem lift_TupleTermRefusal (x : _root_.Effect4.Program.TupleTermRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TupleTermRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))))
     _ _ (Canonical.fits x)
 theorem lift_TupleCauseRefusal (x : _root_.Effect4.Program.TupleCauseRefusal) :
     acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.TupleCauseRefusal).root
       (Canonical.toVal x) = true :=
-  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_left (mem_append_of_right (hp)))))
     _ _ (Canonical.fits x)
 theorem lift_ListString (x : (@_root_.List (_root_.String))) :
     acceptsIn shapeDoc.defs (shape (@_root_.List (_root_.String))).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_left (mem_append_of_right (hp))))
+    _ _ (Canonical.fits x)
+theorem lift_FoldTermRefusal (x : _root_.Effect4.Program.FoldTermRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldTermRefusal).root
+      (Canonical.toVal x) = true :=
+  acceptsIn_mono_of_subset (fun _ hp => mem_append_of_left (mem_append_of_right (hp)))
+    _ _ (Canonical.fits x)
+theorem lift_FoldCauseRefusal (x : _root_.Effect4.Program.FoldCauseRefusal) :
+    acceptsIn shapeDoc.defs (shape _root_.Effect4.Program.FoldCauseRefusal).root
       (Canonical.toVal x) = true :=
   acceptsIn_mono_of_subset (fun _ hp => mem_append_of_right (hp))
     _ _ (Canonical.fits x)
@@ -1725,6 +1975,12 @@ theorem fits (a : _root_.Effect4.Program.TypeReason) : shapeDoc.accepts (toVal a
       (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1)
           (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a2) (acceptsFields_nil _))))
+  | «foldTerm» a0 =>
+    exact accepts_sum _ _ _ 34 "foldTerm" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FoldTermRefusal a0) (acceptsFields_nil _))
+  | «foldCause» a0 =>
+    exact accepts_sum _ _ _ 35 "foldCause" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_FoldCauseRefusal a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.TypeReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -2341,7 +2597,9 @@ def reasons : List TypeReason :=
    .errorPayloadField (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
      ["cause"] .unknown,
    .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E"),
-   .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never)]
+   .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never),
+   .foldTerm ⟨[0], .notList .nat⟩,
+   .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/
@@ -2450,5 +2708,23 @@ def controls : List TypeReason :=
   Canonical.decode (α := TypeReason) (Canonical.encode reason ++ [0]) = none
 
 end TupleRefusalAcceptance
+
+namespace FoldRefusalAcceptance
+open Effect4 Effect4.Program Effect4.Store
+
+/-- The three reasons a list fold has no type (decisions row 228), in a term and in a cause. -/
+def controls : List TypeReason :=
+  [.foldTerm ⟨[1, 0], .notList .nat⟩,
+   .foldTerm ⟨[], .initialNotAccumulator (.list .nat) (.list .never)⟩,
+   .foldTerm ⟨[2], .bodyNotAccumulator .string .nat⟩,
+   .foldCause ⟨[1], ⟨[0], .notList (.option .nat)⟩⟩]
+
+#guard controls.all fun reason =>
+  Canonical.decode (α := TypeReason) (Canonical.encode reason) = some reason
+#guard controls.all fun reason =>
+  Canonical.decode (α := TypeReason) (Canonical.encode reason ++ [0]) = none
+#guard controls.all fun reason => Canonical.head reason == RefusalsAcceptance.printedHead (Canonical.print reason)
+
+end FoldRefusalAcceptance
 
 end Effect4.Store

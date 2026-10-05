@@ -111,12 +111,24 @@ def litArgTy (const : Bool) : Lit → Ty
   | .nat _ => .nat
   | .bool _ => .bool
 
+/-- The element type of a list type, by its head (moved here from the checker, which reads it
+for a list of fibers): a fold types its element binder at it (decisions row 228). A union of
+two list types has none. -/
+def Checker.listOf? : Ty → Option Ty
+  | .list t => some t
+  | _ => none
+
 mutual
   /-- The type of a term in argument position, as a fold: a variable from the environment, the
   literal rule under the enclosing atom's const-generic flag, an application by its atom at its
   arguments' types under the atom's own flag (`Signature.constAtom`). A const-generic atom
   retains direct string literals; other atoms widen them to `string`.
-  The flag is the accumulator; `fold_of` reads the algebra (`Program/Folds/Term.lean`). -/
+  The flag is the accumulator; `fold_of` reads the algebra (`Program/Folds/Term.lean`).
+
+  A list fold (decisions row 228) types its list at `list A` and its initial value at `B0`. Its
+  accumulator's type `B` is the stated one, or `B0`; `B0` is below `B` in the checker's order on
+  normal forms, as `iterate`'s cursor is (DI-91). Under `B` at the fold's level and `A` one above
+  it, the body's type is below `B`. The fold's type is `B`. -/
   def argTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Term → Option Ty
     | .var index => env[index]?
     | .lit value => some (litArgTy const value)
@@ -139,6 +151,15 @@ mutual
     | .tupleAt target index => do
       let targetType ← argTy sig env false target
       Tuple.typeAt targetType index
+    | .fold accTy list init body => do
+      let listType ← argTy sig env false list
+      let item ← Checker.listOf? listType
+      let initType ← argTy sig env false init
+      let acc := accTy.getD initType
+      if Ty.sub initType.normalize acc.normalize then do
+        let bodyType ← argTy sig (env ++ [acc, item]) false body
+        if Ty.sub bodyType.normalize acc.normalize then some acc else none
+      else none
   /-- The argument types of an application, argument by argument. -/
   def argsTy (sig : Signature Op) (env : TyEnv) (const : Bool) : Terms → Option (List Ty)
     | .nil => some []
@@ -278,6 +299,7 @@ theorem argTy_cases (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Te
   | field mode target name => exact Or.inr h
   | recordSet target name value => exact Or.inr h
   | tupleAt target index => exact Or.inr h
+  | fold accTy list init body => exact Or.inr h
 
 /-- The error type a cause carries: its `fail` reasons; defects and interrupts contribute
 none (`Cause.die` and `Cause.interrupt` are outside `E`). A `die` carries an admitted error
@@ -487,6 +509,17 @@ mutual
         argTy_weaken sig pre post inserted true value]
     | .tupleAt target index => by
       simp only [Term.weaken, argTy, argTy_weaken sig pre post inserted false target]
+    -- the body's tail gains the two binders and the cut stays the prefix's length, so the same
+    -- statement holds under them: a nested fold needs no other
+    | .fold accTy list init body => by
+      have hbody : ∀ acc item : Ty,
+          argTy sig ((pre ++ inserted :: post) ++ [acc, item]) false
+              (Term.weaken pre.length body) =
+            argTy sig ((pre ++ post) ++ [acc, item]) false body := fun acc item => by
+        rw [List.append_assoc, List.cons_append, List.append_assoc]
+        exact argTy_weaken sig pre (post ++ [acc, item]) inserted false body
+      simp only [Term.weaken, argTy, argTy_weaken sig pre post inserted false list,
+        argTy_weaken sig pre post inserted false init, hbody]
 
   theorem argsTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
       (const : Bool) (terms : Terms) :
@@ -522,7 +555,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
   cases test with
   | var _ => rfl
   | lit _ => rfl
-  | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => rfl
+  | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ | fold _ _ _ _ => rfl
   | app atom args =>
     cases args with
     | nil => rfl
@@ -530,7 +563,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
       cases head with
       | var _ => rfl
       | app _ _ => rfl
-      | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => rfl
+      | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ | fold _ _ _ _ => rfl
       | lit value =>
         cases value with
         | unit | nat _ | bool _ => rfl
@@ -541,7 +574,7 @@ theorem tagTest?_weaken (cut : Nat) (test : Term) (caught : Nat) (h : cut ≤ ca
             cases second with
             | lit _ => rfl
             | app _ _ => rfl
-            | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ => rfl
+            | record _ _ _ | field _ _ _ | recordSet _ _ _ | tupleAt _ _ | fold _ _ _ _ => rfl
             | var index =>
               cases rest with
               | cons _ _ => rfl

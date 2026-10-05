@@ -14,7 +14,7 @@
 //   Ty (Effect4.Program.Ty, tagged union): never unit nat int string bool handle(target: string) option(inner: Ty) list(inner: Ty) prod(left: Ty, right: Ty) except(error: Ty, value: Ty) exitOf(value: Ty, error: Ty) causeOf(error: Ty) fiberOf(value: Ty, error: Ty) union(left: Ty, right: Ty) lit(value: string) refOf(value: Ty) deferredOf(value: Ty, error: Ty) var(index: number) unknown record(fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]>) map(key: Ty, value: Ty) tuple(items: ReadonlyArray<Ty>) app(name: string, args: ReadonlyArray<Ty>) null undefined number bytes
 //   Lit (Effect4.Program.Lit, tagged union): unit nat(value: number) bool(value: boolean) str(value: string)
 //   FieldReadMode (Effect4.Program.FieldReadMode, literals): required optional
-//   Term (Effect4.Program.Term, tagged union): var(index: number) lit(value: Lit) app(atom: string, args: ReadonlyArray<Term>) record(fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]>, presentNames: ReadonlyArray<string>, values: ReadonlyArray<Term>) field(mode: FieldReadMode, target: Term, name: string) recordSet(target: Term, name: string, value: Term) tupleAt(target: Term, index: number)
+//   Term (Effect4.Program.Term, tagged union): var(index: number) lit(value: Lit) app(atom: string, args: ReadonlyArray<Term>) record(fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]>, presentNames: ReadonlyArray<string>, values: ReadonlyArray<Term>) field(mode: FieldReadMode, target: Term, name: string) recordSet(target: Term, name: string, value: Term) tupleAt(target: Term, index: number) fold(accTy: Ty | null, list: Term, init: Term, body: Term)
 //   Terms (Effect4.Program.Terms, ReadonlyArray<Term>): nil cons(head: Term, tail: ReadonlyArray<Term>)
 //   CauseTerm (Effect4.Program.CauseTerm, tagged union): fail(error: Term) die(defect: Term) interrupt(interruptor: Term | null) both(left: CauseTerm, right: CauseTerm)
 //   MaskMode (Effect4.Supervision.MaskMode, literals): interruptible uninterruptible inherit
@@ -126,6 +126,7 @@ export type Term =
   | { readonly _tag: "field"; readonly mode: FieldReadMode; readonly target: Term; readonly name: string }
   | { readonly _tag: "recordSet"; readonly target: Term; readonly name: string; readonly value: Term }
   | { readonly _tag: "tupleAt"; readonly target: Term; readonly index: number }
+  | { readonly _tag: "fold"; readonly accTy: Ty | null; readonly list: Term; readonly init: Term; readonly body: Term }
 
 export const Term = Schema.TaggedUnion({
   var: { index: Schema.Int },
@@ -135,6 +136,7 @@ export const Term = Schema.TaggedUnion({
   field: { mode: FieldReadMode, target: Schema.suspend((): Schema.Codec<Term> => Term), name: Schema.String },
   recordSet: { target: Schema.suspend((): Schema.Codec<Term> => Term), name: Schema.String, value: Schema.suspend((): Schema.Codec<Term> => Term) },
   tupleAt: { target: Schema.suspend((): Schema.Codec<Term> => Term), index: Schema.Int },
+  fold: { accTy: Schema.NullOr(Schema.suspend((): Schema.Codec<Ty> => Ty)), list: Schema.suspend((): Schema.Codec<Term> => Term), init: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Term> => Term) },
 })
 
 // Terms: the cons-list of Term, carried as ReadonlyArray<Term>.

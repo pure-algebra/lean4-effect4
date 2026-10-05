@@ -1438,7 +1438,30 @@
    "declInferred":
    "export const main = Effect.catch(Effect.uninterruptible(Effect.flatMap(Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0)), (a0) => Effect.fail(42))), (a0) => Effect.succeed(0))\n",
    "decl":
-   "export const main: Effect.Effect<number, never, never> = Effect.catch(Effect.uninterruptible(Effect.flatMap(Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0)), (a0) => Effect.fail(42))), (a0) => Effect.succeed(0))\n"}],
+   "export const main: Effect.Effect<number, never, never> = Effect.catch(Effect.uninterruptible(Effect.flatMap(Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0)), (a0) => Effect.fail(42))), (a0) => Effect.succeed(0))\n"},
+  {"wellTyped": true,
+   "type": {"requiresEmpty": true, "requires": [], "error": "never", "answer": "number"},
+   "straight": true,
+   "scenario": null,
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": 8}},
+   "run":
+   {"schedule": ["started 0", "exited 0 success"],
+    "outcome": "finished",
+    "internal": [],
+    "frames": 5,
+    "fibers": [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": 8}}],
+    "fiberCount": 1,
+    "exitKind": "success",
+    "exit": {"success": 8},
+    "events": ["started 0", "exited 0 {\"success\":8}"]},
+   "name": "pFold",
+   "exprRefusal": null,
+   "expr":
+   "Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Effect.succeed(cons(succ(a0), cons(a0, nil()))), (a1) => Effect.succeed(fold(a1, a0, (a2, a3) => add(a2, fold(a1, a3, (a4, a5) => add(a4, sub(a5, a3))))))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Effect.succeed(cons(succ(a0), cons(a0, nil()))), (a1) => Effect.succeed(fold(a1, a0, (a2, a3) => add(a2, fold(a1, a3, (a4, a5) => add(a4, sub(a5, a3))))))))\n",
+   "decl":
+   "export const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Effect.succeed(cons(succ(a0), cons(a0, nil()))), (a1) => Effect.succeed(fold(a1, a0, (a2, a3) => add(a2, fold(a1, a3, (a4, a5) => add(a4, sub(a5, a3))))))))\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],

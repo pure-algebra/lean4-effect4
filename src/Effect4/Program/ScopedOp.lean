@@ -16,6 +16,11 @@ The same class maps an operation's term (`mapTerm`). The generated frontier map 
 `Program/Fold.lean`) applies it, so `Eff.weaken` shifts an operation's binder term with the rest
 of the program (state plan T3b). An operation that carries no term is fixed.
 
+The same class reads an operation's term (`term?`). The raw annotation collector
+(`Formation.argumentAnnotations`, `Program/Formation.lean`) reads it, so a record declaration or
+a list fold's stated type inside an operation's term is a program annotation: raw formation and
+the integer scan reach it at a located path (decisions row 228, the fold's addendum 2).
+
 The native alphabet's instance is beside `NativeOp` (`Program/Native.lean`); the unit alphabet's
 is below. Scope is not typing: `ScopedOp` says which variables an operation's data may name, and
 nothing about their types.
@@ -44,6 +49,10 @@ class ScopedOp (Op : Type) where
   carries no term. Weakening maps every term slot of a program by `Term.weaken cut`, and an
   operation's term is such a slot: its current value at index `n` moves with the node's level. -/
   mapTerm : (Term → Term) → Op → Op := fun _ op => op
+  /-- The binder term the operation carries, when it carries one: the reading view of what
+  `mapTerm` rewrites. The default is an operation that carries none. An operation's type
+  arguments are types and no term, so this view does not show them (decisions row 212). -/
+  term? : Op → Option Term := fun _ => none
 
 /-- The unit alphabet carries no data. The scope fold's guards and the scope-preservation
 guards instantiate `Eff` at it. -/
