@@ -146,5 +146,66 @@
         "new": "ty-probe\tTy\t00\t[\"probe\"]\t{}\nty-bytes\t"
       }
     ]
+  },
+  {
+    "name": "R10 a constructor's count row leaves without a policy name",
+    "expect": "REFUSE",
+    "clause": "C3",
+    "edits": [
+      {
+        "path": "ocaml/eff/goldens/coverage.txt",
+        "old": "Effect4.Program.NativeOp.deferredIsDone\t1\n",
+        "new": ""
+      }
+    ]
+  },
+  {
+    "name": "R11 a constructor leaves a generated manifest without a policy name",
+    "expect": "REFUSE",
+    "clause": "C2",
+    "edits": [
+      {
+        "path": "ocaml/goldens/eff/manifest.txt",
+        "old": " deferredIsDone deferredPoll",
+        "new": " deferredPoll"
+      }
+    ]
+  },
+  {
+    "name": "G2 a retirement the policy names leaves the count table and the manifest",
+    "expect": "PASS",
+    "edits": [
+      {
+        "path": "ocaml/eff/goldens/coverage.txt",
+        "old": "Effect4.Program.NativeOp.deferredIsDone\t1\n",
+        "new": ""
+      },
+      {
+        "path": "ocaml/goldens/eff/manifest.txt",
+        "old": " deferredIsDone deferredPoll",
+        "new": " deferredPoll"
+      },
+      {
+        "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
+        "old": "\"Effect4.Program.NativeOp.deferredMake\"\n",
+        "new": "\"Effect4.Program.NativeOp.deferredMake\",\n    \"Effect4.Program.NativeOp.deferredIsDone\"\n"
+      }
+    ]
+  },
+  {
+    "name": "G3 a corpus verdict move the policy names",
+    "expect": "PASS",
+    "edits": [
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "g0\tfalse\ttrue\t21\tnotFiber",
+        "new": "g0\ttrue\ttrue\t21\tnotFiber"
+      },
+      {
+        "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
+        "old": "\"generated/corpus-index.tsv:g277\"",
+        "new": "\"generated/corpus-index.tsv:g277\",\n    \"generated/corpus-index.tsv:g0\""
+      }
+    ]
   }
 ]

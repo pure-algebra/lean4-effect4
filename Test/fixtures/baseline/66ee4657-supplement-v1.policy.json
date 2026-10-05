@@ -25,7 +25,15 @@
     "retired, old bytes of a `branch` refuse, and the three retained vectors that held one",
     "(pBranch, pIllBranch, pIllJoin) are the same programs written with `select`.",
     "`yieldError` retired into `fail`, the failure it meant: tag 3 is retired, old bytes refuse,",
-    "and pYieldError is the same program written with `fail`."
+    "and pYieldError is the same program written with `fail`.",
+    "",
+    "The state plan's T3a (decisions rows 42, 155 (a), 183, 209). `Deferred.make` carries its type",
+    "arguments: `NativeOp.deferredMake` retired at tag 13 and `NativeOp.deferredMakeOf (value error : Ty)`",
+    "appended at tag 23. The retained vectors that perform it (pAwait, pCallback, pOps) are the same",
+    "programs at `deferredMakeOf nat nat`, and pAcquire's checked answer is `refOf nat`, the type the",
+    "retired cell spelling denoted. verdict_moves names each corpus row whose verdict moved, as",
+    "`path:key`: g158 (`Ref.make(\"hi\")`) types at `Ref<string>`, and g277's first refusal moved from",
+    "`Ref.make(a0)` to the term `lt(9, undefined)` after it."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -42,13 +50,15 @@
     "Effect4.Program.Ty.undefined",
     "Effect4.Program.Ty.number",
     "Effect4.Program.Ty.bytes",
-    "Effect4.Machine.Err.payload"
+    "Effect4.Machine.Err.payload",
+    "Effect4.Program.NativeOp.deferredMakeOf"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",
     "Effect4.Program.Eff.yieldError",
     "Effect4.Program.Eff.callback",
-    "Effect4.Program.Eff.whileLoop"
+    "Effect4.Program.Eff.whileLoop",
+    "Effect4.Program.NativeOp.deferredMake"
   ],
   "family_additions": [
     "Effect4.Program.Decision",
@@ -128,6 +138,16 @@
     "eff/goldens/pSleep.bin",
     "eff/goldens/pWhile.bin",
     "eff/goldens/pIllStep.bin",
-    "goldens/eff/pLoop.hex"
+    "goldens/eff/pLoop.hex",
+    "eff/goldens/pAwait.bin",
+    "eff/goldens/pAwait.json",
+    "eff/goldens/pCallback.json",
+    "eff/goldens/pOps.json",
+    "eff/goldens/pAcquire.ty",
+    "goldens/eff/pAwait.hex"
+  ],
+  "verdict_moves": [
+    "generated/corpus-index.tsv:g158",
+    "generated/corpus-index.tsv:g277"
   ]
 }
