@@ -1091,6 +1091,10 @@ def main(argv):
     except (LaneError, truth_ledger.Inconsistent) as refusal:
         print(f'FAIL truth-release: {refusal}')
         return 1
+    except subprocess.TimeoutExpired as late:
+        print(f'FAIL truth-release: {Path(late.cmd[0]).name} did not finish in {late.timeout:.0f} s: '
+              f'{" ".join(str(part) for part in late.cmd[1:4])} ...')
+        return 1
 
 
 if __name__ == '__main__':
