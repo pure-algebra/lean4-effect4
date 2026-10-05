@@ -99,17 +99,20 @@ def keyJson (keys : Keys) : String :=
 
 /-- Every profile row has a construction, independent of random seed coverage. -/
 def nativeProbes : List (String × Eff NativeOp) :=
-  OCaml5.Eff.allOps.zipIdx.map fun (op, index) =>
+  NativeOp.spelled.zipIdx.map fun (op, index) =>
     let row := op.row
+    -- the `Ref` and `Deferred` rows are templates: a bare parameter takes a number, a handle the
+    -- cell or the deferred bound before the call
     let request : Term := match row.request with
       | .unit => .lit .unit
-      | .nat => .lit (.nat 0)
+      | .nat | .var _ => .lit (.nat 0)
       | .prod _ _ => .app "pair" (.cons (.var 0) (.cons (.lit (.nat 0)) .nil))
       | _ => .var 0
     let p := if row.kind == .async then Eff.perform op request else Eff.perform op request
     let p := match row.request with
-      | .handle name => .bind (.perform (if name == NativeOp.refTarget then .refMake else .deferredMake) (.lit (.nat 1))) p
-      | .prod (.handle name) _ => .bind (.perform (if name == NativeOp.refTarget then .refMake else .deferredMake) (.lit (.nat 1))) p
+      | .refOf _ | .prod (.refOf _) _ => .bind (.perform .refMake (.lit (.nat 1))) p
+      | .deferredOf _ _ | .prod (.deferredOf _ _) _ =>
+        .bind (.perform (.deferredMakeOf .nat .nat) (.lit (.nat 1))) p
       | _ => p
     ("native-" ++ toString index ++ "-" ++ row.name ++ "-" ++ "-".intercalate row.trailing, p)
 

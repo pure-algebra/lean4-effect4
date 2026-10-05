@@ -158,7 +158,7 @@ g154	false	true	179	requestNotSubtype	0.0.0.0.1	2345|2769
 g155	false	true	575	breakOutsideLoop	0.0.0.0	1107
 g156	false	true	335	valueNotSubtype	0.0.0.0	2345|2375|2322
 g157	false	true	36	breakOutsideLoop	0.0	1107
-g158	false	true	32	requestNotSubtype	0.0.0	2345|2769
+g158	true	true	32	-	-	-
 g159	true	true	99	-	-	-
 g160	true	true	95	-	-	-
 g161	true	true	21	-	-	-
@@ -277,7 +277,7 @@ g273	false	true	299	notFiber	0.0.1.0	2345
 g274	true	true	22	-	-	-
 g275	false	true	153	listOfFibersExpected	0.0	2345
 g276	true	true	62	-	-	-
-g277	false	true	223	requestNotSubtype	0.0.1.0.0.0.0	2345|2769
+g277	false	true	223	term	0	2345|2769|2554
 g278	true	true	22	-	-	-
 g279	false	true	211	predicateNotBool	.	-
 g280	false	true	31	errorNotAdmitted	.	-

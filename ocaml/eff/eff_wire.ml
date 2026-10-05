@@ -507,7 +507,6 @@ let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
   | Native_op_refUpdateSomeAndGet a0 -> Eff_frame.emit_ctor b 10 (fun b -> emit_fn_name b a0)
   | Native_op_refModify a0 -> Eff_frame.emit_ctor b 11 (fun b -> emit_fn_name b a0)
   | Native_op_refModifySome a0 -> Eff_frame.emit_ctor b 12 (fun b -> emit_fn_name b a0)
-  | Native_op_deferredMake -> Eff_frame.emit_ctor b 13 (fun _ -> ())
   | Native_op_deferredIsDone -> Eff_frame.emit_ctor b 14 (fun _ -> ())
   | Native_op_deferredPoll -> Eff_frame.emit_ctor b 15 (fun _ -> ())
   | Native_op_deferredSucceed -> Eff_frame.emit_ctor b 16 (fun _ -> ())
@@ -517,6 +516,7 @@ let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
   | Native_op_sleep -> Eff_frame.emit_ctor b 20 (fun _ -> ())
   | Native_op_clockNow -> Eff_frame.emit_ctor b 21 (fun _ -> ())
   | Native_op_external a0 -> Eff_frame.emit_ctor b 22 (fun b -> Eff_frame.emit_nat b a0)
+  | Native_op_deferredMakeOf (a0, a1) -> Eff_frame.emit_ctor b 23 (fun b -> emit_ty b a0; emit_ty b a1)
 
 let encode_native_op (v : native_op) : string = Eff_frame.to_string emit_native_op v
 
@@ -575,8 +575,6 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Native_op_refModifySome a0, next) else None)
-    | 13 ->
-      if p = e then Some (Native_op_deferredMake, next) else None
     | 14 ->
       if p = e then Some (Native_op_deferredIsDone, next) else None
     | 15 ->
@@ -601,6 +599,14 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
        | None -> None
        | Some (a0, p) ->
         if p = e then Some (Native_op_external a0, next) else None)
+    | 23 ->
+      (match decode_ty s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_ty s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Native_op_deferredMakeOf (a0, a1), next) else None))
     | _ -> None)
 
 let decode_native_op_exact (s : string) : native_op option = Eff_frame.exact decode_native_op s

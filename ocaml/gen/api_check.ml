@@ -6,7 +6,7 @@
      p42    = succeed (lit (nat 42))
      pFork  = bind (withFiber (fork (bind (yieldNow 0) (succeed (lit (nat 7)))) opts))
                    (awaitFiber (var 0) awaitValue)
-     pAwait = bind (perform deferredMake (lit unit)) (perform deferredAwait (var 0))
+     pAwait = bind (perform (deferredMakeOf nat nat) (lit unit)) (perform deferredAwait (var 0))
    Each is run through `api_run` with fuel 1000; the check is the root
    fiber's exit. Exit code 0 iff every check passed.
 
@@ -94,7 +94,7 @@ let p_fork : A.native_op A.eff =
 
 let p_await : A.native_op A.eff =
   A.Eff_bind
-    ( A.Eff_perform (A.NativeOp_deferredMake, A.Term_lit A.Lit_unit),
+    ( A.Eff_perform (A.NativeOp_deferredMakeOf (A.Ty_nat, A.Ty_nat), A.Term_lit A.Lit_unit),
       A.Eff_perform (A.NativeOp_deferredAwait, A.Term_var 0) )
 
 let () =

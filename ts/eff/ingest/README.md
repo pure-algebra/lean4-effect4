@@ -164,7 +164,7 @@ The following tables are generated from the profile, forms and taxonomy.
 | {"_tag":"refModifySome","f":"zeroWhenPositive"} | Ref.modifySome | sync | zeroWhenPositive |
 | {"_tag":"refModifySome","f":"noChange"} | Ref.modifySome | sync | noChange |
 | {"_tag":"refModifySome","f":"takeAndBump"} | Ref.modifySome | sync | takeAndBump |
-| {"_tag":"deferredMake"} | Deferred.make | sync |  |
+| {"_tag":"deferredMakeOf","value":{"_tag":"nat"},"error":{"_tag":"nat"}} | Deferred.make | sync |  |
 | {"_tag":"deferredIsDone"} | Deferred.isDone | sync |  |
 | {"_tag":"deferredPoll"} | Deferred.poll | sync |  |
 | {"_tag":"deferredSucceed"} | Deferred.succeed | sync |  |

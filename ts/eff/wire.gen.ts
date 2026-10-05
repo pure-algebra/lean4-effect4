@@ -272,7 +272,6 @@ const writeNativeOp = (w: Writer, v: NativeOp): void => {
     case "refUpdateSomeAndGet": return w.ctor(10, [() => writeFnName(w, v.f)])
     case "refModify": return w.ctor(11, [() => writeFnName(w, v.f)])
     case "refModifySome": return w.ctor(12, [() => writeFnName(w, v.f)])
-    case "deferredMake": return w.ctor(13, [])
     case "deferredIsDone": return w.ctor(14, [])
     case "deferredPoll": return w.ctor(15, [])
     case "deferredSucceed": return w.ctor(16, [])
@@ -282,6 +281,7 @@ const writeNativeOp = (w: Writer, v: NativeOp): void => {
     case "sleep": return w.ctor(20, [])
     case "clockNow": return w.ctor(21, [])
     case "external": return w.ctor(22, [() => w.nat(v.index)])
+    case "deferredMakeOf": return w.ctor(23, [() => writeTy(w, v.value), () => writeTy(w, v.error)])
     default: throw new TypeError("wire NativeOp constructor")
   }
 }

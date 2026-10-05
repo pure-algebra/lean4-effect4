@@ -22,7 +22,7 @@
 //   ObserverMode (Effect4.Supervision.ObserverMode, literals): awaitValue joinEffect
 //   FinalizerStrategy (Effect4.FinalizerStrategy, literals): sequential parallel
 //   FnName (Effect4.Machine.FnName, literals): incr double zeroWhenPositive noChange takeAndBump
-//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet refUpdate(f: FnName) refGetAndUpdate(f: FnName) refUpdateAndGet(f: FnName) refUpdateSome(f: FnName) refGetAndUpdateSome(f: FnName) refUpdateSomeAndGet(f: FnName) refModify(f: FnName) refModifySome(f: FnName) deferredMake deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow external(index: number)
+//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet refUpdate(f: FnName) refGetAndUpdate(f: FnName) refUpdateAndGet(f: FnName) refUpdateSome(f: FnName) refGetAndUpdateSome(f: FnName) refUpdateSomeAndGet(f: FnName) refModify(f: FnName) refModifySome(f: FnName) deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow external(index: number) deferredMakeOf(value: Ty, error: Ty)
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
@@ -186,7 +186,6 @@ export type NativeOp =
   | { readonly _tag: "refUpdateSomeAndGet"; readonly f: FnName }
   | { readonly _tag: "refModify"; readonly f: FnName }
   | { readonly _tag: "refModifySome"; readonly f: FnName }
-  | { readonly _tag: "deferredMake" }
   | { readonly _tag: "deferredIsDone" }
   | { readonly _tag: "deferredPoll" }
   | { readonly _tag: "deferredSucceed" }
@@ -196,6 +195,7 @@ export type NativeOp =
   | { readonly _tag: "sleep" }
   | { readonly _tag: "clockNow" }
   | { readonly _tag: "external"; readonly index: number }
+  | { readonly _tag: "deferredMakeOf"; readonly value: Ty; readonly error: Ty }
 
 export const NativeOp = Schema.TaggedUnion({
   refMake: {},
@@ -211,7 +211,6 @@ export const NativeOp = Schema.TaggedUnion({
   refUpdateSomeAndGet: { f: FnName },
   refModify: { f: FnName },
   refModifySome: { f: FnName },
-  deferredMake: {},
   deferredIsDone: {},
   deferredPoll: {},
   deferredSucceed: {},
@@ -221,6 +220,7 @@ export const NativeOp = Schema.TaggedUnion({
   sleep: {},
   clockNow: {},
   external: { index: Schema.Int },
+  deferredMakeOf: { value: Schema.suspend((): Schema.Codec<Ty> => Ty), error: Schema.suspend((): Schema.Codec<Ty> => Ty) },
 })
 
 export const ServiceName = Schema.Struct({

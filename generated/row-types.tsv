@@ -11,11 +11,11 @@ KeyValueStoreMemory	kvHas	method	KeyValueStore.KeyValueStore	[string]	boolean	re
 Host	acquire	call		[]	Host.Resource	never	
 Host	close	call		[Host.Resource]	void	never	
 Host	read	call		[Host.Resource]	number	never	
-Native	refMake	call		[number]	Ref.Ref<number>	never	
-Native	refGet	call		[Ref.Ref<number>]	number	never	
-Native	refSet	tupleCall		[Ref.Ref<number>, number]	Ref.Ref<number>	never	
-Native	refGetAndSet	tupleCall		[Ref.Ref<number>, number]	number	never	
-Native	refSetAndGet	tupleCall		[Ref.Ref<number>, number]	number	never	
+Native	refMake	call		["p0"]	Ref.Ref<"p0">	never	<"p0">
+Native	refGet	call		[Ref.Ref<"p0">]	"p0"	never	<"p0">
+Native	refSet	tupleCall		[Ref.Ref<"p0">, "p0"]	Ref.Ref<"p0">	never	<"p0">
+Native	refGetAndSet	tupleCall		[Ref.Ref<"p0">, "p0"]	"p0"	never	<"p0">
+Native	refSetAndGet	tupleCall		[Ref.Ref<"p0">, "p0"]	"p0"	never	<"p0">
 Native	refUpdate	call			void	never	
 Native	refGetAndUpdate	call			number	never	
 Native	refUpdateAndGet	call			number	never	
@@ -24,12 +24,12 @@ Native	refGetAndUpdateSome	call			number	never
 Native	refUpdateSomeAndGet	call			number	never	
 Native	refModify	call			number	never	
 Native	refModifySome	call			number	never	
-Native	deferredMake	call			Deferred.Deferred<number, number>	never	
-Native	deferredIsDone	call		[Deferred.Deferred<number, number>]	boolean	never	
-Native	deferredPoll	call		[Deferred.Deferred<number, number>]	boolean	never	
-Native	deferredSucceed	tupleCall		[Deferred.Deferred<number, number>, number]	boolean	never	
-Native	deferredFail	tupleCall		[Deferred.Deferred<number, number>, number]	boolean	never	
-Native	deferredAwait	call		[Deferred.Deferred<number, number>]	number	number	
+Native	deferredMakeOf	call			Deferred.Deferred<number, number>	never	
+Native	deferredIsDone	call		[Deferred.Deferred<"p0", "p1">]	boolean	never	<"p0", "p1">
+Native	deferredPoll	call		[Deferred.Deferred<"p0", "p1">]	boolean	never	<"p0", "p1">
+Native	deferredSucceed	tupleCall		[Deferred.Deferred<"p0", "p1">, "p0"]	boolean	never	<"p0", "p1">
+Native	deferredFail	tupleCall		[Deferred.Deferred<"p0", "p1">, "p1"]	boolean	never	<"p0", "p1">
+Native	deferredAwait	call		[Deferred.Deferred<"p0", "p1">]	"p0"	"p1"	<"p0", "p1">
 Native	scopeMake	call		[]	Scope.Scope	never	
 Native	sleep	call		[number]	void	never	
 Native	clockNow	value			number	never	

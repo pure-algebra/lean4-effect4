@@ -131,7 +131,6 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
   | Native_op_refUpdateSomeAndGet a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeAndGet"; json_fn_name a0]
   | Native_op_refModify a0 -> Eff_json_text.Array [Eff_json_text.String "refModify"; json_fn_name a0]
   | Native_op_refModifySome a0 -> Eff_json_text.Array [Eff_json_text.String "refModifySome"; json_fn_name a0]
-  | Native_op_deferredMake -> Eff_json_text.Array [Eff_json_text.String "deferredMake"]
   | Native_op_deferredIsDone -> Eff_json_text.Array [Eff_json_text.String "deferredIsDone"]
   | Native_op_deferredPoll -> Eff_json_text.Array [Eff_json_text.String "deferredPoll"]
   | Native_op_deferredSucceed -> Eff_json_text.Array [Eff_json_text.String "deferredSucceed"]
@@ -141,6 +140,7 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
   | Native_op_sleep -> Eff_json_text.Array [Eff_json_text.String "sleep"]
   | Native_op_clockNow -> Eff_json_text.Array [Eff_json_text.String "clockNow"]
   | Native_op_external a0 -> Eff_json_text.Array [Eff_json_text.String "external"; Eff_json_text.Int a0]
+  | Native_op_deferredMakeOf (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "deferredMakeOf"; json_ty a0; json_ty a1]
 
 let print_native_op (v : native_op) : string = Eff_json_text.render (json_native_op v)
 

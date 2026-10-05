@@ -43,7 +43,6 @@ Effect4.Program.NativeOp.refGetAndUpdateSome	1
 Effect4.Program.NativeOp.refUpdateSomeAndGet	1
 Effect4.Program.NativeOp.refModify	1
 Effect4.Program.NativeOp.refModifySome	1
-Effect4.Program.NativeOp.deferredMake	3
 Effect4.Program.NativeOp.deferredIsDone	1
 Effect4.Program.NativeOp.deferredPoll	1
 Effect4.Program.NativeOp.deferredSucceed	1
@@ -53,6 +52,7 @@ Effect4.Program.NativeOp.scopeMake	4
 Effect4.Program.NativeOp.sleep	1
 Effect4.Program.NativeOp.clockNow	1
 Effect4.Program.NativeOp.external	2
+Effect4.Program.NativeOp.deferredMakeOf	3
 Effect4.Program.Decision.bool	4
 Effect4.Program.Decision.option	1
 Effect4.Program.Decision.tag	1
