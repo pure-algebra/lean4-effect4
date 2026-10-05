@@ -1,0 +1,48 @@
+{
+  "runtime": "v22.23.2",
+  "sourcePath": "/Users/pooks/Dev/lean4-effect4/tools/Tools/ProofGraphView.js",
+  "sourceSha256": "61ff4a5a0b7664f0dd05b8b66d339d34a6087dca4bf38a1041612b7cbe6206d0",
+  "reportPath": "/Users/pooks/Dev/lean4-effect4/.lake/gen/semantics-report/semantics.json",
+  "reportSha256": "4f5481913e33f1211eb156ced52d3c2a95791f9fd7c9a36e0c47376e8ec30c6c",
+  "results": [
+    {
+      "label": "positive untouched",
+      "problems": [],
+      "model": {
+        "ok": true,
+        "nodes": 147
+      }
+    },
+    {
+      "label": "positive empty edge list",
+      "problems": [],
+      "model": {
+        "ok": true,
+        "nodes": 147
+      }
+    },
+    {
+      "label": "negative unknown string",
+      "problems": [
+        "Effect4.Program.Denote.meaning_typed_app's nearest nodes names Missing.Proof, which is not a plan node"
+      ]
+    },
+    {
+      "label": "requirement top uses known string",
+      "problems": [],
+      "model": {
+        "ok": false,
+        "error": "TypeError: Cannot read properties of undefined (reading 'push')"
+      }
+    },
+    {
+      "label": "nearest edge uses known object",
+      "problems": [],
+      "model": {
+        "ok": false,
+        "error": "TypeError: Cannot read properties of undefined (reading 'push')"
+      }
+    }
+  ],
+  "scope": "Actual validator and actual pure model-building source extracted. No DOM execution, Lean execution, kernel or report-exporter defect asserted."
+}

@@ -1,0 +1,63 @@
+{
+  "runtime": "v22.23.2",
+  "sourcePath": "/Users/pooks/Dev/lean4-effect4/tools/Tools/ProofGraphView.js",
+  "sourceSha256": "61ff4a5a0b7664f0dd05b8b66d339d34a6087dca4bf38a1041612b7cbe6206d0",
+  "reportPath": "/Users/pooks/Dev/lean4-effect4/.lake/gen/semantics-report/semantics.json",
+  "reportSha256": "4f5481913e33f1211eb156ced52d3c2a95791f9fd7c9a36e0c47376e8ec30c6c",
+  "sourceReportKeys": [
+    "schemaVersion",
+    "provenance",
+    "producer",
+    "plan",
+    "placement",
+    "inputs",
+    "format",
+    "cuts",
+    "concepts",
+    "command",
+    "claims",
+    "acceptance"
+  ],
+  "node": "Conform.Effect4.Typing.check_sound",
+  "results": [
+    {
+      "label": "positive untouched report",
+      "problems": []
+    },
+    {
+      "label": "negative unknown nearest",
+      "problems": [
+        "Conform.Effect4.Typing.check_sound's nearest nodes names Missing.Proof, which is not a plan node"
+      ]
+    },
+    {
+      "label": "missing statement",
+      "problems": [
+        "Conform.Effect4.Typing.check_sound's statement is missing"
+      ]
+    },
+    {
+      "label": "missing axioms",
+      "problems": [
+        "Conform.Effect4.Typing.check_sound's axioms is missing"
+      ]
+    },
+    {
+      "label": "report diagnostic",
+      "problems": []
+    },
+    {
+      "label": "missing nearest",
+      "problems": [
+        "Conform.Effect4.Typing.check_sound's nearest nodes is missing"
+      ]
+    },
+    {
+      "label": "missing open parts",
+      "problems": [
+        "R1's open parts is missing"
+      ]
+    }
+  ],
+  "scope": "Actual extracted validator; no UI rendering, no Lean run, no assertion about compiled theorem soundness."
+}

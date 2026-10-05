@@ -50,13 +50,20 @@ function validatePlan(report) {
     if (!isArr(value)) { problems.push(`${where} is not a list`); return false; }
     return true;
   };
-  const known = (where, value) => {
+  // A reference names a plan node, in the shape that the drawings read at its field. A
+  // requirement's top and placed entries are objects with a name. Every other reference is the
+  // name itself. The other shape at a field is refused here, before the model is built.
+  const references = (where, value, asObject) => {
     if (!list(where, value)) return;
     for (const t of value) {
-      const name = t && typeof t === 'object' ? t.name : t;
+      const shaped = asObject ? (t !== null && typeof t === 'object' && isStr(t.name)) : isStr(t);
+      if (!shaped) { problems.push(`${where} has an entry that is not ${asObject ? 'an object with a name' : 'a name'}`); continue; }
+      const name = asObject ? t.name : t;
       if (!names.has(name)) problems.push(`${where} names ${name}, which is not a plan node`);
     }
   };
+  const known = (where, value) => references(where, value, false);
+  const knownItems = (where, value) => references(where, value, true);
   for (const n of plan.nodes) {
     if (!n || !isStr(n.name)) continue;
     if (typeof n.statement !== 'string') problems.push(`${n.name}'s statement is missing`);
@@ -74,8 +81,8 @@ function validatePlan(report) {
   }
   for (const r of plan.requirements) {
     if (!r || !isStr(r.id) || !isStr(r.title) || !isStr(r.status)) { problems.push('a requirement lacks its id, title or status'); continue; }
-    known(`${r.id}'s top nodes`, r.top);
-    known(`${r.id}'s placed nodes`, r.placed);
+    knownItems(`${r.id}'s top nodes`, r.top);
+    knownItems(`${r.id}'s placed nodes`, r.placed);
     known(`${r.id}'s next goals`, r.next);
     list(`${r.id}'s open parts`, r.openParts);
   }

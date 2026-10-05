@@ -8,7 +8,9 @@
 //   and a requirement whose top node is unknown each fail, with a problem naming the cause;
 // - a copy that lacks one field the drawings read fails, with a problem naming the field: an
 //   absent list is not an empty one (Codex's dogfooding review, 2026-10-05);
-// - a copy with that field present and empty passes.
+// - a copy with that field present and empty passes;
+// - a reference in the other shape fails: a requirement's top node given as a bare name, and a
+//   node's nearest node given as an object. The view reads each field in one shape only.
 //
 // Usage: node scripts/check-proofgraph-input.mjs [semantics.json]
 import { readFileSync } from 'node:fs';
@@ -76,4 +78,19 @@ for (const [label, remove, empty, expected] of fields) {
   const none = validatePlan(emptied);
   if (none.length) fail(`${label} empty: expected no problem, got ${JSON.stringify(none.slice(0, 3))}`);
 }
-console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${fields.length} absent fields refused, and the same fields accepted when empty`);
+
+// A known reference in the wrong shape for its field.
+const withTop = report.plan.requirements.findIndex((q) => (q.top || []).length > 0);
+if (withTop < 0) fail('the generated report has no requirement with a top node to reshape');
+const shapes = [
+  ["a requirement's top node as a bare name", (r) => { const q = r.plan.requirements[withTop]; q.top[0] = q.top[0].name; }, 'top nodes has an entry that is not an object with a name'],
+  ["a node's nearest node as an object", (r) => { const n = node(r); n.broughtIn.nearest[0] = { name: n.broughtIn.nearest[0] }; }, 'nearest nodes has an entry that is not a name'],
+];
+if (!(node(report).broughtIn.nearest || []).length) fail('the generated report has no nearest node to reshape');
+for (const [label, mutate, expected] of shapes) {
+  const reshaped = copy();
+  mutate(reshaped);
+  const problems = validatePlan(reshaped);
+  if (!problems.some((p) => p.includes(expected))) fail(`${label}: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
+}
+console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${fields.length} absent fields refused, and the same fields accepted when empty; ${shapes.length} references in the wrong shape refused`);

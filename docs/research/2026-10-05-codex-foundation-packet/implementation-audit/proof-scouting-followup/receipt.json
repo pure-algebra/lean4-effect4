@@ -1,0 +1,66 @@
+{
+  "heartbeat": "2026-10-05T18:04:29.069Z",
+  "observed_at": "2026-10-05T18:12:17.601182+00:00",
+  "finishing_criteria": [
+    "Verify current UI coordinator and active seats",
+    "Recheck the two tooling repairs and accepted scouting route",
+    "Review committed T3b E3/E4 with unfinished F excluded",
+    "Retain any new bounded finding and deliver one advisory",
+    "Keep monitor active without repository edits or build work"
+  ],
+  "heads": {
+    "/Users/pooks/Dev/lean4-effect4": "11e655c1da013a3dc412f4e85931028a6f168e77",
+    "/Users/pooks/Dev/lean4-effect4-t3b": "7c678efaf5645270830d622f541d1b936a380d6c",
+    "/Users/pooks/Dev/lean4-effect4-m0": "f3086de1d8a395d39480cbd361622f919a069996"
+  },
+  "statuses": {
+    "/Users/pooks/Dev/lean4-effect4": "M scripts/check-proofgraph-input.mjs\n M tools/Tools/ProofGraphView.js",
+    "/Users/pooks/Dev/lean4-effect4-t3b": "M Test/Dogfood/P3WorkerQueue.lean\n M Test/Dogfood/P4RateLimiter.lean\n M Test/Dogfood/P5LedgerService.lean\n M Test/Dogfood/README.md\n M Test/Dogfood/Stage.lean\n M docs/core/semantics.md\n M ocaml/engine/test/test_engine.ml",
+    "/Users/pooks/Dev/lean4-effect4-m0": "M scripts/lib/truth_host.py\n?? harness/truth/build-ledger.tsv\n?? scripts/check-truth-release.py\n?? scripts/lib/truth_ledger.py"
+  },
+  "coordinator": "Queues plan and design decisions",
+  "url": "https://claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+  "authority": "rows244-248 remain current; no new owner ruling observed",
+  "resolved": [
+    "0373bcf6: missing-field validator findings; actual JS rerun PASS",
+    "0373bcf6: duplicate queue traversal; source and eight Python controls plus 13 retained requirement graphs",
+    "11e655c1 adopts proof routes, registry reconciliation after T3b merge, and migration acceptance additions"
+  ],
+  "new_finding": "Known-reference shape mutants pass validation and crash actual pure model-building code; valid, empty-edge and unknown-name controls retained",
+  "commands": [
+    {
+      "command": "node scripts/check-proofgraph-input.mjs",
+      "result": "PASS 134 nodes,13 requirements,4 broken copies refused,13 absent fields refused with empty controls"
+    },
+    {
+      "command": "node /private/tmp/codex-effect4-overnight-monitor/2026-10-05-proof-scouting-followup/reference-shapes.mjs",
+      "result": "5 controls:2 valid model constructions,1 unknown-name refusal,2 malformed known-reference shapes accepted then TypeError"
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-proof-scouting-followup/review.md",
+      "result": "PASS"
+    }
+  ],
+  "t3b_review": "No new actionable defect in bounded committed E3/e112352f and E4/861397bf source and retained-receipt review. Active F excluded. No tests or builds rerun.",
+  "delivery": {
+    "status": "normal_send_verified",
+    "ui": "Message62 You said: Codex follow-up at11e655c1; empty prompt; coordinator responding;2 background seats active",
+    "draft_preserved": true,
+    "force_send": false
+  },
+  "monitor": "active; no development handoff",
+  "scope": "Source review; JavaScript execution of actual validator and pure model; finite Python traversal mirror. No Lean/build/generator/install/repository edit. No kernel or exporter defect asserted.",
+  "artifacts": {
+    "reach-followup.py": "a927e390fca81217f6e725b905355c2934f3eba9fb21fea8a7964fbbc745f457",
+    "recheck-missing-fields.json": "bfd76d2964b2b649ae5fe5c79d460a5ac00f0163e5c1639bf7a3387e8176610d",
+    "reference-shapes.json": "87a19fdce081541fd633846e2d3073c1c8c36e60f738df0848c94c358a89bf02",
+    "reach-receipt.json": "58e3bf2c1cb5a0bd47c7c208bca1244384fd064c16dc46967745157bde910f0d",
+    "t3b-e3-e4.md": "7446503f957817fbf4ec94178fd8bd32ace84f3f9932e17142a90e0980ba1b9a",
+    "recheck-missing-fields.mjs": "b0a2f3da5aab86966bf21f4eb137332fc7c193098cdc454852e88fd36d6b55af",
+    "coordinator-note.txt": "13a35cffe909bb705c37a5d880ea97cfb6cb799082b7e4dbb7ae4d103afcab78",
+    "reference-shapes.mjs": "77dd7c57e0c31da8724c91cc0575a93fd7628a74f4ed43ba78f364d5add09ab3",
+    "reach-review.md": "bd519e7aab2cce815b1ce61eeabcda66b6955f1028755a1a4a9b462bf66090d4",
+    "review.md": "29c93b88c1cf36990b6dd5388e9bd410b6013c8f8f8f5456f92f51cb3f0454e9",
+    "reach-followup.json": "25c7a961e0f784e30e73839d622cb3afef337b07b757a9ef2ce3fc12477a926a"
+  }
+}

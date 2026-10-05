@@ -1,0 +1,356 @@
+{
+  "head": "11e655c1da013a3dc412f4e85931028a6f168e77",
+  "python": "3.13.14",
+  "scope": "Finite Python mirror and independent traversal oracle; no Lean execution. Eight synthetic cases, old red/green control, retained report comparison.",
+  "source_sha256": {
+    "tools/Tools/Semantics.lean": "74cec91a9facf2a1f78553337b689efc737b2acb92cbf2a1f63057d0a52f5ab0",
+    "tools/Drivers/SemanticsControls.lean": "5efc0dfdaa8ddf55b5166c129a77de3c05ac6ab60188e7d8c647c80800ede3dc",
+    ".lake/gen/semantics-report/semantics.json": "4f5481913e33f1211eb156ced52d3c2a95791f9fd7c9a36e0c47376e8ec30c6c"
+  },
+  "old_shared": [
+    [
+      "T",
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    [
+      "L"
+    ]
+  ],
+  "old_chain": [
+    [
+      "T",
+      "A",
+      "B",
+      "C",
+      "D",
+      "L"
+    ],
+    []
+  ],
+  "cases": [
+    {
+      "label": "shared descendant",
+      "edges": {
+        "T": [
+          "A",
+          "B",
+          "C"
+        ],
+        "A": [
+          "D"
+        ],
+        "B": [
+          "D"
+        ],
+        "C": [
+          "D"
+        ],
+        "D": [
+          "L"
+        ],
+        "L": []
+      },
+      "bound": 6,
+      "start": [
+        "T"
+      ],
+      "reached": [
+        "T",
+        "A",
+        "B",
+        "C",
+        "D",
+        "L"
+      ],
+      "pending": []
+    },
+    {
+      "label": "chain positive control",
+      "edges": {
+        "T": [
+          "A"
+        ],
+        "A": [
+          "B"
+        ],
+        "B": [
+          "C"
+        ],
+        "C": [
+          "D"
+        ],
+        "D": [
+          "L"
+        ],
+        "L": []
+      },
+      "bound": 6,
+      "start": [
+        "T"
+      ],
+      "reached": [
+        "T",
+        "A",
+        "B",
+        "C",
+        "D",
+        "L"
+      ],
+      "pending": []
+    },
+    {
+      "label": "repeated starting node",
+      "edges": {
+        "T": [
+          "A",
+          "B",
+          "C"
+        ],
+        "A": [
+          "D"
+        ],
+        "B": [
+          "D"
+        ],
+        "C": [
+          "D"
+        ],
+        "D": [
+          "L"
+        ],
+        "L": []
+      },
+      "bound": 6,
+      "start": [
+        "T",
+        "T"
+      ],
+      "reached": [
+        "T",
+        "A",
+        "B",
+        "C",
+        "D",
+        "L"
+      ],
+      "pending": []
+    },
+    {
+      "label": "small budget retains pending",
+      "edges": {
+        "T": [
+          "A",
+          "B",
+          "C"
+        ],
+        "A": [
+          "D"
+        ],
+        "B": [
+          "D"
+        ],
+        "C": [
+          "D"
+        ],
+        "D": [
+          "L"
+        ],
+        "L": []
+      },
+      "bound": 3,
+      "start": [
+        "T"
+      ],
+      "reached": [
+        "T",
+        "A",
+        "B"
+      ],
+      "pending": [
+        "C",
+        "D"
+      ]
+    },
+    {
+      "label": "zero budget retains distinct starts",
+      "edges": {
+        "T": [
+          "A",
+          "B",
+          "C"
+        ],
+        "A": [
+          "D"
+        ],
+        "B": [
+          "D"
+        ],
+        "C": [
+          "D"
+        ],
+        "D": [
+          "L"
+        ],
+        "L": []
+      },
+      "bound": 0,
+      "start": [
+        "T",
+        "T",
+        "A"
+      ],
+      "reached": [],
+      "pending": [
+        "T",
+        "A"
+      ]
+    },
+    {
+      "label": "cycle and self-loop",
+      "edges": {
+        "T": [
+          "T",
+          "A"
+        ],
+        "A": [
+          "T",
+          "B"
+        ],
+        "B": [
+          "A",
+          "B"
+        ]
+      },
+      "bound": 3,
+      "start": [
+        "T"
+      ],
+      "reached": [
+        "T",
+        "A",
+        "B"
+      ],
+      "pending": []
+    },
+    {
+      "label": "duplicate sibling edges",
+      "edges": {
+        "T": [
+          "A",
+          "A",
+          "B",
+          "A"
+        ],
+        "A": [
+          "B",
+          "L",
+          "L"
+        ],
+        "B": [
+          "L"
+        ],
+        "L": []
+      },
+      "bound": 4,
+      "start": [
+        "T"
+      ],
+      "reached": [
+        "T",
+        "A",
+        "B",
+        "L"
+      ],
+      "pending": []
+    },
+    {
+      "label": "missing start and edge names in renderer bound",
+      "edges": {
+        "T": [
+          "outside"
+        ]
+      },
+      "bound": 4,
+      "start": [
+        "absent",
+        "T"
+      ],
+      "reached": [
+        "absent",
+        "T",
+        "outside"
+      ],
+      "pending": []
+    }
+  ],
+  "retained_report": [
+    {
+      "requirement": "R1",
+      "visited": 50,
+      "pending": 0
+    },
+    {
+      "requirement": "R2",
+      "visited": 7,
+      "pending": 0
+    },
+    {
+      "requirement": "R3",
+      "visited": 18,
+      "pending": 0
+    },
+    {
+      "requirement": "R4",
+      "visited": 10,
+      "pending": 0
+    },
+    {
+      "requirement": "R5",
+      "visited": 4,
+      "pending": 0
+    },
+    {
+      "requirement": "R6",
+      "visited": 41,
+      "pending": 0
+    },
+    {
+      "requirement": "R7",
+      "visited": 0,
+      "pending": 0
+    },
+    {
+      "requirement": "R8",
+      "visited": 6,
+      "pending": 0
+    },
+    {
+      "requirement": "R9",
+      "visited": 43,
+      "pending": 0
+    },
+    {
+      "requirement": "R10",
+      "visited": 23,
+      "pending": 0
+    },
+    {
+      "requirement": "R11",
+      "visited": 7,
+      "pending": 0
+    },
+    {
+      "requirement": "R12",
+      "visited": 2,
+      "pending": 0
+    },
+    {
+      "requirement": "R13",
+      "visited": 1,
+      "pending": 0
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "head": "11e655c1da013a3dc412f4e85931028a6f168e77",
+  "status": "",
+  "changed_inputs": [],
+  "script_sha256": "a927e390fca81217f6e725b905355c2934f3eba9fb21fea8a7964fbbc745f457",
+  "commands": [
+    "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-proof-scouting-followup/reach-followup.py",
+    "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-proof-scouting-followup/reach-review.md"
+  ],
+  "language_check": {
+    "first_exit": 1,
+    "first_findings": 2,
+    "final_exit": 0,
+    "final_findings": 0
+  }
+}
