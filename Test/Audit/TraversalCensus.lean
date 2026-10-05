@@ -36,7 +36,8 @@ gate over compiled default arms is the case-site policy (`make check-cases`). Re
 appending a constructor: `lake env lean Test/Audit/TraversalCensus.lean`.
 
 The one assertion here is the inventory's own red control, over
-`Test/Audit/ExhaustiveFixture.lean`: a twenty-arm match with no wildcard must be reported
+`Test/Audit/ExhaustiveFixture.lean`: a match that names every constructor, with no wildcard,
+must be reported
 `catchAll false`, the same match closed by `| _ =>` must be reported `catchAll true`, a
 match on `Term` must not be reported at all, and a private definition must be reported under the
 name it was written with, marked `[private]`.
@@ -44,13 +45,13 @@ name it was written with, marked `[private]`.
 
 /--
 info: #traversal_census Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test.Audit.TraversalFixture: 9 definitions take a family value (1 private) — fold 0, generated 0, structural 3 (of which 0 with a fold beside them, 0 instance implementations), wf 2 (of which 0 with a fold beside them), one-level 2 (of which 0 with a fold beside them), delegates 1, opaque 1; declared folds: []
-  delegates	Test.Audit.TraversalFixture:85	Test.Audit.TraversalFixture.viaDepth	(Ty)	→ [Test.Audit.TraversalFixture.depth]
+  delegates	Test.Audit.TraversalFixture:86	Test.Audit.TraversalFixture.viaDepth	(Ty)	→ [Test.Audit.TraversalFixture.depth]
   one-level	Test.Audit.TraversalFixture:59	Test.Audit.TraversalFixture.notUnion	(Ty)
   one-level	Test.Audit.TraversalFixture:64	Test.Audit.TraversalFixture.isOption	(Ty)
-  opaque	Test.Audit.TraversalFixture:87	Test.Audit.TraversalFixture.pairUp	(Ty)
+  opaque	Test.Audit.TraversalFixture:88	Test.Audit.TraversalFixture.pairUp	(Ty)
   structural	Test.Audit.TraversalFixture:54	Test.Audit.TraversalFixture.privateDepth [private]	(Ty)
-  structural	Test.Audit.TraversalFixture:71	Test.Audit.TraversalFixture.depth	(Ty)
-  structural	Test.Audit.TraversalFixture:77	Test.Audit.TraversalFixture.fuelDepth	(Ty)
+  structural	Test.Audit.TraversalFixture:72	Test.Audit.TraversalFixture.depth	(Ty)
+  structural	Test.Audit.TraversalFixture:78	Test.Audit.TraversalFixture.fuelDepth	(Ty)
   wf	Test.Audit.TraversalFixture:36	Test.Audit.TraversalFixture.wfPair	(Ty)
   wf	Test.Audit.TraversalFixture:45	Test.Audit.TraversalFixture.fuelWalk	(Ty)
 #traversal_census done: 9 rows; 1 modules under Test.Audit.TraversalFixture scanned
@@ -89,7 +90,7 @@ Effect4.Codegen.Schema.check (Check) Effect4.Codegen.Schema.printAlgebra
 
 /--
 info: #exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test.Audit.ExhaustiveFixture: 3 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
-  Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 20	catchAll false
+  Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 28	catchAll false
   Test.Audit.ExhaustiveFixture.catchAllPresent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllPresent.match_1	discr 0	alts 4	catchAll true
   Test.Audit.ExhaustiveFixture.privateCatchAll [private]	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.privateCatchAll.match_1	discr 0	alts 2	catchAll true
 #exhaustive_gate done: 3 rows; 1 modules under Test.Audit.ExhaustiveFixture scanned
