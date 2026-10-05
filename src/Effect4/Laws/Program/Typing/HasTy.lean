@@ -91,11 +91,13 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   request term's type matches the row's request template (`rowTy`, decisions row 42: the
   bindings the request fixes, under which it is a subtype of the instantiated request — DI-15,
   subsumption at the row request: TypeScript assignability at the call site; both sides
-  canonical). The answer and error columns are the row's own, instantiated at the bindings. -/
+  canonical). The answer and error columns are the row's own, instantiated at the bindings,
+  extended by the operation's binder term where it carries one (`Signature.termUse`: the term
+  typed at `env ++ [A]`, the state plan's T3b). -/
   | perform {env : TyEnv} {op : Op} {request : Term} {requestTy : Ty} {t : EffTy} :
       sig.dom op = true →
       termTy sig env request = some requestTy →
-      rowTy (sig.rowOf op) requestTy = some t →
+      rowTy (sig.rowOf op) requestTy (sig.termUse env op) = some t →
       HasTy sig env (.perform op request) t
   /-- `Effect.flatMap` (`:1590`): the continuation is typed under the environment extended by
   the first program's answer; the errors join and the rows union. -/

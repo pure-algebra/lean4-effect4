@@ -134,5 +134,9 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   -- The error payload's restrictions (decisions row 120): TypeScript accepts every failure value.
   | .errorPayloadField _ _ _ => []
   | .errorSpelling _ _ => []
+  -- A binder term the row's operation carries: the faces print no term until the state plan's
+  -- T5, so no target diagnostic is claimed.
+  | .binderTerm _ _ => []
+  | .resultNotSubtype _ _ _ => []
 
 end Effect4.Codegen

@@ -46,7 +46,7 @@ theorem inv_suspend (sig : Signature Op) (env : TyEnv) (body : Eff Op) :
 theorem inv_perform (sig : Signature Op) (env : TyEnv) (op : Op) (request : Term) :
     ∀ t, effTy sig env (.perform op request) = some t →
       ∃ requestTy, sig.dom op = true ∧ termTy sig env request = some requestTy ∧
-        rowTy (sig.rowOf op) requestTy = some t :=
+        rowTy (sig.rowOf op) requestTy (sig.termUse env op) = some t :=
   fun t h => Checker.inv_perform sig env [] op request t (effTy_ok h [])
 
 theorem inv_bind (sig : Signature Op) (env : TyEnv) (first rest : Eff Op) :

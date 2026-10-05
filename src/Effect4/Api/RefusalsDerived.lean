@@ -1329,6 +1329,8 @@ end CauseTypingRefusalC
 
 namespace TypeReasonC
 
+set_option maxHeartbeats 600000
+
 def shapeDoc : ShapeDoc :=
   ⟨.sum "TypeReason"
      [("term", 0, [("t", (shape _root_.Effect4.Program.Term).root)]),
@@ -1373,7 +1375,12 @@ def shapeDoc : ShapeDoc :=
         ("path", (shape (@_root_.List (_root_.String))).root),
         ("field", (shape _root_.Effect4.Program.Ty).root)]),
       ("errorSpelling", 31, [("error", (shape _root_.Effect4.Program.Ty).root),
-        ("spelling", (shape _root_.Effect4.Program.Ty).root)])],
+        ("spelling", (shape _root_.Effect4.Program.Ty).root)]),
+      ("binderTerm", 32, [("row", (shape _root_.String).root),
+        ("param", (shape _root_.Effect4.Program.Ty).root)]),
+      ("resultNotSubtype", 33, [("row", (shape _root_.String).root),
+        ("result", (shape _root_.Effect4.Program.Ty).root),
+        ("expected", (shape _root_.Effect4.Program.Ty).root)])],
    (shape _root_.Effect4.Program.Term).defs ++ (shape _root_.Effect4.Program.CauseTerm).defs ++
      (shape _root_.Effect4.Program.Ty).defs ++ (shape _root_.String).defs ++
      (shape _root_.Effect4.Program.Decision).defs ++ (shape _root_.Effect4.ServiceKey).defs ++
@@ -1421,6 +1428,9 @@ def toVal : _root_.Effect4.Program.TypeReason → Val
   | .errorPayloadField a0 a1 a2 => .ctor 30 [Canonical.toVal a0, Canonical.toVal a1,
       Canonical.toVal a2]
   | .errorSpelling a0 a1 => .ctor 31 [Canonical.toVal a0, Canonical.toVal a1]
+  | .binderTerm a0 a1 => .ctor 32 [Canonical.toVal a0, Canonical.toVal a1]
+  | .resultNotSubtype a0 a1 a2 => .ctor 33 [Canonical.toVal a0, Canonical.toVal a1,
+      Canonical.toVal a2]
 
 def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .term
@@ -1490,6 +1500,17 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
         Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1 with
     | some a0, some a1 => some (.errorSpelling a0 a1)
     | _, _ => none
+  | .ctor 32 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.String) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1 with
+    | some a0, some a1 => some (.binderTerm a0 a1)
+    | _, _ => none
+  | .ctor 33 [v0, v1, v2] =>
+    match Canonical.ofVal (α := _root_.String) v0,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v1,
+        Canonical.ofVal (α := _root_.Effect4.Program.Ty) v2 with
+    | some a0, some a1, some a2 => some (.resultNotSubtype a0 a1 a2)
+    | _, _, _ => none
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -1695,6 +1716,15 @@ theorem fits (a : _root_.Effect4.Program.TypeReason) : shapeDoc.accepts (toVal a
     exact accepts_sum _ _ _ 31 "errorSpelling" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1) (acceptsFields_nil _)))
+  | «binderTerm» a0 a1 =>
+    exact accepts_sum _ _ _ 32 "binderTerm" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1) (acceptsFields_nil _)))
+  | «resultNotSubtype» a0 a1 a2 =>
+    exact accepts_sum _ _ _ 33 "resultNotSubtype" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_String a0)
+        (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a1)
+          (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a2) (acceptsFields_nil _))))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.TypeReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -2304,7 +2334,8 @@ def reasons : List TypeReason :=
    .tupleCause ⟨[1], ⟨[0], 0, .nonTuple .nat⟩⟩,
    .errorPayloadField (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
      ["cause"] .unknown,
-   .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E")]
+   .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E"),
+   .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never)]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

@@ -344,6 +344,58 @@ theorem matchTemplateArgs_widens {join : Bool} {σ σ' : Subst} {ps rs : List Ty
 
 end Ty
 
+/-- A binder term binds by its result template's match at its own type (`bindTerm`). A step of
+`bindTerm_widens` and of the row lemmas below. -/
+theorem bindTerm_some_ok {σ σ' : Ty.Subst} {u : TermUse} (h : bindTerm σ (some u) = .ok σ') :
+    ∃ r, u.typeAt (Ty.instantiate σ u.param.normalize).normalize = some r ∧
+      Ty.matchTemplate σ u.result.normalize r = some σ' := by
+  simp only [bindTerm] at h
+  split at h
+  · exact nomatch h
+  · rename_i r hr
+    split at h
+    · rename_i σ'' hm
+      cases h
+      exact ⟨r, hr, hm⟩
+    · exact nomatch h
+
+/-- A binder term only widens the request's bindings: its result template's match widens its
+seed (`Ty.matchTemplate_widens`), and no term binds nothing. A step of `rowTy_fits`
+(`Typed/Denotation.lean`), the inversion of the row rule at a term use. -/
+theorem bindTerm_widens {σ σ' : Ty.Subst} {use : Option TermUse} (h : bindTerm σ use = .ok σ') :
+    Ty.Widens σ σ' := by
+  cases use with
+  | none => cases h; exact Ty.Widens.refl σ
+  | some u =>
+    obtain ⟨_, _, hm⟩ := bindTerm_some_ok h
+    exact Ty.matchTemplate_widens hm
+
+/-- A binder term's refusal is its own: no term use refuses as the request. A step of
+`checkRow_request_iff`. -/
+theorem bindTerm_ne_requestNotSubtype (σ : Ty.Subst) (use : Option TermUse) :
+    bindTerm σ use ≠ .error .requestNotSubtype := by
+  intro h
+  cases use with
+  | none => exact nomatch h
+  | some u =>
+    simp only [bindTerm] at h
+    split at h
+    · exact nomatch h
+    · split at h <;> exact nomatch h
+
+/-- A binder term's refusal is its own: no term use refuses as an instantiated column. A step
+of `checkRow_formation_iff`. -/
+theorem bindTerm_ne_formation (σ : Ty.Subst) (use : Option TermUse) (why : FormationRefusal) :
+    bindTerm σ use ≠ .error (.formation why) := by
+  intro h
+  cases use with
+  | none => exact nomatch h
+  | some u =>
+    simp only [bindTerm] at h
+    split at h
+    · exact nomatch h
+    · split at h <;> exact nomatch h
+
 /-- A closed, raw formed row types by subsumption and its own columns.
 The formation premise is required by rows 192 and 193 even on closed rows. -/
 theorem rowTy_closed (row : Row) (r : Ty) (hreq : row.request.closed = true)
@@ -360,7 +412,7 @@ theorem rowTy_closed (row : Row) (r : Ty) (hreq : row.request.closed = true)
       Ty.normalize_idem, hsub, Bool.false_eq_true, ↓reduceIte, Except.toOption]
   | true =>
     simp only [rowTy, checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
-      Ty.normalize_idem, hsub, ↓reduceIte, hformed, Except.toOption,
+      Ty.normalize_idem, hsub, ↓reduceIte, bindTerm_none, hformed, Except.toOption,
       Ty.instantiate_closed _ _ hans, Ty.instantiate_closed _ _ herr]
 
 /-- A successful closed-row match still exposes subsumption and its own columns.
@@ -378,61 +430,82 @@ theorem rowTy_closed_some {row : Row} {r : Ty} {t : EffTy} (hreq : row.request.c
     cases h
   | true =>
     simp only [checkRow, Ty.matchTemplate_closed [] _ _ (Ty.closed_normalize _ hreq),
-      Ty.normalize_idem, hsub, ↓reduceIte] at h
+      Ty.normalize_idem, hsub, ↓reduceIte, bindTerm_none] at h
     split at h
     · cases h
     · simp only [Ty.instantiate_closed _ _ hans, Ty.instantiate_closed _ _ herr,
         Except.ok.injEq] at h
       exact ⟨rfl, h.symm⟩
 
-/-- `instantiated-formation`: a successful row use retains the actual bindings and
-strict formation of every substituted column. Typing consumes this through `rowTy`.
-This is a static property; it makes no host reply or execution claim. -/
-theorem rowTy_instantiated_formed {row : Row} {request : Ty} {ty : EffTy}
-    (accepted : rowTy row request = some ty) :
-    ∃ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some bindings ∧
+/-- `instantiated-formation`: a successful row use retains the actual bindings, the request's
+and then the binder term's (`bindTerm`), and strict formation of every substituted column.
+Typing consumes this through `rowTy`. This is a static property; it makes no host reply or
+execution claim. -/
+theorem rowTy_instantiated_formed {row : Row} {request : Ty} {use : Option TermUse} {ty : EffTy}
+    (accepted : rowTy row request use = some ty) :
+    ∃ σ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some σ ∧
+      bindTerm σ use = .ok bindings ∧
       Formation.Formed (Formation.instantiatedSites row bindings) := by
   rw [rowTy_eq_some_iff] at accepted
   unfold checkRow at accepted
   split at accepted
   · cases accepted
-  · rename_i bindings matched
+  · rename_i σ matched
     split at accepted
     · cases accepted
-    · rename_i formed
-      exact ⟨bindings, matched, (Formation.check_eq_none_iff _).mp formed⟩
+    · rename_i bindings bound
+      split at accepted
+      · cases accepted
+      · rename_i formed
+        exact ⟨σ, bindings, matched, bound, (Formation.check_eq_none_iff _).mp formed⟩
 
 /-- The precise diagnostic part of `instantiated-formation`: this refusal names
-an actual failed column check after a successful template match. -/
-theorem checkRow_formation_iff (row : Row) (request : Ty) (why : FormationRefusal) :
-    checkRow row request = .error (.formation why) ↔
-      ∃ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some bindings ∧
+an actual failed column check after a successful template match and term binding. -/
+theorem checkRow_formation_iff (row : Row) (request : Ty) (use : Option TermUse)
+    (why : FormationRefusal) :
+    checkRow row request use = .error (.formation why) ↔
+      ∃ σ bindings, Ty.matchTemplate [] row.request.normalize request.normalize = some σ ∧
+        bindTerm σ use = .ok bindings ∧
         Formation.check (Formation.instantiatedSites row bindings) = some why := by
   constructor
   · intro refused
     unfold checkRow at refused
     split at refused
     · cases refused
-    · rename_i bindings matched
+    · rename_i σ matched
       split at refused
-      · rename_i actual failed
-        have same : actual = why := RowTypingRefusal.formation.inj (Except.error.inj refused)
+      · rename_i failure bound
+        have same : failure = .formation why := Except.error.inj refused
         subst same
-        exact ⟨bindings, matched, failed⟩
-      · cases refused
-  · rintro ⟨bindings, matched, failed⟩
-    simp only [checkRow, matched, failed]
+        exact absurd bound (bindTerm_ne_formation σ use why)
+      · rename_i bindings bound
+        split at refused
+        · rename_i actual failed
+          have same : actual = why := RowTypingRefusal.formation.inj (Except.error.inj refused)
+          subst same
+          exact ⟨σ, bindings, matched, bound, failed⟩
+        · cases refused
+  · rintro ⟨σ, bindings, matched, bound, failed⟩
+    simp only [checkRow, matched, bound, failed]
 
-/-- Request mismatch retains its exact meaning and precedence. The formation
-branch cannot be reported as a subtype mismatch by the shared row checker. -/
-theorem checkRow_request_iff (row : Row) (request : Ty) :
-    checkRow row request = .error .requestNotSubtype ↔
+/-- Request mismatch retains its exact meaning and precedence. Neither the binder term nor the
+formation branch can be reported as a subtype mismatch by the shared row checker. -/
+theorem checkRow_request_iff (row : Row) (request : Ty) (use : Option TermUse) :
+    checkRow row request use = .error .requestNotSubtype ↔
       Ty.matchTemplate [] row.request.normalize request.normalize = none := by
   cases matched : Ty.matchTemplate [] row.request.normalize request.normalize with
   | none => simp only [checkRow, matched]
-  | some bindings =>
-    simp only [checkRow, matched, reduceCtorEq]
-    split <;> simp only [Except.error.injEq, reduceCtorEq]
+  | some σ =>
+    simp only [checkRow, matched, reduceCtorEq, iff_false]
+    cases bound : bindTerm σ use with
+    | error why =>
+      intro refused
+      have same : why = .requestNotSubtype := Except.error.inj refused
+      subst same
+      exact bindTerm_ne_requestNotSubtype σ use bound
+    | ok bindings =>
+      dsimp only
+      split <;> simp only [Except.error.injEq, reduceCtorEq, not_false_eq_true]
 
 /-! ## What a row's template may say, and what the guard buys (plan 1.8)
 

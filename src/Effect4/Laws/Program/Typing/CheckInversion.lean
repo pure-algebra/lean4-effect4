@@ -47,10 +47,10 @@ theorem listOf?_eq_some (t inner : Ty) : listOf? t = some inner ↔ t = .list in
   cases t <;> simp only [listOf?, reduceCtorEq, Option.some.injEq, Ty.list.injEq]
 
 /-- The row check of a `perform` node succeeds exactly when the row's type answers. -/
-theorem rowCheck_eq_ok (row : Row) (r : Ty) (p : List Nat) (t : EffTy) :
-    rowCheck row r p = .ok t ↔ rowTy row r = some t := by
-  rw [← toOption_rowCheck row r p]
-  cases rowCheck row r p <;> simp only [Except.toOption, reduceCtorEq, Except.ok.injEq,
+theorem rowCheck_eq_ok (row : Row) (r : Ty) (use : Option TermUse) (p : List Nat) (t : EffTy) :
+    rowCheck row r use p = .ok t ↔ rowTy row r use = some t := by
+  rw [← toOption_rowCheck row r use p]
+  cases rowCheck row r use p <;> simp only [Except.toOption, reduceCtorEq, Except.ok.injEq,
     Option.some.injEq]
 
 /-- The value and error types of an exit type, inverted. -/
@@ -95,7 +95,7 @@ theorem inv_suspend (sig : Signature Op) (env : TyEnv) (p : List Nat) (body : Ef
 theorem inv_perform (sig : Signature Op) (env : TyEnv) (p : List Nat) (op : Op) (request : Term) :
     ∀ t, check sig env p (.perform op request) = .ok t →
       ∃ requestTy, sig.dom op = true ∧ termTy sig env request = some requestTy ∧
-        rowTy (sig.rowOf op) requestTy = some t := by
+        rowTy (sig.rowOf op) requestTy (sig.termUse env op) = some t := by
   aesop (rule_sets := [Effect4.Checker])
 
 theorem inv_bind (sig : Signature Op) (env : TyEnv) (p : List Nat) (first rest : Eff Op) :

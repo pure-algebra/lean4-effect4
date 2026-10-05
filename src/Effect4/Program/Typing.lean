@@ -94,12 +94,34 @@ Weakening maps an operation's own term too (`ScopedOp.mapTerm`, state plan T3b).
 holds at a signature that types an operation alike once its term is weakened
 (`Signature.WeakenNatural`): the same domain and the same row columns. -/
 
-/-- A signature types an operation alike once its binder term is weakened: the same domain and
-the same row columns (`Row.columns`), so the row check reads nothing the weakening moved. The
-premise of `check_weaken`. -/
+/-- A signature types an operation alike once its binder term is weakened: the same domain, the
+same row columns (`Row.columns`), and the weakened binder term with the same templates
+(`BinderTerm.weaken`). So the row check reads nothing the weakening moved but the term, which
+is weakened with its environment. The premise of `check_weaken`. -/
 def Signature.WeakenNatural [ScopedOp Op] (sig : Signature Op) : Prop :=
   ∀ cut op, sig.dom (ScopedOp.mapTerm (Term.weaken cut) op) = sig.dom op ∧
-    (sig.rowOf (ScopedOp.mapTerm (Term.weaken cut) op)).columns = (sig.rowOf op).columns
+    (sig.rowOf (ScopedOp.mapTerm (Term.weaken cut) op)).columns = (sig.rowOf op).columns ∧
+    sig.termOf (ScopedOp.mapTerm (Term.weaken cut) op) =
+      (sig.termOf op).map (BinderTerm.weaken cut)
+
+/-- An operation's term use survives an inserted slot: the weakened term at the widened
+environment types as the term at the original (`termTy_weaken`, at `post ++ [A]`). A step of
+`check_weaken`. -/
+theorem Signature.termUse_weaken [ScopedOp Op] {sig : Signature Op} (hw : sig.WeakenNatural)
+    (pre post : TyEnv) (inserted : Ty) (op : Op) :
+    sig.termUse (pre ++ inserted :: post) (ScopedOp.mapTerm (Term.weaken pre.length) op) =
+      sig.termUse (pre ++ post) op := by
+  obtain ⟨-, -, hterm⟩ := hw pre.length op
+  unfold Signature.termUse
+  rw [hterm]
+  cases sig.termOf op with
+  | none => rfl
+  | some b =>
+    simp only [Option.map_some, BinderTerm.weaken, Option.some.injEq, TermUse.mk.injEq,
+      true_and]
+    funext A
+    simpa only [List.append_assoc, List.cons_append] using
+      termTy_weaken sig pre (post ++ [A]) inserted b.term
 
 mutual
   theorem check_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
@@ -111,9 +133,10 @@ mutual
       cases mode <;> simp only [Eff.weaken, check, toOption_bind, toOption_pure, toOption_expect,
         toOption_term?, termTy_weaken]
     | .perform op _ => by
-      obtain ⟨hdom, hcols⟩ := hw pre.length op
+      obtain ⟨hdom, hcols, -⟩ := hw pre.length op
       simp only [Eff.weaken, check, toOption_bind, toOption_term?, termTy_weaken,
-        apply_ite Except.toOption, toOption_throw, toOption_rowCheck, hdom, rowTy_columns hcols]
+        apply_ite Except.toOption, toOption_throw, toOption_rowCheck, hdom, rowTy_columns hcols,
+        Signature.termUse_weaken hw]
     | .succeed _ | .fail _ | .failCause _ | .sync _ | .suspend _
     | .bind _ _ | .gen _ | .catchCause _ _ | .catchIf _ _ _ | .matchCause _ _ _
     | .onExit _ _ | .exit _ | .uninterruptible _ | .interruptible _ | .yieldNow _

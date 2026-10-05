@@ -84,26 +84,30 @@ end Congr
 /-! ## Signature extension -/
 
 /-- `s'` extends `s`: the same atoms and scope key, every operation `s` admits admitted by `s'`
-at the same row, every key `s` types typed by `s'` at the same carrier. -/
+at the same row, every key `s` types typed by `s'` at the same carrier, and the same binder
+terms. -/
 structure SigExtends {Op : Type} (s s' : Signature Op) : Prop where
   atomOf : s'.atomOf = s.atomOf
   constAtom : s'.constAtom = s.constAtom
   scopeKey : s'.scopeKey = s.scopeKey
   row : ∀ op, s.dom op = true → s'.dom op = true ∧ s'.rowOf op = s.rowOf op
   service : ∀ key ty, s.serviceTy key = some ty → s'.serviceTy key = some ty
+  /-- The same binder terms (the state plan's T3b): an operation's term is its own data, which
+  no table or declaration changes. -/
+  termOf : s'.termOf = s.termOf
 
 namespace SigExtends
 
 variable {Op : Type} {s s' s'' : Signature Op}
 
 theorem refl (s : Signature Op) : SigExtends s s :=
-  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h⟩
+  ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, fun _ _ h => h, rfl⟩
 
 theorem trans (h₁ : SigExtends s s') (h₂ : SigExtends s' s'') : SigExtends s s'' :=
   ⟨h₂.atomOf.trans h₁.atomOf, h₂.constAtom.trans h₁.constAtom, h₂.scopeKey.trans h₁.scopeKey,
     fun op hd =>
       ⟨(h₂.row op (h₁.row op hd).1).1, (h₂.row op (h₁.row op hd).1).2.trans (h₁.row op hd).2⟩,
-    fun key ty hk => h₂.service key ty (h₁.service key ty hk)⟩
+    fun key ty hk => h₂.service key ty (h₁.service key ty hk), h₂.termOf.trans h₁.termOf⟩
 
 theorem termTy (h : SigExtends s s') (env : TyEnv) (t : Term) :
     Effect4.Program.termTy s' env t = Effect4.Program.termTy s env t :=
@@ -116,6 +120,12 @@ theorem causeTy (h : SigExtends s s') (env : TyEnv) (c : CauseTerm) :
 theorem bodyRequires (h : SigExtends s s') (t : EffTy) :
     Effect4.Program.bodyRequires s' t = Effect4.Program.bodyRequires s t := by
   simp only [Effect4.Program.bodyRequires, h.scopeKey]
+
+/-- An operation's binder term types alike along an extension: the same term, typed by the
+same atoms. -/
+theorem termUse (h : SigExtends s s') (env : TyEnv) (op : Op) :
+    s'.termUse env op = s.termUse env op := by
+  simp only [Signature.termUse, h.termOf, h.termTy]
 
 end SigExtends
 
@@ -132,7 +142,8 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .sync ht => .sync ((h.termTy _ _).trans ht)
   | _, _, _, .suspend hb => .suspend (hasTy_ext h hb)
   | _, _, _, .perform hdom hreq hrow =>
-    .perform (h.row _ hdom).1 ((h.termTy _ _).trans hreq) (by rw [(h.row _ hdom).2]; exact hrow)
+    .perform (h.row _ hdom).1 ((h.termTy _ _).trans hreq)
+      (by rw [(h.row _ hdom).2, h.termUse]; exact hrow)
   | _, _, _, .bind hf hr => .bind (hasTy_ext h hf) (hasTy_ext h hr)
   | _, _, _, .gen hb => .gen (stmtsHasTy_ext h hb)
   | _, _, _, .catchCause hb hh hj => .catchCause (hasTy_ext h hb) (hasTy_ext h hh) hj
@@ -256,7 +267,7 @@ end Extend
 admitted by the longer one at the same row. -/
 theorem rows_append (t t' : RowTable) :
     SigExtends (nativeSignature t) (nativeSignature (t ++ t')) := by
-  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk⟩
+  refine ⟨rfl, rfl, rfl, ?_, fun _ _ hk => hk, rfl⟩
   intro op hd
   cases op with
   | external i =>
@@ -293,7 +304,7 @@ theorem serviceTy_code (app : SigApp) {key key' : ServiceKey} (hcode : key.servi
 theorem rows_append (app : SigApp) (t' : RowTable) :
     SigExtends app.signature (SigApp.mk (app.rows ++ t') app.services).signature := by
   have h := Effect4.Program.rows_append app.rows t'
-  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk⟩
+  exact ⟨rfl, rfl, rfl, h.row, fun _ _ hk => hk, rfl⟩
 
 /-- A declaration appended at a code that neither the application nor the built-in table
 types. -/
@@ -305,7 +316,7 @@ types keeps its carrier. -/
 theorem services_append (app : SigApp) (s' : List (ServiceKey × Ty))
     (fresh : ∀ entry ∈ s', FreshCode app entry) :
     SigExtends app.signature (SigApp.mk app.rows (app.services ++ s')).signature := by
-  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_⟩
+  refine ⟨rfl, rfl, rfl, fun _ h => ⟨h, rfl⟩, ?_, rfl⟩
   intro key ty hk
   change app.serviceTy key = some ty at hk
   change SigApp.serviceTy ⟨app.rows, app.services ++ s'⟩ key = some ty
@@ -807,7 +818,8 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     eff_suspend := rfl
     eff_perform := fun op hd => by
       have hdom : s.dom op = true := hd
-      simp only [Checker.check.alg, hterm, (h.row op hdom).1, (h.row op hdom).2, hdom]
+      simp only [Checker.check.alg, hterm, (h.row op hdom).1, (h.row op hdom).2, hdom,
+        h.termUse]
     eff_bind := rfl
     eff_gen := rfl
     eff_catchCause := rfl

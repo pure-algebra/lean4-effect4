@@ -2429,16 +2429,18 @@ theorem modifySomeTerm_maps {w : World} {t : Ty} (equiv : Equiv t .nat) (f : FnN
     exact fits_nat_irrel w' n m t ha
 
 /-- **A checked row use places the request's values under the instance** (the inversion of the
-row rule, `checkRow`): the match's bindings put every member of the request's type under the
-row's request at them (the guard, `Ty.matchTemplate_sound`), fix the node's columns as the
-instance's normal forms, and carry the instance's formation. A step of `denote-typed` (M5); its
+row rule, `checkRow`): the request's bindings `σ` put every member of the request's type under
+the row's request at them (the guard, `Ty.matchTemplate_sound`); the operation's binder term
+extends them to `σ'` (`bindTerm`), which only widens (`bindTerm_widens`); the node's columns are
+the instance's normal forms at `σ'`, with its formation. A step of `denote-typed` (M5); its
 consumers are `syncRow_typed`, `deferredAwait_arm`, `sleep_arm` and `inlineYield_typed`. -/
-theorem rowTy_fits {row : Effect4.Program.Row} {reqTy : Ty} {t : EffTy} (h : rowTy row reqTy = some t)
-    {w : World} {v : Val} (hv : Fits w v reqTy) :
-    ∃ σ, Fits w v (row.request.normalize.instantiate σ) ∧
-      t = ⟨(row.answer.instantiate σ).normalize, (row.error.instantiate σ).normalize,
+theorem rowTy_fits {row : Effect4.Program.Row} {reqTy : Ty} {use : Option TermUse} {t : EffTy}
+    (h : rowTy row reqTy use = some t) {w : World} {v : Val} (hv : Fits w v reqTy) :
+    ∃ σ σ', Fits w v (row.request.normalize.instantiate σ) ∧ bindTerm σ use = .ok σ' ∧
+      Ty.Widens σ σ' ∧
+      t = ⟨(row.answer.instantiate σ').normalize, (row.error.instantiate σ').normalize,
         Env.Requirement.ofList row.requires⟩ ∧
-      Formation.Formed (Formation.instantiatedSites row σ) := by
+      Formation.Formed (Formation.instantiatedSites row σ') := by
   rw [rowTy_eq_some_iff] at h
   unfold checkRow at h
   split at h
@@ -2446,12 +2448,29 @@ theorem rowTy_fits {row : Effect4.Program.Row} {reqTy : Ty} {t : EffTy} (h : row
   · rename_i σ hmatch
     split at h
     · cases h
-    · rename_i hformed
-      cases h
-      refine ⟨σ, ?_, rfl, (Formation.check_eq_none_iff _).mp hformed⟩
-      have hsub := Ty.matchTemplate_sound [] _ _ σ hmatch
-      exact (fits_normalize w _ v).mp (fits_sub w hsub v
-        ((fits_normalize w _ v).mpr ((fits_normalize w reqTy v).mpr hv)))
+    · rename_i σ' hbind
+      split at h
+      · cases h
+      · rename_i hformed
+        cases h
+        refine ⟨σ, σ', ?_, hbind, bindTerm_widens hbind, rfl,
+          (Formation.check_eq_none_iff _).mp hformed⟩
+        have hsub := Ty.matchTemplate_sound [] _ _ σ hmatch
+        exact (fits_normalize w _ v).mp (fits_sub w hsub v
+          ((fits_normalize w _ v).mpr ((fits_normalize w reqTy v).mpr hv)))
+
+/-- `rowTy_fits` at an operation that carries no binder term: the request's bindings stand. A
+step of `denote-typed`; its consumers are `syncRow_typed`'s rows without a term,
+`deferredAwait_arm`, `sleep_arm` and `inlineYield_typed`. -/
+theorem rowTy_fits_none {row : Effect4.Program.Row} {reqTy : Ty} {t : EffTy}
+    (h : rowTy row reqTy none = some t) {w : World} {v : Val} (hv : Fits w v reqTy) :
+    ∃ σ, Fits w v (row.request.normalize.instantiate σ) ∧
+      t = ⟨(row.answer.instantiate σ).normalize, (row.error.instantiate σ).normalize,
+        Env.Requirement.ofList row.requires⟩ ∧
+      Formation.Formed (Formation.instantiatedSites row σ) := by
+  obtain ⟨σ, σ', hinst, hbind, -, rfl, hformed⟩ := rowTy_fits h hv
+  cases hbind
+  exact ⟨σ, hinst, rfl, hformed⟩
 
 /-- Every node of a formed site list's type is head-formed at the list's template flag. A step of
 `denote-typed`; its consumer is `syncRow_typed`'s `deferredFail` arm, which reads the formation
@@ -2473,12 +2492,13 @@ promise's declared columns, and a failure's value is in the error alphabet by th
 a deferred's error column. A step of the claims `denote-typed` and `straight-meaning-typed`; its
 consumers are `syncPerform_arm`, `inlineYield_typed` and `progress`. -/
 theorem syncRow_typed (root : ProgramSource) {w : World} {req : Env.Requirement}
-    (op : NativeOp) (hk : NativeOp.kind op = .sync) {env : List Val} {reqTy : Ty} {t : EffTy}
-    (hrow : rowTy (NativeOp.row op).normalizeTypes reqTy = some t)
+    (op : NativeOp) (hk : NativeOp.kind op = .sync) {env : List Val} {tys : TyEnv} {reqTy : Ty}
+    {t : EffTy}
+    (hrow : rowTy (NativeOp.row op).normalizeTypes reqTy (root.signature.termUse tys op) = some t)
     (v : Val) (hfit : Fits w v reqTy) :
     ∃ o, NativeOp.syncOpOf op env v = some o ∧
       TypedProg root w ⟨t.answer, t.error, req⟩ (.vis (.inl o) fun ans => .pure (.success ans)) := by
-  obtain ⟨σ, hinst, rfl, hformed⟩ := rowTy_fits hrow hfit
+  obtain ⟨σ, hinst, rfl, hformed⟩ := rowTy_fits_none hrow hfit
   cases op with
   | refMake =>
     refine ⟨SyncOp.refMake v, rfl, ?_⟩
@@ -2793,8 +2813,8 @@ theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
     (hk : NativeOp.kind op ≠ .program)
     (hat : Node.at_ (.eff root.program) q.path = some (.eff (.perform op r)))
     (hpt : PointTyped root w q t) :
-    ∃ v reqTy, evalTerm q.env r = some v ∧ Fits w v reqTy ∧
-      rowTy (NativeOp.row op).normalizeTypes reqTy = some t := by
+    ∃ tys v reqTy, EnvTyped w tys q.env ∧ evalTerm q.env r = some v ∧ Fits w v reqTy ∧
+      rowTy (NativeOp.row op).normalizeTypes reqTy (root.signature.termUse tys op) = some t := by
   obtain ⟨env, hcheck, henv, -⟩ := hpt.at_node hat
   rw [Eff.expandIn_of_round _ _ rfl] at hcheck
   obtain ⟨reqTy, -, hreq, hrow⟩ := Checker.inv_perform _ _ _ _ _ _ hcheck
@@ -2803,7 +2823,7 @@ theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
     show (nativeRowOf root.table op).normalizeTypes = _
     rw [nativeRowOf_builtin root.table hk]
   rw [hrowOf] at hrow
-  exact ⟨v, reqTy, hv, hvfit, hrow⟩
+  exact ⟨env, v, reqTy, henv, hv, hvfit, hrow⟩
 
 /-- **A `perform` at a `sync` built-in row**: the store operation at the node's checked instance
 (`syncRow_typed`). The consumer of the reference-read card. -/
@@ -2812,7 +2832,7 @@ theorem syncPerform_arm {op : NativeOp} {r : Term} (hk : NativeOp.kind op = .syn
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform op r)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.perform op r) p) := by
-  obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
+  obtain ⟨tys, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
   obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk (env := p.env) hrow v hfit
   rw [denoteR_perform_sync _ _ _ hfuel ((NativeOp.row_kind op).trans hk), hv, Option.bind_some, ho]
   exact htyped
@@ -2823,8 +2843,8 @@ theorem deferredAwait_arm {r : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform .deferredAwait r)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.perform .deferredAwait r) p) := by
-  obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
-  obtain ⟨σ, hinst, rfl, -⟩ := rowTy_fits hrow hfit
+  obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+  obtain ⟨σ, hinst, rfl, -⟩ := rowTy_fits_none hrow hfit
   obtain ⟨k, rfl, a', e', hPi, ⟨ha, -⟩, ⟨he, -⟩⟩ := fits_deferredOf_inv hinst
   rw [denoteR_perform _ _ _ hfuel]
   show TypedProg root w _ (denoteAsync r p)
@@ -2841,8 +2861,8 @@ theorem sleep_arm {r : Term} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.perform .sleep r)))
     (hpt : PointTyped root w p ty) :
     TypedProg root w ty (denoteR root.program (.perform .sleep r) p) := by
-  obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
-  obtain ⟨σ, hinst, rfl, -⟩ := rowTy_fits hrow hfit
+  obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+  obtain ⟨σ, hinst, rfl, -⟩ := rowTy_fits_none hrow hfit
   obtain ⟨n, rfl⟩ := fits_nat_inv hinst
   rw [denoteR_perform _ _ _ hfuel]
   show TypedProg root w _ (denoteSleep r p)
@@ -3133,21 +3153,22 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
         simp only [inlineAsyncYield, hv] at hinline
         exact nomatch hinline
       | sleep =>
-        obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
-        obtain ⟨σ, hinst, -, -⟩ := rowTy_fits hrow hfit
+        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+        obtain ⟨σ, hinst, -, -⟩ := rowTy_fits_none hrow hfit
         obtain ⟨n, rfl⟩ := fits_nat_inv hinst
         simp only [NativeOp.row_kind, NativeOp.kind, inlineAsyncYield, hv, Option.bind_some,
           NativeOp.sleepMillisOf] at hinline
         exact nomatch hinline
       | deferredAwait =>
-        obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
-        obtain ⟨σ, hinst, -, -⟩ := rowTy_fits hrow hfit
+        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ := builtinPerform_inv (by decide) hat hpt
+        obtain ⟨σ, hinst, -, -⟩ := rowTy_fits_none hrow hfit
         obtain ⟨k, rfl, -⟩ := fits_deferredOf_inv hinst
         simp only [NativeOp.row_kind, NativeOp.kind, inlineAsyncYield, hv, Option.bind_some,
           NativeOp.awaitCellOf] at hinline
         exact nomatch hinline
       | _ =>
-        obtain ⟨v, reqTy, hv, hfit, hrow⟩ := builtinPerform_inv (kind_ne_program_of_sync rfl) hat hpt
+        obtain ⟨_, v, reqTy, -, hv, hfit, hrow⟩ :=
+          builtinPerform_inv (kind_ne_program_of_sync rfl) hat hpt
         obtain ⟨o, ho, -⟩ := syncRow_typed root (req := Env.Requirement.empty) _ rfl (env := p.env)
           hrow v hfit
         simp only [NativeOp.row_kind, NativeOp.kind, hv, Option.bind_some, ho] at hinline

@@ -142,14 +142,19 @@ def refusal {α : Type} : Except TypeRefusal α → Option TypeRefusal
   | .error r => some r
   | .ok _ => none
 
-/-- The row check of a `perform` node at its request's type `r` (`checkRow`), its refusal located
-at the node: a request outside the row's request, or an instantiated column that fails
+/-- The row check of a `perform` node at its request's type `r` and its operation's term use
+(`checkRow`), its refusal located at the node: a request outside the row's request, a binder
+term with no type or a type outside its result template, or an instantiated column that fails
 formation. Its success projection is `rowTy` (`toOption_rowCheck`). -/
-def rowCheck (row : Row) (r : Ty) (p : List Nat) : Except TypeRefusal EffTy :=
-  match checkRow row r with
+def rowCheck (row : Row) (r : Ty) (use : Option TermUse) (p : List Nat) :
+    Except TypeRefusal EffTy :=
+  match checkRow row r use with
   | .ok t => .ok t
   | .error .requestNotSubtype => .error ⟨p, .requestNotSubtype row.name r row.request⟩
   | .error (.formation why) => .error ⟨p, .instantiatedFormation row.name why⟩
+  | .error (.term param) => .error ⟨p, .binderTerm row.name param⟩
+  | .error (.resultNotSubtype result expected) =>
+    .error ⟨p, .resultNotSubtype row.name result expected⟩
 
 mutual
   /-- `effTy` and `explainEff` as one: the type, or the located refusal. -/
@@ -172,7 +177,7 @@ mutual
       let r ← term? sig env p request
       let row := sig.rowOf op
       if sig.dom op = false then throw ⟨p, .outsideDomain row.name⟩
-      else rowCheck row r p
+      else rowCheck row r (sig.termUse env op) p
     | .bind first rest => do
       let f ← check sig env (p ++ [0]) first
       let r ← check sig (env ++ [f.answer]) (p ++ [1]) rest
@@ -453,10 +458,10 @@ theorem toOption_cause? (sig : Signature Op) (env : TyEnv) (p : List Nat) (cause
     (cause? sig env p cause).toOption = causeTy sig env cause := by
   cases result : causeTy sig env cause <;> simp only [cause?, result, Except.toOption]
 
-theorem toOption_rowCheck (row : Row) (r : Ty) (p : List Nat) :
-    (rowCheck row r p).toOption = rowTy row r := by
+theorem toOption_rowCheck (row : Row) (r : Ty) (use : Option TermUse) (p : List Nat) :
+    (rowCheck row r use p).toOption = rowTy row r use := by
   unfold rowCheck rowTy
-  cases checkRow row r with
+  cases checkRow row r use with
   | ok t => rfl
   | error why => cases why <;> rfl
 
