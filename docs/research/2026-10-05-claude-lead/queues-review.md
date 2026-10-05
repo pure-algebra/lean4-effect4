@@ -42,7 +42,7 @@ The owner asked four things on 2026-10-05:
 | The observation packet §2.5 (`docs/research/2026-09-20-open-design-issues-order-and-observation-packet.md`); decisions rows 79, 81, 204 and 205; DI-11 | read |
 | The source tree of 4.0.0 against the pin, file by file | tested (a diff) |
 | npm's latest version of `effect` | read: 4.0.1. Downloaded on the owner's word; its `Queue.ts` equals 4.0.0's byte for byte (tested) |
-| Codex's review of the first draft, `plan-review.md`, in `/private/tmp/codex-effect4-overnight-monitor/2026-10-05-deferred-latch-probes/` | read; each finding checked by reading; its 27 model assertions were not run again |
+| Codex's review of the first draft, `plan-review.md`, in `/private/tmp/codex-effect4-overnight-monitor/2026-10-05-deferred-latch-probes/`, and its follow-up on the amendment | read; each finding checked by reading; its model assertions were not run again |
 | `docs/research/2026-10-05-claude-lead/queue-probes/QueueModel.lean`, a pure model of the corrected contract | tested: every control holds, and the bounded exploration passes |
 | Any Lean file of the tree, any proof | not written |
 
@@ -147,7 +147,9 @@ Two waiting protocols live in this one module:
 1. **The order of takers is a choice, and Effect 4 changed it.** In the run of F2, Effect 3 hands
    the first message to the taker that waited longest. Effect 4 wakes a taker and lets it race.
 2. **An answer depends on the schedule when a new take may pass a waiting one.** A turn check
-   inside the atomic step removes that dependence, as long as no waiting request is withdrawn.
+   inside the atomic step stops a take from passing an earlier request that is eligible.
+   Eligibility can still change before a signalled request runs its step (Codex's follow-up).
+   Under `strict` order, and with no withdrawal, the answers no longer depend on the schedule.
 3. **A batch minimum and the batch taker's turn can both be kept.** rc.112 dropped the minimum
    (P2). 4.0.1 keeps it and lets a new take pass. A retry that checks its turn and its minimum
    inside the atomic step keeps both (Codex's review).
@@ -209,10 +211,14 @@ A pure Lean model states this contract and runs it:
 
 - Each of Codex's countermodels is a control that holds on it.
 - So are P1, P2 and P4, and Codex's contender for the order of offers.
-- A bounded exploration runs every sequence of at most five operations from ten, at four
-  capacities and both turn policies: 111,111 runs each. Each run keeps two properties. A bounded
-  queue never exceeds its capacity. A taker that is ready and has the turn was signalled.
+- A bounded exploration runs every sequence of at most five operations from ten: 111,111 runs
+  for each configuration. The 22 configurations are both turn policies with `suspend` and
+  `dropping` at four capacities, and with `sliding` at three. Each run keeps two properties. A
+  bounded queue never exceeds its capacity. A taker that is ready and has the turn was signalled.
 - A red control drops the signal of a withdrawal, and the exploration then fails.
+- A take with a zero bound answers the empty batch, as 4.0.1 does.
+- Codex's timing trace is a control: under `readyFirst` its answers differ with the time of a
+  retry, and under `strict` they do not.
 
 ### F7. The full API on this design
 
@@ -314,8 +320,10 @@ window with a finite run that interrupts at every step boundary.
   that is signalled, and a signal that is not yet resolved.
 - **The profile** is the queue's own (row 79): the private cell and `Deferred`s hidden, and the
   direction "included". No common profile is signed for every derived module.
-- **Timing.** With no withdrawal, each answer is fixed by the order of the atomic steps. With a
-  withdrawal, the time of a wake can change which request receives a message (Codex's review).
+- **Timing.** With no withdrawal, each answer is fixed by the order of the atomic steps. Under
+  `readyFirst` that order includes each retry step, so the time of a wake can still change an
+  answer. Under `strict` it cannot. With a withdrawal, the time of a wake can change which
+  request receives a message under either policy (Codex's review).
 - **Progress, as far as it is provable now.** At a quiet machine no eligible request waits
   without its signal. A head batch that needs three may wait with one message buffered.
   `frontier_empty_iff_deadlocked` (`src/Effect4/Laws/Api/Frontier.lean`) classifies the machine's
@@ -345,6 +353,10 @@ Each name is a proposal. None is declared. The first four rows follow Codex's re
 - Each step copies the message list. Measure before changing the representation.
 - The turn policy is a choice (proposal 4). Under `strict`, a batch taker at the head blocks the
   takers behind it. Under `readyFirst`, single takers may pass a batch taker that is not ready.
+- At capacity zero an offer waits until a taker's step takes its message. Effect accepts the
+  offer at once when a taker waits.
+- `sliding` at capacity zero stores one message in 4.0.1. The contract must refuse that
+  configuration or define it. The model pins it and leaves it out of the exploration.
 - The acceptance program p3 must not promise the worker that receives each job (Codex's survey).
 
 ## What Codex's review changed
@@ -365,6 +377,15 @@ replacement on each countermodel.
 | Rounds, with no owner | The serving fiber stops between two rounds | The fold; an owner for the signal list |
 | The time of the wake changes no answer; every other step maps to none | A withdrawal after a message was assigned | F11's timing and simulation clauses |
 
+Codex's follow-up on the amendment
+(`/private/tmp/codex-effect4-overnight-monitor/2026-10-05-queue-amendment-review/review.md`) made
+three more corrections. Each is applied above and in the model:
+
+- F5.2 claimed too much for `readyFirst`: eligibility can change before a retry.
+- The model accepted zero bounds without the empty answer that 4.0.1 gives.
+- The exploration covered `suspend` only, and `sliding` at capacity zero breaks the capacity
+  bound.
+
 Claims that the review narrowed:
 
 - `Deferred` is the blocking basis this tree chose. No theorem says it is the only possible one.
@@ -382,8 +403,12 @@ Claims that the review narrowed:
 2. **The contract of F6.** Effect 4's wake-and-retry with a turn check, and consumption at the
    taker's own step. The turn check is the one divergence from 4.0.1. P1 is its control.
 3. **Follow 4.0.1 at P2, P3 and P4.** They are defects of the pin, not of the latest release.
-4. **The turn policy.** `readyFirst` is 4.0.1's order of service without the bypass. `strict` is
-   the simpler law, and it lets a batch at the head block the queue. Recommended: `readyFirst`.
+4. **The turn policy.** Under `strict`, with no withdrawal, the queue's answers do not depend on
+   the time of a wake. That is the property that lets the queue do without a posted wake. Its
+   cost: a batch at the head blocks the takers behind it, which 4.0.1 does not do. `readyFirst`
+   is 4.0.1's order of service without the bypass, and its answers can depend on the time of a
+   retry. Recommended: `strict`. This recommendation changed twice; Codex's timing trace is the
+   reason for the last change.
 5. **Iteration.** The fold, as the owner chose. Bulk atoms only where a named consumer needs
    them.
 6. **The law's clients.** State the law over abstract queue operations and their expansion.
@@ -407,7 +432,8 @@ Claims that the review narrowed:
 - Effect 3's source was not read here. Its row of F2 rests on the run alone.
 - The design of F6 to F11 is a proposal. No Lean of the tree was written.
 - The model is a finite probe. Its exploration is bounded at five operations from ten, and it
-  omits `offerAll`, `peek`, `clear` and the awaiters' registration. It proves nothing.
+  omits `offerAll`, `peek`, `clear` and the awaiters' registration. It records a signal as sent,
+  and it does not model the wrapper or an interrupt inside the wrapper. It proves nothing.
 - The timing clause of F11 is an argument from reading. The simulation is its proof, and it is
   not written.
 - Codex's 27 model assertions were read, not run again.

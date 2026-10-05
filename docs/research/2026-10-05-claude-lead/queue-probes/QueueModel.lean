@@ -17,7 +17,16 @@ The contract it models, after Codex's review of the queues review:
 * **Signals.** Every transition answers the requests to signal. A signal is a hint: the
   signalled request runs its own step again.
 
-Every `#guard` is a finite check on the named trace. The exploration at the end is bounded.
+**The admitted domain of this probe.** Bounds are natural numbers; a take with a zero bound
+answers the empty batch (4.0.1, `takeBetweenUnsafe`). Capacity zero is modelled for the
+`suspend` and `dropping` strategies. `sliding` at capacity zero stores one message, as 4.0.1's
+`offerUnsafe` does; that boundary is pinned below and left out of the exploration. At capacity
+zero an offer waits until a taker's step takes its message; Effect accepts it at once when a
+taker waits.
+
+Every `#guard` is a finite check on the named trace. The exploration at the end is bounded. It
+records a signal as sent in the step that answers it. It does not model the wrapper, an
+interrupt inside the wrapper, or the delivery of a `Deferred`'s resolution.
 -/
 
 namespace QueueModel
@@ -143,6 +152,7 @@ def pull (s : State) (max : Nat) : List Nat × State × List Nat :=
 /-- One atomic step of a take. Consumption commits here and nowhere else. -/
 def take (s : State) (t : Taker) : State × TakeReply × List Nat :=
   if s.phase = .done then (removeTaker s t.id, .ended, [])
+  else if t.min = 0 || t.max = 0 then (s, .got [], [])
   else if ready s t && turn s t.id then
     let p := pull (removeTaker s t.id) t.max
     let a := accept p.2.1
@@ -195,16 +205,21 @@ def shutdown (s : State) : State × Bool × List Nat :=
     ({ s with messages := [], offers := [], takers := [], awaiters := [], phase := .done }, true,
       s.takers.map (·.id) ++ s.offers.map (·.id) ++ s.awaiters)
 
-/-- A take that never waits. It does not pass a taker that is ready. -/
+/-- Whether a request that never registers may be served now. `strict`: no taker waits.
+`readyFirst`: no waiting taker is ready. -/
+def passes (s : State) : Bool :=
+  match s.policy with
+  | .strict => s.takers.isEmpty
+  | .readyFirst => !s.takers.any (ready s)
+
+/-- A take of one message that never waits and never registers. -/
 def poll (s : State) : State × Option Nat × List Nat :=
-  if s.phase = .done || s.takers.any (ready s) then (s, none, [])
+  if s.phase = .done || !(ready s ⟨0, 1, 1⟩) || !(passes s) then (s, none, [])
   else
-    match s.messages with
-    | m :: rest =>
-      let a := accept { s with messages := rest }
-      let d := settle a.1
-      (d.1, some m, a.2 ++ d.2 ++ wake d.1)
-    | [] => (s, none, [])
+    let p := pull s 1
+    let a := accept p.2.1
+    let d := settle a.1
+    (d.1, p.1.head?, p.2.2 ++ a.2 ++ d.2 ++ wake d.1)
 
 def T (id : Nat) (min : Nat := 1) (max : Nat := 1) : Taker := ⟨id, min, max⟩
 
@@ -289,6 +304,48 @@ def batchHead (p : Policy) : List Nat × TakeReply :=
 
 #guard batchHead .strict = ([], .wait)
 #guard batchHead .readyFirst = ([], .got [10])
+
+/-- Zero bounds (4.0.1, `takeBetweenUnsafe`): the empty batch at once, and no registration.
+At capacity zero a pending offer stays pending. -/
+def zeroBounds : TakeReply × Nat × TakeReply × Nat :=
+  let r1 := take {} (T 1 0 5)
+  let s := (offer { capacity := some 0 } 100 10).1
+  let r2 := take s (T 2 1 0)
+  (r1.2.1, r1.1.takers.length, r2.2.1, r2.1.offers.length)
+
+#guard zeroBounds = (.got [], 0, .got [], 1)
+
+/-- Codex's timing trace. T1 needs two messages and T2 needs one. `10` arrives and T2 is
+signalled. `early := true`: T2 runs its step before `20` arrives. `early := false`: `20`
+arrives first. No request is withdrawn. Under `readyFirst` the answers differ; under `strict`
+they do not. -/
+def timing (p : Policy) (early : Bool) : TakeReply × TakeReply :=
+  let t1 := T 1 2 2
+  let s := (take { policy := p } t1).1
+  let s := (take s (T 2)).1
+  let s := (offer s 100 10).1
+  if early then
+    let r2 := take s (T 2)
+    let s := (offer r2.1 101 20).1
+    ((take s t1).2.1, r2.2.1)
+  else
+    let s := (offer s 101 20).1
+    let r2 := take s (T 2)
+    ((take r2.1 t1).2.1, r2.2.1)
+
+#guard timing .readyFirst true = (.wait, .got [10])
+#guard timing .readyFirst false = (.got [10, 20], .wait)
+#guard timing .strict true = (.got [10, 20], .wait)
+#guard timing .strict false = (.got [10, 20], .wait)
+
+/-- `poll` under each policy, with one message buffered and a batch of three at the head. -/
+def pollAtBatchHead (p : Policy) : Option Nat :=
+  let s := (offer { policy := p } 100 10).1
+  let s := (take s (T 1 3 5)).1
+  (poll s).2.1
+
+#guard pollAtBatchHead .strict = none
+#guard pollAtBatchHead .readyFirst = some 10
 
 /-! ## The probes of the queues review, on this contract -/
 
@@ -432,8 +489,9 @@ def explore (forward : Bool) : Nat → Run → Nat × Bool
       (acc.1 + x.1, acc.2 && x.2)) (1, r.ok)
 
 def exploreAt (capacity : Option Nat) (policy : Policy) (depth : Nat)
-    (forward : Bool := true) : Nat × Bool :=
-  explore forward depth { state := { capacity := capacity, policy := policy } }
+    (forward : Bool := true) (strategy : Strategy := .suspend) : Nat × Bool :=
+  explore forward depth
+    { state := { capacity := capacity, policy := policy, strategy := strategy } }
 
 #eval [exploreAt none .strict 5, exploreAt none .readyFirst 5,
   exploreAt (some 0) .strict 5, exploreAt (some 0) .readyFirst 5,
@@ -444,6 +502,24 @@ def exploreAt (capacity : Option Nat) (policy : Policy) (depth : Nat)
 #guard (exploreAt (some 0) .strict 5).2 && (exploreAt (some 0) .readyFirst 5).2
 #guard (exploreAt (some 1) .strict 5).2 && (exploreAt (some 1) .readyFirst 5).2
 #guard (exploreAt (some 2) .strict 5).2 && (exploreAt (some 2) .readyFirst 5).2
+
+/-! The eight runs above use the `suspend` strategy. The same exploration for `dropping` at
+four capacities, and for `sliding` at the three capacities this probe admits. -/
+
+#guard [none, some 0, some 1, some 2].all fun c =>
+  (exploreAt c .strict 5 (strategy := .dropping)).2 &&
+    (exploreAt c .readyFirst 5 (strategy := .dropping)).2
+
+#guard [none, some 1, some 2].all fun c =>
+  (exploreAt c .strict 5 (strategy := .sliding)).2 &&
+    (exploreAt c .readyFirst 5 (strategy := .sliding)).2
+
+/-- The pinned boundary: `sliding` at capacity zero stores one message (4.0.1, `offerUnsafe`).
+The contract must refuse this configuration or define it. -/
+def slidingZero : List Nat :=
+  (offer { capacity := some 0, strategy := .sliding } 100 10).1.messages
+
+#guard slidingZero = [10]
 
 /-- The red control: when a withdrawal forwards no signal, the exploration finds a ready taker
 that nobody signalled. -/
