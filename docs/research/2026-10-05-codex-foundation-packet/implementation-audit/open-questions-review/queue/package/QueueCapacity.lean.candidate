@@ -1,0 +1,68 @@
+import Test.Program.QueueModel
+import ProofGraph.Plan
+import Effect4.Laws.Auto.Semantics
+import Lean.Elab.Tactic.Omega
+
+/-!
+Uncompiled proof candidate. Excluded from the integration allowlist.
+
+The placed goal serves R10's proposed `queue-expansion-agrees`: the capacity invariant of its
+abstract client. It is not typed store preservation, signal delivery or target agreement.
+The helper is a proposed step toward that goal. It uses the existing model without a change.
+Compile only after the coordinator assigns a Lean slot. No result is asserted here.
+-/
+
+namespace Test.Program.QueueCapacity
+open QueueContract
+
+/-- Abstract positive-capacity suspend steps keep the configuration and buffer bound.
+Consumer: the later Queue term-to-model refinement. No wrapper or host claim. -/
+@[semantics "reactive-scheduling" (requirement := R10)]
+proof_goal positive_suspend_step_capacity
+    (c : Nat) (s : State) (op : Op)
+    (hpos : 0 < c) (hcap : s.capacity = some c)
+    (hstrategy : s.strategy = .suspend)
+    (hwithin : s.messages.length ≤ c) :
+  let next := (step .none { s := s } op).s
+  next.capacity = some c ∧ next.strategy = .suspend ∧ next.messages.length ≤ c
+
+/-- Pending offers add at most the finite room to the buffer.
+A helper of `positive_suspend_step_capacity`, through `accept` and `afterConsume`.
+The statement concerns lengths, not request identities, signal delivery or store membership. -/
+@[semantics "reactive-scheduling" (requirement := R10)]
+theorem acceptLoop_length_le (r : Nat) (ms : List Nat) (os : List Offer) :
+    (acceptLoop (some r) ms os).1.length ≤ ms.length + r := by
+  induction os generalizing r ms with
+  | nil =>
+    simp only [acceptLoop]
+    omega
+  | cons o os ih =>
+    by_cases hr : r = 0
+    · subst r
+      simpa only [acceptLoop, if_pos rfl, Nat.add_zero] using Nat.le_refl ms.length
+    · have hroom : (some r : Option Nat) ≠ some 0 := by
+        intro h
+        exact hr (Option.some.inj h)
+      rw [acceptLoop, if_neg hroom]
+      simp only [fit, Option.map_some]
+      split
+      · change
+          (acceptLoop (some (r - Nat.min r o.rest.length))
+            (ms ++ o.rest.take (Nat.min r o.rest.length)) os).1.length ≤ ms.length + r
+        have bound := ih (r - Nat.min r o.rest.length)
+          (ms ++ o.rest.take (Nat.min r o.rest.length))
+        have takeBound := List.length_take_le (Nat.min r o.rest.length) o.rest
+        have roomBound := Nat.min_le_left r o.rest.length
+        rw [List.length_append] at bound
+        omega
+      · change (ms ++ o.rest.take (Nat.min r o.rest.length)).length ≤ ms.length + r
+        rw [List.length_append]
+        exact Nat.add_le_add_left
+          (Nat.le_trans (List.length_take_le _ _) (Nat.min_le_left _ _)) _
+
+-- These commands request evidence when the candidate is compiled. They are not retained output.
+#plan_status positive_suspend_step_capacity
+#plan_status acceptLoop_length_le
+#print axioms acceptLoop_length_le
+
+end Test.Program.QueueCapacity

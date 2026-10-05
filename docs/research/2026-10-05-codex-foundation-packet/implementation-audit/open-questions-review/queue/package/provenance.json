@@ -1,0 +1,65 @@
+{
+  "source_sha256": "17910cf6d42ab9782896435e55022b66c1386d21aacf0b2c7ca0bdc0fe30755a",
+  "source_commit": "da41297b95f21b7cfef08b4cb54edf5bf7d8c8b1",
+  "source_path": "docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean",
+  "fragments": [
+    {
+      "name": "model_operations",
+      "source_start_char": 1950,
+      "source_end_char": 14818,
+      "sha256": "9616450f381881accaf45219f323970816d90a49df96d5d333de625f7acaf28b"
+    },
+    {
+      "name": "named_controls_1",
+      "source_start_char": 14818,
+      "source_end_char": 22987,
+      "sha256": "d748af24011ab619236a9fec2102009b9ad7d7b6640d5ece8ef4d5f2ceca3e63"
+    },
+    {
+      "name": "large_named_controls",
+      "source_start_char": 22987,
+      "source_end_char": 23849,
+      "sha256": "e811cf9c1fb86ceb49ee010415cdc097156ebfa5200bcbbbe3d34b30bf51a8a1"
+    },
+    {
+      "name": "named_controls_2",
+      "source_start_char": 23849,
+      "source_end_char": 30382,
+      "sha256": "05c3c1ebf2ea6924e2f9202375afccd894df9097793baf3261d48d4ee8d5711c"
+    },
+    {
+      "name": "exploration_description",
+      "source_start_char": 30382,
+      "source_end_char": 31561,
+      "sha256": "2a0112cbd7fb6f496831bf20750e1c258b4241e827b2b76ff70fd61ad7cf30fb"
+    },
+    {
+      "name": "model_runner",
+      "source_start_char": 31561,
+      "source_end_char": 35052,
+      "sha256": "b76bb3ab8644782ae98ba06c36b6a0173c724fd09308afd3fe9460ce50063c39"
+    },
+    {
+      "name": "exploration",
+      "source_start_char": 35052,
+      "source_end_char": 37619,
+      "sha256": "754aad490a69ed80df8d7660443b37a53cb03de064d954a2404ee911f0ef290c"
+    }
+  ],
+  "outputs": {
+    "Test/Program/QueueModel.lean": {
+      "sha256": "708a5d641d6815f5f41db369a5ddd59cdd2b78c5c7f58c42f56789e35b15db21",
+      "bytes": 16777
+    },
+    "Test/Program/QueueContract.lean": {
+      "sha256": "7940667008b490dadc58236c4a8a682e9f9c4faedaea7ceeca6fbea73289abd4",
+      "bytes": 15201
+    },
+    "retained/QueueLargeControls.lean": {
+      "sha256": "d8d5a9deb213c8b172e05a6e723457c6de53ff6fa21696365fc7dce261c11e9f",
+      "bytes": 4931
+    }
+  },
+  "original_guard_count": 51,
+  "original_eval_count": 6
+}

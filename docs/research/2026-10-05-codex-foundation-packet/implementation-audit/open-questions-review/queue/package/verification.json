@@ -1,0 +1,29 @@
+{
+  "status": "byte extraction verified; no Lean compilation",
+  "source_sha256": "17910cf6d42ab9782896435e55022b66c1386d21aacf0b2c7ca0bdc0fe30755a",
+  "positive": "all prepared sources exactly match their extracted ranges and wrappers",
+  "body_mutation_red": [
+    "bytes differ: Test/Program/QueueModel.lean"
+  ],
+  "missing_controls_red": [
+    "missing: Test/Program/QueueContract.lean"
+  ],
+  "guards_preserved": 51,
+  "evals_preserved": 6,
+  "default_controls_have_large_evaluation": false,
+  "model_has_evaluation_commands": false,
+  "outputs": {
+    "Test/Program/QueueModel.lean": {
+      "sha256": "708a5d641d6815f5f41db369a5ddd59cdd2b78c5c7f58c42f56789e35b15db21",
+      "bytes": 16777
+    },
+    "Test/Program/QueueContract.lean": {
+      "sha256": "7940667008b490dadc58236c4a8a682e9f9c4faedaea7ceeca6fbea73289abd4",
+      "bytes": 15201
+    },
+    "retained/QueueLargeControls.lean": {
+      "sha256": "d8d5a9deb213c8b172e05a6e723457c6de53ff6fa21696365fc7dce261c11e9f",
+      "bytes": 4931
+    }
+  }
+}

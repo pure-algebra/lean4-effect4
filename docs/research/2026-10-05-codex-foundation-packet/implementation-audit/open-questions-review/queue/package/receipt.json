@@ -1,0 +1,95 @@
+{
+  "time_utc": "2026-10-05T22:02:19.125104+00:00",
+  "scope": "scratch-only Q0 preparation",
+  "reviewed_main_head": "da41297b95f21b7cfef08b4cb54edf5bf7d8c8b1",
+  "current_repo_status": "M  docs/STATE.md\nM  docs/core/decisions.md\nM  docs/research/2026-10-05-claude-lead/migration-plan.md\nA  docs/research/2026-10-05-claude-lead/release-driver/tsgo-4.0.1-with-driver.txt\nM  harness/truth/RELEASE-LANE.md\nM  harness/truth/build-ledger.tsv",
+  "source_matches_reviewed_tracked_bytes": true,
+  "checks": [
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-open-questions-review/queue/package/extract_verify.py --write",
+      "result": "exit 0; exact source-fragment split; retained 51 guard commands and 6 eval commands; mutation and missing-file reds rejected"
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-open-questions-review/queue/package/extract_verify.py --verify",
+      "result": "exit 0; same checks pass on written files"
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-open-questions-review/queue/package/capacity_mirror.py",
+      "result": "exit 0; 3744 finite grid cases plus six named positives; unbounded append mutant rejected"
+    }
+  ],
+  "proof_candidate": {
+    "path": "candidates/QueueCapacity.lean.candidate",
+    "status": "uncompiled; excluded from integration",
+    "helper": "acceptLoop_length_le",
+    "planned_consumer": "positive_suspend_step_capacity",
+    "holes": "No arbitrary sorry, admit, placeholder goal or native_decide token",
+    "axioms": "not measured; no Lean command ran"
+  },
+  "initial_integration_allowlist": [
+    "Test/Program/QueueModel.lean",
+    "Test/Program/QueueContract.lean",
+    "Test/contracts/queue.contract.md"
+  ],
+  "coordinator_owned": [
+    "base/branch and available seat",
+    "Test/All.lean anchor",
+    "research receipt and large-control destination",
+    "registry joining",
+    "Lean slot and actual compilation acceptance"
+  ],
+  "no_repository_write": true,
+  "no_worktree_or_branch_created": true,
+  "no_build_lean_ocaml_generator_install": true,
+  "no_claude_message": true,
+  "files": {
+    "extract_verify.py": {
+      "sha256": "4a133000eab926538aa172fb0889bba538513984ffd5af17643897e50f72e3b5",
+      "bytes": 5909
+    },
+    "provenance.json": {
+      "sha256": "fedbfbe614164c104fca6035a9ef5328912f91699800701d55c9deed5b90f195",
+      "bytes": 2171
+    },
+    "capacity-mirror.json": {
+      "sha256": "b9068afda9f2d3fc3a4c1b0630d268e02ad3dafa9e6f60954ebb9ec9e7361b12",
+      "bytes": 3100
+    },
+    "README.md": {
+      "sha256": "b8effda54886961b0a816c2f2013990be0dc39bfea8d778ac6560da8ef2f3b0b",
+      "bytes": 4449
+    },
+    "verification.json": {
+      "sha256": "9350676851f583c4193109c4879883395c8e588bcbdfadbca58ea083d4602bca",
+      "bytes": 1016
+    },
+    "capacity_mirror.py": {
+      "sha256": "b95cc1f27820d01300c3886798d350c7173e3c92654bbcc1e3b026913bbe07a7",
+      "bytes": 3724
+    },
+    "candidates/QueueCapacity.lean.candidate": {
+      "sha256": "0ed3eb62d439775463b04d75c30238855bbe2a75d0b3bb9f6eabc1a2639ac79a",
+      "bytes": 2979
+    },
+    "source/QueueContract.lean": {
+      "sha256": "17910cf6d42ab9782896435e55022b66c1386d21aacf0b2c7ca0bdc0fe30755a",
+      "bytes": 37978
+    },
+    "retained/QueueLargeControls.lean": {
+      "sha256": "d8d5a9deb213c8b172e05a6e723457c6de53ff6fa21696365fc7dce261c11e9f",
+      "bytes": 4931
+    },
+    "Test/contracts/queue.contract.md": {
+      "sha256": "db0ce5e105c4a579d719a06a10bee64fa605d04e24cc14ac0c36b8a4b3a41417",
+      "bytes": 7111
+    },
+    "Test/Program/QueueContract.lean": {
+      "sha256": "7940667008b490dadc58236c4a8a682e9f9c4faedaea7ceeca6fbea73289abd4",
+      "bytes": 15201
+    },
+    "Test/Program/QueueModel.lean": {
+      "sha256": "708a5d641d6815f5f41db369a5ddd59cdd2b78c5c7f58c42f56789e35b15db21",
+      "bytes": 16777
+    }
+  }
+}

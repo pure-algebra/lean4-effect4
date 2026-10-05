@@ -1,0 +1,186 @@
+{
+  "kind": "finite Python mirror; not Lean compilation, proof or runtime conformance",
+  "scope": "finite room, messages represented by integers, at most three pending offers of length zero through four",
+  "grid_cases": 3744,
+  "named_positive_controls": {
+    "empty_offers": {
+      "room": 3,
+      "messages": [
+        90,
+        91
+      ],
+      "offers": [],
+      "output": [
+        90,
+        91
+      ],
+      "pending": [],
+      "bound": true,
+      "old_prefix_kept": true
+    },
+    "zero_room": {
+      "room": 0,
+      "messages": [
+        90
+      ],
+      "offers": [
+        [
+          1,
+          2
+        ]
+      ],
+      "output": [
+        90
+      ],
+      "pending": [
+        [
+          1,
+          2
+        ]
+      ],
+      "bound": true,
+      "old_prefix_kept": true
+    },
+    "partial_acceptance": {
+      "room": 2,
+      "messages": [
+        90
+      ],
+      "offers": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          4
+        ]
+      ],
+      "output": [
+        90,
+        1,
+        2
+      ],
+      "pending": [
+        [
+          3
+        ],
+        [
+          4
+        ]
+      ],
+      "bound": true,
+      "old_prefix_kept": true
+    },
+    "several_full_offers": {
+      "room": 4,
+      "messages": [
+        90
+      ],
+      "offers": [
+        [
+          1
+        ],
+        [],
+        [
+          2,
+          3
+        ],
+        [
+          4
+        ]
+      ],
+      "output": [
+        90,
+        1,
+        2,
+        3,
+        4
+      ],
+      "pending": [],
+      "bound": true,
+      "old_prefix_kept": true
+    },
+    "exact_fill_then_pending": {
+      "room": 2,
+      "messages": [
+        90
+      ],
+      "offers": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ],
+      "output": [
+        90,
+        1,
+        2
+      ],
+      "pending": [
+        [
+          3
+        ]
+      ],
+      "bound": true,
+      "old_prefix_kept": true
+    },
+    "empty_pending_offer": {
+      "room": 1,
+      "messages": [],
+      "offers": [
+        [],
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ],
+      "output": [
+        1
+      ],
+      "pending": [
+        [
+          2
+        ]
+      ],
+      "bound": true,
+      "old_prefix_kept": true
+    }
+  },
+  "unbounded_append_mutant_red": {
+    "room": 0,
+    "messages": [
+      90
+    ],
+    "offers": [
+      [
+        1
+      ]
+    ],
+    "output": [
+      90,
+      1
+    ],
+    "pending": [],
+    "bound": false,
+    "old_prefix_kept": true
+  },
+  "source_question": "Can acceptLoop append more messages than its finite room on this bounded domain?",
+  "observation": "No witness in the enumerated mirror domain; the deliberate append mutant exceeds the bound.",
+  "exclusions": [
+    "source-to-mirror agreement proof",
+    "Lean proof candidate elaboration",
+    "all Queue steps",
+    "signals and answers",
+    "wrapper delivery",
+    "target runtime"
+  ],
+  "script_sha256": "b95cc1f27820d01300c3886798d350c7173e3c92654bbcc1e3b026913bbe07a7"
+}
