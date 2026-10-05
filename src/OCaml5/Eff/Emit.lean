@@ -24,7 +24,6 @@ open Lean Meta
 open Effect4.Program
 open Effect4.Supervision (MaskMode ForkOptions ObserverMode)
 open Effect4 (FinalizerStrategy ServiceKey)
-open Effect4.Machine (FnName)
 
 namespace OCaml5.Eff
 
@@ -411,12 +410,34 @@ def keyO (k : ServiceKey) : String :=
 
 def listO (xs : List String) : String := "[" ++ "; ".intercalate xs ++ "]"
 
-def fnO : FnName → String
-  | .incr => octor "fn_name" "incr"
-  | .double => octor "fn_name" "double"
-  | .zeroWhenPositive => octor "fn_name" "zeroWhenPositive"
-  | .noChange => octor "fn_name" "noChange"
-  | .takeAndBump => octor "fn_name" "takeAndBump"
+def litO : Lit → String
+  | .unit => octor "lit" "unit"
+  | .nat n => s!"({octor "lit" "nat"} {n})"
+  | .bool b => s!"({octor "lit" "bool"} {b})"
+  | .str s => s!"({octor "lit" "str"} {ostr s})"
+
+def readModeO : FieldReadMode → String
+  | .required => octor "field_read_mode" "required"
+  | .optional => octor "field_read_mode" "optional"
+
+mutual
+/-- A term as an OCaml value: the binder term a read-modify-write row carries in `all_ops`. -/
+def termO : Effect4.Program.Term → String
+  | .var i => s!"({octor "term" "var"} {i})"
+  | .lit l => s!"({octor "term" "lit"} {litO l})"
+  | .app atom args => s!"({octor "term" "app"} ({ostr atom}, {termsO args}))"
+  | .record fields names values =>
+    s!"({octor "term" "record"} ([{"; ".intercalate (fieldsO fields)}], [{"; ".intercalate (names.map ostr)}], {termsO values}))"
+  | .field mode target name =>
+    s!"({octor "term" "field"} ({readModeO mode}, {termO target}, {ostr name}))"
+  | .recordSet target name value =>
+    s!"({octor "term" "recordSet"} ({termO target}, {ostr name}, {termO value}))"
+  | .tupleAt target index => s!"({octor "term" "tupleAt"} ({termO target}, {index}))"
+/-- An argument list as an OCaml value. -/
+def termsO : Effect4.Program.Terms → String
+  | .nil => octor "terms" "nil"
+  | .cons head tail => s!"({octor "terms" "cons"} ({termO head}, {termsO tail}))"
+end
 
 def stratO : FinalizerStrategy → String
   | .sequential => octor "finalizer_strategy" "sequential"
@@ -428,14 +449,14 @@ def opO : NativeOp → String
   | .refSet => octor "native_op" "refSet"
   | .refGetAndSet => octor "native_op" "refGetAndSet"
   | .refSetAndGet => octor "native_op" "refSetAndGet"
-  | .refUpdate f => s!"({octor "native_op" "refUpdate"} {fnO f})"
-  | .refGetAndUpdate f => s!"({octor "native_op" "refGetAndUpdate"} {fnO f})"
-  | .refUpdateAndGet f => s!"({octor "native_op" "refUpdateAndGet"} {fnO f})"
-  | .refUpdateSome f => s!"({octor "native_op" "refUpdateSome"} {fnO f})"
-  | .refGetAndUpdateSome f => s!"({octor "native_op" "refGetAndUpdateSome"} {fnO f})"
-  | .refUpdateSomeAndGet f => s!"({octor "native_op" "refUpdateSomeAndGet"} {fnO f})"
-  | .refModify f => s!"({octor "native_op" "refModify"} {fnO f})"
-  | .refModifySome f => s!"({octor "native_op" "refModifySome"} {fnO f})"
+  | .refUpdateWith f => s!"({octor "native_op" "refUpdateWith"} {termO f})"
+  | .refGetAndUpdateWith f => s!"({octor "native_op" "refGetAndUpdateWith"} {termO f})"
+  | .refUpdateAndGetWith f => s!"({octor "native_op" "refUpdateAndGetWith"} {termO f})"
+  | .refUpdateSomeWith f => s!"({octor "native_op" "refUpdateSomeWith"} {termO f})"
+  | .refGetAndUpdateSomeWith f => s!"({octor "native_op" "refGetAndUpdateSomeWith"} {termO f})"
+  | .refUpdateSomeAndGetWith f => s!"({octor "native_op" "refUpdateSomeAndGetWith"} {termO f})"
+  | .refModifyWith f => s!"({octor "native_op" "refModifyWith"} {termO f})"
+  | .refModifySomeWith f => s!"({octor "native_op" "refModifySomeWith"} {termO f})"
   | .deferredMakeOf value error => s!"({octor "native_op" "deferredMakeOf"} ({tyO value}, {tyO error}))"
   | .deferredIsDone => octor "native_op" "deferredIsDone"
   | .deferredPoll => octor "native_op" "deferredPoll"
@@ -447,26 +468,25 @@ def opO : NativeOp → String
   | .clockNow => octor "native_op" "clockNow"
   | .external i => s!"({octor "native_op" "external"} {i})"
 
-def fnNames : List FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
-
 /-- The finite built-in alphabet, one operation per spelling key: the core's `NativeOp.spelled`
-(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell. External
-row indices range over `Nat` and are supplied by a separate table. `main` checks the
-constructor classes. -/
+(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell and each
+read-modify-write row at each of the five names' images at level 0 (`fnNames`). External row
+indices range over `Nat` and are supplied by a separate table. `main` checks the constructor
+classes. -/
 def allOps : List NativeOp := NativeOp.spelled
 
 /-- The const-generic atoms by name (`NativeAtom.constGeneric`, the literal rule's flag). -/
 def constAtomNames : List String :=
   (NativeAtom.all.filter NativeAtom.constGeneric).map NativeAtom.name
 
-def emitNative (nullaryOps typedOps fnOps stratOps : Nat) : String :=
+def emitNative (nullaryOps typedOps termOps stratOps : Nat) : String :=
   header "Eff_native: the native alphabet as data. atom names and const-generic metadata project the complete NativeAtom inventory (src/Effect4/Program/NativeAtom.lean). Typing remains in Lean; no second atom checker is emitted. all_ops is NativeOp.spelled, one operation per spelling key (the constructor table checks the classes). scope_key is nativeScopeKey." ++
   "open Eff_types\n\n" ++
   "let atom_names : string list = " ++ listO (NativeAtom.names.map ostr) ++ "\n\n" ++
   "(* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)\n" ++
   "let const_atoms : string list = " ++ listO (constAtomNames.map ostr) ++ "\n" ++
   "let const_atom (name : string) : bool = List.mem name const_atoms\n\n" ++
-  s!"(* {nullaryOps} nullary operations, {typedOps} at the faces' type arguments, {fnOps} over every fn_name, {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
+  s!"(* {nullaryOps} nullary operations, {typedOps} at the faces' type arguments, {termOps} at every name's image at level 0 (a binder term), {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
   "let all_ops : native_op list =\n  [ " ++ "\n  ; ".intercalate (allOps.map opO) ++ " ]\n\n" ++
   "let scope_key : service_key = " ++ keyO nativeScopeKey ++ "\n" ++
   "let scope_ty : ty = " ++ tyO Ty.scope ++ "\n" ++

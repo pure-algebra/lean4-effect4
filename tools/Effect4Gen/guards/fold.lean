@@ -64,11 +64,13 @@ def sampleProgram : Eff Nat :=
 #guard serviceKeys sampleProgram == [sampleKey]
 #guard subtermCount sampleProgram > 0
 
-def pWeaken : Eff Nat :=
+-- weakening needs the alphabet's `ScopedOp` instance (an operation's term is a slot): the unit
+-- alphabet's fixes every operation
+def pWeaken : Eff Unit :=
   .provideLayer (.effect sampleKey (.succeed (.var 0))) false (.succeed (.var 0))
 
 #guard Eff.weaken 0 pWeaken ==
-  (.provideLayer (.effect sampleKey (.succeed (.var 0))) false (.succeed (.var 1)) : Eff Nat)
+  (.provideLayer (.effect sampleKey (.succeed (.var 0))) false (.succeed (.var 1)) : Eff Unit)
 #guard (Eff.weaken 0 pWeaken == cata_frontier_eff (weakenAlg 0) pWeaken)
 
 /-! ### The monadic fold
@@ -216,7 +218,7 @@ def depthEnv : List Nat := [7, 8, 9]
 
 /-! ## The identity algebra, one override of it, and the path fold -/
 
-#guard cata_eff (EffAlgebra.id Nat) pWeaken == pWeaken
+#guard cata_eff (EffAlgebra.id Unit) pWeaken == pWeaken
 #guard cata_ty TyAlgebra.id (Ty.list Ty.unit) == Ty.list Ty.unit
 #guard (cata_eff (EffAlgebra.onRef fun _ => .effectDiscard (.succeed (.lit .unit)))
     (.provideLayer (.ref [0]) false (.succeed (.lit .unit))) : Eff Unit)
@@ -225,6 +227,6 @@ def depthEnv : List Nat := [7, 8, 9]
     (.bind (.succeed (.lit .unit)) (.matchCause (.succeed (.lit .unit)) (.succeed (.lit .unit)) (.succeed (.lit .unit))) : Eff Unit)
     (f_eff := fun _ p => [p])
   == [[], [0], [1], [1, 0], [1, 1], [1, 2]]
-#guard (cata_frontier_eff (frontierMap id id) pWeaken : Eff Nat) == pWeaken
+#guard (cata_frontier_eff (frontierMap id id) pWeaken : Eff Unit) == pWeaken
 
 end FoldAcceptance

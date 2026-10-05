@@ -214,13 +214,6 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Finalizer_strategy_sequential -> A.FinalizerStrategy_sequential
     | Eff_types.Finalizer_strategy_parallel -> A.FinalizerStrategy_parallel
 
-  let of_fn_name : Eff_types.fn_name -> A.fn_name = function
-    | Eff_types.Fn_name_incr -> A.FnName_incr
-    | Eff_types.Fn_name_double -> A.FnName_double
-    | Eff_types.Fn_name_zeroWhenPositive -> A.FnName_zeroWhenPositive
-    | Eff_types.Fn_name_noChange -> A.FnName_noChange
-    | Eff_types.Fn_name_takeAndBump -> A.FnName_takeAndBump
-
   let of_service_key (k : Eff_types.service_key) : A.service_key =
     { A.name = k.service_key_name.service_name_value;
       service = k.service_key_service.service_type_code_value }
@@ -231,16 +224,6 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_refSet -> A.NativeOp_refSet
     | Eff_types.Native_op_refGetAndSet -> A.NativeOp_refGetAndSet
     | Eff_types.Native_op_refSetAndGet -> A.NativeOp_refSetAndGet
-    | Eff_types.Native_op_refUpdate f -> A.NativeOp_refUpdate (of_fn_name f)
-    | Eff_types.Native_op_refGetAndUpdate f -> A.NativeOp_refGetAndUpdate (of_fn_name f)
-    | Eff_types.Native_op_refUpdateAndGet f -> A.NativeOp_refUpdateAndGet (of_fn_name f)
-    | Eff_types.Native_op_refUpdateSome f -> A.NativeOp_refUpdateSome (of_fn_name f)
-    | Eff_types.Native_op_refGetAndUpdateSome f ->
-      A.NativeOp_refGetAndUpdateSome (of_fn_name f)
-    | Eff_types.Native_op_refUpdateSomeAndGet f ->
-      A.NativeOp_refUpdateSomeAndGet (of_fn_name f)
-    | Eff_types.Native_op_refModify f -> A.NativeOp_refModify (of_fn_name f)
-    | Eff_types.Native_op_refModifySome f -> A.NativeOp_refModifySome (of_fn_name f)
     | Eff_types.Native_op_deferredIsDone -> A.NativeOp_deferredIsDone
     | Eff_types.Native_op_deferredPoll -> A.NativeOp_deferredPoll
     | Eff_types.Native_op_deferredSucceed -> A.NativeOp_deferredSucceed
@@ -251,6 +234,18 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Native_op_clockNow -> A.NativeOp_clockNow
     | Eff_types.Native_op_external d -> A.NativeOp_external d
     | Eff_types.Native_op_deferredMakeOf (v, e) -> A.NativeOp_deferredMakeOf (of_ty v, of_ty e)
+    (* The eight read-modify-write rows carry their binder term (decisions row 43; the state
+       plan's T3b): the term reads the cell's current value at the node's level. *)
+    | Eff_types.Native_op_refUpdateWith f -> A.NativeOp_refUpdateWith (of_term f)
+    | Eff_types.Native_op_refGetAndUpdateWith f -> A.NativeOp_refGetAndUpdateWith (of_term f)
+    | Eff_types.Native_op_refUpdateAndGetWith f -> A.NativeOp_refUpdateAndGetWith (of_term f)
+    | Eff_types.Native_op_refUpdateSomeWith f -> A.NativeOp_refUpdateSomeWith (of_term f)
+    | Eff_types.Native_op_refGetAndUpdateSomeWith f ->
+      A.NativeOp_refGetAndUpdateSomeWith (of_term f)
+    | Eff_types.Native_op_refUpdateSomeAndGetWith f ->
+      A.NativeOp_refUpdateSomeAndGetWith (of_term f)
+    | Eff_types.Native_op_refModifyWith f -> A.NativeOp_refModifyWith (of_term f)
+    | Eff_types.Native_op_refModifySomeWith f -> A.NativeOp_refModifySomeWith (of_term f)
 
   let of_decision : Eff_types.decision -> A.decision = function
     | Eff_types.Decision_bool -> A.Decision_bool
@@ -383,34 +378,30 @@ module Make (A : PROGRAM_TYPES) = struct
   let ctor_index_finalizer_strategy : A.finalizer_strategy -> int = function
     | A.FinalizerStrategy_sequential -> 0 | A.FinalizerStrategy_parallel -> 1
 
-  let ctor_index_fn_name : A.fn_name -> int = function
-    | A.FnName_incr -> 0 | A.FnName_double -> 1 | A.FnName_zeroWhenPositive -> 2
-    | A.FnName_noChange -> 3 | A.FnName_takeAndBump -> 4
-
   let ctor_index_native_op : A.native_op -> int = function
     | A.NativeOp_refMake -> 0
     | A.NativeOp_refGet -> 1
     | A.NativeOp_refSet -> 2
     | A.NativeOp_refGetAndSet -> 3
     | A.NativeOp_refSetAndGet -> 4
-    | A.NativeOp_refUpdate _ -> 5
-    | A.NativeOp_refGetAndUpdate _ -> 6
-    | A.NativeOp_refUpdateAndGet _ -> 7
-    | A.NativeOp_refUpdateSome _ -> 8
-    | A.NativeOp_refGetAndUpdateSome _ -> 9
-    | A.NativeOp_refUpdateSomeAndGet _ -> 10
-    | A.NativeOp_refModify _ -> 11
-    | A.NativeOp_refModifySome _ -> 12
-    | A.NativeOp_deferredIsDone -> 13
-    | A.NativeOp_deferredPoll -> 14
-    | A.NativeOp_deferredSucceed -> 15
-    | A.NativeOp_deferredFail -> 16
-    | A.NativeOp_deferredAwait -> 17
-    | A.NativeOp_scopeMake _ -> 18
-    | A.NativeOp_sleep -> 19
-    | A.NativeOp_clockNow -> 20
-    | A.NativeOp_external _ -> 21
-    | A.NativeOp_deferredMakeOf _ -> 22
+    | A.NativeOp_deferredIsDone -> 5
+    | A.NativeOp_deferredPoll -> 6
+    | A.NativeOp_deferredSucceed -> 7
+    | A.NativeOp_deferredFail -> 8
+    | A.NativeOp_deferredAwait -> 9
+    | A.NativeOp_scopeMake _ -> 10
+    | A.NativeOp_sleep -> 11
+    | A.NativeOp_clockNow -> 12
+    | A.NativeOp_external _ -> 13
+    | A.NativeOp_deferredMakeOf _ -> 14
+    | A.NativeOp_refUpdateWith _ -> 15
+    | A.NativeOp_refGetAndUpdateWith _ -> 16
+    | A.NativeOp_refUpdateAndGetWith _ -> 17
+    | A.NativeOp_refUpdateSomeWith _ -> 18
+    | A.NativeOp_refGetAndUpdateSomeWith _ -> 19
+    | A.NativeOp_refUpdateSomeAndGetWith _ -> 20
+    | A.NativeOp_refModifyWith _ -> 21
+    | A.NativeOp_refModifySomeWith _ -> 22
 
   let ctor_index_decision : A.decision -> int = function
     | A.Decision_bool -> 0 | A.Decision_option -> 1 | A.Decision_tag _ -> 2

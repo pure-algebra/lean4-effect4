@@ -68,7 +68,7 @@ def prints : List PrintRefusal :=
   [.internalAction "fork", .layerRef [0, 2], .unsafeName "a0", .typeSpelling "Date",
    .payloadClass "not-a-tag" .notIdentifier, .payloadClass "Effect" .collides,
    .payloadClass "NotFound" .fieldsDiffer, .payloadClass "NotFound" .construction,
-   .payloadClass "Rate" .unreadable]
+   .payloadClass "Rate" .unreadable, .binderTerm "Ref.modify"]
 
 def reads : List ReadRefusal :=
   [.unknownHead "Cause.fail", .unknownIdent "x", .arity "Db.get", .binder "a1", .shape "call",
@@ -101,7 +101,8 @@ def reasons : List TypeReason :=
    .tupleCause ⟨[1], ⟨[0], 0, .nonTuple .nat⟩⟩,
    .errorPayloadField (.record [("_tag", false, .lit "E"), ("cause", false, .unknown)])
      ["cause"] .unknown,
-   .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E")]
+   .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E"),
+   .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never)]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

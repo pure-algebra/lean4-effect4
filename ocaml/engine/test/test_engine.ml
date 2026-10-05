@@ -8,6 +8,12 @@
         converted by `E4_program`, where `ocaml/gen/api_check.ml` writes them directly in
         the generated type -- give `finished ... success 42`, `finished fibers=2 success
         ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers what `Ref` answers.
+        With them, the term rows' environment (the state plan's T3b): a read-modify-write
+        row's term reads an outer binder and the cell's value at the node's level
+        (`pCapture`, `pLevel@2`), and a `Ref.modify` answers a value of another type than
+        the cell's (`pModifyOther`), with two red controls, the term one level down and one
+        level up (`pLevel@1`, `pLevel@3`); the values are Lean's
+        (Test/Program/CompileContract.lean).
      2  The differential D1 in miniature: the programs of ocaml/eff/goldens/*.bin,
         decoded by `Eff_wire`, converted by `E4_program`, run at fuel 1000
         on both instances.  Outcome, answer, exits, the fiber-table projection, the trace
@@ -129,6 +135,53 @@ let rec chain n : E.eff =
       ( E.Eff_perform (E.Native_op_refMake, E.Term_lit (E.Lit_nat (n - 1))),
         chain (n - 1) )
 
+(* The term rows' environment (decisions row 43; the state plan's T3b).  A read-modify-write
+   row's binder term runs at the node's environment extended by the cell's current value, so it
+   reads the current value at the node's level and every outer binder below it.  In the
+   generated engine that environment is the point's carrier (`field Effect4.Machine.SyncOp.env
+   E.t`, externs.txt) and `sh_ref_step` extends it with `E.snoc`.  The programs and their
+   values are Test/Program/CompileContract.lean's `pRefUpdateCapture`, `pRefUpdateLevel` and
+   `pRefModifyOther`. *)
+let nat_lit n = E.Term_lit (E.Lit_nat n)
+let succ_at n = E.Term_app ("succ", E.Terms_cons (E.Term_var n, E.Terms_nil))
+
+(* `Ref.make(5)`, a bound `10`, `Ref.update(ref, a => add(a, x))`, then `Ref.get(ref)`: the
+   term captures the outer `x` (`var 1`) and reads the cell's value at the node's level
+   (`var 2`). *)
+let p_capture : E.eff =
+  E.Eff_bind
+    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+      E.Eff_bind
+        ( E.Eff_succeed (nat_lit 10),
+          E.Eff_bind
+            ( E.Eff_perform
+                ( E.Native_op_refUpdateWith
+                    (E.Term_app
+                       ("add", E.Terms_cons (E.Term_var 2, E.Terms_cons (E.Term_var 1, E.Terms_nil)))),
+                  E.Term_var 0 ),
+              E.Eff_perform (E.Native_op_refGet, E.Term_var 0) ) ) )
+
+(* `Ref.make(5)`, then `Ref.modify(ref, a => ["s", a])`: the row answers the string and stores
+   the number it read (`pRefModifyOther`).  `B` is the term's, not the cell's. *)
+let p_modify_other : E.eff =
+  E.Eff_bind
+    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+      E.Eff_perform
+        ( E.Native_op_refModifyWith
+            (E.Term_app
+               ( "pair",
+                 E.Terms_cons
+                   (E.Term_lit (E.Lit_str "s"), E.Terms_cons (E.Term_var 1, E.Terms_nil)) )),
+          E.Term_var 0 ) )
+
+(* `Ref.make(5)`, a bound `10`, then `Ref.updateAndGet(ref, f)` at a node of level 2. *)
+let p_level (f : E.term) : E.eff =
+  E.Eff_bind
+    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+      E.Eff_bind
+        ( E.Eff_succeed (nat_lit 10),
+          E.Eff_perform (E.Native_op_refUpdateAndGetWith f, E.Term_var 0) ) )
+
 (* ================================================================ one report per run *)
 
 type report = {
@@ -230,7 +283,16 @@ let g0 () =
   (* `awaitFiber ... awaitValue` answers the child's REIFIED exit, `ctor 0 [7]`
      (ocaml/gen/api_check.ml:96-97). *)
   one "pFork" p_fork "finished" 2 (Some "success ctor 0 [7]");
-  one "pAwait" p_await "frontier" 1 None
+  one "pAwait" p_await "frontier" 1 None;
+  (* The term rows' environment, on both carriers, against Lean's pinned values. *)
+  one "pCapture" p_capture "finished" 1 (Some "success 15");
+  one "pLevel@2" (p_level (succ_at 2)) "finished" 1 (Some "success 6");
+  one "pModifyOther" p_modify_other "finished" 1 (Some "success \"s\"");
+  (* Red controls.  The image one level down reads the outer `10`, not the cell.  The image one
+     level up is out of scope: the store step stops and the machine answers the thunk's pure
+     value, the unit. *)
+  one "pLevel@1" (p_level (succ_at 1)) "finished" 1 (Some "success 11");
+  one "pLevel@3" (p_level (succ_at 3)) "finished" 1 (Some "success unit")
 
 (* ================================================================ 2. the 37 goldens *)
 
@@ -308,21 +370,21 @@ let sample_masks =
 let sample_obs = [ E.Observer_mode_awaitValue; E.Observer_mode_joinEffect ]
 let sample_fins = [ E.Finalizer_strategy_sequential; E.Finalizer_strategy_parallel ]
 
-let sample_fns =
-  [ E.Fn_name_incr; E.Fn_name_double; E.Fn_name_zeroWhenPositive; E.Fn_name_noChange;
-    E.Fn_name_takeAndBump ]
+(* The binder term of a read-modify-write row (decisions row 43; the state plan's T3b): the
+   cell's current value at the node's level, here `succ(var 0)`, `incr`'s image at level 0. *)
+let succ_term = E.Term_app ("succ", E.Terms_cons (E.Term_var 0, E.Terms_nil))
 
 let sample_ops =
   [ E.Native_op_refMake; E.Native_op_refGet; E.Native_op_refSet; E.Native_op_refGetAndSet;
     E.Native_op_refSetAndGet;
-    E.Native_op_refUpdate E.Fn_name_incr;
-    E.Native_op_refGetAndUpdate E.Fn_name_incr;
-    E.Native_op_refUpdateAndGet E.Fn_name_incr;
-    E.Native_op_refUpdateSome E.Fn_name_incr;
-    E.Native_op_refGetAndUpdateSome E.Fn_name_incr;
-    E.Native_op_refUpdateSomeAndGet E.Fn_name_incr;
-    E.Native_op_refModify E.Fn_name_incr;
-    E.Native_op_refModifySome E.Fn_name_incr;
+    E.Native_op_refUpdateWith succ_term;
+    E.Native_op_refGetAndUpdateWith succ_term;
+    E.Native_op_refUpdateAndGetWith succ_term;
+    E.Native_op_refUpdateSomeWith succ_term;
+    E.Native_op_refGetAndUpdateSomeWith succ_term;
+    E.Native_op_refUpdateSomeAndGetWith succ_term;
+    E.Native_op_refModifyWith succ_term;
+    E.Native_op_refModifySomeWith succ_term;
     E.Native_op_deferredMakeOf (E.Ty_nat, E.Ty_nat); E.Native_op_deferredIsDone;
     E.Native_op_deferredPoll;
     E.Native_op_deferredSucceed; E.Native_op_deferredFail; E.Native_op_deferredAwait;
@@ -469,9 +531,6 @@ module Ord (A : E4_program.PROGRAM_TYPES) = struct
          one "finalizer_strategy" i (E.ctor_index_finalizer_strategy v)
            (P.ctor_index_finalizer_strategy (P.of_finalizer_strategy v)))
       sample_fins;
-    List.iteri
-      (fun i v -> one "fn_name" i (E.ctor_index_fn_name v) (P.ctor_index_fn_name (P.of_fn_name v)))
-      sample_fns;
     List.iteri
       (fun i v ->
          one "native_op" i (E.ctor_index_native_op v)

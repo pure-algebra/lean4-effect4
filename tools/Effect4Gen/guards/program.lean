@@ -59,10 +59,15 @@ def genDecode (b : Bytes) : Option (Eff NativeOp) :=
 -- The alphabets read back constructor by constructor: the law `ofVal_toVal`, run.
 #guard [Lit.unit, .nat 42, .bool true, .bool false, .str "x"].all fun l =>
   ProgramGen.LitC.ofVal (ProgramGen.LitC.toVal l) = some l
-#guard [NativeOp.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet, .refUpdate .incr,
-    .refGetAndUpdate .double, .refUpdateAndGet .noChange, .refUpdateSome .incr,
-    .refGetAndUpdateSome .incr, .refUpdateSomeAndGet .incr, .refModify .takeAndBump,
-    .refModifySome .incr, .deferredMakeOf .nat .nat, .deferredMakeOf .string (.lit "E"),
+#guard [NativeOp.refMake, .refGet, .refSet, .refGetAndSet, .refSetAndGet,
+    .refUpdateWith (.app "succ" (.cons (.var 0) .nil)),
+    .refGetAndUpdateWith (.app "mul" (.cons (.var 2) (.cons (.lit (.nat 2)) .nil))),
+    .refUpdateAndGetWith (.var 0), .refUpdateSomeWith (.app "none" .nil),
+    .refGetAndUpdateSomeWith (.app "some" (.cons (.var 1) .nil)),
+    .refUpdateSomeAndGetWith (.app "some" (.cons (.lit (.str "x")) .nil)),
+    .refModifyWith (.app "pair" (.cons (.lit (.bool true)) (.cons (.var 0) .nil))),
+    .refModifySomeWith (.app "pair" (.cons (.var 0) (.cons (.app "none" .nil) .nil))),
+    .deferredMakeOf .nat .nat, .deferredMakeOf .string (.lit "E"),
     .deferredIsDone, .deferredPoll, .deferredSucceed, .deferredFail, .deferredAwait,
     .scopeMake .parallel].all fun o =>
   ProgramGen.NativeOpC.ofVal (ProgramGen.NativeOpC.toVal o) = some o
@@ -168,6 +173,36 @@ def nested (tag : Nat) : Val :=
 #guard (Canonical.ofVal (α := Eff NativeOp)
   (.ctor 7 [Canonical.toVal (Eff.yieldNow (Op := NativeOp) 0),
     Canonical.toVal (Eff.succeed (Op := NativeOp) (.lit .unit))])).isSome
+
+/-! The read-modify-write rows (the state plan's T3b, decisions row 210): tags 5 to 12 named a
+function and are retired with `deferredMake`'s 13; tags 24 to 31 carry a binder term. Old bytes
+of a retired row refuse, at the root and inside a program, and the tag of a function name is no
+term. -/
+
+/-- Tags of `NativeOp` that no active constructor holds: 5 to 12 the retired name rows, 13 the
+retired `deferredMake`, the other two never given. -/
+def unheldOps : List Nat := [5, 6, 7, 8, 9, 10, 11, 12, 13, 32, 255]
+
+/-- Old bytes of `refUpdate incr`: tag 5 with the name `incr`, tag 0 of the retired family. -/
+def oldRefUpdate : Val := .ctor 5 [.ctor 0 []]
+
+#guard Canonical.ofVal (α := NativeOp) oldRefUpdate = none
+#guard Canonical.decode (α := NativeOp) (Val.encode oldRefUpdate) = none
+#guard Canonical.decode (α := Eff NativeOp)
+  (Val.encode (.ctor 6 [oldRefUpdate, Canonical.toVal (Term.var 0)])) = none
+#guard unheldOps.all fun tag => Canonical.ofVal (α := NativeOp) (.ctor tag []) = none
+#guard unheldOps.all fun tag => Canonical.ofVal (α := NativeOp) (.ctor tag [.ctor 0 []]) = none
+#guard unheldOps.all fun tag => (Canonical.shape NativeOp).accepts (.ctor tag [.ctor 0 []]) = false
+-- The appended rows hold tags 24 to 31, each with its one term.
+#guard ([NativeOp.refUpdateWith, .refGetAndUpdateWith, .refUpdateAndGetWith, .refUpdateSomeWith,
+    .refGetAndUpdateSomeWith, .refUpdateSomeAndGetWith, .refModifyWith, .refModifySomeWith].zipIdx.all
+  fun (con, i) => Canonical.toVal (con (.var 3)) = .ctor (24 + i) [Canonical.toVal (Term.var 3)])
+-- The same program with the name's image as its term reads back.
+#guard Canonical.decode (α := Eff NativeOp) (Canonical.encode
+    (Eff.perform (Op := NativeOp) (.refUpdateWith (.app "succ" (.cons (.var 0) .nil))) (.var 0))) =
+  some (.perform (.refUpdateWith (.app "succ" (.cons (.var 0) .nil))) (.var 0))
+-- A term row's operand is a term: a function name's old value tree in its place refuses.
+#guard Canonical.ofVal (α := NativeOp) (.ctor 24 [.ctor 0 []]) = none
 
 end WireTagAcceptance
 

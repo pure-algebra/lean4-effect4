@@ -760,6 +760,14 @@ def emitPlain (st : St) (ns : String) (kinds : Array KindReq) : EmitM Unit := do
   let nf := st.foreigns.size
   emit s!"namespace {ns}"
   emit ""
+  -- The two codec laws unfold one `ofVal` arm per constructor, so their cost grows with the sum.
+  -- Past thirty-two arms the default budget runs out (seat T3b, 2026-10-04: the checker's
+  -- `TypeReason` at thirty-four), so the budget grows by the default for every sixteen arms. It
+  -- holds from the namespace's start: `ofVal`'s equations are realized under the options of its
+  -- definition, and a budget on each law alone is not enough (measured).
+  if !m.isStruct && m.ctors.size > 32 then
+    emit s!"set_option maxHeartbeats {200000 * ((m.ctors.size + 15) / 16)}"
+    emit ""
   emit "def shapeDoc : ShapeDoc :="
   emitMemberShape st m "  ⟨" "     " ","
   emitForeignDefs st "⟩"

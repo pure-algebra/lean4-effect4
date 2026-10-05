@@ -1,0 +1,47 @@
+Test/Codegen/FormsContract.lean: 3 lines (face 2, fn 2), 1 declarations: args
+Test/Codegen/ReadContract.lean: 2 lines (fn 2, row 2), 1 declarations: tupleLawful
+Test/Codegen/SchemaGenerationContract.lean: 1 lines (fn 1, row 1), 1 declarations: pLoopProg
+Test/Counterexamples/Machine/Semantics/TrivialPosts.lean: 3 lines (fn 3), 2 declarations: modifyCode, modify_typed
+Test/Dogfood/P3WorkerQueue.lean: 2 lines (fn 2), 1 declarations: worker
+Test/Dogfood/P4RateLimiter.lean: 5 lines (face 1, fn 4), 2 declarations: request, window1
+Test/Machine/Runtime/StoresLawsContract.lean: 9 lines (fn 9), 2 declarations: m3', viaKernel
+Test/Program/AuthorContract.lean: 1 lines (fn 1), 1 declarations: counter
+Test/Program/AuthoringContract.lean: 1 lines (fn 1), 1 declarations: counter
+Test/Program/CompileContract.lean: 7 lines (fn 7, row 7), 7 declarations: pGenLoop, pGenLoopBreakInElse, pIterateRef, pOnExit, pRefModify, pRefUpdate, pWhileLoop
+Test/Program/Gen.lean: 10 lines (fn 10), 2 declarations: fns, genOp
+Test/Program/LayerSharingContract.lean: 1 lines (fn 1, row 1), 1 declarations: layerCount
+Test/Program/LoopSugarContract.lean: 3 lines (fn 3), 2 declarations: bump5, untilThree
+Test/Program/MeaningEqContract.lean: 1 lines (fn 1, row 1), 1 declarations: cleanup
+Test/Program/ProgressContract.lean: 37 lines (fn 37, row 6), 3 declarations: coarseWorld_not_cells, s1mod, s1upd
+Test/Program/ProtocolPosts.lean: 17 lines (fn 17), 12 declarations: adequacy_false_refModify, example, incr_modify_bool_none, refModifySome_bool_answer, refModifySome_bool_typed, refModifySome_post_excludes, refModifySome_pre_refuses, refModify_bool_frontier, refModify_post_admits, refModify_post_excludes, refModify_pre, refModify_pre_refuses
+Test/Program/RuntimeRContract.lean: 1 lines (fn 1, row 1), 1 declarations: onExitRef
+Test/Program/TypedContract.lean: 8 lines (fn 8, row 8), 1 declarations: atNat
+Test/Program/TypedCorpus.lean: 8 lines (fn 8, row 8), 1 declarations: raw
+harness/truth/Truth.lean: 2 lines (fn 2, row 2), 2 declarations: layerBump, layerCount
+src/Effect4/Codegen/Forms.lean: 16 lines (face 7, fn 14), 5 declarations: Form.checkExample, lambdaAtom, lambdaAtom_exact, lambdaShape, lambdaShape_atom
+src/Effect4/Codegen/Styles.lean: 9 lines (face 9, fn 5), 3 declarations: Form.foreign, atom?, expression
+src/Effect4/Laws/Codegen/ReadLeaf.lean: 5 lines (face 1, row 4), 3 declarations: NativeOp.external_not_mem_spelled, NativeOp.row_hygiene, nativeLawful
+src/Effect4/Laws/Machine/RefKernel.lean: 8 lines (row 8), 1 declarations: SyncOp.refKernel_handles
+src/Effect4/Laws/Machine/Witnesses.lean: 4 lines (fn 4), 4 declarations: w7GetAndUpdateSome, w7ModifySome, w7Update, w7UpdateSomeAndGet
+src/Effect4/Laws/Program/Authoring/Rows.lean: 8 lines (fn 8), 8 declarations: getAndUpdateSome_scoped, getAndUpdate_scoped, modifySome_scoped, modify_scoped, updateAndGet_scoped, updateSomeAndGet_scoped, updateSome_scoped, update_scoped
+src/Effect4/Laws/Program/Progress.lean: 20 lines (fn 8, row 12), 2 declarations: NativeOp.fnKernel, kernel_term_agrees
+src/Effect4/Laws/Program/Typed.lean: 8 lines (row 8), 1 declarations: syncOpOf_isSome
+src/Effect4/Laws/Program/Typed/Denotation.lean: 42 lines (fn 34, row 8), 9 declarations: fits_partialUpdate, fits_total, modifySomeTerm_maps, modifySome_nat, modifyTerm_maps, modify_nat, syncRow_typed, updateSomeTerm_maps, updateTerm_maps
+src/Effect4/Machine/Stores.lean: 37 lines (fn 37), 15 declarations: FnName, FnName.modify, FnName.modifySome, FnName.modifySomeTerm, FnName.modifySomeTerm_agrees, FnName.modifyTerm, FnName.modifyTerm_agrees, FnName.partialUpdate, FnName.total, FnName.updateSomeTerm, FnName.updateSomeTerm_agrees, FnName.updateTerm, FnName.updateTerm_agrees, refStep_update_applies_once, updateSomeAndGet_ne_getAndUpdateSome
+src/Effect4/Program/Authoring/Rows.lean: 17 lines (fn 9, row 9), 9 declarations: currentTimeMillis, getAndUpdate, getAndUpdateSome, modify, modifySome, update, updateAndGet, updateSome, updateSomeAndGet
+src/Effect4/Program/Native.lean: 48 lines (face 11, fn 24, row 29), 7 declarations: NativeOp, NativeOp.spelled, fnNames, fnSpelling, kind, row, syncOpOf
+src/Effect4/Program/Table.lean: 2 lines (row 2), 1 declarations: NativeOp.rowKey_mem
+src/Effect4/Store/Domain/Derived/Program.lean: 48 lines (fn 40, row 28), 9 declarations: fits, genDecode, instCanonical, lift_FnName, ofVal, ofVal_exact, ofVal_toVal, shapeDoc, toVal
+src/Effect4/Store/Domain/ProgramWire.lean: 1 lines (fn 1, row 1), 1 declarations: pLoop
+src/OCaml5/Eff/Emit.lean: 16 lines (face 1, fn 8, row 8), 4 declarations: ?, fnNames, fnO, opO
+src/OCaml5/Eff/Goldens.lean: 23 lines (fn 15, row 16), 4 declarations: ?, fnV, opV, pOps
+src/OCaml5/Eff/World.lean: 1 lines (fn 1), 1 declarations: ?
+src/OCaml5/Tools/EffGen.lean: 5 lines (face 4, fn 3), 2 declarations: ?, main
+tools/Drivers/Styles.lean: 5 lines (face 1, fn 3, row 3), 2 declarations: composite, probes
+tools/Drivers/TsGen.lean: 22 lines (face 1, fn 13, row 8), 5 declarations: allFnNames, allNativeOps, fnJs, lambdaJs, opJs
+tools/Effect4Gen/guards/program.lean: 4 lines (fn 4, row 4), 1 declarations: genDecode
+tools/Effect4Gen/guards/rows.lean: 1 lines (fn 1, row 1), 1 declarations: ?
+tools/Tools/ProgramStructure.lean: 1 lines (fn 1), 1 declarations: blocks
+tools/Tools/SemanticsRegistry.lean: 1 lines (fn 1), 1 declarations: registry
+files 45, declarations 145, lines 474; by kind: {'face': 38, 'fn': 354, 'row': 186}
+src files 19, Test files 19, tools files 6

@@ -1,0 +1,39 @@
+refused at a read-modify-write row: g61 path [0, 0, 0, 0, 0, 1, 1, 0] row refModify request not a cell: number expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g94 path [] row refUpdate request not a cell: boolean expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g124 path [0, 0] row refUpdateSomeAndGet request not a cell: number expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g127 path [0, 1, 0, 0] row refUpdate request not a cell: number expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g147 path [0, 0, 0, 0, 1] row refGetAndUpdate request not a cell: number expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g154 path [0, 0, 0, 0, 1] row refGetAndUpdate request not a cell: boolean expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g231 path [1, 0, 0, 0, 0, 0, 1, 0] row refModify request not a cell: number expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g239 path [] row refGetAndUpdateSome request not a cell: void expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g294 path [0, 0, 0, 0] row refUpdateSomeAndGet request not a cell: number expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g298 path [0] row refModify request not a cell: boolean expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g345 path [] row refUpdate request not a cell: number expected Ref.Ref<number> readable true
+refused at a read-modify-write row: g379 path [0, 0, 0, 0, 0, 0, 0] row refGetAndUpdate request not a cell: void expected Ref.Ref<number> readable true
+programs with a read-modify-write perform: 39; printed 39; wellTyped 1; refused at such a row with requestNotSubtype: 12
+  printed use: refGetAndUpdate double: 1
+  printed use: refGetAndUpdate incr: 1
+  printed use: refGetAndUpdate takeAndBump: 3
+  printed use: refGetAndUpdateSome double: 1
+  printed use: refGetAndUpdateSome incr: 2
+  printed use: refGetAndUpdateSome noChange: 1
+  printed use: refGetAndUpdateSome takeAndBump: 1
+  printed use: refModify double: 1
+  printed use: refModify incr: 2
+  printed use: refModify noChange: 1
+  printed use: refModify takeAndBump: 1
+  printed use: refModifySome noChange: 1
+  printed use: refUpdate double: 4
+  printed use: refUpdate incr: 4
+  printed use: refUpdate noChange: 1
+  printed use: refUpdate zeroWhenPositive: 1
+  printed use: refUpdateAndGet incr: 1
+  printed use: refUpdateAndGet noChange: 1
+  printed use: refUpdateAndGet takeAndBump: 4
+  printed use: refUpdateSome noChange: 1
+  printed use: refUpdateSome zeroWhenPositive: 1
+  printed use: refUpdateSomeAndGet double: 1
+  printed use: refUpdateSomeAndGet noChange: 1
+  printed use: refUpdateSomeAndGet takeAndBump: 3
+declOrder: 15 printed programs move (15 uses): [g18, g76, g108, g124, g126, g127, g191, g197, g198, g231, g239, g255, g259, g294, g379]
+home: 14 printed programs move (14 uses): [g18, g61, g63, g76, g108, g124, g126, g197, g198, g239, g255, g294, g298, g379]

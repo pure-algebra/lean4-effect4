@@ -21,8 +21,7 @@
 //   ForkOptions (Effect4.Supervision.ForkOptions, struct): mk(startImmediately: boolean, daemon: boolean, maskMode: MaskMode)
 //   ObserverMode (Effect4.Supervision.ObserverMode, literals): awaitValue joinEffect
 //   FinalizerStrategy (Effect4.FinalizerStrategy, literals): sequential parallel
-//   FnName (Effect4.Machine.FnName, literals): incr double zeroWhenPositive noChange takeAndBump
-//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet refUpdate(f: FnName) refGetAndUpdate(f: FnName) refUpdateAndGet(f: FnName) refUpdateSome(f: FnName) refGetAndUpdateSome(f: FnName) refUpdateSomeAndGet(f: FnName) refModify(f: FnName) refModifySome(f: FnName) deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow external(index: number) deferredMakeOf(value: Ty, error: Ty)
+//   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow external(index: number) deferredMakeOf(value: Ty, error: Ty) refUpdateWith(f: Term) refGetAndUpdateWith(f: Term) refUpdateAndGetWith(f: Term) refUpdateSomeWith(f: Term) refGetAndUpdateSomeWith(f: Term) refUpdateSomeAndGetWith(f: Term) refModifyWith(f: Term) refModifySomeWith(f: Term)
 //   ServiceName (Effect4.ServiceName, struct): mk(value: number)
 //   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
 //   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
@@ -169,23 +168,12 @@ export type ObserverMode = typeof ObserverMode.Type
 export const FinalizerStrategy = Schema.Literals(["sequential", "parallel"])
 export type FinalizerStrategy = typeof FinalizerStrategy.Type
 
-export const FnName = Schema.Literals(["incr", "double", "zeroWhenPositive", "noChange", "takeAndBump"])
-export type FnName = typeof FnName.Type
-
 export type NativeOp =
   | { readonly _tag: "refMake" }
   | { readonly _tag: "refGet" }
   | { readonly _tag: "refSet" }
   | { readonly _tag: "refGetAndSet" }
   | { readonly _tag: "refSetAndGet" }
-  | { readonly _tag: "refUpdate"; readonly f: FnName }
-  | { readonly _tag: "refGetAndUpdate"; readonly f: FnName }
-  | { readonly _tag: "refUpdateAndGet"; readonly f: FnName }
-  | { readonly _tag: "refUpdateSome"; readonly f: FnName }
-  | { readonly _tag: "refGetAndUpdateSome"; readonly f: FnName }
-  | { readonly _tag: "refUpdateSomeAndGet"; readonly f: FnName }
-  | { readonly _tag: "refModify"; readonly f: FnName }
-  | { readonly _tag: "refModifySome"; readonly f: FnName }
   | { readonly _tag: "deferredIsDone" }
   | { readonly _tag: "deferredPoll" }
   | { readonly _tag: "deferredSucceed" }
@@ -196,6 +184,14 @@ export type NativeOp =
   | { readonly _tag: "clockNow" }
   | { readonly _tag: "external"; readonly index: number }
   | { readonly _tag: "deferredMakeOf"; readonly value: Ty; readonly error: Ty }
+  | { readonly _tag: "refUpdateWith"; readonly f: Term }
+  | { readonly _tag: "refGetAndUpdateWith"; readonly f: Term }
+  | { readonly _tag: "refUpdateAndGetWith"; readonly f: Term }
+  | { readonly _tag: "refUpdateSomeWith"; readonly f: Term }
+  | { readonly _tag: "refGetAndUpdateSomeWith"; readonly f: Term }
+  | { readonly _tag: "refUpdateSomeAndGetWith"; readonly f: Term }
+  | { readonly _tag: "refModifyWith"; readonly f: Term }
+  | { readonly _tag: "refModifySomeWith"; readonly f: Term }
 
 export const NativeOp = Schema.TaggedUnion({
   refMake: {},
@@ -203,14 +199,6 @@ export const NativeOp = Schema.TaggedUnion({
   refSet: {},
   refGetAndSet: {},
   refSetAndGet: {},
-  refUpdate: { f: FnName },
-  refGetAndUpdate: { f: FnName },
-  refUpdateAndGet: { f: FnName },
-  refUpdateSome: { f: FnName },
-  refGetAndUpdateSome: { f: FnName },
-  refUpdateSomeAndGet: { f: FnName },
-  refModify: { f: FnName },
-  refModifySome: { f: FnName },
   deferredIsDone: {},
   deferredPoll: {},
   deferredSucceed: {},
@@ -221,6 +209,14 @@ export const NativeOp = Schema.TaggedUnion({
   clockNow: {},
   external: { index: Schema.Int },
   deferredMakeOf: { value: Schema.suspend((): Schema.Codec<Ty> => Ty), error: Schema.suspend((): Schema.Codec<Ty> => Ty) },
+  refUpdateWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  refGetAndUpdateWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  refUpdateAndGetWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  refUpdateSomeWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  refGetAndUpdateSomeWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  refUpdateSomeAndGetWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  refModifyWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
+  refModifySomeWith: { f: Schema.suspend((): Schema.Codec<Term> => Term) },
 })
 
 export const ServiceName = Schema.Struct({

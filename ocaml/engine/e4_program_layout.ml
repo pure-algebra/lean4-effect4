@@ -49,24 +49,11 @@ module type PROGRAM_TYPES = sig
   type fork_options = { start_immediately : bool; daemon : bool; mask_mode : mask_mode }
   type observer_mode = ObserverMode_awaitValue | ObserverMode_joinEffect
   type finalizer_strategy = FinalizerStrategy_sequential | FinalizerStrategy_parallel
-  type fn_name = | FnName_incr
-  | FnName_double
-  | FnName_zeroWhenPositive
-  | FnName_noChange
-  | FnName_takeAndBump
   type native_op = | NativeOp_refMake
   | NativeOp_refGet
   | NativeOp_refSet
   | NativeOp_refGetAndSet
   | NativeOp_refSetAndGet
-  | NativeOp_refUpdate of fn_name
-  | NativeOp_refGetAndUpdate of fn_name
-  | NativeOp_refUpdateAndGet of fn_name
-  | NativeOp_refUpdateSome of fn_name
-  | NativeOp_refGetAndUpdateSome of fn_name
-  | NativeOp_refUpdateSomeAndGet of fn_name
-  | NativeOp_refModify of fn_name
-  | NativeOp_refModifySome of fn_name
   | NativeOp_deferredIsDone
   | NativeOp_deferredPoll
   | NativeOp_deferredSucceed
@@ -77,6 +64,14 @@ module type PROGRAM_TYPES = sig
   | NativeOp_clockNow
   | NativeOp_external of int
   | NativeOp_deferredMakeOf of ty * ty
+  | NativeOp_refUpdateWith of term
+  | NativeOp_refGetAndUpdateWith of term
+  | NativeOp_refUpdateAndGetWith of term
+  | NativeOp_refUpdateSomeWith of term
+  | NativeOp_refGetAndUpdateSomeWith of term
+  | NativeOp_refUpdateSomeAndGetWith of term
+  | NativeOp_refModifyWith of term
+  | NativeOp_refModifySomeWith of term
   type service_name = int
   type service_type_code = int
   type service_key = { name : service_name; service : service_type_code }
@@ -176,7 +171,6 @@ let source_ctor_names = [
   ("mask_mode", Eff_types.ctor_names_mask_mode);
   ("observer_mode", Eff_types.ctor_names_observer_mode);
   ("finalizer_strategy", Eff_types.ctor_names_finalizer_strategy);
-  ("fn_name", Eff_types.ctor_names_fn_name);
   ("native_op", Eff_types.ctor_names_native_op);
   ("decision", Eff_types.ctor_names_decision);
   ("eff", Eff_types.ctor_names_eff);
@@ -201,8 +195,7 @@ let engine_ctor_names = [
   ("mask_mode", ["interruptible"; "uninterruptible"; "inherit"]);
   ("observer_mode", ["awaitValue"; "joinEffect"]);
   ("finalizer_strategy", ["sequential"; "parallel"]);
-  ("fn_name", ["incr"; "double"; "zeroWhenPositive"; "noChange"; "takeAndBump"]);
-  ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "refUpdate"; "refGetAndUpdate"; "refUpdateAndGet"; "refUpdateSome"; "refGetAndUpdateSome"; "refUpdateSomeAndGet"; "refModify"; "refModifySome"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"]);
+  ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"]);
   ("decision", ["bool"; "option"; "tag"; "recordTag"]);
   ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]);
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);

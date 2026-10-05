@@ -127,10 +127,12 @@ def atomSignature (s : NativeAtom.Scheme) : Option (String × String × String) 
   | .alts _ | .custom _ => none
 
 /-- A native row's line: a template row (the `Ref` and `Deferred` rows since the state plan's
-T3a) is rendered at its parameters' probes and queried at them, as a template atom is. -/
+T3a) is rendered at its parameters' probes and queried at them, as a template atom is. The
+parameters are those of the request, the answer and the error: `Ref.modify`'s `B` occurs in its
+answer and in its binder term's result, never in its request (the state plan's T3b). -/
 def nativeLine (op : NativeOp) : String :=
   let row := NativeOp.row op
-  let σ := probes [row.request]
+  let σ := probes [row.request, row.answer, row.error]
   let typeArgs := if σ.isEmpty then "" else
     "<" ++ String.intercalate ", " (σ.map fun b => Ty.renderRaw b.2) ++ ">"
   let inst : Row :=

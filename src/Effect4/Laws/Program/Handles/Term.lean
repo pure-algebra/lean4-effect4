@@ -249,10 +249,18 @@ theorem awaitCellOf_keys (v : Val) (cell : DeferredKey) (h : NativeOp.awaitCellO
     simp only [Val.keys, Handle.ofCode_promise, Option.toList, List.mem_singleton]
   · exact nomatch h
 
-theorem syncOpOf_keys (op : NativeOp) (v : Val) (o : SyncOp) (h : NativeOp.syncOpOf op v = some o) :
-    o.keys ⊆ v.keys := by
+/-- **A decoded store operation holds the request's handles and the environment's**: a
+read-modify-write row hands the store the point's environment, whose values its binder term may
+capture (decisions row 43), so the operation's handles are the cell and the environment's
+(`SyncOp.keys`); every other row holds handles of its request alone. A step of the handle
+invariant; its consumer is the compile's `perform` arm (`compileEff_keys`,
+`Handles/Compile.lean`), which bounds the environment by the point's handles
+(`Point.env_keys_subset`). -/
+theorem syncOpOf_keys (op : NativeOp) (env : List Val) (v : Val) (o : SyncOp)
+    (h : NativeOp.syncOpOf op env v = some o) :
+    o.keys ⊆ v.keys ++ env.flatMap Val.keys := by
   unfold NativeOp.syncOpOf at h
-  split at h <;> cases h <;> sub_tac
+  split at h <;> cases h <;> sub_tac norm [Val.keysList_eq_flatMap]
 
 theorem tuple?_keys (v : Val) : ∀ vs, Val.tuple? v = some vs → vs.flatMap Val.keys ⊆ v.keys := by
   intro vs h

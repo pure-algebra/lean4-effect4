@@ -1,5 +1,7 @@
 module
 
+public import Effect4.Machine.Term
+
 /-!
 # Program.ScopedOp — the scope of an operation's own data
 
@@ -9,6 +11,10 @@ module
 elaborated program with no signature at hand (`Src.Scoped`, `Laws/Program/Authoring.lean`), so it
 is a class of the alphabet and not a field of `Signature` (state plan T0,
 `docs/research/2026-10-04-claude-lead/state-any-type-plan.md`).
+
+The same class maps an operation's term (`mapTerm`). The generated frontier map (`frontierMap`,
+`Program/Fold.lean`) applies it, so `Eff.weaken` shifts an operation's binder term with the rest
+of the program (state plan T3b). An operation that carries no term is fixed.
 
 The native alphabet's instance is beside `NativeOp` (`Program/Native.lean`); the unit alphabet's
 is below. Scope is not typing: `ScopedOp` says which variables an operation's data may name, and
@@ -34,9 +40,14 @@ checked at `n + 1`, the cursor at index `n`). An operation that carries no term 
 class ScopedOp (Op : Type) where
   /-- Every variable the operation carries is in scope at a `perform` node of level `n`. -/
   scopedAt : Op → Nat → Bool
+  /-- The operation with its own binder term mapped by `g`; the default fixes an operation that
+  carries no term. Weakening maps every term slot of a program by `Term.weaken cut`, and an
+  operation's term is such a slot: its current value at index `n` moves with the node's level. -/
+  mapTerm : (Term → Term) → Op → Op := fun _ op => op
 
 /-- The unit alphabet carries no data. The scope fold's guards and the scope-preservation
 guards instantiate `Eff` at it. -/
-instance : ScopedOp Unit := ⟨fun _ _ => true⟩
+instance : ScopedOp Unit where
+  scopedAt _ _ := true
 
 end Effect4.Program

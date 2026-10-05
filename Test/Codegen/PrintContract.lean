@@ -468,4 +468,70 @@ refuses all three by name, before it looks at the row table. -/
 #guard (printEntry [] nativeSignature "main" ⟨.nat, .never, Requirement.empty⟩
     (.succeed (.lit (.nat 1)))).isOk
 
+/-! ## Binder terms (the state plan's T3b, until T5 prints a term itself)
+
+A read-modify-write row carries a binder term, which reads its current value at the node's
+level. The printer prints the row's form at level 0 (`Signature.opAtLevel`,
+`NativeOp.atLevel`): a term that is a name's image at the node's level prints that name after
+the request, exactly as the row printed when it named its function. A term that is no name's
+image there is refused by its row's spelling (`PrintRefusal.binderTerm`); it is never printed as
+a name. -/
+
+open Effect4.Machine (FnName) in
+#guard (print nativeSignature 0
+    (.perform (.refUpdateWith (FnName.image .update 0 .incr)) (.lit (.nat 0)))).map (expr house0 0)
+  = .ok "Ref.update(0, incr)"
+-- under two binders the same name is another term, `succ(var 2)`, and prints alike
+open Effect4.Machine (FnName) in
+#guard (print nativeSignature 2
+    (.perform (.refUpdateWith (FnName.image .update 2 .incr)) (.var 0))).map (expr house0 0)
+  = .ok "Ref.update(a0, incr)"
+#guard (print nativeSignature 2
+    (.perform (.refUpdateWith (.app "succ" (.cons (.var 2) .nil))) (.var 0))).map (expr house0 0)
+  = .ok "Ref.update(a0, incr)"
+open Effect4.Machine (FnName) in
+#guard (print nativeSignature 1
+    (.perform (.refModifySomeWith (FnName.image .modifySome 1 .noChange)) (.var 0))).map
+      (expr house0 0)
+  = .ok "Ref.modifySome(a0, noChange)"
+-- the two names whose plain terms would repeat print their own names
+open Effect4.Machine (FnName) in
+#guard (print nativeSignature 1
+    (.perform (.refUpdateWith (.app "add" (.cons (.var 1) (.cons (.lit (.nat 1)) .nil))))
+      (.var 0))).map (expr house0 0) = .ok "Ref.update(a0, takeAndBump)"
+#guard (print nativeSignature 1
+    (.perform (.refUpdateWith (.var 1)) (.var 0))).map (expr house0 0)
+  = .ok "Ref.update(a0, noChange)"
+-- each of the forty images prints its own name, at levels 0 to 3
+open Effect4.Machine (FnName) in
+#guard (List.range 4).all fun n => NativeOp.termRows.all fun row => fnNames.all fun g =>
+  decide ((print nativeSignature n
+      (.perform (row.1 (FnName.image row.2 n g)) (.lit (.nat 0)))).map (expr house0 0)
+    = .ok ((NativeOp.row (row.1 (.var 0))).spelling ++ "(0, " ++ fnSpelling g ++ ")"))
+
+-- a term that is no name's image at the node's level is refused by its row's spelling
+#guard (print nativeSignature 0
+    (.perform (.refUpdateWith (.app "succ" (.cons (.app "succ" (.cons (.var 0) .nil)) .nil)))
+      (.lit (.nat 0)))).map (expr house0 0) = .error (.binderTerm "Ref.update")
+-- a captured term reads a value bound around the node: no name spells it
+#guard (print nativeSignature 1
+    (.perform (.refUpdateWith (.app "add" (.cons (.var 1) (.cons (.var 0) .nil)))) (.var 0))).map
+      (expr house0 0) = .error (.binderTerm "Ref.update")
+-- a name's image at another level is no image here: at level 1 `succ(var 0)` reads the outer
+-- binder, and printing it as `incr` would print another function
+open Effect4.Machine (FnName) in
+#guard (print nativeSignature 1
+    (.perform (.refUpdateWith (FnName.image .update 0 .incr)) (.var 0))).map (expr house0 0)
+  = .error (.binderTerm "Ref.update")
+-- a term of another row's shape is no image at this row
+open Effect4.Machine (FnName) in
+#guard (print nativeSignature 0
+    (.perform (.refModifyWith (FnName.image .update 0 .incr)) (.lit (.nat 0)))).map (expr house0 0)
+  = .error (.binderTerm "Ref.modify")
+-- `Ref.modify` at another answer type: typed and run (`Test/Program/CompileContract.lean`,
+-- `pRefModifyOther`), and not printed until T5
+#guard (print nativeSignature 1
+    (.perform (.refModifyWith (.app "pair" (.cons (.lit (.str "s")) (.cons (.var 1) .nil))))
+      (.var 0))).map (expr house0 0) = .error (.binderTerm "Ref.modify")
+
 end Test.Syntax.PrintContract

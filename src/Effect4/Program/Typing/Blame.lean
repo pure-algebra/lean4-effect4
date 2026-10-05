@@ -87,6 +87,12 @@ inductive TypeReason
   ruling (c)): a message-only class is the pair `[tag, message]` and a no-field class the
   literal `tag`, which `spelling` names. -/
   | errorSpelling (error : Ty) (spelling : Ty)
+  /-- The binder term the row's operation carries has no type at the parameter's instance
+  `param` (the state plan's T3b, decisions row 43). -/
+  | binderTerm (row : String) (param : Ty)
+  /-- The binder term's type `result` is not below the result template's instance `expected`
+  (the state plan's T3b). -/
+  | resultNotSubtype (row : String) (result expected : Ty)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -123,6 +129,8 @@ def TypeReason.head : TypeReason → String
   | .tupleCause _ => "tupleCause"
   | .errorPayloadField _ _ _ => "errorPayloadField"
   | .errorSpelling _ _ => "errorSpelling"
+  | .binderTerm _ _ => "binderTerm"
+  | .resultNotSubtype _ _ _ => "resultNotSubtype"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

@@ -43,16 +43,25 @@ runs, and its `await` cannot fail; the printer refuses it by name until T5 spell
 arguments. The measured pool keeps today's instance, `Deferred<number, number>`, so it still prints
 and reads back.
 
+**Changes in the state plan's T3b.** A read-modify-write row carries a binder term. The log's
+append is rc.112's `Ref.update(log, lines => [...lines, line])`: with the cell ascribed at
+`ReadonlyArray<string>` it builds and runs to its lines, and at `Ref<never[]>` the checker refuses
+the term's result (`resultNotSubtype`). rc.112's `finish`, one `Ref.modify` that counts and decides
+"last" in one store step, builds and answers a boolean over a number cell. Neither term is a name's
+image, so the printer refuses both rows by name until the state plan's T5. The measured pool keeps
+its counters at `n => succ(n)`, the image of `incr`, so its stage does not move.
+
 **What the language refuses** (section 6): the log's append at `Ref<never[]>`
-(`requestNotSubtype`); the gate `Deferred<void, never>` in TypeScript (the printer, by name); the
+(`resultNotSubtype`); the gate `Deferred<void, never>` in TypeScript (the printer, by name); the
 forms `forEach` and `catchTag`. A queue has no spelling inside a program: DI-11 rules it a composite
 over `Ref`, `Deferred` and a wait list. When the scope interrupts a worker parked on the host's
 `take`, the session retires the call; rc.112's take is in-process.
 
-**Waits on:** R4 with rows 42–43 steps 3–5 (the log's element type, the gate's printing,
-`Ref.modify` with a binder); R10 with DI-11 (the queue composite) and DI-89 (`forEach`); R3 with row 130
-(`catchTag`'s residual over records); row 131 (the log lines interpolate numbers); R11 (release on interruption, the whole
-run). The slices of row 204 that move it: state at any type, then queues.
+**Waits on:** R4, the faces' part (the log's element type as a type argument, the gate's printing,
+and a binder term printed as a lambda: the state plan's T5); R10 with DI-11 (the queue composite)
+and DI-89 (`forEach`); R3 with row 130 (`catchTag`'s residual over records); row 131 (the log lines
+interpolate numbers); R11 (release on interruption, the whole run). The slice of row 204 that
+moves it next: queues.
 -/
 
 set_option autoImplicit false
@@ -75,14 +84,14 @@ forever, handle a failed job, and count each finished job. The job that makes th
 completes the gate. -/
 def worker (closes count gate : TermSrc) (total : Nat) : Src NativeOp :=
   scope (eff do
-    let _conn ← acquireRelease "conn" "exit" (succeed unit) (Ref.update .incr closes)
+    let _conn ← acquireRelease "conn" "exit" (succeed unit) (Ref.update "n" (app "succ" [var "n"]) closes)
     iterateWith (bool true)
       { while_ := fun _ => bool true
         body := fun _ => eff do
           let job ← Row.call take unit
           let _ ← catchIf "e" (app "tagIs" [str "JobFailed", var "e"])
             (Row.call runJob job) (succeed unit)
-          let n ← Ref.updateAndGet .incr count
+          let n ← Ref.updateAndGet "n" (app "succ" [var "n"]) count
           ifElse (app "eq" [n, nat total])
             (Deferred.succeed gate (nat 0)) (succeed (bool false))
         step := fun c _ => c })
@@ -242,10 +251,35 @@ open Effect4.Program.Denote in
 `never[]`. -/
 def logCell : Module NativeOp := program (Ref.make (app "nil" []))
 
-/-- The log's first append, `Ref.set(log, ["open 1"])`. -/
+/-- `note(log, line)`, rc.112's append: `Ref.update(log, lines => [...lines, line])`. -/
+def note (log : TermSrc) (line : String) : Src NativeOp :=
+  Ref.update "lines" (app "append" [var "lines", app "cons" [str line, app "nil" []]]) log
+
+/-- The log's first append at the bare cell, `Ref<never[]>`. -/
 def logAppend : Module NativeOp :=
+  program (bindName "log" (Ref.make (app "nil" [])) fun log => note log "open 1")
+
+/-- The same append by a whole-value write, `Ref.set(log, ["open 1"])`. -/
+def logSet : Module NativeOp :=
   program (bindName "log" (Ref.make (app "nil" [])) fun log =>
     Ref.set log (app "cons" [str "open 1", app "nil" []]))
+
+/-- `e : T`, written with the language's one written term type, a record's declared field (seat
+T3a's measured ascription; `Ref.make<A>` lands at the state plan's T5). -/
+def ascribe (ty : Ty) (e : TermSrc) : TermSrc := field (record [("v", false, ty)] [("v", e)]) "v"
+
+/-- `Ref.make<ReadonlyArray<string>>([])`, two appends, then the log. -/
+def logAscribed : Module NativeOp :=
+  program (bindName "log" (Ref.make (ascribe (.list .string) (app "nil" []))) fun log =>
+    andThen (note log "open 1") (andThen (note log "done 1 by 1") (Ref.get log)))
+
+/-- rc.112's `finish`: `Ref.modify(count, n => [n + 1 === total, n + 1])`, one store step that
+counts and decides "last". The module answers the decision and the count it left. -/
+def finishModule (start total : Nat) : Module NativeOp :=
+  program (bindName "count" (Ref.make (nat start)) fun count =>
+    bindName "last" (Ref.modify "n"
+        (app "pair" [app "eq" [app "succ" [var "n"], nat total], app "succ" [var "n"]]) count)
+      fun last => bindName "n" (Ref.get count) fun n => succeed (app "pair" [last, n]))
 
 /-- rc.112's gate, `Deferred.make<void>()`, completed and awaited. -/
 def gateModule : Module NativeOp :=
@@ -259,10 +293,25 @@ def jobFailedModule : Module NativeOp :=
     [("_tag", str "JobFailed"), ("id", nat 2), ("reason", str "bad payload")]))
 
 -- A cell holds any type (the state plan's T3a): the empty log builds at `Ref<never[]>`, and a cell
--- is invariant, so its first append is refused at `Ref.set`'s request.
+-- is invariant. Its first append is refused at the term's result: the term answers `string[]`,
+-- and the cell holds `never[]` (the state plan's T3b).
 #guard (built? logCell).map (fun b => b.ty.answer) = some (.refOf (.list .never))
-#guard typingReason? logAppend = some (.requestNotSubtype "refSet"
+#guard typingReason? logAppend = some (.resultNotSubtype "refUpdateWith"
+  (.list .string) (.list .never))
+-- The whole-value write is refused at `Ref.set`'s request, as before T3b.
+#guard typingReason? logSet = some (.requestNotSubtype "refSet"
   (.prod (.refOf (.list .never)) (.list .string)) (.prod (.refOf (.var 0)) (.var 0)))
+-- With the cell ascribed at its element type the append builds and runs to its lines.
+#guard (built? logAscribed).map (fun b => (b.ty.answer, b.runSync)) =
+  some (.list .string, .success (.list [.str "open 1", .str "done 1 by 1"]))
+-- The append's term is no name's image: the printer refuses the row by name until T5.
+#guard (built? logAscribed).map printVerdict = some "refused: binderTerm Ref.update"
+-- rc.112's `finish` builds: over a number cell the row answers a boolean, `B` is not `A`. The
+-- fifth job of five is the last, and the fourth is not.
+#guard (built? (finishModule 4 5)).map (fun b => (b.ty.answer, b.runSync)) =
+  some (.prod .bool .nat, .success (.list [.bool true, .nat 5]))
+#guard (built? (finishModule 3 5)).map (·.runSync) = some (.success (.list [.bool false, .nat 4]))
+#guard (built? (finishModule 4 5)).map printVerdict = some "refused: binderTerm Ref.modify"
 -- Green control: a log made with a line types at its element.
 #guard (built? (program (Ref.make (app "cons" [str "open 1", app "nil" []])))).map
   (fun b => b.ty.answer) = some (.refOf (.list .string))
@@ -303,7 +352,7 @@ def measured : Reach :=
 scripted host, with counts where rc.112 answers the log; printed and read back. -/
 def stage : Reach :=
   { refused :=
-      [ ("the log's append at Ref<never[]>", "typing: requestNotSubtype")
+      [ ("the log's append at Ref<never[]>", "typing: resultNotSubtype")
       , ("the gate as Deferred<void> in TypeScript", "refused: typeSpelling Deferred.make") ]
     admitted := true, answer := .differs, printed := true, readBack := true }
 

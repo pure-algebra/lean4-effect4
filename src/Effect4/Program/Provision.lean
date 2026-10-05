@@ -498,8 +498,11 @@ def docsServiceTy (key : ServiceKey) : Option Ty :=
   else if key = dbBinding ∨ key = rateBinding then some .nat
   else none
 
-def docsSig : Signature DocsOp :=
-  ⟨DocsOp.row, fun _ _ => none, scopeKey, docsServiceTy, fun _ => true, fun _ => false⟩
+def docsSig : Signature DocsOp where
+  rowOf := DocsOp.row
+  atomOf _ _ := none
+  scopeKey := scopeKey
+  serviceTy := docsServiceTy
 
 /-- The leaf semantics of the docs alphabet: a body that performs one row reads the row's one
 required service and binds it as the new service (the machine's `Construction.fromService`);

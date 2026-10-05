@@ -11,14 +11,17 @@ reaches `Classical.choice` through Lean's own framework, and no theorem lives he
 program built from the lifts: each step reads the goal's head and applies the lemma named
 after it (`f_scoped` for a lift or a piece of sugar `f`, the carrier's `cons`/`nil` and
 `some`/`none` lemmas for a membership goal, the hypothesis for a variable), so no
-alternative is ever tried against a goal it cannot close.
+alternative is ever tried against a goal it cannot close. An equation goal is the operation
+lift's own hypothesis, the scope of an operation's data (`ScopedOp.scopedAt op n = true`,
+`perform_scoped`); it closes by computation.
 -/
 
 namespace Effect4.Program.Authoring
 
 open Lean Elab Tactic Meta in
 /-- One step. A goal `∀ x ∈ l, C.Scoped x` applies the carrier's `cons`/`nil` (`some`/`none`)
-lemma by the shape of `l`; any other Pi is introduced; a goal `C.Scoped (f …)` applies
+lemma by the shape of `l`; any other Pi is introduced; an equation closes by `rfl` (the scope of
+an operation's own data, decided by its alphabet's instance); a goal `C.Scoped (f …)` applies
 `f_scoped`; a goal on a variable is its hypothesis. -/
 elab "authoring_scoped_step" : tactic => do
   let goal ← getMainGoal
@@ -37,6 +40,9 @@ elab "authoring_scoped_step" : tactic => do
       evalTactic (← `(tactic| apply $(mkIdent (carrier.appendAfter suffix))))
     else
       evalTactic (← `(tactic| intro))
+    return
+  if ty.isAppOfArity ``Eq 3 then
+    evalTactic (← `(tactic| rfl))
     return
   let arg ← whnfR ty.getAppArgs.back!
   match arg.getAppFn with

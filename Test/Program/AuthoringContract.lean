@@ -193,7 +193,7 @@ def immediateChild : Effect4.Supervision.ForkOptions :=
 def counter : LayerSrc NativeOp :=
   Layer.effect kA <|
     bind "ref" (service kRef) <|
-    andThen (Ref.update .incr (var "ref")) <|
+    andThen (Ref.update "n" (app "succ" [var "n"]) (var "ref")) <|
     succeed (nat 5)
 
 /-- The main program provides the `Ref`, provides `Counter` once and again by reference,

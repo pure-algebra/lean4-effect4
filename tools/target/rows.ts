@@ -76,10 +76,10 @@ export function queries(repo: string, signatures: Map<string, RowSignature>): Qu
  * qualified rc.112 export (`Ref.set`), which is what the query asks about. */
 const spellings: Record<string, string> = {
   refMake: "Ref.make", refGet: "Ref.get", refSet: "Ref.set", refGetAndSet: "Ref.getAndSet",
-  refSetAndGet: "Ref.setAndGet", refUpdate: "Ref.update", refGetAndUpdate: "Ref.getAndUpdate",
-  refUpdateAndGet: "Ref.updateAndGet", refUpdateSome: "Ref.updateSome",
-  refGetAndUpdateSome: "Ref.getAndUpdateSome", refUpdateSomeAndGet: "Ref.updateSomeAndGet",
-  refModify: "Ref.modify", refModifySome: "Ref.modifySome", deferredMakeOf: "Deferred.make",
+  refSetAndGet: "Ref.setAndGet", refUpdateWith: "Ref.update", refGetAndUpdateWith: "Ref.getAndUpdate",
+  refUpdateAndGetWith: "Ref.updateAndGet", refUpdateSomeWith: "Ref.updateSome",
+  refGetAndUpdateSomeWith: "Ref.getAndUpdateSome", refUpdateSomeAndGetWith: "Ref.updateSomeAndGet",
+  refModifyWith: "Ref.modify", refModifySomeWith: "Ref.modifySome", deferredMakeOf: "Deferred.make",
   deferredIsDone: "Deferred.isDone", deferredPoll: "Deferred.poll",
   deferredSucceed: "Deferred.succeed", deferredFail: "Deferred.fail", deferredAwait: "Deferred.await",
   scopeMake: "Scope.make", sleep: "Effect.sleep", clockNow: "Effect.currentTimeMillis",

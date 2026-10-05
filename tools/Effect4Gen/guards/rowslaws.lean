@@ -13,4 +13,9 @@ example : Src.Scoped (bind "r" (Ref.make (nat 0)) (Ref.set (var "r") (nat 1))) :
 example : Src.Scoped (bind "d" (Deferred.make .nat .nat) (Deferred.succeed (var "d") (nat 7))) := by
   authoring_scoped
 
+-- A term row: the binder term under the current value's name, with an outer capture.
+example : Src.Scoped (bind "r" (Ref.make (nat 0))
+    (Ref.update "a" (app "add" [var "a", var "r"]) (var "r"))) := by
+  authoring_scoped
+
 end Effect4.Program.AuthoringRowsLawsGuards

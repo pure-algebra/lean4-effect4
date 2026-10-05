@@ -60,27 +60,6 @@ open Effect4
 -- `DeferredKey`, a cell of the Deferred store, lives in `Machine/Wake.lean` (the scheduler
 -- surface, 2026-09-08), below the fiber machine, so a task can name a Deferred's waiter list.
 
-/-! ## The function-name alphabet (retires at T3 of the state plan: `NativeOp`'s rows carry terms) -/
-
-/-- Names of the pure functions the read-modify-write `Ref` operations of `NativeOp` apply.
-rc.112 takes a JavaScript function; DB-02 forbids storing one. Since T2 of the state plan the
-store runs binder terms (decisions row 43), and a name reaches it as its lowering, one term per
-shape (`FnName.updateTerm` and its three siblings). The interpretations below are the
-lowerings' left side: on every number each term evaluates to the name's answer
-(`FnName.updateTerm_agrees`). -/
-inductive FnName
-  /-- `a ↦ a + 1`. -/
-  | incr
-  /-- `a ↦ 2 * a`. -/
-  | double
-  /-- partial: `Some 0` on a positive cell, `None` otherwise. -/
-  | zeroWhenPositive
-  /-- partial: `None` always — the `modifySome` write-back witness. -/
-  | noChange
-  /-- `modify`: answer the old value, write the bumped one. -/
-  | takeAndBump
-deriving DecidableEq, Repr
-
 /-- The fiber `Context` (rc.112 `fiber.context`, `internal/effect.ts:2152`): the service map
 (`Machine/ContextMap.lean`) and the two budget fields `setContext` caches off it (`:726-727`).
 The ambient `Scope` service is read off the map (`forkScoped`, `:5400-5406`; `Ctx.ambientScope`),
@@ -856,96 +835,6 @@ def refPeek (heap : RefHeap) (cell : RefKey) : Option Val := heap[cell.index]?
 def refPoke (heap : RefHeap) (cell : RefKey) (value : Val) : RefHeap :=
   heap.set cell.index value
 
-/-- `a ↦ f(a)` for the total read-modify-write operations. -/
-def FnName.total : FnName → Val → Val
-  | FnName.incr, Val.nat n => Val.nat (n + 1)
-  | FnName.double, Val.nat n => Val.nat (n * 2)
-  | FnName.takeAndBump, Val.nat n => Val.nat (n + 1)
-  | _, value => value
-
-/-- `a ↦ pf(a)` for the `Some`/`None` read-modify-write operations. -/
-def FnName.partialUpdate : FnName → Val → Option Val
-  | FnName.noChange, _ => none
-  | FnName.zeroWhenPositive, Val.nat (Nat.succ _) => some (Val.nat 0)
-  | FnName.zeroWhenPositive, _ => none
-  | f, value => some (f.total value)
-
-/-- `a ↦ [b, a']` (`Ref.ts:898`). -/
-def FnName.modify : FnName → Val → Val × Val
-  | FnName.takeAndBump, Val.nat n => (Val.nat n, Val.nat (n + 1))
-  | f, value => (value, f.total value)
-
-/-- `a ↦ [b, Option a']` (`Ref.ts:1161`). -/
-def FnName.modifySome : FnName → Val → Val × Option Val
-  | FnName.noChange, value => (value, none)
-  | f, value => ((f.modify value).1, some (f.modify value).2)
-
-/-! ### The connector: a name lowered to a binder term, one term per shape
-
-A name means one function at each of rc.112's four shapes (`Ref.ts`, the eight bodies):
-`A → A` at the three update rows, `A → Option<A>` at the three `Some` rows, `A → [B, A]` at
-`modify` and `A → [B, Option<A>]` at `modifySome`. So a name lowers to one term per shape. Each
-term reads the cell's value at level 0 of the environment `[]`, and on every number it evaluates
-to the image of the name's answer (`FnName.updateTerm_agrees` and its three siblings, by `rfl`).
-On a value that is not a number the terms of the computing names stop, since every atom that
-reads a number refuses any other value: the agreement holds on numbers only (the state plan's
-T2, ruling D1). -/
-
-/-- The term of a name at `A → A`: `succ(a)` for `incr` and `takeAndBump`, `mul(a, 2)` for
-`double`, `a` for the other two. -/
-def FnName.updateTerm : FnName → Program.Term
-  | FnName.incr | FnName.takeAndBump => .app "succ" (.cons (.var 0) .nil)
-  | FnName.double => .app "mul" (.cons (.var 0) (.cons (.lit (.nat 2)) .nil))
-  | FnName.zeroWhenPositive | FnName.noChange => .var 0
-
-/-- The term of a name at `A → Option<A>`: `none()` for `noChange`,
-`ite(lt(0, a), some(0), none())` for `zeroWhenPositive`, `some` of the `A → A` term for the
-others. -/
-def FnName.updateSomeTerm : FnName → Program.Term
-  | FnName.noChange => .app "none" .nil
-  | FnName.zeroWhenPositive =>
-    .app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
-      (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil)))
-  | f => .app "some" (.cons f.updateTerm .nil)
-
-/-- The term of a name at `A → [B, A]`: the pair of the value read and the `A → A` term. -/
-def FnName.modifyTerm (f : FnName) : Program.Term :=
-  .app "pair" (.cons (.var 0) (.cons f.updateTerm .nil))
-
-/-- The term of a name at `A → [B, Option<A>]`: the value read, paired with `none()` for
-`noChange` and with `some` of the `A → A` term for the others. -/
-def FnName.modifySomeTerm : FnName → Program.Term
-  | FnName.noChange => .app "pair" (.cons (.var 0) (.cons (.app "none" .nil) .nil))
-  | f => .app "pair" (.cons (.var 0) (.cons (.app "some" (.cons f.updateTerm .nil)) .nil))
-
-/-- On every number the `A → A` term evaluates to the name's answer. -/
-theorem FnName.updateTerm_agrees (f : FnName) (n : Nat) :
-    Program.evalTerm [.nat n] f.updateTerm = some (f.total (.nat n)) := by
-  cases f <;> rfl
-
-/-- On every number the `A → Option<A>` term evaluates to the option image of the name's
-answer. -/
-theorem FnName.updateSomeTerm_agrees (f : FnName) (n : Nat) :
-    Program.evalTerm [.nat n] f.updateSomeTerm =
-      some (Store.Image.toOption Store.Image.ident (f.partialUpdate (.nat n))) := by
-  cases f
-  case zeroWhenPositive => cases n <;> rfl
-  all_goals rfl
-
-/-- On every number the `A → [B, A]` term evaluates to the pair of the name's answer. -/
-theorem FnName.modifyTerm_agrees (f : FnName) (n : Nat) :
-    Program.evalTerm [.nat n] f.modifyTerm =
-      some (Program.Val.tuple [(f.modify (.nat n)).1, (f.modify (.nat n)).2]) := by
-  cases f <;> rfl
-
-/-- On every number the `A → [B, Option<A>]` term evaluates to the pair of the name's answer,
-its second component through the option image. -/
-theorem FnName.modifySomeTerm_agrees (f : FnName) (n : Nat) :
-    Program.evalTerm [.nat n] f.modifySomeTerm =
-      some (Program.Val.tuple [(f.modifySome (.nat n)).1,
-        Store.Image.toOption Store.Image.ident (f.modifySome (.nat n)).2]) := by
-  cases f <;> rfl
-
 /-- One step of the Ref heap. `none` is a frontier: a key no allocation of this heap minted, or
 a term that does not evaluate at `env ++ [current]` or answers outside its row's shape. A `Some`
 row reads its term's answer with the carrier's exact option image (`Store.Image.option`), and
@@ -1106,11 +995,11 @@ theorem refStep_update (heap : RefHeap) (cell : RefKey) (f : Program.Term) (env 
     refStep (SyncOp.refUpdate cell f env) heap = some (Val.unit, refPoke heap cell a') := by
   simp only [refStep, h, hf, Option.bind_some, Option.map_some]
 
-/-- `ref.update`: applied exactly once, not twice; the term is `incr`'s lowering.
-census: ref.update -/
+/-- `ref.update`: applied exactly once, not twice; the term is `succ(a)`, the current value at
+level 0. census: ref.update -/
 theorem refStep_update_applies_once (heap : RefHeap) (cell : RefKey) (a : Val)
     (h : refPeek heap cell = some a) (hval : a = Val.nat 0) :
-    (refStep (SyncOp.refUpdate cell FnName.incr.updateTerm []) heap).map Prod.snd =
+    (refStep (SyncOp.refUpdate cell (.app "succ" (.cons (.var 0) .nil)) []) heap).map Prod.snd =
       some (refPoke heap cell (Val.nat 1)) := by
   subst hval
   rw [refStep_update heap cell _ [] (Val.nat 0) (Val.nat 1) h rfl]
@@ -1167,12 +1056,17 @@ theorem refStep_updateSomeAndGet_none (heap : RefHeap) (cell : RefKey) (f : Prog
   rfl
 
 /-- `ref.update-some-and-get-reread`: `updateSomeAndGet` and `getAndUpdateSome` differ — the
-first answers after the write, the second before it; the term is `zeroWhenPositive`'s lowering.
+first answers after the write, the second before it; the term is
+`ite(lt(0, a), some(0), none())`, `Some 0` on a positive cell.
 census: ref.update-some-and-get-reread -/
 theorem updateSomeAndGet_ne_getAndUpdateSome :
-    (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
+    (refStep (SyncOp.refUpdateSomeAndGet ⟨0⟩
+        (.app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
+          (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil)))) [])
         [Val.nat 3]).map Prod.fst ≠
-      (refStep (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
+      (refStep (SyncOp.refGetAndUpdateSome ⟨0⟩
+        (.app "ite" (.cons (.app "lt" (.cons (.lit (.nat 0)) (.cons (.var 0) .nil)))
+          (.cons (.app "some" (.cons (.lit (.nat 0)) .nil)) (.cons (.app "none" .nil) .nil)))) [])
         [Val.nat 3]).map Prod.fst := by
   decide
 

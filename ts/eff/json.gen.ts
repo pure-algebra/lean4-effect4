@@ -12,7 +12,7 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, FnName, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
+import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
@@ -98,8 +98,6 @@ export const observerModeJson = (v: ObserverMode): Json => [v]
 
 export const finalizerStrategyJson = (v: FinalizerStrategy): Json => [v]
 
-export const fnNameJson = (v: FnName): Json => [v]
-
 export const nativeOpJson = (v: NativeOp): Json => {
   switch (v._tag) {
     case "refMake": return ["refMake"]
@@ -107,14 +105,6 @@ export const nativeOpJson = (v: NativeOp): Json => {
     case "refSet": return ["refSet"]
     case "refGetAndSet": return ["refGetAndSet"]
     case "refSetAndGet": return ["refSetAndGet"]
-    case "refUpdate": return ["refUpdate", fnNameJson(v.f)]
-    case "refGetAndUpdate": return ["refGetAndUpdate", fnNameJson(v.f)]
-    case "refUpdateAndGet": return ["refUpdateAndGet", fnNameJson(v.f)]
-    case "refUpdateSome": return ["refUpdateSome", fnNameJson(v.f)]
-    case "refGetAndUpdateSome": return ["refGetAndUpdateSome", fnNameJson(v.f)]
-    case "refUpdateSomeAndGet": return ["refUpdateSomeAndGet", fnNameJson(v.f)]
-    case "refModify": return ["refModify", fnNameJson(v.f)]
-    case "refModifySome": return ["refModifySome", fnNameJson(v.f)]
     case "deferredIsDone": return ["deferredIsDone"]
     case "deferredPoll": return ["deferredPoll"]
     case "deferredSucceed": return ["deferredSucceed"]
@@ -125,6 +115,14 @@ export const nativeOpJson = (v: NativeOp): Json => {
     case "clockNow": return ["clockNow"]
     case "external": return ["external", v.index]
     case "deferredMakeOf": return ["deferredMakeOf", tyJson(v.value), tyJson(v.error)]
+    case "refUpdateWith": return ["refUpdateWith", termJson(v.f)]
+    case "refGetAndUpdateWith": return ["refGetAndUpdateWith", termJson(v.f)]
+    case "refUpdateAndGetWith": return ["refUpdateAndGetWith", termJson(v.f)]
+    case "refUpdateSomeWith": return ["refUpdateSomeWith", termJson(v.f)]
+    case "refGetAndUpdateSomeWith": return ["refGetAndUpdateSomeWith", termJson(v.f)]
+    case "refUpdateSomeAndGetWith": return ["refUpdateSomeAndGetWith", termJson(v.f)]
+    case "refModifyWith": return ["refModifyWith", termJson(v.f)]
+    case "refModifySomeWith": return ["refModifySomeWith", termJson(v.f)]
   }
 }
 

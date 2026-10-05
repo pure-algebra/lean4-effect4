@@ -63,7 +63,7 @@ def count3 : Src NativeOp :=
 
 def bump5 : Src NativeOp :=
   bindWith (Ref.make (nat 0)) fun r =>
-    andThen (forRange (nat 0) (nat 5) fun _ => Ref.update .incr r) (Ref.get r)
+    andThen (forRange (nat 0) (nat 5) fun _ => Ref.update "n" (app "succ" [var "n"]) r) (Ref.get r)
 
 #guard typed bump5
 #guard answerOf bump5 = some (Exit.success (Store.Val.nat 5))
@@ -85,14 +85,14 @@ def untilThree : Src NativeOp :=
   bindWith (Ref.make (nat 0)) fun r =>
     andThen
       (repeatWhile (bindWith (Ref.get r) fun v => succeed (app "lt" [v, nat 3]))
-        (Ref.update .incr r))
+        (Ref.update "n" (app "succ" [var "n"]) r))
       (Ref.get r)
 
 #guard typed untilThree
 #guard answerOf untilThree = some (Exit.success (Store.Val.nat 3))
 -- a condition false at once runs the body no times
 #guard answerOf (bindWith (Ref.make (nat 9)) fun r =>
-    andThen (repeatWhile (succeed (bool false)) (Ref.update .incr r)) (Ref.get r))
+    andThen (repeatWhile (succeed (bool false)) (Ref.update "n" (app "succ" [var "n"]) r)) (Ref.get r))
   = some (Exit.success (Store.Val.nat 9))
 
 /-! ## Scope: by the laws, not by running -/

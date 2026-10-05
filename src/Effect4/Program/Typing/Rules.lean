@@ -51,6 +51,20 @@ theorem joinAnswer_eq (a b : Ty) : joinAnswer a b = some (Ty.join a b) := rfl
 
 end EffTy
 
+/-- The binder term an operation carries (decisions row 43), with its type over the row's
+parameters: the term runs at `env ++ [current]`, the current value at `param` and its answer at
+`result` (the state plan's T3b). The templates sit beside the term, not in `Row`: no host row
+takes a function, and `Row`'s codec stays as it is. -/
+structure BinderTerm where
+  term : Term
+  param : Ty
+  result : Ty
+deriving DecidableEq
+
+/-- The binder term weakened at a cut, its templates unchanged. -/
+def BinderTerm.weaken (cut : Nat) (b : BinderTerm) : BinderTerm :=
+  { b with term := Term.weaken cut b.term }
+
 /-- What typing consults beside the program: the rows of the alphabet, the pure atoms
 (parameter types and answer), and the `Scope` service key of this signature. -/
 structure Signature (Op : Type) where
@@ -71,6 +85,16 @@ structure Signature (Op : Type) where
   DI-55): a string literal argument of such an atom keeps its literal type (`litArgTy`, the
   literal rule of DI-15). No atom is const-generic unless the signature says so. -/
   constAtom : String → Bool := fun _ => false
+  /-- The binder term an operation carries, with its templates (the state plan's T3b); `none`
+  for an operation that carries none. The checker types the term at the node's environment
+  extended by the current value (`termUse`, `checkRow`). -/
+  termOf : Op → Option BinderTerm := fun _ => none
+  /-- An operation's own data written for a node of level `src`, as data for a node of level
+  `dst`. A binder term reads its current value at the node's level, so the faces print and read
+  an operation as its form at level 0 (`Codegen/Templates.lean`, `Codegen/Read.lean`). `none`
+  where the faces have no form for it (the state plan's T3b, until T5). The identity by
+  default. -/
+  opAtLevel : Nat → Nat → Op → Option Op := fun _ _ op => some op
 
 variable {Op : Type}
 
@@ -129,36 +153,103 @@ is `Lit.ty` (`litArgTy_false`). -/
 def termTy (sig : Signature Op) (env : TyEnv) (t : Term) : Option Ty :=
   argTy sig env false t
 
-/-- A request mismatch and malformed instantiated columns are distinct refusals. -/
+/-- How one use of a row types its operation's binder term: the term's parameter and result
+templates, and the term's type at a parameter type. -/
+structure TermUse where
+  param : Ty
+  result : Ty
+  typeAt : Ty → Option Ty
+
+/-- The use of an operation's binder term at a node of environment `env`: the term typed at
+`env ++ [A]`, its current value `A` at the node's level (`ScopedOp`'s convention, decisions row
+43). `none` for an operation that carries no term. -/
+def Signature.termUse (sig : Signature Op) (env : TyEnv) (op : Op) : Option TermUse :=
+  (sig.termOf op).map fun b => ⟨b.param, b.result, fun A => termTy sig (env ++ [A]) b.term⟩
+
+/-- A request mismatch and malformed instantiated columns are distinct refusals, and so are the
+two ways an operation's binder term fails: no type at the parameter, and a type outside the
+result template's instance. -/
 inductive RowTypingRefusal where
   | requestNotSubtype
   | formation (why : FormationRefusal)
+  /-- The binder term has no type at the instantiated parameter (appended, the state plan's
+  T3b). -/
+  | term (param : Ty)
+  /-- The binder term's type is not below the result template's instance at the request's
+  bindings (appended, the state plan's T3b). -/
+  | resultNotSubtype (result expected : Ty)
   deriving DecidableEq, Repr
 
-/-- Match the request, then check all raw instantiated columns before normalization.
-Request mismatch retains precedence when both checks would fail (rows 42 and 193).
-The checker and `rowTy` project this one result. -/
-def checkRow (row : Row) (request : Ty) : Except RowTypingRefusal EffTy :=
+/-- The bindings a row use's binder term extends: the term typed at the parameter's instance,
+its type matched against the result template from the request's bindings `σ`. The match reads
+the term's raw type: its normal form distributes a product over a union, where the first member
+would bind a parameter the guard then refuses (the T3b design note, F6). -/
+def bindTerm (σ : Ty.Subst) : Option TermUse → Except RowTypingRefusal Ty.Subst
+  | none => .ok σ
+  | some use =>
+    let param := (use.param.normalize.instantiate σ).normalize
+    match use.typeAt param with
+    | none => .error (.term param)
+    | some r =>
+      match Ty.matchTemplate σ use.result.normalize r with
+      | some σ' => .ok σ'
+      | none => .error (.resultNotSubtype r (use.result.normalize.instantiate σ).normalize)
+
+/-- Match the request, then bind the operation's binder term (`bindTerm`), then check all raw
+instantiated columns before normalization. Request mismatch retains precedence when several
+checks would fail (rows 42 and 193). The checker and `rowTy` project this one result. -/
+def checkRow (row : Row) (request : Ty) (use : Option TermUse := none) :
+    Except RowTypingRefusal EffTy :=
   match Ty.matchTemplate [] row.request.normalize request.normalize with
   | none => .error .requestNotSubtype
-  | some bindings =>
-    match Formation.check (Formation.instantiatedSites row bindings) with
-    | some why => .error (.formation why)
-    | none => .ok ⟨(row.answer.instantiate bindings).normalize,
-        (row.error.instantiate bindings).normalize, Requirement.ofList row.requires⟩
+  | some σ =>
+    match bindTerm σ use with
+    | .error why => .error why
+    | .ok bindings =>
+      match Formation.check (Formation.instantiatedSites row bindings) with
+      | some why => .error (.formation why)
+      | none => .ok ⟨(row.answer.instantiate bindings).normalize,
+          (row.error.instantiate bindings).normalize, Requirement.ofList row.requires⟩
 
 /-- The type projection of the row check. A closed, raw formed row reduces to
 subsumption and its own columns (`rowTy_closed`, `Laws/Program/Template.lean`). -/
-def rowTy (row : Row) (request : Ty) : Option EffTy :=
-  (checkRow row request).toOption
+def rowTy (row : Row) (request : Ty) (use : Option TermUse := none) : Option EffTy :=
+  (checkRow row request use).toOption
+
+/-- The part of a row the row check reads (`checkRow`): its request, answer and error columns
+and its requirements. The name, spelling, shape, trailing names, type arguments, citation and
+registration are the faces' and the runner's. -/
+def Row.columns (row : Row) : Ty × Ty × Ty × List ServiceKey :=
+  (row.request, row.answer, row.error, row.requires)
+
+/-- Two rows with the same columns check alike: the row check reads nothing else. A step of
+`check_weaken` (`Program/Typing.lean`), whose signature premise compares columns. -/
+theorem checkRow_columns {row row' : Row} (h : row.columns = row'.columns) (request : Ty)
+    (use : Option TermUse) : checkRow row request use = checkRow row' request use := by
+  simp only [Row.columns, Prod.mk.injEq] at h
+  obtain ⟨hreq, hans, herr, hrequires⟩ := h
+  simp only [checkRow, Formation.instantiatedSites, hreq, hans, herr, hrequires]
+
+/-- `rowTy` at two rows with the same columns. -/
+theorem rowTy_columns {row row' : Row} (h : row.columns = row'.columns) (request : Ty)
+    (use : Option TermUse) : rowTy row request use = rowTy row' request use := by
+  simp only [rowTy, checkRow_columns h request use]
 
 /-- The row judgment and diagnostic worker accept the same type. The checker
 inversion and completeness laws consume this projection of `checkRow`. -/
-theorem rowTy_eq_some_iff (row : Row) (request : Ty) (ty : EffTy) :
-    rowTy row request = some ty ↔ checkRow row request = .ok ty := by
-  cases checked : checkRow row request with
+theorem rowTy_eq_some_iff (row : Row) (request : Ty) (use : Option TermUse) (ty : EffTy) :
+    rowTy row request use = some ty ↔ checkRow row request use = .ok ty := by
+  cases checked : checkRow row request use with
   | error why => simp only [rowTy, checked, Except.toOption, reduceCtorEq]
   | ok result => simp only [rowTy, checked, Except.toOption, Option.some.injEq, Except.ok.injEq]
+
+/-- An operation with no binder term binds nothing: the request's bindings stand. -/
+@[simp] theorem bindTerm_none (σ : Ty.Subst) : bindTerm σ none = .ok σ := rfl
+
+/-- The use of an operation that carries no term is no use. -/
+theorem Signature.termUse_eq_none {sig : Signature Op} {op : Op} (h : sig.termOf op = none)
+    (env : TyEnv) : sig.termUse env op = none := by
+  simp only [Signature.termUse, h, Option.map_none]
 
 /-- `argsTy` on a cons, as nested `Option.bind`s. -/
 theorem argsTy_cons (sig : Signature Op) (env : TyEnv) (const : Bool) (head : Term)

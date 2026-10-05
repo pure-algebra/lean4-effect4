@@ -30,7 +30,6 @@ open Lean Meta
 open Effect4.Program
 open Effect4.Supervision (MaskMode ForkOptions ObserverMode)
 open Effect4 (FinalizerStrategy ServiceKey)
-open Effect4.Machine (FnName)
 
 namespace OCaml5.Eff
 

@@ -25,6 +25,56 @@ def args (n : Nat) : Arguments :=
     (.bind (.succeed (.lit (.nat 2)))
       (.succeed (.app "pair" (.cons (.var n) (.cons (.var (n + 2)) .nil)))))
 
+/-! ### A term row as a form's argument (state plan T3b; register row `E4-CHECK-CE-019`)
+
+A form places an argument effect under the binders it introduces: `insert cut count` weakens the
+argument, an operation's own binder term included (`ScopedOp.mapTerm`). `tap`'s second argument
+sits under the first argument's answer. With `Ref.update(cell, a => succ(a))` as that argument
+at level 1 (the cell at `var 0`), the expansion keeps the cell and moves the term's current value
+past the new binder. -/
+
+/-- `Ref.update(cell, a => succ(a))` at level `n + 1`: the cell at `var n`, its value at
+`var (n + 1)`. -/
+def bump (n : Nat) : Eff NativeOp :=
+  .perform (.refUpdateWith (.app "succ" (.cons (.var (n + 1)) .nil))) (.var n)
+
+-- under the form's one new binder the request keeps the cell and the term reads `var (n + 2)`
+#guard [0, 2, 5].all fun n =>
+  (Template.argument 1 0 1).expand (n + 1) { effects := [.succeed (.lit .unit), bump n] } == some
+    (.perform (.refUpdateWith (.app "succ" (.cons (.var (n + 2)) .nil))) (.var n))
+#guard insert 1 1 (bump 0) =
+  (.perform (.refUpdateWith (.app "succ" (.cons (.var 2) .nil))) (.var 0) : Eff NativeOp)
+-- the inserted argument types as the argument did, whatever the new binder holds: the instance
+-- of `effTy_insert_append` at the native signature
+#guard [Ty.string, .nat, .bool].all fun slot =>
+  effTy nativeSignature ([.refOf .nat] ++ [slot]) (insert 1 1 (bump 0)) ==
+    effTy nativeSignature [.refOf .nat] (bump 0)
+example (slot : Ty) :
+    effTy nativeSignature ([.refOf .nat] ++ [slot]) (insert 1 1 (bump 0)) =
+      effTy nativeSignature [.refOf .nat] (bump 0) :=
+  effTy_insert_append nativeSignature (nativeSignature_weakenNatural []) [.refOf .nat] [slot]
+    (bump 0)
+
+/-- Red control: the insertion of before slice B of the state plan's T3b, which weakened the
+request and left the operation's term alone. -/
+def insertRequestOnly (cut : Nat) : Eff NativeOp → Eff NativeOp
+  | .perform op request => .perform op (Term.weaken cut request)
+  | e => e
+
+-- the unshifted term still reads `var 1`, the form's new binder, not the cell's value
+#guard insertRequestOnly 1 (bump 0) = bump 0
+#guard insertRequestOnly 1 (bump 0) != insert 1 1 (bump 0)
+-- a string in the new binder: the argument typed, and the unshifted insertion does not
+#guard (effTy nativeSignature [.refOf .nat] (bump 0)).isSome
+#guard effTy nativeSignature [.refOf .nat, .string] (insertRequestOnly 1 (bump 0)) = none
+-- a number in the new binder: it types and reads the wrong binder, answering the binder's
+-- successor where the inserted term answers the cell's
+#guard (effTy nativeSignature [.refOf .nat, .nat] (insertRequestOnly 1 (bump 0))).isSome
+#guard evalTerm ([Effect4.Machine.Val.cell ⟨0⟩, .nat 100] ++ [.nat 5])
+  (.app "succ" (.cons (.var 1) .nil)) = some (.nat 101)
+#guard evalTerm ([Effect4.Machine.Val.cell ⟨0⟩, .nat 100] ++ [.nat 5])
+  (.app "succ" (.cons (.var 2) .nil)) = some (.nat 6)
+
 #guard all.all fun f => [0, 1, 2, 5].all fun n => f.checkExample n && (Form.foreign f {} n).isSome
 #guard [Effect4.Machine.FnName.incr, .double, .zeroWhenPositive, .noChange].all
   (fun f => (lambdaShape f).isSome)

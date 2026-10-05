@@ -463,35 +463,6 @@ let rec decode_finalizer_strategy (s : string) (pos : int) (limit : int) : (fina
 
 let decode_finalizer_strategy_exact (s : string) : finalizer_strategy option = Eff_frame.exact decode_finalizer_strategy s
 
-let rec emit_fn_name (b : Buffer.t) (v : fn_name) : unit =
-  match v with
-  | Fn_name_incr -> Eff_frame.emit_ctor b 0 (fun _ -> ())
-  | Fn_name_double -> Eff_frame.emit_ctor b 1 (fun _ -> ())
-  | Fn_name_zeroWhenPositive -> Eff_frame.emit_ctor b 2 (fun _ -> ())
-  | Fn_name_noChange -> Eff_frame.emit_ctor b 3 (fun _ -> ())
-  | Fn_name_takeAndBump -> Eff_frame.emit_ctor b 4 (fun _ -> ())
-
-let encode_fn_name (v : fn_name) : string = Eff_frame.to_string emit_fn_name v
-
-let rec decode_fn_name (s : string) (pos : int) (limit : int) : (fn_name * int) option =
-  match Eff_frame.read_ctor s pos limit with
-  | None -> None
-  | Some (i, p, e, next) ->
-    (match i with
-    | 0 ->
-      if p = e then Some (Fn_name_incr, next) else None
-    | 1 ->
-      if p = e then Some (Fn_name_double, next) else None
-    | 2 ->
-      if p = e then Some (Fn_name_zeroWhenPositive, next) else None
-    | 3 ->
-      if p = e then Some (Fn_name_noChange, next) else None
-    | 4 ->
-      if p = e then Some (Fn_name_takeAndBump, next) else None
-    | _ -> None)
-
-let decode_fn_name_exact (s : string) : fn_name option = Eff_frame.exact decode_fn_name s
-
 let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
   match v with
   | Native_op_refMake -> Eff_frame.emit_ctor b 0 (fun _ -> ())
@@ -499,14 +470,6 @@ let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
   | Native_op_refSet -> Eff_frame.emit_ctor b 2 (fun _ -> ())
   | Native_op_refGetAndSet -> Eff_frame.emit_ctor b 3 (fun _ -> ())
   | Native_op_refSetAndGet -> Eff_frame.emit_ctor b 4 (fun _ -> ())
-  | Native_op_refUpdate a0 -> Eff_frame.emit_ctor b 5 (fun b -> emit_fn_name b a0)
-  | Native_op_refGetAndUpdate a0 -> Eff_frame.emit_ctor b 6 (fun b -> emit_fn_name b a0)
-  | Native_op_refUpdateAndGet a0 -> Eff_frame.emit_ctor b 7 (fun b -> emit_fn_name b a0)
-  | Native_op_refUpdateSome a0 -> Eff_frame.emit_ctor b 8 (fun b -> emit_fn_name b a0)
-  | Native_op_refGetAndUpdateSome a0 -> Eff_frame.emit_ctor b 9 (fun b -> emit_fn_name b a0)
-  | Native_op_refUpdateSomeAndGet a0 -> Eff_frame.emit_ctor b 10 (fun b -> emit_fn_name b a0)
-  | Native_op_refModify a0 -> Eff_frame.emit_ctor b 11 (fun b -> emit_fn_name b a0)
-  | Native_op_refModifySome a0 -> Eff_frame.emit_ctor b 12 (fun b -> emit_fn_name b a0)
   | Native_op_deferredIsDone -> Eff_frame.emit_ctor b 14 (fun _ -> ())
   | Native_op_deferredPoll -> Eff_frame.emit_ctor b 15 (fun _ -> ())
   | Native_op_deferredSucceed -> Eff_frame.emit_ctor b 16 (fun _ -> ())
@@ -517,6 +480,14 @@ let rec emit_native_op (b : Buffer.t) (v : native_op) : unit =
   | Native_op_clockNow -> Eff_frame.emit_ctor b 21 (fun _ -> ())
   | Native_op_external a0 -> Eff_frame.emit_ctor b 22 (fun b -> Eff_frame.emit_nat b a0)
   | Native_op_deferredMakeOf (a0, a1) -> Eff_frame.emit_ctor b 23 (fun b -> emit_ty b a0; emit_ty b a1)
+  | Native_op_refUpdateWith a0 -> Eff_frame.emit_ctor b 24 (fun b -> emit_term b a0)
+  | Native_op_refGetAndUpdateWith a0 -> Eff_frame.emit_ctor b 25 (fun b -> emit_term b a0)
+  | Native_op_refUpdateAndGetWith a0 -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0)
+  | Native_op_refUpdateSomeWith a0 -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0)
+  | Native_op_refGetAndUpdateSomeWith a0 -> Eff_frame.emit_ctor b 28 (fun b -> emit_term b a0)
+  | Native_op_refUpdateSomeAndGetWith a0 -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0)
+  | Native_op_refModifyWith a0 -> Eff_frame.emit_ctor b 30 (fun b -> emit_term b a0)
+  | Native_op_refModifySomeWith a0 -> Eff_frame.emit_ctor b 31 (fun b -> emit_term b a0)
 
 let encode_native_op (v : native_op) : string = Eff_frame.to_string emit_native_op v
 
@@ -535,46 +506,6 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
       if p = e then Some (Native_op_refGetAndSet, next) else None
     | 4 ->
       if p = e then Some (Native_op_refSetAndGet, next) else None
-    | 5 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refUpdate a0, next) else None)
-    | 6 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refGetAndUpdate a0, next) else None)
-    | 7 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refUpdateAndGet a0, next) else None)
-    | 8 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refUpdateSome a0, next) else None)
-    | 9 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refGetAndUpdateSome a0, next) else None)
-    | 10 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refUpdateSomeAndGet a0, next) else None)
-    | 11 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refModify a0, next) else None)
-    | 12 ->
-      (match decode_fn_name s p e with
-       | None -> None
-       | Some (a0, p) ->
-        if p = e then Some (Native_op_refModifySome a0, next) else None)
     | 14 ->
       if p = e then Some (Native_op_deferredIsDone, next) else None
     | 15 ->
@@ -607,6 +538,46 @@ let rec decode_native_op (s : string) (pos : int) (limit : int) : (native_op * i
          | None -> None
          | Some (a1, p) ->
           if p = e then Some (Native_op_deferredMakeOf (a0, a1), next) else None))
+    | 24 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refUpdateWith a0, next) else None)
+    | 25 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refGetAndUpdateWith a0, next) else None)
+    | 26 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refUpdateAndGetWith a0, next) else None)
+    | 27 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refUpdateSomeWith a0, next) else None)
+    | 28 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refGetAndUpdateSomeWith a0, next) else None)
+    | 29 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refUpdateSomeAndGetWith a0, next) else None)
+    | 30 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refModifyWith a0, next) else None)
+    | 31 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Native_op_refModifySomeWith a0, next) else None)
     | _ -> None)
 
 let decode_native_op_exact (s : string) : native_op option = Eff_frame.exact decode_native_op s

@@ -12,7 +12,6 @@
     "Effect4.Supervision.ForkOptions",
     "Effect4.Supervision.ObserverMode",
     "Effect4.FinalizerStrategy",
-    "Effect4.Machine.FnName",
     "Effect4.Program.NativeOp",
     "Effect4.ServiceName",
     "Effect4.ServiceTypeCode",

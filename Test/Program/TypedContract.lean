@@ -495,53 +495,173 @@ def atNat (t : Ty) : Ty := t.instantiate [(0, .nat), (1, .nat)]
 
 #guard Val.hasTy (Val.nat 0) (atNat (NativeOp.row .refMake).request)
 #guard !Val.hasTy (Val.nat 0) (NativeOp.row .refMake).request
-#guard NativeOp.syncOpOf .refMake (Val.nat 0) = some (SyncOp.refMake (Val.nat 0))
+#guard NativeOp.syncOpOf .refMake [] (Val.nat 0) = some (SyncOp.refMake (Val.nat 0))
 -- `Ref.make` decodes any initial value: the instance never decides the decoding
-#guard NativeOp.syncOpOf .refMake (Val.str "x") = some (SyncOp.refMake (Val.str "x"))
+#guard NativeOp.syncOpOf .refMake [] (Val.str "x") = some (SyncOp.refMake (Val.str "x"))
 #guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row .refGet).request)
-#guard NativeOp.syncOpOf .refGet (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
+#guard NativeOp.syncOpOf .refGet [] (Val.cell ⟨0⟩) = some (SyncOp.refGet ⟨0⟩)
 #guard Val.hasTy (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) (atNat (NativeOp.row .refSet).request)
 #guard Val.hasTy (Val.tuple [Val.cell ⟨0⟩, Val.str "a"])
   ((NativeOp.row .refSet).request.instantiate [(0, .string)])
-#guard NativeOp.syncOpOf .refSet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSet ⟨0⟩ (Val.nat 1))
-#guard NativeOp.syncOpOf .refGetAndSet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refGetAndSet ⟨0⟩ (Val.nat 1))
-#guard NativeOp.syncOpOf .refSetAndGet (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSetAndGet ⟨0⟩ (Val.nat 1))
-#guard NativeOp.syncOpOf (.refUpdate .incr) (Val.cell ⟨0⟩) = some (SyncOp.refUpdate ⟨0⟩ FnName.incr.updateTerm [])
-#guard NativeOp.syncOpOf (.refGetAndUpdate .incr) (Val.cell ⟨0⟩) = some (SyncOp.refGetAndUpdate ⟨0⟩ FnName.incr.updateTerm [])
-#guard NativeOp.syncOpOf (.refUpdateAndGet .incr) (Val.cell ⟨0⟩) = some (SyncOp.refUpdateAndGet ⟨0⟩ FnName.incr.updateTerm [])
-#guard NativeOp.syncOpOf (.refUpdateSome .zeroWhenPositive) (Val.cell ⟨0⟩) = some (SyncOp.refUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
-#guard NativeOp.syncOpOf (.refGetAndUpdateSome .zeroWhenPositive) (Val.cell ⟨0⟩) = some (SyncOp.refGetAndUpdateSome ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
-#guard NativeOp.syncOpOf (.refUpdateSomeAndGet .zeroWhenPositive) (Val.cell ⟨0⟩) = some (SyncOp.refUpdateSomeAndGet ⟨0⟩ FnName.zeroWhenPositive.updateSomeTerm [])
-#guard NativeOp.syncOpOf (.refModify .takeAndBump) (Val.cell ⟨0⟩) = some (SyncOp.refModify ⟨0⟩ FnName.takeAndBump.modifyTerm [])
-#guard NativeOp.syncOpOf (.refModifySome .noChange) (Val.cell ⟨0⟩) = some (SyncOp.refModifySome ⟨0⟩ FnName.noChange.modifySomeTerm [])
+#guard NativeOp.syncOpOf .refSet [] (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSet ⟨0⟩ (Val.nat 1))
+#guard NativeOp.syncOpOf .refGetAndSet [] (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refGetAndSet ⟨0⟩ (Val.nat 1))
+#guard NativeOp.syncOpOf .refSetAndGet [] (Val.tuple [Val.cell ⟨0⟩, Val.nat 1]) = some (SyncOp.refSetAndGet ⟨0⟩ (Val.nat 1))
+-- a read-modify-write row hands the store its own binder term and the point's environment
+-- (decisions row 43; the state plan's T3b), whatever the term and the environment are
+#guard [NativeOp.refUpdateWith, .refGetAndUpdateWith, .refUpdateAndGetWith, .refUpdateSomeWith,
+    .refGetAndUpdateSomeWith, .refUpdateSomeAndGetWith, .refModifyWith, .refModifySomeWith].zip
+    [SyncOp.refUpdate, .refGetAndUpdate, .refUpdateAndGet, .refUpdateSome, .refGetAndUpdateSome,
+     .refUpdateSomeAndGet, .refModify, .refModifySome] |>.all fun (row, store) =>
+  [([] : List Val), [Val.nat 7, Val.str "x"]].all fun env =>
+    [Term.var 0, .app "add" (.cons (.var 2) (.cons (.var 0) .nil))].all fun f =>
+      NativeOp.syncOpOf (row f) env (Val.cell ⟨0⟩) == some (store ⟨0⟩ f env)
+-- the request is a cell: any other value decodes to nothing, as at the rows without a term
+#guard NativeOp.syncOpOf (.refUpdateWith (.var 0)) [] (Val.nat 0) = none
+#guard Val.hasTy (Val.cell ⟨0⟩) (atNat (NativeOp.row (.refModifyWith (.var 0))).request)
 #guard Val.hasTy Val.unit (NativeOp.row (.deferredMakeOf .nat .nat)).request
-#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) Val.unit = some SyncOp.deferredMake
+#guard NativeOp.syncOpOf (.deferredMakeOf .nat .nat) [] Val.unit = some SyncOp.deferredMake
 #guard Val.hasTy (Val.promise ⟨0⟩) (atNat (NativeOp.row .deferredIsDone).request)
-#guard NativeOp.syncOpOf .deferredIsDone (Val.promise ⟨0⟩) = some (SyncOp.deferredIsDone ⟨0⟩)
-#guard NativeOp.syncOpOf .deferredPoll (Val.promise ⟨0⟩) = some (SyncOp.deferredPoll ⟨0⟩)
+#guard NativeOp.syncOpOf .deferredIsDone [] (Val.promise ⟨0⟩) = some (SyncOp.deferredIsDone ⟨0⟩)
+#guard NativeOp.syncOpOf .deferredPoll [] (Val.promise ⟨0⟩) = some (SyncOp.deferredPoll ⟨0⟩)
 #guard Val.hasTy (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) (atNat (NativeOp.row .deferredSucceed).request)
-#guard NativeOp.syncOpOf .deferredSucceed (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
+#guard NativeOp.syncOpOf .deferredSucceed [] (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
   some (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.success (Val.nat 7))))
-#guard NativeOp.syncOpOf .deferredFail (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
+#guard NativeOp.syncOpOf .deferredFail [] (Val.tuple [Val.promise ⟨0⟩, Val.nat 7]) =
   some (SyncOp.deferredCompleteWith ⟨0⟩ (Completion.ofExit (Exit.failure (Cause.fail (Err.tag 7)))))
 #guard Val.hasTy Val.unit (NativeOp.row (.scopeMake .sequential)).request
-#guard NativeOp.syncOpOf (.scopeMake .sequential) Val.unit = some (SyncOp.scopeMake .sequential)
-#guard NativeOp.syncOpOf (.scopeMake .parallel) Val.unit = some (SyncOp.scopeMake .parallel)
+#guard NativeOp.syncOpOf (.scopeMake .sequential) [] Val.unit = some (SyncOp.scopeMake .sequential)
+#guard NativeOp.syncOpOf (.scopeMake .parallel) [] Val.unit = some (SyncOp.scopeMake .parallel)
 -- the async row decodes to nothing, and a wrong shape decodes to nothing
 #guard (NativeOp.row .deferredAwait).kind = .async
-#guard NativeOp.syncOpOf .deferredAwait (Val.promise ⟨0⟩) = none
-#guard NativeOp.syncOpOf .refGet (Val.nat 0) = none
+#guard NativeOp.syncOpOf .deferredAwait [] (Val.promise ⟨0⟩) = none
+#guard NativeOp.syncOpOf .refGet [] (Val.nat 0) = none
 #guard Val.hasTy (Val.nat 0) (atNat (NativeOp.row .refGet).request) = false
 -- the timer (A4): the sleep row is async and decodes to no store operation; the clock read is a
 -- value row on `unit` decoding to `clockNow`
 #guard (NativeOp.row .sleep).kind = .async ∧ (NativeOp.row .sleep).shape = .call
 #guard Val.hasTy (Val.nat 5) (NativeOp.row .sleep).request
-#guard NativeOp.syncOpOf .sleep (Val.nat 5) = none
+#guard NativeOp.syncOpOf .sleep [] (Val.nat 5) = none
 #guard (NativeOp.row .clockNow).kind = .sync ∧ (NativeOp.row .clockNow).shape = .value
 #guard Val.hasTy Val.unit (NativeOp.row .clockNow).request
-#guard NativeOp.syncOpOf .clockNow Val.unit = some SyncOp.clockNow
-#guard NativeOp.syncOpOf .clockNow (Val.nat 0) = none
+#guard NativeOp.syncOpOf .clockNow [] Val.unit = some SyncOp.clockNow
+#guard NativeOp.syncOpOf .clockNow [] (Val.nat 0) = none
 
 end Rows20
+
+/-! ## The eight term rows: the checker types the binder term (the state plan's T3b)
+
+A read-modify-write row carries a binder term (decisions row 43). The checker matches the
+request against `Ref<A>`, types the term at the node's environment extended by `A`
+(`Signature.termUse`), and matches the term's type against the shape's result template
+(`bindTerm`, `Typing/Rules.lean`). A node here sits under one binder that holds the cell, so the
+node's level is 1 and the term reads the cell's value at `var 1`. Finite checks of named
+programs; the theorems are `syncRow_typed` and `termMaps_of_typed`
+(`Laws/Program/Typed/Denotation.lean`). -/
+
+section TermRows
+
+/-- The cell's current value at a node of level 1. -/
+def cur : Term := .var 1
+
+def app1 (f : String) (x : Term) : Term := .app f (.cons x .nil)
+def app2 (f : String) (x y : Term) : Term := .app f (.cons x (.cons y .nil))
+def none' : Term := .app "none" .nil
+
+/-- One term row on the cell at `var 0`, checked with a cell of `element` in scope. -/
+def rowCheck (element : Ty) (op : NativeOp) : Except TypeRefusal EffTy :=
+  Checker.check nativeSignature [.refOf element] [] (.perform op (.var 0))
+
+/-- The type the row answers on a cell of numbers. -/
+def answers (op : NativeOp) : Option Ty := (rowCheck .nat op).toOption.map (·.answer)
+
+-- the checker types each of the eight rows at a term: the three that answer nothing answer
+-- `void`, the four that answer the cell's value answer its type, and `modify` answers `B`
+#guard answers (.refUpdateWith (app1 "succ" cur)) = some .unit
+#guard answers (.refGetAndUpdateWith (app1 "succ" cur)) = some .nat
+#guard answers (.refUpdateAndGetWith (app2 "mul" cur (.lit (.nat 2)))) = some .nat
+#guard answers (.refUpdateSomeWith (app1 "some" (app1 "succ" cur))) = some .unit
+#guard answers (.refGetAndUpdateSomeWith none') = some .nat
+#guard answers (.refUpdateSomeAndGetWith
+  (.app "ite" (.cons (app2 "lt" (.lit (.nat 0)) cur) (.cons (app1 "some" (.lit (.nat 0)))
+    (.cons none' .nil))))) = some .nat
+-- `modify` answers `B`, bound from the term's type: here a boolean, on a cell of numbers
+#guard answers (.refModifyWith (app2 "pair" (app1 "isZero" cur) (app1 "succ" cur))) = some .bool
+#guard answers (.refModifySomeWith (app2 "pair" (.lit (.str "s")) none')) = some (.lit "s")
+-- every row types no error and needs nothing
+#guard (rowCheck .nat (.refModifyWith (app2 "pair" cur cur))).toOption =
+  some ⟨.nat, .never, .empty⟩
+
+-- every name's image types at its row, at levels 1 to 4 (the corpus draws exactly these)
+#guard (List.range 4).all fun k => NativeOp.termRows.all fun row => fnNames.all fun g =>
+  (Checker.check nativeSignature (List.replicate (k + 1) (.refOf .nat)) []
+    (.perform (row.1 (FnName.image row.2 (k + 1) g)) (.var 0))).toOption.isSome
+
+-- the term is typed at the cell's element type, not at `number`
+#guard (rowCheck .string (.refUpdateWith (app2 "concat" cur (.lit (.str "!"))))).toOption.isSome
+#guard Checker.refusal (rowCheck .string (.refUpdateWith (app1 "succ" cur))) =
+  some ⟨[], .binderTerm "refUpdateWith" .string⟩
+#guard (rowCheck (.prod .nat .string) (.refGetAndUpdateWith
+  (app2 "pair" (app1 "succ" (app1 "fst" cur)) (app1 "snd" cur)))).toOption.map (·.answer) =
+  some (.prod .nat .string)
+
+-- a term with no type at the parameter is refused as a term, named by its row
+#guard Checker.refusal (rowCheck .nat (.refUpdateWith (app1 "succ" (.lit (.bool true))))) =
+  some ⟨[], .binderTerm "refUpdateWith" .nat⟩
+-- so is a variable past the current value: the environment ends at the cell's value
+#guard Checker.refusal (rowCheck .nat (.refUpdateWith (.var 2))) =
+  some ⟨[], .binderTerm "refUpdateWith" .nat⟩
+-- a term of the wrong result type is refused with the type it has and the one the row asks for
+#guard Checker.refusal (rowCheck .nat (.refUpdateWith (.lit (.str "x")))) =
+  some ⟨[], .resultNotSubtype "refUpdateWith" .string .nat⟩
+#guard Checker.refusal (rowCheck .nat (.refUpdateSomeWith (app1 "succ" cur))) =
+  some ⟨[], .resultNotSubtype "refUpdateSomeWith" .nat (.option .nat)⟩
+#guard Checker.refusal (rowCheck .nat (.refModifyWith (app1 "succ" cur))) =
+  some ⟨[], .resultNotSubtype "refModifyWith" .nat (.prod .never .nat)⟩
+-- the request is checked first: a term row on a number is the request's refusal
+#guard (Checker.refusal (Checker.check nativeSignature [.nat] []
+    (.perform (.refUpdateWith (.lit (.str "x"))) (.var 0)))).map (·.reason.head) =
+  some "requestNotSubtype"
+
+/-- An outer capture: a number bound around the node, between the cell and the node. The node
+sits at level 2: the cell's value is `var 2` and the outer number `var 1`. -/
+def captureEnv : TyEnv := [.refOf .nat, .nat]
+
+#guard (Checker.check nativeSignature captureEnv []
+  (.perform (.refUpdateWith (app2 "add" (.var 2) (.var 1))) (.var 0))).toOption =
+  some ⟨.unit, .never, .empty⟩
+-- the capture is typed at its own type: a captured string is no number
+#guard Checker.refusal (Checker.check nativeSignature [.refOf .nat, .string] []
+    (.perform (.refUpdateWith (app2 "add" (.var 2) (.var 1))) (.var 0))) =
+  some ⟨[], .binderTerm "refUpdateWith" .nat⟩
+
+/-! ### `B`'s binding and its limit (decisions row 213's stated limit, in a term's form)
+
+`Ref.modify`'s `B` first occurs covariantly, in the term's result template `[B, A]`, so the
+match is not complete relative to its guard there: the limit `Ty.matchTemplate_complete_anchored`
+states (`template-match-anchored`'s property line). A term whose type is a union of products
+binds `B` at the first member, and the guard refuses the term, although `B := "a" | "b"` puts
+the term's type under the instance. The same function written as a pair has the raw product
+type and binds the union. T4's control `covT` (`Test/Program/TypeAlgebraContract.lean`) is the
+same boundary at a row's request. -/
+
+/-- `["a", number] | ["b", number]`: the type of an outer value that is one of two pairs. -/
+def pairUnion : Ty := .union (.prod (.lit "a") .nat) (.prod (.lit "b") .nat)
+
+/-- The cell, then the outer pair; the node sits at level 2. -/
+def unionEnv : TyEnv := [.refOf .nat, pairUnion]
+
+-- the term is the outer variable: `B` binds `"a"` from the first member, and the guard refuses
+#guard Checker.refusal (Checker.check nativeSignature unionEnv []
+    (.perform (.refModifyWith (.var 1)) (.var 0))) =
+  some ⟨[], .resultNotSubtype "refModifyWith" pairUnion (.prod .never .nat)⟩
+-- yet the binding exists: at `B := "a" | "b"` the term's type is under the instance
+#guard Ty.sub pairUnion.normalize
+  ((Ty.prod (.var 1) (.var 0)).instantiate [(0, .nat), (1, .union (.lit "a") (.lit "b"))]).normalize
+-- the same function as a pair of the two components has the raw product type and binds the union
+#guard (Checker.check nativeSignature [.refOf .nat, .union (.lit "a") (.lit "b")] []
+    (.perform (.refModifyWith (app2 "pair" (.var 1) (.var 2))) (.var 0))).toOption.map (·.answer) =
+  some (.union (.lit "a") (.lit "b"))
+
+end TermRows
 
 end Test.Program.TypedContract

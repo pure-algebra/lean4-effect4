@@ -129,12 +129,14 @@ def classReason : ClassRefusal → String
   | .unreadable => "unreadable"
 
 /-- The module printer's answer on a built program, by name: a payload class it cannot declare is
-named with its tag and the reason (`ClassRefusal`). -/
+named with its tag and the reason (`ClassRefusal`), and a read-modify-write row whose binder term
+is no name's image is named by its spelling (the state plan's T3b, until T5 prints the term). -/
 def printVerdict (b : Effect4.Api.Built) : String :=
   match Effect4.Api.emitModule "main" b.program b.table with
   | .ok _ => "printed"
   | .error (.print (.payloadClass tag why)) => "refused: payloadClass " ++ tag ++ " " ++ classReason why
   | .error (.print (.internalAction name)) => "refused: " ++ name
+  | .error (.print (.binderTerm spelling)) => "refused: binderTerm " ++ spelling
   | .error (.print (.typeSpelling name)) => "refused: typeSpelling " ++ name
   | .error _ => "refused"
 
@@ -175,6 +177,13 @@ def partReach (m : Module NativeOp) (record : Effect4.Machine.Val) : PartReach :
 #guard answerOf (some (.success (.nat 1))) (.success (.nat 1)) = .rc112
 #guard answerOf (some (.success (.nat 0))) (.success (.nat 1)) = .differs
 #guard answerOf none (.success (.nat 1)) = .unfinished
+-- `printVerdict`: a row whose term is a name's image prints; a term that is no image is refused
+-- by the row's spelling.
+#guard ((Effect4.Api.Author.build (program (bindName "r" (Ref.make (nat 0)) fun r =>
+    Ref.update "n" (app "succ" [var "n"]) r))).toOption.map printVerdict) = some "printed"
+#guard ((Effect4.Api.Author.build (program (bindName "r" (Ref.make (nat 0)) fun r =>
+    Ref.update "n" (app "succ" [app "succ" [var "n"]]) r))).toOption.map printVerdict) =
+  some "refused: binderTerm Ref.update"
 -- `formAdmits`: a head the table holds, and one it does not.
 #guard formAdmits "Effect.andThen"
 #guard !formAdmits "Effect.catchTag"

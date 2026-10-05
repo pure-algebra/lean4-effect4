@@ -908,6 +908,7 @@ theorem methodLawful {sig : Signature Op} {spell : String → List String → Op
   spelling_not_reserved := hl.spelling_not_reserved
   trailing_ne_name := hl.trailing_ne_name
   trailing_ne_undefined := hl.trailing_ne_undefined
+  opAtLevel_symm := hl.opAtLevel_symm
 
 theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (args : Term)
@@ -957,10 +958,17 @@ theorem readRowMethod_print {sig : Signature Op} {spell : String → List String
     readRowCall_methodArgs hl op hd args ha hca hta, Option.getD_some]
   simp only [rowAnswer, addReceiver, hs, if_true]
 
-/-- The printed form of a row answer is the row's printed call. -/
+/-- The signature at the faces' level: every operation is its own form at level 0
+(`Signature.opAtLevel` the identity). The face reader (`readPerformFace`) reads no level, so what
+it reads prints back under this signature (`readPerformFace_exact`). -/
+def Signature.atFaces (sig : Signature Op) : Signature Op :=
+  { sig with opAtLevel := fun _ _ op => some op }
+
+/-- The printed form of a row answer at the faces' level is the row's printed call. -/
 theorem print_rowAnswer {sig : Signature Op} {n : Nat} (op : Op) (r : Term) :
-    print sig n (rowAnswer (sig.rowOf op) op r) = printRow (sig.rowOf op) r := by
+    print sig.atFaces n (rowAnswer (sig.rowOf op) op r) = printRow (sig.rowOf op) r := by
   simp only [rowAnswer, print_perform]
+  rfl
 
 /-- The reader's two call arms agree on a row's printed head: with no declared type
 arguments it is a plain `spelling(...)` call, and with them a `spelling<T…>(...)` call; both
@@ -971,23 +979,23 @@ theorem readPerform_printRowHead {sig : Signature Op} {spell : String → List S
     {typeArgs : List TypeScript.TypeRef} (hta : rowTypeArgs (sig.rowOf op) = some typeArgs)
     (hrow : readRowCall classes sig spell n (sig.rowOf op).spelling typeArgs args = some answer)
     {head : Expr} (hp : printRowHead (sig.rowOf op) = .ok head) :
-    readPerform classes sig spell n (.call head args) = answer := by
+    readPerformFace classes sig spell n (.call head args) = answer := by
   cases typeArgs with
   | nil =>
     simp only [printRowHead, hta, Except.ok.injEq] at hp
     subst head
-    simp only [readPerform, hhead, hrow, Option.getD_some]
+    simp only [readPerformFace, hhead, hrow, Option.getD_some]
   | cons a rest =>
     simp only [printRowHead, hta, Except.ok.injEq] at hp
     subst head
-    simp only [readPerform, hrow, Option.getD_some]
+    simp only [readPerformFace, hrow, Option.getD_some]
 
-/-- A successfully printed readable row reads back to its row answer. -/
+/-- A successfully printed readable row reads back to its row answer, at the faces' level. -/
 theorem read_printRow {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
     (h : requestReadable (sig.rowOf op) n r = true) (hc : r.covers classes = true)
     {x : Expr} (hp : printRow (sig.rowOf op) r = .ok x) :
-    readPerform classes sig spell n x = .ok (rowAnswer (sig.rowOf op) op r) := by
+    readPerformFace classes sig spell n x = .ok (rowAnswer (sig.rowOf op) op r) := by
   have hname : ∀ i, Var.name i ≠ (sig.rowOf op).spelling := fun i => (hl.spelling_ne_name op i).symm
   have hhead : headOf (sig.rowOf op).spelling = none := headOf_none (hl.spelling_not_reserved op)
   cases hshape : (sig.rowOf op).shape with
@@ -999,7 +1007,7 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     rw [htr] at hsp
     simp only [printRow, hshape, Except.ok.injEq] at hp
     subst x
-    simp [readPerform, Var.read_none hname, hhead, readRowValue, hsp, hshape]
+    simp [readPerformFace, Var.read_none hname, hhead, readRowValue, hsp, hshape]
   | call =>
     have htypes : (rowTypeArgs (sig.rowOf op)).isSome = true := by
       simp only [requestReadable, hshape, Bool.and_eq_true] at h
@@ -1047,12 +1055,12 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
         simp only [printRow, hshape, pairArgs?, ↓reduceIte, printMethod, hta,
           Except.ok.injEq] at hp
         subst x
-        simp [readPerform, readMethod, hm]
+        simp [readPerformFace, readMethod, hm]
       | cons t ts =>
         simp only [printRow, hshape, pairArgs?, ↓reduceIte, printMethod, hta,
           Except.ok.injEq] at hp
         subst x
-        simp [readPerform, readMethod, hm]
+        simp [readPerformFace, readMethod, hm]
 
 /-- The tuple reading reconstructs its two arguments: a saved variable prints as its two
 component reads, any other pair as the printed components. -/
@@ -1149,7 +1157,7 @@ theorem readRowMethod_exact {sig : Signature Op} {spell : String → List String
     (hl : LawfulSpelling sig spell) {n : Nat} {receiver : Expr} {s : String}
     {ta : List TypeScript.TypeRef} {args : List Expr} {e : Eff Op}
     (h : readRowMethod classes sig spell n receiver s ta args = .ok e) :
-    print sig n e = .ok (match ta with
+    print sig.atFaces n e = .ok (match ta with
       | [] => .method receiver s args
       | ts => .call (.generic (.member receiver s) ts) args) := by
   unfold readRowMethod at h
@@ -1172,7 +1180,7 @@ theorem readRowMethod_exact {sig : Signature Op} {spell : String → List String
 
 theorem readMethod_exact {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
-    (h : readMethod classes sig spell n x = .ok e) : print sig n e = .ok x := by
+    (h : readMethod classes sig spell n x = .ok e) : print sig.atFaces n e = .ok x := by
   unfold readMethod at h
   split at h
   · exact readRowMethod_exact hl h
@@ -1192,7 +1200,7 @@ from `idents?_exact`, and the request from its reader's exactness. -/
 theorem readRowCall_exact {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {s : String} {ta : List TypeScript.TypeRef}
     {args : List Expr} {e : Eff Op} (h : readRowCall classes sig spell n s ta args = some (.ok e)) :
-    print sig n e = .ok (rowCallImage s ta args) := by
+    print sig.atFaces n e = .ok (rowCallImage s ta args) := by
   unfold readRowCall at h
   split at h
   · rename_i op hA
@@ -1244,7 +1252,7 @@ theorem readRowCall_exact {sig : Signature Op} {spell : String → List String �
 /-- A bare identifier read as a value row prints back. -/
 theorem readRowValue_exact {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {s : String} {e : Eff Op}
-    (h : readRowValue sig spell s = .ok e) : print sig n e = .ok (.ident s) := by
+    (h : readRowValue sig spell s = .ok e) : print sig.atFaces n e = .ok (.ident s) := by
   unfold readRowValue at h
   split at h
   · rename_i op hsp
@@ -1257,11 +1265,12 @@ theorem readRowValue_exact {sig : Signature Op} {spell : String → List String 
     · cases h
   · cases h
 
-/-- The row call of `perform`: what `readPerform` accepts prints back to the tree it read. -/
-theorem readPerform_exact {sig : Signature Op} {spell : String → List String → Option Op}
+/-- The row call at the faces' level: what `readPerformFace` accepts prints back to the tree it
+read, every operation at its own form. -/
+theorem readPerformFace_exact {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
-    (h : readPerform classes sig spell n x = .ok e) : print sig n e = .ok x := by
-  unfold readPerform at h
+    (h : readPerformFace classes sig spell n x = .ok e) : print sig.atFaces n e = .ok x := by
+  unfold readPerformFace at h
   split at h
   · split at h
     · cases h
@@ -1292,6 +1301,31 @@ theorem readPerform_exact {sig : Signature Op} {spell : String → List String �
       exact readRowCall_exact hl hrow
   · exact readMethod_exact hl h
 
+/-- The row call of `perform`: what `readPerform` accepts prints back to the tree it read. The
+face it reads prints at the faces' level (`readPerformFace_exact`); the operation it moves to the
+node's level (`atNodeLevel`) moves back to the same face (`LawfulSpelling.opAtLevel_symm`), so the
+printer prints the same row. A step of `read_exact` (R8). -/
+theorem readPerform_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
+    (h : readPerform classes sig spell n x = .ok e) : print sig n e = .ok x := by
+  unfold readPerform at h
+  cases hf : readPerformFace classes sig spell n x with
+  | error why => rw [hf] at h; exact nomatch h
+  | ok face =>
+    rw [hf] at h
+    have hx := readPerformFace_exact hl hf
+    cases face with
+    | perform op r =>
+      simp only [Except.bind, atNodeLevel] at h
+      split at h
+      · rename_i op' hop
+        cases h
+        rw [print_perform, hl.opAtLevel_symm 0 n op op' hop]
+        rw [print_perform] at hx
+        exact hx
+      · exact nomatch h
+    | _ => simp only [Except.bind, atNodeLevel] at h; exact nomatch h
+
 end ReadExact
 
 end Rows
@@ -1299,11 +1333,13 @@ end Rows
 theorem name_notin (l : List String) (h : ∀ s ∈ l, s.toByteArray.data.toList.head? ≠ some 97)
     (i : Nat) : Var.name i ∉ l := fun hm => Var.name_ne (h _ hm) i rfl
 
-/-- No external operation is a built-in representative. -/
+/-- No external operation is a built-in representative: every representative is a built-in row,
+whose kind is not a host row's. -/
 theorem NativeOp.external_not_mem_spelled (i : Nat) : NativeOp.external i ∉ NativeOp.spelled := by
   intro h
-  simp only [NativeOp.spelled, fnNames, List.mem_append, List.mem_cons, List.flatMap_cons,
-    List.flatMap_nil, List.map_cons, List.map_nil, List.mem_nil_iff, reduceCtorEq, or_self] at h
+  have hall : NativeOp.spelled.all (fun op => decide (NativeOp.kind op ≠ .program)) = true := by
+    decide
+  exact of_decide_eq_true (List.all_eq_true.mp hall _ h) rfl
 
 /-- A built-in operation keeps its own row whatever the supplied table. -/
 theorem nativeRowOf_builtin (table : RowTable) (op : NativeOp) (h : ∀ i, op ≠ .external i) :
@@ -1317,13 +1353,19 @@ theorem nativeRowOf_external (table : RowTable) (i : Nat) (hi : i < table.length
   simp [nativeRowOf, List.getElem?_eq_getElem hi]
 
 /-- Every native row's names are hygienic: the spelling and the trailing names are fixed by the
-operation's key, never by a type argument it carries. -/
+operation's key, never by a type argument it carries. A term row's trailing name is one of the
+five names' spellings, or it has none (`NativeOp.termFace`). -/
 theorem NativeOp.row_hygiene (op : NativeOp) :
     (op.row.shape = .value → op.row.trailing = []) ∧ rowNamesSafe op.row = true := by
   cases op with
-  | refUpdate f | refGetAndUpdate f | refUpdateAndGet f | refUpdateSome f
-  | refGetAndUpdateSome f | refUpdateSomeAndGet f | refModify f | refModifySome f =>
-    cases f <;> decide
+  | refUpdateWith f | refGetAndUpdateWith f | refUpdateAndGetWith f | refUpdateSomeWith f
+  | refGetAndUpdateSomeWith f | refUpdateSomeAndGetWith f | refModifyWith f
+  | refModifySomeWith f =>
+    refine ⟨fun hs => (by cases hs), ?_⟩
+    simp only [NativeOp.row, NativeOp.termFace, NativeOp.kind]
+    split
+    · next g _ => cases g <;> decide
+    · decide
   | scopeMake s => cases s <;> decide
   | deferredMakeOf value error => exact ⟨fun hs => (by cases hs), rfl⟩
   | external i =>
@@ -1361,7 +1403,29 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     LawfulSpelling (nativeSignature table) (nativeSpell table) where
   spell_row := by
     intro op hd hh
+    cases hb : op.binder? with
+    | some st =>
+      -- a term row: only a name's image at level 0 has a head that reads back (until T5)
+      obtain ⟨s, f⟩ := st
+      cases hdec : Machine.FnName.decode? s 0 f with
+      | none =>
+        -- no name: the row carries the empty type-argument spelling, which no reading parses
+        cases op <;> cases hb <;>
+          (change (decide (RowShape.call = .value) ||
+              ((NativeOp.termFace _ _).2.mapM Effect4.Codegen.Types.parseLegacy).isSome) = true
+            at hh
+           rw [NativeOp.termFace_none hdec] at hh
+           exact absurd hh (by decide))
+      | some g =>
+        -- the name's image: the row spells the name, and the spelling reads the image back
+        have hf := Machine.FnName.image_of_decode? hdec
+        subst hf
+        cases op <;> cases hb <;> cases g <;> rfl
+    | none =>
     cases op with
+    | refUpdateWith f | refGetAndUpdateWith f | refUpdateAndGetWith f | refUpdateSomeWith f
+    | refGetAndUpdateSomeWith f | refUpdateSomeAndGetWith f | refModifyWith f
+    | refModifySomeWith f => cases hb
     | external i =>
       have hi : i < table.length := of_decide_eq_true hd
       change nativeSpell table (nativeRowOf table (.external i)).spelling
@@ -1377,9 +1441,6 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
       unfold nativeSpell rowKey
       rw [hb, hf]
       rfl
-    | refUpdate f | refGetAndUpdate f | refUpdateAndGet f | refUpdateSome f
-    | refGetAndUpdateSome f | refUpdateSomeAndGet f | refModify f | refModifySome f =>
-      cases f <;> rfl
     | scopeMake s => cases s <;> rfl
     | deferredMakeOf value error =>
       -- only the instance whose type arguments the faces spell reads back (until T5)
@@ -1443,5 +1504,7 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     have hn := hn.1
     have ht := List.all_eq_true.mp hn.2 "undefined" hm
     simp at ht
+  -- the names are an exact embedding into terms at each shape and level
+  opAtLevel_symm := fun _ _ _ _ h => NativeOp.atLevel_symm h
 
 end Effect4.Program

@@ -1146,8 +1146,8 @@ src/Effect4/Store/Domain/Canonical.lean	mem_lookupAll	simp-without-only	1
 src/Effect4/Store/Domain/Canonical.lean	ofVal_exact	first	1
 src/Effect4/Store/Domain/Derived/Json.lean	ofVal_toVal	simp-without-only	1
 src/Effect4/Store/Domain/Derived/Json.lean	rawJson_toValJson	simp-without-only	8
-src/Effect4/Store/Domain/Derived/Program.lean	ofVal_exact	first	11
-src/Effect4/Store/Domain/Derived/Program.lean	ofVal_toVal	simp-without-only	17
+src/Effect4/Store/Domain/Derived/Program.lean	ofVal_exact	first	10
+src/Effect4/Store/Domain/Derived/Program.lean	ofVal_toVal	simp-without-only	16
 src/Effect4/Store/Domain/Derived/Program.lean	rawCauseTerm_toValCauseTerm	simp-without-only	4
 src/Effect4/Store/Domain/Derived/Program.lean	rawEff_toValEff	simp-without-only	56
 src/Effect4/Store/Domain/Derived/Program.lean	rawTerm_toValTerm	simp-without-only	8

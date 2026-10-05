@@ -6,7 +6,7 @@
  * into `prelude-atoms.gen.ts` (`tools/Effect4Gen/PreludeAtoms.lean`, group `PreludeAtoms`) and
  * re-exported below, each carrying the `cite` column of its `NativeAtom.spec` row as its doc.
  * What stays hand-written here is everything that is not an atom: `select`'s printed heads,
- * the `FnName`s of `src/Effect4/Machine/Stores.lean` (`FnName.total`, `FnName.partialUpdate`),
+ * the `FnName`s of `src/Effect4/Program/FnName.lean` (`FnName.total`, `FnName.partialUpdate`),
  * the self-test table, the error projection and the canonical package tables.
  * Part of the truth claim (`Test/contracts/faces.contract.md` §4): the doc comment on each
  * export is the table mapping it to its Lean definition — there is no separate notes file.
@@ -31,6 +31,11 @@
  *    `modifySome` shapes (`FnName.modify`, `FnName.modifySome`: `(a) => [b, a']`) are NOT
  *    these identifiers — a printed `Ref.modify(ref, takeAndBump)` would call the total shape
  *    and misbehave on rc.112. Recorded as finding F3 in `REPORT.md`; not patched here.
+ *    Since the state plan's T3b a read-modify-write row carries a binder term, and the printer
+ *    spells the term by the name whose image it is at the row's shape (`FnName.image`,
+ *    `NativeOp.atLevel`); a term that is no name's image is refused, never printed. The
+ *    identifiers below are still one function each, so the finding stands until the state
+ *    plan's T5 prints the term itself.
  */
 import { Cause, Effect, Exit, Option, Scope } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
@@ -78,7 +83,7 @@ export const caseTag = <T, K extends string, A0, E0, R0, A1, E1, R1>(
       ? hit((value as any)[1])
       : miss(value as any))
 
-// ---- FnName, total shape (Stores.lean:458-462 `FnName.total`) ------------------------
+// ---- FnName, total shape (`FnName.total`, src/Effect4/Program/FnName.lean) -----------
 
 /** `FnName.incr`: `a ↦ a + 1`. */
 export const incr = (a: number): number => a + 1
@@ -88,7 +93,7 @@ export const double = (a: number): number => a * 2
  * `a ↦ [a, a + 1]`, not this identifier — see the header). */
 export const takeAndBump = (a: number): number => a + 1
 
-// ---- FnName, partial shape (Stores.lean:465-469 `FnName.partialUpdate`) --------------
+// ---- FnName, partial shape (`FnName.partialUpdate`, src/Effect4/Program/FnName.lean) --
 
 /** `FnName.zeroWhenPositive`: `Some 0` on a positive cell, `None` otherwise. */
 export const zeroWhenPositive = (a: number): Option.Option<number> =>

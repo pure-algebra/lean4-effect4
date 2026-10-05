@@ -152,19 +152,20 @@ theorem layerHasTy_unique (sig : Signature Op) (l : LayerTerm Op) {s₁ s₂ : L
   Option.some.inj ((layerTy_complete sig l s₁ h₁).symm.trans (layerTy_complete sig l s₂ h₂))
 
 /-- Weakening, restated on the relation: inserting an environment slot the shifted program
-does not use changes no derivation (`effTy_weaken`). -/
-theorem hasTy_weaken (sig : Signature Op) (pre post : TyEnv) (inserted : Ty)
-    (program : Eff Op) (t : EffTy) :
+does not use changes no derivation (`effTy_weaken`), at a signature that types an operation alike
+once its term is weakened (`Signature.WeakenNatural`). -/
+theorem hasTy_weaken [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
+    (pre post : TyEnv) (inserted : Ty) (program : Eff Op) (t : EffTy) :
     HasTy sig (pre ++ inserted :: post) (Eff.weaken pre.length program) t ↔
       HasTy sig (pre ++ post) program t := by
-  rw [← effTy_eq_hasTy, ← effTy_eq_hasTy, effTy_weaken]
+  rw [← effTy_eq_hasTy, ← effTy_eq_hasTy, effTy_weaken sig hw]
 
 /-- A closed program may be placed under a new surrounding binder without changing its
 derivation (`typeOf_weaken`). -/
-theorem hasTy_weaken_closed (sig : Signature Op) (inserted : Ty) (program : Eff Op)
-    (t : EffTy) :
+theorem hasTy_weaken_closed [ScopedOp Op] (sig : Signature Op) (hw : sig.WeakenNatural)
+    (inserted : Ty) (program : Eff Op) (t : EffTy) :
     HasTy sig [inserted] (Eff.weaken 0 program) t ↔ HasTy sig [] program t :=
-  hasTy_weaken sig [] [] inserted program t
+  hasTy_weaken sig hw [] [] inserted program t
 
 /-! ## The projection's equations at the arms other proofs unfold -/
 

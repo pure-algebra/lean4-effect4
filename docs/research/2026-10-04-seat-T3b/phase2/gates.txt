@@ -1,0 +1,281 @@
+# Seat T3b, phase 2: the gates, as run on 2026-10-05 in the worktree lean4-effect4-t3b (branch seat/t3b).
+# Every Lean command ran through /Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh. Each block is the command and the last lines it printed.
+# Every block ran at 67e6ec20, except the steps of the ingest lane, which ran at 1a76491b. The commit between them changes one battery and one docstring.
+
+## lake build
+info: Test/All.lean:228:0: Effect4 library-root gate: 163 API/utility modules, 275 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:228:0: Effect4 module and axiom gate: checked 665 modules and 81910 declarations; phases (ms): sources and closure 16, library roots 181, declarations 4000, resolution 760, axioms 35540, exemptions 489; semantic/test axioms are [propext,
+info: Test/All.lean:228:0: Effect4 goal gate: 13 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 7 declaration(s) rest on goals; no other declaration reaches sorryAx
+Build completed successfully (904 jobs).
+exit 0
+
+## lake env lean -DwarningAsError=true Test/All.lean
+Effect4 library-root gate: 163 API/utility modules, 275 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+Effect4 module and axiom gate: checked 665 modules and 81910 declarations; phases (ms): sources and closure 24, library roots 325, declarations 3878, resolution 893, axioms 26787, exemptions 645; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+Effect4 goal gate: 13 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 7 declaration(s) rest on goals; no other declaration reaches sorryAx
+exit 0
+
+## the axioms of every theorem the seat's commits touched (changed-lines.py, AxiomsOfChanged.lean, axioms-of-changed.tsv)
+199 theorems; axiom sets: [[Quot.sound, propext], [propext], []]
+exit 0
+ 152 [Quot.sound, propext]
+   9 []
+  38 [propext]
+
+## python3 scripts/generate.py --all --output-dir <scratch>   (verify mode at 1ff9a94a; then every output compared with the tree)
+PASS ingest README: generated tables match
+PASS generate: requested producers ran in dependency order
+exit 0
+compared 379 files, 0 differ
+
+## python3 scripts/generate.py --only lcnf   (in place at 1ff9a94a; then git status)
+wrote ocaml/engine/api_engine.ml and ocaml/gen/closure-api_engine.tsv
+PASS generate: requested producers ran in dependency order
+exit 0
+git status --short: empty
+
+## make check-gen
+PASS generate: requested producers ran in dependency order
+PASS generate: requested producers ran in dependency order
+PASS generate: requested producers ran in dependency order
+PASS generate: requested producers ran in dependency order
+PASS generate: requested producers ran in dependency order
+PASS generate: requested producers ran in dependency order
+PASS check-gen: every Lean-only generated file is what its generator emits
+exit 0
+
+## make check-cases
+Build completed successfully (416 jobs).
+conform cases: PASS, exit 0; .lake/conform/cases.json
+exit 0
+
+## make check-proof-style
+Build completed successfully (904 jobs).
+lake env lean -DwarningAsError=true Test/Audit/ProofStyle.lean
+proof style: 1915 recorded uses and 60 recorded unread commands in 1178 entries; the unread commands:
+exit 0
+
+## make check-ocaml
+cd ocaml && opam exec --switch=effect4 -- dune build && opam exec --switch=effect4 -- dune test eff gen clock
+cd ocaml && opam exec --switch=effect4 -- dune test engine
+opam exec --switch=effect4 -- bash ocaml/engine/tools/gen-check.sh
+ok   C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in src/Effect4/
+ok   C2 ocaml/gen builds and @gen/runtest passes (api_gen.ml is the oracle)
+ok   C3a dune build engine
+ok   C3b api_engine.ml type-checks against E4_clock/E4_nat interfaces: the functor needs no instance, so the
+          extern table is closed (every unconverted carrier site would be a type error)
+ok   C4 the generated file carries the current prelude
+
+gen-check: PASS
+exit 0
+# dune test --force eff gen clock; dune test --force engine:
+test_val_frames: 26 checks, 0 failures
+test_lean_wire: 117 checks, 0 failures
+prop_wire: 6330 checks, 0 failures (seed 42)
+test_eff: 555 checks, 0 failures
+exit 0
+engine suites reporting ALL PASS: 28
+== ALL PASS: 0 failure(s) in 132 checks ==
+  pCapture Fast: outcome=finished fibers=1 exit=success 15 trace=9
+  pLevel@2 Fast: outcome=finished fibers=1 exit=success 6 trace=7
+  pModifyOther Fast: outcome=finished fibers=1 exit=success "s" trace=5
+  pLevel@1 Fast: outcome=finished fibers=1 exit=success 11 trace=7
+  pLevel@3 Fast: outcome=finished fibers=1 exit=success unit trace=7
+exit 0
+
+## make check-truth
+PASS: 38 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS truth: pinned corpus, bounded differential and signed U-01 divergence checked; the regenerated modules type-check
+exit 0
+
+## make check-corpus
+python3 scripts/check-corpus.py
+wrote 400 generated programs at depth 4 to /Users/pooks/Dev/lean4-effect4-t3b/harness/truth/corpus-check/corpus.json
+{"kind":"signed-divergence-controls","checks":9,"failures":[]}
+emitted 400 of 400 programs (128 with an unannotated block)
+corpus types: 128 queried; 115 agree, 6 mismatch, 7 refused
+corpus: 400 programs, 75 in the straight-line fragment; run {'untyped': 272, 'agree': 122, 'differ': 6}; sync {'n/a': 272, 'agree': 122, 'differs': 6}; tsc {'errors': 255, 'clean': 145}; types {'untyped': 272, 'agree': 115, 'mismatch-A': 6, 'refused': 7}
+PASS corpus: 400 programs match the committed results; 25 registered disagreement(s)
+exit 0
+
+## make check-target
+bun test v1.4.2 (744846f84)
+
+ 28 pass
+ 0 fail
+ 218 expect() calls
+Ran 28 tests across 6 files. [5.54s]
+bun tools/target/cli.ts --repo .
+target conformance [effect@4.0.0-rc.112/adapter]: PASS; 50 expected, 50 attempted, 50 resolved, 0 mismatching, 0 refused
+report: /Users/pooks/Dev/lean4-effect4-t3b/.lake/target/report.json
+wrote 600 pairs to .lake/target/ty-vectors.tsv
+bun tools/target/assignability.ts --repo . --vectors .lake/target/ty-vectors.tsv
+assignability: 600 pairs; agree 594, cut 6
+assignability: red control (refOf covariant): 10 pair(s) move, 10 caught by the differential
+PASS assignability: no pair the order accepts is refused by the target
+bun tools/target/rows.ts --repo .
+rows: 62 queried (22 rows, 40 atoms); agree 38, mismatch 3, refused 21
+PASS rows: the table is what this run observed
+exit 0
+
+## make check-ts-reader
+Build completed successfully (155 jobs).
+cd ts/eff && bun run check.ts /Users/pooks/Dev/lean4-effect4-t3b/.lake/corpus /Users/pooks/Dev/lean4-effect4-t3b/harness/truth/generated --oracle /Users/pooks/Dev/lean4-effect4-t3b/.lake/corpus
+files 447: matched 416, mismatched 0, refused with oracle 0, accepted without oracle 24, refused without oracle 7 (251 ms)
+refusals by kind: unknownHead 7
+cd ts/eff && bun run typecheck
+$ tsgo --noEmit -p tsconfig.json
+cd ts/eff && bun test
+bun test v1.4.2 (744846f84)
+
+ 697 pass
+ 0 fail
+ 3326 expect() calls
+Ran 697 tests across 25 files. [3.91s]
+exit 0
+tsgo: Version 7.0.0-dev.20260629.1
+
+## bash scripts/check-conservativity.sh --self-test
+self-test: 22 of 22 controls as expected
+exit 0
+
+## bash scripts/check-conservativity.sh 917d4b5d HEAD
+conservativity: BASE 917d4b5d (917d4b5d), CAND HEAD (67e6ec20)
+C1 goldens: PASS: 334 byte vectors at BASE; 0 changed, 0 removed, 3 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 22 tag families, 3 manifests; appended 8 constructors {'Effect4.Program.NativeOp': ['refUpdateWith', 'refGetAndUpdateWith', 'refUpdateAndGetWith', 'refUpdateSomeWith', 'refGetAndUpdateSomeWith', 'refUpdateSomeAndGetWith', 'refModifyWith', 'refModifySomeWith']}
+C3 verdicts: REFUSE: 875 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables; 0 verdict moves and 13 retired count rows named by policy
+  harness/truth/corpus-results.tsv: g158: BASE 'g158\tno\tno\texpr\tclean\tuntyped\tn/a\t{"failure":{"reasons":[{"die":"badName"}]}}\tnot run\t\t\tuntyped\t' CAND 'g158\tno\tyes\tdecl\tclean\tagree\tagree\tsuccess {"ref":0}\tsuccess {"ref":0}\tstarted 0,forked 0 1,started 1,exited 1 success,exited 0 success\tstarted 0,forked 0 1
+  harness/truth/corpus-results.tsv: g309: BASE 'g309\tno\tyes\tdecl\terrors\tagree\tagree\tdie [{"die":"missingService"}]\tdie [{"die":"missingService"}]\tstarted 0,exited 0 die\tstarted 0,exited 0 die\trefused\tsame failure reasons and payloads; tsc: error TS2375: Type \'Effect<Fiber<unknown, unknown>, never, Scope>\' is not as
+C4 policy: PASS: 8 added and 8 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+C5 record: git diff --stat over 68 GENERATED_PATHS entries: 34 files changed, 1508 insertions(+), 1695 deletions(-)
+conservativity: REFUSE (3 of 4 clauses pass)
+exit 1
+
+## bash scripts/check-conservativity.sh 917d4b5d 261b4a8e   (the integration branch alone)
+conservativity: BASE 917d4b5d (917d4b5d), CAND 261b4a8e (261b4a8e)
+C1 goldens: PASS: 334 byte vectors at BASE; 0 changed, 0 removed, 0 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 22 tag families, 3 manifests; appended 0 constructors 
+C3 verdicts: REFUSE: 875 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables; 0 verdict moves and 0 retired count rows named by policy
+  harness/truth/corpus-results.tsv: g158: BASE 'g158\tno\tno\texpr\tclean\tuntyped\tn/a\t{"failure":{"reasons":[{"die":"badName"}]}}\tnot run\t\t\tuntyped\t' CAND 'g158\tno\tyes\tdecl\tclean\tagree\tagree\tsuccess {"ref":0}\tsuccess {"ref":0}\tstarted 0,forked 0 1,started 1,exited 1 success,exited 0 success\tstarted 0,forked 0 1
+  harness/truth/corpus-results.tsv: g309: BASE 'g309\tno\tyes\tdecl\terrors\tagree\tagree\tdie [{"die":"missingService"}]\tdie [{"die":"missingService"}]\tstarted 0,exited 0 die\tstarted 0,exited 0 die\trefused\tsame failure reasons and payloads; tsc: error TS2375: Type \'Effect<Fiber<unknown, unknown>, never, Scope>\' is not as
+C4 policy: PASS: 0 added and 0 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+C5 record: git diff --stat over 68 GENERATED_PATHS entries: 2 files changed, 19 insertions(+), 2 deletions(-)
+conservativity: REFUSE (3 of 4 clauses pass)
+exit 1
+
+## bash scripts/check-conservativity.sh 261b4a8e HEAD
+conservativity: BASE 261b4a8e (261b4a8e), CAND HEAD (67e6ec20)
+C1 goldens: PASS: 334 byte vectors at BASE; 0 changed, 0 removed, 3 changed or removed by policy name, 0 added
+C2 alphabets: PASS: 22 tag families, 3 manifests; appended 8 constructors {'Effect4.Program.NativeOp': ['refUpdateWith', 'refGetAndUpdateWith', 'refUpdateAndGetWith', 'refUpdateSomeWith', 'refGetAndUpdateSomeWith', 'refUpdateSomeAndGetWith', 'refModifyWith', 'refModifySomeWith']}
+C3 verdicts: PASS: 875 verdict rows at BASE over 3 lanes; 4 ordered and 2 count tables; 0 verdict moves and 13 retired count rows named by policy
+C4 policy: PASS: 8 added and 8 retired between BASE and CAND; 0 not named in Test/fixtures/baseline/66ee4657-supplement-v1.policy.json
+C5 record: git diff --stat over 68 GENERATED_PATHS entries: 33 files changed, 1489 insertions(+), 1693 deletions(-)
+conservativity: PASS (4 of 4 clauses pass)
+exit 0
+
+## make check-slow
+info: Test/Slow.lean:21:0: Effect4 library-root gate: 163 API/utility modules, 275 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/Slow.lean:21:0: Effect4 module and axiom gate: checked 674 modules and 83907 declarations; phases (ms): sources and closure 31, library roots 305, declarations 7888, resolution 2433, axioms 58412, exemptions 694; semantic/test axioms are [propext,
+info: Test/Slow.lean:21:0: Effect4 goal gate: 13 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 7 declaration(s) rest on goals; no other declaration reaches sorryAx
+Build completed successfully (909 jobs).
+exit 0
+
+## make gen-semantics   (then git status --short: empty)
+Build completed successfully (486 jobs).
+rm -rf .lake/gen/semantics-report && mkdir -p .lake/gen/semantics-report
+lake exe semantics-report .lake/gen/semantics-report
+cp .lake/gen/semantics-report/semantics.md generated/semantics.md
+exit 0
+
+## make check-semantics
+PASS semantics controls: imported tags and all statuses; 34 report refusals; 18 register controls
+exit 0
+
+## beside the brief's list
+### make check-docs
+python3 scripts/check-docs.py
+PASS check-docs: every path, link, citation and make target in 72 documents resolves
+exit 0
+### make check-language
+python3 scripts/check-language.py --strict docs/core/controlled-english.md AGENTS.md
+PASS check-language: no finding in docs/core/controlled-english.md, AGENTS.md; the other documents carry 1805 finding(s) (report: python3 scripts/check-language.py)
+exit 0
+### make check-tsgo
+PASS check-tsgo: no typescript below 7 under ts/, harness/ or tools/
+exit 0
+### make check-native
+Build completed successfully (416 jobs).
+conform native: PASS, exit 0; .lake/conform/native.json
+exit 0
+### make check-host-protocol
+PASS keyed differential: 57 runs, 52 programs, 30 controls; exact exits and keyed applications
+PASS host-protocol: fresh projections, typed host programs, keyed replay and negative controls
+exit 0
+### make check-census
+PASS generated Effect 4.0.0-rc.112 runtime census is current: 137 mechanism rows
+PASS census ids and kinds join the Lean row list
+exit 0
+### make check-tools
+PASS exact private resolution, rendering receipts, and base ceiling for 487 semantic declarations
+PASS fresh choice-bearing semantic helper exceeds its selected ceiling
+exit 0
+### make check-schema-codec
+Build completed successfully (904 jobs).
+PASS schema-codec: 32 fresh Lean/rc.112 comparisons, 32 host round trips, 10 matching refusals, 2 legacy negative controls, 3 explicit boundary differences
+exit 0
+### make check-schema-pins
+PASS SC-REP-CENSUS-PIN has exact extracted spelling-set agreement at the pinned rc.112 bytes
+INFO this is lexical source evidence, not payload or semantic faithfulness
+exit 0
+### make check-tsdiag
+FAIL check-tsdiag: generated/tsdiag-agreement.tsv differs from this run (see /Users/pooks/Dev/lean4-effect4-t3b/.lake/tsdiag/tsdiag-agreement.tsv); promote with make gen-tsdiag if the change is intended
+make: *** [.lake/check/tsdiag] Error 1
+exit 2
+### bun ts/eff/ingest/check-corpus.ts printed .lake/corpus   (make check-ingest-smoke's command)
+PASS printed: 408 exact JSON/wire comparisons on each parser with shared form lowering; batch bound 500
+exit 0
+### the steps of scripts/check-ingest.sh, by hand at 1a76491b, without its bun install --frozen-lockfile
+foreign 22986; isolated 21; products 11520; forms 19 at four depths; construction JSON/wire/keys before readers
+exit 0
+PASS oracle coverage: 25 Eff, 6 statements, 11 actions, 10 layers, 55 native rows; 19 forms at four depths
+exit 0
+== gate
+PASS printed: 408 exact JSON/wire comparisons on each parser with shared form lowering; batch bound 500
+PASS foreign: 22986 exact JSON/wire comparisons on each parser with shared form lowering, exact key tables and complete verdict agreement; batch bound 500
+exit 0
+== inclusion
+PASS inclusion: 408 printed modules, 323 lifted by both engines to the printed oracle up to service-key renumbering; foreign key base 5, foreign key base 4, foreign key base 6; 85 refused by the foreign contract: refused ck=E-ARG-DYNAMIC oxc=E-ARG-DYNAMIC x21, refused ck=E-FAIL-NOT-DOCUMENTED oxc=E-FAIL-NOT-DOCUMENTED x61, refus
+exit 0
+== metamorphic printed
+PASS source edits: printed, 408 fixtures × 6 transformations × 2 engines; source locations alone excluded; workers limited to 350 source variants per engine
+exit 0
+== metamorphic foreign
+PASS source edits: foreign, 22986 fixtures × 6 transformations × 2 engines; source locations alone excluded; workers limited to 350 source variants per engine
+exit 0
+== negative refusals
+PASS source edits: negative, 22 fixtures × 6 transformations × 2 engines; source locations alone excluded; workers limited to 350 source variants per engine
+exit 0
+== negative witnesses
+PASS source edits: negative, 2 fixtures × 6 transformations × 2 engines; source locations alone excluded; workers limited to 350 source variants per engine
+exit 0
+== readme
+PASS ingest README: generated tables match
+exit 0
+== ocaml cma
+exit 0
+== ocamlc
+exit 0
+== check-wire
+PASS OCaml exact decoder and JSON oracle: 23394 programs
+exit 0
+== fidelity
+PASS fidelity: four original/reprinted programs agree; requirement, foreign import and v3 exclusions hold; poisoned rerun reuses no old observations
+exit 0
+### lake build Effect4Gen   (the library target; not a gate)
+exit 1
+failed steps: 21
+✖ [4/148] Running Effect4Gen.Check:c.o
+error: build cycle detected:
+  effect4/+Effect4Gen.Check:leanArts
+  effect4/+Effect4Gen.Check:c

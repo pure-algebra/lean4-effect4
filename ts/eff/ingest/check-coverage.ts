@@ -8,12 +8,19 @@ import { nativeOpJson } from "../json.gen.ts"
 const dir = process.argv[2]
 if (!dir) throw new Error("check-coverage.ts <foreign-directory>")
 const seen = { eff: new Set<string>(), stmt: new Set<string>(), action: new Set<string>(), layer: new Set<string>(), row: new Set<string>() }
+/** A row's coverage key: its operation with every variable index dropped. A read-modify-write
+ * row's binder term reads the cell's current value at its node's level (decisions row 43; the
+ * state plan's T3b), so the profile's form at level 0 and a corpus program's form differ in that
+ * index and in nothing else. Two names' images still differ under the key, in their atoms and
+ * literals (Lean `FnName.headName?_image`, read without the term's level). */
+const rowKey = (op: unknown): string =>
+  JSON.stringify(op, (_key, v: unknown) => Array.isArray(v) && v[0] === "var" ? ["var"] : v)
 const array = (v: unknown): readonly unknown[] => { if (!Array.isArray(v) || typeof v[0] !== "string") throw new Error("invalid oracle constructor"); return v }
 function chain(v: unknown, walk: (v: unknown) => void): void { const a = array(v); if (a[0] === "nil") return; if (a[0] !== "cons") throw new Error("invalid oracle list"); walk(a[1]); chain(a[2], walk) }
 function eff(v: unknown): void {
   const a = array(v), tag = String(a[0]); seen.eff.add(tag)
   switch (tag) {
-    case "perform": seen.row.add(JSON.stringify(a[1])); break
+    case "perform": seen.row.add(rowKey(a[1])); break
     case "suspend": case "exit": case "uninterruptible": case "interruptible": case "scoped": eff(a[1]); break
     case "bind": case "catchCause": case "onExit": case "acquireRelease": eff(a[1]); eff(a[2]); break
     case "matchCause": eff(a[1]); eff(a[2]); eff(a[3]); break
@@ -50,8 +57,10 @@ const expected = {
   stmt: Object.keys(Stmt.cases),
   action: Object.keys(ActionTerm.cases).filter(n => !["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"].includes(n)),
   layer: Object.keys(LayerTerm.cases),
-  row: rows.map(r => JSON.stringify(nativeOpJson(r.op)))
+  row: rows.map(r => rowKey(nativeOpJson(r.op)))
 }
+// The key must keep the profile's rows apart, or a missing name would hide behind another.
+if (new Set(expected.row).size !== rows.length) throw new Error("the row coverage key collapses two profile rows")
 for (const family of ["eff", "stmt", "action", "layer", "row"] as const) {
   const missing = expected[family].filter(n => !seen[family].has(n))
   if (missing.length) throw new Error(`missing ${family} coverage: ${missing.join(", ")}`)

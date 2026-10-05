@@ -86,7 +86,7 @@ theorem intro_perform (root : NativeEff) (op : NativeOp) (r : Term) (p : Point) 
     | none => exact codeMeans_badShape root
     | some v =>
       dsimp only [Option.bind]
-      cases NativeOp.syncOpOf op v with
+      cases NativeOp.syncOpOf op p.env v with
       | some o => exact CodeMeans.syncOp o _ (successV root)
       | none => exact codeMeans_badShape root
   · rw [compileEff_perform_nonsync op r hf hk, denoteR_perform_nonsync root op r hpos hk]

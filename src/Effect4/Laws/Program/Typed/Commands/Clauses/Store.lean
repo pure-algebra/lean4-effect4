@@ -201,7 +201,7 @@ theorem DueKept.refl (w : World) (d : DeferredStore) : DueKept w d d :=
   fun _ h => Or.inl h
 
 /-- **A store step that adds no declaration settles typed**: the world over the new store is later
-and typed (`restate_world`, `poke_world`, `complete_world`), the Deferred cells and the due list
+and typed (`restate_world`, `complete_world`), the Deferred cells and the due list
 are kept (`CellsKept`, `DueKept`), the scope and memo columns are untouched, the sleeps only lose
 waiters, the new store is well formed, and the answer is in the row's post. -/
 theorem Evaluating.store_kept {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -245,22 +245,5 @@ theorem Evaluating.store_kept {root : ProgramSource} {rootTy : EffTy} {w : World
       cases mode
   · obtain ⟨c, hc0, sub, _⟩ := cells key cell hcell
     exact WakeTyped.of_subset sub (wide.waiters key c hc0 a e hpi)
-
-/-- **A store step over the same declaration tables settles typed** (the ref rows): every column
-but the heap is untouched (`Evaluating.store_kept`). -/
-theorem Evaluating.store_restated {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
-    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
-    {op : SyncOp} {next : Val → RProgram} (hc : f.frame.current = .vis (.inl op) next)
-    {s : Stores} {ans : Val} (step : syncOpStep op w.state = some (s, ans))
-    (valid : op.validIn w.state = true)
-    (store' : StoreTyped root { w with state := s }) (ord : w.leHost { w with state := s })
-    (deferreds : s.deferreds = w.state.deferreds) (scopes : s.scopes = w.state.scopes)
-    (memo : s.memo = w.state.memo) (timers : s.timers = w.state.timers)
-    (post : ∀ cert, storePre root w op cert → storePost { w with state := s } op cert ans) :
-    SettlesTyped root rootTy w f.id rest
-      (prepareIterR (evaluateRawR (interpRAt root.program m.completedExits) m f y)) :=
-  ev.store_kept hc step (fun h => syncOpStep_wf op w.state s ans h valid step) store' ord
-    (deferreds ▸ DueKept.refl w _)
-    (deferreds ▸ CellsKept.refl w _) scopes memo (timers ▸ List.Subset.refl _) post
 
 end Effect4.Program.Typed

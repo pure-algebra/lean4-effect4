@@ -27,6 +27,12 @@ builds as a typed failure and runs to `Err.payload`. It prints as a module that 
 `Data.TaggedError` class and fails with `new InsufficientFunds({ … })`, and the module reads back
 (section 5).
 
+**Changes in the state plan's T3b.** A read-modify-write row carries a binder term. The pure part
+of a deposit, one `Ref.modify` that adds to the balance, appends a `Deposit` entry and answers the
+new balance, builds and runs over the `Account` record; its term captures the amount, an outer
+binder (section 1). The term is no name's image, so the printer refuses the row by name until the
+state plan's T5.
+
 **What the language refuses** (section 2): `needed` and `available` as rc.112 types them, signed
 numbers (admission refuses `int` by the field's path; row 121); a
 signed number (table admission refuses an `int` column as uninhabited,
@@ -34,9 +40,10 @@ and `sub` truncates, so `10 - 25` answers `0` where rc.112 answers `-15`). A lis
 which no value holds; so are `Ref.modify`'s effect-valued answer and `Effect.callback`'s cancel
 effect, and removal by identity needs equality on code (R7, row 82).
 
-**Waits on:** R4 with rows 42–43 steps 3–5 (record and list cells); R3 with row 121 (`int`); R7 with row 82 (listeners, the effect-valued answer, the cancel effect);
-R10 with DI-89 (`forEach`) and DI-39 (`catchTag`); R6, parked, or the logical clock (`settle`).
-The slices of row 204 that move it: state at any type, and error payloads.
+**Waits on:** R4, the faces' part (a binder term printed as a lambda, the state plan's T5); R3 with
+row 121 (`int`); R7 with row 82 (listeners, the effect-valued answer, the cancel effect); R10 with
+DI-89 (`forEach`) and DI-39 (`catchTag`); R6, parked, or the logical clock (`settle`). The slices
+of row 204 that move it: state at any type, and error payloads.
 -/
 
 set_option autoImplicit false
@@ -95,6 +102,41 @@ def accountTy : Ty := (Ty.record accountFields).normalize
   some (.refOf .string)
 #guard (built? (program (Ref.make (app "cons" [nat 1, app "nil" []])))).map (fun b => b.ty.answer) =
   some (.refOf (.list .nat))
+
+/-- `{ _tag: "Deposit", amount }`. -/
+def depositEntry (amount : TermSrc) : TermSrc :=
+  record [("_tag", false, .lit "Deposit"), ("amount", false, .nat)]
+    [("_tag", str "Deposit"), ("amount", amount)]
+
+/-- `{ ...a, balance: a.balance + amount, history: [...a.history, { _tag: "Deposit", amount }] }`,
+the account a deposit leaves (`p5-ledger-service.ts`, `deposit`). -/
+def deposited (a amount : TermSrc) : TermSrc :=
+  recordSet (recordSet a "balance" (app "add" [field a "balance", amount]))
+    "history" (app "append" [field a "history", app "cons" [depositEntry amount, app "nil" []]])
+
+/-- The pure part of a deposit as one atomic transition: `Ref.modify(state, a => [next.balance,
+next])`. The amount is bound outside the term, which captures it. The module answers the balance
+the row answered and the length of the history the cell holds after. rc.112's `transition` also
+answers an effect and runs the listeners, which no value holds (section 2). -/
+def depositModule (amount : Nat) : Module NativeOp :=
+  program (bindName "state" (Ref.make account0) fun state =>
+    bindName "amount" (succeed (nat amount)) fun amount =>
+      bindName "balance" (Ref.modify "a"
+          (app "pair" [app "add" [field (var "a") "balance", amount], deposited (var "a") amount])
+          state) fun balance =>
+        bindName "after" (Ref.get state) fun after =>
+          succeed (app "pair" [balance, app "length" [field after "history"]]))
+
+-- Since the state plan's T3b the atomic deposit builds over the `Account` record: the row answers
+-- a number, `B`, and stores an account, `A`. It runs to the new balance and one history entry.
+#guard (built? (depositModule 10)).map (fun b => (b.ty.answer, b.runSync)) =
+  some (.prod .nat .nat, .success (.list [.nat 10, .nat 1]))
+-- Its term is no name's image: the printer refuses the row by name until the state plan's T5.
+#guard (built? (depositModule 10)).map printVerdict = some "refused: binderTerm Ref.modify"
+-- Red control: a deposit whose answer and next account are swapped is refused at the term's result.
+#guard (typingReason? (program (bindName "state" (Ref.make account0) fun state =>
+    Ref.modify "a" (app "pair" [deposited (var "a") (nat 10), field (var "a") "balance"]) state))).map
+    (·.head) = some "resultNotSubtype"
 
 /-! ## 2. The failure and its arithmetic -/
 
@@ -180,7 +222,8 @@ def measured : Reach :=
 
 /-- The stage p5 reaches today, as `Test/Dogfood/README.md` quotes it: no encoding of the program
 builds, and the language refuses its signed answer. The `Account` record in one `Ref` builds since
-the state plan's T3a (section 1). -/
+the state plan's T3a, and the pure part of a deposit is one atomic `Ref.modify` over it since T3b
+(section 1). -/
 def stage : Reach :=
   { refused :=
       [ ("a signed number", "admission") ]

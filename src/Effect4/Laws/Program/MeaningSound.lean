@@ -59,7 +59,7 @@ def denoteWith (bad : ExitV) : NativeEff → List Val → Effects.Program StoreS
   | .perform op r, env =>
     match (NativeOp.row op).kind with
     | .sync =>
-      match (evalTerm env r).bind (NativeOp.syncOpOf op) with
+      match (evalTerm env r).bind (NativeOp.syncOpOf op env) with
       | some o =>
         Effects.Program.bind (Effects.Program.perform (S := StoreSig) o) fun v =>
           pure (Exit.success v)
@@ -98,7 +98,7 @@ theorem denoteWith_badShape : ∀ (e : NativeEff) (env : List Val),
   | .perform op r, env => by
     rw [denoteWith, denote]
     cases (NativeOp.row op).kind with
-    | sync => cases (evalTerm env r).bind (NativeOp.syncOpOf op) <;> rfl
+    | sync => cases (evalTerm env r).bind (NativeOp.syncOpOf op env) <;> rfl
     | async => rfl
     | program => rfl
   | .suspend b, env => by rw [denoteWith, denote, denoteWith_badShape b env]
@@ -452,7 +452,7 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
       rw [denote] at hden'
       rw [denoteWith, denote]
       simp only [hkind] at hden' ⊢
-      cases hd : (evalTerm env r).bind (NativeOp.syncOpOf op) with
+      cases hd : (evalTerm env r).bind (NativeOp.syncOpOf op env) with
       | none =>
         rw [hd] at hden'
         cases hden'

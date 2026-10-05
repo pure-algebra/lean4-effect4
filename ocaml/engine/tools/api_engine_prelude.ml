@@ -193,12 +193,15 @@ let sh_drop_observers token fibers (_acc : 'acc list) =
    applies `List.length` and `++` to the carrier inline.  `Val.cell k` is `Val.handle 2 k`.
    A read-modify-write row carries a binder term and its environment (decisions row 43) and
    runs the term at `env ++ [a]`: `eval_term` is `Effect4.Program.evalTerm`, generated below
-   this prelude, so the row hands it in, and it reads the point environment carrier, built
-   here by `E.of_list`.  The term's answer is read as Lean's arm reads it: the option frames
+   this prelude, so the row hands it in.  The row's environment is the point environment
+   carrier of the node that performed it (`field Effect4.Machine.SyncOp.env E.t`, externs.txt;
+   the state plan's T3b), so `env ++ [a]` is `E.snoc env a`: the term reads its outer binders
+   below the current value, at the node's level.  The term's answer is read as Lean's arm
+   reads it: the option frames
    (`Store.Image.ofOption Store.Image.ident`: `Val_none`, `Val_some`) and the two-element
    tuple (`Store.Image.ofTuple2`: `Val_list [b; a]`); any other answer is a frontier. *)
 let sh_ref_step eval_term op heap =
-  let run env f a = eval_term (E.of_list (env @ [a])) f in
+  let run env f a = eval_term (E.snoc env a) f in
   let option_of = function
     | Val_none -> Some None
     | Val_some v -> Some (Some v)

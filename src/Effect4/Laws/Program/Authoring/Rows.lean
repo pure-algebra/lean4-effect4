@@ -16,55 +16,55 @@ namespace Ref
 
 theorem make_scoped {request : TermSrc} (h0 : request.Scoped) :
     (make request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) h0
 
 theorem get_scoped {request : TermSrc} (h0 : request.Scoped) :
     (get request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) h0
 
 theorem set_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (set x0 x1).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem getAndSet_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (getAndSet x0 x1).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem setAndGet_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (setAndGet x0 x1).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
-theorem update_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (update f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem update_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (update current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem getAndUpdate_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (getAndUpdate f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem getAndUpdate_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (getAndUpdate current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem updateAndGet_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (updateAndGet f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem updateAndGet_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (updateAndGet current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem updateSome_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (updateSome f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem updateSome_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (updateSome current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem getAndUpdateSome_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (getAndUpdateSome f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem getAndUpdateSome_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (getAndUpdateSome current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem updateSomeAndGet_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (updateSomeAndGet f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem updateSomeAndGet_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (updateSomeAndGet current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem modify_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (modify f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem modify_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (modify current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem modifySome_scoped (f : Effect4.Machine.FnName) {request : TermSrc} (h0 : request.Scoped) :
-    (modifySome f request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+theorem modifySome_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
+    (modifySome current f request).Scoped :=
+  performTerm_scoped (fun _ _ => rfl) current h0 h1
 
 end Ref
 
@@ -72,27 +72,27 @@ namespace Deferred
 
 theorem make_scoped (value : Effect4.Program.Ty) (error : Effect4.Program.Ty)  :
     (make value error).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) unit_scoped
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) unit_scoped
 
 theorem isDone_scoped {request : TermSrc} (h0 : request.Scoped) :
     (isDone request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) h0
 
 theorem poll_scoped {request : TermSrc} (h0 : request.Scoped) :
     (poll request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) h0
 
 theorem succeed_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (succeed x0 x1).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem fail_scoped {x0 x1 : TermSrc} (h0 : x0.Scoped) (h1 : x1.Scoped) :
     (fail x0 x1).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) (app_scoped "pair" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))
 
 theorem await_scoped {request : TermSrc} (h0 : request.Scoped) :
     (await request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) h0
 
 end Deferred
 
@@ -100,7 +100,7 @@ namespace Scope
 
 theorem make_scoped (strategy : Effect4.FinalizerStrategy)  :
     (make strategy).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) unit_scoped
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) unit_scoped
 
 end Scope
 
@@ -108,11 +108,11 @@ namespace Effect
 
 theorem sleep_scoped {request : TermSrc} (h0 : request.Scoped) :
     (sleep request).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) h0
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) h0
 
 theorem currentTimeMillis_scoped :
     (currentTimeMillis).Scoped :=
-  perform_scoped _ (NativeOp.scopedAt_eq_true _) unit_scoped
+  perform_scoped _ (NativeOp.scopedAt_eq_true _ rfl) unit_scoped
 
 end Effect
 
@@ -131,6 +131,11 @@ example : Src.Scoped (bind "r" (Ref.make (nat 0)) (Ref.set (var "r") (nat 1))) :
   authoring_scoped
 
 example : Src.Scoped (bind "d" (Deferred.make .nat .nat) (Deferred.succeed (var "d") (nat 7))) := by
+  authoring_scoped
+
+-- A term row: the binder term under the current value's name, with an outer capture.
+example : Src.Scoped (bind "r" (Ref.make (nat 0))
+    (Ref.update "a" (app "add" [var "a", var "r"]) (var "r"))) := by
   authoring_scoped
 
 end Effect4.Program.AuthoringRowsLawsGuards

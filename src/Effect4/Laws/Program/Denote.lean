@@ -83,7 +83,7 @@ def denote : NativeEff → List Val → Effects.Program StoreSig ExitV
   | .perform op r, env =>
     match (NativeOp.row op).kind with
     | .sync =>
-      match (evalTerm env r).bind (NativeOp.syncOpOf op) with
+      match (evalTerm env r).bind (NativeOp.syncOpOf op env) with
       | some o =>
         Effects.Program.bind (Effects.Program.perform (S := StoreSig) o) fun v =>
           pure (Exit.success v)
@@ -214,7 +214,7 @@ theorem meaning_suspend (b : NativeEff) (env : List Val) (s : Stores) :
 /-- A `sync` row whose request evaluates and decodes: the store step, with the fallback. -/
 theorem meaning_perform_sync (op : NativeOp) (r : Term) (env : List Val) (s : Stores)
     (hkind : (NativeOp.row op).kind = .sync) {x : Val} (hx : evalTerm env r = some x)
-    {o : SyncOp} (ho : NativeOp.syncOpOf op x = some o) :
+    {o : SyncOp} (ho : NativeOp.syncOpOf op env x = some o) :
     meaning (.perform op r) env s =
       (match syncOpStep o s with
        | some (s', v) => (Exit.success v, s')
@@ -237,7 +237,7 @@ theorem meaning_perform_noEval (op : NativeOp) (r : Term) (env : List Val) (s : 
 /-- A `sync` row whose request evaluates to a value of the wrong shape: the defect. -/
 theorem meaning_perform_noDecode (op : NativeOp) (r : Term) (env : List Val) (s : Stores)
     (hkind : (NativeOp.row op).kind = .sync) {x : Val} (hx : evalTerm env r = some x)
-    (ho : NativeOp.syncOpOf op x = none) :
+    (ho : NativeOp.syncOpOf op env x = none) :
     meaning (.perform op r) env s = (badShapeExit, s) := by
   unfold meaning
   simp only [denote, hkind, hx, Option.bind, ho]

@@ -38,37 +38,45 @@ def getAndSet (x0 x1 : TermSrc) : Src NativeOp :=
 def setAndGet (x0 x1 : TermSrc) : Src NativeOp :=
   perform .refSetAndGet (app "pair" [x0, x1])
 
-/-- `Ref.update` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276`). -/
-def update (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refUpdate f) request
+/-- `Ref.update` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def update (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refUpdateWith current f request
 
-/-- `Ref.getAndUpdate` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501`). -/
-def getAndUpdate (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refGetAndUpdate f) request
+/-- `Ref.getAndUpdate` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def getAndUpdate (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refGetAndUpdateWith current f request
 
-/-- `Ref.updateAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1368`). -/
-def updateAndGet (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refUpdateAndGet f) request
+/-- `Ref.updateAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1368`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def updateAndGet (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refUpdateAndGetWith current f request
 
-/-- `Ref.updateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508`). -/
-def updateSome (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refUpdateSome f) request
+/-- `Ref.updateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def updateSome (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refUpdateSomeWith current f request
 
-/-- `Ref.getAndUpdateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643`). -/
-def getAndUpdateSome (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refGetAndUpdateSome f) request
+/-- `Ref.getAndUpdateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def getAndUpdateSome (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refGetAndUpdateSomeWith current f request
 
-/-- `Ref.updateSomeAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646`). -/
-def updateSomeAndGet (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refUpdateSomeAndGet f) request
+/-- `Ref.updateSomeAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def updateSomeAndGet (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refUpdateSomeAndGetWith current f request
 
-/-- `Ref.modify` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901`). -/
-def modify (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refModify f) request
+/-- `Ref.modify` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def modify (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refModifyWith current f request
 
-/-- `Ref.modifySome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163`). -/
-def modifySome (f : Effect4.Machine.FnName) (request : TermSrc) : Src NativeOp :=
-  perform (.refModifySome f) request
+/-- `Ref.modifySome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163`).
+`f` is the binder term, written under the name `current` of the cell's current value. -/
+def modifySome (current : String) (f request : TermSrc) : Src NativeOp :=
+  performTerm .refModifySomeWith current f request
 
 end Ref
 
@@ -137,7 +145,17 @@ open Effect4.Program Effect4.Program.Authoring
 #guard elaborate (bind "r" (Ref.make (nat 0)) (Ref.set (var "r") (nat 1)))
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
           (.perform .refSet (.app "pair" (.cons (.var 0) (.cons (.lit (.nat 1)) .nil)))))
-#guard elaborate (Ref.update .incr (nat 0)) = .ok (.perform (.refUpdate .incr) (.lit (.nat 0)))
+-- A term row elaborates its binder term under the name of the cell's current value: at the
+-- root that name is level 0, and under one binder it is level 1, above the outer name.
+#guard elaborate (Ref.update "a" (app "succ" [var "a"]) (nat 0))
+  = .ok (.perform (.refUpdateWith (.app "succ" (.cons (.var 0) .nil))) (.lit (.nat 0)))
+#guard elaborate (bind "r" (Ref.make (nat 0))
+    (Ref.modify "a" (app "pair" [var "a", app "add" [var "a", var "r"]]) (var "r")))
+  = .ok (.bind (.perform .refMake (.lit (.nat 0)))
+          (.perform (.refModifyWith (.app "pair" (.cons (.var 1)
+            (.cons (.app "add" (.cons (.var 1) (.cons (.var 0) .nil))) .nil)))) (.var 0)))
+-- The current value's name is the term's alone: the request does not see it.
+#guard elaborate (Ref.update "a" (var "a") (var "a")) = .error ⟨[], .unbound "a"⟩
 -- An async row authors as the reader reads it: a `perform`, the one invocation form.
 #guard elaborate (Effect.sleep (nat 5)) = .ok (.perform .sleep (.lit (.nat 5)))
 -- `Deferred.make` takes its type arguments: the operation carries them (decisions row 42).

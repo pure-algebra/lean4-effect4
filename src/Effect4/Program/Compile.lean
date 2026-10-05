@@ -613,7 +613,7 @@ def compileEff : NativeEff → Point → NCode
           | .sync =>
             match evalTerm p.env request with
             | some val =>
-              match NativeOp.syncOpOf op val with
+              match NativeOp.syncOpOf op p.env val with
               | some operation => Prim.sync (EffThunk.op operation)
               | none => badShape
             | none => badShape

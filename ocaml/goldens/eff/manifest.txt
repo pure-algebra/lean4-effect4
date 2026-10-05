@@ -8,8 +8,7 @@ MaskMode: interruptible uninterruptible inherit
 ForkOptions: startImmediately daemon maskMode
 ObserverMode: awaitValue joinEffect
 FinalizerStrategy: sequential parallel
-FnName: incr double zeroWhenPositive noChange takeAndBump
-NativeOp: refMake refGet refSet refGetAndSet refSetAndGet refUpdate refGetAndUpdate refUpdateAndGet refUpdateSome refGetAndUpdateSome refUpdateSomeAndGet refModify refModifySome deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow external deferredMakeOf
+NativeOp: refMake refGet refSet refGetAndSet refSetAndGet deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake sleep clockNow external deferredMakeOf refUpdateWith refGetAndUpdateWith refUpdateAndGetWith refUpdateSomeWith refGetAndUpdateSomeWith refUpdateSomeAndGetWith refModifyWith refModifySomeWith
 ServiceName: value
 ServiceTypeCode: value
 ServiceKey: name service
