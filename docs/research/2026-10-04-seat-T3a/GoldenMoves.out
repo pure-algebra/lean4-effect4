@@ -1,0 +1,5 @@
+pAwait	type names a spelling false	annotation false	Deferred.make true	refusal -
+pCallback	type names a spelling false	annotation false	Deferred.make true	refusal -
+pAcquire	type names a spelling true	annotation false	Deferred.make false	refusal -
+pOps	type names a spelling false	annotation false	Deferred.make true	refusal -
+pIllReq	type names a spelling false	annotation false	Deferred.make false	refusal requestNotSubtype refGet at number

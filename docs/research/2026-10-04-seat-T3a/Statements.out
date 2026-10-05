@@ -1,0 +1,5 @@
+'T3aStatements.syncRow_typed_at' depends on axioms: [propext, Quot.sound]
+'T3aStatements.fits_refOf_inv' depends on axioms: [propext, Quot.sound]
+'T3aStatements.fits_deferredOf_inv' depends on axioms: [propext, Quot.sound]
+'T3aStatements.refRead' depends on axioms: [propext, Quot.sound]
+'T3aStatements.completeAnchored_refuted' depends on axioms: [propext, Quot.sound]
