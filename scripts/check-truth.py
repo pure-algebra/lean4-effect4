@@ -47,6 +47,8 @@ def main():
         # lane compiled them.
         shutil.copyfile(truth/'select-controls.ts', Path(work)/'select-controls.ts')
         shutil.copyfile(truth/'records.typecheck.ts', Path(work)/'records.typecheck.ts')
+        # The list fold's controls (decisions rows 228 and 229), compiled beside the modules.
+        shutil.copyfile(truth/'folds.typecheck.ts', Path(work)/'folds.typecheck.ts')
         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),

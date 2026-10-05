@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 38 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
+  "summary": "PASS: 39 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -6107,6 +6107,66 @@
           "0:OnSuccess",
           "0:Sync",
           "0:Async"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pFold",
+      "leanExit": "success 8",
+      "hostExit": "success 8",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": 8
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":8}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": 8
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":8}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success"
         ],
         "late": [],
         "settledLater": null

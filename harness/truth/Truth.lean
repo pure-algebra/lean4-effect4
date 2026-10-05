@@ -377,9 +377,31 @@ def pFailPayload : Api.Program := .fail (notFound 9)
 def pTagPayload : Api.Program :=
   .catchIf (tagTest "NotFound" 0) (.fail (notFound 9)) (.succeed (.lit (.nat 1)))
 
+/-- Decisions row 228: a list fold in a term position, with an outer capture and a fold inside
+a fold. `a0` is a bound number, and `a1` a bound list built from it, `[a0 + 1, a0]`. The outer
+fold walks `a1` from `a0` and binds `a2` and `a3`. The inner fold walks the captured `a1` again,
+from the outer element `a3`, and binds `a4` and `a5`. Its body reads its two binders and the
+outer element. With `a0 = 2` the answer is `8`: the two inner folds answer `3` and `3`. A printer
+that named the inner binders at the outer fold's level would answer `7`. No fold states a type,
+so the module reads back on both readers.
+
+The list is built from a bound number and not from number literals. On the target a list of
+number literals has a literal element type, and a list of two such lists with different
+literals does not type-check under tsgo 7 (`cons(cons(1, cons(2, nil())), cons(cons(3, nil()),
+nil()))`: `readonly (1 | 2)[]` is not `readonly 3[]`). That is the list atoms' typing and not
+the fold's. -/
+def pFold : Api.Program :=
+  let call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+  let list (xs : List Term) : Term := xs.foldr (fun x acc => call "cons" [x, acc]) (call "nil" [])
+  .bind (.succeed (.lit (.nat 2)))
+    (.bind (.succeed (list [call "succ" [.var 0], .var 0]))
+      (.succeed (.fold none (.var 1) (.var 0)
+        (call "add" [.var 2,
+          .fold none (.var 1) (.var 3) (call "add" [.var 4, call "sub" [.var 5, .var 3]])]))))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
-the S2 error-image, S3 handler and part-4 residual fixtures. Every listed program contributes
-one manifest entry. -/
+the S2 error-image, S3 handler and part-4 residual fixtures, and the list fold. Every listed
+program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -390,7 +412,8 @@ def corpus : List (String × Api.Program) :=
     ("pSqlFail", pSqlFail), ("pSqlCatch", pSqlCatch), ("pSqlExit", pSqlExit), ("pSqlOrDie", pSqlOrDie),
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
-    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape)]
+    ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape),
+    ("pFold", pFold)]
 
 /-! ## The value wire -/
 
@@ -878,7 +901,12 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
-   "pInterruptEscape"]
+   "pInterruptEscape", "pFold"]
+-- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
+-- answers `8` on the machine, and reads back whole.
+#guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
+#guard (Api.run pFold 1000).exit = some (.success (.nat 8))
+#guard Api.roundTrip pFold = .ok pFold
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
