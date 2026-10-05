@@ -120,8 +120,8 @@ The owner ruled the foundations of the composed modules (decisions rows 214 to 2
 rest on finite runs, finite models, source reading and literature; none is a Lean proof.
 
 - **The Queue** (rows 219 to 222). It serves in strict request order. A message is consumed at
-  the taker's atomic step. The signal is posted, as Effect 4 does. A cancellation before
-  consumption consumes nothing, and a commit stays after it.
+  the taker's atomic step. The signal is posted, as Effect 4 does. When cancellation wins
+  before consumption, nothing is consumed; a commit stays after it.
 - **The shared foundations** (rows 221, 223 to 227, 230 and 234):
   - one waiting wrapper with a checked body profile;
   - a restricted atomic body;

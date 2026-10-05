@@ -2661,7 +2661,7 @@ flowchart LR
 - Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
 - Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
 - Open: saved-mask-restoration (proposed claim; scope-lifetime-finalization): restore reinstates its mask's saved incoming interruptibility on success, failure, interruption and nested entry, and is the identity under a masked caller; cleanup is installed before an interruption can observe an acquired resource or a committed registration (decisions row 227)
-- Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; a cancellation before consumption withdraws the request and consumes nothing, and a commit stays after it; an old token is inert after rearming (decisions rows 221, 222)
+- Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)
 
 ```mermaid
 flowchart LR

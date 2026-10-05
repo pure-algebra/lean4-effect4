@@ -180,7 +180,7 @@ composition ruling; correcting a contradictory summary does not require ruling i
 **Ruled 2026-10-05 (rows 219 to 234).** The owner ruled the first profiles of this section:
 
 - the Queue's contract (rows 219 to 222): strict order, consumption at the taker's step, a posted
-  signal, and a cancellation that keeps a commit;
+  signal, and a cancellation that withdraws only when it wins before consumption;
 - the shared waiting wrapper, with a checked body profile (row 221);
 - the atomic body and its alternatives (rows 223 and 224), and its work limits (row 226);
 - posted work as an `Eff` body with task metadata (row 225);

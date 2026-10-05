@@ -1,0 +1,86 @@
+[
+  {
+    "runtime": "rc112",
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/src/internal/effect.ts",
+    "declaration": "FiberImpl.interruptUnsafe",
+    "fileSHA256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "excerpt": "  interruptUnsafe(fiberId?: number | undefined, annotations?: Context.Context<never> | undefined): void {\n    if (this._exit) {\n      return\n    }\n    let cause = causeInterrupt(fiberId)\n    if (this.currentStackFrame) {\n      cause = causeAnnotate(cause, Context.make(CauseStackTrace, this.currentStackFrame))\n    }\n    if (annotations) {\n      cause = causeAnnotate(cause, annotations)\n    }\n    this._interruptedCause = this._interruptedCause\n      ? causeCombine(this._interruptedCause, cause)\n      : cause\n    if (this.interruptible) {\n      if (this._running) {\n        this._deferredInterrupt = true\n      } else {\n        this.evaluate(failCause(this._interruptedCause) as any)\n      }\n    }\n  }\n"
+  },
+  {
+    "runtime": "rc112",
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/src/internal/effect.ts",
+    "declaration": "fiberInterruptAs",
+    "fileSHA256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "excerpt": "export const fiberInterruptAs: {\n  (\n    fiberId: number | undefined,\n    annotations?: Context.Context<never> | undefined\n  ): <A, E>(self: Fiber.Fiber<A, E>) => Effect.Effect<void>\n  <A, E>(\n    self: Fiber.Fiber<A, E>,\n    fiberId: number | undefined,\n    annotations?: Context.Context<never> | undefined\n  ): Effect.Effect<void>\n} = dual(\n  (args) => hasProperty(args[0], FiberTypeId),\n  <A, E>(\n    self: Fiber.Fiber<A, E>,\n    fiberId: number | undefined,\n    annotations?: Context.Context<never> | undefined\n  ): Effect.Effect<void> =>\n    withFiber((parent) => {\n      let ann = fiberStackAnnotations(parent)\n      ann = ann && annotations ? Context.merge(ann, annotations) : ann ?? annotations\n      self.interruptUnsafe(fiberId, ann)\n      return asVoid(fiberAwait(self))\n    })\n)\n\n"
+  },
+  {
+    "runtime": "rc112",
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/src/internal/effect.ts",
+    "declaration": "uninterruptible and setInterruptible",
+    "fileSHA256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "excerpt": "export const uninterruptible = <A, E, R>(\n  self: Effect.Effect<A, E, R>\n): Effect.Effect<A, E, R> =>\n  withFiber((fiber) => {\n    if (!fiber.interruptible) return self\n    fiber.interruptible = false\n    fiber._stack.push(setInterruptibleTrue)\n    return self\n  })\n\nconst setInterruptible: (interruptible: boolean) => Primitive = makePrimitive({\n  op: \"SetInterruptible\",\n  [contAll](fiber) {\n    fiber.interruptible = this[args]\n    if (fiber._interruptedCause && fiber.interruptible) {\n      return () => failCause(fiber._interruptedCause!)\n    }\n  }\n})\nconst setInterruptibleTrue = setInterruptible(true)\nconst setInterruptibleFalse = setInterruptible(false)\n\nconst setFiberInterruptible = (fiber: FiberImpl): Effect.Effect<never> | undefined => {\n  fiber.interruptible = true\n  fiber._stack.push(setInterruptibleFalse)\n  if (fiber._interruptedCause) return failCause(fiber._interruptedCause)\n}\n\n"
+  },
+  {
+    "runtime": "rc112",
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/src/Queue.ts",
+    "declaration": "take",
+    "fileSHA256": "dc355d1a09662ae7b023c98ad47b7fe71051becaf9d461f244c37ad0a4d3dc35",
+    "excerpt": "export const take = <A, E>(self: Dequeue<A, E>): Effect<A, E> =>\n  internalEffect.suspend(\n    () => takeUnsafe(self) ?? internalEffect.andThen(awaitTake(self), take(self))\n  )\n\n"
+  },
+  {
+    "runtime": "rc112",
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/src/Queue.ts",
+    "declaration": "takeUnsafe",
+    "fileSHA256": "dc355d1a09662ae7b023c98ad47b7fe71051becaf9d461f244c37ad0a4d3dc35",
+    "excerpt": "export const takeUnsafe = <A, E>(self: Dequeue<A, E>): Exit<A, E> | undefined => {\n  if (self.state._tag === \"Done\") {\n    return self.state.exit\n  }\n  if (self.messages.length > 0) {\n    const message = MutableList.take(self.messages)!\n    releaseCapacity(self)\n    return core.exitSucceed(message)\n  } else if (self.capacity <= 0 && self.state.offers.size > 0) {\n    self.capacity = 1\n    releaseCapacity(self)\n    self.capacity = 0\n    const message = MutableList.take(self.messages)!\n    releaseCapacity(self)\n    return core.exitSucceed(message)\n  }\n  return undefined"
+  },
+  {
+    "runtime": "rc112",
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/src/Deferred.ts",
+    "declaration": "doneUnsafe",
+    "fileSHA256": "78b5d3cd2ad37f9e4f8ebaf465c9375bb982a00bd22a9f3d50ed02e0cb65f0e9",
+    "excerpt": "export const doneUnsafe = <A, E>(self: Deferred<A, E>, effect: Effect<A, E>): boolean => {\n  if (self.effect) return false\n  self.effect = effect\n  if (self.resumes) {\n    // Clear `resumes` before resuming: a waiter resumed with an interrupt\n    // cause dies synchronously inside `resume`, and its await cleanup would\n    // otherwise splice this array mid-iteration and skip the next waiter.\n    const resumes = self.resumes\n    self.resumes = undefined\n    for (let i = 0; i < resumes.length; i++) {\n      resumes[i](effect)\n    }\n  }\n  return true"
+  },
+  {
+    "runtime": "v401",
+    "path": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/src/internal/effect.ts",
+    "declaration": "FiberImpl.interruptUnsafe",
+    "fileSHA256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+    "excerpt": "  interruptUnsafe(fiberId?: number | undefined, annotations?: Context.Context<never> | undefined): void {\n    if (this._exit) {\n      return\n    }\n    let cause = causeInterrupt(fiberId)\n    if (this.cache.stackFrame) {\n      cause = causeAnnotate(cause, Context.make(CauseStackTrace, this.cache.stackFrame))\n    }\n    if (annotations) {\n      cause = causeAnnotate(cause, annotations)\n    }\n    this._interruptedCause = this._interruptedCause\n      ? causeCombine(this._interruptedCause, cause)\n      : cause\n    if (this.interruptible) {\n      if (this._running) {\n        this._deferredInterrupt = true\n      } else {\n        this.evaluate(failCause(this._interruptedCause) as any)\n      }\n    }\n  }\n"
+  },
+  {
+    "runtime": "v401",
+    "path": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/src/internal/effect.ts",
+    "declaration": "fiberInterruptAs",
+    "fileSHA256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+    "excerpt": "export const fiberInterruptAs: {\n  (\n    fiberId: number | undefined,\n    annotations?: Context.Context<never> | undefined\n  ): <A, E>(self: Fiber.Fiber<A, E>) => Effect.Effect<void>\n  <A, E>(\n    self: Fiber.Fiber<A, E>,\n    fiberId: number | undefined,\n    annotations?: Context.Context<never> | undefined\n  ): Effect.Effect<void>\n} = dual(\n  (args) => hasProperty(args[0], FiberTypeId),\n  <A, E>(\n    self: Fiber.Fiber<A, E>,\n    fiberId: number | undefined,\n    annotations?: Context.Context<never> | undefined\n  ): Effect.Effect<void> =>\n    withFiber((parent) => {\n      let ann = fiberStackAnnotations(parent)\n      ann = ann && annotations ? Context.merge(ann, annotations) : ann ?? annotations\n      self.interruptUnsafe(fiberId, ann)\n      return asVoid(fiberAwait(self))\n    })\n)\n\n"
+  },
+  {
+    "runtime": "v401",
+    "path": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/src/internal/effect.ts",
+    "declaration": "uninterruptible and setInterruptible",
+    "fileSHA256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+    "excerpt": "export const uninterruptible = <A, E, R>(\n  self: Effect.Effect<A, E, R>\n): Effect.Effect<A, E, R> =>\n  withFiber((fiber) => {\n    if (!fiber.interruptible) return self\n    fiber.interruptible = false\n    fiber._stack.push(setInterruptibleTrue)\n    return self\n  })\n\nconst setInterruptible: (interruptible: boolean) => Primitive = makePrimitive({\n  op: \"SetInterruptible\",\n  [contAll](fiber) {\n    fiber.interruptible = this[args]\n    if (fiber._interruptedCause && fiber.interruptible) {\n      return () => failCause(fiber._interruptedCause!)\n    }\n  }\n})\nconst setInterruptibleTrue = setInterruptible(true)\nconst setInterruptibleFalse = setInterruptible(false)\n\nconst setFiberInterruptible = (fiber: FiberImpl): Effect.Effect<never> | undefined => {\n  fiber.interruptible = true\n  fiber._stack.push(setInterruptibleFalse)\n  if (fiber._interruptedCause) return failCause(fiber._interruptedCause)\n}\n\n/**\n * Makes the current fiber uninterruptible for the returned effect without an\n * extra primitive. Call only within `withFiber`.\n *\n * @internal\n */\nexport const fiberEnterUninterruptibleUnsafe = (fiber: Fiber.Fiber<unknown, unknown>): void => {\n  const impl = fiber as FiberImpl\n  if (!impl.interruptible) return\n  impl.interruptible = false\n  impl._stack.push(setInterruptibleTrue)\n}\n\n/**\n * Makes the current fiber interruptible for the returned effect without an\n * extra primitive. Call only within `withFiber` and return any pending\n * interruption it produces.\n *\n * @internal\n */\nexport const fiberEnterInterruptibleUnsafe = (\n  fiber: Fiber.Fiber<unknown, unknown>\n): Effect.Effect<never> | undefined => {\n  const impl = fiber as FiberImpl\n  if (impl.interruptible) return undefined\n  return setFiberInterruptible(impl)\n}\n\n"
+  },
+  {
+    "runtime": "v401",
+    "path": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/src/Queue.ts",
+    "declaration": "take",
+    "fileSHA256": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+    "excerpt": "export const take = <A, E>(self: Dequeue<A, E>): Effect<A, E> =>\n  internalEffect.suspend(() =>\n    takeUnsafe(self) ?? internalEffect.andThen(awaitTake(self, () => canTake(self, 1)), take(self))\n  )\n\n"
+  },
+  {
+    "runtime": "v401",
+    "path": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/src/Queue.ts",
+    "declaration": "takeUnsafe",
+    "fileSHA256": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+    "excerpt": "export const takeUnsafe = <A, E>(self: Dequeue<A, E>): Exit<A, E> | undefined => {\n  if (self.state._tag === \"Done\") {\n    return self.state.exit\n  }\n  if (self.messages.length > 0) {\n    const message = MutableList.take(self.messages)!\n    releaseCapacity(self)\n    return core.exitSucceed(message)\n  } else if (self.capacity <= 0 && self.state.offers.size > 0) {\n    const message = takeOfferUnsafe(self.state.offers)\n    releaseCapacity(self)\n    return core.exitSucceed(message)\n  }\n  return undefined"
+  },
+  {
+    "runtime": "v401",
+    "path": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/src/Deferred.ts",
+    "declaration": "doneUnsafe",
+    "fileSHA256": "3cb80cc3c17148d8c6cc264e80f196ca7799c49423497ca7929d98179c797198",
+    "excerpt": "export const doneUnsafe = <A, E>(self: Deferred<A, E>, effect: Effect<A, E>): boolean => {\n  if (self.effect) return false\n  self.effect = effect\n  if (self.resumes) {\n    // Clear `resumes` before resuming: a waiter resumed with an interrupt\n    // cause dies synchronously inside `resume`, and its await cleanup would\n    // otherwise splice this array mid-iteration and skip the next waiter.\n    const resumes = self.resumes\n    self.resumes = undefined\n    for (let i = 0; i < resumes.length; i++) {\n      resumes[i](effect)\n    }\n  }\n  return true"
+  }
+]

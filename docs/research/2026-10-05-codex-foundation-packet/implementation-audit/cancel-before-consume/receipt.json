@@ -1,0 +1,91 @@
+{
+  "checkedAtUTC": "2026-10-05T16:08:02.367871+00:00",
+  "mainHead": "5ebacecc8631b9897652a86f67b7f1d3097dcffc",
+  "evidence": "Finite deterministic host probe with two positive controls per installed version",
+  "caseCount": 6,
+  "observationsIdenticalAcrossVersions": true,
+  "commands": [
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/probe.mjs /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/rc112.json",
+      "exitCode": 0
+    },
+    {
+      "command": "bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/probe.mjs /Users/pooks/.bun/install/cache/effect@4.0.1@@@1 > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/v401.json",
+      "exitCode": 0
+    }
+  ],
+  "runtimeVersions": {
+    "rc112": {
+      "bun": "1.4.2",
+      "effect": "4.0.0-rc.112",
+      "effectDir": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect",
+      "entry": "installed src",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Effect-TS/effect.git",
+        "directory": "packages/effect"
+      }
+    },
+    "v401": {
+      "bun": "1.4.2",
+      "effect": "4.0.1",
+      "effectDir": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1",
+      "entry": "installed src",
+      "repository": {
+        "type": "git",
+        "url": "https://github.com/Effect-TS/effect.git",
+        "directory": "packages/effect"
+      }
+    }
+  },
+  "pythonReceiptVersion": "3.13.14",
+  "sourceHashes": {
+    "rc112": {
+      "package.json": "0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d",
+      "src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+      "src/Deferred.ts": "78b5d3cd2ad37f9e4f8ebaf465c9375bb982a00bd22a9f3d50ed02e0cb65f0e9",
+      "src/Queue.ts": "dc355d1a09662ae7b023c98ad47b7fe71051becaf9d461f244c37ad0a4d3dc35",
+      "src/Fiber.ts": "53b9006580b03d9f7036229f20712595852521a29370f0fcb2d3a8efa4bba291"
+    },
+    "v401": {
+      "package.json": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+      "src/internal/effect.ts": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+      "src/Deferred.ts": "3cb80cc3c17148d8c6cc264e80f196ca7799c49423497ca7929d98179c797198",
+      "src/Queue.ts": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+      "src/Fiber.ts": "0823a06049643e1b3efbfaabdccc03be1a08b5ae165841d3ef18916e297ee057"
+    }
+  },
+  "rc112ImportedVendorByteEquality": {
+    "internal/effect.ts": true,
+    "Deferred.ts": true,
+    "Queue.ts": true,
+    "Fiber.ts": true
+  },
+  "reviewedAuthorityHashes": {
+    "/Users/pooks/Dev/lean4-effect4/tools/Tools/SemanticsRegistry.lean": "496f0d6bfdf6b7cd2822dce6265dd2f4b8b8893e4940b90d811e97f818293011",
+    "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md": "487ebdb44e09408d00ae86e3a3e5a0b94bb9ffc6c7b18b5cd45d319f26b48d31"
+  },
+  "files": {
+    "probe.mjs": "12711ac2488305103c8291fe79f8bd0a6ebad26db8a27cdc4e9394509f2a8a76",
+    "rc112.json": "fc5df7763bb27a1923d02655e1aac129adc15889f1120cc65886554dffbfc12f",
+    "wording.json": "e047302ea73501b691fbf62a44982b0175aff41e99f0da8bddd0820c83e4e2ec",
+    "language-check.txt": "f9e39fbfa3cee3ad97a25a9c5bb62531deb950eaddd0d9083df38b6c90a93857",
+    "source-cites.json": "bd0ec179f34e043556fc307298fc3faee83c7c74cf66b3da579d2b4bca702910",
+    "v401.json": "99bd37a3179d6f53351228669c1bf4967cedd33e9dd5e2a8b9f2407115e4e4f0",
+    "commands.txt": "9cfb896740db1bab3b9c1adc32b5bfbad1662277895f8a29817cb30d1f6b625d",
+    "review.md": "c89b2b60afd4adae17c839cd5ec2beeb9182310b02e8ce50d279d520fd7710a9"
+  },
+  "limits": [
+    "Three deterministic cases per version only",
+    "No queue waiter is enrolled because data is available",
+    "Pending cause and mask fields are observed read-only",
+    "No fiber or queue private state is mutated",
+    "No Lean proof, repository edit, build, compiler, installation, or timer"
+  ],
+  "languageCheck": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/review.md",
+    "exitCode": 0,
+    "initialExitCode": 1,
+    "repairs": "Qualified two uses of registry as semantics registry; final exit 0."
+  }
+}

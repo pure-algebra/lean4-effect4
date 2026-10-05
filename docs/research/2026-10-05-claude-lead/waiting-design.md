@@ -17,7 +17,8 @@ and for the owner's sign-off before a seat builds it. Five results:
 4. **The waiting wrapper is a derived form** over constructs that exist, plus the mask.
 5. **The Queue's first slice needs no atomic region.** Its step is one atomic update.
 
-Items 1 and 3 are the two points for the owner's sign-off, after Codex's review.
+Items 1 and 3 are the points for the owner's sign-off, with one clause of row 227 (proposal 4).
+Codex's first review of the candidates is folded in; it selects no construct.
 
 ## Question
 
@@ -38,6 +39,7 @@ Items 1 and 3 are the two points for the owner's sign-off, after Codex's review.
 | `docs/research/2026-10-05-claude-lead/queue-probes/composite-queue.ts` on rc.112 and 4.0.1, with bun 1.4.2; each output sits beside it | tested |
 | `docs/research/2026-10-05-claude-lead/queue-probes/native-cancel-after-signal.ts` on rc.112 and 4.0.1 | tested |
 | The public `Fiber` interface (`vendor/effect-4.0.0-rc.112/src/Fiber.ts`), for a field `interruptible` | tested (a search): none |
+| Codex's implementation audit (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/`): `posted-review.md`, `rulings-review.md` and `cancel-before-consume/review.md` | read; its probes were not run again |
 | Any Lean file of the tree, any proof | not written |
 
 ## Findings
@@ -62,6 +64,10 @@ signalled request runs its next step in a task, not inside the signalling step.
   would be the waiter itself, or the interpreter's interface would change.
 - **Candidate A has no faithful printed form.** No public API resolves a `Deferred` now and
   resumes its waiters later. A printed program could only post the whole resolution.
+- **One trace separates A from B** (Codex's review). An await that starts after the signal
+  continues at once under A, through the completed cell (`deferredStore_register_done`,
+  `src/Effect4/Machine/Stores.lean`, and the immediate branch of `evaluatePrim`). Under B the
+  cell is still empty, so the await parks until the helper's task runs.
 
 ### F2. The probe: three deliveries on one composite queue
 
@@ -114,6 +120,14 @@ It discards the fork's answer. Row 225 asks that the task's metadata stay explic
   the delivery is bounded (row 226), and it is not reentrant (row 223).
 - **A receiver stays in its interruptible wait until its task runs.** So an interrupt in the
   posted window withdraws the request, and the next request is signalled (F2's last row).
+- **The next attempt always follows the dispatch.** The hint stays unresolved until the helper's
+  task runs. So a request that awaits late still parks, and its next attempt comes after that
+  task.
+- **The body cannot park.** It is one synchronous row. So the end of the task is the end of the
+  body, and no posted work is left unfinished (Codex's watchpoint on `fireStep`).
+- **The service context is the helper's own,** copied at the fork. The body reads no service,
+  and it does not depend on the signalling fiber's later exit (Codex's watchpoint on
+  `RunFiber.cleared`).
 - **The cost is a helper fiber for each signal:** an identity, a fork record and an exit in the
   observation. The printed program has the same helpers, so the two faces agree on them. The
   module's profile hides them from its clients (row 230).
@@ -146,9 +160,11 @@ restore e                 :=  select saved .bool (interruptible e) e
 - **`saved` is the lexical reference of row 227.** `bind` binds it, and each activation of the
   mask has its own value in the environment. The existing frames restore on every exit.
 - **Under a masked caller `restore` is the identity,** by the `select`.
-- **Nothing needs a refusal for escape.** `saved` is a Boolean. A use outside the mask means what
-  a captured `restore` means in the pin: `interruptible` or the identity. Row 227's refusal can
-  stay as a check on the form, or go.
+- **An escaping reference needs no refusal.** A fork captures its environment, so `saved` can
+  reach a child that outlives the mask (Codex's watchpoint: `actionAt` keeps `Point.env` for the
+  child). There `restore e` means what the pin's captured `restore` means: `interruptible e` or
+  `e`, run in the child. So the Boolean form agrees with the pin on an escaped use too. Row 227
+  refuses such a use; proposal 4 asks to drop that clause.
 - **It is a derived form** (row 214). The form table prints it as
   `Effect.uninterruptibleMask((restore) => …)`. The bare action has no public spelling, because
   the public `Fiber` interface has no `interruptible` field. The printer refuses it outside the
@@ -192,12 +208,16 @@ take q min max :=
 - **Row 222's four observations** are four places of this text: the consuming `Ref.modify`; the
   mask's exit; the caller's continuation; the fiber's exit. An interrupt that is pending when
   the mask ends reaches the caller before the messages do, and the consumption stays.
+- **A request for interruption is not a withdrawal.** An interrupt that arrives after the mask's
+  entry stays pending. If a message is available, the step consumes it, and the mask's end then
+  interrupts the caller (Codex's six cases on rc.112 and 4.0.1). Row 222's premise is that
+  cancellation wins, and in this text it wins only inside `restore`.
 
 The acceptance traces of row 221, and what answers each:
 
 | Trace | What answers it |
 | --- | --- |
-| A notification before the await | The hint is already resolved, so the await answers at once |
+| A notification before the await | The hint resolves only in the helper's task. A request that awaits before that task parks; one that awaits after it answers at once. In both cases the next attempt follows the dispatch. The control asserts no attempt before the task fires, and one after it. An ordinary `Deferred` keeps its inline control |
 | A cancellation after the selection and before the delivery | The wait is still interruptible; the withdrawal passes the signal on (F2's last row) |
 | A late delivery with an old token after rearming | Each wait has a fresh hint; the old helper resolves a hint that nobody awaits |
 
@@ -247,7 +267,8 @@ handles; the mask; then the Queue's first path.
 2. **For sign-off: the mask is F4's form,** with one fiber action that reads the
    interruptibility.
 3. **The mask is its own small slice, before the Queue.**
-4. **Row 227's refusal of an escaping reference** becomes a check on the form, or is dropped.
+4. **For sign-off: drop row 227's clause that refuses an escaping reference,** for the reason
+   of F4. This amends a ruled row, so it needs the owner's word.
 5. **Codex reviews this note** before a seat builds either construct.
 
 ## What this does not establish
@@ -263,3 +284,4 @@ handles; the mask; then the Queue's first path.
   not designed.
 - The budget of F7 is a shape. No bound was computed.
 - What a run records when it ends with a helper posted is open.
+- Codex's control for the order around the dispatch is stated in F5. It was not run.
