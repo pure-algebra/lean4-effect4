@@ -172,6 +172,9 @@ Lane 1, `Effect4.Program`:
    row's template and at every environment, decodes. The `Ref` and `Deferred` rows are templates since the state plan's
    T3a (`(NativeOp.row op).request.instantiate σ`); the decoder reads any value, so the
    instance never decides the decoding.
+   Since the state plan's T3b the eight read-modify-write rows carry a binder term
+   (`NativeOp.binder?`, `src/Effect4/Program/Native.lean`). The decoded store operation holds that
+   term and the node's environment, so the term reads its outer binders and the cell's current value.
 9. `syncOpOf_async_none`.
 
 Lane 2, `Effect4.Machine`:
@@ -283,12 +286,17 @@ numeric heap predicate `Stores.HeapNat` and its lemmas are deleted.
     row on the cell columns (`Typed.CellImplements`). The heap kernels are one theorem
     (`Typed.kernel_step`) over one table (`Typed.kernel_typed`). `Stores.WF` alone is not enough
     (`E4-PROGRESS-CE-001`).
+    A read-modify-write row's pre is that its term maps the cell's type into the row's result
+    (`Typed.TermMaps`). `Typed.syncRow_typed` takes that pre from the checker's typing of the term
+    (`Typed.termMaps_of_typed`, the claim `term-typed-maps`), at the node's typed environment.
 34. `StoreFits.step`: a store step keeps `Stores.WF` when the cell columns are typed at the new
     world. A value that fits is valid in a store whose cell columns are typed
     (`Typed.CellsTyped.fits_validIn`).
 35. `progress`: take a `sync` row's `perform` node in an environment typed at a world whose store
     fits. The node denotes one store operation, which steps without a frontier. Its answer has the
     node's type at a later world whose store fits again.
+    The statement names no row and no term, so the term rows of T3b change its proof only.
+    At a `Ref.modify` the node's answer type is `B`, which the checker binds from the term.
 
 The error-image and allocation lane, `Effect4.Program.ErrorImage` and the laws above `Typed`
 (landed 2026-09-09 in `23e5717` as S2's preparation; the instantiation of the folds into
@@ -329,6 +337,8 @@ meaning (bind a b) env s     = let (ex, s') := meaning a env s
 meaning (perform op r) env s = match syncOpStep o s with some (s', v) => (success v, s')
                                                      | none => (success unit, s)
                                where some o = (evalTerm env r).bind (syncOpOf op env)
+                               a read-modify-write `o` holds the row's term `f` and `env`;
+                               its step evaluates `f` at env ++ [current], once
 meaning (suspend b) env s    = meaning b env s
 meaning (exit b) env s       = let (ex, s') := meaning b env s; (success (reifyExitVal ex), s')
 meaning (catchCause b h)     = on failure c, meaning h (env ++ [exitErr c])

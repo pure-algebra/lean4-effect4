@@ -10,7 +10,8 @@
         ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers what `Ref` answers.
         With them, the term rows' environment (the state plan's T3b): a read-modify-write
         row's term reads an outer binder and the cell's value at the node's level
-        (`pCapture`, `pLevel@2`), with two red controls, the term one level down and one
+        (`pCapture`, `pLevel@2`), and a `Ref.modify` answers a value of another type than
+        the cell's (`pModifyOther`), with two red controls, the term one level down and one
         level up (`pLevel@1`, `pLevel@3`); the values are Lean's
         (Test/Program/CompileContract.lean).
      2  The differential D1 in miniature: the programs of ocaml/eff/goldens/*.bin,
@@ -138,8 +139,9 @@ let rec chain n : E.eff =
    row's binder term runs at the node's environment extended by the cell's current value, so it
    reads the current value at the node's level and every outer binder below it.  In the
    generated engine that environment is the point's carrier (`field Effect4.Machine.SyncOp.env
-   E.t`, externs.txt) and `sh_ref_step` extends it with `E.snoc`.  The two programs and their
-   values are Test/Program/CompileContract.lean's `pRefUpdateCapture` and `pRefUpdateLevel`. *)
+   E.t`, externs.txt) and `sh_ref_step` extends it with `E.snoc`.  The programs and their
+   values are Test/Program/CompileContract.lean's `pRefUpdateCapture`, `pRefUpdateLevel` and
+   `pRefModifyOther`. *)
 let nat_lit n = E.Term_lit (E.Lit_nat n)
 let succ_at n = E.Term_app ("succ", E.Terms_cons (E.Term_var n, E.Terms_nil))
 
@@ -158,6 +160,19 @@ let p_capture : E.eff =
                        ("add", E.Terms_cons (E.Term_var 2, E.Terms_cons (E.Term_var 1, E.Terms_nil)))),
                   E.Term_var 0 ),
               E.Eff_perform (E.Native_op_refGet, E.Term_var 0) ) ) )
+
+(* `Ref.make(5)`, then `Ref.modify(ref, a => ["s", a])`: the row answers the string and stores
+   the number it read (`pRefModifyOther`).  `B` is the term's, not the cell's. *)
+let p_modify_other : E.eff =
+  E.Eff_bind
+    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+      E.Eff_perform
+        ( E.Native_op_refModifyWith
+            (E.Term_app
+               ( "pair",
+                 E.Terms_cons
+                   (E.Term_lit (E.Lit_str "s"), E.Terms_cons (E.Term_var 1, E.Terms_nil)) )),
+          E.Term_var 0 ) )
 
 (* `Ref.make(5)`, a bound `10`, then `Ref.updateAndGet(ref, f)` at a node of level 2. *)
 let p_level (f : E.term) : E.eff =
@@ -272,6 +287,7 @@ let g0 () =
   (* The term rows' environment, on both carriers, against Lean's pinned values. *)
   one "pCapture" p_capture "finished" 1 (Some "success 15");
   one "pLevel@2" (p_level (succ_at 2)) "finished" 1 (Some "success 6");
+  one "pModifyOther" p_modify_other "finished" 1 (Some "success \"s\"");
   (* Red controls.  The image one level down reads the outer `10`, not the cell.  The image one
      level up is out of scope: the store step stops and the machine answers the thunk's pure
      value, the unit. *)

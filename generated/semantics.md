@@ -18,6 +18,7 @@ Store Typing: World-indexed semantic value membership (Fits) and store typings
 | fits-normalize | compatibility | proved | Effect4.Program.Typed.fits_normalize | yes |  |
 | fits-scope-inv | inversion | proved | Effect4.Program.Typed.fits_scope_inv | yes |  |
 | term-maps-mono | monotonicity | proved | Effect4.Program.Typed.TermMaps.mono | yes |  |
+| term-typed-maps | fundamentalProperty | proved | Effect4.Program.Typed.termMaps_of_typed | yes |  |
 | store-safety | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |  |
 
 ### Printed statements
@@ -76,6 +77,22 @@ Literature: ATTAPL, ch. 3, pp. 87–136 — analogy
 
 Literature: Ahmed2004, audit P1 — adaptedResult
 
+**term-typed-maps**
+
+```lean
+∀ {sig : Effect4.Program.Signature Effect4.Program.NativeOp},
+  Eq sig.atomOf Effect4.Program.nativeAtomTy →
+    ∀ {w : Effect4.Program.Typed.World} {tys : Effect4.Program.TyEnv}
+      {env : List Effect4.Machine.Val},
+      Effect4.Program.Typed.EnvTyped w tys env →
+        ∀ {f : Effect4.Program.Term} {A R : Effect4.Program.Ty},
+          Eq (Effect4.Program.termTy sig (instHAppendOfAppend.hAppend tys (List.cons A List.nil)) f)
+              (Option.some R) →
+            Effect4.Program.Typed.TermMaps w f env A R
+```
+
+Literature: Ahmed2004, audit P1 — adaptedResult
+
 Literature: TAPL, §13.5, pp. 165–169 — excludedFeature
 
 ## residual-program-typing
@@ -108,14 +125,17 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 **instantiated-formation**
 
 ```lean
-∀ {row : Effect4.Program.Row} {request : Effect4.Program.Ty} {ty : Effect4.Program.EffTy},
-  Eq (Effect4.Program.rowTy row request) (Option.some ty) →
-    Exists fun bindings =>
-      And
-        (Eq (Effect4.Program.Ty.matchTemplate List.nil row.request.normalize request.normalize)
-          (Option.some bindings))
-        (Effect4.Program.Formation.Formed
-          (Effect4.Program.Formation.instantiatedSites row bindings))
+∀ {row : Effect4.Program.Row} {request : Effect4.Program.Ty} {use : Option Effect4.Program.TermUse}
+  {ty : Effect4.Program.EffTy},
+  Eq (Effect4.Program.rowTy row request use) (Option.some ty) →
+    Exists fun σ =>
+      Exists fun bindings =>
+        And
+          (Eq (Effect4.Program.Ty.matchTemplate List.nil row.request.normalize request.normalize)
+            (Option.some σ))
+          (And (Eq (Effect4.Program.bindTerm σ use) (Except.ok bindings))
+            (Effect4.Program.Formation.Formed
+              (Effect4.Program.Formation.instantiatedSites row bindings)))
 ```
 
 **seq-typed**
@@ -1524,7 +1544,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 4; inherited (provisional): 1370; unplaced: 0.
+Tagged: 4; inherited (provisional): 1371; unplaced: 0.
 
 ## Plan
 
@@ -1537,7 +1557,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `kernel_term_agrees` (proved) | — |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved) | `image_agrees` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved) | — |
 | R5 | open | `build_total` (proved) | — | — |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved) | — |
 | R7 | open | — | — | — |
@@ -1574,41 +1594,40 @@ flowchart LR
   n12["hom_eq_cata_ty<br/>proved"]
   n13["deferredMake_extension<br/>proved"]
   n14["refMake_extension<br/>proved"]
-  n15["errOf_payload<br/>proved"]
-  n16["isPayload_of_hasTy_record<br/>proved"]
+  n15["syncRow_typed<br/>proved"]
+  n16["fits_normalize<br/>proved"]
   n17["normalize_idem<br/>proved"]
   n18["fits_subN<br/>proved"]
-  n19["subN_refl<br/>proved"]
-  n20["fits_normalize<br/>proved"]
-  n21["subN_trans<br/>proved"]
-  n22["order_trans<br/>proved"]
-  n23["reachable_typed<br/>proved"]
-  n24["lawfulSig_of_admitted<br/>proved"]
-  n25["cata_eff_congr_on<br/>proved"]
-  n26["hom_eq_cata_eff<br/>proved"]
-  n27["handles_of_payloadFieldTy<br/>proved"]
-  n28["decision_preserves<br/>proved"]
-  n29["load_typed<br/>proved"]
-  n30["configTyped_frame<br/>proved"]
-  n31["wake_preserves<br/>proved"]
-  n32["mono<br/>proved"]
-  n33["close_typed<br/>proved"]
-  n34["registrationDone_preserves<br/>proved"]
-  n35["launch_preserves<br/>proved"]
-  n36["guardBind_typed<br/>proved"]
-  n37["deliver_preserves<br/>proved"]
-  n38["loop_preserves<br/>proved"]
-  n39["driveState_lift<br/>proved"]
-  n40["denotesTyped<br/>proved"]
-  n41["completionStrong_await<br/>proved"]
-  n42["catchGuard_typed<br/>proved"]
-  n43["closeOrder_eq<br/>proved"]
-  n44["fits_scope_inv<br/>proved"]
-  n45["seq_typed<br/>proved"]
-  n46["memoBuild_extension<br/>proved"]
-  n47["allGuard_typed<br/>proved"]
-  n48["provideLayerArm<br/>proved"]
-  n49["onExit_typed<br/>proved"]
+  n19["subN_trans<br/>proved"]
+  n20["subN_refl<br/>proved"]
+  n21["errOf_payload<br/>proved"]
+  n22["isPayload_of_hasTy_record<br/>proved"]
+  n23["order_trans<br/>proved"]
+  n24["reachable_typed<br/>proved"]
+  n25["lawfulSig_of_admitted<br/>proved"]
+  n26["cata_eff_congr_on<br/>proved"]
+  n27["hom_eq_cata_eff<br/>proved"]
+  n28["termMaps_of_typed<br/>proved"]
+  n29["handles_of_payloadFieldTy<br/>proved"]
+  n30["decision_preserves<br/>proved"]
+  n31["load_typed<br/>proved"]
+  n32["configTyped_frame<br/>proved"]
+  n33["wake_preserves<br/>proved"]
+  n34["mono<br/>proved"]
+  n35["close_typed<br/>proved"]
+  n36["registrationDone_preserves<br/>proved"]
+  n37["launch_preserves<br/>proved"]
+  n38["guardBind_typed<br/>proved"]
+  n39["deliver_preserves<br/>proved"]
+  n40["loop_preserves<br/>proved"]
+  n41["driveState_lift<br/>proved"]
+  n42["denotesTyped<br/>proved"]
+  n43["completionStrong_await<br/>proved"]
+  n44["catchGuard_typed<br/>proved"]
+  n45["closeOrder_eq<br/>proved"]
+  n46["fits_scope_inv<br/>proved"]
+  n47["seq_typed<br/>proved"]
+  n48["memoBuild_extension<br/>proved"]
   n3 --> n7
   n3 --> n8
   n4 --> n7
@@ -1625,15 +1644,16 @@ flowchart LR
   n5 --> n17
   n5 --> n18
   n5 --> n19
-  n5 --> n20
-  n5 --> n21
   n5 --> n0
   n5 --> n1
+  n5 --> n20
+  n5 --> n21
   n5 --> n22
-  n6 --> n23
+  n5 --> n23
   n6 --> n24
-  n7 --> n25
+  n6 --> n25
   n7 --> n26
+  n7 --> n27
   n8 --> n10
   n8 --> n11
   n8 --> n12
@@ -1644,214 +1664,200 @@ flowchart LR
   n8 --> n17
   n8 --> n18
   n8 --> n19
-  n8 --> n20
-  n8 --> n21
   n8 --> n0
   n8 --> n1
+  n8 --> n20
+  n8 --> n21
   n8 --> n22
-  n16 --> n27
-  n18 --> n21
-  n18 --> n20
-  n20 --> n21
-  n20 --> n17
-  n23 --> n28
-  n23 --> n29
-  n23 --> n22
-  n23 --> n10
-  n24 --> n2
+  n8 --> n23
+  n15 --> n16
+  n15 --> n19
+  n15 --> n18
+  n15 --> n28
+  n15 --> n12
+  n15 --> n21
+  n15 --> n22
+  n15 --> n17
+  n15 --> n20
+  n16 --> n19
+  n16 --> n17
+  n18 --> n19
+  n18 --> n16
+  n22 --> n29
+  n24 --> n30
+  n24 --> n31
+  n24 --> n23
+  n24 --> n10
+  n25 --> n2
+  n28 --> n16
+  n28 --> n17
   n28 --> n18
-  n28 --> n10
-  n28 --> n21
-  n28 --> n30
-  n28 --> n11
+  n28 --> n19
   n28 --> n12
-  n28 --> n31
-  n28 --> n22
-  n28 --> n32
-  n28 --> n33
-  n28 --> n34
-  n28 --> n35
-  n28 --> n36
-  n28 --> n37
-  n28 --> n38
-  n28 --> n39
-  n29 --> n40
-  n29 --> n0
-  n29 --> n1
-  n30 --> n11
-  n30 --> n22
+  n28 --> n11
+  n30 --> n18
+  n30 --> n10
+  n30 --> n19
   n30 --> n32
+  n30 --> n11
   n30 --> n12
-  n31 --> n10
-  n31 --> n30
-  n31 --> n11
-  n31 --> n41
-  n31 --> n12
-  n32 --> n22
-  n34 --> n11
-  n34 --> n33
-  n34 --> n18
-  n34 --> n10
-  n35 --> n19
-  n35 --> n18
-  n35 --> n11
-  n35 --> n22
-  n35 --> n32
-  n35 --> n10
-  n36 --> n33
-  n37 --> n10
+  n30 --> n33
+  n30 --> n23
+  n30 --> n34
+  n30 --> n35
+  n30 --> n36
+  n30 --> n37
+  n30 --> n38
+  n30 --> n39
+  n30 --> n40
+  n30 --> n41
+  n31 --> n42
+  n31 --> n0
+  n31 --> n1
+  n32 --> n11
+  n32 --> n23
+  n32 --> n34
+  n32 --> n12
+  n33 --> n10
+  n33 --> n32
+  n33 --> n11
+  n33 --> n43
+  n33 --> n12
+  n34 --> n23
+  n36 --> n11
+  n36 --> n35
+  n36 --> n18
+  n36 --> n10
+  n37 --> n20
   n37 --> n18
   n37 --> n11
-  n37 --> n42
-  n37 --> n19
-  n37 --> n36
-  n37 --> n43
-  n37 --> n44
-  n37 --> n22
-  n37 --> n45
-  n37 --> n32
-  n37 --> n30
-  n37 --> n12
-  n37 --> n41
-  n37 --> n46
-  n37 --> n13
-  n37 --> n14
-  n37 --> n40
-  n37 --> n20
-  n37 --> n17
-  n37 --> n21
-  n37 --> n15
-  n37 --> n16
-  n37 --> n47
-  n37 --> n33
-  n37 --> n48
-  n37 --> n49
-  n38 --> n10
-  n38 --> n18
-  n38 --> n11
-  n38 --> n42
-  n38 --> n19
-  n38 --> n36
-  n38 --> n43
-  n38 --> n44
-  n38 --> n22
-  n38 --> n45
-  n38 --> n32
-  n38 --> n30
-  n38 --> n12
-  n38 --> n41
-  n38 --> n46
-  n38 --> n13
-  n38 --> n14
-  n38 --> n40
-  n38 --> n20
-  n38 --> n17
-  n38 --> n21
-  n38 --> n15
-  n38 --> n16
-  n38 --> n47
-  n38 --> n33
-  n38 --> n48
-  n38 --> n49
-  n40 --> n48
-  n40 --> n11
+  n37 --> n23
+  n37 --> n34
+  n37 --> n10
+  n38 --> n35
+  n39 --> n10
+  n39 --> n18
+  n39 --> n11
+  n39 --> n44
+  n39 --> n20
+  n39 --> n38
+  n39 --> n45
+  n39 --> n46
+  n39 --> n23
+  n39 --> n47
+  n39 --> n34
+  n39 --> n32
+  n39 --> n12
+  n39 --> n43
+  n39 --> n48
+  n39 --> n13
+  n39 --> n14
+  n39 --> n42
+  n39 --> n16
+  n39 --> n17
+  n39 --> n19
+  n39 --> n15
+  n39 --> n21
+  n39 --> n22
+  n39 --> n35
+  n40 --> n10
   n40 --> n18
-  n40 --> n20
-  n40 --> n17
-  n40 --> n21
-  n40 --> n12
-  n40 --> n22
-  n40 --> n19
-  n40 --> n42
-  n40 --> n49
-  n40 --> n36
+  n40 --> n11
   n40 --> n44
-  n40 --> n15
-  n40 --> n16
+  n40 --> n20
+  n40 --> n38
+  n40 --> n45
+  n40 --> n46
+  n40 --> n23
   n40 --> n47
-  n41 --> n21
+  n40 --> n34
+  n40 --> n32
+  n40 --> n12
+  n40 --> n43
+  n40 --> n48
+  n40 --> n13
+  n40 --> n14
+  n40 --> n42
+  n40 --> n16
+  n40 --> n17
+  n40 --> n19
+  n40 --> n15
+  n40 --> n21
+  n40 --> n22
+  n40 --> n35
+  n42 --> n11
   n42 --> n18
-  n42 --> n36
-  n45 --> n19
-  n45 --> n18
-  n45 --> n36
-  n47 --> n36
-  n48 --> n18
-  n48 --> n10
-  n48 --> n21
-  n48 --> n20
-  n48 --> n12
-  n48 --> n15
-  n48 --> n16
-  n48 --> n17
-  n48 --> n19
-  n48 --> n22
-  n48 --> n49
-  n48 --> n36
-  n48 --> n11
-  n48 --> n44
-  n48 --> n45
-  n48 --> n42
-  n49 --> n18
-  n49 --> n11
-  n49 --> n42
-  n49 --> n19
-  n49 --> n36
-  n49 --> n47
+  n42 --> n16
+  n42 --> n17
+  n42 --> n19
+  n42 --> n12
+  n42 --> n23
+  n42 --> n20
+  n42 --> n44
+  n42 --> n38
+  n42 --> n46
+  n42 --> n15
+  n42 --> n21
+  n42 --> n22
+  n43 --> n19
+  n44 --> n18
+  n44 --> n38
+  n47 --> n20
+  n47 --> n18
+  n47 --> n38
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `check_sound` | proved | — | — | 133 | 224 |
-| `check_complete` | proved | — | — | 68 | 227 |
-| `admitSig_ok_iff` | proved | — | — | 44 | 147 |
-| `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` | 75 | 334 |
-| `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 103 | 1112 |
-| `meaningB_typed_app` | proved | — | `check_restrict`, `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `fits_subN`, `subN_refl`, `fits_normalize`, `subN_trans`, `check_sound`, `check_complete`, `order_trans` | 812 | 887 |
-| `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` | 80 | 1197 |
-| `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 70 | 289 |
-| `meaning_typed` | proved | — | `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `fits_subN`, `subN_refl`, `fits_normalize`, `subN_trans`, `check_sound`, `check_complete`, `order_trans` | 770 | 872 |
-| `run_eq_meaning` | proved | — | — | 310 | 905 |
+| `check_sound` | proved | — | — | 135 | 234 |
+| `check_complete` | proved | — | — | 70 | 237 |
+| `admitSig_ok_iff` | proved | — | — | 45 | 162 |
+| `meaning_typed_app` | proved | — | `check_restrict`, `meaning_typed` | 76 | 356 |
+| `run_typed_app` | proved | — | `check_restrict`, `meaning_typed`, `run_eq_meaning` | 104 | 1130 |
+| `meaningB_typed_app` | proved | — | `check_restrict`, `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `fits_normalize`, `normalize_idem`, `fits_subN`, `subN_trans`, `check_sound`, `check_complete`, `subN_refl`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` | 790 | 898 |
+| `reachable_typed_admitted` | proved | — | `reachable_typed`, `lawfulSig_of_admitted` | 80 | 1215 |
+| `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 72 | 299 |
+| `meaning_typed` | proved | — | `order_refl`, `fits_mono`, `hom_eq_cata_ty`, `deferredMake_extension`, `refMake_extension`, `syncRow_typed`, `fits_normalize`, `normalize_idem`, `fits_subN`, `subN_trans`, `check_sound`, `check_complete`, `subN_refl`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans` | 747 | 883 |
+| `run_eq_meaning` | proved | — | — | 310 | 913 |
 | `order_refl` | proved | — | — | 57 | 200 |
 | `fits_mono` | proved | — | — | 80 | 230 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `deferredMake_extension` | proved | — | — | 112 | 335 |
 | `refMake_extension` | proved | — | — | 113 | 335 |
-| `errOf_payload` | proved | — | — | 8 | 15 |
-| `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 127 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 388 | 683 |
+| `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 224 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 224 |
-| `subN_refl` | proved | — | — | 38 | 44 |
-| `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 224 |
 | `subN_trans` | proved | — | — | 96 | 53 |
+| `subN_refl` | proved | — | — | 38 | 44 |
+| `errOf_payload` | proved | — | — | 8 | 15 |
+| `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 127 |
 | `order_trans` | proved | — | — | 57 | 201 |
-| `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 86 | 1218 |
-| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 148 |
+| `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 86 | 1236 |
+| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 42 | 163 |
 | `cata_eff_congr_on` | proved | — | — | 63 | 71 |
 | `hom_eq_cata_eff` | proved | — | — | 63 | 77 |
+| `termMaps_of_typed` | proved | — | `fits_normalize`, `normalize_idem`, `fits_subN`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono` | 461 | 411 |
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 130 |
-| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1050 | 1511 |
-| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1142 |
-| `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 334 | 1193 |
-| `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` | 237 | 1336 |
+| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1049 | 1527 |
+| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1160 |
+| `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 334 | 1211 |
+| `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` | 237 | 1354 |
 | `mono` | proved | — | `order_trans` | 57 | 266 |
-| `close_typed` | proved | — | — | 72 | 597 |
-| `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 326 | 1300 |
-| `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 361 | 1319 |
+| `close_typed` | proved | — | — | 72 | 619 |
+| `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 326 | 1318 |
+| `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 361 | 1337 |
 | `guardBind_typed` | proved | — | `close_typed` | 54 | 250 |
-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1984 | 1561 |
-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1991 | 1561 |
+| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1973 | 1576 |
+| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1980 | 1576 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
-| `denotesTyped` | proved | — | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 785 | 856 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 773 | 871 |
 | `completionStrong_await` | proved | — | `subN_trans` | 250 | 237 |
 | `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` | 56 | 241 |
 | `closeOrder_eq` | proved | — | — | 0 | 4 |
 | `fits_scope_inv` | proved | — | — | 54 | 199 |
 | `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` | 58 | 244 |
 | `memoBuild_extension` | proved | — | — | 111 | 335 |
-| `allGuard_typed` | proved | — | `guardBind_typed` | 54 | 241 |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `fits_normalize`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl`, `order_trans`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 821 | 898 |
-| `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 89 | 624 |
 
 ### R2: Extension is conservative: C1–C8 over DI-47's relation on Σ_app
 
@@ -1878,11 +1884,11 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `check_ext` | proved | — | `check_sound`, `check_complete` | 65 | 217 |
-| `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 70 | 289 |
-| `lawful_append` | proved | — | — | 40 | 142 |
-| `check_sound` | proved | — | — | 133 | 224 |
-| `check_complete` | proved | — | — | 68 | 227 |
+| `check_ext` | proved | — | `check_sound`, `check_complete` | 67 | 227 |
+| `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 72 | 299 |
+| `lawful_append` | proved | — | — | 41 | 157 |
+| `check_sound` | proved | — | — | 135 | 234 |
+| `check_complete` | proved | — | — | 70 | 237 |
 | `cata_eff_congr_on` | proved | — | — | 63 | 71 |
 | `hom_eq_cata_eff` | proved | — | — | 63 | 77 |
 
@@ -1940,7 +1946,7 @@ flowchart LR
 | `readTerm_printTerm` | proved | — | — | 149 | 194 |
 | `type_metadata_exact` | proved | — | — | 61 | 86 |
 | `errOf_valOfErr` | proved | — | `errOf_payload` | 4 | 16 |
-| `admitModule_classDecls` | proved | — | `checkInput_eq_none_iff` | 140 | 685 |
+| `admitModule_classDecls` | proved | — | `checkInput_eq_none_iff` | 140 | 709 |
 | `errOf_ne_boom_of_supported` | proved | — | `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record` | 230 | 225 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 127 |
@@ -1951,9 +1957,7 @@ flowchart LR
 
 ### R4: State: the world types every cell at any type, with rows as templates
 
-- Open: FnName retires: the store runs binder terms since T2, and a NativeOp row hands it its name's lowering, which runs the name's kernel on every number (kernel_term_agrees); the rows carry terms at T3b (decisions row 43; state plan T3b)
-- Open: the read-modify-write rows as templates: the eight rows stay at refOf nat, and modify answering B while storing A, until their binder terms land (decisions rows 42–43; state plan T3b); the Ref and Deferred rows are templates and Deferred.make carries its type arguments since T3a
-- Open: the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed (decisions rows 42–43, step 5; state plan T5)
+- Open: the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed and read as lambdas (since T3b the faces spell a read-modify-write row's term by one of five names, FnName.image, and refuse any other term by name, binderTerm), and an operation's binder term as a program annotation with the integer scan over it (decisions rows 42–43, step 5, and row 212; state plan T5)
 - Open: fold-typed-atomic-update (proposed claim; store-typing): the pure list fold with two binders, the accumulator and the element, at any types; listTake and listDrop only for a demonstrated consumer, and no counted loop: typing, scoping, capture, compilation, printing and exact reading, with Ref.modify one step that answers B and stores A; its first consumer is the Queue's service pass (decisions row 228; after T3b)
 - Open: handle-identity-laws (proposed claim; store-typing): the identity of a handle in a term: equality of two Ref handles or two Deferred handles of one kind by identity, never by payload; a cell that holds a list of handles, with membership, fresh allocation and world extension laws, and the identity correspondence in each target's relation (decisions row 229)
 - Open: atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)
@@ -1966,13 +1970,44 @@ flowchart LR
   n2["refMake_extension<br/>proved"]
   n3["deferredMake_extension<br/>proved"]
   n4["memoBuild_extension<br/>proved"]
-  n5["perform_scoped_iff<br/>proved"]
-  n6["matchTemplate_complete_anchored<br/>proved"]
-  n7["mono<br/>proved"]
-  n8["kernel_term_agrees<br/>proved"]
-  n9["normalize_idem<br/>proved"]
-  n6 --> n9
-  n7 --> n1
+  n5["image_agrees<br/>proved"]
+  n6["perform_scoped_iff<br/>proved"]
+  n7["matchTemplate_complete_anchored<br/>proved"]
+  n8["mono<br/>proved"]
+  n9["syncRow_typed<br/>proved"]
+  n10["termMaps_of_typed<br/>proved"]
+  n11["normalize_idem<br/>proved"]
+  n12["fits_normalize<br/>proved"]
+  n13["subN_trans<br/>proved"]
+  n14["fits_subN<br/>proved"]
+  n15["hom_eq_cata_ty<br/>proved"]
+  n16["errOf_payload<br/>proved"]
+  n17["isPayload_of_hasTy_record<br/>proved"]
+  n18["subN_refl<br/>proved"]
+  n19["fits_mono<br/>proved"]
+  n20["handles_of_payloadFieldTy<br/>proved"]
+  n7 --> n11
+  n8 --> n1
+  n9 --> n12
+  n9 --> n13
+  n9 --> n14
+  n9 --> n10
+  n9 --> n15
+  n9 --> n16
+  n9 --> n17
+  n9 --> n11
+  n9 --> n18
+  n10 --> n12
+  n10 --> n11
+  n10 --> n14
+  n10 --> n13
+  n10 --> n15
+  n10 --> n19
+  n12 --> n13
+  n12 --> n11
+  n14 --> n13
+  n14 --> n12
+  n17 --> n20
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -1982,11 +2017,22 @@ flowchart LR
 | `refMake_extension` | proved | — | — | 113 | 335 |
 | `deferredMake_extension` | proved | — | — | 112 | 335 |
 | `memoBuild_extension` | proved | — | — | 111 | 335 |
+| `image_agrees` | proved | — | — | 11 | 110 |
 | `perform_scoped_iff` | proved | — | — | 0 | 71 |
 | `matchTemplate_complete_anchored` | proved | — | `normalize_idem` | 233 | 124 |
 | `mono` | proved | — | `order_trans` | 57 | 266 |
-| `kernel_term_agrees` | proved | — | — | 13 | 124 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 388 | 683 |
+| `termMaps_of_typed` | proved | — | `fits_normalize`, `normalize_idem`, `fits_subN`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono` | 461 | 411 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
+| `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 224 |
+| `subN_trans` | proved | — | — | 96 | 53 |
+| `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 224 |
+| `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
+| `errOf_payload` | proved | — | — | 8 | 15 |
+| `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 127 |
+| `subN_refl` | proved | — | — | 38 | 44 |
+| `fits_mono` | proved | — | — | 80 | 230 |
+| `handles_of_payloadFieldTy` | proved | — | — | 44 | 130 |
 
 ### R5: Services: the service table, layers and provision
 
@@ -2006,7 +2052,7 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `build_total` | proved | — | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 170 | 249 |
+| `build_total` | proved | — | `satisfies_union`, `satisfies_weaken`, `satisfies_empty` | 172 | 259 |
 | `satisfies_union` | proved | — | — | 20 | 33 |
 | `satisfies_weaken` | proved | — | — | 0 | 25 |
 | `satisfies_empty` | proved | — | — | 2 | 26 |
@@ -2059,11 +2105,13 @@ flowchart LR
   n33["deferredMake_extension<br/>proved"]
   n34["refMake_extension<br/>proved"]
   n35["normalize_idem<br/>proved"]
-  n36["errOf_payload<br/>proved"]
-  n37["isPayload_of_hasTy_record<br/>proved"]
-  n38["allGuard_typed<br/>proved"]
-  n39["provideLayerArm<br/>proved"]
-  n40["onExit_typed<br/>proved"]
+  n36["syncRow_typed<br/>proved"]
+  n37["errOf_payload<br/>proved"]
+  n38["isPayload_of_hasTy_record<br/>proved"]
+  n39["allGuard_typed<br/>proved"]
+  n40["provideLayerArm<br/>proved"]
+  n41["onExit_typed<br/>proved"]
+  n42["termMaps_of_typed<br/>proved"]
   n0 --> n4
   n0 --> n5
   n0 --> n6
@@ -2134,9 +2182,10 @@ flowchart LR
   n19 --> n36
   n19 --> n37
   n19 --> n38
-  n19 --> n15
   n19 --> n39
+  n19 --> n15
   n19 --> n40
+  n19 --> n41
   n20 --> n7
   n20 --> n8
   n20 --> n11
@@ -2161,10 +2210,11 @@ flowchart LR
   n20 --> n36
   n20 --> n37
   n20 --> n38
-  n20 --> n15
   n20 --> n39
+  n20 --> n15
   n20 --> n40
-  n22 --> n39
+  n20 --> n41
+  n22 --> n40
   n22 --> n11
   n22 --> n8
   n22 --> n25
@@ -2174,12 +2224,13 @@ flowchart LR
   n22 --> n6
   n22 --> n27
   n22 --> n28
-  n22 --> n40
+  n22 --> n41
   n22 --> n18
   n22 --> n30
   n22 --> n36
   n22 --> n37
   n22 --> n38
+  n22 --> n39
   n25 --> n9
   n25 --> n35
   n26 --> n9
@@ -2188,59 +2239,75 @@ flowchart LR
   n31 --> n27
   n31 --> n8
   n31 --> n18
-  n37 --> n3
-  n38 --> n18
-  n39 --> n8
-  n39 --> n7
-  n39 --> n9
-  n39 --> n25
-  n39 --> n12
-  n39 --> n36
-  n39 --> n37
-  n39 --> n35
-  n39 --> n27
-  n39 --> n6
-  n39 --> n40
+  n36 --> n25
+  n36 --> n9
+  n36 --> n8
+  n36 --> n42
+  n36 --> n12
+  n36 --> n37
+  n36 --> n38
+  n36 --> n35
+  n36 --> n27
+  n38 --> n3
   n39 --> n18
-  n39 --> n11
-  n39 --> n30
-  n39 --> n31
-  n39 --> n28
   n40 --> n8
-  n40 --> n11
-  n40 --> n28
-  n40 --> n27
-  n40 --> n18
+  n40 --> n7
+  n40 --> n12
+  n40 --> n9
+  n40 --> n25
+  n40 --> n36
+  n40 --> n35
+  n40 --> n37
   n40 --> n38
+  n40 --> n6
+  n40 --> n27
+  n40 --> n41
+  n40 --> n18
+  n40 --> n11
+  n40 --> n30
+  n40 --> n31
+  n40 --> n28
+  n41 --> n8
+  n41 --> n11
+  n41 --> n28
+  n41 --> n27
+  n41 --> n18
+  n41 --> n39
+  n42 --> n25
+  n42 --> n35
+  n42 --> n8
+  n42 --> n9
+  n42 --> n12
+  n42 --> n11
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 86 | 1218 |
-| `preflight_success_prepared_fits` | proved | — | — | 101 | 748 |
-| `preflight_failure_noShapeDefect` | proved | — | — | 66 | 273 |
+| `reachable_typed` | proved | — | `decision_preserves`, `load_typed`, `order_trans`, `order_refl` | 86 | 1236 |
+| `preflight_success_prepared_fits` | proved | — | — | 100 | 748 |
+| `preflight_failure_noShapeDefect` | proved | — | — | 66 | 280 |
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 130 |
-| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1050 | 1511 |
-| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1142 |
+| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1049 | 1527 |
+| `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 106 | 1160 |
 | `order_trans` | proved | — | — | 57 | 201 |
 | `order_refl` | proved | — | — | 57 | 200 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 224 |
 | `subN_trans` | proved | — | — | 96 | 53 |
-| `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 334 | 1193 |
+| `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 334 | 1211 |
 | `fits_mono` | proved | — | — | 80 | 230 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
-| `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` | 237 | 1336 |
+| `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` | 237 | 1354 |
 | `mono` | proved | — | `order_trans` | 57 | 266 |
-| `close_typed` | proved | — | — | 72 | 597 |
-| `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 326 | 1300 |
-| `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 361 | 1319 |
+| `close_typed` | proved | — | — | 72 | 619 |
+| `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 326 | 1318 |
+| `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 361 | 1337 |
 | `guardBind_typed` | proved | — | `close_typed` | 54 | 250 |
-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1984 | 1561 |
-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1991 | 1561 |
+| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1973 | 1576 |
+| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1980 | 1576 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
-| `denotesTyped` | proved | — | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 785 | 856 |
-| `check_sound` | proved | — | — | 133 | 224 |
-| `check_complete` | proved | — | — | 68 | 227 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 773 | 871 |
+| `check_sound` | proved | — | — | 135 | 234 |
+| `check_complete` | proved | — | — | 70 | 237 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 224 |
 | `completionStrong_await` | proved | — | `subN_trans` | 250 | 237 |
 | `subN_refl` | proved | — | — | 38 | 44 |
@@ -2252,11 +2319,13 @@ flowchart LR
 | `deferredMake_extension` | proved | — | — | 112 | 335 |
 | `refMake_extension` | proved | — | — | 113 | 335 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 388 | 683 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 127 |
 | `allGuard_typed` | proved | — | `guardBind_typed` | 54 | 241 |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `fits_normalize`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl`, `order_trans`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 821 | 898 |
-| `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 89 | 624 |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `syncRow_typed`, `normalize_idem`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 810 | 913 |
+| `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 89 | 646 |
+| `termMaps_of_typed` | proved | — | `fits_normalize`, `normalize_idem`, `fits_subN`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono` | 461 | 411 |
 
 ### R7: Retained behaviour: a resolved code entry is typed at its reference's type
 
@@ -2294,11 +2363,11 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `read_print` | proved | — | `readTerm_printTerm` | 284 | 512 |
-| `read_exact` | proved | — | — | 227 | 467 |
-| `run_eq_meaning` | proved | — | — | 310 | 905 |
-| `loopAgreement` | proved | — | — | 339 | 916 |
-| `run_eq_ref` | proved | — | — | 877 | 1058 |
+| `read_print` | proved | — | `readTerm_printTerm` | 285 | 516 |
+| `read_exact` | proved | — | — | 230 | 472 |
+| `run_eq_meaning` | proved | — | — | 310 | 913 |
+| `loopAgreement` | proved | — | — | 339 | 924 |
+| `run_eq_ref` | proved | — | — | 877 | 1066 |
 | `readTerm_printTerm` | proved | — | — | 149 | 194 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
@@ -2344,12 +2413,13 @@ flowchart LR
   n34["deferredMake_extension<br/>proved"]
   n35["refMake_extension<br/>proved"]
   n36["normalize_idem<br/>proved"]
-  n37["errOf_payload<br/>proved"]
-  n38["isPayload_of_hasTy_record<br/>proved"]
-  n39["allGuard_typed<br/>proved"]
-  n40["provideLayerArm<br/>proved"]
-  n41["onExit_typed<br/>proved"]
-  n42["handles_of_payloadFieldTy<br/>proved"]
+  n37["syncRow_typed<br/>proved"]
+  n38["errOf_payload<br/>proved"]
+  n39["isPayload_of_hasTy_record<br/>proved"]
+  n40["allGuard_typed<br/>proved"]
+  n41["provideLayerArm<br/>proved"]
+  n42["onExit_typed<br/>proved"]
+  n43["termMaps_of_typed<br/>proved"]
   n0 --> n2
   n0 --> n3
   n0 --> n4
@@ -2424,9 +2494,10 @@ flowchart LR
   n19 --> n37
   n19 --> n38
   n19 --> n39
-  n19 --> n15
   n19 --> n40
+  n19 --> n15
   n19 --> n41
+  n19 --> n42
   n20 --> n7
   n20 --> n6
   n20 --> n10
@@ -2451,10 +2522,11 @@ flowchart LR
   n20 --> n37
   n20 --> n38
   n20 --> n39
-  n20 --> n15
   n20 --> n40
+  n20 --> n15
   n20 --> n41
-  n22 --> n40
+  n20 --> n42
+  n22 --> n41
   n22 --> n10
   n22 --> n6
   n22 --> n26
@@ -2464,12 +2536,13 @@ flowchart LR
   n22 --> n13
   n22 --> n28
   n22 --> n29
-  n22 --> n41
+  n22 --> n42
   n22 --> n18
   n22 --> n31
   n22 --> n37
   n22 --> n38
   n22 --> n39
+  n22 --> n40
   n26 --> n8
   n26 --> n36
   n27 --> n8
@@ -2478,60 +2551,75 @@ flowchart LR
   n32 --> n28
   n32 --> n6
   n32 --> n18
-  n38 --> n42
-  n39 --> n18
-  n40 --> n6
-  n40 --> n7
-  n40 --> n8
-  n40 --> n26
-  n40 --> n11
-  n40 --> n37
-  n40 --> n38
-  n40 --> n36
-  n40 --> n28
-  n40 --> n13
-  n40 --> n41
+  n37 --> n26
+  n37 --> n8
+  n37 --> n6
+  n37 --> n43
+  n37 --> n11
+  n37 --> n38
+  n37 --> n39
+  n37 --> n36
+  n37 --> n28
   n40 --> n18
-  n40 --> n10
-  n40 --> n31
-  n40 --> n32
-  n40 --> n29
   n41 --> n6
-  n41 --> n10
-  n41 --> n29
-  n41 --> n28
-  n41 --> n18
+  n41 --> n7
+  n41 --> n11
+  n41 --> n8
+  n41 --> n26
+  n41 --> n37
+  n41 --> n36
+  n41 --> n38
   n41 --> n39
+  n41 --> n13
+  n41 --> n28
+  n41 --> n42
+  n41 --> n18
+  n41 --> n10
+  n41 --> n31
+  n41 --> n32
+  n41 --> n29
+  n42 --> n6
+  n42 --> n10
+  n42 --> n29
+  n42 --> n28
+  n42 --> n18
+  n42 --> n40
+  n43 --> n26
+  n43 --> n36
+  n43 --> n6
+  n43 --> n8
+  n43 --> n11
+  n43 --> n10
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `m7_proved` | proved | — | `decision_preserves`, `loadsTyped`, `m7_of_ledger` | 0 | 3 |
-| `m7_admitted` | proved | — | `m7_proved`, `lawfulSig_of_admitted` | 54 | 357 |
-| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1050 | 1511 |
-| `loadsTyped` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 107 | 1144 |
-| `m7_of_ledger` | proved | — | `order_trans`, `order_refl` | 918 | 1414 |
-| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 41 | 148 |
+| `m7_admitted` | proved | — | `m7_proved`, `lawfulSig_of_admitted` | 54 | 379 |
+| `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1049 | 1527 |
+| `loadsTyped` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 107 | 1162 |
+| `m7_of_ledger` | proved | — | `order_trans`, `order_refl` | 918 | 1432 |
+| `lawfulSig_of_admitted` | proved | — | `admitSig_ok_iff` | 42 | 163 |
 | `fits_subN` | proved | — | `subN_trans`, `fits_normalize` | 247 | 224 |
 | `order_refl` | proved | — | — | 57 | 200 |
 | `subN_trans` | proved | — | — | 96 | 53 |
-| `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 334 | 1193 |
+| `configTyped_frame` | proved | — | `fits_mono`, `order_trans`, `mono`, `hom_eq_cata_ty` | 334 | 1211 |
 | `fits_mono` | proved | — | — | 80 | 230 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
-| `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` | 237 | 1336 |
+| `wake_preserves` | proved | — | `order_refl`, `configTyped_frame`, `fits_mono`, `completionStrong_await`, `hom_eq_cata_ty` | 237 | 1354 |
 | `order_trans` | proved | — | — | 57 | 201 |
 | `mono` | proved | — | `order_trans` | 57 | 266 |
-| `close_typed` | proved | — | — | 72 | 597 |
-| `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 326 | 1300 |
-| `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 361 | 1319 |
+| `close_typed` | proved | — | — | 72 | 619 |
+| `registrationDone_preserves` | proved | — | `fits_mono`, `close_typed`, `fits_subN`, `order_refl` | 326 | 1318 |
+| `launch_preserves` | proved | — | `subN_refl`, `fits_subN`, `fits_mono`, `order_trans`, `mono`, `order_refl` | 361 | 1337 |
 | `guardBind_typed` | proved | — | `close_typed` | 54 | 250 |
-| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1984 | 1561 |
-| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1991 | 1561 |
+| `deliver_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1973 | 1576 |
+| `loop_preserves` | proved | — | `order_refl`, `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `closeOrder_eq`, `fits_scope_inv`, `order_trans`, `seq_typed`, `mono`, `configTyped_frame`, `hom_eq_cata_ty`, `completionStrong_await`, `memoBuild_extension`, `deferredMake_extension`, `refMake_extension`, `denotesTyped`, `fits_normalize`, `normalize_idem`, `subN_trans`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed`, `close_typed`, `provideLayerArm`, `onExit_typed` | 1980 | 1576 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
-| `denotesTyped` | proved | — | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 785 | 856 |
-| `check_sound` | proved | — | — | 133 | 224 |
-| `check_complete` | proved | — | — | 68 | 227 |
-| `admitSig_ok_iff` | proved | — | — | 44 | 147 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_mono`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 773 | 871 |
+| `check_sound` | proved | — | — | 135 | 234 |
+| `check_complete` | proved | — | — | 70 | 237 |
+| `admitSig_ok_iff` | proved | — | — | 45 | 162 |
 | `fits_normalize` | proved | — | `subN_trans`, `normalize_idem` | 264 | 224 |
 | `completionStrong_await` | proved | — | `subN_trans` | 250 | 237 |
 | `subN_refl` | proved | — | — | 38 | 44 |
@@ -2543,12 +2631,13 @@ flowchart LR
 | `deferredMake_extension` | proved | — | — | 112 | 335 |
 | `refMake_extension` | proved | — | — | 113 | 335 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
+| `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 388 | 683 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 127 |
 | `allGuard_typed` | proved | — | `guardBind_typed` | 54 | 241 |
-| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `fits_normalize`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl`, `order_trans`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 821 | 898 |
-| `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 89 | 624 |
-| `handles_of_payloadFieldTy` | proved | — | — | 44 | 130 |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `syncRow_typed`, `normalize_idem`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 810 | 913 |
+| `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 89 | 646 |
+| `termMaps_of_typed` | proved | — | `fits_normalize`, `normalize_idem`, `fits_subN`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono` | 461 | 411 |
 
 ### R10: Library code inherits theorems: a composed module's law is Agrees profile module expansion
 
@@ -2630,28 +2719,28 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `andThenEffect_typed` | proved | — | `check_sound`, `check_complete` | 72 | 237 |
-| `andThenContinuation_typed` | proved | — | `check_sound`, `check_complete` | 57 | 227 |
-| `andThenThunk_typed` | proved | — | `andThenEffect_typed` | 53 | 213 |
-| `as_typed` | proved | — | `check_sound`, `check_complete` | 99 | 233 |
-| `asVoid_typed` | proved | — | `as_typed` | 53 | 213 |
-| `tapContinuation_typed` | proved | — | `normalize_idem`, `check_sound`, `check_complete` | 165 | 240 |
-| `tapEffect_typed` | proved | — | `normalize_idem`, `check_sound`, `check_complete` | 179 | 250 |
-| `ensuring_typed` | proved | — | `check_sound`, `check_complete` | 72 | 237 |
-| `void_typed` | proved | — | `check_complete`, `check_sound` | 57 | 227 |
-| `die_typed` | proved | — | `check_complete`, `check_sound` | 57 | 227 |
-| `yieldKey_typed` | proved | — | `check_complete`, `check_sound` | 57 | 227 |
-| `matchCause_typed` | proved | — | `check_sound`, `check_complete` | 59 | 228 |
-| `matchCauseEffect_typed` | proved | — | `check_sound`, `check_complete` | 59 | 228 |
-| `yieldNow_typed` | proved | — | `check_complete`, `check_sound` | 57 | 227 |
-| `forkChildDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 227 |
-| `forkDetachDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 227 |
-| `forkInDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 227 |
-| `forkScopedDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 227 |
-| `releaseOne_typed` | proved | — | `check_sound`, `check_complete` | 75 | 237 |
+| `andThenEffect_typed` | proved | — | `check_sound`, `check_complete` | 76 | 256 |
+| `andThenContinuation_typed` | proved | — | `check_sound`, `check_complete` | 57 | 242 |
+| `andThenThunk_typed` | proved | — | `andThenEffect_typed` | 53 | 233 |
+| `as_typed` | proved | — | `check_sound`, `check_complete` | 99 | 248 |
+| `asVoid_typed` | proved | — | `as_typed` | 53 | 223 |
+| `tapContinuation_typed` | proved | — | `normalize_idem`, `check_sound`, `check_complete` | 165 | 255 |
+| `tapEffect_typed` | proved | — | `normalize_idem`, `check_sound`, `check_complete` | 183 | 269 |
+| `ensuring_typed` | proved | — | `check_sound`, `check_complete` | 76 | 256 |
+| `void_typed` | proved | — | `check_complete`, `check_sound` | 57 | 242 |
+| `die_typed` | proved | — | `check_complete`, `check_sound` | 57 | 242 |
+| `yieldKey_typed` | proved | — | `check_complete`, `check_sound` | 57 | 242 |
+| `matchCause_typed` | proved | — | `check_sound`, `check_complete` | 59 | 243 |
+| `matchCauseEffect_typed` | proved | — | `check_sound`, `check_complete` | 59 | 243 |
+| `yieldNow_typed` | proved | — | `check_complete`, `check_sound` | 57 | 242 |
+| `forkChildDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 242 |
+| `forkDetachDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 242 |
+| `forkInDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 242 |
+| `forkScopedDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 242 |
+| `releaseOne_typed` | proved | — | `check_sound`, `check_complete` | 79 | 256 |
 | `tagHit_record` | proved | — | — | 47 | 130 |
-| `check_sound` | proved | — | — | 133 | 224 |
-| `check_complete` | proved | — | — | 68 | 227 |
+| `check_sound` | proved | — | — | 135 | 234 |
+| `check_complete` | proved | — | — | 70 | 237 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
 
 ### R11: Resources are released: at most once per registration, exactly once in close order
@@ -2721,7 +2810,7 @@ flowchart LR
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
-| `journal_replays` | proved | — | — | 78 | 931 |
+| `journal_replays` | proved | — | — | 77 | 931 |
 
 ## Acceptance programs
 
@@ -2731,8 +2820,8 @@ The rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/
 | --- | --- | --- | --- | --- | --- | --- |
 | `P1HttpCache` | yes | differs | yes | no | a Quote record in the key-value cache (typing: requestNotSubtype) | R3, R6, R7, R10 |
 | `P2HandlerLayers` | yes | rc112 | yes | yes | AppConfig as a string service (serviceCarrier: signature none); CurrentUser as a record service (serviceCarrier: signature none); a number in a template string (typing: term) | R3, R5, R7, R10, R13 |
-| `P3WorkerQueue` | yes | differs | yes | yes | the log's append at Ref<never[]> (typing: requestNotSubtype); the gate as Deferred<void> in TypeScript (refused: typeSpelling Deferred.make) | R3, R4, R10, R11 |
-| `P4RateLimiter` | yes | rc112 | yes | yes | — | R4, R10 |
+| `P3WorkerQueue` | yes | differs | yes | yes | the log's append at Ref<never[]> (typing: resultNotSubtype); the gate as Deferred<void> in TypeScript (refused: typeSpelling Deferred.make) | R3, R4, R10, R11 |
+| `P4RateLimiter` | yes | rc112 | no | no | — | R4, R10 |
 | `P5LedgerService` | no | notRun | no | no | a signed number (admission) | R3, R4, R6, R7, R10 |
 
 The programs each requirement keeps waiting:

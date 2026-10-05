@@ -183,4 +183,58 @@ its instance, at the row's answer column; `Deferred.make<void, never>()` is form
   some (.deferredOf .never .nat)
 #guard (admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], []⟩).isOk
 
+/-! ### An operation's binder term is not a program annotation (the state plan's T3b, its D9 (b))
+
+Since T3b a read-modify-write row carries a binder term. `Formation.programAnnotations` reads an
+operation argument as nothing, so a record declaration inside that term is no program annotation
+until the state plan's T5 makes operation data one (decisions row 212, extended to binder terms).
+Formation does not escape: the term typer checks a record's own formation. The integer scan does
+escape: a record with an `int` field inside a binder term is admitted. This is the gap, pinned. -/
+
+/-- `{ n: 1 }` at the declaration `{ n: int }`. -/
+def intRecord : Term := .record [("n", false, .int)] ["n"] (.cons (.lit (.nat 1)) .nil)
+
+/-- `{ x: 1 }` at a declaration that names `x` twice. -/
+def duplicateRecord : Term :=
+  .record [("x", false, .nat), ("x", true, .string)] ["x"] (.cons (.lit (.nat 1)) .nil)
+
+/-- `Ref.make(0)`, then `Ref.update(cell, a => fst(pair(a, r)))`: the record `r` inside the row's
+binder term. -/
+def inBinderTerm (r : Term) : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.perform (.refUpdateWith (.app "fst" (.cons (.app "pair" (.cons (.var 1) (.cons r .nil))) .nil)))
+      (.var 0))
+
+/-- Green control: the same record as an ordinary term argument. -/
+def inTermArgument (r : Term) : NativeEff := .bind (.succeed r) (.succeed (.lit (.nat 0)))
+
+-- The collector reads the record of a term argument and nothing of an operation's term.
+#guard (Formation.programAnnotations (inTermArgument intRecord)).map (·.1) =
+  [["program", "0", "argument", "0", "term", "fields"]]
+#guard Formation.programAnnotations (inBinderTerm intRecord) = []
+-- Raw formation therefore misses a repeated field inside a binder term, and the term typer
+-- refuses it: the checker types the term, and a record term checks its own declaration.
+#guard (Formation.checkInput (inTermArgument duplicateRecord) []).isSome
+#guard Formation.checkInput (inBinderTerm duplicateRecord) [] = none
+#guard Effect4.Api.typeOf (inBinderTerm duplicateRecord) = none
+-- The gap: the integer scan refuses an `int` field of a term argument by its path, and admits the
+-- same field inside a binder term.
+#guard match admitProgram (inTermArgument intRecord) ⟨[], []⟩ with
+  | .error (.uninhabited path) => path == ["program", "0", "argument", "0", "term", "fields", "n"]
+  | _ => false
+#guard (Effect4.Api.typeOf (inBinderTerm intRecord)).isSome
+#guard (admitProgram (inBinderTerm intRecord) ⟨[], []⟩).isOk
+
+/-- `Ref.make(0)`, then `Ref.modify(cell, a => pair(r, a))`: the record is the row's answer, `B`. -/
+def asModifyAnswer (r : Term) : NativeEff :=
+  .bind (.perform .refMake (.lit (.nat 0)))
+    (.perform (.refModifyWith (.app "pair" (.cons r (.cons (.var 1) .nil)))) (.var 0))
+
+-- The gap's edge. Where the record reaches the program's answer, the scan of the root's columns
+-- refuses it by that path. Bound and dropped inside the program, it is admitted.
+#guard match admitProgram (asModifyAnswer intRecord) ⟨[], []⟩ with
+  | .error (.uninhabited path) => path == ["program", "answer", "n"]
+  | _ => false
+#guard (admitProgram (.bind (asModifyAnswer intRecord) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk
+
 end Test.Program.FormationContract

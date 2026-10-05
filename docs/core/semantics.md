@@ -253,6 +253,13 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   map one type into another (decisions row 43). The map holds at every world later than one where it
   holds. It quantifies over later worlds, so `Fits` gains no arrow clause (row 163).
   (`TermMaps.mono` (`src/Effect4/Laws/Program/Typed/Residual.lean`)).
+- **Typed terms map (`term-typed-maps`)**: The term typer admits a binder term at the node's
+  environment extended by the cell's type. Over an environment that fits, the term then maps the
+  cell's type into its own type, at every later world.
+  This is the term relation's fundamental property for the term typer.
+  A typed read-modify-write row takes its pre from it (decisions row 43; the state plan's T3b).
+  It establishes nothing about a term that the checker refuses.
+  (`termMaps_of_typed` (`src/Effect4/Laws/Program/Typed/Denotation.lean`)).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 
@@ -672,6 +679,9 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   T4).
   It establishes no match at a parameter first met covariantly, under a union template or under a
   nominal reference.
+  `Ref.modify`'s `B` is such a parameter: it first occurs in the result of the row's binder term.
+  The checker binds `B` from the term's raw type (`bindTerm`, `src/Effect4/Program/Typing/Rules.lean`)
+  and claims no completeness there (the state plan's T3b).
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 
@@ -716,6 +726,10 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
 - **Operation data scoped (`operation-data-scoped`)**: the scope fold decides a `perform` node
   from its operation's own data, read by the alphabet's `ScopedOp`, and from its request
   (`Eff.perform_scoped_iff` (`src/Effect4/Laws/Program/Authoring.lean`)). Scope is not typing.
+  Weakening is the frontier fold over the same data: it maps an operation's binder term with the
+  program (`ScopedOp.mapTerm`, `src/Effect4/Program/ScopedOp.lean`).
+  The checker's weakening law holds at every signature that is natural in that term
+  (`check_weaken` and `Signature.WeakenNatural`, `src/Effect4/Program/Typing.lean`).
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 

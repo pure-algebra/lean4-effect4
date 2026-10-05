@@ -211,6 +211,12 @@ def registry : Registry where
       literature := [
         { work := "Ahmed2004", locator := "audit P1", relation := "adaptedResult" }
       ] },
+    { id := "term-typed-maps", concept := "store-typing", role := .fundamentalProperty
+      title := "A binder term the term typer admits at the node's environment and the cell's type maps that type into its own type at every later world, over an environment that fits (the state plan's T3b)"
+      pointer := .witness `Effect4.Program.Typed.termMaps_of_typed
+      literature := [
+        { work := "Ahmed2004", locator := "audit P1", relation := "adaptedResult" }
+      ] },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
       pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
@@ -733,9 +739,7 @@ def registry : Registry where
       top := [`Effect4.Program.Typed.order_refl, `Effect4.Program.Typed.order_trans,
         `Effect4.Program.Typed.refMake_extension, `Effect4.Program.Typed.deferredMake_extension,
         `Effect4.Program.Typed.memoBuild_extension]
-      openParts := ["FnName retires: the store runs binder terms since T2, and a NativeOp row hands it its name's lowering, which runs the name's kernel on every number (kernel_term_agrees); the rows carry terms at T3b (decisions row 43; state plan T3b)",
-        "the read-modify-write rows as templates: the eight rows stay at refOf nat, and modify answering B while storing A, until their binder terms land (decisions rows 42–43; state plan T3b); the Ref and Deferred rows are templates and Deferred.make carries its type arguments since T3a",
-        "the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed (decisions rows 42–43, step 5; state plan T5)",
+      openParts := ["the faces of Ref<A> and Deferred<A, E>: Ref.make<A> and Deferred.make<A, E> printed and read at every instance (the faces spell Deferred.make at Deferred<number, number> and refuse another instance by name), the TypeScript profile and OCaml at instances, binder terms printed and read as lambdas (since T3b the faces spell a read-modify-write row's term by one of five names, FnName.image, and refuse any other term by name, binderTerm), and an operation's binder term as a program annotation with the integer scan over it (decisions rows 42–43, step 5, and row 212; state plan T5)",
         "fold-typed-atomic-update (proposed claim; store-typing): the pure list fold with two binders, the accumulator and the element, at any types; listTake and listDrop only for a demonstrated consumer, and no counted loop: typing, scoping, capture, compilation, printing and exact reading, with Ref.modify one step that answers B and stores A; its first consumer is the Queue's service pass (decisions row 228; after T3b)",
         "handle-identity-laws (proposed claim; store-typing): the identity of a handle in a term: equality of two Ref handles or two Deferred handles of one kind by identity, never by payload; a cell that holds a list of handles, with membership, fresh allocation and world extension laws, and the identity correspondence in each target's relation (decisions row 229)",
         "atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)",
