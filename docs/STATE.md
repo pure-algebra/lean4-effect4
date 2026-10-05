@@ -236,7 +236,8 @@ Open at this landing:
 - the acceptance programs gain four scenarios (row 254;
   [Codex's review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/dogfood/review.md)):
   two workers with two pending replies, exact handler routing, atomic state with failure and
-  cleanup, and replies at a timeout's boundary. A seat takes them when seat LOWER ends;
+  cleanup, and replies at a timeout's boundary. A seat takes them when seat LOWER ends
+  ([the brief](research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md));
 - the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
   with its model. Its slice is with seat FOLD since 2026-10-05 (branch `seat/fold`, from
   `a53e5e15`; [the brief](research/2026-10-05-claude-lead/briefs/seat-fold-brief.md));
