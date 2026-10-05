@@ -1,0 +1,20 @@
+# The release's type check of the truth modules, with the driver installed
+# Run 2026-10-05 from the lane's work copy of the release (.lake/truth-release/release/harness/truth),
+# linked to the tracked install ts/release (bun install --frozen-lockfile).
+# effect: "version":"4.0.1"
+# @effect/sql-sqlite-bun: "version":"4.0.1"
+# compiler: tsgo Version 7.0.0-dev.20260629.1
+# command: node node_modules/@typescript/native-preview/bin/tsgo --pretty false --noEmit -p tsconfig.json
+# modules checked: 39; modules that name the prelude's Sql: pSqlFail.ts pSqlOrDie.ts pSqlCatch.ts pSqlExit.ts pSqlite.ts 
+
+generated/pSqlCatch.ts(5,14): error TS2375: Type 'Effect<string, SqlError, never>' is not assignable to type 'Effect<string, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'SqlError' is not assignable to type 'never'.
+generated/pSqlExit.ts(5,14): error TS2375: Type 'Effect<Exit<readonly (readonly (readonly [string, string])[])[], Pair>, SqlError, never>' is not assignable to type 'Effect<Exit<readonly (readonly (readonly [string, string])[])[], readonly [string, string]>, never, never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'SqlError' is not assignable to type 'never'.
+generated/pSqlFail.ts(5,14): error TS2375: Type 'Effect<readonly (readonly (readonly [string, string])[])[], Pair | SqlError, never>' is not assignable to type 'Effect<readonly (readonly (readonly [string, string])[])[], readonly [string, string], never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Pair | SqlError' is not assignable to type 'readonly [string, string]'.
+    Type 'SqlError' is not assignable to type 'readonly [string, string]'.
+generated/pSqlite.ts(5,14): error TS2375: Type 'Effect<readonly (readonly (readonly [string, string])[])[], Pair | SqlError, never>' is not assignable to type 'Effect<readonly (readonly (readonly [string, string])[])[], readonly [string, string], never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Type 'Pair | SqlError' is not assignable to type 'readonly [string, string]'.
+    Type 'SqlError' is not assignable to type 'readonly [string, string]'.
+# exit 1

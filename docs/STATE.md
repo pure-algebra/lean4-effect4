@@ -182,7 +182,10 @@ More rulings of the same day (rows 235 to 248):
 - `Scope.close` on a forked scope keeps `void`, the tree's answer to `U-02` (row 249);
 - the release's SQLite driver is downloaded, with a tracked install recipe (row 250);
 - after the fold come the faces of a binder term, then the mask, then the Queue (row 251);
-- a second seat lands Codex's follow-ups of the OCaml route (row 252).
+- a second seat lands Codex's follow-ups of the OCaml route (row 252);
+- the migration follows the features: a cut-over runs when a feature needs it, and a release
+  case that waits is deferred with its reason (row 253);
+- dogfooding is rigorous, runs through the lowering, and is placed in the proof graph (row 254).
 
 Landed later on 2026-10-05:
 
@@ -194,7 +197,8 @@ Landed later on 2026-10-05:
   [its receipt](research/2026-10-05-seat-M0-receipt.md),
   [the lane note](../harness/truth/RELEASE-LANE.md)). `make check-truth-release` runs the truth
   harness on effect 4.0.1 beside the pin, and one build ledger holds each program's expected
-  agreement. The target is in no sweep: no tracked recipe installs the release.
+  agreement. The target is in no sweep: the tracked recipe `ts/release` installs the release with
+  its driver, and the lane does not pass on that install yet.
 - **The builtin table of the OCaml route is data** (`8b236fa7`;
   [`lcnf-route.md`](core/lcnf-route.md) §9;
   [the note](research/2026-10-05-claude-lead/lowering-table/lowering-table.md)). A Lean binder
@@ -216,7 +220,23 @@ Open at this landing:
 - the Queue's whole transition contract is written
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
-  It is owed as a packet in `Test/contracts/` with the first Queue slice;
+  The Queue's path lands in three parts:
+  1. **The pure contract and its first capacity proof.** Codex prepares them for integration,
+     on the owner's word to Codex (relayed 2026-10-05;
+     [its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md)).
+     They are a packet named `queue.contract.md` in `Test/contracts/`, and the modules
+     `QueueModel`, `QueueContract` and `QueueCapacity` under `Test/Program/`. The coordinator
+     owns the import in `Test/All.lean`, the registry's join, the base and the Lean slot. It
+     integrates them when a seat frees a slot. The capacity proof is not compiled yet;
+  2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
+     It needs the fold and part 1, and neither T5 nor the mask. The coordinator proposes it as
+     a slice beside T5;
+  3. **The public path:** the operations that wait, the posted signal, the module's rows and
+     its law, and the printed form. It follows T5 and the mask (row 251);
+- the acceptance programs gain four scenarios (row 254;
+  [Codex's review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/dogfood/review.md)):
+  two workers with two pending replies, exact handler routing, atomic state with failure and
+  cleanup, and replies at a timeout's boundary. A seat takes them when seat LOWER ends;
 - the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
   with its model. Its slice is with seat FOLD since 2026-10-05 (branch `seat/fold`, from
   `a53e5e15`; [the brief](research/2026-10-05-claude-lead/briefs/seat-fold-brief.md));
@@ -227,12 +247,15 @@ Open at this landing:
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
-  for review (row 248). Its first slice landed with seat M0. Its second slice, the census by
-  row and the impact query, waits for the owner's reading of the plan's mechanics;
+  (row 248), and the owner accepted its mechanics (row 253; the plan's F8). Its first slice
+  landed with seat M0. No slice is scheduled: a cut-over runs when a feature, a semantics or a
+  proof needs it. The census by row and the impact query run with the first one;
 - the release's driver is installed by the tracked recipe `ts/release`. It changes one type:
-  `SqliteClient.make` can fail with `SqlError`. The five SQL programs then fail the release's
-  type check. The release lane still runs on an install without the driver
-  ([the lane note](../harness/truth/RELEASE-LANE.md); the plan's F7);
+  `SqliteClient.make` can fail with `SqlError`. Four of the five SQL modules then fail the
+  release's type check. The five ledger lines are deferred with their reasons, and the row
+  `sqliteOpen` keeps the pin's `never`. The release lane runs on an install without the driver
+  ([the lane note](../harness/truth/RELEASE-LANE.md); the plan's F7). Whether opening a
+  database fails with a typed error is open;
 - the release audit, landed on 2026-10-05
   ([the audit](research/2026-10-05-seat-A401/audit.md),
   [its receipt](research/2026-10-05-seat-A401-receipt.md)). For this tree 4.0.1 is a new runtime

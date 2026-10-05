@@ -1,0 +1,29 @@
+{
+  "scope": "Read-only dogfood composition and API scout",
+  "head": "da41297b95f21b7cfef08b4cb54edf5bf7d8c8b1",
+  "evidence_kind": "source inspection and historical receipt inspection; no execution rerun",
+  "sources": "source-manifest.json",
+  "review": "review.md",
+  "commands": {
+    "head": "git rev-parse HEAD",
+    "clean": "git status --porcelain",
+    "inspection": "rg and sed over listed sources; exact declarations and controls named in review"
+  },
+  "executed_builds": [],
+  "executed_probes": [],
+  "repository_writes": false,
+  "source_manifest_files": 26,
+  "new_implementation_defect": false,
+  "recommendations": [
+    "Shared delayed keyed scenario driver over existing Run commands",
+    "Multi-worker and pending-reply schedules",
+    "Handler error-routing and repository non-call controls",
+    "Placed behavior laws for timeout/retry and identity-sensitive cleanup"
+  ],
+  "limits": [
+    "No whole-tree build or freshness claim",
+    "No current-head axiom execution",
+    "Existing guards inspected but not rerun",
+    "Host application typing and real Queue/service integration remain open"
+  ]
+}

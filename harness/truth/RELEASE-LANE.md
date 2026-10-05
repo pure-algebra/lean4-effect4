@@ -151,8 +151,9 @@ Put the driver and `effect` in one real install. Do not link the driver from ano
 Under bun a linked package resolves its imports from its real path. A linked driver therefore
 does not find `effect` (a finite probe on bun 1.4.2, 2026-10-05).
 
-No tracked recipe installs the release yet. To assemble an install from directories that a
-machine already has:
+A tracked recipe, `ts/release`, installs the release with its driver. The lane does not pass
+on that install yet, as the section below says. To assemble an install without the driver from
+directories that a machine already has:
 
 1. Make a folder, and name it `R`.
 2. Link a directory that holds the `effect@4.0.1` package as `R/effect`.
@@ -187,8 +188,11 @@ export EFFECT4_RELEASE_NODE_MODULES="$PWD/node_modules"
 ```
 
 **The lane does not pass on this install yet.** With the driver present the lane runs the five
-SQL programs, and their modules fail the release's type check (tested, tsgo
-7.0.0-dev.20260629.1):
+SQL programs. Four of their modules fail the release's type check: `pSqlite`, `pSqlFail`,
+`pSqlCatch` and `pSqlExit` (tested, tsgo 7.0.0-dev.20260629.1). `pSqlOrDie` passes it, because
+its layer turns the failure into a defect. The compiler's whole answer is kept in
+`docs/research/2026-10-05-claude-lead/release-driver/tsgo-4.0.1-with-driver.txt`. One of its
+four findings:
 
 ```text
 generated/pSqlCatch.ts(5,14): error TS2375: Type 'Effect<string, SqlError, never>' is not assignable to type 'Effect<string, never, never>'
@@ -201,9 +205,12 @@ cannot be opened or configured. Both were read on 2026-10-05, in the file `Sqlit
 each driver's sources. The row `sqliteOpen` (`src/Effect4/Program/Packages/SqliteBun.lean`)
 has the error column `never`.
 
-A slice of the migration moves that row and the prelude's `Sql.open`. Until then, run the lane
-on an install without the driver, as the recipe above this section assembles. The five ledger
-lines stay `not-run`.
+**The five ledger lines are deferred** (decisions row 253). Each stays `not-run`, and its
+`reason` says which case it is. A deferral is neither a divergence nor an agreement: the failed
+type check says nothing about what the five programs do when they run on the release. The row
+`sqliteOpen` keeps the pin's `never`. No slice is scheduled: the cut-over of that row and of the
+prelude's `Sql.open` runs when a feature needs it. Until then, run the lane on an install
+without the driver, as the recipe above this section assembles.
 
 ## How to change the ledger
 

@@ -1,0 +1,83 @@
+{
+  "time_utc": "2026-10-05T21:56:01.142792+00:00",
+  "kind": "read-only source scouting; no new proof or runtime result",
+  "main": {
+    "head": "da41297b95f21b7cfef08b4cb54edf5bf7d8c8b1",
+    "status": "",
+    "sha256": {
+      "AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "docs/STATE.md": "c8d44b7243188c05ecd7cb1137c9850078666a448c1dd18e9f996fd4ce6ff227",
+      "docs/core/decisions.md": "154f1770117ee3bf67a068dcca2f0e0bc03a421e03ceddb2e288e65e6ad7a324",
+      "docs/core/semantics.md": "5618682b96dda9c0841855e530368266f515067cc4ff3bc07d28797e9b8fc203",
+      "tools/Tools/SemanticsRegistry.lean": "fad68ca4ec0c4f3d044412fc3fda3e30817948a178142e01f8cba5783c40904a",
+      "docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md": "6fe9063305896c076a13357ca5bb5d388f8026fcba5c0bf694c934287d26406f",
+      "docs/research/2026-10-05-claude-lead/queue-contract/QueueContract.lean": "17910cf6d42ab9782896435e55022b66c1386d21aacf0b2c7ca0bdc0fe30755a",
+      "docs/research/2026-10-05-claude-lead/foundation-contracts.md": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5",
+      "docs/research/2026-10-05-claude-lead/waiting-design.md": "c2303ca86f1f973e947051582f141ee6d4593ccaf51feb38ff49831bca2fc8ce",
+      "docs/research/2026-10-05-claude-lead/mask-second-note.md": "69922e280bcaadceb5219ccba3eaaf6144078806d70e36f10eaa71aa2577786e",
+      "docs/research/2026-10-05-claude-lead/briefs/seat-fold-brief.md": "847bb3f568e602df8f0dee61b2e98bfb06e0e3eee73d142a6f1e82dd6862d523",
+      "docs/research/2026-10-05-claude-lead/fold-design/fold-design.md": "973b9a64e2baf1f91c5fcd9d7c3f192409ae5480a5264b4e757535baa2a470bb",
+      "Test/contracts/README.md": "3e834c515d28829057a536f803e50a66549b58aab42c3de831f5db49fc46aaac",
+      "Test/Audit/ProofGraphPlan.lean": "11e8f8f63f7c38137dc5503d3eb9aaef99603937b148a098f501c9f3b5ca5443",
+      "Test/Audit/SemanticsCensus.lean": "cb182396390b492a37edc7fc7cdb44926d9dab29d8ec5bac07a1b15891137eac",
+      "lakefile.toml": "cc29730d1d7d00a4fbc42d931bcd97819da4c21cc2ad7163042d49d677a68e47"
+    }
+  },
+  "fold": {
+    "head": "246295eee67d02af4187a105ca4566f8ad45cba8",
+    "branch": "seat/fold",
+    "sha256": {
+      "src/Effect4/Laws/Machine/TermHandles.lean": "8cbfa8f82ae544395531cbdceced175a83921e8a3c17c632e18375d69f5bb479",
+      "src/Effect4/Laws/Program/Handles/Term.lean": "b17da43da49346c1d69c0474def6f5ee8266164f6ed0c16b9d75f6cdec495afd",
+      "src/Effect4/Laws/Program/Typed.lean": "5ae0330024f2765b1a0464b1113e4215a448b0efb4243b0553a46addbb26bd4f",
+      "src/Effect4/Laws/Program/Typed/Membership.lean": "c16b703a6541bacf275d6a45afa1be9e6ae17c1363c5b7118dbc8f3834e9698a",
+      "src/Effect4/Laws/Program/Typed/Denotation.lean": "bf23930aebedafa19ea193003b2e73cf5b2d4b4cc70e294b9a63ec749bb16ff0",
+      "src/Effect4/Laws/Program/Typed/RecordOperations.lean": "701f7f7fc4cebb5fba15597d06bf8c20876d80956d7a85e69357669e462d3f23"
+    },
+    "acceptance": "active uncommitted edits; not a landed proof receipt"
+  },
+  "proposed_scope": "Test-only pure Queue contract promotion plus acceptLoop buffer bound and positive suspend step capacity preservation",
+  "proposed_paths": [
+    "Test/contracts/queue.contract.md",
+    "Test/Program/QueueModel.lean",
+    "Test/Program/QueueCapacity.lean",
+    "Test/Program/QueueContract.lean"
+  ],
+  "path_collisions": {
+    "Test/contracts/queue.contract.md": false,
+    "Test/Program/QueueModel.lean": false,
+    "Test/Program/QueueCapacity.lean": false,
+    "Test/Program/QueueContract.lean": false
+  },
+  "coordinator_owned_integration": [
+    "Test/All.lean import anchor",
+    "tools/Tools/SemanticsRegistry.lean optional explicit helper placement",
+    "scheduled narrow checks via scratch/lean-slot.sh after slot release"
+  ],
+  "ran": [
+    "git rev-parse/status/diff",
+    "targeted rg/sed reads",
+    "sha256 source snapshots"
+  ],
+  "did_not_run": [
+    "Lean",
+    "OCaml",
+    "build",
+    "generator",
+    "install",
+    "runtime probe"
+  ],
+  "repository_edits": false,
+  "claude_messages": false,
+  "new_defect": null,
+  "fold_reuse": "RawHandles to decoded keys adopted; generic termMaps world connector retained; inversions moved lower without statement change",
+  "remaining": [
+    "actual capacity theorem proof and axiom check",
+    "abstract-to-Term/Ref.modify connector",
+    "FOLD receipt",
+    "T5",
+    "mask",
+    "notification ownership and posted delivery",
+    "embedded budget or admitted-client restriction"
+  ]
+}

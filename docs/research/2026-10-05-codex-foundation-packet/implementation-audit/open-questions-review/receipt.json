@@ -1,0 +1,45 @@
+{
+  "observed_at": "2026-10-05T22:00:31.506563+00:00",
+  "repositories": {
+    "coordinator": {
+      "path": "/Users/pooks/Dev/lean4-effect4",
+      "head": "da41297b95f21b7cfef08b4cb54edf5bf7d8c8b1",
+      "branch": "refactor/phase1-phase3",
+      "status": "M docs/STATE.md\n M docs/core/decisions.md\n M docs/research/2026-10-05-claude-lead/migration-plan.md\n M harness/truth/RELEASE-LANE.md\n M harness/truth/build-ledger.tsv"
+    },
+    "FOLD": {
+      "path": "/Users/pooks/Dev/lean4-effect4-t3b",
+      "head": "246295eee67d02af4187a105ca4566f8ad45cba8",
+      "branch": "seat/fold",
+      "status": "M harness/truth/prelude-atoms.gen.ts\n M ocaml/eff/eff_json.ml\n M ocaml/eff/eff_layout.ml\n M ocaml/eff/eff_manifest.txt\n M ocaml/eff/eff_native.ml\n M ocaml/eff/eff_types.ml\n M ocaml/eff/eff_wire.ml\n M ocaml/eff/goldens/corpus.txt\n M ocaml/eff/goldens/coverage.txt\n M ocaml/eff/program-structure.json\n M ocaml/eff/test/prop_wire.ml\n M ocaml/engine/api_engine.ml\n M ocaml/engine/e4_program.ml\n M ocaml/engine/e4_program_layout.ml\n M ocaml/engine/test/test_engine.ml\n M ocaml/gen/api_gen.ml\n M ocaml/gen/closure-api_engine.tsv\n M ocaml/gen/closure-api_gen.tsv\n M ocaml/goldens/eff/manifest.txt\n M ocaml/goldens/eff/wire-tags.txt\n M src/Effect4/Api/RefusalsDerived.lean\n M src/Effect4/Codegen/ClassTable.lean\n M src/Effect4/Codegen/Diagnostics.lean\n M src/Effect4/Codegen/Print.lean\n M src/Effect4/Codegen/PrintLeaf.lean\n M src/Effect4/Codegen/Read.lean\n M src/Effect4/Laws/Codegen/Admit.lean\n M src/Effect4/Laws/Codegen/Classes.lean\n M src/Effect4/Laws/Codegen/ReadLeaf.lean\n M src/Effect4/Laws/Codegen/ReadPrint.lean\n M src/Effect4/Laws/Machine/TermHandles.lean\n M src/Effect4/Laws/Program/Handles/Term.lean\n M src/Effect4/Laws/Program/Signature.lean\n M src/Effect4/Laws/Program/Typed.lean\n M src/Effect4/Laws/Program/Typed/Denotation.lean\n M src/Effect4/Laws/Program/Typed/Membership.lean\n M src/Effect4/Laws/Program/Typed/RecordOperations.lean\n M src/Effect4/Machine/Term.lean\n M src/Effect4/Program/AtomInventory.lean\n M src/Effect4/Program/Checker.lean\n M src/Effect4/Program/Eff.lean\n M src/Effect4/Program/Fold.lean\n M src/Effect4/Program/Formation.lean\n M src/Effect4/Program/Native.lean\n M src/Effect4/Program/NativeAtom.lean\n M src/Effect4/Program/ScopedOp.lean\n M src/Effect4/Program/Typing/Blame.lean\n M src/Effect4/Program/Typing/Rules.lean\n M src/Effect4/Program/Typing/TermRefusal.lean\n M src/Effect4/Store/Domain/Derived/Program.lean\n M src/OCaml5/Eff/Emit.lean\n M src/OCaml5/Eff/Goldens.lean\n M tools/Drivers/TsGen.lean\n M tools/Effect4Gen/PreludeAtoms.lean\n M tools/Effect4Gen/guards/program.lean\n M tools/Effect4Gen/guards/refusals.lean\n M tools/Effect4Gen/manifest.json\n M tools/Effect4Gen/wire-tags.json\n?? ocaml/eff/goldens/pFold.bin\n?? ocaml/eff/goldens/pFold.json\n?? ocaml/eff/goldens/pFold.ty\n?? ocaml/eff/goldens/pFoldAtoms.bin\n?? ocaml/eff/goldens/pFoldAtoms.json\n?? ocaml/eff/goldens/pFoldAtoms.ty\n?? ocaml/eff/goldens/pFoldCapture.bin\n?? ocaml/eff/goldens/pFoldCapture.json\n?? ocaml/eff/goldens/pFoldCapture.ty\n?? ocaml/eff/goldens/pFoldInOp.bin\n?? ocaml/eff/goldens/pFoldInOp.json\n?? ocaml/eff/goldens/pFoldInOp.ty\n?? ocaml/eff/goldens/pFoldNested.bin\n?? ocaml/eff/goldens/pFoldNested.json\n?? ocaml/eff/goldens/pFoldNested.ty\n?? ocaml/eff/goldens/pIllFoldBody.bin\n?? ocaml/eff/goldens/pIllFoldBody.json\n?? ocaml/eff/goldens/pIllFoldBody.ty\n?? ocaml/eff/goldens/pIllFoldNotList.bin\n?? ocaml/eff/goldens/pIllFoldNotList.json\n?? ocaml/eff/goldens/pIllFoldNotList.ty\n?? ocaml/eff/goldens/pIllSameHandle.bin\n?? ocaml/eff/goldens/pIllSameHandle.json\n?? ocaml/eff/goldens/pIllSameHandle.ty\n?? src/Effect4/Codegen/ListFold.lean\n?? src/Effect4/Laws/Codegen/ListFold.lean"
+    },
+    "LOWER": {
+      "path": "/Users/pooks/Dev/lean4-effect4-lower",
+      "head": "2ba1775c6c767c3307606490bf27d1e292186a23",
+      "branch": "seat/lower",
+      "status": "M scripts/check-conform.py\n M scripts/lib/conform_report.py\n M tools/Conform/Effect4/CompilerControls.lean\n M tools/Conform/Effect4/Normalization.lean\n M tools/Conform/README.md\n?? scripts/test-conform-runner.py"
+    }
+  },
+  "reports_sha256": {
+    "recommendations.md": "c9924ddf33bba17a836f56c349f7cdb993cd92e26995b86c56c7613182e56110",
+    "queue/review.md": "f139945f868224a81b4dbe1ac26065b87cfb596d1f5d5324065984da17c6c93c",
+    "migration/review.md": "c15305bfa09781be88f70f8a9d97ed6cc7c2eb50a6b4d985e96fadcd224a28ae",
+    "dogfood/review.md": "02dd9a1c07ec719963482a44323970cd48de869217dc9333bbd7f4d7272d2b2d"
+  },
+  "evidence": [
+    "source inspection",
+    "current Claude computer-use transcripts",
+    "seven isolated Python ledger-judge controls, parent rerun"
+  ],
+  "review_limits": [
+    "No monitor Lean, compiler, host runtime, generator, installation or repository write",
+    "FOLD changes are active, not final acceptance",
+    "Queue source preparation is scratch-only and uncompiled"
+  ],
+  "ui_delivery": {
+    "message82": "normal send verified; consumed; migration wording corrected",
+    "message84": "normal send verified; queued unread with empty composer; exact Q0 scope and review packet; no Send now or interruption"
+  },
+  "user_authority": "Direct user authorizes coordinated Queue code/proof preparation; migration follows feature need; compositional dogfood and fold proof reuse prioritized",
+  "implementation_ownership": "FOLD and LOWER remain active. No third implementation/build seat started; Q0 scratch packet only."
+}

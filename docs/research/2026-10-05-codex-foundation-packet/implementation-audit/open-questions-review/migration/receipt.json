@@ -1,0 +1,47 @@
+{
+  "reviewed_head": "da41297b95f21b7cfef08b4cb54edf5bf7d8c8b1",
+  "evidence": "read-only source inspection and seven isolated pure Python validator controls",
+  "runtime_runs": 0,
+  "builds": 0,
+  "repo_edits": 0,
+  "source_sha256": {
+    "docs/research/2026-10-05-claude-lead/migration-plan.md": "7e244f1a659bb34ea8b91e110e325f7051ca6473ce8bbcc62e98cd7ff2d4eaab",
+    "docs/STATE.md": "c8d44b7243188c05ecd7cb1137c9850078666a448c1dd18e9f996fd4ce6ff227",
+    "docs/core/decisions.md": "154f1770117ee3bf67a068dcca2f0e0bc03a421e03ceddb2e288e65e6ad7a324",
+    "docs/research/2026-10-05-seat-M0-receipt.md": "48ee83f6d5c3dd38d0739320fab919f3ba3e209139e0e0b2ec449800d0601da4",
+    "src/Effect4/Program/Packages/SqliteBun.lean": "258240b381fcc19d92e8de4c620f1a2636eecc020af037c29e149cab9fcbac71",
+    "harness/truth/prelude.ts": "21581cf922dc6d0f5616895b3e37963905b879952118866aecbfba81b8676ee4",
+    "harness/truth/run-truth.ts": "6ec3e68e59e74bcca4a991a3b0fea5bfc3fccf887550e3ba35f7864a790c1cb5",
+    "scripts/check-truth.py": "13661fe53e9964d7a5103aa51f5a81e098682dff8d49139f9fd5a0f15aa98103",
+    "scripts/lib/truth_ledger.py": "4105ff8a191d82cabffd0f38c46341a6af0bf72b023bb4853a2bda9050dc120b",
+    "scripts/lib/truth_host.py": "dda7863735296fb8df81fccc196b167fb6c5e4892f146886f335b76714173499",
+    "tools/ProofGraph/Axioms.lean": "c7350aff47aa5457ba354cfc7b783fdad63a9ef4bb18e9c7bf911947edab9e0d",
+    "Test/Audit/RuntimeCoverage.lean": "9200945f80ac887ff21f8ef2cc3be7cdb613a0fc6d274eb91f8e8d16b6c286c6",
+    "scripts/generate-effect-runtime-census.sh": "9045a4d7272a189b1fc63d4e322be79365aa58db5be7436e403d473b30a3ae7c",
+    "ts/release/package.json": "82f94f5ec98d0fc891ab3bc08832c81c502ca275e61ed45f21eb7bb3d4902a60",
+    "ts/release/node_modules/@effect/sql-sqlite-bun/src/SqliteClient.ts": "bf7c291cea704e7e4e9ec391e3f190697b6fc297d4aae93f72b3493841a848a6"
+  },
+  "output_sha256": {
+    "review.md": "c15305bfa09781be88f70f8a9d97ed6cc7c2eb50a6b4d985e96fadcd224a28ae",
+    "probe-results.json": "b41c3e9a5036f30b1cfe7081a16a64bb6cb9d98816848af8f931975f3a228aeb",
+    "probe.py": "eace4b33d4643da9a1588738510a79971c858d6000c2dd960a0b2b8b55e246d5"
+  },
+  "commands": [
+    "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-05-open-questions-review/migration/probe.py"
+  ],
+  "corrections": [
+    {
+      "subject": "M0 post-T3b refresh",
+      "status": "Already landed and rechecked; no redundant refresh recommended",
+      "evidence": "Parent integration review at 20:07: 74 byte/digest comparisons, main cfb70462 after 57b261a0 and ba0b6d38",
+      "next": "Coordinator-owned refresh and promotion after FOLD",
+      "verification": "Exact superseded paragraph replaced; new paragraph reread; report hash updated"
+    },
+    {
+      "subject": "SQL release type-check count",
+      "status": "Removed stale five-failure count",
+      "evidence": "Coordinator reports four of five modules fail tsgo 7; pSqlOrDie passes",
+      "monitor_rerun": false
+    }
+  ]
+}

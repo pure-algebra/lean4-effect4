@@ -1,0 +1,34 @@
+{
+  "kind": "isolated Python validator controls; no runtime comparison",
+  "python": "3.13.14 (main, Aug  5 2026, 15:33:38) [Clang 22.1.3 ]",
+  "checks": [
+    {
+      "name": "known schedule difference leaves independent exit and sync expectations",
+      "passed": true
+    },
+    {
+      "name": "changed 4.0.0-rc.112 exit refused",
+      "passed": true
+    },
+    {
+      "name": "changed 4.0.0-rc.112 sync refused",
+      "passed": true
+    },
+    {
+      "name": "changed 4.0.1 exit refused",
+      "passed": true
+    },
+    {
+      "name": "changed 4.0.1 schedule refused",
+      "passed": true
+    },
+    {
+      "name": "same judge supports pinned observations alone",
+      "passed": true
+    },
+    {
+      "name": "missing run does not satisfy agreement",
+      "passed": true
+    }
+  ]
+}

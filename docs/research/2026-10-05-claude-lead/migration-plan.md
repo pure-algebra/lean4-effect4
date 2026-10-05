@@ -3,6 +3,14 @@
 Status: research note (history, not authority). Base: `6d16d5a2` (`refactor/phase1-phase3`).
 A plan for review. No file of the tree changed.
 
+**Read with its answers (2026-10-05).** The owner accepted the mechanics and set their priority
+(F8; decisions row 253). Four parts of the text below are answered and stand as history:
+
+- the head's request for one download, and F6's items 1 and 2 (rows 249 and 250);
+- F2's line "the release's driver is not installed": the driver is installed, and F7 reads it;
+- M0 in F3 and F4: it landed with seat M0 (`ba0b6d38`);
+- F4's "two seats, two queues": F8 replaces it.
+
 **The one thing to know first.** Decisions row 248 rules that the pin moves to 4.0.1 in
 increments, and that development does not pause. This plan says how. Each area of the machine
 is cut over in place to the release's rule. Until the last area moves, the truth lane runs both
@@ -99,7 +107,7 @@ Three points of acceptance come from Codex's proof scouting of 2026-10-05
 | M5. The failure walk | S2 | The interrupt reasons added when no handler is skipped. `U-01` ends as a divergence | Two census rows; the divergence's register row |
 | M6. The budget and the new primitives | S5 | `succeedWith`, three new tags, the yield test at an iteration only | Two census rows; every agreement that counts operations |
 | M7. The data plane | S7 | The `Union` node's options, the `Config` evaluation, two provider corners | The Schema census; the Config contract |
-| M8. The end of the pin lane | S1 and the rest of S8 | The profile at one build, the harness's version test, the host loop's census row, the citations that still name the pin | The ledger has one column |
+| M8. The end of the pin lane | S1 and the rest of S8 | The profile at one build, the harness's version test, the host loop's census row, the citations that still name the pin | The ledger has one build, with its three observations apart |
 
 ```mermaid
 flowchart TD
@@ -174,11 +182,63 @@ fails with `SqlError` when the database cannot be opened or configured (read in 
 
 - The row `sqliteOpen` (`src/Effect4/Program/Packages/SqliteBun.lean`) has the error column
   `never`, and the prelude's `Sql.open` does not project an error.
-- With the driver present, the five SQL programs fail the release's type check, so the release
-  lane does not pass on the tracked install `ts/release` (tested, tsgo 7).
+- With the driver present, four of the five SQL modules fail the release's type check:
+  `pSqlite`, `pSqlFail`, `pSqlCatch` and `pSqlExit`. `pSqlOrDie` passes it, because its layer
+  turns the failure into a defect. So the release lane does not pass on the tracked install
+  `ts/release` (tested, tsgo 7.0.0-dev.20260629.1;
+  `docs/research/2026-10-05-claude-lead/release-driver/tsgo-4.0.1-with-driver.txt`). The first
+  record of this finding said five.
 - The move belongs to M7, the data plane: the row's error column, the prelude's projection at
   `Sql.open`, and the five ledger lines.
 - The release audit did not read the driver. This is the first difference found in it.
+
+### F8. The owner's word on the mechanics (2026-10-05)
+
+The owner accepted the mechanics of F2 and set their priority (decisions row 253).
+
+- **The mechanics stand.** Each area is cut over in place. The two lanes, the ledger and a build
+  on each census row keep a mixed machine checked.
+- **The migration follows the features.** A cut-over runs when a feature, a semantics or a proof
+  needs the release's rule. No slice exists only to reach agreement with 4.0.1.
+- **Agreement with one build is no goal by itself.** The goals are coherent APIs, the proof
+  infrastructure and the semantics of behaviour.
+- **A cut-over changes nothing that needs no change.**
+- **A release case that no slice takes is deferred,** with the evidence of its build and its
+  reason. A deferral is neither a divergence nor an agreement.
+- **An intentional deviation is decided on its merits,** in a decisions row of its own.
+
+What this changes in the plan:
+
+| Part of the plan | Before | Now |
+| --- | --- | --- |
+| The order of F3 | the order in which a migration seat works | the order of the dependencies: a slice still needs the slices that F3's diagram puts before it |
+| F4, "two seats, two queues" | one seat for the foundation slices, one for the migration | no seat is reserved for the migration (the coordinator's reading) |
+| M1, the census by row and the impact query | next, held for the owner's reading | runs with the first cut-over that needs it |
+| The driver's type (F7) | a slice of M7, next in its turn | deferred: the five ledger lines hold the reason, and `sqliteOpen` keeps the pin's `never` |
+
+No feature of the foundation order needs a cut-over today. F4's third point still holds: the
+mask's source is equal text in both builds, and the Queue's contract follows the release.
+
+Codex reviewed the mechanics the same day
+(`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/migration/review.md`).
+Three of its points bind the first cut-over, whenever a feature calls for one:
+
+- **One acceptance rule for both truth lanes.** The pinned lane still refuses every
+  disagreement but the exact case of `U-01` (`harness/truth/run-truth.ts`,
+  `scripts/check-truth.py`). The first slice that changes the machine's semantics separates
+  collecting a host observation from accepting it, and reuses the ledger's judge for both
+  builds. This is seat M0's recorded open obligation.
+- **M1 comes before a change of the machine's semantics.** A census row's build must reach the
+  witness join, and the impact query runs on the slice's changed declarations.
+- **A mixed machine names its own revision.** A program that joins a migrated rule and one that
+  is not migrated may agree with neither build on one observation. That is allowed only as an
+  exact expectation with its owner and its reason.
+
+Its recommendation for the driver, when a feature needs SQLite on the release: one whole
+adapter slice. It moves the row's error column, the printed type, the projection of the error,
+the recorded reply and the admission of a replay together. It states who closes the minted
+scope when opening fails. It keeps a defect, an interruption and a typed failure apart. This is
+a recommendation, and no row rules it.
 
 ## Proposals (not rulings)
 
@@ -202,4 +262,7 @@ fails with `SqlError` when the database cannot be opened or configured (read in 
   owes the claims of its own area, and the gates of F2 check programs, not proofs.
 - The order of F3 follows the audit's dependencies. A dependency that the audit's direct join
   missed can change it.
-- The release's SQLite driver was not read.
+- The release's SQLite driver was read at one function, `SqliteClient.make` (F7). The rest of it was
+  not read.
+- Source reading, a finite comparison and a Lean proof establish three different things. This plan
+  holds the first two only.

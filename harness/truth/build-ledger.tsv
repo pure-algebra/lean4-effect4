@@ -24,12 +24,12 @@ pDiamond	yes	yes	yes	yes	yes	yes
 pMergeAll	yes	yes	yes	yes	no: the host lacks machine rows 19-21 (forked 0 7, started 7, exited 7 success)	yes	one fork fewer on the release (the scope link, by reading)	M2 scopes
 pAcquireHandle	yes	yes	yes	yes	yes	yes		
 pFailTagged	yes	yes	yes	yes	yes	yes		
-pSqlite	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
+pSqlite	yes	yes	yes	not-run	not-run	not-run	deferred: on 4.0.1 the driver can fail Sql.open with SqlError, and the module fails the type check there; the lane runs without the driver	M7 (decisions row 253)
 pKv	yes	yes	yes	yes	yes	yes		
-pSqlFail	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
-pSqlCatch	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
-pSqlExit	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
-pSqlOrDie	yes	yes	yes	not-run	not-run	not-run	the release's sqlite driver is not installed	driver (the owner's word, migration plan F6)
+pSqlFail	yes	yes	yes	not-run	not-run	not-run	deferred: on 4.0.1 the driver can fail Sql.open with SqlError, and the module fails the type check there; the lane runs without the driver	M7 (decisions row 253)
+pSqlCatch	yes	yes	yes	not-run	not-run	not-run	deferred: on 4.0.1 the driver can fail Sql.open with SqlError, and the module fails the type check there; the lane runs without the driver	M7 (decisions row 253)
+pSqlExit	yes	yes	yes	not-run	not-run	not-run	deferred: on 4.0.1 the driver can fail Sql.open with SqlError, and the module fails the type check there; the lane runs without the driver	M7 (decisions row 253)
+pSqlOrDie	yes	yes	yes	not-run	not-run	not-run	deferred: the module passes the type check on 4.0.1; the lane runs without the driver while four SQL modules fail that check	M7 (decisions row 253)
 pFailText	yes	yes	yes	yes	yes	yes		
 pFailBoomText	yes	yes	yes	yes	yes	yes		
 pTextOrDie	yes	yes	yes	yes	yes	yes		

@@ -1,0 +1,136 @@
+{
+  "head": "da41297b95f21b7cfef08b4cb54edf5bf7d8c8b1",
+  "status": "",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "path": "docs/STATE.md",
+      "sha256": "c8d44b7243188c05ecd7cb1137c9850078666a448c1dd18e9f996fd4ce6ff227",
+      "bytes": 85608
+    },
+    {
+      "path": "docs/core/api-surface.md",
+      "sha256": "1133bb01744e272aa4d29e974bcbf3b8273bb370b24811f9dc09be17b70c0b90",
+      "bytes": 14330
+    },
+    {
+      "path": "docs/core/system-map.md",
+      "sha256": "622ec37a03dd50b7a82c7ee0f52e67b0b471ffd2fdd58cf9f8b5ca3918e6d6ca",
+      "bytes": 45257
+    },
+    {
+      "path": "docs/core/host-boundary.md",
+      "sha256": "f478fbe6f9061ff6518992c63482424f61e5959f41dd50a43355fcca82e812fe",
+      "bytes": 22517
+    },
+    {
+      "path": "Test/Dogfood/README.md",
+      "sha256": "4e63abcbe72cf470b9065e7a7b2745b41a0bbb5e251593ace98c14ac6b8e1b07",
+      "bytes": 11899
+    },
+    {
+      "path": "Test/Dogfood/Stage.lean",
+      "sha256": "8072d37b47630fa52c96df971895d51c695d6922e2a9a5a0b74ceeb82df89944",
+      "bytes": 10424
+    },
+    {
+      "path": "Test/Dogfood/P1HttpCache.lean",
+      "sha256": "42f29240567822f3abd24af262bcfd4a2d5c641579fa8458e3a0960957f2336a",
+      "bytes": 23618
+    },
+    {
+      "path": "Test/Dogfood/P2HandlerLayers.lean",
+      "sha256": "e626bfce9eeceb6bcf008ca99c1389b536c53ac99b19c2005d5ddc73a5bbab03",
+      "bytes": 21973
+    },
+    {
+      "path": "Test/Dogfood/P3WorkerQueue.lean",
+      "sha256": "6f4afa7336cfa4d168816ca3dbf8588821150868b75c4e372c44d6f368b82f42",
+      "bytes": 21179
+    },
+    {
+      "path": "Test/Dogfood/P4RateLimiter.lean",
+      "sha256": "805aeb4b9193a5b81e40be83dfeb873a22e510866c8ac1176c328019edeb3f36",
+      "bytes": 16549
+    },
+    {
+      "path": "Test/Dogfood/P5LedgerService.lean",
+      "sha256": "350cd5ecbedd1a723a5b9cdd2d9dc46c9cd0ba083371064bcde8203a401ca337",
+      "bytes": 14306
+    },
+    {
+      "path": "Test/Run/RunContract.lean",
+      "sha256": "592a67aa9b97bf80793179b7600609c9a1874001cfd51087d2e119c2434195f8",
+      "bytes": 17511
+    },
+    {
+      "path": "Test/Api/HostSessionContract.lean",
+      "sha256": "aea86a0276b4eabbd05b83fee8069944fe4f61b4d20163dc31677211773f023c",
+      "bytes": 9661
+    },
+    {
+      "path": "Test/Api/KeyedHostContract.lean",
+      "sha256": "103b5c99f6ebfd85100fedf2fff1274d351862768fb53bb0755ccccf372294db",
+      "bytes": 5490
+    },
+    {
+      "path": "Test/Program/MeaningEqContract.lean",
+      "sha256": "a60b9b4c92b4a8c2d58b49bbfc602c51febd92b718997f384fbdcbb1e253940b",
+      "bytes": 4034
+    },
+    {
+      "path": "Test/All.lean",
+      "sha256": "99d49b05c7fa1b08f8741ee2b09b096a82a7d0f91c916d99febd2079888fecd7",
+      "bytes": 8671
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844",
+      "bytes": 16676
+    },
+    {
+      "path": "src/Effect4/Api/Author.lean",
+      "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "bytes": 6392
+    },
+    {
+      "path": "src/Effect4/Api/HostSession.lean",
+      "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece",
+      "bytes": 11404
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+      "bytes": 51982
+    },
+    {
+      "path": "src/Effect4/Laws/Api/HostSession.lean",
+      "sha256": "de49efa72ca2999f13140a4dac4434b596054a885cb2e7fdd2bca697da0d7c84",
+      "bytes": 18191
+    },
+    {
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+      "bytes": 6647
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Assembly.lean",
+      "sha256": "3b4b82b088c749b463a233be6642d3c3e79851596b541bdf9ecb38203ff32777",
+      "bytes": 111218
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "sha256": "fad68ca4ec0c4f3d044412fc3fda3e30817948a178142e01f8cba5783c40904a",
+      "bytes": 64891
+    },
+    {
+      "path": "docs/research/2026-10-03-codex-usable-apis/receipt.md",
+      "sha256": "45f8bc72cf765cc72280d3eb01002ea459caf0427b7c63e3737f59019b8094b6",
+      "bytes": 6983
+    }
+  ]
+}
