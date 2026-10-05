@@ -1,0 +1,37 @@
+{
+  "time_utc": "2026-10-05T23:08:44.460231+00:00",
+  "requested_base": "6214dcb8",
+  "observed_head": "0dbb17c32fc7fbc40b1c23769a7d35ae2f93f987",
+  "template_unchanged_from_requested_base": true,
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "source_sha256": {
+    "AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "src/Effect4/Laws/Program/Template.lean": "9ac7073790ce330a7720cdf8070ad6e102cd18f9bd9ade7bf4eedaaa4416d832",
+    "src/Effect4/Data/Constructive.lean": "f0d0431d80d4c78ccde04129a294d9988db2a7e55bfa9f09c56a9c57254cdb14",
+    "src/Effect4/Data/Row.lean": "841c5ac64a4e02d4d21ce8efdd6260f806d6fb48e3e3de90be22a3b9b12dd8b2",
+    "src/Effect4/Program/Ty.lean": "06fdf5c40fc2fbfa956ef11b5acb980fc0c5ac7427627a55486d403f8cc31735",
+    "src/Effect4/Laws/Program/Typed/Membership.lean": "291b79b6bf5d4c24645e39fce9ceeed35c82e2ac0b8f293dedb3293052eea9f0",
+    "docs/research/2026-10-04-seat-T4-receipt.md": "f18d3871f6ae8b72ecdb24af3041e7732b14703ab74f78f5684d653155096c5c",
+    "tools/Tools/SemanticsRegistry.lean": "1c3346a914076b945343660f6a24204842614103f8f7feac25dbfcc2cba792b3",
+    "docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md": "0c3b61d97c8c6a9b4def21641430a5c6d8639457851681492e85d72abcf3fd4c"
+  },
+  "standard_library_sha256": {
+    "Init/Data/List/Zip.lean": "deebfdff24cbe457820ce00e56bd86625566b3b2b31056ce3bad8c91879a091a",
+    "Init/Data/List/Find.lean": "46c8f9f09f6790204446656b8b8cbd62420e83d0da3c6ec727a9862cc19181aa",
+    "Init/Data/List/Lemmas.lean": "0724ebc7c72c87ad6d480dba407c43cc60393e7a0facfbaa6670045f66f636ac"
+  },
+  "generic_helpers": [
+    "flatMap_congr",
+    "mem_zip_map_self",
+    "mem_zip_middle",
+    "eq_of_mem_zip_map",
+    "lookup_of_mem_nodup"
+  ],
+  "nonrecursive_call_sites": 8,
+  "evidence": "Read-only source and retained T4 receipt. No Lean elaboration or axiom rerun.",
+  "recommendation": "Relocate five helpers unchanged to existing Effect4.Constructive.List; optional Typed.mem_zip_self body reuse after relocation. Coordinate shared-core rebuild after active T5 batch.",
+  "no_repo_edit": true,
+  "no_build_generator_install": true,
+  "no_ui_or_dispatch": true,
+  "memory_lookup": "No task-relevant memory used; conclusions verified from current sources."
+}

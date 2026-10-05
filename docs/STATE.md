@@ -295,6 +295,15 @@ Open at this landing:
   - the citations that miss in the pin itself;
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;
+- one small cleanup waits for seat T5's merge, from Codex's review of 2026-10-05
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/list-lemma-review/recommendations.md`):
+  - five general list facts move from `src/Effect4/Laws/Program/Template.lean` to
+    `Effect4.Constructive.List` in `src/Effect4/Data/Constructive.lean`, with their statements
+    and proofs unchanged;
+  - `lookup_weaken` of `src/Effect4/Program/Typing/Rules.lean` is exposed, and the copy
+    `getElem?_weaken` in the fold's law module goes.
+
+  The shared data module has many dependents, so the cleanup must not run beside T5;
 - the OCaml route, after seat LOWER's merge:
   - the target evaluator is outside the trust ceiling. Its rules for the length of a string
     and for the order of two strings reach `Classical.choice`. The seat proposes their byte

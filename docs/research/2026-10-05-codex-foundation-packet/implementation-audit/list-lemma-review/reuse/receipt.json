@@ -1,0 +1,25 @@
+{
+  "head": "0dbb17c32fc7fbc40b1c23769a7d35ae2f93f987",
+  "status": "",
+  "requested_base": "6214dcb8",
+  "scope": "flatMap_congr, lookup_of_mem_nodup and duplicated weakening helper only",
+  "evidence": "source inspection and textual statement equality, no elaboration",
+  "checks": {
+    "weakening_statements_equal_modulo_whitespace": true,
+    "weakening_statement": "{\u03b1 : Type} (pre post : List \u03b1) (inserted : \u03b1) (index : Nat) : (pre ++ inserted :: post)[Var.weaken pre.length index]? = (pre ++ post)[index]?",
+    "stdlib_version": "leanprover/lean4:v4.33.1",
+    "direct_stdlib_flatMap_congr_declaration": false,
+    "direct_stdlib_lookup_of_mem_nodup_declaration": false,
+    "scope": "source text only, no Lean elaboration or axiom traversal"
+  },
+  "recommendation": "Move/share two plain Template facts; expose existing core Rules weakening helper with FOLD proof and exact statement; delete Laws duplicate. No generic-if bridge or Program.Eff move required.",
+  "fences": {
+    "repo_edits": false,
+    "builds": false,
+    "generators": false,
+    "installations": false,
+    "ui": false
+  },
+  "sources": "sources.json",
+  "review": "review.md"
+}
