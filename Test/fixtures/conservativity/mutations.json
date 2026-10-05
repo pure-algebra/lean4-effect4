@@ -217,5 +217,48 @@
         "new": "\"generated/corpus-index.tsv:g277\",\n    \"generated/corpus-index.tsv:g0\""
       }
     ]
+  },
+  {
+    "name": "R12 a family's line leaves a generated manifest without a policy name",
+    "expect": "REFUSE",
+    "clause": "C2",
+    "edits": [
+      {
+        "path": "ocaml/goldens/eff/manifest.txt",
+        "old": "ObserverMode: awaitValue joinEffect\n",
+        "new": ""
+      }
+    ]
+  },
+  {
+    "name": "G4 a family retirement the policy names leaves the three manifests and the count table",
+    "expect": "PASS",
+    "edits": [
+      {
+        "path": "ocaml/eff/goldens/coverage.txt",
+        "old": "Effect4.Supervision.ObserverMode.awaitValue\t3\nEffect4.Supervision.ObserverMode.joinEffect\t1\n",
+        "new": ""
+      },
+      {
+        "path": "ocaml/goldens/eff/manifest.txt",
+        "old": "ObserverMode: awaitValue joinEffect\n",
+        "new": ""
+      },
+      {
+        "path": "ocaml/eff/eff_manifest.txt",
+        "old": "Effect4.Supervision.ObserverMode (observer_mode) inductive: awaitValue joinEffect\n",
+        "new": ""
+      },
+      {
+        "path": "ocaml/goldens/eff/wire-tags.txt",
+        "old": "ObserverMode: awaitValue=0 joinEffect=1\n",
+        "new": ""
+      },
+      {
+        "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
+        "old": "  \"consumer_additions\": [",
+        "new": "  \"family_retirements\": [\n    \"Effect4.Supervision.ObserverMode\"\n  ],\n  \"consumer_additions\": ["
+      }
+    ]
   }
 ]

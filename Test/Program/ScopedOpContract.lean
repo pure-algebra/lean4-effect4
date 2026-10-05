@@ -116,6 +116,46 @@ theorem native_perform_scoped (n : Nat) (op : NativeOp) (r : Term) :
     Eff.scopedAt n (.perform op r) = r.scoped n := by
   simp only [Eff.scopedAt_perform, NativeOp.scopedAt_eq_true, Bool.true_and]
 
+/-! ## The term-row lift: the term under the current value's name (state plan T3b)
+
+`Authoring.performTerm` elaborates an operation's term under a name for the current value, as
+`iterate`'s step is elaborated under its cursor (decisions row 43). The name resolves to the
+node's level, an outer name to its own level below it, and the name is not in scope in the
+request. -/
+
+/-- The current value's name is the variable at the node's level. -/
+theorem performTerm_current :
+    Authoring.elaborate
+        (Authoring.performTerm TermOp.withTerm "a" (Authoring.var "a") Authoring.unit) =
+      .ok (.perform (TermOp.withTerm (.var 0)) (.lit .unit)) := rfl
+
+/-- Under a binder: the outer name keeps its level and the current value sits above it. -/
+theorem performTerm_capture :
+    Authoring.elaborate
+        (Authoring.bind "x" (Authoring.succeed (Authoring.nat 1))
+          (Authoring.performTerm TermOp.withTerm "a"
+            (Authoring.app "add" [Authoring.var "x", Authoring.var "a"]) Authoring.unit)) =
+      .ok (under (.perform (TermOp.withTerm
+        (.app "add" (.cons (.var 0) (.cons (.var 1) .nil)))) closed)) := rfl
+
+/-- The current value's name is the term's alone: the request does not see it. -/
+theorem performTerm_request_unbound :
+    Authoring.elaborate
+        (Authoring.performTerm TermOp.withTerm "a" (Authoring.var "a") (Authoring.var "a")) =
+      .error ⟨[], .unbound "a"⟩ := rfl
+
+/-- The lift is scoped at an alphabet whose instance follows the convention
+(`Authoring.performTerm_scoped`), and the scope tactic discharges it: the instance's equation is
+the tactic's equation step. -/
+example : (Authoring.performTerm TermOp.withTerm "a" (Authoring.var "a") Authoring.unit :
+    Authoring.Src TermOp).Scoped := by
+  authoring_scoped
+
+/-- The operation lift's own hypothesis, the scope of an operation's data at every level, closes
+by the tactic's equation step (seat T0's finding: the step named a lemma that does not exist). -/
+example : (Authoring.perform NativeOp.refGet (Authoring.nat 0) : Authoring.Src NativeOp).Scoped := by
+  authoring_scoped
+
 /-! ## The arm before T0, for comparison
 
 The generated fold with its operation arm put back to the arm of `9b9c42e5`,

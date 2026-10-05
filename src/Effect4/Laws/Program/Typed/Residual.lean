@@ -44,6 +44,17 @@ theorem TermMaps.mono {w w' : World} {f : Term} {env : List Val} {A R : Ty}
     (ord : w.leHost w') (h : TermMaps w f env A R) : TermMaps w' f env A R :=
   fun w'' o a ha => h w'' (leHost_trans _ _ _ ord o) a ha
 
+/-- **The term relation is closed under the checker's order**: a smaller parameter and a larger
+result. A read-modify-write row's term is typed at the instance's parameter, and the store's
+pre asks for the cell's declared type, which is equivalent to it (`RefDeclared`). A step of
+`syncRow_typed` (`Typed/Denotation.lean`), where the claim `term-typed-maps` is used. -/
+theorem TermMaps.widen {w : World} {f : Term} {env : List Val} {A A' R R' : Ty}
+    (hA : Ty.subN A' A = true) (hR : Ty.subN R R' = true) (h : TermMaps w f env A R) :
+    TermMaps w f env A' R' := by
+  intro w' ord a ha
+  obtain ⟨r, hr, hfit⟩ := h w' ord a (fits_subN w' hA a ha)
+  exact ⟨r, hr, fits_subN w' hR r hfit⟩
+
 /-- A row's ghost certificate: the allocated type, the promise's columns, the memo hit's error
 type, or the answer column `B` of the two `modify` rows. -/
 def StoreCert : SyncOp → Type

@@ -29,14 +29,17 @@ an unresolved revision or a failed git command (with the message); 2 on a usage 
                 The generated manifests (ocaml/eff/eff_manifest.txt, ocaml/goldens/eff/manifest.txt,
                 ocaml/goldens/eff/wire-tags.txt): each BASE family line, less the constructors the
                 policy names as retired (constructor_retirements), is a prefix of CAND's (names and
-                argument shapes), so an existing constructor is neither moved nor re-typed.
+                argument shapes), so an existing constructor is neither moved nor re-typed. A
+                family's line may leave only when the policy names the family as retired from the
+                program world (family_retirements); its rows stay in wire-tags.json, tags reserved.
   C3 verdicts:  generated/corpus-index.tsv (Lean's wellTyped/readable verdict per program),
                 ocaml/eff/goldens/corpus.txt (the golden programs' typing verdicts),
                 harness/truth/corpus-results.tsv (the host lane, as committed): every BASE row is in
                 CAND unchanged, unless the policy names its move (`verdict_moves`, `path:key`). The
                 golden tables (metadata.tsv, cases.txt, the CAS manifest, same-programs.txt) keep
                 every BASE line in order; the coverage tables keep every BASE key at a count no
-                smaller, except a constructor the policy names as retired, whose row may leave.
+                smaller, except a constructor the policy names as retired, or one of a family the
+                policy names as retired, whose row may leave.
   C4 policy:    every constructor added or retired between BASE and CAND (read off wire-tags.json)
                 is named in CAND's Test/fixtures/baseline/66ee4657-supplement-v1.policy.json.
                 Reported, refused only with --strict: the additions since the frozen baseline
@@ -48,9 +51,11 @@ The controls (`--self-test`): the ten of probe Q, each a mutation of a scratch e
 judged against HEAD (R1-R9 refuse on the clause they name, G1 the wave appended and named passes);
 the four of the named retirement and the named verdict move (seat T3a: R10 and R11 a retirement
 the policy does not name, refused by C3 and C2; G2 the same retirement named, G3 R6's verdict move
-named, both pass); and six on the revisions themselves, each run as this command: an invalid
-BASE, an invalid CAND and both invalid, each with and without --strict, all refused with exit 1
-and the message naming the revision.
+named, both pass); the two of the named family retirement (seat T3b: R12 a family's line leaves a
+generated manifest and the policy does not name the family, refused by C2; G4 the family named,
+its lines and its count rows leave, passes); and six on the revisions themselves, each run as
+this command: an invalid BASE, an invalid CAND and both invalid, each with and without --strict,
+all refused with exit 1 and the message naming the revision.
 """
 import json
 import os
@@ -211,6 +216,17 @@ def retired_names(pol):
     return out
 
 
+def retired_families(pol):
+    """The families the policy names as retired from the program world (`family_retirements`), by
+    full name and by last component, since a manifest keys a family either way. No program
+    carries a constructor of such a family; its rows stay in wire-tags.json, tags reserved."""
+    out = set()
+    for full in pol.get('family_retirements', []):
+        out.add(full)
+        out.add(full.rpartition('.')[2])
+    return out
+
+
 def item_name(item):
     """A manifest item's constructor name: `lit(string)` and `lit=3` are `lit`."""
     return re.split(r'[(=]', item, maxsplit=1)[0]
@@ -306,12 +322,19 @@ def c2(base, cand, pol):
                 if name not in before['active'] and name not in before['retired'] and tag in old:
                     problems.append(f'wire-tags: new {fam}.{name} reuses tag {tag}')
     gone = retired_names(pol)
+    gone_families = retired_families(pol)
+    left = []
     for path in MANIFESTS:
         mb, mc = manifest_lines(base.read(path)), manifest_lines(cand.read(path))
         for fam, items in mb.items():
             got = mc.get(fam)
             if got is None:
-                problems.append(f'{path}: family {fam} left'); continue
+                # a family the policy names as retired from the program world leaves its line
+                if fam in gone_families:
+                    left.append(f'{path}: {fam}')
+                else:
+                    problems.append(f'{path}: family {fam} left')
+                continue
             # a constructor the policy names as retired leaves its family's line
             items = [x for x in items if (fam, item_name(x)) not in gone]
             if got[:len(items)] != items:
@@ -324,6 +347,7 @@ def c2(base, cand, pol):
     print(f'C2 alphabets: {"PASS" if ok else "REFUSE"}: {len(tb)} tag families, {len(MANIFESTS)} manifests; '
           f'appended {sum(map(len, appended.values()))} constructors {appended if appended else ""}')
     for p in problems: print(f'  {p}')
+    for m in left: print(f'  family retired by policy name: {m}')
     return ok
 
 
@@ -344,6 +368,7 @@ def c3(base, cand, pol):
     problems, judged, moved, left = [], 0, [], []
     named_moves = set(pol.get('verdict_moves', []))
     retired = set(pol.get('constructor_retirements', []))
+    retired_fams = set(pol.get('family_retirements', []))
     for path in VERDICTS:
         tb, tc = base.read(path), cand.read(path)
         if tb is None:
@@ -368,8 +393,9 @@ def c3(base, cand, pol):
             n_b = int(line.split('\t')[-1]); got = kc.get(k)
             n_c = int(got.split('\t')[-1]) if got else -1
             if n_c < n_b:
-                # a constructor the policy names as retired may leave the count tables
-                if got is None and k in retired:
+                # a constructor the policy names as retired, or one of a family it names as
+                # retired from the program world, may leave the count tables
+                if got is None and (k in retired or k.rpartition('.')[0] in retired_fams):
                     left.append(f'{path}: {k}')
                 else:
                     problems.append(f'{path}: {k}: count {n_b} became {n_c}')

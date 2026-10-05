@@ -274,3 +274,30 @@ theorem Eff.perform_scoped_iff {Op : Type} [ScopedOp Op] (n : Nat) (op : Op) (ar
   simp only [Eff.scopedAt_perform, Bool.and_eq_true]
 
 end Effect4.Program
+
+namespace Effect4.Program.Authoring
+
+open Effect4.Program
+
+/-- **The term-row lift preserves scope**, at every alphabet whose instance checks the term a
+`mk`-built operation carries at the node's level plus one (`ScopedOp`'s convention): the term is
+elaborated under the current value's binder, so it is scoped there, and the request is scoped at
+the node. The authoring half of the claim `operation-data-scoped`
+(`Eff.perform_scoped_iff`); its consumers are the generated lemmas of the term rows
+(`Laws/Program/Authoring/Rows.lean`). Scope is not typing: it says nothing of the term's type. -/
+theorem performTerm_scoped {Op : Type} [ScopedOp Op] {mk : Term → Op}
+    (hmk : ∀ t n, ScopedOp.scopedAt (mk t) n = t.scoped (n + 1)) (current : String)
+    {f request : TermSrc} (hf : f.Scoped) (hr : request.Scoped) :
+    ((performTerm mk current f request) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold performTerm at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  obtain ⟨x1, hx1, h⟩ := bind_ok h
+  cases h
+  have s0 := hf.holds _ _ _ hx0
+  simp only [Env.push_length, List.length_cons, List.length_nil] at s0
+  have s1 := hr.holds _ _ _ hx1
+  rw [Eff.perform_scoped_iff, hmk]
+  exact ⟨s0, s1⟩
+
+end Effect4.Program.Authoring

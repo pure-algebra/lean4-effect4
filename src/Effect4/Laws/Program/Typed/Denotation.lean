@@ -650,6 +650,24 @@ theorem evalTerm_progress_env {src : ProgramSource} {w : World} {env : List Ty}
     ∃ v, evalTerm vals t = some v ∧ Fits w v ty :=
   evalTerm_progress rfl (fitsAll_of_pointwise henv.1 henv.2) t ty hty
 
+/-- **A typed binder term maps its parameter into its type**, at every later world (the claim
+`term-typed-maps`): a term the checker types at `tys ++ [A]` with type `R`, over an environment
+that fits `tys`, runs at `env ++ [a]` for every member `a` of `A` to a member of `R`. It is the
+term relation's fundamental property for the term typer (`TermMaps`, `Typed/Residual.lean`):
+the environment stays typed at every later world (`envTyped_mono`), the current value extends it
+(`envTyped_append`), and a typed term over fitting values evaluates into its type
+(`evalTerm_progress`). Under any signature whose atoms are the native table's. Its consumer is
+`syncRow_typed`, which discharges a read-modify-write row's pre from the term's typing. It says
+nothing of a term the checker refuses. -/
+@[semantics "store-typing" (requirement := R4)]
+theorem termMaps_of_typed {sig : Signature NativeOp} (hatom : sig.atomOf = nativeAtomTy)
+    {w : World} {tys : TyEnv} {env : List Val} (henv : EnvTyped w tys env)
+    {f : Term} {A R : Ty} (hty : termTy sig (tys ++ [A]) f = some R) :
+    TermMaps w f env A R := by
+  intro w' ord a ha
+  have henv' := envTyped_append (envTyped_mono ord henv) ha
+  exact evalTerm_progress hatom (fitsAll_of_pointwise henv'.1 henv'.2) f R hty
+
 /-- An admitted error value is represented: its error image reads back (`valOfErr_errOf_supported`
 at the world's allocation table), so it is not the payload-discarding `boom`. -/
 theorem valOfErr_errOf_fits {w : World} {e : Ty} {v : Val} (hs : admittedErrTy e = true)

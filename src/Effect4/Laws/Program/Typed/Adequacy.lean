@@ -351,47 +351,7 @@ theorem complete_cells_length (d : DeferredStore) (cell : DeferredKey)
     · rfl
     · exact List.length_set
 
-/-! ## Moving the world along a ref write and a completion -/
-
-/-- A store step that writes one ref cell with a value its declared type admits moves to the world
-over the new store: later in the host order, and typed. -/
-theorem poke_world {root : ProgramSource} {w : World} {op : SyncOp} {st' : Stores} {ans : Val} {cell : RefKey} {t : Ty}
-    {v : Val} (store : StoreTyped root w) (step : syncOpStep op w.state = some (st', ans))
-    (refs : st'.refs = refPoke w.state.refs cell v) (deferreds : st'.deferreds = w.state.deferreds)
-    (externals : st'.externals = w.state.externals)
-    (declared : w.Ρ cell = some t) (fits : Fits w v t) :
-    w.leHost { w with state := st' } ∧ StoreTyped root { w with state := st' } := by
-  have written : ∀ (i : Nat) (x : Val), st'.refs[i]? = some x →
-      (i = cell.index ∧ x = v) ∨ (i ≠ cell.index ∧ w.state.refs[i]? = some x) := by
-    intro i x hx
-    rw [refs] at hx
-    unfold refPoke at hx
-    rw [List.getElem?_set] at hx
-    split at hx
-    · rename_i same
-      split at hx
-      · cases hx
-        exact Or.inl ⟨same.symm, rfl⟩
-      · cases hx
-    · rename_i other
-      exact Or.inr ⟨fun h => other h.symm, hx⟩
-  obtain ⟨ord, cells⟩ := store.toCellsTyped.restate step
-    (by rw [refs]; unfold refPoke; exact List.length_set)
-    (fun i x hx ty hty => by
-      rcases written i x hx with ⟨same, rfl⟩ | ⟨_, old⟩
-      · have hkey : (⟨i⟩ : RefKey) = cell := by
-          cases cell with
-          | mk c =>
-            change i = c at same
-            rw [same]
-        rw [hkey, declared] at hty
-        cases hty
-        exact fits
-      · exact store.values i x old ty hty)
-    (by rw [deferreds])
-    (fun key c' hc completion hcomp => .inl ⟨c', by rw [← deferreds]; exact hc, hcomp⟩)
-    externals
-  exact ⟨ord, store.step step rfl ord cells (layerCells_of_cells_length step (by rw [deferreds]))⟩
+/-! ## Moving the world along a completion -/
 
 /-- **The cell columns move along a completion**: a store step that completes one Deferred cell
 with a completion its declared columns admit, keeping the heap and the external spellings. -/

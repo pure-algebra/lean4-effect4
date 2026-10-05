@@ -204,6 +204,23 @@ def app (atom : String) (args : List TermSrc) : TermSrc := fun env p => do
   let vs ← args.mapM (· env p)
   .ok (.app atom (termsOfList vs))
 
+/-! ## A row whose operation carries a binder term
+
+The operation lift (`perform`, `Program/Authoring/Lifts.lean`) takes an operation as data. A
+read-modify-write row's operation carries a term that runs at `env ++ [current]`, so an author
+writes the term under a name for the current value, as `iterate`'s step is written under its
+cursor (decisions row 43; `ScopedOp`'s convention). `performTerm` is that one hand lift: the
+generated row wrappers of a term row are one application of it
+(`Program/Authoring/Rows.lean`). -/
+
+/-- A row whose operation carries a binder term: the term elaborates under the current value's
+binder `current`, the request at the node's own scope. -/
+def performTerm {Op : Type} (mk : Term → Op) (current : String) (f request : TermSrc) : Src Op :=
+  fun env p => do
+    let x0 ← f (env.push [current]) p
+    let x1 ← request env p
+    .ok (.perform (mk x0) x1)
+
 /-! ## Host rows by name
 
 A host row is a position in the table supplied beside the program (`NativeOp.external i`,
