@@ -476,9 +476,9 @@ def builtins : List Builtin := [
     "the structural comparison of a list against the empty list is `isEmpty`.",
   row `List.isEmpty (listIsEmpty) .exact "" []
     "",
-  row `List.elem (listElem) .exact "" []
+  row `List.elem (listElem) .exact "" ["elem-order"]
     "`[BEq α]` is a one-field structure at mono, so the instance is a relevant argument. Lean's `List.elem a (b :: l)` tests `a == b`, i.e. `inst a b`; `List.exists (inst a) l` tests the same, in the same order.",
-  row `List.contains (.support "lcnf_list_contains") .exact "" ["contains-order"]
+  row `List.contains (.support "lcnf_list_contains") .exact "" ["contains-order", "callback-exception"]
     "`contains as a` is `elem a as`, so the target is the first BEq argument, as in the `elem` row; an asymmetric instance sees the same order on both sides (the `contains-order` control).",
   row `List.map (.library "List.map") .exact "" []
     "",
@@ -490,9 +490,9 @@ def builtins : List Builtin := [
     "",
   row `List.foldl (.library "List.fold_left") .exact "" []
     "same argument order (`f`, `init`, `l`) and same associativity.",
-  row `List.all (listAll) .exact "" []
+  row `List.all (listAll) .exact "" ["all-scan"]
     "Lean takes the list first, OCaml the predicate first; the row swaps.",
-  row `List.any (listAny) .exact "" []
+  row `List.any (listAny) .exact "" ["any-scan"]
     "as `List.all`.",
   row `List.find? (.library "List.find_opt") .exact "" []
     "",
@@ -551,7 +551,7 @@ def builtins : List Builtin := [
     "",
   row `Option.isNone (.library "Option.is_none") .exact "" []
     "",
-  row `Option.getD (optionGetD) .exact "" []
+  row `Option.getD (optionGetD) .exact "" ["option-default", "option-default-eager"]
     "",
   row `Option.map (.library "Option.map") .exact "" []
     "",

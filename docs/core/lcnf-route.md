@@ -303,13 +303,20 @@ check, as the row intends.
   prints. Ten name fixtures agree with the compiled Lean
   definitions, on the evaluator and in compiled OCaml 5.1.1 (tested, finite). An altered
   support body fails the first fixture that reads it, on both.
+- The builtin controls are `hostChecks` (`tools/Conform/Effect4/CompilerControls.lean`). Each
+  runs on the evaluator and in compiled OCaml (tested, finite). A control expects a value or a
+  named exception. The asymmetric control of `List.contains` fails on both when the support
+  body hands the instance its two arguments in the other order.
 - The four generated modules: `Ml.checkModule` and `hygieneProblems` pass on each (tested at
   generation). Their text changed at two call sites and in the prelude.
 
 **What this does not establish.**
 - No theorem relates a row to its Lean constant. A class is a reading, and a control is finite.
-- The evaluator has no rule for a callback library function such as `List.exists`. It refuses
-  `lcnf_list_contains`, and only compiled OCaml runs that body.
+- The evaluator has a rule for two callback library functions, `List.exists` and
+  `List.for_all` (`scanT` in `tools/Conform/Lcnf/SemanticsTarget.lean`). It refuses a call of
+  any other one, such as `List.map`, and only compiled OCaml runs a body that calls one.
+- The reader admits one labelled call, `Option.value o ~default:d`, and refuses every other.
+  The evaluator evaluates the two arguments from left to right. OCaml leaves that order open.
 - `hygieneProblems` refuses a capture. It does not prove that every source translates.
 - A carrier's `to_list` is taken as total and pure. The observation excludes allocation and
   cost.

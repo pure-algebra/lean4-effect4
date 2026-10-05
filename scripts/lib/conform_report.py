@@ -1,5 +1,6 @@
 """Strict boundary for Conform reports and fresh producer runs (standard library only)."""
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 import hashlib
 import json
@@ -7,6 +8,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+
+REPORT_FORMAT = "conform-report-v2"
 
 
 class InvalidReport(ValueError):
@@ -47,12 +50,22 @@ def unique_records(values, value_key):
     return result
 
 
-def validate(report, process_exit=None, *, expected_ids=None, expected_pins=None,
-             expected_inputs=None, allow_on_demand=False, require_closed=False):
+def validate(report, process_exit=None, *, expected_tool=None, expected_ids=None,
+             expected_pins=None, expected_inputs=None, allow_on_demand=False,
+             require_closed=False):
+    """Check one report against its own plan, and against the caller's request.
+
+    A report is self-described: its plan, its pins and its inputs are its own. The four
+    `expected_*` arguments are the caller's request. A caller builds them from what it asked
+    for, never from the report that came back.
+    """
     object_keys(report, ("format", "tool", "pins", "inputs", "expected", "required",
                          "summary", "rows"), ("obligations",))
-    require(report["format"] == "conform-report-v2", "unsupported report format")
+    require(report["format"] == REPORT_FORMAT, "unsupported report format")
     require(isinstance(report["tool"], str) and report["tool"], "missing tool identity")
+    if expected_tool is not None:
+        require(report["tool"] == expected_tool,
+                f"the report names the tool `{report['tool']}`, not `{expected_tool}`")
     pins = unique_records(report["pins"], "value")
     inputs = unique_records(report["inputs"], "sha256")
     for digest in inputs.values():
@@ -146,45 +159,113 @@ def manifest(root):
     return {str(p.relative_to(root)): sha256(p) for p in sorted(files) if p.exists()}
 
 
-def fresh_run(command, destination, expected_files, *, cwd, input_snapshot=None):
+def carries_report_format(path):
+    """Whether a file is a JSON object with a report's format tag."""
+    try:
+        value = json.loads(Path(path).read_text())
+    except ValueError:
+        return False
+    return (isinstance(value, dict) and isinstance(value.get("format"), str)
+            and value["format"].startswith("conform-report"))
+
+
+def retain_attempt(out, destination, record, error):
+    """Keep a refused run beside its receipt, and publish nothing of it.
+
+    The folder `attempts/<profile>/` holds the producer's files as it left them (`files/`) and
+    `attempt.json`: the command, the exit, the full standard output and standard error, the
+    digest of each file and the refusal. It holds the latest refused run of the profile. The
+    record's format is not the receipt's, and its `valid` field is false.
+    """
+    folder = destination.parent / "attempts" / destination.stem
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True)
+    files = folder / "files"
+    os.replace(out, files)
+    record["error"] = str(error)
+    record["time"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    record["files"] = {str(p.relative_to(files)): sha256(p)
+                       for p in sorted(files.rglob("*")) if p.is_file()}
+    (folder / "attempt.json").write_text(json.dumps(record, indent=2) + "\n")
+    return folder
+
+
+def fresh_run(command, destination, reports, artifacts=(), *, cwd, input_snapshot=None):
     """A producer gets an empty directory. Only a validated, unchanged-input run is published.
 
-    COMMAND contains {out} as its output-directory argument. Every named output is required;
-    JSON reports are recognized by format. Other JSON artifacts are not called reports.
-    Exit 2 remains exit 2, including when a profile intentionally has unresolved rows.
+    COMMAND contains {out} as its output-directory argument. Every output has a declared role.
+    REPORTS maps each report file to the tool identity it must carry, and ARTIFACTS names the
+    other files. A report is validated, and an artifact is hashed. The role is never read off
+    the file: a declared report without the report format is refused, and so is a declared
+    artifact that carries it. Exit 2 remains exit 2, including when a profile intentionally has
+    unresolved rows.
+
+    A refused run publishes nothing: the earlier receipt stays as it was. `retain_attempt` keeps
+    the run's files, command, exit, standard output and standard error for the diagnosis.
     """
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    reports, artifacts = dict(reports), list(artifacts)
+    names = list(reports) + artifacts
+    require(reports, "the profile declares no report")
+    require(len(set(names)) == len(names), "the profile names an output twice")
+    roles = {**{name: f"report:{tool}" for name, tool in reports.items()},
+             **{name: "artifact" for name in artifacts}}
     before = input_snapshot() if input_snapshot else {}
-    with tempfile.TemporaryDirectory(prefix=".conform-", dir=destination.parent) as scratch:
-        out = Path(scratch)
-        completed = subprocess.run([x.replace("{out}", str(out)) for x in command], cwd=cwd,
-                                   capture_output=True, text=True)
-        found = {str(p.relative_to(out)) for p in out.rglob("*") if p.is_file()}
-        require(found == set(expected_files), f"producer output set differs: {found ^ set(expected_files)}; exit {completed.returncode}\n{completed.stderr[-3000:]}")
-        statuses, reports = [], {}
-        for name in expected_files:
-            path = out / name
-            if path.suffix == ".json":
-                value = json.loads(path.read_text())
-                if isinstance(value, dict) and "format" in value and value["format"].startswith("conform-report"):
-                    statuses.append(validate(value))
-                    reports[name] = value
-        require(statuses, "producer emitted no reports")
-        require(completed.returncode == max(statuses), "phase exit differs from its reports")
-        after = input_snapshot() if input_snapshot else {}
-        require(before == after, "inputs changed during execution")
-        receipt = {"format": "conform-run-v1", "command": command,
-                   "exit": completed.returncode, "inputs": before,
-                   "outputs": {name: sha256(out / name) for name in expected_files},
-                   "reports": reports, "stdout": completed.stdout, "stderr": completed.stderr}
-        generation = hashlib.sha256(json.dumps(receipt["outputs"], sort_keys=True).encode()).hexdigest()
-        artifacts = destination.parent / "artifacts" / generation
-        artifacts.parent.mkdir(parents=True, exist_ok=True)
-        if not artifacts.exists():
-            shutil.copytree(out, artifacts)
-        receipt["artifactDirectory"] = str(artifacts)
-        temporary = destination.with_suffix(".tmp")
-        temporary.write_text(json.dumps(receipt, indent=2) + "\n")
-        os.replace(temporary, destination)
-        return completed.returncode
+    out = Path(tempfile.mkdtemp(prefix=".conform-", dir=destination.parent))
+    record = {"format": "conform-attempt-v1", "valid": False, "command": command,
+              "roles": roles, "inputs": before}
+    try:
+        try:
+            completed = subprocess.run([x.replace("{out}", str(out)) for x in command], cwd=cwd,
+                                       capture_output=True, text=True)
+            record.update(exit=completed.returncode, stdout=completed.stdout,
+                          stderr=completed.stderr)
+            found = {str(p.relative_to(out)) for p in out.rglob("*") if p.is_file()}
+            require(found == set(names),
+                    f"producer output set differs: missing {sorted(set(names) - found)}, "
+                    f"unexpected {sorted(found - set(names))}; exit {completed.returncode}\n"
+                    f"{completed.stderr[-3000:]}")
+            statuses, read = [], {}
+            for name, tool in reports.items():
+                try:
+                    value = json.loads((out / name).read_text())
+                except ValueError as error:
+                    raise InvalidReport(f"{name}: declared a report, and it is not JSON: {error}")
+                found_format = value.get("format") if isinstance(value, dict) else None
+                require(found_format == REPORT_FORMAT,
+                        f"{name}: declared a report, and its format is {found_format!r}, "
+                        f"not {REPORT_FORMAT!r}")
+                try:
+                    statuses.append(validate(value, expected_tool=tool))
+                except InvalidReport as error:
+                    raise InvalidReport(f"{name}: {error}") from error
+                read[name] = value
+            for name in artifacts:
+                require(not carries_report_format(out / name),
+                        f"{name}: declared an artifact, and it carries a report's format")
+            require(completed.returncode == max(statuses), "phase exit differs from its reports")
+            after = input_snapshot() if input_snapshot else {}
+            changed = sorted(k for k in before.keys() | after.keys()
+                             if before.get(k) != after.get(k))
+            require(not changed, f"inputs changed during execution: {changed[:8]}")
+            receipt = {"format": "conform-run-v1", "command": command,
+                       "exit": completed.returncode, "inputs": before, "roles": roles,
+                       "outputs": {name: sha256(out / name) for name in names},
+                       "reports": read, "stdout": completed.stdout, "stderr": completed.stderr}
+            generation = hashlib.sha256(json.dumps(receipt["outputs"], sort_keys=True).encode()).hexdigest()
+            artifact_folder = destination.parent / "artifacts" / generation
+            artifact_folder.parent.mkdir(parents=True, exist_ok=True)
+            if not artifact_folder.exists():
+                shutil.copytree(out, artifact_folder)
+            receipt["artifactDirectory"] = str(artifact_folder)
+            temporary = destination.with_suffix(".tmp")
+            temporary.write_text(json.dumps(receipt, indent=2) + "\n")
+            os.replace(temporary, destination)
+            return completed.returncode
+        except (InvalidReport, OSError) as error:
+            folder = retain_attempt(out, destination, record, error)
+            raise InvalidReport(f"{error}\nthe attempt is kept: {folder}") from error
+    finally:
+        shutil.rmtree(out, ignore_errors=True)

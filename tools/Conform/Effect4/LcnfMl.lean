@@ -20,7 +20,9 @@ rung 2 uses. Nothing is re-implemented: the input is exactly the syntax tree
 **The reader refuses by name.** Every `Ml.Expr` and `Ml.Pat` constructor outside the emitted
 subset is an `Except` error naming the constructor, so "the evaluator handles what the
 translator emits" is a checked claim rather than a hope. The refusals this run reports are
-listed in the output.
+listed in the output. One labelled application is read, by its exact shape:
+`Option.value o ~default:d`, the form of the row `Option.getD`. Every other labelled
+application is refused.
 
 The production backend emits its UTF-8 helper and byte-array identity. This reader uses
 those same emitted declarations, with named primitive assumptions in the target evaluator.
@@ -140,7 +142,13 @@ partial def ofExpr : OCaml5.Ml.Expr → Except String Target.Expr
   | .whileE .. => .error "Ml.Expr.whileE"
   | .forE .. => .error "Ml.Expr.forE"
   | .polyCtor .. => .error "Ml.Expr.polyCtor"
-  | .appL .. => .error "Ml.Expr.appL (a labelled application)"
+  -- The one labelled call the builtin table writes: the row `Option.getD`. It is read by its
+  -- exact shape: the function's name, one positional option, then the label `default`. The
+  -- target primitive takes both as values, as the call evaluates both.
+  | .appL (.var "Option.value") [(.nolabel, o), (.lbl "default", d)] => do
+    return .prim "Option.value~default" [← ofExpr o, ← ofExpr d]
+  | .appL .. =>
+    .error "Ml.Expr.appL (a labelled application other than `Option.value o ~default:d`)"
   | .ifThenOnly .. => .error "Ml.Expr.ifThenOnly"
   | .handler .. => .error "Ml.Expr.handler"
   | .matchWithK .. => .error "Ml.Expr.matchWithK"
@@ -268,30 +276,30 @@ def buildCases : Array Target.TCase := Id.run do
   for t in vectors do
     let tv := tyT t
     let lbl := t.render
-    out := out.push { label := lbl, bind := gname ``Ty.render, args := #[tv], expected := .str t.render }
-    out := out.push { label := lbl, bind := gname ``Ty.key, args := #[tv], expected := natListT t.key }
-    out := out.push { label := lbl, bind := gname ``Ty.members, args := #[tv], expected := tyListT t.members }
-    out := out.push { label := lbl, bind := gname ``Ty.isNever, args := #[tv], expected := .bool t.isNever }
+    out := out.push { label := lbl, bind := gname ``Ty.render, args := #[tv], expected := .value (.str t.render) }
+    out := out.push { label := lbl, bind := gname ``Ty.key, args := #[tv], expected := .value (natListT t.key) }
+    out := out.push { label := lbl, bind := gname ``Ty.members, args := #[tv], expected := .value (tyListT t.members) }
+    out := out.push { label := lbl, bind := gname ``Ty.isNever, args := #[tv], expected := .value (.bool t.isNever) }
     out := out.push { label := lbl, bind := gname ``Ty.ofMembers, args := #[tyListT t.members],
-                      expected := tyT (Ty.ofMembers t.members) }
+                      expected := .value (tyT (Ty.ofMembers t.members)) }
     out := out.push { label := lbl ++ " ⊔ self", bind := gname ``Ty.join, args := #[tv, tv],
-                      expected := tyT (Ty.join t t) }
+                      expected := .value (tyT (Ty.join t t)) }
     out := out.push { label := lbl ++ " ⊔ never", bind := gname ``Ty.join, args := #[tv, tyT .never],
-                      expected := tyT (Ty.join t .never) }
+                      expected := .value (tyT (Ty.join t .never)) }
     out := out.push { label := lbl ++ " ▷ []", bind := gname ``Ty.insertMember,
                       args := #[tv, Target.TValue.ofList []],
-                      expected := tyListT (Ty.insertMember t []) }
+                      expected := .value (tyListT (Ty.insertMember t [])) }
   for a in c1 do
     for b in c1 do
       let lbl := a.render ++ " | " ++ b.render
       out := out.push { label := lbl, bind := gname ``Ty.join, args := #[tyT a, tyT b],
-                        expected := tyT (Ty.join a b) }
+                        expected := .value (tyT (Ty.join a b)) }
       out := out.push { label := lbl, bind := gname ``Effect4.Field.ltKey,
                         args := #[natListT a.key, natListT b.key],
-                        expected := .bool (Effect4.Field.ltKey a.key b.key) }
+                        expected := .value (.bool (Effect4.Field.ltKey a.key b.key)) }
       out := out.push { label := lbl, bind := gname ``Ty.insertMember,
                         args := #[tyT a, tyListT [b]],
-                        expected := tyListT (Ty.insertMember a [b]) }
+                        expected := .value (tyListT (Ty.insertMember a [b])) }
   return out
 
 /-! ## 4. The driver -/
