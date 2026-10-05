@@ -2,8 +2,7 @@ git diff --exit-code f3086de1 -- <the pinned lane's sources and committed artifa
 exit status 0 (0: no byte differs)
 git diff --numstat f3086de1 -- scripts/lib/truth_host.py (added, removed):
 108	0	scripts/lib/truth_host.py
-git status --short:
- M harness/truth/RELEASE-LANE.md
+git status --short, the seat's evidence folder aside:
 (end)
 
 The pinned lane's printed lines at the base f3086de1 (check-truth.at-base.log) against the head's (check-truth.log),

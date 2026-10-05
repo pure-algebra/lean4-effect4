@@ -4,9 +4,9 @@ bun test v1.4.2 (744846f84)
  23 pass
  0 fail
  175 expect() calls
-Ran 23 tests across 4 files. [282.00ms]
+Ran 23 tests across 4 files. [466.00ms]
 python3 scripts/check-truth.py
-wrote 39 programs to /Users/pooks/Dev/lean4-effect4-m0/harness/truth/truth-check-tfdics99/corpus.json
+wrote 39 programs to /Users/pooks/Dev/lean4-effect4-m0/harness/truth/truth-check-06bhzl0y/corpus.json
 {"kind":"signed-divergence-controls","checks":9,"failures":[]}
 | program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
 |---|---|---|---|---|---|---|---|
@@ -92,7 +92,10 @@ python3 scripts/check-truth-release.py --self-test
 --- control red: a reason left on an agreeing line: ok
 --- control red: an entry that is none of the four: ok
 --- control red: a `no` without its difference: ok
---- control red: a line with a column too few: ok
+--- control red: a line with an entry too few: ok
+--- control red: a line with a column too many: ok
+--- control green: a ledger whose trailing empty columns were trimmed says the same: ok
+--- control red: a trimmed line that still needs its slice: ok
 --- control red: a header for other builds: ok
 --- control red: an empty file: ok
 --- control red: no file: ok
@@ -137,7 +140,7 @@ python3 scripts/check-truth-release.py --self-test
 --- control green: an install with the pinned compiler: ok
 --- control green: the table is true of a pin-shaped and a release-shaped package: ok
 --- control red: the table against two packages of the pin's shape: ok
-self-test: 85 of 85 controls as expected
+self-test: 88 of 88 controls as expected
 python3 scripts/check-truth-release.py --host-tests harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
 truth-release: the control: effect@4.0.0-rc.112 through the work copy (33 sources) reproduces result.json, result.md, 39 modules and 6 tapes byte for byte
 truth-release: the release: effect@4.0.1, 34 of 39 programs run; not run, the install has no @effect/sql-sqlite-bun: pSqlite, pSqlFail, pSqlCatch, pSqlExit, pSqlOrDie

@@ -4,9 +4,9 @@ bun test v1.4.2 (744846f84)
  23 pass
  0 fail
  175 expect() calls
-Ran 23 tests across 4 files. [607.00ms]
+Ran 23 tests across 4 files. [379.00ms]
 python3 scripts/check-truth.py
-wrote 39 programs to /Users/pooks/Dev/lean4-effect4-m0/harness/truth/truth-check-im5vfsxq/corpus.json
+wrote 39 programs to /Users/pooks/Dev/lean4-effect4-m0/harness/truth/truth-check-t_ski3ex/corpus.json
 {"kind":"signed-divergence-controls","checks":9,"failures":[]}
 | program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
 |---|---|---|---|---|---|---|---|

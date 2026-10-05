@@ -25,7 +25,7 @@ $SLOT make -o build -o ts/eff/node_modules check-truth > $E/check-truth.log 2>&1
   git diff --exit-code f3086de1 -- harness/truth/corpus.json harness/truth/result.json harness/truth/result.md harness/truth/generated harness/truth/tapes harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/records.ts harness/truth/tuples.ts harness/truth/run-truth.ts harness/truth/tsconfig.json harness/truth/session harness/truth/Truth.lean scripts/check-truth.py scripts/check-corpus.py ts/eff
   echo "exit status $? (0: no byte differs)"
   echo "git diff --numstat f3086de1 -- scripts/lib/truth_host.py (added, removed):"; git diff --numstat f3086de1 -- scripts/lib/truth_host.py
-  echo "git status --short:"; git status --short; echo "(end)"; } > $E/pinned-artifacts.txt 2>&1
+  echo "git status --short, the seat's evidence folder aside:"; git status --short -- . ':!docs/research'; echo "(end)"; } > $E/pinned-artifacts.txt 2>&1
 
 # The pinned lane's printed lines at the base (the seat's run before any change) against the head's.
 sed '$d' $S/check-truth.base.log > $E/check-truth.at-base.log
@@ -77,14 +77,22 @@ keep harness/truth/build-ledger.tsv; { echo "RED CONTROL D: a promote over a led
 from pathlib import Path
 p = Path('harness/truth/build-ledger.tsv'); lines = p.read_bytes().decode('utf-8').split('\n')
 i = next(k for k, l in enumerate(lines) if l.startswith('pInterruptEscape\t'))
-lines[i] = lines[i].rsplit('\t', 1)[0]
+lines[i] = '\t'.join(lines[i].split('\t')[:5])
 p.write_bytes('\n'.join(lines).encode('utf-8'))
-print('removed the last column of the line of pInterruptEscape')
+print('cut the line of pInterruptEscape to five columns')
 PY
 echo "sha256 of the ledger before the promote: $(shasum -a 256 harness/truth/build-ledger.tsv | cut -c1-16)"
 python3 scripts/check-truth-release.py --promote 2>&1 | grep "FAIL\|promoted"; echo "promote exit status: ${pipestatus[1]}"
 echo "sha256 of the ledger after the promote:  $(shasum -a 256 harness/truth/build-ledger.tsv | cut -c1-16)"
 back harness/truth/build-ledger.tsv; } > $E/red-control-D.promote-guard.txt 2>&1
+keep harness/truth/build-ledger.tsv; { echo "GREEN CONTROL E: the ledger with its trailing empty columns trimmed, as an editor may leave it"; python3 - <<'PY'
+from pathlib import Path
+p = Path('harness/truth/build-ledger.tsv'); s = p.read_bytes().decode('utf-8')
+t = '\n'.join(line.rstrip('\t') for line in s.split('\n'))
+p.write_bytes(t.encode('utf-8'))
+print('trimmed the trailing tabs of', sum(1 for a, b in zip(s.split('\n'), t.split('\n')) if a != b), 'lines')
+PY
+run; back harness/truth/build-ledger.tsv; } > $E/green-control-E.trimmed-ledger.txt 2>&1
 stale; mq check-truth-release 2>&1 | tail -1 > $E/after-red-controls.txt; echo "after the red controls: $(cut -c1-60 $E/after-red-controls.txt)" | tee -a $E/summary.new
 
 # 4. the red controls on real data, the kept controls, the lane with the network denied
@@ -147,4 +155,4 @@ print(f'{len(oxc)} sources, {total} static import and re-export specifiers by ox
 PY
 cat $E/specifiers-against-oxc.txt | tee -a $E/summary.new
 mv $E/summary.new $E/summary.txt
-git status --short
+git status --short -- . ':!docs/research'

@@ -18,9 +18,13 @@ record.
 - `b106d795`: the pinned lane's host tests run on both builds.
 - `aded1cec`: the promote refuses a ledger that it could not read whole.
 - `b2d63c0d`: the identity rule as a pure function with its controls.
-- `fb324abe`: one word of a docstring. This is the code head, and `out/` was written at it.
-- Head: the commit that adds this receipt, its evidence folder and one word of the lane note.
-  The seat's final message gives its hash.
+- `fb324abe`: one word of a docstring.
+- `38b3ea1c`: this receipt and its evidence folder, in their first form.
+- `8cdda516`: the ledger's reader takes a line whose empty trailing columns were trimmed.
+- `96e11df9`: a host that does not finish is a refusal with one line. This is the code head,
+  and `out/` was written at it.
+- Head: the commit that brings this receipt and its evidence to the code head. The seat's
+  final message gives its hash.
 - Nothing is pushed.
 
 ## Changed files
@@ -29,7 +33,7 @@ record.
 | --- | --- |
 | `scripts/lib/truth_host.py` | 108 lines added, none removed. `release_install`, `select_release`, `compiler_refusal`, `link_install` and the table `RELEASE_ENTRY_POINTS`. `select`, `compiler` and `copy_prelude` are as at the base |
 | `scripts/lib/truth_ledger.py` | New. The build ledger's pure part: its grammar, the observation of a runner result, the comparison |
-| `scripts/check-truth-release.py` | New. The lane, the promote, and 85 controls (`--self-test`) |
+| `scripts/check-truth-release.py` | New. The lane, the promote, and 88 controls (`--self-test`) |
 | `harness/truth/build-ledger.tsv` | New. One ledger line for each of the 39 programs of the manifest |
 | `harness/truth/build-ledger.run.json` | New. The run record: what the entries were measured on |
 | `harness/truth/RELEASE-LANE.md` | New. The lane note |
@@ -68,7 +72,7 @@ brief forbids both. The two flags tell make not to remake those two targets.
 | Command | Result |
 | --- | --- |
 | At the base: `EFFECT4_EFFECT_NODE_MODULES=<P> <slot> make -o build -o ts/eff/node_modules check-truth` | `PASS truth: pinned corpus, bounded differential and signed U-01 divergence checked; the regenerated modules type-check` |
-| The same command at the code head `fb324abe` (`out/check-truth.log`) | Exit 0. Last lines: `PASS: 38 programs agree on exits, schedules and sync exits; 1 signed divergence(s)` and the same `PASS truth:` line |
+| The same command at the code head `96e11df9` (`out/check-truth.log`) | Exit 0. Last lines: `PASS: 38 programs agree on exits, schedules and sync exits; 1 signed divergence(s)` and the same `PASS truth:` line |
 | `git diff --exit-code f3086de1 --` over the pinned lane's sources and committed artifacts (`out/pinned-artifacts.txt`) | Exit 0: no byte differs |
 | The lane's output at the base against the head's, line by line, temporary folder name and test time aside | No line differs |
 | `git diff --numstat f3086de1 -- scripts/lib/truth_host.py` | `108 0` |
@@ -77,7 +81,7 @@ brief forbids both. The two flags tell make not to remake those two targets.
 
 | Command | Result |
 | --- | --- |
-| `EFFECT4_EFFECT_NODE_MODULES=<P> EFFECT4_RELEASE_NODE_MODULES=<R> <slot> make -o build -o ts/eff/node_modules check-truth-release` (`out/check-truth-release.log`) | Exit 0. `self-test: 85 of 85 controls as expected`, then the lane's lines below |
+| `EFFECT4_EFFECT_NODE_MODULES=<P> EFFECT4_RELEASE_NODE_MODULES=<R> <slot> make -o build -o ts/eff/node_modules check-truth-release` (`out/check-truth-release.log`) | Exit 0. `self-test: 88 of 88 controls as expected`, then the lane's lines below |
 | The control | `effect@4.0.0-rc.112 through the work copy (33 sources) reproduces result.json, result.md, 39 modules and 6 tapes byte for byte` |
 | The release | `effect@4.0.1, 34 of 39 programs run; not run, the install has no @effect/sql-sqlite-bun: pSqlite, pSqlFail, pSqlCatch, pSqlExit, pSqlOrDie` |
 | What each build ran on (also `harness/truth/build-ledger.run.json` and `out/run.json`) | `effect@4.0.1 ran on bun 1.4.2; tsgo 7.0.0-dev.20260629.1 type-checks its 64 sources; modules: 34, sha256 60a2893025fd06a1; tapes: 1, sha256 b3832d633fddddd0; host tests: 23 pass in 4 file(s)`. The pin's line: 68 sources, 39 modules `07ac4adeb4adea7c`, 6 tapes `0f40a831dab3bd86`, 23 pass |
@@ -89,7 +93,7 @@ brief forbids both. The two flags tell make not to remake those two targets.
 
 ### The red controls
 
-`out/` holds the output of each. The first four change one committed file, run the lane and put
+`out/` holds the output of each. The first five change one committed file, run the lane and put
 a kept copy back.
 
 | Control | Result |
@@ -97,13 +101,14 @@ a kept copy back.
 | A, the brief's. The entry `p42`, `4.0.1 exit`, flipped from `yes` to `no: x` | make exits 2. `FAIL truth-release: p42: 4.0.1 exit: the ledger says "no: x", observed "yes"`, and one more finding: the line then needs a reason and a slice. Put back |
 | B, the addendum's first. `pProvideMerge` keeps its schedule difference, and its expected `4.0.1 exit` is altered | make exits 2. One finding: `FAIL truth-release: pProvideMerge: 4.0.1 exit: the ledger says "no: machine success 2, host success 3", observed "yes"`. No finding names its schedule. Put back |
 | C. The run record names another module digest and another bun version | make exits 2. Two findings, each with the record's path, the recorded value and this run's value. Put back |
-| D. A ledger line a column short, then the promote | The promote exits 1: `the ledger on disk has 39 line(s) and 38 could be read`. The file's bytes do not change. Put back |
+| D. A ledger line cut to five columns, then the promote | The promote exits 1: `the ledger on disk has 39 line(s) and 38 could be read`. The file's bytes do not change. Put back |
+| E, a green control. The trailing tabs of the ledger's 30 agreeing lines trimmed, as an editor may leave them | make exits 0 with the same PASS line. Put back |
 | The addendum's first, on real data (`red-controls.py`): for each of `pProvideMerge`, `pProvideTwice` and `pMergeAll`, the observed exit is altered, then the observed sync exit | Six refusals. Each names the program and the altered field, for example `pMergeAll: 4.0.1 exit: the ledger says "yes", observed "no: machine success 3, host success 99"`. None names the schedule |
 | The addendum's second, on real data: the observation of `pBind` removed from the release result; of `pGen` from the pin result | `(the result is refused) pBind: the runner reports no result for it`; the same for `pGen` |
 | The addendum's second, on real data: a field absent (`pFork`, `runSyncAgree`) or null (`p42`, `scheduleAgree`; `pKv`, `exitAgree`) | `pFork: 4.0.1 sync: the ledger says "yes", observed "n/a"`, and the same form for the two others |
 | The addendum's second, on real data: `pSqlite` said to have run; a result for `pSqlite` slipped in | Both refused: `the runner reports no result for it`; `the lane did not select it, and the runner reports it` |
 | `python3 docs/research/2026-10-05-seat-M0/red-controls.py` as a whole | `red controls on real data: 14 of 14 as expected` |
-| `python3 scripts/check-truth-release.py --self-test` | `self-test: 85 of 85 controls as expected`. It reads no install and runs no host |
+| `python3 scripts/check-truth-release.py --self-test` | `self-test: 88 of 88 controls as expected`. It reads no install and runs no host |
 
 ### Other checks
 
@@ -140,7 +145,7 @@ phase of the pinned lane.
 | The pinned lane's four host test files pass on both builds | tested | 23 tests |
 | The lane needs no network, and nothing was downloaded | tested | A sandbox that denies the network, on macOS; bun's cache unchanged |
 | The ledger's groups are the audit's four groups | tested | The comparison above |
-| The lane refuses each fault of the controls | tested | 85 kept controls on a small manifest; four on the committed files; 13 on the real results |
+| The lane refuses each fault of the controls | tested | 88 kept controls on a small manifest; four red controls on the committed files; 13 on the real results |
 | The Windows branch of `link_install`, and bun as `bun.exe` under WSL | assumed | Written after `select`; not run |
 
 No statement here is proved. Every host run is a finite probe on one machine.
@@ -226,9 +231,9 @@ on the three fields that the runner compares. It states no claim of its own.
   change.
 - **A safety check refused one `rm` of the old evidence files.** The seat did not repeat it,
   and the evidence script overwrites each file in place.
-- **Eight `curl` probes ran inside the sandbox that denies the network,** as its red control.
-  Two ran by hand, and one ran in each run of the evidence script. Each failed to resolve
-  `registry.npmjs.org`, and nothing was fetched.
+- **A `curl` probe ran inside the sandbox that denies the network,** as its red control. It
+  ran twice by hand and once in each run of the evidence script. Each time it failed to
+  resolve `registry.npmjs.org`, and nothing was fetched.
 
 ### Noticed in passing, outside the slice
 

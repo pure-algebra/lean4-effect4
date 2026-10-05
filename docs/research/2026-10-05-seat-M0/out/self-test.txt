@@ -38,7 +38,10 @@
 --- control red: a reason left on an agreeing line: ok
 --- control red: an entry that is none of the four: ok
 --- control red: a `no` without its difference: ok
---- control red: a line with a column too few: ok
+--- control red: a line with an entry too few: ok
+--- control red: a line with a column too many: ok
+--- control green: a ledger whose trailing empty columns were trimmed says the same: ok
+--- control red: a trimmed line that still needs its slice: ok
 --- control red: a header for other builds: ok
 --- control red: an empty file: ok
 --- control red: no file: ok
@@ -83,4 +86,4 @@
 --- control green: an install with the pinned compiler: ok
 --- control green: the table is true of a pin-shaped and a release-shaped package: ok
 --- control red: the table against two packages of the pin's shape: ok
-self-test: 85 of 85 controls as expected
+self-test: 88 of 88 controls as expected

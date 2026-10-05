@@ -3,7 +3,7 @@ make check-truth-release: exit status 0
 after the red controls: PASS truth-release: 39 programs match harness/truth/build-le
 the lane, direct: exit status 0
 red-controls.py: exit status 0; red controls on real data: 14 of 14 as expected
---self-test: exit status 0; self-test: 85 of 85 controls as expected
+--self-test: exit status 0; self-test: 88 of 88 controls as expected
 curl exit status: 6
 lane exit status: 0
 six runs: 6 pass, 1 distinct SHA-256 of the release result
