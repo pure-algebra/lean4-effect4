@@ -3,13 +3,17 @@
 Status: research note (history, not authority). Base: `4f69ff59` (`refactor/phase1-phase3`).
 A contract for review. No file of the tree changed.
 
+**Ruled 2026-10-05.** The owner ratified proposals 1 to 4 in session, as recommended. They are
+decisions rows 240 to 243. Proposal 5's candidates are listed in `docs/UPSTREAM-BACKLOG.md`,
+and none is reported. Proposal 6 stays with the first Queue slice.
+
 **The one thing to know first.** Decisions row 233 asks for the Queue's whole transition
 contract before the first Queue slice. This note states it, under rows 219 to 222, 235 and 238:
 one cell, and one pure step for each operation of the release's API. Its executable form is
 `QueueContract.lean` beside it: 32 controls, and a bounded exploration of 177,156 runs on each
 of eight configurations, with a red control. Seven points differ from the native 4.0.1 queue on
-purpose, and each is measured on rc.112 and 4.0.1. Three points are new choices for the owner
-(proposals 1 to 3).
+purpose, and each is measured on rc.112 and 4.0.1. Three points were new choices for the owner
+(proposals 1 to 3, now rows 240 to 242).
 
 ## Question
 
@@ -137,7 +141,8 @@ For `suspend`, capacity zero is a rendezvous:
 - nothing is ever buffered.
 
 `sliding` at capacity zero is refused (row 219). The native queue stores one message there, and
-a waiting taker is not woken (D5). `dropping` at capacity zero is proposal 2.
+a waiting taker is not woken (D5). `dropping` at capacity zero is refused too (proposal 2, row
+241).
 
 ### F5. The ends
 
@@ -228,20 +233,22 @@ It also has row 222's four observations. Two points follow from this contract:
 
 None is a planned goal yet. The first Queue slice states each one over its definitions.
 
-## Proposals (not rulings)
+## Proposals, and what the owner ruled
 
 1. **Every signal of the Queue is posted, the offerer's too.** Row 220 says posted. The native
    queue resumes a waiting offerer inside the take that frees room (D1). Posting keeps the
    signalling fiber free of the receiver's code. The cost is the difference of D1.
+   **Ruled: row 240.**
 2. **`dropping` at capacity zero is not formed.** The release hands the message to a waiting
    taker, and the pin refuses it (D4). A hand-over is a reservation, which row 219 rejects.
+   **Ruled: row 241.**
 3. **`clear` and `poll` pass no waiting taker,** as row 219 says of a request that never waits.
-   The native `clear` passes (D6).
-4. **`flush` and the `Unsafe` family are refused by name.**
+   The native `clear` passes (D6). **Ruled: row 242.**
+4. **`flush` and the `Unsafe` family are refused by name.** **Ruled: row 243.**
 5. **Upstream candidates,** for the owner to decide: D5, and the buffered message at capacity
-   zero (D3, D7).
+   zero (D3, D7). They are listed in `docs/UPSTREAM-BACKLOG.md`, and none is reported.
 6. **This note becomes the packet in `Test/contracts/`** with the first Queue slice, and the
-   model's steps become the pure queue in Lean.
+   model's steps become the pure queue in Lean. This stays a proposal until that slice.
 
 ## What this does not establish
 

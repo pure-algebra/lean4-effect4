@@ -158,7 +158,7 @@ Where to read:
 - [the landing review](research/2026-10-05-claude-lead/landing-review.md): what the session of
   2026-10-04 landed.
 
-More rulings of the same day (rows 235 to 239):
+More rulings of the same day (rows 235 to 243):
 
 - the Queue's TypeScript face prints the expansion by default, and the native queue only under a
   narrower named profile;
@@ -169,13 +169,18 @@ More rulings of the same day (rows 235 to 239):
 - the mask is a saved Boolean, with one fiber action that reads the interruptibility (row 239);
 - a second note, on the mask's check at program admission and its printed form, comes before
   any seat;
-- a recognized `restore` may escape its mask (row 227, amended).
+- a recognized `restore` may escape its mask (row 227, amended);
+- every signal of the Queue is posted, a waiting offerer's too (row 240);
+- `dropping` at capacity zero is not formed (row 241);
+- `poll` and `clear` pass no waiting taker (row 242);
+- `flush` and the `Unsafe` family are refused by name (row 243).
 
 Open at this landing:
 
-- the Queue's whole transition contract: drafted on 2026-10-05
+- the Queue's whole transition contract: written on 2026-10-05
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
-  model), and owed as a packet in `Test/contracts/` with the first Queue slice;
+  model), its choices ruled (rows 240 to 243), and owed as a packet in `Test/contracts/` with
+  the first Queue slice;
 - the mask's second note; the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
