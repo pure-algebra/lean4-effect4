@@ -250,13 +250,14 @@ Open at this landing:
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
      its law, and the printed form. It follows T5 and the mask (row 251).
 
-  A probe ran `take` and `offer` as programs on the machine, with stand-ins for the fold and
-  the mask (`research/2026-10-05-claude-lead/queue-readiness/QueueSkeleton.lean`; a finite
-  probe, fifteen programs). They build and run with the constructs of today: the posted helper
-  of row 238, a wait and a second attempt, strict order with two takers, and a withdrawal that
-  keeps the interruptor. The cleanup is the pin's `onInterrupt`: `onExit` with
-  `causeIsInterrupt` on the exit. Not probed: the generated engine, and the printed module on
-  a host, which waits for T5;
+  Two probes ran `take` and `offer` as programs on the machine
+  ([the note](research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md); finite
+  probes). The second uses the real steps: one `Ref.modify` whose term folds, the posted helper
+  of row 238, strict order, an offer that waits at capacity, and a withdrawal that keeps the
+  interruptor. Seven scenarios answer as expected, and two were read beside the model. The
+  cleanup is the pin's `onInterrupt`: `onExit` with `causeIsInterrupt` on the exit. Not
+  probed: the generated engine, a masked caller, batches, and the printed module on a host,
+  which waits for T5;
 - the acceptance programs gain four scenarios (row 254;
   [Codex's review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/dogfood/review.md)):
   two workers with two pending replies, exact handler routing, atomic state with failure and

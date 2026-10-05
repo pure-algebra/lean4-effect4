@@ -1,0 +1,16 @@
+("built", "built", "built", "built", "built", "built", "built")
+some
+  "(Effect4.Program.Ty.tuple\n   [Effect4.Program.Ty.bool, Effect4.Program.Ty.nat, Effect4.Program.Ty.bool, Effect4.Program.Ty.nat],\n Effect4.Program.Ty.never)"
+"success (Val.list [(Val.bool true), (Val.bool true), (Val.nat 1), (Val.nat 2)])"
+"success (Val.nat 7)"
+"success (Val.list [(Val.nat 1), (Val.nat 2)])"
+"success (Val.list [(Val.bool true), (Val.nat 1), (Val.bool true), (Val.nat 2)])"
+"success (Val.list [(Val.nat 5), (Val.nat 0)])"
+"success (Val.list [(Val.nat 1), (Val.nat 0), (Val.nat 0)])"
+"success (Val.ctor 1 [(Val.ctor 0 [(Val.list [(Val.ctor 2 [(Val.some (Val.ctor 0 [(Val.nat 0)])), (Val.ctor 0 [(Val.list [(Val.pair (Val.str \"stack1\") Val.unit), (Val.pair (Val.str \"stack0\") Val.unit)])])])])])])"
+"(QueueContract.OfferReply.accepted true,\n QueueContract.OfferReply.accepted true,\n QueueContract.TakeReply.got [1],\n QueueContract.TakeReply.got [2])"
+"(QueueContract.OfferReply.accepted true,\n QueueContract.OfferReply.wait,\n QueueContract.TakeReply.got [1],\n [{ id := 101, note := QueueContract.Note.offered true }],\n QueueContract.TakeReply.got [2])"
+some (379, 11)
+some (50, 1)
+some (61, 1)
+("refused: typeSpelling Deferred.make", "refused: typeSpelling Deferred.make", "printed")
