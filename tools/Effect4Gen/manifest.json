@@ -217,9 +217,9 @@
     },
     {
       "Name": "Fold",
-      "Flags": ["--module", "--meta-imports", "Effect4.Program.Eff,Effect4.Program.Ty"],
+      "Flags": ["--module", "--meta-imports", "Effect4.Program.Eff,Effect4.Program.Ty,Effect4.Program.ScopedOp"],
       "Tool": "tools/Effect4Gen/Fold.lean",
-      "Imports": "Effect4.Program.Eff,Effect4.Program.Ty",
+      "Imports": "Effect4.Program.Eff,Effect4.Program.Ty,Effect4.Program.ScopedOp",
       "Out": "src\\Effect4\\Program\\Fold.lean",
       "Guards": "tools\\Effect4Gen\\guards\\fold.lean",
       "Kinds": [],

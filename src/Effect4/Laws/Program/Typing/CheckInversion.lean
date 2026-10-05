@@ -46,12 +46,20 @@ theorem cause?_eq_ok (sig : Signature Op) (env : TyEnv) (path : List Nat) (cause
 theorem listOf?_eq_some (t inner : Ty) : listOf? t = some inner ↔ t = .list inner := by
   cases t <;> simp only [listOf?, reduceCtorEq, Option.some.injEq, Ty.list.injEq]
 
+/-- The row check of a `perform` node succeeds exactly when the row's type answers. -/
+theorem rowCheck_eq_ok (row : Row) (r : Ty) (p : List Nat) (t : EffTy) :
+    rowCheck row r p = .ok t ↔ rowTy row r = some t := by
+  rw [← toOption_rowCheck row r p]
+  cases rowCheck row r p <;> simp only [Except.toOption, reduceCtorEq, Except.ok.injEq,
+    Option.some.injEq]
+
 /-- The value and error types of an exit type, inverted. -/
 theorem exitOf?_eq_some (t : Ty) (x : Ty × Ty) : exitOf? t = some x ↔ t = .exitOf x.1 x.2 := by
   cases x
   cases t <;> simp only [exitOf?, reduceCtorEq, Option.some.injEq, Ty.exitOf.injEq, Prod.mk.injEq]
 
 attribute [aesop norm simp (rule_sets := [Effect4.Checker])] rowTy_eq_some_iff expect_eq_ok term?_eq_ok cause?_eq_ok listOf?_eq_some exitOf?_eq_some check checkStmt
+  rowCheck_eq_ok
   checkStmts checkEffs checkAction checkLayer checkLayers StmtTy.fold GenTy.mergeT GenTy.seqT
   GenTy.joinAnswerT EffTy.joinAnswer_eq GenTy.merge_eq GenTy.seq_eq
 

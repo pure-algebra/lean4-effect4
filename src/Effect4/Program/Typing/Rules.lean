@@ -152,6 +152,25 @@ subsumption and its own columns (`rowTy_closed`, `Laws/Program/Template.lean`). 
 def rowTy (row : Row) (request : Ty) : Option EffTy :=
   (checkRow row request).toOption
 
+/-- The part of a row the row check reads (`checkRow`): its request, answer and error columns
+and its requirements. The name, spelling, shape, trailing names, type arguments, citation and
+registration are the faces' and the runner's. -/
+def Row.columns (row : Row) : Ty × Ty × Ty × List ServiceKey :=
+  (row.request, row.answer, row.error, row.requires)
+
+/-- Two rows with the same columns check alike: the row check reads nothing else. A step of
+`check_weaken` (`Program/Typing.lean`), whose signature premise compares columns. -/
+theorem checkRow_columns {row row' : Row} (h : row.columns = row'.columns) (request : Ty) :
+    checkRow row request = checkRow row' request := by
+  simp only [Row.columns, Prod.mk.injEq] at h
+  obtain ⟨hreq, hans, herr, hrequires⟩ := h
+  simp only [checkRow, Formation.instantiatedSites, hreq, hans, herr, hrequires]
+
+/-- `rowTy` at two rows with the same columns, as functions of the request. -/
+theorem rowTy_columns {row row' : Row} (h : row.columns = row'.columns) :
+    rowTy row = rowTy row' :=
+  funext fun request => by simp only [rowTy, checkRow_columns h request]
+
 /-- The row judgment and diagnostic worker accept the same type. The checker
 inversion and completeness laws consume this projection of `checkRow`. -/
 theorem rowTy_eq_some_iff (row : Row) (request : Ty) (ty : EffTy) :

@@ -1207,20 +1207,25 @@ positions: {p.key} and {q.key}"
 
   return (s, receipts, emitted)
 
-/-- A frontier slot under weakening at `cut`. -/
+/-- A frontier slot under weakening at `cut`. An operation is mapped by its alphabet's
+`ScopedOp.mapTerm`: its binder term is a slot of the program too (state plan T3b). -/
 def weakenOf (tyText : String) (arg : String) : String :=
   if tyText == "Effect4.Program.Term" then s!"(Effect4.Program.Term.weaken cut {arg})"
   else if tyText == "Effect4.Program.CauseTerm" then s!"(Effect4.Program.CauseTerm.weaken cut {arg})"
   else if tyText == "Option Effect4.Program.Term" then
     s!"({arg}.map (Effect4.Program.Term.weaken cut))"
+  else if tyText == "Op" then
+    s!"(Effect4.Program.ScopedOp.mapTerm (Effect4.Program.Term.weaken cut) {arg})"
   else arg
 
 /-- A frontier slot under the maps: a term through `g`, a cause through `gc`, an optional
-term through `g` inside, anything else as it is. -/
+term through `g` inside, an operation's own term through `g` (`ScopedOp.mapTerm`), anything else
+as it is. -/
 def mapOf (tyText : String) (arg : String) : String :=
   if tyText == "Effect4.Program.Term" then s!"(g {arg})"
   else if tyText == "Effect4.Program.CauseTerm" then s!"(gc {arg})"
   else if tyText == "Option Effect4.Program.Term" then s!"({arg}.map g)"
+  else if tyText == "Op" then s!"(Effect4.Program.ScopedOp.mapTerm g {arg})"
   else arg
 
 def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List String) := do
@@ -1286,8 +1291,9 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
   s := s ++ "\n"
 
   s := s ++ "/-- The term frontier mapped: `g` on every term slot, `gc` on every cause slot, of the\n"
-  s := s ++ "open sorts; closed layers are constants of this signature and stay as they are. -/\n"
-  s := s ++ "def frontierMap {Op : Type} (g : Effect4.Program.Term → Effect4.Program.Term)\n"
+  s := s ++ "open sorts, and `g` on an operation's own term (`ScopedOp.mapTerm`); closed layers are\n"
+  s := s ++ "constants of this signature and stay as they are. -/\n"
+  s := s ++ "def frontierMap {Op : Type} [Effect4.Program.ScopedOp Op] (g : Effect4.Program.Term → Effect4.Program.Term)\n"
   s := s ++ "    (gc : Effect4.Program.CauseTerm → Effect4.Program.CauseTerm) :\n"
   s := s ++ "    EffFrontierAlgebra Op (frontierSelfCarrier Op) where\n"
   for (_, _, rows) in block do
@@ -1301,14 +1307,14 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
       let rhs := if rhsArgs.isEmpty then "" else " " ++ String.intercalate " " rhsArgs
       s := s ++ s!"  {r.field}{lhs} := .{r.ctor}{rhs}\n"
   s := s ++ "\n/-- Weakening at a cut is the frontier map of the term weakening. -/\n"
-  s := s ++ "def weakenAlg {Op : Type} (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) :=\n"
+  s := s ++ "def weakenAlg {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) :=\n"
   s := s ++ "  frontierMap (Effect4.Program.Term.weaken cut) (Effect4.Program.CauseTerm.weaken cut)\n"
   -- Weakening at each open sort, from the rows: the frontier's terms through `Term.weaken`,
   -- the open children recursively, closed layers untouched. No hand-written arm; the
   -- theorem below says it is the frontier fold of `weakenAlg`.
   s := s ++ "\nmutual\n"
   for (_, fam, rows) in block do
-    s := s ++ s!"def {shortName fam}.weaken \{Op : Type} (cut : Nat) : {fam} Op → {fam} Op\n"
+    s := s ++ s!"def {shortName fam}.weaken \{Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : {fam} Op → {fam} Op\n"
     for r in rows do
       let binders := String.intercalate " " (r.args.map (·.name))
       let pat := if r.args.isEmpty then s!"  | .{r.ctor} =>" else s!"  | .{r.ctor} {binders} =>"
@@ -1325,7 +1331,7 @@ def emitFrontier (root : Name) (frontier : List Name) : MetaM (String × List St
   let mut receipts := []
   for (label, fam, rows) in block do
     let handName := s!"{fam}.weaken"
-    s := s ++ s!"theorem weaken_eq_cata_{label} \{Op : Type} (cut : Nat) (node : {fam} Op) :\n"
+    s := s ++ s!"theorem weaken_eq_cata_{label} \{Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) (node : {fam} Op) :\n"
     s := s ++ s!"    {handName} cut node = cata_frontier_{label} (weakenAlg cut) node := by\n"
     s := s ++ "  match node with\n"
     for r in rows do

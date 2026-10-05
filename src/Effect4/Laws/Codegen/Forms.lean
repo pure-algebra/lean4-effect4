@@ -7,7 +7,9 @@ import Effect4.Laws.Program.Typing.Sound
 
 `Forms.insert` uses the existing weakening operation. Its typing law covers any
 number of inserted slots, arbitrary captured and local variables, and refusals as
-well as successful typings. The template constructor laws state the environments
+well as successful typings. Weakening maps an operation's own term too, so every law that
+inserts a slot holds at a signature that types an operation alike once its term is weakened
+(`Signature.WeakenNatural`, `Program/Typing.lean`). The template constructor laws state the environments
 of their arguments explicitly; an `ArgClass` alone is not a typing premise.
 
 The concrete laws select the existing `Forms.all` rows by id and type their actual
@@ -32,8 +34,10 @@ theorem insert_succ (cut count : Nat) (program : Eff NativeOp) :
 
 /-- Insert any finite block of unused slots without changing the complete typing
 result. `pre` contains the captured variables before the cut; `post` contains those
-after it. The program's own binders are traversed by `Eff.weaken`. -/
-theorem effTy_insert (sig : Signature NativeOp) (pre inserted post : TyEnv)
+after it. The program's own binders are traversed by `Eff.weaken`, an operation's own term
+included, so the signature must type an operation alike once its term is weakened
+(`Signature.WeakenNatural`). -/
+theorem effTy_insert (sig : Signature NativeOp) (hw : sig.WeakenNatural) (pre inserted post : TyEnv)
     (program : Eff NativeOp) :
     effTy sig (pre ++ inserted ++ post) (insert pre.length inserted.length program) =
       effTy sig (pre ++ post) program := by
@@ -43,26 +47,27 @@ theorem effTy_insert (sig : Signature NativeOp) (pre inserted post : TyEnv)
       rw [List.append_assoc]
       change effTy sig (pre ++ ty :: (inserted ++ post))
         (insert pre.length (inserted.length + 1) program) = _
-      rw [insert_succ, effTy_weaken]
+      rw [insert_succ, effTy_weaken sig hw]
       simpa only [List.append_assoc] using ih
 
 /-- The common form case: append unused slots after every captured variable. -/
-theorem effTy_insert_append (sig : Signature NativeOp) (env inserted : TyEnv)
-    (program : Eff NativeOp) :
+theorem effTy_insert_append (sig : Signature NativeOp) (hw : sig.WeakenNatural)
+    (env inserted : TyEnv) (program : Eff NativeOp) :
     effTy sig (env ++ inserted) (insert env.length inserted.length program) =
       effTy sig env program := by
-  simpa only [List.append_nil] using effTy_insert sig env inserted [] program
+  simpa only [List.append_nil] using effTy_insert sig hw env inserted [] program
 
 /-- An effect slot transports its complete typing result when its recorded cut
 and count describe this environment insertion. Slot existence is explicit. -/
-theorem Template.argument_typed (sig : Signature NativeOp) (n slot offset count : Nat)
+theorem Template.argument_typed (sig : Signature NativeOp) (hw : sig.WeakenNatural)
+    (n slot offset count : Nat)
     (args : Arguments) (program : Eff NativeOp) (pre inserted post : TyEnv)
     (hslot : args.effects[slot]? = some program)
     (hcut : n + offset = pre.length) (hcount : count = inserted.length) :
     ((Template.argument slot offset count).expand n args).bind
         (effTy sig (pre ++ inserted ++ post)) = effTy sig (pre ++ post) program := by
   simp only [Template.expand, hslot, Option.map_some, Option.bind_some, hcut, hcount]
-  exact effTy_insert sig pre inserted post program
+  exact effTy_insert sig hw pre inserted post program
 
 /-- A bind template uses its continuation under the first argument's answer type.
 Both expansion and typing premises are explicit for each template argument. -/
@@ -90,7 +95,7 @@ theorem Template.onExit_typed (sig : Signature NativeOp) (env : TyEnv) (n : Nat)
 
 /-- The table's effect-valued `andThen` inserts an unused answer slot into its
 second argument. Captures in either argument may refer to any position in `env`. -/
-theorem andThenEffect_typed (sig : Signature NativeOp) (env : TyEnv)
+theorem andThenEffect_typed (sig : Signature NativeOp) (hw : sig.WeakenNatural) (env : TyEnv)
     (first second : Eff NativeOp) (a b : EffTy)
     (ha : effTy sig env first = some a) (hb : effTy sig env second = some b) :
     ((all.find? (fun f => f.id == "andThenEffect")).bind
@@ -99,7 +104,7 @@ theorem andThenEffect_typed (sig : Signature NativeOp) (env : TyEnv)
       some ⟨b.answer, a.error.join b.error, a.requires.union b.requires⟩ := by
   change effTy sig env (.bind first (insert env.length 1 second)) = _
   have hb' : effTy sig (env ++ [a.answer]) (insert env.length 1 second) = some b :=
-    (effTy_insert_append sig env [a.answer] second).trans hb
+    (effTy_insert_append sig hw env [a.answer] second).trans hb
   simp only [Conform.Effect4.Typing.effTy_bind, ha, hb', Option.bind_eq_bind, Option.bind_some]
 
 /-- A continuation-valued `andThen` is already authored under its answer binder;
@@ -117,14 +122,14 @@ theorem andThenContinuation_typed (sig : Signature NativeOp) (env : TyEnv)
 
 /-- The thunk row shares the effect row's core typing rule. This does not claim
 that an arbitrary host thunk is an admitted source expression. -/
-theorem andThenThunk_typed (sig : Signature NativeOp) (env : TyEnv)
+theorem andThenThunk_typed (sig : Signature NativeOp) (hw : sig.WeakenNatural) (env : TyEnv)
     (first second : Eff NativeOp) (a b : EffTy)
     (ha : effTy sig env first = some a) (hb : effTy sig env second = some b) :
     ((all.find? (fun f => f.id == "andThenThunk")).bind
       (fun f => f.expansion.expand env.length { effects := [first, second] })).bind
         (effTy sig env) =
       some ⟨b.answer, a.error.join b.error, a.requires.union b.requires⟩ := by
-  exact andThenEffect_typed sig env first second a b ha hb
+  exact andThenEffect_typed sig hw env first second a b ha hb
 
 private theorem bind_keep_typed (sig : Signature NativeOp) (env : TyEnv)
     (first continuation : Eff NativeOp) (a b : EffTy)
@@ -158,7 +163,7 @@ theorem tapContinuation_typed (sig : Signature NativeOp) (env : TyEnv)
 
 /-- An effect-valued `tap` first shifts its captured effect beneath the unused
 answer slot, then retains the first answer beneath both new binders. -/
-theorem tapEffect_typed (sig : Signature NativeOp) (env : TyEnv)
+theorem tapEffect_typed (sig : Signature NativeOp) (hw : sig.WeakenNatural) (env : TyEnv)
     (first second : Eff NativeOp) (a b : EffTy)
     (ha : effTy sig env first = some a) (hb : effTy sig env second = some b) :
     ((all.find? (fun f => f.id == "tapEffect")).bind
@@ -168,7 +173,7 @@ theorem tapEffect_typed (sig : Signature NativeOp) (env : TyEnv)
   change effTy sig env
     (.bind first (.bind (insert env.length 1 second) (.succeed (.var env.length)))) = _
   exact bind_keep_typed sig env first (insert env.length 1 second) a b ha
-    ((effTy_insert_append sig env [a.answer] second).trans hb)
+    ((effTy_insert_append sig hw env [a.answer] second).trans hb)
 
 /-- The literal admitted by `as` supplies the answer. Sequencing with its pure
 result normalizes the original error column, as the core bind rule requires. -/
@@ -194,7 +199,7 @@ theorem asVoid_typed (sig : Signature NativeOp) (env : TyEnv)
 
 /-- `ensuring` shifts its captured finalizer under an unused exit slot. Its
 answer is discarded; its errors and service requirements are still retained. -/
-theorem ensuring_typed (sig : Signature NativeOp) (env : TyEnv)
+theorem ensuring_typed (sig : Signature NativeOp) (hw : sig.WeakenNatural) (env : TyEnv)
     (body finalizer : Eff NativeOp) (a b : EffTy)
     (ha : effTy sig env body = some a) (hb : effTy sig env finalizer = some b) :
     ((all.find? (fun f => f.id == "ensuring")).bind
@@ -204,7 +209,7 @@ theorem ensuring_typed (sig : Signature NativeOp) (env : TyEnv)
   change effTy sig env (.onExit body (insert env.length 1 finalizer)) = _
   have hb' : effTy sig (env ++ [.exitOf a.answer a.error])
       (insert env.length 1 finalizer) = some b :=
-    (effTy_insert_append sig env [.exitOf a.answer a.error] finalizer).trans hb
+    (effTy_insert_append sig hw env [.exitOf a.answer a.error] finalizer).trans hb
   simp only [Conform.Effect4.Typing.effTy_onExit, ha, hb', Option.bind_eq_bind, Option.bind_some]
 
 /-! ## The remaining eleven rows (R10: each form owes a typing lemma)
@@ -331,7 +336,7 @@ theorem forkScopedDefault_typed (sig : Signature NativeOp) (env : TyEnv) (body :
 open Conform.Effect4.Typing (HasTy ActionHasTy effTy_sound effTy_complete) in
 /-- `Effect.acquireRelease` with a one-argument release: the release, written under the
 resource's binder, gets an unused exit slot inserted after it. -/
-theorem releaseOne_typed (sig : Signature NativeOp) (env : TyEnv)
+theorem releaseOne_typed (sig : Signature NativeOp) (hw : sig.WeakenNatural) (env : TyEnv)
     (acquire release : Eff NativeOp) (a r : EffTy)
     (ha : effTy sig env acquire = some a)
     (hr : effTy sig (env ++ [a.answer]) release = some r) (hn : r.error.normalize = .never) :
@@ -345,7 +350,7 @@ theorem releaseOne_typed (sig : Signature NativeOp) (env : TyEnv)
     simp only [List.length_append, List.length_singleton]
   have hr' : effTy sig (env ++ [a.answer, .exitOf .unknown .unknown])
       (insert (env.length + 1) 1 release) = some r := by
-    have h := effTy_insert_append sig (env ++ [a.answer]) [.exitOf .unknown .unknown] release
+    have h := effTy_insert_append sig hw (env ++ [a.answer]) [.exitOf .unknown .unknown] release
     rw [hlen, List.append_assoc] at h
     exact h.trans hr
   exact effTy_complete sig _ env _

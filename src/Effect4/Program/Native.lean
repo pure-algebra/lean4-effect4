@@ -101,7 +101,8 @@ carries a term yet: a read-modify-write row names its function (`FnName`), which
 variable, and `Deferred.make`'s type arguments are types, which bind no term variable. So every
 native operation is in scope at every level. State plan T3b gives the read-modify-write rows
 binder terms, and this instance then checks each at `n + 1`, by `ScopedOp`'s convention. -/
-instance : ScopedOp NativeOp := ⟨fun _ _ => true⟩
+instance : ScopedOp NativeOp where
+  scopedAt _ _ := true
 
 /-- No native operation carries a variable: the hypothesis the operation lift's scope lemma
 (`Authoring.perform_scoped`) asks of an operation, discharged once for the native alphabet. -/
