@@ -212,6 +212,11 @@ does not stand in for `modify`.
 
 ### T3. Rows as templates, terms in rows (after T0–T2, seat S and row 120's carrier)
 
+**T3a landed 2026-10-04** (seat T3a, merged `ba7e2de0`; decisions rows 210–213): the rows are
+templates, `Deferred.make` carries its type arguments, a deferred's error column is formed in the
+error alphabet, and the match reads request unions. One goal is open:
+`Ty.matchTemplate_complete_anchored`, with its `bottomFree` premise.
+
 **Re-cut 2026-10-04, after T2: T3a, then T3b.** The slice below is too large for one seat, and
 its two halves change different things. T3a changes the types and leaves the function rows at
 `refOf nat`. T3b gives the eight read-modify-write rows their terms. Each starts with a design note
