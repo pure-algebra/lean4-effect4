@@ -158,7 +158,7 @@ Where to read:
 - [the landing review](research/2026-10-05-claude-lead/landing-review.md): what the session of
   2026-10-04 landed.
 
-More rulings of the same day (rows 235 to 243):
+More rulings of the same day (rows 235 to 248):
 
 - the Queue's TypeScript face prints the expansion by default, and the native queue only under a
   narrower named profile;
@@ -173,26 +173,33 @@ More rulings of the same day (rows 235 to 243):
 - every signal of the Queue is posted, a waiting offerer's too (row 240);
 - `dropping` at capacity zero is not formed (row 241);
 - `poll` and `clear` pass no waiting taker (row 242);
-- `flush` and the `Unsafe` family are refused by name (row 243).
+- `flush` and the `Unsafe` family are refused by name (row 243);
+- the mask's saved state has a type of its own, and typing is its check (row 244);
+- a restore site is one node, and the mask prints as two rows of public API (row 245);
+- the saved value may be passed as data (row 246);
+- the Lean TypeScript package is upgraded as needed (row 247);
+- the pin moves to 4.0.1 in increments, and development does not pause (row 248).
 
 Open at this landing:
 
-- the Queue's whole transition contract: written on 2026-10-05
+- the Queue's whole transition contract is written
   ([the contract](research/2026-10-05-claude-lead/queue-contract/queue-contract.md), with its
-  model), its choices ruled (rows 240 to 243), corrected the same day after Codex's review, and
-  owed as a packet in `Test/contracts/` with the first Queue slice;
-- the mask's second note is [written](research/2026-10-05-claude-lead/mask-second-note.md), and
-  its two amendments to row 239 await the owner; the design of waiting, tasks and the atomic
-  frontier is [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
+  model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
+  It is owed as a packet in `Test/contracts/` with the first Queue slice;
+- the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
+  (rows 244 to 246). Its slice follows seat T3b's merge;
+- the design of waiting, tasks and the atomic frontier is
+  [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
+- the migration plan to 4.0.1 is owed (row 248);
 - the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
-  with its model: one constructor of `Term`, the identity of a handle as one atom, and the six
-  steps of the groundwork plan as terms. Its slice follows seat T3b's merge;
+  with its model. It has one constructor of `Term`, the identity of a handle as one atom, and
+  the six steps of the groundwork plan as terms. Its slice follows seat T3b's merge;
 - seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
 - the release audit, landed on 2026-10-05
   ([the audit](research/2026-10-05-seat-A401/audit.md),
   [its receipt](research/2026-10-05-seat-A401-receipt.md)). For this tree 4.0.1 is a new runtime
-  revision, and the pin stays at rc.112. The owner's migration ruling is open, with the seat's
-  proposals A to I. Three small repairs wait for a seat:
+  revision. The owner ruled the migration in increments (row 248), and the seat's proposals A,
+  B and D to I stay open inside its plan. Three small repairs wait for a seat:
   - the citations that miss in the pin itself;
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;

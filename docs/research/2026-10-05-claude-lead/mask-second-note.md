@@ -3,6 +3,10 @@
 Status: research note (history, not authority). Base: `0002ca73` (`refactor/phase1-phase3`).
 A design for the owner's sign-off. No file of the tree changed.
 
+**Ruled 2026-10-05.** The owner ratified the three directions in session ("yes to all three"),
+after Codex's review. They are decisions rows 244 to 246: proposals 1, then 2 to 4, then 5.
+Proposal 6 is the coordinator's order under row 237.
+
 **Corrected 2026-10-05, after Codex's review** of this note at its first commit
 (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/mask-second-review/recommendations.md`).
 The review recommends the three directions and finds six faults in the statements. Each was
@@ -364,7 +368,7 @@ Codex's review places the same five, with their consumers on the M5 and M6 path.
 Each is an open part of its requirement row now. The slice states each as a planned goal over
 its definitions before it proves one.
 
-## Proposals (not rulings)
+## Proposals, and what the owner ruled
 
 1. **The saved state has its own opaque type** (amends row 239). Its name is reserved, and its
    value is the saved bit in an image of its own. Typing is the check at program admission, and
