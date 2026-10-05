@@ -23,8 +23,9 @@ record.
 - `8cdda516`: the ledger's reader takes a line whose empty trailing columns were trimmed.
 - `96e11df9`: a host that does not finish is a refusal with one line. This is the code head,
   and `out/` was written at it.
-- Head: the commit that brings this receipt and its evidence to the code head. The seat's
-  final message gives its hash.
+- `4a8105cd`: this receipt and its evidence at the code head.
+- Head: the commit that adds the receipt's notes on the brief's letter. The seat's final
+  message gives its hash. After `96e11df9` only files under `docs/research/` change.
 - Nothing is pushed.
 
 ## Changed files
@@ -45,6 +46,16 @@ No file under `src/`, `Test/`, `tools/`, `generated/` or `vendor/` changed. `lak
 `docs/core/decisions.md`, `docs/STATE.md`, `harness/truth/Truth.lean`, `harness/truth/prelude.ts`,
 `harness/truth/run-truth.ts`, `scripts/check-truth.py`, `ts/eff/package.json` and the lockfiles
 did not change.
+
+### Where the slice goes beyond the brief's letter
+
+- **A second tracked file.** The brief asks for one ledger file. The run record follows the
+  coordinator's addendum: each run keeps what it ran on.
+- **Two more steps in the lane.** The compiler type-checks both work copies, and the pinned
+  lane's host tests run on both builds. The brief asks for the host run and the ledger.
+- **A second make target,** `gen-truth-ledger`, beside `check-truth-release`.
+- **Two words.** The files say "line" and "entry" where the brief says "row" and "cell". The
+  dictionary gives "cell" to the machine's mutable reference.
 
 ## Commands and results
 
@@ -207,7 +218,7 @@ on the three fields that the runner compares. It states no claim of its own.
    pin only.
 7. **Windows is not run.** No PowerShell wrapper exists for the release lane.
 8. **The worktree holds leftovers that git ignores:** the two links to the pin's install,
-   `.lake/truth-release/` and the markers under `.lake/check/`.
+   `.lake/truth-release/`, the markers under `.lake/check/` and two `__pycache__` folders.
 
 ### What the seat did not verify
 
