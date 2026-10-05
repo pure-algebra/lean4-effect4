@@ -70,12 +70,29 @@ The audit's run gives the ledger of today:
 A mixed machine is still one semantics, and it is ours. A claim of agreement with a host names
 its build, and the ledger is where it does.
 
+Three points of acceptance come from Codex's proof scouting of 2026-10-05
+(`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/proof-scouting/migration.md`):
+
+- **The ledger keeps each observation apart:** the exit, the schedule and the synchronous exit
+  have a cell each, for each build. A known difference of the schedule excuses no difference of
+  the exit. A run that did not happen is its own value, and it is not a disagreement.
+- **The census row's build reaches the witness join.** `Test/Audit/RuntimeCoverage.lean` joins
+  a row to its theorems by identity and kind today. The join takes the build too, so a row of
+  the release is never paired with evidence that is still attributed to the pin. One theorem
+  may witness a row on both builds.
+- **An impact query runs before the first semantic slice.** `ProofGraph.reachedAxiomsMany`
+  (`tools/ProofGraph/Axioms.lean`) takes the slice's changed declarations as its stop leaves,
+  with a fresh memo for each environment and stop set. Its roots are the semantics registry's witnesses,
+  the requirements' top nodes, the placed goals and the census witnesses of the area. It
+  answers which claims reach a changed declaration, which the audit's direct join left open.
+  Reach is no proof that a claim keeps its meaning.
+
 ### F3. The slices and their order
 
 | Slice | The audit's | What moves | What it turns |
 | --- | --- | --- | --- |
 | M0. The release lane | its F12 | The second host run, the ledger, the profile's entry points by build. No Lean file | The gate reads the ledger |
-| M1. The census by row | part of S8 | A build column. The 83 rows whose span is equal move by digest. The 42 rows whose sentence holds move with a reading | 125 of 137 rows |
+| M1. The census by row, and the impact query | part of S8 | A build column that reaches the witness join. The 83 rows whose span is equal move by digest. The 42 rows whose sentence holds move with a reading. The query of F2 | 125 of 137 rows |
 | M2. Scopes | S3 | The parent pointer, the `Empty` reset, the uninterruptible `Scope.close` | The three schedule programs; four registry claims; two census rows |
 | M3. Fibers and the race | S4 | The child's parent pointer, the race's clean-up at its exit, the interruptible await of children, the merged cancel failure | Three census rows |
 | M4. The memo map | S6 | The entry's shape and the synchronous registration | Two census rows; the sixteen layer rows' witnesses |

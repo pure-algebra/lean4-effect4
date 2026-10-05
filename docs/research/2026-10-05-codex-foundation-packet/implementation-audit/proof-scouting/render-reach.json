@@ -1,0 +1,186 @@
+{
+  "python": "3.13.14 (main, Aug  5 2026, 15:33:38) [Clang 22.1.3 ]",
+  "source": "tools/Tools/Semantics.lean renderPlan",
+  "sourceSha256": "b4d1b48738d9f5407965598204027711fe28559516ff4a12af6b03e2a04a3fe9",
+  "reportSha256": "4f5481913e33f1211eb156ced52d3c2a95791f9fd7c9a36e0c47376e8ec30c6c",
+  "algorithm": "Mirror of renderPlan queue loop capped at nodes.size+1, compared with full visited-set traversal",
+  "scope": "Finite Python mirror, not executed Lean renderer. Synthetic graph could represent shared proof dependencies. Actual retained report comparison listed separately.",
+  "liveReport": [
+    {
+      "requirement": "R1",
+      "visited": 50,
+      "expected": 50,
+      "omitted": [],
+      "pending": 61
+    },
+    {
+      "requirement": "R2",
+      "visited": 7,
+      "expected": 7,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R3",
+      "visited": 18,
+      "expected": 18,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R4",
+      "visited": 10,
+      "expected": 10,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R5",
+      "visited": 4,
+      "expected": 4,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R6",
+      "visited": 41,
+      "expected": 41,
+      "omitted": [],
+      "pending": 17
+    },
+    {
+      "requirement": "R7",
+      "visited": 0,
+      "expected": 0,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R8",
+      "visited": 6,
+      "expected": 6,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R9",
+      "visited": 43,
+      "expected": 43,
+      "omitted": [],
+      "pending": 19
+    },
+    {
+      "requirement": "R10",
+      "visited": 23,
+      "expected": 23,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R11",
+      "visited": 7,
+      "expected": 7,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R12",
+      "visited": 2,
+      "expected": 2,
+      "omitted": [],
+      "pending": 0
+    },
+    {
+      "requirement": "R13",
+      "visited": 1,
+      "expected": 1,
+      "omitted": [],
+      "pending": 0
+    }
+  ],
+  "witnesses": [
+    {
+      "label": "positive chain",
+      "nodes": {
+        "T": [
+          "A"
+        ],
+        "A": [
+          "B"
+        ],
+        "B": [
+          "C"
+        ],
+        "C": [
+          "D"
+        ],
+        "D": [
+          "L"
+        ],
+        "L": []
+      },
+      "limited": [
+        "T",
+        "A",
+        "B",
+        "C",
+        "D",
+        "L"
+      ],
+      "complete": [
+        "T",
+        "A",
+        "B",
+        "C",
+        "D",
+        "L"
+      ],
+      "pending": [],
+      "omitted": []
+    },
+    {
+      "label": "shared descendant",
+      "nodes": {
+        "T": [
+          "A",
+          "B",
+          "C"
+        ],
+        "A": [
+          "D"
+        ],
+        "B": [
+          "D"
+        ],
+        "C": [
+          "D"
+        ],
+        "D": [
+          "L"
+        ],
+        "L": []
+      },
+      "limited": [
+        "T",
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "complete": [
+        "T",
+        "A",
+        "B",
+        "C",
+        "D",
+        "L"
+      ],
+      "pending": [
+        "L"
+      ],
+      "omitted": [
+        "L"
+      ]
+    }
+  ]
+}

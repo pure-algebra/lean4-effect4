@@ -1,0 +1,56 @@
+{
+  "completed_at": "2026-10-05T18:00:16.072794+00:00",
+  "finishing_criteria": [
+    "Add proof scouting and tool dogfooding to recurring monitor",
+    "Inspect current coordinator and rulings",
+    "Map upcoming proof reuse and exact boundaries",
+    "Retain bounded tool reproductions and controls",
+    "Send one actionable note and verify delivery"
+  ],
+  "heads": {
+    "/Users/pooks/Dev/lean4-effect4": "4977c4f3db4db51903ed9437022fd0f27d6fa41f",
+    "/Users/pooks/Dev/lean4-effect4-t3b": "e112352f587e52b2ae3ccd2b88719d06ab067f0b",
+    "/Users/pooks/Dev/lean4-effect4-m0": "f3086de1d8a395d39480cbd361622f919a069996"
+  },
+  "sources": {
+    "AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "docs/core/decisions.md": "a75b7d4340f10bbb73089ddada74fdac62a1e7c478ed105636d81b818696dbc2",
+    "tools/ProofGraph/Plan.lean": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49",
+    "tools/ProofGraph/Axioms.lean": "c7350aff47aa5457ba354cfc7b783fdad63a9ef4bb18e9c7bf911947edab9e0d",
+    "tools/Tools/Semantics.lean": "b4d1b48738d9f5407965598204027711fe28559516ff4a12af6b03e2a04a3fe9",
+    "tools/Tools/SemanticsRegistry.lean": "06fddbdf1f723b2047f1eaf81b4501bbab6188272c285f4e45a486581a0d8270",
+    "tools/Tools/ProofGraphView.js": "3207b71b05348b71097b8482f44204d9f4b7f0bfd4223f3c9c02f08839a19beb",
+    "scripts/check-proofgraph-input.mjs": "aa377b7d5dac3cc19da5e5072ebe206d122a8bd3f277eec0333816b937a236da"
+  },
+  "artifacts": {
+    "render-reach.json": "785f8d614342b3b8f5ab77d6aeaebc452760f061370f105293bbf0f184b9701b",
+    "mask-tooling-receipt.json": "51ed7007fda2096b2172e614fb14fbf9fcc01901c5cf14d9bea7d53ce8c65e68",
+    "coordinator-note.txt": "0a8f45a28a54ee16a8aa15f4b466ec03e6a79dd04ee389a38ece809f23d19790",
+    "fold.md": "a4caed37307e71496373c753d5ff6b2972a62211bfe620ad206005090001bf87",
+    "migration.md": "e8a61b0522805444eca492646dbc01880ce7235351d7bd60ca79c5b39f68b78b",
+    "render-reach.py": "76b16a0a486989b1943481b495e551479e20eeae56778cb37ba3e907b480e00a",
+    "view-validation.mjs": "bbd55e29a734cfe34dde91f7ff70fd115dc2719496381f5f4b13f2f222f3ca4a",
+    "mask-tooling.md": "a6a4716e852038a99e06e0d6c20a2b60d18b29eb5632157f4f861b7e1a538b41",
+    "migration.receipt.json": "9c41c0361d5380a0e95e9587227fd97583536eb9f97994d6cbc09ad5baf03754",
+    "recommendations.md": "cae64517bbfe2129f5ae6492e2bf76a158742c1269d05c5e99b33f71343f27b9",
+    "view-validation.json": "79cb4731563849f0b251238917c0427a0dcfa724123ce31f5d42a62164e31127"
+  },
+  "verification": {
+    "existing_validator_controls": "PASS: retained 134-node, 13-requirement artifact; four malformed controls refused",
+    "validator_probe": "Executed actual extracted validator; valid input and unknown-reference controls succeed as expected; four missing-field mutations wrongly accepted",
+    "markdown_traversal": "Finite Python mirror: six-node shared-dependency witness omits L, chain control passes; retained artifact comparison finds no omitted nodes",
+    "report_freshness": "Retained report only; no current HEAD proof-status claim. Old semantics receipt identifies ba64bf87; freshness was not regenerated.",
+    "language": "PASS recommendations.md"
+  },
+  "advisory": {
+    "status": "normal_send_verified",
+    "ui": "Message60 You said: Codex proof scouting at4977c4f3.; prompt empty; coordinator responding",
+    "recipient": "Queues plan and design decisions",
+    "draft_preserved": true,
+    "force_send_or_interrupt": false
+  },
+  "scope": "Source-grounded proposed proof outlines, actual JavaScript validator test and finite Python model; no new Lean theorem.",
+  "no_repo_writes_builds_generators_installs": true,
+  "automation_scope_updated": true,
+  "monitor": "active"
+}

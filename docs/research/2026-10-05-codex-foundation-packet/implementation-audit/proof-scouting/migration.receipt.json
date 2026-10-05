@@ -1,0 +1,45 @@
+{
+  "reviewed_head": "4977c4f3db4db51903ed9437022fd0f27d6fa41f",
+  "head_at_save": "4977c4f3db4db51903ed9437022fd0f27d6fa41f",
+  "evidence": "source-only; retained JSON inspected, not regenerated or freshness-validated",
+  "static_checks": {
+    "recommendations": 3,
+    "cited_source_files_exist": true,
+    "retained_run_eq_meaning_broughtIn": {
+      "nearest": [],
+      "lemmas": 310,
+      "definitions": 905
+    }
+  },
+  "sha256": {
+    "docs/research/2026-10-05-claude-lead/migration-plan.md": "df03dffcbdfd31bf4e169d0cab3e6be32b04ff738cd95d6d38945ca0c99fa326",
+    "docs/research/2026-10-05-seat-A401/audit.md": "c723bdb6a0eee8015a4418bd364d2e52c03b6905de0aad888fe62e8f07ba50b1",
+    "tools/ProofGraph/Plan.lean": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49",
+    "tools/ProofGraph/Axioms.lean": "c7350aff47aa5457ba354cfc7b783fdad63a9ef4bb18e9c7bf911947edab9e0d",
+    "tools/Tools/Semantics.lean": "b4d1b48738d9f5407965598204027711fe28559516ff4a12af6b03e2a04a3fe9",
+    "Test/Audit/RuntimeCoverage.lean": "9200945f80ac887ff21f8ef2cc3be7cdb613a0fc6d274eb91f8e8d16b6c286c6",
+    "scripts/check-effect-runtime-census.sh": "1055304058799c35cb249260e0b6b233a6273ec76176191a3ed7018907ee0666",
+    "harness/truth/run-truth.ts": "6ec3e68e59e74bcca4a991a3b0fea5bfc3fccf887550e3ba35f7864a790c1cb5",
+    "scripts/check-truth.py": "13661fe53e9964d7a5103aa51f5a81e098682dff8d49139f9fd5a0f15aa98103",
+    "docs/research/2026-10-05-seat-A401/out/truth-401/summary.tsv": "d0c8fcc72230093f91de2d71f4d9854dd6fd6e865ab873ad98332c4cf0dc5fa1",
+    ".lake/gen/semantics-report/semantics.json": "4f5481913e33f1211eb156ced52d3c2a95791f9fd7c9a36e0c47376e8ec30c6c"
+  },
+  "report_sha256": "e8a61b0522805444eca492646dbc01880ce7235351d7bd60ca79c5b39f68b78b",
+  "excluded_actions": [
+    "Lean",
+    "runtime probes",
+    "builds",
+    "generators",
+    "installs",
+    "repository edits",
+    "UI",
+    "external messages"
+  ],
+  "m0_recheck": {
+    "path": "/Users/pooks/Dev/lean4-effect4-m0",
+    "head": "f3086de1d8a395d39480cbd361622f919a069996",
+    "status": "clean",
+    "observation": "No draft ledger in targeted harness/scripts inventory; original selector and observation fields remain",
+    "classification": "acceptance prerequisite; not active defect"
+  }
+}

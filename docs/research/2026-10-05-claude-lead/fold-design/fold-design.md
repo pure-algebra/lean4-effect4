@@ -174,6 +174,23 @@ Both are open parts of R4 now. The slice states each as a planned goal over its 
   It lands before the Queue's first path, whose step is its first consumer.
 - Its acceptance is the model's six steps as terms of the tree, in a `Test` fixture.
 
+### F9. The proof route
+
+From Codex's proof scouting of 2026-10-05
+(`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/proof-scouting/fold.md`).
+It is an outline over existing declarations, each of which was found in the tree. No step is
+proved.
+
+| Step | What it reuses | A point to keep |
+| --- | --- | --- |
+| The identity atom | `fits_refOf_inv` and `fits_deferredOf_inv`; then the atom's evaluation on two keys | Both lemmas live in `src/Effect4/Laws/Program/Typed/Denotation.lean`, above the membership module. They move down beside `Fits` first, so that membership imports no denotation |
+| The atom's three interfaces | `NativeAtom.Sound`, `AtomFits`, `atom_progress` | `AtomFits` assumes that evaluation succeeded. Totality is `atom_progress`, a separate case |
+| The fold's typed evaluation, a case of `evalTerm_progress` | `fits_list_iff` to read the list, `fits_subN` to widen the initial value, an induction on the list, `envTyped_append` twice | The world is fixed. The list may be a snapshot of handles, so the proof reads it through `fits_list_iff` and not as a raw list |
+| Weakening | `argTy_weaken` and `termTy_weaken` over the split environment | The body's tail gains the two binders, and the cut stays the prefix's length. Nested folds need no other statement |
+| One atomic step | seat T3b's `termMaps_of_typed`, then `syncOpStep_eq_refStepOf` | No new store relation and no machine loop |
+| The handles of the answer | `RawHandles.evalTerm_handles`, extended by the fold's case; then `evalTerm_registered` and `termKernel_frames` | The proof needs successful evaluation, not typing |
+| A fresh handle is in no stored list | `fits_live`, the two allocation lemmas `refMake_extension` and `deferredMake_extension`, `fits_mono` | The fresh key comes from the allocation itself, not from the world's order |
+
 ## Proposals (not rulings)
 
 1. **The fold is one constructor of `Term`,** with an optional type for its accumulator. No

@@ -187,11 +187,12 @@ Open at this landing:
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   It is owed as a packet in `Test/contracts/` with the first Queue slice;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
-  (rows 244 to 246). Its slice follows seat T3b's merge;
+  (rows 244 to 246). Its slice follows seat T3b's merge. The semantics registry still holds the
+  mask's parts in older words and lacks three; the coordinator reconciles it at that merge;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
-  for review (row 248): each area is cut over in place, and the truth lane runs both builds
+  for review (row 248). Each area is cut over in place, and the truth lane runs both builds
   with one ledger. Its first slice, the release's truth lane, is with seat M0 since 2026-10-05
   (branch `seat/m0-release-lane`, from `f3086de1`);
 - the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),

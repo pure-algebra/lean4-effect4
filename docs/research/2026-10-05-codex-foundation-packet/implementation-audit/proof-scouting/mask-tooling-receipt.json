@@ -1,0 +1,30 @@
+{
+  "head": "4977c4f3db4db51903ed9437022fd0f27d6fa41f",
+  "status": "",
+  "python": "3.13.14",
+  "evidence": "read-only source inspection; existing report parsed, not generated; no Lean/build/probes",
+  "sha256": {
+    "docs/research/2026-10-05-claude-lead/mask-second-note.md": "fb22601a94691102081367f22082e3991b6c619bac58ee35fe4e1b86dd50efa9",
+    "tools/Tools/SemanticsRegistry.lean": "06fddbdf1f723b2047f1eaf81b4501bbab6188272c285f4e45a486581a0d8270",
+    "tools/Tools/Semantics.lean": "b4d1b48738d9f5407965598204027711fe28559516ff4a12af6b03e2a04a3fe9",
+    "tools/ProofGraph/Goal.lean": "6c09f2bbe758c23517c84b0f31394a730be5c448f5c7fb483620295d4ade1e24",
+    "tools/ProofGraph/Plan.lean": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49",
+    "tools/ProofGraph/Sketch.lean": "bcfd56fadcc0100a263886f2462363545a27b15be407f8e78cccb17d84d0103d",
+    "src/Effect4/Laws/Auto/Semantics.lean": "601fc6b06a288b1234886ab9548b1f17e9804a024f10e38317da8207454bc469",
+    "src/Effect4/Laws/Program/Typed/Membership.lean": "0a2506dd1c91ce64dab9b9ae8d34b8ab30b9e3d338db16ffedbe83d69731436a",
+    "src/Effect4/Laws/Program/Typed/Denotation.lean": "39fdabf6b79c4c2cb186879a495bc5d58839fcc62845212f16affd31d8593bd9",
+    "src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean": "b6a3919790641f33ff16ee530f3b66eeb7e7f4204a21bf56c8082e475c9eb2ac",
+    "src/Effect4/Laws/Machine/ScopeRestoration.lean": "a4cd65502d60a4c3a49fc43bf9d881e1f3c53b27be715274269011e8bed19b5d",
+    ".lake/gen/semantics-report/semantics.json": "4f5481913e33f1211eb156ced52d3c2a95791f9fd7c9a36e0c47376e8ec30c6c"
+  },
+  "final_head": "4977c4f3db4db51903ed9437022fd0f27d6fa41f",
+  "final_status": "",
+  "changed_inputs": [],
+  "language_check": {
+    "first_exit": 1,
+    "first_findings": 3,
+    "final_exit": 0,
+    "final_findings": 0
+  },
+  "report_sha256": "a6a4716e852038a99e06e0d6c20a2b60d18b29eb5632157f4f861b7e1a538b41"
+}

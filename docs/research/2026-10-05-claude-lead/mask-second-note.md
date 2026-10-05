@@ -365,8 +365,36 @@ Codex's review places the same five, with their consumers on the M5 and M6 path.
 | The read and print claims of the two rows | R8 | Program syntax only: `read_print` and `read_exact` at the extended table | No typing, and no behaviour of the target |
 | The printed form's behaviour | R10 and R11 | A named release, compatible decisions, the two checkpoints of F6, compiled programs | No equality with the native spelling |
 
-Each is an open part of its requirement row now. The slice states each as a planned goal over
-its definitions before it proves one.
+**The semantics registry does not hold all five yet** (Codex's proof scouting of 2026-10-05,
+`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/proof-scouting/mask-tooling.md`).
+An earlier version of this section said that it did.
+
+- Two parts are there in older words. `saved-mask-restoration` (R11) names a saved state and
+  row 227 only. `scoped-body-substitution-boundary` (R4) names a first scoped constructor, and
+  the restore node binds nothing.
+- Three parts are absent: the saved image's membership (R4), the extended table's premises
+  (R8), and the printed form's profile with its entry checkpoints (R10).
+
+The coordinator reconciles the semantics registry with rows 244 to 246 at seat T3b's merge, because that
+seat edits the same file now. Every unrelated open part stays. No goal is stated before that.
+
+The order of the proofs, with what each reuses (the same scouting; each name was found in the
+tree):
+
+1. **The saved image and its membership,** before anything else: `Fits`, `FlatFits`,
+   `fits_hasTy`, `fits_live`, `fits_mono`. An image with no handle reuses
+   `live_of_handles_nil`.
+2. **The getter's answer and the body at child 0,** on the source-point induction that M5 uses:
+   `interruptible_arm`, `uninterruptible_arm`, `pointTyped_child`, `childDenotes_upto`
+   (`src/Effect4/Laws/Program/Typed/Denotation.lean`). Both saved choices resolve one checked
+   body in one environment.
+3. **The five statements of F7,** with one clause each for a success, a failure, a pending
+   interrupt and a nested region. `maskFrame` and `clause_mask`
+   (`src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean`) prove that the typed state is kept.
+   They do not prove the form's behaviour.
+
+A placement in the semantics registry says what a goal is for. It does not show that M5 or M6 uses the
+declaration: the receipt checks both, with `#plan_status` on the goal and on its consumer.
 
 ## Proposals, and what the owner ruled
 
