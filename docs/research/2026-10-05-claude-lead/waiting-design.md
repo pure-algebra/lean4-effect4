@@ -18,7 +18,8 @@ and for the owner's sign-off before a seat builds it. Five results:
 5. **The Queue's first slice needs no atomic region.** Its step is one atomic update.
 
 Items 1 and 3 are the points for the owner's sign-off, with one clause of row 227 (proposal 4).
-Codex's first review of the candidates is folded in; it selects no construct.
+Codex reviewed this note at `261b4a8e`. It recommends the detached helper and accepts the saved
+Boolean in principle. F9 lists the four claims of this note that it corrected.
 
 ## Question
 
@@ -40,6 +41,7 @@ Codex's first review of the candidates is folded in; it selects no construct.
 | `docs/research/2026-10-05-claude-lead/queue-probes/native-cancel-after-signal.ts` on rc.112 and 4.0.1 | tested |
 | The public `Fiber` interface (`vendor/effect-4.0.0-rc.112/src/Fiber.ts`), for a field `interruptible` | tested (a search): none |
 | Codex's implementation audit (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/`): `posted-review.md`, `rulings-review.md` and `cancel-before-consume/review.md` | read; its probes were not run again |
+| Codex's review of this note (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/w-design-review/`): `recommendation.md`, `review.md`, `mask-review.md`, `queue-review.md` | read; its eight wrapper controls were not run again |
 | Any Lean file of the tree, any proof | not written |
 
 ## Findings
@@ -93,6 +95,13 @@ step. It runs each probe with three deliveries. rc.112 and 4.0.1 agree on every 
 - **The inline delivery gives Effect 3's answers**, as the queues review predicted.
 - Each row is a finite run. The native column is from `queue-timing.ts`, `queue-faults.ts` and
   `native-cancel-after-signal.ts`.
+- **The probe's limits.** No strategy of the probe suspends an offer, and a step answers at most
+  one hint. Its `ready` does not cap a minimum by the capacity, as the model's `threshold` does;
+  every bounded row uses a minimum of one.
+- **Codex's eight controls** on the same composite (`wrapper-controls.ts`, four on each build)
+  add two facts. An interrupt between the registration and the await is cleaned up. In the
+  posted window an interruptible caller withdraws; a masked caller stays registered, consumes,
+  and is interrupted when its outer mask ends.
 
 ### F3. The posted signal: the proposal
 
@@ -116,15 +125,26 @@ It discards the fork's answer. Row 225 asks that the task's metadata stay explic
 | The receiver's token | The waiter's own await token, in the hint's waiter list |
 | The completion rule | The helper exits when the resolution returns |
 
-- **The signalling fiber runs no receiver code.** Its delivery is one fork for each signal. So
-  the delivery is bounded (row 226), and it is not reentrant (row 223).
-- **A receiver stays in its interruptible wait until its task runs.** So an interrupt in the
-  posted window withdraws the request, and the next request is signalled (F2's last row).
+- **Posting is bounded; delivery is not.** The signalling fiber runs one fork for each signal
+  occurrence, and no receiver code. The delivery is the helper's task. Resolving the hint there
+  runs the receiver: its next attempt, and then its caller's continuation, all under that task's
+  driver budget (Codex's review). The count of signals does not bound that work (F7).
+- **A yield can still be injected** between two forks, and before the helper's row. The machine
+  tests the yield setting there and not the mask (`injectYield`,
+  `src/Effect4/Machine/Fibers.lean`).
+- **Under an interruptible caller, a receiver stays in an interruptible wait until its task
+  runs.** An interrupt in the posted window then withdraws the request, if the withdrawal wins
+  before consumption, and the next request is signalled (F2's last row).
+- **Under a masked caller `restore` is the identity.** The request stays registered, consumes
+  after its notification, and is interrupted when the outer mask ends (Codex's controls). That
+  is the mask's meaning and no fault of the queue.
 - **The next attempt always follows the dispatch.** The hint stays unresolved until the helper's
   task runs. So a request that awaits late still parks, and its next attempt comes after that
   task.
-- **The body cannot park.** It is one synchronous row. So the end of the task is the end of the
-  body, and no posted work is left unfinished (Codex's watchpoint on `fireStep`).
+- **The body has no wait of its own, and it can still stop unfinished.** A yield can be
+  injected before its row, and the receiver's work spends the same budget. So nothing follows
+  from the single row alone. F7's budget claim covers the task's whole drain, or the profile
+  restricts the receiver's continuation.
 - **The service context is the helper's own,** copied at the fork. The body reads no service,
   and it does not depend on the signalling fiber's later exit (Codex's watchpoint on
   `RunFiber.cleared`).
@@ -137,8 +157,11 @@ It discards the fork's answer. Row 225 asks that the task's metadata stay explic
 - **What stays reserved.** A named owner or another priority extends `ForkOptions` when a
   consumer needs it. A pass that selects when it runs is the same construct with a larger body;
   `Semaphore` decides whether it needs one. Candidate A's mode stays dormant.
-- **Open.** A run can end while a helper is posted and has not run. The Queue's observation must
-  say what it records then.
+- **Two frontiers belong in the observation.** Before the dispatch, a posted helper and its
+  queued start are outstanding notification work. Inside the dispatch, a budget cut loses work
+  today: `fireState` removes the dispatcher's snapshot, and `fireStep` drops the commands that
+  remain. Row 226's sufficient budget excludes that cut until the driver suspension exists. A
+  second `fire` on the returned machine is not a resumption.
 
 ### F4. The mask that restores
 
@@ -160,15 +183,27 @@ restore e                 :=  select saved .bool (interruptible e) e
 - **`saved` is the lexical reference of row 227.** `bind` binds it, and each activation of the
   mask has its own value in the environment. The existing frames restore on every exit.
 - **Under a masked caller `restore` is the identity,** by the `select`.
-- **An escaping reference needs no refusal.** A fork captures its environment, so `saved` can
-  reach a child that outlives the mask (Codex's watchpoint: `actionAt` keeps `Point.env` for the
-  child). There `restore e` means what the pin's captured `restore` means: `interruptible e` or
-  `e`, run in the child. So the Boolean form agrees with the pin on an escaped use too. Row 227
-  refuses such a use; proposal 4 asks to drop that clause.
-- **It is a derived form** (row 214). The form table prints it as
-  `Effect.uninterruptibleMask((restore) => …)`. The bare action has no public spelling, because
-  the public `Fiber` interface has no `interruptible` field. The printer refuses it outside the
-  form, by name.
+- **An escaped restore keeps the pin's meaning, and row 227 refuses it.** A fork captures its
+  environment, so `saved` can reach a child that outlives the mask (`actionAt` keeps `Point.env`
+  for the child). Both releases choose the identity or the global `interruptible` at entry, and
+  that choice holds no activation of the parent (Codex's review). So a child that keeps the
+  saved Boolean selects the same wrapper on its own execution. Proposal 4 asks for the
+  amendment, for recognized restore sites only. Until the capture connector covers the form,
+  the checked profile may refuse a capture. The Queue needs only a local restore.
+- **Its printed form has no route yet** (Codex's review). The public spelling is
+  `Effect.uninterruptibleMask((restore) => …)`, because the public `Fiber` interface has no
+  `interruptible` field. But `Forms.Template.expand` only expands a form into `Eff`
+  (`src/Effect4/Codegen/Forms.lean`). The printer works by constructor rows
+  (`src/Effect4/Codegen/Templates.lean`), so it would meet the getter and refuse it. The mask
+  therefore owes a second note before a seat builds it, with:
+  - a checked recognition of the whole expansion, at program admission of the canonical `Eff`;
+  - the saved value used only at recognized restore sites: never returned, stored, renamed or
+    passed to another operation;
+  - nested masks, an outer restore inside an inner mask, and binders inside each branch;
+  - the read and print equations, exact or modulo a named normalizer, with `read_print` and
+    `read_exact` unchanged in meaning;
+  - the behaviour relation for the two extra steps, the getter and the selection, which the
+    native spelling does not run.
 - **Its cost against the pin:** one more step, and one more point of interruption before the
   mask, where the fiber holds nothing yet.
 - `interruptibleMask` is the dual and uses the same action.
@@ -218,8 +253,10 @@ The acceptance traces of row 221, and what answers each:
 | Trace | What answers it |
 | --- | --- |
 | A notification before the await | The hint resolves only in the helper's task. A request that awaits before that task parks; one that awaits after it answers at once. In both cases the next attempt follows the dispatch. The control asserts no attempt before the task fires, and one after it. An ordinary `Deferred` keeps its inline control |
-| A cancellation after the selection and before the delivery | The wait is still interruptible; the withdrawal passes the signal on (F2's last row) |
-| A late delivery with an old token after rearming | Each wait has a fresh hint; the old helper resolves a hint that nobody awaits |
+| A cancellation after the selection and before the delivery | Under an interruptible caller the wait is interruptible: the withdrawal wins and passes the signal on (F2's last row). Under a masked caller the request stays registered and may consume; that control stays beside it |
+| A late delivery with an old token after rearming | Each wait has a fresh hint; the old helper resolves a hint that nobody awaits. This trace is still owed as a run |
+| A blocked offerer is cancelled before its posted hint runs | Owed with the first slice: its message is absent, the old message is consumed once, and a later offer can progress. The offerer that is not cancelled is the control |
+| The signalling taker exits before the dispatch | The helper is a daemon, and its start is already posted (F3) |
 
 The wrapper uses the mask around its wait. So the mask lands before the Queue's first slice, not
 with `Semaphore`.
@@ -232,52 +269,88 @@ with `Semaphore`.
   accepts pure terms, reads and writes of existing cells, success, failure, retry and flat
   composition. It refuses allocation, host effects, recovery inside the body, general loops, and
   calls that are unresolved or reentrant.
-- **F3 meets row 223's rule on delivery.** A commit ends its bookkeeping and then forks one
-  helper that resolves every hint in order. No receiver runs inside the committing fiber.
+- **The first Queue posts one helper for each hint,** as F3 and the probe do. A transaction that
+  posts one helper for a whole list is another producer with its own contract, and no probe here
+  covers it.
+- **A deferred start is not row 223's rule.** It keeps a receiver out of the fork operation
+  itself. It does not show that every fork ends before any receiver runs, because a yield can be
+  injected between two forks. Row 223's rule on bookkeeping needs its own argument when
+  transactions land.
 
 ### F7. Work limits
 
 An operation is a sequence of segments, and each segment ends at a wait or at the operation's
-answer. A segment runs a bounded count of machine steps:
+answer. The posting and wrapper work of a segment is a bounded count of machine steps:
 
 - a fixed count for the allocation, the step and the mask's frames;
 - one fork for each signal that the step answers.
 
 The count of signals depends on the cell's value: a take that frees room can admit several
-pending offers. So the budget is a function of the state, and the claim
-`embedded-budget-sufficient` states it for a segment that starts from any typed state.
-`straight_sufficient` (`src/Effect4/Laws/Program/RuntimeR.lean`) covers a fresh run only. The
-step's own evaluation is one machine step, whatever the list's length.
+pending offers. The step's own evaluation is one machine step, whatever the list's length.
+
+That count does not bound the delivery (Codex's review). A dispatch runs each receiver under the
+task's budget, with its caller's continuation. So the claim `embedded-budget-sufficient` names
+more than the wrapper:
+
+- its premises and its bound include the receiver continuations that a dispatch reaches, the
+  cleanup, and the commands that are pending;
+- or the first profile restricts those continuations, and says so;
+- a cut inside a dispatch stays excluded until the driver suspension exists.
+
+Its falsifier holds the queue's state and the count of signals fixed, and grows the receiver's
+continuation. The claimed budget covers the drain, or the profile refuses the longer client. The
+empty continuation is the control. `straight_sufficient`
+(`src/Effect4/Laws/Program/RuntimeR.lean`) covers a fresh run only.
 
 ### F8. What each proposal serves, and the order
 
 | Proposal | Obligations of the foundation contracts | Lands |
 | --- | --- | --- |
-| F3, the posted signal | `posted-wake-profile-agrees`, `posted-task-decision-preserves`, `posted-body-entry-typed`: each at an existing fork, so with existing fork clauses | with the Queue's first slice; no machine change |
-| F4, the mask | `saved-mask-restoration`, `scoped-body-substitution-boundary` | one small slice before the Queue |
+| F3, the posted signal | `posted-wake-profile-agrees`, `posted-task-decision-preserves`, `posted-body-entry-typed`. The fork's existing clauses give the local behaviour and typing; the composed statements are owed | with the Queue's first slice; no machine change |
+| F4, the mask | `saved-mask-restoration`, `scoped-body-substitution-boundary`, and R8's read and print claims for its spelling | after its second note; before the Queue |
 | F5, the wrapper | `waiting-request-obligation-preserved`, `wait-registration-no-gap` | with the Queue's first slice |
 | F7, the budget | `embedded-budget-sufficient` | with the Queue's first slice |
 
-So the order of row 233 gains one small slice. After seat T3b: the fold and the identity of
-handles; the mask; then the Queue's first path.
+So the order of row 233 gains one slice. After seat T3b come the fold and the identity of
+handles. Beside them comes the mask's second note, and then the mask. The Queue's first path
+follows, with its delivery budget or a declared restriction on its clients.
+
+### F9. What Codex's review of this note changed
+
+| Claim of the first draft | Correction | Where |
+| --- | --- | --- |
+| One fork for each signal bounds the delivery | It bounds the posting. A dispatch runs receiver code, the caller's continuation included, under the same budget; a yield can be injected despite the mask | F3, F7 |
+| The helper's one row leaves no unfinished work | A cut inside a dispatch drops the remaining commands today; the sufficient budget must exclude it | F3, F7 |
+| A receiver's wait stays interruptible until its task runs | Only under an interruptible caller. A masked caller stays registered and can consume | F3, F5 |
+| A commit forks one helper for every hint | The first Queue posts one helper for each hint. A grouped body is another producer | F6 |
+| The form table prints the mask | No recognizer exists. The mask owes a second note on its admission check, its printed form and its two extra steps | F4 |
 
 ## Proposals (not rulings)
 
-1. **For sign-off: the posted signal is the detached fork of F3.** No construct is added.
-2. **For sign-off: the mask is F4's form,** with one fiber action that reads the
-   interruptibility.
-3. **The mask is its own small slice, before the Queue.**
-4. **For sign-off: drop row 227's clause that refuses an escaping reference,** for the reason
-   of F4. This amends a ruled row, so it needs the owner's word.
-5. **Codex reviews this note** before a seat builds either construct.
+1. **For sign-off: the posted signal is the detached fork of F3,** one helper for each signal
+   occurrence. No construct is added. Codex recommends it for the first Queue profile.
+2. **For sign-off: the mask's direction is F4's saved Boolean,** with one fiber action that reads
+   the interruptibility. Codex accepts it in principle. No seat builds it before the second
+   note of F4.
+3. **The mask lands before the Queue's first path.**
+4. **For sign-off: amend row 227** to permit a recognized restore that escapes its mask. Every
+   other use of the saved value stays refused. This amends a ruled row, so it needs the owner's
+   word. Codex recommends it.
+5. **The first Queue slice carries four acceptance runs** beside the model's (F5, F7):
+   - the blocked offerer that is cancelled;
+   - the old hint after rearming;
+   - the masked caller in the posted window;
+   - the receiver's continuation that grows.
 
 ## What this does not establish
 
 - Each probe is one finite run on one schedule with bun 1.4.2. None is a proof.
 - The composite of the probe is TypeScript written by hand. It is not a printed program, and no
   Lean composite exists.
-- That the fork's existing clauses carry the three posted-work obligations is a reading. No
-  statement was written.
+- The fork's existing clauses are ingredients. No composed statement of the posted-work
+  obligations was written.
+- No printed form of the mask exists, and its second note is not written.
+- Codex's eight controls were read and not run again.
 - The mask's extra step and extra point of interruption were not measured against the truth
   harness.
 - The wrapper's text is a sketch. Its steps need the fold and the identity of handles, which are

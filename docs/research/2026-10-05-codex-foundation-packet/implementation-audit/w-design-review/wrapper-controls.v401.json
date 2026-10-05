@@ -1,0 +1,124 @@
+{
+  "evidence": "Four finite wrapper cases; queue definitions copied unchanged",
+  "effect": "4.0.1",
+  "bun": "1.4.2",
+  "entry": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/dist/index.js",
+  "cases": [
+    {
+      "name": "registration-gap",
+      "cancel": true,
+      "events": [
+        {
+          "event": "registered-before-await",
+          "interruptible": false,
+          "awaitCallbacks": 0
+        }
+      ],
+      "tasksBeforeDrain": 0,
+      "tasksExecuted": 0,
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "takers": 0,
+      "messages": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "registration-gap",
+      "cancel": false,
+      "events": [
+        {
+          "event": "registered-before-await",
+          "interruptible": false,
+          "awaitCallbacks": 0
+        }
+      ],
+      "tasksBeforeDrain": 2,
+      "tasksExecuted": 2,
+      "target": {
+        "tag": "Success",
+        "value": 1
+      },
+      "takers": 0,
+      "messages": [
+        2
+      ]
+    },
+    {
+      "name": "posted-window-cancellation",
+      "incomingMasked": false,
+      "afterInterrupt": {
+        "target": {
+          "tag": "Failure",
+          "reasons": [
+            "Interrupt"
+          ]
+        },
+        "interrupter": {
+          "tag": "Success",
+          "value": null
+        },
+        "takers": 0,
+        "messages": [
+          1
+        ]
+      },
+      "events": [],
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "interrupter": {
+        "tag": "Success",
+        "value": null
+      },
+      "takers": 0,
+      "messages": [
+        1
+      ],
+      "tasksExecuted": 1
+    },
+    {
+      "name": "posted-window-cancellation",
+      "incomingMasked": true,
+      "afterInterrupt": {
+        "target": {
+          "tag": "Pending"
+        },
+        "interrupter": {
+          "tag": "Pending"
+        },
+        "takers": 1,
+        "messages": [
+          1
+        ]
+      },
+      "events": [
+        {
+          "event": "inside-caller-continuation",
+          "value": 1
+        }
+      ],
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "interrupter": {
+        "tag": "Success",
+        "value": null
+      },
+      "takers": 0,
+      "messages": [],
+      "tasksExecuted": 1
+    }
+  ]
+}

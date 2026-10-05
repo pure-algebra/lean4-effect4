@@ -1,0 +1,95 @@
+{
+  "checkedAtUTC": "2026-10-05T16:12:44.727427+00:00",
+  "mainHead": "261b4a8e4508f7ba8e677ed1e1e5e0aff4c5dcca",
+  "evidence": "Eight finite host cases, four per installed version; no Lean theorem",
+  "commands": [
+    {
+      "command": "EFFECT_DIR=/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect bun run /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/w-design-review/wrapper-controls.ts > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/w-design-review/wrapper-controls.rc112.json",
+      "exitCode": 0
+    },
+    {
+      "command": "EFFECT_DIR=/Users/pooks/.bun/install/cache/effect@4.0.1@@@1 bun run /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/w-design-review/wrapper-controls.ts > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/w-design-review/wrapper-controls.v401.json",
+      "exitCode": 0
+    }
+  ],
+  "runtimeVersions": [
+    "4.0.0-rc.112",
+    "4.0.1"
+  ],
+  "bun": "1.4.2",
+  "sourcePrefixUnchanged": true,
+  "runtimeCasesIdentical": true,
+  "retainedCoordinatorOutputsIdenticalApartFromVersion": true,
+  "reviewedSourceHashes": {
+    "docs/research/2026-10-05-claude-lead/waiting-design.md": "a481167c5cc1fdb4e5bd6de8282bbe8999e769c9276a7d0ede80a89fb3e60b9d",
+    "docs/research/2026-10-05-claude-lead/queue-probes/composite-queue.ts": "843e00a255c0369a417a459d85d086b898fd8a96e69f8b899fbfd86b467ce236",
+    "docs/research/2026-10-05-claude-lead/queue-probes/QueueModel.lean": "db88226c5dd019f36a906d0f12ec5d7fcce26a43538939112623d5b80589cad9",
+    "docs/research/2026-10-05-claude-lead/queue-probes/composite-queue.rc112.out": "6570984c092eb883ffbb2b7c0cc96f5e5cc7a267e2f013057bf602869a4b8cb3",
+    "docs/research/2026-10-05-claude-lead/queue-probes/composite-queue.v401.out": "6abad13067f717e661fc2cf16f011334d477c703cc48af8917b4833e7f176522"
+  },
+  "runtimeHashes": {
+    "rc112": {
+      "package.json": "0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d",
+      "dist/index.js": "c0d5efdfd7396d61e64a05ff5558ce19c2540e1cb97decc853ac27cd1380ccfe",
+      "dist/internal/effect.js": "269e711472b84dcd04862f11e842acc1095cc5d22948af36cda76e9a9185828e",
+      "dist/Ref.js": "77336a92c0fa9cce18a716c7f7055b7a33d1006d7e3272ef08e0590da02a84fa",
+      "dist/Deferred.js": "c53475656c85d74872a15ee45cb06767e0a19f2ce4119d530d0d7d2827a5045c",
+      "dist/Fiber.js": "8e8433ea84b971792c3903e3cd62182c6c61a567ec73fee98f3e33cb520d4aee"
+    },
+    "v401": {
+      "package.json": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+      "dist/index.js": "6ef2255bd8ae944bf4af6098ad4ef43c91ef2ac345570b878667a2931ff1130f",
+      "dist/internal/effect.js": "cd1d12a5d8336f65877efabc55301a97e526fc3397a1c21a798a4c268858746f",
+      "dist/Ref.js": "77336a92c0fa9cce18a716c7f7055b7a33d1006d7e3272ef08e0590da02a84fa",
+      "dist/Deferred.js": "84002bff8ce017020784d39d1b57991b3d8d80fad9461bdf53ad9c28da58254a",
+      "dist/Fiber.js": "8e8433ea84b971792c3903e3cd62182c6c61a567ec73fee98f3e33cb520d4aee"
+    }
+  },
+  "sourceDeclarations": {
+    "composite-queue.ts": [
+      "ready",
+      "wake",
+      "post",
+      "takeBetween",
+      "takeStep",
+      "cancelStep"
+    ],
+    "QueueModel.lean": [
+      "threshold",
+      "ready",
+      "take",
+      "wake"
+    ],
+    "src/internal/effect.ts": [
+      "uninterruptibleMask",
+      "onInterrupt",
+      "onExitPrimitive",
+      "setInterruptible"
+    ]
+  },
+  "limits": [
+    "No repository edits, builds, installations, Lean, or TypeScript compiler",
+    "Manual scheduler returns false from shouldYield; its read-only state hook requests public Fiber.interrupt from a separate fiber",
+    "No model for pending offers, end/shutdown, zero bounds, capacity zero, or full QueueModel agreement",
+    "Current waiting-design.md has active uncommitted edits; findings describe the retained snapshot"
+  ],
+  "files": {
+    "waiting-design.live.md": "a481167c5cc1fdb4e5bd6de8282bbe8999e769c9276a7d0ede80a89fb3e60b9d",
+    "wrapper-controls.rc112.json": "4564a46b5b69087a7d33995bc10671e946e91a391854e0d49b81e84303db5557",
+    "waiting-design.27ea7cb2.md": "848ab061336bfd583e34b44bd7fd1844a024ab8724a5538297a27f69654cf74c",
+    "language-check.txt": "758e63a0f1f248cd80e4f5ce8d10e1c1e41ed7cc96f2f419b81fe795ffabd754",
+    "composite-source.ts": "843e00a255c0369a417a459d85d086b898fd8a96e69f8b899fbfd86b467ce236",
+    "wrapper-controls.ts": "3e7d3b4083b7200ca20f131b1f758d3a0ca71c8ce856e30216c7331d44cb3922",
+    "queue-review.md": "f289d5fe54fa48e527f469bc63a8059b79a72c53ebc9d835a04f8c8b54390d93",
+    "mask-review.md": "44c38e851c6d223527800bf2dd56527fc70ce0a30c7c312a0b7d0ca86923ea24",
+    "commands.txt": "f50385c0d4a14ddd57d804feaa996d9720fb352d40328a3f289cb717024eead8",
+    "review.md": "6bf63e7d642846612901cfb208e43260663286153f623a289203761c68f07ce5",
+    "wrapper-controls.v401.json": "ad43a068be787c6648ac40087d06a40608da44ba0de7dd1a41f6e86d3e0d36f8"
+  },
+  "languageCheck": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-language.py --strict /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/w-design-review/queue-review.md",
+    "initialExitCode": 1,
+    "finalExitCode": 0,
+    "repair": "Replaced ambiguous completeness and admission words with the stated scope."
+  }
+}
