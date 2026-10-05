@@ -1,0 +1,27 @@
+{
+  "reviewed_commit": "5ebacecc8631b9897652a86f67b7f1d3097dcffc",
+  "head_at_verification": "5ebacecc8631b9897652a86f67b7f1d3097dcffc",
+  "working_tree_status": "",
+  "accepted_packet_checks": {
+    "contracts-and-literature.md": {
+      "byte_identical": true,
+      "sha256": "2c4aa82918ff4ed8b4d0413fd17813dc06fa42ae34adf5400dce368e4a15d89f"
+    },
+    "foundation-audit.md": {
+      "byte_identical": true,
+      "sha256": "01f1e527f380842d543ed8110eadbfcbf9adedaf06189c0ddaa37a8d11723c93"
+    }
+  },
+  "assertions": {
+    "row222_winning_premise": true,
+    "registry_drops_winning_premise": true,
+    "four_observations_retained": true,
+    "target_agreement_stays_open": true,
+    "dynamic_access_tracking_retained": true,
+    "no_pretended_goals": true,
+    "queue_packet_still_owed": true,
+    "clock_schedule_superseded": true
+  },
+  "report_sha256": "72c22917d9495b031cae5048d9aaebd423a19aafa0eb1cd0e17b88321919665a",
+  "limits": "Read-only source review; no builds, generators, runtime probes or active-repository writes."
+}

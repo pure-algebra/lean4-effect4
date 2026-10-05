@@ -1,0 +1,52 @@
+{
+  "observed_at": "2026-10-05T16:01:35.390763+00:00",
+  "scope": "Read-only implementation audit; no Lean, generators, installations, Git mutations or active-repository edits.",
+  "finishing_criteria": [
+    "Confirm coordinator, active seats, worktrees and resume assignment through UI and Git",
+    "Compare tracked rulings with ratified package",
+    "Review available T3b implementation and claimed evidence",
+    "Verify any finding before one bounded advisory",
+    "Retain limits and refresh existing monitor"
+  ],
+  "repos": {
+    "main": {
+      "path": "/Users/pooks/Dev/lean4-effect4",
+      "head": "5ebacecc8631b9897652a86f67b7f1d3097dcffc",
+      "branch": "refactor/phase1-phase3",
+      "status": ""
+    },
+    "t3b": {
+      "path": "/Users/pooks/Dev/lean4-effect4-t3b",
+      "head": "44960c5b52beb7c90a0a48c9e59c7e3f58082586",
+      "branch": "seat/t3b",
+      "status": ""
+    },
+    "a401": {
+      "path": "/Users/pooks/Dev/lean4-effect4-audit401",
+      "head": "5ebacecc8631b9897652a86f67b7f1d3097dcffc",
+      "branch": "seat/audit-401",
+      "status": "?? vendor/effect-4.0.1/"
+    }
+  },
+  "inputs": {
+    "AGENTS.md": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "docs/STATE.md": "b8c9def1cce83af89deb14010cad61f1f1a17a206b5ce015624664a131913003",
+    "docs/core/decisions.md": "487ebdb44e09408d00ae86e3a3e5a0b94bb9ffc6c7b18b5cd45d319f26b48d31",
+    "docs/research/2026-10-04-seat-T3b-design.md": "e079729c4e3b1d19f92303cbb14648dd0cfc20654512f6ff254bada0ef99ca23",
+    "docs/research/2026-10-05-claude-lead/foundation-contracts.md": "641e247e1b0d7d7dd17197ba4e952bc1a7a6ad9b0354719986bc9f9d181e8da4",
+    "tools/Tools/SemanticsRegistry.lean": "496f0d6bfdf6b7cd2822dce6265dd2f4b8b8893e4940b90d811e97f818293011"
+  },
+  "ui": {
+    "coordinator": "Queues plan and design decisions",
+    "url": "claude.ai/epitaxy/local_fba6862c-f91c-4a69-8859-ce514ca70b21",
+    "state": "running",
+    "seats": [
+      "Resume seat T3b: slices E, F",
+      "Seat A401: audit release 4.0.1"
+    ],
+    "draft": "empty; not changed",
+    "t3b_observation": "Merged-base build success reported in seat UI; currently surveying cutover consumers and proof routes. No independent build by monitor.",
+    "coordinator_work": "Design W in progress; options are not settled implementation contracts."
+  },
+  "guidance_sent": false
+}

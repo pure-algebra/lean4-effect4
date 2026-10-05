@@ -1,0 +1,251 @@
+{
+ "effect": "4.0.1",
+ "inline": {
+  "p5_batchOneToTwo": [
+   {
+    "gap": false,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p6_slidingOne": [
+   {
+    "gap": false,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p7_droppingOne": [
+   {
+    "gap": false,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p1": "A got 1, B got 2, B got 3, B got 4, B got 5, B got 6",
+  "cancelWaiting": {
+   "left": 1
+  },
+  "cancelAfterSignal": {
+   "secondTaker": "waiting",
+   "left": 0
+  }
+ },
+ "yield": {
+  "p5_batchOneToTwo": [
+   {
+    "gap": false,
+    "taker": [
+     1,
+     2
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 0
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p6_slidingOne": [
+   {
+    "gap": false,
+    "taker": [
+     2
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 0
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p7_droppingOne": [
+   {
+    "gap": false,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     false
+    ],
+    "left": 0
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p1": "A got 1, B got 2, B got 3, B got 4, B got 5, B got 6",
+  "cancelWaiting": {
+   "left": 1
+  },
+  "cancelAfterSignal": {
+   "secondTaker": "waiting",
+   "left": 0
+  }
+ },
+ "fork": {
+  "p5_batchOneToTwo": [
+   {
+    "gap": false,
+    "taker": [
+     1,
+     2
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 0
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p6_slidingOne": [
+   {
+    "gap": false,
+    "taker": [
+     2
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 0
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p7_droppingOne": [
+   {
+    "gap": false,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     false
+    ],
+    "left": 0
+   },
+   {
+    "gap": true,
+    "taker": [
+     1
+    ],
+    "offers": [
+     true,
+     true
+    ],
+    "left": 1
+   }
+  ],
+  "p1": "A got 1, B got 2, B got 3, B got 4, B got 5, B got 6",
+  "cancelWaiting": {
+   "left": 1
+  },
+  "cancelAfterSignal": {
+   "secondTaker": 1,
+   "left": 0
+  }
+ }
+}

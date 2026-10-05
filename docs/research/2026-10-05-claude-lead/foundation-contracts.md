@@ -35,7 +35,7 @@ does the work run?
 | 219 | The Queue serves in strict request order, and a message is consumed at the taker's atomic step |
 | 220 | The Queue's signal is posted, for the default Effect 4 profile; a `Deferred` stays inline |
 | 221 | One shared waiting wrapper, with a checked body profile; each module owns its enrolment |
-| 222 | A cancellation before consumption consumes nothing; a commit stays after it; four observations |
+| 222 | When cancellation wins before consumption, nothing is consumed; a commit stays after it; four observations |
 | 223 | The atomic body is a restricted fragment of `Eff`, with flat nesting |
 | 224 | An alternative falls back on retry only, as Harris et al. define it |
 | 225 | Posted work is an `Eff` body with explicit task metadata; it is not a child fork |

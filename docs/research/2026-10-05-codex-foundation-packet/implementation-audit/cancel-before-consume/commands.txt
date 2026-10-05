@@ -1,0 +1,2 @@
+bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/probe.mjs /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/rc112.json
+bun /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/probe.mjs /Users/pooks/.bun/install/cache/effect@4.0.1@@@1 > /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/v401.json

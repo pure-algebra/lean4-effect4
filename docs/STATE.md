@@ -120,8 +120,8 @@ The owner ruled the foundations of the composed modules (decisions rows 214 to 2
 rest on finite runs, finite models, source reading and literature; none is a Lean proof.
 
 - **The Queue** (rows 219 to 222). It serves in strict request order. A message is consumed at
-  the taker's atomic step. The signal is posted, as Effect 4 does. A cancellation before
-  consumption consumes nothing, and a commit stays after it.
+  the taker's atomic step. The signal is posted, as Effect 4 does. When cancellation wins
+  before consumption, nothing is consumed; a commit stays after it.
 - **The shared foundations** (rows 221, 223 to 227, 230 and 234):
   - one waiting wrapper with a checked body profile;
   - a restricted atomic body;
@@ -158,11 +158,19 @@ Where to read:
 - [the landing review](research/2026-10-05-claude-lead/landing-review.md): what the session of
   2026-10-04 landed.
 
+Three more rulings of the same day (rows 235 to 237):
+
+- the Queue's TypeScript face prints the expansion by default, and the native queue only under a
+  narrower named profile;
+- 4.0.1's source is vendored beside rc.112's for citation, and the pin does not move;
+- the coordinator staffs one seat for each slice in row 233's order, at most two at once;
+- the owner signs off the posted signal's construct before a seat builds it.
+
 Open at this landing:
 
 - the Queue's whole transition contract, as a packet in `Test/contracts/`;
 - the design note for waiting, tasks, masks and the atomic frontier;
-- seat T3b's slices E and F;
+- seat T3b's slices E and F, resumed on 2026-10-05 from `632265fd`;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness reports a module error on every typed program;
   - `check-schema-ts`: its host packages are not installed.

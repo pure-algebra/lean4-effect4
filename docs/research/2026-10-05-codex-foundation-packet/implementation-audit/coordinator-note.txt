@@ -1,0 +1,9 @@
+First implementation audit: main 5ebacecc; T3b 44960c5b. The A–D source changes match the staged design. Existing P11 controls cover the cutover risks. E/F and design W remain in progress.
+
+Two bounded review points:
+
+1. In tools/Tools/SemanticsRegistry.lean, R11 waiting-request-obligation-preserved drops row 222’s “when cancellation wins” premise. Restore it before stating the goal. A new six-case host probe confirms why: on rc.112 and 4.0.1, interruption requested before an available Queue.take remains pending under a mask; the take consumes, then restoration interrupts before return. The no-cancellation control returns; the unmasked control retains the message. This is finite evidence on an available-message operation, not a waiting-wrapper defect or an upstream bug. Inputs, versions and outputs: /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/cancel-before-consume/.
+
+2. For W’s existing notification-before-await case, distinguish committing a Deferred completion now and posting owed resumes from posting the completion itself. DeferredStore.register/deferredStore_register_done (Machine/Stores.lean) plus evaluatePrim’s immediate async branch (Machine/Fibers.lean) let a later await continue without dispatch in the first candidate. If the selected Queue profile requires its next attempt after dispatch, test that exact order, or prove the enrolment-to-await interval unreachable. Keep ordinary Deferred’s inline control. This refines posted-wake-profile-agrees and wait-registration-no-gap; it is not a finding against an unpublished design.
+
+Full source reviews: /private/tmp/codex-effect4-overnight-monitor/2026-10-05-implementation-audit/{t3b-review,rulings-review,posted-review}.md. No monitor Lean work or repository edits.

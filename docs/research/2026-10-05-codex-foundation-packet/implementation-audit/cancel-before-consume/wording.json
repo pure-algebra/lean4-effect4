@@ -1,0 +1,8 @@
+{
+  "registry": [
+    "\"waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; a cancellation before consumption withdraws the request and consumes nothing, and a commit stays after it; an old token is inert after rearming (decisions rows 221, 222)\"] },"
+  ],
+  "decision222": [
+    "| 222 | Cancellation of an operation that waits | When cancellation wins before consumption, the request is withdrawn and nothing is consumed. After consumption the state stays committed, even when the caller is interrupted before its continuation receives the value. The observation records four things apart: the commitment, the operation's exit, the entry of the caller's continuation, and the fiber's exit. No law says that an interrupted take consumed nothing, or that every committed result reaches the caller's code; masking gives no such guarantee. An acquisition whose lifetime must be protected, such as a permit, keeps that lifetime inside a bracketed operation with installed cleanup. Evidence: a protected `Queue.take` consumes and reaches its result, and the restored mask interrupts before the caller continues, on rc.112, 4.0.1 and Effect 3.22.2 (five controls on each) | `docs/research/2026-10-05-codex-foundation-packet/atomic/cancel-return/README.md`; `docs/research/2026-10-05-claude-lead/queue-probes/cancel-return.ts` and its three outputs; `docs/research/2026-10-05-codex-foundation-packet/literature/tasks/contracts.md` | owner | **ruled 2026-10-05 (as recommended)**; not landed |"
+  ]
+}

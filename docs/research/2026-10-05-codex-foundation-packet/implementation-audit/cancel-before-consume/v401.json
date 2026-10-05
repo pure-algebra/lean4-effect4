@@ -1,0 +1,169 @@
+{
+  "evidence": "Finite deterministic host probe; no Lean proof or all-schedule claim",
+  "runtime": {
+    "bun": "1.4.2",
+    "effect": "4.0.1",
+    "effectDir": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1",
+    "entry": "installed src",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Effect-TS/effect.git",
+      "directory": "packages/effect"
+    }
+  },
+  "sourceHashes": {
+    "package.json": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "src/internal/effect.ts": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+    "src/Deferred.ts": "3cb80cc3c17148d8c6cc264e80f196ca7799c49423497ca7929d98179c797198",
+    "src/Queue.ts": "6781fd0ac6fad03057ebeaa838d0f9723913027a4f6845d57dc3c17da70d1953",
+    "src/Fiber.ts": "0823a06049643e1b3efbfaabdccc03be1a08b5ae165841d3ef18916e297ee057"
+  },
+  "cases": [
+    {
+      "name": "masked-cancel-before-take",
+      "masked": true,
+      "cancel": true,
+      "events": [
+        {
+          "event": "operation-body-entered"
+        },
+        {
+          "event": "cancel-requested-by-separate-fiber"
+        },
+        {
+          "event": "before-take",
+          "pendingInterrupt": true,
+          "interruptible": false
+        },
+        {
+          "event": "state-consumed",
+          "value": "message"
+        },
+        {
+          "event": "body-result-ready",
+          "value": "message"
+        },
+        {
+          "event": "operation-exit",
+          "tag": "Failure",
+          "reasons": [
+            "Interrupt"
+          ],
+          "value": null
+        },
+        {
+          "event": "observer-or-canceller-finished"
+        }
+      ],
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "canceller": {
+        "tag": "Success",
+        "value": null
+      },
+      "queueSizeBeforePoll": 0,
+      "remaining": {
+        "tag": "None",
+        "value": null
+      },
+      "tasksExecuted": 0
+    },
+    {
+      "name": "masked-no-cancellation-control",
+      "masked": true,
+      "cancel": false,
+      "events": [
+        {
+          "event": "operation-body-entered"
+        },
+        {
+          "event": "before-take-observed-control"
+        },
+        {
+          "event": "observer-or-canceller-finished"
+        },
+        {
+          "event": "before-take",
+          "pendingInterrupt": false,
+          "interruptible": false
+        },
+        {
+          "event": "state-consumed",
+          "value": "message"
+        },
+        {
+          "event": "body-result-ready",
+          "value": "message"
+        },
+        {
+          "event": "operation-exit",
+          "tag": "Success",
+          "reasons": [],
+          "value": "message"
+        },
+        {
+          "event": "caller-continuation-entered",
+          "value": "message"
+        }
+      ],
+      "target": {
+        "tag": "Success",
+        "value": "message"
+      },
+      "canceller": {
+        "tag": "Success",
+        "value": null
+      },
+      "queueSizeBeforePoll": 0,
+      "remaining": {
+        "tag": "None",
+        "value": null
+      },
+      "tasksExecuted": 0
+    },
+    {
+      "name": "unmasked-cancellation-control",
+      "masked": false,
+      "cancel": true,
+      "events": [
+        {
+          "event": "operation-body-entered"
+        },
+        {
+          "event": "cancel-requested-by-separate-fiber"
+        },
+        {
+          "event": "operation-exit",
+          "tag": "Failure",
+          "reasons": [
+            "Interrupt"
+          ],
+          "value": null
+        },
+        {
+          "event": "observer-or-canceller-finished"
+        }
+      ],
+      "target": {
+        "tag": "Failure",
+        "reasons": [
+          "Interrupt"
+        ]
+      },
+      "canceller": {
+        "tag": "Success",
+        "value": null
+      },
+      "queueSizeBeforePoll": 1,
+      "remaining": {
+        "tag": "Some",
+        "value": "message"
+      },
+      "tasksExecuted": 0
+    }
+  ]
+}
