@@ -211,9 +211,12 @@ Open at this landing:
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   It is owed as a packet in `Test/contracts/` with the first Queue slice;
 - the fold's design is [written](research/2026-10-05-claude-lead/fold-design/fold-design.md),
-  with its model. Its slice is the next one of the foundation seat;
+  with its model. Its slice is with seat FOLD since 2026-10-05 (branch `seat/fold`, from
+  `a53e5e15`; [the brief](research/2026-10-05-claude-lead/briefs/seat-fold-brief.md));
+- the faces of an operation's binder term, the state plan's T5, follow the fold. The Queue's
+  printed form needs them, because its step is one `Ref.modify` whose term folds;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
-  (rows 244 to 246). Its slice follows the fold's;
+  (rows 244 to 246). Its slice follows those two;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
