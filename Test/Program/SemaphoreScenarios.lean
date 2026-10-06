@@ -1,7 +1,7 @@
 import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
-import Effect4.Modules.Queue.Steps
+import Effect4.Modules.Semaphore.Steps
 
 /-!
 # Semaphore on the machine: the wake's first check (decisions rows 259 to 261 and 265)
@@ -28,8 +28,8 @@ withdrawal on interruption. `release` posts one helper, whose body is the walk (
 `interruptible` for its restore, which is right under an interruptible caller only. The public
 operations come with the wrapper's slice, after the mask.
 
-**The steps here are a first form.** The slice's next step moves them into the library, and
-this battery then runs the library's terms.
+**The steps are the library's** (`src/Effect4/Modules/Semaphore/Steps.lean`): the take step, the
+release step, the visit and the withdrawal. One more run, T1, is the take that never waits.
 
 **The settings of every run.**
 
@@ -60,92 +60,9 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.SemaphoreScenarios
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue (nilT noneT len snoc notT andT orT isEmpty ifT noneOf idTy)
-
-/-! ## The cell and the five steps, in their first form
-
-One record at four fields, and a waiter at four fields (the card's section 3). Each step is one
-term for one `Ref.modify`: it answers the pair of its reply and the cell's next value. -/
-
-def waiterFields : List (String × Bool × Ty) :=
-  [("id", false, idTy), ("need", false, .nat), ("hint", false, idTy), ("stamp", false, .nat)]
-
-def waiterTy : Ty := .record
-  [("hint", false, idTy), ("id", false, idTy), ("need", false, .nat), ("stamp", false, .nat)]
-
-def cellFields : List (String × Bool × Ty) :=
-  [("permits", false, .nat), ("taken", false, .nat), ("waiters", false, .list waiterTy),
-   ("next", false, .nat)]
-
-/-- The initial value at a total: nothing taken, no waiter, the stamp zero. -/
-def empty (permits : Nat) : TermSrc :=
-  record cellFields
-    [("permits", nat permits), ("taken", nat 0), ("waiters", app "nil" []), ("next", nat 0)]
-
-/-- The free count: the total less what is taken. -/
-def free (s : TermSrc) : TermSrc := app "sub" [field s "permits", field s "taken"]
-
-/-- Whether a count fits the free count. -/
-def fits (need s : TermSrc) : TermSrc := notT (app "lt" [free s, need])
-
-def mkWaiter (id need hint stamp : TermSrc) : TermSrc :=
-  record waiterFields [("id", id), ("need", need), ("hint", hint), ("stamp", stamp)]
-
-/-- The waiters without the request `id`: the Queue's removal pass, which reads the field `id`
-of an entry and no other. -/
-def removeWaiter (waiters id : TermSrc) : TermSrc := Queue.removeTaker waiters id
-
-/-- Take or enrol. The request's own entry leaves first. Where the count fits, `taken` gains
-it. Otherwise a new entry joins the end, at the stamp `next`. Answer: whether it took. -/
-def takeStep (need id hint s : TermSrc) : TermSrc :=
-  let rest := removeWaiter (field s "waiters") id
-  ifT (fits need s)
-    (app "pair" [bool true,
-      recordSet (recordSet s "taken" (app "add" [field s "taken", need])) "waiters" rest])
-    (app "pair" [bool false,
-      recordSet (recordSet s "waiters" (snoc rest (mkWaiter id need hint (field s "next"))))
-        "next" (app "add" [field s "next", nat 1])])
-
-/-- Take if available: it never enrols. Answer: whether it took. -/
-def takeIfAvailableStep (need s : TermSrc) : TermSrc :=
-  ifT (fits need s)
-    (app "pair" [bool true, recordSet s "taken" (app "add" [field s "taken", need])])
-    (app "pair" [bool false, s])
-
-/-- Release: at most what is taken, by `sub` (decisions row 261). Answer: the free count, and
-whether a waiter is enrolled. -/
-def releaseStep (count s : TermSrc) : TermSrc :=
-  let left := app "sub" [field s "taken", count]
-  app "pair" [tuple [app "sub" [field s "permits", left], notT (isEmpty (field s "waiters"))],
-    recordSet s "taken" left]
-
-/-- Whether a waiter is at or after the cursor, and its count fits. -/
-def eligible (cursor s w : TermSrc) : TermSrc :=
-  andT (notT (app "lt" [field w "stamp", cursor])) (notT (app "lt" [free s, field w "need"]))
-
-/-- The waiters from the first eligible one on. -/
-def fromFirst (cursor s : TermSrc) : TermSrc :=
-  foldWith (field s "waiters") (noneOf (field s "waiters")) fun kept w =>
-    ifT (orT (notT (isEmpty kept)) (eligible cursor s w)) (snoc kept w) kept
-
-/-- A visit's answer and stored value, from the waiters that start at the selected one. -/
-def visitFrom (rest s : TermSrc) : TermSrc :=
-  let waiters := field s "waiters"
-  ifT (app "isZero" [free s])
-    (app "pair" [app "get" [noneOf waiters, nat 0], s])
-    (app "pair" [app "get" [rest, nat 0],
-      recordSet s "waiters"
-        (app "append" [app "take" [waiters, app "sub" [len waiters, len rest]],
-          app "drop" [rest, nat 1]])])
-
-/-- One visit of the walk. It stops where no permit is free. Otherwise it selects the first
-waiter at or after the cursor whose count fits, and that waiter leaves the list. Answer: the
-selected waiter's record, if any. A visit reserves nothing: `taken` stays. -/
-def visitStep (cursor s : TermSrc) : TermSrc := visitFrom (fromFirst cursor s) s
-
-/-- Withdraw: the request's entry leaves. Answer: nothing. -/
-def withdrawStep (id s : TermSrc) : TermSrc :=
-  app "pair" [unit, recordSet s "waiters" (removeWaiter (field s "waiters") id)]
+open Effect4.Queue (nilT noneT len snoc notT ifT noneOf)
+open Effect4.Semaphore (takeStep takeIfAvailableStep releaseStep visitStep withdrawStep visitFrom
+  eligibleT)
 
 /-! ## The operations, as fixtures
 
@@ -228,7 +145,7 @@ def visitHeadStep (cursor s : TermSrc) : TermSrc :=
   let waiters := field s "waiters"
   visitFrom
     (foldWith (app "take" [waiters, nat 1]) (noneOf waiters) fun _ w =>
-      ifT (eligible cursor s w) waiters (noneOf waiters))
+      ifT (eligibleT cursor s w) waiters (noneOf waiters))
     s
 
 def headOnly : Ops := { take := take, release := releaseWith (walkWith visitHeadStep) }
@@ -358,7 +275,7 @@ def yieldsOn (tape : List Api.Decision) (src : Src NativeOp) : Option (List (Nat
 /-- P1 and P9, the protected case. A is fiber 1, B fiber 2 and C fiber 3. The root yields once
 before it opens the gate: P9's tape tells B to yield there. -/
 def p1 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (empty 2)
+  let q ← Ref.make (Semaphore.empty 2)
   let log ← Ref.make noNumbers
   let gate ← Deferred.make .unit .never
   let _ ← fork (withPermits ops (nat 2) q (Deferred.await gate))
@@ -378,7 +295,7 @@ def p1 (ops : Ops) : Src NativeOp := eff do
 
 /-- P2, the scan case. B is fiber 1 and C fiber 2. -/
 def p2 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (empty 2)
+  let q ← Ref.make (Semaphore.empty 2)
   let log ← Ref.make noNumbers
   let _ ← ops.take (nat 1) q
   let _ ← ops.take (nat 1) q
@@ -398,7 +315,7 @@ def p2 (ops : Ops) : Src NativeOp := eff do
 /-- P3, the overtaking case. B is fiber 1 and C fiber 2. B writes 21 after its first take and
 22 after its second. -/
 def p3 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (empty 2)
+  let q ← Ref.make (Semaphore.empty 2)
   let log ← Ref.make noNumbers
   let _ ← ops.take (nat 2) q
   let _ ← fork (eff do
@@ -419,7 +336,7 @@ def p3 (ops : Ops) : Src NativeOp := eff do
 /-- P4, two protected waiters whose bodies do not wait. A body writes its mark with the taken
 count that it reads: 20 or 30, plus the count. -/
 def p4 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (empty 2)
+  let q ← Ref.make (Semaphore.empty 2)
   let log ← Ref.make noNumbers
   let gate ← Deferred.make .unit .never
   let _ ← fork (withPermits ops (nat 2) q (Deferred.await gate))
@@ -439,7 +356,7 @@ def p4 (ops : Ops) : Src NativeOp := eff do
 /-- P7, the withdrawal. The root holds the one permit. A raw waiter is interrupted, then a
 protected waiter. The root then releases. -/
 def p7 (ops : Ops) : Src NativeOp := eff do
-  let q ← Ref.make (empty 1)
+  let q ← Ref.make (Semaphore.empty 1)
   let _ ← ops.take (nat 1) q
   let b ← fork (ops.take (nat 1) q)
   let whileB ← counts q
@@ -453,6 +370,15 @@ def p7 (ops : Ops) : Src NativeOp := eff do
   let _ ← settle
   let afterRelease ← counts q
   return tuple [whileB, afterB, whileC, afterC, answer, afterRelease]
+
+/-- T1, the take that never waits: it takes 2 of 2, and a second request for 1 does not take
+and does not enrol. -/
+def t1 : Src NativeOp := eff do
+  let q ← Ref.make (Semaphore.empty 2)
+  let first ← Ref.modify "s" (takeIfAvailableStep (nat 2) (var "s")) q
+  let second ← Ref.modify "s" (takeIfAvailableStep (nat 1) (var "s")) q
+  let after ← counts q
+  return tuple [first, second, after]
 
 /-- A count as a value. -/
 def count (taken : Nat) (needs stamps : List Nat) : Val :=
@@ -488,6 +414,10 @@ def marks (ks : List Nat) : Val := .list (ks.map .nat)
 -- free, and it waits again with a new entry: the stamp 2.
 #guard exitOn yieldAtResume (p1 live) = some (.success (.list
   [count 2 [2, 1] [0, 1], count 1 [2] [2], marks [31]]))
+
+-- T1. The take that never waits answers true, then false, and nobody is enrolled.
+#guard verdict t1 = "built" &&
+  exitOf t1 = some (.success (.list [.bool true, .bool false, count 2 [] []]))
 
 /-! ### The reading of the machine, on the trace
 
