@@ -307,10 +307,11 @@ theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List N
 admits: the sub-program there, with an environment and a type. A consumer of
 `focus-function`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Sketch.check_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+theorem Sketch.check_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {q : NativeEff} (hs : s.check app = .ok T)
     (hat : (Node.eff s.program).at_ path = some (.eff q)) :
-    ∃ (env : TyEnv) (t : EffTy), s.focusAt app path = some ⟨q, env, t⟩
+    ∃ (env : TyEnv) (t : EffTy), s.focusAt app path = some ⟨q, env, t⟩ :=
+  Effect4.Program.check_focusAt hs hat
 
 /-- **Filling at the answered focus keeps the type.** In a sketch that the checker admits, take
 the focus that `Sketch.focusAt` answers at an address. Every program that the checker admits at
@@ -319,12 +320,18 @@ sketch at the same type. The filling may declare more holes: `more` is appended 
 table. Nothing is existential: a tool computes the focus and checks its filling against it. A
 consumer of `focus-function`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Sketch.check_fill_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+theorem Sketch.check_fill_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
     (more : RowTable) {q' : NativeEff} {pq : List Nat}
     (hq' : Checker.check (app.withHoles (s.holes ++ more)).signature f.env pq q' = .ok f.ty) :
     ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
-      s'.check app = .ok T
+      s'.check app = .ok T := by
+  have hext : SigExtends (app.withHoles s.holes).signature
+      (app.withHoles (s.holes ++ more)).signature := by
+    rw [← SigApp.withHoles_withHoles]
+    exact (app.withHoles s.holes).withHoles_extends more
+  obtain ⟨p', hrep, hp'⟩ := check_replace_focusAt hs hf hext hq'
+  exact ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ more }) hrep, hp' []⟩
 
 /-- **Omitting at the answered focus keeps the type.** In a sketch that the checker admits, take
 the focus that `Sketch.focusAt` answers at an address. When its type has closed columns, an
@@ -333,13 +340,22 @@ declares that type exists, and the checker admits it at the same type. Each prem
 answered type, so a tool can decide it. They are the premises of `Sketch.check_omit`. A consumer
 of `focus-function`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Sketch.check_omit_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+theorem Sketch.check_omit_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
     (name : String) (hans : f.ty.answer.closed = true) (herr : f.ty.error.closed = true)
     (hansN : f.ty.answer.normalize = f.ty.answer) (herrN : f.ty.error.normalize = f.ty.error)
     (formed : Formation.Formed (Formation.instantiatedSites
       (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems).normalizeTypes [])) :
     ∃ s', s.omitAt app path (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems) = some s' ∧
-      s'.check app = .ok T
+      s'.check app = .ok T := by
+  have hhole := Sketch.hole_hasTy app
+    (s.holes ++ [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems]) s.holes.length f.env
+    List.getElem?_concat_length hans herr formed
+  have hreq : Requirement.ofList f.ty.requires.elems = f.ty.requires :=
+    Row.normalize_of_ascending f.ty.requires.elems f.ty.requires.ascending
+  rw [hansN, herrN, hreq] at hhole
+  exact Sketch.check_fill_focusAt s app hs hf
+    [Row.hole name f.ty.answer f.ty.error f.ty.requires.elems] (pq := [])
+    (check_complete _ _ f.env f.ty hhole [])
 
 end Effect4.Program

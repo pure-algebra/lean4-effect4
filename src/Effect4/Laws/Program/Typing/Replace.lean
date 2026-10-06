@@ -25,6 +25,11 @@ The law is the law of two edits of a sketch (`Program/Sketch.lean`). To fill is 
 program at an address. To omit is to put a hole there. The extension of the signature in the
 statement is what lets a filling or an omission declare new holes.
 
+**The environment is computed** (`NodeHasTy.replace_envAt`). The focus's environment is the one
+that the step function answers along the path (`Node.envAt`, `Program/Typing/Focus.lean`), and
+its type is then the checker's. So the law holds at a pair that a function names.
+`Laws/Program/Typing/Focus.lean` states it for `focusAt`.
+
 ## How it is proved
 
 The six typing judgments are mutual, and a path crosses them: a program, a statement list, a
@@ -32,16 +37,18 @@ race, a fiber action, a layer, a layer spine. One judgment over nodes holds the 
 (`NodeHasTy`), indexed by the node's sort (`NodeTy`). A path also crosses a statement, which
 has no judgment of its own: a statement is typed with the statements after it.
 
-- **One step** (`NodeHasTy.child_step`). A typed node's child is typed, and a node of the child's
-  type stands in its place. It has one case for each arm of the generated `Node.child`
+- **One step** (`NodeHasTy.child_step`). A typed node's child is typed, at the environment that
+  the step function `Node.childEnv` answers, and a node of the child's type stands in its
+  place. It has one case for each arm of the generated `Node.child`
   (`Program/NodeLenses.lean`), in that function's order. Each case inverts one rule and applies
   it again, with the other premises moved along the extension (`hasTy_ext` and its five
   siblings, `Laws/Program/Signature.lean`). A constructor appended to the program family adds
-  one case for each of its node children.
+  one case for each of its node children, here and in `Node.childEnv`.
 - **Two dead ends.** The empty list after a `return` and the empty tail of a one-layer spine
   are children with no typed replacement. No path to a program crosses one, and the step asks
   for that.
-- **The path** (`NodeHasTy.replace`). One induction on the path, with no mutual induction.
+- **The path** (`NodeHasTy.replace_envAt`). One induction on the path, with no mutual
+  induction. `NodeHasTy.replace` is its corollary: the same law, without the function.
 - **The six statements** are its instances: `hasTy_replace`, `stmtsHasTy_replace`,
   `effsHasTy_replace`, `actionHasTy_replace`, `layerHasTy_replace`, `layersHasTy_replace`.
 - **At the checker** (`check_replace`): the focus is checked, and not the program again. The
@@ -50,10 +57,15 @@ has no judgment of its own: a statement is typed with the statements after it.
 ## Placement
 
 Concept `initial-algebras-folds`: the typing judgment follows the program's constructors, and
-the law is its congruence at one address. Requirement R14, the proposed claim
-`typed-replacement` (role substitution; pointer `NodeHasTy.replace`), under decisions rows 282
-and 288. Consumers: `Sketch.check_fill` and `Sketch.check_omit` (`Laws/Program/Sketch.lean`),
-and each edit of a program at a focus.
+the law is its congruence at one address. Requirement R14, the claim `typed-replacement` (role
+substitution; pointer `NodeHasTy.replace`), under decisions rows 282 and 288. Consumers:
+`Sketch.check_fill` and `Sketch.check_omit` (`Laws/Program/Sketch.lean`), and each edit of a
+program at a focus.
+
+The proposed claim `focus-function` (role inversion; pointer `NodeHasTy.replace_envAt`), under
+decisions row 292: the step function is the inversion of the typing rules at one child, and its
+fold is the inversion along a path. Consumers: the laws of `focusAt`
+(`Laws/Program/Typing/Focus.lean`), and through them a tool at an address of a sketch.
 
 Reach: the six judgments, at every signature of every operation alphabet; a program as the
 focus, at every address; every extension of the signature; the focus's type kept exactly.
@@ -64,9 +76,8 @@ The law does not establish:
 - a focus of a smaller type, or of a type that is equal only after normalization;
 - a term as the focus: a term has no address (`Node.child`);
 - a program with a layer reference: the judgment has no rule for one;
-- a function that computes the focus's environment and type. They are existential here. A tool
-  needs that function, and the proof that it answers this law's pair (the receipt of slice
-  REPLACE, its first open obligation).
+- an environment after a sibling that the checker refuses: the step function answers none
+  there, and every statement here starts from a typed node.
 -/
 
 set_option autoImplicit false
@@ -160,286 +171,306 @@ theorem layersHasTy_cons {s : Signature Op} {head : LayerTerm Op} {ls : LayerTer
   | one hl => exact .cons hh (.one hl)
   | cons hl hr => exact .cons hh (.cons hl hr)
 
-/-- **One step of the law.** A typed node's child that leads to a program is typed, and a node
-of the child's type stands in its place: the parent keeps its type, under every extension of
-the signature.
+/-- A typed sibling's type is the checker's answer, under the map that a step applies to it. A
+step of `focus-function`: the cases of `NodeHasTy.child_step` whose child reads the type of an
+earlier sibling. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem effTy_map_of_hasTy {α : Type} {s : Signature Op} {env : TyEnv} {e : Eff Op} {t : EffTy}
+    (h : HasTy s env e t) (g : EffTy → α) : (effTy s env e).map g = some (g t) :=
+  Option.map_eq_some_iff.mpr ⟨t, effTy_complete s e env t h, rfl⟩
+
+/-- **One step of the law.** A typed node's child that leads to a program is typed, at the
+environment that the step function answers (`Node.childEnv`). A node of the child's type stands
+in its place: the parent keeps its type, under every extension of the signature.
 
 One case for each arm of `Node.child`, in that function's order, and one for each rule where a
-node has several. Each case inverts the rule and applies it again: the new premise stands at
-the child, and every other premise moves along the extension. The two dead ends read `hlead`.
-A step of `typed-replacement`: `NodeHasTy.replace` folds it along a path. -/
+node has several. Each case inverts the rule and has three parts:
+
+- the child's premise, which is its typing;
+- the environment fact: `rfl` where the child is typed at its parent's environment or at a
+  fixed one, and the checker's answer on what the rule reads first where the rule extends the
+  environment (`effTy_map_of_hasTy`, or the term's premise);
+- the rule applied again: the new premise stands at the child, and every other premise moves
+  along the extension.
+
+The two dead ends read `hlead`. A step of `typed-replacement` and of `focus-function`:
+`NodeHasTy.replace_envAt` folds it along a path. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op} {i : Nat}
     (hn : NodeHasTy s n τ) (hc : n.child i = some c)
     (hlead : ∃ rest q, c.at_ rest = some (.eff q)) :
-    ∃ τc, NodeHasTy s c τc ∧
+    ∃ τc, NodeHasTy s c τc ∧ n.childEnv s τ.env i = some τc.env ∧
       ∀ {s' : Signature Op} {c' n' : Node Op}, SigExtends s s' → NodeHasTy s' c' τc →
         n.setChild i c' = some n' → NodeHasTy s' n' τ := by
   unfold Node.child at hc
   split at hc <;> cases hc
   -- eff (.suspend a0), 0
   · cases hn with | eff hp => cases hp with | suspend hb =>
-    exact ⟨_, .eff hb, fun _ hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.suspend hx)⟩
   -- eff (.bind a0 _), 0
   · cases hn with | eff hp => cases hp with | bind hf hr =>
-    exact ⟨_, .eff hf, fun h hc' hs => by
+    exact ⟨_, .eff hf, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.bind hx (hasTy_ext h hr))⟩
   -- eff (.bind _ a1), 1
   · cases hn with | eff hp => cases hp with | bind hf hr =>
-    exact ⟨_, .eff hr, fun h hc' hs => by
+    exact ⟨_, .eff hr, effTy_map_of_hasTy hf _, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.bind (hasTy_ext h hf) hx)⟩
   -- eff (.gen a0), 0
   · cases hn with | eff hp => cases hp with | gen hb =>
-    exact ⟨_, .stmts hb, fun _ hc' hs => by
+    exact ⟨_, .stmts hb, rfl, fun _ hc' hs => by
       cases hc' with | stmts hx => cases hs; exact .eff (.gen hx)⟩
   -- eff (.catchCause a0 _), 0
   · cases hn with | eff hp => cases hp with | catchCause hb hh hj =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.catchCause hx (hasTy_ext h hh) hj)⟩
   -- eff (.catchCause _ a1), 1
   · cases hn with | eff hp => cases hp with | catchCause hb hh hj =>
-    exact ⟨_, .eff hh, fun h hc' hs => by
+    exact ⟨_, .eff hh, effTy_map_of_hasTy hb _, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.catchCause (hasTy_ext h hb) hx hj)⟩
   -- eff (.matchCause a0 _ _), 0
   · cases hn with | eff hp => cases hp with | matchCause hb hv hk hj =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.matchCause hx (hasTy_ext h hv) (hasTy_ext h hk) hj)⟩
   -- eff (.matchCause _ a1 _), 1
   · cases hn with | eff hp => cases hp with | matchCause hb hv hk hj =>
-    exact ⟨_, .eff hv, fun h hc' hs => by
+    exact ⟨_, .eff hv, effTy_map_of_hasTy hb _, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.matchCause (hasTy_ext h hb) hx (hasTy_ext h hk) hj)⟩
   -- eff (.matchCause _ _ a2), 2
   · cases hn with | eff hp => cases hp with | matchCause hb hv hk hj =>
-    exact ⟨_, .eff hk, fun h hc' hs => by
+    exact ⟨_, .eff hk, effTy_map_of_hasTy hb _, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.matchCause (hasTy_ext h hb) (hasTy_ext h hv) hx hj)⟩
   -- eff (.onExit a0 _), 0
   · cases hn with | eff hp => cases hp with | onExit hb hf =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.onExit hx (hasTy_ext h hf))⟩
   -- eff (.onExit _ a1), 1
   · cases hn with | eff hp => cases hp with | onExit hb hf =>
-    exact ⟨_, .eff hf, fun h hc' hs => by
+    exact ⟨_, .eff hf, effTy_map_of_hasTy hb _, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.onExit (hasTy_ext h hb) hx)⟩
   -- eff (.exit a0), 0
   · cases hn with | eff hp => cases hp with | exit hb =>
-    exact ⟨_, .eff hb, fun _ hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.exit hx)⟩
   -- eff (.uninterruptible a0), 0
   · cases hn with | eff hp => cases hp with | uninterruptible hb =>
-    exact ⟨_, .eff hb, fun _ hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.uninterruptible hx)⟩
   -- eff (.interruptible a0), 0
   · cases hn with | eff hp => cases hp with | interruptible hb =>
-    exact ⟨_, .eff hb, fun _ hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun _ hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.interruptible hx)⟩
   -- eff (.withFiber a0), 0
   · cases hn with | eff hp => cases hp with | withFiber ha =>
-    exact ⟨_, .action ha, fun _ hc' hs => by
+    exact ⟨_, .action ha, rfl, fun _ hc' hs => by
       cases hc' with | action hx => cases hs; exact .eff (.withFiber hx)⟩
   -- eff (.scoped a0), 0
   · cases hn with | eff hp => cases hp with | «scoped» hb =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; rw [← h.bodyRequires]; exact .eff (.scoped hx)⟩
   -- eff (.acquireRelease a0 _), 0
   · cases hn with | eff hp => cases hp with | acquireRelease ha hr hne =>
-    exact ⟨_, .eff ha, fun h hc' hs => by
+    exact ⟨_, .eff ha, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; rw [← h.scopeKey]; exact .eff (.acquireRelease hx (hasTy_ext h hr) hne)⟩
   -- eff (.acquireRelease _ a1), 1
   · cases hn with | eff hp => cases hp with | acquireRelease ha hr hne =>
-    exact ⟨_, .eff hr, fun h hc' hs => by
+    exact ⟨_, .eff hr, effTy_map_of_hasTy ha _, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; rw [← h.scopeKey]; exact .eff (.acquireRelease (hasTy_ext h ha) hx hne)⟩
   -- eff (.provideLayer a0 _ _), 0
   · cases hn with | eff hp => cases hp with | provideLayer isLocal hl hb =>
-    exact ⟨_, .layer hl, fun h hc' hs => by
+    exact ⟨_, .layer hl, rfl, fun h hc' hs => by
       cases hc' with | layer hx =>
         cases hs; exact .eff (.provideLayer _ hx (hasTy_ext h hb))⟩
   -- eff (.provideLayer _ _ a2), 1
   · cases hn with | eff hp => cases hp with | provideLayer isLocal hl hb =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.provideLayer _ (layerHasTy_ext h hl) hx)⟩
   -- eff (.provideService _ _ a2), 0
   · cases hn with | eff hp => cases hp with | provideService hk hv hsub hb =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs
         exact .eff (.provideService (h.service _ _ hk) ((h.termTy _ _).trans hv) hsub hx)⟩
   -- eff (.catchIf _ a1 _), 0
   · cases hn with | eff hp => cases hp with | catchIf hb ht hh hj =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.catchIf hx ((h.termTy _ _).trans ht) (hasTy_ext h hh) hj)⟩
   -- eff (.catchIf _ _ a2), 1
   · cases hn with | eff hp => cases hp with | catchIf hb ht hh hj =>
-    exact ⟨_, .eff hh, fun h hc' hs => by
+    exact ⟨_, .eff hh, effTy_map_of_hasTy hb _, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.catchIf (hasTy_ext h hb) ((h.termTy _ _).trans ht) hx hj)⟩
   -- eff (.select _ _ a2 _), 0
   · cases hn with | eff hp => cases hp with | select ht hd h0 h1 hj =>
-    exact ⟨_, .eff h0, fun h hc' hs => by
+    exact ⟨_, .eff h0,
+      Option.map_eq_some_iff.mpr ⟨_, Option.bind_eq_some_iff.mpr ⟨_, ht, hd⟩, rfl⟩,
+      fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.select ((h.termTy _ _).trans ht) hd hx (hasTy_ext h h1) hj)⟩
   -- eff (.select _ _ _ a3), 1
   · cases hn with | eff hp => cases hp with | select ht hd h0 h1 hj =>
-    exact ⟨_, .eff h1, fun h hc' hs => by
+    exact ⟨_, .eff h1,
+      Option.map_eq_some_iff.mpr ⟨_, Option.bind_eq_some_iff.mpr ⟨_, ht, hd⟩, rfl⟩,
+      fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .eff (.select ((h.termTy _ _).trans ht) hd (hasTy_ext h h0) hx hj)⟩
   -- eff (.iterate _ _ _ _ _ a5), 0
   · cases hn with | eff hp => cases hp with | iterate hi ht hb hst hr hs0 hs1 =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, Option.map_eq_some_iff.mpr ⟨_, hi, rfl⟩, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs
         exact .eff (.iterate ((h.termTy _ _).trans hi) ((h.termTy _ _).trans ht) hx
           ((h.termTy _ _).trans hst) ((h.termTy _ _).trans hr) hs0 hs1)⟩
   -- eff (.restore _ a1), 0
   · cases hn with | eff hp => cases hp with | restore hsv hb =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .eff (.restore ((h.termTy _ _).trans hsv) hx)⟩
   -- action (.fork a0 _), 0
   · cases hn with | action ha => cases ha with | fork options hp =>
-    exact ⟨_, .eff hp, fun _ hc' hs => by
+    exact ⟨_, .eff hp, rfl, fun _ hc' hs => by
       cases hc' with | eff hx => cases hs; exact .action (.fork _ hx)⟩
   -- action (.forkIn a0 _ _), 0
   · cases hn with | action ha => cases ha with | forkIn options hp hsc =>
-    exact ⟨_, .eff hp, fun h hc' hs => by
+    exact ⟨_, .eff hp, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; exact .action (.forkIn _ hx ((h.termTy _ _).trans hsc))⟩
   -- action (.forkScoped a0 _), 0
   · cases hn with | action ha => cases ha with | forkScoped options hp =>
-    exact ⟨_, .eff hp, fun h hc' hs => by
+    exact ⟨_, .eff hp, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; rw [← h.scopeKey]; exact .action (.forkScoped _ hx)⟩
   -- action (.raceAll a0), 0
   · cases hn with | action ha => cases ha with | raceAll he =>
-    exact ⟨_, .effs he, fun _ hc' hs => by
+    exact ⟨_, .effs he, rfl, fun _ hc' hs => by
       cases hc' with | effs hx => cases hs; exact .action (.raceAll hx)⟩
   -- layer (.effect _ a1), 0
   · cases hn with | layer hl => cases hl with | effect hb hk hsub =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; rw [← h.bodyRequires]; exact .layer (.effect hx (h.service _ _ hk) hsub)⟩
   -- layer (.effectDiscard a0), 0
   · cases hn with | layer hl => cases hl with | effectDiscard hb =>
-    exact ⟨_, .eff hb, fun h hc' hs => by
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
       cases hc' with | eff hx =>
         cases hs; rw [← h.bodyRequires]; exact .layer (.effectDiscard hx)⟩
   -- layer (.provide a0 _), 0
   · cases hn with | layer hl => cases hl with | provide ha hb =>
-    exact ⟨_, .layer ha, fun h hc' hs => by
+    exact ⟨_, .layer ha, rfl, fun h hc' hs => by
       cases hc' with | layer hx => cases hs; exact .layer (.provide hx (layerHasTy_ext h hb))⟩
   -- layer (.provide _ a1), 1
   · cases hn with | layer hl => cases hl with | provide ha hb =>
-    exact ⟨_, .layer hb, fun h hc' hs => by
+    exact ⟨_, .layer hb, rfl, fun h hc' hs => by
       cases hc' with | layer hx => cases hs; exact .layer (.provide (layerHasTy_ext h ha) hx)⟩
   -- layer (.provideMerge a0 _), 0
   · cases hn with | layer hl => cases hl with | provideMerge ha hb =>
-    exact ⟨_, .layer ha, fun h hc' hs => by
+    exact ⟨_, .layer ha, rfl, fun h hc' hs => by
       cases hc' with | layer hx =>
         cases hs; exact .layer (.provideMerge hx (layerHasTy_ext h hb))⟩
   -- layer (.provideMerge _ a1), 1
   · cases hn with | layer hl => cases hl with | provideMerge ha hb =>
-    exact ⟨_, .layer hb, fun h hc' hs => by
+    exact ⟨_, .layer hb, rfl, fun h hc' hs => by
       cases hc' with | layer hx =>
         cases hs; exact .layer (.provideMerge (layerHasTy_ext h ha) hx)⟩
   -- layer (.merge a0 _), 0
   · cases hn with | layer hl => cases hl with | merge ha hb =>
-    exact ⟨_, .layer ha, fun h hc' hs => by
+    exact ⟨_, .layer ha, rfl, fun h hc' hs => by
       cases hc' with | layer hx => cases hs; exact .layer (.merge hx (layerHasTy_ext h hb))⟩
   -- layer (.merge _ a1), 1
   · cases hn with | layer hl => cases hl with | merge ha hb =>
-    exact ⟨_, .layer hb, fun h hc' hs => by
+    exact ⟨_, .layer hb, rfl, fun h hc' hs => by
       cases hc' with | layer hx => cases hs; exact .layer (.merge (layerHasTy_ext h ha) hx)⟩
   -- layer (.fresh a0), 0
   · cases hn with | layer hl => cases hl with | fresh hi =>
-    exact ⟨_, .layer hi, fun _ hc' hs => by
+    exact ⟨_, .layer hi, rfl, fun _ hc' hs => by
       cases hc' with | layer hx => cases hs; exact .layer (.fresh hx)⟩
   -- layer (.orDie a0), 0
   · cases hn with | layer hl => cases hl with | orDie hi =>
-    exact ⟨_, .layer hi, fun _ hc' hs => by
+    exact ⟨_, .layer hi, rfl, fun _ hc' hs => by
       cases hc' with | layer hx => cases hs; exact .layer (.orDie hx)⟩
   -- layer (.mergeAll a0), 0
   · cases hn with | layer hl => cases hl with | mergeAll hls =>
-    exact ⟨_, .layers hls, fun _ hc' hs => by
+    exact ⟨_, .layers hls, rfl, fun _ hc' hs => by
       cases hc' with | layers hx => cases hs; exact .layer (.mergeAll hx)⟩
   -- stmts (.cons a0 _), 0: the statement, typed with the statements after it
   · cases hn with | stmts hb =>
-    exact ⟨_, .stmt hb, fun _ hc' hs => by
+    exact ⟨_, .stmt hb, rfl, fun _ hc' hs => by
       cases hc' with | stmt hx => cases hs; exact .stmts hx⟩
   -- stmts (.cons _ a1), 1: the statements after the head, by the head's rule
   · cases hn with | stmts hb =>
     cases hb with
     | bindYield he hr =>
-      exact ⟨_, .stmts hr, fun h hc' hs => by
+      exact ⟨_, .stmts hr, effTy_map_of_hasTy he _, fun h hc' hs => by
         cases hc' with | stmts hx => cases hs; exact .stmts (.bindYield (hasTy_ext h he) hx)⟩
     | yieldDiscard he hr =>
-      exact ⟨_, .stmts hr, fun h hc' hs => by
+      exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
         cases hc' with | stmts hx => cases hs; exact .stmts (.yieldDiscard (hasTy_ext h he) hx)⟩
     | ret ht =>
       obtain ⟨rest, q, hat⟩ := hlead
       exact absurd hat (Node.at_stmts_nil rest q)
     | ifElse ht ha hb hr hab hg =>
-      exact ⟨_, .stmts hr, fun h hc' hs => by
+      exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
         cases hc' with | stmts hx =>
           cases hs
           exact .stmts (.ifElse ((h.termTy _ _).trans ht) (stmtsHasTy_ext h ha)
             (stmtsHasTy_ext h hb) hx hab hg)⟩
     | whileTrue hb hr hg =>
-      exact ⟨_, .stmts hr, fun h hc' hs => by
+      exact ⟨_, .stmts hr, rfl, fun h hc' hs => by
         cases hc' with | stmts hx =>
           cases hs; exact .stmts (.whileTrue (stmtsHasTy_ext h hb) hx hg)⟩
     | breakLoop hr =>
-      exact ⟨_, .stmts hr, fun _ hc' hs => by
+      exact ⟨_, .stmts hr, rfl, fun _ hc' hs => by
         cases hc' with | stmts hx => cases hs; exact .stmts (.breakLoop hx)⟩
   -- stmt (.bindYield a0), 0
   · cases hn with | stmt hb => cases hb with | bindYield he hr =>
-    exact ⟨_, .eff he, fun h hc' hs => by
+    exact ⟨_, .eff he, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .stmt (.bindYield hx (stmtsHasTy_ext h hr))⟩
   -- stmt (.yieldDiscard a0), 0
   · cases hn with | stmt hb => cases hb with | yieldDiscard he hr =>
-    exact ⟨_, .eff he, fun h hc' hs => by
+    exact ⟨_, .eff he, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .stmt (.yieldDiscard hx (stmtsHasTy_ext h hr))⟩
   -- stmt (.ifElse _ a1 _), 0
   · cases hn with | stmt hb => cases hb with | ifElse ht ha hb hr hab hg =>
-    exact ⟨_, .stmts ha, fun h hc' hs => by
+    exact ⟨_, .stmts ha, rfl, fun h hc' hs => by
       cases hc' with | stmts hx =>
         cases hs
         exact .stmt (.ifElse ((h.termTy _ _).trans ht) hx (stmtsHasTy_ext h hb)
           (stmtsHasTy_ext h hr) hab hg)⟩
   -- stmt (.ifElse _ _ a2), 1
   · cases hn with | stmt hb => cases hb with | ifElse ht ha hb hr hab hg =>
-    exact ⟨_, .stmts hb, fun h hc' hs => by
+    exact ⟨_, .stmts hb, rfl, fun h hc' hs => by
       cases hc' with | stmts hx =>
         cases hs
         exact .stmt (.ifElse ((h.termTy _ _).trans ht) (stmtsHasTy_ext h ha) hx
           (stmtsHasTy_ext h hr) hab hg)⟩
   -- stmt (.whileTrue a0), 0
   · cases hn with | stmt hb => cases hb with | whileTrue hb hr hg =>
-    exact ⟨_, .stmts hb, fun h hc' hs => by
+    exact ⟨_, .stmts hb, rfl, fun h hc' hs => by
       cases hc' with | stmts hx =>
         cases hs; exact .stmt (.whileTrue hx (stmtsHasTy_ext h hr) hg)⟩
   -- effs (.cons a0 _), 0
   · cases hn with | effs he => cases he with | cons hh ht hj =>
-    exact ⟨_, .eff hh, fun h hc' hs => by
+    exact ⟨_, .eff hh, rfl, fun h hc' hs => by
       cases hc' with | eff hx => cases hs; exact .effs (.cons hx (effsHasTy_ext h ht) hj)⟩
   -- effs (.cons _ a1), 1
   · cases hn with | effs he => cases he with | cons hh ht hj =>
-    exact ⟨_, .effs ht, fun h hc' hs => by
+    exact ⟨_, .effs ht, rfl, fun h hc' hs => by
       cases hc' with | effs hx => cases hs; exact .effs (.cons (hasTy_ext h hh) hx hj)⟩
   -- layers (.cons a0 _), 0
   · cases hn with | layers hl =>
     cases hl with
     | one hh =>
-      exact ⟨_, .layer hh, fun _ hc' hs => by
+      exact ⟨_, .layer hh, rfl, fun _ hc' hs => by
         cases hc' with | layer hx => cases hs; exact .layers (.one hx)⟩
     | cons hh hr =>
-      exact ⟨_, .layer hh, fun h hc' hs => by
+      exact ⟨_, .layer hh, rfl, fun h hc' hs => by
         cases hc' with | layer hx => cases hs; exact .layers (.cons hx (layersHasTy_ext h hr))⟩
   -- layers (.cons _ a1), 1
   · cases hn with | layers hl =>
@@ -448,7 +479,7 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
       obtain ⟨rest, q, hat⟩ := hlead
       exact absurd hat (Node.at_layers_nil rest q)
     | cons hh hr =>
-      exact ⟨_, .layers hr, fun h hc' hs => by
+      exact ⟨_, .layers hr, rfl, fun h hc' hs => by
         cases hc' with | layers hx =>
           cases hs; exact .layers (layersHasTy_cons (layerHasTy_ext h hh) hx)⟩
 
@@ -461,20 +492,9 @@ that type in that environment, under every extension of the signature, stands in
 place, and the node keeps its type. `NodeHasTy.replace` is this statement without the
 function. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal NodeHasTy.replace_envAt {s : Signature Op} (path : List Nat) {n : Node Op}
+theorem NodeHasTy.replace_envAt {s : Signature Op} (path : List Nat) {n : Node Op}
     {τ : NodeTy Op} {q : Eff Op} (hn : NodeHasTy s n τ) (hat : n.at_ path = some (.eff q)) :
     ∃ (env : TyEnv) (t : EffTy), n.envAt s τ.env path = some (.env env) ∧ HasTy s env q t ∧
-      ∀ {s' : Signature Op} {q' : Eff Op} {n' : Node Op}, SigExtends s s' → HasTy s' env q' t →
-        n.replaceAt path (.eff q') = some n' → NodeHasTy s' n' τ
-
-/-- **The replacement law, at a node: the claim `typed-replacement`.** A typed node splits at an
-address of a program into an environment and a type of the focus. Every program of that type in
-that environment, under every extension of the signature, stands in the focus's place, and the
-node keeps its type. The six statements below are its instances. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem NodeHasTy.replace {s : Signature Op} (path : List Nat) {n : Node Op} {τ : NodeTy Op}
-    {q : Eff Op} (hn : NodeHasTy s n τ) (hat : n.at_ path = some (.eff q)) :
-    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
       ∀ {s' : Signature Op} {q' : Eff Op} {n' : Node Op}, SigExtends s s' → HasTy s' env q' t →
         n.replaceAt path (.eff q') = some n' → NodeHasTy s' n' τ := by
   induction path generalizing n τ with
@@ -483,7 +503,7 @@ theorem NodeHasTy.replace {s : Signature Op} (path : List Nat) {n : Node Op} {τ
     subst hnq
     cases hn with
     | eff hq =>
-      refine ⟨_, _, hq, fun {s' q' n'} _ hq' hrep => ?_⟩
+      refine ⟨_, _, rfl, hq, fun {s' q' n'} _ hq' hrep => ?_⟩
       have hidx : (Node.eff q').ctorIdx = (Node.eff q).ctorIdx := rfl
       simp only [Node.replaceAt, if_pos hidx, Option.some.injEq] at hrep
       subst hrep
@@ -494,17 +514,32 @@ theorem NodeHasTy.replace {s : Signature Op} (path : List Nat) {n : Node Op} {τ
     | some c =>
       have hat' : c.at_ rest = some (.eff q) := by
         simpa only [Node.at_, hci, Option.bind_some] using hat
-      obtain ⟨τc, hc, hstep⟩ := hn.child_step hci ⟨rest, q, hat'⟩
-      obtain ⟨env, t, hq, hfill⟩ := ih hc hat'
-      refine ⟨env, t, hq, fun {s' q' n'} hext hq' hrep => ?_⟩
-      cases hrc : c.replaceAt rest (.eff q') with
-      | none =>
-        simp only [Node.replaceAt, hci, Option.bind_some, hrc, Option.bind_none,
-          reduceCtorEq] at hrep
-      | some c' =>
-        have hset : n.setChild i c' = some n' := by
-          simpa only [Node.replaceAt, hci, Option.bind_some, hrc] using hrep
-        exact hstep hext (hfill hext hq' hrc) hset
+      obtain ⟨τc, hc, henv, hstep⟩ := hn.child_step hci ⟨rest, q, hat'⟩
+      obtain ⟨env, t, hpath, hq, hfill⟩ := ih hc hat'
+      refine ⟨env, t, ?_, hq, fun {s' q' n'} hext hq' hrep => ?_⟩
+      · simpa only [Node.envAt, hci, henv, Option.bind_some] using hpath
+      · cases hrc : c.replaceAt rest (.eff q') with
+        | none =>
+          simp only [Node.replaceAt, hci, Option.bind_some, hrc, Option.bind_none,
+            reduceCtorEq] at hrep
+        | some c' =>
+          have hset : n.setChild i c' = some n' := by
+            simpa only [Node.replaceAt, hci, Option.bind_some, hrc] using hrep
+          exact hstep hext (hfill hext hq' hrc) hset
+
+/-- **The replacement law, at a node: the claim `typed-replacement`.** A typed node splits at an
+address of a program into an environment and a type of the focus. Every program of that type in
+that environment, under every extension of the signature, stands in the focus's place, and the
+node keeps its type. The six statements below are its instances. It is
+`NodeHasTy.replace_envAt` without the function that names the environment. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem NodeHasTy.replace {s : Signature Op} (path : List Nat) {n : Node Op} {τ : NodeTy Op}
+    {q : Eff Op} (hn : NodeHasTy s n τ) (hat : n.at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+      ∀ {s' : Signature Op} {q' : Eff Op} {n' : Node Op}, SigExtends s s' → HasTy s' env q' t →
+        n.replaceAt path (.eff q') = some n' → NodeHasTy s' n' τ := by
+  obtain ⟨env, t, -, hq, hfill⟩ := NodeHasTy.replace_envAt path hn hat
+  exact ⟨env, t, hq, hfill⟩
 
 /-- **The replacement law, at a program.** A typed program splits at an address into an
 environment and a type of the focus, and every program of that type in that environment stands

@@ -89,35 +89,47 @@ theorem focusAt_nil (s : Signature Op) (env0 : TyEnv) (p : Eff Op) :
 address, and that sub-program has the answered type in the answered environment. It holds for
 every program: the program around the focus need not have a type. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal focusAt_typed {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {path : List Nat}
+theorem focusAt_typed {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {path : List Nat}
     {f : Focus Op} (hf : focusAt s env0 p path = some f) :
-    (Node.eff p).at_ path = some (.eff f.program) ∧ HasTy s f.env f.program f.ty
+    (Node.eff p).at_ path = some (.eff f.program) ∧ HasTy s f.env f.program f.ty :=
+  ⟨(focusAt_eq_some.mp hf).1, effTy_sound s _ _ _ (focusAt_eq_some.mp hf).2.2⟩
 
 /-- **On a typed program the focus function answers at every address of a program.** The
 answered program is the one at the address. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal hasTy_focusAt {s : Signature Op} {env0 : TyEnv} {p q : Eff Op} {T : EffTy}
+theorem hasTy_focusAt {s : Signature Op} {env0 : TyEnv} {p q : Eff Op} {T : EffTy}
     {path : List Nat} (hp : HasTy s env0 p T) (hat : (Node.eff p).at_ path = some (.eff q)) :
-    ∃ (env : TyEnv) (t : EffTy), focusAt s env0 p path = some ⟨q, env, t⟩
+    ∃ (env : TyEnv) (t : EffTy), focusAt s env0 p path = some ⟨q, env, t⟩ := by
+  obtain ⟨env, t, henv, hq, -⟩ := NodeHasTy.replace_envAt path (.eff hp) hat
+  exact ⟨env, t, focusAt_eq_some.mpr ⟨hat, henv, effTy_complete s q env t hq⟩⟩
 
 /-- **The replacement law at the focus function's answer.** In a typed program, a program that
 has the answered type in the answered environment, under an extension of the signature, stands
 in the focus's place, and the whole keeps its type. No environment and no type is existential:
 the function names both. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal hasTy_replace_focusAt {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {T : EffTy}
+theorem hasTy_replace_focusAt {s : Signature Op} {env0 : TyEnv} {p : Eff Op} {T : EffTy}
     {path : List Nat} {f : Focus Op} (hp : HasTy s env0 p T)
     (hf : focusAt s env0 p path = some f) {s' : Signature Op} {q' p' : Eff Op}
     (hext : SigExtends s s') (hq' : HasTy s' f.env q' f.ty)
-    (hrep : (Node.eff p).replaceAt path (.eff q') = some (.eff p')) : HasTy s' env0 p' T
+    (hrep : (Node.eff p).replaceAt path (.eff q') = some (.eff p')) : HasTy s' env0 p' T := by
+  obtain ⟨hat, henv, hty⟩ := focusAt_eq_some.mp hf
+  obtain ⟨env, t, henv', hq, hfill⟩ := NodeHasTy.replace_envAt path (.eff hp) hat
+  have he : env = f.env := by
+    simpa only [Option.some.injEq, NodeEnv.env.injEq] using henv'.symm.trans henv
+  subst he
+  have ht : t = f.ty := Option.some.inj ((effTy_complete s _ _ _ hq).symm.trans hty)
+  subst ht
+  cases hfill hext hq' hrep with | eff h => exact h
 
 /-- **At the checker: the focus function answers at every address of a program** that the
 checker admits. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal check_focusAt {s : Signature Op} {env0 : TyEnv} {p0 : List Nat} {p q : Eff Op}
+theorem check_focusAt {s : Signature Op} {env0 : TyEnv} {p0 : List Nat} {p q : Eff Op}
     {T : EffTy} {path : List Nat} (hp : Checker.check s env0 p0 p = .ok T)
     (hat : (Node.eff p).at_ path = some (.eff q)) :
-    ∃ (env : TyEnv) (t : EffTy), focusAt s env0 p path = some ⟨q, env, t⟩
+    ∃ (env : TyEnv) (t : EffTy), focusAt s env0 p path = some ⟨q, env, t⟩ :=
+  hasTy_focusAt (check_sound s p env0 p0 T hp) hat
 
 /-- **At the checker: the replacement law at the focus function's answer.** In a program that
 the checker admits, take the focus that the function answers. For every program that the
@@ -125,11 +137,15 @@ checker admits at the focus's type in the focus's environment, under an extensio
 signature, the replaced program exists, and the checker admits it at the whole's type. The
 focus is checked, and not the program again. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal check_replace_focusAt {s : Signature Op} {env0 : TyEnv} {p0 : List Nat} {p : Eff Op}
+theorem check_replace_focusAt {s : Signature Op} {env0 : TyEnv} {p0 : List Nat} {p : Eff Op}
     {T : EffTy} {path : List Nat} {f : Focus Op} (hp : Checker.check s env0 p0 p = .ok T)
     (hf : focusAt s env0 p path = some f) {s' : Signature Op} {q' : Eff Op} {pq : List Nat}
     (hext : SigExtends s s') (hq' : Checker.check s' f.env pq q' = .ok f.ty) :
     ∃ p', (Node.eff p).replaceAt path (.eff q') = some (.eff p') ∧
-      ∀ p1, Checker.check s' env0 p1 p' = .ok T
+      ∀ p1, Checker.check s' env0 p1 p' = .ok T := by
+  obtain ⟨p', hrep⟩ := Node.replaceAt_eff q' (focusAt_typed hf).1
+  exact ⟨p', hrep, check_complete s' p' env0 T
+    (hasTy_replace_focusAt (check_sound s p env0 p0 T hp) hf hext
+      (check_sound s' q' f.env pq f.ty hq') hrep)⟩
 
 end Effect4.Program
