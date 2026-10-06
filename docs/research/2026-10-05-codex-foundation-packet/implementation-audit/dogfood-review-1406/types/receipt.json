@@ -1,0 +1,43 @@
+{
+  "commit": "00b160d25d6929ab7ba3aa19cc00fa6fdcfa9674",
+  "scope": "Dogfood type/API friction source scout",
+  "verdict": "No demonstrated need for a new type model; three concrete consumer improvements plus narrower proof-domain transport.",
+  "ranked": [
+    "Use existing hygienic callbacks and consolidate the three identical note helpers",
+    "Centralize the existing checked record-based ascription for empty cell initialization",
+    "Use exact repository error domains in the positive Routing example after resolving its known target conditional-inference refusal"
+  ],
+  "already_fixed": [
+    "Built retains admission and projects typing",
+    "State at arbitrary types and atomic answer/store separation",
+    "All four dogfood programs have current print/read controls",
+    "Immediate number/Boolean slot widening with string-tag preservation"
+  ],
+  "open_boundaries": [
+    "Exact Routing host twin remains kept out: two retained TS2375 errors at Boolean-select suspend inference",
+    "Bare string literal versus uniform TypesEach/Kept premise",
+    "Workers still uses host Jobs.take rather than Queue composite",
+    "Routing is a handler fragment rather than layered code-valued services",
+    "Retained behavior and lifetime remain row234 work"
+  ],
+  "proof_sketches": "Proposed only; no Lean elaboration or evaluation by this scout",
+  "evidence": "Frozen committed source plus existing retained guards and prior integration receipt; no new compiler/runtime test",
+  "source_hashes_verified": 29,
+  "all_match": true,
+  "artifacts": {
+    "review.md": "8039020a422e484d2c59fe7aceffe7b71915e323376fc0faefa960487094ed89",
+    "source-manifest.json": "db6c5b93f7fb4e8347bd74815be22aea6c41d6ed919acc25ddca2352fb98818a",
+    "source-controls.json": "08de970667aa1ca6d13ebb108f8ea8846df3733fbd2558697a528eae7e659479",
+    "verification.json": "309e2fe1e4d44da06add100f6e65eb8051bb5fe864b4baab34500e53b9ea4d30",
+    "routing-supplement/source-manifest.json": "64dbb37134990ad166526bf783297bf945ba30aa90dc00633aa9dbbc5a248424",
+    "routing-supplement/diagnostic.json": "b6eea68b589eab920d800fcded0d13255be68e85e45bed973d659f164da6f8ad"
+  },
+  "supplement": {
+    "sources": 9,
+    "manifest": "routing-supplement/source-manifest.json",
+    "diagnostic": "routing-supplement/diagnostic.json",
+    "source_commit": "00b160d25d6929ab7ba3aa19cc00fa6fdcfa9674",
+    "compiler_rerun": false,
+    "proposed": "Transport checked branch-joined EffTy to select emission; uncompiled, preserve reader exactness"
+  }
+}

@@ -1,0 +1,21 @@
+-- PROPOSED / UNCOMPILED. Placement and consumer are in review.md.
+-- Import the existing owners. No new framework or machine representation is proposed.
+import Effect4.Laws.Machine.MaskDiscipline
+import Effect4.Laws.Machine.Lift
+
+namespace Effect4.Machine
+
+universe u v
+variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+variable {St : Type (max u v)}
+
+-- Concrete FrameFiber instance, not an arbitrary FiberCore.
+-- Proposed proof reduces cleared -> clearStack -> MaskChain [] to the same equality.
+theorem cleared_maskChain_iff (base : Bool)
+    (interp : RunInterp ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) :
+    Effect4.FrameFiber.MaskChain base (f.cleared interp).frame.interruptible
+      (f.cleared interp).frame.stack ↔ f.frame.interruptible = base := by
+  rfl
+
+end Effect4.Machine

@@ -1,0 +1,20 @@
+{
+  "observed_at": "2026-10-06T14:21:29.653777+00:00",
+  "frozen_main": "00b160d2",
+  "checks": 255,
+  "passed": 255,
+  "failures": [],
+  "scenario_goals": [
+    "releases_once",
+    "infrastructure_escapes",
+    "unauthorized_calls_nothing",
+    "bounded",
+    "counted",
+    "committed",
+    "cleans_once",
+    "retries_declared",
+    "stale_never_applies",
+    "cleanup_keeps"
+  ],
+  "scope": "Source and retained-artifact byte identities; four finite name-resolution mirror cases. No Lean/compiler/runtime/build/generator/install."
+}

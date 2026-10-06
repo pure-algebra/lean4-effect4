@@ -374,6 +374,18 @@ Candidates with no seat, each with its place:
   a protected body (row 275, points 2 and 4);
 - Semaphore's operations that wait and its protected form, after seat PUB's shared wrapper.
   The case P9 on the generated engine goes with it;
+- four points of Codex's dogfood review of 2026-10-06
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/`):
+  - the next application runs Workers over the public Queue. Workers still takes its jobs
+    from a host row;
+  - the three `note` helpers of the scenarios bind a fixed name. They go through
+    `Ref.updateWith`, and one shared helper gives a typed empty cell;
+  - the exact Routing example has no printed twin in the host lane. Two errors of tsgo 7
+    keep it out. The repair carries the checked types of the branches to the printed
+    Boolean select, with the reader's laws;
+  - Atomic makes two commits and no transaction. A control of an interruption between them
+    needs a reachable checkpoint first. The controls of a timeout under a mask and of one
+    registration's cleanup are missing too;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
 - two small repairs of the foreign readers (row 258, points 5 and 6);
