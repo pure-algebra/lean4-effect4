@@ -844,12 +844,37 @@ establish what the machine is after a stopped row, and it reads no row after one
 Consumer: no theorem of this module uses it. It is the law of a driver that plays a script in
 parts, and the record `cuts` (`Test/Dogfood/Scenario/Tape.lean`) holds its controls. -/
 @[semantics "translation-simulation" (requirement := R13)]
-proof_goal tapeFrom_append (s : Run) (a b : List Command) :
+theorem tapeFrom_append (s : Run) (a b : List Command) :
     tapeFrom s (a ++ b) =
       if (tapeFrom s a).2 = [] then
         ((tapeFrom s a).1 ++ (tapeFrom (s.play a) b).1,
           (tapeFrom (s.play a) b).2)
-      else ((tapeFrom s a).1, (tapeFrom s a).2 ++ b)
+      else ((tapeFrom s a).1, (tapeFrom s a).2 ++ b) := by
+  induction a generalizing s with
+  | nil => rfl
+  | cons c rest ih =>
+    rw [List.cons_append, Run.play_cons]
+    cases hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) with
+    | true =>
+      rw [tapeFrom_frontier s c (rest ++ b) hfront, tapeFrom_frontier s c rest hfront]
+      exact (if_neg (List.cons_ne_nil c rest)).symm
+    | false =>
+      cases hdec : decisionOf s c (Api.Runner.result s.runner c).phase with
+      | none =>
+        rw [tapeFrom_skip s c (rest ++ b) hfront hdec, tapeFrom_skip s c rest hfront hdec]
+        exact ih (s.step c)
+      | some decision =>
+        cases hreads : readsOn s decision with
+        | false =>
+          rw [tapeFrom_stop s c (rest ++ b) decision hfront hdec hreads,
+            tapeFrom_stop s c rest decision hfront hdec hreads]
+          exact (if_neg (List.cons_ne_nil c rest)).symm
+        | true =>
+          rw [tapeFrom_take s c (rest ++ b) decision hfront hdec hreads,
+            tapeFrom_take s c rest decision hfront hdec hreads, ih (s.step c)]
+          split
+          · rfl
+          · rfl
 
 /-- **The journal's cut.** A journal is a completed prefix, then the rows that its tape leaves
 unread. The tape of the prefix alone holds the same positions, and it leaves no row unread. So
@@ -898,18 +923,19 @@ proof_goal tapeFrom_position_replays (s : Run) (rows : List Command)
       Run.machineOf (Run.replayFrom s.built.program s.built.table s.budget.fuel
         (((tapeFrom s rows).1.take (i + 1)).map (·.decision)) s.machine)
 
-/-! The standing of the four laws, as the plan derives it from their proofs. -/
+/-! The axioms of each law that is proved, then the standing of the four laws, as the plan
+derives it from their proofs. -/
+
+/-- info: 'Test.Dogfood.Scenario.tapeFrom_append' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms tapeFrom_append
 
 /--
-info: Test.Dogfood.Scenario.tapeFrom_append: goal; nearest []; 0 lemmas, 4 definitions
+info: Test.Dogfood.Scenario.tapeFrom_append: proved; nearest []; 4 lemmas, 4 definitions
 Test.Dogfood.Scenario.tapeFrom_cut: goal; nearest []; 0 lemmas, 4 definitions
 Test.Dogfood.Scenario.tapeFrom_cut_replays: goal; nearest []; 0 lemmas, 5 definitions
 Test.Dogfood.Scenario.tapeFrom_position_replays: goal; nearest []; 0 lemmas, 6 definitions
-next goals: 4
-  goal Test.Dogfood.Scenario.tapeFrom_append : ∀ (s : Run) (a b : List Command),
-  tapeFrom s (a ++ b) =
-    if (tapeFrom s a).snd = [] then ((tapeFrom s a).fst ++ (tapeFrom (s.play a) b).fst, (tapeFrom (s.play a) b).snd)
-    else ((tapeFrom s a).fst, (tapeFrom s a).snd ++ b)
+next goals: 3
   goal Test.Dogfood.Scenario.tapeFrom_cut : ∀ (s : Run) (rows : List Command),
   ∃ done, rows = done ++ (tapeFrom s rows).snd ∧ tapeFrom s done = ((tapeFrom s rows).fst, [])
   goal Test.Dogfood.Scenario.tapeFrom_cut_replays : ∀ (s : Run) (rows : List Command),
