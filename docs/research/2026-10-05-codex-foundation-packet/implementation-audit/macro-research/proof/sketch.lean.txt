@@ -1,0 +1,46 @@
+-- UNCOMPILED DESIGN SKETCH. This is not a checked declaration or an implementation.
+-- Intended home: Program.Authoring, directly beside performTerm.
+-- Sugar already imports generated Rows; Rows must not depend on Sugar.
+namespace Effect4.Program.Authoring
+
+def performTermWith {Op : Type} (mk : Term → Op)
+    (request : TermSrc) (body : TermSrc → TermSrc) : Src Op :=
+  fun env path =>
+    let current := env.mint "current"
+    performTerm mk current (body (minted current)) request env path
+
+-- Intended proof home: Laws.Program.Authoring, beside performTerm_scoped.
+-- This follows foldWith_scoped's pointwise proof shape; it asserts scope only.
+theorem performTermWith_scoped {Op : Type} [ScopedOp Op] {mk : Term → Op}
+    (hmk : ∀ t n, ScopedOp.scopedAt (mk t) n = t.scoped (n + 1))
+    {body : TermSrc → TermSrc} {request : TermSrc}
+    (hb : ∀ current : TermSrc, current.Scoped → (body current).Scoped)
+    (hr : request.Scoped) : (performTermWith mk request body).Scoped :=
+  ⟨fun env path term accepted =>
+    (performTerm_scoped hmk (env.mint "current")
+      (hb _ (minted_scoped _)) hr).holds env path term accepted⟩
+
+-- Generated from the existing native row owner, not a second row catalogue.
+-- Keep the existing named wrapper; add a callback spelling such as updateWith.
+-- Exact public name must first be checked against the existing generated namespace.
+def Ref.updateWith (request : TermSrc) (body : TermSrc → TermSrc) : Src NativeOp :=
+  performTermWith .refUpdateWith request body
+
+-- First actual consumer: Atomic.note (currently fixes its binder name to "xs").
+def noteWith (log x : TermSrc) : Src NativeOp :=
+  Ref.updateWith log fun xs => app "append" [xs, app "cons" [x, app "nil" []]]
+
+end Effect4.Program.Authoring
+
+/- SECONDARY PROTOTYPE: generator algorithm, not Lean syntax.
+Read the actual Forms.all row. Freeze its existing _typed statement.
+Recurse over only argument / bind / onExit for the first prototype.
+  argument: use Template.argument_typed, with explicit slot, cut and count facts;
+            retain Signature.WeakenNatural whenever inserting an unused slot.
+  bind: use Template.bind_typed with the second environment extended by a.answer.
+  onExit: use Template.onExit_typed with the environment extended by exitOf A E.
+Refuse every unsupported shape or missing premise. Never manufacture a proof_goal.
+First consumers: andThenEffect_typed, andThenContinuation_typed, ensuring_typed.
+Retain their exact statements and names. Do not create aliases that merely invoke the
+same existing concrete theorem: the prototype must derive its body from constructor laws.
+-/

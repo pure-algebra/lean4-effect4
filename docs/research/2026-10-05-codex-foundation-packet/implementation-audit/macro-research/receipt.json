@@ -1,0 +1,48 @@
+{
+  "reviewed_revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+  "final_head": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+  "final_status": "",
+  "review_kind": "source-only research; proposals unimplemented and uncompiled",
+  "source_hashes_verified": 55,
+  "finite_checks": {
+    "total": 16,
+    "census_manifest_source_equalities": 12,
+    "changed_digest_mutant": 1,
+    "research_manifest_parser_negative_controls": 3
+  },
+  "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-macro-research/verify_sources.py",
+  "forbidden_actions_run": [],
+  "ranked_candidates": [
+    "generated hygienic Ref callback builders",
+    "raw record declaration helper bundle",
+    "vendor identity and verification scripts",
+    "explicit kvGet backing-adapter recipe"
+  ],
+  "proof_followup": "proof/review.md and proof/sketch.lean.txt are complementary source-only proposals; parent is checking common builder placement and API order",
+  "exclusions": [
+    "no new Lean theorem",
+    "no runtime or compiler result",
+    "no repository edits",
+    "no new semantic ruling",
+    "no pin migration"
+  ],
+  "created_utc": "2026-10-06T02:33:36.145318+00:00",
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-macro-research/report.md",
+      "sha256": "672d10417d6031b53626360a5d7bbbf6402de2b09f8a818d0a28225c2c6249d2"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-macro-research/sources.json",
+      "sha256": "09721e5bb4c0e801377f5ff8186fcad02cc7ad53cd480c4c1bb1bd88d1591669"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-macro-research/checks.json",
+      "sha256": "2f291b43dd02cf1ba11843331a8ba14a431338b0cb3a7dfcaa7800251c1a0713"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-macro-research/verify_sources.py",
+      "sha256": "ef27b62abe53d5d63d684361cb7ad2b74220f444a3a063f0452725dc22f4e9b4"
+    }
+  ]
+}

@@ -405,6 +405,19 @@ Open at this landing:
   admission and the comparison of answer, error and requirement types stay in this tree. No
   seat has it, and the proposal is the owner's to rule. Its one small finding landed with seat
   T5's part A: the pinned truth check compiles the tuple control;
+- Codex's research on macros and declarations is filed
+  ([its report](research/2026-10-05-codex-foundation-packet/implementation-audit/macro-research/report.md);
+  source reading, and no Lean run). It proposes four small changes and no macro framework:
+  - a row builder that mints the current value's name, `performTermWith`, beside
+    `Authoring.performTerm`, with generated `Ref.modifyWith cell fun current => …` wrappers
+    and their scope laws. A fixed name around a caller's term can capture a variable:
+    `Test.Dogfood.Scenario.Atomic.note` is such a helper, and no present caller meets it. The
+    coordinator plans it after seat T5's part B, before the Queue's public wrapper;
+  - a record's type derived from its one field declaration, in p4 as in p5;
+  - one identity record beside each vendored source, read by the census and the variances;
+  - one host adapter, `kvGet`, generated from explicit contract data.
+
+  The last three have no seat and no date;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

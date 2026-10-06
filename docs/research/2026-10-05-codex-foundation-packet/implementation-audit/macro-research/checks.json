@@ -1,0 +1,81 @@
+{
+  "scope": "read-only source identity and a research text parser; no compiler or generator",
+  "checks": [
+    {
+      "check": "census-manifest-source-equality",
+      "path": "internal/effect.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "internal/core.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Scheduler.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Scope.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Exit.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Cause.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Array.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Ref.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "MutableRef.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Deferred.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "Layer.ts",
+      "pass": true
+    },
+    {
+      "check": "census-manifest-source-equality",
+      "path": "internal/layer.ts",
+      "pass": true
+    },
+    {
+      "check": "changed-digest-mutant-refused",
+      "pass": true
+    },
+    {
+      "check": "duplicate-path-refused-by-research-parser",
+      "pass": true
+    },
+    {
+      "check": "path-escape-refused-by-research-parser",
+      "pass": true
+    },
+    {
+      "check": "invalid-digest-refused-by-research-parser",
+      "pass": true
+    }
+  ]
+}

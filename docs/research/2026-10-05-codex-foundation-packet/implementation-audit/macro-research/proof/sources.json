@@ -1,0 +1,151 @@
+{
+  "snapshot": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "scope": "Source-only review. No build, generator, runtime or semantic probe executed.",
+  "sources": [
+    {
+      "path": "src/Effect4/Program/Authoring.lean",
+      "sha256": "6710949b4dff8e17459f0a91b35fc04b15ea96e563f483beaa688106aac8fad8",
+      "git_blob": "857f004b16c749916f2668302cd3a1d89a21ecd5",
+      "bytes": 20252
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Sugar.lean",
+      "sha256": "c949a4f037fec137c086a885af0f8cf250f215fb29d2b012f65ed18a9d51f0e1",
+      "git_blob": "787d6101e8ac800ba8cbc253390ec5125d654a1e",
+      "bytes": 7466
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Folds.lean",
+      "sha256": "ec88151bb31d9fbe2b8cd73dbeb0608e486ea6fc8c976f30824f5b8ed3180aa7",
+      "git_blob": "a8eee7be947c3c28123c3fbcee70a0ffc14c0fd4",
+      "bytes": 1804
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Rows.lean",
+      "sha256": "b6057849cd607bf015dcbd77ed326de25ce99878032307a3ced5b07a8b58fe72",
+      "git_blob": "f8712bcdf0511a017170b173f2e771a997b5d1ae",
+      "bytes": 7544
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16",
+      "git_blob": "5e1702a233bea0de80ea605c3642c688ddc73483",
+      "bytes": 18639
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Authoring.lean",
+      "sha256": "3bd3b39b9cff602ef918f87266217bff91b8c51153fa249deee4b33b34df9a54",
+      "git_blob": "a54c0a0852aff616bbc19f6e07a016e8baaaa7ea",
+      "bytes": 13744
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Authoring/Sugar.lean",
+      "sha256": "df1cdf1dcef26f0737b9767fad1c27f4270bad50624b729c31e4e90123a04384",
+      "git_blob": "d3a572041eaad02b8f29c76a9a2acb14f0e4b536",
+      "bytes": 3264
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Authoring/Folds.lean",
+      "sha256": "7c41f0058241d2ab3f598e3a30a105bae1f64d8fce469adf9b9c942a9140212a",
+      "git_blob": "164686c0cfc7142919636f8f5bf98cce7d69916e",
+      "bytes": 2686
+    },
+    {
+      "path": "src/Effect4/Codegen/Forms.lean",
+      "sha256": "4b1dc973cc69c184918682f5c9abaabd83abaa1d6385d1f5f4f924bfbe3049f6",
+      "git_blob": "c2de8a072e50fa2bf70ee068ce62dda987614e6b",
+      "bytes": 10512
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/Forms.lean",
+      "sha256": "fa228d5ce566d8922915506dd493abfd9d62fb8b1a38d4882e0baffb402e8150",
+      "git_blob": "369ffaa9c3f92c49de75bac1b80b159504564690",
+      "bytes": 21526
+    },
+    {
+      "path": "tools/Effect4Gen/Forms.lean",
+      "sha256": "5a54314fb50c7908881dfa93e887113ca399b21d85ea78c93790920c10c2bdd2",
+      "git_blob": "34bccccf3ae7655c0e4897894036213ca643d636",
+      "bytes": 16442
+    },
+    {
+      "path": "tools/Effect4Gen/Rows.lean",
+      "sha256": "79e7fcb69f782382de0ccfe3fff02960a82aed0f682b337be2494728989ffa0f",
+      "git_blob": "c82d5bc8f86ba275d8cbf605a978d9a31489e611",
+      "bytes": 12590
+    },
+    {
+      "path": "tools/ProofGraph/Goal.lean",
+      "sha256": "6c09f2bbe758c23517c84b0f31394a730be5c448f5c7fb483620295d4ade1e24",
+      "git_blob": "c03b4394fe55805604d321212a5286addbbe35c4",
+      "bytes": 4748
+    },
+    {
+      "path": "tools/ProofGraph/Proof.lean",
+      "sha256": "283b11563eb0328e1b354c257b5436d64d957ef51596defa738699fe5b9e62d7",
+      "git_blob": "b315b0b2997748ebbfc53d1041207f194589728d",
+      "bytes": 3930
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "sha256": "e38154ff07e6832d37c6b9eeae742e9444c53867481e197ce9059bd5c9df5933",
+      "git_blob": "25a1c38227a63e8b4b34f91cc60e73952fc77b5c",
+      "bytes": 67817
+    },
+    {
+      "path": "Test/Codegen/FormsContract.lean",
+      "sha256": "4050972d72c93c563baae9a2831efd73a81d3969a1f332e1967da26d2b82f672",
+      "git_blob": "d412bbce64a3d1f93a902406d40d4a117837dc13",
+      "bytes": 9742
+    },
+    {
+      "path": "Test/Program/FoldHygiene.lean",
+      "sha256": "8fae0f761f40c313e0d5ff4bd5e9ff0ce9b2af9301250dbda8acf47c3eb98e60",
+      "git_blob": "88953e5968ea464d7102506485b58440d36594f7",
+      "bytes": 5030
+    },
+    {
+      "path": "Test/Program/TypedProgBindRed.lean",
+      "sha256": "feb8d263fe5f800fb3223ef43ae3aa79e0e7ab8d032273870096b596c7e0369f",
+      "git_blob": "84b30c3a8eb75b131e2e9a0690784962fe7e7df5",
+      "bytes": 7058
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Atomic.lean",
+      "sha256": "8145330840256407c52479c5b07c4f08ad4fd2d4242eeca60d8da3c7191f6f55",
+      "git_blob": "1279cc100e576f8e3b174cfab9818305b00e6de5",
+      "bytes": 32993
+    },
+    {
+      "path": "Test/Dogfood/P5LedgerService.lean",
+      "sha256": "ec27271fc1144b65ad4feb7a571761b576460169180887e17f9b420efdb6b909",
+      "git_blob": "0e6e8c5d083b1b62f66e0440e903233d994c1e95",
+      "bytes": 14518
+    },
+    {
+      "path": "ts/eff/ingest/forms.ts",
+      "sha256": "267aa35c747c45c8a0988cb6ceb4dca1ba07156b7997fdfa67f33f06c4cf4345",
+      "git_blob": "53989b923bfde052c56678bf2c3f82f4726c7b74",
+      "bytes": 5641
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Lifts.lean",
+      "sha256": "f8a9b638a2028d1ecdae970fa3cbd29829ef92ad2ecc345cd25cbaf7fe92d869",
+      "git_blob": "ff6b9f54537781bc721467283862434c83cc1ebe",
+      "bytes": 15110
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Authoring/Lifts.lean",
+      "sha256": "36510518a7010651f12a47abfcd8441eeb93ce70619f46e5eaa07ad72e9b2378",
+      "git_blob": "2bf87be5941cb1c266f30d9f205eec276811a5c3",
+      "bytes": 23590
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Authoring/Rows.lean",
+      "sha256": "8e8990f6f0c202c2a55f58177c78669d8fbe340589a89c9ff3b59a253113377d",
+      "git_blob": "9bb66fe42cd478f6bbbde906eeeb8cabf73300bc",
+      "bytes": 5975
+    }
+  ]
+}

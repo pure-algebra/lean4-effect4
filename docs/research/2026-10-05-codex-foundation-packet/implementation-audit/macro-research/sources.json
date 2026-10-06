@@ -1,0 +1,442 @@
+{
+  "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+  "sources": [
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/AGENTS.md",
+      "git_path": "AGENTS.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/STATE.md",
+      "git_path": "docs/STATE.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "a12e797e01a764098c59a3f13cc98f81f972b5d84cdcab34ad9aa29b35fead03",
+      "bytes": 96705,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/ARCHITECTURE.md",
+      "git_path": "docs/ARCHITECTURE.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "280c2e5e714ac6801db5cca57a0c211aef6a11eacfdb0b3c03d34b480c47f935",
+      "bytes": 28129,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/GENERATED.md",
+      "git_path": "docs/GENERATED.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "b3a8efffed868fd56ecf3e4b55279e4d50663f62630a2db378b6d85ce08abfa5",
+      "bytes": 19568,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+      "git_path": "docs/core/decisions.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "65f53230826cda2f2873b64a684cf43d48a84166aff319f40b959afda76d2cc3",
+      "bytes": 323470,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/semantics.md",
+      "git_path": "docs/core/semantics.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32",
+      "bytes": 72882,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/core/controlled-english.md",
+      "git_path": "docs/core/controlled-english.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "ef0495605e2cfb41b2c3b2a4871f4cf1a8ab3865647fbd68258e7cafe79cc06b",
+      "bytes": 102737,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/migration-plan.md",
+      "git_path": "docs/research/2026-10-05-claude-lead/migration-plan.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "f960b0f51fdeb90eccef8c304fd40d246faa4856be240d5c40af9603685be35a",
+      "bytes": 17016,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Authoring.lean",
+      "git_path": "src/Effect4/Program/Authoring.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "6710949b4dff8e17459f0a91b35fc04b15ea96e563f483beaa688106aac8fad8",
+      "bytes": 20252,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Authoring/Sugar.lean",
+      "git_path": "src/Effect4/Program/Authoring/Sugar.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "c949a4f037fec137c086a885af0f8cf250f215fb29d2b012f65ed18a9d51f0e1",
+      "bytes": 7466,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Authoring/Folds.lean",
+      "git_path": "src/Effect4/Program/Authoring/Folds.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "ec88151bb31d9fbe2b8cd73dbeb0608e486ea6fc8c976f30824f5b8ed3180aa7",
+      "bytes": 1804,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Authoring/Rows.lean",
+      "git_path": "src/Effect4/Program/Authoring/Rows.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "b6057849cd607bf015dcbd77ed326de25ce99878032307a3ced5b07a8b58fe72",
+      "bytes": 7544,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Authoring/Records.lean",
+      "git_path": "src/Effect4/Program/Authoring/Records.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "f9a94903d05212ea4f7ebdb83fee6c3f94d35a6c8de9f03e060771b6470530a6",
+      "bytes": 1514,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Authoring/Services.lean",
+      "git_path": "src/Effect4/Program/Authoring/Services.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "f85a8b2d5eb5f0528914e5b787566f6b24d15e2e27552b86a0581981b881b7e6",
+      "bytes": 9512,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Record.lean",
+      "git_path": "src/Effect4/Program/Record.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "161ef4cbac0f17434d22c19b19332bcabd45ee47be86084034a1c415ab577bcd",
+      "bytes": 3399,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Machine/Record.lean",
+      "git_path": "src/Effect4/Machine/Record.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "cf759a6a076fb422e0e46442c118deec1c16631657fcdb7ed0b8a9c5b01ced2d",
+      "bytes": 3235,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api/Author.lean",
+      "git_path": "src/Effect4/Api/Author.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "bytes": 6392,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Codegen/Forms.lean",
+      "git_path": "src/Effect4/Codegen/Forms.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "4b1dc973cc69c184918682f5c9abaabd83abaa1d6385d1f5f4f924bfbe3049f6",
+      "bytes": 10512,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Author.lean",
+      "git_path": "src/Effect4/Laws/Program/Author.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16",
+      "bytes": 18639,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Authoring.lean",
+      "git_path": "src/Effect4/Laws/Program/Authoring.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "3bd3b39b9cff602ef918f87266217bff91b8c51153fa249deee4b33b34df9a54",
+      "bytes": 13744,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Authoring/Folds.lean",
+      "git_path": "src/Effect4/Laws/Program/Authoring/Folds.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "7c41f0058241d2ab3f598e3a30a105bae1f64d8fce469adf9b9c942a9140212a",
+      "bytes": 2686,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Authoring/Records.lean",
+      "git_path": "src/Effect4/Laws/Program/Authoring/Records.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "d1175fb0a2f8782db47df69503dce0836923bdef96e0638f62443b28d8571dc1",
+      "bytes": 2544,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Codegen/Record.lean",
+      "git_path": "src/Effect4/Laws/Codegen/Record.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "468e36a87e6f4a8731728609daa553e977e9207ab2f7b87fba1075e9a3e3c1e8",
+      "bytes": 8188,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Packages.lean",
+      "git_path": "src/Effect4/Program/Packages.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "554649f626a21101de442d562037e92eb02192e0b7e002150b6379b703c9d6f9",
+      "bytes": 2766,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Packages/KeyValueStoreMemory.lean",
+      "git_path": "src/Effect4/Program/Packages/KeyValueStoreMemory.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "1694e1e942c637ab82b5a5e4e41be7a7764ddaec23c443f827be5226d5b7c500",
+      "bytes": 3334,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Packages/SqliteBun.lean",
+      "git_path": "src/Effect4/Program/Packages/SqliteBun.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "258240b381fcc19d92e8de4c620f1a2636eecc020af037c29e149cab9fcbac71",
+      "bytes": 4970,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/src/OCaml5/Lcnf/Builtins.lean",
+      "git_path": "src/OCaml5/Lcnf/Builtins.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "8e93fdaa48af5112810d3adfe2896a9b3292308849eeaa096c6f9767483c34a2",
+      "bytes": 42699,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Effect4Gen/Rows.lean",
+      "git_path": "tools/Effect4Gen/Rows.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "79e7fcb69f782382de0ccfe3fff02960a82aed0f682b337be2494728989ffa0f",
+      "bytes": 12590,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Effect4Gen/Forms.lean",
+      "git_path": "tools/Effect4Gen/Forms.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "5a54314fb50c7908881dfa93e887113ca399b21d85ea78c93790920c10c2bdd2",
+      "bytes": 16442,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Effect4Gen/Atoms.lean",
+      "git_path": "tools/Effect4Gen/Atoms.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "8702c172ec9a21f7a70da27bfd81aa02ffd5203d33812a71241cc2f0e6ebecf3",
+      "bytes": 8136,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Effect4Gen/PreludeAtoms.lean",
+      "git_path": "tools/Effect4Gen/PreludeAtoms.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "abbfc871b89255d9264408ccd40b62aa48f8d6f527b237bd2cc458ac1168c532",
+      "bytes": 5924,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Effect4Gen/manifest.json",
+      "git_path": "tools/Effect4Gen/manifest.json",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "30f1e49289178f5e5ecdb7875ec7fc9f01b8109b854d958c261dc7863d1ee177",
+      "bytes": 21116,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Tools/Variances.lean",
+      "git_path": "tools/Tools/Variances.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "0194c0e13d8fedc6d1262a137371939a77349cd0573e64d24ae143db005fe1e9",
+      "bytes": 36675,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Tools/GeneratedStamp.lean",
+      "git_path": "tools/Tools/GeneratedStamp.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "ed86f750413c79fa93ea36b3164de75eb61088125b2f990c3e9d27d385db9529",
+      "bytes": 3695,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Tools/SemanticsRegistry.lean",
+      "git_path": "tools/Tools/SemanticsRegistry.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "e38154ff07e6832d37c6b9eeae742e9444c53867481e197ce9059bd5c9df5933",
+      "bytes": 67817,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/tools/Drivers/TsGen.lean",
+      "git_path": "tools/Drivers/TsGen.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "3c6481392379c27f20551e8ec8d8da9456dcb757792e928d61786f2d1e86ae06",
+      "bytes": 75904,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Test/Dogfood/P4RateLimiter.lean",
+      "git_path": "Test/Dogfood/P4RateLimiter.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "9156125b86457a840b3dd8b68659e472597abe80826370f4a1e1249293a6e682",
+      "bytes": 16686,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Test/Dogfood/P5LedgerService.lean",
+      "git_path": "Test/Dogfood/P5LedgerService.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "ec27271fc1144b65ad4feb7a571761b576460169180887e17f9b420efdb6b909",
+      "bytes": 14518,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Test/Dogfood/P2HandlerLayers.lean",
+      "git_path": "Test/Dogfood/P2HandlerLayers.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "e626bfce9eeceb6bcf008ca99c1389b536c53ac99b19c2005d5ddc73a5bbab03",
+      "bytes": 21973,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Test/Dogfood/Scenario/Atomic.lean",
+      "git_path": "Test/Dogfood/Scenario/Atomic.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "8145330840256407c52479c5b07c4f08ad4fd2d4242eeca60d8da3c7191f6f55",
+      "bytes": 32993,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/Test/Codegen/TermRows.lean",
+      "git_path": "Test/Codegen/TermRows.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "91562e31af086baab7ab36a63f1d13aa2c9a343fab7968f262a5cbe610cdf2c7",
+      "bytes": 38262,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/truth/Truth.lean",
+      "git_path": "harness/truth/Truth.lean",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "aab1efdda691a58e627d0d277eb99019b2f3a5d2f67be0f4f089ac27da63b441",
+      "bytes": 67039,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts",
+      "git_path": "harness/truth/prelude.ts",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0",
+      "bytes": 30177,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/generate-effect-runtime-census.sh",
+      "git_path": "scripts/generate-effect-runtime-census.sh",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "9045a4d7272a189b1fc63d4e322be79365aa58db5be7436e403d473b30a3ae7c",
+      "bytes": 51112,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/check-truth-release.py",
+      "git_path": "scripts/check-truth-release.py",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "bd4356e950a9e24990c0b6ffbfa3fd42d8fe5a256d1f86495e69e6dd6899688a",
+      "bytes": 65101,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/scripts/lib/truth_host.py",
+      "git_path": "scripts/lib/truth_host.py",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "dda7863735296fb8df81fccc196b167fb6c5e4892f146886f335b76714173499",
+      "bytes": 9133,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/README.md",
+      "git_path": "vendor/effect-4.0.0-rc.112/README.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "c92a6fb10ba01e83969d06f5dcd30a1be01a44d4254a6aa1722bc39de1416687",
+      "bytes": 3212,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/SHA256SUMS",
+      "git_path": "vendor/effect-4.0.0-rc.112/SHA256SUMS",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "abc662a063f030d7e5fca848b0847f48634d78776afd03ea73a5459eb5c3aef0",
+      "bytes": 43219,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.1/README.md",
+      "git_path": "vendor/effect-4.0.1/README.md",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "ef259d4ffcd0e8fa46d03c0f40fa8920022f9371ab7e9a1ad8a5f2d2f597d9c3",
+      "bytes": 4883,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.1/SHA256SUMS",
+      "git_path": "vendor/effect-4.0.1/SHA256SUMS",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "739ebfedceb61b4e2f3daa6a4a3bde7c3201e73449f1341365ab74554464e953",
+      "bytes": 45072,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts",
+      "git_path": "vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "1e6eaaf69a75c7720466dbe929c3bd3f3dcf681ee43c220d541c3b338af21653",
+      "bytes": 26753,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/lake-manifest.json",
+      "git_path": "lake-manifest.json",
+      "revision": "33a1852942deaaa9c45a87a8a7e7b380b028043d",
+      "sha256": "448045a73fe9e702e93b255af45592c8bc2ba02d86bac9fbf7b684ba28843afe",
+      "bytes": 1856,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/README.md",
+      "revision": "f5878bf879bd5712db964c2cd12802748c707605",
+      "sha256": "0514737366d5c59622ae22b54938725aadd137be377ac2ff9702938f09d192e2",
+      "bytes": 4587,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/Syntax.lean",
+      "revision": "f5878bf879bd5712db964c2cd12802748c707605",
+      "sha256": "c127a4692df836cf651acdc0eee2b4eaa5d6e6c222d91742b5b23b9b4983bfb4",
+      "bytes": 15789,
+      "current_equals_snapshot": true
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/TypeScript/TypeRef.lean",
+      "revision": "f5878bf879bd5712db964c2cd12802748c707605",
+      "sha256": "0fefe0eb79ac19997a8b5d9df408c3cd46c9c0b9177746256a25e4ae9cd9bd57",
+      "bytes": 4672,
+      "current_equals_snapshot": true
+    }
+  ]
+}
