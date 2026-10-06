@@ -1,0 +1,29 @@
+{
+  "role": "read-only proof reuse addendum",
+  "snapshot": "c957bfab708d6b1b924356c6c28ca2769f66cb99",
+  "source_hashes_verified": 12,
+  "typed_none": "existing Semaphore composition; no new helper necessary",
+  "nat_equality": "existing primitive and type scheme; proposed small shared proof helpers only",
+  "evidence": "source-only; no new Lean check",
+  "commands_run": [
+    "source reads",
+    "git show byte comparisons",
+    "Python hashing/report writing"
+  ],
+  "repository_edits": false,
+  "builds": false,
+  "compiler_runtime": false,
+  "ui_messages": false,
+  "artifacts": [
+    {
+      "path": "reuse-addendum.md",
+      "sha256": "d84c52cbfcb1817daaaad0b5a957c0b117dff13fd8ec74fa9a92cab741d9384e",
+      "bytes": 6358
+    },
+    {
+      "path": "reuse-addendum-sources.json",
+      "sha256": "2de1cdb2f47d8ce84c87a571407eea233d86abbf2dbc10feca2cf7868a6310a2",
+      "bytes": 3997
+    }
+  ]
+}

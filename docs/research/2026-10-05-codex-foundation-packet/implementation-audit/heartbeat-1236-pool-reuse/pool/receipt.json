@@ -1,0 +1,95 @@
+{
+  "role": "advisory source review",
+  "main": "3a2616f1b01a8fcfb22caf993a425f9306f4cc8a",
+  "seat": "c957bfab708d6b1b924356c6c28ca2769f66cb99",
+  "branch": "seat/pool",
+  "status": "initial reading; design and Pool sources absent at snapshot",
+  "new_actionable_defects": [],
+  "prior_findings": "Both e7034464 corrections remain in brief/card and dispatch; not repeated",
+  "maskpop": "written/not dispatched in tracked STATE",
+  "optional_guidance": {
+    "status": "pending optional; not delivered",
+    "scope": "brief atomic counted-selection model/step only",
+    "claim": "proposed pool-expansion-agrees / R10; selection property serves pool-wake-selection / R12",
+    "reuse": [
+      "reads_take",
+      "reads_drop",
+      "types_take",
+      "types_drop",
+      "List.map_take",
+      "List.map_drop",
+      "step_updates",
+      "step_keeps_cell"
+    ],
+    "prerequisite": "Part1 machine cases pass; design fixes state/reply; goal receives placement",
+    "exclusions": [
+      "native live callback traversal",
+      "whole helper agreement",
+      "general public reachability",
+      "delivery",
+      "cancellation",
+      "fairness",
+      "liveness",
+      "cleanup completion"
+    ]
+  },
+  "retained_result": {
+    "original_path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pool/base-build.log",
+    "sha256": "8da85b52a07d85de15338be875a2000407e84c674f4ceb5f6f63a6b301cb3179",
+    "result": "Build completed successfully (990 jobs). exit=0",
+    "producer": "Claude POOL seat; not monitor"
+  },
+  "commands_run_by_monitor": [
+    "git source/status reads",
+    "Python JSON extraction and source hashing"
+  ],
+  "no_runs": [
+    "Lean",
+    "build",
+    "compiler",
+    "runtime",
+    "generator",
+    "install"
+  ],
+  "repository_edits": false,
+  "ui_actions": false,
+  "dispatch": false,
+  "claude_messages": false,
+  "artifacts": [
+    {
+      "path": "base-build.log",
+      "sha256": "8da85b52a07d85de15338be875a2000407e84c674f4ceb5f6f63a6b301cb3179",
+      "bytes": 293337
+    },
+    {
+      "path": "dispatch.json",
+      "sha256": "0b1b310a66f532cd24bbfbab4ac152f4822e4e11735b41a54cef1b69f0c22a8c",
+      "bytes": 5632
+    },
+    {
+      "path": "public-activity.json",
+      "sha256": "b6966f8af10e1963fa690bd21667281b1eb947a932ae960cff96911bc55754a1",
+      "bytes": 6991
+    },
+    {
+      "path": "review.md",
+      "sha256": "79204e944ac1b89fb5c2d947b2111d491df691bde44916716c95ddf251dbdcde",
+      "bytes": 5878
+    },
+    {
+      "path": "snapshot.py",
+      "sha256": "07130438e51b1cac2efb022a7c893c2a2aadefe862905718abccdc78e7ee2780",
+      "bytes": 4096
+    },
+    {
+      "path": "sources.json",
+      "sha256": "361c295db608bea6d4cf29d0302fbfb599802adae5272b8283cf191f73a59a3a",
+      "bytes": 5080
+    },
+    {
+      "path": "state.json",
+      "sha256": "1ab7cdbf53347ce95c97d07d6c049277a656b91da129a2ed29da1699b320e4e8",
+      "bytes": 1119
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "task": "PUB first-appearance numbering repair audit",
+  "finished_at_utc": "2026-10-06T12:41:57.193272+00:00",
+  "frozen_head": "a1d358a09682a8e42cab2f637c4c26316bf92a4f",
+  "prior_review": "08ee3109",
+  "main_initial": "3a2616f1",
+  "later_seat_head_excluded": "0338b004658563b91fdb3dbf310df61056660c7b",
+  "reviewed_commits": [
+    "fa1507b5",
+    "9f7241dd",
+    "a1d358a0"
+  ],
+  "verdict": "No new actionable mismatch; retained source/results satisfy accepted ruling within stated limits",
+  "advisory_sent": false,
+  "repo_writes": false,
+  "project_execution": false,
+  "verification": {
+    "retained_source_evidence_identities": 29,
+    "baseline_program_entries_unchanged": 47,
+    "prior_failed_probe_other_program_entries_unchanged": 51,
+    "current_programs": 53,
+    "recorder_executable_unchanged": true,
+    "tapes_unchanged": true
+  },
+  "retained_results": {
+    "build_jobs": 990,
+    "modules": 740,
+    "declarations": 87684,
+    "planned_goals": 24,
+    "goal_dependents": 11,
+    "matching_programs": 52,
+    "signed_divergences": 1,
+    "host_tests_pass": 23,
+    "host_tests_fail": 0,
+    "truth_runner_exit": 0,
+    "compiler_exit": 0,
+    "compiler": "@typescript/native-preview 7.0.0-dev.20260629.1",
+    "effect": "4.0.0-rc.112",
+    "bun": "1.4.2"
+  },
+  "pending_owned": [
+    "Main staged integration acceptance",
+    "Makefile TRUTH_SOURCES additions",
+    "truth ledger regeneration",
+    "generated corpus two-cell regeneration",
+    "contract wording and decisions filing",
+    "later PUB faces/engine/typing/final receipt"
+  ],
+  "limits": [
+    "No independent Lean or host rerun",
+    "Recorder joined-before-first-sight observer-order limit retained",
+    "DI-73/DI-74 and never-seen-fiber limits retained",
+    "No general wrapper, native Queue, liveness, or sufficient-budget theorem"
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/review.md",
+      "sha256": "644803fc7756bc5b20b38d3c7eb45cf4ffe2f99464f74439b7e0b4039cae2bd9"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/data-comparison.json",
+      "sha256": "bc4616db1de141bfeab0bf5c2d18c6368c56a2057c2ab95a56a324fcdf265b93"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source-and-evidence-hashes.json",
+      "sha256": "a8d9a33f48d99612956ad31193dff842960963d70d9aa38a1d96370026f3b6b4"
+    }
+  ]
+}

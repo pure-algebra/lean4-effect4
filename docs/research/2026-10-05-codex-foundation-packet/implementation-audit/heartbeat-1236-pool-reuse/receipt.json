@@ -1,0 +1,68 @@
+{
+  "time_utc": "2026-10-06T12:53:01.250986+00:00",
+  "frozen_initial_main": "3a2616f1",
+  "verified_merges": [
+    "c957bfab",
+    "5701a5dc"
+  ],
+  "closing_main": "41be5ef3",
+  "later_faces_engine_review": "deferred to next check",
+  "parent_checks": {
+    "initial": 695,
+    "truth_merge": 282,
+    "additional_pool_sources": 12,
+    "requirement_lists": 13
+  },
+  "advisory": {
+    "ui_message": 145,
+    "ordinary_send_verified": true,
+    "empty_composer_verified": true,
+    "consumed": true,
+    "relay_timestamp": "2026-10-06T12:49:33.451Z",
+    "application_pending": true
+  },
+  "ui": {
+    "initial_lock": true,
+    "one_unlock_question": true,
+    "recovered": true,
+    "coordinator_and_pub_pool_inspected": true
+  },
+  "coordinator_block": {
+    "reason": "automatic approval review cannot evaluate due to earlier conversation content",
+    "actions": [
+      "diagnostic shell read",
+      "corrected conservativity rerun"
+    ],
+    "rerun_pending": true,
+    "filing_uncommitted": true,
+    "owner_notified_by_coordinator": true,
+    "monitor_bypass": false
+  },
+  "scope": {
+    "repo_edits": false,
+    "builds": false,
+    "Lean": false,
+    "runtime": false,
+    "compiler": false,
+    "generator": false,
+    "install": false,
+    "branch_changes": false,
+    "implementation_dispatch": false,
+    "interruption": false
+  },
+  "monitor": "ACTIVE",
+  "handoff": false,
+  "packets": [
+    "integration/receipt.json",
+    "integration/truth-merge-receipt.json",
+    "pub/receipt.json",
+    "pool/receipt.json",
+    "pool/reuse-addendum-receipt.json",
+    "parent-verification.json",
+    "parent-truth-verification.json",
+    "closing-state.json",
+    "advisory-followthrough.json",
+    "coordinator-shell-block.json"
+  ],
+  "automation_update_verified": true
+}

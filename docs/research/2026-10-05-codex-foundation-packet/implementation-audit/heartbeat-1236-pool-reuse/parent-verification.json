@@ -1,0 +1,2788 @@
+{
+  "checks": 695,
+  "passed": 695,
+  "all_pass": true,
+  "details": [
+    {
+      "check": "integration snapshot source/AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/Test/All.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed Test/All.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/Test/Audit/AxiomGate.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed Test/Audit/AxiomGate.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/Test/Program/QueueOps.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed Test/Program/QueueOps.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/Test/Program/QueueSteps.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed Test/Program/QueueSteps.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/Test/Program/QueueTraces.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed Test/Program/QueueTraces.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/Test/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed Test/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/Test/fixtures/proof-style/baseline.tsv",
+      "pass": true
+    },
+    {
+      "check": "integration committed Test/fixtures/proof-style/baseline.tsv",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/docs/ARCHITECTURE.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed docs/ARCHITECTURE.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/docs/STATE.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed docs/STATE.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/docs/core/decisions.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed docs/core/decisions.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/docs/core/semantics.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed docs/core/semantics.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/docs/research/2026-10-06-seat-REFS-design.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed docs/research/2026-10-06-seat-REFS-design.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/docs/research/2026-10-06-seat-REFS-receipt.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed docs/research/2026-10-06-seat-REFS-receipt.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/generated/semantics.md",
+      "pass": true
+    },
+    {
+      "check": "integration committed generated/semantics.md",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws/Program/CheckedTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws/Program/CheckedTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws/Program/PathFold.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws/Program/PathFold.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws/Program/PathOrder.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws/Program/PathOrder.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/src/Effect4/Program/Refs.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed src/Effect4/Program/Refs.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/tools/Tools/ArchitectureRoles.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed tools/Tools/ArchitectureRoles.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot source/tools/Tools/SemanticsRegistry.lean",
+      "pass": true
+    },
+    {
+      "check": "integration committed tools/Tools/SemanticsRegistry.lean",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/build.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/build.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/census.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/census.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/check-cases.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/check-cases.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/check-docs.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/check-docs.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/check-proof-style.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/check-proof-style.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/check-semantics.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/check-semantics.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/conservativity.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/conservativity.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/gates.out",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/gates.out",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/gates.sh",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/gates.sh",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/gates.summary",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/gates.summary",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/gen-architecture.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/gen-architecture.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/gen-semantics.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/gen-semantics.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/msg-docs.txt",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/msg-docs.txt",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/msg-merge.txt",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/msg-merge.txt",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot evidence/record-proof-style.log",
+      "pass": true
+    },
+    {
+      "check": "integration retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/merge-refs-pub/record-proof-style.log",
+      "pass": true
+    },
+    {
+      "check": "integration snapshot observed-later-worktree-status.txt",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19891",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19892",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19895",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19896",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19949",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19951",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19956",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19957",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19962",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19971",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19983",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19984",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19987",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19988",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19991",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 19992",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 20009",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 20010",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 20063",
+      "pass": true
+    },
+    {
+      "check": "integration transcript 20064",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1746",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1820",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1821",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1822",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1823",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1824",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1826",
+      "pass": true
+    },
+    {
+      "check": "result evidence/build.log:1827",
+      "pass": true
+    },
+    {
+      "check": "result evidence/check-semantics.log:1518",
+      "pass": true
+    },
+    {
+      "check": "result evidence/gen-semantics.log:1533",
+      "pass": true
+    },
+    {
+      "check": "result evidence/gen-semantics.log:1534",
+      "pass": true
+    },
+    {
+      "check": "result evidence/gen-architecture.log:1514",
+      "pass": true
+    },
+    {
+      "check": "result evidence/gen-architecture.log:1515",
+      "pass": true
+    },
+    {
+      "check": "result evidence/check-cases.log:1539",
+      "pass": true
+    },
+    {
+      "check": "result evidence/check-docs.log:2",
+      "pass": true
+    },
+    {
+      "check": "result evidence/census.log:1262",
+      "pass": true
+    },
+    {
+      "check": "result evidence/census.log:1312",
+      "pass": true
+    },
+    {
+      "check": "result evidence/census.log:1615",
+      "pass": true
+    },
+    {
+      "check": "result evidence/conservativity.log:109",
+      "pass": true
+    },
+    {
+      "check": "result evidence/conservativity.log:142",
+      "pass": true
+    },
+    {
+      "check": "result evidence/conservativity.log:153",
+      "pass": true
+    },
+    {
+      "check": "result evidence/conservativity.log:179",
+      "pass": true
+    },
+    {
+      "check": "result evidence/conservativity.log:190",
+      "pass": true
+    },
+    {
+      "check": "result evidence/conservativity.log:251",
+      "pass": true
+    },
+    {
+      "check": "result evidence/conservativity.log:252",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSTest/All.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSTest/All.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSTest/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSTest/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSTest/fixtures/proof-style/baseline.tsv",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSTest/fixtures/proof-style/baseline.tsv",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSdocs/ARCHITECTURE.md",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSdocs/ARCHITECTURE.md",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSdocs/research/2026-10-06-seat-REFS-design.md",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSdocs/research/2026-10-06-seat-REFS-design.md",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSdocs/research/2026-10-06-seat-REFS-receipt.md",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSdocs/research/2026-10-06-seat-REFS-receipt.md",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSsrc/Effect4/Laws.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSsrc/Effect4/Laws.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSsrc/Effect4/Laws/Program/CheckedTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSsrc/Effect4/Laws/Program/CheckedTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSsrc/Effect4/Laws/Program/PathFold.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSsrc/Effect4/Laws/Program/PathFold.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSsrc/Effect4/Laws/Program/PathOrder.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSsrc/Effect4/Laws/Program/PathOrder.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSsrc/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSsrc/Effect4/Laws/Program/ReferenceExpansion.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSsrc/Effect4/Laws/Program/ReferenceTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSsrc/Effect4/Laws/Program/ReferenceTyping.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFSsrc/Effect4/Program/Refs.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFSsrc/Effect4/Program/Refs.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes REFStools/Tools/ArchitectureRoles.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity REFStools/Tools/ArchitectureRoles.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes PUBTest/All.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity PUBTest/All.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes PUBTest/Program/QueueOps.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity PUBTest/Program/QueueOps.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes PUBTest/Program/QueueSteps.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity PUBTest/Program/QueueSteps.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes PUBTest/Program/QueueTraces.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity PUBTest/Program/QueueTraces.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes PUBsrc/Effect4/Laws/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity PUBsrc/Effect4/Laws/Modules/Queue/Ops.lean",
+      "pass": true
+    },
+    {
+      "check": "merged hashes PUBsrc/Effect4/Laws/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "merged identity PUBsrc/Effect4/Laws/Modules/Waiting.lean",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/Makefile",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:Makefile",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/Test/contracts/faces.contract.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:Test/contracts/faces.contract.md",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/Test/fixtures/target/selection.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:Test/fixtures/target/selection.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/docs/research/2026-10-06-seat-pub-evidence/README.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:docs/research/2026-10-06-seat-pub-evidence/README.md",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/docs/research/2026-10-06-seat-pub-evidence/generated-corpus.moved.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:docs/research/2026-10-06-seat-pub-evidence/generated-corpus.moved.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/docs/research/2026-10-06-seat-pub-evidence/late-seen-joined.probe.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:docs/research/2026-10-06-seat-pub-evidence/late-seen-joined.probe.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/docs/research/2026-10-06-seat-pub-evidence/pQueueOrder.before-repair.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:docs/research/2026-10-06-seat-pub-evidence/pQueueOrder.before-repair.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/harness/truth/LANE.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:harness/truth/LANE.md",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/harness/truth/Truth.lean",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:harness/truth/Truth.lean",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/harness/truth/corpus.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:harness/truth/corpus.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/harness/truth/result.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:harness/truth/result.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/harness/truth/result.md",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:harness/truth/result.md",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/source/harness/truth/run-truth.ts",
+      "pass": true
+    },
+    {
+      "check": "pub commit a1d358a0:harness/truth/run-truth.ts",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/baseline/corpus.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit 08ee3109:harness/truth/corpus.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/baseline/result.json",
+      "pass": true
+    },
+    {
+      "check": "pub commit 08ee3109:harness/truth/result.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/before-probe/corpus.json",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T120638Z/pub/evidence/truth-probe-1/corpus.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/before-probe/result.json",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T120638Z/pub/evidence/truth-probe-1/result.json",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/build-5.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/build-5.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/check-truth-1.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/check-truth-1.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/check-truth-2.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/check-truth-2.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/corpus-B.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/corpus-B.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/corpus-gen-B.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/corpus-gen-B.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/gen-truth-1.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/gen-truth-1.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/gen-truth-2.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/gen-truth-2.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/truth-elab-5.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/truth-elab-5.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/logs/truth-probe-3.log",
+      "pass": true
+    },
+    {
+      "check": "pub retained /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/pub/logs/truth-probe-3.log",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/transcripts/acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl0",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl1",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl2",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl3",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl4",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl5",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl6",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl7",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl8",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl9",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl10",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl11",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl12",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl13",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl14",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl15",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl16",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl17",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl18",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl19",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl20",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl21",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl22",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl23",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl24",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl25",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl26",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl27",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl28",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl29",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl30",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl31",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl32",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl33",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl34",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl35",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl36",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl37",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl38",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl39",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl40",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl41",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl42",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl43",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl44",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl45",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl46",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl47",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl48",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl49",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl50",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl51",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl52",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl53",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl54",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl55",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl56",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl57",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl58",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl59",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl60",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl61",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl62",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl63",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl64",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl65",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl66",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl67",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl68",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl69",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl70",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl71",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl72",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl73",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl74",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl75",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl76",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl77",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl78",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl79",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl80",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl81",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl82",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl83",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl84",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl85",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl86",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl87",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl88",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl89",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl90",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl91",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl92",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl93",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl94",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl95",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl96",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl97",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl98",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl99",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl100",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl101",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl102",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl103",
+      "pass": true
+    },
+    {
+      "check": "pub transcript acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl104",
+      "pass": true
+    },
+    {
+      "check": "pub snapshot /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pub/evidence/transcripts/agent-a84e4ef772d0afeb1.jsonl",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl0",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl1",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl2",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl3",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl4",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl5",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl6",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl7",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl8",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl9",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl10",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl11",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl12",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl13",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl14",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl15",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl16",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl17",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl18",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl19",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl20",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl21",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl22",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl23",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl24",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl25",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl26",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl27",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl28",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl29",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl30",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl31",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl32",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl33",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl34",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl35",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl36",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl37",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl38",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl39",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl40",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl41",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl42",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl43",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl44",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl45",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl46",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl47",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl48",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl49",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl50",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl51",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl52",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl53",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl54",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl55",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl56",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl57",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl58",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl59",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl60",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl61",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl62",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl63",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl64",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl65",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl66",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl67",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl68",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl69",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl70",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl71",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl72",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl73",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl74",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl75",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl76",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl77",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl78",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl79",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl80",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl81",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl82",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl83",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl84",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl85",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl86",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl87",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl88",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl89",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl90",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl91",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl92",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl93",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl94",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl95",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl96",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl97",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl98",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl99",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl100",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl101",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl102",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl103",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl104",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl105",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl106",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl107",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl108",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl109",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl110",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl111",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl112",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl113",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl114",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl115",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl116",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl117",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl118",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl119",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl120",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl121",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl122",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl123",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl124",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl125",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl126",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl127",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl128",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl129",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl130",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl131",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl132",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl133",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl134",
+      "pass": true
+    },
+    {
+      "check": "pub transcript agent-a84e4ef772d0afeb1.jsonl135",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/AGENTS.md",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/docs/research/2026-10-05-claude-lead/module-cards/pool.md",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/docs/research/2026-10-05-claude-lead/module-cards/pool.md",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Table.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Table.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Reading.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Reading.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Checking.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Checking.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Store.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Store.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Relation.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Relation.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Steps.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Steps.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Profile.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Profile.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Modules/Words.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Modules/Words.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Modules/Semaphore/Cell.lean",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Modules/Semaphore/Cell.lean",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4/docs/STATE.md",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4/docs/STATE.md",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+      "pass": true
+    },
+    {
+      "check": "pool commit /Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+      "pass": true
+    },
+    {
+      "check": "pool snapshot /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/src/lean/Init/Data/List/TakeDrop.lean",
+      "pass": true
+    },
+    {
+      "check": "pool stdlib",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonp42",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpBind",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpFork",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpAwait",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpGen",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpLoop",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpCatch",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpScope",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpTwo",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpAcquire",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpAcquireClosed",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpProvide",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpProvideMerge",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpProvideTwice",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpDiamond",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpMergeAll",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpAcquireHandle",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpFailTagged",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpSqlite",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpKv",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpSqlFail",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpSqlCatch",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpSqlExit",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpSqlOrDie",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpFailText",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpFailBoomText",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpTextOrDie",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpCatchError",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpCatchIfHit",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpCatchIfMiss",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpCatchIfRetained",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpTagHit",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpTagMiss",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpTagTwoFail",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpOptionSome",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpOptionNone",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpFailPayload",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpTagPayload",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpInterruptEscape",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpFold",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpModifyFold",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpQueueOffer",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpRateRequest",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpDeferredGate",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpInterruptedWait",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpMaskWait",
+      "pass": true
+    },
+    {
+      "check": "baseline corpus.jsonpMaskedRestore",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonp42",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpBind",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpFork",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpAwait",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpGen",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpLoop",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpCatch",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpScope",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpTwo",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpAcquire",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpAcquireClosed",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpProvide",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpProvideMerge",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpProvideTwice",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpDiamond",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpMergeAll",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpAcquireHandle",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpFailTagged",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpSqlite",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpKv",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpSqlFail",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpSqlCatch",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpSqlExit",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpSqlOrDie",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpFailText",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpFailBoomText",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpTextOrDie",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpCatchError",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpCatchIfHit",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpCatchIfMiss",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpCatchIfRetained",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpTagHit",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpTagMiss",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpTagTwoFail",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpOptionSome",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpOptionNone",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpFailPayload",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpTagPayload",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpInterruptEscape",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpFold",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpModifyFold",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpQueueOffer",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpRateRequest",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpDeferredGate",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpInterruptedWait",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpMaskWait",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpMaskedRestore",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpQueueWake",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpQueueFull",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpQueueInterrupted",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpQueueMasked",
+      "pass": true
+    },
+    {
+      "check": "prior probe corpus.jsonpQueueOrder",
+      "pass": true
+    },
+    {
+      "check": "6 additions corpus.json",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonp42",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpBind",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpFork",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpAwait",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpGen",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpLoop",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpCatch",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpScope",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpTwo",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpAcquire",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpAcquireClosed",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpProvide",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpProvideMerge",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpProvideTwice",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpDiamond",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpMergeAll",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpAcquireHandle",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpFailTagged",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpSqlite",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpKv",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpSqlFail",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpSqlCatch",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpSqlExit",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpSqlOrDie",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpFailText",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpFailBoomText",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpTextOrDie",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpCatchError",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpCatchIfHit",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpCatchIfMiss",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpCatchIfRetained",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpTagHit",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpTagMiss",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpTagTwoFail",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpOptionSome",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpOptionNone",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpFailPayload",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpTagPayload",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpInterruptEscape",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpFold",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpModifyFold",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpQueueOffer",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpRateRequest",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpDeferredGate",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpInterruptedWait",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpMaskWait",
+      "pass": true
+    },
+    {
+      "check": "baseline result.jsonpMaskedRestore",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonp42",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpBind",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpFork",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpAwait",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpGen",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpLoop",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpCatch",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpScope",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpTwo",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpAcquire",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpAcquireClosed",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpProvide",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpProvideMerge",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpProvideTwice",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpDiamond",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpMergeAll",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpAcquireHandle",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpFailTagged",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpSqlite",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpKv",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpSqlFail",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpSqlCatch",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpSqlExit",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpSqlOrDie",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpFailText",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpFailBoomText",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpTextOrDie",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpCatchError",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpCatchIfHit",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpCatchIfMiss",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpCatchIfRetained",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpTagHit",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpTagMiss",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpTagTwoFail",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpOptionSome",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpOptionNone",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpFailPayload",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpTagPayload",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpInterruptEscape",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpFold",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpModifyFold",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpQueueOffer",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpRateRequest",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpDeferredGate",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpInterruptedWait",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpMaskWait",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpMaskedRestore",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpQueueWake",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpQueueFull",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpQueueInterrupted",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpQueueMasked",
+      "pass": true
+    },
+    {
+      "check": "prior probe result.jsonpQueueOrder",
+      "pass": true
+    },
+    {
+      "check": "6 additions result.json",
+      "pass": true
+    }
+  ],
+  "execution": "read-only source, retained bytes and JSON; no project command"
+}

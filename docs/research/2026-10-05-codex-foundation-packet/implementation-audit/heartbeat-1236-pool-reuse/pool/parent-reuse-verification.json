@@ -1,0 +1,17 @@
+{
+  "passing": 12,
+  "files": [
+    "src/Effect4/Modules/Words.lean",
+    "src/Effect4/Modules/Semaphore/Steps.lean",
+    "src/Effect4/Laws/Modules/Semaphore/Reading.lean",
+    "src/Effect4/Laws/Modules/Semaphore/Typing.lean",
+    "src/Effect4/Laws/Modules/Reading.lean",
+    "src/Effect4/Laws/Modules/Checking.lean",
+    "src/Effect4/Laws/Program/Typing/TermIntro.lean",
+    "src/Effect4/Machine/Term.lean",
+    "src/Effect4/Program/NativeAtom.lean",
+    "src/Effect4/Program/Native.lean",
+    "docs/research/2026-10-05-claude-lead/briefs/seat-pool-brief.md",
+    "docs/research/2026-10-05-claude-lead/module-cards/pool.md"
+  ]
+}

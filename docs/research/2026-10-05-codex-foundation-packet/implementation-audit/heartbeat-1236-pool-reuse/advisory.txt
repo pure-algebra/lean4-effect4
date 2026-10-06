@@ -1,0 +1,9 @@
+Source-checked reuse pointers for POOL’s current design work; please relay when useful. No new Lean result or representation ruling is claimed.
+
+For an optional Nat lease stamp, Semaphore already supplies the exact empty-option pattern: app "get" [noneOf (field cell "available"), nat 0]. Modules.reads_head (reads_noneOf hAvailable) and types_head atoms (types_noneOf atoms hAvailable) compose directly when available is List Nat. Then use the existing recordSet rules and exact field-type equation. Under a fold, keep Captured/CapturedTy. This confirms the option route the seat considered; a sentinel is unnecessary for typing.
+
+Nat equality already exists in NativeAtom.eval/spec. The missing part is only small shared reading/typing helpers alongside lt: reuse reads_app/types_app/atomOf_native and monoApply_self for eq’s first scheme alternative. No new atom or two-lt encoding is needed. Any TermIntro edit remains subject to your file allocation.
+
+For the atomic counted-selection model step, take/drop plus List.map_take/map_drop and step_updates avoid another fold proof. This only establishes the selected records and next cell; it does not establish native callback traversal, delivery, or whole-run agreement. Public count-1 versus low-level count-2 premises stay separate.
+
+Exact sources, proposed R10/R4/R12 placements, hypotheses, consumers and exclusions: /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T123639Z/pool/reuse-addendum.md and review.md. Twelve addendum source identities checked. Monitor remains read-only; no build or implementation seat started.
