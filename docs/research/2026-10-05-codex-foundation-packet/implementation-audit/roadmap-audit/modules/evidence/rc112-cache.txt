@@ -1,0 +1,183 @@
+vendor/effect-4.0.0-rc.112/src/Cache.ts
+
+190: export const makeWith = <
+191:   Key,
+192:   A,
+193:   E = never,
+194:   R = never,
+195:   ServiceMode extends "lookup" | "construction" = never
+196: >(lookup: (key: Key) => Effect.Effect<A, E, R>, options: {
+197:   readonly capacity: number
+198:   readonly timeToLive?: ((exit: Exit.Exit<A, E>, key: Key) => Duration.Input) | undefined
+199:   readonly requireServicesAt?: ServiceMode | undefined
+200: }): Effect.Effect<
+201:   Cache<Key, A, E, "lookup" extends ServiceMode ? R : never>,
+202:   never,
+203:   "lookup" extends ServiceMode ? never : R
+204: > =>
+205:   effect.contextWith((context: Context.Context<any>) => {
+206:     const self = Object.create(Proto)
+207:     self.lookup = (key: Key): Effect.Effect<A, E> =>
+208:       effect.updateContext(
+209:         lookup(key),
+210:         (input) => Context.merge(context, input)
+211:       )
+212:     self.map = MutableHashMap.make()
+213:     self.capacity = options.capacity
+214:     self.timeToLive = options.timeToLive
+215:       ? (exit: Exit.Exit<A, E>, key: Key) => Duration.fromInputUnsafe(options.timeToLive!(exit, key))
+216:       : defaultTimeToLive
+217:     return effect.succeed(self as Cache<Key, A, E>)
+218:   })
+
+615:   <Key, A, E, R>(self: Cache<Key, A, E, R>, key: Key): Effect.Effect<A, E, R> =>
+616:     core.withFiber((fiber) => {
+617:       const oentry = MutableHashMap.get(self.map, key)
+618:       if (Option.isSome(oentry) && !hasExpired(oentry.value, fiber)) {
+619:         // Move the entry to the end of the map to keep it fresh
+620:         MutableHashMap.remove(self.map, key)
+621:         MutableHashMap.set(self.map, key, oentry.value)
+622:         return oentry.value.await()
+623:       }
+624:       const entry = new EntryImpl(fiber, self.lookup(key))
+625:       entry.fiber.addObserver((exit) => {
+626:         if (effect.exitHasInterrupts(exit)) {
+627:           const current = MutableHashMap.get(self.map, key)
+628:           if (Option.isSome(current) && current.value === entry) {
+629:             MutableHashMap.remove(self.map, key)
+630:           }
+631:           return
+632:         }
+633:         const ttl = self.timeToLive(exit, key)
+634:         if (Duration.isFinite(ttl)) {
+635:           entry.expiresAt = fiber.getRef(effect.ClockRef).currentTimeMillisUnsafe() + Duration.toMillis(ttl)
+636:         } else if (Duration.isZero(ttl)) {
+637:           MutableHashMap.remove(self.map, key)
+638:         }
+639:       })
+640:       MutableHashMap.set(self.map, key, entry)
+641:       if (Number.isFinite(self.capacity)) {
+642:         checkCapacity(self)
+643:       }
+644:       return entry.await()
+645:     })
+646: )
+647: 
+648: class EntryImpl<A, E> implements Entry<A, E> {
+649:   expiresAt: number | undefined
+650:   awaiters: number
+651:   fiber: Fiber.Fiber<A, E>
+652: 
+653:   constructor(
+654:     parent: Fiber.Fiber<unknown, unknown>,
+655:     valueEffect: Effect.Effect<A, E, any>
+656:   ) {
+657:     this.fiber = effect.forkUnsafe(parent, valueEffect, true, true)
+658:     this.awaiters = 0
+659:     this.expiresAt = undefined
+660:   }
+661: 
+662:   await(): Effect.Effect<A, E> {
+663:     const exit = this.fiber.pollUnsafe()
+664:     if (exit) return exit
+665:     this.awaiters++
+666:     return effect.onExit(effect.fiberJoin(this.fiber), () => {
+667:       this.awaiters--
+668:       if (this.awaiters > 0 || this.fiber.pollUnsafe()) return effect.void
+669:       return effect.fiberInterrupt(this.fiber)
+670:     })
+671:   }
+672: }
+673: 
+674: const hasExpired = <A, E>(entry: Entry<A, E>, fiber: Fiber.Fiber<unknown, unknown>): boolean => {
+675:   if (entry.expiresAt === undefined) {
+676:     return false
+677:   }
+678:   return fiber.getRef(effect.ClockRef).currentTimeMillisUnsafe() >= entry.expiresAt
+679: }
+680: 
+681: const checkCapacity = <K, A, E, R>(self: Cache<K, A, E, R>) => {
+682:   let diff = MutableHashMap.size(self.map) - self.capacity
+683:   if (diff <= 0) return
+684:   // MutableHashMap has insertion order, so we can remove the oldest entries
+685:   for (const [key] of self.map) {
+686:     MutableHashMap.remove(self.map, key)
+687:     diff--
+688:     if (diff === 0) return
+689:   }
+690: }
+
+1010: const getImpl = <Key, A, E, R>(
+1011:   self: Cache<Key, A, E, R>,
+1012:   key: Key,
+1013:   fiber: Fiber.Fiber<any, any>,
+1014:   isRead = true
+1015: ): Entry<A, E> | undefined => {
+1016:   const oentry = MutableHashMap.get(self.map, key)
+1017:   if (Option.isNone(oentry)) {
+1018:     return undefined
+1019:   } else if (hasExpired(oentry.value, fiber)) {
+1020:     MutableHashMap.remove(self.map, key)
+1021:     return undefined
+1022:   } else if (isRead) {
+1023:     MutableHashMap.remove(self.map, key)
+1024:     MutableHashMap.set(self.map, key, oentry.value)
+1025:   }
+1026:   return oentry.value
+1027: }
+
+1424:   <Key, A, E, R>(self: Cache<Key, A, E, R>, key: Key, value: A): Effect.Effect<void>
+1425: } = dual(
+1426:   3,
+1427:   <Key, A, E, R>(self: Cache<Key, A, E, R>, key: Key, value: A): Effect.Effect<void> =>
+1428:     core.withFiber((fiber) => {
+1429:       const exit = core.exitSucceed(value)
+1430:       const entry = new EntryImpl(fiber, exit)
+1431:       const ttl = self.timeToLive(exit, key)
+1432:       if (Duration.isZero(ttl)) {
+1433:         MutableHashMap.remove(self.map, key)
+1434:         return effect.void
+1435:       }
+1436:       entry.expiresAt = Duration.isFinite(ttl)
+1437:         ? fiber.getRef(effect.ClockRef).currentTimeMillisUnsafe() + Duration.toMillis(ttl)
+1438:         : undefined
+1439:       MutableHashMap.set(self.map, key, entry)
+1440:       checkCapacity(self)
+1441:       return effect.void
+1442:     })
+1443: )
+
+1740:   2,
+1741:   <Key, A, E>(self: Cache<Key, A, E>, key: Key): Effect.Effect<boolean> =>
+1742:     core.withFiber((fiber) => {
+1743:       const oentry = getImpl(self, key, fiber, false)
+1744:       return effect.succeed(oentry !== undefined)
+1745:     })
+
+2424:   <Key, A, E, R>(self: Cache<Key, A, E, R>, key: Key): Effect.Effect<A, E, R> =>
+2425:     core.withFiber((fiber) => {
+2426:       const entry = new EntryImpl(fiber, self.lookup(key))
+2427:       const existing = getImpl(self, key, fiber, false) !== undefined
+2428:       if (!existing) {
+2429:         MutableHashMap.set(self.map, key, entry)
+2430:         checkCapacity(self)
+2431:       }
+2432:       entry.fiber.addObserver((exit) => {
+2433:         if (effect.exitHasInterrupts(exit)) {
+2434:           if (!existing) MutableHashMap.remove(self.map, key)
+2435:           return
+2436:         }
+2437:         const ttl = self.timeToLive(exit, key)
+2438:         if (Duration.isZero(ttl)) {
+2439:           MutableHashMap.remove(self.map, key)
+2440:           return effect.void
+2441:         }
+2442:         entry.expiresAt = Duration.isFinite(ttl)
+2443:           ? fiber.getRef(effect.ClockRef).currentTimeMillisUnsafe() + Duration.toMillis(ttl)
+2444:           : undefined
+2445:         if (existing) {
+2446:           MutableHashMap.set(self.map, key, entry)
+2447:         }
+2448:       })
+2449:       return entry.await()
+2450:     })

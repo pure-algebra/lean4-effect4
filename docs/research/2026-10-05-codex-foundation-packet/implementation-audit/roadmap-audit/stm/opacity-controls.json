@@ -1,0 +1,74 @@
+{
+  "kind": "finite history model, not Effect execution or Lean proof",
+  "cases": [
+    {
+      "name": "mixed read across writer, then abort",
+      "legal_serial_order_exists": false,
+      "orders": []
+    },
+    {
+      "name": "coherent read before writer, then abort",
+      "legal_serial_order_exists": true,
+      "orders": [
+        [
+          "T",
+          "C"
+        ]
+      ]
+    },
+    {
+      "name": "coherent read after writer, then abort",
+      "legal_serial_order_exists": true,
+      "orders": [
+        [
+          "C",
+          "T"
+        ]
+      ]
+    },
+    {
+      "name": "own tentative write may break x=y while visible to self",
+      "legal_serial_order_exists": true,
+      "orders": [
+        [
+          "T"
+        ]
+      ]
+    },
+    {
+      "name": "aborted write is not visible to next transaction",
+      "legal_serial_order_exists": false,
+      "orders": []
+    },
+    {
+      "name": "aborted write discarded positive",
+      "legal_serial_order_exists": true,
+      "orders": [
+        [
+          "A",
+          "T"
+        ],
+        [
+          "T",
+          "A"
+        ]
+      ]
+    },
+    {
+      "name": "real time prohibits old read after writer completes",
+      "legal_serial_order_exists": false,
+      "orders": []
+    },
+    {
+      "name": "real time allows new read after writer completes",
+      "legal_serial_order_exists": true,
+      "orders": [
+        [
+          "C",
+          "T"
+        ]
+      ]
+    }
+  ],
+  "passed": 8
+}

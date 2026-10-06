@@ -1,0 +1,140 @@
+### Active Context & Landings (21:00–01:30)
+
+Before identifying priorities, let's establish what landed in the tree during the last few hours:
+
+1. **Queue Steps & Typing**:
+   - **Seat QSTEPS** merged (`80d73226`): all 6 step goals (`offerStep`, `takeStep`, `pollStep`, `sizeStep`, `withdrawTake`, `withdrawOffer`) are proved against the abstract model (`Effect4.Queue.Model`), with step-store connectors (`step_updates`, `step_keeps_cell`).
+   - **Seat QTYPES** merged (`4834760e`): the 5 step typing goals are proved at every scope (`TermIntro.lean`, `Checking.lean`), with positional reply reads and minted-name capture lemmas (`Reading.lean`).
+2. **Faces & Targets (Seat T5)**:
+   - Parts A & B merged (`e9a3b1af`): `pair` and `tuple` literal widening (row 256), `Deferred.make<A,E>()` and loop cursor types print and read back; 43 truth programs agree.
+3. **Owner Rulings of 2026-10-06 (Rows 259–265)**:
+   - **Row 259 (A1)**: Semaphore live scan approved (resumed waiter takes inside the wake walk; wake reserves nothing).
+   - **Row 260 & 261 (A2/A3)**: Semaphore first profile ruled (`make`, `take`, `release`, `withPermits`, `takeIfAvailable`, `withPermitsIfAvailable`; release of more than taken uses saturated subtraction `sub`).
+   - **Row 265 (A7)**: Semaphore cell and steps authorized to start immediately as a third seat.
+4. **Currently in Flight**:
+   - **Seat MASK**: implementing mask and dynamic restore (rows 244–246).
+   - **Seat HOST**: implementing host observations for the 4 dogfood scenarios.
+
+---
+
+### Priority 1: Eliminating the Reference-Expansion Completeness Gap
+
+* **Concept**: `initial-algebras-folds`, serving **R5** (shared-layer admission) and **R8** (simulation).
+* **The Gap in the Tree**:
+  In [`src/Effect4/Program/Typing.lean`](file:///Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Typing.lean#L68), `typeOfProgram` tests:
+  ```lean
+  if program.layerRefsWF && (program.expandRefs.refSites []).isEmpty then ...
+  ```
+  In [`src/Effect4/Laws/Program/ReferenceTyping.lean`](file:///Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/ReferenceTyping.lean#L102-L105), `typeOfProgram_expandRefs` carries `(p.expandRefs.refSites []).isEmpty = true` as an explicit, unproved premise:
+  ```lean
+  theorem typeOfProgram_expandRefs {Op : Type} (sig : Signature Op) (p : Eff Op)
+      (hwf : p.layerRefsWF = true)
+      (hempty : (p.expandRefs.refSites []).isEmpty = true) :
+      typeOfProgram sig p.expandRefs = typeOfProgram sig p
+  ```
+  Every theorem and certificate consuming reference typing must drag along `(p.expandRefs.refSites []).isEmpty = true`.
+* **The Semantic Trap**:
+  Expansion replaces `.ref target` with `orig.layerAt target`. If that target definition contains nested references, expanding a shared target can *increase* the total count of reference occurrences across the tree (e.g. from 6 to 9 before decreasing to 0). Inducting naively on the count of reference occurrences fails.
+* **Theory & Formalization**:
+  * *Citation*: **Gambino & Hyland** (*Wellfounded Trees and Dependent Polynomial Functors*, TYPES 2003, LNCS 3085).
+  * *Mechanism*: The dependency relation between reference sites is an acyclic graph over original occurrences in `orig`. By `Eff.layerRefsWF`, `Path.lt target site` and `!Path.properPrefix target site`, every target is strictly prior in program order and non-enclosing.
+  * *Goal*:
+    ```lean
+    theorem expanded_refs_nil_of_wf (root : Eff Op) (valid : root.layerRefsWF = true) :
+        (root.expandRefs.refSites []).isEmpty = true
+    ```
+  * *Proof Path*: Define the dependency rank as the maximum reference depth in the original syntax DAG (bounded by `(root.refSites []).length`). Induct on this finite rank across rounds of `cata_eff (expandAlgebra orig)`. Once proved, the second condition in `typeOfProgram` can be retired by equivalence, lifting an admission premise across all shared layers.
+
+---
+
+### Priority 2: Journal Prefix Cut Laws for Replay and Driver Suspension
+
+* **Concept**: `translation-simulation`, serving **R8** (equal observation) and **R13** (monoid journal action).
+* **The Gap in the Tree**:
+  `tape_replays` ([`Test/Dogfood/Scenario.lean`](file:///Users/pooks/Dev/lean4-effect4/Test/Dogfood/Scenario.lean#L548-L553)) is currently proved only for runs whose tapes read completely to the end:
+  ```lean
+  def TapeReplays : Prop :=
+    ∀ (s : Run) (rows : List Command), (tapeFrom s rows).2 = [] →
+      (s.play rows).machine = ...
+  ```
+  When a run reaches fuel exhaustion, an unread decision, or an external frontier, `tapeFrom s rows` returns `(positions, left)` with `left ≠ []`. In [`Test/Dogfood/Scenario/Lowered.lean`](file:///Users/pooks/Dev/lean4-effect4/Test/Dogfood/Scenario/Lowered.lean), lowered replay has to check every position manually because there is no theorem connecting an arbitrary cut of a journal to its raw machine replay.
+* **The Semantic Trap**:
+  A command that stops execution may have partially updated machine state. The cut prefix describes the machine state *before* that stopped command executes; it cannot be treated as a completed post-frontier checkpoint without driver continuation context (row 226).
+* **Theory & Formalization**:
+  * *Citation*: **Lynch & Vaandrager** (*Forward and Backward Simulations, Part I: Untimed Systems*, Information and Computation 121, 1995). Section 3.2 (Lemma 3.8 and Proposition 3.9): lifting forward simulations from execution fragments to execution prefixes while preserving reachability invariants.
+  * *Goal*:
+    1. Splitting law for `tapeFrom`:
+       ```text
+       tapeFrom s (a ++ b) =
+         if (tapeFrom s a).2 = [] then
+           let (pb, left) := tapeFrom (s.play a) b
+           ((tapeFrom s a).1 ++ pb, left)
+         else ((tapeFrom s a).1, (tapeFrom s a).2 ++ b)
+       ```
+    2. Cut consistency:
+       ```text
+       tapeFrom s rows = (positions, left) →
+         ∃ done, rows = done ++ left ∧ (tapeFrom s done).2 = [] ∧
+           (s.play done).machine = replayMachine (positions.map (·.decision), s.machine)
+       ```
+  * *Impact*: Provides the missing theoretical foundation for `Lowered.shown` and directly enables the driver suspension needed for row 226 without an ad-hoc tape framework.
+
+---
+
+### Priority 3: Semantic Traps in the Composed Module Pipeline (Pool & Cache)
+
+With Semaphore authorized (row 265), contract cards for **Pool** and **Cache** are the next design deliverables (row 230, C6 in the rulings note). Primary literature and vendor source inspection reveal critical semantic divergences that cannot be smoothed over by a generic "wake-all" container:
+
+```mermaid
+flowchart TD
+  subgraph Waiting Mechanics
+    Q[Queue] -->|Strict Order| W1[Taker Commit Step + Deferred Post]
+    S[Semaphore] -->|Live Scan| W2[Live Sequential Re-evaluation during Wake Task]
+    P[Pool] -->|Snapshot Selection| W3[At most 'count' waiters batched, then delivered]
+    C[Cache] -->|Shared Lookup| W4[Pending Fiber deduplicated; cancelled if last waiter departs]
+  end
+```
+
+#### A. Pool: Snapshot Selection vs. Semaphore's Live Scan
+* **Semantic Trap**:
+  In [`vendor/effect-4.0.0-rc.112/src/Pool.ts`](file:///Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/src/Pool.ts), `wakeWaiters` snapshots at most `count` waiters inside the posted task and unparks that fixed batch. In contrast, Semaphore's `releaseUnsafe` runs a **live scan** where a resumed waiter runs *inside* the wake walk, immediately taking free permits before the next waiter is inspected. If Pool naively inherits Semaphore's live scan, batch resource delivery breaks.
+* **Identity Trap**:
+  Pool requires distinguishing a **lease** from the **underlying resource**. Returning a lease (decrementing the active borrow count) must not trigger the resource finalizer. The finalizer runs only during pool shutdown or enclosing scope termination.
+* **Theory**: **Wu, Schrijvers, Hinze** (*Effect Handlers in Scope*, Haskell 2014) on distinguishing scoped program parameters from subsequent linear resources.
+
+#### B. Cache: LRU Eviction vs. Effect4 Map Ordering
+* **Semantic Trap**:
+  [`Effect4.Program.Authoring`](file:///Users/pooks/Dev/lean4-effect4/README.md#L87) provides `mapKeys` and `mapEntries` sorted in **canonical UTF-8 order**.
+  However, Effect's native `Cache` evicts by **recency (LRU / insertion order)**! If the Cache module naively uses `Effect4.Api` string maps for storage, capacity eviction will evict lexicographically by key instead of by recency, breaking upstream target agreement.
+* **Cancellation Trap**:
+  Native Cache deduplicates concurrent lookups for the same key. When the last waiting fiber interrupts, it cancels the in-flight lookup. Stale cleanup must only delete the map entry if the entry still holds the identity of that specific lookup fiber; otherwise, it would wipe a newly started replacement lookup.
+* **Theory**: **Chappe et al.** (*Choice Trees*, POPL 2023) on separating internal state-machine transitions from concurrent external observer arrivals.
+
+---
+
+### Priority 4: STM & Transaction Semantics — Opacity vs. Unrestricted Effects
+
+* **Concept**: `residual-program-typing` and `translation-simulation`, serving Step 6 of row 233.
+* **The Emerging Boundary**:
+  As Queue and Semaphore complete their primitive phases, transactions (`STM`) will follow. In `docs/research/2026-10-05-codex-foundation-packet/literature/stm/contract-findings.md`, primary literature reveals a major design boundary:
+  1. **Rollback Scope**:
+     * In Haskell GHC STM (*Composable Memory Transactions*, Harris et al., PPoPP 2005), `catchSTM` rolls back tentative memory writes in the aborted block.
+     * In Effect TypeScript, does `Effect.catchAll` roll back `Ref` mutations? **No.** `Ref` mutations in standard Effect are irreversible. `STM` is a separate domain with a transaction journal.
+  2. **Consistency Inside In-flight Transactions (Opacity)**:
+     * *Citation*: **Guerraoui & Kapalka** (*On the Correctness of Transactional Memory*, PPoPP 2008).
+     * *Definition*: **Opacity** requires that *all* transactions—including live, aborted, and retrying transactions—always observe a mutually consistent prefix of committed memory.
+     * *Why this matters in Effect4*: Without opacity, an in-flight attempt can read an inconsistent state (e.g. `used = 3` and `admitted = 0` when the invariant requires `used == admitted + rejected`), which can trigger division-by-zero, out-of-bounds indexing, or divergence in user code before the transaction aborts.
+* **Recommendation**:
+  Formulate `TxBody` as an explicitly admitted, restricted first-order language (no host IO, no arbitrary `Ref` access, only tracked transactional cells). Do not promise transaction rollback over arbitrary `Eff` programs.
+
+---
+
+### Actionable Roadmap Alignment
+
+| Item | Focus | Key Theoretical Anchor | Next Concrete Action |
+| --- | --- | --- | --- |
+| **1. Reference Expansion** | Eliminate `(expandRefs.refSites []).isEmpty` hypothesis from `typeOfProgram_expandRefs` | Gambino & Hyland (TYPES 2003) | Prove well-founded induction on dependency rank of `orig.layerAt` targets. |
+| **2. Replay Cut Laws** | Connect prefix cuts of `tapeFrom` to raw machine replay | Lynch & Vaandrager (1995) | Prove `tapeFrom (a ++ b)` splitting law to ground `Lowered.shown` and driver suspension. |
+| **3. Pool Contract Card** | Lease identity vs. resource finalization; snapshot unparking | Wu, Schrijvers, Hinze (2014) | Draft card with explicit lease return vs. scope destruction. |
+| **4. Cache Contract Card** | Recency order vs. UTF-8 map order; replacement identity | Chappe et al. (POPL 2023) | Draft card specifying an explicit LRU queue rather than relying on `Authoring.mapKeys`. |
+| **5. STM Foundations** | Opacity invariant over admitted `TxBody` | Guerraoui & Kapalka (2008) | Bound transactions to tracked cells before designing rollback profiles. |

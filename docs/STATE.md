@@ -161,7 +161,14 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
   (`research/2026-10-05-claude-lead/module-cards/semaphore-probes/`). The card now recommends
   the live scan: a resumed waiter takes inside the wake's walk, on the pin and on our machine.
   Its first recommendation, a grant at the wake, rested on a wrong reading of our machine.
-  Pool's and Cache's cards are not written.
+  [Pool's card](research/2026-10-05-claude-lead/module-cards/pool.md) and
+  [Cache's card](research/2026-10-05-claude-lead/module-cards/cache.md) are written since
+  2026-10-06. Each rests on the two vendored sources, a host probe on rc.112 and 4.0.1, and
+  Codex's proposed card. Neither profile is ruled: Pool's card puts five choices to the owner
+  and Cache's four. Two findings came from the probes. In both Effect 4 builds the close of a
+  pool's scope does not wait for a borrowed item, and in Effect 3 it does. On the pin a
+  cache's reader who arrives during a lookup's cleanup is interrupted, and the release
+  repairs that. `UPSTREAM-BACKLOG.md` records both as candidates.
 
   [The rulings note](research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md) gives a
   recommended ruling for each open question of this stretch, with its evidence. The owner
@@ -229,8 +236,14 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   264);
 - Semaphore's cell and steps start now, as a third seat (row 265). Seat SEM has them since
   2026-10-06 (branch `seat/semaphore`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-sem-brief.md)). Its first step runs
-  the card's cases on our machine: no Semaphore program ran there before the ruling.
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-sem-brief.md)). Its first step ran
+  the card's cases on our machine, where no Semaphore program had run before the ruling. The
+  cases P1 to P4, P7 and P9 give the pin's answers, and three changed walks are red
+  (`Test/Program/SemaphoreScenarios.lean`). Its first three steps are merged (`c685aa71`):
+  that battery, the packet `Test/contracts/semaphore.contract.md`, the model and its profile
+  (`src/Effect4/Laws/Modules/Semaphore/`). Three theorems are proved there: `profile_closed`,
+  `visit_selects_earliest` and `visit_stops_iff`. The cell, the step terms and their
+  agreement follow.
 
 Landed later on 2026-10-05:
 
@@ -297,8 +310,8 @@ Landed later on 2026-10-05:
   `control_retires`. Each scenario's claim is proved modulo its planned goals. Eleven planned
   goals are new, all in batteries, and the goal gate counts 24. Nineteen lowered runs replay
   on the generated engine, on both instances: the engine's machine view is Lean's at each of
-  101 positions (`ocaml/engine/test/scenarios/`). Every run is finite, and no host run of a
-  scenario exists.
+  101 positions (`ocaml/engine/test/scenarios/`). Every run is finite. No host run of a
+  scenario existed at that merge; two scenarios run on a host since 2026-10-06, below.
 - **A journal's machine is the raw replay of its tape** (`tape_replays`,
   `Test/Dogfood/Scenario.lean`; R8, the claim `run-tape-replay`). The coordinator proved the
   first of the scenarios' planned goals, at `[propext, Quot.sound]`. It holds for every run and
@@ -458,7 +471,13 @@ Open at this landing:
     recorder needs one extension, an operation that completes after its cancellation.
     Seat HOST has it since 2026-10-06 (branch `seat/host`;
     [its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md)). It took the slot
-    that seat QTYPES freed;
+    that seat QTYPES freed. **Routing and workers are merged** (`11616581`;
+    [the design note](research/2026-10-05-seat-HOST-design.md)). Each script of a battery is
+    performed on the scenario's printed module on rc.112, and Lean replays the host's
+    recording. Routing has 8 scripts and workers 16, and no entry of either observation
+    waits. Workers reads five entries through a reader: a spy in the harness that changes no
+    recording, which the lane checks by running each script twice. The recorder takes an
+    operation that completes after its cancellation. Timeout and atomic follow;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
@@ -490,7 +509,13 @@ Open at this landing:
   its ratification is among the seat's proposals;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
   (rows 244 to 246). Seat MASK has its slice since 2026-10-06 (branch `seat/mask`;
-  [the brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md));
+  [the brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md)). Its first step is
+  merged (`811ac973`): `Eff.restore` and `ActionTerm.getInterruptible`, each appended; the
+  saved state's type; a case in every proved theorem that matches on them; and the engine's
+  lane `ocaml/engine/test/mask/`. The coordinator pinned the case policy again, moved one
+  pinned count of the reader's tests, wrote the truth modules again and named the two
+  constructors in the baseline policy. The seat's later steps hold the claims' theorems, two
+  truth programs and its receipt;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
@@ -579,7 +604,19 @@ Open at this landing:
     give an expansion with no reference left, at the existing bound. Its claim would be
     `reference-expansion-complete`, under `initial-algebras-folds`, for R5 and R8. It also
     proposes cut laws for a journal's consumed prefix, for the scenarios' tapes. Both are
-    candidates when a seat is free, beside the module slices;
+    candidates when a seat is free, beside the module slices. Codex's audit of the owner's
+    roadmap corrects both targets (`roadmap-audit/`, filed beside the others):
+    - a checked caller already has the fact, by `TypedProgram.expanded_refSites`
+      (`src/Effect4/Laws/Program/CheckedTyping.lean`). The proof's consumers are the converse
+      `checkTypedProgram_of_hasTy` in that file and `typeOfProgram_expandRefs`
+      (`src/Effect4/Laws/Program/ReferenceTyping.lean`). It keeps the layers' sharing at run
+      time;
+    - a cut gives the prefix before a stopped command, and that command may already have
+      changed the machine. `driveState_add` (`src/Effect4/Laws/Machine/Approximation.lean`)
+      splits the command loop's fuel, and row 226 still owes the driver's outer continuation. The first connector of `Lowered.shown` is stated
+      at a fresh `Run.open`;
+    - a transaction's body stays the admitted part of `Eff` that row 223 rules, and no second
+      representation;
   - the sixth reads the coordinator's Semaphore probe. A grant at the wake is a policy of its
     own: on the pin a resumed caller's next request takes inside the walk. A visit of the
     live scan reaches the resumed caller's work up to its own cut. The card follows both. The

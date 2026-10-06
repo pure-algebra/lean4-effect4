@@ -1,0 +1,72 @@
+[
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/Effect.ts",
+    "commit": "d3a3e558",
+    "sha256": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718"
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/TxRef.ts",
+    "commit": "d3a3e558",
+    "sha256": "bb4891f9cf42b98e69301404177676d10f52a3b5d2f09f2e318f63451fae1b43"
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/Ref.ts",
+    "commit": "d3a3e558",
+    "sha256": "69dc695dbe042baec090178dcc261f9a171e15a9fe6034d1c479408d6369d8fc"
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/Effect.ts",
+    "commit": "d3a3e558",
+    "sha256": "d39dc35b3dd3afe81c9b939147078822f26fcf8ba5b33735d9d903596bce9519"
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/TxRef.ts",
+    "commit": "d3a3e558",
+    "sha256": "a663887ca115856c74204871f554a54c1125abca5305b2cc957d28fa90ac192b"
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "commit": "d3a3e558",
+    "sha256": "4376a8489e7d39fd138df09542083d5455f950179c02f5f7d2d422eb82870cb0"
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+    "commit": "d3a3e558",
+    "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5"
+  },
+  {
+    "path": "tools/Tools/SemanticsRegistry.lean",
+    "commit": "d3a3e558",
+    "sha256": "75195042cb052f938cf79f70954dd223f4200c4baf102f768401fcaf1eced906"
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/harris-2005-composable-memory-transactions.pdf",
+    "sha256": "3072226686dce29a00d483e76eaa2ca92ea8f6748a11a26966c3b18f0df4dae3",
+    "previous_sha256": "3072226686dce29a00d483e76eaa2ca92ea8f6748a11a26966c3b18f0df4dae3",
+    "match": true
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/guerraoui-kapalka-2008-opacity.pdf",
+    "sha256": "145510bcd897695456c34e61b0a6ef39cd322fc09f4ebb9ef2df39a2d2523972",
+    "previous_sha256": "145510bcd897695456c34e61b0a6ef39cd322fc09f4ebb9ef2df39a2d2523972",
+    "match": true
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/ghc-9.12.2-STM.h",
+    "sha256": "c5a26d0f8c50645eff52daacefb4ae7a1d65a67307a83bff5f70d4c7115eac90",
+    "previous_sha256": "c5a26d0f8c50645eff52daacefb4ae7a1d65a67307a83bff5f70d4c7115eac90",
+    "match": true
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/ghc-9.12.2-STM.c",
+    "sha256": "cdb5d71b29b85ef9c5b598c7d17114ffdae7e4976e7120c1f29d1dc1ffd5cf0c",
+    "previous_sha256": "cdb5d71b29b85ef9c5b598c7d17114ffdae7e4976e7120c1f29d1dc1ffd5cf0c",
+    "match": true
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/stm/ghc-9.12.2-Sync.hs",
+    "sha256": "0e184aee23032845d03ecd192d90e9e2e0f654ef6f55e0ad1b171f3456d1e79f",
+    "previous_sha256": "0e184aee23032845d03ecd192d90e9e2e0f654ef6f55e0ad1b171f3456d1e79f",
+    "match": true
+  }
+]

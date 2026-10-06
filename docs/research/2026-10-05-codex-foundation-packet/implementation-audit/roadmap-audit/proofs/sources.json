@@ -1,0 +1,90 @@
+{
+  "frozen_head": "d3a3e558ba0c4b0af8c9b47c22ed327c51506d5e",
+  "observed_live_head": "0acec081735277287cad1ce342059d1600b4ee3f",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "sha256": "13f10a4775e01c8e2149c3b199260b8c4af1f37cbb6a2cbe7f9f3426a59eb7c4"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "sha256": "bd98048d469a624ddc92f60ca8c70104a8d16e2aa1ac624ef0271937b045ff76"
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "sha256": "595a1b2654ecff35c11779592a2acf65f2a6455b9ac3b7e52c3a23b9341cd4bb"
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Lowered.lean",
+      "sha256": "56d3368fef7a7dadfcb81b881a80d9346aa41ddd8e162b15ad96e6289f9fe06e"
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844"
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25"
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "sha256": "75195042cb052f938cf79f70954dd223f4200c4baf102f768401fcaf1eced906"
+    },
+    {
+      "path": "docs/core/system-map.md",
+      "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65"
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "sha256": "673ec988373c0fcce6b8f8fa6f08a4dd5f0eea02490e0432fa23e0b365eb3260"
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "sha256": "4376a8489e7d39fd138df09542083d5455f950179c02f5f7d2d422eb82870cb0"
+    },
+    {
+      "path": "src/Effect4/Program/Refs.lean",
+      "sha256": "cb64593e1215807891022dc4435565773c7908dd927b41a34831077dc6cd3d1a"
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Tape.lean",
+      "sha256": "842a3710c30359d6cc4bb8a2f0fdc8ce9a78bda374c77784ec64e14e2ab30741"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "sha256": "053667a8a9487078a2e9bea71d042d418d8d3c1f14ac15938f1330890331a361"
+    },
+    {
+      "path": "src/Effect4/Api.lean",
+      "sha256": "52f91cbb2a84d374e260d3ca6fe4c71158e3bad884d258c84fed654e2aff9350"
+    },
+    {
+      "path": "src/Effect4/Program/CheckedTyping.lean",
+      "sha256": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathFold.lean",
+      "sha256": "3b07b6f8ea7d011b262b87c78f4d667a09ef6655f5e5e80dfdab421da61e678b"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathOrder.lean",
+      "sha256": "e8cfabfca3ac587209d002e9250ac563efebbcaa7a31b81dabd7ec68e67cb0f7"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Approximation.lean",
+      "sha256": "eed02bea96ac686c32bd554fa95ef5f8a21813209e8f26de776bd4b66a8afe5c"
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "sha256": "00cf4375cef366719b63904f0df534bf10ab7d94213fcbfb212c66a4b5aa9fb8"
+    }
+  ]
+}
