@@ -244,7 +244,11 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   (`src/Effect4/Laws/Modules/Semaphore/`). Three theorems are proved there: `profile_closed`,
   `visit_selects_earliest` and `visit_stops_iff`. Its fourth step is merged too (`c17f0be7`):
   the cell and five step terms (`src/Effect4/Modules/Semaphore/`), and six typing statements,
-  each proved at every scope of names. Each step's agreement with the model follows.
+  each proved at every scope of names. **Each step's agreement with the model is proved**
+  (`85a8e587`; `src/Effect4/Laws/Modules/Semaphore/Steps.lean`): five theorems, and
+  `semaphore_steps_agree`, which assembles them. They are parts of the proposed claim
+  `semaphore-expansion-agrees` and close no requirement. The engine's replay, the documents
+  and the receipt follow. The operations that wait and the protected form are a later slice.
 
 Landed later on 2026-10-05:
 

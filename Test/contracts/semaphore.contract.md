@@ -11,6 +11,10 @@ proofs. It authorizes no public operation and no runtime behaviour.
 | `visit_selects_earliest` and `visit_stops_iff` in the same file | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/SemaphoreContract.lean` | tested: its guard checks hold, and a falsified copy fails each changed check |
 | `Test/Program/SemaphoreScenarios.lean` | tested: six cases on the Lean machine, one schedule each |
+| `src/Effect4/Modules/Semaphore/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
+| the six typing statements of `src/Effect4/Laws/Modules/Semaphore/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
+| the five step statements and `semaphore_steps_agree` in `src/Effect4/Laws/Modules/Semaphore/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
+| `Test/Program/SemaphoreSteps.lean`, `SemaphoreAgreement.lean` and `SemaphoreRelation.lean` in the same folder | tested: finite controls, and a falsified copy of each fails each changed check |
 
 ## Authority and owned surface
 
@@ -136,14 +140,26 @@ of one identity (`takeKeeping`).
 | --- | --- | --- | --- |
 | `profile_closed` | `store-typing`, R4; the model's half of the proposed `semaphore-accounting-preserved` | every transition of the model, on the profile's states | nothing about a program, and no progress of a waiter |
 | `visit_selects_earliest`, `visit_stops_iff` | `reactive-scheduling`, R12; their consumer is the waiting clauses of the proposed `semaphore-expansion-agrees` | one visit of the model | no statement about a whole walk, and no liveness |
+| `empty_types` and the five `…Step_types` | `store-typing`, R4; the cell's half of the proposed `semaphore-accounting-preserved` | the cell's type; every scope of names; the native atoms | no agreement with the model |
+| the five `…Step_agrees`, and `semaphore_steps_agree` | `translation-simulation`, R10; parts of the proposed `semaphore-expansion-agrees` | every model state and an injective table; the reply, the stored value and the selected waiter's record | no order of the wake across visits, no cancellation law, no fairness, no wrapper |
 
 The consumer of each statement is the public law, in the slice of the operations that wait.
 Neither proposed claim is in the semantics registry yet.
 
+**The step statements take no premise on the state.** No step reads the profile. The term and
+the model compute the same truncated subtraction, the same removal by identity and the same
+first fitting waiter. So the profile's closure and the steps' agreement are two statements,
+and the public law uses both.
+
+**A visit compares no record and no handle.** Its term reads two numbers of each entry: the
+stamp against the cursor, and the count against the free count. It removes the selected entry
+by its position, and the model removes it by `erase`. The two agree with no premise on the
+identities (`visit_fromFirst`, `src/Effect4/Laws/Modules/Semaphore/Steps.lean`).
+
 ## Remaining connectors
 
-1. Relate the typed cell and each step term to the model's transition: this slice's later
-   steps.
+1. Prove that the cell's value is a member of the cell's type, from the handles that the table
+   names: the membership premise of `step_keeps_cell`.
 2. Prove the waiting wrapper over the actual program: the enrolment, the wait, the retry and
    the withdrawal on interruption.
 3. State the walk as a library program, and its law across visits, with the reach of one visit
