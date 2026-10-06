@@ -240,6 +240,33 @@ def s7 : Src NativeOp := eff do
 
 #guard exitOf s7 = some (.success (.list [open_, open_, open_, masked, masked]))
 
+/-! ### S7, wider: a body that holds regions of its own
+
+Under a masked caller the form changes no flag and pushes no frame, so its exit flag is what
+its body left. No theorem states that flag yet: it is the open part of `saved-mask-restoration`
+(`src/Effect4/Laws/Program/Typed/Mask.lean`). Each body below changes the flag inside, by an
+`interruptible` region, a restore site or a nested mask, and ends by a success or a failure.
+The last two readings are under an interruptible caller, where the form's own frame returns
+the flag. -/
+
+/-- The caller's flag after a form whose body takes the restore function. -/
+def flagAfterWith (body : (Src NativeOp → Src NativeOp) → Src NativeOp) : Src NativeOp := eff do
+  let _ ← exit (uninterruptibleMaskWith body)
+  flag
+
+def s7Regions : Src NativeOp := eff do
+  let a ← uninterruptible (flagAfterWith fun _ => interruptible (succeed (nat 1)))
+  let b ← uninterruptible (flagAfterWith fun r => r (interruptible (succeed (nat 1))))
+  let c ← uninterruptible (flagAfterWith fun _ =>
+    uninterruptibleMaskWith fun inner => inner (fail (str "e")))
+  let d ← uninterruptible (flagAfterWith fun _ => interruptible (fail (str "e")))
+  let e ← flagAfterWith fun r => r (uninterruptible (succeed (nat 1)))
+  let f ← flagAfterWith fun r => r (uninterruptibleMaskWith fun inner => inner (fail (str "e")))
+  return tuple [a, b, c, d, e, f]
+
+#guard verdict (mk s7Regions) = "built"
+#guard exitOf s7Regions = some (.success (.list [masked, masked, masked, masked, open_, open_]))
+
 /-! ## S9: the flag at five places of a body
 
 False in the body. True in an `interruptible` region of the body. True in a restore site.
