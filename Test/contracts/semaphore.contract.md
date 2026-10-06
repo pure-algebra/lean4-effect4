@@ -15,6 +15,7 @@ proofs. It authorizes no public operation and no runtime behaviour.
 | the six typing statements of `src/Effect4/Laws/Modules/Semaphore/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | the five step statements and `semaphore_steps_agree` in `src/Effect4/Laws/Modules/Semaphore/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/SemaphoreSteps.lean`, `SemaphoreAgreement.lean` and `SemaphoreRelation.lean` in the same folder | tested: finite controls, and a falsified copy of each fails each changed check |
+| `ocaml/engine/test/semaphore/`, bound by `Test/Program/SemaphoreEngine.lean` | tested: the cases P1 and P3 on the generated engine, on both carriers, one schedule each. P9 does not cross in this lane: its fixture holds no tape, and the test runs the engine's own drive loop |
 
 ## Authority and owned surface
 

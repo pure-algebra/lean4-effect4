@@ -115,7 +115,12 @@ def registry : Registry where
         -- the typing judgment of a builder's term and the term checker's rules in their
         -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257)
         `Effect4.Laws.Modules.Queue.Checking,
-        `Effect4.Laws.Program.Typing.TermIntro
+        `Effect4.Laws.Program.Typing.TermIntro,
+        -- Semaphore's typing statements, and its model's profile: the closure is this
+        -- concept's node, and the two facts of a visit carry their own tag (seat SEM's
+        -- receipt, item 10, row 3, option (b); decisions row 265)
+        `Effect4.Laws.Modules.Semaphore.Typing,
+        `Effect4.Laws.Modules.Semaphore.Profile
       ] },
     { id := "residual-program-typing"
       title := "Residual Program Typing: TypedProg, the protocol-indexed judgment on residual programs"
@@ -180,7 +185,10 @@ def registry : Registry where
         `Effect4.Laws.Machine.Book,
         `Effect4.Laws.Modules.Queue.Relation,
         `Effect4.Laws.Modules.Queue.Reading,
-        `Effect4.Laws.Modules.Queue.Steps
+        `Effect4.Laws.Modules.Queue.Steps,
+        `Effect4.Laws.Modules.Semaphore.Relation,
+        `Effect4.Laws.Modules.Semaphore.Reading,
+        `Effect4.Laws.Modules.Semaphore.Steps
       ] }
   ]
   claims := [
@@ -441,6 +449,15 @@ def registry : Registry where
     { id := "queue-first-profile-closed", concept := "reactive-scheduling", role := .preservation
       title := "Each first operation of the Queue's abstract model keeps the first profile, when its request keeps the step's premise (a helper of queue-expansion-agrees: the domain of the step goals; no agreement of a term with the model; decisions rows 219, 233 and 255)"
       pointer := .witness `Effect4.Queue.Model.first_profile_closed },
+    { id := "semaphore-profile-closed", concept := "store-typing", role := .preservation
+      title := "Each transition of Semaphore's abstract model keeps the first profile, with no premise on its request (the model's half of semaphore-accounting-preserved; nothing about a program, and no progress of a waiter; decisions rows 259 to 261 and 265)"
+      pointer := .witness `Effect4.Semaphore.Model.profile_closed },
+    { id := "semaphore-visit-selects-earliest", concept := "reactive-scheduling", role := .inversion
+      title := "One visit of Semaphore's model selects the earliest fitting waiter at or after its cursor, and that waiter leaves (a helper of semaphore-expansion-agrees' waiting clauses; one visit, no walk and no liveness; decisions row 259)"
+      pointer := .witness `Effect4.Semaphore.Model.visit_selects_earliest },
+    { id := "semaphore-visit-stops", concept := "reactive-scheduling", role := .inversion
+      title := "One visit of Semaphore's model selects nobody exactly when no permit is free or no waiter at or after the cursor fits, and then it changes nothing (a helper of semaphore-expansion-agrees' waiting clauses; one visit, no walk and no liveness; decisions row 259)"
+      pointer := .witness `Effect4.Semaphore.Model.visit_stops_iff },
 
     -- 5. exact-codecs
     { id := "decode-iff", concept := "exact-codecs", role := .decidability
@@ -660,6 +677,9 @@ def registry : Registry where
     { id := "queue-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of the Queue's six step terms agrees with the abstract model's step on the first profile: the reply, the stored value through the encoding table, and the ordered signals (a part of queue-expansion-agrees; no delivery, no cancellation law, no liveness, no wrapper and no host; decisions row 255)"
       pointer := .witness `Effect4.Queue.Model.queue_steps_agree },
+    { id := "semaphore-steps-agree", concept := "translation-simulation", role := .simulation
+      title := "Each of Semaphore's five step terms agrees with the abstract model's step on every model state: the reply, the stored value through the encoding table, and the selected waiter's record (a part of semaphore-expansion-agrees; no order of the wake across visits, no cancellation law, no liveness, no wrapper and no host; decisions rows 259 to 261 and 265)"
+      pointer := .witness `Effect4.Semaphore.Model.semaphore_steps_agree },
     { id := "straight-composition-agreement", concept := "translation-simulation", role := .simulation
       title := "StraightEq programs run to equal exits and stores at their own sufficient budgets (the straight-fragment composition relation)"
       pointer := .witness `Effect4.Program.Denote.StraightEq.run_agrees },
@@ -798,6 +818,7 @@ def registry : Registry where
         `Effect4.Program.Typed.scoped_body_substitution_boundary]
       openParts := ["the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation",
         "the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws",
+        "semaphore-accounting-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 260, 261, 265)",
         "atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)",
         "the second half of scoped-body-substitution-boundary (residual-program-typing): for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); no goal states it: the mask adds no scoped constructor, and its restore node's half is scoped_body_substitution_boundary"] },
     { id := "R5", title := "Services: the service table, layers and provision"
@@ -858,6 +879,7 @@ def registry : Registry where
         "DI-39's six rows not landed",
         "a composite's contract by a stuttering route (post-Phase C §11.4)",
         "queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230)",
+        "semaphore-expansion-agrees (proposed claim; translation-simulation): Semaphore's expansion agrees with the first profile's public observation; it keeps the selected identities and the permit commits, with its premises on the wake's policy, the admitted callers, interruption and the work budget; its parts on one atomic step are semaphore-steps-agree, and the wrapper, the walk across visits and the protected form are not stated (decisions rows 79, 226, 259 to 261)",
         "posted-wake-profile-agrees (proposed claim; translation-simulation): one producer's posted delivery, with its dispatch owner, priority, receiver and token, capture time, coalescing and cancellation, agrees with its module expansion; the Queue's producer is first (decisions rows 81, 220, 225; DB-13)",
         "atomic-attempt-agreement (proposed claim; translation-simulation): the restricted transaction profile against the named release, with flat nesting, immutable payloads and explicit retry; then tx-choice-rollback-union for the retry-only alternative (decisions rows 80, 84, 223, 224)",
         "fair composition of tickets that are enrolled apart is outside the first profile: the opposing-ticket cycle stays a refused case until an enrolment protocol resolves it (decisions row 223)"] },

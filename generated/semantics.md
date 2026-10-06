@@ -23,6 +23,7 @@ Store Typing: World-indexed semantic value membership (Fits) and store typings
 | handle-identity-laws | canonicalForms | proved | Effect4.Program.Typed.handle_identity_laws | yes |  |
 | saved-mask-image-membership | canonicalForms | proved | Effect4.Program.Typed.saved_mask_image_membership | yes |  |
 | store-safety | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |  |
+| semaphore-profile-closed | preservation | proved | Effect4.Semaphore.Model.profile_closed | yes |  |
 
 ### Printed statements
 
@@ -120,6 +121,14 @@ Effect4.Program.Typed.SavedMaskImage
 ```
 
 Literature: TAPL, §13.5, pp. 165–169 — excludedFeature
+
+**semaphore-profile-closed**
+
+```lean
+∀ (s : Effect4.Semaphore.Model.State) (op : Effect4.Semaphore.Model.Op),
+  Effect4.Semaphore.Model.Profile s →
+    Effect4.Semaphore.Model.Profile (Effect4.Semaphore.Model.step s op)
+```
 
 ## residual-program-typing
 
@@ -516,6 +525,8 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | fair-scheduling | adequacy | absent | Weak fairness progress is open (R12; decisions row 86) | — |  |
 | queue-step-capacity | preservation | proved | Effect4.Queue.Model.positive_suspend_step_capacity | yes |  |
 | queue-first-profile-closed | preservation | proved | Effect4.Queue.Model.first_profile_closed | yes |  |
+| semaphore-visit-selects-earliest | inversion | proved | Effect4.Semaphore.Model.visit_selects_earliest | yes |  |
+| semaphore-visit-stops | inversion | proved | Effect4.Semaphore.Model.visit_stops_iff | yes |  |
 
 ### Printed statements
 
@@ -798,6 +809,41 @@ Literature: PFPL, chs. 39–41, pp. 371–406 — excludedFeature
       Effect4.Queue.Model.Requested s op →
         Effect4.Queue.Model.FirstProfile
           (Effect4.Queue.Model.step Effect4.Queue.Model.Fault.none { s := s } op).s
+```
+
+**semaphore-visit-selects-earliest**
+
+```lean
+∀ {s : Effect4.Semaphore.Model.State},
+  Effect4.Semaphore.Model.Profile s →
+    ∀ {cursor : Nat} {w : Effect4.Semaphore.Model.Waiter},
+      Eq (Effect4.Semaphore.Model.visit s cursor).snd (Option.some w) →
+        And (List.instMembership.mem s.waiters w)
+          (And (instLENat.le cursor w.stamp)
+            (And (instLENat.le w.need (Effect4.Semaphore.Model.free s))
+              (And
+                (∀ (u : Effect4.Semaphore.Model.Waiter),
+                  List.instMembership.mem s.waiters u →
+                    instLENat.le cursor u.stamp →
+                      instLENat.le u.need (Effect4.Semaphore.Model.free s) →
+                        instLENat.le w.stamp u.stamp)
+                (Eq (Effect4.Semaphore.Model.visit s cursor).fst
+                  { permits := s.permits, taken := s.taken, waiters := s.waiters.erase w,
+                    next := s.next }))))
+```
+
+**semaphore-visit-stops**
+
+```lean
+∀ (s : Effect4.Semaphore.Model.State) (cursor : Nat),
+  And
+    (Iff (Eq (Effect4.Semaphore.Model.visit s cursor).snd Option.none)
+      (Or (Eq (Effect4.Semaphore.Model.free s) 0)
+        (∀ (u : Effect4.Semaphore.Model.Waiter),
+          List.instMembership.mem s.waiters u →
+            instLENat.le cursor u.stamp → instLTNat.lt (Effect4.Semaphore.Model.free s) u.need)))
+    (Eq (Effect4.Semaphore.Model.visit s cursor).snd Option.none →
+      Eq (Effect4.Semaphore.Model.visit s cursor).fst s)
 ```
 
 ## exact-codecs
@@ -1282,6 +1328,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
 | run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
 | queue-steps-agree | simulation | proved | Effect4.Queue.Model.queue_steps_agree | yes |  |
+| semaphore-steps-agree | simulation | proved | Effect4.Semaphore.Model.semaphore_steps_agree | yes |  |
 | straight-composition-agreement | simulation | proved | Effect4.Program.Denote.StraightEq.run_agrees | yes |  |
 | mask-printed-form-profile | compatibility | proved | Effect4.Program.mask_printed_form_profile | yes |  |
 
@@ -1485,6 +1532,12 @@ Test.Dogfood.Scenario.TapeReplays
 Effect4.Queue.Model.StepsAgree
 ```
 
+**semaphore-steps-agree**
+
+```lean
+Effect4.Semaphore.Model.StepsAgree
+```
+
 **straight-composition-agreement**
 
 ```lean
@@ -1641,7 +1694,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 29; inherited (provisional): 1730; unplaced: 0.
+Tagged: 44; inherited (provisional): 1824; unplaced: 0.
 
 ## Plan
 
@@ -2095,6 +2148,7 @@ flowchart LR
 
 - Open: the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation
 - Open: the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws
+- Open: semaphore-accounting-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 260, 261, 265)
 - Open: atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)
 - Open: the second half of scoped-body-substitution-boundary (residual-program-typing): for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); no goal states it: the mask adds no scoped constructor, and its restore node's half is scoped_body_substitution_boundary
 
@@ -3030,6 +3084,7 @@ flowchart LR
 - Open: DI-39's six rows not landed
 - Open: a composite's contract by a stuttering route (post-Phase C §11.4)
 - Open: queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230)
+- Open: semaphore-expansion-agrees (proposed claim; translation-simulation): Semaphore's expansion agrees with the first profile's public observation; it keeps the selected identities and the permit commits, with its premises on the wake's policy, the admitted callers, interruption and the work budget; its parts on one atomic step are semaphore-steps-agree, and the wrapper, the walk across visits and the protected form are not stated (decisions rows 79, 226, 259 to 261)
 - Open: posted-wake-profile-agrees (proposed claim; translation-simulation): one producer's posted delivery, with its dispatch owner, priority, receiver and token, capture time, coalescing and cancellation, agrees with its module expansion; the Queue's producer is first (decisions rows 81, 220, 225; DB-13)
 - Open: atomic-attempt-agreement (proposed claim; translation-simulation): the restricted transaction profile against the named release, with flat nesting, immutable payloads and explicit retry; then tx-choice-rollback-union for the retry-only alternative (decisions rows 80, 84, 223, 224)
 - Open: fair composition of tickets that are enrolled apart is outside the first profile: the opposing-ticket cycle stays a refused case until an enrolment protocol resolves it (decisions row 223)
