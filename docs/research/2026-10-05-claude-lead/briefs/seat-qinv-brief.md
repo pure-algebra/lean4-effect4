@@ -29,9 +29,8 @@ profile admits. So every run of the model from the empty queue has both flags.
    `quiet`, `waiting`, `accounted`, `bump`, `step`, and `Fault`.
 3. `src/Effect4/Laws/Modules/Queue/Profile.lean`: `FirstProfile` and its closure, and
    `Capacity.lean` beside it.
-4. The batteries that explore the model: `Test/Program/QueueModel.lean`,
-   `QueueContract.lean` and `QueueCapacity.lean`. Find the bounded exploration and its two
-   mutations.
+4. The batteries that explore the model: `Test/Program/QueueContract.lean` and
+   `Test/Program/QueueCapacity.lean`. Find the bounded exploration and its two mutations.
 5. `Test/contracts/queue.contract.md`: the model's transitions and the connectors.
 6. The registry's open parts under R12 in `generated/semantics.md`.
 
