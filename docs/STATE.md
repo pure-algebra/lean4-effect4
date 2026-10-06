@@ -305,6 +305,15 @@ A sweep follows the set: the owner approved the coordinator's recommendations on
 main open theory, and it starts with a design question. The owner asked for a discussion of
 it when the set has landed: its obligations, and the base abstractions that it needs first.
 
+**The focus after the set (row 281).** The owner named it on 2026-10-06: the program as
+data. A program's regions are selected, observed, shown and proved, and that work serves the
+tools, authoring, MCP, composing and the lowering, which must start. A region is a derived
+view of the stored program with proof data: no marker is added to the stored program or to
+the machine. The owner also asked for a plan of how the focus meets bidirectional type
+slicing. [The plan](research/2026-10-06-type-slicing-plan.md) reads the vendored paper,
+maps it to the checker and lists ten proposed claims, four probes and six slices. Its three
+questions wait for the owner, and nothing of it is dispatched.
+
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
 work took by reading, the facts that the law of a whole run will stand on, and the evidence
