@@ -356,6 +356,10 @@ private def clear (m : M) : M := (driveStep toy m (Cmd.exitDone ⟨0⟩) []).1
 #guard runs [true] (clear published) && runs [true] (clear emptied) && runs [true] (clear atBase)
 -- `Cmd.finish` asks for nothing: it publishes the trap's fiber before it clears it.
 #guard runs [true] (driveStep toy trap (Cmd.finish ⟨0⟩ (.success 0)) []).1
+-- A live fiber has one entry: the other table is red at the trap. An exited fiber's entry is
+-- free, so both tables hold at the published fiber.
+#guard !runs [false] trap
+#guard runs [false] published
 
 /-- **The trap, proved.** Without the command condition the statement is false: an arbitrary
 `Cmd.exitDone` clears a live fiber's stack and keeps its flag. No table that extends `[true]`
@@ -590,6 +594,10 @@ example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (m : M)
     (evaluatePrim interp m f y).outcome = Outcome.finished exit →
       (evaluatePrim interp m f y).fiber.frame.stack = [] :=
   atNat.finished
+
+example : ∀ (bases bases' : List Bool) (m : M) (f : R), MaskRuns bases m → MaskRuns bases' m →
+    f ∈ m.fibers → f.exit = none → bases[f.id.value]? = bases'[f.id.value]? :=
+  atNat.sameBase
 
 /-- The placed statement, as it stands: the compiled program's interpreter under the native
 evaluator. -/

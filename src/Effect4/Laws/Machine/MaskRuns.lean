@@ -38,7 +38,8 @@ a finished frame's state at `evaluatePrim.finishFrame`.
 * **Where a fiber's base is.** The machine stores no base. The base is proof data: a table of
   start flags, the world of the lift (`basesOrder`). Entry `n` is the flag that the fiber with
   id `n` started with. A spawn appends one entry (`maskRuns_make`, `spawn_maskRuns`), and no
-  command changes an entry.
+  command changes an entry. A live fiber has one entry in each table that holds the invariant
+  (`MaskRuns.entry_eq`), so the table is no arbitrary witness there.
 * **The invariant** (`MaskRuns`). Each fiber has its entry, and a live fiber holds the chain at
   its entry. An exited fiber's flag and stack are outside it: the driver steps an exited fiber
   where a second fiber evaluates the registration of a race that the first one hosts
@@ -97,8 +98,8 @@ variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
 /-! ## The base, and the sentinel -/
 
 /-- **The base is a function of the flag and of the stack**: two chains over one flag and one
-stack have one base. It is the mirror of `MaskChain.flag_eq`. A step of the lift: the clearing of
-a stack keeps the chain exactly at the base, so the flag there names the base. -/
+stack have one base. It is the mirror of `MaskChain.flag_eq`. A step of `MaskRuns.entry_eq`: a
+live fiber has one entry in each table that holds the invariant. -/
 @[semantics "scope-lifetime-finalization"]
 theorem MaskChain.base_eq {base base' flag : Bool} {stack : List (Prim ν σ β ε δ ι α)}
     (h : MaskChain base flag stack) (h' : MaskChain base' flag stack) : base = base' := by
@@ -331,8 +332,11 @@ theorem popFrom_unanswered_stack (demand : Arm) (skip : Bool)
 /-- **A pop from a chain that answers nothing ends at the base.** The pop keeps the chain
 (`popFrom_maskChain`), and the chain over an empty stack is the flag's equation with the base.
 
-A step of R11's open part "the lift of saved-mask-pop-discipline to runs". Its consumer is
-`step_finished_flag`, through `getCont_unanswered_flag`. -/
+It is the flag's half of line 6 of the lift's map, at the pop. `getCont_unanswered_flag` and
+`step_finished_flag` state it at their levels. The fiber machine reads the stack's half
+(`step_finished_stack`), and it states the flag's half of a live fiber's evaluation at its own
+level (`IterKeepsMask.finished_flag`). So this statement's reader is a proof over one frame
+machine. -/
 @[semantics "scope-lifetime-finalization"]
 theorem popFrom_unanswered_flag (base : Bool) (demand : Arm) (skip : Bool)
     (frames : List (Prim ν σ β ε δ ι α)) (f : FrameFiber ν σ β ε δ ι α)
@@ -359,8 +363,8 @@ theorem getCont_unanswered_stack (f : FrameFiber ν σ β ε δ ι α) (demand :
     rw [if_neg popping]
     exact popFrom_unanswered_stack demand skip f.stack _ rfl unanswered
 
-/-- `getCont` from a chain that answers nothing ends at the base. A step of
-`step_finished_flag`. -/
+/-- `getCont` from a chain that answers nothing ends at the base: `popFrom_unanswered_flag` at
+`getCont`, at every carried cause. -/
 @[semantics "scope-lifetime-finalization"]
 theorem getCont_unanswered_flag (base : Bool) (f : FrameFiber ν σ β ε δ ι α) (demand : Arm)
     (skip : Bool) (cause : Option (Cause ε δ ι α))
@@ -472,8 +476,9 @@ theorem step_finished_stack (interp : PrimInterp ν σ β ε δ ι α) (f : Fram
 `frameExitState` retains has the base as its flag: the chain is kept
 (`frameExitState_maskChain`), and the stack is empty.
 
-A step of R11's open part "the lift of saved-mask-pop-discipline to runs". Its consumer is the
-completed exit's statement at the fiber machine: the driver issues `Cmd.finish` at the base. -/
+It is the flag's half of line 6 at one frame machine, and its reader is a proof over that
+machine. The fiber machine states the same of a live fiber's evaluation
+(`IterKeepsMask.finished_flag`): the driver issues `Cmd.finish` at the base. -/
 @[semantics "scope-lifetime-finalization"]
 theorem step_finished_flag (base : Bool) (interp : PrimInterp ν σ β ε δ ι α)
     (f : FrameFiber ν σ β ε δ ι α) (valid : MaskChain base f.interruptible f.stack)
@@ -815,6 +820,19 @@ theorem MaskRuns.same {bases : List Bool} {m m' : RunMachine ν σ β ε δ ι �
   · rw [next] at upper
     exact absurd upper (Nat.not_lt.mpr lower)
 
+/-- **A live fiber has one entry in each table that holds the invariant.** The base is a function
+of the flag and of the stack (`MaskChain.base_eq`). So a machine's table is no arbitrary witness
+at its live fibers: the entry is the fiber's base. It is the field `sameBase` of
+`saved_mask_chain_runs`. -/
+@[semantics "scope-lifetime-finalization"]
+theorem MaskRuns.entry_eq {bases bases' : List Bool} {m : RunMachine ν σ β ε δ ι α χ St}
+    (kept : MaskRuns bases m) (kept' : MaskRuns bases' m) {f : RunFiber ν σ β ε δ ι α χ}
+    (mem : f ∈ m.fibers) (live : f.exit = none) :
+    bases[f.id.value]? = bases'[f.id.value]? := by
+  obtain ⟨base, entry, valid⟩ := kept.2 f mem
+  obtain ⟨base', entry', valid'⟩ := kept'.2 f mem
+  rw [entry, entry', (valid live).base_eq (valid' live)]
+
 /-- The empty machine holds the invariant at the empty table. It is the field `empty` of
 `saved_mask_chain_runs`. -/
 @[semantics "scope-lifetime-finalization"]
@@ -850,8 +868,8 @@ theorem maskRuns_make (bases : List Bool) (m : RunMachine ν σ β ε δ ι α �
       rfl
 
 /-- A spawn extends the table by the flag that its mask mode gives the child: true, false, or the
-parent's flag. It is `maskRuns_make` at the machine that `spawn` builds. Its consumer is the
-bracket's law, which reads a child's base. -/
+parent's flag. It is `maskRuns_make` at the machine that `spawn` builds, and the field `spawn`
+of `saved_mask_chain_runs`. -/
 @[semantics "scope-lifetime-finalization"]
 theorem spawn_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St) (bases : List Bool)
     (m : RunMachine ν σ β ε δ ι α χ St) (kept : MaskRuns bases m)
@@ -1180,7 +1198,8 @@ theorem IterKeepsMask.finished_stack {m : RunMachine ν σ β ε δ ι α χ St}
 
 /-- **The driver issues `Cmd.finish` at the base.** With the chain over the evaluated fiber, a
 finished fiber that has not exited has the base as its flag: the chain is kept, and the stack is
-empty. So a fiber's first publication is at its start flag. -/
+empty. So a fiber's first publication is at its start flag. At the frame evaluator it is the
+field `finishedAtBase` of `saved_mask_chain_runs`. -/
 @[semantics "scope-lifetime-finalization"]
 theorem IterKeepsMask.finished_flag {m : RunMachine ν σ β ε δ ι α χ St}
     {f : RunFiber ν σ β ε δ ι α χ} {it : Iter ν σ β ε δ ι α χ St} (kept : IterKeepsMask m f it)
@@ -2000,7 +2019,7 @@ theorem maskRuns_decisionLift (interp : RunInterp ν σ β ε δ ι α χ St)
       ⟨kept, fun _ => ⟨clearsExited_of_noClear rfl, trivial⟩⟩
 
 /-- The command loop keeps the invariant at every fuel, from commands that meet the pending
-condition. Its consumer is a run entry such as `runFork`, which starts a loop outside a decision. -/
+condition. It is the field `loop` of `saved_mask_chain_runs`, by `Lift.driveState_lift`. -/
 @[semantics "scope-lifetime-finalization"]
 theorem driveState_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St)
     (evaluates : EvaluatorKeepsMask interp) (fuel : Nat) (bases : List Bool)
@@ -2074,6 +2093,21 @@ structure MaskChainRuns (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
         { m with
           fibers := m.fibers ++ [RunFiber.make ⟨m.nextId⟩ program flag budget context]
           nextId := m.nextId + 1 }
+  /-- A spawn extends the table by the flag that its mask mode gives the child. -/
+  spawn : ∀ (interp : RunInterp ν σ β ε δ ι α χ St) (bases : List Bool)
+    (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (site : List Nat),
+    MaskRuns bases m →
+      MaskRuns
+        (bases ++ [match options.maskMode with
+          | Supervision.MaskMode.interruptible => true
+          | Supervision.MaskMode.uninterruptible => false
+          | Supervision.MaskMode.inherit => parent.frame.interruptible])
+        (Machine.spawn interp m parent program options site).1
+  /-- **A live fiber has one entry in each table that holds the invariant.** -/
+  sameBase : ∀ (bases bases' : List Bool) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ), MaskRuns bases m → MaskRuns bases' m → f ∈ m.fibers →
+      f.exit = none → bases[f.id.value]? = bases'[f.id.value]?
   /-- **Each command keeps the invariant under the command condition** `ClearReady`. -/
   command : ∀ (interp : RunInterp ν σ β ε δ ι α χ St) (bases : List Bool)
     (m : RunMachine ν σ β ε δ ι α χ St) (c : Cmd ν σ β ε δ ι α) (rest : List (Cmd ν σ β ε δ ι α)),
@@ -2085,6 +2119,12 @@ structure MaskChainRuns (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
     Lift.StepKeeps basesOrder interp
       (Lift.Guarded (fun bases m => MaskRuns bases m) (fun _ m cmds => ClearsExited m cmds)
         (fun _ _ _ => True) ts)
+  /-- The command loop keeps the invariant at every fuel, from commands that meet the pending
+  condition. -/
+  loop : ∀ (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (bases : List Bool)
+    (m : RunMachine ν σ β ε δ ι α χ St) (cmds : List (Cmd ν σ β ε δ ι α)), MaskRuns bases m →
+      ClearsExited m cmds →
+        ∃ bases', bases <+: bases' ∧ MaskRuns bases' (driveState interp fuel m cmds).1
   /-- **Each decision keeps the invariant**, with no admission. -/
   decision : ∀ (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (bases : List Bool)
     (m : RunMachine ν σ β ε δ ι α χ St) (d : RunDecision ν σ β ε δ ι α), MaskRuns bases m →
@@ -2099,6 +2139,13 @@ structure MaskChainRuns (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
     (f : RunFiber ν σ β ε δ ι α χ) (y : Bool) (exit : Exit β ε δ ι α),
     (evaluatePrim interp m f y).outcome = Outcome.finished exit →
       (evaluatePrim interp m f y).fiber.frame.stack = []
+  /-- **The driver issues `Cmd.finish` at the base**, where the finished fiber has not exited. -/
+  finishedAtBase : ∀ (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (y : Bool) (base : Bool) (exit : Exit β ε δ ι α),
+    MaskChain base f.frame.interruptible f.frame.stack →
+      (evaluatePrim interp m f y).fiber.exit = none →
+        (evaluatePrim interp m f y).outcome = Outcome.finished exit →
+          (evaluatePrim interp m f y).fiber.frame.interruptible = base
 
 /-- **Each live fiber of a reached run holds the saved mask's chain at its start flag**, at the
 frame evaluator (concept `scope-lifetime-finalization`, requirement R11). It is the general form
@@ -2129,13 +2176,19 @@ theorem saved_mask_chain_runs (ν σ : Type u) (β : Type v) (ε δ ι α χ : T
   empty := maskRuns_empty
   start := fun bases m program flag budget context kept =>
     maskRuns_make bases m kept program flag budget context
+  spawn := fun interp bases m parent program options site kept =>
+    spawn_maskRuns interp bases m kept parent program options site
+  sameBase := fun _ _ _ _ kept kept' mem live => kept.entry_eq kept' mem live
   command := fun interp => driveStep_maskRuns interp (evaluatePrim_evaluatorKeepsMask interp)
   guarded := fun interp => maskRuns_stepKeeps interp (evaluatePrim_evaluatorKeepsMask interp)
+  loop := fun interp => driveState_maskRuns interp (evaluatePrim_evaluatorKeepsMask interp)
   decision := fun interp =>
     stepDecisionState_maskRuns interp (evaluatePrim_evaluatorKeepsMask interp)
   replay := fun interp => replayEval_maskRuns interp (evaluatePrim_evaluatorKeepsMask interp)
   finished := fun interp m f y _ finished =>
     (evaluatePrim_keepsMask interp m f y).finished_stack finished
+  finishedAtBase := fun interp m f y _ _ valid live finished =>
+    (evaluatePrim_keepsMask interp m f y).finished_flag valid live finished
 
 end Frames
 
