@@ -253,4 +253,53 @@ the counts of the axiom gate. A changed type hash after the build is a changed s
   `typeOfProgram_expandRefs` (`Laws/Program/ReferenceTyping.lean`) and
   `TypedProgram.expanded_refSites` (`Laws/Program/CheckedTyping.lean`). The checker
   (`typeOfProgram`, `Program/Typing.lean`) and the facade's refusal (`Api.explain`) make no
-  second test because of it.""
+  second test because of it."
+
+## 12. Addendum: the coordinator's answer, and one statement
+
+The coordinator answered the note's question on 2026-10-06, after commit `649ebab3`. Four
+points change the plan above.
+
+- **The header of `ReferenceExpansion.lean` is in the slice.** The comment edit of proposal P4
+  lands in the commit that changes the two definitions.
+- **The pinned plan status moves in that commit**, and the receipt names the edge that left.
+- **The baseline's two lines go by hand.** The coordinator confirms with
+  `make record-proof-style` at the merge.
+- **The facade's equation is a theorem**, if it adds no second copy of the old definition.
+
+The last point takes the route that seat REFS took for the checker. One commit states the
+equation with the new form on its right side, before any definition changes. Its proof there
+uses `expanded_refs_nil_of_wf`, so the tree of that commit proves that no refusal changes. The
+next commit changes the two definitions, and the proof becomes `rfl`. The statement holds the
+new form only, so the tree never holds a copy of the old definition.
+
+```lean
+theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
+    explain program table =
+      if program.layerRefsWF then
+        Effect4.Program.explain (nativeSignature table) [] program.expandRefs
+      else some ⟨[], .referencesIllFormed⟩
+```
+
+Its placement:
+
+- Concept: `initial-algebras-folds`; property: the reference expansion leaves no reference,
+  read at the facade's refusal.
+- Question: a step under the claim `reference-expansion-complete`, whose pointer stays
+  `expanded_refs_nil_of_wf`. Consumer: no proof in the tree. The coordinator asked for it as
+  the record that the facade may lose its arm, as `typeOfProgram_eq_if_refsWF` is the checker's.
+- Reach: the native signature at every row table, and every program. It has no premise.
+- Does not establish: that a refusal is right, any typing success, or any fact about a run.
+  After the definitions change, it is the definition's own equation.
+- Unlocks: nothing on the M5 to M7 spine. It serves R5.
+
+Its file is `src/Effect4/Laws/Api/Codegen.lean`, in the namespace `Effect4.Api`. The checker's
+equation is in `src/Effect4/Laws/Program/ReferenceTyping.lean`, which holds laws at every
+operation alphabet and does not import the facade. The measure (`SCRATCH/closure.py`): 166
+modules import that file, directly or through others, and 5 of them do not reach `Effect4.Api`
+today. A new import there puts the facade under the file and under those 5.
+`Laws/Api/Codegen.lean` imports the facade and reaches the expansion theorem already, so the
+theorem lands with no change of an import.
+
+The battery pins the new statement too, so it imports `Effect4.Laws.Api.Codegen`. Section 7's
+last row then names six statements.
