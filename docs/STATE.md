@@ -242,8 +242,9 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   (`Test/Program/SemaphoreScenarios.lean`). Its first three steps are merged (`c685aa71`):
   that battery, the packet `Test/contracts/semaphore.contract.md`, the model and its profile
   (`src/Effect4/Laws/Modules/Semaphore/`). Three theorems are proved there: `profile_closed`,
-  `visit_selects_earliest` and `visit_stops_iff`. The cell, the step terms and their
-  agreement follow.
+  `visit_selects_earliest` and `visit_stops_iff`. Its fourth step is merged too (`c17f0be7`):
+  the cell and five step terms (`src/Effect4/Modules/Semaphore/`), and six typing statements,
+  each proved at every scope of names. Each step's agreement with the model follows.
 
 Landed later on 2026-10-05:
 
