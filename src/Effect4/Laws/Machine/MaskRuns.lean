@@ -55,6 +55,10 @@ a finished frame's state at `evaluatePrim.finishFrame`.
   carries that fact through the observers' commands and their nested work.
 * **The lift** (`maskRuns_decisionLift`, `replayEval_maskRuns`). Each decision and each replay
   keeps the invariant, at a table that grows at its end. The lift asks for no admission.
+* **The entry `runSyncExit`** (`runSyncExit_maskRuns`). The root starts at flag true, the
+  command loop runs from commands that clear no fiber, and the root's flush is rounds of
+  `fireState`. No entry owes a premise for the command condition: the command loop discharges
+  it, and an entry's first commands hold no `Cmd.exitDone`.
 * **A finished frame at the machine** (`IterKeepsMask.finished_stack`,
   `IterKeepsMask.finished_flag`). The driver issues `Cmd.finish` at an empty stack, and at the
   base where the fiber is live. It is the completed exit's statement, at its event.
@@ -2085,6 +2089,60 @@ theorem replayEval_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St)
   Lift.replayEval_lift basesOrder (fun bases m => MaskRuns bases m) (fun _ _ _ => True) interp fuel
     (fun bases m d _ kept _ => stepDecisionState_maskRuns interp evaluates fuel bases m d kept)
     tape bases m kept (admittedReplay_true interp fuel tape m)
+
+/-- The root's flush keeps the invariant. Each round is one `fireState`, which
+`Lift.fireState_lift` covers. `Machine.Lift` states the flush of every armed dispatcher
+(`Lift.flushAllState_lift`), and it has no statement of the root's flush. A step of
+`runSyncExit_maskRuns`. -/
+theorem flushRootState_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St)
+    (evaluates : EvaluatorKeepsMask interp) (fuel : Nat) (root : FiberId) :
+    ∀ (rounds : Nat) (bases : List Bool) (m : RunMachine ν σ β ε δ ι α χ St), MaskRuns bases m →
+      ∃ bases', bases <+: bases' ∧ MaskRuns bases' (flushRootState interp fuel root rounds m).1
+  | 0, bases, m, kept => by
+    simp only [flushRootState]
+    split
+    · exact ⟨bases, List.prefix_refl _, kept⟩
+    · exact ⟨bases, List.prefix_refl _, kept⟩
+  | rounds + 1, bases, m, kept => by
+    simp only [flushRootState]
+    split
+    · exact ⟨bases, List.prefix_refl _, kept⟩
+    · split
+      · exact ⟨bases, List.prefix_refl _, kept⟩
+      · obtain ⟨bases₁, le₁, kept₁⟩ :=
+          Lift.fireState_lift (maskRuns_decisionLift interp evaluates) fuel bases m root kept
+        split
+        · obtain ⟨bases₂, le₂, kept₂⟩ :=
+            flushRootState_maskRuns interp evaluates fuel root rounds bases₁ _ kept₁
+          exact ⟨bases₂, List.IsPrefix.trans le₁ le₂, kept₂⟩
+        · exact ⟨bases₁, le₁, kept₁⟩
+
+/-- **The entry `runSyncExit` keeps the invariant, and its root starts at flag true.** `runFork`
+appends the root at the next id, at flag true. It runs the command loop from
+`[Cmd.evaluate root, Cmd.drainDue]`, which holds no `Cmd.exitDone`, so the pending condition
+holds there. Then `runSyncExit` flushes the root's dispatcher. The table gains the root's entry
+first.
+
+A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is
+`Api.runSync_maskRuns` (`Laws/Program/MaskRuns.lean`). -/
+@[semantics "scope-lifetime-finalization"]
+theorem runSyncExit_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St)
+    (evaluates : EvaluatorKeepsMask interp) (fuel : Nat) (bases : List Bool)
+    (m : RunMachine ν σ β ε δ ι α χ St) (program : Prim ν σ β ε δ ι α) (context : χ)
+    (kept : MaskRuns bases m) :
+    ∃ bases', (bases ++ [true]) <+: bases' ∧
+      MaskRuns bases' (runSyncExit interp fuel m program context).1 := by
+  have started := maskRuns_make bases m kept program true (interp.budgetOf context) context
+  obtain ⟨bases₁, le₁, kept₁⟩ := driveState_maskRuns interp evaluates fuel _ _
+    [Cmd.evaluate ⟨m.nextId⟩, Cmd.drainDue] started (clearsExited_of_noClear rfl)
+  obtain ⟨bases₂, le₂, kept₂⟩ :=
+    flushRootState_maskRuns interp evaluates fuel ⟨m.nextId⟩ fuel bases₁ _ kept₁
+  refine ⟨bases₂, List.IsPrefix.trans le₁ le₂, ?_⟩
+  unfold runSyncExit
+  dsimp only
+  split
+  · exact kept₂
+  · exact kept₂
 
 end Step
 

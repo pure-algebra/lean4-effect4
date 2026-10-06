@@ -1,5 +1,6 @@
 import Effect4.Laws.Machine.MaskRuns
 import Effect4.Laws.Program.MaskRuns
+import Effect4.Laws.Api.MaskRuns
 import Test.Program.MaskContract
 import ProofGraph.Plan
 
@@ -8,8 +9,9 @@ import ProofGraph.Plan
 
 `src/Effect4/Laws/Machine/MaskRuns.lean` carries the chain `FrameFiber.MaskChain` from the frame
 machine's pop along a run, and `src/Effect4/Laws/Program/MaskRuns.lean` states the lift at the
-compiled program's interpreter. This battery evaluates their statements on real fibers and on
-real machines.
+compiled program's interpreter. `src/Effect4/Laws/Api/MaskRuns.lean` states it at the session,
+the runner and the run API. This battery evaluates their statements on real fibers and on real
+machines.
 
 ## Part A: the frames
 
@@ -35,6 +37,10 @@ real machines.
   restore site, replayed by `Api.replay` under the native evaluator. Exactly one table of start
   flags fits every cut. On each pair of cuts, a fiber that is live in both with one stack has
   one flag.
+- **The other entries that return a machine**: `Api.runSync` and the checked replay on the same
+  program, with a refused decision's machine. Then a built program with two masked host calls,
+  through the journaled run API under a host, and through the runner's rows of bytes. At each
+  entry exactly one table fits every cut, so each other table is red there.
 
 Placement. Each guard is a finite instance of the proposed registry claim
 `saved-mask-chain-runs` (concept `scope-lifetime-finalization`, requirement R11), or of one of
@@ -611,6 +617,165 @@ example (p : Api.Program) (budget : Nat) :
     ∃ bases, [true] <+: bases ∧ MaskRuns bases (Api.replay p budget flushes [] [] fuel).machine :=
   Api.replay_maskRuns p budget flushes [] [] fuel
 
+/-! ### The other entries that return a machine
+
+`Api.runSync`, the checked replay, the journaled run API under a host, and the runner's rows of
+bytes. Each control cuts one run at each command budget below a bound and at the full budget.
+Exactly one table of start flags fits every cut, so each other table is red at some cut. -/
+
+/-- `Api.runSync`, cut at each command budget below `upTo` and at the full budget. -/
+private def syncCuts (src : Src NativeOp) (upTo : Nat) : List Api.Machine :=
+  match buildOf (mk src) with
+  | none => []
+  | some p => (List.range upTo ++ [fuel]).map fun n => (Api.runSync p n [] [] fuel).1
+
+-- `Api.runSync`: one table fits every cut, and a cut holds a child masked over both saved flags.
+#guard (syncCuts s6 160).length == 161
+#guard fitting (syncCuts s6 160) 3 == [[true, false, true]]
+#guard ((syncCuts s6 160).map shown).contains
+  [(0, true, [], false), (1, false, [true, false], false), (2, true, [], false)]
+#guard fitting (syncCuts s3 200) 3 == [[true, true, true]]
+
+/-- The machine that a checked replay returns: its reading's, or a refused decision's. A
+formation refusal returns none. -/
+private def machineOfChecked : Api.Inspection ⊕ Api.ReplayCheckRefusal → Option Api.Machine
+  | .inl reading => some reading.machine
+  | .inr (.decision _ _ _ machine) => some machine
+  | .inr (.formation _) => none
+
+private def kindOfChecked : Api.Inspection ⊕ Api.ReplayCheckRefusal → String
+  | .inl _ => "reading"
+  | .inr (.decision position _ _ _) => s!"refused at {position}"
+  | .inr (.formation _) => "formation"
+
+/-- A tape whose second decision the checked replay refuses: an answer for no call. -/
+private def stray : List Api.Decision :=
+  [Api.evaluate, .answerAsync Api.root 99 (.ofExit (.success (.nat 0))), Api.flush]
+
+private def checkedCuts (src : Src NativeOp) (tape : List Api.Decision) (upTo : Nat) :
+    List (Api.Inspection ⊕ Api.ReplayCheckRefusal) :=
+  match buildOf (mk src) with
+  | none => []
+  | some p => (List.range upTo ++ [fuel]).map fun n => Api.replayChecked p n tape
+
+-- The checked replay: a reading at each budget, and at the larger budgets the refused answer
+-- with the machine that it met. Each cut returns a machine, and one table fits them all.
+#guard ((checkedCuts s6 flushes 160).map kindOfChecked).eraseDups == ["reading"]
+#guard ((checkedCuts s6 stray 160).map kindOfChecked).eraseDups == ["reading", "refused at 1"]
+#guard ((checkedCuts s6 stray 160).filterMap machineOfChecked).length == 161
+#guard fitting ((checkedCuts s6 flushes 160).filterMap machineOfChecked) 3 ==
+  [[true, false, true]]
+#guard fitting ((checkedCuts s6 stray 160).filterMap machineOfChecked) 3 == [[true, false, true]]
+
+/-- A host row. -/
+private def wait : RowDef := Row.host "Host.wait" .nat .nat
+
+/-- Two masked host calls: a child that starts masked calls the host, and the root calls it
+inside a mask. Each fiber parks at its call with flag false. The root's stack holds the frame
+that returns true, and the child's holds none. -/
+private def calls : Module NativeOp :=
+  { rows := [wait]
+    main := eff do
+      let child ← fork (Row.call wait (nat 3)) maskedChild
+      let a ← uninterruptible (Row.call wait (nat 2))
+      let _ ← await child
+      return a }
+
+private def built : Option Api.Built := (Effect4.Api.Author.build calls).toOption
+
+/-- The host: whatever was asked for comes back as the answer. -/
+private def echo : Run.Reactor Unit := fun _ request st => some (.ofExit (.success request), st)
+
+/-- The run of the two calls at one command budget: opened, started, and driven by the host. -/
+private def driven (n : Nat) : Option Run :=
+  built.map fun b =>
+    (((Run.open b "calls" { fuel := n, compileFuel := fuel }).play Rows.start).drive echo ()).1
+
+/-- Each prefix of the driven journal, played from the opened run at one command budget. -/
+private def journalCuts (n : Nat) : List Api.Machine :=
+  match built, driven fuel with
+  | some b, some full =>
+    (List.range (full.journal.length + 1)).map fun k =>
+      ((Run.open b "calls" { fuel := n, compileFuel := fuel }).play (full.journal.take k)).machine
+  | _, _ => []
+
+-- The program builds, and the host drove eight rows: the start, two answers of three rows each,
+-- and the flush.
+#guard verdict calls == "built"
+#guard (driven fuel).map (·.phases) ==
+  some [.progressed, .bound, .preflight, .applied, .bound, .preflight, .applied, .progressed]
+-- After the start both fibers are parked at flag false: the root under its restoring frame, and
+-- the masked child over none. After the root's reply is applied, the root has left its mask.
+#guard (journalCuts fuel).map shown ==
+  [[(0, true, [], false)],
+   [(0, false, [true], false), (1, false, [], false)],
+   [(0, false, [true], false), (1, false, [], false)],
+   [(0, false, [true], false), (1, false, [], false)],
+   [(0, true, [], false), (1, false, [], false)],
+   [(0, true, [], false), (1, false, [], false)],
+   [(0, true, [], false), (1, false, [], false)],
+   [(0, true, [], true), (1, false, [], true)],
+   [(0, true, [], true), (1, false, [], true)]]
+-- The journaled run, at each command budget and each prefix of the journal: one table fits.
+#guard fitting ((List.range 60).flatMap journalCuts ++ journalCuts fuel) 2 == [[true, false]]
+-- A reading holds the run's machine.
+#guard (driven fuel).map (fun s => shown s.inspect.machine == shown s.machine) == some true
+
+/-- The same journal as rows of bytes, with one unreadable row at the end of each prefix. -/
+private def byteCuts (n : Nat) : List Api.Machine :=
+  match built, driven fuel with
+  | some b, some full =>
+    let rows := full.journal.map Api.Runner.commandBytes
+    (List.range (rows.length + 1)).map fun k =>
+      (Api.Runner.replayBytes (Run.open b "calls" { fuel := n, compileFuel := fuel }).runner
+        (rows.take k ++ [(default : Effect4.Store.Bytes)])).1.session.machine
+  | _, _ => []
+
+-- The unreadable row is no command. The rows of bytes reach the machines that the journal
+-- reaches, and one table fits every cut.
+#guard (Api.Runner.commandOf (default : Effect4.Store.Bytes)).isNone
+#guard (byteCuts fuel).map shown == (journalCuts fuel).map shown
+#guard fitting ((List.range 60).flatMap byteCuts ++ byteCuts fuel) 2 == [[true, false]]
+
+/-- `Api.runSync` at the program interface: it takes no premise on the program. -/
+example (p : Api.Program) (budget : Nat) :
+    ∃ bases, [true] <+: bases ∧ MaskRuns bases (Api.runSync p budget [] [] fuel).1 :=
+  Api.runSync_maskRuns p budget [] [] fuel
+
+/-- The checked replay: the machine of a refused decision holds the invariant. -/
+example (p : Api.Program) (budget position : Nat) (tape : List Api.Decision)
+    (input : Api.Decision) (why : Api.Refusal) (machine : Api.Machine)
+    (refused : Api.replayChecked p budget tape = .inr (.decision position input why machine)) :
+    ∃ bases, [true] <+: bases ∧ MaskRuns bases machine :=
+  (Api.replayChecked_maskRuns p budget tape [] []).2 position input why machine refused
+
+/-- The journaled run: each journal from an opened run, with no premise on the built program. -/
+example (b : Api.Built) (rows : List Api.Runner.Command) :
+    ∃ bases, [true] <+: bases ∧ MaskRuns bases ((Run.open b "calls").play rows).machine :=
+  Run.open_play_maskRuns b "calls" {} "" rows
+
+/-- The drive under a host, from a started run. -/
+example (b : Api.Built) (r : Run.Reactor Unit) :
+    ∃ bases, [true] <+: bases ∧
+      MaskRuns bases (((Run.open b "calls").play Rows.start).drive r ()).1.machine := by
+  obtain ⟨bases, le, kept⟩ := Run.open_play_maskRuns b "calls" {} "" Rows.start
+  obtain ⟨bases', le', kept'⟩ := Run.drive_maskRuns _ r () 64 bases kept
+  exact ⟨bases', List.IsPrefix.trans le le', kept'⟩
+
+/-- The rows of bytes, from a loaded runner. -/
+example (p : Api.Runner.Runner) (rows : List Effect4.Store.Bytes) (bases : List Bool)
+    (kept : MaskRuns bases p.session.machine) :
+    ∃ bases', bases <+: bases' ∧
+      MaskRuns bases' (Api.Runner.replayBytes p rows).1.session.machine :=
+  Api.Runner.replayBytes_maskRuns p rows bases kept
+
+/-- A reading holds the session's machine, so the invariant at a run is the invariant at its
+reading. -/
+example (s : Run) (bases : List Bool) (kept : MaskRuns bases s.machine) :
+    MaskRuns bases s.inspect.machine := by
+  rw [show s.inspect.machine = s.machine from Api.HostSession.inspect_machine s.session]
+  exact kept
+
 end Compiled
 
 /-! ## The statements of part B, pinned -/
@@ -690,6 +855,48 @@ it from their proofs. The counts are of this battery's tree, which holds no step
 /-- info: 'Effect4.Api.replay_maskRuns' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms Api.replay_maskRuns
+
+/-- info: 'Effect4.Api.runSync_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.runSync_maskRuns
+
+/-- info: 'Effect4.Api.replayChecked_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.replayChecked_maskRuns
+
+/--
+info: 'Effect4.Api.HostSession.applyPending_maskRuns' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Api.HostSession.applyPending_maskRuns
+
+/-- info: 'Effect4.Api.Runner.load_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.Runner.load_maskRuns
+
+/-- info: 'Effect4.Api.Runner.replay_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.Runner.replay_maskRuns
+
+/-- info: 'Effect4.Api.Runner.stepBytes_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.Runner.stepBytes_maskRuns
+
+/-- info: 'Effect4.Api.Runner.replayBytes_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.Runner.replayBytes_maskRuns
+
+/-- info: 'Effect4.Run.open_play_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Run.open_play_maskRuns
+
+/-- info: 'Effect4.Run.drive_maskRuns' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Run.drive_maskRuns
+
+/-- info: 'Effect4.Api.HostSession.inspect_machine' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.HostSession.inspect_machine
 
 /-- info: 'Effect4.Machine.saved_mask_chain_runs' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
