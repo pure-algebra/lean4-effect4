@@ -3,7 +3,7 @@ import Effect4.Program.Typing
 import Effect4.Program.Native
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.TyView
-import Effect4.Laws.Modules.Queue.Checking
+import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -23,12 +23,12 @@ typing.
   the instance of the form below at the statement's own names.
 - **At every scope** (`takeStep_types` and its four siblings): for every caller's terms that
   have the arguments' types and keep them under a fold's binders, the step has its stated type
-  (`Types`, `CapturedTy`, `src/Effect4/Laws/Modules/Queue/Checking.lean`). The wrapper applies
-  this form at its own scope, with no second elaboration.
+  (`Types`, `CapturedTy`, `src/Effect4/Laws/Modules/Checking.lean`). The wrapper applies this
+  form at its own scope, with no second elaboration.
 
 Their consumer is the wrapper's law, in the public path's slice: with a step's typing,
-`step_keeps_cell` (`src/Effect4/Laws/Modules/Queue/Steps.lean`) gives that one `Ref.modify` of
-the step keeps the cell a member of the cell's type. `typeAt_tree` recovers the tree and its
+`step_keeps_cell` (`src/Effect4/Laws/Modules/Store.lean`) gives that one `Ref.modify` of the
+step keeps the cell a member of the cell's type. `typeAt_tree` recovers the tree and its
 `termTy` equation from a statement at the step's own scope. Reach: the signature's atoms are the
 native table's, and no premise names `sig.constAtom`, because no step holds a string literal. A
 caller's term has its type under each literal flag, so a string literal is no caller's term
@@ -48,6 +48,7 @@ set_option autoImplicit false
 namespace Effect4.Queue.Model
 
 open Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
 /-- **A message type that the checker types in a cell.** It is its own normal form, so the
 cell's type at it is the type that the checker answers. The two record declarations that hold
@@ -64,41 +65,6 @@ instance (A : Ty) : Decidable (MessageTy A) :=
       Formation.check (Formation.sites false [] (.record (Queue.cellFields A))) = none ∧
       Formation.check (Formation.sites false [] (.record (Queue.offerFields A))) = none)
     ⟨fun h => ⟨h.1, h.2.1, h.2.2⟩, fun h => ⟨h.canonical, h.cell, h.offer⟩⟩
-
-/-- The checker's type of a source term, at a scope of names and their types. `none` where the
-source refuses or its tree has no type. -/
-def typeAt (sig : Signature NativeOp) (names : List String) (types : List Ty) (src : TermSrc) :
-    Option Ty :=
-  (src { names := names } []).toOption.bind (termTy sig types)
-
-/-- A source term that types at a scope of names, outside a const-generic position, has the
-checker's answer there. Each typing statement at a step's own scope is read so from the step's
-typing at every scope. -/
-theorem typeAt_of_types {sig : Signature NativeOp} {names : List String} {types : List Ty}
-    {src : TermSrc} {T : Ty} (typed : Types sig src { names := names } [] types false T) :
-    typeAt sig names types src = some T := by
-  obtain ⟨t, tree, checked⟩ := typed
-  show ((src { names := names } []).toOption.bind (termTy sig types)) = some T
-  rw [tree]
-  exact checked
-
-/-- **From a `typeAt` answer to the tree's typing.** The source elaborates at the scope of
-names, and the checker types its tree: the elaborated tree, its elaboration equation and its
-`termTy` equation. Placement: concept `store-typing`, requirement R4, a helper of the wrapper's
-law. Its consumer is the typing premise of `step_keeps_cell`
-(`src/Effect4/Laws/Modules/Queue/Steps.lean`). It reads `typeAt`'s definition, and it
-establishes nothing of a wrapper. -/
-theorem typeAt_tree {sig : Signature NativeOp} {names : List String} {types : List Ty}
-    {src : TermSrc} {T : Ty} (typed : typeAt sig names types src = some T) :
-    ∃ t, src { names := names } [] = .ok t ∧ termTy sig types t = some T := by
-  unfold typeAt at typed
-  cases tree : src { names := names } [] with
-  | error refusal =>
-    rw [tree] at typed
-    exact absurd typed (Option.some_ne_none T).symm
-  | ok t =>
-    rw [tree] at typed
-    exact ⟨t, rfl, typed⟩
 
 /-! ## The types of the steps' replies -/
 
@@ -124,7 +90,7 @@ theorem offerTy_normal {A : Ty} (canonical : A.normalize = A) :
   show Ty.normalize (.record _) = _
   rw [Ty.normalize_record]
   show Ty.record [("batch", false, Ty.normalize .bool), ("hint", false, Ty.normalize Queue.answerTy),
-    ("id", false, Ty.normalize Queue.idTy), ("rest", false, Ty.normalize (.list A))] = _
+    ("id", false, Ty.normalize idTy), ("rest", false, Ty.normalize (.list A))] = _
   have rest : Ty.normalize (.list A) = .list A := by
     show Ty.list (Ty.normalize A) = _
     rw [canonical]
@@ -157,13 +123,6 @@ theorem cell_msgsTy {A : Ty} (canonical : A.normalize = A) :
   rw [Ty.join_never]
   show some (Ty.list (Ty.normalize A)) = _
   rw [canonical]
-
-/-- The empty list is below every list type. -/
-theorem sub_nil_list (T : Ty) : Ty.sub (.list .never) (.list T) = true := by
-  rw [Ty.sub_args_list]
-  show (Ty.sub .never T && true) = true
-  rw [Ty.OrderProof.sub_never]
-  rfl
 
 /-- The cell's written declaration normalizes to the cell's type. -/
 theorem cellFields_normal {A : Ty} (canonical : A.normalize = A) :
@@ -199,7 +158,7 @@ theorem offerFields_normal {A : Ty} (canonical : A.normalize = A) :
     Ty.normalize (.record (Queue.offerFields A)) = Queue.offerTy A := by
   rw [Ty.normalize_record]
   show Ty.record [("batch", false, Ty.normalize .bool),
-    ("hint", false, Ty.normalize Queue.answerTy), ("id", false, Ty.normalize Queue.idTy),
+    ("hint", false, Ty.normalize Queue.answerTy), ("id", false, Ty.normalize idTy),
     ("rest", false, Ty.normalize (.list A))] = _
   have rest : Ty.normalize (.list A) = .list A := Ty.normalize_list_canonical canonical
   rw [rest]
@@ -218,14 +177,14 @@ theorem cell_takersTy {A : Ty} (canonical : A.normalize = A) :
   Record.fieldType_normal (cellTy_normal canonical) rfl
 
 theorem offer_idTy {A : Ty} (canonical : A.normalize = A) :
-    Record.fieldType false (Queue.offerTy A) "id" = some Queue.idTy :=
+    Record.fieldType false (Queue.offerTy A) "id" = some idTy :=
   Record.fieldType_normal (offerTy_normal canonical) rfl
 
 theorem offer_restTy {A : Ty} (canonical : A.normalize = A) :
     Record.fieldType false (Queue.offerTy A) "rest" = some (.list A) :=
   Record.fieldType_normal (offerTy_normal canonical) rfl
 
-theorem taker_idTy : Record.fieldType false Queue.takerTy "id" = some Queue.idTy :=
+theorem taker_idTy : Record.fieldType false Queue.takerTy "id" = some idTy :=
   Record.fieldType_normal takerTy_normal rfl
 
 /-- The buffer's overwrite keeps the cell's type. -/
@@ -246,14 +205,14 @@ theorem cell_setOffersTy {A : Ty} (canonical : A.normalize = A) :
 
 /-- A taker's construction, each field at its declared type, answers a taker's type. -/
 theorem taker_checkTy :
-    Record.check Queue.takerFields ["id", "hint"] [Queue.idTy, Queue.idTy] =
+    Record.check Queue.takerFields ["id", "hint"] [idTy, idTy] =
       some Queue.takerTy :=
   Record.check_declared (fields := Queue.takerFields) (by decide)
 
 /-- An offer's construction, each field at its declared type, answers an offer's type. -/
 theorem offer_checkTy {A : Ty} (canonical : A.normalize = A) :
     Record.check (Queue.offerFields A) ["id", "hint", "batch", "rest"]
-        [Queue.idTy, Queue.answerTy, .bool, .list A] =
+        [idTy, Queue.answerTy, .bool, .list A] =
       some (Queue.offerTy A) := by
   have distinct : ((Queue.offerFields A).map Prod.fst).Nodup := by
     show (["id", "hint", "batch", "rest"] : List String).Nodup
@@ -355,15 +314,15 @@ theorem types_setOffers {A : Ty} (canonical : A.normalize = A) {s v : TermSrc}
   fun _ => types_recordSet (hs false) (hv true) (cell_setOffersTy canonical)
 
 /-- A waiting taker's record, built from an identity and a hint. -/
-theorem types_mkTaker {id hint : TermSrc} (hid : TypesEach sig id env path types Queue.idTy)
-    (hhint : TypesEach sig hint env path types Queue.idTy) :
+theorem types_mkTaker {id hint : TermSrc} (hid : TypesEach sig id env path types idTy)
+    (hhint : TypesEach sig hint env path types idTy) :
     TypesEach sig (Queue.mkTaker id hint) env path types Queue.takerTy :=
   fun _ => types_record takerFields_formed (.cons (hid true) (.cons (hhint true) .nil))
     taker_checkTy
 
 /-- A pending offer's record. -/
 theorem types_mkOffer {A : Ty} (message : MessageTy A) {id hint batch rest : TermSrc}
-    (hid : TypesEach sig id env path types Queue.idTy)
+    (hid : TypesEach sig id env path types idTy)
     (hhint : TypesEach sig hint env path types Queue.answerTy)
     (hbatch : TypesEach sig batch env path types .bool)
     (hrest : TypesEach sig rest env path types (.list A)) :
@@ -383,21 +342,10 @@ theorem types_wake {takers msgs : TermSrc} {T M : Ty}
   types_ifT atoms (types_isEmpty atoms hmsgs) (types_noneOf atoms htakers)
     (types_take atoms htakers (types_nat 1))
 
-/-- The identity of a folded record against the request's, under the fold's binders: the
-record's `id` field and the request's identity are two `Deferred` handles. -/
-theorem types_sameItem {id : TermSrc} {E accT a e b f : Ty}
-    (depth : types.length = env.names.length)
-    (idField : Record.fieldType false E "id" = some (.deferredOf a e))
-    (hid : CapturedTy sig id env path types (.deferredOf b f)) :
-    TypesEach sig (Queue.same (field (minted (env.mint "item")) "id") id)
-      (env.push [env.mint "acc", env.mint "item"]) path (types ++ [accT, E]) .bool :=
-  types_same atoms (fun _ => types_field (types_minted_item depth path accT E false) idField)
-    (hid.underFold accT E)
-
 /-- `enrolled`: whether the request waits among the takers. -/
 theorem types_enrolled {takers id : TermSrc} (depth : types.length = env.names.length)
     (htakers : TypesEach sig takers env path types (.list Queue.takerTy))
-    (hid : CapturedTy sig id env path types Queue.idTy) :
+    (hid : CapturedTy sig id env path types idTy) :
     TypesEach sig (Queue.enrolled takers id) env path types .bool :=
   fun _ => types_foldWith_same (htakers false) (types_bool false false)
     (types_orT atoms (types_minted_acc depth path .bool Queue.takerTy)
@@ -407,36 +355,17 @@ theorem types_enrolled {takers id : TermSrc} (depth : types.length = env.names.l
 /-- `isHead`: whether the request is the earliest taker. -/
 theorem types_isHead {takers id : TermSrc} (depth : types.length = env.names.length)
     (htakers : TypesEach sig takers env path types (.list Queue.takerTy))
-    (hid : CapturedTy sig id env path types Queue.idTy) :
+    (hid : CapturedTy sig id env path types idTy) :
     TypesEach sig (Queue.isHead takers id) env path types .bool :=
   fun _ => types_foldWith_same (types_take atoms htakers (types_nat 1) false)
     (types_bool false false)
     (types_sameItem (accT := .bool) atoms depth taker_idTy hid false)
     (Ty.subN_refl .bool)
 
-/-- The fold that drops the entries of one identity types at the list's own type, where the
-entries' type is its own normal form and holds a `Deferred` identity. The body of
-`removeTaker` and of `removeOffer`. -/
-theorem types_removeById {entries id : TermSrc} {E a e b f : Ty}
-    (depth : types.length = env.names.length) (canonical : E.normalize = E)
-    (idField : Record.fieldType false E "id" = some (.deferredOf a e))
-    (hentries : TypesEach sig entries env path types (.list E))
-    (hid : CapturedTy sig id env path types (.deferredOf b f)) :
-    TypesEach sig
-      (foldWith entries (Queue.noneOf entries) fun kept entry =>
-        Queue.ifT (Queue.same (field entry "id") id) kept (Queue.snoc kept entry))
-      env path types (.list E) :=
-  fun _ => types_foldWith_same (hentries false) (types_noneOf atoms hentries false)
-    (types_ifT atoms (types_sameItem atoms depth idField hid)
-      (types_minted_acc depth path (.list E) E)
-      (types_snoc atoms canonical (types_minted_acc depth path (.list E) E)
-        (types_minted_item depth path (.list E) E)) false)
-    (Ty.subN_refl (.list E))
-
 /-- `removeTaker`: the takers without the request. -/
 theorem types_removeTaker {takers id : TermSrc} (depth : types.length = env.names.length)
     (htakers : TypesEach sig takers env path types (.list Queue.takerTy))
-    (hid : CapturedTy sig id env path types Queue.idTy) :
+    (hid : CapturedTy sig id env path types idTy) :
     TypesEach sig (Queue.removeTaker takers id) env path types (.list Queue.takerTy) :=
   types_removeById atoms depth takerTy_normal taker_idTy htakers hid
 
@@ -444,7 +373,7 @@ theorem types_removeTaker {takers id : TermSrc} (depth : types.length = env.name
 theorem types_removeOffer {A : Ty} (canonical : A.normalize = A) {offers id : TermSrc}
     (depth : types.length = env.names.length)
     (hoffers : TypesEach sig offers env path types (.list (Queue.offerTy A)))
-    (hid : CapturedTy sig id env path types Queue.idTy) :
+    (hid : CapturedTy sig id env path types idTy) :
     TypesEach sig (Queue.removeOffer offers id) env path types (.list (Queue.offerTy A)) :=
   types_removeById atoms depth (offerTy_normal canonical) (offer_idTy canonical) hoffers hid
 
@@ -452,8 +381,8 @@ theorem types_removeOffer {A : Ty} (canonical : A.normalize = A) {offers id : Te
 hint both stand in the fold's body. -/
 theorem types_renewHint {takers id hint : TermSrc} (depth : types.length = env.names.length)
     (htakers : TypesEach sig takers env path types (.list Queue.takerTy))
-    (hid : CapturedTy sig id env path types Queue.idTy)
-    (hhint : CapturedTy sig hint env path types Queue.idTy) :
+    (hid : CapturedTy sig id env path types idTy)
+    (hhint : CapturedTy sig hint env path types idTy) :
     TypesEach sig (Queue.renewHint takers id hint) env path types (.list Queue.takerTy) :=
   fun _ => types_foldWith_same (htakers false) (types_noneOf atoms htakers false)
     (types_snoc atoms takerTy_normal
@@ -517,7 +446,7 @@ scope, and the statement of the same step. -/
 theorem withdrawOffer_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
     {types : List Ty} (depth : types.length = env.names.length)
-    (typesId : CapturedTy sig idSrc env path types Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.withdrawOffer A idSrc cellSrc) env path types
       (.prod wakeReplyTy (Queue.cellTy A)) := by
@@ -534,7 +463,7 @@ theorem withdrawOffer_types (sig : Signature NativeOp) (atoms : sig.atomOf = nat
 theorem withdrawTake_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
     {types : List Ty} (depth : types.length = env.names.length)
-    (typesId : CapturedTy sig idSrc env path types Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.withdrawTake A idSrc cellSrc) env path types
       (.prod wakeReplyTy (Queue.cellTy A)) := by
@@ -590,7 +519,7 @@ each argument is typed at the scope alone. The message has the cell's message ty
 theorem offerStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (message : MessageTy A) {idSrc hintSrc messageSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {types : List Ty}
-    (typesId : TypesEach sig idSrc env path types Queue.idTy)
+    (typesId : TypesEach sig idSrc env path types idTy)
     (typesHint : TypesEach sig hintSrc env path types Queue.answerTy)
     (typesMessage : TypesEach sig messageSrc env path types A)
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
@@ -638,8 +567,8 @@ and the arm that waits answers none: the step has the first arm's type. -/
 theorem takeStep_types (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (message : MessageTy A) {idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
     {types : List Ty} (depth : types.length = env.names.length)
-    (typesId : CapturedTy sig idSrc env path types Queue.idTy)
-    (typesHint : CapturedTy sig hintSrc env path types Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path types idTy)
+    (typesHint : CapturedTy sig hintSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types (Queue.cellTy A)) :
     TypesEach sig (Queue.takeStep A idSrc hintSrc cellSrc) env path types
       (.prod (takeReplyTy A) (Queue.cellTy A)) := by
@@ -736,13 +665,13 @@ the cell's value, it answers the pair of a take's reply and the cell's next valu
 @[semantics "store-typing" (requirement := R4)]
 theorem takeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) :
-    typeAt sig ["id", "hint", "s"] [Queue.idTy, Queue.idTy, Queue.cellTy A]
+    typeAt sig ["id", "hint", "s"] [idTy, idTy, Queue.cellTy A]
         (Queue.takeStep A (var "id") (var "hint") (var "s")) =
       some (.prod (takeReplyTy A) (Queue.cellTy A)) := by
   apply typeAt_of_types
   exact takeStep_types sig atoms A message (idSrc := var "id") (hintSrc := var "hint")
     (cellSrc := var "s") (env := { names := ["id", "hint", "s"] }) (path := [])
-    (types := [Queue.idTy, Queue.idTy, Queue.cellTy A]) rfl (capturedTy_var rfl rfl rfl)
+    (types := [idTy, idTy, Queue.cellTy A]) rfl (capturedTy_var rfl rfl rfl)
     (capturedTy_var rfl rfl rfl) (types_var rfl rfl rfl) false
 
 /-- **The offer step is typed at the cell's type**: under the request's identity, its hint at
@@ -750,13 +679,13 @@ the answer's type, the message and the cell's value. -/
 @[semantics "store-typing" (requirement := R4)]
 theorem offerStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) :
-    typeAt sig ["id", "hint", "a", "s"] [Queue.idTy, Queue.answerTy, A, Queue.cellTy A]
+    typeAt sig ["id", "hint", "a", "s"] [idTy, Queue.answerTy, A, Queue.cellTy A]
         (Queue.offerStep A (var "id") (var "hint") (var "a") (var "s")) =
       some (.prod offerReplyTy (Queue.cellTy A)) := by
   apply typeAt_of_types
   exact offerStep_types sig atoms A message (idSrc := var "id") (hintSrc := var "hint")
     (messageSrc := var "a") (cellSrc := var "s") (env := { names := ["id", "hint", "a", "s"] })
-    (path := []) (types := [Queue.idTy, Queue.answerTy, A, Queue.cellTy A])
+    (path := []) (types := [idTy, Queue.answerTy, A, Queue.cellTy A])
     (types_var rfl rfl rfl) (types_var rfl rfl rfl) (types_var rfl rfl rfl)
     (types_var rfl rfl rfl) false
 
@@ -796,24 +725,24 @@ theorem sizeStep_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAt
 @[semantics "store-typing" (requirement := R4)]
 theorem withdrawTake_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) :
-    typeAt sig ["id", "s"] [Queue.idTy, Queue.cellTy A]
+    typeAt sig ["id", "s"] [idTy, Queue.cellTy A]
         (Queue.withdrawTake A (var "id") (var "s")) =
       some (.prod wakeReplyTy (Queue.cellTy A)) := by
   apply typeAt_of_types
   exact withdrawTake_types sig atoms A message (idSrc := var "id") (cellSrc := var "s")
-    (env := { names := ["id", "s"] }) (path := []) (types := [Queue.idTy, Queue.cellTy A]) rfl
+    (env := { names := ["id", "s"] }) (path := []) (types := [idTy, Queue.cellTy A]) rfl
     (capturedTy_var rfl rfl rfl) (types_var rfl rfl rfl) false
 
 /-- **The withdrawal of an offer is typed at the cell's type.** -/
 @[semantics "store-typing" (requirement := R4)]
 theorem withdrawOffer_typed (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) :
-    typeAt sig ["id", "s"] [Queue.idTy, Queue.cellTy A]
+    typeAt sig ["id", "s"] [idTy, Queue.cellTy A]
         (Queue.withdrawOffer A (var "id") (var "s")) =
       some (.prod wakeReplyTy (Queue.cellTy A)) := by
   apply typeAt_of_types
   exact withdrawOffer_types sig atoms A message (idSrc := var "id") (cellSrc := var "s")
-    (env := { names := ["id", "s"] }) (path := []) (types := [Queue.idTy, Queue.cellTy A]) rfl
+    (env := { names := ["id", "s"] }) (path := []) (types := [idTy, Queue.cellTy A]) rfl
     (capturedTy_var rfl rfl rfl) (types_var rfl rfl rfl) false
 
 end Effect4.Queue.Model

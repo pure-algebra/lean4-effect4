@@ -25,13 +25,13 @@ types to the whole's type. Each rule is stated once, and it names no module.
 - **Tuples.** `Tuple.typeAt` at a tuple type in normal form, for a reply that is read by
   position.
 
-Placement. Concept `store-typing`, requirement R4. Every rule here is a helper of the five
-typing statements of the Queue's steps (`src/Effect4/Laws/Modules/Queue/Typing.lean`), and each
-docstring names a step that uses it. The two rules of a positional read are the exception:
-their consumer is the wrapper's law, which reads a step's reply by position. The rules reach
-the statements through the judgment `Types` and its builder lemmas
-(`src/Effect4/Laws/Modules/Queue/Checking.lean`). A second composed module takes the same
-rules.
+Placement. Concept `store-typing`, requirement R4. Every rule here is a helper of the typing
+statements of a composed module's steps: the Queue's
+(`src/Effect4/Laws/Modules/Queue/Typing.lean`), where each docstring names a step that uses
+it, and Semaphore's (`src/Effect4/Laws/Modules/Semaphore/Typing.lean`). The two rules of a
+positional read are the exception: their consumer is the wrapper's law, which reads a step's
+reply by position. The rules reach the statements through the judgment `Types` and its builder
+lemmas (`src/Effect4/Laws/Modules/Checking.lean`).
 
 Reach. Each rule is an equation of the checker. `Ty.sub` and `Ty.normalize` are well-founded,
 so a rule rewrites with their lemmas and never by evaluation at a symbolic type. The rules
@@ -266,6 +266,10 @@ theorem nativeAtomTy_none : nativeAtomTy "none" [] = some (.option .never) := rf
 
 theorem nativeAtomTy_isZero : nativeAtomTy "isZero" [.nat] = some .bool :=
   NativeAtom.monoApply_self [.nat] .bool
+
+/-- `add` on two numbers. A fixed signature at its own parameters. -/
+theorem nativeAtomTy_add : nativeAtomTy "add" [.nat, .nat] = some .nat :=
+  NativeAtom.monoApply_self [.nat, .nat] .nat
 
 theorem nativeAtomTy_not : nativeAtomTy "not" [.bool] = some .bool :=
   NativeAtom.monoApply_self [.bool] .bool

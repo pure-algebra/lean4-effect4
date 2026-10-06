@@ -52,6 +52,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Denote Effect4.Program.Agreement
 open Effect4.Queue.Model
 open Test.Program.QueueRelation (decode msg)
+open Effect4.Modules
 
 /-! ## The programs -/
 
@@ -88,7 +89,7 @@ def stepThen (q : TermSrc) (step : TermSrc → TermSrc) : Src NativeOp := eff do
 /-- A step whose entry joins a log. -/
 def logged (q log : TermSrc) (step : TermSrc → TermSrc) : Src NativeOp := eff do
   let e ← stepThen q step
-  Ref.update "l" (Queue.snoc (var "l") e) log
+  Ref.update "l" (snoc (var "l") e) log
 
 /-- The shared setup: the cell at capacity one, ten handles, and the first four operations. The
 empty logs take their types from the first entry. -/
@@ -108,9 +109,9 @@ def setup (rest : Handles → TermSrc → Src NativeOp) : Src NativeOp := eff do
   let e2 ← stepThen q (Queue.takeStep .nat b hb)
   let e3 ← stepThen q (Queue.offerStep .nat p hp (nat 10))
   let e4 ← stepThen q (Queue.offerStep .nat o ho (nat 20))
-  let takes ← Ref.make (app "take" [app "cons" [e1, Queue.nilT], nat 0])
+  let takes ← Ref.make (app "take" [app "cons" [e1, nilT], nat 0])
   let withdrawals ← Ref.make (app "take" [app "cons"
-    [app "pair" [Queue.noneOf (field (app "snd" [e1]) "takers"), app "snd" [e1]], Queue.nilT],
+    [app "pair" [noneOf (field (app "snd" [e1]) "takers"), app "snd" [e1]], nilT],
     nat 0])
   rest ⟨q, takes, withdrawals, a, b, o, ha2, hb2⟩ (tuple [e1, e2, e3, e4])
 
@@ -139,7 +140,7 @@ def sequence (w : Withdrawal) : Src NativeOp :=
     observe h first
 
 /-- The first of two terms at round zero, and the second after it. -/
-def pick (i first second : TermSrc) : TermSrc := Queue.ifT (app "isZero" [i]) first second
+def pick (i first second : TermSrc) : TermSrc := ifT (app "isZero" [i]) first second
 
 /-- **The loop**: the two consuming takes as two rounds of one loop over the takers. The
 request's identity and its hint are terms over the loop's counter. -/

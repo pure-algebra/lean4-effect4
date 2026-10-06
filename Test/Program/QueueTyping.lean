@@ -2,6 +2,7 @@ import Effect4.Modules.Queue.Steps
 import Effect4.Program.Authoring.Sugar
 import Effect4.Laws.Modules.Queue.Typing
 import Effect4.Laws.Modules.Queue.Steps
+import Effect4.Laws.Modules.Store
 import ProofGraph.Plan
 
 /-!
@@ -10,8 +11,8 @@ import ProofGraph.Plan
 The five steps of a `Ref.modify` are typed at every message type that the checker types in a
 cell (`src/Effect4/Laws/Modules/Queue/Typing.lean`). The proofs read the checker's rules in
 their introduction form (`src/Effect4/Laws/Program/Typing/TermIntro.lean`) through the judgment
-`Types` (`src/Effect4/Laws/Modules/Queue/Checking.lean`). This battery holds what the theorems
-do not say by themselves:
+`Types` (`src/Effect4/Laws/Modules/Checking.lean`). This battery holds what the theorems do not
+say by themselves:
 
 1. the statements at a record message type and at a message type that holds a handle;
 2. a step's typing at a scope that is not the statement's own: a binder before the arguments,
@@ -36,6 +37,7 @@ namespace Test.Program.QueueTyping
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Queue.Model
+open Effect4.Modules
 
 /-- The checker's type of a source term at a scope, at the native signature. -/
 def typeOf (names : List String) (types : List Ty) (src : TermSrc) : Option Ty :=
@@ -57,24 +59,24 @@ example : MessageTy handleMessage := by decide
 
 example :
     typeAt nativeSignature ["id", "hint", "s"]
-        [Queue.idTy, Queue.idTy, Queue.cellTy recordMessage]
+        [idTy, idTy, Queue.cellTy recordMessage]
         (Queue.takeStep recordMessage (var "id") (var "hint") (var "s")) =
       some (.prod (takeReplyTy recordMessage) (Queue.cellTy recordMessage)) :=
   takeStep_typed nativeSignature rfl recordMessage (by decide)
 
 example :
     typeAt nativeSignature ["id", "hint", "a", "s"]
-        [Queue.idTy, Queue.answerTy, handleMessage, Queue.cellTy handleMessage]
+        [idTy, Queue.answerTy, handleMessage, Queue.cellTy handleMessage]
         (Queue.offerStep handleMessage (var "id") (var "hint") (var "a") (var "s")) =
       some (.prod offerReplyTy (Queue.cellTy handleMessage)) :=
   offerStep_typed nativeSignature rfl handleMessage (by decide)
 
 -- The checker's own answer at both types, by evaluation.
-#guard decide (typeOf ["id", "hint", "s"] [Queue.idTy, Queue.idTy, Queue.cellTy recordMessage]
+#guard decide (typeOf ["id", "hint", "s"] [idTy, idTy, Queue.cellTy recordMessage]
     (Queue.takeStep recordMessage (var "id") (var "hint") (var "s")) =
   some (.prod (takeReplyTy recordMessage) (Queue.cellTy recordMessage)))
 #guard decide (typeOf ["id", "hint", "a", "s"]
-    [Queue.idTy, Queue.answerTy, handleMessage, Queue.cellTy handleMessage]
+    [idTy, Queue.answerTy, handleMessage, Queue.cellTy handleMessage]
     (Queue.offerStep handleMessage (var "id") (var "hint") (var "a") (var "s")) =
   some (.prod offerReplyTy (Queue.cellTy handleMessage)))
 
@@ -87,13 +89,13 @@ statement's own. Weakening is not used: the theorem types the source at the new 
 /-- A binder before the arguments: the identity is the scope's second name. -/
 example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (message : MessageTy A) :
-    typeAt sig ["before", "id", "s"] [.nat, Queue.idTy, Queue.cellTy A]
+    typeAt sig ["before", "id", "s"] [.nat, idTy, Queue.cellTy A]
         (Queue.withdrawOffer A (var "id") (var "s")) =
       some (.prod wakeReplyTy (Queue.cellTy A)) := by
   apply typeAt_of_types
   exact withdrawOffer_types sig atoms A message (idSrc := var "id") (cellSrc := var "s")
     (env := { names := ["before", "id", "s"] }) (path := [])
-    (types := [.nat, Queue.idTy, Queue.cellTy A]) rfl (capturedTy_var rfl rfl rfl)
+    (types := [.nat, idTy, Queue.cellTy A]) rfl (capturedTy_var rfl rfl rfl)
     (types_var rfl rfl rfl) false
 
 /-- A caller's term that is no variable: the identity is a field of a caller's record. The
@@ -110,7 +112,7 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (capturedTy_field (capturedTy_var rfl rfl rfl) taker_idTy) (types_var rfl rfl rfl) false
 
 -- The checker's own answer at both scopes, at number messages.
-#guard decide (typeOf ["before", "id", "s"] [.nat, Queue.idTy, Queue.cellTy .nat]
+#guard decide (typeOf ["before", "id", "s"] [.nat, idTy, Queue.cellTy .nat]
     (Queue.withdrawOffer .nat (var "id") (var "s")) =
   some (.prod wakeReplyTy (Queue.cellTy .nat)))
 #guard decide (typeOf ["taker", "s"] [Queue.takerTy, Queue.cellTy .nat]
@@ -118,7 +120,7 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
   some (.prod wakeReplyTy (Queue.cellTy .nat)))
 -- Red control of the scope: the identity at the scope's first name is a number, and the step
 -- has no type.
-#guard (typeOf ["before", "id", "s"] [.nat, Queue.idTy, Queue.cellTy .nat]
+#guard (typeOf ["before", "id", "s"] [.nat, idTy, Queue.cellTy .nat]
     (Queue.withdrawOffer .nat (var "before") (var "s"))).isNone
 
 /-! ## 3. An identity that `bindWith` binds
@@ -195,13 +197,13 @@ example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint :
 example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (message : MessageTy A) :
     typeAt sig [cellName, identityName, hintName, "s"]
-        [.refOf (Queue.cellTy A), Queue.idTy, Queue.idTy, Queue.cellTy A]
+        [.refOf (Queue.cellTy A), idTy, idTy, Queue.cellTy A]
         (Queue.takeStep A (minted identityName) (minted hintName) (var "s")) =
       some (.prod (takeReplyTy A) (Queue.cellTy A)) := by
   apply typeAt_of_types
   exact takeStep_types sig atoms A message (idSrc := minted identityName)
     (hintSrc := minted hintName) (cellSrc := var "s") (env := takeScope) (path := [])
-    (types := [.refOf (Queue.cellTy A), Queue.idTy, Queue.idTy, Queue.cellTy A]) rfl
+    (types := [.refOf (Queue.cellTy A), idTy, idTy, Queue.cellTy A]) rfl
     (capturedTy_answer (outer := { names := [cellName] }) takeScope_identity rfl)
     (capturedTy_answer (outer := { names := [cellName, identityName] }) takeScope_hint rfl)
     (types_var rfl takeScope_cell rfl) false
@@ -225,7 +227,7 @@ def modifyTerm : Eff NativeOp → Option Term
   (Queue.takeStep .nat (minted identityName) (minted hintName) (var "s") takeScope []).toOption
 -- The checker types the step's term there.
 #guard decide (typeOf takeScope.names
-    [.refOf (Queue.cellTy .nat), Queue.idTy, Queue.idTy, Queue.cellTy .nat]
+    [.refOf (Queue.cellTy .nat), idTy, idTy, Queue.cellTy .nat]
     (Queue.takeStep .nat (minted identityName) (minted hintName) (var "s")) =
   some (.prod (takeReplyTy .nat) (Queue.cellTy .nat)))
 -- Red control of the depth: two `bindWith`s at one depth would mint one name, and the first
@@ -249,14 +251,14 @@ def clash : Env := { names := ["_%acc1"] }
 #guard (minted "_%acc1" (clash.push [clash.mint "acc", clash.mint "item"]) []).toOption.bind
   (evalTerm [Val.nat 7, Val.nat 100, Val.nat 5]) == some (Val.nat 100)
 -- So a fold whose body answers the name answers its initial value, and not the caller's.
-#guard ((foldWith (app "cons" [nat 1, Queue.nilT]) (nat 100) fun _ _ => minted "_%acc1")
+#guard ((foldWith (app "cons" [nat 1, nilT]) (nat 100) fun _ _ => minted "_%acc1")
   clash []).toOption.bind (evalTerm [Val.nat 7]) == some (Val.nat 100)
 -- The checker types the fold at a number under both readings.
 #guard decide (typeOf ["_%acc1"] [.nat]
-    (foldWith (app "cons" [nat 1, Queue.nilT]) (nat 100) fun _ _ => minted "_%acc1") =
+    (foldWith (app "cons" [nat 1, nilT]) (nat 100) fun _ _ => minted "_%acc1") =
   some .nat)
 -- A name that `bindWith` mints is no such name: the same fold answers the caller's value.
-#guard ((foldWith (app "cons" [nat 1, Queue.nilT]) (nat 100) fun _ _ => minted cellName)
+#guard ((foldWith (app "cons" [nat 1, nilT]) (nat 100) fun _ _ => minted cellName)
   { names := [cellName] } []).toOption.bind (evalTerm [Val.nat 7]) == some (Val.nat 7)
 
 /-! ## 4. The red controls of the new rules
@@ -271,10 +273,10 @@ The fold's introduction rule asks that the body's type is below the accumulator'
 type of a list of nothing, and the body answers a list of numbers. -/
 
 #guard (typeOf ["xs"] [.list .nat]
-  (foldWith (var "xs") Queue.nilT fun acc item => app "cons" [item, acc])).isNone
+  (foldWith (var "xs") nilT fun acc item => app "cons" [item, acc])).isNone
 -- With the accumulator's type stated, the same fold is typed.
 #guard decide (typeOf ["xs"] [.list .nat]
-    (foldWith (var "xs") Queue.nilT (fun acc item => app "cons" [item, acc])
+    (foldWith (var "xs") nilT (fun acc item => app "cons" [item, acc])
       (some (.list .nat))) =
   some (.list .nat))
 
@@ -300,10 +302,10 @@ name the element's (`types_minted_acc`, `types_minted_item`). The accumulator is
 and the element a number. -/
 
 #guard decide (typeOf ["xs"] [.list .nat]
-    (foldWith (var "xs") (bool false) fun acc item => Queue.orT acc (app "isZero" [item])) =
+    (foldWith (var "xs") (bool false) fun acc item => orT acc (app "isZero" [item])) =
   some .bool)
 #guard (typeOf ["xs"] [.list .nat]
-  (foldWith (var "xs") (bool false) fun acc item => Queue.orT item (app "isZero" [acc]))).isNone
+  (foldWith (var "xs") (bool false) fun acc item => orT item (app "isZero" [acc]))).isNone
 
 /-! ### A term moved under the binders without its capture
 
@@ -384,7 +386,7 @@ that the checker types in a cell: the step's tree at the statement's own scope, 
 answer and its stored value are members of. -/
 theorem withdrawOffer_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
     (A : Ty) (message : MessageTy A) {w : Typed.World} {captured : List Val}
-    (typedEnv : Typed.EnvTyped w [Queue.idTy] captured) {stores : Stores} {q : RefKey}
+    (typedEnv : Typed.EnvTyped w [idTy] captured) {stores : Stores} {q : RefKey}
     {cell reply next : Val} (held : refPeek stores.refs q = some cell)
     (member : Typed.Fits w cell (Queue.cellTy A)) :
     ∃ f, Queue.withdrawOffer A (var "id") (var "s") { names := ["id", "s"] } [] = .ok f ∧
@@ -415,7 +417,7 @@ theorem withdrawTake_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf =
     (A : Ty) (message : MessageTy A) {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
     {tys : List Ty} {w : Typed.World} {captured : List Val}
     (depth : (tys ++ [Queue.cellTy A]).length = env.names.length)
-    (typesId : CapturedTy sig idSrc env path (tys ++ [Queue.cellTy A]) Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path (tys ++ [Queue.cellTy A]) idTy)
     (typesCell : TypesEach sig cellSrc env path (tys ++ [Queue.cellTy A]) (Queue.cellTy A))
     (typedEnv : Typed.EnvTyped w tys captured) {stores : Stores} {q : RefKey}
     {cell reply next : Val} (held : refPeek stores.refs q = some cell)
@@ -568,37 +570,37 @@ next goals: 0
 
 /-! ### The capture of a minted name, its typed twin, and the connector -/
 
-/-- info: 'Effect4.Queue.Model.captured_minted' depends on axioms: [propext] -/
+/-- info: 'Effect4.Modules.captured_minted' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms captured_minted
 
-/-- info: 'Effect4.Queue.Model.captured_answer' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.captured_answer' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms captured_answer
 
-/-- info: 'Effect4.Queue.Model.capturedTy_var' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.capturedTy_var' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms capturedTy_var
 
-/-- info: 'Effect4.Queue.Model.capturedTy_minted' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.capturedTy_minted' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms capturedTy_minted
 
-/-- info: 'Effect4.Queue.Model.capturedTy_answer' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.capturedTy_answer' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms capturedTy_answer
 
-/-- info: 'Effect4.Queue.Model.typeAt_tree' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.typeAt_tree' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms typeAt_tree
 
 /--
-info: Effect4.Queue.Model.captured_minted: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Queue.Model.captured_answer: proved; nearest [Effect4.Queue.Model.captured_minted]; 0 lemmas, 0 definitions
-Effect4.Queue.Model.capturedTy_var: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Queue.Model.capturedTy_minted: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Queue.Model.capturedTy_answer: proved; nearest [Effect4.Queue.Model.capturedTy_minted]; 0 lemmas, 0 definitions
-Effect4.Queue.Model.typeAt_tree: proved; nearest []; 0 lemmas, 0 definitions
+info: Effect4.Modules.captured_minted: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Modules.captured_answer: proved; nearest [Effect4.Modules.captured_minted]; 0 lemmas, 0 definitions
+Effect4.Modules.capturedTy_var: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Modules.capturedTy_minted: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Modules.capturedTy_answer: proved; nearest [Effect4.Modules.capturedTy_minted]; 0 lemmas, 0 definitions
+Effect4.Modules.typeAt_tree: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in

@@ -180,13 +180,16 @@ import Effect4.Laws.Program.Folds.Ty
 import Effect4.Laws.Machine.Folds.Stores
 import Effect4.Laws.Store.Folds.Val
 import Effect4.Laws.Program.Typing.FoldAgreement
+import Effect4.Laws.Modules.Table
+import Effect4.Laws.Modules.Reading
+import Effect4.Laws.Modules.Checking
+import Effect4.Laws.Modules.Store
 import Effect4.Laws.Modules.Queue.Capacity
 import Effect4.Laws.Modules.Queue.Profile
 import Effect4.Laws.Modules.Queue.Typing
 import Effect4.Laws.Modules.Queue.Relation
 import Effect4.Laws.Modules.Queue.Reading
 import Effect4.Laws.Modules.Queue.Steps
-import Effect4.Laws.Modules.Queue.Checking
 import Effect4.Laws.Modules.Semaphore.Model
 import Effect4.Laws.Modules.Semaphore.Profile
 import Effect4.Laws.Modules.Semaphore.Typing

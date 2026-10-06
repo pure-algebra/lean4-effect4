@@ -1,12 +1,14 @@
 import Effect4.Laws.Modules.Queue.Steps
+import Effect4.Laws.Modules.Store
 import Test.Program.QueueAgreement
 import ProofGraph.Plan
 
 /-!
 # The Queue's relation and its step goals: finite controls (decisions row 255)
 
-The relation is `src/Effect4/Laws/Modules/Queue/Relation.lean`: the encoding table, the
-message map, the cell's value and a step's notifications. The six step goals are in
+The relation is `src/Effect4/Laws/Modules/Queue/Relation.lean`: the message map, the cell's
+value and a step's notifications, over the shared encoding table
+(`src/Effect4/Laws/Modules/Table.lean`). The six step goals are in
 `src/Effect4/Laws/Modules/Queue/Steps.lean`. This battery evaluates each goal's conclusion, as
 the goal states it: at one table, one message map and the scope of the step's own arguments, on
 every state of the universe of `Test/Program/QueueAgreement.lean`, twelve moves on each.
@@ -28,6 +30,7 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.QueueRelation
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 open Effect4.Queue.Model
 open Test.Program.QueueAgreement (profileStates moves Move mixed full waiting2 T)
 
@@ -235,7 +238,7 @@ example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint :
     (captured_var rfl rfl rfl) (captured_var (x := "hint") rfl rfl rfl)
     (captured_var (x := "s") rfl rfl rfl).atScope
 
-/-- info: 'Effect4.Queue.Model.captured_var' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.captured_var' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms captured_var
 
@@ -245,15 +248,15 @@ Each proved statement's axioms, and its standing as the plan derives it from the
 goal that is still planned has no pin here: the goal gate counts it. The counts are of this
 battery's tree, which holds no step of a proof: the steps are in the law graph. -/
 
-/-- info: 'Effect4.Queue.Model.step_updates' depends on axioms: [propext] -/
+/-- info: 'Effect4.Modules.step_updates' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms step_updates
 
-/-- info: 'Effect4.Queue.Model.step_keeps_cell' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.step_keeps_cell' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms step_keeps_cell
 
-/-- info: 'Effect4.Queue.Model.cell_read' depends on axioms: [propext] -/
+/-- info: 'Effect4.Modules.cell_read' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms cell_read
 

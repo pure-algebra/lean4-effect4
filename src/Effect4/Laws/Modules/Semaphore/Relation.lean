@@ -1,6 +1,6 @@
 import Effect4.Modules.Semaphore.Steps
 import Effect4.Laws.Modules.Semaphore.Profile
-import Effect4.Laws.Modules.Queue.Relation
+import Effect4.Laws.Modules.Table
 
 /-!
 # The relation between Semaphore's cell and the abstract model (decisions row 265)
@@ -10,9 +10,9 @@ cell (`src/Effect4/Modules/Semaphore/Cell.lean`) names a request by a `Deferred`
 holds each waiter's hint, which the model does not hold. So the connector is a relation, and no
 function of the state alone.
 
-- **The encoding table** is the Queue's, as it is (`Table`,
-  `src/Effect4/Laws/Modules/Queue/Relation.lean`): each model identity's handle, and its current
-  hint. `Table.Injective` says that no two identities share a handle.
+- **The encoding table** is shared (`Table`, `src/Effect4/Laws/Modules/Table.lean`): each
+  model identity's handle, and its current hint. `Table.Injective` says that no two identities
+  share a handle.
 - **The cell's value** (`cellVal`) is a function of the table and a model state. It loses
   nothing of the state: the total, the permits taken, the next stamp, and each waiter's
   identity, count and stamp. A waiter's count and stamp are numbers, so they need no entry of
@@ -23,8 +23,8 @@ function of the state alone.
   the selected waiter's record through the table for a visit (`visitReplyVal`); nothing for a
   withdrawal.
 
-`Reads` and `Captured` are the Queue's too: a source term reads a value at a scope, and a
-caller's term keeps its value under a fold's two binders.
+`Reads` and `Captured` are shared too (`src/Effect4/Laws/Modules/Reading.lean`): a source term
+reads a value at a scope, and a caller's term keeps its value under a fold's two binders.
 
 Placement. These are definitions, with no statement. Concept `translation-simulation`,
 requirement R10: they are the vocabulary of the five step goals
@@ -38,7 +38,7 @@ set_option autoImplicit false
 namespace Effect4.Semaphore.Model
 
 open Effect4 Effect4.Machine Effect4.Program
-open Effect4.Queue.Model (Table)
+open Effect4.Modules
 
 /-! ## The cell's value -/
 

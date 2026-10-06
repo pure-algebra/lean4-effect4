@@ -34,6 +34,7 @@ namespace Test.Program.QueueAgreement
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Queue.Model (FirstProfile)
+open Effect4.Modules
 
 /-! ## The first profile's states
 
@@ -85,9 +86,9 @@ def evalAt (src : TermSrc) : Option Val :=
   (src { names := envNames } []).toOption.bind (evalTerm envVals ·)
 
 def natList (xs : List Nat) : TermSrc :=
-  xs.foldr (fun x acc => app "cons" [nat x, acc]) Queue.nilT
+  xs.foldr (fun x acc => app "cons" [nat x, acc]) nilT
 def listOf (xs : List TermSrc) : TermSrc :=
-  xs.foldr (fun x acc => app "cons" [x, acc]) Queue.nilT
+  xs.foldr (fun x acc => app "cons" [x, acc]) nilT
 
 /-- The table: a request's current hint. -/
 abbrev Table := Nat → TermSrc
@@ -189,7 +190,7 @@ def takeExpected (mutation : Mutation) (s : Queue.Model.State) (id : Nat) :
   let r := Queue.Model.take s ⟨id, 1, 1⟩
   let (reply, tb) ← (match r.2.1 with
     | .got [m] => pure (app "some" [nat m], table0)
-    | .wait => pure (Queue.noneT, table0.set id (var "fresh"))
+    | .wait => pure (noneT, table0.set id (var "fresh"))
     | _ => throw "the reply is no single message and no wait" : Except String (TermSrc × Table))
   let (accepted, woken) ← notifications s r.1 tb r.2.2
   let (first, second) := match mutation with
@@ -218,7 +219,7 @@ def offerExpected (mutation : Mutation) (s : Queue.Model.State) (id a : Nat) :
   let r := Queue.Model.offer s id a
   let reply := match r.2.1 with
     | .accepted ok => app "some" [bool ok]
-    | .wait => Queue.noneT
+    | .wait => noneT
   let woken ← wakesOnly s r.1 r.2.2
   let woken := match mutation with
     | .dropWake => []
@@ -239,7 +240,7 @@ def pollAgrees (s : Queue.Model.State) : Verdict :=
     unless woken.isEmpty do throw "a poll wakes no taker"
     let reply := match r.2.1 with
       | some m => app "some" [nat m]
-      | none => Queue.noneT
+      | none => noneT
     pure (app "pair" [tuple [reply, listOf accepted], stateTerm table0 r.1])))
 
 def sizeAgrees (s : Queue.Model.State) : Verdict :=
@@ -412,12 +413,12 @@ def offerStepSilent (id hint a s : TermSrc) : TermSrc :=
   let offers := field s "offers"
   let takers := field s "takers"
   let pending := recordSet s "offers"
-    (Queue.snoc offers (Queue.mkOffer .nat id hint (bool false) (app "cons" [a, Queue.nilT])))
-  Queue.ifT (Queue.orT (Queue.notT (Queue.isEmpty offers))
-      (Queue.notT (app "lt" [Queue.len msgs, field s "cap"])))
-    (app "pair" [tuple [Queue.noneT, Queue.noneOf takers], pending])
-    (app "pair" [tuple [app "some" [bool true], Queue.wake takers (Queue.snoc msgs a)],
-      recordSet s "msgs" (Queue.snoc msgs a)])
+    (snoc offers (Queue.mkOffer .nat id hint (bool false) (app "cons" [a, nilT])))
+  ifT (orT (notT (isEmpty offers))
+      (notT (app "lt" [len msgs, field s "cap"])))
+    (app "pair" [tuple [noneT, noneOf takers], pending])
+    (app "pair" [tuple [app "some" [bool true], Queue.wake takers (snoc msgs a)],
+      recordSet s "msgs" (snoc msgs a)])
 
 -- M4. The comparison over every state finds the silent offer: it differs exactly where the
 -- buffer is full, no offer is pending, and a taker waits behind a message. Twenty states.

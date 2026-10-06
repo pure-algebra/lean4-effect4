@@ -32,6 +32,7 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.QueueScenarios
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
 /-! ## The operations, as the probe writes them
 
@@ -50,7 +51,7 @@ def posted : Effect4.Supervision.ForkOptions := ⟨false, true, .uninterruptible
 (decisions rows 238 and 240). -/
 def postAll (requests answer : TermSrc) : Src NativeOp :=
   iterateWith (nat 0)
-    { while_ := fun i => app "lt" [i, Queue.len requests]
+    { while_ := fun i => app "lt" [i, len requests]
       body := fun i => selectOption "r" (app "get" [requests, i]) (succeed unit)
         (andThen
           (withFiber (Action.fork (Deferred.succeed (field (var "r") "hint") answer) posted))
@@ -66,9 +67,9 @@ answers, then the taker's wake. -/
 def take (A : Ty) (q : TermSrc) : Src NativeOp :=
   uninterruptible (eff do
     let id ← Deferred.make .unit .never
-    let got ← iterateWith Queue.noneT
+    let got ← iterateWith noneT
       { cursorTy := some (.option A)
-        while_ := fun c => Queue.notT (app "isSome" [c])
+        while_ := fun c => notT (app "isSome" [c])
         body := fun _ => eff do
           let hint ← Deferred.make .unit .never
           let r ← Ref.modify "s" (Queue.takeStep A id hint (var "s")) q
@@ -80,7 +81,7 @@ def take (A : Ty) (q : TermSrc) : Src NativeOp :=
                 (eff do
                   let woken ← Ref.modify "s" (Queue.withdrawTake A id (var "s")) q
                   postAll woken unit))
-              (succeed Queue.noneT))
+              (succeed noneT))
             (succeed (app "some" [var "m"]))
         step := fun _ a => a }
     selectOption "m" got (failCause (Cause.die (str "queue: the loop ended without a message")))
@@ -177,7 +178,7 @@ def r5 : Src NativeOp := eff do
   let _ ← offer .nat q (nat 5)
   let x ← take .nat q
   let s ← Ref.get q
-  return tuple [x, Queue.len (field s "takers")]
+  return tuple [x, len (field s "takers")]
 
 /-- R6: capacity one. A pending offer is interrupted before any step accepts it: its message
 never enters. -/
@@ -189,7 +190,7 @@ def r6 : Src NativeOp := eff do
   let x ← take .nat q
   let n ← size .nat q
   let s ← Ref.get q
-  return tuple [x, n, Queue.len (field s "offers")]
+  return tuple [x, n, len (field s "offers")]
 
 /-- R7: the interrupted taker's own exit keeps its interruptor. -/
 def r7 : Src NativeOp := eff do
@@ -206,17 +207,17 @@ Each fiber writes its mark when it goes on, so the log shows the order of the tw
 A's own mark, then the offerer's `101`, then B's message. -/
 def r8 : Src NativeOp := eff do
   let q ← Ref.make (Queue.empty .nat 1)
-  let log ← Ref.make (app "take" [app "cons" [nat 0, Queue.nilT], nat 0])
+  let log ← Ref.make (app "take" [app "cons" [nat 0, nilT], nat 0])
   let fa ← fork (eff do
     let x ← take .nat q
-    Ref.update "l" (Queue.snoc (var "l") x) log)
+    Ref.update "l" (snoc (var "l") x) log)
   let fb ← fork (eff do
     let x ← take .nat q
-    Ref.update "l" (Queue.snoc (var "l") x) log)
+    Ref.update "l" (snoc (var "l") x) log)
   let _ ← offer .nat q (nat 1)
   let fc ← fork (eff do
     let _ ← offer .nat q (nat 2)
-    Ref.update "l" (Queue.snoc (var "l") (nat 101)) log)
+    Ref.update "l" (snoc (var "l") (nat 101)) log)
   let _ ← join fa
   let _ ← join fb
   let _ ← join fc

@@ -1,5 +1,5 @@
 import Effect4.Modules.Semaphore.Steps
-import Effect4.Laws.Modules.Queue.Typing
+import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -14,9 +14,9 @@ Each statement is in the shape of the Queue's general forms
 (`src/Effect4/Laws/Modules/Queue/Typing.lean`). For every caller's terms that have the
 arguments' types, the step has the type of the pair of its reply and the cell. A caller's term
 that stands in a fold's body keeps its type under the fold's two binders: that is a premise
-(`CapturedTy`, `src/Effect4/Laws/Modules/Queue/Checking.lean`). The take step and the
-withdrawal take the identity so. The visit takes the cursor and the cell's own source so,
-because its fold reads the free count in its body.
+(`CapturedTy`, `src/Effect4/Laws/Modules/Checking.lean`). The take step and the withdrawal take
+the identity so. The visit takes the cursor and the cell's own source so, because its fold
+reads the free count in its body.
 
 | Statement | The step's type |
 | --- | --- |
@@ -30,13 +30,13 @@ Placement. Concept `store-typing`, requirement R4: each is a part of the propose
 `semaphore-accounting-preserved`, on the side of the cell's type. Reach: the checker's `argTy`
 on the step's tree under each literal flag, at every scope; the signature's atoms are the
 native table's. Their consumer is the public law, in the slice of the operations that wait:
-with a step's typing, `step_keeps_cell` (`src/Effect4/Laws/Modules/Queue/Steps.lean`) gives
-that one `Ref.modify` of the step keeps the cell a member of the cell's type.
+with a step's typing, `step_keeps_cell` (`src/Effect4/Laws/Modules/Store.lean`) gives that one
+`Ref.modify` of the step keeps the cell a member of the cell's type.
 
 The statements establish no agreement with the model, no typing of a wrapper and nothing about
 a target. The checker's typing of a step is not program admission. The cell's type is closed,
 so each side condition of a record rule is decided by `rfl` or by `decide`. The proofs read
-the checker's rule at each node, through the Queue's builder rules. The finite controls are in
+the checker's rule at each node, through the shared builder rules. The finite controls are in
 `Test/Program/SemaphoreSteps.lean`.
 -/
 
@@ -45,7 +45,7 @@ set_option autoImplicit false
 namespace Effect4.Semaphore.Model
 
 open Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue.Model
+open Effect4.Modules
 
 /-! ## The types of the steps' replies -/
 
@@ -86,7 +86,7 @@ theorem cell_waitersTy :
 theorem cell_nextTy : Record.fieldType false Semaphore.cellTy "next" = some .nat :=
   Record.fieldType_normal cellTy_normal rfl
 
-theorem waiter_idTy : Record.fieldType false Semaphore.waiterTy "id" = some Queue.idTy :=
+theorem waiter_idTy : Record.fieldType false Semaphore.waiterTy "id" = some idTy :=
   Record.fieldType_normal waiterTy_normal rfl
 
 theorem waiter_needTy : Record.fieldType false Semaphore.waiterTy "need" = some .nat :=
@@ -113,7 +113,7 @@ theorem cell_setNextTy : Record.setType Semaphore.cellTy "next" .nat = some Sema
 /-- A waiter's construction, each field at its declared type, answers a waiter's type. -/
 theorem waiter_checkTy :
     Record.check Semaphore.waiterFields ["id", "need", "hint", "stamp"]
-        [Queue.idTy, .nat, Queue.idTy, .nat] =
+        [idTy, .nat, idTy, .nat] =
       some Semaphore.waiterTy :=
   Record.check_declared (fields := Semaphore.waiterFields) (by decide)
 
@@ -141,36 +141,9 @@ theorem empty_checkTy :
   rw [if_pos ⟨named, named, fits⟩]
   rfl
 
-/-! ## The words that the Queue's steps do not use
-
-`add`, `isZero` at a number, and the literal of nothing. Their consumers are the passes and the
-steps below. -/
-
-/-- `add` on two numbers. A fixed signature at its own parameters. -/
-theorem nativeAtomTy_add : nativeAtomTy "add" [.nat, .nat] = some .nat :=
-  NativeAtom.monoApply_self [.nat, .nat] .nat
-
 section Builders
 
 variable {Op : Type} {sig : Signature Op} {env : Env} {path : List Nat} {types : List Ty}
-
-/-- The literal of nothing. -/
-theorem types_unit : TypesEach sig unit env path types .unit :=
-  fun const => types_lit .unit const
-
-variable (atoms : sig.atomOf = nativeAtomTy)
-include atoms
-
-theorem types_add {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
-    (hb : TypesEach sig b env path types .nat) :
-    TypesEach sig (app "add" [a, b]) env path types .nat :=
-  fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_add)
-
-theorem types_isZero {n : TermSrc} (hn : TypesEach sig n env path types .nat) :
-    TypesEach sig (app "isZero" [n]) env path types .bool :=
-  fun _ => types_app (.cons (hn _) .nil) (atomOf_native atoms nativeAtomTy_isZero)
-
-omit atoms
 
 /-! ## The cell's fields and overwrites, at a source of the cell's type -/
 
@@ -207,15 +180,16 @@ theorem types_setNext {s v : TermSrc} (hs : TypesEach sig s env path types Semap
 
 /-- A waiter's record, built from an identity, a count, a hint and a stamp. -/
 theorem types_mkWaiter {id need hint stamp : TermSrc}
-    (hid : TypesEach sig id env path types Queue.idTy)
+    (hid : TypesEach sig id env path types idTy)
     (hneed : TypesEach sig need env path types .nat)
-    (hhint : TypesEach sig hint env path types Queue.idTy)
+    (hhint : TypesEach sig hint env path types idTy)
     (hstamp : TypesEach sig stamp env path types .nat) :
     TypesEach sig (Semaphore.mkWaiter id need hint stamp) env path types Semaphore.waiterTy :=
   fun _ => types_record waiterFields_formed
     (.cons (hid true) (.cons (hneed true) (.cons (hhint true) (.cons (hstamp true) .nil))))
     waiter_checkTy
 
+variable (atoms : sig.atomOf = nativeAtomTy)
 include atoms
 
 /-! ## The passes, typed once -/
@@ -231,10 +205,10 @@ theorem types_fitsT {need s : TermSrc} (hneed : TypesEach sig need env path type
     TypesEach sig (Semaphore.fitsT need s) env path types .bool :=
   types_notT atoms (types_lt atoms (types_freeT atoms hs) hneed)
 
-/-- `removeWaiter`: the waiters without the request. The Queue's fold, at a waiter's type. -/
+/-- `removeWaiter`: the waiters without the request. The shared fold, at a waiter's type. -/
 theorem types_removeWaiter {waiters id : TermSrc} (depth : types.length = env.names.length)
     (hwaiters : TypesEach sig waiters env path types (.list Semaphore.waiterTy))
-    (hid : CapturedTy sig id env path types Queue.idTy) :
+    (hid : CapturedTy sig id env path types idTy) :
     TypesEach sig (Semaphore.removeWaiter waiters id) env path types
       (.list Semaphore.waiterTy) :=
   types_removeById atoms depth waiterTy_normal waiter_idTy hwaiters hid
@@ -312,8 +286,8 @@ theorem takeStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = na
     {needSrc idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {types : List Ty}
     (depth : types.length = env.names.length)
     (typesNeed : TypesEach sig needSrc env path types .nat)
-    (typesId : CapturedTy sig idSrc env path types Queue.idTy)
-    (typesHint : TypesEach sig hintSrc env path types Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path types idTy)
+    (typesHint : TypesEach sig hintSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.takeStep needSrc idSrc hintSrc cellSrc) env path types
       (.prod .bool Semaphore.cellTy) := by
@@ -375,7 +349,7 @@ fold. -/
 theorem withdrawStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
     {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {types : List Ty}
     (depth : types.length = env.names.length)
-    (typesId : CapturedTy sig idSrc env path types Queue.idTy)
+    (typesId : CapturedTy sig idSrc env path types idTy)
     (typesCell : TypesEach sig cellSrc env path types Semaphore.cellTy) :
     TypesEach sig (Semaphore.withdrawStep idSrc cellSrc) env path types
       (.prod .unit Semaphore.cellTy) :=

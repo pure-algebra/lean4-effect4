@@ -24,17 +24,20 @@ path's slice. Reach, for each goal:
 - the observation is the reply, the stored value and the ordered notifications: every signal
   of the model, and no other (`Notified`);
 - the statement holds at every scope, for every caller's term that reads the step's arguments
-  (`Reads`, `Captured`).
+  (`Reads`, `Captured`, `src/Effect4/Laws/Modules/Reading.lean`).
 
-`step_updates` joins a goal to the store: a step term that reads the pair of a reply and a next
-value is one atomic update of the cell (`refStep_modify`). `step_keeps_cell` gives the typed
-half (`ListFoldRules.step`). `sizeStep` is a term over a read, and `cell_read` is its store law
+The connectors to the store are shared (`src/Effect4/Laws/Modules/Store.lean`). `step_updates`
+joins a goal to the store: a step term that reads the pair of a reply and a next value is one
+atomic update of the cell (`refStep_modify`). `step_keeps_cell` gives the typed half
+(`ListFoldRules.step`). `sizeStep` is a term over a read, and `cell_read` is its store law
 (`refStep_get`).
 
 The six statements are proved, each in place of its planned goal (decisions row 203). The
-proofs read each builder of a step through `src/Effect4/Laws/Modules/Queue/Reading.lean`, and
-they put the model's step in closed form on the profile: `acceptLoop_single` and
-`wake_profile` give the offers that enter and the taker to wake.
+proofs read each builder of a step through the shared reading rules
+(`src/Effect4/Laws/Modules/Reading.lean`) and each pass through
+`src/Effect4/Laws/Modules/Queue/Reading.lean`. They put the model's step in closed form on the
+profile: `acceptLoop_single` and `wake_profile` give the offers that enter and the taker to
+wake.
 
 The statements establish no delivery, no cancellation law, no liveness and nothing of a
 wrapper. An equal value in the model says nothing of a host. The finite controls are
@@ -48,64 +51,8 @@ namespace Effect4.Queue.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Typed
-
-/-! ## The connector to the store -/
-
-/-- **One atomic update.** A step term that reads the pair of a reply and a next value, under
-the cell's current value as its last binder, is one `Ref.modify`: the store step reads the cell
-once, answers the reply and writes the next value. Stated once, for the five steps of a
-`Ref.modify`. Consumer: the wrapper's law, which runs each step so. It is the census clause
-`refStep_modify`, and it needs no typing. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem step_updates {step : TermSrc} {env : Env} {path : List Nat} {current : String}
-    {captured : List Val} {stores : Stores} {q : RefKey} {cell reply next : Val}
-    (held : refPeek stores.refs q = some cell)
-    (reads : Reads step (env.push [current]) path (captured ++ [cell])
-      (Val.tuple [reply, next])) :
-    ∃ f, step (env.push [current]) path = .ok f ∧
-      syncOpStep (.refModify q f captured) stores =
-        some ({ stores with refs := refPoke stores.refs q next }, reply) := by
-  obtain ⟨f, elaborated, value⟩ := reads
-  refine ⟨f, elaborated, ?_⟩
-  show (refStep (.refModify q f captured) stores.refs).map
-    (fun step => ({ stores with refs := step.2 }, step.1)) = _
-  rw [refStep_modify stores.refs q f captured cell reply next held value]
-  rfl
-
-/-- **The typed half of the connector.** A step term that the checker types at the pair of a
-reply type and the cell's type keeps the cell a member of its type, and its reply is a member
-of the reply type. It is `ListFoldRules.step`, read at the value that the step answers.
-Consumer: the wrapper's law, with a step's typing statement
-(`src/Effect4/Laws/Modules/Queue/Typing.lean`). -/
-@[semantics "store-typing" (requirement := R4)]
-theorem step_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
-    {w : Typed.World} {tys : TyEnv} {captured : List Val} (typedEnv : EnvTyped w tys captured)
-    {f : Term} {C B : Ty} (typed : termTy sig (tys ++ [C]) f = some (.prod B C))
-    {stores : Stores} {q : RefKey} {cell reply next : Val}
-    (held : refPeek stores.refs q = some cell) (member : Fits w cell C)
-    (value : evalTerm (captured ++ [cell]) f = some (Val.tuple [reply, next])) :
-    Fits w reply B ∧ Fits w next C := by
-  obtain ⟨b, a, answered, -, fitsReply, fitsNext⟩ :=
-    (fold_typed_atomic_update sig).step atoms w tys captured typedEnv f C B typed stores q cell
-      held member
-  rw [value] at answered
-  have same : Val.tuple [reply, next] = Val.tuple [b, a] := Option.some.inj answered
-  have parts : [reply, next] = [b, a] := Store.Val.list.inj same
-  obtain ⟨rfl, rest⟩ := List.cons.inj parts
-  obtain ⟨rfl, -⟩ := List.cons.inj rest
-  exact ⟨fitsReply, fitsNext⟩
-
-/-- **The read law of `size`.** A `Ref.get` of the cell answers its value and leaves the
-stores: the size step is a term over that value, and it writes nothing. It is the census clause
-`refStep_get`. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem cell_read {stores : Stores} {q : RefKey} {cell : Val}
-    (held : refPeek stores.refs q = some cell) :
-    syncOpStep (.refGet q) stores = some (stores, cell) := by
-  show (refStep (.refGet q) stores.refs).map
-    (fun step => ({ stores with refs := step.2 }, step.1)) = _
-  rw [refStep_get stores.refs q cell held]
-  rfl
+open Effect4.Modules
+open Effect4.Constructive.List (foldl_snoc_map foldl_or_any)
 
 /-! ## The model's side, in closed form
 
@@ -348,23 +295,6 @@ theorem poll_consumes {s : State} (h : FirstProfile s) {c : Nat}
 
 /-! ## The take step's passes and the model's `take`, in closed form -/
 
-/-- A fold that appends one image of each element is the list with the images. -/
-theorem foldl_snoc_map {α β : Type} (g : α → β) :
-    ∀ (xs : List α) (init : List β),
-      xs.foldl (fun out x => out ++ [g x]) init = init ++ xs.map g
-  | [], init => by rw [List.foldl_nil, List.map_nil, List.append_nil]
-  | x :: xs, init => by
-    rw [List.foldl_cons, foldl_snoc_map g xs, List.map_cons, List.append_assoc]
-    rfl
-
-/-- A fold that keeps a flag is the flag, or any element's test. -/
-theorem foldl_or_any {α : Type} (p : α → Bool) :
-    ∀ (xs : List α) (found : Bool), xs.foldl (fun found x => found || p x) found =
-      (found || xs.any p)
-  | [], found => by rw [List.foldl_nil, List.any_nil, Bool.or_false]
-  | x :: xs, found => by
-    rw [List.foldl_cons, foldl_or_any p xs, List.any_cons, Bool.or_assoc]
-
 /-- The request's stored record, through the table that holds the step's hint. -/
 theorem takerVal_renewed (tb : Table) (id : Nat) (hint : DeferredKey) {t : Taker}
     (same : t.id = id) :
@@ -553,7 +483,7 @@ theorem takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (i
   have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
       (Val.list ((s.messages.drop 1).map msg)) :=
     (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
-  have room : Reads (app "sub" [field cellSrc "cap", Queue.len
+  have room : Reads (app "sub" [field cellSrc "cap", len
       (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
       (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
     (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
@@ -649,7 +579,7 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
     (reads_app (.cons readsMessage (.cons reads_nilT .nil)) (atom_cons (msg a) []))
   have pending := (reads_recordSet readsCell (reads_snoc offers newOffer)
     (cell_setOffers _ _ _ _ _)).to (cell_pended tb msg s id a hint foreign fresh).symm
-  have longer : Reads (Queue.snoc (field cellSrc "msgs") messageSrc) env path vals
+  have longer : Reads (snoc (field cellSrc "msgs") messageSrc) env path vals
       (Val.list ((s.messages ++ [a]).map msg)) :=
     (reads_snoc msgs readsMessage).to (by rw [List.map_append]; rfl)
   have accepted := reads_recordSet readsCell longer (cell_setMsgs _ _ _ _ _)
@@ -658,10 +588,10 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
     (reads_tuple2 (reads_some (reads_bool true env path vals)) (reads_wake takers longer))
     accepted
   have full := reads_pair (reads_tuple2 reads_noneT (reads_wake takers msgs)) pending
-  have hasPending : Reads (Queue.notT (Queue.isEmpty (field cellSrc "offers"))) env path vals
+  have hasPending : Reads (notT (isEmpty (field cellSrc "offers"))) env path vals
       (Val.bool (!decide (s.offers.length = 0))) :=
     (reads_notT (reads_isEmpty offers)).to (by rw [List.length_map])
-  have hasRoom : Reads (app "lt" [Queue.len (field cellSrc "msgs"), field cellSrc "cap"]) env
+  have hasRoom : Reads (app "lt" [len (field cellSrc "msgs"), field cellSrc "cap"]) env
       path vals (Val.bool (decide (s.messages.length < c + 1))) :=
     (reads_lt (reads_len msgs) cap).to (by rw [List.length_map, capacity]; rfl)
   have whole := reads_ifT hasPending behind (reads_ifT hasRoom room full)
@@ -728,7 +658,7 @@ theorem pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
   have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
       (Val.list ((s.messages.drop 1).map msg)) :=
     (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
-  have room : Reads (app "sub" [field cellSrc "cap", Queue.len
+  have room : Reads (app "sub" [field cellSrc "cap", len
       (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
       (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
     (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
@@ -740,8 +670,8 @@ theorem pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
     (cell_setOffers _ _ _ _ _)
   have yes := reads_pair (reads_tuple2 (reads_head msgs) entering) consumed
   have no := reads_pair (reads_tuple2 reads_noneT (reads_noneOf offers)) readsCell
-  have test : Reads (Queue.andT (Queue.notT (Queue.isEmpty (field cellSrc "msgs")))
-      (Queue.isEmpty (field cellSrc "takers"))) env path vals
+  have test : Reads (andT (notT (isEmpty (field cellSrc "msgs")))
+      (isEmpty (field cellSrc "takers"))) env path vals
       (Val.bool (!decide (s.messages.length = 0) && decide (s.takers.length = 0))) :=
     (reads_andT (reads_notT (reads_isEmpty msgs)) (reads_isEmpty takers)).to
       (by rw [List.length_map, List.length_map])

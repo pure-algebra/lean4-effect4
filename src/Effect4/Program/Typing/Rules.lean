@@ -499,7 +499,10 @@ def bodyRequires (sig : Signature Op) (t : EffTy) : Requirement :=
 
 /-! ### Inserting an environment slot -/
 
-private theorem lookup_weaken {α : Type} (pre post : List α) (inserted : α) (index : Nat) :
+/-- A lookup after one inserted slot: positions at or above the cut move up by one. The typing's
+weakening reads it at type environments (`argTy_weaken`, below), and the evaluation's reads it
+at value environments (`evalTerm_weaken`, `src/Effect4/Laws/Program/Typed/ListFold.lean`). -/
+theorem lookup_weaken {α : Type} (pre post : List α) (inserted : α) (index : Nat) :
     (pre ++ inserted :: post)[Var.weaken pre.length index]? = (pre ++ post)[index]? := by
   induction pre generalizing index with
   | nil => simp [Var.weaken]

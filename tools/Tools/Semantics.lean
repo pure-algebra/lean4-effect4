@@ -517,8 +517,25 @@ def reachThrough (nearestOf : String → List String) (bound : Nat) (start : Lis
     todo := todo ++ ((nearestOf n).eraseDups.filter fun d => !reach.contains d && !todo.contains d)
   return (reach, todo)
 
+/-- A name by the fewest of its last components that no other name of a list shares. One
+component is enough for most names, and `shortName` is that case. Two modules that state a step
+of one name need more: `Effect4.Queue.Model.takeStep_types` and
+`Effect4.Semaphore.Model.takeStep_types` print as `Queue.Model.takeStep_types` and
+`Semaphore.Model.takeStep_types`. A name whose every run of last components another name
+shares prints in full. The list is the names that one requirement's row and section print, so a
+name is told from the names beside it and no further (seat SEM's receipt, item 10, row 6). -/
+def displayName (among : List String) (name : String) : String := Id.run do
+  let parts := name.splitOn "."
+  let others := (among.eraseDups.filter (· != name)).map (·.splitOn ".")
+  for count in [1:parts.length] do
+    let tail := parts.drop (parts.length - count)
+    unless others.any (fun other => other.drop (other.length - count) == tail) do
+      return String.intercalate "." tail
+  return name
+
 /-- The plan section: the requirements table, the next goals, the loose premises, and one Mermaid
-diagram per requirement over the nodes it reaches. -/
+diagram per requirement over the nodes it reaches. A name prints by `displayName`, among the
+names of its own row and section. -/
 private def renderPlan (plan : Json) : String := Id.run do
   if plan == .null then return ""
   let nodes := array plan "nodes"
@@ -528,36 +545,47 @@ private def renderPlan (plan : Json) : String := Id.run do
   let statusOf (name : String) : String := ((nodeOf name).map (field · "status")).getD "missing"
   let nearestOf (name : String) : List String :=
     ((nodeOf name).map fun n => strings (nested (nested n "broughtIn") "nearest")).getD []
-  let ticked (names : List String) : String :=
-    if names.isEmpty then "—" else String.intercalate ", " (names.map fun n => s!"`{shortName n}`")
+  let restsOnOf (name : String) : List String :=
+    ((nodeOf name).map fun n => strings (nested n "restsOn")).getD []
+  let ticked (shown : String → String) (names : List String) : String :=
+    if names.isEmpty then "—" else String.intercalate ", " (names.map fun n => s!"`{shown n}`")
   let mut out := "\n## Plan\n\nThe requirements and their nodes. A node is a planned goal (a theorem whose body is `sorry`, declared by `proof_goal`) or a theorem a requirement names. Its status is derived from its proof, with goals as leaves (`tools/ProofGraph/Plan.lean`, decisions row 203): goal, modulo (proved from the goals it rests on), or proved. An edge goes from a node to the nodes its proof reaches first.\n\n"
   out := out ++ "A requirement's nodes are its top nodes, named by the registry, and the declarations placed at it (`@[semantics \"concept\" (requirement := Rn)]`, decisions row 207). A requirement is proved when every node is proved and no open part remains. An open part is one not yet stated as a goal.\n\n"
   out := out ++ "| Requirement | Status | Top nodes | Placed nodes | Next goals |\n| --- | --- | --- | --- | --- |\n"
-  let listed (items : Array Json) : String :=
+  let listed (shown : String → String) (items : Array Json) : String :=
     if items.isEmpty then "—" else String.intercalate ", " (items.toList.map fun t =>
-      s!"`{shortName (field t "name")}` ({field t "status"})")
-  for req in array plan "requirements" do
-    out := out ++ s!"| {field req "id"} | {field req "status"} | {listed (array req "top")} | {listed (array req "placed")} | {ticked (strings (nested req "next"))} |\n"
-  let next := strings (nested plan "next")
-  out := out ++ s!"\n**Next goals** ({next.length}): {ticked next}\n"
-  let unplaced := strings (nested plan "unplacedGoals")
-  unless unplaced.isEmpty do
-    out := out ++ s!"\n**Goals no requirement reaches** ({unplaced.length}): {ticked unplaced}\n"
+      s!"`{shown (field t "name")}` ({field t "status"})")
   -- every name that a traversal can meet: the nodes, and every name a node's edge names
   let names := (nodes.toList.flatMap fun n =>
     field n "name" :: strings (nested (nested n "broughtIn") "nearest")).eraseDups
-  for req in array plan "requirements" do
-    -- the nodes the requirement's top and placed nodes reach through their nearest nodes
+  -- the nodes the requirement's top and placed nodes reach through their nearest nodes, the
+  -- names still queued, and every name that the requirement's row and section print
+  let sectionOf (req : Json) : List String × List String × List String :=
     let start := ((array req "top") ++ (array req "placed")).toList.map (field · "name")
     let (reach, pending) := reachThrough nearestOf (names.length + start.length) start
+    let printed := start ++ strings (nested req "next") ++ reach ++ pending ++
+      reach.flatMap (fun n => restsOnOf n ++ nearestOf n)
+    (reach, pending, printed.eraseDups)
+  for req in array plan "requirements" do
+    let shown := displayName (sectionOf req).2.2
+    out := out ++ s!"| {field req "id"} | {field req "status"} | {listed shown (array req "top")} | {listed shown (array req "placed")} | {ticked shown (strings (nested req "next"))} |\n"
+  let next := strings (nested plan "next")
+  let unplaced := strings (nested plan "unplacedGoals")
+  let loose := displayName (next ++ unplaced)
+  out := out ++ s!"\n**Next goals** ({next.length}): {ticked loose next}\n"
+  unless unplaced.isEmpty do
+    out := out ++ s!"\n**Goals no requirement reaches** ({unplaced.length}): {ticked loose unplaced}\n"
+  for req in array plan "requirements" do
+    let (reach, pending, printed) := sectionOf req
+    let shown := displayName printed
     out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n"
     unless pending.isEmpty do
-      out := out ++ s!"- **Incomplete:** the traversal stopped with {pending.length} names not visited ({ticked pending}).\n"
+      out := out ++ s!"- **Incomplete:** the traversal stopped with {pending.length} names not visited ({ticked shown pending}).\n"
     for part in strings (nested req "openParts") do
       out := out ++ s!"- Open: {part}\n"
     out := out ++ "\n```mermaid\nflowchart LR\n"
     for (n, i) in reach.zipIdx do
-      out := out ++ s!"  n{i}[\"{shortName n}<br/>{statusOf n}\"]\n"
+      out := out ++ s!"  n{i}[\"{shown n}<br/>{statusOf n}\"]\n"
     for (n, i) in reach.zipIdx do
       for d in nearestOf n do
         if let some j := reach.idxOf? d then out := out ++ s!"  n{i} --> n{j}\n"
@@ -566,7 +594,7 @@ private def renderPlan (plan : Json) : String := Id.run do
       let some node := nodeOf n | continue
       let b := nested node "broughtIn"
       let count (key : String) := ((b.getObjValAs? Nat key).toOption.getD 0)
-      out := out ++ s!"| `{shortName n}` | {statusOf n} | {ticked (strings (nested node "restsOn"))} | {ticked (nearestOf n)} | {count "lemmas"} | {count "definitions"} |\n"
+      out := out ++ s!"| `{shown n}` | {statusOf n} | {ticked shown (restsOnOf n)} | {ticked shown (nearestOf n)} | {count "lemmas"} | {count "definitions"} |\n"
   return out
 
 def renderMarkdown (report : Json) : String := Id.run do

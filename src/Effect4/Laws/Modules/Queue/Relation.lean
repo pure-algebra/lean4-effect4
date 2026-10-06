@@ -1,5 +1,6 @@
 import Effect4.Modules.Queue.Steps
 import Effect4.Laws.Modules.Queue.Profile
+import Effect4.Laws.Modules.Table
 
 /-!
 # The relation between the Queue's cell and the abstract model (decisions row 255)
@@ -10,8 +11,9 @@ signal by that number. The cell (`src/Effect4/Modules/Queue/Cell.lean`) names a 
 the state alone. This file writes it (the design's F3,
 `docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md`).
 
-- **The encoding table** (`Table`) gives each model identity its identity handle and its
-  current hint. `Table.Injective` says that no two identities share a handle.
+- **The encoding table** is shared (`Table`, `src/Effect4/Laws/Modules/Table.lean`). It gives
+  each model identity its identity handle and its current hint. `Table.Injective` says that no
+  two identities share a handle.
 - **The message map** gives each of the model's messages, a number, a value of the cell's
   message type. It keeps the order and the count of the messages.
 - **The cell's value** (`cellVal`) is a function of the table, the map and a model state. On
@@ -19,13 +21,14 @@ the state alone. This file writes it (the design's F3,
   bounds and the two empty lists are fixed there (`FirstProfile`).
 - **A step changes the table in one way, and frames the rest** (`Table.renew`): it sets the
   hint of the step's own request, which it enrols or whose hint it replaces. Every other entry
-  stays.
+  stays. The table after a take and after an offer reads the model's reply
+  (`Table.afterTake`, `Table.afterOffer`), so the two are here.
 - **A step's notifications** (`Notified`) are the model's signals, every signal and no other:
   the answers of offers that were pending before the step, then the wakes of takers that are
   stored after it.
-- **A source term reads a value at a scope** (`Reads`): it elaborates there, and its tree has
-  the value. A step goal is stated for every scope and every caller's term that reads the
-  step's arguments.
+
+A source term reads a value at a scope (`Reads`, `src/Effect4/Laws/Modules/Reading.lean`): a
+step goal is stated for every scope and every caller's term that reads the step's arguments.
 
 Placement. These are definitions, with no statement. Concept `translation-simulation`,
 requirement R10: they are the vocabulary of the six step goals
@@ -39,23 +42,9 @@ set_option autoImplicit false
 namespace Effect4.Queue.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
-/-! ## The encoding table -/
-
-/-- **The encoding table**: each model identity's `Deferred` handle, and its current hint. -/
-structure Table where
-  handle : Nat → DeferredKey
-  hint : Nat → DeferredKey
-
-/-- No two identities share a handle, so the identity test on two handles decides the equality
-of the two identities. -/
-def Table.Injective (tb : Table) : Prop := ∀ a b : Nat, tb.handle a = tb.handle b → a = b
-
-/-- The table with the hint of the request `id` set. Every handle stays, and so does the hint of
-every other request. A step enrols a fresh request so, and replaces the hint of a request that
-waits already. -/
-def Table.renew (tb : Table) (id : Nat) (hint : DeferredKey) : Table :=
-  { tb with hint := fun n => if n = id then hint else tb.hint n }
+/-! ## The table after a step -/
 
 /-- The table after a take: the request's hint is the step's, where the request waits. -/
 def Table.afterTake (tb : Table) (id : Nat) (hint : DeferredKey) : TakeReply → Table
@@ -66,6 +55,21 @@ def Table.afterTake (tb : Table) (id : Nat) (hint : DeferredKey) : TakeReply →
 def Table.afterOffer (tb : Table) (id : Nat) (hint : DeferredKey) : OfferReply → Table
   | .wait => tb.renew id hint
   | .accepted _ => tb
+
+end Effect4.Queue.Model
+
+/-! The two functions above read the Queue's replies, so they are declared in the Queue's
+namespace, and the shared table's namespace holds no declaration of a module. A statement writes
+`tb.afterTake id hint reply` on a shared table: the field notation finds the two through these
+aliases. -/
+namespace Effect4.Modules.Table
+export Effect4.Queue.Model.Table (afterTake afterOffer)
+end Effect4.Modules.Table
+
+namespace Effect4.Queue.Model
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
 /-! ## The cell's value -/
 
@@ -131,21 +135,5 @@ structure Notified (before after : State) (signals : List Signal) (entered : Lis
       woken.map (fun t => (⟨t.id, .again⟩ : Signal))
   entered : ∀ o ∈ entered, o ∈ before.offers
   woken : ∀ t ∈ woken, t ∈ after.takers
-
-/-! ## Reading a source term -/
-
-/-- **A source term reads a value at a scope**: it elaborates under the scope's names, and its
-tree evaluates to the value in an environment. -/
-def Reads (src : TermSrc) (env : Env) (path : List Nat) (vals : List Val) (v : Val) : Prop :=
-  ∃ t, src env path = .ok t ∧ evalTerm vals t = some v
-
-/-- **A caller's term under a step's folds.** It reads one value at the scope. It reads the
-same value under the two binders that a fold of that scope mints, whatever they hold. A
-variable that an author wrote is such a term, and so is a literal. -/
-structure Captured (src : TermSrc) (env : Env) (path : List Nat) (vals : List Val) (v : Val) :
-    Prop where
-  atScope : Reads src env path vals v
-  underFold : ∀ acc item : Val,
-    Reads src (env.push [env.mint "acc", env.mint "item"]) path (vals ++ [acc, item]) v
 
 end Effect4.Queue.Model

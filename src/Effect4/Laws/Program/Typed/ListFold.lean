@@ -44,20 +44,6 @@ set_option autoImplicit false
 namespace Effect4.Program
 open Effect4 Effect4.Machine
 
-/-- A lookup after one inserted slot: positions at or above the cut move up by one. The typing
-weakening reads the same fact of type environments (`argTy_weaken`,
-`src/Effect4/Program/Typing/Rules.lean`). -/
-theorem getElem?_weaken {α : Type} (pre post : List α) (inserted : α) (index : Nat) :
-    (pre ++ inserted :: post)[Var.weaken pre.length index]? = (pre ++ post)[index]? := by
-  unfold Var.weaken
-  split
-  · next h => rw [List.getElem?_append_left h, List.getElem?_append_left h]
-  · next h =>
-    have hge : pre.length ≤ index := Nat.le_of_not_lt h
-    have hsucc : index + 1 - pre.length = index - pre.length + 1 := by omega
-    rw [List.getElem?_append_right (Nat.le_succ_of_le hge), List.getElem?_append_right hge,
-      hsucc, List.getElem?_cons_succ]
-
 mutual
   /-- **Weakening of evaluation**: inserting one slot at a cut, with every variable at or above
   the cut moved up, keeps the whole result of a term's evaluation, refusal included. A fold
@@ -68,7 +54,7 @@ mutual
       evalTerm (pre ++ inserted :: post) (Term.weaken pre.length term) =
         evalTerm (pre ++ post) term :=
     match term with
-    | .var index => getElem?_weaken pre post inserted index
+    | .var index => lookup_weaken pre post inserted index
     | .lit _ => rfl
     | .app atom args => by
       simp only [Term.weaken, evalTerm, evalTerms_weaken pre post inserted args]

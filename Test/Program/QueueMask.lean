@@ -32,6 +32,7 @@ namespace Test.Program.QueueMask
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Test.Program.QueueScenarios (postAll onInterrupt offer size verdict exitOf typesOf)
+open Effect4.Modules
 
 /-- `take`, under the mask. The registration and the service pass run masked; the wait runs at
 the caller's interruptibility, by the mask's own restore; the withdrawal on interruption runs
@@ -39,9 +40,9 @@ masked again. -/
 def take (A : Ty) (q : TermSrc) : Src NativeOp :=
   uninterruptibleMaskWith fun restore => eff do
     let id ← Deferred.make .unit .never
-    let got ← iterateWith Queue.noneT
+    let got ← iterateWith noneT
       { cursorTy := some (.option A)
-        while_ := fun c => Queue.notT (app "isSome" [c])
+        while_ := fun c => notT (app "isSome" [c])
         body := fun _ => eff do
           let hint ← Deferred.make .unit .never
           let r ← Ref.modify "s" (Queue.takeStep A id hint (var "s")) q
@@ -53,7 +54,7 @@ def take (A : Ty) (q : TermSrc) : Src NativeOp :=
                 (eff do
                   let woken ← Ref.modify "s" (Queue.withdrawTake A id (var "s")) q
                   postAll woken unit))
-              (succeed Queue.noneT))
+              (succeed noneT))
             (succeed (app "some" [var "m"]))
         step := fun _ a => a }
     selectOption "m" got (failCause (Cause.die (str "queue: the loop ended without a message")))
@@ -77,7 +78,7 @@ def r5 : Src NativeOp := eff do
   let _ ← offer .nat q (nat 5)
   let x ← take .nat q
   let s ← Ref.get q
-  return tuple [x, Queue.len (field s "takers")]
+  return tuple [x, len (field s "takers")]
 
 /-- R7: the interrupted taker's own exit keeps its interruptor. -/
 def r7 : Src NativeOp := eff do
@@ -126,8 +127,8 @@ def maskedCaller (takeOp : Ty → TermSrc → Src NativeOp) : Src NativeOp := ef
   let x ← Ref.get got
   let n ← size .nat q
   let s ← Ref.get q
-  return tuple [Queue.len (field registered "takers"), x, app "causeIsInterrupt" [e], n,
-    Queue.len (field s "takers")]
+  return tuple [len (field registered "takers"), x, app "causeIsInterrupt" [e], n,
+    len (field s "takers")]
 
 #guard verdict (maskedCaller take) = "built"
 

@@ -113,8 +113,9 @@ def registry : Registry where
         `Effect4.Laws.Program.Typed.Validity,
         `Effect4.Laws.Modules.Queue.Typing,
         -- the typing judgment of a builder's term and the term checker's rules in their
-        -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257)
-        `Effect4.Laws.Modules.Queue.Checking,
+        -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257).
+        -- The judgment's file names no module since seat MOVE
+        `Effect4.Laws.Modules.Checking,
         `Effect4.Laws.Program.Typing.TermIntro,
         -- Semaphore's typing statements, and its model's profile: the closure is this
         -- concept's node, and the two facts of a visit carry their own tag (seat SEM's
@@ -183,6 +184,12 @@ def registry : Registry where
         `Effect4.Laws.Program.LoopAgreement,
         `Effect4.Laws.Program.RuntimeR,
         `Effect4.Laws.Machine.Book,
+        -- the shared homes of the composed modules (seat MOVE): the encoding table, the
+        -- reading rules of a builder, and the connectors to the store. `step_keeps_cell`
+        -- keeps its own tag, `store-typing`
+        `Effect4.Laws.Modules.Table,
+        `Effect4.Laws.Modules.Reading,
+        `Effect4.Laws.Modules.Store,
         `Effect4.Laws.Modules.Queue.Relation,
         `Effect4.Laws.Modules.Queue.Reading,
         `Effect4.Laws.Modules.Queue.Steps,

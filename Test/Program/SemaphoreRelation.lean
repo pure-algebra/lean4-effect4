@@ -1,4 +1,5 @@
 import Effect4.Laws.Modules.Semaphore.Steps
+import Effect4.Laws.Modules.Store
 import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreSteps
 import ProofGraph.Plan
@@ -6,7 +7,7 @@ import ProofGraph.Plan
 /-!
 # Semaphore's relation and its step goals: finite controls (decisions row 265)
 
-The relation is `src/Effect4/Laws/Modules/Semaphore/Relation.lean`: the Queue's encoding table,
+The relation is `src/Effect4/Laws/Modules/Semaphore/Relation.lean`: the shared encoding table,
 the cell's value and the replies. The five step goals are in
 `src/Effect4/Laws/Modules/Semaphore/Steps.lean`. This battery evaluates each goal's conclusion,
 as the goal states it: at one table and at the scope of the step's own arguments, on every
@@ -15,7 +16,7 @@ state of the universe of `Test/Program/SemaphoreAgreement.lean`, 23 moves on eac
 It also ties the two encodings: the cell's value of the relation is the value of the
 comparison's state term. The red controls drop one premise each: the table's injectivity, and
 the hint that a take sets. Two more sections apply the statements: at a scope where `bindWith`
-minted the cursor, and joined to the store by the Queue's connector, `step_updates`.
+minted the cursor, and joined to the store by the shared connector, `step_updates`.
 
 Placement. Each guard is a finite instance of a step goal (concept `translation-simulation`,
 requirement R10, a part of the proposed claim `semaphore-expansion-agrees`). A state outside
@@ -30,7 +31,7 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.SemaphoreRelation
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue.Model (Table Reads Captured captured_var captured_answer step_updates)
+open Effect4.Modules
 open Effect4.Semaphore.Model
 open Test.Program.SemaphoreAgreement (profileStates outside moves Move held freed scan)
 open Test.Program.SemaphoreSteps (firstName secondName stepScope stepScope_second stepScope_cell)
@@ -149,7 +150,7 @@ def both : State := { permits := 2, taken := 2, waiters := [⟨1, 1, 1⟩, ⟨2,
 
 A step statement holds at every scope, for every caller's term that reads the step's
 arguments. A variable that an author wrote is such a term (`captured_var`). With `step_updates`
-(`src/Effect4/Laws/Modules/Queue/Steps.lean`) a statement is one atomic update of the cell: the
+(`src/Effect4/Laws/Modules/Store.lean`) a statement is one atomic update of the cell: the
 store step reads the cell once, answers the model's reply and writes the model's next state.
 The row's binder for the cell's value is the scope's last name. -/
 
@@ -301,7 +302,7 @@ next goals: 0
 #plan_status semaphore_steps_agree
 
 -- The general removal, and the three joins to the store.
-/-- info: 'Effect4.Semaphore.Model.reads_removeById' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.reads_removeById' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms reads_removeById
 

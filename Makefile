@@ -394,7 +394,8 @@ check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration thro
 # inventory reruns it when a scanned source is added or deleted.
 $(CHK)/proof-style: $(filter src/Effect4/%,$(LEAN_SOURCES)) Test/fixtures/proof-style/baseline.tsv \
   Test/fixtures/proof-style/red/Sample.lean Test/fixtures/proof-style/red-baseline.tsv \
-  Test/fixtures/proof-style/red-stale.tsv $(CHK)/inventory \
+  Test/fixtures/proof-style/red-stale.tsv Test/fixtures/proof-style/under/Sample.lean \
+  $(CHK)/inventory \
   tools/ProofGraph/ProofStyle.lean Test/Audit/ProofStyle.lean | build
 	$(LAKE) env lean -DwarningAsError=true Test/Audit/ProofStyle.lean
 	@mkdir -p $(CHK) && touch $@

@@ -334,7 +334,10 @@ def censusRows (root scope : Name) :
 def TraversalRow.marks (r : TraversalRow) : String :=
   (if r.isInstance then " [instance]" else "") ++ (if r.isPrivate then " [private]" else "")
 
-syntax (name := traversalCensus) "#traversal_census " ident (" under " ident)? : command
+/-- `#traversal_census T under Some.Prefix`. The word `under` is a keyword in this place only
+(`&" under "`), so a hypothesis or a binder may have the name: `definitionsUnder` above has a
+binder of that name. -/
+syntax (name := traversalCensus) "#traversal_census " ident (&" under " ident)? : command
 
 @[command_elab traversalCensus] def elabTraversalCensus : CommandElab := fun stx => do
   let root := stx[1].getId
@@ -369,7 +372,7 @@ syntax (name := traversalCensus) "#traversal_census " ident (" under " ident)? :
     {scope} scanned"
   logInfo report
 
-syntax (name := traversalClass) "#traversal_class " ident (" under " ident)? " for " ident+ :
+syntax (name := traversalClass) "#traversal_class " ident (&" under " ident)? " for " ident+ :
   command
 
 /-- The class the census gives each named definition, by the name it was written with, in the

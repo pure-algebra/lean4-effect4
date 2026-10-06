@@ -26,6 +26,7 @@ set_option maxRecDepth 16384
 namespace Test.Program.QueueSteps
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Modules
 
 open Effect4.Queue.Model (MessageTy takeReplyTy offerReplyTy pollReplyTy wakeReplyTy)
 
@@ -36,7 +37,7 @@ def termAt (names : List String) (src : TermSrc) : Option Term :=
 /-- The checker's type of a source term, at a scope of names and their types: the function of
 the typing statements, at the native signature. -/
 def typeAt (names : List String) (types : List Ty) (src : TermSrc) : Option Ty :=
-  Queue.Model.typeAt nativeSignature names types src
+  Modules.typeAt nativeSignature names types src
 
 /-! ## 1. The cell -/
 
@@ -99,12 +100,12 @@ Each guard is the statement of one typing theorem of
 `src/Effect4/Laws/Modules/Queue/Typing.lean`, at each listed message type. -/
 
 def takeTyped (A : Ty) : Bool :=
-  decide (typeAt ["id", "hint", "s"] [Queue.idTy, Queue.idTy, Queue.cellTy A]
+  decide (typeAt ["id", "hint", "s"] [idTy, idTy, Queue.cellTy A]
     (Queue.takeStep A (var "id") (var "hint") (var "s")) =
       some (.prod (takeReplyTy A) (Queue.cellTy A)))
 
 def offerTyped (A : Ty) : Bool :=
-  decide (typeAt ["id", "hint", "a", "s"] [Queue.idTy, Queue.answerTy, A, Queue.cellTy A]
+  decide (typeAt ["id", "hint", "a", "s"] [idTy, Queue.answerTy, A, Queue.cellTy A]
     (Queue.offerStep A (var "id") (var "hint") (var "a") (var "s")) =
       some (.prod offerReplyTy (Queue.cellTy A)))
 
@@ -116,11 +117,11 @@ def sizeTyped (A : Ty) : Bool :=
   decide (typeAt ["s"] [Queue.cellTy A] (Queue.sizeStep A (var "s")) = some .nat)
 
 def withdrawTakeTyped (A : Ty) : Bool :=
-  decide (typeAt ["id", "s"] [Queue.idTy, Queue.cellTy A]
+  decide (typeAt ["id", "s"] [idTy, Queue.cellTy A]
     (Queue.withdrawTake A (var "id") (var "s")) = some (.prod wakeReplyTy (Queue.cellTy A)))
 
 def withdrawOfferTyped (A : Ty) : Bool :=
-  decide (typeAt ["id", "s"] [Queue.idTy, Queue.cellTy A]
+  decide (typeAt ["id", "s"] [idTy, Queue.cellTy A]
     (Queue.withdrawOffer A (var "id") (var "s")) = some (.prod wakeReplyTy (Queue.cellTy A)))
 
 #guard messageTypes.all takeTyped
@@ -140,15 +141,15 @@ def withdrawOfferTyped (A : Ty) : Bool :=
 -- Red controls of the scope. A request's identity at a number has no type: `sameHandle` takes
 -- two handles of one kind. An offerer's hint at a taker's hint type has none: a `Deferred` is
 -- invariant in its answer. A message at another type has none.
-#guard (typeAt ["id", "hint", "s"] [.nat, Queue.idTy, Queue.cellTy .nat]
+#guard (typeAt ["id", "hint", "s"] [.nat, idTy, Queue.cellTy .nat]
   (Queue.takeStep .nat (var "id") (var "hint") (var "s"))).isNone
-#guard (typeAt ["id", "hint", "a", "s"] [Queue.idTy, Queue.idTy, .nat, Queue.cellTy .nat]
+#guard (typeAt ["id", "hint", "a", "s"] [idTy, idTy, .nat, Queue.cellTy .nat]
   (Queue.offerStep .nat (var "id") (var "hint") (var "a") (var "s"))).isNone
-#guard (typeAt ["id", "hint", "a", "s"] [Queue.idTy, Queue.answerTy, .string, Queue.cellTy .nat]
+#guard (typeAt ["id", "hint", "a", "s"] [idTy, Queue.answerTy, .string, Queue.cellTy .nat]
   (Queue.offerStep .nat (var "id") (var "hint") (var "a") (var "s"))).isNone
 -- A message below the cell's message type is typed: a literal in a cell of strings.
 #guard decide (typeAt ["id", "hint", "a", "s"]
-    [Queue.idTy, Queue.answerTy, .lit "x", Queue.cellTy .string]
+    [idTy, Queue.answerTy, .lit "x", Queue.cellTy .string]
     (Queue.offerStep .string (var "id") (var "hint") (var "a") (var "s")) =
   some (.prod offerReplyTy (Queue.cellTy .string)))
 
@@ -197,7 +198,7 @@ def measure (names : List String) (src : TermSrc) : Option (Nat × Nat) :=
 #guard measure ["id", "s"] (Queue.withdrawTake .nat (var "id") (var "s")) = some (66, 3)
 #guard measure ["id", "s"] (Queue.withdrawOffer .nat (var "id") (var "s")) = some (34, 1)
 -- The accept pass's one fold.
-#guard measure [] (Queue.gained (nat 1) Queue.nilT Queue.nilT) = some (16, 1)
+#guard measure [] (Queue.gained (nat 1) nilT nilT) = some (16, 1)
 #guard messageTypes.all fun A =>
   measure ["id", "hint", "s"] (Queue.takeStep A (var "id") (var "hint") (var "s")) ==
     some (283, 9)
@@ -215,7 +216,7 @@ def measure (names : List String) (src : TermSrc) : Option (Nat × Nat) :=
 #guard ((termAt ["id", "s"] (Queue.withdrawOffer .nat (var "id") (var "s"))).map
   (·.unannotated)) = some true
 -- Red control of the predicate: a fold that states a type is outside the domain.
-#guard ((termAt ["xs"] (fold "acc" "item" (some (.list .nat)) (var "xs") Queue.nilT
+#guard ((termAt ["xs"] (fold "acc" "item" (some (.list .nat)) (var "xs") nilT
   (var "acc"))).map (·.unannotated)) = some false
 
 /-! ## 4. A caller's variable under each helper
@@ -236,7 +237,7 @@ def valueAt (src : TermSrc) : Option Val :=
   (termAt hygieneNames src).bind (evalTerm hygieneValues)
 
 def listOf (xs : List TermSrc) : TermSrc :=
-  xs.foldr (fun x acc => app "cons" [x, acc]) Queue.nilT
+  xs.foldr (fun x acc => app "cons" [x, acc]) nilT
 
 def taker1 : TermSrc := Queue.mkTaker (var "acc") (var "h1")
 def taker2 : TermSrc := Queue.mkTaker (var "item") (var "h2")
@@ -282,7 +283,7 @@ def answers (helper expected : TermSrc) : Bool :=
 /-- Red control of the hygiene: `enrolled` with the fold's two names fixed. -/
 def enrolledFixed (takers id : TermSrc) : TermSrc :=
   fold "acc" "item" none takers (bool false)
-    (Queue.orT (var "acc") (Queue.same (field (var "item") "id") id))
+    (orT (var "acc") (same (field (var "item") "id") id))
 
 -- Under a name the fixed helper does not bind, it answers as the library's helper.
 #guard answers (enrolledFixed takers (var "other")) (bool false)

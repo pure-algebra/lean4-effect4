@@ -850,71 +850,11 @@ theorem anchoredFrom_unflagged {seen : List Nat} :
         exact hi
       · exact he
 
-/-- `flatMap` respects pointwise equality on the list. It is a step of `template-match-anchored`,
-and `paramOccurrences_firsts` reads it. -/
-theorem flatMap_congr {α β : Type} {l : List α} {f g : α → List β} (h : ∀ x ∈ l, f x = g x) :
-    l.flatMap f = l.flatMap g := by
-  rw [List.flatMap_def, List.flatMap_def, List.map_congr_left h]
-
-/-- A list zipped with its own image pairs each element with its image. It is a step of
-`template-match-anchored`, and `args_zip_of_map` reads it. -/
-theorem mem_zip_map_self {α β : Type} {f : α → β} :
-    ∀ {l : List α} {p : α × β}, p ∈ l.zip (l.map f) → p.2 = f p.1
-  | [], _, hp => absurd hp List.not_mem_nil
-  | a :: l, p, hp => by
-    rw [List.map_cons, List.zip_cons_cons, List.mem_cons] at hp
-    rcases hp with rfl | hp
-    · rfl
-    · exact mem_zip_map_self hp
-
-/-- Of three aligned lists, a pair of the first two has a partner in the third at its position. It
-is a step of `template-match-anchored`, and `underInstance_args` reads it. -/
-theorem mem_zip_middle {α β γ : Type} : ∀ {xs : List α} {ys : List β} {zs : List γ},
-    xs.length = zs.length → ys.length = zs.length → ∀ {a : α} {b : β}, (a, b) ∈ xs.zip ys →
-      ∃ c, (a, c) ∈ xs.zip zs ∧ (b, c) ∈ ys.zip zs
-  | [], _, _, _, _, _, _, h => absurd h List.not_mem_nil
-  | _ :: _, [], _, _, _, _, _, h => absurd h List.not_mem_nil
-  | _ :: _, _ :: _, [], hx, _, _, _, _ =>
-    absurd hx (List.cons_ne_nil _ _ ∘ List.eq_nil_of_length_eq_zero)
-  | x :: xs, y :: ys, z :: zs, hx, hy, a, b, h => by
-    rw [List.zip_cons_cons, List.mem_cons] at h
-    rcases h with h | h
-    · rw [Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact ⟨z, List.mem_cons_self, List.mem_cons_self⟩
-    · obtain ⟨c, hac, hbc⟩ := mem_zip_middle (Nat.succ.inj hx) (Nat.succ.inj hy) h
-      exact ⟨c, List.mem_cons_of_mem _ hac, List.mem_cons_of_mem _ hbc⟩
-
-/-- Two lists with one image pair elements of one image. It is a step of `template-match-anchored`,
-and `underInstance_args` and `infer_args` read it. -/
-theorem eq_of_mem_zip_map {α β γ : Type} {f : α → γ} {g : β → γ} :
-    ∀ {xs : List α} {ys : List β}, xs.map f = ys.map g → ∀ {a : α} {b : β},
-      (a, b) ∈ xs.zip ys → f a = g b
-  | [], _, _, _, _, h => absurd h List.not_mem_nil
-  | _ :: _, [], _, _, _, h => absurd h List.not_mem_nil
-  | x :: xs, y :: ys, he, a, b, h => by
-    rw [List.map_cons, List.map_cons, List.cons.injEq] at he
-    rw [List.zip_cons_cons, List.mem_cons] at h
-    rcases h with h | h
-    · rw [Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact he.1
-    · exact eq_of_mem_zip_map he.2 h
-
-/-- A lookup in a list of distinct names finds the entry of that name. It is a step of
-`template-match-anchored`, and `infer_args` reads it at a record. -/
-theorem lookup_of_mem_nodup {β : Type} :
-    ∀ {L : List (String × β)}, (L.map Prod.fst).Nodup → ∀ {p : String × β}, p ∈ L →
-      L.lookup p.1 = some p.2
-  | [], _, _, hp => absurd hp List.not_mem_nil
-  | q :: L, hnd, p, hp => by
-    rw [List.map_cons, List.nodup_cons] at hnd
-    rw [List.lookup_cons]
-    rcases List.mem_cons.mp hp with rfl | hp
-    · rw [beq_iff_eq.mpr rfl]
-    · have hne : p.1 ≠ q.1 := fun he => hnd.1 (he ▸ List.mem_map_of_mem hp)
-      rw [beq_eq_false_iff_ne.mpr hne]
-      exact lookup_of_mem_nodup hnd.2 hp
+/-! Five facts of lists that the proofs below read are in `Effect4.Constructive.List`
+(`src/Effect4/Data/Constructive.lean`): `flatMap_congr`, `mem_zip_map_self`, `mem_zip_middle`,
+`eq_of_mem_zip_map` and `lookup_of_mem_nodup`. Each is a step of `template-match-anchored`. -/
+open Effect4.Constructive.List (flatMap_congr mem_zip_map_self mem_zip_middle eq_of_mem_zip_map
+  lookup_of_mem_nodup)
 
 /-- A type is a parameter or is not one. It is a step of `template-match-anchored`, and
 `inferItems_recovers` reads it. -/

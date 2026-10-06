@@ -153,6 +153,8 @@ import Effect4.Run
 import Effect4.Ingest.Taxonomy
 import Effect4.Codegen.Forms
 import Effect4.Codegen.Styles
+-- The words of a step term that the composed modules share, in the namespace `Effect4.Modules`.
+import Effect4.Modules.Words
 -- The composed modules, programs over the authoring surface (decisions row 255): the Queue's
 -- cell and its steps.
 import Effect4.Modules.Queue.Cell

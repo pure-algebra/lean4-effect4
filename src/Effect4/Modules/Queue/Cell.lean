@@ -1,6 +1,6 @@
 module
 
-public import Effect4.Program.Authoring.Records
+public import Effect4.Modules.Words
 
 /-!
 # Modules.Queue.Cell — the Queue's cell: its type and its initial value (decisions row 255)
@@ -23,8 +23,9 @@ F1, `docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md`
 
 A request's identity is a `Deferred` that nobody resolves. Two identities are compared by
 `sameHandle`, and never by a number. A hint is a `Deferred`: a taker's carries nothing, and an
-offerer's carries its decided answer (decisions row 240). An offer's batch flag is false in the
-first profile, and its list holds one message.
+offerer's carries its decided answer (decisions row 240). The type of an identity and of a
+taker's hint is the shared `idTy` (`src/Effect4/Modules/Words.lean`). An offer's batch flag is
+false in the first profile, and its list holds one message.
 
 **The cell's type is private to the module, and a later slice changes it.** A field's name does
 not keep a `Ref`'s or a `Deferred`'s type. Three changes are known.
@@ -45,9 +46,7 @@ the cell's `Ref` in this slice (decisions row 230). Nothing here performs an eff
 namespace Effect4.Queue
 
 open Effect4.Program Effect4.Program.Authoring
-
-/-- A request's identity, and a taker's hint: a `Deferred` of nothing that cannot fail. -/
-def idTy : Ty := .deferredOf .unit .never
+open Effect4.Modules
 
 /-- An offerer's hint: a `Deferred` of its decided answer (decisions row 240). -/
 def answerTy : Ty := .deferredOf .bool .never
