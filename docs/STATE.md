@@ -255,11 +255,11 @@ Open at this landing:
      and twice revised after Codex's reviews. Its five choices are ruled (row 255). Its step
      goals quantify
      over a closed predicate, the first profile's states: `FirstProfile`, with its closure
-     proved (`first_profile_closed`, `src/Effect4/Laws/Modules/Queue/Profile.lean`). No seat has it yet:
-     two seats run.
-     [Its brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md) is written ahead.
-     The owner ruled the design's five proposals as recommended (row 255), so its dispatch
-     waits for a free seat only. Codex's design research
+     proved (`first_profile_closed`, `src/Effect4/Laws/Modules/Queue/Profile.lean`). Seat QSTEPS has
+     it since 2026-10-05 (branch `seat/qsteps`, from `b52c2b1b`;
+     [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). It runs as a
+     third seat, on the owner's word (row 237's amendment). The owner ruled the design's five
+     proposals as recommended (row 255). Codex's design research
      ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
      is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
      so a step's helper cannot capture its caller's variable
