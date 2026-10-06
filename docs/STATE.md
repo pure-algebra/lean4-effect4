@@ -282,24 +282,49 @@ In work since 2026-10-06, two seats at once (row 237):
 
 - **Seat PUB has the Queue's first public operations** (branch `seat/pub`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
-  become library programs that capture no name of a caller. Each atomic attempt is to be
-  proved the model's step, at the operation's own scope. Each runs on the Lean machine, on
-  the generated engine and on rc.112. The slice states no law of a whole run. **Its first
-  part is merged** (`f046975b`). It holds the shared pieces of a module that waits
-  (`src/Effect4/Modules/Waiting.lean`). It holds the five operations
-  (`src/Effect4/Modules/Queue/Ops.lean`: `Queue.bounded`, `offer`, `take`, `poll`, `size`),
-  and each one's scope law. The wrapper has two forms over one `Waiter`: a wake invites
-  another attempt, or the wake carries the decided answer. Every binder is minted, and the
-  batteries keep every answer. The typing at every scope, the attempt laws, the acceptance
-  traces and the truth programs are the seat's next steps.
-- **Seat REFS has the independent foundation proof** of the owner's roadmap, as Codex's audit
-  corrected it (branch `seat/refs`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-refs-brief.md)). A program whose
-  layer references are well formed expands to a program with no reference, at the bound of
-  `Eff.expandRefs`. Two theorems then lose a premise. The seat reports the top theorem
-  proved on its branch (`00a37ffc`), both consumers without their premise (`525c78b3`) and a
-  battery of nine real programs (`8a5352dc`). Its receipt is committed, and its last checks
-  run. Nothing of it is merged yet.
+  become library programs that capture no name of a caller. Each runs on the Lean machine, on
+  the generated engine and on rc.112. The slice states no law of a whole run. **Four steps
+  are merged** (`f046975b`, then `c957bfab`):
+  - the shared pieces of a module that waits (`src/Effect4/Modules/Waiting.lean`), and the
+    five operations (`src/Effect4/Modules/Queue/Ops.lean`: `Queue.bounded`, `offer`, `take`,
+    `poll`, `size`), each with its scope law. The wrapper has two forms over one `Waiter`: a
+    wake invites another attempt, or the wake carries the decided answer. Every binder is
+    minted;
+  - seven attempt laws: each operation's own step is the model's step
+    (`src/Effect4/Laws/Modules/Queue/Ops.lean`: `take_attempt` and its six siblings), and
+    four forms over minted names. The facts about names hold for every caller environment.
+    The comparison with the actual operation trees is a finite battery;
+  - seven acceptance traces and the hygiene controls (`Test/Program/QueueTraces.lean`). Each
+    trace is a finite control of one open part. Trace 7 measures the embedded budget. At one
+    unit of fuel less than the measured least, the remaining work is lost, and later flushes
+    do not end the root. That is the cut that row 226 excludes. No bound is claimed. The
+    registry now names that open part `embedded-budget-sufficient`, under R12.
+
+  The typing at every scope, the faces, the truth programs and the engine's lane are the
+  seat's next steps. Its repair of the truth lane's fiber numbers is committed on its branch
+  and not merged. The Lean face then numbers a fiber by its first row, as the host's
+  recorder does.
+- **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
+  merge freed a seat. It first runs the card's cases on our machine. Then it writes the
+  contract, the model with its profile, and the cell with its five steps. It ends with the
+  steps' typing and their agreement with the model. The public `make` and `use`, the close
+  that waits and the finalizers' runs are a later slice.
+
+Merged on 2026-10-06, after the seats above began:
+
+- **Seat REFS is merged** (`c957bfab`;
+  [its receipt](research/2026-10-06-seat-REFS-receipt.md)). It is the independent foundation
+  proof of the owner's roadmap, as Codex's audit corrected it. A program whose layer
+  references are well formed expands to a program with no reference site. The bound is that
+  of `Eff.expandRefs` (`expanded_refs_nil_of_wf`,
+  `src/Effect4/Laws/Program/ReferenceExpansion.lean`; the registry claim
+  `reference-expansion-complete`, R5). The theorem landed as a planned goal and was proved in
+  place. `typeOfProgram_expandRefs` and `checkTypedProgram_of_hasTy` each lose a premise, by
+  the checker's equation `typeOfProgram_eq_if_refsWF`. A battery holds nine real programs,
+  with four red controls. Seven old lemmas are now instances of one law, with their
+  statements unchanged, and the proof-style baseline loses 16 lines. Row 273 records what the
+  receipt leaves open.
 
 Candidates with no seat, each with its place:
 
@@ -324,7 +349,10 @@ Candidates with no seat, each with its place:
   The case P9 on the generated engine goes with it;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
-- two small repairs of the foreign readers (row 258, points 5 and 6).
+- two small repairs of the foreign readers (row 258, points 5 and 6);
+- the checker's second test goes: `typeOfProgram` then tests the references' formation only,
+  and the dead arm of `Api.explain` goes with it (row 273, point 2). No program's answer
+  changes.
 
 Three repairs of 2026-10-06, outside any seat:
 
