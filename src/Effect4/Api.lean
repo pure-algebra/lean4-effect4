@@ -112,14 +112,15 @@ def checkTyping (program : Program) (table : RowTable := []) :
 def wellTyped (program : Program) (table : RowTable := []) : Bool := (typeOf program table).isSome
 
 /-- Where and why a program fails to type (DI-86): the checker's refusal, with the program's
-layer references resolved as `typeOf` resolves them (an ill-formed reference is refused at the
-root, a reference that survives expansion at its site). `none` exactly when the program is
-`wellTyped` (`Api.explain_none_iff`, below). -/
+layer references resolved as `typeOf` resolves them. The facade refuses an ill-formed reference
+at the root. Where the references are well formed, it answers the structural checker's refusal
+of the expansion (`Program.explain`). The expansion has no reference site
+(`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`), so no arm answers for one
+(decisions row 273). `none` exactly when the program is `wellTyped` (`Api.explain_none_iff`,
+below). -/
 def explain (program : Program) (table : RowTable := []) : Option Effect4.Program.TypeRefusal :=
   if program.layerRefsWF then
-    match program.expandRefs.refSites [] with
-    | (site, target) :: _ => some ⟨site, .layerReference target⟩
-    | [] => Effect4.Program.explain (nativeSignature table) [] program.expandRefs
+    Effect4.Program.explain (nativeSignature table) [] program.expandRefs
   else some ⟨[], .referencesIllFormed⟩
 
 /-- The path of the refusal alone: the deepest node whose own rule refuses. -/
@@ -127,13 +128,17 @@ def blame (program : Program) (table : RowTable := []) : Option (List Nat) :=
   (explain program table).map (·.path)
 
 /-- The facade's refusal is the checker's (DI-86): `explain` answers `none` exactly when the
-program is `wellTyped`, the layer references resolved the same way on both sides. -/
+program is `wellTyped`, the layer references resolved the same way on both sides. Both sides
+test the references' formation. Where it holds, the law is the structural one at the expansion
+(`Program.explain_none_iff`, `Program/Typing/Agreement.lean`). Where it fails, the facade
+refuses at the root and the program is not `wellTyped`. The proof uses no law of the proof
+graph. -/
 theorem explain_none_iff (program : Program) (table : RowTable) :
     explain program table = none ↔ wellTyped program table = true := by
-  unfold explain wellTyped typeOf Program.typeOfProgram Program.typeOf
-  split
-  · split <;> simp_all [Program.explain_none_iff]
-  · simp_all
+  unfold explain wellTyped typeOf Program.typeOfProgram
+  cases program.layerRefsWF with
+  | true => exact Program.explain_none_iff (nativeSignature table) [] program.expandRefs
+  | false => exact ⟨nofun, nofun⟩
 
 theorem blame_none_iff (program : Program) (table : RowTable) :
     blame program table = none ↔ wellTyped program table = true := by

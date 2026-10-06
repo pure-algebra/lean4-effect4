@@ -13,11 +13,14 @@ Proof graph:
   expansion round fixes syntax with no reference sites.
 * `expandRefs_eq_self_of_refSites_nil` reduces the expansion fold to that round;
   `layerRefsWF_of_refSites_nil` discharges well-formedness of reference-free syntax.
-* `typeOfProgram_eq_if_refsWF` is the checker's equation. The checker's second test, that
-  the expansion has no reference site, follows from its first, that the references are
-  well formed (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`).
-* `typeOfProgram_expandRefs` reads the equation at the program and at its expansion,
-  which the first two facts fix. Its one premise is the well-formed references.
+* `typeOfProgram_eq_if_refsWF` is the checker's equation, and it is the checker's definition
+  (`typeOfProgram`, `Program/Typing.lean`). The checker tests the references' formation only.
+  Until 2026-10-06 it made a second test, that the expansion has no reference site. That test
+  followed from the first (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`),
+  and decisions row 273 removed it.
+* `typeOfProgram_expandRefs` reads the equation at the program and at its expansion. The
+  expansion has no reference site (`expanded_refs_nil_of_wf`), so the first two facts fix it.
+  Its one premise is the well-formed references.
 
 The proved judgment is equality of `typeOfProgram` results. Neither answer is shown to
 be a type. Runtime behavior and layer sharing are separate C4 obligations.
@@ -155,21 +158,17 @@ theorem layerRefsWF_of_refSites_nil {Op : Type} (p : Eff Op)
     (h : p.refSites [] = []) : p.layerRefsWF = true := by
   simp [Eff.layerRefsWF, h]
 
-/-- **The checker's equation.** The whole-program checker makes two tests before it types the
-expansion (`typeOfProgram`, `Program/Typing.lean`): the references are well formed, and the
-expansion has no reference site. The second follows from the first (`expanded_refs_nil_of_wf`,
-`Laws/Program/ReferenceExpansion.lean`). So the checker answers the structural type of the
-expansion exactly when the references are well formed. The equation does not say that the answer
-is a type. Its consumers are `typeOfProgram_expandRefs` below and `checkTypedProgram_of_hasTy`
-(`Laws/Program/CheckedTyping.lean`). -/
+/-- **The checker's equation.** The whole-program checker tests one thing before it types the
+expansion (`typeOfProgram`, `Program/Typing.lean`): the references are well formed. So it
+answers the structural type of the expansion exactly when the references are well formed. The
+equation is the checker's definition, so its proof is `rfl`. Until 2026-10-06 the checker also
+tested that the expansion has no reference site. That test followed from the first
+(`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`), and it is gone (decisions
+row 273). The equation does not say that the answer is a type. Its consumers are
+`typeOfProgram_expandRefs` below, `TypedProgram.hasTy` and `checkTypedProgram_of_hasTy`
+(`Laws/Program/CheckedTyping.lean`), and `typeOfProgram_looped` (`Laws/Program/TypedRun.lean`). -/
 theorem typeOfProgram_eq_if_refsWF {Op : Type} (sig : Signature Op) (p : Eff Op) :
-    typeOfProgram sig p = if p.layerRefsWF then typeOf sig p.expandRefs else none := by
-  unfold typeOfProgram
-  cases hwf : p.layerRefsWF with
-  | false => rfl
-  | true =>
-    rw [expanded_refs_nil_of_wf p hwf]
-    rfl
+    typeOfProgram sig p = if p.layerRefsWF then typeOf sig p.expandRefs else none := rfl
 
 /-- C4 typing equation with its one premise, well-formed original layer references: the
 checker's answer on the expanded program is its answer on the program. The expansion has no

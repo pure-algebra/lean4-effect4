@@ -839,11 +839,14 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   reference site. The bound is that of `Eff.expandRefs`: one more round than the program has
   reference sites (`expanded_refs_nil_of_wf`
   (`src/Effect4/Laws/Program/ReferenceExpansion.lean`)). The one premise is the formation of
-  the references. Scope, type formation and typing are not conclusions. So the second test
-  of the whole-program checker follows from its first (`typeOfProgram_eq_if_refsWF`,
-  `src/Effect4/Laws/Program/ReferenceTyping.lean`). The property is about the expansion that
-  typing reads. The compile does not expand: it redirects a reference to its target, and a
-  run shares the layer by its path.
+  the references. Scope, type formation and typing are not conclusions. So the whole-program
+  checker tests the references' formation only (`typeOfProgram`,
+  `src/Effect4/Program/Typing.lean`). The program interface's refusal has no arm for a kept
+  reference site (`Api.explain`, `src/Effect4/Api.lean`). Each equation is its definition's
+  own (`typeOfProgram_eq_if_refsWF`, `src/Effect4/Laws/Program/ReferenceTyping.lean`;
+  `Api.explain_eq_if_refsWF`, `src/Effect4/Laws/Api/Codegen.lean`). The property is about the
+  expansion that typing reads. The compile does not expand: it redirects a reference to its
+  target, and a run shares the layer by its path.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 
