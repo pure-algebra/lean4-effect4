@@ -49,5 +49,7 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pRateRequest | success [true,false,3,1,3] | success [true,false,3,1,3] | yes | yes | yes | runSyncExit | same value |
 | pDeferredGate | success [false,true,false,7] | success [false,true,false,7] | yes | yes | yes | runSyncExit | same value |
 | pInterruptedWait | success [true,1] | success [true,1] | yes | yes | yes | runSyncExit | same value |
+| pMaskWait | success [true,1] | success [true,1] | yes | yes | yes | runSyncExit | same value |
+| pMaskedRestore | success [1,true,18] | success [1,true,18] | yes | yes | yes | runSyncExit | same value |
 
-PASS: 44 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 46 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

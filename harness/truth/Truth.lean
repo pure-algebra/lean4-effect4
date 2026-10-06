@@ -1,5 +1,6 @@
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Codegen.TermRows
+import Test.Program.MaskContract
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -493,11 +494,42 @@ def pInterruptedWait : Api.Program :=
   | .ok p => p
   | .error _ => .fail (.lit (.str "pInterruptedWait: the source does not elaborate"))
 
+/-- The mask that restores (decisions rows 244 to 246): a mask around a wait that is
+interrupted. The program is `Test.Program.MaskContract.s2`, the note's scenario S2. `a0` is a
+promise that nothing completes, and `a1` a log cell. A child runs the mask as the derived form:
+the getter `Effect.uninterruptibleMask((a) => Effect.succeed(a))` under a `flatMap`, and the
+body under `Effect.uninterruptible`. The body marks the log with `1`, waits at the promise in a
+restore site, `pipe(Deferred.await(a0), a)`, and would mark `10`. The main fiber interrupts the
+child while it waits. The caller is interruptible, so the restore site is interruptible: the
+child exits interrupted, and its body does not go on. The program answers `[the child's exit is
+an interruption, the log]`, which is `[true, 1]`. Its rows are `pInterruptedWait`'s: the mask
+adds no row. A source that does not elaborate is a failure with a text, never a patched
+program. -/
+def pMaskWait : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Program.MaskContract.s2 with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pMaskWait: the source does not elaborate"))
+
+/-- The mask that restores: a restore site under a masked caller. The program is
+`Test.Program.MaskContract.s3`, the note's scenario S3: the child of `pMaskWait` under
+`Effect.uninterruptible`, with a body that adds the awaited value to its second mark. A helper
+fiber interrupts the child while it waits. The caller is masked, so the saved choice is the
+identity and the wait is not interrupted. The main fiber reads the log, completes the promise
+with `7`, and awaits the child and the helper. The child's body goes on to its end, and the
+child is interrupted when its caller's mask ends. The program answers `[the log after the
+interrupt's request, the child's exit is an interruption, the log at the end]`, which is
+`[1, true, 18]`. -/
+def pMaskedRestore : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Program.MaskContract.s3 with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pMaskedRestore: the source does not elaborate"))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, the two programs
 of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe),
-the rate limiter's request, a gate at `Deferred<void, never>`, and a parked fiber that an
-interrupt wakes. Every listed program contributes one manifest entry. -/
+the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
+interrupt wakes, and the two programs of the mask that restores. Every listed program
+contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -511,7 +543,8 @@ def corpus : List (String × Api.Program) :=
     ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape),
     ("pFold", pFold), ("pModifyFold", pModifyFold), ("pQueueOffer", pQueueOffer),
     ("pRateRequest", pRateRequest), ("pDeferredGate", pDeferredGate),
-    ("pInterruptedWait", pInterruptedWait)]
+    ("pInterruptedWait", pInterruptedWait), ("pMaskWait", pMaskWait),
+    ("pMaskedRestore", pMaskedRestore)]
 
 /-! ## The value wire -/
 
@@ -1021,7 +1054,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
    "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate",
-   "pInterruptedWait"]
+   "pInterruptedWait", "pMaskWait", "pMaskedRestore"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
@@ -1091,6 +1124,37 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard ((reduce (Api.run pDeferredGate 1000).trace).filter (· == "resumed 1")).length = 1
 #guard (((Api.run pDeferredGate 1000).trace.filterMap reduced).filter (· == "resumed 1")).length = 1
 #guard ((reduce (Api.run pInterruptedWait 1000).trace).filter (· == "resumed 1")).length = 1
+-- The mask that restores (decisions rows 244 to 246). Each source elaborates (its first node
+-- makes the promise; a source that did not elaborate is a `fail`), types at its answer, answers
+-- on the machine, and reads back whole.
+#guard match pMaskWait with
+  | .bind (.perform (.deferredMakeOf .nat .never) _) _ => true
+  | _ => false
+#guard match pMaskedRestore with
+  | .bind (.perform (.deferredMakeOf .nat .never) _) _ => true
+  | _ => false
+#guard Api.typeOf pMaskWait = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
+#guard (Api.run pMaskWait 1000).exit = some (.success (.list [.bool true, .nat 1]))
+#guard Api.roundTrip pMaskWait = .ok pMaskWait
+#guard Api.typeOf pMaskedRestore =
+  some ⟨.tuple [.nat, .bool, .nat], .never, Env.Requirement.empty⟩
+#guard (Api.run pMaskedRestore 1000).exit =
+  some (.success (.list [.nat 1, .bool true, .nat 18]))
+#guard Api.roundTrip pMaskedRestore = .ok pMaskedRestore
+-- the printed expression of the first: the getter under a `flatMap`, the body's mask, and the
+-- restore site as `pipe(body, saved)`
+#guard (Api.print pMaskWait).toOption.map (TypeScript.Render.expr house0 0) = some
+  "Effect.flatMap(Deferred.make<number, never>(), (a0) => Effect.flatMap(Ref.make(0), (a1) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Effect.uninterruptibleMask((a2) => Effect.succeed(a2)), (a2) => Effect.uninterruptible(Effect.flatMap(Ref.update(a1, (a3) => add(a3, 1)), (a3) => Effect.flatMap(pipe(Deferred.await(a0), a2), (a4) => Ref.update(a1, (a5) => add(a5, 10)))))), { startImmediately: true, uninterruptible: \"inherit\" }), (a2) => Effect.flatMap(Fiber.interrupt(a2), (a3) => Effect.flatMap(Fiber.await(a2), (a4) => Effect.flatMap(Ref.get(a1), (a5) => Effect.succeed(tuple(causeIsInterrupt(a4), a5))))))))"
+-- The mask adds no compared row: the masked wait's rows are the plain wait's, and under a
+-- masked caller the child is resumed by the promise's token, after the helper parks.
+#guard reduce (Api.run pMaskWait 1000).trace = reduce (Api.run pInterruptedWait 1000).trace
+#guard reduce (Api.run pMaskedRestore 1000).trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
+   "resumed 1", "started 1", "exited 1 interrupt", "resumed 2", "started 2",
+   "exited 2 success", "exited 0 success"]
+-- red control: the two programs differ by the caller's mask and the helper, and by their answers
+#guard pMaskWait != pMaskedRestore &&
+  (Api.run pMaskWait 1000).exit != (Api.run pMaskedRestore 1000).exit
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
