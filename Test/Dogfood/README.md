@@ -20,8 +20,8 @@ of row 204 moves at least one program forward.
   each requirement keeps waiting.
 - `Scenario.lean` holds what the scenarios share: the script alphabet, the driver, the readers of a
   run's session part and the driver's laws. It also holds a scenario's record and the gate
-  `#scenario_gate`. Its last section holds the one `note` of the scenarios' logs: an entry
-  appended to a log cell, under a minted name for the cell's value.
+  `#scenario_gate`. Its last section holds the one `note` of the scenarios' logs. A note appends
+  an entry to a log cell, under a minted name for the cell's value.
 - `Scenario/` holds one battery per scenario. `Scenario/Tape.lean` holds the text of their lowered
   runs, and `Scenario/Lowered.lean` binds the engine's fixtures to it. `Scenario/Faces.lean` pins
   that each scenario's program prints and reads back. `Test/All.lean` imports each one.
@@ -99,10 +99,11 @@ fields have these meanings:
 | `readBack` | `Api.readable` holds: reading the program's printing gives the program back |
 
 A battery also pins each error payload part apart from the program's stage (`PartReach`,
-`Stage.lean`; decisions row 120). The fields are the build's verdict, whether the part's run
-fails with its record as the first typed failure, the module printer's answer (`Api.emitModule`:
-`printed`, or a payload class refused by name with its tag) and whether the printed module reads
-back (`Api.readModule`). Since part E2 the module declares one `Data.TaggedError` class per tagged
+`Stage.lean`; decisions row 120). It has four fields. The first is the build's verdict. The
+second says whether the part's run fails with its record as the first typed failure. The
+third is the module printer's answer (`Api.emitModule`): `printed`, or a payload class
+refused by name with its tag. The fourth says whether the printed module reads back
+(`Api.readModule`). Since part E2 the module declares one `Data.TaggedError` class per tagged
 payload type and constructs the payload with `new`.
 
 Each run is a finite probe: one scripted host and one decision tape per run. A stage is not a
@@ -198,7 +199,7 @@ flowchart LR
 | Reader | What it takes | Where |
 | --- | --- | --- |
 | The gate | It plays each named run once. It hands each control the runs that the control names, as played. | `Scenario.problems`, `Scenario.lean` |
-| The host lane | It performs each named run of the four records, in the record's order. It holds no script. | `Wire.runs`, `harness/truth/session/Keyed.lean` |
+| The host lane | It performs each named run of the five records, in the record's order. It holds no script. | `Wire.runs`, `harness/truth/session/Keyed.lean` |
 | The engine's lane | It takes the runs that `taken` names. It holds two scripts of its own, which no record lists. | `taken` and `own`, `Scenario/Tape.lean` |
 
 A lane quotes a run as the scenario's name, a slash and the run's name. One name has one script
@@ -225,9 +226,21 @@ control on the Lean machine.
 | Scenario | Program | Observation | Claim, assembled clauses and associated laws | Lowered runs |
 | --- | --- | --- | --- | --- |
 | workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers` assembles four clauses: `receipt_inert`, `applied_selects` and `control_retires` (theorems of `Scenario.lean`), and the planned goal `releases_once`. That goal says: under every script the crew releases no connection twice. Associated law: `replays`. | Engine: `workers.txt`, five runs of the machine clause. Host: the keyed lane performs each named run that a host can perform. The host measures six entries by itself: the reply receipts, the reply applications, the retired calls, the root's exit, the live calls and the stored replies. It measures five entries through a reader, at the script's end: the assignment and the cleanups through the cells reader, the timers through the sleeps reader, and the runnable fibers and the armed owners through the dispatchers reader, as a count of zero. Where the run's own wait follows the last act, that wait gives the zero. Those two entries then show only that the host came to rest, and the check's table names the scripts. No entry waits. One script has no host run: a forged reply is no act of a host. The program prints and reads back since the state plan's T5, part A (`Scenario/Faces.lean`). |
+| queue-workers: `Scenario/QueueWorkers.lean`, on p3's consumer and the public Queue | `crew`: a feeder takes each job from the host row `Jobs.take` and offers it to a queue of capacity 1. Two workers take from the queue, note each assignment and run each job on the host row `Jobs.run`. The root reads the queue's size and polls once at its exit. So the program holds the five public operations of `src/Effect4/Modules/Queue/Ops.lean`. Each of the three crew members holds a connection that its scope releases. | `Observation`, eleven fields: the assignment, the queue's cell up to its handles, the fed jobs, the accepted reply receipts, the reply applications, the retired calls, the opened and the released connections, the count of finished jobs, the root's exit and the work left. | `queueWorkers` assembles seven clauses. Three are theorems of `Scenario.lean`: `receipt_inert`, `applied_selects` and `control_retires`. Four are planned goals over scripts. `held_within_fed`: no job is held more often than the host fed it. `fed_accounted`: each fed job is held, but for one job of a feeder that is gone. `queue_settled`: at rest the queue's registrations are the crew's waits, and no job is stranded. `releases_once`: no connection is released twice. Each goal takes the budget premise `funded`, and the two middle ones hold at rest, on scripts of host acts. Associated laws: `replays` and `funded_replays`. | Engine: `queue-workers.txt`, three runs of the machine clause: the whole run to the root's exit, and the two cancellations between a reply application and its flush. Host: the keyed lane performs each named run that a host can perform. The host measures seven entries by itself: the fed jobs, the reply receipts, the reply applications, the retired calls, the root's exit, the live calls and the stored replies. It measures eight entries through a reader, at the script's end. Five come through the cells reader: the assignment, the queue's cell, the opened connections, the released connections and the count of finished jobs. The timers come through the sleeps reader. The runnable fibers and the armed owners come through the dispatchers reader, as a count of zero, under the limit of the workers scenario's row. No entry waits. The lane compares the queue's cell up to its handles ("The host runs", below). Six scripts have no host run. A forged reply is no act of a host. Three scripts give another row where the machine has work for a flush. Two cancel a fiber between a reply application and its flush, and the third plays the second one's moves on a faulty crew. A host lets every dispatcher run after each act, so it reaches no such state. The engine's fixture holds the two on the crew. Two scripts run at a command budget that cuts a step, and a host has no budget. The program prints and reads back (`Scenario/Faces.lean`). |
 | routing: `Scenario/Routing.lean`, on p2's consumer | `request`: p2's handler on its two host rows. `handleOn` writes it over any repository row and any two handler tests. | `Observation`, three fields: the exact response or the failure that escapes, the repository's calls, and the refused rows with the session's reason. | `routing` assembles three clauses: `tagIs_pair` (a theorem: the handler's test is exact on the pair spelling), and the planned goals `infrastructure_escapes` and `unauthorized_calls_nothing`. Associated law: `submit_success_prepared_fits`, a theorem of the law graph. | Engine: `routing.txt`, four runs of the machine clause. Host: the keyed lane performs each named run that a host can perform. The host measures the outcome and the repository's calls. The recorder's ledger predicts the refused rows, and Lean's replay gives the session's verdict of each. No field waits. Two scripts have no host run: the session refuses a reply as `envelope`, and a host has no reply admission. A third stays out: tsgo 7 refuses the printed module of the exact error column. The program prints and reads back (`Scenario/Faces.lean`). |
 | atomic: `Scenario/Atomic.lean`, on p4's and p5's consumers | `shop`: a rate-limited ledger. Each request decides over the window in one store step, and an admitted request deposits its number in one store step. Request 2 fails behind both commits. Each request's finalizer notes what it sees. | `Observation`, five fields: each request's outcome, the whole window, the whole account, the count of completed requests and the cleanup log. | `atomic` assembles five clauses. Four are planned goals over every script: `bounded`, `counted`, `committed` and `cleans_once`. One is a theorem on the straight fragment: `unsuspended_runs`. Associated law: `syncRow_typed`, a theorem of the law graph. | Engine: `atomic.txt`, three runs of the machine clause. Host: the keyed lane performs each named run that a host can perform. The shop has no host row, so the host measures no field by itself. It measures all five fields through a reader, at the script's end: the window, the account and the cleanup log through the cells reader, and each request's outcome and the completed count through the fibers reader. No field waits. One script has no host run: it interrupts request 2, whose fiber made no call, so a host with no reader has no name for it. The program prints and reads back since the state plan's T5, part A (`Scenario/Faces.lean`). |
 | timeout: `Scenario/Timeout.lean`, on p1's consumer | `fetch`: p1's quote fetch, with a 2000 ms timeout around each attempt and three retries. Each attempt counts itself before its host call, and its finalizer notes how it ended. | `Observation`, nine fields: what became of each held call, the accepted reply receipts, the reply applications, the retired calls and the stored replies. Then the attempts started, the cleanup log, the root's ending and the timer work. | `timeout` assembles three clauses, each a planned goal: `retries_declared`, `stale_never_applies` and `cleanup_keeps`. Associated laws: `applyReply_zero` and `advance_answer_refuses`, theorems of the law graph, and `replays`. | Engine: `timeout.txt`, six runs of the machine clause, and p1's own program as the handle case. Host: the keyed lane performs each named run that a host can perform. The host measures six fields by itself: each held call's fate, the reply receipts, the reply applications, the retired calls, the stored replies and the root's ending. It measures the attempt count and the cleanup log through the cells reader, at the script's end. It measures the timers through the sleeps reader in each script where every sleeping fiber is the root or made a call. In the other scripts the timers wait: a timer's fiber makes no call, so it has no number on the host, and Lean's replay is the timers' only evidence there. So the scenario's whole-observation comparison waits on the timers in those scripts, and the check's table names them. Two scripts have no host run: a forged reply and a direct answer decision are no acts of a host. The program prints since the state plan's T5, part A, and reads back since part B's second step: the checked type reader reads the retry loop's stated cursor type (`Scenario/Faces.lean`). |
+
+A statement over a scenario's runs takes its budget as a premise, under one name: `funded`
+(`Scenario.lean`). A funded run is a run that no budget cut: the tape of its own journal, read
+from its fresh open, leaves no row unread. The journal's verdicts alone do not decide it. A
+reply application has the verdict `applied` as soon as its call's guard is gone, whatever fuel
+its step had left. `funded_replays` says what the premise gives: the machine of a funded run is
+the raw replay of its tape's decisions. The queue-workers record holds the controls, on one
+journal at three command budgets. At the battery's budget the run is funded. At a smaller
+budget the journal has a stopped row and the funded run's verdicts, and the queue is not
+settled. At a third budget the cut leaves the machine at rest: no work is left, and the root
+has no exit. So a machine at rest does not show that its run is funded.
 
 Two cases have no control, and each battery's header states its case.
 
@@ -340,7 +353,28 @@ The lane performs each script with no reader, with its readers, and with each re
 Each recording must be the bytes of the run with no reader.
 
 A script has no host run where a host has no act for one of its rows. The driver gives the
-reason (`performable`, `harness/truth/session/Keyed.lean`).
+reason (`performable`, `harness/truth/session/Keyed.lean`). A run that is not funded has no
+host run either: a host has no budget (`emitRun`, in the same file).
+
+The lane compares a module's private cell up to its handles. The queue-workers scenario reads
+the Queue's cell, whose waiting requests hold `Deferred` handles. A host has no number for a
+`Deferred`. So both faces write one image for it, `{"handle": "deferred"}`, each in a writer
+named `cellJson`.
+
+- On the host only the cells reader calls it (`keyed-recorder.ts`). A `Deferred` in a call's
+  request or in an exit stays outside the transport profile.
+- On the Lean face a scenario's wire chooses it for an entry (`Keyed.lean`). The queue-workers
+  wire chooses it for the entry `queue` alone, and every other entry keeps `valJson`.
+
+So a `Deferred` in any other compared value is red.
+
+- The lane compares how many requests stand in the cell, and each request's other fields.
+- The lane does not compare which handle stands where.
+
+Two runs of the scenario differ only there. After `parked` the earliest waiting taker is
+worker 1's request, and after `rewaiting` it is worker 2's. The two cells differ on the Lean
+machine, and their images are equal. The runs `fed` and `rewaiting-fed` show the difference
+in an entry that the lane does compare: the next fed job goes to the earliest taker.
 
 Each host run is a finite host run of one script. It establishes no agreement for another
 script, no host adequacy and no liveness.

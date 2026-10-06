@@ -1,0 +1,75 @@
+import Test.Dogfood.Scenario.QueueWorkers
+import Effect4.Laws.Run
+
+/-!
+The least command budget of each row of a script. The probe plays the script at the battery's
+budget. Before each row that gives the machine a decision, it asks `Run.enoughFor` at each
+command budget from 1 to 200, on the machine that the funded run holds there. It prints the
+least sufficient budget, and whether the answer is monotone in the budget.
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace RowCost
+
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Api.Runner (Command)
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+def rowText : Command → String
+  | .control d =>
+    match d with
+    | .flush => "flush"
+    | .evaluate id => s!"evaluate {id.value}"
+    | .interruptFrom _ _ target => s!"interrupt {target.value}"
+    | .advance _ => "advance"
+    | _ => "control"
+  | .submit r => s!"submit {r.key.fiber.value}.{r.key.token}"
+  | .apply k => s!"apply {k.fiber.value}.{k.token}"
+  | _ => "bind"
+
+/-- The least budget in 1..200 at which the decision has enough fuel, and whether the answer is
+monotone on that range. -/
+def least (s : Run) (d : Api.Decision) : Option Nat × Bool :=
+  let answers := (List.range 200).map fun k =>
+    Run.enoughFor s.built.program s.built.table (k + 1) s.machine d
+  let first := (answers.zipIdx.find? (·.1)).map (·.2 + 1)
+  let monotone := match first with
+    | some n => (answers.drop (n - 1)).all id
+    | none => true
+  (first, monotone)
+
+def costs (b : Api.Built) (moves : List Move) : List String :=
+  let whole := _root_.Test.Dogfood.Scenario.play (opened b) moves
+  let step := fun (acc : Run × Nat × List String) (c : Command) =>
+    let s := acc.1
+    let index := acc.2.1
+    let phase := (Api.Runner.result s.runner c).phase
+    let line := match decisionOf s c phase with
+      | none => []
+      | some d =>
+        let found := least s d
+        [s!"row {index + 1} {rowText c}: least {found.1}{if found.2 then "" else " NOT MONOTONE"}"]
+    (s.step c, index + 1, acc.2.2 ++ line)
+  (whole.journal.foldl step (opened b, 0, [])).2.2
+
+def report (name : String) (parts : List (List Move)) : IO Unit :=
+  match (Effect4.Api.Author.build (crew 3)).toOption with
+  | none => IO.println "no build"
+  | some b => do
+    IO.println s!"--- {name}"
+    for line in costs b (script parts) do IO.println line
+
+#eval report "closed" [blocked, closing]
+#eval report "cancelled-waiting-closed" [running, cancelWaiting, afterWaiting]
+#eval report "cancelled-running-closed" [running, [.cancel ⟨2⟩], afterRunning]
+#eval report "cancelled-root" [blocked, [.cancel ⟨0⟩]]
+#eval report "cancelled-accepted" [blocked, [.receive w1 (ok .unit), .apply w1, .cancel ⟨3⟩, .flush]]
+#eval report "cancelled-selected" [parked, [.receive feederCall (ok (.nat 1)), .apply feederCall, .cancel ⟨1⟩, .flush]]
+#eval report "cancelled-offer" [blocked, [.cancel ⟨3⟩]]
+#eval report "rewaiting-fed" [parked, feed 1, [.hold feederCall, .hold w1], done w1, feed 2]
+
+end RowCost

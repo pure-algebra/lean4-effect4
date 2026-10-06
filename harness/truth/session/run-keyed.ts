@@ -16,7 +16,7 @@ import { setImmediate } from "node:timers/promises"
 import { deepStrictEqual } from "node:assert"
 import { Effect, Ref, type Exit, type Fiber } from "effect"
 import * as Prelude from "../prelude.ts"
-import { KeyedRecorder, exitJson, valueJson, type KeyedFixture } from "./keyed-recorder.ts"
+import { KeyedRecorder, cellJson, exitJson, type KeyedFixture } from "./keyed-recorder.ts"
 import { ArmedDispatchers, KeyedBindings, ScriptedHost, bindScenario, declareScenario } from "./keyed-bindings.ts"
 import { measure, type HostEnd, type ReaderName, type Readers, type ScenarioFixture, type ScenarioManifest, type ScenarioResult } from "./keyed-observation.ts"
 import type { KeyedRecording } from "./keyed-protocol.ts"
@@ -207,7 +207,7 @@ if (scenariosPath) {
       const end: HostEnd = {
         exit: exitOf(exit),
         ledger: recorder.measurements(),
-        ...(readers.cells !== undefined ? { cells: host.cells.map(cell => valueJson(Ref.getUnsafe(cell))) } : {}),
+        ...(readers.cells !== undefined ? { cells: host.cells.map(cell => cellJson(Ref.getUnsafe(cell))) } : {}),
         ...(readers.fibers !== undefined ? { fibers: [exitOf(exit), ...host.forks.map(fork => exitOf(fork.pollUnsafe()))] } : {}),
         ...(readers.sleeps ? { sleeps: clock.sleeps().map(({ fiber, wake }): [number, string] =>
           [recorder.fiberOf(fiber) ?? refuse("sleeps", "a sleeping fiber has no number on the host"), wake.toString()]) } : {}),

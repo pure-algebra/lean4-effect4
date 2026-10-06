@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { allows, decodeKeyed, hostProtocol, transition, type KeyedHeader, type KeyedRecording, type DecisionRecord } from "./keyed-protocol.ts"
-import { KeyedRecorder, valueJson, wireValue, type KeyedFixture } from "./keyed-recorder.ts"
+import { KeyedRecorder, cellJson, valueJson, wireValue, type KeyedFixture } from "./keyed-recorder.ts"
 import { ArmedDispatchers, ScriptedHost, bindScenario, declareScenario, scenarioEffect, scenarioRef } from "./keyed-bindings.ts"
 import { measure, type HostEnd, type ScenarioFixture } from "./keyed-observation.ts"
-import { Data, Effect, Fiber, Option, Ref, Result } from "effect"
+import { Data, Deferred, Effect, Fiber, Option, Ref, Result } from "effect"
 import { setImmediate as nextTurn } from "node:timers/promises"
 import { ProfileRefusal, Rc112ClockBoundary } from "./clock.ts"
 const expected = { program: "two", table: [{}] }
@@ -253,6 +253,20 @@ describe("scripted recorder", () => {
     expect(wireValue({ some: { ctor: 0, args: [["id", "name"], [2, "bob"]] } })).toEqual(Option.some({ id: 2, name: "bob" }))
     expect(wireValue(null)).toBeUndefined()
     expect(() => wireValue({ ctor: 1, args: [1] })).toThrow("outside the selected transport profile")
+  })
+
+  // The cells reader's writer and the transport profile's writer, on a `Deferred`. Lean's pair
+  // has the same control (`cellJson` and `valJson`, `Keyed.lean`).
+  test("a Deferred has an image with no identity in a cell, and it is outside the transport profile", () => {
+    const first = Deferred.makeUnsafe<void>(), second = Deferred.makeUnsafe<void>()
+    expect(cellJson(first)).toEqual({ handle: "deferred" })
+    expect(cellJson(second)).toEqual(cellJson(first))
+    expect(cellJson({ takers: [{ id: first, hint: second }] })).toEqual(
+      { ctor: 0, args: [["takers"], [[{ ctor: 0, args: [["hint", "id"], [{ handle: "deferred" }, { handle: "deferred" }]] }]]] })
+    expect(() => valueJson(first)).toThrow("outside the selected transport profile")
+    expect(() => valueJson({ takers: [{ id: first, hint: second }] })).toThrow("outside the selected transport profile")
+    for (const value of [undefined, 3, true, "a", [1, "b"], Option.none(), Option.some(1), { status: 200, body: "bob" }])
+      expect(cellJson(value)).toEqual(valueJson(value))
   })
 })
 

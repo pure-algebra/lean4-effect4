@@ -27,6 +27,12 @@ Placement.
 | `reads_ascribe` | `translation-simulation`; R10: a helper of a module expansion's reading | one evaluation of the form's tree, at every scope | typing, a store step, a model's step | the attempt law of a caller that makes its cell at a declared type |
 
 The finite controls are in `Test/Program/Ascribe.lean`.
+
+Why the form's four laws stand in two files. The three laws here are stated over the judgments
+`Types` and `Reads`, which live in this folder. The fourth, the scope lemma `ascribe_scoped`, is
+in `src/Effect4/Laws/Program/Authoring/Ascribe.lean`, among the scope laws of the authoring
+surface: the role register (`tools/Tools/ArchitectureRoles.lean`) puts that folder below this
+one, so a scope proof does not import the judgments.
 -/
 
 set_option autoImplicit false

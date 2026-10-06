@@ -1,0 +1,85 @@
+import Test.Dogfood.Scenario.QueueWorkers
+
+/-!
+The budget sweep of seat WORKQ. It plays each script of the battery's 22 runs on the crew at each
+command budget from 1 to 160, at the battery's compile budget. For each run it reports the least
+funded budget, the budgets at which the run is cut and at rest, and each budget at which an
+observation of a planned goal fails. The alphabet and the scripts are the battery's own.
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace Budgets
+
+open Effect4 Effect4.Machine Effect4.Program
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+def build3 : Option Api.Built := (Effect4.Api.Author.build (crew 3)).toOption
+
+/-- The ranges of a sorted list of numbers, as text. -/
+def ranges : List Nat → String
+  | [] => "none"
+  | n :: rest =>
+    let step := fun (acc : List (Nat × Nat)) (k : Nat) =>
+      match acc with
+      | (lo, hi) :: more => if k == hi + 1 then (lo, k) :: more else (k, k) :: (lo, hi) :: more
+      | [] => [(k, k)]
+    let found := (rest.foldl step [(n, n)]).reverse
+    ", ".intercalate (found.map fun (lo, hi) => if lo == hi then toString lo else s!"{lo}-{hi}")
+
+structure Row where
+  fuel : Nat
+  funded : Bool
+  rest : Bool
+  hostly : Bool
+  within : Bool
+  once : Bool
+  accounted : Bool
+  settled : Bool
+  exited : Bool
+
+def rowOf (b : Api.Built) (moves : List Move) (fuel : Nat) : Row :=
+  let s := _root_.Test.Dogfood.Scenario.play (openedAt fuel b) moves
+  let o := observe s
+  { fuel, funded := funded s, rest := atRest s, hostly := moves.all Move.hostAct
+    within := o.heldWithin, once := o.releasedOnce, accounted := o.accounted, settled := o.settled
+    exited := o.rootExit.isSome }
+
+def report (name : String) (rows : List Row) : String :=
+  let pick := fun (p : Row → Bool) => ranges ((rows.filter p).map fun (r : Row) => r.fuel)
+  let least := ((rows.filter fun (r : Row) => r.funded).map fun (r : Row) => r.fuel).head?
+  let fundedFrom := match least with
+    | some n => if (rows.filter (fun (r : Row) => decide (r.fuel ≥ n))).all (·.funded) then s!"funded from {n}" else s!"funded first at {n}, not at each larger budget"
+    | none => "never funded to 160"
+  s!"{name}: {fundedFrom}; cut and at rest: {pick fun r => !r.funded && r.rest}; " ++
+  s!"cut, at rest, the root has no exit: {pick fun r => !r.funded && r.rest && !r.exited}; " ++
+  s!"FAIL funded within: {pick fun r => r.funded && !r.within}; FAIL funded once: {pick fun r => r.funded && !r.once}; " ++
+  s!"FAIL funded at rest accounted: {pick fun r => r.funded && r.rest && r.hostly && !r.accounted}; " ++
+  s!"FAIL funded at rest settled: {pick fun r => r.funded && r.rest && r.hostly && !r.settled}; " ++
+  s!"cut within fails: {pick fun r => !r.funded && !r.within}; cut once fails: {pick fun r => !r.funded && !r.once}; " ++
+  s!"cut at rest accounted fails: {pick fun r => !r.funded && r.rest && r.hostly && !r.accounted}; " ++
+  s!"cut at rest settled fails: {pick fun r => !r.funded && r.rest && r.hostly && !r.settled}; " ++
+  s!"cut not at rest settled fails: {pick fun r => !r.funded && !r.rest && !r.settled}"
+
+def sweep : IO Unit :=
+  match build3 with
+  | none => IO.println "no build"
+  | some b => do
+    let runs := (scenario.runs.take 22)
+    let mut cutRest := 0
+    let mut cutAll := 0
+    let mut fundedAll := 0
+    for run in runs do
+      let rows := (List.range 160).map fun k => rowOf b run.moves (k + 1)
+      cutRest := cutRest + (rows.filter fun (r : Row) => !r.funded && r.rest).length
+      cutAll := cutAll + (rows.filter fun (r : Row) => !r.funded).length
+      fundedAll := fundedAll + (rows.filter fun (r : Row) => r.funded).length
+      IO.println (report run.name rows)
+    IO.println s!"total: {runs.length} scripts, 160 budgets each; funded {fundedAll}, cut {cutAll}, cut and at rest {cutRest}"
+
+#eval sweep
+
+end Budgets

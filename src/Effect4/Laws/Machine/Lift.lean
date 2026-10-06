@@ -588,6 +588,30 @@ theorem FoldLift.flushAllState_lift (h : FoldLift o interp J I O) (fuel : Nat) :
           exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
         · exact ⟨w₁, le₁, hj₁⟩
 
+/-- The root's flush: rounds of `fire` at one fiber's dispatcher (`flushRootState`, the flush of
+the sync entry). Its first consumer is the mask's invariant at that entry
+(`flushRootState_maskRuns`, `Laws/Machine/MaskRuns.lean`), a step of the claim
+`saved-mask-chain-runs`. It carries an invariant, and it states no progress of the flush. -/
+theorem FoldLift.flushRootState_lift (h : FoldLift o interp J I O) (fuel : Nat) (root : FiberId) :
+    ∀ (rounds : Nat) (w : W) (m : RunMachine ν σ β ε δ ι α χ St κ φ η), J w m →
+      ∃ w', o.le w w' ∧ J w' (flushRootState interp fuel root rounds m).1
+  | 0, w, m, hj => by
+    simp only [flushRootState]
+    split
+    · exact ⟨w, o.refl w, hj⟩
+    · exact ⟨w, o.refl w, hj⟩
+  | rounds + 1, w, m, hj => by
+    simp only [flushRootState]
+    split
+    · exact ⟨w, o.refl w, hj⟩
+    · split
+      · exact ⟨w, o.refl w, hj⟩
+      · obtain ⟨w₁, le₁, hj₁⟩ := fireState_lift h fuel w m root hj
+        split
+        · obtain ⟨w₂, le₂, hj₂⟩ := flushRootState_lift h fuel root rounds w₁ _ hj₁
+          exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
+        · exact ⟨w₁, le₁, hj₁⟩
+
 /-- An `advance`: rounds of `clockStep`, the owed resume through the loop, then a flush. -/
 theorem FoldLift.advanceState_lift (h : FoldLift o interp J I O) (fuel : Nat)
     (millis : ClockMillis) :
@@ -748,6 +772,17 @@ theorem replayEval_lift (o : WorldOrder W) (J : W → RunMachine ν σ β ε δ 
         obtain ⟨w₂, le₂, hj₂⟩ := replayEval_lift o J A interp fuel pres tape w₁ _ hj₁ (hrest hr)
         exact ⟨w₂, o.trans le₁ le₂, hj₂⟩
       · exact ⟨w₁, le₁, hj₁⟩
+
+/-- With no admission to ask, every tape is admitted, for every invariant: the replay's form of
+`admitted_true`. Its first consumer is the mask's replay law (`replayEval_maskRuns`,
+`Laws/Machine/MaskRuns.lean`), a step of the claim `saved-mask-chain-runs`. -/
+theorem admittedReplay_true (J : W → RunMachine ν σ β ε δ ι α χ St κ φ η → Prop)
+    (interp : RunInterp ν σ β ε δ ι α χ St κ) (fuel : Nat) :
+    ∀ (tape : List (RunDecision ν σ β ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St κ φ η),
+      AdmittedReplay J (fun _ _ _ => True) interp fuel m tape
+  | [], _ => trivial
+  | _ :: tape, _ => fun _ =>
+    ⟨fun _ _ => trivial, fun _ => admittedReplay_true J interp fuel tape _⟩
 
 end Replay
 
