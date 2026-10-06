@@ -304,7 +304,7 @@ main open theory, and it starts with a design question. The owner asked for a di
 it when the set has landed: its obligations, and the base abstractions that it needs first.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
-[The probe questions](research/2026-10-06-probe-questions.md) lists thirteen: what today's
+[The probe questions](research/2026-10-06-probe-questions.md) lists fourteen: what today's
 work took by reading, the facts that the law of a whole run will stand on, and the evidence
 that rests on one schedule.
 
