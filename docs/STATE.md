@@ -298,8 +298,9 @@ the state at the handover point and the integration procedure as practiced.
 - Pool's public operations (rows 276 and 279), after the owner's ruling on a closed pool;
 - two small repairs of proofs. The first is **landed** by seat REPAIR: the Queue's typing
   through the shared rule, with two general statements in the lift module. The second waits
-  for seat WORKQ's receipt, which lists the declarations to move: the scenario driver's laws
-  in the law graph.
+  for nothing more: seat WORKQ's receipt lists the declarations to move, and seat TAPE has
+  the move of the scenario driver's laws into the library
+  ([its brief](research/2026-10-05-claude-lead/briefs/seat-tape-brief.md)).
 
 A sweep follows the set: the owner approved the coordinator's recommendations on
 2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
