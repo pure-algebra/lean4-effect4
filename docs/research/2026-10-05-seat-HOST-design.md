@@ -3,7 +3,8 @@
 Status: a design note (history, not authority). Brief:
 `docs/research/2026-10-05-claude-lead/briefs/seat-host-brief.md`. Base: `310c8314`. Written on
 2026-10-06, before the first commit of the seat. Section 8 was amended the same day, after the
-coordinator's ruling.
+coordinator's ruling. Sections 3, 4 and 8 were amended once more that day, with the lane's last
+steps. The receipt, `docs/research/2026-10-05-seat-HOST-receipt.md`, holds the final counts.
 
 The note fixes six things. They are one run's parts, the host's act for each `Move`, and each
 field's source of evidence. Then come the scripts a host can perform, the schedule and the
