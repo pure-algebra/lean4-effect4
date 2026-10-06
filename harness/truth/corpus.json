@@ -1597,7 +1597,54 @@
    "declInferred":
    "export const main = Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))\n",
    "decl":
-   "export const main: Effect.Effect<readonly [boolean, boolean, boolean, number], never, never> = Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))\n"}],
+   "export const main: Effect.Effect<readonly [boolean, boolean, boolean, number], never, never> = Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Deferred.await(a0), (a1) => Effect.succeed(7)), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.yieldNowWith(0), (a2) => Effect.flatMap(Deferred.isDone(a0), (a3) => Effect.flatMap(Deferred.succeed(a0, undefined), (a4) => Effect.flatMap(Deferred.succeed(a0, undefined), (a5) => Effect.flatMap(Fiber.join(a1), (a6) => Effect.succeed(tuple(a3, a4, a5, a6)))))))))\n"},
+  {"wellTyped": true,
+   "type":
+   {"requiresEmpty": true,
+    "requires": [],
+    "error": "never",
+    "answer": "readonly [boolean, number]"},
+   "straight": false,
+   "scenario": null,
+   "runSync": {"sync": true, "exitKind": "success", "exit": {"success": [true, 1]}},
+   "run":
+   {"schedule":
+    ["started 0",
+     "forked 0 1",
+     "started 1",
+     "parked 1",
+     "resumed 1",
+     "started 1",
+     "exited 1 interrupt",
+     "exited 0 success"],
+    "outcome": "finished",
+    "internal": ["interruptRecorded by=0 target=1", "observerFired 1"],
+    "frames": 27,
+    "fibers":
+    [{"parkedToken": null, "id": 0, "exited": true, "exit": {"success": [true, 1]}},
+     {"parkedToken": null,
+      "id": 1,
+      "exited": true,
+      "exit": {"failure": {"reasons": [{"interrupt": 0}]}}}],
+    "fiberCount": 2,
+    "exitKind": "success",
+    "exit": {"success": [true, 1]},
+    "events":
+    ["started 0",
+     "forked 0->1",
+     "started 1",
+     "parkedOn 1 token=0",
+     "started 1",
+     "exited 1 {\"failure\":{\"reasons\":[{\"interrupt\":0}]}}",
+     "exited 0 {\"success\":[true,1]}"]},
+   "name": "pInterruptedWait",
+   "exprRefusal": null,
+   "expr":
+   "Effect.flatMap(Deferred.make<number, never>(), (a0) => Effect.flatMap(Ref.make(0), (a1) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Ref.update(a1, (a2) => add(a2, 1)), (a2) => Effect.flatMap(Deferred.await(a0), (a3) => Ref.update(a1, (a4) => add(a4, 10)))), { startImmediately: true, uninterruptible: \"inherit\" }), (a2) => Effect.flatMap(Fiber.interrupt(a2), (a3) => Effect.flatMap(Fiber.await(a2), (a4) => Effect.flatMap(Ref.get(a1), (a5) => Effect.succeed(tuple(causeIsInterrupt(a4), a5))))))))",
+   "declInferred":
+   "export const main = Effect.flatMap(Deferred.make<number, never>(), (a0) => Effect.flatMap(Ref.make(0), (a1) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Ref.update(a1, (a2) => add(a2, 1)), (a2) => Effect.flatMap(Deferred.await(a0), (a3) => Ref.update(a1, (a4) => add(a4, 10)))), { startImmediately: true, uninterruptible: \"inherit\" }), (a2) => Effect.flatMap(Fiber.interrupt(a2), (a3) => Effect.flatMap(Fiber.await(a2), (a4) => Effect.flatMap(Ref.get(a1), (a5) => Effect.succeed(tuple(causeIsInterrupt(a4), a5))))))))\n",
+   "decl":
+   "export const main: Effect.Effect<readonly [boolean, number], never, never> = Effect.flatMap(Deferred.make<number, never>(), (a0) => Effect.flatMap(Ref.make(0), (a1) => Effect.flatMap(Effect.forkChild(Effect.flatMap(Ref.update(a1, (a2) => add(a2, 1)), (a2) => Effect.flatMap(Deferred.await(a0), (a3) => Ref.update(a1, (a4) => add(a4, 10)))), { startImmediately: true, uninterruptible: \"inherit\" }), (a2) => Effect.flatMap(Fiber.interrupt(a2), (a3) => Effect.flatMap(Fiber.await(a2), (a4) => Effect.flatMap(Ref.get(a1), (a5) => Effect.succeed(tuple(causeIsInterrupt(a4), a5))))))))\n"}],
  "hostRows":
  [{"typeArgs": [],
    "trailing": [],

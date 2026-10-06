@@ -465,11 +465,39 @@ def pDeferredGate : Api.Program :=
               (.bind (.awaitFiber (.var 1) .joinEffect)
                 (.succeed (call "tuple" [.var 3, .var 4, .var 5, .var 6]))))))))
 
+open Effect4.Program.Authoring in
+/-- The source of `pInterruptedWait`: a child marks a log, waits at a promise that nothing
+completes, and would mark the log again; its parent interrupts it while it waits. -/
+def interruptedWait : Src NativeOp := eff do
+  let d ← Deferred.make .nat .never
+  let log ← Ref.make (nat 0)
+  let f ← fork (eff do
+    let _ ← Ref.update "l" (app "add" [var "l", nat 1]) log
+    let _ ← Deferred.await d
+    Ref.update "l" (app "add" [var "l", nat 10]) log)
+  let _ ← withFiber (Action.interrupt f)
+  let e ← await f
+  let l ← Ref.get log
+  return tuple [app "causeIsInterrupt" [e], l]
+
+/-- A parked fiber that an interrupt wakes, with no mask: the control of the `resumed` row's
+second cause (`reduce`). `a0` is a promise that nothing completes, and `a1` a log cell. A child
+marks the log with `1` and waits at the promise. The main fiber interrupts it there. The child
+is interruptible, so the interrupt applies at once: the child runs again, and it exits
+interrupted before its second mark. The program answers `[the child's exit is an interruption,
+the log]`, which is `[true, 1]`. Its schedule holds `parked 1`, then `resumed 1` and
+`started 1`, and no token is resumed. A source that does not elaborate is a failure with a
+text, never a patched program. -/
+def pInterruptedWait : Api.Program :=
+  match Effect4.Program.Authoring.elaborate interruptedWait with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pInterruptedWait: the source does not elaborate"))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, the two programs
 of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe),
-the rate limiter's request, and a gate at `Deferred<void, never>`. Every listed program
-contributes one manifest entry. -/
+the rate limiter's request, a gate at `Deferred<void, never>`, and a parked fiber that an
+interrupt wakes. Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -482,7 +510,8 @@ def corpus : List (String × Api.Program) :=
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
     ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape),
     ("pFold", pFold), ("pModifyFold", pModifyFold), ("pQueueOffer", pQueueOffer),
-    ("pRateRequest", pRateRequest), ("pDeferredGate", pDeferredGate)]
+    ("pRateRequest", pRateRequest), ("pDeferredGate", pDeferredGate),
+    ("pInterruptedWait", pInterruptedWait)]
 
 /-! ## The value wire -/
 
@@ -688,29 +717,50 @@ def immediateFork (p c : FiberId) : List Event → Bool
   `fiber._children` before it runs (`:5280-5281`) and is seen at the parent's next
   primitive, so its fork stays where the machine emits it. A scheduled daemon child is never
   registered and starts from the scheduler with no parent on the stack, so its fork stays in
-  `events` only. -/
+  `events` only.
+* **A `resumed k` row: a fiber that the trace last showed parked runs again, whatever woke
+  it.** The recorder has the same definition (`context`, `harness/truth/run-truth.ts`): it
+  writes `resumed k` and then `started k` at the first primitive of a fiber whose recorded
+  state is parked. Two causes wake a parked fiber. A token's resume emits `resumedWith`
+  (`Cmd.resume`, `Fibers.lean`). An interrupt that applies now emits `interruptRecorded` and
+  then `started`, with no token (`interruptRecord`, then `Cmd.evaluate`). One restart is one
+  row. `go` keeps the fibers that the trace last showed parked: a `parkedOn` adds the fiber, a
+  `resumedWith` writes the row and removes the fiber, and a `started` of a fiber still in the
+  set writes the row itself. So the `started` after a `resumedWith` writes no second row.
+  Before 2026-10-06 the row came from `resumedWith` alone, and it meant a token's resume. No
+  truth program then woke a parked fiber by an interrupt (seat MASK; the control is
+  `pInterruptedWait`, with a red guard on its trace in the receipts). -/
 def reduce (trace : List Event) : List String :=
-  go trace [] []
+  go trace [] [] []
 where
-  go : List Event → List (FiberId × FiberId) → List Nat → List String
-    | [], _, _ => []
-    | .forked p c daemon :: rest, pending, running =>
-      if immediateFork p c rest then go rest ((c, p) :: pending) running
-      else (if daemon then [] else [s!"forked {p.value} {c.value}"]) ++ go rest pending running
-    | .started f :: rest, pending, running =>
-      if running.contains f.value then go rest pending running
+  go : List Event → List (FiberId × FiberId) → List Nat → List Nat → List String
+    | [], _, _, _ => []
+    | .forked p c daemon :: rest, pending, running, parked =>
+      if immediateFork p c rest then go rest ((c, p) :: pending) running parked
+      else (if daemon then [] else [s!"forked {p.value} {c.value}"]) ++
+        go rest pending running parked
+    | .started f :: rest, pending, running, parked =>
+      if running.contains f.value then go rest pending running parked
       else
         let running := f.value :: running
         match pending.find? (fun x => x.1.value = f.value) with
         | some (_, p) =>
           s!"forked {p.value} {f.value}" :: s!"started {f.value}" ::
-            go rest (pending.filter (fun x => x.1.value ≠ f.value)) running
-        | none => s!"started {f.value}" :: go rest pending running
-    | .parkedOn f t :: rest, pending, running =>
-      (reduced (.parkedOn f t)).toList ++ go rest pending (running.filter (· ≠ f.value))
-    | .exited f e :: rest, pending, running =>
-      (reduced (.exited f e)).toList ++ go rest pending (running.filter (· ≠ f.value))
-    | e :: rest, pending, running => (reduced e).toList ++ go rest pending running
+            go rest (pending.filter (fun x => x.1.value ≠ f.value)) running parked
+        | none =>
+          -- a parked fiber that starts with no resume of its token: an interrupt applied now
+          (if parked.contains f.value then [s!"resumed {f.value}"] else []) ++
+            s!"started {f.value}" :: go rest pending running (parked.filter (· ≠ f.value))
+    | .parkedOn f t :: rest, pending, running, parked =>
+      (reduced (.parkedOn f t)).toList ++
+        go rest pending (running.filter (· ≠ f.value)) (f.value :: parked)
+    | .resumedWith f t answer :: rest, pending, running, parked =>
+      (reduced (.resumedWith f t answer)).toList ++
+        go rest pending running (parked.filter (· ≠ f.value))
+    | .exited f e :: rest, pending, running, parked =>
+      (reduced (.exited f e)).toList ++
+        go rest pending (running.filter (· ≠ f.value)) (parked.filter (· ≠ f.value))
+    | e :: rest, pending, running, parked => (reduced e).toList ++ go rest pending running parked
 
 /-- The events that are neither observable nor frame rows: recorded, never compared. -/
 def internal : Event → Option String
@@ -970,7 +1020,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
-   "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate"]
+   "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer", "pRateRequest", "pDeferredGate",
+   "pInterruptedWait"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
@@ -1016,6 +1067,30 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
       | .error (.arity "Deferred.make") => true
       | _ => false)
   | _ => false
+-- A parked fiber that an interrupt wakes (the `resumed` row's second cause). The source
+-- elaborates, types at the pair, answers on the machine, and reads back whole.
+#guard match pInterruptedWait with
+  | .bind (.perform (.deferredMakeOf .nat .never) _) _ => true
+  | _ => false
+#guard Api.typeOf pInterruptedWait = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
+#guard (Api.run pInterruptedWait 1000).exit = some (.success (.list [.bool true, .nat 1]))
+#guard Api.roundTrip pInterruptedWait = .ok pInterruptedWait
+-- Its compared rows are the rows the recorder wrote on rc.112 (`harness/truth/result.json`):
+-- the child parks, is resumed and started by the interrupt, and exits interrupted.
+#guard reduce (Api.run pInterruptedWait 1000).trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "resumed 1", "started 1",
+   "exited 1 interrupt", "exited 0 success"]
+-- Red control of the rule. The trace holds no resume of a token: the row-by-row projection
+-- (`reduced`), which wrote every `resumed` row before 2026-10-06, has no `resumed 1` here, so
+-- it differs from the recorder at that one row. The interrupt is recorded instead.
+#guard !((Api.run pInterruptedWait 1000).trace.filterMap reduced).contains "resumed 1"
+#guard ((Api.run pInterruptedWait 1000).trace.filterMap internal).contains
+  "interruptRecorded by=0 target=1"
+-- One restart is one row, at either cause: a token's resume in `pDeferredGate`, where the
+-- projection already has the row and the reduction adds none, and the interrupt here.
+#guard ((reduce (Api.run pDeferredGate 1000).trace).filter (· == "resumed 1")).length = 1
+#guard (((Api.run pDeferredGate 1000).trace.filterMap reduced).filter (· == "resumed 1")).length = 1
+#guard ((reduce (Api.run pInterruptedWait 1000).trace).filter (· == "resumed 1")).length = 1
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))

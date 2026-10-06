@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 43 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
+  "summary": "PASS: 44 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -6566,6 +6566,138 @@
           "0:Sync",
           "0:OnSuccess",
           "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pInterruptedWait",
+      "leanExit": "success [true,1]",
+      "hostExit": "success [true,1]",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": [
+            true,
+            1
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "forked 0 1",
+          "started 1",
+          "parked 1",
+          "resumed 1",
+          "started 1",
+          "exited 1 interrupt",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "forked 0->1",
+          "started 1",
+          "parkedOn 1",
+          "resumedWith 1",
+          "started 1",
+          "exited 1 {\"failure\":{\"reasons\":[{\"interrupt\":0}]}}",
+          "exited 0 {\"success\":[true,1]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "1:OnSuccess",
+          "1:Sync",
+          "1:OnSuccess",
+          "1:Async",
+          "0:Success",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "0:WithFiber",
+          "1:Failure",
+          "1:OnSuccess",
+          "1:Sync",
+          "1:Failure",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": [
+            true,
+            1
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "forked 0 1",
+          "started 1",
+          "parked 1",
+          "resumed 1",
+          "started 1",
+          "exited 1 interrupt",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "forked 0->1",
+          "started 1",
+          "parkedOn 1",
+          "resumedWith 1",
+          "started 1",
+          "exited 1 {\"failure\":{\"reasons\":[{\"interrupt\":0}]}}",
+          "exited 0 {\"success\":[true,1]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "1:OnSuccess",
+          "1:Sync",
+          "1:OnSuccess",
+          "1:Async",
+          "0:Success",
+          "0:OnSuccess",
+          "0:WithFiber",
+          "0:WithFiber",
+          "1:Failure",
+          "1:OnSuccess",
+          "1:Sync",
+          "1:Failure",
+          "0:OnSuccess",
+          "0:Success",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Sync",
           "0:Success"
         ],
         "late": [],
