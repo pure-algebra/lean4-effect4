@@ -259,6 +259,89 @@ theorem offer_full {s : State} (h : FirstProfile s) {c : Nat}
   rw [room, h.opened, h.suspend, noPending]
   rfl
 
+/-! ## The model's consuming steps on the profile, in closed form -/
+
+/-- How many pending offers enter the room of a state whose capacity is `c + 1`. -/
+def fitCount (c : Nat) (s : State) : Nat := Nat.min (c + 1 - s.messages.length) s.offers.length
+
+/-- The state after the offers that fit entered the buffer. -/
+def afterAccept (c : Nat) (s : State) : State :=
+  { s with messages := s.messages ++ (s.offers.take (fitCount c s)).flatMap (·.rest),
+           offers := s.offers.drop (fitCount c s) }
+
+/-- **After a consuming step on the profile**: the offers that fit enter and are answered, and
+the earliest taker is named where a message is buffered (`acceptLoop_single`,
+`wake_profile`). -/
+theorem afterConsume_closed {s : State} (h : FirstProfile s) {c : Nat}
+    (capacity : s.capacity = some (c + 1)) :
+    afterConsume s =
+      (afterAccept c s,
+        (s.offers.take (fitCount c s)).map (fun o => (⟨o.id, .offered true⟩ : Signal)) ++
+          (toWake (afterAccept c s)).map (fun t => (⟨t.id, .again⟩ : Signal))) := by
+  have accepted : accept s = (afterAccept c s,
+      (s.offers.take (fitCount c s)).map (fun o => (⟨o.id, .offered true⟩ : Signal))) := by
+    unfold accept afterAccept fitCount
+    rw [acceptLoop_single (room s) s.messages s.offers h.offers]
+    unfold entered room
+    rw [capacity]
+    rfl
+  have next : FirstProfile (afterAccept c s) := by
+    have kept := accept_profile h
+    rw [accepted] at kept
+    exact kept
+  unfold afterConsume
+  rw [accepted]
+  show ((settle (afterAccept c s)).1, _ ++ (settle (afterAccept c s)).2 ++
+    wake (settle (afterAccept c s)).1) = _
+  rw [settle_opened next.opened, List.append_nil, wake_toWake next]
+
+/-- A consuming pull from a buffered state takes from the buffer. -/
+theorem pull_buffered {s : State} {m : Nat} {ms : List Nat} (buffered : s.messages = m :: ms)
+    (max : Nat) :
+    pull s max = ((m :: ms).take max, { s with messages := (m :: ms).drop max }, []) := by
+  unfold pull
+  rw [buffered]
+  rfl
+
+/-- The model's `poll` on the profile, where it does not consume: no message is buffered, or a
+taker waits. -/
+theorem poll_idle {s : State} (h : FirstProfile s) (idle : s.messages = [] ∨ s.takers ≠ []) :
+    poll s = (s, none, []) := by
+  unfold poll
+  rw [isDone_opened h.opened, ready_profile h]
+  rcases idle with empty | waiting
+  · rw [empty]
+    rfl
+  · cases held : s.takers with
+    | nil => exact absurd held waiting
+    | cons t ts =>
+      have blocked : (false || !!s.messages.isEmpty || !(t :: ts).isEmpty) = true := by
+        show (false || !!s.messages.isEmpty || true) = true
+        rw [Bool.or_true]
+      rw [blocked, if_pos rfl]
+
+/-- The model's `poll` on the profile, where it consumes: a message is buffered and no taker
+waits. The offers that fit the freed room enter, and nobody is woken. -/
+theorem poll_consumes {s : State} (h : FirstProfile s) {c : Nat}
+    (capacity : s.capacity = some (c + 1)) {m : Nat} {ms : List Nat}
+    (buffered : s.messages = m :: ms) (alone : s.takers = []) :
+    poll s = (afterAccept c { s with messages := ms }, some m,
+      (s.offers.take (fitCount c { s with messages := ms })).map
+        (fun o => (⟨o.id, .offered true⟩ : Signal))) := by
+  have rest : FirstProfile { s with messages := ms } :=
+    h.shrink rfl rfl rfl rfl rfl (List.Sublist.refl _) (List.Sublist.refl _)
+  have consumed := afterConsume_closed rest (c := c) capacity
+  have quiet : toWake (afterAccept c { s with messages := ms }) = [] := by
+    show (if _ = 0 then [] else s.takers.take 1) = []
+    rw [alone]
+    exact ite_self _
+  have step : poll s = ((afterConsume { s with messages := ms }).1, some m,
+      (afterConsume { s with messages := ms }).2) := by
+    unfold poll
+    rw [isDone_opened h.opened, ready_profile h, pull_buffered buffered 1, buffered, alone]
+    rfl
+  rw [step, consumed, quiet, List.map_nil, List.append_nil]
+
 /-! ## The six step goals -/
 
 /-- **The take step agrees with the model's `take` at the bounds one and one.** The cell holds
@@ -374,7 +457,7 @@ theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (
 /-- **The poll step agrees with the model's `poll`.** The reply is the model's, the list is the
 offers that entered, and the model wakes no taker. The table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
+theorem pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
     (profile : FirstProfile s) {cellSrc : TermSrc} {env : Env} {path : List Nat}
     {vals : List Val} (depth : vals.length = env.names.length)
     (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
@@ -383,7 +466,70 @@ proof_goal pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
       Reads (Queue.pollStep A cellSrc) env path vals
         (Val.tuple [Val.tuple [pollReplyVal msg (poll s).2.1,
             Val.list (entered.map (offerVal tb msg))],
-          cellVal tb msg (poll s).1])
+          cellVal tb msg (poll s).1]) := by
+  obtain ⟨c, capacity⟩ := profile.positive
+  -- the parts of the term, each at the value it reads
+  have msgs := reads_field readsCell (cell_msgs _ _ _ _)
+  have offers := reads_field readsCell (cell_offers _ _ _ _)
+  have takers := reads_field readsCell (cell_takers _ _ _ _)
+  have cap := reads_field readsCell (cell_cap _ _ _ _)
+  have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
+      (Val.list ((s.messages.drop 1).map msg)) :=
+    (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
+  have room : Reads (app "sub" [field cellSrc "cap", Queue.len
+      (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
+      (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
+    (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
+  have gained := reads_gained tb msg _ (s.messages.drop 1) s.offers depth room rest offers
+  have entering := reads_entering tb msg _ s.offers room offers
+  have staying := reads_staying tb msg _ s.offers room offers
+  have consumed := reads_recordSet
+    (reads_recordSet readsCell gained (cell_setMsgs _ _ _ _ _)) staying
+    (cell_setOffers _ _ _ _ _)
+  have yes := reads_pair (reads_tuple2 (reads_head msgs) entering) consumed
+  have no := reads_pair (reads_tuple2 reads_noneT (reads_noneOf offers)) readsCell
+  have test : Reads (Queue.andT (Queue.notT (Queue.isEmpty (field cellSrc "msgs")))
+      (Queue.isEmpty (field cellSrc "takers"))) env path vals
+      (Val.bool (!decide (s.messages.length = 0) && decide (s.takers.length = 0))) :=
+    (reads_andT (reads_notT (reads_isEmpty msgs)) (reads_isEmpty takers)).to
+      (by rw [List.length_map, List.length_map])
+  have whole := reads_ifT test yes no
+  have idle : ∀ (quiet : s.messages = [] ∨ s.takers ≠ [])
+      (refused : (!decide (s.messages.length = 0) && decide (s.takers.length = 0)) = false),
+      ∃ entered,
+        Notified s (poll s).1 (poll s).2.2 entered [] ∧
+        Reads (Queue.pollStep A cellSrc) env path vals
+          (Val.tuple [Val.tuple [pollReplyVal msg (poll s).2.1,
+              Val.list (entered.map (offerVal tb msg))],
+            cellVal tb msg (poll s).1]) := by
+    intro quiet refused
+    rw [refused, if_neg Bool.false_ne_true] at whole
+    rw [poll_idle profile quiet]
+    exact ⟨[], ⟨rfl, fun _ none => absurd none List.not_mem_nil,
+      fun _ none => absurd none List.not_mem_nil⟩, whole⟩
+  cases buffered : s.messages with
+  | nil =>
+    refine idle (Or.inl buffered) ?_
+    rw [buffered]
+    rfl
+  | cons m ms =>
+    cases alone : s.takers with
+    | cons t ts =>
+      refine idle (Or.inr fun none => ?_) ?_
+      · rw [alone] at none
+        cases none
+      · rw [alone]
+        exact Bool.and_false _
+    | nil =>
+      have accepts : (!decide (s.messages.length = 0) && decide (s.takers.length = 0)) = true := by
+        rw [buffered, alone]
+        rfl
+      rw [accepts, if_pos rfl, buffered] at whole
+      rw [poll_consumes profile capacity buffered alone]
+      refine ⟨s.offers.take (fitCount c { s with messages := ms }), ⟨?_, ?_, ?_⟩, whole⟩
+      · rw [List.map_nil, List.append_nil]
+      · exact fun o member => List.mem_of_mem_take member
+      · exact fun _ none => absurd none List.not_mem_nil
 
 /-- **The size step agrees with the model's `size`.** The reply is the buffer's length. The
 step is a term over the cell's value: it stores nothing and names no notification, as the
