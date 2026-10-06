@@ -106,18 +106,16 @@ def readsAs (printed other : Src NativeOp) : Bool :=
 
 /-! ## The scenarios' modules: printed, and read back -/
 
-open Test.Program.QueueScenarios (offer take) in
-/-- One offer into room, on a cell that the program makes. -/
+/-- One offer into room, on a queue that the program makes. -/
 def offerOnly : Src NativeOp := eff do
-  let q ← Ref.make (Queue.empty .nat 2)
-  let a ← offer .nat q (nat 1)
+  let q ← Queue.bounded .nat 2
+  let a ← Queue.offer .nat q (nat 1)
   return a
 
-open Test.Program.QueueScenarios (offer take) in
-/-- One take, on a cell that the program makes. -/
+/-- One take, on a queue that the program makes. -/
 def takeOnly : Src NativeOp := eff do
-  let q ← Ref.make (Queue.empty .nat 2)
-  let a ← take .nat q
+  let q ← Queue.bounded .nat 2
+  let a ← Queue.take .nat q
   return a
 
 -- Each scenario's module prints: `Deferred.make`'s type arguments print from the operation.

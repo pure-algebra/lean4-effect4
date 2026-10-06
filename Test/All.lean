@@ -168,6 +168,7 @@ import Test.Program.QueueCapacity
 import Test.Program.QueueProfile
 import Test.Program.QueueSteps
 import Test.Program.QueueScenarios
+import Test.Program.QueueOps
 import Test.Program.QueueAgreement
 import Test.Program.QueueRelation
 import Test.Program.QueueWorkload

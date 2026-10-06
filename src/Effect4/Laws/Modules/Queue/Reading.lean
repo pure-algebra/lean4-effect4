@@ -136,17 +136,6 @@ theorem reads_removeTaker {takers id : TermSrc} (tb : Table) (injective : tb.Inj
   reads_removeById tb injective (takerVal tb) (·.id) (fun _ => taker_id _ _) ⟨0, 1, 1⟩ ts i depth
     htakers hid
 
-/-- The identity of a folded offer against the request's, under the fold's binders. -/
-theorem reads_sameOffer {id : TermSrc} (tb : Table) (msg : Nat → Val) (injective : tb.Injective)
-    (i : Nat) (depth : vals.length = env.names.length)
-    (hid : Captured id env path vals (Val.promise (tb.handle i))) (acc : Val) (o : Offer) :
-    Reads (same (field (minted (env.mint "item")) "id") id)
-      (env.push [env.mint "acc", env.mint "item"]) path (vals ++ [acc, offerVal tb msg o])
-      (Val.bool (decide (o.id = i))) :=
-  (reads_same
-    (reads_field (reads_minted_item depth path acc (offerVal tb msg o)) (offer_id _ _ _ _))
-    (hid.underFold acc (offerVal tb msg o))).to (by rw [injective.decides])
-
 /-- `removeOffer`: the pending offers without the request. One application of the shared rule
 of the pass `removeById`. -/
 theorem reads_removeOffer {offers id : TermSrc} (tb : Table) (msg : Nat → Val)
