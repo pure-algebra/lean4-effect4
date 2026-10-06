@@ -423,6 +423,7 @@ Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwin
 | close-reentrant-add | preservation | proved | Effect4.Scope.close_reentrant_add | yes |  |
 | close-seq-protocol | fundamentalProperty | proved | Test.Program.ProtocolPosts.CloseIter.closeSeq_protocol | yes |  |
 | saved-mask-restoration | preservation | proved | Effect4.Program.Typed.saved_mask_restoration | yes |  |
+| saved-mask-pop-discipline | preservation | proved | Effect4.Machine.saved_mask_pop_discipline | yes |  |
 
 ### Printed statements
 
@@ -498,6 +499,13 @@ Literature: deVilhenaPottier2021, audit P8 — adaptedResult
 
 ```lean
 Effect4.Program.Typed.MaskRestoration
+```
+
+**saved-mask-pop-discipline**
+
+```lean
+∀ (ν σ : Type u) (β : Type v) (ε δ ι α : Type u) [inst : DecidableEq ε] [inst_1 : DecidableEq δ]
+  [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α], Effect4.Machine.MaskPopDiscipline ν σ β ε δ ι α
 ```
 
 ## reactive-scheduling
@@ -1703,7 +1711,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 61; inherited (provisional): 1930; unplaced: 0.
+Tagged: 71; inherited (provisional): 1936; unplaced: 0.
 
 ## Plan
 
@@ -1723,7 +1731,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `step_updates` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `take_attempt` (proved), `take_attempt_minted` (proved), `take_withdrawal` (proved), `take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `withdrawStep_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
-| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `close_refuses` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
+| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_pop_discipline` (proved), `close_refuses` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
 
@@ -3447,7 +3455,7 @@ flowchart LR
 - Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
 - Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
 - Open: the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant; a finite probe holds the candidate at scheduling points (docs/research/2026-10-05-claude-lead/mask-probes/MaskStack.lean)
-- Open: saved-mask-pop-discipline (proposed helper claim; scope-lifetime-finalization, serving the run-level half above): at one fixed base bit, the chain of restoring frames on a fiber's stack is kept through FrameFiber.popFrom from an empty scratch stack, through getCont and through Machine.frameExitState, and through the entry of each region; two states of one base with one stack have one flag; it is a local law of the frame machine with no statement of a run, of a completed exit, of cleanup or of delivery, and its lift to runs through Machine.Lift keeps the pending commands' conditions; its consumers are that lift, then the waiting wrapper under a masked caller and Semaphore's protected permit (Codex's candidate, not compiled)
+- Open: the lift of saved-mask-pop-discipline to runs (scope-lifetime-finalization, serving the run-level half above): each live fiber of a reached run holds the chain at its start flag; it needs FrameFiber.step and each command to keep the chain, with a condition on a command that clears a fiber: just before the clearing the fiber's stack is empty, or its flag is its base; the stack's emptiness after the clearing protects nothing, since Cmd.exitDone clears a stack through RunFiber.cleared and keeps the flag; the local law is saved_mask_pop_discipline; no goal states the lift
 - Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)
 
 ```mermaid
@@ -3459,20 +3467,21 @@ flowchart LR
   n4["close_reentrant_add<br/>proved"]
   n5["closeOrder_eq<br/>proved"]
   n6["saved_mask_restoration<br/>proved"]
-  n7["close_refuses<br/>proved"]
-  n8["giveBack_front<br/>proved"]
-  n9["giveBack_once<br/>proved"]
-  n10["cleans_once<br/>goal"]
-  n11["cleanup_keeps<br/>goal"]
-  n12["releases_once<br/>goal"]
-  n13["close_idempotent<br/>proved"]
-  n14["checkInput_eq_none_iff<br/>proved"]
+  n7["saved_mask_pop_discipline<br/>proved"]
+  n8["close_refuses<br/>proved"]
+  n9["giveBack_front<br/>proved"]
+  n10["giveBack_once<br/>proved"]
+  n11["cleans_once<br/>goal"]
+  n12["cleanup_keeps<br/>goal"]
+  n13["releases_once<br/>goal"]
+  n14["close_idempotent<br/>proved"]
+  n15["checkInput_eq_none_iff<br/>proved"]
   n1 --> n0
-  n3 --> n13
-  n9 --> n8
-  n10 --> n14
-  n11 --> n14
-  n12 --> n14
+  n3 --> n14
+  n10 --> n9
+  n11 --> n15
+  n12 --> n15
+  n13 --> n15
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3484,6 +3493,7 @@ flowchart LR
 | `close_reentrant_add` | proved | — | — | 2 | 11 |
 | `closeOrder_eq` | proved | — | — | 0 | 4 |
 | `saved_mask_restoration` | proved | — | — | 99 | 753 |
+| `saved_mask_pop_discipline` | proved | — | — | 35 | 45 |
 | `close_refuses` | proved | — | — | 1 | 14 |
 | `giveBack_front` | proved | — | — | 3 | 12 |
 | `giveBack_once` | proved | — | `giveBack_front` | 1 | 12 |

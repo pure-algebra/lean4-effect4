@@ -461,6 +461,13 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   It states nothing for a region that changes no flag, and nothing about a module.
   It establishes no progress.
   (`saved_mask_restoration` (`src/Effect4/Laws/Program/Typed/Mask.lean`)).
+- **The saved mask's chain through a pop (`saved-mask-pop-discipline`)**: At one fixed base
+  bit, the restoring frames of a fiber's stack alternate from the negation of the flag
+  (`MaskChain`). The frame machine's pop keeps the chain, from an empty scratch stack.
+  `getCont`, the finished frame's path and the entry of each region keep it too. Two fibers
+  with one base and one stack have one flag. It is a local law of the frame machine. It
+  states no law of a run, no completed exit and no bracket of a region.
+  (`saved_mask_pop_discipline` (`src/Effect4/Laws/Machine/MaskDiscipline.lean`)).
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 
