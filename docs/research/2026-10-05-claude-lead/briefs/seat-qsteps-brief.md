@@ -39,7 +39,7 @@ branch. You work alone and hand back a receipt.
 
 1. `AGENTS.md`, in full.
 2. `docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md`, in full. Its
-   findings F1 to F6 are your specification. Decisions row 255 rules its proposals 1 to 5 as
+   findings F1 to F7 are your specification. Decisions row 255 rules its proposals 1 to 5 as
    recommended.
 3. The probe beside it: `QueueSteps.lean` and `QueueSteps.out`. Read the section "The steps
    against the model" with care: its comparison is the executable form of your goals.
@@ -50,21 +50,29 @@ branch. You work alone and hand back a receipt.
 5. `docs/core/decisions.md`, rows 219 to 222, 228 to 230, 233, 235, 238 and 240 to 243.
 6. Seat FOLD's receipt, `docs/research/2026-10-05-seat-FOLD-receipt.md`, and
    `src/Effect4/Laws/Program/Typed/ListFold.lean`: `ListFoldRules` and `HandleIdentityLaws`.
-7. Codex's two reviews of the design, under
+7. Codex's reviews of the design, under
    `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/`:
-   `heartbeat-queue-steps-2311/review.md` and `heartbeat-queue-steps-2341/review.md`.
+   `heartbeat-queue-steps-2311/review.md`, `heartbeat-queue-steps-2341/review.md`, and the
+   folder `queue-dogfood-design-research`. In that folder `proof/report.md` maps each
+   connector to the theorem that gives it, and `dogfood/review.md` gives the workload's trace.
+8. `src/Effect4/Program/Authoring/Folds.lean` and `Test/Program/FoldHygiene.lean`: the
+   hygienic fold builder, and the capture that it prevents.
 
 ## The assignment
 
-1. **The cell.** One record type at a message type `A`, with every field of the design's F1,
-   and the initial value at a capacity. A request's identity and its hint are `Deferred`
-   handles. Identities are compared by `sameHandle`.
+1. **The cell.** One record type at a message type `A`, with the four fields of the design's
+   F1, and the initial value at a capacity. A request's identity and its hint are `Deferred`
+   handles. Identities are compared by `sameHandle`. State in the module's header which later
+   slice changes the cell's type, as F1 lists it.
 2. **The six steps,** each one term for a `Ref.modify`: `takeStep`, `offerStep`, `pollStep`,
    `sizeStep`, `withdrawTake` and `withdrawOffer`. Start from the probe's terms.
    - A step names its notifications in the model's order: the accepted offers, then the taker
      to wake.
    - No fold states its accumulator's type.
    - A step frames every field that it does not change.
+   - Each helper folds with `Authoring.foldWith`. Never give `Authoring.fold` a fixed name
+     around a caller's term. Keep one control with a caller's variable under each helper.
+   - The accept pass is the closed form of `acceptLoop_single`: `take`, `drop` and one fold.
 3. **The typing.** Each step term is typed at the cell's type, for any message type that the
    checker types in a cell.
 4. **The homes** (row 255). The module is `src/Effect4/Modules/Queue/`, a new layer of the
@@ -72,24 +80,36 @@ branch. You work alone and hand back a receipt.
    graph: `src/Effect4/Laws/Modules/Queue/`, in the namespace `Effect4.Queue.Model`. Change no
    statement, placement or proof there.
 5. **The relation.** An encoding table gives each model identity its handle and its current
-   hint. The cell's value is a function of the table and a profile state. Write both in Lean.
+   hint. A message map gives each of the model's messages a value that fits `A`. The cell's
+   value is a function of the table, the map and a profile state. Write them in Lean.
 6. **The step goals,** one for each step, in the shape of the design's F3.
    - The domain is `FirstProfile`, with the request's premise `Requested`.
    - The table's injectivity and the replaced hint are written premises.
    - The conclusion gives the reply, the stored value and the ordered notifications: every
      signal of the model, and no other.
    - `acceptLoop_single` and `wake_profile` give the model's side in closed form.
+   - One connector joins a goal to the store: a step term's agreement gives one atomic update
+     of the cell (`refStep_modify`, `ListFoldRules.step`). State it once, for all six steps.
+   - A fresh identity is no handle inside the cell: use `HandleIdentityLaws.freshDeferred` on
+     the whole cell. `notMemberDeferred` asks for a list of handles, and the lists hold records.
 7. **The battery.** Promote the probe's comparison into the tree.
    - The named controls C1 to C6, and the refusals P1 to P3.
    - The red controls M1 to M4.
    - Every state of the probe's universe, twelve moves on each.
    - The eight scenarios on the machine, R1 to R8.
+   - One workload in two spellings, as the design's proposal 6 states it. It is a sequence
+     and a finite loop over one shared setup, with a withdrawal at two places. If seat
+     DOGFOOD's scenario record is merged in your base, write it as one scenario of that record.
 8. **The engine.** Two scenarios run on the generated engine, through the wire.
 9. **The documents.** A row for the module in `docs/ARCHITECTURE.md`, and its role in the
    architecture map's register (`tools/Tools/ArchitectureRoles.lean`). The laws' rows exist.
 
 Where the design leaves a choice open, make it and state it in the receipt. Where the tree
 proves the design wrong, stop that part and report with the evidence. Do not redesign.
+
+**Reuse first** (the owner, 2026-10-05). Use the model's laws, the minted fold builder and the
+one store connector. Before you add a helper, name its consumer in this slice. Add no second
+interpreter of the Queue, no new stored binding form and no proof framework of your own.
 
 ## The obligations and their placement
 

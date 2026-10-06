@@ -1,0 +1,17 @@
+{
+  "task": "Queue straight and iterative consumer proof scouting",
+  "evidence": "source review; proposed statement shapes are uncompiled and unproved",
+  "reviewed_commit": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+  "head_at_finish": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+  "status_at_finish": " M Test/All.lean\n M Test/Program/QueueCapacity.lean\n M Test/Program/QueueContract.lean\n M Test/Program/QueueProfile.lean\n M src/Effect4/Laws.lean\nRM Test/Program/QueueModel.lean -> src/Effect4/Laws/Modules/Queue/Model.lean\n M tools/Tools/ArchitectureRoles.lean\n M tools/Tools/SemanticsRegistry.lean\n?? src/Effect4/Laws/Modules/Queue/Capacity.lean\n?? src/Effect4/Laws/Modules/Queue/Profile.lean\n",
+  "source_count": 30,
+  "source_hashes": "sources.json (committed bytes)",
+  "active_relocation_hashes": "relocation-observation.json (uncommitted observation only)",
+  "report_sha256": "8636bd86c9fb5a5649dceb413848bd35fdbb9fd7c0af4569dceb8dc209f19f44",
+  "no_repository_edits": true,
+  "no_lean_or_compiler_commands": true,
+  "no_runtime_probes": true,
+  "no_claude_messages_or_ui": true,
+  "new_tests_run": [],
+  "committed_source_hashes_verified": true
+}

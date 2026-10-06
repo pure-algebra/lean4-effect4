@@ -1,0 +1,133 @@
+{
+  "evidence": "Python name-resolution mirror; not Lean elaboration",
+  "checks": 8,
+  "results": [
+    {
+      "name": "enrolled_collision",
+      "actual": [
+        true,
+        2
+      ],
+      "expected_current_behavior": [
+        true,
+        2
+      ],
+      "intended_semantics": false
+    },
+    {
+      "name": "enrolled_plain_control",
+      "actual": [
+        false,
+        0
+      ],
+      "expected_current_behavior": [
+        false,
+        0
+      ],
+      "intended_semantics": false
+    },
+    {
+      "name": "enrolled_matching_control",
+      "actual": [
+        true,
+        0
+      ],
+      "expected_current_behavior": [
+        true,
+        0
+      ],
+      "intended_semantics": true
+    },
+    {
+      "name": "enrolled_reserved_control",
+      "actual": [
+        false,
+        0
+      ],
+      "expected_current_behavior": [
+        false,
+        0
+      ],
+      "intended_semantics": false
+    },
+    {
+      "name": "remove_collision",
+      "actual": [
+        [],
+        2
+      ],
+      "expected_current_behavior": [
+        [],
+        2
+      ],
+      "intended_semantics": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "remove_plain_control",
+      "actual": [
+        [
+          2,
+          3
+        ],
+        0
+      ],
+      "expected_current_behavior": [
+        [
+          2,
+          3
+        ],
+        0
+      ],
+      "intended_semantics": [
+        2,
+        3
+      ]
+    },
+    {
+      "name": "remove_matching_control",
+      "actual": [
+        [
+          3
+        ],
+        0
+      ],
+      "expected_current_behavior": [
+        [
+          3
+        ],
+        0
+      ],
+      "intended_semantics": [
+        3
+      ]
+    },
+    {
+      "name": "remove_reserved_control",
+      "actual": [
+        [
+          2,
+          3
+        ],
+        0
+      ],
+      "expected_current_behavior": [
+        [
+          2,
+          3
+        ],
+        0
+      ],
+      "intended_semantics": [
+        2,
+        3
+      ]
+    }
+  ],
+  "collision_witnesses_differ_from_intended": [
+    "enrolled_collision",
+    "remove_collision"
+  ]
+}

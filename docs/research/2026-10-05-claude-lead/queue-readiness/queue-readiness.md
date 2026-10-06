@@ -71,7 +71,7 @@ universe of the profile: 200 states, twelve moves on each, and all 2,400 compari
 Each red control changes one notification, and nothing else. No step term changed. The
 predicate and its closure are in the tree, proved: `FirstProfile` and `first_profile_closed`
 in `src/Effect4/Laws/Modules/Queue/Profile.lean`. The comparison decides that predicate. The
-model and its capacity statement are beside it since the owner's word (row 255): the table
+model and its capacity statement are beside it since the owner's word (row 255). The table
 above names their paths at the time of the runs, under `Test/Program/`.
 
 ### F2. Cleanup on interruption needs no new construct
@@ -108,9 +108,11 @@ and the type arguments of `Deferred.make`.
 ### F4. Three points of friction, none a blocker
 
 1. **The term language has no local binding.** The take step is written once in Lean, and its
-   parts occur several times in the term. It has 765 nodes and 11 folds, where one accept pass
-   has 138 nodes and one fold. The repeated passes are pure, so the step stays one machine step
-   and its answer is the same. The cost is a constant factor and a long printed term.
+   parts occur several times in the term. It had 765 nodes and 11 folds with the general
+   accept pass. With the model's closed form of that pass it has 283 nodes and 9 folds
+   (revised after Codex's design research: the design note's F7). The repeated passes are
+   pure, so the step stays one machine step and its answer is the same. The cost is a constant
+   factor and a long printed term.
 2. **A loop that ends with a value needs an arm that never runs.** `iterate` answers its
    cursor, an option of the message. The program after it selects on that option, and the
    empty arm fails with a defect. The types do not say that the loop ends only with a

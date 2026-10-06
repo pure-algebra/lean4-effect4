@@ -42,9 +42,9 @@ differs
 true
 20
 20
-some (765, 11)
-some (138, 1)
+some (283, 9)
+some (16, 1)
 some (93, 0)
-some (484, 3)
+some (118, 1)
 (some true, some true, some true, some true, some true, some true)
 ("refused: typeSpelling Deferred.make", "refused: typeSpelling Deferred.make", "printed")

@@ -259,9 +259,15 @@ Open at this landing:
      two seats run.
      [Its brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md) is written ahead.
      The owner ruled the design's five proposals as recommended (row 255), so its dispatch
-     waits for a free seat only;
+     waits for a free seat only. Codex's design research
+     ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
+     is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
+     so a step's helper cannot capture its caller's variable
+     (`Test/Program/FoldHygiene.lean`). The accept pass is the model's closed form, and the
+     first cell holds four fields;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
-     its law, and the printed form. It follows T5 and the mask (row 251).
+     its law, and the printed form. It follows T5 and the mask (row 251). Codex's research
+     proposes a private helper for the take's loop, whose last arm never runs.
 
   Two probes ran `take` and `offer` as programs on the machine
   ([the note](research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md); finite

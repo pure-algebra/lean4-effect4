@@ -138,6 +138,11 @@ A fold with a stated type is printed and not read.
 The printer refuses a fold inside an operation's term by the row's name.
 `Test/Program/FoldContract.lean` holds the checked examples and the refusals.
 
+`Authoring.foldWith list init (fun acc item => body)` is the same fold with its two names minted.
+A helper that places its caller's term in the body uses this form.
+With fixed names, a caller's variable of the same name would read the folded element.
+`Test/Program/FoldHygiene.lean` holds that capture as a control.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact

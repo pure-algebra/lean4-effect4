@@ -1,0 +1,17 @@
+/- Uncompiled inspection snippet. Append after the existing QueueSteps probe declarations.
+No Lean invocation ran here. The two #eval commands should reveal variable levels.
+The outer request is level 0. The colliding folded item is level 3.
+A following owner-run semantic control should use unequal identities of equal record types. -/
+open Effect4.Program.Authoring
+#eval QueueSteps.enrolled (var "xs") (field (var "e_t") "id")
+  { names := ["e_t", "xs"] } []
+#eval QueueSteps.enrolled (var "xs") (field (var "caller") "id")
+  { names := ["caller", "xs"] } []
+
+/- Suggested convenience shape; uncompiled, not production code.
+def foldWith (accTy : Option Ty) (xs initial : TermSrc)
+    (body : TermSrc → TermSrc → TermSrc) : TermSrc := fun env path =>
+  let acc := env.mint "foldAcc"
+  let item := env.mint "foldItem"
+  fold acc item accTy xs initial (body (minted acc) (minted item)) env path
+-/

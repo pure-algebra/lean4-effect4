@@ -1,0 +1,151 @@
+{
+  "captured_utc": "2026-10-06T00:52:45.429875+00:00",
+  "trees": {
+    "dogfood": {
+      "path": "/Users/pooks/Dev/lean4-effect4-lower",
+      "head": "01bc224b55d53b52f5a9269eb442bc42338c55bf",
+      "status": "",
+      "atomic_file_present": false
+    },
+    "main": {
+      "path": "/Users/pooks/Dev/lean4-effect4",
+      "head": "09d35eafd4e68ef86916dced39d003fd4cf8fbd3",
+      "status": " M Test/All.lean\n M Test/Program/QueueCapacity.lean\n M Test/Program/QueueContract.lean\n M Test/Program/QueueProfile.lean\n M src/Effect4/Laws.lean\nRM Test/Program/QueueModel.lean -> src/Effect4/Laws/Modules/Queue/Model.lean\n?? src/Effect4/Laws/Modules/Queue/Capacity.lean\n?? src/Effect4/Laws/Modules/Queue/Profile.lean\n",
+      "atomic_file_present": false
+    }
+  },
+  "sources": [
+    {
+      "tree": "dogfood",
+      "path": "AGENTS.md",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Dogfood/README.md",
+      "sha256": "949a868bf254ed7fc076ea68fec7e791bfab32b0302de022b6c8c291378bce47",
+      "bytes": 19005
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Dogfood/Scenario.lean",
+      "sha256": "dcc5a8bfb20fe4ac47075a6cf94eb10b0f45a8a8f775b5c4bbd4a7d5c5b82db9",
+      "bytes": 40873
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Dogfood/P3WorkerQueue.lean",
+      "sha256": "6f4afa7336cfa4d168816ca3dbf8588821150868b75c4e372c44d6f368b82f42",
+      "bytes": 21179
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Dogfood/Scenario/Workers.lean",
+      "sha256": "395a9ffe81b210f324ac8b2951c4f49b417796250c535ee765b9555dcf153c8b",
+      "bytes": 21277
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Dogfood/Scenario/Tape.lean",
+      "sha256": "a858662530c023a02f199a0a94ceaf78f568843fd1472c81be57535572829d8d",
+      "bytes": 12112
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Dogfood/Scenario/Lowered.lean",
+      "sha256": "9e8c03c493b6eaa8e26c376bd2cf12ccf359dfdc46bd2cad33b508410d187bfe",
+      "bytes": 3221
+    },
+    {
+      "tree": "dogfood",
+      "path": "src/Effect4/Laws/Run.lean",
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+      "bytes": 51982
+    },
+    {
+      "tree": "dogfood",
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+      "bytes": 6647
+    },
+    {
+      "tree": "dogfood",
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+      "bytes": 2381
+    },
+    {
+      "tree": "dogfood",
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "sha256": "a2a7a7be54c308f1071344de71e080d2aabe0da0909421945ac579cf50953d71",
+      "bytes": 45515
+    },
+    {
+      "tree": "dogfood",
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "sha256": "96e4fc0e142f85296e4226064ac04cce9f5cebbb4e81473b25f475bc694faee3",
+      "bytes": 22927
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Program/MeaningEqContract.lean",
+      "sha256": "a60b9b4c92b4a8c2d58b49bbfc602c51febd92b718997f384fbdcbb1e253940b",
+      "bytes": 4034
+    },
+    {
+      "tree": "dogfood",
+      "path": "Test/Program/QueueModel.lean",
+      "sha256": "8922b6f6930c8a8ca703ac8bbfdf09a1f29bc6ee25e2f43b77461d0756c71dfe",
+      "bytes": 17035
+    },
+    {
+      "tree": "dogfood",
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "sha256": "1c3346a914076b945343660f6a24204842614103f8f7feac25dbfcc2cba792b3",
+      "bytes": 65980
+    },
+    {
+      "tree": "dogfood",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md",
+      "sha256": "a3e7dc489d1f17870fc43cbc01f9e6ec197ece7334bd0cab8addd4fa27d47b4e",
+      "bytes": 18306
+    },
+    {
+      "tree": "main",
+      "path": "docs/core/decisions.md",
+      "sha256": "a64f413ae8af2798d11c80cafbc88456ad695d7ca76647f1fcf5c28493bd2e6b",
+      "bytes": 320040
+    },
+    {
+      "tree": "main",
+      "path": "docs/STATE.md",
+      "sha256": "f09205b52890012a8b0acd97ab615ac69bf5345c57ac8e3cd65e33f31fc2a101",
+      "bytes": 91882
+    },
+    {
+      "tree": "main",
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md",
+      "sha256": "3ec92387d66e9bbef129b2ebb01b01c6511cb89263e0d124952f5a3e3cdc5b99",
+      "bytes": 10369
+    },
+    {
+      "tree": "main",
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+      "sha256": "15d49c50ad4c434f8fea60f9a75355fb836d17b9bd99890a787401300d69204e",
+      "bytes": 19582
+    },
+    {
+      "tree": "main",
+      "path": "src/Effect4/Laws/Modules/Queue/Model.lean",
+      "sha256": "cedc4e7cf129ee7da9c122251f3ebccbc506f5cfa9b025571e9d07fa70ca246d",
+      "bytes": 17180
+    },
+    {
+      "tree": "main",
+      "path": "Test/Program/QueueProfile.lean",
+      "sha256": "5088f86930771c1d4ee5b258b4065e1e13054d7ef919a21516f066f5b59d7d42",
+      "bytes": 4099
+    }
+  ]
+}

@@ -85,56 +85,51 @@ def mkOffer (id hint batch rest : TermSrc) : TermSrc :=
 
 /-! ## The pure parts -/
 
+/-! Each helper folds with `foldWith`: its two names are minted, so a caller's term keeps its
+reading inside the body (`Test/Program/FoldHygiene.lean` holds the capture that fixed names
+allow; Codex's review found it). -/
+
 /-- Whether the request `id` waits among the takers. -/
 def enrolled (takers id : TermSrc) : TermSrc :=
-  fold "e_acc" "e_t" none takers (bool false) (orT (var "e_acc") (same (field (var "e_t") "id") id))
+  foldWith takers (bool false) fun found t => orT found (same (field t "id") id)
 
 /-- Whether the request `id` is the earliest taker. -/
 def isHead (takers id : TermSrc) : TermSrc :=
-  fold "h_acc" "h_t" none (app "take" [takers, nat 1]) (bool false)
-    (same (field (var "h_t") "id") id)
+  foldWith (app "take" [takers, nat 1]) (bool false) fun _ t => same (field t "id") id
 
 /-- The takers without the request `id`. -/
 def removeTaker (takers id : TermSrc) : TermSrc :=
-  fold "r_acc" "r_t" none takers (none_of takers)
-    (ite (same (field (var "r_t") "id") id) (var "r_acc") (snoc (var "r_acc") (var "r_t")))
+  foldWith takers (none_of takers) fun kept t =>
+    ite (same (field t "id") id) kept (snoc kept t)
 
 /-- The takers, with the hint of the request `id` replaced. -/
 def renewHint (takers id hint : TermSrc) : TermSrc :=
-  fold "n_acc" "n_t" none takers (none_of takers)
-    (snoc (var "n_acc") (ite (same (field (var "n_t") "id") id) (mkTaker id hint) (var "n_t")))
+  foldWith takers (none_of takers) fun out t =>
+    snoc out (ite (same (field t "id") id) (mkTaker id hint) t)
 
 /-- The pending offers without the request `id`. -/
 def removeOffer (offers id : TermSrc) : TermSrc :=
-  fold "o_acc" "o_t" none offers (none_of offers)
-    (ite (same (field (var "o_t") "id") id) (var "o_acc") (snoc (var "o_acc") (var "o_t")))
+  foldWith offers (none_of offers) fun kept o =>
+    ite (same (field o "id") id) kept (snoc kept o)
 
 /-- The model's `wake` in the first profile: the earliest taker, when a message is ready. A
 list of at most one taker. -/
 def wake (takers msgs : TermSrc) : TermSrc :=
   ite (empty msgs) (none_of takers) (app "take" [takers, nat 1])
 
-/-- The model's `acceptLoop` at a finite room. The accumulator: room, buffer, kept offers,
-accepted offers, a stop flag. An offer that fits whole is accepted; the first that does not
-keeps its rest, and every later one stays. -/
-def accept (room msgs offers : TermSrc) : TermSrc :=
-  let acc := var "a_acc"
-  let o := var "a_o"
-  let room' := tupleAt acc 0
-  let msgs' := tupleAt acc 1
-  let kept := tupleAt acc 2
-  let done := tupleAt acc 3
-  let rest := field o "rest"
-  let k := minT room' (len rest)
-  let taken := app "append" [msgs', app "take" [rest, k]]
-  fold "a_acc" "a_o" none offers
-    (tuple [room, msgs, none_of offers, none_of offers, bool false])
-    (ite (orT (tupleAt acc 4) (app "isZero" [room']))
-      (tuple [room', msgs', snoc kept o, done, bool true])
-      (ite (app "eq" [len rest, k])
-        (tuple [app "sub" [room', k], taken, kept, snoc done o, bool false])
-        (tuple [nat 0, taken, snoc kept (recordSet o "rest" (app "drop" [rest, k])), done,
-          bool true])))
+/-! The model's accept pass on single offers, in its closed form (`acceptLoop_single`,
+`src/Effect4/Laws/Modules/Queue/Profile.lean`): as many offers as fit enter, in arrival order.
+Three terms with one fold, where the general pass kept five values and a stop flag. -/
+
+/-- How many pending offers enter the room. -/
+def fitting (room offers : TermSrc) : TermSrc := minT room (len offers)
+/-- The offers that enter: the step answers them, in arrival order. -/
+def entering (room offers : TermSrc) : TermSrc := app "take" [offers, fitting room offers]
+/-- The offers that stay pending. -/
+def staying (room offers : TermSrc) : TermSrc := app "drop" [offers, fitting room offers]
+/-- The buffer with the messages of the offers that enter. -/
+def gained (room msgs offers : TermSrc) : TermSrc :=
+  foldWith (entering room offers) msgs fun buffer o => app "append" [buffer, field o "rest"]
 
 /-! ## The steps, each one term of a `Ref.modify` -/
 
@@ -148,13 +143,14 @@ def takeStep (id hint s : TermSrc) : TermSrc :=
   let turn := orT (isHead takers id) (andT (notT (enrolled takers id)) (empty takers))
   let msgs1 := app "drop" [msgs, nat 1]
   let takers1 := removeTaker takers id
-  let acc := accept (app "sub" [field s "cap", len msgs1]) msgs1 offers
-  let consumed := recordSet (recordSet (recordSet s "msgs" (tupleAt acc 1)) "takers" takers1)
-    "offers" (tupleAt acc 2)
+  let room := app "sub" [field s "cap", len msgs1]
+  let msgs2 := gained room msgs1 offers
+  let consumed := recordSet (recordSet (recordSet s "msgs" msgs2) "takers" takers1)
+    "offers" (staying room offers)
   let waiting := recordSet s "takers"
     (ite (enrolled takers id) (renewHint takers id hint) (snoc takers (mkTaker id hint)))
   ite (andT (notT (empty msgs)) turn)
-    (app "pair" [tuple [app "get" [msgs, nat 0], tupleAt acc 3, wake takers1 (tupleAt acc 1)],
+    (app "pair" [tuple [app "get" [msgs, nat 0], entering room offers, wake takers1 msgs2],
       consumed])
     (app "pair" [tuple [noneT, none_of offers, none_of takers], waiting])
 
@@ -191,10 +187,11 @@ def pollStep (s : TermSrc) : TermSrc :=
   let msgs := field s "msgs"
   let offers := field s "offers"
   let msgs1 := app "drop" [msgs, nat 1]
-  let acc := accept (app "sub" [field s "cap", len msgs1]) msgs1 offers
-  let consumed := recordSet (recordSet s "msgs" (tupleAt acc 1)) "offers" (tupleAt acc 2)
+  let room := app "sub" [field s "cap", len msgs1]
+  let consumed := recordSet (recordSet s "msgs" (gained room msgs1 offers)) "offers"
+    (staying room offers)
   ite (andT (notT (empty msgs)) (empty (field s "takers")))
-    (app "pair" [tuple [app "get" [msgs, nat 0], tupleAt acc 3], consumed])
+    (app "pair" [tuple [app "get" [msgs, nat 0], entering room offers], consumed])
     (app "pair" [tuple [noneT, none_of offers], s])
 
 /-- The model's `size` in an opened queue: a read, and no step of the cell. -/
@@ -836,9 +833,11 @@ where foldCounts : Terms → Nat
 def stepTerm (step : TermSrc) : Option Term :=
   (step { names := ["id", "hint", "s"] } []).toOption
 
--- The take step: its nodes and its folds. Then one accept pass, and the offer step.
+-- The take step: its nodes and its folds. Then the accept pass's one fold, and the offer step.
+-- With the general accept pass (five values and a stop flag) the take step had 765 nodes and 11
+-- folds, the pass 138 nodes, and the poll step 484 nodes and 3 folds.
 #eval (stepTerm (takeStep (var "id") (var "hint") (var "s"))).map fun t => (termSize t, foldCount t)
-#eval (stepTerm (accept (nat 1) nilT nilT)).map fun t => (termSize t, foldCount t)
+#eval (stepTerm (gained (nat 1) nilT nilT)).map fun t => (termSize t, foldCount t)
 #eval (stepTerm (offerStep (var "id") (var "hint") (nat 1) (var "s"))).map fun t =>
   (termSize t, foldCount t)
 #eval (stepTerm (pollStep (var "s"))).map fun t => (termSize t, foldCount t)

@@ -3,14 +3,18 @@
 Status: research note (history, not authority). Base: `73e931bc` (`refactor/phase1-phase3`).
 A design for review, before any seat builds it. No file of the tree changed.
 
-**Revised twice on 2026-10-05, after Codex's two reviews** of this note. Both are under
+**Revised three times on 2026-10-05, after Codex's reviews** of this note. All are under
 `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/`: the first in
-`heartbeat-queue-steps-2311/review.md`, the second in `heartbeat-queue-steps-2341/review.md`.
+`heartbeat-queue-steps-2311/review.md`, the second in `heartbeat-queue-steps-2341/review.md`,
+and the third, a design research of three scouts, in `queue-dogfood-design-research/`.
 
 - The first found two places where the probe's notifications left the model's, and three gaps
   in this text.
 - The second found that the step goals had no closed domain, and that the comparison dropped a
   signal it could not encode.
+- The third found that the helpers' fixed fold names can capture a caller's variable. It also
+  proposed a simpler accept pass, asked what the cell's declaration settles, and mapped the
+  proofs that the slice reuses. F7 lists its points.
 
 F6 lists each point with its repair. The probe is rerun after each. After the second, the
 predicate and its closure went into the tree, proved. After the owner's word (row 255) the
@@ -44,28 +48,40 @@ the wrapper and the printed TypeScript form build on it without a change?
 
 ### F1. The cell
 
-The cell is one `Ref` at one record type. The slice declares every field of the model's state
-now, so that a later step adds no field.
+The cell is one `Ref` at one record type. **The first cell holds the fields that the first
+steps read or write, and no other** (revised after Codex's design research: F7).
 
-| Field | Type | Model's field | Read or written by the first steps |
-| --- | --- | --- | --- |
-| `msgs` | a list of the message type `A` | `messages` | yes |
-| `cap` | an option of a number | `capacity` | read |
-| `strategy` | one of three literals | `strategy` | read: the first profile is `suspend` |
-| `takers` | a list of records: identity, hint, minimum, maximum | `takers` | yes |
-| `offers` | a list of records: identity, hint, the batch flag, the messages not yet accepted | `offers` | yes |
-| `peekers`, `awaiters` | lists of records: identity, hint | `peekers`, `awaiters` | no |
-| `phase` | a tagged value: opened, closing with an end, done with an end | `phase` | read: the first steps test `opened` |
+| Field | Type | Model's field |
+| --- | --- | --- |
+| `msgs` | a list of the message type `A` | `messages` |
+| `cap` | a number | `capacity`: positive in the first profile |
+| `takers` | a list of records: identity, hint | `takers`: each at the bounds one and one |
+| `offers` | a list of records: identity, hint, the batch flag, the messages not yet accepted | `offers` |
+
+The first profile fixes every other part of the model's state: the phase, the strategy, a
+stored taker's bounds, and the two empty lists. So the cell's value loses nothing there.
+
+**The cell's type is private to the module, and a later slice changes it.** A field's name
+does not keep a `Ref`'s or a `Deferred`'s type. Three changes are known:
+
+- **Batches** change an offer's answer. The hint carries a Boolean here, and a batch's answer
+  is the list of the messages left. A stored taker gains its bounds then.
+- **The terminal operations** add the phase with its end, and the awaiters. The end holds a
+  failure's cause, so the module gains the failure type `E` beside `A`.
+- **`peek`** adds the peekers, and **the other strategies** add the strategy. **An unbounded
+  queue** makes the capacity an option.
+
+Each change is a new cell type, a wider profile predicate and a wider relation. The model, the
+shape of a step goal and the step terms of the first profile stay.
 
 - **A request's identity is a `Deferred` that nobody resolves** (the waiting design's F5). Two
   identities are compared by `sameHandle`, and never by a number.
 - **A hint is a `Deferred`.** A taker's hint carries nothing. An offerer's hint carries its
   decided answer (row 240).
 - **The message type `A` is a parameter of the module.** Every export takes it as a `Ty`.
-- **An offer's batch flag is false in this slice,** and its list holds one message. The field
-  is there so that a batch adds no field. The step relation of F3 requires the flag false.
-- **The lists `peekers` and `awaiters` are empty in this slice.** The first profile of F3
-  requires it, and each step frames both fields.
+- **An offer's batch flag is false in this slice,** and its list holds one message. The flag
+  is the one field kept for later: Codex's first review asked for it, and it costs one
+  Boolean. The step relation of F3 requires the flag false.
 
 ### F2. The steps
 
@@ -79,6 +95,13 @@ Each step is one term for a `Ref.modify`. It answers a reply and the requests to
 - **No fold of a step states its accumulator's type.** An empty list of the right type is
   `take xs 0`. So each step term is inside the reader's domain, and the laws `read_print` and
   `read_exact` reach it once seat T5's faces land.
+- **Each helper folds with `Authoring.foldWith`,** whose two names are minted. A helper places
+  its caller's term in the fold's body. With fixed names a caller's variable of the same name
+  reads the folded element. A removal then removes every entry, and both terms are well
+  typed. `Test/Program/FoldHygiene.lean` holds that capture as a control.
+- **The accept pass is the model's closed form** (`acceptLoop_single`): as many pending offers
+  as fit enter, in arrival order. It is `take`, `drop` and one fold that appends the entered
+  messages. The general pass, with five values and a stop flag, comes back with the batches.
 
 | Step | Model's function | Its parts |
 | --- | --- | --- |
@@ -90,8 +113,9 @@ Each step is one term for a `Ref.modify`. It answers a reply and the requests to
 | `withdrawOffer id` | `withdrawOffer` | remove the pending offer, name the taker to wake |
 
 The probe holds all six. A poll consumes only when no taker waits, so it wakes none. The take
-step has 765 nodes and 11 folds, and the poll step 484 nodes and 3 folds. One accept pass has
-138 nodes and one fold.
+step has 283 nodes and 9 folds, and the poll step 118 nodes and one fold. The fold of the
+accept pass has 16 nodes. With the general accept pass the take step had 765 nodes and 11
+folds, and the poll step 484 nodes and 3 folds.
 
 ### F3. The relation to the model
 
@@ -130,8 +154,11 @@ the first profile when each condition below holds.
 - **An encoding table** maps each model identity to its identity handle and its current hint.
   The map is injective on identities.
 - **The state relation** says that the cell's value is the model's state. Each identity and
-  each signal is read through the table, and each message through its value image. On the
+  each signal is read through the table, and each message through a message map. On the
   first profile the cell's value loses nothing of the model's state.
+- **The message map** gives each of the model's messages, a number, a value that fits `A`. It
+  keeps the order and the count of the messages. The model's proofs are over numbers, so a
+  goal at a general `A` carries this map as a premise.
 - **A step changes the table in two ways, and frames the rest.** It extends the table by a
   fresh request that it enrols. It replaces the current hint of a request that waits already:
   the model's state is then unchanged, and the cell's value changes at that hint. Every other
@@ -154,9 +181,16 @@ signals: every signal, and no other.
 - **A new notification is related to the hint that the table holds after the step.**
 - **An earlier posted hint is not this relation's.** A helper that was posted for a hint since
   replaced belongs to the wrapper's relation, which counts each occurrence.
-- **What gives it:** `ListFoldRules.step` gives one typed store step for a term that folds.
-  `HandleIdentityLaws.notMemberDeferred` gives that a fresh identity is in no stored list.
-  `contained` keeps the handles of an answer inside the environment's.
+- **What gives it** (Codex's proof map, F7):
+  - `refStep_modify` gives the store's equation for one `Ref.modify`, from the term's value.
+  - `ListFoldRules.step` gives the typed store step for a term that folds.
+  - `refModify_implements` and `storeStep_typed` give the later world and the continuation.
+  - `HandleIdentityLaws.freshDeferred` gives that a fresh identity is no handle inside the
+    cell's value. The stored lists hold records, so `notMemberDeferred` does not apply as it
+    stands: it asks for a list of handles.
+  - `contained` keeps the handles of an answer inside the environment's.
+- **One connector joins a step goal to the store.** A step term's agreement gives one atomic
+  update of the cell, with the reply and the related next value. Each goal's consumer uses it.
 
 The closure is proved. The slice states the step statement as one planned goal for each
 step, and proves a goal where the proof is short. The statement establishes no delivery, no
@@ -240,11 +274,14 @@ profile is defined. That is the wrapper's slice.
 
 ### F5. Two points of friction that the slice must decide
 
-1. **No local binding in a term.** The take step holds eleven folds where six are distinct,
-   and its accept pass occurs three times (the readiness note's F4). The slice either repeats
-   the passes or adds a binding form.
+1. **No local binding in a term.** The take step holds nine folds where five are distinct:
+   the removal occurs three times, and the accept pass's fold twice. The slice repeats the
+   passes and adds no binding form (row 255).
 2. **The loop's empty arm.** It belongs to the wrapper's slice. It is listed here so that the
-   step's reply type is chosen with it in mind: the reply is an option of the message.
+   step's reply type is chosen with it in mind: the reply is an option of the message. Codex's
+   research proposes a helper private to the Queue, `untilSome`, over `iterateWith` and
+   `selectOption`. Its local law says that a typed option cursor whose loop test is false
+   holds a message. The helper must leave a wait that never ends as a frontier.
 
 ### F6. What Codex's review changed
 
@@ -269,6 +306,25 @@ The second review changed the comparison and the goals' domain. It changed no st
 The coordinator added three things beyond the review. They are the poll and size steps, the
 withdrawals' controls, and the comparison on every state of the universe.
 
+### F7. What Codex's design research changed
+
+Three scouts read the design, the probe and the proof graph. No Lean ran there. Each point
+below is checked here or handed on.
+
+| Point of the research | What was done | Where |
+| --- | --- | --- |
+| A helper with fixed fold names captures a caller's variable of that name. A removal then removes every entry, and typing does not see it | `Authoring.foldWith` mints the two names. Its scope law and the pair form of `var_push_minted` are proved. The capture is a Lean-checked control, with nested uses. The probe's helpers use it | F2; `Test/Program/FoldHygiene.lean` |
+| The accept pass rebuilds two lists and carries a stop flag that the first profile never needs | The pass is the closed form of `acceptLoop_single`: `take`, `drop` and one fold. All 2,400 comparisons still agree. The take step went from 765 nodes to 283, and the poll step from 484 to 118. No run time is measured | F2; the probe |
+| A field's name does not keep the type of a later `Ref` or `Deferred` | The first cell holds four fields, and the note names each later change of its type | F1 |
+| `notMemberDeferred` asks for a list of handles, and the cell's lists hold records | The goals use `freshDeferred` on the whole cell | F3 |
+| A goal at a general message type needs a map from the model's numbers | The message map is a written premise | F3 |
+| One workload in two spellings would test the steps as a client uses them | It joins the slice's acceptance | proposal 6 |
+| The take's loop ends with an arm that never runs | A private `untilSome` helper, for the wrapper's slice | F5 |
+
+The research keeps the design: one cell, pure step terms, one atomic update for each step.
+A program of step calls with no wait is in the straight fragment, or in the looped one. The
+public operations hold masks, forks and waits, so those two fragments' laws do not reach them.
+
 ## Proposals
 
 **The owner accepted proposals 1 to 5 on 2026-10-05,** in session. Decisions row 255 records
@@ -287,12 +343,19 @@ them. Proposal 6 is the slice's acceptance, and the brief carries it.
    Its consumers are the step goals along a run.
 5. **The slice repeats the passes** and adds no binding form. It measures each step's size.
    A binding form is proposed again with the batches, where a step holds more passes.
-6. **Acceptance** has four parts:
+6. **Acceptance** has five parts:
    - each step against the model, on the contract's named traces of the first profile and on
      every state of the probe's universe. The comparison refuses a state outside the profile
      and a signal with no encoding. The red controls are M1 to M4. The observation is the
      reply, the stored value and the ordered notifications;
    - the eight scenarios of the probe, kept as a battery;
+   - one workload in two spellings, from Codex's research. Capacity one; the takers A and B
+     enrol; the offers 10 and 20 follow; two takes consume. The two takes are written once
+     as a sequence and once as a finite loop, over one shared setup. The observation is every
+     reply, the whole cell and each notification in order. A withdrawal of the second offer
+     runs at two places: before its acceptance, and after it. The red controls are the
+     reversed notifications and a cell update that is dropped. `run_eq_meaning` carries the
+     sequence and `loopAgreement` the loop, with a witness that the loop finishes;
    - the engine on two of them, through the wire;
    - the program R4 printed and read back, once seat T5's faces land. Until then the printer's
      refusal is pinned.
