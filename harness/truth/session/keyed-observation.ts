@@ -103,6 +103,18 @@ const ending = (exit: Json, single: "interrupted" | "other"): Json => {
   if (Array.isArray(failed) && failed.length === 2 && failed.every(part => typeof part === "string")) return { failed }
   return single === "interrupted" && Object.hasOwn(reason, "interrupt") ? { interrupted: true } : { other: true }
 }
+/** A request's outcome as the atomic battery reads a fiber's exit (`outcomeOf`). */
+const outcome = (exit: Json | undefined): Json => {
+  if (exit === undefined || exit === null) return { pending: true }
+  if (typeof exit !== "object" || Array.isArray(exit)) return { other: true }
+  if (Object.hasOwn(exit, "success")) return exit.success === true ? { admitted: true } : exit.success === false ? { rejected: true } : { other: true }
+  const reasons = exit.failure
+  const reason = Array.isArray(reasons) && reasons.length === 1 ? reasons[0] : undefined
+  if (reason === undefined || reason === null || typeof reason !== "object" || Array.isArray(reason)) return { other: true }
+  const failed = reason.fail
+  if (Array.isArray(failed) && failed.length === 2 && failed[0] === "Downstream" && failed[1] === "unavailable") return { failedBehind: true }
+  return Object.hasOwn(reason, "interrupt") ? { interrupted: reason.interrupt! } : { other: true }
+}
 const scenarios: Record<string, Scenario> = {
   // Test/Dogfood/Scenario/Routing.lean, `Observation`. The refused rows are the session's: the
   // ledger predicts each one.
@@ -159,6 +171,20 @@ const scenarios: Record<string, Scenario> = {
     through: {
       cells: { fields: ["attempts", "cleanups"], read: ({ cells }) => ({ attempts: typeof cells![0] === "number" ? cells![0] : 0, cleanups: entries(cells![1]) }) },
       sleeps: { fields: ["timers"], read: ({ sleeps }) => ({ timers: sleeps!.map(([fiber, wake]) => [fiber, Number(wake)]) }) }
+    }
+  },
+  // Test/Dogfood/Scenario/Atomic.lean, `Observation`. The cells are the window, the account and
+  // the cleanup log. The requests 1 to 6 are the fibers 2 to 7: the daemon is fiber 1.
+  atomic: {
+    host: () => ({}),
+    through: {
+      cells: { fields: ["window", "account", "cleanups"], read: ({ cells }) => ({ window: cells![0] ?? null, account: cells![1] ?? null, cleanups: entries(cells![2]) }) },
+      fibers: { fields: ["decisions", "completed"], read: ({ fibers }) => {
+        const decisions = [2, 3, 4, 5, 6, 7].map(fiber => outcome(fibers![fiber]))
+        const completed = decisions.filter(decision => decision !== null && typeof decision === "object" &&
+          (Object.hasOwn(decision, "admitted") || Object.hasOwn(decision, "failedBehind") || Object.hasOwn(decision, "rejected"))).length
+        return { decisions, completed }
+      } }
     }
   }
 }

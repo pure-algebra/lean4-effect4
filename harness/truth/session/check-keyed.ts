@@ -180,20 +180,25 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ scenarios, notPerformed: manifest.waiting, controls,
     evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, predicted by the ledger, measured through a reader, or replay only",
     boundary: "no agreement for another script or another entry; no host adequacy; no liveness" }, null, 2) + "\n")
+  // An entry with two sources has two rows, each with its scripts by name.
+  const scriptsOf = (scenario: string, scripts: number, names: string[]): string =>
+    names.length === scripts ? `all ${scripts}` : `${names.length} of ${scripts}: ${names.map(name => name.slice(scenario.length + 1)).join(", ")}`
   await writeFile(resolve(runPath, "scenario-evidence.md"), [
     "| Scenario | Entry | Evidence | Scripts |", "| --- | --- | --- | --- |",
     ...scenarios.flatMap(({ scenario, scripts, evidence }) => evidence.map(row =>
-      `| ${scenario} | \`${row.entry}\` | ${row.evidence} | ${row.scripts.length === scripts ? `all ${scripts}` : `${row.scripts.length} of ${scripts}`} |`)),
+      `| ${scenario} | \`${row.entry}\` | ${row.evidence} | ${scriptsOf(scenario, scripts, row.scripts)} |`)),
     ""].join("\n"))
+  // The acceptance line of each scenario: how many entries have each source in every script,
+  // and, for each entry that waits, in how many scripts the whole-observation comparison waits.
   const line = scenarios.map(({ scenario, scripts, evidence }) => {
     const whole = (word: (evidence: string) => boolean): number => evidence.filter(row => word(row.evidence) && row.scripts.length === scripts).length
-    const partial = evidence.filter(row => row.evidence === "replay only" && row.scripts.length < scripts)
+    const waits = evidence.filter(row => row.evidence === "replay only")
     const parts = [`${whole(word => word === "host")} entries measured by the host`,
       ...(whole(word => word === "ledger") ? [`${whole(word => word === "ledger")} predicted by the ledger`] : []),
       ...(whole(word => word.startsWith("reader")) ? [`${whole(word => word.startsWith("reader"))} through a reader`] : []),
-      ...partial.map(row => `${row.entry} through a reader in ${scripts - row.scripts.length} scripts and replay only in ${row.scripts.length}`),
-      ...(whole(word => word === "replay only") ? [`${whole(word => word === "replay only")} replay only`] : [])]
-    return `${scenario} ${scripts} scripts (${parts.join(", ")})`
+      ...evidence.filter(row => row.evidence.startsWith("reader") && row.scripts.length < scripts).map(row => `${row.entry} through a reader in ${row.scripts.length} scripts`)]
+    const waiting = waits.length ? `the whole-observation comparison waits on ${waits.map(row => `${row.entry} in ${row.scripts.length} scripts`).join(", ")}` : "no entry waits"
+    return `${scenario} ${scripts} scripts (${parts.join(", ")}; ${waiting})`
   }).join("; ")
   const count = Object.values(controls).reduce((sum, list) => sum + list.length, 0)
   console.log(`PASS keyed scenarios: ${line}; ${manifest.waiting.length} scripts with no host run; ${count} red controls`)

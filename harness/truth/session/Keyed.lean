@@ -3,6 +3,7 @@ import Effect4.Program.Profile
 import Effect4.Program.Stream
 import Test.Dogfood.Scenario.Workers
 import Test.Dogfood.Scenario.Routing
+import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
 import Tools.ProfileJson
 import TypeScript.Render
@@ -917,9 +918,48 @@ def timeoutRuns : Except String (List HostRun) := do
     , timeout "eager" eager (Scenario.script notFound)
     , timeout "resetting" resetting (Scenario.script [parked, [.tick 2000]]) ]
 
+/-- One host run of the atomic scenario, with its observation's five fields. -/
+def atomic (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
+  { name := "atomic/" ++ name
+    scenario := "atomic"
+    opened := Scenario.Atomic.opened built
+    moves := moves
+    observed := fun run =>
+      let o := Scenario.Atomic.observe run
+      [ ("decisions", toJson (o.decisions.map fun
+          | .pending => Json.mkObj [("pending", true)]
+          | .admitted => Json.mkObj [("admitted", true)]
+          | .rejected => Json.mkObj [("rejected", true)]
+          | .failedBehind => Json.mkObj [("failedBehind", true)]
+          | .interrupted interruptor =>
+            Json.mkObj [("interrupted", (interruptor.map fun (fiber : FiberId) => toJson fiber.value).getD .null)]
+          | .other => Json.mkObj [("other", true)]))
+      , ("window", (o.window.map valJson).getD .null)
+      , ("account", (o.account.map valJson).getD .null)
+      , ("completed", toJson o.completed)
+      , ("cleanups", toJson (o.cleanups.map valJson)) ]
+    same := fun a b => Scenario.Atomic.observe a == Scenario.Atomic.observe b
+    asks := [.cells, .fibers] }
+
+open Scenario.Atomic in
+/-- The atomic scenario's runs: each script of a control of `Test/Dogfood/Scenario/Atomic.lean`
+on the shop, and the script `started` on the four faulty shops. -/
+def atomicRuns : Except String (List HostRun) := do
+  let built := fun (fault : Fault) => build "the shop" (shop fault)
+  let shop ← built .none
+  return [ atomic "started" shop started
+    , atomic "refilled" shop refilled
+    , atomic "finished" shop finished
+    , atomic "interrupted" shop interrupted
+    , atomic "stopped" shop stopped
+    , atomic "racy" (← built .racy) started
+    , atomic "erased" (← built .erased) started
+    , atomic "undone" (← built .undone) started
+    , atomic "twice" (← built .twice) started ]
+
 /-- Every host run of every scenario. -/
 def runs : Except String (List HostRun) := do
-  return (← routingRuns) ++ (← workersRuns) ++ (← timeoutRuns)
+  return (← routingRuns) ++ (← workersRuns) ++ (← timeoutRuns) ++ (← atomicRuns)
 
 /-- The fixtures of the runs that a host can perform, and each other run with the reason. -/
 def emit : Except String J := do
