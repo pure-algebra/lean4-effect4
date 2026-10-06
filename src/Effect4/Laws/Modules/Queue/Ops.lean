@@ -631,11 +631,14 @@ variable that an author wrote is one, and so is a number or a Boolean literal. `
 `Queue.poll` read the handle at their own scope alone. A string literal is no kept term, and so
 no message of these statements (the gap of seat QTYPES's receipt).
 
-Each proof follows the operation's tree. The step of each `Ref.modifyWith` has the type that
-its step theorem gives, at the row's own scope (`takeStep_types` and its siblings,
-`src/Effect4/Laws/Modules/Queue/Typing.lean`). The mask's form types as its body
-(`MaskFormProfile.typed`). The cell's type and each reply's type are canonical and formed at a
-message type with `MessageTy`, which is what the rows of a cell ask.
+`bounded`, `size` and `poll` use no wrapper, and each proof follows the operation's tree. `take`
+and `offer` are typed through the wrapper's own rules (`waitRetry_answers` and
+`waitAnswer_answers`, `src/Effect4/Laws/Modules/Waiting.lean`). Each of the two proofs holds the
+Queue's part alone: its attempt and its withdrawal, typed as `Waiter.Typed` asks. The step of
+each `Ref.modifyWith` has the type that its step theorem gives, at the row's own scope
+(`takeStep_types` and its siblings, `src/Effect4/Laws/Modules/Queue/Typing.lean`). The cell's
+type and each reply's type are canonical and formed at a message type with `MessageTy`, which
+is what the rows of a cell ask.
 
 Placement. Concept `store-typing`, requirement R4. Reach: the checker's judgment `effTy` on the
 operation's tree, at every typed scope and every path, at the native signature of any row
@@ -781,41 +784,35 @@ theorem offer_types (A : Ty) (message : MessageTy A) {q m : TermSrc} {s : TypedS
   have canonical := message.canonical
   have cellNormal := cellTy_normal canonical
   have cellNodes := cell_nodes message
-  have joined : Ty.join .bool .bool = .bool := by decide +kernel
   have offerReplyNormal : offerReplyTy.normalize = offerReplyTy := by decide +kernel
   have wakeReplyNormal : wakeReplyTy.normalize = wakeReplyTy := by decide +kernel
   have test : nativeAtomTy "causeIsInterrupt" [.exitOf .bool .never] = some .bool := by
     decide +kernel
-  have whole : Answers (nativeSignature table) (Queue.offer A q m) s (Ty.join .bool .bool) := by
-    unfold Queue.offer waitAnswer
-    refine answers_maskWith fun restore hrestore => ?_
-    refine answers_bindWith (answers_deferredMake hintTy_unit _) fun id hid => ?_
-    refine answers_bindWith (answers_deferredMake hintTy_bool _) fun hint hhint => ?_
-    dsimp only
-    refine answers_bindWith
-      (answers_refModifyWith cellNormal cellNodes offerReplyNormal offerReply_nodes
-        hq.push.push.push.here
-        fun _ hcurrent path => offerStep_types _ rfl A message (hid.push.push.here path)
-          (hhint.push.here path) (hm.push.push.push.push.here path) (hcurrent path))
-      fun reply hreply => ?_
-    refine answers_andThen
-      (postAll_answers hintTy_unit takerTy_normal taker_hintTy
-        (hreply.tupleAt offerReply_at.2) (kept_unit _)) ?_
-    refine answers_selectOptionWith (P := .bool) rfl
-      (fun path => (hreply.push.tupleAt offerReply_at.1).here path) ?_
-      fun _ hanswer => answers_succeed hanswer
-    refine waitAt_answers (F := .nat) hintTy_bool test
-      (fun inner Y h => hrestore _ inner Y
-        (.push _ _ (.push _ _ (.push _ _ (.push _ _ .here)))) h)
-      hhint.push.push.here ?_
-    exact answers_bindWith
-      (answers_refModifyWith cellNormal cellNodes wakeReplyNormal wakeReply_nodes
-        hq.push.push.push.push.push.push.here
-        fun _ hcurrent path => withdrawOffer_types _ rfl A message (TypedScope.depth _)
-          ((hid.push.push.push.push.push).captured path) (hcurrent path))
-      fun _ hwoken => postAll_answers hintTy_unit takerTy_normal taker_hintTy hwoken (kept_unit _)
-  rw [joined] at whole
-  exact whole
+  unfold Queue.offer
+  exact waitAnswer_answers (F := .nat)
+    { hint := hintTy_bool
+      interrupted := test
+      attempt := fun _ _ _ _ _ _ _ reach hid hhint hwait hdone =>
+        answers_bindWith
+          (answers_refModifyWith cellNormal cellNodes offerReplyNormal offerReply_nodes
+            (hq.push.reach reach).here
+            fun _ hcurrent path => offerStep_types _ rfl A message (hid.push.here path)
+              (hhint.push.here path) ((hm.push.reach reach).push.here path) (hcurrent path))
+          fun _ hreply => answers_andThen
+            (postAll_answers hintTy_unit takerTy_normal taker_hintTy
+              (hreply.tupleAt offerReply_at.2) (kept_unit _))
+            (answers_selectOptionWith (P := .bool) rfl
+              (fun path => (hreply.push.tupleAt offerReply_at.1).here path)
+              (hwait _ (.push _ _ (.push _ _ .here)))
+              fun _ hanswer => hdone _ _ (.push _ _ (.push _ _ (.push _ _ .here))) hanswer)
+      withdraw := fun _ _ reach hid =>
+        answers_bindWith
+          (answers_refModifyWith cellNormal cellNodes wakeReplyNormal wakeReply_nodes
+            (hq.push.reach reach).here
+            fun _ hcurrent path => withdrawOffer_types _ rfl A message (TypedScope.depth _)
+              (hid.push.captured path) (hcurrent path))
+          fun _ hwoken =>
+            postAll_answers hintTy_unit takerTy_normal taker_hintTy hwoken (kept_unit _) }
 
 /-- **`take` is typed at every scope**: it answers a message. The handle is a kept term: the
 operation reads it under its own binders. -/
@@ -826,65 +823,38 @@ theorem take_types (A : Ty) (message : MessageTy A) {q : TermSrc} {s : TypedScop
   have canonical := message.canonical
   have cellNormal := cellTy_normal canonical
   have cellNodes := cell_nodes message
-  have optionNormal : (Ty.option A).normalize = .option A :=
-    Ty.normalize_option_canonical canonical
-  have noneBelow : Ty.sub (.option .never) (.option A) = true := by
-    rw [Ty.sub_option]
-    exact Ty.OrderProof.sub_never A
-  have final : Ty.join .never A = A := (Ty.join_never A).trans canonical
   have wakeReplyNormal : wakeReplyTy.normalize = wakeReplyTy := by decide +kernel
   have test : nativeAtomTy "causeIsInterrupt" [.exitOf .unit .never] = some .bool := by
     decide +kernel
-  have whole : Answers (nativeSignature table) (Queue.take A q) s (Ty.join .never A) := by
-    unfold Queue.take waitRetry
-    refine answers_maskWith fun restore hrestore => ?_
-    refine answers_bindWith (answers_deferredMake hintTy_unit _) fun id hid => ?_
-    refine answers_bindWith (X := .option A) ?_ fun _ hlast =>
-      answers_selectOptionWith canonical (fun path => hlast.here path) (answers_die _ _)
-        fun _ hanswer => answers_succeed hanswer
-    refine answers_iterateWith (C0 := .option .never) (C := .option A)
-      (B := Ty.join (.option .never) (.option A)) (C1 := Ty.join (.option .never) (.option A))
-      (D := .option A) rfl (fun _ => types_noneT rfl) ?_ ?_ (fun _ _ _ ha => ha)
-      (fun _ hc => hc) ?_
-      (subN_join_of_canonical rfl optionNormal optionNormal noneBelow (Ty.sub_refl _))
-    · intro c hc path
-      exact types_notT rfl fun _ => types_app (.cons (hc path _) .nil) (nativeAtomTy_isSome A)
-    · intro _ _
-      dsimp only
-      refine answers_bindWith (answers_deferredMake hintTy_unit _) fun hint hhint => ?_
-      refine answers_bindWith
-        (answers_refModifyWith cellNormal cellNodes (takeReplyTy_normal canonical)
-          (takeReply_nodes message) hq.push.push.push.push.here
-          fun _ hcurrent path => takeStep_types _ rfl A message (TypedScope.depth _)
-            ((hid.push.push.push).captured path) ((hhint.push).captured path) (hcurrent path))
-        fun reply hreply => ?_
-      refine answers_andThen
-        (postAll_answers hintTy_bool (offerTy_normal canonical) (offer_hintTy canonical)
-          (hreply.tupleAt (takeReply_at canonical).2.1) (kept_bool true _)) ?_
-      refine answers_andThen
-        (postAll_answers hintTy_unit takerTy_normal taker_hintTy
-          (hreply.push.tupleAt (takeReply_at canonical).2.2) (kept_unit _)) ?_
-      refine answers_selectOptionWith canonical
-        (fun path => (hreply.push.push.tupleAt (takeReply_at canonical).1).here path) ?_
-        fun _ hanswer => answers_succeed fun path => types_some rfl (hanswer path)
-      refine answers_andThen
-        (waitAt_answers (F := .nat) hintTy_unit test
-          (fun inner Y h => hrestore _ inner Y
-            (.push _ _ (.push _ _ (.push _ _ (.push _ _ (.push _ _ (.push _ _ .here)))))) h)
-          hhint.push.push.push.here ?_)
-        (answers_succeed fun _ => types_noneT rfl)
-      exact answers_bindWith
-        (answers_refModifyWith cellNormal cellNodes wakeReplyNormal wakeReply_nodes
-          hq.push.push.push.push.push.push.push.push.here
-          fun _ hcurrent path => withdrawTake_types _ rfl A message (TypedScope.depth _)
-            ((hid.push.push.push.push.push.push.push).captured path) (hcurrent path))
-        fun _ hwoken =>
-          postAll_answers hintTy_unit takerTy_normal taker_hintTy hwoken (kept_unit _)
-    · show Ty.sub (Ty.option .never).normalize (Ty.option A).normalize = true
-      rw [optionNormal]
-      exact noneBelow
-  rw [final] at whole
-  exact whole
+  unfold Queue.take
+  exact waitRetry_answers (F := .nat) canonical
+    { hint := hintTy_unit
+      interrupted := test
+      attempt := fun _ _ _ _ _ _ _ reach hid hhint hwait hdone =>
+        answers_bindWith
+          (answers_refModifyWith cellNormal cellNodes (takeReplyTy_normal canonical)
+            (takeReply_nodes message) (hq.push.reach reach).here
+            fun _ hcurrent path => takeStep_types _ rfl A message (TypedScope.depth _)
+              (hid.push.captured path) (hhint.push.captured path) (hcurrent path))
+          fun _ hreply => answers_andThen
+            (postAll_answers hintTy_bool (offerTy_normal canonical) (offer_hintTy canonical)
+              (hreply.tupleAt (takeReply_at canonical).2.1) (kept_bool true _))
+            (answers_andThen
+              (postAll_answers hintTy_unit takerTy_normal taker_hintTy
+                (hreply.push.tupleAt (takeReply_at canonical).2.2) (kept_unit _))
+              (answers_selectOptionWith canonical
+                (fun path => (hreply.push.push.tupleAt (takeReply_at canonical).1).here path)
+                (hwait _ (.push _ _ (.push _ _ (.push _ _ .here))))
+                fun _ hanswer =>
+                  hdone _ _ (.push _ _ (.push _ _ (.push _ _ (.push _ _ .here)))) hanswer))
+      withdraw := fun _ _ reach hid =>
+        answers_bindWith
+          (answers_refModifyWith cellNormal cellNodes wakeReplyNormal wakeReply_nodes
+            (hq.push.reach reach).here
+            fun _ hcurrent path => withdrawTake_types _ rfl A message (TypedScope.depth _)
+              (hid.push.captured path) (hcurrent path))
+          fun _ hwoken =>
+            postAll_answers hintTy_unit takerTy_normal taker_hintTy hwoken (kept_unit _) }
 
 end OpsTyping
 
