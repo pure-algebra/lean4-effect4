@@ -132,7 +132,8 @@ theorem admitProgram_eq_ok {program : NativeEff} {app : SigApp}
         contradiction
       · split
         · rename_i why refused
-          rw [(Formation.checkInput_eq_none_iff program app.rows).mpr admitted.formed] at refused
+          rw [(Formation.checkInput_eq_none_iff program app.rows app.services).mpr
+            admitted.formed] at refused
           cases refused
         · rw [checkTypedProgram_eq_some admitted.toTypedProgram]
           dsimp only

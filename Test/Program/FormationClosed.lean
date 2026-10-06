@@ -18,6 +18,8 @@ Finite controls of the clause "a type variable is formed in a template only"
   Each native row is formed as a template. A closed annotation is formed at each site.
 - **The theorem's premises.** Each premise of `check_closed` has a program that shows it is
   needed: without it the checker answers a type that is not closed.
+- **A declared carrier.** A service carrier is a strict formation site, so admission refuses a
+  signature whose carrier holds a variable, and an admitted program has closed types.
 - **A count.** No program of the generated corpus and of the wire corpus holds a variable in
   an annotation.
 
@@ -203,19 +205,60 @@ def cellKey : ServiceKey := ⟨⟨20⟩, ⟨20⟩⟩
 /-- An application's signature that declares the carrier `Ref<T3>`. -/
 def openCarrier : SigApp := { services := [(cellKey, .refOf (.var 3))] }
 
--- **The carrier premise.** A carrier is no annotation of a program. The signature's admission
--- accepts a cell at any type, so `Effect.service` at this key is admitted at a type that is
--- not closed.
+-- **The carrier premise.** A carrier is no annotation of a program, and the signature's local
+-- checks accept a cell at any type. The checker alone answers the carrier as it is declared,
+-- `Ref.Ref<T3>`.
 #guard admitSig openCarrier = .ok ()
 #guard (Formation.checkInput (.service cellKey : NativeEff) openCarrier.rows).isNone
 #guard (typeOfProgram openCarrier.signature (.service cellKey)).map
   (fun t => (t.answer, t.answer.closed)) = some (.refOf (.var 3), false)
 #guard (Ty.refOf (.var 3)).renderRaw = "Ref.Ref<T3>"
-#guard (admitProgram (.service cellKey) openCarrier).isOk
 
 /-- The signature of `openCarrier` has no closed carriers. -/
 theorem openCarrier_not_closed : ¬ ClosedSig openCarrier.signature := fun closed =>
   Bool.noConfusion (closed.service cellKey (.refOf (.var 3)) (by decide +kernel))
+
+/-! ## A declared carrier is a strict formation site
+
+A carrier is no template: `Effect.service(key)` answers it as it is declared. So the formation
+pass checks each declared carrier strictly (`Formation.serviceSites`), and admission refuses a
+signature whose carrier holds a variable. Until this step `admitProgram` admitted the program
+above at `Ref.Ref<T3>`. -/
+
+#guard Formation.checkInput (.service cellKey : NativeEff) openCarrier.rows openCarrier.services =
+  some ⟨["service", "0", "carrier", "type", "1"], .var 3, .typeVariable⟩
+#guard match admitProgram (.service cellKey) openCarrier with
+  | .error (.formation why) =>
+    why.path == ["service", "0", "carrier", "type", "1"] && why.ty == .var 3 &&
+      why.reason == .typeVariable
+  | _ => false
+
+/-- An application's signature that declares one carrier. -/
+def declaring (carrier : Ty) : SigApp := { services := [(cellKey, carrier)] }
+
+-- The other clauses of formation hold at a carrier too: a repeated field name, a map key that
+-- is no string, and a deferred's error column outside the error alphabet. The signature's
+-- local checks accept each of the three cells, and formation refuses each.
+#guard [ (Ty.refOf (.record [("x", false, .nat), ("x", true, .string)]),
+          FormationReason.repeatedField "x")
+       , (.refOf (.map .nat .nat), .mapKey)
+       , (.refOf (.deferredOf .nat .bool), .deferredError) ].all fun (carrier, reason) =>
+  admitSig (declaring carrier) = .ok () &&
+    match admitProgram (.succeed (.lit .unit)) (declaring carrier) with
+    | .error (.formation why) => why.reason == reason
+    | _ => false
+
+-- Green: a closed, formed carrier is admitted, and a boundary with no declared carrier reads
+-- the same sites as before.
+#guard [Ty.refOf .nat, .string, .refOf (.record [("x", false, .nat)])].all fun carrier =>
+  (admitProgram (.succeed (.lit .unit)) (declaring carrier)).isOk
+#guard closed5.all fun e =>
+  Formation.input e [templateRow] = Formation.tableSites [templateRow] ++ Formation.programSites e
+
+/-- An admitted program has closed types, with no premise on its signature. -/
+example {program : NativeEff} {app : SigApp} (admitted : AdmittedProgram program app) :
+    admitted.ty.answer.closed = true ∧ admitted.ty.error.closed = true :=
+  admitted.closed
 
 /-! ## A layer reference: the expansion states what the program states
 
@@ -271,6 +314,7 @@ def holdsVariable (e : NativeEff) : Bool :=
 
 #print axioms check_closed
 #print axioms typeOfProgram_closed
+#print axioms AdmittedProgram.closed
 #print axioms Formation.annotationsAll_expandRefs
 #print axioms closedSig_native
 #print axioms hasTy_closed

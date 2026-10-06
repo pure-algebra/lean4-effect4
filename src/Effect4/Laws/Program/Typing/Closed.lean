@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Laws.Program.References
+import Effect4.Program.Admission
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -31,6 +32,9 @@ The sections, in the order a proof reads them:
 5. **The six judgments** (`hasTy_closed` and its five siblings), one line per rule.
 6. **The checker** (`check_closed`), **the whole-program checker** (`typeOfProgram_closed`), and
    the native signature (`closedSig_native`).
+7. **An application's signature.** A declared service carrier is a strict formation site
+   (`Formation.serviceSites`), so a formed input gives closed carriers (`closedSig_app`), and
+   an admitted program has closed types with no premise (`AdmittedProgram.closed`).
 
 Placement. Concept `subtyping-algebra`, requirements R1, R3 and R14; the laws of the generated
 folds are placed under `initial-algebras-folds`. Reach: a closed environment, a typing signature
@@ -1851,5 +1855,93 @@ So `check_closed` asks nothing of a native program but its formed annotations. -
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem closedSig_native (table : RowTable) : ClosedSig (nativeSignature table) :=
   ⟨fun _ _ _ h htys => closed_nativeAtomTy htys h, fun _ _ h => closed_nativeServiceTy h⟩
+
+/-! ## 7. An application's signature: a declared carrier is a formation site
+
+A declared service carrier is no template, so formation checks it strictly
+(`Formation.serviceSites`). The signature's own admission (`admitSig`) keeps its local checks:
+a carrier's formation is the formation pass's, as a row's is. So the premise on carriers
+follows from the formed input, and program admission carries it. -/
+
+namespace Formation
+
+/-- Each declared carrier of a formed list of service sites is closed. A step of
+`closedSig_app`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem services_closed {services : List (ServiceKey × Ty)}
+    (h : Formed (serviceSites services)) : ∀ entry ∈ services, entry.2.closed = true := by
+  intro entry hentry
+  obtain ⟨i, hi⟩ := List.mem_iff_getElem?.mp hentry
+  have hmem : (entry, i) ∈ services.zipIdx := List.mem_zipIdx_iff_getElem?.mpr hi
+  exact closed_of_formed (path := ["service", toString i, "carrier"]) fun site hsite =>
+    h site (List.mem_flatMap.mpr ⟨(entry, i), hmem, hsite⟩)
+
+/-- The service sites of a formed input are formed. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem inputFormed_services {Op : Type} [ScopedOp Op] {program : Eff Op} {table : List Row}
+    {services : List (ServiceKey × Ty)} (h : InputFormed program table services) :
+    Formed (serviceSites services) := fun site hsite =>
+  h site (List.mem_append_right _ (List.mem_append_left _ hsite))
+
+/-- The program sites of a formed input are formed. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem inputFormed_program {Op : Type} [ScopedOp Op] {program : Eff Op} {table : List Row}
+    {services : List (ServiceKey × Ty)} (h : InputFormed program table services) :
+    Formed (programSites program) := fun site hsite =>
+  h site (List.mem_append_right _ (List.mem_append_right _ hsite))
+
+end Formation
+
+/-- A carrier that an application's signature answers is closed, when its declared carriers
+are: the reserved carrier and the built-in ones are read off their tables. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closed_serviceTy {app : SigApp}
+    (hservices : ∀ entry ∈ app.services, entry.2.closed = true) {key : ServiceKey} {ty : Ty}
+    (h : app.serviceTy key = some ty) : ty.closed = true := by
+  unfold SigApp.serviceTy at h
+  split at h
+  · rename_i hfind
+    cases h
+    exact List.all_eq_true.mp
+      (by decide : nativeReservedServiceTypes.all (fun entry => entry.2.closed) = true) _
+      (List.mem_of_find?_eq_some hfind)
+  · split at h
+    · exact nomatch h
+    · split at h
+      · rename_i hcode
+        cases h
+        obtain ⟨entry, hfind, rfl⟩ := Option.map_eq_some_iff.mp hcode
+        exact hservices entry (List.mem_of_find?_eq_some hfind)
+      · obtain ⟨entry, hfind, rfl⟩ := Option.map_eq_some_iff.mp h
+        exact List.all_eq_true.mp
+          (by decide : nativeServiceTypes.all (fun entry => entry.2.closed) = true) entry
+          (List.mem_of_find?_eq_some hfind)
+
+/-- **An application's signature has closed atoms and closed carriers when its declared
+carriers are formed.** The atoms are the native ones. A step of `AdmittedProgram.closed`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem closedSig_app (app : SigApp) (h : Formation.Formed (Formation.serviceSites app.services)) :
+    ClosedSig app.signature :=
+  ⟨fun _ _ _ hatom htys => closed_nativeAtomTy htys hatom,
+    fun _ _ hty => closed_serviceTy (Formation.services_closed h) hty⟩
+
+/-- `typeOfProgram_closed` at an application's signature: formation of the input is its one
+premise. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem typeOfProgram_closed_app (app : SigApp) {e : NativeEff} {t : EffTy}
+    (formed : Formation.InputFormed e app.rows app.services)
+    (h : typeOfProgram app.signature e = some t) :
+    t.answer.closed = true ∧ t.error.closed = true :=
+  typeOfProgram_closed _ (closedSig_app app (Formation.inputFormed_services formed))
+    (Formation.inputFormed_program formed) h
+
+/-- **An admitted program has closed types**, with no premise: its certificate holds the formed
+input and the whole-program checker's answer. The claim `checked-types-closed` at program
+admission. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem AdmittedProgram.closed {program : NativeEff} {app : SigApp}
+    (admitted : AdmittedProgram program app) :
+    admitted.ty.answer.closed = true ∧ admitted.ty.error.closed = true :=
+  typeOfProgram_closed_app app admitted.formed admitted.typed
 
 end Effect4.Program
