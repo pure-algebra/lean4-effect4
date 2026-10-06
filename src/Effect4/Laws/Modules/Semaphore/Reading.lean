@@ -2,7 +2,7 @@ import Effect4.Laws.Modules.Semaphore.Relation
 import Effect4.Laws.Modules.Reading
 
 /-!
-# Reading Semaphore's step terms: the values of its records, words and passes (row 265)
+# Reading Semaphore's step terms: the values of its records and of its passes (row 265)
 
 A step goal says that a step's source term reads a value (`Reads`,
 `src/Effect4/Laws/Modules/Reading.lean`). The shared reading rules give what each authoring
