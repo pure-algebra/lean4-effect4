@@ -1,0 +1,308 @@
+[
+  {
+    "variant": "baseline",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline",
+    "exit": 1,
+    "seconds": 0.158,
+    "log_sha256": "3a89908ef531f7cef1802a7c6a53201160cef9b99f291832568d6281ba63d0d6",
+    "diagnostic_count": 9
+  },
+  {
+    "variant": "candidate",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/candidate/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/candidate",
+    "exit": 1,
+    "seconds": 0.11,
+    "log_sha256": "c87b4a14ab0866b40bc0d57510785d245547feb650820a86767671cac25ea9bf",
+    "diagnostic_count": 9
+  },
+  {
+    "variant": "direct-assertion",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/direct-assertion/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/direct-assertion",
+    "exit": 1,
+    "seconds": 0.106,
+    "log_sha256": "c87b4a14ab0866b40bc0d57510785d245547feb650820a86767671cac25ea9bf",
+    "diagnostic_count": 9
+  },
+  {
+    "variant": "baseline",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline",
+    "exit": 1,
+    "seconds": 0.111,
+    "log_sha256": "a489ee20c54acfc8924ad1b65e270d56dca16dd90cf065029e3985670cc5329a",
+    "diagnostic_count": 3
+  },
+  {
+    "variant": "candidate",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/candidate/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/candidate",
+    "exit": 1,
+    "seconds": 0.112,
+    "log_sha256": "ec7e099c7ff34235164ebac3da34c789f7b4e5f20cf7630bbc7a35359e8efe09",
+    "diagnostic_count": 3
+  },
+  {
+    "variant": "direct-assertion",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/direct-assertion/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/direct-assertion",
+    "exit": 1,
+    "seconds": 0.107,
+    "log_sha256": "ec7e099c7ff34235164ebac3da34c789f7b4e5f20cf7630bbc7a35359e8efe09",
+    "diagnostic_count": 3
+  },
+  {
+    "variant": "baseline",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline",
+    "exit": 1,
+    "seconds": 0.124,
+    "log_sha256": "ec3d8efb92621b2b915412adfe008431eef4de965fd31aabb9aa7a0de6791f7b",
+    "diagnostic_count": 15
+  },
+  {
+    "variant": "revised",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised",
+    "exit": 0,
+    "seconds": 0.119,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diagnostic_count": 0
+  },
+  {
+    "variant": "contextual",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/contextual/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/contextual",
+    "exit": 1,
+    "seconds": 0.102,
+    "log_sha256": "ca9eab0783ad408d6beda07441d00e4bf767fa7d10cf11eace03e015af073fb1",
+    "diagnostic_count": 15
+  },
+  {
+    "variant": "blanket-mutant",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/blanket-mutant/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/blanket-mutant",
+    "exit": 1,
+    "seconds": 0.123,
+    "log_sha256": "aa989d82cccb21efcb9d3e2e2d8b444db0a6e9aca123063431045f5164dbfe46",
+    "diagnostic_count": 2
+  },
+  {
+    "variant": "revised",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised",
+    "exit": 0,
+    "seconds": 0.276,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diagnostic_count": 0
+  },
+  {
+    "variant": "blanket-mutant",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/blanket-mutant/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/blanket-mutant",
+    "exit": 1,
+    "seconds": 0.151,
+    "log_sha256": "db3bc29be9cbde0604fc6118171123d9dcde068832d9d143450e216428f00e23",
+    "diagnostic_count": 6
+  },
+  {
+    "variant": "refusal-observations",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/refusal-observations/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/refusal-observations",
+    "exit": 1,
+    "seconds": 0.16,
+    "log_sha256": "cc23b8446a6dfee9ee4a769dec7edd3c5e7a69b0b79b2d29ea3c67c8d39e0e3b",
+    "diagnostic_count": 11
+  },
+  {
+    "variant": "revised",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised",
+    "exit": 0,
+    "seconds": 0.216,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diagnostic_count": 0
+  },
+  {
+    "variant": "minimal-baseline",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-baseline/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-baseline",
+    "exit": 1,
+    "seconds": 0.208,
+    "log_sha256": "f89213fd946a612aecb7d5fdaeeb3319370e6307e8156044b07365a4668e5f71",
+    "diagnostic_count": 2
+  },
+  {
+    "variant": "minimal-revised",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-revised/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-revised",
+    "exit": 0,
+    "seconds": 0.184,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diagnostic_count": 0
+  },
+  {
+    "variant": "refusal-observations",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/refusal-observations/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/refusal-observations",
+    "exit": 1,
+    "seconds": 0.191,
+    "log_sha256": "17455c8af23934f4f5e8855140286ccbdd85a4bf7b9b153d3860e989b039644c",
+    "diagnostic_count": 13
+  },
+  {
+    "variant": "exact-candidate",
+    "command": [
+      "node",
+      "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+      "--pretty",
+      "false",
+      "--noEmit",
+      "-p",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/exact-candidate/tsconfig.json"
+    ],
+    "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/exact-candidate",
+    "exit": 0,
+    "seconds": 0.159,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "diagnostic_count": 0
+  }
+]

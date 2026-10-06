@@ -1,0 +1,1146 @@
+{
+  "frozen_commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+  "compiler": "@typescript/native-preview 7.0.0-dev.20260629.1",
+  "effect": "4.0.0-rc.112",
+  "scope": "isolated pinned tsgo typecheck and two-helper JavaScript emission only",
+  "repo_edits": false,
+  "runtime_runs": false,
+  "lean_runs": false,
+  "generators": false,
+  "source_checks": 30,
+  "exact_queue_expression": [
+    {
+      "variant": "baseline",
+      "exact_saved_expression": true,
+      "expression_sha256": "34032e918c43f4e52f245911cd439e8659f647a66428211451a9c75f519f6dde",
+      "characters": 9120
+    },
+    {
+      "variant": "revised",
+      "exact_saved_expression": true,
+      "expression_sha256": "34032e918c43f4e52f245911cd439e8659f647a66428211451a9c75f519f6dde",
+      "characters": 9120
+    },
+    {
+      "variant": "exact-candidate",
+      "exact_saved_expression": true,
+      "expression_sha256": "34032e918c43f4e52f245911cd439e8659f647a66428211451a9c75f519f6dde",
+      "characters": 9120
+    }
+  ],
+  "final_runs": [
+    {
+      "variant": "baseline",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline",
+      "exit": 1,
+      "seconds": 0.124,
+      "log_sha256": "ec3d8efb92621b2b915412adfe008431eef4de965fd31aabb9aa7a0de6791f7b",
+      "diagnostic_count": 15,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/baseline.log"
+    },
+    {
+      "variant": "candidate",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/candidate/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/candidate",
+      "exit": 1,
+      "seconds": 0.112,
+      "log_sha256": "ec7e099c7ff34235164ebac3da34c789f7b4e5f20cf7630bbc7a35359e8efe09",
+      "diagnostic_count": 3,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/candidate.log"
+    },
+    {
+      "variant": "direct-assertion",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/direct-assertion/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/direct-assertion",
+      "exit": 1,
+      "seconds": 0.107,
+      "log_sha256": "ec7e099c7ff34235164ebac3da34c789f7b4e5f20cf7630bbc7a35359e8efe09",
+      "diagnostic_count": 3,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/direct-assertion.log"
+    },
+    {
+      "variant": "exact-candidate",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/exact-candidate/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/exact-candidate",
+      "exit": 0,
+      "seconds": 0.159,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostic_count": 0,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/exact-candidate.log"
+    },
+    {
+      "variant": "revised",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised",
+      "exit": 0,
+      "seconds": 0.216,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostic_count": 0,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/revised.log"
+    },
+    {
+      "variant": "contextual",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/contextual/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/contextual",
+      "exit": 1,
+      "seconds": 0.102,
+      "log_sha256": "ca9eab0783ad408d6beda07441d00e4bf767fa7d10cf11eace03e015af073fb1",
+      "diagnostic_count": 15,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/contextual.log"
+    },
+    {
+      "variant": "blanket-mutant",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/blanket-mutant/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/blanket-mutant",
+      "exit": 1,
+      "seconds": 0.151,
+      "log_sha256": "db3bc29be9cbde0604fc6118171123d9dcde068832d9d143450e216428f00e23",
+      "diagnostic_count": 6,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/blanket-mutant.log"
+    },
+    {
+      "variant": "minimal-baseline",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-baseline/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-baseline",
+      "exit": 1,
+      "seconds": 0.208,
+      "log_sha256": "f89213fd946a612aecb7d5fdaeeb3319370e6307e8156044b07365a4668e5f71",
+      "diagnostic_count": 2,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/minimal-baseline.log"
+    },
+    {
+      "variant": "minimal-revised",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-revised/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-revised",
+      "exit": 0,
+      "seconds": 0.184,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostic_count": 0,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/minimal-revised.log"
+    },
+    {
+      "variant": "refusal-observations",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/refusal-observations/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/refusal-observations",
+      "exit": 1,
+      "seconds": 0.191,
+      "log_sha256": "17455c8af23934f4f5e8855140286ccbdd85a4bf7b9b153d3860e989b039644c",
+      "diagnostic_count": 13,
+      "log_path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/outputs/refusal-observations.log"
+    }
+  ],
+  "new_exact_type_assertions": 13,
+  "new_negative_controls": 13,
+  "helper_js": {
+    "runs": [
+      {
+        "variant": "baseline",
+        "command": [
+          "node",
+          "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+          "--pretty",
+          "false",
+          "-p",
+          "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-baseline/tsconfig.json"
+        ],
+        "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-baseline",
+        "exit": 0,
+        "input_sha256": "a99c91855273681f61d6120cb54370bfebb94bb56c03aa9224de71ce5cc672bf",
+        "js_sha256": "8a8016071e9c825f932cb06d81c37d09453fa5db4e031af7c3c4db1e34eb7f20"
+      },
+      {
+        "variant": "revised",
+        "command": [
+          "node",
+          "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+          "--pretty",
+          "false",
+          "-p",
+          "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-revised/tsconfig.json"
+        ],
+        "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-revised",
+        "exit": 0,
+        "input_sha256": "4eca677d9c844248caffd9a781e850fb4c8b8e5749b3db01b8d6645b2070a775",
+        "js_sha256": "8a8016071e9c825f932cb06d81c37d09453fa5db4e031af7c3c4db1e34eb7f20"
+      }
+    ],
+    "byte_identical": true,
+    "bytes": 80,
+    "observation": "Emitted helper JavaScript only. No runtime run or semantic theorem."
+  },
+  "files": [
+    {
+      "path": "inputs/baseline/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/baseline/prelude-atoms.gen.ts",
+      "bytes": 11100,
+      "sha256": "008f9ffadf042a5f8e6f2b71a92862970eac6b25f675d4768d0421ce1031b1d6"
+    },
+    {
+      "path": "inputs/baseline/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/baseline/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/baseline/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/baseline/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/baseline/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/baseline/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/baseline/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/baseline/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/baseline/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/baseline/tsconfig.json",
+      "bytes": 550,
+      "sha256": "24f0780b87c7446d3a7fca96b0a27adc5825947dadef991b0829ac6cad98759d"
+    },
+    {
+      "path": "inputs/baseline/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/baseline/tuples.typecheck.ts",
+      "bytes": 1595,
+      "sha256": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493"
+    },
+    {
+      "path": "inputs/blanket-mutant/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/blanket-mutant/policy-controls.ts",
+      "bytes": 4353,
+      "sha256": "291939dee632089a40e099cac1eae654693c9774296c1157975fc6a49abd81df"
+    },
+    {
+      "path": "inputs/blanket-mutant/prelude-atoms.gen.ts",
+      "bytes": 11327,
+      "sha256": "ce4a9106b6ef59fc9697eacfc372b72d881ca3e8c97494888b037bc1c78af038"
+    },
+    {
+      "path": "inputs/blanket-mutant/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/blanket-mutant/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/blanket-mutant/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/blanket-mutant/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/blanket-mutant/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/blanket-mutant/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/blanket-mutant/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/blanket-mutant/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/blanket-mutant/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/blanket-mutant/tsconfig.json",
+      "bytes": 576,
+      "sha256": "3ee959a88553f6a2a437b502269ba8ca2c9414fd3fdae3b788bfa65e08cf4180"
+    },
+    {
+      "path": "inputs/blanket-mutant/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/blanket-mutant/tuples.typecheck.ts",
+      "bytes": 1626,
+      "sha256": "794dcfdae5376e4f2309f11bb4e589725c7d30db2b978feb0e23acb4589f4ba1"
+    },
+    {
+      "path": "inputs/candidate/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/candidate/prelude-atoms.gen.ts",
+      "bytes": 11321,
+      "sha256": "189e53047c5a124420c8e00d1a51f8913a84ccd95fb7afe3edb94f403dd9ad78"
+    },
+    {
+      "path": "inputs/candidate/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/candidate/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/candidate/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/candidate/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/candidate/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/candidate/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/candidate/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/candidate/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/candidate/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/candidate/tsconfig.json",
+      "bytes": 550,
+      "sha256": "24f0780b87c7446d3a7fca96b0a27adc5825947dadef991b0829ac6cad98759d"
+    },
+    {
+      "path": "inputs/candidate/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/candidate/tuples.typecheck.ts",
+      "bytes": 1595,
+      "sha256": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493"
+    },
+    {
+      "path": "inputs/contextual/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/contextual/prelude-atoms.gen.ts",
+      "bytes": 11100,
+      "sha256": "008f9ffadf042a5f8e6f2b71a92862970eac6b25f675d4768d0421ce1031b1d6"
+    },
+    {
+      "path": "inputs/contextual/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/contextual/real-queue-take.ts",
+      "bytes": 10045,
+      "sha256": "77c1e89a6174ee29b76a4a45d587078624c5fc885e858ba2f0630eb84c4966b7"
+    },
+    {
+      "path": "inputs/contextual/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/contextual/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/contextual/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/contextual/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/contextual/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/contextual/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/contextual/term-rows.typecheck.ts",
+      "bytes": 12200,
+      "sha256": "514ab93ac5d5d67fa9b422e27c68e266129a506a03a8f482c025fc84c0fa51b5"
+    },
+    {
+      "path": "inputs/contextual/tsconfig.json",
+      "bytes": 550,
+      "sha256": "24f0780b87c7446d3a7fca96b0a27adc5825947dadef991b0829ac6cad98759d"
+    },
+    {
+      "path": "inputs/contextual/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/contextual/tuples.typecheck.ts",
+      "bytes": 1595,
+      "sha256": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493"
+    },
+    {
+      "path": "inputs/direct-assertion/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/direct-assertion/prelude-atoms.gen.ts",
+      "bytes": 11299,
+      "sha256": "f0ae5627860d35ab3e07bd414f62ba0c82a69d2bdf62462b51e83b2dff454df8"
+    },
+    {
+      "path": "inputs/direct-assertion/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/direct-assertion/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/direct-assertion/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/direct-assertion/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/direct-assertion/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/direct-assertion/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/direct-assertion/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/direct-assertion/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/direct-assertion/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/direct-assertion/tsconfig.json",
+      "bytes": 550,
+      "sha256": "24f0780b87c7446d3a7fca96b0a27adc5825947dadef991b0829ac6cad98759d"
+    },
+    {
+      "path": "inputs/direct-assertion/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/direct-assertion/tuples.typecheck.ts",
+      "bytes": 1595,
+      "sha256": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493"
+    },
+    {
+      "path": "inputs/emit-baseline/helpers.ts",
+      "bytes": 161,
+      "sha256": "a99c91855273681f61d6120cb54370bfebb94bb56c03aa9224de71ce5cc672bf"
+    },
+    {
+      "path": "inputs/emit-baseline/tsconfig.json",
+      "bytes": 195,
+      "sha256": "b6fd5a27319e954a04c7a1576f1377dfcf5174dc91c1148bd723b85cbdc93b18"
+    },
+    {
+      "path": "inputs/emit-revised/helpers.ts",
+      "bytes": 360,
+      "sha256": "4eca677d9c844248caffd9a781e850fb4c8b8e5749b3db01b8d6645b2070a775"
+    },
+    {
+      "path": "inputs/emit-revised/tsconfig.json",
+      "bytes": 194,
+      "sha256": "fd66274bf245ad6d31bf85a0786f50d1cee925db63af602764faca02f614b3f7"
+    },
+    {
+      "path": "inputs/exact-candidate/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/exact-candidate/policy-controls.ts",
+      "bytes": 5215,
+      "sha256": "c8b638e96d101a88faeb3bfbd754000dabd1cab50c0c20687f48f7d593ae7143"
+    },
+    {
+      "path": "inputs/exact-candidate/prelude-atoms.gen.ts",
+      "bytes": 11321,
+      "sha256": "189e53047c5a124420c8e00d1a51f8913a84ccd95fb7afe3edb94f403dd9ad78"
+    },
+    {
+      "path": "inputs/exact-candidate/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/exact-candidate/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/exact-candidate/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/exact-candidate/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/exact-candidate/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/exact-candidate/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/exact-candidate/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/exact-candidate/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/exact-candidate/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/exact-candidate/tsconfig.json",
+      "bytes": 576,
+      "sha256": "3ee959a88553f6a2a437b502269ba8ca2c9414fd3fdae3b788bfa65e08cf4180"
+    },
+    {
+      "path": "inputs/exact-candidate/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/exact-candidate/tuples.typecheck.ts",
+      "bytes": 1626,
+      "sha256": "794dcfdae5376e4f2309f11bb4e589725c7d30db2b978feb0e23acb4589f4ba1"
+    },
+    {
+      "path": "inputs/minimal-baseline/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/minimal-baseline/minimal.ts",
+      "bytes": 399,
+      "sha256": "2d4d4ebaf3b35a08253be05d9a01a168830ce0940ecb384c81267ec29f529051"
+    },
+    {
+      "path": "inputs/minimal-baseline/prelude-atoms.gen.ts",
+      "bytes": 11100,
+      "sha256": "008f9ffadf042a5f8e6f2b71a92862970eac6b25f675d4768d0421ce1031b1d6"
+    },
+    {
+      "path": "inputs/minimal-baseline/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/minimal-baseline/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/minimal-baseline/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/minimal-baseline/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/minimal-baseline/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/minimal-baseline/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/minimal-baseline/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/minimal-baseline/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/minimal-baseline/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/minimal-baseline/tsconfig.json",
+      "bytes": 431,
+      "sha256": "972ce6ecea8f7a523a9b37bf1ec1dc7bebe39d85b208f22f2821da53b2ae1412"
+    },
+    {
+      "path": "inputs/minimal-baseline/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/minimal-baseline/tuples.typecheck.ts",
+      "bytes": 1595,
+      "sha256": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493"
+    },
+    {
+      "path": "inputs/minimal-revised/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/minimal-revised/minimal.ts",
+      "bytes": 399,
+      "sha256": "2d4d4ebaf3b35a08253be05d9a01a168830ce0940ecb384c81267ec29f529051"
+    },
+    {
+      "path": "inputs/minimal-revised/policy-controls.ts",
+      "bytes": 5215,
+      "sha256": "c8b638e96d101a88faeb3bfbd754000dabd1cab50c0c20687f48f7d593ae7143"
+    },
+    {
+      "path": "inputs/minimal-revised/prelude-atoms.gen.ts",
+      "bytes": 11299,
+      "sha256": "f0ae5627860d35ab3e07bd414f62ba0c82a69d2bdf62462b51e83b2dff454df8"
+    },
+    {
+      "path": "inputs/minimal-revised/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/minimal-revised/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/minimal-revised/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/minimal-revised/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/minimal-revised/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/minimal-revised/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/minimal-revised/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/minimal-revised/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/minimal-revised/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/minimal-revised/tsconfig.json",
+      "bytes": 431,
+      "sha256": "972ce6ecea8f7a523a9b37bf1ec1dc7bebe39d85b208f22f2821da53b2ae1412"
+    },
+    {
+      "path": "inputs/minimal-revised/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/minimal-revised/tuples.typecheck.ts",
+      "bytes": 1626,
+      "sha256": "794dcfdae5376e4f2309f11bb4e589725c7d30db2b978feb0e23acb4589f4ba1"
+    },
+    {
+      "path": "inputs/refusal-observations/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/refusal-observations/policy-controls.ts",
+      "bytes": 4321,
+      "sha256": "f4773dffeb94fb18a14187e023dc282a6726b59f7da635fbb209a8b4847cdf8a"
+    },
+    {
+      "path": "inputs/refusal-observations/prelude-atoms.gen.ts",
+      "bytes": 11299,
+      "sha256": "f0ae5627860d35ab3e07bd414f62ba0c82a69d2bdf62462b51e83b2dff454df8"
+    },
+    {
+      "path": "inputs/refusal-observations/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/refusal-observations/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/refusal-observations/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/refusal-observations/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/refusal-observations/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/refusal-observations/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/refusal-observations/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/refusal-observations/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/refusal-observations/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/refusal-observations/tsconfig.json",
+      "bytes": 576,
+      "sha256": "3ee959a88553f6a2a437b502269ba8ca2c9414fd3fdae3b788bfa65e08cf4180"
+    },
+    {
+      "path": "inputs/refusal-observations/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/refusal-observations/tuples.typecheck.ts",
+      "bytes": 1626,
+      "sha256": "794dcfdae5376e4f2309f11bb4e589725c7d30db2b978feb0e23acb4589f4ba1"
+    },
+    {
+      "path": "inputs/revised/folds.typecheck.ts",
+      "bytes": 3140,
+      "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+    },
+    {
+      "path": "inputs/revised/policy-controls.ts",
+      "bytes": 5215,
+      "sha256": "c8b638e96d101a88faeb3bfbd754000dabd1cab50c0c20687f48f7d593ae7143"
+    },
+    {
+      "path": "inputs/revised/prelude-atoms.gen.ts",
+      "bytes": 11299,
+      "sha256": "f0ae5627860d35ab3e07bd414f62ba0c82a69d2bdf62462b51e83b2dff454df8"
+    },
+    {
+      "path": "inputs/revised/prelude.ts",
+      "bytes": 30177,
+      "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+    },
+    {
+      "path": "inputs/revised/real-queue-take.ts",
+      "bytes": 9949,
+      "sha256": "7e2500587fda7861d50c5d746324104d2523f840401d757ac2d5124d33d1b3d5"
+    },
+    {
+      "path": "inputs/revised/records.ts",
+      "bytes": 2646,
+      "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+    },
+    {
+      "path": "inputs/revised/records.typecheck.ts",
+      "bytes": 4200,
+      "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+    },
+    {
+      "path": "inputs/revised/session/clock.ts",
+      "bytes": 4610,
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+    },
+    {
+      "path": "inputs/revised/session/keyed-protocol.ts",
+      "bytes": 5678,
+      "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+    },
+    {
+      "path": "inputs/revised/session/protocol.gen.ts",
+      "bytes": 2924,
+      "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+    },
+    {
+      "path": "inputs/revised/session/protocol.ts",
+      "bytes": 6955,
+      "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+    },
+    {
+      "path": "inputs/revised/term-rows.typecheck.ts",
+      "bytes": 12091,
+      "sha256": "6872f61193391e1a4cf02f0d0c4a537a77b7874bf33b57414d7f381b04a3c431"
+    },
+    {
+      "path": "inputs/revised/tsconfig.json",
+      "bytes": 576,
+      "sha256": "3ee959a88553f6a2a437b502269ba8ca2c9414fd3fdae3b788bfa65e08cf4180"
+    },
+    {
+      "path": "inputs/revised/tuples.ts",
+      "bytes": 344,
+      "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+    },
+    {
+      "path": "inputs/revised/tuples.typecheck.ts",
+      "bytes": 1626,
+      "sha256": "794dcfdae5376e4f2309f11bb4e589725c7d30db2b978feb0e23acb4589f4ba1"
+    },
+    {
+      "path": "inputs/saved/literal-widening-repair.md",
+      "bytes": 2125,
+      "sha256": "528d8c6e7583b87cb59820e658969e9724571193182dd70d50342e76e5391659"
+    },
+    {
+      "path": "inputs/saved/offerStep.txt",
+      "bytes": 1956,
+      "sha256": "aa6cca80ccd5303d240dd23c56709e51e053bd0aefe4934b8cd41c1ab59ab7b3"
+    },
+    {
+      "path": "inputs/saved/skOffer.txt",
+      "bytes": 654,
+      "sha256": "19ab7817459060407413fb9e99db0add3d01a204835150e718f8be9101d6f8cf"
+    },
+    {
+      "path": "inputs/saved/skRetryTake.txt",
+      "bytes": 1205,
+      "sha256": "e7f92d373c8f35298730959321dbf143fb77bbc77bcce286076868e2957ea1f6"
+    },
+    {
+      "path": "inputs/saved/skTryTake.txt",
+      "bytes": 1036,
+      "sha256": "22837f310ccac5ee2e51d9876f83cc42a1817150ab1ed8a3fe40817a8238e858"
+    },
+    {
+      "path": "inputs/saved/skWithdraw.txt",
+      "bytes": 1182,
+      "sha256": "ff06e51be8b5d881904497a133058ea954e63c065c2fabcf489046549834e4f0"
+    },
+    {
+      "path": "inputs/saved/takeStep.txt",
+      "bytes": 9120,
+      "sha256": "34032e918c43f4e52f245911cd439e8659f647a66428211451a9c75f519f6dde"
+    },
+    {
+      "path": "inputs/saved/text-request.txt",
+      "bytes": 342,
+      "sha256": "8dbd382def76f50efbb92e23b2250792c97e1063e856cc6769de75118a28fcad"
+    },
+    {
+      "path": "inputs/saved/withdrawOffer.txt",
+      "bytes": 411,
+      "sha256": "b2c1e18e46bc904be7c40021f45ec56230fd004c5bb65bf75d0e5b3ed93080fc"
+    },
+    {
+      "path": "inputs/saved/withdrawTake.txt",
+      "bytes": 717,
+      "sha256": "8858f0de8a3abc56d414ef42913a43bb148b41a67f7e0fd71b629dd741ce2e51"
+    },
+    {
+      "path": "outputs/baseline.log",
+      "bytes": 6260,
+      "sha256": "ec3d8efb92621b2b915412adfe008431eef4de965fd31aabb9aa7a0de6791f7b"
+    },
+    {
+      "path": "outputs/blanket-mutant.log",
+      "bytes": 1035,
+      "sha256": "db3bc29be9cbde0604fc6118171123d9dcde068832d9d143450e216428f00e23"
+    },
+    {
+      "path": "outputs/candidate.log",
+      "bytes": 669,
+      "sha256": "ec7e099c7ff34235164ebac3da34c789f7b4e5f20cf7630bbc7a35359e8efe09"
+    },
+    {
+      "path": "outputs/contextual.log",
+      "bytes": 6261,
+      "sha256": "ca9eab0783ad408d6beda07441d00e4bf767fa7d10cf11eace03e015af073fb1"
+    },
+    {
+      "path": "outputs/direct-assertion.log",
+      "bytes": 669,
+      "sha256": "ec7e099c7ff34235164ebac3da34c789f7b4e5f20cf7630bbc7a35359e8efe09"
+    },
+    {
+      "path": "outputs/emit-baseline/helpers.js",
+      "bytes": 80,
+      "sha256": "8a8016071e9c825f932cb06d81c37d09453fa5db4e031af7c3c4db1e34eb7f20"
+    },
+    {
+      "path": "outputs/emit-baseline.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "outputs/emit-comparison.json",
+      "bytes": 1489,
+      "sha256": "28f94492b689097c0ec8455524dff04c7637b1054d65bfd16474479a6cff21fa"
+    },
+    {
+      "path": "outputs/emit-revised/helpers.js",
+      "bytes": 80,
+      "sha256": "8a8016071e9c825f932cb06d81c37d09453fa5db4e031af7c3c4db1e34eb7f20"
+    },
+    {
+      "path": "outputs/emit-revised.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "outputs/exact-candidate.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "outputs/minimal-baseline.log",
+      "bytes": 512,
+      "sha256": "f89213fd946a612aecb7d5fdaeeb3319370e6307e8156044b07365a4668e5f71"
+    },
+    {
+      "path": "outputs/minimal-revised.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "outputs/refusal-observations.log",
+      "bytes": 5117,
+      "sha256": "17455c8af23934f4f5e8855140286ccbdd85a4bf7b9b153d3860e989b039644c"
+    },
+    {
+      "path": "outputs/revised.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "outputs/runs.json",
+      "bytes": 11246,
+      "sha256": "b74370c89964c010df6297ce5299943a088daf0bc726f68ae0db7410195ea861"
+    }
+  ],
+  "notes": [
+    "Initial attempts missed transitive prelude session dependencies. Frozen dependency closure was copied and subsequent results replace those attempts.",
+    "outputs/runs.json preserves attempt history. final_runs identifies logs retained and checked against current bytes.",
+    "The baseline and contextual runs must fail at the named literal conflicts. Refusal observations and blanket mutant must fail. Accepted variants must exit zero."
+  ],
+  "report_sha256": "57386af88ea461b0236c93a705b5056d628a105dc2e3adf4020ca69e4d807ee1",
+  "semantic_placement": "R8 existing TypeScript face finite truth-harness boundary, no new theorem"
+}

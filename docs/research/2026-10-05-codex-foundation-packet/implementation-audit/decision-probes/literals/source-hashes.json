@@ -1,0 +1,167 @@
+[
+  {
+    "path": "harness/truth/prelude-atoms.gen.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "008f9ffadf042a5f8e6f2b71a92862970eac6b25f675d4768d0421ce1031b1d6"
+  },
+  {
+    "path": "harness/truth/prelude.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "06e9b5189fd76e8ce3d566e3e5937cc6cca7756b0608b1495c7d474bfb03a3c0"
+  },
+  {
+    "path": "harness/truth/records.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "51f7026914373ef5f1555f4e52a2a2562d352a16b4fdaeb386e804aa12a489a4"
+  },
+  {
+    "path": "harness/truth/tuples.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+  },
+  {
+    "path": "harness/truth/tuples.typecheck.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493"
+  },
+  {
+    "path": "harness/truth/records.typecheck.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099"
+  },
+  {
+    "path": "harness/truth/term-rows.typecheck.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "9aa782f9447acf938c0d6e6e62948546d39070c35eeaf3105caaae2a93366ffb"
+  },
+  {
+    "path": "harness/truth/folds.typecheck.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+  },
+  {
+    "path": "harness/truth/session/keyed-protocol.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "9dbfc86982bd56153d517dd17b7a14279620db0aee737f2c5985ada73ebe3457"
+  },
+  {
+    "path": "src/Effect4/Machine/Term.lean",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "ad902c1bce2984059dcad6823d6b51597e21bde76b08d632bf0d1a2e03fb808e"
+  },
+  {
+    "path": "src/Effect4/Program/NativeAtom.lean",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "4581dfd034dcaf878bb76ef808f745c53817064748d4d1d012e1759b2cb2b5d2"
+  },
+  {
+    "path": "docs/STATE.md",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "b555dc1e486c31780c4977fc46441e484a8377f36a111187dccd1e2cec8b2242"
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "f64956bb439c41a4094ff619b14c1879f70c63bf5da8b65b81ffb223d7a206da"
+  },
+  {
+    "path": "tools/Effect4Gen/PreludeAtoms.lean",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "abbfc871b89255d9264408ccd40b62aa48f8d6f527b237bd2cc458ac1168c532"
+  },
+  {
+    "path": "harness/truth/tsconfig.json",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "d2e979e487e8f8095953eb24b5ee6d2c3cb8bf030599f2163207131842c5e565"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/literal-widening-repair.md",
+    "sha256": "528d8c6e7583b87cb59820e658969e9724571193182dd70d50342e76e5391659",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/skTryTake.txt",
+    "sha256": "22837f310ccac5ee2e51d9876f83cc42a1817150ab1ed8a3fe40817a8238e858",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/takeStep.txt",
+    "sha256": "34032e918c43f4e52f245911cd439e8659f647a66428211451a9c75f519f6dde",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/text-request.txt",
+    "sha256": "8dbd382def76f50efbb92e23b2250792c97e1063e856cc6769de75118a28fcad",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/skOffer.txt",
+    "sha256": "19ab7817459060407413fb9e99db0add3d01a204835150e718f8be9101d6f8cf",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/skRetryTake.txt",
+    "sha256": "e7f92d373c8f35298730959321dbf143fb77bbc77bcce286076868e2957ea1f6",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/skWithdraw.txt",
+    "sha256": "ff06e51be8b5d881904497a133058ea954e63c065c2fabcf489046549834e4f0",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/offerStep.txt",
+    "sha256": "aa6cca80ccd5303d240dd23c56709e51e053bd0aefe4934b8cd41c1ab59ab7b3",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/withdrawTake.txt",
+    "sha256": "8858f0de8a3abc56d414ef42913a43bb148b41a67f7e0fd71b629dd741ce2e51",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/e4a67264-1213-4b33-b3e2-68332653bd83/scratchpad/t5/withdrawOffer.txt",
+    "sha256": "b2c1e18e46bc904be7c40021f45ec56230fd004c5bb65bf75d0e5b3ed93080fc",
+    "kind": "retained seat input, no current generator run"
+  },
+  {
+    "path": "harness/truth/session/protocol.gen.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "676aa68288a30f4cd68e7c3afbd4c4fd538ba603ada693a197d45f7cc67dc470"
+  },
+  {
+    "path": "harness/truth/session/protocol.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "303aab1e482310e7913dc8f7addf49d341ecb4247e0e3cc6eb74ea6ff9e022d9"
+  },
+  {
+    "path": "harness/truth/session/clock.ts",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01"
+  },
+  {
+    "path": "src/Effect4/Program/Typing/Rules.lean",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e"
+  },
+  {
+    "path": "tools/Tools/SemanticsRegistry.lean",
+    "commit": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+    "sha256": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164"
+  },
+  {
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/package.json",
+    "sha256": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478",
+    "kind": "installed compiler/dependency identity"
+  },
+  {
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/package.json",
+    "sha256": "0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d",
+    "kind": "installed compiler/dependency identity"
+  },
+  {
+    "path": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+    "sha256": "d81db91c981d5cddf17283dfb1d8f9ccf1b448c1c446ca6030c7a4d52c3e961a",
+    "kind": "installed compiler/dependency identity"
+  }
+]

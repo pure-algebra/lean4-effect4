@@ -1,0 +1,110 @@
+{
+  "compiler": "Version 7.0.0-dev.20260629.1",
+  "rows": [
+    {
+      "variant": "baseline",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/baseline/tsconfig.json"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "matched": true,
+      "diagnostics": 15,
+      "sha256": "ec3d8efb92621b2b915412adfe008431eef4de965fd31aabb9aa7a0de6791f7b"
+    },
+    {
+      "variant": "revised",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/revised/tsconfig.json"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "matched": true,
+      "diagnostics": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "variant": "contextual",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/contextual/tsconfig.json"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "matched": true,
+      "diagnostics": 15,
+      "sha256": "ca9eab0783ad408d6beda07441d00e4bf767fa7d10cf11eace03e015af073fb1"
+    },
+    {
+      "variant": "blanket-mutant",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/blanket-mutant/tsconfig.json"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "matched": true,
+      "diagnostics": 6,
+      "sha256": "db3bc29be9cbde0604fc6118171123d9dcde068832d9d143450e216428f00e23"
+    },
+    {
+      "variant": "minimal-baseline",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-baseline/tsconfig.json"
+      ],
+      "exit": 1,
+      "expected_exit": 1,
+      "matched": true,
+      "diagnostics": 2,
+      "sha256": "f89213fd946a612aecb7d5fdaeeb3319370e6307e8156044b07365a4668e5f71"
+    },
+    {
+      "variant": "minimal-revised",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "--noEmit",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/minimal-revised/tsconfig.json"
+      ],
+      "exit": 0,
+      "expected_exit": 0,
+      "matched": true,
+      "diagnostics": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "all_expected": true,
+  "runtime_execution": false,
+  "lean_commands": false
+}

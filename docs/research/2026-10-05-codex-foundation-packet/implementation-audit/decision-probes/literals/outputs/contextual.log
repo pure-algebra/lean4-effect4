@@ -1,0 +1,47 @@
+real-queue-take.ts(8,878): error TS2322: Type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]' is not assignable to type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+real-queue-take.ts(8,1070): error TS2345: Argument of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'false' is not assignable to type 'true'.
+real-queue-take.ts(8,1737): error TS2345: Argument of type 'readonly [0, readonly number[], readonly (Omit<Offer, "rest"> & { readonly rest: readonly number[]; })[], readonly Offer[], true]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+real-queue-take.ts(8,2598): error TS2322: Type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]' is not assignable to type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+real-queue-take.ts(8,2790): error TS2345: Argument of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'false' is not assignable to type 'true'.
+real-queue-take.ts(8,3457): error TS2345: Argument of type 'readonly [0, readonly number[], readonly (Omit<Offer, "rest"> & { readonly rest: readonly number[]; })[], readonly Offer[], true]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+real-queue-take.ts(8,4798): error TS2322: Type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]' is not assignable to type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+real-queue-take.ts(8,4990): error TS2345: Argument of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'false' is not assignable to type 'true'.
+real-queue-take.ts(8,5657): error TS2345: Argument of type 'readonly [0, readonly number[], readonly (Omit<Offer, "rest"> & { readonly rest: readonly number[]; })[], readonly Offer[], true]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+real-queue-take.ts(8,6695): error TS2322: Type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]' is not assignable to type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+real-queue-take.ts(8,6887): error TS2345: Argument of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], true]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'false' is not assignable to type 'true'.
+real-queue-take.ts(8,7554): error TS2345: Argument of type 'readonly [0, readonly number[], readonly (Omit<Offer, "rest"> & { readonly rest: readonly number[]; })[], readonly Offer[], true]' is not assignable to parameter of type 'readonly [number, readonly number[], readonly Offer[], readonly Offer[], false]'.
+  Type at position 4 in source is not compatible with type at position 4 in target.
+    Type 'true' is not assignable to type 'false'.
+term-rows.typecheck.ts(126,271): error TS2345: Argument of type 'readonly [false, Omit<Window, "rejected"> & { readonly rejected: number; }]' is not assignable to parameter of type 'readonly [true, Omit<Omit<Window, "used"> & { readonly used: number; }, "admitted"> & { readonly admitted: number; }]'.
+  Type at position 0 in source is not compatible with type at position 0 in target.
+    Type 'false' is not assignable to type 'true'.
+term-rows.typecheck.ts(132,943): error TS2345: Argument of type 'readonly [readonly [Option<never>, number, Option<never>], Omit<Skeleton, "takers"> & { readonly takers: readonly Hint[]; }]' is not assignable to parameter of type 'readonly [readonly [Option<number>, 0, Option<Hint>], Omit<Skeleton, "mHead"> & { readonly mHead: number; }]'.
+  Type at position 0 in source is not compatible with type at position 0 in target.
+    Type 'readonly [Option<never>, number, Option<never>]' is not assignable to type 'readonly [Option<number>, 0, Option<Hint>]'.
+      Type at position 1 in source is not compatible with type at position 1 in target.
+        Type 'number' is not assignable to type '0'.
+term-rows.typecheck.ts(137,67): error TS2322: Type 'readonly [number, true]' is not assignable to type 'readonly [0, false]'.
+  Type at position 0 in source is not compatible with type at position 0 in target.
+    Type 'number' is not assignable to type '0'.

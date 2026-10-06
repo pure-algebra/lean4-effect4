@@ -1,0 +1,64 @@
+{
+  "review_cut": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+  "review_type": "read-only design audit and source comparison; no new Lean/compiler/runtime checks",
+  "source_sha256": {
+    "src/Effect4/Laws/Modules/Queue/Typing.lean": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766",
+    "src/Effect4/Laws/Modules/Queue/Steps.lean": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+    "src/Effect4/Program/Typing/Rules.lean": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e",
+    "src/Effect4/Laws/Program/Signature.lean": "76c9eed75af3e950fc769f8b56cabd0df10a5f78d5d67bc0acef3a00657c3060",
+    "src/Effect4/Laws/Program/Typed/ListFold.lean": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+    "src/Effect4/Program/CheckedTyping.lean": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75",
+    "src/Effect4/Program/Admission.lean": "4ef4539a87ae5b273cbb06d318c84180513c2958370b2797b5f7fc981e6f6062",
+    "src/Effect4/Api/Author.lean": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+    "src/Effect4/Program/Record.lean": "161ef4cbac0f17434d22c19b19332bcabd45ee47be86084034a1c415ab577bcd",
+    "src/Effect4/Laws/Program/Typed.lean": "5ae0330024f2765b1a0464b1113e4215a448b0efb4243b0553a46addbb26bd4f",
+    "src/Effect4/Program/NativeAtom.lean": "4581dfd034dcaf878bb76ef808f745c53817064748d4d1d012e1759b2cb2b5d2",
+    "Test/Program/QueueSteps.lean": "942c6498f5dce82df4d0b0c74628e38ededc3037bc4f318e70ed213d5cc4dbcc",
+    "tools/Tools/SemanticsRegistry.lean": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164",
+    "generated/semantics.md": "be0080164f491c94461cf88b0f0e491e13b116ecd79d9c61648ccd483eee8691"
+  },
+  "source_message_type_count": 27,
+  "count_evidence": "bounded lexical count of the committed messageTypes list, not execution",
+  "finite_probe_source_identical_to_777d831e": true,
+  "retained_build_log": {
+    "path": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qsteps/build-t1.log",
+    "sha256": "416ea65ad48bc4a455c385e62e70948842fc30c3055b693cb2cca33c0c637b1c",
+    "lines": [
+      "\u2714 [909/914] Built Test.Program.QueueSteps (3.5s)",
+      "info: Test/All.lean:248:0: Effect4 library-root gate: 167 API/utility modules, 285 Laws-only modules; every library source is reachable; Effect4 never reaches Laws",
+      "info: Test/All.lean:248:0: Effect4 module and axiom gate: checked 699 modules and 85477 declarations; phases (ms): sources and closure 13, library roots 161, declarations 2096, resolution 537, axioms 11762, exemptions 281; semantic/test axioms are [propext,",
+      " Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice",
+      "info: Test/All.lean:248:0: Effect4 goal gate: 29 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx",
+      "Build completed successfully (949 jobs)."
+    ]
+  },
+  "retained_tool_result": {
+    "stage": "typing and StepsAgree final default build",
+    "tool_id": "toolu_01Trs2usJppAjzpf1QmUbgEJ",
+    "call_line": 600,
+    "call_time": "2026-10-06T03:27:29.280Z",
+    "build_command_lines": [
+      "S=/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qsteps && (time /Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build) > $S/build-t1.log 2>&1; echo exit=$?; tail -2 $S/build-t1.log | cut -c1-200; grep -n \"gate\\|error\" $S/build-t1.log | cut -c1-300 | head; git status --short"
+    ],
+    "result_line": 601,
+    "result_time": "2026-10-06T03:28:02.305Z",
+    "result_record_sha256": "e6aea3d4dcbc8f26b8cf299d538cc41a073e7081631c0a9436b06d2cf833056e",
+    "prefix_through_record_sha256": "aab8c729bf9fd11b4883cbb384bc54ee996eee09d79d74dc0dce1693031c48be",
+    "result": {
+      "tool_use_id": "toolu_01Trs2usJppAjzpf1QmUbgEJ",
+      "type": "tool_result",
+      "content": "exit=0\nBuild completed successfully (949 jobs).\n/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build  27.02s user 7.19s system 115% cpu 29.717 total\n68:info: Test/All.lean:248:0: Effect4 library-root gate: 167 API/utility modules, 285 Laws-only modules; every library source is reachable; Effect4 never reaches Laws\n69:info: Test/All.lean:248:0: Effect4 module and axiom gate: checked 699 modules and 85477 declarations; phases (ms): sources and closure 13, library roots 161, declarations 2096, resolution 537, axioms 11762, exemptions 281; semantic/test axioms are [propext,\n71:info: Test/All.lean:248:0: Effect4 goal gate: 29 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx\n M Test/Program/QueueRelation.lean\n M Test/Program/QueueSteps.lean\n M src/Effect4/Laws/Modules/Queue/Steps.lean\n M src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "is_error": false
+    }
+  },
+  "candidate_status": "UNCOMPILED; no new proved claim",
+  "candidate_sha256": "4b57e229a1778ce9fe461c9b1e8b66ee40b88936ee592bbab156ffdb6be2b5ff",
+  "review_sha256": "577067eabfee02de3c604ad7279f8f6a4443043696e7fbbe169fc56e5d44c150",
+  "recommendation": "Explicit exact-body checker evidence first for the concrete wrapper; retain universal goals and build shared checker connectors. Universal no-refusal API promise waits for universal typing proofs.",
+  "limits": [
+    "No wrapper law currently proved by this review",
+    "No automatic transport from canonical scope to arbitrary source terms",
+    "No new certificate checked",
+    "No later source inspected"
+  ]
+}

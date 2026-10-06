@@ -1,0 +1,12 @@
+policy-controls.ts(11,30): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+policy-controls.ts(15,34): error TS2344: Type 'false' does not satisfy the constraint 'true'.
+policy-controls.ts(39,35): error TS2322: Type 'string | number' is not assignable to type 'number'.
+  Type 'string' is not assignable to type 'number'.
+policy-controls.ts(40,9): error TS2322: Type 'string | number' is not assignable to type '"message"'.
+  Type 'string' is not assignable to type '"message"'.
+tuples.typecheck.ts(6,7): error TS2322: Type 'readonly [number, string]' is not assignable to type 'readonly [number, "x"]'.
+  Type at position 1 in source is not compatible with type at position 1 in target.
+    Type 'string' is not assignable to type '"x"'.
+tuples.typecheck.ts(7,7): error TS2322: Type 'readonly [number, string, boolean]' is not assignable to type 'readonly [number, "x", boolean]'.
+  Type at position 1 in source is not compatible with type at position 1 in target.
+    Type 'string' is not assignable to type '"x"'.

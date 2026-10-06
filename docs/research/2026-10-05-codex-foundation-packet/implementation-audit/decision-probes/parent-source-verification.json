@@ -1,0 +1,253 @@
+{
+  "checks": [
+    {
+      "label": "independent:AGENTS.md",
+      "actual": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "expected": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "ok": true
+    },
+    {
+      "label": "independent:docs/STATE.md",
+      "actual": "b555dc1e486c31780c4977fc46441e484a8377f36a111187dccd1e2cec8b2242",
+      "expected": "b555dc1e486c31780c4977fc46441e484a8377f36a111187dccd1e2cec8b2242",
+      "ok": true
+    },
+    {
+      "label": "independent:docs/core/decisions.md",
+      "actual": "f64956bb439c41a4094ff619b14c1879f70c63bf5da8b65b81ffb223d7a206da",
+      "expected": "f64956bb439c41a4094ff619b14c1879f70c63bf5da8b65b81ffb223d7a206da",
+      "ok": true
+    },
+    {
+      "label": "independent:docs/DESIGN-ISSUES.md",
+      "actual": "3b3aad08a16027124286889d2602a613e13c1a085b4a5a227fb06b8d65984174",
+      "expected": "3b3aad08a16027124286889d2602a613e13c1a085b4a5a227fb06b8d65984174",
+      "ok": true
+    },
+    {
+      "label": "independent:docs/core/semantics.md",
+      "actual": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32",
+      "expected": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32",
+      "ok": true
+    },
+    {
+      "label": "independent:docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md",
+      "actual": "0c3b61d97c8c6a9b4def21641430a5c6d8639457851681492e85d72abcf3fd4c",
+      "expected": "0c3b61d97c8c6a9b4def21641430a5c6d8639457851681492e85d72abcf3fd4c",
+      "ok": true
+    },
+    {
+      "label": "independent:docs/research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md",
+      "actual": "4559f54063551f0152eccb0d2517f97f6f7a7075dcca45350770adf2d9d3ff1f",
+      "expected": "4559f54063551f0152eccb0d2517f97f6f7a7075dcca45350770adf2d9d3ff1f",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "actual": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766",
+      "expected": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Laws/Modules/Queue/Reading.lean",
+      "actual": "07800e57f763950b32485cec27ce384104ef725662bbf30c3cf6ed07070ff586",
+      "expected": "07800e57f763950b32485cec27ce384104ef725662bbf30c3cf6ed07070ff586",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "actual": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+      "expected": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Laws/Modules/Queue/Relation.lean",
+      "actual": "b319dfb241d5da0b98458074ce474f8811b819b3360c7eb5fd7a3646338694db",
+      "expected": "b319dfb241d5da0b98458074ce474f8811b819b3360c7eb5fd7a3646338694db",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Modules/Queue/Steps.lean",
+      "actual": "6032a1ca68ffd201f2c4b28d40ff43dd0faba655002792a055dad083e0cc8059",
+      "expected": "6032a1ca68ffd201f2c4b28d40ff43dd0faba655002792a055dad083e0cc8059",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Program/Typing/Rules.lean",
+      "actual": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e",
+      "expected": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Machine/Term.lean",
+      "actual": "ad902c1bce2984059dcad6823d6b51597e21bde76b08d632bf0d1a2e03fb808e",
+      "expected": "ad902c1bce2984059dcad6823d6b51597e21bde76b08d632bf0d1a2e03fb808e",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "actual": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+      "expected": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Codegen/Print.lean",
+      "actual": "07883ce3457e2d433debab76c5c547e38a19bb06527f724bf26b246a6725977d",
+      "expected": "07883ce3457e2d433debab76c5c547e38a19bb06527f724bf26b246a6725977d",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Codegen/Read.lean",
+      "actual": "e9a78a35d265de33b256b35ffa8527c4072403e0e4345babe6762b516811b487",
+      "expected": "e9a78a35d265de33b256b35ffa8527c4072403e0e4345babe6762b516811b487",
+      "ok": true
+    },
+    {
+      "label": "independent:src/Effect4/Codegen/Templates.lean",
+      "actual": "4360605942836e64493d45730f773b454b726efdd25efd941d5e84d6b456e74d",
+      "expected": "4360605942836e64493d45730f773b454b726efdd25efd941d5e84d6b456e74d",
+      "ok": true
+    },
+    {
+      "label": "independent:harness/truth/tuples.typecheck.ts",
+      "actual": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493",
+      "expected": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493",
+      "ok": true
+    },
+    {
+      "label": "independent:harness/truth/prelude-atoms.gen.ts",
+      "actual": "008f9ffadf042a5f8e6f2b71a92862970eac6b25f675d4768d0421ce1031b1d6",
+      "expected": "008f9ffadf042a5f8e6f2b71a92862970eac6b25f675d4768d0421ce1031b1d6",
+      "ok": true
+    },
+    {
+      "label": "independent:Test/Program/QueueSteps.lean",
+      "actual": "942c6498f5dce82df4d0b0c74628e38ededc3037bc4f318e70ed213d5cc4dbcc",
+      "expected": "942c6498f5dce82df4d0b0c74628e38ededc3037bc4f318e70ed213d5cc4dbcc",
+      "ok": true
+    },
+    {
+      "label": "independent:Test/Codegen/TermRows.lean",
+      "actual": "05167b94ce8818ea446621c13478a6c27a3025805b82cc76f9546e08dc77cd88",
+      "expected": "05167b94ce8818ea446621c13478a6c27a3025805b82cc76f9546e08dc77cd88",
+      "ok": true
+    },
+    {
+      "label": "independent:tools/Tools/SemanticsRegistry.lean",
+      "actual": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164",
+      "expected": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164",
+      "ok": true
+    },
+    {
+      "label": "independent:/Users/pooks/Dev/lean4-effect4-t3b/docs/research/2026-10-05-seat-T5-receipt.md",
+      "actual": "ebe10c54e3ab28eac94e84580086f859317d49145b14997be0c5139d6c4b940a",
+      "expected": "ebe10c54e3ab28eac94e84580086f859317d49145b14997be0c5139d6c4b940a",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "actual": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766",
+      "expected": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "actual": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+      "expected": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Program/Typing/Rules.lean",
+      "actual": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e",
+      "expected": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Laws/Program/Signature.lean",
+      "actual": "76c9eed75af3e950fc769f8b56cabd0df10a5f78d5d67bc0acef3a00657c3060",
+      "expected": "76c9eed75af3e950fc769f8b56cabd0df10a5f78d5d67bc0acef3a00657c3060",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "actual": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+      "expected": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Program/CheckedTyping.lean",
+      "actual": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75",
+      "expected": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Program/Admission.lean",
+      "actual": "4ef4539a87ae5b273cbb06d318c84180513c2958370b2797b5f7fc981e6f6062",
+      "expected": "4ef4539a87ae5b273cbb06d318c84180513c2958370b2797b5f7fc981e6f6062",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Api/Author.lean",
+      "actual": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "expected": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Program/Record.lean",
+      "actual": "161ef4cbac0f17434d22c19b19332bcabd45ee47be86084034a1c415ab577bcd",
+      "expected": "161ef4cbac0f17434d22c19b19332bcabd45ee47be86084034a1c415ab577bcd",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Laws/Program/Typed.lean",
+      "actual": "5ae0330024f2765b1a0464b1113e4215a448b0efb4243b0553a46addbb26bd4f",
+      "expected": "5ae0330024f2765b1a0464b1113e4215a448b0efb4243b0553a46addbb26bd4f",
+      "ok": true
+    },
+    {
+      "label": "typing:src/Effect4/Program/NativeAtom.lean",
+      "actual": "4581dfd034dcaf878bb76ef808f745c53817064748d4d1d012e1759b2cb2b5d2",
+      "expected": "4581dfd034dcaf878bb76ef808f745c53817064748d4d1d012e1759b2cb2b5d2",
+      "ok": true
+    },
+    {
+      "label": "typing:Test/Program/QueueSteps.lean",
+      "actual": "942c6498f5dce82df4d0b0c74628e38ededc3037bc4f318e70ed213d5cc4dbcc",
+      "expected": "942c6498f5dce82df4d0b0c74628e38ededc3037bc4f318e70ed213d5cc4dbcc",
+      "ok": true
+    },
+    {
+      "label": "typing:tools/Tools/SemanticsRegistry.lean",
+      "actual": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164",
+      "expected": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164",
+      "ok": true
+    },
+    {
+      "label": "typing:generated/semantics.md",
+      "actual": "be0080164f491c94461cf88b0f0e491e13b116ecd79d9c61648ccd483eee8691",
+      "expected": "be0080164f491c94461cf88b0f0e491e13b116ecd79d9c61648ccd483eee8691",
+      "ok": true
+    },
+    {
+      "label": "typing retained build log",
+      "actual": "416ea65ad48bc4a455c385e62e70948842fc30c3055b693cb2cca33c0c637b1c",
+      "expected": "416ea65ad48bc4a455c385e62e70948842fc30c3055b693cb2cca33c0c637b1c",
+      "ok": true
+    },
+    {
+      "label": "typing candidate",
+      "actual": "4b57e229a1778ce9fe461c9b1e8b66ee40b88936ee592bbab156ffdb6be2b5ff",
+      "expected": "4b57e229a1778ce9fe461c9b1e8b66ee40b88936ee592bbab156ffdb6be2b5ff",
+      "ok": true
+    },
+    {
+      "label": "typing review",
+      "actual": "577067eabfee02de3c604ad7279f8f6a4443043696e7fbbe169fc56e5d44c150",
+      "expected": "577067eabfee02de3c604ad7279f8f6a4443043696e7fbbe169fc56e5d44c150",
+      "ok": true
+    }
+  ],
+  "all_ok": true,
+  "count": 41,
+  "new_lean_commands": false
+}

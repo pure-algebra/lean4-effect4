@@ -1,0 +1,39 @@
+{
+  "frozen_main": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+  "captured_sources": 24,
+  "source_hashes_verified": true,
+  "timestamp_utc": "2026-10-06T03:54:58.231149+00:00",
+  "review_kind": "Independent source and retained-receipt critique; no new execution evidence",
+  "recommendations": [
+    "Keep the primitive-widening decision scoped to the two target helpers, subject to parent compiler controls.",
+    "Do not present callback annotations as a drop-in fix: they change the current exact reader image and may not resolve inner inference.",
+    "Conditional wrapper results can reuse step_keeps_cell without Queue goal dependencies when typing evidence is an explicit premise.",
+    "Keep five planned typing goals and the arbitrary-MessageTy builder usability claim open; goal-supplied instantiations remain modulo those goals."
+  ],
+  "unexecuted_controls": "review.md tables; sketches only",
+  "tests_run": [
+    "SHA-256 verification of 24 retained source snapshots"
+  ],
+  "not_run": [
+    "Lean",
+    "Lake",
+    "tsgo",
+    "tsc",
+    "OCaml compiler",
+    "runtime probes",
+    "generators",
+    "installations"
+  ],
+  "repo_edits": false,
+  "ui_actions": false,
+  "artifacts": {
+    "review.md": {
+      "bytes": 7037,
+      "sha256": "6b18731d36572698e31feb6e96e81e9aef061c7d6c66ec00be0e187fd64ece49"
+    },
+    "source-manifest.json": {
+      "bytes": 5141,
+      "sha256": "81ed935e6d946adeb7fe0559481ce92a720872e95ef7d0ed86891c6584d44fcc"
+    }
+  }
+}

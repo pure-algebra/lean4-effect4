@@ -1,0 +1,24 @@
+{
+  "completed_utc": "2026-10-06T03:59:35.774608+00:00",
+  "review_cut": "368e0314031cdc2376c38d5738bcb3cde4d099e0",
+  "scope": "Two owner-requested decision probes and requested coordinator guidance",
+  "parent_source_comparisons": "parent-source-verification.json",
+  "parent_literal_comparisons": "parent-literal-verification.json",
+  "parent_compiler_runs": "parent-compiler/receipt.json",
+  "new_lean_proofs": false,
+  "repository_edits": false,
+  "runtime_execution": false,
+  "generators": false,
+  "installs": false,
+  "delivery": {
+    "coordinator": "Queues plan and design decisions (fork)",
+    "url": "https://claude.ai/epitaxy/local_acf2315e-02ac-4acd-9ef9-b0734bd686a7",
+    "message": 33,
+    "normal_send_verified": true,
+    "composer_empty_after_send": true,
+    "force_send_or_interrupt": false,
+    "consumption": "Not yet verified"
+  },
+  "authority": "Recommendations only. No policy decision recorded by this monitor.",
+  "current_development": "QSTEPS final merge staged at main368e0314; coordinator builds/gates it. T5 still active. No development handoff. Those later changes are outside this decision review."
+}

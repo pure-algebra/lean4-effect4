@@ -1,0 +1,1 @@
+Ref.modify(a0, (a1) => ite(lt(recordRequired<"used">("used")(a1), 3), pair(true, recordSet<"admitted">("admitted")(recordSet<"used">("used")(a1)(succ(recordRequired<"used">("used")(a1))))(succ(recordRequired<"admitted">("admitted")(a1)))), pair(false, recordSet<"rejected">("rejected")(a1)(succ(recordRequired<"rejected">("rejected")(a1))))))

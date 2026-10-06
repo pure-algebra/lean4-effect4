@@ -1,0 +1,37 @@
+{
+  "runs": [
+    {
+      "variant": "baseline",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-baseline/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-baseline",
+      "exit": 0,
+      "input_sha256": "a99c91855273681f61d6120cb54370bfebb94bb56c03aa9224de71ce5cc672bf",
+      "js_sha256": "8a8016071e9c825f932cb06d81c37d09453fa5db4e031af7c3c4db1e34eb7f20"
+    },
+    {
+      "variant": "revised",
+      "command": [
+        "node",
+        "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo",
+        "--pretty",
+        "false",
+        "-p",
+        "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-revised/tsconfig.json"
+      ],
+      "cwd": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-decision-probes/literals/inputs/emit-revised",
+      "exit": 0,
+      "input_sha256": "4eca677d9c844248caffd9a781e850fb4c8b8e5749b3db01b8d6645b2070a775",
+      "js_sha256": "8a8016071e9c825f932cb06d81c37d09453fa5db4e031af7c3c4db1e34eb7f20"
+    }
+  ],
+  "byte_identical": true,
+  "bytes": 80,
+  "observation": "Emitted helper JavaScript only. No runtime run or semantic theorem."
+}

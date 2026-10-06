@@ -1,0 +1,46 @@
+policy-controls.ts(25,7): error TS2322: Type 'number' is not assignable to type '1'.
+policy-controls.ts(27,7): error TS2322: Type 'boolean' is not assignable to type 'true'.
+policy-controls.ts(29,13): error TS2540: Cannot assign to '0' because it is a read-only property.
+policy-controls.ts(31,13): error TS2493: Tuple type 'readonly [number, "Tag", boolean]' of length '3' has no element at index '3'.
+policy-controls.ts(33,19): error TS2345: Argument of type 'readonly [number, "Tag", boolean]' is not assignable to parameter of type 'readonly unknown[] & { readonly 3: unknown; }'.
+  Property '3' is missing in type 'readonly [number, "Tag", boolean]' but required in type '{ readonly 3: unknown; }'.
+policy-controls.ts(60,7): error TS2322: Type 'Ref<1>' is not assignable to type 'Ref<number>'.
+  The types of '[TypeId]._A' are incompatible between these types.
+    Type 'Invariant<1>' is not assignable to type 'Invariant<number>'.
+      Types of parameters '_' and '_' are incompatible.
+        Type 'number' is not assignable to type '1'.
+policy-controls.ts(62,7): error TS2375: Type 'Deferred<true, "E">' is not assignable to type 'Deferred<boolean, "E">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'resumes' are incompatible.
+    Type '((effect: Effect<true, "E", never>) => void)[] | undefined' is not assignable to type '((effect: Effect<boolean, "E", never>) => void)[] | undefined'.
+      Type '((effect: Effect<true, "E", never>) => void)[]' is not assignable to type '((effect: Effect<boolean, "E", never>) => void)[]'.
+        Type '(effect: Effect<true, "E", never>) => void' is not assignable to type '(effect: Effect<boolean, "E", never>) => void'.
+          Types of parameters 'effect' and 'effect' are incompatible.
+            Type 'Effect<boolean, "E", never>' is not assignable to type 'Effect<true, "E", never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+              Type 'boolean' is not assignable to type 'true'.
+policy-controls.ts(64,7): error TS2375: Type 'Deferred<true, "E">' is not assignable to type 'Deferred<true, string>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'resumes' are incompatible.
+    Type '((effect: Effect<true, "E", never>) => void)[] | undefined' is not assignable to type '((effect: Effect<true, string, never>) => void)[] | undefined'.
+      Type '((effect: Effect<true, "E", never>) => void)[]' is not assignable to type '((effect: Effect<true, string, never>) => void)[]'.
+        Type '(effect: Effect<true, "E", never>) => void' is not assignable to type '(effect: Effect<true, string, never>) => void'.
+          Types of parameters 'effect' and 'effect' are incompatible.
+            Type 'Effect<true, string, never>' is not assignable to type 'Effect<true, "E", never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+              Type 'string' is not assignable to type '"E"'.
+policy-controls.ts(67,9): error TS2345: Argument of type 'Ref<1>' is not assignable to parameter of type 'Ref<1 | 2>'.
+  The types of '[TypeId]._A' are incompatible between these types.
+    Type 'Invariant<1>' is not assignable to type 'Invariant<1 | 2>'.
+      Types of parameters '_' and '_' are incompatible.
+        Type '1 | 2' is not assignable to type '1'.
+          Type '2' is not assignable to type '1'.
+policy-controls.ts(70,18): error TS2379: Argument of type 'Deferred<true, "E">' is not assignable to parameter of type 'Deferred<boolean, "E">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'resumes' are incompatible.
+    Type '((effect: Effect<true, "E", never>) => void)[] | undefined' is not assignable to type '((effect: Effect<boolean, "E", never>) => void)[] | undefined'.
+      Type '((effect: Effect<true, "E", never>) => void)[]' is not assignable to type '((effect: Effect<boolean, "E", never>) => void)[]'.
+        Type '(effect: Effect<true, "E", never>) => void' is not assignable to type '(effect: Effect<boolean, "E", never>) => void'.
+          Types of parameters 'effect' and 'effect' are incompatible.
+            Type 'Effect<boolean, "E", never>' is not assignable to type 'Effect<true, "E", never>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+              Type 'boolean' is not assignable to type 'true'.
+policy-controls.ts(80,11): error TS2322: Type 'number | "text"' is not assignable to type 'number'.
+  Type 'string' is not assignable to type 'number'.
+policy-controls.ts(93,7): error TS2322: Type 'number' is not assignable to type 'number & { readonly __brand: "Meters"; }'.
+  Type 'number' is not assignable to type '{ readonly __brand: "Meters"; }'.
+policy-controls.ts(95,7): error TS2322: Type 'boolean' is not assignable to type 'boolean & { readonly __brand: "Flag"; }'.

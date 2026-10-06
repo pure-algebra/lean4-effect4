@@ -1,0 +1,38 @@
+[
+  {
+    "path": "recommendations.md",
+    "sha256": "2434bad8d77b08469b8bbc001947d96ff42b8bd1b70f96682567a3eaf39db93f"
+  },
+  {
+    "path": "advisory.md",
+    "sha256": "a835f192a28a9c6e44d8280ddc4c12e33b103cefdfbcb7c6bae81d7d65d8454e"
+  },
+  {
+    "path": "parent-receipt.json",
+    "sha256": "009cbc7061fb1ec742f21576b5e2dbfdb5d10c2bd4fb165574e6a9fa33df46da"
+  },
+  {
+    "path": "parent-source-verification.json",
+    "sha256": "7c8be9052a381efb9813c5981b7889fa8924e7db28474c47f63d6896fbca4813"
+  },
+  {
+    "path": "parent-literal-verification.json",
+    "sha256": "a40615e15cb9ee28b89057e5f383293f21f8811ef0148a60f5b3c0175c5fe48e"
+  },
+  {
+    "path": "parent-compiler/receipt.json",
+    "sha256": "0256a520772f56d4595a9c7cecedda9c478160126159f24db04eb0c328290e9b"
+  },
+  {
+    "path": "typing/receipt.json",
+    "sha256": "68a9ba7c5d4866adb01d63d52fa9cc2402c73f40c68cde49c30c41d5cdbcc475"
+  },
+  {
+    "path": "independent/receipt.json",
+    "sha256": "c8c89dc5924c9d23f10ee18e5293c0252794b359817c5a6f34d27c93ca7aa5d0"
+  },
+  {
+    "path": "literals/receipt.json",
+    "sha256": "3374556b15ce2d9f9f4126edc4ecdac3fe2ff38c6aeb8b16e16e19b23c5bb633"
+  }
+]

@@ -1,0 +1,8 @@
+tuples.typecheck.ts(5,7): error TS2322: Type 'readonly [number]' is not assignable to type 'readonly [7]'.
+  Type 'number' is not assignable to type '7'.
+tuples.typecheck.ts(6,7): error TS2322: Type 'readonly [number, "x"]' is not assignable to type 'readonly [7, "x"]'.
+  Type at position 0 in source is not compatible with type at position 0 in target.
+    Type 'number' is not assignable to type '7'.
+tuples.typecheck.ts(7,7): error TS2322: Type 'readonly [number, "x", boolean]' is not assignable to type 'readonly [7, "x", true]'.
+  Type at position 0 in source is not compatible with type at position 0 in target.
+    Type 'number' is not assignable to type '7'.
