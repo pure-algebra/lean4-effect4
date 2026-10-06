@@ -221,6 +221,13 @@ import Test.Dogfood.P2HandlerLayers
 import Test.Dogfood.P3WorkerQueue
 import Test.Dogfood.P4RateLimiter
 import Test.Dogfood.P5LedgerService
+import Test.Dogfood.Scenario
+import Test.Dogfood.Scenario.Workers
+import Test.Dogfood.Scenario.Routing
+import Test.Dogfood.Scenario.Atomic
+import Test.Dogfood.Scenario.Timeout
+import Test.Dogfood.Scenario.Tape
+import Test.Dogfood.Scenario.Lowered
 import Test.Program.ScopedOpContract
 
 /-!

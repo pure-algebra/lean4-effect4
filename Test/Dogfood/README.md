@@ -18,6 +18,11 @@ of row 204 moves at least one program forward.
   - `waitsOn`, the requirements of the system map's §8 that its row below explains.
   `generated/semantics.md` prints them in its section "Acceptance programs", with the programs
   each requirement keeps waiting.
+- `Scenario.lean` holds what the scenarios share: the script alphabet, the driver, the readers of a
+  run's session part, the driver's laws and the gate `#scenario_gate`.
+- `Scenario/` holds one battery per scenario. `Scenario/Tape.lean` holds the text of their lowered
+  runs, and `Scenario/Lowered.lean` binds the engine's fixtures to it. `Test/All.lean` imports
+  each one.
 
 ## The reference texts
 
@@ -108,6 +113,110 @@ theorem. An equal answer is a test on one recorded run, and the battery claims n
 3. Rewrite the battery's program with the spelling the slice lands.
 4. Update the battery's `stage`, then the program's row in this file.
 5. Name the moved program in the slice's receipt.
+
+## The scenarios
+
+Decisions row 254 (owner, 2026-10-05) adds scenarios to the acceptance programs. A scenario tests
+the semantics where features compose. It is one unit with six parts.
+
+| Part | Content |
+| --- | --- |
+| Program | One program through `Api.Author.build`, built on the consumer of a battery above |
+| Script | A `List Move` (`Scenario.lean`): control decisions, held calls, reply receipts and reply applications |
+| Observation | One named structure read from the run. Every control compares it |
+| Claim | One theorem whose proof assembles the clauses. Each clause is a theorem or a planned goal with its placement |
+| Controls | For each clause, and for each associated law, a green control and at least one red control |
+| Lowered runs | The same observation on the generated OCaml engine and on the printed TypeScript module, or the stage that run waits on |
+
+The driver plays a script into the run's own journal. It keeps the reply receipt and the reply
+application apart, and it selects a live call by its key. The run a script reaches is the run its
+journal reaches (`replays`, `Scenario.lean`), so a replay calls no fixture.
+
+A scenario's record names its program, its observation and its claims as declarations
+(`Scenario`, `Scenario.lean`). It lists two kinds of entry.
+
+- An **assembled clause** is a claim that the scenario's claim uses in its proof.
+- An **associated law** has controls only. The record claims no dependency of the claim on it.
+
+`#scenario_gate` stands at the foot of each scenario's battery. It checks the record against the
+environment and runs the controls once. It refuses:
+
+- a program or an observation that does not resolve to a declaration;
+- a claim that is no theorem and no planned goal;
+- a claim with no placement (decisions row 207);
+- a claim whose proof does not reach one of its assembled clauses;
+- a claim that rests on a planned goal which no clause names;
+- a clause or a law with no green control, or with no red control;
+- a control that names no clause and no law, or that fails.
+
+A battery's declaration carries its own placement at a requirement. Any other declaration carries
+`@[semantics]`, or the semantics registry places it: as a requirement's top node, as a claim's
+pointer, or by its module.
+
+The gate measures the two dependency findings on the planning graph (`ProofGraph.buildPlan`,
+`tools/ProofGraph/Plan.lean`). A planned goal is reached when the claim rests on it. A theorem is
+reached when the walk from the claim's proof reaches it through the batteries' declarations.
+
+So no control stands outside a scenario, and no scenario stands without a placed claim. Each
+control is a finite probe: one script on the Lean machine. A claim's standing is derived from its
+proof: `#plan_status` prints it, with the planned goals the claim rests on.
+
+| Scenario | Program | Observation | Claim, assembled clauses and associated laws | Lowered runs |
+| --- | --- | --- | --- | --- |
+| workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers` assembles four clauses: `receipt_inert`, `applied_selects` and `control_retires` (theorems of `Scenario.lean`), and the planned goal `releases_once`. That goal says: under every script the crew releases no connection twice. Associated law: `replays`. | Engine: `workers.txt`, five runs of the machine clause. Host: waiting. The printer refuses the crew's log rows by name (`binderTerm`) until the state plan's T5. |
+| routing: `Scenario/Routing.lean`, on p2's consumer | `request`: p2's handler on its two host rows. `handleOn` writes it over any repository row and any two handler tests. | `Observation`, three fields: the exact response or the failure that escapes, the repository's calls, and the refused rows with the session's reason. | `routing` assembles three clauses: `tagIs_pair` (a theorem: the handler's test is exact on the pair spelling), and the planned goals `infrastructure_escapes` and `unauthorized_calls_nothing`. Associated law: `submit_success_prepared_fits`, a theorem of the law graph. | Engine: `routing.txt`, four runs of the machine clause. Host: waiting on the coordinator's word for the keyed lane. The program prints and reads back. |
+| atomic: `Scenario/Atomic.lean`, on p4's and p5's consumers | `shop`: a rate-limited ledger. Each request decides over the window in one store step, and an admitted request deposits its number in one store step. Request 2 fails behind both commits. Each request's finalizer notes what it sees. | `Observation`, five fields: each request's outcome, the whole window, the whole account, the count of completed requests and the cleanup log. | `atomic` assembles five clauses. Four are planned goals over every script: `bounded`, `counted`, `committed` and `cleans_once`. One is a theorem on the straight fragment: `unsuspended_runs`. Associated law: `syncRow_typed`, a theorem of the law graph. | Engine: `atomic.txt`, three runs of the machine clause. Host: waiting. The printer refuses the shop's rows by name (`binderTerm`) until the state plan's T5. |
+| timeout: `Scenario/Timeout.lean`, on p1's consumer | `fetch`: p1's quote fetch, with a 2000 ms timeout around each attempt and three retries. Each attempt counts itself before its host call, and its finalizer notes how it ended. | `Observation`, nine fields: what became of each held call, the accepted reply receipts, the reply applications, the retired calls and the stored replies. Then the attempts started, the cleanup log, the root's ending and the timer work. | `timeout` assembles three clauses, each a planned goal: `retries_declared`, `stale_never_applies` and `cleanup_keeps`. Associated laws: `applyReply_zero` and `advance_answer_refuses`, theorems of the law graph, and `replays`. | Engine: `timeout.txt`, six runs of the machine clause, and p1's own program as the handle case. Host: waiting. The printer refuses the attempt's rows by name (`binderTerm`) until the state plan's T5. |
+
+Two cases have no control, and each battery's header states its case.
+
+- A cleanup replayed under one registration (atomic). The cleanup log counts writes by identity,
+  and it does not count a finalizer's invocations.
+- A timer that fires inside a masked region (timeout). That cut waits for the mask's contract
+  (decisions rows 244 to 246).
+
+### The lowered runs
+
+The generated OCaml engine holds no session: no stored reply, no retired call, no consumed call.
+So a scenario's observation lands as two clauses.
+
+- **The session clause** is the whole observation. Each scenario's battery checks it on the Lean
+  machine. The host run checks it on the printed TypeScript module, on the keyed lane.
+- **The machine clause** is `machineView` (`Scenario.lean`). It holds six readings: the root's
+  exit, the cells, the calls the machine waits on, the armed owners, the runnable fibers and the
+  timers.
+
+`Scenario/Tape.lean` holds what Lean writes for the machine clause: each scenario's lowered runs,
+their machine tapes and the fixture text. It has no control, so it builds whatever the committed
+files hold. A fixture holds the canonical bytes of the admitted program and of each row, and the
+budgets. It also holds the machine tape: each decision that moved the session machine, with the
+view after it.
+
+`Scenario/Lowered.lean` binds each committed fixture under `ocaml/engine/test/scenarios/` to that
+text. `ocaml/engine/test/scenarios/test_scenarios.ml` replays each prefix of each tape through the
+generated `api_replay`, with the row table read from its wire bytes, on both instances. It compares
+the engine's view with Lean's at every position.
+
+A fixture's line `table differs` or `table same` records one comparison, in one projection. It
+says whether the raw replay with the empty table shows another machine view at some position.
+`table same` does not say that the replay reads no row of the table. The run `handle/cache` of
+`timeout.txt` is p1's own program, whose first host row answers a handle. It is the one run that
+says `table differs`.
+
+The planned goal `tape_replays` (`Scenario.lean`) states the Lean half: a journal's machine is the
+raw replay of its tape. The battery checks it at every position of every fixture, as finite runs.
+The engine's session clause waits: the engine has no session to compare.
+
+To write the fixtures again, follow these steps from the repository's root.
+
+1. Build `Test.Dogfood.Scenario.Tape`.
+2. Run `lake env lean --run ocaml/engine/test/scenarios/write.lean`.
+3. Build `Test.Dogfood.Scenario.Lowered`, which binds the files.
+4. Run `dune test --force engine/test/scenarios` in `ocaml/`, through `opam exec --switch=effect4`.
+
+Lake does not see a fixture as an input of the battery. So after a change of a fixture alone,
+`lake build` takes the battery from its cache and binds nothing. To bind the files then, run
+`lake env lean Test/Dogfood/Scenario/Lowered.lean`: it elaborates the battery afresh.
 
 ## The earlier dogfood programs
 
