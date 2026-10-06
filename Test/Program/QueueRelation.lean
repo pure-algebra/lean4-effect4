@@ -243,4 +243,15 @@ next goals: 0
 #guard_msgs in
 #plan_status withdrawTake_agrees
 
+/-- info: 'Effect4.Queue.Model.withdrawOffer_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms withdrawOffer_agrees
+
+/--
+info: Effect4.Queue.Model.withdrawOffer_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status withdrawOffer_agrees
+
 end Test.Program.QueueRelation

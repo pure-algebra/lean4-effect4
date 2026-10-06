@@ -144,6 +144,31 @@ theorem wake_encoded (tb : Table) (msg : Nat → Val) (messages : List Nat) (tak
   · rw [if_pos empty, if_pos empty]; rfl
   · rw [if_neg empty, if_neg empty, List.map_take]
 
+theorem isDone_opened {s : State} (opened : s.phase = .opened) : isDone s = false := by
+  unfold isDone
+  rw [opened]
+
+theorem isOpen_opened {s : State} (opened : s.phase = .opened) : isOpen s = true := by
+  unfold isOpen
+  rw [opened]
+
+theorem settle_opened {s : State} (opened : s.phase = .opened) : settle s = (s, []) := by
+  unfold settle
+  rw [opened]
+
+/-- The model's `withdrawOffer` in an opened queue: the offer leaves, and the wake is named. -/
+theorem withdrawOffer_opened {s : State} (opened : s.phase = .opened) (id : Nat) :
+    withdrawOffer s id =
+      ({ s with offers := s.offers.filter (fun o => o.id != id) },
+        wake { s with offers := s.offers.filter (fun o => o.id != id) }) := by
+  unfold withdrawOffer
+  rw [isDone_opened opened, if_neg Bool.false_ne_true]
+  show ((settle { s with offers := s.offers.filter (fun o => o.id != id) }).1,
+    (settle { s with offers := s.offers.filter (fun o => o.id != id) }).2 ++
+      wake (settle { s with offers := s.offers.filter (fun o => o.id != id) }).1) = _
+  rw [settle_opened (s := { s with offers := s.offers.filter (fun o => o.id != id) }) opened]
+  rfl
+
 /-! ## The six step goals -/
 
 /-- **The take step agrees with the model's `take` at the bounds one and one.** The cell holds
@@ -247,7 +272,7 @@ theorem withdrawTake_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State
 offer, its list is the takers that the model wakes, and the stored value is the model's next
 state. The table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+theorem withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {idSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {vals : List Val} (depth : vals.length = env.names.length)
     (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
@@ -256,6 +281,19 @@ proof_goal withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : S
       Notified s (withdrawOffer s id).1 (withdrawOffer s id).2 [] woken ∧
       Reads (Queue.withdrawOffer A idSrc cellSrc) env path vals
         (Val.tuple [Val.list (woken.map (takerVal tb)),
-          cellVal tb msg (withdrawOffer s id).1])
+          cellVal tb msg (withdrawOffer s id).1]) := by
+  have next : FirstProfile { s with offers := s.offers.filter (fun o => o.id != id) } :=
+    profile.shrink rfl rfl rfl rfl rfl (List.Sublist.refl _) List.filter_sublist
+  rw [withdrawOffer_opened profile.opened]
+  refine ⟨toWake s, ⟨?_, fun _ none => absurd none List.not_mem_nil, toWake_stored s⟩, ?_⟩
+  · show wake { s with offers := s.offers.filter (fun o => o.id != id) } = _
+    rw [wake_toWake next]
+    rfl
+  · have removed := reads_removeOffer tb msg injective s.offers id depth
+      (reads_field readsCell (cell_offers _ _ _ _)) readsId
+    have woken := reads_wake (reads_field readsCell (cell_takers _ _ _ _))
+      (reads_field readsCell (cell_msgs _ _ _ _))
+    have stored := reads_recordSet readsCell removed (cell_setOffers _ _ _ _ _)
+    exact (reads_pair woken stored).to (by rw [wake_encoded]; rfl)
 
 end Effect4.Queue.Model

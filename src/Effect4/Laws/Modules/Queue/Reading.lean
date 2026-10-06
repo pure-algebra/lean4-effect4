@@ -618,6 +618,41 @@ theorem reads_removeTaker {takers id : TermSrc} (tb : Table) (injective : tb.Inj
         rfl
   exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
 
+/-- The identity of a folded offer against the request's, under the fold's binders. -/
+theorem reads_sameOffer {id : TermSrc} (tb : Table) (msg : Nat → Val) (injective : tb.Injective)
+    (i : Nat) (depth : vals.length = env.names.length)
+    (hid : Captured id env path vals (Val.promise (tb.handle i))) (acc : Val) (o : Offer) :
+    Reads (Queue.same (field (minted (env.mint "item")) "id") id)
+      (env.push [env.mint "acc", env.mint "item"]) path (vals ++ [acc, offerVal tb msg o])
+      (Val.bool (decide (o.id = i))) :=
+  (reads_same
+    (reads_field (reads_minted_item depth path acc (offerVal tb msg o)) (offer_id _ _ _ _))
+    (hid.underFold acc (offerVal tb msg o))).to (by rw [injective.decides])
+
+/-- `removeOffer`: the pending offers without the request. -/
+theorem reads_removeOffer {offers id : TermSrc} (tb : Table) (msg : Nat → Val)
+    (injective : tb.Injective) (os : List Offer) (i : Nat)
+    (depth : vals.length = env.names.length)
+    (hoffers : Reads offers env path vals (Val.list (os.map (offerVal tb msg))))
+    (hid : Captured id env path vals (Val.promise (tb.handle i))) :
+    Reads (Queue.removeOffer offers id) env path vals
+      (Val.list ((os.filter (fun o => o.id != i)).map (offerVal tb msg))) := by
+  have folded : Reads (Queue.removeOffer offers id) env path vals
+      (Val.list ((os.foldl (fun kept o => if o.id = i then kept else kept ++ [o]) []).map
+        (offerVal tb msg))) :=
+    reads_foldWith_model (offerVal tb msg)
+      (fun kept : List Offer => Val.list (kept.map (offerVal tb msg)))
+      (fun kept o => if o.id = i then kept else kept ++ [o]) os [] ⟨0, false, []⟩ hoffers
+      (reads_noneOf hoffers) fun kept o => by
+        refine (reads_ifT (reads_sameOffer tb msg injective i depth hid _ o)
+          (reads_minted_acc depth path _ (offerVal tb msg o))
+          (reads_snoc (reads_minted_acc depth path _ (offerVal tb msg o))
+            (reads_minted_item depth path _ (offerVal tb msg o)))).to ?_
+        by_cases same : o.id = i
+        · rw [decide_eq_true same, if_pos rfl, if_pos same]
+        · rw [decide_eq_false same, if_neg Bool.false_ne_true, if_neg same, List.map_append]
+          rfl
+  exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
 
 end Passes
 
