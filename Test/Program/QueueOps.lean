@@ -28,7 +28,8 @@ controls of the operations that those do not run, and of the module's laws.
    and the checker's own answer on each operation's tree: at 27 message types and three scopes.
    The red controls are a message of another type, a handle of another type and a cell of
    another message type.
-7. **The pinned outputs**: each law's axioms, and its standing in the plan.
+7. **The pinned outputs**: each law's axioms, and its standing in the plan. The example of
+   `README.md` stands before them, with its checked answer.
 
 Placement. Each run is a finite control of the proposed claim `queue-expansion-agrees` (concept
 `translation-simulation`, requirement R10), on the side of the operations' use in a program.
@@ -778,6 +779,35 @@ def operationsTyped (names : List String) (others : Ty → List Ty) (A : Ty) : B
   (Queue.offer .string (var "q") (str "a")) = some (EffTy.pure .bool)
 
 end Typing
+
+/-! ## The example of `README.md`
+
+The section "A bounded queue" of `README.md` shows this program. It is the scenario R2 with
+another name for the worker, so its tree is R2's: the program `pQueueWake` of the truth lane
+(`harness/truth/Truth.lean`). -/
+
+/-- The README's example, as the README writes it. -/
+def handoff : Src NativeOp := eff do
+  let q ← Queue.bounded .nat 2
+  let worker ← fork (Queue.take .nat q)
+  let _ ← Queue.offer .nat q (nat 7)
+  let x ← join worker
+  return x
+
+-- `Effect4.Api.author` checks it at the answer type `nat`, with no failure and no requirement,
+-- and its run answers `7`.
+#guard match Effect4.Api.author handoff with
+  | .ok typed => decide (typed.ty = EffTy.pure .nat) && typed.runSync == .success (Val.nat 7)
+  | .error _ => false
+-- Its tree is the scenario R2's.
+#guard (elaborate handoff).toOption == (elaborate Test.Program.QueueScenarios.r2).toOption
+-- Red control: with a message of another type, the checker refuses the program at a type.
+#guard match Effect4.Api.author (eff do
+    let q ← Queue.bounded .nat 2
+    let a ← Queue.offer .nat q (bool true)
+    return a) with
+  | .error (.typing _) => true
+  | _ => false
 
 /-! ## 7. The pinned outputs
 

@@ -143,14 +143,51 @@ Those results verify provenance only.
 
 ## Remaining connectors
 
-1. Relate the typed cell encoding and actual binder term to this abstract state transition.
-2. Reuse `termMaps_of_typed` and `syncRow_typed` for the one atomic update.
-3. Prove registration, notification ownership, hint renewal and withdrawal over the actual wrapper.
-4. Keep accepted offers committed when interruption wins before the caller receives the answer.
-5. Relate every posted signal to its receiver, including terminal signals after request removal.
-6. Supply an embedded budget covering reached receiver continuations, or state the admitted-client restriction.
-7. Check and relate the actual emitted expansion after T5 and the mask land.
+The first public operations landed on 2026-10-06 (decisions rows 233, 255 and 257).
+They are `Queue.bounded`, `Queue.offer`, `Queue.take`, `Queue.poll` and `Queue.size`.
+Their file is `src/Effect4/Modules/Queue/Ops.lean`, over the shared wrapper of `src/Effect4/Modules/Waiting.lean`.
+That slice took three connectors, and it prepared four.
 
-These connectors remain open.
-Neither `quiet` nor `accounted` proves them.
+| # | Connector | State | Evidence |
+| --- | --- | --- | --- |
+| 1 | Relate the typed cell encoding and actual binder term to this abstract state transition. | taken, for one store step | proved: the seven attempt laws |
+| 2 | Reuse `termMaps_of_typed` and `syncRow_typed` for the one atomic update. | taken | proved: each attempt law's typed half, and each operation's typing |
+| 3 | Prove registration, notification ownership, hint renewal and withdrawal over the actual wrapper. | open, with finite controls | tested: acceptance traces 1 and 3 |
+| 4 | Keep accepted offers committed when interruption wins before the caller receives the answer. | open, with finite controls | tested: acceptance traces 4 and 5 |
+| 5 | Relate every posted signal to its receiver, including terminal signals after request removal. | open, with finite controls | tested: acceptance traces 2 and 6 |
+| 6 | Supply an embedded budget covering reached receiver continuations, or state the admitted-client restriction. | open, with a measure | tested: acceptance trace 7 |
+| 7 | Check and relate the actual emitted expansion after T5 and the mask land. | taken, as finite checks | tested and reproduced: three lanes |
+
+**Connectors 1 and 2.** The attempt laws are in `src/Effect4/Laws/Modules/Queue/Ops.lean`.
+They are `take_attempt`, `take_withdrawal`, `offer_attempt`, `offer_withdrawal`, `poll_attempt`, `size_read` and `bounded_makes`.
+Each is proved at `[propext, Quot.sound]`, and its plan status is `proved`.
+Each states one store step at the operation's own step term, under the binder of its own row.
+The cell holds the encoding of a state of `FirstProfile`, and the request has the premise `Requested`.
+The step then answers the model's reply, and it writes the encoding of the model's next state.
+It names the model's signals in order, and the reply and the stored value are members of their types.
+Each law composes `step_updates` and `step_keeps_cell` of `src/Effect4/Laws/Modules/Store.lean` with the step's agreement and its typing.
+`take_types` and its four siblings type each operation at every scope, for every message type with `MessageTy`.
+The laws state no run: no delivery, no order across steps, no cancellation law, no budget and no liveness.
+
+**Connector 7.** The evidence is finite, in three lanes.
+
+- `Test/Program/QueueFaces.lean` pins the printed text of one use of each operation, and each text reads back.
+- `harness/truth/Truth.lean` runs five programs over the operations on Effect 4.0.0-rc.112.
+  They are `pQueueWake`, `pQueueFull`, `pQueueInterrupted`, `pQueueMasked` and `pQueueOrder`.
+  Each printed module type-checks under tsgo 7.
+  Each run agrees with the Lean machine on its exit, its compared schedule rows and its sync exit.
+  The rows are compared up to one renaming of the fibers (decisions row 274).
+- `ocaml/engine/test/queue/` runs five programs on the generated engine, on both instances.
+
+The relation of the emitted expansion to the model is not proved.
+
+**Connectors 3 to 6.** No run-level law is stated.
+`Test/Program/QueueTraces.lean` runs the seven acceptance traces on the Lean machine, one schedule each.
+Each trace has a positive control, and a fault that fails the promised property.
+Each names the open part of the semantics registry that it is a finite control of.
+The parts are `wait-registration-no-gap`, `waiting-request-obligation-preserved`, `posted-task-decision-preserves`, `queue-expansion-agrees`, `posted-wake-profile-agrees` and `embedded-budget-sufficient`.
+Trace 7 measures the least fuel of one helper's task at eight lengths of the receiver's continuation.
+The measure is `49 + 3n`, and the trace claims no bound.
+
+Neither `quiet` nor `accounted` proves a connector.
 The packet does not change the repository pin or reopen the signed native differences.
