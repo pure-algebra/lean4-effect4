@@ -62,17 +62,21 @@ driver gets one statement, and a write of a field outside them is closed by refl
 
 The command loop takes its evaluator as an instance. So the statements over a command take one
 premise, `EvaluatorKeepsMask`: each evaluation keeps the machine and the fiber. The frame
-evaluator `evaluatePrim` meets it (`evaluatePrim_keepsMask`), and the placed theorem is at that
-evaluator. A run of a compiled program uses `Program.evaluateNative`
-(`src/Effect4/Program/Compile.lean`), whose premise has no statement in this module.
+evaluator `evaluatePrim` meets it (`evaluatePrim_keepsMask`), and `saved_mask_chain_runs` is at
+that evaluator. It is the general form, and alone it does not cover a run of a compiled program:
+such a run uses `Program.evaluateNative` (`src/Effect4/Program/Compile.lean`).
+`Laws/Program/MaskRuns.lean` gives that evaluator's premise and the statement at the compiled
+program's interpreter, `Program.compiled_mask_chain_runs`.
 
 Placement (AGENTS.md, Trust):
 
 - concept `scope-lifetime-finalization` (`docs/core/semantics.md` §2.3), requirement R11. The
   proposed registry claim is `saved-mask-chain-runs`, the lift of `saved-mask-pop-discipline` to
-  runs. Its pointer is `saved_mask_chain_runs`, and each other theorem is a step of it;
+  runs. Its pointer is `Program.compiled_mask_chain_runs` (`Laws/Program/MaskRuns.lean`).
+  `saved_mask_chain_runs` is its general form, and each other theorem here is a step of both;
 - reach: the fiber machine at the frame evaluator, at every interpreter, decision tape and fuel,
-  with no admission of a decision and no premise on a program;
+  with no admission of a decision and no premise on a program. The statements over a command
+  reach each evaluator that meets `EvaluatorKeepsMask`;
 - it does not establish the bracket of a region, a flag or a stack of an exited fiber as a state
   invariant, a cleanup's multiplicity, a delivery, a budget or liveness. It says nothing of a
   host or of a printed form. An invariant is not progress;
@@ -738,6 +742,28 @@ outside it: the driver steps an exited fiber where a second fiber evaluates the 
 a race that the first one hosts, and `Test/Machine/MaskRuns.lean` holds that reached machine. -/
 def MaskRuns (bases : List Bool) (m : RunMachine ν σ β ε δ ι α χ St) : Prop :=
   bases.length = m.nextId ∧ ∀ f ∈ m.fibers, MaskKept bases f
+
+/-- The fiber's clause is decidable, so a battery evaluates the invariant on a real machine
+(`Test/Machine/MaskRuns.lean`). The instance decides the one definition. It is no second
+definition of the invariant. -/
+instance MaskKept.decidable (bases : List Bool) (f : RunFiber ν σ β ε δ ι α χ) :
+    Decidable (MaskKept bases f) :=
+  match entry : bases[f.id.value]?, live : f.exit with
+  | none, _ => isFalse (fun ⟨_, found, _⟩ => by rw [entry] at found; cases found)
+  | some base, some _ => isTrue ⟨base, entry, fun gone => by rw [live] at gone; cases gone⟩
+  | some base, none =>
+    if valid : MaskChain base f.frame.interruptible f.frame.stack then
+      isTrue ⟨base, entry, fun _ => valid⟩
+    else
+      isFalse (fun ⟨_, found, kept⟩ => valid (by
+        rw [entry] at found
+        cases found
+        exact kept live))
+
+/-- The invariant is decidable, by its fiber's clause. -/
+instance MaskRuns.decidable (bases : List Bool) (m : RunMachine ν σ β ε δ ι α χ St) :
+    Decidable (MaskRuns bases m) :=
+  inferInstanceAs (Decidable (bases.length = m.nextId ∧ ∀ f ∈ m.fibers, MaskKept bases f))
 
 /-- Each fiber's id is allocated: it has an entry. A step of `maskRuns_stepKeeps`. -/
 @[semantics "scope-lifetime-finalization"]
@@ -1682,7 +1708,8 @@ variable [evaluator : FiberEvaluator ν σ β ε δ ι α χ St (Prim ν σ β �
 /-- **The evaluator's premise.** Each evaluation keeps the machine and the fiber. The command loop
 takes its evaluator as an instance, so the lift takes this one premise. The frame evaluator
 meets it (`evaluatePrim_evaluatorKeepsMask`). A run of a compiled program uses another
-evaluator, `Program.evaluateNative` (`src/Effect4/Program/Compile.lean`). -/
+evaluator, `Program.evaluateNative`, which meets it too (`Program.evaluateNative_keepsMask`,
+`Laws/Program/MaskRuns.lean`). -/
 def EvaluatorKeepsMask (interp : RunInterp ν σ β ε δ ι α χ St) : Prop :=
   ∀ (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (y : Bool),
     IterKeepsMask m f (evaluator.evaluate interp m f y)
@@ -2031,8 +2058,9 @@ theorem evaluatePrim_evaluatorKeepsMask (interp : RunInterp ν σ β ε δ ι α
     EvaluatorKeepsMask interp :=
   evaluatePrim_keepsMask interp
 
-/-- The statements of the proposed registry claim `saved-mask-chain-runs`, at the frame evaluator.
-Each field holds the invariant `MaskRuns` at a table of start flags. -/
+/-- The statements of the lift, at the frame evaluator: the general form of the proposed registry
+claim `saved-mask-chain-runs`. Each field holds the invariant `MaskRuns` at a table of start
+flags. -/
 structure MaskChainRuns (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
     [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] : Prop where
   /-- The empty machine holds the invariant at the empty table. -/
@@ -2072,23 +2100,28 @@ structure MaskChainRuns (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
     (evaluatePrim interp m f y).outcome = Outcome.finished exit →
       (evaluatePrim interp m f y).fiber.frame.stack = []
 
-/-- **Each live fiber of a reached run holds the saved mask's chain at its start flag** (the
-proposed registry claim `saved-mask-chain-runs`; concept `scope-lifetime-finalization`,
-requirement R11). It is the lift of `saved_mask_pop_discipline` to runs. Each field cites one
-theorem of this module, so its status is derived from theirs (`#plan_status`).
+/-- **Each live fiber of a reached run holds the saved mask's chain at its start flag**, at the
+frame evaluator (concept `scope-lifetime-finalization`, requirement R11). It is the general form
+of the proposed registry claim `saved-mask-chain-runs`: the lift of `saved_mask_pop_discipline`
+to runs of the fiber machine. Each field cites one theorem of this module, so its status is
+derived from theirs (`#plan_status`).
+
+Alone it does not cover a run of a compiled program: the program interface runs the native
+evaluator, and this theorem is at `evaluatePrim`. The claim's pointer is the statement at the
+compiled program's interpreter, `Program.compiled_mask_chain_runs`
+(`Laws/Program/MaskRuns.lean`), which reads this module's statements over a command at the
+native evaluator's premise.
 
 Reach: the fiber machine at the frame evaluator `evaluatePrim`, at every interpreter, decision
 tape and fuel. It asks for no admission of a decision and no premise on a program. A fiber is
-live while its `exit` is `none`. The statements over another evaluator take one premise,
-`EvaluatorKeepsMask`.
+live while its `exit` is `none`.
 
 It does not establish the bracket of a region, a flag or a stack of an exited fiber as a state
 invariant, a cleanup's multiplicity, a delivery, a budget or liveness. It says nothing of a host
-or of a printed form. The native evaluator's premise has no statement here. An invariant is not
-progress.
+or of a printed form. An invariant is not progress.
 
-Its consumers are the bracket's law, then the waiting wrapper under a masked caller and
-Semaphore's protected permit. -/
+Its consumers are `Program.compiled_mask_chain_runs`'s: the bracket's law, then the waiting
+wrapper under a masked caller and Semaphore's protected permit. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem saved_mask_chain_runs (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
     (St : Type (max u v)) [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] :
