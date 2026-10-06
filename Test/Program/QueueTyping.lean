@@ -16,9 +16,9 @@ do not say by themselves:
 1. the statements at a record message type and at a message type that holds a handle;
 2. a step's typing at a scope that is not the statement's own: a binder before the arguments,
    and a caller's term that is no variable;
-3. an identity that `bindWith` binds, through a fold of a step, with no assumed capture, for
-   values and for types, and the red control of the capture;
-4. the red controls of the new rules;
+3. an identity and a hint that `bindWith` binds, through the folds of a step, with no assumed
+   capture, for values and for types, and the red control of the capture;
+4. the red controls of the new rules, the literal flag, and a positional read of a reply;
 5. the connector to the store: `step_keeps_cell` on a step's typing;
 6. the pinned axioms and the pinned standing of each theorem.
 
@@ -123,83 +123,113 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
 
 /-! ## 3. An identity that `bindWith` binds
 
-A wrapper binds a request's identity with `bindWith`, whose name is minted, and writes the step
-under a row's binder for the cell's value. The step's term then stands under two names: the
-identity's minted name, and the binder. `captured_answer` and `capturedTy_answer` give the
-capture of the identity there, with no assumption. -/
+A wrapper binds a request's identity and its hint with `bindWith`, whose names are minted, and
+writes the step under a row's binder for the cell's value. Here a program binds a cell, an
+identity and a hint so, and takes. The step's term stands under four names: the three minted
+names, and the binder. `captured_answer` and `capturedTy_answer` give the capture of the
+identity and of the hint there, with no assumption. The resolution premise is discharged by two
+facts: an author's binder is no minted name (`written_ne_mint`), and one stem at two depths
+gives two names (`mint_depth_inj`). -/
 
-/-- The scope of a step under one `bindWith` and a row's binder `s`. -/
-def stepScope : Env := { names := [Env.mint {} "answer", "s"] }
+/-- The three names that the program's three `bindWith`s mint: the cell's handle, the request's
+identity, and its hint. They differ by their depths. -/
+def cellName : String := Env.mint {} "answer"
+def identityName : String := Env.mint { names := [cellName] } "answer"
+def hintName : String := Env.mint { names := [cellName, identityName] } "answer"
 
-/-- The identity's name is the scope's first level: the binder `s` is another name, because an
-author can write it. -/
-theorem stepScope_identity : stepScope.names.resolve (Env.mint {} "answer") = some 0 := by
-  have other : "s" ≠ Env.mint {} "answer" := by
-    intro same
-    have reserved : Name.reserved "s" = true := by
-      rw [same]
-      exact mint_reserved {} "answer"
-    exact absurd reserved (by decide)
-  exact (Names.resolve_append_ne other [Env.mint {} "answer"]).trans
-    (resolve_last [] (Env.mint {} "answer"))
+/-- The scope of the step: the three minted names, and the row's binder `s`. -/
+def takeScope : Env := { names := [cellName, identityName, hintName, "s"] }
 
-/-- The cell's binder is the scope's second level. -/
-theorem stepScope_cell : stepScope.names.resolve "s" = some 1 :=
-  resolve_last [Env.mint {} "answer"] "s"
+/-- The hint's name is the scope's third level: the binder `s` is another name. -/
+theorem takeScope_hint : takeScope.names.resolve hintName = some 2 := by
+  have binder : "s" ≠ hintName := written_ne_mint rfl _ "answer"
+  exact (Names.resolve_append_ne binder [cellName, identityName, hintName]).trans
+    (resolve_last [cellName, identityName] hintName)
+
+/-- The identity's name is the scope's second level: the binder `s` and the hint's name are
+other names. -/
+theorem takeScope_identity : takeScope.names.resolve identityName = some 1 := by
+  have binder : "s" ≠ identityName := written_ne_mint rfl _ "answer"
+  have later : hintName ≠ identityName := fun same => absurd (mint_depth_inj same) (by decide)
+  exact (Names.resolve_append_ne binder [cellName, identityName, hintName]).trans
+    ((Names.resolve_append_ne later [cellName, identityName]).trans
+      (resolve_last [cellName] identityName))
+
+/-- The cell's binder is the scope's last level. -/
+theorem takeScope_cell : takeScope.names.resolve "s" = some 3 :=
+  resolve_last [cellName, identityName, hintName] "s"
 
 /-- **The identity goes through a fold into `withdrawTake_agrees`**: `removeTaker` places it in
 a fold's body, and its capture is `captured_answer`. No `Captured` is assumed. -/
-example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (q h : Val)
     (profile : FirstProfile s) (injective : tb.Injective) :
     ∃ woken,
       Notified s (withdrawTake s id).1 (withdrawTake s id).2 [] woken ∧
-      Reads (Queue.withdrawTake A (minted (Env.mint {} "answer")) (var "s")) stepScope []
-        [Val.promise (tb.handle id), cellVal tb msg s]
+      Reads (Queue.withdrawTake A (minted identityName) (var "s")) takeScope []
+        [q, Val.promise (tb.handle id), h, cellVal tb msg s]
         (Val.tuple [Val.list (woken.map (takerVal tb)), cellVal tb msg (withdrawTake s id).1]) :=
   withdrawTake_agrees A tb msg s id profile injective rfl
-    (captured_answer (outer := {}) stepScope_identity rfl)
-    (captured_var (x := "s") rfl stepScope_cell rfl).atScope
+    (captured_answer (outer := { names := [cellName] }) takeScope_identity rfl)
+    (captured_var (x := "s") rfl takeScope_cell rfl).atScope
 
-/-- The same step is typed there: the typed twin of the capture is `capturedTy_answer`. -/
+/-- **The identity and the hint go through the take step's folds into `takeStep_agrees`**:
+`renewHint` places both in a fold's body. No `Captured` is assumed. -/
+example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey)
+    (q : Val) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
+    (injective : tb.Injective) :
+    ∃ reply entered woken,
+      takeReplyVal msg (take s ⟨id, 1, 1⟩).2.1 = some reply ∧
+      Notified s (take s ⟨id, 1, 1⟩).1 (take s ⟨id, 1, 1⟩).2.2 entered woken ∧
+      Reads (Queue.takeStep A (minted identityName) (minted hintName) (var "s")) takeScope []
+        [q, Val.promise (tb.handle id), Val.promise hint, cellVal tb msg s]
+        (Val.tuple [Val.tuple [reply, Val.list (entered.map (offerVal tb msg)),
+            Val.list (woken.map (takerVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1)))],
+          cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1]) :=
+  takeStep_agrees A tb msg s id hint profile requested injective rfl
+    (captured_answer (outer := { names := [cellName] }) takeScope_identity rfl)
+    (captured_answer (outer := { names := [cellName, identityName] }) takeScope_hint rfl)
+    (captured_var (x := "s") rfl takeScope_cell rfl).atScope
+
+/-- The take step is typed there: the typed twin of the capture is `capturedTy_answer`. -/
 example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) (A : Ty)
     (message : MessageTy A) :
-    typeAt sig [Env.mint {} "answer", "s"] [Queue.idTy, Queue.cellTy A]
-        (Queue.withdrawTake A (minted (Env.mint {} "answer")) (var "s")) =
-      some (.prod wakeReplyTy (Queue.cellTy A)) := by
+    typeAt sig [cellName, identityName, hintName, "s"]
+        [.refOf (Queue.cellTy A), Queue.idTy, Queue.idTy, Queue.cellTy A]
+        (Queue.takeStep A (minted identityName) (minted hintName) (var "s")) =
+      some (.prod (takeReplyTy A) (Queue.cellTy A)) := by
   apply typeAt_of_types
-  exact withdrawTake_types sig atoms A message (idSrc := minted (Env.mint {} "answer"))
-    (cellSrc := var "s") (env := stepScope) (path := [])
-    (types := [Queue.idTy, Queue.cellTy A]) rfl
-    (capturedTy_answer (outer := {}) stepScope_identity rfl)
-    (types_var rfl stepScope_cell rfl) false
+  exact takeStep_types sig atoms A message (idSrc := minted identityName)
+    (hintSrc := minted hintName) (cellSrc := var "s") (env := takeScope) (path := [])
+    (types := [.refOf (Queue.cellTy A), Queue.idTy, Queue.idTy, Queue.cellTy A]) rfl
+    (capturedTy_answer (outer := { names := [cellName] }) takeScope_identity rfl)
+    (capturedTy_answer (outer := { names := [cellName, identityName] }) takeScope_hint rfl)
+    (types_var rfl takeScope_cell rfl) false
 
-/-- A program that binds a cell and an identity with `bindWith`, then withdraws the identity.
-The two minted names differ by their depths. -/
-def withdrawing : Src NativeOp :=
+/-- A program that binds a cell, an identity and a hint with `bindWith`, then takes. -/
+def taking : Src NativeOp :=
   bindWith (Ref.make (Queue.empty .nat 2)) fun q =>
     bindWith (Deferred.make .unit .never) fun id =>
-      Ref.modify "s" (Queue.withdrawTake .nat id (var "s")) q
+      bindWith (Deferred.make .unit .never) fun hint =>
+        Ref.modify "s" (Queue.takeStep .nat id hint (var "s")) q
 
 /-- The term of the program's one `Ref.modify`. -/
 def modifyTerm : Eff NativeOp → Option Term
-  | .bind _ (.bind _ (.perform (.refModifyWith f) _)) => some f
+  | .bind _ (.bind _ (.bind _ (.perform (.refModifyWith f) _))) => some f
   | _ => none
 
-/-- The name of the cell and the name of the identity, as the two `bindWith`s mint them. -/
-def cellName : String := Env.mint {} "answer"
-def identityName : String := Env.mint { names := [cellName] } "answer"
-
--- The program's step term is the step's source under the two minted names and the binder: the
--- scope at which the capture is stated.
-#guard (elaborate withdrawing).toOption.bind modifyTerm ==
-  (Queue.withdrawTake .nat (minted identityName) (var "s")
-    { names := [cellName, identityName, "s"] } []).toOption
-#guard ((elaborate withdrawing).toOption.bind modifyTerm).isSome
+-- The program's step term is the step's source at the scope of the examples: the scope at
+-- which the capture is stated is the scope that the program elaborates the step in.
+#guard ((elaborate taking).toOption.bind modifyTerm).isSome
+#guard (elaborate taking).toOption.bind modifyTerm ==
+  (Queue.takeStep .nat (minted identityName) (minted hintName) (var "s") takeScope []).toOption
 -- The checker types the step's term there.
-#guard decide (typeOf [cellName, identityName, "s"]
-    [.refOf (Queue.cellTy .nat), Queue.idTy, Queue.cellTy .nat]
-    (Queue.withdrawTake .nat (minted identityName) (var "s")) =
-  some (.prod wakeReplyTy (Queue.cellTy .nat)))
+#guard decide (typeOf takeScope.names
+    [.refOf (Queue.cellTy .nat), Queue.idTy, Queue.idTy, Queue.cellTy .nat]
+    (Queue.takeStep .nat (minted identityName) (minted hintName) (var "s")) =
+  some (.prod (takeReplyTy .nat) (Queue.cellTy .nat)))
+-- Red control of the depth: two `bindWith`s at one depth would mint one name, and the first
+-- would resolve to the second's level.
+#guard (minted cellName { names := [cellName, cellName] } []).toOption == some (Term.var 1)
 
 /-! ### Red control of the capture: a caller's name equal to the fold's accumulator name
 
@@ -320,6 +350,26 @@ example :
 #guard decide (typeOf [] [] (str "A") = some .string)
 -- Red control: a string that is no literal of the tag does not fit the tag field.
 #guard (typeOf ["x"] [.string] (record [("tag", false, .lit "A")] [("tag", var "x")])).isNone
+
+/-! ### A positional read of a step's reply
+
+The wrapper reads a step's reply by position. A reply's type is its own normal form, so the
+tuple rule answers the item at the position (`Tuple.typeAt_normal`, `types_tupleAt`). -/
+
+-- The offers that a take accepted: the second part of its reply, at every message type.
+example (sig : Signature NativeOp) (A : Ty) (message : MessageTy A) :
+    Types sig (tupleAt (var "r") 1) { names := ["r"] } [] [takeReplyTy A] false
+      (.list (Queue.offerTy A)) :=
+  types_tupleAt (types_var rfl rfl rfl false)
+    (Tuple.typeAt_normal (takeReplyTy_normal message.canonical) rfl)
+
+-- The checker's own answer at number messages, and a poll's reply, which is a product.
+#guard decide (typeOf ["r"] [takeReplyTy .nat] (tupleAt (var "r") 1) =
+  some (.list (Queue.offerTy .nat)))
+#guard decide (typeOf ["r"] [pollReplyTy .nat] (tupleAt (var "r") 0) = some (.option .nat))
+-- Red control: a tuple of three has no fourth part, and a list has no fixed position.
+#guard (typeOf ["r"] [takeReplyTy .nat] (tupleAt (var "r") 3)).isNone
+#guard (typeOf ["r"] [wakeReplyTy] (tupleAt (var "r") 0)).isNone
 
 /-! ## 5. The connector to the store
 
