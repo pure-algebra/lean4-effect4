@@ -49,6 +49,9 @@ def main():
         shutil.copyfile(truth/'records.typecheck.ts', Path(work)/'records.typecheck.ts')
         # The list fold's controls (decisions rows 228 and 229), compiled beside the modules.
         shutil.copyfile(truth/'folds.typecheck.ts', Path(work)/'folds.typecheck.ts')
+        # The printed function of an operation's binder term, and a list of number literals
+        # (the state plan's T5, decisions row 251), compiled beside the modules.
+        shutil.copyfile(truth/'term-rows.typecheck.ts', Path(work)/'term-rows.typecheck.ts')
         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),

@@ -1,3 +1,4 @@
+import Test.Dogfood.P4RateLimiter
 import Effect4.Api.Author
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
@@ -21,7 +22,10 @@ battery is the slice's acceptance for printing (decisions row 251):
    `r4` of the Queue's real steps (`QueueSteps.lean`, beside it): each step's `Ref.modify` prints
    and reads back, and each program's module is pinned at what the faces answer today;
 3. a class construction that only an operation's term holds: the module declares its class
-   with the construction's own fields, through `ScopedOp.term?`.
+   with the construction's own fields, through `ScopedOp.term?`;
+4. the texts that the truth lane's compiler control copies
+   (`harness/truth/term-rows.typecheck.ts`), each pinned in full, and the Lean half of two
+   programs that the truth lane runs or holds out.
 
 Every guard is a finite check on one program. None states target typing or a host run: the
 TypeScript reader's twin is `ts/eff/test/term-rows.test.ts`, and the truth lane runs printed
@@ -601,6 +605,67 @@ def shortOp : NativeOp :=
 -- the term, and the same construction is found.
 #guard classesOf (Op := Blind) (.perform ⟨shortOp⟩ (.var 0)) = []
 #guard classesOf (Op := NativeOp) (.perform shortOp (.var 0)) = [("Short", shortFields)]
+
+/-! ## 4. The texts the compiler control copies
+
+`harness/truth/term-rows.typecheck.ts` type-checks printed steps under tsgo 7, at the cell's
+printed type. It copies the four texts below, so each is pinned here in full: a change of the
+printer moves this file and that one together. The first two type-check there. The last two are
+that file's red lines: on the target, `pair` and `tuple` keep a boolean or a number literal as a
+literal type, where Lean types `bool` and `nat`, so two arms that Lean types alike are two target
+types (seat T5's receipt, the registered difference). -/
+
+-- the probe's offer step is pinned in section 2; the model's `withdrawTake`:
+#guard ((nodeAt ["q", "id"] (Ref.modify "s" (Steps.withdrawTake (var "id") (var "s")) (var "q"))).bind
+    fun p => (print nativeSignature 2 p).toOption.map (expr house0 0)) = some
+  "Ref.modify(a0, (a2) => pair(ite(isZero(length(recordRequired<\"msgs\">(\"msgs\")(a2))), take(fold(recordRequired<\"takers\">(\"takers\")(a2), take(recordRequired<\"takers\">(\"takers\")(a2), 0), (a3, a4) => ite(sameHandle(recordRequired<\"id\">(\"id\")(a4), a1), a3, append(a3, cons(a4, nil())))), 0), take(fold(recordRequired<\"takers\">(\"takers\")(a2), take(recordRequired<\"takers\">(\"takers\")(a2), 0), (a3, a4) => ite(sameHandle(recordRequired<\"id\">(\"id\")(a4), a1), a3, append(a3, cons(a4, nil())))), 1)), recordSet<\"takers\">(\"takers\")(a2)(fold(recordRequired<\"takers\">(\"takers\")(a2), take(recordRequired<\"takers\">(\"takers\")(a2), 0), (a3, a4) => ite(sameHandle(recordRequired<\"id\">(\"id\")(a4), a1), a3, append(a3, cons(a4, nil())))))))"
+-- the rate limiter's request (`Test/Dogfood/P4RateLimiter.lean`, `decision`): one arm pairs
+-- `true` with the window, the other `false`
+#guard ((nodeAt ["a0"] (Ref.modify "w" (Test.Dogfood.P4RateLimiter.decision (var "w")) (var "a0"))).bind
+    fun p => (print nativeSignature 1 p).toOption.map (expr house0 0)) = some
+  "Ref.modify(a0, (a1) => ite(lt(recordRequired<\"used\">(\"used\")(a1), 3), pair(true, recordSet<\"admitted\">(\"admitted\")(recordSet<\"used\">(\"used\")(a1)(succ(recordRequired<\"used\">(\"used\")(a1))))(succ(recordRequired<\"admitted\">(\"admitted\")(a1)))), pair(false, recordSet<\"rejected\">(\"rejected\")(a1)(succ(recordRequired<\"rejected\">(\"rejected\")(a1))))))"
+-- the probe's first take attempt: one arm answers the position `0`, the other a length
+#guard ((nodeAt ["q", "hint"] (Ref.modify "s" (Skeleton.tryTake (var "hint") (var "s")) (var "q"))).bind
+    fun p => (print nativeSignature 2 p).toOption.map (expr house0 0)) = some
+  "Ref.modify(a0, (a2) => ite(and(lt(recordRequired<\"mHead\">(\"mHead\")(a2), length(recordRequired<\"msgs\">(\"msgs\")(a2))), not(lt(recordRequired<\"tHead\">(\"tHead\")(a2), length(recordRequired<\"takers\">(\"takers\")(a2))))), pair(tuple(get(recordRequired<\"msgs\">(\"msgs\")(a2), recordRequired<\"mHead\">(\"mHead\")(a2)), 0, ite(lt(recordRequired<\"mHead\">(\"mHead\")(recordSet<\"mHead\">(\"mHead\")(a2)(succ(recordRequired<\"mHead\">(\"mHead\")(a2)))), length(recordRequired<\"msgs\">(\"msgs\")(recordSet<\"mHead\">(\"mHead\")(a2)(succ(recordRequired<\"mHead\">(\"mHead\")(a2)))))), get(recordRequired<\"takers\">(\"takers\")(recordSet<\"mHead\">(\"mHead\")(a2)(succ(recordRequired<\"mHead\">(\"mHead\")(a2)))), recordRequired<\"tHead\">(\"tHead\")(recordSet<\"mHead\">(\"mHead\")(a2)(succ(recordRequired<\"mHead\">(\"mHead\")(a2))))), none())), recordSet<\"mHead\">(\"mHead\")(a2)(succ(recordRequired<\"mHead\">(\"mHead\")(a2)))), pair(tuple(none(), length(recordRequired<\"takers\">(\"takers\")(a2)), none()), recordSet<\"takers\">(\"takers\")(a2)(append(recordRequired<\"takers\">(\"takers\")(a2), cons(a1, nil()))))))"
+
+/-- The rate limiter's request, four times in a row on one window cell. The window admits three
+requests. The answer is `[first decision, fourth decision, admitted, rejected, used]`. The brief
+names this request as a truth program. Its printed module runs on rc.112 with the machine's
+answer, and tsgo 7 refuses its type at the request's two arms, so the truth lane holds it out
+(seat T5's receipt). -/
+def fourRequests : Src NativeOp :=
+  open Test.Dogfood.P4RateLimiter in eff do
+    let state ← Ref.make window0
+    let first ← request false state
+    let _ ← request false state
+    let _ ← request false state
+    let fourth ← request false state
+    let w ← Ref.get state
+    return tuple [first, fourth, field w "admitted", field w "rejected", field w "used"]
+
+#guard verdict (mk fourRequests) = "built"
+#guard exitOf fourRequests =
+  some (.success (.list [.bool true, .bool false, .nat 3, .nat 1, .nat 3]))
+#guard printVerdict fourRequests = "printed"
+#guard readsBack fourRequests
+
+/-- The probe's offer step, twice on the Queue's first state with no taker: the truth program
+`pQueueOffer` (`harness/truth/Truth.lean`). The first step's answer is the hint to signal, which
+is absent. The program answers `[a hint was due, the buffer's length, the head index]`. Its cell
+holds the probe's whole state record, whose type names `Deferred<void, never>`; it makes no
+`Deferred`, so its module prints today. -/
+def twoOffers : Src NativeOp := eff do
+  let q ← Ref.make Skeleton.state0
+  let s1 ← Ref.modify "s" (Skeleton.offerStep (nat 1) (var "s")) q
+  let _ ← Ref.modify "s" (Skeleton.offerStep (nat 2) (var "s")) q
+  let s ← Ref.get q
+  return tuple [app "isSome" [s1], app "length" [field s "msgs"], field s "mHead"]
+
+#guard verdict (mk twoOffers) = "built"
+#guard exitOf twoOffers = some (.success (.list [.bool false, .nat 2, .nat 0]))
+#guard printVerdict twoOffers = "printed"
+#guard readsBack twoOffers
 
 /-! ## The laws this battery reads
 

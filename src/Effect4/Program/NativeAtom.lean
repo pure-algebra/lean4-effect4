@@ -286,7 +286,14 @@ def spec : NativeAtom → Spec
   | .listCons =>
       { scheme := .poly [.var 0, .list (.var 0)] (.list (.var 0)) true,
         cite := "`\"cons\", [x, list vs] => list (x :: vs)` — a fiber snapshot is the list of its \
-                 handles\n(`Val.asList?`)." }
+                 handles\n(`Val.asList?`).\nThe element and the tail's element are two type \
+                 parameters (seat T5, 2026-10-05): the\ncompiler infers `A` from the element \
+                 alone, so a literal element widens, and\n`cons(1, nil())` is \
+                 `ReadonlyArray<number>`, the `list nat` of `NativeAtom.typeOf .listCons`.\nWith \
+                 one parameter the tail took part in the inference and the literal stayed:\n\
+                 `ReadonlyArray<1>`. The answer is the union of the two, which is their common \
+                 supertype\nwherever the scheme's join finds one; a list the join refuses is \
+                 Lean's to refuse, not this\nsignature's." }
   | .listGet =>
       { scheme := .poly [.list (.var 0), .nat] (.option (.var 0)),
         cite := "`\"get\", [list vs, nat i] => option vs[i]?` — rc.112 `Array.get` at a natural \

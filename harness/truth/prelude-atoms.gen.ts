@@ -163,8 +163,15 @@ export const nil = (): ReadonlyArray<never> => []
 /**
  * `"cons", [x, list vs] => list (x :: vs)` — a fiber snapshot is the list of its handles
  * (`Val.asList?`).
+ * The element and the tail's element are two type parameters (seat T5, 2026-10-05): the
+ * compiler infers `A` from the element alone, so a literal element widens, and
+ * `cons(1, nil())` is `ReadonlyArray<number>`, the `list nat` of `NativeAtom.typeOf .listCons`.
+ * With one parameter the tail took part in the inference and the literal stayed:
+ * `ReadonlyArray<1>`. The answer is the union of the two, which is their common supertype
+ * wherever the scheme's join finds one; a list the join refuses is Lean's to refuse, not this
+ * signature's.
  */
-export const cons = <A>(x: A, xs: ReadonlyArray<A>): ReadonlyArray<A> => [x, ...xs]
+export const cons = <A, B = A>(x: A, xs: ReadonlyArray<B>): ReadonlyArray<A | B> => [x, ...xs]
 
 /**
  * `"get", [list vs, nat i] => option vs[i]?` — rc.112 `Array.get` at a natural index
