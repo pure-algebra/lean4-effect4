@@ -171,6 +171,7 @@ import Test.Program.QueueSteps
 import Test.Program.QueueScenarios
 import Test.Program.QueueOps
 import Test.Program.QueueTraces
+import Test.Program.QueueInvariant
 import Test.Program.QueueAgreement
 import Test.Program.QueueRelation
 import Test.Program.QueueWorkload

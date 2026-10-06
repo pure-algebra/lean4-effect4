@@ -543,6 +543,14 @@ inductive RunDecision ...
 - **Operational progress (`scheduler-progress`)**: Every typed state is either terminal, takes a step, or is at a live frontier
   (decisions row 139).
 - **Infinite liveness (`fair-scheduling`)**: Temporal liveness under weak fairness (Requirement R12).
+- **The Queue model's run invariant on the first profile (`queue-first-step-invariant`,
+  `queue-first-run-flags`)**: One step of a first operation keeps the run invariant
+  `FirstRunInv`: the profile, the buffer's bound, `tidy`, `quiet`, and the run's two flags.
+  So both flags hold after every list of first operations from the empty queue of a positive
+  capacity. It is the model's half of `wait-registration-no-gap` and of
+  `waiting-request-obligation-preserved`. It states nothing of a program, of a signal's
+  delivery or of liveness.
+  (`first_step_inv`, `first_run_flags` (`src/Effect4/Laws/Modules/Queue/Invariant.lean`)).
 
 #### 5. How the scheduler proofs use the theory
 
