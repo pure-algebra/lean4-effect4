@@ -29,6 +29,7 @@
     "term-rows.typecheck.ts",
     "literals.typecheck.ts",
     "queue-steps.typecheck.ts",
+    "mask.typecheck.ts",
     "select-controls.ts",
     "generated",
     "run-truth.ts",

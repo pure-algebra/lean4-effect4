@@ -21,6 +21,7 @@ Store Typing: World-indexed semantic value membership (Fits) and store typings
 | term-typed-maps | fundamentalProperty | proved | Effect4.Program.Typed.termMaps_of_typed | yes |  |
 | fold-typed-atomic-update | compatibility | proved | Effect4.Program.Typed.fold_typed_atomic_update | yes |  |
 | handle-identity-laws | canonicalForms | proved | Effect4.Program.Typed.handle_identity_laws | yes |  |
+| saved-mask-image-membership | canonicalForms | proved | Effect4.Program.Typed.saved_mask_image_membership | yes |  |
 | store-safety | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |  |
 
 ### Printed statements
@@ -112,6 +113,12 @@ Effect4.Program.Typed.HandleIdentityLaws
 
 Literature: Ahmed2004, audit P1 — analogy
 
+**saved-mask-image-membership**
+
+```lean
+Effect4.Program.Typed.SavedMaskImage
+```
+
 Literature: TAPL, §13.5, pp. 165–169 — excludedFeature
 
 ## residual-program-typing
@@ -137,6 +144,7 @@ Residual Program Typing: TypedProg, the protocol-indexed judgment on residual pr
 | on-failure-typed | compatibility | proved | Effect4.Program.Typed.catchGuard_typed | yes |  |
 | all-guard-typed | compatibility | proved | Effect4.Program.Typed.allGuard_typed | yes |  |
 | on-exit-typed | compatibility | proved | Effect4.Program.Typed.onExit_typed | yes |  |
+| scoped-body-substitution-boundary | compatibility | proved | Effect4.Program.Typed.scoped_body_substitution_boundary | yes |  |
 | admitted-source-lawful | compatibility | proved | Effect4.Program.Typed.lawfulSig_of_admitted | yes | E4-TYPED-CE-041 |
 
 ### Printed statements
@@ -381,6 +389,12 @@ Literature: deVilhenaPottier2021, audit P8 — excludedFeature
             Effect4.Program.Typed.TypedProg root w ty (Effect4.Program.Sched.onExitR body fin flag)
 ```
 
+**scoped-body-substitution-boundary**
+
+```lean
+Effect4.Program.Typed.RestoreBodyBoundary
+```
+
 **admitted-source-lawful**
 
 ```lean
@@ -399,6 +413,7 @@ Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwin
 | close-order-eq | inversion | proved | Effect4.Scope.closeOrder_eq | yes |  |
 | close-reentrant-add | preservation | proved | Effect4.Scope.close_reentrant_add | yes |  |
 | close-seq-protocol | fundamentalProperty | proved | Test.Program.ProtocolPosts.CloseIter.closeSeq_protocol | yes |  |
+| saved-mask-restoration | preservation | proved | Effect4.Program.Typed.saved_mask_restoration | yes |  |
 
 ### Printed statements
 
@@ -469,6 +484,12 @@ Literature: ATTAPL, ch. 3, pp. 87–136 — analogy
 ```
 
 Literature: deVilhenaPottier2021, audit P8 — adaptedResult
+
+**saved-mask-restoration**
+
+```lean
+Effect4.Program.Typed.MaskRestoration
+```
 
 ## reactive-scheduling
 
@@ -795,6 +816,7 @@ Exact Codecs: Invertible embeddings for JSON and Schema representations
 | service-identifier-injective | compatibility | proved | Effect4.Program.keyIdentifier_injective | yes |  |
 | error-payload-exact | compatibility | proved | Effect4.Program.errOf_valOfErr | yes |  |
 | payload-class-decl-exact | compatibility | proved | Effect4.Codegen.admitModule_classDecls | yes |  |
+| mask-rows-table-premises | compatibility | proved | Effect4.Program.mask_rows_table_premises | yes |  |
 
 ### Printed statements
 
@@ -892,6 +914,12 @@ Literature: RendelOstermann2010, audit P32 — adaptedResult
   {module : TypeScript.Module} {r : Effect4.Codegen.ModuleReading table name allowed ambient},
   Eq (Effect4.Codegen.admitModule name module table allowed ambient) (Except.ok r) →
     Eq (Effect4.Program.splitClasses module.decls).fst r.classDecls
+```
+
+**mask-rows-table-premises**
+
+```lean
+Effect4.Program.MaskRowsPremises
 ```
 
 ## subtyping-algebra
@@ -1255,6 +1283,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
 | queue-steps-agree | simulation | proved | Effect4.Queue.Model.queue_steps_agree | yes |  |
 | straight-composition-agreement | simulation | proved | Effect4.Program.Denote.StraightEq.run_agrees | yes |  |
+| mask-printed-form-profile | compatibility | proved | Effect4.Program.mask_printed_form_profile | yes |  |
 
 ### Printed statements
 
@@ -1473,6 +1502,12 @@ Effect4.Queue.Model.StepsAgree
                     (Eq (Effect4.Api.run a fa).stores (Effect4.Api.run b fb).stores)))
 ```
 
+**mask-printed-form-profile**
+
+```lean
+Effect4.Program.MaskFormProfile
+```
+
 ## Register context
 
 These are authored links to historical attacks. Read each full row: a leading status word may coexist with a later repair. It does not by itself refute the currently printed proposition. Source: [counterexample register](../Test/Counterexamples/REGISTER.md).
@@ -1619,14 +1654,14 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved) | `image_agrees` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `step_keeps_cell` (proved), `takeStep_typed` (proved), `takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `empty_types` (proved), `profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `takeStep_types` (proved), `visitStep_types` (proved), `withdrawStep_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `step_keeps_cell` (proved), `takeStep_typed` (proved), `takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `empty_types` (proved), `profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `takeStep_types` (proved), `visitStep_types` (proved), `withdrawStep_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
-| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | `unsuspended_runs` (proved), `tape_replays` (proved) | — |
+| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
-| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `takeStep_agrees` (proved), `visitStep_agrees` (proved), `withdrawStep_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
-| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `takeStep_agrees` (proved), `visitStep_agrees` (proved), `withdrawStep_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
+| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_restoration` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
 
@@ -2061,8 +2096,7 @@ flowchart LR
 - Open: the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation
 - Open: the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws
 - Open: atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)
-- Open: scoped-body-substitution-boundary (proposed claim; residual-program-typing): the mask adds no scoped constructor: a restore site is one node that binds nothing, with its checked body at child 0; both saved choices resolve that one body in one environment, with a typed stack, typed captures and no lookup that fails; a saved value passed as data keeps its choice and no activation of its mask (decisions rows 245, 246); for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); it states no agreement with a target
-- Open: saved-mask-image-membership (proposed claim; store-typing): the mask's saved state is at an opaque host type with a reserved target; membership at it is exactly one of the two canonical images of the saved bit, so the value is no Boolean even after widening; no external handle and no host answer column takes the type, and no service carries it in the first profile; typed stores, typed environments and a later world keep the membership (decisions row 244; the first of the mask's obligations); it states no reply admission
+- Open: the second half of scoped-body-substitution-boundary (residual-program-typing): for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); no goal states it: the mask adds no scoped constructor, and its restore node's half is scoped_body_substitution_boundary
 
 ```mermaid
 flowchart LR
@@ -2073,127 +2107,191 @@ flowchart LR
   n4["memoBuild_extension<br/>proved"]
   n5["fold_typed_atomic_update<br/>proved"]
   n6["handle_identity_laws<br/>proved"]
-  n7["image_agrees<br/>proved"]
-  n8["perform_scoped_iff<br/>proved"]
-  n9["matchTemplate_complete_anchored<br/>proved"]
-  n10["mono<br/>proved"]
-  n11["syncRow_typed<br/>proved"]
-  n12["termMaps_of_typed<br/>proved"]
-  n13["empty_typed<br/>proved"]
-  n14["offerStep_typed<br/>proved"]
-  n15["offerStep_types<br/>proved"]
-  n16["pollStep_typed<br/>proved"]
-  n17["pollStep_types<br/>proved"]
-  n18["sizeStep_typed<br/>proved"]
-  n19["step_keeps_cell<br/>proved"]
-  n20["takeStep_typed<br/>proved"]
-  n21["takeStep_types<br/>proved"]
-  n22["withdrawOffer_typed<br/>proved"]
-  n23["withdrawOffer_types<br/>proved"]
-  n24["withdrawTake_typed<br/>proved"]
-  n25["withdrawTake_types<br/>proved"]
-  n26["empty_types<br/>proved"]
-  n27["profile_closed<br/>proved"]
-  n28["releaseStep_types<br/>proved"]
-  n29["takeIfAvailableStep_types<br/>proved"]
-  n30["takeStep_types<br/>proved"]
-  n31["visitStep_types<br/>proved"]
-  n32["withdrawStep_types<br/>proved"]
-  n33["atomic<br/>modulo"]
-  n34["bounded<br/>goal"]
-  n35["committed<br/>goal"]
-  n36["counted<br/>goal"]
-  n37["readTerm_printTerm<br/>proved"]
-  n38["fits_subN<br/>proved"]
-  n39["fits_normalize<br/>proved"]
-  n40["normalize_idem<br/>proved"]
-  n41["subN_trans<br/>proved"]
-  n42["hom_eq_cata_ty<br/>proved"]
-  n43["fits_mono<br/>proved"]
-  n44["errOf_payload<br/>proved"]
-  n45["isPayload_of_hasTy_record<br/>proved"]
-  n46["subN_refl<br/>proved"]
-  n47["sub_antisymm_canonical<br/>proved"]
-  n48["unsuspended_runs<br/>proved"]
-  n49["cleans_once<br/>goal"]
-  n50["checkInput_eq_none_iff<br/>proved"]
-  n51["handles_of_payloadFieldTy<br/>proved"]
-  n52["run_agrees<br/>proved"]
-  n53["run_eq_meaning<br/>proved"]
-  n5 --> n37
-  n5 --> n0
-  n5 --> n12
-  n5 --> n38
+  n7["saved_mask_image_membership<br/>proved"]
+  n8["scoped_body_substitution_boundary<br/>proved"]
+  n9["image_agrees<br/>proved"]
+  n10["perform_scoped_iff<br/>proved"]
+  n11["matchTemplate_complete_anchored<br/>proved"]
+  n12["mono<br/>proved"]
+  n13["syncRow_typed<br/>proved"]
+  n14["termMaps_of_typed<br/>proved"]
+  n15["empty_typed<br/>proved"]
+  n16["offerStep_typed<br/>proved"]
+  n17["offerStep_types<br/>proved"]
+  n18["pollStep_typed<br/>proved"]
+  n19["pollStep_types<br/>proved"]
+  n20["sizeStep_typed<br/>proved"]
+  n21["step_keeps_cell<br/>proved"]
+  n22["takeStep_typed<br/>proved"]
+  n23["takeStep_types<br/>proved"]
+  n24["withdrawOffer_typed<br/>proved"]
+  n25["withdrawOffer_types<br/>proved"]
+  n26["withdrawTake_typed<br/>proved"]
+  n27["withdrawTake_types<br/>proved"]
+  n28["empty_types<br/>proved"]
+  n29["profile_closed<br/>proved"]
+  n30["releaseStep_types<br/>proved"]
+  n31["takeIfAvailableStep_types<br/>proved"]
+  n32["takeStep_types<br/>proved"]
+  n33["visitStep_types<br/>proved"]
+  n34["withdrawStep_types<br/>proved"]
+  n35["atomic<br/>modulo"]
+  n36["bounded<br/>goal"]
+  n37["committed<br/>goal"]
+  n38["counted<br/>goal"]
+  n39["readTerm_printTerm<br/>proved"]
+  n40["fits_subN<br/>proved"]
+  n41["fits_normalize<br/>proved"]
+  n42["normalize_idem<br/>proved"]
+  n43["subN_trans<br/>proved"]
+  n44["hom_eq_cata_ty<br/>proved"]
+  n45["fits_mono<br/>proved"]
+  n46["denotesTyped<br/>proved"]
+  n47["errOf_payload<br/>proved"]
+  n48["isPayload_of_hasTy_record<br/>proved"]
+  n49["subN_refl<br/>proved"]
+  n50["sub_antisymm_canonical<br/>proved"]
+  n51["unsuspended_runs<br/>proved"]
+  n52["cleans_once<br/>goal"]
+  n53["checkInput_eq_none_iff<br/>proved"]
+  n54["provideLayerArm<br/>proved"]
+  n55["catchGuard_typed<br/>proved"]
+  n56["onExit_typed<br/>proved"]
+  n57["guardBind_typed<br/>proved"]
+  n58["fits_scope_inv<br/>proved"]
+  n59["allGuard_typed<br/>proved"]
+  n60["handles_of_payloadFieldTy<br/>proved"]
+  n61["run_agrees<br/>proved"]
+  n62["seq_typed<br/>proved"]
+  n63["close_typed<br/>proved"]
+  n64["run_eq_meaning<br/>proved"]
   n5 --> n39
+  n5 --> n0
+  n5 --> n14
   n5 --> n40
   n5 --> n41
   n5 --> n42
-  n6 --> n43
-  n9 --> n40
-  n10 --> n1
-  n11 --> n39
-  n11 --> n41
-  n11 --> n38
-  n11 --> n12
+  n5 --> n43
+  n5 --> n44
+  n6 --> n45
+  n8 --> n46
+  n8 --> n40
+  n8 --> n41
+  n8 --> n42
+  n8 --> n43
+  n8 --> n44
   n11 --> n42
-  n11 --> n44
-  n11 --> n45
-  n11 --> n40
-  n11 --> n46
-  n12 --> n38
-  n12 --> n39
-  n12 --> n40
-  n12 --> n41
-  n12 --> n42
-  n12 --> n43
-  n14 --> n15
-  n15 --> n47
-  n15 --> n40
+  n12 --> n1
+  n13 --> n41
+  n13 --> n43
+  n13 --> n40
+  n13 --> n14
+  n13 --> n44
+  n13 --> n47
+  n13 --> n48
+  n13 --> n42
+  n13 --> n49
+  n14 --> n40
+  n14 --> n41
+  n14 --> n42
+  n14 --> n43
+  n14 --> n44
+  n14 --> n45
   n16 --> n17
-  n17 --> n47
-  n17 --> n40
-  n17 --> n46
-  n19 --> n5
-  n20 --> n21
-  n21 --> n47
-  n21 --> n46
-  n21 --> n40
+  n17 --> n50
+  n17 --> n42
+  n18 --> n19
+  n19 --> n50
+  n19 --> n42
+  n19 --> n49
+  n21 --> n5
   n22 --> n23
-  n23 --> n40
-  n23 --> n46
-  n23 --> n47
+  n23 --> n50
+  n23 --> n49
+  n23 --> n42
   n24 --> n25
-  n25 --> n40
-  n25 --> n46
-  n25 --> n47
-  n28 --> n40
-  n29 --> n40
-  n30 --> n40
-  n30 --> n47
-  n30 --> n46
-  n31 --> n46
-  n31 --> n47
-  n31 --> n40
-  n32 --> n40
-  n32 --> n46
-  n32 --> n47
-  n33 --> n48
+  n25 --> n42
+  n25 --> n49
+  n25 --> n50
+  n26 --> n27
+  n27 --> n42
+  n27 --> n49
+  n27 --> n50
+  n30 --> n42
+  n31 --> n42
+  n32 --> n42
+  n32 --> n50
+  n32 --> n49
   n33 --> n49
-  n33 --> n35
-  n33 --> n36
-  n33 --> n34
   n33 --> n50
+  n33 --> n42
+  n34 --> n42
+  n34 --> n49
   n34 --> n50
-  n35 --> n50
-  n36 --> n50
-  n38 --> n41
-  n38 --> n39
-  n39 --> n41
-  n39 --> n40
-  n45 --> n51
-  n48 --> n52
-  n49 --> n50
+  n35 --> n51
+  n35 --> n52
+  n35 --> n37
+  n35 --> n38
+  n35 --> n36
+  n35 --> n53
+  n36 --> n53
+  n37 --> n53
+  n38 --> n53
+  n40 --> n43
+  n40 --> n41
+  n41 --> n43
+  n41 --> n42
+  n46 --> n54
+  n46 --> n40
+  n46 --> n41
+  n46 --> n42
+  n46 --> n43
+  n46 --> n44
+  n46 --> n45
+  n46 --> n1
+  n46 --> n49
+  n46 --> n55
+  n46 --> n56
+  n46 --> n57
+  n46 --> n58
+  n46 --> n13
+  n46 --> n47
+  n46 --> n48
+  n46 --> n59
+  n48 --> n60
+  n51 --> n61
   n52 --> n53
+  n54 --> n40
+  n54 --> n0
+  n54 --> n44
+  n54 --> n43
+  n54 --> n41
+  n54 --> n13
+  n54 --> n42
+  n54 --> n47
+  n54 --> n48
+  n54 --> n1
+  n54 --> n49
+  n54 --> n56
+  n54 --> n57
+  n54 --> n45
+  n54 --> n58
+  n54 --> n62
+  n54 --> n55
+  n55 --> n40
+  n55 --> n57
+  n56 --> n40
+  n56 --> n45
+  n56 --> n55
+  n56 --> n49
+  n56 --> n57
+  n56 --> n59
+  n57 --> n63
+  n59 --> n57
+  n61 --> n64
+  n62 --> n49
+  n62 --> n40
+  n62 --> n57
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2205,6 +2303,8 @@ flowchart LR
 | `memoBuild_extension` | proved | — | — | 111 | 340 |
 | `fold_typed_atomic_update` | proved | — | `readTerm_printTerm`, `order_refl`, `termMaps_of_typed`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty` | 567 | 654 |
 | `handle_identity_laws` | proved | — | `fits_mono` | 176 | 372 |
+| `saved_mask_image_membership` | proved | — | — | 75 | 256 |
+| `scoped_body_substitution_boundary` | proved | — | `denotesTyped`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty` | 771 | 1097 |
 | `image_agrees` | proved | — | — | 11 | 110 |
 | `perform_scoped_iff` | proved | — | — | 0 | 73 |
 | `matchTemplate_complete_anchored` | proved | — | `normalize_idem` | 233 | 124 |
@@ -2242,6 +2342,7 @@ flowchart LR
 | `subN_trans` | proved | — | — | 96 | 53 |
 | `hom_eq_cata_ty` | proved | — | — | 28 | 35 |
 | `fits_mono` | proved | — | — | 80 | 235 |
+| `denotesTyped` | proved | — | `provideLayerArm`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono`, `order_trans`, `subN_refl`, `catchGuard_typed`, `onExit_typed`, `guardBind_typed`, `fits_scope_inv`, `syncRow_typed`, `errOf_payload`, `isPayload_of_hasTy_record`, `allGuard_typed` | 788 | 877 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 132 |
 | `subN_refl` | proved | — | — | 38 | 44 |
@@ -2249,8 +2350,16 @@ flowchart LR
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1441 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
+| `provideLayerArm` | proved | — | `fits_subN`, `order_refl`, `hom_eq_cata_ty`, `subN_trans`, `fits_normalize`, `syncRow_typed`, `normalize_idem`, `errOf_payload`, `isPayload_of_hasTy_record`, `order_trans`, `subN_refl`, `onExit_typed`, `guardBind_typed`, `fits_mono`, `fits_scope_inv`, `seq_typed`, `catchGuard_typed` | 821 | 919 |
+| `catchGuard_typed` | proved | — | `fits_subN`, `guardBind_typed` | 56 | 246 |
+| `onExit_typed` | proved | — | `fits_subN`, `fits_mono`, `catchGuard_typed`, `subN_refl`, `guardBind_typed`, `allGuard_typed` | 89 | 652 |
+| `guardBind_typed` | proved | — | `close_typed` | 54 | 256 |
+| `fits_scope_inv` | proved | — | — | 54 | 200 |
+| `allGuard_typed` | proved | — | `guardBind_typed` | 54 | 246 |
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 135 |
 | `run_agrees` | proved | — | `run_eq_meaning` | 68 | 861 |
+| `seq_typed` | proved | — | `subN_refl`, `fits_subN`, `guardBind_typed` | 58 | 249 |
+| `close_typed` | proved | — | — | 72 | 625 |
 | `run_eq_meaning` | proved | — | — | 310 | 906 |
 
 ### R5: Services: the service table, layers and provision
@@ -2604,7 +2713,6 @@ flowchart LR
 - Open: numbers open (decisions row 108): each face equal to the reference inside its bounded profile and refusing outside it, intermediates included (DI-56)
 - Open: K2 holds on the readable domain; since the state plan's T5, part B, a loop's stated cursor type and an operation's type arguments read back through one checked type reader (Classes.readTyChecked, DI-91's fallback (a) in a checked form), and the domain excludes a stated type outside the readable types (Classes.ReadableTy: a collision such as int, a spelling with no reading such as a handle type) and every list fold that states its accumulator's type, which is printed and not read
 - Open: one identity bijection across faces: the fiber identity carrier is ruled, not landed (DI-81)
-- Open: mask-rows-table-premises (proposed claim; exact-codecs): the mask's two printed rows, the getter as the mask that answers its own restore and a restore site as pipe(E, saved), keep the row table's premises at the extended table: rowsApart with a reservation for the row that has no head, table_apart and table_shape; read_print and read_exact then keep their statements; program syntax only, no typing and no behaviour of the target (decisions row 245)
 - Open: the TypeScript face against rc.112: finite truth-harness checks only (DI-49)
 - Open: the profile as data, named by each face's law (decisions row 79, R79.5)
 
@@ -2615,13 +2723,16 @@ flowchart LR
   n2["run_eq_meaning<br/>proved"]
   n3["loopAgreement<br/>proved"]
   n4["run_eq_ref<br/>proved"]
-  n5["unsuspended_runs<br/>proved"]
-  n6["tape_replays<br/>proved"]
-  n7["readTerm_printTerm<br/>proved"]
-  n8["run_agrees<br/>proved"]
-  n0 --> n7
-  n5 --> n8
-  n8 --> n2
+  n5["mask_rows_table_premises<br/>proved"]
+  n6["unsuspended_runs<br/>proved"]
+  n7["tape_replays<br/>proved"]
+  n8["readTerm_printTerm<br/>proved"]
+  n9["run_agrees<br/>proved"]
+  n0 --> n8
+  n5 --> n1
+  n5 --> n0
+  n6 --> n9
+  n9 --> n2
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2631,6 +2742,7 @@ flowchart LR
 | `run_eq_meaning` | proved | — | — | 310 | 906 |
 | `loopAgreement` | proved | — | — | 339 | 917 |
 | `run_eq_ref` | proved | — | — | 880 | 1059 |
+| `mask_rows_table_premises` | proved | — | `read_exact`, `read_print` | 124 | 521 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
 | `tape_replays` | proved | — | — | 97 | 962 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
@@ -2912,7 +3024,7 @@ flowchart LR
 
 - Open: a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)
 - Open: no form has a behaviour law (DI-89)
-- Open: mask-printed-form-profile (proposed claim; translation-simulation, serving R10 and R11): the mask as a derived form, the getter bound to its body under uninterruptible, against the named release's native mask: equal observation on a named observation, under compatible decisions, for compiled programs; the printed form is three checkpoints longer than the native mask, and it is not the native mask at two checkpoints of its entry, where the client premise, nothing acquired or registered before the body begins, makes an interrupt equal to one before the form (decisions rows 245, 246; the two checkpoints rest on Codex's runs); it states no equality with the native spelling
+- Open: the agreement half of mask-printed-form-profile (translation-simulation, serving R10 and R11): the compiled derived form against the named release's printed form, equal observation on a named observation under compatible decisions; the three operations more than the native mask are measured on the machine and on the target, not proved, and the cuts at the two checkpoints on the pin rest on Codex's runs; the expansion, the typing, the readability and the two checkpoints on the machine are mask_printed_form_profile (decisions rows 245, 246); no goal states the agreement
 - Open: none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators
 - Open: per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)
 - Open: DI-39's six rows not landed
@@ -2943,91 +3055,100 @@ flowchart LR
   n16["forkInDefault_typed<br/>proved"]
   n17["forkScopedDefault_typed<br/>proved"]
   n18["releaseOne_typed<br/>proved"]
-  n19["tagHit_record<br/>proved"]
-  n20["acceptLoop_length_le<br/>proved"]
-  n21["cell_read<br/>proved"]
-  n22["first_profile_closed<br/>proved"]
-  n23["offerStep_agrees<br/>proved"]
-  n24["pollStep_agrees<br/>proved"]
-  n25["positive_suspend_step_capacity<br/>proved"]
-  n26["queue_steps_agree<br/>proved"]
-  n27["sizeStep_agrees<br/>proved"]
-  n28["step_updates<br/>proved"]
-  n29["takeStep_agrees<br/>proved"]
-  n30["withdrawOffer_agrees<br/>proved"]
-  n31["withdrawTake_agrees<br/>proved"]
-  n32["releaseStep_agrees<br/>proved"]
-  n33["semaphore_steps_agree<br/>proved"]
-  n34["takeIfAvailableStep_agrees<br/>proved"]
-  n35["takeStep_agrees<br/>proved"]
-  n36["visitStep_agrees<br/>proved"]
-  n37["withdrawStep_agrees<br/>proved"]
-  n38["infrastructure_escapes<br/>goal"]
-  n39["routing<br/>modulo"]
-  n40["tagIs_pair<br/>proved"]
-  n41["retries_declared<br/>goal"]
-  n42["check_sound<br/>proved"]
-  n43["check_complete<br/>proved"]
-  n44["normalize_idem<br/>proved"]
-  n45["checkInput_eq_none_iff<br/>proved"]
-  n46["unauthorized_calls_nothing<br/>goal"]
-  n0 --> n42
+  n19["mask_printed_form_profile<br/>proved"]
+  n20["tagHit_record<br/>proved"]
+  n21["acceptLoop_length_le<br/>proved"]
+  n22["cell_read<br/>proved"]
+  n23["first_profile_closed<br/>proved"]
+  n24["offerStep_agrees<br/>proved"]
+  n25["pollStep_agrees<br/>proved"]
+  n26["positive_suspend_step_capacity<br/>proved"]
+  n27["queue_steps_agree<br/>proved"]
+  n28["sizeStep_agrees<br/>proved"]
+  n29["step_updates<br/>proved"]
+  n30["takeStep_agrees<br/>proved"]
+  n31["withdrawOffer_agrees<br/>proved"]
+  n32["withdrawTake_agrees<br/>proved"]
+  n33["releaseStep_agrees<br/>proved"]
+  n34["semaphore_steps_agree<br/>proved"]
+  n35["takeIfAvailableStep_agrees<br/>proved"]
+  n36["takeStep_agrees<br/>proved"]
+  n37["visitStep_agrees<br/>proved"]
+  n38["withdrawStep_agrees<br/>proved"]
+  n39["infrastructure_escapes<br/>goal"]
+  n40["routing<br/>modulo"]
+  n41["tagIs_pair<br/>proved"]
+  n42["retries_declared<br/>goal"]
+  n43["check_sound<br/>proved"]
+  n44["check_complete<br/>proved"]
+  n45["normalize_idem<br/>proved"]
+  n46["saved_mask_restoration<br/>proved"]
+  n47["read_print<br/>proved"]
+  n48["checkInput_eq_none_iff<br/>proved"]
+  n49["unauthorized_calls_nothing<br/>goal"]
+  n50["readTerm_printTerm<br/>proved"]
   n0 --> n43
-  n1 --> n42
+  n0 --> n44
   n1 --> n43
+  n1 --> n44
   n2 --> n0
-  n3 --> n42
   n3 --> n43
+  n3 --> n44
   n4 --> n3
-  n5 --> n44
-  n5 --> n42
+  n5 --> n45
   n5 --> n43
-  n6 --> n44
-  n6 --> n42
+  n5 --> n44
+  n6 --> n45
   n6 --> n43
-  n7 --> n42
+  n6 --> n44
   n7 --> n43
+  n7 --> n44
+  n8 --> n44
   n8 --> n43
-  n8 --> n42
+  n9 --> n44
   n9 --> n43
-  n9 --> n42
+  n10 --> n44
   n10 --> n43
-  n10 --> n42
-  n11 --> n42
   n11 --> n43
-  n12 --> n42
+  n11 --> n44
   n12 --> n43
+  n12 --> n44
+  n13 --> n44
   n13 --> n43
-  n13 --> n42
-  n14 --> n42
   n14 --> n43
-  n15 --> n42
+  n14 --> n44
   n15 --> n43
-  n16 --> n42
+  n15 --> n44
   n16 --> n43
-  n17 --> n42
+  n16 --> n44
   n17 --> n43
-  n18 --> n42
+  n17 --> n44
   n18 --> n43
-  n25 --> n20
-  n26 --> n30
-  n26 --> n31
-  n26 --> n27
-  n26 --> n24
-  n26 --> n23
-  n26 --> n29
-  n33 --> n37
-  n33 --> n36
-  n33 --> n32
-  n33 --> n34
-  n33 --> n35
-  n38 --> n45
-  n39 --> n46
-  n39 --> n38
-  n39 --> n40
-  n39 --> n45
-  n41 --> n45
-  n46 --> n45
+  n18 --> n44
+  n19 --> n46
+  n19 --> n47
+  n19 --> n43
+  n19 --> n44
+  n26 --> n21
+  n27 --> n31
+  n27 --> n32
+  n27 --> n28
+  n27 --> n25
+  n27 --> n24
+  n27 --> n30
+  n34 --> n38
+  n34 --> n37
+  n34 --> n33
+  n34 --> n35
+  n34 --> n36
+  n39 --> n48
+  n40 --> n49
+  n40 --> n39
+  n40 --> n41
+  n40 --> n48
+  n42 --> n48
+  n47 --> n50
+  n49 --> n48
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3051,6 +3172,7 @@ flowchart LR
 | `forkInDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 246 |
 | `forkScopedDefault_typed` | proved | — | `check_sound`, `check_complete` | 59 | 246 |
 | `releaseOne_typed` | proved | — | `check_sound`, `check_complete` | 79 | 260 |
+| `mask_printed_form_profile` | proved | — | `saved_mask_restoration`, `read_print`, `check_sound`, `check_complete` | 216 | 862 |
 | `tagHit_record` | proved | — | — | 47 | 135 |
 | `acceptLoop_length_le` | proved | — | — | 0 | 6 |
 | `cell_read` | proved | — | — | 10 | 200 |
@@ -3077,8 +3199,11 @@ flowchart LR
 | `check_sound` | proved | — | — | 137 | 237 |
 | `check_complete` | proved | — | — | 70 | 240 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
+| `saved_mask_restoration` | proved | — | — | 99 | 753 |
+| `read_print` | proved | — | `readTerm_printTerm` | 346 | 553 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
 | `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 84 | 1423 |
+| `readTerm_printTerm` | proved | — | — | 164 | 205 |
 
 ### R11: Resources are released: at most once per registration, exactly once in close order
 
@@ -3086,7 +3211,7 @@ flowchart LR
 - Open: the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)
 - Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
 - Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
-- Open: saved-mask-restoration (proposed claim; scope-lifetime-finalization): the mask's law at region boundaries, for both saved bits: at the mask's entry the flag is false; at a restore site a true bit runs the body interruptibly and a false bit leaves the flag as it is, so it is the identity on the fiber that runs the node; a nested region keeps its own rule; each completed exit, by success, failure or interruption, returns its region's earlier flag, and an exit that leaves the fiber interruptible with a pending cause fails there with that cause; no statement that every later step keeps the entry flag; a client premise, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); it states no progress and nothing about the Queue
+- Open: the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant
 - Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)
 
 ```mermaid
@@ -3097,16 +3222,17 @@ flowchart LR
   n3["close_twice<br/>proved"]
   n4["close_reentrant_add<br/>proved"]
   n5["closeOrder_eq<br/>proved"]
-  n6["cleans_once<br/>goal"]
-  n7["cleanup_keeps<br/>goal"]
-  n8["releases_once<br/>goal"]
-  n9["close_idempotent<br/>proved"]
-  n10["checkInput_eq_none_iff<br/>proved"]
+  n6["saved_mask_restoration<br/>proved"]
+  n7["cleans_once<br/>goal"]
+  n8["cleanup_keeps<br/>goal"]
+  n9["releases_once<br/>goal"]
+  n10["close_idempotent<br/>proved"]
+  n11["checkInput_eq_none_iff<br/>proved"]
   n1 --> n0
-  n3 --> n9
-  n6 --> n10
-  n7 --> n10
-  n8 --> n10
+  n3 --> n10
+  n7 --> n11
+  n8 --> n11
+  n9 --> n11
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3117,6 +3243,7 @@ flowchart LR
 | `close_twice` | proved | — | `close_idempotent` | 1 | 15 |
 | `close_reentrant_add` | proved | — | — | 2 | 11 |
 | `closeOrder_eq` | proved | — | — | 0 | 4 |
+| `saved_mask_restoration` | proved | — | — | 99 | 753 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1441 |
 | `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 84 | 1439 |
 | `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 84 | 1448 |

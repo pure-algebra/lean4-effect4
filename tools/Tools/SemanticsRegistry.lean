@@ -243,6 +243,9 @@ def registry : Registry where
       literature := [
         { work := "Ahmed2004", locator := "audit P1", relation := "analogy" }
       ] },
+    { id := "saved-mask-image-membership", concept := "store-typing", role := .canonicalForms
+      title := "The mask's saved state: membership at Ty.maskRestore is exactly the two saved images, in Fits and in the shape check; the image is no Boolean, a Boolean is no image, and no subtyping relates the two types; the target is reserved against an external allocation, a host answer column and a service carrier; an image holds no handle, so every world, every store and every environment keep its membership (decisions row 244; no reply admission)"
+      pointer := .witness `Effect4.Program.Typed.saved_mask_image_membership },
     { id := "store-safety", concept := "store-typing", role := .progress
       title := "Store safety through inductive configuration typing"
       pointer := .absent "Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139)"
@@ -318,6 +321,9 @@ def registry : Registry where
     { id := "on-exit-typed", concept := "residual-program-typing", role := .compatibility
       title := "The onExit shape onExitR builds: the body and the finalizer at their types"
       pointer := .witness `Effect4.Program.Typed.onExit_typed },
+    { id := "scoped-body-substitution-boundary", concept := "residual-program-typing", role := .compatibility
+      title := "A restore site is one node that binds nothing, with its checked body at child 0: both saved choices run that one body in the node's environment; a typed point at the node denotes a typed program, its saved term evaluates to an image, and its body's point is typed at the node's type; a saved value passed as data keeps its choice and holds no handle; the mask's builder is the program's own expansion over bind (decisions rows 245, 246; the restore node's half of the claim; no agreement with a target)"
+      pointer := .witness `Effect4.Program.Typed.scoped_body_substitution_boundary },
 
     -- 3. scope-lifetime-finalization
     { id := "close-idempotent", concept := "scope-lifetime-finalization", role := .preservation
@@ -344,6 +350,9 @@ def registry : Registry where
       literature := [
         { work := "deVilhenaPottier2021", locator := "audit P8", relation := "adaptedResult" }
       ] },
+    { id := "saved-mask-restoration", concept := "scope-lifetime-finalization", role := .preservation
+      title := "The mask's law at the boundaries of regions, on the frame machine: the getter masks and answers the image of the entry flag; a restore site at a true bit is the interruptible region over its body, and at a false bit it is its body's own code; a region's entry sets its own flag at every fiber and saves the earlier flag exactly when it changes it; the saved frame's pass returns that flag on every exit, and with a cause pending an exit that leaves the fiber interruptible fails there with it (decisions rows 227, 244 to 246; no progress, nothing about a module, and no statement for a region that changes no flag)"
+      pointer := .witness `Effect4.Program.Typed.saved_mask_restoration },
 
     -- 4. reactive-scheduling
     { id := "machine-typed-not-halted", concept := "reactive-scheduling", role := .inversion
@@ -470,6 +479,9 @@ def registry : Registry where
     { id := "payload-class-decl-exact", concept := "exact-codecs", role := .compatibility
       title := "An admitted module's payload class declarations are exactly the ones the printer writes for the program it reads to (decisions row 120, part E2)"
       pointer := .witness `Effect4.Codegen.admitModule_classDecls },
+    { id := "mask-rows-table-premises", concept := "exact-codecs", role := .compatibility
+      title := "The mask's two printed rows, the getter as the mask that answers its own restore and a restore site as pipe(E, saved), have two reserved heads and keep the row table's nine decided premises at the extended table; a restore site is readable exactly when its saved term is a readable leaf and its body is readable; read_print and read_exact keep their statements (decisions row 245; program syntax only)"
+      pointer := .witness `Effect4.Program.mask_rows_table_premises },
 
     -- 6. subtyping-algebra
     { id := "subn-refl", concept := "subtyping-algebra", role := .compatibility
@@ -650,7 +662,10 @@ def registry : Registry where
       pointer := .witness `Effect4.Queue.Model.queue_steps_agree },
     { id := "straight-composition-agreement", concept := "translation-simulation", role := .simulation
       title := "StraightEq programs run to equal exits and stores at their own sufficient budgets (the straight-fragment composition relation)"
-      pointer := .witness `Effect4.Program.Denote.StraightEq.run_agrees }
+      pointer := .witness `Effect4.Program.Denote.StraightEq.run_agrees },
+    { id := "mask-printed-form-profile", concept := "translation-simulation", role := .compatibility
+      title := "The mask as a derived form, the getter bound to its body under uninterruptible: the surface's builder is that expansion; it types as its body under the saved state's binder, and a restore site of any other saved term has no type; it is readable exactly when its body is, so it prints and reads back; inside the getter the fiber is masked and a pending cause fails it at the getter's restoring frame, and after that frame an interruptible caller is interruptible until the body's mask (decisions rows 245, 246; no equality with the native spelling and no agreement with a release)"
+      pointer := .witness `Effect4.Program.mask_printed_form_profile }
   ]
   cuts := [
     -- 1. store-typing
@@ -778,12 +793,13 @@ def registry : Registry where
         `Effect4.Program.Typed.refMake_extension, `Effect4.Program.Typed.deferredMake_extension,
         `Effect4.Program.Typed.memoBuild_extension,
         `Effect4.Program.Typed.fold_typed_atomic_update,
-        `Effect4.Program.Typed.handle_identity_laws]
+        `Effect4.Program.Typed.handle_identity_laws,
+        `Effect4.Program.Typed.saved_mask_image_membership,
+        `Effect4.Program.Typed.scoped_body_substitution_boundary]
       openParts := ["the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation",
         "the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws",
         "atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)",
-        "scoped-body-substitution-boundary (proposed claim; residual-program-typing): the mask adds no scoped constructor: a restore site is one node that binds nothing, with its checked body at child 0; both saved choices resolve that one body in one environment, with a typed stack, typed captures and no lookup that fails; a saved value passed as data keeps its choice and no activation of its mask (decisions rows 245, 246); for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); it states no agreement with a target",
-        "saved-mask-image-membership (proposed claim; store-typing): the mask's saved state is at an opaque host type with a reserved target; membership at it is exactly one of the two canonical images of the saved bit, so the value is no Boolean even after widening; no external handle and no host answer column takes the type, and no service carries it in the first profile; typed stores, typed environments and a later world keep the membership (decisions row 244; the first of the mask's obligations); it states no reply admission"] },
+        "the second half of scoped-body-substitution-boundary (residual-program-typing): for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); no goal states it: the mask adds no scoped constructor, and its restore node's half is scoped_body_substitution_boundary"] },
     { id := "R5", title := "Services: the service table, layers and provision"
       top := [`Effect4.Program.Provision.build_total]
       openParts := ["lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)",
@@ -808,12 +824,11 @@ def registry : Registry where
     { id := "R8", title := "Runs and faces as named connections: equal to the reference inside a profile, refused outside it"
       top := [`Effect4.Program.read_print, `Effect4.Program.read_exact,
         `Effect4.Program.Agreement.run_eq_meaning, `Effect4.Program.Agreement.loopAgreement,
-        `Effect4.Program.Sched.run_eq_ref]
+        `Effect4.Program.Sched.run_eq_ref, `Effect4.Program.mask_rows_table_premises]
       openParts := ["typed lowering open: what verified lowering means (decisions row 28); the OCaml engine is outside M7 until it is ruled",
         "numbers open (decisions row 108): each face equal to the reference inside its bounded profile and refusing outside it, intermediates included (DI-56)",
         "K2 holds on the readable domain; since the state plan's T5, part B, a loop's stated cursor type and an operation's type arguments read back through one checked type reader (Classes.readTyChecked, DI-91's fallback (a) in a checked form), and the domain excludes a stated type outside the readable types (Classes.ReadableTy: a collision such as int, a spelling with no reading such as a handle type) and every list fold that states its accumulator's type, which is printed and not read",
         "one identity bijection across faces: the fiber identity carrier is ruled, not landed (DI-81)",
-        "mask-rows-table-premises (proposed claim; exact-codecs): the mask's two printed rows, the getter as the mask that answers its own restore and a restore site as pipe(E, saved), keep the row table's premises at the extended table: rowsApart with a reservation for the row that has no head, table_apart and table_shape; read_print and read_exact then keep their statements; program syntax only, no typing and no behaviour of the target (decisions row 245)",
         "the TypeScript face against rc.112: finite truth-harness checks only (DI-49)",
         "the profile as data, named by each face's law (decisions row 79, R79.5)"] },
     { id := "R9", title := "Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)"
@@ -833,10 +848,11 @@ def registry : Registry where
         `Effect4.Codegen.Forms.forkDetachDefault_typed,
         `Effect4.Codegen.Forms.forkInDefault_typed,
         `Effect4.Codegen.Forms.forkScopedDefault_typed,
-        `Effect4.Codegen.Forms.releaseOne_typed]
+        `Effect4.Codegen.Forms.releaseOne_typed,
+        `Effect4.Program.mask_printed_form_profile]
       openParts := ["a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)",
         "no form has a behaviour law (DI-89)",
-        "mask-printed-form-profile (proposed claim; translation-simulation, serving R10 and R11): the mask as a derived form, the getter bound to its body under uninterruptible, against the named release's native mask: equal observation on a named observation, under compatible decisions, for compiled programs; the printed form is three checkpoints longer than the native mask, and it is not the native mask at two checkpoints of its entry, where the client premise, nothing acquired or registered before the body begins, makes an interrupt equal to one before the form (decisions rows 245, 246; the two checkpoints rest on Codex's runs); it states no equality with the native spelling",
+        "the agreement half of mask-printed-form-profile (translation-simulation, serving R10 and R11): the compiled derived form against the named release's printed form, equal observation on a named observation under compatible decisions; the three operations more than the native mask are measured on the machine and on the target, not proved, and the cuts at the two checkpoints on the pin rest on Codex's runs; the expansion, the typing, the readability and the two checkpoints on the machine are mask_printed_form_profile (decisions rows 245, 246); no goal states the agreement",
         "none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators",
         "per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)",
         "DI-39's six rows not landed",
@@ -848,12 +864,13 @@ def registry : Registry where
     { id := "R11", title := "Resources are released: at most once per registration, exactly once in close order"
       top := [`Effect4.ScopeMachine.runState_complete, `Effect4.ScopeMachine.runState_restore,
         `Effect4.ScopeMachine.runState_prefix, `Effect4.Scope.close_twice,
-        `Effect4.Scope.close_reentrant_add, `Effect4.Scope.closeOrder_eq]
+        `Effect4.Scope.close_reentrant_add, `Effect4.Scope.closeOrder_eq,
+        `Effect4.Program.Typed.saved_mask_restoration]
       openParts := ["the whole run open: release at most once per registration, counted by identity (DB-07)",
         "the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)",
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
         "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
-        "saved-mask-restoration (proposed claim; scope-lifetime-finalization): the mask's law at region boundaries, for both saved bits: at the mask's entry the flag is false; at a restore site a true bit runs the body interruptibly and a false bit leaves the flag as it is, so it is the identity on the fiber that runs the node; a nested region keeps its own rule; each completed exit, by success, failure or interruption, returns its region's earlier flag, and an exit that leaves the fiber interruptible with a pending cause fails there with that cause; no statement that every later step keeps the entry flag; a client premise, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); it states no progress and nothing about the Queue",
+        "the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant",
         "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]
