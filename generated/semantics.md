@@ -1625,7 +1625,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | `unsuspended_runs` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
-| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `takeStep_agrees` (proved), `visitStep_agrees` (proved), `withdrawStep_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
@@ -2956,53 +2956,59 @@ flowchart LR
   n29["takeStep_agrees<br/>proved"]
   n30["withdrawOffer_agrees<br/>proved"]
   n31["withdrawTake_agrees<br/>proved"]
-  n32["infrastructure_escapes<br/>goal"]
-  n33["routing<br/>modulo"]
-  n34["tagIs_pair<br/>proved"]
-  n35["retries_declared<br/>goal"]
-  n36["check_sound<br/>proved"]
-  n37["check_complete<br/>proved"]
-  n38["normalize_idem<br/>proved"]
-  n39["checkInput_eq_none_iff<br/>proved"]
-  n40["unauthorized_calls_nothing<br/>goal"]
-  n0 --> n36
-  n0 --> n37
-  n1 --> n36
-  n1 --> n37
+  n32["releaseStep_agrees<br/>proved"]
+  n33["semaphore_steps_agree<br/>proved"]
+  n34["takeIfAvailableStep_agrees<br/>proved"]
+  n35["takeStep_agrees<br/>proved"]
+  n36["visitStep_agrees<br/>proved"]
+  n37["withdrawStep_agrees<br/>proved"]
+  n38["infrastructure_escapes<br/>goal"]
+  n39["routing<br/>modulo"]
+  n40["tagIs_pair<br/>proved"]
+  n41["retries_declared<br/>goal"]
+  n42["check_sound<br/>proved"]
+  n43["check_complete<br/>proved"]
+  n44["normalize_idem<br/>proved"]
+  n45["checkInput_eq_none_iff<br/>proved"]
+  n46["unauthorized_calls_nothing<br/>goal"]
+  n0 --> n42
+  n0 --> n43
+  n1 --> n42
+  n1 --> n43
   n2 --> n0
-  n3 --> n36
-  n3 --> n37
+  n3 --> n42
+  n3 --> n43
   n4 --> n3
-  n5 --> n38
-  n5 --> n36
-  n5 --> n37
-  n6 --> n38
-  n6 --> n36
-  n6 --> n37
-  n7 --> n36
-  n7 --> n37
-  n8 --> n37
-  n8 --> n36
-  n9 --> n37
-  n9 --> n36
-  n10 --> n37
-  n10 --> n36
-  n11 --> n36
-  n11 --> n37
-  n12 --> n36
-  n12 --> n37
-  n13 --> n37
-  n13 --> n36
-  n14 --> n36
-  n14 --> n37
-  n15 --> n36
-  n15 --> n37
-  n16 --> n36
-  n16 --> n37
-  n17 --> n36
-  n17 --> n37
-  n18 --> n36
-  n18 --> n37
+  n5 --> n44
+  n5 --> n42
+  n5 --> n43
+  n6 --> n44
+  n6 --> n42
+  n6 --> n43
+  n7 --> n42
+  n7 --> n43
+  n8 --> n43
+  n8 --> n42
+  n9 --> n43
+  n9 --> n42
+  n10 --> n43
+  n10 --> n42
+  n11 --> n42
+  n11 --> n43
+  n12 --> n42
+  n12 --> n43
+  n13 --> n43
+  n13 --> n42
+  n14 --> n42
+  n14 --> n43
+  n15 --> n42
+  n15 --> n43
+  n16 --> n42
+  n16 --> n43
+  n17 --> n42
+  n17 --> n43
+  n18 --> n42
+  n18 --> n43
   n25 --> n20
   n26 --> n30
   n26 --> n31
@@ -3010,13 +3016,18 @@ flowchart LR
   n26 --> n24
   n26 --> n23
   n26 --> n29
-  n32 --> n39
-  n33 --> n40
+  n33 --> n37
+  n33 --> n36
   n33 --> n32
   n33 --> n34
-  n33 --> n39
-  n35 --> n39
-  n40 --> n39
+  n33 --> n35
+  n38 --> n45
+  n39 --> n46
+  n39 --> n38
+  n39 --> n40
+  n39 --> n45
+  n41 --> n45
+  n46 --> n45
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3053,6 +3064,12 @@ flowchart LR
 | `takeStep_agrees` | proved | — | — | 138 | 207 |
 | `withdrawOffer_agrees` | proved | — | — | 83 | 173 |
 | `withdrawTake_agrees` | proved | — | — | 80 | 173 |
+| `releaseStep_agrees` | proved | — | — | 34 | 132 |
+| `semaphore_steps_agree` | proved | — | `withdrawStep_agrees`, `visitStep_agrees`, `releaseStep_agrees`, `takeIfAvailableStep_agrees`, `takeStep_agrees` | 9 | 182 |
+| `takeIfAvailableStep_agrees` | proved | — | — | 39 | 134 |
+| `takeStep_agrees` | proved | — | — | 85 | 164 |
+| `visitStep_agrees` | proved | — | — | 85 | 161 |
+| `withdrawStep_agrees` | proved | — | — | 58 | 154 |
 | `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 84 | 1431 |
 | `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 84 | 1433 |
 | `tagIs_pair` | proved | — | — | 8 | 86 |
