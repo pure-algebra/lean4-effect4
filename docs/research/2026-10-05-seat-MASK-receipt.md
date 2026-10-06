@@ -34,8 +34,9 @@ Eight more facts stand beside it.
 - **Two placements differ from the brief's table.** `mask-rows-table-premises` is at the
   concept `exact-codecs`, where `read_print`'s modules are. `mask-printed-form-profile` names
   R10 only, because the placement attribute takes one requirement.
-- **Main's head `07dd849a` is merged in**, as `f9f63aba`, with no conflict. The default build
-  and each acceptance command pass on the merged tree (section 3).
+- **Main's heads `07dd849a` and `f569d4af` are merged in**, as `f9f63aba` and `1c70029c`,
+  with no conflict. Each acceptance command passes on the first merged tree. The default build
+  and the truth lane pass on the second too (section 3).
 - **`Test/contracts/faces.contract.md` has no amendment for the two rows.** The file is not in
   my brief. Section 10 proposes the text.
 - **One late commit adds a compiler control that the brief does not name.**
@@ -50,9 +51,9 @@ Eight more facts stand beside it.
 | Branch | `seat/mask`, in the worktree `/Users/pooks/Dev/lean4-effect4-mask` |
 | Base at the dispatch | `8c61250f` |
 | Main-line heads taken in by fast-forward, before the first commit | `835696c1`, `310c8314` |
-| Main-line heads taken in by a merge commit | `1d292a3d` as `6bba4c39`; `07dd849a` as `f9f63aba`. No conflict |
+| Main-line heads taken in by a merge commit | `1d292a3d` as `6bba4c39`; `07dd849a` as `f9f63aba`; `f569d4af` as `1c70029c`. No conflict |
 | The first step's head, merged by the coordinator as `811ac973` | `85c61eb8` |
-| Head | the commit that adds this receipt; its parent is `9b910e5b` |
+| Head | the commit that revises this receipt; its parent is `1c70029c` |
 
 Nothing is pushed.
 
@@ -67,7 +68,9 @@ Nothing is pushed.
 | `f9f63aba` | — | the merge of `07dd849a` |
 | `90a38874` | 7 | the compiler control, two pins of a saved state as data, the truth lane's inputs |
 | `9b910e5b` | 7 | six more runs of S7: a body that holds regions of its own |
-| the head | 7 | this receipt |
+| `75110772` | 7 | this receipt |
+| `1c70029c` | — | the merge of `f569d4af` |
+| the head | 7 | this receipt, revised for the last merge |
 
 ## 2. Changed files, by group
 
@@ -119,6 +122,7 @@ the command read.
 | `SLOT lake build` | `f9f63aba` | `Build completed successfully (972 jobs)` | proved, tested |
 | `SLOT lake build` | `90a38874` | `Build completed successfully (972 jobs)` | proved, tested |
 | `SLOT lake build` | `9b910e5b` | `Build completed successfully (972 jobs)` | proved, tested |
+| `SLOT lake build` | `1c70029c` | `Build completed successfully (977 jobs)` | proved, tested |
 | `SLOT python3 scripts/generate.py` | `f9f63aba` | `PASS generate: requested producers ran in dependency order`; `git status` empty after it | reproduced |
 | `SLOT python3 scripts/generate.py --only lcnf` | `f9f63aba` | the same line; four artifacts, each with `todos (0)`, `Ml.checkModule: PASS (0 diagnostics)` and `name hygiene: PASS (0 problems)`; `git status` empty | reproduced, tested |
 | `SLOT python3 scripts/generate.py --only fixtures` | `f9f63aba`, and again `9b910e5b` | the same line; `git status` empty | reproduced |
@@ -128,31 +132,34 @@ the command read.
 | `DUNE test --force eff gen clock` | `f9f63aba` | exit 0; `test_val_frames: 26 checks, 0 failures`; `test_lean_wire: 117 checks, 0 failures`; `metadata: 207 checks passed`; `prop_wire: 6345 checks, 0 failures (seed 42)`; `test_eff: 659 checks, 0 failures` | tested |
 | `DUNE test --force engine` | `f9f63aba` | exit 0; `test_mask: 83 checks, 0 failures`; `test_queue: 19 checks, 0 failures`; no line holds `FAIL` | tested |
 | `MAKE check-truth` | `f9f63aba` | `23 pass`, `0 fail`; `PASS: 46 programs agree on exits, schedules and sync exits; 1 signed divergence(s)`; `PASS truth: pinned corpus, bounded differential and signed U-01 divergence checked; the regenerated modules type-check` | tested: host runs |
-| `MAKE check-truth` | `90a38874`, and again `9b910e5b` | the same three results, with the new control among the type-checked files | tested: host runs |
+| `MAKE check-truth` | `90a38874`, and again `9b910e5b` and `1c70029c` | the same three results, with the new control among the type-checked files | tested: host runs |
 | `SLOT python3 scripts/check-truth.py`, with one expectation line removed from the control | `90a38874`, edited | exit 1: `FAIL truth: the regenerated modules do not type-check`, at `mask.typecheck.ts(45,62): error TS2345` | reproduced red; the line is back |
 | `MAKE check-ts-reader` | `d112bf40` | `726 pass`, `0 fail`; 455 files: 416 matched, 0 mismatched | tested |
 | `MAKE check-ts-reader` | `f9f63aba` | `make` finds the target current | — |
 | `SLOT python3 scripts/check-conform.py compiler` | `f9f63aba` | `conform compiler: PASS, exit 0; .lake/conform/compiler.json` | tested |
 | `MAKE check-cases` | `f9f63aba` | `conform cases: PASS, exit 0; .lake/conform/cases.json` | tested |
-| `python3 scripts/check-docs.py` | `9b910e5b`, with this receipt | `PASS check-docs: every path, link, citation and make target in 75 documents resolves` | tested |
+| `MAKE check-cases` | `1c70029c` | `make` finds the target current | — |
+| `python3 scripts/check-docs.py` | `1c70029c`, with this receipt | `PASS check-docs: every path, link, citation and make target in 75 documents resolves` | tested |
 | `python3 scripts/check-language.py --strict` on this receipt, and `--show` on `docs/core/semantics.md` | the same | no finding in the receipt; the document's count of findings is the count before the edit | tested |
-| `SLOT lake exe semantics-report SCRATCH/semantics-report-merged` | `f9f63aba` | exit 0; the render differs from the committed report at the five claims and at four requirement rows | tested |
+| `SLOT lake exe semantics-report SCRATCH/semantics-report-final` | `1c70029c` | exit 0; the render differs from the committed report at the five claims and at four requirement rows | tested |
 | `SLOT lake env lean -DwarningAsError=true SCRATCH/Probe8.lean` | `f9f63aba` | exit 0: a saved state in a promise and in a cell builds, runs and prints | tested |
 | `SLOT lake env lean -DwarningAsError=true SCRATCH/Probe9.lean` | `9b910e5b` | exit 1: the wider S7's guard with one reading falsified `did not evaluate to true` | reproduced red |
 | `SLOT lake env lean -DwarningAsError=true SCRATCH/Probe10.lean` | `9b910e5b` | exit 0: the plan status and the axioms of the consumers (section 5) | tested |
 
-The gates of the last default build, on `9b910e5b`'s tree, as `Test/All.lean` prints them:
+The gates of the last default build, on `1c70029c`'s tree, as `Test/All.lean` prints them:
 
 | Gate | Result |
 | --- | --- |
-| Library-root gate | 170 API and utility modules, 293 Laws-only modules; each library source is reachable; `Effect4` never reaches Laws |
-| Module and axiom gate | 722 modules and 86893 declarations; semantic and test axioms are `[propext, Quot.sound]`; the exact implementation boundary, 17 modules and 23 declarations, also allows `Classical.choice` |
+| Library-root gate | 170 API and utility modules, 296 Laws-only modules; each library source is reachable; `Effect4` never reaches Laws |
+| Module and axiom gate | 727 modules and 87131 declarations; semantic and test axioms are `[propext, Quot.sound]`; the exact implementation boundary, 17 modules and 23 declarations, also allows `Classical.choice` |
 | Goal gate | 24 planned goals; 11 declarations rest on goals; no other declaration reaches `sorryAx` |
 | Proof-style gate | no finding: `Test.Audit.ProofStyle` builds |
 
-Two earlier builds give the slice's own counts. On `85c61eb8` the default build has 959 jobs,
+Earlier builds give the slice's own counts. On `85c61eb8` the default build has 959 jobs,
 709 modules and 86379 declarations. On `a8173482`, merged with `1d292a3d`, it has 964 jobs, 714
-modules and 86543 declarations. Both lines are from this seat's reading of
+modules and 86543 declarations. On `9b910e5b` it has 972 jobs, 722 modules and 86893
+declarations. From `f9f63aba` on the counts hold Semaphore's modules, which the merges of main
+bring. The first two lines are from this seat's reading of
 `SCRATCH/build-default-3.log` and `SCRATCH/build-default-4.log` at the time. A permission check
 denied a second read of those logs for this receipt.
 
@@ -361,14 +368,14 @@ No helper states progress, delivery, a module's step or a host run.
 
 ## 7. Requirements R1 to R13: three lists
 
-Two sources give the lists. The first is `generated/semantics.md` at `07dd849a`, the head last
+Two sources give the lists. The first is `generated/semantics.md` at `f569d4af`, the head last
 merged. The second is a render of the same report from this head's registry, in
-`SCRATCH/semantics-report-merged/`, with the `#plan_status` pins of section 5. I keep no other
+`SCRATCH/semantics-report-final/`, with the `#plan_status` pins of section 5. I keep no other
 list of statuses.
 
 ### List 1: what the slice advances
 
-| Requirement | Claim and node | In the report at `07dd849a` | In the render at this head |
+| Requirement | Claim and node | In the report at `f569d4af` | In the render at this head |
 | --- | --- | --- | --- |
 | R4 | `saved-mask-image-membership`; `saved_mask_image_membership` | an open part, a proposed claim | proved; a top node and a placed node |
 | R4 | `scoped-body-substitution-boundary`; `scoped_body_substitution_boundary` | an open part, a proposed claim | proved for the restore node's half; the second half stays an open part |
@@ -380,7 +387,8 @@ list of statuses.
 The four requirements stay open in both reports. A script over the two files counts the open
 parts. R4 goes from 5 to 4, and R8 from 7 to 6. R10 stays at 11, and R11 at 6. In R10 and R11
 the proposed claim's line gives way to the line of its remaining half. No other requirement's open
-parts differ between the two files.
+parts differ between the two files. The four rows of the plan differ by the five top nodes and
+by nothing else, and no other row differs.
 
 The proved top nodes of R1, R6, R8 and R9 keep their statements and their status:
 `check_sound`, `check_complete`, `reachable_typed`, `read_print`, `read_exact`, `run_eq_ref`
