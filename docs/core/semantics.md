@@ -954,6 +954,16 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   (`Sketch.hole_hasTy` (`src/Effect4/Laws/Program/Sketch.lean`)). The typing judgment gains no
   rule. The three properties establish no admission of a sketch to a later stage, no law of
   filling a hole and no run.
+- **The replacement law (`typed-replacement`)**: a typed node splits at an address of a program
+  into an environment and a type of the focus. Every program of that type in that environment
+  stands in the focus's place, under every extension of the typing signature
+  (`NodeHasTy.replace` (`src/Effect4/Laws/Program/Typing/Replace.lean`)). Its six instances are
+  the six typing judgments, and the judgment gains no rule. It is the law of the two edits of a
+  sketch (`Sketch.check_fill`, `Sketch.check_omit` (`src/Effect4/Laws/Program/Sketch.lean`)).
+  A filling has no further premise. An omission keeps the whole type where the focus's columns
+  are closed, formed and in normal form. The focus's type is kept exactly: the law says nothing
+  at a type that is equal only after normalization, and nothing of behaviour. The environment
+  and the type are existential, and no function answers them yet.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 

@@ -1496,6 +1496,7 @@ Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniquenes
 | sketch-conservative | compatibility | proved | Effect4.Program.holes_conservative | yes |  |
 | sketch-weakening | weakening | proved | Effect4.Program.sketch_weakening | yes |  |
 | hole-rule | compatibility | proved | Effect4.Program.Sketch.hole_hasTy | yes |  |
+| typed-replacement | substitution | proved | Effect4.Program.NodeHasTy.replace | yes |  |
 
 ### Printed statements
 
@@ -1607,6 +1608,24 @@ Literature: TAPL, §16.1, p. 210 — adaptedResult
             (Effect4.Program.Sketch.hole app k)
             { answer := answer.normalize, error := error.normalize,
               requires := Effect4.Machine.Env.Requirement.ofList requires }
+```
+
+**typed-replacement**
+
+```lean
+∀ {Op : Type} {s : Effect4.Program.Signature Op} (path : List Nat) {n : Effect4.Program.Node Op}
+  {τ : Effect4.Program.NodeTy Op} {q : Effect4.Program.Eff Op},
+  Effect4.Program.NodeHasTy s n τ →
+    Eq (n.at_ path) (Option.some (Effect4.Program.Node.eff q)) →
+      Exists fun env =>
+        Exists fun t =>
+          And (Conform.Effect4.Typing.HasTy s env q t)
+            (∀ {s' : Effect4.Program.Signature Op} {q' : Effect4.Program.Eff Op}
+              {n' : Effect4.Program.Node Op},
+              Effect4.Program.SigExtends s s' →
+                Conform.Effect4.Typing.HasTy s' env q' t →
+                  Eq (n.replaceAt path (Effect4.Program.Node.eff q')) (Option.some n') →
+                    Effect4.Program.NodeHasTy s' n' τ)
 ```
 
 ## context-requirements
@@ -2247,7 +2266,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
-| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved) | `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `check_filled` (proved), `check_more_holes` (proved), `check_program` (proved), `hole_hasTy` (proved), `adjoint` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_unique` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `holes_conservative` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
+| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved), `replace` (proved) | `at_layers_nil` (proved), `at_stmts_nil` (proved), `replaceAt_eff` (proved), `child_step` (proved), `replace` (proved), `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `check_fill` (proved), `check_filled` (proved), `check_more_holes` (proved), `check_omit` (proved), `check_program` (proved), `fillAt_of_replaceAt` (proved), `hole_hasTy` (proved), `adjoint` (proved), `Eliminator.lift_least` (proved), `Eliminator.lift_mono` (proved), `Eliminator.lift_upper` (proved), `monotone` (proved), `lift_sound` (proved), `below_of_upper` (proved), `closed_join` (proved), `foldl_all` (proved), `foldl_join_normalize` (proved), `foldl_join_start` (proved), `foldl_keeps` (proved), `joinAll_all` (proved), `joinAll_keeps` (proved), `joinAll_le` (proved), `joinAll_normalize` (proved), `join_normalize_right` (proved), `le_joinAll` (proved), `lift_all` (proved), `lift_closed` (proved), `lift_closed_pair` (proved), `lift_congr` (proved), `lift_laws` (proved), `UnionRule.lift_least` (proved), `lift_member` (proved), `UnionRule.lift_mono` (proved), `lift_never` (proved), `lift_transfer` (proved), `lift_union` (proved), `lift_union_eq` (proved), `lift_unique` (proved), `UnionRule.lift_upper` (proved), `mapM_answer` (proved), `mapM_cons_eq_some` (proved), `mapM_source` (proved), `mapM_total` (proved), `members_union` (proved), `normal_ofMembers` (proved), `actionHasTy_replace` (proved), `check_replace` (proved), `effsHasTy_replace` (proved), `hasTy_replace` (proved), `holes_conservative` (proved), `layerHasTy_replace` (proved), `layersHasTy_cons` (proved), `layersHasTy_replace` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `stmtsHasTy_replace` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
 
 **Next goals** (14): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
@@ -4614,12 +4633,12 @@ flowchart LR
 
 - Open: sketch-renumbering (proposed claim; initial-algebras-folds): a stored sketch is pinned to the row count of its application; when the application gains a row before the hole table, a map of positions renames the program's operations, each operation keeps its row, and the sketch keeps its type; no theorem states it, and Eff has no map on its operations today; a stale hole is not refused as such, since it reads the row that now stands at its position (two red controls, Test/Program/SketchControls.lean); at the authoring surface a hole is its row's spelling, and no position is stale; the consumer is an author who adds a host row while a sketch is open (docs/research/2026-10-06-seat-SKETCH-receipt.md, open obligation 1; decisions row 291)
 - Open: sketch-admission (proposed claim; residual-program-typing): a located refusal for a sketch with its hole table: signature admission at the extended application, raw formation of each hole row, and closed columns; Sketch.check is the checker's answer and admits no sketch to a later stage; the checker types a hole whose declared answer repeats a record field, which raw formation refuses; the consumer is the first tool that stores a sketch (the receipt, open obligation 2)
-- Open: typed-replacement (proposed claim; initial-algebras-folds): an admitted program splits at an address into an environment and a type, and any program of that type stands at the address with the whole keeping its type; one statement over HasTy for each of the six judgments, with the hole table in the statement; it is the law of omitting and of filling, and an edit at a focus needs the focus checked and not the program again; compiled as six statements, proved in scratch on the addresses through bind, with 13 of 57 single steps (the study, section 5.7); no goal states it; slice REPLACE; it replaces the parts focus-decomposes and focus-composes
 - Open: checked-types-closed (proposed claim; subtyping-algebra): every type that the checker gives a formed program is closed; false today, since formation has no rule at a type variable outside a template, and a program of one node is admitted at a type that is not closed (the study, section 9.6 (a), compiled); the repair is one clause of Formation.HeadFormed, which narrows the admitted programs by those that hold a variable in an annotation; slice FORM
-- Open: column-graduality (proposed claim; context-requirements): under a hole row that declares the answer alone, omitting more gives the same answer, a smaller error and a smaller requirement, where each omitted address has no closed edge above it or its node's error is never; a closed edge is a place where a child's error enters a value type: the body of catchCause, catchIf, matchCause, onExit or exit, and the program of a fork; it is the one fact that a slice view of the error or of the requirement column owes (docs/research/2026-10-06-seat-LATTICE-receipt.md, section 7); read upward it is the completion of a type slice; with three declared columns an omission keeps the whole type at every address, by typed-replacement; a finite census holds it at 4833 single omissions and 1033 whole masks of 201 programs, with none refused, and outside the premise 4 of 49 omissions are refused (docs/research/2026-10-06-seat-CENSUS-receipt.md, section 5.3); no goal states it; slice COLUMN
-- Open: focus-function and marking-agrees (proposed claims; initial-algebras-folds): the traced check answers the environment and the type at each address and agrees with check; a checker that marks each local failure answers on every program, its first mark is the located refusal of explain, it has no mark exactly where the program is admitted, and a marked program is admitted modulo its holes when each mark is read as a hole; not compiled; slice TRACE
+- Open: column-graduality (proposed claim; context-requirements): under a hole row that declares the answer alone, omitting more gives the same answer, a smaller error and a smaller requirement, where each omitted address has no closed edge above it or its node's error is never; a closed edge is a place where a child's error enters a value type: the body of catchCause, catchIf, matchCause, onExit or exit, and the program of a fork; it is the one fact that a slice view of the error or of the requirement column owes (docs/research/2026-10-06-seat-LATTICE-receipt.md, section 7); read upward it is the completion of a type slice; with three declared columns an omission keeps the whole type where the focus's columns are closed, formed and in normal form (Sketch.check_omit); elsewhere the hole row is read in normal form, and an omission can change the type of the whole or be refused (the controls on a pair and on mapFromEntries, Test/Program/ReplaceControls.lean); a filling has no such premise; a finite census holds it at 4833 single omissions and 1033 whole masks of 201 programs, with none refused, and outside the premise 4 of 49 omissions are refused (docs/research/2026-10-06-seat-CENSUS-receipt.md, section 5.3); no goal states it; slice COLUMN
+- Open: focus-function (proposed claim; initial-algebras-folds): a function answers the environment and the type of the focus at an address, and the replacement law holds at its answer with no existential (NodeHasTy.replace states the pair as existential); a step function with one case for each arm of Node.child, and its fold along a path; Checker.check does not change; the first half of slice TRACE (decisions row 292), with seat SKETCH; its first consumer is the TypeScript printer, which needs the type of an eliminator's scrutinee
+- Open: marking-agrees (proposed claim; initial-algebras-folds): a checker that marks each local failure answers on every program, its first mark is the located refusal of explain, it has no mark exactly where the program is admitted, and a marked program is admitted modulo its holes when each mark is read as a hole; not compiled; its natural form is the checker over a monad, which rewrites the 65 fields of the checker's algebra and each proof that unfolds one, so it gets its own design; the second half of slice TRACE
 - Open: expected-type-slice (proposed claim; subtyping-algebra): each analysing rule of the checker has a minimal slice of its context that still expects the queried type: the row's declaration, the declared field, the cursor type; not stated
-- Open: checker-monotone (proposed claim; subtyping-algebra): with every eliminator and every test by equality reading a union member by member and total at never, and with no scheme, row or loop that binds one parameter at two covariant places, a typed term stays typed at a smaller type under a pointwise smaller environment, and a program stays admitted at a smaller type when a child is replaced by a program of a smaller type; false today at the shape eliminators (fiberTy, Decision.arms), at getOrElse, ite and a loop with no cursor annotation (seat GAP's probes); it is the law of filling a hole at a smaller type and of the answer-only column slices, and the guarantee for an omission does not need it; its union groundwork is proved (union-rule-lift): each converted rule owes the three facts of UnionRule.Eliminator, a rule that reads two heads owes four member facts of an upper map, and the record rules owe UnionRule.Below; no rule is converted yet, and a converted rule under the guard is not monotone at a proper union until the TypeScript printer writes the type arguments (candidate N, decisions rows 282, 285, 292, 293)
+- Open: checker-monotone (proposed claim; subtyping-algebra): with every eliminator and every test by equality reading a union member by member and total at never, and with no scheme, row or loop that binds one parameter at two covariant places, and with no scheme that binds a parameter at the first member of a union (mapFromEntries refuses the normal form of an argument that it admits raw; seat BOUNDS probes the match by bounds), a typed term stays typed at a smaller type under a pointwise smaller environment, and a program stays admitted at a smaller type when a child is replaced by a program of a smaller type; false today at the shape eliminators (fiberTy, Decision.arms), at getOrElse, ite and a loop with no cursor annotation (seat GAP's probes); it is the law of filling a hole at a smaller type and of the answer-only column slices, and the guarantee for an omission does not need it; its union groundwork is proved (union-rule-lift): each converted rule owes the three facts of UnionRule.Eliminator, a rule that reads two heads owes four member facts of an upper map, and the record rules owe UnionRule.Below; no rule is converted yet, and a converted rule under the guard is not monotone at a proper union until the TypeScript printer writes the type arguments (candidate N, decisions rows 282, 285, 292, 293)
 - Open: gap-conservative, gap-necessary, gap-graduality and gap-exact-off-cells (proposed claims; subtyping-algebra, with R2 and R3 for the appended leaf): with one gap per hole, the gap check on a program with no gap is the checker; a program with holes that some hole table admits passes the gap check; an omission passes the gap check at a gap type that has the original's type as an instance; off invariant positions a program that passes the gap check is admitted by some hole table; at a cell the content converts by the rule with bounds, since the member-by-member rule accepts pairs with no witness; tested on finite models and not compiled (the study, sections 5.2, 5.5 and 5.6); the leaf Ty.gap is stage 6 of the study's plan, and the coordinator tells the owner before the append lands (decisions rows 282, 288); they replace the part gradual-checker
 - Open: fill-by-term (proposed claim; translation-simulation): a reply of a term's value at a hole's frontier and the filled program have one observation; a data hole waits at a frontier as a host row does today, and a handler for a hole's operation waits for a consumer; designed and not compiled (the study, section 7)
 
@@ -4629,279 +4648,318 @@ flowchart LR
   n1["holes_conservative<br/>proved"]
   n2["sketch_weakening<br/>proved"]
   n3["hole_hasTy<br/>proved"]
-  n4["withHoles_extends<br/>proved"]
-  n5["withHoles_nil<br/>proved"]
-  n6["withHoles_rowOf<br/>proved"]
-  n7["withHoles_withHoles<br/>proved"]
-  n8["check_filled<br/>proved"]
-  n9["check_more_holes<br/>proved"]
-  n10["check_program<br/>proved"]
-  n11["adjoint<br/>proved"]
-  n12["Eliminator.lift_least<br/>proved"]
-  n13["Eliminator.lift_mono<br/>proved"]
-  n14["Eliminator.lift_upper<br/>proved"]
-  n15["monotone<br/>proved"]
-  n16["lift_sound<br/>proved"]
-  n17["below_of_upper<br/>proved"]
-  n18["closed_join<br/>proved"]
-  n19["foldl_all<br/>proved"]
-  n20["foldl_join_normalize<br/>proved"]
-  n21["foldl_join_start<br/>proved"]
-  n22["foldl_keeps<br/>proved"]
-  n23["joinAll_all<br/>proved"]
-  n24["joinAll_keeps<br/>proved"]
-  n25["joinAll_le<br/>proved"]
-  n26["joinAll_normalize<br/>proved"]
-  n27["join_normalize_right<br/>proved"]
-  n28["le_joinAll<br/>proved"]
-  n29["lift_all<br/>proved"]
-  n30["lift_closed<br/>proved"]
-  n31["lift_closed_pair<br/>proved"]
-  n32["lift_congr<br/>proved"]
-  n33["lift_laws<br/>proved"]
-  n34["UnionRule.lift_least<br/>proved"]
-  n35["lift_member<br/>proved"]
-  n36["UnionRule.lift_mono<br/>proved"]
-  n37["lift_never<br/>proved"]
-  n38["lift_transfer<br/>proved"]
-  n39["lift_union<br/>proved"]
-  n40["lift_union_eq<br/>proved"]
-  n41["lift_unique<br/>proved"]
-  n42["UnionRule.lift_upper<br/>proved"]
-  n43["mapM_answer<br/>proved"]
-  n44["mapM_cons_eq_some<br/>proved"]
-  n45["mapM_source<br/>proved"]
-  n46["mapM_total<br/>proved"]
-  n47["members_union<br/>proved"]
-  n48["normal_ofMembers<br/>proved"]
-  n49["sketch_more_holes<br/>proved"]
-  n50["sketch_reads_its_holes<br/>proved"]
-  n51["drop_le<br/>proved"]
-  n52["drop_le_of_subset<br/>proved"]
-  n53["exists_mem_subslices<br/>proved"]
-  n54["failed_rest<br/>proved"]
-  n55["failed_snoc<br/>proved"]
-  n56["filter_mem_sublists<br/>proved"]
-  n57["firstDrop_append<br/>proved"]
-  n58["firstDrop_length<br/>proved"]
-  n59["instIsPreorder<br/>proved"]
-  n60["instLawfulOrderInf<br/>proved"]
-  n61["instLawfulOrderSup<br/>proved"]
-  n62["le_drop<br/>proved"]
-  n63["le_of_mem_subslices<br/>proved"]
-  n64["not_mem_drop<br/>proved"]
-  n65["omitted_anti<br/>proved"]
-  n66["omitted_full<br/>proved"]
-  n67["omitted_subset<br/>proved"]
-  n68["restart_append<br/>proved"]
-  n69["restart_eq_sweep<br/>proved"]
-  n70["restart_of_none<br/>proved"]
-  n71["restart_of_some<br/>proved"]
-  n72["sublists_subset<br/>proved"]
-  n73["sweepAsked_length<br/>proved"]
-  n74["sweepFreeAsked_sublist<br/>proved"]
-  n75["sweepFree_congr<br/>proved"]
-  n76["sweepFree_eq_sweep<br/>proved"]
-  n77["sweep_congr<br/>proved"]
-  n78["sweep_kept_needed<br/>proved"]
-  n79["sweep_sublist<br/>proved"]
-  n80["sweep_valid<br/>proved"]
-  n81["keeps_above<br/>proved"]
-  n82["needs<br/>proved"]
-  n83["of_same_sites<br/>proved"]
-  n84["contribution_le<br/>proved"]
-  n85["contribution_lub<br/>proved"]
-  n86["contribution_valid<br/>proved"]
-  n87["decide_valid_up<br/>proved"]
-  n88["descendTree_asks<br/>proved"]
-  n89["descendTree_eq_descend<br/>proved"]
-  n90["descendTree_minimal<br/>proved"]
-  n91["descend_asks<br/>proved"]
-  n92["descend_eq_restart<br/>proved"]
-  n93["descend_le<br/>proved"]
-  n94["descend_minimal<br/>proved"]
-  n95["descend_sublist<br/>proved"]
-  n96["descend_valid<br/>proved"]
-  n97["exists_minimal_below<br/>proved"]
-  n98["isMinimal_iff<br/>proved"]
-  n99["minimal_iff_drop<br/>proved"]
-  n100["minimal_refine<br/>proved"]
-  n101["minimals_complete<br/>proved"]
-  n102["minimals_sound<br/>proved"]
-  n103["ofOmitted_full<br/>proved"]
-  n104["parentOmitted_sound<br/>proved"]
-  n105["valid_max<br/>proved"]
-  n106["valid_refine<br/>proved"]
-  n107["valid_up<br/>proved"]
-  n108["check_restrict<br/>proved"]
-  n109["normalize_idem<br/>proved"]
-  n110["subN_trans<br/>proved"]
-  n111["subN_refl<br/>proved"]
-  n112["subN_equiv_iff<br/>proved"]
-  n113["check_ext<br/>proved"]
-  n114["cata_eff_congr_on<br/>proved"]
-  n115["hom_eq_cata_eff<br/>proved"]
-  n116["sub_antisymm_canonical<br/>proved"]
-  n117["check_sound<br/>proved"]
-  n118["check_complete<br/>proved"]
-  n0 --> n105
-  n0 --> n100
-  n0 --> n94
-  n0 --> n93
-  n0 --> n97
-  n1 --> n4
-  n1 --> n108
-  n2 --> n50
-  n2 --> n49
-  n3 --> n109
-  n3 --> n6
-  n8 --> n1
-  n9 --> n49
-  n10 --> n5
-  n11 --> n12
-  n11 --> n110
-  n11 --> n46
-  n11 --> n14
-  n12 --> n34
-  n13 --> n15
-  n13 --> n36
-  n14 --> n111
-  n14 --> n42
-  n15 --> n111
-  n15 --> n17
-  n16 --> n38
-  n17 --> n110
-  n20 --> n109
-  n21 --> n27
-  n21 --> n109
-  n23 --> n19
-  n24 --> n22
-  n25 --> n23
-  n26 --> n20
-  n27 --> n109
-  n28 --> n24
-  n29 --> n45
-  n29 --> n23
-  n30 --> n18
-  n30 --> n29
-  n31 --> n18
-  n31 --> n29
-  n33 --> n38
-  n33 --> n36
-  n33 --> n32
-  n33 --> n35
-  n33 --> n37
-  n34 --> n110
-  n34 --> n45
-  n34 --> n25
-  n36 --> n25
-  n36 --> n28
-  n36 --> n43
-  n36 --> n46
-  n38 --> n24
-  n38 --> n43
-  n39 --> n45
-  n39 --> n25
-  n39 --> n28
-  n39 --> n43
-  n39 --> n46
-  n39 --> n47
-  n40 --> n26
-  n40 --> n109
-  n40 --> n112
-  n40 --> n39
-  n40 --> n110
-  n40 --> n111
-  n41 --> n109
-  n41 --> n32
-  n41 --> n21
+  n4["replace<br/>proved"]
+  n5["at_layers_nil<br/>proved"]
+  n6["at_stmts_nil<br/>proved"]
+  n7["replaceAt_eff<br/>proved"]
+  n8["child_step<br/>proved"]
+  n9["withHoles_extends<br/>proved"]
+  n10["withHoles_nil<br/>proved"]
+  n11["withHoles_rowOf<br/>proved"]
+  n12["withHoles_withHoles<br/>proved"]
+  n13["check_fill<br/>proved"]
+  n14["check_filled<br/>proved"]
+  n15["check_more_holes<br/>proved"]
+  n16["check_omit<br/>proved"]
+  n17["check_program<br/>proved"]
+  n18["fillAt_of_replaceAt<br/>proved"]
+  n19["adjoint<br/>proved"]
+  n20["Eliminator.lift_least<br/>proved"]
+  n21["Eliminator.lift_mono<br/>proved"]
+  n22["Eliminator.lift_upper<br/>proved"]
+  n23["monotone<br/>proved"]
+  n24["lift_sound<br/>proved"]
+  n25["below_of_upper<br/>proved"]
+  n26["closed_join<br/>proved"]
+  n27["foldl_all<br/>proved"]
+  n28["foldl_join_normalize<br/>proved"]
+  n29["foldl_join_start<br/>proved"]
+  n30["foldl_keeps<br/>proved"]
+  n31["joinAll_all<br/>proved"]
+  n32["joinAll_keeps<br/>proved"]
+  n33["joinAll_le<br/>proved"]
+  n34["joinAll_normalize<br/>proved"]
+  n35["join_normalize_right<br/>proved"]
+  n36["le_joinAll<br/>proved"]
+  n37["lift_all<br/>proved"]
+  n38["lift_closed<br/>proved"]
+  n39["lift_closed_pair<br/>proved"]
+  n40["lift_congr<br/>proved"]
+  n41["lift_laws<br/>proved"]
+  n42["UnionRule.lift_least<br/>proved"]
+  n43["lift_member<br/>proved"]
+  n44["UnionRule.lift_mono<br/>proved"]
+  n45["lift_never<br/>proved"]
+  n46["lift_transfer<br/>proved"]
+  n47["lift_union<br/>proved"]
+  n48["lift_union_eq<br/>proved"]
+  n49["lift_unique<br/>proved"]
+  n50["UnionRule.lift_upper<br/>proved"]
+  n51["mapM_answer<br/>proved"]
+  n52["mapM_cons_eq_some<br/>proved"]
+  n53["mapM_source<br/>proved"]
+  n54["mapM_total<br/>proved"]
+  n55["members_union<br/>proved"]
+  n56["normal_ofMembers<br/>proved"]
+  n57["actionHasTy_replace<br/>proved"]
+  n58["check_replace<br/>proved"]
+  n59["effsHasTy_replace<br/>proved"]
+  n60["hasTy_replace<br/>proved"]
+  n61["layerHasTy_replace<br/>proved"]
+  n62["layersHasTy_cons<br/>proved"]
+  n63["layersHasTy_replace<br/>proved"]
+  n64["sketch_more_holes<br/>proved"]
+  n65["sketch_reads_its_holes<br/>proved"]
+  n66["stmtsHasTy_replace<br/>proved"]
+  n67["drop_le<br/>proved"]
+  n68["drop_le_of_subset<br/>proved"]
+  n69["exists_mem_subslices<br/>proved"]
+  n70["failed_rest<br/>proved"]
+  n71["failed_snoc<br/>proved"]
+  n72["filter_mem_sublists<br/>proved"]
+  n73["firstDrop_append<br/>proved"]
+  n74["firstDrop_length<br/>proved"]
+  n75["instIsPreorder<br/>proved"]
+  n76["instLawfulOrderInf<br/>proved"]
+  n77["instLawfulOrderSup<br/>proved"]
+  n78["le_drop<br/>proved"]
+  n79["le_of_mem_subslices<br/>proved"]
+  n80["not_mem_drop<br/>proved"]
+  n81["omitted_anti<br/>proved"]
+  n82["omitted_full<br/>proved"]
+  n83["omitted_subset<br/>proved"]
+  n84["restart_append<br/>proved"]
+  n85["restart_eq_sweep<br/>proved"]
+  n86["restart_of_none<br/>proved"]
+  n87["restart_of_some<br/>proved"]
+  n88["sublists_subset<br/>proved"]
+  n89["sweepAsked_length<br/>proved"]
+  n90["sweepFreeAsked_sublist<br/>proved"]
+  n91["sweepFree_congr<br/>proved"]
+  n92["sweepFree_eq_sweep<br/>proved"]
+  n93["sweep_congr<br/>proved"]
+  n94["sweep_kept_needed<br/>proved"]
+  n95["sweep_sublist<br/>proved"]
+  n96["sweep_valid<br/>proved"]
+  n97["keeps_above<br/>proved"]
+  n98["needs<br/>proved"]
+  n99["of_same_sites<br/>proved"]
+  n100["contribution_le<br/>proved"]
+  n101["contribution_lub<br/>proved"]
+  n102["contribution_valid<br/>proved"]
+  n103["decide_valid_up<br/>proved"]
+  n104["descendTree_asks<br/>proved"]
+  n105["descendTree_eq_descend<br/>proved"]
+  n106["descendTree_minimal<br/>proved"]
+  n107["descend_asks<br/>proved"]
+  n108["descend_eq_restart<br/>proved"]
+  n109["descend_le<br/>proved"]
+  n110["descend_minimal<br/>proved"]
+  n111["descend_sublist<br/>proved"]
+  n112["descend_valid<br/>proved"]
+  n113["exists_minimal_below<br/>proved"]
+  n114["isMinimal_iff<br/>proved"]
+  n115["minimal_iff_drop<br/>proved"]
+  n116["minimal_refine<br/>proved"]
+  n117["minimals_complete<br/>proved"]
+  n118["minimals_sound<br/>proved"]
+  n119["ofOmitted_full<br/>proved"]
+  n120["parentOmitted_sound<br/>proved"]
+  n121["valid_max<br/>proved"]
+  n122["valid_refine<br/>proved"]
+  n123["valid_up<br/>proved"]
+  n124["check_restrict<br/>proved"]
+  n125["normalize_idem<br/>proved"]
+  n126["replaceAt_spec<br/>proved"]
+  n127["check_complete<br/>proved"]
+  n128["subN_trans<br/>proved"]
+  n129["subN_refl<br/>proved"]
+  n130["subN_equiv_iff<br/>proved"]
+  n131["check_sound<br/>proved"]
+  n132["check_ext<br/>proved"]
+  n133["cata_eff_congr_on<br/>proved"]
+  n134["hom_eq_cata_eff<br/>proved"]
+  n135["sub_antisymm_canonical<br/>proved"]
+  n0 --> n121
+  n0 --> n116
+  n0 --> n110
+  n0 --> n109
+  n0 --> n113
+  n1 --> n9
+  n1 --> n124
+  n2 --> n65
+  n2 --> n64
+  n3 --> n125
+  n3 --> n11
+  n4 --> n8
+  n7 --> n126
+  n8 --> n62
+  n8 --> n5
+  n8 --> n6
+  n13 --> n18
+  n13 --> n9
+  n13 --> n12
+  n13 --> n58
+  n14 --> n1
+  n15 --> n64
+  n16 --> n127
+  n16 --> n3
+  n16 --> n13
+  n17 --> n10
+  n19 --> n20
+  n19 --> n128
+  n19 --> n54
+  n19 --> n22
+  n20 --> n42
+  n21 --> n23
+  n21 --> n44
+  n22 --> n129
+  n22 --> n50
+  n23 --> n129
+  n23 --> n25
+  n24 --> n46
+  n25 --> n128
+  n28 --> n125
+  n29 --> n35
+  n29 --> n125
+  n31 --> n27
+  n32 --> n30
+  n33 --> n31
+  n34 --> n28
+  n35 --> n125
+  n36 --> n32
+  n37 --> n53
+  n37 --> n31
+  n38 --> n26
+  n38 --> n37
+  n39 --> n26
+  n39 --> n37
+  n41 --> n46
   n41 --> n44
-  n41 --> n48
-  n42 --> n28
-  n42 --> n110
-  n42 --> n43
-  n43 --> n44
-  n45 --> n44
-  n46 --> n44
-  n49 --> n4
-  n49 --> n113
-  n49 --> n7
-  n50 --> n4
-  n50 --> n108
-  n50 --> n7
-  n53 --> n56
-  n63 --> n72
-  n68 --> n55
-  n68 --> n54
-  n68 --> n71
-  n68 --> n57
-  n68 --> n70
-  n68 --> n58
-  n69 --> n68
-  n70 --> n58
-  n71 --> n58
-  n74 --> n52
-  n76 --> n52
-  n78 --> n79
-  n78 --> n52
-  n81 --> n82
-  n82 --> n99
-  n83 --> n59
-  n83 --> n107
-  n85 --> n102
-  n85 --> n101
-  n86 --> n94
-  n86 --> n93
-  n86 --> n59
-  n86 --> n85
-  n86 --> n96
-  n86 --> n107
-  n87 --> n107
-  n88 --> n75
-  n88 --> n104
-  n88 --> n87
-  n88 --> n74
-  n89 --> n104
-  n89 --> n87
-  n89 --> n76
-  n90 --> n89
-  n90 --> n94
-  n91 --> n77
-  n91 --> n73
-  n92 --> n87
-  n92 --> n69
-  n92 --> n58
-  n93 --> n95
-  n94 --> n87
-  n94 --> n78
-  n94 --> n96
-  n94 --> n99
-  n95 --> n79
-  n96 --> n80
-  n97 --> n94
-  n97 --> n93
-  n98 --> n99
-  n99 --> n62
-  n99 --> n107
-  n99 --> n51
-  n99 --> n64
-  n100 --> n106
-  n100 --> n97
-  n101 --> n83
-  n101 --> n98
-  n101 --> n53
-  n102 --> n98
-  n102 --> n63
-  n103 --> n66
-  n105 --> n61
-  n105 --> n59
-  n105 --> n107
-  n108 --> n114
-  n108 --> n115
-  n112 --> n116
-  n112 --> n109
-  n113 --> n117
-  n113 --> n118
+  n41 --> n40
+  n41 --> n43
+  n41 --> n45
+  n42 --> n128
+  n42 --> n53
+  n42 --> n33
+  n44 --> n33
+  n44 --> n36
+  n44 --> n51
+  n44 --> n54
+  n46 --> n32
+  n46 --> n51
+  n47 --> n53
+  n47 --> n33
+  n47 --> n36
+  n47 --> n51
+  n47 --> n54
+  n47 --> n55
+  n48 --> n34
+  n48 --> n125
+  n48 --> n130
+  n48 --> n47
+  n48 --> n128
+  n48 --> n129
+  n49 --> n125
+  n49 --> n40
+  n49 --> n29
+  n49 --> n52
+  n49 --> n56
+  n50 --> n36
+  n50 --> n128
+  n50 --> n51
+  n51 --> n52
+  n53 --> n52
+  n54 --> n52
+  n57 --> n4
+  n58 --> n7
+  n58 --> n127
+  n58 --> n131
+  n58 --> n60
+  n59 --> n4
+  n60 --> n4
+  n61 --> n4
+  n63 --> n4
+  n64 --> n9
+  n64 --> n132
+  n64 --> n12
+  n65 --> n9
+  n65 --> n124
+  n65 --> n12
+  n66 --> n4
+  n69 --> n72
+  n79 --> n88
+  n84 --> n71
+  n84 --> n70
+  n84 --> n87
+  n84 --> n73
+  n84 --> n86
+  n84 --> n74
+  n85 --> n84
+  n86 --> n74
+  n87 --> n74
+  n90 --> n68
+  n92 --> n68
+  n94 --> n95
+  n94 --> n68
+  n97 --> n98
+  n98 --> n115
+  n99 --> n75
+  n99 --> n123
+  n101 --> n118
+  n101 --> n117
+  n102 --> n110
+  n102 --> n109
+  n102 --> n75
+  n102 --> n101
+  n102 --> n112
+  n102 --> n123
+  n103 --> n123
+  n104 --> n91
+  n104 --> n120
+  n104 --> n103
+  n104 --> n90
+  n105 --> n120
+  n105 --> n103
+  n105 --> n92
+  n106 --> n105
+  n106 --> n110
+  n107 --> n93
+  n107 --> n89
+  n108 --> n103
+  n108 --> n85
+  n108 --> n74
+  n109 --> n111
+  n110 --> n103
+  n110 --> n94
+  n110 --> n112
+  n110 --> n115
+  n111 --> n95
+  n112 --> n96
+  n113 --> n110
+  n113 --> n109
+  n114 --> n115
+  n115 --> n78
+  n115 --> n123
+  n115 --> n67
+  n115 --> n80
+  n116 --> n122
+  n116 --> n113
+  n117 --> n99
+  n117 --> n114
+  n117 --> n69
+  n118 --> n114
+  n118 --> n79
+  n119 --> n82
+  n121 --> n77
+  n121 --> n75
+  n121 --> n123
+  n124 --> n133
+  n124 --> n134
+  n130 --> n135
+  n130 --> n125
+  n132 --> n131
+  n132 --> n127
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -4910,13 +4968,21 @@ flowchart LR
 | `holes_conservative` | proved | — | `withHoles_extends`, `check_restrict` | 37 | 203 |
 | `sketch_weakening` | proved | — | `sketch_reads_its_holes`, `sketch_more_holes` | 53 | 358 |
 | `hole_hasTy` | proved | — | `normalize_idem`, `withHoles_rowOf` | 83 | 207 |
+| `replace` | proved | — | `child_step` | 0 | 6 |
+| `at_layers_nil` | proved | — | — | 0 | 2 |
+| `at_stmts_nil` | proved | — | — | 0 | 2 |
+| `replaceAt_eff` | proved | — | `replaceAt_spec` | 2 | 5 |
+| `child_step` | proved | — | `layersHasTy_cons`, `at_layers_nil`, `at_stmts_nil` | 71 | 204 |
 | `withHoles_extends` | proved | — | — | 40 | 130 |
 | `withHoles_nil` | proved | — | — | 0 | 4 |
 | `withHoles_rowOf` | proved | — | — | 37 | 130 |
 | `withHoles_withHoles` | proved | — | — | 0 | 4 |
+| `check_fill` | proved | — | `fillAt_of_replaceAt`, `withHoles_extends`, `withHoles_withHoles`, `check_replace` | 53 | 297 |
 | `check_filled` | proved | — | `holes_conservative` | 37 | 203 |
 | `check_more_holes` | proved | — | `sketch_more_holes` | 53 | 291 |
+| `check_omit` | proved | — | `check_complete`, `hole_hasTy`, `check_fill` | 58 | 301 |
 | `check_program` | proved | — | `withHoles_nil` | 53 | 291 |
+| `fillAt_of_replaceAt` | proved | — | — | 0 | 9 |
 | `adjoint` | proved | — | `Eliminator.lift_least`, `subN_trans`, `mapM_total`, `Eliminator.lift_upper` | 84 | 57 |
 | `Eliminator.lift_least` | proved | — | `UnionRule.lift_least` | 39 | 51 |
 | `Eliminator.lift_mono` | proved | — | `monotone`, `UnionRule.lift_mono` | 37 | 49 |
@@ -4955,8 +5021,16 @@ flowchart LR
 | `mapM_total` | proved | — | `mapM_cons_eq_some` | 0 | 0 |
 | `members_union` | proved | — | — | 111 | 54 |
 | `normal_ofMembers` | proved | — | — | 47 | 40 |
+| `actionHasTy_replace` | proved | — | `replace` | 0 | 7 |
+| `check_replace` | proved | — | `replaceAt_eff`, `check_complete`, `check_sound`, `hasTy_replace` | 53 | 233 |
+| `effsHasTy_replace` | proved | — | `replace` | 0 | 7 |
+| `hasTy_replace` | proved | — | `replace` | 0 | 7 |
+| `layerHasTy_replace` | proved | — | `replace` | 0 | 7 |
+| `layersHasTy_cons` | proved | — | — | 53 | 194 |
+| `layersHasTy_replace` | proved | — | `replace` | 0 | 7 |
 | `sketch_more_holes` | proved | — | `withHoles_extends`, `check_ext`, `withHoles_withHoles` | 53 | 288 |
 | `sketch_reads_its_holes` | proved | — | `withHoles_extends`, `check_restrict`, `withHoles_withHoles` | 53 | 358 |
+| `stmtsHasTy_replace` | proved | — | `replace` | 0 | 7 |
 | `drop_le` | proved | — | — | 0 | 2 |
 | `drop_le_of_subset` | proved | — | — | 0 | 2 |
 | `exists_mem_subslices` | proved | — | `filter_mem_sublists` | 0 | 4 |
@@ -5016,15 +5090,16 @@ flowchart LR
 | `valid_up` | proved | — | — | 1 | 4 |
 | `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 72 | 308 |
 | `normalize_idem` | proved | — | — | 77 | 51 |
+| `replaceAt_spec` | proved | — | — | 1 | 9 |
+| `check_complete` | proved | — | — | 70 | 244 |
 | `subN_trans` | proved | — | — | 96 | 53 |
 | `subN_refl` | proved | — | — | 38 | 44 |
 | `subN_equiv_iff` | proved | — | `sub_antisymm_canonical`, `normalize_idem` | 38 | 48 |
+| `check_sound` | proved | — | — | 137 | 241 |
 | `check_ext` | proved | — | `check_sound`, `check_complete` | 67 | 234 |
 | `cata_eff_congr_on` | proved | — | — | 65 | 73 |
 | `hom_eq_cata_eff` | proved | — | — | 65 | 79 |
 | `sub_antisymm_canonical` | proved | — | — | 144 | 61 |
-| `check_sound` | proved | — | — | 137 | 241 |
-| `check_complete` | proved | — | — | 70 | 244 |
 
 ## Acceptance programs
 

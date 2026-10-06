@@ -1,5 +1,6 @@
 import Effect4.Program.Sketch
 import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.Typing.Replace
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -19,10 +20,16 @@ checker's two extension theorems apply.
 | `sketch_more_holes` (H2) | a sketch stays admitted, at the same type, when more holes are declared | `check_ext` |
 | `sketch_reads_its_holes` (H3) | the checker reads the rows of the holes that the sketch performs, and no later row | `check_restrict` |
 | `Sketch.hole_hasTy` | a hole has its declared type, in every environment | `HasTy.perform`, `rowTy_closed` |
+| `Sketch.check_fill` | a filling of the focus's type keeps the sketch's type, and the filling alone is checked | `check_replace` |
+| `Sketch.check_omit` | an omission keeps the sketch's type, when the hole row declares the focus's type exactly | `check_replace`, `Sketch.hole_hasTy` |
 
 Each statement is made once, at the typing signature of an application (`SigApp.signature`).
 The form at a row table alone is the instance at `⟨table, []⟩`: `SigApp.signature_nil` holds by
 definition (`Test/Program/SketchControls.lean` has the instance).
+
+The last two are the replacement law of the typing judgment
+(`Laws/Program/Typing/Replace.lean`) at the two edits of a sketch, `Sketch.fillAt` and
+`Sketch.omitAt`. Their controls are in `Test/Program/ReplaceControls.lean`.
 
 ## Placement
 
@@ -43,6 +50,16 @@ that fold at two signatures. Requirement R14, under decisions rows 282 and 288.
   hole row with a unit request, closed columns and formed columns, at any position of any hole
   table, in every environment. It does not establish a rule for a request that reads the
   environment, or a run. Consumer: the replacement law, for an omission.
+
+- **`typed-replacement`** (proposed claim, role substitution; its pointer is
+  `NodeHasTy.replace`, in `Laws/Program/Typing/Replace.lean`). `Sketch.check_fill` and
+  `Sketch.check_omit` are its two consumers on a sketch. Reach: a sketch that the checker admits,
+  and an address of a program in it. A filling has the focus's type exactly, and it may declare
+  more holes. An omission asks four things of the focus's type: closed columns, an answer and an
+  error in normal form, formed columns, and the requirement as its own key list. They do not
+  establish any behaviour, or a filling or an omission at a type that is equal only after
+  normalization: the checker gives a node the raw type of its term, and it reads a hole row in
+  normal form. The focus's environment and type are existential here.
 
 No statement here names a gap, a term hole or a run. The host boundary stays where
 `docs/core/host-boundary.md` puts it.
@@ -204,5 +221,69 @@ theorem Sketch.hole_hasTy (app : SigApp) (holes : RowTable) (k : Nat) {name : St
     show some (⟨answer.normalize.normalize, error.normalize.normalize,
       Requirement.ofList requires⟩ : EffTy) = _
     rw [Ty.normalize_idem, Ty.normalize_idem]
+
+/-! ## Filling and omitting: the replacement law at a sketch -/
+
+/-- The fill at an address where the program's replacement exists: the sketch with the
+replaced program. A step of `typed-replacement`: `Sketch.check_fill` reads it. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.fillAt_of_replaceAt {s : Sketch} {path : List Nat} {q program : NativeEff}
+    (h : (Node.eff s.program).replaceAt path (.eff q) = some (.eff program)) :
+    s.fillAt path q = some { s with program := program } := by
+  simp only [Sketch.fillAt, h, Option.bind_some, Node.eff?, Option.map_some]
+
+/-- **Filling keeps the type, and the filling alone is checked.** A sketch that the checker
+admits splits at an address of a program into an environment and a type of the focus. Every
+program that the checker admits at that type in that environment fills the address, and the
+checker admits the filled sketch at the same type. The filling may declare more holes: `more`
+is appended to the hole table. A consumer of `typed-replacement`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_fill (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {q : NativeEff} (hs : s.check app = .ok T)
+    (hat : (Node.eff s.program).at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy),
+      (∀ pq, Checker.check (app.withHoles s.holes).signature env pq q = .ok t) ∧
+      ∀ (more : RowTable) {q' : NativeEff} {pq : List Nat},
+        Checker.check (app.withHoles (s.holes ++ more)).signature env pq q' = .ok t →
+        ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
+          s'.check app = .ok T := by
+  obtain ⟨env, t, hq, hfill⟩ := check_replace hs hat
+  refine ⟨env, t, hq, fun more {q' pq} hq' => ?_⟩
+  have hext : SigExtends (app.withHoles s.holes).signature
+      (app.withHoles (s.holes ++ more)).signature := by
+    rw [← SigApp.withHoles_withHoles]
+    exact (app.withHoles s.holes).withHoles_extends more
+  obtain ⟨p', hrep, hp'⟩ := hfill hext hq'
+  exact ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ more }) hrep, hp' []⟩
+
+/-- **Omitting keeps the type, where a hole row declares the focus's type exactly.** A sketch
+that the checker admits splits at an address of a program into an environment and a type `t` of
+the focus. When `t` has closed columns, an answer and an error in normal form, and formed
+columns, the omission with the hole row that declares `t` exists, and the checker admits it at
+the same type. The premises are the hole's rule's (`Sketch.hole_hasTy`), and the two on normal
+form: a hole row is read in normal form, and the checker gives a node the raw type of its term.
+A consumer of `typed-replacement`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {q : NativeEff} (hs : s.check app = .ok T)
+    (hat : (Node.eff s.program).at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy),
+      (∀ pq, Checker.check (app.withHoles s.holes).signature env pq q = .ok t) ∧
+      ∀ (name : String), t.answer.closed = true → t.error.closed = true →
+        t.answer.normalize = t.answer → t.error.normalize = t.error →
+        Formation.Formed (Formation.instantiatedSites
+          (Row.hole name t.answer t.error t.requires.elems).normalizeTypes []) →
+        ∃ s', s.omitAt app path (Row.hole name t.answer t.error t.requires.elems) = some s' ∧
+          s'.check app = .ok T := by
+  obtain ⟨env, t, hq, hfill⟩ := Sketch.check_fill s app hs hat
+  refine ⟨env, t, hq, fun name hans herr hansN herrN formed => ?_⟩
+  have hhole := Sketch.hole_hasTy app
+    (s.holes ++ [Row.hole name t.answer t.error t.requires.elems]) s.holes.length env
+    List.getElem?_concat_length hans herr formed
+  have hreq : Requirement.ofList t.requires.elems = t.requires :=
+    Row.normalize_of_ascending t.requires.elems t.requires.ascending
+  rw [hansN, herrN, hreq] at hhole
+  exact hfill [Row.hole name t.answer t.error t.requires.elems] (pq := [])
+    (check_complete _ _ env t hhole [])
 
 end Effect4.Program

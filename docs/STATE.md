@@ -350,7 +350,12 @@ need no ruling and no append: the hole table (SKETCH), the replacement law (REPL
 formation at a type variable (FORM). The first of them has landed (row 291): a sketch is a
 program with its hole table (`src/Effect4/Program/Sketch.lean`), and its language is a
 conservative extension of the program's (`src/Effect4/Laws/Program/Sketch.lean`). The
-replacement law is the next slice. Nothing else of the study is a theorem of the tree yet.
+replacement law has landed too (row 294): a program of the focus's type stands in the
+focus's place, over the six typing judgments, with no rule added
+(`src/Effect4/Laws/Program/Typing/Replace.lean`). A filling has no further premise. An
+omission with three columns keeps the type where the focus's columns are closed, formed and
+in normal form. The law's environment and type are existential, and the first half of slice
+TRACE makes them a function. Nothing else of the study is a theorem of the tree yet.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
@@ -375,7 +380,18 @@ In work since the suspension of the handover:
   data, and three claims are in the registry: `sketch-conservative`, `sketch-weakening` and
   `hole-rule`. `Sketch.check` is the checker's answer: it admits no sketch to a later stage.
   A stored sketch is pinned to the row count of its application, and its renumbering is an
-  open part of R14. The seat has the replacement law next, on the same branch.
+  open part of R14.
+- **Slice REPLACE is merged** ([its receipt](research/2026-10-06-seat-REPLACE-receipt.md);
+  rows 288 and 294). The replacement law is one statement over a judgment of nodes
+  (`NodeHasTy.replace`, the registry claim `typed-replacement`), with one step for each arm
+  of the generated `Node.child`. A sketch has two edits with their laws: `Sketch.fillAt` with
+  `Sketch.check_fill`, and `Sketch.omitAt` with `Sketch.check_omit`. One finding changes the
+  order of work. The checker refuses the normal form of a type that it admits raw, at an
+  atom whose scheme infers on the raw type (a red control on `mapFromEntries`). So the
+  conversions of candidate N alone do not make the checker read a type up to its normal
+  form: the match of a template must change too, which seat BOUNDS probes. Seat SKETCH has
+  the first half of slice TRACE next, on the same branch: a function for the focus's
+  environment and type.
 - **Seat FORM has formation at a type variable** (branch `seat/form`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-form-brief.md); row 288, point
   6 a). A type variable is formed in a template only, and a formed program that the checker
