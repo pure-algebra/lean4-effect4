@@ -11,8 +11,9 @@ Status: a proposal (history, not authority). It follows the card's template of
 - Codex's proposed card and review
   (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/roadmap-audit/modules/`).
 
-No profile here is ruled. No Lean statement of Pool exists. Section 10 puts five choices to
-the owner.
+**Ruled 2026-10-06.** The owner answered "yes to all" to section 10's five choices, each as
+recommended. Decisions rows 267 to 269 are the authority: the first profile, the close that
+waits, and the release's order of reuse. No Lean statement of Pool exists.
 
 ## 1. The source
 
@@ -241,3 +242,6 @@ Each fault must fail its own property, and typing alone must not catch it.
 
 Questions 2 and 3 are differences from the pin. Question 1 follows a ruled policy, and it is
 listed so that the owner sees it.
+
+**The answers (2026-10-06).** Each is ruled as recommended: question 1 by decisions row 269,
+question 2 by row 268, and questions 3, 4 and 5 by row 267.

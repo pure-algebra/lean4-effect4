@@ -10,8 +10,10 @@ Status: a proposal (history, not authority). It follows the card's template of
 - Codex's proposed card and review
   (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/roadmap-audit/modules/`).
 
-No profile here is ruled. No Lean statement of Cache exists. Section 10 puts four choices to
-the owner.
+**Ruled 2026-10-06.** The owner answered "yes to all" to section 10's four choices, each as
+recommended. Decisions rows 270 to 272 are the authority: the first profile, the release's
+behaviour where the two builds differ, and the capacity's reach. No Lean statement of Cache
+exists.
 
 ## 1. The source
 
@@ -221,3 +223,6 @@ Each fault must fail its own property, and typing alone must not catch it.
 
 Question 2 is a difference in the surface. Question 1 follows a ruled policy, and it is listed
 so that the owner sees it.
+
+**The answers (2026-10-06).** Each is ruled as recommended: question 1 by decisions row 271,
+questions 2 and 3 by row 270, and question 4 by row 272.

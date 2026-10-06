@@ -47,6 +47,11 @@ These are not rows, and none is reported. Reporting is the owner's decision. Eac
 finite runs with bun 1.4.2 on the named builds, and on a reading of the named source. The
 probes and their outputs are under `docs/research/2026-10-05-claude-lead/module-cards/`.
 
+The owner ruled the tree's answer to each on 2026-10-06 (`docs/core/decisions.md`). Pool's
+close waits for every borrowed item, as Effect 3 does (row 268). Cache follows the release
+(row 271). Pool's first profile acquires every item at `make`, so a failed acquisition fails
+`make` (row 267).
+
 | Candidate | Effect 3.22.2 | rc.112 | 4.0.1 | Probe |
 | --- | --- | --- | --- | --- |
 | The close of a pool's scope finishes while a borrower still holds an item. The item's finalizer runs later, at the return. `shutdown` calls `releaseAll` on its local semaphore, which frees the permits that its last `take` waits for. Effect 3 calls `releaseAll` on the pool's own semaphore | no: the close waits for the return | yes | yes | `pool-probes/pool-close.ts`, on three builds |

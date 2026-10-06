@@ -164,8 +164,9 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
   [Pool's card](research/2026-10-05-claude-lead/module-cards/pool.md) and
   [Cache's card](research/2026-10-05-claude-lead/module-cards/cache.md) are written since
   2026-10-06. Each rests on the two vendored sources, a host probe on rc.112 and 4.0.1, and
-  Codex's proposed card. Neither profile is ruled: Pool's card puts five choices to the owner
-  and Cache's four. Two findings came from the probes. In both Effect 4 builds the close of a
+  Codex's proposed card. **Both profiles are ruled** since 2026-10-06 (rows 267 to 272,
+  below): the owner answered "yes to all" to the nine choices of the two cards. Two findings
+  came from the probes. In both Effect 4 builds the close of a
   pool's scope does not wait for a borrowed item, and in Effect 3 it does. On the pin a
   cache's reader who arrives during a lookup's cleanup is interrupted, and the release
   repairs that. `UPSTREAM-BACKLOG.md` records both as candidates.
@@ -261,6 +262,21 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   comparison finds 192 moved declarations with equal statements and no other difference, and
   no step term moved. Fourteen list facts are in `Effect4.Constructive`. The operations that
   wait and the protected form are a later slice.
+
+Ruled later on 2026-10-06, each as recommended (rows 267 to 272; no Lean statement of
+either module exists yet):
+
+- Pool's first profile is a fixed size, `make size acquire` that acquires every item before
+  it answers, and `use pool body`. Time to live, `invalidate` and the scoped `get` are
+  excluded by name (row 267);
+- Pool's close waits for every borrowed item, as Effect 3 does. Both Effect 4 builds do not
+  wait, and the profile signs the difference (row 268);
+- a returned item joins the front, as the release does (row 269);
+- Cache's first profile is a fixed capacity with string keys, and `make`, `get`, `has` and
+  `invalidate`. The lookup is given at each `get` (row 270);
+- Cache follows the release where the two builds differ: a reader that arrives during an
+  abandoned lookup's cleanup starts a new lookup (row 271);
+- Cache's capacity bounds the keys, and not the lookups that are alive (row 272).
 
 In work since 2026-10-06, two seats at once (row 237):
 
