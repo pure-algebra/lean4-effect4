@@ -132,7 +132,9 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     changed.push(`${host.name}: ${field}`)
   }
   // Red control of the host's measurement: a fault on the host only. It keeps every other
-  // entry, the root's exit among them, and the comparison fails at the faulty entry.
+  // entry, the root's exit among them, and the comparison fails at the faulty entry. The fault
+  // is a dropped assignment of the workers scenario, so the control stands with that scenario.
+  if (scenarioNames.includes("workers")) ok(faulty.length > 0, "the host's measurement has its red control")
   for (const host of faulty) {
     const fixture = fixtureOf(host.name)
     const { [host.field]: _through, ...through } = host.through, { [host.field]: _measured, ...measured } = host.measured

@@ -1,6 +1,7 @@
 import Effect4.Api.HostSession
 import Effect4.Program.Profile
 import Effect4.Program.Stream
+import Test.Dogfood.Scenario.Workers
 import Test.Dogfood.Scenario.Routing
 import Tools.ProfileJson
 import TypeScript.Render
@@ -791,9 +792,61 @@ def routingRuns : Except String (List HostRun) := do
     , { routing "exact-escape" exact (failing "SqlError" "connection lost") with
         out := some "tsgo 7 refuses the printed module of the exact error column (TS2375, twice): the lane runs only a module that type-checks" } ]
 
+/-- One host run of the workers scenario. Its observation has seven fields. The work left is
+five readings, and each has its own entry, because the host reads two of them. -/
+def workers (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
+  { name := "workers/" ++ name
+    scenario := "workers"
+    opened := Scenario.Workers.opened built
+    moves := moves
+    observed := fun run =>
+      let o := Scenario.Workers.observe run
+      [ ("assignment", toJson (o.assignment.map valJson))
+      , ("receipts", toJson (o.receipts.map seenJson))
+      , ("applications", toJson (o.applications.map seenJson))
+      , ("retired", toJson (o.retired.map fun entry =>
+          Json.mkObj [("call", seenJson entry.1), ("kept", toJson entry.2)]))
+      , ("cleanups", toJson (o.cleanups.map valJson))
+      , ("rootExit", exitOrNull o.rootExit)
+      , ("workLeft.runnable", toJson (o.workLeft.runnable.map (·.value)))
+      , ("workLeft.queued", toJson (o.workLeft.queued.map (·.value)))
+      , ("workLeft.awaiting", toJson (o.workLeft.awaiting.map awaitJson))
+      , ("workLeft.pending", toJson (o.workLeft.pending.map keyJson))
+      , ("workLeft.timers", toJson (o.workLeft.timers.map fun timer =>
+          [toJson timer.1.value, Json.str timer.2.toDecimal])) ]
+    same := fun a b => Scenario.Workers.observe a == Scenario.Workers.observe b
+    asks := [.cells, .sleeps, .dispatchers] }
+
+open Scenario.Workers in
+/-- The workers scenario's runs: each script of a control of `Test/Dogfood/Scenario/Workers.lean`
+on the crew, and the lowest-fiber schedule on the crew that registers each release twice. -/
+def workersRuns : Except String (List HostRun) := do
+  let crew ← build "the crew" (crew 2)
+  let faulty ← build "the crew that registers each release twice" (crewWith true 2)
+  let run := fun (name : String) (parts : List (List Scenario.Move)) =>
+    workers name crew (Scenario.script parts)
+  return [ run "parked" [parked]
+    , run "received" [parked, takes]
+    , run "received-reversed" [parked, takes.reverse]
+    , run "duplicate" [parked, takes, [.receive w1 (Scenario.ok (.nat 1))]]
+    , run "applied-2" [parked, takes, [.apply w2]]
+    , run "applied-1-2" [parked, takes, [.apply w1, .apply w2]]
+    , run "applied-2-1" [parked, takes, [.apply w2, .apply w1]]
+    , run "crossed" [parked, [.row (.submit (forged 0 2 2 (Scenario.ok (.nat 1))))]]
+    , run "unreceived" [parked, [.apply w2]]
+    , run "stale" [parked, takes,
+        [.apply w1, .row (.submit (forged 0 1 1 (Scenario.ok (.nat 1)))), .row (.apply ⟨⟨1⟩, 1⟩)]]
+    , run "cancelled-running" [running, [.cancel ⟨2⟩]]
+    , run "cancelled-early" [parked, [.cancel ⟨2⟩, .receive w2 (Scenario.ok (.nat 2))]]
+    , run "cancelled-between" [parked, takes, [.cancel ⟨2⟩, .apply w2, .apply w1]]
+    , run "cancelled-root" [parked, [.cancel ⟨0⟩]]
+    , run "lowest" [lowest]
+    , run "cancelled" [running, [.cancel ⟨2⟩], finish]
+    , workers "twice" faulty lowest ]
+
 /-- Every host run of every scenario. -/
 def runs : Except String (List HostRun) := do
-  routingRuns
+  return (← routingRuns) ++ (← workersRuns)
 
 /-- The fixtures of the runs that a host can perform, and each other run with the reason. -/
 def emit : Except String J := do

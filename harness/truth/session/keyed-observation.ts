@@ -85,6 +85,9 @@ interface Scenario {
   /** The entries that the host measures through a reader, by the reader. */
   readonly through: { readonly [Reader in ReaderName]?: { readonly fields: string[]; readonly read: (end: HostEnd) => Entries } }
 }
+/** The entries of a log cell (`entries` of the batteries): the list, or nothing. */
+const entries = (cell: Json | undefined): Json => Array.isArray(cell) ? cell : []
+const key = ({ fiber, token }: Key): Json => ({ fiber, token })
 const scenarios: Record<string, Scenario> = {
   // Test/Dogfood/Scenario/Routing.lean, `Observation`. The refused rows are the session's: the
   // ledger predicts each one.
@@ -96,6 +99,31 @@ const scenarios: Record<string, Scenario> = {
     }),
     predicted: ["refusals"],
     through: {}
+  },
+  // Test/Dogfood/Scenario/Workers.lean, `Observation`. The work left is five entries. The cells
+  // are `opened`, `released`, `assigned` and `count`, in allocation order.
+  workers: {
+    host: ({ exit, ledger }, spelling) => {
+      const seen = (call: HeldCall): Json => ({ row: spelling(call), request: call.request, fiber: call.fiber, token: call.token })
+      return {
+        receipts: ledger.receipts.map(seen),
+        applications: ledger.applications.map(seen),
+        retired: ledger.retired.map(({ call, kept }) => ({ call: seen(call), kept })),
+        rootExit: exit,
+        "workLeft.awaiting": ledger.live.map(({ fiber, token, row, request }) => ({ fiber, token, row, request })),
+        "workLeft.pending": ledger.stored.map(key)
+      }
+    },
+    through: {
+      cells: { fields: ["assignment", "cleanups"], read: ({ cells }) => ({ assignment: entries(cells![2]), cleanups: entries(cells![1]) }) },
+      sleeps: { fields: ["workLeft.timers"], read: ({ sleeps }) => ({ "workLeft.timers": sleeps! }) },
+      // The count names no fiber. Lean grants the reader only where both of its lists are empty,
+      // so zero armed dispatchers is the two empty lists, and any other count is a disagreement.
+      dispatchers: { fields: ["workLeft.runnable", "workLeft.queued"], read: ({ armed }) => {
+        const none: Json = armed === 0 ? [] : { armed: armed! }
+        return { "workLeft.runnable": none, "workLeft.queued": none }
+      } }
+    }
   }
 }
 /** The entries of a scenario's observation at a script's end, each by its source: measured by
