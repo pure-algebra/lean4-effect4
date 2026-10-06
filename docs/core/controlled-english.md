@@ -318,6 +318,8 @@ Each entry is one row of six columns:
 | **refutation** | A counterexample that refutes a registry claim. | `Pointer` (`tools/Tools/SemanticsRegistry.lean`) | — | — | — |
 | **control** (red control, green control) | A fixture that shows a check refuses what it must (red) or accepts what it must (green). Every check keeps its red control. | — | — | — | — |
 | **fixture** | Input data for a test, under `Test/fixtures/`. | — | — | — | — |
+| **scenario** | An acceptance program with one named observation, its claim, its clauses and its controls, declared as one record. A scenario gate checks the record. | `Scenario` (`Test/Dogfood/Scenario.lean`) | — | — | — |
+| **named run** | One list of moves of a scenario, under one name, on one program. The scenario's record lists it once, and each lane takes it from there. | `NamedRun` (`Test/Dogfood/Scenario.lean`) | — | — | — |
 | **battery** | A `Test` module of checks, reachable from `Test/All.lean`, or from `Test/Slow.lean` for the slow lane. | `slowLane` (`Test/Audit/AxiomGate.lean`) | — | — | — |
 | **census** | A measurement over an explicit universe, with its exclusions, roots and freshness recorded. A census is not a proof that a list is whole. A census command inspects Lean's `Environment`. | `#traversal_census` (`src/Effect4/Laws/Auto/Traversals.lean`); `#auto_census` (`src/Effect4/Laws/Auto/Census.lean`); `#semantics_census` (`src/Effect4/Laws/Auto/Semantics.lean`) | — | — | — |
 | **gate** | A check that refuses a build or a merge under a stated policy. A passing gate is a verdict of its policy, not a proof. The axiom ceiling, runtime coverage and evidence validation are distinct gates. | `#effect4_axiom_gate` (`Test/Audit/AxiomGate.lean`) | — | — | — |
