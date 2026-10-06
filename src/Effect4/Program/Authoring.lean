@@ -223,10 +223,12 @@ def performTerm {Op : Type} (mk : Term → Op) (current : String) (f request : T
 
 /-- `performTermWith mk f request`: `performTerm` with the current value's binder as a Lean
 function over a name minted for this scope, read through `minted`. No name an author writes is
-a minted name, so a term of the caller keeps its reading inside `f` (`var_push_minted`,
-`Laws/Program/Author.lean`). A builder that places a caller's term in a row's binder term uses
-this form: under `performTerm`'s fixed name the caller's variable of the same name would read
-the cell's current value. It emits the same `Eff.perform`. The generated wrappers
+a minted name. So a variable that the caller reads through `var` keeps its reading inside `f`
+(`var_push_minted`, `Laws/Program/Author.lean`, under its premises on the two names). The
+promise is for such a reader: a `TermSrc` is a function of the scope, and one that inspects
+the scope in another way is outside it. A builder that places a caller's term in a row's
+binder term uses this form: under `performTerm`'s fixed name the caller's variable of the same
+name would read the cell's current value. It emits the same `Eff.perform`. The generated wrappers
 `Ref.modifyWith` and its seven siblings are one application of it
 (`Program/Authoring/Rows.lean`). -/
 def performTermWith {Op : Type} (mk : Term → Op) (f : TermSrc → TermSrc) (request : TermSrc) :

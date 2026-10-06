@@ -46,8 +46,9 @@ def uninterruptibleMask {Op : Type} (saved : String) (body : Src Op) : Src Op :=
 
 /-- `uninterruptibleMaskWith fun restore => body`: the mask with its saved state under a name
 minted for the scope, as rc.112 hands its body the function `restore`. `restore e` is the
-restore site of this mask's saved state. No name an author writes is a minted name, so a term
-of the caller keeps its reading inside the body. -/
+restore site of this mask's saved state. No name an author writes is a minted name. So a
+variable that the caller reads through `var` keeps its reading inside the body
+(`var_push_minted`, `Laws/Program/Author.lean`, under its premises on the two names). -/
 def uninterruptibleMaskWith {Op : Type} (body : (Src Op → Src Op) → Src Op) : Src Op :=
   minting "restore" fun saved => uninterruptibleMask saved (body (restore (minted saved)))
 

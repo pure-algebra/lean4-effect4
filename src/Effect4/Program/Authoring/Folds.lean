@@ -23,9 +23,10 @@ def fold (acc item : String) (accTy : Option Ty) (list init body : TermSrc) : Te
     .ok (.fold accTy listTerm initTerm bodyTerm)
 
 /-- `foldWith list init body`: `fold` with its two binders as Lean functions over names minted
-for this scope, read through `minted`. No name an author writes is a minted name, so a term of
-the caller keeps its reading inside the body (`var_push_minted_pair`,
-`Laws/Program/Authoring/Folds.lean`). A builder that places a caller's term in a fold's body
+for this scope, read through `minted`. No name an author writes is a minted name. So a variable
+that the caller reads through `var` keeps its reading inside the body (`var_push_minted_pair`,
+`Laws/Program/Authoring/Folds.lean`, under its premises on the names). The promise is for such
+a reader, and not for a `TermSrc` that inspects the scope in another way. A builder that places a caller's term in a fold's body
 uses this form: with `fold`'s fixed names the caller's variable of the same name would read the
 folded element. It emits the same `Term.fold`. `accTy` is `fold`'s. -/
 def foldWith (list init : TermSrc) (body : TermSrc → TermSrc → TermSrc)

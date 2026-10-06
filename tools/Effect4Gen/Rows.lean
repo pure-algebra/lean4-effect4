@@ -93,7 +93,8 @@ def emitTermRow (row : Row) (f : String) : Emitted :=
 
 /-- A term row's hygienic wrapper and lemma: one application of `performTermWith`
 (`Program/Authoring.lean`). `f` is a Lean function over the reader of the current value's name,
-which the surface mints, so a caller's term inside it keeps its reading. The wrapper's name is
+which the surface mints, so a variable that a caller reads through `var` keeps its reading
+inside it. The wrapper's name is
 the row's with the suffix `With`. The request comes first and the function last, as in
 `bindWith` and `foldWith`: an author writes `Ref.modifyWith cell fun current => …`. -/
 def emitTermRowWith (row : Row) (f : String) : Emitted :=
