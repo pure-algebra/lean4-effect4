@@ -285,12 +285,24 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   seat CUTS freed. Part A is two statements of the frame machine. Part B is the
   machine's invariant and its lift, with a condition just before a command clears a fiber.
   Nothing is compiled yet.
-- **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
+- **Seat SEMW has Semaphore's public operations** (branch `seat/semw`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-semw-brief.md)), in the seat that
+  seat POOL freed. It follows seat PUB's procedure for the Queue. It first lands the
+  wrapper's form at a caller's restore, which a protected body needs (row 276, point 1). The
+  Queue's trees must not move.
+- **Seat CHECK has the checker's second test** (branch `seat/check`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-check-brief.md)), in the seat that
+  seat QINV freed. `typeOfProgram` then tests the references' formation only, and the dead
+  arm of `Api.explain` goes (row 273, point 2). No program's answer changes.
+
+Merged on 2026-10-06, after the seats above began:
+
+- **Seat POOL is merged: Pool's cell and steps** (branch `seat/pool`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
   contract, the model with its profile, and the cell with its five steps. It ends with the
   steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice. **Its eight steps are
+  that waits and the finalizers' runs are a later slice. **Its eight steps and its receipt are
   merged** (`e212766f`, `e87777e9`, then `0cd730ca`). Every case of the card gives the profile's answer on the Lean
   machine, one schedule each (`Test/Program/PoolScenarios.lean`). The contract is
   `Test/contracts/pool.contract.md`. The model's profile is closed under its five
@@ -301,14 +313,8 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   `pool_steps_agree`, with its five parts (`src/Effect4/Laws/Modules/Pool/Steps.lean`; R10).
   Each part was proved in place of its planned goal. They state no order of the wake across helpers, no
   cancellation law, no close that waits and no wrapper. Two cases replay on the generated
-  engine (`ocaml/engine/test/pool/`; merged `c9428f73`). The receipt is next.
-- **Seat CHECK has the checker's second test** (branch `seat/check`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-check-brief.md)), in the seat that
-  seat QINV freed. `typeOfProgram` then tests the references' formation only, and the dead
-  arm of `Api.explain` goes (row 273, point 2). No program's answer changes.
-
-Merged on 2026-10-06, after the seats above began:
-
+  engine (`ocaml/engine/test/pool/`; merged `c9428f73`). [Its receipt](research/2026-10-06-seat-POOL-receipt.md) is merged with its claims
+  (`4667df9a`), and row 276 records what it leaves open.
 - **Seat QINV is merged** (`13a77be6`;
   [its receipt](research/2026-10-06-seat-QINV-receipt.md)). On the first profile, one step of
   the Queue's model keeps its run invariant, and both flags hold after every list of first
@@ -382,10 +388,9 @@ Merged on 2026-10-06, after the seats above began:
 Candidates with no seat, each with its place:
 
 - the scenario driver's general laws in the law graph, with seat CUTS's five statements;
-- the run-level law of the Queue's wrapper, and the wrapper's form under a caller's mask for
-  a protected body (row 275, points 2 and 4);
-- Semaphore's operations that wait and its protected form, after seat PUB's shared wrapper.
-  The case P9 on the generated engine goes with it;
+- the run-level law of the Queue's wrapper (row 275, point 2);
+- Pool's public slice: `make`, `use` by the protected form, and the close that waits, with
+  the closer as a request (row 276);
 - four points of Codex's dogfood review of 2026-10-06
   (`research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/`):
   - the next application runs Workers over the public Queue. Workers still takes its jobs
