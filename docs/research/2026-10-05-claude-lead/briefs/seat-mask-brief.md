@@ -178,3 +178,13 @@ Write `docs/research/2026-10-05-seat-MASK-receipt.md`, in the handoff form of `A
 9. proposed decisions rows. Do not edit the register.
 
 Your last message gives the head commit, the receipt's path and the first item of the receipt.
+
+The receipt also accounts for the requirements R1 to R13, in three lists taken from
+`generated/semantics.md` and from `#plan_status` (the owner's direction of 2026-10-05;
+`docs/research/2026-10-05-claude-lead/module-factory-plan.md`):
+
+- the existing claims and requirement rows that the slice advances, with each node's status;
+- the goals and the premises that its theorems still rest on;
+- the older open parts of the same requirements that it leaves untouched.
+
+Keep no second list of statuses. A conditional theorem keeps each premise that it does not meet.

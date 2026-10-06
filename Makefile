@@ -220,12 +220,24 @@ SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
   .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
   $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),.lake/build/lib/lean/Test/Dogfood/$(m).trace)
 
+# The engine's fixtures (decisions rows 254 and 255; the group `fixtures` of docs/GENERATED.md).
+# A lane is a folder under ocaml/engine/test/ with a writer, write.lean: a Lean script that
+# writes the lane's *.txt from the programs `Api.Author.build` admits. The engine's dune test
+# reads the files, and a Lean battery binds each by `include_str`. Lake does not take such a
+# file as an input, so a fixture that changed alone left the battery's evidence stale. Here the
+# marker depends on the fixtures themselves, on the writers, and on the traces of the modules
+# that the writers import (read from the writers' own import lines: the writer is the one hand
+# input). A fixture that changes alone is written again from Lean, and `check-gen` refuses a
+# committed fixture that Lean does not write.
+ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
+ENGINE_FIXTURE_TRACES := $(foreach m,$(shell sed -n 's/^import //p' $(ENGINE_FIXTURE_WRITERS)),.lake/build/lib/lean/$(subst .,/,$(m)).trace)
+
 # Lake rewrites these traces while `build` runs. Make reads a prerequisite that has no rule once,
 # before any recipe, so a rule whose Lean sources changed saw the old time and stayed stale until
 # a second run (seat T1, 2026-10-04). As targets of `build` with an empty recipe, they are read
 # again after `build`: a rule reruns exactly when a trace moved.
 $(CORE) $(LAWS) $(SEMANTICS_ROOTS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
-  .lake/build/lib/lean/Test/Program/Gen.trace: build ;
+  .lake/build/lib/lean/Test/Program/Gen.trace $(ENGINE_FIXTURE_TRACES): build ;
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
@@ -237,11 +249,22 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) $(SEMANTICS_ROOTS) | build
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md
 	@mkdir -p $(GEN) && touch $@
 
+# The lanes' inventory: every fixture and every writer, by path. A wildcard prerequisite does
+# not remember a path that left, so the list itself is a prerequisite. It changes when a fixture
+# or a writer is added, removed or renamed (the pattern of $(CHK)/inventory), and the producer
+# then refuses a fixture folder that has no writer.
+$(GEN)/fixtures-inventory: FORCE
+	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
+	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
+$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(ENGINE_FIXTURE_TRACES) scripts/generate.py | build
+	$(PY) scripts/generate.py --only fixtures
+	@mkdir -p $(GEN) && touch $@
+
 # The groups generate.py can regenerate into a temporary directory (no host runtime).
-HERMETIC_GROUPS := variances derived eff wire cas ts readme semantics
+HERMETIC_GROUPS := variances derived eff wire cas ts readme semantics fixtures
 # `gen`'s order, which is the producers' order above; lcnf is named here, between derived
 # and eff, and nowhere in HERMETIC_GROUPS.
-GEN_GROUPS := variances derived lcnf eff wire cas ts readme truth host-protocol schema-ts census semantics
+GEN_GROUPS := variances derived lcnf eff wire cas ts readme truth host-protocol schema-ts census semantics fixtures
 
 .PHONY: gen gen-hermetic $(addprefix gen-,$(GEN_GROUPS)) clean-gen
 gen: $(addprefix $(GEN)/,$(GEN_GROUPS)) ## regenerate every stale generated group, in order
@@ -264,7 +287,8 @@ GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.le
   harness/truth/tapes harness/truth/session/protocol.gen.ts harness/truth/session/tape.schema.json \
   $(SCHEMA_TS_DIR)/Person.generated.ts $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts $(SCHEMA_TS_DIR)/TwoRoots.generated.ts \
   generated/effect-runtime-census.tsv generated/corpus-index.tsv generated/row-types.tsv generated/assignability.tsv generated/row-citations.tsv \
-  generated/semantics.md
+  generated/semantics.md \
+  ocaml/engine/test/*/*.txt
 
 # ---------------------------------------------------------------------------- corpus
 #
@@ -457,7 +481,7 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 # and the inventory guard (every generated atom has a prelude case that runs). Named one by
 # one: `bun test harness/truth` would also pick up the lane's work directories.
 TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts \
+$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts harness/truth/queue-steps.typecheck.ts \
     $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
 	$(BUN) test $(TRUTH_HOST_TESTS)
 	$(PY) scripts/check-truth.py
@@ -572,7 +596,7 @@ $(CHK)/schema-codec: $(CORE) $(wildcard harness/truth/schema-codec/*) | build ha
 # library's goldens and wire tests, the LCNF route's smoke, the engine's own tests and the
 # three-engine differential (which reads the printed corpus), and the engine seam check.
 OCAML_SOURCES := $(shell find ocaml -type f -not -path '*/_build/*')
-$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES)
+$(CHK)/ocaml: $(CORPUS)/index.tsv $(OCAML_SOURCES) $(GEN)/fixtures
 	cd ocaml && $(OCAML) dune build && $(OCAML) dune test eff gen clock
 	cd ocaml && $(OCAML) dune test engine
 	$(OCAML) bash ocaml/engine/tools/gen-check.sh

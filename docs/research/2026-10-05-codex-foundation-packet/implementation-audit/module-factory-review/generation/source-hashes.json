@@ -1,0 +1,164 @@
+[
+  {
+    "path": "AGENTS.md",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 21254,
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+  },
+  {
+    "path": "docs/STATE.md",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 105108,
+    "sha256": "26396c6dded63557025713d06701cfcdbbfb2c2dedbd35b2b8e4b7abb775eb44"
+  },
+  {
+    "path": "docs/GENERATED.md",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 19568,
+    "sha256": "b3a8efffed868fd56ecf3e4b55279e4d50663f62630a2db378b6d85ce08abfa5"
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 330487,
+    "sha256": "0c31fb1bfc6e604332484cbdd110126622abb5ff0679b619a3034e22ac97a413"
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 14358,
+    "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5"
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/groundwork-plan.md",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 14768,
+    "sha256": "d439b3fa678f6627cf73d24e2dcd50fc928f6f03d3cc43e038d200e826627358"
+  },
+  {
+    "path": "tools/Effect4Gen/Authoring.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 42563,
+    "sha256": "ee1db2fc20c4e73ae5b1163f53e5da907e4fab07593c23b83f166665c3ab8bf1"
+  },
+  {
+    "path": "tools/Effect4Gen/Rows.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 12590,
+    "sha256": "79e7fcb69f782382de0ccfe3fff02960a82aed0f682b337be2494728989ffa0f"
+  },
+  {
+    "path": "tools/Effect4Gen/Forms.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 16442,
+    "sha256": "5a54314fb50c7908881dfa93e887113ca399b21d85ea78c93790920c10c2bdd2"
+  },
+  {
+    "path": "tools/Effect4Gen/Driver.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 15679,
+    "sha256": "6761b4833b7095873b153e677b16234638e1a99cc7fa423e978a7c7f80f9007a"
+  },
+  {
+    "path": "tools/Effect4Gen/manifest.json",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 21116,
+    "sha256": "30f1e49289178f5e5ecdb7875ec7fc9f01b8109b854d958c261dc7863d1ee177"
+  },
+  {
+    "path": "tools/Effect4Gen/binders.json",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 3819,
+    "sha256": "20d65ff09142c57e5018a92b047c86cc3fb18c3545b7ca010872685429c09538"
+  },
+  {
+    "path": "src/Effect4/Codegen/Forms.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 10512,
+    "sha256": "4b1dc973cc69c184918682f5c9abaabd83abaa1d6385d1f5f4f924bfbe3049f6"
+  },
+  {
+    "path": "src/Effect4/Program/Authoring.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 20252,
+    "sha256": "6710949b4dff8e17459f0a91b35fc04b15ea96e563f483beaa688106aac8fad8"
+  },
+  {
+    "path": "src/Effect4/Api/Author.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 6392,
+    "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b"
+  },
+  {
+    "path": "src/Effect4/Api/Built.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 1105,
+    "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3"
+  },
+  {
+    "path": "src/Effect4/Modules/Queue/Cell.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 4584,
+    "sha256": "5a0e9d199a192a5a9c03382e6fb78141518cb251c61def5801698db35545997f"
+  },
+  {
+    "path": "src/Effect4/Modules/Queue/Steps.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 10443,
+    "sha256": "6032a1ca68ffd201f2c4b28d40ff43dd0faba655002792a055dad083e0cc8059"
+  },
+  {
+    "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 51364,
+    "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784"
+  },
+  {
+    "path": "src/Effect4/Laws/Modules/Queue/Typing.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 12361,
+    "sha256": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766"
+  },
+  {
+    "path": "Test/Program/QueueFaces.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 10710,
+    "sha256": "e5c8180fb07a90052fc6e1518eea93dc0178f562edb0a507db2eac1ce4da363f"
+  },
+  {
+    "path": "Test/Program/QueueEngine.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 3560,
+    "sha256": "02d45e0c08f2d8a20aeeea8e01d5f856d064c4497fa6ae30d95f951b0859f986"
+  },
+  {
+    "path": "tools/ProofGraph/Goal.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 4748,
+    "sha256": "6c09f2bbe758c23517c84b0f31394a730be5c448f5c7fb483620295d4ade1e24"
+  },
+  {
+    "path": "tools/ProofGraph/Sketch.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 5229,
+    "sha256": "bcfd56fadcc0100a263886f2462363545a27b15be407f8e78cccb17d84d0103d"
+  },
+  {
+    "path": "tools/ProofGraph/Plan.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 7038,
+    "sha256": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49"
+  },
+  {
+    "path": "tools/ProofGraph/Proof.lean",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 3930,
+    "sha256": "283b11563eb0328e1b354c257b5436d64d957ef51596defa738699fe5b9e62d7"
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+    "commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+    "bytes": 28165,
+    "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2"
+  }
+]

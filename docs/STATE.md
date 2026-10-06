@@ -144,6 +144,20 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
 
   The design of waiting, tasks, masks and the atomic frontier comes before the Queue. The clock
   slice and the release audit run beside these.
+- **The module procedure** (the owner's direction of 2026-10-05, relayed by Codex in three
+  messages). The Queue is the first worked example of a factory of composed modules.
+  - The contract cards of Semaphore, Pool and Cache are prepared now. They do not wait for
+    step 4 of the order.
+  - Every module follows one procedure, and its repeated parts are generated or applied.
+  - Every receipt accounts for the requirements R1 to R13. No module slice closes one by
+    association.
+  - Row 233's order of implementation stands until the owner changes it.
+
+  [The plan](research/2026-10-05-claude-lead/module-factory-plan.md) holds the procedure, the
+  card's template, the order and the accounting.
+  [Semaphore's card](research/2026-10-05-claude-lead/module-cards/semaphore.md) is written
+  from the pinned source. It proposes a first profile and puts four choices to the owner.
+  Pool's and Cache's cards are not written.
 
 Where to read:
 
@@ -287,11 +301,11 @@ Landed later on 2026-10-05:
   in order, on every state of the first profile. `queue_steps_agree` assembles the six, and
   the registry's claim `queue-steps-agree` points at it (`962150af`). Two of the seven typing
   statements are proved too, `empty_typed` and `sizeStep_typed`. Five stay planned goals, by
-  the seat's stop and by no counterexample: the checker answers the stated type for each at
+  the seat's stop and by no counterexample. The checker answers the stated type for each at
   27 message types, by evaluation. So the goal gate counts 29. One workload runs in two
-  spellings (`Test/Program/QueueWorkload.lean`). The seat's last part is merged (`80d73226`):
-  the scenarios R1 and R4 run on the generated engine on both carriers
-  (`ocaml/engine/test/queue/`), and `Test/Program/QueueFaces.lean` pins what prints and reads
+  spellings (`Test/Program/QueueWorkload.lean`). The seat's last part is merged (`80d73226`).
+  The scenarios R1 and R4 run on the generated engine on both carriers
+  (`ocaml/engine/test/queue/`). `Test/Program/QueueFaces.lean` pins what prints and reads
   back. Each of the eight scenario modules prints and reads back since seat T5's second step.
   No Queue program runs on a host yet. No printed Queue module type-checks on the target
   until the literal repair lands (row 256).
@@ -339,13 +353,14 @@ Open at this landing:
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). A service error
      stopped its first run before any commit, and it started again the same evening from
      `7f77bd03`. The seat is finished and merged in five parts, the last at `80d73226`
-     ([its receipt](research/2026-10-05-seat-QSTEPS-receipt.md)): the cell, the six steps,
-     the relation, the six step theorems, two typing theorems, two scenarios on the engine,
-     the faces' pins and the documents. Open: five typing statements. Seat QTYPES has them
+     ([its receipt](research/2026-10-05-seat-QSTEPS-receipt.md)). They hold the cell, the
+     six steps, the relation, the six step theorems and two typing theorems. They also hold
+     two scenarios on the engine, the faces' pins and the documents. Open: five typing
+     statements. Seat QTYPES has them
      since 2026-10-05 (branch `seat/qtypes`;
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md); row 257). It
-     states the checker's rules in their introduction form, a typing judgment beside `Reads`
-     and the capture of a minted name, and it types each step at every scope. The wrapper's
+     states the checker's rules in their introduction form and a typing judgment beside
+     `Reads`. It proves the capture of a minted name, and it types each step at every scope. The wrapper's
      law takes a step's typing equation as a proof parameter. A concrete application
      discharges it by the checker's own answer on its actual body (row 257, after Codex's
      review). The owner ruled the design's five proposals as recommended
@@ -388,9 +403,10 @@ Open at this landing:
     `play_controls_eq_replay` and the session's laws (its receipt, item 9.5);
   - a fixture edited alone is not bound by `lake build`: Lake does not take an `include_str`
     file as an input. A fresh elaboration of `Test/Dogfood/Scenario/Lowered.lean` binds it.
-    The Queue's engine fixture has the same gap (`Test/Program/QueueEngine.lean`). The
-    coordinator wires both into the generation graph as side work: a fixture that changes
-    alone must force fresh evidence, with no new stamp;
+    The Queue's engine fixture had the same gap (`Test/Program/QueueEngine.lean`). The
+    generated group `fixtures` closes it for both lanes (`docs/GENERATED.md`). Its marker
+    depends on the fixtures themselves. `make gen-fixtures` writes a changed fixture again
+    from Lean, and `make check-gen` refuses a committed fixture that Lean does not write;
   - two controls are not written: a cleanup replayed under one registration, and a timer that
     fires inside a masked region;
 - the faces of an operation's type arguments, part B of the state plan's T5, are with seat T5
@@ -481,19 +497,21 @@ Open at this landing:
   - one host adapter, `kvGet`, generated from explicit contract data.
 
   The last three have no seat and no date;
-- Codex's two reviews of 2026-10-05 are filed, each with the owner's relay as pasted
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/` and
-  `next-proof-review/` beside it; source reading, compiler probes and finite controls, and
-  no Lean run):
+- Codex's three reviews of 2026-10-05 are filed, each with the owner's relay as pasted
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/`, with
+  `next-proof-review/` and `module-factory-review/` beside it). Their evidence is source
+  reading, compiler probes and finite controls, with no Lean run:
   - the first probes the literal repair and the typing of the Queue's steps (rows 256 and
     257);
-  - the second orders the next proofs: the shared typing rules and the capture of a minted
-    name (seat QTYPES), the mask and then the Queue's public path, fixture freshness in the
-    generation graph, and `Routing.infrastructure_escapes` as the first scenario goal to
-    prove. It corrects one stale reading: the admission gap is closed, and `Api.Built`
-    retains a program's admission;
-  - the owner's guidance came with both: automate the repeated checks, and keep questions
-    for a change of meaning, of the supported domain or of a representation;
+  - the second orders the next proofs. Seat QTYPES has the shared typing rules and the
+    capture of a minted name. The mask comes next, then the Queue's public path. Fixture
+    freshness joins the generation graph. `Routing.infrastructure_escapes` is the first
+    scenario goal to prove. One stale reading is corrected: the admission gap is closed, and
+    `Api.Built` retains a program's admission;
+  - the third asks for breadth and a module factory, and it keeps R1 to R13 on the plan. It
+    proposes first profiles for Semaphore, Pool and Cache, which no one has ruled;
+  - the owner's guidance came with all three. Automate the repeated checks. Keep a question
+    for the owner to a change of meaning, of the supported domain or of a representation;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

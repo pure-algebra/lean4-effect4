@@ -1,0 +1,133 @@
+{
+  "frozen_commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+  "source_files_verified": 19,
+  "checks": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "verified": true
+    },
+    {
+      "path": "docs/core/machine-state.md",
+      "sha256": "a2c51fa6ce917ff3a7560a7ff49f785d70a30250b03543ff2a639ef3bde24597",
+      "verified": true
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "3b54e44482d1459698ddb2096be3cae0b791bc89e9b5d54a1a5e1a546b2ec738",
+      "verified": true
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32",
+      "verified": true
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "sha256": "0c31fb1bfc6e604332484cbdd110126622abb5ff0679b619a3034e22ac97a413",
+      "verified": true
+    },
+    {
+      "path": "docs/STATE.md",
+      "sha256": "26396c6dded63557025713d06701cfcdbbfb2c2dedbd35b2b8e4b7abb775eb44",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/waiting-design.md",
+      "sha256": "c2303ca86f1f973e947051582f141ee6d4593ccaf51feb38ff49831bca2fc8ce",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+      "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5",
+      "verified": true
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Modules/Queue/Cell.lean",
+      "sha256": "5a0e9d199a192a5a9c03382e6fb78141518cb251c61def5801698db35545997f",
+      "verified": true
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+      "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2",
+      "verified": true
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Pool.ts",
+      "sha256": "d88cd954f7cc0dd8fd086c33d48a76d4e1cd93f9630bc09f1577d95fb29492b7",
+      "verified": true
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Cache.ts",
+      "sha256": "50cb55a041c0f2873e4e7693d235875ffd8d199395fc5440aa77e00173cac121",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Folds.lean",
+      "sha256": "ec88151bb31d9fbe2b8cd73dbeb0608e486ea6fc8c976f30824f5b8ed3180aa7",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Loops.lean",
+      "sha256": "db8f346db8540233226e1b86d91b8e445731ef35b4b1bfb815e99c377a661a3a",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Maps.lean",
+      "sha256": "8efb389e18953a4ba3c11e817e5a1ae7b62ca016670ece859cb35dffa212c6c5",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Forms.lean",
+      "sha256": "4b1dc973cc69c184918682f5c9abaabd83abaa1d6385d1f5f4f924bfbe3049f6",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-09-19-stateful-api-catalogue.md",
+      "sha256": "0b9c77e1c0e8f489db9cf83cd3a47e03e86ae7cc0bd089033bd2e75435db9937",
+      "verified": true
+    }
+  ],
+  "source_declaration_anchors": {
+    "vendor/effect-4.0.0-rc.112/src/Semaphore.ts": [
+      "const waitForPermits",
+      "take(n: number)",
+      "releaseUnsafe(fiber:",
+      "withPermits(n: number)"
+    ],
+    "vendor/effect-4.0.0-rc.112/src/Pool.ts": [
+      "export const makeWithStrategy",
+      "const getSlowWith",
+      "const leaseItemBookkeeping",
+      "const leaseItem =",
+      "const releaseItem",
+      "const wakeWaiters"
+    ],
+    "vendor/effect-4.0.0-rc.112/src/Cache.ts": [
+      "export const makeWith",
+      "export const get:",
+      "class EntryImpl",
+      "const hasExpired",
+      "const checkCapacity"
+    ]
+  },
+  "report_sha256": "1353ea11036ce2e6931a3f29068bd21602fa56f996fa3f53f2d691c1998f5cf6",
+  "source_manifest_sha256": "4653b095045a6ccd89975f47b30e3f4f1fd6dec27abbbe2ba561d09f3bbe6c7d",
+  "evidence_kind": "read-only source audit and architecture recommendation",
+  "controls": "proposed only; no model/native runtime/compiler/Lean execution",
+  "new_scope_authorized": false,
+  "dispatches": false,
+  "repo_edits": false,
+  "unresolved_lookup": "src/Effect4/Laws/Machine/Project.lean was not found; no recommendation relies on it",
+  "scope": "repeatable module process with Semaphore, Pool, Cache as concrete consumers; no implementation authorization"
+}

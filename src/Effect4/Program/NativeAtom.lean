@@ -221,7 +221,9 @@ def spec : NativeAtom → Spec
                  2026-09-12): a string\nliteral argument keeps its literal type, so \
                  `pair(\"A\", m)` is `readonly [\"A\", string]` and\n`pair(\"A\", \"m\")` is \
                  `readonly [\"A\", \"m\"]`, exactly what `NativeAtom.typeOf .pair` answers\n\
-                 under `litArgTy`; a `string` variable stays `string`." }
+                 under `litArgTy`; a `string` variable stays `string`. A number or a Boolean \
+                 in a slot\nwidens (`Wide`, decisions row 256): `pair(true, 0)` is \
+                 `readonly [boolean, number]`, as `litArgTy`\ntypes the two literals." }
   | .fst => { scheme := .custom (.project false),
               cite := "`\"fst\", [exitCons a _] => a`" }
   | .snd => { scheme := .custom (.project true),
@@ -342,7 +344,10 @@ def spec : NativeAtom → Spec
 
   | .tuple =>
       { scheme := .custom .tuple,
-        cite := "Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary." }
+        cite := "Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary.\n\
+                 A string literal in a slot keeps its literal type, and a number or a Boolean \
+                 widens (`Wide`,\ndecisions row 256): `tuple(7, \"x\", true)` is \
+                 `readonly [number, \"x\", boolean]`." }
   | .listTake =>
       { scheme := .poly [.list (.var 0), .nat] (.list (.var 0)),
         cite := "`\"take\", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a \

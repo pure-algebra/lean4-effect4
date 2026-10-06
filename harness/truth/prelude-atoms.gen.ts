@@ -13,6 +13,18 @@ import { Cause, Deferred, Exit, Option, Ref } from "effect"
 const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<E> =>
   Exit.isExit(input) ? Exit.isFailure(input) ? input.cause : Cause.empty : input
 
+/** The literal rule of `pair` and `tuple` on the target (decisions row 256, inside DI-55's
+ * ruling). A number or a Boolean type in an immediate slot widens to `number` or `boolean`,
+ * as Lean's literal rule types a number or a Boolean literal (`litArgTy`,
+ * `src/Effect4/Program/Typing/Rules.lean`). A string literal keeps its literal type. Every
+ * other argument keeps its type: no record, list, supplied tuple or handle is rewritten, and
+ * nothing is recursive.
+ *
+ * The consequence. A number or Boolean singleton type, or a brand, in a direct slot is lost
+ * on the target. A Boolean tuple tag no longer discriminates. These helpers preserve no
+ * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */
+type Wide<T> = T extends number ? number : T extends boolean ? boolean : T
+
 /**
  * `"succ", [nat n] => nat (n + 1)`
  */
@@ -53,9 +65,11 @@ export const eq = (a: number | string, b: number | string): boolean => a === b
  * The type parameters are `const` (DI-55, DI-15's literal rule, part 4 2026-09-12): a string
  * literal argument keeps its literal type, so `pair("A", m)` is `readonly ["A", string]` and
  * `pair("A", "m")` is `readonly ["A", "m"]`, exactly what `NativeAtom.typeOf .pair` answers
- * under `litArgTy`; a `string` variable stays `string`.
+ * under `litArgTy`; a `string` variable stays `string`. A number or a Boolean in a slot
+ * widens (`Wide`, decisions row 256): `pair(true, 0)` is `readonly [boolean, number]`, as `litArgTy`
+ * types the two literals.
  */
-export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
+export const pair = <const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] => [a, b] as readonly [Wide<A>, Wide<B>]
 
 /**
  * `"fst", [exitCons a _] => a`
@@ -243,8 +257,10 @@ export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [strin
 
 /**
  * Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary.
+ * A string literal in a slot keeps its literal type, and a number or a Boolean widens (`Wide`,
+ * decisions row 256): `tuple(7, "x", true)` is `readonly [number, "x", boolean]`.
  */
-export const tuple = <const A extends readonly unknown[]>(...items: A): A => items
+export const tuple = <const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } => items as { readonly [I in keyof A]: Wide<A[I]> }
 
 /**
  * `"take", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a natural count

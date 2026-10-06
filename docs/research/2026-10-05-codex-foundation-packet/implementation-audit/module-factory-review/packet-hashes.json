@@ -1,0 +1,312 @@
+[
+  {
+    "path": "advisory.md",
+    "sha256": "040f3985e27d282e34e9a6779fcb88d67b7f5cf12f5ddfcd074d030bec68c332",
+    "bytes": 3637
+  },
+  {
+    "path": "breadth/receipt.json",
+    "sha256": "9fb95ddee948df01ea8d31fac1c01f8a76168841c242b49d6a2e41154fd3e32d",
+    "bytes": 4688
+  },
+  {
+    "path": "breadth/report.md",
+    "sha256": "1353ea11036ce2e6931a3f29068bd21602fa56f996fa3f53f2d691c1998f5cf6",
+    "bytes": 16989
+  },
+  {
+    "path": "breadth/source/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "path": "breadth/source/docs/ARCHITECTURE.md",
+    "sha256": "3b54e44482d1459698ddb2096be3cae0b791bc89e9b5d54a1a5e1a546b2ec738",
+    "bytes": 28783
+  },
+  {
+    "path": "breadth/source/docs/STATE.md",
+    "sha256": "26396c6dded63557025713d06701cfcdbbfb2c2dedbd35b2b8e4b7abb775eb44",
+    "bytes": 105108
+  },
+  {
+    "path": "breadth/source/docs/core/decisions.md",
+    "sha256": "0c31fb1bfc6e604332484cbdd110126622abb5ff0679b619a3034e22ac97a413",
+    "bytes": 330487
+  },
+  {
+    "path": "breadth/source/docs/core/machine-state.md",
+    "sha256": "a2c51fa6ce917ff3a7560a7ff49f785d70a30250b03543ff2a639ef3bde24597",
+    "bytes": 19313
+  },
+  {
+    "path": "breadth/source/docs/core/semantics.md",
+    "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32",
+    "bytes": 72882
+  },
+  {
+    "path": "breadth/source/docs/research/2026-09-19-stateful-api-catalogue.md",
+    "sha256": "0b9c77e1c0e8f489db9cf83cd3a47e03e86ae7cc0bd089033bd2e75435db9937",
+    "bytes": 60785
+  },
+  {
+    "path": "breadth/source/docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+    "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5",
+    "bytes": 14358
+  },
+  {
+    "path": "breadth/source/docs/research/2026-10-05-claude-lead/waiting-design.md",
+    "sha256": "c2303ca86f1f973e947051582f141ee6d4593ccaf51feb38ff49831bca2fc8ce",
+    "bytes": 26698
+  },
+  {
+    "path": "breadth/source/src/Effect4/Codegen/Forms.lean",
+    "sha256": "4b1dc973cc69c184918682f5c9abaabd83abaa1d6385d1f5f4f924bfbe3049f6",
+    "bytes": 10512
+  },
+  {
+    "path": "breadth/source/src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+    "bytes": 51364
+  },
+  {
+    "path": "breadth/source/src/Effect4/Modules/Queue/Cell.lean",
+    "sha256": "5a0e9d199a192a5a9c03382e6fb78141518cb251c61def5801698db35545997f",
+    "bytes": 4584
+  },
+  {
+    "path": "breadth/source/src/Effect4/Program/Authoring/Folds.lean",
+    "sha256": "ec88151bb31d9fbe2b8cd73dbeb0608e486ea6fc8c976f30824f5b8ed3180aa7",
+    "bytes": 1804
+  },
+  {
+    "path": "breadth/source/src/Effect4/Program/Authoring/Loops.lean",
+    "sha256": "db8f346db8540233226e1b86d91b8e445731ef35b4b1bfb815e99c377a661a3a",
+    "bytes": 3240
+  },
+  {
+    "path": "breadth/source/src/Effect4/Program/Authoring/Maps.lean",
+    "sha256": "8efb389e18953a4ba3c11e817e5a1ae7b62ca016670ece859cb35dffa212c6c5",
+    "bytes": 1160
+  },
+  {
+    "path": "breadth/source/tools/Tools/SemanticsRegistry.lean",
+    "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5",
+    "bytes": 68968
+  },
+  {
+    "path": "breadth/source/vendor/effect-4.0.0-rc.112/src/Cache.ts",
+    "sha256": "50cb55a041c0f2873e4e7693d235875ffd8d199395fc5440aa77e00173cac121",
+    "bytes": 82367
+  },
+  {
+    "path": "breadth/source/vendor/effect-4.0.0-rc.112/src/Pool.ts",
+    "sha256": "d88cd954f7cc0dd8fd086c33d48a76d4e1cd93f9630bc09f1577d95fb29492b7",
+    "bytes": 33716
+  },
+  {
+    "path": "breadth/source/vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+    "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2",
+    "bytes": 28165
+  },
+  {
+    "path": "breadth/sources.json",
+    "sha256": "4653b095045a6ccd89975f47b30e3f4f1fd6dec27abbbe2ba561d09f3bbe6c7d",
+    "bytes": 3315
+  },
+  {
+    "path": "generation/receipt.json",
+    "sha256": "a6edf7edf86f2e196a1cf8af1e23a141ec40a38d00ee00eb38736f122c7faccd",
+    "bytes": 657
+  },
+  {
+    "path": "generation/report.md",
+    "sha256": "035bec528e1f5e3fbb0266dd91d5524df8e3fe27b676fc295108ffb74652ff48",
+    "bytes": 13111
+  },
+  {
+    "path": "generation/source-hashes.json",
+    "sha256": "8d511e9b6595d6c4fa2bab6b18dbe24088f0d35ddd62864368454b3ba38003ed",
+    "bytes": 5789
+  },
+  {
+    "path": "generation/sources/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "path": "generation/sources/Test/Program/QueueEngine.lean",
+    "sha256": "02d45e0c08f2d8a20aeeea8e01d5f856d064c4497fa6ae30d95f951b0859f986",
+    "bytes": 3560
+  },
+  {
+    "path": "generation/sources/Test/Program/QueueFaces.lean",
+    "sha256": "e5c8180fb07a90052fc6e1518eea93dc0178f562edb0a507db2eac1ce4da363f",
+    "bytes": 10710
+  },
+  {
+    "path": "generation/sources/docs/GENERATED.md",
+    "sha256": "b3a8efffed868fd56ecf3e4b55279e4d50663f62630a2db378b6d85ce08abfa5",
+    "bytes": 19568
+  },
+  {
+    "path": "generation/sources/docs/STATE.md",
+    "sha256": "26396c6dded63557025713d06701cfcdbbfb2c2dedbd35b2b8e4b7abb775eb44",
+    "bytes": 105108
+  },
+  {
+    "path": "generation/sources/docs/core/decisions.md",
+    "sha256": "0c31fb1bfc6e604332484cbdd110126622abb5ff0679b619a3034e22ac97a413",
+    "bytes": 330487
+  },
+  {
+    "path": "generation/sources/docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+    "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5",
+    "bytes": 14358
+  },
+  {
+    "path": "generation/sources/docs/research/2026-10-05-claude-lead/groundwork-plan.md",
+    "sha256": "d439b3fa678f6627cf73d24e2dcd50fc928f6f03d3cc43e038d200e826627358",
+    "bytes": 14768
+  },
+  {
+    "path": "generation/sources/src/Effect4/Api/Author.lean",
+    "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+    "bytes": 6392
+  },
+  {
+    "path": "generation/sources/src/Effect4/Api/Built.lean",
+    "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+    "bytes": 1105
+  },
+  {
+    "path": "generation/sources/src/Effect4/Codegen/Forms.lean",
+    "sha256": "4b1dc973cc69c184918682f5c9abaabd83abaa1d6385d1f5f4f924bfbe3049f6",
+    "bytes": 10512
+  },
+  {
+    "path": "generation/sources/src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+    "bytes": 51364
+  },
+  {
+    "path": "generation/sources/src/Effect4/Laws/Modules/Queue/Typing.lean",
+    "sha256": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766",
+    "bytes": 12361
+  },
+  {
+    "path": "generation/sources/src/Effect4/Modules/Queue/Cell.lean",
+    "sha256": "5a0e9d199a192a5a9c03382e6fb78141518cb251c61def5801698db35545997f",
+    "bytes": 4584
+  },
+  {
+    "path": "generation/sources/src/Effect4/Modules/Queue/Steps.lean",
+    "sha256": "6032a1ca68ffd201f2c4b28d40ff43dd0faba655002792a055dad083e0cc8059",
+    "bytes": 10443
+  },
+  {
+    "path": "generation/sources/src/Effect4/Program/Authoring.lean",
+    "sha256": "6710949b4dff8e17459f0a91b35fc04b15ea96e563f483beaa688106aac8fad8",
+    "bytes": 20252
+  },
+  {
+    "path": "generation/sources/tools/Effect4Gen/Authoring.lean",
+    "sha256": "ee1db2fc20c4e73ae5b1163f53e5da907e4fab07593c23b83f166665c3ab8bf1",
+    "bytes": 42563
+  },
+  {
+    "path": "generation/sources/tools/Effect4Gen/Driver.lean",
+    "sha256": "6761b4833b7095873b153e677b16234638e1a99cc7fa423e978a7c7f80f9007a",
+    "bytes": 15679
+  },
+  {
+    "path": "generation/sources/tools/Effect4Gen/Forms.lean",
+    "sha256": "5a54314fb50c7908881dfa93e887113ca399b21d85ea78c93790920c10c2bdd2",
+    "bytes": 16442
+  },
+  {
+    "path": "generation/sources/tools/Effect4Gen/Rows.lean",
+    "sha256": "79e7fcb69f782382de0ccfe3fff02960a82aed0f682b337be2494728989ffa0f",
+    "bytes": 12590
+  },
+  {
+    "path": "generation/sources/tools/Effect4Gen/binders.json",
+    "sha256": "20d65ff09142c57e5018a92b047c86cc3fb18c3545b7ca010872685429c09538",
+    "bytes": 3819
+  },
+  {
+    "path": "generation/sources/tools/Effect4Gen/manifest.json",
+    "sha256": "30f1e49289178f5e5ecdb7875ec7fc9f01b8109b854d958c261dc7863d1ee177",
+    "bytes": 21116
+  },
+  {
+    "path": "generation/sources/tools/ProofGraph/Goal.lean",
+    "sha256": "6c09f2bbe758c23517c84b0f31394a730be5c448f5c7fb483620295d4ade1e24",
+    "bytes": 4748
+  },
+  {
+    "path": "generation/sources/tools/ProofGraph/Plan.lean",
+    "sha256": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49",
+    "bytes": 7038
+  },
+  {
+    "path": "generation/sources/tools/ProofGraph/Proof.lean",
+    "sha256": "283b11563eb0328e1b354c257b5436d64d957ef51596defa738699fe5b9e62d7",
+    "bytes": 3930
+  },
+  {
+    "path": "generation/sources/tools/ProofGraph/Sketch.lean",
+    "sha256": "bcfd56fadcc0100a263886f2462363545a27b15be407f8e78cccb17d84d0103d",
+    "bytes": 5229
+  },
+  {
+    "path": "generation/sources/vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+    "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2",
+    "bytes": 28165
+  },
+  {
+    "path": "parent/probe.py",
+    "sha256": "af8f7649e720c14d61fdec772d9e86858f7d6ccda7c498c0ec360affdd604351",
+    "bytes": 3041
+  },
+  {
+    "path": "parent/results.json",
+    "sha256": "1d457072f2468d5ca043368cc2db7d1fbbe39a23cce0420b49b9407f19b2364e",
+    "bytes": 3182
+  },
+  {
+    "path": "parent/verify.py",
+    "sha256": "705f7f81aecdb30b76b4c8b6347d320e1c04573581a75252e3d9a1e9c335fe98",
+    "bytes": 2754
+  },
+  {
+    "path": "parent-verification.json",
+    "sha256": "edaa392865a21d84d09143d25424dd479c48f1ffb9a3f59a260f9f3155d5f5af",
+    "bytes": 18081
+  },
+  {
+    "path": "proofs/hashes.json",
+    "sha256": "b7d15290278fffea5aa6269ccacd397640e2b553f95841a4968843f36fc52d0e",
+    "bytes": 5266
+  },
+  {
+    "path": "proofs/report.md",
+    "sha256": "c7006b6296e767f71090d1ae593cedbeddba824c98f12ea51b864d14783b6e88",
+    "bytes": 13651
+  },
+  {
+    "path": "r-addendum.md",
+    "sha256": "dae745a8400c88f33807c1fc271d6302db53e9f7c5cbf4e15e0969a891917c2a",
+    "bytes": 1365
+  },
+  {
+    "path": "receipt.json",
+    "sha256": "6e661bccc7359974646721056bf7b1c5938df03c074b3da850464f638c731674",
+    "bytes": 1555
+  },
+  {
+    "path": "recommendations.md",
+    "sha256": "dbf709182e306d1d0a95398bd4bfd738d13aa9cbea730dd4611176a0916cbc5b",
+    "bytes": 20323
+  }
+]

@@ -46,5 +46,7 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pFold | success 8 | success 8 | yes | yes | yes | runSyncExit | same value |
 | pModifyFold | success [21,7] | success [21,7] | yes | yes | yes | runSyncExit | same value |
 | pQueueOffer | success [false,2,0] | success [false,2,0] | yes | yes | yes | runSyncExit | same value |
+| pRateRequest | success [true,false,3,1,3] | success [true,false,3,1,3] | yes | yes | yes | runSyncExit | same value |
+| pDeferredGate | success [false,true,false,7] | success [false,true,false,7] | yes | yes | yes | runSyncExit | same value |
 
-PASS: 41 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 43 programs agree on exits, schedules and sync exits; 1 signed divergence(s)

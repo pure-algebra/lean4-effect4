@@ -1,0 +1,184 @@
+{
+  "kind": "finite Python design controls",
+  "python": "3.13.14",
+  "frozen_source_commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+  "native_or_Lean_execution": false,
+  "checks": [
+    {
+      "name": "semaphore-live-eligibility",
+      "inputs": [
+        1,
+        [
+          [
+            "large",
+            2
+          ],
+          [
+            "small",
+            1
+          ]
+        ]
+      ],
+      "actual": {
+        "chosen": [
+          "small"
+        ],
+        "free": 0
+      },
+      "expected": {
+        "chosen": [
+          "small"
+        ],
+        "free": 0
+      },
+      "pass": true
+    },
+    {
+      "name": "strict-head-mutant-differs",
+      "inputs": [
+        1,
+        [
+          [
+            "large",
+            2
+          ],
+          [
+            "small",
+            1
+          ]
+        ]
+      ],
+      "actual": {
+        "chosen": [],
+        "free": 1
+      },
+      "expected": {
+        "chosen": [],
+        "free": 1
+      },
+      "pass": true
+    },
+    {
+      "name": "enough-permits-positive",
+      "inputs": [
+        3,
+        [
+          [
+            "large",
+            2
+          ],
+          [
+            "small",
+            1
+          ]
+        ]
+      ],
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    {
+      "name": "cache-insertion-versus-sorted-za",
+      "inputs": [
+        "z",
+        "a"
+      ],
+      "actual": false,
+      "expected": false,
+      "pass": true
+    },
+    {
+      "name": "cache-insertion-versus-sorted-az",
+      "inputs": [
+        "a",
+        "z"
+      ],
+      "actual": true,
+      "expected": true,
+      "pass": true
+    },
+    {
+      "name": "separate-private-cells",
+      "inputs": [
+        0,
+        1
+      ],
+      "actual": {
+        "results": [
+          true,
+          true
+        ],
+        "values": [
+          0,
+          0
+        ]
+      },
+      "expected": {
+        "results": [
+          true,
+          true
+        ],
+        "values": [
+          0,
+          0
+        ]
+      },
+      "pass": true
+    },
+    {
+      "name": "alias-mutant-local-bounds-still-pass",
+      "inputs": [
+        0,
+        0
+      ],
+      "actual": {
+        "results": [
+          true,
+          false
+        ],
+        "values": [
+          0
+        ]
+      },
+      "expected": {
+        "results": [
+          true,
+          false
+        ],
+        "values": [
+          0
+        ]
+      },
+      "pass": true
+    },
+    {
+      "name": "single-module-positive",
+      "inputs": [
+        0
+      ],
+      "actual": {
+        "results": [
+          true
+        ],
+        "values": [
+          0
+        ]
+      },
+      "expected": {
+        "results": [
+          true
+        ],
+        "values": [
+          0
+        ]
+      },
+      "pass": true
+    }
+  ],
+  "exclusions": [
+    "No failing current module or generated artifact is alleged.",
+    "The alias is a constructed violation of private allocation, not a reachable fresh allocation.",
+    "These models do not establish native scheduling, cancellation, or liveness.",
+    "The cache test concerns ordering only, not lookup or expiry."
+  ]
+}

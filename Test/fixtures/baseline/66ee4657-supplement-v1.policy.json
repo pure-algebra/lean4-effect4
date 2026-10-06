@@ -55,7 +55,18 @@
     "atoms `take`, `drop` and `sameHandle` are spelled by name on the wire, so they add no tag. No",
     "retained vector changed bytes: eight golden programs were appended to the OCaml corpus (pFold,",
     "pFoldCapture, pFoldNested, pFoldInOp, pFoldAtoms, pIllFoldNotList, pIllFoldBody,",
-    "pIllSameHandle). No corpus verdict moved."
+    "pIllSameHandle). No corpus verdict moved.",
+    "",
+    "The faces of a binder term and the literal rule (the state plan's T5; decisions rows 43, 212",
+    "and 256). The host lane's table followed at the merge of 2026-10-06 (`1eadc78b`): 21 rows",
+    "moved, each in one column, and no verdict column moved. Fourteen moved in the note, the",
+    "compiler's message on a program that Lean does not type: it shows `Ref<unknown>` where it",
+    "showed `Ref<number>`, because a row's term prints as a function of the current value and no",
+    "longer as a named function (g61, g94, g124, g127, g147, g154, g169, g239, g246, g259, g294,",
+    "g298, g345, g379). Two moved in the note for the literal rule: the message shows a tuple's",
+    "wide type (g5, g167). Five moved in the host's answer: the program is `Effect.fiberId`, and",
+    "the host's fiber counter stands at 7 where it stood at 1 (g81, g144, g250, g289, g313). Each",
+    "of the five was a registered difference before, and it is the same difference."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -192,6 +203,27 @@
     "generated/corpus-index.tsv:g158",
     "generated/corpus-index.tsv:g277",
     "harness/truth/corpus-results.tsv:g158",
-    "harness/truth/corpus-results.tsv:g309"
+    "harness/truth/corpus-results.tsv:g309",
+    "harness/truth/corpus-results.tsv:g5",
+    "harness/truth/corpus-results.tsv:g61",
+    "harness/truth/corpus-results.tsv:g81",
+    "harness/truth/corpus-results.tsv:g94",
+    "harness/truth/corpus-results.tsv:g124",
+    "harness/truth/corpus-results.tsv:g127",
+    "harness/truth/corpus-results.tsv:g144",
+    "harness/truth/corpus-results.tsv:g147",
+    "harness/truth/corpus-results.tsv:g154",
+    "harness/truth/corpus-results.tsv:g167",
+    "harness/truth/corpus-results.tsv:g169",
+    "harness/truth/corpus-results.tsv:g239",
+    "harness/truth/corpus-results.tsv:g246",
+    "harness/truth/corpus-results.tsv:g250",
+    "harness/truth/corpus-results.tsv:g259",
+    "harness/truth/corpus-results.tsv:g289",
+    "harness/truth/corpus-results.tsv:g294",
+    "harness/truth/corpus-results.tsv:g298",
+    "harness/truth/corpus-results.tsv:g313",
+    "harness/truth/corpus-results.tsv:g345",
+    "harness/truth/corpus-results.tsv:g379"
   ]
 }

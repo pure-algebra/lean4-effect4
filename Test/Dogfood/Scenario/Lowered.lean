@@ -20,10 +20,12 @@ the writer runs first, and this battery binds its files afterwards (`Test/Dogfoo
 
 The binding holds where this battery is elaborated. Lake does not see a fixture as an input: it
 reads `include_str` as part of this file. So a fixture that changes alone does not rebuild the
-battery, and `lake build` then binds nothing. `lake env lean Test/Dogfood/Scenario/Lowered.lean`
-elaborates it afresh.
+battery, and `lake build` then binds nothing. The generated group `fixtures` closes that gap
+(`docs/GENERATED.md`): its marker depends on the fixtures themselves, `make gen-fixtures` writes
+a changed fixture again from Lean, and `make check-gen` refuses a committed fixture that Lean
+does not write.
 
-The host run of each scenario is not here: the keyed lane waits on the coordinator's word.
+The host run of each scenario is not here: it waits on the keyed lane.
 -/
 
 set_option autoImplicit false
