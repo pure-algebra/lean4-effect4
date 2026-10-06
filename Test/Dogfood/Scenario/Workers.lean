@@ -45,13 +45,9 @@ namespace Test.Dogfood.Scenario.Workers
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Api.HostSession (Key Reply)
-open Test.Dogfood.P3WorkerQueue (take runJob ascribe)
+open Test.Dogfood.P3WorkerQueue (take runJob)
 
 /-! ## 1. The program -/
-
-/-- `Ref.update(log, xs => [...xs, x])`: one entry appended to a log cell. -/
-def note (log x : TermSrc) : Src NativeOp :=
-  Ref.update "xs" (app "append" [var "xs", app "cons" [x, app "nil" []]]) log
 
 /-- One worker with an identity. Its connection carries the identity: the acquisition notes it in
 `opened` and answers it, and the release notes the acquired value in `released`. Then the worker

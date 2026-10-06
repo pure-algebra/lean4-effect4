@@ -1,5 +1,5 @@
 import Test.Dogfood.Scenario
-import Test.Dogfood.P3WorkerQueue
+import Effect4.Program.Authoring.Ascribe
 import Test.Dogfood.P4RateLimiter
 import Test.Dogfood.P5LedgerService
 import Effect4.Laws.Program.MeaningEq
@@ -56,7 +56,6 @@ namespace Test.Dogfood.Scenario.Atomic
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Denote (Straight StraightEq)
-open Test.Dogfood.P3WorkerQueue (ascribe)
 open Test.Dogfood.P4RateLimiter (window0 windowTy windowVal decision refill)
 open Test.Dogfood.P5LedgerService (account0 deposited)
 
@@ -75,10 +74,6 @@ inductive Fault
   /-- The finalizer notes its entry twice. -/
   | twice
 deriving DecidableEq
-
-/-- `Ref.update(log, xs => [...xs, x])`: one entry appended to a log cell. -/
-def note (log x : TermSrc) : Src NativeOp :=
-  Ref.update "xs" (app "append" [var "xs", app "cons" [x, app "nil" []]]) log
 
 /-- The request's decision over the window. The scenario's is p4's: one `Ref.modify` that
 decides and rewrites the window in one store step. With `yielding`, a yield comes before the

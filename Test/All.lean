@@ -54,6 +54,7 @@ import Test.Program.MaskEngine
 import Test.Program.MaskClaims
 import Test.Program.QueueMask
 import Test.Program.FoldHygiene
+import Test.Program.Ascribe
 import Test.Program.RecordValues
 import Test.Program.MapValues
 import Test.Program.MapTyping

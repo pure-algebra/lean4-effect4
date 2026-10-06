@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario
 import Test.Dogfood.P1HttpCache
-import Test.Dogfood.P3WorkerQueue
+import Effect4.Program.Authoring.Ascribe
 
 /-!
 # The timeout scenario: replies at a timeout's boundary
@@ -53,13 +53,8 @@ namespace Test.Dogfood.Scenario.Timeout
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Api.HostSession (Key Reply)
 open Test.Dogfood.P1HttpCache (getQuote timeoutForm retryForm retryable)
-open Test.Dogfood.P3WorkerQueue (ascribe)
 
 /-! ## 1. The program -/
-
-/-- `Ref.update(log, xs => [...xs, x])`: one entry appended to a log cell. -/
-def note (log x : TermSrc) : Src NativeOp :=
-  Ref.update "xs" (app "append" [var "xs", app "cons" [x, app "nil" []]]) log
 
 /-- One attempt. It counts itself, then calls the host: the count is committed before the call.
 Its finalizer notes the count it sees and whether an interruption ended the attempt. With

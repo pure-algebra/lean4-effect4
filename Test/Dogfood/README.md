@@ -20,7 +20,8 @@ of row 204 moves at least one program forward.
   each requirement keeps waiting.
 - `Scenario.lean` holds what the scenarios share: the script alphabet, the driver, the readers of a
   run's session part and the driver's laws. It also holds a scenario's record and the gate
-  `#scenario_gate`.
+  `#scenario_gate`. Its last section holds the one `note` of the scenarios' logs: an entry
+  appended to a log cell, under a minted name for the cell's value.
 - `Scenario/` holds one battery per scenario. `Scenario/Tape.lean` holds the text of their lowered
   runs, and `Scenario/Lowered.lean` binds the engine's fixtures to it. `Scenario/Faces.lean` pins
   that each scenario's program prints and reads back. `Test/All.lean` imports each one.
