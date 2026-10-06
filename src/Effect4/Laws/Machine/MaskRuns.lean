@@ -39,7 +39,9 @@ a finished frame's state at `evaluatePrim.finishFrame`.
   start flags, the world of the lift (`basesOrder`). Entry `n` is the flag that the fiber with
   id `n` started with. A spawn appends one entry (`maskRuns_make`, `spawn_maskRuns`), and no
   command changes an entry. A live fiber has one entry in each table that holds the invariant
-  (`MaskRuns.entry_eq`), so the table is no arbitrary witness there.
+  (`MaskRuns.entry_eq`), so the table is no arbitrary witness there. So along a run a live
+  fiber's flag is a function of its stack (`MaskRuns.flag_eq`), which is what the invariant
+  gives the bracket of a region.
 * **The invariant** (`MaskRuns`). Each fiber has its entry, and a live fiber holds the chain at
   its entry. An exited fiber's flag and stack are outside it: the driver steps an exited fiber
   where a second fiber evaluates the registration of a race that the first one hosts
@@ -832,6 +834,29 @@ theorem MaskRuns.entry_eq {bases bases' : List Bool} {m : RunMachine ν σ β ε
   obtain ⟨base, entry, valid⟩ := kept.2 f mem
   obtain ⟨base', entry', valid'⟩ := kept'.2 f mem
   rw [entry, entry', (valid live).base_eq (valid' live)]
+
+/-- **Along a run, a live fiber's flag is a function of its stack.** Two machines hold the
+invariant, at two tables in the prefix order. A fiber is live in both, with one stack. Then it
+has one flag: its entry is the same in both tables, and two chains at one base over one stack
+have one flag (`MaskChain.flag_eq`). It is the field `sameFlag` of `saved_mask_chain_runs`.
+
+It is what the invariant gives the bracket of a region. It does not say that a body's run
+returns to the entry's stack: that is the bracket's own fact. -/
+@[semantics "scope-lifetime-finalization"]
+theorem MaskRuns.flag_eq {bases bases' : List Bool} {m m' : RunMachine ν σ β ε δ ι α χ St}
+    (kept : MaskRuns bases m) (kept' : MaskRuns bases' m') (grown : bases <+: bases')
+    {f g : RunFiber ν σ β ε δ ι α χ} (mem : f ∈ m.fibers) (mem' : g ∈ m'.fibers)
+    (same : g.id = f.id) (live : f.exit = none) (live' : g.exit = none)
+    (stack : f.frame.stack = g.frame.stack) :
+    f.frame.interruptible = g.frame.interruptible := by
+  obtain ⟨base, entry, valid⟩ := kept.2 f mem
+  obtain ⟨base', entry', valid'⟩ := kept'.2 g mem'
+  obtain ⟨rest, rfl⟩ := grown
+  rw [same, List.getElem?_append_left (List.getElem?_eq_some_iff.mp entry).1, entry] at entry'
+  cases entry'
+  have chain := valid live
+  rw [stack] at chain
+  exact chain.flag_eq (valid' live')
 
 /-- The empty machine holds the invariant at the empty table. It is the field `empty` of
 `saved_mask_chain_runs`. -/
@@ -2108,6 +2133,13 @@ structure MaskChainRuns (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
   sameBase : ∀ (bases bases' : List Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ), MaskRuns bases m → MaskRuns bases' m → f ∈ m.fibers →
       f.exit = none → bases[f.id.value]? = bases'[f.id.value]?
+  /-- **Along a run, a live fiber's flag is a function of its stack.** Two machines hold the
+  invariant at tables in the prefix order, and one fiber is live in both with one stack. Then it
+  has one flag. -/
+  sameFlag : ∀ (bases bases' : List Bool) (m m' : RunMachine ν σ β ε δ ι α χ St)
+    (f g : RunFiber ν σ β ε δ ι α χ), MaskRuns bases m → MaskRuns bases' m' → bases <+: bases' →
+      f ∈ m.fibers → g ∈ m'.fibers → g.id = f.id → f.exit = none → g.exit = none →
+        f.frame.stack = g.frame.stack → f.frame.interruptible = g.frame.interruptible
   /-- **Each command keeps the invariant under the command condition** `ClearReady`. -/
   command : ∀ (interp : RunInterp ν σ β ε δ ι α χ St) (bases : List Bool)
     (m : RunMachine ν σ β ε δ ι α χ St) (c : Cmd ν σ β ε δ ι α) (rest : List (Cmd ν σ β ε δ ι α)),
@@ -2179,6 +2211,8 @@ theorem saved_mask_chain_runs (ν σ : Type u) (β : Type v) (ε δ ι α χ : T
   spawn := fun interp bases m parent program options site kept =>
     spawn_maskRuns interp bases m kept parent program options site
   sameBase := fun _ _ _ _ kept kept' mem live => kept.entry_eq kept' mem live
+  sameFlag := fun _ _ _ _ _ _ kept kept' grown mem mem' same live live' stack =>
+    kept.flag_eq kept' grown mem mem' same live live' stack
   command := fun interp => driveStep_maskRuns interp (evaluatePrim_evaluatorKeepsMask interp)
   guarded := fun interp => maskRuns_stepKeeps interp (evaluatePrim_evaluatorKeepsMask interp)
   loop := fun interp => driveState_maskRuns interp (evaluatePrim_evaluatorKeepsMask interp)

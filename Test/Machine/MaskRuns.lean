@@ -26,12 +26,15 @@ real machines.
 - **The trap**, on one constructed machine: an arbitrary `Cmd.exitDone` on a live fiber breaks
   the invariant `MaskRuns`. The same machine keeps it under each alternative of the command
   condition `ClearReady`, and `Cmd.finish` keeps it with no condition.
+- **One run is needed** for `MaskRuns.flag_eq`: two fibers of two runs are live at one stack, and
+  they started at two flags.
 - **Runs of a toy interpreter**, at each command budget and each prefix of a tape: a masked
   parent whose child inherits its mask, and a run that steps an exited fiber. At that reached
   machine the invariant holds, and the form over every fiber of the table is red.
 - **A compiled program**: `Test.Program.MaskContract.s6`, with a mask, a masked fork and a
   restore site, replayed by `Api.replay` under the native evaluator. Exactly one table of start
-  flags fits every cut.
+  flags fits every cut. On each pair of cuts, a fiber that is live in both with one stack has
+  one flag.
 
 Placement. Each guard is a finite instance of the proposed registry claim
 `saved-mask-chain-runs` (concept `scope-lifetime-finalization`, requirement R11), or of one of
@@ -342,6 +345,9 @@ private def published : M := single maskedFrame (some (.success 0))
 private def emptied : M := single ⟨.success 0, [], true, none, false⟩ none
 /-- A live fiber at its base, over a neutral frame. -/
 private def atBase : M := single ⟨.success 0, [value], true, none, false⟩ none
+/-- A live fiber of a second run, which started at flag false: the stack of `emptied`, and the
+other flag. -/
+private def startedFalse : M := single ⟨.success 0, [], false, none, false⟩ none
 
 /-- An arbitrary `Cmd.exitDone` for fiber 0. -/
 private def clear (m : M) : M := (driveStep toy m (Cmd.exitDone ⟨0⟩) []).1
@@ -360,6 +366,9 @@ private def clear (m : M) : M := (driveStep toy m (Cmd.exitDone ⟨0⟩) []).1
 -- free, so both tables hold at the published fiber.
 #guard !runs [false] trap
 #guard runs [false] published
+-- One stack gives one flag only along one run. `startedFalse` holds the invariant at its own
+-- table and not at the table of `emptied`, and the two tables are not in the prefix order.
+#guard runs [false] startedFalse && runs [true] emptied && !runs [true] startedFalse
 
 /-- **The trap, proved.** Without the command condition the statement is false: an arbitrary
 `Cmd.exitDone` clears a live fiber's stack and keeps its flag. No table that extends `[true]`
@@ -372,6 +381,18 @@ theorem exitDone_needs_ready :
   have same : [true] = bases' := le.eq_of_length kept.1.symm
   subst same
   exact absurd kept (by decide)
+
+/-- **One run is needed.** Without the prefix order between the two tables, the statement of
+`MaskRuns.flag_eq` is false: two fibers of two runs are live at an empty stack, and they
+started at two flags. -/
+theorem sameFlag_needs_one_run :
+    ¬ ∀ (bases bases' : List Bool) (m m' : M) (f g : R), MaskRuns bases m → MaskRuns bases' m' →
+      f ∈ m.fibers → g ∈ m'.fibers → g.id = f.id → f.exit = none → g.exit = none →
+        f.frame.stack = g.frame.stack → f.frame.interruptible = g.frame.interruptible := by
+  intro h
+  have flags := h [true] [false] emptied startedFalse _ _ (by decide) (by decide)
+    (List.mem_singleton.mpr rfl) (List.mem_singleton.mpr rfl) rfl rfl rfl rfl
+  exact absurd flags (by decide)
 
 /-- The trap does not meet the condition: the fiber is live, its stack holds a frame, and its
 flag is not its base. -/
@@ -548,6 +569,12 @@ private def shown (m : Api.Machine) : List (Nat × Bool × List Bool × Bool) :=
       savedFlags f.frame.stack,
       f.exit.isSome)
 
+/-- A fiber's flag and its whole stack at one cut, where the fiber is live. -/
+private def liveAt (m : Api.Machine) (id : Nat) :
+    Option (Bool × List (Prim EffName EffThunk Val Err Defect FiberId Ann)) :=
+  (m.fibers.find? fun f => f.id.value == id && f.exit.isNone).map fun f =>
+    (f.frame.interruptible, f.frame.stack)
+
 -- The program builds, and its run allocates three fibers.
 #guard (cuts s6 160).length == 161
 #guard ((cuts s6 160).map (·.nextId)).eraseDups == [1, 2, 3]
@@ -565,6 +592,19 @@ private def shown (m : Api.Machine) : List (Nat × Bool × List Bool × Bool) :=
   some [(0, true, [], true), (1, false, [], true), (2, true, [], true)]
 -- A second program, with a fork of nested masks: one table again.
 #guard fitting (cuts s3 200) 3 == [[true, true, true]]
+-- Along the run a live fiber's flag is a function of its stack: on each pair of cuts, a fiber
+-- that is live in both with one stack has one flag.
+#guard (let machines := cuts s6 160
+  machines.all fun m => machines.all fun m' => [0, 1, 2].all fun id =>
+    match liveAt m id, liveAt m' id with
+    | some (flag, stack), some (flag', stack') => stack != stack' || flag == flag'
+    | _, _ => true)
+-- The check is not empty: some two cuts differ, and hold one live fiber at one stack with frames.
+#guard (let machines := cuts s6 160
+  machines.any fun m => machines.any fun m' => shown m != shown m' && [0, 1, 2].any fun id =>
+    match liveAt m id, liveAt m' id with
+    | some (_, stack), some (_, stack') => stack == stack' && !stack.isEmpty
+    | _, _ => false)
 
 /-- The theorem at the program interface: it takes no premise on the program. -/
 example (p : Api.Program) (budget : Nat) :
@@ -598,6 +638,12 @@ example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (m : M)
 example : ∀ (bases bases' : List Bool) (m : M) (f : R), MaskRuns bases m → MaskRuns bases' m →
     f ∈ m.fibers → f.exit = none → bases[f.id.value]? = bases'[f.id.value]? :=
   atNat.sameBase
+
+example : ∀ (bases bases' : List Bool) (m m' : M) (f g : R), MaskRuns bases m →
+    MaskRuns bases' m' → bases <+: bases' → f ∈ m.fibers → g ∈ m'.fibers → g.id = f.id →
+      f.exit = none → g.exit = none → f.frame.stack = g.frame.stack →
+        f.frame.interruptible = g.frame.interruptible :=
+  atNat.sameFlag
 
 /-- The placed statement, as it stands: the compiled program's interpreter under the native
 evaluator. -/
