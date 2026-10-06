@@ -4,6 +4,14 @@ Status: a brief (history, not authority). One page. Base: the head that the disp
 names. It is stage 3 of the plan of the study of a gap with holes (decisions rows 282, 288).
 The owner brought it forward on 2026-10-06 (row 292, point 2).
 
+**Amended the same day.** Seat SKETCH proved the replacement law in scratch and found that one
+generic transformer of the checker's algebra cannot give the trace: the algebra's fields are
+pure functions of their children, so a wrapper does not see the environment that a field
+passes. The first half below is therefore a step function with one case for each arm of
+`Node.child`, and seat SKETCH has it after slice REPLACE, since its step lemma holds those
+facts. The sentence below on `EffAlgebra.traced` is superseded. This brief stays for the
+consumers, the anchors, the rules, and the second half.
+
 ## The slice
 
 The checker answers one type for a whole program, or its first located refusal. Three
