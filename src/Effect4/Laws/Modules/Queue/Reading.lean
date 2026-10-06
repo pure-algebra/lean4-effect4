@@ -220,11 +220,21 @@ theorem mint_acc_ne_item (env : Env) : env.mint "acc" ≠ env.mint "item" := by
   simp only [List.cons_append, List.nil_append, List.cons.injEq] at bytes
   exact absurd bytes.2.2.1 (by decide)
 
-/-- Under a fold's two binders, the accumulator's name reads the accumulator. -/
-theorem reads_minted_acc {env : Env} {vals : List Val} (depth : vals.length = env.names.length)
-    (path : List Nat) (acc item : Val) :
-    Reads (minted (env.mint "acc")) (env.push [env.mint "acc", env.mint "item"]) path
-      (vals ++ [acc, item]) acc := by
+/-- A name that resolves at a scope is the variable at its level. A step of every lemma that
+reads a name: a fold's binder, an author's variable and a minted name. -/
+theorem minted_tree {name : String} {env : Env} {i : Nat}
+    (bound : env.names.resolve name = some i) (path : List Nat) :
+    minted name env path = .ok (.var i) := by
+  show (match env.names.resolve name with
+    | some i => Except.ok (Term.var i)
+    | none => Except.error (Refusal.mk path (Reason.unbound name))) = _
+  rw [bound]
+
+/-- Under a fold's two binders, the accumulator's name is the variable at the scope's depth.
+The tree that both the value and the type of the accumulator are read from. -/
+theorem minted_acc_tree (env : Env) (path : List Nat) :
+    minted (env.mint "acc") (env.push [env.mint "acc", env.mint "item"]) path =
+      .ok (.var env.names.length) := by
   have resolved : Names.resolve (env.names ++ [env.mint "acc", env.mint "item"])
       (env.mint "acc") = some env.names.length := by
     have split : env.names ++ [env.mint "acc", env.mint "item"] =
@@ -233,21 +243,13 @@ theorem reads_minted_acc {env : Env} {vals : List Val} (depth : vals.length = en
       rfl
     rw [split, Names.resolve_append_ne (fun same => mint_acc_ne_item env same.symm),
       resolve_last]
-  refine ⟨.var env.names.length, ?_, ?_⟩
-  · show (match Names.resolve (env.names ++ [env.mint "acc", env.mint "item"])
-        (env.mint "acc") with
-      | some i => Except.ok (Term.var i)
-      | none => Except.error (Refusal.mk path (Reason.unbound (env.mint "acc")))) = _
-    rw [resolved]
-  · show (vals ++ [acc, item])[env.names.length]? = some acc
-    rw [← depth, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
-    rfl
+  exact minted_tree resolved path
 
-/-- Under a fold's two binders, the element's name reads the element. -/
-theorem reads_minted_item {env : Env} {vals : List Val} (depth : vals.length = env.names.length)
-    (path : List Nat) (acc item : Val) :
-    Reads (minted (env.mint "item")) (env.push [env.mint "acc", env.mint "item"]) path
-      (vals ++ [acc, item]) item := by
+/-- Under a fold's two binders, the element's name is the variable one above the scope's
+depth. -/
+theorem minted_item_tree (env : Env) (path : List Nat) :
+    minted (env.mint "item") (env.push [env.mint "acc", env.mint "item"]) path =
+      .ok (.var (env.names.length + 1)) := by
   have resolved : Names.resolve (env.names ++ [env.mint "acc", env.mint "item"])
       (env.mint "item") = some (env.names.length + 1) := by
     have split : env.names ++ [env.mint "acc", env.mint "item"] =
@@ -256,17 +258,29 @@ theorem reads_minted_item {env : Env} {vals : List Val} (depth : vals.length = e
       rfl
     rw [split, resolve_last, List.length_append]
     rfl
-  refine ⟨.var (env.names.length + 1), ?_, ?_⟩
-  · show (match Names.resolve (env.names ++ [env.mint "acc", env.mint "item"])
-        (env.mint "item") with
-      | some i => Except.ok (Term.var i)
-      | none => Except.error (Refusal.mk path (Reason.unbound (env.mint "item")))) = _
-    rw [resolved]
-  · show (vals ++ [acc, item])[env.names.length + 1]? = some item
-    rw [← depth, List.getElem?_append_right (Nat.le_succ _)]
-    have one : vals.length + 1 - vals.length = 1 := by omega
-    rw [one]
-    rfl
+  exact minted_tree resolved path
+
+/-- Under a fold's two binders, the accumulator's name reads the accumulator. -/
+theorem reads_minted_acc {env : Env} {vals : List Val} (depth : vals.length = env.names.length)
+    (path : List Nat) (acc item : Val) :
+    Reads (minted (env.mint "acc")) (env.push [env.mint "acc", env.mint "item"]) path
+      (vals ++ [acc, item]) acc := by
+  refine ⟨.var env.names.length, minted_acc_tree env path, ?_⟩
+  show (vals ++ [acc, item])[env.names.length]? = some acc
+  rw [← depth, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+  rfl
+
+/-- Under a fold's two binders, the element's name reads the element. -/
+theorem reads_minted_item {env : Env} {vals : List Val} (depth : vals.length = env.names.length)
+    (path : List Nat) (acc item : Val) :
+    Reads (minted (env.mint "item")) (env.push [env.mint "acc", env.mint "item"]) path
+      (vals ++ [acc, item]) item := by
+  refine ⟨.var (env.names.length + 1), minted_item_tree env path, ?_⟩
+  show (vals ++ [acc, item])[env.names.length + 1]? = some item
+  rw [← depth, List.getElem?_append_right (Nat.le_succ _)]
+  have one : vals.length + 1 - vals.length = 1 := by omega
+  rw [one]
+  rfl
 
 /-- A name that the surface mints is reserved: an author cannot write it. -/
 theorem mint_reserved (env : Env) (stem : String) : Name.reserved (env.mint stem) = true := by
@@ -282,18 +296,20 @@ theorem mint_reserved (env : Env) (stem : String) : Name.reserved (env.mint stem
   rw [bytes]
   rfl
 
+/-- A variable that an author wrote, bound at a scope, is the variable at its level. -/
+theorem var_tree {x : String} {env : Env} {i : Nat} (written : Name.reserved x = false)
+    (bound : env.names.resolve x = some i) (path : List Nat) :
+    var x env path = .ok (.var i) := by
+  show (if Name.reserved x = true then _ else minted x env path) = _
+  rw [written, if_neg Bool.false_ne_true]
+  exact minted_tree bound path
+
 /-- **A variable that an author wrote is a caller's term under a step's folds**: it reads its
 value at the scope, and the same value under the two binders that a fold mints. -/
 theorem captured_var {x : String} {env : Env} {path : List Nat} {vals : List Val} {i : Nat}
     {v : Val} (written : Name.reserved x = false) (bound : env.names.resolve x = some i)
     (held : vals[i]? = some v) : Captured (var x) env path vals v := by
-  have tree : var x env path = .ok (.var i) := by
-    show (if Name.reserved x = true then _ else minted x env path) = _
-    rw [written, if_neg Bool.false_ne_true]
-    show (match env.names.resolve x with
-      | some i => Except.ok (Term.var i)
-      | none => Except.error (Refusal.mk path (Reason.unbound x))) = _
-    rw [bound]
+  have tree : var x env path = .ok (.var i) := var_tree written bound path
   refine ⟨⟨.var i, tree, held⟩, fun acc item => ⟨.var i, ?_, ?_⟩⟩
   · rw [var_push_minted_pair (mint_reserved env "acc") (mint_reserved env "item") written env
       path]
@@ -302,6 +318,84 @@ theorem captured_var {x : String} {env : Env} {path : List Nat} {vals : List Val
     show (vals ++ [acc, item])[i]? = some v
     rw [List.getElem?_append_left inside]
     exact held
+
+/-! ## A minted name under a fold's two binders
+
+A wrapper binds a request's identity with `bindWith`, whose name is minted. `var` refuses a
+minted name, so `captured_var` does not cover it. A minted name keeps its level under a fold's
+two binders where it differs from both of the fold's names. The name that `bindWith` mints
+differs from both at every pair of scopes: the stem `answer` is no prefix of `acc` or of
+`item`, and neither is a prefix of it. No statement here says that two stems and two depths
+give two names in general.
+
+Placement. Concept `translation-simulation`, requirement R10: a helper of the step statements'
+use by the wrapper, the open part `queue-expansion-agrees`. Reach: one read under a fold's two
+binders. It establishes no wrapper typing, no cleanup, no scheduling and no host law. Its
+consumer is the wrapper's law: the `Captured` premises of `takeStep_agrees`,
+`withdrawTake_agrees` and `withdrawOffer_agrees`
+(`src/Effect4/Laws/Modules/Queue/Steps.lean`). -/
+
+/-- Two binders of other names leave a name's level. -/
+theorem resolve_under_pair {name first second : String} {names : Names} {i : Nat}
+    (bound : Names.resolve names name = some i) (notFirst : first ≠ name)
+    (notSecond : second ≠ name) : Names.resolve (names ++ [first, second]) name = some i := by
+  have split : names ++ [first, second] = (names ++ [first]) ++ [second] := by
+    rw [List.append_assoc]
+    rfl
+  rw [split, Names.resolve_append_ne notSecond, Names.resolve_append_ne notFirst]
+  exact bound
+
+/-- **A minted name is a caller's term under a step's folds**, where it differs from the two
+names that a fold of the scope mints. It resolves to a level of the scope, and the values hold
+`v` there. It reads `v` at the scope, and `v` under the fold's two binders. -/
+theorem captured_minted {name : String} {env : Env} {path : List Nat} {vals : List Val}
+    {i : Nat} {v : Val} (bound : env.names.resolve name = some i) (held : vals[i]? = some v)
+    (notAcc : env.mint "acc" ≠ name) (notItem : env.mint "item" ≠ name) :
+    Captured (minted name) env path vals v := by
+  have under : (env.push [env.mint "acc", env.mint "item"]).names.resolve name = some i :=
+    resolve_under_pair bound notAcc notItem
+  refine ⟨⟨.var i, minted_tree bound path, held⟩,
+    fun acc item => ⟨.var i, minted_tree under path, ?_⟩⟩
+  obtain ⟨inside, -⟩ := List.getElem?_eq_some_iff.mp held
+  show (vals ++ [acc, item])[i]? = some v
+  rw [List.getElem?_append_left inside]
+  exact held
+
+/-- A fold's accumulator name is no name that `bindWith` mints, at any two scopes. -/
+theorem mint_acc_ne_answer (env outer : Env) : env.mint "acc" ≠ outer.mint "answer" := by
+  intro same
+  unfold Env.mint reservedPrefix at same
+  have bytes := congrArg (fun s : String => s.toByteArray.data.toList) same
+  simp only [String.toByteArray_append, ByteArray.data_append, Array.toList_append] at bytes
+  have h1 : ("_%" : String).toByteArray.data.toList = [95, 37] := by decide
+  have h2 : ("acc" : String).toByteArray.data.toList = [97, 99, 99] := by decide
+  have h3 : ("answer" : String).toByteArray.data.toList = [97, 110, 115, 119, 101, 114] := by
+    decide
+  rw [h1, h2, h3] at bytes
+  simp only [List.cons_append, List.nil_append, List.cons.injEq] at bytes
+  exact absurd bytes.2.2.2.1 (by decide)
+
+/-- A fold's element name is no name that `bindWith` mints, at any two scopes. -/
+theorem mint_item_ne_answer (env outer : Env) : env.mint "item" ≠ outer.mint "answer" := by
+  intro same
+  unfold Env.mint reservedPrefix at same
+  have bytes := congrArg (fun s : String => s.toByteArray.data.toList) same
+  simp only [String.toByteArray_append, ByteArray.data_append, Array.toList_append] at bytes
+  have h1 : ("_%" : String).toByteArray.data.toList = [95, 37] := by decide
+  have h2 : ("item" : String).toByteArray.data.toList = [105, 116, 101, 109] := by decide
+  have h3 : ("answer" : String).toByteArray.data.toList = [97, 110, 115, 119, 101, 114] := by
+    decide
+  rw [h1, h2, h3] at bytes
+  simp only [List.cons_append, List.nil_append, List.cons.injEq] at bytes
+  exact absurd bytes.2.2.1 (by decide)
+
+/-- **The name that `bindWith` mints is a caller's term under a step's folds**, at every scope
+where it is bound: `outer` is the scope of the `bindWith`, and `env` the scope of the step. -/
+theorem captured_answer {outer env : Env} {path : List Nat} {vals : List Val} {i : Nat}
+    {v : Val} (bound : env.names.resolve (outer.mint "answer") = some i)
+    (held : vals[i]? = some v) :
+    Captured (minted (outer.mint "answer")) env path vals v :=
+  captured_minted bound held (mint_acc_ne_answer env outer) (mint_item_ne_answer env outer)
 
 /-- A literal is a caller's term under a step's folds. -/
 theorem captured_lit (value : Lit) (env : Env) (path : List Nat) (vals : List Val) {v : Val}
