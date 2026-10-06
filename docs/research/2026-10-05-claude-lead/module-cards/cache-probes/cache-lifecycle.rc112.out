@@ -105,5 +105,55 @@
   "log": [
    "lookup f starts (1)"
   ]
+ },
+ "cp9_two_readers_and_an_eviction": {
+  "keysAfterTheRemoval": [
+   "b"
+  ],
+  "logAfterTheFirstLeaves": [
+   "lookup a starts (1)",
+   "lookup b starts (1)"
+  ],
+  "third": "v-a from lookup 2",
+  "keysAfterTheReplacement": [
+   "a"
+  ],
+  "logAfterTheLastLeaves": [
+   "lookup a starts (1)",
+   "lookup b starts (1)",
+   "lookup a starts (2)",
+   "lookup 1 of a is interrupted"
+  ],
+  "keysAfterTheOldCleanup": [
+   "a"
+  ],
+  "fourth": "v-a from lookup 2",
+  "lookupsOfA": 2,
+  "keysAtTheEnd": [
+   "a"
+  ]
+ },
+ "cp9_two_readers_and_an_invalidation": {
+  "keysAfterTheRemoval": [],
+  "logAfterTheFirstLeaves": [
+   "lookup a starts (1)"
+  ],
+  "third": "v-a from lookup 2",
+  "keysAfterTheReplacement": [
+   "a"
+  ],
+  "logAfterTheLastLeaves": [
+   "lookup a starts (1)",
+   "lookup a starts (2)",
+   "lookup 1 of a is interrupted"
+  ],
+  "keysAfterTheOldCleanup": [
+   "a"
+  ],
+  "fourth": "v-a from lookup 2",
+  "lookupsOfA": 2,
+  "keysAtTheEnd": [
+   "a"
+  ]
  }
 }

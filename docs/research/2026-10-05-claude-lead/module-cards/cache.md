@@ -15,6 +15,13 @@ recommended. Decisions rows 270 to 272 are the authority: the first profile, the
 behaviour where the two builds differ, and the capacity's reach. No Lean statement of Cache
 exists.
 
+**Corrected 2026-10-06, after Codex's review.** The first draft kept an entry's count of
+awaiters in the one list of members. An eviction or an `invalidate` removes a member, so a
+reader who left afterwards had no record to find. Section 3 now names an owner for an entry
+that left the map while its lookup is pending: the detached records. The probe's case CP9 is
+new, and it gives the pin's answer on both builds. No ruling changes: row 272 already says
+that such an entry keeps its readers and its lookup.
+
 ## 1. The source
 
 `vendor/effect-4.0.0-rc.112/src/Cache.ts`, and the same file of `vendor/effect-4.0.1/`:
@@ -34,8 +41,9 @@ exists.
 `vendor/effect-4.0.0-rc.112/src/MutableHashMap.ts`: the map iterates in the order of
 insertion, and a write to a present key keeps its place (reading).
 
-**The probe.** `cache-probes/cache-lifecycle.ts` runs eight cases on one build, with bun
-1.4.2. Each case is one schedule. The lookup records each start.
+**The probe.** `cache-probes/cache-lifecycle.ts` runs nine cases on one build, with bun
+1.4.2. Each case is one schedule. The lookup records each start. CP9 runs twice: the key
+leaves by an eviction, and by `invalidate`.
 
 | Case | On rc.112 | On 4.0.1 |
 | --- | --- | --- |
@@ -47,6 +55,7 @@ insertion, and a write to a present key keeps its place (reading).
 | CP6. The last reader of a pending lookup leaves, and the lookup's cleanup waits. A new reader then asks for the key. | The key is still present. The new reader joins the old lookup and ends with an interruption. No second lookup starts. | The key is gone. A second lookup starts, and the new reader gets its value. |
 | CP7. Capacity 1. A reader waits on key a. Another key enters. | Key a leaves the map. Its reader still gets the first lookup's value. A later read of a starts a second lookup. | The same. |
 | CP8. A lookup that fails, read twice. | Both reads fail with the lookup's error, and one lookup ran. | The same. |
+| CP9. Two readers of a pending key a. The key leaves the map. The first reader is interrupted. A third read of a follows. The second reader is interrupted. A fourth read of a follows. | With one reader left the old lookup goes on. The third read starts a second lookup, and a is a key again. With no reader left the old lookup is interrupted. The key a stays, and the fourth read gets the second lookup's value. Both removals give this answer. | The same. |
 
 **The pin interrupts a reader that asked for nothing of the kind** (CP6, tested). The reader
 arrives while an abandoned lookup cleans up, and it gets that lookup's interruption as its
@@ -85,6 +94,7 @@ One cell, a record. The handle is the cell's `Ref` in this slice (decisions row 
 | --- | --- | --- |
 | `capacity` | a natural number | the most keys that the cache holds |
 | `entries` | a list of entries, oldest first | the membership and the recency order in one list |
+| `detached` | a list of entries | each entry that left the map while its lookup was pending, until it is retired |
 | `next` | a natural number | the stamp of the next entry |
 
 An entry is a record: its key, its stamp, its lookup's fiber, its result and its count of
@@ -94,8 +104,26 @@ two entries of one key have two stamps.
 One list holds both the membership and the order, so no second structure can disagree with
 it. The capacity is small and fixed, so a fold over the list finds a key.
 
+**A pending entry's record has one owner at each time.** The pin's `EntryImpl.await` keeps
+the entry object in each reader's cleanup, so the count outlives the map's membership
+(reading of both vendored sources). A cell holds values and no shared object. So the cell
+itself keeps the record:
+
+- `entries` owns it while its key holds it;
+- `detached` owns it after an eviction or an `invalidate` took it from the map, while its
+  lookup is pending;
+- it is retired when its last reader leaves, or when its lookup ends. Its readers then hold
+  the result's `Deferred`, and no later step needs the count.
+
+A step that a reader or a lookup runs for its own entry finds the record by its stamp, in
+either list. The capacity counts `entries` only (decisions row 272).
+
+The other form is a `Ref` of its own for each entry. It was not taken. A reader would then
+find the entry in one step and count itself in another. A last reader could leave between
+the two.
+
 Three things stay apart: a key, the entry that the key holds now, and a lookup. A key can
-hold a new entry while an older entry's lookup is still alive (CP6 on 4.0.1, CP7).
+hold a new entry while an older entry's lookup is still alive (CP6 on 4.0.1, CP7, CP9).
 
 ## 4. The mandatory questions
 
@@ -104,11 +132,12 @@ hold a new entry while an older entry's lookup is still alive (CP6 on 4.0.1, CP7
 | The atomic boundaries | `get` reads the map, forks the lookup and writes the entry in one synchronous step. | One `Ref.modify` for each of: join or reserve, publish a lookup's fiber, leave, the end of a lookup, `has`, `invalidate`. |
 | Where a reader registers | `EntryImpl.await` counts the reader before it joins. | The join step counts the reader in the entry that the key holds at that step. |
 | The commit point of a miss | The new entry is in the map before `get` returns its await. | The reserve step writes the entry with its stamp. The lookup's fiber is forked next, in the same masked region. |
-| A reader leaves | The count goes down. With no awaiter left and the lookup pending, the reader interrupts the lookup (CP5). | The leave step finds the entry by its stamp. It answers whether the lookup is to be interrupted. |
+| A reader leaves | The count goes down. With no awaiter left and the lookup pending, the reader interrupts the lookup (CP5). The same holds after the key left the map (CP9). | The leave step finds the entry by its stamp, among the members or among the detached records. It answers whether the lookup is to be interrupted. |
 | The detachment | rc.112 removes the key after the interruption ends. 4.0.1 removes it before (CP6). | 4.0.1's order: the leave step removes the entry from the list in the step that decides the interruption. |
-| A stale cleanup | The observer removes the key only if it still holds this entry. | Every step that ends a lookup compares stamps. It leaves a newer entry of the same key alone. |
+| A stale cleanup | The observer removes the key only if it still holds this entry. | Every step that ends a lookup compares stamps. It leaves a newer entry of the same key alone (CP9: the replacement stays). It retires its own detached record. |
 | The recency | A `get` of a live key moves it to the fresh end. `has` moves nothing (CP1, CP2). | The join step moves the entry to the list's end. The `has` step reads only. |
-| The capacity | `checkCapacity` removes from the old end. A removed pending entry keeps its readers and its lookup (CP7). | The reserve step drops entries from the list's head. A dropped entry's lookup goes on for its readers. |
+| The capacity | `checkCapacity` removes from the old end. A removed pending entry keeps its readers and its lookup (CP7, CP9). | The reserve step takes entries from the list's head. A finished entry is dropped. A pending entry's record moves to the detached records, and its lookup goes on for its readers. |
+| An `invalidate` | It removes the key, and it interrupts no lookup (CP9). | The same rule as the capacity's: a finished entry is dropped, and a pending entry's record moves to the detached records. |
 | A failure | The lookup's exit is the entry's result, a failure too (CP8). | The result holds the whole exit. An interruption is no cached result. |
 
 ## 5. The representation and the context
@@ -144,7 +173,7 @@ The count of keys is not enough. It cannot tell a reader that joined an old entr
 that started a new lookup. The capacity bounds the keys, and it does not bound the lookups
 that are alive (CP7).
 
-Hidden: the list's representation and the awaiter counts.
+Hidden: the list's representation, the detached records and the awaiter counts.
 
 ## 7. The reused pieces and the gaps
 
@@ -176,8 +205,9 @@ first.
 | --- | --- | --- | --- |
 | the step statements | `translation-simulation`, R10 | each step term agrees with the model's step: the reply, the stored value, the keys in their order, and the entry that it selects | parts of the public law |
 | `cache-recency` | `translation-simulation`, R10 | a `get` moves its key to the fresh end; `has` and `invalidate` move no other key; the reserve step drops from the old end | the public law |
-| `cache-entry-cleanup` | `reactive-scheduling`, R12 | a step that ends the lookup of one entry leaves every entry of another stamp unchanged, also under the same key | the public law |
-| `cache-shared-lookup` | `reactive-scheduling`, R12 | readers who join one pending entry get one exit of one lookup; the lookup is interrupted only when its last reader leaves | the public law |
+| `cache-entry-cleanup` | `reactive-scheduling`, R12 | a step that ends the lookup of one entry leaves every entry of another stamp unchanged, also under the same key, and it retires its own detached record | the public law |
+| `cache-shared-lookup` | `reactive-scheduling`, R12 | readers who join one pending entry get one exit of one lookup; the lookup is interrupted when its last reader leaves, and no sooner, also after the entry's key left the map | the public law |
+| the cell's invariant | `store-typing`, R4 | the stamps are distinct across both lists; a detached record is pending and has a reader; the members are at most the capacity | each step's typing and each step statement |
 | `cache-expansion-agrees` | `translation-simulation`, R10 | the expansion agrees with the profile's public observation, under its premises on the callers, interruption and the work budget | R10's module-profile part |
 
 None of these states one lookup for a key for all time, a bound on the lookups that are alive,
@@ -190,7 +220,7 @@ The pin's answers are tested (section 1). No case was run on our machine.
 
 | Case | The profile's answer |
 | --- | --- |
-| CP1, CP2, CP4, CP5, CP7, CP8 | the pin's, which is the release's too |
+| CP1, CP2, CP4, CP5, CP7, CP8, CP9 | the pin's, which is the release's too |
 | CP6 | 4.0.1's: the new reader starts a second lookup and gets its value |
 | CP3 | outside the profile: `set` is excluded |
 
@@ -202,6 +232,8 @@ The pin's answers are tested (section 1). No case was run on our machine.
 | A new reader that joins a lookup which is being interrupted | the shared lookup, on CP6: the reader must not end with an interruption |
 | A lookup interrupted while a reader is left | the shared lookup, on CP5 |
 | An eviction that interrupts the evicted entry's lookup | the shared lookup, on CP7: the reader must get its value |
+| A removal that drops a pending entry's record with its count | the shared lookup, on CP9: the last reader's leave must interrupt the old lookup, and the first reader's must not |
+| An old lookup's end that removes by the key alone | the entry's cleanup, on CP9: the replacement must stay |
 | An interruption kept as a result | the failure's rule: a later reader must start a lookup |
 
 Each fault must fail its own property, and typing alone must not catch it.

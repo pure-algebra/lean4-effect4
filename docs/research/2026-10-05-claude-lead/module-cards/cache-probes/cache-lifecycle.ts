@@ -181,6 +181,53 @@ const cp8 = Effect.gen(function*() {
   return { first, second, lookupsOfF: count.f, keys: yield* keysOf(cache), log }
 })
 
+// CP9. Two readers of a pending entry whose key leaves the map, by an eviction or by
+// `invalidate`. R1 and R2 read a, whose first lookup waits. The key leaves. R1 is interrupted:
+// one reader is left. A third read of a follows: a replacement. R2 is interrupted: it was the
+// old entry's last reader. A fourth read of a follows.
+const cp9 = (removal: "evict" | "invalidate") =>
+  Effect.gen(function*() {
+    const gate = yield* Deferred.make()
+    const { cache, log, count } = yield* makeCache(removal === "evict" ? 1 : 4, {
+      a: (n: number) =>
+        n === 1
+          ? Effect.onInterrupt(
+            Effect.as(Deferred.await(gate), "v-a from lookup 1"),
+            () => Effect.sync(() => { log.push("lookup 1 of a is interrupted") })
+          )
+          : Effect.succeed(`v-a from lookup ${n}`)
+    })
+    const r1 = yield* fork(Cache.get(cache, "a"))
+    yield* settle
+    const r2 = yield* fork(Cache.get(cache, "a"))
+    yield* settle
+    if (removal === "evict") yield* Cache.get(cache, "b")
+    else yield* Cache.invalidate(cache, "a")
+    yield* settle
+    const keysAfterTheRemoval = yield* keysOf(cache)
+    yield* Fiber.interrupt(r1)
+    yield* settle
+    const logAfterTheFirstLeaves = log.slice()
+    const third = yield* Cache.get(cache, "a")
+    const keysAfterTheReplacement = yield* keysOf(cache)
+    yield* Fiber.interrupt(r2)
+    yield* settle
+    const logAfterTheLastLeaves = log.slice()
+    const keysAfterTheOldCleanup = yield* keysOf(cache)
+    const fourth = yield* Cache.get(cache, "a")
+    return {
+      keysAfterTheRemoval,
+      logAfterTheFirstLeaves,
+      third,
+      keysAfterTheReplacement,
+      logAfterTheLastLeaves,
+      keysAfterTheOldCleanup,
+      fourth,
+      lookupsOfA: count.a,
+      keysAtTheEnd: yield* keysOf(cache)
+    }
+  })
+
 const run = (e: any) => Effect.runPromise(e).catch((error: unknown) => ({ probeError: String(error) }))
 const out = {
   effect: version,
@@ -192,6 +239,8 @@ const out = {
   cp5_readers_leave: await run(cp5),
   cp6_reader_during_a_cleanup: await run(cp6),
   cp7_pending_entry_evicted: await run(cp7),
-  cp8_failed_lookup_kept: await run(cp8)
+  cp8_failed_lookup_kept: await run(cp8),
+  cp9_two_readers_and_an_eviction: await run(cp9("evict")),
+  cp9_two_readers_and_an_invalidation: await run(cp9("invalidate"))
 }
 console.log(JSON.stringify(out, null, 1))
