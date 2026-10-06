@@ -1,9 +1,14 @@
-== every path under ~/.bun, to depth 2, that changed after the session began
+== every path under ~/.bun, at any depth, that changed after the session began
 ~/.bun/install/cache
+~/.bun/install/cache/b7c5cc8194df205f.npm
+== every path under ~/.bun, at any depth, that was created after the session began
+~/.bun/install/cache/b7c5cc8194df205f.npm
 == the manifest cache of effect
-~/.bun/install/cache/b7c5cc8194df205f.npm  181600 bytes  modified 2026-10-06 17:48:08
+~/.bun/install/cache/b7c5cc8194df205f.npm  181600 bytes  modified 2026-10-06 17:48:08  created 2026-10-06 17:48:08
 bun-npm-manifest-cache-v0.0.7
 effect
+== the probe that asked: the file's creation (its first run is the same command)
+<scratch>/probe/children-probe.ts  created 2026-10-06 17:48:08
 == the version folders of effect in the cache, newest first (none is from the session)
 Sep 9 05:18:28 2026 3.22.2@@@1
 Oct 1 10:24:01 2026 4.0.0@@@1
@@ -14,3 +19,5 @@ absent
 absent
 absent
 absent
+== the measure's time
+2026-10-06 18:48:34

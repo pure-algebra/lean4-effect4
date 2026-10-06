@@ -13,18 +13,24 @@ Evidence files: `docs/research/2026-10-06-seat-LANES-evidence/`.
 2026-10-06 at 17:48:08 a probe of mine made bun ask that host for the manifest of `effect`.
 The probe, `children-probe.ts`, stood in the scratch folder and imported `effect` by its bare
 name. No `node_modules` stands above that folder, so bun's auto-install answered the import.
+The probe's file and the manifest's file have one creation time, to the second (tested,
+`incident-measure.out.txt`).
 
 - **What changed.** bun wrote one file: the manifest cache of `effect` in its global cache,
-  181600 bytes. It installed no package, and no version folder of the cache is from that day
-  (tested, `incident-measure.out.txt`). No path of the install under `ts/eff/node_modules` is
-  newer than the session's start (tested, `find` to depth 3), and `git status` is empty.
+  181600 bytes. Under bun's home, at any depth, two paths changed since the session began:
+  that file and its folder (tested, `incident-measure.out.txt`). The run installed no package,
+  and no version folder of the cache is from that day (tested, the same file). No path of the
+  install under `ts/eff/node_modules` is newer than the session's start (tested, `find` to
+  depth 3), and `git status` is empty.
 - **What I did.** I reported it to the coordinator when I found it, and the coordinator
   verified the measure. The file stays as it is, because the owner decides.
-- **What is void.** The four runs of that probe are void as evidence. This receipt cites its
-  rerun alone. The rerun imports no package, it runs under `bun --no-install`, and it prints
-  the build that answers: effect 4.0.0-rc.112 (tested, `probes.out.txt`).
-- **What I cannot measure.** The manifest file has one write time. Whether the three later
-  runs of the probe asked the host again, I cannot say.
+- **What is void.** Four runs are void as evidence: three of that probe, and one of its copy
+  for the base (reading of the session's record). This receipt cites the rerun alone. The
+  rerun imports no package, it runs under `bun --no-install`, and it prints the build that
+  answers: effect 4.0.0-rc.112 (tested, `probes.out.txt`).
+- **What I cannot measure.** The manifest file has one write time, the first run's. Whether
+  the three later runs asked the host again, I cannot say. Which build of `effect` answered
+  the four runs, I cannot say.
 - **The rule since then.** Every bun run of a scratch file is `bun --no-install`. No scratch
   file imports a package by a bare name. tsgo runs by its path, never through `bunx`.
 
@@ -48,8 +54,8 @@ Six more facts stand beside these two.
 ## 1. Base and head
 
 Branch `seat/lanes`, in the worktree `/Users/pooks/Dev/lean4-effect4-lower`. The base is
-`6d10fcc0`. The head is the commit that corrects this receipt, and its parent is `befc0aad`.
-Nothing is pushed.
+`6d10fcc0`. The head is the commit that last corrects this receipt, and its parent is
+`39a044c0`. Nothing is pushed.
 
 | Commit | Part | Content |
 | --- | --- | --- |
@@ -62,6 +68,8 @@ Nothing is pushed.
 | `9a2dc6df` | both | more evidence: the truth lane's run and two later probes |
 | `3459cb91` | both | this receipt, in its first form |
 | `befc0aad` | both | the voided probe's rerun, and the measure of the fetch |
+| `39a044c0` | both | this receipt, with the fetch in its first lines |
+| the head | both | the measure at any depth, and the forecast of the merge |
 
 ## 2. Changed files
 
@@ -357,7 +365,8 @@ evidence folder holds each script and probe of the scratch folder, with `.txt` a
 | `bash controls.sh`, each bun run as `bun --no-install` | A0 exit 0; A1 to A3 exit 1; B0 exit 0; B1 to B4 TS2345 |
 | `bash probes.sh`, each run as `bun --no-install` | section 4.2 and 4.3; `probes.out.txt`; the reader loads effect 4.0.0-rc.112 |
 | `bash probes-2.sh`, each run as `bun --no-install` | finding 4; `probes-2.out.txt` |
-| `bash incident-measure.sh`, which runs no bun | one file of bun's cache from the session; `incident-measure.out.txt` |
+| `bash incident-measure.sh`, which runs no bun | under bun's home, at any depth, two paths from the session: one file and its folder; `incident-measure.out.txt` |
+| `bash merge-forecast.sh`, which runs git in the worktree alone | no file changed on both sides; `merge-forecast.out.txt` |
 | `bun run check-styles.ts <scratch>/foreign`, in `ts/eff` | `PASS styles construction: 22398 indexed files, 11541 configurations`; tsgo's API and oxc accept every source |
 | `bash foreign-mask-types.sh` | tsgo exit 1; 7 of 84 sources have a diagnostic (finding 9) |
 | `SLOT make … check-ts-reader`, at `c540da33` and at `49457227` | `files 481: matched 416, mismatched 0, refused with oracle 0`; 737 tests pass, then 738 |
@@ -385,12 +394,27 @@ theorem is stated.
   and effect 4.0.0-rc.112. The fidelity step rests on bun 1.4.2 and the pinned runtime.
 - **One machine.** Every run is on this Mac: node 22.23.2, bun 1.4.2, OCaml 5.1.1 and dune
   3.24.2 of the effect4 switch.
-- **Void.** The four runs of `children-probe.ts` before its rerun, as the first lines state.
+- **Void.** Four runs before the rerun, as the first lines state: three of
+  `children-probe.ts`, and one of its copy for the base.
   The reruns of the other scratch probes give the bytes that were filed before (tested,
   `diff`).
 - **The corpora.** The printed corpus is the worktree's `.lake/corpus`, cut at the base by
   `make corpus`. No run read the coordinator's corpus. As I write, the coordinator's
   `generated/corpus-index.tsv` has the same bytes as the worktree's (tested, `cmp`).
+- **The merge, as a forecast.** On 2026-10-06 at 18:49 the coordinator's branch stands at
+  `9dd89864`, 32 commits past the base (tested, `merge-forecast.out.txt`).
+  - No file is changed on both sides (tested).
+  - That branch moves neither `generated/corpus-index.tsv` nor the promoted table (tested).
+  - Outside the law graph, the batteries and the semantics registry, it adds two modules
+    and changes three definitions. The three are `joinResults`, `fieldType` and `setType`
+    of `src/Effect4/Program/Record.lean`.
+  - The checker's rules call `fieldType` and `setType`
+    (`src/Effect4/Program/Typing/Rules.lean`, reading).
+  - Each of the three unfolds to its body at the base, through `UnionRule.lift` and
+    `UnionRule.joinAll` (reading).
+
+  So I expect the base's corpus index in the merged tree. `make check-tsdiag` there is the
+  test, and I did not run it on a merged tree.
 
 ## 8. Landed theorems and their placement
 

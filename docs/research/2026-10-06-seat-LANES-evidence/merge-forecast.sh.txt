@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Read-only, from the seat's worktree: the files that the seat's branch and the coordinator's
+# branch both change since the base, and what that branch changes in the corpus's inputs.
+# It runs git in the seat's worktree alone, and it writes nothing.
+# Usage: bash merge-forecast.sh <worktree> <base> <the coordinator's branch> <the coordinator's checkout>
+set -uo pipefail
+cd "$1"
+mine=$(git diff --name-only "$2" seat/lanes | sort)
+theirs=$(git diff --name-only "$2" "$3" | sort)
+echo "== the coordinator's branch, and the seat's"
+git log --oneline -1 "$3"
+echo "commits past the base $2: $(git rev-list --count "$2..$3")"
+git log --oneline -1 seat/lanes
+echo "== files changed since the base: the seat's $(echo "$mine" | wc -l | tr -d ' '), that branch's $(echo "$theirs" | wc -l | tr -d ' ')"
+echo "== files changed on both sides"
+comm -12 <(echo "$mine") <(echo "$theirs")
+echo "(end of that list)"
+echo "== that branch's changes outside docs, vendor and AGENTS.md, by status"
+git diff --name-status "$2" "$3" -- . ':!docs' ':!vendor' ':!AGENTS.md'
+echo "== the definitions that it changes in src/Effect4/Program/Record.lean"
+git diff "$2" "$3" -- src/Effect4/Program/Record.lean | grep -E '^[-+](def |  [^ ])' | grep -vE '^[-+]  (record type|\(`src|refuses)'
+echo "== the lifted rule and its join on that branch"
+git show "$3:src/Effect4/Program/UnionRule.lean" | grep -A1 -E '^def (joinAll|lift) '
+echo "== the corpus index: that branch against the base, and the two working files"
+if git diff --quiet "$2" "$3" -- generated/corpus-index.tsv generated/tsdiag-agreement.tsv; then
+  echo "that branch moves neither generated/corpus-index.tsv nor generated/tsdiag-agreement.tsv"
+else
+  git diff --stat "$2" "$3" -- generated/corpus-index.tsv generated/tsdiag-agreement.tsv
+fi
+cmp "$4/generated/corpus-index.tsv" generated/corpus-index.tsv && echo "the coordinator's working index has the worktree's bytes"
+echo "== the forecast's time"
+date '+%Y-%m-%d %H:%M:%S'
