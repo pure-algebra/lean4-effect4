@@ -8,13 +8,11 @@ import { nativeOpJson } from "../json.gen.ts"
 const dir = process.argv[2]
 if (!dir) throw new Error("check-coverage.ts <foreign-directory>")
 const seen = { eff: new Set<string>(), stmt: new Set<string>(), action: new Set<string>(), layer: new Set<string>(), row: new Set<string>() }
-/** A row's coverage key: its operation with every variable index dropped. A read-modify-write
- * row's binder term reads the cell's current value at its node's level (decisions row 43; the
- * state plan's T3b), so the profile's form at level 0 and a corpus program's form differ in that
- * index and in nothing else. Two names' images still differ under the key, in their atoms and
- * literals (Lean `FnName.headName?_image`, read without the term's level). */
-const rowKey = (op: unknown): string =>
-  JSON.stringify(op, (_key, v: unknown) => Array.isArray(v) && v[0] === "var" ? ["var"] : v)
+/** A row's coverage key: its operation. A read-modify-write row of the profile is its face, the
+ * unit literal for its binder term (Lean `Signature.face`; the state plan's T5), which is closed.
+ * The constructed corpus performs each face once (`tools/Drivers/ForeignCorpus.lean`
+ * `nativeProbes`), so the key is exact. */
+const rowKey = (op: unknown): string => JSON.stringify(op)
 const array = (v: unknown): readonly unknown[] => { if (!Array.isArray(v) || typeof v[0] !== "string") throw new Error("invalid oracle constructor"); return v }
 function chain(v: unknown, walk: (v: unknown) => void): void { const a = array(v); if (a[0] === "nil") return; if (a[0] !== "cons") throw new Error("invalid oracle list"); walk(a[1]); chain(a[2], walk) }
 function eff(v: unknown): void {

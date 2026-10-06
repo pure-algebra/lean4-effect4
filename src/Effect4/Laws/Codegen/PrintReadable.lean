@@ -441,6 +441,25 @@ theorem printRow_ok {row : Row} {n : Nat} {r : Term} (h : requestReadable row n 
   cases hs : row.shape <;> rw [hs] at h <;>
     aesop (add norm simp [printRowHead, printMethod, bind, Except.bind, Option.isSome_iff_exists])
 
+/-- **The row call of `perform` prints** where its request reads back on the row and its binder
+term reads back there (`termReadable`): the row's call prints (`printRow_ok`), and a row that
+is no value row prints a call, which carries the term's function (`withFunction_printRow`).
+A step of `print_node`, whose consumers are the module laws (`printed-modules`, R2/R3). -/
+theorem printPerform_ok {sig : Signature Op} {n : Nat} {op : Op} {r : Term}
+    (hreq : requestReadable (sig.rowOf op) n r = true)
+    (hterm : termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) = true) :
+    ∃ x, printPerform sig n op r = .ok x := by
+  obtain ⟨call, hcall⟩ := printRow_ok hreq
+  unfold printPerform
+  cases hb : sig.termOf op with
+  | none => exact ⟨call, hcall⟩
+  | some b =>
+    rw [hb, Option.map_some] at hterm
+    simp only [termReadable, Bool.and_eq_true, Bool.not_eq_true', decide_eq_false_iff_not] at hterm
+    obtain ⟨x, hx⟩ := withFunction_printRow hcall hterm.2 (sig.rowOf op).spelling
+      (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term))
+    exact ⟨x, by rw [hcall]; exact hx⟩
+
 /-! ## The node steps -/
 
 section Node
@@ -498,7 +517,7 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
       tableLayer sig fam ctor (args.map (ArgF.fold (printAlg sig))) :=
     cata_build (tableLayer sig) fam ctor args e hbuild
   rw [hcata]
-  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, face, r, hout, hargs, hface, hd', hreq⟩
+  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, r, hout, hargs, hd', hreq, _, _, hterm⟩
   · -- a skeleton row: the arguments print and the skeleton instantiates
     obtain ⟨τ, hτ⟩ := printArgs_ok args 0 hr' ih'
     have hkinds : Kinds τ (RowOut.holeKinds row.out) := by
@@ -514,13 +533,13 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
   · -- the row call
     have hargs' := fold_eq_op_term (readableAlg classes sig) hargs
     subst hargs'
-    obtain ⟨x, hx⟩ := printRow_ok hreq.1
+    obtain ⟨x, hx⟩ := printPerform_ok hreq hterm
     have hfind'' : (table.find? fun r' => r'.selects fam ctor
         ([.op op, .term r] : List (ArgF Op Carrier))) = some row := by
       simpa only [List.map_cons, List.map_nil, ArgF.fold] using hfind'
     rcases hfam with rfl | rfl | rfl <;>
       exact ⟨x, by simp only [tableLayer, tableLayer.rowPrint, List.map_cons, List.map_nil,
-        ArgF.fold, hfind'', hout, hface, hx]⟩
+        ArgF.fold, hfind'', hout, hx]⟩
 
 /-- A readable statement prints, with the binders the domain counted. -/
 theorem print_stmt {st : Program.Stmt Op} {n d : Nat} (hd : cata_stmt (readableAlg classes sig) st n = some d)
@@ -651,7 +670,7 @@ theorem printLayer_of_readable {l : LayerTerm Op} (hr : ReadableAt classes sig .
 
 /-- The round trip on the readable domain: a readable program prints, and what it prints
 reads back to it. -/
-theorem roundTrip_of_readable {spell : String → List String → Option Op}
+theorem roundTrip_of_readable [ScopedOp Op] {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
     (hr : Readable (classesOf e) sig n e = true) :
     roundTrip sig spell n e = .ok e := by
@@ -659,7 +678,8 @@ theorem roundTrip_of_readable {spell : String → List String → Option Op}
   simp only [roundTrip, hx, read_print hl hr hx]
 
 /-- The executed check of the round trip holds on the readable domain. -/
-theorem readable_of_Readable [DecidableEq Op] {spell : String → List String → Option Op}
+theorem readable_of_Readable [DecidableEq Op] [ScopedOp Op]
+    {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {e : Eff Op}
     (hr : Readable (classesOf e) sig n e = true) :
     readable sig spell n e = true := by

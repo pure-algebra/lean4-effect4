@@ -76,13 +76,26 @@ def insertRequestOnly (cut : Nat) : Eff NativeOp → Eff NativeOp
   (.app "succ" (.cons (.var 2) .nil)) = some (.nat 6)
 
 #guard all.all fun f => [0, 1, 2, 5].all fun n => f.checkExample n && (Form.foreign f {} n).isSome
-#guard [Effect4.Machine.FnName.incr, .double, .zeroWhenPositive, .noChange].all
-  (fun f => (lambdaShape f).isSome)
-#guard lambdaShape .takeAndBump == none
-#guard match expression { lambdas := true } (.ident "takeAndBump") with
-  | .leaf (.ident "takeAndBump") => true | _ => false
+-- The foreign lambda shapes (the state plan's T5): the printer writes a row's term as a function,
+-- and the `lambdas` style spells a function that is a shape's term at its row as the shape. The
+-- five names are no identifiers of any face: a name is restyled nowhere.
+#guard (lambdaShapes.map lambdaAtom) == [Effect4.Machine.FnName.incr, .double, .noChange, .zeroWhenPositive]
 #guard match expression { lambdas := true } (.ident "incr") with
-  | .atomLambda .addOne => true | _ => false
+  | .leaf (.ident "incr") => true | _ => false
+#guard match expression { lambdas := true }
+    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a1" }]
+      (.call (.ident "succ") [.ident "a1"])]) with
+  | .call _ [_, .atomLambda .addOne] => true | _ => false
+-- `takeAndBump`'s term has no lambda spelling: its function keeps its printed form
+#guard match expression { lambdas := true }
+    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a1" }]
+      (.call (.ident "add") [.ident "a1", .int 1])]) with
+  | .call _ [_, .lambda _ _ none] => true | _ => false
+-- without the style every function keeps its printed form
+#guard match expression {}
+    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a1" }]
+      (.call (.ident "succ") [.ident "a1"])]) with
+  | .call _ [_, .lambda _ _ none] => true | _ => false
 -- Every depth-n example includes its n enclosing bindings in the emitted source data.
 #guard all.all fun f =>
   match Form.foreign f {} 1 with

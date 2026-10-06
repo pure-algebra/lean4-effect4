@@ -32,11 +32,19 @@ test("the generated package tables are the two of Program/Packages, with their c
   }
 })
 
-test("the shared lambda shape names only incr and retains takeAndBump", () => {
-  expect(forms.lambdas.find(r => r.atom === "incr")?.shape).toBe("addOne")
-  expect(forms.lambdas.find(r => r.atom === "takeAndBump")?.shape).toBeNull()
-  const shapes = forms.lambdas.map(r => r.shape).filter(s => s !== null)
-  expect(new Set(shapes).size).toBe(4)
+test("the four foreign lambda shapes each spell one term at each read-modify-write row", () => {
+  // Lean `LambdaShape.term` (`src/Effect4/Codegen/Forms.lean`): the term at level 0, where
+  // `var 0` is the cell's current value. No name is an identifier of any face.
+  expect(forms.lambdas.map(r => r.shape)).toEqual(["addOne", "multiplyTwo", "optionNone", "positiveThenZero"])
+  for (const lambda of forms.lambdas) expect(Object.keys(lambda.terms)).toEqual([
+    "refUpdateWith", "refGetAndUpdateWith", "refUpdateAndGetWith", "refUpdateSomeWith",
+    "refGetAndUpdateSomeWith", "refUpdateSomeAndGetWith", "refModifyWith", "refModifySomeWith"])
+  const addOne = forms.lambdas.find(r => r.shape === "addOne")!
+  expect(addOne.terms.refUpdateWith).toEqual({ _tag: "app", atom: "succ", args: [{ _tag: "var", index: 0 }] })
+  expect(addOne.terms.refModifyWith).toEqual({ _tag: "app", atom: "pair", args: [
+    { _tag: "var", index: 0 }, { _tag: "app", atom: "succ", args: [{ _tag: "var", index: 0 }] }] })
+  const optionNone = forms.lambdas.find(r => r.shape === "optionNone")!
+  expect(optionNone.terms.refUpdateSomeWith).toEqual({ _tag: "app", atom: "none", args: [] })
 })
 
 test("editing either generated payload fails its import-time stamp", async () => {

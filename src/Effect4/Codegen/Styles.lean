@@ -131,20 +131,42 @@ mutual
     | [] => false | (_, ss) :: xs => mentionsStmts name ss || mentionsCases name xs
 end
 
-/-- The approved lambda replacement has no branch for takeAndBump. -/
-def atom? : String → Option LambdaShape
-  | "incr" => lambdaShape .incr
-  | "double" => lambdaShape .double
-  | "noChange" => lambdaShape .noChange
-  | "zeroWhenPositive" => lambdaShape .zeroWhenPositive
-  | "takeAndBump" => lambdaShape .takeAndBump
-  | _ => none
+/-- How many binder levels `lambdaOf` looks a printed parameter up in. A printed function under
+more binders keeps its printed form, which both foreign readers read as a term. -/
+def lambdaDepth : Nat := 64
+
+/-- **The foreign lambda a printed binder-term function is restyled as**: the shape whose term
+at the row of this spelling the function is (`LambdaShape.term`), at the level its parameter
+names. The printer writes a read-modify-write row's term as `(aN) => body`
+(`printPerform`, `Codegen/PrintLeaf.lean`); where `body` is the printed image of a shape's term
+at that row's shape and level, the foreign text may spell the shape instead. `none` for a
+spelling that is no read-modify-write row, an annotated parameter, and any other body. -/
+def lambdaOf (spelling : String) (param : TypeScript.Parameter) (body : TypeScript.Expr) :
+    Option LambdaShape :=
+  match NativeOp.termRows.find? fun row => (NativeOp.row (row.1 (.lit .unit))).spelling == spelling with
+  | none => none
+  | some row =>
+    if param.type.isSome then none
+    else lambdaShapes.find? fun shape =>
+      (List.range lambdaDepth).any fun level =>
+        param.name == Var.name level && body == printTerm (level + 1) (shape.term row.2 level)
+
+/-- The arguments of a row call under the `lambdas` style: a last argument that is the printed
+function of a lambda shape's term becomes that shape's foreign spelling. -/
+def restyleFunction (style : Style) (name : String) (args : List TypeScript.Expr)
+    (changed : List Expr) : List Expr :=
+  if style.lambdas then
+    match args.getLast? with
+    | some (.lambda [param] body none) =>
+      match lambdaOf name param body with
+      | some shape => changed.dropLast ++ [.atomLambda shape]
+      | none => changed
+    | _ => changed
+  else changed
 
 mutual
   def expression (style : Style) : TypeScript.Expr → Expr
-    | .ident s => if style.lambdas then
-        match atom? s with | some shape => .atomLambda shape | none => head style s
-      else head style s
+    | .ident s => head style s
     | .call (.ident "Effect.sleep") [.int (.ofNat n)] =>
         .call (head style "Effect.sleep") [duration style n]
     | .call (.ident "Effect.acquireRelease") [acquire, .lambda [resource, exit] body returnType] =>
@@ -153,7 +175,7 @@ mutual
           .lambda (if style.releaseOne && exit.type.isNone && !mentions exit.name body
             then [resource] else [resource, exit]) (expression style body) returnType]
     | .call (.ident name) args =>
-        let changed := expressions style args
+        let changed := restyleFunction style name args (expressions style args)
         let skipOptions :=  style.omitOptions &&
             ["Effect.forkChild", "Effect.forkDetach", "Effect.forkIn", "Effect.forkScoped"].contains name &&
             match args.getLast? with
@@ -229,7 +251,14 @@ def Form.foreign (f : Form) (style : Style) (n : Nat) : Option Expr := do
         .lambda ["a" ++ toString i] (wrap (i + 1) m body)]
   return wrap 0 n result
 
-#guard atom? "incr" == some .addOne
-#guard atom? "takeAndBump" == none
+-- A printed function that is a lambda shape's term at its row and level is that shape; a term
+-- that is no shape's, a name that had no lambda spelling, another row's shape and another level
+-- are none.
+#guard lambdaOf "Ref.update" { name := "a1" } (.call (.ident "succ") [.ident "a1"]) == some .addOne
+#guard lambdaOf "Ref.updateSome" { name := "a3" } (.call (.ident "none") []) == some .optionNone
+#guard lambdaOf "Ref.update" { name := "a1" } (.call (.ident "add") [.ident "a1", .int 1]) == none
+#guard lambdaOf "Ref.modify" { name := "a1" } (.call (.ident "succ") [.ident "a1"]) == none
+#guard lambdaOf "Ref.update" { name := "a1" } (.call (.ident "succ") [.ident "a0"]) == none
+#guard lambdaOf "Ref.get" { name := "a1" } (.call (.ident "succ") [.ident "a1"]) == none
 
 end Effect4.Codegen.Styles

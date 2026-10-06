@@ -472,3 +472,55 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
   `readClassDecl_exact`, `admitModule_classDecls`. *Tested*: tsgo 7.0.0-dev.20260629.1 on a green
   file and a red twin (TS2740, TS2375, TS2353, TS2322), the TypeScript reader lane, and two truth
   programs against rc.112. Seat E2's receipt: `docs/research/2026-10-04-seat-E2-receipt.md`.
+
+## Amendment, 2026-10-05: an operation's binder term (the state plan's T5, decisions row 251)
+
+- **Face 1 prints the term as a function.** A read-modify-write row carries a binder term
+  (decisions row 43). The printer writes it after the row's call, as a function of the cell's
+  current value: `Ref.update(a0, (a1) => succ(a1))` (`printPerform` and `withFunction`,
+  `src/Effect4/Codegen/PrintLeaf.lean`). The parameter is the binder due at the node's level,
+  and the body is the term one level up. A fold inside the term prints with no further rule.
+- **The five names leave the faces.** No row spells `incr`, `double`, `zeroWhenPositive`,
+  `noChange` or `takeAndBump`. One term has one printed form. A spelled row is its face, with the
+  unit literal for its term (`Signature.face`, `src/Effect4/Program/Typing/Rules.lean`).
+  `PrintRefusal.binderTerm` stays for one case: a value row that carries a term.
+- **The readers install the term.** The Lean reader splits the function off the call
+  (`splitFunction`). It reads the call to the row's face, and the body one level up. Then it
+  installs the term (`readPerform` and `installTerm`, `src/Effect4/Codegen/Read.lean`).
+  `ts/eff/read.ts` reads the same form. A term row without its function is refused by its
+  spelling. So is a function on a row that carries no term.
+- **The laws keep their statements.** `read_print` and `read_exact` are unchanged. Their domain
+  admits a term row on two conditions. The term is scoped at `n + 1`, covered and unannotated.
+  The row is no value row (`termReadable`; `rowDom`, `src/Effect4/Laws/Codegen/ReadPrint.lean`).
+  `LawfulSpelling` states that a row does not depend on its operation's term. The row-call steps
+  are `readPerform_printPerform` and `readPerform_exact`
+  (`src/Effect4/Laws/Codegen/ReadLeaf.lean`).
+- **The annotation refusal at a term row (`E4-CHECK-CE-017`).** An annotated function in the
+  term's place is refused as `ReadRefusal.annotation "<spelling> <site>"`. The site is
+  `parameter`, `return` or `thunk return` (`functionAnnotation`, beside `readPerform`). The
+  reader asks it only after the row's face has refused, so the accepted domain does not move. A
+  missing function, a wrong binder and a wrong number of parameters stay `ReadRefusal.arity`.
+  The TypeScript reader refuses the same input. It claims no agreement on the refusal's name.
+- **The foreign contract (§3).** The five names are no foreign spelling. Both recognizers read a
+  row's function under any parameter name. Each of the four lambda shapes spells one term at each
+  row (`LambdaShape.term`, `src/Effect4/Codegen/Forms.lean`). The foreign corpus restyles a
+  printed function that is such a term (`Styles.lambdaOf`, `src/Effect4/Codegen/Styles.lean`).
+  A term row declares no type argument. Both recognizers refuse a call that carries one, with
+  the code `E-NODE` (`ts/eff/ingest/test/foreign.test.ts`).
+- **The truth claim (§4).** The prelude exports no function name. A printed term calls the atoms
+  alone, so one printed term means one function at every row's shape. This closes finding F3 of
+  `harness/truth/prelude.ts`.
+- **Not established.** A row's type arguments stay spelled at one instance: `Deferred.make` at
+  any other instance is refused by name (`PrintRefusal.typeSpelling`). A fold with a stated
+  type, and a loop with a stated cursor type, print and do not read back. No law states target
+  typing or a host run.
+- **A registered difference on the target.** `pair` and `tuple` keep a boolean or a number
+  literal as a literal type, where Lean types `bool` and `nat`. Two arms that Lean types alike
+  can then be two target types. The rate limiter's request and the Queue probe's first take
+  attempt do not type-check under tsgo 7 for that reason. The compiler control pins three such
+  lines as refused (`harness/truth/term-rows.typecheck.ts`).
+- **Evidence.** *Proved*: `read_print`, `read_exact`, `readPerform_printPerform`,
+  `readPerform_exact`. *Tested*: the batteries `Test/Codegen/TermRows.lean`,
+  `Test/Codegen/ReadContract.lean` and `Test/Codegen/PrintContract.lean`. *Tested*: tsgo
+  7.0.0-dev.20260629.1 on `harness/truth/term-rows.typecheck.ts`, with a red control at each of
+  the eight rows. *Tested*: the TypeScript reader lane, and two truth programs against rc.112.

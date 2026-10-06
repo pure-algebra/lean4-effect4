@@ -179,7 +179,7 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 # The truth harness: Lean writes the corpus from the committed tapes, then the real
 # runtime prints the modules, re-records the tapes and writes the result. Both are
 # deterministic given the pinned host; the comparison against a fresh run is check-truth.
-TRUTH_SOURCES := harness/truth/Truth.lean harness/truth/records.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/run-truth.ts \
+TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean harness/truth/records.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
 $(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(CORE) $(LAWS)
 	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
@@ -455,7 +455,7 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 # and the inventory guard (every generated atom has a prelude case that runs). Named one by
 # one: `bun test harness/truth` would also pick up the lane's work directories.
 TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/folds.typecheck.ts \
+$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts \
     $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
 	$(BUN) test $(TRUTH_HOST_TESTS)
 	$(PY) scripts/check-truth.py

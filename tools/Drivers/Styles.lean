@@ -146,8 +146,11 @@ def composite : Eff NativeOp :=
       (.cons (.ifElse (.lit (.bool true)) .nil .nil)
       (.cons (.ret (.lit .unit)) .nil))))))))))
 
-/-- Extra probes force all four permitted lambda shapes and the named retention, exact
-fractional duration spelling, all tuple functions and the option/empty-else axes. -/
+/-- Extra probes force all four permitted lambda shapes and the term that has none, exact
+fractional duration spelling, all tuple functions and the option/empty-else axes. The five
+row probes are named by the old function names, as file names only: each performs the name's
+image at an update row, which the faces print as a function (the state plan's T5). The image
+of `takeAndBump` is no shape's term, so it keeps its printed function in every style. -/
 def probes : List (String × Eff NativeOp) :=
   [("composite", composite), ("fractionalDuration", .perform .sleep (.lit (.nat 1500)))] ++
   [Effect4.Machine.FnName.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump].map

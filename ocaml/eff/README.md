@@ -20,7 +20,7 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | `eff_wire.ml` | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
 | `eff_subterm.ml` | **generated** | the node sorts of `Effect4.Program.Node`, each constructor's children as (value argument index, child sort), the one-step `child`, and one witness per constructor with pairwise different children |
 | `eff_json.ml` | **generated** | `print_*` per family (a printer only — there is no JSON parser anywhere) |
-| `eff_native.ml` | **generated** | the native alphabet as data: atom names and const-generic metadata, the 55 op values `all_ops` (`NativeOp.spelled`, one per spelling key), `scope_key`, the scope and context types; typing remains in Lean |
+| `eff_native.ml` | **generated** | the native alphabet as data: atom names and const-generic metadata, the op values `all_ops` (`NativeOp.spelled`, one per spelling key; a read-modify-write row stands once, at its face), `scope_key`, the scope and context types; typing remains in Lean |
 | `eff_manifest.txt` | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
 | `program-structure.json` | **generated** | the constructor families the engine's layout check reads |
 | `goldens/` | **generated** | for 48 programs: `<name>.bin` (the canonical bytes), `<name>.json` (the Lean JSON printer's output), `<name>.ty` (Lean's `typeOf`); `corpus.txt` (each name with Lean's `wellTyped` verdict); `coverage.txt` (constructor counts over the corpus) |

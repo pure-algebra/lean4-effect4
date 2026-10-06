@@ -73,3 +73,6 @@ Atom	mapKeys	poly		[Readonly<Record<string, "p0">>]	ReadonlyArray<string>		<"p0"
 Atom	mapEntries	poly		[Readonly<Record<string, "p0">>]	ReadonlyArray<readonly [string, "p0"]>		<"p0">
 Atom	mapFromEntries	poly		[ReadonlyArray<readonly [string, "p0"]>]	Readonly<Record<string, "p0">>		<"p0">
 Atom	tuple	custom					
+Atom	take	poly		[ReadonlyArray<"p0">, number]	ReadonlyArray<"p0">		<"p0">
+Atom	drop	poly		[ReadonlyArray<"p0">, number]	ReadonlyArray<"p0">		<"p0">
+Atom	sameHandle	custom					

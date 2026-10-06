@@ -177,13 +177,16 @@ def partReach (m : Module NativeOp) (record : Effect4.Machine.Val) : PartReach :
 #guard answerOf (some (.success (.nat 1))) (.success (.nat 1)) = .rc112
 #guard answerOf (some (.success (.nat 0))) (.success (.nat 1)) = .differs
 #guard answerOf none (.success (.nat 1)) = .unfinished
--- `printVerdict`: a row whose term is a name's image prints; a term that is no image is refused
--- by the row's spelling.
+-- `printVerdict`: a row's binder term prints as a function of the current value (the state
+-- plan's T5), a term that was a name's image and any other term alike, and the module reads back.
 #guard ((Effect4.Api.Author.build (program (bindName "r" (Ref.make (nat 0)) fun r =>
     Ref.update "n" (app "succ" [var "n"]) r))).toOption.map printVerdict) = some "printed"
 #guard ((Effect4.Api.Author.build (program (bindName "r" (Ref.make (nat 0)) fun r =>
     Ref.update "n" (app "succ" [app "succ" [var "n"]]) r))).toOption.map printVerdict) =
-  some "refused: binderTerm Ref.update"
+  some "printed"
+#guard ((Effect4.Api.Author.build (program (bindName "r" (Ref.make (nat 0)) fun r =>
+    Ref.update "n" (app "succ" [app "succ" [var "n"]]) r))).toOption.map readBackVerdict) =
+  some true
 -- `formAdmits`: a head the table holds, and one it does not.
 #guard formAdmits "Effect.andThen"
 #guard !formAdmits "Effect.catchTag"

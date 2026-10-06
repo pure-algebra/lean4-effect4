@@ -157,7 +157,7 @@ if (mode === "inclusion-batch") {
       const [style, n] = row.split("\t")
       if (counts.get(style!) !== Number(n)) throw new Error(`style count mismatch: ${style}`)
     }
-    if (counts.size !== 21 + 11520 || names.length !== 22986) throw new Error("foreign construction coverage/count changed")
+    if (counts.size !== 21 + 11520 || names.length !== 22314) throw new Error("foreign construction coverage/count changed")
   }
   for (let at = 0; at < names.length; at += 500) {
     const run = spawnSync(process.execPath, [import.meta.filename, mode + "-batch", dir, String(at), "500"], { encoding: "utf8", maxBuffer: 2 ** 24 })

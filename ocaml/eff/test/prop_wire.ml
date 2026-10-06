@@ -69,8 +69,9 @@ let rec rand_term d =
 
 and rand_terms d = if d <= 0 || ri 3 = 0 then Terms_nil else Terms_cons (rand_term (d - 1), rand_terms (d - 1))
 
-(* The 55 built-in op values (`Eff_native.all_ops`) enumerate every FinalizerStrategy and, at
-   each of the eight read-modify-write rows, the five level-0 images the faces spell by a name.
+(* The 23 built-in op values (`Eff_native.all_ops`) enumerate every FinalizerStrategy and hold
+   each of the eight read-modify-write rows once, at its face: the unit literal for its binder
+   term (the state plan's T5; the faces print the term as a function and spell no name).
    A row's binder term is any term (decisions row 43; the state plan's T3b), so one draw in
    four puts a random term in one of the eight rows.  External operations additionally sample
    scalar row indices. *)

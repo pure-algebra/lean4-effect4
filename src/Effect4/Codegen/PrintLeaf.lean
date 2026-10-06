@@ -59,8 +59,10 @@ inductive PrintRefusal
   | typeSpelling (text : String)
   /-- An error payload class the module cannot declare, named by its tag (decisions row 120). -/
   | payloadClass (tag : String) (why : ClassRefusal)
-  /-- An operation whose binder term has no form at level 0 (`Signature.opAtLevel`), named by its
-  row's spelling: until the state plan's T5 the faces print a term only as a name's image. -/
+  /-- An operation that carries a binder term on a row whose printed form is no call, named by the
+  row's spelling: a value row has no argument list to carry the term's function
+  (`withFunction`). No native row is such a row: the eight term rows are call rows, and each
+  prints its term (the state plan's T5). -/
   | binderTerm (spelling : String)
 deriving DecidableEq, Repr
 
@@ -338,6 +340,31 @@ def printRow (n : Nat) (row : Row) (request : Term) : Except PrintRefusal TypeSc
     | some (receiver, args) => printMethod n row receiver args
     | none =>
       printMethod n row (.app "fst" (.cons request .nil)) (.app "snd" (.cons request .nil))
+
+/-- A printed row call with one more argument, after the request and the trailing names: the
+function an operation's binder term prints as (`Binders.write`, `Codegen/ListFold.lean`). A call
+and a method call carry it. A value row prints a bare name, which carries no argument: such a
+row is refused by its spelling. -/
+def withFunction (spelling : String) (fn : TypeScript.Expr) :
+    TypeScript.Expr → Except PrintRefusal TypeScript.Expr
+  | .call head args => .ok (.call head (args ++ [fn]))
+  | .method receiver name args => .ok (.method receiver name (args ++ [fn]))
+  | _ => .error (.binderTerm spelling)
+
+/-- **The row call of `perform`**: the row's call on the request (`printRow`), and after it the
+operation's binder term as a function of the current value, `(aN) => body`. The term's body
+prints one level up: the current value is the binder at the node's level `n` (`ScopedOp`'s
+convention), so an outer capture prints as the binder it names and a list fold inside the term
+prints its own two binders above it. An operation that carries no term prints its row's call
+alone. Every term prints this way: no term has a second printed form (the state plan's T5). -/
+def printPerform {Op : Type} (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
+    Except PrintRefusal TypeScript.Expr :=
+  match sig.termOf op with
+  | none => printRow n (sig.rowOf op) request
+  | some b =>
+    (printRow n (sig.rowOf op) request).bind
+      (withFunction (sig.rowOf op).spelling
+        (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term)))
 
 /-- The fork options object rc.112's fork family takes:
 `{ startImmediately: b, uninterruptible: true | false | "inherit" }`. `daemon` is not a

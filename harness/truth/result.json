@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 39 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
+  "summary": "PASS: 41 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -6166,6 +6166,156 @@
           "0:Success",
           "0:OnSuccess",
           "0:Success",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pModifyFold",
+      "leanExit": "success [21,7]",
+      "hostExit": "success [21,7]",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": [
+            21,
+            7
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":[21,7]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": [
+            21,
+            7
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":[21,7]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Success",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      }
+    },
+    {
+      "program": "pQueueOffer",
+      "leanExit": "success [false,2,0]",
+      "hostExit": "success [false,2,0]",
+      "entry": "runSyncExit",
+      "exitAgree": true,
+      "scheduleAgree": true,
+      "runSyncAgree": true,
+      "notes": [
+        "same value"
+      ],
+      "host": {
+        "entry": "runPromiseExit",
+        "exit": {
+          "success": [
+            false,
+            2,
+            0
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":[false,2,0]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:Success"
+        ],
+        "late": [],
+        "settledLater": null
+      },
+      "hostSync": {
+        "entry": "runSyncExit",
+        "exit": {
+          "success": [
+            false,
+            2,
+            0
+          ]
+        },
+        "parked": false,
+        "schedule": [
+          "started 0",
+          "exited 0 success"
+        ],
+        "events": [
+          "started 0",
+          "exited 0 {\"success\":[false,2,0]}"
+        ],
+        "frames": [
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
+          "0:OnSuccess",
+          "0:Sync",
           "0:Success"
         ],
         "late": [],

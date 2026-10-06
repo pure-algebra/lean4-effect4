@@ -22,8 +22,10 @@ One line per row, tab separated:
     table  name  shape  receiver  request  answer  error  typeArgs
 
 `request` is the argument tuple the call takes (`[string, number]`), `receiver` the method's
-receiver or empty. A row with trailing arguments or explicit type arguments is not a callable
-adapter row for this lane and is written with an empty `request`, which the reader refuses.
+receiver or empty. A row with trailing arguments or explicit type arguments, and a
+read-modify-write row, whose call takes the function of its binder term after the request
+(`printPerform`, `Codegen/PrintLeaf.lean`), is not a callable adapter row for this lane and is
+written with an empty `request`, which the reader refuses.
 `typeArgs` is the explicit instantiation the lane queries a template atom or a template row at
 (`<"p0">`), its request and answer rendered at the same probes; it is empty on every other line.
 
@@ -71,9 +73,9 @@ def shapeName : RowShape → String
 
 /-- One line of the table, with the explicit instantiation the lane queries it at. A row this
 lane cannot call keeps its name and shape with empty argument columns; the reader refuses to
-select it. -/
-def lineAt (table : String) (row : Row) (typeArgs : String) : String :=
-  let (args, receiver) := match request row with
+select it. `callable := false` names a row whose call takes more than its request. -/
+def lineAt (table : String) (row : Row) (typeArgs : String) (callable : Bool := true) : String :=
+  let (args, receiver) := match (if callable then request row else none) with
     | some (args, receiver) => (args, receiver.getD "")
     | none => ("", "")
   String.intercalate "\t"
@@ -83,11 +85,10 @@ def lineAt (table : String) (row : Row) (typeArgs : String) : String :=
 /-- One line of a row with no parameter. -/
 def line (table : String) (row : Row) : String := lineAt table row ""
 
-/-- The built-in operations, one per row name: the read-modify-write rows differ only in the
-pure function they print after the request, which is a trailing argument, so one representative
-stands for the five, and `scopeMake` prints its strategy the same way. The core's
-`NativeOp.spelled` (`src/Effect4/Program/Native.lean`) holds one operation per spelling key; its
-first operation at each spelling is the row name's representative. -/
+/-- The built-in operations, one per row name: `scopeMake` prints its strategy as a trailing
+argument, so one representative stands for its two rows. The core's `NativeOp.spelled`
+(`src/Effect4/Program/Native.lean`) holds one operation per spelling key, a read-modify-write row
+once, at its face; its first operation at each spelling is the row name's representative. -/
 def nativeOps : List NativeOp :=
   NativeOp.spelled.foldl (fun acc op =>
     if acc.any (fun seen => seen.row.spelling == op.row.spelling) then acc else acc ++ [op]) []
@@ -129,7 +130,11 @@ def atomSignature (s : NativeAtom.Scheme) : Option (String × String × String) 
 /-- A native row's line: a template row (the `Ref` and `Deferred` rows since the state plan's
 T3a) is rendered at its parameters' probes and queried at them, as a template atom is. The
 parameters are those of the request, the answer and the error: `Ref.modify`'s `B` occurs in its
-answer and in its binder term's result, never in its request (the state plan's T3b). -/
+answer and in its binder term's result, never in its request (the state plan's T3b). A
+read-modify-write row is not callable here: its call takes its function after the request (the
+state plan's T5), so its request column stays empty, as when the row carried a trailing name.
+The target's signatures of the eight rows are checked by the truth lane's compiler control
+(`harness/truth/term-rows.typecheck.ts`). -/
 def nativeLine (op : NativeOp) : String :=
   let row := NativeOp.row op
   let σ := probes [row.request, row.answer, row.error]
@@ -140,7 +145,7 @@ def nativeLine (op : NativeOp) : String :=
       request := row.request.instantiate σ
       answer := row.answer.instantiate σ
       error := row.error.instantiate σ }
-  lineAt "Native" inst typeArgs
+  lineAt "Native" inst typeArgs (callable := (nativeSignature.termOf op).isNone)
 
 def schemeKind : NativeAtom.Scheme → String
   | .mono _ _ => "mono"

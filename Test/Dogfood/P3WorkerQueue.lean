@@ -304,14 +304,17 @@ def jobFailedModule : Module NativeOp :=
 -- With the cell ascribed at its element type the append builds and runs to its lines.
 #guard (built? logAscribed).map (fun b => (b.ty.answer, b.runSync)) =
   some (.list .string, .success (.list [.str "open 1", .str "done 1 by 1"]))
--- The append's term is no name's image: the printer refuses the row by name until T5.
-#guard (built? logAscribed).map printVerdict = some "refused: binderTerm Ref.update"
+-- The append's term prints as a function of the log since the state plan's T5, and the module
+-- reads back.
+#guard (built? logAscribed).map printVerdict = some "printed"
+#guard (built? logAscribed).map readBackVerdict = some true
 -- rc.112's `finish` builds: over a number cell the row answers a boolean, `B` is not `A`. The
 -- fifth job of five is the last, and the fourth is not.
 #guard (built? (finishModule 4 5)).map (fun b => (b.ty.answer, b.runSync)) =
   some (.prod .bool .nat, .success (.list [.bool true, .nat 5]))
 #guard (built? (finishModule 3 5)).map (·.runSync) = some (.success (.list [.bool false, .nat 4]))
-#guard (built? (finishModule 4 5)).map printVerdict = some "refused: binderTerm Ref.modify"
+#guard (built? (finishModule 4 5)).map printVerdict = some "printed"
+#guard (built? (finishModule 4 5)).map readBackVerdict = some true
 -- Green control: a log made with a line types at its element.
 #guard (built? (program (Ref.make (app "cons" [str "open 1", app "nil" []])))).map
   (fun b => b.ty.answer) = some (.refOf (.list .string))

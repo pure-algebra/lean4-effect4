@@ -418,12 +418,9 @@ The value printers below spell Lean values as the encoded form of the schemas ab
 name for an all-nullary inductive. A field name here that disagrees with the environment fails
 the decode at import. -/
 
-def allFnNames : List Effect4.Machine.FnName :=
-  [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
-
-/-- The 55 built-in rows, one per spelling key: the core's `NativeOp.spelled`
+/-- The 23 built-in rows, one per spelling key: the core's `NativeOp.spelled`
 (`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell and each
-read-modify-write row at each of the five names' images at level 0. External indices are
+read-modify-write row at its face, the unit literal for its binder term. External indices are
 supplied by row tables and are not enumerated. -/
 def allNativeOps : List Effect4.Program.NativeOp := Effect4.Program.NativeOp.spelled
 
@@ -446,10 +443,10 @@ run_cmd do
          ``Effect4.Program.NativeOp.refGetAndUpdateSomeWith,
          ``Effect4.Program.NativeOp.refUpdateSomeAndGetWith,
          ``Effect4.Program.NativeOp.refModifyWith, ``Effect4.Program.NativeOp.refModifySomeWith])
-    , (``Effect4.Machine.FnName,
-        [``Effect4.Machine.FnName.incr, ``Effect4.Machine.FnName.double,
-         ``Effect4.Machine.FnName.zeroWhenPositive, ``Effect4.Machine.FnName.noChange,
-         ``Effect4.Machine.FnName.takeAndBump])
+    , (``Effect4.Codegen.Forms.LambdaShape,
+        [``Effect4.Codegen.Forms.LambdaShape.addOne, ``Effect4.Codegen.Forms.LambdaShape.multiplyTwo,
+         ``Effect4.Codegen.Forms.LambdaShape.optionNone,
+         ``Effect4.Codegen.Forms.LambdaShape.positiveThenZero])
     , (``Effect4.FinalizerStrategy,
         [``Effect4.FinalizerStrategy.sequential, ``Effect4.FinalizerStrategy.parallel]) ]
   for (ind, ctors) in expect do
@@ -459,8 +456,10 @@ run_cmd do
         throwError "TsGen: {ind} constructors moved: {info.ctors} ≠ {ctors}"
     | _ => throwError "TsGen: {ind} is not an inductive in this environment"
 
-#guard allNativeOps.length = 55
-#guard allNativeOps.eraseDups.length = 55
+#guard allNativeOps.length = 23
+#guard allNativeOps.eraseDups.length = 23
+#guard Effect4.Codegen.Forms.lambdaShapes.length = 4
+#guard Effect4.Codegen.Forms.lambdaShapes.eraseDups.length = 4
 
 def obj (fields : List (String × String)) : String :=
   "{" ++ ",".intercalate (fields.map fun (k, v) => lit k ++ ":" ++ v) ++ "}"
@@ -597,13 +596,6 @@ def emitTypeProjectionCases (fs : List Family) : Except String String := do
   pure ((Json.mkObj [("generated", .str "tools/Drivers/TsGen.lean; regenerate with make gen-ts"),
     ("scope", .str "Finite normalization, metadata and target annotation controls"),
     ("cases", toJson cases)]).pretty ++ "\n")
-
-def fnJs : Effect4.Machine.FnName → String
-  | .incr => lit "incr"
-  | .double => lit "double"
-  | .zeroWhenPositive => lit "zeroWhenPositive"
-  | .noChange => lit "noChange"
-  | .takeAndBump => lit "takeAndBump"
 
 def strategyJs : Effect4.FinalizerStrategy → String
   | .sequential => lit "sequential"
@@ -905,20 +897,27 @@ def dualJs : DualRule → String
   | .effectSecond => tagged "effectSecond" []
 
 open Effect4.Codegen.Forms in
-def lambdaJs (f : Effect4.Machine.FnName) : String :=
-  obj [("atom", fnJs f), ("shape", match lambdaShape f with
-    | none => "null"
-    | some .addOne => lit "addOne"
-    | some .multiplyTwo => lit "multiplyTwo"
-    | some .optionNone => lit "optionNone"
-    | some .positiveThenZero => lit "positiveThenZero")]
+def lambdaShapeJs : LambdaShape → String
+  | .addOne => lit "addOne"
+  | .multiplyTwo => lit "multiplyTwo"
+  | .optionNone => lit "optionNone"
+  | .positiveThenZero => lit "positiveThenZero"
+
+open Effect4.Codegen.Forms in
+/-- One foreign lambda shape with the term it spells at each read-modify-write row, the current
+value at level 0 (`LambdaShape.term`): the row's operation tag names its term. A recognizer moves
+the term to its node's level. -/
+def lambdaJs (shape : LambdaShape) : String :=
+  obj [("shape", lambdaShapeJs shape),
+    ("terms", obj (Effect4.Program.NativeOp.termRows.map fun row =>
+      ((Effect4.Program.NativeOp.row (row.1 (.lit .unit))).name, termJs (shape.term row.2 0))))]
 
 open Effect4.Codegen.Forms in
 def emitForms : String :=
   let rows := all.map fun f => obj [("id", lit f.id), ("head", lit f.head),
     ("arity", arityJs f.arity), ("arguments", arr (f.arguments.map argClassJs)),
     ("expansion", templateJs f.expansion), ("citation", lit f.citation)]
-  emitTable "forms" (obj [("rows", arr rows), ("lambdas", arr (allFnNames.map lambdaJs)),
+  emitTable "forms" (obj [("rows", arr rows), ("lambdas", arr (lambdaShapes.map lambdaJs)),
     ("duals", arr (duals.map fun (head, rule) => obj [("head", lit head), ("rule", dualJs rule)])),
     ("unaryRefs", arr (unaryRefs.map lit))])
 

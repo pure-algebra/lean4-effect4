@@ -475,9 +475,8 @@ def opO : NativeOp → String
 
 /-- The finite built-in alphabet, one operation per spelling key: the core's `NativeOp.spelled`
 (`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell and each
-read-modify-write row at each of the five names' images at level 0 (`fnNames`). External row
-indices range over `Nat` and are supplied by a separate table. `main` checks the constructor
-classes. -/
+read-modify-write row at its face, the unit literal for its binder term. External row indices
+range over `Nat` and are supplied by a separate table. `main` checks the constructor classes. -/
 def allOps : List NativeOp := NativeOp.spelled
 
 /-- The const-generic atoms by name (`NativeAtom.constGeneric`, the literal rule's flag). -/
@@ -491,7 +490,7 @@ def emitNative (nullaryOps typedOps termOps stratOps : Nat) : String :=
   "(* The const-generic atoms (NativeAtom.constGeneric): a string literal argument keeps its literal type (the literal rule, DI-15). *)\n" ++
   "let const_atoms : string list = " ++ listO (constAtomNames.map ostr) ++ "\n" ++
   "let const_atom (name : string) : bool = List.mem name const_atoms\n\n" ++
-  s!"(* {nullaryOps} nullary operations, {typedOps} at the faces' type arguments, {termOps} at every name's image at level 0 (a binder term), {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
+  s!"(* {nullaryOps} nullary operations, {typedOps} at the faces' type arguments, {termOps} at their faces (a binder term at the unit literal), {stratOps} over every finalizer_strategy: {allOps.length} values. *)\n" ++
   "let all_ops : native_op list =\n  [ " ++ "\n  ; ".intercalate (allOps.map opO) ++ " ]\n\n" ++
   "let scope_key : service_key = " ++ keyO nativeScopeKey ++ "\n" ++
   "let scope_ty : ty = " ++ tyO Ty.scope ++ "\n" ++

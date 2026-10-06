@@ -31,11 +31,11 @@ test("a deep program uses the explicit work stack", () => {
   expect(encoded.length).toBe(55 + 15000 * 19)
 })
 
-test("different named atoms keep different wire bytes", () => {
-  const parse = (atom: string) => {
-    const p = readTypeScript(`Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, ${atom}))`)
+test("different binder terms keep different wire bytes", () => {
+  const parse = (body: string) => {
+    const p = readTypeScript(`Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a1) => ${body}))`)
     if (Result.isFailure(p)) throw new Error("control refused")
     return p.success
   }
-  expect(hex(effWire(parse("incr")))).not.toBe(hex(effWire(parse("takeAndBump"))))
+  expect(hex(effWire(parse("succ(a1)")))).not.toBe(hex(effWire(parse("add(a1, 1)"))))
 })

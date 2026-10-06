@@ -331,7 +331,7 @@ def row : NativeAtom → AtomRow
         prelude := "(): ReadonlyArray<never> => []" }
   | .listCons =>
       { name := "cons", arity := some 2, constGeneric := false,
-        prelude := "<A>(x: A, xs: ReadonlyArray<A>): ReadonlyArray<A> => [x, ...xs]" }
+        prelude := "<A, B = A>(x: A, xs: ReadonlyArray<B>): ReadonlyArray<A | B> => [x, ...xs]" }
   | .listGet =>
       { name := "get", arity := some 2, constGeneric := false,
         prelude := "<A>(xs: ReadonlyArray<A>, i: number): Option.Option<A> =>\n  \

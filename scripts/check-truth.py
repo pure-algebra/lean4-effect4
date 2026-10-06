@@ -47,8 +47,15 @@ def main():
         # lane compiled them.
         shutil.copyfile(truth/'select-controls.ts', Path(work)/'select-controls.ts')
         shutil.copyfile(truth/'records.typecheck.ts', Path(work)/'records.typecheck.ts')
+        # The tuple controls (`tupleAt`, decisions row 159). The config named this file and no
+        # copy stood here, so the pinned lane never compiled it (coordinator's addendum 3 to
+        # seat T5, 2026-10-05).
+        shutil.copyfile(truth/'tuples.typecheck.ts', Path(work)/'tuples.typecheck.ts')
         # The list fold's controls (decisions rows 228 and 229), compiled beside the modules.
         shutil.copyfile(truth/'folds.typecheck.ts', Path(work)/'folds.typecheck.ts')
+        # The printed function of an operation's binder term, and a list of number literals
+        # (the state plan's T5, decisions row 251), compiled beside the modules.
+        shutil.copyfile(truth/'term-rows.typecheck.ts', Path(work)/'term-rows.typecheck.ts')
         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),
@@ -70,6 +77,17 @@ def main():
         config['files'] = [host_path(truth/'run-truth.ts')] + [
             host_path(path) for path in sorted((truth/'session').glob('*.ts'))]
         (Path(work)/'tsconfig.json').write_text(json.dumps(config, indent=2) + '\n')
+        # A plain file name in `include` must name a file the compiler reads: one beside the
+        # copied config, or one that `files` names in the tree. A name that matches nothing
+        # drops its control from the lane without a word. The release driver refuses the same
+        # (`type_roots`, scripts/check-truth-release.py).
+        by_path = {path.replace('\\', '/').rsplit('/', 1)[-1] for path in config['files']}
+        absent = [name for name in config['include']
+                  if not any(mark in name for mark in '*?/')
+                  and not (Path(work)/name).exists() and name not in by_path]
+        if absent:
+            sys.exit('FAIL truth: harness/truth/tsconfig.json includes ' + ', '.join(absent)
+                     + ', which the work directory does not hold; copy it beside the others')
         typed = subprocess.run(truth_host.compiler(modules) + ['--pretty', 'false',
                                 '--noEmit', '-p', host_path(Path(work)/'tsconfig.json')],
                                cwd=work, text=True, capture_output=True, timeout=300)

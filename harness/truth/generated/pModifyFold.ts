@@ -2,5 +2,4 @@
 // Regenerate: make gen-truth
 import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"
 import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tuple, ite, some, none, mul, get, length, append, nil, cons, sub, fold } from "../prelude.ts"
-export class NotFound extends Data.TaggedError("NotFound")<{ readonly id: number }> {}
-export const main: Effect.Effect<never, NotFound, never> = Effect.fail(new NotFound({ id: 9 }))
+export const main: Effect.Effect<readonly [number, number], never, never> = Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Ref.make(5), (a1) => Effect.flatMap(Ref.modify(a1, (a2) => pair(fold(cons(succ(a0), cons(a0, cons(3, nil()))), a2, (a3, a4) => add(a3, mul(a4, a0))), add(a2, a0))), (a2) => Effect.flatMap(Ref.get(a1), (a3) => Effect.succeed(pair(a2, a3))))))

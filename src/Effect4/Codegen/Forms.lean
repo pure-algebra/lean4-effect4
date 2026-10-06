@@ -123,30 +123,32 @@ def all : List Form :=
       .acquireRelease (.argument 0 0 0) (.argument 1 1 1), "internal/effect.ts:3971-4000"⟩
   ]
 
-/-- An injective shape alphabet; takeAndBump has no lambda spelling by owner ruling. -/
+/-- The foreign lambda spellings of a read-modify-write row's function, admitted beside the
+printed function of a term (`printPerform`, `Codegen/PrintLeaf.lean`): `(x) => x + 1`,
+`(x) => x * 2`, `(_) => Option.none()` and `(x) => x > 0 ? Option.some(0) : Option.none()`. An
+injective shape alphabet. Each shape spells one term at each row shape, the image of one function
+name (`lambdaAtom`, `LambdaShape.term`); `takeAndBump` has no lambda spelling by owner ruling.
+The printer never writes a shape: the foreign corpus restyles a printed function that is a
+shape's term (`Styles.lambdaOf`), and the two foreign recognizers read it back
+(`ts/eff/ingest`). -/
 inductive LambdaShape
   | addOne | multiplyTwo | optionNone | positiveThenZero
   deriving DecidableEq, BEq
 
-def lambdaShape : FnName → Option LambdaShape
-  | .incr => some .addOne
-  | .double => some .multiplyTwo
-  | .noChange => some .optionNone
-  | .zeroWhenPositive => some .positiveThenZero
-  | .takeAndBump => none
+/-- Every lambda shape, in declaration order: the order the forms table prints. -/
+def lambdaShapes : List LambdaShape := [.addOne, .multiplyTwo, .optionNone, .positiveThenZero]
 
+/-- The function name whose images a lambda shape spells. -/
 def lambdaAtom : LambdaShape → FnName
   | .addOne => .incr
   | .multiplyTwo => .double
   | .optionNone => .noChange
   | .positiveThenZero => .zeroWhenPositive
 
-theorem lambdaShape_atom (s : LambdaShape) : lambdaShape (lambdaAtom s) = some s := by
-  cases s <;> rfl
-
-theorem lambdaAtom_exact (f : FnName) (s : LambdaShape) (h : lambdaShape f = some s) :
-    lambdaAtom s = f := by
-  cases f <;> cases s <;> cases h <;> rfl
+/-- **The term a lambda shape spells** at a row shape, the current value at `var n`, the level
+of the node that performs the row: its name's image there (`FnName.image`). -/
+def LambdaShape.term (shape : LambdaShape) (s : FnShape) (n : Nat) : Term :=
+  FnName.image s n (lambdaAtom shape)
 
 /-- The host's dual-call dispatch data. It records unsupported heads too; arity metadata
 never admits a head without a profile row or an expansion in `all`. -/
@@ -196,7 +198,8 @@ def Form.checkExample (f : Form) (n : Nat) : Bool :=
 #guard all.length == 19
 #guard (all.map (·.id)).eraseDups.length == all.length
 #guard all.all (fun f => [0, 1, 2, 5].all f.checkExample)
-#guard lambdaShape .takeAndBump == none
 #guard lambdaAtom .addOne == .incr
+#guard (lambdaShapes.map lambdaAtom).eraseDups.length == lambdaShapes.length
+#guard !(lambdaShapes.map lambdaAtom).contains .takeAndBump
 
 end Effect4.Codegen.Forms

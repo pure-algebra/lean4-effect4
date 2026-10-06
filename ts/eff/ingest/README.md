@@ -124,46 +124,14 @@ The following tables are generated from the profile, forms and taxonomy.
 | {"_tag":"refSet"} | Ref.set | sync |  |
 | {"_tag":"refGetAndSet"} | Ref.getAndSet | sync |  |
 | {"_tag":"refSetAndGet"} | Ref.setAndGet | sync |  |
-| {"_tag":"refUpdateWith","f":{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}} | Ref.update | sync | incr |
-| {"_tag":"refUpdateWith","f":{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}} | Ref.update | sync | double |
-| {"_tag":"refUpdateWith","f":{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":0}}]}} | Ref.update | sync | zeroWhenPositive |
-| {"_tag":"refUpdateWith","f":{"_tag":"var","index":0}} | Ref.update | sync | noChange |
-| {"_tag":"refUpdateWith","f":{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}} | Ref.update | sync | takeAndBump |
-| {"_tag":"refGetAndUpdateWith","f":{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}} | Ref.getAndUpdate | sync | incr |
-| {"_tag":"refGetAndUpdateWith","f":{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}} | Ref.getAndUpdate | sync | double |
-| {"_tag":"refGetAndUpdateWith","f":{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":0}}]}} | Ref.getAndUpdate | sync | zeroWhenPositive |
-| {"_tag":"refGetAndUpdateWith","f":{"_tag":"var","index":0}} | Ref.getAndUpdate | sync | noChange |
-| {"_tag":"refGetAndUpdateWith","f":{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}} | Ref.getAndUpdate | sync | takeAndBump |
-| {"_tag":"refUpdateAndGetWith","f":{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}} | Ref.updateAndGet | sync | incr |
-| {"_tag":"refUpdateAndGetWith","f":{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}} | Ref.updateAndGet | sync | double |
-| {"_tag":"refUpdateAndGetWith","f":{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":0}}]}} | Ref.updateAndGet | sync | zeroWhenPositive |
-| {"_tag":"refUpdateAndGetWith","f":{"_tag":"var","index":0}} | Ref.updateAndGet | sync | noChange |
-| {"_tag":"refUpdateAndGetWith","f":{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}} | Ref.updateAndGet | sync | takeAndBump |
-| {"_tag":"refUpdateSomeWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}]}} | Ref.updateSome | sync | incr |
-| {"_tag":"refUpdateSomeWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}]}} | Ref.updateSome | sync | double |
-| {"_tag":"refUpdateSomeWith","f":{"_tag":"app","atom":"ite","args":[{"_tag":"app","atom":"lt","args":[{"_tag":"lit","value":{"_tag":"nat","value":0}},{"_tag":"var","index":0}]},{"_tag":"app","atom":"some","args":[{"_tag":"lit","value":{"_tag":"nat","value":0}}]},{"_tag":"app","atom":"none","args":[]}]}} | Ref.updateSome | sync | zeroWhenPositive |
-| {"_tag":"refUpdateSomeWith","f":{"_tag":"app","atom":"none","args":[]}} | Ref.updateSome | sync | noChange |
-| {"_tag":"refUpdateSomeWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}]}} | Ref.updateSome | sync | takeAndBump |
-| {"_tag":"refGetAndUpdateSomeWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}]}} | Ref.getAndUpdateSome | sync | incr |
-| {"_tag":"refGetAndUpdateSomeWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}]}} | Ref.getAndUpdateSome | sync | double |
-| {"_tag":"refGetAndUpdateSomeWith","f":{"_tag":"app","atom":"ite","args":[{"_tag":"app","atom":"lt","args":[{"_tag":"lit","value":{"_tag":"nat","value":0}},{"_tag":"var","index":0}]},{"_tag":"app","atom":"some","args":[{"_tag":"lit","value":{"_tag":"nat","value":0}}]},{"_tag":"app","atom":"none","args":[]}]}} | Ref.getAndUpdateSome | sync | zeroWhenPositive |
-| {"_tag":"refGetAndUpdateSomeWith","f":{"_tag":"app","atom":"none","args":[]}} | Ref.getAndUpdateSome | sync | noChange |
-| {"_tag":"refGetAndUpdateSomeWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}]}} | Ref.getAndUpdateSome | sync | takeAndBump |
-| {"_tag":"refUpdateSomeAndGetWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}]}} | Ref.updateSomeAndGet | sync | incr |
-| {"_tag":"refUpdateSomeAndGetWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}]}} | Ref.updateSomeAndGet | sync | double |
-| {"_tag":"refUpdateSomeAndGetWith","f":{"_tag":"app","atom":"ite","args":[{"_tag":"app","atom":"lt","args":[{"_tag":"lit","value":{"_tag":"nat","value":0}},{"_tag":"var","index":0}]},{"_tag":"app","atom":"some","args":[{"_tag":"lit","value":{"_tag":"nat","value":0}}]},{"_tag":"app","atom":"none","args":[]}]}} | Ref.updateSomeAndGet | sync | zeroWhenPositive |
-| {"_tag":"refUpdateSomeAndGetWith","f":{"_tag":"app","atom":"none","args":[]}} | Ref.updateSomeAndGet | sync | noChange |
-| {"_tag":"refUpdateSomeAndGetWith","f":{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}]}} | Ref.updateSomeAndGet | sync | takeAndBump |
-| {"_tag":"refModifyWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}]}} | Ref.modify | sync | incr |
-| {"_tag":"refModifyWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}]}} | Ref.modify | sync | double |
-| {"_tag":"refModifyWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":0}}]}]}} | Ref.modify | sync | zeroWhenPositive |
-| {"_tag":"refModifyWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"var","index":0}]}} | Ref.modify | sync | noChange |
-| {"_tag":"refModifyWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}]}} | Ref.modify | sync | takeAndBump |
-| {"_tag":"refModifySomeWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"succ","args":[{"_tag":"var","index":0}]}]}]}} | Ref.modifySome | sync | incr |
-| {"_tag":"refModifySomeWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"mul","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":2}}]}]}]}} | Ref.modifySome | sync | double |
-| {"_tag":"refModifySomeWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"some","args":[{"_tag":"var","index":0}]}]}} | Ref.modifySome | sync | zeroWhenPositive |
-| {"_tag":"refModifySomeWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"none","args":[]}]}} | Ref.modifySome | sync | noChange |
-| {"_tag":"refModifySomeWith","f":{"_tag":"app","atom":"pair","args":[{"_tag":"var","index":0},{"_tag":"app","atom":"some","args":[{"_tag":"app","atom":"add","args":[{"_tag":"var","index":0},{"_tag":"lit","value":{"_tag":"nat","value":1}}]}]}]}} | Ref.modifySome | sync | takeAndBump |
+| {"_tag":"refUpdateWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.update | sync |  |
+| {"_tag":"refGetAndUpdateWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.getAndUpdate | sync |  |
+| {"_tag":"refUpdateAndGetWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.updateAndGet | sync |  |
+| {"_tag":"refUpdateSomeWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.updateSome | sync |  |
+| {"_tag":"refGetAndUpdateSomeWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.getAndUpdateSome | sync |  |
+| {"_tag":"refUpdateSomeAndGetWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.updateSomeAndGet | sync |  |
+| {"_tag":"refModifyWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.modify | sync |  |
+| {"_tag":"refModifySomeWith","f":{"_tag":"lit","value":{"_tag":"unit"}}} | Ref.modifySome | sync |  |
 | {"_tag":"deferredMakeOf","value":{"_tag":"nat"},"error":{"_tag":"nat"}} | Deferred.make | sync |  |
 | {"_tag":"deferredIsDone"} | Deferred.isDone | sync |  |
 | {"_tag":"deferredPoll"} | Deferred.poll | sync |  |

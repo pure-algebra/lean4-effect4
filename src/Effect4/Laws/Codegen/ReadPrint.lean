@@ -360,7 +360,8 @@ abbrev Dom (_ : EffFam) : Type := Nat → Option Nat
 /-- A leaf reads back from its printing at depth `d`: a term or cause in scope whose folds
 state no accumulator type, a key whose type spells, fork options whose daemon flag the row
 spells, no type annotation (B19: types are not read), and a layer path whose declared name
-decodes (the name codec has no law of its own; the domain runs it). -/
+decodes (the name codec has no law of its own; the domain runs it). An operation is no leaf of
+its own: the row call's arm of the domain reads its binder term (`termReadable`). -/
 def leafReadable {R : EffFam → Type} (classes : Classes) (sig : Signature Op) (d : Nat)
     (daemon : Bool) : ArgF Op R → Bool
   | .term t => t.scoped d && t.covers classes && t.unannotated
@@ -420,15 +421,14 @@ where
     | some row => match row.out with
       | .refuse _ | .stmt _ => none
       | .rowCall => match args with
-        -- the row the printer prints is the operation's form at level 0 (`Signature.opAtLevel`)
+        -- the request reads back on the row, and the operation's binder term as the function
+        -- the printer writes after the row's call (`termReadable`, the state plan's T5)
         | [.op op, .term request] =>
-          match sig.opAtLevel n 0 op with
-          | some face =>
-            if sig.dom face && requestReadable (sig.rowOf face) n request &&
-                request.covers classes && request.unannotated then
-              some 0
-            else none
-          | none => none
+          if sig.dom op && requestReadable (sig.rowOf op) n request &&
+              request.covers classes && request.unannotated &&
+              termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) then
+            some 0
+          else none
         | _ => none
       | .tpl t => if argsReadable classes sig fam n (.tpl t) (rowDaemon row) args 0 then some 0 else none
 
@@ -825,6 +825,48 @@ theorem printRow_nodeLike {n : Nat} {row : Row} {r : Term} {x : Expr}
   unfold printRow at h
   aesop (add norm simp [printRowHead, printMethod, nodeLike])
 
+/-- A row call with a function after its arguments keeps its head, and is node-like: the head
+of a call is its callee's, whatever its arguments. A step of `printPerform_head`. -/
+theorem withFunction_head {spelling : String} {fn call x : Expr}
+    (h : withFunction spelling fn call = .ok x) :
+    exprHead? x = exprHead? call ∧ nodeLike x = true := by
+  unfold withFunction at h
+  split at h
+  · next head args =>
+    cases h
+    exact ⟨by cases head <;> rfl, rfl⟩
+  · cases h
+    exact ⟨rfl, rfl⟩
+  · exact nomatch h
+
+/-- The row call of `perform` is headed as its row's call is: by the spelling, or by nothing.
+The function of a binder term after the arguments does not change the head. A step of the
+row call's case of `readT_print`: no reserved skeleton matches the image. -/
+theorem printPerform_head {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {x : Expr}
+    (h : printPerform sig n op r = .ok x) :
+    exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling := by
+  unfold printPerform at h
+  split at h
+  · exact printRow_head h
+  · cases hcall : printRow n (sig.rowOf op) r with
+    | error why => rw [hcall] at h; exact nomatch h
+    | ok call =>
+      rw [hcall] at h
+      rw [(withFunction_head h).1]
+      exact printRow_head hcall
+
+/-- The row call of `perform` is node-like, with or without a binder term's function. -/
+theorem printPerform_nodeLike {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {x : Expr}
+    (h : printPerform sig n op r = .ok x) : nodeLike x = true := by
+  unfold printPerform at h
+  split at h
+  · exact printRow_nodeLike h
+  · cases hcall : printRow n (sig.rowOf op) r with
+    | error why => rw [hcall] at h; exact nomatch h
+    | ok call =>
+      rw [hcall] at h
+      exact (withFunction_head h).2
+
 /-! ## The pairwise fact of the table: no row before the printing row matches its image -/
 
 /-- The heads of the action rows: what a `withFiber` image is headed by. -/
@@ -902,8 +944,8 @@ theorem rowPrint_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Carrie
     ∃ row, table.find? (fun r => r.selects fam ctor args) = some row ∧
       ((∃ t τ, row.out = .tpl t ∧ printArgs sig fam n (.tpl t) args 0 = .ok τ ∧
           inst n τ t = some x) ∨
-       (∃ op face r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
-          sig.opAtLevel n 0 op = some face ∧ printRow n (sig.rowOf face) r = .ok x)) := by
+       (∃ op r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
+          printPerform sig n op r = .ok x)) := by
   unfold tableLayer.rowPrint at h
   aesop
 
@@ -912,10 +954,10 @@ theorem rowDom_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Dom)} {n
     (h : domLayer.rowDom classes sig fam ctor args n = some d) :
     ∃ row, table.find? (fun r => r.selects fam ctor args) = some row ∧
       ((∃ t, row.out = .tpl t ∧ argsReadable classes sig fam n (.tpl t) (rowDaemon row) args 0 = true) ∨
-       (∃ op face r, row.out = .rowCall ∧ args = [.op op, .term r] ∧
-          sig.opAtLevel n 0 op = some face ∧ sig.dom face = true ∧
-          requestReadable (sig.rowOf face) n r = true ∧ r.covers classes = true ∧
-          r.unannotated = true)) := by
+       (∃ op r, row.out = .rowCall ∧ args = [.op op, .term r] ∧ sig.dom op = true ∧
+          requestReadable (sig.rowOf op) n r = true ∧ r.covers classes = true ∧
+          r.unannotated = true ∧
+          termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) = true)) := by
   unfold domLayer.rowDom at h
   aesop
 
@@ -1121,15 +1163,15 @@ theorem readRow_path_print {row : Templates.Row} (hk : table[k]? = some row)
     ↓reduceIte, hb, Except.toOption, Option.map_some]
 
 /-- The row call reads its image back: the printed row of `perform` reads to `perform`. The
-printer printed the operation's face (its form at level 0), the face reader reads the face back
-(`read_printRow`), and the reader moves it to the node's level, where it is the operation again
-(`LawfulSpelling.opAtLevel_symm`). -/
+printer printed the row's call and, after it, the operation's binder term as a function; the
+reader reads the call to the operation's face, the function's body to the term, and installs
+the term (`readPerform_printPerform`, `Laws/Codegen/ReadLeaf.lean`). -/
 theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.Row}
-    (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op face : Op} {r : Term}
-    (hface : sig.opAtLevel n 0 op = some face)
-    (hd : sig.dom face = true) (hreq : requestReadable (sig.rowOf face) n r = true)
+    (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op : Op} {r : Term}
+    (hd : sig.dom op = true) (hreq : requestReadable (sig.rowOf op) n r = true)
     (hc : r.covers classes = true) (hu : r.unannotated = true)
-    (hp : printRow n (sig.rowOf face) r = .ok x) (hfam' : fam = .eff) :
+    (hterm : termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) = true)
+    (hp : printPerform sig n op r = .ok x) (hfam' : fam = .eff) :
     readRow classes sig spell fam n x row k child children block same =
       some (.ok (hfam' ▸ (Eff.perform op r : EffSelfCarrier Op .eff))) := by
   subst hfam'
@@ -1137,26 +1179,25 @@ theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.R
   simp only at hfam hrow
   subst hfam hrow
   unfold readRow
-  simp only [↓reduceIte, readPerform, read_printRow hl face hd r hreq hc hu hp, rowAnswer,
-    Except.bind, atNodeLevel, hl.opAtLevel_symm n 0 op face hface, Except.mapError]
+  simp only [↓reduceIte, readPerform_printPerform hl hd hreq hc hu hterm hp, Except.mapError]
 
 /-! ## No row before the printing row fires -/
 
 /-- A skeleton with a reserved head does not match the row call's image. -/
 theorem matchT_none_of_reserved (hl : LawfulSpelling sig spell) {op : Op} {r : Term} {m : Nat}
-    (hp : printRow m (sig.rowOf op) r = .ok x) {t : Tpl} {h : String} (hh : t.head? = some h)
+    (hp : printPerform sig m op r = .ok x) {t : Tpl} {h : String} (hh : t.head? = some h)
     (hres : h ∈ reserved) : matchT n t x = none := by
   cases hm : matchT n t x with
   | none => rfl
   | some σ =>
     have h1 := head_of_match n t x σ hm hh
-    rcases printRow_head hp with h2 | h2 <;> rw [h1] at h2
+    rcases printPerform_head hp with h2 | h2 <;> rw [h1] at h2
     · cases h2
     · exact absurd (Option.some.inj h2 ▸ hres) (hl.spelling_not_reserved op)
 
 /-- No action row reads the row call's image. -/
 theorem readT_action_none_of_printRow (hl : LawfulSpelling sig spell) {op : Op} {r : Term}
-    {m : Nat} (hp : printRow m (sig.rowOf op) r = .ok x) (d : Nat) :
+    {m : Nat} (hp : printPerform sig m op r = .ok x) (d : Nat) :
     readT classes sig spell .action d x = none := by
   rw [readT, List.findSome?_eq_none_iff]
   intro p hmem
@@ -1250,7 +1291,7 @@ theorem earlier_none_path {i : Nat} (hout : row.out = .tpl (.hole i))
 /-- Before the row call: a skeleton's head is reserved and the image's is a spelling; the
 transparent row hands the image to the action family, which reads nothing of it. -/
 theorem earlier_none_rowCall (hl : LawfulSpelling sig spell) (hrow : row.out = .rowCall)
-    {op : Op} {r : Term} (hp : printRow n (sig.rowOf op) r = .ok x)
+    {op : Op} {r : Term} (hp : printPerform sig n op r = .ok x)
     (hsame : ∀ hk d, same .action hk d = none) :
     readRow classes sig spell fam n x rj j child children block same = none := by
   unfold rowsApart at hap
@@ -1330,7 +1371,7 @@ theorem action_image_head {c : EffSelfCarrier Op .action} {d : Nat} {x : Expr}
     exact (selects_fam_ctor this).1
   have hshape := table_fact table_actionHeaded hmem
   simp only [actionRowHeaded, hfam, bne_self_eq_false, Bool.false_or] at hshape
-  rcases hcase with ⟨t, τ, hout, _, hinst⟩ | ⟨_, _, _, hout, _, _, _⟩
+  rcases hcase with ⟨t, τ, hout, _, hinst⟩ | ⟨_, _, hout, _, _⟩
   · rw [hout] at hshape
     simp only [Bool.and_eq_true, Option.any_eq_true] at hshape
     obtain ⟨_, h, hh, _⟩ := hshape
@@ -1478,9 +1519,9 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
   -- an earlier row of another family reads nothing
   have hother : ∀ j < k, ∀ rj, table[j]? = some rj → rj.fam ≠ fam ∨ rowsApart rj row = true :=
     fun j hj rj hrj => by rw [← hfamrow]; exact apart_of_lt hrj hk hj
-  rcases hcase with ⟨t, τ, hout, hτ, hinst⟩ | ⟨op, face, r, hout, hargs, hface, hp'⟩
+  rcases hcase with ⟨t, τ, hout, hτ, hinst⟩ | ⟨op, r, hout, hargs, hp'⟩
   · -- a skeleton row
-    rcases hcase' with ⟨t', hout', hr'⟩ | ⟨_, _, _, hout', _⟩
+    rcases hcase' with ⟨t', hout', hr'⟩ | ⟨_, _, hout', _⟩
     swap; · rw [hout] at hout'; cases hout'
     rw [hout, RowOut.tpl.injEq] at hout'
     subst hout'
@@ -1580,7 +1621,7 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
       | _ => exact absurd rfl hrigid
   · -- the row call
     rcases hcase' with
-      ⟨_, hout', _⟩ | ⟨op', face', r', hout', hargs', hface', hd', hreq, hcov, hun⟩
+      ⟨_, hout', _⟩ | ⟨op', r', hout', hargs', hd', hreq, hcov, hun, hterm⟩
     · rw [hout] at hout'; cases hout'
     have hfamily := table_fact table_family hmem
     simp only [rowFamily, hout, beq_iff_eq] at hfamily
@@ -1590,14 +1631,13 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     have hargs' := fold_eq_op_term (readableAlg classes sig) hargs'
     rw [hargs, List.cons.injEq, List.cons.injEq, ArgF.op.injEq, ArgF.term.injEq] at hargs'
     obtain ⟨rfl, rfl, _⟩ := hargs'
-    obtain rfl : face' = face := Option.some.inj (hface'.symm.trans hface)
     have he : e = .perform op r := eff_of_view_op_term e op r (by rw [hview]; exact hargs)
     subst he
-    refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, printRow_nodeLike hp'⟩
+    refine ⟨readT_of_row hk (fun j hj rj hrj => ?_) ?_, printPerform_nodeLike hp'⟩
     · rcases hother j hj rj hrj with hne | hap
       · exact readRow_none_of_fam hne
       · exact earlier_none_rowCall hap hl hout hp' (fun hk d => readT_action_none_of_printRow hl hp' d)
-    · exact readRow_rowCall_print hl hout hfamily hface hd' hreq hcov hun hp' rfl
+    · exact readRow_rowCall_print hl hout hfamily hd' hreq hcov hun hterm hp' rfl
 
 end Step
 

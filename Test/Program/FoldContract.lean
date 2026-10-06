@@ -409,11 +409,12 @@ local macro "printed% " program:term:max : term =>
 #guard match Api.roundTrip pFoldNested with
   | .error (.annotation what) => what == "fold accumulator"
   | _ => false
--- The faces refuse an operation's term that holds a fold, by the row's name (the state plan's
--- T5 prints it).
-#guard match Api.print pFoldInOp with
-  | .error (.binderTerm name) => name == "Ref.modify"
-  | _ => false
+-- An operation's term prints as a function of the current value (the state plan's T5), and a
+-- fold inside it binds the two levels above that value: the cell is `a0`, its value `a1`, and
+-- the fold's binders `a2` and `a3`. The program reads back.
+#guard printed% pFoldInOp = some
+  "Effect.flatMap(Ref.make(5), (a0) => Ref.modify(a0, (a1) => pair(fold(cons(1, cons(2, cons(3, nil()))), a1, (a2, a3) => add(a2, a3)), a1)))"
+#guard Api.roundTrip pFoldInOp == .ok pFoldInOp
 
 /-! ### The fold's level under a binder, and in a closed layer (Codex's depth control)
 

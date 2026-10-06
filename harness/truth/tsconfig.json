@@ -26,6 +26,7 @@
     "records.typecheck.ts",
     "tuples.typecheck.ts",
     "folds.typecheck.ts",
+    "term-rows.typecheck.ts",
     "select-controls.ts",
     "generated",
     "run-truth.ts",

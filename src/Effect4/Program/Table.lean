@@ -61,33 +61,30 @@ theorem rowIndex_exact (table : List Row) (key : String × List String) (i : Nat
 /-- The built-in spelling keys: one per representative of `NativeOp.spelled`. -/
 def builtinKeys : List (String × List String) := NativeOp.spelled.map (rowKey ∘ NativeOp.row)
 
-/-- **Every built-in operation the faces spell has a built-in key**: a row's spelling and
-trailing names do not depend on the type arguments its operation carries, and a term row whose
-term has a form at level 0 (`NativeOp.atLevel`: a name's image there) carries that name. So
-`NativeOp.spelled`'s keys cover every operation but an external one and a term row the faces
-refuse, whose row carries no trailing name (`NativeOp.termFace`). -/
-theorem NativeOp.rowKey_mem (op : NativeOp) (h : ∀ i, op ≠ .external i)
-    (hface : (op.atLevel 0 0).isSome = true) : rowKey op.row ∈ builtinKeys := by
-  cases hb : op.binder? with
-  | none =>
-    cases op with
-    | external i => exact absurd rfl (h i)
-    | deferredMakeOf _ _ => exact (by decide : ("Deferred.make", ([] : List String)) ∈ builtinKeys)
-    | scopeMake s => cases s <;> decide
-    | refUpdateWith f | refGetAndUpdateWith f | refUpdateAndGetWith f | refUpdateSomeWith f
-    | refGetAndUpdateSomeWith f | refUpdateSomeAndGetWith f | refModifyWith f
-    | refModifySomeWith f => cases hb
-    | _ => decide
-  | some st =>
-    obtain ⟨s, t⟩ := st
-    have hname : (Effect4.Machine.FnName.decode? s 0 t).isSome = true := by
-      unfold NativeOp.atLevel at hface
-      rw [hb, Option.isSome_map] at hface
-      exact hface
-    obtain ⟨g, hg⟩ := Option.isSome_iff_exists.mp hname
-    have ht := Effect4.Machine.FnName.image_of_decode? hg
-    subst ht
-    cases op <;> cases hb <;> cases g <;> decide
+/-- **Every built-in operation has a built-in key**: a row's spelling and trailing names depend
+neither on the type arguments its operation carries nor on its binder term, which the faces print
+as a function after the request. So `NativeOp.spelled`'s keys cover every operation but an
+external one. -/
+theorem NativeOp.rowKey_mem (op : NativeOp) (h : ∀ i, op ≠ .external i) :
+    rowKey op.row ∈ builtinKeys := by
+  cases op with
+  | external i => exact absurd rfl (h i)
+  | deferredMakeOf _ _ => exact (by decide : ("Deferred.make", ([] : List String)) ∈ builtinKeys)
+  | scopeMake s => cases s <;> decide
+  | refUpdateWith _ => exact (by decide : ("Ref.update", ([] : List String)) ∈ builtinKeys)
+  | refGetAndUpdateWith _ =>
+    exact (by decide : ("Ref.getAndUpdate", ([] : List String)) ∈ builtinKeys)
+  | refUpdateAndGetWith _ =>
+    exact (by decide : ("Ref.updateAndGet", ([] : List String)) ∈ builtinKeys)
+  | refUpdateSomeWith _ => exact (by decide : ("Ref.updateSome", ([] : List String)) ∈ builtinKeys)
+  | refGetAndUpdateSomeWith _ =>
+    exact (by decide : ("Ref.getAndUpdateSome", ([] : List String)) ∈ builtinKeys)
+  | refUpdateSomeAndGetWith _ =>
+    exact (by decide : ("Ref.updateSomeAndGet", ([] : List String)) ∈ builtinKeys)
+  | refModifyWith _ => exact (by decide : ("Ref.modify", ([] : List String)) ∈ builtinKeys)
+  | refModifySomeWith _ =>
+    exact (by decide : ("Ref.modifySome", ([] : List String)) ∈ builtinKeys)
+  | _ => decide
 
 theorem builtinLookup_none (key : String × List String) (h : key ∉ builtinKeys) :
     NativeOp.spelled.find? (fun op => decide (rowKey op.row = key)) = none := by

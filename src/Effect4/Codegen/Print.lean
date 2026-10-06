@@ -43,14 +43,11 @@ length `0`. -/
 def printLayer (sig : Signature Op) (l : LayerTerm Op) : Except PrintRefusal TypeScript.Expr :=
   Effect4.Codegen.Templates.printLayerT sig l
 
-/-- A row's invocation prints as its row call: the table's `rowCall` row, by computation, at
-the operation's form at level 0 (`Signature.opAtLevel`). An operation with no such form is
-refused by its row's spelling. -/
+/-- A row's invocation prints as its row call: the table's `rowCall` row, by computation, the
+row's call on the request and after it the operation's binder term as a function of the current
+value (`printPerform`, `Codegen/PrintLeaf.lean`). -/
 theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
-    print sig n (.perform op request) =
-      match sig.opAtLevel n 0 op with
-      | some face => printRow n (sig.rowOf face) request
-      | none => .error (.binderTerm (sig.rowOf op).spelling) := rfl
+    print sig n (.perform op request) = printPerform sig n op request := rfl
 
 /-- The complete requirement row as target syntax. The empty union is `never`. -/
 def requirementType (scopeKey : ServiceKey) (requires : Requirement) : TypeScript.TypeRef :=

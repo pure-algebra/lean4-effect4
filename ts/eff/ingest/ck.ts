@@ -31,19 +31,25 @@ class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
 const unit: Term = { _tag: "lit", value: { _tag: "unit" } }
 
-/** A read-modify-write row's binder term at a node of level `n` (decisions row 43; Lean
- * `NativeOp.atLevel 0 n`). A profile entry holds the term at level 0, where its one variable is
- * the cell's current value; a node reads that value at its own level, so `var 0` becomes
- * `var n`. A name's image is variables, literals and atom applications; this engine declines
- * any other entry term. Written apart from `read.ts`'s move: the two engines stay two walks. */
+/** A foreign lambda shape's term at a node of level `n` (decisions row 43; Lean
+ * `LambdaShape.term`, `src/Effect4/Codegen/Forms.lean`). The forms table holds the term at level
+ * 0, where its one variable is the cell's current value; a node reads that value at its own
+ * level, so `var 0` becomes `var n`. A shape's term is variables, literals and atom
+ * applications; this engine declines any other table term. Written apart from the other
+ * engine's move: the two engines stay two walks. */
 const termAt = (n: number, t: Term): Term =>
   t._tag === "var" ? (t.index === 0 ? { _tag: "var", index: n } : bad("binder term"))
     : t._tag === "app" ? { _tag: "app", atom: t.atom, args: t.args.map(a => termAt(n, a)) }
     : t._tag === "lit" ? t
     : bad("binder term")
 type RowOp = (typeof rows)[number]["op"]
-/** A row's operation at a node of level `n`: its term moved, when it carries one. */
-const opAt = (n: number, op: RowOp): RowOp => "f" in op ? { _tag: op._tag, f: termAt(n, op.f) } : op
+/** A read-modify-write row's operation: the eight operations that carry a binder term. A
+ * profile entry holds such a row at its face, the unit literal for its term (Lean
+ * `Signature.face`); a reader installs the function it read (the state plan's T5). */
+type TermRowOp = Extract<RowOp, { readonly f: Term }>
+const isTermRow = (op: RowOp): op is TermRowOp => "f" in op
+/** The operation with the term a reader read (Lean `NativeOp.withTerm`). */
+const withTerm = (op: TermRowOp, f: Term): RowOp => ({ _tag: op._tag, f })
 
 /** An array hole (`[a, , b]`): TypeScript's `OmittedExpression`, a position no rule admits. */
 interface Hole { readonly type: "Hole"; readonly start: number; readonly end: number }
@@ -313,6 +319,13 @@ class CompilerReader {
     if (x.type === "CallExpression") return { _tag: "app", atom: this.name(x.callee), args: x.arguments.map(a => this.term(a, env)) }
     return { _tag: "lit", value: this.literal(x) }
   }
+  /** A read-modify-write row's function, `(x) => body`: its body as a term under one more
+   * binder, the cell's current value at the node's level (decisions row 43). The body is read
+   * one level up, as the Lean reader reads it (`readPerform`). */
+  rowFunction(x: Ex, env: readonly string[]): Term {
+    const fn = this.arrow(x, env, 1)
+    return this.term(this.expression(fn.body), fn.env)
+  }
   arrow(x: Ex, env: readonly string[], count: number): { body: FunctionBody | Expression; env: readonly string[] } {
     x = this.unwrap(x)
     if (x.type !== "ArrowFunctionExpression" || x.params.length !== count) return bad("closure")
@@ -526,7 +539,10 @@ class CompilerReader {
     const trailingName = (z: Ex): string | undefined => { z = this.unwrap(z); return isString(z) ? JSON.stringify(z.value) : z.type === "Identifier" ? z.name : undefined }
     for (const r of rows.filter(r => r.row.spelling === h && r.row.shape !== "value")) {
       const count = r.row.shape === "tupleCall" ? 2 : r.row.request._tag === "unit" ? 0 : 1
-      if (a.length !== count + r.row.trailing.length || !r.row.trailing.every((v, i) => trailingName(arg(count + i)) === v)) continue
+      // A read-modify-write row's binder term follows the request and the trailing names, as a
+      // function of the cell's current value (the state plan's T5; Lean `printPerform`).
+      const functions = isTermRow(r.op) ? 1 : 0
+      if (a.length !== count + r.row.trailing.length + functions || !r.row.trailing.every((v, i) => trailingName(arg(count + i)) === v)) continue
       const types = x.typeArguments?.params.map(n => this.text(n)) ?? []
       if (types.join(",") !== r.row.typeArgs.join(",")) continue
       let request = unit
@@ -541,7 +557,8 @@ class CompilerReader {
         }
         request = saved ? this.term(saved, env) : { _tag: "app", atom: "pair", args: [left, right] }
       }
-      return { _tag: "perform", op: opAt(env.length, r.op), request }
+      const op = isTermRow(r.op) ? withTerm(r.op, this.rowFunction(arg(count + r.row.trailing.length), env)) : r.op
+      return { _tag: "perform", op, request }
     }
     const application = this.term(x, env)
     this.defer("unknownHead")
@@ -781,7 +798,7 @@ class ForeignCompilerReader extends CompilerReader {
       if (binding === "opaque") return refuseForeign("E-IMPORT-OPAQUE", raw)
       return [binding, ...tail].filter(Boolean).join(".")
     }
-    if (raw === "undefined" || atoms.has(raw) || forms.lambdas.some(l => l.atom === raw)) return raw
+    if (raw === "undefined" || atoms.has(raw)) return raw
     return refuseForeign("E-OP-RECEIVER", raw)
   }
   override literal(x: Ex): Lit {
@@ -1169,29 +1186,51 @@ class ForeignCompilerReader extends CompilerReader {
     }
     return super.loopTail(x)
   }
-  lambdaAtom(x: Ex): string {
-    x = this.unwrap(x)
-    const p0 = x.type === "ArrowFunctionExpression" ? x.params[0] : undefined
-    const name = p0 ? parameterName(p0) : undefined
-    if (x.type !== "ArrowFunctionExpression" || x.params.length !== 1 || name === undefined || x.body.type === "BlockStatement") return refuseForeign("E-ARG-CLOSURE", "lambda atom")
-    const b = this.unwrap(x.body)
+  /** The foreign lambda shape a row's function spells, if any (`forms.lambdas`, Lean
+   * `LambdaShape`): `(x) => x + 1`, `(x) => x * 2`, `(_) => Option.none()` and
+   * `(x) => x > 0 ? Option.some(0) : Option.none()`. Any other function is the function of a
+   * term. */
+  lambdaShape(name: string, b: Ex): (typeof forms.lambdas)[number]["shape"] | undefined {
+    b = this.unwrap(b)
     const param = (e: Ex) => { e = this.unwrap(e); return e.type === "Identifier" && e.name === name }
-    const number = (e: Ex, n: number) => { const v = this.literal(e); return v._tag === "nat" && v.value === n }
+    const number = (e: Ex, n: number) => { e = this.unwrap(e); return isNumeric(e) && e.value === n && this.text(e) === String(n) }
     const option = (e: Ex, head: string, n?: number) => {
       e = this.unwrap(e)
-      if (e.type !== "CallExpression" || this.name(e.callee) !== head) return false
+      if (e.type !== "CallExpression" || e.optional || e.arguments.some(a => a.type === "SpreadElement")) return false
+      const callee = this.unwrap(e.callee)
+      if (callee.type !== "MemberExpression" && callee.type !== "Identifier") return false
+      let resolved: string
+      try { resolved = this.name(callee) } catch (error) { if (error instanceof ForeignRefusal) return false; throw error }
+      if (resolved !== head) return false
       return n === undefined ? e.arguments.length === 0 : e.arguments.length === 1 && number(this.at(e.arguments, 0), n)
     }
     if (b.type === "BinaryExpression" && b.left.type !== "PrivateIdentifier" && param(b.left)) {
-      if (b.operator === "+" && number(b.right, 1)) return "incr"
-      if (b.operator === "*" && number(b.right, 2)) return "double"
+      if (b.operator === "+" && number(b.right, 1)) return "addOne"
+      if (b.operator === "*" && number(b.right, 2)) return "multiplyTwo"
     }
-    if (option(b, "Option.none")) return "noChange"
+    if (option(b, "Option.none")) return "optionNone"
     if (b.type === "ConditionalExpression") {
       const test = this.unwrap(b.test)
-      if (test.type === "BinaryExpression" && test.operator === ">" && param(test.left) && number(test.right, 0) && option(b.consequent, "Option.some", 0) && option(b.alternate, "Option.none")) return "zeroWhenPositive"
+      if (test.type === "BinaryExpression" && test.operator === ">" && param(test.left) && number(test.right, 0) && option(b.consequent, "Option.some", 0) && option(b.alternate, "Option.none")) return "positiveThenZero"
     }
-    return refuseForeign("E-ARG-CLOSURE", "lambda atom")
+    return undefined
+  }
+  /** A read-modify-write row's function in foreign source (the state plan's T5): an arrow
+   * function of one named parameter with an expression body. A foreign lambda shape spells the
+   * shape's term at this row, moved to the node's level; any other function is the function of
+   * a term, read under one more binder. */
+  foreignFunction(op: TermRowOp, x: Ex, env: readonly string[]): Term {
+    x = this.unwrap(x)
+    const p0 = x.type === "ArrowFunctionExpression" ? x.params[0] : undefined
+    const name = p0 ? parameterName(p0) : undefined
+    if (x.type !== "ArrowFunctionExpression" || x.params.length !== 1 || p0?.type !== "Identifier" || name === undefined || x.body.type === "BlockStatement") return refuseForeign("E-ARG-CLOSURE", "lambda atom")
+    const shape = this.lambdaShape(name, x.body)
+    if (shape !== undefined) {
+      const entry = forms.lambdas.find(l => l.shape === shape)
+      if (entry === undefined) return refuseForeign("E-ARG-CLOSURE", "lambda atom")
+      return termAt(env.length, entry.terms[op._tag])
+    }
+    return this.term(x.body, [...env, name])
   }
   duration(x: Ex): number {
     x = this.unwrap(x)
@@ -1353,16 +1392,16 @@ class ForeignCompilerReader extends CompilerReader {
         const body = this.eff(this.at(x.arguments, 0), env), key = this.key(this.at(x.arguments, 1), env), value = this.provided(key, this.at(x.arguments, 2))
         return { _tag: "provideService", body, key, value: { _tag: "lit", value } }
       }
-      if (x.arguments.some(a => this.unwrap(a).type === "ArrowFunctionExpression") && rows.some(r => r.row.spelling === h)) {
-        for (const r of rows.filter(r => r.row.spelling === h)) {
-          const count = r.row.shape === "tupleCall" ? 2 : r.row.request._tag === "unit" ? 0 : 1
-          if (x.arguments.length !== count + r.row.trailing.length) continue
-          const trailing = x.arguments.slice(count).map(a => this.unwrap(a).type === "ArrowFunctionExpression" ? this.lambdaAtom(a) : this.name(a))
-          if (!r.row.trailing.every((name, i) => trailing[i] === name)) continue
-          const request = count === 0 ? unit : count === 1 ? this.term(this.at(x.arguments, 0), env) : { _tag: "app" as const, atom: "pair", args: [this.term(this.at(x.arguments, 0), env), this.term(this.at(x.arguments, 1), env)] }
-          return { _tag: "perform", op: opAt(env.length, r.op), request }
-        }
-        return refuseForeign("E-ARG-CLOSURE", "lambda atom")
+      // A read-modify-write row: its cell, then its function (the state plan's T5). Each of the
+      // eight rows takes one request and no trailing name.
+      const termRow = rows.find(r => r.row.spelling === h && isTermRow(r.op))
+      if (termRow !== undefined && isTermRow(termRow.op) && x.arguments.length === 2) {
+        // The row declares no type argument (`row.typeArgs`), so a call that carries one is no
+        // invocation of it. It is refused as the other engine refuses an admitted head with an
+        // unmatched invocation: the two engines answer alike, and neither drops the arguments.
+        if ((x.typeArguments?.params.length ?? 0) !== termRow.row.typeArgs.length) return refuseForeign("E-NODE", h)
+        const f = this.foreignFunction(termRow.op, this.at(x.arguments, 1), env)
+        return { _tag: "perform", op: withTerm(termRow.op, f), request: this.term(this.at(x.arguments, 0), env) }
       }
       if (!knownHeads.has(h) && !atoms.has(h)) return refuseForeign("E-OP-UNKNOWN", h)
     }

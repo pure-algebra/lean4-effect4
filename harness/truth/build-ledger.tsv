@@ -46,3 +46,5 @@ pFailPayload	yes	yes	yes	yes	yes	yes
 pTagPayload	yes	yes	yes	yes	yes	yes		
 pInterruptEscape	no: machine interrupt [{"interrupt":0}], host fail [{"fail":42}]	no: machine row 4 (exited 0 interrupt) is host row 4 (exited 0 fail)	yes	yes	yes	yes	U-01: the pin lets the typed failure escape, and the release answers the interrupt as the machine does	M5 the failure walk
 pFold	yes	yes	yes	yes	yes	yes		
+pModifyFold	yes	yes	yes	yes	yes	yes		
+pQueueOffer	yes	yes	yes	yes	yes	yes		
