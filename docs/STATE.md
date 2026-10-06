@@ -287,21 +287,9 @@ as practiced. Three points stay open for the owner: who integrates after the han
 whether the reviewer builds, and a sweep at the handover head. Until the owner names a
 party, the coordinator still merges, runs the wide gates and keeps the registers.
 
-In work since 2026-10-06. The owner allowed three seats at once that day (row 237). Two
-run, and the third seat is held:
+In work since 2026-10-06. The owner allowed three seats at once that day (row 237). One
+seat runs, and one is held:
 
-- **Seat LIFT's code is merged: the mask's chain at every live fiber of a run**
-  (`d734aa6a`; branch `seat/lift`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)). The machine holds
-  one table of start flags, and each live fiber holds the chain at its own flag
-  (`MaskRuns`, `src/Effect4/Laws/Machine/MaskRuns.lean`). Each command keeps the invariant
-  under one condition, just before a command clears a fiber. The command loop discharges the
-  condition. So every decision, tape and fuel keeps the invariant, at the compiled program's
-  interpreter (`compiled_mask_chain_runs`, `src/Effect4/Laws/Program/MaskRuns.lean`; the
-  registry claim `saved-mask-chain-runs`, R11). Each entry of the program interface that
-  returns a machine holds it with no premise (`src/Effect4/Laws/Api/MaskRuns.lean`). No
-  planned goal. The bracket of a region stays open: a body's run returns to the entry's
-  stack. Its receipt comes next.
 - **Seat SEMW's eight steps are merged: Semaphore's public operations** (branch
   `seat/semw`; [its brief](research/2026-10-05-claude-lead/briefs/seat-semw-brief.md);
   `aa70b078`, `4b57609c`, `ea036307`, `5fc17c3f`, `75ad13b7`, `831a76f3`). The two forms are
@@ -325,6 +313,19 @@ run, and the third seat is held:
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat LIFT is merged: the mask's chain at every live fiber of a run** (`d734aa6a`;
+  [its receipt](research/2026-10-06-seat-LIFT-receipt.md)). A table of start flags is proof
+  data: the machine stores no base. Each live fiber holds the chain at its own flag of the
+  table (`MaskRuns`, `src/Effect4/Laws/Machine/MaskRuns.lean`). Each command keeps the
+  invariant under one condition, on `Cmd.exitDone` alone, and the command loop discharges
+  it. So every decision, tape and fuel keeps the invariant, at the compiled program's
+  interpreter (`compiled_mask_chain_runs`, `src/Effect4/Laws/Program/MaskRuns.lean`; the
+  registry claim `saved-mask-chain-runs`, R11). Each entry outside the machine that returns a
+  machine keeps it, with no premise for the condition
+  (`src/Effect4/Laws/Api/MaskRuns.lean`). Along a run, a live fiber's flag is a function of
+  its stack. No planned goal. R11 stays open: the bracket of a region owes two facts. A
+  body's run returns to the entry's stack, and the fiber is live at both cuts. Row 278
+  records what the receipt leaves open.
 - **Seat CHECK is merged** (`0c4f9774`;
   [its receipt](research/2026-10-06-seat-CHECK-receipt.md)), in the seat that seat QINV
   freed. `typeOfProgram` tests the references' formation only

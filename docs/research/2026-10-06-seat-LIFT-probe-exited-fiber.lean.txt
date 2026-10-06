@@ -1,0 +1,166 @@
+-- Seat LIFT's probe of the finding (2026-10-06), filed with the receipt
+-- `docs/research/2026-10-06-seat-LIFT-receipt.md`. It is no source of the tree: the name ends
+-- in `.txt` so that no tool reads it as one. Its text is the scratch file `lift/hijack1.lean`,
+-- unchanged below this header. It ran at the base `f3568844`, before the law module existed,
+-- with `lake env lean -M6144 -DwarningAsError=true`, and it exited 0. Its output follows the
+-- file as a comment. The battery `Test/Machine/MaskRuns.lean` now holds the same run as a
+-- control (`reached`).
+
+import Effect4.Laws.Machine.MaskDiscipline
+import Effect4.Laws.Machine.Lift
+
+/-! Scratch probe: does the driver reach a machine whose exited fiber breaks the chain, when a
+second fiber runs the registration of a race that the first fiber hosts? -/
+
+set_option autoImplicit false
+
+namespace LiftProbe
+
+open Effect4 Effect4.Machine Effect4.FrameFiber
+
+abbrev P := Prim Nat Nat Nat Nat Nat Nat Nat
+abbrev C := Cause Nat Nat Nat Nat
+abbrev M := RunMachine Nat Nat Nat Nat Nat Nat Nat Unit Unit
+abbrev F := RunFiber Nat Nat Nat Nat Nat Nat Nat Unit
+abbrev D := RunDecision Nat Nat Nat Nat Nat Nat Nat
+
+/-- The second fiber's program: await fiber 0, then run the registration of race 0. -/
+def waiter : P := .onSuccess (.suspend 100) 20
+
+/-- A toy interpreter. Its `parkOf` reads two thunks as parks: `suspend 100` awaits fiber 0, and
+`suspend (1000 + k)` is the registration of race `k`. -/
+def toy : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit where
+  contA := fun name _ =>
+    if name = 10 then .withFiber 2 else if name = 20 then .suspend 1000 else .success 0
+  contE := fun _ cause => .failure cause
+  syncValue := fun _ => 0
+  suspendBody := fun _ => .success 0
+  finalizerExit := fun _ _ => .success ()
+  reifyExit := fun _ => 0
+  iterNext := fun _ _ => ([], .done 0)
+  loopEnter := fun _ _ => .finish (.success 0)
+  loopResume := fun _ _ _ => .finish (.success 0)
+  notImplemented := 0
+  cancelThenFail := fun _ cause => .failure cause
+  parkOf := fun code =>
+    match code with
+    | .suspend n =>
+      if n = 100 then some (.ok (.join ⟨0⟩ .awaitValue))
+      else if 1000 ≤ n then some (.ok (.race (n - 1000)))
+      else none
+    | _ => none
+  parkCode := fun kind =>
+    match kind with
+    | .race k => .suspend (1000 + k)
+    | _ => .success 0
+  interruptCode := fun _ => .success 0
+  interruptAsCode := fun _ _ => .success 0
+  interruptAllCode := fun _ => .success 0
+  withFiberOf := fun thunk =>
+    if thunk = 1 then some (.fork waiter ⟨true, true, .interruptible⟩)
+    else if thunk = 2 then some (.raceAll [.success 7])
+    else if thunk = 3 then some (.setInterruptible (.yieldNowWith 0) false)
+    else none
+  syncState := fun _ _ => none
+  registerAsync := fun _ _ _ st => (st, none)
+  answerCode := fun _ => .success 0
+  dueResumes := fun st => ([], st)
+  wakeList := fun _ _ st => st
+  clockStep := fun _ st => (none, st)
+  cancelName := fun name _ _ => name
+  abortName := 0
+  parkCancelName := 0
+  raceCancelName := fun _ => 0
+  raceSettle := fun _ _ _ => .withFiber 3
+  finalizerProgram := fun _ _ => none
+  restoreName := fun _ => 0
+  mergeName := fun _ => 0
+  scopeStatus := fun _ _ => none
+  scopeLinkFiber := fun _ _ _ _ => none
+  dropFinalizer := fun _ _ _ => none
+  closeScope := fun _ _ _ _ _ => none
+  ambientScope := fun _ => none
+  budgetOf := fun _ => (1000000, true)
+  emptyContext := ()
+  contextValue := fun _ => 0
+  exitValue := fun _ _ => .success 0
+  fiberValue := fun id => id.value
+  fiberIdValue := fun id => id.value
+  restoreValue := fun _ => 0
+  fibersValue := fun _ => 0
+  exitsValue := fun _ => 0
+  voidValue := 0
+  scopeValue := fun n => n
+  closeDoneName := 0
+  encodeFiber := fun id => id.value
+  stackAnnotations := fun _ => ReasonAnnotations.empty
+  asyncFiberError := 0
+  missingScope := 0
+
+/-- The root's program: fork the waiter, then race one entrant. The race settles into a masked
+yield (`raceSettle`). -/
+def root : P := .onSuccess (.withFiber 1) 10
+
+def start : M :=
+  let m : M := RunMachine.empty ()
+  { m with
+    fibers := m.fibers ++ [RunFiber.make ⟨m.nextId⟩ root true (toy.budgetOf ()) ()]
+    nextId := m.nextId + 1 }
+
+def machineOf : ReplayResult Nat Nat Nat Nat Nat Nat Nat Unit Unit → M
+  | .finished m => m
+  | .frontier _ m => m
+  | .stuck _ m => m
+
+def run (tape : List D) : M := machineOf (replayEval toy 400 tape start)
+
+structure Seen where
+  id : Nat
+  flag : Bool
+  stack : Nat
+  masks : List Bool
+  exited : Bool
+  running : Bool
+  parked : Bool
+deriving Repr, DecidableEq
+
+def seen (m : M) : List Seen :=
+  m.fibers.map fun f =>
+    { id := f.id.value, flag := f.frame.interruptible, stack := f.frame.stack.length,
+      masks := f.frame.stack.filterMap
+        (fun p => match p with | Prim.setInterruptible g => some g | _ => none),
+      exited := f.exit.isSome, running := f.running,
+      parked := decide (f.parked ≠ Parked.notParked) }
+
+/-- Every fiber of the table holds the chain at the flag it started with (all start at true). -/
+def allHold (m : M) : Bool :=
+  m.fibers.all fun f => decide (MaskChain true f.frame.interruptible f.frame.stack)
+
+/-- Every fiber that has not exited holds the chain. -/
+def liveHold (m : M) : Bool :=
+  m.fibers.all fun f => f.exit.isSome || decide (MaskChain true f.frame.interruptible f.frame.stack)
+
+#eval seen (run [])
+#eval seen (run [.evaluate ⟨0⟩])
+#eval seen (run [.evaluate ⟨0⟩, .fire ⟨0⟩])
+#eval (allHold (run [.evaluate ⟨0⟩]), liveHold (run [.evaluate ⟨0⟩]))
+#eval (allHold (run [.evaluate ⟨0⟩, .fire ⟨0⟩]), liveHold (run [.evaluate ⟨0⟩, .fire ⟨0⟩]))
+#eval (run [.evaluate ⟨0⟩, .fire ⟨0⟩]).stuck.isSome
+#eval (run [.evaluate ⟨0⟩, .fire ⟨0⟩]).races.map fun r => (r.id, r.host.value, r.settled, r.registering, r.state.accepted.isSome)
+
+end LiftProbe
+
+/- The output of the run, one line for each `#eval`:
+
+[{ id := 0, flag := true, stack := 0, masks := [], exited := false, running := false, parked := false }]
+[{ id := 0, flag := false, stack := 1, masks := [true], exited := false, running := false, parked := true },
+ { id := 1, flag := true, stack := 2, masks := [], exited := false, running := false, parked := true },
+ { id := 2, flag := true, stack := 0, masks := [], exited := true, running := false, parked := false }]
+[{ id := 0, flag := false, stack := 0, masks := [], exited := true, running := false, parked := true },
+ { id := 1, flag := true, stack := 0, masks := [], exited := false, running := true, parked := false },
+ { id := 2, flag := true, stack := 0, masks := [], exited := true, running := false, parked := false }]
+(true, true)
+(false, true)
+false
+[(0, 0, true, false, true)]
+-/

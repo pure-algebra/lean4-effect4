@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""Seat LIFT's falsified copy of the battery `Test/Machine/MaskRuns.lean` (2026-10-06).
+
+Filed with the receipt `docs/research/2026-10-06-seat-LIFT-receipt.md`. It is no tool of the
+tree: the name ends in `.txt` so that nothing runs it in place. Copy it to a scratch folder as
+`falsify.py` first.
+
+It changes every check of the battery so that the check must fail. Then it reads Lean's errors
+on the changed copy and asks for one at each changed check, and for none elsewhere. A check
+that stays green in the copy is a check that tests nothing.
+
+- each `#guard e` becomes `#guard !(e)`;
+- each pinned output's expected text gains a letter;
+- each proved control is changed at one named place (the list `PROVED` below).
+
+Usage, from the worktree, with `OUT` a scratch folder:
+
+    python3 falsify.py write Test/Machine/MaskRuns.lean OUT
+    lake env lean -M6144 -DwarningAsError=true -DmaxErrors=1000 OUT/battery-red.lean \\
+        > OUT/battery-red.log 2>&1        # through the Lean slot; it exits 1
+    python3 falsify.py compare OUT        # exits 0 when each changed check is red
+
+Lean stops at 100 errors by default, so the option `maxErrors` is needed.
+"""
+import json
+import re
+import sys
+
+# (anchor that opens the command, old text inside the command, new text). In the file's order.
+PROVED = [
+    # part A
+    ("theorem unanswered_needs_empty_scratch", "⟨.success 0, [value], true, none, false⟩", "⟨.success 0, [], true, none, false⟩"),
+    ("theorem unanswered_flag_needs_chain", "(h true ⟨.success 0, [], false, none, false⟩", "(h false ⟨.success 0, [], false, none, false⟩"),
+    ("theorem base_needs_flag", "(h true false true false [] rfl rfl)", "(h true true true true [] rfl rfl)"),
+    ("example : ∀ (base : Bool) (interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat) (f : F),\n    MaskChain base f.interruptible f.stack → ∀ (next : F),",
+     "MaskChain base next.interruptible next.stack :=", "MaskChain (!base) next.interruptible next.stack :="),
+    ("example : ∀ (demand : Arm) (skip : Bool) (frames : List P) (f : F), f.stack = [] →\n    (popFrom demand skip frames f).answer = ContAnswer.empty →",
+     "(popFrom demand skip frames f).fiber.stack = [] :=", "(popFrom demand skip frames f).fiber.stack = frames :="),
+    ("example : ∀ (base : Bool) (demand : Arm) (skip : Bool) (frames : List P) (f : F), f.stack = [] →",
+     "(popFrom demand skip frames f).fiber.interruptible = base :=", "(popFrom demand skip frames f).fiber.interruptible = !base :="),
+    ("example : ∀ (base : Bool) (interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat) (f : F),\n    MaskChain base f.interruptible f.stack → ∀ (exit : Exit Nat Nat Nat Nat Nat),",
+     "(frameExitState f).stack = [] ∧ (frameExitState f).interruptible = base :=",
+     "(frameExitState f).stack = [] ∧ (frameExitState f).interruptible = !base :="),
+    ("example : ∀ next : F, (answered.step frames).fst = FrameStep.running next →",
+     "MaskChain true next.interruptible next.stack :=\n  step_maskChain true frames answered (by decide)",
+     "MaskChain false next.interruptible next.stack :=\n  step_maskChain false frames answered (by decide)"),
+    # part B
+    ("theorem exitDone_needs_ready", "h [true] trap (Cmd.exitDone ⟨0⟩) [] (by decide)", "h [true] published (Cmd.exitDone ⟨0⟩) [] (by decide)"),
+    ("theorem sameFlag_needs_one_run", "h [true] [false] emptied startedFalse", "h [true] [true] emptied startedFalse"),
+    ("example : ¬ ClearReady [true] trap (Cmd.exitDone ⟨0⟩) := by", "¬ ClearReady [true] trap", "¬ ClearReady [true] published"),
+    ("example : ∃ bases', [true] <+: bases' ∧ MaskRuns bases' (clear published) :=", "[true] published _ [] (by decide)", "[true] trap _ [] (by decide)"),
+    ("example : ∃ bases', [true] <+: bases' ∧ MaskRuns bases' (clear emptied) :=", "[true] emptied _ [] (by decide)", "[true] trap _ [] (by decide)"),
+    ("example : ∃ bases', [true] <+: bases' ∧ MaskRuns bases' (clear atBase) :=", "[true] atBase _ [] (by decide)", "[true] trap _ [] (by decide)"),
+    ("example : ∃ bases', [true] <+: bases' ∧\n    MaskRuns bases' (replayEval toy 400 inheritTape (rooted inherits)).machine :=",
+     "replayEval_maskRuns toy (evaluatePrim_evaluatorKeepsMask toy) 400 inheritTape [true]", "replayEval_maskRuns toy (evaluatePrim_evaluatorKeepsMask toy) 400 inheritTape [false]"),
+    ("example : ∃ bases', [true] <+: bases' ∧\n    MaskRuns bases' (replayEval toy 400 hostTape (rooted hosts)).machine :=",
+     "replayEval_maskRuns toy (evaluatePrim_evaluatorKeepsMask toy) 400 hostTape [true]", "replayEval_maskRuns toy (evaluatePrim_evaluatorKeepsMask toy) 400 hostTape [false]"),
+    ("example (p : Api.Program) (budget : Nat) :", "∃ bases, [true] <+: bases ∧", "∃ bases, [false] <+: bases ∧"),
+    ("/-- `Api.runSync` at the program interface: it takes no premise on the program. -/",
+     "∃ bases, [true] <+: bases ∧ MaskRuns bases (Api.runSync", "∃ bases, [false] <+: bases ∧ MaskRuns bases (Api.runSync"),
+    ("/-- The checked replay: the machine of a refused decision holds the invariant. -/",
+     "∃ bases, [true] <+: bases ∧ MaskRuns bases machine :=", "∃ bases, [false] <+: bases ∧ MaskRuns bases machine :="),
+    ("/-- The journaled run: each journal from an opened run, with no premise on the built program. -/",
+     "∃ bases, [true] <+: bases ∧ MaskRuns bases ((Run.open", "∃ bases, [false] <+: bases ∧ MaskRuns bases ((Run.open"),
+    ("/-- The drive under a host, from a started run. -/",
+     "∃ bases, [true] <+: bases ∧\n      MaskRuns bases (((Run.open", "∃ bases, [false] <+: bases ∧\n      MaskRuns bases (((Run.open"),
+    ("/-- The rows of bytes, from a loaded runner. -/",
+     "∃ bases', bases <+: bases' ∧\n      MaskRuns bases' (Api.Runner.replayBytes", "∃ bases', bases' <+: bases ∧\n      MaskRuns bases' (Api.Runner.replayBytes"),
+    ("/-- A reading holds the session's machine, so the invariant at a run is the invariant at its",
+     "MaskRuns bases s.inspect.machine := by", "MaskRuns (true :: bases) s.inspect.machine := by"),
+    ("example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (bases : List Bool) (m : M)\n    (c : K) (rest : List K), MaskRuns bases m → ClearReady bases m c →",
+     "(c : K) (rest : List K), MaskRuns bases m → ClearReady bases m c →", "(c : K) (rest : List K), MaskRuns bases m → True →"),
+    ("example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (fuel : Nat)\n    (tape : List D) (bases : List Bool) (m : M), MaskRuns bases m →",
+     "∃ bases', bases <+: bases' ∧ MaskRuns bases' (replayEval interp fuel tape m).machine :=\n  atNat.replay",
+     "∃ bases', bases' <+: bases ∧ MaskRuns bases' (replayEval interp fuel tape m).machine :=\n  atNat.replay"),
+    ("example : ∀ (interp : RunInterp Nat Nat Nat Nat Nat Nat Nat Unit Unit) (m : M) (f : R) (y : Bool)",
+     "(evaluatePrim interp m f y).fiber.frame.stack = [] :=", "(evaluatePrim interp m f y).fiber.frame.stack = f.frame.stack :="),
+    ("example : ∀ (bases bases' : List Bool) (m : M) (f : R), MaskRuns bases m → MaskRuns bases' m →",
+     "f ∈ m.fibers → f.exit = none → bases[f.id.value]? = bases'[f.id.value]? :=", "f ∈ m.fibers → True → bases[f.id.value]? = bases'[f.id.value]? :="),
+    ("example : ∀ (bases bases' : List Bool) (m m' : M) (f g : R), MaskRuns bases m →",
+     "f.exit = none → g.exit = none → f.frame.stack = g.frame.stack →", "f.exit = none → g.exit = none → True →"),
+    ("example : ∀ (root : Program.NativeEff) (table : Program.RowTable) (fuel : Nat)",
+     "(tape : List Api.Decision) (bases : List Bool) (m : Api.Machine), MaskRuns bases m →\n      ∃ bases', bases <+: bases'",
+     "(tape : List Api.Decision) (bases : List Bool) (m : Api.Machine), MaskRuns bases m →\n      ∃ bases', bases' <+: bases"),
+    ("example : MaskRuns [true] (rooted hosts) :=", "atNat.start [] (RunMachine.empty ()) hosts true", "atNat.start [] (RunMachine.empty ()) hosts false"),
+]
+
+
+def write(src, out):
+    text = open(src).read()
+    lines = text.split("\n")
+    result = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("#guard ") or line == "#guard":
+            j = i + 1
+            while j < len(lines) and (lines[j].startswith(" ") and lines[j].strip() != ""):
+                j += 1
+            expr = "\n".join([line[len("#guard"):]] + lines[i + 1:j])
+            result.extend(("#guard !(" + expr.strip("\n") + ")").split("\n"))
+            i = j
+            continue
+        result.append(line)
+        i += 1
+    text2 = "\n".join(result)
+
+    def pin(m):
+        return m.group(0).replace("info: ", "info: X", 1)
+
+    text2, n_pins = re.subn(r"/--\s*info: (?:(?!-/).|\n)*?-/\n#guard_msgs in", pin, text2)
+    starts = []
+    last = -1
+    for anchor, old, new in PROVED:
+        a = text2.find(anchor)
+        if a < 0:
+            sys.exit("anchor not found: " + anchor[:60])
+        if a <= last:
+            sys.exit("anchors out of order: " + anchor[:60])
+        last = a
+        b = text2.find(old, a)
+        if b < 0 or b - a > 1500:
+            sys.exit("old text not found near anchor: " + old[:60])
+        text2 = text2[:b] + new + text2[b + len(old):]
+        starts.append(a)
+    open(out + "/battery-red.lean", "w").write(text2)
+    out2 = text2.split("\n")
+    guards = [k + 1 for k, l in enumerate(out2) if l.startswith("#guard !(")]
+    pins = [k + 1 for k, l in enumerate(out2) if l.startswith("#guard_msgs in")]
+    proved = []
+    for a in starts:
+        first = text2.count("\n", 0, a) + 1
+        last_line = first
+        while last_line < len(out2) and out2[last_line].strip() != "":
+            last_line += 1
+        proved.append([first, last_line])
+    json.dump({"guards": guards, "pins": pins, "proved": proved}, open(out + "/battery-red.json", "w"))
+    authored = len(re.findall(r"^(?:private )?(?:theorem|example)\b", text, flags=re.M))
+    print("guards", len(guards), "pins", len(pins), "changed pins", n_pins,
+          "proved controls changed", len(starts), "of", authored, "proved items")
+
+
+def compare(out):
+    m = json.load(open(out + "/battery-red.json"))
+    log = open(out + "/battery-red.log").read()
+    if "maximum number of errors" in log:
+        sys.exit("Lean stopped at its error limit: run it with -DmaxErrors=1000")
+    errors = sorted({int(x) for x in re.findall(r"battery-red\.lean:(\d+):\d+: error", log)})
+    guards, pins, proved = set(m["guards"]), set(m["pins"]), m["proved"]
+    hit_guards, hit_pins, hit_proved, stray = set(), set(), set(), []
+    for line in errors:
+        if line in guards:
+            hit_guards.add(line)
+        elif line in pins:
+            hit_pins.add(line)
+        else:
+            owner = [i for i, (a, b) in enumerate(proved) if a <= line <= b]
+            if owner:
+                hit_proved.add(owner[0])
+            else:
+                stray.append(line)
+    print("errors", len(errors))
+    print("guards", len(hit_guards), "of", len(guards))
+    print("pins", len(hit_pins), "of", len(pins))
+    print("proved", len(hit_proved), "of", len(proved))
+    print("stray", stray)
+    missing = (sorted(guards - hit_guards) + sorted(pins - hit_pins)
+               + [proved[i][0] for i in range(len(proved)) if i not in hit_proved])
+    print("missing", missing)
+    sys.exit(0 if not stray and not missing else 1)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 4 and sys.argv[1] == "write":
+        write(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 3 and sys.argv[1] == "compare":
+        compare(sys.argv[2])
+    else:
+        sys.exit(__doc__)

@@ -474,24 +474,28 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   with one base and one stack have one flag. It is a local law of the frame machine. It
   states no law of a run, no completed exit and no bracket of a region.
   (`saved_mask_pop_discipline` (`src/Effect4/Laws/Machine/MaskDiscipline.lean`)).
-- **The saved mask's chain at every live fiber of a run (`saved-mask-chain-runs`)**: The
-  machine holds one table of start flags. Each live fiber holds the chain at its own flag of
-  the table (`MaskRuns`). Each command keeps the invariant under one condition: just before a
-  command clears a fiber, that fiber has exited, or its stack is empty, or its flag is its
-  base. The command loop discharges the condition, so every decision, tape and fuel keeps the
-  invariant. The claim's pointer states it at the compiled program's interpreter
-  (`compiled_mask_chain_runs` (`src/Effect4/Laws/Program/MaskRuns.lean`)). Its general form is
-  at the frame evaluator (`saved_mask_chain_runs`
-  (`src/Effect4/Laws/Machine/MaskRuns.lean`)). Each entry of the program interface that
-  returns a machine holds it with no premise (`src/Effect4/Laws/Api/MaskRuns.lean`). Along a
-  run, a live fiber's flag is a function of its stack (`MaskRuns.flag_eq`). It states no
-  bracket of a region: that a body's run returns to the entry's stack stays open. It states
-  nothing of an exited fiber, of cleanup, of delivery or of progress.
+- **The saved mask's chain at every live fiber of a run (`saved-mask-chain-runs`)**: A
+  table of start flags is proof data: the machine stores no base. Each live fiber holds the
+  chain at its own flag of the table (`MaskRuns`). Each command keeps the invariant under one
+  condition, on `Cmd.exitDone` alone. Just before it clears a fiber, that fiber has exited,
+  or its stack is empty, or its flag is its base. `Cmd.finish` publishes the fiber before it
+  clears it, so it asks for nothing. The command loop discharges the condition, so every
+  decision, tape and fuel keeps the invariant. The claim's pointer states it at the compiled
+  program's interpreter (`compiled_mask_chain_runs`
+  (`src/Effect4/Laws/Program/MaskRuns.lean`)). Its general form is at the frame evaluator
+  (`saved_mask_chain_runs` (`src/Effect4/Laws/Machine/MaskRuns.lean`)). Each entry outside
+  the machine that returns a machine keeps it, with no premise for the condition. An entry
+  that starts a run holds it outright. An entry that steps a machine keeps it from that
+  machine. (`src/Effect4/Laws/Program/MaskRuns.lean`, `src/Effect4/Laws/Api/MaskRuns.lean`).
+  Along a run, a live fiber's flag is a function of its stack (`MaskRuns.flag_eq`). It states
+  no bracket of a region. Two facts of the bracket stay open: a body's run returns to the
+  entry's stack, and the fiber is live at both cuts. It states nothing of an exited fiber,
+  of cleanup, of delivery or of progress.
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 - **Pool's return and close on the model (`pool-return-front`, `pool-return-once`,
-  `pool-close-refuses`)**: A return of a lease that holds its item puts the item at the front
-  of the idle items and keeps every item. The lease then holds nothing (`giveBack_front`). A
+  `pool-close-refuses`)**: A held lease's return puts its item at the front of the idle
+  items, and it keeps every item. The lease then holds nothing (`giveBack_front`). A
   second return of that lease changes nothing (`giveBack_once`). After the close's first
   step every lease is refused (`close_refuses`). They state no finalizer's run and no close
   that waits. The three theorems are in `src/Effect4/Laws/Modules/Pool/Profile.lean`.
