@@ -188,6 +188,7 @@ import Effect4.Laws.Modules.Semaphore.Model
 import Effect4.Laws.Modules.Semaphore.Profile
 import Effect4.Laws.Modules.Semaphore.Typing
 import Effect4.Laws.Modules.Semaphore.Relation
+import Effect4.Laws.Modules.Semaphore.Reading
 import Effect4.Laws.Modules.Semaphore.Steps
 import Effect4.Laws.Program.Typing.TermIntro
 

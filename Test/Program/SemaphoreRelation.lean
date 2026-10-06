@@ -1,5 +1,6 @@
 import Effect4.Laws.Modules.Semaphore.Steps
 import Test.Program.SemaphoreAgreement
+import Test.Program.SemaphoreSteps
 import ProofGraph.Plan
 
 /-!
@@ -13,12 +14,13 @@ state of the universe of `Test/Program/SemaphoreAgreement.lean`, 23 moves on eac
 
 It also ties the two encodings: the cell's value of the relation is the value of the
 comparison's state term. The red controls drop one premise each: the table's injectivity, and
-the hint that a take sets. The last section joins a goal to the store by the Queue's
-connector, `step_updates`.
+the hint that a take sets. Two more sections apply the statements: at a scope where `bindWith`
+minted the cursor, and joined to the store by the Queue's connector, `step_updates`.
 
 Placement. Each guard is a finite instance of a step goal (concept `translation-simulation`,
 requirement R10, a part of the proposed claim `semaphore-expansion-agrees`). A state outside
-the universe and another table are not checked.
+the universe and another table are not checked. The pinned axiom and plan outputs follow the
+controls.
 -/
 
 set_option autoImplicit false
@@ -28,9 +30,10 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.SemaphoreRelation
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue.Model (Table Reads Captured captured_var step_updates)
+open Effect4.Queue.Model (Table Reads Captured captured_var captured_answer step_updates)
 open Effect4.Semaphore.Model
 open Test.Program.SemaphoreAgreement (profileStates outside moves Move held freed scan)
+open Test.Program.SemaphoreSteps (firstName secondName stepScope stepScope_second stepScope_cell)
 
 /-! ## One table -/
 
@@ -193,5 +196,136 @@ theorem take_updates (tb : Table) (s : State) (id n : Nat) (hint : DeferredKey)
       (captured_var (x := "need") rfl rfl rfl).atScope (captured_var (x := "id") rfl rfl rfl)
       (captured_var (x := "hint") rfl rfl rfl).atScope
       (captured_var (x := "s") rfl rfl rfl).atScope)
+
+/-! ## A cursor and an identity that `bindWith` binds
+
+The scope is `Test/Program/SemaphoreSteps.lean`'s: two minted names, and the row's binder `s`.
+`captured_answer` gives the capture of the minted name, and `captured_var` the capture of the
+binder. No `Captured` is assumed. -/
+
+/-- The visit, with a cursor that `bindWith` bound: both caller's terms go under the visit's
+fold. -/
+example (tb : Table) (s : State) (cursor : Nat) (q : Val) :
+    Reads (Semaphore.visitStep (minted secondName) (var "s")) stepScope []
+      [q, Val.nat cursor, cellVal tb s]
+      (Val.tuple [visitReplyVal tb (visit s cursor).2, cellVal tb (visit s cursor).1]) :=
+  visitStep_agrees tb s cursor rfl
+    (captured_answer (outer := { names := [firstName] }) stepScope_second rfl)
+    (captured_var (x := "s") rfl stepScope_cell rfl)
+
+/-- The withdrawal, with an identity that `bindWith` bound. -/
+example (tb : Table) (s : State) (id : Nat) (q : Val) (injective : tb.Injective) :
+    Reads (Semaphore.withdrawStep (minted secondName) (var "s")) stepScope []
+      [q, Val.promise (tb.handle id), cellVal tb s]
+      (Val.tuple [Val.unit, cellVal tb (withdraw s id)]) :=
+  withdrawStep_agrees tb s id injective rfl
+    (captured_answer (outer := { names := [firstName] }) stepScope_second rfl)
+    (captured_var (x := "s") rfl stepScope_cell rfl).atScope
+
+/-! ## The pinned outputs
+
+Each proved statement's axioms, and its standing as the plan derives it from the proof. Each
+statement was a planned goal, and it is proved in place with its statement unchanged. The
+counts are of this battery's tree, which holds no step of a proof: the steps are in the law
+graph. -/
+
+/-- info: 'Effect4.Semaphore.Model.takeStep_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms takeStep_agrees
+
+/--
+info: Effect4.Semaphore.Model.takeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status takeStep_agrees
+
+/-- info: 'Effect4.Semaphore.Model.takeIfAvailableStep_agrees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms takeIfAvailableStep_agrees
+
+/--
+info: Effect4.Semaphore.Model.takeIfAvailableStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status takeIfAvailableStep_agrees
+
+/-- info: 'Effect4.Semaphore.Model.releaseStep_agrees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms releaseStep_agrees
+
+/--
+info: Effect4.Semaphore.Model.releaseStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status releaseStep_agrees
+
+/-- info: 'Effect4.Semaphore.Model.visitStep_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms visitStep_agrees
+
+/--
+info: Effect4.Semaphore.Model.visitStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status visitStep_agrees
+
+/--
+info: 'Effect4.Semaphore.Model.withdrawStep_agrees' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms withdrawStep_agrees
+
+/--
+info: Effect4.Semaphore.Model.withdrawStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status withdrawStep_agrees
+
+-- The five statements as one: the witness of the proposed claim `semaphore-steps-agree`.
+/--
+info: 'Effect4.Semaphore.Model.semaphore_steps_agree' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms semaphore_steps_agree
+
+/--
+info: Effect4.Semaphore.Model.semaphore_steps_agree: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status semaphore_steps_agree
+
+-- The general removal, and the three joins to the store.
+/-- info: 'Effect4.Semaphore.Model.reads_removeById' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms reads_removeById
+
+/--
+info: 'Test.Program.SemaphoreRelation.release_updates' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms release_updates
+
+/--
+info: 'Test.Program.SemaphoreRelation.visit_updates' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms visit_updates
+
+/--
+info: Test.Program.SemaphoreRelation.visit_updates: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status visit_updates
+
+/-- info: 'Test.Program.SemaphoreRelation.take_updates' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms take_updates
 
 end Test.Program.SemaphoreRelation
