@@ -296,9 +296,9 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   transitions, with no planned goal (`src/Effect4/Laws/Modules/Pool/`). An idle item beside
   enrolled waiters is a state of the profile. The cell and the five step terms are typed,
   with no planned goal (`src/Effect4/Modules/Pool/`, `src/Effect4/Laws/Modules/Pool/Typing.lean`).
-  Each step term agrees with the model's step, on every state of the model:
-  `pool_steps_agree` and its five parts (`src/Effect4/Laws/Modules/Pool/Steps.lean`; R10),
-  proved in place of five planned goals. They state no order of the wake across helpers, no
+  Each step term agrees with the model's step, on every state of the model. The law is
+  `pool_steps_agree`, with its five parts (`src/Effect4/Laws/Modules/Pool/Steps.lean`; R10).
+  Each part was proved in place of its planned goal. They state no order of the wake across helpers, no
   cancellation law, no close that waits and no wrapper. The engine's two cases, the
   documents and the receipt are next.
 - **Seat QINV has the Queue model's run invariant** (branch `seat/qinv`, from `4bd063a2`;
