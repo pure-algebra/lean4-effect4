@@ -483,6 +483,22 @@ test("a restore site has one spelling: every other place of a saved state is ref
       rest: { _tag: "succeed", value: { _tag: "var", index: 1 } } } })
 })
 
+// A derived form that inserts a binder re-reads its argument one level up (`effectSlot`,
+// `ingest/forms.ts`; Lean `Forms.insert`). A saved state bound outside keeps its level, and a mask
+// inside the argument binds its saved state above the inserted binder.
+test("the mask's rows keep their binders under a form that inserts one", () => {
+  const two: Eff = { _tag: "succeed", value: { _tag: "lit", value: { _tag: "nat", value: 2 } } }
+  const cases: ReadonlyArray<readonly [string, Eff]> = [
+    [`Effect.flatMap(${maskGetter("r")}, (r) => Effect.andThen(Effect.succeed(1), pipe(Effect.succeed(2), r)))`,
+      { _tag: "bind", first: getInterruptible, rest: { _tag: "bind", first: one, rest: restoreAt(0, two) } }],
+    [`Effect.andThen(Effect.succeed(1), Effect.flatMap(${maskGetter("r")}, (s) => Effect.uninterruptible(pipe(Effect.succeed(2), s))))`,
+      { _tag: "bind", first: one, rest: { _tag: "bind", first: getInterruptible, rest: { _tag: "uninterruptible", body: restoreAt(1, two) } } }],
+    [`Effect.tap(${maskGetter("r")}, (s) => pipe(Effect.succeed(2), s))`,
+      { _tag: "bind", first: getInterruptible, rest: { _tag: "bind", first: restoreAt(0, two), rest: { _tag: "succeed", value: { _tag: "var", index: 0 } } } }],
+  ]
+  for (const [body, expected] of cases) for (const eff of lifts(maskHeader + "export const program = " + body)) expect(eff).toEqual(expected)
+})
+
 // A layer constant used under a restore site. Both engines walk into the site's body: the ck
 // engine by `walkProgram`, the oxc engine by `childrenOf` of `read.ts`. Until 2026-10-06 neither
 // walker had the case, and the oxc engine left the definition's index where the layer's path
