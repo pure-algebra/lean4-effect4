@@ -15,7 +15,9 @@ the abstract model is `Test/Program/QueueAgreement.lean`. The runs on the machin
 Placement. The typing controls are finite instances of the typing statements of
 `src/Effect4/Laws/Modules/Queue/Typing.lean` (concept `store-typing`, requirement R4). Every
 guard is a finite check at the listed message types. None proves a statement at every message
-type, and none states agreement with the model.
+type, and none states agreement with the model. The seven statements are proved at every
+message type in the law graph, and the guards stay as their finite controls and red controls.
+The pins of the five steps of a `Ref.modify` are in `Test/Program/QueueTyping.lean`.
 -/
 
 set_option autoImplicit false
@@ -93,7 +95,7 @@ def malformedTypes : List Ty :=
 
 /-! ## 2. The steps' types
 
-Each guard is the statement of one typing goal of
+Each guard is the statement of one typing theorem of
 `src/Effect4/Laws/Modules/Queue/Typing.lean`, at each listed message type. -/
 
 def takeTyped (A : Ty) : Bool :=
@@ -293,11 +295,12 @@ def enrolledFixed (takers id : TermSrc) : TermSrc :=
 
 /-! ## 5. The pinned outputs of the typing statements
 
-Two typing statements are proved at every message type that the checker types in a cell: the
-initial value's and the size step's. The five steps of a `Ref.modify` are planned goals, and
-the guards of section 2 are their finite controls. -/
+The seven typing statements are proved at every message type that the checker types in a cell.
+The initial value's and the size step's are pinned here. The five steps of a `Ref.modify` are
+pinned in `Test/Program/QueueTyping.lean`, and the guards of section 2 are their finite
+controls. -/
 
-open Effect4.Queue.Model (empty_typed sizeStep_typed takeStep_typed)
+open Effect4.Queue.Model (empty_typed sizeStep_typed)
 
 /-- info: 'Effect4.Queue.Model.empty_typed' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
