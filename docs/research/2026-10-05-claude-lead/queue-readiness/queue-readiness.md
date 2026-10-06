@@ -68,7 +68,9 @@ and it dropped a signal that it could not encode. A state with a peeker passed f
 The first profile is a closed predicate of eight conditions now. The comparison refuses a state
 outside it, and a reply or a signal with no encoding. It runs on every state of a finite
 universe of the profile: 200 states, twelve moves on each, and all 2,400 comparisons agree.
-Each red control changes one notification, and nothing else. No step term changed.
+Each red control changes one notification, and nothing else. No step term changed. The
+predicate and its closure are in the tree, proved: `FirstProfile` and `first_profile_closed`
+in `Test/Program/QueueProfile.lean`. The comparison decides that predicate.
 
 ### F2. Cleanup on interruption needs no new construct
 

@@ -11,6 +11,7 @@ It authorizes no additional runtime behaviour.
 | `Test/Program/QueueContract.lean` | tested: its guard checks hold |
 | `acceptLoop_length_le` in `Test/Program/QueueCapacity.lean` | proved, at `[propext, Quot.sound]` |
 | `positive_suspend_step_capacity` in the same file | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+| `first_profile_closed` in `Test/Program/QueueProfile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
 
 ## Authority and owned surface
 
@@ -68,6 +69,15 @@ An implementation at another payload type owes an encoding and an explicit state
 General request-order and ownership proofs require fresh request identities and immutable bounds within a request.
 The wrapper must establish those premises.
 The capacity helper itself requires neither identity freshness nor a scheduler.
+
+`FirstProfile` in `Test/Program/QueueProfile.lean` is the first profile's state predicate.
+It has eight conditions: the opened phase, the suspend strategy and a positive capacity.
+Each stored taker has the bounds one and one, and each pending offer is one message and no batch.
+No peeker and no awaiter waits, and no two waiting requests share an identity.
+`first_profile_closed` proves that the first operations keep it.
+The first operations are `take` at the bounds one and one, `offer`, `poll` and the two withdrawals.
+A request's premise is `Requested`: a take names no pending offer, and an offer no waiting taker.
+The later term-to-model step goals quantify over this predicate, and over no other state.
 
 ## Proof placement and first obligation
 

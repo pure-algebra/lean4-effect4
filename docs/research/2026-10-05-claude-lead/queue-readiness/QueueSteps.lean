@@ -4,6 +4,7 @@ import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Folds
 import Effect4.Codegen.ListFold
 import Test.Program.QueueModel
+import Test.Program.QueueProfile
 
 /-!
 # Probe: the Queue's first profile with the real steps, after seat FOLD's merge
@@ -22,7 +23,8 @@ capacity and the `suspend` strategy, with `take` and `offer` of one message.
 
 A step names its notifications as the abstract model does (`Test/Program/QueueModel.lean`), and
 in the model's order: the offers that the step accepted, then the taker to wake. Section
-"The first profile's states" states the closed predicate that a step goal quantifies over.
+"The first profile's states" gives each fault of the closed predicate that a step goal
+quantifies over (`FirstProfile`, `Test/Program/QueueProfile.lean`, where its closure is proved).
 Section "The steps against the model" compares each step's answer, stored value and ordered
 notifications with the model's: on named states, and on every state of a finite universe of the
 profile. A comparison refuses a state outside the profile, and a signal with no encoding. No
@@ -425,9 +427,13 @@ def model4 : QueueContract.OfferReply × QueueContract.OfferReply × QueueContra
 /-! ## The first profile's states
 
 A step goal quantifies over the states of the first profile, and over no other. The predicate is
-closed: each first operation leaves it true (`closed`, below, on a finite universe). The model's
-`within` and `tidy` are no part of it. They are the capacity claim's, and a step agrees with the
-model at a state that breaks them too. -/
+`FirstProfile` of `Test/Program/QueueProfile.lean`, and it is closed: `first_profile_closed`
+there. A comparison below decides it. `profileFaults` says in words what a state breaks, and
+agrees with the predicate on every state that a comparison meets (`faultsAgree`, below). The
+model's `within` and `tidy` are no part of it. They are the capacity statement's, and a step
+agrees with the model at a state that breaks them too. -/
+
+open Test.Program.QueueProfile (FirstProfile)
 
 def distinct : List Nat → Bool
   | [] => true
@@ -449,7 +455,11 @@ def profileFaults (s : QueueContract.State) : List String :=
   (if s.awaiters.isEmpty then [] else ["an awaiter waits"]) ++
   (if distinct (QueueContract.waiting s) then [] else ["two waiting requests share an identity"])
 
-def firstProfile (s : QueueContract.State) : Bool := (profileFaults s).isEmpty
+/-- The predicate of the tree, decided. -/
+def firstProfile (s : QueueContract.State) : Bool := decide (FirstProfile s)
+
+/-- The words agree with the predicate on a state. -/
+def faultsAgree (s : QueueContract.State) : Bool := (profileFaults s).isEmpty == firstProfile s
 
 /-! ## The steps against the model
 
@@ -546,10 +556,9 @@ def judge (step : TermSrc) (expected : Except String TermSrc) : Verdict :=
 first profile, and the request keeps the step's premise. -/
 def guarded (before after : QueueContract.State) (request : List String) (raw : Verdict) :
     Verdict :=
-  match profileFaults before ++ request ++
-      (profileFaults after).map ("after the step, " ++ ·) with
-  | [] => raw
-  | faults => .outside faults
+  if firstProfile before && request.isEmpty && firstProfile after then raw
+  else .outside (profileFaults before ++ request ++
+    (profileFaults after).map ("after the step, " ++ ·))
 
 /-- A take's request is fresh, or it is its own waiting taker. -/
 def foreign (s : QueueContract.State) (id : Nat) : List String :=
@@ -766,6 +775,10 @@ def disagreements : List (String × String) :=
 -- The states, the comparisons, whether the profile is closed on them, and the disagreements.
 #eval (profileStates.length, profileStates.length * moves.length, closed)
 #eval (disagreements.length, disagreements.take 3)
+-- The words of `profileFaults` agree with the tree's predicate: on each state of the universe,
+-- on each state a move leaves, and on the three states outside the profile.
+#eval (profileStates.all fun s => faultsAgree s && moves.all fun m => faultsAgree (m.next s)) &&
+  [peeked, twoTwo, (QueueContract.offer mixed 101 9).1].all faultsAgree
 
 /-- A deliberate defect of a step, for a red control of the whole comparison: the first draft's
 offer, which notifies nobody when it waits at a full buffer. -/

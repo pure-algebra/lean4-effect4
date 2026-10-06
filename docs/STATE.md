@@ -250,7 +250,9 @@ Open at this landing:
      The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
      Its design is [written](research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md)
      and twice revised after Codex's reviews, with five open choices. Its step goals quantify
-     over a closed predicate, the first profile's states. No seat has it yet: two seats run;
+     over a closed predicate, the first profile's states: `FirstProfile`, with its closure
+     proved (`first_profile_closed`, `Test/Program/QueueProfile.lean`). No seat has it yet:
+     two seats run;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
      its law, and the printed form. It follows T5 and the mask (row 251).
 

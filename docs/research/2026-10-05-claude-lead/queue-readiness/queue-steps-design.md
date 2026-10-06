@@ -12,7 +12,8 @@ A design for review, before any seat builds it. No file of the tree changed.
 - The second found that the step goals had no closed domain, and that the comparison dropped a
   signal it could not encode.
 
-F6 lists each point with its repair. The probe is rerun after each.
+F6 lists each point with its repair. The probe is rerun after each. After the second, the
+predicate and its closure went into the tree, proved (`Test/Program/QueueProfile.lean`).
 
 **The one thing to know first.** One part of the Queue's first path needs neither T5 nor the
 mask. It is the cell's encoding, and each step as one term that agrees with the abstract
@@ -32,6 +33,7 @@ the wrapper and the printed TypeScript form build on it without a change?
 | --- | --- |
 | `QueueSteps.lean` and its output, beside this note | run: eight scenarios on the machine; each of the six steps against the model, on named states and on 200 states of the first profile |
 | `Test/Program/QueueModel.lean`, `Test/contracts/queue.contract.md` | read; two scenarios run on the model |
+| `Test/Program/QueueProfile.lean`: `FirstProfile` and `first_profile_closed` | built: proved at `[propext, Quot.sound]` |
 | Seat FOLD's claims `fold-typed-atomic-update` and `handle-identity-laws` | read: their fields `step`, `notMemberDeferred` and `contained` |
 | Decisions rows 219 to 222, 228 to 230, 233, 235, 238 and 240 to 243 | read |
 | `docs/ARCHITECTURE.md`, its source tree | read: it has no row for a composed module |
@@ -96,7 +98,8 @@ The model names a request by a number, and a signal by that number. The tree nam
 by a handle, and a signal by a hint. So the connector is a relation, and no function.
 
 **The first profile's states.** A step goal quantifies over the states of one predicate, and
-over no other. A model state is of the first profile when each condition below holds.
+over no other. It is `FirstProfile` in `Test/Program/QueueProfile.lean`. A model state is of
+the first profile when each condition below holds.
 
 | Condition | What a step gets wrong without it |
 | --- | --- |
@@ -110,9 +113,12 @@ over no other. A model state is of the first profile when each condition below h
 | No two waiting requests share an identity | The table gives one identity one handle and one hint |
 
 - **The predicate is closed.** Each first operation leaves it true, when its request keeps the
-  premise below. That is the slice's first planned goal.
+  premise below. This is proved: `first_profile_closed`, over the model's own `step`. The
+  empty queue of a positive capacity is of the profile (`empty_profile`).
 - **A request's premise.** A take's request is fresh, or it is its own waiting taker. An
   offer's request is fresh. A request is fresh when its identity names no waiting request.
+  In the tree it is `Requested`. The model's `step` passes an offer whose request waits already.
+- **The predicate decides.** A control or a comparison asks `decide (FirstProfile s)`.
 - **The model's `within` and `tidy` are no part of the predicate.** They are the capacity
   claim's. The probe's universe holds states that break them, and each step agrees there too.
 - **Awaiters are absent, and not framed.** A goal that framed them would say more than the
@@ -147,15 +153,15 @@ signals: every signal, and no other.
   `HandleIdentityLaws.notMemberDeferred` gives that a fresh identity is in no stored list.
   `contained` keeps the handles of an answer inside the environment's.
 
-The slice states the closure as one planned goal, and the step statement as one planned goal
-for each step. It proves a goal where the proof is short. The statement establishes no
-delivery, no cancellation law and no liveness.
+The closure is proved. The slice states the step statement as one planned goal for each
+step, and proves a goal where the proof is short. The statement establishes no delivery, no
+cancellation law and no liveness.
 
 **What the probe checks** (`QueueSteps.lean`, "The steps against the model"). A comparison
 evaluates a step term on the encoding of a model state. It compares the whole result with the
 encoding of the model's: the reply, the stored value and the ordered notifications. It has
 five verdicts: agrees, differs, a term with no value, a result with no encoding, and a state
-or a request outside the profile.
+or a request outside the profile. It decides the tree's predicate, before and after the step.
 
 | Control | The model's step | The verdict |
 | --- | --- | --- |
@@ -199,7 +205,8 @@ Twelve moves run on each state:
 - a poll, and a size;
 - a withdrawal of each of the three takes, and of each of the three offers.
 
-All 2,400 comparisons agree, and each move leaves the predicate true.
+All 2,400 comparisons agree, and each move leaves the predicate true. The second is a finite
+instance of the proved closure.
 
 ### F4. Where the module lives, and what it exports
 
@@ -250,7 +257,7 @@ The second review changed the comparison and the goals' domain. It changed no st
 
 | Point of the second draft | Correction | Where |
 | --- | --- | --- |
-| Five premises stood for the goals' domain. They left out a peeker and a stored taker's bounds | A closed predicate of eight conditions, with the request's premise. The closure is the first planned goal | F3 |
+| Five premises stood for the goals' domain. They left out a peeker and a stored taker's bounds | A closed predicate of eight conditions, with the request's premise. The closure is proved in the tree | F3; `Test/Program/QueueProfile.lean` |
 | The comparison dropped a signal that named no stored taker, so a peeker's state passed | A reply or a signal with no encoding is a refusal. `agrees` accounts for each signal, in order | F3; controls P1 and P2 |
 | One red control compared a pair with a bare state. The other changed the reply and the state | Three mutants change one notification each. A fourth is a defective step, compared on every state | F3; M1 to M4 |
 
@@ -266,7 +273,7 @@ withdrawals' controls, and the comparison on every state of the universe.
 3. **The model moves into the law graph** with the capacity theorem and its planned goal. The
    battery `Test/Program/QueueContract.lean` keeps the controls.
 4. **Each step has one planned goal,** placed under `translation-simulation`, R10, as a part
-   of `queue-expansion-agrees`. Its consumer is the wrapper's law. **The closure has one more,**
+   of `queue-expansion-agrees`. Its consumer is the wrapper's law. **The closure is proved,**
    placed under `reactive-scheduling`, R10, as a helper of the same claim on the model's side.
    Its consumers are the step goals along a run.
 5. **The slice repeats the passes** and adds no binding form. It measures each step's size.
@@ -286,8 +293,8 @@ withdrawals' controls, and the comparison on every state of the universe.
 - No library file exists. The step terms are the probe's, at one message type.
 - The state relation is described, and not written in Lean. Its exact form may change when the
   first goal is stated.
-- The closure of the predicate and the agreement of each step are checked on 200 states.
-  Neither is proved. A state outside the universe is not checked.
+- The agreement of each step with the model is checked on 200 states, and not proved. A
+  state outside the universe is not checked. The closure of the predicate is proved.
 - The typing of the cell at a message type other than a number is not tried.
 - The cost of the repeated passes is counted in nodes, and not measured in time.
 - The wrapper, the mask, the posted helper's law and the printed form are outside this slice.
