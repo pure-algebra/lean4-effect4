@@ -1046,6 +1046,68 @@ next goals: 0
 #plan_status tapeFrom_append tapeFrom_cut tapeFrom_cut_replays tapeFrom_position_replays
   tape_replays
 
+/-! ### A funded run, and a machine at rest
+
+A statement over a scenario's runs takes its budget as a premise. This section gives that
+premise one name, `funded`, and ties it to a proved law of the driver. -/
+
+/-- The run that a run started from: its own program, name, budgets and profile, opened fresh.
+Playing a recorded run's journal from it reaches the run again (`Run.journal_replays`,
+`src/Effect4/Laws/Run.lean`). -/
+def openedOf (s : Run) : Run := Run.open s.built s.id s.budget s.profile
+
+/-- The decisions of a run's tape: the decisions that moved the machine, read off the run's own
+journal from its fresh open. -/
+def tapeOf (s : Run) : List Api.Decision := (tapeFrom (openedOf s) s.journal).1.map (·.decision)
+
+/-- **A funded run: no task of the run was cut by its budget.** The tape of the run's own
+journal, read from the run's fresh open, leaves no row unread. So the journal holds no stopped
+row: no row ends at a frontier, and each decision is taken at a live machine with enough command
+fuel (`tapeFrom`, `readsOn`).
+
+The journal's verdicts alone do not decide it. A reply application has the verdict `applied` as
+soon as its call's guard is gone, whatever fuel its step had left (`applyReply`,
+`src/Effect4/Api/HostSession.lean`). Only a control reports its sufficiency, as `progressed` or
+`frontier` (`advance`, in the same file). The tape asks `Run.enoughFor` of each decision, so it
+stops at an applied reply application that the budget cut (`tapeFrom_stop`).
+
+It is the budget premise of a law of a whole run. Decisions row 226 excludes a cut inside an
+owned operation from the first profile. The proposed claim `embedded-budget-sufficient` (an open
+part of R12) is to supply the premise from a program's own bound. Until then a statement over
+runs takes it by this one name. `funded_replays` says what the premise gives. -/
+def funded (s : Run) : Bool := (tapeFrom (openedOf s) s.journal).2.isEmpty
+
+/-- **The machine of a funded run is the raw replay of its tape's decisions.** For a recorded
+run whose journal holds no stopped row, the machine is the machine that the raw frame replay
+leaves on the decisions of the run's tape, from the program's own load, at the run's table and
+budgets. Reach: any run that was opened and then played (`Run.Reached`), under `funded`. It is
+one application of `tape_replays` at the run's fresh open, with `Run.journal_replays`. It does
+not establish that a run is funded: that is the open claim `embedded-budget-sufficient`. It does
+not establish equal session ledgers, and it says nothing of a run with a stopped row. Concept
+`translation-simulation`, R8. Consumer: each statement over runs that takes `funded` as its
+budget premise, the planned goals of `Test/Dogfood/Scenario/QueueWorkers.lean` first. -/
+@[semantics "translation-simulation" (requirement := R8)]
+theorem funded_replays (s : Run) (recorded : Run.Reached s) (h : funded s = true) :
+    s.machine =
+      Run.machineOf (Run.replayFrom s.built.program s.built.table s.budget.fuel (tapeOf s)
+        (Api.load s.built.program s.budget.compileFuel)) := by
+  have read : (tapeFrom (openedOf s) s.journal).2 = [] := List.isEmpty_iff.mp h
+  have replayed := tape_replays (openedOf s) s.journal read
+  rw [show (openedOf s).play s.journal = s from Run.journal_replays s recorded,
+    show (openedOf s).machine = Api.load s.built.program s.budget.compileFuel from
+      Run.open_machine s.built s.id s.budget s.profile] at replayed
+  exact replayed
+
+/-- info: 'Test.Dogfood.Scenario.funded_replays' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms funded_replays
+
+/-- **A machine at rest**: it names no runnable fiber and no armed owner. A host lets every
+dispatcher run after each of its acts but the root's start, so a host reads a machine at rest
+(`performable`, `harness/truth/session/Keyed.lean`). A fiber that a budget cut stays runnable
+with no task, so a run with a stopped row is seldom at rest. -/
+def atRest (s : Run) : Bool := s.work.runnable.isEmpty && s.work.queued.isEmpty
+
 /-! ## 5. A scenario's record, and the gate at the foot of a battery -/
 
 /-- One entry of a scenario's record: a clause of its claim, or a law beside it, with the

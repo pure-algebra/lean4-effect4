@@ -226,6 +226,23 @@ battery holds the statements' verdicts on its named runs only. The receipt recor
 
 Associated law: `replays`, with its two controls, as in the first scenario.
 
+**Addendum of the same day: the budget premise, and the search's counts.** The paragraph above
+is as the note first stood. Its search judged `funded` by the journal's verdicts: no row with
+the verdict frontier. That reading is too weak. A reply application has the verdict `applied` as
+soon as its call's guard is gone, whatever fuel its step had left (`applyReply`,
+`src/Effect4/Api/HostSession.lean`). So a journal with no frontier verdict can hold a cut. The
+coordinator accepted the correction the same day.
+
+- `funded` is now the tape's reading (`Test/Dogfood/Scenario.lean`): the tape of the run's own
+  journal, read from its fresh open, leaves no row unread. `funded_replays` ties it to
+  `tape_replays` (proved).
+- The search ran again with that reading (tested, a finite probe). Its script and its output are
+  filed in `docs/research/2026-10-06-seat-workq-evidence/`, and the receipt gives the counts.
+  It found no counterexample of the four statements.
+- The same search read cut runs, at four small budgets. It found cut runs at rest, and no goal's
+  observation fails on one. Where a goal's observation fails on a cut run, the run is not at
+  rest. The reason: a fiber that a budget cuts stays runnable with no task.
+
 ## 6. The named runs and the controls
 
 Each clause and each law has a green control and at least one red control. A fault is a

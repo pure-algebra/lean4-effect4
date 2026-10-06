@@ -430,11 +430,6 @@ def cutRuns : List NamedRun :=
     (Workers.scenario.run? script).map fun run =>
       ⟨name, Run.open run.opened.built run.opened.id cutBudget run.opened.profile, run.moves⟩
 
-/-- The run that a played run of the record started from: its own program, name, budgets and
-profile, opened fresh. Playing the run's journal from it reaches the run again
-(`Run.journal_replays`). -/
-def openedOf (played : Run) : Run := Run.open played.built played.id played.budget played.profile
-
 /-- The completed prefix of a journal read from a run: its rows before the tape's unread rows.
 It is the prefix of `tapeFrom_cut`. -/
 def completedPrefix (s : Run) (rows : List Api.Runner.Command) : List Api.Runner.Command :=
@@ -498,9 +493,9 @@ def cutLowered (name : String) : Option Lowered :=
   (cutRuns.find? (·.name == name)).map fun run => ⟨"cuts/" ++ name, run.opened, run.moves⟩
 
 /-- The controls of the journal's cut. A control of a journal reads its named run as the gate
-plays it. It takes the opened run and the rows from that run alone: `openedOf`, and the run's
-journal. The two controls of the lowered run's views read no run: `Lowered.shown` plays the
-script itself.
+plays it. It takes the opened run and the rows from that run alone: `openedOf`
+(`Test/Dogfood/Scenario.lean`), and the run's journal. The two controls of the lowered run's
+views read no run: `Lowered.shown` plays the script itself.
 
 * **`views`.** On the journal `stopped` the raw replay shows the session machine at every
   position of the lowered run, and one row stays unread. The red control drops the fresh open:

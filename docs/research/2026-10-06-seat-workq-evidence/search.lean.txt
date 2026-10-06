@@ -1,0 +1,150 @@
+import Test.Dogfood.Scenario.QueueWorkers
+
+/-!
+The bounded search of seat WORKQ, with the tape's reading of `funded`. It judges the four planned
+goals of `Test/Dogfood/Scenario/QueueWorkers.lean` on every script of an alphabet up to a length,
+from named states. `funded` is computed row by row along a script: the tape reads a row when the
+row ends at no frontier and its decision, if any, is taken at a live machine with enough command
+fuel. That is `tapeFrom`'s own test, and a sample compares it with `funded` itself.
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace Search
+
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Api.Runner (Command)
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+/-- Whether the tape reads one row from a run. -/
+def rowRead (s : Run) (c : Command) : Bool :=
+  let phase := (Api.Runner.result s.runner c).phase
+  phase != .frontier && (decisionOf s c phase).all (readsOn s)
+
+/-- One move, with the tape's reading of its rows. -/
+def stepRead (state : Run × Bool) (move : Move) : Run × Bool :=
+  (move.rows state.1).foldl (fun acc c => (acc.1.step c, acc.2 && rowRead acc.1 c)) state
+
+def playRead (s : Run) (moves : List Move) : Run × Bool := moves.foldl stepRead (s, true)
+
+structure Tally where
+  nodes : Nat := 0
+  funded : Nat := 0
+  rest : Nat := 0
+  judgedAtRest : Nat := 0
+  badWithin : List (List Nat) := []
+  badOnce : List (List Nat) := []
+  badAccounted : List (List Nat) := []
+  badSettled : List (List Nat) := []
+  -- unfunded states
+  cut : Nat := 0
+  cutAtRest : Nat := 0
+  cutBadWithin : List (List Nat) := []
+  cutBadOnce : List (List Nat) := []
+  cutRestBadAccounted : List (List Nat) := []
+  cutRestBadSettled : List (List Nat) := []
+
+def keep (xs : List (List Nat)) (path : List Nat) : List (List Nat) :=
+  if xs.length < 3 then path :: xs else xs
+
+/-- Judge one state. `hostly` says whether the script holds host acts only, so that the two
+goals at rest are judged. -/
+def judge (hostly : Bool) (state : Run × Bool) (path : List Nat) (t : Tally) : Tally :=
+  let s := state.1
+  let f := state.2
+  let o := observe s
+  let r := atRest s
+  let t := { t with nodes := t.nodes + 1 }
+  if f then
+    let t := { t with funded := t.funded + 1, rest := t.rest + (if r then 1 else 0),
+                      judgedAtRest := t.judgedAtRest + (if hostly && r then 1 else 0) }
+    let t := if !o.heldWithin then { t with badWithin := keep t.badWithin path } else t
+    let t := if !o.releasedOnce then { t with badOnce := keep t.badOnce path } else t
+    let t := if hostly && r && !o.accounted then { t with badAccounted := keep t.badAccounted path } else t
+    let t := if hostly && r && !o.settled then { t with badSettled := keep t.badSettled path } else t
+    t
+  else
+    let t := { t with cut := t.cut + 1, cutAtRest := t.cutAtRest + (if r then 1 else 0) }
+    let t := if !o.heldWithin then { t with cutBadWithin := keep t.cutBadWithin path } else t
+    let t := if !o.releasedOnce then { t with cutBadOnce := keep t.cutBadOnce path } else t
+    let t := if hostly && r && !o.accounted then { t with cutRestBadAccounted := keep t.cutRestBadAccounted path } else t
+    let t := if hostly && r && !o.settled then { t with cutRestBadSettled := keep t.cutRestBadSettled path } else t
+    t
+
+def search (hostly : Bool) (alphabet : List Move) : Nat → Run × Bool → List Nat → Tally → Tally
+  | 0, state, path, t => judge hostly state path t
+  | depth + 1, state, path, t =>
+    let t := judge hostly state path t
+    (List.range alphabet.length).foldl (fun t i =>
+      match alphabet[i]? with
+      | some move => search hostly alphabet depth (stepRead state move) (path ++ [i]) t
+      | none => t) t
+
+def report (t : Tally) : String :=
+  s!"nodes={t.nodes} funded={t.funded} atRest={t.rest} judgedAtRest={t.judgedAtRest} " ++
+  s!"bad: within={t.badWithin} once={t.badOnce} accounted={t.badAccounted} settled={t.badSettled} | " ++
+  s!"cut={t.cut} cutAtRest={t.cutAtRest} cutBad: within={t.cutBadWithin} once={t.cutBadOnce} accountedAtRest={t.cutRestBadAccounted} settledAtRest={t.cutRestBadSettled}"
+
+def hostAlphabet : List Move :=
+  [ .flush, .cancel ⟨0⟩, .cancel ⟨1⟩, .cancel ⟨2⟩, .cancel ⟨3⟩
+  , .hold feederCall, .hold w1, .hold w2
+  , .receive feederCall (ok (.nat 7)), .receive feederCall (ok (.nat 8))
+  , .receive w1 (ok .unit), .receive w2 (ok .unit)
+  , .receive w1 (failed "JobFailed" "bad payload"), .receive w2 (failed "Boom" "other")
+  , .apply feederCall, .apply w1, .apply w2 ]
+
+def freshAlphabet : List Move := .start :: hostAlphabet
+
+def wideAlphabet : List Move :=
+  hostAlphabet ++
+  [ .control (.fire ⟨0⟩), .control (.fire ⟨1⟩), .control (.fire ⟨2⟩), .control (.fire ⟨3⟩)
+  , .control (.evaluate ⟨1⟩), .control (.evaluate ⟨2⟩), .control (.evaluate ⟨3⟩), .tick 10
+  , .row (.submit (forged 0 3 3 (ok (.nat 9))))
+  , .row (.apply ⟨⟨3⟩, 3⟩), .row (.apply ⟨⟨1⟩, 5⟩) ]
+
+#guard hostAlphabet.all Move.hostAct && freshAlphabet.all Move.hostAct
+#guard (hostAlphabet.length, freshAlphabet.length, wideAlphabet.length) == (17, 18, 28)
+
+def bases : List (String × List Move) :=
+  [ ("start", [.start]), ("parked", parked), ("running", running), ("blocked", blocked)
+  , ("idle2", script [running, done w2])
+  , ("inflight", script [parked, [.receive feederCall (ok (.nat 1)), .apply feederCall]]) ]
+
+def build (total : Nat) : Option Api.Built := (Effect4.Api.Author.build (crew total)).toOption
+
+def from_ (hostly : Bool) (alphabet : List Move) (depth total fuel : Nat) (base : List Move) : String :=
+  match build total with
+  | some b => report (search hostly alphabet depth (playRead (openedAt fuel b) base) [] {})
+  | none => "no build"
+
+-- The row-by-row reading is `funded` itself: a sample, every script of 17 moves up to length 2
+-- from two states, at two budgets.
+def sample (fuel : Nat) (base : List Move) : Bool :=
+  match build 3 with
+  | some b =>
+    let start := playRead (openedAt fuel b) base
+    hostAlphabet.all fun first =>
+      let one := stepRead start first
+      one.2 == funded one.1 &&
+        hostAlphabet.all fun second =>
+          let two := stepRead one second
+          two.2 == funded two.1
+  | none => false
+#eval IO.println s!"sample: the row-by-row reading equals `funded`: {[sample 1000 running, sample 1000 blocked, sample 60 (script [running, cancelWaiting, afterWaiting]), sample 100 (script [blocked, closing])]}"
+
+#eval IO.println "--- A: 17 host moves, to length 4, six states, total 3, command budget 1000"
+#eval bases.forM fun (name, base) => IO.println (name ++ ": " ++ from_ true hostAlphabet 4 3 1000 base)
+#eval IO.println "--- B: 18 moves with the start, to length 4, from the fresh run, totals 1 2 3, command budget 1000"
+#eval [1, 2, 3].forM fun total => IO.println (s!"total {total}: " ++ from_ true freshAlphabet 4 total 1000 [])
+#eval IO.println "--- C: 28 moves with raw rows, to length 3, six states, total 3, command budget 1000 (the two goals over every script)"
+#eval bases.forM fun (name, base) => IO.println (name ++ ": " ++ from_ false wideAlphabet 3 3 1000 base)
+#eval IO.println "--- D: cut budgets: 17 host moves, to length 3, three states whose last application is cut, command budgets 60 80 100 118"
+#eval [60, 80, 100, 118].forM fun fuel => do
+  IO.println (s!"budget {fuel} cancelled-waiting-closed: " ++ from_ true hostAlphabet 3 3 fuel (script [running, cancelWaiting, afterWaiting]))
+  IO.println (s!"budget {fuel} closed: " ++ from_ true hostAlphabet 3 3 fuel (script [blocked, closing]))
+  IO.println (s!"budget {fuel} cancelled-root: " ++ from_ true hostAlphabet 3 3 fuel (script [blocked, [.cancel ⟨0⟩]]))
+
+end Search
