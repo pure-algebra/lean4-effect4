@@ -1,4 +1,5 @@
 import Effect4.Program.SigApp
+import Effect4.Program.Typing.Focus
 
 /-!
 # Program.Sketch — a program with its hole table
@@ -47,6 +48,12 @@ the sketch's type, and the filling alone is checked (`Sketch.check_fill`,
 `Laws/Program/Sketch.lean`). An omission keeps it too, when the hole row declares exactly that
 type (`Sketch.check_omit`). A hole row is read in normal form, so that law asks for a type whose
 answer and error are in normal form.
+
+That environment and that type are computed. `Sketch.focusAt` answers, at an address of a
+program, the sub-program, the types of the variables that it can read, and its type there
+(`focusAt`, `Program/Typing/Focus.lean`). The two laws hold at its answer
+(`Sketch.check_fill_focusAt`, `Sketch.check_omit_focusAt`). So a tool asks for the focus, checks
+its filling against the answered type in the answered environment, and edits.
 
 ## The parallel with a planned goal, and where it stops
 
@@ -165,6 +172,18 @@ the views of an error or of a requirement (decisions row 288, point 3), and no l
 it. `omit` is a keyword of Lean, so the function carries the address in its name. -/
 def omitAt (s : Sketch) (app : SigApp) (path : List Nat) (row : Row) : Option Sketch :=
   Sketch.fillAt { s with holes := s.holes ++ [row] } path (Sketch.hole app s.holes.length)
+
+/-- **The focus at an address of a sketch**: the sub-program at `path`, the types of the
+variables that it can read, and its type there, at the application's typing signature extended
+by the hole table (`focusAt`, `Program/Typing/Focus.lean`). A hole has its declared type. The
+answer is `none` when `path` is no address of a program, or when the checker refuses the
+sub-program or a sibling that its environment reads.
+
+A filling of the answered type in the answered environment keeps the sketch's type
+(`Sketch.check_fill_focusAt`, `Laws/Program/Sketch.lean`). An omission keeps it when the hole
+row declares the answered type (`Sketch.check_omit_focusAt`). -/
+def focusAt (s : Sketch) (app : SigApp) (path : List Nat) : Option (Focus NativeOp) :=
+  Effect4.Program.focusAt (app.withHoles s.holes).signature [] s.program path
 
 end Sketch
 

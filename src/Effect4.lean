@@ -151,6 +151,8 @@ import Effect4.Store.Carrier.Fold
 import Effect4.Program.FoldOf
 import Effect4.Program.Checker
 import Effect4.Program.Typing.Agreement
+-- The focus at an address (decisions row 292): the sub-program, its environment and its type.
+import Effect4.Program.Typing.Focus
 import Effect4.Api.Author
 import Effect4.Api.Supervision
 import Effect4.Run
