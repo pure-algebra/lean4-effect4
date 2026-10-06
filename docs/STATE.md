@@ -280,16 +280,17 @@ either module exists yet):
 
 In work since 2026-10-06, three seats at once since the owner's word of that day (row 237):
 
-- **Seat CUTS has the journal's cut and position connectors** (branch `seat/cuts`, from
-  `bc0ee4c1`; [its brief](research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md)), in
-  the seat that seat PUB freed. Codex mapped the slice: four connectors beside `tapeFrom`,
-  one structural helper, and the consumer at a fresh `Run.open`. None is compiled yet.
+- **Seat LIFT has the mask's chain at every live fiber of a run** (branch `seat/lift`, from
+  `f3568844`; [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)), in the
+  seat that seat CUTS freed. Part A is two statements of the frame machine. Part B is the
+  machine's invariant and its lift, with a condition just before a command clears a fiber.
+  Nothing is compiled yet.
 - **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
   contract, the model with its profile, and the cell with its five steps. It ends with the
   steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice. **Its first seven steps are
+  that waits and the finalizers' runs are a later slice. **Its eight steps are
   merged** (`e212766f`, `e87777e9`, then `0cd730ca`). Every case of the card gives the profile's answer on the Lean
   machine, one schedule each (`Test/Program/PoolScenarios.lean`). The contract is
   `Test/contracts/pool.contract.md`. The model's profile is closed under its five
@@ -299,14 +300,21 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   Each step term agrees with the model's step, on every state of the model. The law is
   `pool_steps_agree`, with its five parts (`src/Effect4/Laws/Modules/Pool/Steps.lean`; R10).
   Each part was proved in place of its planned goal. They state no order of the wake across helpers, no
-  cancellation law, no close that waits and no wrapper. The engine's two cases, the
-  documents and the receipt are next.
+  cancellation law, no close that waits and no wrapper. Two cases replay on the generated
+  engine (`ocaml/engine/test/pool/`; merged `c9428f73`). The receipt is next.
 - **Seat QINV has the Queue model's run invariant** (branch `seat/qinv`, from `4bd063a2`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md)), in the seat that
   seat MASKPOP freed. Codex gave the invariant and its premises. Nothing is compiled yet.
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat CUTS is merged** (`f3568844`;
+  [its receipt](research/2026-10-06-seat-CUTS-receipt.md)), Codex's priority 4. A journal's
+  tape has its cut and position connectors beside `tapeFrom` (`Test/Dogfood/Scenario.lean`).
+  The machine after a position is the raw replay of the decisions up to it (the registry
+  claim `journal-position-replay`, R13). The first consumer is a lowered run's views at a
+  fresh open (`shown_views_opened`, R8). Lean accepts Codex's four statements and its helper
+  as written. The laws say nothing about the machine after a stopped row.
 - **Seat MASKPOP is merged** (`2266ec30`;
   [its receipt](research/2026-10-06-seat-MASKPOP-receipt.md)), the third seat of the day. The
   saved mask's chain is kept through a pop of the stack: `saved_mask_pop_discipline`
@@ -366,14 +374,23 @@ Merged on 2026-10-06, after the seats above began:
 
 Candidates with no seat, each with its place:
 
-- the lift of the mask's chain to runs, R11's open part after seat MASKPOP. The receipt's
-  item 8 lists what the lift owes. `FrameFiber.step` and each command keep the chain, with
-  a condition just before a command clears a fiber. No goal states it;
-- the scenario driver's general laws in the law graph, after seat CUTS's connectors;
+- the scenario driver's general laws in the law graph, with seat CUTS's five statements;
 - the run-level law of the Queue's wrapper, and the wrapper's form under a caller's mask for
   a protected body (row 275, points 2 and 4);
 - Semaphore's operations that wait and its protected form, after seat PUB's shared wrapper.
   The case P9 on the generated engine goes with it;
+- four points of Codex's dogfood review of 2026-10-06
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/`):
+  - the next application runs Workers over the public Queue. Workers still takes its jobs
+    from a host row;
+  - the three `note` helpers of the scenarios bind a fixed name. They go through
+    `Ref.updateWith`, and one shared helper gives a typed empty cell;
+  - the exact Routing example has no printed twin in the host lane. Two errors of tsgo 7
+    keep it out. The repair carries the checked types of the branches to the printed
+    Boolean select, with the reader's laws;
+  - Atomic makes two commits and no transaction. A control of an interruption between them
+    needs a reachable checkpoint first. The controls of a timeout under a mask and of one
+    registration's cleanup are missing too;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
 - two small repairs of the foreign readers (row 258, points 5 and 6);

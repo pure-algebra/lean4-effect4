@@ -1344,6 +1344,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | replay-externals | preservation | proved | Effect4.Program.Sched.replay_externals | yes |  |
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
 | run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
+| journal-position-replay | simulation | proved | Test.Dogfood.Scenario.tapeFrom_position_replays | yes |  |
 | queue-steps-agree | simulation | proved | Effect4.Queue.Model.queue_steps_agree | yes |  |
 | semaphore-steps-agree | simulation | proved | Effect4.Semaphore.Model.semaphore_steps_agree | yes |  |
 | straight-composition-agreement | simulation | proved | Effect4.Program.Denote.StraightEq.run_agrees | yes |  |
@@ -1543,6 +1544,21 @@ Literature: WrightFelleisen1994, audit P36 — analogy
 Test.Dogfood.Scenario.TapeReplays
 ```
 
+**journal-position-replay**
+
+```lean
+∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command) (i : Nat)
+  (position : Test.Dogfood.Scenario.Position),
+  Eq (List.instGetElem?NatLtLength.getElem? (Test.Dogfood.Scenario.tapeFrom s rows).fst i)
+      (Option.some position) →
+    Eq position.after.machine
+      (Effect4.Run.machineOf
+        (Effect4.Run.replayFrom s.built.program s.built.table s.budget.fuel
+          (List.map (fun x => x.decision)
+            (List.take (instHAdd.hAdd i 1) (Test.Dogfood.Scenario.tapeFrom s rows).fst))
+          s.machine))
+```
+
 **queue-steps-agree**
 
 ```lean
@@ -1728,12 +1744,12 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
-| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `tape_replays` (proved) | — |
+| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `step_updates` (proved), `closeStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `take_attempt` (proved), `take_attempt_minted` (proved), `take_withdrawal` (proved), `take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_pop_discipline` (proved), `close_refuses` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
-| R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
+| R13 | open | `journal_replays` (proved) | `replays` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved) | — |
 
 **Next goals** (10): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
 
@@ -2878,14 +2894,18 @@ flowchart LR
   n4["run_eq_ref<br/>proved"]
   n5["mask_rows_table_premises<br/>proved"]
   n6["unsuspended_runs<br/>proved"]
-  n7["tape_replays<br/>proved"]
-  n8["readTerm_printTerm<br/>proved"]
-  n9["run_agrees<br/>proved"]
-  n0 --> n8
+  n7["shown_views_opened<br/>proved"]
+  n8["tape_replays<br/>proved"]
+  n9["readTerm_printTerm<br/>proved"]
+  n10["run_agrees<br/>proved"]
+  n11["tapeFrom_position_replays<br/>proved"]
+  n0 --> n9
   n5 --> n1
   n5 --> n0
-  n6 --> n9
-  n9 --> n2
+  n6 --> n10
+  n7 --> n11
+  n10 --> n2
+  n11 --> n8
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2897,9 +2917,11 @@ flowchart LR
 | `run_eq_ref` | proved | — | — | 880 | 1059 |
 | `mask_rows_table_premises` | proved | — | `read_exact`, `read_print` | 124 | 521 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
+| `shown_views_opened` | proved | — | `tapeFrom_position_replays` | 74 | 1027 |
 | `tape_replays` | proved | — | — | 97 | 962 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `run_agrees` | proved | — | `run_eq_meaning` | 68 | 861 |
+| `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 961 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
 
@@ -3583,13 +3605,26 @@ flowchart LR
 flowchart LR
   n0["journal_replays<br/>proved"]
   n1["replays<br/>proved"]
+  n2["tapeFrom_append<br/>proved"]
+  n3["tapeFrom_cut<br/>proved"]
+  n4["tapeFrom_cut_replays<br/>proved"]
+  n5["tapeFrom_position_replays<br/>proved"]
+  n6["tape_replays<br/>proved"]
   n1 --> n0
+  n4 --> n6
+  n4 --> n3
+  n5 --> n6
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `journal_replays` | proved | — | — | 77 | 938 |
 | `replays` | proved | — | `journal_replays` | 82 | 965 |
+| `tapeFrom_append` | proved | — | — | 75 | 954 |
+| `tapeFrom_cut` | proved | — | — | 74 | 953 |
+| `tapeFrom_cut_replays` | proved | — | `tape_replays`, `tapeFrom_cut` | 70 | 960 |
+| `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 961 |
+| `tape_replays` | proved | — | — | 97 | 962 |
 
 ## Acceptance programs
 

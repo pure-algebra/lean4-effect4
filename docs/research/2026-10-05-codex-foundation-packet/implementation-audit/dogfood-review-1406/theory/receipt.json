@@ -1,0 +1,246 @@
+{
+  "head": "00b160d25d6929ab7ba3aa19cc00fa6fdcfa9674",
+  "initial_primary_status": "clean",
+  "source_files": 49,
+  "source_hashes_verified": true,
+  "requirements_compared": 13,
+  "registry_report_join": true,
+  "evidence_kind": "Frozen source review and existing retained proof/guard statements; no new project execution",
+  "commands": [
+    "git rev-parse/status/show; bounded rg/sed/cat source reads",
+    "python3 audit_snapshot.py; copies git-show bytes and compares registry/report lists",
+    "Inline Python verifies all copied source hashes"
+  ],
+  "repo_edits": false,
+  "new_proofs": false,
+  "new_execution_checks": false,
+  "ranked_consumers": [
+    "Queue wrapper relation using existing atomic attempts, then second waiting module",
+    "LIFT and protected waiting through one enclosing caller mask",
+    "Compositional work-budget premise or explicit retained driver continuation"
+  ],
+  "not_reopened": [
+    "Ratified Queue profile/order/posted wakes/cancellation policy",
+    "First-order Eff ownership",
+    "Already landed uniform Queue typing"
+  ],
+  "separate_future_boundaries": [
+    "Typed host admission and table-aware transport",
+    "Retained behavior carrier for an actual storing consumer",
+    "Verified lowering and numeric profiles"
+  ],
+  "files": {
+    "requirements.json": {
+      "sha256": "a8041c1bde302db274e26b9ad1bddc1c48869abb577a2981f93ba0dfe5ca683a",
+      "bytes": 18541
+    },
+    "audit_snapshot.py": {
+      "sha256": "2312b25566c070d9030509de7bc85abd361e3df86c9a35fc7c777a3152f40ff2",
+      "bytes": 3448
+    },
+    "manifest.json": {
+      "sha256": "d3b6cccf561f1dc07ffc1b08fcd3a22a0db6df34c3aa4a2cc710e3840ca5579f",
+      "bytes": 17130
+    },
+    "review.md": {
+      "sha256": "a62eec9ebbc71e7c0f382aa2a52b0fb14b72ad37d5f41c743eaafbdd763015c5",
+      "bytes": 15736
+    },
+    "source/AGENTS.md": {
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    "source/generated/semantics.md": {
+      "sha256": "3cef119c270e3d50c0c0b835b5378b2ffc86fecc3df666bf1869585bb9ed77a3",
+      "bytes": 174441
+    },
+    "source/docs/ARCHITECTURE.md": {
+      "sha256": "6b9f745dbfa95aa1339e8245b650612744ab182e2688c3dc6cfd9a4cfa63493d",
+      "bytes": 35720
+    },
+    "source/docs/STATE.md": {
+      "sha256": "99a517727a8a12d06bc9432406a2b8775e9f7f35cb7c39dba31fb76f4dae8294",
+      "bytes": 132763
+    },
+    "source/src/Effect4/Run.lean": {
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844",
+      "bytes": 16676
+    },
+    "source/src/Effect4/Laws/Run.lean": {
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+      "bytes": 51982
+    },
+    "source/src/Effect4/Api/HostSession.lean": {
+      "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece",
+      "bytes": 11404
+    },
+    "source/src/Effect4/Modules/Waiting.lean": {
+      "sha256": "1705d1b8c102e559b36f5291e4e399621da2d9f5037272fd18ce2720512222d1",
+      "bytes": 7865
+    },
+    "source/src/Effect4/Laws/Machine/Behaviour.lean": {
+      "sha256": "744f6cd68497a0470d126b703a760357c5400d5d00cbe719a77ef5e7c9388cbc",
+      "bytes": 4767
+    },
+    "source/src/Effect4/Laws/Machine/MaskDiscipline.lean": {
+      "sha256": "8f8497df43e8d1994099ca75cf4b35c82041a61177871ae5365d17f79efab678",
+      "bytes": 19458
+    },
+    "source/src/Effect4/Laws/Machine/Refinement.lean": {
+      "sha256": "9183fdd7e13b3492d65d5719774282c927a340dbf61c7adb664534aca85643af",
+      "bytes": 24309
+    },
+    "source/src/Effect4/Laws/Machine/Lift.lean": {
+      "sha256": "f0816027156e83141ab89823906c9e7d2c532ff0c32e28e551af383ea52db5ee",
+      "bytes": 46446
+    },
+    "source/src/Effect4/Laws/Program/MeaningEq.lean": {
+      "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+      "bytes": 6647
+    },
+    "source/src/Effect4/Laws/Program/Progress.lean": {
+      "sha256": "35c9581dc0271c83fe8fcd6862d3d3646a46a5fc51d35688644eac8ce53d6bab",
+      "bytes": 9180
+    },
+    "source/src/Effect4/Laws/Program/LoopAgreement.lean": {
+      "sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+      "bytes": 2381
+    },
+    "source/src/Effect4/Laws/Api/HostSession.lean": {
+      "sha256": "de49efa72ca2999f13140a4dac4434b596054a885cb2e7fdd2bca697da0d7c84",
+      "bytes": 18191
+    },
+    "source/src/Effect4/Laws/Modules/Waiting.lean": {
+      "sha256": "86d762705304eed6c398a3c04b539387f7f4ddd99f60bd40c5fcca29850d24e9",
+      "bytes": 61587
+    },
+    "source/src/Effect4/Laws/Modules/Table.lean": {
+      "sha256": "8b6f9578c07ac9f8f49fae9961ca43af905535d30330086944bda2a72e346017",
+      "bytes": 2587
+    },
+    "source/src/Effect4/Laws/Modules/Store.lean": {
+      "sha256": "8cc1842ea6e1b53383ebc44f425f658bcd3ee638ea0bc87afbb0a0bf9c2cb547",
+      "bytes": 5348
+    },
+    "source/src/Effect4/Laws/Modules/Semaphore/Steps.lean": {
+      "sha256": "dd63e1822b0d933516350636b961930776509cf50b357e48a99c3046044f14cb",
+      "bytes": 17199
+    },
+    "source/src/Effect4/Laws/Modules/Semaphore/Typing.lean": {
+      "sha256": "24d980ac29e78327a08119fb54ef2dabd0dc54a8c4f0f36d5ffb40a9afff7e89",
+      "bytes": 18331
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Steps.lean": {
+      "sha256": "6b4ed73c940482dc1e2d0c1b3f88b32a4bcc37b288cad8f1011a8082d21847e9",
+      "bytes": 47444
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Typing.lean": {
+      "sha256": "678eedff2908b6b76729cac1401d9b46ec6fac466051f98a6680ab939239ede0",
+      "bytes": 39813
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Ops.lean": {
+      "sha256": "516916e41df282264d2ed8a4cfde6af4f6b28427802bad7238eabc5ca13ce73f",
+      "bytes": 52534
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Relation.lean": {
+      "sha256": "854c2f67668e37b70fcc6480487280abf661c58676eae6b2b2b0639f92ffad07",
+      "bytes": 6581
+    },
+    "source/src/Effect4/Laws/Modules/Pool/Steps.lean": {
+      "sha256": "16a858c517f798e42e8953eedb6ea5330788defe0bdb089417665feb3c4ed646",
+      "bytes": 17720
+    },
+    "source/src/Effect4/Laws/Modules/Pool/Typing.lean": {
+      "sha256": "4b72771e1b9b04b860e195497bb2914272468c6075638974a7e2a6c6c8ba4410",
+      "bytes": 32579
+    },
+    "source/src/Effect4/Laws/Modules/Pool/Relation.lean": {
+      "sha256": "bcdac63d7ce0adeffcd348c4587990f57de1184c13210ee95a9a5990738d1451",
+      "bytes": 5288
+    },
+    "source/src/Effect4/Laws/Program/Agreement/Loop.lean": {
+      "sha256": "0b20fbd693f0400b995d044bd35ce38a0c2a04eabaf92f9d71b31d04b445e242",
+      "bytes": 45631
+    },
+    "source/src/Effect4/Laws/Program/Typed/AdmittedSource.lean": {
+      "sha256": "2b5fb583bd9d337b50b5447b720dc76bbecd7f52ff7ea00582ab73a63bbe1233",
+      "bytes": 4193
+    },
+    "source/src/Effect4/Laws/Program/Typed/Seq.lean": {
+      "sha256": "de2a465fc4d1c74fc7f6de68f021dfe484d711b0d3bc7c413f015e10cd6fb982",
+      "bytes": 16214
+    },
+    "source/src/Effect4/Laws/Program/Typed/World.lean": {
+      "sha256": "1f7999fb615cfe1e1b11da097233d51f6d156282e454cc029d9dd1cd1b33aefd",
+      "bytes": 32553
+    },
+    "source/src/Effect4/Laws/Program/Typed/Assembly.lean": {
+      "sha256": "3b4b82b088c749b463a233be6642d3c3e79851596b541bdf9ecb38203ff32777",
+      "bytes": 111218
+    },
+    "source/src/Effect4/Laws/Program/Typed/Results.lean": {
+      "sha256": "c6fb9f0a892c1c8b4e88afb5e27542e0a9a62a4076585c79ecd0b62b0e34c215",
+      "bytes": 5375
+    },
+    "source/src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean": {
+      "sha256": "0f783ada14262f20a09f1e0774509d8ff06a6be6075a93194ab61bfedf7e2e6c",
+      "bytes": 14619
+    },
+    "source/docs/research/2026-10-06-seat-PUB-receipt.md": {
+      "sha256": "d826322499f406577dae340fd60ad677905ff05afd668070b34e1369e51d7a9e",
+      "bytes": 20652
+    },
+    "source/docs/core/host-boundary.md": {
+      "sha256": "f478fbe6f9061ff6518992c63482424f61e5959f41dd50a43355fcca82e812fe",
+      "bytes": 22517
+    },
+    "source/docs/core/semantics.md": {
+      "sha256": "4db3c822f4f5a69de08a206bbbee5c7e7a7485933243e1cb7f82b9a6c675a7ea",
+      "bytes": 78869
+    },
+    "source/docs/core/system-map.md": {
+      "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65",
+      "bytes": 45403
+    },
+    "source/docs/core/decisions.md": {
+      "sha256": "9a929f97d767e3f7d04423963c98213b6f65fe5bb77e062736064a1186ee9120",
+      "bytes": 363781
+    },
+    "source/docs/research/2026-10-05-claude-lead/briefs/seat-lift-brief.md": {
+      "sha256": "3b32417a236603eb2582432a4c3d4d910231b297802cc76694e0c8d6b931f98d",
+      "bytes": 6123
+    },
+    "source/docs/research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md": {
+      "sha256": "59ad03116d17a081f575feefc75673c2b28b7561cfab73b54cc66fddf3d671bd",
+      "bytes": 6230
+    },
+    "source/docs/research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md": {
+      "sha256": "75d24368c0104883bb6adca99e6d778bb31f3c74c11cfc6f1b488b4427dd1a5e",
+      "bytes": 6848
+    },
+    "source/Test/contracts/queue.contract.md": {
+      "sha256": "d26e0a2803cab06c2fd90d4b3ee5e1e521b94053c2f8047b60adf611d3b41604",
+      "bytes": 13118
+    },
+    "source/Test/contracts/pool.contract.md": {
+      "sha256": "0b0cb8f5992e7c5ac6209ebc1434eabd8dd0aa23bc86efaf1a7b5025c5d819a8",
+      "bytes": 16182
+    },
+    "source/Test/contracts/faces.contract.md": {
+      "sha256": "faf0d2ca2da160c93d3120a967216145177dcd2c87e2e5cd6875f505a7fbc2a5",
+      "bytes": 53729
+    },
+    "source/Test/Program/TypedProgBindRed.lean": {
+      "sha256": "feb8d263fe5f800fb3223ef43ae3aa79e0e7ab8d032273870096b596c7e0369f",
+      "bytes": 7058
+    },
+    "source/Test/Program/QueueTraces.lean": {
+      "sha256": "fe22cb75b991eda38f40343399316afe79ff14ea87cf676c0687fd0b85ba1f4d",
+      "bytes": 33881
+    },
+    "source/tools/Tools/SemanticsRegistry.lean": {
+      "sha256": "32451e23cbe59e6d77665080ed8451eb9fe8a04101555e8453f824a13751644e",
+      "bytes": 78041
+    }
+  }
+}

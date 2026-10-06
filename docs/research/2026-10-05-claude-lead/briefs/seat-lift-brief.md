@@ -23,6 +23,13 @@ The receipt of seat MASKPOP maps the lift, in its item 8
    `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/deeper-proof-support/semantic/report.md`,
    and its correction of the condition:
    `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-1336-qinv-pool-maskpop/maskpop/closing-addendum.md`.
+   Codex's connector for the clearing, not compiled:
+   `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/lift/candidate.lean.txt`,
+   with `review.md` beside it. It states that `RunFiber.cleared` keeps the chain exactly when
+   the flag before the clearing is the base (`cleared_maskChain_iff`). Two commands clear a
+   fiber: `Cmd.exitDone`, and `Cmd.finish` through `exitFiber.exitStore`. The condition must
+   hold for both, and it must survive the observer commands and the nested work between a
+   pending clear and its run. Carry it by `Guarded`.
 5. `src/Effect4/Laws/Machine/Lift.lean`: `StepKeeps`, `Guarded`, `driveState_lift`,
    `stepDecisionState_lift`, `replayEval_lift`.
 6. `src/Effect4/Machine/Fibers.lean`: `FiberCore.start`, `evaluatePrim`, `finishFrame`,

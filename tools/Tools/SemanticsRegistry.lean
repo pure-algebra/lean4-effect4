@@ -101,7 +101,9 @@ def registry : Registry where
     -- the scenarios of the acceptance programs (decisions row 254): their placed claims and
     -- their planned goals are nodes of the plan
     `Test.Dogfood.Scenario, `Test.Dogfood.Scenario.Workers, `Test.Dogfood.Scenario.Routing,
-    `Test.Dogfood.Scenario.Atomic, `Test.Dogfood.Scenario.Timeout]
+    `Test.Dogfood.Scenario.Atomic, `Test.Dogfood.Scenario.Timeout,
+    -- the lowered run's tape, for its placed consumer of the journal's position law
+    `Test.Dogfood.Scenario.Tape]
   acceptance := [`Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers,
     `Test.Dogfood.P3WorkerQueue, `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
   concepts := [
@@ -691,6 +693,9 @@ def registry : Registry where
     { id := "run-tape-replay", concept := "translation-simulation", role := .simulation
       title := "A journal's machine is the raw replay of its tape: the controls that progressed and the reply applications, each as the decision the session hands the machine (machine equality for any run and any journal whose tape reads to its end; no session ledger, no journal that stops at a frontier, no lowered engine; decisions row 254)"
       pointer := .witness `Test.Dogfood.Scenario.tape_replays },
+    { id := "journal-position-replay", concept := "translation-simulation", role := .simulation
+      title := "The machine after a position of a journal's tape is the raw replay of the decisions up to it, from the run's own machine (any run, any rows and any position; nothing about a stopped row's machine, a session ledger or a generated engine)"
+      pointer := .witness `Test.Dogfood.Scenario.tapeFrom_position_replays },
     { id := "queue-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of the Queue's six step terms agrees with the abstract model's step on the first profile: the reply, the stored value through the encoding table, and the ordered signals (a part of queue-expansion-agrees; no delivery, no cancellation law, no liveness, no wrapper and no host; decisions row 255)"
       pointer := .witness `Effect4.Queue.Model.queue_steps_agree },

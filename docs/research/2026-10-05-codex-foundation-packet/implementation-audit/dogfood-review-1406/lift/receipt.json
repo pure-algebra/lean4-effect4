@@ -1,0 +1,226 @@
+{
+  "head": "00b160d25d6929ab7ba3aa19cc00fa6fdcfa9674",
+  "base": "38837c5fe083543f2ac9110ac3dfc8b38fda2bed",
+  "scope": "Read-only source and retained evidence audit; uncompiled local LIFT proposal",
+  "seat": {
+    "observed_utc": "2026-10-06T14:12:58.797140+00:00",
+    "head": "4bd063a2c5d805dd619af636351b23a3b87ba2a8",
+    "branch": "seat/qinv",
+    "status": "",
+    "exists": {
+      "AGENTS.md": true,
+      "docs/research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md": true,
+      "src/Effect4/Laws/Modules/Queue/Invariant.lean": false,
+      "Test/Program/QueueInvariant.lean": false,
+      "docs/research/2026-10-06-seat-QINV-design.md": false,
+      "docs/research/2026-10-06-seat-QINV-receipt.md": false
+    }
+  },
+  "qinv": {
+    "adopted": true,
+    "production_law_accepted": false,
+    "checked_source": "evidence/qinv/probe3.checked.lean",
+    "checked_result": "evidence/qinv/probe3.checked.log",
+    "actual_result_record": 132,
+    "actual_result_timestamp": "2026-10-06T14:10:43.503Z",
+    "current_scratch_differs": true,
+    "checked_helpers": [
+      "step_state",
+      "wake_again",
+      "quiet_iff_wake"
+    ],
+    "axioms": [
+      "propext",
+      "Quot.sound"
+    ],
+    "retained_base_only": {
+      "build_jobs": 996,
+      "modules": 746,
+      "declarations": 88410,
+      "planned_goals": 24,
+      "dependent_declarations": 11
+    }
+  },
+  "lift": {
+    "status": "Written ahead, proposed connector UNCOMPILED",
+    "consumer": "Both Cmd.finish/exitStore and Cmd.exitDone arms of pending-command StepKeeps",
+    "proof_role": "helper",
+    "concept": "scope-lifetime-finalization",
+    "requirement": "R11"
+  },
+  "requirements_unchanged": 13,
+  "verification": {
+    "file_hashes": 31,
+    "transcript_line_hashes": 13,
+    "result_line_hashes": 10,
+    "line_hash_recipe": "sha256(read_text().splitlines()[one_based_line-1].encode()), no newline"
+  },
+  "commands_run": [
+    "python3 audit_snapshot.py (source and retained evidence collection only)",
+    "Inline Python verification of retained hashes and thirteen requirements"
+  ],
+  "project_execution": false,
+  "repository_edits": false,
+  "notes": [
+    "An initial identity assertion detected a changed scratch file. The receipt binds acceptance to the prior Write and ToolResult instead of the active bytes.",
+    "No Lean, build, compiler, runtime, generator, install, UI, dispatch, or seat message was run."
+  ],
+  "files": {
+    "requirements.json": {
+      "sha256": "4d91c3b2f6ae83453d44c6dc783495791f12797873f2c5d48e24a943db07492a",
+      "bytes": 18121
+    },
+    "result-lines.json": {
+      "sha256": "f6f43463b99dcbca7d431b657b556f8d6e95a976d4e1fa46f6b83748b719f77c",
+      "bytes": 3328
+    },
+    "seat.json": {
+      "sha256": "cf70d63f4e488c010e1b62de28b0d9ee9fa95af736c7cb7e019c612ce16069b2",
+      "bytes": 495
+    },
+    "audit_snapshot.py": {
+      "sha256": "00d6c1229d73448cc7ababc949c5301e8d7763b8b44054ae5f621e32e20ee9ad",
+      "bytes": 6478
+    },
+    "tool-evidence.json": {
+      "sha256": "83c1cc9b0860455c1e5f5bdf82c4c77b510282bbb9a44dc5aef8e13c9b52f4b0",
+      "bytes": 20582
+    },
+    "manifest.json": {
+      "sha256": "ab731b59d4fdd1e6772cc522c16f7d60c1e0f7114de12c018bd6cebf29d7a6a9",
+      "bytes": 12634
+    },
+    "review.md": {
+      "sha256": "383214fd5a123acda4544dfcd4c1dc12a070a7f83718fa9206827a7dd315845c",
+      "bytes": 5700
+    },
+    "candidate.lean.txt": {
+      "sha256": "c05567a0ff7f559f5718d02ad643d516b5d1f2353f96f4e008943ed065db9a56",
+      "bytes": 837
+    },
+    "seat-source/AGENTS.md": {
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    "source/AGENTS.md": {
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    "source/generated/semantics.md": {
+      "sha256": "3cef119c270e3d50c0c0b835b5378b2ffc86fecc3df666bf1869585bb9ed77a3",
+      "bytes": 174441
+    },
+    "source/docs/STATE.md": {
+      "sha256": "99a517727a8a12d06bc9432406a2b8775e9f7f35cb7c39dba31fb76f4dae8294",
+      "bytes": 132763
+    },
+    "source/src/Effect4/Machine/Frames.lean": {
+      "sha256": "d63071625c8018e33547cb79915a2fec2da9147c8a8afc017f6ba315fa74f117",
+      "bytes": 194412
+    },
+    "source/src/Effect4/Machine/Fibers.lean": {
+      "sha256": "038f424e682f830d61b716748ef3d05cfe7cc940e02c8d4ae2e6b8d92e9b8327",
+      "bytes": 132671
+    },
+    "source/src/Effect4/Laws/Machine/MaskDiscipline.lean": {
+      "sha256": "8f8497df43e8d1994099ca75cf4b35c82041a61177871ae5365d17f79efab678",
+      "bytes": 19458
+    },
+    "source/src/Effect4/Laws/Machine/Lift.lean": {
+      "sha256": "f0816027156e83141ab89823906c9e7d2c532ff0c32e28e551af383ea52db5ee",
+      "bytes": 46446
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Profile.lean": {
+      "sha256": "087064aca1eda9808642ad69ca949c07ff3735331e4f1e5821d5013dfe007c0b",
+      "bytes": 19028
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Model.lean": {
+      "sha256": "cedc4e7cf129ee7da9c122251f3ebccbc506f5cfa9b025571e9d07fa70ca246d",
+      "bytes": 17180
+    },
+    "source/src/Effect4/Laws/Modules/Queue/Capacity.lean": {
+      "sha256": "07f8d6a54d2bff23eccc33ccec18455c2870530dc483013f2812e6234f877a9b",
+      "bytes": 8977
+    },
+    "source/docs/research/2026-10-06-seat-MASKPOP-receipt.md": {
+      "sha256": "71c8de51229fcbf99ca9a5c8d6f2817132e69345f55e109e41f33c7dcfb4b59c",
+      "bytes": 44826
+    },
+    "source/docs/core/semantics.md": {
+      "sha256": "4db3c822f4f5a69de08a206bbbee5c7e7a7485933243e1cb7f82b9a6c675a7ea",
+      "bytes": 78869
+    },
+    "source/docs/core/system-map.md": {
+      "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65",
+      "bytes": 45403
+    },
+    "source/docs/core/decisions.md": {
+      "sha256": "9a929f97d767e3f7d04423963c98213b6f65fe5bb77e062736064a1186ee9120",
+      "bytes": 363781
+    },
+    "source/docs/research/2026-10-05-claude-lead/briefs/seat-lift-brief.md": {
+      "sha256": "3b32417a236603eb2582432a4c3d4d910231b297802cc76694e0c8d6b931f98d",
+      "bytes": 6123
+    },
+    "source/docs/research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md": {
+      "sha256": "75d24368c0104883bb6adca99e6d778bb31f3c74c11cfc6f1b488b4427dd1a5e",
+      "bytes": 6848
+    },
+    "source/tools/Tools/SemanticsRegistry.lean": {
+      "sha256": "32451e23cbe59e6d77665080ed8451eb9fe8a04101555e8453f824a13751644e",
+      "bytes": 78041
+    },
+    "seat-source/docs/research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md": {
+      "sha256": "75d24368c0104883bb6adca99e6d778bb31f3c74c11cfc6f1b488b4427dd1a5e",
+      "bytes": 6848
+    },
+    "base-source/generated/semantics.md": {
+      "sha256": "c9a039f92b1b4d227627d6c6fd3555ad27056deb8d484e313230e4cf51e8645a",
+      "bytes": 173422
+    },
+    "base-source/tools/Tools/SemanticsRegistry.lean": {
+      "sha256": "32451e23cbe59e6d77665080ed8451eb9fe8a04101555e8453f824a13751644e",
+      "bytes": 78041
+    },
+    "evidence/qinv/probe3.checked.log": {
+      "sha256": "2921ee16d8e48cf07197faa20c3d1c6fc1b1f95b993a0bee859379e5ed29f11d",
+      "bytes": 944
+    },
+    "evidence/qinv/probe2.lean": {
+      "sha256": "6848979287165fb5f9fe042e933b741a2700504b42dffbf390088cafbc8dae7d",
+      "bytes": 4479
+    },
+    "evidence/qinv/probe3.checked.lean": {
+      "sha256": "4043c8cccaa3dfdd5f01cdda86b623a02c19665792e608ab2c1e5cbf9ebadd5b",
+      "bytes": 3218
+    },
+    "evidence/qinv/probe3.lean": {
+      "sha256": "1def320d28b73809ef059cba7fdeadfddab1c5bd3d0a9ac54cafd0621b5bca6f",
+      "bytes": 11570
+    },
+    "evidence/qinv/probe1.log": {
+      "sha256": "c15d3347ced3157d4c827f5557b215e69bc98f6ec9f49d304db61af729463539",
+      "bytes": 5880
+    },
+    "evidence/qinv/probe2.log": {
+      "sha256": "5b41151b894ecc624ea51828b8403edbc29196493cd53cfd26676cb871d7fef0",
+      "bytes": 251
+    },
+    "evidence/qinv/probe3.log": {
+      "sha256": "81d4e5700803ee5b892b37feed204a4b11e507a9ff9d1ce0a8f06679948452a3",
+      "bytes": 4249
+    },
+    "evidence/qinv/base-gates.log": {
+      "sha256": "85cd0a720683dada6c8146c903815e5b49c1e25a44fa3ed68c9e6012d74e3410",
+      "bytes": 662
+    },
+    "evidence/qinv/base-build.log": {
+      "sha256": "ec1315ca8c9414f834dd70135e1ec6bbcb927f1226cc08cc39b385f1739e2d3c",
+      "bytes": 48
+    },
+    "evidence/qinv/probe1.lean": {
+      "sha256": "ce2fb4b2856aeb11a8e5013a7ec95b86f358a4260966622df5c44f2b519f0416",
+      "bytes": 1245
+    }
+  }
+}
