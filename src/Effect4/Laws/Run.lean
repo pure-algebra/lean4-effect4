@@ -1,4 +1,5 @@
 import Effect4.Run
+import Effect4.Run.Tape
 import Effect4.Laws.Api.Runner
 import Effect4.Laws.Api.HostSession
 import Effect4.Laws.Api.Frontier
@@ -814,25 +815,12 @@ theorem controlOnce_journal (s : Run) (decision : Api.Decision)
   rw [controlOnce_some s decision chosen]
   exact step_journal s (.control decision)
 
-/-! ## The ordinary run -/
+/-! ## The ordinary run
 
-/-- The machine a replay reached, whichever way it ended. -/
-def machineOf : NativeReplay → Api.Machine
-  | .finished m => m
-  | .frontier _ m => m
-  | .stuck _ m => m
-
-/-- A decision tape replayed from a machine, at the program's own evaluator. -/
-def replayFrom (program : Api.Program) (table : RowTable) (fuel : Nat)
-    (tape : List Api.Decision) (m : Api.Machine) : NativeReplay :=
-  letI := evaluatorFor program table
-  replayEval (interpOf program table) fuel tape m
-
-/-- Whether one decision had enough command fuel, at the program's own evaluator. -/
-def enoughFor (program : Api.Program) (table : RowTable) (fuel : Nat) (m : Api.Machine)
-    (d : Api.Decision) : Bool :=
-  letI := evaluatorFor program table
-  (stepDecisionState (interpOf program table) fuel m d).2
+`machineOf`, `replayFrom` and `enoughFor` are definitions of the core
+(`src/Effect4/Run/Tape.lean`): the machine that a replay reached, a decision tape replayed from
+a machine, and whether one decision had enough command fuel. A tool that inspects a recorded
+run calls them from the `Effect4` root. Their laws stand here. -/
 
 /-- The run a replay result reports, as `Api.replay` reports it. -/
 def runOf : NativeReplay → Api.Inspection

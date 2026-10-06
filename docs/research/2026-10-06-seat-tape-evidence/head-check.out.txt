@@ -1,0 +1,394 @@
+Effect4.Run.MachineView : Type
+Effect4.Run.machineViewOf : Effect4.Api.Machine → Effect4.Run.MachineView
+Effect4.Run.machineView : Effect4.Run → Effect4.Run.MachineView
+Effect4.Run.Position : Type
+Effect4.Run.replyDecision : Effect4.Api.HostSession.Reply → Effect4.Api.Decision
+Effect4.Run.decisionOf : Effect4.Run →
+  Effect4.Api.Runner.Command → Effect4.Api.HostSession.Phase → Option Effect4.Api.Decision
+Effect4.Run.receiptRow : Effect4.Api.Runner.Command → Bool
+Effect4.Run.openedOf : Effect4.Run → Effect4.Run
+Effect4.Run.atRest : Effect4.Run → Bool
+Effect4.Run.play_id : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Effect4.Run.id (Effect4.Run.play s rows) = Effect4.Run.id s
+Effect4.Run.play_budget : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Effect4.Run.budget (Effect4.Run.play s rows) = Effect4.Run.budget s
+Effect4.Run.play_profile : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Effect4.Run.profile (Effect4.Run.play s rows) = Effect4.Run.profile s
+@Effect4.Run.SessionInert : {program : Effect4.Api.Program} →
+  {table : Effect4.Program.RowTable} →
+    Effect4.Api.HostSession.Session program table → Effect4.Api.HostSession.Session program table → Prop
+Effect4.Run.Inert : Effect4.Run → Effect4.Run → Prop
+@Effect4.Run.bindCall_inert : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (call : Effect4.Api.HostSession.Call) (token : Nat),
+  Effect4.Run.SessionInert s (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.bindCall s call token))
+@Effect4.Run.submit_inert : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (reply : Effect4.Api.HostSession.Reply),
+  Effect4.Run.SessionInert s (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.submit s reply))
+Effect4.Run.step_receiptRow : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command),
+  Effect4.Run.receiptRow c = Bool.true → Effect4.Run.Inert s (Effect4.Run.step s c)
+Effect4.Run.play_receiptRows : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  List.all rows Effect4.Run.receiptRow = Bool.true → Effect4.Run.Inert s (Effect4.Run.play s rows)
+Effect4.Run.receive_receiptRows : ∀ (s : Effect4.Run) (key : Effect4.Api.HostSession.Key)
+  (completion : Effect4.Api.HostSession.Answer),
+  List.all (Effect4.Rows.receive s key completion) Effect4.Run.receiptRow = Bool.true
+Effect4.Run.AppliedSelects : Prop
+@Effect4.Run.applied_selects : Effect4.Run.AppliedSelects
+Effect4.Run.ControlRetires : Prop
+@Effect4.Run.control_retires : Effect4.Run.ControlRetires
+Effect4.Run.readsOn : Effect4.Run → Effect4.Api.Decision → Bool
+Effect4.Run.tapeFrom : Effect4.Run →
+  List Effect4.Api.Runner.Command → List Effect4.Run.Position × List Effect4.Api.Runner.Command
+Effect4.Run.TapeReplays : Prop
+@Effect4.Run.preflight_replyDecision : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (reply : Effect4.Api.HostSession.Reply)
+  (decision : Effect4.Program.NativeDecision),
+  Effect4.Api.HostSession.preflight s reply = Except.ok decision → decision = Effect4.Run.replyDecision reply
+@Effect4.Run.applyReply_applied_machine : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (key : Effect4.Api.HostSession.Key) (fuel : Nat),
+  Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+      Effect4.Api.HostSession.Phase.applied →
+    ∃ reply,
+      Effect4.Api.HostSession.readReply (Effect4.Api.HostSession.Session.pending s) key = Option.some reply ∧
+        Effect4.Api.HostSession.Session.machine
+            (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.applyReply s key fuel)) =
+          Effect4.Program.steppedBy program fuel table (Effect4.Api.HostSession.Session.machine s)
+            (Effect4.Run.replyDecision reply)
+@Effect4.Run.applyReply_ends : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (key : Effect4.Api.HostSession.Key) (fuel : Nat),
+  Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+      Effect4.Api.HostSession.Phase.frontier ∨
+    Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+        Effect4.Api.HostSession.Phase.applied ∨
+      ∃ why,
+        Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+          Effect4.Api.HostSession.Phase.refused why
+Effect4.Run.step_keeps_machine : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Effect4.Run.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.none →
+      Effect4.Run.machine (Effect4.Run.step s c) = Effect4.Run.machine s
+Effect4.Run.step_takes_decision : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (decision : Effect4.Api.Decision),
+  Effect4.Run.decisionOf s c
+        (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+      Option.some decision →
+    Effect4.Run.machine (Effect4.Run.step s c) =
+      Effect4.Program.steppedBy (Effect4.Api.Built.program (Effect4.Run.built s))
+        (Effect4.Api.Budget.fuel (Effect4.Run.budget s)) (Effect4.Api.Built.table (Effect4.Run.built s))
+        (Effect4.Run.machine s) decision
+Effect4.Run.tapeFrom_frontier : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.true →
+    Effect4.Run.tapeFrom s (c :: rest) = ([], c :: rest)
+Effect4.Run.tapeFrom_skip : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Effect4.Run.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.none →
+      Effect4.Run.tapeFrom s (c :: rest) = Effect4.Run.tapeFrom (Effect4.Run.step s c) rest
+Effect4.Run.tapeFrom_take : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command) (decision : Effect4.Api.Decision),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Effect4.Run.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.some decision →
+      Effect4.Run.readsOn s decision = Bool.true →
+        Effect4.Run.tapeFrom s (c :: rest) =
+          ({ decision := decision, after := Effect4.Run.step s c } ::
+              Prod.fst (Effect4.Run.tapeFrom (Effect4.Run.step s c) rest),
+            Prod.snd (Effect4.Run.tapeFrom (Effect4.Run.step s c) rest))
+Effect4.Run.tapeFrom_stop : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command) (decision : Effect4.Api.Decision),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Effect4.Run.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.some decision →
+      Effect4.Run.readsOn s decision = Bool.false → Effect4.Run.tapeFrom s (c :: rest) = ([], c :: rest)
+Effect4.Run.tape_replays : Effect4.Run.TapeReplays
+Effect4.Run.tapeFrom_append : ∀ (s : Effect4.Run) (a b : List Effect4.Api.Runner.Command),
+  Effect4.Run.tapeFrom s (a ++ b) =
+    if Prod.snd (Effect4.Run.tapeFrom s a) = [] then
+      (Prod.fst (Effect4.Run.tapeFrom s a) ++ Prod.fst (Effect4.Run.tapeFrom (Effect4.Run.play s a) b),
+        Prod.snd (Effect4.Run.tapeFrom (Effect4.Run.play s a) b))
+    else (Prod.fst (Effect4.Run.tapeFrom s a), Prod.snd (Effect4.Run.tapeFrom s a) ++ b)
+Effect4.Run.tapeFrom_cut : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  ∃ done,
+    rows = done ++ Prod.snd (Effect4.Run.tapeFrom s rows) ∧
+      Effect4.Run.tapeFrom s done = (Prod.fst (Effect4.Run.tapeFrom s rows), [])
+Effect4.Run.tapeFrom_cut_replays : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  ∃ done,
+    rows = done ++ Prod.snd (Effect4.Run.tapeFrom s rows) ∧
+      Effect4.Run.tapeFrom s done = (Prod.fst (Effect4.Run.tapeFrom s rows), []) ∧
+        Effect4.Run.machine (Effect4.Run.play s done) =
+          Effect4.Run.machineOf
+            (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+              (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+              (List.map (fun x => Effect4.Run.Position.decision x) (Prod.fst (Effect4.Run.tapeFrom s rows)))
+              (Effect4.Run.machine s))
+Effect4.Run.tapeFrom_position_prefix : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command) (i : Nat)
+  (position : Effect4.Run.Position),
+  (Prod.fst (Effect4.Run.tapeFrom s rows))[i]? = Option.some position →
+    ∃ done tail,
+      rows = done ++ tail ∧
+        Effect4.Run.play s done = Effect4.Run.Position.after position ∧
+          Effect4.Run.tapeFrom s done = (List.take (i + 1) (Prod.fst (Effect4.Run.tapeFrom s rows)), [])
+Effect4.Run.tapeFrom_position_replays : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command) (i : Nat)
+  (position : Effect4.Run.Position),
+  (Prod.fst (Effect4.Run.tapeFrom s rows))[i]? = Option.some position →
+    Effect4.Run.machine (Effect4.Run.Position.after position) =
+      Effect4.Run.machineOf
+        (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+          (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+          (List.map (fun x => Effect4.Run.Position.decision x)
+            (List.take (i + 1) (Prod.fst (Effect4.Run.tapeFrom s rows))))
+          (Effect4.Run.machine s))
+Effect4.Run.tapeOf : Effect4.Run → List Effect4.Api.Decision
+Effect4.Run.funded : Effect4.Run → Bool
+Effect4.Run.funded_replays : ∀ (s : Effect4.Run),
+  Effect4.Run.Reached s →
+    Effect4.Run.funded s = Bool.true →
+      Effect4.Run.machine s =
+        Effect4.Run.machineOf
+          (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+            (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+            (Effect4.Run.tapeOf s)
+            (Effect4.Api.load (Effect4.Api.Built.program (Effect4.Run.built s))
+              (Effect4.Api.Budget.compileFuel (Effect4.Run.budget s))))
+Effect4.Run.instDecidableEqMachineView : DecidableEq Effect4.Run.MachineView
+structure Effect4.Run.MachineView : Type
+number of parameters: 0
+fields:
+  Effect4.Run.MachineView.rootExit : Option Effect4.Machine.ExitV
+  Effect4.Run.MachineView.cells : List Effect4.Machine.Val
+  Effect4.Run.MachineView.awaiting : List Effect4.Program.Await
+  Effect4.Run.MachineView.queued : List Effect4.FiberId
+  Effect4.Run.MachineView.runnable : List Effect4.FiberId
+  Effect4.Run.MachineView.timers : List (Effect4.FiberId × Effect4.ClockMillis)
+constructor:
+  Effect4.Run.MachineView.mk (rootExit : Option Effect4.Machine.ExitV) (cells : List Effect4.Machine.Val)
+    (awaiting : List Effect4.Program.Await) (queued runnable : List Effect4.FiberId)
+    (timers : List (Effect4.FiberId × Effect4.ClockMillis)) : Effect4.Run.MachineView
+structure Effect4.Run.Position : Type
+number of parameters: 0
+fields:
+  Effect4.Run.Position.decision : Effect4.Api.Decision
+  Effect4.Run.Position.after : Effect4.Run
+constructor:
+  Effect4.Run.Position.mk (decision : Effect4.Api.Decision) (after : Effect4.Run) : Effect4.Run.Position
+def Effect4.Run.machineViewOf : Effect4.Api.Machine → Effect4.Run.MachineView :=
+fun m =>
+  { rootExit := Option.bind (Effect4.Machine.RunMachine.fiber? m Effect4.Api.root) Effect4.Machine.RunFiber.exit,
+    cells :=
+      Effect4.Machine.Stores.refs
+        (Effect4.Machine.RunMachine.state
+          (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          m),
+    awaiting := Effect4.Program.awaits m,
+    queued :=
+      Effect4.Machine.RunMachine.armed
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        m,
+    runnable := Effect4.Api.runnableFibers m,
+    timers :=
+      List.map (fun w => (Effect4.Machine.Waiter.fiber w, Effect4.Machine.Waiter.payload w))
+        (Effect4.Machine.WakeList.waiters
+          (Effect4.Machine.TimerStore.wake
+            (Effect4.Machine.Stores.timers
+              (Effect4.Machine.RunMachine.state
+                (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                  Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                  Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                  Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                m)))) }
+def Effect4.Run.machineView : Effect4.Run → Effect4.Run.MachineView :=
+fun s => Effect4.Run.machineViewOf (Effect4.Run.machine s)
+def Effect4.Run.replyDecision : Effect4.Api.HostSession.Reply → Effect4.Api.Decision :=
+fun reply =>
+  Effect4.Machine.RunDecision.answerAsync (Effect4.Api.HostProtocol.Key.fiber (Effect4.Api.HostSession.Reply.key reply))
+    (Effect4.Api.HostProtocol.Key.token (Effect4.Api.HostSession.Reply.key reply))
+    (Effect4.Api.HostSession.Reply.completion reply)
+def Effect4.Run.decisionOf : Effect4.Run →
+  Effect4.Api.Runner.Command → Effect4.Api.HostSession.Phase → Option Effect4.Api.Decision :=
+fun s c phase =>
+  match c, phase with
+  | Effect4.Api.Runner.Command.control decision, Effect4.Api.HostSession.Phase.progressed => Option.some decision
+  | Effect4.Api.Runner.Command.apply key, Effect4.Api.HostSession.Phase.applied =>
+    Option.map Effect4.Run.replyDecision
+      (Effect4.Api.HostSession.readReply (Effect4.Api.HostSession.Session.pending (Effect4.Run.session s)) key)
+  | x, x_1 => Option.none
+def Effect4.Run.receiptRow : Effect4.Api.Runner.Command → Bool :=
+fun x =>
+  match x with
+  | Effect4.Api.Runner.Command.bind call token => Bool.true
+  | Effect4.Api.Runner.Command.submit reply => Bool.true
+  | x => Bool.false
+def Effect4.Run.openedOf : Effect4.Run → Effect4.Run :=
+fun s => Effect4.Run.open (Effect4.Run.built s) (Effect4.Run.id s) (Effect4.Run.budget s) (Effect4.Run.profile s)
+def Effect4.Run.atRest : Effect4.Run → Bool :=
+fun s =>
+  List.isEmpty (Effect4.Run.Work.runnable (Effect4.Run.work s)) &&
+    List.isEmpty (Effect4.Run.Work.queued (Effect4.Run.work s))
+def Effect4.Run.readsOn : Effect4.Run → Effect4.Api.Decision → Bool :=
+fun s decision =>
+  Option.isNone
+      (Effect4.Machine.RunMachine.stuck
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.Run.machine s)) &&
+    Effect4.Run.enoughFor (Effect4.Api.Built.program (Effect4.Run.built s))
+      (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+      (Effect4.Run.machine s) decision
+def Effect4.Run.tapeFrom : Effect4.Run →
+  List Effect4.Api.Runner.Command → List Effect4.Run.Position × List Effect4.Api.Runner.Command :=
+fun s x =>
+  List.brecOn (motive := fun x => Effect4.Run → List Effect4.Run.Position × List Effect4.Api.Runner.Command) x
+    Effect4.Run.tapeFrom._f s
+def Effect4.Run.tapeOf : Effect4.Run → List Effect4.Api.Decision :=
+fun s =>
+  List.map (fun x => Effect4.Run.Position.decision x)
+    (Prod.fst (Effect4.Run.tapeFrom (Effect4.Run.openedOf s) (Effect4.Run.journal s)))
+def Effect4.Run.funded : Effect4.Run → Bool :=
+fun s => List.isEmpty (Prod.snd (Effect4.Run.tapeFrom (Effect4.Run.openedOf s) (Effect4.Run.journal s)))
+def Effect4.Run.TapeReplays : Prop :=
+∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Prod.snd (Effect4.Run.tapeFrom s rows) = [] →
+    Effect4.Run.machine (Effect4.Run.play s rows) =
+      Effect4.Run.machineOf
+        (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+          (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+          (List.map (fun x => Effect4.Run.Position.decision x) (Prod.fst (Effect4.Run.tapeFrom s rows)))
+          (Effect4.Run.machine s))
+def Effect4.Run.SessionInert : {program : Effect4.Api.Program} →
+  {table : Effect4.Program.RowTable} →
+    Effect4.Api.HostSession.Session program table → Effect4.Api.HostSession.Session program table → Prop :=
+fun {program} {table} before after =>
+  Effect4.Api.HostSession.Session.machine after = Effect4.Api.HostSession.Session.machine before ∧
+    Effect4.Api.HostSession.Session.applied after = Effect4.Api.HostSession.Session.applied before ∧
+      Effect4.Api.HostSession.Session.consumed after = Effect4.Api.HostSession.Session.consumed before ∧
+        Effect4.Api.HostSession.Session.retired after = Effect4.Api.HostSession.Session.retired before
+def Effect4.Run.Inert : Effect4.Run → Effect4.Run → Prop :=
+fun before after =>
+  Effect4.Run.machine after = Effect4.Run.machine before ∧
+    Effect4.Api.HostSession.Session.applied (Effect4.Run.session after) =
+        Effect4.Api.HostSession.Session.applied (Effect4.Run.session before) ∧
+      Effect4.Api.HostSession.Session.consumed (Effect4.Run.session after) =
+          Effect4.Api.HostSession.Session.consumed (Effect4.Run.session before) ∧
+        Effect4.Api.HostSession.Session.retired (Effect4.Run.session after) =
+          Effect4.Api.HostSession.Session.retired (Effect4.Run.session before)
+def Effect4.Run.AppliedSelects : Prop :=
+∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable} (s : Effect4.Api.HostSession.Session program table)
+  (key : Effect4.Api.HostSession.Key) (fuel : Nat),
+  Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+      Effect4.Api.HostSession.Phase.applied →
+    ∃ selected,
+      List.find? (fun b => Effect4.Api.HostSession.BoundCall.key b == key) (Effect4.Api.HostSession.Session.active s) =
+          Option.some selected ∧
+        Effect4.Api.HostSession.Session.consumed
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.applyReply s key fuel)) =
+            Effect4.Api.HostSession.Session.consumed s ++
+              [Effect4.Api.HostSession.Call.callId (Effect4.Api.HostSession.BoundCall.call selected)] ∧
+          Effect4.Api.HostSession.Session.applied
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.applyReply s key fuel)) =
+            Effect4.Api.HostSession.Session.applied s + 1
+def Effect4.Run.ControlRetires : Prop :=
+∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable} (s : Effect4.Api.HostSession.Session program table)
+  (fuel : Nat) (decision : Effect4.Program.NativeDecision) (selected : Effect4.Api.HostSession.BoundCall),
+  selected ∈ Effect4.Api.HostSession.Session.active s →
+    (∀ (why : Effect4.Api.HostSession.Refusal),
+        Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.advance s fuel decision) ≠
+          Effect4.Api.HostSession.Phase.refused why) →
+      (Option.isSome
+              (Effect4.Api.requestOf
+                (Effect4.Api.HostSession.Session.machine
+                  (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision)))
+                (Effect4.Api.HostSession.Call.fiber (Effect4.Api.HostSession.BoundCall.call selected))
+                (Effect4.Api.HostSession.BoundCall.token selected)) =
+            Bool.true →
+          selected ∈
+            Effect4.Api.HostSession.Session.active
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision))) ∧
+        (Option.isNone
+              (Effect4.Api.requestOf
+                (Effect4.Api.HostSession.Session.machine
+                  (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision)))
+                (Effect4.Api.HostSession.Call.fiber (Effect4.Api.HostSession.BoundCall.call selected))
+                (Effect4.Api.HostSession.BoundCall.token selected)) =
+            Bool.true →
+          { bound := selected,
+              pending :=
+                Effect4.Api.HostSession.readReply (Effect4.Api.HostSession.Session.pending s)
+                  (Effect4.Api.HostSession.BoundCall.key selected) } ∈
+            Effect4.Api.HostSession.Session.retired
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision)))
+'Effect4.Run.MachineView' depends on axioms: [propext]
+'Effect4.Run.machineViewOf' depends on axioms: [propext]
+'Effect4.Run.machineView' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.Position' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.replyDecision' depends on axioms: [propext]
+'Effect4.Run.decisionOf' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.receiptRow' depends on axioms: [propext]
+'Effect4.Run.openedOf' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.atRest' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.play_id' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.play_budget' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.play_profile' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.SessionInert' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.Inert' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.bindCall_inert' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.submit_inert' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.step_receiptRow' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.play_receiptRows' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.receive_receiptRows' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.AppliedSelects' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.applied_selects' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.ControlRetires' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.control_retires' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.readsOn' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.TapeReplays' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.preflight_replyDecision' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.applyReply_applied_machine' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.applyReply_ends' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.step_keeps_machine' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.step_takes_decision' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_frontier' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_skip' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_take' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_stop' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tape_replays' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_append' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_cut' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_cut_replays' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_position_prefix' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeFrom_position_replays' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.tapeOf' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.funded' depends on axioms: [propext, Quot.sound]
+'Effect4.Run.funded_replays' depends on axioms: [propext, Quot.sound]

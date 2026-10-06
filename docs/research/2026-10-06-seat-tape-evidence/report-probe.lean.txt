@@ -1,0 +1,44 @@
+import Tools.Semantics
+
+/-! Scratch probe of seat TAPE: the semantics report at the head, first with the registry as it
+stands, then with its three pointers at the moved names. It writes into a scratch folder only.
+`make gen-semantics` is not run, and no tracked file is written. -/
+
+open Tools.Semantics Lean
+
+/-- The registry with the three pointers of the moved theorems at their new names, and the one
+citation of `funded` in an open part at its new file. -/
+def moved : Registry :=
+  let pointer (p : Pointer) : Pointer :=
+    match p with
+    | .witness n =>
+      if n == `Test.Dogfood.Scenario.tape_replays then .witness `Effect4.Run.tape_replays
+      else if n == `Test.Dogfood.Scenario.funded_replays then .witness `Effect4.Run.funded_replays
+      else if n == `Test.Dogfood.Scenario.tapeFrom_position_replays then
+        .witness `Effect4.Run.tapeFrom_position_replays
+      else p
+    | other => other
+  { registry with
+    claims := registry.claims.map fun claim => { claim with pointer := pointer claim.pointer }
+    requirements := registry.requirements.map fun r =>
+      { r with openParts := r.openParts.map fun part =>
+          part.replace "funded (Test/Dogfood/Scenario.lean)" "funded (src/Effect4/Run/Tape.lean)" } }
+
+def main (args : List String) : IO UInt32 := do
+  let [outdir] := args | IO.eprintln "usage: ReportProbe <output-directory>"; return 1
+  let dir : System.FilePath := outdir
+  IO.FS.createDirAll dir
+  match ← loadReport registry with
+  | .error errors =>
+    IO.FS.writeFile (dir / "stale.txt") ("\n".intercalate errors.toList ++ "\n")
+    IO.println s!"the registry as it stands: refused, {errors.size} finding(s)"
+  | .ok _ => IO.println "the registry as it stands: accepted"
+  match ← loadReport moved with
+  | .error errors =>
+    for error in errors do IO.eprintln error
+    return 1
+  | .ok report =>
+    IO.FS.writeFile (dir / "semantics.json") (report.pretty ++ "\n")
+    IO.FS.writeFile (dir / "semantics.md") (renderMarkdown report)
+    IO.println "the registry with the three pointers moved: accepted"
+    return 0

@@ -1,0 +1,96 @@
+import Effect4.Laws.Program.Signature
+import Effect4.Schema.Codec
+import Effect4.Codegen.Types
+
+/-!
+Seat GAP, probe 1 (scratch; run from the worktree root through the Lean slot).
+
+What the tree's own `Ty.sub`, `Ty.normalize`, `Ty.join` and `Ty.instantiate` do at `Ty.var`,
+against the model's opaque named gap (`gap_types.py`, `gap_checker.py`).
+Each `#guard` is a finite check, evaluated by the compiler.
+-/
+
+set_option autoImplicit false
+
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+
+namespace GapProbe
+
+def g1 : Ty := .var 101
+def g2 : Ty := .var 102
+
+-- A. the order at a variable: an opaque atom between `never` and `unknown`
+#guard Ty.sub g1 g1 = true
+#guard Ty.sub g1 g2 = false
+#guard Ty.sub .never g1 = true
+#guard Ty.sub g1 .unknown = true
+#guard Ty.sub .nat g1 = false            -- no flexible reading: `nat ≲ □` is NOT `sub`
+#guard Ty.sub g1 .nat = false            -- nor `□ ≲ nat`
+#guard Ty.sub g1 (.union g1 .nat) = true
+#guard Ty.sub (.refOf g1) (.refOf g1) = true
+#guard Ty.sub (.refOf g1) (.refOf g2) = false
+
+-- B. the normal form at a variable: one name deduplicates, two names stay apart
+#guard (Ty.union g1 .never).normalize = g1
+#guard (Ty.union g1 .unknown).normalize = .unknown
+#guard (Ty.union g1 g1).normalize = g1
+#guard (Ty.union g1 g2).normalize = .union g1 g2
+#guard (Ty.union (.list g1) (.list g1)).normalize = .list g1
+#guard (Ty.union (.list g1) (.list g2)).normalize = .union (.list g1) (.list g2)
+#guard (Ty.union (.list .nat) (.list g1)).normalize = .union (.list .nat) (.list g1)
+#guard Ty.join (.list g1) (.list g2) = .union (.list g1) (.list g2)
+
+-- C. `instantiate` is the materialization of a named gap at a static typing of the holes
+def sigma : Ty.Subst := [(101, .nat), (102, .string)]
+#guard ((Ty.join (.list g1) (.list g2)).instantiate sigma).normalize
+        = Ty.join (.list .nat) (.list .string)
+-- the anonymous counterexample of the model (L6): with ONE name the join has lost a member
+#guard ((Ty.join (.list g1) (.list g1)).instantiate sigma).normalize = .list .nat
+-- an unbound variable is `never`: the least materialization
+#guard (Ty.list g1).instantiate [] = .list .never
+
+-- D. `normalize` commutes with `instantiate`, on a small enumeration of templates and bindings
+def atoms : List Ty := [.nat, .number, .string, .never, .unknown, g1, g2]
+def level1 : List Ty :=
+  atoms ++ atoms.map Ty.list ++ atoms.map Ty.refOf ++
+    (atoms.flatMap fun a => atoms.map fun b => Ty.union a b)
+def templates : List Ty :=
+  level1 ++ (level1.flatMap fun a => [Ty.list a, Ty.refOf a]) ++
+    (level1.flatMap fun a => level1.map fun b => Ty.union a b)
+def bindingsOf : List Ty := [.nat, .number, .string, .never, .unknown, .list .nat,
+  .union .nat .string, .refOf .nat]
+def sigmas : List Ty.Subst :=
+  bindingsOf.flatMap fun a => bindingsOf.map fun b => [(101, a), (102, b)]
+
+#eval templates.length
+#eval sigmas.length
+/-- The pairs where normalizing first changes the instance's normal form. -/
+def commuteBad : List (Ty × Ty.Subst) :=
+  templates.flatMap fun t => sigmas.filterMap fun s =>
+    if ((t.normalize).instantiate s).normalize = (t.instantiate s).normalize then none
+    else some (t, s)
+#eval commuteBad.length
+#eval (commuteBad.take 3).map fun p => (p.1.renderRaw, p.2.map fun q => (q.1, q.2.renderRaw),
+  ((p.1.normalize).instantiate p.2).normalize.renderRaw, (p.1.instantiate p.2).normalize.renderRaw)
+
+/-- `sub` on templates is kept by every instantiation (the order is stable under substitution). -/
+def stableBad : List (Ty × Ty × Ty.Subst) :=
+  level1.flatMap fun a => level1.flatMap fun b =>
+    if Ty.sub a.normalize b.normalize then
+      sigmas.filterMap fun s =>
+        if Ty.sub (a.instantiate s).normalize (b.instantiate s).normalize then none
+        else some (a, b, s)
+    else []
+#eval stableBad.length
+#eval (stableBad.take 3).map fun p => (p.1.renderRaw, p.2.1.renderRaw,
+  p.2.2.map fun q => (q.1, q.2.renderRaw))
+
+-- E. the boundary stages at a variable, as they are today
+#guard Val.hasTy (.nat 1) g1 [] = false                    -- membership: no value
+#guard (Ty.closed g1) = false
+#guard (Ty.closed (.list g1)) = false
+#eval g1.renderRaw                                          -- the spelling of a parameter
+#eval (Ty.var 0).renderRaw
+
+end GapProbe

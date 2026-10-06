@@ -60,9 +60,10 @@ def unresolved : Scenario := { planned with name := "unresolved", program := `No
 /-- Red control: a claim that is a definition. -/
 def noTheorem : Scenario := { planned with name := "noTheorem", claim := ``play }
 
-/-- Red control: a law that is a battery's theorem with no placement. -/
+/-- Red control: a law that is a battery's theorem with no placement. `play_opened` is a helper
+of `replays` (`Test/Dogfood/Scenario.lean`), and it carries no `@[semantics …]`. -/
 def unplaced : Scenario :=
-  { planned with name := "unplaced", laws := [⟨"inert", ``play_id⟩]
+  { planned with name := "unplaced", laws := [⟨"inert", ``play_opened⟩]
                  controls := both "machine" ++ both "inert" }
 
 /-- Red control: a law of the law graph with no placement. `Effect4.Run.step_id` carries no
@@ -161,7 +162,7 @@ end Fixture
 error: wrongTop: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "replay" (Effect4.Run.journal_replays)
 unresolved: Nowhere.program does not resolve to a declaration
 noTheorem: the claim Test.Dogfood.Scenario.play is no theorem and no planned goal
-unplaced: the claim Test.Dogfood.Scenario.play_id has no placement at a requirement
+unplaced: the claim Test.Dogfood.Scenario.play_opened has no placement at a requirement
 unplacedLaw: the claim Effect4.Run.step_id has no placement: no semantics attribute and no row of the semantics registry
 unlisted: the claim Test.Dogfood.Scenario.Fixture.pending rests on the planned goal Test.Dogfood.Scenario.Fixture.pending, which no clause names
 loose: the clause "machine" has no red control

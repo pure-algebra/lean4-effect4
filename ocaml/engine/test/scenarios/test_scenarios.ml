@@ -3,7 +3,7 @@
    What it is: decisions row 254.  A scenario of Test/Dogfood/Scenario/ compares one named
    observation.  The generated engine holds no session, so the observation lands as two
    clauses: the session clause, checked in Lean, and the machine clause, checked here.  The
-   machine clause is `Test.Dogfood.Scenario.machineView`: the root's exit, the cells, the calls
+   machine clause is `Effect4.Run.machineView`: the root's exit, the cells, the calls
    the machine waits on, the armed owners, the runnable fibers and the timers.
 
    The fixtures are the *.txt files beside this one, written by Lean from the programs

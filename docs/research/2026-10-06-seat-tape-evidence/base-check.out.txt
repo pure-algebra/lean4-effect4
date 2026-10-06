@@ -1,0 +1,402 @@
+Test.Dogfood.Scenario.MachineView : Type
+Test.Dogfood.Scenario.machineViewOf : Effect4.Api.Machine → Test.Dogfood.Scenario.MachineView
+Test.Dogfood.Scenario.machineView : Effect4.Run → Test.Dogfood.Scenario.MachineView
+Test.Dogfood.Scenario.Position : Type
+Test.Dogfood.Scenario.replyDecision : Effect4.Api.HostSession.Reply → Effect4.Api.Decision
+Test.Dogfood.Scenario.decisionOf : Effect4.Run →
+  Effect4.Api.Runner.Command → Effect4.Api.HostSession.Phase → Option Effect4.Api.Decision
+Test.Dogfood.Scenario.receiptRow : Effect4.Api.Runner.Command → Bool
+Test.Dogfood.Scenario.openedOf : Effect4.Run → Effect4.Run
+Test.Dogfood.Scenario.atRest : Effect4.Run → Bool
+Test.Dogfood.Scenario.play_id : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Effect4.Run.id (Effect4.Run.play s rows) = Effect4.Run.id s
+Test.Dogfood.Scenario.play_budget : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Effect4.Run.budget (Effect4.Run.play s rows) = Effect4.Run.budget s
+Test.Dogfood.Scenario.play_profile : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Effect4.Run.profile (Effect4.Run.play s rows) = Effect4.Run.profile s
+@Test.Dogfood.Scenario.SessionInert : {program : Effect4.Api.Program} →
+  {table : Effect4.Program.RowTable} →
+    Effect4.Api.HostSession.Session program table → Effect4.Api.HostSession.Session program table → Prop
+Test.Dogfood.Scenario.Inert : Effect4.Run → Effect4.Run → Prop
+@Test.Dogfood.Scenario.bindCall_inert : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (call : Effect4.Api.HostSession.Call) (token : Nat),
+  Test.Dogfood.Scenario.SessionInert s
+    (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.bindCall s call token))
+@Test.Dogfood.Scenario.submit_inert : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (reply : Effect4.Api.HostSession.Reply),
+  Test.Dogfood.Scenario.SessionInert s (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.submit s reply))
+Test.Dogfood.Scenario.step_receiptRow : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command),
+  Test.Dogfood.Scenario.receiptRow c = Bool.true → Test.Dogfood.Scenario.Inert s (Effect4.Run.step s c)
+Test.Dogfood.Scenario.play_receiptRows : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  List.all rows Test.Dogfood.Scenario.receiptRow = Bool.true → Test.Dogfood.Scenario.Inert s (Effect4.Run.play s rows)
+Test.Dogfood.Scenario.receive_receiptRows : ∀ (s : Effect4.Run) (key : Effect4.Api.HostSession.Key)
+  (completion : Effect4.Api.HostSession.Answer),
+  List.all (Effect4.Rows.receive s key completion) Test.Dogfood.Scenario.receiptRow = Bool.true
+Test.Dogfood.Scenario.AppliedSelects : Prop
+@Test.Dogfood.Scenario.applied_selects : Test.Dogfood.Scenario.AppliedSelects
+Test.Dogfood.Scenario.ControlRetires : Prop
+@Test.Dogfood.Scenario.control_retires : Test.Dogfood.Scenario.ControlRetires
+Test.Dogfood.Scenario.readsOn : Effect4.Run → Effect4.Api.Decision → Bool
+Test.Dogfood.Scenario.tapeFrom : Effect4.Run →
+  List Effect4.Api.Runner.Command → List Test.Dogfood.Scenario.Position × List Effect4.Api.Runner.Command
+Test.Dogfood.Scenario.TapeReplays : Prop
+@Test.Dogfood.Scenario.preflight_replyDecision : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (reply : Effect4.Api.HostSession.Reply)
+  (decision : Effect4.Program.NativeDecision),
+  Effect4.Api.HostSession.preflight s reply = Except.ok decision → decision = Test.Dogfood.Scenario.replyDecision reply
+@Test.Dogfood.Scenario.applyReply_applied_machine : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (key : Effect4.Api.HostSession.Key) (fuel : Nat),
+  Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+      Effect4.Api.HostSession.Phase.applied →
+    ∃ reply,
+      Effect4.Api.HostSession.readReply (Effect4.Api.HostSession.Session.pending s) key = Option.some reply ∧
+        Effect4.Api.HostSession.Session.machine
+            (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.applyReply s key fuel)) =
+          Effect4.Program.steppedBy program fuel table (Effect4.Api.HostSession.Session.machine s)
+            (Test.Dogfood.Scenario.replyDecision reply)
+@Test.Dogfood.Scenario.applyReply_ends : ∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable}
+  (s : Effect4.Api.HostSession.Session program table) (key : Effect4.Api.HostSession.Key) (fuel : Nat),
+  Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+      Effect4.Api.HostSession.Phase.frontier ∨
+    Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+        Effect4.Api.HostSession.Phase.applied ∨
+      ∃ why,
+        Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+          Effect4.Api.HostSession.Phase.refused why
+Test.Dogfood.Scenario.step_keeps_machine : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Test.Dogfood.Scenario.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.none →
+      Effect4.Run.machine (Effect4.Run.step s c) = Effect4.Run.machine s
+Test.Dogfood.Scenario.step_takes_decision : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (decision : Effect4.Api.Decision),
+  Test.Dogfood.Scenario.decisionOf s c
+        (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+      Option.some decision →
+    Effect4.Run.machine (Effect4.Run.step s c) =
+      Effect4.Program.steppedBy (Effect4.Api.Built.program (Effect4.Run.built s))
+        (Effect4.Api.Budget.fuel (Effect4.Run.budget s)) (Effect4.Api.Built.table (Effect4.Run.built s))
+        (Effect4.Run.machine s) decision
+Test.Dogfood.Scenario.tapeFrom_frontier : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.true →
+    Test.Dogfood.Scenario.tapeFrom s (c :: rest) = ([], c :: rest)
+Test.Dogfood.Scenario.tapeFrom_skip : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Test.Dogfood.Scenario.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.none →
+      Test.Dogfood.Scenario.tapeFrom s (c :: rest) = Test.Dogfood.Scenario.tapeFrom (Effect4.Run.step s c) rest
+Test.Dogfood.Scenario.tapeFrom_take : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command) (decision : Effect4.Api.Decision),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Test.Dogfood.Scenario.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.some decision →
+      Test.Dogfood.Scenario.readsOn s decision = Bool.true →
+        Test.Dogfood.Scenario.tapeFrom s (c :: rest) =
+          ({ decision := decision, after := Effect4.Run.step s c } ::
+              Prod.fst (Test.Dogfood.Scenario.tapeFrom (Effect4.Run.step s c) rest),
+            Prod.snd (Test.Dogfood.Scenario.tapeFrom (Effect4.Run.step s c) rest))
+Test.Dogfood.Scenario.tapeFrom_stop : ∀ (s : Effect4.Run) (c : Effect4.Api.Runner.Command)
+  (rest : List Effect4.Api.Runner.Command) (decision : Effect4.Api.Decision),
+  (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c) ==
+        Effect4.Api.HostSession.Phase.frontier) =
+      Bool.false →
+    Test.Dogfood.Scenario.decisionOf s c
+          (Effect4.Api.HostSession.Result.phase (Effect4.Api.Runner.result (Effect4.Run.runner s) c)) =
+        Option.some decision →
+      Test.Dogfood.Scenario.readsOn s decision = Bool.false →
+        Test.Dogfood.Scenario.tapeFrom s (c :: rest) = ([], c :: rest)
+Test.Dogfood.Scenario.tape_replays : Test.Dogfood.Scenario.TapeReplays
+Test.Dogfood.Scenario.tapeFrom_append : ∀ (s : Effect4.Run) (a b : List Effect4.Api.Runner.Command),
+  Test.Dogfood.Scenario.tapeFrom s (a ++ b) =
+    if Prod.snd (Test.Dogfood.Scenario.tapeFrom s a) = [] then
+      (Prod.fst (Test.Dogfood.Scenario.tapeFrom s a) ++
+          Prod.fst (Test.Dogfood.Scenario.tapeFrom (Effect4.Run.play s a) b),
+        Prod.snd (Test.Dogfood.Scenario.tapeFrom (Effect4.Run.play s a) b))
+    else (Prod.fst (Test.Dogfood.Scenario.tapeFrom s a), Prod.snd (Test.Dogfood.Scenario.tapeFrom s a) ++ b)
+Test.Dogfood.Scenario.tapeFrom_cut : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  ∃ done,
+    rows = done ++ Prod.snd (Test.Dogfood.Scenario.tapeFrom s rows) ∧
+      Test.Dogfood.Scenario.tapeFrom s done = (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows), [])
+Test.Dogfood.Scenario.tapeFrom_cut_replays : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  ∃ done,
+    rows = done ++ Prod.snd (Test.Dogfood.Scenario.tapeFrom s rows) ∧
+      Test.Dogfood.Scenario.tapeFrom s done = (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows), []) ∧
+        Effect4.Run.machine (Effect4.Run.play s done) =
+          Effect4.Run.machineOf
+            (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+              (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+              (List.map (fun x => Test.Dogfood.Scenario.Position.decision x)
+                (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows)))
+              (Effect4.Run.machine s))
+Test.Dogfood.Scenario.tapeFrom_position_prefix : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command) (i : Nat)
+  (position : Test.Dogfood.Scenario.Position),
+  (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows))[i]? = Option.some position →
+    ∃ done tail,
+      rows = done ++ tail ∧
+        Effect4.Run.play s done = Test.Dogfood.Scenario.Position.after position ∧
+          Test.Dogfood.Scenario.tapeFrom s done =
+            (List.take (i + 1) (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows)), [])
+Test.Dogfood.Scenario.tapeFrom_position_replays : ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command) (i : Nat)
+  (position : Test.Dogfood.Scenario.Position),
+  (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows))[i]? = Option.some position →
+    Effect4.Run.machine (Test.Dogfood.Scenario.Position.after position) =
+      Effect4.Run.machineOf
+        (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+          (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+          (List.map (fun x => Test.Dogfood.Scenario.Position.decision x)
+            (List.take (i + 1) (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows))))
+          (Effect4.Run.machine s))
+Test.Dogfood.Scenario.tapeOf : Effect4.Run → List Effect4.Api.Decision
+Test.Dogfood.Scenario.funded : Effect4.Run → Bool
+Test.Dogfood.Scenario.funded_replays : ∀ (s : Effect4.Run),
+  Effect4.Run.Reached s →
+    Test.Dogfood.Scenario.funded s = Bool.true →
+      Effect4.Run.machine s =
+        Effect4.Run.machineOf
+          (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+            (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+            (Test.Dogfood.Scenario.tapeOf s)
+            (Effect4.Api.load (Effect4.Api.Built.program (Effect4.Run.built s))
+              (Effect4.Api.Budget.compileFuel (Effect4.Run.budget s))))
+Test.Dogfood.Scenario.instDecidableEqMachineView : DecidableEq Test.Dogfood.Scenario.MachineView
+structure Test.Dogfood.Scenario.MachineView : Type
+number of parameters: 0
+fields:
+  Test.Dogfood.Scenario.MachineView.rootExit : Option Effect4.Machine.ExitV
+  Test.Dogfood.Scenario.MachineView.cells : List Effect4.Machine.Val
+  Test.Dogfood.Scenario.MachineView.awaiting : List Effect4.Program.Await
+  Test.Dogfood.Scenario.MachineView.queued : List Effect4.FiberId
+  Test.Dogfood.Scenario.MachineView.runnable : List Effect4.FiberId
+  Test.Dogfood.Scenario.MachineView.timers : List (Effect4.FiberId × Effect4.ClockMillis)
+constructor:
+  Test.Dogfood.Scenario.MachineView.mk (rootExit : Option Effect4.Machine.ExitV) (cells : List Effect4.Machine.Val)
+    (awaiting : List Effect4.Program.Await) (queued runnable : List Effect4.FiberId)
+    (timers : List (Effect4.FiberId × Effect4.ClockMillis)) : Test.Dogfood.Scenario.MachineView
+structure Test.Dogfood.Scenario.Position : Type
+number of parameters: 0
+fields:
+  Test.Dogfood.Scenario.Position.decision : Effect4.Api.Decision
+  Test.Dogfood.Scenario.Position.after : Effect4.Run
+constructor:
+  Test.Dogfood.Scenario.Position.mk (decision : Effect4.Api.Decision) (after : Effect4.Run) :
+    Test.Dogfood.Scenario.Position
+def Test.Dogfood.Scenario.machineViewOf : Effect4.Api.Machine → Test.Dogfood.Scenario.MachineView :=
+fun m =>
+  { rootExit := Option.bind (Effect4.Machine.RunMachine.fiber? m Effect4.Api.root) Effect4.Machine.RunFiber.exit,
+    cells :=
+      Effect4.Machine.Stores.refs
+        (Effect4.Machine.RunMachine.state
+          (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+            Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+          m),
+    awaiting := Effect4.Program.awaits m,
+    queued :=
+      Effect4.Machine.RunMachine.armed
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        m,
+    runnable := Effect4.Api.runnableFibers m,
+    timers :=
+      List.map (fun w => (Effect4.Machine.Waiter.fiber w, Effect4.Machine.Waiter.payload w))
+        (Effect4.Machine.WakeList.waiters
+          (Effect4.Machine.TimerStore.wake
+            (Effect4.Machine.Stores.timers
+              (Effect4.Machine.RunMachine.state
+                (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                  Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                  Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                  Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                m)))) }
+def Test.Dogfood.Scenario.machineView : Effect4.Run → Test.Dogfood.Scenario.MachineView :=
+fun s => Test.Dogfood.Scenario.machineViewOf (Effect4.Run.machine s)
+def Test.Dogfood.Scenario.replyDecision : Effect4.Api.HostSession.Reply → Effect4.Api.Decision :=
+fun reply =>
+  Effect4.Machine.RunDecision.answerAsync (Effect4.Api.HostProtocol.Key.fiber (Effect4.Api.HostSession.Reply.key reply))
+    (Effect4.Api.HostProtocol.Key.token (Effect4.Api.HostSession.Reply.key reply))
+    (Effect4.Api.HostSession.Reply.completion reply)
+def Test.Dogfood.Scenario.decisionOf : Effect4.Run →
+  Effect4.Api.Runner.Command → Effect4.Api.HostSession.Phase → Option Effect4.Api.Decision :=
+fun s c phase =>
+  match c, phase with
+  | Effect4.Api.Runner.Command.control decision, Effect4.Api.HostSession.Phase.progressed => Option.some decision
+  | Effect4.Api.Runner.Command.apply key, Effect4.Api.HostSession.Phase.applied =>
+    Option.map Test.Dogfood.Scenario.replyDecision
+      (Effect4.Api.HostSession.readReply (Effect4.Api.HostSession.Session.pending (Effect4.Run.session s)) key)
+  | x, x_1 => Option.none
+def Test.Dogfood.Scenario.receiptRow : Effect4.Api.Runner.Command → Bool :=
+fun x =>
+  match x with
+  | Effect4.Api.Runner.Command.bind call token => Bool.true
+  | Effect4.Api.Runner.Command.submit reply => Bool.true
+  | x => Bool.false
+def Test.Dogfood.Scenario.openedOf : Effect4.Run → Effect4.Run :=
+fun s => Effect4.Run.open (Effect4.Run.built s) (Effect4.Run.id s) (Effect4.Run.budget s) (Effect4.Run.profile s)
+def Test.Dogfood.Scenario.atRest : Effect4.Run → Bool :=
+fun s =>
+  List.isEmpty (Effect4.Run.Work.runnable (Effect4.Run.work s)) &&
+    List.isEmpty (Effect4.Run.Work.queued (Effect4.Run.work s))
+def Test.Dogfood.Scenario.readsOn : Effect4.Run → Effect4.Api.Decision → Bool :=
+fun s decision =>
+  Option.isNone
+      (Effect4.Machine.RunMachine.stuck
+        (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+          Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+        (Effect4.Run.machine s)) &&
+    Effect4.Run.enoughFor (Effect4.Api.Built.program (Effect4.Run.built s))
+      (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+      (Effect4.Run.machine s) decision
+def Test.Dogfood.Scenario.tapeFrom : Effect4.Run →
+  List Effect4.Api.Runner.Command → List Test.Dogfood.Scenario.Position × List Effect4.Api.Runner.Command :=
+fun s x =>
+  List.brecOn (motive := fun x => Effect4.Run → List Test.Dogfood.Scenario.Position × List Effect4.Api.Runner.Command) x
+    Test.Dogfood.Scenario.tapeFrom._f s
+def Test.Dogfood.Scenario.tapeOf : Effect4.Run → List Effect4.Api.Decision :=
+fun s =>
+  List.map (fun x => Test.Dogfood.Scenario.Position.decision x)
+    (Prod.fst (Test.Dogfood.Scenario.tapeFrom (Test.Dogfood.Scenario.openedOf s) (Effect4.Run.journal s)))
+def Test.Dogfood.Scenario.funded : Effect4.Run → Bool :=
+fun s =>
+  List.isEmpty (Prod.snd (Test.Dogfood.Scenario.tapeFrom (Test.Dogfood.Scenario.openedOf s) (Effect4.Run.journal s)))
+def Test.Dogfood.Scenario.TapeReplays : Prop :=
+∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command),
+  Prod.snd (Test.Dogfood.Scenario.tapeFrom s rows) = [] →
+    Effect4.Run.machine (Effect4.Run.play s rows) =
+      Effect4.Run.machineOf
+        (Effect4.Run.replayFrom (Effect4.Api.Built.program (Effect4.Run.built s))
+          (Effect4.Api.Built.table (Effect4.Run.built s)) (Effect4.Api.Budget.fuel (Effect4.Run.budget s))
+          (List.map (fun x => Test.Dogfood.Scenario.Position.decision x)
+            (Prod.fst (Test.Dogfood.Scenario.tapeFrom s rows)))
+          (Effect4.Run.machine s))
+def Test.Dogfood.Scenario.SessionInert : {program : Effect4.Api.Program} →
+  {table : Effect4.Program.RowTable} →
+    Effect4.Api.HostSession.Session program table → Effect4.Api.HostSession.Session program table → Prop :=
+fun {program} {table} before after =>
+  Effect4.Api.HostSession.Session.machine after = Effect4.Api.HostSession.Session.machine before ∧
+    Effect4.Api.HostSession.Session.applied after = Effect4.Api.HostSession.Session.applied before ∧
+      Effect4.Api.HostSession.Session.consumed after = Effect4.Api.HostSession.Session.consumed before ∧
+        Effect4.Api.HostSession.Session.retired after = Effect4.Api.HostSession.Session.retired before
+def Test.Dogfood.Scenario.Inert : Effect4.Run → Effect4.Run → Prop :=
+fun before after =>
+  Effect4.Run.machine after = Effect4.Run.machine before ∧
+    Effect4.Api.HostSession.Session.applied (Effect4.Run.session after) =
+        Effect4.Api.HostSession.Session.applied (Effect4.Run.session before) ∧
+      Effect4.Api.HostSession.Session.consumed (Effect4.Run.session after) =
+          Effect4.Api.HostSession.Session.consumed (Effect4.Run.session before) ∧
+        Effect4.Api.HostSession.Session.retired (Effect4.Run.session after) =
+          Effect4.Api.HostSession.Session.retired (Effect4.Run.session before)
+def Test.Dogfood.Scenario.AppliedSelects : Prop :=
+∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable} (s : Effect4.Api.HostSession.Session program table)
+  (key : Effect4.Api.HostSession.Key) (fuel : Nat),
+  Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.applyReply s key fuel) =
+      Effect4.Api.HostSession.Phase.applied →
+    ∃ selected,
+      List.find? (fun b => Effect4.Api.HostSession.BoundCall.key b == key) (Effect4.Api.HostSession.Session.active s) =
+          Option.some selected ∧
+        Effect4.Api.HostSession.Session.consumed
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.applyReply s key fuel)) =
+            Effect4.Api.HostSession.Session.consumed s ++
+              [Effect4.Api.HostSession.Call.callId (Effect4.Api.HostSession.BoundCall.call selected)] ∧
+          Effect4.Api.HostSession.Session.applied
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.applyReply s key fuel)) =
+            Effect4.Api.HostSession.Session.applied s + 1
+def Test.Dogfood.Scenario.ControlRetires : Prop :=
+∀ {program : Effect4.Api.Program} {table : Effect4.Program.RowTable} (s : Effect4.Api.HostSession.Session program table)
+  (fuel : Nat) (decision : Effect4.Program.NativeDecision) (selected : Effect4.Api.HostSession.BoundCall),
+  selected ∈ Effect4.Api.HostSession.Session.active s →
+    (∀ (why : Effect4.Api.HostSession.Refusal),
+        Effect4.Api.HostSession.Result.phase (Effect4.Api.HostSession.advance s fuel decision) ≠
+          Effect4.Api.HostSession.Phase.refused why) →
+      (Option.isSome
+              (Effect4.Api.requestOf
+                (Effect4.Api.HostSession.Session.machine
+                  (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision)))
+                (Effect4.Api.HostSession.Call.fiber (Effect4.Api.HostSession.BoundCall.call selected))
+                (Effect4.Api.HostSession.BoundCall.token selected)) =
+            Bool.true →
+          selected ∈
+            Effect4.Api.HostSession.Session.active
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision))) ∧
+        (Option.isNone
+              (Effect4.Api.requestOf
+                (Effect4.Api.HostSession.Session.machine
+                  (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision)))
+                (Effect4.Api.HostSession.Call.fiber (Effect4.Api.HostSession.BoundCall.call selected))
+                (Effect4.Api.HostSession.BoundCall.token selected)) =
+            Bool.true →
+          { bound := selected,
+              pending :=
+                Effect4.Api.HostSession.readReply (Effect4.Api.HostSession.Session.pending s)
+                  (Effect4.Api.HostSession.BoundCall.key selected) } ∈
+            Effect4.Api.HostSession.Session.retired
+              (Effect4.Api.HostSession.Result.session (Effect4.Api.HostSession.advance s fuel decision)))
+'Test.Dogfood.Scenario.MachineView' depends on axioms: [propext]
+'Test.Dogfood.Scenario.machineViewOf' depends on axioms: [propext]
+'Test.Dogfood.Scenario.machineView' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.Position' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.replyDecision' depends on axioms: [propext]
+'Test.Dogfood.Scenario.decisionOf' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.receiptRow' depends on axioms: [propext]
+'Test.Dogfood.Scenario.openedOf' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.atRest' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.play_id' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.play_budget' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.play_profile' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.SessionInert' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.Inert' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.bindCall_inert' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.submit_inert' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.step_receiptRow' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.play_receiptRows' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.receive_receiptRows' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.AppliedSelects' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.applied_selects' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.ControlRetires' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.control_retires' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.readsOn' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.TapeReplays' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.preflight_replyDecision' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.applyReply_applied_machine' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.applyReply_ends' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.step_keeps_machine' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.step_takes_decision' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_frontier' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_skip' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_take' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_stop' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tape_replays' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_append' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_cut' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_cut_replays' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_position_prefix' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeFrom_position_replays' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.tapeOf' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.funded' depends on axioms: [propext, Quot.sound]
+'Test.Dogfood.Scenario.funded_replays' depends on axioms: [propext, Quot.sound]

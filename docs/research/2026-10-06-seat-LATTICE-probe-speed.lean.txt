@@ -1,0 +1,122 @@
+import Effect4.Laws.Slice.Lattice
+
+/-!
+# Seat LATTICE, a probe for the note on speed (2026-10-06)
+
+A scratch probe: nothing here is in the tree, and no statement here is a law of the module. Run
+it as `lake env lean <this file, with the suffix .lean>` at the head of branch `seat/lattice`.
+
+Part 1 counts the questions of a divide-and-conquer descent against the one pass, under an upward
+closed validity. Part 2 states the interface of a neighbour's check, and proves that a pass over
+it gives the pass's list.
+-/
+
+set_option autoImplicit false
+
+open Effect4
+
+/-! ## Part 1: divide and conquer -/
+
+/-- Divide and conquer, in the shape of Junker's QuickXplain: a minimal sub-list `X` of `c` with
+`valid (b ++ X)`, assuming `valid (b ++ c)`. `delta` says that `b` grew since the last question.
+It returns the kept sites and the number of questions. The fuel bounds the depth. -/
+def qx (valid : Slice Nat → Bool) : Nat → Bool → List Nat → List Nat → List Nat × Nat
+  | 0, _, _, c => (c, 0)
+  | fuel + 1, delta, b, c =>
+    if delta && valid ⟨b⟩ then ([], 1)
+    else
+      let asked := if delta then 1 else 0
+      if c.length ≤ 1 then (c, asked)
+      else
+        let k := c.length / 2
+        let c1 := c.take k
+        let c2 := c.drop k
+        let r2 := qx valid fuel (!c1.isEmpty) (b ++ c1) c2
+        let r1 := qx valid fuel (!r2.1.isEmpty) (b ++ r2.1) c1
+        (r1.1 ++ r2.1, asked + r1.2 + r2.2)
+
+/-- Valid when the slice keeps each site of `need`: upward closed, with one minimal slice. -/
+def needs (need : List Nat) (s : Slice Nat) : Bool := need.all fun i => decide (i ∈ s.kept)
+
+/-- Valid when the slice keeps `a`, or keeps both `b` and `c`: two minimal slices. -/
+def either (a b c : Nat) (s : Slice Nat) : Bool :=
+  decide (a ∈ s.kept) || (decide (b ∈ s.kept) && decide (c ∈ s.kept))
+
+/-- One row: the sites, the kept sites of the minimal slice, the pass's questions, the questions
+of divide and conquer, whether the two slices are equal, whether the result is valid. -/
+def row (n : Nat) (need : List Nat) : Nat × Nat × Nat × Nat × Bool × Bool :=
+  let sites := List.range n
+  let r := qx (needs need) (n + 2) false [] sites
+  let pass := Slice.sweep (needs need) [] sites
+  (n, need.length, (Slice.sweepAsked (needs need) [] sites).length, r.2,
+    decide (r.1 = pass), needs need ⟨r.1⟩)
+
+/--
+info: [(64, 1, 64, 8, true, true), (64, 2, 64, 15, true, true), (64, 4, 64, 28, true, true), (256, 1, 256, 10, true, true),
+  (256, 4, 256, 30, true, true), (256, 16, 256, 34, true, true), (1024, 1, 1024, 12, true, true),
+  (1024, 4, 1024, 32, true, true), (1024, 16, 1024, 36, true, true), (1024, 16, 1024, 126, true, true),
+  (64, 64, 64, 126, true, true), (256, 128, 256, 255, true, true)]
+-/
+#guard_msgs in
+#eval [row 64 [5], row 64 [5, 40], row 64 [3, 17, 33, 60], row 256 [5], row 256 [3, 17, 33, 60],
+  row 256 (List.range 16), row 1024 [5], row 1024 [3, 17, 33, 60], row 1024 (List.range 16),
+  row 1024 ((List.range 16).map (· * 64)), row 64 (List.range 64), row 256 (List.range 128)]
+
+-- Two minimal slices: divide and conquer returns `[2]` after 7 questions, and the pass returns
+-- `[40, 50]` after 64. Each is minimal. The two descents choose by different rules.
+/-- info: ([2], 7, [40, 50], 64) -/
+#guard_msgs in
+#eval
+  let v := either 2 40 50
+  let sites := List.range 64
+  let r := qx v 66 false [] sites
+  (r.1, r.2, Slice.sweep v [] sites, (Slice.sweepAsked v [] sites).length)
+
+/-! ## Part 2: a neighbour's check -/
+
+universe u v w
+
+/-- A state that holds the check of one slice, and gives the check of a neighbour from it: the
+slice without one site. -/
+structure Neighbour (α : Type u) (T : Type v) (σ : Type w) where
+  /-- the type of the slice that the state holds -/
+  typeOf : σ → T
+  /-- the state of the slice without the site -/
+  drop : σ → α → σ
+
+/-- The pass over a neighbour's check: each question is one step of the state, and no whole
+check. -/
+def sweepWith {α : Type u} {T : Type v} {σ : Type w} [LE T] [DecidableLE T]
+    (nb : Neighbour α T σ) (q : T) : σ → List α → List α → List α
+  | _, done, [] => done
+  | st, done, x :: rest =>
+    if q ≤ nb.typeOf (nb.drop st x) then sweepWith nb q (nb.drop st x) done rest
+    else sweepWith nb q st (done ++ [x]) rest
+
+/-- What the instance owes for it: a relation between a state and the slice whose check it
+holds, kept by `drop`. Then the pass over the neighbour's check gives the pass's list. -/
+theorem sweepWith_eq_sweep {α : Type u} {T : Type v} {σ : Type w} [LE T] [DecidableLE T]
+    (v : SliceView α T) (nb : Neighbour α T σ) (Holds : σ → Slice α → Prop)
+    (holds_type : ∀ {st : σ} {c : Slice α}, Holds st c → nb.typeOf st = v.typeOf c)
+    (holds_drop : ∀ {st : σ} {done rest : List α} {x : α},
+      Holds st ⟨done ++ x :: rest⟩ → Holds (nb.drop st x) ⟨done ++ rest⟩)
+    (q : T) (todo : List α) :
+    ∀ (st : σ) (done : List α), Holds st ⟨done ++ todo⟩ →
+      sweepWith nb q st done todo = Slice.sweep (fun c => decide (v.Valid q c)) done todo := by
+  induction todo with
+  | nil => exact fun _ _ _ => rfl
+  | cons x rest ih =>
+    intro st done h
+    have htype : nb.typeOf (nb.drop st x) = v.typeOf ⟨done ++ rest⟩ := holds_type (holds_drop h)
+    rw [sweepWith, Slice.sweep, htype]
+    by_cases hc : v.Valid q ⟨done ++ rest⟩
+    · have hle : q ≤ v.typeOf ⟨done ++ rest⟩ := hc
+      rw [if_pos hle, if_pos (decide_eq_true hc)]
+      exact ih _ _ (holds_drop h)
+    · have hle : ¬ q ≤ v.typeOf ⟨done ++ rest⟩ := hc
+      rw [if_neg hle, if_neg (fun hd => hc (of_decide_eq_true hd))]
+      exact ih _ _ (by rwa [List.append_assoc, List.singleton_append])
+
+/-- info: 'sweepWith_eq_sweep' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms sweepWith_eq_sweep

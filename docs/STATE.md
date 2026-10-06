@@ -297,13 +297,11 @@ the state at the handover point and the integration procedure as practiced.
   with Semaphore's cases P1 and P4 as the batteries write them;
 - Pool's public operations (rows 276 and 279), after the owner's ruling on a closed pool;
 - two small repairs of proofs. The first is **landed** by seat REPAIR: the Queue's typing
-  through the shared rule, with two general statements in the lift module. The second waits
-  for nothing more: seat WORKQ's receipt lists the declarations to move, and seat TAPE has
-  the move of the scenario driver's laws into the library
-  ([its brief](research/2026-10-05-claude-lead/briefs/seat-tape-brief.md)).
+  through the shared rule, with two general statements in the lift module. The second is
+  **landed** by seat TAPE: the tape and its laws stand in the library (row 287).
 
-A sweep follows the set: the owner approved the coordinator's recommendations on
-2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
+The set is landed. A sweep follows it: the owner approved the coordinator's recommendations
+on 2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
 main open theory, and it starts with a design question. The owner asked for a discussion of
 it when the set has landed: its obligations, and the base abstractions that it needs first.
 
@@ -315,12 +313,12 @@ the machine. The owner also asked for a plan of how the focus meets bidirectiona
 slicing. [The plan](research/2026-10-06-type-slicing-plan.md) reads the vendored paper,
 maps it to the checker and lists ten proposed claims, four probes and six slices. The
 owner said to go ahead with its recommendations and to run its probes, and asked for a deep
-exploration of a true gap with holes. Two research seats have them, and neither edits a
-tracked source: seat CENSUS measures the checker's graduality on the two corpora
-([its brief](research/2026-10-05-claude-lead/briefs/seat-census-brief.md)), and seat GAP
-studies what a gap with holes would give, from the papers and from what the algebra already
-gives ([its brief](research/2026-10-05-claude-lead/briefs/seat-gap-brief.md)). Two of the
-plan's questions were answered under row 282.
+exploration of a true gap with holes. Two research seats took them, and neither edits a
+tracked source. Seat CENSUS measures the checker's graduality on the two corpora
+([its brief](research/2026-10-05-claude-lead/briefs/seat-census-brief.md)); its receipt is
+not in yet. Seat GAP studied what a gap with holes would give, from the papers and from what
+the algebra already gives; [its study](research/2026-10-06-seat-GAP-study.md) is merged
+(row 288). Two of the plan's questions were answered under row 282.
 
 **The gap with holes is first-class work (row 282).** The owner authorized it on
 2026-10-06: the coordinator ratifies the plan's recommended answers, approves the
@@ -328,11 +326,19 @@ obligations and lands the groundwork, with no shortcut and with Lean's metaprogr
 where it makes a thing generated, fast or ergonomic. Three answers are ratified. Candidate A
 is the first stage, and a true gap with holes is the direction. Explanations have a
 requirement of their own, **R14: a partial program checks and explains its types**. A slice
-view promises one minimal slice and never a minimum size. The first groundwork slice is the
-generic lattice module (seat LATTICE,
-[its brief](research/2026-10-05-claude-lead/briefs/seat-lattice-brief.md)). The checked
-focus waits for the study's verdict on whether its context typing is generated from the
-checker.
+view promises one minimal slice and never a minimum size. The first groundwork slice is
+landed: the generic theory of type slices (seat LATTICE, row 286). The second is in work: one
+combinator for a rule that reads a union member by member (seat UNION, row 285).
+
+**What the study found (row 288).** A hole needs no new constructor and no new type. A hole
+is a host row with a declared type, in a hole table that is appended after the row table.
+The checker admits a program modulo its holes, as the kernel accepts a theorem modulo its
+planned goals. One law is new: a program of a hole's declared type stands in the hole's
+place, and the whole keeps its type. The true gap is the second step: the type of a hole
+whose type is not stated. It costs one appended leaf of `Ty`, with one name per hole, and it
+pays where a value reaches a cell. The study's plan has nine stages and seven slices. Three
+need no ruling and no append: the hole table (SKETCH), the replacement law (REPLACE) and
+formation at a type variable (FORM). Nothing of the study is a theorem of the tree yet.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
@@ -341,6 +347,28 @@ that rests on one schedule.
 
 In work since the suspension of the handover:
 
+- **Seat UNION has the combinator of candidate N** (branch `seat/union`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-union-brief.md); row 285). It
+  names the pattern of `Record.fieldType` once: a member rule, applied to every member of a
+  union's normal form, with the answers joined. It proves the pattern's laws once and writes
+  the two record rules through it. It changes no rule and no admitted program. Each later
+  conversion of a by-shape rule is then an instance. The coordinator probes the conversions
+  beside it: the proofs that each touches, and whether tsgo reads a union the same way.
+- **Seat LATTICE is merged** ([its receipt](research/2026-10-06-seat-LATTICE-receipt.md);
+  row 286). `src/Effect4/Laws/Slice/Lattice.lean` holds the generic theory of type slices. A
+  type slice is the list of its kept sites. A view is a monotone map from the type slices of
+  one program to one column of types, and it owes that one fact. For every view, a minimal
+  valid slice exists below each valid slice, the one-pass descent returns one with one
+  question for each site, a refined query has a minimal slice below, and the join of two
+  valid slices is valid (`SliceView.lattice_minimal`, the registry claim
+  `slice-lattice-minimal`; the paper's Theorems 4.5, 4.6 and 4.7). No statement names `Eff`,
+  `Ty` or the checker, and no view of a real program exists yet.
+- **Seat TAPE is merged** ([its receipt](research/2026-10-06-seat-TAPE-receipt.md);
+  row 287). Forty-four declarations left the scenario support for the library, under the
+  namespace `Effect4.Run`. The sixteen executable definitions are core
+  (`src/Effect4/Run/Tape.lean`): the machine's view, the raw replay, the tape, a funded run
+  and rest. The laws are in `src/Effect4/Laws/Run/Rows.lean` and
+  `src/Effect4/Laws/Run/Tape.lean`. No statement changed, and no generated file moved.
 - **Seat POOLOPS has Pool's public operations** (branch `seat/poolops`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-poolops-brief.md)): `make`, `use`
   by the protected form, and the close that waits, with the closer as a request. It follows
@@ -488,7 +516,7 @@ Merged on 2026-10-06, after the seats above began:
   written. It is the model's half of two open parts. The wrapper's run stays open.
 - **Seat CUTS is merged** (`f3568844`;
   [its receipt](research/2026-10-06-seat-CUTS-receipt.md)), Codex's priority 4. A journal's
-  tape has its cut and position connectors beside `tapeFrom` (`Test/Dogfood/Scenario.lean`).
+  tape has its cut and position connectors (`src/Effect4/Laws/Run/Tape.lean`, since row 287).
   The machine after a position is the raw replay of the decisions up to it (the registry
   claim `journal-position-replay`, R13). The first consumer is a lowered run's views at a
   fresh open (`shown_views_opened`, R8). Lean accepts Codex's four statements and its helper
@@ -706,13 +734,14 @@ Landed later on 2026-10-05:
 
   A shared driver plays a script of moves. A gate ties each control to a clause of a placed
   claim. Four laws of the session are proved: `replays`, `receipt_inert`, `applied_selects` and
-  `control_retires`. Each scenario's claim is proved modulo its planned goals. Eleven planned
+  `control_retires`. The last two stand in the law graph since row 287
+  (`src/Effect4/Laws/Run/Rows.lean`). Each scenario's claim is proved modulo its planned goals. Eleven planned
   goals are new, all in batteries, and the goal gate counts 24. Nineteen lowered runs replay
   on the generated engine, on both instances: the engine's machine view is Lean's at each of
   101 positions (`ocaml/engine/test/scenarios/`). Every run is finite. No host run of a
   scenario existed at that merge; two scenarios run on a host since 2026-10-06, below.
 - **A journal's machine is the raw replay of its tape** (`tape_replays`,
-  `Test/Dogfood/Scenario.lean`; R8, the claim `run-tape-replay`). The coordinator proved the
+  `src/Effect4/Laws/Run/Tape.lean` since row 287; R8, the claim `run-tape-replay`). The coordinator proved the
   first of the scenarios' planned goals, at `[propext, Quot.sound]`. It holds for every run and
   every journal whose tape reads to its end. The tape holds the decision that the session
   hands the machine: for a reply application, the reply's own answer decision. So the

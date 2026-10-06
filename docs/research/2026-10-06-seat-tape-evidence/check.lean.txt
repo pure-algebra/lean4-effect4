@@ -1,0 +1,111 @@
+import Test.Dogfood.Scenario
+set_option pp.fullNames true
+set_option pp.fieldNotation false
+set_option format.width 100
+#check @Effect4.Run.MachineView
+#check @Effect4.Run.machineViewOf
+#check @Effect4.Run.machineView
+#check @Effect4.Run.Position
+#check @Effect4.Run.replyDecision
+#check @Effect4.Run.decisionOf
+#check @Effect4.Run.receiptRow
+#check @Effect4.Run.openedOf
+#check @Effect4.Run.atRest
+#check @Effect4.Run.play_id
+#check @Effect4.Run.play_budget
+#check @Effect4.Run.play_profile
+#check @Effect4.Run.SessionInert
+#check @Effect4.Run.Inert
+#check @Effect4.Run.bindCall_inert
+#check @Effect4.Run.submit_inert
+#check @Effect4.Run.step_receiptRow
+#check @Effect4.Run.play_receiptRows
+#check @Effect4.Run.receive_receiptRows
+#check @Effect4.Run.AppliedSelects
+#check @Effect4.Run.applied_selects
+#check @Effect4.Run.ControlRetires
+#check @Effect4.Run.control_retires
+#check @Effect4.Run.readsOn
+#check @Effect4.Run.tapeFrom
+#check @Effect4.Run.TapeReplays
+#check @Effect4.Run.preflight_replyDecision
+#check @Effect4.Run.applyReply_applied_machine
+#check @Effect4.Run.applyReply_ends
+#check @Effect4.Run.step_keeps_machine
+#check @Effect4.Run.step_takes_decision
+#check @Effect4.Run.tapeFrom_frontier
+#check @Effect4.Run.tapeFrom_skip
+#check @Effect4.Run.tapeFrom_take
+#check @Effect4.Run.tapeFrom_stop
+#check @Effect4.Run.tape_replays
+#check @Effect4.Run.tapeFrom_append
+#check @Effect4.Run.tapeFrom_cut
+#check @Effect4.Run.tapeFrom_cut_replays
+#check @Effect4.Run.tapeFrom_position_prefix
+#check @Effect4.Run.tapeFrom_position_replays
+#check @Effect4.Run.tapeOf
+#check @Effect4.Run.funded
+#check @Effect4.Run.funded_replays
+#check @Effect4.Run.instDecidableEqMachineView
+#print Effect4.Run.MachineView
+#print Effect4.Run.Position
+#print Effect4.Run.machineViewOf
+#print Effect4.Run.machineView
+#print Effect4.Run.replyDecision
+#print Effect4.Run.decisionOf
+#print Effect4.Run.receiptRow
+#print Effect4.Run.openedOf
+#print Effect4.Run.atRest
+#print Effect4.Run.readsOn
+#print Effect4.Run.tapeFrom
+#print Effect4.Run.tapeOf
+#print Effect4.Run.funded
+#print Effect4.Run.TapeReplays
+#print Effect4.Run.SessionInert
+#print Effect4.Run.Inert
+#print Effect4.Run.AppliedSelects
+#print Effect4.Run.ControlRetires
+#print axioms Effect4.Run.MachineView
+#print axioms Effect4.Run.machineViewOf
+#print axioms Effect4.Run.machineView
+#print axioms Effect4.Run.Position
+#print axioms Effect4.Run.replyDecision
+#print axioms Effect4.Run.decisionOf
+#print axioms Effect4.Run.receiptRow
+#print axioms Effect4.Run.openedOf
+#print axioms Effect4.Run.atRest
+#print axioms Effect4.Run.play_id
+#print axioms Effect4.Run.play_budget
+#print axioms Effect4.Run.play_profile
+#print axioms Effect4.Run.SessionInert
+#print axioms Effect4.Run.Inert
+#print axioms Effect4.Run.bindCall_inert
+#print axioms Effect4.Run.submit_inert
+#print axioms Effect4.Run.step_receiptRow
+#print axioms Effect4.Run.play_receiptRows
+#print axioms Effect4.Run.receive_receiptRows
+#print axioms Effect4.Run.AppliedSelects
+#print axioms Effect4.Run.applied_selects
+#print axioms Effect4.Run.ControlRetires
+#print axioms Effect4.Run.control_retires
+#print axioms Effect4.Run.readsOn
+#print axioms Effect4.Run.tapeFrom
+#print axioms Effect4.Run.TapeReplays
+#print axioms Effect4.Run.preflight_replyDecision
+#print axioms Effect4.Run.applyReply_applied_machine
+#print axioms Effect4.Run.applyReply_ends
+#print axioms Effect4.Run.step_keeps_machine
+#print axioms Effect4.Run.step_takes_decision
+#print axioms Effect4.Run.tapeFrom_frontier
+#print axioms Effect4.Run.tapeFrom_skip
+#print axioms Effect4.Run.tapeFrom_take
+#print axioms Effect4.Run.tapeFrom_stop
+#print axioms Effect4.Run.tape_replays
+#print axioms Effect4.Run.tapeFrom_append
+#print axioms Effect4.Run.tapeFrom_cut
+#print axioms Effect4.Run.tapeFrom_cut_replays
+#print axioms Effect4.Run.tapeFrom_position_prefix
+#print axioms Effect4.Run.tapeFrom_position_replays
+#print axioms Effect4.Run.tapeOf
+#print axioms Effect4.Run.funded
+#print axioms Effect4.Run.funded_replays

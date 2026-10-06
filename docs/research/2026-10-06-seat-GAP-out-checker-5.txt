@@ -1,0 +1,100 @@
+closed terms up to size 5: 22172; admitted: 1247; static types met: 143
+
+D1 downward graduality: 7069 folds of one or two disjoint subterms of an admitted term
+  N, eliminators as they are: refused 212; admitted at a type that is not below the original's 1292
+      refused: elem([1]) : nat   folded to   elem(?1)
+      not below: mk(1) : ref(nat)   folded to   mk(?1) : ref(never)
+  N, uniform eliminators: refused 24; admitted at a type that is not below the original's 1308
+      refused: set(mk(1), 1) : nat   folded to   set(mk(?11), 1)
+      not below: mk(1) : ref(nat)   folded to   mk(?1) : ref(never)
+  G, one anonymous gap, local: refused 0; admitted at a type that is not below the original's 4
+      not below: if([1], ["a"]) : list(nat) | list(str)   folded to   if([?11], [?21]) : list(□)
+  G, one gap per hole, local: refused 0; admitted at a type that is not below the original's 0
+  G, one gap per hole, uniform eliminators: refused 0; admitted at a type that is not below the original's 0
+
+D2 (the eliminators as they are) sketches with one hole up to size 6, and with two up to size 4: 180892
+  admitted by the local gap checker: 21322
+  admitted under some static typing of the holes: 21315
+  completed to an admitted term by fillings of size at most 3: 19415
+  local, but no static typing of the holes: 15   e.g. let(?1, set(v0, elem(v0)))   ;   (get(get(elem(get(?21111)))) : ref(num))   ;   (get(elem(get(get(?21111)))) : ref(num))
+  a static typing, but refused by the local checker: 8   e.g. elem(if([1], [?121]))   ;   elem(if([?111], [1]))   ;   elem(if(["a"], [?121]))
+  a completion, but refused by the local checker: 8   e.g. elem(if([1], [?121]))   ;   elem(if([?111], [1]))   ;   elem(if(["a"], [?121]))
+  a static typing, but no completion of size at most 3: 1900   e.g. set(?1, [[1]])   ;   set(?1, mk([1]))   ;   set(?1, [mk(1)])
+
+D2 (uniform eliminators) sketches with one hole up to size 6, and with two up to size 4: 180892
+  admitted by the local gap checker: 21336
+  admitted under some static typing of the holes: 21336
+  completed to an admitted term by fillings of size at most 3: 19421
+  local, but no static typing of the holes: 0
+  a static typing, but refused by the local checker: 0
+  a completion, but refused by the local checker: 0
+  a static typing, but no completion of size at most 3: 1915   e.g. set(?1, [[1]])   ;   set(?1, mk([1]))   ;   set(?1, [mk(1)])
+
+D4 sketches with no cell, uniform eliminators: 58406
+  admitted with a gap per hole: 8012; admitted with each hole at `never`: 8012; admitted under some static typing: 8012; the three verdicts agree on 58406
+
+D3 exhibits
+  one hole used as a list and as a cell: let(?1, if(elem(v0), get(v0)))
+      N, eliminators as they are: refused
+      N, uniform eliminators: never
+      G, one anonymous gap, local: □e | □g
+      G, one gap per hole, local: □1e | □1g
+      G, one gap per hole, uniform eliminators: □1e | □1g
+      a static typing of the holes: none in the universe
+      a static typing of the holes, uniform eliminators: ?1 := never
+      a completion by fillings of size at most 4: none
+  one hole used at `nat` and at `str`: let(?1, if((v0 : nat), (v0 : str)))
+      N, eliminators as they are: nat | str
+      N, uniform eliminators: nat | str
+      G, one anonymous gap, local: nat | str
+      G, one gap per hole, local: nat | str
+      G, one gap per hole, uniform eliminators: nat | str
+      a static typing of the holes: ?1 := never
+      a static typing of the holes, uniform eliminators: ?1 := never
+      a completion by fillings of size at most 4: none
+  a cell made from a hole, then written: let(mk(?11), set(v0, "a"))
+      N, eliminators as they are: refused
+      N, uniform eliminators: refused
+      G, one anonymous gap, local: nat
+      G, one gap per hole, local: nat
+      G, one gap per hole, uniform eliminators: nat
+      a static typing of the holes: ?11 := str
+      a static typing of the holes, uniform eliminators: ?11 := str
+      a completion by fillings of size at most 4: let(mk("a"), set(v0, "a"))
+  two holes in two lists, joined: if([?11], [?21])
+      N, eliminators as they are: list(never)
+      N, uniform eliminators: list(never)
+      G, one anonymous gap, local: list(□)
+      G, one gap per hole, local: list(□11) | list(□21)
+      G, one gap per hole, uniform eliminators: list(□11) | list(□21)
+      a static typing of the holes: ?11 := never, ?21 := never
+      a static typing of the holes, uniform eliminators: ?11 := never, ?21 := never
+      a completion by fillings of size at most 4: if([1], [1])
+  a cell made from a hole, written at `str` and read at `nat`: let(mk(?11), if(set(v0, "a"), (get(v0) : nat)))
+      N, eliminators as they are: refused
+      N, uniform eliminators: refused
+      G, one anonymous gap, local: nat
+      G, one gap per hole, local: nat
+      G, one gap per hole, uniform eliminators: nat
+      a static typing of the holes: none in the universe
+      a static typing of the holes, uniform eliminators: none in the universe
+      a completion by fillings of size at most 4: none
+  a cell of a cell made from a hole, written with two cells: let(mk(mk(?111)), set(v0, if(mk(1), mk("a"))))
+      N, eliminators as they are: refused
+      N, uniform eliminators: refused
+      G, one anonymous gap, local: nat
+      G, one gap per hole, local: nat
+      G, one gap per hole, uniform eliminators: nat
+      a static typing of the holes: none in the universe
+      a static typing of the holes, uniform eliminators: none in the universe
+      a completion by fillings of size at most 4: none
+  a cell made from a hole, written twice: let(mk(?11), if(set(v0, "a"), set(v0, 1)))
+      N, eliminators as they are: refused
+      N, uniform eliminators: refused
+      G, one anonymous gap, local: nat
+      G, one gap per hole, local: nat
+      G, one gap per hole, uniform eliminators: nat
+      a static typing of the holes: ?11 := nat | str
+      a static typing of the holes, uniform eliminators: ?11 := nat | str
+      a completion by fillings of size at most 4: let(mk(if(1, "a")), if(set(v0, "a"), set(v0, 1)))
+python3 gap_checker.py 5  306.30s user 0.87s system 99% cpu 5:10.27 total

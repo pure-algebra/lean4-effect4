@@ -273,6 +273,7 @@ import Test.Dogfood.Scenario.Lowered
 import Test.Dogfood.Scenario.Gate
 import Test.Dogfood.Scenario.Faces
 import Test.Program.ScopedOpContract
+import Test.Program.SliceLattice
 
 /-!
 # Effect4 test battery

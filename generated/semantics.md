@@ -1355,6 +1355,7 @@ Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
 | normalize-idem | compatibility | proved | Effect4.Program.Ty.normalize_idem | yes |  |
 | sub-antisymm-canonical | antisymmetry | proved | Effect4.Program.Ty.sub_antisymm_canonical | yes |  |
 | template-match-anchored | decidability | proved | Effect4.Program.Ty.matchTemplate_complete_anchored | yes |  |
+| slice-lattice-minimal | monotonicity | proved | Effect4.SliceView.lattice_minimal | yes |  |
 
 ### Printed statements
 
@@ -1419,6 +1420,27 @@ Literature: Castagna2024, audit P6 — adaptedResult
           Eq r.bottomFree Bool.true →
             Eq (r.normalize.sub (Effect4.Program.Ty.instantiate τ t).normalize) Bool.true →
               Exists fun σ => Eq (Effect4.Program.Ty.matchTemplate List.nil t r) (Option.some σ)
+```
+
+**slice-lattice-minimal**
+
+```lean
+∀ {α : Type u} {T : Type v} [inst : LE T] [DecidableEq α] [Std.IsPreorder T]
+  [inst_3 : DecidableLE T] [inst_4 : Max T] [Std.LawfulOrderSup T] (v : Effect4.SliceView α T),
+  And
+    (∀ {q : T} {s : Effect4.Slice α},
+      v.Valid q s → Exists fun m => And (Effect4.Slice.instLE.le m s) (v.Minimal q m))
+    (And
+      (∀ {q : T} {s : Effect4.Slice α},
+        v.Valid q s → And (Effect4.Slice.instLE.le (v.descend q s) s) (v.Minimal q (v.descend q s)))
+      (And
+        (∀ {q₁ q₂ : T} {m₂ : Effect4.Slice α},
+          inst.le q₁ q₂ →
+            v.Minimal q₂ m₂ →
+              Exists fun m₁ => And (Effect4.Slice.instLE.le m₁ m₂) (v.Minimal q₁ m₁))
+        (∀ {q₁ q₂ : T} {a b : Effect4.Slice α},
+          v.Valid q₁ a →
+            v.Valid q₂ b → v.Valid (inst_4.max q₁ q₂) (Effect4.Slice.instMax.max a b))))
 ```
 
 ## initial-algebras-folds
@@ -1709,9 +1731,9 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | m7-results-exit-hasty | adequacy | proved | Effect4.Program.Typed.exits_hasTy | yes |  |
 | replay-externals | preservation | proved | Effect4.Program.Sched.replay_externals | yes |  |
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
-| run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
-| funded-run-replay | simulation | proved | Test.Dogfood.Scenario.funded_replays | yes |  |
-| journal-position-replay | simulation | proved | Test.Dogfood.Scenario.tapeFrom_position_replays | yes |  |
+| run-tape-replay | simulation | proved | Effect4.Run.tape_replays | yes |  |
+| funded-run-replay | simulation | proved | Effect4.Run.funded_replays | yes |  |
+| journal-position-replay | simulation | proved | Effect4.Run.tapeFrom_position_replays | yes |  |
 | pool-steps-agree | simulation | proved | Effect4.Pool.Model.pool_steps_agree | yes |  |
 | queue-steps-agree | simulation | proved | Effect4.Queue.Model.queue_steps_agree | yes |  |
 | semaphore-steps-agree | simulation | proved | Effect4.Semaphore.Model.semaphore_steps_agree | yes |  |
@@ -1909,7 +1931,7 @@ Literature: WrightFelleisen1994, audit P36 — analogy
 **run-tape-replay**
 
 ```lean
-Test.Dogfood.Scenario.TapeReplays
+Effect4.Run.TapeReplays
 ```
 
 **funded-run-replay**
@@ -1917,11 +1939,10 @@ Test.Dogfood.Scenario.TapeReplays
 ```lean
 ∀ (s : Effect4.Run),
   s.Reached →
-    Eq (Test.Dogfood.Scenario.funded s) Bool.true →
+    Eq s.funded Bool.true →
       Eq s.machine
         (Effect4.Run.machineOf
-          (Effect4.Run.replayFrom s.built.program s.built.table s.budget.fuel
-            (Test.Dogfood.Scenario.tapeOf s)
+          (Effect4.Run.replayFrom s.built.program s.built.table s.budget.fuel s.tapeOf
             (Effect4.Api.load s.built.program s.budget.compileFuel)))
 ```
 
@@ -1929,14 +1950,12 @@ Test.Dogfood.Scenario.TapeReplays
 
 ```lean
 ∀ (s : Effect4.Run) (rows : List Effect4.Api.Runner.Command) (i : Nat)
-  (position : Test.Dogfood.Scenario.Position),
-  Eq (List.instGetElem?NatLtLength.getElem? (Test.Dogfood.Scenario.tapeFrom s rows).fst i)
-      (Option.some position) →
+  (position : Effect4.Run.Position),
+  Eq (List.instGetElem?NatLtLength.getElem? (s.tapeFrom rows).fst i) (Option.some position) →
     Eq position.after.machine
       (Effect4.Run.machineOf
         (Effect4.Run.replayFrom s.built.program s.built.table s.budget.fuel
-          (List.map (fun x => x.decision)
-            (List.take (instHAdd.hAdd i 1) (Test.Dogfood.Scenario.tapeFrom s rows).fst))
+          (List.map (fun x => x.decision) (List.take (instHAdd.hAdd i 1) (s.tapeFrom rows).fst))
           s.machine))
 ```
 
@@ -2129,15 +2148,15 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
 | R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `ascribe_untyped` (proved), `step_keeps_cell` (proved), `types_ascribe` (proved), `closeStep_types` (proved), `drainStep_types` (proved), `initial_types` (proved), `leaseStep_types` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `returnStep_types` (proved), `selectStep_types` (proved), `Pool.Model.withdrawStep_types` (proved), `close_answers` (proved), `Pool.make_types` (proved), `use_types` (proved), `ascribe_scoped` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `Queue.take_types` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `Semaphore.Model.withdrawStep_types` (proved), `Semaphore.make_types` (proved), `release_types` (proved), `takeIfAvailable_types` (proved), `Semaphore.take_types` (proved), `withPermitsIfAvailable_types` (proved), `withPermits_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
-| R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
+| R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `applied_selects` (proved), `control_retires` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
-| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved), `funded_replays` (proved), `tape_replays` (proved) | — |
+| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `funded_replays` (proved), `tape_replays` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `held_within_fed` (goal), `queueWorkers` (modulo), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `held_within_fed`, `fed_accounted`, `queue_settled`, `releases_once`, `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
-| R13 | open | `journal_replays` (proved) | `replays` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved) | — |
-| R14 | open | — | — | — |
+| R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
+| R14 | open | `lattice_minimal` (proved) | `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_below` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `folded_anti` (proved), `folded_full` (proved), `folded_subset` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_below` (proved), `not_mem_drop` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofFolded_full` (proved), `parentFolded_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
 
 **Next goals** (14): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
@@ -3066,11 +3085,11 @@ flowchart LR
   n1["preflight_success_prepared_fits<br/>proved"]
   n2["preflight_failure_noShapeDefect<br/>proved"]
   n3["handles_of_payloadFieldTy<br/>proved"]
-  n4["stale_never_applies<br/>goal"]
-  n5["timeout<br/>modulo"]
-  n6["workers<br/>modulo"]
-  n7["applied_selects<br/>proved"]
-  n8["control_retires<br/>proved"]
+  n4["applied_selects<br/>proved"]
+  n5["control_retires<br/>proved"]
+  n6["stale_never_applies<br/>goal"]
+  n7["timeout<br/>modulo"]
+  n8["workers<br/>modulo"]
   n9["receipt_inert<br/>proved"]
   n10["decision_preserves<br/>proved"]
   n11["load_typed<br/>proved"]
@@ -3119,16 +3138,16 @@ flowchart LR
   n0 --> n11
   n0 --> n12
   n0 --> n13
-  n4 --> n14
-  n5 --> n15
-  n5 --> n4
-  n5 --> n16
-  n5 --> n14
-  n6 --> n17
-  n6 --> n8
-  n6 --> n7
-  n6 --> n9
   n6 --> n14
+  n7 --> n15
+  n7 --> n6
+  n7 --> n16
+  n7 --> n14
+  n8 --> n17
+  n8 --> n5
+  n8 --> n4
+  n8 --> n9
+  n8 --> n14
   n10 --> n18
   n10 --> n13
   n10 --> n19
@@ -3303,11 +3322,11 @@ flowchart LR
 | `preflight_success_prepared_fits` | proved | — | — | 100 | 754 |
 | `preflight_failure_noShapeDefect` | proved | — | — | 66 | 285 |
 | `handles_of_payloadFieldTy` | proved | — | — | 44 | 135 |
+| `applied_selects` | proved | — | — | 69 | 897 |
+| `control_retires` | proved | — | — | 69 | 858 |
 | `stale_never_applies` | goal | `stale_never_applies` | `checkInput_eq_none_iff` | 84 | 1450 |
 | `timeout` | modulo | `cleanup_keeps`, `retries_declared`, `stale_never_applies` | `cleanup_keeps`, `stale_never_applies`, `retries_declared`, `checkInput_eq_none_iff` | 84 | 1459 |
 | `workers` | modulo | `releases_once` | `releases_once`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 84 | 1457 |
-| `applied_selects` | proved | — | — | 69 | 897 |
-| `control_retires` | proved | — | — | 69 | 858 |
 | `receipt_inert` | proved | — | — | 77 | 951 |
 | `decision_preserves` | proved | — | `fits_subN`, `order_refl`, `subN_trans`, `configTyped_frame`, `fits_mono`, `hom_eq_cata_ty`, `wake_preserves`, `order_trans`, `mono`, `close_typed`, `registrationDone_preserves`, `launch_preserves`, `guardBind_typed`, `deliver_preserves`, `loop_preserves`, `driveState_lift` | 1051 | 1534 |
 | `load_typed` | proved | — | `denotesTyped`, `check_sound`, `check_complete` | 107 | 1167 |
@@ -3384,23 +3403,23 @@ flowchart LR
   n3["loopAgreement<br/>proved"]
   n4["run_eq_ref<br/>proved"]
   n5["mask_rows_table_premises<br/>proved"]
-  n6["unsuspended_runs<br/>proved"]
-  n7["shown_views_opened<br/>proved"]
-  n8["funded_replays<br/>proved"]
-  n9["tape_replays<br/>proved"]
+  n6["funded_replays<br/>proved"]
+  n7["tape_replays<br/>proved"]
+  n8["unsuspended_runs<br/>proved"]
+  n9["shown_views_opened<br/>proved"]
   n10["readTerm_printTerm<br/>proved"]
-  n11["run_agrees<br/>proved"]
-  n12["tapeFrom_position_replays<br/>proved"]
-  n13["journal_replays<br/>proved"]
+  n11["journal_replays<br/>proved"]
+  n12["run_agrees<br/>proved"]
+  n13["tapeFrom_position_replays<br/>proved"]
   n0 --> n10
   n5 --> n1
   n5 --> n0
   n6 --> n11
-  n7 --> n12
-  n8 --> n13
-  n8 --> n9
-  n11 --> n2
-  n12 --> n9
+  n6 --> n7
+  n8 --> n12
+  n9 --> n13
+  n12 --> n2
+  n13 --> n7
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3411,14 +3430,14 @@ flowchart LR
 | `loopAgreement` | proved | — | — | 339 | 917 |
 | `run_eq_ref` | proved | — | — | 880 | 1059 |
 | `mask_rows_table_premises` | proved | — | `read_exact`, `read_print` | 124 | 521 |
-| `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
-| `shown_views_opened` | proved | — | `tapeFrom_position_replays` | 74 | 1027 |
 | `funded_replays` | proved | — | `journal_replays`, `tape_replays` | 71 | 979 |
 | `tape_replays` | proved | — | — | 97 | 962 |
+| `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
+| `shown_views_opened` | proved | — | `tapeFrom_position_replays` | 74 | 1027 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
+| `journal_replays` | proved | — | — | 77 | 938 |
 | `run_agrees` | proved | — | `run_eq_meaning` | 68 | 861 |
 | `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 961 |
-| `journal_replays` | proved | — | — | 77 | 938 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
 
@@ -4264,7 +4283,7 @@ flowchart LR
 - Open: stability over the allowed internal decisions, with a named progress observation (not stated)
 - Open: divergence by compatible prefixes (DB-03; not stated)
 - Open: driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226); a finite control: at a reply application the command loop's leftover commands are not kept, and one run then stands at rest with no exit of the root (the run dropped of Test/Dogfood/Scenario/QueueWorkers.lean; one script at seven budgets)
-- Open: embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, Test/Program/SemaphoreTraces.lean and Test/Program/PoolTraces.lean, trace 7 of each; Pool's measures seven lengths); no bound is claimed; at a run the premise has one name, funded (Test/Dogfood/Scenario.lean), and funded_replays says what it gives; a journal's verdicts do not decide it
+- Open: embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, Test/Program/SemaphoreTraces.lean and Test/Program/PoolTraces.lean, trace 7 of each; Pool's measures seven lengths); no bound is claimed; at a run the premise has one name, funded (src/Effect4/Run/Tape.lean), and funded_replays says what it gives; a journal's verdicts do not decide it
 - Open: wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean); the Queue model's half is proved on the first profile (queue-first-step-invariant, queue-first-run-flags), and the wrapper's run stays open; an instance at rest on one program is the planned goal queue_settled (Test/Dogfood/Scenario/QueueWorkers.lean)
 - Open: posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)
 - Open: posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)
@@ -4321,45 +4340,234 @@ flowchart LR
 ```mermaid
 flowchart LR
   n0["journal_replays<br/>proved"]
-  n1["replays<br/>proved"]
-  n2["tapeFrom_append<br/>proved"]
-  n3["tapeFrom_cut<br/>proved"]
-  n4["tapeFrom_cut_replays<br/>proved"]
-  n5["tapeFrom_position_replays<br/>proved"]
+  n1["tapeFrom_append<br/>proved"]
+  n2["tapeFrom_cut<br/>proved"]
+  n3["tapeFrom_cut_replays<br/>proved"]
+  n4["tapeFrom_position_replays<br/>proved"]
+  n5["replays<br/>proved"]
   n6["tape_replays<br/>proved"]
-  n1 --> n0
+  n3 --> n6
+  n3 --> n2
   n4 --> n6
-  n4 --> n3
-  n5 --> n6
+  n5 --> n0
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `journal_replays` | proved | — | — | 77 | 938 |
-| `replays` | proved | — | `journal_replays` | 82 | 965 |
 | `tapeFrom_append` | proved | — | — | 75 | 954 |
 | `tapeFrom_cut` | proved | — | — | 74 | 953 |
 | `tapeFrom_cut_replays` | proved | — | `tape_replays`, `tapeFrom_cut` | 70 | 960 |
 | `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 961 |
+| `replays` | proved | — | `journal_replays` | 82 | 965 |
 | `tape_replays` | proved | — | — | 97 | 962 |
 
 ### R14: A partial program checks and explains its types: holes and the gap, graduality, the focus, minimal slices and total marking
 
-- Open: focus-decomposes and focus-composes (proposed claims; initial-algebras-folds): an admitted program splits at a supported address into a context typing and a typing of the focus, and a context typing with a focus that fits its mode composes to an admitted program, so an edit at a focus needs the focus checked and not the program again; no goal states either (docs/research/2026-10-06-type-slicing-plan.md, section 6; decisions rows 281, 282)
-- Open: slice-lattice-minimal (proposed claim; subtyping-algebra): for a monotone map from a finite lattice of slices to types, every valid slice has a minimal valid slice below it, the one-step descent ends at one, below a minimal slice of a query lies a minimal slice of each refined query, and the join of two valid slices is valid for the join of their queries; no statement names Eff; seat LATTICE has it
-- Open: column-graduality, slice-conservative and slice-completion (proposed claims; context-requirements): a program with a sub-program folded to an assumption of its own answer type is admitted with the same answer, a smaller error and a smaller requirement, where the folded node's error flows into no value; at the empty mask the sliced check is the checker; every admitted program that agrees with a valid slice on its kept part keeps the queried member; a finite probe runs first (seat CENSUS)
-- Open: marking-total, marking-erases and marking-agrees (proposed claims; initial-algebras-folds): a checker that marks each local failure answers on every program, erasing its marks gives the program back, its first mark is the located refusal of explain, and it has no mark exactly where the program is admitted; no goal states one
+- Open: sketch-conservative, sketch-weakening and hole-rule (proposed claims; initial-algebras-folds): a hole is a host row with a declared type, in a hole table appended after the row table; a program that performs no hole row is checked the same with any hole table; a program with holes that the checker admits stays admitted at its type with more holes declared; a hole row with closed, formed columns types its perform at those columns; so the checker admits a program modulo its holes, and no constructor is added; proved in scratch from check_ext and check_restrict, and no theorem of the tree states one (docs/research/2026-10-06-seat-GAP-study.md, sections 5.7 and 6.2; decisions row 288); slice SKETCH
+- Open: typed-replacement (proposed claim; initial-algebras-folds): an admitted program splits at an address into an environment and a type, and any program of that type stands at the address with the whole keeping its type; one statement over HasTy for each of the six judgments, with the hole table in the statement; it is the law of omitting and of filling, and an edit at a focus needs the focus checked and not the program again; compiled as six statements, proved in scratch on the addresses through bind, with 13 of 57 single steps (the study, section 5.7); no goal states it; slice REPLACE; it replaces the parts focus-decomposes and focus-composes
+- Open: checked-types-closed (proposed claim; subtyping-algebra): every type that the checker gives a formed program is closed; false today, since formation has no rule at a type variable outside a template, and a program of one node is admitted at a type that is not closed (the study, section 9.6 (a), compiled); the repair is one clause of Formation.HeadFormed, which narrows the admitted programs by those that hold a variable in an annotation; slice FORM
+- Open: column-graduality (proposed claim; context-requirements): under a hole row that declares the answer alone, omitting more gives the same answer, a smaller error and a smaller requirement, where the omitted node's error flows into no value; it is the one fact that a slice view of the error or of the requirement column owes (docs/research/2026-10-06-seat-LATTICE-receipt.md, section 7); read upward it is the completion of a type slice; with three declared columns an omission keeps the whole type at every address, by typed-replacement; finite probes pass on the truth lane's programs (seat CENSUS), and no goal states it; slice COLUMN
+- Open: focus-function and marking-agrees (proposed claims; initial-algebras-folds): the traced check answers the environment and the type at each address and agrees with check; a checker that marks each local failure answers on every program, its first mark is the located refusal of explain, it has no mark exactly where the program is admitted, and a marked program is admitted modulo its holes when each mark is read as a hole; not compiled; slice TRACE
 - Open: expected-type-slice (proposed claim; subtyping-algebra): each analysing rule of the checker has a minimal slice of its context that still expects the queried type: the row's declaration, the declared field, the cursor type; not stated
-- Open: gradual-checker (proposed claim; subtyping-algebra, with R2 and R3 for an append): the checker over programs with holes, at types with a gap, satisfies downwards static graduality, and it is the present checker on a program with no hole; a cell's content converts by consistency; the owner approved a gap with holes as first-class work (decisions row 282); its definitions are seat GAP's study, and no goal states it
-- Open: checker-monotone (proposed claim; subtyping-algebra): with every eliminator distributing over a union and total at never, a typed term stays typed at a smaller type under a pointwise smaller environment; decided with the census's numbers (candidate N, decisions row 282)
-- Open: a hole at run time: a frontier with a typed answer, or an operation that a layer provides; fill and resume against the recorded journal; not designed (seat GAP's study, part 3)
+- Open: checker-monotone (proposed claim; subtyping-algebra): with every eliminator and every test by equality reading a union member by member and total at never, and with no scheme, row or loop that binds one parameter at two covariant places, a typed term stays typed at a smaller type under a pointwise smaller environment, and a program stays admitted at a smaller type when a child is replaced by a program of a smaller type; false today at the shape eliminators (fiberTy, Decision.arms), at getOrElse, ite and a loop with no cursor annotation (seat GAP's probes); it is the law of filling a hole at a smaller type and of the answer-only column slices, and the guarantee for an omission does not need it; seat UNION has the combinator that each conversion is an instance of (candidate N, decisions rows 282, 285)
+- Open: gap-conservative, gap-necessary, gap-graduality and gap-exact-off-cells (proposed claims; subtyping-algebra, with R2 and R3 for the appended leaf): with one gap per hole, the gap check on a program with no gap is the checker; a program with holes that some hole table admits passes the gap check; an omission passes the gap check at a gap type that has the original's type as an instance; off invariant positions a program that passes the gap check is admitted by some hole table; at a cell the content converts by the rule with bounds, since the member-by-member rule accepts pairs with no witness; tested on finite models and not compiled (the study, sections 5.2, 5.5 and 5.6); the leaf Ty.gap is stage 6 of the study's plan, and the coordinator tells the owner before the append lands (decisions rows 282, 288); they replace the part gradual-checker
+- Open: fill-by-term (proposed claim; translation-simulation): a reply of a term's value at a hole's frontier and the filled program have one observation; a data hole waits at a frontier as a host row does today, and a handler for a hole's operation waits for a consumer; designed and not compiled (the study, section 7)
 
 ```mermaid
 flowchart LR
+  n0["lattice_minimal<br/>proved"]
+  n1["drop_le<br/>proved"]
+  n2["drop_le_of_subset<br/>proved"]
+  n3["exists_mem_below<br/>proved"]
+  n4["failed_rest<br/>proved"]
+  n5["failed_snoc<br/>proved"]
+  n6["filter_mem_sublists<br/>proved"]
+  n7["firstDrop_append<br/>proved"]
+  n8["firstDrop_length<br/>proved"]
+  n9["folded_anti<br/>proved"]
+  n10["folded_full<br/>proved"]
+  n11["folded_subset<br/>proved"]
+  n12["instIsPreorder<br/>proved"]
+  n13["instLawfulOrderInf<br/>proved"]
+  n14["instLawfulOrderSup<br/>proved"]
+  n15["le_drop<br/>proved"]
+  n16["le_of_mem_below<br/>proved"]
+  n17["not_mem_drop<br/>proved"]
+  n18["restart_append<br/>proved"]
+  n19["restart_eq_sweep<br/>proved"]
+  n20["restart_of_none<br/>proved"]
+  n21["restart_of_some<br/>proved"]
+  n22["sublists_subset<br/>proved"]
+  n23["sweepAsked_length<br/>proved"]
+  n24["sweepFreeAsked_sublist<br/>proved"]
+  n25["sweepFree_congr<br/>proved"]
+  n26["sweepFree_eq_sweep<br/>proved"]
+  n27["sweep_congr<br/>proved"]
+  n28["sweep_kept_needed<br/>proved"]
+  n29["sweep_sublist<br/>proved"]
+  n30["sweep_valid<br/>proved"]
+  n31["keeps_above<br/>proved"]
+  n32["needs<br/>proved"]
+  n33["of_same_sites<br/>proved"]
+  n34["contribution_le<br/>proved"]
+  n35["contribution_lub<br/>proved"]
+  n36["contribution_valid<br/>proved"]
+  n37["decide_valid_up<br/>proved"]
+  n38["descendTree_asks<br/>proved"]
+  n39["descendTree_eq_descend<br/>proved"]
+  n40["descendTree_minimal<br/>proved"]
+  n41["descend_asks<br/>proved"]
+  n42["descend_eq_restart<br/>proved"]
+  n43["descend_le<br/>proved"]
+  n44["descend_minimal<br/>proved"]
+  n45["descend_sublist<br/>proved"]
+  n46["descend_valid<br/>proved"]
+  n47["exists_minimal_below<br/>proved"]
+  n48["isMinimal_iff<br/>proved"]
+  n49["minimal_iff_drop<br/>proved"]
+  n50["minimal_refine<br/>proved"]
+  n51["minimals_complete<br/>proved"]
+  n52["minimals_sound<br/>proved"]
+  n53["ofFolded_full<br/>proved"]
+  n54["parentFolded_sound<br/>proved"]
+  n55["valid_max<br/>proved"]
+  n56["valid_refine<br/>proved"]
+  n57["valid_up<br/>proved"]
+  n0 --> n55
+  n0 --> n50
+  n0 --> n44
+  n0 --> n43
+  n0 --> n47
+  n3 --> n6
+  n16 --> n22
+  n18 --> n5
+  n18 --> n4
+  n18 --> n21
+  n18 --> n7
+  n18 --> n20
+  n18 --> n8
+  n19 --> n18
+  n20 --> n8
+  n21 --> n8
+  n24 --> n2
+  n26 --> n2
+  n28 --> n29
+  n28 --> n2
+  n31 --> n32
+  n32 --> n49
+  n33 --> n12
+  n33 --> n57
+  n35 --> n52
+  n35 --> n51
+  n36 --> n44
+  n36 --> n43
+  n36 --> n12
+  n36 --> n35
+  n36 --> n46
+  n36 --> n57
+  n37 --> n57
+  n38 --> n25
+  n38 --> n54
+  n38 --> n37
+  n38 --> n24
+  n39 --> n54
+  n39 --> n37
+  n39 --> n26
+  n40 --> n39
+  n40 --> n44
+  n41 --> n27
+  n41 --> n23
+  n42 --> n37
+  n42 --> n19
+  n42 --> n8
+  n43 --> n45
+  n44 --> n37
+  n44 --> n28
+  n44 --> n46
+  n44 --> n49
+  n45 --> n29
+  n46 --> n30
+  n47 --> n44
+  n47 --> n43
+  n48 --> n49
+  n49 --> n15
+  n49 --> n57
+  n49 --> n1
+  n49 --> n17
+  n50 --> n56
+  n50 --> n47
+  n51 --> n33
+  n51 --> n48
+  n51 --> n3
+  n52 --> n48
+  n52 --> n16
+  n53 --> n10
+  n55 --> n14
+  n55 --> n12
+  n55 --> n57
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
+| `lattice_minimal` | proved | — | `valid_max`, `minimal_refine`, `descend_minimal`, `descend_le`, `exists_minimal_below` | 0 | 9 |
+| `drop_le` | proved | — | — | 0 | 2 |
+| `drop_le_of_subset` | proved | — | — | 0 | 2 |
+| `exists_mem_below` | proved | — | `filter_mem_sublists` | 0 | 3 |
+| `failed_rest` | proved | — | — | 12 | 13 |
+| `failed_snoc` | proved | — | — | 0 | 1 |
+| `filter_mem_sublists` | proved | — | — | 0 | 1 |
+| `firstDrop_append` | proved | — | — | 0 | 2 |
+| `firstDrop_length` | proved | — | — | 0 | 1 |
+| `folded_anti` | proved | — | — | 0 | 3 |
+| `folded_full` | proved | — | — | 0 | 2 |
+| `folded_subset` | proved | — | — | 0 | 2 |
+| `instIsPreorder` | proved | — | — | 0 | 2 |
+| `instLawfulOrderInf` | proved | — | — | 0 | 3 |
+| `instLawfulOrderSup` | proved | — | — | 0 | 3 |
+| `le_drop` | proved | — | — | 0 | 2 |
+| `le_of_mem_below` | proved | — | `sublists_subset` | 0 | 3 |
+| `not_mem_drop` | proved | — | — | 0 | 2 |
+| `restart_append` | proved | — | `failed_snoc`, `failed_rest`, `restart_of_some`, `firstDrop_append`, `restart_of_none`, `firstDrop_length` | 0 | 6 |
+| `restart_eq_sweep` | proved | — | `restart_append` | 0 | 2 |
+| `restart_of_none` | proved | — | `firstDrop_length` | 0 | 2 |
+| `restart_of_some` | proved | — | `firstDrop_length` | 0 | 2 |
+| `sublists_subset` | proved | — | — | 0 | 1 |
+| `sweepAsked_length` | proved | — | — | 0 | 2 |
+| `sweepFreeAsked_sublist` | proved | — | `drop_le_of_subset` | 0 | 6 |
+| `sweepFree_congr` | proved | — | — | 0 | 2 |
+| `sweepFree_eq_sweep` | proved | — | `drop_le_of_subset` | 0 | 5 |
+| `sweep_congr` | proved | — | — | 0 | 2 |
+| `sweep_kept_needed` | proved | — | `sweep_sublist`, `drop_le_of_subset` | 14 | 14 |
+| `sweep_sublist` | proved | — | — | 0 | 1 |
+| `sweep_valid` | proved | — | — | 0 | 1 |
+| `keeps_above` | proved | — | `needs` | 0 | 6 |
+| `needs` | proved | — | `minimal_iff_drop` | 0 | 6 |
+| `of_same_sites` | proved | — | `instIsPreorder`, `valid_up` | 0 | 5 |
+| `contribution_le` | proved | — | — | 0 | 9 |
+| `contribution_lub` | proved | — | `minimals_sound`, `minimals_complete` | 0 | 11 |
+| `contribution_valid` | proved | — | `descend_minimal`, `descend_le`, `instIsPreorder`, `contribution_lub`, `descend_valid`, `valid_up` | 0 | 13 |
+| `decide_valid_up` | proved | — | `valid_up` | 0 | 5 |
+| `descendTree_asks` | proved | — | `sweepFree_congr`, `parentFolded_sound`, `decide_valid_up`, `sweepFreeAsked_sublist` | 0 | 12 |
+| `descendTree_eq_descend` | proved | — | `parentFolded_sound`, `decide_valid_up`, `sweepFree_eq_sweep` | 0 | 8 |
+| `descendTree_minimal` | proved | — | `descendTree_eq_descend`, `descend_minimal` | 0 | 12 |
+| `descend_asks` | proved | — | `sweep_congr`, `sweepAsked_length` | 0 | 8 |
+| `descend_eq_restart` | proved | — | `decide_valid_up`, `restart_eq_sweep`, `firstDrop_length` | 0 | 7 |
+| `descend_le` | proved | — | `descend_sublist` | 0 | 6 |
+| `descend_minimal` | proved | — | `decide_valid_up`, `sweep_kept_needed`, `descend_valid`, `minimal_iff_drop` | 0 | 9 |
+| `descend_sublist` | proved | — | `sweep_sublist` | 0 | 4 |
+| `descend_valid` | proved | — | `sweep_valid` | 0 | 6 |
+| `exists_minimal_below` | proved | — | `descend_minimal`, `descend_le` | 0 | 8 |
+| `isMinimal_iff` | proved | — | `minimal_iff_drop` | 0 | 8 |
+| `minimal_iff_drop` | proved | — | `le_drop`, `valid_up`, `drop_le`, `not_mem_drop` | 0 | 6 |
+| `minimal_refine` | proved | — | `valid_refine`, `exists_minimal_below` | 0 | 5 |
+| `minimals_complete` | proved | — | `of_same_sites`, `isMinimal_iff`, `exists_mem_below` | 0 | 10 |
+| `minimals_sound` | proved | — | `isMinimal_iff`, `le_of_mem_below` | 0 | 10 |
+| `ofFolded_full` | proved | — | `folded_full` | 0 | 2 |
+| `parentFolded_sound` | proved | — | — | 0 | 6 |
+| `valid_max` | proved | — | `instLawfulOrderSup`, `instIsPreorder`, `valid_up` | 0 | 5 |
+| `valid_refine` | proved | — | — | 0 | 2 |
+| `valid_up` | proved | — | — | 1 | 4 |
 
 ## Acceptance programs
 

@@ -1,0 +1,12 @@
+#!/bin/sh
+# Count the files and sites that name one constructor, split by generated or hand.
+# usage: count-sites.sh <regex> <label>
+# A file is "generated" when one of its first three lines holds the word GENERATED.
+pat="$1"; label="$2"
+for root in src/Effect4 src/OCaml5 tools Test ocaml/eff ocaml/engine ts/eff harness/truth; do
+  [ -d "$root" ] || continue
+  grep -rlE "$pat" "$root" 2>/dev/null | grep -v node_modules | grep -v '/_build/' | grep -v '/goldens/' | while read f; do
+    if head -3 "$f" | grep -q "GENERATED"; then k=generated; else k=hand; fi
+    echo "$root $k $(grep -cE "$pat" "$f")"
+  done
+done | awk -v L="$label" '{f[$1" "$2]++; s[$1" "$2]+=$3} END {for (k in f) printf "%s | %s | %d files | %d lines\n", L, k, f[k], s[k]}' | sort

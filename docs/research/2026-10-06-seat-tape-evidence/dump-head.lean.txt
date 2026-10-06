@@ -1,0 +1,135 @@
+import Test.Dogfood.Scenario
+open Lean
+
+/-! Scratch probe of seat TAPE: the kernel terms of the moved declarations, with each moved name
+written under the new namespace. Run at the base and at the head, the two outputs must be equal.
+A binder's hygiene suffix and the payload of an `mdata` node are not printed: both hold a module
+name or a source position. -/
+namespace TapeDump
+
+def movedShort : List String := ["MachineView", "machineViewOf", "machineView", "Position", "replyDecision", "decisionOf", "receiptRow", "openedOf", "atRest", "play_id", "play_budget", "play_profile", "SessionInert", "Inert", "bindCall_inert", "submit_inert", "step_receiptRow", "play_receiptRows", "receive_receiptRows", "AppliedSelects", "applied_selects", "ControlRetires", "control_retires", "readsOn", "tapeFrom", "TapeReplays", "preflight_replyDecision", "applyReply_applied_machine", "applyReply_ends", "step_keeps_machine", "step_takes_decision", "tapeFrom_frontier", "tapeFrom_skip", "tapeFrom_take", "tapeFrom_stop", "tape_replays", "tapeFrom_append", "tapeFrom_cut", "tapeFrom_cut_replays", "tapeFrom_position_prefix", "tapeFrom_position_replays", "tapeOf", "funded", "funded_replays", "instDecidableEqMachineView"]
+
+def oldNs : Name := `Effect4.Run
+def newNs : Name := `Effect4.Run
+
+/-- The first component of `n` after the prefix `p`, when `p` is a proper prefix of `n`. -/
+def firstAfter (p : Name) (n : Name) : Option String :=
+  let ps := p.components
+  let ns := n.components
+  if ps.isPrefixOf ns then (ns.drop ps.length).head?.map toString else none
+
+def rn (n : Name) : Name :=
+  match firstAfter oldNs n with
+  | some first => if movedShort.contains first then n.replacePrefix oldNs newNs else n
+  | none => n
+
+def serLevel : Level → String
+  | .zero => "0"
+  | .succ l => "S(" ++ serLevel l ++ ")"
+  | .max a b => "max(" ++ serLevel a ++ "," ++ serLevel b ++ ")"
+  | .imax a b => "imax(" ++ serLevel a ++ "," ++ serLevel b ++ ")"
+  | .param n => "p:" ++ toString n
+  | .mvar _ => "?level"
+
+def serBinder : BinderInfo → String
+  | .default => "d" | .implicit => "i" | .strictImplicit => "s" | .instImplicit => "c"
+
+def ser : Expr → String
+  | .bvar i => "#" ++ toString i
+  | .fvar id => "fvar:" ++ toString id.name
+  | .mvar id => "mvar:" ++ toString id.name
+  | .sort l => "Sort(" ++ serLevel l ++ ")"
+  | .const n ls => toString (rn n) ++ ".{" ++ ",".intercalate (ls.map serLevel) ++ "}"
+  | .app f a => "(" ++ ser f ++ " " ++ ser a ++ ")"
+  | .lam n t b bi => "(fun " ++ toString n.eraseMacroScopes ++ "[" ++ serBinder bi ++ "] : " ++ ser t ++ " => " ++ ser b ++ ")"
+  | .forallE n t b bi => "(all " ++ toString n.eraseMacroScopes ++ "[" ++ serBinder bi ++ "] : " ++ ser t ++ ", " ++ ser b ++ ")"
+  | .letE n t v b _ => "(let " ++ toString n.eraseMacroScopes ++ " : " ++ ser t ++ " := " ++ ser v ++ "; " ++ ser b ++ ")"
+  | .lit (.natVal n) => "nat:" ++ toString n
+  | .lit (.strVal s) => "str:" ++ (repr s).pretty
+  | .mdata d e => "(mdata[" ++ ",".intercalate (d.entries.map (toString ·.1)) ++ "] " ++ ser e ++ ")"
+  | .proj s i e => "(proj " ++ toString (rn s) ++ " " ++ toString i ++ " " ++ ser e ++ ")"
+
+/-- The name that a projection node of a moved structure carries in the hashed form. The base's
+filed hashes keep the old name there, so the head maps the new name back to it. -/
+def projRn (n : Name) : Name :=
+  match firstAfter (`Effect4.Run) n with
+  | some first => if movedShort.contains first then n.replacePrefix (`Effect4.Run) (`Test.Dogfood.Scenario) else n
+  | none => n
+
+/-- A moved name under the base's namespace again. -/
+def back (n : Name) : Name :=
+  match firstAfter `Effect4.Run n with
+  | some first => if movedShort.contains first then n.replacePrefix `Effect4.Run `Test.Dogfood.Scenario else n
+  | none => n
+
+/-- The name that the base's term carries where the head's carries `n`, for the two kinds of
+compiler-made names that the move changes. A module-private auxiliary carries its module: the
+head's three modules become the base's one. The matcher of `decisionOf` calls a helper that the
+base took from the reader `applications`. Every other name stays. -/
+def baseName (n : Name) : Name :=
+  if n == `Effect4.Run.decisionOf._sparseCasesOn_3 then
+    `Test.Dogfood.Scenario.applications._sparseCasesOn_2
+  else if n == `Effect4.Run.decisionOf._sparseCasesOn_3.else_eq then
+    `Test.Dogfood.Scenario.applications._sparseCasesOn_2.else_eq
+  else match privateToUserName? n with
+    | some user =>
+      let text := toString n
+      if text.startsWith "_private.Effect4.Run.Tape.0." || text.startsWith "_private.Effect4.Laws.Run.Rows.0." ||
+          text.startsWith "_private.Effect4.Laws.Run.Tape.0." then
+        -- the base hashed a private name as it stood: its module, and the old namespace inside
+        mkPrivateNameCore `Test.Dogfood.Scenario (back user)
+      else n
+    | none => rn n
+
+/-- The head's term in the base's hashed form. Scratch code: `partial` stands in no tracked file. -/
+partial def renamed (e : Expr) : Expr :=
+  e.replace fun
+    | .const n ls => some (.const (baseName n) ls)
+    | .proj s i b => if projRn s == s then none else some (.proj (projRn s) i (renamed b))
+    | _ => none
+
+/-- The constants that a term uses, renamed, sorted, each once. -/
+def usedOf (e : Expr) : List String :=
+  ((e.getUsedConstants.map fun n => toString (rn n)).qsort (· < ·)).toList.eraseDups
+
+def kindOf : ConstantInfo → String
+  | .axiomInfo _ => "axiom" | .defnInfo _ => "def" | .thmInfo _ => "theorem"
+  | .opaqueInfo _ => "opaque" | .quotInfo _ => "quot" | .inductInfo _ => "inductive"
+  | .ctorInfo _ => "constructor" | .recInfo _ => "recursor"
+
+def describe (full : Bool) (name : Name) (ci : ConstantInfo) : String :=
+  let head := "== " ++ toString (rn name) ++ " : " ++ kindOf ci ++ " levels=" ++ toString ci.levelParams
+  let type := "\n  type " ++ ser ci.type
+  let value :=
+    match ci with
+    | .defnInfo d =>
+      (if full then "\n  value " ++ ser d.value else "") ++
+        "\n  valueHash " ++ toString (renamed d.value).hash ++ " safety " ++
+        (match d.safety with | .safe => "safe" | .unsafe => "unsafe" | .partial => "partial")
+    | .thmInfo t => "\n  valueHash " ++ toString (renamed t.value).hash
+    | .inductInfo i => "\n  ctors " ++ toString (i.ctors.map rn) ++ " params " ++ toString i.numParams ++
+        " indices " ++ toString i.numIndices ++ " rec " ++ toString i.isRec
+    | .ctorInfo c => "\n  fields " ++ toString c.numFields
+    | _ => ""
+  head ++ type ++ value
+
+end TapeDump
+
+open TapeDump in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let lookNs : Name := `Effect4.Run
+  let mut out := ""
+  for short in movedShort do
+    let name := lookNs ++ Name.mkSimple short
+    match env.find? name with
+    | none => out := out ++ "== MISSING " ++ toString (rn name) ++ "\n"
+    | some ci =>
+      out := out ++ describe true name ci ++ "\n"
+      -- the declarations that the elaborator made under this one, by name
+      let aux := env.constants.fold (init := (#[] : Array (Name × ConstantInfo))) fun acc n c =>
+        if name.isPrefixOf n && n != name then acc.push (n, c) else acc
+      let aux := aux.qsort fun a b => toString a.1 < toString b.1
+      for (n, c) in aux do
+        out := out ++ "  -- under it: " ++ describe (short != "instDecidableEqMachineView") n c ++ "\n"
+  IO.println out

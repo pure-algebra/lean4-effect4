@@ -1,0 +1,32 @@
+import Test.Dogfood.Scenario
+
+open Lean
+namespace TapeNames
+def movedShort : List String := ["MachineView", "machineViewOf", "machineView", "Position", "replyDecision", "decisionOf", "receiptRow", "openedOf", "atRest", "play_id", "play_budget", "play_profile", "SessionInert", "Inert", "bindCall_inert", "submit_inert", "step_receiptRow", "play_receiptRows", "receive_receiptRows", "AppliedSelects", "applied_selects", "ControlRetires", "control_retires", "readsOn", "tapeFrom", "TapeReplays", "preflight_replyDecision", "applyReply_applied_machine", "applyReply_ends", "step_keeps_machine", "step_takes_decision", "tapeFrom_frontier", "tapeFrom_skip", "tapeFrom_take", "tapeFrom_stop", "tape_replays", "tapeFrom_append", "tapeFrom_cut", "tapeFrom_cut_replays", "tapeFrom_position_prefix", "tapeFrom_position_replays", "tapeOf", "funded", "funded_replays", "instDecidableEqMachineView"]
+def firstAfter (p : Name) (n : Name) : Option String :=
+  let ps := p.components
+  let ns := n.components
+  if ps.isPrefixOf ns then (ns.drop ps.length).head?.map toString else none
+/-- The name with a moved declaration's namespace renamed, also inside a private name. -/
+def normName (n : Name) : String :=
+  let user := (privateToUserName? n).getD n
+  let renamed := match firstAfter `Test.Dogfood.Scenario user with
+    | some first => if movedShort.contains first then user.replacePrefix `Test.Dogfood.Scenario `Effect4.Run else user
+    | none => user
+  (if (privateToUserName? n).isSome then "private " else "") ++ toString renamed
+def kind : ConstantInfo → String
+  | .axiomInfo _ => "axiom" | .defnInfo _ => "def" | .thmInfo _ => "theorem"
+  | .opaqueInfo _ => "opaque" | .quotInfo _ => "quot" | .inductInfo _ => "inductive"
+  | .ctorInfo _ => "constructor" | .recInfo _ => "recursor"
+end TapeNames
+
+open TapeNames in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let mods : List Name := [`Effect4.Run.Tape, `Effect4.Laws.Run.Rows, `Effect4.Laws.Run.Tape, `Test.Dogfood.Scenario]
+  let mut out : Array String := #[]
+  for (n, c) in env.constants.toList do
+    match env.getModuleIdxFor? n with
+    | some idx => if mods.contains env.header.moduleNames[idx.toNat]! then out := out.push (normName n ++ " : " ++ kind c)
+    | none => pure ()
+  IO.println ("\n".intercalate (out.qsort (· < ·)).toList)

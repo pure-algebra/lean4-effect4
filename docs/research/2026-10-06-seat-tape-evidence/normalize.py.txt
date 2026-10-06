@@ -1,0 +1,15 @@
+"""Join the lines of one printed message and collapse its spaces, so that two printings of one
+term compare equal where only the line breaks differ. A message starts at a line that does not
+start with a space; its continuation lines are indented. A structure's field list is indented
+too, so one `#print` of a structure becomes one line."""
+import re, sys
+out, cur = [], None
+for line in open(sys.argv[1]).read().split('\n'):
+    if line.startswith(' ') and cur is not None:
+        cur += ' ' + line.strip()
+    else:
+        if cur is not None: out.append(cur)
+        cur = line
+if cur is not None: out.append(cur)
+norm = [re.sub(r'\s+', ' ', l).replace('( ', '(').strip() for l in out]
+sys.stdout.write('\n'.join(norm) + '\n')

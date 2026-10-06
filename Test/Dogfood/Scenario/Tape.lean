@@ -10,7 +10,7 @@ import Test.Dogfood.Scenario.Timeout
 Decisions row 254 asks that a scenario's observation be compared on the generated OCaml engine.
 The engine holds no session: no stored reply, no retired call, no consumed call. So a scenario's
 observation lands as two clauses. The session clause is the whole observation, checked in each
-scenario's battery. The machine clause is `machineView` (`Test/Dogfood/Scenario.lean`): the
+scenario's battery. The machine clause is `machineView` (`src/Effect4/Run/Tape.lean`): the
 root's exit, the cells, the calls the machine waits on, the armed owners, the runnable fibers and
 the timers.
 
@@ -31,7 +31,7 @@ committed fixtures hold. The writer imports it. The battery
   of a record's run is refused (`findings`), so one name has one script on every lane.
 * **The journal's cut.** `shown_views_opened`: at a fresh open, the raw replay of each prefix of
   a lowered run's tape shows the session machine's view at that position. It is the consumer of
-  the driver's laws of the journal's cut. The record `cuts` holds the controls of those laws, on
+  the laws of the journal's cut. The record `cuts` holds the controls of those laws, on
   two journals of the crew that stop at a row. Its gate, at the module's foot, plays them on the
   Lean machine.
 
@@ -336,7 +336,7 @@ def fixtureTexts : Option (List (String × String)) :=
 
 /-! ## 4. The journal's cut on a lowered run
 
-The driver's laws of the journal's cut (`Test/Dogfood/Scenario.lean`) say what a prefix of a
+The laws of the journal's cut (`src/Effect4/Laws/Run/Tape.lean`) say what a prefix of a
 journal gives: its completed prefix and each position of its tape replay raw. This section
 holds their consumer and their controls.
 
@@ -362,7 +362,7 @@ also asks for a tape that reads every row. It says nothing of the replay's outco
 `observedTableDifference`, of a session ledger or of a lowered engine: the engine's link stays
 the finite comparison of `ocaml/engine/test/scenarios/test_scenarios.ml`. Concept
 `translation-simulation`, R8: the replay view of `tape_replays`, at every position, for a tape
-that may stop. It is `tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`) at each
+that may stop. It is `tapeFrom_position_replays` (`src/Effect4/Laws/Run/Tape.lean`) at each
 position. Consumer: the lowered runs of `fixtures`, each of which opens its program fresh, and
 the record `cuts` below. -/
 @[semantics "translation-simulation" (requirement := R8)]
@@ -501,7 +501,7 @@ def cutLowered (name : String) : Option Lowered :=
 
 /-- The controls of the journal's cut. A control of a journal reads its named run as the gate
 plays it. It takes the opened run and the rows from that run alone: `openedOf`
-(`Test/Dogfood/Scenario.lean`), and the run's journal. The two controls of the lowered run's
+(`src/Effect4/Run/Tape.lean`), and the run's journal. The two controls of the lowered run's
 views read no run: `Lowered.shown` plays the script itself.
 
 * **`views`.** On the journal `stopped` the raw replay shows the session machine at every

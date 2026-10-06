@@ -1,0 +1,28 @@
+"A"
+"Ref.Ref<A>"
+"readonly [Ref.Ref<A>, A]"
+"A"
+some ("number", "never")
+false
+some ("never", "string")
+some ("Ref.Ref<Exit.Exit<never, string>>", "never")
+some ("number", "string")
+some ("number", "never")
+some ("number", "string")
+some "Deferred.Deferred<never, number>"
+some ("T7", false)
+some "number | string"
+none
+some "never"
+some ("Ref.Ref<number>", "string")
+some ("{ readonly a?: T7 }", false)
+some ("Deferred.Deferred<never, number>", true)
+none
+some "number | string"
+some "number | string"
+some "number | string"
+none
+some "readonly [number, string]"
+false
+false
+true

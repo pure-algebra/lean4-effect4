@@ -1,0 +1,16 @@
+Run.MachineView : Type
+Run.machineViewOf : Api.Machine → Run.MachineView
+Run.machineView : Run → Run.MachineView
+Run.Position : Type
+Run.replyDecision : Api.HostSession.Reply → Api.Decision
+Run.decisionOf : Run → Api.Runner.Command → Api.HostSession.Phase → Option Api.Decision
+Run.receiptRow : Api.Runner.Command → Bool
+Run.machineOf : Program.NativeReplay → Api.Machine
+Run.replayFrom : Api.Program → Program.RowTable → Nat → List Api.Decision → Api.Machine → Program.NativeReplay
+Run.enoughFor : Api.Program → Program.RowTable → Nat → Api.Machine → Api.Decision → Bool
+Run.readsOn : Run → Api.Decision → Bool
+Run.tapeFrom : Run → List Api.Runner.Command → List Run.Position × List Api.Runner.Command
+Run.openedOf : Run → Run
+Run.tapeOf : Run → List Api.Decision
+Run.funded : Run → Bool
+Run.atRest : Run → Bool

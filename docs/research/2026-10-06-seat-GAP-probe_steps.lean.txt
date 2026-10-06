@@ -1,0 +1,120 @@
+import Effect4.Laws.Program.Signature
+
+/-!
+Seat GAP, probe 5 (scratch; run from the worktree root through the Lean slot).
+
+More single steps of the replacement law, chosen for the premises that could make a case differ
+from the plain one: a term premise at an extended environment, a decision's arms, a layer
+premise, the signature's scope key in the conclusion, and a step in each sibling judgment that
+has a program as a child. Each is proved here from the tree's theorems.
+-/
+
+set_option autoImplicit false
+
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+open Conform.Effect4.Typing
+
+namespace GapProbe
+
+variable {Op : Type} {s s' : Signature Op}
+
+/-- `catchIf`, the body: the test and the handler are typed at the same error. -/
+theorem step_catchIf_body (h : SigExtends s s') {env : TyEnv} {test : Term}
+    {hole handler : Eff Op} {b hd : EffTy} {answer : Ty}
+    (hb : HasTy s' env hole b)
+    (htest : termTy s (env ++ [b.error]) test = some .bool)
+    (hh : HasTy s (env ++ [b.error]) handler hd)
+    (hj : EffTy.joinAnswer b.answer hd.answer = some answer) :
+    HasTy s' env (.catchIf test hole handler)
+      ⟨answer, catchIfError test env.length b.error hd.error, b.requires.union hd.requires⟩ :=
+  .catchIf hb ((h.termTy _ _).trans htest) (hasTy_ext h hh) hj
+
+/-- `select`, the first arm: the scrutinee's type and the decision's arms are unchanged. -/
+theorem step_select_arm0 (h : SigExtends s s') {env : TyEnv} {sc : Term} {d : Decision}
+    {hole a1 : Eff Op} {t : Ty} {e0 e1 : List Ty} {t0 t1 : EffTy} {answer : Ty}
+    (hs : termTy s env sc = some t) (hd : d.arms t = some (e0, e1))
+    (h0 : HasTy s' (env ++ e0) hole t0) (h1 : HasTy s (env ++ e1) a1 t1)
+    (hj : EffTy.joinAnswer t0.answer t1.answer = some answer) :
+    HasTy s' env (.select sc d hole a1)
+      ⟨answer, t0.error.join t1.error, t0.requires.union t1.requires⟩ :=
+  .select ((h.termTy _ _).trans hs) hd h0 (hasTy_ext h h1) hj
+
+/-- `iterate`, the body: four term premises move along the extension. -/
+theorem step_iterate_body (h : SigExtends s s') {env : TyEnv} {cursorTy : Option Ty}
+    {initial test step result : Term} {hole : Eff Op} {c0 c1 d : Ty} {b : EffTy}
+    (hi : termTy s env initial = some c0)
+    (ht : termTy s (env ++ [cursorTy.getD c0]) test = some .bool)
+    (hb : HasTy s' (env ++ [cursorTy.getD c0]) hole b)
+    (hs : termTy s (env ++ [cursorTy.getD c0, b.answer]) step = some c1)
+    (hres : termTy s (env ++ [cursorTy.getD c0]) result = some d)
+    (h0 : Ty.sub c0.normalize (cursorTy.getD c0).normalize = true)
+    (h1 : Ty.sub c1.normalize (cursorTy.getD c0).normalize = true) :
+    HasTy s' env (.iterate cursorTy initial test step result hole) ⟨d, b.error, b.requires⟩ :=
+  .iterate ((h.termTy _ _).trans hi) ((h.termTy _ _).trans ht) hb ((h.termTy _ _).trans hs)
+    ((h.termTy _ _).trans hres) h0 h1
+
+/-- `provideLayer`, the body: the layer's judgment moves along the extension. -/
+theorem step_provideLayer_body (h : SigExtends s s') {env : TyEnv} {layer : LayerTerm Op}
+    (isLocal : Bool) {hole : Eff Op} {l : LayerTy} {b : EffTy}
+    (hl : LayerHasTy s layer l) (hb : HasTy s' env hole b) :
+    HasTy s' env (.provideLayer layer isLocal hole)
+      ⟨b.answer, b.error.join l.error, Row.union l.requires (Row.diff b.requires l.out)⟩ :=
+  .provideLayer isLocal (layerHasTy_ext h hl) hb
+
+/-- `acquireRelease`, the acquire: the conclusion names the signature's scope key, which an
+extension keeps. -/
+theorem step_acquire (h : SigExtends s s') {env : TyEnv} {hole release : Eff Op} {a r : EffTy}
+    (ha : HasTy s' env hole a)
+    (hr : HasTy s (env ++ [a.answer, .exitOf .unknown .unknown]) release r)
+    (hn : r.error.normalize = .never) :
+    HasTy s' env (.acquireRelease hole release)
+      ⟨a.answer, a.error, (a.requires.union r.requires).union (Requirement.single s.scopeKey)⟩ := by
+  have key := HasTy.acquireRelease ha (hasTy_ext h hr) hn
+  rwa [h.scopeKey] at key
+
+/-- `scoped`: the conclusion reads the signature through `bodyRequires`. -/
+theorem step_scoped (h : SigExtends s s') {env : TyEnv} {hole : Eff Op} {t : EffTy}
+    (ht : HasTy s' env hole t) :
+    HasTy s' env (.scoped hole) { t with requires := bodyRequires s t } := by
+  have key := HasTy.scoped ht
+  rwa [h.bodyRequires] at key
+
+/-- A statement list: the program of a `const x = yield* e`. -/
+theorem step_bindYield (h : SigExtends s s') {env : TyEnv} {inLoop : Bool} {hole : Eff Op}
+    {rest : Stmts Op} {t : EffTy} {r : GenTy}
+    (ht : HasTy s' env hole t) (hr : StmtsHasTy s (env ++ [t.answer]) inLoop rest r) :
+    StmtsHasTy s' env inLoop (.cons (.bindYield hole) rest)
+      ⟨r.answer, t.error.join r.error, t.requires.union r.requires, r.completes, r.breaks⟩ :=
+  .bindYield ht (stmtsHasTy_ext h hr)
+
+/-- A race: its first entrant. -/
+theorem step_effs_head (h : SigExtends s s') {env : TyEnv} {hole : Eff Op} {tail : Effs Op}
+    {hd t : EffTy} {answer : Ty}
+    (hh : HasTy s' env hole hd) (ht : EffsHasTy s env tail t)
+    (hj : EffTy.joinAnswer hd.answer t.answer = some answer) :
+    EffsHasTy s' env (.cons hole tail)
+      ⟨answer, hd.error.join t.error, hd.requires.union t.requires⟩ :=
+  .cons hh (effsHasTy_ext h ht) hj
+
+/-- A fiber action: the program of a scoped fork, whose conclusion names the scope key. -/
+theorem step_forkScoped (h : SigExtends s s') {env : TyEnv} {hole : Eff Op}
+    (options : Supervision.ForkOptions) {p : EffTy} (hp : HasTy s' env hole p) :
+    ActionHasTy s' env (.forkScoped hole options)
+      ⟨.fiberOf p.answer p.error, .never,
+        p.requires.union (Requirement.single s.scopeKey)⟩ := by
+  have key := ActionHasTy.forkScoped options hp
+  rwa [h.scopeKey] at key
+
+/-- A layer: the body of `Layer.effect`, typed at the empty environment. -/
+theorem step_layer_effect (h : SigExtends s s') {key : ServiceKey} {hole : Eff Op} {t : EffTy}
+    {ty : Ty} (hb : HasTy s' [] hole t) (hk : s.serviceTy key = some ty)
+    (hsub : Ty.sub t.answer.normalize ty.normalize = true) :
+    LayerHasTy s' (.effect key hole) ⟨Requirement.single key, t.error, bodyRequires s t⟩ := by
+  have step := LayerHasTy.effect hb (h.service key ty hk) hsub
+  rwa [h.bodyRequires] at step
+
+#print axioms step_acquire
+#print axioms step_layer_effect
+
+end GapProbe

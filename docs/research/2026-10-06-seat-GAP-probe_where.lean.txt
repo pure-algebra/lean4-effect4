@@ -1,0 +1,31 @@
+import Effect4.Laws.Program.Signature
+
+/-! Seat GAP, probe 4 (scratch): where the checker refuses, for three programs of the note. -/
+
+set_option autoImplicit false
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+
+namespace GapProbe
+
+def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
+def prog (first : NativeEff) : NativeEff :=
+  .bind first
+    (.bind (.perform .refMake (.var 0))
+      (.bind (.perform .refSet (pairT (.var 1) (.lit (.nat 7))))
+        (.perform .refGet (.var 1))))
+def neverProg : NativeEff := .failCause (.die (.lit (.str "todo")))
+def hole (i : Nat) : NativeEff := .perform (.external i) (.lit .unit)
+
+/-- The path of the first refusal, when there is one. -/
+def wherePath (e : NativeEff) (table : RowTable := []) : Option (List Nat) :=
+  (explain (nativeSignature table) [] e).map (·.path)
+
+-- candidate N on the plan's example: the refusal is at the write
+#eval wherePath (prog neverProg)
+-- a sketch checked at the base table: the refusal is at the hole
+#eval wherePath (prog (hole 0))
+-- a filling of another type: the refusal is at the write, in the context
+#eval wherePath (prog (.succeed (.lit (.str "x"))))
+
+end GapProbe

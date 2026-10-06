@@ -1,0 +1,718 @@
+#!/usr/bin/env python3
+"""Seat GAP, part 1: a finite model of a fragment of `Ty` with a gap.
+
+What it models (read from the tree at base 42492024, by name):
+  - `Ty.sub`        (src/Effect4/Program/Ty.lean): reflexive; `never` least; a union on the
+                    left is "all members", on the right "some member"; `unknown` greatest;
+                    `list` covariant; `refOf` invariant; a record compares equal heads, then
+                    fields covariantly; the leaf edge `nat` below `number`.
+  - `Ty.normalize`  (same file): a union is the sorted antichain of its maximal members
+                    (`normalizeRow`), `never` is the empty union.
+  - `Ty.join`       (same file): `normalize (union a b)`.
+The gap is one more leaf.  For `sub` and `normalize` it is an opaque atom, exactly as the
+tree treats `Ty.var`: below itself, above `never`, below `unknown`, nothing else.
+
+The language L of one run is finite and exact: atoms `nat`, `num`, `str`; one constructor
+kind of depth 1 over the seven atom-level types; every union (antichain) of those members.
+A gap inside a constructor ranges over the seven atom-level types; a gap at the top of a
+type ranges over the whole static language.  So the concretization of a gap type is computed
+exactly, as a set of static types of L, and each lifted predicate is decided by brute force.
+
+Run: python3 gap_types.py list|ref|rec   (the constructor kind of the run)
+"""
+import itertools
+import sys
+
+# ---------------------------------------------------------------- the type syntax
+NEVER, UNKNOWN, GAP = ("never",), ("unknown",), ("gap",)
+NAT, NUM, STR = ("nat",), ("num",), ("str",)
+ATOMS = [NAT, NUM, STR]
+
+
+def members(t):
+    """`Ty.members`: the members of a union, `never` contributes none."""
+    if t == NEVER:
+        return ()
+    if t[0] == "union":
+        return t[1]
+    return (t,)
+
+
+def sub(a, b):
+    """`Ty.sub`, with the gap as an opaque atom (the tree's treatment of `Ty.var`)."""
+    if a == b:
+        return True
+    if a == NAT and b == NUM:  # the leaf table's edge
+        return True
+    if a == NEVER:
+        return True
+    if a[0] == "union":
+        return all(sub(m, b) for m in a[1])
+    if b[0] == "union":
+        return any(sub(a, m) for m in b[1])
+    if b == UNKNOWN:
+        return True
+    if a[0] == "list" and b[0] == "list":
+        return sub(a[1], b[1])
+    if a[0] == "ref" and b[0] == "ref":
+        return sub(a[1], b[1]) and sub(b[1], a[1])
+    if a[0] == "rec" and b[0] == "rec":
+        return a[1] == b[1] and sub(a[2], b[2])
+    return False
+
+
+def key(t):
+    """An injective structural key, for the member order (the tree's `Ty.key` in spirit)."""
+    order = {"never": 0, "nat": 2, "num": 3, "str": 4, "list": 8, "union": 14, "ref": 16,
+             "gap": 18, "unknown": 19, "rec": 20}
+    if t[0] == "union":
+        return (order["union"],) + tuple(k for m in t[1] for k in key(m))
+    if t[0] == "rec":
+        return (order["rec"], int(t[1])) + key(t[2])
+    if t[0] in ("list", "ref"):
+        return (order[t[0]],) + key(t[1])
+    return (order[t[0]],)
+
+
+def mk_union(ms):
+    """`normalizeRow` then `ofMembers`: sort, deduplicate, keep the maximal members."""
+    flat = []
+    for m in ms:
+        for x in members(m):
+            if x not in flat:
+                flat.append(x)
+    keep = [x for x in flat if all((not sub(x, y)) or sub(y, x) for y in flat)]
+    keep.sort(key=key)
+    if not keep:
+        return NEVER
+    if len(keep) == 1:
+        return keep[0]
+    return ("union", tuple(keep))
+
+
+def join(a, b):
+    return mk_union([a, b])
+
+
+def show(t):
+    if t[0] == "union":
+        return " | ".join(show(m) for m in t[1])
+    if t[0] == "list":
+        return "list(" + show(t[1]) + ")"
+    if t[0] == "ref":
+        return "ref(" + show(t[1]) + ")"
+    if t[0] == "rec":
+        return "{a" + ("?" if t[1] else "") + ": " + show(t[2]) + "}"
+    return {"gap": "□"}.get(t[0], t[0])
+
+
+def has_gap(t):
+    if t == GAP:
+        return True
+    if t[0] == "union":
+        return any(has_gap(m) for m in t[1])
+    if t[0] in ("list", "ref"):
+        return has_gap(t[1])
+    if t[0] == "rec":
+        return has_gap(t[2])
+    return False
+
+
+# ---------------------------------------------------------------- the finite language
+def antichains(ms):
+    """Every subset of `ms` that `mk_union` keeps whole, as a normal type."""
+    out = []
+    for r in range(len(ms) + 1):
+        for combo in itertools.combinations(ms, r):
+            t = mk_union(list(combo))
+            if len(members(t)) == len(combo) and t not in out:
+                out.append(t)
+    return out
+
+
+def build(kind, width):
+    """The static language, the inner types, and the gap types under test."""
+    inner_static = antichains(ATOMS) + [UNKNOWN]            # seven atom-level types
+    inner_gradual = antichains(ATOMS + [GAP]) + [UNKNOWN]   # thirteen with the gap member
+
+    def ctors(inner):
+        if kind == "list":
+            return [("list", x) for x in inner]
+        if kind == "ref":
+            return [("ref", x) for x in inner]
+        return [("rec", o, x) for o in (False, True) for x in inner]
+
+    static_members = ATOMS + ctors(inner_static)
+    static = antichains(static_members) + [UNKNOWN]
+    # the gap types under test: at most `width` constructor members, any atom-level part
+    tops = antichains(ATOMS + [GAP])
+    cms = ctors(inner_gradual)
+    gradual = []
+    for r in range(width + 1):
+        for combo in itertools.combinations(cms, r):
+            for top in tops:
+                t = mk_union(list(combo) + [top])
+                if t not in gradual:
+                    gradual.append(t)
+    if UNKNOWN not in gradual:
+        gradual.append(UNKNOWN)
+    return inner_static, inner_gradual, static, gradual
+
+
+# ---------------------------------------------------------------- concretization
+class Model:
+    def __init__(self, kind, width):
+        self.kind = kind
+        self.inner_static, self.inner_gradual, self.static, self.gradual = build(kind, width)
+        self.index = {t: i for i, t in enumerate(self.static)}
+        n = len(self.static)
+        self.full = (1 << n) - 1
+        # the order as bit rows: up[i] = the supertypes of i, down[i] = its subtypes
+        self.up = [0] * n
+        self.down = [0] * n
+        for i, a in enumerate(self.static):
+            for j, b in enumerate(self.static):
+                if sub(a, b):
+                    self.up[i] |= 1 << j
+                    self.down[j] |= 1 << i
+        self._gamma = {}
+        self._types = {}
+        self._inner = {g: self._inner_gamma(g) for g in self.inner_gradual}
+
+    def _inner_gamma(self, g):
+        """A gap inside a constructor ranges over the seven atom-level types."""
+        if GAP in members(g):
+            rest = [m for m in members(g) if m != GAP]
+            return sorted({mk_union(rest + [s]) for s in self.inner_static}, key=key)
+        return [g]
+
+    def gamma(self, g):
+        """The concretization of a gap type: a bit set of static types of the language."""
+        if g in self._gamma:
+            return self._gamma[g]
+        ms = members(g)
+        top_gap = GAP in ms
+        plain = [m for m in ms if m != GAP and m[0] not in ("list", "ref", "rec")]
+        cons = [m for m in ms if m[0] in ("list", "ref", "rec")]
+        choices = []
+        for c in cons:
+            inner = c[-1]
+            choices.append([c[:-1] + (x,) for x in self._inner[inner]])
+        bits = 0
+        for pick in itertools.product(*choices):
+            base = mk_union(plain + list(pick))
+            if top_gap:
+                bits |= self.up[self.index[base]]      # {S | base : S static} = the supertypes
+            else:
+                bits |= 1 << self.index[base]
+        self._gamma[g] = bits
+        return bits
+
+    def types(self, bits):
+        if bits not in self._types:
+            self._types[bits] = [self.static[i] for i in range(len(self.static)) if bits >> i & 1]
+        return self._types[bits]
+
+    # ------------------------------------------------ the lifted relations, by brute force
+    def down_closure(self, bits):
+        out = 0
+        i = 0
+        b = bits
+        while b:
+            if b & 1:
+                out |= self.down[i]
+            b >>= 1
+            i += 1
+        return out
+
+    def csub_true(self, g1, g2):
+        """Consistent subtyping, by its definition: some concretizations are in `sub`."""
+        return self.gamma(g1) & self.down_closure_of(g2) != 0
+
+    def down_closure_of(self, g):
+        k = ("down", g)
+        if k not in self._gamma:
+            self._gamma[k] = self.down_closure(self.gamma(g))
+        return self._gamma[k]
+
+    def cons_true(self, g1, g2):
+        """Consistency, the lifting of equal normal forms: a common concretization."""
+        return self.gamma(g1) & self.gamma(g2) != 0
+
+    def less_precise(self, g1, g2):
+        """`g1 ⊑ g2` in the slicing paper's direction: `g1` stands for at least `g2`'s types."""
+        return self.gamma(g2) & ~self.gamma(g1) == 0
+
+
+# ---------------------------------------------------------------- candidate structural rules
+def lo(g):
+    """The least concretization where one exists: each gap in a covariant place is `never`.
+    A gap inside `ref` has no least choice, so `lo` is partial there (None)."""
+    if g == GAP:
+        return NEVER
+    if g[0] == "union":
+        parts = [lo(m) for m in g[1]]
+        return None if None in parts else mk_union(parts)
+    if g[0] == "list":
+        x = lo(g[1])
+        return None if x is None else ("list", x)
+    if g[0] == "rec":
+        x = lo(g[2])
+        return None if x is None else ("rec", g[1], x)
+    if g[0] == "ref":
+        return None if has_gap(g[1]) else g
+    return g
+
+
+def hi(g):
+    """The greatest concretization where one exists: each covariant gap is `unknown`."""
+    if g == GAP:
+        return UNKNOWN
+    if g[0] == "union":
+        parts = [hi(m) for m in g[1]]
+        return None if None in parts else mk_union(parts)
+    if g[0] == "list":
+        x = hi(g[1])
+        return None if x is None else ("list", x)
+    if g[0] == "rec":
+        x = hi(g[2])
+        return None if x is None else ("rec", g[1], x)
+    if g[0] == "ref":
+        return None if has_gap(g[1]) else g
+    return g
+
+
+def cons_struct(a, b):
+    """Candidate: consistency by recursion (used at an invariant place)."""
+    return csub_mw(a, b) and csub_mw(b, a)
+
+
+def csub_mw(a, b):
+    """Candidate M: `Ty.sub`'s own recursion with three gap lines added, member by member.
+    A gap on the left is below everything; a gap member on the right is above everything."""
+    if a == b:
+        return True
+    if a == NAT and b == NUM:
+        return True
+    if a == NEVER or a == GAP:
+        return True
+    if a[0] == "union":
+        return all(csub_mw(m, b) for m in a[1])
+    if b == GAP:
+        return True
+    if b[0] == "union":
+        return GAP in b[1] or any(csub_mw(a, m) for m in b[1])
+    if b == UNKNOWN:
+        return True
+    if a[0] == "list" and b[0] == "list":
+        return csub_mw(a[1], b[1])
+    if a[0] == "ref" and b[0] == "ref":
+        return cons_struct(a[1], b[1])
+    if a[0] == "rec" and b[0] == "rec":
+        return a[1] == b[1] and csub_mw(a[2], b[2])
+    return False
+
+
+def csub_ext(a, b):
+    """Candidate E: `sub (lo a) (hi b)` where both exist; else candidate M."""
+    x, y = lo(a), hi(b)
+    if x is not None and y is not None:
+        return sub(x, y)
+    return csub_mw(a, b)
+
+
+def _inner(u):
+    """An atom-level type that may hold the gap as a member: its static members, and the gap."""
+    ms = members(u)
+    return [x for x in ms if x != GAP], GAP in ms
+
+
+def _below_some(r, rest):
+    return any(sub(r, x) for x in rest)
+
+
+def _constraint(m, n):
+    """What `m ≲ n` asks of the gap inside the right member `n`, for two members: None when no
+    choice of the gaps places `m` below `n`; otherwise the lower and the upper bounds of
+    `n`'s gap.  A gap inside the left member is chosen for this pair alone."""
+    if n == UNKNOWN:
+        return ([], [])
+    if m[0] in ("list", "rec") and n[0] == m[0]:
+        if m[0] == "rec" and m[1] != n[1]:
+            return None
+        ru, _ = _inner(m[-1])          # a covariant gap on the left is `never`
+        rv, gv = _inner(n[-1])
+        need = [r for r in ru if not _below_some(r, rv)]
+        if gv:
+            return (need, [])
+        return ([], []) if not need else None
+    if m[0] == "ref" and n[0] == "ref":
+        ru, gu = _inner(m[1])
+        rv, gv = _inner(n[1])
+        if not gv:
+            v = n[1]
+            if gu:                      # ru | X ≡ v: X := v, when ru is below v
+                return ([], []) if all(sub(r, v) for r in ru) else None
+            return ([], []) if m[1] == n[1] else None
+        need = [r for r in ru if not _below_some(r, rv)]
+        if gu:                          # ru | X ≡ rv | Y: X := rv | Y, when ru is below it
+            return (need, [])
+        u = m[1]                        # rv | Y ≡ u: rv below u, Y below u, u below rv | Y
+        if not all(sub(r, u) for r in rv):
+            return None
+        return (need, [u])
+    if m[0] in ("list", "ref", "rec") or n[0] in ("list", "ref", "rec"):
+        return None
+    return ([], []) if sub(m, n) else None
+
+
+def csub_bounds(a, b):
+    """Candidate B: each member of the left picks a member of the right, as in `Ty.sub`; a gap
+    inside a right member collects the bounds of every left member that picked it; the
+    comparison holds when every lower bound is below every upper bound."""
+    ms_a = [m for m in members(a) if m != GAP]      # a gap at the top of the left is `never`
+    ms_b = members(b)
+    if GAP in ms_b:                                 # a gap at the top of the right takes all
+        return True
+    opts = []
+    for m in ms_a:
+        o = []
+        for j, n in enumerate(ms_b):
+            c = _constraint(m, n)
+            if c is not None:
+                o.append((j, c[0], c[1]))
+        if not o:
+            return False
+        opts.append(o)
+    for pick in itertools.product(*opts):
+        lows, ups = {}, {}
+        for j, lo_, up_ in pick:
+            lows.setdefault(j, []).extend(lo_)
+            ups.setdefault(j, []).extend(up_)
+        if all(sub(l, u) for j in lows for l in lows[j] for u in ups.get(j, [])):
+            return True
+    return False
+
+
+# ---------------------------------------------------------------- lifted eliminators
+def list_of_static(t):
+    """`Checker.listOf?` (src/Effect4/Program/Typing/Rules.lean): the head must be `list`."""
+    return t[1] if t[0] == "list" else None
+
+
+def list_of_uniform(t):
+    """Candidate N's eliminator: every member a list, the element types joined; total at
+    `never` (the shape of `Record.fieldType`)."""
+    ms = members(t)
+    if any(m[0] != "list" for m in ms):
+        return None
+    return mk_union([m[1] for m in ms])
+
+
+def field_static(t):
+    """`Record.fieldType` in required mode: every member a record whose field `a` is not
+    optional; the field types joined; total at `never`."""
+    ms = members(t)
+    if any(m[0] != "rec" or m[1] for m in ms):
+        return None
+    return mk_union([m[2] for m in ms])
+
+
+def elim_members(g, shape, inner):
+    """Candidate: the same member-by-member rule with one line for the gap member."""
+    ms = members(g)
+    if any(m != GAP and not shape(m) for m in ms):
+        return None
+    return mk_union([GAP if m == GAP else inner(m) for m in ms])
+
+
+def list_of_gap_table(g):
+    """Candidate for today's shape-matching eliminator: a gap, one list, or lists under a
+    top gap; the last answers `□ | elements`."""
+    if g == GAP:
+        return GAP
+    if g[0] == "list":
+        return g[1]
+    ms = members(g)
+    if GAP in ms and all(m == GAP or m[0] == "list" for m in ms):
+        return mk_union([GAP] + [m[1] for m in ms if m != GAP])
+    return None
+
+
+# ---------------------------------------------------------------- the report
+def first(xs, n=3):
+    return xs[:n]
+
+
+def size(*ts):
+    return sum(len(show(t)) for t in ts)
+
+
+def run(kind, width):
+    m = Model(kind, width)
+    S, G = m.static, m.gradual
+    gi = {g: i for i, g in enumerate(G)}
+    print(f"== run {kind}: {len(S)} static types, {len(G)} gap types under test "
+          f"(at most {width} constructor members)")
+
+    assert all(mk_union([t]) == t for t in S), "a static type is its own normal form"
+    print("control (red): str ≲ nat by candidate M:", csub_mw(STR, NAT), "| by definition:",
+          m.csub_true(STR, NAT))
+
+    # 1. conservativity
+    bad = [(a, b) for a in S for b in S if m.csub_true(a, b) != sub(a, b)]
+    print("L1 consistent subtyping equals `sub` on static pairs: counterexamples", len(bad))
+    bad = [(a, b) for a in S for b in S if csub_mw(a, b) != sub(a, b)]
+    print("L1' candidate M equals `sub` on static pairs: counterexamples", len(bad))
+    bad = [(a, b) for a in S for b in S if csub_bounds(a, b) != sub(a, b)]
+    print("L1'' candidate B equals `sub` on static pairs: counterexamples", len(bad))
+
+    # 2. the gap in a union
+    for name, lhs, rhs in [("□ | never = □", join(GAP, NEVER), GAP),
+                           ("□ | unknown = unknown", join(GAP, UNKNOWN), UNKNOWN),
+                           ("□ | □ = □", join(GAP, GAP), GAP)]:
+        print(f"L2 {name}: normal forms equal {lhs == rhs}; concretizations equal "
+              f"{m.gamma(lhs) == m.gamma(rhs)}")
+    absorbing = [t for t in S if m.gamma(join(GAP, t)) == m.gamma(GAP)]
+    print("L2 static T with γ(□ | T) = γ(□):", [show(t) for t in absorbing])
+    upset = [t for t in S if m.gamma(join(GAP, t)) != m.up[m.index[t]]]
+    print("L2 γ(□ | T) = the supertypes of T, for static T: counterexamples", len(upset))
+
+    # 3. the candidate decision rules against the definition
+    def matrix(f):
+        rows = [0] * len(G)
+        for i, a in enumerate(G):
+            r = 0
+            for j, b in enumerate(G):
+                if f(a, b):
+                    r |= 1 << j
+            rows[i] = r
+        return rows
+
+    def cols(rows):
+        c = [0] * len(G)
+        for i, r in enumerate(rows):
+            j = 0
+            while r:
+                if r & 1:
+                    c[j] |= 1 << i
+                r >>= 1
+                j += 1
+        return c
+
+    T = matrix(m.csub_true)
+    for name, f in [("M (member by member)", csub_mw), ("E (extremes, else M)", csub_ext),
+                    ("B (member by member, with bounds)", csub_bounds)]:
+        R = matrix(f)
+        unsound = [(G[i], G[j]) for i in range(len(G)) for j in range(len(G))
+                   if R[i] >> j & 1 and not T[i] >> j & 1]
+        incomplete = [(G[i], G[j]) for i in range(len(G)) for j in range(len(G))
+                      if T[i] >> j & 1 and not R[i] >> j & 1]
+        print(f"L3 candidate {name}: accepts beyond the definition {len(unsound)}, "
+              f"refuses within it {len(incomplete)}, of {len(G) ** 2} pairs")
+        for a, b in first(sorted(unsound, key=lambda p: size(*p))):
+            print("     accepts, no witness:", show(a), " ≲ ", show(b))
+        for a, b in first(sorted(incomplete, key=lambda p: size(*p))):
+            print("     refuses, witness exists:", show(a), " ≲ ", show(b))
+        if name.startswith("M"):
+            RM = R
+
+    # 4. monotonicity in precision: what downward graduality needs of a relation
+    below = [0] * len(G)          # below[i] = the gap types that are less precise than G[i]
+    for i, a in enumerate(G):
+        ga = m.gamma(a)
+        for j, b in enumerate(G):
+            if ga & ~m.gamma(b) == 0:      # γ(a) ⊆ γ(b): b is less precise than a
+                below[i] |= 1 << j
+    RB = matrix(csub_bounds)
+    for name, R in [("the definition", T), ("candidate M", RM), ("candidate B", RB)]:
+        C = cols(R)
+        bad = []
+        for i in range(len(G)):
+            r = R[i]
+            j = 0
+            while r:
+                if r & 1:
+                    if below[i] & ~C[j]:
+                        k = (below[i] & ~C[j]).bit_length() - 1
+                        bad.append((G[i], G[j], G[k], "left"))
+                    if below[j] & ~R[i]:
+                        k = (below[j] & ~R[i]).bit_length() - 1
+                        bad.append((G[i], G[j], G[k], "right"))
+                r >>= 1
+                j += 1
+        print(f"L4 {name} is kept when either side loses precision: counterexamples {len(bad)}")
+        for a, b, c, side in first(sorted(bad, key=lambda q: size(*q[:3]))):
+            print(f"     holds at {show(a)} ≲ {show(b)}, fails with the {side} side at {show(c)}")
+
+    # 5. consistency is not transitive
+    tr = [(a, b, c) for a in S[:12] for b in G for c in S[:12]
+          if m.csub_true(a, b) and m.csub_true(b, c) and not sub(a, c)]
+    print("L5 a ≲ g ≲ c with a ≰ c (static a, c among the first twelve): count", len(tr))
+    for a, b, c in first(sorted(tr, key=lambda q: size(*q)), 2):
+        print("     ", show(a), "≲", show(b), "≲", show(c))
+
+    # 6. the tree's `join` on gap types: exact, sound, or neither
+    ji = {}
+    exact = lost = gained = checked = 0
+    worst = []
+    for a in G:
+        for b in G:
+            ga, gb = m.types(m.gamma(a)), m.types(m.gamma(b))
+            if len(ga) * len(gb) > 600:
+                continue
+            want = 0
+            for x in ga:
+                for y in gb:
+                    k = (x, y)
+                    if k not in ji:
+                        ji[k] = 1 << m.index[join(x, y)]
+                    want |= ji[k]
+            got = m.gamma(join(a, b))
+            checked += 1
+            if got == want:
+                exact += 1
+            else:
+                if want & ~got:
+                    lost += 1
+                    worst.append((a, b))
+                if got & ~want:
+                    gained += 1
+    print(f"L6 γ(join a b) against {{join x y}}: {checked} pairs checked, {exact} exact, "
+          f"{lost} lose a concretization, {gained} gain one")
+    for a, b in first(sorted(worst, key=lambda q: size(*q))):
+        print("     join(", show(a), ",", show(b), ") =", show(join(a, b)), "loses a member")
+
+    # 6'. `join` is not monotone in precision with one anonymous gap
+    bad = []
+    for a in G:
+        for b in G:
+            j = join(a, b)
+            if j not in gi:
+                continue
+            for a2 in (GAP, a):
+                pass
+    mono_bad = []
+    small = [g for g in G if len(show(g)) <= 14]
+    for a in small:
+        for b in small:
+            jab = m.gamma(join(a, b))
+            ia, ib = gi[a], gi[b]
+            for a2 in small:
+                if not below[gi[a2]] >> ia & 1:      # a is less precise than a2
+                    continue
+                for b2 in small:
+                    if not below[gi[b2]] >> ib & 1:
+                        continue
+                    if m.gamma(join(a2, b2)) & ~jab:
+                        mono_bad.append((a, b, a2, b2))
+    print("L6' a ⊑ a2 and b ⊑ b2 imply join a b ⊑ join a2 b2 (short types): counterexamples",
+          len(mono_bad))
+    for a, b, a2, b2 in first(sorted(mono_bad, key=lambda q: size(*q)), 2):
+        print(f"     join({show(a)}, {show(b)}) = {show(join(a, b))}  but  "
+              f"join({show(a2)}, {show(b2)}) = {show(join(a2, b2))}")
+
+    # 7. distinct normal forms with one meaning
+    by = {}
+    for g in G:
+        by.setdefault(m.gamma(g), []).append(g)
+    classes = [v for v in by.values() if len(v) > 1]
+    print(f"L7 classes of distinct normal forms with equal concretizations: {len(classes)} "
+          f"(of {len(by)} meanings)")
+    for v in first(sorted(classes, key=lambda v: size(v[0])), 3):
+        print("     ", "  ==  ".join(show(x) for x in sorted(v, key=lambda x: len(show(x)))[:4]))
+    # the rule that would merge them: under a top gap, each member at its least concretization
+    def canon(g):
+        ms = members(g)
+        if GAP in ms:
+            parts = [lo(x) for x in ms if x != GAP]
+            if None not in parts:
+                return mk_union([GAP] + parts)
+        return g
+    by2 = {}
+    for g in G:
+        by2.setdefault(m.gamma(g), set()).add(canon(g))
+    left = [v for v in by2.values() if len(v) > 1]
+    print(f"L7' after `□ | M ↦ □ | lo M`: classes with more than one form: {len(left)}")
+    for v in first(sorted(left, key=lambda v: min(size(x) for x in v)), 3):
+        print("     ", "  ==  ".join(show(x) for x in sorted(v, key=lambda x: len(show(x)))[:4]))
+
+    # 8. consistency against mutual consistent subtyping (what an invariant place needs)
+    bad = [(a, b) for a in G for b in G
+           if m.cons_true(a, b) != (T[gi[a]] >> gi[b] & 1 and T[gi[b]] >> gi[a] & 1)]
+    print("L8 a ~ b equals (a ≲ b and b ≲ a): counterexamples", len(bad))
+    for a, b in first(sorted(bad, key=lambda q: size(*q))):
+        print("      ", show(a), " ; ", show(b), "  a~b:", m.cons_true(a, b))
+
+    # 9. eliminators
+    def results(g, f):
+        out = set()
+        for t in m.types(m.gamma(g)):
+            r = f(t)
+            if r is not None:
+                out.add(r)
+        return out
+
+    inner_index = {t: i for i, t in enumerate(m.inner_static)}
+
+    def inner_gamma(g):
+        """γ of an atom-level gap type, as a set of atom-level static types."""
+        if GAP in members(g):
+            rest = [x for x in members(g) if x != GAP]
+            return {mk_union(rest + [s]) for s in m.inner_static}
+        return {g}
+
+    def report(label, f_static, candidate):
+        undef_bad, unsound, loose, n = [], [], [], 0
+        for g in G:
+            want = results(g, f_static)
+            got = candidate(g)
+            n += 1
+            if (got is None) != (not want):
+                undef_bad.append((g, got, want))
+                continue
+            if got is None:
+                continue
+            cover = inner_gamma(got) if all(x[0] not in ("list", "ref", "rec")
+                                           for x in members(got)) else None
+            if cover is None:
+                continue
+            if not want <= cover:
+                unsound.append((g, got))
+            elif want != cover:
+                loose.append((g, got))
+        print(f"L9 {label}: {n} gap types; defined where it should not be or the reverse "
+              f"{len(undef_bad)}; misses a result {len(unsound)}; covers more than the results "
+              f"{len(loose)}")
+        for g, got, want in first(sorted(undef_bad, key=lambda q: size(q[0]))):
+            print("       ", show(g), "→ candidate", None if got is None else show(got),
+                  "; results", sorted(show(x) for x in want)[:4])
+        for g, got in first(sorted(unsound, key=lambda q: size(q[0]))):
+            print("        misses:", show(g), "→", show(got))
+        for g, got in first(sorted(loose, key=lambda q: size(q[0])), 2):
+            print("        loose:", show(g), "→", show(got))
+
+    if kind == "list":
+        report("`listOf?` as it is, lifted by the table", list_of_static, list_of_gap_table)
+        report("`listOf?` as it is, lifted member by member", list_of_static,
+               lambda g: elim_members(g, lambda x: x[0] == "list", lambda x: x[1]))
+        report("`listOf?` made uniform (candidate N), lifted member by member", list_of_uniform,
+               lambda g: elim_members(g, lambda x: x[0] == "list", lambda x: x[1]))
+    if kind == "rec":
+        report("`fieldType` (required), lifted member by member", field_static,
+               lambda g: elim_members(g, lambda x: x[0] == "rec" and not x[1], lambda x: x[2]))
+
+    # 10. two predicates the checker tests by equality
+    bad = [g for g in G if (m.gamma(g) >> m.index[STR] & 1) !=
+           (g == STR or g == GAP or (GAP in members(g) and all(x in (GAP, STR) for x in members(g))))]
+    print("L10 `t = str` lifted: str, □ or □ | str and nothing else: counterexamples", len(bad))
+    bad = [g for g in G if (m.gamma(g) >> m.index[NEVER] & 1) != (lo(g) == NEVER)]
+    print("L10 `t ≡ never` lifted: exactly when the least concretization is never: "
+          "counterexamples", len(bad), [show(g) for g in bad[:3]])
+    return m
+
+
+if __name__ == "__main__":
+    kind = sys.argv[1] if len(sys.argv) > 1 else "list"
+    width = int(sys.argv[2]) if len(sys.argv) > 2 else 2
+    run(kind, width)

@@ -1,0 +1,80 @@
+import Effect4.Laws.Slice.Lattice
+import Effect4.Laws.Program.TypeAlgebra
+
+/-!
+# Seat LATTICE, the second instance of the interface test: a mask over addresses (2026-10-06)
+
+A scratch probe: nothing here is in the tree. Run it as `lake env lean <this file, with the
+suffix .lean>` at the head of branch `seat/lattice`.
+
+It shows the shape that a real instance takes, at the tree's own type carriers. The fold and its
+graduality are the instance's work, so here they are fields of a record. No fold of a real
+program is defined, and no graduality is proved.
+-/
+
+set_option autoImplicit false
+
+namespace AddrSketch
+open Effect4 Effect4.Program
+
+/-- An address of a program: a path of child indices (`Node.at_`, `Program/Refs.lean`). -/
+abbrev Addr := List Nat
+
+-- The module's requirements on the type side resolve at the tree's carriers.
+example : Std.IsPreorder CTy := inferInstance
+example : DecidableLE CTy := inferInstance
+example : Std.LawfulOrderSup CTy := inferInstance
+example : Std.IsPreorder ErrTy := inferInstance
+example : DecidableLE ErrTy := inferInstance
+example : Std.LawfulOrderSup ErrTy := inferInstance
+
+/-- What a real instance has: the addresses that may be folded, one column of the check of the
+program with some of them folded, and its graduality: folding more gives less. The graduality is
+owed for the foldable addresses only. -/
+structure Masked (T : Type) [LE T] where
+  sites : List Addr
+  column : List Addr → T
+  gradual : ∀ {F G : List Addr}, F ⊆ G → G ⊆ sites → column G ≤ column F
+
+/-- The view of a masked check: one line. -/
+def Masked.view {T : Type} [LE T] (m : Masked T) : SliceView Addr T :=
+  SliceView.ofFolded m.sites m.column m.gradual
+
+/-- The plan's conservativity is one line: the full slice folds nothing. -/
+example {T : Type} [LE T] (m : Masked T) : m.view.typeOf ⟨m.sites⟩ = m.column [] :=
+  SliceView.ofFolded_full m.sites m.column m.gradual
+
+-- Each statement of the module applies at the error column, with no fact more.
+example (m : Masked ErrTy) (q : ErrTy) (h : m.view.Valid q ⟨m.sites⟩) :
+    ∃ k : Slice Addr, k ≤ ⟨m.sites⟩ ∧ m.view.Minimal q k :=
+  m.view.exists_minimal_below h
+
+example (m : Masked ErrTy) (q₁ q₂ : ErrTy) (a b : Slice Addr)
+    (ha : m.view.Valid q₁ a) (hb : m.view.Valid q₂ b) : m.view.Valid (max q₁ q₂) (max a b) :=
+  m.view.valid_max ha hb
+
+example (m : Masked CTy) (q₁ q₂ : CTy) (k₂ : Slice Addr) (hq : q₁ ≤ q₂)
+    (h : m.view.Minimal q₂ k₂) : ∃ k₁ : Slice Addr, k₁ ≤ k₂ ∧ m.view.Minimal q₁ k₁ :=
+  m.view.minimal_refine hq h
+
+/-- The executable descent at the error column: why can the program fail with `q`? -/
+def explain (m : Masked ErrTy) (q : ErrTy) : Slice Addr := m.view.descend q ⟨m.sites⟩
+
+/-- The parent of an address, where it is a site: the address without its last index. -/
+def parentIn (sites : List Addr) (a : Addr) : Option Addr :=
+  match a with
+  | [] => none
+  | _ :: _ => if a.dropLast ∈ sites then some a.dropLast else none
+
+/-- The descent over the tree of addresses. With the instance's no-op it gives `explain`'s slice
+and asks no more (`SliceView.descendTree_eq_descend`, `SliceView.descendTree_asks`). -/
+def explainTree (m : Masked ErrTy) (q : ErrTy) : Slice Addr :=
+  m.view.descendTree (parentIn m.sites) q ⟨m.sites⟩
+
+example (m : Masked ErrTy) (q : ErrTy)
+    (noop : ∀ (c : Slice Addr) {x y : Addr}, parentIn m.sites x = some y → y ∉ c.kept →
+      m.view.typeOf c ≤ m.view.typeOf (c.drop x))
+    (h : m.view.Valid q ⟨m.sites⟩) : explainTree m q = explain m q :=
+  m.view.descendTree_eq_descend (parentIn m.sites) noop h
+
+end AddrSketch

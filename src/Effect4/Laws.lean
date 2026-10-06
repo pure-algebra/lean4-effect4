@@ -61,6 +61,8 @@ import Effect4.Laws.Api.Supervision
 import Effect4.Laws.Api.Codegen
 import Effect4.Laws.Api.Formation
 import Effect4.Laws.Run
+import Effect4.Laws.Run.Rows
+import Effect4.Laws.Run.Tape
 import Effect4.Laws.Program.Handles
 import Effect4.Laws.Program.Means
 import Effect4.Laws.Program.Intro
@@ -217,6 +219,7 @@ import Effect4.Laws.Modules.Pool.Reading
 import Effect4.Laws.Modules.Pool.Steps
 import Effect4.Laws.Modules.Pool.Ops
 import Effect4.Laws.Program.Typing.TermIntro
+import Effect4.Laws.Slice.Lattice
 
 /-!
 # Effect4 proof graph

@@ -842,6 +842,18 @@ theorem subN_equiv_iff (a b : Ty) : (subN a b = true ∧ subN b a = true) ↔ a.
   `Ref.modify`'s `B` is such a parameter: it first occurs in the result of the row's binder term.
   The checker binds `B` from the term's raw type (`bindTerm`, `src/Effect4/Program/Typing/Rules.lean`)
   and claims no completeness there (the state plan's T3b).
+- **Minimal type slices of a monotone view (`slice-lattice-minimal`)**: The statement fixes a view: a
+  monotone map from the type slices of one program to a preorder of types.
+  A type slice is the list of its kept sites, and a smaller type slice keeps less.
+  A query is valid for a type slice when the slice's type is at or above it.
+  A minimal valid slice exists below each valid slice, and the one-pass descent returns one.
+  A refined query has a minimal slice below a minimal slice of the wider query.
+  The join of two valid slices is valid for the join of their queries.
+  It is proved (`SliceView.lattice_minimal`, `src/Effect4/Laws/Slice/Lattice.lean`; seat LATTICE).
+  The statements follow Theorems 4.5, 4.6 and 4.7 of the paper on bidirectional type slicing
+  (`vendor/papers/program-graphs/README.md`).
+  It establishes no monotone type map of a real program, no least slice and no minimum-size slice.
+  A view takes one column of the checker's type, and it owes one fact, its monotonicity.
 
 ### 2.7 Concept 7: Initial Algebras & Catamorphic Folds (`initial-algebras-folds`)
 
@@ -1067,14 +1079,14 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   completed prefix and an unread rest, and the prefix's machine is the replay of its
   positions (`tapeFrom_cut_replays`). The laws say nothing about the machine after a stopped
   row: that row may change the machine before it reports its frontier.
-  (`tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`)).
+  (`tapeFrom_position_replays` (`src/Effect4/Laws/Run/Tape.lean`)).
 - **A funded run replays (`funded-run-replay`)**: A run is funded when the tape of its own
   journal leaves no row unread. The machine of a funded run is the raw replay of its tape's
   decisions, from the program's own load. A statement over a session's runs takes this
   budget premise by its one name, `funded`. A journal's verdicts do not decide it: a reply's
   application answers `applied` whatever fuel its step had left. The law says nothing about
   a run with a stopped row, a session ledger or a generated engine.
-  (`funded_replays` (`Test/Dogfood/Scenario.lean`)).
+  (`funded_replays` (`src/Effect4/Laws/Run/Tape.lean`)).
 - **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's six step terms
   agrees with the model's step, on every state of the model. The lease, the withdrawal and
   the closer's step take an injective table. The agreement covers the reply, the stored

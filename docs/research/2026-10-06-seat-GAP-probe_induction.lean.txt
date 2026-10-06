@@ -1,0 +1,96 @@
+import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.References
+
+/-!
+Seat GAP, probe 7 (scratch): the skeleton of the replacement law's induction, on the fragment
+of addresses that pass through `bind` nodes only. It shows how the path, `Node.at_` and
+`Node.replaceAt` meet the inversion of the judgment. Proved here from the tree's theorems.
+-/
+
+set_option autoImplicit false
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+open Conform.Effect4.Typing
+
+namespace GapProbe
+
+variable {Op : Type}
+
+/-- An address that passes through `bind` nodes only. -/
+inductive BindPath : Eff Op → List Nat → Prop
+  | here (e : Eff Op) : BindPath e []
+  | first {a b : Eff Op} {rest : List Nat} : BindPath a rest → BindPath (.bind a b) (0 :: rest)
+  | second {a b : Eff Op} {rest : List Nat} : BindPath b rest → BindPath (.bind a b) (1 :: rest)
+
+/-- The replacement law on that fragment: decomposition and composition, with the signature
+extension in the statement. -/
+theorem replacement_bind (s : Signature Op) {p : Eff Op} {path : List Nat}
+    (hpath : BindPath p path) :
+    ∀ (env0 : TyEnv) (T : EffTy) (q : Eff Op), HasTy s env0 p T →
+      (Node.eff p).at_ path = some (.eff q) →
+      ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+        ∀ (s' : Signature Op) (q' p' : Eff Op), SigExtends s s' → HasTy s' env q' t →
+          (Node.eff p).replaceAt path (.eff q') = some (.eff p') → HasTy s' env0 p' T := by
+  induction hpath with
+  | here e =>
+    intro env0 T q hp hat
+    have hq : e = q := by
+      simpa only [Node.at_, Option.some.injEq, Node.eff.injEq] using hat
+    subst hq
+    refine ⟨env0, T, hp, ?_⟩
+    intro s' q' p' _ hq' hrep
+    simp only [Node.replaceAt] at hrep
+    have hidx : (Node.eff q').ctorIdx = (Node.eff e).ctorIdx := rfl
+    rw [if_pos hidx] at hrep
+    have hp' : q' = p' := by
+      simpa only [Option.some.injEq, Node.eff.injEq] using hrep
+    subst hp'
+    exact hq'
+  | first hrest ih =>
+    rename_i a b rest
+    intro env0 T q hp hat
+    cases hp with
+    | bind hf hr =>
+      have hat' : (Node.eff a).at_ rest = some (.eff q) := by
+        simpa only [Node.at_, Node.child, Option.bind_some] using hat
+      obtain ⟨env, t, hq, hfill⟩ := ih env0 _ q hf hat'
+      refine ⟨env, t, hq, ?_⟩
+      intro s' q' p' hext hq' hrep
+      simp only [Node.replaceAt, Node.child, Option.bind_some] at hrep
+      cases hinner : (Node.eff a).replaceAt rest (.eff q') with
+      | none => simp only [hinner, Option.bind_none] at hrep; exact nomatch hrep
+      | some n =>
+        simp only [hinner, Option.bind_some] at hrep
+        cases n with
+        | eff a' =>
+          have hp' : Eff.bind a' b = p' := by
+            simpa only [Node.setChild, Option.some.injEq, Node.eff.injEq] using hrep
+          subst hp'
+          exact .bind (hfill s' q' a' hext hq' hinner) (hasTy_ext hext hr)
+        | _ => simp only [Node.setChild] at hrep; exact nomatch hrep
+  | second hrest ih =>
+    rename_i a b rest
+    intro env0 T q hp hat
+    cases hp with
+    | bind hf hr =>
+      have hat' : (Node.eff b).at_ rest = some (.eff q) := by
+        simpa only [Node.at_, Node.child, Option.bind_some] using hat
+      obtain ⟨env, t, hq, hfill⟩ := ih _ _ q hr hat'
+      refine ⟨env, t, hq, ?_⟩
+      intro s' q' p' hext hq' hrep
+      simp only [Node.replaceAt, Node.child, Option.bind_some] at hrep
+      cases hinner : (Node.eff b).replaceAt rest (.eff q') with
+      | none => simp only [hinner, Option.bind_none] at hrep; exact nomatch hrep
+      | some n =>
+        simp only [hinner, Option.bind_some] at hrep
+        cases n with
+        | eff b' =>
+          have hp' : Eff.bind a b' = p' := by
+            simpa only [Node.setChild, Option.some.injEq, Node.eff.injEq] using hrep
+          subst hp'
+          exact .bind (hasTy_ext hext hf) (hfill s' q' b' hext hq' hinner)
+        | _ => simp only [Node.setChild] at hrep; exact nomatch hrep
+
+#print axioms replacement_bind
+
+end GapProbe

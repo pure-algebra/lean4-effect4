@@ -1,0 +1,535 @@
+#!/usr/bin/env python3
+"""Seat GAP, part 1 and part 4: a small checker with holes, by exhaustive enumeration.
+
+The language is a fragment in the image of the tree's checker (`Checker.check` and `argTy`,
+src/Effect4/Program/Checker.lean and Typing/Rules.lean):
+
+  n, s            literals at `nat` and `str`
+  v0, v1          variables
+  let e1 e2       `bind`: `e2` at the environment extended by `e1`'s type
+  if e1 e2        the two arms of a `select`: the answer is `Ty.join` of the arms
+  [e]             a one-item list;   elem e   the list eliminator (`Checker.listOf?`)
+  mk e            `Ref.make`;        get e    `Ref.get`;   set e1 e2   `Ref.set`
+  as_T e          an analysing site: `e`'s type must be below the stated `T`
+  ?               a hole
+
+Three ways to give a hole a type are compared on the same programs:
+  N   the hole is a program of type `never`; two variants of the eliminators: as they are
+      (they match one shape and refuse `never`) and uniform (member by member, total at `never`)
+  G   the hole has a gap type; each analysing site is checked alone (the local discipline);
+      two variants: one anonymous gap, and one gap per hole (a name)
+  S   the hole has SOME static type: the sketch is admitted when one static typing of its
+      holes makes the static checker admit it (the global discipline)
+
+Run: python3 gap_checker.py [max term size, default 5]
+"""
+import itertools
+import sys
+from gap_types import (NEVER, UNKNOWN, NAT, NUM, STR, members, sub, mk_union, show, key)
+
+# ------------------------------------------------------------------ gap atoms with names
+def gap(name):
+    return ("gap", name)
+
+
+def is_gap(t):
+    return t[0] == "gap"
+
+
+def has_gap(t):
+    if is_gap(t):
+        return True
+    if t[0] == "union":
+        return any(has_gap(m) for m in t[1])
+    if t[0] in ("list", "ref"):
+        return has_gap(t[1])
+    return False
+
+
+def gkey(t):
+    if is_gap(t):
+        return (18, t[1])
+    if t[0] == "union":
+        return (14,) + tuple(gkey(m) for m in t[1])
+    if t[0] in ("list", "ref"):
+        return ({"list": 8, "ref": 16}[t[0]], gkey(t[1]))
+    return (key(t)[0],)
+
+
+def gsub(a, b):
+    """`Ty.sub` with every gap atom opaque: the tree's treatment of `Ty.var`."""
+    if a == b:
+        return True
+    if a == NAT and b == NUM:
+        return True
+    if a == NEVER:
+        return True
+    if a[0] == "union":
+        return all(gsub(m, b) for m in a[1])
+    if b[0] == "union":
+        return any(gsub(a, m) for m in b[1])
+    if b == UNKNOWN:
+        return True
+    if a[0] == "list" and b[0] == "list":
+        return gsub(a[1], b[1])
+    if a[0] == "ref" and b[0] == "ref":
+        return gsub(a[1], b[1]) and gsub(b[1], a[1])
+    return False
+
+
+def gunion(ms):
+    flat = []
+    for m in ms:
+        for x in members(m):
+            if x not in flat:
+                flat.append(x)
+    keep = [x for x in flat if all((not gsub(x, y)) or gsub(y, x) for y in flat)]
+    keep.sort(key=gkey)
+    if not keep:
+        return NEVER
+    return keep[0] if len(keep) == 1 else ("union", tuple(keep))
+
+
+def gshow(t):
+    if is_gap(t):
+        return "□" + t[1]
+    if t[0] == "union":
+        return " | ".join(gshow(m) for m in t[1])
+    if t[0] in ("list", "ref"):
+        return t[0] + "(" + gshow(t[1]) + ")"
+    return t[0]
+
+
+def csub(a, b):
+    """Consistent subtyping, candidate M: `sub`'s recursion with the gap lines."""
+    if a == b or (a == NAT and b == NUM) or a == NEVER or is_gap(a):
+        return True
+    if a[0] == "union":
+        return all(csub(m, b) for m in a[1])
+    if is_gap(b):
+        return True
+    if b[0] == "union":
+        return any(is_gap(m) for m in b[1]) or any(csub(a, m) for m in b[1])
+    if b == UNKNOWN:
+        return True
+    if a[0] == "list" and b[0] == "list":
+        return csub(a[1], b[1])
+    if a[0] == "ref" and b[0] == "ref":
+        return csub(a[1], b[1]) and csub(b[1], a[1])
+    return False
+
+
+# ------------------------------------------------------------------ terms
+ANN = [NAT, NUM, STR, ("list", NAT), ("ref", NUM)]
+
+
+def terms(size, depth, hole):
+    """Every term of exactly `size` nodes whose free variables are below `depth`."""
+    out = []
+    if size == 1:
+        out += [("n",), ("s",)] + [("v", i) for i in range(depth)]
+        if hole:
+            out.append(("?",))
+        return out
+    for e in terms(size - 1, depth, hole):
+        out += [("list", e), ("elem", e), ("mk", e), ("get", e)]
+        out += [("as", t, e) for t in ANN]
+    for k in range(1, size - 1):
+        for a in terms(k, depth, hole):
+            for b in terms(size - 1 - k, depth + 1, hole):
+                out.append(("let", a, b))
+            for b in terms(size - 1 - k, depth, hole):
+                out += [("if", a, b), ("set", a, b)]
+    return out
+
+
+def tshow(e):
+    h = e[0]
+    if h in ("n", "s"):
+        return {"n": "1", "s": '"a"'}[h]
+    if h == "v":
+        return "v" + str(e[1])
+    if h == "?":
+        return "?" + (e[1] if len(e) > 1 else "")
+    if h == "as":
+        return "(" + tshow(e[2]) + " : " + show(e[1]) + ")"
+    if h == "list":
+        return "[" + tshow(e[1]) + "]"
+    if h in ("elem", "mk", "get"):
+        return h + "(" + tshow(e[1]) + ")"
+    return h + "(" + tshow(e[1]) + ", " + tshow(e[2]) + ")"
+
+
+def subterms(e, path=()):
+    """Every position of a term, in program order, with the subterm there."""
+    yield path, e
+    h = e[0]
+    if h in ("list", "elem", "mk", "get"):
+        yield from subterms(e[1], path + (1,))
+    elif h == "as":
+        yield from subterms(e[2], path + (2,))
+    elif h in ("let", "if", "set"):
+        yield from subterms(e[1], path + (1,))
+        yield from subterms(e[2], path + (2,))
+
+
+def replace(e, path, new):
+    if not path:
+        return new
+    i = path[0]
+    return e[:i] + (replace(e[i], path[1:], new),) + e[i + 1:]
+
+
+def name_holes(e):
+    """Give each hole its own name, by position."""
+    out = e
+    for path, t in list(subterms(e)):
+        if t[0] == "?":
+            out = replace(out, path, ("?", "".join(map(str, path)) or "r"))
+    return out
+
+
+# ------------------------------------------------------------------ the checker, in modes
+class Mode:
+    def __init__(self, uniform=False, consistent=False, hole=None):
+        self.uniform = uniform          # eliminators member by member, total at `never`
+        self.consistent = consistent    # analysing sites by consistent subtyping
+        self.hole = hole                # name -> type of the hole
+
+
+def elim(mode, shape, t, suffix):
+    """The list eliminator (`Checker.listOf?`): as it is, it matches one `list` head and
+    refuses `never` and a union; uniform, it reads every member and is total at `never`.
+    With gaps: the same rule, and a gap member answers a gap."""
+    ms = members(t)
+    if mode.uniform or mode.consistent:
+        if not mode.uniform and not any(is_gap(m) for m in ms) and len(ms) != 1:
+            return None                 # as it is: one member of the shape, no gap
+        if any(not is_gap(m) and m[0] != shape for m in ms):
+            return None
+        return gunion([gap(m[1] + suffix) if is_gap(m) else m[1] for m in ms])
+    return t[1] if t[0] == shape else None
+
+
+def cell_content(mode, t):
+    """What a row over a cell reads off its request (`Ty.matchTemplate` at `refOf (var 0)`,
+    src/Effect4/Program/Ty.lean): at one cell, its content; at `never`, nothing is bound and
+    the instance is `never` (the row is total at `never`); at a union of cells the first
+    member binds and the guard refuses, unless the eliminators are uniform."""
+    ms = members(t)
+    if not ms:
+        return NEVER
+    if any(not is_gap(m) and m[0] != "ref" for m in ms):
+        return None
+    if len(ms) != 1 and not mode.uniform and not any(is_gap(m) for m in ms):
+        return None
+    return gunion([gap(m[1] + "g") if is_gap(m) else m[1] for m in ms])
+
+
+def check(mode, env, e):
+    h = e[0]
+    if h == "n":
+        return NAT
+    if h == "s":
+        return STR
+    if h == "v":
+        return env[e[1]] if e[1] < len(env) else None
+    if h == "?":
+        return mode.hole(e[1] if len(e) > 1 else "")
+    below = csub if mode.consistent else gsub
+    if h == "as":
+        t = check(mode, env, e[2])
+        return e[1] if t is not None and below(t, e[1]) else None
+    a = check(mode, env, e[1])
+    if a is None:
+        return None
+    if h == "list":
+        return ("list", a)
+    if h == "mk":
+        return ("ref", a)
+    if h == "elem":
+        return elim(mode, "list", a, "e")
+    if h == "get":
+        return cell_content(mode, a)
+    if h == "let":
+        return check(mode, env + [a], e[2])
+    b = check(mode, env, e[2])
+    if b is None:
+        return None
+    if h == "if":
+        return gunion([a, b])
+    if h == "set":                      # `Ref.set`: request `prod (refOf (var 0)) (var 0)`
+        ms = members(a)                 # at `never` the request is `never`: admitted
+        if any(not is_gap(m) and m[0] != "ref" for m in ms):
+            return None
+        if len(ms) > 1 and not mode.uniform and not any(is_gap(m) for m in ms):
+            return None                 # as it is: the first member binds, the guard refuses
+        for m in ms:                    # uniform: the row is used at each member of the request
+            content = gap(m[1] + "g") if is_gap(m) else m[1]
+            if not below(b, content):
+                return None
+        return NAT
+    raise ValueError(h)
+
+
+STATIC = Mode()
+N_AS_IS = Mode(hole=lambda u: NEVER)
+N_UNIFORM = Mode(uniform=True, hole=lambda u: NEVER)
+G_ANON = Mode(consistent=True, hole=lambda u: gap(""))
+G_ANON.anonymous = True
+G_NAMED = Mode(consistent=True, hole=lambda u: gap(u))
+G_NAMED_U = Mode(uniform=True, consistent=True, hole=lambda u: gap(u))
+
+
+def instances(g, universe, anonymous):
+    """Every static type a gap type stands for, over a universe of fillings: one filling per
+    name, or one per occurrence when the gap is anonymous."""
+    if not has_gap(g):
+        return {g}
+    slots = []
+
+    def walk(t):
+        if is_gap(t):
+            slots.append(t[1] if not anonymous else len(slots))
+        elif t[0] == "union":
+            for m in t[1]:
+                walk(m)
+        elif t[0] in ("list", "ref"):
+            walk(t[1])
+    walk(g)
+    names = sorted(set(slots), key=str)
+    out = set()
+    for pick in itertools.product(universe, repeat=len(names)):
+        sigma = dict(zip(names, pick))
+        counter = [0]
+
+        def inst(t):
+            if is_gap(t):
+                k = t[1] if not anonymous else counter[0]
+                counter[0] += 1
+                return sigma[k]
+            if t[0] == "union":
+                return mk_union([inst(m) for m in t[1]])
+            if t[0] in ("list", "ref"):
+                return (t[0], inst(t[1]))
+            return t
+        out.add(inst(g))
+    return out
+
+
+def main(max_size):
+    closed = [e for k in range(1, max_size + 1) for e in terms(k, 0, False)]
+    typed = [(e, check(STATIC, [], e)) for e in closed]
+    admitted = [(e, t) for e, t in typed if t is not None]
+    universe = sorted({t for _, t in admitted} |
+                      {check(STATIC, [], s) for e, _ in admitted for _, s in subterms(e)
+                       if check(STATIC, [], s) is not None} | {NEVER, UNKNOWN}, key=key)
+    print(f"closed terms up to size {max_size}: {len(closed)}; admitted: {len(admitted)}; "
+          f"static types met: {len(universe)}")
+
+    # ---- downward graduality, one fold and two folds
+    def folds(e):
+        pos = [(p, s) for p, s in subterms(e)]
+        closed_pos = [p for p, s in pos]   # every position: a hole needs no closed subterm
+        singles = [[p] for p in closed_pos if p != ()]
+        pairs = [[p, q] for p, q in itertools.combinations(closed_pos, 2)
+                 if p != () and p[:len(q)] != q and q[:len(p)] != p]
+        return singles + pairs
+
+    modes = [("N, eliminators as they are", N_AS_IS), ("N, uniform eliminators", N_UNIFORM),
+             ("G, one anonymous gap, local", G_ANON), ("G, one gap per hole, local", G_NAMED),
+             ("G, one gap per hole, uniform eliminators", G_NAMED_U)]
+    stats = {name: [0, 0, 0, None, None] for name, _ in modes}   # folds, refused, not below
+    total = 0
+    for e, t in admitted:
+        for fold in folds(e):
+            sk = e
+            for p in fold:
+                sk = replace(sk, p, ("?", "".join(map(str, p))))
+            total += 1
+            for name, mode in modes:
+                got = check(mode, [], sk)
+                st = stats[name]
+                st[0] += 1
+                if got is None:
+                    st[1] += 1
+                    if st[3] is None or len(tshow(e)) < len(tshow(st[3][0])):
+                        st[3] = (e, sk, t)
+                    continue
+                if mode.consistent:
+                    ok = t in instances(got, universe, getattr(mode, "anonymous", False))
+                else:
+                    ok = gsub(got, t)
+                if not ok:
+                    st[2] += 1
+                    if st[4] is None or len(tshow(e)) < len(tshow(st[4][0])):
+                        st[4] = (e, sk, t, got)
+    print(f"\nD1 downward graduality: {total} folds of one or two disjoint subterms of an "
+          f"admitted term")
+    for name, _ in modes:
+        f, refused, notbelow, ex1, ex2 = stats[name]
+        print(f"  {name}: refused {refused}; admitted at a type that is not below the "
+              f"original's {notbelow}")
+        if ex1:
+            print(f"      refused: {tshow(ex1[0])} : {show(ex1[2])}   folded to   {tshow(ex1[1])}")
+        if ex2:
+            print(f"      not below: {tshow(ex2[0])} : {show(ex2[2])}   folded to   "
+                  f"{tshow(ex2[1])} : {gshow(ex2[3])}")
+
+    # ---- sketches written directly: admitted by whom, and completable or not
+    small = max_size + 1
+    sketches = []
+    for k in range(1, small + 1):
+        for e in terms(k, 0, True):
+            holes = sum(1 for _, s in subterms(e) if s[0] == "?")
+            if holes == 1 or (holes == 2 and k <= 4):
+                sketches.append(name_holes(e))
+    fill_terms = {d: [e for k in range(1, 4) for e in terms(k, d, False)] for d in range(4)}
+    wide = sorted(set(universe) | {(c, t) for c in ("list", "ref") for t in universe}, key=key)
+
+    def hole_sites(e, depth=0, path=()):
+        h = e[0]
+        if h == "?":
+            yield path, depth
+        elif h in ("list", "elem", "mk", "get"):
+            yield from hole_sites(e[1], depth, path + (1,))
+        elif h == "as":
+            yield from hole_sites(e[2], depth, path + (2,))
+        elif h == "let":
+            yield from hole_sites(e[1], depth, path + (1,))
+            yield from hole_sites(e[2], depth + 1, path + (2,))
+        elif h in ("if", "set"):
+            yield from hole_sites(e[1], depth, path + (1,))
+            yield from hole_sites(e[2], depth, path + (2,))
+
+    def typing(sk, names, uniform, types):
+        for pick in itertools.product(types, repeat=len(names)):
+            sigma = dict(zip(names, pick))
+            if check(Mode(uniform=uniform, hole=lambda u, s=sigma: s[u]), [], sk) is not None:
+                return sigma
+        return None
+
+    for label, uniform, local in [("the eliminators as they are", False, G_NAMED),
+                                  ("uniform eliminators", True, G_NAMED_U)]:
+        static = Mode(uniform=uniform)
+        n_local = n_typing = n_comp = 0
+        local_not_typing, typing_not_local, comp_not_local, typing_not_comp = [], [], [], []
+        for sk in sketches:
+            sites = list(hole_sites(sk))
+            names = ["".join(map(str, p)) or "r" for p, _ in sites]
+            loc = check(local, [], sk) is not None
+            typ = typing(sk, names, uniform, universe) is not None
+            if loc and not typ:                   # look again in the wider universe
+                typ = typing(sk, names, uniform, wide) is not None
+            comp = False
+            if typ:
+                for pick in itertools.product(*[fill_terms[min(d, 3)] for _, d in sites]):
+                    full = sk
+                    for (p, _), f in zip(sites, pick):
+                        full = replace(full, p, f)
+                    if check(static, [], full) is not None:
+                        comp = True
+                        break
+            n_local += loc
+            n_typing += typ
+            n_comp += comp
+            if loc and not typ:
+                local_not_typing.append(sk)
+            if typ and not loc:
+                typing_not_local.append(sk)
+            if comp and not loc:
+                comp_not_local.append(sk)
+            if typ and not comp:
+                typing_not_comp.append(sk)
+        print(f"\nD2 ({label}) sketches with one hole up to size {small}, and with two up to "
+              f"size 4: {len(sketches)}")
+        print(f"  admitted by the local gap checker: {n_local}")
+        print(f"  admitted under some static typing of the holes: {n_typing}")
+        print(f"  completed to an admitted term by fillings of size at most 3: {n_comp}")
+        for name, xs in [("local, but no static typing of the holes", local_not_typing),
+                         ("a static typing, but refused by the local checker", typing_not_local),
+                         ("a completion, but refused by the local checker", comp_not_local),
+                         ("a static typing, but no completion of size at most 3", typing_not_comp)]:
+            xs = sorted(xs, key=lambda e: len(tshow(e)))
+            print(f"  {name}: {len(xs)}" +
+                  ("" if not xs else "   e.g. " + "   ;   ".join(tshow(x) for x in xs[:3])))
+
+    # ---- off the cell: `never` is the witness
+    def cell_free(e):
+        return all(s[0] not in ("mk", "get", "set") for _, s in subterms(e))
+
+    free = [sk for sk in sketches if cell_free(sk)]
+    agree = n_g = n_n = n_t = 0
+    diff = []
+    for sk in free:
+        sites = list(hole_sites(sk))
+        names = ["".join(map(str, p)) or "r" for p, _ in sites]
+        g = check(G_NAMED_U, [], sk) is not None
+        n = check(N_UNIFORM, [], sk) is not None
+        t = typing(sk, names, True, universe) is not None
+        n_g += g
+        n_n += n
+        n_t += t
+        if g == n == t:
+            agree += 1
+        else:
+            diff.append(sk)
+    print(f"\nD4 sketches with no cell, uniform eliminators: {len(free)}")
+    print(f"  admitted with a gap per hole: {n_g}; admitted with each hole at `never`: {n_n}; "
+          f"admitted under some static typing: {n_t}; the three verdicts agree on {agree}")
+    for sk in sorted(diff, key=lambda e: len(tshow(e)))[:3]:
+        print("      differ:", tshow(sk))
+
+    # ---- exhibits, checked one by one
+    print("\nD3 exhibits")
+    V0 = ("v", 0)
+    ex = [("one hole used as a list and as a cell",
+           ("let", ("?", "1"), ("if", ("elem", V0), ("get", V0)))),
+          ("one hole used at `nat` and at `str`",
+           ("let", ("?", "1"), ("if", ("as", NAT, V0), ("as", STR, V0)))),
+          ("a cell made from a hole, then written",
+           ("let", ("mk", ("?", "11")), ("set", V0, ("s",)))),
+          ("two holes in two lists, joined",
+           ("if", ("list", ("?", "11")), ("list", ("?", "21")))),
+          ("a cell made from a hole, written at `str` and read at `nat`",
+           ("let", ("mk", ("?", "11")),
+            ("if", ("set", V0, ("s",)), ("as", NAT, ("get", V0))))),
+          ("a cell of a cell made from a hole, written with two cells",
+           ("let", ("mk", ("mk", ("?", "111"))),
+            ("set", V0, ("if", ("mk", ("n",)), ("mk", ("s",)))))),
+          ("a cell made from a hole, written twice",
+           ("let", ("mk", ("?", "11")),
+            ("if", ("set", V0, ("s",)), ("set", V0, ("n",)))))]
+    for title, sk in ex:
+        sites = list(hole_sites(sk))
+        names = ["".join(map(str, p)) or "r" for p, _ in sites]
+        row = []
+        for name, mode in modes:
+            got = check(mode, [], sk)
+            row.append(f"{name}: " + ("refused" if got is None else gshow(got)))
+        sig = typing(sk, names, False, wide)
+        sig_u = typing(sk, names, True, wide)
+        comp = None
+        for pick in itertools.product(*[[e for k in range(1, 5) for e in terms(k, min(d, 3), False)]
+                                        for _, d in sites]):
+            full = sk
+            for (p, _), f in zip(sites, pick):
+                full = replace(full, p, f)
+            if check(STATIC, [], full) is not None:
+                comp = full
+                break
+        print(f"  {title}: {tshow(sk)}")
+        for r in row:
+            print("      " + r)
+        print("      a static typing of the holes: " +
+              ("none in the universe" if sig is None else
+               ", ".join(f"?{k} := {show(v)}" for k, v in sig.items())))
+        print("      a static typing of the holes, uniform eliminators: " +
+              ("none in the universe" if sig_u is None else
+               ", ".join(f"?{k} := {show(v)}" for k, v in sig_u.items())))
+        print("      a completion by fillings of size at most 4: " +
+              ("none" if comp is None else tshow(comp)))
+
+
+if __name__ == "__main__":
+    main(int(sys.argv[1]) if len(sys.argv) > 1 else 5)
