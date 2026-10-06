@@ -324,10 +324,17 @@ $(CORPUS)/index.tsv: $(CORPUS_TRACE)
 corpus: $(CORPUS)/index.tsv ## the printed corpus under .lake/corpus (Lean's 400 programs and the wire corpus)
 
 # The pinned TypeScript install the reader, the ingest and the truth harness run on.
+# A seat's worktree links this folder to the coordinator's install, and the link's target is
+# older than the worktree's manifests. So a `make` without `-o ts/eff/node_modules` reaches this
+# rule there. A link is kept: it is never deleted, and nothing is installed over it (no seat
+# installs a package). On 2026-10-06 a seat's `make` lost its `-o` flags and installed here.
 ts/eff/node_modules: ts/eff/package.json ts/eff/bun.lock
-	rm -rf ts/eff/node_modules
-	cd ts/eff && $(BUN) install --frozen-lockfile
-	@touch $@
+	@if [ -L ts/eff/node_modules ]; then \
+	  echo "ts/eff/node_modules is a link to another checkout's install: kept, nothing installed"; \
+	else \
+	  echo "rm -rf ts/eff/node_modules && cd ts/eff && $(BUN) install --frozen-lockfile"; \
+	  rm -rf ts/eff/node_modules && (cd ts/eff && $(BUN) install --frozen-lockfile) && touch $@; \
+	fi
 
 # The truth harness and the schema codec resolve Effect and the compiler through
 # harness/truth/node_modules, a link to that install (never a second install: the truth
