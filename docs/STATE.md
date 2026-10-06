@@ -252,7 +252,10 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   generated engine, on both carriers. The registry names four claims with their witnesses.
   No planned goal was added. The seat used the Queue's typing and reading pieces as they
   are. Fourteen general statements wait in Semaphore's folder for the move of the shared
-  helpers. The operations that wait and the protected form are a later slice.
+  helpers. Seat MOVE has that move since 2026-10-06 (branch `seat/move`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-move-brief.md)): each shared piece
+  gets one home that names no module, and no statement changes. The operations that wait and
+  the protected form are a later slice.
 
 Landed later on 2026-10-05:
 
