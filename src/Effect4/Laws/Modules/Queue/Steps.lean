@@ -169,6 +169,96 @@ theorem withdrawOffer_opened {s : State} (opened : s.phase = .opened) (id : Nat)
   rw [settle_opened (s := { s with offers := s.offers.filter (fun o => o.id != id) }) opened]
   rfl
 
+/-! ## The table's one change frames every other request -/
+
+/-- The hint of another request stays. -/
+theorem takerVal_renew {tb : Table} {t : Taker} {id : Nat} (other : t.id ≠ id)
+    (hint : DeferredKey) : takerVal (tb.renew id hint) t = takerVal tb t := by
+  show takerOf (Val.promise (if t.id = id then hint else tb.hint t.id))
+    (Val.promise (tb.handle t.id)) = _
+  rw [if_neg other]
+  rfl
+
+theorem offerVal_renew {tb : Table} {o : Offer} {id : Nat} (other : o.id ≠ id)
+    (hint : DeferredKey) (msg : Nat → Val) :
+    offerVal (tb.renew id hint) msg o = offerVal tb msg o := by
+  show offerOf (.bool o.batch) (Val.promise (if o.id = id then hint else tb.hint o.id))
+    (Val.promise (tb.handle o.id)) (.list (o.rest.map msg)) = _
+  rw [if_neg other]
+  rfl
+
+/-- Stored takers that are not the request keep their records. -/
+theorem takers_renew (tb : Table) (ts : List Taker) (id : Nat) (hint : DeferredKey)
+    (others : ∀ t ∈ ts, t.id ≠ id) :
+    ts.map (takerVal (tb.renew id hint)) = ts.map (takerVal tb) :=
+  List.map_congr_left fun t member => takerVal_renew (others t member) hint
+
+/-- Pending offers that are not the request keep their records. -/
+theorem offers_renew (tb : Table) (msg : Nat → Val) (os : List Offer) (id : Nat)
+    (hint : DeferredKey) (others : ∀ o ∈ os, o.id ≠ id) :
+    os.map (offerVal (tb.renew id hint) msg) = os.map (offerVal tb msg) :=
+  List.map_congr_left fun o member => offerVal_renew (others o member) hint msg
+
+/-- The cell after a fresh offer pends: the stored records stay, and the new offer holds the
+step's hint. -/
+theorem cell_pended (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat) (hint : DeferredKey)
+    (foreign : ∀ t ∈ s.takers, t.id ≠ id) (fresh : ∀ o ∈ s.offers, o.id ≠ id) :
+    cellVal (tb.renew id hint) msg { s with offers := s.offers ++ [⟨id, false, [a]⟩] } =
+      cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg))
+        (.list (s.offers.map (offerVal tb msg) ++
+          [offerOf (.bool false) (Val.promise hint) (Val.promise (tb.handle id))
+            (.list [msg a])]))
+        (.list (s.takers.map (takerVal tb))) := by
+  show cellOf _ _
+    (.list ((s.offers ++ [(⟨id, false, [a]⟩ : Offer)]).map (offerVal (tb.renew id hint) msg)))
+    (.list (s.takers.map (takerVal (tb.renew id hint)))) = _
+  rw [List.map_append, offers_renew tb msg s.offers id hint fresh,
+    takers_renew tb s.takers id hint foreign]
+  have new : offerVal (tb.renew id hint) msg ⟨id, false, [a]⟩ =
+      offerOf (.bool false) (Val.promise hint) (Val.promise (tb.handle id)) (.list [msg a]) := by
+    show offerOf (.bool false) (Val.promise (if id = id then hint else tb.hint id))
+      (Val.promise (tb.handle id)) (.list [msg a]) = _
+    rw [if_pos rfl]
+  rw [List.map_cons, List.map_nil, new]
+
+/-! ## The model's `offer` on the profile, in closed form -/
+
+theorem offer_behind {s : State} (h : FirstProfile s) (id a : Nat) (pending : s.offers ≠ []) :
+    offer s id a = ({ s with offers := s.offers ++ [⟨id, false, [a]⟩] }, .wait, []) := by
+  cases held : s.offers with
+  | nil => exact absurd held pending
+  | cons o os =>
+    unfold offer isOpen
+    rw [h.opened, h.suspend, held]
+    rfl
+
+theorem hasRoom_iff {s : State} {c : Nat} (capacity : s.capacity = some (c + 1)) :
+    hasRoom s = decide (s.messages.length < c + 1) := by
+  unfold hasRoom room
+  rw [capacity]
+  show decide (0 < c + 1 - s.messages.length) = _
+  exact decide_eq_decide.mpr ⟨fun h => by omega, fun h => by omega⟩
+
+theorem offer_room {s : State} (h : FirstProfile s) {c : Nat}
+    (capacity : s.capacity = some (c + 1)) (id a : Nat) (noPending : s.offers = [])
+    (free : s.messages.length < c + 1) :
+    offer s id a = ({ s with messages := s.messages ++ [a] }, .accepted true,
+      wake { s with messages := s.messages ++ [a] }) := by
+  have room : hasRoom s = true := by rw [hasRoom_iff capacity, decide_eq_true free]
+  unfold offer isOpen
+  rw [room, h.opened, h.suspend, noPending]
+  rfl
+
+theorem offer_full {s : State} (h : FirstProfile s) {c : Nat}
+    (capacity : s.capacity = some (c + 1)) (id a : Nat) (noPending : s.offers = [])
+    (full : ¬ s.messages.length < c + 1) :
+    offer s id a = ({ s with offers := s.offers ++ [⟨id, false, [a]⟩] }, .wait,
+      wake { s with offers := s.offers ++ [⟨id, false, [a]⟩] }) := by
+  have room : hasRoom s = false := by rw [hasRoom_iff capacity, decide_eq_false full]
+  unfold offer isOpen
+  rw [room, h.opened, h.suspend, noPending]
+  rfl
+
 /-! ## The six step goals -/
 
 /-- **The take step agrees with the model's `take` at the bounds one and one.** The cell holds
@@ -199,7 +289,7 @@ waiting taker and no pending offer. The message term reads the value of the mode
 that the model wakes. The stored value is the model's next state, through the table that holds
 `hint` at `id` where the offer waits. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
+theorem offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
     (fresh : ∀ o ∈ s.offers, o.id ≠ id) {idSrc hintSrc messageSrc cellSrc : TermSrc}
     {env : Env} {path : List Nat} {vals : List Val}
@@ -212,7 +302,74 @@ proof_goal offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State
       Reads (Queue.offerStep A idSrc hintSrc messageSrc cellSrc) env path vals
         (Val.tuple [Val.tuple [offerReplyVal (offer s id a).2.1,
             Val.list (woken.map (takerVal (tb.afterOffer id hint (offer s id a).2.1)))],
-          cellVal (tb.afterOffer id hint (offer s id a).2.1) msg (offer s id a).1])
+          cellVal (tb.afterOffer id hint (offer s id a).2.1) msg (offer s id a).1]) := by
+  obtain ⟨c, capacity⟩ := profile.positive
+  have foreign : ∀ t ∈ s.takers, t.id ≠ id := requested
+  -- the parts of the term, each at the value it reads
+  have msgs := reads_field readsCell (cell_msgs _ _ _ _)
+  have offers := reads_field readsCell (cell_offers _ _ _ _)
+  have takers := reads_field readsCell (cell_takers _ _ _ _)
+  have cap := reads_field readsCell (cell_cap _ _ _ _)
+  have newOffer := reads_mkOffer A readsId readsHint (reads_bool false env path vals)
+    (reads_app (.cons readsMessage (.cons reads_nilT .nil)) (atom_cons (msg a) []))
+  have pending := (reads_recordSet readsCell (reads_snoc offers newOffer)
+    (cell_setOffers _ _ _ _ _)).to (cell_pended tb msg s id a hint foreign fresh).symm
+  have longer : Reads (Queue.snoc (field cellSrc "msgs") messageSrc) env path vals
+      (Val.list ((s.messages ++ [a]).map msg)) :=
+    (reads_snoc msgs readsMessage).to (by rw [List.map_append]; rfl)
+  have accepted := reads_recordSet readsCell longer (cell_setMsgs _ _ _ _ _)
+  have behind := reads_pair (reads_tuple2 reads_noneT (reads_noneOf takers)) pending
+  have room := reads_pair
+    (reads_tuple2 (reads_some (reads_bool true env path vals)) (reads_wake takers longer))
+    accepted
+  have full := reads_pair (reads_tuple2 reads_noneT (reads_wake takers msgs)) pending
+  have hasPending : Reads (Queue.notT (Queue.isEmpty (field cellSrc "offers"))) env path vals
+      (Val.bool (!decide (s.offers.length = 0))) :=
+    (reads_notT (reads_isEmpty offers)).to (by rw [List.length_map])
+  have hasRoom : Reads (app "lt" [Queue.len (field cellSrc "msgs"), field cellSrc "cap"]) env
+      path vals (Val.bool (decide (s.messages.length < c + 1))) :=
+    (reads_lt (reads_len msgs) cap).to (by rw [List.length_map, capacity]; rfl)
+  have whole := reads_ifT hasPending behind (reads_ifT hasRoom room full)
+  by_cases noPending : s.offers = []
+  · have none : (!decide (s.offers.length = 0)) = false := by
+      rw [noPending]
+      rfl
+    rw [none, if_neg Bool.false_ne_true] at whole
+    by_cases free : s.messages.length < c + 1
+    · -- room: the offer is accepted, and the earliest taker is named
+      have next : FirstProfile { s with messages := s.messages ++ [a] } :=
+        profile.shrink rfl rfl rfl rfl rfl (List.Sublist.refl _) (List.Sublist.refl _)
+      rw [offer_room profile capacity id a noPending free]
+      refine ⟨toWake { s with messages := s.messages ++ [a] },
+        ⟨?_, fun _ none => absurd none List.not_mem_nil, toWake_stored _⟩, ?_⟩
+      · show wake { s with messages := s.messages ++ [a] } = _
+        rw [wake_toWake next]
+        rfl
+      · rw [decide_eq_true free, if_pos rfl] at whole
+        exact whole.to (by rw [wake_encoded]; rfl)
+    · -- full: the offer waits, and the model still names the earliest taker
+      have next : FirstProfile { s with offers := s.offers ++ [⟨id, false, [a]⟩] } :=
+        profile.pend id a fresh foreign
+      rw [offer_full profile capacity id a noPending free]
+      refine ⟨toWake s, ⟨?_, fun _ none => absurd none List.not_mem_nil, toWake_stored s⟩, ?_⟩
+      · show wake { s with offers := s.offers ++ [⟨id, false, [a]⟩] } = _
+        rw [wake_toWake next]
+        rfl
+      · rw [decide_eq_false free, if_neg Bool.false_ne_true] at whole
+        refine whole.to ?_
+        show _ = Val.tuple [Val.tuple [Store.Val.none,
+          Val.list ((toWake s).map (takerVal (tb.renew id hint)))], _]
+        rw [wake_encoded, takers_renew tb (toWake s) id hint
+          fun t member => foreign t (toWake_stored s t member)]
+        rfl
+  · -- behind a pending offer: the offer waits, and nobody is named
+    have some : (!decide (s.offers.length = 0)) = true := by
+      rw [decide_eq_false fun zero => noPending (List.eq_nil_of_length_eq_zero zero)]
+      rfl
+    rw [some, if_pos rfl] at whole
+    rw [offer_behind profile id a noPending]
+    exact ⟨[], ⟨rfl, fun _ none => absurd none List.not_mem_nil,
+      fun _ none => absurd none List.not_mem_nil⟩, whole⟩
 
 /-- **The poll step agrees with the model's `poll`.** The reply is the model's, the list is the
 offers that entered, and the model wakes no taker. The table does not change. -/
