@@ -1,6 +1,5 @@
 import Effect4.Laws.Program.PathFold
 import Effect4.Laws.Program.PathOrder
-import Effect4.Laws.Program.References
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -193,8 +192,8 @@ theorem LayerTerm.refSites_move {l : LayerTerm Op} {p q : List Nat} {x : List Na
 /-! ## The edge descends -/
 
 /-- **A reference inside a target is an original reference, and it precedes every reference to
-the target.** The target's layer is addressed, so its sites are the program's
-(`refSites_subset_of_at`). The target precedes the caller's site and is no prefix of it
+the target.** The target's layer is a layer of the program, so its sites are the program's
+(`refSites_subset_of_layerAt`). The target precedes the caller's site and is no prefix of it
 (`layerRefsWF_mem`), and the nested site extends the target (`LayerTerm.refSites_move`,
 `Path.lt_append_of_lt`). A step of `expanded_refs_nil_of_wf`; consumer `refsWithin_round`. -/
 theorem target_refs_prior (root : Eff Op) (valid : root.layerRefsWF = true)
@@ -203,7 +202,7 @@ theorem target_refs_prior (root : Eff Op) (valid : root.layerRefsWF = true)
     (lookup : (Node.eff root).layerAt target = some layer)
     (inside : (nested, next) ∈ layer.refSites target) :
     (nested, next) ∈ root.refSites [] ∧ Path.lt nested site = true := by
-  refine ⟨refSites_subset_of_at ((Node.layerAt_eq_some_iff _ _ _).mp lookup) inside, ?_⟩
+  refine ⟨refSites_subset_of_layerAt lookup inside, ?_⟩
   obtain ⟨hlt, hpre, -⟩ := layerRefsWF_mem valid caller
   obtain ⟨r, hr, -⟩ := LayerTerm.refSites_move (q := []) inside
   have hnested : nested = target ++ r := hr

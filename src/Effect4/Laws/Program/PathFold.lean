@@ -11,7 +11,7 @@ fold at `p ++ [i]` is in its parent's (`foldList_child`, the case list `Node.chi
 every addressed node's fold, at its path, is in the root's fold (`foldList_subset_of_at`), and
 its yield with it (`yieldAt_subset_of_at`).
 A census over the program by the path fold is an instance: the layer reference sites
-(`Eff.refSites`, `mem_refSites_of_at`, `refSites_subset_of_at`), the premise of the reference
+(`Eff.refSites`, `mem_refSites_of_at`, `refSites_subset_of_layerAt`), the premise of the reference
 formation rule (`Eff.layerRefsWF`) at a reference site (`layerRefsWF_mem`) and at a reference
 reached by its address (`layerRefsWF_at`).
 
@@ -93,7 +93,8 @@ theorem foldList_child (y : PathYield Op α) : ∀ (n : Node Op) (i : Nat) (c : 
   all_goals simp only [hx, true_or, or_true]
 
 /-- **A descendant's fold, at its path, is in its ancestor's**: the child step (`foldList_child`)
-along the address. Its consumers are `yieldAt_subset_of_at` below and `refSites_subset_of_at`. -/
+along the address. Its consumers are `yieldAt_subset_of_at` below and
+`refSites_subset_of_layerAt`. -/
 theorem foldList_subset_of_at (y : PathYield Op α) :
     ∀ (path : List Nat) (n m : Node Op) (p : List Nat), Node.at_ n path = some m →
       foldList y (p ++ path) m ⊆ foldList y p n
@@ -127,15 +128,22 @@ theorem mem_refSites_of_at {Op : Type} {root : Eff Op} {path target : List Nat}
   rw [List.nil_append] at hsub
   exact hsub (List.mem_singleton_self _)
 
-/-- **The reference sites under an addressed layer, at its path, are reference sites of the
-program.** A step of `expanded_refs_nil_of_wf` (`Laws/Program/ReferenceExpansion.lean`). Its
-consumer is `target_refs_prior` there, at the layer that a reference names. -/
-theorem refSites_subset_of_at {Op : Type} {root : Eff Op} {path : List Nat} {layer : LayerTerm Op}
-    (h : Node.at_ (.eff root) path = some (.layer layer)) :
+/-- **The reference sites of the layer at a path, at that path, are reference sites of the
+program.** The premise is the layer lookup of the formation rule (`Node.layerAt`,
+`Program/Refs.lean`), which reads the node at the path. A step of `expanded_refs_nil_of_wf`
+(`Laws/Program/ReferenceExpansion.lean`). Its consumer is `target_refs_prior` there, at the layer
+that a reference names. -/
+theorem refSites_subset_of_layerAt {Op : Type} {root : Eff Op} {path : List Nat}
+    {layer : LayerTerm Op} (h : (Node.eff root).layerAt path = some layer) :
     layer.refSites path ⊆ root.refSites [] := by
-  have hsub := Node.foldList_subset_of_at refYield path (.eff root) (.layer layer) [] h
-  rw [List.nil_append] at hsub
-  exact hsub
+  unfold Node.layerAt at h
+  split at h
+  · rename_i found hat
+    rw [Option.some.inj h] at hat
+    have hsub := Node.foldList_subset_of_at refYield path (.eff root) (.layer layer) [] hat
+    rw [List.nil_append] at hsub
+    exact hsub
+  · cases h
 
 /-- Well-formed references, read at a reference site: the three clauses of `Eff.layerRefsWF`.
 The target precedes the site, it is no prefix of the site, and it names a layer that is no

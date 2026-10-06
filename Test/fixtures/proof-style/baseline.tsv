@@ -867,7 +867,6 @@ src/Effect4/Laws/Program/ReferenceTyping.lean	stmt_expandRound_eq_self	simp_all	
 src/Effect4/Laws/Program/ReferenceTyping.lean	stmt_expandRound_eq_self	unread	1
 src/Effect4/Laws/Program/ReferenceTyping.lean	stmts_expandRound_eq_self	simp_all	1
 src/Effect4/Laws/Program/ReferenceTyping.lean	stmts_expandRound_eq_self	unread	1
-src/Effect4/Laws/Program/ReferenceTyping.lean	typeOfProgram_expandRefs	simp-without-only	1
 src/Effect4/Laws/Program/Residual.lean	Ty.hasTy_of_not_tagged	simp-without-only	7
 src/Effect4/Laws/Program/Residual.lean	catchIf_miss_admits_of_le_one	simp-without-only	1
 src/Effect4/Laws/Program/Residual.lean	catchIf_miss_allCaught	simp-without-only	1

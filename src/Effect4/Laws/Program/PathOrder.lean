@@ -1,5 +1,4 @@
 import Effect4.Program.Refs
-import Effect4.Laws.Auto.RuleSets
 import Init.Data.List.Perm
 
 /-!
@@ -140,7 +139,18 @@ reference's target and at the sites inside the target. By `fun_induction`, so th
 arms of `lt`. -/
 theorem lt_append_of_lt {a b : List Nat} (hab : lt a b = true) (hpre : properPrefix a b = false)
     (c : List Nat) : lt (a ++ c) b = true := by
-  fun_induction lt a b <;> aesop (add norm simp [lt, properPrefix]) (add safe (by omega))
+  fun_induction lt a b with
+  | case1 => exact Bool.noConfusion hab
+  | case2 => exact Bool.noConfusion hpre
+  | case3 => exact Bool.noConfusion hab
+  | case4 a as b bs hlt => simp only [List.cons_append, lt, hlt, if_true]
+  | case5 => exact Bool.noConfusion hab
+  | case6 a as b bs hlt hgt ih =>
+    have heq : a = b := by omega
+    subst heq
+    simp only [properPrefix, decide_true, Bool.true_and] at hpre
+    simp only [List.cons_append, lt, hlt, if_false]
+    exact ih hab hpre
 
 /-- Insertion retains every element and its multiplicity, for any comparator. -/
 theorem insertBy_perm (before : List Nat → List Nat → Bool) (x : List Nat)
@@ -283,7 +293,19 @@ private theorem countP_lt_countP {α : Type} {p q : α → Bool} {xs : List α} 
   | cons x xs ih =>
     have hmono : xs.countP p ≤ xs.countP q :=
       List.countP_mono_left fun y hy => hpq y (List.mem_cons_of_mem x hy)
-    aesop (add norm simp [List.countP_cons]) (add safe (by omega))
+    have hhead := hpq x List.mem_cons_self
+    rw [List.countP_cons, List.countP_cons]
+    rcases List.mem_cons.mp ha with rfl | hmem
+    · simp only [hp, hq, Bool.false_eq_true, if_false, if_true]
+      omega
+    · have hrest := ih (fun y hy => hpq y (List.mem_cons_of_mem x hy)) hmem
+      cases hpx : p x with
+      | false =>
+        simp only [Bool.false_eq_true, if_false]
+        omega
+      | true =>
+        simp only [hhead hpx, if_true]
+        omega
 
 /-- The rank of a path in a finite list of paths: how many of them precede it. -/
 def rank (xs : List (List Nat)) (a : List Nat) : Nat := xs.countP (fun x => lt x a)

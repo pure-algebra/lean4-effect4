@@ -1,20 +1,24 @@
 import Effect4.Program.Typing
+import Effect4.Laws.Program.ReferenceExpansion
 
 /-!
 C4: expanding layer references leaves the whole-program type checker unchanged
-when the original references are well formed and the expansion has no reference
-sites. The operation alphabet and signature are arbitrary.
+when the original references are well formed. The operation alphabet and signature
+are arbitrary.
 
 Proof graph:
 * The seven mutual `*_expandRound_eq_self` lemmas use structural induction to
   show that one expansion round fixes syntax with no reference sites.
 * `expandRefs_eq_self_of_refSites_nil` reduces the expansion fold to that round;
   `layerRefsWF_of_refSites_nil` discharges well-formedness of reference-free syntax.
-* `typeOfProgram_expandRefs` applies those facts to the expanded program and
-  unfolds the existing whole-program checker, preserving both dispatch premises.
+* `typeOfProgram_eq_if_refsWF` is the checker's equation. The checker's second test, that
+  the expansion has no reference site, follows from its first, that the references are
+  well formed (`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`).
+* `typeOfProgram_expandRefs` reads the equation at the program and at its expansion,
+  which the first two facts fix. Its one premise is the well-formed references.
 
-The proved judgment is equality of `typeOfProgram` results. Runtime behavior and
-layer sharing are separate C4 obligations.
+The proved judgment is equality of `typeOfProgram` results. Neither answer is shown to
+be a type. Runtime behavior and layer sharing are separate C4 obligations.
 -/
 
 set_option autoImplicit false
@@ -97,16 +101,36 @@ theorem layerRefsWF_of_refSites_nil {Op : Type} (p : Eff Op)
     (h : p.refSites [] = []) : p.layerRefsWF = true := by
   simp [Eff.layerRefsWF, h]
 
-/-- C4 typing equation with the exact two dispatch premises: well-formed original
-layer references and no remaining reference sites after expansion. -/
+/-- **The checker's equation.** The whole-program checker makes two tests before it types the
+expansion (`typeOfProgram`, `Program/Typing.lean`): the references are well formed, and the
+expansion has no reference site. The second follows from the first (`expanded_refs_nil_of_wf`,
+`Laws/Program/ReferenceExpansion.lean`). So the checker answers the structural type of the
+expansion exactly when the references are well formed. The equation does not say that the answer
+is a type. Its consumers are `typeOfProgram_expandRefs` below and `checkTypedProgram_of_hasTy`
+(`Laws/Program/CheckedTyping.lean`). -/
+theorem typeOfProgram_eq_if_refsWF {Op : Type} (sig : Signature Op) (p : Eff Op) :
+    typeOfProgram sig p = if p.layerRefsWF then typeOf sig p.expandRefs else none := by
+  unfold typeOfProgram
+  cases hwf : p.layerRefsWF with
+  | false => rfl
+  | true =>
+    rw [expanded_refs_nil_of_wf p hwf]
+    rfl
+
+/-- C4 typing equation with its one premise, well-formed original layer references: the
+checker's answer on the expanded program is its answer on the program. The expansion has no
+reference site (`expanded_refs_nil_of_wf`), so it is well formed and its own expansion. The
+theorem does not say that either answer is a type. The premise stays: the checker refuses a
+program with a forward reference, and it types that program's expansion
+(`Test/Program/ReferenceExpansion.lean`, `forward_needs_wellFormed`). -/
+@[semantics "initial-algebras-folds" (requirement := R5)]
 theorem typeOfProgram_expandRefs {Op : Type} (sig : Signature Op) (p : Eff Op)
-    (hwf : p.layerRefsWF = true)
-    (hempty : (p.expandRefs.refSites []).isEmpty = true) :
+    (hwf : p.layerRefsWF = true) :
     typeOfProgram sig p.expandRefs = typeOfProgram sig p := by
-  have hrefs : p.expandRefs.refSites [] = [] := List.isEmpty_iff.mp hempty
-  have hfixed := expandRefs_eq_self_of_refSites_nil p.expandRefs hrefs
-  have hwf' := layerRefsWF_of_refSites_nil p.expandRefs hrefs
-  simp [typeOfProgram, hwf, hempty, hfixed, hwf']
+  have hrefs := expanded_refs_nil_of_wf p hwf
+  rw [typeOfProgram_eq_if_refsWF, typeOfProgram_eq_if_refsWF, hwf,
+    layerRefsWF_of_refSites_nil p.expandRefs hrefs,
+    expandRefs_eq_self_of_refSites_nil p.expandRefs hrefs]
 
 /-! ## A subterm's expansion (decisions row 153)
 
@@ -170,10 +194,5 @@ theorem Eff.expandIn_acquireRelease {Op : Type} (root a r : Eff Op) :
     Eff.expandIn root (.acquireRelease a r) =
       .acquireRelease (Eff.expandIn root a) (Eff.expandIn root r) :=
   foldl_expandRound_acquireRelease _ a r _
-
-#check (typeOfProgram_expandRefs :
-  ∀ {Op : Type} (sig : Signature Op) (p : Eff Op),
-    p.layerRefsWF = true → (p.expandRefs.refSites []).isEmpty = true →
-    typeOfProgram sig p.expandRefs = typeOfProgram sig p)
 
 end Effect4.Program
