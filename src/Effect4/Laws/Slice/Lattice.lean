@@ -22,15 +22,29 @@ values, so the order on slices is a preorder. Where the paper says that two slic
 this module says that each is below the other: they keep the same sites. `SliceView.Minimal` is
 the paper's Definition 4.3 (p. 9) read that way.
 
+**An instance chooses its `T`.** A view has one type side, with one order. The checker's type
+has three columns, and an instance takes one. The first instance, the plan's fold to an
+assumption, takes the error or the requirement, and not the three columns. A finite probe of
+seat CENSUS on 2026-10-06 found its answer column not monotone across a fork, and the two other
+columns monotone on each pair of masks that it tried.
+
+**A second fact, for a tree of sites only.** The sites of a real program are the addresses of a
+tree, and a fold at an address folds its sub-tree. So folding a site changes nothing when its
+parent is folded already: the instance's no-op. Two statements take it as a premise. A minimal
+slice is then a highlighted tree (`SliceView.Minimal.keeps_above`). And the descent can ask
+nothing about a site under a folded parent, and give the same slice
+(`SliceView.descendTree_eq_descend`). No other statement needs it.
+
 The parts, in order:
 
 - the carrier and its order, with Lean core's order classes (`Std.IsPreorder`,
   `Std.LawfulOrderSup`, `Std.LawfulOrderInf`), which `CTy` and `ErrTy` carry on the type side
   (`src/Effect4/Laws/Program/TypeAlgebra.lean`);
 - the descent on a list of sites: one pass (`Slice.sweep`), the pass's questions
-  (`Slice.sweepAsked`), and the paper's restart (`Slice.restart`);
-- the view, validity and minimality, with the executable `descend`, `isMinimal`, `minimals` and
-  `contribution`;
+  (`Slice.sweepAsked`), the paper's restart (`Slice.restart`), and the pass that asks nothing at
+  a site that changes nothing (`Slice.sweepFree`);
+- the view, validity and minimality, with the executable `descend`, `descendTree`, `isMinimal`,
+  `minimals` and `contribution`;
 - the statements.
 
 Placement. Concept `subtyping-algebra`. Requirement R14, under the proposed claim
@@ -38,8 +52,8 @@ Placement. Concept `subtyping-algebra`. Requirement R14, under the proposed clai
 of types, with a decided order on the types and decided equality of sites where a statement
 names them. Consumer: each slice view, first the error and requirement provenance of the plan
 (`docs/research/2026-10-06-type-slicing-plan.md`, section 8, slice 4). The statements do not
-establish that any real type map is monotone, a least slice, a minimum-size slice, or a bound
-for the contribution slice below a search. The design is
+establish that any real type map is monotone or has the no-op, a least slice, a minimum-size
+slice, or a bound for the contribution slice below a search. The design is
 `docs/research/2026-10-06-seat-LATTICE-design.md`. The controls and the paper's examples are in
 `Test/Program/SliceLattice.lean`.
 -/
@@ -300,7 +314,7 @@ theorem sweep_valid (valid : Slice α → Bool) (done todo : List α)
   | case3 done x rest _ ih => exact ih (by rwa [List.append_assoc, List.singleton_append])
 
 /-- A slice within `done ++ x :: rest`, without `x`, is below the slice that the pass asked
-about at `x`. A step of `sweep_kept_needed`, its one consumer. -/
+about at `x`. A step of `sweep_kept_needed` and of `sweepFree_eq_sweep`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem drop_le_of_subset [DecidableEq α] {r done rest : List α} {x : α}
     (h : r ⊆ done ++ x :: rest) : (Slice.mk r).drop x ≤ ⟨done ++ rest⟩ := by
@@ -470,6 +484,107 @@ theorem restart_eq_sweep (valid : Slice α → Bool)
     restart valid l = sweep valid [] l :=
   restart_append valid up [] l trivial
 
+/-! ### The pass with free drops
+
+A site is free at a slice when dropping it there changes nothing. An instance that can tell so
+with no call of its type map gives the test, and the pass asks nothing at a free site. The three
+lemmas of this section are steps of `SliceView.descendTree_eq_descend` and of
+`SliceView.descendTree_asks`. -/
+
+/-- **The pass with free drops.** `free c x` says that the site `x` changes nothing at the slice
+`c`. Where it holds, the pass drops the site and asks nothing. Elsewhere it is `sweep`. -/
+def sweepFree (valid : Slice α → Bool) (free : Slice α → α → Bool) : List α → List α → List α
+  | done, [] => done
+  | done, x :: rest =>
+    if free ⟨done ++ x :: rest⟩ x then sweepFree valid free done rest
+    else if valid ⟨done ++ rest⟩ then sweepFree valid free done rest
+    else sweepFree valid free (done ++ [x]) rest
+
+/-- The questions of the pass with free drops, in the order asked. It follows the pass's own
+recursion, and `sweepFree_congr` makes it the list of the questions. -/
+def sweepFreeAsked (valid : Slice α → Bool) (free : Slice α → α → Bool) :
+    List α → List α → List (Slice α)
+  | _, [] => []
+  | done, x :: rest =>
+    if free ⟨done ++ x :: rest⟩ x then sweepFreeAsked valid free done rest
+    else ⟨done ++ rest⟩ ::
+      (if valid ⟨done ++ rest⟩ then sweepFreeAsked valid free done rest
+        else sweepFreeAsked valid free (done ++ [x]) rest)
+
+/-- The test of a tree of sites: the site has a parent, and the slice does not keep the parent.
+A fold at the parent has folded the site already. -/
+def parentFolded [DecidableEq α] (parent : α → Option α) (c : Slice α) (x : α) : Bool :=
+  match parent x with
+  | some p => !decide (p ∈ c.kept)
+  | none => false
+
+/-- From a valid start, the pass with free drops gives the pass's list. The test must be sound:
+a valid slice stays valid without a site that the test calls free. Then the pass drops each free
+site too, after one question. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweepFree_eq_sweep [DecidableEq α] (valid : Slice α → Bool) (free : Slice α → α → Bool)
+    (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true)
+    (sound : ∀ (c : Slice α) (x : α), free c x = true → valid c = true → valid (c.drop x) = true)
+    (done todo : List α) (h : valid ⟨done ++ todo⟩ = true) :
+    sweepFree valid free done todo = sweep valid done todo := by
+  fun_induction sweepFree valid free done todo with
+  | case1 done => rfl
+  | case2 done x rest hfree ih =>
+    have hc : valid ⟨done ++ rest⟩ = true :=
+      up (drop_le_of_subset (List.Subset.refl _)) (sound _ x hfree h)
+    rw [sweep, if_pos hc]
+    exact ih hc
+  | case3 done x rest _ hc ih =>
+    rw [sweep, if_pos hc]
+    exact ih hc
+  | case4 done x rest _ hc ih =>
+    rw [sweep, if_neg hc]
+    exact ih (by rwa [List.append_assoc, List.singleton_append])
+
+/-- Under the same premises, the questions of the pass with free drops are a sub-list of the
+pass's questions: the same questions, without the ones at free sites. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweepFreeAsked_sublist [DecidableEq α] (valid : Slice α → Bool)
+    (free : Slice α → α → Bool)
+    (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true)
+    (sound : ∀ (c : Slice α) (x : α), free c x = true → valid c = true → valid (c.drop x) = true)
+    (done todo : List α) (h : valid ⟨done ++ todo⟩ = true) :
+    (sweepFreeAsked valid free done todo).Sublist (sweepAsked valid done todo) := by
+  fun_induction sweepFree valid free done todo with
+  | case1 done => exact List.Sublist.refl _
+  | case2 done x rest hfree ih =>
+    have hc : valid ⟨done ++ rest⟩ = true :=
+      up (drop_le_of_subset (List.Subset.refl _)) (sound _ x hfree h)
+    rw [sweepFreeAsked, if_pos hfree, sweepAsked, if_pos hc]
+    exact (ih hc).cons _
+  | case3 done x rest hfree hc ih =>
+    rw [sweepFreeAsked, if_neg hfree, if_pos hc, sweepAsked, if_pos hc]
+    exact (ih hc).cons_cons _
+  | case4 done x rest hfree hc ih =>
+    rw [sweepFreeAsked, if_neg hfree, if_neg hc, sweepAsked, if_neg hc]
+    exact (ih (by rwa [List.append_assoc, List.singleton_append])).cons_cons _
+
+/-- The pass with free drops reads `valid` at its asked slices and nowhere else. It needs no
+premise. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweepFree_congr (valid valid' : Slice α → Bool) (free : Slice α → α → Bool)
+    (done todo : List α) (h : ∀ c ∈ sweepFreeAsked valid free done todo, valid' c = valid c) :
+    sweepFree valid' free done todo = sweepFree valid free done todo := by
+  fun_induction sweepFree valid free done todo with
+  | case1 done => rfl
+  | case2 done x rest hfree ih =>
+    rw [sweepFreeAsked, if_pos hfree] at h
+    rw [sweepFree, if_pos hfree]
+    exact ih h
+  | case3 done x rest hfree hc ih =>
+    rw [sweepFreeAsked, if_neg hfree, if_pos hc] at h
+    rw [sweepFree, if_neg hfree, h _ List.mem_cons_self, if_pos hc]
+    exact ih fun c hcm => h c (List.mem_cons_of_mem _ hcm)
+  | case4 done x rest hfree hc ih =>
+    rw [sweepFreeAsked, if_neg hfree, if_neg hc] at h
+    rw [sweepFree, if_neg hfree, h _ List.mem_cons_self, if_neg hc]
+    exact ih fun c hcm => h c (List.mem_cons_of_mem _ hcm)
+
 end Slice
 
 /-- **A view of one program**: the type of each of its slices. An instance owes one fact, `mono`,
@@ -527,6 +642,20 @@ def descend [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) : Slice 
 def asked [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) : List (Slice α) :=
   Slice.sweepAsked (fun c => decide (v.Valid q c)) [] s.kept
 
+/-- **The descent over a tree of sites.** `parent x` is the site above `x`, where one is. The
+descent is `descend`, and it asks nothing about a site whose parent the slice does not keep
+(`Slice.sweepFree` with `Slice.parentFolded`). With the parents first in `s.kept`, a dropped site
+takes its sub-tree with it, for one question. Its law is `descendTree_eq_descend`, under the
+instance's no-op premise. -/
+def descendTree [DecidableEq α] [DecidableLE T] (v : SliceView α T) (parent : α → Option α)
+    (q : T) (s : Slice α) : Slice α :=
+  ⟨Slice.sweepFree (fun c => decide (v.Valid q c)) (Slice.parentFolded parent) [] s.kept⟩
+
+/-- The slices whose validity the descent over a tree asked, in the order asked. -/
+def askedTree [DecidableEq α] [DecidableLE T] (v : SliceView α T) (parent : α → Option α)
+    (q : T) (s : Slice α) : List (Slice α) :=
+  Slice.sweepFreeAsked (fun c => decide (v.Valid q c)) (Slice.parentFolded parent) [] s.kept
+
 /-! ## Every minimal slice, by search -/
 
 /-- Every minimal slice below `s`, one for each sub-list of its sites that passes the one-step
@@ -555,7 +684,10 @@ def ofFolded [DecidableEq α] (sites : List α) (f : List α → T)
 
 /-! ## The statements
 
-Each began as a planned goal, and its proof replaced it in place. -/
+Each of the fifteen statements of the brief began as a planned goal, and its proof replaced it in
+place. The three statements of the descent over a tree landed with their proofs:
+`descendTree_eq_descend`, `descendTree_minimal` and `descendTree_asks`, with their step
+`parentFolded_sound`. -/
 
 /-- **Validity is upward closed**: a slice that keeps more is valid for the same query. The
 paper has it by graduality (Theorem 3.5, p. 8) for its calculus. Here it holds for every
@@ -689,7 +821,10 @@ slice one site below and starts again (pp. 9 and 10): `Slice.restart`. Monotonic
 makes one pass enough: a site that failed once fails at each later slice, so no start needs to
 ask about it again. A finite probe counts the questions on one input of `n` sites: the restart
 asks 120 at `n = 20` and 255 at `n = 30`, and the pass 20 and 30
-(`Test/Program/SliceLattice.lean`). Without monotonicity the two can differ (the same file). -/
+(`Test/Program/SliceLattice.lean`). The equality rests on monotonicity, and where a type map is
+not monotone the two descents differ (the same file). On programs of the tree, under a fold that
+is not monotone, a finite probe of seat CENSUS on 2026-10-06 found the pass in program order at
+a slice that is not minimal in 3 of 50 cases, and the restart at a minimal slice in all 50. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem descend_eq_restart [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T) (q : T)
     (s : Slice α) :
@@ -708,6 +843,68 @@ theorem descend_asks [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α)
       ∀ valid' : Slice α → Bool, (∀ c ∈ v.asked q s, valid' c = decide (v.Valid q c)) →
         Slice.sweep valid' [] s.kept = (v.descend q s).kept :=
   ⟨Slice.sweepAsked_length _ [] s.kept, fun valid' h => Slice.sweep_congr _ valid' [] s.kept h⟩
+
+/-- The tree's test is sound for a view with the no-op premise: where the parent is folded, a
+valid slice stays valid without the site. A step of `descendTree_eq_descend` and of
+`descendTree_asks`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem parentFolded_sound [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
+    (parent : α → Option α)
+    (noop : ∀ (c : Slice α) {x y : α}, parent x = some y → y ∉ c.kept →
+      v.typeOf c ≤ v.typeOf (c.drop x))
+    (q : T) (c : Slice α) (x : α) (hfree : Slice.parentFolded parent c x = true)
+    (hc : decide (v.Valid q c) = true) : decide (v.Valid q (c.drop x)) = true := by
+  unfold Slice.parentFolded at hfree
+  split at hfree
+  · next p hp =>
+    exact decide_eq_true (Std.le_trans (of_decide_eq_true hc)
+      (noop c hp (of_decide_eq_false (Eq.mp (Bool.not_eq_true' _) hfree))))
+  · exact nomatch hfree
+
+/-- **The descent over a tree gives the descent's slice.** The premise is the instance's no-op,
+the one of `Minimal.keeps_above`, asked at every slice: folding a site changes nothing when its
+parent is folded already. A type map that folds a whole sub-tree at an address has it. From a
+valid start the two descents give one slice. The statement says nothing for a start that is not
+valid, and it gives no order of the sites: with a child before its parent the descent asks about
+the child. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem descendTree_eq_descend [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+    (v : SliceView α T) (parent : α → Option α)
+    (noop : ∀ (c : Slice α) {x y : α}, parent x = some y → y ∉ c.kept →
+      v.typeOf c ≤ v.typeOf (c.drop x))
+    {q : T} {s : Slice α} (h : v.Valid q s) : v.descendTree parent q s = v.descend q s :=
+  congrArg Slice.mk (Slice.sweepFree_eq_sweep _ _ (v.decide_valid_up q)
+    (v.parentFolded_sound parent noop q) [] s.kept (decide_eq_true h))
+
+/-- The descent over a tree ends at a minimal slice: `descend_minimal`, through
+`descendTree_eq_descend`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem descendTree_minimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+    (v : SliceView α T) (parent : α → Option α)
+    (noop : ∀ (c : Slice α) {x y : α}, parent x = some y → y ∉ c.kept →
+      v.typeOf c ≤ v.typeOf (c.drop x))
+    {q : T} {s : Slice α} (h : v.Valid q s) : v.Minimal q (v.descendTree parent q s) :=
+  v.descendTree_eq_descend parent noop h ▸ v.descend_minimal h
+
+/-- **The descent over a tree asks no more.** Its questions are a sub-list of the descent's
+questions: the same ones, without those at a site under a folded parent. And its result depends
+on the validity at its own questions only. A finite probe on the toy: 8 questions against 10 on
+the page 18 program, and 1 against 4 where the root folds (`Test/Program/SliceLattice.lean`). It
+states no count below the sub-list. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem descendTree_asks [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+    (v : SliceView α T) (parent : α → Option α)
+    (noop : ∀ (c : Slice α) {x y : α}, parent x = some y → y ∉ c.kept →
+      v.typeOf c ≤ v.typeOf (c.drop x))
+    {q : T} {s : Slice α} (h : v.Valid q s) :
+    (v.askedTree parent q s).Sublist (v.asked q s) ∧
+      ∀ valid' : Slice α → Bool,
+        (∀ c ∈ v.askedTree parent q s, valid' c = decide (v.Valid q c)) →
+          Slice.sweepFree valid' (Slice.parentFolded parent) [] s.kept =
+            (v.descendTree parent q s).kept :=
+  ⟨Slice.sweepFreeAsked_sublist _ _ (v.decide_valid_up q) (v.parentFolded_sound parent noop q)
+      [] s.kept (decide_eq_true h),
+    fun valid' hv => Slice.sweepFree_congr _ valid' _ [] s.kept hv⟩
 
 /-- **The join of two valid slices is valid for the join of their queries**: the paper's
 Theorem 4.7 (p. 12). The type side needs a join here, and in no other statement: `max` with
