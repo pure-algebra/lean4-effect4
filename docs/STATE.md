@@ -287,11 +287,11 @@ Landed later on 2026-10-05:
   in order, on every state of the first profile. `queue_steps_agree` assembles the six, and
   the registry's claim `queue-steps-agree` points at it (`962150af`). Two of the seven typing
   statements are proved too, `empty_typed` and `sizeStep_typed`. Five stay planned goals, by
-  the seat's stop and by no counterexample: the checker answers the stated type for each at
+  the seat's stop and by no counterexample. The checker answers the stated type for each at
   27 message types, by evaluation. So the goal gate counts 29. One workload runs in two
-  spellings (`Test/Program/QueueWorkload.lean`). The seat's last part is merged (`80d73226`):
-  the scenarios R1 and R4 run on the generated engine on both carriers
-  (`ocaml/engine/test/queue/`), and `Test/Program/QueueFaces.lean` pins what prints and reads
+  spellings (`Test/Program/QueueWorkload.lean`). The seat's last part is merged (`80d73226`).
+  The scenarios R1 and R4 run on the generated engine on both carriers
+  (`ocaml/engine/test/queue/`). `Test/Program/QueueFaces.lean` pins what prints and reads
   back. Each of the eight scenario modules prints and reads back since seat T5's second step.
   No Queue program runs on a host yet. No printed Queue module type-checks on the target
   until the literal repair lands (row 256).
@@ -339,13 +339,14 @@ Open at this landing:
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). A service error
      stopped its first run before any commit, and it started again the same evening from
      `7f77bd03`. The seat is finished and merged in five parts, the last at `80d73226`
-     ([its receipt](research/2026-10-05-seat-QSTEPS-receipt.md)): the cell, the six steps,
-     the relation, the six step theorems, two typing theorems, two scenarios on the engine,
-     the faces' pins and the documents. Open: five typing statements. Seat QTYPES has them
+     ([its receipt](research/2026-10-05-seat-QSTEPS-receipt.md)). They hold the cell, the
+     six steps, the relation, the six step theorems and two typing theorems. They also hold
+     two scenarios on the engine, the faces' pins and the documents. Open: five typing
+     statements. Seat QTYPES has them
      since 2026-10-05 (branch `seat/qtypes`;
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md); row 257). It
-     states the checker's rules in their introduction form, a typing judgment beside `Reads`
-     and the capture of a minted name, and it types each step at every scope. The wrapper's
+     states the checker's rules in their introduction form and a typing judgment beside
+     `Reads`. It proves the capture of a minted name, and it types each step at every scope. The wrapper's
      law takes a step's typing equation as a proof parameter. A concrete application
      discharges it by the checker's own answer on its actual body (row 257, after Codex's
      review). The owner ruled the design's five proposals as recommended
@@ -483,17 +484,17 @@ Open at this landing:
   The last three have no seat and no date;
 - Codex's two reviews of 2026-10-05 are filed, each with the owner's relay as pasted
   (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/` and
-  `next-proof-review/` beside it; source reading, compiler probes and finite controls, and
-  no Lean run):
+  `next-proof-review/` beside it). Their evidence is source reading, compiler probes and
+  finite controls, with no Lean run:
   - the first probes the literal repair and the typing of the Queue's steps (rows 256 and
     257);
-  - the second orders the next proofs: the shared typing rules and the capture of a minted
-    name (seat QTYPES), the mask and then the Queue's public path, fixture freshness in the
-    generation graph, and `Routing.infrastructure_escapes` as the first scenario goal to
-    prove. It corrects one stale reading: the admission gap is closed, and `Api.Built`
-    retains a program's admission;
-  - the owner's guidance came with both: automate the repeated checks, and keep questions
-    for a change of meaning, of the supported domain or of a representation;
+  - the second orders the next proofs. Seat QTYPES has the shared typing rules and the
+    capture of a minted name. The mask comes next, then the Queue's public path. Fixture
+    freshness joins the generation graph. `Routing.infrastructure_escapes` is the first
+    scenario goal to prove. One stale reading is corrected: the admission gap is closed, and
+    `Api.Built` retains a program's admission;
+  - the owner's guidance came with both. Automate the repeated checks. Keep a question for
+    the owner to a change of meaning, of the supported domain or of a representation;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);
