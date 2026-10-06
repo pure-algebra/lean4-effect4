@@ -496,7 +496,9 @@ Open at this landing:
     - **the host driver restates each control's script**, because a battery holds the script
       inside a Boolean expression. A changed script of a battery does not reach the host
       runs, and the lane stays green on the old script. The repair makes a control carry its
-      script as data (row 266);
+      script as data (row 266). Seat CONTROLS has it since 2026-10-06 (branch
+      `seat/controls`;
+      [its brief](research/2026-10-05-claude-lead/briefs/seat-controls-brief.md));
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
