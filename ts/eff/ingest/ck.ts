@@ -1396,6 +1396,10 @@ class ForeignCompilerReader extends CompilerReader {
       // eight rows takes one request and no trailing name.
       const termRow = rows.find(r => r.row.spelling === h && isTermRow(r.op))
       if (termRow !== undefined && isTermRow(termRow.op) && x.arguments.length === 2) {
+        // The row declares no type argument (`row.typeArgs`), so a call that carries one is no
+        // invocation of it. It is refused as the other engine refuses an admitted head with an
+        // unmatched invocation: the two engines answer alike, and neither drops the arguments.
+        if ((x.typeArguments?.params.length ?? 0) !== termRow.row.typeArgs.length) return refuseForeign("E-NODE", h)
         const f = this.foreignFunction(termRow.op, this.at(x.arguments, 1), env)
         return { _tag: "perform", op: withTerm(termRow.op, f), request: this.term(this.at(x.arguments, 0), env) }
       }

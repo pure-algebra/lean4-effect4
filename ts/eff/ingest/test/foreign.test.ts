@@ -255,6 +255,33 @@ test("a name, a block body and two parameters in a row's function place are refu
   expect(left.map(v => v.kind === "refusal" ? v.code : v.kind)).toEqual(["E-ARG-DYNAMIC"])
 })
 
+// The coordinator's fourth addendum to seat T5 (Codex's falsifier). A read-modify-write row
+// declares no type argument, so a call that carries one is outside both readers' domain. The
+// candidate differs from its positive by `<number>` alone. Before the correction the
+// compiler-backed reader lifted it and the oxc reader refused it. The parity is of admission
+// and refusal (`Test/contracts/faces.contract.md` §3): no target typing is claimed.
+test("a term row with explicit type arguments is refused alike, and its positive is read alike", () => {
+  const positive = cellModule("Ref.update(cell, (s) => succ(s))")
+  const candidates = [
+    cellModule("Ref.update<number>(cell, (s) => succ(s))"),
+    cellModule("Ref.update<number>(cell, (x) => x + 1)"),
+    cellModule("Ref.modify<number, number>(cell, (s) => pair(s, s))"),
+  ]
+  for (const source of candidates) {
+    const left = ck(source, "cell.ts"), right = oxc(source, "cell.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    expect(left.map(v => v.kind === "refusal" ? [v.code, v.detail] : v.kind)).toEqual([["E-NODE", `fragment node: ${source.includes("Ref.modify") ? "Ref.modify" : "Ref.update"}`]])
+    expect(right.map(v => v.kind === "refusal" ? v.code : v.kind)).toEqual(["E-NODE"])
+  }
+  const left = ck(positive, "cell.ts"), right = oxc(positive, "cell.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  expect(left.map(v => v.kind)).toEqual(["lifted"])
+  expect(right.map(v => v.kind)).toEqual(["lifted"])
+  for (const recognize of [ck, oxc]) {
+    expect(cellRest(positive, recognize)).toEqual({ _tag: "perform", op: { _tag: "refUpdateWith", f: app("succ", current) }, request: cellValue })
+  }
+})
+
 // Seat J2, step 1b: DI-72 (763187e1) in both engines. A bare value (a literal, `undefined`, a
 // binder) or an application of a name that is no head and no row is no program; the ck engine
 // lifted each as `fail(…)` from 2026-09-13 until step 1b, while the fragment reader refused it.
