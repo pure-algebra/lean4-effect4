@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import { allows, decodeKeyed, hostProtocol, transition, type KeyedHeader, type KeyedRecording, type DecisionRecord } from "./keyed-protocol.ts"
 import { KeyedRecorder, valueJson, wireValue, type KeyedFixture } from "./keyed-recorder.ts"
 import { ArmedDispatchers, ScriptedHost, bindScenario, declareScenario, scenarioEffect, scenarioRef } from "./keyed-bindings.ts"
+import { measure, type HostEnd, type ScenarioFixture } from "./keyed-observation.ts"
 import { Data, Effect, Fiber, Option, Ref, Result } from "effect"
 import { setImmediate as nextTurn } from "node:timers/promises"
 import { ProfileRefusal, Rc112ClockBoundary } from "./clock.ts"
@@ -313,5 +314,23 @@ describe("scenario readers", () => {
     expect(fiber.pollUnsafe()).toBeDefined()
     await nextTurn()
     expect(dispatchers.armed()).toBe(0)
+  })
+
+  test("the dispatchers reader's zero carries its limit where the run's own wait gave it", () => {
+    const fields = ["assignment", "receipts", "applications", "retired", "cleanups", "rootExit",
+      "workLeft.runnable", "workLeft.queued", "workLeft.awaiting", "workLeft.pending", "workLeft.timers"]
+    const fixture: ScenarioFixture = { name: "workers/limit", scenario: "workers", session: "workers", module: "", namespaces: [], bindings: "", table: [],
+      calls: [], acts: [], observation: Object.fromEntries(fields.map(field => [field, null])), fields, readers: { dispatchers: true }, refusedReaders: [],
+      premises: { cells: true, fibers: true, sleeps: true, dispatchers: true } }
+    const end = (armed: number, waited: boolean): HostEnd =>
+      ({ exit: null, ledger: { held: [], receipts: [], applications: [], retired: [], stored: [], live: [], refusals: [] }, armed, waited })
+    const read = (armed: number, waited: boolean) => measure(fixture, end(armed, waited), { dispatchers: true }).through
+    // After the run's own wait the zero is the wait's: the entry says so.
+    expect(read(0, true)["workLeft.runnable"]).toEqual({ reader: "dispatchers", value: [], limit: "zero by the run's own wait" })
+    expect(read(0, true)["workLeft.queued"]).toEqual({ reader: "dispatchers", value: [], limit: "zero by the run's own wait" })
+    // After a held call or a reply receipt no wait follows: the zero is the act's, with no limit.
+    expect(read(0, false)["workLeft.runnable"]).toEqual({ reader: "dispatchers", value: [] })
+    // An armed dispatcher is no empty list, so the comparison with Lean's empty list fails.
+    expect(read(1, false)["workLeft.queued"]).toEqual({ reader: "dispatchers", value: { armed: 1 } })
   })
 })

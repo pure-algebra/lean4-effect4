@@ -23,7 +23,8 @@ SESSION = ROOT / 'harness/truth/session'
 MODULES = ROOT / 'ts/eff/node_modules'
 TSGO = MODULES / '@typescript/native-preview/bin/tsgo'
 # The scenarios' batteries, which `Keyed.lean` imports, and the one tool module beside them.
-SCENARIOS = ['Test.Dogfood.Scenario.Workers', 'Test.Dogfood.Scenario.Routing', 'Tools.ProfileJson']
+SCENARIOS = ['Test.Dogfood.Scenario.Workers', 'Test.Dogfood.Scenario.Routing',
+             'Test.Dogfood.Scenario.Atomic', 'Test.Dogfood.Scenario.Timeout', 'Tools.ProfileJson']
 # The recordings of the lane's four fixture families (two, shared, kv and the streams), as the
 # runner wrote them at `310c8314`, before the scenarios came. A scenario's fixture is `scripted`,
 # and a reader is off unless a scenario's fixture asks for it, so these bytes must not move.

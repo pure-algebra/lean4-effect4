@@ -39,8 +39,12 @@ export interface ScenarioFixture {
   calls: Array<Key & { row: number; request: Json }>
   acts: ScenarioAct[]
   observation: Record<string, Json>
+  /** The observation's entries, in the order of the battery's fields. */
+  fields: string[]
   readers: Readers
   refusedReaders: Array<{ reader: ReaderName; why: string }>
+  /** Each reader's premise on the run, asked for or not: `true`, or the reason it fails. */
+  premises: Record<ReaderName, true | string>
 }
 export interface ScenarioManifest { runs: ScenarioFixture[]; waiting: Array<{ name: string; scenario: string; why: string }> }
 /** What the host holds at a script's end. The last four are a reader's notes, in the wire. */
@@ -56,6 +60,9 @@ export interface HostEnd {
   readonly sleeps?: Array<[fiber: number, wake: string]>
   /** The count of armed dispatchers. */
   readonly armed?: number
+  /** Whether the run's own wait followed the last act. That wait ends when no dispatcher is
+   * armed, so the count is then zero by the wait. */
+  readonly waited?: boolean
 }
 /** The host's result for one script. */
 export interface ScenarioResult {
@@ -64,13 +71,21 @@ export interface ScenarioResult {
   measured: Record<string, Json>
   /** Predicted by the recorder's ledger with no reader: the session's refusals. */
   predicted: Record<string, Json>
-  /** Measured on the host through the named reader, at the script's end. */
-  through: Record<string, { reader: ReaderName; value: Json }>
+  /** Measured on the host through the named reader, at the script's end. `limit` says where the
+   * value shows less than its entry's name: the lane's check writes it beside the entry. */
+  through: Record<string, { reader: ReaderName; value: Json; limit?: string }>
   /** No measurement on the host: Lean's replay is the only evidence. */
   waits: Array<{ field: string; why: string }>
   /** The entries of `measured` and `predicted` again, from the run with its readers and the
    * exact wait. */
   withReaders: Record<string, Json>
+  /** The root fiber's exit in the plain run and in the run with its readers. The readers'
+   * control compares the two. It is no entry of an observation unless a battery reads it. */
+  rootExits: [plain: Json, withReaders: Json]
+  /** What each reader gives in a run that has that reader alone, with the plain run's scheduler
+   * and wait: its entries, and the root's exit. The readers' control compares them with the
+   * run that has every reader. */
+  alone: { [Reader in ReaderName]?: { rootExit: Json; entries: Record<string, Json> } }
   /** The ledger's predictions of a refusal, by the record's index. */
   predictions: LedgerRefusal[]
   records: number
@@ -82,12 +97,38 @@ interface Scenario {
   readonly host: (end: HostEnd, spelling: (call: HeldCall) => string) => Entries
   /** The entries of `host` that are the ledger's predictions of the session's refusals. */
   readonly predicted?: string[]
-  /** The entries that the host measures through a reader, by the reader. */
-  readonly through: { readonly [Reader in ReaderName]?: { readonly fields: string[]; readonly read: (end: HostEnd) => Entries } }
+  /** The entries that the host measures through a reader, by the reader. `limit` gives the
+   * reason, at one script's end, why a value shows less than its entry's name. */
+  readonly through: { readonly [Reader in ReaderName]?: { readonly fields: string[]; readonly read: (end: HostEnd) => Entries; readonly limit?: (end: HostEnd) => string | undefined } }
 }
 /** The entries of a log cell (`entries` of the batteries): the list, or nothing. */
 const entries = (cell: Json | undefined): Json => Array.isArray(cell) ? cell : []
 const key = ({ fiber, token }: Key): Json => ({ fiber, token })
+/** An exit as the timeout battery reads one: a body, one tagged failure, or `other`. With
+ * `interrupted`, one interruption is an ending of its own (`endingOf`); a held call's fate has
+ * no such case (`fateOf`). */
+const ending = (exit: Json, single: "interrupted" | "other"): Json => {
+  if (exit === null || typeof exit !== "object" || Array.isArray(exit)) return { other: true }
+  if (Object.hasOwn(exit, "success")) return { answered: exit.success! }
+  const reasons = exit.failure
+  const reason = Array.isArray(reasons) && reasons.length === 1 ? reasons[0] : undefined
+  if (reason === undefined || reason === null || typeof reason !== "object" || Array.isArray(reason)) return { other: true }
+  const failed = reason.fail
+  if (Array.isArray(failed) && failed.length === 2 && failed.every(part => typeof part === "string")) return { failed }
+  return single === "interrupted" && Object.hasOwn(reason, "interrupt") ? { interrupted: true } : { other: true }
+}
+/** A request's outcome as the atomic battery reads a fiber's exit (`outcomeOf`). */
+const outcome = (exit: Json | undefined): Json => {
+  if (exit === undefined || exit === null) return { pending: true }
+  if (typeof exit !== "object" || Array.isArray(exit)) return { other: true }
+  if (Object.hasOwn(exit, "success")) return exit.success === true ? { admitted: true } : exit.success === false ? { rejected: true } : { other: true }
+  const reasons = exit.failure
+  const reason = Array.isArray(reasons) && reasons.length === 1 ? reasons[0] : undefined
+  if (reason === undefined || reason === null || typeof reason !== "object" || Array.isArray(reason)) return { other: true }
+  const failed = reason.fail
+  if (Array.isArray(failed) && failed.length === 2 && failed[0] === "Downstream" && failed[1] === "unavailable") return { failedBehind: true }
+  return Object.hasOwn(reason, "interrupt") ? { interrupted: reason.interrupt! } : { other: true }
+}
 const scenarios: Record<string, Scenario> = {
   // Test/Dogfood/Scenario/Routing.lean, `Observation`. The refused rows are the session's: the
   // ledger predicts each one.
@@ -119,9 +160,47 @@ const scenarios: Record<string, Scenario> = {
       sleeps: { fields: ["workLeft.timers"], read: ({ sleeps }) => ({ "workLeft.timers": sleeps! }) },
       // The count names no fiber. Lean grants the reader only where both of its lists are empty,
       // so zero armed dispatchers is the two empty lists, and any other count is a disagreement.
+      // Where the run's own wait followed the last act, that wait gives the zero: the value then
+      // shows that the host came to rest, and no more. After a held call or a reply receipt no
+      // wait follows, and the zero shows that the act armed no dispatcher.
       dispatchers: { fields: ["workLeft.runnable", "workLeft.queued"], read: ({ armed }) => {
         const none: Json = armed === 0 ? [] : { armed: armed! }
         return { "workLeft.runnable": none, "workLeft.queued": none }
+      }, limit: ({ waited }) => waited ? "zero by the run's own wait" : undefined }
+    }
+  },
+  // Test/Dogfood/Scenario/Timeout.lean, `Observation`. The cells are `count` and `ended`. Lean
+  // grants the sleeps reader in a script where every sleeping fiber is the root or made a call.
+  // In any other script the timers wait: a timer's fiber makes no call, so it has no number on
+  // the host.
+  timeout: {
+    host: ({ exit, ledger }, spelling) => ({
+      calls: ledger.held.filter(call => spelling(call) === "Http.getQuote").map(call =>
+        call.state === "live" ? { live: true }
+          : call.state === "retired" ? { retired: call.kept === true }
+          : ending(call.reply ?? null, "other")),
+      receipts: ledger.receipts.map(key),
+      applications: ledger.applications.map(key),
+      retired: ledger.retired.map(({ call, kept }) => ({ key: key(call), kept })),
+      stored: ledger.stored.map(key),
+      root: exit === null ? { running: true } : ending(exit, "interrupted")
+    }),
+    through: {
+      cells: { fields: ["attempts", "cleanups"], read: ({ cells }) => ({ attempts: typeof cells![0] === "number" ? cells![0] : 0, cleanups: entries(cells![1]) }) },
+      sleeps: { fields: ["timers"], read: ({ sleeps }) => ({ timers: sleeps!.map(([fiber, wake]) => [fiber, Number(wake)]) }) }
+    }
+  },
+  // Test/Dogfood/Scenario/Atomic.lean, `Observation`. The cells are the window, the account and
+  // the cleanup log. The requests 1 to 6 are the fibers 2 to 7: the daemon is fiber 1.
+  atomic: {
+    host: () => ({}),
+    through: {
+      cells: { fields: ["window", "account", "cleanups"], read: ({ cells }) => ({ window: cells![0] ?? null, account: cells![1] ?? null, cleanups: entries(cells![2]) }) },
+      fibers: { fields: ["decisions", "completed"], read: ({ fibers }) => {
+        const decisions = [2, 3, 4, 5, 6, 7].map(fiber => outcome(fibers![fiber]))
+        const completed = decisions.filter(decision => decision !== null && typeof decision === "object" &&
+          (Object.hasOwn(decision, "admitted") || Object.hasOwn(decision, "failedBehind") || Object.hasOwn(decision, "rejected"))).length
+        return { decisions, completed }
       } }
     }
   }
@@ -136,14 +215,14 @@ export const measure = (fixture: ScenarioFixture, end: HostEnd, readers: Readers
   const measured = Object.fromEntries(host.filter(([field]) => !scenario.predicted?.includes(field)))
   const predicted = Object.fromEntries(host.filter(([field]) => scenario.predicted?.includes(field)))
   const through: ScenarioResult["through"] = {}, waits: ScenarioResult["waits"] = []
-  for (const [reader, { fields, read }] of Object.entries(scenario.through) as Array<[ReaderName, NonNullable<Scenario["through"][ReaderName]>]>) {
+  for (const [reader, { fields, read, limit }] of Object.entries(scenario.through) as Array<[ReaderName, NonNullable<Scenario["through"][ReaderName]>]>) {
     if (readers[reader] === undefined) {
       const refused = fixture.refusedReaders.find(refusal => refusal.reader === reader)
       for (const field of fields) waits.push({ field, why: refused ? `the ${reader} reader is refused: ${refused.why}` : `the run has no ${reader} reader` })
       continue
     }
-    const values = read(end)
-    for (const field of fields) through[field] = { reader, value: values[field]! }
+    const values = read(end), why = limit?.(end)
+    for (const field of fields) through[field] = { reader, value: values[field]!, ...(why === undefined ? {} : { limit: why }) }
   }
   const sourced = [...host.map(([field]) => field), ...Object.keys(through), ...waits.map(wait => wait.field)]
   for (const field of Object.keys(fixture.observation)) if (!sourced.includes(field)) waits.push({ field, why: "no reader on the host" })

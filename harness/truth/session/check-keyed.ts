@@ -69,6 +69,7 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   const faulty = await read<Array<ScenarioResult & { fault: string; field: string }>>(resolve(runPath, "scenario-faults.json"))
   const plain = await read<Cases>(resolve(runPath, "scenario-cases.json"))
   const withReaders = await read<Cases>(resolve(runPath, "scenario-reader-cases.json"))
+  const aloneCases = await read<Array<Cases[number] & { reader: string }>>(resolve(runPath, "scenario-alone-cases.json"))
   const replays = await read<Replays>(scenarioLeanPath)
   const moved = await read<Replays>(scenarioControlsPath)
   const movedCases = await read<Array<{ name: string; predictions: ScenarioResult["predictions"] }>>(resolve(runPath, "scenario-controls.json"))
@@ -100,15 +101,32 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     const refused = (replay.verdicts ?? []).map(verdict => typeof verdict === "string" ? null : verdict.refused)
     deepStrictEqual(predicted, refused, `${name}: the recorder's predictions are not the session's verdicts`)
   }
-  /** The readers' control. The run with its readers and the exact wait leaves the recording of
-   * the plain run, byte for byte, and the same entries where the plain run measures one. */
-  const compareReaders = (name: string, host: ScenarioResult, without: KeyedRecording, withThem: KeyedRecording): void => {
+  /** The readers' control, in three parts.
+   *  - The run with its readers and the exact wait leaves the recording of the plain run, byte
+   *    for byte, the same entries where the plain run gives one, and the same exit of the root.
+   *  - A run with one reader alone, under the plain run's scheduler and wait, leaves that
+   *    recording and that exit too.
+   *  - What a reader gives alone is what it gives among the other readers and the exact wait.
+   * A script with no call has a recording of its controls alone. The root's exit and the third
+   * part are what sees such a program. A reader's effect on its own entries has no control:
+   * no run without the reader reads them. */
+  const sameRecording = (name: string, what: string, without: KeyedRecording, withThem: KeyedRecording): void => {
     const left = JSON.stringify(without), right = JSON.stringify(withThem)
-    if (left !== right) {
-      const at = without.records.findIndex((record, index) => JSON.stringify(record) !== JSON.stringify(withThem.records[index]))
-      throw new AssertionError({ message: `${name}: the readers change the recording at record ${at < 0 ? without.records.length : at}`, actual: right, expected: left })
-    }
+    if (left === right) return
+    const at = without.records.findIndex((record, index) => JSON.stringify(record) !== JSON.stringify(withThem.records[index]))
+    throw new AssertionError({ message: `${name}: ${what} the recording at record ${at < 0 ? without.records.length : at}`, actual: right, expected: left })
+  }
+  const compareReaders = (name: string, host: ScenarioResult, without: KeyedRecording, withThem: KeyedRecording, only: typeof aloneCases): void => {
+    sameRecording(name, "the readers change", without, withThem)
     deepStrictEqual(host.withReaders, { ...host.measured, ...host.predicted }, `${name}: the readers change an entry that the plain run gives`)
+    deepStrictEqual(host.rootExits[1], host.rootExits[0], `${name}: the readers change the root's exit`)
+    deepStrictEqual(only.map(run => run.reader).sort(), Object.keys(host.alone).sort(), `${name}: each reader has its run alone`)
+    for (const run of only) sameRecording(name, `the ${run.reader} reader alone changes`, without, run.recording)
+    for (const [reader, { rootExit, entries }] of Object.entries(host.alone)) {
+      deepStrictEqual(rootExit, host.rootExits[0], `${name}: the ${reader} reader alone changes the root's exit`)
+      for (const [field, value] of Object.entries(entries))
+        deepStrictEqual(value, host.through[field]?.value, `${name}: the ${reader} reader gives another ${field} alone than among the other readers`)
+    }
   }
   deepStrictEqual(hosts.map(run => run.name), manifest.runs.map(run => run.name), "every script that a host can perform is performed once")
   deepStrictEqual(replays.map(run => run.name), hosts.map(run => run.name), "every recording of a script is replayed once")
@@ -117,7 +135,8 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     compareHost(fixtureOf(host.name), host)
     compareReplay(host.name, replay)
     comparePredictions(host.name, host, replay)
-    compareReaders(host.name, host, byName(plain, host.name).recording, byName(withReaders, host.name).recording)
+    compareReaders(host.name, host, byName(plain, host.name).recording, byName(withReaders, host.name).recording,
+      aloneCases.filter(run => run.name === host.name))
   }
   const named = (name: string, field: string) => (error: unknown): boolean =>
     error instanceof AssertionError && error.message.startsWith(`${name}: `) && error.message.includes(field)
@@ -149,11 +168,19 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   moved.forEach(({ name, result }, index) =>
     throws(() => { compareReplay(name, result); comparePredictions(name, movedCases[index]!, result) }, named(name, ""),
       `${name}: a recording with a moved record must not replay as the script`))
+  // Red control of a reader's premise. Lean refuses the fibers reader to a program that holds a
+  // race, so the timeout scenario cannot use it. A granted reader is one whose premise holds.
+  const racing = manifest.runs.filter(run => run.scenario === "timeout")
+  for (const run of racing)
+    ok(typeof run.premises.fibers === "string" && run.premises.fibers.includes("race") && run.readers.fibers === undefined,
+      `${run.name}: the fibers reader must be refused to a program that holds a race`)
+  for (const run of manifest.runs) for (const reader of Object.keys(run.readers) as Array<keyof typeof run.readers>)
+    ok(run.premises[reader] === true, `${run.name}: the ${reader} reader is on, and its premise fails`)
   // Red control of the readers' control: one dropped record of a recording is a difference.
   const dropped: string[] = []
   for (const scenario of scenarioNames) {
     const host = hosts.find(run => run.scenario === scenario)!, recording = byName(plain, host.name).recording
-    throws(() => compareReaders(host.name, host, recording, { ...recording, records: recording.records.slice(0, -1) }), named(host.name, "the readers change the recording"))
+    throws(() => compareReaders(host.name, host, recording, { ...recording, records: recording.records.slice(0, -1) }, []), named(host.name, "the readers change the recording"))
     dropped.push(host.name)
   }
   // Red control of the predictions: one prediction taken away is a difference, where a script
@@ -163,29 +190,68 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     throws(() => comparePredictions(host.name, { ...host, predictions: host.predictions.slice(1) }, byName(replays, host.name).result), named(host.name, "predictions"))
     unpredicted.push(host.name)
   }
+  // Each entry's evidence, by scenario: measured by the host, predicted by the ledger, measured
+  // through a named reader, or replay only. An entry may have a reader in some scripts and wait
+  // in the others. A reader's value may show less than its entry's name in some scripts: the
+  // row then gives that limit with those scripts. The table goes to `scenario-evidence.md`, so
+  // that no document counts by hand.
   const scenarios = scenarioNames.map(scenario => {
     const runs = hosts.filter(run => run.scenario === scenario)
-    const entries = (pick: (run: ScenarioResult) => string[]): string[] => [...new Set(runs.flatMap(pick))]
-    const waits = entries(run => run.waits.map(wait => wait.field))
-    return { scenario, scripts: runs.length,
-      measuredByTheHost: entries(run => Object.keys(run.measured)),
-      predictedByTheLedger: entries(run => Object.keys(run.predicted)),
-      measuredThroughAReader: Object.fromEntries(entries(run => Object.keys(run.through)).map(field => [field, runs.find(run => run.through[field])!.through[field]!.reader])),
-      waiting: Object.fromEntries(waits.map(field => [field, runs.filter(run => run.waits.some(wait => wait.field === field)).map(run => run.name)])),
-      wholeObservationOnHost: waits.length === 0 }
+    const evidence = fixtureOf(runs[0]!.name).fields.flatMap(entry => {
+      const words = runs.map(run => Object.hasOwn(run.measured, entry) ? "host" : Object.hasOwn(run.predicted, entry) ? "ledger"
+        : run.through[entry] ? `reader: ${run.through[entry]!.reader}` : "replay only")
+      return [...new Set(words)].map(word => {
+        const scripts = runs.filter((_, index) => words[index] === word)
+        const limits = [...new Set(scripts.flatMap(run => run.through[entry]?.limit ?? []))].map(limit =>
+          ({ limit, scripts: scripts.filter(run => run.through[entry]?.limit === limit).map(run => run.name) }))
+        return { entry, evidence: word, scripts: scripts.map(run => run.name), limits }
+      })
+    })
+    return { scenario, scripts: runs.length, evidence, wholeObservationOnHost: !evidence.some(row => row.evidence === "replay only") }
   })
   const controls = { comparator: changed, hostMeasurement: faulty.map(host => `${host.name}: ${host.fault}, at ${host.field}`),
-    replay: moved.map(run => run.name), readers: dropped, predictions: unpredicted }
-  await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ scenarios, notPerformed: manifest.waiting, controls,
-    evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, measured through a reader, or waits with Lean's replay as its only evidence",
+    replay: moved.map(run => run.name), readers: dropped, predictions: unpredicted,
+    premises: racing.map(run => `${run.name}: no fibers reader`) }
+  const versions = await read<{ effect: string; bun: string }>(resolve(runPath, "versions.json"))
+  await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ host: versions, scenarios, notPerformed: manifest.waiting, controls,
+    evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, predicted by the ledger, measured through a reader, or replay only",
     boundary: "no agreement for another script or another entry; no host adequacy; no liveness" }, null, 2) + "\n")
-  const line = scenarios.map(({ scenario, scripts, measuredByTheHost, predictedByTheLedger, measuredThroughAReader, waiting }) => {
-    const parts = [`${measuredByTheHost.length} entries measured by the host`,
-      ...(predictedByTheLedger.length ? [`${predictedByTheLedger.length} predicted by the ledger`] : []),
-      ...(Object.keys(measuredThroughAReader).length ? [`${Object.keys(measuredThroughAReader).length} through a reader`] : []),
-      `${Object.keys(waiting).length} waiting`]
-    return `${scenario} ${scripts} scripts (${parts.join(", ")})`
+  // An entry with two sources has two rows, each with its scripts by name. The last column gives
+  // a reader's limit on the entry, with the scripts that it holds in.
+  const scriptsOf = (scenario: string, scripts: number, names: string[]): string =>
+    names.length === scripts ? `all ${scripts}` : `${names.length} of ${scripts}: ${names.map(name => name.slice(scenario.length + 1)).join(", ")}`
+  await writeFile(resolve(runPath, "scenario-evidence.md"), [
+    "| Scenario | Entry | Evidence | Scripts | Limit |", "| --- | --- | --- | --- | --- |",
+    ...scenarios.flatMap(({ scenario, scripts, evidence }) => evidence.map(row =>
+      `| ${scenario} | \`${row.entry}\` | ${row.evidence} | ${scriptsOf(scenario, scripts, row.scripts)} | ${row.limits.map(({ limit, scripts: names }) =>
+        `${limit}, in ${scriptsOf(scenario, row.scripts.length, names)}`).join("; ")} |`)),
+    ""].join("\n"))
+  // The acceptance line of each scenario: how many entries have each source in every script,
+  // and, for each entry that waits, the scripts where the whole-observation comparison waits,
+  // by count and by name. A reader's limit follows the readers' count: how many entries it
+  // holds for, and in how many scripts.
+  const line = scenarios.map(({ scenario, scripts, evidence }) => {
+    const whole = (word: (evidence: string) => boolean): number => evidence.filter(row => word(row.evidence) && row.scripts.length === scripts).length
+    const waits = evidence.filter(row => row.evidence === "replay only")
+    const limited = new Map<string, { entries: Set<string>; scripts: Set<string> }>()
+    for (const row of evidence) for (const { limit, scripts: names } of row.limits) {
+      const found = limited.get(limit) ?? { entries: new Set<string>(), scripts: new Set<string>() }
+      found.entries.add(row.entry)
+      for (const name of names) found.scripts.add(name)
+      limited.set(limit, found)
+    }
+    const parts = [`${whole(word => word === "host")} entries measured by the host`,
+      ...(whole(word => word === "ledger") ? [`${whole(word => word === "ledger")} predicted by the ledger`] : []),
+      ...(whole(word => word.startsWith("reader")) ? [`${whole(word => word.startsWith("reader"))} through a reader`] : []),
+      ...[...limited].map(([limit, found]) =>
+        `${found.entries.size} ${whole(word => word.startsWith("reader")) ? "of them" : "entries through a reader"} ${limit} in ${found.scripts.size} scripts`),
+      ...evidence.filter(row => row.evidence.startsWith("reader") && row.scripts.length < scripts).map(row => `${row.entry} through a reader in ${row.scripts.length} scripts`)]
+    const short = (names: string[]): string => names.map(name => name.slice(scenario.length + 1)).join(", ")
+    const waiting = waits.length
+      ? `the whole-observation comparison waits on ${waits.map(row => `${row.entry} in ${row.scripts.length} scripts (${short(row.scripts)})`).join(", ")}`
+      : "no entry waits"
+    return `${scenario} ${scripts} scripts (${parts.join(", ")}; ${waiting})`
   }).join("; ")
   const count = Object.values(controls).reduce((sum, list) => sum + list.length, 0)
-  console.log(`PASS keyed scenarios: ${line}; ${manifest.waiting.length} scripts with no host run; ${count} red controls`)
+  console.log(`PASS keyed scenarios on effect ${versions.effect} under bun ${versions.bun}: ${line}; ${manifest.waiting.length} scripts with no host run; ${count} red controls`)
 }

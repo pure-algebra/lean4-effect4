@@ -2767,7 +2767,7 @@ flowchart LR
 - Open: numbers open (decisions row 108): each face equal to the reference inside its bounded profile and refusing outside it, intermediates included (DI-56)
 - Open: K2 holds on the readable domain; since the state plan's T5, part B, a loop's stated cursor type and an operation's type arguments read back through one checked type reader (Classes.readTyChecked, DI-91's fallback (a) in a checked form), and the domain excludes a stated type outside the readable types (Classes.ReadableTy: a collision such as int, a spelling with no reading such as a handle type) and every list fold that states its accumulator's type, which is printed and not read
 - Open: one identity bijection across faces: the fiber identity carrier is ruled, not landed (DI-81)
-- Open: the TypeScript face against rc.112: finite truth-harness checks only (DI-49)
+- Open: the TypeScript face against rc.112: finite checks only, by the truth harness and by the keyed lane's runs of the scenarios' scripts on their printed modules (DI-49; decisions row 254)
 - Open: the profile as data, named by each face's law (decisions row 79, R79.5)
 
 ```mermaid

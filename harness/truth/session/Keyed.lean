@@ -3,6 +3,8 @@ import Effect4.Program.Profile
 import Effect4.Program.Stream
 import Test.Dogfood.Scenario.Workers
 import Test.Dogfood.Scenario.Routing
+import Test.Dogfood.Scenario.Atomic
+import Test.Dogfood.Scenario.Timeout
 import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
@@ -647,8 +649,17 @@ def cellsFirst : Api.Program → Bool
     if makesFiber first then !makesCell first && !makesCell rest else cellsFirst rest
   | program => !(makesFiber program && makesCell program)
 
+-- Controls of the premises, on small programs. A cell before a fork passes, and a cell after a
+-- fork or inside one does not. The lane's program `two` forks twice and holds no race.
+#guard cellsFirst (.bind (.perform .refMake (.lit (.nat 0))) two)
+#guard !cellsFirst (.bind two (.perform .refMake (.lit (.nat 0))))
+#guard !cellsFirst (.withFiber (.fork (.perform .refMake (.lit (.nat 0))) opts))
+#guard makesFiber two && !makesCell two && !races two && !forksInFork two
+#guard races (.withFiber (.raceAll (.cons two .nil))) && forksInFork (.withFiber (.fork two opts))
+
 /-- The readers that a run gets, each with what the host must find, and the readers that it is
-refused, each with the reason.
+refused, each with the reason. The third part gives the premise of each of the four readers on
+the run, asked for or not: `true`, or the reason it fails.
 
 * `cells`: the root makes every cell before it makes a fiber (`cellsFirst`). The fixture holds
   the count of cells at the script's end.
@@ -659,7 +670,7 @@ refused, each with the reason.
   has its number.
 * `dispatchers`: the machine has no armed owner and no runnable fiber at the script's end. The
   host reads a count, and it names no fiber. -/
-def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J :=
+def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J × List (String × J) :=
   let program := run.opened.built.program
   let machine := scripted.machine
   let callers := Api.root :: (callsOf run.opened scripted.journal).map (·.fiber)
@@ -682,16 +693,22 @@ def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J :=
     | .dispatchers =>
       if scripted.work.runnable.isEmpty && scripted.work.queued.isEmpty then .ok (Json.bool true)
       else .error "the machine names an armed owner or a runnable fiber, and the host reads a count"
-  run.asks.foldl (fun (state : List (String × J) × List J) reader =>
+  let asked := run.asks.foldl (fun (state : List (String × J) × List J) reader =>
     match verdict reader with
     | .ok found => (state.1 ++ [(reader.word, found)], state.2)
     | .error why =>
       (state.1, state.2 ++ [Json.mkObj [("reader", .str reader.word), ("why", .str why)]])) ([], [])
+  let premises := [Reader.cells, .fibers, .sleeps, .dispatchers].map fun reader =>
+    match verdict reader with
+    | .ok _ => (reader.word, Json.bool true)
+    | .error why => (reader.word, Json.str why)
+  (asked.1, asked.2, premises)
 
 /-! ### The fixture and the replay -/
 
 /-- One run's fixture: the printed module, the bindings' type, the table, the calls, the script
-as the host's acts, and the battery's observation of the scripted run. -/
+as the host's acts, the battery's observation of the scripted run with its fields in the
+battery's order, and the readers that the run gets. -/
 def emitRun (run : HostRun) : Except String J := do
   let built := run.opened.built
   let scripted := Scenario.play run.opened run.moves
@@ -704,14 +721,16 @@ def emitRun (run : HostRun) : Except String J := do
     | some act => pure act
     | none => throw "a row outside the wire"
   let (spaces, bindings) ← bindingsType built.table
-  let (readers, refused) := readersOf run scripted
+  let (readers, refused, premises) := readersOf run scripted
   return Json.mkObj [("name", .str run.name), ("scenario", .str run.scenario),
     ("session", .str run.opened.id),
     ("module", .str (String.join (module.decls.map (TypeScript.Render.decl TypeScript.house0)))),
     ("namespaces", toJson spaces), ("bindings", .str bindings), ("table", tableJson built.table),
     ("calls", toJson ((callsOf run.opened scripted.journal).map awaitJson)),
     ("acts", toJson acts), ("observation", Json.mkObj (run.observed scripted)),
-    ("readers", Json.mkObj readers), ("refusedReaders", toJson refused)]
+    ("fields", toJson ((run.observed scripted).map (·.1))),
+    ("readers", Json.mkObj readers), ("refusedReaders", toJson refused),
+    ("premises", Json.mkObj premises)]
 
 /-- Lean's replay of a host's recording: the rows of the recording played by `Run.play` from the
 run that the battery opens. `same` is the battery's own equality of the replayed observation and
@@ -819,7 +838,9 @@ def workers (name : String) (built : Api.Built) (moves : List Scenario.Move) : H
 
 open Scenario.Workers in
 /-- The workers scenario's runs: each script of a control of `Test/Dogfood/Scenario/Workers.lean`
-on the crew, and the lowest-fiber schedule on the crew that registers each release twice. -/
+on the crew, and the lowest-fiber schedule on the crew that registers each release twice. The
+run that `P3WorkerQueue.drive` makes and the two played journals are no scripts, so they have
+no run here. -/
 def workersRuns : Except String (List HostRun) := do
   let crew ← build "the crew" (crew 2)
   let faulty ← build "the crew that registers each release twice" (crewWith true 2)
@@ -834,6 +855,7 @@ def workersRuns : Except String (List HostRun) := do
     , run "applied-2-1" [parked, takes, [.apply w2, .apply w1]]
     , run "crossed" [parked, [.row (.submit (forged 0 2 2 (Scenario.ok (.nat 1))))]]
     , run "unreceived" [parked, [.apply w2]]
+    , run "applied-1" [parked, takes, [.apply w1]]
     , run "stale" [parked, takes,
         [.apply w1, .row (.submit (forged 0 1 1 (Scenario.ok (.nat 1)))), .row (.apply ⟨⟨1⟩, 1⟩)]]
     , run "cancelled-running" [running, [.cancel ⟨2⟩]]
@@ -844,9 +866,123 @@ def workersRuns : Except String (List HostRun) := do
     , run "cancelled" [running, [.cancel ⟨2⟩], finish]
     , workers "twice" faulty lowest ]
 
+/-- A held call's fate, as one JSON object with one key. -/
+def fateJson : Scenario.Timeout.Fate → J
+  | .live => Json.mkObj [("live", true)]
+  | .answered body => Json.mkObj [("answered", valJson body)]
+  | .failed tag message => Json.mkObj [("failed", toJson [tag, message])]
+  | .retired kept => Json.mkObj [("retired", kept)]
+  | .other => Json.mkObj [("other", true)]
+
+/-- The root's ending, as one JSON object with one key. -/
+def endingJson : Scenario.Timeout.Ending → J
+  | .running => Json.mkObj [("running", true)]
+  | .answered body => Json.mkObj [("answered", valJson body)]
+  | .failed tag message => Json.mkObj [("failed", toJson [tag, message])]
+  | .interrupted => Json.mkObj [("interrupted", true)]
+  | .other => Json.mkObj [("other", true)]
+
+/-- One host run of the timeout scenario, with its observation's nine fields. -/
+def timeout (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
+  { name := "timeout/" ++ name
+    scenario := "timeout"
+    opened := Scenario.Timeout.opened built
+    moves := moves
+    observed := fun run =>
+      let o := Scenario.Timeout.observe run
+      [ ("calls", toJson (o.calls.map fateJson))
+      , ("receipts", toJson (o.receipts.map keyJson))
+      , ("applications", toJson (o.applications.map keyJson))
+      , ("retired", toJson (o.retired.map fun entry =>
+          Json.mkObj [("key", keyJson entry.1), ("kept", toJson entry.2)]))
+      , ("stored", toJson (o.stored.map keyJson))
+      , ("attempts", toJson o.attempts)
+      , ("cleanups", toJson (o.cleanups.map valJson))
+      , ("root", endingJson o.root)
+      , ("timers", toJson (o.timers.map fun timer => [timer.1, timer.2])) ]
+    same := fun a b => Scenario.Timeout.observe a == Scenario.Timeout.observe b
+    asks := [.cells, .sleeps] }
+
+open Scenario.Timeout in
+/-- The timeout scenario's runs: each script of a control of `Test/Dogfood/Scenario/Timeout.lean`
+on the fetch, and the scripts of the two faulty clients. The battery's part `parked` is one run
+more: every script starts with it, and no control plays it alone. The frontier control has no
+run here: it edits the budget of a run, and a script does not. The two played journals are no
+scripts either. -/
+def timeoutRuns : Except String (List HostRun) := do
+  let fetch ← build "the fetch" fetch
+  let eager ← build "the client that retries every failure"
+    (client (fun _ => Authoring.bool true) false)
+  let resetting ← build "the client whose finalizer resets the count"
+    (client P1HttpCache.retryable true)
+  let run := fun (name : String) (parts : List (List Scenario.Move)) =>
+    timeout name fetch (Scenario.script parts)
+  let notFound := [parked, Scenario.answer http (Scenario.failed "HttpError" "404"),
+    [.tick 100, .flush, .hold http]]
+  return [ run "parked" [parked]
+    , run "503" [parked, Scenario.answer http (Scenario.failed "HttpError" "503"),
+        [.tick 100, .hold http], Scenario.answer http (Scenario.ok body2)]
+    , run "timed-out" [timedOut]
+    , run "four" [[.start, .tick 2000, .tick 100, .tick 2000, .tick 200, .tick 2000, .tick 400,
+        .tick 2000]]
+    , run "404" notFound
+    , run "before" [parked, Scenario.answer http (Scenario.ok body1)]
+    , run "second" [timedOut, Scenario.answer second (Scenario.ok body2)]
+    , run "late" [timedOut, Scenario.answer first (Scenario.ok body1)]
+    , run "kept" [parked, [.receive http (Scenario.ok body1), .tick 2000, .apply first]]
+    , run "crossed" [timedOut, [.row (.submit (forged 0 key2 (Scenario.ok body1)))]]
+    , run "direct" [timedOut, [.control (.answerAsync ⟨5⟩ 7 (Scenario.ok body1))]]
+    , run "timer-interrupt" [parked, [.tick 2000]]
+    , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
+    , run "received" [parked, [.receive http (Scenario.ok body1)]]
+    , run "applied" [parked, [.receive http (Scenario.ok body1), .apply http]]
+    , timeout "eager" eager (Scenario.script notFound)
+    , timeout "resetting" resetting (Scenario.script [parked, [.tick 2000]]) ]
+
+/-- One host run of the atomic scenario, with its observation's five fields. -/
+def atomic (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
+  { name := "atomic/" ++ name
+    scenario := "atomic"
+    opened := Scenario.Atomic.opened built
+    moves := moves
+    observed := fun run =>
+      let o := Scenario.Atomic.observe run
+      [ ("decisions", toJson (o.decisions.map fun
+          | .pending => Json.mkObj [("pending", true)]
+          | .admitted => Json.mkObj [("admitted", true)]
+          | .rejected => Json.mkObj [("rejected", true)]
+          | .failedBehind => Json.mkObj [("failedBehind", true)]
+          | .interrupted interruptor =>
+            Json.mkObj [("interrupted", (interruptor.map fun (fiber : FiberId) => toJson fiber.value).getD .null)]
+          | .other => Json.mkObj [("other", true)]))
+      , ("window", (o.window.map valJson).getD .null)
+      , ("account", (o.account.map valJson).getD .null)
+      , ("completed", toJson o.completed)
+      , ("cleanups", toJson (o.cleanups.map valJson)) ]
+    same := fun a b => Scenario.Atomic.observe a == Scenario.Atomic.observe b
+    asks := [.cells, .fibers] }
+
+open Scenario.Atomic in
+/-- The atomic scenario's runs: each script of a control of `Test/Dogfood/Scenario/Atomic.lean`
+on the shop, and the script `started` on the four faulty shops. The controls of the straight
+clause have no run here: they run the request alone with `Api.run`, at a bound and with no
+script, and they compare no `Observation`. -/
+def atomicRuns : Except String (List HostRun) := do
+  let built := fun (fault : Fault) => build "the shop" (shop fault)
+  let shop ← built .none
+  return [ atomic "started" shop started
+    , atomic "refilled" shop refilled
+    , atomic "finished" shop finished
+    , atomic "interrupted" shop interrupted
+    , atomic "stopped" shop stopped
+    , atomic "racy" (← built .racy) started
+    , atomic "erased" (← built .erased) started
+    , atomic "undone" (← built .undone) started
+    , atomic "twice" (← built .twice) started ]
+
 /-- Every host run of every scenario. -/
 def runs : Except String (List HostRun) := do
-  return (← routingRuns) ++ (← workersRuns)
+  return (← routingRuns) ++ (← workersRuns) ++ (← timeoutRuns) ++ (← atomicRuns)
 
 /-- The fixtures of the runs that a host can perform, and each other run with the reason. -/
 def emit : Except String J := do
