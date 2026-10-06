@@ -50,9 +50,9 @@ The handover is clean when all four hold. None is rushed, and none needs a new s
 1. Seat LIFT is merged, with its records.
 2. Seat SEMW is merged, with its records. Its truth programs move generated files, so its
    last merges run the release ledger and the corpus and target lanes.
-3. The records that the coordinator still owes are landed: three dictionary entries that seat
-   CUTS proposed, the README's row for the record `cuts`, and two sentence repairs of
-   `docs/STATE.md`.
+3. The records that the coordinator owed are landed. They are three dictionary entries that
+   seat CUTS proposed, the README's paragraph for the record `cuts`, and the sentence repairs
+   of `docs/STATE.md`. **Done on 2026-10-06**, in the commit after this note's first.
 4. One sweep runs at that head, if the owner asks for it. A measured base then stands under
    the first slice of the next implementer.
 

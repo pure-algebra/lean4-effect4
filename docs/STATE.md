@@ -346,8 +346,8 @@ Merged on 2026-10-06, after the seats above began:
   (`4667df9a`), and row 276 records what it leaves open.
 - **Seat QINV is merged** (`13a77be6`;
   [its receipt](research/2026-10-06-seat-QINV-receipt.md)). On the first profile, one step of
-  the Queue's model keeps its run invariant, and both flags hold after every list of first
-  operations from the empty queue (`first_step_inv`, `first_run_flags`,
+  the Queue's model keeps its run invariant (`first_step_inv`). Both flags hold after every
+  list of first operations from the empty queue (`first_run_flags`,
   `src/Effect4/Laws/Modules/Queue/Invariant.lean`; R12). Lean accepts Codex's invariant as
   written. It is the model's half of two open parts. The wrapper's run stays open.
 - **Seat CUTS is merged** (`f3568844`;

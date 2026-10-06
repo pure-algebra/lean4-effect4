@@ -253,6 +253,24 @@ file, so it builds whatever the committed files hold. A lowered run with the nam
 run is that named run. `taken` lists those names, and the lane writes no script of them. The
 lane's own runs are the two of `own`.
 
+The record `cuts` is the journal's cut as a scenario. The driver's reading of a journal stops at
+its first stopped row. That row ends at a frontier, or the raw replay does not read past its
+decision. The rows before it are the completed prefix.
+
+- **Program and runs.** The crew of the workers scenario, on two of its scripts. The budget
+  `cutBudget` makes each journal stop.
+- **Claim.** `shown_views_opened`: at a fresh open, a lowered run's views are those of its
+  positions, even when later rows stay unread. Its proof uses the clause `position`
+  (`tapeFrom_position_replays`): the machine after a position is the raw replay of the decisions
+  up to it.
+- **Associated laws.** `cut` (`tapeFrom_cut_replays`) and `append` (`tapeFrom_append`). The
+  record claims no dependency of the claim on them.
+- **Controls.** The second record, `unstopped`, plays the same scripts at the workers' own
+  budgets, where no journal stops. The gate must refuse each control that reads a journal for its
+  stop.
+- **Limit.** No law states the machine after a stopped row. Two red controls show that it is not
+  the raw replay of the completed prefix's tape.
+
 A fixture holds the canonical bytes of the admitted program and of each row, and the budgets. It
 also holds the machine tape: each decision that moved the session machine, with the view after
 it. A decision of the tape may leave the view as it was, as a second interruption of an exited
