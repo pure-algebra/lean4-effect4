@@ -27,6 +27,8 @@ and the lowered runs. This module holds what the scenarios share.
 * **The machine's tape.** `tapeFrom` reads the decisions that moved the machine off a journal:
   each control that progressed and each reply application. `machineView` is the machine's part
   of an observation. A lowered run replays the tape and compares that view (`tape_replays`).
+  A journal whose tape stops has a completed prefix, and that prefix and each position of the
+  tape replay raw too (`tapeFrom_cut_replays`, `tapeFrom_position_replays`).
 * **The record.** A `Scenario` names its program, its observation and its claim as declarations.
   It lists the assembled clauses, which the claim's proof uses, and the associated laws, which
   have controls only. `#scenario_gate`, at the foot of a battery, refuses a name that does not
@@ -821,9 +823,10 @@ registry.
 
 * **A stopped row** is the first unread row. It ends at a frontier (`tapeFrom_frontier`), or
   it gives a decision that the raw replay does not read past (`tapeFrom_stop`). A control that
-  progressed always reads on (`Run.advance_progressed`), so the second kind is a reply
-  application: the session applied the reply, and the command budget did not cover the step.
-* **The completed prefix** ends before the first stopped row. It may end with rows that give no
+  progressed always reads on (`Run.advance_progressed`), so a row of the second kind is a reply
+  application that the session applied. The record `cuts` holds one: the command budget did not
+  cover its step.
+* **The completed prefix** ends before the stopped row. It may end with rows that give no
   decision, after its last position.
 
 Each law holds for every run and every list of rows: no premise asks for a recorded run, a
@@ -878,8 +881,8 @@ theorem tapeFrom_append (s : Run) (a b : List Command) :
 
 /-- **The journal's cut.** A journal is a completed prefix, then the rows that its tape leaves
 unread. The tape of the prefix alone holds the same positions, and it leaves no row unread. So
-the positions of a journal are read from the completed prefix, and the first stopped row is the
-first row after it. Reach: any run and any rows. A journal whose tape reads every row is its own
+the positions of a journal are read from the completed prefix, and a stopped row is the first
+row after it. Reach: any run and any rows. A journal whose tape reads every row is its own
 completed prefix. It does not establish the machine after the prefix: `tapeFrom_cut_replays`
 adds that clause. Concept `translation-simulation`, R13. Consumer: `tapeFrom_cut_replays`. -/
 @[semantics "translation-simulation" (requirement := R13)]
@@ -934,6 +937,55 @@ theorem tapeFrom_cut_replays (s : Run) (rows : List Command) :
   rw [htape] at replayed
   exact ⟨done, hrows, htape, replayed⟩
 
+/-- Step of `tapeFrom_position_replays`: a prefix of the journal ends at the row of position
+`i`. Playing that prefix reaches the position's own run, with every row of the prefix in its
+journal: the rows that gave no decision are played too. The tape of the prefix alone is the
+first `i + 1` positions, with no row unread. So `tape_replays` reads the machine off that
+prefix, and the position law needs no second induction over replies. -/
+theorem tapeFrom_position_prefix (s : Run) (rows : List Command)
+    (i : Nat) (position : Position)
+    (found : (tapeFrom s rows).1[i]? = some position) :
+    ∃ done tail, rows = done ++ tail ∧
+      s.play done = position.after ∧
+      tapeFrom s done = ((tapeFrom s rows).1.take (i + 1), []) := by
+  induction rows generalizing s i with
+  | nil => cases found
+  | cons c rest ih =>
+    cases hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) with
+    | true =>
+      rw [tapeFrom_frontier s c rest hfront] at found
+      cases found
+    | false =>
+      cases hdec : decisionOf s c (Api.Runner.result s.runner c).phase with
+      | none =>
+        rw [tapeFrom_skip s c rest hfront hdec] at found ⊢
+        obtain ⟨done, tail, hrows, hafter, htape⟩ := ih (s.step c) i found
+        refine ⟨c :: done, tail, congrArg (List.cons c) hrows, ?_, ?_⟩
+        · rw [Run.play_cons]
+          exact hafter
+        · rw [tapeFrom_skip s c done hfront hdec]
+          exact htape
+      | some decision =>
+        cases hreads : readsOn s decision with
+        | false =>
+          rw [tapeFrom_stop s c rest decision hfront hdec hreads] at found
+          cases found
+        | true =>
+          rw [tapeFrom_take s c rest decision hfront hdec hreads] at found ⊢
+          cases i with
+          | zero =>
+            cases found
+            refine ⟨[c], rest, rfl, rfl, ?_⟩
+            rw [tapeFrom_take s c [] decision hfront hdec hreads]
+            rfl
+          | succ j =>
+            obtain ⟨done, tail, hrows, hafter, htape⟩ := ih (s.step c) j found
+            refine ⟨c :: done, tail, congrArg (List.cons c) hrows, ?_, ?_⟩
+            · rw [Run.play_cons]
+              exact hafter
+            · rw [tapeFrom_take s c done decision hfront hdec hreads, htape]
+              rfl
+
 /-- **The machine after a position is the raw replay of the decisions up to it.** At position
 `i` of a journal's tape, the machine of the run after the position's row is the machine that the
 raw frame replay leaves on the first `i + 1` decisions. The replay starts at the machine of the
@@ -945,16 +997,21 @@ open, which the consumer states. Concept `translation-simulation`, R13: it is `t
 the prefix that ends at the position's row. Consumer: `shown_views_opened`
 (`Test/Dogfood/Scenario/Tape.lean`), the views of a lowered run. -/
 @[semantics "translation-simulation" (requirement := R13)]
-proof_goal tapeFrom_position_replays (s : Run) (rows : List Command)
+theorem tapeFrom_position_replays (s : Run) (rows : List Command)
     (i : Nat) (position : Position)
     (found : (tapeFrom s rows).1[i]? = some position) :
     position.after.machine =
       Run.machineOf (Run.replayFrom s.built.program s.built.table s.budget.fuel
-        (((tapeFrom s rows).1.take (i + 1)).map (·.decision)) s.machine)
+        (((tapeFrom s rows).1.take (i + 1)).map (·.decision)) s.machine) := by
+  obtain ⟨done, tail, _, hafter, htape⟩ := tapeFrom_position_prefix s rows i position found
+  have replayed := tape_replays s done (congrArg Prod.snd htape)
+  rw [htape, hafter] at replayed
+  exact replayed
 
-/-! The axioms of each law that is proved, then the standing of the four laws, as the plan
-derives it from their proofs. `tape_replays` is named last, so that the plan shows which laws
-rest on it. -/
+/-! The axioms of the four laws and of the helper, then the standing of the four laws, as the
+plan derives it from their proofs. `tape_replays` is named last, so that the plan shows which
+laws rest on it. Each was a planned goal first, and each is proved in place with its statement
+unchanged. -/
 
 /-- info: 'Test.Dogfood.Scenario.tapeFrom_append' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
@@ -968,19 +1025,21 @@ rest on it. -/
 #guard_msgs in
 #print axioms tapeFrom_cut_replays
 
+/-- info: 'Test.Dogfood.Scenario.tapeFrom_position_prefix' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms tapeFrom_position_prefix
+
+/-- info: 'Test.Dogfood.Scenario.tapeFrom_position_replays' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms tapeFrom_position_replays
+
 /--
 info: Test.Dogfood.Scenario.tapeFrom_append: proved; nearest []; 4 lemmas, 4 definitions
 Test.Dogfood.Scenario.tapeFrom_cut: proved; nearest []; 4 lemmas, 4 definitions
 Test.Dogfood.Scenario.tapeFrom_cut_replays: proved; nearest [Test.Dogfood.Scenario.tape_replays, Test.Dogfood.Scenario.tapeFrom_cut]; 0 lemmas, 5 definitions
-Test.Dogfood.Scenario.tapeFrom_position_replays: goal; nearest []; 0 lemmas, 6 definitions
+Test.Dogfood.Scenario.tapeFrom_position_replays: proved; nearest [Test.Dogfood.Scenario.tape_replays]; 5 lemmas, 6 definitions
 Test.Dogfood.Scenario.tape_replays: proved; nearest []; 11 lemmas, 6 definitions
-next goals: 1
-  goal Test.Dogfood.Scenario.tapeFrom_position_replays : ∀ (s : Run) (rows : List Command) (i : Nat) (position : Position),
-  (tapeFrom s rows).fst[i]? = some position →
-    position.after.machine =
-      Run.machineOf
-        (Run.replayFrom s.built.program s.built.table s.budget.fuel
-          (List.map (fun x => x.decision) (List.take (i + 1) (tapeFrom s rows).fst)) s.machine)
+next goals: 0
 -/
 #guard_msgs in
 #plan_status tapeFrom_append tapeFrom_cut tapeFrom_cut_replays tapeFrom_position_replays
