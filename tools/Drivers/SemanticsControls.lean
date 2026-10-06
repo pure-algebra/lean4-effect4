@@ -357,6 +357,37 @@ private def checkReach : MetaM Nat := do
       throwError "semantics controls: {label}: expected {expected}, got {got}"
   return cases.length
 
+/-- The names of a requirement's section (`displayName`). One last component is the common
+case. Two names that share it print with the components that tell them apart: two components
+where the second differs, three for the two modules' steps of one name. A name that is a
+suffix of another prints in full. A red control beside each: the short name alone, which the
+report printed before, does not tell the two apart. -/
+private def checkNames : MetaM Nat := do
+  let steps := ["Effect4.Queue.Model.takeStep_types", "Effect4.Semaphore.Model.takeStep_types",
+    "Effect4.Queue.Model.offerStep_types"]
+  let cases : List (String × String × String) := [
+    ("a name alone has its last component", displayName steps "Effect4.Queue.Model.offerStep_types",
+      "offerStep_types"),
+    ("two modules' steps of one name, the Queue's", displayName steps "Effect4.Queue.Model.takeStep_types",
+      "Queue.Model.takeStep_types"),
+    ("two modules' steps of one name, Semaphore's",
+      displayName steps "Effect4.Semaphore.Model.takeStep_types", "Semaphore.Model.takeStep_types"),
+    ("two components where the second differs", displayName ["A.B.x", "A.C.x"] "A.B.x", "B.x"),
+    ("a name twice in the list is one name", displayName ["A.x", "A.x"] "A.x", "x"),
+    ("a suffix of another name prints in full", displayName ["x", "A.x"] "x", "x"),
+    ("the longer of the two has the component that tells", displayName ["x", "A.x"] "A.x", "A.x"),
+    ("a name outside the list is told from the list", displayName ["A.x"] "B.x", "B.x")]
+  for (label, got, expected) in cases do
+    unless got == expected do
+      throwError "semantics controls: {label}: expected {expected}, got {got}"
+  -- the red control: the two steps' printed names differ, and their last components do not
+  let queue := displayName steps "Effect4.Queue.Model.takeStep_types"
+  let semaphore := displayName steps "Effect4.Semaphore.Model.takeStep_types"
+  let last (name : String) : String := (name.splitOn ".").getLast!
+  unless queue != semaphore && last queue == last semaphore do
+    throwError "semantics controls: the two steps of one name are not told apart"
+  return cases.length + 1
+
 def run : MetaM Unit := do
   checkPositive
   for test in negativeCases do
@@ -364,7 +395,8 @@ def run : MetaM Unit := do
   checkUnloadedWitness
   let parsing ← checkParsing
   let reach ← checkReach
-  IO.println s!"PASS semantics controls: imported tags and all statuses; {negativeCases.size + 1} report refusals; {parsing} register controls; {reach} traversal controls"
+  let names ← checkNames
+  IO.println s!"PASS semantics controls: imported tags and all statuses; {negativeCases.size + 1} report refusals; {parsing} register controls; {reach} traversal controls; {names} name controls"
 
 end Tools.Semantics.Controls
 
