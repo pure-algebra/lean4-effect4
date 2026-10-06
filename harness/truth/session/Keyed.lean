@@ -1,13 +1,18 @@
 import Effect4.Api.HostSession
 import Effect4.Program.Profile
 import Effect4.Program.Stream
+import Test.Dogfood.Scenario.Routing
 import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
 
 /-! Strict v3 decision-tape tool. The runtime session is the semantic owner; this is
 only fixture construction, JSON transport, and rendering of the same admitted Eff program.
-No legacy tape inference, oracle answer queue, or implicit pending-reply scheduler. -/
+No legacy tape inference, oracle answer queue, or implicit pending-reply scheduler.
+
+The last section holds the scenarios' host runs (decisions row 254): one fixture for each script
+of a battery of `Test/Dogfood/Scenario/` that a host can perform, and Lean's replay of each
+recording that the host writes. -/
 open Lean Effect4 Effect4.Machine Effect4.Program Effect4.Api.HostSession
 set_option maxRecDepth 8192
 set_option maxHeartbeats 4000000
@@ -183,32 +188,43 @@ def checkRecord (j : J) (session : String) : Except String String := do
     | .json => pure ()
   return kind
 
-def consume {p : Api.Program} {rows : RowTable} (s : Session p rows) (fuel : Nat)
-    (j : J) : Except String (Effect4.Api.HostSession.Result p rows) := do
-  match ← checkRecord j s.header.session with
+/-- A checked record as a row of the session's journal (`Api.Runner.Command`). It is the one
+reading of a record: `consume` plays the row on a session, and a scenario's replay plays it on a
+run. -/
+def command (session : String) (rows : RowTable) (j : J) : Except String Api.Runner.Command := do
+  match ← checkRecord j session with
   | "call" =>
     let key ← keyOf j
-    return bindCall s ⟨version, s.header.session, rows, ← natField j "callId", key.fiber,
+    return .bind ⟨version, session, rows, ← natField j "callId", key.fiber,
       .external (← natField j "row"), ← decodeVal 64 (← field j "request")⟩ key.token
   | "reply" =>
     let key ← keyOf j
     let answer ← decodeAnswer (← field j "completion")
-    -- Nonempty Some is the stream binding refinement, checked before ordinary Envelope.
-    if rows = streamTable then
-      match requestOf s.machine key.fiber key.token, answer with
+    return .submit ⟨version, session, ← natField j "callId", key, answer⟩
+  | "apply" => return .apply (← keyOf j)
+  | "advanceClock" => return .control (.advance (← clockField j "millis"))
+  | "cancel" => return .control (.interruptFrom none .empty ⟨← natField j "fiber"⟩)
+  | "evaluate" => return .control (.evaluate ⟨← natField j "fiber"⟩)
+  | "fire" => return .control (.fire ⟨← natField j "fiber"⟩)
+  | "flush" => return .control .flush
+  | "yieldVerdict" =>
+    return .control (.yieldVerdict ⟨← natField j "fiber"⟩ (← (← field j "verdict").getBool?))
+  | "installMiddleware" => return .control .installMiddleware
+  | _ => throw "unimplemented protocol record"
+
+def consume {p : Api.Program} {rows : RowTable} (s : Session p rows) (fuel : Nat)
+    (j : J) : Except String (Effect4.Api.HostSession.Result p rows) := do
+  let row ← command s.header.session rows j
+  -- Nonempty Some is the stream binding refinement, checked before ordinary Envelope.
+  if rows = streamTable then
+    match row with
+    | .submit reply =>
+      match requestOf s.machine reply.key.fiber reply.key.token, reply.completion with
       | some (.external 1, _), .ofExit (.success value) =>
         if (Stream.chunk? value).isNone then throw "empty or malformed stream chunk"
       | _, _ => pure ()
-    return submit s ⟨version, s.header.session, ← natField j "callId", key, answer⟩
-  | "apply" => return applyReply s (← keyOf j) fuel
-  | "advanceClock" => return advance s fuel (.advance (← clockField j "millis"))
-  | "cancel" => return advance s fuel (.interruptFrom none .empty ⟨← natField j "fiber"⟩)
-  | "evaluate" => return advance s fuel (.evaluate ⟨← natField j "fiber"⟩)
-  | "fire" => return advance s fuel (.fire ⟨← natField j "fiber"⟩)
-  | "flush" => return advance s fuel .flush
-  | "yieldVerdict" => return advance s fuel (.yieldVerdict ⟨← natField j "fiber"⟩ (← (← field j "verdict").getBool?))
-  | "installMiddleware" => return advance s fuel .installMiddleware
-  | _ => throw "unimplemented protocol record"
+    | _ => pure ()
+  return Api.Runner.result ⟨p, rows, fuel, s⟩ row
 
 structure Walk (p : Api.Program) (rows : RowTable) where
   session : Session p rows
@@ -350,6 +366,461 @@ def emitFixture (name : String) : Except String J := do
   return Json.mkObj [("name", .str name), ("table", tableJson f.table),
     ("plan", toJson schedule), ("expected", expected),
     ("source", f.source), ("expression", .str (TypeScript.Render.expr TypeScript.house0 0 expr))]
+
+/-! ## The scenarios' host runs (decisions row 254)
+
+A scenario of `Test/Dogfood/Scenario/` runs on this lane as its printed module. One host run is
+one script of a battery on one program that the battery builds. The lane writes one fixture for
+each run that a host can perform, and it names each run that a host cannot perform, with the
+reason.
+
+* **The script.** The battery's own `List Move`, played by the battery's own driver. The fixture
+  holds the journal rows that the script leaves, as records of this lane's wire. The host acts
+  out each row, and it writes each record from what it did.
+* **The calls.** Every call that the machine waits on during the script, in the order of the
+  guard tokens: the order in which the fibers parked. The recorder gives the n-th call that the
+  module starts the n-th key.
+* **The observation.** The battery's own `observe` of the scripted run, one JSON value a field.
+* **The readers.** The notes inside the program's state that the run may use on the host, each
+  with its premise checked here (`readersOf`).
+* **The replay.** `Run.play` over the rows of the host's recording, from the run that the battery
+  opens. It reads the battery's `observe`, and it compares by the battery's own equality. It
+  also gives the session's verdict of each row, which the recorder's ledger predicted.
+
+Each host run is a finite host run of one script. It proves nothing. -/
+namespace Scenarios
+open Test.Dogfood
+
+abbrev Row := Api.Runner.Command
+
+/-- A reader inside the program's state (the coordinator's ruling of 2026-10-06, the seat's
+receipt). Each is a note that the lane adds on the host, and it changes nothing that the module
+does: the lane's check compares the recording with a reader and the recording without one.
+
+* `cells`: the value of each cell that the module makes, by allocation index.
+* `fibers`: each fiber that the module forks, in fork order, with its exit.
+* `sleeps`: each pending sleep of the clock boundary, with its fiber and its wake time.
+* `dispatchers`: whether a dispatcher of the run is armed, as a count. -/
+inductive Reader
+  | cells | fibers | sleeps | dispatchers
+deriving DecidableEq
+
+def Reader.word : Reader → String
+  | .cells => "cells" | .fibers => "fibers" | .sleeps => "sleeps" | .dispatchers => "dispatchers"
+
+/-- One host run of a scenario: a script of a battery on a program that the battery opened. -/
+structure HostRun where
+  /-- The run's name: the scenario, a slash, and the script's name. -/
+  name : String
+  /-- The scenario's name, as its row of `Test/Dogfood/README.md` quotes it. -/
+  scenario : String
+  /-- The built program, opened as the battery opens it. -/
+  opened : Run
+  /-- The battery's script. -/
+  moves : List Scenario.Move
+  /-- The battery's observation of a run, one JSON value a field, in the order of its fields. -/
+  observed : Run → List (String × J)
+  /-- Whether two runs show one observation, by the battery's own equality. -/
+  same : Run → Run → Bool
+  /-- A reason that keeps the run out of the lane and that no rule of `performable` measures:
+  a finding of the target type check, stated with its evidence. -/
+  out : Option String := none
+  /-- The readers inside the program's state that the scenario's observation asks for. A
+  reader is off unless a run asks for it and its premise holds on that run (`readersOf`). -/
+  asks : List Reader := []
+
+/-! ### The observation's wire -/
+
+def keyJson (key : Key) : J :=
+  Json.mkObj [("fiber", toJson key.fiber.value), ("token", toJson key.token)]
+
+/-- A call as the host sees it: the row's spelling, the request and the key. -/
+def seenJson (seen : Scenario.Seen) : J :=
+  Json.mkObj [("row", .str seen.row), ("request", valJson seen.request),
+    ("fiber", toJson seen.key.fiber.value), ("token", toJson seen.key.token)]
+
+def exitOrNull (exit : Option ExitV) : J := (exit.map exitJson).getD .null
+
+/-- The session's reason for a refusal, as one word. -/
+def refusalWord : Effect4.Api.HostSession.Refusal → String
+  | .version => "version" | .session => "session" | .profile => "profile" | .table => "table"
+  | .program _ => "program" | .duplicateCall => "duplicateCall" | .protocol => "protocol"
+  | .selectionRequired => "selectionRequired" | .pendingReply => "pendingReply"
+  | .callOrder => "callOrder" | .noCall => "noCall" | .staleCall => "staleCall"
+  | .envelope => "envelope" | .directAnswer => "directAnswer"
+  | .pendingControl => "pendingControl" | .stuck => "stuck"
+
+/-- The session's verdict of a row: a word, or the refusal with its reason. The check compares
+it with what the recorder's ledger predicted for the same record. -/
+def verdictJson : Phase → J
+  | .bound => "bound" | .preflight => "preflight" | .applied => "applied"
+  | .progressed => "progressed" | .frontier => "frontier"
+  | .refused why => Json.mkObj [("refused", .str (refusalWord why))]
+
+/-! ### A script as the host's acts -/
+
+/-- A journal row as a record of the lane's wire, without its version and session: the act that
+the host performs. `none` for a row that the wire does not carry. It is the inverse of
+`command`. -/
+def rowJson : Row → Option J
+  | .bind call token =>
+    match call.op with
+    | .external row =>
+      some (Json.mkObj [("kind", "call"), ("callId", toJson call.callId),
+        ("fiber", toJson call.fiber.value), ("token", toJson token), ("row", toJson row),
+        ("request", valJson call.request)])
+    | _ => none
+  | .submit reply =>
+    some (Json.mkObj [("kind", "reply"), ("callId", toJson reply.callId),
+      ("fiber", toJson reply.key.fiber.value), ("token", toJson reply.key.token),
+      ("completion", answerJson reply.completion)])
+  | .apply key =>
+    some (Json.mkObj [("kind", "apply"), ("fiber", toJson key.fiber.value),
+      ("token", toJson key.token)])
+  | .control (.evaluate fiber) =>
+    some (Json.mkObj [("kind", "evaluate"), ("fiber", toJson fiber.value)])
+  | .control .flush => some (Json.mkObj [("kind", "flush")])
+  | .control (.advance millis) =>
+    some (Json.mkObj [("kind", "advanceClock"), ("millis", .str millis.toDecimal)])
+  | .control (.interruptFrom none annotations fiber) =>
+    if annotations.entries.isEmpty then
+      some (Json.mkObj [("kind", "cancel"), ("fiber", toJson fiber.value)])
+    else none
+  | _ => none
+
+/-- Whether a host answer is a scripted completion that the host can give: a success, or one
+tagged failure with no annotation. -/
+def scripted : Effect4.Api.HostSession.Answer → Bool
+  | .ofExit (.success _) => true
+  | .ofExit (.failure cause) =>
+    match cause.reasons with
+    | [.fail (.tagged _ _) annotations] => annotations.entries.isEmpty
+    | _ => false
+  | _ => false
+
+/-- Every call that the machine waits on while a journal plays, once each, in the order of the
+guard tokens. A fiber takes its token when it parks, so this is the order in which the fibers
+parked. -/
+def callsOf (opened : Run) (journal : List Row) : List Await :=
+  let walked := journal.foldl (fun (state : Run × List Await) row =>
+    let next := state.1.step row
+    (next, state.2 ++ next.outstanding.filter fun a =>
+      !state.2.any fun b => b.fiber == a.fiber && b.token == a.token)) (opened, [])
+  walked.2.mergeSort fun a b => a.token ≤ b.token
+
+/-- Why a host cannot perform a script, as an error. The host has seven acts: the root's start,
+a flush, a clock step, a cancellation, holding a call, a reply receipt and a reply application.
+
+* **The acts.** A raw control that is none of the first four is no act of a host. A cancellation
+  needs a fiber that the host can name: the root, or a fiber that made a call.
+* **The ledger.** A host's reply carries the call id of the call it holds at that key, so a
+  forged reply is no act of a host. The recorder's ledger predicts two refusals of the session:
+  a reply or an application with no live call, and a second reply at a key. Any other refusal
+  is the session's alone, and a host has no act that shows it.
+* **The budget.** A host has no budget, so a row that stops at a frontier has no host act.
+* **The schedule.** A host lets every dispatcher run after each act but the root's start. So
+  the machine must have no armed owner and no runnable fiber after a row, unless the row is the
+  root's start or the next row is a flush. -/
+def performable (opened : Run) (journal : List Row) : Except String Unit := do
+  let mut run := opened
+  let mut held : List (Nat × Key) := []
+  let mut known : List FiberId := [Api.root]
+  let mut first := true
+  let mut restless := false
+  for row in journal do
+    let next := run.step row
+    let phase := next.phases.getLast?.getD .frontier
+    if first && row != .control (.evaluate Api.root) then
+      throw "the script does not start with the root's evaluation"
+    if restless && row != .control .flush then
+      throw "the machine has work for a flush where the script gives another row"
+    match row with
+    | .control (.evaluate _) =>
+      unless first do throw "a second evaluation is no act of a host"
+    | .control .flush => pure ()
+    | .control (.advance _) => pure ()
+    | .control (.interruptFrom none annotations fiber) =>
+      unless annotations.entries.isEmpty do throw "an annotated interruption is outside the wire"
+      unless known.contains fiber do
+        throw s!"the host has no name for fiber {fiber.value}: it made no call before its cancellation"
+    | .control (.answerAsync _ _ _) => throw "a direct answer decision is no act of a host"
+    | .control _ => throw "a control of the scheduler that is no act of a host"
+    | .bind call token =>
+      unless phase == .bound do throw "the session refuses the held call"
+      held := held ++ [(call.callId, ⟨call.fiber, token⟩)]
+    | .submit reply =>
+      unless held.contains (reply.callId, reply.key) do
+        throw "a forged reply: a host's reply carries the call id of the call it holds at the key"
+      unless scripted reply.completion do
+        throw "a host answer that is no scripted completion: not a success and not one tagged failure"
+      match phase with
+      | .preflight | .refused .noCall | .refused .pendingReply => pure ()
+      | .refused why =>
+        throw s!"the session refuses the reply ({refusalWord why}), and a host has no reply admission of its own"
+      | _ => throw "a reply receipt with an unexpected verdict"
+    | .apply _ =>
+      match phase with
+      | .applied | .refused .noCall => pure ()
+      | .frontier => throw "the reply application stops at a frontier of the budget, and a host has no budget"
+      | .refused why => throw s!"the session refuses the application ({refusalWord why})"
+      | _ => throw "a reply application with an unexpected verdict"
+    match row, phase with
+    | .control _, .progressed => pure ()
+    | .control _, .frontier => throw "a control stops at a frontier of the budget, and a host has no budget"
+    | .control _, _ => throw "the session refuses a control"
+    | _, _ => pure ()
+    restless := !first && !(next.work.queued.isEmpty && next.work.runnable.isEmpty)
+    known := known ++ ((next.outstanding.map (·.fiber)).filter fun fiber => !known.contains fiber)
+    first := false
+    run := next
+
+/-! ### The rows as the module's host bindings -/
+
+/-- The TypeScript type of a row's column, as the type printer spells it. -/
+def columnType (ty : Ty) : Except String String :=
+  match Effect4.Codegen.Types.ofTy ty with
+  | some target => .ok (TypeScript.Render.type TypeScript.house0 target)
+  | none => .error "a row's column has no TypeScript type"
+
+/-- The host bindings of a row table, as the printed module names them: the namespaces, and the
+TypeScript type of the object that holds them. A row `Spelling.method` is one method. It takes
+the request, or nothing when the request is `unit`, and it answers
+`Effect.Effect<answer, error>`. -/
+def bindingsType (table : RowTable) : Except String (List String × String) := do
+  let methods ← table.mapM fun (raw : Program.Row) => do
+    let row := raw.normalizeTypes
+    unless row.shape == .call && row.trailing.isEmpty && row.typeArgs.isEmpty &&
+        row.registration == .external && row.kind == .async do
+      throw s!"the row {row.spelling} is no plain host call"
+    let (space, method) ← match row.spelling.splitOn "." with
+      | [space, method] => pure (space, method)
+      | _ => throw s!"the row {row.spelling} is not spelled Namespace.method"
+    let parameter ← if row.request == .unit then pure "" else do
+      pure ("request: " ++ (← columnType row.request))
+    pure (space, s!"readonly {method}: ({parameter}) => Effect.Effect<{← columnType row.answer}, {← columnType row.error}>")
+  let spaces := (methods.map (·.1)).eraseDups
+  let fields := spaces.map fun space =>
+    s!"readonly {space}: \{ {"; ".intercalate ((methods.filter (·.1 == space)).map (·.2))} }"
+  return (spaces, s!"\{ {"; ".intercalate fields} }")
+
+/-! ### The readers' premises
+
+A reader maps what the host notes to a part of the machine by position: the n-th cell that the
+module makes is cell n, and the n-th fiber that it forks is fiber n. Each premise below is what
+makes that position the machine's. Lean checks it on the program and on the scripted run. A
+reader whose premise fails is refused for that run, with the reason, and its fields wait. -/
+
+/-- Whether a program makes a cell: a `Ref.make` anywhere in it. -/
+def makesCell (program : Api.Program) : Bool :=
+  foldMap_eff false (· || ·) program (f_eff := fun
+    | .perform .refMake _ => true
+    | _ => false)
+
+/-- Whether a program makes a fiber: a fork head, a fiber run into a scope, or a race, anywhere
+in it. -/
+def makesFiber (program : Api.Program) : Bool :=
+  foldMap_eff false (· || ·) program (f_action := fun
+    | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .raceAll _ => true
+    | _ => false)
+
+/-- Whether a program holds a race. A race forks its entrants through no fork head. -/
+def races (program : Api.Program) : Bool :=
+  foldMap_eff false (· || ·) program (f_action := fun
+    | .raceAll _ => true
+    | _ => false)
+
+/-- Whether a forked program of a program makes a fiber. A fork that starts at once runs its
+program before its own fork head answers, so a fiber that the forked program makes is noted on
+the host before the forked fiber is. -/
+def forksInFork (program : Api.Program) : Bool :=
+  foldMap_eff false (· || ·) program (f_action := fun
+    | .fork forked _ | .forkIn forked _ _ | .forkScoped forked _ => makesFiber forked
+    | _ => false)
+
+/-- Whether the root makes every cell before it makes a fiber. Down the program's spine of
+binds, a part that makes a fiber makes no cell, and no part after it makes one. So one fiber
+makes every cell, in the program's order, and the n-th `Ref.make` that runs is cell n. The check
+is conservative: it refuses a part that makes both, whatever their order inside it. -/
+def cellsFirst : Api.Program → Bool
+  | .bind first rest =>
+    if makesFiber first then !makesCell first && !makesCell rest else cellsFirst rest
+  | program => !(makesFiber program && makesCell program)
+
+/-- The readers that a run gets, each with what the host must find, and the readers that it is
+refused, each with the reason.
+
+* `cells`: the root makes every cell before it makes a fiber (`cellsFirst`). The fixture holds
+  the count of cells at the script's end.
+* `fibers`: the program holds no race and no fork inside a forked program, and every fiber of
+  the run but the root has a source point and the next number. The fixture holds the count of
+  those fibers.
+* `sleeps`: every fiber that sleeps at the script's end is the root or made a call, so the host
+  has its number.
+* `dispatchers`: the machine has no armed owner and no runnable fiber at the script's end. The
+  host reads a count, and it names no fiber. -/
+def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J :=
+  let program := run.opened.built.program
+  let machine := scripted.machine
+  let callers := Api.root :: (callsOf run.opened scripted.journal).map (·.fiber)
+  let verdict : Reader → Except String J
+    | .cells =>
+      if cellsFirst program then .ok (toJson machine.state.refs.length)
+      else .error "a Ref.make of the program follows a fork, or stands in one"
+    | .fibers =>
+      if races program then .error "the program holds a race, which forks through no fork head"
+      else if forksInFork program then
+        .error "a forked program of the program makes a fiber, so the host notes it out of order"
+      else if machine.forks.any (·.site.isEmpty) then
+        .error "a fiber of the run has no source point"
+      else if machine.forks.map (·.child.value) != (List.range machine.forks.length).map (· + 1) then
+        .error "the forked fibers of the run are not numbered in fork order"
+      else .ok (toJson machine.forks.length)
+    | .sleeps =>
+      if scripted.work.timers.all fun timer => callers.contains timer.1 then .ok (Json.bool true)
+      else .error "a fiber that sleeps at the script's end made no call, so the host has no number for it"
+    | .dispatchers =>
+      if scripted.work.runnable.isEmpty && scripted.work.queued.isEmpty then .ok (Json.bool true)
+      else .error "the machine names an armed owner or a runnable fiber, and the host reads a count"
+  run.asks.foldl (fun (state : List (String × J) × List J) reader =>
+    match verdict reader with
+    | .ok found => (state.1 ++ [(reader.word, found)], state.2)
+    | .error why =>
+      (state.1, state.2 ++ [Json.mkObj [("reader", .str reader.word), ("why", .str why)]])) ([], [])
+
+/-! ### The fixture and the replay -/
+
+/-- One run's fixture: the printed module, the bindings' type, the table, the calls, the script
+as the host's acts, and the battery's observation of the scripted run. -/
+def emitRun (run : HostRun) : Except String J := do
+  let built := run.opened.built
+  let scripted := Scenario.play run.opened run.moves
+  performable run.opened scripted.journal
+  if let some why := run.out then throw why
+  let some module := Api.printModule "main" built.program built.table
+    | throw "the module printer refuses the program"
+  let acts ← scripted.journal.mapM fun row =>
+    match rowJson row with
+    | some act => pure act
+    | none => throw "a row outside the wire"
+  let (spaces, bindings) ← bindingsType built.table
+  let (readers, refused) := readersOf run scripted
+  return Json.mkObj [("name", .str run.name), ("scenario", .str run.scenario),
+    ("session", .str run.opened.id),
+    ("module", .str (String.join (module.decls.map (TypeScript.Render.decl TypeScript.house0)))),
+    ("namespaces", toJson spaces), ("bindings", .str bindings), ("table", tableJson built.table),
+    ("calls", toJson ((callsOf run.opened scripted.journal).map awaitJson)),
+    ("acts", toJson acts), ("observation", Json.mkObj (run.observed scripted)),
+    ("readers", Json.mkObj readers), ("refusedReaders", toJson refused)]
+
+/-- Lean's replay of a host's recording: the rows of the recording played by `Run.play` from the
+run that the battery opens. `same` is the battery's own equality of the replayed observation and
+the scripted one. `fields` gives the same comparison for each field's JSON value. `verdicts`
+gives the session's verdict of each row, in order. -/
+def replayRun (run : HostRun) (recording : J) : Except String J := do
+  keys recording ["header", "records"]
+  let header ← field recording "header"
+  keys header ["format", "version", "session", "profile", "program", "table"]
+  unless (← strField header "format") = "effect4-host-session-v3" &&
+      (← natField header "version") = version do
+    throw "version 3 required; version 2 and older inputs need explicit migration"
+  unless (← strField header "profile") = "keyed-v3" do throw "profile mismatch"
+  unless (← strField header "session") = run.opened.id do throw "session mismatch"
+  unless (← strField header "program") = run.name do throw "program mismatch"
+  unless (← field header "table") == tableJson run.opened.built.table do throw "full table mismatch"
+  let records := (← (← field recording "records").getArr?).toList
+  let rows ← records.mapM (command run.opened.id run.opened.built.table)
+  let replayed := run.opened.play rows
+  let scripted := Scenario.play run.opened run.moves
+  let fields := ((run.observed replayed).zip (run.observed scripted)).map fun (mine, theirs) =>
+    (mine.1, Json.bool (mine.2 == theirs.2))
+  return Json.mkObj [("same", toJson (run.same replayed scripted)), ("fields", Json.mkObj fields),
+    ("journal", toJson (decide (replayed.journal = scripted.journal))),
+    ("verdicts", toJson (replayed.phases.map verdictJson)),
+    ("observation", Json.mkObj (run.observed replayed))]
+
+/-! ### The runs -/
+
+/-- A battery's program, built as the battery builds it. -/
+def build (what : String) (module : Authoring.Module NativeOp) : Except String Api.Built :=
+  match Effect4.Api.Author.build module with
+  | .ok built => .ok built
+  | .error _ => .error ("the build refuses " ++ what)
+
+/-- One host run of the routing scenario, with its observation's three fields. -/
+def routing (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
+  { name := "routing/" ++ name
+    scenario := "routing"
+    opened := Scenario.Routing.opened built
+    moves := moves
+    observed := fun run =>
+      let o := Scenario.Routing.observe run
+      [ ("outcome", exitOrNull o.outcome)
+      , ("repositoryCalls", toJson (o.repositoryCalls.map valJson))
+      , ("refusals", toJson (o.refusals.map fun entry => [entry.1, refusalWord entry.2])) ]
+    same := fun a b => Scenario.Routing.observe a == Scenario.Routing.observe b }
+
+open Scenario.Routing in
+/-- The routing scenario's runs: each script of a control of `Test/Dogfood/Scenario/Routing.lean`,
+on the program of that control. The first six are on the scenario's own program `request`. The
+others are on the variants of the battery's red controls. -/
+def routingRuns : Except String (List HostRun) := do
+  let own := P2HandlerLayers.findById
+  let bob ← build "routing's request" (request "secret" 2 "2")
+  let missing ← build "routing's request" (request "secret" 9 "9")
+  let denied ← build "routing's request" (request "wrong" 2 "2")
+  let misnamed ← build "routing's misnamed handler"
+    (routed false own (named "NotFound") (named "Unauthorised") "wrong" 2 "2")
+  let catchAll ← build "routing's catch-all handler"
+    (routed false own (named "NotFound") (fun _ => Authoring.bool true) "secret" 2 "2")
+  let eager ← build "routing's eager handler"
+    (routed true own (named "NotFound") (named "Unauthorized") "wrong" 2 "2")
+  let exact ← build "routing's exact error column"
+    (routed false findByIdExact (named "NotFound") (named "Unauthorized") "secret" 2 "2")
+  return [ routing "200" bob (lookups 2)
+    , routing "404" missing (lookups 9)
+    , routing "401" denied (lookups 2)
+    , routing "escape" bob (failing "SqlError" "connection lost")
+    , routing "business-tag" bob (failing "NotFound" "db")
+    , routing "wide" bob (Scenario.script [[.start],
+        Scenario.answer cfg (Scenario.ok (configOf "secret" 20)),
+        Scenario.answer repo (Scenario.ok wide)])
+    , routing "misnamed" misnamed (lookups 2)
+    , routing "catch-all" catchAll (failing "SqlError" "connection lost")
+    , routing "eager" eager (lookups 2)
+    , routing "exact-business-tag" exact (failing "NotFound" "db")
+    , { routing "exact-escape" exact (failing "SqlError" "connection lost") with
+        out := some "tsgo 7 refuses the printed module of the exact error column (TS2375, twice): the lane runs only a module that type-checks" } ]
+
+/-- Every host run of every scenario. -/
+def runs : Except String (List HostRun) := do
+  routingRuns
+
+/-- The fixtures of the runs that a host can perform, and each other run with the reason. -/
+def emit : Except String J := do
+  let all ← runs
+  let fixtures := all.filterMap fun run => (emitRun run).toOption
+  let waiting := all.filterMap fun run =>
+    match emitRun run with
+    | .ok _ => none
+    | .error why => some (Json.mkObj [("name", .str run.name), ("scenario", .str run.scenario),
+        ("why", .str why)])
+  return Json.mkObj [("runs", toJson fixtures), ("waiting", toJson waiting)]
+
+/-- Lean's replay of each recording of a batch, by the run's name. -/
+def batch (inputs : List J) : Except String J := do
+  let all ← runs
+  return toJson (← inputs.mapM fun input => do
+    let name ← input.getObjValAs? String "name"
+    let recording ← input.getObjVal? "recording"
+    let result := match all.find? (·.name == name) with
+      | none => Json.mkObj [("refused", .str "unknown run")]
+      | some run =>
+        match replayRun run recording with
+        | .ok result => result
+        | .error why => Json.mkObj [("refused", .str why)]
+    return Json.mkObj [("name", .str name), ("result", result)])
+
+end Scenarios
 end KeyedTool
 
 def main (args : List String) : IO UInt32 := do
@@ -369,7 +840,11 @@ def main (args : List String) : IO UInt32 := do
           let result := match KeyedTool.replay (← j.getObjVal? "recording") ((j.getObjValAs? Nat "fuel").toOption.getD 1000) with
             | .ok receipt => receipt | .error why => Json.mkObj [("refused", .str why)]
           return Json.mkObj [("name", .str name), ("result", result)])
-    | _ => pure (.error "usage: emit | replay FILE | zero FILE | batch FILE")
+    | ["scenarios"] => pure KeyedTool.Scenarios.emit
+    | ["scenario-batch", file] => do
+      let input ← IO.FS.readFile file
+      pure <| do KeyedTool.Scenarios.batch (← (← Json.parse input).getArr?).toList
+    | _ => pure (.error "usage: emit | replay FILE | zero FILE | batch FILE | scenarios | scenario-batch FILE")
   match result with
   | .error why => IO.eprintln why; pure 2
   | .ok j => IO.println j.compress; pure 0

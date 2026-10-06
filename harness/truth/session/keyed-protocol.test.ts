@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import { allows, decodeKeyed, hostProtocol, transition, type KeyedHeader, type KeyedRecording, type DecisionRecord } from "./keyed-protocol.ts"
-import { KeyedRecorder, valueJson, type KeyedFixture } from "./keyed-recorder.ts"
-import { Effect, Fiber, Result } from "effect"
+import { KeyedRecorder, valueJson, wireValue, type KeyedFixture } from "./keyed-recorder.ts"
+import { ArmedDispatchers, ScriptedHost, bindScenario, declareScenario, scenarioEffect, scenarioRef } from "./keyed-bindings.ts"
+import { Data, Effect, Fiber, Option, Ref, Result } from "effect"
+import { setImmediate as nextTurn } from "node:timers/promises"
 import { ProfileRefusal, Rc112ClockBoundary } from "./clock.ts"
 const expected = { program: "two", table: [{}] }
 const header: KeyedHeader = { format: "effect4-host-session-v3", version: hostProtocol.version, session: "s", profile: "keyed-v3", ...expected }
@@ -151,5 +153,165 @@ describe("keyed clock execution", () => {
     } finally {
       await clock.dispose()
     }
+  })
+})
+
+// The scenarios' half of the recorder (decisions row 254). A fixture is `scripted` or it is not.
+describe("scripted recorder", () => {
+  const call = { callId: 0, fiber: 1, token: 5, row: 0, request: 7 }
+  const fixture = (scripted: boolean): KeyedFixture => ({
+    name: "scripted", expression: "", table: [{}], source: null, plan: [call], expected: null, ...(scripted ? { scripted: true as const } : {})
+  })
+  /** One fiber parked on one call of the recorder. */
+  const parked = (recorder: KeyedRecorder, work: Effect.Effect<number> = Effect.succeed(7)) =>
+    Effect.runFork(recorder.external(0, 7, work))
+
+  test("an unmarked fixture keeps today's refusals, and it takes no scripted branch", async () => {
+    const recorder = new KeyedRecorder(fixture(false), "plain")
+    const fiber = parked(recorder)
+    // The call is recorded when it starts, with the plan's call id.
+    expect(recorder.records.map(record => record.kind)).toEqual(["evaluate", "call"])
+    expect(() => recorder.apply(call)).toThrow("no stored reply for selected key")
+    await expect(recorder.arrive({ fiber: 9, token: 9 })).rejects.toThrow("unknown or duplicate arrival")
+    await Effect.runPromise(Fiber.interrupt(fiber))
+    // After the cancellation the call is gone: a reply is a refusal of the recorder, no record.
+    await expect(recorder.arrive(call)).rejects.toThrow("unknown or duplicate arrival")
+    expect(recorder.records.map(record => record.kind)).toEqual(["evaluate", "call"])
+    expect(recorder.measurements()).toMatchObject({ held: [], retired: [], refusals: [] })
+  })
+
+  test("an unmarked fixture refuses an operation that completes after its cancellation", async () => {
+    const recorder = new KeyedRecorder(fixture(false), "plain")
+    let complete!: (value: number) => void
+    const fiber = parked(recorder, Effect.promise(() => new Promise<number>(resolve => { complete = resolve })))
+    const arrival = recorder.arrive(call)
+    await Effect.runPromise(Fiber.interrupt(fiber))
+    complete(7)
+    await expect(arrival).rejects.toThrow("operation completed after cancellation; binding cleanup required")
+    expect(recorder.records.map(record => record.kind)).toEqual(["evaluate", "call"])
+  })
+
+  test("a scripted fixture records a call when the script holds it", async () => {
+    const recorder = new KeyedRecorder(fixture(true), "scripted")
+    const fiber = parked(recorder)
+    expect(recorder.records.map(record => record.kind)).toEqual(["evaluate"])
+    expect(() => recorder.hold({ fiber: 9, token: 9 })).toThrow("did not start")
+    recorder.hold(call)
+    expect(() => recorder.hold(call)).toThrow("twice")
+    expect(recorder.records.at(-1)).toMatchObject({ kind: "call", callId: 0, fiber: 1, token: 5, row: 0, request: 7 })
+    await recorder.arrive(call)
+    recorder.apply(call)
+    expect(await Effect.runPromise(Fiber.join(fiber))).toBe(7)
+    const { held, receipts, applications, retired, refusals } = recorder.measurements()
+    expect(held).toEqual([{ ...call, state: "applied", reply: { success: 7 } }])
+    expect([receipts.length, applications.length, retired.length, refusals.length]).toEqual([1, 1, 0, 0])
+    expect(recorder.snapshot().records.map(record => record.kind)).toEqual(["evaluate", "call", "reply", "apply"])
+  })
+
+  test("a late reply is recorded, stored nowhere and predicted as noCall", async () => {
+    const recorder = new KeyedRecorder(fixture(true), "scripted")
+    parked(recorder)
+    recorder.hold(call)
+    recorder.cancel(1)
+    await recorder.arrive(call)
+    recorder.apply(call)
+    const { held, receipts, retired, stored, refusals } = recorder.measurements()
+    expect(recorder.records.map(record => record.kind)).toEqual(["evaluate", "call", "cancel", "reply", "apply"])
+    expect(held).toEqual([{ ...call, state: "retired", kept: false }])
+    expect(retired).toEqual([{ call: held[0]!, kept: false }])
+    expect([receipts, stored]).toEqual([[], []])
+    expect(refusals).toEqual([{ at: 3, row: "submit", reason: "noCall" }, { at: 4, row: "apply", reason: "noCall" }])
+  })
+
+  test("a stored reply stays with its retired call, and a second reply is predicted as pendingReply", async () => {
+    const recorder = new KeyedRecorder(fixture(true), "scripted")
+    parked(recorder)
+    recorder.hold(call)
+    await recorder.arrive(call)
+    await recorder.arrive(call)
+    recorder.cancel(1)
+    recorder.apply(call)
+    const { retired, stored, receipts, refusals } = recorder.measurements()
+    expect(retired.map(entry => entry.kept)).toEqual([true])
+    expect([stored.length, receipts.length]).toEqual([0, 1])
+    expect(refusals).toEqual([{ at: 3, row: "submit", reason: "pendingReply" }, { at: 5, row: "apply", reason: "noCall" }])
+  })
+
+  test("a call that the script never held leaves no retired record", async () => {
+    const recorder = new KeyedRecorder(fixture(true), "scripted")
+    parked(recorder)
+    recorder.cancel(1)
+    expect(recorder.measurements()).toMatchObject({ held: [], retired: [], live: [] })
+    expect(() => recorder.cancel(4)).toThrow("no runtime fiber")
+  })
+
+  test("a record is its frame, and a scripted value is the frame's record", () => {
+    class Deposit extends Data.TaggedError("Deposit")<{ readonly amount: number }> {}
+    expect(valueJson({ status: 200, body: "bob" })).toEqual({ ctor: 0, args: [["body", "status"], ["bob", 200]] })
+    expect(valueJson(new Deposit({ amount: 1 }))).toEqual({ ctor: 0, args: [["_tag", "amount"], ["Deposit", 1]] })
+    expect(wireValue({ some: { ctor: 0, args: [["id", "name"], [2, "bob"]] } })).toEqual(Option.some({ id: 2, name: "bob" }))
+    expect(wireValue(null)).toBeUndefined()
+    expect(() => wireValue({ ctor: 1, args: [1] })).toThrow("outside the selected transport profile")
+  })
+})
+
+// The readers (decisions row 254): each is a note, and each is off unless a run turns it on.
+describe("scenario readers", () => {
+  test("the cells reader's Ref owns `make` only, and its cell is the pinned one", () => {
+    declareScenario("reader/cells", [])
+    const host = new ScriptedHost(new KeyedRecorder({ name: "reader/cells", expression: "", table: [], source: null, plan: [], expected: null, scripted: true }, "reader"))
+    bindScenario("reader/cells", host)
+    const spied = scenarioRef("reader/cells")
+    expect(Object.keys(spied)).toEqual(["make"])
+    for (const name of Object.keys(Ref) as Array<keyof typeof Ref>) if (name !== "make") expect(spied[name]).toBe(Ref[name])
+    const cell = Effect.runSync(spied.make(7))
+    expect([host.cells.length, host.cells[0] === (cell as unknown)]).toEqual([1, true])
+    expect(Effect.runSync(Ref.updateAndGet(cell, n => n + 1))).toBe(8)
+    expect(Ref.getUnsafe(host.cells[0]!)).toBe(8)
+    // A faulty Ref, for the red control of the host's measurement, also owns `update`.
+    expect(Object.keys(scenarioRef("reader/cells", "drops-assignment"))).toEqual(["make", "update"])
+    bindScenario("reader/cells", undefined)
+  })
+
+  test("the fibers reader's Effect owns the three fork heads, in both call forms", async () => {
+    declareScenario("reader/fibers", [])
+    const host = new ScriptedHost(new KeyedRecorder({ name: "reader/fibers", expression: "", table: [], source: null, plan: [], expected: null, scripted: true }, "reader"))
+    bindScenario("reader/fibers", host)
+    const spied = scenarioEffect("reader/fibers")
+    expect(Object.keys(spied).sort()).toEqual(["forkChild", "forkDetach", "forkScoped"])
+    for (const name of Object.keys(Effect) as Array<keyof typeof Effect>)
+      if (!Object.hasOwn(spied, name)) expect(spied[name]).toBe(Effect[name])
+    const options = { startImmediately: true, uninterruptible: "inherit" } as const
+    const first = await Effect.runPromise(Effect.flatMap(spied.forkChild(Effect.succeed(1), options), fiber => Effect.map(Fiber.join(fiber), value => [fiber, value] as const)))
+    const second = await Effect.runPromise(Effect.flatMap(Effect.succeed(2).pipe(spied.forkDetach(options)), fiber => Effect.map(Fiber.join(fiber), value => [fiber, value] as const)))
+    expect([first[1], second[1]]).toEqual([1, 2])
+    expect(host.forks.map(fork => fork.id)).toEqual([first[0].id, second[0].id])
+    bindScenario("reader/fibers", undefined)
+  })
+
+  test("the sleeps reader is off by default, and it lists a sleep from its start to its end", async () => {
+    const clock = await Rc112ClockBoundary.make()
+    try {
+      expect(() => clock.sleeps()).toThrow("off")
+      clock.noteSleeps()
+      const fiber = Effect.runFork(clock.provide(Effect.sleep(5)))
+      expect(clock.sleeps().map(sleep => [sleep.fiber, sleep.wake])).toEqual([[fiber, 5n]])
+      await clock.advance("5")
+      await Effect.runPromise(Fiber.join(fiber))
+      expect(clock.sleeps()).toEqual([])
+    } finally {
+      await clock.dispose()
+    }
+  })
+
+  test("the dispatchers reader counts an armed dispatcher until its turn", async () => {
+    const dispatchers = new ArmedDispatchers()
+    const fiber = Effect.runFork(Effect.andThen(Effect.yieldNow, Effect.succeed(3)), { scheduler: dispatchers.scheduler })
+    expect(dispatchers.armed()).toBe(1)
+    await dispatchers.idle()
+    expect(dispatchers.armed()).toBe(0)
+    expect(fiber.pollUnsafe()).toBeDefined()
+    await nextTurn()
+    expect(dispatchers.armed()).toBe(0)
   })
 })
