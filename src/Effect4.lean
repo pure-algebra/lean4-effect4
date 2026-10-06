@@ -157,6 +157,9 @@ import Effect4.Codegen.Styles
 -- cell and its steps.
 import Effect4.Modules.Queue.Cell
 import Effect4.Modules.Queue.Steps
+-- Semaphore's cell and its five steps (decisions row 265).
+import Effect4.Modules.Semaphore.Cell
+import Effect4.Modules.Semaphore.Steps
 
 /-!
 # Effect4
