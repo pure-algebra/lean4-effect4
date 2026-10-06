@@ -1,0 +1,18 @@
+constants of the Effect4 and Test modules: 91515; matched by spelling: 6529
+below: matched 92; tagged by Lean 44; own declaration range 8; generated for its parent 84; theorems among the ranged 8
+brecOn: matched 84; tagged by Lean 44; own declaration range 0; generated for its parent 84; theorems among the ranged 0
+ctorElim: matched 261; tagged by Lean 261; own declaration range 0; generated for its parent 261; theorems among the ranged 0
+ctorIdx: matched 633; tagged by Lean 0; own declaration range 0; generated for its parent 633; theorems among the ranged 0
+inj: matched 1361; tagged by Lean 0; own declaration range 0; generated for its parent 1361; theorems among the ranged 0
+injEq: matched 1361; tagged by Lean 0; own declaration range 0; generated for its parent 1361; theorems among the ranged 0
+noConfusionType: matched 633; tagged by Lean 0; own declaration range 0; generated for its parent 633; theorems among the ranged 0
+sizeOf_spec: matched 2104; tagged by Lean 0; own declaration range 0; generated for its parent 2104; theorems among the ranged 0
+matched names with a declaration range of their own: [Effect4.Pool.Model.Profile.below,
+ Effect4.Program.Guard.FiberGuardState.below,
+ Effect4.Program.Guard.ReservedKeys.below,
+ Effect4.Program.Typed.FiberTyped.below,
+ Effect4.Program.Typed.OwedOk.below,
+ Effect4.Program.Typed.ReservedKeysR.below,
+ Effect4.Semaphore.Model.Profile.below,
+ Test.Counterexamples.Machine.Semantics.M6Capstone.OldObserve.ReservedKeysR.below]
+names under one of them: []

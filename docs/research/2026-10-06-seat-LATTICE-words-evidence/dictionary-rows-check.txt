@@ -1,0 +1,81 @@
+$ python3 try_entries.py dictionary-rows.txt <the worktree at the head> <a scratch folder>
+rows read as entries: 8 of 8; inserted 8; in place of an entry 0 []
+  type slice: forms ['type slice', 'type slices']; avoid ['program slice']; scope None; qualifiers []; in code False
+  site: forms ['site', 'sites']; avoid []; scope None; qualifiers []; in code False
+  slice view: forms ['slice view', 'slice views']; avoid ['sliced check']; scope None; qualifiers []; in code False
+  valid slice: forms ['valid slice', 'valid slices', 'valid type slice', 'valid type slices']; avoid []; scope None; qualifiers []; in code False
+  minimal slice: forms ['minimal slice', 'minimal slices', 'minimal type slice', 'minimal type slices']; avoid []; scope None; qualifiers []; in code False
+  descent: forms ['descent']; avoid []; scope None; qualifiers []; in code False
+  contribution slice: forms ['contribution slice', 'contribution slices']; avoid []; scope None; qualifiers []; in code False
+  mask: forms ['mask', 'masks']; avoid ['folded sites']; scope first; qualifiers ['slice', 'slices', 'omitted', 'interruptibility', 'interruptible', 'uninterruptible', 'restore', 'restores', 'restoring', 'saved', 'protected']; in code True
+
+the specification with the rows: 0 new finding(s)
+AGENTS.md: 0 new finding(s)
+
+every other checked document, new findings by rule and text:
+  Test/Dogfood/README.md: 1: {('qualifier', '"mask"'): 1}
+  Test/contracts/faces.contract.md: 1: {('qualifier', '"mask"'): 1}
+  Test/contracts/queue.contract.md: 1: {('qualifier', '"mask"'): 1}
+  harness/truth/LANE.md: 1: {('qualifier', '"mask"'): 1}
+  all: {('qualifier', '"mask"'): 4}
+
+$ python3 try_entries.py dictionary-rows-mask-as-asked.txt <the worktree at the head> <a scratch folder>   (the row of mask as asked: one sense, a qualifier at every use)
+the specification with the rows: 0 new finding(s)
+AGENTS.md: 0 new finding(s)
+
+every other checked document, new findings by rule and text:
+  docs/STATE.md: 21: {('qualifier', '"mask"'): 20, ('qualifier', '"masks"'): 1}
+  Test/contracts/pool.contract.md: 5: {('qualifier', '"mask"'): 5}
+  Test/contracts/program-runtime-r.contract.md: 5: {('qualifier', '"masks"'): 3, ('qualifier', '"mask"'): 2}
+  Test/contracts/semaphore.contract.md: 5: {('qualifier', '"mask"'): 5}
+  docs/core/semantics.md: 5: {('qualifier', '"mask"'): 4, ('qualifier', '"masks"'): 1}
+  Test/contracts/scope-restoration.contract.md: 4: {('qualifier', '"masks"'): 2, ('qualifier', '"mask"'): 2}
+  Test/contracts/frames.contract.md: 3: {('qualifier', '"masks"'): 2, ('qualifier', '"mask"'): 1}
+  Test/contracts/queue.contract.md: 3: {('qualifier', '"mask"'): 3}
+  README.md: 2: {('qualifier', '"mask"'): 2}
+  Test/contracts/faces.contract.md: 2: {('qualifier', '"mask"'): 2}
+  Test/contracts/program-denote-r.contract.md: 2: {('qualifier', '"mask"'): 2}
+  docs/design/design-language.md: 2: {('qualifier', '"mask"'): 2}
+  Test/Dogfood/README.md: 1: {('qualifier', '"mask"'): 1}
+  docs/ARCHITECTURE.md: 1: {('qualifier', '"masks"'): 1}
+  docs/core/decisions.md: 1: {('qualifier', '"mask"'): 1}
+  docs/core/machine-state.md: 1: {('qualifier', '"mask"'): 1}
+  generated/semantics.md: 1: {('qualifier', '"mask"'): 1}
+  harness/truth/LANE.md: 1: {('qualifier', '"mask"'): 1}
+  all: {('qualifier', '"mask"'): 55, ('qualifier', '"masks"'): 10}
+
+$ python3 try_entries.py dictionary-rows-valid-one-word.txt <the worktree at the head> <a scratch folder>   (valid as a one-word entry, a qualifier at every use)
+the specification with the rows: 2 new finding(s)
+  line 562: qualifier: "valid" (use of valid) without its qualifier Is this declaration valid under its names, parameters and structural ru…
+  line 563: qualifier: "valid" (use of valid) without its qualifier That the original declaration was valid
+AGENTS.md: 0 new finding(s)
+
+every other checked document, new findings by rule and text:
+  Test/contracts/foundation-wave2.contract.md: 4: {('qualifier', '"Valid"'): 1, ('qualifier', '"valid"'): 3}
+  docs/core/host-boundary.md: 4: {('qualifier', '"valid"'): 4}
+  Test/contracts/faces.contract.md: 2: {('qualifier', '"validity"'): 1, ('qualifier', '"mask"'): 1}
+  Test/Dogfood/README.md: 1: {('qualifier', '"mask"'): 1}
+  Test/contracts/machine-completion.contract.md: 1: {('qualifier', '"validity"'): 1}
+  Test/contracts/machine-handles.contract.md: 1: {('qualifier', '"valid"'): 1}
+  Test/contracts/queue.contract.md: 1: {('qualifier', '"mask"'): 1}
+  docs/ARCHITECTURE.md: 1: {('qualifier', '"valid"'): 1}
+  docs/STATE.md: 1: {('qualifier', '"validity"'): 1}
+  docs/core/system-map.md: 1: {('qualifier', '"validity"'): 1}
+  harness/truth/LANE.md: 1: {('qualifier', '"mask"'): 1}
+  all: {('qualifier', '"mask"'): 4, ('qualifier', '"validity"'): 4, ('qualifier', '"Valid"'): 1, ('qualifier', '"valid"'): 9}
+
+$ python3 try_entries.py monotonicity-row.txt <the worktree at the head> <a scratch folder>   (the amendment: the row takes the place of the entry of monotonicity)
+rows read as entries: 1 of 1; inserted 0; in place of an entry 1 ['monotonicity']
+  monotonicity: forms ['monotonicity', 'monotone']; avoid []; scope None; qualifiers []; in code False
+
+the specification with the rows: 0 new finding(s)
+AGENTS.md: 0 new finding(s)
+
+every other checked document, new findings by rule and text:
+  all: {}
+
+$ python3 try_entries.py dictionary-rows-red-anchors.txt <the worktree at the head> <a scratch folder>   (red control: one anchor names a theorem that is not there, and one a file that is not there)
+the specification with the rows: 2 new finding(s)
+  line 226: anchor: `refSite` (`src/Effect4/Program/NoSuchFile.lean`) no such file
+  line 230: anchor: `descend_no_such_theorem` (`src/Effect4/Laws/Slice/Lattice.lean`) the file does not contain descend_no_such_theorem
+AGENTS.md: 0 new finding(s)

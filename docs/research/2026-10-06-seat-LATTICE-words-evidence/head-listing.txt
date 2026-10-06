@@ -1,0 +1,351 @@
+THEOREMS 59
+### Effect4.Slice.drop_le
+@Effect4.Slice.drop_le : ∀ {α : Type u_1} [inst : DecidableEq α] (s : Effect4.Slice α) (x : α), s.drop x ≤ s
+### Effect4.Slice.drop_le_of_subset
+@Effect4.Slice.drop_le_of_subset : ∀ {α : Type u_1} [inst : DecidableEq α] {r done rest : List α} {x : α},
+  r ⊆ done ++ x :: rest → { kept := r }.drop x ≤ { kept := done ++ rest }
+### Effect4.Slice.exists_mem_subslices
+@Effect4.Slice.exists_mem_subslices : ∀ {α : Type u_1} [DecidableEq α] {j s : Effect4.Slice α},
+  j ≤ s → ∃ j', j' ∈ s.subslices ∧ j' ≤ j ∧ j ≤ j'
+### Effect4.Slice.failed_rest
+@Effect4.Slice.failed_rest : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool),
+  (∀ {a b : Effect4.Slice α}, a ≤ b → valid a = true → valid b = true) →
+    ∀ (pre mid rest : List α) (x : α),
+      Effect4.Slice.Failed valid pre mid (x :: rest) → Effect4.Slice.Failed valid pre mid rest
+### Effect4.Slice.failed_snoc
+@Effect4.Slice.failed_snoc : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool) (pre mid rest : List α) (x : α),
+  Effect4.Slice.Failed valid pre mid (x :: rest) →
+    valid { kept := pre ++ mid ++ rest } = false → Effect4.Slice.Failed valid pre (mid ++ [x]) rest
+### Effect4.Slice.filter_mem_sublists
+@Effect4.Slice.filter_mem_sublists : ∀ {α : Type u_1} (p : α → Bool) (l : List α),
+  List.filter p l ∈ Effect4.Slice.sublists l
+### Effect4.Slice.firstDrop_append
+@Effect4.Slice.firstDrop_append : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool) (pre mid rest : List α),
+  Effect4.Slice.Failed valid pre mid rest →
+    Effect4.Slice.firstDrop valid pre (mid ++ rest) = Effect4.Slice.firstDrop valid (pre ++ mid) rest
+### Effect4.Slice.firstDrop_length
+@Effect4.Slice.firstDrop_length : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool) (done todo l' : List α),
+  Effect4.Slice.firstDrop valid done todo = some l' → l'.length + 1 = done.length + todo.length
+### Effect4.Slice.instIsPreorder
+@Effect4.Slice.instIsPreorder : ∀ {α : Type u_1}, Std.IsPreorder (Effect4.Slice α)
+### Effect4.Slice.instLawfulOrderInf
+@Effect4.Slice.instLawfulOrderInf : ∀ {α : Type u_1} [inst : DecidableEq α], Std.LawfulOrderInf (Effect4.Slice α)
+### Effect4.Slice.instLawfulOrderSup
+@Effect4.Slice.instLawfulOrderSup : ∀ {α : Type u_1}, Std.LawfulOrderSup (Effect4.Slice α)
+### Effect4.Slice.le_drop
+@Effect4.Slice.le_drop : ∀ {α : Type u_1} [inst : DecidableEq α] {j s : Effect4.Slice α} {x : α},
+  j ≤ s → ¬x ∈ j.kept → j ≤ s.drop x
+### Effect4.Slice.le_of_mem_subslices
+@Effect4.Slice.le_of_mem_subslices : ∀ {α : Type u_1} {j s : Effect4.Slice α}, j ∈ s.subslices → j ≤ s
+### Effect4.Slice.not_mem_drop
+@Effect4.Slice.not_mem_drop : ∀ {α : Type u_1} [inst : DecidableEq α] (s : Effect4.Slice α) (x : α),
+  ¬x ∈ (s.drop x).kept
+### Effect4.Slice.omitted_anti
+@Effect4.Slice.omitted_anti : ∀ {α : Type u_1} [inst : DecidableEq α] (sites : List α) {a b : Effect4.Slice α},
+  a ≤ b → Effect4.Slice.omitted sites b ⊆ Effect4.Slice.omitted sites a
+### Effect4.Slice.omitted_full
+@Effect4.Slice.omitted_full : ∀ {α : Type u_1} [inst : DecidableEq α] (sites : List α),
+  Effect4.Slice.omitted sites { kept := sites } = []
+### Effect4.Slice.omitted_subset
+@Effect4.Slice.omitted_subset : ∀ {α : Type u_1} [inst : DecidableEq α] (sites : List α) (s : Effect4.Slice α),
+  Effect4.Slice.omitted sites s ⊆ sites
+### Effect4.Slice.restart_append
+@Effect4.Slice.restart_append : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool),
+  (∀ {a b : Effect4.Slice α}, a ≤ b → valid a = true → valid b = true) →
+    ∀ (done todo : List α),
+      Effect4.Slice.Failed valid [] done todo →
+        Effect4.Slice.restart valid (done ++ todo) = Effect4.Slice.sweep valid done todo
+### Effect4.Slice.restart_eq_sweep
+@Effect4.Slice.restart_eq_sweep : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool),
+  (∀ {a b : Effect4.Slice α}, a ≤ b → valid a = true → valid b = true) →
+    ∀ (l : List α), Effect4.Slice.restart valid l = Effect4.Slice.sweep valid [] l
+### Effect4.Slice.restart_of_none
+@Effect4.Slice.restart_of_none : ∀ {α : Type u_1} {valid : Effect4.Slice α → Bool} {l : List α},
+  Effect4.Slice.firstDrop valid [] l = none → Effect4.Slice.restart valid l = l
+### Effect4.Slice.restart_of_some
+@Effect4.Slice.restart_of_some : ∀ {α : Type u_1} {valid : Effect4.Slice α → Bool} {l l' : List α},
+  Effect4.Slice.firstDrop valid [] l = some l' → Effect4.Slice.restart valid l = Effect4.Slice.restart valid l'
+### Effect4.Slice.sublists_subset
+@Effect4.Slice.sublists_subset : ∀ {α : Type u_1} (l l' : List α), l' ∈ Effect4.Slice.sublists l → l' ⊆ l
+### Effect4.Slice.sweepAsked_length
+@Effect4.Slice.sweepAsked_length : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool) (done todo : List α),
+  (Effect4.Slice.sweepAsked valid done todo).length = todo.length
+### Effect4.Slice.sweepFreeAsked_sublist
+@Effect4.Slice.sweepFreeAsked_sublist : ∀ {α : Type u_1} [inst : DecidableEq α] (valid : Effect4.Slice α → Bool)
+  (free : Effect4.Slice α → α → Bool),
+  (∀ {a b : Effect4.Slice α}, a ≤ b → valid a = true → valid b = true) →
+    (∀ (c : Effect4.Slice α) (x : α), free c x = true → valid c = true → valid (c.drop x) = true) →
+      ∀ (done todo : List α),
+        valid { kept := done ++ todo } = true →
+          (Effect4.Slice.sweepFreeAsked valid free done todo).Sublist (Effect4.Slice.sweepAsked valid done todo)
+### Effect4.Slice.sweepFree_congr
+@Effect4.Slice.sweepFree_congr : ∀ {α : Type u_1} (valid valid' : Effect4.Slice α → Bool)
+  (free : Effect4.Slice α → α → Bool) (done todo : List α),
+  (∀ (c : Effect4.Slice α), c ∈ Effect4.Slice.sweepFreeAsked valid free done todo → valid' c = valid c) →
+    Effect4.Slice.sweepFree valid' free done todo = Effect4.Slice.sweepFree valid free done todo
+### Effect4.Slice.sweepFree_eq_sweep
+@Effect4.Slice.sweepFree_eq_sweep : ∀ {α : Type u_1} [inst : DecidableEq α] (valid : Effect4.Slice α → Bool)
+  (free : Effect4.Slice α → α → Bool),
+  (∀ {a b : Effect4.Slice α}, a ≤ b → valid a = true → valid b = true) →
+    (∀ (c : Effect4.Slice α) (x : α), free c x = true → valid c = true → valid (c.drop x) = true) →
+      ∀ (done todo : List α),
+        valid { kept := done ++ todo } = true →
+          Effect4.Slice.sweepFree valid free done todo = Effect4.Slice.sweep valid done todo
+### Effect4.Slice.sweep_congr
+@Effect4.Slice.sweep_congr : ∀ {α : Type u_1} (valid valid' : Effect4.Slice α → Bool) (done todo : List α),
+  (∀ (c : Effect4.Slice α), c ∈ Effect4.Slice.sweepAsked valid done todo → valid' c = valid c) →
+    Effect4.Slice.sweep valid' done todo = Effect4.Slice.sweep valid done todo
+### Effect4.Slice.sweep_kept_needed
+@Effect4.Slice.sweep_kept_needed : ∀ {α : Type u_1} [inst : DecidableEq α] (valid : Effect4.Slice α → Bool),
+  (∀ {a b : Effect4.Slice α}, a ≤ b → valid a = true → valid b = true) →
+    ∀ (done todo : List α) (y : α),
+      y ∈ Effect4.Slice.sweep valid done todo →
+        y ∈ done ∨ valid ({ kept := Effect4.Slice.sweep valid done todo }.drop y) = false
+### Effect4.Slice.sweep_sublist
+@Effect4.Slice.sweep_sublist : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool) (done todo : List α),
+  (Effect4.Slice.sweep valid done todo).Sublist (done ++ todo)
+### Effect4.Slice.sweep_valid
+@Effect4.Slice.sweep_valid : ∀ {α : Type u_1} (valid : Effect4.Slice α → Bool) (done todo : List α),
+  valid { kept := done ++ todo } = true → valid { kept := Effect4.Slice.sweep valid done todo } = true
+### Effect4.SliceView.Minimal.keeps_above
+@Effect4.SliceView.Minimal.keeps_above : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] {v : Effect4.SliceView α T} {q : T} {m : Effect4.Slice α},
+  v.Minimal q m →
+    ∀ {above : α → α → Prop},
+      (∀ {x y : α}, above y x → ¬y ∈ m.kept → v.typeOf m ≤ v.typeOf (m.drop x)) →
+        ∀ {x y : α}, x ∈ m.kept → above y x → y ∈ m.kept
+### Effect4.SliceView.Minimal.needs
+@Effect4.SliceView.Minimal.needs : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] {v : Effect4.SliceView α T} {q : T} {m : Effect4.Slice α},
+  v.Minimal q m → ∀ {x : α}, x ∈ m.kept → ¬v.typeOf m ≤ v.typeOf (m.drop x)
+### Effect4.SliceView.Minimal.of_same_sites
+@Effect4.SliceView.Minimal.of_same_sites : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [Std.IsPreorder T]
+  {v : Effect4.SliceView α T} {q : T} {m m' : Effect4.Slice α}, v.Minimal q m → m ≤ m' → m' ≤ m → v.Minimal q m'
+### Effect4.SliceView.contribution_le
+@Effect4.SliceView.contribution_le : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [inst_2 : DecidableLE T] (v : Effect4.SliceView α T) (q : T) (s : Effect4.Slice α), v.contribution q s ≤ s
+### Effect4.SliceView.contribution_lub
+@Effect4.SliceView.contribution_lub : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) (q : T) (s u : Effect4.Slice α),
+  v.contribution q s ≤ u ↔ ∀ (m : Effect4.Slice α), m ≤ s → v.Minimal q m → m ≤ u
+### Effect4.SliceView.contribution_valid
+@Effect4.SliceView.contribution_valid : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) {q : T} {s : Effect4.Slice α},
+  v.Valid q s → v.Valid q (v.contribution q s)
+### Effect4.SliceView.decide_valid_up
+@Effect4.SliceView.decide_valid_up : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [Std.IsPreorder T]
+  [inst_2 : DecidableLE T] (v : Effect4.SliceView α T) (q : T) {a b : Effect4.Slice α},
+  a ≤ b → decide (v.Valid q a) = true → decide (v.Valid q b) = true
+### Effect4.SliceView.descendTree_asks
+@Effect4.SliceView.descendTree_asks : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) (parent : α → Option α),
+  (∀ (c : Effect4.Slice α) {x y : α}, parent x = some y → ¬y ∈ c.kept → v.typeOf c ≤ v.typeOf (c.drop x)) →
+    ∀ {q : T} {s : Effect4.Slice α},
+      v.Valid q s →
+        (v.askedTree parent q s).Sublist (v.asked q s) ∧
+          ∀ (valid' : Effect4.Slice α → Bool),
+            (∀ (c : Effect4.Slice α), c ∈ v.askedTree parent q s → valid' c = decide (v.Valid q c)) →
+              Effect4.Slice.sweepFree valid' (Effect4.Slice.parentOmitted parent) [] s.kept =
+                (v.descendTree parent q s).kept
+### Effect4.SliceView.descendTree_eq_descend
+@Effect4.SliceView.descendTree_eq_descend : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) (parent : α → Option α),
+  (∀ (c : Effect4.Slice α) {x y : α}, parent x = some y → ¬y ∈ c.kept → v.typeOf c ≤ v.typeOf (c.drop x)) →
+    ∀ {q : T} {s : Effect4.Slice α}, v.Valid q s → v.descendTree parent q s = v.descend q s
+### Effect4.SliceView.descendTree_minimal
+@Effect4.SliceView.descendTree_minimal : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) (parent : α → Option α),
+  (∀ (c : Effect4.Slice α) {x y : α}, parent x = some y → ¬y ∈ c.kept → v.typeOf c ≤ v.typeOf (c.drop x)) →
+    ∀ {q : T} {s : Effect4.Slice α}, v.Valid q s → v.Minimal q (v.descendTree parent q s)
+### Effect4.SliceView.descend_asks
+@Effect4.SliceView.descend_asks : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableLE T]
+  (v : Effect4.SliceView α T) (q : T) (s : Effect4.Slice α),
+  (v.asked q s).length = s.kept.length ∧
+    ∀ (valid' : Effect4.Slice α → Bool),
+      (∀ (c : Effect4.Slice α), c ∈ v.asked q s → valid' c = decide (v.Valid q c)) →
+        Effect4.Slice.sweep valid' [] s.kept = (v.descend q s).kept
+### Effect4.SliceView.descend_eq_restart
+@Effect4.SliceView.descend_eq_restart : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [Std.IsPreorder T]
+  [inst_2 : DecidableLE T] (v : Effect4.SliceView α T) (q : T) (s : Effect4.Slice α),
+  v.descend q s = { kept := Effect4.Slice.restart (fun c => decide (v.Valid q c)) s.kept }
+### Effect4.SliceView.descend_le
+@Effect4.SliceView.descend_le : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableLE T]
+  (v : Effect4.SliceView α T) (q : T) (s : Effect4.Slice α), v.descend q s ≤ s
+### Effect4.SliceView.descend_minimal
+@Effect4.SliceView.descend_minimal : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [DecidableEq α] [Std.IsPreorder T]
+  [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) {q : T} {s : Effect4.Slice α},
+  v.Valid q s → v.Minimal q (v.descend q s)
+### Effect4.SliceView.descend_sublist
+@Effect4.SliceView.descend_sublist : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableLE T]
+  (v : Effect4.SliceView α T) (q : T) (s : Effect4.Slice α), (v.descend q s).kept.Sublist s.kept
+### Effect4.SliceView.descend_valid
+@Effect4.SliceView.descend_valid : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableLE T]
+  (v : Effect4.SliceView α T) {q : T} {s : Effect4.Slice α}, v.Valid q s → v.Valid q (v.descend q s)
+### Effect4.SliceView.exists_minimal_below
+@Effect4.SliceView.exists_minimal_below : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [DecidableEq α]
+  [Std.IsPreorder T] [DecidableLE T] (v : Effect4.SliceView α T) {q : T} {s : Effect4.Slice α},
+  v.Valid q s → ∃ m, m ≤ s ∧ v.Minimal q m
+### Effect4.SliceView.isMinimal_iff
+@Effect4.SliceView.isMinimal_iff : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) (q : T) (m : Effect4.Slice α),
+  v.isMinimal q m = true ↔ v.Minimal q m
+### Effect4.SliceView.lattice_minimal
+@Effect4.SliceView.lattice_minimal : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [DecidableEq α] [Std.IsPreorder T]
+  [inst_3 : DecidableLE T] [inst_4 : Max T] [Std.LawfulOrderSup T] (v : Effect4.SliceView α T),
+  (∀ {q : T} {s : Effect4.Slice α}, v.Valid q s → ∃ m, m ≤ s ∧ v.Minimal q m) ∧
+    (∀ {q : T} {s : Effect4.Slice α}, v.Valid q s → v.descend q s ≤ s ∧ v.Minimal q (v.descend q s)) ∧
+      (∀ {q₁ q₂ : T} {m₂ : Effect4.Slice α}, q₁ ≤ q₂ → v.Minimal q₂ m₂ → ∃ m₁, m₁ ≤ m₂ ∧ v.Minimal q₁ m₁) ∧
+        ∀ {q₁ q₂ : T} {a b : Effect4.Slice α}, v.Valid q₁ a → v.Valid q₂ b → v.Valid (max q₁ q₂) (max a b)
+### Effect4.SliceView.minimal_iff_drop
+@Effect4.SliceView.minimal_iff_drop : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] (v : Effect4.SliceView α T) (q : T) (m : Effect4.Slice α),
+  v.Minimal q m ↔ v.Valid q m ∧ ∀ (x : α), x ∈ m.kept → ¬v.Valid q (m.drop x)
+### Effect4.SliceView.minimal_refine
+@Effect4.SliceView.minimal_refine : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [DecidableEq α] [Std.IsPreorder T]
+  [DecidableLE T] (v : Effect4.SliceView α T) {q₁ q₂ : T} {m₂ : Effect4.Slice α},
+  q₁ ≤ q₂ → v.Minimal q₂ m₂ → ∃ m₁, m₁ ≤ m₂ ∧ v.Minimal q₁ m₁
+### Effect4.SliceView.minimals_complete
+@Effect4.SliceView.minimals_complete : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) {q : T} {s m : Effect4.Slice α},
+  m ≤ s → v.Minimal q m → ∃ m', m' ∈ v.minimals q s ∧ m' ≤ m ∧ m ≤ m'
+### Effect4.SliceView.minimals_sound
+@Effect4.SliceView.minimals_sound : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) {q : T} {s m : Effect4.Slice α},
+  m ∈ v.minimals q s → m ≤ s ∧ v.Minimal q m
+### Effect4.SliceView.mono
+@Effect4.SliceView.mono : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] (self : Effect4.SliceView α T)
+  {a b : Effect4.Slice α}, a ≤ b → self.typeOf a ≤ self.typeOf b
+### Effect4.SliceView.ofOmitted_full
+@Effect4.SliceView.ofOmitted_full : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  (sites : List α) (f : List α → T) (anti : ∀ {F G : List α}, F ⊆ G → G ⊆ sites → f G ≤ f F),
+  (Effect4.SliceView.ofOmitted sites f ⋯).typeOf { kept := sites } = f []
+### Effect4.SliceView.parentOmitted_sound
+@Effect4.SliceView.parentOmitted_sound : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [inst_1 : DecidableEq α]
+  [Std.IsPreorder T] [inst_3 : DecidableLE T] (v : Effect4.SliceView α T) (parent : α → Option α),
+  (∀ (c : Effect4.Slice α) {x y : α}, parent x = some y → ¬y ∈ c.kept → v.typeOf c ≤ v.typeOf (c.drop x)) →
+    ∀ (q : T) (c : Effect4.Slice α) (x : α),
+      Effect4.Slice.parentOmitted parent c x = true → decide (v.Valid q c) = true → decide (v.Valid q (c.drop x)) = true
+### Effect4.SliceView.valid_max
+@Effect4.SliceView.valid_max : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [Std.IsPreorder T] [inst_2 : Max T]
+  [Std.LawfulOrderSup T] (v : Effect4.SliceView α T) {q₁ q₂ : T} {a b : Effect4.Slice α},
+  v.Valid q₁ a → v.Valid q₂ b → v.Valid (max q₁ q₂) (max a b)
+### Effect4.SliceView.valid_refine
+@Effect4.SliceView.valid_refine : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [Std.IsPreorder T]
+  (v : Effect4.SliceView α T) {q q' : T} {s : Effect4.Slice α}, q' ≤ q → v.Valid q s → v.Valid q' s
+### Effect4.SliceView.valid_up
+@Effect4.SliceView.valid_up : ∀ {α : Type u_1} {T : Type u_2} [inst : LE T] [Std.IsPreorder T]
+  (v : Effect4.SliceView α T) {q : T} {a b : Effect4.Slice α}, v.Valid q a → a ≤ b → v.Valid q b
+OTHERS 38
+### Effect4.Slice
+Effect4.Slice : Type u_1 → Type u_1
+### Effect4.Slice.Failed
+@Effect4.Slice.Failed : {α : Type u_1} → (Effect4.Slice α → Bool) → List α → List α → List α → Prop
+### Effect4.Slice.drop
+@Effect4.Slice.drop : {α : Type u_1} → [DecidableEq α] → Effect4.Slice α → α → Effect4.Slice α
+### Effect4.Slice.firstDrop
+@Effect4.Slice.firstDrop : {α : Type u_1} → (Effect4.Slice α → Bool) → List α → List α → Option (List α)
+### Effect4.Slice.instDecidableLE
+@Effect4.Slice.instDecidableLE : {α : Type u_1} → [DecidableEq α] → (a b : Effect4.Slice α) → Decidable (a ≤ b)
+### Effect4.Slice.instLE
+@Effect4.Slice.instLE : {α : Type u_1} → LE (Effect4.Slice α)
+### Effect4.Slice.instMax
+@Effect4.Slice.instMax : {α : Type u_1} → Max (Effect4.Slice α)
+### Effect4.Slice.instMinOfDecidableEq
+@Effect4.Slice.instMinOfDecidableEq : {α : Type u_1} → [DecidableEq α] → Min (Effect4.Slice α)
+### Effect4.Slice.kept
+@Effect4.Slice.kept : {α : Type u_1} → Effect4.Slice α → List α
+### Effect4.Slice.mk
+@Effect4.Slice.mk : {α : Type u_1} → List α → Effect4.Slice α
+### Effect4.Slice.omitted
+@Effect4.Slice.omitted : {α : Type u_1} → [DecidableEq α] → List α → Effect4.Slice α → List α
+### Effect4.Slice.parentOmitted
+@Effect4.Slice.parentOmitted : {α : Type u_1} → [DecidableEq α] → (α → Option α) → Effect4.Slice α → α → Bool
+### Effect4.Slice.restart
+@Effect4.Slice.restart : {α : Type u_1} → (Effect4.Slice α → Bool) → List α → List α
+### Effect4.Slice.sublists
+@Effect4.Slice.sublists : {α : Type u_1} → List α → List (List α)
+### Effect4.Slice.subslices
+@Effect4.Slice.subslices : {α : Type u_1} → Effect4.Slice α → List (Effect4.Slice α)
+### Effect4.Slice.sweep
+@Effect4.Slice.sweep : {α : Type u_1} → (Effect4.Slice α → Bool) → List α → List α → List α
+### Effect4.Slice.sweepAsked
+@Effect4.Slice.sweepAsked : {α : Type u_1} → (Effect4.Slice α → Bool) → List α → List α → List (Effect4.Slice α)
+### Effect4.Slice.sweepFree
+@Effect4.Slice.sweepFree : {α : Type u_1} →
+  (Effect4.Slice α → Bool) → (Effect4.Slice α → α → Bool) → List α → List α → List α
+### Effect4.Slice.sweepFreeAsked
+@Effect4.Slice.sweepFreeAsked : {α : Type u_1} →
+  (Effect4.Slice α → Bool) → (Effect4.Slice α → α → Bool) → List α → List α → List (Effect4.Slice α)
+### Effect4.SliceView
+Effect4.SliceView : Type u_1 → (T : Type u_2) → [LE T] → Type (max u_1 u_2)
+### Effect4.SliceView.Minimal
+@Effect4.SliceView.Minimal : {α : Type u_1} →
+  {T : Type u_2} → [inst : LE T] → Effect4.SliceView α T → T → Effect4.Slice α → Prop
+### Effect4.SliceView.Valid
+@Effect4.SliceView.Valid : {α : Type u_1} →
+  {T : Type u_2} → [inst : LE T] → Effect4.SliceView α T → T → Effect4.Slice α → Prop
+### Effect4.SliceView.asked
+@Effect4.SliceView.asked : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] → [DecidableLE T] → Effect4.SliceView α T → T → Effect4.Slice α → List (Effect4.Slice α)
+### Effect4.SliceView.askedTree
+@Effect4.SliceView.askedTree : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] →
+      [DecidableEq α] →
+        [DecidableLE T] → Effect4.SliceView α T → (α → Option α) → T → Effect4.Slice α → List (Effect4.Slice α)
+### Effect4.SliceView.contribution
+@Effect4.SliceView.contribution : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] → [DecidableEq α] → [DecidableLE T] → Effect4.SliceView α T → T → Effect4.Slice α → Effect4.Slice α
+### Effect4.SliceView.descend
+@Effect4.SliceView.descend : {α : Type u_1} →
+  {T : Type u_2} → [inst : LE T] → [DecidableLE T] → Effect4.SliceView α T → T → Effect4.Slice α → Effect4.Slice α
+### Effect4.SliceView.descendTree
+@Effect4.SliceView.descendTree : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] →
+      [DecidableEq α] → [DecidableLE T] → Effect4.SliceView α T → (α → Option α) → T → Effect4.Slice α → Effect4.Slice α
+### Effect4.SliceView.instDecidableMinimal
+@Effect4.SliceView.instDecidableMinimal : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] →
+      [DecidableEq α] →
+        [Std.IsPreorder T] →
+          [DecidableLE T] → (v : Effect4.SliceView α T) → (q : T) → (m : Effect4.Slice α) → Decidable (v.Minimal q m)
+### Effect4.SliceView.instDecidableValid
+@Effect4.SliceView.instDecidableValid : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] →
+      [DecidableLE T] → (v : Effect4.SliceView α T) → (q : T) → (s : Effect4.Slice α) → Decidable (v.Valid q s)
+### Effect4.SliceView.isMinimal
+@Effect4.SliceView.isMinimal : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] → [DecidableEq α] → [DecidableLE T] → Effect4.SliceView α T → T → Effect4.Slice α → Bool
+### Effect4.SliceView.minimals
+@Effect4.SliceView.minimals : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] →
+      [DecidableEq α] → [DecidableLE T] → Effect4.SliceView α T → T → Effect4.Slice α → List (Effect4.Slice α)
+### Effect4.SliceView.mk
+@Effect4.SliceView.mk : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] →
+      (typeOf : Effect4.Slice α → T) → (∀ {a b : Effect4.Slice α}, a ≤ b → typeOf a ≤ typeOf b) → Effect4.SliceView α T
+### Effect4.SliceView.ofOmitted
+@Effect4.SliceView.ofOmitted : {α : Type u_1} →
+  {T : Type u_2} →
+    [inst : LE T] →
+      [DecidableEq α] →
+        (sites : List α) → (f : List α → T) → (∀ {F G : List α}, F ⊆ G → G ⊆ sites → f G ≤ f F) → Effect4.SliceView α T
+### Effect4.SliceView.typeOf
+@Effect4.SliceView.typeOf : {α : Type u_1} →
+  {T : Type u_2} → [inst : LE T] → Effect4.SliceView α T → Effect4.Slice α → T
+### Effect4.instDecidableEqSlice
+@Effect4.instDecidableEqSlice : {α : Type u_1} → [DecidableEq α] → DecidableEq (Effect4.Slice α)
+### Effect4.instDecidableEqSlice.decEq
+@Effect4.instDecidableEqSlice.decEq : {α : Type u_1} → [DecidableEq α] → (x x_1 : Effect4.Slice α) → Decidable (x = x_1)
+### Effect4.instReprSlice
+@Effect4.instReprSlice : {α : Type u_1} → [Repr α] → Repr (Effect4.Slice α)
+### Effect4.instReprSlice.repr
+@Effect4.instReprSlice.repr : {α : Type u_1} → [Repr α] → Effect4.Slice α → Nat → Std.Format

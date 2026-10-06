@@ -1,0 +1,120 @@
+import Effect4.Laws.Slice.Lattice
+
+/-!
+# Seat LATTICE, the words follow-up: which minimal type slice a divide-and-conquer descent returns
+
+A scratch probe: nothing here is in the tree, and no statement here is a law of the module. Run
+it as `lake env lean <this file, with the suffix .lean>` at the head of branch
+`seat/lattice-words`.
+
+The question is the rule of choice. `descend` returns one minimal slice, fixed by the order of
+the start's sites. This probe tests, on finite inputs, that a divide-and-conquer descent returns
+the same slice when it treats the first half of the sites first, with the second half kept. It
+also tests that the other order of the halves returns the slice of the pass over the reversed
+list. The validities are upward closed: a slice is valid when it keeps every site of one of a
+few clauses.
+-/
+
+set_option autoImplicit false
+
+open Effect4
+
+/-- Divide and conquer, the first half first. `b` is kept for sure, and `c` is not decided yet.
+`known` says that `b` is known to be not valid, so no question is asked about it. It returns the
+kept sites of `c` and the number of questions. The fuel bounds the depth. -/
+def firstHalfFirst (valid : Slice Nat → Bool) :
+    Nat → Bool → List Nat → List Nat → List Nat × Nat
+  | 0, _, _, c => (c, 0)
+  | fuel + 1, known, b, c =>
+    let asked := if known then 0 else 1
+    if !known && valid ⟨b⟩ then ([], asked)
+    else match c with
+      | [] => ([], asked)
+      | [x] => ([x], asked)
+      | _ =>
+        let k := c.length / 2
+        let c1 := c.take k
+        let c2 := c.drop k
+        let r1 := firstHalfFirst valid fuel false (b ++ c2) c1
+        let r2 := firstHalfFirst valid fuel r1.1.isEmpty (b ++ r1.1) c2
+        (r1.1 ++ r2.1, asked + r1.2 + r2.2)
+
+/-- The other order of the halves: the second half first, with the first half kept. It is the
+order of the filed speed probe. -/
+def secondHalfFirst (valid : Slice Nat → Bool) :
+    Nat → Bool → List Nat → List Nat → List Nat × Nat
+  | 0, _, _, c => (c, 0)
+  | fuel + 1, known, b, c =>
+    let asked := if known then 0 else 1
+    if !known && valid ⟨b⟩ then ([], asked)
+    else match c with
+      | [] => ([], asked)
+      | [x] => ([x], asked)
+      | _ =>
+        let k := c.length / 2
+        let c1 := c.take k
+        let c2 := c.drop k
+        let r2 := secondHalfFirst valid fuel false (b ++ c1) c2
+        let r1 := secondHalfFirst valid fuel r2.1.isEmpty (b ++ r2.1) c1
+        (r1.1 ++ r2.1, asked + r1.2 + r2.2)
+
+/-- A step of a linear congruential generator: the inputs are fixed by their seeds. -/
+def next (s : Nat) : Nat := (s * 1103515245 + 12345) % 2147483648
+
+/-- `m` numbers below `n`, from a seed. -/
+def draws (n : Nat) : Nat → Nat → List Nat × Nat
+  | 0, s => ([], s)
+  | m + 1, s =>
+    let s' := next s
+    let r := draws n m s'
+    ((s' / 65536) % n :: r.1, r.2)
+
+/-- `k` clauses of `w` sites each, over `n` sites, from a seed. -/
+def clauses (n w : Nat) : Nat → Nat → List (List Nat)
+  | 0, _ => []
+  | k + 1, s =>
+    let d := draws n w s
+    d.1 :: clauses n w k d.2
+
+/-- Valid when the slice keeps every site of one clause: upward closed. -/
+def validFor (cls : List (List Nat)) (s : Slice Nat) : Bool :=
+  cls.any fun cl => cl.all fun x => decide (x ∈ s.kept)
+
+/-- One input: `n` sites, `k` clauses of `w` sites, a seed. It answers whether the first order
+returns the pass's list, whether the second order returns the list of the pass over the reversed
+sites, and the three numbers of questions. -/
+def trial (n w k seed : Nat) : Bool × Bool × Nat × Nat × Nat :=
+  let valid := validFor (clauses n w k seed)
+  let sites := List.range n
+  let pass := Slice.sweep valid [] sites
+  let first := firstHalfFirst valid (n + 2) false [] sites
+  let second := secondHalfFirst valid (n + 2) false [] sites
+  let passReversed := (Slice.sweep valid [] sites.reverse).reverse
+  (first.1 == pass, second.1 == passReversed, n, first.2, second.2)
+
+/-- Every seed below `seeds` at one shape: all agree with the pass, all agree with the reversed
+pass, the pass's questions on each input, and the most questions of each order. -/
+def shape (n w k seeds : Nat) : Bool × Bool × Nat × Nat × Nat :=
+  (List.range seeds).foldl (init := (true, true, n, 0, 0)) fun acc seed =>
+    let t := trial n w k (seed + 1)
+    (acc.1 && t.1, acc.2.1 && t.2.1, n, max acc.2.2.2.1 t.2.2.2.1, max acc.2.2.2.2 t.2.2.2.2)
+
+-- (first order = the pass, second order = the reversed pass, the pass's questions,
+--  the most questions of the first order, the most of the second) over 200 seeds each
+/--
+info: [(true, true, 8, 10, 10), (true, true, 16, 18, 17), (true, true, 33, 18, 18), (true, true, 64, 28, 28),
+  (true, true, 64, 44, 43), (true, true, 128, 40, 40)]
+-/
+#guard_msgs in
+#eval [shape 8 2 3 200, shape 16 3 3 200, shape 33 2 4 200, shape 64 3 2 200, shape 64 6 3 200,
+  shape 128 4 2 200]
+
+-- The two orders differ where a query has two minimal slices: the first order returns the
+-- pass's `[40, 50]`, and the second order returns `[2]`.
+/-- info: ([40, 50], [2], [40, 50]) -/
+#guard_msgs in
+#eval
+  let valid := validFor [[2], [40, 50]]
+  let sites := List.range 64
+  ((firstHalfFirst valid 66 false [] sites).1, (secondHalfFirst valid 66 false [] sites).1,
+    Slice.sweep valid [] sites)

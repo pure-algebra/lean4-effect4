@@ -4,7 +4,8 @@ import Test.Program.SliceLattice
 # Seat LATTICE, the two candidates not taken, against the toy (2026-10-06)
 
 A scratch probe: nothing here is in the tree. Run it as `lake env lean <this file, with the
-suffix .lean>` at the head of branch `seat/lattice`.
+suffix .lean>` at the head of branch `seat/lattice-words`. The names are the module's after the
+follow-up on words of the same day: `Slice.subslices` was `Slice.below`.
 
 Only the interfaces of the two refused candidates and what an instance must supply. No theory is
 proved for them. The design note's section 4.1 reads this file.
@@ -29,21 +30,21 @@ structure FiniteOrder (S : Type u) where
   all : List S
   complete : ∀ s, s ∈ all
   /-- needed by a cheap descent: the elements one step below, and that they cover -/
-  below : S → List S
-  below_lt : ∀ {a b}, b ∈ below a → le b a ∧ ¬ le a b
-  below_covers : ∀ {a j}, le j a → ¬ le a j → ∃ b ∈ below a, le j b
+  oneBelow : S → List S
+  oneBelow_lt : ∀ {a b}, b ∈ oneBelow a → le b a ∧ ¬ le a b
+  oneBelow_covers : ∀ {a j}, le j a → ¬ le a j → ∃ b ∈ oneBelow a, le j b
 
 /-- The carrier must be a type with finitely many elements, so it is tied to one program: the
 listed sub-lists of its sites. -/
-def toyCarrier (full : Slice Site) : Type := {s : Slice Site // s ∈ full.below}
+def toyCarrier (full : Slice Site) : Type := {s : Slice Site // s ∈ full.subslices}
 
 -- The list and its wholeness are free on that subtype.
-example (full : Slice Site) : List (toyCarrier full) := full.below.attach
-example (full : Slice Site) (s : toyCarrier full) : s ∈ full.below.attach :=
+example (full : Slice Site) : List (toyCarrier full) := full.subslices.attach
+example (full : Slice Site) (s : toyCarrier full) : s ∈ full.subslices.attach :=
   List.mem_attach _ s
 
 -- Antisymmetry is not: with a repeated site, three listed sub-lists keep the same site.
-example : ((Slice.mk [1, 1]).below.filter fun s =>
+example : ((Slice.mk [1, 1]).subslices.filter fun s =>
     decide (s ≤ ⟨[1]⟩ ∧ (⟨[1]⟩ : Slice Nat) ≤ s)).length = 3 := by decide
 
 /-! ## Candidate III-b: flags by position over a fixed list of sites -/

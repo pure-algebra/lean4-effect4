@@ -1,0 +1,53 @@
+"""Seat LATTICE, the words follow-up: the code of a Lean file with every comment removed (block
+comments, docstrings and line comments; block comments nest; a string literal is kept whole).
+With --rename, each identifier of the rename map is replaced by whole token first. Two files are
+then equal as code exactly when the outputs are equal."""
+import re, sys
+
+MAP_A = {
+    'folded_anti': 'omitted_anti', 'folded_subset': 'omitted_subset', 'folded_full': 'omitted_full',
+    'folded': 'omitted', 'parentFolded_sound': 'parentOmitted_sound',
+    'parentFolded': 'parentOmitted', 'ofFolded_full': 'ofOmitted_full', 'ofFolded': 'ofOmitted',
+}
+MAP_B = {
+    'below': 'subslices', 'le_of_mem_below': 'le_of_mem_subslices',
+    'exists_mem_below': 'exists_mem_subslices',
+}
+
+def strip(src):
+    out, i, n, depth = [], 0, len(src), 0
+    while i < n:
+        two = src[i:i+2]
+        if depth > 0:
+            if two == '/-': depth += 1; i += 2
+            elif two == '-/': depth -= 1; i += 2
+            else: i += 1
+            continue
+        if two == '/-':
+            depth = 1; i += 2; continue
+        if two == '--':
+            j = src.find('\n', i)
+            i = n if j < 0 else j
+            continue
+        if src[i] == '"':
+            j = i + 1
+            while j < n and src[j] != '"':
+                j += 2 if src[j] == '\\' else 1
+            out.append(src[i:j+1]); i = j + 1; continue
+        out.append(src[i]); i += 1
+    code = ''.join(out)
+    # one statement of layout: no trailing blanks, no blank lines
+    return '\n'.join(l.rstrip() for l in code.split('\n') if l.strip()) + '\n'
+
+def rename(code, maps):
+    table = {}
+    for m in maps: table.update(m)
+    return re.sub(r"[A-Za-z_][A-Za-z0-9_']*", lambda m: table.get(m.group(0), m.group(0)), code)
+
+if __name__ == '__main__':
+    args = sys.argv[1:]
+    maps = []
+    while args and args[0].startswith('--rename'):
+        maps.append({'--rename-a': MAP_A, '--rename-b': MAP_B}[args.pop(0)])
+    code = strip(open(args[0]).read())
+    sys.stdout.write(rename(code, maps) if maps else code)

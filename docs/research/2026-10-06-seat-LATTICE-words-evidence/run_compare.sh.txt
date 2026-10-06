@@ -1,0 +1,51 @@
+#!/bin/bash
+# Seat LATTICE, the words follow-up: every comparison of the addendum's section 4, one command each.
+# usage: bash run_compare.sh.txt <the repository's root> <the base revision> <the head revision>
+#        <a work folder>
+# It reads this folder's two listings and three scripts, and the two Lean files at each revision
+# (`git show`). It writes into the work folder only, which it makes when it is not there.
+set -u
+if [ $# -ne 4 ]; then
+  echo "usage: bash run_compare.sh.txt <repository root> <base revision> <head revision> <work folder>" >&2
+  exit 2
+fi
+here="$(cd "$(dirname "$0")" && pwd)"
+repo="$1"; base="$2"; head="$3"; work="$4"
+mkdir -p "$work" || exit 2
+cp "$here/compare_checks.py.txt" "$work/compare_checks.py"
+cp "$here/code_only.py.txt" "$work/code_only.py"
+cp "$here/maps_merge_nothing.py.txt" "$work/maps_merge_nothing.py"
+cp "$here/base-listing.txt" "$here/head-listing.txt" "$work/"
+git -C "$repo" show "$base:src/Effect4/Laws/Slice/Lattice.lean" > "$work/base-Lattice.lean" || exit 2
+git -C "$repo" show "$base:Test/Program/SliceLattice.lean" > "$work/base-SliceLattice.lean" || exit 2
+git -C "$repo" show "$head:src/Effect4/Laws/Slice/Lattice.lean" > "$work/head-Lattice.lean" || exit 2
+git -C "$repo" show "$head:Test/Program/SliceLattice.lean" > "$work/head-SliceLattice.lean" || exit 2
+cd "$work" || exit 2
+run() { echo "\$ $*"; "$@"; echo "exit $?"; echo; }
+echo "== 1. The #check listings, up to both rename maps"
+run python3 compare_checks.py base-listing.txt head-listing.txt a b
+echo "== 2. Red control: the same listings with no map"
+run python3 compare_checks.py base-listing.txt head-listing.txt
+echo "== 3. The same listings with map A alone: what map B renames is left"
+run python3 compare_checks.py base-listing.txt head-listing.txt a
+echo "== 4. The code with every comment removed, up to both maps"
+for f in Lattice SliceLattice; do
+  python3 code_only.py --rename-a --rename-b base-$f.lean > base-$f.code
+  python3 code_only.py head-$f.lean > head-$f.code
+  echo "\$ diff <(code_only --rename-a --rename-b base-$f.lean) <(code_only head-$f.lean)"
+  diff base-$f.code head-$f.code; echo "exit $?; lines of code: $(wc -l < head-$f.code | tr -d ' ')"; echo
+done
+echo "== 5. Red control: the code with no map, changed lines"
+for f in Lattice SliceLattice; do
+  python3 code_only.py base-$f.lean > base-$f.plain
+  echo "$f: $(diff base-$f.plain head-$f.code | grep -c '^>') changed line(s)"
+done
+echo
+echo "== 6. The maps merge no two names: no target at the base, no source at the head"
+run python3 maps_merge_nothing.py base-listing.txt head-listing.txt
+run python3 maps_merge_nothing.py base-Lattice.lean head-Lattice.lean
+run python3 maps_merge_nothing.py base-SliceLattice.lean head-SliceLattice.lean
+echo "== 7. Red control: the same check with the two sides exchanged"
+run python3 maps_merge_nothing.py head-listing.txt base-listing.txt
+run python3 maps_merge_nothing.py head-Lattice.lean base-Lattice.lean
+run python3 maps_merge_nothing.py head-SliceLattice.lean base-SliceLattice.lean
