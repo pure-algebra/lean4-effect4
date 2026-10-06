@@ -549,8 +549,9 @@ Open at this landing:
       their runs from the records, so one name has one script on every lane. Five runs of the
       engine's fixtures took the batteries' scripts: two were stale copies that the retry
       repair had missed. The lane's red control reads the last decision that moves the view.
-      The seat has three follow-ups. The run `timeout/parked` gets a control. The gate then
-      refuses a run that no control reads. The script of `timeout/before` keeps one name;
+      Three follow-ups are merged too (`1ffa7438`). The run `timeout/parked` has its control.
+      The gate refuses a run that no control reads. The script of `timeout/before` has one
+      name, so the host lane performs 14 timeout scripts;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
