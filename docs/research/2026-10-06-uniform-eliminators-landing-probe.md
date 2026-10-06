@@ -45,13 +45,22 @@ A cell's invariance is a fourth cause (99). Only the gap repairs it.
   soundness and completeness.
 - One lemma pins the shape: `fiberTy_eq_some`, which answers `t = .fiberOf pair.1 pair.2`
   (`src/Effect4/Laws/Program/Typed/Membership.lean`). Under the lifted rule that equation is
-  false. The true statement is an inequality: `Ty.sub t (.fiberOf pair.1 pair.2) = true`.
+  false. The true statement is an inequality on normal forms:
+  `Ty.subN t (.fiberOf pair.1 pair.2) = true`.
 - `src/Effect4/Laws/Program/Typed/Denotation.lean` uses the lemma 13 times, each as one rewrite
   before `evalTerm_progress_env`. With the inequality each use takes the value at `t` and moves
-  it up by `fits_sub`: one line replaced, and one added.
+  it up by `fits_subN`: one line replaced, and one added.
 - So the conversions need one more general law of the combinator, **the upper form**. For a
   covariant constructor `C`, the lifted rule answers arguments `a` with `t` below `C a`. Seat
-  UNION has it on its list since this probe.
+  UNION has it on its list since this probe, with its least half.
+- **Two corrections from seat UNION** (tested in its scratch). The upper form holds in
+  `Ty.subN` and not in the raw `Ty.sub`: the raw order never distributes a product over a
+  union, and `fiberOf (prod (nat | string) unit) never` shows it. And the field read has no
+  upper form: the order has no width rule (decisions row 178), so a record of two fields is
+  not below the record of one.
+- **What an instance owes is three member facts** (seat UNION's `Eliminator`): the rule answers
+  only at its constructor; the constructor keeps and reflects the order; a normal member below
+  the constructor is read. The monotonicity premise and the upper form follow from them.
 
 ### 3. tsgo does not read a union member by member at a generic call (run)
 
