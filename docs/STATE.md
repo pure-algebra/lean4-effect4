@@ -298,9 +298,15 @@ the state at the handover point and the integration procedure as practiced.
 - two small repairs of proofs: the Queue's typing through the shared rule, and the scenario
   driver's laws in the law graph.
 
-A sweep follows the set, if the owner asks for it. The law of a whole run for a module's
-operation is not in the set. It is the main open theory, and it starts with a design
-question.
+A sweep follows the set: the owner approved the coordinator's recommendations on
+2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
+main open theory, and it starts with a design question. The owner asked for a discussion of
+it when the set has landed: its obligations, and the base abstractions that it needs first.
+
+A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
+[The probe questions](research/2026-10-06-probe-questions.md) lists thirteen: what today's
+work took by reading, the facts that the law of a whole run will stand on, and the evidence
+that rests on one schedule.
 
 In work since the suspension of the handover:
 
