@@ -31,6 +31,9 @@ The laws, in order:
   back into types, the lifted rule's answer `a` puts the target below `C a`, and `a` is the
   least such answer.
 - **The claim as one statement** (`lift_laws`).
+- **The eliminator of one covariant constructor** (`Eliminator`): three facts of a member rule
+  that reads one constructor give the monotone law and the upper form with its least half
+  (`Eliminator.lift_mono`, `Eliminator.lift_upper`, `Eliminator.lift_least`).
 
 Three parts carry the proofs: a list read element by element (`mapM_answer`, `mapM_source`,
 `mapM_total`), the join of a list (`joinAll_keeps`, `joinAll_all`), and the order of a carrier
@@ -482,5 +485,89 @@ theorem lift_laws [AnswerOrder α] (rule : Ty → Option α) :
     fun below _ _ _ smaller typed => lift_mono below smaller typed, ?_⟩
   intro V In P normal members left right member t a v typed fit
   exact lift_transfer (In := In) (P := P) normal members left right member typed fit
+
+/-! ## A member rule that reads one covariant constructor
+
+A by-shape rule of the checker reads one constructor: `fiberTy` reads a fiber type, and
+`Checker.listOf?` a list type. Such a rule owes three facts, and the order laws follow from them
+with no word about unions. A rule that reads two heads owes the member facts of `lift_upper`,
+`lift_least` and `below_of_upper` instead. -/
+
+/-- **`Below` from an upper map.** Take a member rule and a map `C` from answers into types.
+Let each normal union member that the rule answers be below `C` of its answer, and let that
+answer be the least such. Let the rule read each normal union member that is below some `C b`.
+Then the member rule is monotone in the order: `Below rule rule`. A part of the claim
+`union-rule-lift`. Its consumers are `Eliminator.monotone`, and a rule that reads two heads, such
+as the cause rule `causeInputError?` (`src/Effect4/Program/NativeAtom.lean`). -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem below_of_upper [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
+    (upper : ∀ {m : Ty} {a : α}, Ty.Normal m → m.isMember = true → rule m = some a →
+      Ty.subN m (C a) = true)
+    (least : ∀ {m : Ty} {a b : α}, Ty.Normal m → m.isMember = true → rule m = some a →
+      Ty.subN m (C b) = true → le a b)
+    (reads : ∀ {m : Ty} {b : α}, Ty.Normal m → m.isMember = true → Ty.subN m (C b) = true →
+      ∃ a, rule m = some a) :
+    Below rule rule := by
+  intro x y nx ny hx hy hxy b hb
+  have hxb : Ty.subN x (C b) = true := Ty.subN_trans (Ty.sub_le_subN hxy) (upper ny hy hb)
+  obtain ⟨a, ha⟩ := reads nx hx hxb
+  exact ⟨a, ha, least nx hx ha hxb⟩
+
+/-- **The eliminator of one covariant constructor**: the three facts that a member rule `rule`
+owes for a constructor `C`. The rule answers only at the constructor. The constructor keeps and
+reflects the order. The rule reads each normal union member below the constructor. An invariant
+constructor has no instance: `embeds` fails there. -/
+structure Eliminator [AnswerOrder α] (rule : Ty → Option α) (C : α → Ty) : Prop where
+  /-- The rule answers only at the constructor, with the constructor's arguments. -/
+  shape : ∀ {m : Ty} {a : α}, rule m = some a → m = C a
+  /-- The constructor keeps and reflects the order. -/
+  embeds : ∀ {a b : α}, Ty.subN (C a) (C b) = true ↔ le a b
+  /-- The rule reads each normal union member below the constructor. -/
+  reads : ∀ {m : Ty} {b : α}, Ty.Normal m → m.isMember = true → Ty.subN m (C b) = true →
+    ∃ a, rule m = some a
+
+section Eliminator
+
+variable [AnswerOrder α] {rule : Ty → Option α} {C : α → Ty}
+
+/-- The eliminator of one constructor is monotone in the order: the premise of `lift_mono`. A
+part of the claim `union-rule-lift`. Its consumer is `Eliminator.lift_mono`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.monotone (e : Eliminator rule C) : Below rule rule :=
+  below_of_upper (fun _ _ answered => by rw [e.shape answered]; exact Ty.subN_refl _)
+    (fun _ _ answered upper => by rw [e.shape answered] at upper; exact e.embeds.mp upper)
+    e.reads
+
+/-- **The lifted eliminator is monotone.** A smaller target has an answer where a larger one
+has, and the answer is smaller. A part of the claim `union-rule-lift`. Its consumer is
+`checker-monotone` at each converted rule. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.lift_mono (e : Eliminator rule C) {s t : Ty}
+    (smaller : Ty.subN s t = true) {b : α} (typed : lift rule t = some b) :
+    ∃ a, lift rule s = some a ∧ le a b :=
+  UnionRule.lift_mono e.monotone smaller typed
+
+/-- **The upper form of an eliminator.** A target that the lifted rule answers at `a` is below
+`C a`, in the checker's order. It takes the place of the equation that a by-shape rule has
+today, such as `fiberTy_eq_some` (`src/Effect4/Laws/Program/Typed/Membership.lean`): a use site
+moves a value of the target up by `fits_subN`. A part of the claim `union-rule-lift`. Its
+consumer is each conversion of candidate N. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.lift_upper (e : Eliminator rule C) {t : Ty} {a : α}
+    (typed : lift rule t = some a) : Ty.subN t (C a) = true :=
+  UnionRule.lift_upper (fun below => e.embeds.mpr below)
+    (fun _ _ answered => by rw [e.shape answered]; exact Ty.subN_refl _) typed
+
+/-- **The lifted eliminator answers the least.** Each `b` with the target below `C b` is above
+the lifted answer. A part of the claim `union-rule-lift`. Its consumer is a type that a printer
+writes at a call: it must be above the lifted answer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Eliminator.lift_least (e : Eliminator rule C) {t : Ty} {a b : α}
+    (typed : lift rule t = some a) (upper : Ty.subN t (C b) = true) : le a b :=
+  UnionRule.lift_least
+    (fun _ _ answered upper => by rw [e.shape answered] at upper; exact e.embeds.mp upper)
+    typed upper
+
+end Eliminator
 
 end Effect4.Program.UnionRule
