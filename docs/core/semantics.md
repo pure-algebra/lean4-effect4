@@ -293,6 +293,12 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   (`saved_mask_image_membership` (`src/Effect4/Laws/Program/Typed/Mask.lean`)).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
+- **Pool's profile on the model (`pool-profile-closed`, `pool-lease-enrols`)**: Each of the
+  five transitions of Pool's abstract model keeps the first profile. The law has no premise
+  on a request. An idle item beside enrolled waiters is a state of the profile. A lease enrols its
+  request exactly when the pool is open and a lease holds every item. Neither states
+  fairness, liveness or anything of a program.
+  (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
 
 ### 2.2 Concept 2: Residual Program Typing (`residual-program-typing`)
 
@@ -470,6 +476,12 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   (`saved_mask_pop_discipline` (`src/Effect4/Laws/Machine/MaskDiscipline.lean`)).
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
+- **Pool's return and close on the model (`pool-return-front`, `pool-close-refuses`)**: A
+  return of a lease that holds its item puts the item at the front of the idle items and
+  keeps every item. A second return of that lease changes nothing. After the close's first
+  step every lease is refused. They state no finalizer's run and no close that waits.
+  (`giveBack_front`, `giveBack_once`, `close_refuses`
+  (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
 
 ### 2.4 Concept 4: Reactive Scheduling & Machine Invariants (`reactive-scheduling`)
 
@@ -551,6 +563,10 @@ inductive RunDecision ...
   `waiting-request-obligation-preserved`. It states nothing of a program, of a signal's
   delivery or of liveness.
   (`first_step_inv`, `first_run_flags` (`src/Effect4/Laws/Modules/Queue/Invariant.lean`)).
+- **Pool's wake selection on the model (`pool-select-takes-first`)**: One selection takes the
+  first waiters of the state that it finds, at most its count, and it changes the waiters
+  alone. It is one selection: it states no run and no liveness.
+  (`select_takes_first` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
 
 #### 5. How the scheduler proofs use the theory
 
@@ -993,6 +1009,12 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   positions (`tapeFrom_cut_replays`). The laws say nothing about the machine after a stopped
   row: that row may change the machine before it reports its frontier.
   (`tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`)).
+- **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's five step terms
+  agrees with the model's step, on every state of the model. The agreement covers the reply,
+  the stored value through the table, and the selected waiters' records. It is a part of the proposed claim
+  `pool-expansion-agrees`. It states no order of the wake across helpers, no cancellation
+  law, no close that waits and no wrapper.
+  (`pool_steps_agree` (`src/Effect4/Laws/Modules/Pool/Steps.lean`)).
 
 ## 3. The object-language glossary (moved 2026-10-03)
 

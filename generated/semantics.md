@@ -24,6 +24,8 @@ Store Typing: World-indexed semantic value membership (Fits) and store typings
 | saved-mask-image-membership | canonicalForms | proved | Effect4.Program.Typed.saved_mask_image_membership | yes |  |
 | store-safety | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |  |
 | semaphore-profile-closed | preservation | proved | Effect4.Semaphore.Model.profile_closed | yes |  |
+| pool-profile-closed | preservation | proved | Effect4.Pool.Model.profile_closed | yes |  |
+| pool-lease-enrols | inversion | proved | Effect4.Pool.Model.lease_enrols_iff | yes |  |
 
 ### Printed statements
 
@@ -128,6 +130,25 @@ Literature: TAPL, §13.5, pp. 165–169 — excludedFeature
 ∀ (s : Effect4.Semaphore.Model.State) (op : Effect4.Semaphore.Model.Op),
   Effect4.Semaphore.Model.Profile s →
     Effect4.Semaphore.Model.Profile (Effect4.Semaphore.Model.step s op)
+```
+
+**pool-profile-closed**
+
+```lean
+∀ (s : Effect4.Pool.Model.State) (op : Effect4.Pool.Model.Op),
+  Effect4.Pool.Model.Profile s → Effect4.Pool.Model.Profile (Effect4.Pool.Model.step s op)
+```
+
+**pool-lease-enrols**
+
+```lean
+∀ {s : Effect4.Pool.Model.State},
+  Effect4.Pool.Model.Profile s →
+    ∀ (id : Nat),
+      Iff (List.instMembership.mem (Effect4.Pool.Model.lease s id).fst.waiters id)
+        (And (Eq s.closing Bool.false)
+          (∀ (it : Effect4.Pool.Model.Item),
+            List.instMembership.mem s.items it → Eq it.borrowed Bool.true))
 ```
 
 ## residual-program-typing
@@ -424,6 +445,8 @@ Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwin
 | close-seq-protocol | fundamentalProperty | proved | Test.Program.ProtocolPosts.CloseIter.closeSeq_protocol | yes |  |
 | saved-mask-restoration | preservation | proved | Effect4.Program.Typed.saved_mask_restoration | yes |  |
 | saved-mask-pop-discipline | preservation | proved | Effect4.Machine.saved_mask_pop_discipline | yes |  |
+| pool-return-front | inversion | proved | Effect4.Pool.Model.giveBack_front | yes |  |
+| pool-close-refuses | inversion | proved | Effect4.Pool.Model.close_refuses | yes |  |
 
 ### Printed statements
 
@@ -508,6 +531,36 @@ Effect4.Program.Typed.MaskRestoration
   [inst_2 : DecidableEq ι] [inst_3 : DecidableEq α], Effect4.Machine.MaskPopDiscipline ν σ β ε δ ι α
 ```
 
+**pool-return-front**
+
+```lean
+∀ {s : Effect4.Pool.Model.State} {i l : Nat},
+  Eq (s.items.any fun x => x.heldBy i l) Bool.true →
+    And (Eq (Effect4.Pool.Model.giveBack s i l).fst.available (List.cons i s.available))
+      (And
+        (Eq (Effect4.Pool.Model.giveBack s i l).snd
+          { fst := Bool.true, snd := s.waiters.isEmpty.not })
+        (And
+          (Eq
+            (List.map (fun it => { fst := it.stamp, snd := it.resource })
+              (Effect4.Pool.Model.giveBack s i l).fst.items)
+            (List.map (fun it => { fst := it.stamp, snd := it.resource }) s.items))
+          (Eq ((Effect4.Pool.Model.giveBack s i l).fst.items.any fun x => x.heldBy i l)
+            Bool.false)))
+```
+
+**pool-close-refuses**
+
+```lean
+∀ (s : Effect4.Pool.Model.State),
+  And (Eq (Effect4.Pool.Model.close s).fst.closing Bool.true)
+    (And (Eq (Effect4.Pool.Model.close s).snd { fst := s.closing.not, snd := s.waiters.length })
+      (∀ (id : Nat),
+        Eq (Effect4.Pool.Model.lease (Effect4.Pool.Model.close s).fst id)
+          { fst := Effect4.Pool.Model.withdraw (Effect4.Pool.Model.close s).fst id,
+            snd := { fst := Bool.true, snd := Option.none } }))
+```
+
 ## reactive-scheduling
 
 Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants
@@ -537,6 +590,7 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | semaphore-visit-stops | inversion | proved | Effect4.Semaphore.Model.visit_stops_iff | yes |  |
 | queue-first-step-invariant | preservation | proved | Effect4.Queue.Model.first_step_inv | yes |  |
 | queue-first-run-flags | preservation | proved | Effect4.Queue.Model.first_run_flags | yes |  |
+| pool-select-takes-first | inversion | proved | Effect4.Pool.Model.select_takes_first | yes |  |
 
 ### Printed statements
 
@@ -881,6 +935,21 @@ Literature: PFPL, chs. 39–41, pp. 371–406 — excludedFeature
         (List.foldl (Effect4.Queue.Model.step Effect4.Queue.Model.Fault.none)
             { s := { capacity := Option.some (instHAdd.hAdd c 1) } } ops).named
         Bool.true)
+```
+
+**pool-select-takes-first**
+
+```lean
+∀ (s : Effect4.Pool.Model.State) (count : Nat),
+  And
+    (Eq
+      (instHAppendOfAppend.hAppend (Effect4.Pool.Model.select s count).snd
+        (Effect4.Pool.Model.select s count).fst.waiters)
+      s.waiters)
+    (And (Eq (Effect4.Pool.Model.select s count).snd.length (instMinNat.min count s.waiters.length))
+      (Eq (Effect4.Pool.Model.select s count).fst
+        { items := s.items, available := s.available, waiters := List.drop count s.waiters,
+          closing := s.closing, next := s.next }))
 ```
 
 ## exact-codecs
@@ -1374,6 +1443,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
 | run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
 | journal-position-replay | simulation | proved | Test.Dogfood.Scenario.tapeFrom_position_replays | yes |  |
+| pool-steps-agree | simulation | proved | Effect4.Pool.Model.pool_steps_agree | yes |  |
 | queue-steps-agree | simulation | proved | Effect4.Queue.Model.queue_steps_agree | yes |  |
 | semaphore-steps-agree | simulation | proved | Effect4.Semaphore.Model.semaphore_steps_agree | yes |  |
 | straight-composition-agreement | simulation | proved | Effect4.Program.Denote.StraightEq.run_agrees | yes |  |
@@ -1588,6 +1658,12 @@ Test.Dogfood.Scenario.TapeReplays
           s.machine))
 ```
 
+**pool-steps-agree**
+
+```lean
+Effect4.Pool.Model.StepsAgree
+```
+
 **queue-steps-agree**
 
 ```lean
@@ -1756,7 +1832,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 74; inherited (provisional): 1982; unplaced: 0.
+Tagged: 92; inherited (provisional): 2120; unplaced: 0.
 
 ## Plan
 
@@ -2208,6 +2284,7 @@ flowchart LR
 
 ### R4: State: the world types every cell at any type, with rows as templates
 
+- Open: pool-profile-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 267 to 269)
 - Open: the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation
 - Open: the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws
 - Open: semaphore-accounting-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 260, 261, 265)
@@ -3226,6 +3303,7 @@ flowchart LR
 
 ### R10: Library code inherits theorems: a composed module's law is Agrees profile module expansion
 
+- Open: pool-expansion-agrees (proposed claim; translation-simulation): Pool's expansion agrees with the first profile's public observation, under its premises on the callers, interruption, the close and the work budget; its parts on one atomic step are pool_steps_agree (decisions rows 79, 226, 267 to 269)
 - Open: a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)
 - Open: no form has a behaviour law (DI-89)
 - Open: the agreement half of mask-printed-form-profile (translation-simulation, serving R10 and R11): the compiled derived form against the named release's printed form, equal observation on a named observation under compatible decisions; the three operations more than the native mask are measured on the machine and on the target, not proved, and the cuts at the two checkpoints on the pin rest on Codex's runs; the expansion, the typing, the readability and the two checkpoints on the machine are mask_printed_form_profile (decisions rows 245, 246); no goal states the agreement
@@ -3542,6 +3620,7 @@ flowchart LR
 
 ### R11: Resources are released: at most once per registration, exactly once in close order
 
+- Open: pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once and close_refuses (decisions rows 267, 268)
 - Open: the whole run open: release at most once per registration, counted by identity (DB-07)
 - Open: the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)
 - Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
@@ -3597,6 +3676,7 @@ flowchart LR
 
 ### R12: Frontiers name what they await
 
+- Open: pool-wake-selection (proposed claim; reactive-scheduling): the helper selects the first count waiters of the state that it finds, and it notifies exactly those, in order; the model's fact is select_takes_first (decisions rows 221, 267)
 - Open: R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)
 - Open: stability over the allowed internal decisions, with a named progress observation (not stated)
 - Open: divergence by compatible prefixes (DB-03; not stated)

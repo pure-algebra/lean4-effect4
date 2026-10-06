@@ -10,7 +10,7 @@ proofs. It authorizes no public operation and no runtime behaviour.
 | `profile_closed` in `src/Effect4/Laws/Modules/Pool/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
 | `lease_enrols_iff`, `select_takes_first`, `giveBack_front`, `giveBack_once` and `close_refuses` in the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/PoolContract.lean` | tested: its guard checks hold, and a falsified copy fails each changed check |
-| `Test/Program/PoolScenarios.lean` | tested: seven cases and three more on the Lean machine, one schedule each |
+| `Test/Program/PoolScenarios.lean` | tested: seven cases and three more on the Lean machine, one schedule each; two red controls of the mask of `use` |
 | `src/Effect4/Modules/Pool/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
 | the six typing statements of `src/Effect4/Laws/Modules/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
@@ -214,6 +214,9 @@ waiters' records: each names a selected identity and its hint.
    values.
 2. Prove the waiting wrapper over the actual program: the enrolment, the wait, the retry and
    the withdrawal on interruption. The wait stands inside the mask that holds the body's hook.
+   Two controls on the machine show why (`interruptedHolder` and `interruptedWaiter` in
+   `Test/Program/PoolScenarios.lean`). A lease in its own mask loses the lease under an
+   interruption, or its wait cannot be interrupted.
 3. State the wake's helper as a library program, and its law across helpers.
 4. State the close that waits, and the finalizers' runs.
 5. State the public `make` and `use`, with the acquisition inside the pool's scope.
