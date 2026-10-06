@@ -77,6 +77,16 @@ Of 33 forms tsgo refuses 20 and accepts 13.
 - **The repeated parameter of the prelude agrees with tsgo**, as seat GAP's study says: both
   refuse `getOrElse(o, "d")`, `ite(c, 1, "a")` and `append` of two lists with no order. `cons`
   has two parameters and is accepted.
+- **A union whose members are comparable is accepted as printed** (a second run, six forms, no
+  error: `docs/research/2026-10-06-uniform-eliminators-tsgo-probe2.ts.txt`). tsgo takes the
+  candidate that is above the others: `Fiber<"a", string> | Fiber<string, string>` at
+  `Fiber.join`, and the same at `get`, `fold` and `optionCase`. A member at `never` is accepted
+  too. Our normal form keeps the maximal members only (`Normal.members_maximal`,
+  `src/Effect4/Laws/Program/TypeAlgebra.lean`), so such a union has one member there. One form
+  is accepted by tsgo with two members in our normal form: two literals of one base type,
+  `Fiber<"a", string> | Fiber<"b", string>`.
+- **So "at most one member of the normal form" is the line that tsgo's inference draws**, but
+  for literals of one base type, where tsgo accepts more.
 
 ## Proposals (not rulings)
 
@@ -92,21 +102,29 @@ Of 33 forms tsgo refuses 20 and accepts 13.
 3. **The TypeScript printer writes the type arguments at a proper union.** The arguments are the
    lifted rule's own answer, so the printer needs the checked type at the node. That is the
    traced check of the study's slice TRACE, with the reader's half of the round trip.
-4. **Until the printer writes them, the printer refuses such a program with a located refusal.**
-   `Api.print` answers `Except PrintRefusal`. The program is admitted by the checker and not
-   supported by the TypeScript profile yet. The other choice is a guard in the checker that
-   keeps today's refusal at a proper union. It keeps each step in agreement with tsgo, and it
-   leaves the judgment not monotone until the guard goes.
+4. **Until the printer writes them, a guard keeps today's refusal at a proper union.** A
+   converted rule reads the members of the normal form. With no member it answers `never`. With
+   one member it answers the member rule. With more it refuses, as today. Each step then agrees
+   with tsgo, and the hole work has what it needs: a hole with no stated type is declared at
+   `never`, and `never` passes every eliminator. The proofs are written for the full lifted
+   rule, so the guard goes by one line when the printer writes the type arguments. The judgment
+   is not monotone at a proper union until then.
+   - The other choice admits a proper union in the checker at once. The printed program then
+     fails in tsgo with no located refusal of ours: `Api.print` reads no type, so it cannot
+     see the case. That choice needs a signed difference in the corpus lane.
+   - The printer has a place for type arguments on a call's head already (`withHeadTypes`,
+     `src/Effect4/Codegen/PrintLeaf.lean`), and `PrintRefusal` is the home of a target's limit.
 5. **The prelude's signatures can read a member themselves**, as `fst` does. A list atom could
    take `L extends ReadonlyArray<unknown>` and answer `L[number]`. Then the atoms need no type
    arguments. It is a change of the prelude, a face of the target.
 
-The owner decides point 4, and hears of point 5 before it lands.
+The owner decides point 4: the coordinator recommends the guard. The owner hears of point 5
+before it lands.
 
 ## What this does not establish
 
 - No conversion is written. The count of 13 uses is for `fiberTy` alone.
-- The probe is 33 forms on one compiler version. It does not show that a printed program with
+- The probes are 33 forms and 6 forms on one compiler version. It does not show that a printed program with
   written type arguments reads back.
 - The census's counts are relayed from a draft receipt.
 - No corpus row is counted: how many refused corpus programs a conversion would admit is not
