@@ -319,10 +319,13 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
   contract, the model with its profile, and the cell with its five steps. It ends with the
   steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice. Two steps are on its branch and
-  not merged. Every case of the card gives the profile's answer on the Lean machine, one
-  schedule each (`af7f6099`). The model's profile is closed under its five transitions,
-  with no planned goal (`7f76f0b9`).
+  that waits and the finalizers' runs are a later slice. **Its first three steps are
+  merged** (`e212766f`). Every case of the card gives the profile's answer on the Lean
+  machine, one schedule each (`Test/Program/PoolScenarios.lean`). The contract is
+  `Test/contracts/pool.contract.md`. The model's profile is closed under its five
+  transitions, with no planned goal (`src/Effect4/Laws/Modules/Pool/`). An idle item beside
+  enrolled waiters is a state of the profile. The cell, the step terms, their typing and
+  their agreement with the model are next.
 - **Seat MASKPOP has the mask's pop discipline** (branch `seat/maskpop`), the third seat, on
   the owner's word. Lean accepts Codex's predicate and statements as written. On its branch,
   not merged: the placed theorem `saved_mask_pop_discipline` is proved in place of its
