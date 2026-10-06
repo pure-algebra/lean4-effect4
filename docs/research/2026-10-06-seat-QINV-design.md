@@ -230,3 +230,17 @@ operation. So the mutations are no falsifiers of the step law.
 - Nothing outside the first operations: `close`, `shutdown`, `peek`, `await` and a batch are
   outside `firstOp`.
 - Nothing without `Requested` at each step. The wrapper owes that premise: fresh identities.
+
+## 8. Addendum: what the landing changed
+
+Added after the landing, at `5dd784bd`. The statements of section 1 are in the tree as written
+there. The contract of section 4 has other field names, and one more definition.
+
+| Design | Landed | Reason |
+| --- | --- | --- |
+| `Flags.tidy`: the next state is tidy | `Flags.spent : Spent after` | each operation's lemma gives and takes the proposition, and `bump_inv` reads `tidy` once (`tidy_iff`) |
+| no name for it | `Spent s`: no offer is pending, or the room is zero | the premise of each operation's lemma |
+| `Flags.quiet` | `Flags.woken` | the field states the wake's condition, not `quiet` itself |
+| `Flags.named` | `Flags.accounted` | the field is `accounted` itself |
+
+The receipt is `docs/research/2026-10-06-seat-QINV-receipt.md`.
