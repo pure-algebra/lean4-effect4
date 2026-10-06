@@ -3,6 +3,8 @@
 Status: a design note (history, not authority). Brief:
 `docs/research/2026-10-05-claude-lead/briefs/seat-controls-brief.md`, under decisions rows 254
 and 266. Base: `1e280f24`. Written on 2026-10-06, before the first Lean commit of the seat.
+Section 8 was added the same day, after the coordinator's rulings. It changes sections 3 and 6.
+The receipt, `docs/research/2026-10-06-seat-CONTROLS-receipt.md`, holds the results.
 
 ## 1. The fault, on the base
 
@@ -98,3 +100,25 @@ to the coordinator.
 The slice states no theorem and moves no status. A played run is a finite probe: one script on
 the Lean machine. The gate cannot see a move that a comparison plays by itself. Section 5 names
 the one that stays.
+
+## 8. The coordinator's rulings of 2026-10-06
+
+The coordinator accepted the records of section 2 and ruled on the three findings of section 6.
+
+| Subject | Ruling | What changes above |
+| --- | --- | --- |
+| The runs at the scenario | Accepted. The list keeps the driver's order of today. | Nothing. |
+| A run that no control reads | It stays a named run. The gate reports it by name, and the report is visible. The coordinator rules at the merge whether `parked` gets a control. | Section 3: the gate logs one information message for each such run, and the timeout battery pins that line with `#guard_msgs (info)`. |
+| One name, two scripts | A lowered run with the name of a record's run takes that run's script. No name may carry two scripts after the slice, and the lane that reads both lists refuses one. | Section 6: the lane takes 17 runs from the records. Its own runs are two, `workers/refused` and `handle/cache`. The fixtures move for the five runs, and for no other. |
+| The lane's red control | Two of the five scripts end with decisions that move no machine view, so the old reading fails on them. The control now cuts a tape before its last decision that moves the view. | Section 6: `Shown.lastCounts` and S4 of `ocaml/engine/test/scenarios/test_scenarios.ml` change, and that file joins the seat's files. |
+
+Six conditions bind the red control's new reading.
+
+1. The tape that is cut must end at another view than the whole tape's.
+2. The cut comes from Lean's data: the last position at which two neighbouring view lines of
+   the fixture differ. The engine's own views choose nothing.
+3. A run of two or more decisions in which no decision moves the view fails. It is not skipped.
+4. The decisions after the cut get no second comparison: the lane compares every position.
+5. The test's label and its property list say what the control reads.
+6. The receipt gives the test's count of checks on the base and at the head. It shows one
+   scratch fixture that the test refuses: a moving decision removed, with its view kept.
