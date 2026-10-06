@@ -520,9 +520,9 @@ def controlsOf (b : Api.Built) : List Control :=
       ["received"] fun
       | [received] =>
         let starved : Run := { received with budget := { budget with fuel := 0 } }
-        (Scenario.play starved [.apply http]).phases.getLast? == some .frontier &&
-          shows (Scenario.play starved [.apply http])
-            { atParked with receipts := [key1], stored := [key1] }
+        let stopped := Scenario.play starved [.apply http]
+        stopped.phases.getLast? == some .frontier &&
+          shows stopped { atParked with receipts := [key1], stored := [key1] }
       | _ => false
   , red "frontier" "with its budget the same row applies the reply and stores none"
       ["applied"] fun

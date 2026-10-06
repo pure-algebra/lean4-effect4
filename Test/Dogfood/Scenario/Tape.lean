@@ -222,10 +222,10 @@ record's run takes that run from the record: its opened program and its script. 
 script of a battery reaches the fixture, and one name has one script on every lane. The lane's
 own runs are the two that no record lists, each written once in `own`. -/
 
-/-- A named run of a scenario's record as a lowered run. Its name is the scenario's name, a slash
-and the run's name, as the host lane quotes it. -/
+/-- A named run of a scenario's record as a lowered run. Its name is the record's quoted name
+(`Scenario.quote`), as on the host lane. -/
 def ofRecord (scenario : Scenario) (run : NamedRun) : Lowered :=
-  ⟨scenario.name ++ "/" ++ run.name, run.opened, run.moves⟩
+  ⟨scenario.quote run, run.opened, run.moves⟩
 
 /-- What the lane takes from the records: each fixture file, its scenario's record, and the names
 of the runs in the file's order.
@@ -268,8 +268,7 @@ def own : Option (List (String × Lowered)) := do
 /-- The names among these runs that a record gives one of its runs, as a lane quotes them. An
 own run with such a name would give one name two scripts. -/
 def clashesOf (runs : List Lowered) : List String :=
-  let listed := taken.flatMap fun entry =>
-    entry.2.1.runs.map fun run => entry.2.1.name ++ "/" ++ run.name
+  let listed := taken.flatMap fun entry => entry.2.1.runs.map entry.2.1.quote
   (runs.map (·.name)).filter listed.contains
 
 /-- What keeps the lane from its fixtures, each finding in a sentence, for a list of own runs.

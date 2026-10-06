@@ -825,7 +825,7 @@ structure Clause where
 /-- One named run of a scenario: one script on one program. A scenario's record lists each one
 once, and every consumer of a script takes it from that list: the gate, the host lane
 (`harness/truth/session/Keyed.lean`) and the engine's lane (`Test/Dogfood/Scenario/Tape.lean`).
-A lane quotes a run as the scenario's name, a slash and the run's name. -/
+A lane quotes a run as the scenario's name, a slash and the run's name (`Scenario.quote`). -/
 structure NamedRun where
   /-- The run's name in its scenario. -/
   name : String
@@ -890,6 +890,11 @@ structure Scenario where
 /-- The named run of a record with this name. -/
 def Scenario.run? (s : Scenario) (name : String) : Option NamedRun :=
   s.runs.find? (·.name == name)
+
+/-- A run of a record as a lane quotes it: the scenario's name, a slash and the run's name. The
+host lane and the engine's lane quote a run by this one function, so a name means one run on
+both. -/
+def Scenario.quote (s : Scenario) (run : NamedRun) : String := s.name ++ "/" ++ run.name
 
 /-- The names that a record lists more than once, each once, in the record's order. -/
 def Scenario.repeated (s : Scenario) : List String :=

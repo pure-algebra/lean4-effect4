@@ -785,10 +785,11 @@ def keptOut : List (String × String) :=
       "tsgo 7 refuses the printed module of the exact error column (TS2375, twice): the lane runs only a module that type-checks") ]
 
 /-- The host runs of a scenario: each named run of its battery's record, in the record's order.
-A run's name is the scenario's name, a slash and the run's name. -/
+A run's name is the record's quoted name: the scenario's name, a slash and the run's name
+(`Scenario.quote`). -/
 def Wire.runs (wire : Wire) : List HostRun :=
   wire.scenario.runs.map fun run =>
-    let name := wire.scenario.name ++ "/" ++ run.name
+    let name := wire.scenario.quote run
     { name := name
       scenario := wire.scenario.name
       opened := run.opened
