@@ -1,0 +1,7 @@
+@60: the stopped row is row 27 of 28; enoughFor=false; the command loop leaves (some 2) commands: (some [loop 1, drainDue]); atRest=false runnable=[1] rootExit=false
+@80: the stopped row is row 27 of 28; enoughFor=false; the command loop leaves (some 4) commands: (some [observe 1, exitDone 1, drainDue, drainDue]); atRest=true runnable=[] rootExit=false
+@100: the stopped row is row 27 of 28; enoughFor=false; the command loop leaves (some 4) commands: (some [deliver 0, exitDone 1, drainDue, drainDue]); atRest=false runnable=[0] rootExit=false
+@116: the stopped row is row 27 of 28; enoughFor=false; the command loop leaves (some 3) commands: (some [exitDone 1, drainDue, drainDue]); atRest=true runnable=[] rootExit=true
+@117: the stopped row is row 27 of 28; enoughFor=false; the command loop leaves (some 2) commands: (some [drainDue, drainDue]); atRest=true runnable=[] rootExit=true
+@118: the stopped row is row 27 of 28; enoughFor=false; the command loop leaves (some 1) commands: (some [drainDue]); atRest=true runnable=[] rootExit=true
+@119: no stopped row

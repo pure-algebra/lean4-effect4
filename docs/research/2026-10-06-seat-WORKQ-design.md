@@ -242,6 +242,12 @@ coordinator accepted the correction the same day.
 - The same search read cut runs, at four small budgets. It found cut runs at rest, and no goal's
   observation fails on one. Where a goal's observation fails on a cut run, the run is not at
   rest. The reason: a fiber that a budget cuts stays runnable with no task.
+- **A second correction, with the receipt's sweep.** The last sentence gives one kind of cut
+  run. A sweep read the battery's 22 scripts on the crew at each command budget from 1 to 160
+  (tested, a finite probe). It finds a second kind. At the command budgets 79 to 81 a budget
+  cuts the pool's close after its three releases. No fiber is then runnable, and the root has
+  no exit: the run is at rest, and nothing will run it. The battery pins one such run,
+  `dropped`. No goal's observation fails on a cut run at rest of either kind.
 
 ## 6. The named runs and the controls
 

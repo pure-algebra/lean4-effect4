@@ -709,9 +709,19 @@ reply application of the script but the last one, whose step closes the pool. A 
 the script's least command budget: the run is funded at 119 and not at 118. -/
 def starvedFuel : Nat := 60
 
+/-- The command budget of the dropped run, on the starved run's script. The script's last reply
+application runs the pool's close through its three releases. At this budget its command loop
+stops before an exit observer of worker 1's fiber, and before the root's exit.
+`stepDecisionState` (`src/Effect4/Machine/Fibers.lean`) keeps the loop's machine and drops the
+commands that the loop leaves. So no fiber is runnable and no owner is armed: the machine is at
+rest, and nothing will run the root. A sweep of the seat's receipt finds this ending at the
+command budgets 79 to 81. -/
+def droppedFuel : Nat := 80
+
 /-- The scenario's named runs: each script of a control, once. The first twenty-two are on the
-crew, at the battery's budgets. Then one run is on each faulty crew, and the last is on the crew
-at the starved budget. The order is the order in which the host lane performs them. -/
+crew, at the battery's budgets. Then one run is on each faulty crew. The last two are on the
+crew at two small command budgets, the starved one and the dropped one. The order is the order
+in which the host lane performs them. -/
 def runsOf (b unwithdrawn silent keeps masked takesBack stays twice : Api.Built) :
     List NamedRun :=
   let run := fun (name : String) (parts : List (List Move)) =>
@@ -748,7 +758,8 @@ def runsOf (b unwithdrawn silent keeps masked takesBack stays twice : Api.Built)
   , ⟨"taken-back", opened takesBack, script [blocked, [.cancel ⟨3⟩]]⟩
   , ⟨"stays", opened stays, script [blocked, [.cancel ⟨3⟩]]⟩
   , ⟨"twice", opened twice, script [blocked, closing]⟩
-  , ⟨"starved", openedAt starvedFuel b, script [running, cancelWaiting, afterWaiting]⟩ ]
+  , ⟨"starved", openedAt starvedFuel b, script [running, cancelWaiting, afterWaiting]⟩
+  , ⟨"dropped", openedAt droppedFuel b, script [running, cancelWaiting, afterWaiting]⟩ ]
 
 /-- The controls. Each names the runs of `runsOf` that its comparison reads, and the gate hands
 them over as played. Every control compares `observe`, or a reading of it. A control of a
@@ -1003,10 +1014,10 @@ def controlsOf (b : Api.Built) : List Control :=
           funded closed && (observe closed).settled && starved.journal == closed.journal
       | _ => false
   , red "settled"
-      "the same journal holds no frontier verdict: its stopped row is a reply application that the session applied"
-      ["starved"] fun
-      | [starved] =>
-        starved.phases.all (· != .frontier) &&
+      "the same journal holds no frontier verdict, and its verdicts are the funded run's: its stopped row is a reply application that the session applied"
+      ["starved", "cancelled-waiting-closed"] fun
+      | [starved, closed] =>
+        starved.phases.all (· != .frontier) && starved.phases == closed.phases &&
           (tapeFrom (openedOf starved) starved.journal).2.take 1 == [.apply ⟨⟨1⟩, 10⟩] &&
           (tapeFrom (openedOf starved) starved.journal).2.length == 2 &&
           !atRest starved && (observe starved).workLeft.runnable == [⟨1⟩]
@@ -1058,6 +1069,18 @@ def controlsOf (b : Api.Built) : List Control :=
       "a journal with a stopped row: the raw replay of its tape shows another machine"
       ["starved"] fun
       | [starved] => !funded starved && machineView starved != replayedView starved
+      | _ => false
+  , red "funded"
+      "a budget's cut that leaves the machine at rest: each connection is released, no work is left and the root has no exit, under the funded run's journal and verdicts"
+      ["dropped", "cancelled-waiting-closed"] fun
+      | [dropped, closed] =>
+        !funded dropped && atRest dropped && funded closed &&
+          dropped.journal == closed.journal && dropped.phases == closed.phases &&
+          (observe dropped).rootExit == none &&
+          (observe closed).rootExit == closedWith [2, 3, 1] &&
+          (observe dropped).cleanups == numbers [2, 3, 1] &&
+          (observe dropped).workLeft == ⟨[], [], [], [], []⟩ &&
+          machineView dropped != replayedView dropped
       | _ => false ]
 
 /-- The scenario's runs and its controls: the crew and its seven faulty twins, each built once.

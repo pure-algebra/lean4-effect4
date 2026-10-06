@@ -1,0 +1,62 @@
+import Test.Dogfood.Scenario.QueueWorkers
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace CutRest
+
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Api.Runner (Command)
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+def build3 : Option Api.Built := (Effect4.Api.Author.build (crew 3)).toOption
+
+def valText : Val → String
+  | .unit => "()"
+  | .nat n => toString n
+  | .bool b => toString b
+  | .str s => "\"" ++ s ++ "\""
+  | .none => "none"
+  | .some v => "some " ++ valText v
+  | .list vs => "[" ++ ", ".intercalate (vs.map valText) ++ "]"
+  | .ctor n vs => s!"ctor{n}(" ++ ", ".intercalate (vs.map valText) ++ ")"
+  | .handle k i => s!"h{k}.{i}"
+  | _ => "?"
+
+def exitText : Option ExitV → String
+  | none => "none"
+  | some (.success v) => "success " ++ valText v
+  | some (.failure _) => "failure"
+
+def queueText : QueueCell → String
+  | .unmade => "unmade"
+  | .malformed => "malformed"
+  | .holds v => s!"buffered={v.buffered.map valText} offers={v.offers.map fun o => (o.1, o.2.map valText)} takers={v.takers}"
+
+def verdicts (s : Run) : String :=
+  String.join (s.phases.map fun
+    | .progressed => "c"
+    | .frontier => "F"
+    | .preflight => "p"
+    | .applied => "A"
+    | .refused _ => "r"
+    | .bound => "b")
+
+def line (fuel : Nat) (parts : List (List Move)) : String :=
+  match build3 with
+  | none => "no build"
+  | some b =>
+    let s := _root_.Test.Dogfood.Scenario.play (openedAt fuel b) (script parts)
+    let o := observe s
+    s!"@{fuel}: verdicts={verdicts s} funded={funded s} atRest={atRest s} rootExit={exitText o.rootExit} " ++
+    s!"assignment={o.assignment.map valText} queue: {queueText o.queue} fed={o.fed.map valText} opened={o.opened.map valText} cleanups={o.cleanups.map valText} " ++
+    s!"finished={o.finished.map valText} runnable={o.workLeft.runnable.map (·.value)} queued={o.workLeft.queued.map (·.value)} " ++
+    s!"awaiting={o.workLeft.awaiting.map fun a => (a.fiber.value, a.token)} pending={o.workLeft.pending.map fun k => (k.fiber.value, k.token)} timers={o.workLeft.timers.length} " ++
+    s!"live1={o.live 1} live2={o.live 2} live3={o.live 3} idle1={o.idle 1} idle3={o.idle 3}"
+
+#eval [60, 80, 100, 118, 119].forM fun fuel =>
+  IO.println (line fuel [running, cancelWaiting, afterWaiting])
+
+end CutRest

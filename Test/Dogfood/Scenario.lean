@@ -1104,8 +1104,13 @@ theorem funded_replays (s : Run) (recorded : Run.Reached s) (h : funded s = true
 
 /-- **A machine at rest**: it names no runnable fiber and no armed owner. A host lets every
 dispatcher run after each of its acts but the root's start, so a host reads a machine at rest
-(`performable`, `harness/truth/session/Keyed.lean`). A fiber that a budget cut stays runnable
-with no task, so a run with a stopped row is seldom at rest. -/
+(`performable`, `harness/truth/session/Keyed.lean`).
+
+Rest does not show that a run is funded. A budget may cut a step and leave its fiber runnable
+with no task: that run is not at rest. A budget may also cut a step and leave no fiber runnable,
+while the root has no exit: that run is at rest, and nothing will run it. The battery
+`Test/Dogfood/Scenario/QueueWorkers.lean` holds one run of each kind, `starved` and `dropped`.
+So a statement at rest takes `funded` beside `atRest`. -/
 def atRest (s : Run) : Bool := s.work.runnable.isEmpty && s.work.queued.isEmpty
 
 /-! ## 5. A scenario's record, and the gate at the foot of a battery -/

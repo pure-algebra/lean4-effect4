@@ -1,0 +1,75 @@
+import Test.Dogfood.Scenario.QueueWorkers
+import Effect4.Laws.Run
+
+/-!
+What the command loop leaves at the stopped row of a run that a budget cut. The probe plays a
+script's completed prefix, takes the stopped row's decision, and runs the command loop of that
+decision (`driveState`, `src/Effect4/Machine/Fibers.lean`) at the run's command budget. It
+prints the commands that the loop returns. `stepDecisionState` keeps the loop's machine and its
+receipt, and it does not keep those commands.
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace Leftover
+
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Api.Runner (Command)
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+def cmdName {ν σ β ε δ ι α κ} : Cmd ν σ β ε δ ι α κ → String
+  | .evaluate f => s!"evaluate {f.value}"
+  | .loop f _ => s!"loop {f.value}"
+  | .deliver f _ => s!"deliver {f.value}"
+  | .finish f _ => s!"finish {f.value}"
+  | .resume f token _ => s!"resume {f.value}.{token}"
+  | .interruptTarget target _ _ => s!"interruptTarget {target.value}"
+  | .afterInterrupt host _ _ => s!"afterInterrupt {host.value}"
+  | .trackChild parent child => s!"trackChild {parent.value} {child.value}"
+  | .observe f _ _ => s!"observe {f.value}"
+  | .exitDone f => s!"exitDone {f.value}"
+  | .closeParAwait host _ fibers => s!"closeParAwait {host.value} {fibers.map (·.value)}"
+  | .link _ _ target _ _ => s!"link {target.value}"
+  | .drainDue => "drainDue"
+  | .wake _ _ => "wake"
+  | _ => "a race's command"
+
+/-- The commands that the command loop of an answer decision leaves, at a run's own budget. -/
+def left (s : Run) (d : Api.Decision) : Option (List String) :=
+  letI := evaluatorFor s.built.program s.built.table
+  match d with
+  | .answerAsync id token answer =>
+    let interp := interpOf s.built.program s.built.table
+    let prepared := prepareAsyncAnswer interp s.machine id token answer
+    let r := driveState interp s.budget.fuel { s.machine with state := prepared.1 }
+      [Cmd.resume id token prepared.2, Cmd.drainDue]
+    some (r.2.map cmdName)
+  | _ => none
+
+def line (fuel : Nat) (parts : List (List Move)) : String :=
+  match (Effect4.Api.Author.build (crew 3)).toOption with
+  | none => "no build"
+  | some b =>
+    let whole := _root_.Test.Dogfood.Scenario.play (openedAt fuel b) (script parts)
+    let read := tapeFrom (openedOf whole) whole.journal
+    let done := whole.journal.take (whole.journal.length - read.2.length)
+    let before := (openedOf whole).play done
+    match read.2 with
+    | [] => s!"@{fuel}: no stopped row"
+    | c :: _ =>
+      let phase := (Api.Runner.result before.runner c).phase
+      match decisionOf before c phase with
+      | none => s!"@{fuel}: the stopped row gives no decision"
+      | some d =>
+        s!"@{fuel}: the stopped row is row {done.length + 1} of {whole.journal.length}; " ++
+        s!"enoughFor={Run.enoughFor before.built.program before.built.table before.budget.fuel before.machine d}; " ++
+        s!"the command loop leaves {(left before d).map (·.length)} commands: {left before d}; " ++
+        s!"atRest={atRest whole} runnable={whole.work.runnable.map (·.value)} rootExit={whole.exit.isSome}"
+
+#eval [60, 80, 100, 116, 117, 118, 119].forM fun fuel =>
+  IO.println (line fuel [running, cancelWaiting, afterWaiting])
+
+end Leftover

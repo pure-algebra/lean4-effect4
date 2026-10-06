@@ -235,8 +235,11 @@ A statement over a scenario's runs takes its budget as a premise, under one name
 from its fresh open, leaves no row unread. The journal's verdicts alone do not decide it. A
 reply application has the verdict `applied` as soon as its call's guard is gone, whatever fuel
 its step had left. `funded_replays` says what the premise gives: the machine of a funded run is
-the raw replay of its tape's decisions. The queue-workers record holds the controls: a journal
-with a stopped row and no frontier verdict, on which the queue is not settled.
+the raw replay of its tape's decisions. The queue-workers record holds the controls, on one
+journal at three command budgets. At the battery's budget the run is funded. At a smaller
+budget the journal has a stopped row and the funded run's verdicts, and the queue is not
+settled. At a third budget the cut leaves the machine at rest: no work is left, and the root
+has no exit. So a machine at rest does not show that its run is funded.
 
 Two cases have no control, and each battery's header states its case.
 
