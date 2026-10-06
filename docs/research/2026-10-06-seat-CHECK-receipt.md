@@ -36,7 +36,7 @@ The sections below carry item numbers. Item 1 is the bold line above.
 | Branch | `seat/check`, in the worktree `/Users/pooks/Dev/lean4-effect4-qsteps` |
 | Base | `8fcab517` |
 | Main-line heads taken in | none |
-| Head | the commit that holds this receipt; its parent is `5627ef4a` |
+| Head | the last commit of the branch. It holds this receipt, and no Lean file changes after `5627ef4a` |
 
 Nothing is pushed.
 
@@ -45,7 +45,7 @@ Nothing is pushed.
 | `649ebab3` | 0 | the design note: the measure, and each proof over the new forms in scratch |
 | `a467ce77` | 1 | the facade's equation, proved against the definitions of the base; the note's first addendum |
 | `5627ef4a` | 2 | the two definitions, each proof that broke, the comment of `ReferenceExpansion.lean`, the battery, the baseline's two lines; the note's second addendum |
-| the head | 3 | this receipt |
+| after `5627ef4a` | 3 | this receipt, and two corrections in the design note |
 
 ## 3. Changed files
 
@@ -97,7 +97,7 @@ named `SCRATCH`. It holds each log and each probe.
 | `SLOT lake build`, the second run | `Build completed successfully (1008 jobs)`, with the gates | proved, and tested |
 | `SLOT lake build`, on the tree of `5627ef4a` | `Build completed successfully (1008 jobs)`; Lake built no module | tested |
 | `LEAN SCRATCH/checks.lean`, before and after; `cmp` of the two outputs | identical: the types of 27 declarations, and 14 axiom lines (item 5) | tested |
-| `LEAN SCRATCH/envdump.lean`, on the base, on `a467ce77` and after; `python3 SCRATCH/envdiff.py` | item 6 | tested |
+| `LEAN SCRATCH/envdump.lean`, with `CHECK_DUMP_OUT` naming its output, on the base, on `a467ce77` and after; `python3 SCRATCH/envdiff.py` on two outputs | item 6 | tested |
 | `LEAN SCRATCH/plan.lean`, before and after | item 7 | tested |
 | `SLOT SCRATCH/red-one/run.sh SCRATCH`: 24 copies of the battery, one falsified check in each | each copy exits 1; 23 give one error, and one gives two | tested: the red controls |
 | `LEAN SCRATCH/battery-green.lean`, a copy equal to the battery by `cmp` | exit 0, and no message | tested |
