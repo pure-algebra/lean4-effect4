@@ -439,6 +439,15 @@ def cases : List (Src NativeOp) := [pp1, pp2, pp3, pp4, pp5, pp6, pp7, pp8, clos
 -- A pool that is made outside a scope builds, and the built program requires the scope.
 #guard verdict (library.make .nat 1 (succeed (nat 1))) = "built" &&
   closedOf (library.make .nat 1 (succeed (nat 1))) = some false
+-- Its type says so, as `make_types` states it: the pool's handle, no failure, and exactly the
+-- scope's key as its requirement.
+#guard ((Effect4.Api.Author.build (mk (library.make .nat 1 (succeed (nat 1))))).toOption.map
+    fun b => decide (b.ty.answer = .refOf (Pool.cellTy .nat)) && decide (b.ty.error = .never) &&
+      decide (b.ty.requires = Env.Requirement.single (nativeSignature b.table).scopeKey)) =
+  some true
+-- Its run has no scope that takes the close: the root dies with the missing service.
+#guard exitOf (library.make .nat 1 (succeed (nat 1))) =
+  some (.failure (Cause.die Defect.missingService))
 -- The closed pool's types: L's exit has no failure type, because an interruption is outside
 -- the failure column. The case itself has no failure.
 #guard typesOf closed = some (.tuple [.exitOf .unit .never,

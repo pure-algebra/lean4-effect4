@@ -209,6 +209,40 @@ The printed program agrees with Effect 4.0.0-rc.112 on its exit and on its compa
 That run is the program `pSemaphoreHandoff` of `harness/truth/Truth.lean`.
 `Test/Program/SemaphoreOps.lean` holds this example, and `Test/contracts/semaphore.contract.md` states what is proved and what is open.
 
+## A pool
+
+`Pool.make A size acquire` makes a pool of `size` resources of the type `A`, at a positive size.
+It runs the acquisition `size` times before it answers, and a failed acquisition fails `make`.
+Its handle is the `Ref` of the pool's cell.
+`Pool.use A pool body` borrows one item, runs the body with its resource, and returns the item at every exit of the body.
+A borrower waits while every item is borrowed.
+A pool is made inside a scope: `make` registers the close there, and its type requires the scope.
+The close refuses new borrowers, waits for every borrowed item, and then lets each resource's finalizer run.
+A borrow at a closed pool interrupts the borrower itself, and its body does not run.
+
+```lean
+import Effect4
+open Effect4 Effect4.Program Effect4.Program.Authoring
+
+def handoff : Src NativeOp := scope (eff do
+  let pool ← Pool.make .nat 1 (succeed (nat 7))
+  let worker ← Pool.use .nat pool fun _ =>
+    fork (Pool.use .nat pool fun resource => succeed resource)
+  let x ← join worker
+  return x)
+```
+
+`Effect4.Api.author handoff` checks this program at the answer type `nat`, and its run answers `7`.
+The root borrows the one item, and the worker waits for it.
+The root's return posts a helper, which wakes the worker, and the worker gets the same resource.
+The protected form is one mask over the lease, the hook and the body.
+An operation mints the name of each of its binders, so it captures no name of its caller.
+Each operation prints as its expansion over `Ref.modify`, `Deferred` and `Effect.forkDetach`, and reads back.
+Ten cases over these operations agree with Effect 4.0.0-rc.112 on their exits and on their compared schedule rows.
+They are the programs `pPoolReuse` to `pPoolClosing` of `harness/truth/Truth.lean`, and this example is not one of them.
+The close of the pin's own `Pool` does not wait for a borrowed item: decisions row 268 signs that difference.
+`Test/Program/PoolOps.lean` holds this example, and `Test/contracts/pool.contract.md` states what is proved and what is open.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact
