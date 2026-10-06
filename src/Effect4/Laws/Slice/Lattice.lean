@@ -103,6 +103,30 @@ instance [DecidableEq α] : Std.LawfulOrderInf (Slice α) where
 /-- The slice one site below: it keeps every site of `s` but `x`. -/
 def drop [DecidableEq α] (s : Slice α) (x : α) : Slice α := ⟨s.kept.filter (· ≠ x)⟩
 
+/-- The slice without a site is below the slice. A step of `SliceView.minimal_iff_drop`, its one
+consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem drop_le [DecidableEq α] (s : Slice α) (x : α) : s.drop x ≤ s :=
+  fun _ hy => (List.mem_filter.mp hy).1
+
+/-- The slice without a site does not keep it. A step of `SliceView.minimal_iff_drop`, its one
+consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem not_mem_drop [DecidableEq α] (s : Slice α) (x : α) : x ∉ (s.drop x).kept := by
+  intro h
+  exact of_decide_eq_true (List.mem_filter.mp h).2 rfl
+
+/-- A slice below `s` that does not keep `x` is below `s` without `x`: each slice strictly
+below is below a slice one site below. A step of `SliceView.minimal_iff_drop`, its one
+consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem le_drop [DecidableEq α] {j s : Slice α} {x : α} (h : j ≤ s) (hx : x ∉ j.kept) :
+    j ≤ s.drop x := by
+  intro y hy
+  refine List.mem_filter.mpr ⟨h hy, decide_eq_true ?_⟩
+  rintro rfl
+  exact hx hy
+
 /-! ## The slices below one slice -/
 
 /-- Every sub-list of a list: `2 ^ n` lists for `n` elements. -/
@@ -280,35 +304,50 @@ def ofFolded [DecidableEq α] (sites : List α) (f : List α → T)
 
 /-! ## The statements
 
-Each is a planned goal at this step. Its proof replaces it in place. -/
+Each began as a planned goal, and its proof replaced it in place. -/
 
 /-- **Validity is upward closed**: a slice that keeps more is valid for the same query. The
 paper has it by graduality (Theorem 3.5, p. 8) for its calculus. Here it holds for every
 monotone view. It establishes no slice that is valid. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal valid_up [Std.IsPreorder T] (v : SliceView α T) {q : T} {a b : Slice α}
-    (h : v.Valid q a) (hab : a ≤ b) : v.Valid q b
+theorem valid_up [Std.IsPreorder T] (v : SliceView α T) {q : T} {a b : Slice α}
+    (h : v.Valid q a) (hab : a ≤ b) : v.Valid q b :=
+  Std.le_trans h (v.mono hab)
 
 /-- **Minimality is decided one site below.** A valid slice is minimal exactly when no slice
 one site below it is valid. It is the last step of the paper's brute-force algorithm: "if none
 of the slices satisfy the query, then a minimal slice has been found, by graduality" (pp. 9
 and 10). It uses the view's monotonicity. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal minimal_iff_drop [DecidableEq α] [Std.IsPreorder T] (v : SliceView α T) (q : T)
-    (m : Slice α) : v.Minimal q m ↔ v.Valid q m ∧ ∀ x ∈ m.kept, ¬ v.Valid q (m.drop x)
+theorem minimal_iff_drop [DecidableEq α] [Std.IsPreorder T] (v : SliceView α T) (q : T)
+    (m : Slice α) : v.Minimal q m ↔ v.Valid q m ∧ ∀ x ∈ m.kept, ¬ v.Valid q (m.drop x) := by
+  constructor
+  · exact fun h => ⟨h.1, fun x hx hv => m.not_mem_drop x (h.2 (m.drop x) (m.drop_le x) hv hx)⟩
+  · exact fun h => ⟨h.1, fun j hj hv x hx => Decidable.byContradiction fun hxj =>
+      h.2 x hx (v.valid_up hv (Slice.le_drop hj hxj))⟩
 
 /-- The one-step test decides minimality: the executable form of `minimal_iff_drop`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal isMinimal_iff [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
-    (q : T) (m : Slice α) : v.isMinimal q m = true ↔ v.Minimal q m
+theorem isMinimal_iff [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
+    (q : T) (m : Slice α) : v.isMinimal q m = true ↔ v.Minimal q m := by
+  rw [minimal_iff_drop, isMinimal, Bool.and_eq_true, decide_eq_true_iff, List.all_eq_true]
+  exact and_congr_right fun _ => forall₂_congr fun _ _ => by
+    rw [Bool.not_eq_true', decide_eq_false_iff_not]
+
+/-- Minimality is decided, by the one-step test. So `decide` proves the minimality of one slice
+of a finite instance whose type map the kernel can run. -/
+instance instDecidableMinimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+    (v : SliceView α T) (q : T) (m : Slice α) : Decidable (v.Minimal q m) :=
+  decidable_of_iff _ (v.isMinimal_iff q m)
 
 /-- **A minimal slice needs each site that it keeps**: its type without the site is not at or
 above its type. A step of `Minimal.keeps_above`, and a test that one kept site is no dead
 weight. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal Minimal.needs [DecidableEq α] [Std.IsPreorder T] {v : SliceView α T} {q : T}
+theorem Minimal.needs [DecidableEq α] [Std.IsPreorder T] {v : SliceView α T} {q : T}
     {m : Slice α} (h : v.Minimal q m) {x : α} (hx : x ∈ m.kept) :
-    ¬ v.typeOf m ≤ v.typeOf (m.drop x)
+    ¬ v.typeOf m ≤ v.typeOf (m.drop x) :=
+  fun hle => ((v.minimal_iff_drop q m).mp h).2 x hx (Std.le_trans h.1 hle)
 
 /-- **A minimal slice is a highlighted tree**: it keeps each site above a site that it keeps.
 `above y x` says that the site `y` is above the site `x`: for the addresses of a tree, an
@@ -317,10 +356,11 @@ is folded already. A type map that folds a whole sub-tree at an address has it. 
 asked at the slice `m` only. The statement gives no such closure for a slice that is not
 minimal. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal Minimal.keeps_above [DecidableEq α] [Std.IsPreorder T] {v : SliceView α T} {q : T}
+theorem Minimal.keeps_above [DecidableEq α] [Std.IsPreorder T] {v : SliceView α T} {q : T}
     {m : Slice α} (h : v.Minimal q m) {above : α → α → Prop}
     (noop : ∀ {x y : α}, above y x → y ∉ m.kept → v.typeOf m ≤ v.typeOf (m.drop x))
-    {x y : α} (hx : x ∈ m.kept) (hyx : above y x) : y ∈ m.kept
+    {x y : α} (hx : x ∈ m.kept) (hyx : above y x) : y ∈ m.kept :=
+  Decidable.byContradiction fun hy => h.needs hx (noop hyx hy)
 
 /-- The descent keeps sites of its start only, in the start's order, each as often as the start
 does. It holds for every start, valid or not. -/
