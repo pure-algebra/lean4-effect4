@@ -7,10 +7,10 @@ import Test.Program.QueueSteps
 import ProofGraph.Plan
 
 /-!
-# Pool's cell and its steps: finite controls of the library module (decisions rows 267 to 269)
+# Pool's cell and its steps: finite controls of the library module (rows 267 to 269 and 276)
 
 The module is `src/Effect4/Modules/Pool/`: the cell's type and initial value (`Cell.lean`), and
-the five step terms (`Steps.lean`). This battery holds the finite controls of the module alone,
+the six step terms (`Steps.lean`). This battery holds the finite controls of the module alone,
 and what the typing theorems do not say by themselves.
 
 1. The cell: its three declarations, the checker's answer for the initial value, and the value.
@@ -114,6 +114,10 @@ own answer, at each resource type. -/
 #guard resourceTypes.all fun A =>
   decide (typeOf ["s"] [Pool.cellTy A] (Pool.closeStep (var "s")) =
     some (.prod closeReplyTy (Pool.cellTy A)))
+#guard resourceTypes.all fun A =>
+  decide (typeOf ["id", "hint", "s"] [idTy, idTy, Pool.cellTy A]
+      (Pool.drainStep (var "id") (var "hint") (var "s")) =
+    some (.prod .bool (Pool.cellTy A)))
 -- A count and two stamps that are literals are typed too: the scenarios write them so.
 #guard decide (typeOf ["s"] [Pool.cellTy .nat] (Pool.selectStep (nat 2) (var "s")) =
   some (.prod selectReplyTy (Pool.cellTy .nat)))
@@ -133,6 +137,11 @@ own answer, at each resource type. -/
 -- A hint at a `Deferred` of a number has none: a `Deferred` is invariant in its answer.
 #guard (typeOf ["id", "hint", "s"] [idTy, .deferredOf .nat .never, Pool.cellTy .nat]
   (Pool.leaseStep (var "id") (var "hint") (var "s"))).isNone
+-- The closer's step has none at a closer's identity that is a number, nor at such a hint.
+#guard (typeOf ["id", "hint", "s"] [.nat, idTy, Pool.cellTy .nat]
+  (Pool.drainStep (var "id") (var "hint") (var "s"))).isNone
+#guard (typeOf ["id", "hint", "s"] [idTy, .deferredOf .nat .never, Pool.cellTy .nat]
+  (Pool.drainStep (var "id") (var "hint") (var "s"))).isNone
 -- A step over an item in place of the cell has none.
 #guard (typeOf ["s"] [Pool.itemTy .nat] (Pool.closeStep (var "s"))).isNone
 #guard (typeOf ["count", "s"] [.nat, Pool.itemTy .nat]
@@ -156,6 +165,8 @@ Queue battery's two algebras of the generated term fold: nodes, then folds. -/
 #guard measure ["count", "s"] (Pool.selectStep (var "count") (var "s")) = some (11, 0)
 #guard measure ["id", "s"] (Pool.withdrawStep (var "id") (var "s")) = some (22, 1)
 #guard measure ["s"] (Pool.closeStep (var "s")) = some (11, 0)
+#guard measure ["id", "hint", "s"] (Pool.drainStep (var "id") (var "hint") (var "s")) =
+  some (59, 3)
 -- The passes. The lease's two folds over the items hold the fold of the front stamp in their
 -- bodies: two folds each.
 #guard measure ["s"] (Pool.headStamp (var "s")) = some (7, 1)
@@ -166,6 +177,7 @@ Queue battery's two algebras of the generated term fold: nodes, then folds. -/
 #guard measure ["item", "lease", "s"] (Pool.freed (var "item") (var "lease") (var "s")) =
   some (28, 1)
 #guard measure ["id", "s"] (Pool.withdrawn (var "id") (var "s")) = some (20, 1)
+#guard measure ["s"] (Pool.outstanding (var "s")) = some (8, 1)
 -- The initial value folds nothing: 14 nodes at one resource, and 12 more for each resource.
 #guard measure [] (Pool.initial .nat [nat 1]) = some (14, 0)
 #guard measure [] (Pool.initial .nat [nat 1, nat 2]) = some (26, 0)
@@ -173,8 +185,9 @@ Queue battery's two algebras of the generated term fold: nodes, then folds. -/
 -- No fold of a step states its accumulator's type, so each step is inside the reader's domain.
 #guard ([Pool.leaseStep (var "a") (var "b") (var "s"),
     Pool.returnStep (var "c") (var "c") (var "s"), Pool.selectStep (var "c") (var "s"),
-    Pool.withdrawStep (var "a") (var "s"), Pool.closeStep (var "s")].map
-  fun src => (termAt ["a", "b", "c", "s"] src).map (·.unannotated)) = List.replicate 5 (some true)
+    Pool.withdrawStep (var "a") (var "s"), Pool.closeStep (var "s"),
+    Pool.drainStep (var "a") (var "b") (var "s")].map
+  fun src => (termAt ["a", "b", "c", "s"] src).map (·.unannotated)) = List.replicate 6 (some true)
 
 /-! ## 4. A caller's variable under each pass that folds
 
@@ -252,6 +265,22 @@ def keeps (plain clash : Option Val) : Bool := plain.isSome && plain == clash
 #guard valueAt ["i", "l", "cell"] [.nat 1, .nat 0, busy]
     (Pool.heldBy (var "i") (var "l") (var "cell")) = some (.bool false)
 
+-- The closer's step: the closer's identity, named `acc` and then `item`. Its removal's fold
+-- reads the identity, and the fold over the items reads no caller's term.
+#guard ["acc", "item"].all fun name =>
+  keeps
+    (valueAt ["x", "h", "cell"] [Val.promise ⟨1⟩, Val.promise ⟨9⟩, busy]
+      (Pool.drainStep (var "x") (var "h") (var "cell")))
+    (valueAt [name, "h", "cell"] [Val.promise ⟨1⟩, Val.promise ⟨9⟩, busy]
+      (Pool.drainStep (var name) (var "h") (var "cell")))
+-- The step reads the items' flags: at the busy cell a lease is outstanding, and at a cell
+-- with every item idle none is.
+#guard valueAt ["x", "h", "cell"] [Val.promise ⟨7⟩, Val.promise ⟨9⟩, busy]
+    (tupleAt (Pool.drainStep (var "x") (var "h") (var "cell")) 0) = some (.bool false)
+#guard (valueAt [] [] (Pool.initial .nat [nat 7, nat 8])).bind (fun fresh =>
+    valueAt ["x", "h", "cell"] [Val.promise ⟨7⟩, Val.promise ⟨9⟩, fresh]
+      (tupleAt (Pool.drainStep (var "x") (var "h") (var "cell")) 0)) = some (.bool true)
+
 /-- Red control of the hygiene: `marked` with the fold's two names fixed. -/
 def markedFixed (s : TermSrc) : TermSrc :=
   fold "acc" "item" none (field s "items") (noneOf (field s "items"))
@@ -321,6 +350,18 @@ example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) :
   apply typeAt_of_types
   exact closeStep_types sig atoms rfl (cellSrc := var "s") (env := { names := ["s"] })
     (path := []) (types := [Pool.cellTy .nat]) (types_var rfl rfl rfl) false
+
+/-- The closer's step at its own scope: the closer's identity is a caller's term under the
+removal's fold. -/
+example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) :
+    typeAt sig ["id", "hint", "s"] [idTy, idTy, Pool.cellTy .nat]
+        (Pool.drainStep (var "id") (var "hint") (var "s")) =
+      some (.prod .bool (Pool.cellTy .nat)) := by
+  apply typeAt_of_types
+  exact drainStep_types sig atoms rfl (idSrc := var "id") (hintSrc := var "hint")
+    (cellSrc := var "s") (env := { names := ["id", "hint", "s"] }) (path := [])
+    (types := [idTy, idTy, Pool.cellTy .nat]) rfl (capturedTy_var rfl rfl rfl)
+    (types_var rfl rfl rfl) (types_var rfl rfl rfl) false
 
 /-- The initial value, at two resources that are a caller's variables. -/
 example (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy) :
@@ -479,6 +520,26 @@ theorem returnStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = n
     ((returnStep_types sig atoms canonical depth typesItem typesLease typesCell false).tree tree)
     held member value
 
+/-- **The closer's step keeps the cell a member of its type**, at every scope: its reply is a
+Boolean. -/
+theorem drainStep_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    {A : Ty} (canonical : A.normalize = A) {idSrc hintSrc cellSrc : TermSrc} {env : Env}
+    {path : List Nat} {tys : List Ty} {w : Typed.World} {captured : List Val}
+    (depth : (tys ++ [Pool.cellTy A]).length = env.names.length)
+    (typesId : CapturedTy sig idSrc env path (tys ++ [Pool.cellTy A]) idTy)
+    (typesHint : TypesEach sig hintSrc env path (tys ++ [Pool.cellTy A]) idTy)
+    (typesCell : TypesEach sig cellSrc env path (tys ++ [Pool.cellTy A]) (Pool.cellTy A))
+    (typedEnv : Typed.EnvTyped w tys captured) {stores : Stores} {q : RefKey}
+    {cell reply next : Val} (held : refPeek stores.refs q = some cell)
+    (member : Typed.Fits w cell (Pool.cellTy A))
+    (reads : Reads (Pool.drainStep idSrc hintSrc cellSrc) env path (captured ++ [cell])
+      (Val.tuple [reply, next])) :
+    Typed.Fits w reply .bool ∧ Typed.Fits w next (Pool.cellTy A) := by
+  obtain ⟨f, tree, value⟩ := reads
+  exact step_keeps_cell sig atoms typedEnv
+    ((drainStep_types sig atoms canonical depth typesId typesHint typesCell false).tree tree)
+    held member value
+
 /--
 info: 'Test.Program.PoolSteps.leaseStep_keeps_cell' depends on axioms: [propext, Quot.sound]
 -/
@@ -498,13 +559,21 @@ info: 'Test.Program.PoolSteps.returnStep_keeps_cell' depends on axioms: [propext
 #print axioms returnStep_keeps_cell
 
 /--
+info: 'Test.Program.PoolSteps.drainStep_keeps_cell' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms drainStep_keeps_cell
+
+/--
 info: Test.Program.PoolSteps.leaseStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
 Test.Program.PoolSteps.selectStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
 Test.Program.PoolSteps.returnStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
+Test.Program.PoolSteps.drainStep_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
 #plan_status leaseStep_keeps_cell selectStep_keeps_cell returnStep_keeps_cell
+  drainStep_keeps_cell
 
 /-! ## 7. The pinned outputs
 
@@ -535,6 +604,10 @@ counts are of this battery's tree, which holds no step of a proof. -/
 #guard_msgs in
 #print axioms closeStep_types
 
+/-- info: 'Effect4.Pool.Model.drainStep_types' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms drainStep_types
+
 /-- info: 'Effect4.Program.nativeAtomTy_eq' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms nativeAtomTy_eq
@@ -554,10 +627,11 @@ Effect4.Pool.Model.returnStep_types: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.selectStep_types: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.withdrawStep_types: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.closeStep_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Pool.Model.drainStep_types: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
 #plan_status initial_types leaseStep_types returnStep_types selectStep_types withdrawStep_types
-  closeStep_types
+  closeStep_types drainStep_types
 
 end Test.Program.PoolSteps

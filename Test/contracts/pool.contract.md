@@ -4,18 +4,21 @@ Status: integrated on 2026-10-06 by seat POOL, under decisions row 237. The mode
 `c957bfab`. This packet freezes the abstract model of Pool's first profile for the step
 proofs. It authorizes no public operation and no runtime behaviour.
 
+Amended on 2026-10-06 by seat POOLOPS: the model gains the closer's step, its sixth transition
+(decisions row 276, point 2).
+
 | Part | Evidence on 2026-10-06 |
 | --- | --- |
 | `src/Effect4/Laws/Modules/Pool/Model.lean` | tested: it builds in the law graph |
 | `profile_closed` in `src/Effect4/Laws/Modules/Pool/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
-| `lease_enrols_iff`, `select_takes_first`, `giveBack_front`, `giveBack_once` and `close_refuses` in the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
+| `lease_enrols_iff`, `select_takes_first`, `giveBack_front`, `giveBack_once`, `close_refuses` and `drain_waits` in the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/PoolContract.lean` | tested: its guard checks hold, and a falsified copy fails each changed check |
 | `Test/Program/PoolScenarios.lean` | tested: seven cases and three more on the Lean machine, one schedule each; two red controls of the mask of `use` |
 | `src/Effect4/Modules/Pool/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
-| the six typing statements of `src/Effect4/Laws/Modules/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
+| the seven typing statements of `src/Effect4/Laws/Modules/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
-| the five step statements and `pool_steps_agree` in `src/Effect4/Laws/Modules/Pool/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
-| `Test/Program/PoolAgreement.lean` and `PoolRelation.lean` in the same folder | tested: finite controls on 130 states, and four faults red at their own property |
+| the six step statements and `pool_steps_agree` in `src/Effect4/Laws/Modules/Pool/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
+| `Test/Program/PoolAgreement.lean` and `PoolRelation.lean` in the same folder | tested: finite controls on 130 states, and five faults red at their own property |
 | `ocaml/engine/test/pool/test_pool.ml`, with `Test/Program/PoolEngine.lean` | tested: PP4 and the control of PP5 give Lean's exit on the generated engine, on both carriers |
 
 ## Authority and owned surface
@@ -69,6 +72,7 @@ none runs a finalizer.
 | A selection takes the first waiters, at most its count, and they leave | `select` |
 | A withdrawal removes the request's entry, and it changes nothing else | `withdraw` |
 | The close's first step tells whether it began the close, and it counts the waiters | `close` |
+| The closer's step tells whether no lease is outstanding, and it enrols the closer otherwise | `drain` |
 
 **A lease in the state** is an item whose flag `borrowed` is true. Its `stamp` and its
 `lease` are the card's pair. The field `lease` has a meaning only while `borrowed` is true. An
@@ -77,6 +81,12 @@ idle item keeps the stamp of its last lease there, and no transition reads it.
 A lease removes its own request's entry first. On every state that the wrapper reaches the
 removal changes nothing: a selection has already removed a resumed borrower. It is in the
 model so that no transition has a premise on its request.
+
+**The closer waits as a request** (decisions row 276, point 2). The closer is the request that
+runs the close. A pool is drained where no lease is outstanding. The closer's step removes the
+closer's own entry first. Where a lease is outstanding it enrols the closer at the list's end.
+The check and the enrolment are one transition, so each later return finds a waiter. The state
+gains no field.
 
 ## The invariant
 
@@ -91,7 +101,7 @@ predicate. It has four parts.
    `next`.
 4. The identities: no two waiters share one.
 
-`profile_closed` proves that each of the five transitions keeps it, with no premise on a
+`profile_closed` proves that each of the six transitions keeps it, with no premise on a
 request. `initial_profile` proves it for the pool as it is made. `step_items` proves that no
 transition adds an item, removes one or changes a resource.
 
@@ -109,6 +119,7 @@ selected borrower's own lease. The rule is on the step, and `lease_enrols_iff` s
 | `giveBack_front` | where the lease holds the item, the item's stamp joins the front, every item stays with its resource, and the lease holds nothing afterwards |
 | `giveBack_once` | a second return of one lease changes nothing and owes no wake |
 | `close_refuses`, `step_closing` | the close's first step leaves a closing pool; every lease is refused there; no transition opens the pool again |
+| `drain_waits` | the closer's step answers true exactly where no lease is outstanding; it enrols the closer exactly otherwise; it changes the waiters alone |
 
 ## The cases, as traces of the model
 
@@ -125,7 +136,7 @@ reads `(the idle stamps, the outstanding leases, the waiters, closing, next)`. A
 | PP4 | H returns; A withdraws; a selection at 1 takes B; B leases | `([], [(0, 1)], [], false, 2)` |
 | PP5, the low-level control | from the premise state, a selection at 2 takes A and B; A leases and returns; B leases | `([], [(0, 2)], [], false, 3)` |
 | PP5, the public retry case | H returns; a selection at 1 takes A; A leases | `([], [(0, 1)], [], false, 2)` |
-| PP7 | the close's first step answers `(true, 1)`; a selection at 1 takes W; W's lease is refused; H returns | `([0], [], [], true, 1)` |
+| PP7 | the close's first step answers `(true, 1)`; the closer's step answers false, and the closer enrols; a selection at 1 takes W; W's lease is refused; H returns and owes a wake; a selection at 1 takes the closer; the closer's step answers true | `([0], [], [], true, 1)` |
 | PP8 | A withdraws; H returns and owes no wake; B leases | `([], [(0, 1)], [], false, 2)` |
 
 `Test/Program/PoolContract.lean` holds each trace with its replies. The cases but PP7 run as
@@ -144,9 +155,10 @@ acquires every item before it answers. So PP5 is no public schedule of the profi
   no waiter is enrolled and no lease is outstanding.
 
 **PP7 is given with the close that waits.** After the close's first step the lease of H is
-outstanding: `leases` reads `[(0, 0)]`. It reads `[]` after H's return. The model holds the
-close's first step alone. The wait for a lease and the finalizers' runs belong to the close's
-slice.
+outstanding: `leases` reads `[(0, 0)]`. The closer's first step answers false there. `leases`
+reads `[]` after H's return, and the closer's second step answers true. The model holds the
+close's first step and the closer's step. The wait along a run and the finalizers' runs belong
+to the public operations.
 
 **PP6 is outside the model.** In the profile a failed acquisition fails `make`, so no pool
 exists. It belongs to the slice of the public operations.
@@ -161,14 +173,14 @@ The control is tested on one schedule.
 | Difference | The pin | The model |
 | --- | --- | --- |
 | When the items are acquired (row 267) | `make` answers before any item exists, and the pin acquires again after a failure | every item exists before the first transition, and no transition adds one |
-| The close (row 268) | rc.112 and 4.0.1 do not wait for a borrowed item; Effect 3.22.2 waits | the close's first step refuses new leases; the wait is the close's slice |
+| The close (row 268) | rc.112 and 4.0.1 do not wait for a borrowed item; Effect 3.22.2 waits | the close's first step refuses new leases; the closer's step answers true only where no lease is outstanding |
 | The order of reuse (row 269) | rc.112 puts a returned item at the end; 4.0.1 puts it at the front | the front |
 | What a selection removes | the task copies its observers, and each observer deletes itself when it is called | one step removes the selected waiters, so a return during the wake posts no helper for them |
 | The posted helper (row 238) | one task on the returning fiber's dispatcher, at priority 0 | a detached fork with a deferred start, uninterruptible, posted by the returning fiber |
 
 ## The faults and their falsifiers
 
-The card's section 9 lists six faults. The model shows four of them, and a fixture on the
+The card's section 9 lists six faults. The model shows five of them, and a fixture on the
 machine shows three.
 
 | Fault | The property that fails | The control |
@@ -177,8 +189,8 @@ machine shows three.
 | A wake that hands an item to each selected waiter | `select_takes_first`: a selection changes the waiters alone; in both forms of PP5 the item is idle after it | `selectHanding` in the contract battery; `handing` on the machine |
 | A selection made when the wake is posted | the selection takes the first waiter of the state that the helper finds: PP4's helper serves B | the changed trace in the contract battery; `early` on the machine |
 | A selection that reads the list again after each notification | `select_takes_first`: the selected identities are one prefix of one state | the changed trace at three waiters in the contract battery |
-| A close that does not wait | the close: PP7's finalizer runs while H holds the item | owed by the close's slice |
-| A cleanup reported as finished at a frontier | the close's pending debt | owed by the close's slice |
+| A close that does not wait | `drain_waits`: the closer's step answers true only where no lease is outstanding | `drainAtOnce` in the contract battery; `drainAtOnceStep` in the agreement battery |
+| A cleanup reported as finished at a frontier | the close's pending debt | owed by the law of a run |
 
 Two more controls are the model's own. A lease that keeps its request's entry leaves two
 waiters of one identity (`leaseKeeping`). A return that puts its item at the end gives
@@ -192,8 +204,9 @@ rc.112's order on PP2 (`backOrder` on the machine).
 | `lease_enrols_iff` | `store-typing`, R4, beside the closure; its consumers are the lease step's agreement and then the public waiting wrapper | one transition of the model, on the profile's states | no fairness and no liveness; nothing about a later selection |
 | `select_takes_first` | `reactive-scheduling`, R12; its consumer is the proposed `pool-wake-selection` | one selection of the model | no statement about a run, and no liveness |
 | `giveBack_front`, `giveBack_once`, `close_refuses` | `scope-lifetime-finalization`, R11; their consumers are the proposed `pool-lease-return` and `pool-close-waits` | one transition of the model; for the close, every later lease | nothing about a finalizer's run, and no completed close |
-| `initial_types` and the five `…Step_types` | `store-typing`, R4; the cell's half of the proposed `pool-profile-preserved` | the cell's type at a resource type in normal form; every scope of names; the native atoms | no agreement with the model |
-| the five `…Step_agrees`, and `pool_steps_agree` | `translation-simulation`, R10; parts of the proposed `pool-expansion-agrees` | every model state and an injective table; the reply, the stored value and the selected waiters' records | no order of the wake across helpers, no cancellation law, no close that waits, no fairness, no wrapper |
+| `drain_waits` | `scope-lifetime-finalization`, R11; its consumer is the proposed `pool-close-waits` | one transition of the model, on every state | no wait along a run, no progress of the closer, and no finalizer's run |
+| `initial_types` and the six `…Step_types` | `store-typing`, R4; the cell's half of the proposed `pool-profile-preserved` | the cell's type at a resource type in normal form; every scope of names; the native atoms | no agreement with the model |
+| the six `…Step_agrees`, and `pool_steps_agree` | `translation-simulation`, R10; parts of the proposed `pool-expansion-agrees` | every model state and an injective table; the reply, the stored value and the selected waiters' records | no order of the wake across helpers, no cancellation law, no wait of the close along a run, no fairness, no wrapper |
 
 The consumer of each statement is the public law, in the slice of the public operations. No
 proposed claim is in the semantics registry yet.
@@ -218,7 +231,8 @@ waiters' records: each names a selected identity and its hint.
    `Test/Program/PoolScenarios.lean`). A lease in its own mask loses the lease under an
    interruption, or its wait cannot be interrupted.
 3. State the wake's helper as a library program, and its law across helpers.
-4. State the close that waits, and the finalizers' runs.
+4. State the close's program over the closer's step, its wait along a run, and the finalizers'
+   runs. The closer's step itself is stated, typed and proved to agree with the model.
 5. State the public `make` and `use`, with the acquisition inside the pool's scope.
 6. Supply the embedded budget for the work that a helper reaches, or restrict the callers
    (decisions row 226).

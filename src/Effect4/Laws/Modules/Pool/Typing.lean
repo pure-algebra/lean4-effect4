@@ -4,7 +4,7 @@ import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
 /-!
-# The typing of Pool's cell and of its five steps (decisions rows 257 and 267)
+# The typing of Pool's cell and of its six steps (decisions rows 257, 267 and 276)
 
 The module is `src/Effect4/Modules/Pool/`: the cell (`Cell.lean`) and the step terms
 (`Steps.lean`). This file states that the checker types the initial value and each step at the
@@ -25,6 +25,7 @@ that stands in a fold's body keeps its type under the fold's two binders: that i
 | `selectStep_types` | the pair of a list of waiters and the cell | none: the step folds nothing |
 | `withdrawStep_types` | the pair of nothing and the cell | the identity |
 | `closeStep_types` | the pair of `[a Boolean, a number]` and the cell | none |
+| `drainStep_types` | the pair of a Boolean and the cell | the identity |
 
 Placement. Concept `store-typing`, requirement R4: each is a part of the proposed claim
 `pool-profile-preserved`, on the side of the cell's type. Reach: the checker's `argTy` on the
@@ -420,6 +421,16 @@ theorem types_freed {i l s : TermSrc} (depth : types.length = env.names.length)
         (types_minted_item depth path (.list (Pool.itemTy A)) (Pool.itemTy A))) false)
     (Ty.subN_refl (.list (Pool.itemTy A)))
 
+/-- `outstanding`: whether a lease is outstanding. A fold whose body reads no caller's term. -/
+theorem types_outstanding {s : TermSrc} (depth : types.length = env.names.length)
+    (hs : TypesEach sig s env path types (Pool.cellTy A)) :
+    TypesEach sig (Pool.outstanding s) env path types .bool :=
+  fun _ => types_foldWith_same (types_cellItems canonical hs false) (types_bool false false)
+    (types_orT atoms (types_minted_acc depth path .bool (Pool.itemTy A))
+      (fun _ => types_field (types_minted_item depth path .bool (Pool.itemTy A) false)
+        (item_borrowedTy canonical)) false)
+    (Ty.subN_refl .bool)
+
 /-- A lease's reply: a Boolean and an option of an item. -/
 theorem types_leaseReply {closed item : TermSrc}
     (hclosed : TypesEach sig closed env path types .bool)
@@ -490,7 +501,7 @@ theorem stampsFrom_ne_nil (stamp : Nat) :
 
 end Initial
 
-/-! ## The initial value and the five steps, typed at every scope -/
+/-! ## The initial value and the six steps, typed at every scope -/
 
 /-- **The initial value has the cell's type**, at every list of at least one resource and in
 every scope, where each resource has the resource's type under each literal flag. The size is
@@ -606,5 +617,27 @@ theorem closeStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = n
     (types_tuple2 atoms (types_notT atoms (types_cellClosing canonical typesCell))
       (types_len atoms (types_cellWaiters canonical typesCell)) rfl rfl rfl rfl)
     (types_setClosing canonical typesCell (types_bool true))
+
+/-- **The closer's step is typed at every scope** (decisions row 276, point 2). The closer's
+identity stands in the removal's fold, so it is taken with its typed capture. The hint and the
+cell's own source stand outside every fold that reads a caller's term. -/
+@[semantics "store-typing" (requirement := R4)]
+theorem drainStep_types {Op : Type} (sig : Signature Op) (atoms : sig.atomOf = nativeAtomTy)
+    {A : Ty} (canonical : A.normalize = A) {idSrc hintSrc cellSrc : TermSrc} {env : Env}
+    {path : List Nat} {types : List Ty} (depth : types.length = env.names.length)
+    (typesId : CapturedTy sig idSrc env path types idTy)
+    (typesHint : TypesEach sig hintSrc env path types idTy)
+    (typesCell : TypesEach sig cellSrc env path types (Pool.cellTy A)) :
+    TypesEach sig (Pool.drainStep idSrc hintSrc cellSrc) env path types
+      (.prod .bool (Pool.cellTy A)) := by
+  have enrolled := types_pair atoms (types_bool false)
+    (types_setWaiters canonical typesCell
+      (types_snoc atoms waiterTy_normal
+        (types_removeById atoms depth waiterTy_normal waiter_idTy
+          (types_cellWaiters canonical typesCell) typesId)
+        (types_mkWaiter typesId.atScope typesHint)))
+  have drained := types_pair atoms (types_bool true)
+    (types_withdrawn canonical atoms depth typesId typesCell)
+  exact types_ifT atoms (types_outstanding canonical atoms depth typesCell) enrolled drained
 
 end Effect4.Pool.Model

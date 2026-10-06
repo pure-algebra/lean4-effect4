@@ -294,8 +294,8 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 - **Pool's profile on the model (`pool-profile-closed`, `pool-lease-enrols`)**: Each of the
-  five transitions of Pool's abstract model keeps the first profile. The law has no premise
-  on a request. An idle item beside enrolled waiters is a state of the profile. A lease enrols its
+  six transitions of Pool's abstract model keeps the first profile. The sixth is the closer's
+  step (decisions row 276, point 2). The law has no premise on a request. An idle item beside enrolled waiters is a state of the profile. A lease enrols its
   request exactly when the pool is open and a lease holds every item. Neither states
   fairness, liveness or anything of a program.
   (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
@@ -502,11 +502,13 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 - **Pool's return and close on the model (`pool-return-front`, `pool-return-once`,
-  `pool-close-refuses`)**: A held lease's return puts its item at the front of the idle
-  items, and it keeps every item. The lease then holds nothing (`giveBack_front`). A
-  second return of that lease changes nothing (`giveBack_once`). After the close's first
-  step every lease is refused (`close_refuses`). They state no finalizer's run and no close
-  that waits. The three theorems are in `src/Effect4/Laws/Modules/Pool/Profile.lean`.
+  `pool-close-refuses`, `pool-drain-waits`)**: A held lease's return puts its item at the
+  front of the idle items, and it keeps every item. The lease then holds nothing
+  (`giveBack_front`). A second return of that lease changes nothing (`giveBack_once`). After
+  the close's first step every lease is refused (`close_refuses`). The closer's step answers
+  true exactly where no lease is outstanding, and it enrols the closer otherwise
+  (`drain_waits`). They state no finalizer's run and no wait of the close along a run. The
+  four theorems are in `src/Effect4/Laws/Modules/Pool/Profile.lean`.
 
 ### 2.4 Concept 4: Reactive Scheduling & Machine Invariants (`reactive-scheduling`)
 
@@ -1037,11 +1039,11 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   positions (`tapeFrom_cut_replays`). The laws say nothing about the machine after a stopped
   row: that row may change the machine before it reports its frontier.
   (`tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`)).
-- **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's five step terms
+- **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's six step terms
   agrees with the model's step, on every state of the model. The agreement covers the reply,
   the stored value through the table, and the selected waiters' records. It is a part of the proposed claim
   `pool-expansion-agrees`. It states no order of the wake across helpers, no cancellation
-  law, no close that waits and no wrapper.
+  law, no wait of the close along a run and no wrapper.
   (`pool_steps_agree` (`src/Effect4/Laws/Modules/Pool/Steps.lean`)).
 
 ## 3. The object-language glossary (moved 2026-10-03)

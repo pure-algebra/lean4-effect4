@@ -401,6 +401,9 @@ def registry : Registry where
     { id := "pool-close-refuses", concept := "scope-lifetime-finalization", role := .inversion
       title := "After the close's first step of Pool's model every lease is refused, and a refused lease changes no item (a helper of pool-close-waits; no wait for a lease and no finalizer's run; decisions row 268)"
       pointer := .witness `Effect4.Pool.Model.close_refuses },
+    { id := "pool-drain-waits", concept := "scope-lifetime-finalization", role := .inversion
+      title := "The closer's step of Pool's model answers that the pool is drained exactly when no lease is outstanding, it enrols the closer exactly otherwise, and it changes the waiters alone (a helper of pool-close-waits; one transition: no wait along a run, no progress of the closer and no finalizer's run; decisions rows 268 and 276)"
+      pointer := .witness `Effect4.Pool.Model.drain_waits },
 
     -- 4. reactive-scheduling
     { id := "machine-typed-not-halted", concept := "reactive-scheduling", role := .inversion
@@ -742,7 +745,7 @@ def registry : Registry where
       title := "The machine after a position of a journal's tape is the raw replay of the decisions up to it, from the run's own machine (any run, any rows and any position; nothing about a stopped row's machine, a session ledger or a generated engine)"
       pointer := .witness `Test.Dogfood.Scenario.tapeFrom_position_replays },
     { id := "pool-steps-agree", concept := "translation-simulation", role := .simulation
-      title := "Each of Pool's five step terms agrees with the abstract model's step on every model state: the reply, the stored value through the encoding table, and the selected waiters' records (a part of pool-expansion-agrees; no order of the wake across helpers, no cancellation law, no close that waits, no liveness, no wrapper and no host; decisions rows 267 to 269)"
+      title := "Each of Pool's six step terms agrees with the abstract model's step on every model state: the reply, the stored value through the encoding table, and the selected waiters' records (a part of pool-expansion-agrees; the sixth is the closer's step of decisions row 276, point 2; no order of the wake across helpers, no cancellation law, no wait of the close along a run, no liveness, no wrapper and no host; decisions rows 267 to 269 and 276)"
       pointer := .witness `Effect4.Pool.Model.pool_steps_agree },
     { id := "queue-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of the Queue's six step terms agrees with the abstract model's step on the first profile: the reply, the stored value through the encoding table, and the ordered signals (a part of queue-expansion-agrees; no delivery, no cancellation law, no liveness, no wrapper and no host; decisions row 255)"
@@ -960,7 +963,7 @@ def registry : Registry where
         `Effect4.ScopeMachine.runState_prefix, `Effect4.Scope.close_twice,
         `Effect4.Scope.close_reentrant_add, `Effect4.Scope.closeOrder_eq,
         `Effect4.Program.Typed.saved_mask_restoration]
-      openParts := ["pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once and close_refuses (decisions rows 267, 268)",
+      openParts := ["pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once, close_refuses and drain_waits (decisions rows 267, 268 and 276)",
         "the whole run open: release at most once per registration, counted by identity (DB-07)",
         "the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)",
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",

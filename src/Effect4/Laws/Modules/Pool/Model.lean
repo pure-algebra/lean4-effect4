@@ -1,7 +1,7 @@
 /-!
 # Pool's abstract transition model (decisions rows 267 to 269)
 
-The model of the packet `Test/contracts/pool.contract.md`: the state of one pool and its five
+The model of the packet `Test/contracts/pool.contract.md`: the state of one pool and its six
 transitions. No effect, no wrapper, no fiber and no delivery of a wake occurs here: a transition
 answers a state and a reply.
 
@@ -12,6 +12,7 @@ answers a state and a reply.
 | `select` | one selection of the wake at a count: the first waiters leave the list | the card's sections 1 and 4 |
 | `withdraw` | a waiting request leaves | the card's section 4 |
 | `close` | the close's first step: the pool refuses new leases from now on | row 268 |
+| `drain` | the closer's step: it tells whether no lease is outstanding, and it enrols the closer otherwise | rows 268 and 276, point 2 |
 
 An item is its stamp, the name of its resource, whether a lease holds it, and the stamp of its
 latest lease (the card's section 3,
@@ -23,7 +24,7 @@ its request's identity.
 card's pair. The field `lease` has a meaning only while `borrowed` is true. An idle item keeps
 the stamp of its last lease there, and no transition reads it.
 
-Five properties of the ruled profile are visible in the definitions.
+Six properties of the ruled profile are visible in the definitions.
 
 - **The rule of enrolment is on the step.** `lease` adds a waiter only when the pool is open
   and no stamp is idle. An idle item beside enrolled waiters is a state of the model: a return
@@ -38,12 +39,15 @@ Five properties of the ruled profile are visible in the definitions.
 - **A lease removes its own request's entry first.** On every state that the wrapper reaches a
   selection has already removed a resumed borrower, so the removal changes nothing there. It is
   in the model so that no transition has a premise on its request.
+- **The closer waits as a request.** `drain` enrols the closer only where a lease is
+  outstanding, in the step that reads it. So no gap exists between that check and the enrolment,
+  and each later return finds a waiter. The cell gains no field (decisions row 276, point 2).
 
 Placement. These are definitions, with no statement. Concept `reactive-scheduling`: they are
 the abstract client of the proposed claim `pool-expansion-agrees` (requirement R10). The profile
 and its closure are `src/Effect4/Laws/Modules/Pool/Profile.lean`. The model states no order of
-the wake across helpers, no fairness, no progress of a waiter, no finalizer's run and no
-completed close.
+the wake across helpers, no fairness, no progress of a waiter or of the closer, no finalizer's
+run and no completed close.
 -/
 
 namespace Effect4.Pool.Model
@@ -152,6 +156,14 @@ which is the count of the helper that the close posts. -/
 def close (s : State) : State × Bool × Nat :=
   ({ s with closing := true }, !s.closing, s.waiters.length)
 
+/-- **The closer's step** (decisions row 276, point 2). The closer's own entry leaves first.
+Where a lease is outstanding, the closer enrols at the list's end, and the answer says that the
+pool is not drained. Otherwise nothing else changes, and the answer says that it is. The
+answer: the next state, and whether no lease is outstanding. -/
+def drain (s : State) (id : Nat) : State × Bool :=
+  if s.items.any (·.borrowed) then ({ s with waiters := without s.waiters id ++ [id] }, false)
+  else (withdraw s id, true)
+
 /-! ## The transitions as one alphabet -/
 
 /-- The model's operations, one for each transition. -/
@@ -161,6 +173,7 @@ inductive Op
   | select (count : Nat)
   | withdraw (id : Nat)
   | close
+  | drain (id : Nat)
   deriving DecidableEq, Repr
 
 /-- The state after one operation. -/
@@ -170,5 +183,6 @@ def step (s : State) : Op → State
   | .select count => (select s count).1
   | .withdraw id => withdraw s id
   | .close => (close s).1
+  | .drain id => (drain s id).1
 
 end Effect4.Pool.Model

@@ -5,13 +5,13 @@ import Test.Program.PoolSteps
 import ProofGraph.Plan
 
 /-!
-# Pool's relation and its step goals: finite controls (decisions rows 267 to 269)
+# Pool's relation and its step goals: finite controls (decisions rows 267 to 269 and 276)
 
 The relation is `src/Effect4/Laws/Modules/Pool/Relation.lean`: the shared encoding table, the
-resources' values, the cell's value and the replies. The five step goals are in
+resources' values, the cell's value and the replies. The six step goals are in
 `src/Effect4/Laws/Modules/Pool/Steps.lean`. This battery evaluates each goal's conclusion, as
 the goal states it: at one table and at the scope of the step's own arguments, on every state
-of the universe of `Test/Program/PoolAgreement.lean`, 17 moves on each.
+of the universe of `Test/Program/PoolAgreement.lean`, 19 moves on each.
 
 It also ties the two encodings: the cell's value of the relation is the value of the
 comparison's state term. The red controls drop one premise each: the table's injectivity, and
@@ -95,6 +95,12 @@ def closeHolds (tb : Table) (s : State) : Bool :=
   readsAt ["s"] [cellVal tb res0 s] (Pool.closeStep (var "s"))
     (Val.tuple [closeReplyVal (close s).2, cellVal tb res0 (close s).1])
 
+/-- The conclusion of `drainStep_agrees`, at the table `tb` and the step's own scope. -/
+def drainHolds (tb : Table) (s : State) (id : Nat) : Bool :=
+  readsAt ["id", "hint", "s"] [Val.promise (tb.handle id), Val.promise fresh, cellVal tb res0 s]
+    (Pool.drainStep (var "id") (var "hint") (var "s"))
+    (Val.tuple [Val.bool (drain s id).2, cellVal (tb.renew id fresh) res0 (drain s id).1])
+
 /-- One move's goal, at a table. -/
 def holds (tb : Table) (s : State) : Move → Bool
   | .lease id => leaseHolds tb s id
@@ -102,6 +108,7 @@ def holds (tb : Table) (s : State) : Move → Bool
   | .select count => selectHolds tb s count
   | .withdraw id => withdrawHolds tb s id
   | .close => closeHolds tb s
+  | .drain id => drainHolds tb s id
 
 /-! ## The named controls, and every state of the universe -/
 
@@ -124,12 +131,18 @@ def holds (tb : Table) (s : State) : Move → Bool
 -- close's first step.
 #guard returnHolds tb0 held 0 0 && returnHolds tb0 again 0 0 && returnHolds tb0 half 1 1 &&
   withdrawHolds tb0 held 2 && closeHolds tb0 held
+-- The closer's step. Where it enrols the closer, the stored value is the model's state through
+-- the table that holds the step's hint at the closer. Where it does not, no entry of the
+-- closer stays, so the table's change is not read.
+#guard drainHolds tb0 held 3 && drainHolds tb0 held 1 && drainHolds tb0 premise 3
+#guard cellVal (tb0.renew 3 fresh) res0 (drain held 3).1 ≠ cellVal tb0 res0 (drain held 3).1
+#guard cellVal (tb0.renew 3 fresh) res0 (drain premise 3).1 = cellVal tb0 res0 (drain premise 3).1
 
--- Every state of the universe, 17 moves on each: each goal's conclusion holds. It holds on
+-- Every state of the universe, 19 moves on each: each goal's conclusion holds. It holds on
 -- the states outside the profile too.
 #guard profileStates.all fun s => moves.all fun m => holds tb0 s m
 #guard outside.all fun s => moves.all fun m => holds tb0 s m
-#guard profileStates.length * moves.length = 2210
+#guard profileStates.length * moves.length = 2470
 
 /-! ## Red controls: one premise dropped -/
 
@@ -140,6 +153,7 @@ def shared : Table := { tb0 with handle := fun n => if n = 2 then ⟨1⟩ else �
 -- request 1's entry too, and the conclusion fails. So does a lease by request 2.
 #guard !withdrawHolds shared held 2 && withdrawHolds tb0 held 2
 #guard !leaseHolds shared held 2 && leaseHolds tb0 held 2
+#guard !drainHolds shared held 2 && drainHolds tb0 held 2
 -- A step that tests no identity does not read the premise: the selection, the return and the
 -- close's first step hold under the shared handle.
 #guard selectHolds shared held 1 && returnHolds shared held 0 0 && closeHolds shared held
@@ -149,6 +163,11 @@ def shared : Table := { tb0 with handle := fun n => if n = 2 then ⟨1⟩ else �
     [Val.promise (tb0.handle 3), Val.promise fresh, cellVal tb0 res0 held]
     (Pool.leaseStep (var "id") (var "hint") (var "s"))
     (Val.tuple [leaseReplyVal res0 (lease held 3).2, cellVal tb0 res0 (lease held 3).1])
+-- The hint that the closer's step sets, in the same way.
+#guard !readsAt ["id", "hint", "s"]
+    [Val.promise (tb0.handle 3), Val.promise fresh, cellVal tb0 res0 held]
+    (Pool.drainStep (var "id") (var "hint") (var "s"))
+    (Val.tuple [Val.bool (drain held 3).2, cellVal tb0 res0 (drain held 3).1])
 -- The selected identities. A selection's reply through another table is no conclusion.
 #guard !readsAt ["count", "s"] [Val.nat 1, cellVal tb0 res0 premise]
     (Pool.selectStep (var "count") (var "s"))
@@ -214,6 +233,23 @@ theorem lease_updates (tb : Table) (res : Nat → Val) (s : State) (id : Nat) (h
     (leaseStep_agrees tb res s id hint injective rfl (captured_var (x := "id") rfl rfl rfl)
       (captured_var (x := "hint") rfl rfl rfl).atScope (captured_var (x := "s") rfl rfl rfl))
 
+/-- **One `Ref.modify` of the closer's step is the model's `drain`**, through the table that
+holds the step's hint at the closer. -/
+theorem drain_updates (tb : Table) (res : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey)
+    (injective : tb.Injective) {stores : Stores} {q : RefKey}
+    (held : refPeek stores.refs q = some (cellVal tb res s)) :
+    ∃ f, Pool.drainStep (var "id") (var "hint") (var "s") { names := ["id", "hint", "s"] } [] =
+        .ok f ∧
+      syncOpStep (.refModify q f [Val.promise (tb.handle id), Val.promise hint]) stores =
+        some ({ stores with
+            refs := refPoke stores.refs q (cellVal (tb.renew id hint) res (drain s id).1) },
+          Val.bool (drain s id).2) :=
+  step_updates (env := { names := ["id", "hint"] }) (current := "s")
+    (captured := [Val.promise (tb.handle id), Val.promise hint]) held
+    (drainStep_agrees tb res s id hint injective rfl (captured_var (x := "id") rfl rfl rfl)
+      (captured_var (x := "hint") rfl rfl rfl).atScope
+      (captured_var (x := "s") rfl rfl rfl).atScope)
+
 /-! ## The lease step in a row of `Ref.modifyWith`
 
 The scope is `Test/Program/PoolSteps.lean`'s: the pool's handle, the identity and the hint under
@@ -263,19 +299,24 @@ graph. -/
 #guard_msgs in
 #print axioms closeStep_agrees
 
+/-- info: 'Effect4.Pool.Model.drainStep_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms drainStep_agrees
+
 /--
 info: Effect4.Pool.Model.leaseStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.returnStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.selectStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.withdrawStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.closeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Pool.Model.drainStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
 #plan_status leaseStep_agrees returnStep_agrees selectStep_agrees withdrawStep_agrees
-  closeStep_agrees
+  closeStep_agrees drainStep_agrees
 
--- The five statements as one: the witness of the proposed claim `pool-steps-agree`.
+-- The six statements as one: the witness of the claim `pool-steps-agree`.
 /-- info: 'Effect4.Pool.Model.pool_steps_agree' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms pool_steps_agree
@@ -331,12 +372,19 @@ info: 'Test.Program.PoolRelation.lease_updates' depends on axioms: [propext, Quo
 #print axioms lease_updates
 
 /--
+info: 'Test.Program.PoolRelation.drain_updates' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms drain_updates
+
+/--
 info: Test.Program.PoolRelation.select_updates: proved; nearest []; 0 lemmas, 0 definitions
 Test.Program.PoolRelation.return_updates: proved; nearest []; 0 lemmas, 0 definitions
 Test.Program.PoolRelation.lease_updates: proved; nearest []; 0 lemmas, 0 definitions
+Test.Program.PoolRelation.drain_updates: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
-#plan_status select_updates return_updates lease_updates
+#plan_status select_updates return_updates lease_updates drain_updates
 
 end Test.Program.PoolRelation

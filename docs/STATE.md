@@ -314,7 +314,11 @@ In work since the suspension of the handover:
   [its brief](research/2026-10-05-claude-lead/briefs/seat-poolops-brief.md)): `make`, `use`
   by the protected form, and the close that waits, with the closer as a request. It follows
   seat SEMW's procedure. A borrow at a closed pool interrupts the borrower itself, as both
-  Effect builds do on one schedule each (row 279, point 2).
+  Effect builds do on one schedule each (row 279, point 2). Its first step is merged: the
+  closer's step, which is the model's sixth transition (`Model.drain`, `Pool.drainStep`). It
+  is typed, and it agrees with the model. The closer's step answers true exactly where no
+  lease is outstanding, and it enrols the closer otherwise (`drain_waits`, the registry
+  claim `pool-drain-waits`). So Pool's model has six transitions and six step terms now.
 - **Seat BRACKET has the bracket of a region** (branch `seat/bracket`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-bracket-brief.md)). A region that
   changes no flag ends with its entry flag, for an arbitrary body. Seat LIFT's law reads a
