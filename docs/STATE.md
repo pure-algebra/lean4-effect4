@@ -346,7 +346,13 @@ In work since the suspension of the handover:
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
   from the Queue's public operations, as a second scenario. The first scenario stays as the
   control of the host protocol. The slice also shares one `note` through `Ref.updateWith`,
-  and it gives the typed empty cell one home with two laws.
+  and it gives the typed empty cell one home with two laws. Its first part is merged: the
+  two helpers. The scenarios share one `note` (`Test/Dogfood/Scenario.lean`), with a control
+  of a name collision. A term at a declared type is `ascribe`
+  (`src/Effect4/Program/Authoring/Ascribe.lean`): a record with one declared field and a
+  read of it, which is no cast. Four laws place it: scope, typing, its refusal and its
+  reading (`src/Effect4/Laws/Modules/Ascribe.lean`,
+  `src/Effect4/Laws/Program/Authoring/Ascribe.lean`). The crew over the Queue comes next.
 
 Merged on 2026-10-06, after the seats above began:
 

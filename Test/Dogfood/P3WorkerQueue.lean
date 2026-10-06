@@ -1,6 +1,7 @@
 import Test.Dogfood.Stage
 import Effect4.Run
 import Effect4.Program.Authoring.Loops
+import Effect4.Program.Authoring.Ascribe
 import Effect4.Laws.Program.DenoteB
 
 /-!
@@ -266,9 +267,9 @@ def logSet : Module NativeOp :=
   program (bindName "log" (Ref.make (app "nil" [])) fun log =>
     Ref.set log (app "cons" [str "open 1", app "nil" []]))
 
-/-- `e : T`, written with the language's one written term type, a record's declared field (seat
-T3a's measured ascription; `Ref.make<A>` lands at the state plan's T5). -/
-def ascribe (ty : Ty) (e : TermSrc) : TermSrc := field (record [("v", false, ty)] [("v", e)]) "v"
+-- `e : T` is `Authoring.ascribe` (`src/Effect4/Program/Authoring/Ascribe.lean`): the language's
+-- one written term type, a record's declared field. Seat T3a measured the form here, and it
+-- moved to the authoring surface with its record form unchanged. It is not `Ref.make<A>`.
 
 /-- `Ref.make<ReadonlyArray<string>>([])`, two appends, then the log. -/
 def logAscribed : Module NativeOp :=

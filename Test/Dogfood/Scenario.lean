@@ -1,4 +1,5 @@
 import Effect4.Laws.Run
+import Effect4.Api.Author
 import Effect4.Laws.Auto.Semantics
 import ProofGraph.Plan
 import Tools.SemanticsRegistry
@@ -1271,5 +1272,70 @@ open Lean in
         findings := findings ++ scenario.problems.toArray
       unless findings.isEmpty do
         throwError (String.intercalate "\n" findings.toList))
+
+/-! ## 6. A log's note
+
+A scenario's program keeps a log in a cell: the assignments, the released connections, the
+cleanups. Each battery wrote the same append under the fixed name `xs` for the cell's value. A
+row elaborates its whole binder term under that name, so a caller's variable `xs` inside the
+entry would read the log. The batteries' entries hold no such variable, so their trees are the
+same under either helper. The one helper here mints the name
+(`Ref.updateWith`, `src/Effect4/Program/Authoring/Rows.lean`).
+
+Placement of the controls. They are finite controls of `var_push_minted`
+(`src/Effect4/Laws/Program/Author.lean`): a minted binder leaves a variable that an author wrote
+reading what it read. That law serves the claim `operation-data-scoped` (concept
+`initial-algebras-folds`, requirement R4). The promise is for a variable that the caller reads
+through `var`. A source term that inspects its scope in another way is outside it. The two
+helpers have one type, so the controls compare a value: typing cannot see the capture. -/
+
+section Note
+
+open Effect4.Program.Authoring
+
+/-- `Ref.update(log, xs => [...xs, x])`: one entry appended to a log cell. The name of the
+cell's current value is minted, so a variable that the caller reads through `var` keeps its
+reading inside the entry. -/
+def note (log x : TermSrc) : Src NativeOp :=
+  Ref.updateWith log fun xs => app "append" [xs, app "cons" [x, app "nil" []]]
+
+/-! The collision's control. Its pieces stand in a namespace of their own, so that no battery
+of this folder reads one by accident. -/
+
+namespace Collision
+
+/-- The helper that each battery wrote before: the same append under the fixed name `xs`. It
+stays as the red control of the collision. -/
+def noteFixed (log x : TermSrc) : Src NativeOp :=
+  Ref.update "xs" (app "append" [var "xs", app "cons" [x, app "nil" []]]) log
+
+/-- The list of the given numbers, as a term. -/
+def numbers : List Nat → TermSrc
+  | [] => app "nil" []
+  | n :: rest => app "cons" [nat n, numbers rest]
+
+/-- Codex's collision case. An outer variable, under the name `outer`, holds `[7, 8]`. The log
+holds `[100]`. The entry is the length of the outer variable. The module answers the log. -/
+def program (outer : String) (noteWith : TermSrc → TermSrc → Src NativeOp) : Module NativeOp :=
+  { main := bindName outer (succeed (numbers [7, 8])) fun _ =>
+      bindName "log" (Ref.make (numbers [100])) fun log =>
+        andThen (noteWith log (app "length" [var outer])) (Ref.get log) }
+
+/-- The log that a collision module answers. -/
+def logged (m : Module NativeOp) : Option ExitV :=
+  (Effect4.Api.Author.build m).toOption.map (·.runSync)
+
+-- Green: under the minted name the entry reads the outer `xs`, of length 2.
+#guard logged (program "xs" note) = some (.success (.list [.nat 100, .nat 2]))
+-- Red: under the fixed name the entry reads the log itself, of length 1. Both modules build:
+-- the two lists have one type.
+#guard logged (program "xs" noteFixed) = some (.success (.list [.nat 100, .nat 1]))
+-- A name that does not collide: the two helpers elaborate one tree, and it answers `[100, 2]`.
+#guard decide (elaborateModule (program "ys" note) = elaborateModule (program "ys" noteFixed))
+#guard logged (program "ys" noteFixed) = some (.success (.list [.nat 100, .nat 2]))
+
+end Collision
+
+end Note
 
 end Test.Dogfood.Scenario

@@ -118,6 +118,8 @@ def registry : Registry where
         -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257).
         -- The judgment's file names no module since seat MOVE
         `Effect4.Laws.Modules.Checking,
+        -- a term at a declared type (`ascribe`): its typing laws' two steps (seat WORKQ)
+        `Effect4.Laws.Modules.Ascribe,
         `Effect4.Laws.Modules.Waiting,
         `Effect4.Laws.Modules.Pool.Typing,
         `Effect4.Laws.Modules.Pool.Profile,

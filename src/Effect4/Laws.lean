@@ -135,6 +135,7 @@ import Effect4.Laws.Program.Authoring.Forms
 import Effect4.Laws.Program.Authoring.Sugar
 import Effect4.Laws.Program.Authoring.Loops
 import Effect4.Laws.Program.Authoring.Mask
+import Effect4.Laws.Program.Authoring.Ascribe
 import Effect4.Laws.Program.Typed.Mask
 import Effect4.Laws.Codegen.Mask
 import Effect4.Laws.Program.Author
@@ -190,6 +191,7 @@ import Effect4.Laws.Program.Typing.FoldAgreement
 import Effect4.Laws.Modules.Table
 import Effect4.Laws.Modules.Reading
 import Effect4.Laws.Modules.Checking
+import Effect4.Laws.Modules.Ascribe
 import Effect4.Laws.Modules.Store
 import Effect4.Laws.Modules.Queue.Capacity
 import Effect4.Laws.Modules.Queue.Profile
