@@ -287,4 +287,16 @@ next goals: 0
 #guard_msgs in
 #plan_status takeStep_agrees
 
+-- The six statements as one: the witness of the proposed claim `queue-steps-agree`.
+/-- info: 'Effect4.Queue.Model.queue_steps_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms queue_steps_agree
+
+/--
+info: Effect4.Queue.Model.queue_steps_agree: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status queue_steps_agree
+
 end Test.Program.QueueRelation

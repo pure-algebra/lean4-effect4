@@ -291,4 +291,34 @@ def enrolledFixed (takers id : TermSrc) : TermSrc :=
 -- A minted name is no name an author can write: the scope reader refuses it.
 #guard (termAt [Env.mint {} "item"] (var (Env.mint {} "item"))).isNone
 
+/-! ## 5. The pinned outputs of the typing statements
+
+Two typing statements are proved at every message type that the checker types in a cell: the
+initial value's and the size step's. The five steps of a `Ref.modify` are planned goals, and
+the guards of section 2 are their finite controls. -/
+
+open Effect4.Queue.Model (empty_typed sizeStep_typed takeStep_typed)
+
+/-- info: 'Effect4.Queue.Model.empty_typed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms empty_typed
+
+/--
+info: Effect4.Queue.Model.empty_typed: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status empty_typed
+
+/-- info: 'Effect4.Queue.Model.sizeStep_typed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms sizeStep_typed
+
+/--
+info: Effect4.Queue.Model.sizeStep_typed: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status sizeStep_typed
+
 end Test.Program.QueueSteps
