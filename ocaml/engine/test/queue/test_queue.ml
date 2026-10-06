@@ -1,9 +1,15 @@
-(* test_queue.ml -- two of the Queue's scenarios on the generated engine, through the wire.
+(* test_queue.ml -- five of the Queue's programs on the generated engine, through the wire.
 
    What it is: decisions row 255.  The Queue's steps are terms of
-   src/Effect4/Modules/Queue/Steps.lean.  Test/Program/QueueScenarios.lean runs eight programs
-   over them on Lean's machine.  This test runs two of those programs, R1 and R4, on the
-   generated engine.
+   src/Effect4/Modules/Queue/Steps.lean, and its operations are the library programs of
+   src/Effect4/Modules/Queue/Ops.lean.  Test/Program/QueueScenarios.lean and
+   Test/Program/QueueMask.lean run nine programs over them on Lean's machine.  This test runs
+   five of those programs on the generated engine:
+     r1      a queue is filled and emptied;
+     r4      a second offer waits at capacity one;
+     r2      a taker waits, and an offer's posted helper wakes it;
+     r5      a waiting taker is interrupted, and its withdrawal removes the request;
+     masked  a taker under a masked caller keeps its request (decisions row 222).
 
    The fixture is queue.txt, beside this file.  Lean writes it from the programs that
    `Api.Author.build` admits (write.lean, beside this file).  A run of the fixture holds the
@@ -14,12 +20,12 @@
    Q1  Each program crosses as its canonical bytes: `of_bytes` reads exactly one program, on
        BOTH instances (Fast and Ref).                                       tested
    Q2  On each instance the run finishes, and the root's exit is the exit Lean wrote.
-                                                                            tested (two runs)
+                                                                            tested (five runs)
    Q3  The two instances give one report: outcome, exits, fiber rows, trace rows, store row.
-                                                                            tested (two runs)
-   Q4  The red controls.  A run's exit is not the other run's.  A program cut by one byte is
-       refused, never repaired.  At a small fuel the run does not finish, and it has no root
-       exit.                                                                tested
+                                                                            tested (five runs)
+   Q4  The red controls.  The five exits are five texts, and a run's exit is not the next
+       run's.  A program cut by one byte is refused, never repaired.  At a small fuel the run
+       does not finish, and it has no root exit.                            tested
 
    What it does not establish: any schedule but the engine's own drive loop, a host run, the
    steps' agreement with the abstract model (proved in Lean, on the term's value), or
@@ -122,7 +128,9 @@ let find_fixture () : string =
 
 let () =
   let runs = read_fixture (find_fixture ()) in
-  check (Printf.sprintf "the fixture holds two runs (%d)" (List.length runs)) (List.length runs = 2);
+  check (Printf.sprintf "the fixture holds five runs (%d)" (List.length runs)) (List.length runs = 5);
+  check "the fixture's runs are r1, r4, r2, r5 and masked, in that order"
+    (List.map (fun (r : run) -> r.name) runs = [ "r1"; "r4"; "r2"; "r5"; "masked" ]);
   List.iter
     (fun (r : run) ->
        Printf.printf "== run %s: %d bytes, fuel %d ==\n" r.name (String.length r.program) r.fuel;
@@ -148,13 +156,18 @@ let () =
           | _ -> check (r.name ^ ": Q4 the program decodes at fuel 5") false)
        | _ -> check (r.name ^ ": Q1 the program's bytes decode on both instances") false)
     runs;
-  (* Q4: the two runs answer two exits, so each run's check can fail. *)
-  (match runs with
-   | [ a; b ] ->
-     check "Q4 the two runs' exits are two texts" (a.exit_text <> b.exit_text);
-     (match RF.report a.program ~fuel:a.fuel with
-      | Some fast -> check "Q4 the first run's exit is not the second run's" (fast.root <> Some b.exit_text)
-      | None -> check "Q4 the first run decodes" false)
-   | _ -> check "Q4 two runs to compare" false);
+  (* Q4: the runs answer pairwise different exits, so each run's check can fail. *)
+  let texts = List.sort_uniq compare (List.map (fun (r : run) -> r.exit_text) runs) in
+  check (Printf.sprintf "Q4 the runs' exits are %d texts for %d runs" (List.length texts) (List.length runs))
+    (List.length texts = List.length runs);
+  let rec neighbours = function
+    | (a : run) :: ((b : run) :: _ as rest) ->
+      (match RF.report a.program ~fuel:a.fuel with
+       | Some fast -> check (a.name ^ ": Q4 its exit is not " ^ b.name ^ "'s") (fast.root <> Some b.exit_text)
+       | None -> check (a.name ^ ": Q4 the run decodes") false);
+      neighbours rest
+    | _ -> ()
+  in
+  neighbours runs;
   Printf.printf "test_queue: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
