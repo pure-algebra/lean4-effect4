@@ -80,6 +80,7 @@ def areas : List Area := [
   ⟨"src/Effect4/Ingest", .runtime, 5, "Ingest", "the ingest taxonomy", false, true⟩,
   ⟨"src/Effect4/Api", .runtime, 6, "Api", "the application face: author and build, run, the host session and protocol, supervision, inspection", false, true⟩,
   ⟨"src/Effect4/Run.lean", .runtime, 7, "Run", "the run API over `Api`: commands, the journal, replay", false, true⟩,
+  ⟨"src/Effect4/Run/Tape.lean", .runtime, 7, "Run/Tape", "what a tool reads off a run, in `Effect4.Run`: the machine's view, the decision of a journal row, the raw replay of a decision tape (`replayFrom`, `machineOf`, `enoughFor`), the tape of a journal (`tapeFrom`), a funded run and a machine at rest", false, true⟩,
   ⟨"src/Effect4.lean", .runtime, 8, "Effect4", "the root: the face and the functional utilities; never Laws", false, true⟩,
   -- the proof graph
   ⟨"src/Effect4/Laws/Effects", .laws, 0, "Laws/Effects", "layer 0 of the typed-state invariant: the protocol-typed predicate on the free monad, its lifts and order, and the signature sum as the coproduct of the free monads; imports the pinned `Effects` only", false, true⟩,
@@ -105,6 +106,8 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Codegen", .laws, 4, "Laws/Codegen", "printer and reader laws over the template table; module admission and checked production; the mask's two rows and its printed form (`Mask.lean`)", false, true⟩,
   ⟨"src/Effect4/Laws/Api", .laws, 5, "Laws/Api", "the runner, host session, supervision, frontier and fuel laws", false, true⟩,
   ⟨"src/Effect4/Laws/Run.lean", .laws, 5, "Laws/Run", "the run API's laws: `journal_replays`, `replay_unique`, `drive_eq_play`", false, true⟩,
+  ⟨"src/Effect4/Laws/Run/Rows.lean", .laws, 5, "Laws/Run/Rows", "what a row of a run keeps and what it changes: playing rows keeps the run's name, budget and profile, a receipt row is inert, `applied_selects` and `control_retires`", false, true⟩,
+  ⟨"src/Effect4/Laws/Run/Tape.lean", .laws, 5, "Laws/Run/Tape", "the laws of the tape: `tape_replays`, the four laws of the journal's cut, and `funded_replays`", false, true⟩,
   ⟨"src/Effect4/Laws/Modules", .laws, 5, "Laws/Modules", "the laws of composed modules, programs over the authoring surface (decisions row 255); the Queue is the first, Semaphore the second and Pool the third; six files that name no module", false, true⟩,
   ⟨"src/Effect4/Laws/Modules/Table.lean", .laws, 5, "Laws/Modules/Table", "the encoding table of a module's relation: each model identity's handle and its hint, the table's injectivity, and the one change of a step", true, true⟩,
   ⟨"src/Effect4/Laws/Modules/Reading.lean", .laws, 5, "Laws/Modules/Reading", "the judgment `Reads` and the capture `Captured`; what each authoring builder, each native atom and each word of a step term reads; the reading rule of `removeById`", true, true⟩,
