@@ -250,10 +250,15 @@ structure AtomRow where
   arity : Option Nat
   /-- The literal rule's flag (DI-55, the prelude's `pair<const A, const B>`): a string literal
   argument keeps its literal type under `litArgTy` (DI-15). `pair` and `tuple` retain literal
-  columns; every other atom widens a literal to `string`. -/
+  columns; every other atom widens a literal to `string`. A number or a Boolean literal has its
+  broad type under `litArgTy` at either flag, and the two helpers type their slots so on the
+  target (`Wide`, decisions row 256). -/
   constGeneric : Bool
   /-- The atom's body in the TypeScript prelude: the text after `export const <name> = `.
-  `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. -/
+  `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. The bodies of `pair`
+  and `tuple` name `Wide`, the one shared type of that file's preamble
+  (`tools/Effect4Gen/PreludeAtoms.lean`, `render`): a number or a Boolean type in an immediate
+  slot widens, and a string literal keeps its literal type (decisions row 256). -/
   prelude : String
 deriving DecidableEq, Repr
 
@@ -275,7 +280,7 @@ def row : NativeAtom → AtomRow
   | .eq => { name := "eq", arity := some 2, constGeneric := false,
              prelude := "(a: number | string, b: number | string): boolean => a === b" }
   | .pair => { name := "pair", arity := some 2, constGeneric := true,
-               prelude := "<const A, const B>(a: A, b: B): readonly [A, B] => [a, b]" }
+               prelude := "<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] => [a, b] as readonly [Wide<A>, Wide<B>]" }
   | .fst => { name := "fst", arity := some 1, constGeneric := false,
               prelude := "<P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]" }
   | .snd => { name := "snd", arity := some 1, constGeneric := false,
@@ -377,7 +382,7 @@ def row : NativeAtom → AtomRow
 
   | .tuple =>
       { name := "tuple", arity := none, constGeneric := true,
-        prelude := "<const A extends readonly unknown[]>(...items: A): A => items" }
+        prelude := "<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } => items as { readonly [I in keyof A]: Wide<A[I]> }" }
   | .listTake =>
       { name := "take", arity := some 2, constGeneric := false,
         prelude := "<A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(0, n)" }

@@ -481,7 +481,7 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
 # and the inventory guard (every generated atom has a prelude case that runs). Named one by
 # one: `bun test harness/truth` would also pick up the lane's work directories.
 TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts \
+$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts harness/truth/queue-steps.typecheck.ts \
     $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
 	$(BUN) test $(TRUTH_HOST_TESTS)
 	$(PY) scripts/check-truth.py
