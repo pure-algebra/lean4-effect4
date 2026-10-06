@@ -184,6 +184,7 @@ import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreRelation
 import Test.Program.SemaphoreEngine
 import Test.Program.PoolScenarios
+import Test.Program.PoolContract
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract
