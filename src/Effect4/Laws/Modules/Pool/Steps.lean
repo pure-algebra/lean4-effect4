@@ -3,7 +3,7 @@ import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
 /-!
-# Pool's five steps agree with the abstract model: the step goals (decisions rows 267 to 269)
+# Pool's six steps agree with the abstract model: the step goals (rows 267 to 269 and 276)
 
 Each step term of `src/Effect4/Modules/Pool/Steps.lean` has one statement here. From a cell
 that holds a model state through the table, the step reads the tuple of the model's reply and
@@ -17,6 +17,7 @@ the model's next state through the table. The relation is in
 | `selectStep_agrees` | `select` | none: the step folds nothing, and it tests no identity |
 | `withdrawStep_agrees` | `withdraw` | an injective table; the identity kept under a fold |
 | `closeStep_agrees` | `close` | none |
+| `drainStep_agrees` | `drain` | an injective table; the identity kept under a fold |
 
 Placement. Concept `translation-simulation`. Requirement R10, as parts of the proposed claim
 `pool-expansion-agrees`. The consumer of each goal is the public law, in the slice of the
@@ -38,14 +39,15 @@ The shared connectors join a goal to the store (`src/Effect4/Laws/Modules/Store.
 update of the cell. `step_keeps_cell` gives the typed half, with a step's typing
 (`src/Effect4/Laws/Modules/Pool/Typing.lean`).
 
-The five statements are proved, each in place of its planned goal and with its statement
-unchanged (decisions row 203). The proofs read each builder of a step through the shared
+The first five statements are proved, each in place of its planned goal and with its statement
+unchanged (decisions row 203). The sixth is the closer's step (decisions row 276, point 2): it
+is proved where it is stated. The proofs read each builder of a step through the shared
 reading rules (`src/Effect4/Laws/Modules/Reading.lean`) and Pool's
 (`src/Effect4/Laws/Modules/Pool/Reading.lean`). They put the model's transition in closed form
 on each side of its tests.
 
 The statements establish no order of the wake across helpers, no cancellation law, no
-fairness, no liveness, no close that waits and nothing of a wrapper. An equal value in the
+fairness, no liveness, no wait of the close along a run and nothing of a wrapper. An equal value in the
 model says nothing of a host. The finite controls are `Test/Program/PoolAgreement.lean` and
 `Test/Program/PoolRelation.lean`: each statement's conclusion on every state of a finite
 universe, and each statement's pinned axioms.
@@ -62,7 +64,8 @@ open Effect4.Constructive.List (decide_length_zero)
 /-! ## The model's side, in closed form
 
 Steps of the step goals: a lease that enrols, a lease that takes an item, and a return of a
-lease that holds its item. The two refusals are `lease_closed` and `giveBack_stale`
+lease that holds its item. The two refusals are `lease_closed` and `giveBack_stale`, and the
+closer's two forms are `drain_enrols` and `drain_drained`
 (`src/Effect4/Laws/Modules/Pool/Profile.lean`). -/
 
 theorem lease_enrols {s : State} (id : Nat) (open_ : s.closing = false)
@@ -88,7 +91,7 @@ theorem giveBack_returns {s : State} {i l : Nat} (held : s.items.any (·.heldBy 
   unfold giveBack
   rw [if_pos held]
 
-/-! ## The five step goals -/
+/-! ## The six step goals -/
 
 /-- **The selection step agrees with the model's `select`.** The reply is the selected
 waiters' records through the table, in order: each names a selected identity and its hint. The
@@ -263,13 +266,56 @@ theorem leaseStep_agrees (tb : Table) (res : Nat → Val) (s : State) (id : Nat)
       | none => rfl
       | some it => rfl
 
-/-! ## The five statements as one
+/-- **The closer's step agrees with the model's `drain`** (decisions row 276, point 2). The
+reply is whether no lease is outstanding. The stored value is the model's next state, through
+the table that holds `hint` at `id`: where the closer enrols, its entry holds the step's hint.
+No premise names the closer: the step removes the closer's own entry first, as the model does.
+The identity stands in the removal's fold, so it is a caller's term under a fold. The cell's own
+source stands in no fold's body. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem drainStep_agrees (tb : Table) (res : Nat → Val) (s : State) (id : Nat)
+    (hint : DeferredKey) (injective : tb.Injective) {idSrc hintSrc cellSrc : TermSrc}
+    {env : Env} {path : List Nat} {vals : List Val} (depth : vals.length = env.names.length)
+    (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
+    (readsHint : Reads hintSrc env path vals (Val.promise hint))
+    (readsCell : Reads cellSrc env path vals (cellVal tb res s)) :
+    Reads (Pool.drainStep idSrc hintSrc cellSrc) env path vals
+      (Val.tuple [Val.bool (drain s id).2, cellVal (tb.renew id hint) res (drain s id).1]) := by
+  have waiters := reads_field readsCell (cell_waiters _ _ _ _ _)
+  have gone := reads_withdrawn tb injective res s id depth readsId readsCell
+  have rest := reads_removeById tb injective (waiterVal tb) (fun w => w)
+    (fun _ => waiter_id _ _) 0 s.waiters id depth waiters readsId
+  -- the closer's own entry left, so every waiter that stays is of another identity
+  have others : ∀ w ∈ without s.waiters id, w ≠ id := fun w member => (mem_without.mp member).2
+  have enrolled := reads_pair (reads_bool false env path vals)
+    (reads_recordSet readsCell (reads_snoc rest (reads_mkWaiter readsId.atScope readsHint))
+      (cell_setWaiters _ _ _ _ _ _))
+  have drained := reads_pair (reads_bool true env path vals) gone
+  have whole := reads_ifT (reads_outstanding tb res s depth readsCell) enrolled drained
+  cases held : s.items.any (·.borrowed) with
+  | true =>
+    rw [held, if_pos rfl] at whole
+    rw [drain_enrols id held]
+    refine whole.to ?_
+    show _ = Val.tuple [Val.bool false,
+      cellOf (.list (s.available.map Val.nat)) (.bool s.closing)
+        (.list (s.items.map (itemVal res))) (.nat s.next)
+        (.list ((without s.waiters id ++ [id]).map (waiterVal (tb.renew id hint))))]
+    rw [List.map_append, waiters_renew tb (without s.waiters id) id hint others, List.map_cons,
+      List.map_nil, waiterVal_renewed]
+    rfl
+  | false =>
+    rw [held, if_neg Bool.false_ne_true] at whole
+    rw [drain_drained id held, cellVal_renew tb res (withdraw s id) id hint others]
+    exact whole
 
-`pool_steps_agree` assembles the five step statements: each field is one of them, word for
+/-! ## The six statements as one
+
+`pool_steps_agree` assembles the six step statements: each field is one of them, word for
 word, and its proof cites that statement. So the plan derives the standing of the whole from
-the five. -/
+the six. -/
 
-/-- **Pool's five steps agree with the abstract model**: one field for each step, at the
+/-- **Pool's six steps agree with the abstract model**: one field for each step, at the
 statement of its goal. -/
 structure StepsAgree : Prop where
   /-- The model's `lease`. -/
@@ -314,11 +360,22 @@ structure StepsAgree : Prop where
       Reads cellSrc env path vals (cellVal tb res s) →
       Reads (Pool.closeStep cellSrc) env path vals
         (Val.tuple [closeReplyVal (close s).2, cellVal tb res (close s).1])
+  /-- The model's `drain`. -/
+  drain : ∀ (tb : Table) (res : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey),
+    tb.Injective →
+    ∀ {idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      vals.length = env.names.length →
+      Captured idSrc env path vals (Val.promise (tb.handle id)) →
+      Reads hintSrc env path vals (Val.promise hint) →
+      Reads cellSrc env path vals (cellVal tb res s) →
+      Reads (Pool.drainStep idSrc hintSrc cellSrc) env path vals
+        (Val.tuple [Val.bool (drain s id).2, cellVal (tb.renew id hint) res (drain s id).1])
 
-/-- **The five step statements hold** (the proposed claim `pool-steps-agree`, a part of
-`pool-expansion-agrees`). Each field is one statement of this file. It establishes no order of
-the wake across helpers, no cancellation law, no liveness, no close that waits and nothing of a
-wrapper. Its consumer is the public law, in the slice of the public operations. -/
+/-- **The six step statements hold** (the claim `pool-steps-agree`, a part of the proposed
+claim `pool-expansion-agrees`). Each field is one statement of this file. It establishes no
+order of the wake across helpers, no cancellation law, no liveness, no wait of the close along
+a run and nothing of a wrapper. Its consumer is the attempt laws of the public operations
+(`src/Effect4/Laws/Modules/Pool/Ops.lean`), and then the law of a run. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem pool_steps_agree : StepsAgree where
   lease := leaseStep_agrees
@@ -326,5 +383,6 @@ theorem pool_steps_agree : StepsAgree where
   select := selectStep_agrees
   withdraw := withdrawStep_agrees
   close := closeStep_agrees
+  drain := drainStep_agrees
 
 end Effect4.Pool.Model

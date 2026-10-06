@@ -43,9 +43,9 @@ the shared `idTy` (`src/Effect4/Modules/Words.lean`). Two identities are compare
 `sameHandle`, and never by a number. A hint is a `Deferred` of nothing: the wake's helper
 resolves it, and the borrower then runs its own lease step again.
 
-The cell's type is private to the module, and a later slice changes it: the close that waits
-adds what its wait reads. The handle is the cell's `Ref` in this slice (decisions row 230).
-Nothing here performs an effect.
+The cell's type is private to the module. The close that waits adds no field to it: the closer
+waits as a request, an entry of `waiters` (decisions row 276, point 2). The handle is the cell's
+`Ref` in this slice (decisions row 230). Nothing here performs an effect.
 -/
 
 @[expose] public section
