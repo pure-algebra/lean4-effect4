@@ -294,7 +294,25 @@ def enrolledFixed (takers id : TermSrc) : TermSrc :=
 -- A minted name is no name an author can write: the scope reader refuses it.
 #guard (termAt [Env.mint {} "item"] (var (Env.mint {} "item"))).isNone
 
-/-! ## 5. The pinned outputs of the typing statements
+/-! ## 5. The two removals are the shared pass
+
+The Queue's `removeTaker` and `removeOffer` are each one application of the shared removal pass
+`removeById` (`src/Effect4/Modules/Words.lean`). Each is that pass as a function, by
+definition: the kernel accepts the equality by `rfl`. Seat MOVE's comparison held the two names
+by their types only (Codex's review), so the values are held here. -/
+
+example : @Effect4.Queue.removeTaker = @Effect4.Modules.removeById := rfl
+example : @Effect4.Queue.removeOffer = @Effect4.Modules.removeById := rfl
+
+-- Red control, at the same type: another pass of two terms is no `removeById`. `enrolled`
+-- answers a Boolean where the removal answers a list, so their trees differ at one scope.
+example : @Effect4.Queue.enrolled ≠ @Effect4.Modules.removeById := fun same =>
+  absurd
+    (congrFun (congrFun (congrFun (congrFun same (var "xs")) (var "i")) { names := ["xs", "i"] })
+      [])
+    (by decide)
+
+/-! ## 6. The pinned outputs of the typing statements
 
 The seven typing statements are proved at every message type that the checker types in a cell.
 The initial value's and the size step's are pinned here. The five steps of a `Ref.modify` are

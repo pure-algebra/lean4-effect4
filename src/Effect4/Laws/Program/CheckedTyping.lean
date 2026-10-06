@@ -1,6 +1,7 @@
 import Effect4.Program.CheckedTyping
 import Effect4.Program.Admission
 import Effect4.Laws.Program.Typing.Sound
+import Effect4.Laws.Program.ReferenceTyping
 
 /-!
 # Whole-program typing certificates retain exactly the existing checker
@@ -96,16 +97,19 @@ theorem TypedProgram.hasTy (checked : TypedProgram sig program) :
   have typed := checked.typed
   simpa [typeOfProgram, typeOf, checked.layerRefsWF, checked.expanded_refSites] using typed
 
-/-- Conversely, the checker's exact reference conditions and the existing declarative
-judgment produce a certificate; no codegen or execution restriction is needed. -/
+/-- Conversely, well-formed references and the existing declarative judgment on the expanded
+tree produce a certificate; no codegen or execution restriction is needed. The caller owes no
+fact about the expansion's reference sites: the checker's equation gives the checker's answer
+from the well-formed references alone (`typeOfProgram_eq_if_refsWF`,
+`Laws/Program/ReferenceTyping.lean`, from `expanded_refs_nil_of_wf`). The theorem makes no claim
+about executing the expanded tree. -/
 theorem checkTypedProgram_of_hasTy {ty : EffTy}
     (references : program.layerRefsWF = true)
-    (expanded : program.expandRefs.refSites [] = [])
     (typed : Conform.Effect4.Typing.HasTy sig [] program.expandRefs ty) :
     ∃ checked, checkTypedProgram sig program = some checked ∧ checked.ty = ty := by
   apply checkTypedProgram_complete
-  simpa [typeOfProgram, typeOf, references, expanded] using
-    (Conform.Effect4.Typing.effTy_complete sig program.expandRefs [] ty typed)
+  rw [typeOfProgram_eq_if_refsWF, references]
+  exact Conform.Effect4.Typing.effTy_complete sig program.expandRefs [] ty typed
 
 /-- A completed runner certificate passes every retained admission check.
 Its typing component is the same shared certificate used by other boundaries. -/

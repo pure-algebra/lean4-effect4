@@ -8,14 +8,17 @@ node addressing (`Node.child`, `Node.at_`, `Program/NodeLenses.lean`, `Program/R
 both read off the one signature. Here the two are related once, at the list monoid and for any
 yields (`PathYield`): a node's own yield is in its fold (`yieldAt_subset_foldList`), a child's
 fold at `p ++ [i]` is in its parent's (`foldList_child`, the case list `Node.child`'s own), so
-every addressed node's yield, at its path, is in the root's fold (`yieldAt_subset_of_at`).
+every addressed node's fold, at its path, is in the root's fold (`foldList_subset_of_at`), and
+its yield with it (`yieldAt_subset_of_at`).
 A census over the program by the path fold is an instance: the layer reference sites
-(`Eff.refSites`, `mem_refSites_of_at`), the premise of the reference formation rule
-(`Eff.layerRefsWF`) at a reference reached by its address.
+(`Eff.refSites`, `mem_refSites_of_at`, `refSites_subset_of_layerAt`), the premise of the reference
+formation rule (`Eff.layerRefsWF`) at a reference site (`layerRefsWF_mem`) and at a reference
+reached by its address (`layerRefsWF_at`).
 
-Placement (AGENTS.md, Trust): concept initial-algebras-folds (`docs/core/semantics.md` §2.7);
-consumer the layer family's reference hop (`Typed/LayerArm.lean`, decisions row 170's premise read
-at an address).
+Placement (AGENTS.md, Trust): concept initial-algebras-folds (`docs/core/semantics.md` §2.7).
+The consumers are the layer family's reference hop (`Typed/LayerArm.lean`, decisions row 170's
+premise read at an address) and the reference expansion (`Laws/Program/ReferenceExpansion.lean`,
+`target_refs_prior`, a step of `expanded_refs_nil_of_wf`).
 -/
 
 set_option autoImplicit false
@@ -89,21 +92,28 @@ theorem foldList_child (y : PathYield Op α) : ∀ (n : Node Op) (i : Nat) (c : 
     foldMapAt_effs, foldMapAt_layer, foldMapAt_layers, List.mem_append] at hx ⊢
   all_goals simp only [hx, true_or, or_true]
 
-/-- **The path fold collects every addressed node's yield, at the node's path.** -/
-theorem yieldAt_subset_of_at (y : PathYield Op α) :
+/-- **A descendant's fold, at its path, is in its ancestor's**: the child step (`foldList_child`)
+along the address. Its consumers are `yieldAt_subset_of_at` below and
+`refSites_subset_of_layerAt`. -/
+theorem foldList_subset_of_at (y : PathYield Op α) :
     ∀ (path : List Nat) (n m : Node Op) (p : List Nat), Node.at_ n path = some m →
-      yieldAt y m (p ++ path) ⊆ foldList y p n
+      foldList y (p ++ path) m ⊆ foldList y p n
   | [], n, m, p, h => by
     simp only [Node.at_, Option.some.injEq] at h
     subst h
     rw [List.append_nil]
-    exact yieldAt_subset_foldList y p n
+    exact List.Subset.refl _
   | i :: rest, n, m, p, h => by
     simp only [Node.at_] at h
     obtain ⟨c, hc, hrest⟩ := Option.bind_eq_some_iff.mp h
-    have ih := yieldAt_subset_of_at y rest c m (p ++ [i]) hrest
+    have ih := foldList_subset_of_at y rest c m (p ++ [i]) hrest
     rw [List.append_assoc, List.singleton_append] at ih
     exact List.Subset.trans ih (foldList_child y n i c p hc)
+
+/-- **The path fold collects every addressed node's yield, at the node's path.** -/
+theorem yieldAt_subset_of_at (y : PathYield Op α) (path : List Nat) (n m : Node Op) (p : List Nat)
+    (h : Node.at_ n path = some m) : yieldAt y m (p ++ path) ⊆ foldList y p n :=
+  List.Subset.trans (yieldAt_subset_foldList y (p ++ path) m) (foldList_subset_of_at y path n m p h)
 
 end Node
 
@@ -118,13 +128,35 @@ theorem mem_refSites_of_at {Op : Type} {root : Eff Op} {path target : List Nat}
   rw [List.nil_append] at hsub
   exact hsub (List.mem_singleton_self _)
 
-/-- Well-formed references, read at an address: the target names a layer that is no reference. -/
-theorem layerRefsWF_at {Op : Type} {root : Eff Op} {path target : List Nat}
-    (hwf : root.layerRefsWF = true) (h : Node.at_ (.eff root) path = some (.layer (.ref target))) :
-    ∃ l, (Node.eff root).layerAt target = some l ∧ ∀ t', l ≠ .ref t' := by
-  have hall := List.all_eq_true.mp hwf (path, target) (mem_refSites_of_at h)
-  simp only [Bool.and_eq_true] at hall
-  obtain ⟨_, hlayer⟩ := hall
+/-- **The reference sites of the layer at a path, at that path, are reference sites of the
+program.** The premise is the layer lookup of the formation rule (`Node.layerAt`,
+`Program/Refs.lean`), which reads the node at the path. A step of `expanded_refs_nil_of_wf`
+(`Laws/Program/ReferenceExpansion.lean`). Its consumer is `target_refs_prior` there, at the layer
+that a reference names. -/
+theorem refSites_subset_of_layerAt {Op : Type} {root : Eff Op} {path : List Nat}
+    {layer : LayerTerm Op} (h : (Node.eff root).layerAt path = some layer) :
+    layer.refSites path ⊆ root.refSites [] := by
+  unfold Node.layerAt at h
+  split at h
+  · rename_i found hat
+    rw [Option.some.inj h] at hat
+    have hsub := Node.foldList_subset_of_at refYield path (.eff root) (.layer layer) [] hat
+    rw [List.nil_append] at hsub
+    exact hsub
+  · cases h
+
+/-- Well-formed references, read at a reference site: the three clauses of `Eff.layerRefsWF`.
+The target precedes the site, it is no prefix of the site, and it names a layer that is no
+reference. Its consumers are `layerRefsWF_at` below and the reference expansion
+(`target_refs_prior` and `refsWithin_round`, `Laws/Program/ReferenceExpansion.lean`). -/
+theorem layerRefsWF_mem {Op : Type} {root : Eff Op} (hwf : root.layerRefsWF = true)
+    {site target : List Nat} (h : (site, target) ∈ root.refSites []) :
+    Path.lt target site = true ∧ Path.properPrefix target site = false ∧
+      ∃ l, (Node.eff root).layerAt target = some l ∧ ∀ t', l ≠ .ref t' := by
+  have hall := List.all_eq_true.mp hwf (site, target) h
+  simp only [Bool.and_eq_true, Bool.not_eq_true'] at hall
+  obtain ⟨⟨hlt, hpre⟩, hlayer⟩ := hall
+  refine ⟨hlt, hpre, ?_⟩
   cases hl : (Node.eff root).layerAt target with
   | none =>
     rw [hl] at hlayer
@@ -134,5 +166,11 @@ theorem layerRefsWF_at {Op : Type} {root : Eff Op} {path target : List Nat}
     refine ⟨l, rfl, fun t' heq => ?_⟩
     subst heq
     exact Bool.noConfusion hlayer
+
+/-- Well-formed references, read at an address: the target names a layer that is no reference. -/
+theorem layerRefsWF_at {Op : Type} {root : Eff Op} {path target : List Nat}
+    (hwf : root.layerRefsWF = true) (h : Node.at_ (.eff root) path = some (.layer (.ref target))) :
+    ∃ l, (Node.eff root).layerAt target = some l ∧ ∀ t', l ≠ .ref t' :=
+  (layerRefsWF_mem hwf (mem_refSites_of_at h)).2.2
 
 end Effect4.Program
