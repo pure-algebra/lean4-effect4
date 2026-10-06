@@ -1,7 +1,7 @@
 /** Exact clock transport and the rc.112 numeric boundary. The tape carries canonical
  * decimal strings; bigint arithmetic precedes every conversion. Refusal is a host outcome
  * recorded separately from a program's error/defect channel. */
-import { Clock, Duration, Effect, Exit, Scope } from "effect"
+import { Clock, Duration, Effect, Exit, Scope, type Fiber } from "effect"
 import { TestClock } from "effect/testing"
 import { ProtocolRefusal } from "./protocol.ts"
 
@@ -48,6 +48,10 @@ export class Rc112ClockBoundary {
   refusal: ProfileRefusal | undefined
   private advancing: Promise<void> = Promise.resolve()
   private readonly service: Clock.Clock
+  /** The sleeps reader (decisions row 254): the sleeps that have started and not ended, each
+   * with its fiber and the clock reading it wakes at. `undefined` is off, the default: the
+   * boundary then gives the test clock's own sleep, as it always did. */
+  private pending: Set<{ readonly fiber: Fiber.Fiber<unknown, unknown>; readonly wake: bigint }> | undefined
 
   private constructor(private readonly clock: TestClock.TestClock, private readonly scope: Scope.Closeable) {
     this.service = {
@@ -61,8 +65,17 @@ export class Rc112ClockBoundary {
       sleep: duration => Effect.suspend(() => {
         try {
           const millis = durationMillis(duration)
-          clockNumber(this.now() + millis)
-          return this.clock.sleep(Duration.millis(clockNumber(millis)))
+          const wake = this.now() + millis
+          clockNumber(wake)
+          const sleep = this.clock.sleep(Duration.millis(clockNumber(millis)))
+          const pending = this.pending
+          if (!pending) return sleep
+          // The note: the test clock's own sleep, between a note of its start and of its end.
+          return Effect.withFiber(fiber => {
+            const entry = { fiber, wake }
+            pending.add(entry)
+            return Effect.ensuring(sleep, Effect.sync(() => { pending.delete(entry) }))
+          })
         } catch (error) {
           if (!(error instanceof ProfileRefusal)) throw error
           this.refusal = error
@@ -81,6 +94,15 @@ export class Rc112ClockBoundary {
   dispose(): Promise<void> { return Effect.runPromise(Scope.close(this.scope, Exit.succeed(undefined))) }
 
   now(): bigint { return naturalMillis(this.clock.currentTimeMillisUnsafe()) }
+
+  /** Turn the sleeps reader on. It adds no sleep and it moves no clock. */
+  noteSleeps(): void { this.pending ??= new Set() }
+
+  /** The pending sleeps, in the order they started. The reader must be on. */
+  sleeps(): Array<{ readonly fiber: Fiber.Fiber<unknown, unknown>; readonly wake: bigint }> {
+    if (!this.pending) throw Error("the sleeps reader is off")
+    return [...this.pending]
+  }
 
   check(): void { if (this.refusal) throw this.refusal }
 

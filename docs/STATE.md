@@ -310,8 +310,8 @@ Landed later on 2026-10-05:
   `control_retires`. Each scenario's claim is proved modulo its planned goals. Eleven planned
   goals are new, all in batteries, and the goal gate counts 24. Nineteen lowered runs replay
   on the generated engine, on both instances: the engine's machine view is Lean's at each of
-  101 positions (`ocaml/engine/test/scenarios/`). Every run is finite, and no host run of a
-  scenario exists.
+  101 positions (`ocaml/engine/test/scenarios/`). Every run is finite. No host run of a
+  scenario existed at that merge; two scenarios run on a host since 2026-10-06, below.
 - **A journal's machine is the raw replay of its tape** (`tape_replays`,
   `Test/Dogfood/Scenario.lean`; R8, the claim `run-tape-replay`). The coordinator proved the
   first of the scenarios' planned goals, at `[propext, Quot.sound]`. It holds for every run and
@@ -471,7 +471,13 @@ Open at this landing:
     recorder needs one extension, an operation that completes after its cancellation.
     Seat HOST has it since 2026-10-06 (branch `seat/host`;
     [its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md)). It took the slot
-    that seat QTYPES freed;
+    that seat QTYPES freed. **Routing and workers are merged** (`11616581`;
+    [the design note](research/2026-10-05-seat-HOST-design.md)). Each script of a battery is
+    performed on the scenario's printed module on rc.112, and Lean replays the host's
+    recording. Routing has 8 scripts and workers 16, and no entry of either observation
+    waits. Workers reads five entries through a reader: a spy in the harness that changes no
+    recording, which the lane checks by running each script twice. The recorder takes an
+    operation that completes after its cancellation. Timeout and atomic follow;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
