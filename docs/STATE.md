@@ -296,8 +296,9 @@ the state at the handover point and the integration procedure as practiced.
   coordinator. The column compares the fork entry on both faces. The lane has 63 programs,
   with Semaphore's cases P1 and P4 as the batteries write them;
 - Pool's public operations (rows 276 and 279), after the owner's ruling on a closed pool;
-- two small repairs of proofs: the Queue's typing through the shared rule, and the scenario
-  driver's laws in the law graph.
+- two small repairs of proofs. Seat REPAIR has the first: the Queue's typing through the
+  shared rule, with two general statements that move to the lift module. The second waits
+  for seat WORKQ, which edits the same files: the scenario driver's laws in the law graph.
 
 A sweep follows the set: the owner approved the coordinator's recommendations on
 2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
@@ -334,6 +335,12 @@ In work since the suspension of the handover:
   fiber. One finding: at Pool a missing withdrawal loses a wake, so the law of a run needs
   the withdrawal as a premise of the wake. The faces, the truth programs and the engine come
   next.
+- **Seat REPAIR has two small repairs of proofs** (branch `seat/repair`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-repair-brief.md)). The Queue's
+  `take_types` and `offer_types` go through the shared typing of the waiting wrapper, with
+  one new rule for the wrapper's answer form (row 279, point 5). Two general statements move
+  from the mask's lift to `src/Effect4/Laws/Machine/Lift.lean` (row 278, point 5). No
+  statement that a consumer reads changes.
 - **Seat WORKQ has the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
