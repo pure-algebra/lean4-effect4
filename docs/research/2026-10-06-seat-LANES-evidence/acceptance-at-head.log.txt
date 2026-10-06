@@ -1,0 +1,45 @@
+== make check-ts-reader
+cd ts/eff && bun run check.ts <worktree>/.lake/corpus <worktree>/harness/truth/generated --oracle <worktree>/.lake/corpus
+files 481: matched 416, mismatched 0, refused with oracle 0, accepted without oracle 58, refused without oracle 7 (231 ms)
+refusals by kind: unknownHead 7
+  <worktree>/harness/truth/generated/pAcquireHandle.ts: refused (no oracle): bind.0 > scoped.0 > acquireRelease.0: unknownHead Host.acquire
+  <worktree>/harness/truth/generated/pKv.ts: refused (no oracle): bind.0: unknownHead Kv.make
+  <worktree>/harness/truth/generated/pSqlCatch.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlExit.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlFail.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlOrDie.ts: refused (no oracle): provideLayer.0 > orDie.0 > effect.1 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlite.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+cd ts/eff && bun run typecheck
+$ tsgo --noEmit -p tsconfig.json
+cd ts/eff && bun test
+bun test v1.4.2 (744846f84)
+
+ 738 pass
+ 0 fail
+ 3611 expect() calls
+Ran 738 tests across 27 files. [2.73s]
+check-ts-reader-exit=0
+-- git status after check-ts-reader:
+-- end
+== make check-ingest-smoke
+bun ts/eff/ingest/check-corpus.ts printed <worktree>/.lake/corpus
+PASS printed: 408 exact JSON/wire comparisons on each parser with shared form lowering; batch bound 500
+check-ingest-smoke-exit=0
+-- git status after check-ingest-smoke:
+-- end
+== make check-tsdiag
+make: Nothing to be done for `check-tsdiag'.
+check-tsdiag-exit=0
+-- git status after check-tsdiag:
+-- end
+== make gen-fixtures
+gen-fixtures-exit=0
+-- git status after gen-fixtures:
+-- end
+== make check-docs
+python3 scripts/check-docs.py
+PASS check-docs: every path, link, citation and make target in 76 documents resolves
+check-docs-exit=0
+-- git status after check-docs:
+-- end
+exit=0
