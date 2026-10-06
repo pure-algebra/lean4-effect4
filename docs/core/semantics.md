@@ -616,6 +616,9 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   A payload class construction prints as `new Tag({ … })` and reads back under the module's classes (decisions row 120).
   Its premise is that the classes cover the term's class constructions (`Term.covers`).
   The scope premise remains unchanged; rendered-source recognition and target execution remain separate boundaries.
+  An operation's binder term prints as a function of the cell's current value, after the row's call.
+  It reads back one level up (`readPerform_printPerform` and `readPerform_exact`, the same file; the state plan's T5).
+  `read_print` and `read_exact` keep their statements at such a row.
 - **Service key identity (`service-identifier-injective`)**: at one signature's scope key, distinct service keys print
   distinct target Identifier types (`keyIdentifier_injective`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
   An ordinary key prints its full key text; the scope key prints `Scope.Scope`.

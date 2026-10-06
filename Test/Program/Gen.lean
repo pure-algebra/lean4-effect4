@@ -85,8 +85,10 @@ def atoms : List (String × Nat) :=
   [("succ", 1), ("pred", 1), ("isZero", 1), ("not", 1), ("add", 2), ("lt", 2), ("eq", 2),
    ("pair", 2), ("fst", 1), ("snd", 1)]
 
-/-- `Effect4.Machine.FnName`, the five names the faces spell a `Ref` row's binder term by. A
-drawn row carries the name's image at the row's shape and the node's level (`FnName.image`). -/
+/-- `Effect4.Machine.FnName`, the five names whose images are the binder terms this generator
+draws. A drawn row carries the name's image at the row's shape and the node's level
+(`FnName.image`). Since the state plan's T5 the faces print that term as a function and spell no
+name. -/
 def fns : List Effect4.Machine.FnName :=
   [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
