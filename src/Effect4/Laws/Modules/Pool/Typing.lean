@@ -53,7 +53,7 @@ open Effect4.Modules
 /-- **A resource type that the checker types in a cell.** It is its own normal form, so the
 cell's type at it is the type that the checker answers. The two record declarations that hold
 it are formed: an item's and the cell's (`Formation.check`,
-`src/Effect4/Program/Formation.lean`). The five steps construct no item and no cell, so their
+`src/Effect4/Program/Formation.lean`). The six steps construct no item and no cell, so their
 typing takes the normal form alone. -/
 structure ResourceTy (A : Ty) : Prop where
   canonical : A.normalize = A
