@@ -1,0 +1,271 @@
+import Effect4.Laws.Program.Signature
+import Effect4.Schema.Codec
+import Effect4.Codegen.Types
+
+/-!
+Seat GAP, probe 2 (scratch; run from the worktree root through the Lean slot).
+
+A hole written as a host row at an extended signature: what `check_ext` and `check_restrict`
+(`src/Effect4/Laws/Program/Signature.lean`) already give, the two forms of the row, and the
+candidates on the plan's own example. A `theorem` here is proved in scratch from the tree's
+theorems; a `#guard` is a finite check.
+-/
+
+set_option autoImplicit false
+
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+open Conform.Effect4.Typing
+
+namespace GapProbe
+
+/-! ## A. What the two theorems give, with rows appended for the holes -/
+
+/-- H1 (conservative): a program that performs no hole row is checked the same with the hole
+rows and without them, refusals included, at every environment and path. -/
+theorem holes_conservative (t H : RowTable) {e : NativeEff}
+    (hp : SigProgram (nativeSignature t) e) (env : TyEnv) (p : List Nat) :
+    Checker.check (nativeSignature (t ++ H)) env p e = Checker.check (nativeSignature t) env p e :=
+  check_restrict (rows_append t H) hp env p
+
+/-- H2 (more holes): a sketch admitted with the hole rows `H` is admitted, at the same type,
+when more hole rows are declared after them. -/
+theorem sketch_more_holes (t H H' : RowTable) {e : NativeEff} {env : TyEnv} {p : List Nat}
+    {ty : EffTy} (h : Checker.check (nativeSignature (t ++ H)) env p e = .ok ty) :
+    Checker.check (nativeSignature ((t ++ H) ++ H')) env p e = .ok ty :=
+  check_ext (rows_append (t ++ H) H') h
+
+/-- H3 (its own holes only): the verdict on a sketch reads the rows of the holes it performs
+and no later row, refusals included. -/
+theorem sketch_reads_its_holes (t H H' : RowTable) {e : NativeEff}
+    (hp : SigProgram (nativeSignature (t ++ H)) e) (env : TyEnv) (p : List Nat) :
+    Checker.check (nativeSignature ((t ++ H) ++ H')) env p e =
+      Checker.check (nativeSignature (t ++ H)) env p e :=
+  check_restrict (rows_append (t ++ H) H') hp env p
+
+/-! ## B. One step of the replacement law, in the declarative system
+
+The rule of the parent is applied again, the hole's judgment stands where the folded child's
+stood, and every other premise moves along the extension (`hasTy_ext`). -/
+
+/-- Three columns: the hole has the folded child's own type, and the parent keeps its type. -/
+theorem fold_bind_first {Op : Type} {s s' : Signature Op} (h : SigExtends s s') {env : TyEnv}
+    {rest hole : Eff Op} {f r : EffTy}
+    (hr : HasTy s (env ++ [f.answer]) rest r) (hh : HasTy s' env hole f) :
+    HasTy s' env (.bind hole rest)
+      ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩ :=
+  .bind hh (hasTy_ext h hr)
+
+/-- The answer alone (candidate A's row): the parent is typed, and its error and requirement
+columns have lost the folded child's part. -/
+theorem fold_bind_first_answer {Op : Type} {s s' : Signature Op} (h : SigExtends s s')
+    {env : TyEnv} {rest hole : Eff Op} {f r : EffTy}
+    (hr : HasTy s (env ++ [f.answer]) rest r)
+    (hh : HasTy s' env hole ⟨f.answer, .never, Requirement.empty⟩) :
+    HasTy s' env (.bind hole rest)
+      ⟨r.answer, Ty.never.join r.error, Requirement.empty.union r.requires⟩ :=
+  .bind hh (hasTy_ext h hr)
+
+/-- Three columns under a handler: the handler's environment holds the same cause type. -/
+theorem fold_catchCause_body {Op : Type} {s s' : Signature Op} (h : SigExtends s s')
+    {env : TyEnv} {handler hole : Eff Op} {b hd : EffTy} {answer : Ty}
+    (hh : HasTy s' env hole b) (hhandler : HasTy s (env ++ [.causeOf b.error]) handler hd)
+    (hj : EffTy.joinAnswer b.answer hd.answer = some answer) :
+    HasTy s' env (.catchCause hole handler) ⟨answer, hd.error, b.requires.union hd.requires⟩ :=
+  .catchCause hh (hasTy_ext h hhandler) hj
+
+/-- The filling direction is the same statement: any program of the hole's type stands in
+its place. Here at the second child of a `bind`. -/
+theorem fill_bind_rest {Op : Type} {s : Signature Op} {env : TyEnv}
+    {first q : Eff Op} {f r : EffTy}
+    (hf : HasTy s env first f) (hq : HasTy s (env ++ [f.answer]) q r) :
+    HasTy s env (.bind first q) ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩ :=
+  .bind hf hq
+
+/-! ## C. The plan's own example: `Ref.make(5)`, then a write, then a read -/
+
+def t0 : RowTable := []
+
+def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
+
+/-- `x = 5; cell = Ref.make(x); Ref.set(cell, 7); Ref.get(cell)`. -/
+def prog (first : NativeEff) : NativeEff :=
+  .bind first
+    (.bind (.perform .refMake (.var 0))
+      (.bind (.perform .refSet (pairT (.var 1) (.lit (.nat 7))))
+        (.perform .refGet (.var 1))))
+
+def original : NativeEff := prog (.succeed (.lit (.nat 5)))
+
+#eval (NativeOp.row .refMake).request.renderRaw
+#eval (NativeOp.row .refMake).answer.renderRaw
+#eval (NativeOp.row .refSet).request.renderRaw
+#eval (NativeOp.row .refGet).answer.renderRaw
+#eval (effTy (nativeSignature t0) [] original).map fun t => (t.answer.renderRaw, t.error.renderRaw)
+
+/-- A hole row with a unit request and the three declared columns. -/
+def holeRow (name : String) (answer error : Ty) (requires : List ServiceKey := []) : Row :=
+  { name := name, spelling := "Hole." ++ name, kind := .async, request := .unit,
+    answer := answer, error := error, requires := requires, cite := "a hole",
+    registration := .external }
+
+/-- `yield* Hole.h()` at index `i`. -/
+def hole (i : Nat) : NativeEff := .perform (.external i) (.lit .unit)
+
+-- the original is admitted at `number`
+#guard effTy (nativeSignature t0) [] original = some ⟨.nat, .never, Requirement.empty⟩
+-- candidate N: the folded child is a program of type `never`; the write is refused
+def neverProg : NativeEff := .failCause (.die (.lit (.str "todo")))
+#guard effTy (nativeSignature t0) [] neverProg = some ⟨.never, .never, Requirement.empty⟩
+#guard effTy (nativeSignature t0) [] (prog neverProg) = none
+#eval (Checker.check (nativeSignature t0) [] [] (prog neverProg)).toOption.isSome
+-- a hole as a row that declares its answer: admitted, at the original's type
+#guard effTy (nativeSignature (t0 ++ [holeRow "h0" .nat .never])) [] (prog (hole 0))
+        = some ⟨.nat, .never, Requirement.empty⟩
+-- a hole declared at another type: the write is refused, as it should be
+#guard effTy (nativeSignature (t0 ++ [holeRow "h0" .string .never])) [] (prog (hole 0)) = none
+-- the hole rows change nothing for the original (H1 at this program)
+#guard Checker.check (nativeSignature (t0 ++ [holeRow "h0" .nat .never])) [] [] original
+        = Checker.check (nativeSignature t0) [] [] original
+
+/-! ## D. The two forms of the row, where they differ: an error that flows into a value -/
+
+def boom : NativeEff := .fail (.lit (.str "boom"))
+
+/-- `a = exit(BODY); cell = Ref.make(a); b = exit(fail "boom"); Ref.set(cell, b)`. -/
+def exits (body : NativeEff) : NativeEff :=
+  .bind (.exit body)
+    (.bind (.perform .refMake (.var 0))
+      (.bind (.exit boom)
+        (.perform .refSet (pairT (.var 1) (.var 2)))))
+
+#eval (effTy (nativeSignature t0) [] boom).map fun t => (t.answer.renderRaw, t.error.renderRaw)
+#eval (effTy (nativeSignature t0) [] (exits boom)).map fun t =>
+  (t.answer.renderRaw, t.error.renderRaw)
+-- three columns: the same type as the original
+#guard effTy (nativeSignature (t0 ++ [holeRow "h0" .never .string])) [] (exits (hole 0))
+        = effTy (nativeSignature t0) [] (exits boom)
+#guard (effTy (nativeSignature t0) [] (exits boom)).isSome
+-- the answer alone (error `never`): the exit's type has changed, and the write is refused
+#guard effTy (nativeSignature (t0 ++ [holeRow "h0" .never .never])) [] (exits (hole 0)) = none
+
+/-- Outside a handler, an exit and a fork the answer-only row keeps the answer and loses the
+folded child's error: `fail "boom"` then `succeed 1`. -/
+def seqE (first : NativeEff) : NativeEff := .bind first (.succeed (.lit (.nat 1)))
+#eval (effTy (nativeSignature t0) [] (seqE boom)).map fun t =>
+  (t.answer.renderRaw, t.error.renderRaw)
+#eval (effTy (nativeSignature (t0 ++ [holeRow "h0" .never .never])) [] (seqE (hole 0))).map
+  fun t => (t.answer.renderRaw, t.error.renderRaw)
+#eval (effTy (nativeSignature (t0 ++ [holeRow "h0" .never .string])) [] (seqE (hole 0))).map
+  fun t => (t.answer.renderRaw, t.error.renderRaw)
+
+/-! ## E. A variable in a program's annotation, today -/
+
+-- `Deferred.make<T5, number>()`: the type argument enters the row's template, and the
+-- unbound parameter is instantiated to `never`
+#eval (effTy (nativeSignature t0) [] (.perform (.deferredMakeOf (.var 5) .nat) (.lit .unit))).map
+  fun t => t.answer.renderRaw
+-- a loop whose cursor annotation is a variable, after a failure: the program's answer type
+def loopVar : NativeEff :=
+  .bind boom
+    (.iterate (some (.var 7)) (.var 0) (.lit (.bool false)) (.var 1) (.var 1)
+      (.succeed (.lit .unit)))
+#eval (effTy (nativeSignature t0) [] loopVar).map fun t => (t.answer.renderRaw, t.answer.closed)
+-- formation has no rule at a variable
+#guard decide (Formation.HeadFormed false (.var 7)) = true
+
+/-! ## F. Where a smaller environment refuses: the checker is not monotone today -/
+
+def getOrElseT : Term := .app "getOrElse" (.cons (.var 0) (.cons (.var 1) .nil))
+#eval (termTy (nativeSignature t0) [.option (.union .nat .string), .string] getOrElseT).map
+  Ty.renderRaw
+#eval (termTy (nativeSignature t0) [.option .nat, .string] getOrElseT).map Ty.renderRaw
+#guard Ty.sub (Ty.option .nat) (Ty.option (.union .nat .string)).normalize = true
+-- the shape eliminators at `never`
+#guard fiberTy .never = none
+#guard Decision.arms .bool .never = none
+#guard Decision.arms .option .never = none
+#guard effTy (nativeSignature t0) [.never] (.awaitFiber (.var 0) .joinEffect) = none
+-- the uniform ones at `never`
+#eval (termTy (nativeSignature t0) [.never] (.field .required (.var 0) "a")).map Ty.renderRaw
+
+/-! ## H. Every declaration of an effect hole has a program of exactly its type: a defect first
+
+`die; x = loop<A>(…); e = loop<E>(…); fail(e)` after a defect: the loops never run, and their
+annotations give the answer and the error columns exactly. So a declarable sketch with effect
+holes is completable, by the replacement law alone. -/
+
+def never0 : NativeEff := .failCause (.die (.lit (.str "todo")))
+/-- A program of type `⟨a, e, ∅⟩` that dies at once: the loop annotated `a` gives the answer. -/
+def dieAt (a e : Ty) : NativeEff :=
+  .bind never0                                              -- v0 : never
+    (.bind (.select (.lit (.bool true)) .bool
+        (.succeed (.lit .unit))
+        (.bind (.iterate (some e) (.var 0) (.lit (.bool false)) (.var 1) (.var 1)
+                  (.succeed (.lit .unit)))                  -- v1 : e
+          (.fail (.var 1))))                                -- fails at `e`, never reached
+      (.iterate (some a) (.var 0) (.lit (.bool false)) (.var 2) (.var 2)
+        (.succeed (.lit .unit))))                           -- the answer column is `a`
+#eval (effTy (nativeSignature t0) [] (dieAt (.refOf .nat) .string)).map fun t =>
+  (t.answer.renderRaw, t.error.renderRaw)
+#guard effTy (nativeSignature t0) [] (dieAt (.refOf .nat) .string)
+        = some ⟨.refOf .nat, .string, Requirement.empty⟩
+#guard effTy (nativeSignature t0) [] (dieAt .never .never) = some ⟨.never, .never, Requirement.empty⟩
+-- and it fills the hole of section D at the declared type: the whole keeps its type
+#guard effTy (nativeSignature t0) [] (exits (dieAt .never .string))
+        = effTy (nativeSignature t0) [] (exits boom)
+
+/-! ## I. The two findings as smallest programs -/
+
+-- (a) one node: an absent optional field declared at a variable; the answer type is open
+def openRecord : NativeEff := .succeed (.record [("a", true, .var 7)] [] .nil)
+#eval (effTy (nativeSignature t0) [] openRecord).map fun t => (t.answer.renderRaw, t.answer.closed)
+-- (a) one node: a type argument at a variable is read as an unbound parameter of the row
+def openMake : NativeEff := .perform (.deferredMakeOf (.var 5) .nat) (.lit .unit)
+#eval (effTy (nativeSignature t0) [] openMake).map fun t => (t.answer.renderRaw, t.answer.closed)
+
+-- (b) a repeated parameter binds at its first occurrence: one node, refused
+def app2 (f : String) (a b : Term) : Term := .app f (.cons a (.cons b .nil))
+def app1 (f : String) (a : Term) : Term := .app f (.cons a .nil)
+def app3 (f : String) (a b c : Term) : Term := .app f (.cons a (.cons b (.cons c .nil)))
+def gOE (x : Term) : Term := app2 "getOrElse" (app1 "some" x) (.lit (.str "d"))
+#eval (effTy (nativeSignature t0) [] (.succeed (gOE (.lit (.nat 1))))).map fun t => t.answer.renderRaw
+-- the same use after a first child of type `number | string` is admitted …
+def wide : NativeEff := .select (.lit (.bool true)) .bool (.succeed (.lit (.nat 1)))
+  (.succeed (.lit (.str "a")))
+#eval (effTy (nativeSignature t0) [] wide).map fun t => t.answer.renderRaw
+#eval (effTy (nativeSignature t0) [] (.bind wide (.succeed (gOE (.var 0))))).map
+  fun t => t.answer.renderRaw
+-- … and refused after a first child of the smaller type `number`: a filling at a smaller type
+#guard effTy (nativeSignature t0) [] (.bind (.succeed (.lit (.nat 1))) (.succeed (gOE (.var 0)))) = none
+#guard (effTy (nativeSignature t0) [] (.bind wide (.succeed (gOE (.var 0))))).isSome
+-- the same at `ite`, whose parameter joins: `ite(true, x, "a")`
+def iteT (x : Term) : Term := app3 "ite" (.lit (.bool true)) x (.lit (.str "a"))
+#eval (effTy (nativeSignature t0) [] (.bind wide (.succeed (iteT (.var 0))))).map
+  fun t => t.answer.renderRaw
+#eval (effTy (nativeSignature t0) [] (.bind (.succeed (.lit (.nat 1))) (.succeed (iteT (.var 0))))).map
+  fun t => t.answer.renderRaw
+-- an atom with two parameters and a union answer does not refuse: `pair` stands for the shape
+#eval (termTy (nativeSignature t0) [.nat, .string] (app2 "pair" (.var 0) (.var 1))).map Ty.renderRaw
+
+-- a loop with no cursor annotation infers its cursor from the initial value, and checks the
+-- step against it: admitted under `[number | string]`, refused under the smaller `[number]`
+def loopNoAnn : NativeEff :=
+  .iterate none (.var 0) (.lit (.bool false)) (.lit (.str "a")) (.var 1) (.succeed (.lit .unit))
+#guard (effTy (nativeSignature t0) [.union .nat .string] loopNoAnn).isSome
+#guard effTy (nativeSignature t0) [.nat] loopNoAnn = none
+-- with the annotation the same loop is admitted under both
+def loopAnn : NativeEff :=
+  .iterate (some (.union .nat .string)) (.var 0) (.lit (.bool false)) (.lit (.str "a")) (.var 1)
+    (.succeed (.lit .unit))
+#guard (effTy (nativeSignature t0) [.union .nat .string] loopAnn).isSome
+#guard (effTy (nativeSignature t0) [.nat] loopAnn).isSome
+
+/-! ## G. The boundary stages at a variable -/
+
+#guard Val.hasTy (.nat 1) (.var 7) [] = false
+#eval (Effect4.Codegen.Types.ofTy (.var 7)).isSome
+#eval (Effect4.Codegen.Types.ofTy (.list (.var 7))).isSome
+#eval (Effect4.Codegen.Types.ofTy (.list .nat)).isSome
+
+end GapProbe

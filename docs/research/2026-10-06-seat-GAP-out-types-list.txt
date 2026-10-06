@@ -1,0 +1,49 @@
+== run list: 67 static types, 457 gap types under test (at most 2 constructor members)
+control (red): str ≲ nat by candidate M: False | by definition: False
+L1 consistent subtyping equals `sub` on static pairs: counterexamples 0
+L1' candidate M equals `sub` on static pairs: counterexamples 0
+L1'' candidate B equals `sub` on static pairs: counterexamples 0
+L2 □ | never = □: normal forms equal True; concretizations equal True
+L2 □ | unknown = unknown: normal forms equal True; concretizations equal True
+L2 □ | □ = □: normal forms equal True; concretizations equal True
+L2 static T with γ(□ | T) = γ(□): ['never']
+L2 γ(□ | T) = the supertypes of T, for static T: counterexamples 0
+L3 candidate M (member by member): accepts beyond the definition 0, refuses within it 0, of 208849 pairs
+L3 candidate E (extremes, else M): accepts beyond the definition 0, refuses within it 0, of 208849 pairs
+L3 candidate B (member by member, with bounds): accepts beyond the definition 0, refuses within it 0, of 208849 pairs
+L4 the definition is kept when either side loses precision: counterexamples 0
+L4 candidate M is kept when either side loses precision: counterexamples 0
+L4 candidate B is kept when either side loses precision: counterexamples 0
+L5 a ≲ g ≲ c with a ≰ c (static a, c among the first twelve): count 914
+      nat ≲ □ ≲ str
+      num ≲ □ ≲ nat
+L6 γ(join a b) against {join x y}: 204548 pairs checked, 200912 exact, 3636 lose a concretization, 0 gain one
+     join( list(□) , list(□) ) = list(□) loses a member
+     join( list(□) , nat | list(□) ) = nat | list(□) loses a member
+     join( list(□) , num | list(□) ) = num | list(□) loses a member
+L6' a ⊑ a2 and b ⊑ b2 imply join a b ⊑ join a2 b2 (short types): counterexamples 124
+     join(list(□), list(□)) = list(□)  but  join(list(nat), list(□)) = list(nat) | list(□)
+     join(list(□), list(□)) = list(□)  but  join(list(num), list(□)) = list(num) | list(□)
+L7 classes of distinct normal forms with equal concretizations: 84 (of 235 meanings)
+      list(nat) | □  ==  list(nat | □) | □  ==  list(nat) | list(□) | □
+      list(num) | □  ==  list(num | □) | □  ==  list(num) | list(□) | □  ==  list(num) | list(nat | □) | □
+      list(str) | □  ==  list(str | □) | □  ==  list(str) | list(□) | □
+L7' after `□ | M ↦ □ | lo M`: classes with more than one form: 30
+      list(nat | str | □)  ==  list(nat | str) | list(str | □)
+      list(num | str | □)  ==  list(num | str) | list(□)  ==  list(num | str) | list(str | □)  ==  list(nat | □) | list(num | str)
+      nat | list(nat | str | □)  ==  nat | list(nat | str) | list(str | □)
+L8 a ~ b equals (a ≲ b and b ≲ a): counterexamples 252
+       list(□)  ;  list(nat) | list(str)   a~b: False
+       list(□)  ;  list(num) | list(str)   a~b: False
+       list(nat) | list(str)  ;  list(□)   a~b: False
+L9 `listOf?` as it is, lifted by the table: 457 gap types; defined where it should not be or the reverse 21; misses a result 0; covers more than the results 0
+        list(nat) | list(□) → candidate None ; results ['nat', 'nat | str', 'num', 'num | str']
+        list(num) | list(□) → candidate None ; results ['num', 'num | str', 'unknown']
+        list(str) | list(□) → candidate None ; results ['nat | str', 'num | str', 'str', 'unknown']
+L9 `listOf?` as it is, lifted member by member: 457 gap types; defined where it should not be or the reverse 4; misses a result 0; covers more than the results 0
+        never → candidate never ; results []
+        list(nat) | list(str) → candidate nat | str ; results []
+        list(num) | list(str) → candidate num | str ; results []
+L9 `listOf?` made uniform (candidate N), lifted member by member: 457 gap types; defined where it should not be or the reverse 0; misses a result 0; covers more than the results 0
+L10 `t = str` lifted: str, □ or □ | str and nothing else: counterexamples 0
+L10 `t ≡ never` lifted: exactly when the least concretization is never: counterexamples 0 []

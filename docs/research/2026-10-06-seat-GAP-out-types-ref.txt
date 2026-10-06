@@ -1,0 +1,44 @@
+== run ref: 769 static types, 1105 gap types under test (at most 2 constructor members)
+control (red): str ≲ nat by candidate M: False | by definition: False
+L1 consistent subtyping equals `sub` on static pairs: counterexamples 0
+L1' candidate M equals `sub` on static pairs: counterexamples 0
+L1'' candidate B equals `sub` on static pairs: counterexamples 0
+L2 □ | never = □: normal forms equal True; concretizations equal True
+L2 □ | unknown = unknown: normal forms equal True; concretizations equal True
+L2 □ | □ = □: normal forms equal True; concretizations equal True
+L2 static T with γ(□ | T) = γ(□): ['never']
+L2 γ(□ | T) = the supertypes of T, for static T: counterexamples 0
+L3 candidate M (member by member): accepts beyond the definition 16200, refuses within it 0, of 1221025 pairs
+     accepts, no witness: ref(nat) | ref(num)  ≲  ref(□)
+     accepts, no witness: ref(nat) | ref(str)  ≲  ref(□)
+     accepts, no witness: ref(num) | ref(str)  ≲  ref(□)
+L3 candidate E (extremes, else M): accepts beyond the definition 16200, refuses within it 0, of 1221025 pairs
+     accepts, no witness: ref(nat) | ref(num)  ≲  ref(□)
+     accepts, no witness: ref(nat) | ref(str)  ≲  ref(□)
+     accepts, no witness: ref(num) | ref(str)  ≲  ref(□)
+L3 candidate B (member by member, with bounds): accepts beyond the definition 0, refuses within it 0, of 1221025 pairs
+L4 the definition is kept when either side loses precision: counterexamples 0
+L4 candidate M is kept when either side loses precision: counterexamples 0
+L4 candidate B is kept when either side loses precision: counterexamples 0
+L5 a ≲ g ≲ c with a ≰ c (static a, c among the first twelve): count 1502
+      nat ≲ □ ≲ str
+      num ≲ □ ≲ nat
+L6 γ(join a b) against {join x y}: 671549 pairs checked, 638357 exact, 33192 lose a concretization, 0 gain one
+     join( ref(□) , ref(□) ) = ref(□) loses a member
+     join( ref(□) , nat | ref(□) ) = nat | ref(□) loses a member
+     join( ref(□) , num | ref(□) ) = num | ref(□) loses a member
+L6' a ⊑ a2 and b ⊑ b2 imply join a b ⊑ join a2 b2 (short types): counterexamples 532
+     join(ref(□), ref(□)) = ref(□)  but  join(ref(nat), ref(□)) = ref(nat) | ref(□)
+     join(ref(□), ref(□)) = ref(□)  but  join(ref(num), ref(□)) = ref(num) | ref(□)
+L7 classes of distinct normal forms with equal concretizations: 72 (of 889 meanings)
+      ref(nat) | □  ==  ref(nat) | ref(□) | □  ==  ref(nat) | ref(nat | □) | □
+      ref(num) | □  ==  ref(num) | ref(□) | □  ==  ref(num) | ref(nat | □) | □  ==  ref(num) | ref(num | □) | □
+      ref(str) | □  ==  ref(str) | ref(□) | □  ==  ref(str) | ref(str | □) | □
+L7' after `□ | M ↦ □ | lo M`: classes with more than one form: 72
+      ref(nat) | □  ==  ref(nat) | ref(□) | □  ==  ref(nat) | ref(nat | □) | □
+      ref(num) | □  ==  ref(num) | ref(□) | □  ==  ref(num) | ref(nat | □) | □  ==  ref(num) | ref(num | □) | □
+      ref(str) | □  ==  ref(str) | ref(□) | □  ==  ref(str) | ref(str | □) | □
+L8 a ~ b equals (a ≲ b and b ≲ a): counterexamples 0
+L10 `t = str` lifted: str, □ or □ | str and nothing else: counterexamples 0
+L10 `t ≡ never` lifted: exactly when the least concretization is never: counterexamples 0 []
+python3 gap_types.py ref 2  124.75s user 0.27s system 99% cpu 2:05.15 total

@@ -1,0 +1,35 @@
+== run rec: 727 static types, 325 gap types under test (at most 1 constructor members)
+control (red): str ≲ nat by candidate M: False | by definition: False
+L1 consistent subtyping equals `sub` on static pairs: counterexamples 0
+L1' candidate M equals `sub` on static pairs: counterexamples 0
+L1'' candidate B equals `sub` on static pairs: counterexamples 0
+L2 □ | never = □: normal forms equal True; concretizations equal True
+L2 □ | unknown = unknown: normal forms equal True; concretizations equal True
+L2 □ | □ = □: normal forms equal True; concretizations equal True
+L2 static T with γ(□ | T) = γ(□): ['never']
+L2 γ(□ | T) = the supertypes of T, for static T: counterexamples 0
+L3 candidate M (member by member): accepts beyond the definition 0, refuses within it 0, of 105625 pairs
+L3 candidate E (extremes, else M): accepts beyond the definition 0, refuses within it 0, of 105625 pairs
+L3 candidate B (member by member, with bounds): accepts beyond the definition 0, refuses within it 0, of 105625 pairs
+L4 the definition is kept when either side loses precision: counterexamples 0
+L4 candidate M is kept when either side loses precision: counterexamples 0
+L4 candidate B is kept when either side loses precision: counterexamples 0
+L5 a ≲ g ≲ c with a ≰ c (static a, c among the first twelve): count 524
+      nat ≲ □ ≲ str
+      num ≲ □ ≲ nat
+L6 γ(join a b) against {join x y}: 67643 pairs checked, 66635 exact, 1008 lose a concretization, 0 gain one
+     join( {a: □} , {a: □} ) = {a: □} loses a member
+     join( {a?: □} , {a?: □} ) = {a?: □} loses a member
+     join( {a: □} , nat | {a: □} ) = nat | {a: □} loses a member
+L6' a ⊑ a2 and b ⊑ b2 imply join a b ⊑ join a2 b2 (short types): counterexamples 556
+     join({a: □}, {a: □}) = {a: □}  but  join({a: nat}, {a: □}) = {a: nat} | {a: □}
+     join({a: □}, {a: □}) = {a: □}  but  join({a: num}, {a: □}) = {a: num} | {a: □}
+L7 classes of distinct normal forms with equal concretizations: 72 (of 253 meanings)
+      □ | {a: nat}  ==  □ | {a: nat | □}
+      □ | {a: num}  ==  □ | {a: num | □}
+      □ | {a: str}  ==  □ | {a: str | □}
+L7' after `□ | M ↦ □ | lo M`: classes with more than one form: 0
+L8 a ~ b equals (a ≲ b and b ≲ a): counterexamples 0
+L9 `fieldType` (required), lifted member by member: 325 gap types; defined where it should not be or the reverse 0; misses a result 0; covers more than the results 0
+L10 `t = str` lifted: str, □ or □ | str and nothing else: counterexamples 0
+L10 `t ≡ never` lifted: exactly when the least concretization is never: counterexamples 0 []

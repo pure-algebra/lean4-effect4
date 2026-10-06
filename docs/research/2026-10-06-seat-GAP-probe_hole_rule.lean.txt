@@ -1,0 +1,158 @@
+import Effect4.Laws.Program.Signature
+
+/-!
+Seat GAP, probe 3 (scratch; run from the worktree root through the Lean slot).
+
+The hole's rule, the statement of the replacement law, and the three judgments on a sketch,
+as Lean states them against the tree. A `theorem` is proved here from the tree's theorems.
+A `def … : Prop` is a statement that elaborates against the tree and that nothing here proves.
+-/
+
+set_option autoImplicit false
+
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+open Conform.Effect4.Typing
+
+namespace GapProbe
+
+/-! ## The hole's rule: `HasTy.perform` at an appended row with closed columns -/
+
+/-- A hole row: a unit request and three declared columns. -/
+def holeRow (name : String) (answer error : Ty) (requires : List ServiceKey := []) : Row :=
+  { name := name, spelling := "Hole." ++ name, kind := .async, request := .unit,
+    answer := answer, error := error, requires := requires, cite := "a hole",
+    registration := .external }
+
+theorem nativeRowOf_append_last (t : RowTable) (row : Row) :
+    nativeRowOf (t ++ [row]) (.external t.length) = row := by
+  simp only [nativeRowOf, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self,
+    List.getElem?_cons_zero, Option.getD_some]
+
+/-- **The hole's rule (proved in scratch).** A hole row appended after the table `t`, with
+closed and formed columns, types `yield* Hole.h()` at its own three columns, in every
+environment. No rule is added to `HasTy`: this is `HasTy.perform` with `rowTy_closed`. -/
+theorem hole_hasTy (t : RowTable) (name : String) (answer error : Ty) (requires : List ServiceKey)
+    (env : TyEnv) (hans : answer.closed = true) (herr : error.closed = true)
+    (formed : Formation.Formed
+      (Formation.instantiatedSites (holeRow name answer error requires).normalizeTypes [])) :
+    HasTy (nativeSignature (t ++ [holeRow name answer error requires])) env
+      (.perform (.external t.length) (.lit .unit))
+      ⟨answer.normalize.normalize, error.normalize.normalize, Requirement.ofList requires⟩ := by
+  refine HasTy.perform (requestTy := .unit) ?_ ?_ ?_
+  · show decide (t.length < (t ++ [holeRow name answer error requires]).length) = true
+    simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add,
+      Nat.lt_add_one, decide_true]
+  · rfl
+  · show rowTy (nativeRowOf (t ++ [holeRow name answer error requires])
+        (.external t.length)).normalizeTypes Ty.unit none = _
+    rw [nativeRowOf_append_last]
+    rw [rowTy_closed _ _ (by rfl) (Ty.closed_normalize _ hans) (Ty.closed_normalize _ herr) formed]
+    have hunit : Ty.sub Ty.unit.normalize Ty.unit.normalize.normalize = true := by decide +kernel
+    have hsub : Ty.sub Ty.unit.normalize
+        (holeRow name answer error requires).normalizeTypes.request.normalize = true := hunit
+    rw [if_pos hsub]
+    rfl
+
+/-! ## The replacement law, as a statement
+
+Decomposition and composition in one statement, in the declarative system: an admitted program
+splits at an address of a program into an environment and a type of the focus, and every
+program of that type, under every extension of the signature, stands in its place. -/
+
+def ReplacementLaw : Prop :=
+  ∀ {Op : Type} (s : Signature Op) (env0 : TyEnv) (p q : Eff Op) (T : EffTy) (path : List Nat),
+    HasTy s env0 p T → (Node.eff p).at_ path = some (.eff q) →
+    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+      ∀ (s' : Signature Op) (q' p' : Eff Op), SigExtends s s' → HasTy s' env q' t →
+        (Node.eff p).replaceAt path (.eff q') = some (.eff p') → HasTy s' env0 p' T
+
+/-- The same law from a statement list, a race, a fiber action, a layer and a layer spine: the
+five siblings that the proof of `ReplacementLaw` needs, one per judgment. -/
+def ReplacementLawStmts : Prop :=
+  ∀ {Op : Type} (s : Signature Op) (env0 : TyEnv) (inLoop : Bool) (b : Stmts Op) (q : Eff Op)
+    (g : GenTy) (path : List Nat),
+    StmtsHasTy s env0 inLoop b g → (Node.stmts b).at_ path = some (.eff q) →
+    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+      ∀ (s' : Signature Op) (q' : Eff Op) (b' : Stmts Op), SigExtends s s' → HasTy s' env q' t →
+        (Node.stmts b).replaceAt path (.eff q') = some (.stmts b') → StmtsHasTy s' env0 inLoop b' g
+
+def ReplacementLawEffs : Prop :=
+  ∀ {Op : Type} (s : Signature Op) (env0 : TyEnv) (es : Effs Op) (q : Eff Op) (T : EffTy)
+    (path : List Nat),
+    EffsHasTy s env0 es T → (Node.effs es).at_ path = some (.eff q) →
+    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+      ∀ (s' : Signature Op) (q' : Eff Op) (es' : Effs Op), SigExtends s s' → HasTy s' env q' t →
+        (Node.effs es).replaceAt path (.eff q') = some (.effs es') → EffsHasTy s' env0 es' T
+
+def ReplacementLawAction : Prop :=
+  ∀ {Op : Type} (s : Signature Op) (env0 : TyEnv) (a : ActionTerm Op) (q : Eff Op) (T : EffTy)
+    (path : List Nat),
+    ActionHasTy s env0 a T → (Node.action a).at_ path = some (.eff q) →
+    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+      ∀ (s' : Signature Op) (q' : Eff Op) (a' : ActionTerm Op), SigExtends s s' →
+        HasTy s' env q' t →
+        (Node.action a).replaceAt path (.eff q') = some (.action a') → ActionHasTy s' env0 a' T
+
+def ReplacementLawLayer : Prop :=
+  ∀ {Op : Type} (s : Signature Op) (l : LayerTerm Op) (q : Eff Op) (L : LayerTy)
+    (path : List Nat),
+    LayerHasTy s l L → (Node.layer l).at_ path = some (.eff q) →
+    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+      ∀ (s' : Signature Op) (q' : Eff Op) (l' : LayerTerm Op), SigExtends s s' →
+        HasTy s' env q' t →
+        (Node.layer l).replaceAt path (.eff q') = some (.layer l') → LayerHasTy s' l' L
+
+def ReplacementLawLayers : Prop :=
+  ∀ {Op : Type} (s : Signature Op) (ls : LayerTerms Op) (q : Eff Op) (L : LayerTy)
+    (path : List Nat),
+    LayersHasTy s ls L → (Node.layers ls).at_ path = some (.eff q) →
+    ∃ (env : TyEnv) (t : EffTy), HasTy s env q t ∧
+      ∀ (s' : Signature Op) (q' : Eff Op) (ls' : LayerTerms Op), SigExtends s s' →
+        HasTy s' env q' t →
+        (Node.layers ls).replaceAt path (.eff q') = some (.layers ls') → LayersHasTy s' ls' L
+
+/-! ## The three judgments on a sketch, in the row form
+
+A sketch is a program over the table `t` extended by its hole rows; hole `i` is the operation
+`external (t.length + i)`. -/
+
+/-- A program of the base table: it performs no hole row. -/
+def Complete (t : RowTable) (e : NativeEff) : Prop := SigProgram (nativeSignature t) e
+
+/-- **Admitted modulo its holes**: the checker admits the sketch at the declared hole rows. -/
+def AdmittedModulo (t H : RowTable) (sketch : NativeEff) (T : EffTy) : Prop :=
+  Checker.check (nativeSignature (t ++ H)) [] [] sketch = .ok T
+
+/-- **Declarable**: some hole rows admit the sketch. -/
+def Declarable (t : RowTable) (sketch : NativeEff) : Prop :=
+  ∃ (H : RowTable) (T : EffTy), AdmittedModulo t H sketch T
+
+/-- A filling: one program per hole, placed by a substitution of the hole operations. The
+statement only needs the result, so the completed program is given with its relation to the
+sketch left abstract here (`fills`). -/
+def Fillable (t : RowTable) (fills : NativeEff → NativeEff → Prop) (sketch : NativeEff) : Prop :=
+  ∃ (p : NativeEff) (T : EffTy), fills sketch p ∧ Complete t p ∧
+    Checker.check (nativeSignature t) [] [] p = .ok T
+
+/-- A sketch admitted modulo its holes stays admitted, at the same type, with more holes
+declared (proved in scratch from `check_ext`). -/
+theorem AdmittedModulo.more (t H H' : RowTable) {sketch : NativeEff} {T : EffTy}
+    (h : AdmittedModulo t H sketch T) : AdmittedModulo t (H ++ H') sketch T := by
+  unfold AdmittedModulo at h ⊢
+  rw [← List.append_assoc]
+  exact check_ext (rows_append (t ++ H) H') h
+
+/-- A complete program is admitted modulo any holes exactly when the base checker admits it
+(proved in scratch from `check_restrict`). -/
+theorem AdmittedModulo.complete_iff (t H : RowTable) {p : NativeEff} {T : EffTy}
+    (hp : Complete t p) :
+    AdmittedModulo t H p T ↔ Checker.check (nativeSignature t) [] [] p = .ok T := by
+  unfold AdmittedModulo
+  rw [check_restrict (rows_append t H) hp]
+
+#print axioms hole_hasTy
+#print axioms AdmittedModulo.more
+#print axioms AdmittedModulo.complete_iff
+
+end GapProbe
