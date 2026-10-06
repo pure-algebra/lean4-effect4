@@ -41,7 +41,9 @@
     "pInterruptEscape",
     "pFold",
     "pModifyFold",
-    "pQueueOffer"
+    "pQueueOffer",
+    "pRateRequest",
+    "pDeferredGate"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

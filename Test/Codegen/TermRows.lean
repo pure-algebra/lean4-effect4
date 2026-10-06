@@ -689,9 +689,9 @@ type (`harness/truth/literals.typecheck.ts` holds the rule's controls). -/
 
 /-- The rate limiter's request, four times in a row on one window cell. The window admits three
 requests. The answer is `[first decision, fourth decision, admitted, rejected, used]`. The brief
-names this request as a truth program. Its printed module runs on rc.112 with the machine's
-answer. Until the literal rule of decisions row 256, tsgo 7 refused its type at the request's
-two arms, so the truth lane held it out (seat T5's receipt). -/
+names this request as a truth program: it is `pRateRequest` (`harness/truth/Truth.lean`), and
+its printed module runs on rc.112 with the machine's answer. Until the literal rule of decisions
+row 256, tsgo 7 refused its type at the request's two arms, and the truth lane held it out. -/
 def fourRequests : Src NativeOp :=
   open Test.Dogfood.P4RateLimiter in eff do
     let state ← Ref.make window0
