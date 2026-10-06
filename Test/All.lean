@@ -257,6 +257,7 @@ import Test.Program.TypingCheckContract
 import Test.Program.LinkedRowsContract
 import Test.Program.LayerSharingContract
 import Test.Program.BlameContract
+import Test.Program.FocusControls
 import Test.Program.DecisionContract
 import Test.Machine.Runtime.ArenaContract
 import Test.Dogfood.P1HttpCache
