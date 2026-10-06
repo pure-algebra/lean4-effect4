@@ -299,9 +299,10 @@ check, as the row intends.
   definitions in dependency order. Nine altered copies are refused, each for a stated reason
   (`#guard`, finite).
 - The compiler checkpoint is the `compiler` profile of `scripts/check-conform.py`. On a
-  checkout it is run by name: no `make` target runs it. The CI job `check-ocaml` runs it at a
-  push, a pull request or a manual run (`.github/workflows/lean_action_ci.yml`). The target
-  evaluator reads each support body from the definition that the prelude prints. Ten name fixtures agree with the compiled Lean
+  checkout `make check-compiler` runs it, and `make check-full` names that target (decisions
+  row 263). The CI job `check-ocaml` runs the same command at a push, a pull request or a
+  manual run (`.github/workflows/lean_action_ci.yml`). The target evaluator reads each support
+  body from the definition that the prelude prints. Ten name fixtures agree with the compiled Lean
   definitions, on the evaluator and in compiled OCaml 5.1.1 (tested, finite). An altered
   support body fails the first fixture that reads it, on both.
 - The builtin controls are `hostChecks` (`tools/Conform/Effect4/CompilerControls.lean`). Each

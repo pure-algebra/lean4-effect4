@@ -223,7 +223,8 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   (row 261);
 - the target evaluator comes under the trust ceiling, by two string rules in byte form (row
   262). The slice has no date;
-- the compiler checkpoint joins the local sweep by one marker rule (row 263);
+- the compiler checkpoint joins the local sweep by one marker rule (row 263; landed
+  `0acec081`);
 - a TypeScript compiler client stays inside `tools/target`, and no package is published (row
   264);
 - Semaphore's cell and steps start now, as a third seat (row 265).
@@ -519,9 +520,8 @@ Open at this landing:
     refusal;
   - the compiler checkpoint runs in the CI job `check-ocaml`, at a push, a pull request or a
     manual run (`.github/workflows/lean_action_ci.yml`). That is a reading of the
-    configuration, and no remote run is checked. No `make` target runs the checkpoint, so the
-    local sweep does not. The owner ruled that it joins the local sweep (row 263). The
-    runner's own script tests run by hand;
+    configuration, and no remote run is checked. Since `0acec081` it also runs in the local
+    sweep, as `make check-compiler` (row 263). The runner's own script tests run by hand;
   - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
 - the proposed decisions rows of four seats' receipts (T3b, M0, LOWER and DOGFOOD), for the
   owner;
