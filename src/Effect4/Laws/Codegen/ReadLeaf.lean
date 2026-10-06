@@ -1204,23 +1204,25 @@ nothing. A step of `splitFunction_printRow`. -/
 theorem splitFunction_call_none {n : Nat} (head : Expr) {args : List Expr}
     (h : ∀ e ∈ args, Effect4.Codegen.Binders.read n [0] e = none) :
     splitFunction n (.call head args) = none := by
-  simp only [splitFunction]
+  simp only [splitFunction, lastArgument?]
   cases hlast : args.getLast? with
   | none => rfl
   | some last =>
     obtain ⟨front, rfl⟩ := List.getLast?_eq_some_iff.mp hlast
-    rw [Option.bind_some, h last (List.mem_append_right front List.mem_cons_self), Option.map_none]
+    rw [Option.map_some, Option.bind_some,
+      h last (List.mem_append_right front List.mem_cons_self), Option.map_none]
 
 /-- The same of a method call. -/
 theorem splitFunction_method_none {n : Nat} (receiver : Expr) (name : String) {args : List Expr}
     (h : ∀ e ∈ args, Effect4.Codegen.Binders.read n [0] e = none) :
     splitFunction n (.method receiver name args) = none := by
-  simp only [splitFunction]
+  simp only [splitFunction, lastArgument?]
   cases hlast : args.getLast? with
   | none => rfl
   | some last =>
     obtain ⟨front, rfl⟩ := List.getLast?_eq_some_iff.mp hlast
-    rw [Option.bind_some, h last (List.mem_append_right front List.mem_cons_self), Option.map_none]
+    rw [Option.map_some, Option.bind_some,
+      h last (List.mem_append_right front List.mem_cons_self), Option.map_none]
 
 /-- A trailing name is no function. -/
 theorem binders_read_idents {n : Nat} (names : List String) :
@@ -1310,10 +1312,10 @@ theorem splitFunction_withFunction {n : Nat} {spelling : String} {call body x : 
   unfold withFunction at h
   split at h
   · cases h
-    simp only [splitFunction, List.getLast?_concat, Option.bind_some,
+    simp only [splitFunction, lastArgument?, List.getLast?_concat, Option.bind_some,
       Effect4.Codegen.Binders.read_write, Option.map_some, List.dropLast_concat]
   · cases h
-    simp only [splitFunction, List.getLast?_concat, Option.bind_some,
+    simp only [splitFunction, lastArgument?, List.getLast?_concat, Option.bind_some,
       Effect4.Codegen.Binders.read_write, Option.map_some, List.dropLast_concat]
   · exact nomatch h
 
@@ -1365,8 +1367,7 @@ theorem readPerform_printPerform {sig : Signature Op} {spell : String → List S
     rw [hb] at hp
     unfold readPerform
     rw [splitFunction_printRow hp, read_printRow hl op hd r hreq hc hu hp]
-    simp only [Except.bind, rowAnswer, termFree, hl.face_of_none hb, hb, Option.isNone_none,
-      ↓reduceIte]
+    simp only [rowAnswer, termFree, hl.face_of_none hb, hb, Option.isNone_none, ↓reduceIte]
   | some b =>
     rw [hb] at hp
     cases hcall : printRow n (sig.rowOf op) r with
@@ -1633,22 +1634,24 @@ theorem withFunction_of_splitFunction {n : Nat} {x call body : Expr} (spelling :
     (h : splitFunction n x = some (call, body)) :
     withFunction spelling (Effect4.Codegen.Binders.write n [0] body) call = .ok x := by
   unfold splitFunction at h
-  split at h
+  obtain ⟨split, hsplit, h⟩ := Option.bind_eq_some_iff.mp h
+  obtain ⟨body', hbody, h⟩ := Option.map_eq_some_iff.mp h
+  cases h
+  unfold lastArgument? at hsplit
+  split at hsplit
   · next head args =>
-    obtain ⟨last, hlast, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨body', hbody, h⟩ := Option.map_eq_some_iff.mp h
-    cases h
+    obtain ⟨last, hlast, hsplit⟩ := Option.map_eq_some_iff.mp hsplit
+    cases hsplit
     obtain ⟨front, rfl⟩ := List.getLast?_eq_some_iff.mp hlast
     rw [Effect4.Codegen.Binders.read_exact n [0] last body hbody, List.dropLast_concat]
     rfl
   · next receiver name args =>
-    obtain ⟨last, hlast, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨body', hbody, h⟩ := Option.map_eq_some_iff.mp h
-    cases h
+    obtain ⟨last, hlast, hsplit⟩ := Option.map_eq_some_iff.mp hsplit
+    cases hsplit
     obtain ⟨front, rfl⟩ := List.getLast?_eq_some_iff.mp hlast
     rw [Effect4.Codegen.Binders.read_exact n [0] last body hbody, List.dropLast_concat]
     rfl
-  · exact nomatch h
+  · exact nomatch hsplit
 
 /-- The row call of `perform`: what `readPerform` accepts prints back to the tree it read. The
 face it reads prints as the row's call (`readPerformFace_exact`). Where a function follows the
@@ -1691,7 +1694,7 @@ theorem readPerform_exact {sig : Signature Op} {spell : String → List String �
       cases face with
       | perform op r =>
         have hrow : printRow n (sig.rowOf op) r = .ok x := hx
-        simp only [Except.bind, termFree] at h
+        simp only [termFree] at h
         split at h
         · next hnone =>
           cases h

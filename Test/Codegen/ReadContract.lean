@@ -719,35 +719,52 @@ open Effect4.Api in
   !readable p && (print p).isOk &&
     decide (roundTrip p = .error (.annotation "fold accumulator"))
 
+-- the parameter is the binder due at the node's level, unannotated, with no declared result
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
+  .ok (.perform (.refUpdateWith (.var 1)) (.var 0))
+-- an annotation that the printer never writes is refused as an annotation, named by the row
+-- and the site (`E4-CHECK-CE-017`, `functionAnnotation`): a parameter's, and the return's. It is
+-- not the arity refusal, which means an argument list the row does not print.
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a1", type := some (.name ["number"] []) }] (.ident "a1")]) =
+  .error (.annotation "Ref.update parameter")
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a1" }] (.ident "a1") (some (.name ["number"] []))]) =
+  .error (.annotation "Ref.update return")
+-- a function with no parameter and a declared result is annotated at its own site
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .arrow (some (.name ["number"] [])) (.int 1)]) =
+  .error (.annotation "Ref.update thunk return")
+-- three refusals that are no annotation, each an argument list the row does not print.
+-- A missing function: a term row called without its function is refused by its spelling, never
+-- read at its face's placeholder term.
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0"]) = .error (.arity "Ref.update")
+-- A wrong binder: the parameter is not the binder due at this level.
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a0" }] (.ident "a0")]) =
+  .error (.arity "Ref.update")
+-- A wrong arity: a function of two parameters.
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.ident "Ref.update") [.ident "a0",
+      .lambda [{ name := "a1" }, { name := "a2" }] (.ident "a1")]) = .error (.arity "Ref.update")
 -- the five names are no row's trailing names: an identifier in the function's place is an
 -- argument list the row does not print, as the TypeScript reader refuses it
 -- (`ts/eff/test/read.test.ts`)
 #guard readEff [] nativeSignature nativeSpell 1
     (.call (.ident "Ref.update") [.ident "a0", .ident "incr"]) = .error (.arity "Ref.update")
--- a term row called without its function is refused by its spelling, never read at its face's
--- placeholder term
-#guard readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0"]) = .error (.arity "Ref.update")
--- a row that carries no term refuses a function
+-- a row that carries no term refuses a function, and an annotated function there is no term
+-- row's annotation: the row's own refusal stands
 #guard readEff [] nativeSignature nativeSpell 1
     (.call (.ident "Ref.get") [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
   .error (.arity "Ref.get")
--- the parameter is the binder due at the node's level, unannotated, with no declared result
 #guard readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
-  .ok (.perform (.refUpdateWith (.var 1)) (.var 0))
-#guard (readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0", .lambda [{ name := "a0" }] (.ident "a0")])).isOk =
-  false
-#guard (readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0",
-      .lambda [{ name := "a1", type := some (.name ["number"] []) }] (.ident "a1")])).isOk = false
-#guard (readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0",
-      .lambda [{ name := "a1" }] (.ident "a1") (some (.name ["number"] []))])).isOk = false
-#guard (readEff [] nativeSignature nativeSpell 1
-    (.call (.ident "Ref.update") [.ident "a0",
-      .lambda [{ name := "a1" }, { name := "a2" }] (.ident "a1")])).isOk = false
+    (.call (.ident "Ref.get") [.ident "a0",
+      .lambda [{ name := "a1", type := some (.name ["number"] []) }] (.ident "a1")]) =
+  .error (.arity "Ref.get")
 
 /-- The native signature's term laws, at their exact propositions (`nativeLawful`'s fields): a
 row does not depend on its operation's term, and replacing the term twice is replacing it

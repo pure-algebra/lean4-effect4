@@ -630,19 +630,21 @@ def readPerformFace (classes : Effect4.Codegen.Classes.Classes) (sig : Signature
     (readRowCall classes sig spell n s (ta :: tas) args).getD (.error (.unknownHead s))
   | _ => readMethod classes sig spell n x
 
+/-- A row call without its last argument, and that argument: the place where the printer writes
+an operation's binder term as a function (`withFunction`, `Codegen/PrintLeaf.lean`). `none` for a
+call with no argument and for any tree that is no call. -/
+def lastArgument? : Expr → Option (Expr × Expr)
+  | .call head args => args.getLast?.map fun last => (.call head args.dropLast, last)
+  | .method receiver name args =>
+    args.getLast?.map fun last => (.method receiver name args.dropLast, last)
+  | _ => none
+
 /-- The row call an expression holds before its last argument, and that argument's body, when
 the last argument is a function of the current value at level `n`: `(aN) => body`, the binder due
-at the node's level, unannotated (`Binders.read n [0]`). The printer writes an operation's
-binder term there (`withFunction`, `Codegen/PrintLeaf.lean`). `none` for any other tree. -/
-def splitFunction (n : Nat) : Expr → Option (Expr × Expr)
-  | .call head args =>
-    args.getLast?.bind fun last =>
-      (Effect4.Codegen.Binders.read n [0] last).map fun body => (.call head args.dropLast, body)
-  | .method receiver name args =>
-    args.getLast?.bind fun last =>
-      (Effect4.Codegen.Binders.read n [0] last).map fun body =>
-        (.method receiver name args.dropLast, body)
-  | _ => none
+at the node's level, unannotated (`Binders.read n [0]`). `none` for any other tree. -/
+def splitFunction (n : Nat) (x : Expr) : Option (Expr × Expr) :=
+  (lastArgument? x).bind fun split =>
+    (Effect4.Codegen.Binders.read n [0] split.2).map fun body => (split.1, body)
 
 /-- A row call read at its face, with the function that followed its arguments installed as the
 operation's binder term (`Signature.withTerm`). An operation that carries no term takes no
@@ -663,11 +665,30 @@ def termFree (sig : Signature Op) : Eff Op → Except ReadRefusal (Eff Op)
     else .error (.arity (sig.rowOf op).spelling)
   | _ => .error (.shape "operation data")
 
+/-- The refusal of a term row whose function carries an annotation the printer never writes:
+`ReadRefusal.annotation`, named by the row's spelling and the annotated site (`annotationSite`:
+a parameter, or the return). It is not the arity refusal that the face reader gives the whole
+call: an annotation and a wrong argument list are two refusals a consumer routes on
+(`E4-CHECK-CE-017`, `Test/contracts/faces.contract.md`). `none` unless the call before the last
+argument reads at its face to an operation that carries a term, and the last argument is a
+function with such an annotation. -/
+def functionAnnotation (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Option ReadRefusal :=
+  (lastArgument? x).bind fun split =>
+    (annotationSite split.2).bind fun site =>
+      match readPerformFace classes sig spell n split.1 with
+      | .ok (.perform op _) =>
+        if (sig.termOf op).isSome then some (.annotation ((sig.rowOf op).spelling ++ " " ++ site))
+        else none
+      | _ => none
+
 /-- The row call at a node of level `n`. A call whose last argument is the function of the
 current value is a term row's: the call before it is read at its face (`readPerformFace`), the
 function's body as a term one level up, where the current value is the binder at `n`
 (`ScopedOp`'s convention), and the term is installed in the spelled operation. Any other tree is
-read at its face and must name an operation that carries no term. -/
+read at its face and must name an operation that carries no term. Where that reading refuses and
+the tree is a term row with an annotated function, the refusal is the annotation's
+(`functionAnnotation`): what is accepted does not change. -/
 def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     (spell : String → List String → Option Op) (n : Nat) (x : Expr) : Except ReadRefusal (Eff Op) :=
   match splitFunction n x with
@@ -675,7 +696,10 @@ def readPerform (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     let face ← readPerformFace classes sig spell n call
     let f ← readTerm classes (n + 1) body
     installTerm sig f face
-  | none => (readPerformFace classes sig spell n x).bind (termFree sig)
+  | none =>
+    match readPerformFace classes sig spell n x with
+    | .ok face => termFree sig face
+    | .error why => .error ((functionAnnotation classes sig spell n x).getD why)
 
 /-- The refusal of a tree that no row of its family matches, named by the family. -/
 def unread : EffFam → ReadRefusal
