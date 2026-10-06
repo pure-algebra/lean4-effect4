@@ -26,12 +26,15 @@ Do not run a script of this folder in place.
 
 ## The scope of the mask's pop discipline
 
-The slice is free for Codex in a scope of its own, or for a seat of the coordinator when one
-is free. Either way it has one owner at a time, and the coordinator merges it.
+The slice is allocated to Codex first, in a scope of its own: Codex asked for a branch, the
+files, the anchors and a build slot. It has one owner at a time. If Codex does not take it,
+Codex says so, and a seat of the coordinator takes it when one is free. The coordinator merges
+it in either case. The two slots of `scratch/lean-slot.sh` are shared with the seats, so a
+build may wait.
 
 | Item | Allocation |
 | --- | --- |
-| Base | the head of `refactor/phase1-phase3` that holds this note, or a later one that the coordinator names |
+| Base | `70fe5bfc` of `refactor/phase1-phase3` or a later head: seat PUB's first part and the filed packets are in it |
 | Branch | `codex/mask-pop-discipline`, in a worktree of its own |
 | New files | `src/Effect4/Laws/Machine/MaskDiscipline.lean` and `Test/Machine/MaskDiscipline.lean` |
 | Root anchors | `src/Effect4/Laws.lean`: after `import Effect4.Laws.Machine.LiveStack`. `Test/All.lean`: after `import Test.Machine.StoreKernelBank` |
