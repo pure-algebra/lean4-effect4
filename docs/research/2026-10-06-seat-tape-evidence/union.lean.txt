@@ -1,0 +1,106 @@
+import Effect4.Laws
+import Test.Dogfood.Scenario
+open Lean
+
+/-! Scratch probe of seat TAPE: the kernel terms of the moved declarations, with each moved name
+written under the new namespace. Run at the base and at the head, the two outputs must be equal.
+A binder's hygiene suffix and the payload of an `mdata` node are not printed: both hold a module
+name or a source position. -/
+namespace TapeDump
+
+def movedShort : List String := []
+
+def oldNs : Name := `X.Y
+def newNs : Name := `X.Y
+
+/-- The first component of `n` after the prefix `p`, when `p` is a proper prefix of `n`. -/
+def firstAfter (p : Name) (n : Name) : Option String :=
+  let ps := p.components
+  let ns := n.components
+  if ps.isPrefixOf ns then (ns.drop ps.length).head?.map toString else none
+
+def rn (n : Name) : Name :=
+  match firstAfter oldNs n with
+  | some first => if movedShort.contains first then n.replacePrefix oldNs newNs else n
+  | none => n
+
+def serLevel : Level → String
+  | .zero => "0"
+  | .succ l => "S(" ++ serLevel l ++ ")"
+  | .max a b => "max(" ++ serLevel a ++ "," ++ serLevel b ++ ")"
+  | .imax a b => "imax(" ++ serLevel a ++ "," ++ serLevel b ++ ")"
+  | .param n => "p:" ++ toString n
+  | .mvar _ => "?level"
+
+def serBinder : BinderInfo → String
+  | .default => "d" | .implicit => "i" | .strictImplicit => "s" | .instImplicit => "c"
+
+def ser : Expr → String
+  | .bvar i => "#" ++ toString i
+  | .fvar id => "fvar:" ++ toString id.name
+  | .mvar id => "mvar:" ++ toString id.name
+  | .sort l => "Sort(" ++ serLevel l ++ ")"
+  | .const n ls => toString (rn n) ++ ".{" ++ ",".intercalate (ls.map serLevel) ++ "}"
+  | .app f a => "(" ++ ser f ++ " " ++ ser a ++ ")"
+  | .lam n t b bi => "(fun " ++ toString n.eraseMacroScopes ++ "[" ++ serBinder bi ++ "] : " ++ ser t ++ " => " ++ ser b ++ ")"
+  | .forallE n t b bi => "(all " ++ toString n.eraseMacroScopes ++ "[" ++ serBinder bi ++ "] : " ++ ser t ++ ", " ++ ser b ++ ")"
+  | .letE n t v b _ => "(let " ++ toString n.eraseMacroScopes ++ " : " ++ ser t ++ " := " ++ ser v ++ "; " ++ ser b ++ ")"
+  | .lit (.natVal n) => "nat:" ++ toString n
+  | .lit (.strVal s) => "str:" ++ (repr s).pretty
+  | .mdata d e => "(mdata[" ++ ",".intercalate (d.entries.map (toString ·.1)) ++ "] " ++ ser e ++ ")"
+  | .proj s i e => "(proj " ++ toString (rn s) ++ " " ++ toString i ++ " " ++ ser e ++ ")"
+
+/-- The name that a projection node of a moved structure carries in the hashed form. The base's
+filed hashes keep the old name there, so the head maps the new name back to it. -/
+def projRn (n : Name) : Name :=
+  match firstAfter (`X.Y) n with
+  | some first => if movedShort.contains first then n.replacePrefix (`X.Y) (`X.Y) else n
+  | none => n
+
+/-- A term with each moved constant renamed: its hash is equal at the base and at the head when
+the two terms are equal up to the namespace. Scratch code: `partial` stands in no tracked file. -/
+partial def renamed (e : Expr) : Expr :=
+  e.replace fun
+    | .const n ls => some (.const (rn n) ls)
+    | .proj s i b => if projRn s == s then none else some (.proj (projRn s) i (renamed b))
+    | _ => none
+
+/-- The constants that a term uses, renamed, sorted, each once. -/
+def usedOf (e : Expr) : List String :=
+  ((e.getUsedConstants.map fun n => toString (rn n)).qsort (· < ·)).toList.eraseDups
+
+def kindOf : ConstantInfo → String
+  | .axiomInfo _ => "axiom" | .defnInfo _ => "def" | .thmInfo _ => "theorem"
+  | .opaqueInfo _ => "opaque" | .quotInfo _ => "quot" | .inductInfo _ => "inductive"
+  | .ctorInfo _ => "constructor" | .recInfo _ => "recursor"
+
+/-- A name with the module of a private name left out. -/
+def shown (n : Name) : String :=
+  match privateToUserName? n with
+  | some user => "private " ++ toString user
+  | none => toString n
+
+end TapeDump
+
+open TapeDump in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let mods : List Name := [`Effect4.Run.Tape, `Effect4.Laws.Run, `Effect4.Laws.Run.Rows, `Effect4.Laws.Run.Tape]
+  let mut out : Array String := #[]
+  for (n, c) in env.constants.toList do
+    match env.getModuleIdxFor? n with
+    | some idx =>
+      if mods.contains env.header.moduleNames[idx.toNat]! then
+        let value := match c with
+          | .defnInfo d => "\n  value " ++ ser d.value
+          | _ => ""
+        out := out.push (shown n ++ " : " ++ kindOf c ++ " levels=" ++ toString c.levelParams ++
+          "\n  type " ++ ser c.type ++ value)
+    | none => pure ()
+  IO.println ("\n".intercalate (out.qsort (· < ·)).toList)
+  -- where each of the seven definitions of the second step stands
+  for short in ["machineOf", "replayFrom", "enoughFor", "readsOn", "tapeFrom", "tapeOf", "funded"] do
+    let name := `Effect4.Run ++ Name.mkSimple short
+    match env.getModuleIdxFor? name with
+    | some idx => IO.eprintln (toString name ++ " stands in " ++ toString env.header.moduleNames[idx.toNat]!)
+    | none => IO.eprintln (toString name ++ " is missing")

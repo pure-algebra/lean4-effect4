@@ -1,0 +1,5 @@
+before the slice (the worktree's last report, of seat WORKQ's head): conform-cases: 231/231 subjects, 231 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
+after step 1 (16d1d078): conform-cases: 231/231 subjects, 231 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
+after step 2 (05768d17): conform-cases: 231/231 subjects, 231 pass, 0 refused, 0 counterexample, 0 unresolved, exit 0
+subjects, outcomes and messages, step 1 against step 2: equal
+subjects, outcomes and messages, before the slice against step 1: equal

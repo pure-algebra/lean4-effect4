@@ -1,0 +1,17 @@
+416c416,419
+<   value (fun x[d] : Effect4.Program.NativeReplay.{} => (((((Effect4.Run.machineOf.match_1.{S(0)} (fun x[d] : Effect4.Program.NativeReplay.{} => Effect4.Api.Inspection.{})) #0) (fun machine[d] : ((((((((((((Effect4.Mach
+---
+>   value (fun x[d] : Effect4.Program.NativeReplay.{} => (((((Effect4.Run.runOf.match_1.{S(0)} (fun x[d] : Effect4.Program.NativeReplay.{} => Effect4.Api.Inspection.{})) #0) (fun machine[d] : ((((((((((((Effect4.Machine.
+> Effect4.Run.runOf.match_1 : def levels=[u_1]
+>   type (all motive[d] : (all x[d] : Effect4.Program.NativeReplay.{}, Sort(p:u_1)), (all x[d] : Effect4.Program.NativeReplay.{}, (all h_1[d] : (all machine[d] : ((((((((((((Effect4.Machine.RunMachine.{0,0} Effect4.Progr
+>   value (fun motive[d] : (all x[d] : Effect4.Program.NativeReplay.{}, Sort(p:u_1)) => (fun x[d] : Effect4.Program.NativeReplay.{} => (fun h_1[d] : (all machine[d] : ((((((((((((Effect4.Machine.RunMachine.{0,0} Effect4.
+686a690,698
+> private Effect4.Run.runOf.match_1.eq_1 : theorem levels=[u_1]
+>   type (all motive[d] : (all x[d] : Effect4.Program.NativeReplay.{}, Sort(p:u_1)), (all machine[d] : ((((((((((((Effect4.Machine.RunMachine.{0,0} Effect4.Program.EffName.{}) Effect4.Program.EffThunk.{}) Effect4.Machine
+> private Effect4.Run.runOf.match_1.eq_2 : theorem levels=[u_1]
+>   type (all motive[d] : (all x[d] : Effect4.Program.NativeReplay.{}, Sort(p:u_1)), (all why[d] : Effect4.Machine.Exhaustion.{}, (all machine[d] : ((((((((((((Effect4.Machine.RunMachine.{0,0} Effect4.Program.EffName.{})
+> private Effect4.Run.runOf.match_1.eq_3 : theorem levels=[u_1]
+>   type (all motive[d] : (all x[d] : Effect4.Program.NativeReplay.{}, Sort(p:u_1)), (all why[d] : Effect4.Machine.Stuck.{}, (all machine[d] : ((((((((((((Effect4.Machine.RunMachine.{0,0} Effect4.Program.EffName.{}) Effe
+> private Effect4.Run.runOf.match_1.splitter : def levels=[u_1]
+>   type (all motive[d] : (all x[d] : Effect4.Program.NativeReplay.{}, Sort(p:u_1)), (all x[d] : Effect4.Program.NativeReplay.{}, (all h_1[d] : (all machine[d] : ((((((((((((Effect4.Machine.RunMachine.{0,0} Effect4.Progr
+>   value Effect4.Run.runOf.match_1.{p:u_1}

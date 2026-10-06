@@ -1,0 +1,3 @@
+claim run-tape-replay: Unknown constant `Test.Dogfood.Scenario.tape_replays`
+claim funded-run-replay: Unknown constant `Test.Dogfood.Scenario.funded_replays`
+claim journal-position-replay: Unknown constant `Test.Dogfood.Scenario.tapeFrom_position_replays`

@@ -1,0 +1,9 @@
+54a55,56
+> Effect4.Run.decisionOf._sparseCasesOn_3 : def
+> Effect4.Run.decisionOf._sparseCasesOn_3.else_eq : theorem
+312d313
+< Test.Dogfood.Scenario.applications._sparseCasesOn_2.else_eq : theorem
+412a414,416
+> private Effect4.Run.decisionOf.match_1.splitter._sparseCasesOn_3 : def
+> private Effect4.Run.decisionOf.match_1.splitter._sparseCasesOn_5 : def
+> private Effect4.Run.decisionOf.match_1.splitter._sparseCasesOn_7 : def

@@ -1,0 +1,52 @@
+import Effect4
+
+/-! Scratch probe of seat TAPE: a tool that imports the `Effect4` root alone reads a tape.
+Green: each of the sixteen definitions of `src/Effect4/Run/Tape.lean` resolves, and a run of a
+small program has its view, its tape and its premises computed. Red: a law of the tape does not
+resolve, since the root never reaches the law graph. -/
+
+open Effect4
+
+#check @Run.MachineView
+#check @Run.machineViewOf
+#check @Run.machineView
+#check @Run.Position
+#check @Run.replyDecision
+#check @Run.decisionOf
+#check @Run.receiptRow
+#check @Run.machineOf
+#check @Run.replayFrom
+#check @Run.enoughFor
+#check @Run.readsOn
+#check @Run.tapeFrom
+#check @Run.openedOf
+#check @Run.tapeOf
+#check @Run.funded
+#check @Run.atRest
+
+/-- A small program: its root answers 7 when the host starts it. -/
+def tiny : Option Api.Built :=
+  (Api.Author.program (Program.Authoring.succeed (Program.Authoring.nat 7))).toOption
+
+/-- The program opened and started: one control row. -/
+def started : Option Run := tiny.map fun built => (Run.open built "probe").play Rows.start
+
+-- Green: the started run is funded and at rest, its tape holds its one decision, and its view
+-- shows the root's exit. The raw replay of that tape shows the same view.
+#guard (started.map Run.funded) == some true
+#guard (started.map Run.atRest) == some true
+#guard (started.map fun s => (Run.tapeOf s).length) == some 1
+#guard (started.map fun s => (Run.machineView s).rootExit) == some (some (.success (.nat 7)))
+#guard (started.map fun s =>
+    Run.machineViewOf (Run.machineOf (Run.replayFrom s.built.program s.built.table s.budget.fuel
+      (Run.tapeOf s) (Api.load s.built.program s.budget.compileFuel))) == Run.machineView s)
+  == some true
+-- Red: at a command budget of zero the start is a stopped row, and the run is not funded.
+#guard (tiny.map fun built =>
+    Run.funded ((Run.open built "probe" { fuel := 0, compileFuel := 2000 }).play Rows.start))
+  == some false
+
+-- Red: the law is no part of the root.
+/-- error: Unknown constant `Effect4.Run.tape_replays` -/
+#guard_msgs in
+#check @Effect4.Run.tape_replays

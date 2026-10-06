@@ -154,3 +154,33 @@ moved name.
 | `generated/semantics.md` | written again after the pointers change |
 
 The receipt lists each citation of a moved declaration in a file that I do not edit.
+
+## 8. Addendum: the coordinator's extension, and what the move measured
+
+The coordinator accepted the design and its four choices, and it added one step. Sections 1 to
+7 stand as the first step's plan (commit `16d1d078`). This section records what changed after
+them. The receipt is `docs/research/2026-10-06-seat-TAPE-receipt.md`.
+
+**The extension lifts section 3's bar** (commit `05768d17`). `machineOf`, `replayFrom` and
+`enoughFor` moved from `src/Effect4/Laws/Run.lean` into the core module
+`src/Effect4/Run/Tape.lean`. `readsOn`, `tapeFrom`, `tapeOf` and `funded` followed them there.
+So the core module holds sixteen definitions, and `src/Effect4/Laws/Run/Tape.lean` holds the
+laws alone. `src/Effect4/Laws/Run.lean` keeps each law of the three, and it imports the core
+module. No import and no proof barred the step.
+
+**Three things that this note did not foresee**, each measured on the kernel's terms.
+
+1. **A matcher's helper has a new name.** The matcher of `decisionOf` calls a helper for the
+   constructor `applied`. At the base the reader `applications` had made that helper, earlier
+   in the support file. The core module has no such declaration, so Lean makes the helper
+   under `decisionOf`. The two helpers have one type and one value (tested).
+2. **A definition that stays has a new matcher.** `runOf` shared the matcher of `machineOf`
+   inside one file. With `machineOf` in the core, Lean makes `runOf` its own matcher. The two
+   matchers are equal up to their binder names (tested).
+3. **The gate counts nine more declarations**: four at the first step and five at the second.
+   Each is a helper that Lean's elaborator made for one of those two matchers. No authored
+   declaration is new.
+
+**What held as written.** No `#guard` changes. The pinned messages change as section 5 lists
+them, and in no other way. `make check-cases` keeps its 231 subjects at each step, so the core
+gained no case site on a policy family.
