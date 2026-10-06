@@ -5,7 +5,7 @@ import Effect4.Laws.Codegen.PrintReadable
 import TypeScript.Render
 
 /-!
-# The faces of the Queue's steps: what prints and reads back today (decisions row 255)
+# The faces of the Queue's operations and steps: what prints and reads back (decisions row 255)
 
 Seat T5's part A and the first two steps of its part B are in the tree. An operation's binder
 term prints as a function of the cell's current value, `Ref.modify(cell, (s) => …)`, and reads
@@ -16,27 +16,35 @@ cursor type reads back through the checked type reader, on the readable types
 - **Each scenario prints as a module and reads back.** Each of the eight scenarios of
   `Test/Program/QueueScenarios.lean` takes, and the take's loop states its cursor's type. The
   module reader gives the built program back. Both answers are pinned.
-- **A program that only takes prints and reads back, and so does a program that only offers.**
-  The second makes two `Deferred` handles and states no cursor type.
+- **One use of each operation prints and reads back.** The operations are the library's
+  (`src/Effect4/Modules/Queue/Ops.lean`): the construction, `size`, `poll`, `offer` and `take`.
+  Each is printed alone at a caller's scope, and in a program that makes its queue. The text
+  of each is pinned. A step's row is long, and its text is pinned in full further down, so the
+  operation's pin writes a mark in its place. An offer makes two `Deferred` handles and states
+  no cursor type. A take states the type of its loop's cursor.
 - **Each of the six step terms prints and reads back alone**: one `Ref.modify` over the step,
   on a cell and handles that the node receives as bound values. The size step is a term over
   the value of a `Ref.get`.
 - **A step that needs no handle prints as a whole module** and reads back: the poll step and
   the size step, on a cell that the program makes with `Ref.make`.
 
-Each row here fixes the name `s` for the cell's current value. Every other term under that
-binder is this battery's own variable (addendum 2 of the seat's brief).
+Each step row of this battery fixes the name `s` for the cell's current value. Every other term
+under that binder is this battery's own variable (addendum 2 of the seat's brief). An operation
+mints the name of each of its binders, and a caller's name is not captured
+(`Test/Program/QueueOps.lean`).
 
 Placement. Finite controls of `read_print` and `read_exact` (R8's top nodes,
 `src/Effect4/Laws/Codegen/ReadPrint.lean` and `src/Effect4/Laws/Codegen/Read.lean`) on the
-Queue's step terms. Every guard is one program. None states target typing or a host run. **Each
+Queue's operations and step terms. Every guard is one program. None states target typing or a host run. **Each
 printed step is type-checked under tsgo 7 by the truth lane, not here**: the compiler control
 `harness/truth/queue-steps.typecheck.ts` copies the six texts that the section "The texts that
 the compiler control copies" pins, each at the cell's printed type. The compiler accepts each of
 the six, and it accepted each before the literal rule of decisions row 256 too: that rule's
 difference was in the readiness probe's take step and in the rate limiter's request, not in
-this module's steps (seat T5's measure). A scenario's whole module is type-checked by no lane
-yet. The rendered bytes stay inside each guard.
+this module's steps (seat T5's measure). Five whole modules over the operations are
+type-checked under tsgo 7 and run on rc.112 by the truth lane: `pQueueWake`, `pQueueFull`,
+`pQueueInterrupted`, `pQueueMasked` and `pQueueOrder` (`harness/truth/Truth.lean`). The
+rendered bytes stay inside each guard.
 -/
 
 set_option autoImplicit false
@@ -74,6 +82,11 @@ def readsBack (src : Src NativeOp) : Bool :=
 /-- A node elaborated under bound names, at the level they give. -/
 def nodeAt (names : List String) (src : Src NativeOp) : Option (Eff NativeOp) :=
   (src { names := names } []).toOption
+
+/-- A node elaborated under bound names and printed at their level: the expression, not yet
+rendered. -/
+def printedAt (names : List String) (src : Src NativeOp) :=
+  (nodeAt names src).bind fun p => (print nativeSignature names.length p).toOption
 
 /-- A node prints, and reads back as itself, at a level. -/
 def roundTrips (level : Nat) (node : Option (Eff NativeOp)) : Bool :=
@@ -118,15 +131,35 @@ def takeOnly : Src NativeOp := eff do
   let a ← Queue.take .nat q
   return a
 
+/-- One construction: the queue's cell. -/
+def boundedOnly : Src NativeOp := Queue.bounded .nat 2
+
+/-- One read of the size, on a queue that the program makes. -/
+def sizeOnly : Src NativeOp := eff do
+  let q ← Queue.bounded .nat 2
+  let n ← Queue.size .nat q
+  return n
+
+/-- One poll, on a queue that the program makes. -/
+def pollOnly : Src NativeOp := eff do
+  let q ← Queue.bounded .nat 2
+  let a ← Queue.poll .nat q
+  return a
+
 -- Each scenario's module prints: `Deferred.make`'s type arguments print from the operation.
 #guard [r1, r2, r3, r4, r5, r6, r7, r8].map printVerdict = List.replicate 8 "printed"
 -- Each reads back as the built program: the take's loop states its cursor's type, and the
 -- checked type reader reads it (DI-91; the state plan's T5, part B). Before that step the
 -- module reader refused each by name, `annotation "local const"`.
 #guard [r1, r2, r3, r4, r5, r6, r7, r8].map readVerdict = List.replicate 8 "reads back"
--- A program that only takes reads back, and so does a program that only offers.
-#guard printVerdict takeOnly = "printed" && readVerdict takeOnly = "reads back"
-#guard printVerdict offerOnly = "printed" && readVerdict offerOnly = "reads back"
+-- One use of each operation, in a program that makes its queue: the module prints, and it
+-- reads back as the built program.
+#guard [boundedOnly, sizeOnly, pollOnly, offerOnly, takeOnly].map printVerdict =
+  List.replicate 5 "printed"
+#guard [boundedOnly, sizeOnly, pollOnly, offerOnly, takeOnly].map readVerdict =
+  List.replicate 5 "reads back"
+-- Red control: a use of one operation reads as that program, and not as a use of another.
+#guard readsAs takeOnly takeOnly && !readsAs takeOnly offerOnly && !readsAs pollOnly sizeOnly
 -- Red control of the comparison: a scenario's module reads as that scenario's program, and as
 -- no other scenario's.
 #guard readsAs r1 r1 && readsAs r4 r4 && !readsAs r1 r4 && !readsAs r4 r1
@@ -135,6 +168,81 @@ def takeOnly : Src NativeOp := eff do
   "printed"
 #guard readVerdict (bindName "id" (Deferred.make .unit .never) fun _ => succeed (nat 1)) =
   "reads back"
+
+/-! ## One use of each operation, alone at a caller's scope
+
+The caller's names are `q` for the handle and `m` for the message. Each operation is one node at
+the level of those names. It prints, and its text reads back as itself, at number messages and
+at string messages. -/
+
+/-- One use of each operation, each as one node at the level of the caller's names. -/
+def operationNodes (A : Ty) : List (Nat × Option (Eff NativeOp)) :=
+  [ (0, nodeAt [] (Queue.bounded A 2))
+  , (1, nodeAt ["q"] (Queue.size A (var "q")))
+  , (1, nodeAt ["q"] (Queue.poll A (var "q")))
+  , (2, nodeAt ["q", "m"] (Queue.offer A (var "q") (var "m")))
+  , (1, nodeAt ["q"] (Queue.take A (var "q"))) ]
+
+#guard (operationNodes .nat).all fun entry => entry.2.isSome && roundTrips entry.1 entry.2
+#guard (operationNodes .string).all fun entry => entry.2.isSome && roundTrips entry.1 entry.2
+-- Red control: an operation that reads the handle does not print at a level with no handle.
+#guard !roundTrips 0 (nodeAt ["q"] (Queue.take .nat (var "q")))
+
+/-! The printed text of each. A step's row is replaced by a mark: the row is the step's text
+of the section "The texts that the compiler control copies", at the level of the operation's own
+binders. The guard computes the row and replaces it, so a mark in a pin says that the row is
+that step's row. The binders of a take are the mask's restore `a1`, the request's identity
+`a2`, the loop's cursor `a3`, the round's hint `a4` and the step's reply `a5`. An offer has no
+cursor: its binders are the restore `a2`, the identity `a3`, the hint `a4` and the reply
+`a5`, after the handle `a0` and the message `a1`. -/
+
+-- The construction: one `Ref.make` of the empty cell, a record at the cell's declared type.
+#guard (printedAt [] (Queue.bounded .nat 2)).map (expr house0 0) = some
+  "Ref.make(recordValue<{ readonly cap: number; readonly msgs: ReadonlyArray<number>; readonly offers: ReadonlyArray<{ readonly batch: boolean; readonly hint: Deferred.Deferred<boolean, never>; readonly id: Deferred.Deferred<void, never>; readonly rest: ReadonlyArray<number> }>; readonly takers: ReadonlyArray<{ readonly hint: Deferred.Deferred<void, never>; readonly id: Deferred.Deferred<void, never> }> }>([10, [20], [[4, [[5, [3, \"msgs\"], [5, [1, false], [10, [8], [[10, [2], []]]]]], [5, [3, \"cap\"], [5, [1, false], [10, [2], []]]], [5, [3, \"takers\"], [5, [1, false], [10, [8], [[10, [20], [[4, [[5, [3, \"hint\"], [5, [1, false], [10, [17], [[10, [1], []], [10, [], []]]]]], [5, [3, \"id\"], [5, [1, false], [10, [17], [[10, [1], []], [10, [], []]]]]]]]]]]]]], [5, [3, \"offers\"], [5, [1, false], [10, [8], [[10, [20], [[4, [[5, [3, \"batch\"], [5, [1, false], [10, [5], []]]], [5, [3, \"hint\"], [5, [1, false], [10, [17], [[10, [5], []], [10, [], []]]]]], [5, [3, \"id\"], [5, [1, false], [10, [17], [[10, [1], []], [10, [], []]]]]], [5, [3, \"rest\"], [5, [1, false], [10, [8], [[10, [2], []]]]]]]]]]]]]]]]]], { msgs: nil(), cap: 2, takers: nil(), offers: nil() }))"
+-- The size: one read of the cell, then the term over its value.
+#guard (printedAt ["q"] (Queue.size .nat (var "q"))).map (expr house0 0) = some
+  "Effect.flatMap(Ref.get(a0), (a1) => Effect.succeed(length(recordRequired<\"msgs\">(\"msgs\")(a1))))"
+-- The poll: the step under `Effect.uninterruptible`, then one posted helper for each offerer
+-- that the step accepted, each with the answer `true`, then the step's first answer.
+#guard ((printedAt ["q"] (Queue.poll .nat (var "q"))).bind fun operation =>
+    (printedAt ["q"] (Ref.modify "s" (Queue.pollStep .nat (var "s")) (var "q"))).map fun step =>
+      (expr house0 0 operation).replace (expr house0 0 step) "<the poll step>") = some
+  "Effect.uninterruptible(Effect.flatMap(<the poll step>, (a1) => Effect.flatMap(Effect.suspend(() => {\n  let a2 = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => lt(a2, length(tupleAt<\"1\">(\"1\")(a1))),\n    body: () => optionCase(get(tupleAt<\"1\">(\"1\")(a1), a2), () => Effect.succeed(undefined), (a3) => Effect.flatMap(Effect.forkDetach(Deferred.succeed(recordRequired<\"hint\">(\"hint\")(a3), true), { startImmediately: false, uninterruptible: true }), (a4) => Effect.succeed(undefined))),\n    step: (a3) => {\n      a2 = succ(a2)\n    },\n  }), () => a2)\n}), (a2) => Effect.succeed(tupleAt<\"0\">(\"0\")(a1)))))"
+-- The offer: the mask's getter, the request's two cells, the step, one posted wake for each
+-- taker that the step names, and then the answer or the wait at the mask's restore site. An
+-- interrupted wait withdraws the request and posts what the withdrawal names.
+#guard ((printedAt ["q", "m"] (Queue.offer .nat (var "q") (var "m"))).bind fun operation =>
+    (printedAt ["q", "m", "saved", "id", "hint"] (Ref.modify "s"
+      (Queue.offerStep .nat (var "id") (var "hint") (var "m") (var "s")) (var "q"))).bind fun step =>
+    (printedAt ["q", "m", "saved", "id", "hint", "r", "x", "e"] (Ref.modify "s"
+      (Queue.withdrawOffer .nat (var "id") (var "s")) (var "q"))).map fun withdrawal =>
+      ((expr house0 0 operation).replace (expr house0 0 step) "<the offer step>").replace
+        (expr house0 0 withdrawal) "<the offer's withdrawal>") = some
+  "Effect.flatMap(Effect.uninterruptibleMask((a2) => Effect.succeed(a2)), (a2) => Effect.uninterruptible(Effect.flatMap(Deferred.make<void, never>(), (a3) => Effect.flatMap(Deferred.make<boolean, never>(), (a4) => Effect.flatMap(<the offer step>, (a5) => Effect.flatMap(Effect.suspend(() => {\n  let a6 = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => lt(a6, length(tupleAt<\"1\">(\"1\")(a5))),\n    body: () => optionCase(get(tupleAt<\"1\">(\"1\")(a5), a6), () => Effect.succeed(undefined), (a7) => Effect.flatMap(Effect.forkDetach(Deferred.succeed(recordRequired<\"hint\">(\"hint\")(a7), undefined), { startImmediately: false, uninterruptible: true }), (a8) => Effect.succeed(undefined))),\n    step: (a7) => {\n      a6 = succ(a6)\n    },\n  }), () => a6)\n}), (a6) => optionCase(tupleAt<\"0\">(\"0\")(a5), () => Effect.onExit(pipe(Deferred.await(a4), a2), (a7) => Effect.suspend(() => causeIsInterrupt(a7) ? Effect.flatMap(<the offer's withdrawal>, (a8) => Effect.suspend(() => {\n  let a9 = 0\n  return Effect.map(Effect.whileLoop({\n    while: () => lt(a9, length(a8)),\n    body: () => optionCase(get(a8, a9), () => Effect.succeed(undefined), (a10) => Effect.flatMap(Effect.forkDetach(Deferred.succeed(recordRequired<\"hint\">(\"hint\")(a10), undefined), { startImmediately: false, uninterruptible: true }), (a11) => Effect.succeed(undefined))),\n    step: (a10) => {\n      a9 = succ(a9)\n    },\n  }), () => a9)\n})) : Effect.succeed(undefined))), (a7) => Effect.succeed(a7))))))))"
+-- The take: the mask's getter, the request's identity, and the loop of attempts at a stated
+-- cursor type. A round makes its hint, runs the step, posts the offerers' answers and the
+-- takers' wakes, and then answers or waits at the restore site. An interrupted wait withdraws.
+-- A loop that ends without a message is a defect.
+#guard ((printedAt ["q"] (Queue.take .nat (var "q"))).bind fun operation =>
+    (printedAt ["q", "saved", "id", "cursor", "hint"] (Ref.modify "s"
+      (Queue.takeStep .nat (var "id") (var "hint") (var "s")) (var "q"))).bind fun step =>
+    (printedAt ["q", "saved", "id", "cursor", "hint", "r", "x", "y", "e"] (Ref.modify "s"
+      (Queue.withdrawTake .nat (var "id") (var "s")) (var "q"))).map fun withdrawal =>
+      ((expr house0 0 operation).replace (expr house0 0 step) "<the take step>").replace
+        (expr house0 0 withdrawal) "<the take's withdrawal>") = some
+  "Effect.flatMap(Effect.uninterruptibleMask((a1) => Effect.succeed(a1)), (a1) => Effect.uninterruptible(Effect.flatMap(Deferred.make<void, never>(), (a2) => Effect.flatMap(Effect.suspend(() => {\n  let a3: Option.Option<number> = none()\n  return Effect.map(Effect.whileLoop({\n    while: () => not(isSome(a3)),\n    body: () => Effect.flatMap(Deferred.make<void, never>(), (a4) => Effect.flatMap(<the take step>, (a5) => Effect.flatMap(Effect.suspend(() => {\n      let a6 = 0\n      return Effect.map(Effect.whileLoop({\n        while: () => lt(a6, length(tupleAt<\"1\">(\"1\")(a5))),\n        body: () => optionCase(get(tupleAt<\"1\">(\"1\")(a5), a6), () => Effect.succeed(undefined), (a7) => Effect.flatMap(Effect.forkDetach(Deferred.succeed(recordRequired<\"hint\">(\"hint\")(a7), true), { startImmediately: false, uninterruptible: true }), (a8) => Effect.succeed(undefined))),\n        step: (a7) => {\n          a6 = succ(a6)\n        },\n      }), () => a6)\n    }), (a6) => Effect.flatMap(Effect.suspend(() => {\n      let a7 = 0\n      return Effect.map(Effect.whileLoop({\n        while: () => lt(a7, length(tupleAt<\"2\">(\"2\")(a5))),\n        body: () => optionCase(get(tupleAt<\"2\">(\"2\")(a5), a7), () => Effect.succeed(undefined), (a8) => Effect.flatMap(Effect.forkDetach(Deferred.succeed(recordRequired<\"hint\">(\"hint\")(a8), undefined), { startImmediately: false, uninterruptible: true }), (a9) => Effect.succeed(undefined))),\n        step: (a8) => {\n          a7 = succ(a7)\n        },\n      }), () => a7)\n    }), (a7) => optionCase(tupleAt<\"0\">(\"0\")(a5), () => Effect.flatMap(Effect.onExit(pipe(Deferred.await(a4), a1), (a8) => Effect.suspend(() => causeIsInterrupt(a8) ? Effect.flatMap(<the take's withdrawal>, (a9) => Effect.suspend(() => {\n      let a10 = 0\n      return Effect.map(Effect.whileLoop({\n        while: () => lt(a10, length(a9)),\n        body: () => optionCase(get(a9, a10), () => Effect.succeed(undefined), (a11) => Effect.flatMap(Effect.forkDetach(Deferred.succeed(recordRequired<\"hint\">(\"hint\")(a11), undefined), { startImmediately: false, uninterruptible: true }), (a12) => Effect.succeed(undefined))),\n        step: (a11) => {\n          a10 = succ(a10)\n        },\n      }), () => a10)\n    })) : Effect.succeed(undefined))), (a8) => Effect.succeed(none())), (a8) => Effect.succeed(some(a8))))))),\n    step: (a4) => {\n      a3 = a4\n    },\n  }), () => a3)\n}), (a3) => optionCase(a3, () => Effect.failCause(Cause.die(\"queue: the loop ended without a message\")), (a4) => Effect.succeed(a4))))))"
+-- Red control of the marks: without the replacement the take's text holds its two step rows,
+-- its three posts and its two `Deferred.make` calls, and it is longer than its pin.
+#guard ((printedAt ["q"] (Queue.take .nat (var "q"))).map fun operation =>
+    let text := expr house0 0 operation
+    ((text.splitOn "Ref.modify(").length - 1, (text.splitOn "Effect.forkDetach(").length - 1,
+      (text.splitOn "Deferred.make<").length - 1, (text.splitOn "<the take step>").length - 1)) =
+  some (2, 3, 2, 0)
+#guard ((printedAt ["q", "m"] (Queue.offer .nat (var "q") (var "m"))).map fun operation =>
+    let text := expr house0 0 operation
+    ((text.splitOn "Ref.modify(").length - 1, (text.splitOn "Effect.forkDetach(").length - 1,
+      (text.splitOn "Deferred.make<").length - 1, (text.splitOn "<the offer step>").length - 1)) =
+  some (2, 2, 2, 0)
 
 /-! ## Each step alone prints and reads back -/
 
