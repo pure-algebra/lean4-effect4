@@ -1612,18 +1612,18 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved) | `image_agrees` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (goal), `offerStep_typed` (goal), `pollStep_typed` (goal), `sizeStep_typed` (goal), `step_keeps_cell` (proved), `takeStep_typed` (goal), `withdrawOffer_typed` (goal), `withdrawTake_typed` (goal), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `empty_typed`, `offerStep_typed`, `pollStep_typed`, `sizeStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted` |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved) | `image_agrees` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (goal), `pollStep_typed` (goal), `sizeStep_typed` (proved), `step_keeps_cell` (proved), `takeStep_typed` (goal), `withdrawOffer_typed` (goal), `withdrawTake_typed` (goal), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `offerStep_typed`, `pollStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | `unsuspended_runs` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
-| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `cell_read` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `step_updates` (proved), `takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
 
-**Next goals** (17): `empty_typed`, `offerStep_typed`, `pollStep_typed`, `sizeStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
+**Next goals** (15): `offerStep_typed`, `pollStep_typed`, `takeStep_typed`, `withdrawOffer_typed`, `withdrawTake_typed`, `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -2072,10 +2072,10 @@ flowchart LR
   n10["mono<br/>proved"]
   n11["syncRow_typed<br/>proved"]
   n12["termMaps_of_typed<br/>proved"]
-  n13["empty_typed<br/>goal"]
+  n13["empty_typed<br/>proved"]
   n14["offerStep_typed<br/>goal"]
   n15["pollStep_typed<br/>goal"]
-  n16["sizeStep_typed<br/>goal"]
+  n16["sizeStep_typed<br/>proved"]
   n17["step_keeps_cell<br/>proved"]
   n18["takeStep_typed<br/>goal"]
   n19["withdrawOffer_typed<br/>goal"]
@@ -2161,10 +2161,10 @@ flowchart LR
 | `mono` | proved | — | `order_trans` | 57 | 266 |
 | `syncRow_typed` | proved | — | `fits_normalize`, `subN_trans`, `fits_subN`, `termMaps_of_typed`, `hom_eq_cata_ty`, `errOf_payload`, `isPayload_of_hasTy_record`, `normalize_idem`, `subN_refl` | 388 | 680 |
 | `termMaps_of_typed` | proved | — | `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty`, `fits_mono` | 468 | 415 |
-| `empty_typed` | goal | `empty_typed` | — | 38 | 126 |
+| `empty_typed` | proved | — | — | 55 | 132 |
 | `offerStep_typed` | goal | `offerStep_typed` | — | 38 | 147 |
 | `pollStep_typed` | goal | `pollStep_typed` | — | 38 | 153 |
-| `sizeStep_typed` | goal | `sizeStep_typed` | — | 38 | 130 |
+| `sizeStep_typed` | proved | — | — | 87 | 140 |
 | `step_keeps_cell` | proved | — | `fold_typed_atomic_update` | 56 | 384 |
 | `takeStep_typed` | goal | `takeStep_typed` | — | 38 | 166 |
 | `withdrawOffer_typed` | goal | `withdrawOffer_typed` | — | 38 | 149 |
@@ -2887,66 +2887,73 @@ flowchart LR
   n23["offerStep_agrees<br/>proved"]
   n24["pollStep_agrees<br/>proved"]
   n25["positive_suspend_step_capacity<br/>proved"]
-  n26["sizeStep_agrees<br/>proved"]
-  n27["step_updates<br/>proved"]
-  n28["takeStep_agrees<br/>proved"]
-  n29["withdrawOffer_agrees<br/>proved"]
-  n30["withdrawTake_agrees<br/>proved"]
-  n31["infrastructure_escapes<br/>goal"]
-  n32["routing<br/>modulo"]
-  n33["tagIs_pair<br/>proved"]
-  n34["retries_declared<br/>goal"]
-  n35["check_sound<br/>proved"]
-  n36["check_complete<br/>proved"]
-  n37["normalize_idem<br/>proved"]
-  n38["checkInput_eq_none_iff<br/>proved"]
-  n39["unauthorized_calls_nothing<br/>goal"]
-  n0 --> n35
+  n26["queue_steps_agree<br/>proved"]
+  n27["sizeStep_agrees<br/>proved"]
+  n28["step_updates<br/>proved"]
+  n29["takeStep_agrees<br/>proved"]
+  n30["withdrawOffer_agrees<br/>proved"]
+  n31["withdrawTake_agrees<br/>proved"]
+  n32["infrastructure_escapes<br/>goal"]
+  n33["routing<br/>modulo"]
+  n34["tagIs_pair<br/>proved"]
+  n35["retries_declared<br/>goal"]
+  n36["check_sound<br/>proved"]
+  n37["check_complete<br/>proved"]
+  n38["normalize_idem<br/>proved"]
+  n39["checkInput_eq_none_iff<br/>proved"]
+  n40["unauthorized_calls_nothing<br/>goal"]
   n0 --> n36
-  n1 --> n35
+  n0 --> n37
   n1 --> n36
+  n1 --> n37
   n2 --> n0
-  n3 --> n35
   n3 --> n36
+  n3 --> n37
   n4 --> n3
-  n5 --> n37
-  n5 --> n35
+  n5 --> n38
   n5 --> n36
-  n6 --> n37
-  n6 --> n35
+  n5 --> n37
+  n6 --> n38
   n6 --> n36
-  n7 --> n35
+  n6 --> n37
   n7 --> n36
+  n7 --> n37
+  n8 --> n37
   n8 --> n36
-  n8 --> n35
+  n9 --> n37
   n9 --> n36
-  n9 --> n35
+  n10 --> n37
   n10 --> n36
-  n10 --> n35
-  n11 --> n35
   n11 --> n36
-  n12 --> n35
+  n11 --> n37
   n12 --> n36
+  n12 --> n37
+  n13 --> n37
   n13 --> n36
-  n13 --> n35
-  n14 --> n35
   n14 --> n36
-  n15 --> n35
+  n14 --> n37
   n15 --> n36
-  n16 --> n35
+  n15 --> n37
   n16 --> n36
-  n17 --> n35
+  n16 --> n37
   n17 --> n36
-  n18 --> n35
+  n17 --> n37
   n18 --> n36
+  n18 --> n37
   n25 --> n20
-  n31 --> n38
+  n26 --> n30
+  n26 --> n31
+  n26 --> n27
+  n26 --> n24
+  n26 --> n23
+  n26 --> n29
   n32 --> n39
-  n32 --> n31
-  n32 --> n33
-  n32 --> n38
-  n34 --> n38
-  n39 --> n38
+  n33 --> n40
+  n33 --> n32
+  n33 --> n34
+  n33 --> n39
+  n35 --> n39
+  n40 --> n39
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2977,6 +2984,7 @@ flowchart LR
 | `offerStep_agrees` | proved | — | — | 85 | 171 |
 | `pollStep_agrees` | proved | — | — | 97 | 185 |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
+| `queue_steps_agree` | proved | — | `withdrawOffer_agrees`, `withdrawTake_agrees`, `sizeStep_agrees`, `pollStep_agrees`, `offerStep_agrees`, `takeStep_agrees` | 10 | 220 |
 | `sizeStep_agrees` | proved | — | — | 20 | 131 |
 | `step_updates` | proved | — | — | 10 | 210 |
 | `takeStep_agrees` | proved | — | — | 135 | 207 |

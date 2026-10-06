@@ -851,4 +851,98 @@ theorem withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : Stat
     have stored := reads_recordSet readsCell removed (cell_setOffers _ _ _ _ _)
     exact (reads_pair woken stored).to (by rw [wake_encoded]; rfl)
 
+/-! ## The six statements as one
+
+The registry's claim points at one witness. `queue_steps_agree` assembles the six step
+statements: each field is one of them, word for word, and its proof cites that theorem. So the
+plan derives the standing of the whole from the six. -/
+
+/-- **The Queue's six steps agree with the abstract model on the first profile**: one field for
+each step, at the statement of its theorem. -/
+structure StepsAgree : Prop where
+  /-- The model's `take` at the bounds one and one. -/
+  take : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey),
+    FirstProfile s → Requested s (.take id 1 1) → tb.Injective →
+    ∀ {idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      vals.length = env.names.length →
+      Captured idSrc env path vals (Val.promise (tb.handle id)) →
+      Captured hintSrc env path vals (Val.promise hint) →
+      Reads cellSrc env path vals (cellVal tb msg s) →
+      ∃ reply entered woken,
+        takeReplyVal msg (take s ⟨id, 1, 1⟩).2.1 = some reply ∧
+        Notified s (take s ⟨id, 1, 1⟩).1 (take s ⟨id, 1, 1⟩).2.2 entered woken ∧
+        Reads (Queue.takeStep A idSrc hintSrc cellSrc) env path vals
+          (Val.tuple [Val.tuple [reply, Val.list (entered.map (offerVal tb msg)),
+              Val.list (woken.map (takerVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1)))],
+            cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1])
+  /-- The model's `offer`, by a fresh request. -/
+  offer : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
+    (hint : DeferredKey),
+    FirstProfile s → Requested s (.offer id a) → (∀ o ∈ s.offers, o.id ≠ id) →
+    ∀ {idSrc hintSrc messageSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
+      {vals : List Val},
+      Reads idSrc env path vals (Val.promise (tb.handle id)) →
+      Reads hintSrc env path vals (Val.promise hint) →
+      Reads messageSrc env path vals (msg a) →
+      Reads cellSrc env path vals (cellVal tb msg s) →
+      ∃ woken,
+        Notified s (offer s id a).1 (offer s id a).2.2 [] woken ∧
+        Reads (Queue.offerStep A idSrc hintSrc messageSrc cellSrc) env path vals
+          (Val.tuple [Val.tuple [offerReplyVal (offer s id a).2.1,
+              Val.list (woken.map (takerVal (tb.afterOffer id hint (offer s id a).2.1)))],
+            cellVal (tb.afterOffer id hint (offer s id a).2.1) msg (offer s id a).1])
+  /-- The model's `poll`. -/
+  poll : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : State), FirstProfile s →
+    ∀ {cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      vals.length = env.names.length →
+      Reads cellSrc env path vals (cellVal tb msg s) →
+      ∃ entered,
+        Notified s (poll s).1 (poll s).2.2 entered [] ∧
+        Reads (Queue.pollStep A cellSrc) env path vals
+          (Val.tuple [Val.tuple [pollReplyVal msg (poll s).2.1,
+              Val.list (entered.map (offerVal tb msg))],
+            cellVal tb msg (poll s).1])
+  /-- The model's `size`: a term over a read. -/
+  size : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : State), FirstProfile s →
+    ∀ {cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      Reads cellSrc env path vals (cellVal tb msg s) →
+      Reads (Queue.sizeStep A cellSrc) env path vals (Val.nat (size s))
+  /-- The model's `withdrawTake`. -/
+  withdrawTake : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat),
+    FirstProfile s → tb.Injective →
+    ∀ {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      vals.length = env.names.length →
+      Captured idSrc env path vals (Val.promise (tb.handle id)) →
+      Reads cellSrc env path vals (cellVal tb msg s) →
+      ∃ woken,
+        Notified s (withdrawTake s id).1 (withdrawTake s id).2 [] woken ∧
+        Reads (Queue.withdrawTake A idSrc cellSrc) env path vals
+          (Val.tuple [Val.list (woken.map (takerVal tb)),
+            cellVal tb msg (withdrawTake s id).1])
+  /-- The model's `withdrawOffer`. -/
+  withdrawOffer : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat),
+    FirstProfile s → tb.Injective →
+    ∀ {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      vals.length = env.names.length →
+      Captured idSrc env path vals (Val.promise (tb.handle id)) →
+      Reads cellSrc env path vals (cellVal tb msg s) →
+      ∃ woken,
+        Notified s (withdrawOffer s id).1 (withdrawOffer s id).2 [] woken ∧
+        Reads (Queue.withdrawOffer A idSrc cellSrc) env path vals
+          (Val.tuple [Val.list (woken.map (takerVal tb)),
+            cellVal tb msg (withdrawOffer s id).1])
+
+/-- **The six step statements hold** (the proposed claim `queue-steps-agree`, a part of
+`queue-expansion-agrees`). Each field is one theorem of this file. It establishes no delivery,
+no cancellation law, no liveness and nothing of a wrapper. Its consumer is the wrapper's law,
+in the public path's slice. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem queue_steps_agree : StepsAgree where
+  take := takeStep_agrees
+  offer := offerStep_agrees
+  poll := pollStep_agrees
+  size := sizeStep_agrees
+  withdrawTake := withdrawTake_agrees
+  withdrawOffer := withdrawOffer_agrees
+
 end Effect4.Queue.Model
