@@ -46,6 +46,7 @@ import Test.Counterexamples.Machine.Semantics.FitsOrder
 import Test.Program.TermFits
 import Test.Program.SignatureControls
 import Test.Program.SketchControls
+import Test.Program.ReplaceControls
 import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns
 import Test.Program.FormationContract
