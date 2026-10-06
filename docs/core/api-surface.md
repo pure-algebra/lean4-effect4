@@ -98,6 +98,10 @@ They produce the existing `Term` language and use the ordinary program checker.
 | `field target name` | The value of a declared required field. |
 | `optionalField target name` | An outer option that reports own-field presence. |
 | `recordSet target name value` | A new record with that field required at the replacement type. |
+| `ascribe ty e` | A term at a declared type: a record with one field declared at `ty` that holds `e`, and a read of that field. The record's check decides it, so it is no cast. |
+
+`ascribe` lives in [`Program.Authoring.Ascribe`](../../src/Effect4/Program/Authoring/Ascribe.lean).
+`Effect4.Api` does not export it yet: a client imports the module by name (decisions row 284).
 
 An absent field differs from a present field containing `undefined` or an empty option.
 Updating a field can change its type.

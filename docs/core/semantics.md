@@ -295,8 +295,9 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 - **Pool's profile on the model (`pool-profile-closed`, `pool-lease-enrols`)**: Each of the
   six transitions of Pool's abstract model keeps the first profile. The sixth is the closer's
-  step (decisions row 276, point 2). The law has no premise on a request. An idle item beside enrolled waiters is a state of the profile. A lease enrols its
-  request exactly when the pool is open and a lease holds every item. Neither states
+  step (decisions row 276, point 2). The law has no premise on a request. An idle item beside enrolled waiters is a state of the profile. On a state of the
+  profile, a lease enrols its request exactly when the pool is open and a lease holds every
+  item. Neither states
   fairness, liveness or anything of a program.
   (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
 - **The waiting forms are typed once (`waiting-wrapper-typed`, `protected-form-typed`)**:
@@ -310,6 +311,18 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   acquisition and the release answer a type, with no failure and no requirement. Both laws
   are typing only. They state no run, no law of the mask and no release at an exit. The
   theorems are in `src/Effect4/Laws/Modules/Waiting.lean`.
+- **Pool's operations are typed at every scope (`pool-use-typed`, `pool-make-typed`,
+  `pool-close-typed`)**: `use` keeps its body's effect type. The lease and the return add
+  no failure and no requirement, and the refusal at a closed pool adds none: an interruption
+  has no failure type. `make` answers the pool's handle. Its failure type is the
+  acquisition's, so a failed acquisition fails `make`. Its requirement is the acquisition's
+  with the scope's key, so a pool is made inside a scope. The close answers the unit, with no
+  failure and no requirement: it is a release that cannot fail, and `make` registers it. Each
+  statement takes a resource type in normal form whose item record and cell record are
+  formed. An acquisition whose answer is another type is outside `make`'s statement. The
+  three are typing only: no run, no law of the mask, no wait of the close and no finalizer's
+  run. (`use_types`, `make_types`, `close_answers`
+  (`src/Effect4/Laws/Modules/Pool/Ops.lean`)).
 
 ### 2.2 Concept 2: Residual Program Typing (`residual-program-typing`)
 
@@ -1055,9 +1068,17 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   positions (`tapeFrom_cut_replays`). The laws say nothing about the machine after a stopped
   row: that row may change the machine before it reports its frontier.
   (`tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`)).
+- **A funded run replays (`funded-run-replay`)**: A run is funded when the tape of its own
+  journal leaves no row unread. The machine of a funded run is the raw replay of its tape's
+  decisions, from the program's own load. A statement over a session's runs takes this
+  budget premise by its one name, `funded`. A journal's verdicts do not decide it: a reply's
+  application answers `applied` whatever fuel its step had left. The law says nothing about
+  a run with a stopped row, a session ledger or a generated engine.
+  (`funded_replays` (`Test/Dogfood/Scenario.lean`)).
 - **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's six step terms
-  agrees with the model's step, on every state of the model. The agreement covers the reply,
-  the stored value through the table, and the selected waiters' records. It is a part of the proposed claim
+  agrees with the model's step, on every state of the model. The lease, the withdrawal and
+  the closer's step take an injective table. The agreement covers the reply, the stored
+  value through the table, and the selected waiters' records. It is a part of the proposed claim
   `pool-expansion-agrees`. It states no order of the wake across helpers, no cancellation
   law, no wait of the close along a run and no wrapper.
   (`pool_steps_agree` (`src/Effect4/Laws/Modules/Pool/Steps.lean`)).

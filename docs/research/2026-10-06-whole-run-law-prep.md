@@ -111,10 +111,13 @@ In this order, each a slice of its own:
    the fuel ends inside an answer decision, the command loop returns the commands that the
    fuel left, and `stepDecisionState` (`src/Effect4/Machine/Fibers.lean`) keeps the machine
    and the receipt `settled`, and drops them. The machine's own flag reads that the fuel
-   was not enough, and the session does not show it. A cut has two kinds. One leaves a
+   was not enough. A reply's application does not show it; a control shows its own cut as
+   the verdict `frontier`. A cut has two kinds. One leaves a
    runnable fiber with no task (the budgets 60 and 100). The other leaves the machine at
-   rest: no runnable fiber, no armed owner, no live call, and no exit of the root, so
-   nothing will run the root (the named run `dropped`, at the budget 80). In a sweep of 22
+   rest: no runnable fiber, no armed owner, no live call, and no exit of the root (the
+   named run `dropped`, at the budget 80). From that run 25,260 continuations, each script
+   of 29 moves up to length 3, give the root no exit and do not move the machine's view.
+   That is a bounded result, and no theorem says that nothing will run the root. In a sweep of 22
    scripts at each command budget from 1 to 160, 1,937 runs are funded and 1,583 are cut;
    23 of the cut runs are at rest, and the root has no exit in 9 of them. So rest does not
    show that a run is funded. No goal's observation failed on any of the 23. The finding is

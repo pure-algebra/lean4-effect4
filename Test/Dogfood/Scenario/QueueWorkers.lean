@@ -714,8 +714,9 @@ application runs the pool's close through its three releases. At this budget its
 stops before an exit observer of worker 1's fiber, and before the root's exit.
 `stepDecisionState` (`src/Effect4/Machine/Fibers.lean`) keeps the loop's machine and drops the
 commands that the loop leaves. So no fiber is runnable and no owner is armed: the machine is at
-rest, and nothing will run the root. A sweep of the seat's receipt finds this ending at the
-command budgets 79 to 81. -/
+rest, and the root has no exit. In the seat's probes no later act of a host gives the root an
+exit: five flushes, a clock step, and a cancellation of each fiber and of the root. A sweep of
+the seat's receipt finds this ending at the command budgets 79 to 81. -/
 def droppedFuel : Nat := 80
 
 /-- The scenario's named runs: each script of a control, once. The first twenty-two are on the

@@ -26,6 +26,9 @@ Store Typing: World-indexed semantic value membership (Fits) and store typings
 | semaphore-profile-closed | preservation | proved | Effect4.Semaphore.Model.profile_closed | yes |  |
 | waiting-wrapper-typed | compatibility | proved | Effect4.Modules.waitRetryAt_answers | yes |  |
 | protected-form-typed | compatibility | proved | Effect4.Modules.protectedBy_has | yes |  |
+| pool-use-typed | compatibility | proved | Effect4.Pool.use_types | yes |  |
+| pool-make-typed | compatibility | proved | Effect4.Pool.make_types | yes |  |
+| pool-close-typed | compatibility | proved | Effect4.Pool.close_answers | yes |  |
 | pool-profile-closed | preservation | proved | Effect4.Pool.Model.profile_closed | yes |  |
 | pool-lease-enrols | inversion | proved | Effect4.Pool.Model.lease_enrols_iff | yes |  |
 
@@ -198,6 +201,57 @@ Literature: TAPL, §13.5, pp. 165–169 — excludedFeature
         Effect4.Modules.Has (Effect4.Program.nativeSignature table)
           (Effect4.Modules.protectedBy acquire release body) s
           { answer := b.answer, error := b.error.normalize, requires := b.requires }
+```
+
+**pool-use-typed**
+
+```lean
+∀ {table : Effect4.Program.RowTable} {A : Effect4.Program.Ty},
+  Effect4.Pool.Model.ResourceTy A →
+    ∀ {pool : Effect4.Program.Authoring.TermSrc}
+      {body :
+        Effect4.Program.Authoring.TermSrc → Effect4.Program.Authoring.Src Effect4.Program.NativeOp}
+      {s : Effect4.Modules.TypedScope} {b : Effect4.Program.EffTy},
+      Effect4.Modules.Kept (Effect4.Program.nativeSignature table) pool s
+          (Effect4.Pool.cellTy A).refOf →
+        (∀ (t : Effect4.Modules.TypedScope) (r : Effect4.Program.Authoring.TermSrc),
+            s.Reaches t →
+              Effect4.Modules.Kept (Effect4.Program.nativeSignature table) r t A →
+                Effect4.Modules.Has (Effect4.Program.nativeSignature table) (body r) t b) →
+          Effect4.Modules.Has (Effect4.Program.nativeSignature table) (Effect4.Pool.use A pool body)
+            s { answer := b.answer, error := b.error.normalize, requires := b.requires }
+```
+
+**pool-make-typed**
+
+```lean
+∀ {table : Effect4.Program.RowTable} {A : Effect4.Program.Ty},
+  Effect4.Pool.Model.ResourceTy A →
+    ∀ (size : Nat) (positive : instLTNat.lt 0 size)
+      {acquire : Effect4.Program.Authoring.Src Effect4.Program.NativeOp}
+      {s : Effect4.Modules.TypedScope} {a : Effect4.Program.EffTy},
+      Eq a.answer A →
+        (∀ (t : Effect4.Modules.TypedScope),
+            s.Reaches t → Effect4.Modules.Has (Effect4.Program.nativeSignature table) acquire t a) →
+          Effect4.Modules.Has (Effect4.Program.nativeSignature table)
+            (Effect4.Pool.make A size acquire positive) s
+            { answer := (Effect4.Pool.cellTy A).refOf, error := a.error.normalize,
+              requires :=
+                a.requires.union
+                  (Effect4.Machine.Env.Requirement.single
+                    (Effect4.Program.nativeSignature table).scopeKey) }
+```
+
+**pool-close-typed**
+
+```lean
+∀ {table : Effect4.Program.RowTable} {A : Effect4.Program.Ty},
+  Effect4.Pool.Model.ResourceTy A →
+    ∀ {pool : Effect4.Program.Authoring.TermSrc} {s : Effect4.Modules.TypedScope},
+      Effect4.Modules.Kept (Effect4.Program.nativeSignature table) pool s
+          (Effect4.Pool.cellTy A).refOf →
+        Effect4.Modules.Answers (Effect4.Program.nativeSignature table) (Effect4.Pool.close pool) s
+          Effect4.Program.Ty.unit
 ```
 
 **pool-profile-closed**
@@ -1656,6 +1710,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | replay-externals | preservation | proved | Effect4.Program.Sched.replay_externals | yes |  |
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
 | run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
+| funded-run-replay | simulation | proved | Test.Dogfood.Scenario.funded_replays | yes |  |
 | journal-position-replay | simulation | proved | Test.Dogfood.Scenario.tapeFrom_position_replays | yes |  |
 | pool-steps-agree | simulation | proved | Effect4.Pool.Model.pool_steps_agree | yes |  |
 | queue-steps-agree | simulation | proved | Effect4.Queue.Model.queue_steps_agree | yes |  |
@@ -1855,6 +1910,19 @@ Literature: WrightFelleisen1994, audit P36 — analogy
 
 ```lean
 Test.Dogfood.Scenario.TapeReplays
+```
+
+**funded-run-replay**
+
+```lean
+∀ (s : Effect4.Run),
+  s.Reached →
+    Eq (Test.Dogfood.Scenario.funded s) Bool.true →
+      Eq s.machine
+        (Effect4.Run.machineOf
+          (Effect4.Run.replayFrom s.built.program s.built.table s.budget.fuel
+            (Test.Dogfood.Scenario.tapeOf s)
+            (Effect4.Api.load s.built.program s.budget.compileFuel)))
 ```
 
 **journal-position-replay**
@@ -2499,7 +2567,7 @@ flowchart LR
 
 ### R4: State: the world types every cell at any type, with rows as templates
 
-- Open: pool-profile-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 267 to 269)
+- Open: pool-profile-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed on six transitions; the cell's half is the seven typing statements of the cell and of the steps with step_keeps_cell, and each attempt statement of the operations gives the membership of the reply and of the stored value from the membership of the cell before the step; the operations are typed at every scope (use_types, make_types, close_answers), and make's type requires the scope; no statement says that a client writes the cell by the operations alone, none keeps the table injective along a run, and no goal states the run-level claim (decisions rows 267 to 269, 276)
 - Open: the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation
 - Open: the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws
 - Open: semaphore-accounting-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed; the cell's half is the six typing statements of the steps with step_keeps_cell, and each attempt statement of the operations gives the membership of the reply and of the stored value from the membership of the cell before the step; no statement gives that first membership from the handles that the table names, and no goal states the run-level claim (decisions rows 260, 261, 265, 276)
@@ -3305,7 +3373,7 @@ flowchart LR
 - Open: numbers open (decisions row 108): each face equal to the reference inside its bounded profile and refusing outside it, intermediates included (DI-56)
 - Open: K2 holds on the readable domain; since the state plan's T5, part B, a loop's stated cursor type and an operation's type arguments read back through one checked type reader (Classes.readTyChecked, DI-91's fallback (a) in a checked form), and the domain excludes a stated type outside the readable types (Classes.ReadableTy: a collision such as int, a spelling with no reading such as a handle type) and every list fold that states its accumulator's type, which is printed and not read
 - Open: one identity bijection across faces: the fiber identity carrier is ruled, not landed (DI-81)
-- Open: the TypeScript face against rc.112: finite checks only, by the truth harness and by the keyed lane's runs of the scenarios' scripts on their printed modules (DI-49; decisions row 254); the truth harness compares each entry's exit with the same entry's, the fork run's and the sync run's apart; two Semaphore programs settle on two exits under their two entries, and the two faces give one exit on each (Test/contracts/faces.contract.md, the amendment of 2026-10-06; decisions row 279)
+- Open: the TypeScript face against rc.112: finite checks only, by the truth harness and by the keyed lane's runs of the scenarios' scripts on their printed modules (DI-49; decisions row 254); the truth harness compares each entry's exit with the same entry's, the fork run's and the sync run's apart; two Semaphore programs settle on two exits under their two entries, and the two faces give one exit on each; three Pool programs settle on two exits too, and their sync runs are pinned apart from the allocation order on the Lean face (lateSightsSync, harness/truth/Truth.lean) (Test/contracts/faces.contract.md, the amendments of 2026-10-06; decisions row 279)
 - Open: the profile as data, named by each face's law (decisions row 79, R79.5)
 
 ```mermaid
@@ -3626,7 +3694,7 @@ flowchart LR
 
 ### R10: Library code inherits theorems: a composed module's law is Agrees profile module expansion
 
-- Open: pool-expansion-agrees (proposed claim; translation-simulation): Pool's expansion agrees with the first profile's public observation, under its premises on the callers, interruption, the close and the work budget; its parts on one atomic step are pool_steps_agree (decisions rows 79, 226, 267 to 269)
+- Open: pool-expansion-agrees (proposed claim; translation-simulation): Pool's expansion agrees with the first profile's public observation, under its premises on the callers, interruption, the close and the work budget; its parts on one atomic step are pool_steps_agree and the eleven attempt statements of the operations, each on every model state (lease_attempt, withdraw_attempt, return_attempt, select_attempt, close_attempt, drain_attempt, make_makes, and four at the names that the operation mints; the lease, the withdrawal and the closer's step take an injective table); the operations, the wake, the close and the refusal at a closed pool are library programs (src/Effect4/Modules/Pool/Ops.lean); the wrapper's run for the borrower and for the closer, the wake across helpers and the protected lease's run are not stated; finite controls: ten cases on the Lean machine, on the generated engine and on rc.112, one schedule each (Test/Program/PoolPublic.lean) (decisions rows 79, 226, 267 to 269, 276, 279)
 - Open: a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)
 - Open: no form has a behaviour law (DI-89)
 - Open: the agreement half of mask-printed-form-profile (translation-simulation, serving R10 and R11): the compiled derived form against the named release's printed form, equal observation on a named observation under compatible decisions; the three operations more than the native mask are measured on the machine and on the target, not proved, and the cuts at the two checkpoints on the pin rest on Codex's runs; the expansion, the typing, the readability and the two checkpoints on the machine are mask_printed_form_profile (decisions rows 245, 246); no goal states the agreement
@@ -3634,7 +3702,7 @@ flowchart LR
 - Open: per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)
 - Open: DI-39's six rows not landed
 - Open: a composite's contract by a stuttering route (post-Phase C §11.4)
-- Open: queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230)
+- Open: queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230); its first application on one program is two planned goals, held_within_fed and fed_accounted (Test/Dogfood/Scenario/QueueWorkers.lean), with finite controls on the Lean machine, three engine runs and 25 host runs; no law of a whole run
 - Open: semaphore-expansion-agrees (proposed claim; translation-simulation): Semaphore's expansion agrees with the first profile's public observation; it keeps the selected identities and the permit commits, with its premises on the wake's policy, the admitted callers, interruption and the work budget; its parts on one atomic step are semaphore-steps-agree and the nine attempt statements of the operations, each on every model state; the operations, the walk and the protected form are library programs (src/Effect4/Modules/Semaphore/Ops.lean); the wrapper's run, the walk across visits and the protected form's run are not stated (decisions rows 79, 226, 259 to 261, 276)
 - Open: posted-wake-profile-agrees (proposed claim; translation-simulation): one producer's posted delivery, with its dispatch owner, priority, receiver and token, capture time, coalescing and cancellation, agrees with its module expansion; the Queue's producer is first (decisions rows 81, 220, 225; DB-13)
 - Open: atomic-attempt-agreement (proposed claim; translation-simulation): the restricted transaction profile against the named release, with flat nesting, immutable payloads and explicit retry; then tx-choice-rollback-union for the retry-only alternative (decisions rows 80, 84, 223, 224)
@@ -4115,8 +4183,8 @@ flowchart LR
 
 ### R11: Resources are released: at most once per registration, exactly once in close order
 
-- Open: pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once, close_refuses and drain_waits (decisions rows 267, 268 and 276)
-- Open: the whole run open: release at most once per registration, counted by identity (DB-07)
+- Open: pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; a lease that is refused at a closing pool commits nothing; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once, close_refuses and drain_waits; the forms are stated, scoped and typed: use is the protected form over the lease's loop and the return, and the close is the wrapper over the closer's step, registered by make after the acquisitions (use_types, close_answers, make_types); their steps are return_attempt, close_attempt and drain_attempt; no goal states a clause, and each waits for the carrying fact of a region and for a finalizer's law of a run; finite controls: a lease in its own mask is lost under an interruption, a wait inside a mask of the form's making cannot be interrupted, the stand-in for the mask fails under a masked caller, and a close that does not wait finalizes an item that a borrower still holds (Test/Program/PoolTraces.lean, traces 4, 5 and 8; Test/Program/PoolPublic.lean, PP7) (decisions rows 222, 267, 268, 276, 279)
+- Open: the whole run open: release at most once per registration, counted by identity (DB-07); its planned goals are three, one program each: Workers.releases_once, cleans_once and QueueWorkers.releases_once
 - Open: the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)
 - Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
 - Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
@@ -4191,13 +4259,13 @@ flowchart LR
 
 ### R12: Frontiers name what they await
 
-- Open: pool-wake-selection (proposed claim; reactive-scheduling): the helper selects the first count waiters of the state that it finds, and it notifies exactly those, in order; the model's fact is select_takes_first (decisions rows 221, 267)
+- Open: pool-wake-selection (proposed claim; reactive-scheduling): the helper selects the first count waiters of the state that it finds, and it notifies exactly those, in order; the model's fact is select_takes_first, and one selection is one store step (select_attempt); the helper is a library program, one selection step and then each selected hint in order; the selection is by count, so the law takes the withdrawal as a premise: every entry of the waiters belongs to a request that still waits; finite controls: a selection at the post serves a waiter that left, and with no withdrawal the wake is lost (Test/Program/PoolPublic.lean, PP4; Test/Program/PoolTraces.lean, trace 2) (decisions rows 221, 267)
 - Open: R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)
 - Open: stability over the allowed internal decisions, with a named progress observation (not stated)
 - Open: divergence by compatible prefixes (DB-03; not stated)
-- Open: driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)
-- Open: embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean and Test/Program/SemaphoreTraces.lean, trace 7 of each); no bound is claimed
-- Open: wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean); the Queue model's half is proved on the first profile (queue-first-step-invariant, queue-first-run-flags), and the wrapper's run stays open
+- Open: driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226); a finite control: at a reply application the command loop's leftover commands are not kept, and one run then stands at rest with no exit of the root (the run dropped of Test/Dogfood/Scenario/QueueWorkers.lean; one script at seven budgets)
+- Open: embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, Test/Program/SemaphoreTraces.lean and Test/Program/PoolTraces.lean, trace 7 of each; Pool's measures seven lengths); no bound is claimed; at a run the premise has one name, funded (Test/Dogfood/Scenario.lean), and funded_replays says what it gives; a journal's verdicts do not decide it
+- Open: wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean); the Queue model's half is proved on the first profile (queue-first-step-invariant, queue-first-run-flags), and the wrapper's run stays open; an instance at rest on one program is the planned goal queue_settled (Test/Dogfood/Scenario/QueueWorkers.lean)
 - Open: posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)
 - Open: posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)
 

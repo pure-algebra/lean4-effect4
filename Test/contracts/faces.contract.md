@@ -746,8 +746,9 @@ What this changes in the packet above, and nothing else:
   rc.112's own `Pool`, so the signed difference of decisions row 268 keeps none out.
 - **Three programs are pinned in their sync run alone** (`lateSightsSync`,
   `harness/truth/Truth.lean`): `pPoolWaiters`, `pPoolLateWake` and `pPoolWake`. The sync
-  entry does not flush a child's dispatcher. So the recorder never sees a helper that a
-  child posts, and it sees the later helper of the root's close. Their fork runs are in the
+  entry does not flush a child's dispatcher. So the Lean face's rows of the sync run never
+  show a helper that a child posts, and they show the later helper of the root's close. The
+  lane compares no schedule of the sync entry. Their fork runs are in the
   allocation order. Their sync exits hold no fiber, so no compared field reads a moved
   number. A new entry of the table is a reviewed change, as an entry of `lateSights` is.
 - **The two entries.** Three programs settle on two exits under the two entries:

@@ -1,0 +1,100 @@
+import Test.Dogfood.Scenario.QueueWorkers
+
+/-!
+A budget for one row. The goals of `Test/Dogfood/Scenario/QueueWorkers.lean` range over runs with
+one command budget, and on the crew such a budget cuts a middle row only where it also cuts the
+first flush. This probe is outside that domain. It plays a script at the battery's budget, sets
+the run's command fuel to a small number for one row, plays that row, and reads the four
+observations. Then it sets the fuel back and plays two flushes, and it reads them again.
+-/
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace OneRow
+
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Api.Runner (Command)
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+def ranges : List Nat → String
+  | [] => "none"
+  | n :: rest =>
+    let step := fun (acc : List (Nat × Nat)) (k : Nat) =>
+      match acc with
+      | (lo, hi) :: more => if k == hi + 1 then (lo, k) :: more else (k, k) :: (lo, hi) :: more
+      | [] => [(k, k)]
+    let found := (rest.foldl step [(n, n)]).reverse
+    ", ".intercalate (found.map fun (lo, hi) => if lo == hi then toString lo else s!"{lo}-{hi}")
+
+structure Row where
+  fuel : Nat
+  rest : Bool
+  within : Bool
+  once : Bool
+  accounted : Bool
+  settled : Bool
+  restLater : Bool
+  accountedLater : Bool
+  settledLater : Bool
+  withinLater : Bool
+  sameLater : Bool
+
+def withFuel (s : Run) (fuel : Nat) : Run := { s with budget := { s.budget with fuel := fuel } }
+
+/-- One base script, one move played at each small fuel. `least` is the first fuel at which the
+move's run is the run at the battery's fuel. -/
+def probe (b : Api.Built) (base : List Move) (move : Move) : List Row × Nat :=
+  let before := _root_.Test.Dogfood.Scenario.play (opened b) base
+  let whole := step before move
+  let healed := _root_.Test.Dogfood.Scenario.play whole [.flush, .flush]
+  let rows := (List.range 70).map fun k =>
+    let cut := step (withFuel before (k + 1)) move
+    let later := _root_.Test.Dogfood.Scenario.play (withFuel cut budget.fuel) [.flush, .flush]
+    let o := observe cut
+    let l := observe later
+    { fuel := k + 1, rest := atRest cut, within := o.heldWithin, once := o.releasedOnce
+      accounted := o.accounted, settled := o.settled, restLater := atRest later
+      accountedLater := l.accounted, settledLater := l.settled, withinLater := l.heldWithin
+      sameLater := decide (machineView later = machineView healed) : Row }
+  let least := ((rows.filter fun (r : Row) =>
+    decide (machineView (step (withFuel before r.fuel) move) = machineView whole)).map fun (r : Row) => r.fuel).head?.getD 0
+  (rows, least)
+
+def report (name : String) (found : List Row × Nat) : String :=
+  let below := found.1.filter fun (r : Row) => decide (r.fuel < found.2)
+  let pick := fun (p : Row → Bool) => ranges ((below.filter p).map fun (r : Row) => r.fuel)
+  s!"{name}: the row's view is the whole one from fuel {found.2}; below it: at rest {pick fun r => r.rest}; " ++
+  s!"within fails {pick fun r => !r.within}; once fails {pick fun r => !r.once}; " ++
+  s!"at rest and accounted fails {pick fun r => r.rest && !r.accounted}; at rest and settled fails {pick fun r => r.rest && !r.settled}; " ++
+  s!"after two flushes at the battery's fuel: not at rest {pick fun r => !r.restLater}; within fails {pick fun r => !r.withinLater}; " ++
+  s!"at rest and accounted fails {pick fun r => r.restLater && !r.accountedLater}; at rest and settled fails {pick fun r => r.restLater && !r.settledLater}; " ++
+  s!"the view is not the whole run's {pick fun r => !r.sameLater}"
+
+def all : IO Unit :=
+  match (Effect4.Api.Author.build (crew 3)).toOption with
+  | none => IO.println "no build"
+  | some b => do
+    let fed := [.receive feederCall (ok (.nat 1))]
+    IO.println (report "the first feed's application" (probe b (script [parked, fed]) (.apply feederCall)))
+    IO.println (report "the first feed's flush" (probe b (script [parked, fed, [.apply feederCall]]) .flush))
+    IO.println (report "the third feed's application, into the buffer"
+      (probe b (script [running, [.receive feederCall (ok (.nat 3))]]) (.apply feederCall)))
+    IO.println (report "worker 1's reply application at the blocked queue"
+      (probe b (script [blocked, [.receive w1 (ok .unit)]]) (.apply w1)))
+    IO.println (report "the flush after it"
+      (probe b (script [blocked, [.receive w1 (ok .unit), .apply w1]]) .flush))
+    IO.println (report "worker 2's reply application at the empty queue"
+      (probe b (script [running, [.receive w2 (ok .unit)]]) (.apply w2)))
+    IO.println (report "the cancellation of worker 2 while it waits"
+      (probe b (script [running, done w2]) (.cancel ⟨2⟩)))
+    IO.println (report "the cancellation of the feeder at its pending offer"
+      (probe b blocked (.cancel ⟨3⟩)))
+    IO.println (report "the flush after a cancellation of the selected worker"
+      (probe b (script [parked, fed, [.apply feederCall, .cancel ⟨1⟩]]) .flush))
+
+#eval all
+
+end OneRow

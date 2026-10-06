@@ -359,8 +359,8 @@ In work since the suspension of the handover:
   one store step to the model's step, with no planned goal. Its fifth step is merged: nine
   acceptance traces on the Lean machine, each with a fault that fails the promised property
   (`Test/Program/PoolTraces.lean`). A borrow at a closing pool leaves the items and the idle
-  list as they were. Under a masked caller it still exits with the interrupt of its own
-  fiber. One finding: at Pool a missing withdrawal loses a wake, so the law of a run needs
+  list as they were. A borrow at a closed pool under a masked caller still exits with the
+  interrupt of its own fiber. One finding: at Pool a missing withdrawal loses a wake, so the law of a run needs
   the withdrawal as a premise of the wake. Its sixth step is merged: each operation prints
   and reads back (`Test/Program/PoolFaces.lean`), and ten programs run on rc.112 in the
   truth lane. Three of them settle on two exits under the two entries, and their sync runs
@@ -371,7 +371,10 @@ In work since the suspension of the handover:
   lanes: a term has no binder, so each step's bytes hold the cell's source many times
   (row 276, point 3). Its eighth step is merged: the contract's sections on the operations
   and on the ten cases (`Test/contracts/pool.contract.md`), the README's section with one
-  checked example, and the architecture rows. The receipt comes next.
+  checked example, and the architecture rows.
+  [Its receipt](research/2026-10-06-seat-POOLOPS-receipt.md) is merged, with three claims
+  of typing in the registry and the corrections that it made to five sentences of the main
+  line. Row 283 records what it leaves open.
 - **Seat WORKQ has the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
@@ -384,14 +387,17 @@ In work since the suspension of the handover:
   read of it, which is no cast. Four laws place it: scope, typing, its refusal and its
   reading (`src/Effect4/Laws/Modules/Ascribe.lean`,
   `src/Effect4/Laws/Program/Authoring/Ascribe.lean`). Its second and third parts are
-  merged. The record `queue-workers` (`Test/Dogfood/Scenario/QueueWorkers.lean`) has 30
-  named runs and 33 controls, and four planned goals under the premise `funded`: the tape
+  merged. The record `queue-workers` (`Test/Dogfood/Scenario/QueueWorkers.lean`) has 31
+  named runs and 35 controls, 18 green and 17 red, and four planned goals under the premise
+  `funded`: the tape
   of the run's own journal leaves no row unread. Its lowered runs replay on the generated
   engine, and 25 scripts run on rc.112 in the keyed lane, with the Queue's cell read
   through a writer of its own (`cellJson`). One finding is for the owner. Where the fuel
   ends inside a reply's application, `stepDecisionState` keeps the receipt `settled` and
   drops the commands that the fuel left. One measured run then stands at rest with no exit
-  of the root (the named run `dropped`). The receipt comes next.
+  of the root (the named run `dropped`), and 25,260 bounded continuations of it give the
+  root no exit. [Its receipt](research/2026-10-06-seat-WORKQ-receipt.md) is merged, and row
+  284 records what it leaves open.
 
 Merged on 2026-10-06, after the seats above began:
 
