@@ -203,6 +203,42 @@ def shared : Table := { tb0 with handle := fun n => if n = 2 then ⟨1⟩ else �
     (offer { capacity := some 2, takers := [T 1], peekers := [2] } 100 7).1
     (offer { capacity := some 2, takers := [T 1], peekers := [2] } 100 7).2.2 = none
 
+/-! ## The statements at the scope of a step's own arguments
+
+A step statement holds at every scope, for every caller's term that reads the step's
+arguments. A variable that an author wrote is such a term (`captured_var`). So each statement
+applies at the scope that the guards above evaluate: the two examples are its instances. -/
+
+example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (profile : FirstProfile s)
+    (injective : tb.Injective) :
+    ∃ woken,
+      Notified s (withdrawTake s id).1 (withdrawTake s id).2 [] woken ∧
+      Reads (Queue.withdrawTake A (var "id") (var "s")) { names := ["id", "s"] } []
+        [Val.promise (tb.handle id), cellVal tb msg s]
+        (Val.tuple [Val.list (woken.map (takerVal tb)), cellVal tb msg (withdrawTake s id).1]) :=
+  withdrawTake_agrees A tb msg s id profile injective rfl
+    (captured_var rfl rfl rfl) (captured_var (x := "s") rfl rfl rfl).atScope
+
+example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey)
+    (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
+    (injective : tb.Injective) :
+    ∃ reply entered woken,
+      takeReplyVal msg (take s ⟨id, 1, 1⟩).2.1 = some reply ∧
+      Notified s (take s ⟨id, 1, 1⟩).1 (take s ⟨id, 1, 1⟩).2.2 entered woken ∧
+      Reads (Queue.takeStep A (var "id") (var "hint") (var "s"))
+        { names := ["id", "hint", "s"] } []
+        [Val.promise (tb.handle id), Val.promise hint, cellVal tb msg s]
+        (Val.tuple [Val.tuple [reply, Val.list (entered.map (offerVal tb msg)),
+            Val.list (woken.map (takerVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1)))],
+          cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1]) :=
+  takeStep_agrees A tb msg s id hint profile requested injective rfl
+    (captured_var rfl rfl rfl) (captured_var (x := "hint") rfl rfl rfl)
+    (captured_var (x := "s") rfl rfl rfl).atScope
+
+/-- info: 'Effect4.Queue.Model.captured_var' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms captured_var
+
 /-! ## The pinned outputs
 
 Each proved statement's axioms, and its standing as the plan derives it from the proof. A step

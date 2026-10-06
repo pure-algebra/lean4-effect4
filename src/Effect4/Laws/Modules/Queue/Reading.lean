@@ -268,6 +268,46 @@ theorem reads_minted_item {env : Env} {vals : List Val} (depth : vals.length = e
     rw [one]
     rfl
 
+/-- A name that the surface mints is reserved: an author cannot write it. -/
+theorem mint_reserved (env : Env) (stem : String) : Name.reserved (env.mint stem) = true := by
+  have bytes : (env.mint stem).toUTF8.data.toList =
+      95 :: 37 :: (stem.toByteArray.data.toList ++
+        (toString env.names.length).toByteArray.data.toList) := by
+    show ("_%" ++ stem ++ toString env.names.length : String).toByteArray.data.toList = _
+    simp only [String.toByteArray_append, ByteArray.data_append, Array.toList_append]
+    have prefixBytes : ("_%" : String).toByteArray.data.toList = [95, 37] := by decide
+    rw [prefixBytes]
+    rfl
+  unfold Name.reserved
+  rw [bytes]
+  rfl
+
+/-- **A variable that an author wrote is a caller's term under a step's folds**: it reads its
+value at the scope, and the same value under the two binders that a fold mints. -/
+theorem captured_var {x : String} {env : Env} {path : List Nat} {vals : List Val} {i : Nat}
+    {v : Val} (written : Name.reserved x = false) (bound : env.names.resolve x = some i)
+    (held : vals[i]? = some v) : Captured (var x) env path vals v := by
+  have tree : var x env path = .ok (.var i) := by
+    show (if Name.reserved x = true then _ else minted x env path) = _
+    rw [written, if_neg Bool.false_ne_true]
+    show (match env.names.resolve x with
+      | some i => Except.ok (Term.var i)
+      | none => Except.error (Refusal.mk path (Reason.unbound x))) = _
+    rw [bound]
+  refine ⟨⟨.var i, tree, held⟩, fun acc item => ⟨.var i, ?_, ?_⟩⟩
+  · rw [var_push_minted_pair (mint_reserved env "acc") (mint_reserved env "item") written env
+      path]
+    exact tree
+  · obtain ⟨inside, -⟩ := List.getElem?_eq_some_iff.mp held
+    show (vals ++ [acc, item])[i]? = some v
+    rw [List.getElem?_append_left inside]
+    exact held
+
+/-- A literal is a caller's term under a step's folds. -/
+theorem captured_lit (value : Lit) (env : Env) (path : List Nat) (vals : List Val) {v : Val}
+    (h : value.toVal = some v) : Captured (lit value) env path vals v :=
+  ⟨reads_lit value env path vals h, fun acc item => reads_lit value _ path (vals ++ [acc, item]) h⟩
+
 /-- **A fold with minted binders reads its fold.** The list and the initial value read at the
 scope. The body, under the two binders, has one tree, and the fold of its values over the
 list's elements answers. -/
