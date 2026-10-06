@@ -224,13 +224,21 @@ theorem Sketch.hole_hasTy (app : SigApp) (holes : RowTable) (k : Nat) {name : St
 
 /-! ## Filling and omitting: the replacement law at a sketch -/
 
+/-- The fill at an address where the program's replacement exists: the sketch with the
+replaced program. A step of `typed-replacement`: `Sketch.check_fill` reads it. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Sketch.fillAt_of_replaceAt {s : Sketch} {path : List Nat} {q program : NativeEff}
+    (h : (Node.eff s.program).replaceAt path (.eff q) = some (.eff program)) :
+    s.fillAt path q = some { s with program := program } := by
+  simp only [Sketch.fillAt, h, Option.bind_some, Node.eff?, Option.map_some]
+
 /-- **Filling keeps the type, and the filling alone is checked.** A sketch that the checker
 admits splits at an address of a program into an environment and a type of the focus. Every
 program that the checker admits at that type in that environment fills the address, and the
 checker admits the filled sketch at the same type. The filling may declare more holes: `more`
 is appended to the hole table. A consumer of `typed-replacement`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Sketch.check_fill (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+theorem Sketch.check_fill (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {q : NativeEff} (hs : s.check app = .ok T)
     (hat : (Node.eff s.program).at_ path = some (.eff q)) :
     ∃ (env : TyEnv) (t : EffTy),
@@ -238,7 +246,15 @@ proof_goal Sketch.check_fill (s : Sketch) (app : SigApp) {T : EffTy} {path : Lis
       ∀ (more : RowTable) {q' : NativeEff} {pq : List Nat},
         Checker.check (app.withHoles (s.holes ++ more)).signature env pq q' = .ok t →
         ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
-          s'.check app = .ok T
+          s'.check app = .ok T := by
+  obtain ⟨env, t, hq, hfill⟩ := check_replace hs hat
+  refine ⟨env, t, hq, fun more {q' pq} hq' => ?_⟩
+  have hext : SigExtends (app.withHoles s.holes).signature
+      (app.withHoles (s.holes ++ more)).signature := by
+    rw [← SigApp.withHoles_withHoles]
+    exact (app.withHoles s.holes).withHoles_extends more
+  obtain ⟨p', hrep, hp'⟩ := hfill hext hq'
+  exact ⟨_, Sketch.fillAt_of_replaceAt (s := { s with holes := s.holes ++ more }) hrep, hp' []⟩
 
 /-- **Omitting keeps the type, where a hole row declares the focus's type exactly.** A sketch
 that the checker admits splits at an address of a program into an environment and a type `t` of
@@ -248,7 +264,7 @@ the same type. The premises are the hole's rule's (`Sketch.hole_hasTy`), and the
 form: a hole row is read in normal form, and the checker gives a node the raw type of its term.
 A consumer of `typed-replacement`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
-proof_goal Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
     {q : NativeEff} (hs : s.check app = .ok T)
     (hat : (Node.eff s.program).at_ path = some (.eff q)) :
     ∃ (env : TyEnv) (t : EffTy),
@@ -258,6 +274,16 @@ proof_goal Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : Lis
         Formation.Formed (Formation.instantiatedSites
           (Row.hole name t.answer t.error t.requires.elems).normalizeTypes []) →
         ∃ s', s.omitAt app path (Row.hole name t.answer t.error t.requires.elems) = some s' ∧
-          s'.check app = .ok T
+          s'.check app = .ok T := by
+  obtain ⟨env, t, hq, hfill⟩ := Sketch.check_fill s app hs hat
+  refine ⟨env, t, hq, fun name hans herr hansN herrN formed => ?_⟩
+  have hhole := Sketch.hole_hasTy app
+    (s.holes ++ [Row.hole name t.answer t.error t.requires.elems]) s.holes.length env
+    List.getElem?_concat_length hans herr formed
+  have hreq : Requirement.ofList t.requires.elems = t.requires :=
+    Row.normalize_of_ascending t.requires.elems t.requires.ascending
+  rw [hansN, herrN, hreq] at hhole
+  exact hfill [Row.hole name t.answer t.error t.requires.elems] (pq := [])
+    (check_complete _ _ env t hhole [])
 
 end Effect4.Program
