@@ -289,20 +289,29 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
   contract, the model with its profile, and the cell with its five steps. It ends with the
   steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice. **Its first three steps are
-  merged** (`e212766f`). Every case of the card gives the profile's answer on the Lean
+  that waits and the finalizers' runs are a later slice. **Its first four steps are
+  merged** (`e212766f`, then `e87777e9`). Every case of the card gives the profile's answer on the Lean
   machine, one schedule each (`Test/Program/PoolScenarios.lean`). The contract is
   `Test/contracts/pool.contract.md`. The model's profile is closed under its five
   transitions, with no planned goal (`src/Effect4/Laws/Modules/Pool/`). An idle item beside
-  enrolled waiters is a state of the profile. The cell, the step terms, their typing and
-  their agreement with the model are next.
-- **Seat MASKPOP has the mask's pop discipline** (branch `seat/maskpop`), the third seat, on
-  the owner's word. Lean accepts Codex's predicate and statements as written. On its branch,
-  not merged: the placed theorem `saved_mask_pop_discipline` is proved in place of its
-  planned goal (`12d7703d`). Its controls, documents and receipt are next.
+  enrolled waiters is a state of the profile. The cell and the five step terms are typed,
+  with no planned goal (`src/Effect4/Modules/Pool/`, `src/Effect4/Laws/Modules/Pool/Typing.lean`).
+  Their agreement with the model is next: a battery holds it on 130 states of the profile,
+  on the seat's branch.
+- **Seat QINV has the Queue model's run invariant** (branch `seat/qinv`, from `4bd063a2`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md)), in the seat that
+  seat MASKPOP freed. Codex gave the invariant and its premises. Nothing is compiled yet.
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat MASKPOP is merged** (`2266ec30`;
+  [its receipt](research/2026-10-06-seat-MASKPOP-receipt.md)), the third seat of the day. The
+  saved mask's chain is kept through a pop of the stack: `saved_mask_pop_discipline`
+  (`src/Effect4/Laws/Machine/MaskDiscipline.lean`; the registry claim
+  `saved-mask-pop-discipline`, R11). It was proved in place of its planned goal. Lean accepts
+  Codex's predicate and its three statements as written. The law is local to the frame
+  machine. R11's open part is now its lift to runs, with a condition just before a command
+  clears a fiber.
 - **Seat PUB is merged: the Queue's first public operations** (branch `seat/pub`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
   become library programs that capture no name of a caller. Each runs on the Lean machine, on
@@ -354,23 +363,9 @@ Merged on 2026-10-06, after the seats above began:
 
 Candidates with no seat, each with its place:
 
-- the mask's invariant of runs, an open part of R11. Its finite probe is
-  `research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`. **Its first slice is placed
-  and has no owner yet.** It is the proposed helper claim `saved-mask-pop-discipline`, a
-  local law of the frame machine through a pop of the stack. Codex wrote its statements,
-  which are not compiled. The filing note gives its branch, its two files and its anchors
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/deeper-proof-support/coordinator-filing-note.md`).
-  The coordinator allocated it to Codex first. Codex answers that it edits and builds nothing
-  until the owner says so to Codex directly. A seat of the coordinator takes the slice when
-  one is free, unless the owner lifts Codex's limits first.
-  [Its brief](research/2026-10-05-claude-lead/briefs/seat-maskpop-brief.md) is written. The
-  owner allowed a third seat for it on 2026-10-06, if it can land work efficiently. **Seat
-  MASKPOP has it** (branch `seat/maskpop`, from `6b2b5cda`). Its lift to runs is a later
-  slice;
-- the Queue model's run invariant on the first profile: each operation keeps `quiet` and
-  `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
-  `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded
-  exploration holds it today, with two mutations red;
+- the lift of the mask's chain to runs, R11's open part after seat MASKPOP. The receipt's
+  item 8 lists what the lift owes. `FrameFiber.step` and each command keep the chain, with
+  a condition just before a command clears a fiber. No goal states it;
 - the scenario driver's general laws in the law graph, after seat CUTS's connectors;
 - the run-level law of the Queue's wrapper, and the wrapper's form under a caller's mask for
   a protected body (row 275, points 2 and 4);
