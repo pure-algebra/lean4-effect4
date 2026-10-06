@@ -133,8 +133,10 @@ lists, and the profile's answer of the card's section 9.
 acquires every item before it answers. So PP5 is no public schedule of the profile.
 
 - **The low-level control.** Its premise state is open, with the item idle and A and then B
-  waiting. No public schedule reaches it, and no public operation posts the count 2 at an open
-  pool. The state and the count are premises of the control.
+  waiting. PP3 reaches that state, after H's return and before its helper. The control's
+  fixture builds it by raw steps. No public operation posts the count 2 at an open pool. A
+  return posts 1, and the close posts every waiter only after it refuses new leases. The state
+  and the count are premises of the control.
 - **The public retry case.** After the selection and before A's own lease, the item is idle,
   no waiter is enrolled and no lease is outstanding.
 
