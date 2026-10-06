@@ -210,6 +210,106 @@ theorem readClassDecls_eq_checked : ∀ {cs : List ClassDecl} {table : Classes} 
           Option.some.inj ((readClassDecl_exact hentry).symm.trans (checkedDecl_classDecl hd))
         rw [same, readClassDecls_eq_checked hrest hds]
 
+/-! ## The checked type reader (the state plan's T5, part B)
+
+Concept `translation-simulation`, serving R4 (the faces of `Ref<A>` and `Deferred<A, E>`) and R8
+(reconstruction). The consumers are the row reader, which reads an operation's type arguments
+(`readCall_printCall`, `readCall_exact`, `Laws/Codegen/ReadLeaf.lean`), and the readers of a
+stated type (`readLeaf_print`, `readLeaf_exact`). Reach: every target type syntax for
+exactness; the readable types (`ReadableTy`) for the retraction. Neither states target typing or
+agreement of a host run, and the retraction says nothing of a type outside `ReadableTy`: the
+type printer is not injective (`Types.ofTy_nat`, `Types.ofTy_int`). -/
+
+/-- **Exactness of the checked type reader**: what it accepts is the spelling that the type
+printer prints of the type it answers. It holds by the reader's own re-print, for every syntax. -/
+theorem readTyChecked_exact {x : TypeRef} {ty : Ty} (h : readTyChecked x = some ty) :
+    Types.ofTy ty = some x := by
+  unfold readTyChecked at h
+  obtain ⟨ty', _, h⟩ := Option.bind_eq_some_iff.mp h
+  split at h
+  · next hprint =>
+    cases h
+    exact hprint
+  · exact nomatch h
+
+/-- **The checked reader's retraction on the readable types**: a readable type reads back from
+its printed spelling. The premise is the domain itself (`ReadableTy`); without it the statement
+is false, at `int` for one. -/
+theorem readTyChecked_of_readable {ty : Ty} {x : TypeRef} (hr : ReadableTy ty = true)
+    (hp : Types.ofTy ty = some x) : readTyChecked x = some ty := by
+  have h := of_decide_eq_true hr
+  rw [hp, Option.bind_some] at h
+  exact h
+
+/-- A readable type has a printed form. -/
+theorem ofTy_of_readable {ty : Ty} (hr : ReadableTy ty = true) : ∃ x, Types.ofTy ty = some x := by
+  have h := of_decide_eq_true hr
+  cases hp : Types.ofTy ty with
+  | none =>
+    rw [hp, Option.bind_none] at h
+    exact nomatch h
+  | some x => exact ⟨x, rfl⟩
+
+/-- The printed forms of a list are as many as its types. -/
+theorem writeTys_length : ∀ {tys : List Ty} {xs : List TypeRef},
+    writeTys tys = some xs → xs.length = tys.length
+  | [], xs, h => by
+    cases h
+    rfl
+  | ty :: tys, xs, h => by
+    simp only [writeTys, bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨x, _, rest, hrest, rfl⟩ := h
+    simp only [List.length_cons, writeTys_length hrest]
+
+/-- The readings of a list are as many as its spellings. -/
+theorem readTysChecked_length : ∀ {xs : List TypeRef} {tys : List Ty},
+    readTysChecked xs = some tys → tys.length = xs.length
+  | [], tys, h => by
+    cases h
+    rfl
+  | x :: xs, tys, h => by
+    simp only [readTysChecked, bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨ty, _, rest, hrest, rfl⟩ := h
+    simp only [List.length_cons, readTysChecked_length hrest]
+
+/-- **Exactness, item by item**: the types a list of spellings reads to print back to the
+list. A step of `readCall_exact`. -/
+theorem readTysChecked_exact : ∀ {xs : List TypeRef} {tys : List Ty},
+    readTysChecked xs = some tys → writeTys tys = some xs
+  | [], tys, h => by
+    cases h
+    rfl
+  | x :: xs, tys, h => by
+    simp only [readTysChecked, bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨ty, hty, rest, hrest, rfl⟩ := h
+    simp only [writeTys, bind, readTyChecked_exact hty, readTysChecked_exact hrest,
+      Option.bind_some]
+
+/-- **The retraction, item by item**: readable types read back from their printed forms. A
+step of `readCall_printCall`. -/
+theorem readTysChecked_of_readable : ∀ {tys : List Ty} {xs : List TypeRef},
+    tys.all ReadableTy = true → writeTys tys = some xs → readTysChecked xs = some tys
+  | [], xs, _, h => by
+    cases h
+    rfl
+  | ty :: tys, xs, hr, h => by
+    simp only [List.all_cons, Bool.and_eq_true] at hr
+    simp only [writeTys, bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨x, hx, rest, hrest, rfl⟩ := h
+    simp only [readTysChecked, bind, readTyChecked_of_readable hr.1 hx,
+      readTysChecked_of_readable hr.2 hrest, Option.bind_some]
+
+/-- Readable types have printed forms, as a list. A step of `printCall_ok`
+(`Laws/Codegen/PrintReadable.lean`). -/
+theorem writeTys_of_readable : ∀ {tys : List Ty},
+    tys.all ReadableTy = true → ∃ xs, writeTys tys = some xs
+  | [], _ => ⟨[], rfl⟩
+  | ty :: tys, hr => by
+    simp only [List.all_cons, Bool.and_eq_true] at hr
+    obtain ⟨x, hx⟩ := ofTy_of_readable hr.1
+    obtain ⟨xs, hxs⟩ := writeTys_of_readable hr.2
+    exact ⟨x :: xs, by simp only [writeTys, bind, hx, hxs, Option.bind_some]⟩
+
 end Effect4.Codegen.Classes
 
 namespace Effect4.Program

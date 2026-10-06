@@ -284,8 +284,21 @@ Landed later on 2026-10-05:
   `takeStep_agrees`, `offerStep_agrees`, `pollStep_agrees`, `sizeStep_agrees`,
   `withdrawTake_agrees` and `withdrawOffer_agrees`, on the reading lemmas of `Reading.lean`.
   Each step term reads the model's reply, its next state through the table, and its signals
-  in order, on every state of the first profile. The seven typing statements are open, so the
-  goal gate counts 31. No Queue program runs on the generated engine or on a host yet.
+  in order, on every state of the first profile. `queue_steps_agree` assembles the six, and
+  the registry's claim `queue-steps-agree` points at it (`962150af`). Two of the seven typing
+  statements are proved too, `empty_typed` and `sizeStep_typed`. Five stay planned goals, by
+  the seat's stop and by no counterexample: the checker answers the stated type for each at
+  27 message types, by evaluation. So the goal gate counts 29. One workload runs in two
+  spellings (`Test/Program/QueueWorkload.lean`). No Queue program runs on the generated
+  engine or on a host yet.
+- **`Deferred.make<A, E>()` prints from the operation and reads back** (`9600fa63`, step a of
+  seat T5's part B; rows 212 and 251). An operation's type arguments are data of the
+  operation: the printer prints each through the type printer, and Lean's reader,
+  `ts/eff/read.ts` and both foreign readers read them back. One checked type reader serves
+  them, with a named readable-type domain. An operation's types are program annotations, so
+  raw formation and the integer scan reach them. p3's gate prints as
+  `Deferred.make<void, never>()` and reads back. The coordinator pinned the case policy again
+  for two new matches. No stored form changed its type.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
@@ -316,9 +329,13 @@ Open at this landing:
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). A service error
      stopped its first run before any commit, and it started again the same evening from
      `7f77bd03`. Its first part is merged (`3d9d935c`): the cell, the six steps, the relation
-     and thirteen planned goals. The six step goals are proved and merged. Open: the seven
-     typing statements, two scenarios on the engine, the workload in two spellings, the
-     faces' pins and the documents. The owner ruled the design's five proposals as recommended
+     and thirteen planned goals. The six step goals and two typing statements are proved and
+     merged. Open: five typing statements, two scenarios on the engine, the faces' pins and
+     the documents. A proof of the five at every message type needs the checker read at
+     symbolic list and record types, as `Reading.lean` reads the evaluator. The seat
+     estimates it as a slice of its own. Until then a typing statement can be a premise that
+     an instance discharges by evaluation: the coordinator's proposal for the wrapper's law,
+     not ruled. The owner ruled the design's five proposals as recommended
      (row 255). Codex's design research
      ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
      is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
@@ -366,7 +383,10 @@ Open at this landing:
   again the same evening. Part B reads a type with one checked reader: the class reader's type
   reader with an arm for `never`, kept only when the type printer prints the answer back. Its
   order follows the Queue: `Deferred.make<A, E>()` first, then a loop's stated cursor type,
-  then a fold's stated accumulator type. The Queue's printed form needs the first two;
+  then a fold's stated accumulator type. The Queue's printed form needs the first two. The
+  first is merged (`9600fa63`), and the seat is on the second. `Ref.make<A>` is not in part
+  B: it needs an appended constructor (row 210), and the Queue's cell is a declared record
+  that does not need it. It is a slice of its own after the Queue's path;
 - on the target, `pair` and `tuple` keep the literal type of a number and of a boolean, where
   Lean types `nat` and `bool`. So the Queue's take step and the rate limiter's request do not
   type-check under tsgo 7.0.0-dev.20260629.1, and six of the eight printed steps do (seat

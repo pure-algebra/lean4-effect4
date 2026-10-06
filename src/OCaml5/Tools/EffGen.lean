@@ -53,7 +53,7 @@ namespace OCaml5.Eff
 
 /-- The `NativeOp` constructors by argument shape: nullary, over a binder term (the eight
 read-modify-write rows, each enumerated once, at its face), over a `finalizer_strategy`, over an
-index, and over type arguments (`deferredMakeOf`, enumerated at the one instance the faces spell,
+index, and over type arguments (`deferredMakeOf`, enumerated once, at its face,
 `NativeOp.spelled`). -/
 def countOps (nativeOp : Family) : Nat × Nat × Nat × Nat × Nat :=
   nativeOp.ctors.foldl (init := (0, 0, 0, 0, 0)) fun (nul, fn, st, indexed, typed) c =>

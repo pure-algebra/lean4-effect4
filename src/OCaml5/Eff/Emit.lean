@@ -474,8 +474,8 @@ def opO : NativeOp → String
   | .external i => s!"({octor "native_op" "external"} {i})"
 
 /-- The finite built-in alphabet, one operation per spelling key: the core's `NativeOp.spelled`
-(`src/Effect4/Program/Native.lean`), `Deferred.make` at the instance the faces spell and each
-read-modify-write row at its face, the unit literal for its binder term. External row indices
+(`src/Effect4/Program/Native.lean`), `Deferred.make` at its face, the instance `(nat, nat)`, and
+each read-modify-write row at its face, the unit literal for its binder term. External row indices
 range over `Nat` and are supplied by a separate table. `main` checks the constructor classes. -/
 def allOps : List NativeOp := NativeOp.spelled
 

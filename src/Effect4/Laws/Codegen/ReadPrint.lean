@@ -421,11 +421,13 @@ where
     | some row => match row.out with
       | .refuse _ | .stmt _ => none
       | .rowCall => match args with
-        -- the request reads back on the row, and the operation's binder term as the function
-        -- the printer writes after the row's call (`termReadable`, the state plan's T5)
+        -- the request reads back on the row, the operation's type arguments as the types the
+        -- printer writes on the call's head (`typeArgsReadable`), and its binder term as the
+        -- function the printer writes after the row's call (`termReadable`, the state plan's T5)
         | [.op op, .term request] =>
           if sig.dom op && requestReadable (sig.rowOf op) n request &&
               request.covers classes && request.unannotated &&
+              typeArgsReadable (sig.rowOf op) (sig.typeArgsOf op) &&
               termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) then
             some 0
           else none
@@ -839,29 +841,62 @@ theorem withFunction_head {spelling : String} {fn call x : Expr}
     exact ⟨rfl, rfl⟩
   · exact nomatch h
 
+/-- A row call with type arguments on its head is headed by no name, and is node-like: its
+callee is a generic application. A step of `printCall_head`. -/
+theorem withHeadTypes_head {spelling : String} {targets : List TypeScript.TypeRef}
+    {call x : Expr} (h : withHeadTypes spelling targets call = .ok x) :
+    exprHead? x = none ∧ nodeLike x = true := by
+  unfold withHeadTypes at h
+  split at h
+  · cases h
+    exact ⟨rfl, rfl⟩
+  · cases h
+    exact ⟨rfl, rfl⟩
+  · exact nomatch h
+
+/-- A row's call with its operation's type arguments is headed as the row's call is, or by
+nothing, and is node-like. A step of `printPerform_head` and `printPerform_nodeLike`. -/
+theorem printCall_head {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {x : Expr}
+    (h : printCall sig n op r = .ok x) :
+    (exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling) ∧ nodeLike x = true := by
+  unfold printCall at h
+  split at h
+  · exact ⟨printRow_head h, printRow_nodeLike h⟩
+  · split at h
+    · cases hcall : printRow n (sig.rowOf op) r with
+      | error why =>
+        rw [hcall] at h
+        exact nomatch h
+      | ok call =>
+        rw [hcall] at h
+        exact ⟨.inl (withHeadTypes_head h).1, (withHeadTypes_head h).2⟩
+    · exact nomatch h
+
 /-- The row call of `perform` is headed as its row's call is: by the spelling, or by nothing.
-The function of a binder term after the arguments does not change the head. A step of the
-row call's case of `readT_print`: no reserved skeleton matches the image. -/
+The type arguments on its head leave it headed by nothing, and the function of a binder term
+after the arguments does not change the head. A step of the row call's case of `readT_print`:
+no reserved skeleton matches the image. -/
 theorem printPerform_head {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {x : Expr}
     (h : printPerform sig n op r = .ok x) :
     exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling := by
   unfold printPerform at h
   split at h
-  · exact printRow_head h
-  · cases hcall : printRow n (sig.rowOf op) r with
+  · exact (printCall_head h).1
+  · cases hcall : printCall sig n op r with
     | error why => rw [hcall] at h; exact nomatch h
     | ok call =>
       rw [hcall] at h
       rw [(withFunction_head h).1]
-      exact printRow_head hcall
+      exact (printCall_head hcall).1
 
-/-- The row call of `perform` is node-like, with or without a binder term's function. -/
+/-- The row call of `perform` is node-like, with or without type arguments on its head and a
+binder term's function. -/
 theorem printPerform_nodeLike {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {x : Expr}
     (h : printPerform sig n op r = .ok x) : nodeLike x = true := by
   unfold printPerform at h
   split at h
-  · exact printRow_nodeLike h
-  · cases hcall : printRow n (sig.rowOf op) r with
+  · exact (printCall_head h).2
+  · cases hcall : printCall sig n op r with
     | error why => rw [hcall] at h; exact nomatch h
     | ok call =>
       rw [hcall] at h
@@ -957,6 +992,7 @@ theorem rowDom_inv {fam : EffFam} {ctor : String} {args : List (ArgF Op Dom)} {n
        (∃ op r, row.out = .rowCall ∧ args = [.op op, .term r] ∧ sig.dom op = true ∧
           requestReadable (sig.rowOf op) n r = true ∧ r.covers classes = true ∧
           r.unannotated = true ∧
+          typeArgsReadable (sig.rowOf op) (sig.typeArgsOf op) = true ∧
           termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) = true)) := by
   unfold domLayer.rowDom at h
   aesop
@@ -1163,13 +1199,15 @@ theorem readRow_path_print {row : Templates.Row} (hk : table[k]? = some row)
     ↓reduceIte, hb, Except.toOption, Option.map_some]
 
 /-- The row call reads its image back: the printed row of `perform` reads to `perform`. The
-printer printed the row's call and, after it, the operation's binder term as a function; the
-reader reads the call to the operation's face, the function's body to the term, and installs
-the term (`readPerform_printPerform`, `Laws/Codegen/ReadLeaf.lean`). -/
+printer printed the row's call with the operation's type arguments on its head and, after its
+arguments, the operation's binder term as a function; the reader reads the call to the
+operation's face, the types and the function's body, and installs both
+(`readPerform_printPerform`, `Laws/Codegen/ReadLeaf.lean`). -/
 theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.Row}
     (hrow : row.out = .rowCall) (hfam : row.fam = .eff) {op : Op} {r : Term}
     (hd : sig.dom op = true) (hreq : requestReadable (sig.rowOf op) n r = true)
     (hc : r.covers classes = true) (hu : r.unannotated = true)
+    (htypes : typeArgsReadable (sig.rowOf op) (sig.typeArgsOf op) = true)
     (hterm : termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) = true)
     (hp : printPerform sig n op r = .ok x) (hfam' : fam = .eff) :
     readRow classes sig spell fam n x row k child children block same =
@@ -1179,7 +1217,8 @@ theorem readRow_rowCall_print (hl : LawfulSpelling sig spell) {row : Templates.R
   simp only at hfam hrow
   subst hfam hrow
   unfold readRow
-  simp only [↓reduceIte, readPerform_printPerform hl hd hreq hc hu hterm hp, Except.mapError]
+  simp only [↓reduceIte, readPerform_printPerform hl hd hreq hc hu htypes hterm hp,
+    Except.mapError]
 
 /-! ## No row before the printing row fires -/
 
@@ -1621,7 +1660,7 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
       | _ => exact absurd rfl hrigid
   · -- the row call
     rcases hcase' with
-      ⟨_, hout', _⟩ | ⟨op', r', hout', hargs', hd', hreq, hcov, hun, hterm⟩
+      ⟨_, hout', _⟩ | ⟨op', r', hout', hargs', hd', hreq, hcov, hun, htypes, hterm⟩
     · rw [hout] at hout'; cases hout'
     have hfamily := table_fact table_family hmem
     simp only [rowFamily, hout, beq_iff_eq] at hfamily
@@ -1637,7 +1676,7 @@ theorem readT_print (hfam : fam = .eff ∨ fam = .action ∨ fam = .layer)
     · rcases hother j hj rj hrj with hne | hap
       · exact readRow_none_of_fam hne
       · exact earlier_none_rowCall hap hl hout hp' (fun hk d => readT_action_none_of_printRow hl hp' d)
-    · exact readRow_rowCall_print hl hout hfamily hd' hreq hcov hun hterm hp' rfl
+    · exact readRow_rowCall_print hl hout hfamily hd' hreq hcov hun htypes hterm hp' rfl
 
 end Step
 

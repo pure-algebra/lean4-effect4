@@ -128,10 +128,11 @@ def causeAnnotations (path : List String) (cause : CauseTerm) : List (List Strin
   } cause path
 
 /-- Read type-bearing leaves from a generated program-family view. An operation argument is
-read through the alphabet's own view of its binder term (`ScopedOp.term?`), at the path segment
-`op`: the term a read-modify-write row runs is program syntax, so a declaration or a stated type
-inside it is an annotation like any other. An operation's type arguments are not read here
-(decisions row 212). -/
+read through the alphabet's own views, at the path segment `op`. Its binder term
+(`ScopedOp.term?`) is program syntax that a read-modify-write row runs, so a declaration or a
+stated type inside it is an annotation like any other. Its type arguments (`ScopedOp.typeArgs`)
+are types the program states, each at the segment `typeArgs` and its position: `Deferred.make<A,
+E>()` states two (decisions row 212, the state plan's T5, part B). -/
 def argumentAnnotations {Op : Type} [ScopedOp Op] (path : List String) (index : Nat) :
     ArgF Op (EffSelfCarrier Op) → List (List String × Ty)
   | .term term => termAnnotations (path ++ ["argument", toString index]) term
@@ -139,7 +140,9 @@ def argumentAnnotations {Op : Type} [ScopedOp Op] (path : List String) (index : 
   | .optTerm term => term.toList.flatMap (termAnnotations (path ++ ["argument", toString index]))
   | .optTy ty => ty.toList.map fun t => (path ++ ["cursorTy"], t)
   | .op op => (ScopedOp.term? op).toList.flatMap
-      (termAnnotations (path ++ ["argument", toString index, "op"]))
+      (termAnnotations (path ++ ["argument", toString index, "op"])) ++
+    (ScopedOp.typeArgs op).zipIdx.map fun (ty, position) =>
+      (path ++ ["argument", toString index, "op", "typeArgs", toString position], ty)
   | _ => []
 
 /-- The generated view supplies every leaf without a second program-constructor match. -/

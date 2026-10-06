@@ -39,9 +39,9 @@ program is a different one: the encoding counts closes and finished jobs instead
 **Changes in the state plan's T3a.** `Ref` and `Deferred` are templates over their types. The log
 `Ref.make([])` builds at `Ref<never[]>`, and its first append is refused, since the cell is
 invariant. `Deferred.make` carries its type arguments, so the gate builds at `Deferred<void, never>`,
-runs, and its `await` cannot fail; the printer refuses it by name until T5 spells the type
-arguments. The measured pool keeps today's instance, `Deferred<number, number>`, so it still prints
-and reads back.
+runs, and its `await` cannot fail. Since the state plan's T5, part B, the faces print the type
+arguments from the operation, so the gate prints as `Deferred.make<void, never>()` and reads
+back. The measured pool keeps its instance, `Deferred<number, number>`.
 
 **Changes in the state plan's T3b.** A read-modify-write row carries a binder term. The log's
 append is rc.112's `Ref.update(log, lines => [...lines, line])`: with the cell ascribed at
@@ -321,8 +321,10 @@ def jobFailedModule : Module NativeOp :=
 -- The gate at `Deferred<void, never>` builds and runs: its `await` cannot fail.
 #guard (built? gateModule).map (fun b => (b.ty.answer, b.ty.error)) = some (.unit, .never)
 #guard (built? gateModule).map (·.runSync) = some (.success .unit)
--- The printer refuses it by name: the faces spell `Deferred.make` at one instance until T5.
-#guard (built? gateModule).map printVerdict = some "refused: typeSpelling Deferred.make"
+-- It prints and reads back: the faces derive `Deferred.make`'s type arguments from the
+-- operation (the state plan's T5, part B). Until then the printer refused it by name.
+#guard (built? gateModule).map printVerdict = some "printed"
+#guard (built? gateModule).map readBackVerdict = some true
 -- The error payload carrier (row 120, part E1): the record is a typed failure (section 7); the
 -- tag with a string message still types as the pair.
 #guard verdict jobFailedModule = "built"
@@ -341,9 +343,7 @@ def jobFailedModule : Module NativeOp :=
 
 def measured : Reach :=
   { refused :=
-      [ ("the log's append at Ref<never[]>", verdict logAppend)
-      , ("the gate as Deferred<void> in TypeScript",
-          ((built? gateModule).map printVerdict).getD "not built") ]
+      [ ("the log's append at Ref<never[]>", verdict logAppend) ]
     admitted := verdict (pool 5) == "built"
     answer := match runPool (pool 5) with
       | some r => answerOf r.1 rc112
@@ -355,8 +355,7 @@ def measured : Reach :=
 scripted host, with counts where rc.112 answers the log; printed and read back. -/
 def stage : Reach :=
   { refused :=
-      [ ("the log's append at Ref<never[]>", "typing: resultNotSubtype")
-      , ("the gate as Deferred<void> in TypeScript", "refused: typeSpelling Deferred.make") ]
+      [ ("the log's append at Ref<never[]>", "typing: resultNotSubtype") ]
     admitted := true, answer := .differs, printed := true, readBack := true }
 
 #guard measured = stage

@@ -95,15 +95,31 @@ structure Signature (Op : Type) where
   installs the function it read (`Codegen/Read.lean`, the state plan's T5). The identity by
   default. -/
   withTerm : Op → Term → Op := fun op _ => op
+  /-- The type arguments that an operation's printed call carries on its head, as program types:
+  `Deferred.make<A, E>()` carries the two types of its instance, because the export's own
+  parameters have defaults and its call has no argument to infer them from (`E4-CHECK-CE-013`).
+  Empty for an operation whose call needs none. The faces print each through the type printer
+  (`Codegen/Types.lean`), so no type argument is spelled by hand (the state plan's T5, part B). -/
+  typeArgsOf : Op → List Ty := fun _ => []
+  /-- The operation at other type arguments; an operation that carries none is unchanged. At a
+  list of another length it answers the operation that the row's key spells, the same for every
+  instance (`Signature.face`). A reader installs the type arguments it read on the call's head
+  (`Codegen/Read.lean`). The laws a reader needs of this update and of `withTerm`, and their
+  independence, are `LawfulTypeArgs` there. The identity by default. -/
+  withTypeArgs : Op → List Ty → Op := fun op _ => op
 
 variable {Op : Type}
 
 /-- **The face of an operation**: the operation as its row spells it, its binder term replaced by
-the unit literal. A row's spelling and trailing names do not show the term, so a reader's `spell`
-answers the face, and the reader installs the function it read (`Signature.withTerm`). An
-operation that carries no term is its own face at a lawful signature
-(`LawfulSpelling.withTerm_none`, `Codegen/Read.lean`). -/
-def Signature.face (sig : Signature Op) (op : Op) : Op := sig.withTerm op (.lit .unit)
+the unit literal and its type arguments dropped. A row's spelling and trailing names show neither,
+so a reader's `spell` answers the face, and the reader installs the type arguments and the
+function it read (`Signature.withTypeArgs`, `Signature.withTerm`). The face keeps the columns of
+the row that a printed call shows. It does not keep the answer and error columns of an operation
+that carries type arguments: the restored operation owns those. An operation that carries no
+term and no type argument is its own face at a lawful signature (`LawfulSpelling.face_of_none`,
+`Laws/Codegen/ReadLeaf.lean`). -/
+def Signature.face (sig : Signature Op) (op : Op) : Op :=
+  sig.withTypeArgs (sig.withTerm op (.lit .unit)) []
 
 /-- The literal rule (DI-15, amended 2026-09-11: "mirror TypeScript"). A string literal types
 as `string` in general position (`Lit.ty`, what `termTy` answers) and keeps its literal type
