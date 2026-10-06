@@ -26,8 +26,8 @@ Do not run a script of this folder in place.
 
 ## The scope of the mask's pop discipline
 
-The slice is allocated to Codex first, in a scope of its own: Codex asked for a branch, the
-files, the anchors and a build slot. It has one owner at a time. If Codex does not take it,
+The slice is allocated to Codex first, in a scope of its own. Codex asked for a branch, the
+files, the anchors and a build slot. The slice has one owner at a time. If Codex does not take it,
 Codex says so, and a seat of the coordinator takes it when one is free. The coordinator merges
 it in either case. The two slots of `scratch/lean-slot.sh` are shared with the seats, so a
 build may wait.
