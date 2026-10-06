@@ -30,7 +30,8 @@ set_option maxHeartbeats 8000000
 namespace Test.Program.SemaphoreRelation
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue.Model (Table Reads Captured captured_var captured_answer step_updates)
+open Effect4.Modules
+open Effect4.Queue.Model (step_updates)
 open Effect4.Semaphore.Model
 open Test.Program.SemaphoreAgreement (profileStates outside moves Move held freed scan)
 open Test.Program.SemaphoreSteps (firstName secondName stepScope stepScope_second stepScope_cell)

@@ -10,8 +10,8 @@ import ProofGraph.Plan
 The five steps of a `Ref.modify` are typed at every message type that the checker types in a
 cell (`src/Effect4/Laws/Modules/Queue/Typing.lean`). The proofs read the checker's rules in
 their introduction form (`src/Effect4/Laws/Program/Typing/TermIntro.lean`) through the judgment
-`Types` (`src/Effect4/Laws/Modules/Queue/Checking.lean`). This battery holds what the theorems
-do not say by themselves:
+`Types` (`src/Effect4/Laws/Modules/Checking.lean`). This battery holds what the theorems do not
+say by themselves:
 
 1. the statements at a record message type and at a message type that holds a handle;
 2. a step's typing at a scope that is not the statement's own: a binder before the arguments,
@@ -569,37 +569,37 @@ next goals: 0
 
 /-! ### The capture of a minted name, its typed twin, and the connector -/
 
-/-- info: 'Effect4.Queue.Model.captured_minted' depends on axioms: [propext] -/
+/-- info: 'Effect4.Modules.captured_minted' depends on axioms: [propext] -/
 #guard_msgs in
 #print axioms captured_minted
 
-/-- info: 'Effect4.Queue.Model.captured_answer' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.captured_answer' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms captured_answer
 
-/-- info: 'Effect4.Queue.Model.capturedTy_var' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.capturedTy_var' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms capturedTy_var
 
-/-- info: 'Effect4.Queue.Model.capturedTy_minted' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.capturedTy_minted' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms capturedTy_minted
 
-/-- info: 'Effect4.Queue.Model.capturedTy_answer' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.capturedTy_answer' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms capturedTy_answer
 
-/-- info: 'Effect4.Queue.Model.typeAt_tree' depends on axioms: [propext, Quot.sound] -/
+/-- info: 'Effect4.Modules.typeAt_tree' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms typeAt_tree
 
 /--
-info: Effect4.Queue.Model.captured_minted: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Queue.Model.captured_answer: proved; nearest [Effect4.Queue.Model.captured_minted]; 0 lemmas, 0 definitions
-Effect4.Queue.Model.capturedTy_var: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Queue.Model.capturedTy_minted: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Queue.Model.capturedTy_answer: proved; nearest [Effect4.Queue.Model.capturedTy_minted]; 0 lemmas, 0 definitions
-Effect4.Queue.Model.typeAt_tree: proved; nearest []; 0 lemmas, 0 definitions
+info: Effect4.Modules.captured_minted: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Modules.captured_answer: proved; nearest [Effect4.Modules.captured_minted]; 0 lemmas, 0 definitions
+Effect4.Modules.capturedTy_var: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Modules.capturedTy_minted: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Modules.capturedTy_answer: proved; nearest [Effect4.Modules.capturedTy_minted]; 0 lemmas, 0 definitions
+Effect4.Modules.typeAt_tree: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in

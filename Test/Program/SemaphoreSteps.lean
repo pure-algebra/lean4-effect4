@@ -36,8 +36,7 @@ namespace Test.Program.SemaphoreSteps
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
-open Effect4.Queue.Model (typeAt typeAt_of_types Reads TypesEach CapturedTy types_var
-  capturedTy_var capturedTy_answer written_ne_mint resolve_last step_keeps_cell)
+open Effect4.Queue.Model (step_keeps_cell)
 open Effect4.Semaphore.Model
 open Test.Program.QueueSteps (termAt measure)
 

@@ -24,7 +24,7 @@ path's slice. Reach, for each goal:
 - the observation is the reply, the stored value and the ordered notifications: every signal
   of the model, and no other (`Notified`);
 - the statement holds at every scope, for every caller's term that reads the step's arguments
-  (`Reads`, `Captured`).
+  (`Reads`, `Captured`, `src/Effect4/Laws/Modules/Reading.lean`).
 
 `step_updates` joins a goal to the store: a step term that reads the pair of a reply and a next
 value is one atomic update of the cell (`refStep_modify`). `step_keeps_cell` gives the typed
@@ -32,9 +32,11 @@ half (`ListFoldRules.step`). `sizeStep` is a term over a read, and `cell_read` i
 (`refStep_get`).
 
 The six statements are proved, each in place of its planned goal (decisions row 203). The
-proofs read each builder of a step through `src/Effect4/Laws/Modules/Queue/Reading.lean`, and
-they put the model's step in closed form on the profile: `acceptLoop_single` and
-`wake_profile` give the offers that enter and the taker to wake.
+proofs read each builder of a step through the shared reading rules
+(`src/Effect4/Laws/Modules/Reading.lean`) and each pass through
+`src/Effect4/Laws/Modules/Queue/Reading.lean`. They put the model's step in closed form on the
+profile: `acceptLoop_single` and `wake_profile` give the offers that enter and the taker to
+wake.
 
 The statements establish no delivery, no cancellation law, no liveness and nothing of a
 wrapper. An equal value in the model says nothing of a host. The finite controls are

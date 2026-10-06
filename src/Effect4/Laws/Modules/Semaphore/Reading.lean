@@ -5,9 +5,9 @@ import Effect4.Laws.Modules.Queue.Reading
 # Reading Semaphore's step terms: the values of its records, words and passes (row 265)
 
 A step goal says that a step's source term reads a value (`Reads`,
-`src/Effect4/Laws/Modules/Queue/Relation.lean`). The Queue's reading lemmas give what each
-authoring builder and each word of a step reads (`src/Effect4/Laws/Modules/Queue/Reading.lean`),
-and they serve here as they are. This file adds what Semaphore's steps need beside them.
+`src/Effect4/Laws/Modules/Reading.lean`). The shared reading rules give what each authoring
+builder and each word of a step reads, and they serve here as they are. This file adds what
+Semaphore's steps need beside them.
 
 - **The two records**: what a read answers and what an overwrite stores, one `rfl` for each
   field of the cell and of a waiter.
@@ -36,8 +36,9 @@ set_option autoImplicit false
 namespace Effect4.Semaphore.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue.Model
 open Effect4.Modules
+-- a fact of lists that waits in the Queue's folder for its move to `Effect4.Constructive.List`
+open Effect4.Queue.Model (foldl_keep)
 
 /-! ## The two records: what a read answers and what an overwrite stores -/
 

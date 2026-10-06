@@ -277,7 +277,7 @@ library's step, so typing alone does not catch it. -/
 
 /-- The checker's type of a source term at a scope, at the native signature. -/
 def typeOf (names : List String) (types : List Ty) (src : TermSrc) : Option Ty :=
-  Queue.Model.typeAt nativeSignature names types src
+  typeAt nativeSignature names types src
 
 /-- A field of a step's stored value, as a number. -/
 def storedNat (step : TermSrc) (name : String) : Option Val :=

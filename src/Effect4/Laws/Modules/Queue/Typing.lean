@@ -3,7 +3,7 @@ import Effect4.Program.Typing
 import Effect4.Program.Native
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.TyView
-import Effect4.Laws.Modules.Queue.Checking
+import Effect4.Laws.Modules.Checking
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -23,8 +23,8 @@ typing.
   the instance of the form below at the statement's own names.
 - **At every scope** (`takeStep_types` and its four siblings): for every caller's terms that
   have the arguments' types and keep them under a fold's binders, the step has its stated type
-  (`Types`, `CapturedTy`, `src/Effect4/Laws/Modules/Queue/Checking.lean`). The wrapper applies
-  this form at its own scope, with no second elaboration.
+  (`Types`, `CapturedTy`, `src/Effect4/Laws/Modules/Checking.lean`). The wrapper applies this
+  form at its own scope, with no second elaboration.
 
 Their consumer is the wrapper's law, in the public path's slice: with a step's typing,
 `step_keeps_cell` (`src/Effect4/Laws/Modules/Queue/Steps.lean`) gives that one `Ref.modify` of
@@ -65,41 +65,6 @@ instance (A : Ty) : Decidable (MessageTy A) :=
       Formation.check (Formation.sites false [] (.record (Queue.cellFields A))) = none ∧
       Formation.check (Formation.sites false [] (.record (Queue.offerFields A))) = none)
     ⟨fun h => ⟨h.1, h.2.1, h.2.2⟩, fun h => ⟨h.canonical, h.cell, h.offer⟩⟩
-
-/-- The checker's type of a source term, at a scope of names and their types. `none` where the
-source refuses or its tree has no type. -/
-def typeAt (sig : Signature NativeOp) (names : List String) (types : List Ty) (src : TermSrc) :
-    Option Ty :=
-  (src { names := names } []).toOption.bind (termTy sig types)
-
-/-- A source term that types at a scope of names, outside a const-generic position, has the
-checker's answer there. Each typing statement at a step's own scope is read so from the step's
-typing at every scope. -/
-theorem typeAt_of_types {sig : Signature NativeOp} {names : List String} {types : List Ty}
-    {src : TermSrc} {T : Ty} (typed : Types sig src { names := names } [] types false T) :
-    typeAt sig names types src = some T := by
-  obtain ⟨t, tree, checked⟩ := typed
-  show ((src { names := names } []).toOption.bind (termTy sig types)) = some T
-  rw [tree]
-  exact checked
-
-/-- **From a `typeAt` answer to the tree's typing.** The source elaborates at the scope of
-names, and the checker types its tree: the elaborated tree, its elaboration equation and its
-`termTy` equation. Placement: concept `store-typing`, requirement R4, a helper of the wrapper's
-law. Its consumer is the typing premise of `step_keeps_cell`
-(`src/Effect4/Laws/Modules/Queue/Steps.lean`). It reads `typeAt`'s definition, and it
-establishes nothing of a wrapper. -/
-theorem typeAt_tree {sig : Signature NativeOp} {names : List String} {types : List Ty}
-    {src : TermSrc} {T : Ty} (typed : typeAt sig names types src = some T) :
-    ∃ t, src { names := names } [] = .ok t ∧ termTy sig types t = some T := by
-  unfold typeAt at typed
-  cases tree : src { names := names } [] with
-  | error refusal =>
-    rw [tree] at typed
-    exact absurd typed (Option.some_ne_none T).symm
-  | ok t =>
-    rw [tree] at typed
-    exact ⟨t, rfl, typed⟩
 
 /-! ## The types of the steps' replies -/
 
@@ -158,13 +123,6 @@ theorem cell_msgsTy {A : Ty} (canonical : A.normalize = A) :
   rw [Ty.join_never]
   show some (Ty.list (Ty.normalize A)) = _
   rw [canonical]
-
-/-- The empty list is below every list type. -/
-theorem sub_nil_list (T : Ty) : Ty.sub (.list .never) (.list T) = true := by
-  rw [Ty.sub_args_list]
-  show (Ty.sub .never T && true) = true
-  rw [Ty.OrderProof.sub_never]
-  rfl
 
 /-- The cell's written declaration normalizes to the cell's type. -/
 theorem cellFields_normal {A : Ty} (canonical : A.normalize = A) :
@@ -384,17 +342,6 @@ theorem types_wake {takers msgs : TermSrc} {T M : Ty}
   types_ifT atoms (types_isEmpty atoms hmsgs) (types_noneOf atoms htakers)
     (types_take atoms htakers (types_nat 1))
 
-/-- The identity of a folded record against the request's, under the fold's binders: the
-record's `id` field and the request's identity are two `Deferred` handles. -/
-theorem types_sameItem {id : TermSrc} {E accT a e b f : Ty}
-    (depth : types.length = env.names.length)
-    (idField : Record.fieldType false E "id" = some (.deferredOf a e))
-    (hid : CapturedTy sig id env path types (.deferredOf b f)) :
-    TypesEach sig (same (field (minted (env.mint "item")) "id") id)
-      (env.push [env.mint "acc", env.mint "item"]) path (types ++ [accT, E]) .bool :=
-  types_same atoms (fun _ => types_field (types_minted_item depth path accT E false) idField)
-    (hid.underFold accT E)
-
 /-- `enrolled`: whether the request waits among the takers. -/
 theorem types_enrolled {takers id : TermSrc} (depth : types.length = env.names.length)
     (htakers : TypesEach sig takers env path types (.list Queue.takerTy))
@@ -414,25 +361,6 @@ theorem types_isHead {takers id : TermSrc} (depth : types.length = env.names.len
     (types_bool false false)
     (types_sameItem (accT := .bool) atoms depth taker_idTy hid false)
     (Ty.subN_refl .bool)
-
-/-- The fold that drops the entries of one identity types at the list's own type, where the
-entries' type is its own normal form and holds a `Deferred` identity. The body of
-`removeTaker` and of `removeOffer`. -/
-theorem types_removeById {entries id : TermSrc} {E a e b f : Ty}
-    (depth : types.length = env.names.length) (canonical : E.normalize = E)
-    (idField : Record.fieldType false E "id" = some (.deferredOf a e))
-    (hentries : TypesEach sig entries env path types (.list E))
-    (hid : CapturedTy sig id env path types (.deferredOf b f)) :
-    TypesEach sig
-      (foldWith entries (noneOf entries) fun kept entry =>
-        ifT (same (field entry "id") id) kept (snoc kept entry))
-      env path types (.list E) :=
-  fun _ => types_foldWith_same (hentries false) (types_noneOf atoms hentries false)
-    (types_ifT atoms (types_sameItem atoms depth idField hid)
-      (types_minted_acc depth path (.list E) E)
-      (types_snoc atoms canonical (types_minted_acc depth path (.list E) E)
-        (types_minted_item depth path (.list E) E)) false)
-    (Ty.subN_refl (.list E))
 
 /-- `removeTaker`: the takers without the request. -/
 theorem types_removeTaker {takers id : TermSrc} (depth : types.length = env.names.length)

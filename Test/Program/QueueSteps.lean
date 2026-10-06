@@ -37,7 +37,7 @@ def termAt (names : List String) (src : TermSrc) : Option Term :=
 /-- The checker's type of a source term, at a scope of names and their types: the function of
 the typing statements, at the native signature. -/
 def typeAt (names : List String) (types : List Ty) (src : TermSrc) : Option Ty :=
-  Queue.Model.typeAt nativeSignature names types src
+  Modules.typeAt nativeSignature names types src
 
 /-! ## 1. The cell -/
 

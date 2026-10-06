@@ -1,5 +1,4 @@
 import Effect4.Laws.Modules.Semaphore.Reading
-import Effect4.Laws.Modules.Queue.Steps
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
 
@@ -31,7 +30,7 @@ operations that wait. Reach, for each goal:
 - the observation is the reply and the stored value. A visit's reply is the selected waiter's
   record: its identity, its hint, its count and its stamp;
 - the statement holds at every scope, for every caller's term that reads the step's arguments
-  (`Reads`, `Captured`, `src/Effect4/Laws/Modules/Queue/Relation.lean`).
+  (`Reads`, `Captured`, `src/Effect4/Laws/Modules/Reading.lean`).
 
 The Queue's connectors join a goal to the store, as they are
 (`src/Effect4/Laws/Modules/Queue/Steps.lean`). With `step_updates`, a step term that reads the
@@ -39,8 +38,8 @@ pair of a reply and a next value is one atomic update of the cell. `step_keeps_c
 typed half, with a step's typing (`src/Effect4/Laws/Modules/Semaphore/Typing.lean`).
 
 The five statements are proved, each in place of its planned goal and with its statement
-unchanged (decisions row 203). The proofs read each builder of a step through the Queue's
-reading lemmas (`src/Effect4/Laws/Modules/Queue/Reading.lean`) and Semaphore's
+unchanged (decisions row 203). The proofs read each builder of a step through the shared
+reading rules (`src/Effect4/Laws/Modules/Reading.lean`) and Semaphore's
 (`src/Effect4/Laws/Modules/Semaphore/Reading.lean`). They put the model's transition in closed
 form: the two takes on each side of their test, and a visit from the waiters that start at the
 first fitting one (`visit_fromFirst`).
@@ -57,7 +56,7 @@ set_option autoImplicit false
 namespace Effect4.Semaphore.Model
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Queue.Model
+open Effect4.Modules
 
 /-! ## The model's side, in closed form
 

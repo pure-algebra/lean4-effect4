@@ -1,16 +1,20 @@
-import Effect4.Laws.Modules.Queue.Reading
+import Effect4.Program.Typing
+import Effect4.Program.Native
+import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Program.TyView
+import Effect4.Laws.Modules.Reading
 import Effect4.Laws.Program.Typing.TermIntro
 
 /-!
-# Checking the Queue's step terms: the types of the authoring builders (decisions row 257)
+# Checking a step term: the types of the authoring builders and of the words (row 257)
 
-A typing statement of a step says that the checker types the step's tree
-(`src/Effect4/Laws/Modules/Queue/Typing.lean`). This file gives the judgment that the
-statements are proved through, beside `Reads`
-(`src/Effect4/Laws/Modules/Queue/Relation.lean`), and what each builder of a step types at, from
-what its arguments type at. The order is that of `Reading.lean`: a literal, an application, a
-field's read, an overwrite, a construction, a fold with minted binders, and the words of a step
-term. A positional read is here for the wrapper, which reads a step's reply by position.
+A typing statement of a composed module's step says that the checker types the step's tree.
+This file holds the judgment that the statements are proved through, beside `Reads`
+(`src/Effect4/Laws/Modules/Reading.lean`), and what each builder of a step types at, from what
+its arguments type at. It names no module. The order is that of `Reading.lean`: a literal, an
+application, a field's read, an overwrite, a construction, a fold with minted binders, and the
+words of a step term. A positional read is here for a wrapper, which reads a step's reply by
+position.
 
 - **`Types`** ties a source term to its elaboration and to the checker's `argTy`, under one
   literal flag. A string literal has two types: its literal type inside a const-generic
@@ -22,23 +26,26 @@ term. A positional read is here for the wrapper, which reads a step's reply by p
   two binders that a fold mints. An author's variable has it (`capturedTy_var`), and so has a
   minted name that differs from the fold's two names (`capturedTy_minted`). Weakening is not
   substitution, so capture stays a premise.
+- **The removal by identity** is typed once (`types_removeById`), at every entry type that
+  holds a `Deferred` identity.
+- **`typeAt`** is the checker's answer for a source term at a scope of names, and
+  `typeAt_of_types` and `typeAt_tree` join it to `Types` and to the tree's `termTy` equation.
 
 Each builder lemma takes each premise at the flag that the builder's node gives its part, and
 its conclusion holds under each flag. The rules of the nodes are the checker's, in their
-introduction form (`src/Effect4/Laws/Program/Typing/TermIntro.lean`). No statement here names a
-type of the Queue: the lemmas stay in this folder until a second module types a builder so.
+introduction form (`src/Effect4/Laws/Program/Typing/TermIntro.lean`).
 
-Placement. Concept `store-typing`, requirement R4. Every lemma here is a helper of the five
-typing statements of the steps, and of the wrapper's law, which types its own terms with the
-same lemmas. They establish nothing of evaluation, of a model or of a target.
+Placement. Concept `store-typing`, requirement R4. Every lemma here is a helper of a module's
+typing statements: the Queue's (`src/Effect4/Laws/Modules/Queue/Typing.lean`) and Semaphore's
+(`src/Effect4/Laws/Modules/Semaphore/Typing.lean`). A wrapper's law types its own terms with
+the same lemmas. They establish nothing of evaluation, of a model or of a target.
 -/
 
 set_option autoImplicit false
 
-namespace Effect4.Queue.Model
+namespace Effect4.Modules
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Modules
 
 variable {Op : Type}
 
@@ -477,6 +484,91 @@ theorem types_tuple3 {a b c : TermSrc} {X Y Z : Ty} (ha : TypesEach sig a env pa
     (atomOf_native atoms (nativeAtomTy_tuple [X, Y, Z]))).to
       (Ty.normalize_triple_canonical hX hY hZ)
 
+/-! ## The removal by identity
+
+The pass `removeById` (`src/Effect4/Modules/Words.lean`) is typed once, at an entry type that
+holds a `Deferred` identity. Its consumers are a module's own removals: the Queue's
+`removeTaker` and `removeOffer`, and Semaphore's `removeWaiter`. -/
+
+/-- The identity of a folded record against the request's, under the fold's binders: the
+record's `id` field and the request's identity are two `Deferred` handles. -/
+theorem types_sameItem {id : TermSrc} {E accT a e b f : Ty}
+    (depth : types.length = env.names.length)
+    (idField : Record.fieldType false E "id" = some (.deferredOf a e))
+    (hid : CapturedTy sig id env path types (.deferredOf b f)) :
+    TypesEach sig (same (field (minted (env.mint "item")) "id") id)
+      (env.push [env.mint "acc", env.mint "item"]) path (types ++ [accT, E]) .bool :=
+  types_same atoms (fun _ => types_field (types_minted_item depth path accT E false) idField)
+    (hid.underFold accT E)
+
+/-- The fold that drops the entries of one identity types at the list's own type, where the
+entries' type is its own normal form and holds a `Deferred` identity. The fold is the body of
+the pass `removeById` (`src/Effect4/Modules/Words.lean`). -/
+theorem types_removeById {entries id : TermSrc} {E a e b f : Ty}
+    (depth : types.length = env.names.length) (canonical : E.normalize = E)
+    (idField : Record.fieldType false E "id" = some (.deferredOf a e))
+    (hentries : TypesEach sig entries env path types (.list E))
+    (hid : CapturedTy sig id env path types (.deferredOf b f)) :
+    TypesEach sig
+      (foldWith entries (noneOf entries) fun kept entry =>
+        ifT (same (field entry "id") id) kept (snoc kept entry))
+      env path types (.list E) :=
+  fun _ => types_foldWith_same (hentries false) (types_noneOf atoms hentries false)
+    (types_ifT atoms (types_sameItem atoms depth idField hid)
+      (types_minted_acc depth path (.list E) E)
+      (types_snoc atoms canonical (types_minted_acc depth path (.list E) E)
+        (types_minted_item depth path (.list E) E)) false)
+    (Ty.subN_refl (.list E))
+
 end Builders
 
-end Effect4.Queue.Model
+/-! ## The checker's answer at a scope of names
+
+`typeAt` is what the checker answers for a source term at a scope of names. A module states
+each step's typing at the step's own names with it, and a battery reads it by `decide`. -/
+
+/-- The checker's type of a source term, at a scope of names and their types. `none` where the
+source refuses or its tree has no type. -/
+def typeAt (sig : Signature NativeOp) (names : List String) (types : List Ty) (src : TermSrc) :
+    Option Ty :=
+  (src { names := names } []).toOption.bind (termTy sig types)
+
+/-- A source term that types at a scope of names, outside a const-generic position, has the
+checker's answer there. Each typing statement at a step's own scope is read so from the step's
+typing at every scope. -/
+theorem typeAt_of_types {sig : Signature NativeOp} {names : List String} {types : List Ty}
+    {src : TermSrc} {T : Ty} (typed : Types sig src { names := names } [] types false T) :
+    typeAt sig names types src = some T := by
+  obtain ⟨t, tree, checked⟩ := typed
+  show ((src { names := names } []).toOption.bind (termTy sig types)) = some T
+  rw [tree]
+  exact checked
+
+/-- **From a `typeAt` answer to the tree's typing.** The source elaborates at the scope of
+names, and the checker types its tree: the elaborated tree, its elaboration equation and its
+`termTy` equation. Placement: concept `store-typing`, requirement R4, a helper of the wrapper's
+law. Its consumer is the typing premise of `step_keeps_cell`
+(`src/Effect4/Laws/Modules/Queue/Steps.lean`). It reads `typeAt`'s definition, and it
+establishes nothing of a wrapper. -/
+theorem typeAt_tree {sig : Signature NativeOp} {names : List String} {types : List Ty}
+    {src : TermSrc} {T : Ty} (typed : typeAt sig names types src = some T) :
+    ∃ t, src { names := names } [] = .ok t ∧ termTy sig types t = some T := by
+  unfold typeAt at typed
+  cases tree : src { names := names } [] with
+  | error refusal =>
+    rw [tree] at typed
+    exact absurd typed (Option.some_ne_none T).symm
+  | ok t =>
+    rw [tree] at typed
+    exact ⟨t, rfl, typed⟩
+
+/-! ## The order at a list -/
+
+/-- The empty list is below every list type. -/
+theorem sub_nil_list (T : Ty) : Ty.sub (.list .never) (.list T) = true := by
+  rw [Ty.sub_args_list]
+  show (Ty.sub .never T && true) = true
+  rw [Ty.OrderProof.sub_never]
+  rfl
+
+end Effect4.Modules
