@@ -45,6 +45,10 @@ Placement (AGENTS.md, Trust):
   (`Laws/Program/ReferenceTyping.lean`), and `checkTypedProgram_of_hasTy`
   (`Laws/Program/CheckedTyping.lean`).
 
+Imports. This module, `PathFold.lean` and `PathOrder.lean` import no `aesop`:
+`Laws/Program/ReferenceTyping.lean` imports this module, and its header says why its imports
+stay free of the `batteries` package.
+
 The design is `docs/research/2026-10-06-seat-REFS-design.md`.
 -/
 

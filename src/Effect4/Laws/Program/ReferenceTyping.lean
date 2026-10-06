@@ -19,6 +19,13 @@ Proof graph:
 
 The proved judgment is equality of `typeOfProgram` results. Neither answer is shown to
 be a type. Runtime behavior and layer sharing are separate C4 obligations.
+
+Imports. This file imports `Laws/Program/ReferenceExpansion.lean` for the top theorem.
+Keep `aesop`, and with it the `batteries` package, out of that module's imports and out of
+the imports of `PathFold.lean` and `PathOrder.lean`. With `batteries` imported here, its
+linter `unnecessarySeqFocus` refuses the last line of `action_expandRound_eq_self` below,
+and the file does not build (`docs/research/2026-10-06-seat-REFS-receipt.md`, finding F1).
+The limit goes when the seven `*_expandRound_eq_self` proofs are rewritten.
 -/
 
 set_option autoImplicit false
