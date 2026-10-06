@@ -1,4 +1,5 @@
 import Effect4.Laws.Modules.Queue.Relation
+import Effect4.Laws.Modules.Queue.Reading
 import Effect4.Laws.Program.Typed.ListFold
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Auto.Semantics
@@ -102,6 +103,72 @@ theorem cell_read {stores : Stores} {q : RefKey} {cell : Val}
   rw [refStep_get stores.refs q cell held]
   rfl
 
+/-! ## The model's side, in closed form
+
+Steps of the step goals: what the model's wake names on the profile, as stored takers. -/
+
+/-- The takers that a profile state's wake names: the earliest, where a message is buffered. -/
+def toWake (s : State) : List Taker := if s.messages.length = 0 then [] else s.takers.take 1
+
+/-- **The model's wake on the profile, as the takers to wake** (`wake_profile`). -/
+theorem wake_toWake {s : State} (h : FirstProfile s) :
+    wake s = (toWake s).map (fun t => (⟨t.id, .again⟩ : Signal)) := by
+  rw [wake_profile h]
+  unfold toWake
+  cases s.takers with
+  | nil =>
+    by_cases empty : s.messages.length = 0
+    · rw [if_pos empty]; rfl
+    · rw [if_neg empty]; rfl
+  | cons t ts =>
+    cases hm : s.messages with
+    | nil => rfl
+    | cons m ms => rfl
+
+/-- Each taker to wake is a stored taker. -/
+theorem toWake_stored (s : State) : ∀ t ∈ toWake s, t ∈ s.takers := by
+  intro t member
+  unfold toWake at member
+  by_cases empty : s.messages.length = 0
+  · rw [if_pos empty] at member
+    exact absurd member List.not_mem_nil
+  · rw [if_neg empty] at member
+    exact List.mem_of_mem_take member
+
+/-- The wake's pass on the encoding of a buffer and of takers reads the takers to wake. -/
+theorem wake_encoded (tb : Table) (msg : Nat → Val) (messages : List Nat) (takers : List Taker) :
+    (if (messages.map msg).length = 0 then [] else (takers.map (takerVal tb)).take 1) =
+      (if messages.length = 0 then [] else takers.take 1).map (takerVal tb) := by
+  rw [List.length_map]
+  by_cases empty : messages.length = 0
+  · rw [if_pos empty, if_pos empty]; rfl
+  · rw [if_neg empty, if_neg empty, List.map_take]
+
+theorem isDone_opened {s : State} (opened : s.phase = .opened) : isDone s = false := by
+  unfold isDone
+  rw [opened]
+
+theorem isOpen_opened {s : State} (opened : s.phase = .opened) : isOpen s = true := by
+  unfold isOpen
+  rw [opened]
+
+theorem settle_opened {s : State} (opened : s.phase = .opened) : settle s = (s, []) := by
+  unfold settle
+  rw [opened]
+
+/-- The model's `withdrawOffer` in an opened queue: the offer leaves, and the wake is named. -/
+theorem withdrawOffer_opened {s : State} (opened : s.phase = .opened) (id : Nat) :
+    withdrawOffer s id =
+      ({ s with offers := s.offers.filter (fun o => o.id != id) },
+        wake { s with offers := s.offers.filter (fun o => o.id != id) }) := by
+  unfold withdrawOffer
+  rw [isDone_opened opened, if_neg Bool.false_ne_true]
+  show ((settle { s with offers := s.offers.filter (fun o => o.id != id) }).1,
+    (settle { s with offers := s.offers.filter (fun o => o.id != id) }).2 ++
+      wake (settle { s with offers := s.offers.filter (fun o => o.id != id) }).1) = _
+  rw [settle_opened (s := { s with offers := s.offers.filter (fun o => o.id != id) }) opened]
+  rfl
+
 /-! ## The six step goals -/
 
 /-- **The take step agrees with the model's `take` at the bounds one and one.** The cell holds
@@ -165,16 +232,22 @@ proof_goal pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
 step is a term over the cell's value: it stores nothing and names no notification, as the
 model's `size` answers no state and no signal (`cell_read`). -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal sizeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
+theorem sizeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
     (profile : FirstProfile s) {cellSrc : TermSrc} {env : Env} {path : List Nat}
     {vals : List Val} (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
-    Reads (Queue.sizeStep A cellSrc) env path vals (Val.nat (size s))
+    Reads (Queue.sizeStep A cellSrc) env path vals (Val.nat (size s)) := by
+  have opened : size s = s.messages.length := by
+    unfold size isDone
+    rw [profile.opened]
+    rfl
+  rw [opened]
+  exact (reads_len (reads_field readsCell (cell_msgs _ _ _ _))).to (by rw [List.length_map])
 
 /-- **The withdrawal of a take agrees with the model's `withdrawTake`.** The step accepts no
 offer, its list is the takers that the model wakes, and the stored value is the model's next
 state. The table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal withdrawTake_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+theorem withdrawTake_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {idSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {vals : List Val} (depth : vals.length = env.names.length)
     (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
@@ -182,13 +255,24 @@ proof_goal withdrawTake_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : St
     ∃ woken,
       Notified s (withdrawTake s id).1 (withdrawTake s id).2 [] woken ∧
       Reads (Queue.withdrawTake A idSrc cellSrc) env path vals
-        (Val.tuple [Val.list (woken.map (takerVal tb)), cellVal tb msg (withdrawTake s id).1])
+        (Val.tuple [Val.list (woken.map (takerVal tb)), cellVal tb msg (withdrawTake s id).1]) := by
+  have next : FirstProfile (removeTaker s id) := removeTaker_profile id profile
+  refine ⟨toWake (removeTaker s id), ⟨?_, fun _ none => absurd none List.not_mem_nil,
+    toWake_stored _⟩, ?_⟩
+  · show wake (removeTaker s id) = _
+    rw [wake_toWake next]
+    rfl
+  · have removed := reads_removeTaker tb injective s.takers id depth
+      (reads_field readsCell (cell_takers _ _ _ _)) readsId
+    have woken := reads_wake removed (reads_field readsCell (cell_msgs _ _ _ _))
+    have stored := reads_recordSet readsCell removed (cell_setTakers _ _ _ _ _)
+    exact (reads_pair woken stored).to (by rw [wake_encoded]; rfl)
 
 /-- **The withdrawal of an offer agrees with the model's `withdrawOffer`.** The step accepts no
 offer, its list is the takers that the model wakes, and the stored value is the model's next
 state. The table does not change. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+theorem withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (profile : FirstProfile s) (injective : tb.Injective) {idSrc cellSrc : TermSrc} {env : Env}
     {path : List Nat} {vals : List Val} (depth : vals.length = env.names.length)
     (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
@@ -197,6 +281,19 @@ proof_goal withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : S
       Notified s (withdrawOffer s id).1 (withdrawOffer s id).2 [] woken ∧
       Reads (Queue.withdrawOffer A idSrc cellSrc) env path vals
         (Val.tuple [Val.list (woken.map (takerVal tb)),
-          cellVal tb msg (withdrawOffer s id).1])
+          cellVal tb msg (withdrawOffer s id).1]) := by
+  have next : FirstProfile { s with offers := s.offers.filter (fun o => o.id != id) } :=
+    profile.shrink rfl rfl rfl rfl rfl (List.Sublist.refl _) List.filter_sublist
+  rw [withdrawOffer_opened profile.opened]
+  refine ⟨toWake s, ⟨?_, fun _ none => absurd none List.not_mem_nil, toWake_stored s⟩, ?_⟩
+  · show wake { s with offers := s.offers.filter (fun o => o.id != id) } = _
+    rw [wake_toWake next]
+    rfl
+  · have removed := reads_removeOffer tb msg injective s.offers id depth
+      (reads_field readsCell (cell_offers _ _ _ _)) readsId
+    have woken := reads_wake (reads_field readsCell (cell_takers _ _ _ _))
+      (reads_field readsCell (cell_msgs _ _ _ _))
+    have stored := reads_recordSet readsCell removed (cell_setOffers _ _ _ _ _)
+    exact (reads_pair woken stored).to (by rw [wake_encoded]; rfl)
 
 end Effect4.Queue.Model

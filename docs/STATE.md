@@ -279,8 +279,10 @@ Landed later on 2026-10-05:
 
   Four batteries under `Test/Program/` run the steps: eight scenarios on the machine, each
   step against the model on a finite universe, and each goal's conclusion on that universe.
-  Thirteen planned goals are new, so the goal gate counts 37. No Queue program runs on the
-  generated engine or on a host yet.
+  Thirteen planned goals came with it. Three step goals are proved since, in place:
+  `sizeStep_agrees`, `withdrawTake_agrees` and `withdrawOffer_agrees`, on the reading lemmas
+  of `Reading.lean`. So the goal gate counts 34. No Queue program runs on the generated
+  engine or on a host yet.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
@@ -311,8 +313,9 @@ Open at this landing:
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). A service error
      stopped its first run before any commit, and it started again the same evening from
      `7f77bd03`. Its first part is merged (`3d9d935c`): the cell, the six steps, the relation
-     and thirteen planned goals. The seat goes on with the proofs, two scenarios on the
-     engine and the documents. The owner ruled the design's five proposals as recommended
+     and thirteen planned goals. Three of the six step goals are proved and merged. Open:
+     `offerStep_agrees`, `pollStep_agrees`, `takeStep_agrees` and the seven typing
+     statements, then two scenarios on the engine and the documents. The owner ruled the design's five proposals as recommended
      (row 255). Codex's design research
      ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
      is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
