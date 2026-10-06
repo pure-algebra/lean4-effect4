@@ -36,6 +36,9 @@ function validatePlan(report) {
   if (!isArr(plan.requirements)) problems.push('plan.requirements is not a list');
   if (!isArr(plan.nodes)) problems.push('plan.nodes is not a list');
   if (problems.length) return problems;
+  const conceptNames = new Set((isArr(report.concepts) ? report.concepts : [])
+    .filter((c) => c && isStr(c.id)).map((c) => c.id));
+  const requirementIds = new Set(plan.requirements.filter((r) => r && isStr(r.id)).map((r) => r.id));
   const names = new Set();
   for (const n of plan.nodes) {
     if (!n || !isStr(n.name)) { problems.push('a plan node has no name'); continue; }
@@ -69,6 +72,19 @@ function validatePlan(report) {
     if (typeof n.statement !== 'string') problems.push(`${n.name}'s statement is missing`);
     if (typeof n.module !== 'string') problems.push(`${n.name}'s module is missing`);
     list(`${n.name}'s axioms`, n.axioms);
+    // The plan retains explicit placement even for goals and modules outside the population.
+    // Validate it before the model uses it as a fallback for a node with no named claim.
+    const placed = n.placement;
+    if (placed !== null) {
+      if (!placed || typeof placed !== 'object' || isArr(placed)) {
+        problems.push(`${n.name}'s placement is missing or is not an object or null`);
+      } else {
+        if (!isStr(placed.concept) || !conceptNames.has(placed.concept))
+          problems.push(`${n.name}'s placement names unknown concept ${placed.concept}`);
+        if (placed.requirement !== null && (!isStr(placed.requirement) || !requirementIds.has(placed.requirement)))
+          problems.push(`${n.name}'s placement names unknown requirement ${placed.requirement}`);
+      }
+    }
     const brought = n.broughtIn;
     if (!brought || typeof brought !== 'object') problems.push(`${n.name}'s dependency summary is missing`);
     else {
@@ -107,6 +123,7 @@ const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/[<]/g, '&lt;').repl
 const CW = 214, CH = 30, REQW = 250, GAPX = 14, GAPY = 92, FRAME = REQW + 140, HUB = 6, LANEHEAD = 34;
 
 // ---------------------------------------------------------------- the model
+// pg-model:begin
 const conceptIds = (report.concepts || []).map((c) => c.id);
 const conceptTitle = Object.fromEntries((report.concepts || []).map((c) => [c.id, c.title]));
 // ten hues spaced around the wheel in the concepts' document order, muted for paper and ink
@@ -140,7 +157,7 @@ for (const n of plan.nodes) {
     area: areaOf(n.module || ''), statement: n.statement || '', axioms: n.axioms || [], restsOn: n.restsOn || [],
     out: ((n.broughtIn || {}).nearest || []), lemmas: (n.broughtIn || {}).lemmas || 0,
     definitions: (n.broughtIn || {}).definitions || 0, claims,
-    concept: (claims[0] && claims[0].concept) || placement[n.name] || null,
+    concept: (claims[0] && claims[0].concept) || (n.placement && n.placement.concept) || placement[n.name] || null,
     role: claims[0] ? claims[0].role : null });
 }
 const parentsOf = new Map([...nodes.keys()].map((k) => [k, []]));
@@ -155,6 +172,8 @@ const reach = (start, next) => {
 const theorems = [...nodes.values()].filter((n) => n.kind !== 'requirement');
 const statusOf = (n) => (n.kind === 'requirement' ? (n.status === 'proved' ? 'proved' : 'req') : n.status);
 const statusWord = (s) => (s === 'goal' ? 'planned goal' : s === 'modulo' ? 'modulo its goals' : s);
+
+// pg-model:end
 
 // ---------------------------------------------------------------- the controls
 const bar = root.querySelector('.pg-bar');
