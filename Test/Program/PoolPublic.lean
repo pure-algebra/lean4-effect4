@@ -56,7 +56,8 @@ PP7 and the two cases of a closed pool are finite controls of the proposed claim
 `pool-close-waits` (concept `scope-lifetime-finalization`, requirement R11). Every guard is one
 run on one schedule. None proves delivery, a cancellation law, a law of the wake across
 helpers, a close that ends or liveness, and none is a host run: the host runs are the truth
-lane's (`harness/truth/Truth.lean`).
+lane's (`harness/truth/Truth.lean`). The last section names the runs of the generated engine's
+fixture: the ten cases cross to the engine after the two earlier runs.
 -/
 
 set_option autoImplicit false
@@ -69,7 +70,8 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Modules
 open Effect4.Pool (initial returnStep selectStep closeStep heldBy freed)
 open Test.Program.PoolScenarios (mk verdict budget runOn plain exitOn exitOf exitsOf yieldsOf
-  noRows say heldOf leasesOf settle snap rows returnBackStep oneBorrower)
+  noRows say heldOf leasesOf settle snap rows returnBackStep oneBorrower fuel buildOf showExit
+  fixtureOf)
 
 /-! ## The operations of a case -/
 
@@ -602,5 +604,54 @@ Each changed policy builds, so typing does not catch it. -/
 #guard exitsOf (pp7With noWait) = some [2, 1, 3, 0, 4]
 -- With no holder at the close the two closes give one answer: PP1 is no control of the wait.
 #guard exitOf (pp1With fun _ => noWait) = exitOf pp1
+
+/-! ## The engine's fixture: the public cases
+
+The fixture of the generated engine's lane (`ocaml/engine/test/pool/pool.txt`) holds the two
+runs of `Test/Program/PoolScenarios.lean`, and then the ten cases of this battery, in order.
+Each program crosses as its canonical bytes. The engine's test runs each on both carriers, and
+it compares the root's exit with the exit of Lean's machine. The writer beside the engine's
+test writes `fixtureText`, and `Test/Program/PoolEngine.lean` binds the committed file to it.
+
+Three answers hold a value that is no number, Boolean or list. PP6 answers a present option,
+the failure 77. The two cases of a closed pool answer L's reified exit, a constructor's value
+whose cause names L's own fiber. The fixture spells each as the engine's `show_val` does
+(`Test.Program.PoolScenarios.showAlgebra`). -/
+
+/-- The names of the public runs in the fixture, in the order of `cases`. -/
+def publicNames : List String :=
+  ["public-pp1", "public-pp2", "public-pp3", "public-pp4", "public-pp5", "public-pp6",
+    "public-pp7", "public-pp8", "public-closed", "public-closing"]
+
+/-- The public runs of the engine's fixture: each case of `cases` under its name. -/
+def publicRuns : List (String × Src NativeOp) := publicNames.zip cases
+
+/-- Every run of the engine's fixture: the two earlier runs, and then the public cases. -/
+def engineRuns : List (String × Src NativeOp) :=
+  Test.Program.PoolScenarios.engineRuns ++ publicRuns
+
+/-- The fixture's whole text. `none` when a run does not build, does not finish, or answers a
+value with no spelling. -/
+def fixtureText : Option String := fixtureOf engineRuns
+
+-- Each case has a name, and no name is written twice.
+#guard publicRuns.length = cases.length && (engineRuns.map (·.1)).eraseDups.length = 12
+-- Every run has a text. The raw run that the fixture records gives the checked session's exit.
+#guard fixtureText.isSome
+#guard publicRuns.all fun (_, src) =>
+  (buildOf src).map (fun p => (Api.run p fuel).exit) == some (exitOf src)
+-- No public run finishes at the engine test's small fuel.
+#guard publicRuns.all fun (_, src) =>
+  (buildOf src).any fun p => (Api.run p 3).outcome != .finished && (Api.run p 3).exit.isNone
+-- The three answers that hold more than numbers, Booleans and lists, in the engine's spelling.
+#guard (exitOf pp6).bind showExit = some "success list[true,some 77,list[list[5],list[9,1]]]"
+#guard (exitOf closed).bind showExit = some
+  ("success list[ctor 1 [ctor 0 [list[ctor 2 [some ctor 0 [1], ctor 0 [list[]]]]]]," ++
+    "list[list[0],list[],list[],0,true,0],list[list[9,1]]]")
+#guard (exitOf closing).bind showExit = some
+  ("success list[list[list[],list[0],list[0],1,false,1]," ++
+    "ctor 1 [ctor 0 [list[ctor 2 [some ctor 0 [3], ctor 0 [list[]]]]]]," ++
+    "list[list[],list[0],list[0],1,true,1],false,list[list[0],list[],list[],0,true,1]," ++
+    "list[list[1,9,1],list[8],list[2,9,1],list[9,1]]]")
 
 end Test.Program.PoolPublic

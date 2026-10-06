@@ -1,33 +1,42 @@
-(* test_pool.ml -- two of Pool's cases on the generated engine, through the wire.
+(* test_pool.ml -- twelve of Pool's runs on the generated engine, through the wire.
 
-   What it is: decisions rows 267 to 269.  Pool's steps are terms of
-   src/Effect4/Modules/Pool/Steps.lean.  Test/Program/PoolScenarios.lean runs the host probe's
-   cases over them on Lean's machine.  This test runs two of those programs on the generated
-   engine: PP4, where a waiter is interrupted between a return and its posted helper, and the
+   What it is: decisions rows 267 to 269, 276 and 279.  Pool's operations are library programs
+   of src/Effect4/Modules/Pool/Ops.lean, over the step terms of Steps.lean beside it.  This test
+   runs twelve programs on the generated engine.
+
+   The first two are cases of Test/Program/PoolScenarios.lean, over that battery's own test
+   forms: PP4, where a waiter is interrupted between a return and its posted helper, and the
    low-level control of PP5, where one helper at the count 2 selects two waiters.  The card's
    reading of the wake rests on these two: the selection is made when the helper runs, and a
    resumed borrower runs inside the helper's task.
+
+   The other ten are the public cases of Test/Program/PoolPublic.lean, over the library's
+   `make` and `use`, each with the close that `make` registers: PP1 to PP8, a borrow at a
+   closed pool, and a borrow at a closing pool.  Three of them hold the profile's own answers:
+   in PP7 and at the closing pool the close waits for a borrowed item (row 268), and at a closed
+   pool the borrower's exit is the interruption of its own fiber (row 279).
 
    The fixture is pool.txt, beside this file.  Lean writes it from the programs that
    `Api.Author.build` admits (write.lean, beside this file).  A run of the fixture holds the
    fuel, the program's canonical bytes, and the root's exit of Lean's machine in the spelling
    of `show_exit` (ocaml/engine/e4_engine.ml).  A root's exit holds snapshots of the cell and
-   the log's rows: the commits, the returns, the selected marks and the notifications.
+   the log's rows.  PP6's exit holds a present option, and the two exits at a closed pool hold a
+   reified exit, a constructor's value: Lean spells each as `show_val` does.
 
    Properties:
    P1  Each program crosses as its canonical bytes: `of_bytes` reads exactly one program, on
-       BOTH instances (Fast and Ref).                                       tested (two runs)
+       BOTH instances (Fast and Ref).                                    tested (twelve runs)
    P2  On each instance the run finishes, and the root's exit is the exit Lean wrote.
-                                                                            tested (two runs)
+                                                                         tested (twelve runs)
    P3  The two instances give one report: outcome, exits, fiber rows, trace rows, store row.
-                                                                            tested (two runs)
-   P4  The red controls.  A run's exit is not the other run's.  A program cut by one byte is
-       refused, never repaired.  At a small fuel the run does not finish, and it has no root
-       exit.                                                                tested
+                                                                         tested (twelve runs)
+   P4  The red controls.  The twelve exits are twelve texts, and a run's exit is not the next
+       run's.  A program cut by one byte is refused, never repaired.  At a small fuel the run
+       does not finish, and it has no root exit.                         tested
 
    What it does not establish: any schedule but the engine's own drive loop, a host run, the
-   steps' agreement with the abstract model (proved in Lean, on the term's value), the public
-   operations (another slice), or delivery under another dispatcher.
+   steps' agreement with the abstract model (proved in Lean, on the term's value), a law of a
+   whole run, or delivery under another dispatcher.  The control of PP5 is no public schedule.
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine *)
 
@@ -127,54 +136,84 @@ let find_fixture () : string =
   | None -> failwith "pool.txt not found from the cwd"
 
 (* The fixture's runs, in the order Lean writes them
-   (Test.Program.PoolScenarios.engineRuns). *)
-let expected_names = [ "pp4"; "pp5control" ]
+   (Test.Program.PoolPublic.engineRuns). *)
+let expected_names =
+  [ "pp4"; "pp5control"; "public-pp1"; "public-pp2"; "public-pp3"; "public-pp4"; "public-pp5";
+    "public-pp6"; "public-pp7"; "public-pp8"; "public-closed"; "public-closing" ]
 
 (* The fuel of the red control: no run of the fixture finishes at it
-   (Test/Program/PoolScenarios.lean guards the same on Lean's machine). *)
+   (Test/Program/PoolScenarios.lean and Test/Program/PoolPublic.lean guard the same on Lean's
+   machine). *)
 let small_fuel = 3
+
+(* Whether no text of a list stands twice. *)
+let rec distinct (texts : string list) : bool =
+  match texts with
+  | [] -> true
+  | text :: rest -> (not (List.mem text rest)) && distinct rest
+
+(* A list turned by one place: each run beside the run after it, and the last beside the
+   first. *)
+let turned (items : 'a list) : 'a list =
+  match items with
+  | [] -> []
+  | first :: rest -> rest @ [ first ]
 
 let () =
   let runs = read_fixture (find_fixture ()) in
   check
-    (Printf.sprintf "the fixture holds the two runs, in order (%d)" (List.length runs))
+    (Printf.sprintf "the fixture holds the twelve runs, in order (%d)" (List.length runs))
     (List.map (fun (r : run) -> r.name) runs = expected_names);
-  List.iter
-    (fun (r : run) ->
-       Printf.printf "== run %s: %d bytes, fuel %d ==\n" r.name (String.length r.program) r.fuel;
-       match (RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel) with
-       | Some fast, Some slow ->
-         check (r.name ^ ": P1 the program's bytes decode on both instances") true;
-         check (r.name ^ ": P2 Fast finishes") (fast.outcome = "finished");
-         check (r.name ^ ": P2 Ref finishes") (slow.outcome = "finished");
-         Printf.printf "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n" r.exit_text
-           (Option.value fast.root ~default:"-") (Option.value slow.root ~default:"-");
-         check (r.name ^ ": P2 Fast's root exit is the exit Lean wrote") (fast.root = Some r.exit_text);
-         check (r.name ^ ": P2 Ref's root exit is the exit Lean wrote") (slow.root = Some r.exit_text);
-         check (r.name ^ ": P3 Fast = Ref: outcome, exits, fibers, trace, store") (fast = slow);
-         (* P4: a program cut by one byte is refused *)
-         let cut = String.sub r.program 0 (String.length r.program - 1) in
-         check (r.name ^ ": P4 a program cut by one byte is refused on both instances")
-           (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
-         (* P4: at a small fuel the run does not finish *)
-         (match (RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel) with
-          | Some f, Some s ->
-            check
-              (Printf.sprintf "%s: P4 at fuel %d neither instance finishes, and none has a root exit"
-                 r.name small_fuel)
-              (f.outcome <> "finished" && s.outcome <> "finished" && f.root = None && s.root = None)
-          | _ -> check (r.name ^ ": P4 the program decodes at the small fuel") false)
-       | _ -> check (r.name ^ ": P1 the program's bytes decode on both instances") false)
-    runs;
-  (* P4: the two runs answer two exits, so each run's check can fail. *)
-  (match runs with
-   | [ a; b ] ->
-     check "P4 the two runs' exits are two texts" (a.exit_text <> b.exit_text);
-     (match (RF.report a.program ~fuel:a.fuel, RR.report a.program ~fuel:a.fuel) with
-      | Some fast, Some slow ->
-        check "P4 the first run's exit is not the second run's, on both instances"
-          (fast.root <> Some b.exit_text && slow.root <> Some b.exit_text)
-      | _ -> check "P4 the first run decodes" false)
-   | _ -> check "P4 two runs to compare" false);
+  (* Each run's root exit on the two instances, for the red control after the loop. *)
+  let roots =
+    List.map
+      (fun (r : run) ->
+         Printf.printf "== run %s: %d bytes, fuel %d ==\n" r.name (String.length r.program) r.fuel;
+         match (RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel) with
+         | Some fast, Some slow ->
+           check (r.name ^ ": P1 the program's bytes decode on both instances") true;
+           check (r.name ^ ": P2 Fast finishes") (fast.outcome = "finished");
+           check (r.name ^ ": P2 Ref finishes") (slow.outcome = "finished");
+           Printf.printf "  Lean's exit: %s\n  Fast's exit: %s\n  Ref's exit:  %s\n" r.exit_text
+             (Option.value fast.root ~default:"-") (Option.value slow.root ~default:"-");
+           check (r.name ^ ": P2 Fast's root exit is the exit Lean wrote")
+             (fast.root = Some r.exit_text);
+           check (r.name ^ ": P2 Ref's root exit is the exit Lean wrote")
+             (slow.root = Some r.exit_text);
+           check (r.name ^ ": P3 Fast = Ref: outcome, exits, fibers, trace, store") (fast = slow);
+           (* P4: a program cut by one byte is refused *)
+           let cut = String.sub r.program 0 (String.length r.program - 1) in
+           check (r.name ^ ": P4 a program cut by one byte is refused on both instances")
+             (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
+           (* P4: at a small fuel the run does not finish *)
+           (match
+              (RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel)
+            with
+            | Some f, Some s ->
+              check
+                (Printf.sprintf
+                   "%s: P4 at fuel %d neither instance finishes, and none has a root exit" r.name
+                   small_fuel)
+                (f.outcome <> "finished" && s.outcome <> "finished" && f.root = None
+                 && s.root = None)
+            | _ -> check (r.name ^ ": P4 the program decodes at the small fuel") false);
+           (fast.root, slow.root)
+         | _ ->
+           check (r.name ^ ": P1 the program's bytes decode on both instances") false;
+           (None, None))
+      runs
+  in
+  (* P4: the runs answer twelve exits, so each run's check can fail. *)
+  let texts = List.map (fun (r : run) -> r.exit_text) runs in
+  check "P4 the runs' exits are twelve texts"
+    (List.length texts = List.length expected_names && distinct texts);
+  List.iter2
+    (fun ((r : run), (fast, slow)) (next : run) ->
+       check
+         (Printf.sprintf "%s: P4 its exit is not the exit of %s, on both instances" r.name
+            next.name)
+         (fast <> None && slow <> None && fast <> Some next.exit_text
+          && slow <> Some next.exit_text))
+    (List.combine runs roots) (turned runs);
   Printf.printf "test_pool: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
