@@ -978,6 +978,13 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   A client keeps one premise: nothing is acquired or registered before the body begins.
   It establishes no equality with the native spelling and no agreement with a release.
   (`mask_printed_form_profile` (`src/Effect4/Laws/Codegen/Mask.lean`)).
+- **A journal's position replays (`journal-position-replay`)**: The machine after a position
+  of a journal's tape is the raw replay of the decisions up to that position. The replay
+  starts at the machine of the run that the tape was read from. A journal splits into a
+  completed prefix and an unread rest, and the prefix's machine is the replay of its
+  positions (`tapeFrom_cut_replays`). The laws say nothing about the machine after a stopped
+  row: that row may change the machine before it reports its frontier.
+  (`tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`)).
 
 ## 3. The object-language glossary (moved 2026-10-03)
 

@@ -248,9 +248,10 @@ So a scenario's observation lands as two clauses.
   timers.
 
 `Scenario/Tape.lean` holds what Lean writes for the machine clause: each scenario's lowered runs,
-their machine tapes and the fixture text. It has no control, so it builds whatever the committed
-files hold. A lowered run with the name of a record's run is that named run. `taken` lists those
-names, and the lane writes no script of them. The lane's own runs are the two of `own`.
+their machine tapes and the fixture text. Its one gate, of the record `cuts`, reads no committed
+file, so it builds whatever the committed files hold. A lowered run with the name of a record's
+run is that named run. `taken` lists those names, and the lane writes no script of them. The
+lane's own runs are the two of `own`.
 
 A fixture holds the canonical bytes of the admitted program and of each row, and the budgets. It
 also holds the machine tape: each decision that moved the session machine, with the view after

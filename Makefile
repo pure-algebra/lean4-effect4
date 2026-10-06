@@ -214,7 +214,7 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 # five scenario modules that hold a placed claim (decisions row 254). One list of names gives
 # both the modules and their traces. The plan reads the ProofGraph modules.
 SEMANTICS_DOGFOOD_NAMES := P1HttpCache P2HandlerLayers P3WorkerQueue P4RateLimiter P5LedgerService \
-  Scenario Scenario/Workers Scenario/Routing Scenario/Atomic Scenario/Timeout
+  Scenario Scenario/Workers Scenario/Routing Scenario/Atomic Scenario/Timeout Scenario/Tape
 SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst /,.,$(m)))
 SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
   .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
