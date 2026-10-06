@@ -69,7 +69,6 @@ src/Effect4/Laws/Api/HostSession.lean	storeReply_commute	simp_all	1
 src/Effect4/Laws/Api/HostSession.lean	storeReply_keys	simp-without-only	1
 src/Effect4/Laws/Api/HostSession.lean	submit_duplicate	simp-without-only	1
 src/Effect4/Laws/Api/HostSession.lean	submit_key_independence	simp-without-only	1
-src/Effect4/Laws/Auto/Traversals.lean	definitionsUnder	unread	1
 src/Effect4/Laws/Codegen/Admit.lean	envelopeCheck_iff	simp-without-only	1
 src/Effect4/Laws/Codegen/Admit.lean	layersPlain_iff	simp-without-only	1
 src/Effect4/Laws/Codegen/Admit.lean	mainConst_eq_some	simp_all	1

@@ -188,7 +188,9 @@ def bodiesUnder (env : Environment) (scope : Name) : Array (Name × Name × Expr
         | _, _ => acc
     | _ => acc
 
-syntax (name := exhaustiveGate) "#exhaustive_gate " ident (" under " ident)? : command
+/-- `#exhaustive_gate T under Some.Prefix`. The word `under` is a keyword in this place only
+(`&" under "`), so a hypothesis or a binder may have the name. -/
+syntax (name := exhaustiveGate) "#exhaustive_gate " ident (&" under " ident)? : command
 
 @[command_elab exhaustiveGate] def elabExhaustiveGate : CommandElab := fun stx => do
   let root ← liftCoreM (realizeGlobalConstNoOverload stx[1])
