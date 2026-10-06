@@ -207,7 +207,8 @@ def registry : Registry where
         `Effect4.Laws.Modules.Pool.Steps,
         `Effect4.Laws.Modules.Semaphore.Relation,
         `Effect4.Laws.Modules.Semaphore.Reading,
-        `Effect4.Laws.Modules.Semaphore.Steps
+        `Effect4.Laws.Modules.Semaphore.Steps,
+        `Effect4.Laws.Modules.Semaphore.Ops
       ] }
   ]
   claims := [
