@@ -32,6 +32,22 @@ The laws are in `Laws/Program/Sketch.lean`. A hole has its declared type in ever
 (`sketch_more_holes`), and the checker reads the rows of the holes that the sketch performs and
 no later row (`sketch_reads_its_holes`).
 
+## Omitting and filling
+
+An **address** is a path of child indices from the root of a program (`Node.at_`,
+`Program/Refs.lean`). To **omit** is to replace the sub-program at an address by a new hole
+(`Sketch.omitAt`). To fill is to put a program at an address, in a hole's place or in any
+sub-program's (`Sketch.fillAt`). Both are `Node.replaceAt` on the program: edits of data, which
+certify nothing by themselves.
+
+The replacement law says what they keep (`Laws/Program/Typing/Replace.lean`). In its context,
+the sub-program at an address has one environment and one type. A program of that type in that
+environment stands in its place, and the whole keeps its type. So a filling of that type keeps
+the sketch's type, and the filling alone is checked (`Sketch.check_fill`,
+`Laws/Program/Sketch.lean`). An omission keeps it too, when the hole row declares exactly that
+type (`Sketch.check_omit`). A hole row is read in normal form, so that law asks for a type whose
+answer and error are in normal form.
+
 ## The parallel with a planned goal, and where it stops
 
 A sketch is to its holes as a theorem is to its planned goals (`proof_goal`, decisions row 203).
@@ -41,6 +57,7 @@ A sketch is to its holes as a theorem is to its planned goals (`proof_goal`, dec
 | `proof_goal G : P` names a statement with no proof | a hole row names a type with no program |
 | downstream proofs use `G` as a theorem | the program performs the hole as an operation |
 | the kernel accepts the theorem modulo `G` | the checker admits the sketch modulo its holes |
+| a proof of `G` in place changes nothing downstream | a program of the hole's declared type in its place keeps the type of the whole |
 | a claim is proved only when it rests on no goal | program admission reads the application's tables alone, so it refuses a program that performs a hole |
 
 The parallel stops at four places.
@@ -127,6 +144,27 @@ checker's located refusal. A sketch is **admitted modulo its holes** at the type
 `s.check app = .ok t`. The checker refuses a layer reference here as it does on any program. -/
 def check (s : Sketch) (app : SigApp := {}) : Except TypeRefusal EffTy :=
   Checker.check (app.withHoles s.holes).signature [] [] s.program
+
+/-- **Fill** an address with a program: the sketch with `q` in the place of the sub-program at
+`path`. The hole table is unchanged. When the sub-program was a hole, its row stays, and the
+checker no longer reads it. The answer is `none` when `path` is no address of a program.
+
+The edit certifies nothing by itself. The sketch keeps its type when `q` has the type of the
+sub-program that it replaces (`Sketch.check_fill`, `Laws/Program/Sketch.lean`). -/
+def fillAt (s : Sketch) (path : List Nat) (q : NativeEff) : Option Sketch :=
+  (((Node.eff s.program).replaceAt path (.eff q)).bind Node.eff?).map fun program =>
+    { s with program := program }
+
+/-- **Omit** the sub-program at an address: declare a new hole with the row `row`, at the end of
+the hole table, and put that hole in the sub-program's place. The answer is `none` when `path`
+is no address of a program.
+
+The sketch keeps its type when `row` declares exactly the type of the omitted sub-program
+(`Sketch.check_omit`, `Laws/Program/Sketch.lean`). A row that declares the answer alone serves
+the views of an error or of a requirement (decisions row 288, point 3), and no law here states
+it. `omit` is a keyword of Lean, so the function carries the address in its name. -/
+def omitAt (s : Sketch) (app : SigApp) (path : List Nat) (row : Row) : Option Sketch :=
+  Sketch.fillAt { s with holes := s.holes ++ [row] } path (Sketch.hole app s.holes.length)
 
 end Sketch
 

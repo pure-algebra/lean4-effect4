@@ -174,6 +174,7 @@ import Effect4.Laws.Program.Typed.LayerArm
 import Effect4.Laws.Program.Typed.Body
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.Sketch
+import Effect4.Laws.Program.Typing.Replace
 import Effect4.Laws.Program.SoundAnySignature
 import Effect4.Laws.Program.Typed.AdmittedSource
 import Effect4.Laws.Auto.AnswerGate
