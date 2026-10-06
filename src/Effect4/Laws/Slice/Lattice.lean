@@ -139,6 +139,47 @@ carrier, as a list: the paper's Theorem 3.3 (p. 7) for this carrier. A search ov
 `2 ^ n` slices. -/
 def below (s : Slice α) : List (Slice α) := (sublists s.kept).map Slice.mk
 
+/-- A listed sub-list holds elements of the list only. A step of `le_of_mem_below`, its one
+consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sublists_subset : ∀ (l l' : List α), l' ∈ sublists l → l' ⊆ l
+  | [], l', h => by
+    obtain rfl := List.mem_singleton.mp h
+    exact List.Subset.refl _
+  | x :: xs, l', h => by
+    rcases List.mem_append.mp h with h | h
+    · exact List.Subset.trans (sublists_subset xs l' h) (List.subset_cons_self x xs)
+    · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp h
+      exact List.cons_subset_cons x (sublists_subset xs t ht)
+
+/-- Each selection of a list's elements is a listed sub-list. A step of `exists_mem_below`, its
+one consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem filter_mem_sublists (p : α → Bool) : ∀ l : List α, l.filter p ∈ sublists l
+  | [] => List.mem_singleton.mpr rfl
+  | x :: xs => by
+    rw [List.filter_cons]
+    split
+    · exact List.mem_append_right _ (List.mem_map_of_mem (filter_mem_sublists p xs))
+    · exact List.mem_append_left _ (filter_mem_sublists p xs)
+
+/-- A listed slice is below the slice. A step of `SliceView.contribution_lub`, through
+`SliceView.minimals_sound`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem le_of_mem_below {j s : Slice α} (h : j ∈ s.below) : j ≤ s := by
+  obtain ⟨l, hl, rfl⟩ := List.mem_map.mp h
+  exact sublists_subset s.kept l hl
+
+/-- **The slices below one slice are finitely many**, up to their kept sites: each slice below
+`s` keeps the same sites as a listed one. It is the paper's Theorem 3.3 (p. 7), for this
+carrier. A step of `SliceView.contribution_lub`, through `SliceView.minimals_complete`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem exists_mem_below [DecidableEq α] {j s : Slice α} (h : j ≤ s) :
+    ∃ j' ∈ s.below, j' ≤ j ∧ j ≤ j' :=
+  ⟨⟨s.kept.filter (· ∈ j.kept)⟩, List.mem_map_of_mem (filter_mem_sublists _ s.kept),
+    fun _ hx => of_decide_eq_true (List.mem_filter.mp hx).2,
+    fun _ hx => List.mem_filter.mpr ⟨h hx, decide_eq_true hx⟩⟩
+
 /-! ## What a slice folds -/
 
 /-- The sites of `sites` that `s` folds: the plan's mask. A smaller slice folds more. -/
@@ -157,6 +198,17 @@ consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem folded_subset [DecidableEq α] (sites : List α) (s : Slice α) : s.folded sites ⊆ sites :=
   fun _ hx => (List.mem_filter.mp hx).1
+
+/-- The slice of every site folds nothing. A step of `SliceView.ofFolded_full`, its one
+consumer. The proof is by a `match`: `List.filter_eq_nil_iff` reaches `Classical.choice` on this
+toolchain. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem folded_full [DecidableEq α] (sites : List α) : (Slice.mk sites).folded sites = [] := by
+  match h : (Slice.mk sites).folded sites with
+  | [] => rfl
+  | x :: _ =>
+    have hx : x ∈ (Slice.mk sites).folded sites := by rw [h]; exact List.mem_cons_self
+    exact absurd (List.mem_filter.mp hx).1 (of_decide_eq_true (List.mem_filter.mp hx).2)
 
 /-! ## The descent on a list of sites -/
 
@@ -661,32 +713,76 @@ theorem descend_asks [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α)
 Theorem 4.7 (p. 12). The type side needs a join here, and in no other statement: `max` with
 `Std.LawfulOrderSup`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal valid_max [Std.IsPreorder T] [Max T] [Std.LawfulOrderSup T] (v : SliceView α T)
+theorem valid_max [Std.IsPreorder T] [Max T] [Std.LawfulOrderSup T] (v : SliceView α T)
     {q₁ q₂ : T} {a b : Slice α} (ha : v.Valid q₁ a) (hb : v.Valid q₂ b) :
-    v.Valid (max q₁ q₂) (max a b)
+    v.Valid (max q₁ q₂) (max a b) :=
+  Std.max_le_iff.mpr ⟨v.valid_up ha Std.left_le_max, v.valid_up hb Std.right_le_max⟩
+
+/-- A slice that keeps the same sites as a minimal slice is minimal. A step of
+`minimals_complete`, its one consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem Minimal.of_same_sites [Std.IsPreorder T] {v : SliceView α T} {q : T} {m m' : Slice α}
+    (h : v.Minimal q m) (h₁ : m ≤ m') (h₂ : m' ≤ m) : v.Minimal q m' :=
+  ⟨v.valid_up h.1 h₁, fun j hj hv => Std.le_trans h₂ (h.2 j (Std.le_trans hj h₂) hv)⟩
+
+/-- Each slice that the search lists is minimal and below the start. A step of
+`contribution_lub`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem minimals_sound [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
+    {q : T} {s m : Slice α} (h : m ∈ v.minimals q s) : m ≤ s ∧ v.Minimal q m :=
+  ⟨Slice.le_of_mem_below (List.mem_filter.mp h).1,
+    (v.isMinimal_iff q m).mp (List.mem_filter.mp h).2⟩
+
+/-- The search misses no minimal slice below the start: each one keeps the same sites as a
+listed one. A step of `contribution_lub`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem minimals_complete [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
+    {q : T} {s m : Slice α} (hs : m ≤ s) (h : v.Minimal q m) :
+    ∃ m' ∈ v.minimals q s, m' ≤ m ∧ m ≤ m' := by
+  obtain ⟨m', hm', h₁, h₂⟩ := Slice.exists_mem_below hs
+  exact ⟨m', List.mem_filter.mpr ⟨hm', (v.isMinimal_iff q m').mpr (h.of_same_sites h₂ h₁)⟩,
+    h₁, h₂⟩
 
 /-- **The contribution slice is the join of the minimal slices**: it is below a slice exactly
 when each minimal slice below `s` is. The paper calls it "a least upper bound of actual minimal
 slices" (p. 12). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal contribution_lub [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+theorem contribution_lub [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) (q : T) (s u : Slice α) :
-    v.contribution q s ≤ u ↔ ∀ m : Slice α, m ≤ s → v.Minimal q m → m ≤ u
+    v.contribution q s ≤ u ↔ ∀ m : Slice α, m ≤ s → v.Minimal q m → m ≤ u := by
+  constructor
+  · intro h m hs hm x hx
+    obtain ⟨m', hm', _, h₂⟩ := v.minimals_complete hs hm
+    exact h (List.mem_filter.mpr
+      ⟨hs hx, List.any_eq_true.mpr ⟨m', hm', decide_eq_true (h₂ hx)⟩⟩)
+  · intro h x hx
+    obtain ⟨m, hm, hxm⟩ := List.any_eq_true.mp (List.mem_filter.mp hx).2
+    exact h m (v.minimals_sound hm).1 (v.minimals_sound hm).2 (of_decide_eq_true hxm)
+
+/-- The contribution slice is below its start: it keeps sites of the start only, in the start's
+order. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem contribution_le [DecidableEq α] [DecidableLE T] (v : SliceView α T) (q : T)
+    (s : Slice α) : v.contribution q s ≤ s :=
+  fun _ hx => (List.mem_filter.mp hx).1
 
 /-- **The contribution slice is valid** when its start is: the join of all minimal slices is a
 slice for the query (the paper's section 4.6, p. 12). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal contribution_valid [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+theorem contribution_valid [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) {q : T} {s : Slice α} (h : v.Valid q s) :
-    v.Valid q (v.contribution q s)
+    v.Valid q (v.contribution q s) :=
+  v.valid_up (v.descend_valid h)
+    ((v.contribution_lub q s _).mp (Std.le_refl _) _ (v.descend_le q s) (v.descend_minimal h))
 
 /-- **At the full slice nothing is folded**: the view of a mask gives the type map at the empty
 mask. It is the generic half of the plan's `slice-conservative`. It does not say that `f []` is
 the checker's answer: that is the instance's. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal ofFolded_full [DecidableEq α] (sites : List α) (f : List α → T)
+theorem ofFolded_full [DecidableEq α] (sites : List α) (f : List α → T)
     (anti : ∀ {F G : List α}, F ⊆ G → G ⊆ sites → f G ≤ f F) :
-    (ofFolded sites f anti).typeOf ⟨sites⟩ = f []
+    (ofFolded sites f anti).typeOf ⟨sites⟩ = f [] :=
+  congrArg f (Slice.folded_full sites)
 
 end SliceView
 
