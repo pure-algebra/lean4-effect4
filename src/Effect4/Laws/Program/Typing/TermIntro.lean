@@ -1,6 +1,7 @@
 import Effect4.Program.Native
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.TyView
+import Effect4.Laws.Program.UnionRule
 
 /-!
 # Laws.Program.Typing.TermIntro — the term checker's rules in their introduction form
@@ -574,12 +575,6 @@ cell's type, and a lookup that `rfl` decides. -/
 
 namespace Record
 
-/-- One alternative's answers are that alternative's answer. -/
-private theorem mapM_singleton {α β : Type} (f : α → Option β) (x : α) :
-    [x].mapM f = (f x).map fun y => [y] := by
-  show (f x >>= fun b => List.mapM.loop f [] [b]) = _
-  cases f x <;> rfl
-
 /-- A map that fixes every element fixes the list. -/
 private theorem map_fixed {α : Type} {f : α → α} :
     ∀ {l : List α}, (∀ a ∈ l, f a = a) → l.map f = l
@@ -589,7 +584,9 @@ private theorem map_fixed {α : Type} {f : α → α} :
       map_fixed fun a member => fixed a (List.mem_cons_of_mem x member)]
 
 /-- **A required field's read** at a record type in normal form answers the field's declared
-type. Used by every step: the cell's four fields, and a stored request's identity. -/
+type. Used by every step: the cell's four fields, and a stored request's identity. A record
+type is one union member, so the lifted rule is the record rule there (`UnionRule.lift_member`,
+`src/Effect4/Laws/Program/UnionRule.lean`). -/
 theorem fieldType_normal {fields : Fields} {name : String} {type : Ty}
     (normal : Ty.normalize (.record fields) = .record fields)
     (declared : Field.firstOf name fields = some (false, type)) :
@@ -604,24 +601,21 @@ theorem fieldType_normal {fields : Fields} {name : String} {type : Ty}
         else if mayBeAbsent = true then none else some declaredType) = some type
     rw [declared]
     rfl
-  unfold fieldType
-  rw [normal]
-  show (([Ty.record fields].mapM (fieldOf false name)).map joinResults) = some type
-  rw [mapM_singleton, read]
+  show UnionRule.lift (fieldOf false name) (.record fields) = some type
+  rw [UnionRule.lift_member _ (Ty.normal_of_canonical normal) rfl, read]
   show some (Ty.join .never type) = some type
   rw [Ty.join_never, typeNormal]
 
 /-- An overwrite at a record type in normal form writes the replacement first, required at its
-own type, and takes the normal form. -/
+own type, and takes the normal form. The lifted rule is the record rule at one union member
+(`UnionRule.lift_member`). -/
 theorem setType_normal {fields : Fields} (name : String) (valueType : Ty)
     (normal : Ty.normalize (.record fields) = .record fields) :
     setType (.record fields) name valueType =
       some (Ty.normalize (.record ((name, false, valueType) ::
         fields.filter (fun field => decide (field.1 ≠ name))))) := by
-  unfold setType
-  rw [normal]
-  show (([Ty.record fields].mapM (setOf name valueType)).map joinResults) = _
-  rw [mapM_singleton]
+  show UnionRule.lift (setOf name valueType) (.record fields) = _
+  rw [UnionRule.lift_member _ (Ty.normal_of_canonical normal) rfl]
   show some (Ty.join .never (Ty.normalize (.record ((name, false, valueType) ::
     fields.filter (fun field => decide (field.1 ≠ name)))))) = _
   rw [Ty.join_never, Ty.normalize_idem]

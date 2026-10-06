@@ -1,11 +1,18 @@
 module
 
 public import Effect4.Program.Ty
+public import Effect4.Program.UnionRule
 public import Effect4.Machine.Record
 
 /-! Record type operations over types already computed by the term checker.
 Recursive declaration formation is checked before these operations by public admission.
-These checks retain original field and supplied-name duplicates before normalization. -/
+These checks retain original field and supplied-name duplicates before normalization.
+
+The field read and the overwrite read their target member by member: each is a rule of one
+record type (`fieldOf`, `setOf`), lifted to every type by `UnionRule.lift`
+(`src/Effect4/Program/UnionRule.lean`). The lifted rule reads the target's normal form, asks the
+record rule at every union member, and joins the answers. One member that is no fitting record
+refuses the target, and `never` answers `never`. -/
 
 @[expose] public section
 
@@ -35,12 +42,14 @@ def fieldOf (optional : Bool) (name : String) : Ty → Option Ty
     else if mayBeAbsent then none else some type
   | _ => none
 
-/-- Join branch results only after every input alternative admits the field operation. -/
-def joinResults (types : List Ty) : Ty := types.foldl Ty.join .never
+/-- Join branch results only after every input alternative admits the field operation: the
+join of a list of answers (`UnionRule.joinAll`) at types, from `never`. -/
+def joinResults (types : List Ty) : Ty := UnionRule.joinAll types
 
-/-- Read a declared field from every normalized record alternative. -/
+/-- Read a declared field from every normalized record alternative: the record-only field rule,
+lifted (`UnionRule.lift`). -/
 def fieldType (optional : Bool) (target : Ty) (name : String) : Option Ty :=
-  ((Ty.members target.normalize).mapM (fieldOf optional name)).map joinResults
+  UnionRule.lift (fieldOf optional name) target
 
 /-- The record-only overwrite rule makes the replacement field required. -/
 def setOf (name : String) (valueType : Ty) : Ty → Option Ty
@@ -48,9 +57,10 @@ def setOf (name : String) (valueType : Ty) : Ty → Option Ty
       fields.filter (fun field => decide (field.1 ≠ name)))))
   | _ => none
 
-/-- Overwrite every record alternative. An unsupported alternative refuses the operation. -/
+/-- Overwrite every record alternative. An unsupported alternative refuses the operation: the
+record-only overwrite rule, lifted (`UnionRule.lift`). -/
 def setType (target : Ty) (name : String) (valueType : Ty) : Option Ty :=
-  ((Ty.members target.normalize).mapM (setOf name valueType)).map joinResults
+  UnionRule.lift (setOf name valueType) target
 
 /-- A required literal discriminant, read from the canonical field declarations. -/
 def tagOf : Ty → Option String
