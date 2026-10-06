@@ -27,6 +27,8 @@
     "tuples.typecheck.ts",
     "folds.typecheck.ts",
     "term-rows.typecheck.ts",
+    "literals.typecheck.ts",
+    "queue-steps.typecheck.ts",
     "select-controls.ts",
     "generated",
     "run-truth.ts",

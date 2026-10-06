@@ -56,6 +56,11 @@ def main():
         # The printed function of an operation's binder term, and a list of number literals
         # (the state plan's T5, decisions row 251), compiled beside the modules.
         shutil.copyfile(truth/'term-rows.typecheck.ts', Path(work)/'term-rows.typecheck.ts')
+        # The literal rule of `pair` and `tuple` on the target (decisions row 256): its positive
+        # controls and its refusals, compiled beside the modules.
+        shutil.copyfile(truth/'literals.typecheck.ts', Path(work)/'literals.typecheck.ts')
+        # The Queue's six printed steps, each at the cell's printed type (decisions row 255).
+        shutil.copyfile(truth/'queue-steps.typecheck.ts', Path(work)/'queue-steps.typecheck.ts')
         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),
