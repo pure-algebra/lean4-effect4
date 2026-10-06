@@ -316,3 +316,35 @@ pointer.
 - A cut at the start of a decision other than `evaluate`. The guard's own lift holds those
   queues (`src/Effect4/Laws/Program/Guard/OuterDriver.lean`).
 - An invariant is not progress.
+
+## 9. Addendum, at the landing (2026-10-06)
+
+Both placed theorems are proved in place, and the stop rule did not apply. The receipt
+(`docs/research/2026-10-06-seat-BRACKET-receipt.md`) holds the commands and their results. The
+coordinator accepted the design and the two law modules, and sent three asks. The landed tree
+differs from this note in six places.
+
+- **`stepped_live` is a placed theorem** (the first ask), at `scope-lifetime-finalization` and
+  R11. It reads each pending command, not the head alone: its premise is `pending : c ∈ cmds`.
+  `LoopCut.live` reads a cut the same way.
+- **The pointer's binders follow.** `compiled_region_bracket` takes two cuts
+  `LoopCut p table bases m cmds` and `LoopCut p table bases' m' cmds'`. It takes two pending
+  commands, `pending : c ∈ cmds` and `pending' : c' ∈ cmds'`, with `Steps id c` and
+  `Steps id c'`. Its other premises and its conclusion are section 3's.
+- **`LoopCut.task` is new.** A dispatcher task's commands are a cut, where the machine reserves
+  the task's keys (`taskCmds_guardQueue`, `src/Effect4/Laws/Program/Guard/OuterDriver.lean`).
+  So section 8's last limit is smaller: a cut is at the start of an `evaluate` decision, and at
+  such a task.
+- **The reach has one wording** (the second ask), in each docstring, in the receipt and in the
+  proposed text of the semantics registry. The later cut's stack shape `above ++ below` is a premise, and it is
+  the region's only mark on the machine. The theorem then gives the entry's stack and the
+  entry flag at the region's end. It does not give that a body's run keeps that shape.
+- **The interrupted body ends in one pop.** On the failure path a restoring frame's
+  replacement is discarded while the fiber is interrupted (`popFrom`,
+  `src/Effect4/Machine/Frames.lean`). So one pop ends the inner region, the outer region and
+  the fiber. The battery reads each of those ends.
+- **The carrying fact is not started** (the third ask). I judge it a slice of its own. The
+  receipt's section 8 opens with its statement, the arms that it crosses and an estimate.
+
+Section 5's row D2 has two cuts, not one. The toy run's second decision has 17 cuts. At two of
+them a pending command steps the exited fiber 0 (tested: the battery).

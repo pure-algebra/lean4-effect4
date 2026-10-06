@@ -1,0 +1,167 @@
+/-
+Seat BRACKET, 2026-10-06: the carrying fact. Filed with the receipt
+`docs/research/2026-10-06-seat-BRACKET-receipt.md`. It is no file of the tree: the name ends in
+`.txt` so that nothing builds it in place. No line below is proved.
+
+Part 1 is the statement. Copy it to a scratch file `carry-statement.lean` and run, from the
+worktree and through the Lean slot:
+
+    lake env lean -M6144 carry-statement.lean
+
+Lean elaborates each definition and each statement, and it warns of two `sorry` bodies, which
+stand for the proofs that no one has written.
+
+Part 2 is a finite probe of the statement at one command. It reads private definitions of the
+battery `Test/Machine/MaskBracket.lean`. Copy the battery to a scratch file, replace its text
+from the heading "The theorems in use" to the end by part 2, and run the copy the same way. It
+prints one row for each run: the inputs, the inputs at which the frames under the region stay,
+the inputs at which the command ends the region instead, and the inputs at which neither holds.
+At the head of the code the rows are:
+
+    (73, 63, 10, 0)      nested
+    (141, 130, 11, 0)    interrupted
+    (41, 35, 6, 0)       formUnderMask
+    (76, 75, 1, 0)       the toy run, its first decision
+    (39, 36, 3, 0)       the toy run, its second decision
+    (333, 317, 16, 0)    Test.Program.MaskContract.s3
+    (209, 191, 18, 0)    Test.Program.MaskContract.s6
+    (362, 317, 45, 0)    Test.Program.MaskContract.s7Regions
+-/
+
+-- ===== Part 1: the statement =====
+
+import Effect4.Laws.Machine.MaskBracket
+
+/-!
+Seat BRACKET, 2026-10-06: the carrying fact's statement, as a scratch probe. No file of the tree
+holds it, and no line below is proved. Each `theorem` here has the body `sorry`, to elaborate
+the statement only.
+-/
+
+set_option autoImplicit false
+
+universe u v
+
+namespace Effect4.Machine
+
+open Effect4 Effect4.FrameFiber
+
+variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- The evaluation of this fiber ends the region of its own frames `above`: its code is an exit,
+and the pop of the own frames that delivers the exit answers nothing. -/
+def EndsRegion (f : FrameFiber ν σ β ε δ ι α) (above : List (Prim ν σ β ε δ ι α)) : Prop :=
+  match f.current with
+  | Prim.success _ => ((f.own above).getCont Arm.contA false).answer = ContAnswer.empty
+  | Prim.failure cause =>
+    ((f.own above).getCont Arm.contE true (some cause)).answer = ContAnswer.empty
+  | _ => False
+
+/-- What one evaluation leaves of a region: the frames under the region stay under the fiber's
+stack, or the evaluation ends the region. -/
+def IterKeepsUnder (f : RunFiber ν σ β ε δ ι α χ) (it : Iter ν σ β ε δ ι α χ St) : Prop :=
+  ∀ above below, f.frame.stack = above ++ below →
+    (∃ above', it.fiber.frame.stack = above' ++ below) ∨ EndsRegion f.frame above
+
+/-- The fiber `id` is inside a region over `below`: each of its live copies has `below` under
+its stack. -/
+def Inside (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId)
+    (below : List (Prim ν σ β ε δ ι α)) : Prop :=
+  ∀ f ∈ m.fibers, f.id = id → f.exit = none → ∃ above, f.frame.stack = above ++ below
+
+section Evaluator
+
+variable [evaluator : FiberEvaluator ν σ β ε δ ι α χ St (Prim ν σ β ε δ ι α)
+  (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α)]
+
+/-- The evaluator's premise, as `EvaluatorKeepsMask` is for the chain. -/
+def EvaluatorKeepsUnder (interp : RunInterp ν σ β ε δ ι α χ St) : Prop :=
+  ∀ (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (y : Bool),
+    IterKeepsUnder f (evaluator.evaluate interp m f y)
+
+/-- **The carrying fact, at one command.** The fiber `id` is inside a region over `below`. After
+one command it is still inside, or the command steps it and ends the region: the fiber that the
+loop evaluates has an exit as its code, and the pop of its own frames answers nothing. -/
+theorem driveStep_keepsUnder (interp : RunInterp ν σ β ε δ ι α χ St)
+    (evaluates : EvaluatorKeepsUnder interp) (m : RunMachine ν σ β ε δ ι α χ St)
+    (c : Cmd ν σ β ε δ ι α) (rest : List (Cmd ν σ β ε δ ι α)) (id : FiberId)
+    (below : List (Prim ν σ β ε δ ι α)) (allocated : id.value < m.nextId)
+    (exited : ∀ id', c = Cmd.exitDone id' → ∀ f, m.fiber? id' = some f → f.exit.isSome = true)
+    (inside : Inside m id below) :
+    Inside (driveStep interp m c rest).1 id below ∨
+      (Steps id c ∧ ∃ f above, m.fiber? id = some f ∧ f.frame.stack = above ++ below ∧
+        EndsRegion (runloopTop f).frame above) := by
+  sorry
+
+end Evaluator
+
+/-- The frame evaluator meets the premise. -/
+theorem evaluatePrim_keepsUnder (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (y : Bool) :
+    IterKeepsUnder f (evaluatePrim interp m f y) := by
+  sorry
+
+end Effect4.Machine
+
+
+-- ===== Part 2: the probe (it replaces the battery's text from "The theorems in use") =====
+
+/-! ## A finite probe of the carrying fact (no theorem states it)
+
+Seat BRACKET, 2026-10-06. The statement is `driveStep_keepsUnder` of the receipt: a fiber that is
+inside a region over `below` is still inside after one command, or the command steps it and ends
+the region. The probe reads each pair of consecutive cuts, each live fiber and each split of
+its stack. -/
+
+private def endsRegionB {ν σ β ε δ ι α : Type} [DecidableEq ν] [DecidableEq σ] [DecidableEq β]
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (f : FrameFiber ν σ β ε δ ι α) (above : List (Prim ν σ β ε δ ι α)) : Bool :=
+  match f.current with
+  | .success _ => ((f.own above).getCont Effect4.Arm.contA false).answer == .empty
+  | .failure cause => ((f.own above).getCont Effect4.Arm.contE true (some cause)).answer == .empty
+  | _ => false
+
+/-- For one pair of consecutive cuts: the number of (fiber, split) inputs, the number at which
+the frames under the region stay, the number at which the command ends the region instead, and
+the number at which neither holds. -/
+private def carry {ν σ β ε δ ι α χ St : Type} [DecidableEq ν] [DecidableEq σ] [DecidableEq β]
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (cut next : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
+    Nat × Nat × Nat × Nat :=
+  cut.1.fibers.foldl (fun acc f =>
+    if f.exit.isSome then acc else
+      (List.range (f.frame.stack.length + 1)).foldl (fun acc k =>
+        let above := f.frame.stack.take k
+        let below := f.frame.stack.drop k
+        let kept := next.1.fibers.all fun g =>
+          g.id != f.id || g.exit.isSome ||
+            (below.length ≤ g.frame.stack.length &&
+              g.frame.stack.drop (g.frame.stack.length - below.length) == below)
+        let ended := (match cut.2.head? with
+          | some c => steppedBy c == some f.id
+          | none => false) && endsRegionB (runloopTop f).frame above
+        (acc.1 + 1, acc.2.1 + (if kept then 1 else 0),
+          acc.2.2.1 + (if !kept && ended then 1 else 0),
+          acc.2.2.2 + (if !kept && !ended then 1 else 0))) acc) (0, 0, 0, 0)
+
+private def carryAll {ν σ β ε δ ι α χ St : Type} [DecidableEq ν] [DecidableEq σ] [DecidableEq β]
+    [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (cuts : List (RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))) :
+    Nat × Nat × Nat × Nat :=
+  (cuts.zip (cuts.drop 1)).foldl (fun acc (cut, next) =>
+    let r := carry cut next
+    (acc.1 + r.1, acc.2.1 + r.2.1, acc.2.2.1 + r.2.2.1, acc.2.2.2 + r.2.2.2)) (0, 0, 0, 0)
+
+#eval carryAll (cutsOf nested 200)
+#eval carryAll (cutsOf interrupted 400)
+#eval carryAll (cutsOf formUnderMask 200)
+#eval carryAll (toyCuts 400 (rooted hosts) [Cmd.evaluate ⟨0⟩, Cmd.drainDue])
+#eval carryAll (fireCuts 400 afterEvaluate ⟨0⟩)
+#eval carryAll (cutsOf s3 400)
+#eval carryAll (cutsOf s6 400)
+#eval carryAll (cutsOf s7Regions 600)
+
+end Compiled
+
+end Test.Machine.MaskBracket
