@@ -1,4 +1,5 @@
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
+import Test.Codegen.TermRows
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -399,9 +400,41 @@ def pFold : Api.Program :=
         (call "add" [.var 2,
           .fold none (.var 1) (.var 3) (call "add" [.var 4, call "sub" [.var 5, .var 3]])]))))
 
+/-- The state plan's T5 (decisions row 251): a step of the Queue's probe as a truth program. The
+program is `Test.Codegen.TermRows.twoOffers`: the probe's offer step, twice on the Queue's first
+state with no taker (`docs/research/2026-10-05-claude-lead/queue-readiness/QueueSkeleton.lean`).
+Each step is one `Ref.modify` whose term reads and rewrites the state record, and no name spelled
+such a term. The cell's printed type names `Deferred<void, never>`, and the program makes no
+`Deferred`, so its module prints. It answers `[a hint was due, the buffer's length, the head
+index]`, which is `[false, 2, 0]`. A source that does not elaborate is a failure with a text,
+never a patched program; a guard below holds the source to its elaboration. -/
+def pQueueOffer : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Codegen.TermRows.twoOffers with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pQueueOffer: the source does not elaborate"))
+
+/-- The state plan's T5: one `Ref.modify` whose term folds, with an outer capture. `a0` is a bound
+number, and `a1` a cell that holds `5`. The row's node stands at level 2, so its term binds the
+cell's value as `a2`, and the fold inside the term binds `a3` and `a4` above that. The fold walks
+`[a0 + 1, a0, 3]` from the cell's value and adds each element times the captured `a0`. The cell's
+new value is its old one plus `a0`. With `a0 = 2` the step answers `5 + 3·2 + 2·2 + 3·2 = 21` and
+leaves `7`, and the program answers the pair `[21, 7]`. A face that bound the term's value at the
+node's own level, or the fold's binders at the term's, would read another program. -/
+def pModifyFold : Api.Program :=
+  let call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+  let list (xs : List Term) : Term := xs.foldr (fun x acc => call "cons" [x, acc]) (call "nil" [])
+  .bind (.succeed (.lit (.nat 2)))
+    (.bind (.perform .refMake (.lit (.nat 5)))
+      (.bind (.perform (.refModifyWith (call "pair"
+            [.fold none (list [call "succ" [.var 0], .var 0, .lit (.nat 3)]) (.var 2)
+                (call "add" [.var 3, call "mul" [.var 4, .var 0]]),
+              call "add" [.var 2, .var 0]])) (.var 1))
+        (.bind (.perform .refGet (.var 1))
+          (.succeed (call "pair" [.var 2, .var 3])))))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
-the S2 error-image, S3 handler and part-4 residual fixtures, and the list fold. Every listed
-program contributes one manifest entry. -/
+the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, and the two programs
+of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe). Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -413,7 +446,7 @@ def corpus : List (String × Api.Program) :=
     ("pFailText", pFailText), ("pFailBoomText", pFailBoomText), ("pTextOrDie", pTextOrDie), ("pCatchError", pCatchError),
     ("pCatchIfHit", pCatchIfHit), ("pCatchIfMiss", pCatchIfMiss), ("pCatchIfRetained", pCatchIfRetained),
     ("pTagHit", pTagHit), ("pTagMiss", pTagMiss), ("pTagTwoFail", pTagTwoFail), ("pOptionSome", pOptionSome), ("pOptionNone", pOptionNone), ("pFailPayload", pFailPayload), ("pTagPayload", pTagPayload), ("pInterruptEscape", pInterruptEscape),
-    ("pFold", pFold)]
+    ("pFold", pFold), ("pModifyFold", pModifyFold), ("pQueueOffer", pQueueOffer)]
 
 /-! ## The value wire -/
 
@@ -901,12 +934,27 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pFailTagged", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie",
    "pFailText", "pFailBoomText", "pTextOrDie", "pCatchError", "pCatchIfHit", "pCatchIfMiss", "pCatchIfRetained",
    "pTagHit", "pTagMiss", "pTagTwoFail", "pOptionSome", "pOptionNone", "pFailPayload", "pTagPayload",
-   "pInterruptEscape", "pFold"]
+   "pInterruptEscape", "pFold", "pModifyFold", "pQueueOffer"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
 #guard (Api.run pFold 1000).exit = some (.success (.nat 8))
 #guard Api.roundTrip pFold = .ok pFold
+-- The fold inside a `Ref.modify` with an outer capture types at a pair of numbers, answers
+-- `[21, 7]` on the machine, and reads back whole.
+#guard Api.typeOf pModifyFold = some ⟨.prod .nat .nat, .never, Env.Requirement.empty⟩
+#guard (Api.run pModifyFold 1000).exit = some (.success (.list [.nat 21, .nat 7]))
+#guard Api.roundTrip pModifyFold = .ok pModifyFold
+-- its printed expression: the term's value is `a2`, the fold's binders `a3` and `a4`
+#guard (Api.print pModifyFold).toOption.map (TypeScript.Render.expr house0 0) = some
+  "Effect.flatMap(Effect.succeed(2), (a0) => Effect.flatMap(Ref.make(5), (a1) => Effect.flatMap(Ref.modify(a1, (a2) => pair(fold(cons(succ(a0), cons(a0, cons(3, nil()))), a2, (a3, a4) => add(a3, mul(a4, a0))), add(a2, a0))), (a2) => Effect.flatMap(Ref.get(a1), (a3) => Effect.succeed(pair(a2, a3))))))"
+-- The probe's offer step, twice: the source elaborates (its first node makes the cell; a source
+-- that did not elaborate is a `fail`), types at the triple, answers on the machine, and reads
+-- back whole.
+#guard match pQueueOffer with | .bind (.perform .refMake _) _ => true | _ => false
+#guard Api.typeOf pQueueOffer = some ⟨.tuple [.bool, .nat, .nat], .never, Env.Requirement.empty⟩
+#guard (Api.run pQueueOffer 1000).exit = some (.success (.list [.bool false, .nat 2, .nat 0]))
+#guard Api.roundTrip pQueueOffer = .ok pQueueOffer
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))

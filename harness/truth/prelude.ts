@@ -1,13 +1,13 @@
 /**
- * prelude.ts — the pure atoms and Ref function names of the native route, on rc.112.
+ * prelude.ts — the pure atoms of the native route, on rc.112.
  *
  * What it is: one export per name the printed programs can mention outside the `effect`
  * package. The pure atoms are no longer written here: they are generated from the atom table
  * into `prelude-atoms.gen.ts` (`tools/Effect4Gen/PreludeAtoms.lean`, group `PreludeAtoms`) and
  * re-exported below, each carrying the `cite` column of its `NativeAtom.spec` row as its doc.
  * What stays hand-written here is everything that is not an atom: `select`'s printed heads,
- * the `FnName`s of `src/Effect4/Program/FnName.lean` (`FnName.total`, `FnName.partialUpdate`),
- * the self-test table, the error projection and the canonical package tables.
+ * the list fold's head, the self-test table, the error projection and the canonical package
+ * tables.
  * Part of the truth claim (`Test/contracts/faces.contract.md` §4): the doc comment on each
  * export is the table mapping it to its Lean definition — there is no separate notes file.
  *
@@ -24,18 +24,15 @@
  *    before any program runs; the table is the one thing about the atoms still written by
  *    hand, and `run-truth.ts` refuses an atom of the profile that has no case in it);
  *  - `pred` is Lean's truncated subtraction, `pred(0) = 0` (by construction);
- *  - one identifier, one shape: `incr`, `double`, `takeAndBump` are the `FnName.total`
- *    shape `(a) => a` that `Ref.update`/`getAndUpdate`/`updateAndGet` take;
- *    `zeroWhenPositive`, `noChange` are the `FnName.partialUpdate` shape `(a) => Option<a>`
- *    that `Ref.updateSome`/`getAndUpdateSome`/`updateSomeAndGet` take. The `modify` and
- *    `modifySome` shapes (`FnName.modify`, `FnName.modifySome`: `(a) => [b, a']`) are NOT
- *    these identifiers — a printed `Ref.modify(ref, takeAndBump)` would call the total shape
- *    and misbehave on rc.112. Recorded as finding F3 in `REPORT.md`; not patched here.
- *    Since the state plan's T3b a read-modify-write row carries a binder term, and the printer
- *    spells the term by the name whose image it is at the row's shape (`FnName.image`,
- *    `NativeOp.atLevel`); a term that is no name's image is refused, never printed. The
- *    identifiers below are still one function each, so the finding stands until the state
- *    plan's T5 prints the term itself.
+ *  - no function name: a read-modify-write row's function is printed as a function of the
+ *    cell's current value, `Ref.update(a0, (a1) => succ(a1))` (the state plan's T5,
+ *    `src/Effect4/Codegen/PrintLeaf.lean` `printPerform`), and its body is built from the atoms
+ *    above. So one printed term calls one function at every row's shape. The five names this
+ *    file exported before (`incr`, `double`, `takeAndBump`, `zeroWhenPositive`, `noChange`) were
+ *    one function each, although a name stood for a different function at each of rc.112's four
+ *    shapes (`A → A`, `A → Option<A>`, `A → [B, A]`, `A → [B, Option<A>]`): a printed
+ *    `Ref.modify(ref, takeAndBump)` called the total shape and misbehaved on rc.112 (finding
+ *    F3). The names are gone with T5, which closes the finding.
  */
 import { Cause, Deferred, Effect, Exit, Option, Ref, Scope } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
@@ -98,26 +95,8 @@ export const caseTag = <T, K extends string, A0, E0, R0, A1, E1, R1>(
       ? hit((value as any)[1])
       : miss(value as any))
 
-// ---- FnName, total shape (`FnName.total`, src/Effect4/Program/FnName.lean) -----------
-
-/** `FnName.incr`: `a ↦ a + 1`. */
-export const incr = (a: number): number => a + 1
-/** `FnName.double`: `a ↦ 2 * a`. */
-export const double = (a: number): number => a * 2
-/** `FnName.takeAndBump` under `FnName.total`: `a ↦ a + 1` (its `modify` shape is
- * `a ↦ [a, a + 1]`, not this identifier — see the header). */
-export const takeAndBump = (a: number): number => a + 1
-
-// ---- FnName, partial shape (`FnName.partialUpdate`, src/Effect4/Program/FnName.lean) --
-
-/** `FnName.zeroWhenPositive`: `Some 0` on a positive cell, `None` otherwise. */
-export const zeroWhenPositive = (a: number): Option.Option<number> =>
-  a > 0 ? Option.some(0) : Option.none()
-/** `FnName.noChange`: `None` always. */
-export const noChange = (_a: number): Option.Option<number> => Option.none()
-
-/** The table the runner's self-test walks. `atom` is the name in `nativeAtom` or `FnName`
- * that the case exercises: `run-truth.ts` checks the atom names against the profile's own
+/** The table the runner's self-test walks. `atom` is the name in `nativeAtom`, or the list
+ * fold's head, that the case exercises: `run-truth.ts` checks the atom names against the profile's own
  * atom set (`ts/eff/profile.gen.ts`, cut from `nativeAtom` — DI-40), so an atom appended in
  * Lean cannot stay untested here. `strings` was untested until that check existed. */
 export const selfTestCases: ReadonlyArray<{
@@ -199,13 +178,7 @@ export const selfTestCases: ReadonlyArray<{
     apply: () => Atoms.sameHandle(Effect.runSync(Deferred.make<number>()), Effect.runSync(Deferred.make<number>())), expected: false },
   { atom: "fold", name: "fold runs from the head", apply: () => fold([1, 2, 3], 10, (acc, x) => acc - x), expected: 4 },
   { atom: "fold", name: "fold keeps the list's order", apply: () => JSON.stringify(fold<ReadonlyArray<number>>([1, 2, 3], [], (acc, x) => [...acc, x])), expected: "[1,2,3]" },
-  { atom: "fold", name: "fold of the empty list is its initial value", apply: () => fold([] as ReadonlyArray<number>, 7, (acc, x) => acc + x), expected: 7 },
-  { atom: "incr", name: "incr 1", apply: () => incr(1), expected: 2 },
-  { atom: "double", name: "double 4", apply: () => double(4), expected: 8 },
-  { atom: "takeAndBump", name: "takeAndBump 4", apply: () => takeAndBump(4), expected: 5 },
-  { atom: "zeroWhenPositive", name: "zeroWhenPositive 3", apply: () => Option.getOrUndefined(zeroWhenPositive(3)), expected: 0 },
-  { atom: "zeroWhenPositive", name: "zeroWhenPositive 0 is none", apply: () => Option.isNone(zeroWhenPositive(0)), expected: true },
-  { atom: "noChange", name: "noChange 7 is none", apply: () => Option.isNone(noChange(7)), expected: true }
+  { atom: "fold", name: "fold of the empty list is its initial value", apply: () => fold([] as ReadonlyArray<number>, 7, (acc, x) => acc + x), expected: 7 }
 ]
 
 /** A unit-declared resource used only by pAcquireHandle. Effect supplies the execution

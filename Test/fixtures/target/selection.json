@@ -38,7 +38,9 @@
     "pOptionNone",
     "pFailPayload",
     "pTagPayload",
-    "pInterruptEscape"
+    "pInterruptEscape",
+    "pModifyFold",
+    "pQueueOffer"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",
