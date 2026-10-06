@@ -1,0 +1,130 @@
+{
+  "snapshot": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+  "source_read_method": "git show <snapshot>:<path>",
+  "evidence": "Source review only; no build, compiler, runtime, generator, or Lean execution.",
+  "report_sha256": "c7006b6296e767f71090d1ae593cedbeddba824c98f12ea51b864d14783b6e88",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "git_blob": "607959a5ece23418c8938d9903200d9f73d1f500",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "path": "docs/core/machine-state.md",
+      "git_blob": "804de62046ed870fd71bbe51e6883f8bac001bc9",
+      "sha256": "a2c51fa6ce917ff3a7560a7ff49f785d70a30250b03543ff2a639ef3bde24597",
+      "bytes": 19313
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "git_blob": "4cf2af30e2a89e3ee0df4a78352d3f21a78a516d",
+      "sha256": "0c31fb1bfc6e604332484cbdd110126622abb5ff0679b619a3034e22ac97a413",
+      "bytes": 330487
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/groundwork-plan.md",
+      "git_blob": "24aa8bad57cb191481174132b510faa0530ed72e",
+      "sha256": "d439b3fa678f6627cf73d24e2dcd50fc928f6f03d3cc43e038d200e826627358",
+      "bytes": 14768
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+      "git_blob": "3327cf9239b1f26d80281183df4f6f72993ec28a",
+      "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5",
+      "bytes": 14358
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/transactions-and-clock.md",
+      "git_blob": "62c901580736aff2f3ead3cf14a6608017dd0c17",
+      "sha256": "15011ebabc468c60b556d90878e42c2766cc4c228dd433aa2e8a2ecf3b6d4e6b",
+      "bytes": 23061
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/waiting-design.md",
+      "git_blob": "803016c24f82ded01008708698a35b2a8a897302",
+      "sha256": "c2303ca86f1f973e947051582f141ee6d4593ccaf51feb38ff49831bca2fc8ce",
+      "bytes": 26698
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "git_blob": "0fc58be9e8d293fdb7be03b91b6db239a943a7d6",
+      "sha256": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce",
+      "bytes": 30908
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "git_blob": "a846cd90b4cd846c309e12e38e6545d87b772a33",
+      "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784",
+      "bytes": 51364
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Reading.lean",
+      "git_blob": "7e20e26f7d430cad35739af14f57ef7d5050d043",
+      "sha256": "b1fdd6c3c4a474bde49e5cf720c14b8ec0ca875819548a2fd61a84508de635eb",
+      "bytes": 39205
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Relation.lean",
+      "git_blob": "6267b1941d312eda9aadc276658eb5a9be4ee6f5",
+      "sha256": "b319dfb241d5da0b98458074ce474f8811b819b3360c7eb5fd7a3646338694db",
+      "bytes": 7391
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+      "git_blob": "02d86e2ddfd12278bf3b57f06d6e43cafd29326e",
+      "sha256": "6f49945dc33e4323887cfd3fd37758ceb08046e7d423d976abcf2becbcd23888",
+      "bytes": 27504
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Refinement.lean",
+      "git_blob": "750a2e54f3e1187ef5a7373d24ca0059a66c0e26",
+      "sha256": "9183fdd7e13b3492d65d5719774282c927a340dbf61c7adb664534aca85643af",
+      "bytes": 24309
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/World.lean",
+      "git_blob": "48c79300b4c161de53fb528a17f4837b82ca84f6",
+      "sha256": "1f7999fb615cfe1e1b11da097233d51f6d156282e454cc029d9dd1cd1b33aefd",
+      "bytes": 32553
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "git_blob": "c2c7f8ac1531f327892d4b3a143e123981193756",
+      "sha256": "291b79b6bf5d4c24645e39fce9ceeed35c82e2ac0b8f293dedb3293052eea9f0",
+      "bytes": 186262
+    },
+    {
+      "path": "tools/ProofGraph/Plan.lean",
+      "git_blob": "9cf9d069348805503c228109e032bf62f84e7cdb",
+      "sha256": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49",
+      "bytes": 7038
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "git_blob": "1e7d831ddc506f19cbd8846372599b7a2f48baac",
+      "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5",
+      "bytes": 68968
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+      "git_blob": "13f3216abcb3899b402ab079cf7a93063f74f643",
+      "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2",
+      "bytes": 28165
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Pool.ts",
+      "git_blob": "4b1f97a523b39255af947aad7fc894a01e22ecb1",
+      "sha256": "d88cd954f7cc0dd8fd086c33d48a76d4e1cd93f9630bc09f1577d95fb29492b7",
+      "bytes": 33716
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Cache.ts",
+      "git_blob": "162eb86a933704307f3b7f0efc93f4642b8fbeaf",
+      "sha256": "50cb55a041c0f2873e4e7693d235875ffd8d199395fc5440aa77e00173cac121",
+      "bytes": 82367
+    }
+  ],
+  "repository_writes": [],
+  "working_tree_note": "Concurrent owner edits observed. All reported source facts use frozen committed blobs; these edits were not inspected or changed."
+}

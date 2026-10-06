@@ -1,0 +1,23 @@
+{
+  "frozen_commit": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+  "source_count": 27,
+  "verified_hashes": true,
+  "report": "report.md",
+  "report_sha256": "035bec528e1f5e3fbb0266dd91d5524df8e3fe27b676fc295108ffb74652ff48",
+  "scope": "Read-only source research; proposed module packet and two-consumer pilot",
+  "runs": {
+    "Lean": false,
+    "compiler": false,
+    "runtime": false,
+    "build": false,
+    "generator": false,
+    "install": false
+  },
+  "repo_edits": false,
+  "proof_status": "All new obligations and controls are uncompiled proposals",
+  "consumers": [
+    "Queue",
+    "Semaphore",
+    "Pool and Cache boundary mapping only"
+  ]
+}

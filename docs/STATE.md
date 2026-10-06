@@ -144,6 +144,17 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
 
   The design of waiting, tasks, masks and the atomic frontier comes before the Queue. The clock
   slice and the release audit run beside these.
+- **The module procedure** (the owner's direction of 2026-10-05, relayed by Codex in three
+  messages). The Queue is the first worked example of a factory of composed modules.
+  - The contract cards of Semaphore, Pool and Cache are prepared now. They do not wait for
+    step 4 of the order.
+  - Every module follows one procedure, and its repeated parts are generated or applied.
+  - Every receipt accounts for the requirements R1 to R13. No module slice closes one by
+    association.
+  - Row 233's order of implementation stands until the owner changes it.
+
+  [The plan](research/2026-10-05-claude-lead/module-factory-plan.md) holds the procedure, the
+  card's template, the order and the accounting.
 
 Where to read:
 
@@ -483,10 +494,10 @@ Open at this landing:
   - one host adapter, `kvGet`, generated from explicit contract data.
 
   The last three have no seat and no date;
-- Codex's two reviews of 2026-10-05 are filed, each with the owner's relay as pasted
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/` and
-  `next-proof-review/` beside it). Their evidence is source reading, compiler probes and
-  finite controls, with no Lean run:
+- Codex's three reviews of 2026-10-05 are filed, each with the owner's relay as pasted
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/`, with
+  `next-proof-review/` and `module-factory-review/` beside it). Their evidence is source
+  reading, compiler probes and finite controls, with no Lean run:
   - the first probes the literal repair and the typing of the Queue's steps (rows 256 and
     257);
   - the second orders the next proofs. Seat QTYPES has the shared typing rules and the
@@ -494,8 +505,10 @@ Open at this landing:
     freshness joins the generation graph. `Routing.infrastructure_escapes` is the first
     scenario goal to prove. One stale reading is corrected: the admission gap is closed, and
     `Api.Built` retains a program's admission;
-  - the owner's guidance came with both. Automate the repeated checks. Keep a question for
-    the owner to a change of meaning, of the supported domain or of a representation;
+  - the third asks for breadth and a module factory, and it keeps R1 to R13 on the plan. It
+    proposes first profiles for Semaphore, Pool and Cache, which no one has ruled;
+  - the owner's guidance came with all three. Automate the repeated checks. Keep a question
+    for the owner to a change of meaning, of the supported domain or of a representation;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

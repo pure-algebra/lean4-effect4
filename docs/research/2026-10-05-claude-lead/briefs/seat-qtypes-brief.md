@@ -202,3 +202,13 @@ only. If a proof needs the second, say so before you add a premise (the review's
 Write `docs/research/2026-10-05-seat-QTYPES-receipt.md` and commit it with `git add -f`. Follow
 AGENTS.md's list for a handoff. Put first the one thing that the coordinator must know before
 merging. Give each landed theorem's placement. Say which evidence is bounded.
+
+The receipt also accounts for the requirements R1 to R13, in three lists taken from
+`generated/semantics.md` and from `#plan_status` (the owner's direction of 2026-10-05;
+`docs/research/2026-10-05-claude-lead/module-factory-plan.md`):
+
+- the existing claims and requirement rows that the slice advances, with each node's status;
+- the goals and the premises that its theorems still rest on;
+- the older open parts of the same requirements that it leaves untouched.
+
+Keep no second list of statuses. A conditional theorem keeps each premise that it does not meet.
