@@ -280,11 +280,35 @@ either module exists yet):
 
 In work since 2026-10-06, three seats at once since the owner's word of that day (row 237):
 
-- **Seat PUB has the Queue's first public operations** (branch `seat/pub`;
+- **Seat CUTS has the journal's cut and position connectors** (branch `seat/cuts`, from
+  `bc0ee4c1`; [its brief](research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md)), in
+  the seat that seat PUB freed. Codex mapped the slice: four connectors beside `tapeFrom`,
+  one structural helper, and the consumer at a fresh `Run.open`. None is compiled yet.
+- **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
+  merge freed a seat. It first runs the card's cases on our machine. Then it writes the
+  contract, the model with its profile, and the cell with its five steps. It ends with the
+  steps' typing and their agreement with the model. The public `make` and `use`, the close
+  that waits and the finalizers' runs are a later slice. **Its first three steps are
+  merged** (`e212766f`). Every case of the card gives the profile's answer on the Lean
+  machine, one schedule each (`Test/Program/PoolScenarios.lean`). The contract is
+  `Test/contracts/pool.contract.md`. The model's profile is closed under its five
+  transitions, with no planned goal (`src/Effect4/Laws/Modules/Pool/`). An idle item beside
+  enrolled waiters is a state of the profile. The cell, the step terms, their typing and
+  their agreement with the model are next.
+- **Seat MASKPOP has the mask's pop discipline** (branch `seat/maskpop`), the third seat, on
+  the owner's word. Lean accepts Codex's predicate and statements as written. On its branch,
+  not merged: the placed theorem `saved_mask_pop_discipline` is proved in place of its
+  planned goal (`12d7703d`). Its controls, documents and receipt are next.
+
+Merged on 2026-10-06, after the seats above began:
+
+- **Seat PUB is merged: the Queue's first public operations** (branch `seat/pub`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
   become library programs that capture no name of a caller. Each runs on the Lean machine, on
-  the generated engine and on rc.112. The slice states no law of a whole run. **Six steps
-  are merged** (`f046975b`, `c957bfab`, `5701a5dc`, `41be5ef3` and `c46e3ca1`):
+  the generated engine and on rc.112. The slice states no law of a whole run. **Its six steps
+  and its receipt are merged** (`f046975b`, `c957bfab`, `5701a5dc`, `41be5ef3`, `c46e3ca1`
+  and `bc0ee4c1`; [its receipt](research/2026-10-06-seat-PUB-receipt.md)):
   - the shared pieces of a module that waits (`src/Effect4/Modules/Waiting.lean`), and the
     five operations (`src/Effect4/Modules/Queue/Ops.lean`: `Queue.bounded`, `offer`, `take`,
     `poll`, `size`), each with its scope law. The wrapper has two forms over one `Waiter`: a
@@ -313,26 +337,8 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
     type and every kept term of a caller. A string literal is not covered. The contract's seven connectors,
     the README's example and the architecture rows came with it.
 
-  The receipt and the last acceptance runs are the seat's next step.
-- **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
-  merge freed a seat. It first runs the card's cases on our machine. Then it writes the
-  contract, the model with its profile, and the cell with its five steps. It ends with the
-  steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice. **Its first three steps are
-  merged** (`e212766f`). Every case of the card gives the profile's answer on the Lean
-  machine, one schedule each (`Test/Program/PoolScenarios.lean`). The contract is
-  `Test/contracts/pool.contract.md`. The model's profile is closed under its five
-  transitions, with no planned goal (`src/Effect4/Laws/Modules/Pool/`). An idle item beside
-  enrolled waiters is a state of the profile. The cell, the step terms, their typing and
-  their agreement with the model are next.
-- **Seat MASKPOP has the mask's pop discipline** (branch `seat/maskpop`), the third seat, on
-  the owner's word. Lean accepts Codex's predicate and statements as written. On its branch,
-  not merged: the placed theorem `saved_mask_pop_discipline` is proved in place of its
-  planned goal (`12d7703d`). Its controls, documents and receipt are next.
-
-Merged on 2026-10-06, after the seats above began:
-
+  Row 275 records what the receipt leaves open. No law of a whole run is stated: the
+  connectors 3 to 6 of the Queue's contract stay open.
 - **Seat REFS is merged** (`c957bfab`;
   [its receipt](research/2026-10-06-seat-REFS-receipt.md)). It is the independent foundation
   proof of the owner's roadmap, as Codex's audit corrected it. A program whose layer
@@ -365,11 +371,9 @@ Candidates with no seat, each with its place:
   `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
   `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded
   exploration holds it today, with two mutations red;
-- the journal's cut and position connectors (Codex's audit of the roadmap, priority 2).
-  [Its brief](research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md) is written, one
-  page that points at Codex's statements and at its later helper
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-1306-cuts/`).
-  It waits for a seat. The scenario driver's general laws in the law graph are a later step;
+- the scenario driver's general laws in the law graph, after seat CUTS's connectors;
+- the run-level law of the Queue's wrapper, and the wrapper's form under a caller's mask for
+  a protected body (row 275, points 2 and 4);
 - Semaphore's operations that wait and its protected form, after seat PUB's shared wrapper.
   The case P9 on the generated engine goes with it;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
