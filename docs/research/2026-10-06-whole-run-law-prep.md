@@ -105,6 +105,23 @@ In this order, each a slice of its own:
    `applied` whatever fuel its step had left, so a cut can hide inside it (tested: one run of
    the crew at the command budget 60). Whether an application should report its sufficiency
    is a choice of the session's observation, for the owner.
+
+   The seat then measured what a cut leaves (tested, finite:
+   `docs/research/2026-10-06-seat-workq-evidence/left.out.txt` and `sweep.out.txt`). Where
+   the fuel ends inside an answer decision, the command loop returns the commands that the
+   fuel left, and `stepDecisionState` (`src/Effect4/Machine/Fibers.lean`) keeps the machine
+   and the receipt `settled`, and drops them. The machine's own flag reads that the fuel
+   was not enough, and the session does not show it. A cut has two kinds. One leaves a
+   runnable fiber with no task (the budgets 60 and 100). The other leaves the machine at
+   rest: no runnable fiber, no armed owner, no live call, and no exit of the root, so
+   nothing will run the root (the named run `dropped`, at the budget 80). In a sweep of 22
+   scripts at each command budget from 1 to 160, 1,937 runs are funded and 1,583 are cut;
+   23 of the cut runs are at rest, and the root has no exit in 9 of them. So rest does not
+   show that a run is funded. No goal's observation failed on any of the 23. The finding is
+   evidence for the open parts `driver-continuation-split` and
+   `driver-suspension-keeps-typed` (decisions rows 84 and 226): the driver's continuation
+   is not kept. Whether the machine keeps it, or the session reports the cut, is the
+   owner's.
 5. **The record's read-and-overwrite laws**, as a bank. It shortens Pool's public slice's
    successors and Cache.
 

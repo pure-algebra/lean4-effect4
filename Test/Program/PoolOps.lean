@@ -27,7 +27,8 @@ laws.
    checker's own answer on each program's tree, at three scopes. A body that fails keeps its
    failure type, and `make` requires the scope's service. The red controls are a handle of
    another type, a resource of another type and a release that could fail.
-6. **The pinned outputs**: each law's axioms, and its standing in the plan.
+6. **The example of `README.md`**, with its checked answer.
+7. **The pinned outputs**: each law's axioms, and its standing in the plan.
 
 Placement. The theorems of section 3 are helpers of the proposed claim `pool-expansion-agrees`
 (concept `translation-simulation`, requirement R10): they discharge the scope premises of the
@@ -557,7 +558,45 @@ def programsTyped (names : List String) (types : List Ty) : Bool :=
 
 end Typing
 
-/-! ## 6. The pinned outputs
+/-! ## 6. The example of `README.md`
+
+The section "A pool" of `README.md` shows this program. The root borrows the one item, and
+inside its body it forks a worker that asks for the item. The worker waits. The root's return
+posts a helper, the root joins the worker, and the helper wakes the worker. -/
+
+/-- The README's example, as the README writes it. -/
+def handoff : Src NativeOp := scope (eff do
+  let pool ← Pool.make .nat 1 (succeed (nat 7))
+  let worker ← Pool.use .nat pool fun _ =>
+    fork (Pool.use .nat pool fun resource => succeed resource)
+  let x ← join worker
+  return x)
+
+-- `Effect4.Api.author` checks it at the answer type `nat`, with no failure and no requirement,
+-- and its run answers `7`: the worker gets the resource that the root returned.
+#guard match Effect4.Api.author handoff with
+  | .ok typed => decide (typed.ty = EffTy.pure .nat) && typed.runSync == .success (Val.nat 7)
+  | .error _ => false
+-- The checked session's run gives the same answer, at the tape `[evaluate root, flush]`.
+#guard exitOf handoff = some (.success (.nat 7))
+-- The worker waits first. It is fiber 1, and the helper of the root's return is fiber 2. The
+-- worker and then the root exit inside the helper's task, so the helper exits last.
+#guard Test.Program.PoolScenarios.exitsOf handoff = some [1, 0, 2]
+-- Red control: with a resource of another type, the checker refuses the program at a type.
+#guard match Effect4.Api.author (scope (eff do
+    let pool ← Pool.make .nat 1 (succeed (nat 7))
+    Pool.use .bool pool fun resource => succeed resource)) with
+  | .error (.typing _) => true
+  | _ => false
+-- The scope is part of the example: without it the checker admits the program at a type that
+-- requires the scope, and the type is not the example's.
+#guard match Effect4.Api.author (eff do
+    let pool ← Pool.make .nat 1 (succeed (nat 7))
+    Pool.use .nat pool fun resource => succeed resource) with
+  | .ok typed => decide (typed.ty ≠ EffTy.pure .nat)
+  | .error _ => false
+
+/-! ## 7. The pinned outputs
 
 Each law's axioms, and its standing as the plan derives it from its proof. No law rests on a
 planned goal. The counts are of this battery's tree, which holds no step of a proof. -/

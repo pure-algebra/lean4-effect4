@@ -3,6 +3,7 @@ import Test.Codegen.TermRows
 import Test.Program.MaskContract
 import Test.Program.QueueMask
 import Test.Program.SemaphoreScenarios
+import Test.Program.PoolPublic
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -731,13 +732,126 @@ walk resumes the worker, which runs its body and releases. The program answers `
 def pSemaphoreHandoff : Api.Program :=
   semaphoreProgram "pSemaphoreHandoff" Test.Program.SemaphoreScenarios.handoff
 
+/-! ### Pool's first operations (decisions rows 267 to 269, 276 and 279)
+
+Ten programs over the library's operations (`src/Effect4/Modules/Pool/Ops.lean`): the first
+host runs of Pool's expansion. Each is a case of `Test/Program/PoolPublic.lean`, so the program
+that rc.112 runs is the program that the batteries run on the Lean machine. `make` prints as
+its acquisitions, one `Ref.make` of the cell and one `Effect.acquireRelease` whose release is
+the close. `use` prints as one mask over the lease's loop, the body at the restore site and the
+return as its hook. The pin's own `Pool` is not printed (decisions row 235). A source that does
+not elaborate is a failure with a text, never a patched program.
+
+A snapshot of the cell is `[the idle stamps, the borrowed items' stamps, their leases' stamps,
+the number of waiters, closing, next]`. The log's rows are `[1, mark, resource]` at a body's
+entry, `[2, mark, resource]` at its end, `[8]` before a gate opens and `[9, resource]` from a
+resource's finalizer. The marks are 9 for H, 1 for A and for W, 2 for B, 3 for C, 4 for D and 5
+for L.
+
+**The signed difference of decisions row 268 keeps no case out of the lane.** The lane runs the
+module's expansion on both faces, and the expansion's close waits on both. The difference is
+between this close and the close of the pin's own `Pool`, which ends at once. No program of the
+lane calls the pin's `Pool`: its answers are those of the card's probes
+(`docs/research/2026-10-05-claude-lead/module-cards/pool-probes/pool-close.ts`, with its
+outputs). The same holds for the order of reuse (row 269) and for a failed acquisition (row
+267): `pPoolOrder` and `pPoolMakeFails` answer the profile's order and the profile's failure
+on both faces.
+
+**The two entries.** Five programs settle on one exit under both entries: in each no return
+finds a waiter, so no helper is posted. The two programs of a close that waits end the sync
+entry in the `AsyncFiberError` defect: the closer waits, and the helper of the holder's return
+is on the holder's dispatcher, which the sync entry does not flush (`runSyncExit`,
+`src/Effect4/Machine/Fibers.lean`). The cases PP3, PP4 and PP5 settle on two exits, as
+Semaphore's cases P1 and P4 do: a child's return posts the helper on that child's dispatcher,
+and the root's four yields end before a wake. The runner's exit column compares the fork entry
+on both faces, and the sync pair has its own column (decisions row 279, point 1). -/
+
+/-- The program of a case of Pool's battery, or a failure with a text. -/
+def poolProgram (name : String) (source : Effect4.Program.Authoring.Src NativeOp) :
+    Api.Program :=
+  match Effect4.Program.Authoring.elaborate source with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str (name ++ ": the source does not elaborate")))
+
+/-- **A returned item is used again, and its finalizer runs once, at the close** (the case
+PP1). Size 1. A borrows and returns, and then B: both bodies hold the resource 1. The pool's
+scope closes, and the finalizer writes its one row there. The program answers the cell before
+the close and the log:
+`[[[0], [], [], 0, false, 2], [[1, 1, 1], [2, 1, 1], [1, 2, 1], [2, 2, 1], [9, 1]]]`. -/
+def pPoolReuse : Api.Program := poolProgram "pPoolReuse" Test.Program.PoolPublic.pp1
+
+/-- **The order of reuse is the release's** (the case PP2, decisions row 269). Size 2. A and B
+hold the resources 1 and 2. A returns, then B: the idle stamps are `[1, 0]`, with B's item at
+the front. C then gets the resource 2, and D the resource 1. The close finalizes the items in
+the reverse order of their acquisition. The pin's own `Pool` puts a returned item at the end.
+The program runs the module's expansion, so both faces answer the release's order. -/
+def pPoolOrder : Api.Program := poolProgram "pPoolOrder" Test.Program.PoolPublic.pp2
+
+/-- **Two waiters, and each return wakes one** (the case PP3). Size 1. H holds, and A and B
+wait. H returns and posts one helper, which selects A at the count 1. A's own step takes the
+item, and B still waits. A's return posts the next helper, which wakes B. The root yields four
+times after each of the two gates. Its two entries settle on two exits. Under the sync entry
+the yields end before a helper runs: the item stays idle beside both waiters, no borrower but H
+runs, and the log is `[[1, 9, 1], [2, 9, 1], [9, 1]]`. -/
+def pPoolWaiters : Api.Program := poolProgram "pPoolWaiters" Test.Program.PoolPublic.pp3
+
+/-- **A waiter is interrupted between the return and the wake** (the case PP4). PP3, and the
+root interrupts A after H's return and before the posted helper runs. A's entry leaves. The
+helper selects the first waiter of the state that it finds, which is B. A's body never runs.
+Its two entries settle on two exits, as PP3's do. -/
+def pPoolLateWake : Api.Program := poolProgram "pPoolLateWake" Test.Program.PoolPublic.pp4
+
+/-- **The wake that a return posts** (the case PP5, in its public form). Size 1. H holds, and A
+enrols. H returns: the item is idle beside A's entry. The helper selects A, and A's own step
+takes the item at the lease's stamp 1. Its two entries settle on two exits, as PP3's do. -/
+def pPoolWake : Api.Program := poolProgram "pPoolWake" Test.Program.PoolPublic.pp5
+
+/-- **A failed acquisition fails `make`** (the case PP6, decisions row 267). The acquisition
+registers a cleanup, writes the row `[5]` and fails with 77. `make` fails with that failure,
+the cleanup runs at the scope's close, and no borrower runs. The program answers whether the
+scope's exit is a failure, its failure and the log: `[true, some 77, [[5], [9, 1]]]`. The pin's
+own `make` answers before any item exists. -/
+def pPoolMakeFails : Api.Program := poolProgram "pPoolMakeFails" Test.Program.PoolPublic.pp6
+
+/-- **The close waits for a borrowed item** (the case PP7, decisions row 268). Size 1. H holds,
+and W waits. The pool's scope closes. The close's helper wakes W, whose lease is refused: W is
+interrupted. The closer waits. A third fiber awaits W's exit, writes the row `[8]` and opens
+H's gate. H's body ends, and its return posts the helper that wakes the closer. The finalizer's
+row follows H's return. The program answers the cell before the close, `true` for W's
+interruption, `false` for H's, the cell after the close and the log
+`[[1, 9, 1], [8], [2, 9, 1], [9, 1]]`. The sync entry ends in the `AsyncFiberError` defect. -/
+def pPoolCloseWaits : Api.Program := poolProgram "pPoolCloseWaits" Test.Program.PoolPublic.pp7
+
+/-- **An interrupted waiter withdraws** (the case PP8). Size 1. H holds. A waits and is
+interrupted: no waiter is left. H's return then owes no wake, and B leases at once. -/
+def pPoolWithdrawn : Api.Program := poolProgram "pPoolWithdrawn" Test.Program.PoolPublic.pp8
+
+/-- **A borrow at a closed pool** (decisions row 279, point 2). The pool's scope closes with no
+borrower. Then L borrows. Its exit is a failure whose cause is the interruption of L's own
+fiber, and its body does not run. The program answers L's exit, the cell and the log. The
+interruptor is the number of L's own fiber, 1 on each face (decisions row 274). -/
+def pPoolClosed : Api.Program := poolProgram "pPoolClosed" Test.Program.PoolPublic.closed
+
+/-- **A borrow at a closing pool, while a holder holds.** H holds, and W waits. The scope
+closes, and the closer waits for H. L awaits W's exit and then borrows: its exit is the
+interruption of its own fiber, 3 on each face, before H's return. A fourth fiber awaits L's
+exit, reads the cell, writes the row `[8]` and opens H's gate. While H holds, the cell reads
+H's lease as it was, no idle stamp, and one waiter, which is the closer. The sync entry ends in
+the `AsyncFiberError` defect. -/
+def pPoolClosing : Api.Program := poolProgram "pPoolClosing" Test.Program.PoolPublic.closing
+
+/-- The ten programs of Pool's first operations, in the lane's order. -/
+def poolPrograms : List Api.Program :=
+  [pPoolReuse, pPoolOrder, pPoolWaiters, pPoolLateWake, pPoolWake, pPoolMakeFails,
+    pPoolCloseWaits, pPoolWithdrawn, pPoolClosed, pPoolClosing]
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, the two programs
 of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe),
 the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
 interrupt wakes, the two programs of the mask that restores, the five programs of the
-Queue's first operations, and the eight programs of Semaphore's first operations. Every listed
-program contributes one manifest entry. -/
+Queue's first operations, the ten programs of Semaphore's first operations, and the ten
+programs of Pool's first operations. Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -761,7 +875,12 @@ def corpus : List (String × Api.Program) :=
     ("pSemaphoreInterrupted", pSemaphoreInterrupted),
     ("pSemaphoreIfAvailable", pSemaphoreIfAvailable), ("pSemaphoreMasked", pSemaphoreMasked),
     ("pSemaphoreHandoff", pSemaphoreHandoff), ("pSemaphoreProtected", pSemaphoreProtected),
-    ("pSemaphoreBodies", pSemaphoreBodies)]
+    ("pSemaphoreBodies", pSemaphoreBodies),
+    ("pPoolReuse", pPoolReuse), ("pPoolOrder", pPoolOrder), ("pPoolWaiters", pPoolWaiters),
+    ("pPoolLateWake", pPoolLateWake), ("pPoolWake", pPoolWake),
+    ("pPoolMakeFails", pPoolMakeFails), ("pPoolCloseWaits", pPoolCloseWaits),
+    ("pPoolWithdrawn", pPoolWithdrawn), ("pPoolClosed", pPoolClosed),
+    ("pPoolClosing", pPoolClosing)]
 
 /-! ## The value wire -/
 
@@ -1180,6 +1299,17 @@ entry is a reviewed change: the lane then compares that program up to this renam
 def lateSights : List (String × List (Nat × Nat)) :=
   [("pQueueOrder", [(4, 3), (3, 4)]), ("pLateSeen", [(2, 1), (3, 2), (1, 3)])]
 
+/-- The lane's programs whose sync run alone is numbered apart from the allocation order, each
+with the fibers that its sync run moves. The fork run of each is numbered in the allocation
+order. In each a child's return posts a helper on that child's dispatcher, which the sync entry
+does not flush, so the recorder never sees that helper there. The root's close posts a later
+helper on the root's dispatcher, and the recorder sees it. No compared field reads a moved
+number: the schedule is the fork run's, and the sync exit of each holds no fiber (a receipt
+holds both). A new entry is a reviewed change, as an entry of `lateSights` is. -/
+def lateSightsSync : List (String × List (Nat × Nat)) :=
+  [("pPoolWaiters", [(5, 4), (4, 5)]), ("pPoolLateWake", [(5, 4), (4, 5)]),
+    ("pPoolWake", [(4, 3), (3, 4)])]
+
 /-- Rows under the numbers of an order. -/
 def renumbered (order : List Nat) (rows : List Row) : List Row :=
   rows.map fun row => row.rename (numberIn order)
@@ -1479,7 +1609,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pQueueInterrupted", "pQueueMasked", "pQueueOrder", "pSemaphoreProtectedJoined",
    "pSemaphoreScan", "pSemaphoreOvertake", "pSemaphoreBodiesJoined", "pSemaphoreInterrupted",
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
-   "pSemaphoreBodies"]
+   "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
+   "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
@@ -1610,12 +1741,15 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
   "{\"interrupt\":9}"
 -- Measured over the lane: the numbering of each program is the allocation order, in the fork
 -- run and in the sync run, but for the programs of `lateSights`, which are pinned with the
--- fibers that they move. The driver holds the same on each run with its tape (`main`).
+-- fibers that they move. The driver holds the same on each run with its tape (`main`). A
+-- program of `lateSightsSync` is pinned apart in its sync run alone.
 #guard corpus.all fun (name, p) =>
   let (table, answers) := hostInputs name
   let pinned := (lateSights.lookup name).getD []
   moved (fixtureRun name p 1000 table answers).trace == pinned &&
-    moved (Api.runSync p 1000 answers table).1.trace == pinned
+    moved (Api.runSync p 1000 answers table).1.trace == (lateSightsSync.lookup name).getD pinned
+-- No program is in both tables, and each sync pin moves a fiber.
+#guard lateSightsSync.all fun entry => (lateSights.lookup entry.1).isNone && entry.2 != []
 #guard moved (Api.run pQueueOrder 1000).trace = [(4, 3), (3, 4)] &&
   moved (Api.runSync pQueueOrder 1000).1.trace = [(4, 3), (3, 4)]
 #guard moved (Api.run pLateSeen 1000).trace = [(2, 1), (3, 2), (1, 3)] &&
@@ -1884,6 +2018,118 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard [pSemaphoreProtectedJoined, pSemaphoreScan, pSemaphoreOvertake, pSemaphoreBodiesJoined,
     pSemaphoreInterrupted, pSemaphoreIfAvailable, pSemaphoreMasked, pSemaphoreHandoff].all
   fun p => moved (Api.run p 1000).trace == [] && moved (Api.runSync p 1000).1.trace == []
+-- Pool's first operations (decisions rows 267 to 269, 276 and 279). Each program is the program
+-- that Pool's battery builds from the same case, so rc.112 runs what the battery runs on the
+-- Lean machine. The lane's run gives each answer that the battery pins on its own run, the
+-- checked session at the tape `[evaluate root, flush]`.
+#guard [(Test.Program.PoolPublic.pp1, pPoolReuse), (Test.Program.PoolPublic.pp2, pPoolOrder),
+    (Test.Program.PoolPublic.pp3, pPoolWaiters), (Test.Program.PoolPublic.pp4, pPoolLateWake),
+    (Test.Program.PoolPublic.pp5, pPoolWake), (Test.Program.PoolPublic.pp6, pPoolMakeFails),
+    (Test.Program.PoolPublic.pp7, pPoolCloseWaits),
+    (Test.Program.PoolPublic.pp8, pPoolWithdrawn), (Test.Program.PoolPublic.closed, pPoolClosed),
+    (Test.Program.PoolPublic.closing, pPoolClosing)].all fun (source, program) =>
+  ((Effect4.Api.Author.build (Test.Program.PoolScenarios.mk source)).toOption.map
+    (·.program)) == some program &&
+  (Api.run program 1000).exit.isSome &&
+    (Api.run program 1000).exit == Test.Program.PoolScenarios.exitOf source
+-- Each source elaborates (its first node makes the log's cell; a source that did not elaborate
+-- is a `fail`), types with no failure and no requirement, and reads back whole.
+#guard poolPrograms.all fun p => match p with
+    | .bind (.perform .refMake _) _ => true
+    | _ => false
+#guard poolPrograms.all fun p =>
+  decide ((Api.typeOf p).map (fun ty => (ty.error, ty.requires)) =
+    some (.never, Env.Requirement.empty))
+-- The closed pool's answer type: L's exit has no failure type, because an interruption is
+-- outside the failure column.
+#guard (Api.typeOf pPoolClosed).map (·.answer) = some (.tuple [.exitOf .unit .never,
+  .tuple [.list .nat, .list .nat, .list .nat, .nat, .bool, .nat], .list (.list .nat)])
+#guard poolPrograms.all fun p => decide (Api.roundTrip p = .ok p)
+-- The sync entry settles five of the ten on the fork run's exit: in each no return finds a
+-- waiter, so no helper is posted.
+#guard [pPoolReuse, pPoolOrder, pPoolMakeFails, pPoolWithdrawn, pPoolClosed].all fun p =>
+  !isAsyncFiberDefect (Api.runSync p 1000).2 &&
+    some (Api.runSync p 1000).2 == (Api.run p 1000).exit
+#guard [pPoolReuse, pPoolOrder, pPoolMakeFails, pPoolWithdrawn, pPoolClosed].all fun p =>
+  !(reduce (Api.run p 1000).trace).any (·.startsWith "scheduled")
+-- The two programs of a close that waits end the sync entry in the `AsyncFiberError` defect.
+-- The closer waits, and the helper of H's return is on H's dispatcher, which the sync entry
+-- does not flush.
+#guard [pPoolCloseWaits, pPoolClosing].all fun p => isAsyncFiberDefect (Api.runSync p 1000).2
+-- The cases PP3, PP4 and PP5 as the batteries write them: the two entries settle on two exits.
+-- Under the sync entry the root's yields end before a wake. The item stays idle beside its
+-- waiters, no borrower but H runs, and the finalizer's row follows H's two rows. The runner's
+-- exit column compares the fork entry on both faces, and its sync column compares the sync
+-- entry, so the lane holds the three programs (decisions row 279, point 1).
+#guard (Api.runSync pPoolWaiters 1000).2 == .success (.list
+  [.list [Test.Program.PoolScenarios.snap [] [0] [0] 2 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1],
+   Test.Program.PoolScenarios.rows [[1, 9, 1], [2, 9, 1], [9, 1]]])
+#guard (Api.runSync pPoolLateWake 1000).2 == .success (.list
+  [.list [Test.Program.PoolScenarios.snap [] [0] [0] 2 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 2 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1],
+   Test.Program.PoolScenarios.rows [[1, 9, 1], [2, 9, 1], [9, 1]]])
+#guard (Api.runSync pPoolWake 1000).2 == .success (.list
+  [.list [Test.Program.PoolScenarios.snap [] [0] [0] 1 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1,
+    Test.Program.PoolScenarios.snap [0] [] [] 1 false 1],
+   Test.Program.PoolScenarios.rows [[1, 9, 1], [2, 9, 1], [9, 1]]])
+#guard [pPoolWaiters, pPoolLateWake, pPoolWake].all fun p =>
+  !isAsyncFiberDefect (Api.runSync p 1000).2 &&
+    some (Api.runSync p 1000).2 != (Api.run p 1000).exit
+-- Each of the ten is numbered in the allocation order in its fork run. The sync runs of the
+-- three programs of two exits are not: the helper of a child's return is never seen there, and
+-- the helper of the root's close, which is forked later, is seen. `lateSightsSync` pins the
+-- three, and the sync run of every other program is in the allocation order.
+#guard poolPrograms.all fun p => moved (Api.run p 1000).trace == []
+#guard [pPoolWaiters, pPoolLateWake, pPoolWake].map
+    (fun p => moved (Api.runSync p 1000).1.trace) =
+  [[(5, 4), (4, 5)], [(5, 4), (4, 5)], [(4, 3), (3, 4)]]
+#guard [pPoolReuse, pPoolOrder, pPoolMakeFails, pPoolCloseWaits, pPoolWithdrawn, pPoolClosed,
+    pPoolClosing].all fun p => moved (Api.runSync p 1000).1.trace == []
+-- No compared field reads a moved number: each of the three sync exits holds no fiber, so it is
+-- one text under the machine's ids and under the sync run's numbers. `pLateSeen` above is the
+-- red control: its exit holds a fiber, and its two texts differ.
+#guard [pPoolWaiters, pPoolLateWake, pPoolWake].all fun p =>
+  (exitJsonAt id none (Api.runSync p 1000).2).compress ==
+    (exitJsonAt (numberOf (Api.runSync p 1000).1.trace) none (Api.runSync p 1000).2).compress
+-- The two borrows at a closed pool: L's exit names L's own fiber, 1 and then 3, and the
+-- allocation order is the recorder's order in both runs.
+#guard ((Api.run pPoolClosed 1000).exit.map fun e =>
+    (exitJsonAt (numberOf (Api.run pPoolClosed 1000).trace) none e).compress) = some
+  "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":1}]}},[[0],[],[],0,true,0],[[9,1]]]}"
+#guard ((Api.run pPoolClosing 1000).exit.map fun e =>
+    (exitJsonAt (numberOf (Api.run pPoolClosing 1000).trace) none e).compress) = some
+  "{\"success\":[[[],[0],[0],1,false,1],{\"failure\":{\"reasons\":[{\"interrupt\":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]]}"
+-- The closed pool's compared rows: L starts and exits with an interruption, and no row of
+-- another fiber stands between. Nobody interrupts L: it fails with its own interruption.
+#guard reduce (Api.run pPoolClosed 1000).trace =
+  ["started 0", "forked 0 1", "started 1", "exited 1 interrupt", "exited 0 success"]
+-- The close that waits. H is fiber 1, W fiber 2 and the gate's opener fiber 3. The root's close
+-- posts its helper (`scheduled 0 0`) and waits. The helper, fiber 4, wakes W, which exits with
+-- its own interruption. W's exit resumes the opener, which opens H's gate. H's return posts
+-- the next helper on H's dispatcher (`scheduled 1 0`). That helper, fiber 5, wakes the closer:
+-- the root runs to its exit inside the helper's task.
+#guard reduce (Api.run pPoolCloseWaits 1000).trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
+   "forked 0 3", "started 3", "parked 3", "scheduled 0 0", "parked 0", "ran 0", "started 4",
+   "resumed 2", "started 2", "exited 2 interrupt", "resumed 3", "started 3", "resumed 1",
+   "started 1", "scheduled 1 0", "exited 1 success", "exited 3 success", "exited 4 success",
+   "ran 1", "started 5", "resumed 0", "started 0", "exited 0 success", "exited 5 success"]
+-- The sync run of the same program stops where the closer waits: H's return has posted its
+-- helper, and that task has not run.
+#guard reduce (Api.runSync pPoolCloseWaits 1000).1.trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
+   "forked 0 3", "started 3", "parked 3", "scheduled 0 0", "parked 0", "ran 0", "started 4",
+   "resumed 2", "started 2", "exited 2 interrupt", "resumed 3", "started 3", "resumed 1",
+   "started 1", "scheduled 1 0", "exited 1 success", "exited 3 success", "exited 4 success"]
+-- red control: the ten programs have ten answers and ten lists of compared rows.
+#guard (poolPrograms.map fun p => (Api.run p 1000).exit).eraseDups.length = 10
+#guard (poolPrograms.map fun p => reduce (Api.run p 1000).trace).eraseDups.length = 10
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))

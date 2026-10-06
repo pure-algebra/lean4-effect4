@@ -734,3 +734,34 @@ What this changes in the packet above, and nothing else:
   with Lean on every field, on rc.112 and on 4.0.1. *Reproduced before the change*: the two
   programs were red in the exit column alone
   (`docs/research/2026-10-06-seat-semw-evidence/README.md`).
+
+## Amendment, 2026-10-06: Pool's ten programs, and three sync runs that are pinned apart (decisions rows 274 and 279)
+
+What this changes in the packet above, and nothing else:
+
+- **The truth claim (§4) gains ten programs**, each the program that Pool's battery builds
+  from the same case: `pPoolReuse`, `pPoolOrder`, `pPoolWaiters`, `pPoolLateWake`,
+  `pPoolWake`, `pPoolMakeFails`, `pPoolCloseWaits`, `pPoolWithdrawn`, `pPoolClosed` and
+  `pPoolClosing`. Both faces run the module's expansion, whose close waits. No program calls
+  rc.112's own `Pool`, so the signed difference of decisions row 268 keeps none out.
+- **Three programs are pinned in their sync run alone** (`lateSightsSync`,
+  `harness/truth/Truth.lean`): `pPoolWaiters`, `pPoolLateWake` and `pPoolWake`. The sync
+  entry does not flush a child's dispatcher. So the recorder never sees a helper that a
+  child posts, and it sees the later helper of the root's close. Their fork runs are in the
+  allocation order. Their sync exits hold no fiber, so no compared field reads a moved
+  number. A new entry of the table is a reviewed change, as an entry of `lateSights` is.
+- **The two entries.** Three programs settle on two exits under the two entries:
+  `pPoolWaiters`, `pPoolLateWake` and `pPoolWake`. Under the sync entry the root's yields
+  end before a wake, and the item stays idle beside its waiters. On two programs the sync
+  entry ends in `AsyncFiberError` on both faces: `pPoolCloseWaits` and `pPoolClosing`. The
+  closer waits there, and the helper of the holder's return is on the holder's dispatcher.
+- **A borrow at a closed pool** exits with the interrupt of the borrower's own fiber, on
+  both faces: fiber 1 in `pPoolClosed` and fiber 3 in `pPoolClosing`.
+- **Evidence.** *Tested*, on rc.112 under bun 1.4.2, with tsgo 7.0.0-dev.20260629.1 for the
+  modules: 72 programs agree on exits, schedules and sync exits, with 1 signed divergence.
+  *Tested*: the generated corpus matches its results on 400 programs, with 25 registered
+  disagreements, and no cell of its results moves. *Tested*: the build ledger holds 73
+  programs, and the ten new ones agree with Lean on every field, on rc.112 and on 4.0.1.
+  *Tested* by guards of `harness/truth/Truth.lean`: each of the three sync exits is one text
+  under the machine's ids and under the sync run's numbers, and the sync run of every other
+  program of Pool is in the allocation order.

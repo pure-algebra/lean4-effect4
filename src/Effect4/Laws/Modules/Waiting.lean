@@ -451,9 +451,11 @@ statements below are the means. They name no module.
 - **The wrapper's forms are typed over a module's part** (decisions row 275, point 3). A
   module's attempt is a function of its two exits, and `Waiter.Typed` says that it answers the
   join of what they answer. `waitRetryAt_answers` and `waitRetry_answers` follow, at every result
-  type in normal form. Semaphore's `take` is their first consumer
-  (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`). The Queue's `take` and `offer` are typed by
-  their own proofs, which follow the same tree.
+  type in normal form. `waitAnswer_answers` is the rule of the form with no loop: it answers the
+  hint's type, which is its own normal form (`HintTy.canonical`). Semaphore's `take` is the
+  first consumer of the loop's rules (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`). The
+  Queue's `take` and `offer` are typed through the rules of the two forms
+  (`src/Effect4/Laws/Modules/Queue/Ops.lean`).
 - **A program at any effect type** (`Has`). A protected body is a caller's program: it may fail,
   and it may require a service. The rules of the builders around it state the columns as the
   checker joins them (`has_bindWith`, `has_onExitWith`, `has_restore`, `has_maskWith`,
@@ -1679,6 +1681,48 @@ theorem waitRetry_answers {result : Ty} {ended : String} {w : Waiter} {s : Typed
     Answers (nativeSignature table) (waitRetry result ended w) s result := by
   unfold waitRetry
   exact answers_maskWith fun _ hrestore => waitRetryAt_answers canonical hrestore hw
+
+/-- **A hint's type is its own normal form.** The row of an await answers the hint's value, and
+the row check answers a normal form (`checkRow`, `src/Effect4/Program/Typing/Rules.lean`). Its
+consumer is `waitAnswer_answers`: the two exits of that form both answer the hint's type, and
+the checker joins them. It does not say that a type in normal form has a hint's three rows. -/
+theorem HintTy.canonical {H : Ty} (hint : HintTy table H) : H.normalize = H := by
+  obtain ⟨_, _, matched, bound, formed⟩ := rowTy_instantiated_formed (hint.awaited [])
+  have answer : Ty.normalize _ = H := congrArg EffTy.answer
+    (Option.some.inj ((rowTy_intro matched bound formed).symm.trans (hint.awaited [])))
+  rw [← answer]
+  exact Ty.normalize_idem _
+
+/-- **The wrapper with no loop answers its hint's type**, where the module's part is typed at
+that type under the mask's saved state. The request's wake carries its decided answer (decisions
+row 240), so the result type of the module's part is the hint's type. The wait answers the
+hint's value, and an attempt that is done answers its result.
+
+The rule takes no premise beside the module's part. The checker joins what the two exits
+answer, and the join of a type with itself is its normal form (`Ty.join_self`). A hint's type is
+its own normal form (`HintTy.canonical`), so the rule asks nothing more of it.
+
+It is a step of the claim `waiting-wrapper-typed`, and its first consumer is the Queue's `offer`
+(`src/Effect4/Laws/Modules/Queue/Ops.lean`). It states no run, no law of the mask and no
+delivery of a wake. -/
+theorem waitAnswer_answers {w : Waiter} {s : TypedScope} {F : Ty}
+    (hw : w.Typed table (s.push .restore Ty.maskRestore) w.hint F) :
+    Answers (nativeSignature table) (waitAnswer w) s w.hint := by
+  unfold waitAnswer
+  refine answers_maskWith fun _ hrestore => ?_
+  refine answers_bindWith (answers_deferredMake hintTy_unit _) fun id hid => ?_
+  refine answers_bindWith (answers_deferredMake hw.hint _) fun hint hhint => ?_
+  refine (hw.attempt _ id hint _ _ w.hint w.hint (.push _ _ (.push _ _ .here)) hid.push hhint
+    ?_ fun _ _ _ hanswer => answers_succeed hanswer).to
+      ((Ty.join_self w.hint).trans hw.hint.canonical)
+  intro u reach
+  exact waitAt_answers (F := F) hw.hint hw.interrupted
+    (fun inner Y h => hrestore u inner Y
+      (TypedScope.Reaches.trans (.push _ _ (.push _ _ .here)) reach) h)
+    (hhint u reach)
+    (hw.withdraw _ id
+      (TypedScope.Reaches.trans (.push _ _ (.push _ _ .here)) (.push _ _ reach))
+      (hid.push.reach (.push _ _ reach)))
 
 /-- **The protected body has its body's effect type**, with the failure type in normal form.
 The acquisition answers a type with no failure, for every restore function that keeps what its

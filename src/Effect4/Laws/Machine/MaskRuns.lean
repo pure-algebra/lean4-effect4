@@ -2069,18 +2069,11 @@ theorem stepDecisionState_maskRuns (interp : RunInterp ν σ β ε δ ι α χ S
     ∃ bases', bases <+: bases' ∧ MaskRuns bases' (stepDecisionState interp fuel m d).1 :=
   Lift.stepDecisionState_lift (maskRuns_decisionLift interp evaluates) fuel bases m d kept trivial
 
-/-- With no admission to ask, every tape is admitted. A step of `replayEval_maskRuns`. -/
-@[semantics "scope-lifetime-finalization"]
-theorem admittedReplay_true (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) :
-    ∀ (tape : List (RunDecision ν σ β ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St),
-      Lift.AdmittedReplay (fun bases m => MaskRuns bases m) (fun _ _ _ => True) interp fuel m tape
-  | [], _ => trivial
-  | _ :: tape, _ => fun _ => ⟨fun _ _ => trivial, fun _ => admittedReplay_true interp fuel tape _⟩
-
 /-- **Each fiber of a reached machine that has not exited holds the chain at its start flag.** A
 replay of any decision tape keeps the invariant, at a table that the first one is a prefix of.
 It is the field `replay` of `saved_mask_chain_runs`, by `Lift.stepDecisionState_lift` and
-`Lift.replayEval_lift`. -/
+`Lift.replayEval_lift`. The lift asks for no admission, so every tape is admitted
+(`Lift.admittedReplay_true`). -/
 @[semantics "scope-lifetime-finalization"]
 theorem replayEval_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St)
     (evaluates : EvaluatorKeepsMask interp) (fuel : Nat) (tape : List (RunDecision ν σ β ε δ ι α))
@@ -2088,34 +2081,19 @@ theorem replayEval_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St)
     ∃ bases', bases <+: bases' ∧ MaskRuns bases' (replayEval interp fuel tape m).machine :=
   Lift.replayEval_lift basesOrder (fun bases m => MaskRuns bases m) (fun _ _ _ => True) interp fuel
     (fun bases m d _ kept _ => stepDecisionState_maskRuns interp evaluates fuel bases m d kept)
-    tape bases m kept (admittedReplay_true interp fuel tape m)
+    tape bases m kept
+    (Lift.admittedReplay_true (fun bases m => MaskRuns bases m) interp fuel tape m)
 
-/-- The root's flush keeps the invariant. Each round is one `fireState`, which
-`Lift.fireState_lift` covers. `Machine.Lift` states the flush of every armed dispatcher
-(`Lift.flushAllState_lift`), and it has no statement of the root's flush. A step of
-`runSyncExit_maskRuns`. -/
+/-- The root's flush keeps the invariant. It is the lift of the root's flush
+(`Lift.FoldLift.flushRootState_lift`) at the mask's decision lift: each round is one
+`fireState`. A step of `runSyncExit_maskRuns`. -/
 theorem flushRootState_maskRuns (interp : RunInterp ν σ β ε δ ι α χ St)
     (evaluates : EvaluatorKeepsMask interp) (fuel : Nat) (root : FiberId) :
     ∀ (rounds : Nat) (bases : List Bool) (m : RunMachine ν σ β ε δ ι α χ St), MaskRuns bases m →
       ∃ bases', bases <+: bases' ∧ MaskRuns bases' (flushRootState interp fuel root rounds m).1
-  | 0, bases, m, kept => by
-    simp only [flushRootState]
-    split
-    · exact ⟨bases, List.prefix_refl _, kept⟩
-    · exact ⟨bases, List.prefix_refl _, kept⟩
-  | rounds + 1, bases, m, kept => by
-    simp only [flushRootState]
-    split
-    · exact ⟨bases, List.prefix_refl _, kept⟩
-    · split
-      · exact ⟨bases, List.prefix_refl _, kept⟩
-      · obtain ⟨bases₁, le₁, kept₁⟩ :=
-          Lift.fireState_lift (maskRuns_decisionLift interp evaluates) fuel bases m root kept
-        split
-        · obtain ⟨bases₂, le₂, kept₂⟩ :=
-            flushRootState_maskRuns interp evaluates fuel root rounds bases₁ _ kept₁
-          exact ⟨bases₂, List.IsPrefix.trans le₁ le₂, kept₂⟩
-        · exact ⟨bases₁, le₁, kept₁⟩
+  | rounds, bases, m, kept =>
+    (Lift.FoldLift.ofDecisionLift (maskRuns_decisionLift interp evaluates)).flushRootState_lift
+      fuel root rounds bases m kept
 
 /-- **The entry `runSyncExit` keeps the invariant, and its root starts at flag true.** `runFork`
 appends the root at the next id, at flag true. It runs the command loop from

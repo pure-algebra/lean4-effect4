@@ -296,14 +296,31 @@ the state at the handover point and the integration procedure as practiced.
   coordinator. The column compares the fork entry on both faces. The lane has 63 programs,
   with Semaphore's cases P1 and P4 as the batteries write them;
 - Pool's public operations (rows 276 and 279), after the owner's ruling on a closed pool;
-- two small repairs of proofs. Seat REPAIR has the first: the Queue's typing through the
-  shared rule, with two general statements that move to the lift module. The second waits
-  for seat WORKQ, which edits the same files: the scenario driver's laws in the law graph.
+- two small repairs of proofs. The first is **landed** by seat REPAIR: the Queue's typing
+  through the shared rule, with two general statements in the lift module. The second waits
+  for seat WORKQ's receipt, which lists the declarations to move: the scenario driver's laws
+  in the law graph.
 
 A sweep follows the set: the owner approved the coordinator's recommendations on
 2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
 main open theory, and it starts with a design question. The owner asked for a discussion of
 it when the set has landed: its obligations, and the base abstractions that it needs first.
+
+**The focus after the set (row 281).** The owner named it on 2026-10-06: the program as
+data. A program's regions are selected, observed, shown and proved, and that work serves the
+tools, authoring, MCP, composing and the lowering, which must start. A region is a derived
+view of the stored program with proof data: no marker is added to the stored program or to
+the machine. The owner also asked for a plan of how the focus meets bidirectional type
+slicing. [The plan](research/2026-10-06-type-slicing-plan.md) reads the vendored paper,
+maps it to the checker and lists ten proposed claims, four probes and six slices. The
+owner said to go ahead with its recommendations and to run its probes, and asked for a deep
+exploration of a true gap with holes. Two research seats have them, and neither edits a
+tracked source: seat CENSUS measures the checker's graduality on the two corpora
+([its brief](research/2026-10-05-claude-lead/briefs/seat-census-brief.md)), and seat GAP
+studies what a gap with holes would give, from the papers and from what the algebra already
+gives ([its brief](research/2026-10-05-claude-lead/briefs/seat-gap-brief.md)). Two of the
+plan's questions wait for the owner: a requirement of its own, and the minimal slice as the
+promise at the surface.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
@@ -333,14 +350,17 @@ In work since the suspension of the handover:
   (`Test/Program/PoolTraces.lean`). A borrow at a closing pool leaves the items and the idle
   list as they were. Under a masked caller it still exits with the interrupt of its own
   fiber. One finding: at Pool a missing withdrawal loses a wake, so the law of a run needs
-  the withdrawal as a premise of the wake. The faces, the truth programs and the engine come
-  next.
-- **Seat REPAIR has two small repairs of proofs** (branch `seat/repair`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-repair-brief.md)). The Queue's
-  `take_types` and `offer_types` go through the shared typing of the waiting wrapper, with
-  one new rule for the wrapper's answer form (row 279, point 5). Two general statements move
-  from the mask's lift to `src/Effect4/Laws/Machine/Lift.lean` (row 278, point 5). No
-  statement that a consumer reads changes.
+  the withdrawal as a premise of the wake. Its sixth step is merged: each operation prints
+  and reads back (`Test/Program/PoolFaces.lean`), and ten programs run on rc.112 in the
+  truth lane. Three of them settle on two exits under the two entries, and their sync runs
+  are pinned apart (`lateSightsSync`, `harness/truth/Truth.lean`). No program is kept out by
+  row 268's signed difference: both faces run the module's expansion. Its seventh step is
+  merged: the ten public cases run on the generated engine, and each gives Lean's exit on
+  both carriers (`ocaml/engine/test/pool/`). The fixture is 1.79 MB, the largest of the
+  lanes: a term has no binder, so each step's bytes hold the cell's source many times
+  (row 276, point 3). Its eighth step is merged: the contract's sections on the operations
+  and on the ten cases (`Test/contracts/pool.contract.md`), the README's section with one
+  checked example, and the architecture rows. The receipt comes next.
 - **Seat WORKQ has the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
@@ -352,10 +372,27 @@ In work since the suspension of the handover:
   (`src/Effect4/Program/Authoring/Ascribe.lean`): a record with one declared field and a
   read of it, which is no cast. Four laws place it: scope, typing, its refusal and its
   reading (`src/Effect4/Laws/Modules/Ascribe.lean`,
-  `src/Effect4/Laws/Program/Authoring/Ascribe.lean`). The crew over the Queue comes next.
+  `src/Effect4/Laws/Program/Authoring/Ascribe.lean`). Its second and third parts are
+  merged. The record `queue-workers` (`Test/Dogfood/Scenario/QueueWorkers.lean`) has 30
+  named runs and 33 controls, and four planned goals under the premise `funded`: the tape
+  of the run's own journal leaves no row unread. Its lowered runs replay on the generated
+  engine, and 25 scripts run on rc.112 in the keyed lane, with the Queue's cell read
+  through a writer of its own (`cellJson`). One finding is for the owner. Where the fuel
+  ends inside a reply's application, `stepDecisionState` keeps the receipt `settled` and
+  drops the commands that the fuel left. One measured run then stands at rest with no exit
+  of the root (the named run `dropped`). The receipt comes next.
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat REPAIR is merged: two small repairs of proofs**
+  ([its receipt](research/2026-10-06-seat-REPAIR-receipt.md); `1504ae65` and the merge
+  after it). `Queue.take_types` is one application of `waitRetry_answers`, and
+  `Queue.offer_types` one of the new rule `waitAnswer_answers`, the typing of the wrapper
+  with no loop (`src/Effect4/Laws/Modules/Waiting.lean`; row 279, point 5). `Waiter.Typed`
+  served both forms with no change. The lift of `flushRootState` is general
+  (`Lift.FoldLift.flushRootState_lift`, `src/Effect4/Laws/Machine/Lift.lean`), and the
+  mask's statement is its instance. `Lift.admittedReplay_true` holds at every invariant,
+  and the mask's copy is cut (row 278, point 5). No statement that a consumer reads changed.
 - **Seat BRACKET is merged: a region ends at its entry's stack and at its entry flag**
   ([its receipt](research/2026-10-06-seat-BRACKET-receipt.md); row 280). A region is no
   syntax of the machine. Its entry is a cut of a run, and a later cut is inside it where the

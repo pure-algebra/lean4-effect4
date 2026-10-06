@@ -2046,7 +2046,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 276; inherited (provisional): 2295; unplaced: 0.
+Tagged: 275; inherited (provisional): 2299; unplaced: 0.
 
 ## Plan
 
@@ -2063,14 +2063,14 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
-| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved), `tape_replays` (proved) | — |
+| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved), `funded_replays` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
-| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
-| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
-| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
+| R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `reads_ascribe` (proved), `step_updates` (proved), `closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `held_within_fed` (goal), `queueWorkers` (modulo), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `held_within_fed`, `fed_accounted`, `queue_settled`, `releases_once`, `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
+| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
+| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `replays` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved) | — |
 
-**Next goals** (10): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
+**Next goals** (14): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -2589,22 +2589,23 @@ flowchart LR
   n79["protectedBy_has<br/>proved"]
   n80["errOf_payload<br/>proved"]
   n81["isPayload_of_hasTy_record<br/>proved"]
-  n82["unsuspended_runs<br/>proved"]
-  n83["cleans_once<br/>goal"]
-  n84["checkInput_eq_none_iff<br/>proved"]
-  n85["provideLayerArm<br/>proved"]
-  n86["catchGuard_typed<br/>proved"]
-  n87["onExit_typed<br/>proved"]
-  n88["guardBind_typed<br/>proved"]
-  n89["fits_scope_inv<br/>proved"]
-  n90["allGuard_typed<br/>proved"]
-  n91["saved_mask_restoration<br/>proved"]
-  n92["read_print<br/>proved"]
-  n93["handles_of_payloadFieldTy<br/>proved"]
-  n94["run_agrees<br/>proved"]
-  n95["seq_typed<br/>proved"]
-  n96["close_typed<br/>proved"]
-  n97["run_eq_meaning<br/>proved"]
+  n82["rowTy_instantiated_formed<br/>proved"]
+  n83["unsuspended_runs<br/>proved"]
+  n84["cleans_once<br/>goal"]
+  n85["checkInput_eq_none_iff<br/>proved"]
+  n86["provideLayerArm<br/>proved"]
+  n87["catchGuard_typed<br/>proved"]
+  n88["onExit_typed<br/>proved"]
+  n89["guardBind_typed<br/>proved"]
+  n90["fits_scope_inv<br/>proved"]
+  n91["allGuard_typed<br/>proved"]
+  n92["saved_mask_restoration<br/>proved"]
+  n93["read_print<br/>proved"]
+  n94["handles_of_payloadFieldTy<br/>proved"]
+  n95["run_agrees<br/>proved"]
+  n96["seq_typed<br/>proved"]
+  n97["close_typed<br/>proved"]
+  n98["run_eq_meaning<br/>proved"]
   n5 --> n65
   n5 --> n0
   n5 --> n30
@@ -2701,12 +2702,13 @@ flowchart LR
   n43 --> n31
   n43 --> n75
   n43 --> n76
+  n44 --> n40
   n44 --> n75
   n44 --> n76
-  n44 --> n40
   n44 --> n68
   n44 --> n73
   n44 --> n33
+  n44 --> n82
   n44 --> n78
   n45 --> n75
   n45 --> n76
@@ -2715,12 +2717,13 @@ flowchart LR
   n45 --> n35
   n46 --> n75
   n46 --> n76
+  n47 --> n42
   n47 --> n75
   n47 --> n76
   n47 --> n68
-  n47 --> n42
   n47 --> n73
   n47 --> n38
+  n47 --> n77
   n47 --> n78
   n50 --> n68
   n51 --> n68
@@ -2765,20 +2768,20 @@ flowchart LR
   n60 --> n52
   n60 --> n77
   n60 --> n79
-  n61 --> n82
   n61 --> n83
+  n61 --> n84
   n61 --> n63
   n61 --> n64
   n61 --> n62
-  n61 --> n84
-  n62 --> n84
-  n63 --> n84
-  n64 --> n84
+  n61 --> n85
+  n62 --> n85
+  n63 --> n85
+  n64 --> n85
   n66 --> n69
   n66 --> n67
   n67 --> n69
   n67 --> n68
-  n72 --> n85
+  n72 --> n86
   n72 --> n66
   n72 --> n67
   n72 --> n68
@@ -2787,60 +2790,60 @@ flowchart LR
   n72 --> n71
   n72 --> n1
   n72 --> n73
-  n72 --> n86
   n72 --> n87
   n72 --> n88
   n72 --> n89
+  n72 --> n90
   n72 --> n29
   n72 --> n80
   n72 --> n81
-  n72 --> n90
+  n72 --> n91
   n77 --> n75
   n77 --> n76
   n77 --> n68
-  n78 --> n91
   n78 --> n92
+  n78 --> n93
   n78 --> n76
   n78 --> n75
   n79 --> n68
   n79 --> n76
   n79 --> n75
   n79 --> n78
-  n81 --> n93
-  n82 --> n94
-  n83 --> n84
-  n85 --> n66
-  n85 --> n0
-  n85 --> n70
-  n85 --> n69
-  n85 --> n67
-  n85 --> n29
-  n85 --> n68
-  n85 --> n80
-  n85 --> n81
-  n85 --> n1
-  n85 --> n73
-  n85 --> n87
-  n85 --> n88
-  n85 --> n71
-  n85 --> n89
-  n85 --> n95
-  n85 --> n86
+  n81 --> n94
+  n83 --> n95
+  n84 --> n85
   n86 --> n66
+  n86 --> n0
+  n86 --> n70
+  n86 --> n69
+  n86 --> n67
+  n86 --> n29
+  n86 --> n68
+  n86 --> n80
+  n86 --> n81
+  n86 --> n1
+  n86 --> n73
   n86 --> n88
+  n86 --> n89
+  n86 --> n71
+  n86 --> n90
+  n86 --> n96
+  n86 --> n87
   n87 --> n66
-  n87 --> n71
-  n87 --> n86
-  n87 --> n73
-  n87 --> n88
-  n87 --> n90
-  n88 --> n96
-  n90 --> n88
-  n92 --> n65
-  n94 --> n97
-  n95 --> n73
-  n95 --> n66
-  n95 --> n88
+  n87 --> n89
+  n88 --> n66
+  n88 --> n71
+  n88 --> n87
+  n88 --> n73
+  n88 --> n89
+  n88 --> n91
+  n89 --> n97
+  n91 --> n89
+  n93 --> n65
+  n95 --> n98
+  n96 --> n73
+  n96 --> n66
+  n96 --> n89
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2889,10 +2892,10 @@ flowchart LR
 | `withdrawTake_typed` | proved | — | `withdrawTake_types` | 49 | 152 |
 | `withdrawTake_types` | proved | — | `normalize_idem`, `subN_refl`, `sub_antisymm_canonical` | 180 | 163 |
 | `bounded_types` | proved | — | `empty_typed`, `check_complete`, `check_sound` | 86 | 307 |
-| `offer_types` | proved | — | `check_complete`, `check_sound`, `withdrawOffer_types`, `normalize_idem`, `subN_refl`, `offerStep_types`, `mask_printed_form_profile` | 242 | 403 |
+| `offer_types` | proved | — | `withdrawOffer_types`, `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `offerStep_types`, `rowTy_instantiated_formed`, `mask_printed_form_profile` | 253 | 403 |
 | `poll_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `pollStep_types` | 246 | 380 |
 | `size_types` | proved | — | `check_complete`, `check_sound` | 173 | 334 |
-| `Queue.take_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `withdrawTake_types`, `subN_refl`, `Queue.Model.takeStep_types`, `mask_printed_form_profile` | 319 | 427 |
+| `Queue.take_types` | proved | — | `withdrawTake_types`, `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `Queue.Model.takeStep_types`, `waitRetryAt_answers`, `mask_printed_form_profile` | 246 | 418 |
 | `empty_types` | proved | — | — | 64 | 126 |
 | `Semaphore.Model.profile_closed` | proved | — | — | 12 | 18 |
 | `releaseStep_types` | proved | — | `normalize_idem` | 156 | 137 |
@@ -2927,6 +2930,7 @@ flowchart LR
 | `protectedBy_has` | proved | — | `normalize_idem`, `check_sound`, `check_complete`, `mask_printed_form_profile` | 138 | 322 |
 | `errOf_payload` | proved | — | — | 8 | 15 |
 | `isPayload_of_hasTy_record` | proved | — | `handles_of_payloadFieldTy` | 45 | 132 |
+| `rowTy_instantiated_formed` | proved | — | — | 54 | 101 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1446 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
@@ -3313,17 +3317,21 @@ flowchart LR
   n5["mask_rows_table_premises<br/>proved"]
   n6["unsuspended_runs<br/>proved"]
   n7["shown_views_opened<br/>proved"]
-  n8["tape_replays<br/>proved"]
-  n9["readTerm_printTerm<br/>proved"]
-  n10["run_agrees<br/>proved"]
-  n11["tapeFrom_position_replays<br/>proved"]
-  n0 --> n9
+  n8["funded_replays<br/>proved"]
+  n9["tape_replays<br/>proved"]
+  n10["readTerm_printTerm<br/>proved"]
+  n11["run_agrees<br/>proved"]
+  n12["tapeFrom_position_replays<br/>proved"]
+  n13["journal_replays<br/>proved"]
+  n0 --> n10
   n5 --> n1
   n5 --> n0
-  n6 --> n10
-  n7 --> n11
-  n10 --> n2
-  n11 --> n8
+  n6 --> n11
+  n7 --> n12
+  n8 --> n13
+  n8 --> n9
+  n11 --> n2
+  n12 --> n9
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3336,10 +3344,12 @@ flowchart LR
 | `mask_rows_table_premises` | proved | — | `read_exact`, `read_print` | 124 | 521 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
 | `shown_views_opened` | proved | — | `tapeFrom_position_replays` | 74 | 1027 |
+| `funded_replays` | proved | — | `journal_replays`, `tape_replays` | 71 | 979 |
 | `tape_replays` | proved | — | — | 97 | 962 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `run_agrees` | proved | — | `run_eq_meaning` | 68 | 861 |
 | `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 961 |
+| `journal_replays` | proved | — | — | 77 | 938 |
 
 ### R9: Never goes wrong: M7a–c on M7Fragment (the empty host table, answer-free tapes)
 
@@ -3709,119 +3719,127 @@ flowchart LR
   n75["Semaphore.take_withdrawal_minted<br/>proved"]
   n76["visit_attempt<br/>proved"]
   n77["visit_attempt_minted<br/>proved"]
-  n78["infrastructure_escapes<br/>goal"]
-  n79["routing<br/>modulo"]
-  n80["tagIs_pair<br/>proved"]
-  n81["retries_declared<br/>goal"]
-  n82["check_sound<br/>proved"]
-  n83["check_complete<br/>proved"]
-  n84["normalize_idem<br/>proved"]
-  n85["saved_mask_restoration<br/>proved"]
-  n86["read_print<br/>proved"]
-  n87["step_keeps_cell<br/>proved"]
-  n88["closeStep_types<br/>proved"]
-  n89["drainStep_types<br/>proved"]
-  n90["leaseStep_types<br/>proved"]
-  n91["returnStep_types<br/>proved"]
-  n92["selectStep_types<br/>proved"]
-  n93["Pool.Model.withdrawStep_types<br/>proved"]
-  n94["offerStep_types<br/>proved"]
-  n95["withdrawOffer_types<br/>proved"]
-  n96["pollStep_types<br/>proved"]
-  n97["Queue.Model.takeStep_types<br/>proved"]
-  n98["withdrawTake_types<br/>proved"]
-  n99["releaseStep_types<br/>proved"]
-  n100["takeIfAvailableStep_types<br/>proved"]
-  n101["Semaphore.Model.takeStep_types<br/>proved"]
-  n102["Semaphore.Model.withdrawStep_types<br/>proved"]
-  n103["visitStep_types<br/>proved"]
-  n104["checkInput_eq_none_iff<br/>proved"]
-  n105["unauthorized_calls_nothing<br/>goal"]
-  n106["readTerm_printTerm<br/>proved"]
-  n107["fold_typed_atomic_update<br/>proved"]
-  n108["subN_refl<br/>proved"]
-  n109["sub_antisymm_canonical<br/>proved"]
-  n110["order_refl<br/>proved"]
-  n111["termMaps_of_typed<br/>proved"]
-  n112["fits_subN<br/>proved"]
-  n113["fits_normalize<br/>proved"]
-  n114["subN_trans<br/>proved"]
-  n115["hom_eq_cata_ty<br/>proved"]
-  n116["fits_mono<br/>proved"]
-  n0 --> n82
-  n0 --> n83
-  n1 --> n82
-  n1 --> n83
+  n78["held_within_fed<br/>goal"]
+  n79["queueWorkers<br/>modulo"]
+  n80["infrastructure_escapes<br/>goal"]
+  n81["routing<br/>modulo"]
+  n82["tagIs_pair<br/>proved"]
+  n83["retries_declared<br/>goal"]
+  n84["check_sound<br/>proved"]
+  n85["check_complete<br/>proved"]
+  n86["normalize_idem<br/>proved"]
+  n87["saved_mask_restoration<br/>proved"]
+  n88["read_print<br/>proved"]
+  n89["step_keeps_cell<br/>proved"]
+  n90["closeStep_types<br/>proved"]
+  n91["drainStep_types<br/>proved"]
+  n92["leaseStep_types<br/>proved"]
+  n93["returnStep_types<br/>proved"]
+  n94["selectStep_types<br/>proved"]
+  n95["Pool.Model.withdrawStep_types<br/>proved"]
+  n96["offerStep_types<br/>proved"]
+  n97["withdrawOffer_types<br/>proved"]
+  n98["pollStep_types<br/>proved"]
+  n99["Queue.Model.takeStep_types<br/>proved"]
+  n100["withdrawTake_types<br/>proved"]
+  n101["releaseStep_types<br/>proved"]
+  n102["takeIfAvailableStep_types<br/>proved"]
+  n103["Semaphore.Model.takeStep_types<br/>proved"]
+  n104["Semaphore.Model.withdrawStep_types<br/>proved"]
+  n105["visitStep_types<br/>proved"]
+  n106["checkInput_eq_none_iff<br/>proved"]
+  n107["releases_once<br/>goal"]
+  n108["queue_settled<br/>goal"]
+  n109["fed_accounted<br/>goal"]
+  n110["control_retires<br/>proved"]
+  n111["applied_selects<br/>proved"]
+  n112["receipt_inert<br/>proved"]
+  n113["unauthorized_calls_nothing<br/>goal"]
+  n114["readTerm_printTerm<br/>proved"]
+  n115["fold_typed_atomic_update<br/>proved"]
+  n116["subN_refl<br/>proved"]
+  n117["sub_antisymm_canonical<br/>proved"]
+  n118["order_refl<br/>proved"]
+  n119["termMaps_of_typed<br/>proved"]
+  n120["fits_subN<br/>proved"]
+  n121["fits_normalize<br/>proved"]
+  n122["subN_trans<br/>proved"]
+  n123["hom_eq_cata_ty<br/>proved"]
+  n124["fits_mono<br/>proved"]
+  n0 --> n84
+  n0 --> n85
+  n1 --> n84
+  n1 --> n85
   n2 --> n0
-  n3 --> n82
-  n3 --> n83
+  n3 --> n84
+  n3 --> n85
   n4 --> n3
+  n5 --> n86
   n5 --> n84
-  n5 --> n82
-  n5 --> n83
+  n5 --> n85
+  n6 --> n86
   n6 --> n84
-  n6 --> n82
-  n6 --> n83
-  n7 --> n82
-  n7 --> n83
-  n8 --> n83
-  n8 --> n82
-  n9 --> n83
-  n9 --> n82
-  n10 --> n83
-  n10 --> n82
-  n11 --> n82
-  n11 --> n83
-  n12 --> n82
-  n12 --> n83
-  n13 --> n83
-  n13 --> n82
-  n14 --> n82
-  n14 --> n83
-  n15 --> n82
-  n15 --> n83
-  n16 --> n82
-  n16 --> n83
-  n17 --> n82
-  n17 --> n83
-  n18 --> n82
-  n18 --> n83
+  n6 --> n85
+  n7 --> n84
+  n7 --> n85
+  n8 --> n85
+  n8 --> n84
+  n9 --> n85
+  n9 --> n84
+  n10 --> n85
+  n10 --> n84
+  n11 --> n84
+  n11 --> n85
+  n12 --> n84
+  n12 --> n85
+  n13 --> n85
+  n13 --> n84
+  n14 --> n84
+  n14 --> n85
+  n15 --> n84
+  n15 --> n85
+  n16 --> n84
+  n16 --> n85
+  n17 --> n84
+  n17 --> n85
+  n18 --> n84
+  n18 --> n85
+  n19 --> n87
+  n19 --> n88
+  n19 --> n84
   n19 --> n85
-  n19 --> n86
-  n19 --> n82
-  n19 --> n83
   n26 --> n24
   n26 --> n23
   n26 --> n29
   n26 --> n28
   n26 --> n27
   n26 --> n25
-  n30 --> n87
-  n30 --> n88
+  n30 --> n89
+  n30 --> n90
   n30 --> n22
   n30 --> n23
-  n31 --> n87
   n31 --> n89
+  n31 --> n91
   n31 --> n22
   n31 --> n24
   n32 --> n31
-  n33 --> n87
-  n33 --> n90
+  n33 --> n89
+  n33 --> n92
   n33 --> n22
   n33 --> n25
   n34 --> n33
-  n36 --> n87
-  n36 --> n91
+  n36 --> n89
+  n36 --> n93
   n36 --> n22
   n36 --> n27
-  n37 --> n84
+  n37 --> n86
   n37 --> n36
-  n38 --> n87
-  n38 --> n92
+  n38 --> n89
+  n38 --> n94
   n38 --> n22
   n38 --> n28
-  n39 --> n87
-  n39 --> n93
+  n39 --> n89
+  n39 --> n95
   n39 --> n22
   n39 --> n29
   n40 --> n39
@@ -3832,29 +3850,29 @@ flowchart LR
   n47 --> n45
   n47 --> n44
   n47 --> n49
-  n53 --> n87
-  n53 --> n94
+  n53 --> n89
+  n53 --> n96
   n53 --> n22
   n53 --> n44
   n54 --> n53
-  n55 --> n87
-  n55 --> n95
+  n55 --> n89
+  n55 --> n97
   n55 --> n22
   n55 --> n50
   n56 --> n55
-  n57 --> n87
-  n57 --> n96
+  n57 --> n89
+  n57 --> n98
   n57 --> n22
   n57 --> n45
   n58 --> n48
   n58 --> n20
-  n59 --> n87
-  n59 --> n97
+  n59 --> n89
+  n59 --> n99
   n59 --> n22
   n59 --> n49
   n60 --> n59
-  n61 --> n87
-  n61 --> n98
+  n61 --> n89
+  n61 --> n100
   n61 --> n22
   n61 --> n51
   n62 --> n61
@@ -3863,95 +3881,107 @@ flowchart LR
   n64 --> n63
   n64 --> n65
   n64 --> n66
-  n70 --> n87
-  n70 --> n99
+  n70 --> n89
+  n70 --> n101
   n70 --> n22
   n70 --> n63
-  n71 --> n87
-  n71 --> n100
+  n71 --> n89
+  n71 --> n102
   n71 --> n22
   n71 --> n65
-  n72 --> n87
-  n72 --> n101
+  n72 --> n89
+  n72 --> n103
   n72 --> n22
   n72 --> n66
   n73 --> n72
-  n74 --> n87
-  n74 --> n102
+  n74 --> n89
+  n74 --> n104
   n74 --> n22
   n74 --> n68
   n75 --> n74
-  n76 --> n87
-  n76 --> n103
+  n76 --> n89
+  n76 --> n105
   n76 --> n22
   n76 --> n67
   n77 --> n76
-  n78 --> n104
-  n79 --> n105
+  n78 --> n106
+  n79 --> n107
+  n79 --> n108
+  n79 --> n109
   n79 --> n78
-  n79 --> n80
-  n79 --> n104
-  n81 --> n104
-  n86 --> n106
-  n87 --> n107
-  n88 --> n84
-  n89 --> n108
-  n89 --> n84
-  n89 --> n109
-  n90 --> n84
-  n90 --> n108
-  n90 --> n109
-  n91 --> n108
-  n91 --> n84
-  n91 --> n109
-  n92 --> n84
-  n93 --> n84
-  n93 --> n108
-  n93 --> n109
-  n94 --> n109
-  n94 --> n84
-  n95 --> n84
-  n95 --> n108
-  n95 --> n109
-  n96 --> n109
-  n96 --> n84
-  n96 --> n108
-  n97 --> n109
-  n97 --> n108
-  n97 --> n84
-  n98 --> n84
-  n98 --> n108
-  n98 --> n109
-  n99 --> n84
-  n100 --> n84
-  n101 --> n84
-  n101 --> n109
-  n101 --> n108
-  n102 --> n84
-  n102 --> n108
-  n102 --> n109
-  n103 --> n108
-  n103 --> n109
-  n103 --> n84
-  n105 --> n104
+  n79 --> n110
+  n79 --> n111
+  n79 --> n112
+  n79 --> n106
+  n80 --> n106
+  n81 --> n113
+  n81 --> n80
+  n81 --> n82
+  n81 --> n106
+  n83 --> n106
+  n88 --> n114
+  n89 --> n115
+  n90 --> n86
+  n91 --> n116
+  n91 --> n86
+  n91 --> n117
+  n92 --> n86
+  n92 --> n116
+  n92 --> n117
+  n93 --> n116
+  n93 --> n86
+  n93 --> n117
+  n94 --> n86
+  n95 --> n86
+  n95 --> n116
+  n95 --> n117
+  n96 --> n117
+  n96 --> n86
+  n97 --> n86
+  n97 --> n116
+  n97 --> n117
+  n98 --> n117
+  n98 --> n86
+  n98 --> n116
+  n99 --> n117
+  n99 --> n116
+  n99 --> n86
+  n100 --> n86
+  n100 --> n116
+  n100 --> n117
+  n101 --> n86
+  n102 --> n86
+  n103 --> n86
+  n103 --> n117
+  n103 --> n116
+  n104 --> n86
+  n104 --> n116
+  n104 --> n117
+  n105 --> n116
+  n105 --> n117
+  n105 --> n86
   n107 --> n106
-  n107 --> n110
-  n107 --> n111
-  n107 --> n112
-  n107 --> n113
-  n107 --> n84
-  n107 --> n114
-  n107 --> n115
-  n111 --> n112
-  n111 --> n113
-  n111 --> n84
-  n111 --> n114
-  n111 --> n115
-  n111 --> n116
-  n112 --> n114
-  n112 --> n113
-  n113 --> n114
-  n113 --> n84
+  n108 --> n106
+  n109 --> n106
+  n113 --> n106
+  n115 --> n114
+  n115 --> n118
+  n115 --> n119
+  n115 --> n120
+  n115 --> n121
+  n115 --> n86
+  n115 --> n122
+  n115 --> n123
+  n119 --> n120
+  n119 --> n121
+  n119 --> n86
+  n119 --> n122
+  n119 --> n123
+  n119 --> n124
+  n120 --> n122
+  n120 --> n121
+  n121 --> n122
+  n121 --> n86
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -4034,6 +4064,8 @@ flowchart LR
 | `Semaphore.take_withdrawal_minted` | proved | — | `Semaphore.take_withdrawal` | 75 | 334 |
 | `visit_attempt` | proved | — | `step_keeps_cell`, `visitStep_types`, `step_updates`, `visitStep_agrees` | 71 | 445 |
 | `visit_attempt_minted` | proved | — | `visit_attempt` | 96 | 341 |
+| `held_within_fed` | goal | `held_within_fed` | `checkInput_eq_none_iff` | 86 | 1585 |
+| `queueWorkers` | modulo | `fed_accounted`, `held_within_fed`, `queue_settled`, `releases_once` | `releases_once`, `queue_settled`, `fed_accounted`, `held_within_fed`, `control_retires`, `applied_selects`, `receipt_inert`, `checkInput_eq_none_iff` | 86 | 1608 |
 | `infrastructure_escapes` | goal | `infrastructure_escapes` | `checkInput_eq_none_iff` | 84 | 1431 |
 | `routing` | modulo | `infrastructure_escapes`, `unauthorized_calls_nothing` | `unauthorized_calls_nothing`, `infrastructure_escapes`, `tagIs_pair`, `checkInput_eq_none_iff` | 84 | 1433 |
 | `tagIs_pair` | proved | — | — | 8 | 86 |
@@ -4061,6 +4093,12 @@ flowchart LR
 | `Semaphore.Model.withdrawStep_types` | proved | — | `normalize_idem`, `subN_refl`, `sub_antisymm_canonical` | 167 | 158 |
 | `visitStep_types` | proved | — | `subN_refl`, `sub_antisymm_canonical`, `normalize_idem` | 195 | 164 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
+| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 86 | 1576 |
+| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 86 | 1592 |
+| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 86 | 1592 |
+| `control_retires` | proved | — | — | 69 | 858 |
+| `applied_selects` | proved | — | — | 69 | 897 |
+| `receipt_inert` | proved | — | — | 77 | 951 |
 | `unauthorized_calls_nothing` | goal | `unauthorized_calls_nothing` | `checkInput_eq_none_iff` | 84 | 1423 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `fold_typed_atomic_update` | proved | — | `readTerm_printTerm`, `order_refl`, `termMaps_of_typed`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty` | 567 | 654 |
@@ -4105,20 +4143,22 @@ flowchart LR
   n15["compiled_region_bracket<br/>proved"]
   n16["stepped_live<br/>proved"]
   n17["cleans_once<br/>goal"]
-  n18["cleanup_keeps<br/>goal"]
-  n19["releases_once<br/>goal"]
-  n20["close_idempotent<br/>proved"]
-  n21["driveState_lift<br/>proved"]
-  n22["checkInput_eq_none_iff<br/>proved"]
+  n18["QueueWorkers.releases_once<br/>goal"]
+  n19["cleanup_keeps<br/>goal"]
+  n20["Workers.releases_once<br/>goal"]
+  n21["close_idempotent<br/>proved"]
+  n22["driveState_lift<br/>proved"]
+  n23["checkInput_eq_none_iff<br/>proved"]
   n1 --> n0
-  n3 --> n20
-  n7 --> n21
+  n3 --> n21
+  n7 --> n22
   n13 --> n12
-  n14 --> n21
+  n14 --> n22
   n15 --> n16
-  n17 --> n22
-  n18 --> n22
-  n19 --> n22
+  n17 --> n23
+  n18 --> n23
+  n19 --> n23
+  n20 --> n23
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -4141,8 +4181,9 @@ flowchart LR
 | `compiled_region_bracket` | proved | — | `stepped_live` | 59 | 84 |
 | `stepped_live` | proved | — | — | 66 | 573 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1446 |
+| `QueueWorkers.releases_once` | goal | `QueueWorkers.releases_once` | `checkInput_eq_none_iff` | 86 | 1576 |
 | `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 84 | 1445 |
-| `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 84 | 1453 |
+| `Workers.releases_once` | goal | `Workers.releases_once` | `checkInput_eq_none_iff` | 84 | 1453 |
 | `close_idempotent` | proved | — | — | 1 | 15 |
 | `driveState_lift` | proved | — | — | 7 | 170 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
@@ -4169,14 +4210,19 @@ flowchart LR
   n5["first_step_inv<br/>proved"]
   n6["visit_selects_earliest<br/>proved"]
   n7["visit_stops_iff<br/>proved"]
-  n8["positive_suspend_step_capacity<br/>proved"]
-  n9["first_profile_closed<br/>proved"]
-  n10["acceptLoop_length_le<br/>proved"]
+  n8["fed_accounted<br/>goal"]
+  n9["queue_settled<br/>goal"]
+  n10["positive_suspend_step_capacity<br/>proved"]
+  n11["first_profile_closed<br/>proved"]
+  n12["checkInput_eq_none_iff<br/>proved"]
+  n13["acceptLoop_length_le<br/>proved"]
   n3 --> n4
   n4 --> n5
-  n5 --> n8
-  n5 --> n9
-  n8 --> n10
+  n5 --> n10
+  n5 --> n11
+  n8 --> n12
+  n9 --> n12
+  n10 --> n13
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -4189,8 +4235,11 @@ flowchart LR
 | `first_step_inv` | proved | — | `positive_suspend_step_capacity`, `first_profile_closed` | 57 | 74 |
 | `visit_selects_earliest` | proved | — | — | 5 | 11 |
 | `visit_stops_iff` | proved | — | — | 4 | 11 |
+| `fed_accounted` | goal | `fed_accounted` | `checkInput_eq_none_iff` | 86 | 1592 |
+| `queue_settled` | goal | `queue_settled` | `checkInput_eq_none_iff` | 86 | 1592 |
 | `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
 | `first_profile_closed` | proved | — | — | 29 | 72 |
+| `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
 | `acceptLoop_length_le` | proved | — | — | 0 | 6 |
 
 ### R13: A run's inputs are data: equal recorded inputs give equal replay observations

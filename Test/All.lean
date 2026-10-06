@@ -198,6 +198,7 @@ import Test.Program.PoolEngine
 import Test.Program.PoolPublic
 import Test.Program.PoolOps
 import Test.Program.PoolTraces
+import Test.Program.PoolFaces
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract

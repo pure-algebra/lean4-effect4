@@ -99,10 +99,11 @@ fields have these meanings:
 | `readBack` | `Api.readable` holds: reading the program's printing gives the program back |
 
 A battery also pins each error payload part apart from the program's stage (`PartReach`,
-`Stage.lean`; decisions row 120). The fields are the build's verdict, whether the part's run
-fails with its record as the first typed failure, the module printer's answer (`Api.emitModule`:
-`printed`, or a payload class refused by name with its tag) and whether the printed module reads
-back (`Api.readModule`). Since part E2 the module declares one `Data.TaggedError` class per tagged
+`Stage.lean`; decisions row 120). It has four fields. The first is the build's verdict. The
+second says whether the part's run fails with its record as the first typed failure. The
+third is the module printer's answer (`Api.emitModule`): `printed`, or a payload class
+refused by name with its tag. The fourth says whether the printed module reads back
+(`Api.readModule`). Since part E2 the module declares one `Data.TaggedError` class per tagged
 payload type and constructs the payload with `new`.
 
 Each run is a finite probe: one scripted host and one decision tape per run. A stage is not a

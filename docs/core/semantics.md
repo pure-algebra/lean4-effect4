@@ -302,10 +302,13 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
 - **The waiting forms are typed once (`waiting-wrapper-typed`, `protected-form-typed`)**:
   The waiting wrapper at a caller's restore answers its result type at every typed scope,
   when the module's part is typed (`waitRetryAt_answers`). The result type is in normal form.
+  The wrapper with no loop answers its hint's type at every typed scope, when the module's
+  part is typed at that type (`waitAnswer_answers`). It asks no normal form of the hint's
+  type: a type with a hint's three rows is its own normal form (`HintTy.canonical`).
   The protected form keeps its body's effect type (`protectedBy_has`). It is one mask over an
   acquisition, a body at the restore site and a release under the exit's binder. The
   acquisition and the release answer a type, with no failure and no requirement. Both laws
-  are typing only. They state no run, no law of the mask and no release at an exit. The two
+  are typing only. They state no run, no law of the mask and no release at an exit. The
   theorems are in `src/Effect4/Laws/Modules/Waiting.lean`.
 
 ### 2.2 Concept 2: Residual Program Typing (`residual-program-typing`)
