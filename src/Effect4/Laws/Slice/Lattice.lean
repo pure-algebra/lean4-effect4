@@ -27,8 +27,8 @@ The parts, in order:
 - the carrier and its order, with Lean core's order classes (`Std.IsPreorder`,
   `Std.LawfulOrderSup`, `Std.LawfulOrderInf`), which `CTy` and `ErrTy` carry on the type side
   (`src/Effect4/Laws/Program/TypeAlgebra.lean`);
-- the descent on a list of sites: one pass (`Slice.sweep`), the pass with its questions
-  (`Slice.sweepLog`), and the paper's restart (`Slice.restart`);
+- the descent on a list of sites: one pass (`Slice.sweep`), the pass's questions
+  (`Slice.sweepAsked`), and the paper's restart (`Slice.restart`);
 - the view, validity and minimality, with the executable `descend`, `isMinimal`, `minimals` and
   `contribution`;
 - the statements.
@@ -163,21 +163,22 @@ theorem folded_subset [DecidableEq α] (sites : List α) (s : Slice α) : s.fold
 /-- **The descent, as one pass.** `done` holds the sites tried and kept, and the second list the
 sites not yet tried. The pass tries each site once, in the order of the list. It drops a site
 exactly when the slice without it is still valid. The recursion is on the list of sites not yet
-tried, so the pass ends. It asks `valid` once for each of those sites (`sweepLog_length`,
+tried, so the pass ends. It asks `valid` once for each of those sites (`sweepAsked_length`,
 `sweep_congr`). -/
 def sweep (valid : Slice α → Bool) : List α → List α → List α
   | done, [] => done
   | done, x :: rest =>
     if valid ⟨done ++ rest⟩ then sweep valid done rest else sweep valid (done ++ [x]) rest
 
-/-- The pass with its questions: the result of `sweep`, and each slice that it asked `valid`
-about, in the order asked. -/
-def sweepLog (valid : Slice α → Bool) : List α → List α → List α × List (Slice α)
-  | done, [] => (done, [])
+/-- The pass's questions: each slice that `sweep` asks `valid` about, in the order asked. It
+follows the pass's own recursion. `sweep_congr` is what makes it the list of the questions: the
+pass's result depends on `valid` at these slices only. -/
+def sweepAsked (valid : Slice α → Bool) : List α → List α → List (Slice α)
+  | _, [] => []
   | done, x :: rest =>
-    let r := if valid ⟨done ++ rest⟩ then sweepLog valid done rest
-      else sweepLog valid (done ++ [x]) rest
-    (r.1, ⟨done ++ rest⟩ :: r.2)
+    ⟨done ++ rest⟩ ::
+      (if valid ⟨done ++ rest⟩ then sweepAsked valid done rest
+        else sweepAsked valid (done ++ [x]) rest)
 
 /-- The first valid slice one site below, in the order of the list: the sites of `done`, then
 the sites not yet tried without the first one whose removal keeps validity. `none` when no such
@@ -280,6 +281,143 @@ theorem sweep_kept_needed [DecidableEq α] (valid : Slice α → Bool)
         exact List.Subset.trans (sweep_sublist valid (done ++ [y]) rest).subset (by sub_tac)
     · exact Or.inr hneeded
 
+/-! ### The pass's cost
+
+The two lemmas of this section are the two halves of `SliceView.descend_asks`, their one
+consumer. -/
+
+/-- The pass asks one question for each site not yet tried. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweepAsked_length (valid : Slice α → Bool) (done todo : List α) :
+    (sweepAsked valid done todo).length = todo.length := by
+  fun_induction sweep valid done todo with
+  | case1 done => rfl
+  | case2 done x rest hc ih => rw [sweepAsked, if_pos hc, List.length_cons, List.length_cons, ih]
+  | case3 done x rest hc ih => rw [sweepAsked, if_neg hc, List.length_cons, List.length_cons, ih]
+
+/-- The pass reads `valid` at the asked slices and nowhere else: a `valid'` that agrees with
+`valid` there gives the same result. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweep_congr (valid valid' : Slice α → Bool) (done todo : List α)
+    (h : ∀ c ∈ sweepAsked valid done todo, valid' c = valid c) :
+    sweep valid' done todo = sweep valid done todo := by
+  fun_induction sweep valid done todo with
+  | case1 done => rfl
+  | case2 done x rest hc ih =>
+    rw [sweepAsked, if_pos hc] at h
+    rw [sweep, h _ List.mem_cons_self, if_pos hc]
+    exact ih fun c hcm => h c (List.mem_cons_of_mem _ hcm)
+  | case3 done x rest hc ih =>
+    rw [sweepAsked, if_neg hc] at h
+    rw [sweep, h _ List.mem_cons_self, if_neg hc]
+    exact ih fun c hcm => h c (List.mem_cons_of_mem _ hcm)
+
+/-! ### The restart agrees with the pass
+
+Each lemma of this section is a step of `restart_eq_sweep`, whose one consumer is
+`SliceView.descend_eq_restart`. The invariant is `Failed`: each site that the pass tried and
+kept still fails. Under an upward closed `valid` it holds along the pass, so a restart finds no
+valid slice among the sites that the pass has kept, and it goes on where the pass is. -/
+
+/-- A restart that finds no valid slice one site below stops at its list. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem restart_of_none {valid : Slice α → Bool} {l : List α}
+    (h : firstDrop valid [] l = none) : restart valid l = l := by
+  rw [restart]
+  split
+  · rfl
+  · next l' h' => rw [h] at h'; exact nomatch h'
+
+/-- A restart that finds a valid slice one site below starts again from it. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem restart_of_some {valid : Slice α → Bool} {l l' : List α}
+    (h : firstDrop valid [] l = some l') : restart valid l = restart valid l' := by
+  rw [restart]
+  split
+  · next h' => rw [h] at h'; exact nomatch h'
+  · next l'' h' => rw [h] at h'; rw [Option.some.inj h']
+
+/-- Each site of `mid` fails: the slice `pre ++ mid ++ rest` without it is not valid. It is the
+invariant of the agreement, and no tool calls it. -/
+def Failed (valid : Slice α → Bool) : List α → List α → List α → Prop
+  | _, [], _ => True
+  | pre, y :: mid, rest =>
+    valid ⟨pre ++ (mid ++ rest)⟩ = false ∧ Failed valid (pre ++ [y]) mid rest
+
+/-- The search for the first valid slice passes over sites that fail. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem firstDrop_append (valid : Slice α → Bool) (pre mid rest : List α)
+    (h : Failed valid pre mid rest) :
+    firstDrop valid pre (mid ++ rest) = firstDrop valid (pre ++ mid) rest := by
+  induction mid generalizing pre with
+  | nil => rw [List.nil_append, List.append_nil]
+  | cons y mid ih =>
+    rw [List.cons_append, firstDrop, if_neg (Bool.eq_false_iff.mp h.1), ih (pre ++ [y]) h.2,
+      List.append_assoc, List.singleton_append]
+
+/-- The invariant grows by a site that the pass tried and kept. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem failed_snoc (valid : Slice α → Bool) (pre mid rest : List α) (x : α)
+    (h : Failed valid pre mid (x :: rest)) (hx : valid ⟨pre ++ mid ++ rest⟩ = false) :
+    Failed valid pre (mid ++ [x]) rest := by
+  induction mid generalizing pre with
+  | nil =>
+    rw [List.append_nil] at hx
+    exact ⟨hx, trivial⟩
+  | cons y mid ih =>
+    show Failed valid pre (y :: (mid ++ [x])) rest
+    refine ⟨?_, ih (pre ++ [y]) h.2 ?_⟩
+    · rw [List.append_assoc, List.singleton_append]
+      exact h.1
+    · rwa [List.append_assoc pre [y] mid, List.singleton_append]
+
+/-- Under an upward closed `valid`, the invariant stays when the pass drops a site: a site that
+failed fails at the smaller slice too. This is the one place where the agreement uses
+monotonicity. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem failed_rest (valid : Slice α → Bool)
+    (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true)
+    (pre mid rest : List α) (x : α) (h : Failed valid pre mid (x :: rest)) :
+    Failed valid pre mid rest := by
+  induction mid generalizing pre with
+  | nil => trivial
+  | cons y mid ih =>
+    refine ⟨Bool.eq_false_iff.mpr fun hv => Bool.eq_false_iff.mp h.1 (up ?_ hv),
+      ih (pre ++ [y]) h.2⟩
+    show pre ++ (mid ++ rest) ⊆ pre ++ (mid ++ x :: rest)
+    sub_tac
+
+/-- The agreement at every state of the pass: with the kept sites failing, the restart from
+the pass's slice gives the pass's result. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem restart_append (valid : Slice α → Bool)
+    (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true) (done todo : List α)
+    (h : Failed valid [] done todo) : restart valid (done ++ todo) = sweep valid done todo := by
+  fun_induction sweep valid done todo with
+  | case1 done =>
+    rw [List.append_nil]
+    refine restart_of_none ?_
+    have := firstDrop_append valid [] done [] h
+    rw [List.append_nil, List.nil_append] at this
+    rw [this, firstDrop]
+  | case2 done x rest hc ih =>
+    have hfirst : firstDrop valid [] (done ++ x :: rest) = some (done ++ rest) := by
+      rw [firstDrop_append valid [] done (x :: rest) h, List.nil_append, firstDrop, if_pos hc]
+    rw [restart_of_some hfirst]
+    exact ih (failed_rest valid up [] done rest x h)
+  | case3 done x rest hc ih =>
+    have := ih (failed_snoc valid [] done rest x h
+      (by rw [List.nil_append]; exact Bool.eq_false_iff.mpr hc))
+    rwa [List.append_assoc, List.singleton_append] at this
+
+/-- **The paper's descent and the one pass give one list**, for every upward closed `valid`.
+The restart asks again about each site that failed, and the pass does not. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem restart_eq_sweep (valid : Slice α → Bool)
+    (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true) (l : List α) :
+    restart valid l = sweep valid [] l :=
+  restart_append valid up [] l trivial
+
 end Slice
 
 /-- **A view of one program**: the type of each of its slices. An instance owes one fact, `mono`,
@@ -335,7 +473,7 @@ def descend [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) : Slice 
 
 /-- The slices whose validity the descent asked, in the order asked. -/
 def asked [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) : List (Slice α) :=
-  (Slice.sweepLog (fun c => decide (v.Valid q c)) [] s.kept).2
+  Slice.sweepAsked (fun c => decide (v.Valid q c)) [] s.kept
 
 /-! ## Every minimal slice, by search -/
 
@@ -501,9 +639,10 @@ ask about it again. A finite probe counts the questions on one input of `n` site
 asks 120 at `n = 20` and 255 at `n = 30`, and the pass 20 and 30
 (`Test/Program/SliceLattice.lean`). Without monotonicity the two can differ (the same file). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal descend_eq_restart [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T) (q : T)
+theorem descend_eq_restart [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T) (q : T)
     (s : Slice α) :
-    v.descend q s = ⟨Slice.restart (fun c => decide (v.Valid q c)) s.kept⟩
+    v.descend q s = ⟨Slice.restart (fun c => decide (v.Valid q c)) s.kept⟩ :=
+  congrArg Slice.mk (Slice.restart_eq_sweep _ (v.decide_valid_up q) s.kept).symm
 
 /-- **The descent's cost: one question for each site of its start.** The first part counts the
 slices that the descent asked about. The second part says that the descent read the validity at
@@ -512,10 +651,11 @@ the same sites. So the count is of the function's questions, with no counter bes
 question is one call of the type map and one comparison. It is the paper's bound `O(n × T)`
 (p. 10), for `n` sites and a type map of cost `T`. It states no bound below `n`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal descend_asks [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
+theorem descend_asks [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
     (v.asked q s).length = s.kept.length ∧
       ∀ valid' : Slice α → Bool, (∀ c ∈ v.asked q s, valid' c = decide (v.Valid q c)) →
-        Slice.sweep valid' [] s.kept = (v.descend q s).kept
+        Slice.sweep valid' [] s.kept = (v.descend q s).kept :=
+  ⟨Slice.sweepAsked_length _ [] s.kept, fun valid' h => Slice.sweep_congr _ valid' [] s.kept h⟩
 
 /-- **The join of two valid slices is valid for the join of their queries**: the paper's
 Theorem 4.7 (p. 12). The type side needs a join here, and in no other statement: `max` with
