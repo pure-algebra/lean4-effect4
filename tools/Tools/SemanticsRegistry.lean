@@ -119,6 +119,8 @@ def registry : Registry where
         -- The judgment's file names no module since seat MOVE
         `Effect4.Laws.Modules.Checking,
         `Effect4.Laws.Modules.Waiting,
+        `Effect4.Laws.Modules.Pool.Typing,
+        `Effect4.Laws.Modules.Pool.Profile,
         `Effect4.Laws.Program.Typing.TermIntro,
         -- Semaphore's typing statements, and its model's profile: the closure is this
         -- concept's node, and the two facts of a visit carry their own tag (seat SEM's
@@ -143,6 +145,7 @@ def registry : Registry where
     { id := "reactive-scheduling"
       title := "Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants"
       defaultModules := [
+        `Effect4.Laws.Modules.Queue.Invariant,
         `Effect4.Laws.Machine.Scheduling,
         `Effect4.Laws.Machine.Lift,
         `Effect4.Laws.Program.Typed.Scheduler,
@@ -199,6 +202,9 @@ def registry : Registry where
         `Effect4.Laws.Modules.Queue.Reading,
         `Effect4.Laws.Modules.Queue.Steps,
         `Effect4.Laws.Modules.Queue.Ops,
+        `Effect4.Laws.Modules.Pool.Relation,
+        `Effect4.Laws.Modules.Pool.Reading,
+        `Effect4.Laws.Modules.Pool.Steps,
         `Effect4.Laws.Modules.Semaphore.Relation,
         `Effect4.Laws.Modules.Semaphore.Reading,
         `Effect4.Laws.Modules.Semaphore.Steps
@@ -377,6 +383,12 @@ def registry : Registry where
     { id := "saved-mask-pop-discipline", concept := "scope-lifetime-finalization", role := .preservation
       title := "At one fixed base bit, the frame machine keeps the chain of restoring frames on a fiber's stack: FrameFiber.popFrom from an empty scratch stack, getCont, Machine.frameExitState and the entry of each region keep it, and two fibers with one base and one stack have one flag (a local law at every demand, skip flag and carried cause; no statement of a run, of a completed exit, of cleanup or of delivery)"
       pointer := .witness `Effect4.Machine.saved_mask_pop_discipline },
+    { id := "pool-return-front", concept := "scope-lifetime-finalization", role := .inversion
+      title := "A return of a lease that holds its item puts the item at the front of the idle items and keeps every item, and a second return of that lease changes nothing (giveBack_once; a helper of pool-lease-return; no finalizer's run)"
+      pointer := .witness `Effect4.Pool.Model.giveBack_front },
+    { id := "pool-close-refuses", concept := "scope-lifetime-finalization", role := .inversion
+      title := "After the close's first step of Pool's model every lease is refused, and a refused lease changes no item (a helper of pool-close-waits; no wait for a lease and no finalizer's run; decisions row 268)"
+      pointer := .witness `Effect4.Pool.Model.close_refuses },
 
     -- 4. reactive-scheduling
     { id := "machine-typed-not-halted", concept := "reactive-scheduling", role := .inversion
@@ -468,12 +480,27 @@ def registry : Registry where
     { id := "semaphore-profile-closed", concept := "store-typing", role := .preservation
       title := "Each transition of Semaphore's abstract model keeps the first profile, with no premise on its request (the model's half of semaphore-accounting-preserved; nothing about a program, and no progress of a waiter; decisions rows 259 to 261 and 265)"
       pointer := .witness `Effect4.Semaphore.Model.profile_closed },
+    { id := "pool-profile-closed", concept := "store-typing", role := .preservation
+      title := "Each transition of Pool's abstract model keeps the first profile, with no premise on its request (the model's half of pool-profile-preserved; nothing about a program, and no progress of a waiter; decisions rows 267 to 269)"
+      pointer := .witness `Effect4.Pool.Model.profile_closed },
+    { id := "pool-lease-enrols", concept := "store-typing", role := .inversion
+      title := "One lease of Pool's model enrols its request exactly when the pool is open and a lease holds every item (on the profile's states; a helper of the public waiting wrapper; no fairness and no liveness)"
+      pointer := .witness `Effect4.Pool.Model.lease_enrols_iff },
     { id := "semaphore-visit-selects-earliest", concept := "reactive-scheduling", role := .inversion
       title := "One visit of Semaphore's model selects the earliest fitting waiter at or after its cursor, and that waiter leaves (a helper of semaphore-expansion-agrees' waiting clauses; one visit, no walk and no liveness; decisions row 259)"
       pointer := .witness `Effect4.Semaphore.Model.visit_selects_earliest },
     { id := "semaphore-visit-stops", concept := "reactive-scheduling", role := .inversion
       title := "One visit of Semaphore's model selects nobody exactly when no permit is free or no waiter at or after the cursor fits, and then it changes nothing (a helper of semaphore-expansion-agrees' waiting clauses; one visit, no walk and no liveness; decisions row 259)"
       pointer := .witness `Effect4.Semaphore.Model.visit_stops_iff },
+    { id := "queue-first-step-invariant", concept := "reactive-scheduling", role := .preservation
+      title := "One step of a first operation of the Queue's abstract model keeps the run invariant of the first profile: the profile, the buffer's bound, tidy, quiet at the run's signalled, and the two flags (the model's half of wait-registration-no-gap and of waiting-request-obligation-preserved; no program, no delivery of a signal and no liveness; decisions rows 219, 233, 255 and 275)"
+      pointer := .witness `Effect4.Queue.Model.first_step_inv },
+    { id := "queue-first-run-flags", concept := "reactive-scheduling", role := .preservation
+      title := "From the empty queue of a positive capacity both flags of the Queue's abstract model hold after every list of first operations whose requests keep their premises at each prefix (the bounded exploration's two flags at every length, on the first profile; decisions rows 219, 233, 255 and 275)"
+      pointer := .witness `Effect4.Queue.Model.first_run_flags },
+    { id := "pool-select-takes-first", concept := "reactive-scheduling", role := .inversion
+      title := "One selection of Pool's model takes the first waiters of the state that it finds, at most its count, and it changes the waiters alone (a helper of pool-wake-selection; one selection, no run and no liveness)"
+      pointer := .witness `Effect4.Pool.Model.select_takes_first },
 
     -- 5. exact-codecs
     { id := "decode-iff", concept := "exact-codecs", role := .decidability
@@ -696,6 +723,9 @@ def registry : Registry where
     { id := "journal-position-replay", concept := "translation-simulation", role := .simulation
       title := "The machine after a position of a journal's tape is the raw replay of the decisions up to it, from the run's own machine (any run, any rows and any position; nothing about a stopped row's machine, a session ledger or a generated engine)"
       pointer := .witness `Test.Dogfood.Scenario.tapeFrom_position_replays },
+    { id := "pool-steps-agree", concept := "translation-simulation", role := .simulation
+      title := "Each of Pool's five step terms agrees with the abstract model's step on every model state: the reply, the stored value through the encoding table, and the selected waiters' records (a part of pool-expansion-agrees; no order of the wake across helpers, no cancellation law, no close that waits, no liveness, no wrapper and no host; decisions rows 267 to 269)"
+      pointer := .witness `Effect4.Pool.Model.pool_steps_agree },
     { id := "queue-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of the Queue's six step terms agrees with the abstract model's step on the first profile: the reply, the stored value through the encoding table, and the ordered signals (a part of queue-expansion-agrees; no delivery, no cancellation law, no liveness, no wrapper and no host; decisions row 255)"
       pointer := .witness `Effect4.Queue.Model.queue_steps_agree },
@@ -838,7 +868,8 @@ def registry : Registry where
         `Effect4.Program.Typed.handle_identity_laws,
         `Effect4.Program.Typed.saved_mask_image_membership,
         `Effect4.Program.Typed.scoped_body_substitution_boundary]
-      openParts := ["the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation",
+      openParts := ["pool-profile-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 267 to 269)",
+        "the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation",
         "the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws",
         "semaphore-accounting-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 260, 261, 265)",
         "atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)",
@@ -893,7 +924,8 @@ def registry : Registry where
         `Effect4.Codegen.Forms.forkScopedDefault_typed,
         `Effect4.Codegen.Forms.releaseOne_typed,
         `Effect4.Program.mask_printed_form_profile]
-      openParts := ["a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)",
+      openParts := ["pool-expansion-agrees (proposed claim; translation-simulation): Pool's expansion agrees with the first profile's public observation, under its premises on the callers, interruption, the close and the work budget; its parts on one atomic step are pool_steps_agree (decisions rows 79, 226, 267 to 269)",
+        "a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)",
         "no form has a behaviour law (DI-89)",
         "the agreement half of mask-printed-form-profile (translation-simulation, serving R10 and R11): the compiled derived form against the named release's printed form, equal observation on a named observation under compatible decisions; the three operations more than the native mask are measured on the machine and on the target, not proved, and the cuts at the two checkpoints on the pin rest on Codex's runs; the expansion, the typing, the readability and the two checkpoints on the machine are mask_printed_form_profile (decisions rows 245, 246); no goal states the agreement",
         "none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators",
@@ -910,21 +942,23 @@ def registry : Registry where
         `Effect4.ScopeMachine.runState_prefix, `Effect4.Scope.close_twice,
         `Effect4.Scope.close_reentrant_add, `Effect4.Scope.closeOrder_eq,
         `Effect4.Program.Typed.saved_mask_restoration]
-      openParts := ["the whole run open: release at most once per registration, counted by identity (DB-07)",
+      openParts := ["pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once and close_refuses (decisions rows 267, 268)",
+        "the whole run open: release at most once per registration, counted by identity (DB-07)",
         "the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)",
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
         "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
         "the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant; a finite probe holds the candidate at scheduling points (docs/research/2026-10-05-claude-lead/mask-probes/MaskStack.lean)",
         "the lift of saved-mask-pop-discipline to runs (scope-lifetime-finalization, serving the run-level half above): each live fiber of a reached run holds the chain at its start flag; it needs FrameFiber.step and each command to keep the chain, with a condition on a command that clears a fiber: just before the clearing the fiber's stack is empty, or its flag is its base; the stack's emptiness after the clearing protects nothing, since Cmd.exitDone clears a stack through RunFiber.cleared and keeps the flag; the local law is saved_mask_pop_discipline; no goal states the lift",
-        "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)"] },
+        "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222); the Queue model's half of its first clause is proved on the first profile (queue-first-step-invariant), and the wrapper's run stays open"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]
-      openParts := ["R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)",
+      openParts := ["pool-wake-selection (proposed claim; reactive-scheduling): the helper selects the first count waiters of the state that it finds, and it notifies exactly those, in order; the model's fact is select_takes_first (decisions rows 221, 267)",
+        "R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)",
         "stability over the allowed internal decisions, with a named progress observation (not stated)",
         "divergence by compatible prefixes (DB-03; not stated)",
         "driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)",
         "embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, trace 7); no bound is claimed",
-        "wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean)",
+        "wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean); the Queue model's half is proved on the first profile (queue-first-step-invariant, queue-first-run-flags), and the wrapper's run stays open",
         "posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)",
         "posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)"] },
     { id := "R13", title := "A run's inputs are data: equal recorded inputs give equal replay observations"

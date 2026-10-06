@@ -166,6 +166,8 @@ import Effect4.Modules.Queue.Ops
 -- Semaphore's cell and its five steps (decisions row 265).
 import Effect4.Modules.Semaphore.Cell
 import Effect4.Modules.Semaphore.Steps
+-- Semaphore's first operations, with the protected permit (decisions rows 259 to 261 and 276).
+import Effect4.Modules.Semaphore.Ops
 -- Pool's cell and its five steps (decisions rows 267 to 269).
 import Effect4.Modules.Pool.Cell
 import Effect4.Modules.Pool.Steps

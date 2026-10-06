@@ -171,6 +171,7 @@ import Test.Program.QueueSteps
 import Test.Program.QueueScenarios
 import Test.Program.QueueOps
 import Test.Program.QueueTraces
+import Test.Program.QueueInvariant
 import Test.Program.QueueAgreement
 import Test.Program.QueueRelation
 import Test.Program.QueueWorkload
@@ -183,6 +184,7 @@ import Test.Program.SemaphoreScenarios
 import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreRelation
 import Test.Program.SemaphoreEngine
+import Test.Program.SemaphoreWrapper
 import Test.Program.PoolScenarios
 import Test.Program.PoolContract
 import Test.Program.PoolSteps

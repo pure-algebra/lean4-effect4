@@ -59,15 +59,15 @@ def actionTy (sig : Signature Op) (env : TyEnv) (a : ActionTerm Op) : Option Eff
 as nothing here; `typeOfProgram` is the whole program's typing. -/
 def typeOf (sig : Signature Op) (program : Eff Op) : Option EffTy := effTy sig [] program
 
-/-- The type of a whole program, its layer references resolved (the host rows slice): when
-the references are well formed (`Eff.layerRefsWF`, `Program/Refs.lean`: every target a
-non-reference layer that precedes its reference) the program is expanded to its
-reference-free twin (`Eff.expandRefs`) and typed structurally; otherwise `none`. A program
-with no references is `typeOf` itself. -/
+/-- The type of a whole program, its layer references resolved (the host rows slice). The
+checker tests one thing: the references are well formed (`Eff.layerRefsWF`, `Program/Refs.lean`:
+every target a non-reference layer that precedes its reference). Then it expands the program
+(`Eff.expandRefs`) and types the expansion structurally. It answers `none` when the references
+are not well formed. The expansion has no reference site (`expanded_refs_nil_of_wf`,
+`Laws/Program/ReferenceExpansion.lean`), so the checker does not test for one (decisions row
+273). A program with no references is `typeOf` itself. -/
 def typeOfProgram (sig : Signature Op) (program : Eff Op) : Option EffTy :=
-  if program.layerRefsWF && (program.expandRefs.refSites []).isEmpty then
-    typeOf sig program.expandRefs
-  else none
+  if program.layerRefsWF then typeOf sig program.expandRefs else none
 
 /-- A layer is well-typed when `layerTy` answers. -/
 def WellTypedLayer (sig : Signature Op) (l : LayerTerm Op) : Prop :=

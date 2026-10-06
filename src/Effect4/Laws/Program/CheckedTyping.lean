@@ -8,7 +8,9 @@ import Effect4.Laws.Program.ReferenceTyping
 
 The executable certificate is a view of `typeOfProgram`, with no additional
 acceptance or refusal. Uniqueness follows from the checker equation and proof
-irrelevance. Its reference conditions are the checker's existing conditions;
+irrelevance. Its reference condition is the checker's one test: the references are well
+formed (`TypedProgram.layerRefsWF`). The expansion then has no reference site by a theorem,
+not by a test (`TypedProgram.expanded_refSites`, from `expanded_refs_nil_of_wf`).
 `HasTy` applies to `expandRefs`, not to a claim about executing expanded programs.
 
 Proof graph: the computed match gives erasure, acceptance and refusal; the existing
@@ -69,25 +71,24 @@ theorem checkTypedProgram_refusal_iff :
   unfold checkTypedProgram
   split <;> simp_all
 
-/-- A completed whole-program check validates every stored layer reference. -/
+/-- A completed whole-program check validates every stored layer reference. The checker
+answers only where the references are well formed, and it makes no other test of them. -/
 theorem TypedProgram.layerRefsWF (checked : TypedProgram sig program) :
     program.layerRefsWF = true := by
   have typed := checked.typed
   unfold typeOfProgram at typed
   split at typed
   · rename_i admitted
-    exact (Bool.and_eq_true_iff.mp admitted).1
+    exact admitted
   · contradiction
 
-/-- The expanded tree used for typing has no remaining reference sites. -/
+/-- The expanded tree used for typing has no remaining reference sites. The checker does not
+test it: the certificate's references are well formed (`TypedProgram.layerRefsWF`), and such a
+program expands to a program with no reference site (`expanded_refs_nil_of_wf`,
+`Laws/Program/ReferenceExpansion.lean`). -/
 theorem TypedProgram.expanded_refSites (checked : TypedProgram sig program) :
-    program.expandRefs.refSites [] = [] := by
-  have typed := checked.typed
-  unfold typeOfProgram at typed
-  split at typed
-  · rename_i admitted
-    exact List.isEmpty_iff.mp (Bool.and_eq_true_iff.mp admitted).2
-  · contradiction
+    program.expandRefs.refSites [] = [] :=
+  expanded_refs_nil_of_wf program checked.layerRefsWF
 
 /-- The certificate's type derives from the existing whole-language typing rules on
 the reference-expanded tree. This theorem makes no execution-expansion claim. -/
@@ -95,13 +96,13 @@ theorem TypedProgram.hasTy (checked : TypedProgram sig program) :
     Conform.Effect4.Typing.HasTy sig [] program.expandRefs checked.ty := by
   apply Conform.Effect4.Typing.effTy_sound
   have typed := checked.typed
-  simpa [typeOfProgram, typeOf, checked.layerRefsWF, checked.expanded_refSites] using typed
+  rw [typeOfProgram_eq_if_refsWF, if_pos checked.layerRefsWF] at typed
+  exact typed
 
 /-- Conversely, well-formed references and the existing declarative judgment on the expanded
 tree produce a certificate; no codegen or execution restriction is needed. The caller owes no
-fact about the expansion's reference sites: the checker's equation gives the checker's answer
-from the well-formed references alone (`typeOfProgram_eq_if_refsWF`,
-`Laws/Program/ReferenceTyping.lean`, from `expanded_refs_nil_of_wf`). The theorem makes no claim
+fact about the expansion's reference sites: the checker tests the references' formation only
+(`typeOfProgram_eq_if_refsWF`, `Laws/Program/ReferenceTyping.lean`). The theorem makes no claim
 about executing the expanded tree. -/
 theorem checkTypedProgram_of_hasTy {ty : EffTy}
     (references : program.layerRefsWF = true)
