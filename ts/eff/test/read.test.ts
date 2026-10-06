@@ -26,9 +26,11 @@ describe("the profile", () => {
   test("retains the declared head and native row inventory", () => {
     expect(heads.length).toBe(58)
     expect(heads).toContain("Scope.Scope")
-    expect(rows.length).toBe(55)
+    // one row per spelling key: a read-modify-write row is its face, and its function is no
+    // trailing name (the state plan's T5)
+    expect(rows.length).toBe(23)
     expect(new Set(rows.map((e) => e.row.spelling)).size).toBe(22)
-    expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(55)
+    expect(new Set(rows.map((e) => JSON.stringify(e.op))).size).toBe(23)
   })
   test("only the five product-request exports use tuple calls", () => {
     expect(rows.filter((e) => e.row.shape === "tupleCall").map((e) => e.row.name)).toEqual([
@@ -69,22 +71,25 @@ describe("rows: the shape the grammar could not decide", () => {
   test('Scope.make("hi") is refused, not read into the wrong row', () => {
     expect(refusal('Scope.make("hi")')).toEqual({ _tag: "arity", head: "Scope.make" })
   })
-  test("a read-modify-write row carries its binder term in the operation, at the node's level", () => {
-    // `incr` spells `succ(a)`, the cell's current value read at the node's level (decisions row
-    // 43; the state plan's T3b): `var 1` under one binder, `var 0` at the root, `var 2` under two.
-    expect(json("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, incr))")).toBe(
+  test("a read-modify-write row carries its binder term in the operation, read from its function", () => {
+    // The term prints as a function of the cell's current value, the binder of the node's
+    // level (decisions row 43; the state plan's T5): `a1` under one binder, `a0` at the root,
+    // `a2` under two. `ts/eff/test/term-rows.test.ts` holds the other forms.
+    expect(json("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, (a1) => succ(a1)))")).toBe(
       '["bind",["perform",["refMake"],["lit",["nat",0]]],["perform",["refUpdateWith",["app","succ",["cons",["var",1],["nil"]]]],["var",0]]]',
     )
-    expect(json("Ref.update(0, incr)")).toBe(
+    expect(json("Ref.update(0, (a0) => succ(a0))")).toBe(
       '["perform",["refUpdateWith",["app","succ",["cons",["var",0],["nil"]]]],["lit",["nat",0]]]',
     )
-    expect(json("Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.succeed(7), (a1) => Ref.modify(a0, takeAndBump)))")).toBe(
+    expect(json("Effect.flatMap(Ref.make(0), (a0) => Effect.flatMap(Effect.succeed(7), (a1) => Ref.modify(a0, (a2) => pair(a2, add(a2, 1)))))")).toBe(
       '["bind",["perform",["refMake"],["lit",["nat",0]]],["bind",["succeed",["lit",["nat",7]]],["perform",["refModifyWith",["app","pair",["cons",["var",2],["cons",["app","add",["cons",["var",2],["cons",["lit",["nat",1]],["nil"]]]],["nil"]]]]],["var",0]]]]',
     )
   })
-  test("a term row's trailing name is one of the five the faces spell", () => {
-    // Lean's reader answers the same refusal (`Test/Codegen/ReadContract.lean`).
-    expect(refusal("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, triple))")).toEqual({ _tag: "unknownHead", name: "Ref.update" })
+  test("the five names are no row's trailing names", () => {
+    // Lean's reader answers the same refusal (`Test/Codegen/ReadContract.lean`): an identifier
+    // in the function's place is an argument list the row does not print.
+    expect(refusal("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, incr))")).toEqual({ _tag: "arity", head: "Ref.update" })
+    expect(refusal("Effect.flatMap(Ref.make(0), (a0) => Ref.update(a0, triple))")).toEqual({ _tag: "arity", head: "Ref.update" })
   })
   test("an async row reads back as perform", () => {
     expect(json("Effect.flatMap(Deferred.make<number, number>(), (a0) => Deferred.await(a0))")).toBe(
@@ -92,7 +97,7 @@ describe("rows: the shape the grammar could not decide", () => {
     )
   })
   // E4-CHECK-CE-013: a row that declares type arguments is read at exactly that spelling
-  // (`Deferred.make<number, number>()`, the instance the faces spell until T5: `deferredMakeOf`
+  // (`Deferred.make<number, number>()`, the instance the faces spell: `deferredMakeOf`
   // at `nat, nat`); a bare call, the wrong arguments, a row that declares none, and a reserved
   // head carrying any are refused, as the Lean reader refuses them.
   test("Deferred.make<number, number>() is the row with its declared type arguments", () => {
@@ -471,7 +476,7 @@ describe("layer references", () => {
   })
 })
 
-// The host rows slice (2026-09-09): a supplied row table beside the 55 built-ins. Its rows are
+// The host rows slice (2026-09-09): a supplied row table beside the 23 built-ins. Its rows are
 // the external operations by position (`nativeSpell`, never parsed from an identifier); a
 // `method` row's receiver is the first component of its request and prints as
 // `receiver.spelling(args)` (`printMethod`, `readRowMethod`). The tables and programs mirror

@@ -1140,8 +1140,9 @@ const namesOf = (args: ReadonlyArray<Expr>): ReadonlyArray<string> | undefined =
   return names
 }
 
-/** The reading of a row: a `perform`, the one invocation form, with the operation at its face
- * (level 0); `readPerform` moves it to the node. The row's kind selects the route at the compile. */
+/** The reading of a row: a `perform`, the one invocation form, with the operation the row spells,
+ * its face (a term row's term is the unit literal there); `readPerform` installs the function it
+ * read. The row's kind selects the route at the compile. */
 const rowAnswer = (e: Entry, request: Term): Eff => ({ _tag: "perform", op: e.op, request })
 
 /** A bare identifier as a value row. */
@@ -1646,41 +1647,12 @@ const readArgHere = (n: number, row: TemplateRow, captured: Subst, i: number, so
 }
 
 /**
- * A binder term at its face, moved to a node of level `n`. A read-modify-write row's term reads
- * the cell's current value at the node's level (decisions row 43; `Program/FnName.lean`), and a
- * profile entry holds the term at level 0, where `var 0` is the current value and nothing else
- * is in scope. So the move renames `var 0` to `var n`: `FnName.image s n f` is `f.imageAt (var n)
- * s`. An image is built from variables, literals and atom applications only; any other term, or
- * any other variable, is not a face form and answers `undefined`, as `NativeOp.atLevel` answers
- * `none` for a term that is no name's image.
+ * The operation with its binder term replaced (Lean `NativeOp.withTerm`, the native signature's
+ * `withTerm`); `undefined` for an operation that carries none. The eight read-modify-write rows
+ * carry a binder term. The switch lists every constructor, so an appended one is a type error
+ * here until it is classified.
  */
-const termAtLevel = (n: number, t: Term): Term | undefined => {
-  switch (t._tag) {
-    case "var":
-      return t.index === 0 ? { _tag: "var", index: n } : undefined
-    case "lit":
-      return t
-    case "app": {
-      const args: Term[] = []
-      for (const a of t.args) {
-        const moved = termAtLevel(n, a)
-        if (moved === undefined) return undefined
-        args.push(moved)
-      }
-      return { _tag: "app", atom: t.atom, args }
-    }
-    default:
-      return undefined
-  }
-}
-
-/**
- * An operation at its face, moved to a node of level `n` (Lean `NativeOp.atLevel 0 n`, the
- * native signature's `opAtLevel`). The eight read-modify-write rows carry a binder term; every
- * other operation is its own form at every level. The switch lists every constructor, so an
- * appended one is a type error here until it is classified.
- */
-const opAtLevel = (n: number, op: NativeOp): NativeOp | undefined => {
+const withTerm = (op: NativeOp, f: Term): NativeOp | undefined => {
   switch (op._tag) {
     case "refUpdateWith":
     case "refGetAndUpdateWith":
@@ -1689,10 +1661,8 @@ const opAtLevel = (n: number, op: NativeOp): NativeOp | undefined => {
     case "refGetAndUpdateSomeWith":
     case "refUpdateSomeAndGetWith":
     case "refModifyWith":
-    case "refModifySomeWith": {
-      const f = termAtLevel(n, op.f)
-      return f === undefined ? undefined : { _tag: op._tag, f }
-    }
+    case "refModifySomeWith":
+      return { _tag: op._tag, f }
     case "refMake":
     case "refGet":
     case "refSet":
@@ -1708,7 +1678,7 @@ const opAtLevel = (n: number, op: NativeOp): NativeOp | undefined => {
     case "clockNow":
     case "external":
     case "deferredMakeOf":
-      return op
+      return undefined
     default: {
       const unclassified: never = op
       return unclassified
@@ -1716,26 +1686,56 @@ const opAtLevel = (n: number, op: NativeOp): NativeOp | undefined => {
   }
 }
 
-/** A row call read at its face, moved to a node of level `n` (Lean `atNodeLevel`): the
- * operation the row spells is its form at level 0, and the program carries its form at the
- * node. */
-const atNodeLevel = (n: number, e: Eff): Read<Eff> => {
-  if (e._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
-  const op = opAtLevel(n, e.op)
-  return op === undefined ? refuse({ _tag: "shape", what: "operation data" }) : ok({ _tag: "perform", op, request: e.request })
+/** The row call an expression holds before its last argument, and that argument's body, when
+ * the last argument is a function of the current value at level `n`: `(aN) => body`, the binder
+ * due at the node's level (Lean `splitFunction`, `Binders.read n [0]`). The printer writes an
+ * operation's binder term there (`printPerform`). An annotated parameter or a declared result
+ * never reaches this fragment (§ 2 refuses both). */
+const splitFunction = (n: number, x: Expr): { readonly call: Expr; readonly body: Expr } | undefined => {
+  if (x._tag !== "call" && x._tag !== "method") return undefined
+  const last = x.args[x.args.length - 1]
+  if (last === undefined || last._tag !== "lambda" || !sameParams(n, [0], last.params)) return undefined
+  return { call: { ...x, args: x.args.slice(0, -1) }, body: last.body }
 }
 
-/** The row call at a node of level `n`: its face (`readPerformFace`), moved to the node
- * (Lean `readPerform`). */
+/** The spelling a row call names: a call's head, with or without type arguments, or a method's
+ * name. A refusal of the row call names it (Lean `(sig.rowOf op).spelling`). */
+const calledSpelling = (x: Expr): string => {
+  if (x._tag === "method") return x.name
+  if (x._tag !== "call") return ""
+  const fn = x.fn._tag === "generic" ? x.fn.fn : x.fn
+  return fn._tag === "ident" ? fn.name : fn._tag === "member" ? fn.name : ""
+}
+
+/** The row call at a node of level `n` (Lean `readPerform`). A call whose last argument is the
+ * function of the current value is a term row's: the call before it is read at its face
+ * (`readPerformFace`), the function's body as a term one level up, where the current value is the
+ * binder at `n` (decisions row 43), and the term is installed in the spelled operation (Lean
+ * `installTerm`). Any other tree is read at its face and must name an operation that carries no
+ * term (Lean `termFree`): a term row called without its function is refused by its spelling. */
 const readPerform = (n: number, x: Expr): Read<Eff> => {
+  const split = splitFunction(n, x)
+  if (split !== undefined) {
+    const face = readPerformFace(n, split.call)
+    if (failed(face)) return face
+    const f = readTerm(n + 1, split.body)
+    if (failed(f)) return again(f)
+    const eff = face.success
+    if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
+    const op = withTerm(eff.op, f.success)
+    return op === undefined ? arity(calledSpelling(split.call)) : ok({ _tag: "perform", op, request: eff.request })
+  }
   const face = readPerformFace(n, x)
-  return failed(face) ? face : atNodeLevel(n, face.success)
+  if (failed(face)) return face
+  const eff = face.success
+  if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
+  return withTerm(eff.op, unit) !== undefined ? arity(calledSpelling(x)) : face
 }
 
 /** What is not a skeleton, read as the printer's hand fields print it (`readPerformFace`): a
  * bare identifier as a value row, a call as a call row, a method call as a method row. A
  * reserved head no row matched is refused by its argument list when it heads a program clause,
- * and by its name otherwise. The operation it answers is the row's form at level 0. */
+ * and by its name otherwise. The operation it answers is the one the row spells, its face. */
 const readPerformFace = (n: number, x: Expr): Read<Eff> => {
   switch (x._tag) {
     case "ident": {

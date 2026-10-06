@@ -3,6 +3,7 @@ import { recognizeSource as ck } from "../ck.ts"
 import { recognizeSource as oxc } from "../oxc.ts"
 import { compareVerdicts } from "../gate.ts"
 import { canonJson, sourceEditKey } from "../contract.ts"
+import type { Eff, Term } from "../../eff.gen.ts"
 
 for (const recognizeSource of [ck, oxc]) {
 
@@ -165,7 +166,7 @@ for (const recognize of [ck, oxc]) {
 // four pipe spellings the foreign styles give its map tail, read alike by both engines, its cursor
 // unannotated (`cursorTy: null`, DI-91). Before step 1b the oxc engine refused all five (E-LOOP or
 // E-SPINE-ESCAPE) and ck declined the four pipe spellings and read the cursor as `unit`.
-const loopBody = 'Effect.whileLoop({ while: () => isZero(a1), body: () => Ref.update(a0, incr), step: (a2) => { a1 = succ(a1) } })'
+const loopBody = 'Effect.whileLoop({ while: () => isZero(a1), body: () => Ref.update(a0, (a2) => succ(a2)), step: (a2) => { a1 = succ(a1) } })'
 const loopTails = [
   `Effect.map(${loopBody}, () => undefined)`,
   `(${loopBody}).pipe(Effect.map(() => undefined))`,
@@ -195,6 +196,63 @@ test("a loop whose result is not a thunk is refused alike, and a bare whileLoop 
     expect(left.map(v => v.kind)).toEqual(["refusal"])
   }
   expect(ck('import { Effect } from "effect"\nconst p = Effect.whileLoop({})\n', "e-loop.ts").map(v => v.kind === "refusal" ? v.code : v.kind)).toEqual(["E-LOOP"])
+})
+
+// Seat T5 (decisions row 251): a read-modify-write row's function in foreign source. The printer
+// writes the row's binder term as a function of the cell's current value; a foreign source may
+// name the parameter freely, and may spell one of the four lambda shapes (`forms.lambdas`). The
+// five names of the old faces are no spelling: a name in the function's place is refused.
+const cellModule = (call: string) => `import { Effect, Ref, Option } from "effect"\nexport const program = Effect.flatMap(Ref.make(0), (cell) => ${call})\n`
+const cellRest = (source: string, recognize: (source: string, filename: string) => ReturnType<typeof ck>): Eff => {
+  const [v] = recognize(source, "cell.ts")
+  if (v?.kind !== "lifted" || v.eff._tag !== "bind") throw new Error("expected a lifted bind: " + JSON.stringify(v))
+  return v.eff.rest
+}
+const cellValue: Term = { _tag: "var", index: 0 }
+const current: Term = { _tag: "var", index: 1 }
+const nat = (value: number): Term => ({ _tag: "lit", value: { _tag: "nat", value } })
+const app = (atom: string, ...args: Term[]): Term => ({ _tag: "app", atom, args })
+
+test("both engines read a row's function as its binder term, under any parameter name", () => {
+  const source = cellModule("Ref.modify(cell, (s) => pair(s, succ(s)))")
+  expect(compareVerdicts(ck(source, "cell.ts"), oxc(source, "cell.ts")).status).toBe("agree")
+  for (const recognize of [ck, oxc]) {
+    expect(cellRest(source, recognize)).toEqual({ _tag: "perform",
+      op: { _tag: "refModifyWith", f: app("pair", current, app("succ", current)) }, request: cellValue })
+  }
+})
+
+test("a foreign lambda shape spells its term at the row it stands on", () => {
+  const cases: ReadonlyArray<readonly [string, Eff]> = [
+    ["Ref.update(cell, (x) => x + 1)",
+      { _tag: "perform", op: { _tag: "refUpdateWith", f: app("succ", current) }, request: cellValue }],
+    ["Ref.modify(cell, (x) => x * 2)",
+      { _tag: "perform", op: { _tag: "refModifyWith", f: app("pair", current, app("mul", current, nat(2))) }, request: cellValue }],
+    ["Ref.updateSome(cell, (_) => Option.none())",
+      { _tag: "perform", op: { _tag: "refUpdateSomeWith", f: app("none") }, request: cellValue }],
+    ["Ref.getAndUpdateSome(cell, (x) => x > 0 ? Option.some(0) : Option.none())",
+      { _tag: "perform", op: { _tag: "refGetAndUpdateSomeWith",
+        f: app("ite", app("lt", nat(0), current), app("some", nat(0)), app("none")) }, request: cellValue }],
+  ]
+  for (const [call, expected] of cases) {
+    const source = cellModule(call)
+    expect(compareVerdicts(ck(source, "cell.ts"), oxc(source, "cell.ts")).status).toBe("agree")
+    for (const recognize of [ck, oxc]) expect(cellRest(source, recognize)).toEqual(expected)
+  }
+})
+
+test("a name, a block body and two parameters in a row's function place are refused alike", () => {
+  for (const call of ["Ref.update(cell, incr)", "Ref.update(cell, (x) => { return succ(x) })", "Ref.update(cell, (x, y) => x)"]) {
+    const source = cellModule(call)
+    const left = ck(source, "cell.ts"), right = oxc(source, "cell.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    expect(left.map(v => v.kind === "refusal" ? v.code : v.kind)).toEqual(["E-ARG-CLOSURE"])
+  }
+  // a body that is no term is refused where its first foreign node stands
+  const source = cellModule("Ref.update(cell, (x) => x + 2)")
+  const left = ck(source, "cell.ts"), right = oxc(source, "cell.ts")
+  expect(compareVerdicts(left, right).status).toBe("agree")
+  expect(left.map(v => v.kind === "refusal" ? v.code : v.kind)).toEqual(["E-ARG-DYNAMIC"])
 })
 
 // Seat J2, step 1b: DI-72 (763187e1) in both engines. A bare value (a literal, `undefined`, a

@@ -10,53 +10,21 @@ let atom_names : string list = ["succ"; "pred"; "isZero"; "not"; "add"; "lt"; "e
 let const_atoms : string list = ["pair"; "tuple"]
 let const_atom (name : string) : bool = List.mem name const_atoms
 
-(* 12 nullary operations, 1 at the faces' type arguments, 8 at every name's image at level 0 (a binder term), 1 over every finalizer_strategy: 55 values. *)
+(* 12 nullary operations, 1 at the faces' type arguments, 8 at their faces (a binder term at the unit literal), 1 over every finalizer_strategy: 23 values. *)
 let all_ops : native_op list =
   [ Native_op_refMake
   ; Native_op_refGet
   ; Native_op_refSet
   ; Native_op_refGetAndSet
   ; Native_op_refSetAndGet
-  ; (Native_op_refUpdateWith (Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))))
-  ; (Native_op_refUpdateWith (Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))))
-  ; (Native_op_refUpdateWith (Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 0)), Terms_nil)))))))
-  ; (Native_op_refUpdateWith (Term_var 0))
-  ; (Native_op_refUpdateWith (Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))))
-  ; (Native_op_refGetAndUpdateWith (Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))))
-  ; (Native_op_refGetAndUpdateWith (Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))))
-  ; (Native_op_refGetAndUpdateWith (Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 0)), Terms_nil)))))))
-  ; (Native_op_refGetAndUpdateWith (Term_var 0))
-  ; (Native_op_refGetAndUpdateWith (Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))))
-  ; (Native_op_refUpdateAndGetWith (Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))))
-  ; (Native_op_refUpdateAndGetWith (Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))))
-  ; (Native_op_refUpdateAndGetWith (Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 0)), Terms_nil)))))))
-  ; (Native_op_refUpdateAndGetWith (Term_var 0))
-  ; (Native_op_refUpdateAndGetWith (Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))))
-  ; (Native_op_refUpdateSomeWith (Term_app ("some", (Terms_cons ((Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))), Terms_nil)))))
-  ; (Native_op_refUpdateSomeWith (Term_app ("some", (Terms_cons ((Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))), Terms_nil)))))
-  ; (Native_op_refUpdateSomeWith (Term_app ("ite", (Terms_cons ((Term_app ("lt", (Terms_cons ((Term_lit (Lit_nat 0)), (Terms_cons ((Term_var 0), Terms_nil)))))), (Terms_cons ((Term_app ("some", (Terms_cons ((Term_lit (Lit_nat 0)), Terms_nil)))), (Terms_cons ((Term_app ("none", Terms_nil)), Terms_nil)))))))))
-  ; (Native_op_refUpdateSomeWith (Term_app ("none", Terms_nil)))
-  ; (Native_op_refUpdateSomeWith (Term_app ("some", (Terms_cons ((Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))), Terms_nil)))))
-  ; (Native_op_refGetAndUpdateSomeWith (Term_app ("some", (Terms_cons ((Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))), Terms_nil)))))
-  ; (Native_op_refGetAndUpdateSomeWith (Term_app ("some", (Terms_cons ((Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))), Terms_nil)))))
-  ; (Native_op_refGetAndUpdateSomeWith (Term_app ("ite", (Terms_cons ((Term_app ("lt", (Terms_cons ((Term_lit (Lit_nat 0)), (Terms_cons ((Term_var 0), Terms_nil)))))), (Terms_cons ((Term_app ("some", (Terms_cons ((Term_lit (Lit_nat 0)), Terms_nil)))), (Terms_cons ((Term_app ("none", Terms_nil)), Terms_nil)))))))))
-  ; (Native_op_refGetAndUpdateSomeWith (Term_app ("none", Terms_nil)))
-  ; (Native_op_refGetAndUpdateSomeWith (Term_app ("some", (Terms_cons ((Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))), Terms_nil)))))
-  ; (Native_op_refUpdateSomeAndGetWith (Term_app ("some", (Terms_cons ((Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))), Terms_nil)))))
-  ; (Native_op_refUpdateSomeAndGetWith (Term_app ("some", (Terms_cons ((Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))), Terms_nil)))))
-  ; (Native_op_refUpdateSomeAndGetWith (Term_app ("ite", (Terms_cons ((Term_app ("lt", (Terms_cons ((Term_lit (Lit_nat 0)), (Terms_cons ((Term_var 0), Terms_nil)))))), (Terms_cons ((Term_app ("some", (Terms_cons ((Term_lit (Lit_nat 0)), Terms_nil)))), (Terms_cons ((Term_app ("none", Terms_nil)), Terms_nil)))))))))
-  ; (Native_op_refUpdateSomeAndGetWith (Term_app ("none", Terms_nil)))
-  ; (Native_op_refUpdateSomeAndGetWith (Term_app ("some", (Terms_cons ((Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))), Terms_nil)))))
-  ; (Native_op_refModifyWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))), Terms_nil)))))))
-  ; (Native_op_refModifyWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))), Terms_nil)))))))
-  ; (Native_op_refModifyWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 0)), Terms_nil)))))), Terms_nil)))))))
-  ; (Native_op_refModifyWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_var 0), Terms_nil)))))))
-  ; (Native_op_refModifyWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))), Terms_nil)))))))
-  ; (Native_op_refModifySomeWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("some", (Terms_cons ((Term_app ("succ", (Terms_cons ((Term_var 0), Terms_nil)))), Terms_nil)))), Terms_nil)))))))
-  ; (Native_op_refModifySomeWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("some", (Terms_cons ((Term_app ("mul", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 2)), Terms_nil)))))), Terms_nil)))), Terms_nil)))))))
-  ; (Native_op_refModifySomeWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("some", (Terms_cons ((Term_var 0), Terms_nil)))), Terms_nil)))))))
-  ; (Native_op_refModifySomeWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("none", Terms_nil)), Terms_nil)))))))
-  ; (Native_op_refModifySomeWith (Term_app ("pair", (Terms_cons ((Term_var 0), (Terms_cons ((Term_app ("some", (Terms_cons ((Term_app ("add", (Terms_cons ((Term_var 0), (Terms_cons ((Term_lit (Lit_nat 1)), Terms_nil)))))), Terms_nil)))), Terms_nil)))))))
+  ; (Native_op_refUpdateWith (Term_lit Lit_unit))
+  ; (Native_op_refGetAndUpdateWith (Term_lit Lit_unit))
+  ; (Native_op_refUpdateAndGetWith (Term_lit Lit_unit))
+  ; (Native_op_refUpdateSomeWith (Term_lit Lit_unit))
+  ; (Native_op_refGetAndUpdateSomeWith (Term_lit Lit_unit))
+  ; (Native_op_refUpdateSomeAndGetWith (Term_lit Lit_unit))
+  ; (Native_op_refModifyWith (Term_lit Lit_unit))
+  ; (Native_op_refModifySomeWith (Term_lit Lit_unit))
   ; (Native_op_deferredMakeOf (Ty_nat, Ty_nat))
   ; Native_op_deferredIsDone
   ; Native_op_deferredPoll

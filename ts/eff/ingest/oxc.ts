@@ -8,7 +8,7 @@
 import { parseSync, type Node as TreeNode } from "oxc-parser"
 import { Result } from "effect"
 import { readEff, readLayer, restoreAll, exprOf, childrenOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
-import { decodeEff, type Eff, type ForkOptions, type LayerTerm, type ServiceKey } from "../eff.gen.ts"
+import { decodeEff, type Eff, type ForkOptions, type LayerTerm, type ServiceKey, type Term } from "../eff.gen.ts"
 import { atomNames, heads, rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import type { Ty } from "../eff.gen.ts"
 import type { Package } from "../packages.gen.ts"
@@ -59,6 +59,17 @@ function reject(code: RefusalCode, value: string): never { throw new Refuse(code
 const id = (name: string): Expr => ({ _tag: "ident", name })
 const call = (name: string, args: readonly Expr[]): Expr => ({ _tag: "call", fn: id(name), args })
 const binder = (body: Expr, depth: number): Expr => ({ _tag: "lambda", params: [`a${depth}`], body })
+/** A foreign lambda shape's term as the printer prints it at a node of level `n` (Lean
+ * `LambdaShape.term`, `printTerm`). The forms table holds the term at level 0, where its one
+ * variable is the cell's current value; the node's function binds that value as `a<n>`. A
+ * shape's term is variables, literals and atom applications; any other table term is a defect
+ * of the table. Written apart from the other engine's move: the two engines stay two walks. */
+const shapeTerm = (n: number, t: Term): Expr => {
+  if (t._tag === "var" && t.index === 0) return id(`a${n}`)
+  if (t._tag === "app") return call(t.atom, t.args.map(a => shapeTerm(n, a)))
+  if (t._tag === "lit" && t.value._tag === "nat") return { _tag: "int", value: t.value.value }
+  return reject("E-NODE", "lambda shape term")
+}
 const forkOptions = (options: ForkOptions): Expr => ({ _tag: "object", fields: [
   ["startImmediately", { _tag: "bool", value: options.startImmediately }],
   ["uninterruptible", options.maskMode === "inherit" ? { _tag: "str", value: "inherit" }
@@ -170,7 +181,7 @@ class Normalize {
     const b = this.bindings.get(root!)
     if (b === "opaque") return reject("E-IMPORT-OPAQUE", raw)
     if (b !== undefined) return [b, ...rest].filter(Boolean).join(".")
-    if (atomNames.has(raw) || forms.lambdas.some(l => l.atom === raw)) return raw
+    if (atomNames.has(raw)) return raw
     return reject("E-OP-RECEIVER", raw)
   }
   literal(n: Node): Expr {
@@ -589,11 +600,19 @@ class Normalize {
     if (h === "Effect.sleep") { arity(1); return call(h, [this.duration(arg(0))]) }
     for (const row of rows.filter(r => r.row.spelling === h)) {
       const requests = row.row.shape === "tupleCall" ? 2 : row.row.request._tag === "unit" ? 0 : 1
+      // A read-modify-write row: its cell, then its function (the state plan's T5). Each of the
+      // eight rows takes one request and no trailing name; the function becomes the printed
+      // `(aN) => body`, which the fragment reader reads as the row's binder term.
+      if ("f" in row.op) {
+        if (length !== requests + 1) continue
+        if (typeArgs.length) continue
+        return { _tag: "call", fn: id(h), args: [...Array.from({ length: requests }, (_, i) => t(i)), this.rowFunction(row.op._tag, arg(requests), env)] }
+      }
       if (length !== requests + row.row.trailing.length) continue
       const trailing: Expr[] = []
       for (let i = requests; i < length; i++) {
         const n = unwrap(arg(i))
-        trailing.push(n.type === "ArrowFunctionExpression" ? id(this.lambdaAtom(n)) : n.type === "Literal" ? this.literal(n) : id(this.rawHead(n)))
+        trailing.push(n.type === "Literal" ? this.literal(n) : id(this.rawHead(n)))
       }
       if (!row.row.trailing.every((s, i) => { const x = trailing[i]!; return s === (x._tag === "ident" ? x.name : x._tag === "str" ? JSON.stringify(x.value) : "") })) continue
       if (typeArgs.join(",") !== row.row.typeArgs.join(",")) continue
@@ -718,28 +737,55 @@ class Normalize {
     const value = tail ? call("Effect.map", [whileLoop, this.continuation(tail.result, env, 0, "term")]) : whileLoop
     return call("Effect.suspend", [{ _tag: "arrowBlock", params: [], body: [{ _tag: "letInit", name: `a${env.length}`, value: this.term(node(d, "init"), env) }, { _tag: "ret", value }] }])
   }
-  lambdaAtom(n: Node): string {
-    const ps = list(n, "params")
-    if (ps.length !== 1 || ps[0]!.type !== "Identifier") return reject("E-ARG-CLOSURE", "lambda atom")
-    const name = str(ps[0]!, "name"), b = unwrap(node(n, "body"))
+  /** The foreign lambda shape a row's function spells, if any (`forms.lambdas`, Lean
+   * `LambdaShape`): `(x) => x + 1`, `(x) => x * 2`, `(_) => Option.none()` and
+   * `(x) => x > 0 ? Option.some(0) : Option.none()`. Any other function is the function of a
+   * term. */
+  lambdaShape(name: string, b: Node): (typeof forms.lambdas)[number]["shape"] | undefined {
+    b = unwrap(b)
     const isParam = (n: Node) => { n = unwrap(n); return n.type === "Identifier" && n.name === name }
-    const isNum = (n: Node, v: number) => { n = unwrap(n); return n.type === "Literal" && n.value === v && this.literal(n)._tag === "int" }
+    const isNum = (n: Node, v: number) => { n = unwrap(n); return n.type === "Literal" && n.value === v && this.source.slice(offset(n, "start"), offset(n, "end")) === String(v) }
     const option = (n: Node, h: string, value?: number): boolean => {
       n = unwrap(n)
-      if (n.type !== "CallExpression" || this.head(node(n, "callee")) !== h) return false
+      if (n.type !== "CallExpression" || n.optional === true) return false
       const args = list(n, "arguments")
+      if (args.some(a => a.type === "SpreadElement")) return false
+      const callee = unwrap(node(n, "callee"))
+      if (callee.type !== "MemberExpression" && callee.type !== "Identifier") return false
+      let resolved: string
+      try { resolved = this.head(callee) } catch (error) { if (error instanceof Refuse) return false; throw error }
+      if (resolved !== h) return false
       return value === undefined ? args.length === 0 : args.length === 1 && isNum(args[0]!, value)
     }
     if (b.type === "BinaryExpression" && isParam(node(b, "left"))) {
-      if (b.operator === "+" && isNum(node(b, "right"), 1)) return "incr"
-      if (b.operator === "*" && isNum(node(b, "right"), 2)) return "double"
+      if (b.operator === "+" && isNum(node(b, "right"), 1)) return "addOne"
+      if (b.operator === "*" && isNum(node(b, "right"), 2)) return "multiplyTwo"
     }
-    if (option(b, "Option.none")) return "noChange"
+    if (option(b, "Option.none")) return "optionNone"
     if (b.type === "ConditionalExpression") {
       const test = unwrap(node(b, "test"))
-      if (test.type === "BinaryExpression" && test.operator === ">" && isParam(node(test, "left")) && isNum(node(test, "right"), 0) && option(node(b, "consequent"), "Option.some", 0) && option(node(b, "alternate"), "Option.none")) return "zeroWhenPositive"
+      if (test.type === "BinaryExpression" && test.operator === ">" && isParam(node(test, "left")) && isNum(node(test, "right"), 0) && option(node(b, "consequent"), "Option.some", 0) && option(node(b, "alternate"), "Option.none")) return "positiveThenZero"
     }
-    return reject("E-ARG-CLOSURE", "lambda atom")
+    return undefined
+  }
+  /** A read-modify-write row's function in foreign source (the state plan's T5), as the printed
+   * function `(aN) => body` at the node's level: an arrow function of one named parameter with
+   * an expression body. A foreign lambda shape spells the shape's term at this row
+   * (`forms.lambdas`, its current value at level 0, printed here at the node's binder); any
+   * other function is the function of a term, read under one more binder. */
+  rowFunction(tag: keyof (typeof forms.lambdas)[number]["terms"], n: Node, env: readonly string[]): Expr {
+    n = unwrap(n)
+    const ps = n.type === "ArrowFunctionExpression" ? list(n, "params") : []
+    if (n.type !== "ArrowFunctionExpression" || ps.length !== 1 || ps[0]!.type !== "Identifier") return reject("E-ARG-CLOSURE", "lambda atom")
+    const name = str(ps[0]!, "name"), body = node(n, "body")
+    if (body.type === "BlockStatement") return reject("E-ARG-CLOSURE", "lambda atom")
+    const shape = this.lambdaShape(name, body)
+    if (shape !== undefined) {
+      const entry = forms.lambdas.find(l => l.shape === shape)
+      if (entry === undefined) return reject("E-ARG-CLOSURE", "lambda atom")
+      return binder(shapeTerm(env.length, entry.terms[tag]), env.length)
+    }
+    return binder(this.term(body, [...env, name]), env.length)
   }
   program(n: Node, env: readonly string[]): Expr {
     n = unwrap(n)
