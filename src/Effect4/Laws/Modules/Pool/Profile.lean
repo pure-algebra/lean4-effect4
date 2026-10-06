@@ -598,7 +598,8 @@ theorem close_refuses (s : State) :
 /-! ## The closer's step -/
 
 /-- The borrowed items of a list are none exactly where no item is borrowed. The proof follows
-the list: the core lemmas of `filter` and `any` at the empty list reach `Classical.choice`. -/
+the list: the core lemma of `filter` at the empty list, `List.filter_eq_nil_iff`, reaches
+`Classical.choice` (measured at Lean v4.33.1). -/
 theorem borrowed_nil_iff : ∀ (items : List Item),
     ((items.filter (·.borrowed)).map fun it => (it.stamp, it.lease)) = [] ↔
       items.any (·.borrowed) = false
