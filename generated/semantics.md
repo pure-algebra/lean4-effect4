@@ -24,6 +24,8 @@ Store Typing: World-indexed semantic value membership (Fits) and store typings
 | saved-mask-image-membership | canonicalForms | proved | Effect4.Program.Typed.saved_mask_image_membership | yes |  |
 | store-safety | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |  |
 | semaphore-profile-closed | preservation | proved | Effect4.Semaphore.Model.profile_closed | yes |  |
+| waiting-wrapper-typed | compatibility | proved | Effect4.Modules.waitRetryAt_answers | yes |  |
+| protected-form-typed | compatibility | proved | Effect4.Modules.protectedBy_has | yes |  |
 | pool-profile-closed | preservation | proved | Effect4.Pool.Model.profile_closed | yes |  |
 | pool-lease-enrols | inversion | proved | Effect4.Pool.Model.lease_enrols_iff | yes |  |
 
@@ -130,6 +132,72 @@ Literature: TAPL, §13.5, pp. 165–169 — excludedFeature
 ∀ (s : Effect4.Semaphore.Model.State) (op : Effect4.Semaphore.Model.Op),
   Effect4.Semaphore.Model.Profile s →
     Effect4.Semaphore.Model.Profile (Effect4.Semaphore.Model.step s op)
+```
+
+**waiting-wrapper-typed**
+
+```lean
+∀ {table : Effect4.Program.RowTable}
+  {restore :
+    Effect4.Program.Authoring.Src Effect4.Program.NativeOp →
+      Effect4.Program.Authoring.Src Effect4.Program.NativeOp}
+  {result : Effect4.Program.Ty} {ended : String} {w : Effect4.Modules.Waiter}
+  {s : Effect4.Modules.TypedScope} {F : Effect4.Program.Ty},
+  Eq result.normalize result →
+    (∀ (t : Effect4.Modules.TypedScope)
+        (inner : Effect4.Program.Authoring.Src Effect4.Program.NativeOp) (Y : Effect4.Program.Ty),
+        s.Reaches t →
+          Effect4.Modules.Answers (Effect4.Program.nativeSignature table) inner t Y →
+            Effect4.Modules.Answers (Effect4.Program.nativeSignature table) (restore inner) t Y) →
+      Effect4.Modules.Waiter.Typed table w s result F →
+        Effect4.Modules.Answers (Effect4.Program.nativeSignature table)
+          (Effect4.Modules.waitRetryAt restore result ended w) s result
+```
+
+**protected-form-typed**
+
+```lean
+∀ {table : Effect4.Program.RowTable}
+  {acquire :
+    (Effect4.Program.Authoring.Src Effect4.Program.NativeOp →
+        Effect4.Program.Authoring.Src Effect4.Program.NativeOp) →
+      Effect4.Program.Authoring.Src Effect4.Program.NativeOp}
+  {release body :
+    Effect4.Program.Authoring.TermSrc → Effect4.Program.Authoring.Src Effect4.Program.NativeOp}
+  {s : Effect4.Modules.TypedScope} {G F : Effect4.Program.Ty} {b : Effect4.Program.EffTy},
+  (∀
+      (restore :
+        Effect4.Program.Authoring.Src Effect4.Program.NativeOp →
+          Effect4.Program.Authoring.Src Effect4.Program.NativeOp),
+      (∀ (t : Effect4.Modules.TypedScope)
+          (inner : Effect4.Program.Authoring.Src Effect4.Program.NativeOp) (Y : Effect4.Program.Ty),
+          (s.push Effect4.Modules.Stem.restore Effect4.Program.Ty.maskRestore).Reaches t →
+            Effect4.Modules.Answers (Effect4.Program.nativeSignature table) inner t Y →
+              Effect4.Modules.Answers (Effect4.Program.nativeSignature table) (restore inner) t Y) →
+        Effect4.Modules.Answers (Effect4.Program.nativeSignature table) (acquire restore)
+          (s.push Effect4.Modules.Stem.restore Effect4.Program.Ty.maskRestore) G) →
+    (∀ (got : Effect4.Program.Authoring.TermSrc),
+        Effect4.Modules.Kept (Effect4.Program.nativeSignature table) got
+            ((s.push Effect4.Modules.Stem.restore Effect4.Program.Ty.maskRestore).push
+              Effect4.Modules.Stem.answer G)
+            G →
+          Effect4.Modules.Has (Effect4.Program.nativeSignature table) (body got)
+            ((s.push Effect4.Modules.Stem.restore Effect4.Program.Ty.maskRestore).push
+              Effect4.Modules.Stem.answer G)
+            b) →
+      (∀ (got : Effect4.Program.Authoring.TermSrc),
+          Effect4.Modules.Kept (Effect4.Program.nativeSignature table) got
+              ((s.push Effect4.Modules.Stem.restore Effect4.Program.Ty.maskRestore).push
+                Effect4.Modules.Stem.answer G)
+              G →
+            Effect4.Modules.Answers (Effect4.Program.nativeSignature table) (release got)
+              (((s.push Effect4.Modules.Stem.restore Effect4.Program.Ty.maskRestore).push
+                    Effect4.Modules.Stem.answer G).push
+                Effect4.Modules.Stem.exit (b.answer.exitOf b.error))
+              F) →
+        Effect4.Modules.Has (Effect4.Program.nativeSignature table)
+          (Effect4.Modules.protectedBy acquire release body) s
+          { answer := b.answer, error := b.error.normalize, requires := b.requires }
 ```
 
 **pool-profile-closed**
@@ -2319,7 +2387,7 @@ flowchart LR
 - Open: pool-profile-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 267 to 269)
 - Open: the faces of Ref<A> and Deferred<A, E>, the type arguments' part: landed in the state plan's T5 for a binder term and for Deferred.make: a read-modify-write row's binder term is printed as a function of the cell's current value and read back (part A: printPerform, readPerform); Deferred.make<A, E>() is printed from the operation's own type arguments and read back at every instance whose types are readable (part B: Signature.typeArgsOf and withTypeArgs, printCall, readCall, LawfulTypeArgs; Classes.readTyChecked on Classes.ReadableTy), a bare Deferred.make() is refused by its spelling and never typed at a default, the native row declares no type argument of its own, and an operation's type arguments are program annotations (ScopedOp.typeArgs: raw formation, the integer scan and the module's class table read them; decisions row 212); read_print and read_exact keep their statements; open: Ref.make<A>, which needs an appended constructor (decisions rows 210 and 212); a type argument outside the readable types (a handle type, unknown, a class name: printed where it has a printed form, and refused at reading; int and number: read at nat); a list fold's stated accumulator type, which is printed and not read; and the instance's row in the other estates: the TypeScript profile and the OCaml metadata list Deferred.make once, at the face's instance, so a consumer that needs an instance's answer column derives it from the operation
 - Open: the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws
-- Open: semaphore-accounting-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed, and the cell's half is the six typing statements with step_keeps_cell; no goal states the run-level claim (decisions rows 260, 261, 265)
+- Open: semaphore-accounting-preserved (proposed claim; store-typing): along a run of the public operations the cell stays a member of its type and its state stays in the first profile; the model's half is profile_closed; the cell's half is the six typing statements of the steps with step_keeps_cell, and each attempt statement of the operations gives the membership of the reply and of the stored value from the membership of the cell before the step; no statement gives that first membership from the handles that the table names, and no goal states the run-level claim (decisions rows 260, 261, 265, 276)
 - Open: atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)
 - Open: the second half of scoped-body-substitution-boundary (residual-program-typing): for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); no goal states it: the mask adds no scoped constructor, and its restore node's half is scoped_body_substitution_boundary
 
@@ -2398,22 +2466,24 @@ flowchart LR
   n70["check_complete<br/>proved"]
   n71["check_sound<br/>proved"]
   n72["mask_printed_form_profile<br/>proved"]
-  n73["unsuspended_runs<br/>proved"]
-  n74["cleans_once<br/>goal"]
-  n75["checkInput_eq_none_iff<br/>proved"]
-  n76["provideLayerArm<br/>proved"]
-  n77["catchGuard_typed<br/>proved"]
-  n78["onExit_typed<br/>proved"]
-  n79["guardBind_typed<br/>proved"]
-  n80["fits_scope_inv<br/>proved"]
-  n81["allGuard_typed<br/>proved"]
-  n82["handles_of_payloadFieldTy<br/>proved"]
-  n83["saved_mask_restoration<br/>proved"]
-  n84["read_print<br/>proved"]
-  n85["run_agrees<br/>proved"]
-  n86["seq_typed<br/>proved"]
-  n87["close_typed<br/>proved"]
-  n88["run_eq_meaning<br/>proved"]
+  n73["waitRetryAt_answers<br/>proved"]
+  n74["protectedBy_has<br/>proved"]
+  n75["unsuspended_runs<br/>proved"]
+  n76["cleans_once<br/>goal"]
+  n77["checkInput_eq_none_iff<br/>proved"]
+  n78["provideLayerArm<br/>proved"]
+  n79["catchGuard_typed<br/>proved"]
+  n80["onExit_typed<br/>proved"]
+  n81["guardBind_typed<br/>proved"]
+  n82["fits_scope_inv<br/>proved"]
+  n83["allGuard_typed<br/>proved"]
+  n84["handles_of_payloadFieldTy<br/>proved"]
+  n85["saved_mask_restoration<br/>proved"]
+  n86["read_print<br/>proved"]
+  n87["run_agrees<br/>proved"]
+  n88["seq_typed<br/>proved"]
+  n89["close_typed<br/>proved"]
+  n90["run_eq_meaning<br/>proved"]
   n5 --> n58
   n5 --> n0
   n5 --> n23
@@ -2529,36 +2599,36 @@ flowchart LR
   n51 --> n70
   n51 --> n71
   n51 --> n45
-  n51 --> n61
+  n51 --> n73
   n51 --> n72
   n52 --> n49
   n52 --> n71
   n52 --> n70
   n52 --> n61
   n52 --> n50
-  n52 --> n72
+  n52 --> n74
   n52 --> n66
   n53 --> n49
   n53 --> n47
   n53 --> n70
   n53 --> n71
   n53 --> n45
-  n53 --> n61
-  n53 --> n72
-  n54 --> n73
-  n54 --> n74
+  n53 --> n73
+  n53 --> n74
+  n54 --> n75
+  n54 --> n76
   n54 --> n56
   n54 --> n57
   n54 --> n55
-  n54 --> n75
-  n55 --> n75
-  n56 --> n75
-  n57 --> n75
+  n54 --> n77
+  n55 --> n77
+  n56 --> n77
+  n57 --> n77
   n59 --> n62
   n59 --> n60
   n60 --> n62
   n60 --> n61
-  n65 --> n76
+  n65 --> n78
   n65 --> n59
   n65 --> n60
   n65 --> n61
@@ -2567,53 +2637,60 @@ flowchart LR
   n65 --> n64
   n65 --> n1
   n65 --> n67
-  n65 --> n77
-  n65 --> n78
   n65 --> n79
   n65 --> n80
+  n65 --> n81
+  n65 --> n82
   n65 --> n22
   n65 --> n68
   n65 --> n69
-  n65 --> n81
-  n69 --> n82
-  n72 --> n83
-  n72 --> n84
+  n65 --> n83
+  n69 --> n84
+  n72 --> n85
+  n72 --> n86
   n72 --> n71
   n72 --> n70
-  n73 --> n85
-  n74 --> n75
-  n76 --> n59
-  n76 --> n0
-  n76 --> n63
-  n76 --> n62
-  n76 --> n60
-  n76 --> n22
-  n76 --> n61
-  n76 --> n68
-  n76 --> n69
-  n76 --> n1
-  n76 --> n67
-  n76 --> n78
-  n76 --> n79
-  n76 --> n64
-  n76 --> n80
-  n76 --> n86
+  n73 --> n70
+  n73 --> n71
+  n73 --> n61
+  n74 --> n61
+  n74 --> n71
+  n74 --> n70
+  n74 --> n72
+  n75 --> n87
   n76 --> n77
-  n77 --> n59
-  n77 --> n79
   n78 --> n59
-  n78 --> n64
-  n78 --> n77
+  n78 --> n0
+  n78 --> n63
+  n78 --> n62
+  n78 --> n60
+  n78 --> n22
+  n78 --> n61
+  n78 --> n68
+  n78 --> n69
+  n78 --> n1
   n78 --> n67
-  n78 --> n79
+  n78 --> n80
   n78 --> n81
-  n79 --> n87
-  n81 --> n79
-  n84 --> n58
-  n85 --> n88
-  n86 --> n67
-  n86 --> n59
-  n86 --> n79
+  n78 --> n64
+  n78 --> n82
+  n78 --> n88
+  n78 --> n79
+  n79 --> n59
+  n79 --> n81
+  n80 --> n59
+  n80 --> n64
+  n80 --> n79
+  n80 --> n67
+  n80 --> n81
+  n80 --> n83
+  n81 --> n89
+  n83 --> n81
+  n86 --> n58
+  n87 --> n90
+  n88 --> n67
+  n88 --> n59
+  n88 --> n81
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2669,9 +2746,9 @@ flowchart LR
 | `make_types` | proved | — | `empty_types`, `check_complete`, `check_sound` | 74 | 297 |
 | `release_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `visitStep_types`, `releaseStep_types` | 285 | 391 |
 | `takeIfAvailable_types` | proved | — | `takeIfAvailableStep_types`, `check_complete`, `check_sound` | 92 | 320 |
-| `Semaphore.take_types` | proved | — | `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `normalize_idem`, `mask_printed_form_profile` | 283 | 405 |
-| `withPermitsIfAvailable_types` | proved | — | `release_types`, `check_sound`, `check_complete`, `normalize_idem`, `takeIfAvailable_types`, `mask_printed_form_profile`, `sub_antisymm_canonical` | 242 | 394 |
-| `withPermits_types` | proved | — | `release_types`, `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `normalize_idem`, `mask_printed_form_profile` | 292 | 422 |
+| `Semaphore.take_types` | proved | — | `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `waitRetryAt_answers`, `mask_printed_form_profile` | 140 | 385 |
+| `withPermitsIfAvailable_types` | proved | — | `release_types`, `check_sound`, `check_complete`, `normalize_idem`, `takeIfAvailable_types`, `protectedBy_has`, `sub_antisymm_canonical` | 231 | 393 |
+| `withPermits_types` | proved | — | `release_types`, `Semaphore.Model.withdrawStep_types`, `check_complete`, `check_sound`, `Semaphore.Model.takeStep_types`, `waitRetryAt_answers`, `protectedBy_has` | 134 | 396 |
 | `atomic` | modulo | `bounded`, `cleans_once`, `committed`, `counted` | `unsuspended_runs`, `cleans_once`, `committed`, `counted`, `bounded`, `checkInput_eq_none_iff` | 85 | 1480 |
 | `bounded` | goal | `bounded` | `checkInput_eq_none_iff` | 85 | 1442 |
 | `committed` | goal | `committed` | `checkInput_eq_none_iff` | 85 | 1448 |
@@ -2691,6 +2768,8 @@ flowchart LR
 | `check_complete` | proved | — | — | 70 | 240 |
 | `check_sound` | proved | — | — | 137 | 237 |
 | `mask_printed_form_profile` | proved | — | `saved_mask_restoration`, `read_print`, `check_sound`, `check_complete` | 216 | 862 |
+| `waitRetryAt_answers` | proved | — | `check_complete`, `check_sound`, `normalize_idem` | 250 | 367 |
+| `protectedBy_has` | proved | — | `normalize_idem`, `check_sound`, `check_complete`, `mask_printed_form_profile` | 138 | 322 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 863 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1441 |
 | `checkInput_eq_none_iff` | proved | — | — | 38 | 99 |
@@ -3064,7 +3143,7 @@ flowchart LR
 - Open: numbers open (decisions row 108): each face equal to the reference inside its bounded profile and refusing outside it, intermediates included (DI-56)
 - Open: K2 holds on the readable domain; since the state plan's T5, part B, a loop's stated cursor type and an operation's type arguments read back through one checked type reader (Classes.readTyChecked, DI-91's fallback (a) in a checked form), and the domain excludes a stated type outside the readable types (Classes.ReadableTy: a collision such as int, a spelling with no reading such as a handle type) and every list fold that states its accumulator's type, which is printed and not read
 - Open: one identity bijection across faces: the fiber identity carrier is ruled, not landed (DI-81)
-- Open: the TypeScript face against rc.112: finite checks only, by the truth harness and by the keyed lane's runs of the scenarios' scripts on their printed modules (DI-49; decisions row 254)
+- Open: the TypeScript face against rc.112: finite checks only, by the truth harness and by the keyed lane's runs of the scenarios' scripts on their printed modules (DI-49; decisions row 254); the truth harness compares the fork run's exit with rc.112's sync exit whenever the sync run settles, so it holds no program whose two entries settle on two exits: two Semaphore programs are filed with their four exits, and the two faces give one exit on each entry (docs/research/2026-10-06-seat-semw-evidence/README.md; decisions row 279)
 - Open: the profile as data, named by each face's law (decisions row 79, R79.5)
 
 ```mermaid
@@ -3388,7 +3467,7 @@ flowchart LR
 - Open: DI-39's six rows not landed
 - Open: a composite's contract by a stuttering route (post-Phase C §11.4)
 - Open: queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230)
-- Open: semaphore-expansion-agrees (proposed claim; translation-simulation): Semaphore's expansion agrees with the first profile's public observation; it keeps the selected identities and the permit commits, with its premises on the wake's policy, the admitted callers, interruption and the work budget; its parts on one atomic step are semaphore-steps-agree, and the wrapper, the walk across visits and the protected form are not stated (decisions rows 79, 226, 259 to 261)
+- Open: semaphore-expansion-agrees (proposed claim; translation-simulation): Semaphore's expansion agrees with the first profile's public observation; it keeps the selected identities and the permit commits, with its premises on the wake's policy, the admitted callers, interruption and the work budget; its parts on one atomic step are semaphore-steps-agree and the nine attempt statements of the operations, each on every model state; the operations, the walk and the protected form are library programs (src/Effect4/Modules/Semaphore/Ops.lean); the wrapper's run, the walk across visits and the protected form's run are not stated (decisions rows 79, 226, 259 to 261, 276)
 - Open: posted-wake-profile-agrees (proposed claim; translation-simulation): one producer's posted delivery, with its dispatch owner, priority, receiver and token, capture time, coalescing and cancellation, agrees with its module expansion; the Queue's producer is first (decisions rows 81, 220, 225; DB-13)
 - Open: atomic-attempt-agreement (proposed claim; translation-simulation): the restricted transaction profile against the named release, with flat nesting, immutable payloads and explicit retry; then tx-choice-rollback-union for the retry-only alternative (decisions rows 80, 84, 223, 224)
 - Open: fair composition of tickets that are enrolled apart is outside the first profile: the opposing-ticket cycle stays a refused case until an enrolment protocol resolves it (decisions row 223)
@@ -3764,6 +3843,7 @@ flowchart LR
 - Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
 - Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
 - Open: the bracket of a region (scope-lifetime-finalization; the run-level half of saved-mask-restoration): a region that changes no flag ends with its entry flag, for an arbitrary body; the invariant of runs is proved (saved-mask-chain-runs): along a run a live fiber's flag is a function of its stack (MaskRuns.flag_eq, the field sameFlag of saved_mask_chain_runs); the bracket's own fact stays open, that the body's run returns to the entry's stack, at a fiber that is live at both cuts, which no theorem states at a cut; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the bracket
+- Open: semaphore-protected-permit (proposed claim; scope-lifetime-finalization): across every prefix of a run a committed activation of Semaphore's protected form releases at most once; an activation whose exit has completed through its cleanup has released exactly once, with enough work for the cleanup or a retained frontier; while the cleanup has not completed, the release obligation stays in the observation, and a frontier is no completed exit; the form is one mask over the take's loop, the hook and the body at the restore site (protectedBy), scoped and typed (protectedBy_has, withPermits_types); no goal states a clause, and each waits for the bracket of a region; finite controls: a take in its own mask loses its permit under an interruption, a wait inside a mask of the form's making cannot be interrupted, and the stand-in for the mask fails under a masked caller (Test/Program/SemaphoreTraces.lean, traces 4, 5 and 8); Pool's lease is the second user (decisions rows 222, 259, 276)
 - Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222); the Queue model's half of its first clause is proved on the first profile (queue-first-step-invariant), and the wrapper's run stays open
 
 ```mermaid
@@ -3826,7 +3906,7 @@ flowchart LR
 - Open: stability over the allowed internal decisions, with a named progress observation (not stated)
 - Open: divergence by compatible prefixes (DB-03; not stated)
 - Open: driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)
-- Open: embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, trace 7); no bound is claimed
+- Open: embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean and Test/Program/SemaphoreTraces.lean, trace 7 of each); no bound is claimed
 - Open: wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean); the Queue model's half is proved on the first profile (queue-first-step-invariant, queue-first-run-flags), and the wrapper's run stays open
 - Open: posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)
 - Open: posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)

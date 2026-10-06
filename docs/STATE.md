@@ -279,30 +279,17 @@ either module exists yet):
 - Cache's capacity bounds the keys, and not the lookups that are alive (row 272).
 
 **Who implements next (row 277; the owner approved the handover on 2026-10-06).**
-Implementation passes to Codex, and the coordinator reviews. The handover takes effect at
-its point: seats LIFT and SEMW are merged with their records. No seat is added before it.
+Implementation passes to Codex, and the coordinator reviews. **The handover point is
+reached**: seats LIFT and SEMW are merged with their records, and no seat of the coordinator
+runs. The coordinator adds no seat.
 The [transition account](research/2026-10-05-claude-lead/2026-10-06-transition-account.md)
 gives the handover point, what the next implementer inherits and the integration procedure
 as practiced. Three points stay open for the owner: who integrates after the handover,
 whether the reviewer builds, and a sweep at the handover head. Until the owner names a
 party, the coordinator still merges, runs the wide gates and keeps the registers.
 
-In work since 2026-10-06. The owner allowed three seats at once that day (row 237). One
-seat runs, and one is held:
+No seat runs since both hand-backs of 2026-10-06, and one prepared seat is held:
 
-- **Seat SEMW's eight steps are merged: Semaphore's public operations** (branch
-  `seat/semw`; [its brief](research/2026-10-05-claude-lead/briefs/seat-semw-brief.md);
-  `aa70b078`, `4b57609c`, `ea036307`, `5fc17c3f`, `75ad13b7`, `831a76f3`). The two forms are
-  `waitRetryAt` and `protectedBy` (`src/Effect4/Modules/Waiting.lean`; row 276, point 1), and
-  the Queue's trees did not move. The six operations are library programs
-  (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every scope.
-  Nine attempt laws relate one store step to the model's step, with no planned goal
-  (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`; R4, R10). The traces run on the Lean
-  machine, with the two red controls of the protected permit
-  (`Test/Program/SemaphoreTraces.lean`). Each operation prints and reads back. Eight programs
-  agree with rc.112 in the truth lane, which has 61 programs. The case P9 replays on the
-  generated engine, with its tape as data. The contract and the README have the operations.
-  Its receipt comes next.
 - **Seat WORKQ is prepared and not dispatched: the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
@@ -313,6 +300,21 @@ seat runs, and one is held:
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat SEMW is merged: Semaphore's public operations**
+  ([its receipt](research/2026-10-06-seat-SEMW-receipt.md); `aa70b078`, `4b57609c`,
+  `ea036307`, `5fc17c3f`, `75ad13b7`, `831a76f3`). The two forms are `waitRetryAt` and
+  `protectedBy` (`src/Effect4/Modules/Waiting.lean`; row 276, point 1), and the Queue's trees
+  did not move. Both forms are typed once, for every module's part (the registry claims
+  `waiting-wrapper-typed` and `protected-form-typed`). The six operations are library
+  programs (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every
+  scope. Nine attempt laws relate one store step to the model's step, with no planned goal
+  (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`; R4, R10). The traces run on the Lean
+  machine, with the two red controls of the protected permit
+  (`Test/Program/SemaphoreTraces.lean`). Each operation prints and reads back. Eight programs
+  agree with rc.112 in the truth lane, which has 61 programs. The case P9 replays on the
+  generated engine, with its tape as data. No law of a run is stated: the wrapper's run, the
+  walk across visits and the protected form's run stay open. Row 279 records what the
+  receipt leaves open, with the runner's rule of the truth lane.
 - **Seat LIFT is merged: the mask's chain at every live fiber of a run** (`d734aa6a`;
   [its receipt](research/2026-10-06-seat-LIFT-receipt.md)). A table of start flags is proof
   data: the machine stores no base. Each live fiber holds the chain at its own flag of the
@@ -437,11 +439,13 @@ Candidates with no seat, each with its place:
   - Atomic makes two commits and no transaction. A control of an interruption between them
     needs a reachable checkpoint first. The controls of a timeout under a mask and of one
     registration's cleanup are missing too;
-- the exit column of the truth lane's runner. It compares the Lean machine's fork exit with
-  rc.112's sync exit whenever the sync entry settles. Semaphore's cases P1 and P4 are the
-  first programs whose two entries settle on two exits, on both faces. They stay out of the
-  lane, with their evidence filed (`research/2026-10-06-seat-semw-evidence/`). A slice
-  changes the rule and adds both programs again;
+- the exit column of the truth lane's runner (row 279, point 1). It compares the Lean
+  machine's fork exit with rc.112's sync exit whenever the sync entry settles. Semaphore's
+  cases P1 and P4 are the first programs whose two entries settle on two exits, on both
+  faces. They stay out of the lane, with their evidence filed
+  (`research/2026-10-06-seat-semw-evidence/`). The accepted rule compares the fork entry on
+  both faces, always. A slice changes the runner and adds both programs again;
+- the bracket of a region, the next proof slice of R11 (row 278, point 3);
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
 - two small repairs of the foreign readers (row 258, points 5 and 6).

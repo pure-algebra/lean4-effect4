@@ -299,6 +299,14 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   request exactly when the pool is open and a lease holds every item. Neither states
   fairness, liveness or anything of a program.
   (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
+- **The waiting forms are typed once (`waiting-wrapper-typed`, `protected-form-typed`)**:
+  The waiting wrapper at a caller's restore answers its result type at every typed scope,
+  when the module's part is typed (`waitRetryAt_answers`). The result type is in normal form.
+  The protected form keeps its body's effect type (`protectedBy_has`). It is one mask over an
+  acquisition, a body at the restore site and a release under the exit's binder. The
+  acquisition and the release answer a type, with no failure and no requirement. Both laws
+  are typing only. They state no run, no law of the mask and no release at an exit. The two
+  theorems are in `src/Effect4/Laws/Modules/Waiting.lean`.
 
 ### 2.2 Concept 2: Residual Program Typing (`residual-program-typing`)
 
