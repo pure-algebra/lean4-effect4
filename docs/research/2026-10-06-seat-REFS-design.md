@@ -171,3 +171,15 @@ reference: the checker refuses the program, and it gives the program's expansion
 The theorem gives no scope, no type formation and no typing success. It says nothing about a
 run, about the sharing of layers, about `lower_refines_build` or about R8. One theorem of the
 reference expansion closes no requirement.
+
+## 9. Addendum, at the landing (2026-10-06)
+
+The landed tree differs from sections 3 and 5 in two places. The receipt
+(`docs/research/2026-10-06-seat-REFS-receipt.md`) gives the reason.
+
+- `refSites_subset_of_at` landed as `refSites_subset_of_layerAt`. Its premise is the layer
+  lookup `Node.layerAt`, the form that `Eff.layerRefsWF` reads. So the new module does not
+  import `src/Effect4/Laws/Program/References.lean`, and it does not use
+  `Node.layerAt_eq_some_iff`.
+- `lt_append_of_lt` and the counting step of the rank are proved by hand, with no search.
+  `PathOrder.lean` keeps its two imports.
