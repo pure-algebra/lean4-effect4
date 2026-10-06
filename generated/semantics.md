@@ -1716,15 +1716,15 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R1 | open | `check_sound` (proved), `check_complete` (proved), `admitSig_ok_iff` (proved), `meaning_typed_app` (proved), `run_typed_app` (proved), `meaningB_typed_app` (proved), `reachable_typed_admitted` (proved) | — | — |
 | R2 | open | `check_ext` (proved), `check_restrict` (proved), `lawful_append` (proved) | — | — |
 | R3 | open | `checkInput_eq_none_iff` (proved), `fits_normalize` (proved), `fits_subN` (proved), `inhabited_iff_fits` (proved), `hom_eq_cata_ty` (proved), `decode_iff` (proved), `ofSchema_exact` (proved), `readTerm_printTerm` (proved), `type_metadata_exact` (proved), `errOf_valOfErr` (proved) | `admitModule_classDecls` (proved), `errOf_ne_boom_of_supported` (proved), `errOf_payload` (proved), `isPayload_of_hasTy_record` (proved) | — |
-| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `step_keeps_cell` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `take_types` (proved), `empty_types` (proved), `profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `withdrawStep_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
+| R4 | open | `order_refl` (proved), `order_trans` (proved), `refMake_extension` (proved), `deferredMake_extension` (proved), `memoBuild_extension` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved) | `image_agrees` (proved), `step_keeps_cell` (proved), `lease_enrols_iff` (proved), `Pool.Model.profile_closed` (proved), `perform_scoped_iff` (proved), `matchTemplate_complete_anchored` (proved), `mono` (proved), `fold_typed_atomic_update` (proved), `handle_identity_laws` (proved), `saved_mask_image_membership` (proved), `scoped_body_substitution_boundary` (proved), `syncRow_typed` (proved), `termMaps_of_typed` (proved), `empty_typed` (proved), `offerStep_typed` (proved), `offerStep_types` (proved), `pollStep_typed` (proved), `pollStep_types` (proved), `sizeStep_typed` (proved), `takeStep_typed` (proved), `Queue.Model.takeStep_types` (proved), `withdrawOffer_typed` (proved), `withdrawOffer_types` (proved), `withdrawTake_typed` (proved), `withdrawTake_types` (proved), `bounded_types` (proved), `offer_types` (proved), `poll_types` (proved), `size_types` (proved), `take_types` (proved), `empty_types` (proved), `Semaphore.Model.profile_closed` (proved), `releaseStep_types` (proved), `takeIfAvailableStep_types` (proved), `Semaphore.Model.takeStep_types` (proved), `visitStep_types` (proved), `withdrawStep_types` (proved), `atomic` (modulo), `bounded` (goal), `committed` (goal), `counted` (goal) | `bounded`, `cleans_once`, `committed`, `counted` |
 | R5 | open | `build_total` (proved) | `expanded_refs_nil_of_wf` (proved), `typeOfProgram_expandRefs` (proved), `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `step_updates` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `take_attempt` (proved), `take_attempt_minted` (proved), `take_withdrawal` (proved), `take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `withdrawStep_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
-| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_restoration` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
-| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
+| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `close_refuses` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
+| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
 
 **Next goals** (10): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
@@ -2174,226 +2174,228 @@ flowchart LR
   n8["scoped_body_substitution_boundary<br/>proved"]
   n9["image_agrees<br/>proved"]
   n10["step_keeps_cell<br/>proved"]
-  n11["perform_scoped_iff<br/>proved"]
-  n12["matchTemplate_complete_anchored<br/>proved"]
-  n13["mono<br/>proved"]
-  n14["syncRow_typed<br/>proved"]
-  n15["termMaps_of_typed<br/>proved"]
-  n16["empty_typed<br/>proved"]
-  n17["offerStep_typed<br/>proved"]
-  n18["offerStep_types<br/>proved"]
-  n19["pollStep_typed<br/>proved"]
-  n20["pollStep_types<br/>proved"]
-  n21["sizeStep_typed<br/>proved"]
-  n22["takeStep_typed<br/>proved"]
-  n23["Queue.Model.takeStep_types<br/>proved"]
-  n24["withdrawOffer_typed<br/>proved"]
-  n25["withdrawOffer_types<br/>proved"]
-  n26["withdrawTake_typed<br/>proved"]
-  n27["withdrawTake_types<br/>proved"]
-  n28["bounded_types<br/>proved"]
-  n29["offer_types<br/>proved"]
-  n30["poll_types<br/>proved"]
-  n31["size_types<br/>proved"]
-  n32["take_types<br/>proved"]
-  n33["empty_types<br/>proved"]
-  n34["profile_closed<br/>proved"]
-  n35["releaseStep_types<br/>proved"]
-  n36["takeIfAvailableStep_types<br/>proved"]
-  n37["Semaphore.Model.takeStep_types<br/>proved"]
-  n38["visitStep_types<br/>proved"]
-  n39["withdrawStep_types<br/>proved"]
-  n40["atomic<br/>modulo"]
-  n41["bounded<br/>goal"]
-  n42["committed<br/>goal"]
-  n43["counted<br/>goal"]
-  n44["readTerm_printTerm<br/>proved"]
-  n45["fits_subN<br/>proved"]
-  n46["fits_normalize<br/>proved"]
-  n47["normalize_idem<br/>proved"]
-  n48["subN_trans<br/>proved"]
-  n49["hom_eq_cata_ty<br/>proved"]
-  n50["fits_mono<br/>proved"]
-  n51["denotesTyped<br/>proved"]
-  n52["errOf_payload<br/>proved"]
-  n53["isPayload_of_hasTy_record<br/>proved"]
-  n54["subN_refl<br/>proved"]
-  n55["sub_antisymm_canonical<br/>proved"]
-  n56["check_complete<br/>proved"]
-  n57["check_sound<br/>proved"]
-  n58["mask_printed_form_profile<br/>proved"]
-  n59["unsuspended_runs<br/>proved"]
-  n60["cleans_once<br/>goal"]
-  n61["checkInput_eq_none_iff<br/>proved"]
-  n62["provideLayerArm<br/>proved"]
-  n63["catchGuard_typed<br/>proved"]
-  n64["onExit_typed<br/>proved"]
-  n65["guardBind_typed<br/>proved"]
-  n66["fits_scope_inv<br/>proved"]
-  n67["allGuard_typed<br/>proved"]
-  n68["handles_of_payloadFieldTy<br/>proved"]
-  n69["saved_mask_restoration<br/>proved"]
-  n70["read_print<br/>proved"]
-  n71["run_agrees<br/>proved"]
-  n72["seq_typed<br/>proved"]
-  n73["close_typed<br/>proved"]
-  n74["run_eq_meaning<br/>proved"]
-  n5 --> n44
-  n5 --> n0
-  n5 --> n15
-  n5 --> n45
+  n11["lease_enrols_iff<br/>proved"]
+  n12["Pool.Model.profile_closed<br/>proved"]
+  n13["perform_scoped_iff<br/>proved"]
+  n14["matchTemplate_complete_anchored<br/>proved"]
+  n15["mono<br/>proved"]
+  n16["syncRow_typed<br/>proved"]
+  n17["termMaps_of_typed<br/>proved"]
+  n18["empty_typed<br/>proved"]
+  n19["offerStep_typed<br/>proved"]
+  n20["offerStep_types<br/>proved"]
+  n21["pollStep_typed<br/>proved"]
+  n22["pollStep_types<br/>proved"]
+  n23["sizeStep_typed<br/>proved"]
+  n24["takeStep_typed<br/>proved"]
+  n25["Queue.Model.takeStep_types<br/>proved"]
+  n26["withdrawOffer_typed<br/>proved"]
+  n27["withdrawOffer_types<br/>proved"]
+  n28["withdrawTake_typed<br/>proved"]
+  n29["withdrawTake_types<br/>proved"]
+  n30["bounded_types<br/>proved"]
+  n31["offer_types<br/>proved"]
+  n32["poll_types<br/>proved"]
+  n33["size_types<br/>proved"]
+  n34["take_types<br/>proved"]
+  n35["empty_types<br/>proved"]
+  n36["Semaphore.Model.profile_closed<br/>proved"]
+  n37["releaseStep_types<br/>proved"]
+  n38["takeIfAvailableStep_types<br/>proved"]
+  n39["Semaphore.Model.takeStep_types<br/>proved"]
+  n40["visitStep_types<br/>proved"]
+  n41["withdrawStep_types<br/>proved"]
+  n42["atomic<br/>modulo"]
+  n43["bounded<br/>goal"]
+  n44["committed<br/>goal"]
+  n45["counted<br/>goal"]
+  n46["readTerm_printTerm<br/>proved"]
+  n47["fits_subN<br/>proved"]
+  n48["fits_normalize<br/>proved"]
+  n49["normalize_idem<br/>proved"]
+  n50["subN_trans<br/>proved"]
+  n51["hom_eq_cata_ty<br/>proved"]
+  n52["fits_mono<br/>proved"]
+  n53["denotesTyped<br/>proved"]
+  n54["errOf_payload<br/>proved"]
+  n55["isPayload_of_hasTy_record<br/>proved"]
+  n56["subN_refl<br/>proved"]
+  n57["sub_antisymm_canonical<br/>proved"]
+  n58["check_complete<br/>proved"]
+  n59["check_sound<br/>proved"]
+  n60["mask_printed_form_profile<br/>proved"]
+  n61["unsuspended_runs<br/>proved"]
+  n62["cleans_once<br/>goal"]
+  n63["checkInput_eq_none_iff<br/>proved"]
+  n64["provideLayerArm<br/>proved"]
+  n65["catchGuard_typed<br/>proved"]
+  n66["onExit_typed<br/>proved"]
+  n67["guardBind_typed<br/>proved"]
+  n68["fits_scope_inv<br/>proved"]
+  n69["allGuard_typed<br/>proved"]
+  n70["handles_of_payloadFieldTy<br/>proved"]
+  n71["saved_mask_restoration<br/>proved"]
+  n72["read_print<br/>proved"]
+  n73["run_agrees<br/>proved"]
+  n74["seq_typed<br/>proved"]
+  n75["close_typed<br/>proved"]
+  n76["run_eq_meaning<br/>proved"]
   n5 --> n46
+  n5 --> n0
+  n5 --> n17
   n5 --> n47
   n5 --> n48
   n5 --> n49
-  n6 --> n50
-  n8 --> n51
-  n8 --> n45
-  n8 --> n46
+  n5 --> n50
+  n5 --> n51
+  n6 --> n52
+  n8 --> n53
   n8 --> n47
   n8 --> n48
   n8 --> n49
+  n8 --> n50
+  n8 --> n51
   n10 --> n5
-  n12 --> n47
-  n13 --> n1
-  n14 --> n46
-  n14 --> n48
-  n14 --> n45
-  n14 --> n15
   n14 --> n49
-  n14 --> n52
-  n14 --> n53
-  n14 --> n47
-  n14 --> n54
-  n15 --> n45
-  n15 --> n46
-  n15 --> n47
-  n15 --> n48
-  n15 --> n49
-  n15 --> n50
-  n17 --> n18
-  n18 --> n55
-  n18 --> n47
+  n15 --> n1
+  n16 --> n48
+  n16 --> n50
+  n16 --> n47
+  n16 --> n17
+  n16 --> n51
+  n16 --> n54
+  n16 --> n55
+  n16 --> n49
+  n16 --> n56
+  n17 --> n47
+  n17 --> n48
+  n17 --> n49
+  n17 --> n50
+  n17 --> n51
+  n17 --> n52
   n19 --> n20
-  n20 --> n55
-  n20 --> n47
-  n20 --> n54
-  n22 --> n23
-  n23 --> n55
-  n23 --> n54
-  n23 --> n47
+  n20 --> n57
+  n20 --> n49
+  n21 --> n22
+  n22 --> n57
+  n22 --> n49
+  n22 --> n56
   n24 --> n25
-  n25 --> n47
-  n25 --> n54
-  n25 --> n55
+  n25 --> n57
+  n25 --> n56
+  n25 --> n49
   n26 --> n27
-  n27 --> n47
-  n27 --> n54
-  n27 --> n55
-  n28 --> n16
-  n28 --> n56
-  n28 --> n57
+  n27 --> n49
+  n27 --> n56
+  n27 --> n57
+  n28 --> n29
+  n29 --> n49
   n29 --> n56
   n29 --> n57
-  n29 --> n25
-  n29 --> n47
-  n29 --> n54
-  n29 --> n18
-  n29 --> n58
-  n30 --> n56
-  n30 --> n57
-  n30 --> n47
-  n30 --> n54
-  n30 --> n20
+  n30 --> n18
+  n30 --> n58
+  n30 --> n59
+  n31 --> n58
+  n31 --> n59
+  n31 --> n27
+  n31 --> n49
   n31 --> n56
-  n31 --> n57
-  n32 --> n56
-  n32 --> n57
-  n32 --> n47
-  n32 --> n27
-  n32 --> n54
-  n32 --> n23
+  n31 --> n20
+  n31 --> n60
   n32 --> n58
-  n35 --> n47
-  n36 --> n47
-  n37 --> n47
-  n37 --> n55
-  n37 --> n54
-  n38 --> n54
-  n38 --> n55
-  n38 --> n47
-  n39 --> n47
-  n39 --> n54
-  n39 --> n55
-  n40 --> n59
-  n40 --> n60
-  n40 --> n42
-  n40 --> n43
-  n40 --> n41
-  n40 --> n61
-  n41 --> n61
+  n32 --> n59
+  n32 --> n49
+  n32 --> n56
+  n32 --> n22
+  n33 --> n58
+  n33 --> n59
+  n34 --> n58
+  n34 --> n59
+  n34 --> n49
+  n34 --> n29
+  n34 --> n56
+  n34 --> n25
+  n34 --> n60
+  n37 --> n49
+  n38 --> n49
+  n39 --> n49
+  n39 --> n57
+  n39 --> n56
+  n40 --> n56
+  n40 --> n57
+  n40 --> n49
+  n41 --> n49
+  n41 --> n56
+  n41 --> n57
   n42 --> n61
-  n43 --> n61
-  n45 --> n48
-  n45 --> n46
-  n46 --> n48
-  n46 --> n47
-  n51 --> n62
-  n51 --> n45
-  n51 --> n46
-  n51 --> n47
-  n51 --> n48
-  n51 --> n49
-  n51 --> n50
-  n51 --> n1
-  n51 --> n54
-  n51 --> n63
-  n51 --> n64
-  n51 --> n65
-  n51 --> n66
-  n51 --> n14
-  n51 --> n52
-  n51 --> n53
-  n51 --> n67
+  n42 --> n62
+  n42 --> n44
+  n42 --> n45
+  n42 --> n43
+  n42 --> n63
+  n43 --> n63
+  n44 --> n63
+  n45 --> n63
+  n47 --> n50
+  n47 --> n48
+  n48 --> n50
+  n48 --> n49
+  n53 --> n64
+  n53 --> n47
+  n53 --> n48
+  n53 --> n49
+  n53 --> n50
+  n53 --> n51
+  n53 --> n52
+  n53 --> n1
+  n53 --> n56
+  n53 --> n65
+  n53 --> n66
+  n53 --> n67
   n53 --> n68
-  n58 --> n69
-  n58 --> n70
-  n58 --> n57
-  n58 --> n56
-  n59 --> n71
-  n60 --> n61
-  n62 --> n45
-  n62 --> n0
-  n62 --> n49
-  n62 --> n48
-  n62 --> n46
-  n62 --> n14
-  n62 --> n47
-  n62 --> n52
-  n62 --> n53
-  n62 --> n1
-  n62 --> n54
-  n62 --> n64
-  n62 --> n65
-  n62 --> n50
-  n62 --> n66
-  n62 --> n72
+  n53 --> n16
+  n53 --> n54
+  n53 --> n55
+  n53 --> n69
+  n55 --> n70
+  n60 --> n71
+  n60 --> n72
+  n60 --> n59
+  n60 --> n58
+  n61 --> n73
   n62 --> n63
-  n63 --> n45
-  n63 --> n65
-  n64 --> n45
+  n64 --> n47
+  n64 --> n0
+  n64 --> n51
   n64 --> n50
-  n64 --> n63
+  n64 --> n48
+  n64 --> n16
+  n64 --> n49
   n64 --> n54
-  n64 --> n65
+  n64 --> n55
+  n64 --> n1
+  n64 --> n56
+  n64 --> n66
   n64 --> n67
-  n65 --> n73
-  n67 --> n65
-  n70 --> n44
-  n71 --> n74
-  n72 --> n54
-  n72 --> n45
-  n72 --> n65
+  n64 --> n52
+  n64 --> n68
+  n64 --> n74
+  n64 --> n65
+  n65 --> n47
+  n65 --> n67
+  n66 --> n47
+  n66 --> n52
+  n66 --> n65
+  n66 --> n56
+  n66 --> n67
+  n66 --> n69
+  n67 --> n75
+  n69 --> n67
+  n72 --> n46
+  n73 --> n76
+  n74 --> n56
+  n74 --> n47
+  n74 --> n67
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -2409,6 +2411,8 @@ flowchart LR
 | `scoped_body_substitution_boundary` | proved | — | `denotesTyped`, `fits_subN`, `fits_normalize`, `normalize_idem`, `subN_trans`, `hom_eq_cata_ty` | 771 | 1097 |
 | `image_agrees` | proved | — | — | 11 | 110 |
 | `step_keeps_cell` | proved | — | `fold_typed_atomic_update` | 56 | 385 |
+| `lease_enrols_iff` | proved | — | — | 5 | 14 |
+| `Pool.Model.profile_closed` | proved | — | — | 23 | 21 |
 | `perform_scoped_iff` | proved | — | — | 0 | 73 |
 | `matchTemplate_complete_anchored` | proved | — | `normalize_idem` | 233 | 124 |
 | `mono` | proved | — | `order_trans` | 57 | 271 |
@@ -2432,7 +2436,7 @@ flowchart LR
 | `size_types` | proved | — | `check_complete`, `check_sound` | 173 | 334 |
 | `take_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `withdrawTake_types`, `subN_refl`, `Queue.Model.takeStep_types`, `mask_printed_form_profile` | 307 | 426 |
 | `empty_types` | proved | — | — | 64 | 126 |
-| `profile_closed` | proved | — | — | 12 | 18 |
+| `Semaphore.Model.profile_closed` | proved | — | — | 12 | 18 |
 | `releaseStep_types` | proved | — | `normalize_idem` | 156 | 137 |
 | `takeIfAvailableStep_types` | proved | — | `normalize_idem` | 136 | 135 |
 | `Semaphore.Model.takeStep_types` | proved | — | `normalize_idem`, `sub_antisymm_canonical`, `subN_refl` | 198 | 164 |
@@ -3455,16 +3459,20 @@ flowchart LR
   n4["close_reentrant_add<br/>proved"]
   n5["closeOrder_eq<br/>proved"]
   n6["saved_mask_restoration<br/>proved"]
-  n7["cleans_once<br/>goal"]
-  n8["cleanup_keeps<br/>goal"]
-  n9["releases_once<br/>goal"]
-  n10["close_idempotent<br/>proved"]
-  n11["checkInput_eq_none_iff<br/>proved"]
+  n7["close_refuses<br/>proved"]
+  n8["giveBack_front<br/>proved"]
+  n9["giveBack_once<br/>proved"]
+  n10["cleans_once<br/>goal"]
+  n11["cleanup_keeps<br/>goal"]
+  n12["releases_once<br/>goal"]
+  n13["close_idempotent<br/>proved"]
+  n14["checkInput_eq_none_iff<br/>proved"]
   n1 --> n0
-  n3 --> n10
-  n7 --> n11
-  n8 --> n11
-  n9 --> n11
+  n3 --> n13
+  n9 --> n8
+  n10 --> n14
+  n11 --> n14
+  n12 --> n14
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3476,6 +3484,9 @@ flowchart LR
 | `close_reentrant_add` | proved | — | — | 2 | 11 |
 | `closeOrder_eq` | proved | — | — | 0 | 4 |
 | `saved_mask_restoration` | proved | — | — | 99 | 753 |
+| `close_refuses` | proved | — | — | 1 | 14 |
+| `giveBack_front` | proved | — | — | 3 | 12 |
+| `giveBack_once` | proved | — | `giveBack_front` | 1 | 12 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1441 |
 | `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 84 | 1439 |
 | `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 84 | 1448 |
@@ -3497,14 +3508,16 @@ flowchart LR
 flowchart LR
   n0["fairTape_unarmed<br/>proved"]
   n1["frontier_empty_iff_deadlocked<br/>proved"]
-  n2["visit_selects_earliest<br/>proved"]
-  n3["visit_stops_iff<br/>proved"]
+  n2["select_takes_first<br/>proved"]
+  n3["visit_selects_earliest<br/>proved"]
+  n4["visit_stops_iff<br/>proved"]
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `fairTape_unarmed` | proved | — | — | 3 | 285 |
 | `frontier_empty_iff_deadlocked` | proved | — | — | 1 | 42 |
+| `select_takes_first` | proved | — | — | 0 | 6 |
 | `visit_selects_earliest` | proved | — | — | 5 | 11 |
 | `visit_stops_iff` | proved | — | — | 4 | 11 |
 
