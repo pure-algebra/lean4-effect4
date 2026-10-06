@@ -143,6 +143,7 @@ def registry : Registry where
     { id := "reactive-scheduling"
       title := "Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants"
       defaultModules := [
+        `Effect4.Laws.Modules.Queue.Invariant,
         `Effect4.Laws.Machine.Scheduling,
         `Effect4.Laws.Machine.Lift,
         `Effect4.Laws.Program.Typed.Scheduler,
@@ -474,6 +475,12 @@ def registry : Registry where
     { id := "semaphore-visit-stops", concept := "reactive-scheduling", role := .inversion
       title := "One visit of Semaphore's model selects nobody exactly when no permit is free or no waiter at or after the cursor fits, and then it changes nothing (a helper of semaphore-expansion-agrees' waiting clauses; one visit, no walk and no liveness; decisions row 259)"
       pointer := .witness `Effect4.Semaphore.Model.visit_stops_iff },
+    { id := "queue-first-step-invariant", concept := "reactive-scheduling", role := .preservation
+      title := "One step of a first operation of the Queue's abstract model keeps the run invariant of the first profile: the profile, the buffer's bound, tidy, quiet at the run's signalled, and the two flags (the model's half of wait-registration-no-gap and of waiting-request-obligation-preserved; no program, no delivery of a signal and no liveness; decisions rows 219, 233, 255 and 275)"
+      pointer := .witness `Effect4.Queue.Model.first_step_inv },
+    { id := "queue-first-run-flags", concept := "reactive-scheduling", role := .preservation
+      title := "From the empty queue of a positive capacity both flags of the Queue's abstract model hold after every list of first operations whose requests keep their premises at each prefix (the bounded exploration's two flags at every length, on the first profile; decisions rows 219, 233, 255 and 275)"
+      pointer := .witness `Effect4.Queue.Model.first_run_flags },
 
     -- 5. exact-codecs
     { id := "decode-iff", concept := "exact-codecs", role := .decidability
@@ -916,7 +923,7 @@ def registry : Registry where
         "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
         "the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant; a finite probe holds the candidate at scheduling points (docs/research/2026-10-05-claude-lead/mask-probes/MaskStack.lean)",
         "the lift of saved-mask-pop-discipline to runs (scope-lifetime-finalization, serving the run-level half above): each live fiber of a reached run holds the chain at its start flag; it needs FrameFiber.step and each command to keep the chain, with a condition on a command that clears a fiber: just before the clearing the fiber's stack is empty, or its flag is its base; the stack's emptiness after the clearing protects nothing, since Cmd.exitDone clears a stack through RunFiber.cleared and keeps the flag; the local law is saved_mask_pop_discipline; no goal states the lift",
-        "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)"] },
+        "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222); the Queue model's half of its first clause is proved on the first profile (queue-first-step-invariant), and the wrapper's run stays open"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]
       openParts := ["R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)",
@@ -924,7 +931,7 @@ def registry : Registry where
         "divergence by compatible prefixes (DB-03; not stated)",
         "driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)",
         "embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, trace 7); no bound is claimed",
-        "wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean)",
+        "wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean); the Queue model's half is proved on the first profile (queue-first-step-invariant, queue-first-run-flags), and the wrapper's run stays open",
         "posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)",
         "posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)"] },
     { id := "R13", title := "A run's inputs are data: equal recorded inputs give equal replay observations"

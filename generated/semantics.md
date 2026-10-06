@@ -535,6 +535,8 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | queue-first-profile-closed | preservation | proved | Effect4.Queue.Model.first_profile_closed | yes |  |
 | semaphore-visit-selects-earliest | inversion | proved | Effect4.Semaphore.Model.visit_selects_earliest | yes |  |
 | semaphore-visit-stops | inversion | proved | Effect4.Semaphore.Model.visit_stops_iff | yes |  |
+| queue-first-step-invariant | preservation | proved | Effect4.Queue.Model.first_step_inv | yes |  |
+| queue-first-run-flags | preservation | proved | Effect4.Queue.Model.first_run_flags | yes |  |
 
 ### Printed statements
 
@@ -852,6 +854,33 @@ Literature: PFPL, chs. 39–41, pp. 371–406 — excludedFeature
             instLENat.le cursor u.stamp → instLTNat.lt (Effect4.Semaphore.Model.free s) u.need)))
     (Eq (Effect4.Semaphore.Model.visit s cursor).snd Option.none →
       Eq (Effect4.Semaphore.Model.visit s cursor).fst s)
+```
+
+**queue-first-step-invariant**
+
+```lean
+∀ (r : Effect4.Queue.Model.Run) (op : Effect4.Queue.Model.Op),
+  Effect4.Queue.Model.FirstRunInv r →
+    Eq (Effect4.Queue.Model.firstOp op) Bool.true →
+      Effect4.Queue.Model.Requested r.s op →
+        Effect4.Queue.Model.FirstRunInv
+          (Effect4.Queue.Model.step Effect4.Queue.Model.Fault.none r op)
+```
+
+**queue-first-run-flags**
+
+```lean
+∀ (c : Nat) (ops : List Effect4.Queue.Model.Op),
+  Effect4.Queue.Model.FirstOps { s := { capacity := Option.some (instHAdd.hAdd c 1) } } ops →
+    And
+      (Eq
+        (List.foldl (Effect4.Queue.Model.step Effect4.Queue.Model.Fault.none)
+            { s := { capacity := Option.some (instHAdd.hAdd c 1) } } ops).ok
+        Bool.true)
+      (Eq
+        (List.foldl (Effect4.Queue.Model.step Effect4.Queue.Model.Fault.none)
+            { s := { capacity := Option.some (instHAdd.hAdd c 1) } } ops).named
+        Bool.true)
 ```
 
 ## exact-codecs
@@ -1727,7 +1756,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 71; inherited (provisional): 1944; unplaced: 0.
+Tagged: 74; inherited (provisional): 1982; unplaced: 0.
 
 ## Plan
 
@@ -1748,7 +1777,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `step_updates` (proved), `closeStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `take_attempt` (proved), `take_attempt_minted` (proved), `take_withdrawal` (proved), `take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_pop_discipline` (proved), `close_refuses` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
-| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
+| R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved) | — |
 
 **Next goals** (10): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
@@ -3519,7 +3548,7 @@ flowchart LR
 - Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
 - Open: the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant; a finite probe holds the candidate at scheduling points (docs/research/2026-10-05-claude-lead/mask-probes/MaskStack.lean)
 - Open: the lift of saved-mask-pop-discipline to runs (scope-lifetime-finalization, serving the run-level half above): each live fiber of a reached run holds the chain at its start flag; it needs FrameFiber.step and each command to keep the chain, with a condition on a command that clears a fiber: just before the clearing the fiber's stack is empty, or its flag is its base; the stack's emptiness after the clearing protects nothing, since Cmd.exitDone clears a stack through RunFiber.cleared and keeps the flag; the local law is saved_mask_pop_discipline; no goal states the lift
-- Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)
+- Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222); the Queue model's half of its first clause is proved on the first profile (queue-first-step-invariant), and the wrapper's run stays open
 
 ```mermaid
 flowchart LR
@@ -3573,7 +3602,7 @@ flowchart LR
 - Open: divergence by compatible prefixes (DB-03; not stated)
 - Open: driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)
 - Open: embedded-budget-sufficient (proposed claim; reactive-scheduling, serving R10 and R12): the embedded budget of an owned operation covers its registration, its cleanup and its selected delivery, so no cut falls inside the operation; a cut inside is excluded and is no resumption (decisions rows 84, 226); no theorem states a sufficient budget; a finite control measures the least fuel of one helper's task at eight lengths of the receiver's continuation, and at one unit less the remaining work is lost and five later flushes do not end the root (Test/Program/QueueTraces.lean, trace 7); no bound is claimed
-- Open: wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean)
+- Open: wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean); the Queue model's half is proved on the first profile (queue-first-step-invariant, queue-first-run-flags), and the wrapper's run stays open
 - Open: posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)
 - Open: posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)
 
@@ -3582,8 +3611,19 @@ flowchart LR
   n0["fairTape_unarmed<br/>proved"]
   n1["frontier_empty_iff_deadlocked<br/>proved"]
   n2["select_takes_first<br/>proved"]
-  n3["visit_selects_earliest<br/>proved"]
-  n4["visit_stops_iff<br/>proved"]
+  n3["first_run_flags<br/>proved"]
+  n4["first_run_inv<br/>proved"]
+  n5["first_step_inv<br/>proved"]
+  n6["visit_selects_earliest<br/>proved"]
+  n7["visit_stops_iff<br/>proved"]
+  n8["positive_suspend_step_capacity<br/>proved"]
+  n9["first_profile_closed<br/>proved"]
+  n10["acceptLoop_length_le<br/>proved"]
+  n3 --> n4
+  n4 --> n5
+  n5 --> n8
+  n5 --> n9
+  n8 --> n10
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -3591,8 +3631,14 @@ flowchart LR
 | `fairTape_unarmed` | proved | — | — | 3 | 285 |
 | `frontier_empty_iff_deadlocked` | proved | — | — | 1 | 42 |
 | `select_takes_first` | proved | — | — | 0 | 6 |
+| `first_run_flags` | proved | — | `first_run_inv` | 6 | 72 |
+| `first_run_inv` | proved | — | `first_step_inv` | 2 | 72 |
+| `first_step_inv` | proved | — | `positive_suspend_step_capacity`, `first_profile_closed` | 57 | 74 |
 | `visit_selects_earliest` | proved | — | — | 5 | 11 |
 | `visit_stops_iff` | proved | — | — | 4 | 11 |
+| `positive_suspend_step_capacity` | proved | — | `acceptLoop_length_le` | 17 | 70 |
+| `first_profile_closed` | proved | — | — | 29 | 72 |
+| `acceptLoop_length_le` | proved | — | — | 0 | 6 |
 
 ### R13: A run's inputs are data: equal recorded inputs give equal replay observations
 

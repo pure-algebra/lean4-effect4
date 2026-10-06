@@ -280,9 +280,9 @@ either module exists yet):
 
 In work since 2026-10-06, three seats at once since the owner's word of that day (row 237):
 
-- **Seat LIFT has the mask's chain at every live fiber of a run** (branch `seat/lift`, from
-  `f3568844`; [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)), in the
-  seat that seat CUTS freed. Part A is two statements of the frame machine. Part B is the
+- **Seat LIFT has the lift of the mask's chain to runs** (branch `seat/lift`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)), in the seat that
+  seat CUTS freed. Part A is two statements of the frame machine. Part B is the
   machine's invariant and its lift, with a condition just before a command clears a fiber.
   Nothing is compiled yet.
 - **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
@@ -302,12 +302,19 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   Each part was proved in place of its planned goal. They state no order of the wake across helpers, no
   cancellation law, no close that waits and no wrapper. Two cases replay on the generated
   engine (`ocaml/engine/test/pool/`; merged `c9428f73`). The receipt is next.
-- **Seat QINV has the Queue model's run invariant** (branch `seat/qinv`, from `4bd063a2`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md)), in the seat that
-  seat MASKPOP freed. Codex gave the invariant and its premises. Nothing is compiled yet.
+- **Seat CHECK has the checker's second test** (branch `seat/check`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-check-brief.md)), in the seat that
+  seat QINV freed. `typeOfProgram` then tests the references' formation only, and the dead
+  arm of `Api.explain` goes (row 273, point 2). No program's answer changes.
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat QINV is merged** (`13a77be6`;
+  [its receipt](research/2026-10-06-seat-QINV-receipt.md)). On the first profile, one step of
+  the Queue's model keeps its run invariant, and both flags hold after every list of first
+  operations from the empty queue (`first_step_inv`, `first_run_flags`,
+  `src/Effect4/Laws/Modules/Queue/Invariant.lean`; R12). Lean accepts Codex's invariant as
+  written. It is the model's half of two open parts. The wrapper's run stays open.
 - **Seat CUTS is merged** (`f3568844`;
   [its receipt](research/2026-10-06-seat-CUTS-receipt.md)), Codex's priority 4. A journal's
   tape has its cut and position connectors beside `tapeFrom` (`Test/Dogfood/Scenario.lean`).
@@ -393,10 +400,7 @@ Candidates with no seat, each with its place:
     registration's cleanup are missing too;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
-- two small repairs of the foreign readers (row 258, points 5 and 6);
-- the checker's second test goes: `typeOfProgram` then tests the references' formation only,
-  and the dead arm of `Api.explain` goes with it (row 273, point 2). No program's answer
-  changes.
+- two small repairs of the foreign readers (row 258, points 5 and 6).
 
 Three repairs of 2026-10-06, outside any seat:
 
