@@ -524,4 +524,3 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
   `Test/Codegen/ReadContract.lean` and `Test/Codegen/PrintContract.lean`. *Tested*: tsgo
   7.0.0-dev.20260629.1 on `harness/truth/term-rows.typecheck.ts`, with a red control at each of
   the eight rows. *Tested*: the TypeScript reader lane, and two truth programs against rc.112.
-  Seat T5's receipt: `docs/research/2026-10-05-seat-T5-receipt.md`.
