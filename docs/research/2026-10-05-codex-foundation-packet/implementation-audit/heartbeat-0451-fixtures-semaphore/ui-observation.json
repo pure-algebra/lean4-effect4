@@ -1,0 +1,15 @@
+{
+  "coordinator": "Queues plan and design decisions (fork)",
+  "url": "claude.ai/epitaxy/local_acf2315e-02ac-4acd-9ef9-b0734bd686a7",
+  "project": "lean4-effect4",
+  "branch": "refactor/phase1-phase3",
+  "messages_42_44": "consumed; adoption tracked00a53895 and user-facing response45",
+  "active_seats": [
+    "T5 partB",
+    "QTYPES"
+  ],
+  "transcript_review": "T5 AX panel blank but screenshot exposes current measuring action; QTYPES transcript read viaAX",
+  "new_advisory": "Message46 sent normally; empty composer and resumed response verified",
+  "input_guard": "one initial Back action blocked by user activity; refreshed without overwriting a draft",
+  "handoff": false
+}

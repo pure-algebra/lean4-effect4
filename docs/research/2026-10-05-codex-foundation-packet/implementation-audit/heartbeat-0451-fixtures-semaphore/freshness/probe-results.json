@@ -1,0 +1,359 @@
+{
+  "source": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/sources/scripts/generate.py",
+  "method": "Extracted unchanged install/fixture_lanes/fixtures AST; mocked all run calls. No Lean, generator, compiler, build or runtime executed.",
+  "count": 9,
+  "results": [
+    {
+      "name": "unchanged check accepts and preserves",
+      "checking": true,
+      "output_aliases_repo": false,
+      "error": null,
+      "repository_fixture_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-9j98f2rz/output/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-9j98f2rz/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "changed known fixture refused",
+      "checking": true,
+      "output_aliases_repo": false,
+      "error": "ocaml/engine/test/queue/queue.txt is not what Lean emits",
+      "repository_fixture_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-6n2z2wtc/output/ocaml/engine/test/queue"
+        ]
+      ]
+    },
+    {
+      "name": "missing known fixture refused",
+      "checking": true,
+      "output_aliases_repo": false,
+      "error": "ocaml/engine/test/queue/queue.txt is not what Lean emits",
+      "repository_fixture_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-r6fwkwr9/output/ocaml/engine/test/queue"
+        ]
+      ]
+    },
+    {
+      "name": "extra known-lane fixture refused",
+      "checking": true,
+      "output_aliases_repo": false,
+      "error": "ocaml/engine/test/queue: no writer writes extra.txt",
+      "repository_fixture_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/extra.txt": "45585452410a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/extra.txt": "45585452410a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-ux6duekm/output/ocaml/engine/test/queue"
+        ]
+      ]
+    },
+    {
+      "name": "write mode repairs changed known fixture",
+      "checking": false,
+      "output_aliases_repo": false,
+      "error": null,
+      "repository_fixture_bytes_changed": true,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-sg2a_3i6/output/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-sg2a_3i6/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "writerless-lane fixture silently accepted",
+      "checking": true,
+      "output_aliases_repo": false,
+      "error": null,
+      "repository_fixture_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/orphan/retained.txt": "4f525048414e0a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/orphan/retained.txt": "4f525048414e0a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-eknjq_fe/output/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-eknjq_fe/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "removed writer leaves former-lane fixture unchecked",
+      "checking": true,
+      "output_aliases_repo": false,
+      "error": null,
+      "repository_fixture_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-b1ojv_lj/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "check output alias overwrites then accepts changed fixture",
+      "checking": true,
+      "output_aliases_repo": true,
+      "error": null,
+      "repository_fixture_bytes_changed": true,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-lv182k8j/repo/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-lv182k8j/repo/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "check output alias deletes extra fixture then accepts",
+      "checking": true,
+      "output_aliases_repo": true,
+      "error": null,
+      "repository_fixture_bytes_changed": true,
+      "before": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/extra.txt": "45585452410a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-i6ege_rh/repo/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/fixture-checker-i6ege_rh/repo/ocaml/engine/test/scenarios"
+        ]
+      ]
+    }
+  ]
+}

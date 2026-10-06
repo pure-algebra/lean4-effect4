@@ -1,0 +1,31 @@
+commit db54a8497be78fe3c7211a8ff508efc55473bfa3
+Author:     mepuka <kokokessy@gmail.com>
+AuthorDate: Tue Oct 6 00:02:47 2026 -0500
+Commit:     mepuka <kokokessy@gmail.com>
+CommitDate: Tue Oct 6 00:02:47 2026 -0500
+
+    The fixtures group: refuse an output that aliases the repository, and a fixture folder with no writer
+    
+    Two gaps in e6d63ddb, found by Codex's review of 2026-10-06 (nine isolated controls over the
+    extracted Python functions, with the writers mocked).
+    
+    - `--only fixtures --output-dir .` let the check form delete and rewrite the repository's own
+      fixtures and then compare each with itself. The family now refuses an output whose lane
+      folder is the repository's, on resolved paths, before it touches a file or runs a command:
+      the derived family's rule.
+    - A folder with text fixtures and no write.lean was never examined, so a lane whose writer
+      left kept its fixtures unchecked. fixture_lanes now refuses such a folder by name. The
+      Makefile's marker depends on an inventory of fixtures and writers, so a path that leaves
+      makes the group stale (the pattern of the source inventory).
+    
+    Controls, run once by hand with the real writers (reproduced):
+    - the repository as the output, on a clean tree and with a changed fixture: exit 1, "output
+      aliases repository destination"; the fixture bytes are as before, and the change is not
+      overwritten;
+    - a symbolic link to the repository as the output: the same refusal;
+    - a separate output: a changed fixture is refused by name, and a clean tree passes;
+    - the Queue's writer moved aside while the scenario lane stays: exit 1 in the check form and
+      in make, "text fixtures in a folder with no writer"; with the writer back the group passes
+      and git shows no change.
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

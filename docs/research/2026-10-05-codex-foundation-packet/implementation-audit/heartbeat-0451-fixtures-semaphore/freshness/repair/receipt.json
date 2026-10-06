@@ -1,0 +1,48 @@
+{
+  "source_status": "active working-tree snapshot",
+  "base_head": "6a8ee9c2b11035d79d373d7717add33b9439e22b",
+  "controls": 15,
+  "repair_controls": 14,
+  "remaining_counterexamples": 1,
+  "commands_all_mocked": true,
+  "actual_subprocesses": 0,
+  "repository_edits": false,
+  "make_inventory": "source reviewed only; no Make execution",
+  "current_hash_comparison": [
+    {
+      "path": "scripts/generate.py",
+      "still_matches_active_source": true
+    },
+    {
+      "path": "Makefile",
+      "still_matches_active_source": true
+    }
+  ],
+  "files": [
+    {
+      "path": "report.md",
+      "sha256": "221a00fab35e52776b3c13c6a2242cdf659ad533d351cb6e875c8b3c694036af",
+      "bytes": 3824
+    },
+    {
+      "path": "source-hashes.json",
+      "sha256": "77b67285079b4d7fa9a278ce811868e0c70ff468f566c2485a8b366c070dfbb4",
+      "bytes": 444
+    },
+    {
+      "path": "active.diff",
+      "sha256": "8f29203f6ec96140336177fc9340e97d20d63575140091c666b14b1dd118dad6",
+      "bytes": 3628
+    },
+    {
+      "path": "probe.py",
+      "sha256": "cd901261c0760dff01c66c18420357a2bf8ccf185e1556e852ea7561dc0e7ad3",
+      "bytes": 6656
+    },
+    {
+      "path": "probe-results.json",
+      "sha256": "6a09ba65553efb3d3caa9c6a7c04e22704ec29b4c98ca5ee7598d2a798e2fb61",
+      "bytes": 21697
+    }
+  ]
+}

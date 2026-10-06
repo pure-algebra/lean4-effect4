@@ -1,0 +1,36 @@
+commit e6d63ddb440b5d171a9699b10182083ba54551d6
+Author:     mepuka <kokokessy@gmail.com>
+AuthorDate: Mon Oct 5 23:49:50 2026 -0500
+Commit:     mepuka <kokokessy@gmail.com>
+CommitDate: Mon Oct 5 23:49:50 2026 -0500
+
+    The engine's fixtures as a generated group: a fixture that changes alone is written again or refused
+    
+    A Lean battery binds each engine fixture by include_str, and Lake does not take such a file as
+    an input. So a fixture edited alone left the battery's evidence stale until a person ran one
+    more command (seat DOGFOOD's and seat QSTEPS's receipts; Codex's review of 2026-10-05).
+    
+    - scripts/generate.py: a family `fixtures`. A lane is a folder under ocaml/engine/test/ with a
+      writer, write.lean. The family builds the modules that the writer imports, runs the writer
+      into a temporary folder, and installs a file only where its bytes differ, or refuses a
+      difference in the check form. It refuses a committed *.txt that no writer writes. The writer
+      is the one hand input.
+    - Each writer takes the folder to write into as one optional argument.
+    - Makefile: the group `fixtures`, hermetic. Its marker depends on the fixtures themselves, on
+      the writers, and on the traces of the writers' imports (read from their import lines). The
+      fixtures join GENERATED_PATHS, so check-gen and the conservativity record hold them. The
+      OCaml check runs after the group.
+    - docs/GENERATED.md, Test/Dogfood/README.md and the two binding batteries' notes follow.
+    
+    Controls, run once by hand (reproduced):
+    - the unchanged tree: no fixture is rewritten, and a second run has nothing to do;
+    - a byte appended to queue.txt: make gen-fixtures writes the fixture again, and git shows no
+      change;
+    - a byte appended to routing.txt: the check form exits 1, "is not what Lean emits";
+    - a copied extra.txt: exit 1, "no writer writes extra.txt".
+    Make 3.81 compares whole seconds: an edit in the marker's own second is not seen.
+    
+    The default build passes after the two note edits: 953 jobs; 703 modules, 85805
+    declarations; 29 planned goals. No dune run: no OCaml source and no fixture byte changed.
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>

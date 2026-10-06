@@ -1,0 +1,215 @@
+{
+  "frozen_head": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "path": "docs/STATE.md",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "5fccb1684132e7bc37f6787c126029b3bed296a8e67e475a759720fb9e2cdb3c",
+      "bytes": 106375
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32",
+      "bytes": 72882
+    },
+    {
+      "path": "docs/core/system-map.md",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "622ec37a03dd50b7a82c7ee0f52e67b0b471ffd2fdd58cf9f8b5ca3918e6d6ca",
+      "bytes": 45257
+    },
+    {
+      "path": "docs/core/host-boundary.md",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "f478fbe6f9061ff6518992c63482424f61e5959f41dd50a43355fcca82e812fe",
+      "bytes": 22517
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "f277875bc0466705fcb0b789666cef7e7e8dc19308fd2e7b207b3de7789a6f8a",
+      "bytes": 330495
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844",
+      "bytes": 16676
+    },
+    {
+      "path": "src/Effect4/Api/Runner.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "57a2f1a0ecd32bf67cc5c8821df4ad44d857a221e28cdfddf2b02a81688aab5a",
+      "bytes": 4203
+    },
+    {
+      "path": "src/Effect4/Api/HostSession.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece",
+      "bytes": 11404
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+      "bytes": 51982
+    },
+    {
+      "path": "src/Effect4/Laws/Api/Runner.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "543b873cf61cf85d8f707ce28db5ff7b8f14fe0fab364a9e981e732292973da8",
+      "bytes": 9356
+    },
+    {
+      "path": "src/Effect4/Laws/Api/RunnerBytes.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "93a2834d896d7c30f7a2c4a7b26c47a8ea1e55deedd5c12952899c4d6c08891e",
+      "bytes": 4333
+    },
+    {
+      "path": "src/Effect4/Laws/Api/HostSession.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "de49efa72ca2999f13140a4dac4434b596054a885cb2e7fdd2bca697da0d7c84",
+      "bytes": 18191
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Approximation.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "eed02bea96ac686c32bd554fa95ef5f8a21813209e8f26de776bd4b66a8afe5c",
+      "bytes": 84583
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Behaviour.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "744f6cd68497a0470d126b703a760357c5400d5d00cbe719a77ef5e7c9388cbc",
+      "bytes": 4767
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Refinement.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "9183fdd7e13b3492d65d5719774282c927a340dbf61c7adb664534aca85643af",
+      "bytes": 24309
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/ForkLedger.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "b7d9a5045457b10955faf84fe1064463b32ce4d10e177a0538923f7b83c5d4cf",
+      "bytes": 4758
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/Core.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "6dd2d430a888af6caad696a5bf84ce530ab16d0539dce2c53d1a239c422fa4ab",
+      "bytes": 184656
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Guard/Decision.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "d08dbb7697d91d1f40747aab00723a553068b9447af92f52e0e546a06bb3f86b",
+      "bytes": 5060
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "595a1b2654ecff35c11779592a2acf65f2a6455b9ac3b7e52c3a23b9341cd4bb",
+      "bytes": 48504
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Tape.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "842a3710c30359d6cc4bb8a2f0fdc8ce9a78bda374c77784ec64e14e2ab30741",
+      "bytes": 14687
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Workers.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "67f5f70fc6e3196c0395a43d56f42a7b69358e88c9b560fe6c19911359762052",
+      "bytes": 21299
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Timeout.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "f4ef7bdbb8def55d594e40cdee9203ce16ef08b0c205088d1acfdc7ab6da1ee3",
+      "bytes": 25291
+    },
+    {
+      "path": "Test/Machine/Runtime/TapeAction.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "ec68a8cd592e4418b2fa9e9b891ee715a1905e26d9628d017627ef8aa0d15663",
+      "bytes": 4136
+    },
+    {
+      "path": "Test/Machine/Runtime/BehaviourContract.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "6deda5c4e84bde195eced8f50bb2f4dd24c27074315e56eef6d9839e365e74de",
+      "bytes": 2849
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5",
+      "bytes": 68968
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Pool.ts",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "d88cd954f7cc0dd8fd086c33d48a76d4e1cd93f9630bc09f1577d95fb29492b7",
+      "bytes": 33716
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Cache.ts",
+      "kind": "frozen committed source",
+      "commit": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "50cb55a041c0f2873e4e7693d235875ffd8d199395fc5440aa77e00173cac121",
+      "bytes": 82367
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+      "kind": "active working-tree card/plan; uncommitted proposal",
+      "base_head": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "b306d098f503e969c3c31b9ac0794b7223b3aa8b0094538018e1ab0921059bcb",
+      "bytes": 15708
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "kind": "active working-tree card/plan; uncommitted proposal",
+      "base_head": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+      "sha256": "e1c26ebe2216e5872c196e6771eab5453996ebeb59cbbb9f5f904c82256834ac",
+      "bytes": 8592
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[
+  {
+    "path": "tools/ProofGraph/Plan.lean",
+    "sha256": "baa481707e6ad0bbe3d1f32cb8f720d3e195dcab0ac0748b3eac369f2826ff49",
+    "frozen": "cbd2ec5793006fd1279121c5104bfdbdc065ea40"
+  },
+  {
+    "path": "tools/ProofGraph/Axioms.lean",
+    "sha256": "c7350aff47aa5457ba354cfc7b783fdad63a9ef4bb18e9c7bf911947edab9e0d",
+    "frozen": "cbd2ec5793006fd1279121c5104bfdbdc065ea40"
+  },
+  {
+    "path": "tools/Tools/Semantics.lean",
+    "sha256": "74cec91a9facf2a1f78553337b689efc737b2acb92cbf2a1f63057d0a52f5ab0",
+    "frozen": "cbd2ec5793006fd1279121c5104bfdbdc065ea40"
+  },
+  {
+    "path": "tools/Tools/SemanticsRegistry.lean",
+    "sha256": "c3464243f13bf41b792490d50f26e89e2c8d612c8cdc14531140b575b28e53e5",
+    "frozen": "cbd2ec5793006fd1279121c5104bfdbdc065ea40"
+  },
+  {
+    "path": "src/Effect4/Laws/Machine/Refinement.lean",
+    "sha256": "9183fdd7e13b3492d65d5719774282c927a340dbf61c7adb664534aca85643af",
+    "frozen": "cbd2ec5793006fd1279121c5104bfdbdc065ea40"
+  }
+]

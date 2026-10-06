@@ -1,0 +1,43 @@
+{
+  "frozen_head": "cbd2ec5793006fd1279121c5104bfdbdc065ea40",
+  "scope": "research only; 3 uncompiled claim connections; live card follow-up separate",
+  "source_count": 30,
+  "source_hashes_verified": true,
+  "live_snapshot_current": [
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+      "matches_current": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "matches_current": true
+    }
+  ],
+  "pure_python_checks": 73,
+  "lean_build_compiler_runtime_runs": 0,
+  "repository_edits": false,
+  "new_runtime_or_journal": false,
+  "files": [
+    {
+      "path": "report.md",
+      "sha256": "dba17334b4ee786e7a9476f12e4ab22e860ed2b869aae7d4d5b0a9ecec05e1bd",
+      "bytes": 19689
+    },
+    {
+      "path": "source-hashes.json",
+      "sha256": "5112552f4d3b623e56a84f13a7e06779a16e14f09337165bcd00de15d39cf1b7",
+      "bytes": 8256
+    },
+    {
+      "path": "probe.py",
+      "sha256": "f737b0708eea18e4708a26e1baab9f831640ab61452c58a9de7bb4a7ba1fda0b",
+      "bytes": 2360
+    },
+    {
+      "path": "probe-results.json",
+      "sha256": "d7a4432bc9f53e2e919f6cd4c379491db1cd7d9a8226a4d4ae8d54c589aae2fe",
+      "bytes": 4908
+    }
+  ],
+  "history_tree_addendum": "Uses existing List Command/Run; proposed play_journal helper and read-only atPrefix consequence; no theorem transferred from literature."
+}

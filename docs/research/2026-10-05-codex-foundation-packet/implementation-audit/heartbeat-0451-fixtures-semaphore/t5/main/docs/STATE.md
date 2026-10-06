@@ -144,20 +144,6 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
 
   The design of waiting, tasks, masks and the atomic frontier comes before the Queue. The clock
   slice and the release audit run beside these.
-- **The module procedure** (the owner's direction of 2026-10-05, relayed by Codex in three
-  messages). The Queue is the first worked example of a factory of composed modules.
-  - The contract cards of Semaphore, Pool and Cache are prepared now. They do not wait for
-    step 4 of the order.
-  - Every module follows one procedure, and its repeated parts are generated or applied.
-  - Every receipt accounts for the requirements R1 to R13. No module slice closes one by
-    association.
-  - Row 233's order of implementation stands until the owner changes it.
-
-  [The plan](research/2026-10-05-claude-lead/module-factory-plan.md) holds the procedure, the
-  card's template, the order and the accounting.
-  [Semaphore's card](research/2026-10-05-claude-lead/module-cards/semaphore.md) is written
-  from the pinned source. It proposes a first profile and puts four choices to the owner.
-  Pool's and Cache's cards are not written.
 
 Where to read:
 
@@ -307,9 +293,8 @@ Landed later on 2026-10-05:
   The scenarios R1 and R4 run on the generated engine on both carriers
   (`ocaml/engine/test/queue/`). `Test/Program/QueueFaces.lean` pins what prints and reads
   back. Each of the eight scenario modules prints and reads back since seat T5's second step.
-  No Queue program runs on a host yet. Each of the six printed steps type-checks on the
-  target, in the truth lane (`harness/truth/queue-steps.typecheck.ts`). A scenario's whole
-  module is type-checked by no lane yet.
+  No Queue program runs on a host yet. No printed Queue module type-checks on the target
+  until the literal repair lands (row 256).
 - **`Deferred.make<A, E>()` prints from the operation and reads back** (`9600fa63`, step a of
   seat T5's part B; rows 212 and 251). An operation's type arguments are data of the
   operation: the printer prints each through the type printer, and Lean's reader,
@@ -324,19 +309,6 @@ Landed later on 2026-10-05:
   through the same reader. p1's program, the timeout scenario's fetch and the Queue's eight
   scenario modules read back. `Test/Dogfood/Scenario/Faces.lean` pins that each of the four
   scenarios' programs prints and reads back.
-- **The literal rule of `pair` and `tuple` is landed, and seat T5 is finished** (`cbd2ec57`,
-  `1eadc78b`, `e9a3b1af`; row 256; [the receipt](research/2026-10-05-seat-T5-receipt.md)).
-  The two helpers widen a number or a Boolean type in an immediate slot, and a string literal
-  keeps its literal type. Six tuple pins moved, and the three registered differences are
-  positive controls. Two truth programs are new: the rate limiter's request and a gate at
-  `Deferred<void, never>`. The lane agrees on 43 programs, and p4 no longer waits on R4. The
-  truth runner's import header is derived from the generated atom names. The coordinator
-  promoted the corpus lane's results and the build ledger. The baseline policy names the 21
-  corpus rows that moved in one column each. No verdict column moved.
-- **Two tooling repairs** (`e6d63ddb`, `db54a849`, `d5b4d9cb`, `34e9423a`). The engine's
-  fixtures are a generated group: a fixture that changes alone is written again, and the check
-  form refuses an output that aliases a lane and a fixture folder with no writer. The plan's
-  dependency walk gives no answer from an unfinished stack.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
@@ -407,7 +379,8 @@ Open at this landing:
     The four programs print and read back (`Test/Dogfood/Scenario/Faces.lean`). The keyed
     recorder needs one extension, an operation that completes after its cancellation.
     [Its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md) is written ahead.
-    It goes to the next free seat;
+    It goes to the next free seat after the literal repair, which lets the shop's module
+    type-check on the target;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
@@ -422,24 +395,33 @@ Open at this landing:
     from Lean, and `make check-gen` refuses a committed fixture that Lean does not write;
   - two controls are not written: a cleanup replayed under one registration, and a timer that
     fires inside a masked region;
-- the faces of an operation's type arguments, part B of the state plan's T5, are landed, and
-  seat T5 is finished ([the receipt](research/2026-10-05-seat-T5-receipt.md)). One checked
-  type reader serves an operation's type arguments and a loop's stated cursor type, on the
-  readable types. Open from that slice:
-  - a list fold's stated accumulator type is printed and not read (the receipt's item 11.2);
-  - `Ref.make<A>` needs an appended constructor (row 210). It is a slice of its own after the
-    Queue's path, and the receipt names the constructor to append and the one to retire;
-  - the receipt proposes ten decisions rows and one text for R4's row of the system map, for
-    the owner;
-  - `harness/tsdiag/run-tsdiag.mjs` keeps its own hand copy of the import list;
+- the faces of an operation's type arguments, part B of the state plan's T5, are with seat T5
+  (branch `seat/t5`; [the brief](research/2026-10-05-claude-lead/briefs/seat-t5-brief.md)).
+  Part A is merged. A service error stopped the seat at the start of part B, and it started
+  again the same evening. Part B reads a type with one checked reader: the class reader's type
+  reader with an arm for `never`, kept only when the type printer prints the answer back. Its
+  order follows the Queue: `Deferred.make<A, E>()` first, then a loop's stated cursor type,
+  then a fold's stated accumulator type. The Queue's printed form needs the first two. Both
+  are merged (`9600fa63`, `98b56e62`). The seat is on the literal repair of row 256. Then
+  come a truth program with a `Deferred.make<void, never>` gate, its documents and its
+  receipt. The fold's stated type comes last, and only if it is cheap. `Ref.make<A>` is not in part
+  B: it needs an appended constructor (row 210), and the Queue's cell is a declared record
+  that does not need it. It is a slice of its own after the Queue's path;
+- on the target, `pair` and `tuple` keep the literal type of a number and of a boolean, where
+  Lean types `nat` and `bool`. So the Queue's take step and the rate limiter's request do not
+  type-check under tsgo 7.0.0-dev.20260629.1, and six of the eight printed steps do (seat
+  T5's measure). The repair is decided and not landed (row 256: the coordinator's decision
+  after Codex's probe, and the owner may undo it). Both helpers widen a number or a Boolean
+  type in an immediate slot and keep a string literal. Six pins of
+  `harness/truth/tuples.typecheck.ts` move. Seat T5 lands it next;
 - seat FOLD left three points for the owner or for T5
   ([its receipt](research/2026-10-05-seat-FOLD-receipt.md), item 9): the argument order of
   `take` and `drop`, the typing of `sameHandle` by the raw head, and a list of number literals
   on the target. Seat T5's part A repaired the third: `cons` has a second type parameter, and
   its ratification is among the seat's proposals;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
-  (rows 244 to 246). Seat MASK has its slice since 2026-10-06 (branch `seat/mask`;
-  [the brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md));
+  (rows 244 to 246). Its slice follows T5, and
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md) is written ahead;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)
@@ -501,11 +483,10 @@ Open at this landing:
   - one host adapter, `kvGet`, generated from explicit contract data.
 
   The last three have no seat and no date;
-- Codex's five reviews of 2026-10-05 and 2026-10-06 are filed, each with the owner's relay
-  as pasted (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/`,
-  with `next-proof-review/`, `module-factory-review/`, `heartbeat-0451-fixtures-semaphore/`
-  and `graph-tree-research/` beside it). Their evidence is source reading, compiler probes
-  and finite controls, with no Lean run:
+- Codex's two reviews of 2026-10-05 are filed, each with the owner's relay as pasted
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/` and
+  `next-proof-review/` beside it). Their evidence is source reading, compiler probes and
+  finite controls, with no Lean run:
   - the first probes the literal repair and the typing of the Queue's steps (rows 256 and
     257);
   - the second orders the next proofs. Seat QTYPES has the shared typing rules and the
@@ -513,18 +494,8 @@ Open at this landing:
     freshness joins the generation graph. `Routing.infrastructure_escapes` is the first
     scenario goal to prove. One stale reading is corrected: the admission gap is closed, and
     `Api.Built` retains a program's admission;
-  - the third asks for breadth and a module factory, and it keeps R1 to R13 on the plan. It
-    proposes first profiles for Semaphore, Pool and Cache, which no one has ruled;
-  - the fourth found two gaps in the fixtures group, which are repaired. It also found one
-    wrong reading in Semaphore's card: a resumed waiter runs inside the wake's walk. The card
-    is revised;
-  - the fifth proposes one foundational slice with no seat yet: well-formed layer references
-    give an expansion with no reference left, at the existing bound. Its claim would be
-    `reference-expansion-complete`, under `initial-algebras-folds`, for R5 and R8. It also
-    proposes cut laws for a journal's consumed prefix, for the scenarios' tapes. Both are
-    candidates when a seat is free, beside the module slices;
-  - the owner's guidance came with all three. Automate the repeated checks. Keep a question
-    for the owner to a change of meaning, of the supported domain or of a representation;
+  - the owner's guidance came with both. Automate the repeated checks. Keep a question for
+    the owner to a change of meaning, of the supported domain or of a representation;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

@@ -1,0 +1,11 @@
+ M Makefile
+ M harness/truth/prelude-atoms.gen.ts
+ M harness/truth/run-truth.ts
+ M harness/truth/term-rows.typecheck.ts
+ M harness/truth/tsconfig.json
+ M harness/truth/tuples.typecheck.ts
+ M scripts/check-truth.py
+ M src/Effect4/Machine/Term.lean
+ M src/Effect4/Program/NativeAtom.lean
+ M tools/Effect4Gen/PreludeAtoms.lean
+?? harness/truth/literals.typecheck.ts

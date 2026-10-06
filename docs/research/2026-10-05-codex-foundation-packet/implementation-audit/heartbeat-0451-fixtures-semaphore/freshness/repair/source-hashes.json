@@ -1,0 +1,16 @@
+{
+  "base_head": "6a8ee9c2b11035d79d373d7717add33b9439e22b",
+  "status": "active working-tree snapshot; not a commit receipt",
+  "files": [
+    {
+      "path": "scripts/generate.py",
+      "sha256": "dca73943c07430f216c32be80227f95875223fc7a4e98779bddf22eecdbcc312",
+      "bytes": 15240
+    },
+    {
+      "path": "Makefile",
+      "sha256": "360543b4176369ddbd9e43763331dcad7f393ec846ff6297f61a47b9ccfe545f",
+      "bytes": 48431
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "reviewed_head": "e6d63ddb440b5d171a9699b10182083ba54551d6",
+  "reviewed_base": "a02126a85051ab7ec0be0a3bd30471feb18fbdd3",
+  "source_snapshots_verified": 18,
+  "independent_checks": {
+    "kind": "actual extracted Python functions; all command requests mocked",
+    "controls": 9,
+    "all_expected_results": true,
+    "build_or_compiler_subprocesses": 0
+  },
+  "retained_coordinator_evidence": "commit message only; no independent Lean or Make rerun",
+  "repository_writes": false,
+  "new_findings": [
+    "check output alias changes repository fixture bytes and accepts",
+    "writerless fixture folders are not checked"
+  ],
+  "files": [
+    {
+      "path": "report.md",
+      "sha256": "5a86e3c6cdb1ec281c8fe1262e1f36d5365531f69c84fa75c839d79ec38505ff",
+      "bytes": 7028
+    },
+    {
+      "path": "source-hashes.json",
+      "sha256": "3275ff751105cb054dcc25f247ec0849f8c711145e5be36048d6a3f8b44f4bc8",
+      "bytes": 3014
+    },
+    {
+      "path": "scoped.diff",
+      "sha256": "b884b844847832c952d7d74c4e070dd551e1a328612fdc0b2f5c9960ad710458",
+      "bytes": 39927
+    },
+    {
+      "path": "commit-receipt.txt",
+      "sha256": "985a485162cbdebaaa85ee94891706085c45a6144d378033d3ed4d617ccccd7a",
+      "bytes": 2267
+    },
+    {
+      "path": "probe.py",
+      "sha256": "e571c368b2d0c0d251e6d3d1e7d0435bf484c45613efa6877b2bbf939c4133dc",
+      "bytes": 4594
+    },
+    {
+      "path": "probe-results.json",
+      "sha256": "c6bfcd3cb6f9c9dfeb1b34fecdd8f2903891766638a4c4d25099601944167d23",
+      "bytes": 11817
+    }
+  ]
+}

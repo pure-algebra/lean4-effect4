@@ -1,0 +1,43 @@
+{
+  "kind": "finite Python mirror",
+  "controls": [
+    {
+      "control": "nearest_positive_sufficient",
+      "passed": true
+    },
+    {
+      "control": "nearest_bounded_cut_has_pending",
+      "passed": true
+    },
+    {
+      "control": "nearest_current_return_discards_pending",
+      "passed": true
+    },
+    {
+      "control": "nearest_shared_descendant_control",
+      "passed": true
+    },
+    {
+      "control": "renderer_distinct_node_bound",
+      "passed": true
+    },
+    {
+      "control": "renderer_reports_exhaustion",
+      "passed": true
+    },
+    {
+      "control": "renderer_cycle_terminates",
+      "passed": true
+    },
+    {
+      "control": "stop_is_cut_not_full_dependency",
+      "passed": true
+    }
+  ],
+  "excluded": [
+    "Lean execution",
+    "kernel proof",
+    "current report exhaustion"
+  ],
+  "finding": "Plan.walk discards unfinished stack; renderer already retains unfinished queue"
+}

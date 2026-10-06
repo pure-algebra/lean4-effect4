@@ -1,0 +1,45 @@
+{
+  "evidence": "source-only draft guidance",
+  "source_checks": [
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+      "snapshot_verified": true,
+      "live_unchanged": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+      "snapshot_verified": true,
+      "live_unchanged": true
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+      "snapshot_verified": true,
+      "live_unchanged": true
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+      "snapshot_verified": true,
+      "live_unchanged": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/waiting-design.md",
+      "snapshot_verified": true,
+      "live_unchanged": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Denote.lean",
+      "snapshot_verified": true,
+      "live_unchanged": true
+    }
+  ],
+  "report_sha256": "560d97ee370b10b687453549691add4fdddb26486d1cff5c7a8c393ddd9fc0a6",
+  "no_native_probe": true,
+  "no_lean_compiler_build_generator": true,
+  "repo_edits": false,
+  "guidance": [
+    "protected example must separate inline retry from yielding retry",
+    "whole-walk atomic selection does not transcribe live interleaving",
+    "release exactly once needs completed-cleanup or retained-obligation premises"
+  ],
+  "landed_defect_claim": false
+}

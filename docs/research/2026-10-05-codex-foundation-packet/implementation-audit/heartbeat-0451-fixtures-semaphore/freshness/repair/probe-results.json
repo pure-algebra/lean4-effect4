@@ -1,0 +1,470 @@
+{
+  "source": "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/sources/scripts/generate.py",
+  "method": "Extracted unchanged repaired install/fixture_lanes/fixtures AST; all run requests mocked. No subprocesses.",
+  "count": 15,
+  "results": [
+    {
+      "name": "unchanged accepts and preserves",
+      "checking": true,
+      "output_mode": "separate",
+      "error": null,
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-c2sail0e/output/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-c2sail0e/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "changed known fixture refuses",
+      "checking": true,
+      "output_mode": "separate",
+      "error": "ocaml/engine/test/queue/queue.txt is not what Lean emits",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-tadbiozz/output/ocaml/engine/test/queue"
+        ]
+      ]
+    },
+    {
+      "name": "missing known fixture refuses",
+      "checking": true,
+      "output_mode": "separate",
+      "error": "ocaml/engine/test/queue/queue.txt is not what Lean emits",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-hq0x9ld9/output/ocaml/engine/test/queue"
+        ]
+      ]
+    },
+    {
+      "name": "extra known-lane fixture refuses",
+      "checking": true,
+      "output_mode": "separate",
+      "error": "ocaml/engine/test/queue: no writer writes extra.txt",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/extra.txt": "45585452410a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/extra.txt": "45585452410a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-4d4lxf3p/output/ocaml/engine/test/queue"
+        ]
+      ]
+    },
+    {
+      "name": "write mode repairs known fixture",
+      "checking": false,
+      "output_mode": "separate",
+      "error": null,
+      "repository_bytes_changed": true,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-k06fwqnb/output/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-k06fwqnb/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "writerless fixture folder refuses before commands",
+      "checking": true,
+      "output_mode": "separate",
+      "error": "text fixtures in a folder with no writer (write.lean): ocaml/engine/test/orphan",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a",
+        "ocaml/engine/test/orphan/retained.txt": "4f525048414e0a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a",
+        "ocaml/engine/test/orphan/retained.txt": "4f525048414e0a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "removed writer refuses before commands",
+      "checking": true,
+      "output_mode": "separate",
+      "error": "text fixtures in a folder with no writer (write.lean): ocaml/engine/test/queue",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "root alias refuses without changes or commands",
+      "checking": true,
+      "output_mode": "self",
+      "error": "ocaml/engine/test/queue: output aliases repository destination",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "root alias extra fixture remains on refusal",
+      "checking": true,
+      "output_mode": "self",
+      "error": "ocaml/engine/test/queue: output aliases repository destination",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/extra.txt": "45585452410a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/extra.txt": "45585452410a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "root symlink alias refuses without changes or commands",
+      "checking": true,
+      "output_mode": "symlink_root",
+      "error": "ocaml/engine/test/queue: output aliases repository destination",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "lane symlink alias refuses without changes or commands",
+      "checking": true,
+      "output_mode": "symlink_lane",
+      "error": "ocaml/engine/test/queue: output aliases repository destination",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "second-lane symlink preflight refuses before first-lane commands",
+      "checking": true,
+      "output_mode": "symlink_second_lane",
+      "error": "ocaml/engine/test/scenarios: output aliases repository destination",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "symlink to independent scratch is accepted",
+      "checking": true,
+      "output_mode": "symlink_scratch",
+      "error": null,
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-qoovgifn/output/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-qoovgifn/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    },
+    {
+      "name": "write mode self-alias also refuses before commands",
+      "checking": false,
+      "output_mode": "self",
+      "error": "ocaml/engine/test/queue: output aliases repository destination",
+      "repository_bytes_changed": false,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "57524f4e472051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": []
+    },
+    {
+      "name": "cross-lane alias modifies repository before later refusal",
+      "checking": true,
+      "output_mode": "cross_lane",
+      "error": "ocaml/engine/test/scenarios: no writer writes queue.txt",
+      "repository_bytes_changed": true,
+      "before": {
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/scenarios/routing.txt": "474f4f4420524f5554494e470a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "after": {
+        "ocaml/engine/test/scenarios/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/scenarios/write.lean": "696d706f727420546573742e446f67666f6f642e5363656e6172696f2e546170650a",
+        "ocaml/engine/test/queue/queue.txt": "474f4f442051554555450a",
+        "ocaml/engine/test/queue/write.lean": "696d706f727420546573742e50726f6772616d2e51756575655363656e6172696f730a"
+      },
+      "mocked_requests_only": [
+        [
+          "lake",
+          "build",
+          "Test.Program.QueueScenarios"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/queue/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-xhg907d_/output/ocaml/engine/test/queue"
+        ],
+        [
+          "lake",
+          "build",
+          "Test.Dogfood.Scenario.Tape"
+        ],
+        [
+          "lake",
+          "env",
+          "lean",
+          "-M4096",
+          "--run",
+          "ocaml/engine/test/scenarios/write.lean",
+          "/private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-06T045135Z/freshness/repair/repair-checker-xhg907d_/output/ocaml/engine/test/scenarios"
+        ]
+      ]
+    }
+  ]
+}

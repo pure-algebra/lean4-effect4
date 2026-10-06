@@ -1,0 +1,348 @@
+diff --git a/Makefile b/Makefile
+index e5385f11..867d4bfb 100644
+--- a/Makefile
++++ b/Makefile
+@@ -457,7 +457,7 @@ $(CHK)/ts-reader: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) $(TR
+ # and the inventory guard (every generated atom has a prelude case that runs). Named one by
+ # one: `bun test harness/truth` would also pick up the lane's work directories.
+ TRUTH_HOST_TESTS := harness/truth/records.test.ts harness/truth/catch-if.test.ts harness/truth/native-queries.test.ts harness/truth/prelude-inventory.test.ts
+-$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts \
++$(CHK)/truth: $(CORE) $(LAWS) $(TRUTH_SOURCES) $(TRUTH_GENERATED) $(wildcard harness/truth/session/*.ts) scripts/check-truth.py scripts/lib/truth_host.py harness/truth/tsconfig.json harness/truth/records.typecheck.ts harness/truth/tuples.typecheck.ts harness/truth/tuples.ts harness/truth/folds.typecheck.ts harness/truth/term-rows.typecheck.ts harness/truth/literals.typecheck.ts \
+     $(TRUTH_HOST_TESTS) harness/truth/prelude-inventory.ts ts/eff/profile.gen.ts | harness/truth/node_modules
+ 	$(BUN) test $(TRUTH_HOST_TESTS)
+ 	$(PY) scripts/check-truth.py
+diff --git a/harness/truth/prelude-atoms.gen.ts b/harness/truth/prelude-atoms.gen.ts
+index 11197f6f..b787f0f4 100644
+--- a/harness/truth/prelude-atoms.gen.ts
++++ b/harness/truth/prelude-atoms.gen.ts
+@@ -13,6 +13,18 @@ import { Cause, Deferred, Exit, Option, Ref } from "effect"
+ const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<E> =>
+   Exit.isExit(input) ? Exit.isFailure(input) ? input.cause : Cause.empty : input
+ 
++/** The literal rule of `pair` and `tuple` on the target (decisions row 256, inside DI-55's
++ * ruling). A number or a Boolean type in an immediate slot widens to `number` or `boolean`,
++ * as Lean's literal rule types a number or a Boolean literal (`litArgTy`,
++ * `src/Effect4/Program/Typing/Rules.lean`). A string literal keeps its literal type. Every
++ * other argument keeps its type: no record, list, supplied tuple or handle is rewritten, and
++ * nothing is recursive.
++ *
++ * The consequence. A number or Boolean singleton type, or a brand, in a direct slot is lost
++ * on the target. A Boolean tuple tag no longer discriminates. These helpers preserve no
++ * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */
++type Wide<T> = T extends number ? number : T extends boolean ? boolean : T
++
+ /**
+  * `"succ", [nat n] => nat (n + 1)`
+  */
+@@ -53,9 +65,11 @@ export const eq = (a: number | string, b: number | string): boolean => a === b
+  * The type parameters are `const` (DI-55, DI-15's literal rule, part 4 2026-09-12): a string
+  * literal argument keeps its literal type, so `pair("A", m)` is `readonly ["A", string]` and
+  * `pair("A", "m")` is `readonly ["A", "m"]`, exactly what `NativeAtom.typeOf .pair` answers
+- * under `litArgTy`; a `string` variable stays `string`.
++ * under `litArgTy`; a `string` variable stays `string`. A number or a Boolean in a slot
++ * widens (`Wide`, decisions row 256): `pair(true, 0)` is `readonly [boolean, number]`, as `litArgTy`
++ * types the two literals.
+  */
+-export const pair = <const A, const B>(a: A, b: B): readonly [A, B] => [a, b]
++export const pair = <const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] => [a, b] as readonly [Wide<A>, Wide<B>]
+ 
+ /**
+  * `"fst", [exitCons a _] => a`
+@@ -243,8 +257,10 @@ export const mapFromEntries = <A = never>(entries: ReadonlyArray<readonly [strin
+ 
+ /**
+  * Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary.
++ * A string literal in a slot keeps its literal type, and a number or a Boolean widens (`Wide`,
++ * decisions row 256): `tuple(7, "x", true)` is `readonly [number, "x", boolean]`.
+  */
+-export const tuple = <const A extends readonly unknown[]>(...items: A): A => items
++export const tuple = <const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } => items as { readonly [I in keyof A]: Wide<A[I]> }
+ 
+ /**
+  * `"take", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a natural count
+diff --git a/harness/truth/run-truth.ts b/harness/truth/run-truth.ts
+index 708402da..380fdc02 100644
+--- a/harness/truth/run-truth.ts
++++ b/harness/truth/run-truth.ts
+@@ -173,11 +173,27 @@ const selfTest = (): string[] => {
+ }
+ 
+ // ---- generation ---------------------------------------------------------------------
++/** The prelude's printed heads that are no atom: the adapters of the package rows, the record
++ * and tuple helpers, the list fold, and `select`'s three heads (`helperNames` of
++ * `Codegen/Record.lean`, `Codegen/Tuple.lean` and `Codegen/ListFold.lean`; `Head.optionCase`,
++ * `Head.caseTag` and `Head.caseTagR`, `Codegen/PrintLeaf.lean`). A new printed head joins this
++ * list. A new atom does not. */
++const preludeHelpers: ReadonlyArray<string> = [
++  "Host", "Sql", "Kv", "recordValue", "recordRequired", "recordOptional", "recordSet", "tupleAt", "fold",
++  "optionCase", "caseTag", "caseTagR",
++]
++
++/** A generated module's header: every atom of the generated profile (`atomNames`,
++ * `ts/eff/profile.gen.ts`, in the alphabet's order), then the helpers above. Each module
++ * imports every name, used or not, so a new atom needs no edit here. Until seat T5's part B
++ * this list was written by hand: it lacked twelve atoms and four helpers, and a printed module
++ * that used one of them (a `select`, a tuple projection, `take`, `drop`, `sameHandle`) could be
++ * no truth program. */
+ const importHeader = [
+   "// GENERATED by harness/truth/run-truth.ts from harness/truth/corpus.json — do not edit.",
+   "// Regenerate: make gen-truth",
+   "import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from \"effect\"",
+-  "import { succ, pred, isZero, not, add, lt, eq, pair, fst, snd, strings, causeIsFail, causeError, causeIsDie, causeIsInterrupt, or, and, tagIs, isSome, getOrElse, Host, Sql, Kv, recordValue, recordRequired, recordOptional, recordSet, tuple, ite, some, none, mul, get, length, append, nil, cons, sub, fold } from \"../prelude.ts\"",
++  `import { ${[...atomNames, ...preludeHelpers].join(", ")} } from "../prelude.ts"`,
+   ""
+ ].join("\n")
+ 
+diff --git a/harness/truth/term-rows.typecheck.ts b/harness/truth/term-rows.typecheck.ts
+index 95242ab4..2b7c8652 100644
+--- a/harness/truth/term-rows.typecheck.ts
++++ b/harness/truth/term-rows.typecheck.ts
+@@ -108,33 +108,41 @@ type Steps = {
+ const withdrawTake = (a0: Ref.Ref<Steps>, a1: Hint): Effect.Effect<ReadonlyArray<Taker>> =>
+   Ref.modify(a0, (a2) => pair(ite(isZero(length(recordRequired<"msgs">("msgs")(a2))), take(fold(recordRequired<"takers">("takers")(a2), take(recordRequired<"takers">("takers")(a2), 0), (a3, a4) => ite(sameHandle(recordRequired<"id">("id")(a4), a1), a3, append(a3, cons(a4, nil())))), 0), take(fold(recordRequired<"takers">("takers")(a2), take(recordRequired<"takers">("takers")(a2), 0), (a3, a4) => ite(sameHandle(recordRequired<"id">("id")(a4), a1), a3, append(a3, cons(a4, nil())))), 1)), recordSet<"takers">("takers")(a2)(fold(recordRequired<"takers">("takers")(a2), take(recordRequired<"takers">("takers")(a2), 0), (a3, a4) => ite(sameHandle(recordRequired<"id">("id")(a4), a1), a3, append(a3, cons(a4, nil())))))))
+ 
+-// ---- a registered difference: a boolean or a number literal at `pair` and `tuple` ----
++// ---- a Boolean or a number literal at `pair` and `tuple` (decisions row 256) ----
+ 
+ // `pair` and `tuple` have `const` type parameters (DI-55), so that a string literal keeps its
+-// literal type, as Lean's literal rule types it. The same modifier keeps a boolean and a number
+-// literal, where Lean types `bool` and `nat`. So two arms that Lean types alike can be two
+-// target types, and the compiler finds no one type for them. The three lines below are Lean's
+-// own text, or cut from it, and each is refused today. They are pins of a known difference, not
+-// of a wanted answer: a repair turns each directive into an error, and the pin then moves
+-// (seat T5's receipt, `docs/research/2026-10-05-seat-T5-receipt.md`, the registered difference).
++// literal type, as Lean's literal rule types it (`litArgTy`). Until the repair of decisions row
++// 256 the same modifier kept a Boolean and a number literal too, where Lean types `bool` and
++// `nat`. Two arms that Lean types alike were then two target types, and the compiler refused
++// the first three lines below: they were this file's pins of a registered difference. The two
++// helpers now widen a number or a Boolean in an immediate slot (`Wide`,
++// `prelude-atoms.gen.ts`), and each line type-checks. The texts are Lean's own, or cut from
++// them (`Test/Codegen/TermRows.lean`, section 4). The rule's own controls and its refusals are
++// in `literals.typecheck.ts`.
+ 
+ type Window = { readonly admitted: number; readonly rejected: number; readonly used: number }
+ // The rate limiter's request (`Test/Dogfood/P4RateLimiter.lean`, `decision`). One arm pairs
+ // `true` with the window and the other `false`: `ite` takes one type for both.
+ const request = (a0: Ref.Ref<Window>): Effect.Effect<boolean> =>
+-  // @ts-expect-error `readonly [false, …]` is no `readonly [true, …]`.
+   Ref.modify(a0, (a1) => ite(lt(recordRequired<"used">("used")(a1), 3), pair(true, recordSet<"admitted">("admitted")(recordSet<"used">("used")(a1)(succ(recordRequired<"used">("used")(a1))))(succ(recordRequired<"admitted">("admitted")(a1)))), pair(false, recordSet<"rejected">("rejected")(a1)(succ(recordRequired<"rejected">("rejected")(a1))))))
+ // The probe's first take attempt (`QueueSkeleton.lean`, `tryTake`). One arm answers the
+-// position `0`, the other a length: `readonly [Option<never>, number, …]` is no
+-// `readonly [Option<number>, 0, …]`.
++// position `0`, the other a length: both are numbers.
+ const tryTake = (a0: Ref.Ref<Skeleton>, a1: Hint): Effect.Effect<readonly [Option.Option<number>, number, Option.Option<Hint>]> =>
+-  // @ts-expect-error The two arms' tuples differ at the literal `0`.
+   Ref.modify(a0, (a2) => ite(and(lt(recordRequired<"mHead">("mHead")(a2), length(recordRequired<"msgs">("msgs")(a2))), not(lt(recordRequired<"tHead">("tHead")(a2), length(recordRequired<"takers">("takers")(a2))))), pair(tuple(get(recordRequired<"msgs">("msgs")(a2), recordRequired<"mHead">("mHead")(a2)), 0, ite(lt(recordRequired<"mHead">("mHead")(recordSet<"mHead">("mHead")(a2)(succ(recordRequired<"mHead">("mHead")(a2)))), length(recordRequired<"msgs">("msgs")(recordSet<"mHead">("mHead")(a2)(succ(recordRequired<"mHead">("mHead")(a2)))))), get(recordRequired<"takers">("takers")(recordSet<"mHead">("mHead")(a2)(succ(recordRequired<"mHead">("mHead")(a2)))), recordRequired<"tHead">("tHead")(recordSet<"mHead">("mHead")(a2)(succ(recordRequired<"mHead">("mHead")(a2))))), none())), recordSet<"mHead">("mHead")(a2)(succ(recordRequired<"mHead">("mHead")(a2)))), pair(tuple(none(), length(recordRequired<"takers">("takers")(a2)), none()), recordSet<"takers">("takers")(a2)(append(recordRequired<"takers">("takers")(a2), cons(a1, nil()))))))
+ // Cut from the real take step (`QueueSteps.lean`, `accept`): a fold whose accumulator starts
+ // with the flag `false` and whose body answers `true`. The accumulator's type is the initial
+-// tuple's, `readonly [0, false]`.
+-// @ts-expect-error `readonly [number, true]` is no `readonly [0, false]`.
+-const flagged = fold(cons(1, nil()), tuple(0, false), (a0, a1) => tuple(add(tupleAt<"0">("0")(a0), a1), true))
++// tuple's, a number and a Boolean.
++const flagged: readonly [number, boolean] =
++  fold(cons(1, nil()), tuple(0, false), (a0, a1) => tuple(add(tupleAt<"0">("0")(a0), a1), true))
++// The smallest choice between two pairs: one arm pairs `true`, the other `false`.
++declare const flag: boolean
++const choice: readonly [boolean, number] = ite(flag, pair(true, 0), pair(false, 0))
++// Red controls. Each wider answer above would also hold of a helper that kept one arm's literal
++// type, so the literal's type is refused by name.
++// @ts-expect-error The fold's flag is a Boolean, not the initial literal `false`.
++const stuckFlag: readonly [number, false] = flagged
++// @ts-expect-error The choice's flag is a Boolean, not the first arm's literal `true`.
++const stuckChoice: readonly [true, number] = choice
+ 
+ // ---- a list of number literals is a list of numbers (seat T5's second choice) ----
+ 
+@@ -160,7 +168,7 @@ const unrelated: ReadonlyArray<number | string> = cons(1, cons("a", nil()))
+ 
+ void [
+   update, getAndUpdate, updateAndGet, updateSome, getAndUpdateSome, updateSomeAndGet, modify, modifySome,
+-  captured, folded, statedFold, offerStep, withdrawTake, request, tryTake, flagged,
++  captured, folded, statedFold, offerStep, withdrawTake, request, tryTake, flagged, choice, stuckFlag, stuckChoice,
+   lists, joined, second, stored, literal, numbers, unrelated,
+   isZero, length, recordRequired, recordSet, sameHandle, take, and, isSome
+ ]
+diff --git a/harness/truth/tsconfig.json b/harness/truth/tsconfig.json
+index 7f2039ae..81cf9810 100644
+--- a/harness/truth/tsconfig.json
++++ b/harness/truth/tsconfig.json
+@@ -27,6 +27,7 @@
+     "tuples.typecheck.ts",
+     "folds.typecheck.ts",
+     "term-rows.typecheck.ts",
++    "literals.typecheck.ts",
+     "select-controls.ts",
+     "generated",
+     "run-truth.ts",
+diff --git a/harness/truth/tuples.typecheck.ts b/harness/truth/tuples.typecheck.ts
+index 62ffa5df..e0ca18a6 100644
+--- a/harness/truth/tuples.typecheck.ts
++++ b/harness/truth/tuples.typecheck.ts
+@@ -1,14 +1,24 @@
+ import { tuple } from "./prelude-atoms.gen.ts"
+ import { tupleAt } from "./tuples.ts"
+ 
++// A number or a Boolean in an immediate slot of `tuple` widens, and a string literal keeps its
++// literal type (decisions row 256; `literals.typecheck.ts` holds the rule's controls). Until
++// that repair six pins below read `7` and `true`: `singleton`, `pair`, `larger`, `first`,
++// `third` and `nested`.
+ const empty: readonly [] = tuple()
+-const singleton: readonly [7] = tuple(7)
+-const pair: readonly [7, "x"] = tuple(7, "x")
+-const larger: readonly [7, "x", true] = tuple(7, "x", true)
+-const first: 7 = tupleAt<"0">("0")(pair)
++const singleton: readonly [number] = tuple(7)
++const pair: readonly [number, "x"] = tuple(7, "x")
++const larger: readonly [number, "x", boolean] = tuple(7, "x", true)
++const first: number = tupleAt<"0">("0")(pair)
+ const second: "x" = tupleAt<"1">("1")(pair)
+-const third: true = tupleAt<"2">("2")(larger)
+-const nested: 7 = tupleAt<"0">("0")(tupleAt<"0">("0")(tuple(pair)))
++const third: boolean = tupleAt<"2">("2")(larger)
++const nested: number = tupleAt<"0">("0")(tupleAt<"0">("0")(tuple(pair)))
++// The earlier pins of `first` and `third`, as refusals on the constructor's own answer: a wider
++// pin alone would also hold of a helper that kept the literal's type.
++// @ts-expect-error The projection of a number slot is `number`, not the literal `7`.
++const literalFirst: 7 = tupleAt<"0">("0")(tuple(7, "x"))
++// @ts-expect-error The projection of a Boolean slot is `boolean`, not the literal `true`.
++const literalThird: true = tupleAt<"2">("2")(tuple(7, "x", true))
+ const unionRead = (value: readonly [7, "x"] | readonly [true, 9]): 7 | true => tupleAt<"0">("0")(value)
+ const impossible = (value: never): never => tupleAt<"123456789012345678901234567890">("123456789012345678901234567890")(value)
+ const nestedImpossible = (value: never): never => tupleAt<"0">("0")(tupleAt<"1">("1")(value))
+@@ -27,4 +37,4 @@ tupleAt<"0">("0")({ "0": 7 })
+ tupleAt<"0">("1")(pair)
+ // @ts-expect-error Every union alternative must contain the requested position.
+ const unionMissing = (value: readonly [7] | readonly []): 7 => tupleAt<"0">("0")(value)
+-void [first, second, third, nested, unionRead, impossible, nestedImpossible, unionMissing]
++void [first, second, third, nested, literalFirst, literalThird, unionRead, impossible, nestedImpossible, unionMissing]
+diff --git a/scripts/check-truth.py b/scripts/check-truth.py
+index f38f5a09..cc5a6ff3 100644
+--- a/scripts/check-truth.py
++++ b/scripts/check-truth.py
+@@ -56,6 +56,9 @@ def main():
+         # The printed function of an operation's binder term, and a list of number literals
+         # (the state plan's T5, decisions row 251), compiled beside the modules.
+         shutil.copyfile(truth/'term-rows.typecheck.ts', Path(work)/'term-rows.typecheck.ts')
++        # The literal rule of `pair` and `tuple` on the target (decisions row 256): its positive
++        # controls and its refusals, compiled beside the modules.
++        shutil.copyfile(truth/'literals.typecheck.ts', Path(work)/'literals.typecheck.ts')
+         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
+         manifest = Path(work)/'corpus.json'
+         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),
+diff --git a/src/Effect4/Machine/Term.lean b/src/Effect4/Machine/Term.lean
+index fa8c75bd..b27400e6 100644
+--- a/src/Effect4/Machine/Term.lean
++++ b/src/Effect4/Machine/Term.lean
+@@ -250,10 +250,15 @@ structure AtomRow where
+   arity : Option Nat
+   /-- The literal rule's flag (DI-55, the prelude's `pair<const A, const B>`): a string literal
+   argument keeps its literal type under `litArgTy` (DI-15). `pair` and `tuple` retain literal
+-  columns; every other atom widens a literal to `string`. -/
++  columns; every other atom widens a literal to `string`. A number or a Boolean literal has its
++  broad type under `litArgTy` at either flag, and the two helpers type their slots so on the
++  target (`Wide`, decisions row 256). -/
+   constGeneric : Bool
+   /-- The atom's body in the TypeScript prelude: the text after `export const <name> = `.
+-  `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. -/
++  `harness/truth/prelude-atoms.gen.ts` is this column, one line per atom. The bodies of `pair`
++  and `tuple` name `Wide`, the one shared type of that file's preamble
++  (`tools/Effect4Gen/PreludeAtoms.lean`, `render`): a number or a Boolean type in an immediate
++  slot widens, and a string literal keeps its literal type (decisions row 256). -/
+   prelude : String
+ deriving DecidableEq, Repr
+ 
+@@ -275,7 +280,7 @@ def row : NativeAtom → AtomRow
+   | .eq => { name := "eq", arity := some 2, constGeneric := false,
+              prelude := "(a: number | string, b: number | string): boolean => a === b" }
+   | .pair => { name := "pair", arity := some 2, constGeneric := true,
+-               prelude := "<const A, const B>(a: A, b: B): readonly [A, B] => [a, b]" }
++               prelude := "<const A, const B>(a: A, b: B): readonly [Wide<A>, Wide<B>] => [a, b] as readonly [Wide<A>, Wide<B>]" }
+   | .fst => { name := "fst", arity := some 1, constGeneric := false,
+               prelude := "<P extends readonly [unknown, unknown]>(p: P): P[0] => p[0]" }
+   | .snd => { name := "snd", arity := some 1, constGeneric := false,
+@@ -377,7 +382,7 @@ def row : NativeAtom → AtomRow
+ 
+   | .tuple =>
+       { name := "tuple", arity := none, constGeneric := true,
+-        prelude := "<const A extends readonly unknown[]>(...items: A): A => items" }
++        prelude := "<const A extends readonly unknown[]>(...items: A): { readonly [I in keyof A]: Wide<A[I]> } => items as { readonly [I in keyof A]: Wide<A[I]> }" }
+   | .listTake =>
+       { name := "take", arity := some 2, constGeneric := false,
+         prelude := "<A>(xs: ReadonlyArray<A>, n: number): ReadonlyArray<A> => xs.slice(0, n)" }
+diff --git a/src/Effect4/Program/NativeAtom.lean b/src/Effect4/Program/NativeAtom.lean
+index 591d418d..a007f27e 100644
+--- a/src/Effect4/Program/NativeAtom.lean
++++ b/src/Effect4/Program/NativeAtom.lean
+@@ -221,7 +221,9 @@ def spec : NativeAtom → Spec
+                  2026-09-12): a string\nliteral argument keeps its literal type, so \
+                  `pair(\"A\", m)` is `readonly [\"A\", string]` and\n`pair(\"A\", \"m\")` is \
+                  `readonly [\"A\", \"m\"]`, exactly what `NativeAtom.typeOf .pair` answers\n\
+-                 under `litArgTy`; a `string` variable stays `string`." }
++                 under `litArgTy`; a `string` variable stays `string`. A number or a Boolean \
++                 in a slot\nwidens (`Wide`, decisions row 256): `pair(true, 0)` is \
++                 `readonly [boolean, number]`, as `litArgTy`\ntypes the two literals." }
+   | .fst => { scheme := .custom (.project false),
+               cite := "`\"fst\", [exitCons a _] => a`" }
+   | .snd => { scheme := .custom (.project true),
+@@ -342,7 +344,10 @@ def spec : NativeAtom → Spec
+ 
+   | .tuple =>
+       { scheme := .custom .tuple,
+-        cite := "Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary." }
++        cite := "Decisions rows 159 and 197: exact tuple construction at every arity, normalized at the type boundary.\n\
++                 A string literal in a slot keeps its literal type, and a number or a Boolean \
++                 widens (`Wide`,\ndecisions row 256): `tuple(7, \"x\", true)` is \
++                 `readonly [number, \"x\", boolean]`." }
+   | .listTake =>
+       { scheme := .poly [.list (.var 0), .nat] (.list (.var 0)),
+         cite := "`\"take\", [list vs, nat n] => list (vs.take n)` — rc.112 `Array.take` at a \
+diff --git a/tools/Effect4Gen/PreludeAtoms.lean b/tools/Effect4Gen/PreludeAtoms.lean
+index 06429810..59f2adec 100644
+--- a/tools/Effect4Gen/PreludeAtoms.lean
++++ b/tools/Effect4Gen/PreludeAtoms.lean
+@@ -40,10 +40,33 @@ def entry (atom : NativeAtom) : List String :=
+     if line.isEmpty then " *" else " * " ++ line
+   ["/**"] ++ doc ++ [" */", "export const " ++ r.name ++ " = " ++ r.prelude, ""]
+ 
++/-- **The literal rule of `pair` and `tuple` on the target** (decisions row 256, inside DI-55's
++ruling): the one shared type that the two bodies name (`NativeAtom.row`, the `prelude` column),
++with the rule's consequence stated where the helper is generated. A number or a Boolean type in
++an immediate slot widens, as `litArgTy` types a number or a Boolean literal
++(`src/Effect4/Program/Typing/Rules.lean`). A string literal keeps its literal type (DI-55). The
++type is written here once, so the rule has one owner. Its compiler controls are
++`harness/truth/literals.typecheck.ts`. -/
++def wide : List String :=
++  [ "/** The literal rule of `pair` and `tuple` on the target (decisions row 256, inside DI-55's"
++  , " * ruling). A number or a Boolean type in an immediate slot widens to `number` or `boolean`,"
++  , " * as Lean's literal rule types a number or a Boolean literal (`litArgTy`,"
++  , " * `src/Effect4/Program/Typing/Rules.lean`). A string literal keeps its literal type. Every"
++  , " * other argument keeps its type: no record, list, supplied tuple or handle is rewritten, and"
++  , " * nothing is recursive."
++  , " *"
++  , " * The consequence. A number or Boolean singleton type, or a brand, in a direct slot is lost"
++  , " * on the target. A Boolean tuple tag no longer discriminates. These helpers preserve no"
++  , " * arbitrary TypeScript refinement. The compiler controls are `literals.typecheck.ts`. */"
++  , "type Wide<T> = T extends number ? number : T extends boolean ? boolean : T"
++  , ""
++  ]
++
+ /-- The whole file: the imports the bodies need, the one shared reader the cause atoms call,
+-and the atoms in the inventory's order. `queryCause` is the host image of
+-`Effect4.Program.queryReasons?`; it is not an atom, so it is written here rather than carried
+-in a row. `Deferred` and `Ref` are named by `sameHandle`'s two signatures (decisions row 229). -/
++the one shared type of the literal rule (`wide`), and the atoms in the inventory's order.
++`queryCause` is the host image of `Effect4.Program.queryReasons?`; it is not an atom, so it is
++written here rather than carried in a row. `Deferred` and `Ref` are named by `sameHandle`'s two
++signatures (decisions row 229). -/
+ def render (head : String) : List String :=
+   [ "// GENERATED by tools/Effect4Gen/PreludeAtoms.lean from NativeAtom.row and NativeAtom.spec \
+      — do not edit."
+@@ -61,7 +84,7 @@ def render (head : String) : List String :=
+   , "const queryCause = <A, E>(input: Cause.Cause<E> | Exit.Exit<A, E>): Cause.Cause<E> =>"
+   , "  Exit.isExit(input) ? Exit.isFailure(input) ? input.cause : Cause.empty : input"
+   , ""
+-  ] ++ NativeAtom.all.flatMap entry
++  ] ++ wide ++ NativeAtom.all.flatMap entry
+ 
+ structure Args where
+   group : String := "PreludeAtoms"
