@@ -289,15 +289,18 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
   contract, the model with its profile, and the cell with its five steps. It ends with the
   steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice. **Its first four steps are
-  merged** (`e212766f`, then `e87777e9`). Every case of the card gives the profile's answer on the Lean
+  that waits and the finalizers' runs are a later slice. **Its first seven steps are
+  merged** (`e212766f`, `e87777e9`, then `0cd730ca`). Every case of the card gives the profile's answer on the Lean
   machine, one schedule each (`Test/Program/PoolScenarios.lean`). The contract is
   `Test/contracts/pool.contract.md`. The model's profile is closed under its five
   transitions, with no planned goal (`src/Effect4/Laws/Modules/Pool/`). An idle item beside
   enrolled waiters is a state of the profile. The cell and the five step terms are typed,
   with no planned goal (`src/Effect4/Modules/Pool/`, `src/Effect4/Laws/Modules/Pool/Typing.lean`).
-  Their agreement with the model is next: a battery holds it on 130 states of the profile,
-  on the seat's branch.
+  Each step term agrees with the model's step, on every state of the model:
+  `pool_steps_agree` and its five parts (`src/Effect4/Laws/Modules/Pool/Steps.lean`; R10),
+  proved in place of five planned goals. They state no order of the wake across helpers, no
+  cancellation law, no close that waits and no wrapper. The engine's two cases, the
+  documents and the receipt are next.
 - **Seat QINV has the Queue model's run invariant** (branch `seat/qinv`, from `4bd063a2`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-qinv-brief.md)), in the seat that
   seat MASKPOP freed. Codex gave the invariant and its premises. Nothing is compiled yet.
