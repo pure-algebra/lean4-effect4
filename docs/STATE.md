@@ -542,7 +542,12 @@ Open at this landing:
   stay open:
   - the mask's law is proved at the boundaries of regions. One statement is an invariant of
     runs: a region that changes no flag ends with its entry flag. It is tested, not proved,
-    and an open part of R11. The first wrapper under a masked caller is its consumer;
+    and an open part of R11. The first wrapper under a masked caller is its consumer. A
+    candidate invariant has a finite probe since 2026-10-06
+    (`research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`). On each fiber's stack the
+    mask frames alternate from the negation of its flag, and the flag under them is constant.
+    The probe covers 16 scenarios of the mask and of the Queue, with cuts at scheduling
+    points. No goal states the invariant yet;
   - a row of the runtime census for `uninterruptibleMask` is proposed and not applied. A
     permission check denied the seat's edit of the census generator, and the row waits for
     the owner;
@@ -608,8 +613,13 @@ Open at this landing:
   - a row builder that mints the current value's name, `performTermWith`, beside
     `Authoring.performTerm`, with generated `Ref.modifyWith cell fun current => …` wrappers
     and their scope laws. A fixed name around a caller's term can capture a variable:
-    `Test.Dogfood.Scenario.Atomic.note` is such a helper, and no present caller meets it. The
-    coordinator plans it after seat T5's part B, before the Queue's public wrapper;
+    `Test.Dogfood.Scenario.Atomic.note` is such a helper, and no present caller meets it. It
+    is landed (`0a10ca6d` and `8e9b9736`, 2026-10-06). `Authoring.performTermWith` mints the
+    name, and each of the eight rows of `Ref` that carry a term has a second generated
+    wrapper with the suffix `With`: `Ref.modifyWith cell fun current => …`.
+    `selectOptionWith` and `onExitWith` are the same form for an option's payload and for an
+    exit. Each has its scope law, and `Test/Program/AuthoringContract.lean` holds the
+    controls. The checks were narrow builds, and the default build runs at the next merge;
   - a record's type derived from its one field declaration, in p4 as in p5;
   - one identity record beside each vendored source, read by the census and the variances;
   - one host adapter, `kvGet`, generated from explicit contract data.
