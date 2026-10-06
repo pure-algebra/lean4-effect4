@@ -141,7 +141,7 @@ theorem denoteWith_badShape : ∀ (e : NativeEff) (env : List Val),
   | .gen _, _ | .uninterruptible _, _ | .interruptible _, _
   | .iterate _ _ _ _ _ _, _ | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
-  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ => by
+  | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .restore _ _, _ => by
     rw [denoteWith, denote]
     all_goals (intros; rename_i heq; cases heq)
 
@@ -471,7 +471,8 @@ theorem sound (bad : ExitV) : ∀ (e : NativeEff) (tys : TyEnv) (env : List Val)
   | .withFiber _, _, _, _, _, hs, _, _ | .scoped _, _, _, _, _, hs, _, _
   | .acquireRelease _ _, _, _, _, _, hs, _, _ | .provideLayer _ _ _, _, _, _, _, hs, _, _
   | .service _, _, _, _, _, hs, _, _ | .provideService _ _ _, _, _, _, _, hs, _, _
-  | .catchIf _ _ _, _, _, _, _, hs, _, _ => absurd hs Bool.false_ne_true
+  | .catchIf _ _ _, _, _, _, _, hs, _, _
+  | .restore _ _, _, _, _, _, hs, _, _ => absurd hs Bool.false_ne_true
 
 /-! ## The corollaries -/
 

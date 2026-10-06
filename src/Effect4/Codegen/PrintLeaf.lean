@@ -90,6 +90,11 @@ inductive Head
   /-- `Effect.map`, the head that maps an `iterate`'s printed `Effect.whileLoop` to its result
   (`reduce`'s shape, `internal/effect.ts:4450-4470`). -/
   | map
+  /-- The mask's two heads (decisions row 245): `Effect.uninterruptibleMask`, on a function that
+  answers its own parameter, is the getter's printed form; the root export `pipe`, called on a
+  body and a saved value, is a restore site's, `pipe(body, saved)`. Both are reserved, so no row
+  of a signature takes either spelling and the table's separation covers both rows. -/
+  | uninterruptibleMask | pipe
 deriving DecidableEq, Repr
 
 /-- The spelling of each head, exactly as `print` emits it. -/
@@ -152,6 +157,8 @@ def Head.spelling : Head → String
   | .layerFresh => "Layer.fresh"
   | .layerOrDie => "Layer.orDie"
   | .layerMergeAll => "Layer.mergeAll"
+  | .uninterruptibleMask => "Effect.uninterruptibleMask"
+  | .pipe => "pipe"
 
 /-- Every head, once. -/
 def heads : List Head :=
@@ -164,7 +171,7 @@ def heads : List Head :=
   , .contextService, .scopeService, .provide, .service, .provideService
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
   , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf
-  , .optionCase, .caseTag, .caseTagR, .map ]
+  , .optionCase, .caseTag, .caseTagR, .map, .uninterruptibleMask, .pipe ]
 
 /-- Every spelling the printer reserves: a row's spelling and a term's atom must avoid
 these. -/

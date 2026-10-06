@@ -1,0 +1,17 @@
+{
+ "effect": "4.0.1",
+ "runtime": "bun 1.4.2",
+ "base": 100,
+ "answer": "ok",
+ "attemptTimesRoundedTo50": [
+  0,
+  100,
+  300,
+  700
+ ],
+ "delayBeforeEachRetry": [
+  100,
+  200,
+  400
+ ]
+}

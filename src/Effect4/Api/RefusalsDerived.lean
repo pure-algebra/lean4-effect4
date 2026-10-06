@@ -1614,7 +1614,8 @@ def shapeDoc : ShapeDoc :=
         ("result", (shape _root_.Effect4.Program.Ty).root),
         ("expected", (shape _root_.Effect4.Program.Ty).root)]),
       ("foldTerm", 34, [("why", (shape _root_.Effect4.Program.FoldTermRefusal).root)]),
-      ("foldCause", 35, [("why", (shape _root_.Effect4.Program.FoldCauseRefusal).root)])],
+      ("foldCause", 35, [("why", (shape _root_.Effect4.Program.FoldCauseRefusal).root)]),
+      ("maskRestoreExpected", 36, [("t", (shape _root_.Effect4.Program.Ty).root)])],
    (shape _root_.Effect4.Program.Term).defs ++ (shape _root_.Effect4.Program.CauseTerm).defs ++
      (shape _root_.Effect4.Program.Ty).defs ++ (shape _root_.String).defs ++
      (shape _root_.Effect4.Program.Decision).defs ++ (shape _root_.Effect4.ServiceKey).defs ++
@@ -1669,6 +1670,7 @@ def toVal : _root_.Effect4.Program.TypeReason → Val
       Canonical.toVal a2]
   | .foldTerm a0 => .ctor 34 [Canonical.toVal a0]
   | .foldCause a0 => .ctor 35 [Canonical.toVal a0]
+  | .maskRestoreExpected a0 => .ctor 36 [Canonical.toVal a0]
 
 def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
   | .ctor 0 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Term) v0).map .term
@@ -1751,6 +1753,7 @@ def ofVal : Val → Option (_root_.Effect4.Program.TypeReason)
     | _, _, _ => none
   | .ctor 34 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldTermRefusal) v0).map .foldTerm
   | .ctor 35 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.FoldCauseRefusal) v0).map .foldCause
+  | .ctor 36 [v0] => (Canonical.ofVal (α := _root_.Effect4.Program.Ty) v0).map .maskRestoreExpected
   | _ => none
 
 set_option linter.unusedSimpArgs false in
@@ -1981,6 +1984,9 @@ theorem fits (a : _root_.Effect4.Program.TypeReason) : shapeDoc.accepts (toVal a
   | «foldCause» a0 =>
     exact accepts_sum _ _ _ 35 "foldCause" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_FoldCauseRefusal a0) (acceptsFields_nil _))
+  | «maskRestoreExpected» a0 =>
+    exact accepts_sum _ _ _ 36 "maskRestoreExpected" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Ty a0) (acceptsFields_nil _))
 
 instance instCanonical : Canonical (_root_.Effect4.Program.TypeReason) :=
   ⟨shapeDoc, toVal, ofVal, ofVal_toVal, ofVal_exact, fits⟩
@@ -2599,7 +2605,8 @@ def reasons : List TypeReason :=
    .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E"),
    .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never),
    .foldTerm ⟨[0], .notList .nat⟩,
-   .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩]
+   .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩,
+   .maskRestoreExpected .bool]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

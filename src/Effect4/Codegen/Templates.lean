@@ -184,6 +184,10 @@ def effRows : List Row :=
   , ⟨.eff, "service", [], .tpl (call "Effect.service" [h 0])⟩
   , ⟨.eff, "provideService", [],
       .tpl (call "Effect.provideService" [h 2, h 0, h 1])⟩
+  -- a restore site (decisions row 245): the root export `pipe` applies its second argument to
+  -- its first, so `pipe(body, saved)` is `saved(body)`. Its head is reserved (`Head.pipe`): a
+  -- method skeleton, `body.pipe(saved)`, has no head for the separation of the rows to read
+  , ⟨.eff, "restore", [], .tpl (call "pipe" [h 1, h 0])⟩
   , ⟨.eff, "gen", [], .tpl (call genHead [.generator (.hole 0)])⟩
   , ⟨.eff, "withFiber", [], .tpl (h 0)⟩
   , ⟨.eff, "perform", [], .rowCall⟩ ]
@@ -215,7 +219,11 @@ def actionRows : List Row :=
   , ⟨.action, "setContext", [], .refuse "setContext"⟩
   , ⟨.action, "getContext", [], .tpl (call "Effect.context" [])⟩
   , ⟨.action, "getId", [], .tpl (.ident "Effect.fiberId")⟩
-  , ⟨.action, "closeScope", [], .tpl (call "Scope.close" [h 0, h 1])⟩ ]
+  , ⟨.action, "closeScope", [], .tpl (call "Scope.close" [h 0, h 1])⟩
+  -- the mask at a constant body (decisions row 245): the function answers its own parameter,
+  -- `Effect.uninterruptibleMask((aN) => Effect.succeed(aN))`
+  , ⟨.action, "getInterruptible", [],
+      .tpl (call "Effect.uninterruptibleMask" [lam (call "Effect.succeed" [.binderRef 0])])⟩ ]
 
 def layerRows : List Row :=
   [ ⟨.layer, "succeed", [], .tpl (call "Layer.succeed" [h 0, h 1])⟩

@@ -341,6 +341,7 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "catchIf": return w.ctor(26, [() => writeTerm(w, v.test), () => writeEff(w, v.body), () => writeEff(w, v.handler)])
     case "select": return w.ctor(27, [() => writeTerm(w, v.scrutinee), () => writeDecision(w, v.decision), () => writeEff(w, v.arm0), () => writeEff(w, v.arm1)])
     case "iterate": return w.ctor(28, [() => w.option(v.cursorTy, (y) => writeTy(w, y)), () => writeTerm(w, v.initial), () => writeTerm(w, v.test), () => writeTerm(w, v.step), () => writeTerm(w, v.result), () => writeEff(w, v.body)])
+    case "restore": return w.ctor(29, [() => writeTerm(w, v.saved), () => writeEff(w, v.body)])
     default: throw new TypeError("wire Eff constructor")
   }
 }
@@ -399,6 +400,7 @@ const writeActionTerm = (w: Writer, v: ActionTerm): void => {
     case "getContext": return w.ctor(13, [])
     case "getId": return w.ctor(14, [])
     case "closeScope": return w.ctor(15, [() => writeTerm(w, v.scope), () => writeTerm(w, v.exit)])
+    case "getInterruptible": return w.ctor(16, [])
     default: throw new TypeError("wire ActionTerm constructor")
   }
 }

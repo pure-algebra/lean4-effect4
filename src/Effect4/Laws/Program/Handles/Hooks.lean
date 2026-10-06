@@ -955,6 +955,7 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | joinEffect => simp only [interpOf, primKeys_ofExit]; exact List.Subset.refl _
   fiberValue id := by simp only [interpOf, Val.keys_fiber]; exact List.Subset.refl _
   fiberIdValue _ := List.nil_subset _
+  restoreValue flag := Val.keys_savedMask flag
   fibersValue ids := by simp only [interpOf, Val.keys_fibers]; exact List.Subset.refl _
   exitsValue exits := by simp only [interpOf, Machine.exitsVal_keys]; exact List.Subset.refl _
   voidValue := rfl

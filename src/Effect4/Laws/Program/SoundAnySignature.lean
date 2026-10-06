@@ -73,7 +73,8 @@ theorem looped_sigProgram : ∀ (e : NativeEff), Looped e = true → SigProgram 
     exact ⟨looped_sigProgram b h.1, looped_sigProgram f h.2⟩
   | .gen _, h | .uninterruptible _, h | .interruptible _, h | .yieldNow _, h
   | .awaitFiber _ _, h | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h
-  | .provideLayer _ _ _, h | .service _, h | .provideService _ _ _, h | .catchIf _ _ _, h =>
+  | .provideLayer _ _ _, h | .service _, h | .provideService _ _ _, h
+  | .catchIf _ _ _, h | .restore _ _, h =>
     absurd h Bool.false_ne_true
 
 /-- **The built-in signature extends to an application's signature** over any table, with its

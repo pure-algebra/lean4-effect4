@@ -716,6 +716,7 @@ let rec emit_eff (b : Buffer.t) (v : eff) : unit =
   | Eff_catchIf (a0, a1, a2) -> Eff_frame.emit_ctor b 26 (fun b -> emit_term b a0; emit_eff b a1; emit_eff b a2)
   | Eff_select (a0, a1, a2, a3) -> Eff_frame.emit_ctor b 27 (fun b -> emit_term b a0; emit_decision b a1; emit_eff b a2; emit_eff b a3)
   | Eff_iterate (a0, a1, a2, a3, a4, a5) -> Eff_frame.emit_ctor b 28 (fun b -> Eff_frame.emit_option b (fun b y -> emit_ty b y) a0; emit_term b a1; emit_term b a2; emit_term b a3; emit_term b a4; emit_eff b a5)
+  | Eff_restore (a0, a1) -> Eff_frame.emit_ctor b 29 (fun b -> emit_term b a0; emit_eff b a1)
 and emit_stmt (b : Buffer.t) (v : stmt) : unit =
   match v with
   | Stmt_bindYield a0 -> Eff_frame.emit_ctor b 0 (fun b -> emit_eff b a0)
@@ -750,6 +751,7 @@ and emit_action_term (b : Buffer.t) (v : action_term) : unit =
   | Action_term_getContext -> Eff_frame.emit_ctor b 13 (fun _ -> ())
   | Action_term_getId -> Eff_frame.emit_ctor b 14 (fun _ -> ())
   | Action_term_closeScope (a0, a1) -> Eff_frame.emit_ctor b 15 (fun b -> emit_term b a0; emit_term b a1)
+  | Action_term_getInterruptible -> Eff_frame.emit_ctor b 16 (fun _ -> ())
 and emit_layer_term (b : Buffer.t) (v : layer_term) : unit =
   match v with
   | Layer_term_succeed (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_service_key b a0; emit_lit b a1)
@@ -971,6 +973,14 @@ let rec decode_eff (s : string) (pos : int) (limit : int) : (eff * int) option =
                  | None -> None
                  | Some (a5, p) ->
                   if p = e then Some (Eff_iterate (a0, a1, a2, a3, a4, a5), next) else None))))))
+    | 29 ->
+      (match decode_term s p e with
+       | None -> None
+       | Some (a0, p) ->
+        (match decode_eff s p e with
+         | None -> None
+         | Some (a1, p) ->
+          if p = e then Some (Eff_restore (a0, a1), next) else None))
     | _ -> None)
 and decode_stmt (s : string) (pos : int) (limit : int) : (stmt * int) option =
   match Eff_frame.read_ctor s pos limit with
@@ -1140,6 +1150,8 @@ and decode_action_term (s : string) (pos : int) (limit : int) : (action_term * i
          | None -> None
          | Some (a1, p) ->
           if p = e then Some (Action_term_closeScope (a0, a1), next) else None))
+    | 16 ->
+      if p = e then Some (Action_term_getInterruptible, next) else None
     | _ -> None)
 and decode_layer_term (s : string) (pos : int) (limit : int) : (layer_term * int) option =
   match Eff_frame.read_ctor s pos limit with

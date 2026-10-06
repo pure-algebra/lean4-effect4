@@ -17,10 +17,12 @@ def program : NativeEff :=
 #guard HandleKind.external.byte = 7
 #guard HandleKind.ofByte? 6 = none
 #guard HandleKind.ofByte? 7 = some .external
--- the value spelling and the kind byte agree; the internal spellings are the five named ones
--- (decisions row 187 adds the memo map's, which a guard keeps)
+-- the value spelling and the kind byte agree; the internal spellings are the six named ones
+-- (decisions row 187 adds the memo map's, which a guard keeps; row 244 adds the mask's saved
+-- state, which no external handle may take)
 #guard Value.external 3 = .handle HandleKind.external.byte 3
-#guard internalHandleTargets = ["Ref.Ref<number>", "Deferred.Deferred<number, number>", "Scope.Scope", "Context.Context<unknown>", "Layer.MemoMap"]
+#guard internalHandleTargets = ["Ref.Ref<number>", "Deferred.Deferred<number, number>", "Scope.Scope", "Context.Context<unknown>", "Layer.MemoMap", "MaskRestore"]
+#guard !externalHandleTarget Ty.maskRestoreTarget
 #guard !externalHandleTarget "Scope.Scope"
 #guard externalHandleTarget resource
 #guard nativeServiceTy ⟨⟨4⟩, ⟨8⟩⟩ = some (.handle "SqlClient.SqlClient")

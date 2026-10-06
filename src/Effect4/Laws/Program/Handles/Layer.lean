@@ -609,6 +609,9 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
   · simp only [Option.some.injEq] at h
     subst h
     exact resolve_keys root (p.child 0)
+  · simp only [Option.some.injEq] at h
+    subst h
+    exact resolve_keys root (p.child 0)
   · rename_i a' _
     simp only [Option.some.injEq] at h
     cases a' with
@@ -731,6 +734,10 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
         have h2 : exitKeys e ⊆ p.keys := List.Subset.trans (exitOfVal_keys v e hev) (evalTerm_point_keys exit p v hv)
         sub_tac using h2
       · subst h; exact List.nil_subset _
+    | getInterruptible =>
+      simp only [] at h
+      subst h
+      exact List.nil_subset _
   · cases h
 
 end Effect4.Program

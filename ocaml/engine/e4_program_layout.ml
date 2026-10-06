@@ -105,6 +105,7 @@ module type PROGRAM_TYPES = sig
   | Eff_catchIf of term * 'op eff * 'op eff
   | Eff_select of term * decision * 'op eff * 'op eff
   | Eff_iterate of ty option * term * term * term * term * 'op eff
+  | Eff_restore of term * 'op eff
   and 'op stmt = | Stmt_bindYield of 'op eff
   | Stmt_yieldDiscard of 'op eff
   | Stmt_ret of term
@@ -129,6 +130,7 @@ module type PROGRAM_TYPES = sig
   | ActionTerm_getContext
   | ActionTerm_getId
   | ActionTerm_closeScope of term * term
+  | ActionTerm_getInterruptible
   and 'op layer_term = | LayerTerm_succeed of service_key * lit
   | LayerTerm_effect of service_key * 'op eff
   | LayerTerm_effectDiscard of 'op eff
@@ -198,11 +200,11 @@ let engine_ctor_names = [
   ("finalizer_strategy", ["sequential"; "parallel"]);
   ("native_op", ["refMake"; "refGet"; "refSet"; "refGetAndSet"; "refSetAndGet"; "deferredIsDone"; "deferredPoll"; "deferredSucceed"; "deferredFail"; "deferredAwait"; "scopeMake"; "sleep"; "clockNow"; "external"; "deferredMakeOf"; "refUpdateWith"; "refGetAndUpdateWith"; "refUpdateAndGetWith"; "refUpdateSomeWith"; "refGetAndUpdateSomeWith"; "refUpdateSomeAndGetWith"; "refModifyWith"; "refModifySomeWith"]);
   ("decision", ["bool"; "option"; "tag"; "recordTag"]);
-  ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]);
+  ("eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"]);
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("stmts", ["nil"; "cons"]);
   ("effs", ["nil"; "cons"]);
-  ("action_term", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"]);
+  ("action_term", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"]);
   ("layer_term", ["succeed"; "effect"; "effectDiscard"; "provide"; "provideMerge"; "merge"; "fresh"; "orDie"; "ref"; "mergeAll"]);
   ("layer_terms", ["nil"; "cons"]);
   ("row_kind", ["sync"; "async"; "program"]);

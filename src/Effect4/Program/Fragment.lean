@@ -52,5 +52,7 @@ def Straight : NativeEff → Bool
   | .provideService _ _ _ => false
   | .catchIf _ _ _ => false
   | .iterate _ _ _ _ _ _ => false
+  -- a restore site sets the fiber's mask when its saved bit is true: outside, as the two masks
+  | .restore _ _ => false
 
 end Effect4.Program.Denote

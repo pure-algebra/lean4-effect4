@@ -440,6 +440,25 @@ theorem cause?_exact {v : Val} {c : CauseV} (h : cause? v = some c) : v = exitEr
     rw [causeImage.ofVal_exact h]
   · exact nomatch h
 
+/-- The mask's saved interruptibility as a value (decisions row 244; `Value.maskImage`): what
+`getInterruptible` answers and a restore node reads. `savedMask true` selects `interruptible`,
+and `savedMask false` the identity (`uninterruptibleMask`, `internal/effect.ts:4340-4352`). -/
+abbrev savedMask (flag : Bool) : Val := Value.maskImage.toVal flag
+/-- The saved flag read back; `none` on any other shape, a Boolean included. -/
+def savedMask? : Val → Option Bool := Value.maskImage.ofVal
+
+theorem savedMask_eq (flag : Bool) : savedMask flag = Value.savedMask (.bool flag) := rfl
+
+theorem savedMask?_savedMask (flag : Bool) : savedMask? (savedMask flag) = some flag :=
+  Value.maskImage.ofVal_toVal flag
+
+theorem savedMask?_exact {v : Val} {flag : Bool} (h : savedMask? v = some flag) :
+    v = savedMask flag :=
+  Value.maskImage.ofVal_exact h
+
+/-- A Boolean is no saved state. -/
+theorem savedMask?_bool (b : Bool) : savedMask? (.bool b) = none := rfl
+
 /-- The carrier's own image: the identity. -/
 def image : Image Val := Image.ident
 

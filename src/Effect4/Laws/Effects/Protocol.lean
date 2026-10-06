@@ -14,7 +14,7 @@ The continuation clause is quantified over later worlds, so weakening along the 
 one `cases` and needs no induction on the tree; sequencing, widening of the result predicate
 and the coproduct lift are one induction each. The tree's world is the typing tables over the
 store (`Laws/Program/Typed/World.lean`); its protocols are the store's `Ψ_S` (31 rows) and the
-fiber alphabet's `Ψ_F` (40 rows), and its program judgment `TypedProg` is its own inductive
+fiber alphabet's `Ψ_F` (41 rows), and its program judgment `TypedProg` is its own inductive
 (`Laws/Program/Typed/Residual.lean`, ruling of 2026-09-23). This module imports the pinned
 `Effects` algebra and nothing of `Effect4`: it is a law of the free monad, kept here until the
 algebra takes it.

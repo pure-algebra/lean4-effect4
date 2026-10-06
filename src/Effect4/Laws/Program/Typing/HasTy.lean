@@ -248,6 +248,13 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig env body b →
       HasTy sig env (.provideService key value body)
         ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
+  /-- A restore site (`pipe(body, saved)`, `internal/effect.ts:4340-4352`; decisions rows 244
+  and 245): the saved term has the saved state's own opaque type, and the node has its body's
+  type. A mask changes no column of the type, as `interruptible` changes none. -/
+  | restore {env : TyEnv} {saved : Term} {body : Eff Op} {t : EffTy} :
+      termTy sig env saved = some Ty.maskRestore →
+      HasTy sig env body t →
+      HasTy sig env (.restore saved body) t
 
 /-- `Σ; Γ; inLoop ⊢ b ⇒ g` — a generator body's statements leave the generator state `g`: the
 answer its `return`s agree on (absent before the first), the errors and requirements so far, and
@@ -416,6 +423,11 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
       termTy sig env scope = some Ty.scope →
       termTy sig env exit = some (.exitOf value error) →
       ActionHasTy sig env (.closeScope scope exit) (EffTy.pure .unit)
+  /-- `uninterruptibleMask((restore) => succeed(restore))` (`internal/effect.ts:4340-4352`;
+  decisions row 245): the saved state of the fiber's entry flag, at its own opaque type, with
+  no error and no requirement. -/
+  | getInterruptible {env : TyEnv} :
+      ActionHasTy sig env .getInterruptible (EffTy.pure Ty.maskRestore)
 
 /-- `Σ ⊢ l : Layer⟨ROut, E, RIn⟩` — a layer term's signature. Bodies are **closed**: a layer's
 own scope is its ambient one (`Layer.ts:1438`), so every body is typed at the empty

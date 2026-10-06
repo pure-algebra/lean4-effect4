@@ -225,19 +225,23 @@ SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
 # writes the lane's *.txt from the programs `Api.Author.build` admits. The engine's dune test
 # reads the files, and a Lean battery binds each by `include_str`. Lake does not take such a
 # file as an input, so a fixture that changed alone left the battery's evidence stale. Here the
-# marker depends on the fixtures themselves, on the writers, and on the traces of the modules
-# that the writers import (read from the writers' own import lines: the writer is the one hand
-# input). A fixture that changes alone is written again from Lean, and `check-gen` refuses a
-# committed fixture that Lean does not write.
+# marker depends on the fixtures themselves, on the writers and on every Lean source. A fixture
+# that changes alone is written again from Lean, and `check-gen` refuses a committed fixture
+# that Lean does not write.
+#
+# The rule does not wait for `build`. When a program changes, the binding battery refuses the
+# old fixture, so the default build is red until the fixture is written again. The producer
+# builds the modules that a writer imports, and no other. Until 2026-10-06 the marker depended
+# on those modules' traces, whose rule is `build`: the group could not repair the staleness that
+# made the build fail.
 ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
-ENGINE_FIXTURE_TRACES := $(foreach m,$(shell sed -n 's/^import //p' $(ENGINE_FIXTURE_WRITERS)),.lake/build/lib/lean/$(subst .,/,$(m)).trace)
 
 # Lake rewrites these traces while `build` runs. Make reads a prerequisite that has no rule once,
 # before any recipe, so a rule whose Lean sources changed saw the old time and stayed stale until
 # a second run (seat T1, 2026-10-04). As targets of `build` with an empty recipe, they are read
 # again after `build`: a rule reruns exactly when a trace moved.
 $(CORE) $(LAWS) $(SEMANTICS_ROOTS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
-  .lake/build/lib/lean/Test/Program/Gen.trace $(ENGINE_FIXTURE_TRACES): build ;
+  .lake/build/lib/lean/Test/Program/Gen.trace: build ;
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
@@ -256,7 +260,7 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) $(SEMANTICS_ROOTS) | build
 $(GEN)/fixtures-inventory: FORCE
 	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
-$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(ENGINE_FIXTURE_TRACES) scripts/generate.py | build
+$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(LEAN_SOURCES) scripts/generate.py
 	$(PY) scripts/generate.py --only fixtures
 	@mkdir -p $(GEN) && touch $@
 

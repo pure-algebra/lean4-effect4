@@ -105,6 +105,7 @@ def interp : I where
   exitValue := fun exit _ => .pure exit
   fiberValue := FiberId.value
   fiberIdValue := FiberId.value
+  restoreValue := fun flag => if flag then 1 else 0
   fibersValue := List.length
   exitsValue := List.length
   voidValue := 0
@@ -309,6 +310,7 @@ def winterp : WI where
   exitValue := fun exit _ => .pure exit
   fiberValue := FiberId.value
   fiberIdValue := FiberId.value
+  restoreValue := fun flag => if flag then 1 else 0
   fibersValue := List.length
   exitsValue := List.length
   voidValue := 0

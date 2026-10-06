@@ -219,6 +219,12 @@ theorem Val.keys_exitErr (cause : CauseV) : (Val.exitErr cause).keys = [] := by
     Store.Val.handlesList_nil]
   rfl
 
+/-- A mask's saved state names no handle (decisions row 244): its image writes none
+(`Value.maskImage_handleFree`). -/
+theorem Val.keys_savedMask (flag : Bool) : (Val.savedMask flag).keys = [] := by
+  rw [Val.keys_eq_handles, Value.maskImage_handleFree flag]
+  rfl
+
 /-- The handles a service map holds: those of every service value. -/
 def Env.Context.handleKeys (c : Env.Ctx) : List Handle :=
   c.entries.flatMap fun s => Val.keys s.valueVal
@@ -642,6 +648,7 @@ def WithFiberAction.keys (nk : ν → List Handle) (sk : σ → List Handle) :
   | WithFiberAction.dropObservers _ => []
   | WithFiberAction.cancelRace _ => []
   | WithFiberAction.closePar finalizers => finalizers.flatMap (primKeys nk sk)
+  | WithFiberAction.getInterruptible => []
 
 /-- The handles a frame holds: its current primitive and its stack. -/
 def frameKeys (nk : ν → List Handle) (sk : σ → List Handle)
@@ -1009,6 +1016,8 @@ structure KeyBounded (nk : ν → List Handle) (sk : σ → List Handle)
   exitValue : ∀ e mode, primKeys nk sk (interp.exitValue e mode) ⊆ exitKeys e
   fiberValue : ∀ id, (interp.fiberValue id).keys ⊆ [Handle.fiber id]
   fiberIdValue : ∀ id, (interp.fiberIdValue id).keys ⊆ [Handle.fiber id]
+  /-- A mask's saved state names no handle (decisions row 244). -/
+  restoreValue : ∀ flag, (interp.restoreValue flag).keys = []
   fibersValue : ∀ ids, (interp.fibersValue ids).keys ⊆ ids.map Handle.fiber
   exitsValue : ∀ exits, (interp.exitsValue exits).keys ⊆ exits.flatMap exitKeys
   voidValue : interp.voidValue.keys = []
@@ -3497,6 +3506,26 @@ theorem withFiber_getId_minted (hb : KeyBounded nk sk interp ambient)
   refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, hv⟩)
   sub_tac
 
+/-- The mask at a constant body (decisions row 245): the masked frame holds the handles the frame
+held, and the answered saved state names none. -/
+theorem withFiber_getInterruptible_minted (hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
+      (WithFiberAction.getInterruptible).keys nk sk)) :
+    IterMinted nk sk m
+      (evaluatePrim.withFiber interp m f yielding WithFiberAction.getInterruptible) := by
+  unfold IterMinted
+  simp only [evaluatePrim.withFiber]
+  refine ⟨World.le_refl _, ?_⟩
+  have hfr : Ok m.world (frameKeys nk sk f.frame.uninterruptible) :=
+    Ok_of_subset (uninterruptible_keys nk sk f.frame) (Ok_of_subset (by sub_tac) hm)
+  have hv : Ok m.world (interp.restoreValue f.frame.interruptible).keys := by
+    rw [hb.restoreValue]
+    exact Ok_nil _
+  refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_append.mpr ⟨hm, hfr⟩, hv⟩)
+  sub_tac
+
 theorem withFiber_closeScope_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool) (scope : Nat) (exit : ExitV)
@@ -3602,6 +3631,7 @@ theorem withFiber_minted (hb : KeyBounded nk sk interp ambient)
   | cancelRace raceId => exact withFiber_cancelRace_minted nk sk hb m f yielding raceId hm
   | ambientScope => exact withFiber_ambientScope_minted nk sk hb m f yielding hm
   | closePar finalizers => exact withFiber_closePar_minted nk sk hb m f yielding finalizers hm
+  | getInterruptible => exact withFiber_getInterruptible_minted nk sk hb m f yielding hm
 
 /-! #### `evaluatePrim` itself -/
 
@@ -6451,6 +6481,7 @@ theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where
     | joinEffect => simp only [stores, primKeys_ofExit]; exact List.Subset.refl _
   fiberValue id := by simp only [stores]; exact List.Subset.refl _
   fiberIdValue _ := List.nil_subset _
+  restoreValue flag := Val.keys_savedMask flag
   fibersValue ids := by simp only [stores, Val.keys_fibers]; exact List.Subset.refl _
   exitsValue exits := by simp only [stores, exitsVal_keys]; exact List.Subset.refl _
   voidValue := rfl

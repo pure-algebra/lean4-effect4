@@ -105,9 +105,13 @@ def retryForm (attempt : Src NativeOp) (retryable : TermSrc → TermSrc) (times 
             (bindName "retry.answer" attempt fun a =>
               succeed (app "pair" [app "some" [a], app "none" []]))
             (succeed (app "pair" [app "none" [], app "some" [var "retry.error"]]))
+        -- the delay doubles after a sleep, and not before the first one: the first sleep is the
+        -- base, as rc.112's `exponential` gives it (`base · factor^(attempt - 1)`,
+        -- `vendor/effect-4.0.0-rc.112/src/Schedule.ts`)
         step := fun c last =>
           app "pair" [app "succ" [app "fst" [c]],
-            app "pair" [app "mul" [app "fst" [app "snd" [c]], nat 2], last]]
+            app "pair" [app "ite" [app "lt" [nat 0, app "fst" [c]],
+              app "mul" [app "fst" [app "snd" [c]], nat 2], app "fst" [app "snd" [c]]], last]]
         result := fun c => app "snd" [app "snd" [c]] })
     fun last =>
       selectOption "retry.ok" (app "fst" [last])
@@ -308,6 +312,45 @@ def timeoutAlone : Option Effect4.Api.Program :=
 #guard retryAlone.map (Effect4.Api.readable ·) = some true
 -- Green control: the timeout form alone reads back.
 #guard timeoutAlone.map (Effect4.Api.readable ·) = some true
+
+/-! ### The retry form's delays
+
+rc.112 sleeps `base · 2^k` before retry `k + 1`: 100, 200 and 400 ms at a base of 100, so its
+attempts run at 0, 100, 300 and 700 ms
+(`docs/research/2026-10-05-claude-lead/retry-probe/retry-first-delay.rc112.out`, one host run on
+real time). The form over an attempt that always fails shows the same deadlines on the machine.
+Until 2026-10-06 the form doubled its delay before its first sleep, and no guard read a delay. -/
+
+/-- The retry form over an attempt that always fails with a retryable error. -/
+def retryFails (base : Nat) : Module NativeOp :=
+  { main := retryForm (fail (str "no")) (fun _ => bool true) 3 base .string .string }
+
+/-- Flush until a flush adds no trace event, at most `n` times. -/
+def settle : Nat → Run → Run
+  | 0, s => s
+  | n + 1, s =>
+    let flushed := s.control Effect4.Api.flush
+    if flushed.machine.trace.length == s.machine.trace.length then flushed else settle n flushed
+
+/-- The deadline of each pending sleep at the start, and after each advance of the clock. -/
+def sleepDeadlines (m : Module NativeOp) (advances : List Nat) : Option (List (List Nat)) :=
+  (built? m).map fun b =>
+    let pending (s : Run) : List Nat := s.machine.state.timers.wake.waiters.map (·.payload.toNat)
+    let start := settle 8 ((Run.open b "p1-retry").play Rows.start)
+    (advances.foldl
+      (fun (acc : Run × List (List Nat)) ms =>
+        let next := settle 8 (acc.1.control (.advance (ClockMillis.ofNat ms)))
+        (next, acc.2 ++ [pending next]))
+      (start, [pending start])).2
+
+-- The sleeps end at 100, 300 and 700 ms: the delays are the base, twice it and four times it.
+-- After the fourth attempt no retry is left, and no sleep is pending.
+#guard sleepDeadlines (retryFails 100) [100, 200, 400] = some [[100], [300], [700], []]
+-- The delays follow the base.
+#guard sleepDeadlines (retryFails 50) [50, 100, 200] = some [[50], [150], [350], []]
+-- Red control of the reading: one millisecond short of the first delay, the first sleep is
+-- still pending.
+#guard sleepDeadlines (retryFails 100) [99] = some [[100], [100]]
 
 /-! ## 5. Which theorem reaches the program -/
 

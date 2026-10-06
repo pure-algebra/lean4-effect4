@@ -70,6 +70,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   exit_value : ('b, 'e, 'd, 'i, 'a) exit_ -> observer_mode -> 'k;
   fiber_value : fiber_id -> 'b;
   fiber_id_value : fiber_id -> 'b;
+  restore_value : bool -> 'b;
   fibers_value : fiber_id list -> 'b;
   exits_value : ('b, 'e, 'd, 'i, 'a) exit_ list -> 'b;
   void_value : 'b;

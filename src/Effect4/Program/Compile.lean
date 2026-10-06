@@ -424,6 +424,7 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
   | .cancelRace r => .cancelRace r
   | .ambientScope => .ambientScope
   | .closePar fins => .closePar (fins.map embed)
+  | .getInterruptible => .getInterruptible
 
 /-! ## The compile -/
 
@@ -671,6 +672,16 @@ def compileEff : NativeEff → Point → NCode
         match evalTerm p.env value with
         | some v =>
           updateContextAt (Env.ContextUpdate.provideService key v) (Region.program (p.child 0))
+        | none => badShape
+      -- A restore site (decisions row 245): `restore(e)` is a call made when the program is
+      -- built, of the function `uninterruptibleMask` chose at its entry (`:4340-4352`:
+      -- `f(identity)` or `f(interruptible)`). So the node has no step of its own. Its saved bit
+      -- is read at the node's point, as `select` reads its scrutinee: a true bit is
+      -- `interruptible` over the body (`actionAt`), a false bit is the body as it is, at child 0
+      | .restore saved body =>
+        match (evalTerm p.env saved).bind Val.savedMask? with
+        | some true => Prim.withFiber (EffThunk.act p)
+        | some false => compileEff body (p.child 0)
         | none => badShape
 
 /-- The program at a point of the root: the subterm compiled there, or the frontier. -/
@@ -1035,6 +1046,10 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
     some (WithFiberAction.setInterruptible (resolve root (p.child 0)) false)
   | some (Node.eff (.interruptible _)) =>
     some (WithFiberAction.setInterruptible (resolve root (p.child 0)) true)
+  -- a restore site whose saved bit is true (`compileEff` names this point's action at no other
+  -- value): `interruptible` over the body, child 0, as the node above
+  | some (Node.eff (.restore _ _)) =>
+    some (WithFiberAction.setInterruptible (resolve root (p.child 0)) true)
   | some (Node.eff (.withFiber a)) =>
     let q := p.child 0
     let refuse : NAction := WithFiberAction.refuse (Cause.die Defect.badName)
@@ -1099,7 +1114,8 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
       | .closeScope scope exit =>
         match evalTerm p.env scope, (evalTerm p.env exit).bind exitOfVal with
         | some (Val.scopeHandle s), some e => WithFiberAction.closeScope s e
-        | _, _ => refuse)
+        | _, _ => refuse
+      | .getInterruptible => WithFiberAction.getInterruptible)
   | _ => none
 where
   /-- The entrants of a race, each compiled at its own point (`effs` node children). -/
@@ -1600,6 +1616,7 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
     | Supervision.ObserverMode.joinEffect => Prim.ofExit exit
   fiberValue := Val.fiber
   fiberIdValue := fun fiber => Val.nat fiber.value
+  restoreValue := Val.savedMask
   fibersValue := Val.fibers
   exitsValue := exitsVal
   voidValue := Val.unit

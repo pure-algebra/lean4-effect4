@@ -226,6 +226,15 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
       split
       · next v hv => sub_tac using (evalTerm_point_keys value p v hv)
       · exact List.nil_subset _
+  -- a restore site: the mask's action at the point, the body at child 0, or the refusal
+  | .restore saved b, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_restore saved b hf]
+      split
+      · exact List.Subset.refl _
+      · exact compileEff_keys b (p.child 0)
+      · exact List.nil_subset _
 
 theorem resolve_keys (root : NativeEff) (p : Point) : nativeKeys (resolve root p) ⊆ p.keys := by
   unfold resolve

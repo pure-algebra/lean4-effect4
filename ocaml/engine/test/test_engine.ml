@@ -489,7 +489,8 @@ let sample_effs =
     E.Eff_awaitFiber (a_term, E.Observer_mode_awaitValue);
     E.Eff_withFiber E.Action_term_getId;
     E.Eff_scoped u;
-    E.Eff_acquireRelease (u, u) ]
+    E.Eff_acquireRelease (u, u);
+    E.Eff_restore (a_term, u) ]
 
 let sample_stmts =
   [ E.Stmt_bindYield u; E.Stmt_yieldDiscard u; E.Stmt_ret a_term;
@@ -515,7 +516,8 @@ let sample_actions =
     E.Action_term_setContext a_term;
     E.Action_term_getContext;
     E.Action_term_getId;
-    E.Action_term_closeScope (a_term, a_term) ]
+    E.Action_term_closeScope (a_term, a_term);
+    E.Action_term_getInterruptible ]
 
 module Ord (A : E4_program.PROGRAM_TYPES) = struct
   module P = E4_program.Make (A)

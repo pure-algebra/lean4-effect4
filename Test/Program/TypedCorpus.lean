@@ -95,6 +95,10 @@ def raw : List (String × E × RowTable) := [
   ("getContext", .withFiber .getContext, []),
   ("setContext", .bind (.withFiber .getContext) (.withFiber (.setContext (v 0))), []),
   ("getId", .withFiber .getId, []),
+  -- the mask that restores (decisions rows 244 to 246): the getter alone, and the derived form
+  -- with one restore site
+  ("getInterruptible", .withFiber .getInterruptible, []),
+  ("restore", .bind (.withFiber .getInterruptible) (.uninterruptible (.restore (v 0) (.succeed (n 1)))), []),
   ("closeScope", .bind (.exit (.succeed u)) (withScope (.withFiber (.closeScope (v 1) (v 0)))), []),
   ("refGet", withCell (.perform .refGet (v 0)), []),
   ("refSet", withCell (.perform .refSet (ap "pair" [v 0, n 2])), []),

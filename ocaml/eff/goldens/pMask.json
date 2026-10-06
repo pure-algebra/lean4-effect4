@@ -1,0 +1,1 @@
+["bind",["perform",["deferredMakeOf",["nat"],["nat"]],["lit",["unit"]]],["bind",["perform",["deferredSucceed"],["app","pair",["cons",["var",0],["cons",["lit",["nat",7]],["nil"]]]]],["bind",["withFiber",["getInterruptible"]],["uninterruptible",["restore",["var",2],["perform",["deferredAwait"],["var",0]]]]]]]

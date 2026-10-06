@@ -157,6 +157,11 @@ inductive FiberOp : Type
   /-- The completed-exit view at a source callback's invocation. Resolved during
   code construction, with no host operation or scheduler command of its own. -/
   | construction
+  /-- The mask at a constant body (decisions row 245; `WithFiberAction.getInterruptible`,
+  `uninterruptibleMask((restore) => succeed(restore))`, `internal/effect.ts:4340-4352`): the
+  fiber is masked, and the answer is the saved state of its entry flag, delivered through the
+  restoring slot, which keeps the test for a pending cause. -/
+  | getInterruptible
 deriving DecidableEq
 
 /-- Operations that deliver an exit answer directly with that exit, while value-returning
@@ -188,7 +193,8 @@ def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
   | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _ | .interruptAll _ _
   | .cancelRace _ | .getId | .getContext | .setContext _ | .snapshotChildren
   | .awaitNewChildren _ | .runIn _ _ | .dropObservers _ | .refuse _
-  | .suspend _ | .sync _ | .ambientScope | .closeWalk _ _ _ | .foreignRelease _ _ => Val.unit
+  | .suspend _ | .sync _ | .ambientScope | .closeWalk _ _ _ | .foreignRelease _ _
+  | .getInterruptible => Val.unit
 
 /-- The answer type is selected by the operation. -/
 abbrev FiberSig : Effects.Signature.{0, 0} := ⟨FiberOp, FiberOp.answer⟩

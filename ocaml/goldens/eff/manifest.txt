@@ -13,11 +13,11 @@ ServiceName: value
 ServiceTypeCode: value
 ServiceKey: name service
 Decision: bool option tag recordTag
-Eff: succeed fail failCause sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible yieldNow awaitFiber withFiber scoped acquireRelease provideLayer service provideService catchIf select iterate
+Eff: succeed fail failCause sync suspend perform bind gen catchCause matchCause onExit exit uninterruptible interruptible yieldNow awaitFiber withFiber scoped acquireRelease provideLayer service provideService catchIf select iterate restore
 Stmt: bindYield yieldDiscard ret ifElse whileTrue breakLoop
 Stmts: nil cons
 Effs: nil cons
-ActionTerm: fork forkIn forkScoped runIn interrupt interruptScoped interruptAll awaitAll awaitAllFailFast snapshotChildren awaitNewChildren raceAll setContext getContext getId closeScope
+ActionTerm: fork forkIn forkScoped runIn interrupt interruptScoped interruptAll awaitAll awaitAllFailFast snapshotChildren awaitNewChildren raceAll setContext getContext getId closeScope getInterruptible
 LayerTerm: succeed effect effectDiscard provide provideMerge merge fresh orDie ref mergeAll
 LayerTerms: nil cons
 RowKind: sync async program

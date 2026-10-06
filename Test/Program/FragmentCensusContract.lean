@@ -35,7 +35,7 @@ def samples : List (String × NativeEff) :=
   , ("provideLayer", .provideLayer (.effectDiscard u) false u)
   , ("service", .service ⟨⟨0⟩, ⟨0⟩⟩), ("provideService", .provideService ⟨⟨0⟩, ⟨0⟩⟩ t u)
   , ("catchIf", .catchIf t u u), ("select", .select t .bool u u)
-  , ("iterate", .iterate none t t t t u) ]
+  , ("iterate", .iterate none t t t t u), ("restore", .restore t u) ]
 
 -- every constructor has a sample, and nothing else does
 #guard samples.map Prod.fst = Effect4.Program.constructorNames
@@ -54,9 +54,11 @@ def admitted (fragment : NativeEff → Bool) : List String :=
   ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "catchCause",
    "matchCause", "onExit", "exit", "select", "iterate"]
 
--- the twelve constructors with no proved agreement between the machine and the meaning
+-- the thirteen constructors with no proved agreement between the machine and the meaning. A
+-- restore site is outside both fragments, as the two masks are: the straight meaning has no
+-- fiber flag (decisions rows 244 to 246; `Test/Program/MaskContract.lean` runs it)
 #guard (samples.filter fun s => !Looped s.2).map Prod.fst =
   ["gen", "uninterruptible", "interruptible", "yieldNow", "awaitFiber", "withFiber", "scoped",
-   "acquireRelease", "provideLayer", "service", "provideService", "catchIf"]
+   "acquireRelease", "provideLayer", "service", "provideService", "catchIf", "restore"]
 
 end Test.Program.FragmentCensusContract

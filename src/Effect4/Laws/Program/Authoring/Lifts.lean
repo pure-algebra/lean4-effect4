@@ -313,6 +313,17 @@ theorem iterate_scoped {Op : Type} [ScopedOp Op] (cursor : String) (answer : Str
   simp only [Env.push_length, List.length_cons, List.length_nil] at s5
   simp [s1, s2, s3, s4, s5]
 
+theorem restore_scoped {Op : Type} [ScopedOp Op] {saved : TermSrc} {body : Src Op} (h0 : saved.Scoped) (h1 : body.Scoped) :
+    ((restore saved body) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold restore at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  obtain ⟨x1, hx1, h⟩ := bind_ok h
+  cases h
+  have s0 := h0.holds _ _ _ hx0
+  have s1 := h1.holds _ _ _ hx1
+  simp [s0, s1]
+
 theorem Action.fork_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (options : Effect4.Supervision.ForkOptions) (h0 : program.Scoped) :
     ((Action.fork program options) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
@@ -415,6 +426,13 @@ theorem Action.closeScope_scoped {Op : Type} [ScopedOp Op] {scope : TermSrc} {ex
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
   simp [s0, s1]
+
+theorem Action.getInterruptible_scoped {Op : Type} [ScopedOp Op] :
+    ((Action.getInterruptible) : ActionSrc Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold Action.getInterruptible at h
+  cases h
+  simp
 
 theorem Layer.succeed_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) (value : Effect4.Program.Lit) :
     ((Layer.succeed key value) : LayerSrc Op).Scoped := by
