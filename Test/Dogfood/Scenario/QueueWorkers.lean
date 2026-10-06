@@ -30,8 +30,8 @@ control of the host protocol.
   `held_within_fed`, `fed_accounted`, `queue_settled` and `releases_once`. Each is an instance,
   on this one program, of a proposed claim of the Queue's law of a whole run. The driver's law
   `replays` stands beside them as an associated law.
-* **Premises.** A goal's budget premise is `funded` (`src/Effect4/Laws/Run/Tape.lean`): no task
-  of the run was cut by its budget. The mask is a premise of the program: each worker takes, and
+* **Premises.** A goal's budget premise is `funded` (`src/Effect4/Run/Tape.lean`): no task of
+  the run was cut by its budget. The mask is a premise of the program: each worker takes, and
   the feeder offers, outside every mask. A red control breaks each premise.
 * **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
   fault is a variant of the crew with one changed part (`Fault`).
@@ -498,8 +498,8 @@ says what the goal would follow from. Those lists are what this scenario needs f
 
 Two premises stand in each statement, and a third in two of them.
 
-* **The budget**: `funded` (`src/Effect4/Laws/Run/Tape.lean`). No task of the run was cut by
-  its budget. The statement ranges over every command budget, at the battery's compile budget.
+* **The budget**: `funded` (`src/Effect4/Run/Tape.lean`). No task of the run was cut by its
+  budget. The statement ranges over every command budget, at the battery's compile budget.
 * **The mask**: the program is `crew`. Each worker takes, and the feeder offers, outside every
   mask. So an interruption at a wait is taken at the wait.
 * **Rest**, for the two statements about a state between two acts of a host: `atRest`, on a

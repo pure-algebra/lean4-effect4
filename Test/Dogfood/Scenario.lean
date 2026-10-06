@@ -30,10 +30,10 @@ and the lowered runs. This module holds what the scenarios share.
   an observation from the journal, its verdicts and the session's ledger.
 * **The machine's tape.** The tape, the machine's view and their laws are general facts of a
   run. They stand in the library, in the namespace `Effect4.Run`. `machineView` is the machine's
-  part of an observation (`src/Effect4/Run/Tape.lean`). `tapeFrom` reads the decisions that
-  moved the machine off a journal: each control that progressed and each reply application. A
-  lowered run replays the tape and compares that view (`tape_replays`,
-  `src/Effect4/Laws/Run/Tape.lean`). A journal whose tape stops has a completed prefix, and that
+  part of an observation, and `tapeFrom` reads the decisions that moved the machine off a
+  journal: each control that progressed and each reply application
+  (`src/Effect4/Run/Tape.lean`). A lowered run replays the tape and compares that view
+  (`tape_replays`, `src/Effect4/Laws/Run/Tape.lean`). A journal whose tape stops has a completed prefix, and that
   prefix and each position of the tape replay raw too (`tapeFrom_cut_replays`,
   `tapeFrom_position_replays`). Section 4 gives each name that the scenarios use an alias in
   this module's namespace.
@@ -244,12 +244,12 @@ The laws of a run's rows and the machine's tape name no scenario. They moved int
 with their statements unchanged (decisions row 284, point 5), and their namespace is
 `Effect4.Run`.
 
-* `src/Effect4/Run/Tape.lean`: the machine's view, a position, the decision of a row, the fresh
-  open and rest.
+* `src/Effect4/Run/Tape.lean`: the machine's view, a position, the decision of a row, the tape,
+  the fresh open, a funded run and rest. They are executable definitions of the core.
 * `src/Effect4/Laws/Run/Rows.lean`: what playing rows keeps, the inertness of a receipt row, and
   the laws of a reply application and of a control.
-* `src/Effect4/Laws/Run/Tape.lean`: the tape, `tape_replays`, the laws of the journal's cut and
-  a funded run.
+* `src/Effect4/Laws/Run/Tape.lean`: `tape_replays`, the laws of the journal's cut and
+  `funded_replays`.
 
 The command below gives each of those names that the scenario tree uses an alias in this
 namespace. So a battery writes `tapeFrom` or `funded` as it did, and a battery's own declaration

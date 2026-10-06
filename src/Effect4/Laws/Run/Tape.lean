@@ -25,11 +25,10 @@ statement and its proof unchanged (decisions row 284, point 5).
   run's own journal leaves no row unread. `funded_replays` says what the premise gives (the
   pointer of `funded-run-replay`).
 
-These four definitions are executable, and they stand in the law graph: `readsOn` calls
-`Run.enoughFor` (`src/Effect4/Laws/Run.lean`), `tapeFrom` calls `readsOn`, and `tapeOf` and
-`funded` call `tapeFrom`. The readings that need no such function are definitions of the core
-(`src/Effect4/Run/Tape.lean`): the machine's view, a position, the decision of a row, the fresh
-open and rest.
+The tape's definitions are the core's (`src/Effect4/Run/Tape.lean`): `readsOn`, `tapeFrom`,
+`tapeOf` and `funded`, with the machine's view, a position, the decision of a row and the fresh
+open. So a tool reads a tape with no import of the law graph, and this module holds the laws
+alone.
 
 Placement. The concept is `translation-simulation`. `tape_replays` and `funded_replays` are
 nodes of R8, and the four laws of the journal's cut are nodes of R13, each by its tag. Each
@@ -47,32 +46,7 @@ open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Api.HostSession (Key Call Reply Phase BoundCall Session)
 open Effect4.Api.Runner (Command)
 
-/-! ## The tape -/
-
-/-- Whether the raw replay takes this decision and reads on: the machine is live, and the step
-has enough command fuel (`Run.enoughFor`, `src/Effect4/Laws/Run.lean`). -/
-def readsOn (s : Run) (decision : Api.Decision) : Bool :=
-  s.machine.stuck.isNone &&
-    Run.enoughFor s.built.program s.built.table s.budget.fuel s.machine decision
-
-/-- The machine tape of rows played from a run: the positions, and the rows left unread. The
-tape stops at the first row that ends at a frontier, and at the first decision the raw replay
-does not read past. A frontier is never turned into a reply application: its rows stay unread. -/
-def tapeFrom (s : Run) : List Command → List Position × List Command
-  | [] => ([], [])
-  | c :: rest =>
-    let phase := (Api.Runner.result s.runner c).phase
-    if phase == .frontier then ([], c :: rest)
-    else
-      match decisionOf s c phase with
-      | none =>
-        let tail := tapeFrom (s.step c) rest
-        (tail.1, tail.2)
-      | some decision =>
-        if readsOn s decision then
-          let tail := tapeFrom (s.step c) rest
-          (⟨decision, s.step c⟩ :: tail.1, tail.2)
-        else ([], c :: rest)
+/-! ## A journal's machine is the raw replay of its tape -/
 
 /-- The proposition of `tape_replays`. -/
 def TapeReplays : Prop :=
@@ -532,30 +506,8 @@ theorem tapeFrom_position_replays (s : Run) (rows : List Command)
 
 /-! ## A funded run
 
-A statement over a scenario's runs takes its budget as a premise. This section gives that
-premise one name, `funded`, and ties it to a proved law of the tape. The fresh open that the
-tape is read from is `openedOf`, a definition of the core (`src/Effect4/Run/Tape.lean`). -/
-
-/-- The decisions of a run's tape: the decisions that moved the machine, read off the run's own
-journal from its fresh open. -/
-def tapeOf (s : Run) : List Api.Decision := (tapeFrom (openedOf s) s.journal).1.map (·.decision)
-
-/-- **A funded run: no task of the run was cut by its budget.** The tape of the run's own
-journal, read from the run's fresh open, leaves no row unread. So the journal holds no stopped
-row: no row ends at a frontier, and each decision is taken at a live machine with enough command
-fuel (`tapeFrom`, `readsOn`).
-
-The journal's verdicts alone do not decide it. A reply application has the verdict `applied` as
-soon as its call's guard is gone, whatever fuel its step had left (`applyReply`,
-`src/Effect4/Api/HostSession.lean`). Only a control reports its sufficiency, as `progressed` or
-`frontier` (`advance`, in the same file). The tape asks `Run.enoughFor` of each decision, so it
-stops at an applied reply application that the budget cut (`tapeFrom_stop`).
-
-It is the budget premise of a law of a whole run. Decisions row 226 excludes a cut inside an
-owned operation from the first profile. The proposed claim `embedded-budget-sufficient` (an open
-part of R12) is to supply the premise from a program's own bound. Until then a statement over
-runs takes it by this one name. `funded_replays` says what the premise gives. -/
-def funded (s : Run) : Bool := (tapeFrom (openedOf s) s.journal).2.isEmpty
+A statement over a scenario's runs takes its budget as a premise, under one name: `funded`
+(`src/Effect4/Run/Tape.lean`). This section ties that premise to a proved law of the tape. -/
 
 /-- **The machine of a funded run is the raw replay of its tape's decisions.** For a recorded
 run whose journal holds no stopped row, the machine is the machine that the raw frame replay
