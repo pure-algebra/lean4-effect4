@@ -177,6 +177,36 @@ def conditionalBranchProg (b : Bool) : Src NativeOp := eff {
 #guard elaborate (bindWith (Ref.make (nat 0)) fun r => Ref.get r : Src NativeOp)
   = .ok (.bind (.perform .refMake (.lit (.nat 0))) (.perform .refGet (.var 0)))
 
+-- `selectOptionWith` and `onExitWith`: the same, for the payload of an option and for an exit.
+#guard elaborate (selectOptionWith (app "some" [nat 1]) (succeed (nat 0)) fun m => succeed m : Src NativeOp)
+  = elaborate (selectOption "m" (app "some" [nat 1]) (succeed (nat 0)) (succeed (var "m")) : Src NativeOp)
+#guard elaborate (onExitWith (succeed (nat 1)) fun x => succeed x : Src NativeOp)
+  = elaborate (onExit "x" (succeed (nat 1)) (succeed (var "x")) : Src NativeOp)
+
+-- A helper that places its caller's term under a binder. With a written name it captures the
+-- caller's variable of that name: the caller's `m` (level 0) reads the payload (level 1).
+#guard elaborate (bind "m" (succeed (nat 7))
+    (selectOption "m" (app "some" [nat 1]) (succeed (nat 0)) (succeed (var "m"))) : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 7)))
+          (.select (.app "some" (.cons (.lit (.nat 1)) .nil)) .option (.succeed (.lit (.nat 0)))
+            (.succeed (.var 1))))
+-- With the minted name the caller's `m` keeps its reading, in each of the three forms.
+#guard elaborate (bind "m" (succeed (nat 7))
+    (selectOptionWith (app "some" [nat 1]) (succeed (nat 0)) fun _ => succeed (var "m")) : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 7)))
+          (.select (.app "some" (.cons (.lit (.nat 1)) .nil)) .option (.succeed (.lit (.nat 0)))
+            (.succeed (.var 0))))
+#guard elaborate (bind "x" (succeed (nat 7))
+    (onExitWith (succeed (nat 1)) fun _ => succeed (var "x")) : Src NativeOp)
+  = .ok (.bind (.succeed (.lit (.nat 7))) (.onExit (.succeed (.lit (.nat 1))) (.succeed (.var 0))))
+#guard elaborate (bind "s" (Ref.make (nat 0))
+    (Ref.modifyWith (fun current => app "pair" [var "s", current]) (var "s")) : Src NativeOp)
+  = .ok (.bind (.perform .refMake (.lit (.nat 0)))
+          (.perform (.refModifyWith (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))) (.var 0)))
+-- No author can read a minted name: `var` refuses the reserved prefix.
+#guard (elaborate (selectOptionWith (app "some" [nat 1]) (succeed (nat 0))
+    fun _ => succeed (var (Env.mint {} "payload")) : Src NativeOp)).toOption.isNone
+
 -- `map` through an atom.
 #guard elaborate (map "add1" (succeed (nat 1)) : Src NativeOp)
   = .ok (.bind (.succeed (.lit (.nat 1))) (.succeed (.app "add1" (.cons (.var 0) .nil))))

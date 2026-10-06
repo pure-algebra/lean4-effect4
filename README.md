@@ -143,6 +143,12 @@ A helper that places its caller's term in the body uses this form.
 With fixed names, a caller's variable of the same name would read the folded element.
 `Test/Program/FoldHygiene.lean` holds that capture as a control.
 
+Three more builders mint the name that they bind, for the same reason.
+`Authoring.Ref.modifyWith (fun current => body) cell` mints the name of the cell's current value.
+Each row that carries a term has this second wrapper, named with the suffix `With`.
+`Authoring.selectOptionWith` mints the payload's name, and `Authoring.onExitWith` the exit's name.
+`Test/Program/AuthoringContract.lean` holds one capture under a written name, and each minted form's reading.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact

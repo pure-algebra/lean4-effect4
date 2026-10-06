@@ -221,6 +221,19 @@ def performTerm {Op : Type} (mk : Term → Op) (current : String) (f request : T
     let x1 ← request env p
     .ok (.perform (mk x0) x1)
 
+/-- `performTermWith mk f request`: `performTerm` with the current value's binder as a Lean
+function over a name minted for this scope, read through `minted`. No name an author writes is
+a minted name, so a term of the caller keeps its reading inside `f` (`var_push_minted`,
+`Laws/Program/Author.lean`). A builder that places a caller's term in a row's binder term uses
+this form: under `performTerm`'s fixed name the caller's variable of the same name would read
+the cell's current value. It emits the same `Eff.perform`. The generated wrappers
+`Ref.modifyWith` and its seven siblings are one application of it
+(`Program/Authoring/Rows.lean`). -/
+def performTermWith {Op : Type} (mk : Term → Op) (f : TermSrc → TermSrc) (request : TermSrc) :
+    Src Op :=
+  fun env p =>
+    performTerm mk (env.mint "current") (f (minted (env.mint "current"))) request env p
+
 /-! ## Host rows by name
 
 A host row is a position in the table supplied beside the program (`NativeOp.external i`,

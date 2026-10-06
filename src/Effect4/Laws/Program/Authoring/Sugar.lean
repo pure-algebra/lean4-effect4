@@ -36,6 +36,22 @@ theorem bindName_scoped {Op : Type} [ScopedOp Op]
     (bindName name first rest).Scoped :=
   ⟨fun env p e h => (bind_scoped name h0 (h1 _ (var_scoped name))).holds env p e h⟩
 
+/-- The option selection over a minted name keeps the scope judgment: the second arm's argument
+is the scoped reader of that name. One application of `selectOption_scoped`. Its consumers are
+the authored programs that use the form, the composed modules' wrappers first. -/
+theorem selectOptionWith_scoped {Op : Type} [ScopedOp Op] {scrutinee : TermSrc} {arm0 : Src Op}
+    {arm1 : TermSrc → Src Op} (h0 : scrutinee.Scoped) (h1 : arm0.Scoped)
+    (h2 : ∀ payload : TermSrc, payload.Scoped → (arm1 payload).Scoped) :
+    (selectOptionWith scrutinee arm0 arm1).Scoped :=
+  minting_scoped _ fun x => selectOption_scoped x h0 h1 (h2 _ (minted_scoped x))
+
+/-- The exit hook over a minted name keeps the scope judgment. One application of
+`onExit_scoped`, with the same consumers. -/
+theorem onExitWith_scoped {Op : Type} [ScopedOp Op] {body : Src Op} {finalizer : TermSrc → Src Op}
+    (h0 : body.Scoped) (h1 : ∀ exit : TermSrc, exit.Scoped → (finalizer exit).Scoped) :
+    (onExitWith body finalizer).Scoped :=
+  minting_scoped _ fun x => onExit_scoped x h0 (h1 _ (minted_scoped x))
+
 theorem OfNat.ofNat_scoped {n : Nat} : (OfNat.ofNat n : TermSrc).Scoped := nat_scoped n
 
 theorem ite_scoped {Op : Type} [ScopedOp Op] (c : Prop) [Decidable c] {t e : Src Op}

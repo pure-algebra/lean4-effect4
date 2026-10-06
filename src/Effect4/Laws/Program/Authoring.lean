@@ -300,4 +300,19 @@ theorem performTerm_scoped {Op : Type} [ScopedOp Op] {mk : Term → Op}
   rw [Eff.perform_scoped_iff, hmk]
   exact ⟨s0, s1⟩
 
+/-- **The hygienic term-row lift preserves scope.** The binder term's argument is the scoped
+reader of the minted name, and the lift is `performTerm` at that name. A step of the same claim
+(`operation-data-scoped`, R4). Its consumers are the generated lemmas of the `…With` wrappers
+(`Laws/Program/Authoring/Rows.lean`), and through them each authored program that places a
+caller's term in a row's binder term: the Queue's public wrappers first. It establishes no
+typing, and nothing of what a caller's term reads: that is `var_push_minted`
+(`Laws/Program/Author.lean`). -/
+theorem performTermWith_scoped {Op : Type} [ScopedOp Op] {mk : Term → Op}
+    (hmk : ∀ t n, ScopedOp.scopedAt (mk t) n = t.scoped (n + 1))
+    {f : TermSrc → TermSrc} {request : TermSrc}
+    (hf : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (hr : request.Scoped) :
+    ((performTermWith mk f request) : Src Op).Scoped :=
+  ⟨fun env p e h =>
+    (performTerm_scoped hmk (env.mint "current") (hf _ (minted_scoped _)) hr).holds env p e h⟩
+
 end Effect4.Program.Authoring

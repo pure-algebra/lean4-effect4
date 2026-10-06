@@ -17,12 +17,14 @@ carries (`refUpdateWith f`, `deferredMakeOf value error`), and emits:
   authored row lands in the printer's image whatever its kind (DI-89's native half). A row whose
   constructor carries a binder term (its one parameter is a `Term`) is one application of the
   term-row lift `performTerm` (`Program/Authoring.lean`): the term is a source term elaborated
-  under a name for the current value, as `iterate`'s step is (decisions row 43).
+  under a name for the current value, as `iterate`'s step is (decisions row 43). A term row has
+  a second wrapper, named with the suffix `With`: one application of `performTermWith`, whose
+  binder term is a Lean function over a name that the surface mints.
 * group `RowsLaws` → `src/Effect4/Laws/Program/Authoring/Rows.lean`: the scope lemma of
   every wrapper. A term-free row's is one application of `perform_scoped`, whose operation
   hypothesis is the native alphabet's `NativeOp.scopedAt_eq_true` at an operation with no term;
   a term row's is one application of `performTerm_scoped`, whose hypothesis is the native
-  instance's own equation.
+  instance's own equation, and its second wrapper's is one of `performTermWith_scoped`.
 
     lake exe effect4gen-catalogue Rows --group Rows
       --imports Effect4.Program.Authoring.Lifts --out src/Effect4/Program/Authoring/Rows.lean
@@ -50,7 +52,8 @@ def ctorParams (c : Name) : MetaM (List (String × String)) := do
       acc := acc ++ [((← x.fvarId!.getDecl).userName.toString, ← srcOf ty)]
     return acc
 
-/-- One row's wrapper and lemma, or none when it has no spelling (the host row). -/
+/-- One wrapper and its lemma. A row with no spelling (the host row) emits none, a term-free
+row one, and a term row two. -/
 structure Emitted where
   namespaceParts : List String
   defName : String
@@ -88,16 +91,42 @@ def emitTermRow (row : Row) (f : String) : Emitted :=
   { namespaceParts := nsParts, defName, wrapper, lemma,
     receipt := "Effect4.Program.Authoring." ++ String.intercalate "." (nsParts ++ [defName]) }
 
+/-- A term row's hygienic wrapper and lemma: one application of `performTermWith`
+(`Program/Authoring.lean`). `f` is a Lean function over the reader of the current value's name,
+which the surface mints, so a caller's term inside it keeps its reading. The wrapper's name is
+the row's with the suffix `With`. -/
+def emitTermRowWith (row : Row) (f : String) : Emitted :=
+  let parts := row.spelling.splitOn "."
+  let defName := parts.getLast! ++ "With"
+  let nsParts := parts.dropLast
+  let (reqParams, reqTerm) := requestOf row
+  let reqText :=
+    if reqParams.isEmpty then "" else s!" ({String.intercalate " " reqParams} : TermSrc)"
+  let header := s!"def {defName} ({f} : TermSrc → TermSrc){reqText} : Src NativeOp :="
+  let wrapper := s!"/-- `{row.spelling}` (`{row.cite}`), with the current value's name minted by the surface.\n`{f}` is the binder term, as a function of the reader of the cell's current value. -/\n{header}\n  performTermWith .{row.name} {f} {reqTerm}\n"
+  let reqHyps := reqParams.zipIdx.map fun (x, i) => s!" (h{i + 1} : {x}.Scoped)"
+  let implicitReq :=
+    if reqParams.isEmpty then "" else s!" \{{String.intercalate " " reqParams} : TermSrc}"
+  let app := String.intercalate " " ([defName, f] ++ reqParams)
+  let requestProof := match reqParams with
+    | [] => "unit_scoped"
+    | [_] => "h1"
+    | _ => "(app_scoped \"pair\" (TermSrc.Scoped_cons h1 (TermSrc.Scoped_cons h2 TermSrc.Scoped_nil)))"
+  let lemma := s!"theorem {defName}_scoped \{{f} : TermSrc → TermSrc}{implicitReq}\n    (h0 : ∀ current : TermSrc, current.Scoped → ({f} current).Scoped){String.join reqHyps} :\n    ({app}).Scoped :=\n  performTermWith_scoped (fun _ _ => rfl) h0 {requestProof}\n"
+  { namespaceParts := nsParts, defName, wrapper, lemma,
+    receipt := "Effect4.Program.Authoring." ++ String.intercalate "." (nsParts ++ [defName]) }
+
 /-- The binder term a row's constructor carries: its one parameter, of type `Term`. -/
 def termParam? : List (String × String) → Option String
   | [(f, ty)] => if ty == termTypeText then some f else none
   | _ => none
 
-def emitOne (op : NativeOp) (params : List (String × String)) : Option Emitted :=
+def emitOne (op : NativeOp) (params : List (String × String)) : List Emitted :=
   let row := op.row
-  if row.spelling.isEmpty then none else
-  -- a row whose constructor carries one binder term goes through the term-row lift
-  if let some f := termParam? params then some (emitTermRow row f) else
+  if row.spelling.isEmpty then [] else
+  -- a row whose constructor carries one binder term goes through the term-row lift, twice:
+  -- under a name the author writes, and under a name the surface mints
+  if let some f := termParam? params then [emitTermRow row f, emitTermRowWith row f] else
   let parts := row.spelling.splitOn "."
   let defName := parts.getLast!
   let nsParts := parts.dropLast
@@ -125,8 +154,8 @@ def emitOne (op : NativeOp) (params : List (String × String)) : Option Emitted 
     | _ => s!"{lift}_scoped _ {opScoped} (app_scoped \"pair\" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))"
   let lemma := s!"theorem {defName}_scoped {lemmaParams} :\n    ({app}).Scoped :=\n  {proof}\n"
   let lemma := lemma.replace "theorem " "theorem " |>.replace "_scoped  :" "_scoped :"
-  some { namespaceParts := nsParts, defName, wrapper, lemma,
-         receipt := "Effect4.Program.Authoring." ++ String.intercalate "." (nsParts ++ [defName]) }
+  [{ namespaceParts := nsParts, defName, wrapper, lemma,
+     receipt := "Effect4.Program.Authoring." ++ String.intercalate "." (nsParts ++ [defName]) }]
 
 /-- Group the emitted rows by namespace, in first-seen order. -/
 def grouped (rows : List Emitted) : List (List String × List Emitted) :=
@@ -146,7 +175,7 @@ def emitAll : MetaM (List Emitted) := do
   for op in NativeOp.spelled do
     let ctorName := (`Effect4.Program.NativeOp).str op.row.name
     let params ← if (← getEnv).contains ctorName then ctorParams ctorName else pure []
-    if let some e := emitOne op params then
+    for e in emitOne op params do
       if !(out.any fun (o : Emitted) => o.receipt == e.receipt) then out := out ++ [e]
   return out
 

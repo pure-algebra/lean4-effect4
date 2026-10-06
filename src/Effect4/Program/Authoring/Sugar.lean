@@ -43,6 +43,18 @@ def bindWith {Op : Type} (first : Src Op) (rest : TermSrc → Src Op) : Src Op :
 def bindName {Op : Type} (name : String) (first : Src Op) (rest : TermSrc → Src Op) : Src Op := fun env p =>
   bind name first (rest (var name)) env p
 
+/-- `selectOptionWith scrutinee none (fun payload => some)` is `selectOption` of a minted name,
+with `payload` reading it. A builder that places a caller's term in the second arm uses this
+form: under a written name the caller's variable of that name would read the payload. -/
+def selectOptionWith {Op : Type} (scrutinee : TermSrc) (arm0 : Src Op) (arm1 : TermSrc → Src Op) :
+    Src Op :=
+  minting "payload" fun x => selectOption x scrutinee arm0 (arm1 (minted x))
+
+/-- `onExitWith body (fun exit => finalizer)` is `onExit` of a minted name, with `exit` reading
+it. A builder that places a caller's term in the finalizer uses this form. -/
+def onExitWith {Op : Type} (body : Src Op) (finalizer : TermSrc → Src Op) : Src Op :=
+  minting "exit" fun x => onExit x body (finalizer (minted x))
+
 /-- `Effect.flatMap` under its Effect name. -/
 def flatMap {Op : Type} (answer : String) (first rest : Src Op) : Src Op := bind answer first rest
 
