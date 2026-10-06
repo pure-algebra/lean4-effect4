@@ -88,6 +88,7 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Store/Folds", .laws, 1, "Laws/Store/Folds", "fold connectors for store values", true, true⟩,
   ⟨"src/Effect4/Laws/Machine", .laws, 2, "Laws/Machine", "store and frame invariants, the store kernel, `Book` and `BMeans`, observations, approximation and scheduling laws", false, true⟩,
   ⟨"src/Effect4/Laws/Machine/Folds", .laws, 2, "Laws/Machine/Folds", "fold connectors for machine stores", true, true⟩,
+  ⟨"src/Effect4/Laws/Machine/MaskDiscipline.lean", .laws, 2, "Laws/Machine/MaskDiscipline", "the saved mask's chain on a stack at one fixed base bit (`MaskChain`); the pop from an empty scratch stack, `getCont`, `frameExitState` and the entry of each region keep it, and one base with one stack gives one flag (`saved_mask_pop_discipline`)", true, true⟩,
   ⟨"src/Effect4/Laws/Program", .laws, 3, "Laws/Program", "typing soundness, meaning, the reference scheduler and evaluator, replay agreement, simulation, guards, authoring, the typed state", false, true⟩,
   ⟨"src/Effect4/Laws/Program/Typing", .laws, 3, "Laws/Program/Typing", "the checker sound and complete against `HasTy`; inversion; the term checker's rules in their introduction form (`TermIntro.lean`, decisions row 257)", true, true⟩,
   ⟨"src/Effect4/Laws/Program/Guard", .laws, 3, "Laws/Program/Guard", "the guard family's laws", true, true⟩,

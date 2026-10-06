@@ -1,0 +1,627 @@
+{
+  "evidence": "Finite Python mirrors of selected source branches; no Lean elaboration, repository model execution, or universal preservation proof",
+  "source_model_sha256": "cedc4e7cf129ee7da9c122251f3ebccbc506f5cfa9b025571e9d07fa70ca246d",
+  "source_profile_sha256": "087064aca1eda9808642ad69ca949c07ff3735331e4f1e5821d5013dfe007c0b",
+  "cases": [
+    {
+      "name": "within is independent",
+      "kind": "omitted premise finite branch mirror",
+      "operation": "dropTake",
+      "argument": 99,
+      "input": {
+        "s": {
+          "messages": [
+            7,
+            8
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "input_observation": {
+        "firstProfile": true,
+        "within": false,
+        "tidy": true,
+        "quiet": true,
+        "ok": true,
+        "named": true
+      },
+      "result": {
+        "s": {
+          "messages": [
+            7,
+            8
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": false,
+        "named": true
+      },
+      "positive_input": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "positive_result": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "missing": "within",
+      "requested": true
+    },
+    {
+      "name": "tidy is independent",
+      "kind": "omitted premise finite branch mirror",
+      "operation": "dropTake",
+      "argument": 99,
+      "input": {
+        "s": {
+          "messages": [],
+          "capacity": 2,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [
+            [
+              2,
+              false,
+              [
+                8
+              ]
+            ]
+          ],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "input_observation": {
+        "firstProfile": true,
+        "within": true,
+        "tidy": false,
+        "quiet": true,
+        "ok": true,
+        "named": true
+      },
+      "result": {
+        "s": {
+          "messages": [],
+          "capacity": 2,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [
+            [
+              2,
+              false,
+              [
+                8
+              ]
+            ]
+          ],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": false,
+        "named": true
+      },
+      "positive_input": {
+        "s": {
+          "messages": [
+            7,
+            9
+          ],
+          "capacity": 2,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [
+            [
+              2,
+              false,
+              [
+                8
+              ]
+            ]
+          ],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "positive_result": {
+        "s": {
+          "messages": [
+            7,
+            9
+          ],
+          "capacity": 2,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [
+            [
+              2,
+              false,
+              [
+                8
+              ]
+            ]
+          ],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "missing": "tidy",
+      "requested": true
+    },
+    {
+      "name": "quiet is independent",
+      "kind": "omitted premise finite branch mirror",
+      "operation": "poll",
+      "argument": 99,
+      "input": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [
+            [
+              5,
+              1,
+              1
+            ]
+          ],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "input_observation": {
+        "firstProfile": true,
+        "within": true,
+        "tidy": true,
+        "quiet": false,
+        "ok": true,
+        "named": true
+      },
+      "result": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [
+            [
+              5,
+              1,
+              1
+            ]
+          ],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": false,
+        "named": true
+      },
+      "positive_input": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [
+            [
+              5,
+              1,
+              1
+            ]
+          ],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [
+          5
+        ],
+        "ok": true,
+        "named": true
+      },
+      "positive_result": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [
+            [
+              5,
+              1,
+              1
+            ]
+          ],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [
+          5
+        ],
+        "ok": true,
+        "named": true
+      },
+      "missing": "quiet",
+      "requested": true
+    },
+    {
+      "name": "old ok flag is sticky",
+      "kind": "omitted premise finite branch mirror",
+      "operation": "dropTake",
+      "argument": 99,
+      "input": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": false,
+        "named": true
+      },
+      "input_observation": {
+        "firstProfile": true,
+        "within": true,
+        "tidy": true,
+        "quiet": true,
+        "ok": false,
+        "named": true
+      },
+      "result": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": false,
+        "named": true
+      },
+      "positive_input": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "positive_result": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "missing": "ok",
+      "requested": true
+    },
+    {
+      "name": "old named flag is sticky",
+      "kind": "omitted premise finite branch mirror",
+      "operation": "dropTake",
+      "argument": 99,
+      "input": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": false
+      },
+      "input_observation": {
+        "firstProfile": true,
+        "within": true,
+        "tidy": true,
+        "quiet": true,
+        "ok": true,
+        "named": false
+      },
+      "result": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": false
+      },
+      "positive_input": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "positive_result": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "missing": "named",
+      "requested": true
+    },
+    {
+      "name": "close omitted signal control",
+      "kind": "broader operation domain, not firstOp",
+      "operation": "close",
+      "input": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 2,
+          "strategy": "suspend",
+          "takers": [
+            [
+              5,
+              2,
+              2
+            ]
+          ],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "input_observation": {
+        "firstProfile": false,
+        "within": true,
+        "tidy": true,
+        "quiet": true,
+        "ok": true,
+        "named": true
+      },
+      "positive_result": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 2,
+          "strategy": "suspend",
+          "takers": [
+            [
+              5,
+              2,
+              2
+            ]
+          ],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "closing"
+        },
+        "signalled": [
+          5
+        ],
+        "ok": true,
+        "named": true
+      },
+      "mutant_result": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 2,
+          "strategy": "suspend",
+          "takers": [
+            [
+              5,
+              2,
+              2
+            ]
+          ],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "closing"
+        },
+        "signalled": [],
+        "ok": false,
+        "named": true
+      },
+      "failed_flag": "ok",
+      "firstOp": false
+    },
+    {
+      "name": "shutdown omitted signal control",
+      "kind": "broader operation domain, not firstOp",
+      "operation": "shutdown",
+      "input": {
+        "s": {
+          "messages": [
+            7
+          ],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [
+            [
+              2,
+              false,
+              [
+                8
+              ]
+            ]
+          ],
+          "awaiters": [],
+          "phase": "opened"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "input_observation": {
+        "firstProfile": true,
+        "within": true,
+        "tidy": true,
+        "quiet": true,
+        "ok": true,
+        "named": true
+      },
+      "positive_result": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "done"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": true
+      },
+      "mutant_result": {
+        "s": {
+          "messages": [],
+          "capacity": 1,
+          "strategy": "suspend",
+          "takers": [],
+          "peekers": [],
+          "offers": [],
+          "awaiters": [],
+          "phase": "done"
+        },
+        "signalled": [],
+        "ok": true,
+        "named": false
+      },
+      "failed_flag": "named",
+      "firstOp": false
+    }
+  ]
+}

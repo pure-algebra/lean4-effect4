@@ -116,6 +116,7 @@ def registry : Registry where
         -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257).
         -- The judgment's file names no module since seat MOVE
         `Effect4.Laws.Modules.Checking,
+        `Effect4.Laws.Modules.Waiting,
         `Effect4.Laws.Program.Typing.TermIntro,
         -- Semaphore's typing statements, and its model's profile: the closure is this
         -- concept's node, and the two facts of a visit carry their own tag (seat SEM's
@@ -134,7 +135,8 @@ def registry : Registry where
       title := "Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwinding"
       defaultModules := [
         `Effect4.Laws.Machine.ScopeMachine,
-        `Effect4.Laws.Machine.ScopeRestoration
+        `Effect4.Laws.Machine.ScopeRestoration,
+        `Effect4.Laws.Machine.MaskDiscipline
       ] },
     { id := "reactive-scheduling"
       title := "Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants"
@@ -194,6 +196,7 @@ def registry : Registry where
         `Effect4.Laws.Modules.Queue.Relation,
         `Effect4.Laws.Modules.Queue.Reading,
         `Effect4.Laws.Modules.Queue.Steps,
+        `Effect4.Laws.Modules.Queue.Ops,
         `Effect4.Laws.Modules.Semaphore.Relation,
         `Effect4.Laws.Modules.Semaphore.Reading,
         `Effect4.Laws.Modules.Semaphore.Steps
@@ -369,6 +372,9 @@ def registry : Registry where
     { id := "saved-mask-restoration", concept := "scope-lifetime-finalization", role := .preservation
       title := "The mask's law at the boundaries of regions, on the frame machine: the getter masks and answers the image of the entry flag; a restore site at a true bit is the interruptible region over its body, and at a false bit it is its body's own code; a region's entry sets its own flag at every fiber and saves the earlier flag exactly when it changes it; the saved frame's pass returns that flag on every exit, and with a cause pending an exit that leaves the fiber interruptible fails there with it (decisions rows 227, 244 to 246; no progress, nothing about a module, and no statement for a region that changes no flag)"
       pointer := .witness `Effect4.Program.Typed.saved_mask_restoration },
+    { id := "saved-mask-pop-discipline", concept := "scope-lifetime-finalization", role := .preservation
+      title := "At one fixed base bit, the frame machine keeps the chain of restoring frames on a fiber's stack: FrameFiber.popFrom from an empty scratch stack, getCont, Machine.frameExitState and the entry of each region keep it, and two fibers with one base and one stack have one flag (a local law at every demand, skip flag and carried cause; no statement of a run, of a completed exit, of cleanup or of delivery)"
+      pointer := .witness `Effect4.Machine.saved_mask_pop_discipline },
 
     -- 4. reactive-scheduling
     { id := "machine-typed-not-halted", concept := "reactive-scheduling", role := .inversion
@@ -904,7 +910,7 @@ def registry : Registry where
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
         "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
         "the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant; a finite probe holds the candidate at scheduling points (docs/research/2026-10-05-claude-lead/mask-probes/MaskStack.lean)",
-        "saved-mask-pop-discipline (proposed helper claim; scope-lifetime-finalization, serving the run-level half above): at one fixed base bit, the chain of restoring frames on a fiber's stack is kept through FrameFiber.popFrom from an empty scratch stack, through getCont and through Machine.frameExitState, and through the entry of each region; two states of one base with one stack have one flag; it is a local law of the frame machine with no statement of a run, of a completed exit, of cleanup or of delivery, and its lift to runs through Machine.Lift keeps the pending commands' conditions; its consumers are that lift, then the waiting wrapper under a masked caller and Semaphore's protected permit (Codex's candidate, not compiled)",
+        "the lift of saved-mask-pop-discipline to runs (scope-lifetime-finalization, serving the run-level half above): each live fiber of a reached run holds the chain at its start flag; it needs FrameFiber.step and each command to keep the chain, with a condition on a command that clears a fiber: just before the clearing the fiber's stack is empty, or its flag is its base; the stack's emptiness after the clearing protects nothing, since Cmd.exitDone clears a stack through RunFiber.cleared and keeps the flag; the local law is saved_mask_pop_discipline; no goal states the lift",
         "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]
