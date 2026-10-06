@@ -1,0 +1,102 @@
+{
+  "commit": "0e6077b6",
+  "source": "generated/semantics.md",
+  "evidence": "committed retained report, not regenerated",
+  "requirements": {
+    "R1": [
+      "program admission at declared services is reached by tests only: authoring, Built, the session and Run.open admit at the table's own signature \u27e8table, []\u27e9, and code generation's admission check is at nativeSignature table (decisions row 21; the slice plan's steps 3 and 4, docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md)",
+      "the faces (22 lines) pinned to the built-in signature: Laws/Codegen/Admit, Laws/Codegen/Checked and Laws/Api/ModuleReadable take nativeSignature table (the \u03a3_app slice; C7, conditional on decisions row 115)",
+      "meaning, loop and run soundness at service declarations that rebind a code: restored 2026-10-04 at fresh codes only (SoundAnySignature.lean)",
+      "structured service carriers: LawfulSig admits flat carriers only (decisions row 118, open: waits on a program that needs one)"
+    ],
+    "R2": [
+      "C2 for host rows: operational until DI-69's row meaning lands",
+      "C4 for TypedProg (the generic judgment is proved both ways)",
+      "C5: the world projection with its back condition (its red controls are proved)",
+      "C7: conditional on decisions row 115",
+      "C8: per form"
+    ],
+    "R3": [
+      "variants: the tag select over records landed (decisions row 195 (d)); catchTag's residual, the caught tag subtracted from the error column, waits on decisions row 130",
+      "recursive types are row 124 (open): nominal \u03a3_app declarations through Ty.app",
+      "error payloads: the carrier (decisions row 120, part E1) and the face (part E2: one Data.TaggedError class per tag, printed and read back) landed; open: catchTag's residual over records (decisions row 130), int and number fields (row 121; a number field is refused by name as unreadable), a field typed by another class (refused by name), a record update of a class instance (it answers a structural object), and a host row answering a payload (R6, parked)",
+      "int inhabited inside row 108's profile: ruled 2026-10-02 (decisions row 121), not landed; the admission's int scan still refuses it",
+      "the Schema and JSON images of app, null, undefined, number and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161)",
+      "equality at records: eq stays refused at records until a program compares them (decisions row 126)"
+    ],
+    "R4": [
+      "the faces of Ref<A> and Deferred<A, E>, the type arguments' part: since the state plan's T5, part A, a read-modify-write row's binder term is printed as a function of the cell's current value and read back by the Lean reader and by ts/eff/read.ts (printPerform, readPerform), the five names spell nothing, and read_print and read_exact hold at a term row whose term is scoped one level up, covered and unannotated; open is part B: Deferred.make<A, E> printed and read at every instance (the faces spell it at Deferred<number, number> and refuse another instance by name, typeSpelling), Row.typeArgs derived from the instance, the TypeScript profile and OCaml at instances, and an operation's type arguments as program annotations (decisions rows 42\u201343, step 5, and row 212; state plan T5); part B needs a reader of types that inverts the type printer on the instance types (Classes.readTy reads neither never nor a handle type), and the same reader would read a fold's stated accumulator type and a loop's stated cursor type, which print and do not read back; since the fold's slice the raw annotation collector and the integer scan read an operation's binder term (ScopedOp.term?), and since T5 the payload class collector does too (classesOf)",
+      "the target half of handle-identity-laws (decisions row 229): the identity correspondence in each target's relation, in both directions: two handles have equal keys exactly when their host objects are one object; no goal states it, and the laws over Fits and the world's order are handle_identity_laws",
+      "atomic-attempt-isolation (proposed claim; store-typing and reactive-scheduling): an admitted atomic body's ordered dynamic reads and writes, the exact state that a failure or a retry restores, and no step of another fiber between its first access and its commit (decisions rows 80, 223; waits on the body profile's grammar and on row 226's budget or suspension)",
+      "scoped-body-substitution-boundary (proposed claim; residual-program-typing): the mask adds no scoped constructor: a restore site is one node that binds nothing, with its checked body at child 0; both saved choices resolve that one body in one environment, with a typed stack, typed captures and no lookup that fails; a saved value passed as data keeps its choice and no activation of its mask (decisions rows 245, 246); for a later constructor that does bind a scope, the code after the scope runs only after it, and substitution neither captures it nor copies it into a child body (decisions rows 225, 227); it states no agreement with a target",
+      "saved-mask-image-membership (proposed claim; store-typing): the mask's saved state is at an opaque host type with a reserved target; membership at it is exactly one of the two canonical images of the saved bit, so the value is no Boolean even after widening; no external handle and no host answer column takes the type, and no service carries it in the first profile; typed stores, typed environments and a later world keep the membership (decisions row 244; the first of the mask's obligations); it states no reply admission"
+    ],
+    "R5": [
+      "lower_refines_build: the machine's build of a layer refines `build` (decisions row 147)",
+      "reference keys, Config, minted keys, and context validation at any runtime bridge (system map \u00a78, R5)"
+    ],
+    "R6": [
+      "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
+      "DI-57's table-aware reference relation: run_eq_ref holds at the empty table only (parked by the owner, 2026-09-30)",
+      "DI-69: the row table's meaning in code",
+      "H related to the machine: M6's premise is a predicate on tapes (decisions row 95), not a host relation",
+      "receipt and application on the keyed lifecycle, and their converse (host-boundary \u00a74.5; decisions rows 98\u2013100, parked by the owner, 2026-09-30)",
+      "a world extension meeting C5, a retirement edge, per-row cancellation, one root (DI-58, DI-65)",
+      "the public typed guarantee for programs using host services (decisions row 99)"
+    ],
+    "R7": [
+      "resolve_typed: a resolved code entry is typed at its reference's type, with capture layout fixed at resolution and identity by allocation or structure (decisions row 82, open)",
+      "code-valued services with a capture law, R5's through R7 (decisions row 82)",
+      "the reserved contract of a retained behaviour: its entry, captures, invocation context and lifetime, designed now for the planned Cache, Pool and callback modules; the value form and its evaluator wait for the first of them (decisions row 234)",
+      "posted-body-entry-typed (proposed claim; residual-program-typing): a checked Eff body supplied at a posting site, with its resolved entry, typed lexical environment and selected service policy, stays typed under world extension (decisions rows 82, 225)"
+    ],
+    "R8": [
+      "typed lowering open: what verified lowering means (decisions row 28); the OCaml engine is outside M7 until it is ruled",
+      "numbers open (decisions row 108): each face equal to the reference inside its bounded profile and refusing outside it, intermediates included (DI-56)",
+      "K2 holds on the readable domain, which excludes annotated loops (DI-91; its fallback (a) is unscheduled)",
+      "one identity bijection across faces: the fiber identity carrier is ruled, not landed (DI-81)",
+      "mask-rows-table-premises (proposed claim; exact-codecs): the mask's two printed rows, the getter as the mask that answers its own restore and a restore site as pipe(E, saved), keep the row table's premises at the extended table: rowsApart with a reservation for the row that has no head, table_apart and table_shape; read_print and read_exact then keep their statements; program syntax only, no typing and no behaviour of the target (decisions row 245)",
+      "the TypeScript face against rc.112: finite truth-harness checks only (DI-49)",
+      "the profile as data, named by each face's law (decisions row 79, R79.5)"
+    ],
+    "R9": [
+      "part two: a saved frame transports missingService across a change in the requirement row (decisions row 117)"
+    ],
+    "R10": [
+      "a composed module's law, Agrees profile module expansion (decisions row 79, R79.5; DI-89)",
+      "no form has a behaviour law (DI-89)",
+      "mask-printed-form-profile (proposed claim; translation-simulation, serving R10 and R11): the mask as a derived form, the getter bound to its body under uninterruptible, against the named release's native mask: equal observation on a named observation, under compatible decisions, for compiled programs; the printed form is three checkpoints longer than the native mask, and it is not the native mask at two checkpoints of its entry, where the client premise, nothing acquired or registered before the body begins, makes an interrupt equal to one before the form (decisions rows 245, 246; the two checkpoints rest on Codex's runs); it states no equality with the native spelling",
+      "none of DI-89's named forms exists: retry, catchTag, forEach, all, Schedule over iterate, the option and result eliminators",
+      "per form: reader admission, a readable expansion (C8) and a stable identity (DI-89; the model probe's D9, unruled)",
+      "DI-39's six rows not landed",
+      "a composite's contract by a stuttering route (post-Phase C \u00a711.4)",
+      "queue-expansion-agrees (proposed claim; translation-simulation): the Queue's expansion agrees with its application-signature clients on the Queue's profile, which defines the public requests, commits, replies, interruptions and terminations before it hides a private cell or a helper identity (decisions rows 79, 219 to 222, 230)",
+      "posted-wake-profile-agrees (proposed claim; translation-simulation): one producer's posted delivery, with its dispatch owner, priority, receiver and token, capture time, coalescing and cancellation, agrees with its module expansion; the Queue's producer is first (decisions rows 81, 220, 225; DB-13)",
+      "atomic-attempt-agreement (proposed claim; translation-simulation): the restricted transaction profile against the named release, with flat nesting, immutable payloads and explicit retry; then tx-choice-rollback-union for the retry-only alternative (decisions rows 80, 84, 223, 224)",
+      "fair composition of tickets that are enrolled apart is outside the first profile: the opposing-ticket cycle stays a refused case until an enrolment protocol resolves it (decisions row 223)"
+    ],
+    "R11": [
+      "the whole run open: release at most once per registration, counted by identity (DB-07)",
+      "the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)",
+      "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
+      "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
+      "saved-mask-restoration (proposed claim; scope-lifetime-finalization): the mask's law at region boundaries, for both saved bits: at the mask's entry the flag is false; at a restore site a true bit runs the body interruptibly and a false bit leaves the flag as it is, so it is the identity on the fiber that runs the node; a nested region keeps its own rule; each completed exit, by success, failure or interruption, returns its region's earlier flag, and an exit that leaves the fiber interruptible with a pending cause fails there with that cause; no statement that every later step keeps the entry flag; a client premise, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); it states no progress and nothing about the Queue",
+      "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222)"
+    ],
+    "R12": [
+      "R12-c: liveness on infinite tapes under FairTape (waits on a ruling on infinite tapes)",
+      "stability over the allowed internal decisions, with a named progress observation (not stated)",
+      "divergence by compatible prefixes (DB-03; not stated)",
+      "driver-continuation-split and driver-suspension-keeps-typed (proposed claims; reactive-scheduling, extending drivestate-lift): a retained driver suspension keeps the commands, the remaining dispatcher tasks, the enclosing flush or clock phase and any atomic owner, and continuing it with budgets n and k equals one run with n + k; until then an owned operation runs under a proved embedded budget (decisions rows 84, 226)",
+      "wait-registration-no-gap (proposed claim; reactive-scheduling): the decision to wait and the registration are one transition, so each eligible waiter is retrying or owns a notification (decisions rows 221, 223; finite controls in docs/research/2026-10-05-claude-lead/tx-probes/TxModel.lean)",
+      "posted-task-decision-preserves (proposed claim; reactive-scheduling): a posted task keeps the typed state, with its execution identity, its owner, its receiver's token and a stale delivery (decisions row 225)",
+      "posted-wake-debt-progress and a module's request progress: separate claims under named fairness, body-progress and budget premises; dispatcher service (flush_fair) does not give them (decisions rows 220, 225, 230)"
+    ],
+    "R13": [
+      "load inputs, the environment snapshot and the seed: designed (the 2026-09-10 Config route B), not implemented (decisions rows 51, 83)",
+      "supplied values fit the admitted load requirements: restates M5 (loadsTyped, the retired ledger's typedState_load) when Config lands",
+      "the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)",
+      "clock-unit-compatibility (proposed claim; translation-simulation): exact nanoseconds inside, with every recorded millisecond input kept in meaning by an explicit conversion; public nanosecond readings wait for the target's bigint contract (decisions rows 83, 231)"
+    ]
+  }
+}

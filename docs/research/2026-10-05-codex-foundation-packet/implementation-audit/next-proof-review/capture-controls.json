@@ -1,0 +1,62 @@
+{
+  "question": "Finite mirror of Authoring.Names.resolve and Env.push; no Lean execution.\n\nQuestion: do name distinctness and stable elaboration matter independently\nof the resulting value's type? Inputs are constructed, not reachable runs.\n",
+  "python": "3.13.14",
+  "command": "python3 capture-controls.py",
+  "checks": [
+    {
+      "label": "minted caller positive before fold",
+      "actual": 41,
+      "expected": 41
+    },
+    {
+      "label": "minted caller positive under fold",
+      "actual": 41,
+      "expected": 41
+    },
+    {
+      "label": "distinct suffix preserves earlier shadow resolution",
+      "actual": 2,
+      "expected": 2
+    },
+    {
+      "label": "same-type accumulator collision changes identity",
+      "actual": 17,
+      "expected": 17
+    },
+    {
+      "label": "unbound name remains unbound",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "label": "environment-sensitive source before extension",
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "label": "environment-sensitive source after extension",
+      "actual": 3,
+      "expected": 3
+    },
+    {
+      "label": "closed constant positive before and after",
+      "actual": [
+        7,
+        7
+      ],
+      "expected": [
+        7,
+        7
+      ]
+    }
+  ],
+  "passed": 8,
+  "evidence": "Finite Python source mirror only; no Lean proof or runtime execution",
+  "observation": "Selected index/value and environment-dependent literal",
+  "excluded": [
+    "actual wrapper",
+    "reachability",
+    "Lean elaboration",
+    "universal theorem"
+  ]
+}

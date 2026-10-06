@@ -1,0 +1,67 @@
+{
+  "task": "Next proofs, language obligations and tightening work after Queue",
+  "completion": "review and advisory delivered; implementation not authorized or performed",
+  "review_cut": "0e6077b6d859cf7030b05654a9ec3dbe1781b993",
+  "closing_head": "0e6077b6d859cf7030b05654a9ec3dbe1781b993",
+  "time_utc": "2026-10-06T04:25:37.933043+00:00",
+  "verification": {
+    "source_comparisons": 121,
+    "unique_source_paths": 89,
+    "all_match": true,
+    "finite_Python_capture_controls": 8,
+    "all_controls_pass": true,
+    "proposed_Lean_statements": "uncompiled",
+    "report_links": [
+      {
+        "source": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/recommendations.md",
+        "target": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/algebra/review.md",
+        "exists": true
+      },
+      {
+        "source": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/recommendations.md",
+        "target": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/language/report.md",
+        "exists": true
+      },
+      {
+        "source": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/recommendations.md",
+        "target": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/backlog/report.md",
+        "exists": true
+      },
+      {
+        "source": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/recommendations.md",
+        "target": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/parent-verification.json",
+        "exists": true
+      },
+      {
+        "source": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/recommendations.md",
+        "target": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/capture-controls.json",
+        "exists": true
+      },
+      {
+        "source": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/recommendations.md",
+        "target": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/qtypes-brief-snapshot.md",
+        "exists": true
+      }
+    ]
+  },
+  "advisory": {
+    "coordinator": "Queues plan and design decisions (fork)",
+    "url": "https://claude.ai/epitaxy/local_acf2315e-02ac-4acd-9ef9-b0734bd686a7",
+    "message": 37,
+    "normal_send_verified": true,
+    "empty_composer_verified": true,
+    "unread_at_delivery": true,
+    "force_send_or_interruption": false,
+    "consumption": "not yet verified"
+  },
+  "current_work": "T5 cursor integration active; QTYPES brief exists. No development handoff.",
+  "correction": "AdmissionGap already closed; Built already retains exact admission. Remaining declared-service threading is faces then Author/Built/session.",
+  "monitor_mutations": "scratch notes only; no repository, builds, Lean, compiler, runtime, generator, install, branch, merge or seat changes",
+  "next_checks": [
+    "Message37 consumption and actual adoption",
+    "T5 integration acceptance and literal repair",
+    "QTYPES actual allocation and receipt",
+    "minted-capture helper and fixture-freshness ownership",
+    "mask and wrapper request/notification/budget obligations"
+  ]
+}

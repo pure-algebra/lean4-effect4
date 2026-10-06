@@ -1,4 +1,4 @@
-# The decision probes of 2026-10-06: the coordinator's filing note
+# The decision probes: the coordinator's filing note
 
 Status: history, not authority. Codex wrote the packet. The owner pasted its relay into the
 coordinator's session. The coordinator filed it here unchanged, at main `80d73226`.
@@ -55,8 +55,8 @@ coordinator's session. The coordinator filed it here unchanged, at main `80d7322
 
 ## What the coordinator does with it
 
-The decisions register holds each choice (`docs/core/decisions.md`: row 255 and the two rows
-after it, written on 2026-10-06). `docs/STATE.md` holds the order of the work.
+The decisions register holds each choice (`docs/core/decisions.md`, rows 255, 256 and 257).
+`docs/STATE.md` holds the order of the work.
 
 - The literal repair lands through seat T5, with the packet's acceptance points.
 - The wrapper's law takes a step's typing equation as a proof parameter.

@@ -1,0 +1,34 @@
+{
+  "role": "advisory research",
+  "evidence": "committed-source inspection; proposed statements and controls are uncompiled and unrun",
+  "frozen_commit": "0e6077b6d859cf7030b05654a9ec3dbe1781b993",
+  "excluded": "all staged and unstaged work, including staged T5 cb4ebce3 and active Queue typing",
+  "verified_sources": 27,
+  "source_manifest": "source-hashes.json",
+  "report": "report.md",
+  "recommendations": [
+    "Finish existing application-signature faces then authoring/run plan",
+    "Land already-scheduled explicit Ref.make<A> after Queue",
+    "Include optional operation-view coherence control with the new constructor, not as a separate seat"
+  ],
+  "resolved_not_repeated": [
+    "AdmissionGap closed by SigApp admission steps1-2",
+    "Built retains exact admission certificate",
+    "operation term/type annotation collectors present"
+  ],
+  "no_commands_of_kind": [
+    "Lean",
+    "compiler",
+    "runtime",
+    "build",
+    "generator",
+    "install"
+  ],
+  "repository_edits": false,
+  "proposed_controls_executed": false,
+  "artifacts": {
+    "report.md": "6a0521925db5eee9227a6a698955621bd1cd16510ed783424c5c675c20b3cef3",
+    "source-hashes.json": "d3658b8071ea41c79883e7a41c430f77ed8372200916169f6f6376a236427267"
+  },
+  "verification": "All retained source bytes and hashes compared again with git show at the frozen commit."
+}

@@ -110,7 +110,8 @@ def registry : Registry where
       defaultModules := [
         `Effect4.Laws.Program.Typed.Membership,
         `Effect4.Laws.Program.Typed.World,
-        `Effect4.Laws.Program.Typed.Validity
+        `Effect4.Laws.Program.Typed.Validity,
+        `Effect4.Laws.Modules.Queue.Typing
       ] },
     { id := "residual-program-typing"
       title := "Residual Program Typing: TypedProg, the protocol-indexed judgment on residual programs"
@@ -172,7 +173,10 @@ def registry : Registry where
         `Effect4.Laws.Program.Agreement.Loop,
         `Effect4.Laws.Program.LoopAgreement,
         `Effect4.Laws.Program.RuntimeR,
-        `Effect4.Laws.Machine.Book
+        `Effect4.Laws.Machine.Book,
+        `Effect4.Laws.Modules.Queue.Relation,
+        `Effect4.Laws.Modules.Queue.Reading,
+        `Effect4.Laws.Modules.Queue.Steps
       ] }
   ]
   claims := [

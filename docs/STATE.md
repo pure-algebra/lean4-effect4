@@ -289,8 +289,12 @@ Landed later on 2026-10-05:
   statements are proved too, `empty_typed` and `sizeStep_typed`. Five stay planned goals, by
   the seat's stop and by no counterexample: the checker answers the stated type for each at
   27 message types, by evaluation. So the goal gate counts 29. One workload runs in two
-  spellings (`Test/Program/QueueWorkload.lean`). No Queue program runs on the generated
-  engine or on a host yet.
+  spellings (`Test/Program/QueueWorkload.lean`). The seat's last part is merged (`80d73226`):
+  the scenarios R1 and R4 run on the generated engine on both carriers
+  (`ocaml/engine/test/queue/`), and `Test/Program/QueueFaces.lean` pins what prints and reads
+  back. Each of the eight scenario modules prints and reads back since seat T5's second step.
+  No Queue program runs on a host yet. No printed Queue module type-checks on the target
+  until the literal repair lands (row 256).
 - **`Deferred.make<A, E>()` prints from the operation and reads back** (`9600fa63`, step a of
   seat T5's part B; rows 212 and 251). An operation's type arguments are data of the
   operation: the printer prints each through the type printer, and Lean's reader,
@@ -299,6 +303,12 @@ Landed later on 2026-10-05:
   raw formation and the integer scan reach them. p3's gate prints as
   `Deferred.make<void, never>()` and reads back. The coordinator pinned the case policy again
   for two new matches. No stored form changed its type.
+- **A loop's stated cursor type reads back** (`98b56e62`, step b of seat T5's part B; DI-91's
+  amendment). The checked type reader reads it, on the readable types. `read_print` and
+  `read_exact` keep their statements. `ts/eff/read.ts` and both foreign readers read it
+  through the same reader. p1's program, the timeout scenario's fetch and the Queue's eight
+  scenario modules read back. `Test/Dogfood/Scenario/Faces.lean` pins that each of the four
+  scenarios' programs prints and reads back.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
@@ -328,14 +338,17 @@ Open at this landing:
      it since 2026-10-05 (branch `seat/qsteps`;
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). A service error
      stopped its first run before any commit, and it started again the same evening from
-     `7f77bd03`. Its first part is merged (`3d9d935c`): the cell, the six steps, the relation
-     and thirteen planned goals. The six step goals and two typing statements are proved and
-     merged. Open: five typing statements, two scenarios on the engine, the faces' pins and
-     the documents. A proof of the five at every message type needs the checker read at
-     symbolic list and record types, as `Reading.lean` reads the evaluator. The seat
-     estimates it as a slice of its own. Until then a typing statement can be a premise that
-     an instance discharges by evaluation: the coordinator's proposal for the wrapper's law,
-     not ruled. The owner ruled the design's five proposals as recommended
+     `7f77bd03`. The seat is finished and merged in five parts, the last at `80d73226`
+     ([its receipt](research/2026-10-05-seat-QSTEPS-receipt.md)): the cell, the six steps,
+     the relation, the six step theorems, two typing theorems, two scenarios on the engine,
+     the faces' pins and the documents. Open: five typing statements. Seat QTYPES has them
+     since 2026-10-05 (branch `seat/qtypes`;
+     [the brief](research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md); row 257). It
+     states the checker's rules in their introduction form, a typing judgment beside `Reads`
+     and the capture of a minted name, and it types each step at every scope. The wrapper's
+     law takes a step's typing equation as a proof parameter. A concrete application
+     discharges it by the checker's own answer on its actual body (row 257, after Codex's
+     review). The owner ruled the design's five proposals as recommended
      (row 255). Codex's design research
      ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
      is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
@@ -362,11 +375,11 @@ Open at this landing:
   - ten planned goals, each in its battery with its placement. The eleventh, `tape_replays`,
     is proved;
   - the host half: a scenario's whole observation on the printed module, on the keyed lane.
-    On the merged tree `Workers.crew`, `Routing.request` and `Atomic.shop` print and read
-    back, and `Timeout.fetch` prints and does not read back (a finite probe). The keyed
+    The four programs print and read back (`Test/Dogfood/Scenario/Faces.lean`). The keyed
     recorder needs one extension, an operation that completes after its cancellation.
-    [Its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md) is written ahead,
-    for the next free seat;
+    [Its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md) is written ahead.
+    It goes to the next free seat after the literal repair, which lets the shop's module
+    type-check on the target;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
@@ -374,7 +387,10 @@ Open at this landing:
     three session laws. The seat proposes their move into the law graph, beside
     `play_controls_eq_replay` and the session's laws (its receipt, item 9.5);
   - a fixture edited alone is not bound by `lake build`: Lake does not take an `include_str`
-    file as an input. A fresh elaboration of `Test/Dogfood/Scenario/Lowered.lean` binds it;
+    file as an input. A fresh elaboration of `Test/Dogfood/Scenario/Lowered.lean` binds it.
+    The Queue's engine fixture has the same gap (`Test/Program/QueueEngine.lean`). The
+    coordinator wires both into the generation graph as side work: a fixture that changes
+    alone must force fresh evidence, with no new stamp;
   - two controls are not written: a cleanup replayed under one registration, and a timer that
     fires inside a masked region;
 - the faces of an operation's type arguments, part B of the state plan's T5, are with seat T5
@@ -383,16 +399,19 @@ Open at this landing:
   again the same evening. Part B reads a type with one checked reader: the class reader's type
   reader with an arm for `never`, kept only when the type printer prints the answer back. Its
   order follows the Queue: `Deferred.make<A, E>()` first, then a loop's stated cursor type,
-  then a fold's stated accumulator type. The Queue's printed form needs the first two. The
-  first is merged (`9600fa63`), and the seat is on the second. `Ref.make<A>` is not in part
+  then a fold's stated accumulator type. The Queue's printed form needs the first two. Both
+  are merged (`9600fa63`, `98b56e62`). The seat is on the literal repair of row 256. Then
+  come a truth program with a `Deferred.make<void, never>` gate, its documents and its
+  receipt. The fold's stated type comes last, and only if it is cheap. `Ref.make<A>` is not in part
   B: it needs an appended constructor (row 210), and the Queue's cell is a declared record
   that does not need it. It is a slice of its own after the Queue's path;
 - on the target, `pair` and `tuple` keep the literal type of a number and of a boolean, where
   Lean types `nat` and `bool`. So the Queue's take step and the rate limiter's request do not
   type-check under tsgo 7.0.0-dev.20260629.1, and six of the eight printed steps do (seat
-  T5's measure). The seat tested a repair in scratch and did not land it: both atoms widen
-  the two literals and keep a string literal, and three pins of
-  `harness/truth/tuples.typecheck.ts` move. This is the owner's to rule;
+  T5's measure). The repair is decided and not landed (row 256: the coordinator's decision
+  after Codex's probe, and the owner may undo it). Both helpers widen a number or a Boolean
+  type in an immediate slot and keep a string literal. Six pins of
+  `harness/truth/tuples.typecheck.ts` move. Seat T5 lands it next;
 - seat FOLD left three points for the owner or for T5
   ([its receipt](research/2026-10-05-seat-FOLD-receipt.md), item 9): the argument order of
   `take` and `drop`, the typing of `sameHandle` by the raw head, and a list of number literals
@@ -462,6 +481,19 @@ Open at this landing:
   - one host adapter, `kvGet`, generated from explicit contract data.
 
   The last three have no seat and no date;
+- Codex's two reviews of 2026-10-05 are filed, each with the owner's relay as pasted
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/` and
+  `next-proof-review/` beside it; source reading, compiler probes and finite controls, and
+  no Lean run):
+  - the first probes the literal repair and the typing of the Queue's steps (rows 256 and
+    257);
+  - the second orders the next proofs: the shared typing rules and the capture of a minted
+    name (seat QTYPES), the mask and then the Queue's public path, fixture freshness in the
+    generation graph, and `Routing.infrastructure_escapes` as the first scenario goal to
+    prove. It corrects one stale reading: the admission gap is closed, and `Api.Built`
+    retains a program's admission;
+  - the owner's guidance came with both: automate the repeated checks, and keep questions
+    for a change of meaning, of the supported domain or of a representation;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

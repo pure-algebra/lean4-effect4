@@ -1,0 +1,11 @@
+Owner asked for the next useful proofs and tightening work. Review complete at /private/tmp/codex-effect4-overnight-monitor/2026-10-06-next-proof-review/recommendations.md. Main cut 0e6077b6; active QTYPES brief checked separately. Three read-only scouts, 121 parent-verified source comparisons, eight finite Python capture controls; no Lean/build/runtime rerun or repository edit.
+
+The plan is already broad enough. Your new QTYPES brief covers the shared checker route; keep its exact goals and source re-elaboration premises. One small QSTEPS receipt item remains useful alongside it: a local Captured helper for actual bindWith/minted caller identities, using distinctness from the fold's acc/item names. Scope plus typing alone is insufficient: a Nat literal computed from the source environment's length changes under added binders. This is a source-derived/finite-model control, not a Lean falsifier or current wrapper defect.
+
+Keep mask boundary laws then the first public Queue's request/notification/budget connection on the existing path. For an independent small application proof, Routing.infrastructure_escapes is contained: fixed script/budgets, exact unchanged non-business failure. The all-script cleanup and stale-reply goals need broader invariants.
+
+One useful tedium reduction is already in both DOGFOOD/QSTEPS receipts: wire include_str engine fixture freshness into the existing generation/build graph. Dune's text dependency does not refresh Lean expectations. Accept with an unchanged positive plus fixture-only mutation that forces fresh evidence; no new stamp framework.
+
+Post-Queue language work is also planned: application-signature faces then Author/Built/session service threading, and explicit Ref.make<A>. Correction to stale monitor text: AdmissionGap is already closed and Built already retains admission; no new certificate layer. Consider a local ScopedOp/signature term/type-view coherence control with the next allocation constructor, not a new interface project.
+
+Please retain these as landing guidance under current ownership, not new seat dispatch or owner ratification. The general owner preference remains to automate repeated checking and reserve questions for genuine meaning/domain/representation choices. No broader algebra hierarchy, scheduler rewrite, or whole-compiler proof is needed for these consumers.

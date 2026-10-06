@@ -1,0 +1,248 @@
+{
+  "cut": "0e6077b6d859cf7030b05654a9ec3dbe1781b993",
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "evidence": "source-only; no fresh proof or execution evidence",
+  "verdict": "Existing algebra is sufficient for the next Queue cut. Two small connections are already explicitly planned; broader composition is deferred.",
+  "ranked": [
+    {
+      "rank": 1,
+      "classification": "small missing connector worth landing; already listed open",
+      "candidate": "captured minted caller name",
+      "consumer": [
+        "takeStep_agrees",
+        "withdrawTake_agrees",
+        "withdrawOffer_agrees"
+      ],
+      "concept": "translation-simulation",
+      "requirement": "R10",
+      "placement": "helper of queue-steps-agree and proposed queue-expansion-agrees"
+    },
+    {
+      "rank": 2,
+      "classification": "already planned",
+      "candidate": "checker introduction and builder lemmas",
+      "consumer": [
+        "withdrawOffer_typed",
+        "withdrawTake_typed",
+        "pollStep_typed",
+        "offerStep_typed",
+        "takeStep_typed",
+        "step_keeps_cell"
+      ],
+      "concept": "store-typing",
+      "requirement": "R4",
+      "placement": "existing planned goals; fold-typed-atomic-update"
+    },
+    {
+      "rank": 3,
+      "classification": "defer",
+      "candidate": "general composeAt algebra or automatic addressed semantic transport",
+      "consumer": "no new active caller found; existing rewrite_agrees already composes existing congruences",
+      "concept": "translation-simulation",
+      "requirement": "R8",
+      "placement": "straight-composition-agreement only if a concrete future consumer is selected"
+    }
+  ],
+  "source_hashes": [
+    {
+      "path": "AGENTS.md",
+      "git_blob": "607959a5ece23418c8938d9903200d9f73d1f500",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+    },
+    {
+      "path": "docs/STATE.md",
+      "git_blob": "53581388469850b2eadf9143c2b1ee433b6de0da",
+      "sha256": "b555dc1e486c31780c4977fc46441e484a8377f36a111187dccd1e2cec8b2242"
+    },
+    {
+      "path": "docs/core/system-map.md",
+      "git_blob": "7079badfc90d40faaa2b763aa9718b97d71585ba",
+      "sha256": "622ec37a03dd50b7a82c7ee0f52e67b0b471ffd2fdd58cf9f8b5ca3918e6d6ca"
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "git_blob": "84918857388fc5739194dc20524a0b17fbae7d7a",
+      "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32"
+    },
+    {
+      "path": "docs/core/controlled-english.md",
+      "git_blob": "27d06cd3ab06c3d309fb52e604a7ba8654c4a1c4",
+      "sha256": "ef0495605e2cfb41b2c3b2a4871f4cf1a8ab3865647fbd68258e7cafe79cc06b"
+    },
+    {
+      "path": "generated/semantics.md",
+      "git_blob": "ece6bf1c0b03c35a6c60c500d6f4ea6e3f317e3d",
+      "sha256": "be0080164f491c94461cf88b0f0e491e13b116ecd79d9c61648ccd483eee8691"
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "git_blob": "8660f3ac2aad406c6845b48321456370e9f079b3",
+      "sha256": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164"
+    },
+    {
+      "path": "src/Effect4/Program/Fold.lean",
+      "git_blob": "f41f381ce11dc779ea9b20e92264ccd567494179",
+      "sha256": "764ddd61a4352730f42e21db691777d975f6ee6bb364c05aef462327f3ffa93f"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring.lean",
+      "git_blob": "857f004b16c749916f2668302cd3a1d89a21ecd5",
+      "sha256": "6710949b4dff8e17459f0a91b35fc04b15ea96e563f483beaa688106aac8fad8"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Sugar.lean",
+      "git_blob": "787d6101e8ac800ba8cbc253390ec5125d654a1e",
+      "sha256": "c949a4f037fec137c086a885af0f8cf250f215fb29d2b012f65ed18a9d51f0e1"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Folds.lean",
+      "git_blob": "a8eee7be947c3c28123c3fbcee70a0ffc14c0fd4",
+      "sha256": "ec88151bb31d9fbe2b8cd73dbeb0608e486ea6fc8c976f30824f5b8ed3180aa7"
+    },
+    {
+      "path": "src/Effect4/Program/Record.lean",
+      "git_blob": "b8ed73220640d4965202e1d116ffaf7402241dd3",
+      "sha256": "161ef4cbac0f17434d22c19b19332bcabd45ee47be86084034a1c415ab577bcd"
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "git_blob": "183118273b78b3cef860e3d4df68b34b11308418",
+      "sha256": "13f10a4775e01c8e2149c3b199260b8c4af1f37cbb6a2cbe7f9f3426a59eb7c4"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "git_blob": "a9d36c186e477dd9987970617856c0b847783f61",
+      "sha256": "56baa536390b2f657338a871911392300126f6aac22811b8de190ab22cfa7c8e"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed.lean",
+      "git_blob": "727a1f935be294f2df595cd2c520b63d751e5789",
+      "sha256": "5ae0330024f2765b1a0464b1113e4215a448b0efb4243b0553a46addbb26bd4f"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "git_blob": "0fc58be9e8d293fdb7be03b91b6db239a943a7d6",
+      "sha256": "27d168271332978e0241cda1f01da9c4f604429f51753850077bef0818cb37ce"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/RecordOperations.lean",
+      "git_blob": "ac873f5952b9f2465fec7b82ca2da1f36ba25bed",
+      "sha256": "701f7f7fc4cebb5fba15597d06bf8c20876d80956d7a85e69357669e462d3f23"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "git_blob": "794a315df2f11363dbbab49558a635a8992f509c",
+      "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "git_blob": "703cade3e21a3649e283c3f21b92f3b71e580d08",
+      "sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "git_blob": "5e1702a233bea0de80ea605c3642c688ddc73483",
+      "sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Authoring/Folds.lean",
+      "git_blob": "164686c0cfc7142919636f8f5bf98cce7d69916e",
+      "sha256": "7c41f0058241d2ab3f598e3a30a105bae1f64d8fce469adf9b9c942a9140212a"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Authoring/Sugar.lean",
+      "git_blob": "d3a572041eaad02b8f29c76a9a2acb14f0e4b536",
+      "sha256": "df1cdf1dcef26f0737b9767fad1c27f4270bad50624b729c31e4e90123a04384"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Term.lean",
+      "git_blob": "2f35590a9fa394566897cf8eaa854db69609eba5",
+      "sha256": "235a13cbdbae0458d63c80c3356e77582842a62920c70cba7defb44eaaf59313"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Denote.lean",
+      "git_blob": "6acddc779d68f0be64fae7836928a9f4c622625d",
+      "sha256": "35d66d11523f402fa7831839fcbe838a169ff95dccf52e485c023dfc19ee0055"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Sound.lean",
+      "git_blob": "30832877edc58f576e181650ff1aa644fdb9d5df",
+      "sha256": "ec58525f55e837024d87f9d98a4081cd830248e3ae321244810e632051150248"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/TypeAlgebra.lean",
+      "git_blob": "0afe3f25686e17b7ab2bae6d41a97e525ac23d16",
+      "sha256": "b23890dc546d06169b3cce622beccdb86db88743c7121b06047466f96526acb4"
+    },
+    {
+      "path": "src/Effect4/Laws/Effects/Sum.lean",
+      "git_blob": "20f267d75047a4f9c8158601be60e2158b177451",
+      "sha256": "46fce32b4044c6edc2a2b3073ec8fefd29bce9ab45e0199507d9481486b5e25f"
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Relation.lean",
+      "git_blob": "6267b1941d312eda9aadc276658eb5a9be4ee6f5",
+      "sha256": "b319dfb241d5da0b98458074ce474f8811b819b3360c7eb5fd7a3646338694db"
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Reading.lean",
+      "git_blob": "7e20e26f7d430cad35739af14f57ef7d5050d043",
+      "sha256": "b1fdd6c3c4a474bde49e5cf720c14b8ec0ca875819548a2fd61a84508de635eb"
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "git_blob": "8b8afd802322758d0d3b43acd2761701843ac288",
+      "sha256": "1fecff380abf239841e5ff334326bc0a48506173aa52147a631f3cea4edf2766"
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "git_blob": "a846cd90b4cd846c309e12e38e6545d87b772a33",
+      "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784"
+    },
+    {
+      "path": "Test/Program/QueueScenarios.lean",
+      "git_blob": "e4a048cdce83350211c03cb4ace419e9e5ea0f22",
+      "sha256": "90eb44483d9c69dea00fe968544782be2900fea67d13152d13c141e05af0d1f6"
+    },
+    {
+      "path": "Test/Program/MeaningEqContract.lean",
+      "git_blob": "8c0fe014dd71f2a7c2e7a2fecba1b0f66eb8ca72",
+      "sha256": "a60b9b4c92b4a8c2d58b49bbfc602c51febd92b718997f384fbdcbb1e253940b"
+    },
+    {
+      "path": "Test/Program/AuthorContract.lean",
+      "git_blob": "e0f2a8099ccd4dd68aca78fdd34e4d510b8c684d",
+      "sha256": "a315462bc68bd8c7d4aaa4d62ad366974269d36dd47bfd21ada538ed33faf5ae"
+    },
+    {
+      "path": "docs/research/2026-10-05-seat-QSTEPS-receipt.md",
+      "git_blob": "0ed7266e35847e89999851f56e6ba0ac68477bdf",
+      "sha256": "0d79167726b84fe9f7cb1d3c5415714e675c0ff778cc06bb6727abe2fe6e677a"
+    },
+    {
+      "path": "lake-manifest.json",
+      "git_blob": "24458710fd6b6c92eacf49ffe95af5404e92d854",
+      "sha256": "448045a73fe9e702e93b255af45592c8bc2ba02d86bac9fbf7b684ba28843afe"
+    }
+  ],
+  "package": {
+    "name": "effects",
+    "manifest_revision": "a4ee7a14248ee5976039b73039319efa87834986",
+    "observed_checkout_revision": "a4ee7a14248ee5976039b73039319efa87834986",
+    "files_read": [
+      "Effects/Algebra/Universal.lean",
+      "Effects/Algebra/Handler.lean"
+    ]
+  },
+  "negative_controls_status": "proposed source-derived cases, not run",
+  "authority_and_skill": [
+    "AGENTS.md",
+    "docs/core/semantics.md",
+    "docs/core/system-map.md",
+    "/Users/pooks/.codex/skills/lean-reification-audit/SKILL.md",
+    "/Users/pooks/.codex/skills/lean-reification/references/evidence.md"
+  ],
+  "scratch_only": true,
+  "no_repo_mutations": true,
+  "no_builds_or_execution": true
+}

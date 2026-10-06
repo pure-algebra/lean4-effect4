@@ -1,0 +1,185 @@
+{
+  "frozen_commit": "0e6077b6d859cf7030b05654a9ec3dbe1781b993",
+  "scope": "read-only bounded backlog/source review",
+  "verified_source_files": 38,
+  "source_checks": [
+    {
+      "path": "AGENTS.md",
+      "verified": true
+    },
+    {
+      "path": "docs/STATE.md",
+      "verified": true
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "verified": true
+    },
+    {
+      "path": "docs/core/system-map.md",
+      "verified": true
+    },
+    {
+      "path": "docs/core/host-boundary.md",
+      "verified": true
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/waiting-design.md",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/mask-second-note.md",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-mask-brief.md",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-host-brief.md",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md",
+      "verified": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+      "verified": true
+    },
+    {
+      "path": "Test/Dogfood/README.md",
+      "verified": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "verified": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Atomic.lean",
+      "verified": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Timeout.lean",
+      "verified": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Workers.lean",
+      "verified": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Routing.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "verified": true
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "verified": true
+    },
+    {
+      "path": "generated/semantics.md",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Api/HostSession.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Api/HostSession.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Denote.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/ListFold.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Machine/Scope.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Membership.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Machine/Frames.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/RuntimeR.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/ReadPrint.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Profile.lean",
+      "verified": true
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Relation.lean",
+      "verified": true
+    },
+    {
+      "path": "docs/core/controlled-english.md",
+      "verified": true
+    }
+  ],
+  "missing_initial_paths": [
+    {
+      "path": "src/Effect4/Laws/HostSession.lean",
+      "error": "fatal: path 'src/Effect4/Laws/HostSession.lean' does not exist in '0e6077b6'\n",
+      "disposition": "Wrong initial path; resolved by src/Effect4/Api/HostSession.lean and src/Effect4/Laws/Api/HostSession.lean. No evidence depends on missing path."
+    },
+    {
+      "path": "src/Effect4/Runner/HostSession.lean",
+      "error": "fatal: path 'src/Effect4/Runner/HostSession.lean' does not exist in '0e6077b6'\n",
+      "disposition": "Wrong initial path; resolved by src/Effect4/Api/HostSession.lean and src/Effect4/Laws/Api/HostSession.lean. No evidence depends on missing path."
+    }
+  ],
+  "report_sha256": "df08a3063ce433784f487d7f890a5d57dad263a1021aa8d46230395c9bc45b2a",
+  "manifest_sha256": "1a664d4382623bd208339fb1648c8307c472547ae93772043edbd849e0723049",
+  "evidence": "source inspection and retained report only; no execution result",
+  "proposed_controls_executed": false,
+  "new_theorems": false,
+  "repo_mutations": false,
+  "builds_compilers_runtimes_generators_installs": false,
+  "ranked": [
+    "saved mask boundary chain (existing brief)",
+    "first public Queue request/notification/budget connector (existing contracts)",
+    "Routing.infrastructure_escapes (existing placed goal)"
+  ],
+  "fresh_allocation": "parent-owned; later T5 and QTYPES activity outside frozen snapshot",
+  "placement_note": "embedded-budget-sufficient is a named F7 contract obligation; R12 records the proved-budget alternative under the driver-continuation open part, not as a standalone named registry claim."
+}

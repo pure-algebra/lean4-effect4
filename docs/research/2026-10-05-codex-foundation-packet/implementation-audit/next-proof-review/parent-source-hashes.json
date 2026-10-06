@@ -1,0 +1,122 @@
+[
+  {
+    "path": "AGENTS.md",
+    "commit": "0e6077b6",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "path": "docs/core/semantics.md",
+    "commit": "0e6077b6",
+    "sha256": "bf9c61eaba648f6e4ec67f0702ae3b7f688d6b83a015d9b88a2056276a1b6d32",
+    "bytes": 72882
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "commit": "0e6077b6",
+    "sha256": "f64956bb439c41a4094ff619b14c1879f70c63bf5da8b65b81ffb223d7a206da",
+    "bytes": 325212
+  },
+  {
+    "path": "docs/STATE.md",
+    "commit": "0e6077b6",
+    "sha256": "b555dc1e486c31780c4977fc46441e484a8377f36a111187dccd1e2cec8b2242",
+    "bytes": 102487
+  },
+  {
+    "path": "docs/GENERATED.md",
+    "commit": "0e6077b6",
+    "sha256": "b3a8efffed868fd56ecf3e4b55279e4d50663f62630a2db378b6d85ce08abfa5",
+    "bytes": 19568
+  },
+  {
+    "path": "tools/Tools/SemanticsRegistry.lean",
+    "commit": "0e6077b6",
+    "sha256": "99d8cf6d9b130e4513285dcc14ae1e10440d63fe927e613de13ab9e10e606164",
+    "bytes": 68790
+  },
+  {
+    "path": "src/Effect4/Api/Built.lean",
+    "commit": "0e6077b6",
+    "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+    "bytes": 1105
+  },
+  {
+    "path": "src/Effect4/Api/Author.lean",
+    "commit": "0e6077b6",
+    "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+    "bytes": 6392
+  },
+  {
+    "path": "src/Effect4/Program/Admission.lean",
+    "commit": "0e6077b6",
+    "sha256": "4ef4539a87ae5b273cbb06d318c84180513c2958370b2797b5f7fc981e6f6062",
+    "bytes": 14104
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/AdmittedSource.lean",
+    "commit": "0e6077b6",
+    "sha256": "2b5fb583bd9d337b50b5447b720dc76bbecd7f52ff7ea00582ab73a63bbe1233",
+    "bytes": 4193
+  },
+  {
+    "path": "docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md",
+    "commit": "0e6077b6",
+    "sha256": "eaabfad2f1c8369f861bcf51d3efaf185fc2a38b767f377cf22b498d15f2dc51",
+    "bytes": 8400
+  },
+  {
+    "path": "Test/Program/MeaningEqContract.lean",
+    "commit": "0e6077b6",
+    "sha256": "a60b9b4c92b4a8c2d58b49bbfc602c51febd92b718997f384fbdcbb1e253940b",
+    "bytes": 4034
+  },
+  {
+    "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+    "commit": "0e6077b6",
+    "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+    "bytes": 6647
+  },
+  {
+    "path": "Test/Program/QueueEngine.lean",
+    "commit": "0e6077b6",
+    "sha256": "02d45e0c08f2d8a20aeeea8e01d5f856d064c4497fa6ae30d95f951b0859f986",
+    "bytes": 3560
+  },
+  {
+    "path": "Test/Dogfood/Scenario/Lowered.lean",
+    "commit": "0e6077b6",
+    "sha256": "f31f3659a97be35f7dc3ee36f0326b05a0b811f8bce47327edac093559883187",
+    "bytes": 3693
+  },
+  {
+    "path": "docs/research/2026-10-05-seat-DOGFOOD-receipt.md",
+    "commit": "0e6077b6",
+    "sha256": "98c14fda2821e7457938247d3ef349a55b6a0308a6fb17448126fc674466268d",
+    "bytes": 48033
+  },
+  {
+    "path": "docs/research/2026-10-05-seat-QSTEPS-receipt.md",
+    "commit": "0e6077b6",
+    "sha256": "0d79167726b84fe9f7cb1d3c5415714e675c0ff778cc06bb6727abe2fe6e677a",
+    "bytes": 25977
+  },
+  {
+    "path": "ocaml/engine/test/queue/dune",
+    "commit": "0e6077b6",
+    "sha256": "7bc569201c3d7c71c1f5c1c3f6511eb09d9a29b8c4c2282cd11f9e5a165412a9",
+    "bytes": 802
+  },
+  {
+    "path": "ocaml/engine/test/scenarios/dune",
+    "commit": "0e6077b6",
+    "sha256": "74036fa0cc2f2cab203db1d81ff3c92302641661a7fc1403ae4c5183149367d8",
+    "bytes": 944
+  },
+  {
+    "path": "Makefile",
+    "commit": "0e6077b6",
+    "sha256": "9cb7b18ee4aa6dd726d22533b76bbc250d85599b2e12951a0060622bdfeb8a9b",
+    "bytes": 46544
+  }
+]
