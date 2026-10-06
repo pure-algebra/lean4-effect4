@@ -1,0 +1,141 @@
+{
+  "evidence": "finite Python source mirrors; not runtime evidence",
+  "checks": [
+    {
+      "name": "snapshot-hint-selection-positive",
+      "pass": true,
+      "observation": {
+        "notifications": [
+          "A",
+          "B"
+        ],
+        "resource_grants": []
+      }
+    },
+    {
+      "name": "snapshot-not-live-mutant",
+      "pass": true,
+      "observation": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "name": "selection-time-positive",
+      "pass": true,
+      "observation": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "name": "selection-at-post-mutant",
+      "pass": true,
+      "observation": {
+        "post": [
+          "A"
+        ],
+        "task": [
+          "A",
+          "B"
+        ]
+      }
+    },
+    {
+      "name": "healthy-lease-return",
+      "pass": true,
+      "observation": [
+        0,
+        false
+      ]
+    },
+    {
+      "name": "invalidated-last-return",
+      "pass": true,
+      "observation": [
+        0,
+        true
+      ]
+    },
+    {
+      "name": "invalidated-held-positive",
+      "pass": true,
+      "observation": [
+        1,
+        false
+      ]
+    },
+    {
+      "name": "read-touch-vs-lexical",
+      "pass": true,
+      "observation": {
+        "recency": [
+          "z",
+          "a",
+          "b"
+        ],
+        "lexical": [
+          "a",
+          "b",
+          "z"
+        ]
+      }
+    },
+    {
+      "name": "existing-write-no-touch",
+      "pass": true,
+      "observation": [
+        "z",
+        "a",
+        "b"
+      ]
+    },
+    {
+      "name": "sorted-map-mutant",
+      "pass": true,
+      "observation": {
+        "canonical": "a",
+        "insertion": "z"
+      }
+    },
+    {
+      "name": "has-no-touch",
+      "pass": true,
+      "observation": [
+        "z",
+        "a"
+      ]
+    },
+    {
+      "name": "old-cleanup-preserves-replacement",
+      "pass": true,
+      "observation": {
+        "k": "new"
+      }
+    },
+    {
+      "name": "key-only-cleanup-mutant",
+      "pass": true,
+      "observation": {}
+    },
+    {
+      "name": "matching-cleanup-positive",
+      "pass": true,
+      "observation": {}
+    },
+    {
+      "name": "eviction-keeps-old-lookup",
+      "pass": true,
+      "observation": {
+        "keys": [
+          "b"
+        ],
+        "running": [
+          "lookup-A",
+          "lookup-B"
+        ]
+      }
+    }
+  ],
+  "count": 15
+}

@@ -1,0 +1,124 @@
+{
+  "completed_at_utc": "2026-10-06T06:46:51.717592+00:00",
+  "source_cut": "d3a3e558ba0c4b0af8c9b47c22ed327c51506d5e",
+  "observed_live_head": "0acec081735277287cad1ce342059d1600b4ee3f",
+  "source_files_verified": 21,
+  "input": {
+    "path": "/Users/pooks/.codex/attachments/b063ec2f-9fb5-4412-8316-4f5482a59ce9/Pasted text.txt",
+    "sha256": "92e3d1e7e3ed941184dd7a74c80c65a534f071977a1cb3a883ad66cd10e303dc"
+  },
+  "status": "read-only audit; proposed Lean signatures uncompiled; independent finite Python controls pass",
+  "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/probe.py > /private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/probe-results.json",
+  "result": {
+    "evidence": "finite independent Python mirrors; not a Lean proof",
+    "tape_lists": 8403,
+    "append_splits": 40617,
+    "tape_laws": "all passed",
+    "red_controls": "stopped row/post-state and receipt omission rejected",
+    "expansion": [
+      {
+        "name": "empty",
+        "original_sites": 0,
+        "counts": [
+          0,
+          0
+        ]
+      },
+      {
+        "name": "one",
+        "original_sites": 1,
+        "counts": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "nested",
+        "original_sites": 3,
+        "counts": [
+          3,
+          2,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "diamond_count_growth",
+        "original_sites": 6,
+        "counts": [
+          6,
+          9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "name": "nested_sibling_target",
+        "original_sites": 3,
+        "counts": [
+          3,
+          3,
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "rejected_reference_shapes": [
+      "enclosing_self",
+      "forward",
+      "ref_target",
+      "missing"
+    ]
+  },
+  "source_delta_check": {
+    "from": "d3a3e558",
+    "to": "0acec081",
+    "paths": [
+      "src/Effect4/Program/Refs.lean",
+      "src/Effect4/Program/Typing.lean",
+      "src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "Test/Dogfood/Scenario.lean",
+      "Test/Dogfood/Scenario/Tape.lean",
+      "src/Effect4/Laws/Run.lean"
+    ],
+    "result": "no diff"
+  },
+  "restrictions": "No repository edits, Lean, build, generator, compiler, host/runtime execution, installs, UI, or coordinator messaging. Only pure Python mirror ran.",
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/review.md",
+      "sha256": "05dbd5128ed27805af7cd3217465e30267fa519767d09d9d11f81119a0444f11"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/proposals.md",
+      "sha256": "e2930ca3a9ad0fa60e4e37aabdbdd7dba04ed2f6e6e45bf6d1dc3ad9e6f5c702"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/probe.py",
+      "sha256": "7c826024f2dfaaf51756f82074b01d880689a0e93429850d88b018839c229891"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/probe-results.json",
+      "sha256": "9bc6993a1a752bf49727a411e8729f3adf5954cf13579f418c7f78f89a7437c3"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/sources.json",
+      "sha256": "3e30f189376a453cd16d1a3730a074bca3ebfe36de9fe17c594cb12340d11400"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/literature/review.md",
+      "sha256": "0b8133c6d047b0235928c6df5d468f0da1548e95eab04aad23ab906ae6d946c1"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/literature/receipt.json",
+      "sha256": "dc5d90e1b0096d5165288f83bb289756b7f33f1c12afc8ff71af24149c779af6"
+    }
+  ]
+}

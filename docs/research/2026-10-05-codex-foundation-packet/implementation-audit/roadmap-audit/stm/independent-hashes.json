@@ -1,0 +1,56 @@
+{
+  "head": "7e3f79111a021a65db2bb3288142db20b6130883",
+  "files": [
+    {
+      "path": "docs/core/decisions.md",
+      "sha256": "3c495077659f4c45a273aca08c9aa92e9a0cfbf41431add5cd2e469792ea448f",
+      "bytes": 343493,
+      "matches_recorded_head": true
+    },
+    {
+      "path": "docs/core/machine-state.md",
+      "sha256": "a2c51fa6ce917ff3a7560a7ff49f785d70a30250b03543ff2a639ef3bde24597",
+      "bytes": 19313,
+      "matches_recorded_head": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+      "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5",
+      "bytes": 14358,
+      "matches_recorded_head": true
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "sha256": "75195042cb052f938cf79f70954dd223f4200c4baf102f768401fcaf1eced906",
+      "bytes": 69819,
+      "matches_recorded_head": true
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Effect.ts",
+      "sha256": "92372a76d06a1c66a47319cd67e1f25c8aa0bc81970ea7cfe7fea2253134e718",
+      "bytes": 799961,
+      "matches_recorded_head": true
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/TxRef.ts",
+      "sha256": "bb4891f9cf42b98e69301404177676d10f52a3b5d2f09f2e318f63451fae1b43",
+      "bytes": 12033,
+      "matches_recorded_head": true
+    },
+    {
+      "path": "vendor/effect-4.0.1/src/Effect.ts",
+      "sha256": "d39dc35b3dd3afe81c9b939147078822f26fcf8ba5b33735d9d903596bce9519",
+      "bytes": 822865,
+      "matches_recorded_head": true
+    },
+    {
+      "path": "vendor/effect-4.0.1/src/TxRef.ts",
+      "sha256": "a663887ca115856c74204871f554a54c1125abca5305b2cc957d28fa90ac192b",
+      "bytes": 12262,
+      "matches_recorded_head": true
+    }
+  ],
+  "all_match_recorded_head": true,
+  "review_sha256": "6df45cc0c651402d7eb494afd9863f9a7a05bde116837c9617350dae5943012d",
+  "scope": "Source-only independent boundary review. No execution, build, generator, compiler, or repository writes. All proposed controls unexecuted."
+}

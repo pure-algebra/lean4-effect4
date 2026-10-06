@@ -1,0 +1,68 @@
+{
+  "evidence": "finite independent Python mirrors; not a Lean proof",
+  "tape_lists": 8403,
+  "append_splits": 40617,
+  "tape_laws": "all passed",
+  "red_controls": "stopped row/post-state and receipt omission rejected",
+  "expansion": [
+    {
+      "name": "empty",
+      "original_sites": 0,
+      "counts": [
+        0,
+        0
+      ]
+    },
+    {
+      "name": "one",
+      "original_sites": 1,
+      "counts": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "nested",
+      "original_sites": 3,
+      "counts": [
+        3,
+        2,
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "diamond_count_growth",
+      "original_sites": 6,
+      "counts": [
+        6,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "nested_sibling_target",
+      "original_sites": 3,
+      "counts": [
+        3,
+        3,
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "rejected_reference_shapes": [
+    "enclosing_self",
+    "forward",
+    "ref_target",
+    "missing"
+  ]
+}

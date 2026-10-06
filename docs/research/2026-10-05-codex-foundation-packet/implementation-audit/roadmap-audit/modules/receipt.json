@@ -1,0 +1,34 @@
+{
+  "status": "source audit and proposed cards complete",
+  "snapshot": "d3a3e558ba0c4b0af8c9b47c22ed327c51506d5e",
+  "source_hashes_verified": 24,
+  "controls": {
+    "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/modules/model-controls.py",
+    "exit": 0,
+    "passed": 15,
+    "evidence": "finite Python source mirrors only",
+    "repair": "Parent review corrected recency-vs-lexical control; final inputs a,z,touch(a),insert(b) give recency z versus lexical a."
+  },
+  "new_findings": [
+    "Pool finalization also follows invalidation, TTL and acquisition failure",
+    "Pool snapshot selects notifications without assigning resources",
+    "Cache recency and write ordering are operation-specific",
+    "Cache membership capacity does not bound all live lookups",
+    "Pool and Cache have version-specific lifecycle and cancellation behavior"
+  ],
+  "proposals": [
+    "pool-card.proposed.md",
+    "cache-card.proposed.md"
+  ],
+  "authority": "No profile ratification or implementation; proposed step subclaims serve existing R10 module-expansion owner; R4 cell typing/invariants, R7 retained code and later R8 target agreement remain distinct obligations.",
+  "no_duplicate_cards_at": "7e3f79111a021a65db2bb3288142db20b6130883",
+  "forbidden_actions_performed": [],
+  "limitations": [
+    "No Lean, compiler, generator or host runtime run",
+    "No upstream bug classification",
+    "Source reading does not establish concurrency agreement",
+    "The proposed shutdown replacement is not native agreement"
+  ],
+  "artifact_manifest_sha256": "eb48993a32a424327dd9b7e6ab98a4366762a77f9f3366f6b0d217e5f7aeebad",
+  "placement_correction": "Pool and Cache model-step subclaims follow Queue convention under translation-simulation/R10; no standalone claim family or new R4 typing theorem."
+}

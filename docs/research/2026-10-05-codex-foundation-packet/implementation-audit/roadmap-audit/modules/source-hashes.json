@@ -1,0 +1,146 @@
+[
+  {
+    "path": "AGENTS.md",
+    "commit": "d3a3e558",
+    "copy": "sources/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+  },
+  {
+    "path": "docs/STATE.md",
+    "commit": "d3a3e558",
+    "copy": "sources/docs/STATE.md",
+    "sha256": "5732dcef3ba8635f2bcfd18ca5db85fef2ae8f0b9d848b5dcf753f5730c5cb70"
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "commit": "d3a3e558",
+    "copy": "sources/docs/core/decisions.md",
+    "sha256": "4376a8489e7d39fd138df09542083d5455f950179c02f5f7d2d422eb82870cb0"
+  },
+  {
+    "path": "docs/core/semantics.md",
+    "commit": "d3a3e558",
+    "copy": "sources/docs/core/semantics.md",
+    "sha256": "673ec988373c0fcce6b8f8fa6f08a4dd5f0eea02490e0432fa23e0b365eb3260"
+  },
+  {
+    "path": "docs/core/system-map.md",
+    "commit": "d3a3e558",
+    "copy": "sources/docs/core/system-map.md",
+    "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65"
+  },
+  {
+    "path": "docs/core/controlled-english.md",
+    "commit": "d3a3e558",
+    "copy": "sources/docs/core/controlled-english.md",
+    "sha256": "1e943d1ea81455dac3493b294c8ee07239b7306e0e6afe843ee082c468d74ea3"
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+    "commit": "d3a3e558",
+    "copy": "sources/docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+    "sha256": "e1c26ebe2216e5872c196e6771eab5453996ebeb59cbbb9f5f904c82256834ac"
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md",
+    "commit": "d3a3e558",
+    "copy": "sources/docs/research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md",
+    "sha256": "57607bbe9c268d5b03f19a7863c1d547237b8580b3896e1fa199cc9849aeb051"
+  },
+  {
+    "path": "tools/Tools/SemanticsRegistry.lean",
+    "commit": "d3a3e558",
+    "copy": "sources/tools/Tools/SemanticsRegistry.lean",
+    "sha256": "75195042cb052f938cf79f70954dd223f4200c4baf102f768401fcaf1eced906"
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/Pool.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.0-rc.112/src/Pool.ts",
+    "sha256": "d88cd954f7cc0dd8fd086c33d48a76d4e1cd93f9630bc09f1577d95fb29492b7"
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/Cache.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.0-rc.112/src/Cache.ts",
+    "sha256": "50cb55a041c0f2873e4e7693d235875ffd8d199395fc5440aa77e00173cac121"
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/MutableHashMap.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.0-rc.112/src/MutableHashMap.ts",
+    "sha256": "fa06f1e1015c682d4466ca7832e56387c43045dd3a660cb33fa7be9a4afc3d7a"
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+    "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2"
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/Pool.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.1/src/Pool.ts",
+    "sha256": "ebf56ba3ddc4288fc193183d131aceff7ce8b9fa79a0d087ab4fe0f35c9e7b16"
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/Cache.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.1/src/Cache.ts",
+    "sha256": "b21d30b4781aa9b504f507e5e4bbd408843f11c5cf84c425494941b7280a05f5"
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/MutableHashMap.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.1/src/MutableHashMap.ts",
+    "sha256": "e69fd4cd700ba21a3449ab6cd649ecd8e5c13902d3b3daec3c49ccdd8c90491d"
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/Semaphore.ts",
+    "commit": "d3a3e558",
+    "copy": "sources/vendor/effect-4.0.1/src/Semaphore.ts",
+    "sha256": "f8108ef8c50542e671c882b6fce97733db986c5171b13dd39021a7d0fa42105b"
+  },
+  {
+    "path": "README.md",
+    "commit": "d3a3e558",
+    "copy": "sources/README.md",
+    "sha256": "bfd039ee15bfc6e3ad2f70dff590ab3c8d6dc77580b862b4c599d42c13d08d84"
+  },
+  {
+    "path": "src/Effect4/Program/Authoring/Maps.lean",
+    "commit": "d3a3e558",
+    "copy": "sources/src/Effect4/Program/Authoring/Maps.lean",
+    "sha256": "8efb389e18953a4ba3c11e817e5a1ae7b62ca016670ece859cb35dffa212c6c5"
+  },
+  {
+    "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "commit": "d3a3e558",
+    "copy": "sources/src/Effect4/Laws/Modules/Queue/Steps.lean",
+    "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784"
+  },
+  {
+    "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+    "commit": "d3a3e558",
+    "copy": "sources/src/Effect4/Laws/Machine/RefKernel.lean",
+    "sha256": "6f49945dc33e4323887cfd3fd37758ceb08046e7d423d976abcf2becbcd23888"
+  },
+  {
+    "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+    "commit": "d3a3e558",
+    "copy": "sources/src/Effect4/Laws/Program/Typed/Denotation.lean",
+    "sha256": "66f1a635b59f7015a4f269f08b70ead0364307376f998156b002667d541bee6d"
+  },
+  {
+    "path": "src/Effect4/Laws/Machine/TermHandles.lean",
+    "commit": "d3a3e558",
+    "copy": "sources/src/Effect4/Laws/Machine/TermHandles.lean",
+    "sha256": "8cbfa8f82ae544395531cbdceced175a83921e8a3c17c632e18375d69f5bb479"
+  },
+  {
+    "path": "/Users/pooks/.codex/attachments/b063ec2f-9fb5-4412-8316-4f5482a59ce9/Pasted text.txt",
+    "copy": "roadmap.txt",
+    "sha256": "92e3d1e7e3ed941184dd7a74c80c65a534f071977a1cb3a883ad66cd10e303dc",
+    "role": "reviewed user roadmap"
+  }
+]

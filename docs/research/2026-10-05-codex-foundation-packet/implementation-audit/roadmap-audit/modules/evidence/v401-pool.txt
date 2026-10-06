@@ -1,0 +1,170 @@
+vendor/effect-4.0.1/src/Pool.ts
+
+564:       }
+565:       state.usage--
+566:     }
+567:     return getSlowWith(self, (self, item, fiber, restore) => useItem(self, item, f, fiber, restore))
+568:   }))
+569: 
+570: // Count the lease and install its release in the same step.
+571: const useItem = <A, E, B, E2, R2>(
+572:   self: Pool<A, E>,
+573:   item: PoolItem<A, E>,
+574:   f: (item: A) => Effect.Effect<B, E2, R2>,
+575:   fiber: Fiber.Fiber<unknown, unknown>,
+576:   restore?: <AX, EX, RX>(effect: Effect.Effect<AX, EX, RX>) => Effect.Effect<AX, EX, RX>
+577: ): Effect.Effect<B, E | E2, R2> => {
+578:   leaseItemBookkeeping(self, item)
+579:   internal.onExitUnsafe(fiber, item.release)
+580:   let body: Effect.Effect<B, E2, R2>
+581:   try {
+582:     body = f((item.exit as Exit.Success<A, E>).value)
+583:   } catch (defect) {
+584:     return core.exitDie(defect)
+585:   }
+586:   return restore !== undefined ? restore(body) : body
+
+675:   item: PoolItem<A, E>,
+676:   fiber: Fiber.Fiber<unknown, unknown>
+677: ): Effect.Effect<A, E, Scope.Scope> => leaseItem(self, item, fiber)
+678: 
+679: const releaseItem = <A, E>(self: Pool<A, E>, item: PoolItem<A, E>): Effect.Effect<void> =>
+680:   core.withFiber((fiber) => {
+681:     const state = self.state
+682:     item.refCount--
+683:     state.usage--
+684:     if (item.refCount === 0) {
+685:       item.idleSince = (self as PoolImpl<A, E>)[PoolClock].currentTimeMillisUnsafe()
+686:     }
+687:     if (state.invalidated.has(item)) {
+688:       return invalidatePoolItem(self, item)
+689:     }
+690:     // Every release frees one slot, so it can admit one waiter. Reacting only
+691:     // to the saturated-to-unsaturated transition strands the rest: several
+692:     // leases returning at once would wake a single waiter and leave the others
+693:     // asleep against an item that has capacity for them. `addAvailable` is
+694:     // idempotent, so re-adding an available item is free.
+695:     if (item.refCount < self.config.concurrency) {
+696:       addAvailableFront(self, item)
+697:       wakeWaiters(self, fiber, 1)
+698:     }
+699:     return internal.void
+700:   })
+701: 
+702: const firstHealthyAvailable = <A, E>(self: Pool<A, E>): PoolItem<A, E> | undefined => {
+703:   let item = self.state.availableHead
+704:   while (item !== undefined && item.exit._tag === "Failure") item = item.availableNext
+705:   return item
+706: }
+707: 
+708: const waitForItem = <A, E>(self: Pool<A, E>): Effect.Effect<void, E> =>
+709:   internal.callback((resume) => {
+710:     const state = self.state
+711:     if (firstHealthyAvailable(self) !== undefined || state.isShuttingDown) {
+712:       return resume(internal.void)
+713:     }
+714:     const observer = (failure?: Exit.Failure<A, E>) => {
+715:       state.waiters.delete(observer)
+716:       resume(failure ?? internal.void)
+717:     }
+718:     state.waiters.add(observer)
+719:     return internal.sync(() => {
+720:       state.waiters.delete(observer)
+721:     })
+722:   })
+723: 
+724: const wakeWaiters = <A, E>(self: Pool<A, E>, fiber: Fiber.Fiber<unknown, unknown>, count: number) => {
+725:   const waiters = self.state.waiters
+726:   if (waiters.size === 0) return
+727:   fiber.currentDispatcher.scheduleTask(() => {
+728:     let remaining = count
+729:     const toWake: Array<(failure?: Exit.Failure<A, E>) => void> = []
+730:     for (const notify of waiters) {
+731:       if (remaining-- <= 0) break
+732:       toWake.push(notify)
+733:     }
+734:     for (let i = 0; i < toWake.length; i++) {
+735:       toWake[i]()
+736:     }
+737:   }, 0)
+738: }
+739: 
+740: const wakeAll = <A, E>(self: Pool<A, E>): Effect.Effect<void> =>
+
+954: const invalidatePoolItem = <A, E>(self: Pool<A, E>, poolItem: PoolItem<A, E>): Effect.Effect<void> =>
+955:   Effect.suspend(() => {
+956:     if (!self.state.items.has(poolItem)) {
+957:       return Effect.void
+958:     } else if (poolItem.refCount === 0) {
+959:       self.state.items.delete(poolItem)
+960:       removeAvailable(self, poolItem)
+961:       self.state.invalidated.delete(poolItem)
+962:       return Effect.asVoid(Effect.flatMap(
+963:         poolItem.finalizer,
+964:         () => Effect.forkIn(Effect.interruptible(resize(self)), self.state.scope, { startImmediately: true })
+965:       ))
+966:     }
+967:     self.state.invalidated.add(poolItem)
+968:     removeAvailable(self, poolItem)
+969:     // An invalidated item stops counting towards the pool's active size, so the
+970:     // pool is now below target and has to top itself back up. Waiting for the
+971:     // last lease to be returned would strand anybody already queued: the item
+972:     // they are waiting for is never coming back.
+973:     return Effect.asVoid(
+974:       Effect.forkIn(Effect.interruptible(resize(self)), self.state.scope, { startImmediately: true })
+975:     )
+976:   })
+
+1013: const allocate = <A, E>(self: Pool<A, E>): Effect.Effect<PoolItem<A, E>> =>
+1014:   internal.uninterruptibleMask((restore) =>
+1015:     core.withFiber((fiber) => {
+1016:       const impl = self as PoolImpl<A, E>
+1017:       const scope = internal.scopeMakeUnsafe()
+1018:       const previousContext = fiber.context
+1019:       fiber.setContext(Context.add(impl[AcquireContext], Scope.Scope, scope))
+1020:       const use = Effect.flatMap(Effect.exit(impl[Acquire]), (exit) => {
+1021:         const item: PoolItem<A, E> = {
+1022:           exit,
+1023:           finalizer: Effect.catchCause(Scope.close(scope, exit), reportUnhandledError),
+1024:           refCount: 0,
+1025:           idleSince: impl[PoolClock].currentTimeMillisUnsafe(),
+1026:           disableReclaim: false,
+1027:           isAvailable: false,
+1028:           availablePrevious: undefined,
+1029:           availableNext: undefined,
+1030:           release: undefined as any
+1031:         }
+1032:         item.release = constant(releaseItem(self, item))
+1033:         const onAcquire = Effect.suspend(() =>
+1034:           // A borrower may have removed the item before the callback runs.
+1035:           self.state.items.has(item) ? self.config.strategy.onAcquire(item) : Effect.void
+1036:         )
+1037:         if (exit._tag === "Success") {
+1038:           self.state.items.add(item)
+1039:           addAvailable(self, item)
+1040:           return self.config.strategy === strategyNoop ? Effect.succeed(item) : Effect.as(onAcquire, item)
+1041:         }
+1042:         // Deliver a waiting borrower its own failure; otherwise retain the slot.
+1043:         const waiter = firstHealthyAvailable(self) === undefined ? self.state.waiters.values().next().value : undefined
+1044:         if (waiter !== undefined) {
+1045:           waiter(exit)
+1046:         } else {
+1047:           self.state.items.add(item)
+1048:           addAvailable(self, item)
+1049:         }
+1050:         // Do not let cleanup delay a replacement acquisition.
+1051:         return Effect.as(
+1052:           Effect.forkIn(Effect.andThen(item.finalizer, onAcquire), self.state.scope, { startImmediately: true }),
+1053:           item
+1054:         )
+1055:       })
+1056:       return internal.onExitPrimitive(
+1057:         restore(use) as Effect.Effect<PoolItem<A, E>>,
+1058:         (exit) => {
+1059:           fiber.setContext(previousContext)
+1060:           return exit._tag === "Failure" ? internal.scopeCloseUnsafe(scope, exit) : undefined
+1061:         },
+1062:         true
+1063:       )
+1064:     })
+1065:   )
