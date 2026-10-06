@@ -7,12 +7,16 @@ import TypeScript.Render
 /-!
 # The faces of the Queue's steps: what prints and reads back today (decisions row 255)
 
-Seat T5's part A is in the tree: an operation's binder term prints as a function of the cell's
-current value, `Ref.modify(cell, (s) => …)`, and reads back. Its part B is not: the faces spell
-the type arguments of `Deferred.make` at one instance only (decisions row 212). So:
+Seat T5's part A and the first step of its part B are in the tree. An operation's binder term
+prints as a function of the cell's current value, `Ref.modify(cell, (s) => …)`, and reads back.
+`Deferred.make`'s type arguments print from the operation and read back. A loop that states its
+cursor's type prints, and the module reader refuses it (DI-91): seat T5's next step. So:
 
-- **A program that makes a request's identity is refused by name**, at `Deferred.make`. Each of
-  the eight scenarios of `Test/Program/QueueScenarios.lean` makes one. The refusal is pinned.
+- **Each scenario prints as a module, and the reader refuses it by name.** Each of the eight
+  scenarios of `Test/Program/QueueScenarios.lean` takes, and the take's loop states its
+  cursor's type. The reader's refusal is `annotation "local const"`. Both answers are pinned.
+- **A program that only offers prints and reads back**: it makes two `Deferred` handles and
+  states no cursor type.
 - **Each of the six step terms prints and reads back alone**: one `Ref.modify` over the step,
   on a cell and handles that the node receives as bound values. The size step is a term over
   the value of a `Ref.get`.
@@ -73,15 +77,50 @@ def roundTrips (level : Nat) (node : Option (Eff NativeOp)) : Bool :=
       decide (roundTrip nativeSignature nativeSpell level p = .ok p)
   | none => false
 
-/-! ## A program that makes an identity is refused by name -/
+/-- The module reader's answer on a source's printed module, by name. -/
+def readVerdict (src : Src NativeOp) : String :=
+  match Effect4.Api.Author.build (mk src) with
+  | .error _ => "not built"
+  | .ok b =>
+    match Effect4.Api.printModule "main" b.program b.table with
+    | none => "not printed"
+    | some m =>
+      match Effect4.Api.readModule m b.table with
+      | .ok p => if p = b.program then "reads back" else "reads another program"
+      | .error (.annotation what) => "refused: annotation " ++ what
+      | .error _ => "refused"
 
--- Each scenario makes a `Deferred` of nothing that cannot fail. The module printer refuses it
--- at that row's type arguments, and at no binder term: part A lifted that refusal.
-#guard [r1, r2, r3, r4, r5, r6, r7, r8].map printVerdict =
-  List.replicate 8 "refused: typeSpelling Deferred.make"
--- The same refusal on the smallest such program.
+/-! ## The scenarios' modules: printed, and refused by the reader by name -/
+
+open Test.Program.QueueScenarios (offer take) in
+/-- One offer into room, on a cell that the program makes. -/
+def offerOnly : Src NativeOp := eff do
+  let q ← Ref.make (Queue.empty .nat 2)
+  let a ← offer .nat q (nat 1)
+  return a
+
+open Test.Program.QueueScenarios (offer take) in
+/-- One take, on a cell that the program makes. -/
+def takeOnly : Src NativeOp := eff do
+  let q ← Ref.make (Queue.empty .nat 2)
+  let a ← take .nat q
+  return a
+
+-- Each scenario's module prints: `Deferred.make`'s type arguments print from the operation.
+#guard [r1, r2, r3, r4, r5, r6, r7, r8].map printVerdict = List.replicate 8 "printed"
+-- The module reader refuses each, by name: the take's loop states its cursor's type, which
+-- prints as an annotated local constant (DI-91).
+#guard [r1, r2, r3, r4, r5, r6, r7, r8].map readVerdict =
+  List.replicate 8 "refused: annotation local const"
+-- The refusal is the take's: a program that only takes has it, and a program that only offers
+-- prints and reads back.
+#guard printVerdict takeOnly = "printed" && readVerdict takeOnly = "refused: annotation local const"
+#guard printVerdict offerOnly = "printed" && readVerdict offerOnly = "reads back"
+-- The smallest program that makes a request's identity prints and reads back.
 #guard printVerdict (bindName "id" (Deferred.make .unit .never) fun _ => succeed (nat 1)) =
-  "refused: typeSpelling Deferred.make"
+  "printed"
+#guard readVerdict (bindName "id" (Deferred.make .unit .never) fun _ => succeed (nat 1)) =
+  "reads back"
 
 /-! ## Each step alone prints and reads back -/
 
