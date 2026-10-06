@@ -149,6 +149,7 @@ environment and runs the controls once. It refuses:
 - a claim that rests on a planned goal which no clause names;
 - a clause or a law with no green control, or with no red control;
 - a record that lists one run's name twice;
+- a named run that no control reads;
 - a control that names no clause and no law;
 - a control that reads a run which the record does not list;
 - a control that fails.
@@ -166,9 +167,9 @@ control is a finite probe: one script on the Lean machine. A claim's standing is
 proof: `#plan_status` prints it, with the planned goals the claim rests on.
 
 The gate has controls of its own: `Scenario/Gate.lean` runs it over fixture records of that
-battery. The gate accepts some, accepts one with a report, and refuses the others by name. Most
-stand on a planned goal of that battery, which states nothing of a program. Some hold named runs
-on a small program of that battery, so that the gate's playing of a run has its controls.
+battery. The gate accepts some, and it refuses the others by name. Most stand on a planned goal
+of that battery, which states nothing of a program. Some hold named runs on a small program of
+that battery, so that the gate's playing of a run has its controls.
 
 ### Where a script lives, and who reads it
 
@@ -217,9 +218,8 @@ Some comparisons do more than read a played run.
 - One workers control makes the run that `P3WorkerQueue.drive` drives.
 - A control that reads no run compares a program, a typing answer or a run of `Api.run`.
 
-The gate allows a named run that no control reads. It reports each one in an information
-message, and the battery pins that line with `#guard_msgs (info)`. One stands today: the timeout
-scenario's run `parked`, which the host lane performs.
+The gate refuses a named run that no control reads. So each run that a lane performs has a
+control on the Lean machine.
 
 | Scenario | Program | Observation | Claim, assembled clauses and associated laws | Lowered runs |
 | --- | --- | --- | --- | --- |

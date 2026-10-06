@@ -122,3 +122,9 @@ Six conditions bind the red control's new reading.
 5. The test's label and its property list say what the control reads.
 6. The receipt gives the test's count of checks on the base and at the head. It shows one
    scratch fixture that the test refuses: a moving decision removed, with its view kept.
+
+**At the merge.** The coordinator merged the slice as `4ffdf83f` and ruled on the two questions
+that the receipt left. The run `parked` got a green control of the clause "cleanup". The gate
+now refuses a named run that no control reads, so the sentence of section 3 on such a run no
+longer holds. The run `timeout/applied` went, so one script has one name. The receipt's section
+"Addendum" holds the results.

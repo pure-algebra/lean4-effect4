@@ -373,10 +373,9 @@ def atSecond : Observation :=
 def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 
 /-- The scenario's named runs: each script of a control, once, from one build of each program.
-The first fifteen are on the fetch. The last two are on the client that retries every failure
+The first fourteen are on the fetch. The last two are on the client that retries every failure
 and on the client whose finalizer resets the count. The host lane performs them in this order.
-The first run, `parked`, is the part that every other script starts with: no control reads it
-alone, and the gate reports it. -/
+The first run, `parked`, is the part that every other script starts with. -/
 def runsOf (b eager resetting : Api.Built) : List NamedRun :=
   let run := fun (name : String) (parts : List (List Move)) =>
     (⟨name, opened b, script parts⟩ : NamedRun)
@@ -397,7 +396,6 @@ def runsOf (b eager resetting : Api.Built) : List NamedRun :=
   , run "timer-interrupt" [parked, [.tick 2000]]
   , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
   , run "received" [parked, [.receive http (ok body1)]]
-  , run "applied" [parked, [.receive http (ok body1), .apply http]]
   , ⟨"eager", opened eager, script notFound⟩
   , ⟨"resetting", opened resetting, script [parked, [.tick 2000]]⟩ ]
 
@@ -490,6 +488,10 @@ def controlsOf (b : Api.Built) : List Control :=
       | [crossed] => refused crossed [("submit", .callOrder)] && shows crossed atTimedOut
       | _ => false
     -- cleanup keeps the committed count
+  , green "cleanup" "the first attempt counts itself before its call, and no finalizer ran"
+      ["parked"] fun
+      | [waiting] => shows waiting atParked && (observe waiting).cleanupKeeps
+      | _ => false
   , green "cleanup" "the timer interrupts the first attempt: it is cleaned once, and its count stays"
       ["timer-interrupt"] fun
       | [interrupted] =>
@@ -525,7 +527,7 @@ def controlsOf (b : Api.Built) : List Control :=
           shows stopped { atParked with receipts := [key1], stored := [key1] }
       | _ => false
   , red "frontier" "with its budget the same row applies the reply and stores none"
-      ["applied"] fun
+      ["before"] fun
       | [applied] =>
         applied.phases.getLast? == some .applied && (observe applied).stored == []
       | _ => false
@@ -577,10 +579,6 @@ def scenario : Scenario :=
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
--- One run of the gate. It reports the one named run that no control reads, and this guard pins
--- the report: a new unread run fails the build until its line stands here.
-/-- info: timeout: no control reads the run "parked" -/
-#guard_msgs (info) in
 #scenario_gate scenario
 
 end Test.Dogfood.Scenario.Timeout

@@ -6,7 +6,7 @@ import Effect4.Api.Author
 
 `#scenario_gate` (`Test/Dogfood/Scenario.lean`) refuses a record that says more than its
 declarations give. This battery runs the gate once over fourteen fixture records: three that it
-accepts, one that it accepts with a report, and ten that it refuses by name.
+accepts, and eleven that it refuses by name.
 
 The fixtures name the driver's declarations and the law graph's. Twelve of the fourteen stand on
 a claim that is a planned goal: its node costs no walk of the proof graph. That goal is this
@@ -143,7 +143,8 @@ def missingRun : Scenario :=
 def twiceListed : Scenario :=
   { played with name := "twiceListed", runs := tinyRuns ++ tinyRuns.take 1 }
 
-/-- A run that no control reads. The gate allows it, and it reports it by name. -/
+/-- Red control: a named run that no control reads. A lane would perform it, and no control
+would compare it. -/
 def unread : Scenario :=
   { played with
     name := "unread"
@@ -154,11 +155,9 @@ def unread : Scenario :=
 end Fixture
 
 -- One run of the gate over the fourteen fixtures, on one plan. The green control is that no
--- finding names `sound`, `planned`, `played` or `unread`. Each red control is one finding or
--- more, by its fixture's name. The information message is the report of `unread`'s unread run.
+-- finding names `sound`, `planned` or `played`. Each red control is one finding or more, by its
+-- fixture's name.
 /--
-info: unread: no control reads the run "opened"
----
 error: wrongTop: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "replay" (Effect4.Run.journal_replays)
 unresolved: Nowhere.program does not resolve to a declaration
 noTheorem: the claim Test.Dogfood.Scenario.play is no theorem and no planned goal
@@ -173,17 +172,19 @@ misread: the control "the opened run answers" fails
 misread: the control "the started run has no exit" fails
 missingRun: the control "the finished run answers" reads the run "finished", which the record does not list
 twiceListed: the record lists the run "opened" twice
+unread: no control reads the run "opened"
 -/
-#guard_msgs (info, error) in
+#guard_msgs (error) in
 #scenario_gate Fixture.sound Fixture.wrongTop Fixture.planned Fixture.unresolved Fixture.noTheorem
   Fixture.unplaced Fixture.unplacedLaw Fixture.unlisted Fixture.loose Fixture.played
   Fixture.misread Fixture.missingRun Fixture.twiceListed Fixture.unread
 
-#guard Fixture.sound.problems = [] && Fixture.planned.problems = [] &&
-  Fixture.played.problems = [] && Fixture.unread.problems = []
+#guard Fixture.sound.problems = [] && Fixture.planned.problems = [] && Fixture.played.problems = []
 
--- The lists that the reports are made from: a name listed twice, and a run that no control reads.
+-- The lists that two findings are made from: a name listed twice, and a run that no control
+-- reads. The record with the unread run has that one finding, and no other.
 #guard Fixture.twiceListed.repeated = ["opened"] && Fixture.played.repeated = []
 #guard Fixture.unread.unread = ["opened"] && Fixture.played.unread = []
+#guard Fixture.unread.problems = ["unread: no control reads the run \"opened\""]
 
 end Test.Dogfood.Scenario
