@@ -344,14 +344,17 @@ Candidates with no seat, each with its place:
   until the owner says so to Codex directly. A seat of the coordinator takes the slice when
   one is free, unless the owner lifts Codex's limits first.
   [Its brief](research/2026-10-05-claude-lead/briefs/seat-maskpop-brief.md) is written. The
-  owner allowed a third seat for it on 2026-10-06, if it can land work efficiently. The seat
-  is not dispatched yet. Its lift to runs is a later slice;
+  owner allowed a third seat for it on 2026-10-06, if it can land work efficiently. **Seat
+  MASKPOP has it** (branch `seat/maskpop`, from `6b2b5cda`). Its lift to runs is a later
+  slice;
 - the Queue model's run invariant on the first profile: each operation keeps `quiet` and
   `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
   `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded
   exploration holds it today, with two mutations red;
-- the journal's cut and position connectors, with the scenario driver's general laws in the
-  law graph (Codex's audit of the roadmap, priority 2);
+- the journal's cut and position connectors (Codex's audit of the roadmap, priority 2).
+  [Its brief](research/2026-10-05-claude-lead/briefs/seat-cuts-brief.md) is written, one
+  page that points at Codex's statements. It waits for a seat. The scenario driver's general
+  laws in the law graph are a later step;
 - Semaphore's operations that wait and its protected form, after seat PUB's shared wrapper.
   The case P9 on the generated engine goes with it;
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
