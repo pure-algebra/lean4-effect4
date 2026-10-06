@@ -1,0 +1,38 @@
+// Probe: the two foreign engines on the mask's spellings.
+import { recognizeSource as ck } from "<worktree>/ts/eff/ingest/ck.ts"
+import { recognizeSource as oxc } from "<worktree>/ts/eff/ingest/oxc.ts"
+import { compareVerdicts } from "<worktree>/ts/eff/ingest/gate.ts"
+import { effJson } from "<worktree>/ts/eff/json.gen.ts"
+const h = 'import { Effect, pipe } from "effect"\n'
+const getter = (r: string) => `Effect.uninterruptibleMask((${r}) => Effect.succeed(${r}))`
+const cases: Array<readonly [string, string]> = [
+  ["printed", h + `export const program = Effect.flatMap(${getter("a0")}, (a0) => Effect.uninterruptible(pipe(Effect.succeed(1), a0)))`],
+  ["foreign names", h + `export const program = Effect.flatMap(${getter("restore")}, (saved) => Effect.uninterruptible(pipe(Effect.succeed(1), saved)))`],
+  ["method pipe", h + `export const program = (${getter("r")}).pipe(Effect.flatMap((r) => Effect.uninterruptible(pipe(Effect.succeed(1), r))))`],
+  ["function pipe", h + `export const program = pipe(${getter("r")}, Effect.flatMap((r) => Effect.uninterruptible(pipe(Effect.succeed(1), r))))`],
+  ["curried", h + `export const program = Effect.flatMap((r) => Effect.uninterruptible(pipe(Effect.succeed(1), r)))(${getter("r")})`],
+  ["eta", h + `export const program = (${getter("r")}).pipe((_self) => Effect.flatMap(_self, (r) => Effect.uninterruptible(pipe(Effect.succeed(1), r))))`],
+  ["namespace", 'import { pipe } from "effect"\nimport * as E from "effect/Effect"\n' + "export const program = E.flatMap(E.uninterruptibleMask((r) => E.succeed(r)), (r) => E.uninterruptible(pipe(E.succeed(1), r)))"],
+  ["Function.pipe", 'import { Effect } from "effect"\nimport { pipe } from "effect/Function"\n' + `export const program = Effect.flatMap(${getter("r")}, (r) => Effect.uninterruptible(pipe(Effect.succeed(1), r)))`],
+  ["generator", h + `export const program = Effect.gen(function* () { const saved = yield* ${getter("r")}; yield* Effect.uninterruptible(pipe(Effect.succeed(1), saved)); return undefined })`],
+  ["nested", h + `export const program = Effect.flatMap(${getter("a")}, (outer) => Effect.uninterruptible(Effect.flatMap(${getter("b")}, (inner) => Effect.uninterruptible(Effect.flatMap(pipe(Effect.succeed(1), inner), (x) => pipe(Effect.succeed(x), outer))))))`],
+  ["REFUSE native callback", h + "export const program = Effect.uninterruptibleMask((restore) => restore(Effect.succeed(1)))"],
+  ["REFUSE body answers a literal", h + "export const program = Effect.uninterruptibleMask((r) => Effect.succeed(1))"],
+  ["REFUSE head starts at the parameter", h + "export const program = Effect.uninterruptibleMask((Effect) => Effect.succeed(Effect))"],
+  ["REFUSE two parameters", h + "export const program = Effect.uninterruptibleMask((r, s) => Effect.succeed(r))"],
+  ["REFUSE no argument", h + "export const program = Effect.uninterruptibleMask()"],
+  ["REFUSE async", h + "export const program = Effect.uninterruptibleMask(async (r) => Effect.succeed(r))"],
+  ["REFUSE block body", h + "export const program = Effect.uninterruptibleMask((r) => { return Effect.succeed(r) })"],
+  ["REFUSE body.pipe(saved)", h + `export const program = Effect.flatMap(${getter("r")}, (r) => Effect.succeed(1).pipe(r))`],
+  ["REFUSE saved(body)", h + `export const program = Effect.flatMap(${getter("r")}, (r) => r(Effect.succeed(1)))`],
+  ["REFUSE three arguments", h + `export const program = Effect.flatMap(${getter("r")}, (r) => pipe(Effect.succeed(1), r, r))`],
+  ["REFUSE unbound saved", h + "export const program = pipe(Effect.succeed(1), nowhere)"],
+  ["REFUSE mask as a segment", h + `export const program = Effect.succeed(1).pipe(Effect.uninterruptibleMask)`],
+  ["a binder that is no saved state", h + "export const program = Effect.flatMap(Effect.succeed(1), (a) => pipe(Effect.succeed(2), a))"],
+]
+for (const [name, source] of cases) {
+  const l = ck(source, "x.ts"), r = oxc(source, "x.ts")
+  const show = (vs: typeof l) => vs.map(v => v.kind === "lifted" ? JSON.stringify(effJson(v.eff)) : `${v.code}: ${v.detail}`).join(" ; ")
+  const agree = compareVerdicts(l, r).status
+  console.log(`${agree === "agree" ? "agree   " : "DISAGREE"} ${name}\n    ck  ${show(l)}${agree === "agree" ? "" : "\n    oxc " + show(r)}`)
+}

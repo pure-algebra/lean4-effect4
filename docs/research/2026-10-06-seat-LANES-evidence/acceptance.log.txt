@@ -1,0 +1,74 @@
+== make check-ts-reader
+cd ts/eff && bun run check.ts <worktree>/.lake/corpus <worktree>/harness/truth/generated --oracle <worktree>/.lake/corpus
+files 481: matched 416, mismatched 0, refused with oracle 0, accepted without oracle 58, refused without oracle 7 (277 ms)
+refusals by kind: unknownHead 7
+  <worktree>/harness/truth/generated/pAcquireHandle.ts: refused (no oracle): bind.0 > scoped.0 > acquireRelease.0: unknownHead Host.acquire
+  <worktree>/harness/truth/generated/pKv.ts: refused (no oracle): bind.0: unknownHead Kv.make
+  <worktree>/harness/truth/generated/pSqlCatch.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlExit.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlFail.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlOrDie.ts: refused (no oracle): provideLayer.0 > orDie.0 > effect.1 > bind.0 > acquireRelease.0: unknownHead Sql.open
+  <worktree>/harness/truth/generated/pSqlite.ts: refused (no oracle): scoped.0 > bind.0 > acquireRelease.0: unknownHead Sql.open
+cd ts/eff && bun run typecheck
+$ tsgo --noEmit -p tsconfig.json
+cd ts/eff && bun test
+bun test v1.4.2 (744846f84)
+
+ 737 pass
+ 0 fail
+ 3602 expect() calls
+Ran 737 tests across 27 files. [4.32s]
+check-ts-reader-exit=0
+-- git status after check-ts-reader:
+-- end
+== make check-ingest-smoke
+bun ts/eff/ingest/check-corpus.ts printed <worktree>/.lake/corpus
+PASS printed: 408 exact JSON/wire comparisons on each parser with shared form lowering; batch bound 500
+check-ingest-smoke-exit=0
+-- git status after check-ingest-smoke:
+-- end
+== make check-tsdiag
+node harness/tsdiag/run-tsdiag.mjs <worktree>/.lake/corpus <worktree>/.lake/tsdiag
+tsdiag: 11 controls hold: the clean project, and 10 defective projects refused by their reasons (the prelude has 8 files)
+tsdiag: 408 programs, one native run in 0.49s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed
+check-tsdiag-exit=0
+-- git status after check-tsdiag:
+-- end
+== make gen-fixtures
+python3 scripts/generate.py --only fixtures
++ lake build Test.Program.MaskContract
+Build completed successfully (147 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/mask/write.lean <generate-tmp>/ocaml/engine/test/mask
+wrote <generate-tmp>/ocaml/engine/test/mask/mask.txt
++ lake build Test.Program.PoolPublic
+Build completed successfully (159 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/pool/write.lean <generate-tmp>/ocaml/engine/test/pool
+wrote <generate-tmp>/ocaml/engine/test/pool/pool.txt
++ lake build Test.Program.QueueMask Effect4.Store.Domain.ProgramWire
+Build completed successfully (169 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/queue/write.lean <generate-tmp>/ocaml/engine/test/queue
+wrote <generate-tmp>/ocaml/engine/test/queue/queue.txt
++ lake build Test.Dogfood.Scenario.Tape
+Build completed successfully (483 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/scenarios/write.lean <generate-tmp>/ocaml/engine/test/scenarios
+wrote <generate-tmp>/ocaml/engine/test/scenarios/workers.txt
+wrote <generate-tmp>/ocaml/engine/test/scenarios/queue-workers.txt
+wrote <generate-tmp>/ocaml/engine/test/scenarios/routing.txt
+wrote <generate-tmp>/ocaml/engine/test/scenarios/atomic.txt
+wrote <generate-tmp>/ocaml/engine/test/scenarios/timeout.txt
++ lake build Test.Program.SemaphoreScenarios
+Build completed successfully (158 jobs).
++ lake env lean -DwarningAsError=true -M4096 --run ocaml/engine/test/semaphore/write.lean <generate-tmp>/ocaml/engine/test/semaphore
+wrote <generate-tmp>/ocaml/engine/test/semaphore/semaphore.txt
+PASS generate: requested producers ran in dependency order
+gen-fixtures-exit=0
+-- git status after gen-fixtures:
+-- end
+== make check-docs
+python3 scripts/check-docs.py
+PASS check-docs: every path, link, citation and make target in 76 documents resolves
+check-docs-exit=0
+-- git status after check-docs:
+-- end
+exit=0

@@ -1,0 +1,33 @@
+== lake build Drivers.ForeignCorpus Drivers.Corpus
+✔ [156/157] Built Drivers.ForeignCorpus (1.9s)
+✔ [157/157] Built Drivers.Corpus (1.6s)
+Build completed successfully (157 jobs).
+build-exit=0
+== the probe
+mask-restore: wellTyped true readable true roundTrip-same true
+  Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => Effect.uninterruptible(pipe(Effect.succeed(1), a0)))
+mask-nested: wellTyped true readable true roundTrip-same true
+  Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => Effect.uninterruptible(Effect.flatMap(Effect.uninterruptibleMask((a1) => Effect.succeed(a1)), (a1) => Effect.uninterruptible(Effect.flatMap(pipe(Effect.succeed(1), a1), (a2) => pipe(Effect.succeed(a2), a0))))))
+mask-gen: wellTyped true readable true roundTrip-same true
+  Effect.gen(function* () {
+  const a0 = yield* Effect.uninterruptibleMask((a0) => Effect.succeed(a0))
+  yield* Effect.uninterruptible(pipe(Effect.succeed(1), a0))
+  return undefined
+})
+mask-layer: wellTyped true readable true roundTrip-same true
+  Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => Effect.uninterruptible(pipe(Effect.flatMap(Effect.provide(Effect.succeed(1), Layer.succeed(Context.Service<"k4_4", number>("k4_4"), 7)), (a1) => Effect.provide(Effect.succeed(2), L_1_0_0_0_0)), a0)))
+layerUnderRestore: wellTyped true
+/**
+
+ */
+
+export const L_1_0_0_0_0 = Layer.succeed(Context.Service<"k4_4", number>("k4_4"), 7)
+
+export const main: Effect.Effect<number, never, never> = Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => Effect.uninterruptible(pipe(Effect.flatMap(Effect.provide(Effect.succeed(1), L_1_0_0_0_0), (a1) => Effect.provide(Effect.succeed(2), L_1_0_0_0_0)), a0)))
+
+  readModule gives the program back: true
+probe-exit=0
+== the foreign corpus
+foreign 22398; isolated 21; products 11520; forms 19 at four depths; construction JSON/wire/keys before readers
+foreign-exit=0
+exit=0

@@ -1,0 +1,11 @@
+sources: 84
+tsgo exit: 1
+src/named-mask-gen.ts(2,707): error TS2305: Module '"effect/Effect"' has no exported member 'currentTimeMillis'.
+src/named-mask-layer.ts(2,707): error TS2305: Module '"effect/Effect"' has no exported member 'currentTimeMillis'.
+src/named-mask-nested.ts(2,707): error TS2305: Module '"effect/Effect"' has no exported member 'currentTimeMillis'.
+src/named-mask-restore.ts(2,707): error TS2305: Module '"effect/Effect"' has no exported member 'currentTimeMillis'.
+src/pipe2-mask-layer.ts(3,195): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '(a: Effect<number, never, never>) => never'.
+src/pipe2-mask-nested.ts(2,164): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '(a: Effect<unknown, never, never>) => never'.
+src/pipe2-mask-nested.ts(2,193): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '(a: Effect<number, never, never>) => never'.
+src/pipe2-mask-restore.ts(2,94): error TS2345: Argument of type 'unknown' is not assignable to parameter of type '(a: Effect<number, never, never>) => never'.
+sources with a diagnostic: 7

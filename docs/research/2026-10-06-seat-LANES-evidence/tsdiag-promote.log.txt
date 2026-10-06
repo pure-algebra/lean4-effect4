@@ -1,0 +1,6 @@
+node harness/tsdiag/run-tsdiag.mjs <worktree>/.lake/corpus <worktree>/.lake/tsdiag --promote
+tsdiag: 11 controls hold: the clean project, and 10 defective projects refused by their reasons (the prelude has 8 files)
+tsdiag: 408 programs, one native run in 0.30s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+tsdiag: wrote generated/tsdiag-agreement.tsv
+PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed
+exit=0

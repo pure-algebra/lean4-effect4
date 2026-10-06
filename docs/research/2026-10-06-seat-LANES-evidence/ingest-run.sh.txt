@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# One hold of the Lean slot: the printed corpus as make cuts it, then the ingest's script
+# without its install line, with the environment that the Makefile exports.
+set -uo pipefail
+cd <worktree>
+echo "== make corpus (the prerequisite of the ingest's rule)"
+make -o build -o ts/eff/node_modules -o harness/truth/node_modules corpus; echo "corpus-exit=$?"
+echo "== lake build Tools.GeneratedStamp (an import of harness/truth/IngestPrint.lean)"
+lake build Tools.GeneratedStamp; echo "stamp-exit=$?"
+echo "== the ingest's script, without the install line"
+TMPDIR=<scratch>/tmp EFFECT4_CORPUS=<worktree>/.lake/corpus E4_LEAN_CORPUS=<worktree>/.lake/corpus bash -x <scratch>/check-ingest-noinstall.sh; echo "ingest-exit=$?"

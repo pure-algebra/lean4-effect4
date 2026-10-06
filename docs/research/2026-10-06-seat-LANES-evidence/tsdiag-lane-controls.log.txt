@@ -1,0 +1,50 @@
+the skeleton has no harness/truth/node_modules
+== K0 the skeleton as it is (expect PASS, exit 0)
+tsdiag: 11 controls hold: the clean project, and 10 defective projects refused by their reasons (the prelude has 8 files)
+tsdiag: 408 programs, one native run in 0.56s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed
+   exit=0
+   the skeleton's table is the committed table
+== K1 a prelude that does not check, with --promote (expect the lane's-own-files refusal, exit 1, table kept)
+FAIL check-tsdiag: the lane's own files do not check, so no program was measured and no table is written (see <scratch>/skeleton-work/diagnostics.tsv):
+  prelude.ts: TS2322 Type 'string' is not assignable to type 'number'.
+   exit=1
+   the skeleton's table is the committed table
+== K2 a later sibling that the prelude re-exports (expect PASS, exit 0, 9 files)
+tsdiag: 12 controls hold: the clean project, and 11 defective projects refused by their reasons (the prelude has 9 files)
+tsdiag: 408 programs, one native run in 0.59s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed
+   exit=0
+   the skeleton's table is the committed table
+1
+== K3 the one list without the atom some (expect a table that differs, exit 1)
+tsdiag: 11 controls hold: the clean project, and 10 defective projects refused by their reasons (the prelude has 8 files)
+tsdiag: 408 programs, one native run in 0.57s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+FAIL check-tsdiag: generated/tsdiag-agreement.tsv differs from this run (see <scratch>/skeleton-work/tsdiag-agreement.tsv); promote with make gen-tsdiag if the change is intended
+   exit=1
+   the skeleton's table is the committed table
+== K4 the prelude reaches a file outside harness/truth (expect the refusal, exit 1)
+file://<scratch>/skeleton/harness/tsdiag/run-tsdiag.mjs:101
+    throw new Error(`tsdiag: the prelude reaches ${path.relative(tree, file)}, outside harness/truth; the lane copies the prelude's folder only`)
+
+Error: tsdiag: the prelude reaches ts/eff/eff.gen.ts, outside harness/truth; the lane copies the prelude's folder only
+
+   exit=1
+   the skeleton's table is the committed table
+1
+== K6 the one list names what the prelude does not export, with --promote (expect the header refusal, exit 1, table kept)
+FAIL check-tsdiag: the lane's own files do not check, so no program was measured and no table is written (see <scratch>/skeleton-work/diagnostics.tsv):
+  the header of a module: TS2305 Module '"../prelude.ts"' has no exported member 'notExportedByThePrelude'. (408 times)
+   exit=1
+   the skeleton's table is the committed table
+== K7 the tree's prelude lacks a file that it imports (expect prelude.ts: TS2307, exit 1)
+FAIL check-tsdiag: the lane's own files do not check, so no program was measured and no table is written (see <scratch>/skeleton-work/diagnostics.tsv):
+  prelude.ts: TS2307 Cannot find module './tuples.ts' or its corresponding type declarations.
+   exit=1
+   the skeleton's table is the committed table
+== K8 the skeleton again, as it is (expect PASS, exit 0)
+tsdiag: 11 controls hold: the clean project, and 10 defective projects refused by their reasons (the prelude has 8 files)
+tsdiag: 408 programs, one native run in 0.44s: refused-agree 181, refused-gap 5, refused-other 2, refused-silent 22, refused-unmapped 62, typed-clean 136
+PASS check-tsdiag: no program this checker types is refused by TypeScript; the agreement table is what this run observed
+   exit=0
+   the skeleton's table is the committed table

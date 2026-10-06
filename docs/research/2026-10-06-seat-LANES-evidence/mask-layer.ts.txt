@@ -1,0 +1,11 @@
+// Probe: a layer constant used under a restore site, in both foreign engines.
+import { recognizeSource as ck } from "<worktree>/ts/eff/ingest/ck.ts"
+import { recognizeSource as oxc } from "<worktree>/ts/eff/ingest/oxc.ts"
+import { compareVerdicts } from "<worktree>/ts/eff/ingest/gate.ts"
+import { effJson } from "<worktree>/ts/eff/json.gen.ts"
+const source = 'import { Effect, Layer, Context, pipe } from "effect"\n' +
+  'const Live = Layer.succeed(Context.Service<number>("K"), 7)\n' +
+  'export const program = Effect.flatMap(Effect.uninterruptibleMask((r) => Effect.succeed(r)), (r) => Effect.uninterruptible(pipe(Effect.flatMap(Effect.provide(Effect.succeed(1), Live), (x) => Effect.provide(Effect.succeed(2), Live)), r)))\n'
+const l = ck(source, "x.ts"), r = oxc(source, "x.ts")
+console.log("agreement:", compareVerdicts(l, r).status)
+for (const [name, vs] of [["ck ", l], ["oxc", r]] as const) for (const v of vs) console.log(name, v.kind === "lifted" ? JSON.stringify(effJson(v.eff)) + " layers " + JSON.stringify(v.layers) + " keys " + JSON.stringify(v.keys) : v.code + ": " + v.detail)
