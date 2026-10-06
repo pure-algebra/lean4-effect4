@@ -9,7 +9,26 @@ Evidence files: `docs/research/2026-10-06-seat-LANES-evidence/`.
 `generated/tsdiag-agreement.tsv` is the table of the base's corpus. If the merged tree moves
 `generated/corpus-index.tsv`, run `make gen-tsdiag` again and read its rows before the commit.
 
-Six more facts stand beside it.
+**One fetch from `registry.npmjs.org` happened, against the rule of no download.** On
+2026-10-06 at 17:48:08 a probe of mine made bun ask that host for the manifest of `effect`.
+The probe, `children-probe.ts`, stood in the scratch folder and imported `effect` by its bare
+name. No `node_modules` stands above that folder, so bun's auto-install answered the import.
+
+- **What changed.** bun wrote one file: the manifest cache of `effect` in its global cache,
+  181600 bytes. It installed no package, and no version folder of the cache is from that day
+  (tested, `incident-measure.out.txt`). No path of the install under `ts/eff/node_modules` is
+  newer than the session's start (tested, `find` to depth 3), and `git status` is empty.
+- **What I did.** I reported it to the coordinator when I found it, and the coordinator
+  verified the measure. The file stays as it is, because the owner decides.
+- **What is void.** The four runs of that probe are void as evidence. This receipt cites its
+  rerun alone. The rerun imports no package, it runs under `bun --no-install`, and it prints
+  the build that answers: effect 4.0.0-rc.112 (tested, `probes.out.txt`).
+- **What I cannot measure.** The manifest file has one write time. Whether the three later
+  runs of the probe asked the host again, I cannot say.
+- **The rule since then.** Every bun run of a scratch file is `bun --no-install`. No scratch
+  file imports a package by a bare name. tsgo runs by its path, never through `bunx`.
+
+Six more facts stand beside these two.
 
 - **The fresh table has no `typed-errors` row.** Each of the 136 programs that the checker
   types is clean under tsgo (tested). Section 3 gives the counts by verdict.
@@ -29,7 +48,7 @@ Six more facts stand beside it.
 ## 1. Base and head
 
 Branch `seat/lanes`, in the worktree `/Users/pooks/Dev/lean4-effect4-lower`. The base is
-`6d10fcc0`. The head is the commit that adds this receipt, and its parent is `9a2dc6df`.
+`6d10fcc0`. The head is the commit that corrects this receipt, and its parent is `befc0aad`.
 Nothing is pushed.
 
 | Commit | Part | Content |
@@ -41,6 +60,8 @@ Nothing is pushed.
 | `476e3550` | both | the evidence folder |
 | `49457227` | 2c | one more test: the mask's rows under a form that inserts a binder |
 | `9a2dc6df` | both | more evidence: the truth lane's run and two later probes |
+| `3459cb91` | both | this receipt, in its first form |
+| `befc0aad` | both | the voided probe's rerun, and the measure of the fetch |
 
 ## 2. Changed files
 
@@ -333,8 +354,10 @@ evidence folder holds each script and probe of the scratch folder, with `.txt` a
 | `SLOT lake build Drivers.ForeignCorpus Drivers.Corpus` | `Build completed successfully (157 jobs).` |
 | `SLOT lake env lean -DwarningAsError=true MaskProbe.lean` | exit 0; four probes typed, readable, round trip the same |
 | `SLOT make … corpus`, then `SLOT lake build Tools.GeneratedStamp`, then the copy of the script | section 4.4; exit 0 |
-| `bash controls.sh` | A0 exit 0; A1 to A3 exit 1; B0 exit 0; B1 to B4 TS2345 |
-| `bash probes.sh` | section 4.2 and 4.3; `probes.out.txt` |
+| `bash controls.sh`, each bun run as `bun --no-install` | A0 exit 0; A1 to A3 exit 1; B0 exit 0; B1 to B4 TS2345 |
+| `bash probes.sh`, each run as `bun --no-install` | section 4.2 and 4.3; `probes.out.txt`; the reader loads effect 4.0.0-rc.112 |
+| `bash probes-2.sh`, each run as `bun --no-install` | finding 4; `probes-2.out.txt` |
+| `bash incident-measure.sh`, which runs no bun | one file of bun's cache from the session; `incident-measure.out.txt` |
 | `bun run check-styles.ts <scratch>/foreign`, in `ts/eff` | `PASS styles construction: 22398 indexed files, 11541 configurations`; tsgo's API and oxc accept every source |
 | `bash foreign-mask-types.sh` | tsgo exit 1; 7 of 84 sources have a diagnostic (finding 9) |
 | `SLOT make … check-ts-reader`, at `c540da33` and at `49457227` | `files 481: matched 416, mismatched 0, refused with oracle 0`; 737 tests pass, then 738 |
@@ -362,6 +385,9 @@ theorem is stated.
   and effect 4.0.0-rc.112. The fidelity step rests on bun 1.4.2 and the pinned runtime.
 - **One machine.** Every run is on this Mac: node 22.23.2, bun 1.4.2, OCaml 5.1.1 and dune
   3.24.2 of the effect4 switch.
+- **Void.** The four runs of `children-probe.ts` before its rerun, as the first lines state.
+  The reruns of the other scratch probes give the bytes that were filed before (tested,
+  `diff`).
 - **The corpora.** The printed corpus is the worktree's `.lake/corpus`, cut at the base by
   `make corpus`. No run read the coordinator's corpus. As I write, the coordinator's
   `generated/corpus-index.tsv` has the same bytes as the worktree's (tested, `cmp`).
@@ -484,7 +510,8 @@ One row, as a record of row 289's two repairs.
 
 ## 12. Not run
 
-- `bun install --frozen-lockfile`, and any other install or download.
+- `bun install --frozen-lockfile`, and any install. One download did happen: the fetch that
+  the first lines state.
 - `make check-ingest` and `scripts/check-ingest.sh` as a whole, because of that line.
 - `make check-corpus`, `make check-target`, `make check-host-protocol` and the release lane's
   host run. `run-truth.ts` changed, and `make check-corpus` runs it too: the merge owes that
