@@ -278,13 +278,14 @@ either module exists yet):
   abandoned lookup's cleanup starts a new lookup (row 271);
 - Cache's capacity bounds the keys, and not the lookups that are alive (row 272).
 
-**Who implements next (the owner's steer, relayed by Codex on 2026-10-06; a preparation,
-not in effect).** Implementation will pass to Codex, and the coordinator will review. No seat
-is added before the handover point is set. Seats LIFT and SEMW finish their slices, each with
-its receipt. The
-[transition account](research/2026-10-05-claude-lead/2026-10-06-transition-account.md) gives
-the proposed handover point, what the next implementer inherits, the integration procedure
-as practiced and four questions for the owner. The handover waits for the owner's own word.
+**Who implements next (row 277; the owner approved the handover on 2026-10-06).**
+Implementation passes to Codex, and the coordinator reviews. The handover takes effect at
+its point: seats LIFT and SEMW are merged with their records. No seat is added before it.
+The [transition account](research/2026-10-05-claude-lead/2026-10-06-transition-account.md)
+gives the handover point, what the next implementer inherits and the integration procedure
+as practiced. Three points stay open for the owner: who integrates after the handover,
+whether the reviewer builds, and a sweep at the handover head. Until the owner names a
+party, the coordinator still merges, runs the wide gates and keeps the registers.
 
 In work since 2026-10-06. The owner allowed three seats at once that day (row 237). Two
 run, and the third seat is held:

@@ -1,8 +1,9 @@
 # 2026-10-06 transition account: implementation passes to Codex, the coordinator reviews
 
 Status: a working note (history, not authority). It answers the owner's steer that Codex
-relayed on 2026-10-06. The steer is a preparation. It is not in effect, and no register row
-records it yet: the handover itself waits for the owner's own word.
+relayed on 2026-10-06. **The owner approved the handover the same day**, in session, by
+voice (decisions row 277). It takes effect at the handover point below. The four questions
+at the end stay open, except the first: the handover has the owner's word.
 
 ## The steer, as relayed
 
