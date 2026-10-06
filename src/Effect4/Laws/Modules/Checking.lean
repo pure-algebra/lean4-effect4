@@ -447,6 +447,12 @@ theorem types_lt {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
     TypesEach sig (app "lt" [a, b]) env path types .bool :=
   fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_lt)
 
+/-- `eq` on two numbers is a Boolean. -/
+theorem types_eq {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
+    (hb : TypesEach sig b env path types .nat) :
+    TypesEach sig (app "eq" [a, b]) env path types .bool :=
+  fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms nativeAtomTy_eq)
+
 theorem types_sub {a b : TermSrc} (ha : TypesEach sig a env path types .nat)
     (hb : TypesEach sig b env path types .nat) :
     TypesEach sig (app "sub" [a, b]) env path types .nat :=
@@ -583,5 +589,37 @@ theorem sub_nil_list (T : Ty) : Ty.sub (.list .never) (.list T) = true := by
   show (Ty.sub .never T && true) = true
   rw [Ty.OrderProof.sub_never]
   rfl
+
+/-! ## Lists that a term writes out
+
+The words `front` and `listOf` of `src/Effect4/Modules/Words.lean`. `single` has its rule
+above: `types_single`. Their first consumer is Pool (`src/Effect4/Laws/Modules/Pool/`): a
+returned item at the front of the idle items, and the items of the initial value. -/
+
+section Lists
+
+variable {sig : Signature Op} {env : Env} {path : List Nat} {types : List Ty}
+variable (atoms : sig.atomOf = nativeAtomTy)
+include atoms
+
+/-- A list with one element in front of it, at the element's type in normal form. -/
+theorem types_front {x xs : TermSrc} {T : Ty} (canonical : T.normalize = T)
+    (hx : TypesEach sig x env path types T) (hxs : TypesEach sig xs env path types (.list T)) :
+    TypesEach sig (front x xs) env path types (.list T) :=
+  types_append atoms (types_single atoms canonical hx) hxs
+
+/-- The list of the given terms, each at one type in normal form, where at least one term is
+given. -/
+theorem types_listOf {T : Ty} (canonical : T.normalize = T) :
+    ∀ {xs : List TermSrc}, xs ≠ [] → (∀ x ∈ xs, TypesEach sig x env path types T) →
+      TypesEach sig (listOf xs) env path types (.list T)
+  | [], nonempty, _ => absurd rfl nonempty
+  | [x], _, each => types_single atoms canonical (each x List.mem_cons_self)
+  | x :: y :: rest, _, each =>
+    types_front atoms canonical (each x List.mem_cons_self)
+      (types_listOf canonical (List.cons_ne_nil y rest) fun z member =>
+        each z (List.mem_cons_of_mem x member))
+
+end Lists
 
 end Effect4.Modules

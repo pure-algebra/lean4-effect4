@@ -624,6 +624,12 @@ theorem reads_lt {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.na
     Reads (app "lt" [a, b]) env path vals (Val.bool (decide (x < y))) :=
   reads_app (.cons ha (.cons hb .nil)) (atom_lt x y)
 
+/-- `eq` on two numbers reads whether they are one number. -/
+theorem reads_eq {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.nat x))
+    (hb : Reads b env path vals (Val.nat y)) :
+    Reads (app "eq" [a, b]) env path vals (Val.bool (decide (x = y))) :=
+  reads_app (.cons ha (.cons hb .nil)) rfl
+
 theorem reads_sub {a b : TermSrc} {x y : Nat} (ha : Reads a env path vals (Val.nat x))
     (hb : Reads b env path vals (Val.nat y)) :
     Reads (app "sub" [a, b]) env path vals (Val.nat (x - y)) :=
@@ -717,5 +723,36 @@ theorem reads_removeById {α : Type} {entries id : TermSrc} (tb : Table)
   exact folded.to (by rw [foldl_keep, List.nil_append]; rfl)
 
 end Removal
+
+/-! ## Lists that a term writes out, and a fold inside a fold's body
+
+The words `single` and `front` of `src/Effect4/Modules/Words.lean`, and the depth premise of a
+fold that stands in another fold's body. Their first consumer is Pool
+(`src/Effect4/Laws/Modules/Pool/`): a returned item at the front of the idle items, and the
+front idle stamp that the lease's folds read in their bodies. -/
+
+section Lists
+
+variable {env : Env} {path : List Nat} {vals : List Val}
+
+theorem reads_single {x : TermSrc} {v : Val} (hx : Reads x env path vals v) :
+    Reads (single x) env path vals (Val.list [v]) :=
+  reads_app (.cons hx (.cons reads_nilT .nil)) (atom_cons v [])
+
+theorem reads_front {x xs : TermSrc} {v : Val} {items : List Val} (hx : Reads x env path vals v)
+    (hxs : Reads xs env path vals (Val.list items)) :
+    Reads (front x xs) env path vals (Val.list (v :: items)) :=
+  reads_append (reads_single hx) hxs
+
+end Lists
+
+/-- Under two more binders a scope's values are as many as its names: the depth premise of a
+fold that stands in another fold's body. It serves the values and the types alike. -/
+theorem depth_under {α : Type} {env : Env} {xs : List α} (depth : xs.length = env.names.length)
+    (first second : String) (a b : α) :
+    (xs ++ [a, b]).length = (env.push [first, second]).names.length := by
+  show (xs ++ [a, b]).length = (env.names ++ [first, second]).length
+  rw [List.length_append, List.length_append, depth]
+  rfl
 
 end Effect4.Modules

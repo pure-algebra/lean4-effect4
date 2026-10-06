@@ -283,6 +283,13 @@ theorem nativeAtomTy_or : nativeAtomTy "or" [.bool, .bool] = some .bool :=
 theorem nativeAtomTy_lt : nativeAtomTy "lt" [.nat, .nat] = some .bool :=
   NativeAtom.monoApply_self [.nat, .nat] .bool
 
+/-- `eq` on two numbers: the first of the atom's two fixed signatures, at its own parameters.
+Used by a step that compares two stamps. -/
+theorem nativeAtomTy_eq : nativeAtomTy "eq" [.nat, .nat] = some .bool := by
+  show ([([Ty.nat, Ty.nat], Ty.bool), ([Ty.string, Ty.string], Ty.bool)].findSome? fun c =>
+    NativeAtom.monoApply c.1 c.2 [.nat, .nat]) = some .bool
+  rw [List.findSome?_cons, NativeAtom.monoApply_self]
+
 theorem nativeAtomTy_sub : nativeAtomTy "sub" [.nat, .nat] = some .nat :=
   NativeAtom.monoApply_self [.nat, .nat] .nat
 

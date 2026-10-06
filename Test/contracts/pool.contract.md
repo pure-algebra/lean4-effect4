@@ -11,6 +11,9 @@ proofs. It authorizes no public operation and no runtime behaviour.
 | `lease_enrols_iff`, `select_takes_first`, `giveBack_front`, `giveBack_once` and `close_refuses` in the same file | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/PoolContract.lean` | tested: its guard checks hold, and a falsified copy fails each changed check |
 | `Test/Program/PoolScenarios.lean` | tested: seven cases and three more on the Lean machine, one schedule each |
+| `src/Effect4/Modules/Pool/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
+| the six typing statements of `src/Effect4/Laws/Modules/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
+| `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
 
 ## Authority and owned surface
 
@@ -184,14 +187,15 @@ rc.112's order on PP2 (`backOrder` on the machine).
 | `lease_enrols_iff` | `store-typing`, R4, beside the closure; its consumers are the lease step's agreement and then the public waiting wrapper | one transition of the model, on the profile's states | no fairness and no liveness; nothing about a later selection |
 | `select_takes_first` | `reactive-scheduling`, R12; its consumer is the proposed `pool-wake-selection` | one selection of the model | no statement about a run, and no liveness |
 | `giveBack_front`, `giveBack_once`, `close_refuses` | `scope-lifetime-finalization`, R11; their consumers are the proposed `pool-lease-return` and `pool-close-waits` | one transition of the model; for the close, every later lease | nothing about a finalizer's run, and no completed close |
+| `initial_types` and the five `…Step_types` | `store-typing`, R4; the cell's half of the proposed `pool-profile-preserved` | the cell's type at a resource type in normal form; every scope of names; the native atoms | no agreement with the model |
 
 The consumer of each statement is the public law, in the slice of the public operations. No
 proposed claim is in the semantics registry yet.
 
 ## Remaining connectors
 
-1. State the cell and the five step terms, and prove each typed and in agreement with its
-   transition.
+1. Prove each of the five step terms in agreement with its transition, through the relation
+   of the cell to the model.
 2. Prove the waiting wrapper over the actual program: the enrolment, the wait, the retry and
    the withdrawal on interruption. The wait stands inside the mask that holds the body's hook.
 3. State the wake's helper as a library program, and its law across helpers.
