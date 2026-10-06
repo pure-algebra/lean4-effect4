@@ -169,6 +169,7 @@ import Test.Program.QueueRelation
 import Test.Program.QueueWorkload
 import Test.Program.QueueEngine
 import Test.Program.QueueFaces
+import Test.Program.QueueTyping
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract

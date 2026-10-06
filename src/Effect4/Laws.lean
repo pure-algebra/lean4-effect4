@@ -183,6 +183,8 @@ import Effect4.Laws.Modules.Queue.Typing
 import Effect4.Laws.Modules.Queue.Relation
 import Effect4.Laws.Modules.Queue.Reading
 import Effect4.Laws.Modules.Queue.Steps
+import Effect4.Laws.Modules.Queue.Checking
+import Effect4.Laws.Program.Typing.TermIntro
 
 /-!
 # Effect4 proof graph
