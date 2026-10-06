@@ -278,7 +278,16 @@ either module exists yet):
   abandoned lookup's cleanup starts a new lookup (row 271);
 - Cache's capacity bounds the keys, and not the lookups that are alive (row 272).
 
-In work since 2026-10-06, three seats at once since the owner's word of that day (row 237):
+**Who implements next (the owner's steer, relayed by Codex on 2026-10-06; a preparation,
+not in effect).** Implementation will pass to Codex, and the coordinator will review. No seat
+is added before the handover point is set. Seats LIFT and SEMW finish their slices, each with
+its receipt. The
+[transition account](research/2026-10-05-claude-lead/2026-10-06-transition-account.md) gives
+the proposed handover point, what the next implementer inherits, the integration procedure
+as practiced and four questions for the owner. The handover waits for the owner's own word.
+
+In work since 2026-10-06. The owner allowed three seats at once that day (row 237). Two
+run, and the third seat is held:
 
 - **Seat LIFT has the lift of the mask's chain to runs** (branch `seat/lift`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)), in the seat that
@@ -293,18 +302,19 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   Queue's trees must not move. Its first five steps are merged (`aa70b078`, `4b57609c`,
   `ea036307`). The two forms are `waitRetryAt` and `protectedBy`
   (`src/Effect4/Modules/Waiting.lean`). The six operations are library programs
-  (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every scope,
-  and nine attempt laws relate one store step to the model's step, with no planned goal
+  (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every scope.
+  Nine attempt laws relate one store step to the model's step, with no planned goal
   (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`; R4, R10). The traces run on the Lean
   machine, with the two red controls of the protected permit
   (`Test/Program/SemaphoreTraces.lean`). The faces, the truth programs, the engine's case and
   the receipt come next.
-- **Seat WORKQ has the workers over the public Queue** (branch `seat/workq`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)), in the seat that
-  seat CHECK freed. It is the first recommendation of Codex's dogfood review. The two-worker
-  crew takes its jobs from the Queue's public operations, as a second scenario. The first
-  scenario stays as the control of the host protocol. The slice also shares one `note`
-  through `Ref.updateWith`, and it gives the typed empty cell one home with two laws.
+- **Seat WORKQ is prepared and not dispatched: the workers over the public Queue** (branch
+  `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
+  is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
+  from the Queue's public operations, as a second scenario. The first scenario stays as the
+  control of the host protocol. The slice also shares one `note` through `Ref.updateWith`,
+  and it gives the typed empty cell one home with two laws. The worktree stands on the
+  branch at `c986b839`, with no commit. The slice is the next implementer's first candidate.
 
 Merged on 2026-10-06, after the seats above began:
 
@@ -412,7 +422,7 @@ Candidates with no seat, each with its place:
   the closer as a request (row 276);
 - two points of Codex's dogfood review of 2026-10-06
   (`research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/`).
-  Seat WORKQ has the review's other two points:
+  Seat WORKQ's brief has the review's other two points:
   - the exact Routing example has no printed twin in the host lane. Two errors of tsgo 7
     keep it out. The repair carries the checked types of the branches to the printed
     Boolean select, with the reader's laws;
