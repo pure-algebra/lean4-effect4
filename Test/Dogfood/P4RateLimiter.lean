@@ -31,12 +31,16 @@ cell builds, and it is read and written.
 **Changes in the state plan's T3b.** A read-modify-write row carries a binder term, so the measured
 program is rc.112's: one `Window` cell, and each request one `Ref.modify` whose term decides and
 rewrites the record in one store step. It answers `[3, 2, 3]`, with or without a yield before the
-step. The three-cell program stays as the race control (section 3). The stage loses `printed` and
-`readBack`: the term of a request is no name's image, so the printer refuses the row by name until
-the state plan's T5 prints a term as a lambda (section 4).
+step. The three-cell program stays as the race control (section 3). The stage lost `printed` and
+`readBack` then: the term of a request is no name's image, and the printer refused the row by name.
 
-**Waits on:** R4, the faces' part (a binder term printed and read as a lambda, the state plan's T5),
-and R10 (DI-89's `all`).
+**Changes in the state plan's T5, part A.** A row's term prints as a function of the current
+value and reads back, so the stage has `printed` and `readBack` again (section 4). The printed
+request does not type-check under tsgo 7 yet: `pair` keeps a boolean literal's type on the target
+(seat T5's measure, `Test/Codegen/TermRows.lean`, `fourRequests`).
+
+**Waits on:** R4, the faces' part (the printed request's typing on the target), and R10 (DI-89's
+`all`).
 -/
 
 set_option autoImplicit false

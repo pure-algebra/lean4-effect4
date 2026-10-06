@@ -194,8 +194,8 @@ Landed later on 2026-10-05:
 
 - **Seat T3b is merged** (`57b261a0`;
   [its receipt](research/2026-10-04-seat-T3b-receipt.md)). The eight read-modify-write rows
-  carry a binder term, and the store step runs it with the node's environment. The faces spell
-  a term by one of five names and refuse any other. The faces of a binder term wait for T5.
+  carry a binder term, and the store step runs it with the node's environment. The faces
+  spelled a term by one of five names until seat T5's part A, below.
 - **Seat M0 is merged** (`ba0b6d38`;
   [its receipt](research/2026-10-05-seat-M0-receipt.md),
   [the lane note](../harness/truth/RELEASE-LANE.md)). `make check-truth-release` runs the truth
@@ -234,6 +234,33 @@ Landed later on 2026-10-05:
   (`src/Effect4/Laws/Modules/Queue/Capacity.lean`) is proved. `positive_suspend_step_capacity` is proved too:
   one step of the model under `suspend` keeps the configuration and the buffer's bound. Its
   proof does not use the positive capacity.
+- **Seat T5's part A is merged** (`b145687a`; rows 43, 212 and 251). A read-modify-write row
+  prints its term as a function of the current value, `Ref.update(cell, (a1) => succ(a1))`.
+  Lean's reader, `ts/eff/read.ts` and both foreign readers read it back. `read_print` and
+  `read_exact` keep their statements and stay proved. No face spells one of the five names.
+  The pinned truth check compiles the tuple control. Two truth programs are new, `pModifyFold`
+  and `pQueueOffer`, and the lane agrees on 42. The coordinator pinned the case policy again,
+  added `pFold` to the target selection and promoted the build ledger. The seat's receipt
+  comes with part B.
+- **Seat DOGFOOD is merged** (`b8c6ab2d`;
+  [its receipt](research/2026-10-05-seat-DOGFOOD-receipt.md); row 254). Four scenarios run on
+  the acceptance programs (`Test/Dogfood/Scenario.lean` and `Test/Dogfood/Scenario/`):
+  - two workers with two pending replies;
+  - exact handler routing;
+  - atomic state with a failure and a cleanup;
+  - replies at a timeout's boundary.
+
+  A shared driver plays a script of moves. A gate ties each control to a clause of a placed
+  claim. Four laws of the session are proved: `replays`, `receipt_inert`, `applied_selects` and
+  `control_retires`. Each scenario's claim is proved modulo its planned goals. Eleven planned
+  goals are new, all in batteries, and the goal gate counts 24. Nineteen lowered runs replay
+  on the generated engine, on both instances: the engine's machine view is Lean's at each of
+  101 positions (`ocaml/engine/test/scenarios/`). Every run is finite, and no host run of a
+  scenario exists.
+- **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
+  172's amendment). A corpus row that moves in printed length alone is reported and not
+  refused, under one validated header. Codex found a false acceptance in the first repair,
+  and three controls hold its correction.
 - **Seventeen worktrees of finished seats are removed,** on the owner's word. Their unique
   notes and one uncommitted patch are kept under
   `research/recovered-worktrees/2026-10-05/` (on disk, not tracked).
@@ -256,10 +283,10 @@ Open at this landing:
      goals quantify
      over a closed predicate, the first profile's states: `FirstProfile`, with its closure
      proved (`first_profile_closed`, `src/Effect4/Laws/Modules/Queue/Profile.lean`). Seat QSTEPS has
-     it since 2026-10-05 (branch `seat/qsteps`, from `b52c2b1b`;
-     [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). It runs as a
-     third seat, on the owner's word (row 237's amendment). The owner ruled the design's five
-     proposals as recommended (row 255). Codex's design research
+     it since 2026-10-05 (branch `seat/qsteps`;
+     [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). A service error
+     stopped its first run before any commit, and it started again the same evening from
+     `7f77bd03`. The owner ruled the design's five proposals as recommended (row 255). Codex's design research
      ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
      is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
      so a step's helper cannot capture its caller's variable
@@ -280,21 +307,37 @@ Open at this landing:
   cleanup is the pin's `onInterrupt`: `onExit` with `causeIsInterrupt` on the exit. Not
   probed: the generated engine, a masked caller, batches, and the printed module on a host,
   which waits for T5;
-- the acceptance programs gain four scenarios (row 254;
-  [Codex's review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/dogfood/review.md)):
-  two workers with two pending replies, exact handler routing, atomic state with failure and
-  cleanup, and replies at a timeout's boundary. Seat DOGFOOD has them since 2026-10-05
-  (branch `seat/scenarios`, from `c09826c0`;
-  [the brief](research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md));
-- the faces of an operation's binder term, the state plan's T5, are with seat T5 since
-  2026-10-05 (branch `seat/t5`, from `6214dcb8`;
-  [the brief](research/2026-10-05-claude-lead/briefs/seat-t5-brief.md)). Part A prints a term
-  as a function and reads it back. Part B derives, prints and reads an operation's type
-  arguments. The Queue's printed form needs both;
+- the four scenarios of the acceptance programs are merged (row 254), and these parts are open
+  ([the receipt](research/2026-10-05-seat-DOGFOOD-receipt.md), items 8 and 9):
+  - the eleven planned goals, each in its battery with its placement;
+  - the host half: a scenario's whole observation on the printed module, on the keyed lane.
+    On the merged tree `Workers.crew`, `Routing.request` and `Atomic.shop` print and read
+    back, and `Timeout.fetch` prints and does not read back (a finite probe). The keyed
+    recorder needs one extension, an operation that completes after its cancellation;
+  - the semantics report does not load the scenario modules, so it shows none of the eleven
+    goals;
+  - a fixture edited alone is not bound by `lake build`: Lake does not take an `include_str`
+    file as an input. A fresh elaboration of `Test/Dogfood/Scenario/Lowered.lean` binds it;
+  - two controls are not written: a cleanup replayed under one registration, and a timer that
+    fires inside a masked region;
+- the faces of an operation's type arguments, part B of the state plan's T5, are with seat T5
+  (branch `seat/t5`; [the brief](research/2026-10-05-claude-lead/briefs/seat-t5-brief.md)).
+  Part A is merged. A service error stopped the seat at the start of part B, and it started
+  again the same evening. Part B reads a type with one checked reader: the class reader's type
+  reader with an arm for `never`, kept only when the type printer prints the answer back. Its
+  order follows the Queue: `Deferred.make<A, E>()` first, then a loop's stated cursor type,
+  then a fold's stated accumulator type. The Queue's printed form needs the first two;
+- on the target, `pair` and `tuple` keep the literal type of a number and of a boolean, where
+  Lean types `nat` and `bool`. So the Queue's take step and the rate limiter's request do not
+  type-check under tsgo 7.0.0-dev.20260629.1, and six of the eight printed steps do (seat
+  T5's measure). The seat tested a repair in scratch and did not land it: both atoms widen
+  the two literals and keep a string literal, and three pins of
+  `harness/truth/tuples.typecheck.ts` move. This is the owner's to rule;
 - seat FOLD left three points for the owner or for T5
   ([its receipt](research/2026-10-05-seat-FOLD-receipt.md), item 9): the argument order of
   `take` and `drop`, the typing of `sameHandle` by the raw head, and a list of number literals
-  on the target, whose literal type does not widen under tsgo 7;
+  on the target. Seat T5's part A repaired the third: `cons` has a second type parameter, and
+  its ratification is among the seat's proposals;
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
   (rows 244 to 246). Its slice follows T5, and
   [its brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md) is written ahead;
@@ -318,7 +361,7 @@ Open at this landing:
   - the citations that miss in the pin itself;
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;
-- one small cleanup waits for seat T5's merge, from Codex's review of 2026-10-05
+- one small cleanup waits for the merge of seat T5's part B, from Codex's review of 2026-10-05
   (`research/2026-10-05-codex-foundation-packet/implementation-audit/list-lemma-review/recommendations.md`):
   - five general list facts move from `src/Effect4/Laws/Program/Template.lean` to
     `Effect4.Constructive.List` in `src/Effect4/Data/Constructive.lean`, with their statements
@@ -337,14 +380,15 @@ Open at this landing:
     refusal;
   - no lane runs the runner's tests or the compiler checkpoint without a person;
   - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
-- the proposed decisions rows of the three seats' receipts (T3b, M0, LOWER), for the owner;
+- the proposed decisions rows of four seats' receipts (T3b, M0, LOWER and DOGFOOD), for the
+  owner;
 - Codex's research on the TypeScript compiler boundary is filed
   ([its recommendations](research/2026-10-05-codex-foundation-packet/implementation-audit/tsgo-research/recommendations.md);
   source reading, and no compiler run). It proposes an optional compiler client beside the
   Lean `typescript` package, extracted from the target oracle and its checker. The Effect
   admission and the comparison of answer, error and requirement types stay in this tree. No
-  seat has it, and the proposal is the owner's to rule. Its one small finding is with seat T5:
-  the pinned truth check does not compile the tuple control;
+  seat has it, and the proposal is the owner's to rule. Its one small finding landed with seat
+  T5's part A: the pinned truth check compiles the tuple control;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

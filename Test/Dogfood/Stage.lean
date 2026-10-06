@@ -129,8 +129,9 @@ def classReason : ClassRefusal → String
   | .unreadable => "unreadable"
 
 /-- The module printer's answer on a built program, by name: a payload class it cannot declare is
-named with its tag and the reason (`ClassRefusal`), and a read-modify-write row whose binder term
-is no name's image is named by its spelling (the state plan's T3b, until T5 prints the term). -/
+named with its tag and the reason (`ClassRefusal`). A binder term on a row whose printed form is
+no call is named by the row's spelling. No native row is such a row since the state plan's T5,
+part A: each of the eight term rows prints its term as a function. -/
 def printVerdict (b : Effect4.Api.Built) : String :=
   match Effect4.Api.emitModule "main" b.program b.table with
   | .ok _ => "printed"

@@ -30,8 +30,8 @@ builds as a typed failure and runs to `Err.payload`. It prints as a module that 
 **Changes in the state plan's T3b.** A read-modify-write row carries a binder term. The pure part
 of a deposit, one `Ref.modify` that adds to the balance, appends a `Deposit` entry and answers the
 new balance, builds and runs over the `Account` record; its term captures the amount, an outer
-binder (section 1). The term is no name's image, so the printer refuses the row by name until the
-state plan's T5.
+binder (section 1). The term is no name's image, so the printer refused the row by name until the
+state plan's T5, part A. Since then it prints as a function of the account and reads back.
 
 **What the language refuses** (section 2): `needed` and `available` as rc.112 types them, signed
 numbers (admission refuses `int` by the field's path; row 121); a
@@ -40,7 +40,8 @@ and `sub` truncates, so `10 - 25` answers `0` where rc.112 answers `-15`). A lis
 which no value holds; so are `Ref.modify`'s effect-valued answer and `Effect.callback`'s cancel
 effect, and removal by identity needs equality on code (R7, row 82).
 
-**Waits on:** R4, the faces' part (a binder term printed as a lambda, the state plan's T5); R3 with
+**Waits on:** R4, the faces' part (the state plan's T5: a binder term prints as a function since
+part A, and `Ref.make<A>` is part B); R3 with
 row 121 (`int`); R7 with row 82 (listeners, the effect-valued answer, the cancel effect); R10 with
 DI-89 (`forEach`) and DI-39 (`catchTag`); R6, parked, or the logical clock (`settle`). The slices
 of row 204 that move it: state at any type, and error payloads.
