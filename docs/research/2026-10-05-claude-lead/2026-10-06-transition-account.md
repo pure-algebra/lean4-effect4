@@ -5,6 +5,10 @@ relayed on 2026-10-06. **The owner approved the handover the same day**, in sess
 voice (decisions row 277). **The handover point is reached** at `f6fa54e7`: both running
 seats are merged with their records, and no seat of the coordinator runs.
 
+**Suspended the same day.** Codex's quota ran out, and the owner said that the
+implementation finishes with the coordinator's seats. This note keeps the state at the
+handover point. `docs/STATE.md` holds what is in work since.
+
 ## The steer, as relayed
 
 - Implementation ownership inverts: Codex implements, and Claude reviews.

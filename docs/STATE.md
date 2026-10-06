@@ -278,25 +278,41 @@ either module exists yet):
   abandoned lookup's cleanup starts a new lookup (row 271);
 - Cache's capacity bounds the keys, and not the lookups that are alive (row 272).
 
-**Who implements next (row 277; the owner approved the handover on 2026-10-06).**
-Implementation passes to Codex, and the coordinator reviews. **The handover point is
-reached**: seats LIFT and SEMW are merged with their records, and no seat of the coordinator
-runs. The coordinator adds no seat.
-The [transition account](research/2026-10-05-claude-lead/2026-10-06-transition-account.md)
-gives the handover point, what the next implementer inherits and the integration procedure
-as practiced. Three points stay open for the owner: who integrates after the handover,
-whether the reviewer builds, and a sweep at the handover head. Until the owner names a
-party, the coordinator still merges, runs the wide gates and keeps the registers.
+**Who implements (row 277).** The owner approved a handover of the implementation to Codex
+on 2026-10-06, and its point was reached at `f6fa54e7`. **The owner suspended it the same
+day**: Codex's quota ran out, and the implementation finishes with the coordinator's seats.
+The owner named the order. First comes the planned work that lands without strain. Then a
+review of the whole graph. Then the authoring and inspection work of Codex's capability
+packet. The
+[transition account](research/2026-10-05-claude-lead/2026-10-06-transition-account.md) keeps
+the state at the handover point and the integration procedure as practiced.
 
-No seat runs since both hand-backs of 2026-10-06, and one prepared seat is held:
+**The close-out set, in work since the suspension:**
 
-- **Seat WORKQ is prepared and not dispatched: the workers over the public Queue** (branch
+- the workers over the public Queue (seat WORKQ);
+- the bracket of a region, the next proof slice of R11 (row 278, point 3);
+- the exit column of the truth lane's runner (row 279, point 1), by the coordinator;
+- Pool's public operations (rows 276 and 279), after the owner's ruling on a closed pool;
+- two small repairs of proofs: the Queue's typing through the shared rule, and the scenario
+  driver's laws in the law graph.
+
+A sweep follows the set, if the owner asks for it. The law of a whole run for a module's
+operation is not in the set. It is the main open theory, and it starts with a design
+question.
+
+In work since the suspension of the handover:
+
+- **Seat BRACKET has the bracket of a region** (branch `seat/bracket`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-bracket-brief.md)). A region that
+  changes no flag ends with its entry flag, for an arbitrary body. Seat LIFT's law reads a
+  run. Two facts stay open: the stack at the region's end is the entry's stack, and the
+  fiber is live at both cuts.
+- **Seat WORKQ has the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
   from the Queue's public operations, as a second scenario. The first scenario stays as the
   control of the host protocol. The slice also shares one `note` through `Ref.updateWith`,
-  and it gives the typed empty cell one home with two laws. The worktree stands on the
-  branch at `c986b839`, with no commit. The slice is the next implementer's first candidate.
+  and it gives the typed empty cell one home with two laws.
 
 Merged on 2026-10-06, after the seats above began:
 
