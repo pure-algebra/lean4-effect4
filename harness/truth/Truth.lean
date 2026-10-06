@@ -1,6 +1,7 @@
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Codegen.TermRows
 import Test.Program.MaskContract
+import Test.Program.QueueMask
 import Tools.GeneratedStamp
 import Tools.ProfileJson
 import Effect4.Api
@@ -49,13 +50,15 @@ Manifest (`format: effect4-truth-manifest-v1`), one entry per program:
 * `run`: `Api.run p fuel` — `outcome` (`finished`, `frontier`, `stuck …`), `exit` (the root's
   exit in the wire below, `null` while the root is live), `fibers` (id, exited, parked token),
   `events` (the machine events with an rc.112 counterpart, in order), `schedule` (the same
-  events reduced to the alphabet the runner can observe), `internal` (the other non-frame
-  events, recorded, never compared), `frames` (how many frame rows were dropped);
+  events reduced to the alphabet the runner can observe, each fiber under its number in the
+  recorder's order, `numbering`), `internal` (the other non-frame events, recorded, never
+  compared), `frames` (how many frame rows were dropped);
 * `runSync`: `Api.runSync p fuel` — `Effect.runSyncExit`'s exit, and `sync`, whether the
   program settled inside it (its exit is not the `AsyncFiberError` defect).
 
 The value wire: `unit` ↦ `null`, `nat` ↦ number,
-`bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":k}`,
+`bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":n}`, where `n` is
+the number of the fiber `k` in the recorder's order in a compared exit (`numbering`),
 `cell k` ↦ `{"ref":k}`, `promise k` ↦ `{"deferred":k}`, `scopeHandle k` ↦ `{"scope":k}`,
 `context` ↦ `{"context":true}`, a reified exit ↦ `{"success":v}` / `{"failure":cause}`; a
 cause is `{"reasons":[…]}` with `{"fail":n|string|{"boom":null}|[tag,message]|{"payload":hex}}`,
@@ -63,7 +66,7 @@ where the program's own exit writes a payload through its error column,
 `{"fail":{"payload":{"_tag":…,…}}}` (`errJsonAt`, decisions row 120, ruling (a)),
 `{"die":d}`,
 where a represented error defect is `{"die":{"error":<the same error wire>}}`,
-`{"interrupt":who|null}`;
+`{"interrupt":who|null}`, the interruptor under the same number;
 an exit is `{"success":v}` / `{"failure":cause}`. Annotations are dropped.
 
 Behaviours held:
@@ -76,7 +79,11 @@ Behaviours held:
   (tested: the `#guard`s at the end);
 * honest about refusals — a print refusal or an ill-typed program is recorded as such, the
   program is never patched (by construction: `expr`/`decl` are `Api.print`/`Api.printDecl`
-  verbatim).
+  verbatim);
+* one numbering — each compared field writes a fiber under its number in the recorder's
+  first-seen order (`numbering`), so the two faces are compared up to one renaming of the
+  fibers, and the machine's allocation order is compared in no field (tested: the receipts on
+  `lateSights`, `pQueueOrder` and `pLateSeen`).
 -/
 
 open Lean (ToJson toJson)
@@ -524,12 +531,104 @@ def pMaskedRestore : Api.Program :=
   | .ok p => p
   | .error _ => .fail (.lit (.str "pMaskedRestore: the source does not elaborate"))
 
+open Effect4.Program.Authoring in
+/-- The source of `pLateSeen`: a detached child with a deferred start, then two children that
+start at once. The second interrupts the first, which waits at a promise that nothing
+completes. The root yields once, so the detached child runs before the root answers. -/
+def lateSeen : Src NativeOp := eff do
+  let gate ← Deferred.make .unit .never
+  -- a deferred start, detached, the parent's mask (`daemon` is a keyword of the surface here)
+  let helper ← fork (succeed (nat 5)) ⟨false, true, .inherit⟩
+  let waiter ← fork (Deferred.await gate)
+  let _ ← fork (withFiber (Action.interrupt waiter))
+  let exit ← await waiter
+  let _ ← yieldNow 0
+  return tuple [exit, helper]
+
+/-- **A fiber that the recorder sees late, named in an exit**: the control of the fiber numbers
+in `run.exit` and `runSync.exit` (`numbering`). The helper is the machine's fiber `1`: a
+detached fork with a deferred start, so it has no `forked` row, and the recorder first sees it
+at its first run. The waiter and its interruptor start at once: the machine's fibers `2` and
+`3`, the recorder's `1` and `2`. The root awaits the waiter and yields, and the helper runs
+then: the recorder's `3`. The program answers `[the waiter's exit, the helper]`. The exit names
+the interruptor, so the wire holds a fiber in two fields: `{"interrupt":2}` and `{"fiber":3}`
+under the recorder's numbers, which are `3` and `1` under the machine's ids. No fiber awaits the
+helper before its first run (the limit on the `exited` row, in the section on the fiber
+numbers). A source that does not elaborate is a failure with a text, never a patched
+program. -/
+def pLateSeen : Api.Program :=
+  match Effect4.Program.Authoring.elaborate lateSeen with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pLateSeen: the source does not elaborate"))
+
+/-! ### The Queue's first operations (decisions rows 219 to 222, 233, 238 and 240)
+
+Five programs over the library's operations (`src/Effect4/Modules/Queue/Ops.lean`): the first
+host runs of the Queue's expansion. Each is a scenario of the Queue's batteries
+(`Test/Program/QueueScenarios.lean`, `Test/Program/QueueMask.lean`), so the program that rc.112
+runs is the program that the batteries run on the Lean machine. A waiting operation prints as
+its expansion: the mask's getter, the request's two `Deferred` cells, one `Ref.modify` for each
+step, and one `Effect.forkDetach` for each posted helper. The pin's own `Queue` is not printed
+(decisions row 235). A source that does not elaborate is a failure with a text, never a patched
+program. -/
+
+/-- **A taker waits, and an offer's posted helper wakes it** (the scenario R2). `a0` is the
+queue's cell, at capacity two. A child takes: it enrols and waits at its hint. The root offers
+`7`: its step names the taker, and it posts one helper, a detached fork with a deferred start.
+The root joins the child. The helper's task resolves the hint, and the taker takes the message
+in its own step. The program answers `7`. -/
+def pQueueWake : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Program.QueueScenarios.r2 with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pQueueWake: the source does not elaborate"))
+
+/-- **A second offer waits at capacity one** (the scenario R4). The first offer is accepted. A
+child offers `2`: the buffer is full, so the offer waits at its hint. The root takes `1`: its
+step frees room, accepts the pending offer and decides its answer, and one helper carries that
+answer to the offerer (decisions row 240). The root joins the offerer and takes again. The
+program answers `[true, 1, true, 2]`. -/
+def pQueueFull : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Program.QueueScenarios.r4 with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pQueueFull: the source does not elaborate"))
+
+/-- **A waiting taker is interrupted** (the scenario R5). A child takes and waits at the mask's
+restore site. The root interrupts it there: the wait is interruptible, and its withdrawal
+removes the request. The root then offers `5`, which stays, and takes it. The program answers
+`[5, 0]`: the message, and no taker left in the cell. -/
+def pQueueInterrupted : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Program.QueueScenarios.r5 with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pQueueInterrupted: the source does not elaborate"))
+
+/-- **A taker under a masked caller** (decisions row 222). A child takes under
+`Effect.uninterruptible`, and it records its message in a cell. A second child interrupts it
+while it waits. The caller is masked, so the restore is the identity: the request stays
+registered. The root offers `9`: the taker takes it and records it inside its caller's mask,
+and it is interrupted when that mask ends. The program answers `[1, 9, true, 0, 0]`: one taker
+registered after the interrupt's request, the recorded message, the taker's exit an
+interruption, an empty buffer and no taker at the end. -/
+def pQueueMasked : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Program.QueueMask.maskedCaller with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pQueueMasked: the source does not elaborate"))
+
+/-- **The order of one step's two notifications** (the scenario R8). Capacity one. The takers A
+and B wait, a message is offered, and a second offer waits at the full buffer. A's take frees
+room: its step accepts the second offer and leaves B ready, and it posts the offerer's answer
+before B's wake. Each fiber writes a mark when it goes on. The program answers the log
+`[1, 101, 2]`: A's message, the offerer's mark, B's message. -/
+def pQueueOrder : Api.Program :=
+  match Effect4.Program.Authoring.elaborate Test.Program.QueueScenarios.r8 with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "pQueueOrder: the source does not elaborate"))
+
 /-- The programs checked: the original wire, control, layer and host fixtures, followed by
 the S2 error-image, S3 handler and part-4 residual fixtures, the list fold, the two programs
 of an operation's binder term (the fold in a `Ref.modify`, and a step of the Queue's probe),
 the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
-interrupt wakes, and the two programs of the mask that restores. Every listed program
-contributes one manifest entry. -/
+interrupt wakes, the two programs of the mask that restores, and the five programs of the
+Queue's first operations. Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 def corpus : List (String × Api.Program) :=
@@ -568,34 +667,41 @@ def defectJson : Defect → J
   | .user n => Lean.Json.mkObj [("user", toJson n)]
   | .error e => Lean.Json.mkObj [("error", errJson e)]
 
-def reasonJson : Reason Err Defect FiberId Ann → J
+/-! A fiber in the wire is a number. Each function below that can meet a fiber takes `fiber`,
+the number that the wire writes for a machine fiber id. A compared exit passes the run's
+numbering (`numberOf`, in the section on the fiber numbers below). The machine's own record
+(`events`, `fibers`) passes `id`. Three fields hold a fiber: an interruptor, a fiber handle and
+the handles of a snapshot. -/
+
+def reasonJson (fiber : Nat → Nat) : Reason Err Defect FiberId Ann → J
   | .fail e _ => Lean.Json.mkObj [("fail", errJson e)]
   | .die d _ => Lean.Json.mkObj [("die", defectJson d)]
   | .interrupt none _ => Lean.Json.mkObj [("interrupt", Lean.Json.null)]
-  | .interrupt (some who) _ => Lean.Json.mkObj [("interrupt", toJson who.value)]
+  | .interrupt (some who) _ => Lean.Json.mkObj [("interrupt", toJson (fiber who.value))]
 
-def causeJson (c : CauseV) : J :=
-  Lean.Json.mkObj [("reasons", Lean.Json.arr (c.reasons.map reasonJson).toArray)]
+def causeJson (fiber : Nat → Nat) (c : CauseV) : J :=
+  Lean.Json.mkObj [("reasons", Lean.Json.arr (c.reasons.map (reasonJson fiber)).toArray)]
 
 /-- Values in the wire, on the shared carrier (`Machine/Value.lean`'s table): a handle by its
 kind byte, a reified exit by its constructor index with the cause read back through
 `causeImage`, the snapshot by its fibers, a `list` as one array. A shape the machine never
-produces renders deterministically under `"raw"`, so the wire stays total. -/
-partial def valJson : Val → J
+produces renders deterministically under `"raw"`, so the wire stays total. A fiber is written
+as `fiber` numbers it. -/
+partial def valJson (fiber : Nat → Nat) : Val → J
   | .unit => Lean.Json.null
   | .nat n => toJson n
   | .bool b => Lean.Json.bool b
   -- strings are machine values since DB-15; the host wires a string as itself, an option as
   -- rc.112's `Option` (`{"some":v}` / `{"none":true}`, the runner's wire of `_tag`)
   | .str s => Lean.Json.str s
-  | .some v => Lean.Json.mkObj [("some", valJson v)]
+  | .some v => Lean.Json.mkObj [("some", valJson fiber v)]
   | .none => Lean.Json.mkObj [("none", Lean.Json.bool true)]
   | Value.external index => Lean.Json.mkObj [("external", toJson index)]
-  | Value.fiber id => Lean.Json.mkObj [("fiber", toJson id)]
+  | Value.fiber index => Lean.Json.mkObj [("fiber", toJson (fiber index))]
   | Value.fiberSnapshot handles =>
     Lean.Json.mkObj [("fibers", Lean.Json.arr
       ((((Effect4.Store.Image.list Value.fiberHandle).ofVal handles).getD []).map fun i =>
-        toJson i.value).toArray)]
+        toJson (fiber i.value)).toArray)]
   | Value.cell k => Lean.Json.mkObj [("ref", toJson k)]
   | Value.promise k => Lean.Json.mkObj [("deferred", toJson k)]
   | Value.scope s => Lean.Json.mkObj [("scope", toJson s)]
@@ -603,15 +709,16 @@ partial def valJson : Val → J
   -- a built service map (`Env.encode`, what a layer build answers and `Effect.provide` reads):
   -- the same `Context` object on the rc.112 face
   | Value.serviceContext _ => Lean.Json.mkObj [("context", Lean.Json.bool true)]
-  | Val.exitOk v => Lean.Json.mkObj [("success", valJson v)]
+  | Val.exitOk v => Lean.Json.mkObj [("success", valJson fiber v)]
   | Value.exitErr written =>
-    Lean.Json.mkObj [("failure", ((causeImage.ofVal written).map causeJson).getD Lean.Json.null)]
-  | .list values => Lean.Json.arr (values.map valJson).toArray
+    Lean.Json.mkObj [("failure",
+      ((causeImage.ofVal written).map (causeJson fiber)).getD Lean.Json.null)]
+  | .list values => Lean.Json.arr (values.map (valJson fiber)).toArray
   | other => Lean.Json.mkObj [("raw", Lean.Json.str (toString (repr other)))]
 
-def exitJson : ExitV → J
-  | .success v => Lean.Json.mkObj [("success", valJson v)]
-  | .failure c => Lean.Json.mkObj [("failure", causeJson c)]
+def exitJson (fiber : Nat → Nat) : ExitV → J
+  | .success v => Lean.Json.mkObj [("success", valJson fiber v)]
+  | .failure c => Lean.Json.mkObj [("failure", causeJson fiber c)]
 
 mutual
 /-- The codec's JSON (`Effect4.Json`) as the manifest's (`Lean.Json`). A number is a natural
@@ -651,16 +758,18 @@ def errJsonAt (errorTy : Option Ty) : Err → J
   | e => errJson e
 
 /-- `reasonJson` with the failure's error at the program's error column (`errJsonAt`). -/
-def reasonJsonAt (errorTy : Option Ty) : Reason Err Defect FiberId Ann → J
+def reasonJsonAt (fiber : Nat → Nat) (errorTy : Option Ty) : Reason Err Defect FiberId Ann → J
   | .fail e _ => Lean.Json.mkObj [("fail", errJsonAt errorTy e)]
-  | r => reasonJson r
+  | r => reasonJson fiber r
 
 /-- The program's own exit, its failures typed by its error column: the `exit` the comparison
-reads (`run.exit`, `runSync.exit`). A child fiber's exit and the event texts keep `exitJson`. -/
-def exitJsonAt (errorTy : Option Ty) : ExitV → J
-  | .success v => exitJson (.success v)
+reads (`run.exit`, `runSync.exit`). Its fibers are written as `fiber` numbers them, which is the
+run's numbering at both call sites. A child fiber's exit and the event texts keep `exitJson`. -/
+def exitJsonAt (fiber : Nat → Nat) (errorTy : Option Ty) : ExitV → J
+  | .success v => exitJson fiber (.success v)
   | .failure c => Lean.Json.mkObj [("failure",
-      Lean.Json.mkObj [("reasons", Lean.Json.arr (c.reasons.map (reasonJsonAt errorTy)).toArray)])]
+      Lean.Json.mkObj [("reasons",
+        Lean.Json.arr (c.reasons.map (reasonJsonAt fiber errorTy)).toArray)])]
 
 /-- The kind of an exit, with the archived tracer's precedence (`outcomeWire`): a `Fail`
 reason wins, then an `Interrupt`, then a `Die`; an empty cause is its own kind. -/
@@ -681,7 +790,8 @@ def isAsyncFiberDefect : ExitV → Bool
 
 abbrev Event := RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx
 
-/-- The events with an rc.112 counterpart, as the manifest spells them. `none` for the rest. -/
+/-- The events with an rc.112 counterpart, as the manifest spells them. `none` for the rest.
+Recorded, never compared: a fiber keeps the machine's id here, in an exit's text too. -/
 def observable : Event → Option String
   | .forked p c d => some s!"forked {p.value}->{c.value}{if d then " daemon" else ""}"
   | .started f => some s!"started {f.value}"
@@ -690,22 +800,70 @@ def observable : Event → Option String
   | .yieldInjected f n => some s!"yieldInjected {f.value}@{n}"
   | .parkedOn f t => some s!"parkedOn {f.value} token={t}"
   | .resumedWith f t _ => some s!"resumedWith {f.value} token={t}"
-  | .exited f e => some s!"exited {f.value} {(exitJson e).compress}"
+  | .exited f e => some s!"exited {f.value} {(exitJson id e).compress}"
   | _ => none
 
-/-- The reduced schedule alphabet the runner can observe on rc.112: fiber starts, exits (by
-kind), forks (`reduce` decides which), parks and resumes, and the dispatcher's scheduling and
-runs. Tokens, priorities' tasks and exit values are erased; fiber ids are the machine's (root
-`0`, children in fork order), which the runner reproduces by first-seen order. -/
-def reduced : Event → Option String
-  | .forked _ _ _ => none   -- `reduce` decides forks
-  | .started f => some s!"started {f.value}"
-  | .scheduledTask o p _ => some s!"scheduled {o.value} {p}"
-  | .ranTask o _ => some s!"ran {o.value}"
-  | .parkedOn f _ => some s!"parked {f.value}"
-  | .resumedWith f _ _ => some s!"resumed {f.value}"
-  | .exited f e => some s!"exited {f.value} {exitKind e}"
+/-- One row of the reduced schedule, over fiber numbers: the alphabet that the runner can
+observe on rc.112. A fiber is forked, starts, parks, is resumed and exits (by kind), and the
+dispatcher of an owner schedules a task and runs one. Tokens, tasks and exit values are
+erased. -/
+inductive Row where
+  | forked (parent child : Nat)
+  | started (fiber : Nat)
+  | scheduled (owner priority : Nat)
+  | ran (owner : Nat)
+  | parked (fiber : Nat)
+  | resumed (fiber : Nat)
+  | exited (fiber : Nat) (kind : String)
+deriving DecidableEq
+
+/-- A row as the manifest and the recorder spell it. -/
+def Row.text : Row → String
+  | .forked parent child => s!"forked {parent} {child}"
+  | .started fiber => s!"started {fiber}"
+  | .scheduled owner priority => s!"scheduled {owner} {priority}"
+  | .ran owner => s!"ran {owner}"
+  | .parked fiber => s!"parked {fiber}"
+  | .resumed fiber => s!"resumed {fiber}"
+  | .exited fiber kind => s!"exited {fiber} {kind}"
+
+/-- A row under a renaming of its fibers. A priority and an exit's kind name no fiber. -/
+def Row.rename (to : Nat → Nat) : Row → Row
+  | .forked parent child => .forked (to parent) (to child)
+  | .started fiber => .started (to fiber)
+  | .scheduled owner priority => .scheduled (to owner) priority
+  | .ran owner => .ran (to owner)
+  | .parked fiber => .parked (to fiber)
+  | .resumed fiber => .resumed (to fiber)
+  | .exited fiber kind => .exited (to fiber) kind
+
+/-- The fiber that a row can show the recorder for the first time: the child of a `forked` row,
+and the fiber of a `started` row. No other row gives a fiber its index (`numbering`). -/
+def Row.sight : Row → Option Nat
+  | .forked _ child => some child
+  | .started fiber => some fiber
   | _ => none
+
+/-- One event as a row, under the machine's fiber ids: the root is `0`, and a fork's child
+takes the next id when the machine allocates it (`spawn`, `src/Effect4/Machine/Fibers.lean`).
+A fork is no row here: `machineRows` decides which fork is a row, and where. -/
+def rowOf : Event → Option Row
+  | .forked _ _ _ => none   -- `machineRows` decides forks
+  | .started f => some (.started f.value)
+  | .scheduledTask o p _ => some (.scheduled o.value p)
+  | .ranTask o _ => some (.ran o.value)
+  | .parkedOn f _ => some (.parked f.value)
+  | .resumedWith f _ _ => some (.resumed f.value)
+  | .exited f e => some (.exited f.value (exitKind e))
+  | _ => none
+
+/-- The row-by-row projection of the trace, as texts: `rowOf` at one event. The fiber numbers
+are the machine's ids, which follow the allocation order. The recorder numbers a fiber when it
+first sees it, and that is another order when it sees a fiber late (`numbering`). Before
+2026-10-06 this docstring said that the runner reproduces the machine's ids by first-seen
+order. That is false for a scheduled daemon child that is followed by another fork before its
+first run (`pQueueOrder`). `reduce` writes the compared rows under the recorder's numbers. -/
+def reduced (e : Event) : Option String := (rowOf e).map Row.text
 
 /-- The fiber an observable event belongs to, for the immediacy test below. -/
 def eventFiber : Event → Option FiberId
@@ -735,8 +893,9 @@ def immediateFork (p c : FiberId) : List Event → Bool
     | some f => if f.value = p.value then false else immediateFork p c rest
     | none => immediateFork p c rest
 
-/-- The reduced schedule: `reduced` row by row, over the fiber states the runner observes
-(DI-75, 2026-09-13).
+/-- The reduced schedule under the machine's fiber ids: `rowOf` row by row, over the fiber
+states the runner observes (DI-75, 2026-09-13). `reduce` renames these rows to the recorder's
+numbers.
 
 * A `started f` row is a fiber's transition into running — fresh, or parked and resumed —
   which is what the recorder's `context` hook can see. The machine's `started` event is its
@@ -763,14 +922,14 @@ def immediateFork (p c : FiberId) : List Event → Bool
   Before 2026-10-06 the row came from `resumedWith` alone, and it meant a token's resume. No
   truth program then woke a parked fiber by an interrupt (seat MASK; the control is
   `pInterruptedWait`, with a red guard on its trace in the receipts). -/
-def reduce (trace : List Event) : List String :=
+def machineRows (trace : List Event) : List Row :=
   go trace [] [] []
 where
-  go : List Event → List (FiberId × FiberId) → List Nat → List Nat → List String
+  go : List Event → List (FiberId × FiberId) → List Nat → List Nat → List Row
     | [], _, _, _ => []
     | .forked p c daemon :: rest, pending, running, parked =>
       if immediateFork p c rest then go rest ((c, p) :: pending) running parked
-      else (if daemon then [] else [s!"forked {p.value} {c.value}"]) ++
+      else (if daemon then [] else [.forked p.value c.value]) ++
         go rest pending running parked
     | .started f :: rest, pending, running, parked =>
       if running.contains f.value then go rest pending running parked
@@ -778,22 +937,150 @@ where
         let running := f.value :: running
         match pending.find? (fun x => x.1.value = f.value) with
         | some (_, p) =>
-          s!"forked {p.value} {f.value}" :: s!"started {f.value}" ::
+          .forked p.value f.value :: .started f.value ::
             go rest (pending.filter (fun x => x.1.value ≠ f.value)) running parked
         | none =>
           -- a parked fiber that starts with no resume of its token: an interrupt applied now
-          (if parked.contains f.value then [s!"resumed {f.value}"] else []) ++
-            s!"started {f.value}" :: go rest pending running (parked.filter (· ≠ f.value))
+          (if parked.contains f.value then [.resumed f.value] else []) ++
+            .started f.value :: go rest pending running (parked.filter (· ≠ f.value))
     | .parkedOn f t :: rest, pending, running, parked =>
-      (reduced (.parkedOn f t)).toList ++
+      (rowOf (.parkedOn f t)).toList ++
         go rest pending (running.filter (· ≠ f.value)) (f.value :: parked)
     | .resumedWith f t answer :: rest, pending, running, parked =>
-      (reduced (.resumedWith f t answer)).toList ++
+      (rowOf (.resumedWith f t answer)).toList ++
         go rest pending running (parked.filter (· ≠ f.value))
     | .exited f e :: rest, pending, running, parked =>
-      (reduced (.exited f e)).toList ++
+      (rowOf (.exited f e)).toList ++
         go rest pending (running.filter (· ≠ f.value)) (parked.filter (· ≠ f.value))
-    | e :: rest, pending, running, parked => (reduced e).toList ++ go rest pending running parked
+    | e :: rest, pending, running, parked => (rowOf e).toList ++ go rest pending running parked
+
+/-! ### The fiber numbers of the compared fields (2026-10-06)
+
+The machine numbers a fiber when it allocates it. The recorder numbers a fiber when it first
+sees it (`see`, `harness/truth/run-truth.ts`). It calls `see` at three places, and it writes a
+row at each:
+
+* `context`, the first call: a fiber at its first primitive while the primitive of another
+  fiber is on the stack. The recorder writes `forked parent child`, and then `started child`.
+* `context`, the second call: a fiber at its first primitive while no fiber is on the stack.
+  This is the root, and a scheduled daemon child at its first run. The recorder writes
+  `started fiber`.
+* `scanChildren`: a child in `_children` that the recorder has not seen, at the next primitive
+  of the parent. The recorder writes `forked parent child`.
+
+So the index of a fiber on rc.112 is the rank of its first row among two kinds of row: a
+`forked` row that names it as the child, and a `started` row that names it. `Row.sight` is that
+rule. The parent of a `forked` row is on the stack or runs the scan, so the recorder has seen
+it.
+
+**A `scheduled` row and a `ran` row give no index, on either face.** On rc.112 each names the
+fiber that made the dispatcher (`TracedScheduler.makeDispatcher`), which `currentFiber` reads
+off the stack: the recorder has seen it. The machine writes `scheduledTask` at two places
+(`start` and `RunMachine.postTask`, `src/Effect4/Machine/Fibers.lean`). A deferred start names
+the parent, which runs. `postTask` posts an owed resume on a stored dispatcher, and no store
+builds a scheduled wake today (`WakeMode.scheduled` has no construction site). If a later
+machine writes such a row for a fiber before its first sight, the recorder decides: `see` does
+not run at a `scheduled` row. The row then takes the number that the later sight gives.
+
+The two orders differ when the recorder sees a fiber late. A scheduled daemon child has no
+`forked` row on either face (`machineRows`), so the recorder first sees it at its first run. A
+fiber that is forked after it and seen before that run takes the smaller index on rc.112, and
+the larger id on the machine. In `pQueueOrder` the helper of the root's offer is the machine's
+fiber `3` and the recorder's `4`.
+
+`numbering` reads the recorder's order from the Lean face's own rows, by the same rule. Each
+compared field that holds a fiber writes the fiber's position in it:
+
+* every row of `run.schedule` (`reduce`): `forked`, `started`, `scheduled`, `ran`, `parked`,
+  `resumed` and `exited`;
+* `run.exit` and `runSync.exit` (`exitJsonAt`): an interruptor, a fiber handle and the handles
+  of a snapshot. The sync run has its own trace, and so its own numbering.
+
+Four fields keep the machine's ids. `run.events`, `run.internal` and `run.fibers` are the
+machine's own record, and no comparison reads a fiber number in them. The runner reads
+`run.fibers` once, for the root's park (`leanVerdict`, `f.id === 0`), and the root is `0` under
+both numberings. A tape row's `fiber` is written by the recorder, and this file does not read
+it (`tapeAnswer`).
+
+What the comparison no longer checks: the machine's allocation order. A fiber's machine id is
+compared in no field, so the two faces agree up to one renaming of the fibers.
+
+Limits, stated and not solved:
+
+* **A literal interruptor (DI-74).** `Cause.interrupt(n)` of a computed number is a number on
+  both faces. The recorder writes the index of the run's fiber whose rc.112 id is `n`, when
+  there is one (`reasonJson`, case `Interrupt`). This file writes the number of the machine's
+  fiber `n`, when there is one. The two tests read different ids.
+* **A fiber that the recorder never sees.** Its handle in a value takes an index of another
+  table on rc.112 (`wire`, the table `fiber?`). Here it takes a position after every seen
+  fiber.
+* **A number that a program computes from an id (DI-73).** It is a number in the wire, and no
+  face renames it.
+* **The `exited` row of a fiber that is awaited before its first sight.** The recorder adds its
+  exit observer at the first sight, behind the awaiter's observer. rc.112 runs the observers in
+  order, so the recorder writes `exited k` after the rows of the awaiter's resumption. The
+  machine writes `exited k` at the exit. The rows then differ in order, and no renaming repairs
+  that. A probe on rc.112 measured it: a detached child with a deferred start that the root
+  joins before the child's first run. No lane program awaits such a fiber: the Queue's helpers
+  are never awaited. -/
+
+/-- The fibers of a list of rows in the order that the recorder first sees them: the first
+sight of each (`Row.sight`), in row order. -/
+def firstSeen (rows : List Row) : List Nat := (rows.filterMap Row.sight).eraseDups
+
+/-- The machine's fibers of a trace in allocation order: the root, then the child of each fork
+(`spawn`, `src/Effect4/Machine/Fibers.lean`, the one place that allocates a child). -/
+def allocated (trace : List Event) : List Nat :=
+  Api.root.value :: trace.filterMap fun
+    | .forked _ child _ => some child.value
+    | _ => none
+
+/-- The fibers of some rows in the recorder's order: the fibers that the rows show, in the order
+of their first sight, and then every other allocated fiber in allocation order. A fiber's
+number is its position in this list. -/
+def numberingOf (allocated : List Nat) (rows : List Row) : List Nat :=
+  let seen := firstSeen rows
+  seen ++ allocated.filter (!seen.contains ·)
+
+/-- The machine's fibers of a run in the recorder's order (`numberingOf`). The list is a
+permutation of the run's fibers (`allocated`), and it is `allocated` itself when the recorder
+sees the fibers in allocation order. -/
+def numbering (trace : List Event) : List Nat := numberingOf (allocated trace) (machineRows trace)
+
+/-- A fiber's number in an order: its position. A number that names no fiber of the order
+stays as it is: a literal interruptor outside the run (DI-74). -/
+def numberIn (order : List Nat) (fiber : Nat) : Nat := (order.idxOf? fiber).getD fiber
+
+/-- The number that a run's compared fields write for a machine fiber id. This is the one
+renaming of the Lean face: `reduce` and `exitJsonAt` take it, and nothing else renames. -/
+def numberOf (trace : List Event) : Nat → Nat := numberIn (numbering trace)
+
+/-- The fibers that a run's numbering moves: each as `(machine id, number)`, in the order of
+the numbers. The list is empty exactly when the recorder's order is the allocation order. -/
+def moved (trace : List Event) : List (Nat × Nat) :=
+  (numbering trace).zipIdx.filter fun entry => entry.1 != entry.2
+
+/-- The lane's programs whose numbering is not the allocation order, each with the fibers that
+it moves (`moved`), in its fork run and in its sync run. The receipts hold every other program
+of the lane at the allocation order, and `main` holds the same on each run with its tape. A new
+entry is a reviewed change: the lane then compares that program up to this renaming. -/
+def lateSights : List (String × List (Nat × Nat)) :=
+  [("pQueueOrder", [(4, 3), (3, 4)]), ("pLateSeen", [(2, 1), (3, 2), (1, 3)])]
+
+/-- Rows under the numbers of an order. -/
+def renumbered (order : List Nat) (rows : List Row) : List Row :=
+  rows.map fun row => row.rename (numberIn order)
+
+/-- The compared schedule: the rows of `machineRows`, each fiber under its number in the
+recorder's order (`numbering`). The recorder writes its rows under its own indices, so the two
+faces are compared up to one renaming of the fibers. -/
+def reduce (trace : List Event) : List String :=
+  (renumbered (numbering trace) (machineRows trace)).map Row.text
+
+/-- The rows that the runner compares: every row but the `scheduled` rows (`compareSchedules`,
+`harness/truth/run-truth.ts`). -/
+def compared (rows : List String) : List String :=
+  rows.filter fun row => !row.startsWith "scheduled "
 
 /-- The events that are neither observable nor frame rows: recorded, never compared. -/
 def internal : Event → Option String
@@ -857,11 +1144,13 @@ def refusalText : PrintRefusal → String
   | .payloadClass tag why => s!"payload class {tag}: {classRefusalText why}"
   | .binderTerm spelling => s!"binder term of {spelling}"
 
+/-- One fiber of the machine's own record, under the machine's ids: its exit is recorded and
+never compared. -/
 def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J :=
   Lean.Json.mkObj
     [ ("id", toJson f.id.value)
     , ("exited", Lean.Json.bool f.exit.isSome)
-    , ("exit", match f.exit with | some e => exitJson e | none => Lean.Json.null)
+    , ("exit", match f.exit with | some e => exitJson id e | none => Lean.Json.null)
     , ("parkedToken", match f.parked with | .withGuard t => toJson t | .notParked => Lean.Json.null) ]
 
 def strings (xs : List String) : J := Lean.Json.arr (xs.map Lean.Json.str).toArray
@@ -879,9 +1168,13 @@ def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
   let r := fixtureRun name p fuel table answers
   let trace := r.trace
   let errorTy := (Api.typeOf p table).map (·.error)
+  -- the run's fibers under the recorder's numbers, in the two compared fields
+  let fiber := numberOf trace
   Lean.Json.mkObj
     [ ("outcome", Lean.Json.str (outcomeText r.outcome))
-    , ("exit", match r.exit with | some e => exitJsonAt errorTy e | none => Lean.Json.null)
+    , ("exit", match r.exit with
+        | some e => exitJsonAt fiber errorTy e
+        | none => Lean.Json.null)
     , ("exitKind", match r.exit with | some e => Lean.Json.str (exitKind e) | none => Lean.Json.null)
     , ("fiberCount", toJson r.fiberCount)
     , ("fibers", Lean.Json.arr (r.machine.fibers.map fiberJson).toArray)
@@ -892,9 +1185,10 @@ def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
 
 def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
-  let (_, exit) := Api.runSync p fuel answers table
+  let (machine, exit) := Api.runSync p fuel answers table
   Lean.Json.mkObj
-    [ ("exit", exitJsonAt ((Api.typeOf p table).map (·.error)) exit)
+    -- the sync run has its own trace, and so its own numbering
+    [ ("exit", exitJsonAt (numberOf machine.trace) ((Api.typeOf p table).map (·.error)) exit)
     , ("exitKind", Lean.Json.str (exitKind exit))
     , ("sync", Lean.Json.bool (!isAsyncFiberDefect exit)) ]
 
@@ -1155,6 +1449,134 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 -- red control: the two programs differ by the caller's mask and the helper, and by their answers
 #guard pMaskWait != pMaskedRestore &&
   (Api.run pMaskWait 1000).exit != (Api.run pMaskedRestore 1000).exit
+-- The fiber numbers of the compared fields (`numbering`). The rule on rows: a fiber's first
+-- sight is its first `forked` row as the child or its first `started` row.
+#guard firstSeen [.started 0, .forked 0 2, .started 2, .parked 2, .started 1, .started 2] = [0, 2, 1]
+-- A `scheduled` row and a `ran` row give no number: the fiber `5` is first seen at its start,
+-- and its two earlier rows take the number that the start gives.
+#guard firstSeen [.started 0, .scheduled 5 0, .forked 0 7, .ran 5, .started 5] = [0, 7, 5]
+#guard (renumbered (numberingOf [] [.started 0, .scheduled 5 0, .forked 0 7, .ran 5, .started 5])
+    [.started 0, .scheduled 5 0, .forked 0 7, .ran 5, .started 5]).map Row.text =
+  ["started 0", "scheduled 2 0", "forked 0 1", "ran 2", "started 2"]
+-- A fiber that no row shows takes a number after every seen fiber, in allocation order.
+#guard numberingOf [0, 1, 2, 3, 4] [.started 0, .forked 0 3, .started 3] = [0, 3, 1, 2, 4]
+-- A number that names no fiber of the order stays: a literal interruptor outside the run.
+#guard numberIn [0, 2, 3, 1] 3 = 2 && numberIn [0, 2, 3, 1] 1 = 3 && numberIn [0, 2, 3, 1] 9 = 9
+-- The three fields of an exit that hold a fiber, under an order: an interruptor, a fiber
+-- handle, and the handles of a snapshot. Red control of each: under `id` the machine's id stays.
+#guard (reasonJson (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨3⟩) .empty)).compress =
+  "{\"interrupt\":2}"
+#guard (valJson (numberIn [0, 2, 3, 1]) (Value.fiber 1)).compress = "{\"fiber\":3}"
+#guard (valJson (numberIn [0, 2, 3, 1])
+    (Value.fiberSnapshot (.list [Value.fiber 1, Value.fiber 3]))).compress = "{\"fibers\":[3,2]}"
+#guard (reasonJson id (.interrupt (some ⟨3⟩) .empty)).compress = "{\"interrupt\":3}"
+#guard (valJson id (Value.fiber 1)).compress = "{\"fiber\":1}"
+#guard (valJson id (Value.fiberSnapshot (.list [Value.fiber 1, Value.fiber 3]))).compress =
+  "{\"fibers\":[1,3]}"
+-- The limit of DI-74, as a control: a literal interruptor that equals a machine id of the run
+-- is written like that fiber, and one outside the run is written as it is.
+#guard (reasonJson (numberIn [0, 2, 3, 1]) (.interrupt (some ⟨9⟩) .empty)).compress =
+  "{\"interrupt\":9}"
+-- Measured over the lane: the numbering of each program is the allocation order, in the fork
+-- run and in the sync run, but for the programs of `lateSights`, which are pinned with the
+-- fibers that they move. The driver holds the same on each run with its tape (`main`).
+#guard corpus.all fun (name, p) =>
+  let (table, answers) := hostInputs name
+  let pinned := (lateSights.lookup name).getD []
+  moved (fixtureRun name p 1000 table answers).trace == pinned &&
+    moved (Api.runSync p 1000 answers table).1.trace == pinned
+#guard moved (Api.run pQueueOrder 1000).trace = [(4, 3), (3, 4)] &&
+  moved (Api.runSync pQueueOrder 1000).1.trace = [(4, 3), (3, 4)]
+#guard moved (Api.run pLateSeen 1000).trace = [(2, 1), (3, 2), (1, 3)] &&
+  moved (Api.runSync pLateSeen 1000).1.trace = [(2, 1), (3, 2), (1, 3)]
+#guard lateSights.lookup "pQueueOrder" = some [(4, 3), (3, 4)] &&
+  lateSights.lookup "pLateSeen" = some [(2, 1), (3, 2), (1, 3)]
+-- red control of the measure: a single-fiber program moves no fiber, and it is no late sight
+#guard moved (Api.run pFold 1000).trace = [] && lateSights.lookup "pFold" = none
+-- The recorder sees every fiber of every lane program, so no number comes from the allocation
+-- order's tail, and the trace's forks give the machine's own list of fibers.
+#guard (corpus ++ [("pQueueOrder", pQueueOrder), ("pLateSeen", pLateSeen)]).all fun (name, p) =>
+  let (table, answers) := hostInputs name
+  let run := fixtureRun name p 1000 table answers
+  allocated run.trace == run.machine.fibers.map (·.id.value) &&
+    (firstSeen (machineRows run.trace)).length == run.fiberCount &&
+    (numbering run.trace).mergeSort == allocated run.trace
+-- `pQueueOrder`, the program that showed the two orders. The root's offer posts a helper: the
+-- machine's fiber `3`, a detached fork with a deferred start. The next taker is forked and
+-- started at once: the machine's fiber `4`. The recorder sees that taker first.
+#guard allocated (Api.run pQueueOrder 1000).trace = [0, 1, 2, 3, 4, 5, 6, 7]
+#guard numbering (Api.run pQueueOrder 1000).trace = [0, 1, 2, 4, 3, 5, 6, 7]
+-- Under the machine's ids the compared rows differ from the recorder's at row 7, and in nine
+-- rows in all. This is the difference that the run of 2026-10-06 showed on rc.112:
+-- `Lean "forked 0 4", rc.112 "forked 0 3"`.
+#guard (compared ((machineRows (Api.run pQueueOrder 1000).trace).map Row.text))[7]? =
+  some "forked 0 4"
+#guard (compared (reduce (Api.run pQueueOrder 1000).trace))[7]? = some "forked 0 3"
+#guard ((compared ((machineRows (Api.run pQueueOrder 1000).trace).map Row.text)).zip
+    (compared (reduce (Api.run pQueueOrder 1000).trace))).countP (fun rows => rows.1 != rows.2) = 9
+-- Its compared rows under the recorder's numbers are the rows that the recorder wrote on
+-- rc.112 (`harness/truth/result.json`).
+#guard reduce (Api.run pQueueOrder 1000).trace =
+  ["started 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2", "parked 2",
+   "scheduled 0 0", "forked 0 3", "started 3", "scheduled 3 0", "parked 3", "parked 0", "ran 0",
+   "started 4", "resumed 1", "started 1", "scheduled 1 0", "scheduled 1 0", "exited 1 success",
+   "resumed 0", "started 0", "parked 0", "exited 4 success", "ran 3", "started 5",
+   "exited 5 success", "ran 1", "started 6", "resumed 3", "started 3", "exited 3 success",
+   "exited 6 success", "ran 1", "started 7", "resumed 2", "started 2", "exited 2 success",
+   "resumed 0", "started 0", "exited 0 success", "exited 7 success"]
+-- A renaming is no difference: the machine's rows with the fibers `3` and `4` exchanged have the
+-- same rows under their own numbering.
+#guard
+  let rows := machineRows (Api.run pQueueOrder 1000).trace
+  let exchanged := rows.map fun row =>
+    row.rename fun fiber => if fiber == 3 then 4 else if fiber == 4 then 3 else fiber
+  exchanged != rows &&
+    renumbered (numberingOf [] exchanged) exchanged == renumbered (numberingOf [] rows) rows
+-- Red control: a real difference survives the renaming. Here the helper's exit and the next
+-- task's run change places (rows 23 and 24): the rows differ by more than a renaming of the
+-- fibers, and they differ under their own numbering too, at those two rows.
+#guard
+  let rows := machineRows (Api.run pQueueOrder 1000).trace
+  let other := rows.take 23 ++ ((rows.drop 23).take 2).reverse ++ rows.drop 25
+  let own := (renumbered (numberingOf [] rows) rows).map Row.text
+  let others := (renumbered (numberingOf [] other) other).map Row.text
+  own[23]? == some "exited 4 success" && own[24]? == some "ran 3" &&
+    others[23]? == some "ran 3" && others[24]? == some "exited 4 success" &&
+    (own.zip others).countP (fun pair => pair.1 != pair.2) == 2
+-- Red control: a fiber that starts at another time takes another number, and the rows then
+-- differ in every row that names it. No renaming of fibers makes the two lists equal.
+#guard
+  let late : List Row :=
+    [.started 0, .forked 0 1, .started 1, .parked 1, .ran 0, .started 2, .exited 2 "success"]
+  let early : List Row :=
+    [.started 0, .ran 0, .started 2, .exited 2 "success", .forked 0 1, .started 1, .parked 1]
+  (renumbered (numberingOf [] late) late).map Row.text !=
+    (renumbered (numberingOf [] early) early).map Row.text
+-- `pLateSeen`, the control of the numbers in an exit. The source elaborates (its first node
+-- makes the promise), types at the pair, and reads back whole.
+#guard match pLateSeen with
+  | .bind (.perform (.deferredMakeOf .unit .never) _) _ => true
+  | _ => false
+#guard Api.typeOf pLateSeen =
+  some ⟨.prod (.exitOf .unit .never) (.fiberOf .nat .never), .never, Env.Requirement.empty⟩
+#guard Api.roundTrip pLateSeen = .ok pLateSeen
+#guard numbering (Api.run pLateSeen 1000).trace = [0, 2, 3, 1]
+-- Its exit names the interruptor and the helper. Under the machine's ids they are `3` and `1`.
+-- Under the recorder's numbers they are `2` and `3`, in the fork run and in the sync run: the
+-- exit that rc.112 gave on both entries (`harness/truth/result.json`).
+#guard ((Api.run pLateSeen 1000).exit.map fun e => (exitJsonAt id none e).compress) =
+  some "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":3}]}},{\"fiber\":1}]}"
+#guard ((Api.run pLateSeen 1000).exit.map fun e =>
+    (exitJsonAt (numberOf (Api.run pLateSeen 1000).trace) none e).compress) =
+  some "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":2}]}},{\"fiber\":3}]}"
+#guard (exitJsonAt (numberOf (Api.runSync pLateSeen 1000).1.trace) none
+    (Api.runSync pLateSeen 1000).2).compress =
+  "{\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":2}]}},{\"fiber\":3}]}"
+-- Its rows under the recorder's numbers: the helper is first seen at its start, as `3`.
+#guard reduce (Api.run pLateSeen 1000).trace =
+  ["started 0", "scheduled 0 0", "forked 0 1", "started 1", "parked 1", "forked 0 2", "started 2",
+   "resumed 1", "started 1", "exited 1 interrupt", "exited 2 success", "parked 0", "ran 0",
+   "started 3", "exited 3 success", "ran 0", "resumed 0", "started 0", "exited 0 success"]
 #guard Api.typeOf pOptionSome = some ⟨.prod .bool .nat, .never, Env.Requirement.empty⟩
 #guard Api.typeOf pOptionNone = Api.typeOf pOptionSome
 #guard (Api.run pOptionSome 1000).exit = some (.success (.list [.bool true, .nat 7]))
@@ -1191,12 +1613,12 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
   ("export class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\n" ++
    "export const main: Effect.Effect<never, NotFound, never> = Effect.fail(new NotFound({ id: 9 }))\n")
 #guard ((Api.run pFailPayload 1000).exit.map fun e =>
-    (exitJsonAt ((Api.typeOf pFailPayload).map (·.error)) e).compress) =
+    (exitJsonAt id ((Api.typeOf pFailPayload).map (·.error)) e).compress) =
   some "{\"failure\":{\"reasons\":[{\"fail\":{\"payload\":{\"_tag\":\"NotFound\",\"id\":9}}}]}}"
 #guard (Api.run pTagPayload 1000).exit = some (.success (.nat 1))
 -- untyped, a payload keeps the hexadecimal of its canonical bytes
 #guard ((Api.run pFailPayload 1000).exit.map fun e =>
-    (exitJsonAt none e).compress == (exitJson e).compress) = some true
+    (exitJsonAt id none e).compress == (exitJson id e).compress) = some true
 #guard Api.typeOf pFailText = some ⟨.never, .string, Env.Requirement.empty⟩
 #guard Api.typeOf pFailBoomText = some ⟨.never, .string, Env.Requirement.empty⟩
 #guard (Api.run pFailText 1000).exit = some (.failure (Cause.fail (.text "lost")))
@@ -1337,6 +1759,9 @@ def main (args : List String) : IO Unit := do
     let m := (OCaml5.Truth.fixtureRun name p fuel table (builtIn ++ tapes name)).machine
     unless OCaml5.Truth.observesReasons .fuel m && OCaml5.Truth.observesReasons .tape m do
       throw (IO.userError s!"observation reasons disagree for {name}")
+    -- the fiber numbers: the allocation order, or the pinned late sights (`lateSights`)
+    unless OCaml5.Truth.moved m.trace == (OCaml5.Truth.lateSights.lookup name).getD [] do
+      throw (IO.userError s!"the fiber numbering of {name} is not the one that `lateSights` pins")
   let text := (OCaml5.Truth.manifest fuel tapes).pretty 100 ++ "\n"
   match out? with
   | some out =>
