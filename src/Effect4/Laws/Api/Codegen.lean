@@ -37,23 +37,21 @@ theorem checkTyping_type (program : Program) (table : RowTable) :
     (checkTyping program table).map TypedProgram.ty = typeOf program table :=
   checkTypedProgram_type _ _
 
-/-- **The facade's equation.** `Api.explain` makes two tests before it answers the structural
-refusal of the expansion. The references are well formed, and the expansion keeps no reference
-site. A well-formed program's expansion keeps none (`expanded_refs_nil_of_wf`,
-`Laws/Program/ReferenceExpansion.lean`), so the arm for a kept site answers at no program. The
-equation is the facade's twin of the checker's (`typeOfProgram_eq_if_refsWF`,
-`Laws/Program/ReferenceTyping.lean`). It does not say that a refusal is right, and it states
-nothing about a run. No proof in the tree uses it: it records that the facade may lose the arm
-(decisions row 273, point 2). -/
+/-- **The facade's equation.** `Api.explain` tests one thing before it answers the structural
+refusal of the expansion: the references are well formed. The equation is the facade's
+definition, so its proof is `rfl`. Until 2026-10-06 the facade had one more arm, for a reference
+site that the expansion keeps. A well-formed program's expansion keeps none
+(`expanded_refs_nil_of_wf`, `Laws/Program/ReferenceExpansion.lean`). The proof at
+`git:a467ce77:src/Effect4/Laws/Api/Codegen.lean` shows this statement over that arm, so no
+refusal changed. The equation is the facade's twin of the checker's
+(`typeOfProgram_eq_if_refsWF`, `Laws/Program/ReferenceTyping.lean`). It does not say that a
+refusal is right, and it states nothing about a run. No proof in the tree uses it (decisions
+row 273, point 2). -/
 theorem explain_eq_if_refsWF (program : Program) (table : RowTable) :
     explain program table =
       if program.layerRefsWF then
         Effect4.Program.explain (nativeSignature table) [] program.expandRefs
-      else some ⟨[], .referencesIllFormed⟩ := by
-  unfold explain
-  cases wellFormed : program.layerRefsWF with
-  | false => rfl
-  | true => rw [expanded_refs_nil_of_wf program wellFormed]
+      else some ⟨[], .referencesIllFormed⟩ := rfl
 
 /-- On raw formed input, evidence retention keeps the existing module output. -/
 theorem printModule_erasure (name : String) (program : Program) (table : RowTable)

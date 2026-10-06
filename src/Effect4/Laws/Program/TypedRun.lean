@@ -72,13 +72,14 @@ theorem Looped.refSites_nil : ∀ (e : NativeEff) (p : List Nat), Looped e = tru
   | .catchIf _ _ _, _, h | .restore _ _, _, h => absurd h Bool.false_ne_true
 
 /-- On the loop-bearing fragment the whole-program checker is `effTy` at the empty
-environment. -/
+environment. A program of the fragment has no reference site, so its references are well formed
+and it is its own expansion. The checker's equation then reads `typeOf` at the program itself. -/
 theorem typeOfProgram_looped (sig : Signature NativeOp) (e : NativeEff) (hl : Looped e = true) :
     typeOfProgram sig e = effTy sig [] e := by
   have hrefs := Looped.refSites_nil e [] hl
-  have hfixed := expandRefs_eq_self_of_refSites_nil e hrefs
-  have hwf := layerRefsWF_of_refSites_nil e hrefs
-  simp [typeOfProgram, hwf, hfixed, hrefs, typeOf]
+  rw [typeOfProgram_eq_if_refsWF, if_pos (layerRefsWF_of_refSites_nil e hrefs),
+    expandRefs_eq_self_of_refSites_nil e hrefs]
+  rfl
 
 /-- **A certified straight program runs to an exit of its type.** -/
 theorem TypedProgram.run_sound {e : NativeEff} (tp : TypedProgram nativeSignature e)

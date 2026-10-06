@@ -303,3 +303,27 @@ theorem lands with no change of an import.
 
 The battery pins the new statement too, so it imports `Effect4.Laws.Api.Codegen`. Section 7's
 last row then names six statements.
+
+## 13. Addendum: two predictions of section 4 were wrong
+
+Section 4 says that `load_typed_of_denotesTyped` and `load_typed_of_denotesTyped_typed` keep
+their scripts. Both scripts failed in the first default build after the change, on 2026-10-06.
+
+- **The cause.** Each proof first takes the formation fact from the checker's answer
+  (`layerRefsWF_of_typeOf`), so the fact is in the context. After the change the checker's `if`
+  tests that fact and no other. `split` then rewrites the `if` to its `then` branch in both
+  cases, from the fact in the context. The second case no longer holds an equation of `none`,
+  and `cases` fails there.
+- **Why the probe passed.** `SCRATCH/probe-laws.lean` states the inner step alone, with no
+  formation fact in its context. `SCRATCH/probe-split.lean` now holds the mechanism in three
+  examples (tested).
+- **The repair.** Both proofs rewrite by the equation and `if_pos` at the fact. No `split`
+  remains in them.
+
+So nine of the ten declarations of section 4 change their proof text, and `typeOfProgram_ext`
+keeps its script. The environment dump agrees: each of the ten has a new proof term, and no
+statement of the ten changed.
+
+The dump also finds six proof terms that section 3 does not name. Three batteries prove the
+field `typed` of a certificate by `cbv`, which evaluates through the definition's equation. The
+answer is the same, and each proof passes.

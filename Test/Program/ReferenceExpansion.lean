@@ -1,3 +1,4 @@
+import Effect4.Laws.Api.Codegen
 import Effect4.Laws.Program.CheckedTyping
 import Effect4.Laws.Program.ReferenceTyping
 import ProofGraph.Plan
@@ -23,10 +24,15 @@ written as real programs.
   (`typeOfProgram_expandRefs`, `checkTypedProgram_of_hasTy`), and the checker's equation is
   evaluated (`typeOfProgram_eq_if_refsWF`). One red control drops the premise that
   `typeOfProgram_expandRefs` keeps.
+- The checker tests the references' formation only (decisions row 273, point 2), and the
+  facade's refusal (`Api.explain`, `src/Effect4/Api.lean`) has no arm for a reference site that
+  the expansion keeps. The nine programs keep each answer: the checker's, and the facade's
+  refusal. A tenth program has well-formed references and a body that the checker refuses. No
+  program is at the arm that the facade lost (proved).
 
-Placement. Each guard is a finite instance of the registry claim proposed as
+Placement. Each guard is a finite instance of the registry claim
 `reference-expansion-complete` (concept `initial-algebras-folds`, requirement R5). A program
-outside the nine is not checked here: the theorem is the general statement. The battery states
+outside the ten is not checked here: the theorem is the general statement. The battery states
 nothing about a run. The pinned axiom and plan outputs follow the controls.
 -/
 
@@ -83,6 +89,11 @@ def refTarget : NativeEff := around (.merge leaf (.merge (.ref [0, 0]) (.ref [0,
 
 /-- Red: a target that names no layer. -/
 def missing : NativeEff := around (.merge leaf (.ref [0, 0, 5]))
+
+/-- The tenth program: `oneRef`'s layer, with well-formed references, and a body that the checker
+refuses, `fail` at a Boolean. The body is at the path `[1]`, past the reference site `[0, 1]`. -/
+def refusedBody : NativeEff :=
+  .provideLayer (.merge leaf (.ref [0, 0])) false (.fail (.lit (.bool true)))
 
 /-! ## The instruments -/
 
@@ -230,11 +241,73 @@ example : ∃ checked, checkTypedProgram sig chain = some checked ∧ checked.ty
   checkTypedProgram_of_hasTy (by decide +kernel)
     (Conform.Effect4.Typing.effTy_sound sig chain.expandRefs [] chainTy (by decide +kernel))
 
+/-- The certificate's fact at the chain: the expansion has no reference site. The checker does
+not test it, and the certificate takes it from `expanded_refs_nil_of_wf`. -/
+example (checked : TypedProgram sig chain) : chain.expandRefs.refSites [] = [] :=
+  checked.expanded_refSites
+
+/-! ## One test: every answer as before
+
+The checker tests the references' formation only, and the facade's refusal has no arm for a
+reference site that the expansion keeps (decisions row 273, point 2). Each expected value below
+is the answer of the tree before that change, measured at `git:8fcab517`. A red control beside a
+check states that a different value is not the answer. -/
+
+-- The checker's answer on the nine: one type for the five, and none for the four.
+#guard [noRef, oneRef, chain, diamond, nestedTargets].all fun p =>
+  typeOfProgram sig p == some (EffTy.pure .nat)
+#guard [insideTarget, forward, refTarget, missing].all fun p => typeOfProgram sig p == none
+-- Red: the five have the layer's carrier as their type, and no other.
+#guard [noRef, oneRef, chain, diamond, nestedTargets].all fun p =>
+  typeOfProgram sig p != some (EffTy.pure .unit)
+
+-- The facade's verdict is the checker's, on the nine.
+#guard programs.all fun p => Api.typeOf p == typeOfProgram sig p
+
+-- The facade's refusal on the nine: none for the five, and the root refusal for the four.
+#guard [noRef, oneRef, chain, diamond, nestedTargets].all fun p => Api.explain p == none
+#guard [insideTarget, forward, refTarget, missing].all fun p =>
+  Api.explain p == some ⟨[], .referencesIllFormed⟩
+-- Red: two of the four keep a reference site in the expansion, and the facade does not refuse
+-- there. The formation test refuses each at the root first.
+#guard Api.explain insideTarget != some ⟨[0, 0, 0, 0], .layerReference [0]⟩
+#guard Api.explain missing != some ⟨[0, 1], .layerReference [0, 0, 5]⟩
+
+-- The tenth program: its one reference is well formed, and its expansion has no reference site.
+#guard refusedBody.refSites [] = [([0, 1], [0, 0])]
+#guard refusedBody.layerRefsWF && (refusedBody.expandRefs.refSites []).isEmpty
+-- As written, the structural checker refuses at the reference: `layerReference` keeps its producer.
+#guard Effect4.Program.explain sig [] refusedBody == some ⟨[0, 1], .layerReference [0, 0]⟩
+-- The facade answers the structural refusal of the expansion: past the reference site, at the body.
+#guard Api.explain refusedBody == some ⟨[1], .errorNotAdmitted .bool⟩
+#guard Api.explain refusedBody == Effect4.Program.explain sig [] refusedBody.expandRefs
+#guard typeOfProgram sig refusedBody == none
+-- Red: the facade's refusal is not the refusal of the program as written.
+#guard Api.explain refusedBody != Effect4.Program.explain sig [] refusedBody
+
+/-- The facade's equation at the tenth program. The program is closed, so this instance reads the
+branch that the program takes. The statement's pin below holds both branches. -/
+example : Api.explain refusedBody =
+    if refusedBody.layerRefsWF then Effect4.Program.explain sig [] refusedBody.expandRefs
+    else some ⟨[], .referencesIllFormed⟩ :=
+  Api.explain_eq_if_refsWF refusedBody []
+
+/-- **No program is at the arm that the facade lost** (proved). The arm answered where the
+references are well formed and the expansion keeps a reference site. So no program has a refusal
+that came from that arm, and this battery can pin none. The premise is needed:
+`insideTarget_keeps_reference` above. -/
+example (program : NativeEff) (site : List Nat × List Nat) (rest : List (List Nat × List Nat))
+    (wellFormed : program.layerRefsWF = true) :
+    program.expandRefs.refSites [] ≠ site :: rest := by
+  rw [expanded_refs_nil_of_wf program wellFormed]
+  exact nofun
+
 /-! ## The statements, pinned
 
 Each statement as it stands, by its type. `typeOfProgram_expandRefs` carried a second premise
 before, that the expansion has no reference site, and `checkTypedProgram_of_hasTy` carried the
-same fact as an equation. -/
+same fact as an equation. The checker's equation and the facade's keep their statements across
+decisions row 273, point 2: each is now its definition's own. -/
 
 example : ∀ {Op : Type} (root : Eff Op), root.layerRefsWF = true →
     root.expandRefs.refSites [] = [] :=
@@ -254,13 +327,32 @@ example : ∀ {Op : Type} {sig : Signature Op} {program : Eff Op} {ty : EffTy},
     ∃ checked, checkTypedProgram sig program = some checked ∧ checked.ty = ty :=
   @checkTypedProgram_of_hasTy
 
+example : ∀ {Op : Type} {sig : Signature Op} {program : Eff Op},
+    TypedProgram sig program → program.expandRefs.refSites [] = [] :=
+  @TypedProgram.expanded_refSites
+
+example : ∀ (program : Api.Program) (table : RowTable),
+    Api.explain program table =
+      if program.layerRefsWF then
+        Effect4.Program.explain (nativeSignature table) [] program.expandRefs
+      else some ⟨[], .referencesIllFormed⟩ :=
+  @Api.explain_eq_if_refsWF
+
+example : ∀ (program : Api.Program) (table : RowTable),
+    Api.explain program table = none ↔ Api.wellTyped program table = true :=
+  @Api.explain_none_iff
+
 /-! ## The pinned outputs
 
-Each statement's axioms, and the four statements' standing as the plan derives it from the
+Each statement's axioms, and the six statements' standing as the plan derives it from the
 proofs. The top statement was a planned goal, and it is proved in place with its statement
-unchanged. The plan reads its edges from the proof terms: the equation rests on the top theorem,
-and each consumer rests on the equation. The counts are of this battery's tree, which holds no
-step of a proof: the steps are in the law graph. -/
+unchanged. The plan reads its edges from the proof terms. The checker's equation and the facade's
+rest on no node: each is its definition's own. `typeOfProgram_expandRefs` and
+`TypedProgram.expanded_refSites` rest on the top theorem, and `checkTypedProgram_of_hasTy` rests
+on the checker's equation. Until 2026-10-06 each equation rested on the top theorem, and
+`TypedProgram.expanded_refSites` rested on no node: it read the checker's second test. The
+counts are of this battery's tree, which holds no step of a proof: the steps are in the law
+graph. -/
 
 /-- info: 'Effect4.Program.expanded_refs_nil_of_wf' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
@@ -279,14 +371,26 @@ step of a proof: the steps are in the law graph. -/
 #print axioms checkTypedProgram_of_hasTy
 
 /--
+info: 'Effect4.Program.TypedProgram.expanded_refSites' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms TypedProgram.expanded_refSites
+
+/-- info: 'Effect4.Api.explain_eq_if_refsWF' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms Api.explain_eq_if_refsWF
+
+/--
 info: Effect4.Program.expanded_refs_nil_of_wf: proved; nearest []; 0 lemmas, 0 definitions
-Effect4.Program.typeOfProgram_eq_if_refsWF: proved; nearest [Effect4.Program.expanded_refs_nil_of_wf]; 0 lemmas, 0 definitions
+Effect4.Program.typeOfProgram_eq_if_refsWF: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Program.typeOfProgram_expandRefs: proved; nearest [Effect4.Program.typeOfProgram_eq_if_refsWF, Effect4.Program.expanded_refs_nil_of_wf]; 0 lemmas, 0 definitions
 Effect4.Program.checkTypedProgram_of_hasTy: proved; nearest [Effect4.Program.typeOfProgram_eq_if_refsWF]; 0 lemmas, 0 definitions
+Effect4.Program.TypedProgram.expanded_refSites: proved; nearest [Effect4.Program.expanded_refs_nil_of_wf]; 0 lemmas, 0 definitions
+Effect4.Api.explain_eq_if_refsWF: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
 #plan_status expanded_refs_nil_of_wf typeOfProgram_eq_if_refsWF typeOfProgram_expandRefs
-  checkTypedProgram_of_hasTy
+  checkTypedProgram_of_hasTy TypedProgram.expanded_refSites Api.explain_eq_if_refsWF
 
 end Test.Program.ReferenceExpansion

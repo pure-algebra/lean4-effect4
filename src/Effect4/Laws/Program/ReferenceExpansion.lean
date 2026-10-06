@@ -41,9 +41,11 @@ Placement (AGENTS.md, Trust):
 - it does not establish scope, type formation or typing success. It says nothing about a run:
   the compile does not expand, it redirects a reference to its target and shares the layer by
   its path. It does not establish `lower_refines_build` or any equal-observation claim of R8;
-- consumers: the checker's equation `typeOfProgram_eq_if_refsWF` and `typeOfProgram_expandRefs`
-  (`Laws/Program/ReferenceTyping.lean`), and `checkTypedProgram_of_hasTy`
-  (`Laws/Program/CheckedTyping.lean`).
+- consumers: `typeOfProgram_expandRefs` (`Laws/Program/ReferenceTyping.lean`) and
+  `TypedProgram.expanded_refSites` (`Laws/Program/CheckedTyping.lean`). The checker
+  (`typeOfProgram`, `Program/Typing.lean`) and the facade's refusal (`Api.explain`, `Api.lean`)
+  make no second test because of it (decisions row 273). So each equation is its definition's
+  own: `typeOfProgram_eq_if_refsWF`, and `Api.explain_eq_if_refsWF` (`Laws/Api/Codegen.lean`).
 
 The design is `docs/research/2026-10-06-seat-REFS-design.md`.
 -/

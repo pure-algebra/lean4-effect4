@@ -1,6 +1,5 @@
 src/Effect4/Api.lean	blame_none_iff	simp-without-only	1
 src/Effect4/Api.lean	check	simp-without-only	1
-src/Effect4/Api.lean	explain_none_iff	simp_all	2
 src/Effect4/Api/Derived.lean	ofVal_exact	first	2
 src/Effect4/Api/Derived.lean	ofVal_toVal	simp-without-only	4
 src/Effect4/Api/RefusalsDerived.lean	ofVal_exact	first	18
@@ -924,7 +923,6 @@ src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	<ProofGraph.goalDecl>	unread	
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	[anonymous]	unread	2
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	elabTypedState	unread	1
 src/Effect4/Laws/Program/Typed/TypedStateDecl.lean	emitOwner	unread	1
-src/Effect4/Laws/Program/TypedRun.lean	typeOfProgram_looped	simp-without-only	1
 src/Effect4/Laws/Program/Typing/Check.lean	checkTyping_refuses_iff	simp_all	1
 src/Effect4/Laws/Program/Typing/Check.lean	checkTyping_spec	unread	1
 src/Effect4/Laws/Schema/Codec.lean	encode_eq_some	simp-without-only	4
