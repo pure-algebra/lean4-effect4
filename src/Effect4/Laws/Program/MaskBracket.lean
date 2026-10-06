@@ -294,7 +294,7 @@ client: nothing is acquired or registered before the body begins (decisions rows
 Its consumers are the waiting wrapper under a masked caller, then Semaphore's protected permit
 and Pool's `use`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal compiled_region_bracket (p : NativeEff) (table : RowTable) {bases bases' : List Bool}
+theorem compiled_region_bracket (p : NativeEff) (table : RowTable) {bases bases' : List Bool}
     {m m' : NativeMachine} {cmds cmds' : List NCmd} (entry : LoopCut p table bases m cmds)
     (later : LoopCut p table bases' m' cmds') (grown : bases <+: bases') {c c' : NCmd}
     (pending : c ∈ cmds) (pending' : c' ∈ cmds') {id : FiberId} (steps : Steps id c)
@@ -303,6 +303,11 @@ proof_goal compiled_region_bracket (p : NativeEff) (table : RowTable) {bases bas
     (inside : g.frame.stack = above ++ f.frame.stack) (demand : Effect4.Arm) (skip : Bool)
     (cause : Option CauseV)
     (unanswered : ((g.frame.own above).getCont demand skip cause).answer = ContAnswer.empty) :
-    RegionEnds f.frame g.frame above demand skip cause
+    RegionEnds f.frame g.frame above demand skip cause :=
+  entry.kept.bracket later.kept grown (List.mem_of_find?_eq_some found)
+    (List.mem_of_find?_eq_some found')
+    ((fiber_id_of_lookup found').trans (fiber_id_of_lookup found).symm)
+    (entry.live pending steps found) (later.live pending' steps' found') inside demand skip cause
+    unanswered
 
 end Effect4.Program

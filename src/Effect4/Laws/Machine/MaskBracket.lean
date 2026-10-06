@@ -44,12 +44,11 @@ Part A is the frame machine alone.
   end** (`getCont_regionEnd`).
 * **The bracket at one frame machine** (`regionEnds_of_base`, `RegionEnds`).
 
-Part B is a run of the fiber machine. Its two statements are the fields `inside` and `ends` of
-`RegionBracket`, and `saved_mask_region_bracket` is their planned goal.
+Part B is a run of the fiber machine.
 
-* **Inside a region the own frames hold the chain at the entry flag**, at two cuts of one run
-  where the fiber is live. `MaskRuns.flag_eq` is its case of no own frame.
-* **The bracket of a region along a run.**
+* **Inside a region the own frames hold the chain at the entry flag** (`MaskRuns.above`), at
+  two cuts of one run where the fiber is live. `MaskRuns.flag_eq` is its case of no own frame.
+* **The bracket of a region along a run** (`MaskRuns.bracket`).
 
 **The second fact, that the fiber is live at both cuts, is a premise here.** No general
 statement gives it: under a hand-written interpreter the command loop steps a fiber that has
@@ -516,7 +515,7 @@ region of `entry`: its stack is the own frames `above` over the entry's stack. T
 hold the chain at the entry flag. Where their pop answers nothing, the region ends at the
 entry's stack and at the entry flag, and the pop goes on from there.
 
-A step of `regionEnds_of_base`, and of the field `ends` of `saved_mask_region_bracket`. -/
+A step of `regionEnds_of_base` and of `Machine.MaskRuns.bracket`. -/
 @[semantics "scope-lifetime-finalization"]
 theorem regionEnds_of_chain (entry g : FrameFiber ν σ β ε δ ι α)
     (above : List (Prim ν σ β ε δ ι α)) (demand : Arm) (skip : Bool)
@@ -535,8 +534,8 @@ second is inside the region of the first: its stack is the own frames `above` ov
 one's stack. Where the pop of the own frames answers nothing, the region ends at the entry's
 stack and at the entry flag. It is the field `frames` of `saved_mask_region_bracket`.
 
-One base is needed, as for `MaskChain.flag_eq`. Along a run the base is the fiber's start
-flag. -/
+One base is needed, as for `MaskChain.flag_eq`. Along a run the base is the fiber's start flag
+(`Machine.MaskRuns.bracket`). -/
 @[semantics "scope-lifetime-finalization"]
 theorem regionEnds_of_base (base : Bool) (entry g : FrameFiber ν σ β ε δ ι α)
     (above : List (Prim ν σ β ε δ ι α)) (demand : Arm) (skip : Bool)
@@ -715,6 +714,54 @@ def Steps {κ : Type (max u v)} (id : FiberId) : Cmd ν σ β ε δ ι α κ →
   | Cmd.deliver fiber _ => fiber = id
   | _ => False
 
+/-- **Inside a region the own frames hold the chain at the entry flag.** Two machines hold the
+invariant, at two tables in the prefix order. A fiber is live in both. At the second its stack
+is the frames `above` over its stack at the first. Then `above` holds the chain at the flag of
+the first cut. It is the field `inside` of `saved_mask_region_bracket`.
+
+`MaskRuns.flag_eq` is its case of no own frame. The later cut's stack shape `above ++ below` is
+a premise, and it is the region's only mark on the machine. -/
+@[semantics "scope-lifetime-finalization"]
+theorem MaskRuns.above {bases bases' : List Bool} {m m' : RunMachine ν σ β ε δ ι α χ St}
+    (kept : MaskRuns bases m) (kept' : MaskRuns bases' m') (grown : bases <+: bases')
+    {f g : RunFiber ν σ β ε δ ι α χ} (mem : f ∈ m.fibers) (mem' : g ∈ m'.fibers)
+    (same : g.id = f.id) (live : f.exit = none) (live' : g.exit = none)
+    {above : List (Prim ν σ β ε δ ι α)} (inside : g.frame.stack = above ++ f.frame.stack) :
+    MaskChain f.frame.interruptible g.frame.interruptible above := by
+  obtain ⟨base, entry, valid⟩ := kept.2 f mem
+  obtain ⟨base', entry', valid'⟩ := kept'.2 g mem'
+  obtain ⟨rest, rfl⟩ := grown
+  rw [same, List.getElem?_append_left (List.getElem?_eq_some_iff.mp entry).1, entry] at entry'
+  cases entry'
+  have chain := valid' live'
+  rw [inside] at chain
+  exact chain.above (valid live)
+
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- **The bracket of a region, along a run.** Two machines hold the invariant, at two tables in
+the prefix order. A fiber is live in both. The first cut is the region's entry. At the second
+the fiber is inside the region: its stack is the own frames `above` over the entry's stack.
+Where the pop of the own frames answers nothing, the region ends at the entry's stack and at
+the entry flag, and the pop goes on from there. It is the field `ends` of
+`saved_mask_region_bracket`.
+
+The later cut's stack shape `above ++ below` is a premise, and it is the region's only mark on
+the machine. The theorem then gives the entry's stack and the entry flag at the region's end. It
+does not give that a body's run keeps that shape. Both cuts need a live fiber, and
+`Test/Machine/MaskBracket.lean` holds the red control. -/
+@[semantics "scope-lifetime-finalization"]
+theorem MaskRuns.bracket {bases bases' : List Bool} {m m' : RunMachine ν σ β ε δ ι α χ St}
+    (kept : MaskRuns bases m) (kept' : MaskRuns bases' m') (grown : bases <+: bases')
+    {f g : RunFiber ν σ β ε δ ι α χ} (mem : f ∈ m.fibers) (mem' : g ∈ m'.fibers)
+    (same : g.id = f.id) (live : f.exit = none) (live' : g.exit = none)
+    {above : List (Prim ν σ β ε δ ι α)} (inside : g.frame.stack = above ++ f.frame.stack)
+    (demand : Arm) (skip : Bool) (cause : Option (Cause ε δ ι α))
+    (unanswered : ((g.frame.own above).getCont demand skip cause).answer = ContAnswer.empty) :
+    RegionEnds f.frame g.frame above demand skip cause :=
+  regionEnds_of_chain f.frame g.frame above demand skip cause inside
+    (kept.above kept' grown mem mem' same live live' inside) unanswered
+
 end Runs
 
 /-! ## The placed theorem -/
@@ -767,9 +814,8 @@ structure RegionBracket (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
 
 /-- **A region ends at its entry's stack and at its entry flag**, for an arbitrary body (concept
 `scope-lifetime-finalization`, requirement R11). It is the general form of the proposed registry
-claim `saved-mask-region-bracket`, the run-level half of `saved-mask-restoration`. It is a
-planned goal: the frame machine's four fields are proved in this module, and the two fields of a
-run are open.
+claim `saved-mask-region-bracket`, the run-level half of `saved-mask-restoration`. Each field
+cites one theorem of this module, so its status is derived from theirs (`#plan_status`).
 
 Reach: the polymorphic frame machine, at every stack, demand, skip flag and carried cause. Along
 a run: two machines that hold `MaskRuns` at tables in the prefix order, at every interpreter and
@@ -789,8 +835,18 @@ body begins (decisions rows 227 and 244 to 246).
 Its consumers are `Program.compiled_region_bracket`'s: the waiting wrapper under a masked
 caller, then Semaphore's protected permit and Pool's `use`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal saved_mask_region_bracket (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
+theorem saved_mask_region_bracket (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u)
     (St : Type (max u v)) [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] :
-    RegionBracket ν σ β ε δ ι α χ St
+    RegionBracket ν σ β ε δ ι α χ St where
+  chain := fun _ _ _ _ _ valid entered => MaskChain.above valid entered
+  between := step_under
+  answered := getCont_under_answered
+  frames := fun base entry g above demand skip cause inside entered valid unanswered =>
+    regionEnds_of_base base entry g above demand skip cause inside entered valid unanswered
+  inside := fun _ _ _ _ _ _ _ kept kept' grown mem mem' same live live' inside =>
+    kept.above kept' grown mem mem' same live live' inside
+  ends := fun _ _ _ _ _ _ _ demand skip cause kept kept' grown mem mem' same live live' inside
+      unanswered =>
+    kept.bracket kept' grown mem mem' same live live' inside demand skip cause unanswered
 
 end Effect4.Machine
