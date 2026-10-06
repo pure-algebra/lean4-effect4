@@ -1,0 +1,16 @@
+; lane S -- the dogfood scenarios' machine clause (decisions row 254; Test/Dogfood/README.md).
+;   test_scenarios  the fixtures beside this file (*.txt, written by Lean from the programs
+;                   `Api.Author.build` admits: Test/Dogfood/Scenario/Lowered.lean, write.lean)
+;                   replayed through the GENERATED `api_replay` with the real row table, on
+;                   both instances (Fast and Ref).  At every position of every tape the
+;                   engine's machine view must be the view Lean wrote for its session machine.
+;                   The adapter lives in the test: `E4_engine.INSTANCE` takes no row table.
+;                   Red controls: the empty table, a dropped decision, a cut row.
+;                   It is its own directory so that no other lane's dune file changes.
+
+(test
+ (name test_scenarios)
+ (modules test_scenarios)
+ (deps
+  (glob_files *.txt))
+ (libraries effect4_engine effect4_eff))

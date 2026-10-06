@@ -23,6 +23,9 @@ and the lowered runs. This module holds what the scenarios share.
   The driver never plays `Rows.answer`: after a reply receipt it would bind and submit again.
 * **The readers.** `receipts`, `applications`, `refusals` and `retired` read the session's part of
   an observation from the journal, its verdicts and the session's ledger.
+* **The machine's tape.** `tapeFrom` reads the decisions that moved the machine off a journal:
+  each control that progressed and each reply application. `machineView` is the machine's part
+  of an observation. A lowered run replays the tape and compares that view (`tape_replays`).
 * **The record.** A `Scenario` names its program, its observation and its claim as declarations.
   It lists the clauses of the claim and holds the controls. `#scenario_gate`, at the foot of a
   battery, refuses a name that does not resolve, a claim that is no theorem or has no placement, a
@@ -459,6 +462,101 @@ theorem control_retires : ControlRetires := by
     refine ⟨fun alive => List.mem_filter.mpr ⟨held, alive⟩, fun gone => ?_⟩
     exact List.mem_append_right _
       (List.mem_map.mpr ⟨selected, List.mem_filter.mpr ⟨held, gone⟩, rfl⟩)
+
+/-! ### The machine's part of a run, and its tape -/
+
+/-- The machine's part of an observation: what a replay of the machine alone can show. The held
+calls, the reply receipts, the retired calls and the stored replies are the session's, and no
+part of them is here. -/
+structure MachineView where
+  /-- The root's exit, or `none` while it is live. -/
+  rootExit : Option ExitV
+  /-- The cells, in allocation order. -/
+  cells : List Val
+  /-- The calls the machine waits on. -/
+  awaiting : List Await
+  /-- The armed owners, in arming order. -/
+  queued : List FiberId
+  /-- The runnable fibers, in the machine's order. -/
+  runnable : List FiberId
+  /-- Each sleeping fiber with the clock reading it wakes at. -/
+  timers : List (FiberId × ClockMillis)
+deriving DecidableEq
+
+/-- The machine's part of an observation, read from a machine. -/
+def machineViewOf (m : Api.Machine) : MachineView :=
+  { rootExit := (m.fiber? Api.root).bind RunFiber.exit
+    cells := m.state.refs
+    awaiting := awaits m
+    queued := m.armed
+    runnable := Api.runnableFibers m
+    timers := m.state.timers.wake.waiters.map fun w => (w.fiber, w.payload) }
+
+/-- The machine's part of a run's observation. -/
+def machineView (s : Run) : MachineView := machineViewOf s.machine
+
+/-- One position of a machine tape: the decision that moved the machine, and the run after the
+row that gave it. -/
+structure Position where
+  decision : Api.Decision
+  after : Run
+
+/-- The decision a row gives the machine, read on the run before the row. `none` for a row that
+leaves the machine as it was: a held call, a reply receipt, a refused row. A reply application
+gives the answer decision of the stored reply. -/
+def decisionOf (s : Run) (c : Command) (phase : Phase) : Option Api.Decision :=
+  match c, phase with
+  | .control decision, .progressed => some decision
+  | .apply key, .applied =>
+    (Api.HostSession.readReply s.session.pending key).map fun reply =>
+      .answerAsync key.fiber key.token reply.completion
+  | _, _ => none
+
+/-- Whether the raw replay takes this decision and reads on: the machine is live, and the step
+has enough command fuel (`Run.enoughFor`, `src/Effect4/Laws/Run.lean`). -/
+def readsOn (s : Run) (decision : Api.Decision) : Bool :=
+  s.machine.stuck.isNone &&
+    Run.enoughFor s.built.program s.built.table s.budget.fuel s.machine decision
+
+/-- The machine tape of rows played from a run: the positions, and the rows left unread. The
+tape stops at the first row that ends at a frontier, and at the first decision the raw replay
+does not read past. A frontier is never turned into a reply application: its rows stay unread. -/
+def tapeFrom (s : Run) : List Command → List Position × List Command
+  | [] => ([], [])
+  | c :: rest =>
+    let phase := (Api.Runner.result s.runner c).phase
+    if phase == .frontier then ([], c :: rest)
+    else
+      match decisionOf s c phase with
+      | none =>
+        let tail := tapeFrom (s.step c) rest
+        (tail.1, tail.2)
+      | some decision =>
+        if readsOn s decision then
+          let tail := tapeFrom (s.step c) rest
+          (⟨decision, s.step c⟩ :: tail.1, tail.2)
+        else ([], c :: rest)
+
+/-- The proposition of `tape_replays`. -/
+def TapeReplays : Prop :=
+  ∀ (s : Run) (rows : List Command), (tapeFrom s rows).2 = [] →
+    (s.play rows).machine =
+      Run.machineOf (Run.replayFrom s.built.program s.built.table s.budget.fuel
+        ((tapeFrom s rows).1.map (·.decision)) s.machine)
+
+/-- **A journal's machine is the raw replay of its tape.** When the tape reads every row, the
+machine that the journal leaves is the machine that the raw frame replay leaves on the tape's
+decisions, at the same table and budgets. It is the machine clause of a lowered run: a replay of
+the machine alone needs the tape, not the session. Reach: any run, any rows whose tape reads to
+the end: no row at a frontier, and every decision taken at a live machine with enough fuel. It
+does not establish equal session ledgers: the raw replay has none. It does not reach a journal
+that stops at a frontier, and it says nothing of a lowered engine: that link is the finite
+comparison of `ocaml/engine/test/test_scenarios.ml`. It extends `play_controls_eq_replay`
+(`src/Effect4/Laws/Run.lean`) from control rows to reply applications. Concept
+`translation-simulation`, R8. Consumer: the lowered runs of `Test/Dogfood/Scenario/Lowered.lean`,
+whose finite runs check it at every position of every fixture. -/
+@[semantics "translation-simulation" (requirement := R8)]
+proof_goal tape_replays : TapeReplays
 
 /-! ## 5. A scenario's record, and the gate at the foot of a battery -/
 
