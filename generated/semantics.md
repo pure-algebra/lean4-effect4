@@ -1455,6 +1455,9 @@ Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniquenes
 | addressed-replacement | compatibility | proved | Effect4.Program.Node.replaceAt_spec | yes |  |
 | operation-data-scoped | decidability | proved | Effect4.Program.Eff.perform_scoped_iff | yes |  |
 | reference-expansion-complete | substitution | proved | Effect4.Program.expanded_refs_nil_of_wf | yes |  |
+| sketch-conservative | compatibility | proved | Effect4.Program.holes_conservative | yes |  |
+| sketch-weakening | weakening | proved | Effect4.Program.sketch_weakening | yes |  |
+| hole-rule | compatibility | proved | Effect4.Program.Sketch.hole_hasTy | yes |  |
 
 ### Printed statements
 
@@ -1516,6 +1519,56 @@ Literature: TAPL, §16.1, p. 210 — adaptedResult
 ∀ {Op : Type} (root : Effect4.Program.Eff Op),
   Eq root.layerRefsWF Bool.true →
     Eq (Effect4.Program.Eff.refSites List.nil root.expandRefs) List.nil
+```
+
+**sketch-conservative**
+
+```lean
+∀ (app : Effect4.Program.SigApp) (holes : Effect4.Program.RowTable) {e : Effect4.Program.NativeEff},
+  Effect4.Program.SigProgram app.signature e →
+    ∀ (env : Effect4.Program.TyEnv) (p : List Nat),
+      Eq (Effect4.Program.Checker.check (app.withHoles holes).signature env p e)
+        (Effect4.Program.Checker.check app.signature env p e)
+```
+
+**sketch-weakening**
+
+```lean
+∀ (app : Effect4.Program.SigApp) (holes more : Effect4.Program.RowTable),
+  And
+    (∀ {e : Effect4.Program.NativeEff} {env : Effect4.Program.TyEnv} {p : List Nat}
+      {t : Effect4.Program.EffTy},
+      Eq (Effect4.Program.Checker.check (app.withHoles holes).signature env p e) (Except.ok t) →
+        Eq
+          (Effect4.Program.Checker.check
+            (app.withHoles (instHAppendOfAppend.hAppend holes more)).signature env p e)
+          (Except.ok t))
+    (∀ {e : Effect4.Program.NativeEff},
+      Effect4.Program.SigProgram (app.withHoles holes).signature e →
+        ∀ (env : Effect4.Program.TyEnv) (p : List Nat),
+          Eq
+            (Effect4.Program.Checker.check
+              (app.withHoles (instHAppendOfAppend.hAppend holes more)).signature env p e)
+            (Effect4.Program.Checker.check (app.withHoles holes).signature env p e))
+```
+
+**hole-rule**
+
+```lean
+∀ (app : Effect4.Program.SigApp) (holes : Effect4.Program.RowTable) (k : Nat) {name : String}
+  {answer error : Effect4.Program.Ty} {requires : List Effect4.ServiceKey}
+  (env : Effect4.Program.TyEnv),
+  Eq (List.instGetElem?NatLtLength.getElem? holes k)
+      (Option.some (Effect4.Program.Row.hole name answer error requires)) →
+    Eq answer.closed Bool.true →
+      Eq error.closed Bool.true →
+        Effect4.Program.Formation.Formed
+            (Effect4.Program.Formation.instantiatedSites
+              (Effect4.Program.Row.hole name answer error requires).normalizeTypes List.nil) →
+          Conform.Effect4.Typing.HasTy (app.withHoles holes).signature env
+            (Effect4.Program.Sketch.hole app k)
+            { answer := answer.normalize, error := error.normalize,
+              requires := Effect4.Machine.Env.Requirement.ofList requires }
 ```
 
 ## context-requirements
@@ -2156,7 +2209,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
-| R14 | open | `lattice_minimal` (proved) | `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_below` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `folded_anti` (proved), `folded_full` (proved), `folded_subset` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_below` (proved), `not_mem_drop` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofFolded_full` (proved), `parentFolded_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
+| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved) | `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `check_filled` (proved), `check_more_holes` (proved), `check_program` (proved), `hole_hasTy` (proved), `holes_conservative` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_below` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `folded_anti` (proved), `folded_full` (proved), `folded_subset` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_below` (proved), `not_mem_drop` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofFolded_full` (proved), `parentFolded_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
 
 **Next goals** (14): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
@@ -4362,9 +4415,10 @@ flowchart LR
 | `replays` | proved | — | `journal_replays` | 82 | 965 |
 | `tape_replays` | proved | — | — | 97 | 962 |
 
-### R14: A partial program checks and explains its types: holes and the gap, graduality, the focus, minimal slices and total marking
+### R14: A sketch checks and explains its types: holes and the gap, graduality, the focus, minimal type slices and total marking
 
-- Open: sketch-conservative, sketch-weakening and hole-rule (proposed claims; initial-algebras-folds): a hole is a host row with a declared type, in a hole table appended after the row table; a program that performs no hole row is checked the same with any hole table; a program with holes that the checker admits stays admitted at its type with more holes declared; a hole row with closed, formed columns types its perform at those columns; so the checker admits a program modulo its holes, and no constructor is added; proved in scratch from check_ext and check_restrict, and no theorem of the tree states one (docs/research/2026-10-06-seat-GAP-study.md, sections 5.7 and 6.2; decisions row 288); slice SKETCH
+- Open: sketch-renumbering (proposed claim; initial-algebras-folds): a stored sketch is pinned to the row count of its application; when the application gains a row before the hole table, a map of positions renames the program's operations, each operation keeps its row, and the sketch keeps its type; no theorem states it, and Eff has no map on its operations today; a stale hole is not refused as such, since it reads the row that now stands at its position (two red controls, Test/Program/SketchControls.lean); at the authoring surface a hole is its row's spelling, and no position is stale; the consumer is an author who adds a host row while a sketch is open (docs/research/2026-10-06-seat-SKETCH-receipt.md, open obligation 1; decisions row 291)
+- Open: sketch-admission (proposed claim; residual-program-typing): a located refusal for a sketch with its hole table: signature admission at the extended application, raw formation of each hole row, and closed columns; Sketch.check is the checker's answer and admits no sketch to a later stage; the checker types a hole whose declared answer repeats a record field, which raw formation refuses; the consumer is the first tool that stores a sketch (the receipt, open obligation 2)
 - Open: typed-replacement (proposed claim; initial-algebras-folds): an admitted program splits at an address into an environment and a type, and any program of that type stands at the address with the whole keeping its type; one statement over HasTy for each of the six judgments, with the hole table in the statement; it is the law of omitting and of filling, and an edit at a focus needs the focus checked and not the program again; compiled as six statements, proved in scratch on the addresses through bind, with 13 of 57 single steps (the study, section 5.7); no goal states it; slice REPLACE; it replaces the parts focus-decomposes and focus-composes
 - Open: checked-types-closed (proposed claim; subtyping-algebra): every type that the checker gives a formed program is closed; false today, since formation has no rule at a type variable outside a template, and a program of one node is admitted at a type that is not closed (the study, section 9.6 (a), compiled); the repair is one clause of Formation.HeadFormed, which narrows the admitted programs by those that hold a variable in an annotation; slice FORM
 - Open: column-graduality (proposed claim; context-requirements): under a hole row that declares the answer alone, omitting more gives the same answer, a smaller error and a smaller requirement, where each omitted address has no closed edge above it or its node's error is never; a closed edge is a place where a child's error enters a value type: the body of catchCause, catchIf, matchCause, onExit or exit, and the program of a fork; it is the one fact that a slice view of the error or of the requirement column owes (docs/research/2026-10-06-seat-LATTICE-receipt.md, section 7); read upward it is the completion of a type slice; with three declared columns an omission keeps the whole type at every address, by typed-replacement; a finite census holds it at 4833 single omissions and 1033 whole masks of 201 programs, with none refused, and outside the premise 4 of 49 omissions are refused (docs/research/2026-10-06-seat-CENSUS-receipt.md, section 5.3); no goal states it; slice COLUMN
@@ -4377,140 +4431,190 @@ flowchart LR
 ```mermaid
 flowchart LR
   n0["lattice_minimal<br/>proved"]
-  n1["drop_le<br/>proved"]
-  n2["drop_le_of_subset<br/>proved"]
-  n3["exists_mem_below<br/>proved"]
-  n4["failed_rest<br/>proved"]
-  n5["failed_snoc<br/>proved"]
-  n6["filter_mem_sublists<br/>proved"]
-  n7["firstDrop_append<br/>proved"]
-  n8["firstDrop_length<br/>proved"]
-  n9["folded_anti<br/>proved"]
-  n10["folded_full<br/>proved"]
-  n11["folded_subset<br/>proved"]
-  n12["instIsPreorder<br/>proved"]
-  n13["instLawfulOrderInf<br/>proved"]
-  n14["instLawfulOrderSup<br/>proved"]
-  n15["le_drop<br/>proved"]
-  n16["le_of_mem_below<br/>proved"]
-  n17["not_mem_drop<br/>proved"]
-  n18["restart_append<br/>proved"]
-  n19["restart_eq_sweep<br/>proved"]
-  n20["restart_of_none<br/>proved"]
-  n21["restart_of_some<br/>proved"]
-  n22["sublists_subset<br/>proved"]
-  n23["sweepAsked_length<br/>proved"]
-  n24["sweepFreeAsked_sublist<br/>proved"]
-  n25["sweepFree_congr<br/>proved"]
-  n26["sweepFree_eq_sweep<br/>proved"]
-  n27["sweep_congr<br/>proved"]
-  n28["sweep_kept_needed<br/>proved"]
-  n29["sweep_sublist<br/>proved"]
-  n30["sweep_valid<br/>proved"]
-  n31["keeps_above<br/>proved"]
-  n32["needs<br/>proved"]
-  n33["of_same_sites<br/>proved"]
-  n34["contribution_le<br/>proved"]
-  n35["contribution_lub<br/>proved"]
-  n36["contribution_valid<br/>proved"]
-  n37["decide_valid_up<br/>proved"]
-  n38["descendTree_asks<br/>proved"]
-  n39["descendTree_eq_descend<br/>proved"]
-  n40["descendTree_minimal<br/>proved"]
-  n41["descend_asks<br/>proved"]
-  n42["descend_eq_restart<br/>proved"]
-  n43["descend_le<br/>proved"]
-  n44["descend_minimal<br/>proved"]
-  n45["descend_sublist<br/>proved"]
-  n46["descend_valid<br/>proved"]
-  n47["exists_minimal_below<br/>proved"]
-  n48["isMinimal_iff<br/>proved"]
-  n49["minimal_iff_drop<br/>proved"]
-  n50["minimal_refine<br/>proved"]
-  n51["minimals_complete<br/>proved"]
-  n52["minimals_sound<br/>proved"]
-  n53["ofFolded_full<br/>proved"]
-  n54["parentFolded_sound<br/>proved"]
-  n55["valid_max<br/>proved"]
-  n56["valid_refine<br/>proved"]
-  n57["valid_up<br/>proved"]
+  n1["holes_conservative<br/>proved"]
+  n2["sketch_weakening<br/>proved"]
+  n3["hole_hasTy<br/>proved"]
+  n4["withHoles_extends<br/>proved"]
+  n5["withHoles_nil<br/>proved"]
+  n6["withHoles_rowOf<br/>proved"]
+  n7["withHoles_withHoles<br/>proved"]
+  n8["check_filled<br/>proved"]
+  n9["check_more_holes<br/>proved"]
+  n10["check_program<br/>proved"]
+  n11["sketch_more_holes<br/>proved"]
+  n12["sketch_reads_its_holes<br/>proved"]
+  n13["drop_le<br/>proved"]
+  n14["drop_le_of_subset<br/>proved"]
+  n15["exists_mem_below<br/>proved"]
+  n16["failed_rest<br/>proved"]
+  n17["failed_snoc<br/>proved"]
+  n18["filter_mem_sublists<br/>proved"]
+  n19["firstDrop_append<br/>proved"]
+  n20["firstDrop_length<br/>proved"]
+  n21["folded_anti<br/>proved"]
+  n22["folded_full<br/>proved"]
+  n23["folded_subset<br/>proved"]
+  n24["instIsPreorder<br/>proved"]
+  n25["instLawfulOrderInf<br/>proved"]
+  n26["instLawfulOrderSup<br/>proved"]
+  n27["le_drop<br/>proved"]
+  n28["le_of_mem_below<br/>proved"]
+  n29["not_mem_drop<br/>proved"]
+  n30["restart_append<br/>proved"]
+  n31["restart_eq_sweep<br/>proved"]
+  n32["restart_of_none<br/>proved"]
+  n33["restart_of_some<br/>proved"]
+  n34["sublists_subset<br/>proved"]
+  n35["sweepAsked_length<br/>proved"]
+  n36["sweepFreeAsked_sublist<br/>proved"]
+  n37["sweepFree_congr<br/>proved"]
+  n38["sweepFree_eq_sweep<br/>proved"]
+  n39["sweep_congr<br/>proved"]
+  n40["sweep_kept_needed<br/>proved"]
+  n41["sweep_sublist<br/>proved"]
+  n42["sweep_valid<br/>proved"]
+  n43["keeps_above<br/>proved"]
+  n44["needs<br/>proved"]
+  n45["of_same_sites<br/>proved"]
+  n46["contribution_le<br/>proved"]
+  n47["contribution_lub<br/>proved"]
+  n48["contribution_valid<br/>proved"]
+  n49["decide_valid_up<br/>proved"]
+  n50["descendTree_asks<br/>proved"]
+  n51["descendTree_eq_descend<br/>proved"]
+  n52["descendTree_minimal<br/>proved"]
+  n53["descend_asks<br/>proved"]
+  n54["descend_eq_restart<br/>proved"]
+  n55["descend_le<br/>proved"]
+  n56["descend_minimal<br/>proved"]
+  n57["descend_sublist<br/>proved"]
+  n58["descend_valid<br/>proved"]
+  n59["exists_minimal_below<br/>proved"]
+  n60["isMinimal_iff<br/>proved"]
+  n61["minimal_iff_drop<br/>proved"]
+  n62["minimal_refine<br/>proved"]
+  n63["minimals_complete<br/>proved"]
+  n64["minimals_sound<br/>proved"]
+  n65["ofFolded_full<br/>proved"]
+  n66["parentFolded_sound<br/>proved"]
+  n67["valid_max<br/>proved"]
+  n68["valid_refine<br/>proved"]
+  n69["valid_up<br/>proved"]
+  n70["check_restrict<br/>proved"]
+  n71["normalize_idem<br/>proved"]
+  n72["check_ext<br/>proved"]
+  n73["cata_eff_congr_on<br/>proved"]
+  n74["hom_eq_cata_eff<br/>proved"]
+  n75["check_sound<br/>proved"]
+  n76["check_complete<br/>proved"]
+  n0 --> n67
+  n0 --> n62
+  n0 --> n56
   n0 --> n55
-  n0 --> n50
-  n0 --> n44
-  n0 --> n43
-  n0 --> n47
+  n0 --> n59
+  n1 --> n4
+  n1 --> n70
+  n2 --> n12
+  n2 --> n11
+  n3 --> n71
   n3 --> n6
-  n16 --> n22
-  n18 --> n5
-  n18 --> n4
-  n18 --> n21
-  n18 --> n7
-  n18 --> n20
-  n18 --> n8
-  n19 --> n18
-  n20 --> n8
-  n21 --> n8
-  n24 --> n2
-  n26 --> n2
-  n28 --> n29
-  n28 --> n2
-  n31 --> n32
-  n32 --> n49
-  n33 --> n12
-  n33 --> n57
-  n35 --> n52
-  n35 --> n51
-  n36 --> n44
-  n36 --> n43
-  n36 --> n12
-  n36 --> n35
-  n36 --> n46
-  n36 --> n57
-  n37 --> n57
-  n38 --> n25
-  n38 --> n54
-  n38 --> n37
-  n38 --> n24
-  n39 --> n54
-  n39 --> n37
-  n39 --> n26
-  n40 --> n39
-  n40 --> n44
-  n41 --> n27
-  n41 --> n23
-  n42 --> n37
-  n42 --> n19
-  n42 --> n8
-  n43 --> n45
-  n44 --> n37
-  n44 --> n28
-  n44 --> n46
-  n44 --> n49
-  n45 --> n29
-  n46 --> n30
-  n47 --> n44
-  n47 --> n43
-  n48 --> n49
-  n49 --> n15
-  n49 --> n57
-  n49 --> n1
-  n49 --> n17
-  n50 --> n56
-  n50 --> n47
-  n51 --> n33
-  n51 --> n48
-  n51 --> n3
-  n52 --> n48
-  n52 --> n16
-  n53 --> n10
-  n55 --> n14
-  n55 --> n12
+  n8 --> n1
+  n9 --> n11
+  n10 --> n5
+  n11 --> n4
+  n11 --> n72
+  n11 --> n7
+  n12 --> n4
+  n12 --> n70
+  n12 --> n7
+  n15 --> n18
+  n28 --> n34
+  n30 --> n17
+  n30 --> n16
+  n30 --> n33
+  n30 --> n19
+  n30 --> n32
+  n30 --> n20
+  n31 --> n30
+  n32 --> n20
+  n33 --> n20
+  n36 --> n14
+  n38 --> n14
+  n40 --> n41
+  n40 --> n14
+  n43 --> n44
+  n44 --> n61
+  n45 --> n24
+  n45 --> n69
+  n47 --> n64
+  n47 --> n63
+  n48 --> n56
+  n48 --> n55
+  n48 --> n24
+  n48 --> n47
+  n48 --> n58
+  n48 --> n69
+  n49 --> n69
+  n50 --> n37
+  n50 --> n66
+  n50 --> n49
+  n50 --> n36
+  n51 --> n66
+  n51 --> n49
+  n51 --> n38
+  n52 --> n51
+  n52 --> n56
+  n53 --> n39
+  n53 --> n35
+  n54 --> n49
+  n54 --> n31
+  n54 --> n20
   n55 --> n57
+  n56 --> n49
+  n56 --> n40
+  n56 --> n58
+  n56 --> n61
+  n57 --> n41
+  n58 --> n42
+  n59 --> n56
+  n59 --> n55
+  n60 --> n61
+  n61 --> n27
+  n61 --> n69
+  n61 --> n13
+  n61 --> n29
+  n62 --> n68
+  n62 --> n59
+  n63 --> n45
+  n63 --> n60
+  n63 --> n15
+  n64 --> n60
+  n64 --> n28
+  n65 --> n22
+  n67 --> n26
+  n67 --> n24
+  n67 --> n69
+  n70 --> n73
+  n70 --> n74
+  n72 --> n75
+  n72 --> n76
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
 | --- | --- | --- | --- | --- | --- |
 | `lattice_minimal` | proved | — | `valid_max`, `minimal_refine`, `descend_minimal`, `descend_le`, `exists_minimal_below` | 0 | 9 |
+| `holes_conservative` | proved | — | `withHoles_extends`, `check_restrict` | 37 | 203 |
+| `sketch_weakening` | proved | — | `sketch_reads_its_holes`, `sketch_more_holes` | 53 | 354 |
+| `hole_hasTy` | proved | — | `normalize_idem`, `withHoles_rowOf` | 83 | 203 |
+| `withHoles_extends` | proved | — | — | 40 | 130 |
+| `withHoles_nil` | proved | — | — | 0 | 4 |
+| `withHoles_rowOf` | proved | — | — | 37 | 130 |
+| `withHoles_withHoles` | proved | — | — | 0 | 4 |
+| `check_filled` | proved | — | `holes_conservative` | 37 | 203 |
+| `check_more_holes` | proved | — | `sketch_more_holes` | 53 | 287 |
+| `check_program` | proved | — | `withHoles_nil` | 53 | 287 |
+| `sketch_more_holes` | proved | — | `withHoles_extends`, `check_ext`, `withHoles_withHoles` | 53 | 284 |
+| `sketch_reads_its_holes` | proved | — | `withHoles_extends`, `check_restrict`, `withHoles_withHoles` | 53 | 354 |
 | `drop_le` | proved | — | — | 0 | 2 |
 | `drop_le_of_subset` | proved | — | — | 0 | 2 |
 | `exists_mem_below` | proved | — | `filter_mem_sublists` | 0 | 3 |
@@ -4568,6 +4672,13 @@ flowchart LR
 | `valid_max` | proved | — | `instLawfulOrderSup`, `instIsPreorder`, `valid_up` | 0 | 5 |
 | `valid_refine` | proved | — | — | 0 | 2 |
 | `valid_up` | proved | — | — | 1 | 4 |
+| `check_restrict` | proved | — | `cata_eff_congr_on`, `hom_eq_cata_eff` | 72 | 304 |
+| `normalize_idem` | proved | — | — | 77 | 51 |
+| `check_ext` | proved | — | `check_sound`, `check_complete` | 67 | 230 |
+| `cata_eff_congr_on` | proved | — | — | 65 | 73 |
+| `hom_eq_cata_eff` | proved | — | — | 65 | 79 |
+| `check_sound` | proved | — | — | 137 | 237 |
+| `check_complete` | proved | — | — | 70 | 240 |
 
 ## Acceptance programs
 

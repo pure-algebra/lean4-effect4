@@ -346,7 +346,10 @@ place, and the whole keeps its type. The true gap is the second step: the type o
 whose type is not stated. It costs one appended leaf of `Ty`, with one name per hole, and it
 pays where a value reaches a cell. The study's plan has nine stages and seven slices. Three
 need no ruling and no append: the hole table (SKETCH), the replacement law (REPLACE) and
-formation at a type variable (FORM). Nothing of the study is a theorem of the tree yet.
+formation at a type variable (FORM). The first of them has landed (row 291): a sketch is a
+program with its hole table (`src/Effect4/Program/Sketch.lean`), and its language is a
+conservative extension of the program's (`src/Effect4/Laws/Program/Sketch.lean`). The
+replacement law is the next slice. Nothing else of the study is a theorem of the tree yet.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
@@ -355,11 +358,12 @@ that rests on one schedule.
 
 In work since the suspension of the handover:
 
-- **Seat SKETCH has the hole table** (branch `seat/sketch`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-sketch-brief.md); row 288). It is
-  stage 1 of the study's plan, and the seat that wrote the study has it: a sketch as data,
-  and the four theorems that make the language with holes a conservative extension. The
-  replacement law follows on the same branch.
+- **Seat SKETCH's hole table is merged**
+  ([its receipt](research/2026-10-06-seat-SKETCH-receipt.md); rows 288 and 291). A sketch is
+  data, and three claims are in the registry: `sketch-conservative`, `sketch-weakening` and
+  `hole-rule`. `Sketch.check` is the checker's answer: it admits no sketch to a later stage.
+  A stored sketch is pinned to the row count of its application, and its renumbering is an
+  open part of R14. The seat has the replacement law next, on the same branch.
 - **Seat FORM has formation at a type variable** (branch `seat/form`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-form-brief.md); row 288, point
   6 a). A type variable is formed in a template only, and a formed program that the checker

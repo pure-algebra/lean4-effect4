@@ -915,6 +915,20 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   `Api.explain_eq_if_refsWF`, `src/Effect4/Laws/Api/Codegen.lean`). The property is about the
   expansion that typing reads. The compile does not expand: it redirects a reference to its
   target, and a run shares the layer by its path.
+- **A sketch is a conservative extension (`sketch-conservative`)**: a program that performs no
+  hole row is checked the same with any hole table, refusals included
+  (`holes_conservative` (`src/Effect4/Laws/Program/Sketch.lean`)). It is the reflection of an
+  extension of the typing signature, at a hole table. It says nothing of a program that
+  performs a hole.
+- **More holes keep a sketch (`sketch-weakening`)**: a sketch that the checker admits stays
+  admitted at its type when more holes are declared. The checker reads the rows of the holes
+  that the sketch performs and no later row
+  (`sketch_weakening` (`src/Effect4/Laws/Program/Sketch.lean`)).
+- **The hole's rule (`hole-rule`)**: a hole has the type that its row declares, in every
+  environment, for a row with a unit request and closed, formed columns
+  (`Sketch.hole_hasTy` (`src/Effect4/Laws/Program/Sketch.lean`)). The typing judgment gains no
+  rule. The three properties establish no admission of a sketch to a later stage, no law of
+  filling a hole and no run.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 
