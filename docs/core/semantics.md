@@ -496,9 +496,22 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   that starts a run holds it outright. An entry that steps a machine keeps it from that
   machine. (`src/Effect4/Laws/Program/MaskRuns.lean`, `src/Effect4/Laws/Api/MaskRuns.lean`).
   Along a run, a live fiber's flag is a function of its stack (`MaskRuns.flag_eq`). It states
-  no bracket of a region. Two facts of the bracket stay open: a body's run returns to the
-  entry's stack, and the fiber is live at both cuts. It states nothing of an exited fiber,
-  of cleanup, of delivery or of progress.
+  no bracket of a region. The bracket is `saved-mask-region-bracket`. It states nothing of
+  an exited fiber, of cleanup, of delivery or of progress.
+- **A region ends at its entry's stack and at its entry flag (`saved-mask-region-bracket`,
+  `stepped-fiber-live`)**: A region is no syntax of the machine. Its entry is a cut of a
+  run, and a later cut is inside it where the fiber's stack is own frames over the entry's
+  stack. The later cut's stack shape `above ++ below` is a premise, and it is the region's
+  only mark on the machine. The theorem then gives the entry's stack and the entry flag at
+  the region's end. It does not give that a body's run keeps that shape. The end is inside a
+  pop: the fiber that the pop of the own frames leaves, where no own frame answers. At a
+  compiled command loop a fiber that a pending command steps has not exited
+  (`stepped-fiber-live`), so the statement takes no premise on an exit. That fact is false
+  at a hand-written interpreter. Both laws give no cleanup, no release count, no delivery,
+  no budget and no liveness, and nothing of a region whose fiber exits inside it.
+  (`compiled_region_bracket`, `stepped_live`
+  (`src/Effect4/Laws/Program/MaskBracket.lean`); the general form is
+  `saved_mask_region_bracket` (`src/Effect4/Laws/Machine/MaskBracket.lean`)).
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 - **Pool's return and close on the model (`pool-return-front`, `pool-return-once`,

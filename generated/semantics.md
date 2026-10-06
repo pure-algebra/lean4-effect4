@@ -514,6 +514,8 @@ Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwin
 | saved-mask-restoration | preservation | proved | Effect4.Program.Typed.saved_mask_restoration | yes |  |
 | saved-mask-pop-discipline | preservation | proved | Effect4.Machine.saved_mask_pop_discipline | yes |  |
 | saved-mask-chain-runs | preservation | proved | Effect4.Program.compiled_mask_chain_runs | yes |  |
+| saved-mask-region-bracket | preservation | proved | Effect4.Program.compiled_region_bracket | yes |  |
+| stepped-fiber-live | inversion | proved | Effect4.Program.stepped_live | yes |  |
 | pool-return-front | inversion | proved | Effect4.Pool.Model.giveBack_front | yes |  |
 | pool-return-once | inversion | proved | Effect4.Pool.Model.giveBack_once | yes |  |
 | pool-close-refuses | inversion | proved | Effect4.Pool.Model.close_refuses | yes |  |
@@ -621,6 +623,101 @@ Effect4.Program.Typed.MaskRestoration
       And (bases.IsPrefix bases')
         (Effect4.Machine.MaskRuns bases'
           (Effect4.Machine.replayEval (Effect4.Program.interpOf root table) fuel tape m).machine)
+```
+
+**saved-mask-region-bracket**
+
+```lean
+∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable) {bases bases' : List Bool}
+  {m m' : Effect4.Program.NativeMachine} {cmds cmds' : List Effect4.Program.Guard.NCmd},
+  Effect4.Program.LoopCut p table bases m cmds →
+    Effect4.Program.LoopCut p table bases' m' cmds' →
+      bases.IsPrefix bases' →
+        ∀ {c c' : Effect4.Program.Guard.NCmd},
+          List.instMembership.mem cmds c →
+            List.instMembership.mem cmds' c' →
+              ∀ {id : Effect4.FiberId},
+                Effect4.Machine.Steps id c →
+                  Effect4.Machine.Steps id c' →
+                    ∀ {f g : Effect4.Program.Guard.NFiber},
+                      Eq (Effect4.Machine.RunMachine.fiber? m id) (Option.some f) →
+                        Eq (Effect4.Machine.RunMachine.fiber? m' id) (Option.some g) →
+                          ∀ {above : List Effect4.Program.NCode},
+                            Eq
+                                (g.frame
+                                    (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
+                                      Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                                      Effect4.FiberId Effect4.Machine.Ann)
+                                    (Effect4.FrameFiber Effect4.Program.EffName
+                                      Effect4.Program.EffThunk Effect4.Machine.Val
+                                      Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                                      Effect4.Machine.Ann)).stack
+                                (instHAppendOfAppend.hAppend above
+                                  (f.frame
+                                      (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
+                                        Effect4.Machine.Val Effect4.Machine.Err
+                                        Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                                      (Effect4.FrameFiber Effect4.Program.EffName
+                                        Effect4.Program.EffThunk Effect4.Machine.Val
+                                        Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                                        Effect4.Machine.Ann)).stack) →
+                              ∀ (demand : Effect4.Arm) (skip : Bool)
+                                (cause : Option Effect4.Machine.CauseV),
+                                Eq
+                                    (((g.frame
+                                                (Effect4.Prim Effect4.Program.EffName
+                                                  Effect4.Program.EffThunk Effect4.Machine.Val
+                                                  Effect4.Machine.Err Effect4.Machine.Defect
+                                                  Effect4.FiberId Effect4.Machine.Ann)
+                                                (Effect4.FrameFiber Effect4.Program.EffName
+                                                  Effect4.Program.EffThunk Effect4.Machine.Val
+                                                  Effect4.Machine.Err Effect4.Machine.Defect
+                                                  Effect4.FiberId Effect4.Machine.Ann)).own
+                                            above).getCont
+                                        demand skip cause).answer
+                                    Effect4.ContAnswer.empty →
+                                  (f.frame
+                                        (Effect4.Prim Effect4.Program.EffName
+                                          Effect4.Program.EffThunk Effect4.Machine.Val
+                                          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                                          Effect4.Machine.Ann)
+                                        (Effect4.FrameFiber Effect4.Program.EffName
+                                          Effect4.Program.EffThunk Effect4.Machine.Val
+                                          Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                                          Effect4.Machine.Ann)).RegionEnds
+                                    (g.frame
+                                      (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
+                                        Effect4.Machine.Val Effect4.Machine.Err
+                                        Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                                      (Effect4.FrameFiber Effect4.Program.EffName
+                                        Effect4.Program.EffThunk Effect4.Machine.Val
+                                        Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId
+                                        Effect4.Machine.Ann))
+                                    above demand skip cause
+```
+
+**stepped-fiber-live**
+
+```lean
+∀ (p : Effect4.Program.NativeEff) (table : Effect4.Program.RowTable)
+  {m : Effect4.Program.NativeMachine} {cmds : List Effect4.Program.Guard.NCmd},
+  Effect4.Program.Guard.GuardState m →
+    Effect4.Program.Guard.GuardQueue p table m cmds →
+      ∀ {c : Effect4.Program.Guard.NCmd},
+        List.instMembership.mem cmds c →
+          ∀ {id : Effect4.FiberId},
+            Effect4.Machine.Steps id c →
+              ∀ {f : Effect4.Program.Guard.NFiber},
+                Eq (Effect4.Machine.RunMachine.fiber? m id) (Option.some f) →
+                  Eq
+                    (f.exit
+                      (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk
+                        Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                        Effect4.FiberId Effect4.Machine.Ann)
+                      (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk
+                        Effect4.Machine.Val Effect4.Machine.Err Effect4.Machine.Defect
+                        Effect4.FiberId Effect4.Machine.Ann))
+                    Option.none
 ```
 
 **pool-return-front**
@@ -1949,7 +2046,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 242; inherited (provisional): 2278; unplaced: 0.
+Tagged: 273; inherited (provisional): 2293; unplaced: 0.
 
 ## Plan
 
@@ -1969,7 +2066,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved), `mask_rows_table_premises` (proved) | `mask_rows_table_premises` (proved), `unsuspended_runs` (proved), `shown_views_opened` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved), `mask_printed_form_profile` (proved) | `cell_read` (proved), `step_updates` (proved), `closeStep_agrees` (proved), `drainStep_agrees` (proved), `leaseStep_agrees` (proved), `pool_steps_agree` (proved), `returnStep_agrees` (proved), `selectStep_agrees` (proved), `Pool.Model.withdrawStep_agrees` (proved), `close_attempt` (proved), `drain_attempt` (proved), `drain_attempt_minted` (proved), `lease_attempt` (proved), `lease_attempt_minted` (proved), `Pool.make_makes` (proved), `return_attempt` (proved), `return_attempt_minted` (proved), `select_attempt` (proved), `withdraw_attempt` (proved), `withdraw_attempt_minted` (proved), `tagHit_record` (proved), `mask_printed_form_profile` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `offerStep_agrees` (proved), `pollStep_agrees` (proved), `positive_suspend_step_capacity` (proved), `queue_steps_agree` (proved), `sizeStep_agrees` (proved), `Queue.Model.takeStep_agrees` (proved), `withdrawOffer_agrees` (proved), `withdrawTake_agrees` (proved), `bounded_makes` (proved), `offer_attempt` (proved), `offer_attempt_minted` (proved), `offer_withdrawal` (proved), `offer_withdrawal_minted` (proved), `poll_attempt` (proved), `size_read` (proved), `Queue.take_attempt` (proved), `Queue.take_attempt_minted` (proved), `Queue.take_withdrawal` (proved), `Queue.take_withdrawal_minted` (proved), `releaseStep_agrees` (proved), `semaphore_steps_agree` (proved), `takeIfAvailableStep_agrees` (proved), `Semaphore.Model.takeStep_agrees` (proved), `visitStep_agrees` (proved), `Semaphore.Model.withdrawStep_agrees` (proved), `Semaphore.make_makes` (proved), `release_attempt` (proved), `takeIfAvailable_attempt` (proved), `Semaphore.take_attempt` (proved), `Semaphore.take_attempt_minted` (proved), `Semaphore.take_withdrawal` (proved), `Semaphore.take_withdrawal_minted` (proved), `visit_attempt` (proved), `visit_attempt_minted` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
-| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
+| R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved) | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved) | — |
 
@@ -3975,8 +4072,8 @@ flowchart LR
 - Open: the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)
 - Open: state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)
 - Open: a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)
-- Open: the bracket of a region (scope-lifetime-finalization; the run-level half of saved-mask-restoration): a region that changes no flag ends with its entry flag, for an arbitrary body; the invariant of runs is proved (saved-mask-chain-runs): along a run a live fiber's flag is a function of its stack (MaskRuns.flag_eq, the field sameFlag of saved_mask_chain_runs); the bracket's own fact stays open, that the body's run returns to the entry's stack, at a fiber that is live at both cuts, which no theorem states at a cut; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the bracket
-- Open: semaphore-protected-permit (proposed claim; scope-lifetime-finalization): across every prefix of a run a committed activation of Semaphore's protected form releases at most once; an activation whose exit has completed through its cleanup has released exactly once, with enough work for the cleanup or a retained frontier; while the cleanup has not completed, the release obligation stays in the observation, and a frontier is no completed exit; the form is one mask over the take's loop, the hook and the body at the restore site (protectedBy), scoped and typed (protectedBy_has, withPermits_types); no goal states a clause, and each waits for the bracket of a region; finite controls: a take in its own mask loses its permit under an interruption, a wait inside a mask of the form's making cannot be interrupted, and the stand-in for the mask fails under a masked caller (Test/Program/SemaphoreTraces.lean, traces 4, 5 and 8); Pool's lease is the second user (decisions rows 222, 259, 276)
+- Open: the carrying fact of a region (scope-lifetime-finalization, serving saved-mask-region-bracket): the stack shape above ++ below is kept along the fiber machine's evaluator arms and commands while the fiber is inside the region, until the command that ends it; the bracket takes the shape as a premise at the later cut; its statement elaborates and a finite probe on eight runs finds no counterexample (docs/research/2026-10-06-seat-BRACKET-carry.lean.txt); the frame machine's own step keeps the shape (step_under); no goal states it
+- Open: semaphore-protected-permit (proposed claim; scope-lifetime-finalization): across every prefix of a run a committed activation of Semaphore's protected form releases at most once; an activation whose exit has completed through its cleanup has released exactly once, with enough work for the cleanup or a retained frontier; while the cleanup has not completed, the release obligation stays in the observation, and a frontier is no completed exit; the form is one mask over the take's loop, the hook and the body at the restore site (protectedBy), scoped and typed (protectedBy_has, withPermits_types); no goal states a clause, and each waits for the carrying fact of a region; finite controls: a take in its own mask loses its permit under an interruption, a wait inside a mask of the form's making cannot be interrupted, and the stand-in for the mask fails under a masked caller (Test/Program/SemaphoreTraces.lean, traces 4, 5 and 8); Pool's lease is the second user (decisions rows 222, 259, 276)
 - Open: waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222); the Queue model's half of its first clause is proved on the first profile (queue-first-step-invariant), and the wrapper's run stays open
 
 ```mermaid
@@ -3990,25 +4087,29 @@ flowchart LR
   n6["saved_mask_restoration<br/>proved"]
   n7["saved_mask_chain_runs<br/>proved"]
   n8["saved_mask_pop_discipline<br/>proved"]
-  n9["close_refuses<br/>proved"]
-  n10["drain_waits<br/>proved"]
-  n11["giveBack_front<br/>proved"]
-  n12["giveBack_once<br/>proved"]
-  n13["compiled_mask_chain_runs<br/>proved"]
-  n14["cleans_once<br/>goal"]
-  n15["cleanup_keeps<br/>goal"]
-  n16["releases_once<br/>goal"]
-  n17["close_idempotent<br/>proved"]
-  n18["driveState_lift<br/>proved"]
-  n19["checkInput_eq_none_iff<br/>proved"]
+  n9["saved_mask_region_bracket<br/>proved"]
+  n10["close_refuses<br/>proved"]
+  n11["drain_waits<br/>proved"]
+  n12["giveBack_front<br/>proved"]
+  n13["giveBack_once<br/>proved"]
+  n14["compiled_mask_chain_runs<br/>proved"]
+  n15["compiled_region_bracket<br/>proved"]
+  n16["stepped_live<br/>proved"]
+  n17["cleans_once<br/>goal"]
+  n18["cleanup_keeps<br/>goal"]
+  n19["releases_once<br/>goal"]
+  n20["close_idempotent<br/>proved"]
+  n21["driveState_lift<br/>proved"]
+  n22["checkInput_eq_none_iff<br/>proved"]
   n1 --> n0
-  n3 --> n17
-  n7 --> n18
-  n12 --> n11
-  n13 --> n18
-  n14 --> n19
-  n15 --> n19
-  n16 --> n19
+  n3 --> n20
+  n7 --> n21
+  n13 --> n12
+  n14 --> n21
+  n15 --> n16
+  n17 --> n22
+  n18 --> n22
+  n19 --> n22
 ```
 
 | Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
@@ -4022,11 +4123,14 @@ flowchart LR
 | `saved_mask_restoration` | proved | — | — | 99 | 753 |
 | `saved_mask_chain_runs` | proved | — | `driveState_lift` | 184 | 304 |
 | `saved_mask_pop_discipline` | proved | — | — | 35 | 45 |
+| `saved_mask_region_bracket` | proved | — | — | 67 | 77 |
 | `close_refuses` | proved | — | — | 1 | 14 |
 | `drain_waits` | proved | — | — | 5 | 12 |
 | `giveBack_front` | proved | — | — | 3 | 12 |
 | `giveBack_once` | proved | — | `giveBack_front` | 1 | 12 |
 | `compiled_mask_chain_runs` | proved | — | `driveState_lift` | 234 | 836 |
+| `compiled_region_bracket` | proved | — | `stepped_live` | 59 | 84 |
+| `stepped_live` | proved | — | — | 66 | 573 |
 | `cleans_once` | goal | `cleans_once` | `checkInput_eq_none_iff` | 85 | 1441 |
 | `cleanup_keeps` | goal | `cleanup_keeps` | `checkInput_eq_none_iff` | 84 | 1439 |
 | `releases_once` | goal | `releases_once` | `checkInput_eq_none_iff` | 84 | 1448 |

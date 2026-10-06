@@ -34,16 +34,21 @@ gives a reason. Two of the Lean-cut goldens are different programs that carry th
 `.bin` golden, so the report is not gated. Nobody has compared the two texts. The probe is
 that comparison: it confirms the comment, or it finds a real difference under it.
 
-**A2. No compiled program reaches the machine where a second fiber steps an exited one.**
-Seat LIFT's receipt, item 7, proves the mask invariant over live fibers only, because a
-hand-written interpreter reaches such a machine
-(`docs/research/2026-10-06-seat-LIFT-probe-exited-fiber.lean.txt`). The seat read that the
-compile builds a race's park code only as its host's own code.
-*Question:* is that reading complete? *Where:* `Machine.beginRace` and the arms of
-`Cmd.registrationDone` and `Cmd.loop` in `src/Effect4/Machine/Fibers.lean`; the arm of
-`awaitFiber` in `src/Effect4/Program/Compile.lean`; `progOf` and `contAOf` in
-`src/Effect4/Machine/Stores.lean`. *Evidence:* each place that builds a park thunk or a race's
-registration, or a program and a tape that reach the machine. Not compiled is fine.
+**A2. A stepped fiber of a compiled program is live: at which cuts?** Seat LIFT read that
+no compiled program reaches a machine where a command steps an exited fiber. Seat BRACKET
+proved it since (`stepped_live`, `src/Effect4/Laws/Program/MaskBracket.lean`), from the
+guard's state and the guard's queue. The theorem holds at a cut (`LoopCut`). The landed
+theorems give a cut at the loaded machine, at the start of an `evaluate` decision, at a
+dispatcher task whose keys are reserved, and after each command from a cut. The receipt
+says that no theorem gives a cut at the start of each other decision
+(`docs/research/2026-10-06-seat-BRACKET-receipt.md`, item 6).
+*Question:* which decisions start a command loop that those theorems do not cover, and can
+a pending command step an exited fiber there? *Where:* the decisions of
+`src/Effect4/Api.lean` and their command lists; `Guard.driveStep_invariants` and
+`Guard.guardState_reachable` under `src/Effect4/Laws/Program/Guard/`; `LoopCut.evaluate`,
+`LoopCut.task` and `LoopCut.load`. *Evidence:* each decision with the theorem that gives its
+cut, or the decision that has none, with a program and a tape if one reaches an exited
+fiber's step. Not compiled is fine.
 
 **A3. The entries that return a machine.** The same receipt lists every entry outside
 `src/Effect4/Machine` and `src/Effect4/Laws` that makes or changes a machine, by four `grep`
@@ -127,8 +132,18 @@ between its steps change? *Evidence:* the changed probe and both outputs for eac
 choices (decisions rows 270 to 272). *Question:* do the cases CP1 to CP9 reproduce on both
 builds, and does a second schedule change the case where the two builds differ (row 271)?
 
-**C3. A masked region's end on the host.** Seat BRACKET proves that a region ends with its
-entry flag on our machine. *Question:* on rc.112 and 4.0.1, does a fiber's interruptibility
+**C3. A masked region's end on the host.** Seat BRACKET proved that a region ends with its
+entry flag on our machine (`compiled_region_bracket`). *Question:* on rc.112 and 4.0.1, does a fiber's interruptibility
 after `uninterruptibleMask` equal its value before, when the body ends normally, when the
 body fails, and when the fiber is interrupted while masked? *Method:* a host probe that reads
 the flag before and after. *Evidence:* the four readings on both builds.
+
+**C4. A restoring frame on the failure path of an interrupted fiber.** Seat BRACKET found
+that our machine discards a restoring frame's replacement while the fiber is interrupted. So
+one pop ends an interrupted child's inner region, its outer region and the fiber (tested:
+`Test/Machine/MaskBracket.lean`; `popFrom`, `src/Effect4/Machine/Frames.lean`). The seat
+did not read rc.112 for it. *Question:* does rc.112 do the same, and 4.0.1? *Method:* a host
+probe: a child with a region inside a region is interrupted inside the inner one, and each
+region's exit hook logs the flag that it reads. Read the pin's `interruptible` and
+`uninterruptible` frames too (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts`).
+*Evidence:* the log on both builds, and the lines of the pin that the machine transcribes.

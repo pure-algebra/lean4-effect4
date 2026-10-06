@@ -56,8 +56,8 @@ Layer 3 needs the host boundary's open parts (R6). Layers 1 and 2 do not.
 | Typed state at every reached machine | proved, for closed programs | layers 1 and 2 |
 | One law for an await and its notification across commands | missing; the one-step laws are there | layer 2 |
 | A run in which no task was cut by its budget, as a named premise | missing as a name; the machine drops the work | layer 2 |
-| The mask: the bracket of a region | proved on seat BRACKET's branch, with the later cut's stack shape as its premise; a fiber that a pending command steps is live at each cut of a compiled command loop (`stepped_live`, the same branch) | layer 2, under a masked caller |
-| The stack's shape is kept along the fiber machine's commands while a fiber is inside a region | missing; seat BRACKET judges it a slice of its own | the same |
+| The mask: the bracket of a region | proved, with the later cut's stack shape as its premise (`compiled_region_bracket`); a fiber that a pending command steps is live at each cut of a compiled command loop (`stepped_live`) | layer 2, under a masked caller |
+| The stack's shape is kept along the fiber machine's commands while a fiber is inside a region (the carrying fact) | missing; seat BRACKET judges it a slice of its own, of the size of seat LIFT's second part. Its statement elaborates, and a finite probe on eight runs finds no counterexample. It is an until statement, which the lift does not carry as it stands (decisions row 280) | the same |
 | A finalizer runs at most once for a registration, along a run | missing (R11's first whole-run clause) | the protected permit, Pool's `use`, two scenario goals |
 | A general algebra of a record's read and overwrite | missing; it costs each module some lemmas and blocks nothing | every next module |
 | An abstract client and its agreement relation | missing | layer 3 |

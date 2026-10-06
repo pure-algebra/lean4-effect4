@@ -290,7 +290,8 @@ the state at the handover point and the integration procedure as practiced.
 **The close-out set, in work since the suspension:**
 
 - the workers over the public Queue (seat WORKQ);
-- the bracket of a region, the next proof slice of R11 (row 278, point 3);
+- the bracket of a region, the next proof slice of R11 (row 278, point 3): **landed** by
+  seat BRACKET (row 280);
 - the exit column of the truth lane's runner (row 279, point 1): **landed** by the
   coordinator. The column compares the fork entry on both faces. The lane has 63 programs,
   with Semaphore's cases P1 and P4 as the batteries write them;
@@ -304,7 +305,7 @@ main open theory, and it starts with a design question. The owner asked for a di
 it when the set has landed: its obligations, and the base abstractions that it needs first.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
-[The probe questions](research/2026-10-06-probe-questions.md) lists fourteen: what today's
+[The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's
 work took by reading, the facts that the law of a whole run will stand on, and the evidence
 that rests on one schedule.
 
@@ -333,11 +334,6 @@ In work since the suspension of the handover:
   fiber. One finding: at Pool a missing withdrawal loses a wake, so the law of a run needs
   the withdrawal as a premise of the wake. The faces, the truth programs and the engine come
   next.
-- **Seat BRACKET has the bracket of a region** (branch `seat/bracket`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-bracket-brief.md)). A region that
-  changes no flag ends with its entry flag, for an arbitrary body. Seat LIFT's law reads a
-  run. Two facts stay open: the stack at the region's end is the entry's stack, and the
-  fiber is live at both cuts.
 - **Seat WORKQ has the workers over the public Queue** (branch
   `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
   is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
@@ -347,6 +343,22 @@ In work since the suspension of the handover:
 
 Merged on 2026-10-06, after the seats above began:
 
+- **Seat BRACKET is merged: a region ends at its entry's stack and at its entry flag**
+  ([its receipt](research/2026-10-06-seat-BRACKET-receipt.md); row 280). A region is no
+  syntax of the machine. Its entry is a cut of a run, and a later cut is inside it where the
+  fiber's stack is own frames over the entry's stack. The region's end is the fiber that the
+  pop of the own frames leaves, where no own frame answers. It has the entry's stack and the
+  entry flag, for an arbitrary body (`compiled_region_bracket`,
+  `src/Effect4/Laws/Program/MaskBracket.lean`; the registry claim
+  `saved-mask-region-bracket`, R11). Its general form is over two machines that hold the
+  chain's invariant (`saved_mask_region_bracket`,
+  `src/Effect4/Laws/Machine/MaskBracket.lean`). A second claim is proved with it: at each
+  cut of a compiled command loop, a fiber that a pending command steps has not exited
+  (`stepped_live`; the registry claim `stepped-fiber-live`). Seat LIFT took that fact by
+  reading, and it is false at a hand-written interpreter. No planned goal. The later cut's
+  stack shape is a premise. So R11 keeps one open part of the mask, the carrying fact: a
+  body's run keeps that shape until the command that ends the region. It is a slice with no
+  seat, of the size of seat LIFT's second part.
 - **Seat SEMW is merged: Semaphore's public operations**
   ([its receipt](research/2026-10-06-seat-SEMW-receipt.md); `aa70b078`, `4b57609c`,
   `ea036307`, `5fc17c3f`, `75ad13b7`, `831a76f3`). The two forms are `waitRetryAt` and
@@ -372,9 +384,8 @@ Merged on 2026-10-06, after the seats above began:
   registry claim `saved-mask-chain-runs`, R11). Each entry outside the machine that returns a
   machine keeps it, with no premise for the condition
   (`src/Effect4/Laws/Api/MaskRuns.lean`). Along a run, a live fiber's flag is a function of
-  its stack. No planned goal. R11 stays open: the bracket of a region owes two facts. A
-  body's run returns to the entry's stack, and the fiber is live at both cuts. Row 278
-  records what the receipt leaves open.
+  its stack. No planned goal. The bracket of a region was its open part, and seat BRACKET
+  proved it since. Row 278 records what the receipt leaves open.
 - **Seat CHECK is merged** (`0c4f9774`;
   [its receipt](research/2026-10-06-seat-CHECK-receipt.md)), in the seat that seat QINV
   freed. `typeOfProgram` tests the references' formation only
@@ -486,7 +497,7 @@ Candidates with no seat, each with its place:
   - Atomic makes two commits and no transaction. A control of an interruption between them
     needs a reachable checkpoint first. The controls of a timeout under a mask and of one
     registration's cleanup are missing too;
-- the bracket of a region, the next proof slice of R11 (row 278, point 3);
+- the carrying fact of a region, R11's open part of the mask (row 280, point 2);
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
 - two small repairs of the foreign readers (row 258, points 5 and 6).
