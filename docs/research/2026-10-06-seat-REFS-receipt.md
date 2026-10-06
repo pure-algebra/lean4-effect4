@@ -6,18 +6,22 @@ Design note: `docs/research/2026-10-06-seat-REFS-design.md`. The coordinator sen
 after the dispatch.
 
 **The one thing to know before merging:** one file outside the brief's list changed.
-`Test/fixtures/proof-style/baseline.tsv` loses the line of the old `simp` of
-`typeOfProgram_expandRefs`, because the proof-style gate refuses a stale entry.
+`Test/fixtures/proof-style/baseline.tsv` loses 16 lines, the entries of the old proofs that
+the slice replaces, because the proof-style gate refuses a stale entry.
 
-Six more facts stand beside it.
+Seven more facts stand beside it.
 
 - **The goal is a theorem.** `expanded_refs_nil_of_wf` is proved in place, with the brief's
   statement and placement. The goal gate counts 24 planned goals again, after 25 at step 1.
 - **Both consumers hold without their premise**, and the checker's equation is a theorem.
   Neither consumer has a caller in the tree.
-- **The imports of `ReferenceTyping.lean` must stay free of the `batteries` package.** That
-  file now imports the new module. With the package imported, its linter refuses one old
-  line of `action_expandRound_eq_self` there (item 7, finding F1).
+- **The last Lean commit, `8fb11f9c`, goes beyond the brief's parts, and the coordinator may
+  leave it out.** It rewrites the proofs of the seven `*_expandRound_eq_self` lemmas, with
+  their statements unchanged, and 15 of the 16 baseline lines are its own.
+- **Without that commit the imports of `ReferenceTyping.lean` must stay free of the
+  `batteries` package.** With the package imported, its linter refuses one old line of
+  `action_expandRound_eq_self` (item 7, finding F1). The commit before it, `3ec7646b`, is
+  green, and it writes the limit in the file's header.
 - **`generated/semantics.md` is stale until `make gen-semantics` runs.** R5 gains two placed
   nodes: `expanded_refs_nil_of_wf` and `typeOfProgram_expandRefs`.
 - **`tools/Tools/SemanticsRegistry.lean` and `docs/core/semantics.md` are untouched.** Item 7
@@ -33,7 +37,7 @@ The sections below carry the brief's item numbers. Item 1 is the bold line above
 | Branch | `seat/refs`, in the worktree `/Users/pooks/Dev/lean4-effect4-qtypes` |
 | Base | `b199c15f` |
 | Main-line heads taken in | none |
-| Head | the commit that adds this receipt; its parent is `ca41bd6a` |
+| Head | the commit that brings this receipt up to date; its parent is `8fb11f9c` |
 
 Nothing is pushed.
 
@@ -46,25 +50,27 @@ Nothing is pushed.
 | `8a5352dc` | 4 | the battery and its import |
 | `8aaf5460` | 4 | the battery pins the four statements' plan status in one command |
 | `ca41bd6a` | 5 | the row of `docs/ARCHITECTURE.md`, the role, and the design note's addendum |
+| `52a1a35a` | 5 | this receipt, in its first form |
+| `3ec7646b` | after 5 | two comments: the limit on the imports of `ReferenceTyping.lean` (finding F1) |
+| `8fb11f9c` | after 5 | the seven old lemmas by one law; the limit is lifted; 15 lines leave the baseline (choice C15) |
 
 ## 3. Changed files
 
-`git diff --stat b199c15f..ca41bd6a` lists 13 files, with 957 insertions and 47 deletions.
-This receipt is the fourteenth. The counts of declarations come from `grep` over the lines
-that open a declaration.
+`git diff --stat b199c15f..8fb11f9c` lists 14 files, with this receipt among them. The counts
+of declarations come from `grep` over the lines that open a declaration.
 
 | Group | File | What changed |
 | --- | --- | --- |
-| The laws | `src/Effect4/Laws/Program/ReferenceExpansion.lean` | new: 17 theorems, 7 of them private; the predicate `RefsWithin`; one private reducible definition, one private abbreviation and one `example` |
+| The laws | `src/Effect4/Laws/Program/ReferenceExpansion.lean` | new: 17 theorems, 7 of them private; the predicate `RefsWithin`; the reducible definition `refAlgebra`, one private abbreviation and one `example` |
 | The laws | `src/Effect4/Laws/Program/PathOrder.lean` | `lt_append_of_lt`; the definition `rank` with `rank_lt_length` and `rank_lt_rank`; one private step. The imports are unchanged |
 | The laws | `src/Effect4/Laws/Program/PathFold.lean` | `Node.foldList_subset_of_at`, `refSites_subset_of_layerAt` and `layerRefsWF_mem`. `Node.yieldAt_subset_of_at` and `layerRefsWF_at` keep their statements as corollaries |
-| The laws | `src/Effect4/Laws/Program/ReferenceTyping.lean` | one import; `typeOfProgram_eq_if_refsWF`, new; `typeOfProgram_expandRefs` without `hempty`, tagged; the `#check` pin at the file's end is gone |
+| The laws | `src/Effect4/Laws/Program/ReferenceTyping.lean` | one import; `typeOfProgram_eq_if_refsWF`, new; `typeOfProgram_expandRefs` without `hempty`, tagged; the `#check` pin at the file's end is gone. In `8fb11f9c`: seven private theorems `onRef_eq_self_*`, new; the seven `*_expandRound_eq_self` lemmas as their instances; the macro `close_ref_free` and two raised limits are gone |
 | The laws | `src/Effect4/Laws/Program/CheckedTyping.lean` | one import; `checkTypedProgram_of_hasTy` without `expanded` |
 | The laws | `src/Effect4/Laws.lean` | one import, after `import Effect4.Laws.Program.PathFold` |
 | The runtime root | `src/Effect4/Program/Refs.lean` | two comments name the theorem: the module text, and the docstring of `Eff.expandRefs`. No definition changed |
 | The batteries | `Test/Program/ReferenceExpansion.lean` | new: 32 guards, 8 examples, 3 theorems and 5 pinned outputs |
 | The batteries | `Test/All.lean` | one import, after `import Test.Program.LayerRefs` |
-| The fixture | `Test/fixtures/proof-style/baseline.tsv` | one line removed, by hand |
+| The fixture | `Test/fixtures/proof-style/baseline.tsv` | 16 lines removed: one by hand in `525c78b3`, and 15 by a script in `8fb11f9c` |
 | The documents | `docs/ARCHITECTURE.md` | one new row |
 | The documents | `tools/Tools/ArchitectureRoles.lean` | one new role |
 | The notes | `docs/research/2026-10-06-seat-REFS-design.md`, and this receipt | new |
@@ -103,14 +109,16 @@ named `SCRATCH`. It holds each log.
 | --- | --- | --- |
 | `SLOT lake build` of the four law modules of the reading list, on `b199c15f` | `Build completed successfully (240 jobs)` | tested: the worktree was warm |
 | `SLOT lake env lean -DwarningAsError=true SCRATCH/probe6.lean` | no error; the three statements at `[propext, Quot.sound]` | tested: the design note's probe, before step 1 |
-| `SLOT lake build`, on the tree of each commit that changes Lean, and on `ca41bd6a` | six runs, each `Build completed successfully`; the table below | proved, and tested |
+| `SLOT lake build`, on the tree of each commit that changes Lean, and on `ca41bd6a` | eight runs, each `Build completed successfully`; the table below | proved, and tested |
 | `SLOT lake build Effect4.Laws.Program.Hoisting Effect4.Laws.Program.Typed.LayerArm`, at step 2 | `Build completed successfully (451 jobs)` | tested: the direct dependents |
 | `SLOT lake env lean -DwarningAsError=true SCRATCH/battery-red-all.lean` | exit 1; 19 changed checks give 19 errors, one at each | tested: the battery's red controls |
-| `SLOT lake env lean -DwarningAsError=true SCRATCH/f1/Plain.lean`, then `SCRATCH/f1/WithAesop.lean` | exit 0; then exit 1 with one error, at the line of finding F1 | reproduced: finding F1 |
+| `SLOT lake env lean -DwarningAsError=true SCRATCH/f1/Plain.lean`, then `SCRATCH/f1/WithAesop.lean`, on the file of `525c78b3` | exit 0; then exit 1 with one error, at the line of finding F1 | reproduced: finding F1 |
+| `SLOT lake env lean -DwarningAsError=true SCRATCH/f1b/WithAesop.lean`, on the file of `8fb11f9c` | exit 0, and no message | tested: the limit is lifted |
+| `SLOT lake env lean -DwarningAsError=true SCRATCH/census2.lean` | the seven lemmas' axioms of item 5, and two of their statements | tested |
 | `SLOT lake env lean -DwarningAsError=true SCRATCH/census.lean` | the axioms and the plan status of item 5 | tested |
 | `SLOT make FLAGS check-cases`, on the tree of `8a5352dc` | `conform cases: PASS, exit 0; .lake/conform/cases.json`. The report says `231/231 subjects, 231 pass, 0 refused`. No refusal line | tested |
-| `SLOT python3 scripts/check-conform.py cases`, on the tree of `ca41bd6a` | the same two lines. The target's marker was fresh, so I ran its producer by name | tested: a fresh run |
-| `SLOT make FLAGS check-docs`, on the tree of `ca41bd6a` | `PASS check-docs: every path, link, citation and make target in 75 documents resolves` | tested |
+| `SLOT python3 scripts/check-conform.py cases`, on the tree of `ca41bd6a`, and again on `8fb11f9c` | the same two lines, each time. The target's marker was fresh, so I ran its producer by name | tested: two fresh runs |
+| `SLOT make FLAGS check-docs`, on the tree of `ca41bd6a`, and again on `8fb11f9c` | `PASS check-docs: every path, link, citation and make target in 75 documents resolves`, each time | tested |
 | the same, with a wrong path in the new row | `FAIL check-docs: 1 stale reference(s) in 1 of 75 documents`, at the new row of `docs/ARCHITECTURE.md`; exit 2. I restored the row, and the check passes again | tested: the red control of the new row |
 | `SLOT lake build Tools.ArchitectureRoles` | `Build completed successfully (2 jobs)` | tested |
 | `python3 scripts/check-language.py --strict` on the design note and on this receipt | `PASS check-language: no finding`, for each | tested |
@@ -125,13 +133,15 @@ The default builds, with the gate lines that `Test/All.lean` prints:
 | `525c78b3` | 983 | 171, 300 | 733, 87219 | 24, 11 | 1922, 59, 1178 |
 | `8a5352dc` | 984 | 171, 300 | 734, 87242 | 24, 11 | 1922, 59, 1178 |
 | `8aaf5460`, and `ca41bd6a` again | 984 | 171, 300 | 734, 87242 | 24, 11 | 1922, 59, 1178 |
+| `3ec7646b` | 984 | 171, 300 | 734, 87242 | 24, 11 | 1922, 59, 1178 |
+| `8fb11f9c` | 984 | 171, 300 | 734, 87234 | 24, 11 | 1914, 52, 1163 |
 
 On each run the library-root gate reports that every library source is reachable, and that
 `Effect4` never reaches Laws. The axiom gate reports the semantic and test axioms at
 `[propext, Quot.sound]`. The goal gate reports that no other declaration reaches `sorryAx`.
 The proof-style gate refuses nothing. I did not run the default build on the base. On the tree
-of `ca41bd6a` Lake replays every module. The head commit adds this receipt only, and no build
-ran after it.
+of `ca41bd6a` Lake replays every module. The head commit changes this receipt and the design
+note only, and no build ran after it.
 
 The first build of step 3 ran on a tree that held the battery too. It took twelve minutes,
 and Lake built 482 of its 984 jobs anew (finding F7). Then I moved the battery out and took its
@@ -183,7 +193,8 @@ the finite cases of Codex's model, as real programs.
 - `make check-gen`, `make check-slow`, `make check-corpus`, `make check-target`,
   `make check-truth`, the conservativity script and `make gen-semantics`.
 - `make check-semantics` and `make gen-architecture`: both need the coordinator's report.
-- `make record-proof-style`: I removed the one line by hand.
+- `make record-proof-style`: I removed the lines without it. One went by hand, and 15 went by
+  a script that names each key.
 - `make check`, `make check-full` and `make status`, as targets.
 - Every TypeScript lane, every host run and every OCaml run.
 
@@ -192,8 +203,9 @@ the finite cases of Codex's model, as real programs.
 Nothing that I ran is red for such a reason. Two older states showed in the logs, and I left
 both:
 
-- the proof-style gate lists 59 unread commands, as the baseline records at the base. Seven
-  of them are the old lemmas of `ReferenceTyping.lean` (finding F1);
+- the proof-style gate lists 59 unread commands up to `3ec7646b`, as the baseline records at
+  the base. Seven of them are the old lemmas of `ReferenceTyping.lean`. The commit `8fb11f9c`
+  rewrites those seven, and 52 stay;
 - `docs/ARCHITECTURE.md` carries older findings of the language checker, away from the new
   row.
 
@@ -206,6 +218,7 @@ both:
 | The reference sites of a round are, at each site, the sites of what the round puts there | proved: `Eff.refSites_expandRound` |
 | A layer's reference sites move with its path, and keep their targets | proved: `LayerTerm.refSites_append`, `LayerTerm.refSites_move` |
 | A reference inside a target is an original reference, and it precedes every reference to the target | proved: `target_refs_prior` |
+| A substitution of the references fixes syntax with no reference site, at the seven sorts | proved: `eff_expandRound_eq_self` and its six siblings, with their statements unchanged (`8fb11f9c`) |
 | The checker answers the structural type of the expansion exactly where the references are well formed | proved: `typeOfProgram_eq_if_refsWF` |
 | With well-formed references, the checker's answer on the expansion is its answer on the program | proved: `typeOfProgram_expandRefs` |
 | Well-formed references and a declarative derivation on the expanded tree give a certificate | proved: `checkTypedProgram_of_hasTy` |
@@ -246,6 +259,18 @@ The axiom gate holds every declaration at `[propext, Quot.sound]`. The census
 'Effect4.Program.typeOfProgram_eq_if_refsWF' depends on axioms: [propext, Quot.sound]
 'Effect4.Program.typeOfProgram_expandRefs' depends on axioms: [propext, Quot.sound]
 'Effect4.Program.checkTypedProgram_of_hasTy' depends on axioms: [propext, Quot.sound]
+```
+
+The seven lemmas of `8fb11f9c`, from `SCRATCH/census2.lean`:
+
+```text
+'Effect4.Program.eff_expandRound_eq_self' depends on axioms: [propext]
+'Effect4.Program.stmts_expandRound_eq_self' depends on axioms: [propext]
+'Effect4.Program.stmt_expandRound_eq_self' depends on axioms: [propext]
+'Effect4.Program.effs_expandRound_eq_self' depends on axioms: [propext]
+'Effect4.Program.action_expandRound_eq_self' depends on axioms: [propext]
+'Effect4.Program.layer_expandRound_eq_self' depends on axioms: [propext]
+'Effect4.Program.layers_expandRound_eq_self' depends on axioms: [propext]
 ```
 
 No theorem reaches `Classical.choice`. One library lemma does, `List.eq_nil_iff_forall_not_mem`,
@@ -325,7 +350,8 @@ that it is a step of, and each names its consumer.
 | --- | --- |
 | `PathOrder.lean` | `lt_append_of_lt`; the private `countP_lt_countP`; `rank`, `rank_lt_length`, `rank_lt_rank` |
 | `PathFold.lean` | `Node.foldList_subset_of_at`, `refSites_subset_of_layerAt`, `layerRefsWF_mem` |
-| `ReferenceExpansion.lean` | the seven private `refSites_onRef_*`; `Eff.refSites_expandRound`, `LayerTerm.refSites_append`, `LayerTerm.refSites_move`; `target_refs_prior`; `RefsWithin` with `refsWithin_self`, `refsWithin_round`, `refsWithin_rounds`, `refSites_nil_of_refsWithin`; `foldl_expandRound_refSites_nil` |
+| `ReferenceExpansion.lean` | `refAlgebra`; the seven private `refSites_onRef_*`; `Eff.refSites_expandRound`, `LayerTerm.refSites_append`, `LayerTerm.refSites_move`; `target_refs_prior`; `RefsWithin` with `refsWithin_self`, `refsWithin_round`, `refsWithin_rounds`, `refSites_nil_of_refsWithin`; `foldl_expandRound_refSites_nil` |
+| `ReferenceTyping.lean`, in `8fb11f9c` | the seven private `onRef_eq_self_*`. Each is a step of the `*_expandRound_eq_self` lemma of its sort. Those seven serve `expandRefs_eq_self_of_refSites_nil` and the `Eff.expandIn` laws, as before |
 
 ## 7. Choices, findings and proposals
 
@@ -342,7 +368,8 @@ that it is a step of, and each names its consumer.
 - **C3. A reducible name for the generated algebra.** `refAlgebra f` is `EffAlgebra.onRef f`,
   equal by `rfl`, and an `example` in the module checks it. Under the name, `simp only` reads
   a field at a constructor and leaves a recursive call's algebra as it is. Lean refuses a
-  local `reducible` attribute on `EffAlgebra.onRef` itself.
+  local `reducible` attribute on `EffAlgebra.onRef` itself. The name is private up to
+  `3ec7646b`, and public in `8fb11f9c`, where a second law reads it.
 - **C4. No inverse fact from a site to an address.** Codex's review asks for one. The move of
   a layer's sites replaces it: a nested site is the target's path with an extension.
 - **C5. The exact bound is stated over any list of rounds** (`foldl_expandRound_refSites_nil`).
@@ -357,7 +384,7 @@ that it is a step of, and each names its consumer.
   `refSites_subset_of_layerAt`, with the premise that `Eff.layerRefsWF` reads. The two new
   proofs of `PathOrder.lean` use no search. So neither `PathOrder.lean` nor the new module
   imports `aesop`. The note's section 9 records both. Step 2 landed the first forms, and step 3
-  replaced them.
+  replaced them. The commit `8fb11f9c` lifts the limit, and both forms stay as they are.
 - **C9. The comments of `Refs.lean` landed with step 3.** A comment edit there rebuilds the
   modules after it (finding F7), and step 3 rebuilds the typed state's graph already.
 - **C10. `Node.yieldAt_subset_of_at` and `layerRefsWF_at` are now corollaries**, with their
@@ -371,6 +398,12 @@ that it is a step of, and each names its consumer.
 - **C14. The baseline's line is removed by hand.** The brief's file list does not name the
   baseline. Its acceptance asks for a green default build, and the new proof has no bare
   `simp`. I told the coordinator in a message during step 3.
+- **C15. The seven old lemmas are rewritten, in a commit of their own.** Finding F1 is a trap
+  that this slice's import opens, so I removed its cause. One law at the seven sorts says
+  that a substitution fixes syntax with no reference site. Each sort is one `cases` and one
+  `simp +contextual only` call, in the style of choice C2. The lemmas keep their names and
+  statements, and no caller changes. The file's two raised limits are gone, and it builds in
+  one second. A coordinator who wants the brief's parts only merges up to `3ec7646b`.
 
 ### Findings
 
@@ -379,8 +412,10 @@ that it is a step of, and each names its consumer.
   (`src/Effect4/Laws/Program/ReferenceTyping.lean`). The linter is `unnecessarySeqFocus`. It
   is absent while the file imports no module of that package, and `aesop` requires the
   package. Reproduced: a copy of the file elaborates with exit 0, and the same copy with one
-  more line, `import Aesop`, gives one error at that line. I did not touch the old proof. It
-  holds `simp_all` and a macro with `first`, so a touch owes a rewrite of seven lemmas.
+  more line, `import Aesop`, gives one error at that line. The old proof holds `simp_all` and
+  a macro with `first`, so a touch owes a rewrite of seven lemmas. The commit `3ec7646b`
+  writes the limit in the file's header. The commit `8fb11f9c` is that rewrite, and after it
+  the copy with `import Aesop` elaborates with exit 0.
 - **F2. The premise is sufficient and not necessary.** Two refused programs of the battery
   expand to a program with no reference site: the forward reference, and the target that is
   a reference. The proof uses two clauses of `Eff.layerRefsWF` and the lookup's success. It
@@ -433,9 +468,10 @@ that it is a step of, and each names its consumer.
   `TypedProgram.expanded_refSites` and `TypedProgram.hasTy`
   (`src/Effect4/Laws/Program/CheckedTyping.lean`); `typeOfProgram_looped`
   (`src/Effect4/Laws/Program/TypedRun.lean`).
-- **P5. Rewrite the seven `*_expandRound_eq_self` lemmas**, in a later slice (F1). It removes
-  seven `simp_all`, one `first` and seven unread commands from the proof-style baseline, and
-  it lifts the limit on the file's imports.
+- **P5. Keep or drop the commit `8fb11f9c`** (choice C15). It removes seven `simp_all`, one
+  `first` and seven unread commands from the proof-style baseline, and it lifts the limit on
+  the file's imports. Without it, the limit of finding F1 stands, as the header of `3ec7646b`
+  says.
 
 ## 8. The requirements R1 to R13
 
@@ -486,8 +522,8 @@ The report's ten next goals are untouched: `bounded`, `cleans_once`, `committed`
 
 ## 9. Open obligations
 
-None of the brief's table. No planned goal of the slice is open. The proposals P4 and P5 name
-later work, and no one has ruled them.
+None of the brief's table. No planned goal of the slice is open. The proposal P4 names later
+work, and the proposal P5 names a choice at the merge. No one has ruled them.
 
 ## 10. Proposed decisions rows (proposals only)
 

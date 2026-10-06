@@ -183,3 +183,7 @@ The landed tree differs from sections 3 and 5 in two places. The receipt
   `Node.layerAt_eq_some_iff`.
 - `lt_append_of_lt` and the counting step of the rank are proved by hand, with no search.
   `PathOrder.lean` keeps its two imports.
+
+A later commit of the branch removes the cause of both. It rewrites the seven
+`*_expandRound_eq_self` lemmas of `ReferenceTyping.lean` by a second law of the generated
+folds: a substitution fixes syntax with no reference site. Their statements are unchanged.
