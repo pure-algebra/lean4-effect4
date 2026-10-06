@@ -177,6 +177,7 @@ import Test.Program.SemaphoreSteps
 import Test.Program.SemaphoreScenarios
 import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreRelation
+import Test.Program.SemaphoreEngine
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract
