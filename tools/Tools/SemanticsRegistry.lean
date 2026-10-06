@@ -97,7 +97,11 @@ deriving Repr, Inhabited
 def registry : Registry where
   roots := [`Effect4.Laws, `Test.Program.TypedProgBindRed, `Test.Program.ProtocolPosts,
     `Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers, `Test.Dogfood.P3WorkerQueue,
-    `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
+    `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService,
+    -- the scenarios of the acceptance programs (decisions row 254): their placed claims and
+    -- their planned goals are nodes of the plan
+    `Test.Dogfood.Scenario, `Test.Dogfood.Scenario.Workers, `Test.Dogfood.Scenario.Routing,
+    `Test.Dogfood.Scenario.Atomic, `Test.Dogfood.Scenario.Timeout]
   acceptance := [`Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers,
     `Test.Dogfood.P3WorkerQueue, `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
   concepts := [
@@ -853,6 +857,6 @@ def registry : Registry where
         "the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)",
         "clock-unit-compatibility (proposed claim; translation-simulation): exact nanoseconds inside, with every recorded millisecond input kept in meaning by an explicit conversion; public nanosecond readings wait for the target's bigint contract (decisions rows 83, 231)"] }
   ]
-  planScope := [`Effect4]
+  planScope := [`Effect4, `Test.Dogfood.Scenario]
 
 end Tools.Semantics

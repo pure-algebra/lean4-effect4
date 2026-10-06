@@ -314,8 +314,9 @@ Open at this landing:
     On the merged tree `Workers.crew`, `Routing.request` and `Atomic.shop` print and read
     back, and `Timeout.fetch` prints and does not read back (a finite probe). The keyed
     recorder needs one extension, an operation that completes after its cancellation;
-  - the semantics report does not load the scenario modules, so it shows none of the eleven
-    goals;
+  - the semantics report loads the five scenario modules that hold a claim, so the plan shows
+    the eleven goals as its next goals. A requirement with a placed scenario goal is proved
+    only when that goal is. Every requirement was open before, and none changed status;
   - a fixture edited alone is not bound by `lake build`: Lake does not take an `include_str`
     file as an input. A fresh elaboration of `Test/Dogfood/Scenario/Lowered.lean` binds it;
   - two controls are not written: a cleanup replayed under one registration, and a timer that

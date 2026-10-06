@@ -210,13 +210,15 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 # .lake/gen/semantics-report. It reads no other generation group, so it is a hermetic group of
 # its own and `check-gen` holds its drift like any other committed generated file.
 # The registry's Test roots are loaded beside Effect4.Laws (`registry.roots`), so their traces are
-# inputs too: two program batteries and the five acceptance programs (decisions row 206). The
-# plan reads the ProofGraph modules.
-SEMANTICS_DOGFOOD := Test.Dogfood.P1HttpCache Test.Dogfood.P2HandlerLayers Test.Dogfood.P3WorkerQueue \
-  Test.Dogfood.P4RateLimiter Test.Dogfood.P5LedgerService
+# inputs too: two program batteries, the five acceptance programs (decisions row 206) and the
+# five scenario modules that hold a placed claim (decisions row 254). One list of names gives
+# both the modules and their traces. The plan reads the ProofGraph modules.
+SEMANTICS_DOGFOOD_NAMES := P1HttpCache P2HandlerLayers P3WorkerQueue P4RateLimiter P5LedgerService \
+  Scenario Scenario/Workers Scenario/Routing Scenario/Atomic Scenario/Timeout
+SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst /,.,$(m)))
 SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
   .lake/build/lib/lean/Test/Program/ProtocolPosts.trace \
-  $(foreach m,P1HttpCache P2HandlerLayers P3WorkerQueue P4RateLimiter P5LedgerService,.lake/build/lib/lean/Test/Dogfood/$(m).trace)
+  $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),.lake/build/lib/lean/Test/Dogfood/$(m).trace)
 
 # Lake rewrites these traces while `build` runs. Make reads a prerequisite that has no rule once,
 # before any recipe, so a rule whose Lean sources changed saw the old time and stayed stale until
