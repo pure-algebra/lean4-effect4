@@ -27,6 +27,11 @@ names no module.
   and for types (`captured_answer_in_row`, `capturedTy_answer_in_row`). The premise that no
   later binder shadows the name stays a premise of each statement. The row's own name reads the
   cell's current value (`reads_minted_last`, `types_minted_last`).
+- **The row's own name under a fold, and a loop's cursor in a row.** A step may hold the cell's
+  own source in a fold's body, and a helper's loop may hand its cursor to a step. The row's own
+  name is a caller's term under the step's folds (`captured_current`, `capturedTy_current`). A
+  loop's cursor is a caller's term of a row's step (`captured_cursor_in_row`,
+  `capturedTy_cursor_in_row`): the row's own binder has another name (`mint_current_ne_cursor`).
 
 - **Typing at every scope.** The last part of the file holds the judgment of a program that
   answers a type (`Answers`), a term that keeps its type under the surface's binders (`Kept`),
@@ -91,28 +96,36 @@ structure Waiter.Scoped (w : Waiter) : Prop where
       (done answer).Scoped) → (w.attempt id hint wait done).Scoped
   withdraw : ∀ id : TermSrc, id.Scoped → (w.withdraw id).Scoped
 
-/-- **The wrapper keeps scope**, where the module's part does: the mask's saved state, the
-identity, the loop's two names, the hint and the result are minted. -/
+/-- **The loop at a caller's restore keeps scope**, where the module's part does and the caller's
+restore function keeps it: the identity, the loop's two names, the hint and the result are
+minted. -/
+theorem waitRetryAt_scoped {restore : Src NativeOp → Src NativeOp} (result : Ty)
+    (ended : String) {w : Waiter}
+    (hrestore : ∀ e : Src NativeOp, e.Scoped → (restore e).Scoped) (h : w.Scoped) :
+    (waitRetryAt restore result ended w).Scoped :=
+  bindWith_scoped (Deferred.make_scoped .unit .never) fun _ hid =>
+    bindWith_scoped
+      (iterateWith_scoped (app_scoped "none" TermSrc.Scoped_nil)
+        (fun _ hcursor => app_scoped "not" (TermSrc.Scoped_cons
+          (app_scoped "isSome" (TermSrc.Scoped_cons hcursor TermSrc.Scoped_nil))
+          TermSrc.Scoped_nil))
+        (fun _ _ => bindWith_scoped (Deferred.make_scoped w.hint .never) fun _ hhint =>
+          h.attempt _ _ _ _ hid hhint
+            (andThen_scoped (waitAt_scoped hrestore hhint (h.withdraw _ hid))
+              (succeed_scoped (app_scoped "none" TermSrc.Scoped_nil)))
+            fun _ hanswer => succeed_scoped
+              (app_scoped "some" (TermSrc.Scoped_cons hanswer TermSrc.Scoped_nil)))
+        (fun _ _ _ hanswer => hanswer)
+        (fun _ hcursor => hcursor))
+      fun _ hlast => selectOptionWith_scoped hlast
+        (failCause_scoped (Cause.die_scoped (str_scoped ended)))
+        fun _ hanswer => succeed_scoped hanswer
+
+/-- **The wrapper keeps scope**, where the module's part does: the mask's saved state is minted,
+and the loop keeps scope at the mask's own restore. -/
 theorem waitRetry_scoped (result : Ty) (ended : String) {w : Waiter} (h : w.Scoped) :
     (waitRetry result ended w).Scoped :=
-  uninterruptibleMaskWith_scoped fun _ hrestore =>
-    bindWith_scoped (Deferred.make_scoped .unit .never) fun _ hid =>
-      bindWith_scoped
-        (iterateWith_scoped (app_scoped "none" TermSrc.Scoped_nil)
-          (fun _ hcursor => app_scoped "not" (TermSrc.Scoped_cons
-            (app_scoped "isSome" (TermSrc.Scoped_cons hcursor TermSrc.Scoped_nil))
-            TermSrc.Scoped_nil))
-          (fun _ _ => bindWith_scoped (Deferred.make_scoped w.hint .never) fun _ hhint =>
-            h.attempt _ _ _ _ hid hhint
-              (andThen_scoped (waitAt_scoped hrestore hhint (h.withdraw _ hid))
-                (succeed_scoped (app_scoped "none" TermSrc.Scoped_nil)))
-              fun _ hanswer => succeed_scoped
-                (app_scoped "some" (TermSrc.Scoped_cons hanswer TermSrc.Scoped_nil)))
-          (fun _ _ _ hanswer => hanswer)
-          (fun _ hcursor => hcursor))
-        fun _ hlast => selectOptionWith_scoped hlast
-          (failCause_scoped (Cause.die_scoped (str_scoped ended)))
-          fun _ hanswer => succeed_scoped hanswer
+  uninterruptibleMaskWith_scoped fun _ hrestore => waitRetryAt_scoped result ended hrestore h
 
 /-- **The wrapper with no loop keeps scope**, where the module's part does. -/
 theorem waitAnswer_scoped {w : Waiter} (h : w.Scoped) : (waitAnswer w).Scoped :=
@@ -121,6 +134,20 @@ theorem waitAnswer_scoped {w : Waiter} (h : w.Scoped) : (waitAnswer w).Scoped :=
       bindWith_scoped (Deferred.make_scoped w.hint .never) fun _ hhint =>
         h.attempt _ _ _ _ hid hhint (waitAt_scoped hrestore hhint (h.withdraw _ hid))
           fun _ hanswer => succeed_scoped hanswer
+
+/-- **The protected body keeps scope**, where its three parts do: the acquisition for every
+restore function that keeps scope, and the release and the body for every scoped acquired value.
+The mask's saved state, the acquired value and the body's exit are minted. -/
+theorem protectedBy_scoped {acquire : (Src NativeOp → Src NativeOp) → Src NativeOp}
+    {release body : TermSrc → Src NativeOp}
+    (hacquire : ∀ restore : Src NativeOp → Src NativeOp,
+      (∀ e : Src NativeOp, e.Scoped → (restore e).Scoped) → (acquire restore).Scoped)
+    (hrelease : ∀ got : TermSrc, got.Scoped → (release got).Scoped)
+    (hbody : ∀ got : TermSrc, got.Scoped → (body got).Scoped) :
+    (protectedBy acquire release body).Scoped :=
+  uninterruptibleMaskWith_scoped fun _ hrestore =>
+    bindWith_scoped (hacquire _ hrestore) fun _ hgot =>
+      onExitWith_scoped (hrestore _ (hbody _ hgot)) fun _ _ => hrelease _ hgot
 
 /-! ## A minted name in a row's scope
 
@@ -268,6 +295,134 @@ theorem capturedTy_answer_in_row {Op : Type} {sig : Signature Op} {outer env : E
   rw [List.getElem?_append_left inside]
   exact held
 
+/-! ## A minted name of any stem in a row's scope, the row's own name, and a loop's cursor
+
+A step may hold the cell's own source in a fold's body: Semaphore's visit reads the free count
+there. A helper's loop may hand its cursor to a step: the walk of a release hands each visit its
+cursor. The lemmas below give each reading. The first three state the rule of a row's scope for
+a minted name of any stem, with the three facts on names as premises. -/
+
+/-- A name of a row's scope resolves to its own level under the row's own binder too, where no
+later binder shadows it and the row's own binder has another name. -/
+theorem resolve_minted_in_row {name : String} {env : Env} {before later : Names}
+    (scope : env.names = before ++ name :: later)
+    (unshadowed : ∀ other ∈ later, other ≠ name) (notCurrent : env.mint "current" ≠ name) :
+    (env.push [env.mint "current"]).names.resolve name = some before.length := by
+  have pushed : (env.push [env.mint "current"]).names =
+      before ++ name :: (later ++ [env.mint "current"]) := by
+    show env.names ++ [env.mint "current"] = _
+    rw [scope, List.append_assoc]
+    rfl
+  rw [pushed]
+  refine resolve_unshadowed before _ _ fun other member => ?_
+  rcases List.mem_append.mp member with earlier | last
+  · exact unshadowed other earlier
+  · rw [List.mem_singleton.mp last]
+    exact notCurrent
+
+/-- **A minted name of a row's scope is a caller's term of the row's step**, where no later
+binder shadows it, and neither the row's own binder nor a fold's two binders have its name. It
+reads the value at its level under the row's own binder, and under a fold's two binders. -/
+theorem captured_minted_in_row {name : String} {env : Env} {path : List Nat}
+    {captured : List Val} {before later : Names} {v cell : Val}
+    (scope : env.names = before ++ name :: later)
+    (unshadowed : ∀ other ∈ later, other ≠ name) (notCurrent : env.mint "current" ≠ name)
+    (notAcc : (env.push [env.mint "current"]).mint "acc" ≠ name)
+    (notItem : (env.push [env.mint "current"]).mint "item" ≠ name)
+    (held : captured[before.length]? = some v) :
+    Captured (minted name) (env.push [env.mint "current"]) path (captured ++ [cell]) v := by
+  refine captured_minted (resolve_minted_in_row scope unshadowed notCurrent) ?_ notAcc notItem
+  obtain ⟨inside, -⟩ := List.getElem?_eq_some_iff.mp held
+  rw [List.getElem?_append_left inside]
+  exact held
+
+/-- **The typed twin**: the name has the type at its level under the row's own binder, and under
+a fold's two binders. -/
+theorem capturedTy_minted_in_row {Op : Type} {sig : Signature Op} {name : String} {env : Env}
+    {path : List Nat} {tys : List Ty} {before later : Names} {T C : Ty}
+    (scope : env.names = before ++ name :: later)
+    (unshadowed : ∀ other ∈ later, other ≠ name) (notCurrent : env.mint "current" ≠ name)
+    (notAcc : (env.push [env.mint "current"]).mint "acc" ≠ name)
+    (notItem : (env.push [env.mint "current"]).mint "item" ≠ name)
+    (held : tys[before.length]? = some T) :
+    CapturedTy sig (minted name) (env.push [env.mint "current"]) path (tys ++ [C]) T := by
+  refine capturedTy_minted (resolve_minted_in_row scope unshadowed notCurrent) ?_ notAcc notItem
+  obtain ⟨inside, -⟩ := List.getElem?_eq_some_iff.mp held
+  rw [List.getElem?_append_left inside]
+  exact held
+
+/-- The name of a row's current value is no name that a loop mints for its cursor, at any two
+scopes. The two stems agree in three bytes and differ at the fourth, so `mint_ne_of_head` does
+not tell them apart. -/
+theorem mint_current_ne_cursor (env outer : Env) : env.mint "current" ≠ outer.mint "cursor" := by
+  intro same
+  unfold Env.mint reservedPrefix at same
+  have bytes := congrArg (fun s : String => s.toByteArray.data.toList) same
+  simp only [String.toByteArray_append, ByteArray.data_append, Array.toList_append] at bytes
+  have h1 : ("_%" : String).toByteArray.data.toList = [95, 37] := by decide
+  have h2 : ("current" : String).toByteArray.data.toList = [99, 117, 114, 114, 101, 110, 116] := by
+    decide
+  have h3 : ("cursor" : String).toByteArray.data.toList = [99, 117, 114, 115, 111, 114] := by
+    decide
+  rw [h1, h2, h3] at bytes
+  simp only [List.cons_append, List.nil_append, List.cons.injEq] at bytes
+  exact absurd bytes.2.2.2.2.2.1 (by decide)
+
+/-- **A loop's cursor is a caller's term of a row's step**, where the row's scope binds the
+cursor's name and no later binder shadows it. `outer` is the scope of the loop, and `env` the
+scope of the row. Its first consumer is the walk of Semaphore's release, whose visit reads the
+walk's cursor under the visit's fold. -/
+theorem captured_cursor_in_row {outer env : Env} {path : List Nat} {captured : List Val}
+    {before later : Names} {v cell : Val}
+    (scope : env.names = before ++ outer.mint "cursor" :: later)
+    (unshadowed : ∀ name ∈ later, name ≠ outer.mint "cursor")
+    (held : captured[before.length]? = some v) :
+    Captured (minted (outer.mint "cursor")) (env.push [env.mint "current"]) path
+      (captured ++ [cell]) v :=
+  captured_minted_in_row scope unshadowed (mint_current_ne_cursor env outer)
+    (mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) _ outer)
+    (mint_ne_of_head (b := 105) (c := 99) (by decide) (by decide) (by decide) _ outer) held
+
+/-- **The typed twin** of `captured_cursor_in_row`. -/
+theorem capturedTy_cursor_in_row {Op : Type} {sig : Signature Op} {outer env : Env}
+    {path : List Nat} {tys : List Ty} {before later : Names} {T C : Ty}
+    (scope : env.names = before ++ outer.mint "cursor" :: later)
+    (unshadowed : ∀ name ∈ later, name ≠ outer.mint "cursor")
+    (held : tys[before.length]? = some T) :
+    CapturedTy sig (minted (outer.mint "cursor")) (env.push [env.mint "current"]) path
+      (tys ++ [C]) T :=
+  capturedTy_minted_in_row scope unshadowed (mint_current_ne_cursor env outer)
+    (mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) _ outer)
+    (mint_ne_of_head (b := 105) (c := 99) (by decide) (by decide) (by decide) _ outer) held
+
+/-- **The name of a row's current value is a caller's term under the step's folds**: a fold's
+two names begin with other bytes. Its first consumer is Semaphore's visit, whose fold reads the
+cell's own source in its body. -/
+theorem captured_current {env : Env} {captured : List Val}
+    (depth : captured.length = env.names.length) (path : List Nat) (cell : Val) :
+    Captured (minted (env.mint "current")) (env.push [env.mint "current"]) path
+      (captured ++ [cell]) cell :=
+  captured_minted (i := env.names.length) (resolve_last env.names _)
+    (by
+      show (captured ++ [cell])[env.names.length]? = some cell
+      rw [← depth, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+      rfl)
+    (mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) _ env)
+    (mint_ne_of_head (b := 105) (c := 99) (by decide) (by decide) (by decide) _ env)
+
+/-- **The typed twin** of `captured_current`. -/
+theorem capturedTy_current {Op : Type} {sig : Signature Op} {env : Env} {tys : List Ty}
+    (depth : tys.length = env.names.length) (path : List Nat) (C : Ty) :
+    CapturedTy sig (minted (env.mint "current")) (env.push [env.mint "current"]) path
+      (tys ++ [C]) C :=
+  capturedTy_minted (i := env.names.length) (resolve_last env.names _)
+    (by
+      show (tys ++ [C])[env.names.length]? = some C
+      rw [← depth, List.getElem?_append_right (Nat.le_refl _), Nat.sub_self]
+      rfl)
+    (mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) _ env)
+    (mint_ne_of_head (b := 105) (c := 99) (by decide) (by decide) (by decide) _ env)
+
 /-! # Typing at every scope (decisions row 257)
 
 A module's operation is typed at every scope, for every caller's term of the stated type. The
@@ -293,12 +448,21 @@ statements below are the means. They name no module.
   decides them at the two hints of the Queue.
 - **The shared pieces** are typed: the posted helpers (`postAll_answers`), the cleanup on
   interruption (`onInterrupt_answers`) and the wait at a mask's restore site (`waitAt_answers`).
-  The wrapper's two forms take a module's attempt as a function of its two exits, so each
-  module's operation is typed through them, in the module's own law file.
+- **The wrapper's forms are typed over a module's part** (decisions row 275, point 3). A
+  module's attempt is a function of its two exits, and `Waiter.Typed` says that it answers the
+  join of what they answer. `waitRetryAt_answers` and `waitRetry_answers` follow, at every result
+  type in normal form. Semaphore's `take` is their first consumer
+  (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`). The Queue's `take` and `offer` are typed by
+  their own proofs, which follow the same tree.
+- **A program at any effect type** (`Has`). A protected body is a caller's program: it may fail,
+  and it may require a service. The rules of the builders around it state the columns as the
+  checker joins them (`has_bindWith`, `has_onExitWith`, `has_restore`, `has_maskWith`,
+  `has_ifElse`). `protectedBy_has` keeps the body's answer, its failure type in normal form and
+  its requirement.
 
 Placement. Concept `store-typing`, requirement R4: helpers of a module's typing statements, the
-Queue's first (`src/Effect4/Laws/Modules/Queue/Ops.lean`), and Semaphore's operations that wait
-next. Reach: the checker's judgment `effTy` at every typed scope; the rows at the native
+Queue's first (`src/Effect4/Laws/Modules/Queue/Ops.lean`), and Semaphore's operations second
+(`src/Effect4/Laws/Modules/Semaphore/Ops.lean`). Reach: the checker's judgment `effTy` at every typed scope; the rows at the native
 signature of any row table. The mask's rule is `MaskFormProfile.typed`
 (`src/Effect4/Laws/Codegen/Mask.lean`). They establish no run, no behaviour and nothing of a
 target. -/
@@ -365,6 +529,14 @@ theorem Reaches.of_push2 {s t : TypedScope} {first second : Stem} {X Y : Ty}
   | push stem' X' _ ih => exact .push stem' X' ih
   | push2 first' second' X' Y' _ ih => exact .push2 first' second' X' Y' ih
 
+/-- What the surface's binders reach from a reached scope, they reach from the first scope. -/
+theorem Reaches.trans {s t u : TypedScope} (first : s.Reaches t) (rest : t.Reaches u) :
+    s.Reaches u := by
+  induction rest with
+  | here => exact first
+  | push stem X _ ih => exact .push stem X ih
+  | push2 a b X Y _ ih => exact .push2 a b X Y ih
+
 end TypedScope
 
 variable {sig : Signature NativeOp}
@@ -388,6 +560,11 @@ theorem Kept.push {src : TermSrc} {s : TypedScope} {T : Ty} (h : Kept sig src s 
 theorem Kept.push2 {src : TermSrc} {s : TypedScope} {T : Ty} (h : Kept sig src s T)
     {first second : Stem} {X Y : Ty} : Kept sig src (s.push2 first second X Y) T :=
   fun t reach => h t reach.of_push2
+
+/-- A kept term is kept at every scope that the surface's binders reach. -/
+theorem Kept.reach {src : TermSrc} {s t : TypedScope} {T : Ty} (h : Kept sig src s T)
+    (reach : s.Reaches t) : Kept sig src t T :=
+  fun u further => h u (reach.trans further)
 
 /-- A kept term is a caller's term under a step's folds. -/
 theorem Kept.captured {src : TermSrc} {s : TypedScope} {T : Ty} (h : Kept sig src s T)
@@ -514,6 +691,30 @@ theorem kept_restore (s : TypedScope) (X : Ty) :
     Kept sig (minted (s.env.mint "restore")) (s.push .restore X) X :=
   kept_minted (i := s.env.names.length) (resolve_last s.env.names _) (held_last s X)
     fun e stem le => apart_restore s.env e stem (deeper_push s .restore X le)
+
+/-- A later minted binder has no name that a loop minted for its cursor at a shallower scope.
+The row's own binder is told apart at the stems' fourth byte (`mint_current_ne_cursor`). -/
+theorem apart_cursor (outer e : Env) (later : Stem)
+    (deeper : outer.names.length < e.names.length) :
+    e.mint later.text ≠ outer.mint "cursor" := by
+  cases later with
+  | cursor => exact fun same => absurd (mint_depth_inj same) (Nat.ne_of_gt deeper)
+  | current => exact mint_current_ne_cursor e outer
+  | answer => exact mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) e outer
+  | payload =>
+    exact mint_ne_of_head (b := 112) (c := 99) (by decide) (by decide) (by decide) e outer
+  | exit => exact mint_ne_of_head (b := 101) (c := 99) (by decide) (by decide) (by decide) e outer
+  | restore =>
+    exact mint_ne_of_head (b := 114) (c := 99) (by decide) (by decide) (by decide) e outer
+  | acc => exact mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) e outer
+  | item => exact mint_ne_of_head (b := 105) (c := 99) (by decide) (by decide) (by decide) e outer
+
+/-- **The name that a loop mints for its cursor keeps its type under the surface's binders.** So
+a loop's body may hand its cursor to a row's step, which reads it under its own binder. -/
+theorem kept_cursor (s : TypedScope) (X : Ty) :
+    Kept sig (minted (s.env.mint "cursor")) (s.push .cursor X) X :=
+  kept_minted (i := s.env.names.length) (resolve_last s.env.names _) (held_last s X)
+    fun e stem le => apart_cursor s.env e stem (deeper_push s .cursor X le)
 
 /-- The name that a builder binds has its type at the builder's scope. -/
 theorem typed_bound (s : TypedScope) (stem : Stem) (X : Ty) :
@@ -764,14 +965,16 @@ theorem answers_die (text : String) (s : TypedScope) :
   exact ⟨.failCause (.die (.lit (.str text))), rfl,
     effTy_complete sig _ _ _ (.failCause (ty := .never) rfl)⟩
 
-/-- **`iterateWith`**: the test, the body, the step and the result read the cursor at its type,
-and the step reads the body's answer. The initial value and the step are below the cursor's
-type in the checker's order. The loop answers its result. -/
-theorem answers_iterateWith {initial : TermSrc} {spec : LoopSpec NativeOp} {s : TypedScope}
+/-- **`iterateWith`, with a kept cursor in the body.** The test, the step and the result read
+the cursor at its type, and the step reads the body's answer. The body reads the cursor through
+a kept term: it may hand the cursor to a row's step, which reads it under more binders. The
+initial value and the step are below the cursor's type in the checker's order. The loop answers
+its result. -/
+theorem answers_iterateWith_kept {initial : TermSrc} {spec : LoopSpec NativeOp} {s : TypedScope}
     {C0 C B C1 D : Ty} (cursor : spec.cursorTy.getD C0 = C) (hinitial : Typed sig initial s C0)
     (htest : ∀ c : TermSrc, Typed sig c (s.push .cursor C) C →
       Typed sig (spec.while_ c) (s.push .cursor C) .bool)
-    (hbody : ∀ c : TermSrc, Typed sig c (s.push .cursor C) C →
+    (hbody : ∀ c : TermSrc, Kept sig c (s.push .cursor C) C →
       Answers sig (spec.body c) (s.push .cursor C) B)
     (hstep : ∀ c a : TermSrc, Typed sig c (s.push2 .cursor .answer C B) C →
       Typed sig a (s.push2 .cursor .answer C B) B →
@@ -786,7 +989,7 @@ theorem answers_iterateWith {initial : TermSrc} {spec : LoopSpec NativeOp} {s : 
     mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) s.env s.env
   obtain ⟨i, treeI, typedI⟩ := hinitial path false
   obtain ⟨t, treeT, typedT⟩ := htest _ (typed_bound s .cursor _) path false
-  obtain ⟨b, treeB, typedB⟩ := hbody _ (typed_bound s .cursor _) (path ++ [0])
+  obtain ⟨b, treeB, typedB⟩ := hbody _ (kept_cursor s _) (path ++ [0])
   obtain ⟨st, treeS, typedS⟩ := hstep _ _ (typed_first s .cursor .answer _ _ apart)
     (typed_second s .cursor .answer _ _) path false
   obtain ⟨r, treeR, typedR⟩ := hresult _ (typed_bound s .cursor _) path false
@@ -811,6 +1014,162 @@ theorem answers_iterateWith {initial : TermSrc} {spec : LoopSpec NativeOp} {s : 
                 Except.ok (Eff.iterate spec.cursorTy x1 x2 x3 x4 x5)) = _
   rw [treeI, treeT', treeS', treeR', treeB']
   rfl
+
+/-- **`iterateWith`**: the test, the body, the step and the result read the cursor at its type,
+and the step reads the body's answer. The initial value and the step are below the cursor's
+type in the checker's order. The loop answers its result. -/
+theorem answers_iterateWith {initial : TermSrc} {spec : LoopSpec NativeOp} {s : TypedScope}
+    {C0 C B C1 D : Ty} (cursor : spec.cursorTy.getD C0 = C) (hinitial : Typed sig initial s C0)
+    (htest : ∀ c : TermSrc, Typed sig c (s.push .cursor C) C →
+      Typed sig (spec.while_ c) (s.push .cursor C) .bool)
+    (hbody : ∀ c : TermSrc, Typed sig c (s.push .cursor C) C →
+      Answers sig (spec.body c) (s.push .cursor C) B)
+    (hstep : ∀ c a : TermSrc, Typed sig c (s.push2 .cursor .answer C B) C →
+      Typed sig a (s.push2 .cursor .answer C B) B →
+        Typed sig (spec.step c a) (s.push2 .cursor .answer C B) C1)
+    (hresult : ∀ c : TermSrc, Typed sig c (s.push .cursor C) C →
+      Typed sig (spec.result c) (s.push .cursor C) D)
+    (start : Ty.subN C0 C = true) (next : Ty.subN C1 C = true) :
+    Answers sig (iterateWith initial spec) s D :=
+  answers_iterateWith_kept cursor hinitial htest (fun c hc => hbody c hc.here) hstep hresult
+    start next
+
+/-! ## Programs at any effect type
+
+`Answers` is the judgment of a program with no failure and no requirement: every piece of a
+module's own operation is one. A protected body is a caller's program, and it may fail or
+require a service. `Has` is the same judgment at any effect type, and the rules below are the
+rules of the builders that stand around such a body: a sequence, a hook on the exit, a restore
+site, the mask and a selection. Each states the columns as the checker joins them. -/
+
+/-- **A source program has an effect type at a typed scope**: it elaborates under the scope's
+names at every path, and the checker types its tree at the scope's types with that effect type.
+`Answers` is `Has` at an answer with no failure and no requirement. -/
+def Has (sig : Signature NativeOp) (src : Src NativeOp) (s : TypedScope) (t : EffTy) : Prop :=
+  ∀ path, ∃ p, src s.env path = .ok p ∧ effTy sig s.types p = some t
+
+/-- A program that answers a type has that answer's effect type. -/
+theorem Answers.has {src : Src NativeOp} {s : TypedScope} {T : Ty} (h : Answers sig src s T) :
+    Has sig src s (EffTy.pure T) := h
+
+/-- An effect type with no failure and no requirement is an answer. -/
+theorem Has.answers {src : Src NativeOp} {s : TypedScope} {T : Ty}
+    (h : Has sig src s (EffTy.pure T)) : Answers sig src s T := h
+
+/-- An effect type that is the same effect type. -/
+theorem Has.to {src : Src NativeOp} {s : TypedScope} {t u : EffTy} (h : Has sig src s t)
+    (same : t = u) : Has sig src s u := same ▸ h
+
+/-- **`bindWith`, at any effect types**: the errors join and the requirements union. -/
+theorem has_bindWith {first : Src NativeOp} {rest : TermSrc → Src NativeOp} {s : TypedScope}
+    {f r : EffTy} (hfirst : Has sig first s f)
+    (hrest : ∀ x : TermSrc, Kept sig x (s.push .answer f.answer) f.answer →
+      Has sig (rest x) (s.push .answer f.answer) r) :
+    Has sig (bindWith first rest) s
+      ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩ := by
+  intro path
+  obtain ⟨a, treeA, typedA⟩ := hfirst (path ++ [0])
+  obtain ⟨b, treeB, typedB⟩ := hrest _ (kept_answer s f.answer) (path ++ [1])
+  have treeB' : rest (minted (s.env.mint "answer")) (s.env.push [s.env.mint "answer"])
+      (path ++ [1]) = .ok b := treeB
+  refine ⟨.bind a b, ?_, effTy_complete sig _ _ _
+    (.bind (effTy_sound sig a _ _ typedA) (effTy_sound sig b _ _ typedB))⟩
+  show (first s.env (path ++ [0]) >>= fun x0 =>
+    rest (minted (s.env.mint "answer")) (s.env.push [s.env.mint "answer"]) (path ++ [1]) >>=
+      fun x1 => Except.ok (Eff.bind x0 x1)) = _
+  rw [treeA, treeB']
+  rfl
+
+/-- **`onExitWith`, at any effect types**: the finalizer reads the body's exit, at the body's
+answer and failure types. The node keeps the body's answer, and the finalizer's failure and
+requirement join the body's. -/
+theorem has_onExitWith {body : Src NativeOp} {finalizer : TermSrc → Src NativeOp}
+    {s : TypedScope} {b f : EffTy} (hbody : Has sig body s b)
+    (hfinal : ∀ x : TermSrc,
+      Typed sig x (s.push .exit (.exitOf b.answer b.error)) (.exitOf b.answer b.error) →
+        Has sig (finalizer x) (s.push .exit (.exitOf b.answer b.error)) f) :
+    Has sig (onExitWith body finalizer) s
+      ⟨b.answer, b.error.join f.error, b.requires.union f.requires⟩ := by
+  intro path
+  obtain ⟨a, treeA, typedA⟩ := hbody (path ++ [0])
+  obtain ⟨c, treeC, typedC⟩ := hfinal _ (typed_bound s .exit _) (path ++ [1])
+  have treeC' : finalizer (minted (s.env.mint "exit")) (s.env.push [s.env.mint "exit"])
+      (path ++ [1]) = .ok c := treeC
+  refine ⟨.onExit a c, ?_, effTy_complete sig _ _ _
+    (.onExit (effTy_sound sig a _ _ typedA) (effTy_sound sig c _ _ typedC))⟩
+  show (body s.env (path ++ [0]) >>= fun x0 =>
+    finalizer (minted (s.env.mint "exit")) (s.env.push [s.env.mint "exit"]) (path ++ [1]) >>=
+      fun x1 => Except.ok (Eff.onExit x0 x1)) = _
+  rw [treeA, treeC']
+  rfl
+
+/-- A restore site has its body's effect type, where its saved term has the saved state's
+type. -/
+theorem has_restore {saved : TermSrc} {body : Src NativeOp} {s : TypedScope} {t : EffTy}
+    (hsaved : Typed sig saved s Ty.maskRestore) (hbody : Has sig body s t) :
+    Has sig (Authoring.restore saved body) s t := by
+  intro path
+  obtain ⟨c, treeC, typedC⟩ := hsaved path false
+  obtain ⟨a, treeA, typedA⟩ := hbody (path ++ [0])
+  refine ⟨.restore c a, ?_,
+    effTy_complete sig _ _ _ (.restore typedC (effTy_sound sig a _ _ typedA))⟩
+  show (saved s.env path >>= fun x0 => body s.env (path ++ [0]) >>= fun x1 =>
+    Except.ok (Eff.restore x0 x1)) = _
+  rw [treeC, treeA]
+  rfl
+
+/-- **`uninterruptibleMaskWith`, at any effect type**: the body's `restore` keeps the effect
+type of its argument, at every scope that the surface's binders reach from the mask's. The mask
+has its body's answer, and the getter's two empty columns join the body's
+(`MaskFormProfile.typed`, `src/Effect4/Laws/Codegen/Mask.lean`). -/
+theorem has_maskWith {body : (Src NativeOp → Src NativeOp) → Src NativeOp} {s : TypedScope}
+    {b : EffTy}
+    (hbody : ∀ restore : Src NativeOp → Src NativeOp,
+      (∀ (t : TypedScope) (inner : Src NativeOp) (y : EffTy),
+        (s.push .restore Ty.maskRestore).Reaches t → Has sig inner t y →
+          Has sig (restore inner) t y) →
+      Has sig (body restore) (s.push .restore Ty.maskRestore) b) :
+    Has sig (uninterruptibleMaskWith body) s
+      ⟨b.answer, Ty.never.join b.error, Requirement.empty.union b.requires⟩ := by
+  intro path
+  obtain ⟨a, treeA, typedA⟩ := hbody (Authoring.restore (minted (s.env.mint "restore")))
+    (fun t inner y reach hinner => has_restore (kept_restore s Ty.maskRestore t reach) hinner)
+    (path ++ [1] ++ [0])
+  have treeA' : body (Authoring.restore (minted (s.env.mint "restore")))
+      (s.env.push [s.env.mint "restore"]) (path ++ [1] ++ [0]) = .ok a := treeA
+  refine ⟨Effect4.Program.maskForm a, ?_,
+    Effect4.Program.mask_printed_form_profile.typed sig s.types a _ typedA⟩
+  show (Except.ok (Eff.withFiber ActionTerm.getInterruptible) >>= fun x0 =>
+    (body (Authoring.restore (minted (s.env.mint "restore")))
+      (s.env.push [s.env.mint "restore"]) (path ++ [1] ++ [0]) >>= fun y =>
+        Except.ok (Eff.uninterruptible y)) >>= fun x1 => Except.ok (Eff.bind x0 x1)) = _
+  rw [treeA']
+  rfl
+
+/-- **`ifElse`, at any effect types**: the two arms' answers join, their errors join and their
+requirements union. -/
+theorem has_ifElse {test : TermSrc} {thenB elseB : Src NativeOp} {s : TypedScope}
+    {t0 t1 : EffTy} (htest : Typed sig test s .bool) (hthen : Has sig thenB s t0)
+    (helse : Has sig elseB s t1) :
+    Has sig (ifElse test thenB elseB) s
+      ⟨Ty.join t0.answer t1.answer, t0.error.join t1.error, t0.requires.union t1.requires⟩ := by
+  intro path
+  obtain ⟨c, treeC, typedC⟩ := htest path false
+  obtain ⟨a, treeA, typedA⟩ := hthen (path ++ [0])
+  obtain ⟨b, treeB, typedB⟩ := helse (path ++ [1])
+  refine ⟨.select c .bool a b, ?_, ?_⟩
+  · show (test s.env path >>= fun x0 => thenB s.env (path ++ [0]) >>= fun x2 =>
+      elseB s.env (path ++ [1]) >>= fun x3 => Except.ok (Eff.select x0 .bool x2 x3)) = _
+    rw [treeC, treeA, treeB]
+    rfl
+  · have left : HasTy sig (s.types ++ []) a t0 := by
+      rw [List.append_nil]
+      exact effTy_sound sig a _ _ typedA
+    have right : HasTy sig (s.types ++ []) b t1 := by
+      rw [List.append_nil]
+      exact effTy_sound sig b _ _ typedB
+    exact effTy_complete sig _ _ _
+      (.select (d := .bool) (e0 := []) (e1 := []) typedC rfl left right rfl)
 
 /-! ## Rows -/
 
@@ -925,19 +1284,24 @@ theorem bindTerm_intro {σ σ' : Ty.Subst} {use : TermUse} {r : Ty}
     bindTerm σ (some use) = .ok σ' := by
   simp only [bindTerm, typed, matched]
 
-/-- **`Ref.modifyWith`** of a cell at a canonical, formed type answers the step's reply. The
-step's term has the pair of the reply's type and the cell's type, under the minted name of the
-cell's current value (decisions row 257, point 1). -/
-theorem answers_refModifyWith {cell : TermSrc} {f : TermSrc → TermSrc} {s : TypedScope}
-    {C B : Ty} (normalC : C.normalize = C) (formedC : NodesFormed C)
+/-- **`Ref.modifyWith`, with the cell's current value as a caller's term under a fold.** The row
+of a cell at a canonical, formed type answers the step's reply. The step's term has the pair of
+the reply's type and the cell's type, under the minted name of the cell's current value
+(decisions row 257, point 1). The step reads that name through a term that keeps its type under
+a fold's two binders: a step may hold the cell's own source in a fold's body. -/
+theorem answers_refModifyWith_captured {cell : TermSrc} {f : TermSrc → TermSrc}
+    {s : TypedScope} {C B : Ty} (normalC : C.normalize = C) (formedC : NodesFormed C)
     (normalB : B.normalize = B) (formedB : NodesFormed B)
     (hcell : Typed (nativeSignature table) cell s (.refOf C))
-    (hstep : ∀ current : TermSrc, Typed (nativeSignature table) current (s.push .current C) C →
+    (hstep : ∀ current : TermSrc,
+      (∀ path, CapturedTy (nativeSignature table) current (s.push .current C).env path
+        (s.push .current C).types C) →
       Typed (nativeSignature table) (f current) (s.push .current C) (.prod B C)) :
     Answers (nativeSignature table) (Ref.modifyWith cell f) s B := by
   intro path
   obtain ⟨r, treeR, typedR⟩ := hcell path false
-  obtain ⟨t, treeT, typedT⟩ := hstep _ (typed_bound s .current C) path false
+  obtain ⟨t, treeT, typedT⟩ :=
+    hstep _ (fun path => capturedTy_current s.depth path C) path false
   have treeT' : f (minted (s.env.mint "current")) (s.env.push [s.env.mint "current"]) path =
       .ok t := treeT
   have typedT' : termTy (nativeSignature table) (s.types ++ [C]) t = some (.prod B C) := typedT
@@ -981,6 +1345,19 @@ theorem answers_refModifyWith {cell : TermSrc} {f : TermSrc → TermSrc} {s : Ty
   · show some (⟨B.normalize, Ty.never, Requirement.empty⟩ : EffTy) = _
     rw [normalB]
     rfl
+
+/-- **`Ref.modifyWith`** of a cell at a canonical, formed type answers the step's reply. The
+step's term has the pair of the reply's type and the cell's type, under the minted name of the
+cell's current value (decisions row 257, point 1). -/
+theorem answers_refModifyWith {cell : TermSrc} {f : TermSrc → TermSrc} {s : TypedScope}
+    {C B : Ty} (normalC : C.normalize = C) (formedC : NodesFormed C)
+    (normalB : B.normalize = B) (formedB : NodesFormed B)
+    (hcell : Typed (nativeSignature table) cell s (.refOf C))
+    (hstep : ∀ current : TermSrc, Typed (nativeSignature table) current (s.push .current C) C →
+      Typed (nativeSignature table) (f current) (s.push .current C) (.prod B C)) :
+    Answers (nativeSignature table) (Ref.modifyWith cell f) s B :=
+  answers_refModifyWith_captured normalC formedC normalB formedB hcell fun current captured =>
+    hstep current fun path => (captured path).atScope
 
 /-- **A hint's type**: the three `Deferred` rows of a wait type at it, with no failure. The
 rows are the making of the hint, its await and its completion. -/
@@ -1086,6 +1463,21 @@ theorem subN_join_of_canonical {a b c : Ty} (ha : a.normalize = a) (hb : b.norma
   rw [Ty.normalize_join, hc]
   exact Ty.join_least ⟨a, ha⟩ ⟨b, hb⟩ ⟨c, hc⟩ hac hbc
 
+/-- **The join of a canonical type with a canonical type below it is the first.** The join is
+above the first and below it, and the order is antisymmetric on canonical types. Its consumer is
+an operation whose two arms answer one type and a type below it: an option of an answer beside
+the empty option. -/
+theorem join_absorb {a b : Ty} (ha : a.normalize = a) (hb : b.normalize = b)
+    (below : Ty.sub b a = true) : Ty.join a b = a :=
+  congrArg CTy.toRaw
+    (Ty.sub_antisymm_canonical (CTy.join ⟨a, ha⟩ ⟨b, hb⟩) ⟨a, ha⟩
+      (Ty.join_least ⟨a, ha⟩ ⟨b, hb⟩ ⟨a, ha⟩ (Ty.sub_refl a) below)
+      (Ty.sub_join_left ⟨a, ha⟩ ⟨b, hb⟩))
+
+/-- The two empty columns of a pure program leave a failure type in normal form as it is. -/
+theorem join_never_normal (E : Ty) : Ty.never.join E.normalize = E.normalize :=
+  (Ty.join_never _).trans (Ty.normalize_idem E)
+
 /-! ## The shared pieces of a module that waits -/
 
 section Pieces
@@ -1148,6 +1540,138 @@ theorem waitAt_answers {restore : Src NativeOp → Src NativeOp} {hint : TermSrc
     (hwithdraw : Answers (nativeSignature table) withdraw (s.push .exit (.exitOf H .never)) F) :
     Answers (nativeSignature table) (waitAt restore hint withdraw) s H :=
   onInterrupt_answers test (hrestore _ _ (answers_deferredAwait hintTy hhint)) hwithdraw
+
+/-! ### The wrapper's forms, typed over a module's part (decisions row 275, point 3)
+
+A module's part of the wrapper is a `Waiter`, whose attempt is a function of its two exits. Its
+typing says what the attempt answers from what the two exits answer: their join. The Queue's
+`take` chooses by an option, and Semaphore's by a Boolean: both answer that join. -/
+
+/-- **A module's part of the wrapper, typed at a result type** `R`, at every scope that the
+surface's binders reach from `s`. `F` is what the withdrawal answers.
+
+- The hint's three rows type, and so does the test of an interrupted wait's exit.
+- The attempt answers the join of what its two exits answer. It reads the identity and the hint
+  through kept terms. Its `wait` answers one type at every scope that the attempt reaches, and
+  its `done` answers one type for every answer of the result type.
+- The withdrawal answers one type, for every kept identity. -/
+structure Waiter.Typed (table : RowTable) (w : Waiter) (s : TypedScope) (R F : Ty) : Prop where
+  hint : HintTy table w.hint
+  interrupted : nativeAtomTy "causeIsInterrupt" [.exitOf w.hint .never] = some .bool
+  attempt : ∀ (t : TypedScope) (id hint : TermSrc) (wait : Src NativeOp)
+    (done : TermSrc → Src NativeOp) (W D : Ty), s.Reaches t →
+    Kept (nativeSignature table) id t idTy →
+    Kept (nativeSignature table) hint t (.deferredOf w.hint .never) →
+    (∀ u : TypedScope, t.Reaches u → Answers (nativeSignature table) wait u W) →
+    (∀ (u : TypedScope) (answer : TermSrc), t.Reaches u →
+      Effect4.Modules.Typed (nativeSignature table) answer u R →
+        Answers (nativeSignature table) (done answer) u D) →
+    Answers (nativeSignature table) (w.attempt id hint wait done) t (Ty.join W D)
+  withdraw : ∀ (t : TypedScope) (id : TermSrc), s.Reaches t →
+    Kept (nativeSignature table) id t idTy →
+      Answers (nativeSignature table) (w.withdraw id) t F
+
+/-- **The loop at a caller's restore answers the result**, where the module's part is typed and
+the caller's restore keeps what its argument answers, at every scope that the surface's binders
+reach. The result type is its own normal form. -/
+theorem waitRetryAt_answers {restore : Src NativeOp → Src NativeOp} {result : Ty}
+    {ended : String} {w : Waiter} {s : TypedScope} {F : Ty}
+    (canonical : result.normalize = result)
+    (hrestore : ∀ (t : TypedScope) (inner : Src NativeOp) (Y : Ty), s.Reaches t →
+      Answers (nativeSignature table) inner t Y →
+        Answers (nativeSignature table) (restore inner) t Y)
+    (hw : w.Typed table s result F) :
+    Answers (nativeSignature table) (waitRetryAt restore result ended w) s result := by
+  have optionNormal : (Ty.option result).normalize = .option result :=
+    Ty.normalize_option_canonical canonical
+  have noneBelow : Ty.sub (.option .never) (.option result) = true := by
+    rw [Ty.sub_option]
+    exact Ty.OrderProof.sub_never result
+  have final : Ty.join .never result = result := (Ty.join_never result).trans canonical
+  have whole : Answers (nativeSignature table) (waitRetryAt restore result ended w) s
+      (Ty.join .never result) := by
+    unfold waitRetryAt
+    refine answers_bindWith (answers_deferredMake hintTy_unit _) fun id hid => ?_
+    refine answers_bindWith (X := .option result) ?_ fun _ hlast =>
+      answers_selectOptionWith canonical (fun path => hlast.here path) (answers_die _ _)
+        fun _ hanswer => answers_succeed hanswer
+    refine answers_iterateWith (C0 := .option .never) (C := .option result)
+      (B := Ty.join (.option .never) (.option result))
+      (C1 := Ty.join (.option .never) (.option result)) (D := .option result) rfl
+      (fun _ => types_noneT rfl) ?_ ?_ (fun _ _ _ ha => ha) (fun _ hc => hc) ?_
+      (subN_join_of_canonical rfl optionNormal optionNormal noneBelow (Ty.sub_refl _))
+    · intro c hc path
+      exact types_notT rfl fun _ =>
+        types_app (.cons (hc path _) .nil) (nativeAtomTy_isSome result)
+    · intro _ _
+      dsimp only
+      refine answers_bindWith (answers_deferredMake hw.hint _) fun hint hhint => ?_
+      refine hw.attempt _ id hint _ _ (.option .never) (.option result)
+        (.push _ _ (.push _ _ (.push _ _ .here))) hid.push.push hhint ?_ ?_
+      · intro u reach
+        refine answers_andThen
+          (waitAt_answers (F := F) hw.hint hw.interrupted
+            (fun inner Y h => hrestore u inner Y
+              (TypedScope.Reaches.trans (.push _ _ (.push _ _ (.push _ _ .here))) reach) h)
+            (hhint u reach) ?_)
+          (answers_succeed fun _ => types_noneT rfl)
+        exact hw.withdraw _ id
+          (TypedScope.Reaches.trans (.push _ _ (.push _ _ (.push _ _ .here)))
+            (.push _ _ reach))
+          ((hid.push.push).reach (.push _ _ reach))
+      · intro u answer _ hanswer
+        exact answers_succeed fun path => types_some rfl (hanswer path)
+    · show Ty.sub (Ty.option .never).normalize (Ty.option result).normalize = true
+      rw [optionNormal]
+      exact noneBelow
+  rw [final] at whole
+  exact whole
+
+/-- **The wrapper answers the result**, where the module's part is typed under the mask's saved
+state. -/
+theorem waitRetry_answers {result : Ty} {ended : String} {w : Waiter} {s : TypedScope} {F : Ty}
+    (canonical : result.normalize = result)
+    (hw : w.Typed table (s.push .restore Ty.maskRestore) result F) :
+    Answers (nativeSignature table) (waitRetry result ended w) s result := by
+  unfold waitRetry
+  exact answers_maskWith fun _ hrestore => waitRetryAt_answers canonical hrestore hw
+
+/-- **The protected body has its body's effect type**, with the failure type in normal form.
+The acquisition answers a type with no failure, for every restore function that keeps what its
+argument answers. The body has one effect type for every kept reader of the acquired value: it
+may fail, and it may require a service. The release answers a type with no failure, under the
+body's exit. -/
+theorem protectedBy_has {acquire : (Src NativeOp → Src NativeOp) → Src NativeOp}
+    {release body : TermSrc → Src NativeOp} {s : TypedScope} {G F : Ty} {b : EffTy}
+    (hacquire : ∀ restore : Src NativeOp → Src NativeOp,
+      (∀ (t : TypedScope) (inner : Src NativeOp) (Y : Ty),
+        (s.push .restore Ty.maskRestore).Reaches t →
+          Answers (nativeSignature table) inner t Y →
+            Answers (nativeSignature table) (restore inner) t Y) →
+      Answers (nativeSignature table) (acquire restore) (s.push .restore Ty.maskRestore) G)
+    (hbody : ∀ got : TermSrc,
+      Kept (nativeSignature table) got ((s.push .restore Ty.maskRestore).push .answer G) G →
+        Has (nativeSignature table) (body got)
+          ((s.push .restore Ty.maskRestore).push .answer G) b)
+    (hrelease : ∀ got : TermSrc,
+      Kept (nativeSignature table) got ((s.push .restore Ty.maskRestore).push .answer G) G →
+        Answers (nativeSignature table) (release got)
+          (((s.push .restore Ty.maskRestore).push .answer G).push .exit
+            (.exitOf b.answer b.error)) F) :
+    Has (nativeSignature table) (protectedBy acquire release body) s
+      ⟨b.answer, b.error.normalize, b.requires⟩ := by
+  unfold protectedBy
+  refine (has_maskWith fun restore hrestore =>
+    has_bindWith (f := EffTy.pure G)
+      (hacquire restore fun t inner Y reach h => hrestore t inner _ reach h)
+      fun got hgot =>
+        has_onExitWith (f := EffTy.pure F)
+          (hrestore _ _ _ (.push _ _ .here) (hbody got hgot)) fun _ _ => hrelease got hgot).to ?_
+  show (⟨b.answer, Ty.never.join (Ty.never.join (b.error.join .never)),
+    Requirement.empty.union (Requirement.empty.union (b.requires.union Requirement.empty))⟩ :
+      EffTy) = _
+  rw [Ty.join_never_right, join_never_normal, join_never_normal]
+  simp only [Requirement.empty, Requirement.union, Row.union_empty_left, Row.union_empty_right]
 
 end Pieces
 

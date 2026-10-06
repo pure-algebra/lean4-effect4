@@ -1832,7 +1832,7 @@ These are authored links to historical attacks. Read each full row: a leading st
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 92; inherited (provisional): 2120; unplaced: 0.
+Tagged: 92; inherited (provisional): 2153; unplaced: 0.
 
 ## Plan
 
@@ -2585,10 +2585,10 @@ flowchart LR
 | `withdrawTake_typed` | proved | — | `withdrawTake_types` | 49 | 152 |
 | `withdrawTake_types` | proved | — | `normalize_idem`, `subN_refl`, `sub_antisymm_canonical` | 180 | 163 |
 | `bounded_types` | proved | — | `empty_typed`, `check_complete`, `check_sound` | 86 | 307 |
-| `offer_types` | proved | — | `check_complete`, `check_sound`, `withdrawOffer_types`, `normalize_idem`, `subN_refl`, `offerStep_types`, `mask_printed_form_profile` | 230 | 403 |
-| `poll_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `pollStep_types` | 234 | 380 |
+| `offer_types` | proved | — | `check_complete`, `check_sound`, `withdrawOffer_types`, `normalize_idem`, `subN_refl`, `offerStep_types`, `mask_printed_form_profile` | 239 | 403 |
+| `poll_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `subN_refl`, `pollStep_types` | 243 | 380 |
 | `size_types` | proved | — | `check_complete`, `check_sound` | 173 | 334 |
-| `take_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `withdrawTake_types`, `subN_refl`, `Queue.Model.takeStep_types`, `mask_printed_form_profile` | 307 | 426 |
+| `take_types` | proved | — | `check_complete`, `check_sound`, `normalize_idem`, `withdrawTake_types`, `subN_refl`, `Queue.Model.takeStep_types`, `mask_printed_form_profile` | 316 | 427 |
 | `empty_types` | proved | — | — | 64 | 126 |
 | `Semaphore.Model.profile_closed` | proved | — | — | 12 | 18 |
 | `releaseStep_types` | proved | — | `normalize_idem` | 156 | 137 |
