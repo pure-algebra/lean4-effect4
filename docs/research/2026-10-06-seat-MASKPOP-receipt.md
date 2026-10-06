@@ -35,7 +35,8 @@ The sections below carry the brief's item numbers. Item 1 is the bold line above
 | Branch | `seat/maskpop`, in the worktree `/Users/pooks/Dev/lean4-effect4-qsteps` |
 | Base | `6b2b5cda` |
 | Main-line heads taken in | none |
-| Head | the commit that adds this receipt; its parent is `e925a8d6` |
+| The main line at the hand-back | `d4ea8243`. It changes no file under `src/Effect4/Machine`, `src/Effect4/Laws/Auto`, `src/Effect4/Laws/Machine` or `tools/ProofGraph`. Its changes of the four shared files are at other lines (reading: `git diff 6b2b5cda refactor/phase1-phase3`). I ran no merge |
+| Head | the commit that brings this receipt up to date. The receipt's first commit is `2a89a30c`, whose parent is `e925a8d6` |
 
 Nothing is pushed.
 
@@ -46,12 +47,13 @@ Nothing is pushed.
 | `12d7703d` | 2 | the goal proved in place, with its nine steps |
 | `86335bd1` | 3 | the battery and its import in `Test/All.lean` |
 | `e925a8d6` | 4 | the row of `docs/ARCHITECTURE.md` and the role of the role register |
-| this commit | — | this receipt, and the design note's addendum |
+| `2a89a30c` | — | this receipt, and the design note's addendum |
+| the head | — | the receipt's last form: the main line's row, and the scratch probe of item 8 with its appendix |
 
 ## 3. Changed files
 
-`git diff --stat 6b2b5cda..e925a8d6` lists seven files. This commit adds the eighth and changes
-the design note. The counts come from `grep` over the lines that open a declaration.
+`git diff --stat 6b2b5cda..e925a8d6` lists seven files. The two commits after it add the eighth
+and change the design note. The counts come from `grep` over the lines that open a declaration.
 
 | Group | File | What changed |
 | --- | --- | --- |
@@ -101,6 +103,7 @@ named `SCRATCH`. It holds each log. `LEAN` stands for
 | the same, with a wrong path in the new row | `FAIL check-docs: 1 stale reference(s) in 1 of 75 documents`, at the new row; exit 2. I restored the row, and the check passes again | tested: the red control of the new row |
 | `SLOT lake build`, on `e925a8d6` | `Build completed successfully (992 jobs).` in 59 seconds; the gate lines below | proved, for the laws; tested, for the batteries |
 | `LEAN SCRATCH/lift-probe.lean` | three results on the sweep, in item 8 | tested: a finite probe |
+| `LEAN SCRATCH/lift-probe2.lean` | exit 0; the kernel accepts the three statements of the appendix, at `[propext, Quot.sound]` | tested: a scratch probe, with no theorem in the tree |
 | `python3 scripts/check-language.py --strict` on the design note and on this receipt | `PASS check-language: no finding`, for each | tested |
 | `python3 scripts/check-language.py --show docs/ARCHITECTURE.md` | no finding at the new row; the document's older findings stay | tested |
 
@@ -121,8 +124,8 @@ Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outs
 
 The slice adds two modules and 107 declarations. The default build ran once, at the end, on a
 clean tree of `e925a8d6`. Lake built `Test.Audit.ProofStyle`, `Test.All` and `Test` in that run,
-and it took the other modules from the narrow builds. This commit changes two notes only, and
-no build ran after it.
+and it took the other modules from the narrow builds. The commits after it change two notes
+only, and no build ran after them.
 
 ### The battery
 
@@ -198,7 +201,7 @@ sent to `/dev/null`. I ran it again without the redirection.
 | The pop's statement is false without the scratch premise | proved at one input: `pop_needs_empty_scratch`. Proved at one input for the joined chain: `pop_needs_empty_scratch_joined` |
 | The same-flag statement is false without the fixed base, and false without the alternation | proved at one input each: `sameFlag_needs_base`, `baseOnly_two_flags` |
 | On the sweep, every state that holds the chain keeps it through every pop and entry | tested: 22408 states |
-| A pop that answers nothing ends at an empty stack and at the base | tested on the sweep (item 8). No theorem states it |
+| A pop that answers nothing ends at an empty stack and at the base | tested on the sweep, and a scratch probe proves it (item 8, the appendix). No theorem of the tree states it |
 | Clearing a stack keeps the chain exactly where the flag is the base | tested on the sweep (item 8). No theorem states it |
 | `FrameFiber.step` pushes no restoring frame | reading (item 8) |
 
@@ -456,8 +459,9 @@ has its field.
    carries a condition: a cleared fiber's stack is empty. This is the trap of Codex's report.
 6. **A finished frame has an empty stack.** In `Fibers.lean`, `Outcome.finished` comes from
    `finishFrame` alone, after `frameExitState` (reading). On the sweep, each of the 10781 pops that answer nothing
-   ends at an empty stack and at the base (tested). No theorem states it. Its proof would
-   follow this slice's induction, with `passPushed_ensure_stack_nil`.
+   ends at an empty stack and at the base (tested). No theorem of the tree states it. A scratch
+   probe proves it by this slice's induction, with `passPushed_ensure_stack_nil`. The kernel
+   accepts the probe, and the appendix holds its text.
 7. **The bracket of a region.** The body's run must return to the entry's stack. That is a law
    of a run. With it, `sameFlag` gives the entry's flag at the exit.
 8. **The form of the invariant.** `Machine.Lift.StepKeeps` takes the machine and the pending
@@ -506,7 +510,8 @@ two predicates.
   (finding F4). The new module would then cite it, and its tag would go.
 - **P6. The next slice.** Its first two statements are lines 2 and 6 of item 8. `step` keeps
   the chain, and a pop that answers nothing ends at an empty stack. Both stay below the typed
-  program, and both follow existing inductions.
+  program. The appendix holds a proof of the second, ready for a placed statement. The first
+  has no probe: I read the pushes of `step` and proved nothing of it.
 
 ## 10. The requirements R1 to R13
 
@@ -563,3 +568,106 @@ One row, if the coordinator records the choice of the invariant:
 | Topic | Proposal |
 | --- | --- |
 | The mask's invariant of runs | The run-level half of `saved-mask-restoration` is stated over `FrameFiber.MaskChain`, at each fiber's start flag as its base. `Program.MaskInv` stays as it is, for the reference relation. The lift's command condition is that a cleared fiber's stack is empty |
+
+## Appendix: the scratch probe of item 8, line 6
+
+`SCRATCH/lift-probe2.lean`, as the kernel accepts it on the tree of `e925a8d6`. It is no file of
+the tree, so this receipt claims no theorem. `#print axioms` gives `[propext]` for the first two
+statements and `[propext, Quot.sound]` for the third. A later slice may place them. Their
+consumer is the lift's condition on the clear.
+
+```lean
+import Effect4.Laws.Machine.MaskDiscipline
+
+set_option autoImplicit false
+
+universe u v
+
+namespace Effect4.FrameFiber
+
+variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+
+/-- An answering frame never answers with the sentinel. -/
+theorem answerOf_ne_empty (frame : Prim ν σ β ε δ ι α) (demand : Arm)
+    (replacement : Option (Prim ν σ β ε δ ι α)) (answer : ContAnswer ν σ β ε δ ι α)
+    (selected : frame.answerOf demand replacement = some answer) : answer ≠ ContAnswer.empty := by
+  intro empty
+  subst empty
+  cases replacement with
+  | some next =>
+    rw [Prim.answerOf_replacement] at selected
+    cases selected
+  | none =>
+    cases arm : frame.hasArm demand with
+    | false =>
+      rw [Prim.answerOf_missing frame demand arm] at selected
+      cases selected
+    | true =>
+      rw [Prim.answerOf_arm frame demand arm] at selected
+      cases selected
+
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- A pop that answers nothing ends at an empty stack, from an empty scratch stack. -/
+theorem popFrom_empty_stack (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν σ β ε δ ι α)) (f : FrameFiber ν σ β ε δ ι α)
+    (scratchEmpty : f.stack = [])
+    (unanswered : (popFrom demand skip frames f).answer = ContAnswer.empty) :
+    (popFrom demand skip frames f).fiber.stack = [] := by
+  induction frames generalizing f with
+  | nil =>
+    rw [popFrom_nil]
+    exact scratchEmpty
+  | cons head rest ih =>
+    have emptied := passPushed_ensure_stack_nil demand skip head f none scratchEmpty
+    have continued : (continueFrom demand skip head rest f).answer = ContAnswer.empty →
+        (continueFrom demand skip head rest f).fiber.stack = [] := by
+      intro silent
+      unfold continueFrom at silent ⊢
+      cases drained : (passPushed demand skip (head.ensure f).fst).answer with
+      | empty =>
+        rw [joinPushed_of_empty demand skip (head.ensure f).fst rest _ drained] at silent ⊢
+        exact ih _ emptied silent
+      | deferred cause =>
+        rw [joinPushed_of_answer demand skip (head.ensure f).fst rest _ _
+          (by intro h; cases h) drained] at silent
+        cases silent
+      | replacement next =>
+        rw [joinPushed_of_answer demand skip (head.ensure f).fst rest _ _
+          (by intro h; cases h) drained] at silent
+        cases silent
+      | frame answering =>
+        rw [joinPushed_of_answer demand skip (head.ensure f).fst rest _ _
+          (by intro h; cases h) drained] at silent
+        cases silent
+    cases answered : head.answerOf demand (head.ensure f).snd with
+    | none =>
+      rw [popFrom_continue_answer demand skip head rest f (Or.inl answered)] at unanswered
+      rw [popFrom_continue_fiber demand skip head rest f (Or.inl answered)]
+      exact continued unanswered
+    | some answer =>
+      cases skipped : (skip && (head.ensure f).fst.interrupted) with
+      | true =>
+        rw [popFrom_continue_answer demand skip head rest f (Or.inr skipped)] at unanswered
+        rw [popFrom_continue_fiber demand skip head rest f (Or.inr skipped)]
+        exact continued unanswered
+      | false =>
+        rw [popFrom_answer_answer demand skip head rest f answer answered skipped] at unanswered
+        exact absurd unanswered (answerOf_ne_empty head demand _ answer answered)
+
+/-- So a pop from a chain that answers nothing ends at the base. -/
+theorem popFrom_empty_flag (base : Bool) (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν σ β ε δ ι α)) (f : FrameFiber ν σ β ε δ ι α)
+    (scratchEmpty : f.stack = []) (valid : MaskChain base f.interruptible frames)
+    (unanswered : (popFrom demand skip frames f).answer = ContAnswer.empty) :
+    (popFrom demand skip frames f).fiber.interruptible = base := by
+  have chain := popFrom_maskChain base demand skip frames f none scratchEmpty valid
+  rw [popFrom_empty_stack demand skip frames f scratchEmpty unanswered] at chain
+  exact chain
+
+#print axioms answerOf_ne_empty
+#print axioms popFrom_empty_stack
+#print axioms popFrom_empty_flag
+
+end Effect4.FrameFiber
+```
