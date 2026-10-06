@@ -1,0 +1,202 @@
+import Effect4.Laws.Modules.Queue.Relation
+import Effect4.Laws.Program.Typed.ListFold
+import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Auto.Semantics
+
+/-!
+# The Queue's six steps agree with the abstract model: the step goals (decisions row 255)
+
+Each step term of `src/Effect4/Modules/Queue/Steps.lean` has one statement here: from a cell
+that holds a state of the first profile, the step's answer and stored value are the encoding of
+the model's step, and its lists are the model's signals in order (the design's F3,
+`docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md`). The relation is
+in `src/Effect4/Laws/Modules/Queue/Relation.lean`.
+
+Placement. Concept `translation-simulation`. Requirement R10, as parts of the proposed claim
+`queue-expansion-agrees`. The consumer of each step goal is the wrapper's law, in the public
+path's slice. Reach, for each goal:
+
+- the domain is `FirstProfile`, with the request's premise `Requested`
+  (`src/Effect4/Laws/Modules/Queue/Profile.lean`);
+- the table's injectivity is a written premise, and the hint that the step sets is written in
+  the conclusion's table (`Table.afterTake`, `Table.afterOffer`);
+- the observation is the reply, the stored value and the ordered notifications: every signal
+  of the model, and no other (`Notified`);
+- the statement holds at every scope, for every caller's term that reads the step's arguments
+  (`Reads`, `Captured`).
+
+`step_updates` joins a goal to the store: a step term that reads the pair of a reply and a next
+value is one atomic update of the cell (`refStep_modify`). `step_keeps_cell` gives the typed
+half (`ListFoldRules.step`). `sizeStep` is a term over a read, and `cell_read` is its store law
+(`refStep_get`).
+
+The goals establish no delivery, no cancellation law, no liveness and nothing of a wrapper. An
+equal value in the model says nothing of a host. Each statement is a planned goal
+(`proof_goal`, decisions row 203) until its proof replaces it in place. The finite controls are
+`Test/Program/QueueAgreement.lean` and `Test/Program/QueueRelation.lean`: each goal's conclusion
+on every state of a universe of 200 states.
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Queue.Model
+
+open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Effect4.Program.Typed
+
+/-! ## The connector to the store -/
+
+/-- **One atomic update.** A step term that reads the pair of a reply and a next value, under
+the cell's current value as its last binder, is one `Ref.modify`: the store step reads the cell
+once, answers the reply and writes the next value. Stated once, for the five steps of a
+`Ref.modify`. Consumer: the wrapper's law, which runs each step so. It is the census clause
+`refStep_modify`, and it needs no typing. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem step_updates {step : TermSrc} {env : Env} {path : List Nat} {current : String}
+    {captured : List Val} {stores : Stores} {q : RefKey} {cell reply next : Val}
+    (held : refPeek stores.refs q = some cell)
+    (reads : Reads step (env.push [current]) path (captured ++ [cell])
+      (Val.tuple [reply, next])) :
+    ∃ f, step (env.push [current]) path = .ok f ∧
+      syncOpStep (.refModify q f captured) stores =
+        some ({ stores with refs := refPoke stores.refs q next }, reply) := by
+  obtain ⟨f, elaborated, value⟩ := reads
+  refine ⟨f, elaborated, ?_⟩
+  show (refStep (.refModify q f captured) stores.refs).map
+    (fun step => ({ stores with refs := step.2 }, step.1)) = _
+  rw [refStep_modify stores.refs q f captured cell reply next held value]
+  rfl
+
+/-- **The typed half of the connector.** A step term that the checker types at the pair of a
+reply type and the cell's type keeps the cell a member of its type, and its reply is a member
+of the reply type. It is `ListFoldRules.step`, read at the value that the step answers.
+Consumer: the wrapper's law, with a step's typing statement
+(`src/Effect4/Laws/Modules/Queue/Typing.lean`). -/
+@[semantics "store-typing" (requirement := R4)]
+theorem step_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    {w : Typed.World} {tys : TyEnv} {captured : List Val} (typedEnv : EnvTyped w tys captured)
+    {f : Term} {C B : Ty} (typed : termTy sig (tys ++ [C]) f = some (.prod B C))
+    {stores : Stores} {q : RefKey} {cell reply next : Val}
+    (held : refPeek stores.refs q = some cell) (member : Fits w cell C)
+    (value : evalTerm (captured ++ [cell]) f = some (Val.tuple [reply, next])) :
+    Fits w reply B ∧ Fits w next C := by
+  obtain ⟨b, a, answered, -, fitsReply, fitsNext⟩ :=
+    (fold_typed_atomic_update sig).step atoms w tys captured typedEnv f C B typed stores q cell
+      held member
+  rw [value] at answered
+  have same : Val.tuple [reply, next] = Val.tuple [b, a] := Option.some.inj answered
+  have parts : [reply, next] = [b, a] := Store.Val.list.inj same
+  obtain ⟨rfl, rest⟩ := List.cons.inj parts
+  obtain ⟨rfl, -⟩ := List.cons.inj rest
+  exact ⟨fitsReply, fitsNext⟩
+
+/-- **The read law of `size`.** A `Ref.get` of the cell answers its value and leaves the
+stores: the size step is a term over that value, and it writes nothing. It is the census clause
+`refStep_get`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem cell_read {stores : Stores} {q : RefKey} {cell : Val}
+    (held : refPeek stores.refs q = some cell) :
+    syncOpStep (.refGet q) stores = some (stores, cell) := by
+  show (refStep (.refGet q) stores.refs).map
+    (fun step => ({ stores with refs := step.2 }, step.1)) = _
+  rw [refStep_get stores.refs q cell held]
+  rfl
+
+/-! ## The six step goals -/
+
+/-- **The take step agrees with the model's `take` at the bounds one and one.** The cell holds
+the state `s` of the first profile, through the table and the message map. The request `id` is
+fresh or its own waiting taker, and `hint` is the hint that the step receives. The step's reply
+is the model's. Its two lists are the model's signals: the offers that entered, then the takers
+to wake. The stored value is the model's next state, through the table that holds `hint` at
+`id` where the request waits. -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+    (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
+    (injective : tb.Injective) {idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
+    {vals : List Val} (depth : vals.length = env.names.length)
+    (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
+    (readsHint : Captured hintSrc env path vals (Val.promise hint))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    ∃ reply entered woken,
+      takeReplyVal msg (take s ⟨id, 1, 1⟩).2.1 = some reply ∧
+      Notified s (take s ⟨id, 1, 1⟩).1 (take s ⟨id, 1, 1⟩).2.2 entered woken ∧
+      Reads (Queue.takeStep A idSrc hintSrc cellSrc) env path vals
+        (Val.tuple [Val.tuple [reply, Val.list (entered.map (offerVal tb msg)),
+            Val.list (woken.map (takerVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1)))],
+          cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1])
+
+/-- **The offer step agrees with the model's `offer`.** The request `id` is fresh: it names no
+waiting taker and no pending offer. The message term reads the value of the model's message
+`a`. The step's reply is the model's, it accepts no pending offer, and its list is the takers
+that the model wakes. The stored value is the model's next state, through the table that holds
+`hint` at `id` where the offer waits. -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal offerStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id a : Nat)
+    (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.offer id a))
+    (fresh : ∀ o ∈ s.offers, o.id ≠ id) {idSrc hintSrc messageSrc cellSrc : TermSrc}
+    {env : Env} {path : List Nat} {vals : List Val}
+    (readsId : Reads idSrc env path vals (Val.promise (tb.handle id)))
+    (readsHint : Reads hintSrc env path vals (Val.promise hint))
+    (readsMessage : Reads messageSrc env path vals (msg a))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    ∃ woken,
+      Notified s (offer s id a).1 (offer s id a).2.2 [] woken ∧
+      Reads (Queue.offerStep A idSrc hintSrc messageSrc cellSrc) env path vals
+        (Val.tuple [Val.tuple [offerReplyVal (offer s id a).2.1,
+            Val.list (woken.map (takerVal (tb.afterOffer id hint (offer s id a).2.1)))],
+          cellVal (tb.afterOffer id hint (offer s id a).2.1) msg (offer s id a).1])
+
+/-- **The poll step agrees with the model's `poll`.** The reply is the model's, the list is the
+offers that entered, and the model wakes no taker. The table does not change. -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal pollStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
+    (profile : FirstProfile s) {cellSrc : TermSrc} {env : Env} {path : List Nat}
+    {vals : List Val} (depth : vals.length = env.names.length)
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    ∃ entered,
+      Notified s (poll s).1 (poll s).2.2 entered [] ∧
+      Reads (Queue.pollStep A cellSrc) env path vals
+        (Val.tuple [Val.tuple [pollReplyVal msg (poll s).2.1,
+            Val.list (entered.map (offerVal tb msg))],
+          cellVal tb msg (poll s).1])
+
+/-- **The size step agrees with the model's `size`.** The reply is the buffer's length. The
+step is a term over the cell's value: it stores nothing and names no notification, as the
+model's `size` answers no state and no signal (`cell_read`). -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal sizeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
+    (profile : FirstProfile s) {cellSrc : TermSrc} {env : Env} {path : List Nat}
+    {vals : List Val} (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    Reads (Queue.sizeStep A cellSrc) env path vals (Val.nat (size s))
+
+/-- **The withdrawal of a take agrees with the model's `withdrawTake`.** The step accepts no
+offer, its list is the takers that the model wakes, and the stored value is the model's next
+state. The table does not change. -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal withdrawTake_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+    (profile : FirstProfile s) (injective : tb.Injective) {idSrc cellSrc : TermSrc} {env : Env}
+    {path : List Nat} {vals : List Val} (depth : vals.length = env.names.length)
+    (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    ∃ woken,
+      Notified s (withdrawTake s id).1 (withdrawTake s id).2 [] woken ∧
+      Reads (Queue.withdrawTake A idSrc cellSrc) env path vals
+        (Val.tuple [Val.list (woken.map (takerVal tb)), cellVal tb msg (withdrawTake s id).1])
+
+/-- **The withdrawal of an offer agrees with the model's `withdrawOffer`.** The step accepts no
+offer, its list is the takers that the model wakes, and the stored value is the model's next
+state. The table does not change. -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal withdrawOffer_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+    (profile : FirstProfile s) (injective : tb.Injective) {idSrc cellSrc : TermSrc} {env : Env}
+    {path : List Nat} {vals : List Val} (depth : vals.length = env.names.length)
+    (readsId : Captured idSrc env path vals (Val.promise (tb.handle id)))
+    (readsCell : Reads cellSrc env path vals (cellVal tb msg s)) :
+    ∃ woken,
+      Notified s (withdrawOffer s id).1 (withdrawOffer s id).2 [] woken ∧
+      Reads (Queue.withdrawOffer A idSrc cellSrc) env path vals
+        (Val.tuple [Val.list (woken.map (takerVal tb)),
+          cellVal tb msg (withdrawOffer s id).1])
+
+end Effect4.Queue.Model
