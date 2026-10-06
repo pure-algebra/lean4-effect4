@@ -110,9 +110,9 @@ def held : State :=
     view b.1 = ([], [(0, 1)], [], false, 2)
 
 /-- **The premise state of PP5's low-level control**: the pool is open, the item is idle, and
-A and then B wait. No public schedule reaches it: lease or enrol adds a waiter only when no
-item is idle, and a return's helper has the count 1. Here it is built by a return whose wake
-is not posted. -/
+A and then B wait. It is PP3's state after H's return and before the selection of its helper.
+What no public operation does is post the count 2 at an open pool: a return's helper has the
+count 1. -/
 def premise : State := (giveBack held 0 0).1
 
 #guard view premise = ([0], [], [1, 2], false, 1)

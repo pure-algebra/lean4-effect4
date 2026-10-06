@@ -203,6 +203,9 @@ import Effect4.Laws.Modules.Semaphore.Steps
 import Effect4.Laws.Modules.Pool.Model
 import Effect4.Laws.Modules.Pool.Profile
 import Effect4.Laws.Modules.Pool.Typing
+import Effect4.Laws.Modules.Pool.Relation
+import Effect4.Laws.Modules.Pool.Reading
+import Effect4.Laws.Modules.Pool.Steps
 import Effect4.Laws.Program.Typing.TermIntro
 
 /-!

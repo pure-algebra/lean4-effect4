@@ -31,9 +31,10 @@ and row 267's `make` acquires every item before it answers. So it runs in two fo
 labelled below.
 
 - **The low-level control** builds its state by hand: a raw lease of the root, the enrolments
-  of A and of B, and a raw return that posts nothing. The state and the count 2 are premises
-  of the control. No public operation posts that count at an open pool: a return posts 1, and
-  the close posts every waiter only after it refuses new leases.
+  of A and of B, and a raw return that posts nothing. PP3 reaches the same state, after H's
+  return and before its helper. The state and the count 2 are premises of the control. No
+  public operation posts that count at an open pool: a return posts 1, and the close posts
+  every waiter only after it refuses new leases.
 - **The public retry case** is a schedule of the profile.
 
 **The operations here are test fixtures.** `use` is one mask around the lease and the body's
@@ -505,10 +506,11 @@ def pp5public (ops : Ops) : Src NativeOp := eff do
     let l ← Ref.get log
     return tuple [before, after, l]
 
-/-- **PP5, the low-level control.** No public schedule: the state and the count are its
-premises. The root leases the item by a raw step. A and then B enrol. A raw return makes the
-item idle and posts nothing. Then the root posts one helper at the count 2. `bodyA` is A's
-body: it returns at once in PP5, and it waits in the control where A holds. -/
+/-- **PP5, the low-level control.** It is no public schedule: no public operation posts the
+count 2 at an open pool. The state and the count are its premises. The root leases the item by
+a raw step. A and then B enrol. A raw return makes the item idle and posts nothing: PP3's
+state after H's return. Then the root posts one helper at the count 2. `bodyA` is A's body:
+it returns at once in PP5, and it waits in the control where A holds. -/
 def pp5control (ops : Ops) (bodyA : TermSrc → TermSrc → Src NativeOp) : Src NativeOp := eff do
   let log ← Ref.make noRows
   let gA ← Deferred.make .unit .never
