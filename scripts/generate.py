@@ -109,8 +109,11 @@ def fixtures(out, checking):
     derived family's rule).
     """
     lanes = fixture_lanes()
+    homes = {(ROOT / folder).resolve() for folder, _ in lanes}
     for folder, _ in lanes:
-        if (out / folder).resolve() == (ROOT / folder).resolve():
+        # against every lane's folder, not this lane's alone: an output folder of one lane that
+        # is a link to another lane's folder would lose that lane's fixtures
+        if (out / folder).resolve() in homes:
             raise ValueError(f'{folder}: output aliases repository destination')
     for folder, modules in lanes:
         temp = out / folder
