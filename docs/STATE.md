@@ -283,8 +283,8 @@ In work since 2026-10-06, two seats at once (row 237):
 - **Seat PUB has the Queue's first public operations** (branch `seat/pub`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
   become library programs that capture no name of a caller. Each runs on the Lean machine, on
-  the generated engine and on rc.112. The slice states no law of a whole run. **Four steps
-  are merged** (`f046975b`, then `c957bfab`):
+  the generated engine and on rc.112. The slice states no law of a whole run. **Five steps
+  are merged** (`f046975b`, `c957bfab`, `5701a5dc` and `41be5ef3`):
   - the shared pieces of a module that waits (`src/Effect4/Modules/Waiting.lean`), and the
     five operations (`src/Effect4/Modules/Queue/Ops.lean`: `Queue.bounded`, `offer`, `take`,
     `poll`, `size`), each with its scope law. The wrapper has two forms over one `Waiter`: a
@@ -298,12 +298,18 @@ In work since 2026-10-06, two seats at once (row 237):
     trace is a finite control of one open part. Trace 7 measures the embedded budget. At one
     unit of fuel less than the measured least, the remaining work is lost, and later flushes
     do not end the root. That is the cut that row 226 excludes. No bound is claimed. The
-    registry now names that open part `embedded-budget-sufficient`, under R12.
+    registry now names that open part `embedded-budget-sufficient`, under R12;
+  - five Queue programs in the truth lane, and the control `pLateSeen` (`harness/truth/Truth.lean`).
+    Each of the six agrees with Lean on rc.112 and on 4.0.1, on every field of the build
+    ledger. The lane's Lean face now writes a fiber under its number in the recorder's order
+    of first sight (row 274). The lane no longer checks the machine's allocation order. Two
+    cells of the generated corpus's results moved, and no outcome moved;
+  - each operation prints and reads back (`Test/Program/QueueFaces.lean`). Five runs replay
+    on the generated engine on both carriers (`ocaml/engine/test/queue/`): R1, R4, a taker
+    that waits, an interrupted taker and a masked caller.
 
-  The typing at every scope, the faces, the truth programs and the engine's lane are the
-  seat's next steps. Its repair of the truth lane's fiber numbers is committed on its branch
-  and not merged. The Lean face then numbers a fiber by its first row, as the host's
-  recorder does.
+  The typing of each operation at every scope, the documents and the receipt are the seat's
+  next steps.
 - **Seat POOL has Pool's cell and steps** (branch `seat/pool`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pool-brief.md)), since seat REFS's
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
@@ -337,8 +343,9 @@ Candidates with no seat, each with its place:
   The coordinator allocated it to Codex first. Codex answers that it edits and builds nothing
   until the owner says so to Codex directly. A seat of the coordinator takes the slice when
   one is free, unless the owner lifts Codex's limits first.
-  [Its brief](research/2026-10-05-claude-lead/briefs/seat-maskpop-brief.md) is written and
-  not dispatched. Its lift to runs is a later slice;
+  [Its brief](research/2026-10-05-claude-lead/briefs/seat-maskpop-brief.md) is written. The
+  owner allowed a third seat for it on 2026-10-06, if it can land work efficiently. The seat
+  is not dispatched yet. Its lift to runs is a later slice;
 - the Queue model's run invariant on the first profile: each operation keeps `quiet` and
   `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
   `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded
@@ -382,14 +389,17 @@ for a watch on the proof graph. Both packets are filed with a coordinator's note
 A third relay came later on 2026-10-06, at main `2ee2aa91` (`heartbeat-1136-pool-and-questions/`
 under the same folder, with a coordinator's note).
 
-- **Two actions wait for the owner's own word.** Codex recommends on each, and its relay says
-  that a recommendation is no approval. The coordinator applied neither:
+- **Two actions waited for the owner's own word.** Codex recommended on each, and its relay
+  said that a recommendation is no approval. The owner answered later that day:
   - the census row `interrupt.uninterruptible-mask`. Codex recommends the coverage `partial`.
     The row's comment then keeps two missing connections. No law relates a compiled mask to
-    the native one. No law of runs gives the restoration after a nested body;
-  - the install that seat CONTROLS's `make` made by mistake, kept untouched in that seat's
-    scratch folder (95 MB). Codex recommends deleting that copy alone. The incident's record,
-    the package's identity and the runs' logs stay;
+    the native one. No law of runs gives the restoration after a nested body. The owner
+    answered by voice: go with the recommendation. The coordinator read the transcript as
+    the census row of the mask, and it told the owner that reading. The row is not added yet;
+  - the install that seat CONTROLS's `make` made by mistake (95 MB, in that seat's scratch
+    folder). The owner left the choice to the coordinator. The copy stays where it is.
+    Nothing reads it, and no evidence rests on it. The incident's record is the seat's
+    receipt;
 - **Pool's brief is corrected before any dispatch.** It asked for an invariant that is
   false: no waiter while an item is idle and the pool is open. A return makes its item idle
   at once, and its helper selects later. The host's output shows two waiters at that point on
@@ -505,12 +515,12 @@ Landed later on 2026-10-05:
   the seat's stop and by no counterexample. The checker answers the stated type for each at
   27 message types, by evaluation. So the goal gate counts 29. One workload runs in two
   spellings (`Test/Program/QueueWorkload.lean`). The seat's last part is merged (`80d73226`).
-  The scenarios R1 and R4 run on the generated engine on both carriers
+  Five runs replay on the generated engine on both carriers since seat PUB's step 5
   (`ocaml/engine/test/queue/`). `Test/Program/QueueFaces.lean` pins what prints and reads
   back. Each of the eight scenario modules prints and reads back since seat T5's second step.
-  No Queue program runs on a host yet. Each of the six printed steps type-checks on the
-  target, in the truth lane (`harness/truth/queue-steps.typecheck.ts`). A scenario's whole
-  module is type-checked by no lane yet.
+  Five Queue programs run on rc.112 and on 4.0.1 since seat PUB's step 5, in the truth lane.
+  Each of the six printed steps type-checks on the target there
+  (`harness/truth/queue-steps.typecheck.ts`), and so does each of those five programs' modules.
 - **`Deferred.make<A, E>()` prints from the operation and reads back** (`9600fa63`, step a of
   seat T5's part B; rows 212 and 251). An operation's type arguments are data of the
   operation: the printer prints each through the type printer, and Lean's reader,

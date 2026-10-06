@@ -73,7 +73,15 @@
     "`ActionTerm.getInterruptible` at tag 16 of `Effect4.Program.ActionTerm`. No tag moved and no",
     "constructor left. No retained vector changed bytes: fifteen golden files were appended to",
     "the OCaml corpus, for the programs pMask, pMaskNested, pMaskEscape, pIllRestoreBool and",
-    "pIllMaskAsBool. No corpus verdict moved."
+    "pIllMaskAsBool. No corpus verdict moved.",
+    "",
+    "The truth lane's fiber numbers (decisions row 274; seat PUB's repair, merged `5701a5dc`). The",
+    "Lean face writes a fiber under its number in the recorder's order of first sight, and no",
+    "longer under the machine's id. The host lane's table followed at that merge: two rows moved,",
+    "each in one column, and no verdict column moved. g102 moved in its Lean schedule: fifteen",
+    "rows take other fiber numbers, and the row was a registered difference before. g246 moved in",
+    "its Lean exit, from `{\"fiber\":1}` to `{\"fiber\":2}`: the program is ill typed, and the host",
+    "does not run it. g246 was named before, for its note."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -217,6 +225,7 @@
     "harness/truth/corpus-results.tsv:g61",
     "harness/truth/corpus-results.tsv:g81",
     "harness/truth/corpus-results.tsv:g94",
+    "harness/truth/corpus-results.tsv:g102",
     "harness/truth/corpus-results.tsv:g124",
     "harness/truth/corpus-results.tsv:g127",
     "harness/truth/corpus-results.tsv:g144",
