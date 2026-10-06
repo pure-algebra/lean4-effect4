@@ -1,0 +1,83 @@
+[
+  {
+    "file": "bidirectional-type-slicing-2607.12197v1.pdf",
+    "source_url": "https://arxiv.org/pdf/2607.12197v1",
+    "resolved_url": "https://arxiv.org/pdf/2607.12197v1",
+    "status": "downloaded_valid_pdf",
+    "bytes": 1121163,
+    "sha256": "8281ad9feeafa487a16a91df1c16c8c6a510940416e74b1047a7661c69de1e8a",
+    "accessed_utc": "2026-10-06T15:54:59.077998+00:00"
+  },
+  {
+    "file": "lamport-1978-time-clocks.pdf",
+    "source_url": "https://lamport.azurewebsites.net/pubs/time-clocks.pdf",
+    "resolved_url": "https://lamport.azurewebsites.net/pubs/time-clocks.pdf",
+    "status": "downloaded_valid_pdf",
+    "bytes": 854562,
+    "sha256": "c55e7cab4230aa3d7126748a149b2db6f0d7a67296d5eccfdd50a210299a96b2",
+    "accessed_utc": "2026-10-06T15:54:59.000665+00:00"
+  },
+  {
+    "file": "huet-zipper.pdf",
+    "source_url": "https://gallium.inria.fr/~huet/PUBLIC/zip.pdf",
+    "resolved_url": "https://gallium.inria.fr/~huet/PUBLIC/zip.pdf",
+    "status": "downloaded_valid_pdf",
+    "bytes": 134598,
+    "sha256": "2ddbd0e2bebe5caf113c0e66fe11e4bf46ba445150582fa40753ec5c881823a4",
+    "accessed_utc": "2026-10-06T15:54:59.346920+00:00"
+  },
+  {
+    "file": "allais-binding-universe.pdf",
+    "source_url": "https://bentnib.org/binding-universe.pdf",
+    "resolved_url": "https://bentnib.org/binding-universe.pdf",
+    "status": "downloaded_valid_pdf",
+    "bytes": 451773,
+    "sha256": "d248a09eaa69cc3d9ca3d171d4fbd7d4b92f794130af1f4b98d02286612e1331",
+    "accessed_utc": "2026-10-06T15:55:00.130912+00:00"
+  },
+  {
+    "file": "hazelnut-1607.04180v5.pdf",
+    "source_url": "https://arxiv.org/pdf/1607.04180v5",
+    "resolved_url": "https://arxiv.org/pdf/1607.04180v5",
+    "status": "downloaded_valid_pdf",
+    "bytes": 550412,
+    "sha256": "54c789e27df02ff66bcf99081c178e625fa51a4431b10e5c9707d069e7abd62d",
+    "accessed_utc": "2026-10-06T15:54:59.712677+00:00"
+  },
+  {
+    "file": "foster-bidirectional-tree-transformations.pdf",
+    "source_url": "https://www.cis.upenn.edu/~bcpierce/papers/newlenses-full.pdf",
+    "resolved_url": "https://www.cis.upenn.edu/~bcpierce/papers/newlenses-full.pdf",
+    "status": "downloaded_valid_pdf",
+    "bytes": 680020,
+    "sha256": "c25fa30018fc2e1ac83a485877a54738d28444feb23275c317fd5bb13c55bb2a",
+    "accessed_utc": "2026-10-06T15:54:59.986449+00:00"
+  },
+  {
+    "file": "interaction-trees-author.pdf",
+    "source_url": "https://perso.ens-lyon.fr/yannick.zakowski/papers/itrees.pdf",
+    "resolved_url": "https://perso.ens-lyon.fr/yannick.zakowski/papers/itrees.pdf",
+    "status": "downloaded_valid_pdf",
+    "bytes": 680023,
+    "sha256": "ff6fc701d847dca01dd591a7a8ee183305a4c5c7df993259746b63368dd11c07",
+    "accessed_utc": "2026-10-06T15:55:01.394192+00:00"
+  },
+  {
+    "file": "choice-trees-2211.06863.pdf",
+    "source_url": "https://arxiv.org/pdf/2211.06863",
+    "resolved_url": "https://arxiv.org/pdf/2211.06863",
+    "status": "downloaded_valid_pdf",
+    "bytes": 863779,
+    "sha256": "87cae08d3a3c0156a38536ebefbf7bc179895a8b67759c277d474b71fad1d3a5",
+    "accessed_utc": "2026-10-06T15:55:00.322116+00:00"
+  },
+  {
+    "file": "tristan-leroy-2008-validation-scheduling.pdf",
+    "source_url": "https://xavierleroy.org/publi/validation-scheduling.pdf",
+    "resolved_url": "https://xavierleroy.org/publi/validation-scheduling.pdf",
+    "status": "downloaded_valid_pdf",
+    "bytes": 239207,
+    "sha256": "238a45520333578febc39117e1eccdd2bf7fa9ac077ee3360b163d33276e8ee5",
+    "accessed_utc": "2026-10-06T15:55:00.394218+00:00"
+  }
+]

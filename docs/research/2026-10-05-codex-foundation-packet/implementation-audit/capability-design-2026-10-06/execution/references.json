@@ -1,0 +1,16 @@
+[
+  {
+    "url": "https://www.w3.org/TR/2026/WD-hr-time-3-20260901/",
+    "title": "High Resolution Time, Working Draft 1 September 2026",
+    "read": "Introduction and sections2.1\u20132.2",
+    "application": "Clock origins, moments versus durations, resolution versus scheduling",
+    "limit": "Working Draft; no Effect theorem"
+  },
+  {
+    "url": "https://lamport.azurewebsites.net/pubs/time-clocks.pdf",
+    "title": "Time, Clocks, and the Ordering of Events in a Distributed System",
+    "read": "Printed pages559\u2013561: happened-before, Clock Condition, total ordering",
+    "application": "Separate causality from chosen journal order and clock values",
+    "limit": "No existing Effect trace completeness or commutation theorem"
+  }
+]

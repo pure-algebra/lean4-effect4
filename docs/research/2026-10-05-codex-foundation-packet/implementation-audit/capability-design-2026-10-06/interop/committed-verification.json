@@ -1,0 +1,402 @@
+{
+  "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "checked": 79,
+  "failed": 0,
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "committed_sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "matches": true
+    },
+    {
+      "path": "docs/STATE.md",
+      "committed_sha256": "5931005e063e3d0b9b29eb081987c6a2aeac959a4dde9363451a3e738734e9cf",
+      "matches": true
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "committed_sha256": "512d6736bd5ee86f6cec78100b6e2b18bae00510cd409186479e7f73d2d1563e",
+      "matches": true
+    },
+    {
+      "path": "docs/GENERATED.md",
+      "committed_sha256": "768f0022ceb166d74acf1449dd6210c9f62152a0e2be67c337bc2fd6aabd7cc1",
+      "matches": true
+    },
+    {
+      "path": "docs/core/system-map.md",
+      "committed_sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65",
+      "matches": true
+    },
+    {
+      "path": "docs/core/controlled-english.md",
+      "committed_sha256": "be430b38810b67e8fb153206833d1b3538672d99955f75c7208397e65aa59a18",
+      "matches": true
+    },
+    {
+      "path": "docs/core/api-surface.md",
+      "committed_sha256": "1133bb01744e272aa4d29e974bcbf3b8273bb370b24811f9dc09be17b70c0b90",
+      "matches": true
+    },
+    {
+      "path": "docs/core/host-boundary.md",
+      "committed_sha256": "f478fbe6f9061ff6518992c63482424f61e5959f41dd50a43355fcca82e812fe",
+      "matches": true
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "committed_sha256": "9fc6693bae0633cf2d14d2fc9d93123a5069190bd2f729b63bb80dc13254791a",
+      "matches": true
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "committed_sha256": "3536331552834acec666d49c357e10bb26dbe4b65ac5071021d6303f101d3ee3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api.lean",
+      "committed_sha256": "52f91cbb2a84d374e260d3ca6fe4c71158e3bad884d258c84fed654e2aff9350",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Built.lean",
+      "committed_sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Author.lean",
+      "committed_sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Runner.lean",
+      "committed_sha256": "57a2f1a0ecd32bf67cc5c8821df4ad44d857a221e28cdfddf2b02a81688aab5a",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/RunnerBytes.lean",
+      "committed_sha256": "8a1086b5a3e598dab9351049353215e8ba485d6c0eb3e3fe420b0daa86778059",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/HostSession.lean",
+      "committed_sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/HostProtocol.lean",
+      "committed_sha256": "dcec8adce472f8348a080419a15bee1e0892999fd0a58220c6a2ce64fd46d451",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Frontier.lean",
+      "committed_sha256": "9b8bab76e8969f0d21d3732f5f73912d85efb03cdf65835bd1ac2e018c18e506",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/TestClock.lean",
+      "committed_sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "committed_sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Schema/Representation.lean",
+      "committed_sha256": "9302c5e8eb5198b3fa8f0566dfaebf1b16061fb90e02e14366736498870121e9",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Schema/Codec.lean",
+      "committed_sha256": "540c54402e077b9bd0f4f5397ada928a465d0071ad5c864db316aa74e50aa419",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Schema/Document.lean",
+      "committed_sha256": "bc28ec0203e9577c4ba32493f24023ab61638e9bec6ff96979b0c5ea47c5a400",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Schema/Payload.lean",
+      "committed_sha256": "3ace09da54444d1a414c53ec2cb82c56e4e4ba7755089d926a112785667e790a",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Schema/Codec.lean",
+      "committed_sha256": "5c69a40b673f0ca39c2bb0eae338a7d9e1c340dde07f5b33f88afe1b42784fe5",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "committed_sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Api/HostSession.lean",
+      "committed_sha256": "de49efa72ca2999f13140a4dac4434b596054a885cb2e7fdd2bca697da0d7c84",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Api/RunnerBytes.lean",
+      "committed_sha256": "93a2834d896d7c30f7a2c4a7b26c47a8ea1e55deedd5c12952899c4d6c08891e",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "committed_sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "committed_sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+      "matches": true
+    },
+    {
+      "path": "tools/Tools/Semantics.lean",
+      "committed_sha256": "a38b231c7ca3187ff2494c7c03742e6d9b9c3b166729e08f5a8eac1f2fa38af6",
+      "matches": true
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "committed_sha256": "d455f54bacaed133b599c88db869f34bd241ac524d08dbcbfffbec9b47b3cd05",
+      "matches": true
+    },
+    {
+      "path": "tools/ProofGraph/Plan.lean",
+      "committed_sha256": "6db3b8a246d67036da3818c7a53db01633142682dd02a49f7eb735c655c8d35b",
+      "matches": true
+    },
+    {
+      "path": "tools/ProofGraph/Goal.lean",
+      "committed_sha256": "6c09f2bbe758c23517c84b0f31394a730be5c448f5c7fb483620295d4ade1e24",
+      "matches": true
+    },
+    {
+      "path": "tools/ProofGraph/Sketch.lean",
+      "committed_sha256": "bcfd56fadcc0100a263886f2462363545a27b15be407f8e78cccb17d84d0103d",
+      "matches": true
+    },
+    {
+      "path": "tools/Tools/HostProtocol.lean",
+      "committed_sha256": "23f6696463dd7a92e42a96762585e4a59d2a1f01b7856f0050353f87c8443d74",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Domain/Canonical.lean",
+      "committed_sha256": "599a9631fc8bde3792613f055037a1b03709cf95c8c1d3048d3abd2e7f0802e7",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Domain/ProgramWire.lean",
+      "committed_sha256": "b79062b8d8ab1c1573f5cd6241af7e1eeb22c1725b739d5c7892d4245993236a",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Domain/Node.lean",
+      "committed_sha256": "164577f9fc408eb8d02bac7e44fc015158497e1491d01a0cce15f34060b2a638",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Domain/Derived/Program.lean",
+      "committed_sha256": "8542a0758a95be3552afbbe18e39251c2def4380ca4fd555676b647e5229a7a4",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Domain/Derived/Schema.lean",
+      "committed_sha256": "4bcd0d13b9bd8df1eafeb0f23b5ce845289e3b359fe5d7df1a6ff0d3e02fdf4f",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Domain/RowCanonical.lean",
+      "committed_sha256": "4502c1d52187b809409019aba9058f79617d2ee49122bda5e7bdf816636568c0",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Domain/Clock.lean",
+      "committed_sha256": "f897287779b083b6cab823191994e3f16a4dcdfb1d76731d97e471f492024195",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Store/Carrier/Val.lean",
+      "committed_sha256": "945eccfeb9dc5ac73a566e521d745b50c9c40ff8c8355d123140f6d792599a17",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/RunnerDerived.lean",
+      "committed_sha256": "458e4c996aa76d06db5f5455d75c4934a95581b8dcb55ed5bd89f33a692b5bce",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Derived.lean",
+      "committed_sha256": "ae6760f1e2144c617e560956c22484abb759f3492cdde8dd8fb737268ead60d3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/RefusalsDerived.lean",
+      "committed_sha256": "25ba1caaf72bcb113a7188088cd2dec283ab63318ced0c13e28e957505b56a77",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Schema/Bridge.lean",
+      "committed_sha256": "f31d9c39b6f33876214e938f0b1da98bdb3c469ee7f1803284c99d79a211e473",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Schema/TyFaces.lean",
+      "committed_sha256": "5515370412ffd013c33580ee8d08cd7cf45f165b6a27b3ff07816c9673cfa9b4",
+      "matches": true
+    },
+    {
+      "path": "tools/Tools/ProgramStructure.lean",
+      "committed_sha256": "3a927c2778ac4f8d10bbe792f7e5487ce5e840c4e4df037b9348ca23b7d51eb1",
+      "matches": true
+    },
+    {
+      "path": "tools/Drivers/TsGen.lean",
+      "committed_sha256": "15e462a81f4cb4a28802e2d7765459e24f03f494daec92811f1c05843df380a3",
+      "matches": true
+    },
+    {
+      "path": "tools/ProofGraph/Proof.lean",
+      "committed_sha256": "283b11563eb0328e1b354c257b5436d64d957ef51596defa738699fe5b9e62d7",
+      "matches": true
+    },
+    {
+      "path": "tools/Conform/Core/Proof.lean",
+      "committed_sha256": "fa556a0f2158f6f505f60497a9e184deee8f587e1f00f3c6f452ea1d44e1a023",
+      "matches": true
+    },
+    {
+      "path": "tools/Conform/Core/Report.lean",
+      "committed_sha256": "22cb35550b231565d1d27fd478347db06e15c95421f9b549b7d1c06f8b9d9ed3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "committed_sha256": "5d193515287b06b02ff5d1ebb93ca7a57b673c453b39e10200e04c009b6ff1c9",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Ty.lean",
+      "committed_sha256": "0de411b14f6758bbe2951cdaced0597662b319ce951186417d02b7223e3e2802",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Admission.lean",
+      "committed_sha256": "4ef4539a87ae5b273cbb06d318c84180513c2958370b2797b5f7fc981e6f6062",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Checker.lean",
+      "committed_sha256": "858d1bad1e6b57536f14c45e5b9b8075305ad932996753f7d406081e5a51235a",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "committed_sha256": "f77508cfd3c7f34b7433346654ac709e2734f5308c8b44391a229e9fdb6a6cdd",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "committed_sha256": "f42a5aa7f2102838bf9723c572c0c55d8dec2e7553f1fea4fba34bffa743a91b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Refs.lean",
+      "committed_sha256": "def356715b4c4cacccdcb17aa3b2c2bbb17e7bc3257b59a22bc27bb9e5fc6858",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/NodeLenses.lean",
+      "committed_sha256": "0102d87d19e956433e0f9c153b0f7dbf2a6540145efb55ca2e3e8d1c1af5995b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "committed_sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "committed_sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "committed_sha256": "0b20fbd693f0400b995d044bd35ce38a0c2a04eabaf92f9d71b31d04b445e242",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Formation.lean",
+      "committed_sha256": "e5bc4f8ff96c045275e7e59d0a4e703fba20d8f86fc3c3b460d82780e7a3f17b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/CheckedTyping.lean",
+      "committed_sha256": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "committed_sha256": "16288aa155aea59c37a3c5b1c9f526fcf17b882891aeeed246f55f0f7ae7f64a",
+      "matches": true
+    },
+    {
+      "path": "tools/Effect4Gen/wire-tags.json",
+      "committed_sha256": "30351349f13bff7dbe9eee2391fe6af2ec945da15b621ff07adb9d1b8908577c",
+      "matches": true
+    },
+    {
+      "path": "tools/Effect4Gen/manifest.json",
+      "committed_sha256": "30f1e49289178f5e5ecdb7875ec7fc9f01b8109b854d958c261dc7863d1ee177",
+      "matches": true
+    },
+    {
+      "path": "ts/eff/wire.gen.ts",
+      "committed_sha256": "5e447a572326341341fc0af096b9bc411bef55c613f0df46ac04a515602ed959",
+      "matches": true
+    },
+    {
+      "path": "ts/eff/eff.gen.ts",
+      "committed_sha256": "311f11db047fa1824a788d96aaff1ee87a9365d1d4d4ec8977c9c883669c0180",
+      "matches": true
+    },
+    {
+      "path": "ts/eff/README.md",
+      "committed_sha256": "0dfe6de9b099ad6bd03430e63a9c5be1aeb21b7713bf3ba567378dd693076e5d",
+      "matches": true
+    },
+    {
+      "path": "ts/eff/ingest/cli.ts",
+      "committed_sha256": "b6b39eb01f0f19415f7a346a5948ec41738c52000b8b428ed92fdbdd228202cb",
+      "matches": true
+    },
+    {
+      "path": "ocaml/eff/README.md",
+      "committed_sha256": "7c70e40eb37f3776847024f8a9ebc4ce397a7e99febb903099cd0516d09682cd",
+      "matches": true
+    },
+    {
+      "path": "ocaml/eff/eff_wire.ml",
+      "committed_sha256": "b645d9d423cfa837fd4a711bebac159042145f231f1c09b243a6e078c33f3748",
+      "matches": true
+    },
+    {
+      "path": "ocaml/engine/api_engine_inst.ml",
+      "committed_sha256": "98c43cf153aef1f868ace20c451b40e366b879a49e7a10b6f352f30b6e387e47",
+      "matches": true
+    },
+    {
+      "path": "ocaml/engine/api_engine.ml",
+      "committed_sha256": "c3c4e9f689b902c911e7c85f7e168c3f53f90925ab25806b4bbf5eec8fdc57ce",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "committed_sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16",
+      "matches": true
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+Title:           Bidirectional Type Slicing
+Keywords:        
+Author:          Max Carroll; Anil Madhavapeddy; Cyrus Omar
+Creator:         arXiv GenPDF (tex2pdf:8def8d8)
+Producer:        pikepdf 8.15.1
+CreationDate:    Tue Jul 14 21:13:28 2026 CDT
+ModDate:         Tue Jul 14 21:13:28 2026 CDT
+Custom Metadata: yes
+Metadata Stream: yes
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           28
+Encrypted:       no
+Page size:       486 x 720 pts
+Page rot:        0
+File size:       1121163 bytes
+Optimized:       no
+PDF version:     1.7

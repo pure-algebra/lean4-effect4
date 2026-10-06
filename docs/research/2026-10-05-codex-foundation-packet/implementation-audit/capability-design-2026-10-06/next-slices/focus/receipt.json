@@ -1,0 +1,62 @@
+{
+  "kind": "research slice contract; not dispatched or compiled",
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+  "prior_cut": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "active_changes": "excluded; only committed git-show sources retained",
+  "verified_source_files": 43,
+  "source_verification": "SHA256, Git blob SHA1 and exact frozen git-show bytes",
+  "probes": {
+    "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/probe.py",
+    "passed": 24,
+    "scope": "isolated finite source/context model; no project imports, Lean or target execution"
+  },
+  "key_refinements": [
+    "route-based focus includes Routing and nested iterate",
+    "inferred types plus named parent constraints, no unique expected type",
+    "outer typing result separate from inner view refusal",
+    "original-source public connector requires reference-free input",
+    "unsupported non-Eff families refuse without fabricated contexts",
+    "no Api/Built import cycle"
+  ],
+  "proofs": "F1-F4 proposed and uncompiled; no new Lean acceptance or axiom output",
+  "limits": [
+    "No repository changes",
+    "No Lean/build/compiler/generator/runtime/install or branch commands",
+    "No Claude or seat messages",
+    "Python controls use no project imports",
+    "Existing parent constraints are modeled only; actual Routing paths remain fixture candidates until authoring is checked"
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/brief.md",
+      "sha256": "0ac456b3eb39220c790f196a467bdea73fa7ff6d0e90ddb0622ddc382eaa5d1c",
+      "bytes": 22435
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/recommendations-review.md",
+      "sha256": "4ad922b170e6d67b81bbc4a56481dee0092abc64608b5cc0caac0cae02267f3e",
+      "bytes": 1984
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/recommendations-reviewed.md",
+      "sha256": "049665f968f6b4749d859a6b1e8cf68d59e96ab6ee3281f096d4c3368bcf8940",
+      "bytes": 15942
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/manifest.json",
+      "sha256": "7045d1b24ec94946270ec7daa342ac701af5cbb56ee5879054c33db05b6697d1",
+      "bytes": 19682
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/probe.py",
+      "sha256": "a85d41855bd484c0e4fc3b38839c917db95775f42e932353e8bfd42c294114f5",
+      "bytes": 8907
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/probe-results.json",
+      "sha256": "f36d2edd15bdfbc3dc0e7a770dbb13d783b0c2706ace66328f234d8034dc8614",
+      "bytes": 6752
+    }
+  ]
+}

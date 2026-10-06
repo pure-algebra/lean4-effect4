@@ -1,0 +1,77 @@
+{
+  "task": "Capability and interoperability API research",
+  "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "status": "Research complete; all APIs/obligations proposed and uncompiled",
+  "source_files": 79,
+  "verification": "verification.json",
+  "no_project_execution": true,
+  "no_repo_edits": true,
+  "no_build_compiler_runtime_generator_install": true,
+  "actual_checks": "Frozen source hashes, packet references, complete obligation metadata; primary literature inspected",
+  "design_controls": "controls.md; proposed, not run",
+  "limitations": [
+    "No new API implementation or theorem checked",
+    "Existing theorem statements inspected, not rebuilt",
+    "TypeScript/OCaml face agreement remains scoped and open",
+    "Current Built service-declaration gap retained",
+    "No hash injectivity assumed",
+    "No general loop termination, liveness or budget-resumption claim"
+  ],
+  "artifacts": [
+    {
+      "path": "report.md",
+      "sha256": "bda26ab7c276dd759731dad07cdcb5d16f4cedee5e608901d6f4d3fc7fd89bb7",
+      "bytes": 24519
+    },
+    {
+      "path": "envelopes.txt",
+      "sha256": "4ce8ad6a6ab7b2e50ff03241342a7c2fe247dcf1c4924cf1c759eae38eab32ce",
+      "bytes": 8153
+    },
+    {
+      "path": "obligations.json",
+      "sha256": "6d5354271f3780791b06ff2af4b2e52a5d44718fec8ca35f3f06d154145f68a6",
+      "bytes": 16765
+    },
+    {
+      "path": "controls.md",
+      "sha256": "98f83b9115ed66d5ddd08badd0c25ce9d895817a5f71cdb8b48e8911a7d776dd",
+      "bytes": 4013
+    },
+    {
+      "path": "source-map.json",
+      "sha256": "831a8ffb82357d0e168e933ce805b5d633921ee5e6a6122e15375b517d29e477",
+      "bytes": 4530
+    },
+    {
+      "path": "source-manifest.json",
+      "sha256": "2eb0a2a86ab8e26a62e98d2c84ba4d6d878bfcfa393ffe79a327cb3c953ecd1f",
+      "bytes": 29170
+    },
+    {
+      "path": "literature.json",
+      "sha256": "5ee4c9b35ec4c3604677fdb6562ad158e5f26089b33e5422852722ff08d4278a",
+      "bytes": 2206
+    },
+    {
+      "path": "verification.json",
+      "sha256": "0ced13d193902c16aa0904ae870cf4f40cf513060ed8263cc7e3dd731771f2ab",
+      "bytes": 15215
+    },
+    {
+      "path": "commands.json",
+      "sha256": "626c101ee173a80805a6789e99b885170168bc71777105fd2e7d3fcf87a90a48",
+      "bytes": 1004
+    },
+    {
+      "path": "finish-packet.py",
+      "sha256": "85978c16c16478572c04559f9dfc569dfcbdad54c121988f1f812a9f504c0245",
+      "bytes": 22445
+    },
+    {
+      "path": "committed-verification.json",
+      "sha256": "80268a1a3111f4a08f00ed7890227c1d62f53b7729f766f812e8024e8bcbd72d",
+      "bytes": 14093
+    }
+  ]
+}

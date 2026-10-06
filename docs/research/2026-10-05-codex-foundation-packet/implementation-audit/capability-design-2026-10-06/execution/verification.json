@@ -1,0 +1,499 @@
+{
+  "source_checks": [
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "AGENTS.md",
+      "original_equals_copy": true,
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/STATE.md",
+      "original_equals_copy": true,
+      "sha256": "5931005e063e3d0b9b29eb081987c6a2aeac959a4dde9363451a3e738734e9cf"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/core/decisions.md",
+      "original_equals_copy": true,
+      "sha256": "3536331552834acec666d49c357e10bb26dbe4b65ac5071021d6303f101d3ee3"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/core/semantics.md",
+      "original_equals_copy": true,
+      "sha256": "9fc6693bae0633cf2d14d2fc9d93123a5069190bd2f729b63bb80dc13254791a"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/core/host-boundary.md",
+      "original_equals_copy": true,
+      "sha256": "f478fbe6f9061ff6518992c63482424f61e5959f41dd50a43355fcca82e812fe"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/core/machine-state.md",
+      "original_equals_copy": true,
+      "sha256": "a2c51fa6ce917ff3a7560a7ff49f785d70a30250b03543ff2a639ef3bde24597"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/core/system-map.md",
+      "original_equals_copy": true,
+      "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+      "original_equals_copy": true,
+      "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "docs/research/2026-10-05-claude-lead/transactions-and-clock.md",
+      "original_equals_copy": true,
+      "sha256": "15011ebabc468c60b556d90878e42c2766cc4c228dd433aa2e8a2ecf3b6d4e6b"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Run.lean",
+      "original_equals_copy": true,
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Run.lean",
+      "original_equals_copy": true,
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Api.lean",
+      "original_equals_copy": true,
+      "sha256": "52f91cbb2a84d374e260d3ca6fe4c71158e3bad884d258c84fed654e2aff9350"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Api/Built.lean",
+      "original_equals_copy": true,
+      "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Api/HostSession.lean",
+      "original_equals_copy": true,
+      "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Api/HostProtocol.lean",
+      "original_equals_copy": true,
+      "sha256": "dcec8adce472f8348a080419a15bee1e0892999fd0a58220c6a2ce64fd46d451"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Api/HostSession.lean",
+      "original_equals_copy": true,
+      "sha256": "de49efa72ca2999f13140a4dac4434b596054a885cb2e7fdd2bca697da0d7c84"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Api/TestClock.lean",
+      "original_equals_copy": true,
+      "sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "original_equals_copy": true,
+      "sha256": "5d193515287b06b02ff5d1ebb93ca7a57b673c453b39e10200e04c009b6ff1c9"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Store/Domain/Clock.lean",
+      "original_equals_copy": true,
+      "sha256": "f897287779b083b6cab823191994e3f16a4dcdfb1d76731d97e471f492024195"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Machine/Timer.lean",
+      "original_equals_copy": true,
+      "sha256": "a2a91cda5746f0b20498b9c22b6ac04732a52010b41e649b5b7c61b528c1b578"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "original_equals_copy": true,
+      "sha256": "038f424e682f830d61b716748ef3d05cfe7cc940e02c8d4ae2e6b8d92e9b8327"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Machine/Lift.lean",
+      "original_equals_copy": true,
+      "sha256": "f0816027156e83141ab89823906c9e7d2c532ff0c32e28e551af383ea52db5ee"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Machine/Clock.lean",
+      "original_equals_copy": true,
+      "sha256": "5b0ab0d4687957228c313fdcfcb4304df3940c1f01a3a365cbc9d66042918fe8"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Program/RuntimeR.lean",
+      "original_equals_copy": true,
+      "sha256": "a7a03719b5b0ec8395c331d936004121777b229752d1e0274a58207736662640"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "original_equals_copy": true,
+      "sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "original_equals_copy": true,
+      "sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "original_equals_copy": true,
+      "sha256": "0b20fbd693f0400b995d044bd35ce38a0c2a04eabaf92f9d71b31d04b445e242"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Program/Compile.lean",
+      "original_equals_copy": true,
+      "sha256": "56e3a6040e28f3f62d895a4702cdb680afe3ffd05e36aa5cb3e9ceb9cca129b6"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Program/Native.lean",
+      "original_equals_copy": true,
+      "sha256": "05c27268e678f4d4d50156d03ce0a2479320c01654431dd9c4fd370857b435cb"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Program/Typed/Contracts.lean",
+      "original_equals_copy": true,
+      "sha256": "c2fb043b3838eea46365fa224a4688387321dd66203d440a1290cc90997c5997"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+      "original_equals_copy": true,
+      "sha256": "18210f5cc58202296fd62b591d8a444cb4882e1a7f72a68db11dab94e13cecc4"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Laws/Program/Typed/Admission.lean",
+      "original_equals_copy": true,
+      "sha256": "d01996af609e851088784e32a3396252ca8a83f74551eaeda83fc16e8d43deed"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Modules/Waiting.lean",
+      "original_equals_copy": true,
+      "sha256": "3e470ba1e48c843c4170f8bea2ca302e455958f3ba737fe46ec8ff1b3d1f705d"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "src/Effect4/Modules/Semaphore/Ops.lean",
+      "original_equals_copy": true,
+      "sha256": "b351fa73de5c5d03756b8d6bb8d52a435280e5da849faabd0508cd8036d0cf0b"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "Test/Dogfood/Scenario.lean",
+      "original_equals_copy": true,
+      "sha256": "8010d6d5360e143b9ded6104fc0a42115431eb11247e1b244ef5520b548b8351"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "Test/Dogfood/Scenario/Tape.lean",
+      "original_equals_copy": true,
+      "sha256": "e6faaea974947de0ebfa785303d20917f22380d8206b31e2f701519f4611274d"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "Test/Api/TestClockContract.lean",
+      "original_equals_copy": true,
+      "sha256": "9616ea6c5731a487df2c7fe94dc217dd9be7c6fd9ecd76401e9d37fa25d0be44"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "harness/truth/session/clock.ts",
+      "original_equals_copy": true,
+      "sha256": "b2317b6200bc15f1c56428bb555199746c6bae80ec24e6fb5ea61188cab3e677"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "harness/truth/session/clock.test.ts",
+      "original_equals_copy": true,
+      "sha256": "1108ab3aa4ec83b189fa2ca844459e8ea19d2c1308e139f1a118655eb254cb5d"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "original_equals_copy": true,
+      "sha256": "d455f54bacaed133b599c88db869f34bd241ac524d08dbcbfffbec9b47b3cd05"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "vendor/effect-4.0.0-rc.112/src/Clock.ts",
+      "original_equals_copy": true,
+      "sha256": "acc538a10d8a45879e8a252fd5bc05acc2c037c8a0751443e98edd7863019453"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+      "original_equals_copy": true,
+      "sha256": "b35d4584199f9f5aaec54bfccf9092a45388b72b617858cdbfe95170a1ac30e3"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+      "original_equals_copy": true,
+      "sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "vendor/effect-4.0.1/src/Clock.ts",
+      "original_equals_copy": true,
+      "sha256": "acc538a10d8a45879e8a252fd5bc05acc2c037c8a0751443e98edd7863019453"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "vendor/effect-4.0.1/src/testing/TestClock.ts",
+      "original_equals_copy": true,
+      "sha256": "b35d4584199f9f5aaec54bfccf9092a45388b72b617858cdbfe95170a1ac30e3"
+    },
+    {
+      "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "path": "vendor/effect-4.0.1/src/internal/effect.ts",
+      "original_equals_copy": true,
+      "sha256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73"
+    },
+    {
+      "commit": "b88ff25d61316040734e4be83622087c24a393d3",
+      "path": "src/Effect4/Laws/Program/MaskRuns.lean",
+      "original_equals_copy": true,
+      "sha256": "d0e4d43b2bcd5fb07d394c5fc8d00886d1c60d10555f996ef37b3abfe9deada6"
+    },
+    {
+      "commit": "b88ff25d61316040734e4be83622087c24a393d3",
+      "path": "src/Effect4/Laws/Machine/MaskRuns.lean",
+      "original_equals_copy": true,
+      "sha256": "4c9ff35d1011cacaa4bdf539834caebf8bdf68b63ecfd4ab6a18a40780041795"
+    }
+  ],
+  "declaration_checks": [
+    {
+      "path": "src/Effect4/Run.lean",
+      "anchor": "structure Run where",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "anchor": "structure Observation where",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "anchor": "structure Work where",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "anchor": "def nextControl",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "anchor": "def runClock",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "anchor": "theorem journal_replays",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "anchor": "theorem play_append",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "anchor": "theorem play_controls_eq_replay",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "anchor": "theorem runClock_eq_run",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "anchor": "theorem nextControl_spec",
+      "present": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "anchor": "def tapeFrom",
+      "present": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "anchor": "theorem tapeFrom_cut_replays",
+      "present": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "anchor": "theorem tapeFrom_position_prefix",
+      "present": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "anchor": "theorem tapeFrom_position_replays",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Contracts.lean",
+      "anchor": "inductive FramePath",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Contracts.lean",
+      "anchor": "theorem append",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Contracts.lean",
+      "anchor": "theorem split",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Contracts.lean",
+      "anchor": "theorem map",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+      "anchor": "inductive RegistrationArrow",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+      "anchor": "abbrev HostStack",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+      "anchor": "abbrev PositionStack",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+      "anchor": "def CodeOk",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+      "anchor": "theorem hostStack_mono",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+      "anchor": "theorem hostStack_races",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Admission.lean",
+      "anchor": "def PointTyped",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Api/TestClock.lean",
+      "anchor": "def sleepDeadlines",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Api/TestClock.lean",
+      "anchor": "def synthesize",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Api/TestClock.lean",
+      "anchor": "def fastForward",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Api/TestClock.lean",
+      "anchor": "def dilateTime",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "anchor": "theorem toNat_add",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "anchor": "theorem ofDecimal_toDecimal",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "anchor": "theorem ofDecimal_exact",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "anchor": "def clockStep",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "anchor": "theorem dueMin_first",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Timer.lean",
+      "anchor": "theorem clockStep_wf",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "anchor": "def advanceState",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "anchor": "def LoopAgreement",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "anchor": "theorem loopAgreement_of_straight",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "anchor": "theorem loopAgreement",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Lift.lean",
+      "anchor": "def Guarded",
+      "present": true
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Lift.lean",
+      "anchor": "structure FoldLift",
+      "present": true
+    }
+  ]
+}

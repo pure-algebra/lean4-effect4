@@ -1,0 +1,16 @@
+CreationDate:    Fri Jul  7 13:53:37 2000 CDT
+ModDate:         Tue Oct 31 07:43:59 2000 CST
+Custom Metadata: no
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           8
+Encrypted:       no
+Page size:       612 x 792 pts (letter)
+Page rot:        0
+File size:       854562 bytes
+Optimized:       yes
+PDF version:     1.3

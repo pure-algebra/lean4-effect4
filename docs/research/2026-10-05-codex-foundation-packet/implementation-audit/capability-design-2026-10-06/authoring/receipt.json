@@ -1,0 +1,80 @@
+{
+  "kind": "source-only design research and isolated finite Python models",
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "revision": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "source_files": 58,
+  "initial_checkout_status": "clean",
+  "source_verification": {
+    "sha256": true,
+    "git_blob_sha1": true,
+    "exact_frozen_git_show": true,
+    "errors": []
+  },
+  "commands": [
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/save_sources.py",
+      "result": "58 source copies at the frozen revision; no project execution"
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/probe.py",
+      "result": "18 finite isolated model controls passed; no project imports"
+    },
+    {
+      "command": "inline Python stdlib source-manifest verification",
+      "result": "58 SHA256, Git blob and frozen git-show comparisons passed"
+    }
+  ],
+  "proposals": [
+    "checked-focus-context",
+    "edit wrapper serving rebuild-admission",
+    "looped-composition-agreement",
+    "meaningB weakening helper for scoped insertion"
+  ],
+  "evidence_limits": [
+    "No Lean compilation or theorem acceptance occurred",
+    "No project runtime, compiler, generator, build or installation ran",
+    "No repository files or branches were changed",
+    "All proposed contracts and theorem shapes are uncompiled",
+    "Finite Python controls are models, not Lean counterexamples or backend results",
+    "No outside implementation agreement is claimed",
+    "No messages were sent to Claude or project seats"
+  ],
+  "artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/report.md",
+      "sha256": "2dd79cadc5777ee1c6740773d28aa45de656079ebcdc54fded2baa106f8f6751",
+      "bytes": 34712
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/contracts.md",
+      "sha256": "c5fe82c31ab0692078d0b86b1173b4516f266f2774e0d543a1c1e5c153911842",
+      "bytes": 6031
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/manifest.json",
+      "sha256": "c32feaad853f915ff86c28ccc4b8b9cd1ce5e3d50dc700510fb670f0c1ee7ab0",
+      "bytes": 25960
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/probe.py",
+      "sha256": "7b0844bad4e16587b1491d1b44422ca347ed5b28f2c165b8082cdd2d17e470a4",
+      "bytes": 5695
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/probe-results.json",
+      "sha256": "369417af5a1f3ba2cb6a774a9a17997d01d30beb38176677a549b602e5ccb668",
+      "bytes": 5081
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/save_sources.py",
+      "sha256": "ad50ebcde7f9258b3ec6f296dd4473d5d9b77e9327dddd47ed7c29266fd3188b",
+      "bytes": 2034
+    }
+  ],
+  "addendum": {
+    "reason": "Routing requires route-based inspection; Looped restricts only semantic rewrite",
+    "prior_receipt": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/authoring/prior-looped-focus/receipt.json",
+    "superseding_brief": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/brief.md",
+    "prior_probes_unchanged": true
+  }
+}

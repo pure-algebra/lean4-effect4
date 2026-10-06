@@ -1,0 +1,22 @@
+{
+  "captured_at": "2026-10-06T16:14:40.292218+00:00",
+  "seats": {
+    "main": [
+      "/Users/pooks/Dev/lean4-effect4",
+      "c22f908def0c2a881ae46040d0dbaaaa57991352"
+    ],
+    "lift": [
+      "/Users/pooks/Dev/lean4-effect4-mask",
+      "698390476983fa89ce55e88dc7ef7aa695111cb3"
+    ],
+    "check": [
+      "/Users/pooks/Dev/lean4-effect4-qsteps",
+      "7b332a805aa9317a32b882ca6e6aafa15371fa65"
+    ],
+    "semw": [
+      "/Users/pooks/Dev/lean4-effect4-qtypes",
+      "11b45d8d66f8df07a4478e494dc61c27a16cdc1b"
+    ]
+  },
+  "note": "Snapshot committed cuts supplied before capture. Later active file copies are explicitly separate."
+}

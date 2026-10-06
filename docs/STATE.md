@@ -434,6 +434,27 @@ Candidates with no seat, each with its place:
   264);
 - two small repairs of the foreign readers (row 258, points 5 and 6).
 
+Candidates for the plan after the handover (row 277), from Codex's capability packet of
+2026-10-06. The packet is filed with a coordinator's note
+(`research/2026-10-05-codex-foundation-packet/implementation-audit/capability-design-2026-10-06/`).
+It is research: nothing is dispatched, and every new statement is uncompiled. Its evidence
+is source inspection and finite models. Seat WORKQ's prepared slice stays first.
+
+- **The checked focus** (`next-slices/focus/brief.md` there): a view of one program location
+  that the checker itself derives. It shows the inherited bindings, the inferred type and the
+  named constraints of each parent rule. Its domain is the admitted source route without
+  references, with Routing and nested `iterate`. Four laws are proposed. A view's refusal is
+  no refusal of the program.
+- **One rewrite for straight programs and loops** (`next-slices/loop-rewrite/brief.md`):
+  the removal of administrative suspensions by the identity fold. Its proposed law compares
+  the bounded meaning at every budget, with the stores of an unfinished loop.
+- **Exact selection, an edit of the same sort and a whole rebuild**, over `Node.replaceAt`
+  and `Built.rebuild`.
+- **A completed prefix's inspection and offline branches**, over `Run` and seat CUTS's laws.
+- **A clock plan against one snapshot**, beside the clock-unit lane of row 231.
+- **Later:** the insertion of a stored fragment under a scope, a claim's applicability to
+  given subjects, causal views and the transport of live state.
+
 Three repairs of 2026-10-06, outside any seat:
 
 - the install rule of the `Makefile` keeps a linked package folder (`6e629bb4`). A seat's

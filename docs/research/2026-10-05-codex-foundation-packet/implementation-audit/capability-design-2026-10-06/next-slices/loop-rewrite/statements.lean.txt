@@ -1,0 +1,95 @@
+/- PROPOSED SIGNATURES ONLY. UNCOMPILED. NOT A PATCH OR A PROOF RECEIPT.
+   Place the proposed claim in brief.md before replacing any proof_goal body.
+   Core and Laws blocks below belong in different modules. -/
+
+-- CORE: imports Effect4.Program.Fold only.
+namespace Effect4.Program
+
+def stripSuspendsAlg (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) :=
+  { EffAlgebra.id Op with eff_suspend := fun body => body }
+
+def stripSuspends {Op : Type} (e : Eff Op) : Eff Op :=
+  cata_eff (stripSuspendsAlg Op) e
+
+end Effect4.Program
+
+-- LAWS: imports existing Folds/Denote, Folds/Looped, MeaningEq and Agreement/Loop.
+-- NativeEff, Looped, meaningB and StraightEq retain their actual definitions.
+namespace Effect4.Program.Denote
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Program.Agreement
+
+-- Helpers of looped-suspension-cleanup; public API checks Looped before applying its law.
+-- Initial-algebras-folds, compatibility, serving R8 through the named transformation.
+@[semantics "initial-algebras-folds" (requirement := R8)]
+proof_goal stripSuspends_looped (e : NativeEff) :
+  Looped (stripSuspends e) = Looped e
+
+@[semantics "initial-algebras-folds" (requirement := R8)]
+proof_goal stripSuspends_straight (e : NativeEff) :
+  Straight (stripSuspends e) = Straight e
+
+-- Stronger internal helper, from the existing denotation algebra's homomorphism.
+-- Keeping Looped in this public-facing helper prevents fallback equality misuse.
+@[semantics "translation-simulation" (requirement := R8)]
+proof_goal stripSuspends_denoteB (k : Nat) (e : NativeEff)
+    (hl : Looped e = true) (env : List Val) :
+  denoteB k (stripSuspends e) env = denoteB k e env
+
+-- Proposed registry pointer: translation-simulation / R8 / role simulation.
+-- One semantic budget, all environments and all complete Stores, including unfinished writes.
+@[semantics "translation-simulation" (requirement := R8)]
+proof_goal looped_suspension_cleanup (e : NativeEff) (hl : Looped e = true) :
+  Looped (stripSuspends e) = true ∧
+    ∀ (k : Nat) (env : List Val) (stores : Stores),
+      meaningB k (stripSuspends e) env stores = meaningB k e env stores
+
+-- Existing StraightEq reused, not a parallel relation with a different observation.
+@[semantics "initial-algebras-folds" (requirement := R8)]
+@[semantics "translation-simulation" (requirement := R8)]
+proof_goal stripSuspends_straightEq (e : NativeEff) (hs : Straight e = true) :
+  StraightEq (stripSuspends e) e
+
+-- Derived consumer: reuse loopAgreement at each program, with separate fuel bounds.
+-- This exact Api.run statement uses its default empty host table and initial state.
+@[semantics "translation-simulation" (requirement := R8)]
+proof_goal stripSuspends_completed_run (e : NativeEff) (hl : Looped e = true)
+    (k : Nat) (ex : ExitV) (stores : Stores)
+    (done : meaningB k e [] Stores.empty = (some ex, stores)) :
+  ∃ originalBound cleanedBound : Nat,
+    ∀ originalFuel cleanedFuel : Nat,
+      originalBound ≤ originalFuel → cleanedBound ≤ cleanedFuel →
+      (Api.run e originalFuel).outcome = .finished ∧
+      (Api.run (stripSuspends e) cleanedFuel).outcome = .finished ∧
+      (Api.run e originalFuel).exit = some ex ∧
+      (Api.run (stripSuspends e) cleanedFuel).exit = some ex ∧
+      (Api.run e originalFuel).stores = stores ∧
+      (Api.run (stripSuspends e) cleanedFuel).stores = stores
+
+end Effect4.Program.Denote
+
+/- Optional later same-type helper, only if its actual API consumer needs it.
+   Do NOT add this goal just to widen the first slice:
+
+   (sig : Signature NativeOp) (env : TyEnv) (e : NativeEff) (ty : EffTy)
+   (hl : Looped e = true)
+   (typed : Conform.Effect4.Typing.HasTy sig env e ty)
+   ⊢ Conform.Effect4.Typing.HasTy sig env (stripSuspends e) ty
+
+   Or use the equivalent success projection through effTy_sound/effTy_complete.
+   Full Except checker equality is false because refusal paths change.
+   Successful Built.rebuild already returns actual candidate admission.
+-/
+
+/- Homomorphism route, schematically:
+   1. Inspect existing denoteB.alg/hom/eq_cata in the authorized Lean environment.
+   2. If its carrier pairs syntax (FoldOf's paramorphism), retain e, not stripSuspends e,
+      in the first component. Pair it with fun env => denoteB k (stripSuspends e) env.
+   3. Supply the same existing algebra, not a new denotation algebra.
+   4. The loop arm uses iter_congr with the body observation equal at every environment.
+   5. hom_eq_cata_eff compares this observer with the existing denoteB.hom.
+   6. Project the observation, then apply runP for the Store result.
+   7. Use Looped/Straight generated algebras for the corresponding fragment facts.
+
+   Generated carrier details have NOT been checked by Lean in this research.
+-/

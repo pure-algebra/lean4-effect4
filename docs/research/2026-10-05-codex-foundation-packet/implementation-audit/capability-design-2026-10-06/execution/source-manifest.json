@@ -1,0 +1,436 @@
+[
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "AGENTS.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/AGENTS.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/STATE.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/STATE.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/STATE.md",
+    "sha256": "5931005e063e3d0b9b29eb081987c6a2aeac959a4dde9363451a3e738734e9cf",
+    "bytes": 134745
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/core/decisions.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/core/decisions.md",
+    "sha256": "3536331552834acec666d49c357e10bb26dbe4b65ac5071021d6303f101d3ee3",
+    "bytes": 366858
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/core/semantics.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/semantics.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/core/semantics.md",
+    "sha256": "9fc6693bae0633cf2d14d2fc9d93123a5069190bd2f729b63bb80dc13254791a",
+    "bytes": 81869
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/core/host-boundary.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/host-boundary.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/core/host-boundary.md",
+    "sha256": "f478fbe6f9061ff6518992c63482424f61e5959f41dd50a43355fcca82e812fe",
+    "bytes": 22517
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/core/machine-state.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/machine-state.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/core/machine-state.md",
+    "sha256": "a2c51fa6ce917ff3a7560a7ff49f785d70a30250b03543ff2a639ef3bde24597",
+    "bytes": 19313
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/core/system-map.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/system-map.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/core/system-map.md",
+    "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65",
+    "bytes": 45403
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/research/2026-10-05-claude-lead/foundation-contracts.md",
+    "sha256": "8c48cf3bc65fbe99a370d22bc3a2482a1545323aaf5de7d9a57649f8017c8ab5",
+    "bytes": 14358
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "docs/research/2026-10-05-claude-lead/transactions-and-clock.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/transactions-and-clock.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/docs/research/2026-10-05-claude-lead/transactions-and-clock.md",
+    "sha256": "15011ebabc468c60b556d90878e42c2766cc4c228dd433aa2e8a2ecf3b6d4e6b",
+    "bytes": 23061
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Run.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Run.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Run.lean",
+    "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844",
+    "bytes": 16676
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Run.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Run.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Run.lean",
+    "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+    "bytes": 51982
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Api.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Api.lean",
+    "sha256": "52f91cbb2a84d374e260d3ca6fe4c71158e3bad884d258c84fed654e2aff9350",
+    "bytes": 32964
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Api/Built.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api/Built.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Api/Built.lean",
+    "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+    "bytes": 1105
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Api/HostSession.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api/HostSession.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Api/HostSession.lean",
+    "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece",
+    "bytes": 11404
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Api/HostProtocol.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api/HostProtocol.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Api/HostProtocol.lean",
+    "sha256": "dcec8adce472f8348a080419a15bee1e0892999fd0a58220c6a2ce64fd46d451",
+    "bytes": 4003
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Api/HostSession.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Api/HostSession.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Api/HostSession.lean",
+    "sha256": "de49efa72ca2999f13140a4dac4434b596054a885cb2e7fdd2bca697da0d7c84",
+    "bytes": 18191
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Api/TestClock.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api/TestClock.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Api/TestClock.lean",
+    "sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3",
+    "bytes": 4790
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Data/ClockMillis.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Data/ClockMillis.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Data/ClockMillis.lean",
+    "sha256": "5d193515287b06b02ff5d1ebb93ca7a57b673c453b39e10200e04c009b6ff1c9",
+    "bytes": 5676
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Store/Domain/Clock.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Store/Domain/Clock.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Store/Domain/Clock.lean",
+    "sha256": "f897287779b083b6cab823191994e3f16a4dcdfb1d76731d97e471f492024195",
+    "bytes": 1414
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Machine/Timer.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Machine/Timer.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Machine/Timer.lean",
+    "sha256": "a2a91cda5746f0b20498b9c22b6ac04732a52010b41e649b5b7c61b528c1b578",
+    "bytes": 15166
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Machine/Fibers.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Machine/Fibers.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Machine/Fibers.lean",
+    "sha256": "038f424e682f830d61b716748ef3d05cfe7cc940e02c8d4ae2e6b8d92e9b8327",
+    "bytes": 132671
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Machine/Lift.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Lift.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Machine/Lift.lean",
+    "sha256": "f0816027156e83141ab89823906c9e7d2c532ff0c32e28e551af383ea52db5ee",
+    "bytes": 46446
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Machine/Clock.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Machine/Clock.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Machine/Clock.lean",
+    "sha256": "5b0ab0d4687957228c313fdcfcb4304df3940c1f01a3a365cbc9d66042918fe8",
+    "bytes": 1683
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Program/RuntimeR.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/RuntimeR.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Program/RuntimeR.lean",
+    "sha256": "a7a03719b5b0ec8395c331d936004121777b229752d1e0274a58207736662640",
+    "bytes": 17646
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/LoopAgreement.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Program/LoopAgreement.lean",
+    "sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+    "bytes": 2381
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Program/DenoteB.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/DenoteB.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Program/DenoteB.lean",
+    "sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3",
+    "bytes": 23034
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Program/Agreement/Loop.lean",
+    "sha256": "0b20fbd693f0400b995d044bd35ce38a0c2a04eabaf92f9d71b31d04b445e242",
+    "bytes": 45631
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Program/Compile.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Compile.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Program/Compile.lean",
+    "sha256": "56e3a6040e28f3f62d895a4702cdb680afe3ffd05e36aa5cb3e9ceb9cca129b6",
+    "bytes": 94529
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Program/Native.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Program/Native.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Program/Native.lean",
+    "sha256": "05c27268e678f4d4d50156d03ce0a2479320c01654431dd9c4fd370857b435cb",
+    "bytes": 34667
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Program/Typed/Contracts.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Contracts.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Program/Typed/Contracts.lean",
+    "sha256": "c2fb043b3838eea46365fa224a4688387321dd66203d440a1290cc90997c5997",
+    "bytes": 18885
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Program/Typed/Scheduler.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Scheduler.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Program/Typed/Scheduler.lean",
+    "sha256": "18210f5cc58202296fd62b591d8a444cb4882e1a7f72a68db11dab94e13cecc4",
+    "bytes": 38013
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Laws/Program/Typed/Admission.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Laws/Program/Typed/Admission.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Laws/Program/Typed/Admission.lean",
+    "sha256": "d01996af609e851088784e32a3396252ca8a83f74551eaeda83fc16e8d43deed",
+    "bytes": 16579
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Modules/Waiting.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Modules/Waiting.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Modules/Waiting.lean",
+    "sha256": "3e470ba1e48c843c4170f8bea2ca302e455958f3ba737fe46ec8ff1b3d1f705d",
+    "bytes": 10535
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "src/Effect4/Modules/Semaphore/Ops.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Modules/Semaphore/Ops.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/src/Effect4/Modules/Semaphore/Ops.lean",
+    "sha256": "b351fa73de5c5d03756b8d6bb8d52a435280e5da849faabd0508cd8036d0cf0b",
+    "bytes": 9254
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "Test/Dogfood/Scenario.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/Test/Dogfood/Scenario.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/Test/Dogfood/Scenario.lean",
+    "sha256": "8010d6d5360e143b9ded6104fc0a42115431eb11247e1b244ef5520b548b8351",
+    "bytes": 65533
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "Test/Dogfood/Scenario/Tape.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/Test/Dogfood/Scenario/Tape.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/Test/Dogfood/Scenario/Tape.lean",
+    "sha256": "e6faaea974947de0ebfa785303d20917f22380d8206b31e2f701519f4611274d",
+    "bytes": 36001
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "Test/Api/TestClockContract.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/Test/Api/TestClockContract.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/Test/Api/TestClockContract.lean",
+    "sha256": "9616ea6c5731a487df2c7fe94dc217dd9be7c6fd9ecd76401e9d37fa25d0be44",
+    "bytes": 3381
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "harness/truth/session/clock.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/harness/truth/session/clock.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/harness/truth/session/clock.ts",
+    "sha256": "b2317b6200bc15f1c56428bb555199746c6bae80ec24e6fb5ea61188cab3e677",
+    "bytes": 5815
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "harness/truth/session/clock.test.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/harness/truth/session/clock.test.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/harness/truth/session/clock.test.ts",
+    "sha256": "1108ab3aa4ec83b189fa2ca844459e8ea19d2c1308e139f1a118655eb254cb5d",
+    "bytes": 4257
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "tools/Tools/SemanticsRegistry.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/tools/Tools/SemanticsRegistry.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/tools/Tools/SemanticsRegistry.lean",
+    "sha256": "d455f54bacaed133b599c88db869f34bd241ac524d08dbcbfffbec9b47b3cd05",
+    "bytes": 83866
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "vendor/effect-4.0.0-rc.112/src/Clock.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/src/Clock.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/vendor/effect-4.0.0-rc.112/src/Clock.ts",
+    "sha256": "acc538a10d8a45879e8a252fd5bc05acc2c037c8a0751443e98edd7863019453",
+    "bytes": 10420
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+    "sha256": "b35d4584199f9f5aaec54bfccf9092a45388b72b617858cdbfe95170a1ac30e3",
+    "bytes": 18673
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+    "sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "bytes": 212712
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "vendor/effect-4.0.1/src/Clock.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.1/src/Clock.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/vendor/effect-4.0.1/src/Clock.ts",
+    "sha256": "acc538a10d8a45879e8a252fd5bc05acc2c037c8a0751443e98edd7863019453",
+    "bytes": 10420
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "vendor/effect-4.0.1/src/testing/TestClock.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.1/src/testing/TestClock.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/vendor/effect-4.0.1/src/testing/TestClock.ts",
+    "sha256": "b35d4584199f9f5aaec54bfccf9092a45388b72b617858cdbfe95170a1ac30e3",
+    "bytes": 18673
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "path": "vendor/effect-4.0.1/src/internal/effect.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.1/src/internal/effect.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source/vendor/effect-4.0.1/src/internal/effect.ts",
+    "sha256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+    "bytes": 223328
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "b88ff25d61316040734e4be83622087c24a393d3",
+    "path": "src/Effect4/Laws/Program/MaskRuns.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Program/MaskRuns.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/lift-source/src/Effect4/Laws/Program/MaskRuns.lean",
+    "sha256": "d0e4d43b2bcd5fb07d394c5fc8d00886d1c60d10555f996ef37b3abfe9deada6",
+    "bytes": 8485,
+    "scope": "separate committed seat; no acceptance rerun"
+  },
+  {
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "b88ff25d61316040734e4be83622087c24a393d3",
+    "path": "src/Effect4/Laws/Machine/MaskRuns.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/lift-source/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "sha256": "4c9ff35d1011cacaa4bdf539834caebf8bdf68b63ecfd4ab6a18a40780041795",
+    "bytes": 108500,
+    "scope": "separate committed seat; no acceptance rerun"
+  }
+]

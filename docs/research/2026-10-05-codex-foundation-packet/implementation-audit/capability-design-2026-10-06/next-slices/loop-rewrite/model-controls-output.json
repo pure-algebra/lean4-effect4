@@ -1,0 +1,2503 @@
+{
+  "kind": "Finite Python source-equation mirror; no Lean, Effect, machine or target execution",
+  "scope": "Single integer cell and named constructors only; not full StoreSig/Stores",
+  "case_families": 7,
+  "comparisons": 126,
+  "named_boundary_controls": 10,
+  "mutants_refused": 5,
+  "diagnostic_path_control": 1,
+  "checks": [
+    {
+      "name": "straight/budget=0/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            3
+          ],
+          3
+        ],
+        "after": [
+          [
+            "success",
+            3
+          ],
+          3
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=0/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            7
+          ],
+          7
+        ],
+        "after": [
+          [
+            "success",
+            7
+          ],
+          7
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=0/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            22
+          ],
+          22
+        ],
+        "after": [
+          [
+            "success",
+            22
+          ],
+          22
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=1/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            3
+          ],
+          3
+        ],
+        "after": [
+          [
+            "success",
+            3
+          ],
+          3
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=1/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            7
+          ],
+          7
+        ],
+        "after": [
+          [
+            "success",
+            7
+          ],
+          7
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=1/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            22
+          ],
+          22
+        ],
+        "after": [
+          [
+            "success",
+            22
+          ],
+          22
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=2/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            3
+          ],
+          3
+        ],
+        "after": [
+          [
+            "success",
+            3
+          ],
+          3
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=2/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            7
+          ],
+          7
+        ],
+        "after": [
+          [
+            "success",
+            7
+          ],
+          7
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=2/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            22
+          ],
+          22
+        ],
+        "after": [
+          [
+            "success",
+            22
+          ],
+          22
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=3/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            3
+          ],
+          3
+        ],
+        "after": [
+          [
+            "success",
+            3
+          ],
+          3
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=3/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            7
+          ],
+          7
+        ],
+        "after": [
+          [
+            "success",
+            7
+          ],
+          7
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=3/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            22
+          ],
+          22
+        ],
+        "after": [
+          [
+            "success",
+            22
+          ],
+          22
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=4/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            3
+          ],
+          3
+        ],
+        "after": [
+          [
+            "success",
+            3
+          ],
+          3
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=4/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            7
+          ],
+          7
+        ],
+        "after": [
+          [
+            "success",
+            7
+          ],
+          7
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=4/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            22
+          ],
+          22
+        ],
+        "after": [
+          [
+            "success",
+            22
+          ],
+          22
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=5/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            3
+          ],
+          3
+        ],
+        "after": [
+          [
+            "success",
+            3
+          ],
+          3
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=5/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            7
+          ],
+          7
+        ],
+        "after": [
+          [
+            "success",
+            7
+          ],
+          7
+        ]
+      }
+    },
+    {
+      "name": "straight/budget=5/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            22
+          ],
+          22
+        ],
+        "after": [
+          [
+            "success",
+            22
+          ],
+          22
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=0/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          0
+        ],
+        "after": [
+          null,
+          0
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=0/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          4
+        ],
+        "after": [
+          null,
+          4
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=0/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          19
+        ],
+        "after": [
+          null,
+          19
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=1/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          1
+        ],
+        "after": [
+          null,
+          1
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=1/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          5
+        ],
+        "after": [
+          null,
+          5
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=1/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          20
+        ],
+        "after": [
+          null,
+          20
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=2/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          2
+        ],
+        "after": [
+          null,
+          2
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=2/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          6
+        ],
+        "after": [
+          null,
+          6
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=2/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          21
+        ],
+        "after": [
+          null,
+          21
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=3/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          2
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          2
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=3/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          6
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          6
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=3/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          21
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          21
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=4/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          2
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          2
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=4/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          6
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          6
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=4/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          21
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          21
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=5/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          2
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          2
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=5/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          6
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          6
+        ]
+      }
+    },
+    {
+      "name": "loop/budget=5/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          21
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          21
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=0/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          0
+        ],
+        "after": [
+          null,
+          0
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=0/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          4
+        ],
+        "after": [
+          null,
+          4
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=0/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          19
+        ],
+        "after": [
+          null,
+          19
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=1/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          7
+        ],
+        "after": [
+          null,
+          7
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=1/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          11
+        ],
+        "after": [
+          null,
+          11
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=1/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          26
+        ],
+        "after": [
+          null,
+          26
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=2/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          15
+        ],
+        "after": [
+          null,
+          15
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=2/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          19
+        ],
+        "after": [
+          null,
+          19
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=2/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          34
+        ],
+        "after": [
+          null,
+          34
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=3/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          32
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          32
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=3/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          36
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          36
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=3/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          51
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          51
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=4/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          32
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          32
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=4/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          36
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          36
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=4/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          51
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          51
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=5/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          32
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          32
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=5/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          36
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          36
+        ]
+      }
+    },
+    {
+      "name": "nested/budget=5/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            2
+          ],
+          51
+        ],
+        "after": [
+          [
+            "success",
+            2
+          ],
+          51
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=0/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          0
+        ],
+        "after": [
+          null,
+          0
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=0/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          4
+        ],
+        "after": [
+          null,
+          4
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=0/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          19
+        ],
+        "after": [
+          null,
+          19
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=1/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          1
+        ],
+        "after": [
+          null,
+          1
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=1/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          5
+        ],
+        "after": [
+          null,
+          5
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=1/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          20
+        ],
+        "after": [
+          null,
+          20
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=2/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=2/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=2/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=3/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=3/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=3/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=4/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=4/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=4/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=5/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          102
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=5/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          106
+        ]
+      }
+    },
+    {
+      "name": "failure-cleanup/budget=5/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ],
+        "after": [
+          [
+            "failure",
+            "boom"
+          ],
+          121
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=0/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          0
+        ],
+        "after": [
+          null,
+          0
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=0/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          4
+        ],
+        "after": [
+          null,
+          4
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=0/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          19
+        ],
+        "after": [
+          null,
+          19
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=1/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          1
+        ],
+        "after": [
+          null,
+          1
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=1/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          5
+        ],
+        "after": [
+          null,
+          5
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=1/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          20
+        ],
+        "after": [
+          null,
+          20
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=2/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          2
+        ],
+        "after": [
+          null,
+          2
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=2/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          6
+        ],
+        "after": [
+          null,
+          6
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=2/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          21
+        ],
+        "after": [
+          null,
+          21
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=3/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          2
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          2
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=3/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          6
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          6
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=3/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          21
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          21
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=4/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          2
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          2
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=4/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          6
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          6
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=4/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          21
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          21
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=5/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          2
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          2
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=5/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          6
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          6
+        ]
+      }
+    },
+    {
+      "name": "unfinished-finalizer/budget=5/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            9
+          ],
+          21
+        ],
+        "after": [
+          [
+            "success",
+            9
+          ],
+          21
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=0/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          0
+        ],
+        "after": [
+          null,
+          0
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=0/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          4
+        ],
+        "after": [
+          null,
+          4
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=0/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          null,
+          19
+        ],
+        "after": [
+          null,
+          19
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=1/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          0
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=1/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          4
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=1/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          19
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=2/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          0
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=2/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          4
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=2/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          19
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=3/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          0
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=3/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          4
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=3/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          19
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=4/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          0
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=4/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          4
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=4/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          19
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=5/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          0
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=5/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          4
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "false-initial-test/budget=5/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "success",
+            0
+          ],
+          19
+        ],
+        "after": [
+          [
+            "success",
+            0
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=0/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=0/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=0/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=1/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=1/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=1/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=2/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=2/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=2/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=3/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=3/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=3/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=4/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=4/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=4/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=5/initial-cell=0",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=5/initial-cell=4",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          4
+        ]
+      }
+    },
+    {
+      "name": "bad-initial-term/budget=5/initial-cell=19",
+      "pass": true,
+      "detail": {
+        "before": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ],
+        "after": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          19
+        ]
+      }
+    },
+    {
+      "name": "loop-zero",
+      "pass": true,
+      "detail": [
+        null,
+        0
+      ]
+    },
+    {
+      "name": "loop-one-round-keeps-write",
+      "pass": true,
+      "detail": [
+        null,
+        1
+      ]
+    },
+    {
+      "name": "loop-two-rounds-still-needs-stop-test",
+      "pass": true,
+      "detail": [
+        null,
+        2
+      ]
+    },
+    {
+      "name": "loop-three-rounds-completes",
+      "pass": true,
+      "detail": [
+        [
+          "success",
+          2
+        ],
+        2
+      ]
+    },
+    {
+      "name": "nested-captures",
+      "pass": true,
+      "detail": [
+        [
+          "success",
+          2
+        ],
+        32
+      ]
+    },
+    {
+      "name": "unfinished-does-not-run-finalizer",
+      "pass": true,
+      "detail": [
+        null,
+        1
+      ]
+    },
+    {
+      "name": "failure-retains-body-and-finalizer-writes",
+      "pass": true,
+      "detail": [
+        [
+          "failure",
+          "boom"
+        ],
+        102
+      ]
+    },
+    {
+      "name": "finalizer-itself-unfinished",
+      "pass": true,
+      "detail": [
+        null,
+        1
+      ]
+    },
+    {
+      "name": "false-test-at-zero-budget",
+      "pass": true,
+      "detail": [
+        null,
+        0
+      ]
+    },
+    {
+      "name": "bad-initial-term-even-at-zero",
+      "pass": true,
+      "detail": [
+        [
+          "failure",
+          "bad-shape"
+        ],
+        0
+      ]
+    },
+    {
+      "name": "refuses-charge-suspend",
+      "pass": true,
+      "detail": {
+        "correct_mirror": [
+          null,
+          1
+        ],
+        "mutant": [
+          null,
+          0
+        ]
+      }
+    },
+    {
+      "name": "refuses-reset-unfinished",
+      "pass": true,
+      "detail": {
+        "correct_mirror": [
+          null,
+          1
+        ],
+        "mutant": [
+          null,
+          0
+        ]
+      }
+    },
+    {
+      "name": "refuses-reset-failure",
+      "pass": true,
+      "detail": {
+        "correct_mirror": [
+          [
+            "failure",
+            "boom"
+          ],
+          2
+        ],
+        "mutant": [
+          [
+            "failure",
+            "boom"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "refuses-drop-outer-slot",
+      "pass": true,
+      "detail": {
+        "correct_mirror": [
+          [
+            "success",
+            2
+          ],
+          32
+        ],
+        "mutant": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ]
+      }
+    },
+    {
+      "name": "refuses-unshifted-finalizer-insertion",
+      "pass": true,
+      "detail": {
+        "unshifted": [
+          [
+            "failure",
+            "bad-shape"
+          ],
+          0
+        ],
+        "scoped": [
+          null,
+          1
+        ]
+      }
+    },
+    {
+      "name": "diagnostic-path-not-invariant",
+      "pass": true,
+      "detail": {
+        "suspend_unbound_leaf_path": [
+          0
+        ],
+        "cleaned_unbound_leaf_path": []
+      }
+    }
+  ],
+  "all_pass": true
+}

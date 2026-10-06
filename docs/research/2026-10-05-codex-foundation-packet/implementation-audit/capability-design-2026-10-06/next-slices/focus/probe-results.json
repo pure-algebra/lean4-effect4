@@ -1,0 +1,284 @@
+{
+  "evidence": "isolated finite source/context model; no project imports, Lean or target execution",
+  "passed": 24,
+  "results": [
+    {
+      "name": "same_continuation_source_changes_context",
+      "actual": [
+        true,
+        [
+          "nat"
+        ],
+        [
+          "string"
+        ]
+      ],
+      "expected": [
+        true,
+        [
+          "nat"
+        ],
+        [
+          "string"
+        ]
+      ],
+      "pass_": true,
+      "scope": "The unedited sibling remains byte-identical but needs a new context."
+    },
+    {
+      "name": "reinspection_updates_answer",
+      "actual": "string",
+      "expected": "string",
+      "pass_": true,
+      "scope": "Positive control after rebuilding the changed parent."
+    },
+    {
+      "name": "invented_context_can_type_constant",
+      "actual": [
+        "nat",
+        "nat"
+      ],
+      "expected": [
+        "nat",
+        "nat"
+      ],
+      "pass_": true,
+      "scope": "Isolated typeability does not determine inherited context."
+    },
+    {
+      "name": "table_identity_changes_context",
+      "actual": [
+        [
+          "nat"
+        ],
+        [
+          "string"
+        ]
+      ],
+      "expected": [
+        [
+          "nat"
+        ],
+        [
+          "string"
+        ]
+      ],
+      "pass_": true,
+      "scope": "The source is identical; its signature remains part of the query input."
+    },
+    {
+      "name": "constant_mode_changes_literal",
+      "actual": [
+        "string",
+        "lit:tag"
+      ],
+      "expected": [
+        "string",
+        "lit:tag"
+      ],
+      "pass_": true,
+      "scope": "The argument mode belongs in the term focus."
+    },
+    {
+      "name": "application_resets_child_mode",
+      "actual": "string",
+      "expected": "string",
+      "pass_": true,
+      "scope": "A parent constant mode is not blindly inherited by a nested application."
+    },
+    {
+      "name": "const_atom_positive",
+      "actual": "pair(lit:tag,nat)",
+      "expected": "pair(lit:tag,nat)",
+      "pass_": true,
+      "scope": "A const atom keeps its direct literal even under ordinary enclosing mode."
+    },
+    {
+      "name": "nested_loop_step_context",
+      "actual": [
+        "nat",
+        "string",
+        "bool"
+      ],
+      "expected": [
+        "nat",
+        "string",
+        "bool"
+      ],
+      "pass_": true,
+      "scope": "Outer cursor, inner cursor and inner answer remain separate slots."
+    },
+    {
+      "name": "outer_loop_step_uses_inner_result",
+      "actual": [
+        "nat",
+        "string"
+      ],
+      "expected": [
+        "nat",
+        "string"
+      ],
+      "pass_": true,
+      "scope": "The outer body answer is the inner loop result type, not its body answer."
+    },
+    {
+      "name": "body_edit_renews_step_context",
+      "actual": [
+        "nat",
+        "string",
+        "nat"
+      ],
+      "expected": [
+        "nat",
+        "string",
+        "nat"
+      ],
+      "pass_": true,
+      "scope": "The step remains well-typed while a body-answer slot changes."
+    },
+    {
+      "name": "loop_slot_names_are_distinct",
+      "actual": 4,
+      "expected": 4,
+      "pass_": true,
+      "scope": "A term slot cannot be erased to the enclosing effect path."
+    },
+    {
+      "name": "routing_local_join_keeps_error_alternatives",
+      "actual": [
+        "SchemaError",
+        "SqlError",
+        "Unauthorized"
+      ],
+      "expected": [
+        "SchemaError",
+        "SqlError",
+        "Unauthorized"
+      ],
+      "pass_": true,
+      "scope": "The local branch join includes both arms."
+    },
+    {
+      "name": "routing_root_type_is_not_branch_type",
+      "actual": false,
+      "expected": false,
+      "pass_": true,
+      "scope": "An enclosing handler removes an error from the final result."
+    },
+    {
+      "name": "routing_inspection_is_not_looped_admission",
+      "actual": [
+        "Config"
+      ],
+      "expected": [
+        "Config"
+      ],
+      "pass_": true,
+      "scope": "Host and handler source remains inspectable; no synchronous semantic theorem is inferred."
+    },
+    {
+      "name": "stop_before_unsupported_family",
+      "actual": "nat",
+      "expected": "nat",
+      "pass_": true,
+      "scope": "The selected effect node is checked even if its child family is unsupported."
+    },
+    {
+      "name": "crossing_unsupported_family_refuses",
+      "actual": {
+        "refusal": "unsupportedFamily:stmts"
+      },
+      "expected": {
+        "refusal": "unsupportedFamily:stmts"
+      },
+      "pass_": true,
+      "scope": "No fabricated child context is returned."
+    },
+    {
+      "name": "view_refusal_does_not_change_root_type",
+      "actual": [
+        "nat",
+        "unsupportedFamily:stmts"
+      ],
+      "expected": [
+        "nat",
+        "unsupportedFamily:stmts"
+      ],
+      "pass_": true,
+      "scope": "Erasure keeps the successful root result."
+    },
+    {
+      "name": "expanded_path_not_original_path",
+      "actual": [
+        false,
+        true
+      ],
+      "expected": [
+        false,
+        true
+      ],
+      "pass_": true,
+      "scope": "The same child index can exist only after reference expansion."
+    },
+    {
+      "name": "reference_free_positive_and_origin_refusal",
+      "actual": [
+        true,
+        false
+      ],
+      "expected": [
+        true,
+        false
+      ],
+      "pass_": true,
+      "scope": "The first view explicitly restricts origins; ordinary admission is unchanged."
+    },
+    {
+      "name": "narrow_step_under_wider_cursor_positive",
+      "actual": true,
+      "expected": true,
+      "pass_": true,
+      "scope": "The loop rule requires subtyping, not equality with an expected cursor type."
+    },
+    {
+      "name": "step_outside_cursor_refuses",
+      "actual": false,
+      "expected": false,
+      "pass_": true,
+      "scope": "A locally inferable Bool step fails the parent cursor constraint."
+    },
+    {
+      "name": "non_boolean_loop_test_refuses",
+      "actual": false,
+      "expected": false,
+      "pass_": true,
+      "scope": "An inferable Nat test fails the parent Boolean constraint."
+    },
+    {
+      "name": "branch_need_not_equal_parent_join",
+      "actual": [
+        "nat",
+        "nat|string"
+      ],
+      "expected": [
+        "nat",
+        "nat|string"
+      ],
+      "pass_": true,
+      "scope": "A valid branch contributes to a join; the parent type is not its expected type."
+    },
+    {
+      "name": "body_answer_not_determined_by_loop_result",
+      "actual": [
+        true,
+        true
+      ],
+      "expected": [
+        true,
+        true
+      ],
+      "pass_": true,
+      "scope": "Equal final result types leave different body-answer contexts for the step."
+    }
+  ]
+}

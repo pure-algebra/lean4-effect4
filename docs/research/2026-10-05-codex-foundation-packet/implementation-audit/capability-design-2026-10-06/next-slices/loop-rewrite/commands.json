@@ -1,0 +1,30 @@
+{
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "output": "c22f908def0c2a881ae46040d0dbaaaa57991352"
+    },
+    {
+      "command": "git show c22f908def0c2a881ae46040d0dbaaaa57991352:<each source-manifest path>",
+      "output": "44 committed snapshots"
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/loop-rewrite/model-controls.py",
+      "output": {
+        "comparisons": 126,
+        "boundary_controls": 10,
+        "mutants_refused": 5,
+        "diagnostic_path_control": 1,
+        "all_pass": true
+      },
+      "evidence": "Finite single-cell Python mirror; no Lean/Effect/runtime result"
+    },
+    {
+      "command": "Python hashlib comparison with git show for each manifest row",
+      "output": {
+        "source_checks": 44,
+        "failed": 0
+      }
+    }
+  ]
+}

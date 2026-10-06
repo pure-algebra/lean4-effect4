@@ -1,0 +1,64 @@
+{
+  "task": "Owner-requested program capabilities, proof/data contracts, clocks, literature vendoring and next-slice scouting",
+  "status": "research complete; proposed statements uncompiled; no implementation dispatch",
+  "source_freezes": [
+    "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+    "c22f908def0c2a881ae46040d0dbaaaa57991352"
+  ],
+  "closing_commit": "ea4e7492aeb2e97ff89abf52643ca5f741511341",
+  "finishing_criteria": {
+    "concrete_consumers_and_api_data": true,
+    "current_module_owners_and_import_direction": true,
+    "straight_and_loop_shared_workflows": true,
+    "placed_proposed_obligations_and_exclusions": true,
+    "full_R1_R13_open_parts_retained": true,
+    "bounded_parent_reruns_and_negative_controls": true,
+    "papers_original_bytes_and_visual_locators_verified": true,
+    "transition_ownership_and_active_work_preserved": true
+  },
+  "parent_verification": {
+    "frozen_source_comparisons": 306,
+    "closing_source_comparisons": 3,
+    "historical_snapshot_comparisons": 13,
+    "finite_model_controls": 205,
+    "all_pass": true,
+    "commands": [
+      "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/verify_packet.py",
+      "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/verify_next.py"
+    ],
+    "scope": "Pure Python mirrors, source identities and document inspection; no Lean or target/runtime execution"
+  },
+  "literature": {
+    "directory": "/Users/pooks/Dev/lean4-effect4/vendor/papers/program-graphs",
+    "pdf_count": 9,
+    "pdf_bytes": 5575537,
+    "verification": "download byte identity, SHA256SUMS, pdfinfo page counts, selected text and visually inspected figures",
+    "tracking": "untracked at closing snapshot; original PDFs preserved; coordinator owns normal provenance filing"
+  },
+  "repo_writes": [
+    "vendor/papers/program-graphs: nine original PDFs, README.md, citations-audit.md, manifest.json, SHA256SUMS"
+  ],
+  "not_performed": [
+    "implementation edits",
+    "Lean",
+    "compiler",
+    "project build",
+    "Effect or target runtime",
+    "generator",
+    "installation",
+    "branch change",
+    "merge",
+    "push",
+    "seat dispatch",
+    "seat interruption",
+    "permission change"
+  ],
+  "communication": {
+    "message106": "normal submission verified; consumed and adopted in 3ce39773",
+    "owner_approval": "Message109 inspected through computer use; recorded row277 at ea4e7492",
+    "final_advisory": "prepared in advisory.md; delivery pending"
+  },
+  "handover": "Approved, takes effect after accepted LIFT/SEMW merges and records; WORKQ held; coordinator retains integration duties pending another ruling",
+  "new_proofs": "none; candidates require placement, authorized allocation, Lean checking and exact axiom/dependency evidence",
+  "created_at_utc": "2026-10-06T16:31:14.401599+00:00"
+}

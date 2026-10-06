@@ -1,0 +1,387 @@
+[
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "AGENTS.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/AGENTS.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/STATE.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/STATE.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/STATE.md",
+    "sha256": "4c3e25bdcbbbdbe8e67f358af36f2618daf8d575c50db45e7d8d38e1b2ffd001",
+    "bytes": 135380
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/core/decisions.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/core/decisions.md",
+    "sha256": "2a035291c6224fa073ad8576da79af8c9cb05fc1cfc0009486d15ce5d9937329",
+    "bytes": 367268
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/core/controlled-english.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/controlled-english.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/core/controlled-english.md",
+    "sha256": "be430b38810b67e8fb153206833d1b3538672d99955f75c7208397e65aa59a18",
+    "bytes": 103547
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/core/semantics.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/semantics.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/core/semantics.md",
+    "sha256": "27b975c42ae4044044dca69b4b6c56d490522bca6fc10b7b2dabdf478014d7b9",
+    "bytes": 82137
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/core/system-map.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/system-map.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/core/system-map.md",
+    "sha256": "46ed32fae1819c5f863cc6550aa8f8e2a59286674572014852aea8d8a1f13a65",
+    "bytes": 45403
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/core/machine-state.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/machine-state.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/core/machine-state.md",
+    "sha256": "a2c51fa6ce917ff3a7560a7ff49f785d70a30250b03543ff2a639ef3bde24597",
+    "bytes": 19313
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/research/2026-10-05-claude-lead/briefs/seat-lift-brief.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-lift-brief.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/research/2026-10-05-claude-lead/briefs/seat-lift-brief.md",
+    "sha256": "39ac757791276326f19c04ac2dbae275201bfc023eb3afe2011beab86c9ac847",
+    "bytes": 6718
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/research/2026-10-05-claude-lead/briefs/seat-check-brief.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-check-brief.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/research/2026-10-05-claude-lead/briefs/seat-check-brief.md",
+    "sha256": "0f91f3982a303db15e74f0e5c889c69a77a09eb8069926858f1e480929b7dcf6",
+    "bytes": 6011
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/research/2026-10-05-claude-lead/briefs/seat-semw-brief.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-semw-brief.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/research/2026-10-05-claude-lead/briefs/seat-semw-brief.md",
+    "sha256": "23c5d9d92a5d3e4d76289d29f2486d1444254dc9f423f2b117cec16f83971043",
+    "bytes": 7969
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "sha256": "faa8832fb045eb74a32e630c7e9c8172266505e31d12dbbf725d9922e37d0720",
+    "bytes": 32597
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "src/Effect4/Machine/Timer.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Machine/Timer.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/src/Effect4/Machine/Timer.lean",
+    "sha256": "a2a91cda5746f0b20498b9c22b6ac04732a52010b41e649b5b7c61b528c1b578",
+    "bytes": 15166
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "src/Effect4/Api/TestClock.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api/TestClock.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/src/Effect4/Api/TestClock.lean",
+    "sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3",
+    "bytes": 4790
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+    "sha256": "b35d4584199f9f5aaec54bfccf9092a45388b72b617858cdbfe95170a1ac30e3",
+    "bytes": 18673
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "path": "vendor/effect-4.0.1/src/testing/TestClock.ts",
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.1/src/testing/TestClock.ts",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/main/vendor/effect-4.0.1/src/testing/TestClock.ts",
+    "sha256": "b35d4584199f9f5aaec54bfccf9092a45388b72b617858cdbfe95170a1ac30e3",
+    "bytes": 18673
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-mask",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "path": "src/Effect4/Laws/Machine/MaskRuns.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/lift/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "sha256": "3e74e89bfada69cf3affb39d9bd54b67e8df0a77df068fae8707a02db5e335e3",
+    "bytes": 112275
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-mask",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "path": "src/Effect4/Laws/Program/MaskRuns.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Program/MaskRuns.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/lift/src/Effect4/Laws/Program/MaskRuns.lean",
+    "sha256": "d0e4d43b2bcd5fb07d394c5fc8d00886d1c60d10555f996ef37b3abfe9deada6",
+    "bytes": 8485
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-mask",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "path": "Test/Machine/MaskRuns.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Machine/MaskRuns.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/lift/Test/Machine/MaskRuns.lean",
+    "sha256": "5efa283abd5bcfd03eaa1cfadf9446db0934df2ed3d844d0217dcff591883276",
+    "bytes": 31813
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-mask",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "path": "docs/research/2026-10-06-seat-LIFT-design.md",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-06-seat-LIFT-design.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/lift/docs/research/2026-10-06-seat-LIFT-design.md",
+    "sha256": "355d504a778ed9c320759da4afd5d0fa4cd45958cabcbebfcb52b1d2e3c3bca2",
+    "bytes": 14707
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qsteps",
+    "commit": "7b332a805aa9317a32b882ca6e6aafa15371fa65",
+    "path": "docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "source": "/Users/pooks/Dev/lean4-effect4-qsteps/docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/check/docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "sha256": "faa8832fb045eb74a32e630c7e9c8172266505e31d12dbbf725d9922e37d0720",
+    "bytes": 32597
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qsteps",
+    "commit": "7b332a805aa9317a32b882ca6e6aafa15371fa65",
+    "path": "src/Effect4/Laws/Api/Codegen.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-qsteps/src/Effect4/Laws/Api/Codegen.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/check/src/Effect4/Laws/Api/Codegen.lean",
+    "sha256": "877da0470e94c3029a6e63aa437290928e8e1b6cc38fa4f9f0c7eb9c6da27646",
+    "bytes": 6333
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qtypes",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "path": "src/Effect4/Laws/Modules/Waiting.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Waiting.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/semw/src/Effect4/Laws/Modules/Waiting.lean",
+    "sha256": "8d38465959fa79a6d30d131ed07220cd627577de863a9bbfd1cdb858c071e181",
+    "bytes": 95556
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qtypes",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "path": "src/Effect4/Laws/Modules/Semaphore/Ops.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Ops.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/semw/src/Effect4/Laws/Modules/Semaphore/Ops.lean",
+    "sha256": "3fcce0b62aad3abea8fb338bcd7589a6d859dcec11b1a45e64a955a8470aab6e",
+    "bytes": 47587
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qtypes",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "path": "src/Effect4/Modules/Semaphore/Ops.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Modules/Semaphore/Ops.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/semw/src/Effect4/Modules/Semaphore/Ops.lean",
+    "sha256": "b351fa73de5c5d03756b8d6bb8d52a435280e5da849faabd0508cd8036d0cf0b",
+    "bytes": 9254
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qtypes",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "path": "Test/Program/SemaphoreOps.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/Test/Program/SemaphoreOps.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/semw/Test/Program/SemaphoreOps.lean",
+    "sha256": "7c490c39b135903ba3b6e4c7d5f211095fbab245096abb65f75dbcb708689df4",
+    "bytes": 51247
+  },
+  {
+    "kind": "committed-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qtypes",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "path": "Test/Program/SemaphoreTraces.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/Test/Program/SemaphoreTraces.lean",
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/source/semw/Test/Program/SemaphoreTraces.lean",
+    "sha256": "12ba1e33a3fcc0303318f842212bb15dbc433905e2d3f591d1538b90dc0487f9",
+    "bytes": 37958
+  },
+  {
+    "kind": "active-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-mask",
+    "base_commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "path": "src/Effect4/Laws/Machine/MaskRuns.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "mtime_ns": 1791302904444521623,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/lift/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "sha256": "6187d0f6633ea999eb39e983a0df9fbb5430fb14eb1b5702d24c6195da69fa17",
+    "bytes": 114518
+  },
+  {
+    "kind": "active-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-mask",
+    "base_commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "path": "Test/Machine/MaskRuns.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Machine/MaskRuns.lean",
+    "mtime_ns": 1791303206569598619,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/lift/Test/Machine/MaskRuns.lean",
+    "sha256": "12560256ee2cf3ee8f6980c495344a50fa5182a54525d5af0daad0c6272f95ea",
+    "bytes": 34451
+  },
+  {
+    "kind": "active-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-mask",
+    "base_commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "path": "docs/research/2026-10-06-seat-LIFT-design.md",
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-06-seat-LIFT-design.md",
+    "mtime_ns": 1791302798620473874,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/lift/docs/research/2026-10-06-seat-LIFT-design.md",
+    "sha256": "3d30fb02c80e6f4ea598df088099c5cff47d31e7a4588f8a460ebd0864afc182",
+    "bytes": 16672
+  },
+  {
+    "kind": "active-source",
+    "repository": "/Users/pooks/Dev/lean4-effect4-qtypes",
+    "base_commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "path": "Test/Program/SemaphoreFaces.lean",
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/Test/Program/SemaphoreFaces.lean",
+    "mtime_ns": 1791302777597655769,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/semw/Test/Program/SemaphoreFaces.lean",
+    "sha256": "83176bdcf80a693c00752d69fed91c5a57d2903b5f9fc825f7c44785e174b187",
+    "bytes": 26452
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/check/stepB-default-again.log",
+    "mtime_ns": 1791301953042707702,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/check/stepB-default-again.log",
+    "sha256": "74965bda65a5a683cd615ee87ed890360056013727221c3585d68e9c149d9679",
+    "bytes": 410728
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/check/accept-checks.log",
+    "mtime_ns": 1791301857769421538,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/check/accept-checks.log",
+    "sha256": "d321c68c58ecfa5f8983b71122ec654ad678d496bb9100dc4854659ffe355aa6",
+    "bytes": 942
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/lift/final-build.log",
+    "mtime_ns": 1791302741018424897,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/lift/final-build.log",
+    "sha256": "de74cfcbe717834325fed2682c3eb97507deebc25d09bc838ab169c30fc5d10a",
+    "bytes": 20387
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/lift/stepF-build1.log",
+    "mtime_ns": 1791302910437300178,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/lift/stepF-build1.log",
+    "sha256": "9be0f0613bedab5a7b2dcc68c1fdce01a2c264371a1d8bb9f1d401a852215e1f",
+    "bytes": 209
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/build-step3-default.log",
+    "mtime_ns": 1791302055084234937,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/build-step3-default.log",
+    "sha256": "3b7c50ed69fa9249ad1b517a5e4582730324433bff1fe72124fbbd72e0e33475",
+    "bytes": 298258
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/build-step5-default.log",
+    "mtime_ns": 1791302575986624591,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/build-step5-default.log",
+    "sha256": "e34fbd01215f8655665c6c8dd3ded8dfb872bd3a89e4b539282246471ec38295",
+    "bytes": 298003
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/build-faces-1.log",
+    "mtime_ns": 1791302808787430504,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/build-faces-1.log",
+    "sha256": "d75951e1f227cbfff604e57688a919bfb272b97a430d284829f49e7b9c69edee",
+    "bytes": 205
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/truth-elab-3.log",
+    "mtime_ns": 1791302977612001344,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/truth-elab-3.log",
+    "sha256": "c094c57d47965eaf79b4c4e59d897b63d2e66cd5ddf1a08ffbac7dca216f9769",
+    "bytes": 120
+  },
+  {
+    "kind": "retained-seat-output",
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/gen-truth-1.log",
+    "mtime_ns": 1791303127731451886,
+    "not_monitor_execution": true,
+    "copy": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/gen-truth-1.log",
+    "sha256": "3eccebfbcaa5df902f151b8cbe79c0e150a59dea2b55ebbd08d5da02c97eb518",
+    "bytes": 18483
+  }
+]

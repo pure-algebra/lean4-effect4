@@ -16,6 +16,10 @@ __pycache__/
 /vendor/refs/*
 !/vendor/refs/MANIFEST.tsv
 
+# Vendored papers (2026-10-06): the originals stay on disk, for reading and citation. Git
+# tracks each folder's index and provenance files only (README, manifest, hashes, audits).
+/vendor/papers/**/*.pdf
+
 # Agent skills and local tooling
 .claude/
 .agents/

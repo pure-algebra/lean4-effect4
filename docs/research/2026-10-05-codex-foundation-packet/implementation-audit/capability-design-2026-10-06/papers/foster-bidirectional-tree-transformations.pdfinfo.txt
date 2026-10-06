@@ -1,0 +1,19 @@
+Title:           main.dvi
+Creator:         dvips(k) 5.92b Copyright 2002 Radical Eye Software
+Producer:        AFPL Ghostscript 8.0
+CreationDate:    Sat Aug  7 08:09:15 2004 CDT
+ModDate:         Sat Aug  7 08:09:15 2004 CDT
+Custom Metadata: no
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           75
+Encrypted:       no
+Page size:       612 x 792 pts (letter)
+Page rot:        0
+File size:       680020 bytes
+Optimized:       no
+PDF version:     1.2

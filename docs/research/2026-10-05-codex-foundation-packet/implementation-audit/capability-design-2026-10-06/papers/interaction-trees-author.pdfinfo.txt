@@ -1,0 +1,22 @@
+Title:           Interaction Trees
+Subject:         -  Software and its engineering  ->  Software libraries and repositories.-  Theory of computation  ->  Logic and verification.Equational logic and rewriting.Denotational semantics.
+Keywords:        Coq, monads, coinduction, compiler correctness
+Author:          Li-yao Xia, Yannick Zakowski, Paul He, Chung-Kil Hur, Gregory Malecha, Benjamin C. Pierce, and Steve Zdancewic
+Creator:         LaTeX with acmart 2019/04/22 v1.60 Typesetting articles for the Association for Computing Machinery and hyperref 2018/02/06 v6.86b Hypertext links for LaTeX
+Producer:        pdfTeX-1.40.19
+CreationDate:    Tue Nov 12 16:15:27 2019 CST
+ModDate:         Tue Nov 12 16:15:27 2019 CST
+Custom Metadata: yes
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           32
+Encrypted:       no
+Page size:       486 x 720 pts
+Page rot:        0
+File size:       680023 bytes
+Optimized:       no
+PDF version:     1.5

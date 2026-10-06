@@ -1,0 +1,26 @@
+{
+  "status": "research/read-only transition readiness; not a handover authorization",
+  "frozen_main": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+  "source_and_evidence_files": 39,
+  "source_recheck_passed": true,
+  "clock_controls": {
+    "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/clock_controls.py",
+    "kind": "independent finite Python mirrors, not project or host execution",
+    "passed": 8,
+    "failed": 0
+  },
+  "material_finding": "SEMW saved gen-truth-1.log completes with exit 2 and two named differences; final acceptance remains open; root notified",
+  "not_performed": [
+    "repository edit",
+    "Lean/build/compiler/runtime/generator/install",
+    "branch change",
+    "seat interruption/dispatch",
+    "Claude messaging",
+    "UI inspection"
+  ],
+  "memory_navigation_only": [
+    "MEMORY.md:85-86",
+    "MEMORY.md:266"
+  ],
+  "created_at": "2026-10-06T16:16:50.646719+00:00"
+}

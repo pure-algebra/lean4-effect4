@@ -1,0 +1,20 @@
+Title:           Choice Trees
+Subject:         -  Theory of computation  ->  Denotational semantics.Program verification.Concurrency.
+Creator:         LaTeX with acmart 2022/08/27 v1.87 Typesetting articles for the Association for Computing Machinery and hyperref 2020-05-15 v7.00e Hypertext links for LaTeX
+Producer:        pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) kpathsea version 6.3.2
+CreationDate:    Mon Nov 14 20:04:57 2022 CST
+ModDate:         Mon Nov 14 20:04:57 2022 CST
+Custom Metadata: yes
+Metadata Stream: yes
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           32
+Encrypted:       no
+Page size:       486 x 720 pts
+Page rot:        0
+File size:       863779 bytes
+Optimized:       no
+PDF version:     1.5

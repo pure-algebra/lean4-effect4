@@ -1,0 +1,91 @@
+{
+  "task": "Next-slice research: suspension cleanup over Straight and Looped",
+  "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+  "status": "Proposed and uncompiled; no implementation allocation",
+  "claim_proposal": {
+    "concept": "translation-simulation",
+    "requirement": "R8",
+    "id": "looped-suspension-cleanup",
+    "observation": "Option ExitV and complete Stores at every semantic budget and environment",
+    "consumer": "checked source cleanup followed by Built.rebuild and separate finished-run law"
+  },
+  "scope_fences": {
+    "repository_edits": false,
+    "Lean_execution": false,
+    "build_or_generator": false,
+    "compiler_or_target_runtime": false,
+    "branch_or_dispatch": false
+  },
+  "actual_evidence": {
+    "frozen_sources": 44,
+    "committed_hash_matches": 44,
+    "finite_model_checks": 142,
+    "model_all_pass": true,
+    "model_limitation": "single integer cell, selected source equations; not full Stores, machine execution, target evidence or Lean proof"
+  },
+  "first_failed_attempt": "Wrongly scoped scratch finalizer fixture; corrected and retained as deliberate negative control, see initial-probe-correction.md",
+  "new_boundaries": [
+    "Looped lives in Laws; initial certified operation belongs in a Laws-loading tooling/Test consumer",
+    "Refusal paths change, so use HasTy or checker success projection instead of exact Except equality",
+    "LoopAgreement uses the default empty-table root; arbitrary Built table needs a connector",
+    "Generated denoteB algebra may pair original syntax; inspect it before filling a homomorphism witness",
+    "Semantic-budget unfinished result is not a machine-fuel frontier claim"
+  ],
+  "artifacts": [
+    {
+      "path": "brief.md",
+      "sha256": "21a0db7bbf983f5775468508a12b2a74b27224e8b9d3d846eef54213aa7738da",
+      "bytes": 13175
+    },
+    {
+      "path": "statements.lean.txt",
+      "sha256": "39e05ba4ee332f99a708cf075ad81d00b09ab12ed0edda10a624679db42a6aa2",
+      "bytes": 4746
+    },
+    {
+      "path": "parent-review.md",
+      "sha256": "1b81d38e4329c999ae2faf06fb3d8a914966176b1ce7012b4b9a5b75b30ff9ff",
+      "bytes": 3097
+    },
+    {
+      "path": "parent-review-source.json",
+      "sha256": "3c6b90d81a5bd12724ce2bf6c5261a56995260d1ccc29643e4a19d1d6be89c66",
+      "bytes": 259
+    },
+    {
+      "path": "parent-recommendations-reviewed.md",
+      "sha256": "049665f968f6b4749d859a6b1e8cf68d59e96ab6ee3281f096d4c3368bcf8940",
+      "bytes": 15942
+    },
+    {
+      "path": "model-controls.py",
+      "sha256": "cad515d1a7f1a680f717088b781e1ae2a6fdb5f36cbc6a36f500ddd9abb92978",
+      "bytes": 6441
+    },
+    {
+      "path": "model-controls-output.json",
+      "sha256": "9b36e60358d1c162b5ea99b90437522c0873e6248d66157e7757b1dbf3f9ff75",
+      "bytes": 41280
+    },
+    {
+      "path": "initial-probe-correction.md",
+      "sha256": "6a15988d95312d4f4da9c54c52385eae9cfab751ffb9df290a83af7e7e5eaf0a",
+      "bytes": 514
+    },
+    {
+      "path": "source-manifest.json",
+      "sha256": "678751825baedb6a9b64bef543c506028ad6fe65c946637d64010056b5438294",
+      "bytes": 13020
+    },
+    {
+      "path": "verification.json",
+      "sha256": "ecf6004ebcb228568eb60d731940e011e25df1aefcbb8ccc17ffdd06a0e4e603",
+      "bytes": 12349
+    },
+    {
+      "path": "commands.json",
+      "sha256": "b95182dcf3ddf214d33a6851e4f968e3ca7a0bcc927bd50cc4976c824011c0fe",
+      "bytes": 879
+    }
+  ]
+}

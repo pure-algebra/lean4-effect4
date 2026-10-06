@@ -1,0 +1,17 @@
+Creator:         TeX
+Producer:        pdfeTeX-1.30.6
+CreationDate:    Fri Nov  9 00:03:31 2007 CST
+Custom Metadata: yes
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           11
+Encrypted:       no
+Page size:       612 x 792 pts (letter)
+Page rot:        0
+File size:       239207 bytes
+Optimized:       no
+PDF version:     1.4

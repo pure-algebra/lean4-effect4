@@ -1,0 +1,47 @@
+[
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/report.md",
+    "sha256": "bd68cf6fd71a1723c216ceb5e567f4e0211a5be52777d2a4cb4ee62e4260a4e2",
+    "bytes": 26179
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/api-data-proposal.json",
+    "sha256": "01e6782764b792827af6cef77d191d845384061dc3a7ddfee5bd125456ee8b4e",
+    "bytes": 8395
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source-manifest.json",
+    "sha256": "cc49e0ad9d6a4db68e35636eea30f2c31ee5836d99c18d14f24da6a4bcbdba50",
+    "bytes": 23857
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/source-comparisons.json",
+    "sha256": "327df68798561adf54c4d238f44f033a278371f55284c2eed7c253e98a3c3b73",
+    "bytes": 596
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/finite_controls.py",
+    "sha256": "2866f3d3a6dde05a531a017968fbe89326fed9b61cf67446ebfbc3ed5750198d",
+    "bytes": 4368
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/finite-results.json",
+    "sha256": "5b1b60d37ba9a1487bc380976a80040d528ebe7aa21e0f9645cf852483c1f03f",
+    "bytes": 4431
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/references.json",
+    "sha256": "a53ead26fd63abfc12fd084c7f497620146b8978b2ad1facdcb9f01c69793b5f",
+    "bytes": 748
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/verification.json",
+    "sha256": "ed0cd66c37d4140374c2046bbcd20c49bbe092a369f67f3b3e747e2f5b06bf80",
+    "bytes": 16931
+  },
+  {
+    "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/receipt.json",
+    "sha256": "98ce6377066a47a4aa3cbc9a672deb537a56f4e743f5c3cc43409fb635f529fd",
+    "bytes": 2732
+  }
+]

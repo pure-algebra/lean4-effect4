@@ -1,0 +1,235 @@
+{
+  "evidence": "finite independent Python models; not Lean evaluation, Effect execution, concurrency proof, target agreement, or a new defect classification",
+  "checks": 13,
+  "results": [
+    {
+      "name": "linear_positive",
+      "inputs": "Seq(parts=(Sleep(ms=5), Sleep(ms=5)))",
+      "observed": {
+        "syntax": [
+          5,
+          5
+        ],
+        "visits": [
+          5,
+          5
+        ],
+        "same": true
+      },
+      "passed": true
+    },
+    {
+      "name": "repeated_loop",
+      "inputs": "Loop(visits=3, body=Sleep(ms=5))",
+      "observed": {
+        "syntax": [
+          5
+        ],
+        "visits": [
+          5,
+          5,
+          5
+        ],
+        "same": false
+      },
+      "passed": true
+    },
+    {
+      "name": "zero_visit_loop",
+      "inputs": "Loop(visits=0, body=Sleep(ms=5))",
+      "observed": {
+        "syntax": [
+          5
+        ],
+        "visits": [],
+        "same": false
+      },
+      "passed": true
+    },
+    {
+      "name": "selected_branch",
+      "inputs": "Choose(choice=True, yes=Sleep(ms=5), no=Sleep(ms=20))",
+      "observed": {
+        "syntax": [
+          5,
+          20
+        ],
+        "visits": [
+          5
+        ],
+        "same": false
+      },
+      "passed": true
+    },
+    {
+      "name": "linear_plan_finishes",
+      "inputs": {
+        "sleeps": [
+          5,
+          5
+        ],
+        "adjustments": [
+          5,
+          5
+        ]
+      },
+      "observed": {
+        "finished_at": 10,
+        "clock": 10,
+        "wakes": [
+          5,
+          10
+        ],
+        "next_deadline": null
+      },
+      "passed": true
+    },
+    {
+      "name": "loop_syntax_plan_leaves_wait",
+      "inputs": {
+        "sleeps": [
+          5,
+          5,
+          5
+        ],
+        "adjustments": [
+          5
+        ]
+      },
+      "observed": {
+        "finished_at": null,
+        "clock": 5,
+        "wakes": [
+          5
+        ],
+        "next_deadline": 10
+      },
+      "passed": true
+    },
+    {
+      "name": "one_advance_includes_newly_registered_due_sleeps",
+      "inputs": {
+        "sleeps": [
+          5,
+          5,
+          5
+        ],
+        "adjustments": [
+          15
+        ]
+      },
+      "observed": {
+        "finished_at": 15,
+        "clock": 15,
+        "wakes": [
+          5,
+          10,
+          15
+        ],
+        "next_deadline": null
+      },
+      "passed": true
+    },
+    {
+      "name": "root_time_differs_from_final_clock",
+      "inputs": {
+        "sleeps": [
+          100,
+          50
+        ],
+        "adjustments": [
+          1000
+        ]
+      },
+      "observed": {
+        "finished_at": 150,
+        "clock": 1000,
+        "wakes": [
+          100,
+          150
+        ],
+        "next_deadline": null
+      },
+      "passed": true
+    },
+    {
+      "name": "unvisited_branch_can_advance_final_clock",
+      "inputs": {
+        "chosen_sleeps": [
+          5
+        ],
+        "syntax_adjustments": [
+          5,
+          20
+        ]
+      },
+      "observed": {
+        "finished_at": 5,
+        "clock": 25,
+        "wakes": [
+          5
+        ],
+        "next_deadline": null
+      },
+      "passed": true
+    },
+    {
+      "name": "ms_ns_additive_exact_integer_model",
+      "inputs": {
+        "domain": [
+          0,
+          1,
+          17,
+          2147483648,
+          9007199254740992,
+          1000000000000000000000000000000
+        ],
+        "pairs": 36
+      },
+      "observed": "all36pairs",
+      "passed": true
+    },
+    {
+      "name": "ms_ns_order_exact_integer_model",
+      "inputs": {
+        "domain": [
+          0,
+          1,
+          17,
+          2147483648,
+          9007199254740992,
+          1000000000000000000000000000000
+        ],
+        "pairs": 36
+      },
+      "observed": "all36pairs",
+      "passed": true
+    },
+    {
+      "name": "unchanged_numeric_sleep_is_bad_migration_mutant",
+      "inputs": {
+        "legacy_sleep_ms": 1,
+        "bad_new_ns": 1
+      },
+      "observed": {
+        "required_ns": 1000000,
+        "bad_ns": 1
+      },
+      "passed": true
+    },
+    {
+      "name": "same_source_point_not_same_loop_activation",
+      "inputs": {
+        "source_path": [
+          0
+        ],
+        "visits": 3
+      },
+      "observed": {
+        "source_points": 1,
+        "activation_observations": 3
+      },
+      "passed": true
+    }
+  ]
+}

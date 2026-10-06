@@ -1,0 +1,38 @@
+{
+  "kind": "primary-source selected readings; no theorem transferred automatically",
+  "sources": [
+    {
+      "title": "Combinators for Bidirectional Tree Transformations: A Linguistic Approach to the View-Update Problem",
+      "url": "https://www.cis.upenn.edu/~bcpierce/papers/lenses-toplas-final.pdf",
+      "locator": "Sections 3.1\u20133.4",
+      "used_for": "Partial-lens round trips, totality and update-law separation; version-counter counterexample",
+      "limit": "No behavioral or typed Eff editing theorem follows from lens laws",
+      "evidence": "Read primary PDF via web tool; no downloaded-PDF hash claimed"
+    },
+    {
+      "title": "Hazelnut: A Bidirectionally Typed Structure Editor Calculus",
+      "url": "https://arxiv.org/pdf/1607.04180",
+      "locator": "Section 3.3.1, Theorems 1\u20133",
+      "used_for": "Action sensibility and movement erasure invariance; distinguish synthesis from analysis",
+      "limit": "Its hole calculus is not Eff; no typed-hole feature proposed",
+      "evidence": "Read primary PDF via web tool"
+    },
+    {
+      "title": "Language Server Protocol 3.17 metamodel",
+      "url": "https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/metaModel/metaModel.json",
+      "locator": "VersionedTextDocumentIdentifier, TextDocumentEdit, DidChangeTextDocumentParams, staleRequestSupport",
+      "used_for": "Separate versioned edit and sequential change contracts; avoid misuse of ContentModified",
+      "limit": "Protocol analogy only; no LSP implementation proposed",
+      "evidence": "Read official metamodel via web tool"
+    },
+    {
+      "title": "Bidirectional Type Slicing",
+      "url": "https://arxiv.org/abs/2607.12197",
+      "pdf": "https://arxiv.org/pdf/2607.12197",
+      "locator": "Metatheorems in prior algebra packet; Section 10 for general minimum-size hardness",
+      "used_for": "Local type explanation with named context; avoid minimum explanation guarantee",
+      "limit": "Research preprint, different hole/precision calculus",
+      "evidence": "Primary reading retained in prior 2026-10-06-tree-control-review/algebra/literature.json; current report reuses that verified reading"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "python": "3.13.14",
+  "kind": "independent finite mirror controls",
+  "count": 8,
+  "results": [
+    {
+      "name": "same_wall_different_monotonic",
+      "passed": true,
+      "observation": {
+        "history_a": {
+          "millis": 7,
+          "wall_ns": 7000000,
+          "mono_ns": 13000000
+        },
+        "history_b": {
+          "millis": 7,
+          "wall_ns": 7000000,
+          "mono_ns": 7000000
+        }
+      }
+    },
+    {
+      "name": "positive_forward_adjustment_composes",
+      "passed": true,
+      "observation": {
+        "millis": 7,
+        "wall_ns": 7000000,
+        "mono_ns": 7000000
+      }
+    },
+    {
+      "name": "backwards_wall_set_preserves_elapsed",
+      "passed": true,
+      "observation": {
+        "millis": 4,
+        "wall_ns": 4000000,
+        "mono_ns": 10000000
+      }
+    },
+    {
+      "name": "wall_only_reconstruction_mutant_refused",
+      "passed": true,
+      "observation": {
+        "incorrect_reconstruction": 7000000,
+        "actual_mirror": 13000000
+      }
+    },
+    {
+      "name": "active_target_survives_due_fire",
+      "passed": true,
+      "observation": {
+        "now": 8,
+        "target": 10,
+        "waits": []
+      }
+    },
+    {
+      "name": "active_target_survives_completion",
+      "passed": true,
+      "observation": {
+        "now": 10,
+        "target": null,
+        "waits": []
+      }
+    },
+    {
+      "name": "new_advance_uses_delta_after_completion",
+      "passed": true,
+      "observation": {
+        "now": 110,
+        "target": null,
+        "waits": []
+      }
+    },
+    {
+      "name": "dropping_target_resumption_mutant_refused",
+      "passed": true,
+      "observation": {
+        "proper_existing_phase": {
+          "now": 10,
+          "target": null,
+          "waits": []
+        },
+        "fresh_phase_mutant": {
+          "now": 108,
+          "target": null,
+          "waits": []
+        }
+      }
+    }
+  ],
+  "exclusions": [
+    "Effect execution",
+    "Lean proof",
+    "fractional/nonfinite/negative times",
+    "sleep callback effects",
+    "full driver suspension",
+    "runtime agreement"
+  ]
+}
