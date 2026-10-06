@@ -2069,6 +2069,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `replays` (proved), `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved) | — |
+| R14 | open | — | — | — |
 
 **Next goals** (14): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
@@ -4273,6 +4274,24 @@ flowchart LR
 | `tapeFrom_cut_replays` | proved | — | `tape_replays`, `tapeFrom_cut` | 70 | 960 |
 | `tapeFrom_position_replays` | proved | — | `tape_replays` | 76 | 961 |
 | `tape_replays` | proved | — | — | 97 | 962 |
+
+### R14: A partial program checks and explains its types: holes and the gap, graduality, the focus, minimal slices and total marking
+
+- Open: focus-decomposes and focus-composes (proposed claims; initial-algebras-folds): an admitted program splits at a supported address into a context typing and a typing of the focus, and a context typing with a focus that fits its mode composes to an admitted program, so an edit at a focus needs the focus checked and not the program again; no goal states either (docs/research/2026-10-06-type-slicing-plan.md, section 6; decisions rows 281, 282)
+- Open: slice-lattice-minimal (proposed claim; subtyping-algebra): for a monotone map from a finite lattice of slices to types, every valid slice has a minimal valid slice below it, the one-step descent ends at one, below a minimal slice of a query lies a minimal slice of each refined query, and the join of two valid slices is valid for the join of their queries; no statement names Eff; seat LATTICE has it
+- Open: column-graduality, slice-conservative and slice-completion (proposed claims; context-requirements): a program with a sub-program folded to an assumption of its own answer type is admitted with the same answer, a smaller error and a smaller requirement, where the folded node's error flows into no value; at the empty mask the sliced check is the checker; every admitted program that agrees with a valid slice on its kept part keeps the queried member; a finite probe runs first (seat CENSUS)
+- Open: marking-total, marking-erases and marking-agrees (proposed claims; initial-algebras-folds): a checker that marks each local failure answers on every program, erasing its marks gives the program back, its first mark is the located refusal of explain, and it has no mark exactly where the program is admitted; no goal states one
+- Open: expected-type-slice (proposed claim; subtyping-algebra): each analysing rule of the checker has a minimal slice of its context that still expects the queried type: the row's declaration, the declared field, the cursor type; not stated
+- Open: gradual-checker (proposed claim; subtyping-algebra, with R2 and R3 for an append): the checker over programs with holes, at types with a gap, satisfies downwards static graduality, and it is the present checker on a program with no hole; a cell's content converts by consistency; the owner approved a gap with holes as first-class work (decisions row 282); its definitions are seat GAP's study, and no goal states it
+- Open: checker-monotone (proposed claim; subtyping-algebra): with every eliminator distributing over a union and total at never, a typed term stays typed at a smaller type under a pointwise smaller environment; decided with the census's numbers (candidate N, decisions row 282)
+- Open: a hole at run time: a frontier with a typed answer, or an operation that a layer provides; fill and resume against the recorded journal; not designed (seat GAP's study, part 3)
+
+```mermaid
+flowchart LR
+```
+
+| Node | Status | Rests on | Nearest nodes | Lemmas | Definitions |
+| --- | --- | --- | --- | --- | --- |
 
 ## Acceptance programs
 

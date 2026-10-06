@@ -9,7 +9,7 @@ documents that the current task names.
 | --- | --- |
 | `README.md` | what the product is, the application face, how to build |
 | `docs/STATE.md` | the entry point: true at HEAD, the documents, what is next, what the owner must decide |
-| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R13 and their status: the frame), `controlled-english.md` (the writing rules for every Markdown artifact; the dictionary, one meaning per word with its tree anchor, its literature term and the words not to use; the seven judgments and the boundary behaviours; the artifact skeletons; checked by `make check-language`), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md` (the live surface and its open decisions), `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
+| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R14 and their status: the frame), `controlled-english.md` (the writing rules for every Markdown artifact; the dictionary, one meaning per word with its tree anchor, its literature term and the words not to use; the seven judgments and the boundary behaviours; the artifact skeletons; checked by `make check-language`), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md` (the live surface and its open decisions), `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
 | `docs/GENERATED.md` | the generated groups: producers (`make gen-<group>`), inputs, consumers and checks |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-17): decision, rationale, witnesses, refusals, sources and literature marks; status only by link to the system map's §8 |
@@ -173,7 +173,7 @@ its arrows. Anything else is a leak.
      - safety is not liveness;
      - an equal-observation theorem holds only on its fragment;
      - the host boundary stays where `docs/core/host-boundary.md` puts it;
-  5. what it unlocks on the M5 → M6 → M7 spine, or which requirement it serves (R1–R13,
+  5. what it unlocks on the M5 → M6 → M7 spine, or which requirement it serves (R1–R14,
      `docs/core/system-map.md`).
 
   Do not start a lemma that has no consumer on a path to a planned goal or a registry claim. If the

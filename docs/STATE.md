@@ -149,8 +149,8 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
   - The contract cards of Semaphore, Pool and Cache are prepared now. They do not wait for
     step 4 of the order.
   - Every module follows one procedure, and its repeated parts are generated or applied.
-  - Every receipt accounts for the requirements R1 to R13. No module slice closes one by
-    association.
+  - Every receipt accounts for the requirements R1 to R14 (R14 since row 282). No module
+    slice closes one by association.
   - Row 233's order of implementation stands until the owner changes it.
 
   [The plan](research/2026-10-05-claude-lead/module-factory-plan.md) holds the procedure, the
@@ -319,8 +319,19 @@ tracked source: seat CENSUS measures the checker's graduality on the two corpora
 ([its brief](research/2026-10-05-claude-lead/briefs/seat-census-brief.md)), and seat GAP
 studies what a gap with holes would give, from the papers and from what the algebra already
 gives ([its brief](research/2026-10-05-claude-lead/briefs/seat-gap-brief.md)). Two of the
-plan's questions wait for the owner: a requirement of its own, and the minimal slice as the
-promise at the surface.
+plan's questions were answered under row 282.
+
+**The gap with holes is first-class work (row 282).** The owner authorized it on
+2026-10-06: the coordinator ratifies the plan's recommended answers, approves the
+obligations and lands the groundwork, with no shortcut and with Lean's metaprogramming
+where it makes a thing generated, fast or ergonomic. Three answers are ratified. Candidate A
+is the first stage, and a true gap with holes is the direction. Explanations have a
+requirement of their own, **R14: a partial program checks and explains its types**. A slice
+view promises one minimal slice and never a minimum size. The first groundwork slice is the
+generic lattice module (seat LATTICE,
+[its brief](research/2026-10-05-claude-lead/briefs/seat-lattice-brief.md)). The checked
+focus waits for the study's verdict on whether its context typing is generated from the
+checker.
 
 A second model reads beside the seats, as Codex did. The owner hands it bounded probes.
 [The probe questions](research/2026-10-06-probe-questions.md) lists fifteen: what today's

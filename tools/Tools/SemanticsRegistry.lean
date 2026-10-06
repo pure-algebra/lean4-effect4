@@ -72,7 +72,7 @@ deriving Repr, Inhabited
 /-- A requirement row of the system map (`docs/core/system-map.md` §8) with the plan nodes that
 state it in Lean: planned goals or theorems. Its status is derived from theirs. -/
 structure Requirement where
-  id : String                     -- the row, `R1` … `R13`
+  id : String                     -- the row, `R1` … `R14`
   title : String
   top : List Name
   /-- the parts of the row not yet stated as goals, each with what it waits on; while one remains,
@@ -1002,7 +1002,17 @@ def registry : Registry where
       openParts := ["load inputs, the environment snapshot and the seed: designed (the 2026-09-10 Config route B), not implemented (decisions rows 51, 83)",
         "supplied values fit the admitted load requirements: restates M5 (loadsTyped, the retired ledger's typedState_load) when Config lands",
         "the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)",
-        "clock-unit-compatibility (proposed claim; translation-simulation): exact nanoseconds inside, with every recorded millisecond input kept in meaning by an explicit conversion; public nanosecond readings wait for the target's bigint contract (decisions rows 83, 231)"] }
+        "clock-unit-compatibility (proposed claim; translation-simulation): exact nanoseconds inside, with every recorded millisecond input kept in meaning by an explicit conversion; public nanosecond readings wait for the target's bigint contract (decisions rows 83, 231)"] },
+    { id := "R14", title := "A partial program checks and explains its types: holes and the gap, graduality, the focus, minimal slices and total marking"
+      top := []
+      openParts := ["focus-decomposes and focus-composes (proposed claims; initial-algebras-folds): an admitted program splits at a supported address into a context typing and a typing of the focus, and a context typing with a focus that fits its mode composes to an admitted program, so an edit at a focus needs the focus checked and not the program again; no goal states either (docs/research/2026-10-06-type-slicing-plan.md, section 6; decisions rows 281, 282)",
+        "slice-lattice-minimal (proposed claim; subtyping-algebra): for a monotone map from a finite lattice of slices to types, every valid slice has a minimal valid slice below it, the one-step descent ends at one, below a minimal slice of a query lies a minimal slice of each refined query, and the join of two valid slices is valid for the join of their queries; no statement names Eff; seat LATTICE has it",
+        "column-graduality, slice-conservative and slice-completion (proposed claims; context-requirements): a program with a sub-program folded to an assumption of its own answer type is admitted with the same answer, a smaller error and a smaller requirement, where the folded node's error flows into no value; at the empty mask the sliced check is the checker; every admitted program that agrees with a valid slice on its kept part keeps the queried member; a finite probe runs first (seat CENSUS)",
+        "marking-total, marking-erases and marking-agrees (proposed claims; initial-algebras-folds): a checker that marks each local failure answers on every program, erasing its marks gives the program back, its first mark is the located refusal of explain, and it has no mark exactly where the program is admitted; no goal states one",
+        "expected-type-slice (proposed claim; subtyping-algebra): each analysing rule of the checker has a minimal slice of its context that still expects the queried type: the row's declaration, the declared field, the cursor type; not stated",
+        "gradual-checker (proposed claim; subtyping-algebra, with R2 and R3 for an append): the checker over programs with holes, at types with a gap, satisfies downwards static graduality, and it is the present checker on a program with no hole; a cell's content converts by consistency; the owner approved a gap with holes as first-class work (decisions row 282); its definitions are seat GAP's study, and no goal states it",
+        "checker-monotone (proposed claim; subtyping-algebra): with every eliminator distributing over a union and total at never, a typed term stays typed at a smaller type under a pointwise smaller environment; decided with the census's numbers (candidate N, decisions row 282)",
+        "a hole at run time: a frontier with a typed answer, or an operation that a layer provides; fill and resume against the recorded journal; not designed (seat GAP's study, part 3)"] }
   ]
   planScope := [`Effect4, `Test.Dogfood.Scenario]
 
