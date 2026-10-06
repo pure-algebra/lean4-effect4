@@ -185,6 +185,7 @@ import Test.Program.SemaphoreAgreement
 import Test.Program.SemaphoreRelation
 import Test.Program.SemaphoreEngine
 import Test.Program.SemaphoreWrapper
+import Test.Program.SemaphoreOps
 import Test.Program.PoolScenarios
 import Test.Program.PoolContract
 import Test.Program.PoolSteps

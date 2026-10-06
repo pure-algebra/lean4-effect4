@@ -716,6 +716,35 @@ theorem kept_cursor (s : TypedScope) (X : Ty) :
   kept_minted (i := s.env.names.length) (resolve_last s.env.names _) (held_last s X)
     fun e stem le => apart_cursor s.env e stem (deeper_push s .cursor X le)
 
+/-- A later minted binder has no name that a selection minted for its payload at a shallower
+scope: every other stem of the surface begins with another byte. -/
+theorem apart_payload (outer e : Env) (later : Stem)
+    (deeper : outer.names.length < e.names.length) :
+    e.mint later.text ≠ outer.mint "payload" := by
+  cases later with
+  | payload => exact fun same => absurd (mint_depth_inj same) (Nat.ne_of_gt deeper)
+  | answer =>
+    exact mint_ne_of_head (b := 97) (c := 112) (by decide) (by decide) (by decide) e outer
+  | cursor =>
+    exact mint_ne_of_head (b := 99) (c := 112) (by decide) (by decide) (by decide) e outer
+  | exit =>
+    exact mint_ne_of_head (b := 101) (c := 112) (by decide) (by decide) (by decide) e outer
+  | current =>
+    exact mint_ne_of_head (b := 99) (c := 112) (by decide) (by decide) (by decide) e outer
+  | restore =>
+    exact mint_ne_of_head (b := 114) (c := 112) (by decide) (by decide) (by decide) e outer
+  | acc => exact mint_ne_of_head (b := 97) (c := 112) (by decide) (by decide) (by decide) e outer
+  | item =>
+    exact mint_ne_of_head (b := 105) (c := 112) (by decide) (by decide) (by decide) e outer
+
+/-- **The name that a selection mints for its payload keeps its type under the surface's
+binders.** So the second arm may read the payload under more binders: the walk of Semaphore's
+release reads a selected waiter's stamp after it resolves that waiter's hint. -/
+theorem kept_payload (s : TypedScope) (X : Ty) :
+    Kept sig (minted (s.env.mint "payload")) (s.push .payload X) X :=
+  kept_minted (i := s.env.names.length) (resolve_last s.env.names _) (held_last s X)
+    fun e stem le => apart_payload s.env e stem (deeper_push s .payload X le)
+
 /-- The name that a builder binds has its type at the builder's scope. -/
 theorem typed_bound (s : TypedScope) (stem : Stem) (X : Ty) :
     Typed sig (minted (s.env.mint stem.text)) (s.push stem X) X :=
@@ -761,6 +790,10 @@ names at every path, and the checker types its tree at the scope's types with th
 failure and no requirement. -/
 def Answers (sig : Signature NativeOp) (src : Src NativeOp) (s : TypedScope) (T : Ty) : Prop :=
   ∀ path, ∃ p, src s.env path = .ok p ∧ effTy sig s.types p = some (EffTy.pure T)
+
+/-- An answer at a type that is the same type. -/
+theorem Answers.to {src : Src NativeOp} {s : TypedScope} {T U : Ty} (h : Answers sig src s T)
+    (same : T = U) : Answers sig src s U := same ▸ h
 
 /-- Two columns with no failure and no requirement join to the same. -/
 theorem pure_columns (T : Ty) :
@@ -839,19 +872,19 @@ theorem answers_ifElse {test : TermSrc} {thenB elseB : Src NativeOp} {s : TypedS
       (.select (d := .bool) (e0 := []) (e1 := []) typedC rfl left right rfl)).trans
         (congrArg some (pure_columns _))
 
-/-- **`selectOptionWith`**: the second arm reads the payload through a kept term, and the two
-arms' answers join. -/
-theorem answers_selectOptionWith {scrutinee : TermSrc} {arm0 : Src NativeOp}
+/-- **`selectOptionWith`, with a kept payload.** The second arm reads the payload through a kept
+term: it may read it under more binders. The two arms' answers join. -/
+theorem answers_selectOptionWith_kept {scrutinee : TermSrc} {arm0 : Src NativeOp}
     {arm1 : TermSrc → Src NativeOp} {s : TypedScope} {P X Y : Ty}
     (canonical : P.normalize = P) (hscrutinee : Typed sig scrutinee s (.option P))
     (h0 : Answers sig arm0 s X)
-    (h1 : ∀ x : TermSrc, Typed sig x (s.push .payload P) P →
+    (h1 : ∀ x : TermSrc, Kept sig x (s.push .payload P) P →
       Answers sig (arm1 x) (s.push .payload P) Y) :
     Answers sig (selectOptionWith scrutinee arm0 arm1) s (Ty.join X Y) := by
   intro path
   obtain ⟨c, treeC, typedC⟩ := hscrutinee path false
   obtain ⟨a, treeA, typedA⟩ := h0 (path ++ [0])
-  obtain ⟨b, treeB, typedB⟩ := h1 _ (typed_bound s .payload P) (path ++ [1])
+  obtain ⟨b, treeB, typedB⟩ := h1 _ (kept_payload s P) (path ++ [1])
   have treeB' : arm1 (minted (s.env.mint "payload")) (s.env.push [s.env.mint "payload"])
       (path ++ [1]) = .ok b := treeB
   refine ⟨.select c .option a b, ?_, ?_⟩
@@ -871,6 +904,17 @@ theorem answers_selectOptionWith {scrutinee : TermSrc} {arm0 : Src NativeOp}
     exact (effTy_complete sig _ _ _
       (.select (d := .option) typedC arms left (effTy_sound sig b _ _ typedB) rfl)).trans
         (congrArg some (pure_columns _))
+
+/-- **`selectOptionWith`**: the second arm reads the payload at its type, and the two arms'
+answers join. -/
+theorem answers_selectOptionWith {scrutinee : TermSrc} {arm0 : Src NativeOp}
+    {arm1 : TermSrc → Src NativeOp} {s : TypedScope} {P X Y : Ty}
+    (canonical : P.normalize = P) (hscrutinee : Typed sig scrutinee s (.option P))
+    (h0 : Answers sig arm0 s X)
+    (h1 : ∀ x : TermSrc, Typed sig x (s.push .payload P) P →
+      Answers sig (arm1 x) (s.push .payload P) Y) :
+    Answers sig (selectOptionWith scrutinee arm0 arm1) s (Ty.join X Y) :=
+  answers_selectOptionWith_kept canonical hscrutinee h0 fun x hx => h1 x hx.here
 
 /-- **`onExitWith`**: the finalizer reads the body's exit, and the program answers as its
 body. -/
