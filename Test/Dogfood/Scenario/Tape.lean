@@ -321,4 +321,71 @@ def shownFixtures : Option (List (String × List (Lowered × Shown))) :=
 def fixtureTexts : Option (List (String × String)) :=
   shownFixtures.bind fun all => all.mapM fun entry => (fixture entry.2).map fun text => (entry.1, text)
 
+/-! ## 4. The journal's cut on a lowered run
+
+The driver's laws of the journal's cut (`Test/Dogfood/Scenario.lean`) say what a prefix of a
+journal gives: its completed prefix and each position of its tape replay raw. Their consumer
+is here: the views that `Lowered.shown` computes. -/
+
+/-- **The raw replay shows the session machine at every position of a lowered run.** When a
+lowered run opens its program fresh (`Run.open`), the views of the raw frame replay are the
+session machine's views: the opened machine first, then the machine after each position of the
+tape. The tape may leave rows unread: a stopped row adds a position to neither list. Reach: any
+built program, name, budgets, profile and script. The fresh open is a premise, because
+`Lowered.shown` replays each prefix from a new load (`Api.replay`). The proof uses the premise
+once, for the opened machine (`Run.open_machine`). It does not establish `Shown.agrees`, which
+also asks for a tape that reads every row. It says nothing of the replay's outcome words, of
+`observedTableDifference`, of a session ledger or of a lowered engine: the engine's link stays
+the finite comparison of `ocaml/engine/test/scenarios/test_scenarios.ml`. Concept
+`translation-simulation`, R8: the replay view of `tape_replays`, at every position, for a tape
+that may stop. It is `tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`) at each
+position. Consumer: the lowered runs of `fixtures`, each of which opens its program fresh. -/
+@[semantics "translation-simulation" (requirement := R8)]
+theorem shown_views_opened (l : Lowered) (b : Api.Built) (id : String) (budget : Api.Budget)
+    (profile : String) (fresh : l.opened = Run.open b id budget profile) :
+    l.shown.raw.map (·.2) = l.shown.views := by
+  have loaded : l.opened.machine =
+      Api.load l.opened.built.program l.opened.budget.compileFuel := by
+    rw [fresh]
+    exact Run.open_machine b id budget profile
+  have raw : ∀ taken : List Api.Decision,
+      (Api.replay l.opened.built.program l.opened.budget.fuel taken [] l.opened.built.table
+        l.opened.budget.compileFuel).machine =
+      Run.machineOf (Run.replayFrom l.opened.built.program l.opened.built.table
+        l.opened.budget.fuel taken l.opened.machine) := by
+    intro taken
+    rw [Run.replay_machine, loaded]
+  have position : ∀ (i : Nat) (position : Position),
+      (tapeFrom l.opened (Scenario.play l.opened l.moves).journal).1[i]? = some position →
+      Run.machineOf (Run.replayFrom l.opened.built.program l.opened.built.table
+        l.opened.budget.fuel
+        (((tapeFrom l.opened (Scenario.play l.opened l.moves).journal).1.map (·.decision)).take
+          (i + 1)) l.opened.machine) = position.after.machine := by
+    intro i position found
+    rw [← List.map_take]
+    exact (tapeFrom_position_replays l.opened _ i position found).symm
+  dsimp only [Lowered.shown]
+  rw [List.map_map, List.map_map, List.range_succ_eq_map, List.map_cons, List.map_map]
+  congr 1
+  · exact congrArg machineViewOf ((raw _).trans (Run.machineOf_nil _ _ _ _))
+  · apply List.ext_getElem
+    · rw [List.length_map, List.length_range, List.length_map, List.length_map]
+    · intro i inRange inTape
+      rw [List.getElem_map, List.getElem_map, List.getElem_range]
+      exact congrArg machineViewOf
+        ((raw _).trans (position i _ (List.getElem?_eq_getElem _)))
+
+/-- info: 'Test.Dogfood.Scenario.Lowered.shown_views_opened' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms shown_views_opened
+
+/--
+info: Test.Dogfood.Scenario.Lowered.shown_views_opened: proved; nearest [Test.Dogfood.Scenario.tapeFrom_position_replays]; 0 lemmas, 27 definitions
+Test.Dogfood.Scenario.tapeFrom_position_replays: proved; nearest [Test.Dogfood.Scenario.tape_replays]; 5 lemmas, 6 definitions
+Test.Dogfood.Scenario.tape_replays: proved; nearest []; 11 lemmas, 6 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status shown_views_opened tapeFrom_position_replays tape_replays
+
 end Test.Dogfood.Scenario.Lowered
