@@ -16,6 +16,7 @@ proofs. It authorizes no public operation and no runtime behaviour.
 | `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
 | the five step statements and `pool_steps_agree` in `src/Effect4/Laws/Modules/Pool/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
 | `Test/Program/PoolAgreement.lean` and `PoolRelation.lean` in the same folder | tested: finite controls on 130 states, and four faults red at their own property |
+| `ocaml/engine/test/pool/test_pool.ml`, with `Test/Program/PoolEngine.lean` | tested: PP4 and the control of PP5 give Lean's exit on the generated engine, on both carriers |
 
 ## Authority and owned surface
 
