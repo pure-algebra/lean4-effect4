@@ -76,9 +76,14 @@ FIXTURE_LANES = 'ocaml/engine/test'
 
 
 def fixture_lanes():
-    """Each lane's folder and the modules its writer imports, read from the writer's header."""
+    """Each lane's folder and the modules its writer imports, read from the writer's header.
+
+    A folder that holds a text fixture and no writer is refused: no writer would hold its bytes,
+    and a lane whose writer left would keep its fixtures unchecked.
+    """
+    base = ROOT / FIXTURE_LANES
     lanes = []
-    for writer in sorted((ROOT / FIXTURE_LANES).glob('*/write.lean')):
+    for writer in sorted(base.glob('*/write.lean')):
         modules = [line.split()[1] for line in writer.read_text().splitlines()
                    if line.startswith('import ')]
         if not modules:
@@ -86,6 +91,11 @@ def fixture_lanes():
         lanes.append((writer.parent.relative_to(ROOT).as_posix(), modules))
     if not lanes:
         raise ValueError(f'{FIXTURE_LANES}: no lane holds a writer')
+    written = {folder for folder, _ in lanes}
+    orphans = sorted({path.parent.relative_to(ROOT).as_posix() for path in base.glob('*/*.txt')}
+                     - written)
+    if orphans:
+        raise ValueError('text fixtures in a folder with no writer (write.lean): ' + ', '.join(orphans))
     return lanes
 
 
@@ -93,8 +103,16 @@ def fixtures(out, checking):
     """Write each lane's fixtures from Lean, then install them or refuse a difference.
 
     A committed `*.txt` that the lane's writer does not write is refused in both modes.
+    The output never aliases a lane's own folder: such a run would delete and rewrite the
+    repository's fixtures and then compare each with itself. That is refused before any file is
+    touched or any command runs, on resolved paths, so a symbolic link is no way around it (the
+    derived family's rule).
     """
-    for folder, modules in fixture_lanes():
+    lanes = fixture_lanes()
+    for folder, _ in lanes:
+        if (out / folder).resolve() == (ROOT / folder).resolve():
+            raise ValueError(f'{folder}: output aliases repository destination')
+    for folder, modules in lanes:
         temp = out / folder
         temp.mkdir(parents=True, exist_ok=True)
         for stale in temp.glob('*.txt'):

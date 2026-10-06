@@ -249,7 +249,14 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) $(SEMANTICS_ROOTS) | build
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/fixtures: $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(ENGINE_FIXTURE_TRACES) scripts/generate.py | build
+# The lanes' inventory: every fixture and every writer, by path. A wildcard prerequisite does
+# not remember a path that left, so the list itself is a prerequisite. It changes when a fixture
+# or a writer is added, removed or renamed (the pattern of $(CHK)/inventory), and the producer
+# then refuses a fixture folder that has no writer.
+$(GEN)/fixtures-inventory: FORCE
+	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
+	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
+$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(ENGINE_FIXTURE_TRACES) scripts/generate.py | build
 	$(PY) scripts/generate.py --only fixtures
 	@mkdir -p $(GEN) && touch $@
 
