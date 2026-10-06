@@ -233,6 +233,7 @@ import Test.Audit.ProofGraphPlan
 import Test.Audit.ProofStyle
 import Test.Machine.StoreKernelBank
 import Test.Machine.MaskDiscipline
+import Test.Machine.MaskRuns
 import Test.Counterexamples.Machine.Runtime.ArmedFrontier
 import Test.Audit.Obligations
 import Test.Audit.SemanticsCensus
