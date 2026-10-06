@@ -155,6 +155,7 @@ import Effect4.Codegen.Styles
 -- The composed modules, programs over the authoring surface (decisions row 255): the Queue's
 -- cell and its steps.
 import Effect4.Modules.Queue.Cell
+import Effect4.Modules.Queue.Steps
 
 /-!
 # Effect4
