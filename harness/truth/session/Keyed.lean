@@ -377,9 +377,10 @@ one script of a battery on one program that the battery builds. The lane writes 
 each run that a host can perform, and it names each run that a host cannot perform, with the
 reason.
 
-* **The script.** The battery's own `List Move`, played by the battery's own driver. The fixture
-  holds the journal rows that the script leaves, as records of this lane's wire. The host acts
-  out each row, and it writes each record from what it did.
+* **The script.** The battery's own `List Move`, played by the battery's own driver. The lane
+  takes it from the battery's record, where each script stands once as a named run: this file
+  holds no script. The fixture holds the journal rows that the script leaves, as records of this
+  lane's wire. The host acts out each row, and it writes each record from what it did.
 * **The calls.** Every call that the machine waits on during the script, in the order of the
   guard tokens: the order in which the fibers parked. The recorder gives the n-th call that the
   module starts the n-th key.
@@ -758,20 +759,49 @@ def replayRun (run : HostRun) (recording : J) : Except String J := do
     ("verdicts", toJson (replayed.phases.map verdictJson)),
     ("observation", Json.mkObj (run.observed replayed))]
 
-/-! ### The runs -/
+/-! ### The runs
 
-/-- A battery's program, built as the battery builds it. -/
-def build (what : String) (module : Authoring.Module NativeOp) : Except String Api.Built :=
-  match Effect4.Api.Author.build module with
-  | .ok built => .ok built
-  | .error _ => .error ("the build refuses " ++ what)
+The lane holds no script. A scenario's battery lists its named runs once, in its record
+(`Scenario.runs`, `Test/Dogfood/Scenario.lean`), and the lane performs each one. So a changed
+script of a battery is the lane's script at the next run, with no edit here. What the lane holds
+of a scenario is its own: the observation's wire, the readers that the observation asks for, and
+a stated reason for a run that the lane keeps out. -/
 
-/-- One host run of the routing scenario, with its observation's three fields. -/
-def routing (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
-  { name := "routing/" ++ name
-    scenario := "routing"
-    opened := Scenario.Routing.opened built
-    moves := moves
+/-- What the lane holds of one scenario beside its battery's record. -/
+structure Wire where
+  /-- The battery's record. Its name is the scenario's name, and its runs are the lane's runs. -/
+  scenario : Scenario.Scenario
+  /-- The battery's observation of a run, one JSON value a field, in the order of its fields. -/
+  observed : Run → List (String × J)
+  /-- Whether two runs show one observation, by the battery's own equality. -/
+  same : Run → Run → Bool
+  /-- The readers inside the program's state that the scenario's observation asks for. -/
+  asks : List Reader := []
+
+/-- The runs that the lane keeps out for a reason that no rule of `performable` measures, each by
+its name: a finding of the target type check, stated with its evidence. -/
+def keptOut : List (String × String) :=
+  [ ("routing/exact-escape",
+      "tsgo 7 refuses the printed module of the exact error column (TS2375, twice): the lane runs only a module that type-checks") ]
+
+/-- The host runs of a scenario: each named run of its battery's record, in the record's order.
+A run's name is the scenario's name, a slash and the run's name. -/
+def Wire.runs (wire : Wire) : List HostRun :=
+  wire.scenario.runs.map fun run =>
+    let name := wire.scenario.name ++ "/" ++ run.name
+    { name := name
+      scenario := wire.scenario.name
+      opened := run.opened
+      moves := run.moves
+      observed := wire.observed
+      same := wire.same
+      out := (keptOut.find? (·.1 == name)).map (·.2)
+      asks := wire.asks }
+
+/-- The routing scenario (`Test/Dogfood/Scenario/Routing.lean`), with its observation's three
+fields. -/
+def routing : Wire :=
+  { scenario := Scenario.Routing.scenario
     observed := fun run =>
       let o := Scenario.Routing.observe run
       [ ("outcome", exitOrNull o.outcome)
@@ -779,45 +809,11 @@ def routing (name : String) (built : Api.Built) (moves : List Scenario.Move) : H
       , ("refusals", toJson (o.refusals.map fun entry => [entry.1, refusalWord entry.2])) ]
     same := fun a b => Scenario.Routing.observe a == Scenario.Routing.observe b }
 
-open Scenario.Routing in
-/-- The routing scenario's runs: each script of a control of `Test/Dogfood/Scenario/Routing.lean`,
-on the program of that control. The first six are on the scenario's own program `request`. The
-others are on the variants of the battery's red controls. -/
-def routingRuns : Except String (List HostRun) := do
-  let own := P2HandlerLayers.findById
-  let bob ← build "routing's request" (request "secret" 2 "2")
-  let missing ← build "routing's request" (request "secret" 9 "9")
-  let denied ← build "routing's request" (request "wrong" 2 "2")
-  let misnamed ← build "routing's misnamed handler"
-    (routed false own (named "NotFound") (named "Unauthorised") "wrong" 2 "2")
-  let catchAll ← build "routing's catch-all handler"
-    (routed false own (named "NotFound") (fun _ => Authoring.bool true) "secret" 2 "2")
-  let eager ← build "routing's eager handler"
-    (routed true own (named "NotFound") (named "Unauthorized") "wrong" 2 "2")
-  let exact ← build "routing's exact error column"
-    (routed false findByIdExact (named "NotFound") (named "Unauthorized") "secret" 2 "2")
-  return [ routing "200" bob (lookups 2)
-    , routing "404" missing (lookups 9)
-    , routing "401" denied (lookups 2)
-    , routing "escape" bob (failing "SqlError" "connection lost")
-    , routing "business-tag" bob (failing "NotFound" "db")
-    , routing "wide" bob (Scenario.script [[.start],
-        Scenario.answer cfg (Scenario.ok (configOf "secret" 20)),
-        Scenario.answer repo (Scenario.ok wide)])
-    , routing "misnamed" misnamed (lookups 2)
-    , routing "catch-all" catchAll (failing "SqlError" "connection lost")
-    , routing "eager" eager (lookups 2)
-    , routing "exact-business-tag" exact (failing "NotFound" "db")
-    , { routing "exact-escape" exact (failing "SqlError" "connection lost") with
-        out := some "tsgo 7 refuses the printed module of the exact error column (TS2375, twice): the lane runs only a module that type-checks" } ]
-
-/-- One host run of the workers scenario. Its observation has seven fields. The work left is
-five readings, and each has its own entry, because the host reads two of them. -/
-def workers (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
-  { name := "workers/" ++ name
-    scenario := "workers"
-    opened := Scenario.Workers.opened built
-    moves := moves
+/-- The workers scenario (`Test/Dogfood/Scenario/Workers.lean`). Its observation has seven
+fields. The work left is five readings, and each has its own entry, because the host reads two
+of them. -/
+def workers : Wire :=
+  { scenario := Scenario.Workers.scenario
     observed := fun run =>
       let o := Scenario.Workers.observe run
       [ ("assignment", toJson (o.assignment.map valJson))
@@ -836,36 +832,6 @@ def workers (name : String) (built : Api.Built) (moves : List Scenario.Move) : H
     same := fun a b => Scenario.Workers.observe a == Scenario.Workers.observe b
     asks := [.cells, .sleeps, .dispatchers] }
 
-open Scenario.Workers in
-/-- The workers scenario's runs: each script of a control of `Test/Dogfood/Scenario/Workers.lean`
-on the crew, and the lowest-fiber schedule on the crew that registers each release twice. The
-run that `P3WorkerQueue.drive` makes and the two played journals are no scripts, so they have
-no run here. -/
-def workersRuns : Except String (List HostRun) := do
-  let crew ← build "the crew" (crew 2)
-  let faulty ← build "the crew that registers each release twice" (crewWith true 2)
-  let run := fun (name : String) (parts : List (List Scenario.Move)) =>
-    workers name crew (Scenario.script parts)
-  return [ run "parked" [parked]
-    , run "received" [parked, takes]
-    , run "received-reversed" [parked, takes.reverse]
-    , run "duplicate" [parked, takes, [.receive w1 (Scenario.ok (.nat 1))]]
-    , run "applied-2" [parked, takes, [.apply w2]]
-    , run "applied-1-2" [parked, takes, [.apply w1, .apply w2]]
-    , run "applied-2-1" [parked, takes, [.apply w2, .apply w1]]
-    , run "crossed" [parked, [.row (.submit (forged 0 2 2 (Scenario.ok (.nat 1))))]]
-    , run "unreceived" [parked, [.apply w2]]
-    , run "applied-1" [parked, takes, [.apply w1]]
-    , run "stale" [parked, takes,
-        [.apply w1, .row (.submit (forged 0 1 1 (Scenario.ok (.nat 1)))), .row (.apply ⟨⟨1⟩, 1⟩)]]
-    , run "cancelled-running" [running, [.cancel ⟨2⟩]]
-    , run "cancelled-early" [parked, [.cancel ⟨2⟩, .receive w2 (Scenario.ok (.nat 2))]]
-    , run "cancelled-between" [parked, takes, [.cancel ⟨2⟩, .apply w2, .apply w1]]
-    , run "cancelled-root" [parked, [.cancel ⟨0⟩]]
-    , run "lowest" [lowest]
-    , run "cancelled" [running, [.cancel ⟨2⟩], finish]
-    , workers "twice" faulty lowest ]
-
 /-- A held call's fate, as one JSON object with one key. -/
 def fateJson : Scenario.Timeout.Fate → J
   | .live => Json.mkObj [("live", true)]
@@ -882,12 +848,10 @@ def endingJson : Scenario.Timeout.Ending → J
   | .interrupted => Json.mkObj [("interrupted", true)]
   | .other => Json.mkObj [("other", true)]
 
-/-- One host run of the timeout scenario, with its observation's nine fields. -/
-def timeout (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
-  { name := "timeout/" ++ name
-    scenario := "timeout"
-    opened := Scenario.Timeout.opened built
-    moves := moves
+/-- The timeout scenario (`Test/Dogfood/Scenario/Timeout.lean`), with its observation's nine
+fields. -/
+def timeout : Wire :=
+  { scenario := Scenario.Timeout.scenario
     observed := fun run =>
       let o := Scenario.Timeout.observe run
       [ ("calls", toJson (o.calls.map fateJson))
@@ -903,48 +867,10 @@ def timeout (name : String) (built : Api.Built) (moves : List Scenario.Move) : H
     same := fun a b => Scenario.Timeout.observe a == Scenario.Timeout.observe b
     asks := [.cells, .sleeps] }
 
-open Scenario.Timeout in
-/-- The timeout scenario's runs: each script of a control of `Test/Dogfood/Scenario/Timeout.lean`
-on the fetch, and the scripts of the two faulty clients. The battery's part `parked` is one run
-more: every script starts with it, and no control plays it alone. The frontier control has no
-run here: it edits the budget of a run, and a script does not. The two played journals are no
-scripts either. -/
-def timeoutRuns : Except String (List HostRun) := do
-  let fetch ← build "the fetch" fetch
-  let eager ← build "the client that retries every failure"
-    (client (fun _ => Authoring.bool true) false)
-  let resetting ← build "the client whose finalizer resets the count"
-    (client P1HttpCache.retryable true)
-  let run := fun (name : String) (parts : List (List Scenario.Move)) =>
-    timeout name fetch (Scenario.script parts)
-  let notFound := [parked, Scenario.answer http (Scenario.failed "HttpError" "404"),
-    [.tick 100, .flush, .hold http]]
-  return [ run "parked" [parked]
-    , run "503" [parked, Scenario.answer http (Scenario.failed "HttpError" "503"),
-        [.tick 100, .hold http], Scenario.answer http (Scenario.ok body2)]
-    , run "timed-out" [timedOut]
-    , run "four" [[.start, .tick 2000, .tick 100, .tick 2000, .tick 200, .tick 2000, .tick 400,
-        .tick 2000]]
-    , run "404" notFound
-    , run "before" [parked, Scenario.answer http (Scenario.ok body1)]
-    , run "second" [timedOut, Scenario.answer second (Scenario.ok body2)]
-    , run "late" [timedOut, Scenario.answer first (Scenario.ok body1)]
-    , run "kept" [parked, [.receive http (Scenario.ok body1), .tick 2000, .apply first]]
-    , run "crossed" [timedOut, [.row (.submit (forged 0 key2 (Scenario.ok body1)))]]
-    , run "direct" [timedOut, [.control (.answerAsync ⟨5⟩ 7 (Scenario.ok body1))]]
-    , run "timer-interrupt" [parked, [.tick 2000]]
-    , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
-    , run "received" [parked, [.receive http (Scenario.ok body1)]]
-    , run "applied" [parked, [.receive http (Scenario.ok body1), .apply http]]
-    , timeout "eager" eager (Scenario.script notFound)
-    , timeout "resetting" resetting (Scenario.script [parked, [.tick 2000]]) ]
-
-/-- One host run of the atomic scenario, with its observation's five fields. -/
-def atomic (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
-  { name := "atomic/" ++ name
-    scenario := "atomic"
-    opened := Scenario.Atomic.opened built
-    moves := moves
+/-- The atomic scenario (`Test/Dogfood/Scenario/Atomic.lean`), with its observation's five
+fields. -/
+def atomic : Wire :=
+  { scenario := Scenario.Atomic.scenario
     observed := fun run =>
       let o := Scenario.Atomic.observe run
       [ ("decisions", toJson (o.decisions.map fun
@@ -962,27 +888,27 @@ def atomic (name : String) (built : Api.Built) (moves : List Scenario.Move) : Ho
     same := fun a b => Scenario.Atomic.observe a == Scenario.Atomic.observe b
     asks := [.cells, .fibers] }
 
-open Scenario.Atomic in
-/-- The atomic scenario's runs: each script of a control of `Test/Dogfood/Scenario/Atomic.lean`
-on the shop, and the script `started` on the four faulty shops. The controls of the straight
-clause have no run here: they run the request alone with `Api.run`, at a bound and with no
-script, and they compare no `Observation`. -/
-def atomicRuns : Except String (List HostRun) := do
-  let built := fun (fault : Fault) => build "the shop" (shop fault)
-  let shop ← built .none
-  return [ atomic "started" shop started
-    , atomic "refilled" shop refilled
-    , atomic "finished" shop finished
-    , atomic "interrupted" shop interrupted
-    , atomic "stopped" shop stopped
-    , atomic "racy" (← built .racy) started
-    , atomic "erased" (← built .erased) started
-    , atomic "undone" (← built .undone) started
-    , atomic "twice" (← built .twice) started ]
+/-- The scenarios that the lane performs, in the lane's order. -/
+def wires : List Wire := [routing, workers, timeout, atomic]
 
-/-- Every host run of every scenario. -/
+/-- The kept-out names that no run carries: a reason that outlived its run. -/
+def stale (kept : List (String × String)) (all : List HostRun) : List String :=
+  (kept.map (·.1)).filter fun name => !all.any (·.name == name)
+
+-- Control of the refusal below: a kept-out name with no run is stale.
+#guard stale [("routing/gone", "a reason")] [] == ["routing/gone"] && stale [] [] == []
+
+/-- Every host run of every scenario: the named runs of the four records. It refuses a record
+that lists no run, which is a battery whose program does not build. It refuses a kept-out name
+that no record lists, so a reason cannot outlive its run. -/
 def runs : Except String (List HostRun) := do
-  return (← routingRuns) ++ (← workersRuns) ++ (← timeoutRuns) ++ (← atomicRuns)
+  for wire in wires do
+    if wire.scenario.runs.isEmpty then
+      throw s!"the scenario {wire.scenario.name} lists no run: a program of its battery does not build"
+  let all := wires.flatMap Wire.runs
+  if let name :: _ := stale keptOut all then
+    throw s!"the lane keeps out the run {name}, and no scenario lists it"
+  return all
 
 /-- The fixtures of the runs that a host can perform, and each other run with the reason. -/
 def emit : Except String J := do
