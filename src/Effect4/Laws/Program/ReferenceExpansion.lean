@@ -45,10 +45,6 @@ Placement (AGENTS.md, Trust):
   (`Laws/Program/ReferenceTyping.lean`), and `checkTypedProgram_of_hasTy`
   (`Laws/Program/CheckedTyping.lean`).
 
-Imports. This module, `PathFold.lean` and `PathOrder.lean` import no `aesop`:
-`Laws/Program/ReferenceTyping.lean` imports this module, and its header says why its imports
-stay free of the `batteries` package.
-
 The design is `docs/research/2026-10-06-seat-REFS-design.md`.
 -/
 
@@ -63,8 +59,10 @@ variable {Op : Type}
 /-- `EffAlgebra.onRef f` (`Program/Fold.lean`) under a reducible name: the identity algebra with
 the reference slot replaced by `f`. `simp only` reads a field of this algebra at a constructor
 through the name, and it leaves the algebra of a recursive call as it is. So one `simp only` call
-closes every arm of a sort, and the recursive statement still matches. -/
-@[reducible] private def refAlgebra (f : List Nat → LayerTerm Op) :
+closes every arm of a sort, and the recursive statement still matches. Its consumers are the two
+laws of the generated folds under a substitution: the reference sites here, and the fixed syntax
+of `Laws/Program/ReferenceTyping.lean` (`onRef_eq_self_eff` and its siblings). -/
+@[reducible] def refAlgebra (f : List Nat → LayerTerm Op) :
     EffAlgebra Op (EffSelfCarrier Op) :=
   { EffAlgebra.id Op with layer_ref := f }
 

@@ -7,8 +7,10 @@ when the original references are well formed. The operation alphabet and signatu
 are arbitrary.
 
 Proof graph:
-* The seven mutual `*_expandRound_eq_self` lemmas use structural induction to
-  show that one expansion round fixes syntax with no reference sites.
+* A substitution of the references fixes syntax with no reference site, at the seven sorts
+  (`onRef_eq_self_eff` and its six siblings): one structural recursion over the sorts. The
+  seven `*_expandRound_eq_self` lemmas are its instances at the expansion algebra: one
+  expansion round fixes syntax with no reference sites.
 * `expandRefs_eq_self_of_refSites_nil` reduces the expansion fold to that round;
   `layerRefsWF_of_refSites_nil` discharges well-formedness of reference-free syntax.
 * `typeOfProgram_eq_if_refsWF` is the checker's equation. The checker's second test, that
@@ -19,84 +21,129 @@ Proof graph:
 
 The proved judgment is equality of `typeOfProgram` results. Neither answer is shown to
 be a type. Runtime behavior and layer sharing are separate C4 obligations.
-
-Imports. This file imports `Laws/Program/ReferenceExpansion.lean` for the top theorem.
-Keep `aesop`, and with it the `batteries` package, out of that module's imports and out of
-the imports of `PathFold.lean` and `PathOrder.lean`. With `batteries` imported here, its
-linter `unnecessarySeqFocus` refuses the last line of `action_expandRound_eq_self` below,
-and the file does not build (`docs/research/2026-10-06-seat-REFS-receipt.md`, finding F1).
-The limit goes when the seven `*_expandRound_eq_self` proofs are rewritten.
 -/
 
 set_option autoImplicit false
-set_option maxRecDepth 4096
-set_option maxHeartbeats 800000
 
 namespace Effect4.Program
 open Effect4.Program
 
-set_option hygiene false in
-scoped macro "close_ref_free" : tactic => `(tactic|
-  (first
-  | apply eff_expandRound_eq_self
-  | apply stmts_expandRound_eq_self
-  | apply stmt_expandRound_eq_self
-  | apply effs_expandRound_eq_self
-  | apply action_expandRound_eq_self
-  | apply layer_expandRound_eq_self
-  | apply layers_expandRound_eq_self) <;> solve_by_elim [And.left, And.right])
+/-! ## A substitution fixes syntax with no reference site
+
+The second law of the generated folds under a substitution of the references. The first is the
+law of the reference sites (`Laws/Program/ReferenceExpansion.lean`), and both read the algebra
+under its reducible name `refAlgebra`. The seven statements are one structural recursion over
+the seven sorts. Each proof takes its arms from the sort, which are the arms of its fold, and one
+`simp only` call closes them all. The call unfolds the two folds at the constructor. It reads the
+premise as one fact for each child, and it rewrites each child by the statement at the child's
+sort and path. A child's path is the node's path with the child's index, so the statements at
+the indices `0`, `1` and `2` cover every arm. At `ref` the premise is false. -/
 
 mutual
-  theorem eff_expandRound_eq_self {Op : Type} (orig : Node Op)
-      (node : Eff Op) (path : List Nat) (h : node.refSites path = []) :
-      Eff.expandRound orig node = node := by
-    cases node <;> simp_all only [foldMapAt_eff, List.nil_append, Eff.refSites, List.append_eq_nil_iff]
-    all_goals simp only [cata_eff, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Eff.expandRound]
-    all_goals congr 1 <;> close_ref_free
+/-- A substitution fixes an `Eff` with no reference site. A step of `eff_expandRound_eq_self`. -/
+private theorem onRef_eq_self_eff {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
+    (node : Eff Op) :
+    foldMapAt_eff [] (· ++ ·) q node (f_layer := LayerTerm.refSite) = [] →
+      cata_eff (refAlgebra f) node = node := by
+  cases node <;> simp +contextual only [foldMapAt_eff, cata_eff, EffAlgebra.id, List.nil_append,
+    List.append_eq_nil_iff, implies_true, onRef_eq_self_eff f (q ++ [0]),
+    onRef_eq_self_eff f (q ++ [1]), onRef_eq_self_eff f (q ++ [2]),
+    onRef_eq_self_stmts f (q ++ [0]), onRef_eq_self_action f (q ++ [0]),
+    onRef_eq_self_layer f (q ++ [0])]
 
-  theorem stmts_expandRound_eq_self {Op : Type} (orig : Node Op)
-      (node : Stmts Op) (path : List Nat) (h : node.refSites path = []) :
-      Stmts.expandRound orig node = node := by
-    cases node <;> simp_all only [foldMapAt_stmts, List.nil_append, Stmts.refSites, List.append_eq_nil_iff]
-    all_goals simp only [cata_stmts, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Stmts.expandRound]
-    all_goals congr 1 <;> close_ref_free
+/-- A substitution fixes a `Stmt` with no reference site. -/
+private theorem onRef_eq_self_stmt {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
+    (node : Stmt Op) :
+    foldMapAt_stmt [] (· ++ ·) q node (f_layer := LayerTerm.refSite) = [] →
+      cata_stmt (refAlgebra f) node = node := by
+  cases node <;> simp +contextual only [foldMapAt_stmt, cata_stmt, EffAlgebra.id, List.nil_append,
+    List.append_eq_nil_iff, implies_true, onRef_eq_self_eff f (q ++ [0]),
+    onRef_eq_self_stmts f (q ++ [0]), onRef_eq_self_stmts f (q ++ [1])]
 
-  theorem stmt_expandRound_eq_self {Op : Type} (orig : Node Op)
-      (node : Stmt Op) (path : List Nat) (h : node.refSites path = []) :
-      Stmt.expandRound orig node = node := by
-    cases node <;> simp_all only [foldMapAt_stmt, List.nil_append, Stmt.refSites, List.append_eq_nil_iff]
-    all_goals simp only [cata_stmt, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Stmt.expandRound]
-    all_goals congr 1 <;> close_ref_free
+/-- A substitution fixes a `Stmts` with no reference site. -/
+private theorem onRef_eq_self_stmts {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
+    (node : Stmts Op) :
+    foldMapAt_stmts [] (· ++ ·) q node (f_layer := LayerTerm.refSite) = [] →
+      cata_stmts (refAlgebra f) node = node := by
+  cases node <;> simp +contextual only [foldMapAt_stmts, cata_stmts, EffAlgebra.id,
+    List.nil_append, List.append_eq_nil_iff, implies_true, onRef_eq_self_stmt f (q ++ [0]),
+    onRef_eq_self_stmts f (q ++ [1])]
 
-  theorem effs_expandRound_eq_self {Op : Type} (orig : Node Op)
-      (node : Effs Op) (path : List Nat) (h : node.refSites path = []) :
-      Effs.expandRound orig node = node := by
-    cases node <;> simp_all only [foldMapAt_effs, List.nil_append, Effs.refSites, List.append_eq_nil_iff]
-    all_goals simp only [cata_effs, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, Effs.expandRound]
-    all_goals congr 1 <;> close_ref_free
+/-- A substitution fixes an `Effs` with no reference site. -/
+private theorem onRef_eq_self_effs {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
+    (node : Effs Op) :
+    foldMapAt_effs [] (· ++ ·) q node (f_layer := LayerTerm.refSite) = [] →
+      cata_effs (refAlgebra f) node = node := by
+  cases node <;> simp +contextual only [foldMapAt_effs, cata_effs, EffAlgebra.id, List.nil_append,
+    List.append_eq_nil_iff, implies_true, onRef_eq_self_eff f (q ++ [0]),
+    onRef_eq_self_effs f (q ++ [1])]
 
-  theorem action_expandRound_eq_self {Op : Type} (orig : Node Op)
-      (node : ActionTerm Op) (path : List Nat) (h : node.refSites path = []) :
-      ActionTerm.expandRound orig node = node := by
-    cases node <;> simp_all only [foldMapAt_action, List.nil_append, ActionTerm.refSites]
-    all_goals simp only [cata_action, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, ActionTerm.expandRound]
-    all_goals congr 1 <;> close_ref_free
+/-- A substitution fixes an `ActionTerm` with no reference site. -/
+private theorem onRef_eq_self_action {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
+    (node : ActionTerm Op) :
+    foldMapAt_action [] (· ++ ·) q node (f_layer := LayerTerm.refSite) = [] →
+      cata_action (refAlgebra f) node = node := by
+  cases node <;> simp +contextual only [foldMapAt_action, cata_action, EffAlgebra.id,
+    List.nil_append, implies_true, onRef_eq_self_eff f (q ++ [0]),
+    onRef_eq_self_effs f (q ++ [0])]
 
-  theorem layer_expandRound_eq_self {Op : Type} (orig : Node Op)
-      (node : LayerTerm Op) (path : List Nat) (h : node.refSites path = []) :
-      LayerTerm.expandRound orig node = node := by
-    cases node <;> simp_all only [foldMapAt_layer, LayerTerm.refSite, List.nil_append, LayerTerm.refSites, List.append_eq_nil_iff,
-      List.cons_ne_nil]
-    all_goals simp only [cata_layer, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, LayerTerm.expandRound]
-    all_goals congr 1 <;> close_ref_free
+/-- A substitution fixes a `LayerTerm` with no reference site. A reference has a site, so its
+premise is false. A step of `layer_expandRound_eq_self`. -/
+private theorem onRef_eq_self_layer {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
+    (node : LayerTerm Op) :
+    foldMapAt_layer [] (· ++ ·) q node (f_layer := LayerTerm.refSite) = [] →
+      cata_layer (refAlgebra f) node = node := by
+  cases node <;> simp +contextual only [foldMapAt_layer, cata_layer, EffAlgebra.id,
+    LayerTerm.refSite, List.nil_append, List.append_eq_nil_iff, implies_true, reduceCtorEq,
+    false_implies, onRef_eq_self_eff f (q ++ [0]), onRef_eq_self_layer f (q ++ [0]),
+    onRef_eq_self_layer f (q ++ [1]), onRef_eq_self_layers f (q ++ [0])]
 
-  theorem layers_expandRound_eq_self {Op : Type} (orig : Node Op)
-      (node : LayerTerms Op) (path : List Nat) (h : node.refSites path = []) :
-      LayerTerms.expandRound orig node = node := by
-    cases node <;> simp_all only [foldMapAt_layers, List.nil_append, LayerTerms.refSites, List.append_eq_nil_iff]
-    all_goals simp only [cata_layers, expandAlgebra, EffAlgebra.onRef, EffAlgebra.id, LayerTerms.expandRound]
-    all_goals congr 1 <;> close_ref_free
+/-- A substitution fixes a `LayerTerms` with no reference site. -/
+private theorem onRef_eq_self_layers {Op : Type} (f : List Nat → LayerTerm Op) (q : List Nat)
+    (node : LayerTerms Op) :
+    foldMapAt_layers [] (· ++ ·) q node (f_layer := LayerTerm.refSite) = [] →
+      cata_layers (refAlgebra f) node = node := by
+  cases node <;> simp +contextual only [foldMapAt_layers, cata_layers, EffAlgebra.id,
+    List.nil_append, List.append_eq_nil_iff, implies_true, onRef_eq_self_layer f (q ++ [0]),
+    onRef_eq_self_layers f (q ++ [1])]
 end
+
+/-- One expansion round fixes a program with no reference site. -/
+theorem eff_expandRound_eq_self {Op : Type} (orig : Node Op)
+    (node : Eff Op) (path : List Nat) (h : node.refSites path = []) :
+    Eff.expandRound orig node = node :=
+  onRef_eq_self_eff _ path node h
+
+theorem stmts_expandRound_eq_self {Op : Type} (orig : Node Op)
+    (node : Stmts Op) (path : List Nat) (h : node.refSites path = []) :
+    Stmts.expandRound orig node = node :=
+  onRef_eq_self_stmts _ path node h
+
+theorem stmt_expandRound_eq_self {Op : Type} (orig : Node Op)
+    (node : Stmt Op) (path : List Nat) (h : node.refSites path = []) :
+    Stmt.expandRound orig node = node :=
+  onRef_eq_self_stmt _ path node h
+
+theorem effs_expandRound_eq_self {Op : Type} (orig : Node Op)
+    (node : Effs Op) (path : List Nat) (h : node.refSites path = []) :
+    Effs.expandRound orig node = node :=
+  onRef_eq_self_effs _ path node h
+
+theorem action_expandRound_eq_self {Op : Type} (orig : Node Op)
+    (node : ActionTerm Op) (path : List Nat) (h : node.refSites path = []) :
+    ActionTerm.expandRound orig node = node :=
+  onRef_eq_self_action _ path node h
+
+/-- One expansion round fixes a layer with no reference site. -/
+theorem layer_expandRound_eq_self {Op : Type} (orig : Node Op)
+    (node : LayerTerm Op) (path : List Nat) (h : node.refSites path = []) :
+    LayerTerm.expandRound orig node = node :=
+  onRef_eq_self_layer _ path node h
+
+theorem layers_expandRound_eq_self {Op : Type} (orig : Node Op)
+    (node : LayerTerms Op) (path : List Nat) (h : node.refSites path = []) :
+    LayerTerms.expandRound orig node = node :=
+  onRef_eq_self_layers _ path node h
 
 theorem expandRefs_eq_self_of_refSites_nil {Op : Type} (p : Eff Op)
     (h : p.refSites [] = []) : p.expandRefs = p := by
