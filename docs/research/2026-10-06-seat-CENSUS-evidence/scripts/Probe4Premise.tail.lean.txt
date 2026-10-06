@@ -1,0 +1,68 @@
+/-
+Seat CENSUS, probe 4, the premise on whole masks. The census of probe 1 folds one address at a
+time. This part takes every closed mask of every program of at most twelve effect addresses,
+keeps the masks whose folded regions all meet the wider premise (no closed edge above the
+region's address, or the error `never` at its node), and checks each under fold A (the row
+form): the masked program is admitted, its answer is the full program's, its error and its
+requirement are no larger; and over every pair of such masks the error and the requirement are
+ordered as the masks are.
+-/
+namespace Census.Premise
+open Census
+
+def inPlan (m : Masked) (i : Nat) : Bool := ((m.sites[i]?).map Site.columnOpen).getD false
+def inWide (m : Masked) (types : Array (Option EffTy)) (i : Nat) : Bool :=
+  inPlan m i || match (types[i]?).getD none with
+    | some t => t.error.normalize == .never
+    | none => false
+
+structure Tally where
+  programs : Nat := 0
+  closed : Nat := 0
+  inPremise : Nat := 0
+  admitted : Nat := 0
+  answerSame : Nat := 0
+  columnsBelow : Nat := 0
+  pairs : Nat := 0
+  pairsOrdered : Nat := 0
+  /-- The masks outside the premise, and those of them that are refused. -/
+  outside : Nat := 0
+  outsideRefused : Nat := 0
+
+def tally (acc : Tally) (m : Masked) : Tally :=
+  let types := m.sites.map fun s => (s.type (nativeSignature m.table)).toOption
+  let masks := m.allClosed
+  let wide := masks.filter fun k => (m.foldedAt k).all (inWide m types)
+  let rest := masks.filter fun k => !(m.foldedAt k).all (inWide m types)
+  let typed := wide.map fun k => (k, m.type? .row k)
+  let adm := typed.filterMap fun (kt : Mask × Option EffTy) => kt.2.map fun t => (kt.1, t)
+  let pairs := adm.flatMap fun a => (adm.filter fun b => a.1.le b.1 && a.1 != b.1).map fun b => (a, b)
+  { programs := acc.programs + 1, closed := acc.closed + masks.length, inPremise := acc.inPremise + wide.length,
+    admitted := acc.admitted + adm.length,
+    answerSame := acc.answerSame + (adm.filter fun (kt : Mask × EffTy) => kt.2.answer == m.full.answer).length,
+    columnsBelow := acc.columnsBelow + (adm.filter fun (kt : Mask × EffTy) =>
+      Ty.sub kt.2.error.normalize m.full.error.normalize &&
+        kt.2.requires.elems.all (m.full.requires.elems.contains ·)).length,
+    pairs := acc.pairs + pairs.length,
+    pairsOrdered := acc.pairsOrdered + (pairs.filter fun (ab : (Mask × EffTy) × (Mask × EffTy)) =>
+      Ty.sub ab.1.2.error.normalize ab.2.2.error.normalize &&
+        ab.1.2.requires.elems.all (ab.2.2.requires.elems.contains ·)).length,
+    outside := acc.outside + rest.length,
+    outsideRefused := acc.outsideRefused + (rest.filter fun k => (m.type? .row k).isNone).length }
+
+def run (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let mut t : Tally := {}
+  for (_, table, e, _) in admittedOf progs do
+    match prepare table e with
+    | some m => if m.size ≤ 12 then t := tally t m
+    | none => pure ()
+  IO.println s!"{label}: programs {t.programs}; closed masks {t.closed}; masks in the wider premise {t.inPremise}: admitted {t.admitted}, with the full program's answer {t.answerSame}, with error and requirement no larger {t.columnsBelow}; pairs a ≤ b of them {t.pairs}, with error and requirement ordered {t.pairsOrdered}; masks outside the premise {t.outside}, refused {t.outsideRefused}"
+
+def genPrograms : List (String × RowTable × P) :=
+  (List.range 400).map fun i => (s!"g{i}", [], Test.Program.Gen.program i 4)
+def truthPrograms : List (String × RowTable × P) :=
+  OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+#eval run "gen" genPrograms
+#eval run "truth" truthPrograms
+
+end Census.Premise

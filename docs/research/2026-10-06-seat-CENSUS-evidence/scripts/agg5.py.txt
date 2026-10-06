@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Seat CENSUS, probe 5: candidate A at work, from <prefix>-slices.tsv and truth-subslices.tsv."""
+import csv, sys, collections, os
+def read(p):
+    rows = list(csv.reader(open(p, newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+    return [dict(zip(rows[0], r)) for r in rows[1:]]
+def table(title, header, rows):
+    print(); print('## ' + title)
+    widths = [max(len(str(x)) for x in col) for col in zip(header, *rows)] if rows else [len(h) for h in header]
+    fmt = '  '.join('{:<%d}' % w for w in widths)
+    print(fmt.format(*header)); print(fmt.format(*['-' * w for w in widths]))
+    for r in rows: print(fmt.format(*[str(x) for x in r]))
+print('# probe 5, candidate A at work: the minimal mask of each error member and each required service (fold A, the row form)')
+for prefix in sys.argv[1:]:
+    rows = read(prefix + '-slices.tsv')
+    label = prefix.split('/')[-1]
+    progs = sorted(set(r['program'] for r in rows))
+    queries = sorted(set((r['program'], r['query']) for r in rows))
+    print()
+    print('=== %s: programs with an error member or a required service: %d; queries: %d (error members %d, services %d)'
+          % (label, len(progs), len(queries), sum(1 for q in queries if q[1].startswith('error')), sum(1 for q in queries if q[1].startswith('requires'))))
+    out = []
+    for dom in ('plan', 'wide', 'all'):
+        rs = [r for r in rows if r['domain'] == dom]
+        n = sum(int(r['addresses']) for r in rs); kept = sum(int(r['kept']) for r in rs)
+        out.append([dom, len(rs), n, sum(int(r['allowed']) for r in rs), kept, '%.0f%%' % (100.0 * kept / n if n else 0),
+                    sum(int(r['calls']) for r in rs), sum(int(r['ms']) for r in rs),
+                    sum(1 for r in rs if int(r['foldedOutsidePlan']) > 0),
+                    sum(1 for r in rs if int(r['moreByRestart']) > 0),
+                    '%d of %d' % (sum(1 for r in rs if r['minimalByBruteForce'] == 'true'), sum(1 for r in rs if r['minimalByBruteForce'] != '-')),
+                    ' / '.join('%s: %d' % kv for kv in sorted(collections.Counter(r['completion1'] for r in rs).items())),
+                    ' / '.join('%s: %d' % kv for kv in sorted(collections.Counter(r['completion2'] for r in rs).items())),
+                    ' / '.join('%s: %d' % kv for kv in sorted(collections.Counter(r['completion3'] for r in rs).items()))])
+    table('%s: the descent from the root down, by domain' % label,
+          ['domain', 'queries', 'addresses', 'allowed', 'kept', 'kept share', 'calls of check', 'wall ms', 'queries with a fold outside the plan\'s domain',
+           'queries where the restart folds more', 'minimal by brute force', 'completion, replacement 1', 'completion, replacement 2', 'completion, replacement 3'], out)
+    rs = [r for r in rows if r['domain'] == 'all']
+    n = sum(int(r['addresses']) for r in rs)
+    print('the three passes in the domain `all`: from the root down %d calls; from the leaves up %d calls; one question for each site (seat LATTICE\'s pass) %d calls'
+          % (sum(int(r['calls']) for r in rs), sum(int(r['upCalls']) for r in rs), sum(int(r['sweepCalls']) for r in rs)))
+    print('kept by the three passes: %d, %d, %d of %d addresses' % (sum(int(r['kept']) for r in rs), sum(int(r['upKept']) for r in rs), sum(int(r['sweepKept']) for r in rs), n))
+    by = collections.defaultdict(dict)
+    for r in rows: by[(r['program'], r['query'])][r['domain']] = r
+    out = []
+    for k, v in sorted(by.items()):
+        if v['plan']['kept'] != v['all']['kept'] or v['plan']['kept'] != v['wide']['kept']:
+            out.append([k[0], k[1], v['all']['addresses'], v['plan']['kept'], v['wide']['kept'], v['all']['kept'], v['all']['foldedOutsidePlan']])
+    table('%s: the queries where the domains differ (kept addresses)' % label,
+          ['program', 'query', 'addresses', 'plan', 'wide', 'all', 'folds outside the plan\'s domain (all)'], out)
+    table('%s: each program' % label, ['program', 'addresses', 'query', 'plan: kept', 'wide: kept', 'all: kept', 'calls (plan/wide/all)', 'ms (plan/wide/all)'],
+          [[k[0], v['all']['addresses'], k[1][:44], v['plan']['kept'], v['wide']['kept'], v['all']['kept'],
+            '/'.join(v[d]['calls'] for d in ('plan', 'wide', 'all')), '/'.join(v[d]['ms'] for d in ('plan', 'wide', 'all'))] for k, v in sorted(by.items())])
+sub = os.path.join(os.path.dirname(sys.argv[1]), 'truth-subslices.tsv')
+if os.path.exists(sub):
+    rows = read(sub)
+    print()
+    print('=== the larger programs: the outermost node that holds a member (the truth lane, programs of more than 12 effect addresses)')
+    by = collections.defaultdict(dict)
+    for r in rows: by[(r['program'], r['site'], r['query'])][r['domain']] = r
+    print('sub-programs with a query: %d, in %d programs' % (len(by), len(set(k[0] for k in by))))
+    out = []
+    for k, v in sorted(by.items(), key=lambda kv: (-int(kv[1]['all']['addresses']), kv[0])):
+        a = v['all']
+        out.append([k[0], k[1], a['addresses'], k[2], '/'.join(v[d]['allowed'] for d in ('plan', 'wide', 'all')),
+                    '/'.join(v[d]['kept'] for d in ('plan', 'wide', 'all')), '/'.join(v[d]['calls'] for d in ('plan', 'wide', 'all')),
+                    '/'.join(v[d]['ms'] for d in ('plan', 'wide', 'all')), a['msPerCall'], a['upKept'], a['upCalls'], a['upMs'],
+                    a['completion1'][:26], a['completion2'][:26], a['completion3'][:26]])
+    table('each sub-program: the descent from the root down in the three domains (plan/wide/all), and from the leaves up',
+          ['program', 'site', 'addresses', 'query', 'allowed', 'kept', 'calls', 'wall ms', 'ms per call', 'up: kept', 'up: calls', 'up: ms', 'completion 1', 'completion 2', 'completion 3'], out)
+    rs = [v['all'] for v in by.values()]
+    n = sum(int(r['addresses']) for r in rs)
+    print('in all: %d addresses; from the root down %d calls, %d ms; from the leaves up %d calls, %d ms; one question for each site would be %d calls'
+          % (n, sum(int(r['calls']) for r in rs), sum(int(r['ms']) for r in rs), sum(int(r['upCalls']) for r in rs), sum(int(r['upMs']) for r in rs), n))
+    for c in ('completion1', 'completion2', 'completion3'):
+        print('%s, over the three domains: ' % c + ', '.join('%s: %d' % kv for kv in collections.Counter(r[c] for r in rows).items()))
+    print('the restarting descent from each result (no brute force at this size): from the root down %d results, it folds more at %d, in %d calls; from the leaves up %d results, it folds more at %d'
+          % (len(rows), sum(1 for r in rows if int(r['moreByRestart']) > 0), sum(int(r['restartCalls']) for r in rows), len(rs), sum(1 for r in rs if int(r['upMoreByRestart']) > 0)))

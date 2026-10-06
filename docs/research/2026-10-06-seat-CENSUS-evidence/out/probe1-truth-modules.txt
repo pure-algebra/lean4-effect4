@@ -1,0 +1,174 @@
+# probe 1, the graduality census: truth [programs: pQueueW,pQueueF,pQueueI,pQueueM,pQueueOr,pSemaphore,pPool]
+programs: 25   effect addresses: 4219   fold rows: 9051
+malformed rows: folds 0, sites 0, programs 0
+sites by (levelOk, entriesOk, answerOk): ('true', 'true', 'true'): 4219
+sites under a layer: 0
+fold Avar under a layer (the form does not reach it; left out of every table below): 0  ()
+the assumed row's own type against <A ; never ; {}>, by site: same: 4219
+sites whose answer type is its own normal form: 4219 of 4219
+entry checks: every entry at 613 sites, the new entries alone at 3606 sites
+sites in candidate A's domain (no closed edge above): 1565
+sites outside it, by the first closed edge above: ActionTerm.fork.0: 2477, Eff.exit.0: 111, Eff.onExit.0: 66
+
+## fold Avar by rule (the parent's constructor and the child's index): 4219 folds, 0 refused, 4219 gradual
+rule                   folds  refused  answer               error      requires   refusals (reason@place)
+---------------------  -----  -------  -------------------  ---------  ---------  -----------------------
+ActionTerm.fork.0      144    0        same:144             same:144   same:144   -                      
+Eff.acquireRelease.0   21     0        same:21              same:21    same:21    -                      
+Eff.acquireRelease.1   21     0        same:21              same:21    same:21    -                      
+Eff.bind.0             1299   0        same:1297 smaller:2  same:1299  same:1299  -                      
+Eff.bind.1             1299   0        same:1297 smaller:2  same:1299  same:1299  -                      
+Eff.exit.0             1      0        smaller:1            same:1     same:1     -                      
+Eff.iterate.0          170    0        same:170             same:170   same:170   -                      
+Eff.onExit.0           114    0        same:114             same:114   same:114   -                      
+Eff.onExit.1           114    0        same:114             same:114   same:114   -                      
+Eff.restore.0          114    0        same:114             same:114   same:114   -                      
+Eff.scoped.0           10     0        same:9 smaller:1     same:10    same:10    -                      
+Eff.select.bool.0      195    0        same:195             same:195   same:195   -                      
+Eff.select.bool.1      195    0        same:195             same:195   same:195   -                      
+Eff.select.option.0    199    0        same:199             same:199   same:199   -                      
+Eff.select.option.1    199    0        same:199             same:199   same:199   -                      
+Eff.uninterruptible.0  99     0        same:99              same:99    same:99    -                      
+root                   25     0        same:25              same:25    same:25    -                      
+
+## fold Arow by rule (the parent's constructor and the child's index): 613 folds, 0 refused, 613 gradual
+rule                   folds  refused  answer              error     requires  refusals (reason@place)
+---------------------  -----  -------  ------------------  --------  --------  -----------------------
+ActionTerm.fork.0      21     0        same:21             same:21   same:21   -                      
+Eff.acquireRelease.0   1      0        same:1              same:1    same:1    -                      
+Eff.acquireRelease.1   1      0        same:1              same:1    same:1    -                      
+Eff.bind.0             188    0        same:187 smaller:1  same:188  same:188  -                      
+Eff.bind.1             161    0        same:161            same:161  same:161  -                      
+Eff.iterate.0          16     0        same:16             same:16   same:16   -                      
+Eff.onExit.0           15     0        same:15             same:15   same:15   -                      
+Eff.onExit.1           15     0        same:15             same:15   same:15   -                      
+Eff.restore.0          24     0        same:24             same:24   same:24   -                      
+Eff.select.bool.0      32     0        same:32             same:32   same:32   -                      
+Eff.select.bool.1      34     0        same:34             same:34   same:34   -                      
+Eff.select.option.0    36     0        same:36             same:36   same:36   -                      
+Eff.select.option.1    29     0        same:29             same:29   same:29   -                      
+Eff.uninterruptible.0  15     0        same:15             same:15   same:15   -                      
+root                   25     0        same:25             same:25   same:25   -                      
+
+## fold N by rule (the parent's constructor and the child's index): 4219 folds, 618 refused, 3601 gradual
+rule                   folds  refused  answer                error      requires   refusals (reason@place)                                                                                                                                                            
+---------------------  -----  -------  --------------------  ---------  ---------  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ActionTerm.fork.0      144    0        same:139 smaller:5    same:144   same:144   -                                                                                                                                                                                  
+Eff.acquireRelease.0   21     0        same:21               same:21    same:21    -                                                                                                                                                                                  
+Eff.acquireRelease.1   21     0        same:21               same:21    same:21    -                                                                                                                                                                                  
+Eff.bind.0             1299   501      same:687 smaller:111  same:798   same:798   binderTerm@sibling:112 cause@sibling:24 foldTerm@sibling:45 maskRestoreExpected@sibling:79 notFiber@sibling:26 notSelectable@sibling:127 predicateNotBool@sibling:82 term@sibling:6
+Eff.bind.1             1299   90       same:845 smaller:364  same:1209  same:1209  binderTerm@sibling:31 notFiber@sibling:11 notSelectable@sibling:48                                                                                                                 
+Eff.exit.0             1      0        smaller:1             same:1     same:1     -                                                                                                                                                                                  
+Eff.iterate.0          170    0        same:170              same:170   same:170   -                                                                                                                                                                                  
+Eff.onExit.0           114    0        same:109 smaller:5    same:114   same:114   -                                                                                                                                                                                  
+Eff.onExit.1           114    0        same:114              same:114   same:114   -                                                                                                                                                                                  
+Eff.restore.0          114    0        same:109 smaller:5    same:114   same:114   -                                                                                                                                                                                  
+Eff.scoped.0           10     3        smaller:7             same:7     same:7     binderTerm@sibling:1 notFiber@sibling:2                                                                                                                                            
+Eff.select.bool.0      195    0        same:193 smaller:2    same:195   same:195   -                                                                                                                                                                                  
+Eff.select.bool.1      195    0        same:195              same:195   same:195   -                                                                                                                                                                                  
+Eff.select.option.0    199    0        same:199              same:199   same:199   -                                                                                                                                                                                  
+Eff.select.option.1    199    24       same:171 smaller:4    same:175   same:175   notSelectable@sibling:24                                                                                                                                                           
+Eff.uninterruptible.0  99     0        same:85 smaller:14    same:99    same:99    -                                                                                                                                                                                  
+root                   25     0        smaller:25            same:25    same:25    -                                                                                                                                                                                  
+
+## fold Avar against candidate A's domain
+domain                         layer              folds  refused  gradual  answer same (raw)  answer not same  error larger  requires larger
+-----------------------------  -----------------  -----  -------  -------  -----------------  ---------------  ------------  ---------------
+in A's domain                  not under a layer  1565   0        1565     1565               0                0             0              
+outside (a closed edge above)  not under a layer  2654   0        2654     2648               6                0             0              
+
+## fold Arow against candidate A's domain
+domain                         layer              folds  refused  gradual  answer same (raw)  answer not same  error larger  requires larger
+-----------------------------  -----------------  -----  -------  -------  -----------------  ---------------  ------------  ---------------
+in A's domain                  not under a layer  234    0        234      234                0                0             0              
+outside (a closed edge above)  not under a layer  379    0        379      378                1                0             0              
+
+## fold Avar: the premise of column graduality, by the address and by the node's own error
+the address                                  the node                   folds  refused  gradual  answer not identical  error smaller  requires smaller  the rules that refuse
+-------------------------------------------  -------------------------  -----  -------  -------  --------------------  -------------  ----------------  ---------------------
+in the plan's domain (no closed edge above)  the node's error is never  1565   0        1565     0                     0              0                 -                    
+outside it (a closed edge above)             the node's error is never  2648   0        2648     0                     0              0                 -                    
+outside it (a closed edge above)             the node can fail          6      0        6        6                     0              0                 -                    
+the wider premise (no closed edge above, or the node's error is never): 4213 folds, 0 refused, 4213 with the answer identical
+outside the wider premise (a node that can fail, under a closed edge): 6 folds, 0 refused; by closed edge: Eff.exit.0: 6 (refused 0)
+
+## fold Arow: the premise of column graduality, by the address and by the node's own error
+the address                                  the node                   folds  refused  gradual  answer not identical  error smaller  requires smaller  the rules that refuse
+-------------------------------------------  -------------------------  -----  -------  -------  --------------------  -------------  ----------------  ---------------------
+in the plan's domain (no closed edge above)  the node's error is never  234    0        234      0                     0              0                 -                    
+outside it (a closed edge above)             the node's error is never  378    0        378      0                     0              0                 -                    
+outside it (a closed edge above)             the node can fail          1      0        1        1                     0              0                 -                    
+the wider premise (no closed edge above, or the node's error is never): 612 folds, 0 refused, 612 with the answer identical
+outside the wider premise (a node that can fail, under a closed edge): 1 folds, 0 refused; by closed edge: Eff.exit.0: 1 (refused 0)
+
+## fold Avar: the refusals by the rule that refuses, the largest first (0 refusals, 0 rules)
+the rule that refuses  refused folds  programs  folded at (rule:count)  an instance  what it read
+---------------------  -------------  --------  ----------------------  -----------  ------------
+
+## fold Arow: the refusals by the rule that refuses, the largest first (0 refusals, 0 rules)
+the rule that refuses  refused folds  programs  folded at (rule:count)  an instance  what it read
+---------------------  -------------  --------  ----------------------  -----------  ------------
+
+## fold N: the refusals by the rule that refuses, the largest first (618 refusals, 11 rules)
+the rule that refuses                refused folds  programs  folded at (rule:count)                               an instance                                            what it read                            
+-----------------------------------  -------------  --------  ---------------------------------------------------  -----------------------------------------------------  ----------------------------------------
+notSelectable at Eff.select.option   199            25        Eff.bind.0:127 Eff.bind.1:48 Eff.select.option.1:24  pPoolCloseWaits@1.1.1.0.0.0.1.1.0.1.1.1.1.0.1.0        notSelectable option never              
+predicateNotBool at Eff.select.bool  82             20        Eff.bind.0:82                                        pPoolCloseWaits@1.1.1.0.0.0.1.1.0.1.1.1.1.0.1.0.0.1.0  predicateNotBool never                  
+sameHandle (in a binder term)        81             25        Eff.bind.0:81                                        pQueueInterrupted@0                                    sameHandle(never, deferred<unit, never>)
+maskRestoreExpected at Eff.restore   79             25        Eff.bind.0:79                                        pPoolCloseWaits@1.1.1.0.0.0.1.1.0.1.1.1.0              maskRestoreExpected never               
+fold: the list (in a binder term)    63             21        Eff.bind.0:31 Eff.bind.1:31 Eff.scoped.0:1           pPoolCloseWaits@1.1.1.0.0.0                            fold: the list is never                 
+fold: the list (in a term)           45             18        Eff.bind.0:45                                        pPoolCloseWaits@1.1.1.0.0.1.1.1.1.0.0                  fold: the list is never                 
+notFiber at Eff.awaitFiber           32             11        Eff.bind.0:19 Eff.bind.1:11 Eff.scoped.0:2           pPoolCloseWaits@1.1.1.0                                notFiber never                          
+Interrupt (in a cause)               24             10        Eff.bind.0:24                                        pPoolCloseWaits@1.1.1.0.0.1.0.0.0.1.0.0.1.0.0          Interrupt(never)                        
+notFiber at ActionTerm.interrupt     7              6         Eff.bind.0:7                                         pPoolLateWake@1.1.0.0.1.1.1.1.0                        notFiber never                          
+causeIsInterrupt (in a term)         5              4         Eff.bind.0:5                                         pSemaphoreMasked@1.1.1.1.1.1.1.0                       causeIsInterrupt(never)                 
+causeIsFail (in a term)              1              1         Eff.bind.0:1                                         pPoolMakeFails@1.0                                     causeIsFail(never)                      
+
+## admitted folds with a column that is not below the full program's: 0
+program  address  rule  fold  answer  error  requires  node type  folded program type
+-------  -------  ----  ----  ------  -----  --------  ---------  -------------------
+
+fold A, both forms run at 613 addresses not under a layer; the row form alone at 0 addresses under a layer; the variable form alone at 3606 addresses
+
+## fold A: the variable form against the row form, address by address
+under a layer  outcome                       addresses
+-------------  ----------------------------  ---------
+false          both admitted, the same type  613      
+
+## fold A: the addresses where the two forms differ (not under a layer): 0
+program  address  rule  node type  variable form  row form
+-------  -------  ----  ---------  -------------  --------
+
+## fold Avar: one smallest program for each breaking rule (0 rules)
+
+## fold N: one smallest program for each breaking rule (15 rules)
+- rule Eff.bind.0 -> binderTerm at Eff.perform(refModifyWith): 112 folds; smallest: pQueueWake (97 nodes), fold at 0, refusal at 1.0.0.0.1.0.1.0.0.1.0 (binderTerm refModifyWith param=never)
+    bind(refMake(record{msgs: list<nat>, cap: nat, takers: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>, offers: list<{batch: bool, hint: deferred<bool, never>, id: deferred<unit, never>, rest: list<nat>}>}[msgs, cap, takers, offers](nil(), 2, nil(), nil())), bind(fork(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isS …
+- rule Eff.bind.0 -> cause at Eff.failCause: 24 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.1.1.1.0.0.1.0.0, refusal at 1.0.0.0.1.1.1.0.0.1.0.1 (cause Interrupt(a5))
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …
+- rule Eff.bind.0 -> foldTerm at Eff.succeed: 45 folds; smallest: pSemaphoreMasked (124 nodes), fold at 1.1.1.1.1.0.0, refusal at 1.1.1.1.1.0.1 (foldTerm at 2)
+    bind(refMake(record{permits: nat, taken: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>, need: nat, stamp: nat}>, next: nat}[permits, taken, waiters, next](1, 0, nil(), 0)), bind(refMake(0), bind(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isSome(a4)); a5; a4; bind(deferredMake<unit, never>(()), bind(r …
+- rule Eff.bind.0 -> maskRestoreExpected at Eff.restore: 79 folds; smallest: pQueueWake (97 nodes), fold at 1.0.0.0.0, refusal at 1.0.0.0.1.0.1.0.0.1.1.1.1.0.0.0 (maskRestoreExpected never)
+    bind(refMake(record{msgs: list<nat>, cap: nat, takers: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>, offers: list<{batch: bool, hint: deferred<bool, never>, id: deferred<unit, never>, rest: list<nat>}>}[msgs, cap, takers, offers](nil(), 2, nil(), nil())), bind(fork(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isS …
+- rule Eff.bind.0 -> notFiber at ActionTerm.interrupt: 7 folds; smallest: pQueueMasked (119 nodes), fold at 1.1.0, refusal at 1.1.1.0.0.0.0 (notFiber never)
+    bind(refMake(record{msgs: list<nat>, cap: nat, takers: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>, offers: list<{batch: bool, hint: deferred<bool, never>, id: deferred<unit, never>, rest: list<nat>}>}[msgs, cap, takers, offers](nil(), 2, nil(), nil())), bind(refMake(0), bind(fork(uninterruptible(bind(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bin …
+- rule Eff.bind.0 -> notFiber at Eff.awaitFiber: 19 folds; smallest: pQueueWake (97 nodes), fold at 1.0, refusal at 1.1.1.0 (notFiber never)
+    bind(refMake(record{msgs: list<nat>, cap: nat, takers: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>, offers: list<{batch: bool, hint: deferred<bool, never>, id: deferred<unit, never>, rest: list<nat>}>}[msgs, cap, takers, offers](nil(), 2, nil(), nil())), bind(fork(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isS …
+- rule Eff.bind.0 -> notSelectable at Eff.select.option: 127 folds; smallest: pQueueWake (97 nodes), fold at 1.0.0.0.1.0.1.0, refusal at 1.0.0.0.1.0.1.1 (notSelectable option never)
+    bind(refMake(record{msgs: list<nat>, cap: nat, takers: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>, offers: list<{batch: bool, hint: deferred<bool, never>, id: deferred<unit, never>, rest: list<nat>}>}[msgs, cap, takers, offers](nil(), 2, nil(), nil())), bind(fork(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isS …
+- rule Eff.bind.0 -> predicateNotBool at Eff.select.bool: 82 folds; smallest: pSemaphoreHandoff (102 nodes), fold at 1.0.1.0.1.0.0.1.0, refusal at 1.0.1.0.1.0.0.1.1 (predicateNotBool never)
+    bind(refMake(record{permits: nat, taken: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>, need: nat, stamp: nat}>, next: nat}[permits, taken, waiters, next](1, 0, nil(), 0)), bind(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isSome(a3)); a4; a3; bind(deferredMake<unit, never>(()), bind(refModify{ite(not( …
+- rule Eff.bind.0 -> term at Eff.succeed: 6 folds; smallest: pQueueMasked (119 nodes), fold at 1.1.1.1.1.1.0, refusal at 1.1.1.1.1.1.1.1.1.1.1 (term tuple(length(a4.takers), a8, causeIsInterrupt(a6), a9, length(a10.takers)))
+    bind(refMake(record{msgs: list<nat>, cap: nat, takers: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>, offers: list<{batch: bool, hint: deferred<bool, never>, id: deferred<unit, never>, rest: list<nat>}>}[msgs, cap, takers, offers](nil(), 2, nil(), nil())), bind(refMake(0), bind(fork(uninterruptible(bind(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bin …
+- rule Eff.bind.1 -> binderTerm at Eff.perform(refModifyWith): 31 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.0.1, refusal at 1.0.0.0.1.1.1.0.0.0.1.0.0.1.0 (binderTerm refModifyWith param=never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …
+- rule Eff.bind.1 -> notFiber at Eff.awaitFiber: 11 folds; smallest: pPoolCloseWaits (205 nodes), fold at 1.1.1.0.0.1, refusal at 1.1.1.1.0 (notFiber never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(refMake(0), bind(deferredMake<unit, never>(()), bind(scoped(bind(bind(bind(refModify{pair(succ(a3), succ(a3))}(a1), acquireRelease(succeed(a3), refUpdate{append(a6, cons(append(cons(9, nil()), cons(a4, nil())), nil()))}(a0))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, wait …
+- rule Eff.bind.1 -> notSelectable at Eff.select.option: 48 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.1.1.1.0.0.0.1, refusal at 1.0.0.0.1.1.1.0.0.1 (notSelectable option never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …
+- rule Eff.scoped.0 -> binderTerm at Eff.perform(refModifyWith): 1 folds; smallest: pPoolClosed (128 nodes), fold at 1.1.0.0, refusal at 1.1.1.0.0.0.1.0.0.0.1.0.0.1.0 (binderTerm refModifyWith param=never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(refMake(0), bind(scoped(bind(bind(refModify{pair(succ(a2), succ(a2))}(a1), acquireRelease(succeed(a2), refUpdate{append(a5, cons(append(cons(9, nil()), cons(a3, nil())), nil()))}(a0))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: deferred<unit, never>, i …
+- rule Eff.scoped.0 -> notFiber at Eff.awaitFiber: 2 folds; smallest: pPoolCloseWaits (205 nodes), fold at 1.1.1.0.0, refusal at 1.1.1.1.0 (notFiber never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(refMake(0), bind(deferredMake<unit, never>(()), bind(scoped(bind(bind(bind(refModify{pair(succ(a3), succ(a3))}(a1), acquireRelease(succeed(a3), refUpdate{append(a6, cons(append(cons(9, nil()), cons(a4, nil())), nil()))}(a0))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, wait …
+- rule Eff.select.option.1 -> notSelectable at Eff.select.option: 24 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.1.1.1.0.0.0.1.1.1, refusal at 1.0.0.0.1.1.1.0.0.1 (notSelectable option never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …

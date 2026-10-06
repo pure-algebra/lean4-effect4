@@ -1,0 +1,253 @@
+/-
+Seat CENSUS, probe 5: candidate A at work. For every admitted program of the two corpora whose
+error column or requirement is not empty, and for each member of the error union and each
+required service: the minimal mask by the one-step descent under fold A (the row form, which
+reaches a layer's body), with the wall time and the number of calls of `check`.
+
+Three domains of addresses are run for each query.
+
+* `plan`: the plan's domain: no closed edge above the address (its section 4.3).
+* `wide`: the plan's domain, and every address whose node's error is `never`.
+* `all`: every address.
+
+The completion law is tested on each minimal mask: every folded region is replaced by another
+admitted sub-program of the same answer type, three times, and the query is asked again.
+-/
+namespace Census.Slices
+open Census
+
+/-- The node's own type at each site of a prepared program. -/
+def nodeTypes (m : Masked) : Array (Option EffTy) :=
+  m.sites.map fun s => (s.type (nativeSignature m.table)).toOption
+
+def inPlan (m : Masked) (i : Nat) : Bool := ((m.sites[i]?).map Site.columnOpen).getD false
+def inWide (m : Masked) (types : Array (Option EffTy)) (i : Nat) : Bool :=
+  inPlan m i || match (types[i]?).getD none with
+    | some t => t.error.normalize == .never
+    | none => false
+
+/-- Force a pure value before the clock is read again (the compiler may move a pure `let`). -/
+def timed {α : Type} (x : Unit → α) : IO (α × Nat) := do
+  let t0 ← IO.monoMsNow
+  let ref ← IO.mkRef (x ())
+  let t1 ← IO.monoMsNow
+  pure (← ref.get, t1 - t0)
+
+/-! ## The three replacements of the completion test
+
+Each has the folded node's answer type, by the assumed row. The first has another error column,
+the second another error column and another requirement, the third another requirement alone.
+Neither error member occurs in a corpus. -/
+
+def pairT (a b : String) : Term := .app "pair" (.cons (.lit (.str a)) (.cons (.lit (.str b)) .nil))
+def freshKey : ServiceKey := ⟨⟨4000⟩, ⟨4⟩⟩
+
+def replacement1 (row : Nat) : P :=
+  .bind (.select (.lit (.bool false)) .bool (.fail (pairT "CensusOne" "m")) (.succeed (.lit .unit)))
+    (.perform (.external row) (.lit .unit))
+
+def replacement2 (row : Nat) : P :=
+  .bind (.service freshKey)
+    (.bind (.select (.lit (.bool false)) .bool (.fail (pairT "CensusTwo" "m")) (.succeed (.lit .unit)))
+      (.perform (.external row) (.lit .unit)))
+
+/-- The third replacement cannot fail: it has the answer type, the error `never` and one more
+requirement. It is the one that a folded release admits, whose error must be `never`. -/
+def replacement3 (row : Nat) : P :=
+  .bind (.service freshKey) (.perform (.external row) (.lit .unit))
+
+/-- The masked program with each folded region replaced by `make row`, under the assumed rows. -/
+def completed (m : Masked) (k : Mask) (make : Nat → P) : Option (Except TypeRefusal EffTy) :=
+  let folded := m.foldedAt k
+  let answers := folded.map fun i => (m.answers[i]?).getD .never
+  ((folded.zipIdx).foldlM (fun (e : P) (ij : Nat × Nat) =>
+      (m.sites[ij.1]?).bind fun s => replaceEff e s.path (make (m.table.length + ij.2))) m.program).map
+    fun e => Checker.check (nativeSignature (m.table ++ answers.map assumeRow)) m.rootEnv [] e
+
+def completionCell (m : Masked) (q : Query) (k : Mask) (make : Nat → P) : String :=
+  match completed m k make with
+  | none => "replace-failed"
+  | some (.ok t) => if q.holds t then "admitted, the member stays" else "admitted, THE MEMBER IS LOST"
+  | some (.error r) => "not admitted (" ++ r.reason.head ++ ")"
+
+def sliceHeader : String :=
+  tsv ["program", "addresses", "query", "domain", "allowed", "kept", "foldedRegions", "foldedOutsidePlan",
+    "calls", "ms", "moreByRestart", "restartCalls", "minimalByBruteForce",
+    "upKept", "upCalls", "upMs", "sweepKept", "sweepCalls", "sweepMs",
+    "completion1", "completion2", "completion3", "mask"]
+
+def queriesOf (full : EffTy) : List Query :=
+  (full.error.normalize.members.map Query.error) ++ (full.requires.elems.map Query.service)
+
+def marksOf (m : Masked) (k : Mask) : Marks :=
+  (m.foldedAt k).filterMap fun i =>
+    (m.sites[i]?).map fun s => (s.path, "□:" ++ showTy ((m.answers[i]?).getD .never))
+
+/-- Whether a mask is minimal among the valid closed masks whose folds are all allowed, by brute
+force; `-` for a program of more than twelve sites. -/
+def bruteCell (m : Masked) (q : Query) (allowed : Nat → Bool) (k : Mask) : String :=
+  if m.size > 12 then "-"
+  else
+    let valid := m.allClosed.filter fun j => (m.foldedAt j).all allowed && m.valid .row q j
+    toString ((minimalAmong valid).contains k)
+
+/-- The rows of one program: each query under each domain. The descent of each row is the pass
+from the root down. In the domain `all` the row also holds the pass from the leaves up and seat
+LATTICE's pass in program order, for the count of questions. -/
+def sliceRows (name : String) (m : Masked) : IO (List String) := do
+  let types := nodeTypes m
+  let mut rows : List String := []
+  for q in queriesOf m.full do
+    for (domain, allowed) in [("plan", inPlan m), ("wide", inWide m types), ("all", fun _ => true)] do
+      let ((k, calls), ms) ← timed fun _ => m.descentTop .row q allowed (fullMask m.size)
+      -- the restarting descent from the result: does one pass leave an allowed fold undone?
+      let (k2, restartCalls) := m.descentFix .row q allowed m.size k 0
+      let outside := ((m.foldedAt k).filter fun i => !inPlan m i).length
+      let extra ← if domain == "all" then do
+          let ((ku, upCalls), upMs) ← timed fun _ => m.descentUp .row q (fullMask m.size)
+          let ((ks, sweepCalls), sweepMs) ← timed fun _ => m.sweepFrom .row q (List.range m.size)
+          pure [toString ku.kept, toString upCalls, toString upMs, toString ks.kept, toString sweepCalls, toString sweepMs]
+        else pure ["-", "-", "-", "-", "-", "-"]
+      rows := rows ++ [tsv ([name, toString m.size, q.show, domain,
+        toString ((List.range m.size).filter allowed).length, toString k.kept, toString (m.foldedAt k).length,
+        toString outside, toString calls, toString ms, toString (k.kept - k2.kept), toString restartCalls,
+        bruteCell m q allowed k] ++ extra ++
+        [completionCell m q k replacement1, completionCell m q k replacement2, completionCell m q k replacement3,
+          k.show])]
+  pure rows
+
+def runSlices (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let adm := admittedOf progs
+  IO.FS.writeFile (outDir ++ label ++ "-slices.tsv") (sliceHeader ++ "\n")
+  let mut withQuery := 0
+  let mut rows := 0
+  for (name, table, e, full) in adm do
+    if full.error.normalize != .never || !full.requires.elems.isEmpty then
+      withQuery := withQuery + 1
+      match prepare table e with
+      | none => IO.println s!"{label}: {name}: not prepared"
+      | some m =>
+        let rs ← sliceRows name m
+        appendLines (outDir ++ label ++ "-slices.tsv") rs
+        rows := rows + rs.length
+  IO.println s!"{label}: admitted {adm.length}; with an error member or a required service {withQuery}; rows {rows}"
+
+/-! ## The baseline on larger programs: the outermost node that holds a member
+
+The 25 programs of the modules (the Queue's, Semaphore's and Pool's) have the error `never` and
+no requirement at the root, so candidate A has no query on a whole one. Inside them a node can
+fail or require a service, and a handler or a `scoped` above it takes the member out. This part
+runs the same descent on each such sub-program: for a site and a member of its own node's error
+or requirement, where the parent site's node does not hold that member. The sub-program is
+masked at its own environment, and its routes start at its own root. -/
+
+def subHeader : String :=
+  tsv ["program", "site", "node", "addresses", "query", "domain", "allowed", "kept", "foldedRegions",
+    "foldedOutsidePlan", "calls", "ms", "msPerCall", "moreByRestart", "restartCalls", "upKept", "upCalls", "upMs",
+    "upMoreByRestart", "completion1", "completion2", "completion3"]
+
+def subRows (name : String) (table : RowTable) (e : P) : IO (List String) := do
+  let sig := nativeSignature table
+  let ss := (sites sig [] e).toArray
+  let types := ss.map fun s => (s.type sig).toOption
+  let mut rows : List String := []
+  for i in List.range ss.size do
+    match ss[i]?, (types[i]?).getD none with
+    | some s, some t =>
+      -- the parent site's own type
+      let parentType : Option EffTy :=
+        ((List.range ss.size).filter fun j =>
+            match ss[j]? with
+            | some a => a.path.length < s.path.length && a.path.isPrefixOf s.path
+            | none => false).foldl (fun (best : Option (Nat × EffTy)) j =>
+              match ss[j]?, (types[j]?).getD none with
+              | some a, some ta =>
+                (match best with
+                  | some (len, _) => if a.path.length ≥ len then some (a.path.length, ta) else best
+                  | none => some (a.path.length, ta))
+              | _, _ => best) none |>.map (·.2)
+      for q in queriesOf t do
+        let outermost := match parentType with
+          | some pt => !q.holds pt
+          | none => false   -- the root's own queries are the rows of the first part
+        if outermost then
+          match prepare table s.node s.env with
+          | none => pure ()
+          | some m =>
+            if m.size ≥ 8 then
+              let mtypes := nodeTypes m
+              for (domain, allowed) in [("plan", inPlan m), ("wide", inWide m mtypes), ("all", fun _ => true)] do
+                let ((k, calls), ms) ← timed fun _ => m.descentTop .row q allowed (fullMask m.size)
+                -- the restarting descent from the result: does the pass leave an allowed fold undone?
+                -- A program of this size has no brute force, so this is its one check of the result.
+                let (k2, restartCalls) := m.descentFix .row q allowed m.size k 0
+                let outside := ((m.foldedAt k).filter fun j => !inPlan m j).length
+                let extra ← if domain == "all" then do
+                    let ((ku, upCalls), upMs) ← timed fun _ => m.descentUp .row q (fullMask m.size)
+                    let (ku2, _) := m.descentFix .row q (fun _ => true) m.size ku 0
+                    pure [toString ku.kept, toString upCalls, toString upMs, toString (ku.kept - ku2.kept)]
+                  else pure ["-", "-", "-", "-"]
+                rows := rows ++ [tsv ([name, showPath s.path, ctorName (.eff s.node), toString m.size, q.show, domain,
+                  toString ((List.range m.size).filter allowed).length, toString k.kept,
+                  toString (m.foldedAt k).length, toString outside, toString calls, toString ms,
+                  toString (if calls == 0 then 0 else ms / calls), toString (k.kept - k2.kept),
+                  toString restartCalls] ++ extra ++
+                  [completionCell m q k replacement1, completionCell m q k replacement2,
+                    completionCell m q k replacement3])]
+    | _, _ => pure ()
+  pure rows
+
+def runSubSlices (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let adm := admittedOf progs
+  IO.FS.writeFile (outDir ++ label ++ "-subslices.tsv") (subHeader ++ "\n")
+  let mut rows := 0
+  for (name, table, e, _) in adm do
+    if (effectPaths e).length > 12 then
+      let rs ← subRows name table e
+      appendLines (outDir ++ label ++ "-subslices.tsv") rs
+      rows := rows + rs.length
+  IO.println s!"{label}: rows of sub-programs {rows}"
+
+/-- One slice as highlighted program text: the kept part as written, each folded region as
+`□:A`, its assumed answer type. -/
+def showSlice (label name : String) (progs : List (String × RowTable × P)) (pick : Query → Bool)
+    (domain : String) : IO Unit := do
+  match (admittedOf progs).find? (fun (x : String × RowTable × P × EffTy) => x.1 == name) with
+  | none => IO.println s!"{name}: not found"
+  | some (_, table, e, full) =>
+    match prepare table e with
+    | none => IO.println s!"{name}: not prepared"
+    | some m =>
+      let types := nodeTypes m
+      for q in (queriesOf full).filter pick do
+        let allowed := if domain == "plan" then inPlan m else if domain == "wide" then inWide m types else fun _ => true
+        let (k, calls) := m.descentTop .row q allowed (fullMask m.size)
+        IO.println s!"--- {label} {name}; type {showEffTy full}; query: {q.show}; domain {domain}"
+        IO.println s!"    kept {k.kept} of {m.size} effect addresses; {calls} calls of check; {(m.foldedAt k).length} folded regions"
+        IO.println s!"    full:  {showProgram e}"
+        IO.println s!"    slice: {showProgram e (marksOf m k)}"
+        IO.println s!"    slice type: {((m.type? .row k).map showEffTy).getD "refused"}"
+
+end Census.Slices
+
+namespace Census.Slices
+def genPrograms : List (String × RowTable × P) :=
+  (List.range 400).map fun i => (s!"g{i}", [], Test.Program.Gen.program i 4)
+def truthPrograms : List (String × RowTable × P) :=
+  OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+#eval runSlices "gen" genPrograms
+#eval runSlices "truth" truthPrograms
+
+-- the worked examples, as highlighted program text
+#eval do
+  for domain in ["plan", "wide", "all"] do
+    showSlice "truth" "pSqlite" truthPrograms (fun _ => true) domain
+  for domain in ["plan", "wide", "all"] do
+    showSlice "truth" "pTagMiss" truthPrograms (fun _ => true) domain
+  for domain in ["plan", "wide", "all"] do
+    showSlice "gen" "g309" genPrograms (fun _ => true) domain
+  showSlice "truth" "pKv" truthPrograms (fun _ => true) "plan"
+  showSlice "truth" "pSqlFail" truthPrograms (fun _ => true) "plan"
+
+#eval runSubSlices "truth" truthPrograms
+end Census.Slices

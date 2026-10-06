@@ -1,0 +1,48 @@
+eliminator	owner	reads	T1	at T1	T2	at T2	at the raw union T1 | T2	at the canonical union	at never
+atom, fixed parameters: concat(a0, "x")	NativeAtom.monoApply	Ty.sub, raw types	"a"	string	"b"	string	string	string	string
+atom, fixed parameters: isSome(a0)	NativeAtom.monoApply	Ty.sub, raw types	option<nat>	bool	option<string>	bool	bool	bool	bool
+atom, fixed parameters: length(a0)	NativeAtom.monoApply	Ty.sub, raw types	list<nat>	nat	list<string>	nat	nat	nat	nat
+atom, any number of arguments: strings(a0)	Scheme.apply (variadic)	Ty.sub, raw types	"a"	list<string>	"b"	list<string>	list<string>	list<string>	list<string>
+atom, alternatives: eq(a0, a0)	Scheme.apply (alts)	Ty.sub, raw types, the whole list per alternative	nat	bool	string	bool	REFUSED	REFUSED	bool
+atom, template: get(a0, 0)	Ty.matchTemplateArgs	infer, then Ty.sub on normal forms	list<nat>	option<nat>	list<string>	option<string>	REFUSED	REFUSED	option<never>
+atom, template: take(a0, 1)	Ty.matchTemplateArgs	infer, then Ty.sub on normal forms	list<nat>	list<nat>	list<string>	list<string>	REFUSED	REFUSED	list<never>
+atom, template: mapGet(a0, "k")	Ty.matchTemplateArgs	infer, then Ty.sub on normal forms	map<string, nat>	option<nat>	map<string, bool>	option<bool>	REFUSED	REFUSED	option<never>
+atom, template, repeated parameter kept at its first binding: getOrElse(a0, 9)	Ty.matchTemplateArgs (join := false)	infer, then Ty.sub on normal forms	option<nat>	nat	option<never>	REFUSED	nat	nat	nat
+atom, template, repeated parameter joined: append(a0, cons(1, nil()))	Ty.matchTemplateArgs (join := true)	infer, then Ty.sub on normal forms	list<nat>	list<nat>	list<never>	list<nat>	list<nat>	list<nat>	list<nat>
+atom, template, repeated parameter joined: ite(a0, 1, 2)	Ty.matchTemplateArgs (join := true)	infer, then Ty.sub on normal forms	bool	nat	bool	nat	nat	nat	nat
+atom, named rule: fst(a0)	NativeAtom.projectProduct	head of the raw type, member by member	[nat, string]	nat	[bool, unit]	bool	(nat | bool)	(nat | bool)	never
+atom, named rule: causeIsFail(a0)	causeInputError?	head of the raw type	cause<nat>	bool	exit<unit, string>	bool	REFUSED	REFUSED	REFUSED
+atom, named rule: causeError(a0)	causeInputError?	head of the raw type	cause<nat>	option<nat>	cause<string>	option<string>	REFUSED	REFUSED	REFUSED
+atom, named rule: sameHandle(a0, a0)	NativeAtom.sameHandleRule	heads of the raw types	ref<nat>	bool	ref<string>	bool	REFUSED	REFUSED	REFUSED
+field read: a0.x	Record.fieldType	members of the normal form	{_tag: "A", x: nat}	nat	{_tag: "B", x: string}	string	(nat | string)	(nat | string)	never
+field write: a0 with x := 1	Record.setType	members of the normal form	{_tag: "A", x: nat}	{_tag: "A", x: nat}	{_tag: "B", x: string}	{_tag: "B", x: nat}	({_tag: "A", x: nat} | {_tag: "B", x: nat})	({_tag: "A", x: nat} | {_tag: "B", x: nat})	never
+tuple projection: a0#0	Tuple.typeAt	the normal form, member by member	[nat, string]	nat	tuple[bool, unit, nat]	bool	(nat | bool)	(nat | bool)	never
+list fold: fold(a0, 0, a1)	Checker.listOf?	head of the raw type	list<nat>	nat	list<string>	nat	REFUSED	REFUSED	REFUSED
+cause leaf: Fail(a0)	admittedErrTy	members of the normal form	nat	nat	string	string	(nat | string)	(nat | string)	never
+cause leaf: Interrupt(a0)	causeTy	equality of the raw type with nat	nat	never	nat	never	REFUSED	never	REFUSED
+fail(a0)	admittedErrTy	members of the normal form	nat	<never ; nat ; {}>	string	<never ; string ; {}>	<never ; (nat | string) ; {}>	<never ; (nat | string) ; {}>	<never ; never ; {}>
+perform at a closed row: say(a0)	checkRow, Ty.matchTemplate	Ty.sub on normal forms	"a"	<nat ; never ; {}>	"b"	<nat ; never ; {}>	<nat ; never ; {}>	<nat ; never ; {}>	<nat ; never ; {}>
+perform at a template row: Ref.get(a0)	checkRow, Ty.matchTemplate	infer, then Ty.sub on normal forms	ref<nat>	<nat ; never ; {}>	ref<string>	<string ; never ; {}>	REFUSED requestNotSubtype	REFUSED requestNotSubtype	<never ; never ; {}>
+perform at a template row: Deferred.await(a0)	checkRow, Ty.matchTemplate	infer, then Ty.sub on normal forms	deferred<nat, string>	<nat ; string ; {}>	deferred<bool, nat>	<bool ; nat ; {}>	REFUSED requestNotSubtype	REFUSED requestNotSubtype	<never ; never ; {}>
+perform at a template row, the cell beside its content: Ref.set([a0, 7])	checkRow, Ty.matchTemplate	infer, then Ty.sub on normal forms	ref<nat>	<ref<nat> ; never ; {}>	ref<never>	REFUSED requestNotSubtype	REFUSED requestNotSubtype	REFUSED requestNotSubtype	<ref<nat> ; never ; {}>
+perform with a binder term: Ref.update{succ(a1)}(a0)	checkRow, bindTerm	infer, then Ty.sub on normal forms	ref<nat>	<unit ; never ; {}>	ref<never>	REFUSED resultNotSubtype	REFUSED requestNotSubtype	REFUSED requestNotSubtype	<unit ; never ; {}>
+catchIf's test: catchIf(a0-typed test)	Checker.check (catchIf)	equality of the raw type with bool	bool	<unit ; nat ; {}>	bool	<unit ; nat ; {}>	REFUSED predicateNotBool	<unit ; nat ; {}>	REFUSED predicateNotBool
+select by a Boolean: select[bool](a0, …)	Decision.arms	equality of the raw type with bool	bool	<unit ; never ; {}>	bool	<unit ; never ; {}>	REFUSED predicateNotBool	<unit ; never ; {}>	REFUSED predicateNotBool
+select by an option: select[option](a0, …, succeed(a1))	Decision.arms	head of the normal form	option<nat>	<(unit | nat) ; never ; {}>	option<string>	<(unit | string) ; never ; {}>	REFUSED notSelectable	REFUSED notSelectable	REFUSED notSelectable
+select by a tag: select[tag A](a0, succeed(a1), succeed(a1))	Decision.arms, Ty.payloadTy, Ty.diffTag	members of the normal form	["A", nat]	<nat ; never ; {}>	["B", string]	REFUSED notSelectable	<(nat | ["B", string]) ; never ; {}>	<(nat | ["B", string]) ; never ; {}>	REFUSED notSelectable
+select by a record's tag: select[recordTag A](a0, succeed(a1), succeed(a1))	Record.tagArms	members of the normal form	{_tag: "A", x: nat}	<{_tag: "A", x: nat} ; never ; {}>	{_tag: "B", x: string}	<{_tag: "B", x: string} ; never ; {}>	<({_tag: "A", x: nat} | {_tag: "B", x: string}) ; never ; {}>	<({_tag: "A", x: nat} | {_tag: "B", x: string}) ; never ; {}>	<never ; never ; {}>
+iterate's test: iterate(0; a0; a1; (); …)	Checker.check (iterate)	equality of the raw type with bool	bool	<unit ; never ; {}>	bool	<unit ; never ; {}>	REFUSED predicateNotBool	<unit ; never ; {}>	REFUSED predicateNotBool
+join(a0)	fiberTy	head of the raw type	fiber<nat, string>	<nat ; string ; {}>	fiber<bool, nat>	<bool ; nat ; {}>	REFUSED notFiber	REFUSED notFiber	REFUSED notFiber
+await(a0)	fiberTy	head of the raw type	fiber<nat, string>	<exit<nat, string> ; never ; {}>	fiber<bool, nat>	<exit<bool, nat> ; never ; {}>	REFUSED notFiber	REFUSED notFiber	REFUSED notFiber
+restore(a0, …)	Checker.check (restore)	equality of the raw type with Ty.maskRestore	handle(MaskRestore)	<unit ; never ; {}>	handle(MaskRestore)	<unit ; never ; {}>	REFUSED maskRestoreExpected	<unit ; never ; {}>	REFUSED maskRestoreExpected
+provideService(k, a0, …)	Checker.check (provideService)	Ty.sub on normal forms	nat	<unit ; never ; {}>	never	<unit ; never ; {}>	<unit ; never ; {}>	<unit ; never ; {}>	<unit ; never ; {}>
+if a0 {…} else {…} (a generator's statement)	Checker.checkStmt (ifElse)	equality of the raw type with bool	bool	<unit ; never ; {}>	bool	<unit ; never ; {}>	REFUSED predicateNotBool	<unit ; never ; {}>	REFUSED predicateNotBool
+forkIn(…, a0)	Checker.checkAction (forkIn)	equality of the raw type with Ty.scope	handle(Scope.Scope)	<fiber<unit, never> ; never ; {}>	handle(Scope.Scope)	<fiber<unit, never> ; never ; {}>	REFUSED scopeExpected	<fiber<unit, never> ; never ; {}>	REFUSED scopeExpected
+interrupt(a0)	fiberTy	head of the raw type	fiber<nat, string>	<unit ; never ; {}>	fiber<bool, nat>	<unit ; never ; {}>	REFUSED notFiber	REFUSED notFiber	REFUSED notFiber
+interruptAll(a0)	Checker.listOf?, fiberTy	heads of the raw types	list<fiber<nat, string>>	<unit ; never ; {}>	list<fiber<bool, nat>>	<unit ; never ; {}>	REFUSED listOfFibersExpected	REFUSED listOfFibersExpected	REFUSED listOfFibersExpected
+awaitAll(a0)	Checker.listOf?, fiberTy	heads of the raw types	list<fiber<nat, string>>	<list<exit<nat, string>> ; never ; {}>	list<fiber<bool, nat>>	<list<exit<bool, nat>> ; never ; {}>	REFUSED listOfFibersExpected	REFUSED listOfFibersExpected	REFUSED listOfFibersExpected
+awaitNewChildren(a0)	Checker.checkAction (awaitNewChildren)	Ty.sub on the normal form	list<fiber<nat, string>>	<unit ; never ; {}>	list<fiber<bool, nat>>	<unit ; never ; {}>	<unit ; never ; {}>	<unit ; never ; {}>	<unit ; never ; {}>
+setContext(a0)	Checker.checkAction (setContext)	equality of the raw type with Ty.context	handle(Context.Context<unknown>)	<unit ; never ; {}>	handle(Context.Context<unknown>)	<unit ; never ; {}>	REFUSED contextExpected	<unit ; never ; {}>	REFUSED contextExpected
+closeScope(scope, a0)	Checker.exitOf?	head of the raw type	exit<nat, string>	<unit ; never ; {}>	exit<bool, nat>	<unit ; never ; {}>	REFUSED exitExpected	REFUSED exitExpected	REFUSED exitExpected
+probe 2: every guard above holds
+wall=2s exit=0

@@ -1,0 +1,4 @@
+344df2a54a7766f37d811e2bf98f6a27323c1d78242d0d0338e1406b6e6928c4  truth-folds.tsv
+ac6eb1c0d18543a46a6acc681ffea0d51efb3b53cd05c1d39f1cce5ed5cb9455  truth-sites.tsv
+e44a5683b36910c473adbd02654cbaea0f632706b8ebe4c502513f4a0fe69734  truth-terms.tsv
+8022cff035bc6d6a3a97fd6beb8c29ceba053b7aac25c41a6cd618f2d65482f9  truth-programs.tsv

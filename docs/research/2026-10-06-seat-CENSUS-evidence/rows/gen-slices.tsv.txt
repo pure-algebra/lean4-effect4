@@ -1,0 +1,142 @@
+program	addresses	query	domain	allowed	kept	foldedRegions	foldedOutsidePlan	calls	ms	moreByRestart	restartCalls	minimalByBruteForce	upKept	upCalls	upMs	sweepKept	sweepCalls	sweepMs	completion1	completion2	completion3	mask
+g11	1	requires k4_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g11	1	requires k4_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g11	1	requires k4_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g20	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g20	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g20	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g21	4	requires k8_4	plan	3	3	1	0	3	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110
+g21	4	requires k8_4	wide	4	3	1	0	4	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110
+g21	4	requires k8_4	all	4	3	1	0	4	0	0	3	true	3	2	0	3	4	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110
+g21	4	requires k11_4	plan	3	4	0	0	3	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1111
+g21	4	requires k11_4	wide	4	3	1	1	4	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1101
+g21	4	requires k11_4	all	4	3	1	1	4	1	0	3	true	3	2	0	3	4	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1101
+g33	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g33	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g33	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g49	3	error has nat	plan	3	2	1	0	3	1	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+g49	3	error has nat	wide	3	2	1	0	3	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+g49	3	error has nat	all	3	2	1	0	3	0	0	2	true	2	2	0	2	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+g50	2	requires k5_4	plan	2	2	0	0	2	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11
+g50	2	requires k5_4	wide	2	2	0	0	2	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11
+g50	2	requires k5_4	all	2	2	0	0	2	0	0	2	true	2	1	0	2	2	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	11
+g68	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g68	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g68	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g72	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g72	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g72	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g74	1	requires k9_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g74	1	requires k9_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g74	1	requires k9_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g83	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g83	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g83	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g89	4	requires k7_4	plan	4	3	1	0	4	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1101
+g89	4	requires k7_4	wide	4	3	1	0	4	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1101
+g89	4	requires k7_4	all	4	3	1	0	4	0	0	3	true	3	2	1	3	4	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1101
+g102	5	requires k0_0	plan	2	5	0	0	2	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11111
+g102	5	requires k0_0	wide	5	4	1	1	5	0	0	4	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11110
+g102	5	requires k0_0	all	5	4	1	1	5	0	0	4	true	4	2	0	4	5	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	11110
+g113	1	requires k9_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g113	1	requires k9_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g113	1	requires k9_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g120	4	requires k0_0	plan	3	4	0	0	3	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1111
+g120	4	requires k0_0	wide	3	4	0	0	3	1	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1111
+g120	4	requires k0_0	all	4	3	1	1	4	0	0	3	true	3	2	0	3	4	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110
+g122	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g122	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g122	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g135	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g135	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g135	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g137	1	requires k7_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g137	1	requires k7_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g137	1	requires k7_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g146	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g146	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g146	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g159	3	requires k7_4	plan	3	3	0	0	3	1	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g159	3	requires k7_4	wide	3	3	0	0	3	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g159	3	requires k7_4	all	3	3	0	0	3	0	0	3	true	3	1	0	3	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g174	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g174	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g174	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g176	1	requires k7_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g176	1	requires k7_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g176	1	requires k7_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g180	1	requires k6_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g180	1	requires k6_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g180	1	requires k6_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g185	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g185	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g185	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g189	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g189	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g189	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g199	3	requires k0_0	plan	1	3	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g199	3	requires k0_0	wide	3	1	1	1	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	100
+g199	3	requires k0_0	all	3	1	1	1	2	0	0	1	true	1	3	0	1	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	100
+g213	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g213	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g213	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g219	1	requires k5_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g219	1	requires k5_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g219	1	requires k5_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g238	2	requires k0_0	plan	1	2	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11
+g238	2	requires k0_0	wide	2	1	1	1	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	10
+g238	2	requires k0_0	all	2	1	1	1	2	0	0	1	true	1	2	0	1	2	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	10
+g243	1	requires k11_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g243	1	requires k11_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g243	1	requires k11_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g252	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g252	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g252	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g282	1	requires k11_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g282	1	requires k11_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g282	1	requires k11_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g286	1	requires k10_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g286	1	requires k10_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g286	1	requires k10_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g290	3	requires k10_4	plan	1	3	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g290	3	requires k10_4	wide	3	3	0	0	3	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g290	3	requires k10_4	all	3	3	0	0	3	0	0	3	true	3	1	0	3	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g291	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g291	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g291	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g300	4	error has nat	plan	4	2	1	0	3	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1100
+g300	4	error has nat	wide	4	2	1	0	3	1	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1100
+g300	4	error has nat	all	4	2	1	0	3	0	0	2	true	2	3	0	2	4	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1100
+g305	2	requires k0_0	plan	1	2	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11
+g305	2	requires k0_0	wide	2	1	1	1	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	10
+g305	2	requires k0_0	all	2	1	1	1	2	0	0	1	true	1	2	0	1	2	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	10
+g309	8	requires k0_0	plan	2	7	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11111110
+g309	8	requires k0_0	wide	7	2	2	1	4	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	11000000
+g309	8	requires k0_0	all	8	2	2	1	4	0	0	2	true	2	7	0	2	8	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	11000000
+g325	1	requires k9_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g325	1	requires k9_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g325	1	requires k9_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g334	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g334	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g334	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g344	6	requires k0_0	plan	1	6	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111111
+g344	6	requires k0_0	wide	3	4	1	1	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111001
+g344	6	requires k0_0	all	6	1	1	1	2	0	0	1	true	1	6	0	1	6	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	100000
+g347	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g347	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g347	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g358	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g358	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g358	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g366	3	error has nat	plan	3	3	0	0	3	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g366	3	error has nat	wide	3	3	0	0	3	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g366	3	error has nat	all	3	3	0	0	3	0	0	3	true	3	1	0	3	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g367	3	requires k0_0	plan	2	3	0	0	2	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g367	3	requires k0_0	wide	2	3	0	0	2	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	111
+g367	3	requires k0_0	all	3	2	1	1	3	0	0	2	true	2	2	0	2	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+g386	1	error has nat	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g386	1	error has nat	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g386	1	error has nat	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g388	1	requires k7_4	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g388	1	requires k7_4	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+g388	1	requires k7_4	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1

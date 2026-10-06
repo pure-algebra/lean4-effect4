@@ -1,0 +1,715 @@
+program	address	rule	route	columnOpen	inLayer	firstClosed	node	nodeType	fold	admitted	answer	error	requires	refusal	refusalPath	refusalPlace	refusingNode	culprit	refusalDetail	foldedType
+g3	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g3	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g3	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g11	.	root		true	false	-	Eff.service	<nat ; never ; {k4_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g11	.	root		true	false	-	Eff.service	<nat ; never ; {k4_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g11	.	root		true	false	-	Eff.service	<nat ; never ; {k4_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g15	.	root		true	false	-	Eff.withFiber	<fiber<bool, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g15	.	root		true	false	-	Eff.withFiber	<fiber<bool, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g15	.	root		true	false	-	Eff.withFiber	<fiber<bool, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g15	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.sync	<bool ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g15	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.sync	<bool ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g15	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.sync	<bool ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g16	.	root		true	false	-	Eff.sync	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g16	.	root		true	false	-	Eff.sync	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g16	.	root		true	false	-	Eff.sync	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g20	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g20	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g20	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g21	.	root		true	false	-	Eff.interruptible	<nat ; never ; {k8_4, k11_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g21	.	root		true	false	-	Eff.interruptible	<nat ; never ; {k8_4, k11_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g21	.	root		true	false	-	Eff.interruptible	<nat ; never ; {k8_4, k11_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g21	0	Eff.interruptible.0	Eff.interruptible.0	true	false	-	Eff.catchCause	<nat ; never ; {k8_4, k11_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g21	0	Eff.interruptible.0	Eff.interruptible.0	true	false	-	Eff.catchCause	<nat ; never ; {k8_4, k11_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g21	0	Eff.interruptible.0	Eff.interruptible.0	true	false	-	Eff.catchCause	<nat ; never ; {k8_4, k11_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g21	0.0	Eff.catchCause.0	Eff.interruptible.0>Eff.catchCause.0	false	false	Eff.catchCause.0	Eff.service	<nat ; never ; {k8_4}>	N	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {k11_4}>
+g21	0.0	Eff.catchCause.0	Eff.interruptible.0>Eff.catchCause.0	false	false	Eff.catchCause.0	Eff.service	<nat ; never ; {k8_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {k11_4}>
+g21	0.0	Eff.catchCause.0	Eff.interruptible.0>Eff.catchCause.0	false	false	Eff.catchCause.0	Eff.service	<nat ; never ; {k8_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {k11_4}>
+g21	0.1	Eff.catchCause.1	Eff.interruptible.0>Eff.catchCause.1	true	false	-	Eff.service	<nat ; never ; {k11_4}>	N	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {k8_4}>
+g21	0.1	Eff.catchCause.1	Eff.interruptible.0>Eff.catchCause.1	true	false	-	Eff.service	<nat ; never ; {k11_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {k8_4}>
+g21	0.1	Eff.catchCause.1	Eff.interruptible.0>Eff.catchCause.1	true	false	-	Eff.service	<nat ; never ; {k11_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {k8_4}>
+g33	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g33	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g33	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g38	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g38	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g38	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g44	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g44	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g44	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g49	.	root		true	false	-	Eff.bind	<unit ; nat ; {}>	N	true	smaller	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g49	.	root		true	false	-	Eff.bind	<unit ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g49	.	root		true	false	-	Eff.bind	<unit ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g49	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.failCause	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g49	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.failCause	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g49	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.failCause	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g49	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.succeed	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; nat ; {}>
+g49	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.succeed	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>
+g49	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.succeed	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>
+g50	.	root		true	false	-	Eff.provideService	<nat ; never ; {k5_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g50	.	root		true	false	-	Eff.provideService	<nat ; never ; {k5_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g50	.	root		true	false	-	Eff.provideService	<nat ; never ; {k5_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g50	0	Eff.provideService.0	Eff.provideService.0	true	false	-	Eff.service	<nat ; never ; {k5_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g50	0	Eff.provideService.0	Eff.provideService.0	true	false	-	Eff.service	<nat ; never ; {k5_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g50	0	Eff.provideService.0	Eff.provideService.0	true	false	-	Eff.service	<nat ; never ; {k5_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g53	.	root		true	false	-	Eff.suspend	<fiber<exit<never, never>, nat> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g53	.	root		true	false	-	Eff.suspend	<fiber<exit<never, never>, nat> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	.	root		true	false	-	Eff.suspend	<fiber<exit<never, never>, nat> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.withFiber	<fiber<exit<never, never>, nat> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g53	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.withFiber	<fiber<exit<never, never>, nat> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.withFiber	<fiber<exit<never, never>, nat> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0	ActionTerm.fork.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.bind	<exit<never, never> ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g53	0.0.0	ActionTerm.fork.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.bind	<exit<never, never> ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0	ActionTerm.fork.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.bind	<exit<never, never> ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0.0	Eff.bind.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0	false	false	ActionTerm.fork.0	Eff.matchCause	<unit ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0.0	Eff.bind.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0	false	false	ActionTerm.fork.0	Eff.matchCause	<unit ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0.0	Eff.bind.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0	false	false	ActionTerm.fork.0	Eff.matchCause	<unit ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0.0.0	Eff.matchCause.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.0	false	false	ActionTerm.fork.0	Eff.withFiber	<nat ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.0.0	Eff.matchCause.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.0	false	false	ActionTerm.fork.0	Eff.withFiber	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.0.0	Eff.matchCause.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.0	false	false	ActionTerm.fork.0	Eff.withFiber	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.0.1	Eff.matchCause.1	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.1	false	false	ActionTerm.fork.0	Eff.fail	<never ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0.0.1	Eff.matchCause.1	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.1	false	false	ActionTerm.fork.0	Eff.fail	<never ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0.0.1	Eff.matchCause.1	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.1	false	false	ActionTerm.fork.0	Eff.fail	<never ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, never> ; never ; {}>
+g53	0.0.0.0.2	Eff.matchCause.2	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.2	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.0.2	Eff.matchCause.2	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.2	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.0.2	Eff.matchCause.2	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.0>Eff.matchCause.2	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.1	Eff.bind.1	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.1	false	false	ActionTerm.fork.0	Eff.exit	<exit<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g53	0.0.0.1	Eff.bind.1	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.1	false	false	ActionTerm.fork.0	Eff.exit	<exit<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.1	Eff.bind.1	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.1	false	false	ActionTerm.fork.0	Eff.exit	<exit<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.1.0	Eff.exit.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.1>Eff.exit.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.1.0	Eff.exit.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.1>Eff.exit.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g53	0.0.0.1.0	Eff.exit.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.bind.1>Eff.exit.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<exit<never, never>, nat> ; never ; {}>
+g54	.	root		true	false	-	Eff.withFiber	<fiber<string, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g54	.	root		true	false	-	Eff.withFiber	<fiber<string, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {}>
+g54	.	root		true	false	-	Eff.withFiber	<fiber<string, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {}>
+g54	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.sync	<string ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g54	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.sync	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {}>
+g54	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.sync	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {}>
+g55	.	root		true	false	-	Eff.sync	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g55	.	root		true	false	-	Eff.sync	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g55	.	root		true	false	-	Eff.sync	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g57	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g57	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g57	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g59	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g59	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g59	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g66	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g66	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g66	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g68	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g68	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g68	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g72	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g72	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g72	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g73	.	root		true	false	-	Eff.exit	<exit<string, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g73	.	root		true	false	-	Eff.exit	<exit<string, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<string, never> ; never ; {}>
+g73	.	root		true	false	-	Eff.exit	<exit<string, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<string, never> ; never ; {}>
+g73	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.sync	<string ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g73	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.sync	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<string, never> ; never ; {}>
+g73	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.sync	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<string, never> ; never ; {}>
+g74	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g74	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g74	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g75	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g75	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g75	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g75	0.0.0	Stmt.yieldDiscard.0	Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	true	false	-	Eff.gen	<nat ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g75	0.0.0	Stmt.yieldDiscard.0	Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	true	false	-	Eff.gen	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g75	0.0.0	Stmt.yieldDiscard.0	Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	true	false	-	Eff.gen	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g78	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g78	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g78	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g78	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g78	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g78	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g81	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g81	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g81	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g83	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g83	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g83	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g89	.	root		true	false	-	Eff.provideService	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g89	.	root		true	false	-	Eff.provideService	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g89	.	root		true	false	-	Eff.provideService	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g89	0	Eff.provideService.0	Eff.provideService.0	true	false	-	Eff.bind	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g89	0	Eff.provideService.0	Eff.provideService.0	true	false	-	Eff.bind	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g89	0	Eff.provideService.0	Eff.provideService.0	true	false	-	Eff.bind	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g89	0.0	Eff.bind.0	Eff.provideService.0>Eff.bind.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {k7_4}>
+g89	0.0	Eff.bind.0	Eff.provideService.0>Eff.bind.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {k7_4}>
+g89	0.0	Eff.bind.0	Eff.provideService.0>Eff.bind.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {k7_4}>
+g89	0.1	Eff.bind.1	Eff.provideService.0>Eff.bind.1	true	false	-	Eff.service	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g89	0.1	Eff.bind.1	Eff.provideService.0>Eff.bind.1	true	false	-	Eff.service	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g89	0.1	Eff.bind.1	Eff.provideService.0>Eff.bind.1	true	false	-	Eff.service	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g96	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g96	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g96	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g100	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g100	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g100	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g102	.	root		true	false	-	Eff.provideLayer	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g102	.	root		true	false	-	Eff.provideLayer	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	.	root		true	false	-	Eff.provideLayer	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	1	Eff.provideLayer.1	Eff.provideLayer.1	true	false	-	Eff.withFiber	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g102	1	Eff.provideLayer.1	Eff.provideLayer.1	true	false	-	Eff.withFiber	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	1	Eff.provideLayer.1	Eff.provideLayer.1	true	false	-	Eff.withFiber	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	1.0.0	ActionTerm.fork.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.provideService	<fiber<nat, never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g102	1.0.0	ActionTerm.fork.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.provideService	<fiber<nat, never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	1.0.0	ActionTerm.fork.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.provideService	<fiber<nat, never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	1.0.0.0	Eff.provideService.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0	false	false	ActionTerm.fork.0	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g102	1.0.0.0	Eff.provideService.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0	false	false	ActionTerm.fork.0	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	1.0.0.0	Eff.provideService.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0	false	false	ActionTerm.fork.0	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {}>
+g102	1.0.0.0.0.0	ActionTerm.forkScoped.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {k0_0}>
+g102	1.0.0.0.0.0	ActionTerm.forkScoped.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>
+g102	1.0.0.0.0.0	ActionTerm.forkScoped.0	Eff.provideLayer.1>Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<nat, never>, never> ; never ; {k0_0}>
+g105	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g105	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g105	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g109	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g109	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g109	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g113	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g113	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g113	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g117	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g117	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g117	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g117	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g117	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g117	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g118	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g118	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0	Stmt.bindYield.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0	true	false	-	Eff.bind	<exit<nat, never> ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0	Stmt.bindYield.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0	true	false	-	Eff.bind	<exit<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0	Stmt.bindYield.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0	true	false	-	Eff.bind	<exit<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.0	Eff.bind.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.0	true	false	-	Eff.interruptible	<nat ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.0	Eff.bind.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.0	true	false	-	Eff.interruptible	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.0	Eff.bind.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.0	true	false	-	Eff.interruptible	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.0.0	Eff.interruptible.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.0>Eff.interruptible.0	true	false	-	Eff.sync	<nat ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.0.0	Eff.interruptible.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.0>Eff.interruptible.0	true	false	-	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.0.0	Eff.interruptible.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.0>Eff.interruptible.0	true	false	-	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1	Eff.bind.1	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1	true	false	-	Eff.uninterruptible	<exit<nat, never> ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1	Eff.bind.1	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1	true	false	-	Eff.uninterruptible	<exit<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1	Eff.bind.1	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1	true	false	-	Eff.uninterruptible	<exit<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1.0	Eff.uninterruptible.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1>Eff.uninterruptible.0	true	false	-	Eff.exit	<exit<nat, never> ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1.0	Eff.uninterruptible.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1>Eff.uninterruptible.0	true	false	-	Eff.exit	<exit<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1.0	Eff.uninterruptible.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1>Eff.uninterruptible.0	true	false	-	Eff.exit	<exit<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1.0.0	Eff.exit.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1>Eff.uninterruptible.0>Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<nat ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1.0.0	Eff.exit.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1>Eff.uninterruptible.0>Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g118	0.0.0.1.0.0	Eff.exit.0	Eff.gen.0>Stmts.cons.0>Stmt.bindYield.0>Eff.bind.1>Eff.uninterruptible.0>Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g120	.	root		true	false	-	Eff.suspend	<fiber<never, nat> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g120	.	root		true	false	-	Eff.suspend	<fiber<never, nat> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g120	.	root		true	false	-	Eff.suspend	<fiber<never, nat> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g120	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.interruptible	<fiber<never, nat> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g120	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.interruptible	<fiber<never, nat> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g120	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.interruptible	<fiber<never, nat> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g120	0.0	Eff.interruptible.0	Eff.suspend.0>Eff.interruptible.0	true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g120	0.0	Eff.interruptible.0	Eff.suspend.0>Eff.interruptible.0	true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g120	0.0	Eff.interruptible.0	Eff.suspend.0>Eff.interruptible.0	true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g120	0.0.0.0	ActionTerm.forkScoped.0	Eff.suspend.0>Eff.interruptible.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g120	0.0.0.0	ActionTerm.forkScoped.0	Eff.suspend.0>Eff.interruptible.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g120	0.0.0.0	ActionTerm.forkScoped.0	Eff.suspend.0>Eff.interruptible.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g121	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g121	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g121	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g121	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g121	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g121	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g122	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g122	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g122	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g123	.	root		true	false	-	Eff.interruptible	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g123	.	root		true	false	-	Eff.interruptible	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g123	.	root		true	false	-	Eff.interruptible	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g123	0	Eff.interruptible.0	Eff.interruptible.0	true	false	-	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g123	0	Eff.interruptible.0	Eff.interruptible.0	true	false	-	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g123	0	Eff.interruptible.0	Eff.interruptible.0	true	false	-	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g123	0.0.0	ActionTerm.fork.0	Eff.interruptible.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g123	0.0.0	ActionTerm.fork.0	Eff.interruptible.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g123	0.0.0	ActionTerm.fork.0	Eff.interruptible.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g130	.	root		true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g130	.	root		true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	.	root		true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g130	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0	ActionTerm.fork.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.suspend	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0	ActionTerm.fork.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.suspend	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0	ActionTerm.fork.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.suspend	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0.0	Eff.suspend.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0	false	false	ActionTerm.fork.0	Eff.interruptible	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0.0	Eff.suspend.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0	false	false	ActionTerm.fork.0	Eff.interruptible	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0.0	Eff.suspend.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0	false	false	ActionTerm.fork.0	Eff.interruptible	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0.0.0	Eff.interruptible.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0>Eff.interruptible.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0.0.0	Eff.interruptible.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0>Eff.interruptible.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g130	0.0.0.0.0	Eff.interruptible.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0>Eff.interruptible.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g135	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g135	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g135	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g136	.	root		true	false	-	Eff.exit	<exit<unit, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g136	.	root		true	false	-	Eff.exit	<exit<unit, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g136	.	root		true	false	-	Eff.exit	<exit<unit, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g136	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g136	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g136	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g137	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g137	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g137	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g144	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g144	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g144	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g145	.	root		true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g145	.	root		true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g145	.	root		true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g145	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.scoped	<never ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g145	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.scoped	<never ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g145	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.scoped	<never ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g145	0.0.0	Eff.scoped.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0	false	false	ActionTerm.fork.0	Eff.fail	<never ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g145	0.0.0	Eff.scoped.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0	false	false	ActionTerm.fork.0	Eff.fail	<never ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g145	0.0.0	Eff.scoped.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0	false	false	ActionTerm.fork.0	Eff.fail	<never ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g146	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g146	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g146	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g148	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g148	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g148	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g150	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g150	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g150	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g158	.	root		true	false	-	Eff.withFiber	<ref<string> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g158	.	root		true	false	-	Eff.withFiber	<ref<string> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<ref<string> ; never ; {}>
+g158	.	root		true	false	-	Eff.withFiber	<ref<string> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<ref<string> ; never ; {}>
+g158	0.0.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0	true	false	-	Eff.perform(refMake)	<ref<string> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g158	0.0.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0	true	false	-	Eff.perform(refMake)	<ref<string> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<ref<string> ; never ; {}>
+g158	0.0.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0	true	false	-	Eff.perform(refMake)	<ref<string> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<ref<string> ; never ; {}>
+g159	.	root		true	false	-	Eff.suspend	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g159	.	root		true	false	-	Eff.suspend	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g159	.	root		true	false	-	Eff.suspend	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g159	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.interruptible	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g159	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.interruptible	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g159	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.interruptible	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g159	0.0	Eff.interruptible.0	Eff.suspend.0>Eff.interruptible.0	true	false	-	Eff.service	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g159	0.0	Eff.interruptible.0	Eff.suspend.0>Eff.interruptible.0	true	false	-	Eff.service	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g159	0.0	Eff.interruptible.0	Eff.suspend.0>Eff.interruptible.0	true	false	-	Eff.service	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g160	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g160	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g160	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g160	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g160	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g160	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g161	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g161	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g161	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g163	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g163	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g163	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g172	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g172	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g172	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g174	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g174	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g174	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g175	.	root		true	false	-	Eff.exit	<exit<unit, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g175	.	root		true	false	-	Eff.exit	<exit<unit, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g175	.	root		true	false	-	Eff.exit	<exit<unit, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g175	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g175	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g175	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<unit, never> ; never ; {}>
+g176	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g176	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g176	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g179	.	root		true	false	-	Eff.exit	<exit<nat, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g179	.	root		true	false	-	Eff.exit	<exit<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<nat, never> ; never ; {}>
+g179	.	root		true	false	-	Eff.exit	<exit<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<nat, never> ; never ; {}>
+g179	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g179	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<nat, never> ; never ; {}>
+g179	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<nat, never> ; never ; {}>
+g180	.	root		true	false	-	Eff.service	<nat ; never ; {k6_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g180	.	root		true	false	-	Eff.service	<nat ; never ; {k6_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g180	.	root		true	false	-	Eff.service	<nat ; never ; {k6_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g181	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g181	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g181	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g183	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g183	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g183	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g184	.	root		true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g184	.	root		true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g184	.	root		true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g184	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g184	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g184	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g185	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g185	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g185	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g189	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g189	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g189	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g193	.	root		true	false	-	Eff.scoped	<fiber<never, string> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g193	.	root		true	false	-	Eff.scoped	<fiber<never, string> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, string> ; never ; {}>
+g193	.	root		true	false	-	Eff.scoped	<fiber<never, string> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, string> ; never ; {}>
+g193	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, string> ; never ; {k0_0}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g193	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, string> ; never ; {k0_0}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, string> ; never ; {}>
+g193	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, string> ; never ; {k0_0}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, string> ; never ; {}>
+g193	0.0.0	ActionTerm.forkScoped.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; string ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g193	0.0.0	ActionTerm.forkScoped.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; string ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g193	0.0.0	ActionTerm.forkScoped.0	Eff.scoped.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; string ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g199	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g199	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g199	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g199	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.suspend	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g199	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.suspend	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g199	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.suspend	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g199	0.0.0	Eff.suspend.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0	false	false	ActionTerm.forkScoped.0	Eff.sync	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g199	0.0.0	Eff.suspend.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0	false	false	ActionTerm.forkScoped.0	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g199	0.0.0	Eff.suspend.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0	false	false	ActionTerm.forkScoped.0	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g211	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g211	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g211	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g213	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g213	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g213	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g217	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g217	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g217	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g218	.	root		true	false	-	Eff.exit	<exit<bool, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g218	.	root		true	false	-	Eff.exit	<exit<bool, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<bool, never> ; never ; {}>
+g218	.	root		true	false	-	Eff.exit	<exit<bool, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<bool, never> ; never ; {}>
+g218	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<bool ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g218	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<bool ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<bool, never> ; never ; {}>
+g218	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.succeed	<bool ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<bool, never> ; never ; {}>
+g219	.	root		true	false	-	Eff.service	<nat ; never ; {k5_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g219	.	root		true	false	-	Eff.service	<nat ; never ; {k5_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g219	.	root		true	false	-	Eff.service	<nat ; never ; {k5_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g220	.	root		true	false	-	Eff.gen	<bool ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g220	.	root		true	false	-	Eff.gen	<bool ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<bool ; never ; {}>
+g220	.	root		true	false	-	Eff.gen	<bool ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<bool ; never ; {}>
+g222	.	root		true	false	-	Eff.suspend	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g222	.	root		true	false	-	Eff.suspend	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g222	.	root		true	false	-	Eff.suspend	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g222	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.scoped	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g222	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.scoped	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g222	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.scoped	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g222	0.0	Eff.scoped.0	Eff.suspend.0>Eff.scoped.0	true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g222	0.0	Eff.scoped.0	Eff.suspend.0>Eff.scoped.0	true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g222	0.0	Eff.scoped.0	Eff.suspend.0>Eff.scoped.0	true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g223	.	root		true	false	-	Eff.withFiber	<fiber<never, string> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g223	.	root		true	false	-	Eff.withFiber	<fiber<never, string> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, string> ; never ; {}>
+g223	.	root		true	false	-	Eff.withFiber	<fiber<never, string> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, string> ; never ; {}>
+g223	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; string ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g223	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; string ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g223	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; string ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g224	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g224	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g224	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g235	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g235	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g235	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g236	.	root		true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g236	.	root		true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	.	root		true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.interruptible	<fiber<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g236	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.interruptible	<fiber<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.interruptible	<fiber<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0.0	Eff.interruptible.0	Eff.scoped.0>Eff.interruptible.0	true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g236	0.0	Eff.interruptible.0	Eff.scoped.0>Eff.interruptible.0	true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0.0	Eff.interruptible.0	Eff.scoped.0>Eff.interruptible.0	true	false	-	Eff.scoped	<fiber<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0.0.0	Eff.scoped.0	Eff.scoped.0>Eff.interruptible.0>Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, never> ; never ; {k0_0}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g236	0.0.0	Eff.scoped.0	Eff.scoped.0>Eff.interruptible.0>Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, never> ; never ; {k0_0}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0.0.0	Eff.scoped.0	Eff.scoped.0>Eff.interruptible.0>Eff.scoped.0	true	false	-	Eff.withFiber	<fiber<never, never> ; never ; {k0_0}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0.0.0.0.0	ActionTerm.forkScoped.0	Eff.scoped.0>Eff.interruptible.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0.0.0.0.0	ActionTerm.forkScoped.0	Eff.scoped.0>Eff.interruptible.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g236	0.0.0.0.0	ActionTerm.forkScoped.0	Eff.scoped.0>Eff.interruptible.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g238	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g238	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g238	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g238	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.withFiber	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g238	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.withFiber	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g238	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.withFiber	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g242	.	root		true	false	-	Eff.exit	<exit<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g242	.	root		true	false	-	Eff.exit	<exit<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g242	.	root		true	false	-	Eff.exit	<exit<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g242	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g242	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g242	0	Eff.exit.0	Eff.exit.0	false	false	Eff.exit.0	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<exit<never, never> ; never ; {}>
+g243	.	root		true	false	-	Eff.service	<nat ; never ; {k11_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g243	.	root		true	false	-	Eff.service	<nat ; never ; {k11_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g243	.	root		true	false	-	Eff.service	<nat ; never ; {k11_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g247	.	root		true	false	-	Eff.provideLayer	<fiber<nat, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g247	.	root		true	false	-	Eff.provideLayer	<fiber<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g247	.	root		true	false	-	Eff.provideLayer	<fiber<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g247	1	Eff.provideLayer.1	Eff.provideLayer.1	true	false	-	Eff.uninterruptible	<fiber<nat, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g247	1	Eff.provideLayer.1	Eff.provideLayer.1	true	false	-	Eff.uninterruptible	<fiber<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g247	1	Eff.provideLayer.1	Eff.provideLayer.1	true	false	-	Eff.uninterruptible	<fiber<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g247	1.0	Eff.uninterruptible.0	Eff.provideLayer.1>Eff.uninterruptible.0	true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g247	1.0	Eff.uninterruptible.0	Eff.provideLayer.1>Eff.uninterruptible.0	true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g247	1.0	Eff.uninterruptible.0	Eff.provideLayer.1>Eff.uninterruptible.0	true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g247	1.0.0.0	ActionTerm.fork.0	Eff.provideLayer.1>Eff.uninterruptible.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g247	1.0.0.0	ActionTerm.fork.0	Eff.provideLayer.1>Eff.uninterruptible.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g247	1.0.0.0	ActionTerm.fork.0	Eff.provideLayer.1>Eff.uninterruptible.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g250	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g250	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g250	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g252	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g252	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g252	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g256	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g256	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g256	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g260	.	root		true	false	-	Eff.scoped	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g260	.	root		true	false	-	Eff.scoped	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g260	.	root		true	false	-	Eff.scoped	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g260	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.gen	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g260	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.gen	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g260	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.gen	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g260	0.0.0.0	Stmt.yieldDiscard.0	Eff.scoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g260	0.0.0.0	Stmt.yieldDiscard.0	Eff.scoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g260	0.0.0.0	Stmt.yieldDiscard.0	Eff.scoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g263	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g263	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g263	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g267	.	root		true	false	-	Eff.sync	<string ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g267	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g267	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g269	.	root		true	false	-	Eff.succeed	<string ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g269	.	root		true	false	-	Eff.succeed	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g269	.	root		true	false	-	Eff.succeed	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g274	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g274	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g274	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g276	.	root		true	false	-	Eff.bind	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g276	.	root		true	false	-	Eff.bind	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g276	.	root		true	false	-	Eff.bind	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g276	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.succeed	<string ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g276	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.succeed	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g276	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.succeed	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g276	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g276	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g276	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g278	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g278	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g278	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g282	.	root		true	false	-	Eff.service	<nat ; never ; {k11_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g282	.	root		true	false	-	Eff.service	<nat ; never ; {k11_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g282	.	root		true	false	-	Eff.service	<nat ; never ; {k11_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g286	.	root		true	false	-	Eff.service	<nat ; never ; {k10_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g286	.	root		true	false	-	Eff.service	<nat ; never ; {k10_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g286	.	root		true	false	-	Eff.service	<nat ; never ; {k10_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g287	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g287	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g287	.	root		true	false	-	Eff.gen	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g289	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g289	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g289	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g290	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k10_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g290	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k10_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g290	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k10_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g290	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.provideService	<nat ; never ; {k10_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g290	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.provideService	<nat ; never ; {k10_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g290	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.provideService	<nat ; never ; {k10_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g290	0.0.0	Eff.provideService.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0	false	false	ActionTerm.fork.0	Eff.service	<nat ; never ; {k10_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g290	0.0.0	Eff.provideService.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0	false	false	ActionTerm.fork.0	Eff.service	<nat ; never ; {k10_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g290	0.0.0	Eff.provideService.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.provideService.0	false	false	ActionTerm.fork.0	Eff.service	<nat ; never ; {k10_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g291	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g291	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g291	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g300	.	root		true	false	-	Eff.bind	<unit ; nat ; {}>	N	true	smaller	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g300	.	root		true	false	-	Eff.bind	<unit ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g300	.	root		true	false	-	Eff.bind	<unit ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g300	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.failCause	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g300	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.failCause	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g300	0	Eff.bind.0	Eff.bind.0	true	false	-	Eff.failCause	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<unit ; never ; {}>
+g300	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.scoped	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; nat ; {}>
+g300	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.scoped	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>
+g300	1	Eff.bind.1	Eff.bind.1	true	false	-	Eff.scoped	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>
+g300	1.0	Eff.scoped.0	Eff.bind.1>Eff.scoped.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; nat ; {}>
+g300	1.0	Eff.scoped.0	Eff.bind.1>Eff.scoped.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>
+g300	1.0	Eff.scoped.0	Eff.bind.1>Eff.scoped.0	true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; nat ; {}>
+g305	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g305	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g305	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g305	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.sync	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g305	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g305	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {k0_0}>
+g306	.	root		true	false	-	Eff.sync	<string ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g306	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g306	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g308	.	root		true	false	-	Eff.succeed	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g308	.	root		true	false	-	Eff.succeed	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g308	.	root		true	false	-	Eff.succeed	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g309	.	root		true	false	-	Eff.onExit	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g309	.	root		true	false	-	Eff.onExit	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g309	.	root		true	false	-	Eff.onExit	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g309	0	Eff.onExit.0	Eff.onExit.0	false	false	Eff.onExit.0	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g309	0	Eff.onExit.0	Eff.onExit.0	false	false	Eff.onExit.0	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g309	0	Eff.onExit.0	Eff.onExit.0	false	false	Eff.onExit.0	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g309	0.0.0	ActionTerm.forkScoped.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	Eff.onExit.0	Eff.suspend	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g309	0.0.0	ActionTerm.forkScoped.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	Eff.onExit.0	Eff.suspend	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0	ActionTerm.forkScoped.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	Eff.onExit.0	Eff.suspend	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0	Eff.suspend.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0	false	false	Eff.onExit.0	Eff.matchCause	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g309	0.0.0.0	Eff.suspend.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0	false	false	Eff.onExit.0	Eff.matchCause	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0	Eff.suspend.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0	false	false	Eff.onExit.0	Eff.matchCause	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.0	Eff.matchCause.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.0	false	false	Eff.onExit.0	Eff.fail	<never ; string ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.0	Eff.matchCause.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.0	false	false	Eff.onExit.0	Eff.fail	<never ; string ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.0	Eff.matchCause.0	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.0	false	false	Eff.onExit.0	Eff.fail	<never ; string ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.1	Eff.matchCause.1	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.1	false	false	Eff.onExit.0	Eff.perform(deferredAwait)	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.1	Eff.matchCause.1	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.1	false	false	Eff.onExit.0	Eff.perform(deferredAwait)	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.1	Eff.matchCause.1	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.1	false	false	Eff.onExit.0	Eff.perform(deferredAwait)	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.2	Eff.matchCause.2	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.2	false	false	Eff.onExit.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g309	0.0.0.0.2	Eff.matchCause.2	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.2	false	false	Eff.onExit.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	0.0.0.0.2	Eff.matchCause.2	Eff.onExit.0>Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.suspend.0>Eff.matchCause.2	false	false	Eff.onExit.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	1	Eff.onExit.1	Eff.onExit.1	true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	1	Eff.onExit.1	Eff.onExit.1	true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g309	1	Eff.onExit.1	Eff.onExit.1	true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+g313	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g313	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g313	.	root		true	false	-	Eff.withFiber	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g317	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g317	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g317	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g325	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g325	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g325	.	root		true	false	-	Eff.service	<nat ; never ; {k9_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g330	.	root		true	false	-	Eff.sync	<string ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g330	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g330	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g334	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g334	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g334	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g344	.	root		true	false	-	Eff.withFiber	<fiber<string, nat> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g344	.	root		true	false	-	Eff.withFiber	<fiber<string, nat> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<string, nat> ; never ; {}>
+g344	.	root		true	false	-	Eff.withFiber	<fiber<string, nat> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<string, nat> ; never ; {}>
+g344	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.gen	<string ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g344	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.gen	<string ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g344	0.0	ActionTerm.forkScoped.0	Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.gen	<string ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g344	0.0.0.0.0	Stmt.yieldDiscard.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	false	false	ActionTerm.forkScoped.0	Eff.select.bool	<nat ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g344	0.0.0.0.0	Stmt.yieldDiscard.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	false	false	ActionTerm.forkScoped.0	Eff.select.bool	<nat ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g344	0.0.0.0.0	Stmt.yieldDiscard.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0	false	false	ActionTerm.forkScoped.0	Eff.select.bool	<nat ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g344	0.0.0.0.0.0	Eff.select.bool.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.0	false	false	ActionTerm.forkScoped.0	Eff.interruptible	<nat ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<string, nat> ; never ; {k0_0}>
+g344	0.0.0.0.0.0	Eff.select.bool.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.0	false	false	ActionTerm.forkScoped.0	Eff.interruptible	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<string, nat> ; never ; {k0_0}>
+g344	0.0.0.0.0.0	Eff.select.bool.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.0	false	false	ActionTerm.forkScoped.0	Eff.interruptible	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<string, nat> ; never ; {k0_0}>
+g344	0.0.0.0.0.0.0	Eff.interruptible.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.0>Eff.interruptible.0	false	false	ActionTerm.forkScoped.0	Eff.succeed	<nat ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<string, nat> ; never ; {k0_0}>
+g344	0.0.0.0.0.0.0	Eff.interruptible.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.0>Eff.interruptible.0	false	false	ActionTerm.forkScoped.0	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<string, nat> ; never ; {k0_0}>
+g344	0.0.0.0.0.0.0	Eff.interruptible.0	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.0>Eff.interruptible.0	false	false	ActionTerm.forkScoped.0	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<string, nat> ; never ; {k0_0}>
+g344	0.0.0.0.0.1	Eff.select.bool.1	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.1	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g344	0.0.0.0.0.1	Eff.select.bool.1	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.1	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g344	0.0.0.0.0.1	Eff.select.bool.1	Eff.withFiber.0>ActionTerm.forkScoped.0>Eff.gen.0>Stmts.cons.0>Stmt.yieldDiscard.0>Eff.select.bool.1	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<string, never> ; never ; {k0_0}>
+g347	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g347	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g347	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g352	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g352	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g352	.	root		true	false	-	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<handle(Context.Context<unknown>) ; never ; {}>
+g353	.	root		true	false	-	Eff.withFiber	<fiber<bool, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g353	.	root		true	false	-	Eff.withFiber	<fiber<bool, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g353	.	root		true	false	-	Eff.withFiber	<fiber<bool, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g353	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<bool ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g353	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<bool ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g353	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<bool ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<bool, never> ; never ; {}>
+g358	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g358	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g358	.	root		true	false	-	Eff.failCause	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g359	.	root		true	false	-	Eff.uninterruptible	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g359	.	root		true	false	-	Eff.uninterruptible	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g359	.	root		true	false	-	Eff.uninterruptible	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g359	0	Eff.uninterruptible.0	Eff.uninterruptible.0	true	false	-	Eff.uninterruptible	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g359	0	Eff.uninterruptible.0	Eff.uninterruptible.0	true	false	-	Eff.uninterruptible	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g359	0	Eff.uninterruptible.0	Eff.uninterruptible.0	true	false	-	Eff.uninterruptible	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g359	0.0	Eff.uninterruptible.0	Eff.uninterruptible.0>Eff.uninterruptible.0	true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g359	0.0	Eff.uninterruptible.0	Eff.uninterruptible.0>Eff.uninterruptible.0	true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g359	0.0	Eff.uninterruptible.0	Eff.uninterruptible.0>Eff.uninterruptible.0	true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g363	.	root		true	false	-	Eff.uninterruptible	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g363	.	root		true	false	-	Eff.uninterruptible	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g363	.	root		true	false	-	Eff.uninterruptible	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g363	0	Eff.uninterruptible.0	Eff.uninterruptible.0	true	false	-	Eff.sync	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g363	0	Eff.uninterruptible.0	Eff.uninterruptible.0	true	false	-	Eff.sync	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g363	0	Eff.uninterruptible.0	Eff.uninterruptible.0	true	false	-	Eff.sync	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g366	.	root		true	false	-	Eff.scoped	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	.	root		true	false	-	Eff.scoped	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	.	root		true	false	-	Eff.scoped	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.suspend	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.suspend	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	0	Eff.scoped.0	Eff.scoped.0	true	false	-	Eff.suspend	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	0.0	Eff.suspend.0	Eff.scoped.0>Eff.suspend.0	true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	0.0	Eff.suspend.0	Eff.scoped.0>Eff.suspend.0	true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g366	0.0	Eff.suspend.0	Eff.scoped.0>Eff.suspend.0	true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g367	.	root		true	false	-	Eff.suspend	<fiber<never, nat> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g367	.	root		true	false	-	Eff.suspend	<fiber<never, nat> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g367	.	root		true	false	-	Eff.suspend	<fiber<never, nat> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g367	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {k0_0}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g367	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {k0_0}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g367	0	Eff.suspend.0	Eff.suspend.0	true	false	-	Eff.withFiber	<fiber<never, nat> ; never ; {k0_0}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<fiber<never, nat> ; never ; {}>
+g367	0.0.0	ActionTerm.forkScoped.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g367	0.0.0	ActionTerm.forkScoped.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	Avar	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g367	0.0.0	ActionTerm.forkScoped.0	Eff.suspend.0>Eff.withFiber.0>ActionTerm.forkScoped.0	false	false	ActionTerm.forkScoped.0	Eff.fail	<never ; nat ; {}>	Arow	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {k0_0}>
+g368	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g368	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g368	.	root		true	false	-	Eff.withFiber	<fiber<unit, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g368	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g368	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g368	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<unit, never> ; never ; {}>
+g369	.	root		true	false	-	Eff.sync	<string ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g369	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g369	.	root		true	false	-	Eff.sync	<string ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<string ; never ; {}>
+g371	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g371	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g371	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g373	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g373	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g373	.	root		true	false	-	Eff.sync	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g375	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g375	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g375	.	root		true	false	-	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<nat ; never ; {}>
+g380	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g380	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g380	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g382	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g382	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g382	.	root		true	false	-	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g384	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g384	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g384	.	root		true	false	-	Eff.yieldNow	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g386	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	N	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g386	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Avar	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g386	.	root		true	false	-	Eff.fail	<never ; nat ; {}>	Arow	true	same	smaller	same	-	-	-	-	-	-	<never ; never ; {}>
+g388	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	N	true	smaller	same	smaller	-	-	-	-	-	-	<never ; never ; {}>
+g388	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	Avar	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g388	.	root		true	false	-	Eff.service	<nat ; never ; {k7_4}>	Arow	true	same	same	smaller	-	-	-	-	-	-	<nat ; never ; {}>
+g390	.	root		true	false	-	Eff.withFiber	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g390	.	root		true	false	-	Eff.withFiber	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	.	root		true	false	-	Eff.withFiber	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0	true	false	-	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<unit ; never ; {}>
+g390	0.0.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0	true	false	-	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0	true	false	-	Eff.withFiber	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.0.0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<(unit | fiber<never, never>) ; never ; {}>
+g390	0.0.0.0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.0.0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.withFiber	<handle(Context.Context<unknown>) ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.1.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.1>Effs.cons.0	true	false	-	Eff.provideService	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g390	0.0.1.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.1>Effs.cons.0	true	false	-	Eff.provideService	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.1.0	Effs.cons.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.1>Effs.cons.0	true	false	-	Eff.provideService	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.1.0.0	Eff.provideService.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.1>Effs.cons.0>Eff.provideService.0	true	false	-	Eff.sync	<unit ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<handle(Context.Context<unknown>), never> ; never ; {}>
+g390	0.0.1.0.0	Eff.provideService.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.1>Effs.cons.0>Eff.provideService.0	true	false	-	Eff.sync	<unit ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g390	0.0.1.0.0	Eff.provideService.0	Eff.withFiber.0>ActionTerm.raceAll.0>Effs.cons.1>Effs.cons.0>Eff.provideService.0	true	false	-	Eff.sync	<unit ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<(unit | fiber<handle(Context.Context<unknown>), never>) ; never ; {}>
+g392	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g392	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g392	.	root		true	false	-	Eff.withFiber	<fiber<nat, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g392	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g392	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g392	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.succeed	<nat ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<nat, never> ; never ; {}>
+g396	.	root		true	false	-	Eff.withFiber	<fiber<fiber<never, never>, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<never ; never ; {}>
+g396	.	root		true	false	-	Eff.withFiber	<fiber<fiber<never, never>, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	.	root		true	false	-	Eff.withFiber	<fiber<fiber<never, never>, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.scoped	<fiber<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g396	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.scoped	<fiber<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.scoped	<fiber<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0	Eff.scoped.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0	false	false	ActionTerm.fork.0	Eff.withFiber	<fiber<never, never> ; never ; {}>	N	true	smaller	same	same	-	-	-	-	-	-	<fiber<never, never> ; never ; {}>
+g396	0.0.0	Eff.scoped.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0	false	false	ActionTerm.fork.0	Eff.withFiber	<fiber<never, never> ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0	Eff.scoped.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0	false	false	ActionTerm.fork.0	Eff.withFiber	<fiber<never, never> ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0.0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.suspend	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0.0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.suspend	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0.0.0	ActionTerm.fork.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0	false	false	ActionTerm.fork.0	Eff.suspend	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0.0.0.0	Eff.suspend.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	N	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0.0.0.0	Eff.suspend.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	Avar	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>
+g396	0.0.0.0.0.0	Eff.suspend.0	Eff.withFiber.0>ActionTerm.fork.0>Eff.scoped.0>Eff.withFiber.0>ActionTerm.fork.0>Eff.suspend.0	false	false	ActionTerm.fork.0	Eff.failCause	<never ; never ; {}>	Arow	true	same	same	same	-	-	-	-	-	-	<fiber<fiber<never, never>, never> ; never ; {}>

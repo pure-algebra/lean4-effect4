@@ -1,0 +1,247 @@
+/-
+Seat CENSUS, probe 4: the lattice of masks on two examples of the paper, and a sweep of every
+small program of the two corpora. Every mask is enumerated by brute force, and the one-step
+descent is compared with the minimal masks that the enumeration finds.
+
+The paper's page 18: `x : 1 → 1, y : 1 → 1 ⊢ if true then x else y ⇒ 1 → 1`, with four
+incomparable minimal slices. Our types have no arrow and no gap. The rendering keeps the
+example's shape: a type with two parts, each of which either branch can supply. A column is a
+union, and the two parts are two members. `x` and `y` are two sub-programs, each with one node
+for each member. The paper's page 23: a `case` whose two branches give the same type; the meet
+of the two one-branch slices loses the type.
+-/
+namespace Census.Lattice
+open Census
+
+def n (k : Nat) : Term := .lit (.nat k)
+def str (t : String) : Term := .lit (.str t)
+def yes : Term := .lit (.bool true)
+
+/-- Page 18 in the error column: each branch can fail with a number and with a text. -/
+def e18err : P :=
+  .select yes .bool (.bind (.fail (n 1)) (.fail (str "c"))) (.bind (.fail (n 2)) (.fail (str "d")))
+/-- Page 18 in the answer column: each branch can answer a number and a text. -/
+def e18ans : P :=
+  .select yes .bool (.select yes .bool (.succeed (n 1)) (.succeed (str "c")))
+    (.select yes .bool (.succeed (n 2)) (.succeed (str "d")))
+/-- Page 23 in the error column, and in the answer column. -/
+def e23err : P := .select yes .bool (.fail (str "e")) (.fail (str "e"))
+def e23ans : P := .select yes .bool (.succeed (n 1)) (.succeed (n 2))
+
+def marksOf (m : Masked) (kind : FoldKind) (k : Mask) : Marks :=
+  (m.foldedAt k).filterMap fun i =>
+    (m.sites[i]?).map fun s =>
+      (s.path, match kind with
+        | .never => "□"
+        | _ => "□:" ++ showTy ((m.answers[i]?).getD .never))
+
+def showMask (m : Masked) (kind : FoldKind) (k : Mask) : String :=
+  k.show ++ "  " ++ showProgram m.program (marksOf m kind k)
+
+/-- One descent's result: the mask, the calls of `check`, and whether the mask is minimal. -/
+structure Descent where
+  name : String
+  mask : Mask
+  calls : Nat
+  minimal : Bool
+
+/-- The brute-force account of one program, one fold kind and one query. -/
+structure Account where
+  closed : Nat
+  admitted : Nat
+  valid : Nat
+  minimal : List Mask
+  /-- Pairs `a ≤ b` with `b` admitted and `a` refused. -/
+  refusedBelow : Nat
+  /-- Pairs `a ≤ b` with `a` admitted and `b` refused: a refusal between two admitted masks. -/
+  refusedAbove : Nat
+  /-- Pairs `a ≤ b`, both admitted, with the type of `a` not below the type of `b`. -/
+  typeNotBelow : Nat
+  /-- The same pairs by column: the answer, the error, the requirement. -/
+  answerNotBelow : Nat
+  errorNotBelow : Nat
+  requiresNotBelow : Nat
+  /-- Pairs `a ≤ b` with `a` valid and `b` not valid. -/
+  validNotUp : Nat
+  descents : List Descent
+
+def account (m : Masked) (kind : FoldKind) (q : Query) : Account :=
+  let masks := m.allClosed
+  let typed := masks.map fun k => (k, m.type? kind k)
+  let valid := (typed.filter fun (kt : Mask × Option EffTy) => match kt.2 with | some t => q.holds t | none => false).map (·.1)
+  let pairs := typed.flatMap fun a => (typed.filter fun b => a.1.le b.1 && a.1 != b.1).map fun b => (a, b)
+  let count (p : (Mask × Option EffTy) × (Mask × Option EffTy) → Bool) : Nat := (pairs.filter p).length
+  let minimal := minimalAmong valid
+  let full := fullMask m.size
+  let all : Nat → Bool := fun _ => true
+  let mk (name : String) (r : Mask × Nat) : Descent := ⟨name, r.1, r.2, minimal.contains r.1⟩
+  { closed := masks.length, admitted := (typed.filter (·.2.isSome)).length, valid := valid.length, minimal,
+    refusedBelow := count fun ab => ab.2.2.isSome && ab.1.2.isNone,
+    refusedAbove := count fun ab => ab.1.2.isSome && ab.2.2.isNone,
+    typeNotBelow := count fun ab => match ab.1.2, ab.2.2 with
+      | some ta, some tb => !effLe ta tb
+      | _, _ => false,
+    answerNotBelow := count fun ab => match ab.1.2, ab.2.2 with
+      | some ta, some tb => !Ty.sub ta.answer.normalize tb.answer.normalize
+      | _, _ => false,
+    errorNotBelow := count fun ab => match ab.1.2, ab.2.2 with
+      | some ta, some tb => !Ty.sub ta.error.normalize tb.error.normalize
+      | _, _ => false,
+    requiresNotBelow := count fun ab => match ab.1.2, ab.2.2 with
+      | some ta, some tb => !ta.requires.elems.all (tb.requires.elems.contains ·)
+      | _, _ => false,
+    validNotUp := count fun ab => valid.contains ab.1.1 && !valid.contains ab.2.1,
+    descents :=
+      [ mk "from the root down, skipping under a fold" (m.descentTop kind q all full),
+        mk "from the leaves up" (m.descentUp kind q full),
+        mk "restarting (the paper's)" (m.descentFix kind q all m.size full 0),
+        mk "seat LATTICE's pass, program order" (m.sweepFrom kind q (List.range m.size)),
+        mk "seat LATTICE's pass, reverse order" (m.sweepFrom kind q (List.range m.size).reverse) ] }
+
+/-- Every list of kept sites of seat LATTICE's carrier (no closure under parents), its minimal
+slices by that note's definition: valid, and every valid slice that keeps no more keeps the
+same sites. Each as the closed mask that its type map reads. -/
+def latticeMinimals (m : Masked) (kind : FoldKind) (q : Query) : List (List Nat) :=
+  let n := m.size
+  let all := (List.range (2 ^ n)).map fun code => (List.range n).filter fun i => (code >>> i) % 2 == 1
+  let valid := all.filter fun kept => m.valid kind q (m.ofKept kept)
+  valid.filter fun k => valid.all fun j => !(j.all (k.contains ·)) || k.all (j.contains ·)
+
+def report (title : String) (e : P) (kind : FoldKind) (q : Query) : IO Unit := do
+  match prepare [] e with
+  | none => IO.println s!"{title}: not admitted"
+  | some m =>
+    let a := account m kind q
+    IO.println s!"=== {title}; fold {kind.name}; query: {q.show}"
+    IO.println s!"program: {showProgram e}   type: {showEffTy m.full}"
+    IO.println s!"addresses: {m.size}: {(m.sites.toList.map fun s => showPath s.path)}"
+    IO.println s!"closed masks {a.closed}; admitted {a.admitted}; valid {a.valid}; minimal valid masks {a.minimal.length}"
+    for k in a.minimal do
+      IO.println s!"  minimal: {showMask m kind k}   type {((m.type? kind k).map showEffTy).getD "refused"}"
+    IO.println s!"pairs a ≤ b: b admitted and a refused {a.refusedBelow}; a admitted and b refused {a.refusedAbove}; both admitted and type(a) not below type(b) {a.typeNotBelow} (answer {a.answerNotBelow}, error {a.errorNotBelow}, requirement {a.requiresNotBelow}); a valid and b not valid {a.validNotUp}"
+    -- the meet of the minimal masks, and its type
+    match a.minimal with
+    | first :: rest =>
+      let meet := rest.foldl (fun (acc : Mask) k => Array.ofFn (n := acc.size) fun i => acc.keeps i.val && k.keeps i.val) first
+      IO.println s!"the meet of the minimal masks: {showMask m kind meet}   type {((m.type? kind meet).map showEffTy).getD "refused"}   valid: {m.valid kind q meet}"
+    | [] => pure ()
+    for d in a.descents do
+      IO.println s!"descent {d.name}: {d.mask.show} kept {d.mask.kept}, {d.calls} calls of check, minimal: {d.minimal}"
+    let lm := latticeMinimals m kind q
+    IO.println s!"seat LATTICE's carrier (every list of kept sites): minimal slices {lm.length}: {lm}; each is a closed mask: {lm.all fun kept => (m.ofKept kept).kept == kept.length}; the same masks: {(lm.map fun kept => (m.ofKept kept).show) == a.minimal.map Mask.show || (lm.all fun kept => a.minimal.contains (m.ofKept kept)) && lm.length == a.minimal.length}"
+
+#eval do
+  -- page 18: the whole column is the query (the paper's `1 → 1`)
+  report "page 18, the error column" e18err .row (.errorAll (.union .nat .string))
+  report "page 18, the error column" e18err .variable (.errorAll (.union .nat .string))
+  report "page 18, the error column" e18err .never (.errorAll (.union .nat .string))
+  report "page 18, the answer column" e18ans .never (.answer (.union .nat .string))
+  report "page 18, the answer column" e18ans .row (.answer (.union .nat .string))
+  -- the refined query (the paper's `1 → □`): one member
+  report "page 18, the error column, one member" e18err .row (.error .nat)
+  -- page 23
+  report "page 23, the error column" e23err .row (.error .string)
+  report "page 23, the error column" e23err .never (.error .string)
+  report "page 23, the answer column" e23ans .never (.answer .nat)
+
+/-! ### The guards of the two examples -/
+
+def minimalOf (e : P) (kind : FoldKind) (q : Query) : List String :=
+  match prepare [] e with
+  | some m => (account m kind q).minimal.map Mask.show
+  | none => []
+
+-- page 18: four incomparable minimal masks. Addresses: 0 root, 1 x, 2 x's number, 3 x's text,
+-- 4 y, 5 y's number, 6 y's text. (A) x's number and y's text, (B) x's text and y's number,
+-- (C) x alone, (D) y alone.
+#guard (minimalOf e18err .row (.errorAll (.union .nat .string))).length = 4
+#guard minimalOf e18err .row (.errorAll (.union .nat .string)) = minimalOf e18err .never (.errorAll (.union .nat .string))
+#guard minimalOf e18err .row (.errorAll (.union .nat .string)) = minimalOf e18err .variable (.errorAll (.union .nat .string))
+#guard (minimalOf e18ans .never (.answer (.union .nat .string))).length = 4
+-- under fold A the answer is kept by assumption: the least mask folds the root
+#guard minimalOf e18ans .row (.answer (.union .nat .string)) = ["0000000"]
+-- page 23: two minimal masks, and their meet is not valid
+#guard (minimalOf e23err .row (.error .string)).length = 2
+#guard (minimalOf e23ans .never (.answer .nat)).length = 2
+-- the meet of the two keeps the root alone, and it is not valid
+#guard (prepare [] e23err).map (fun m => m.valid .row (.error .string) #[true, false, false]) = some false
+#guard (prepare [] e23err).map (fun m => m.valid .row (.error .string) #[true, true, false]) = some true
+-- red control: where both nodes are needed, the full mask is the one minimal mask
+#guard (minimalOf (.bind (.fail (n 1)) (.fail (str "c"))) .row (.errorAll (.union .nat .string))) = ["111"]
+
+/-! ### A program where the one-pass descent is not enough under fold N
+
+`bind(succeed(5), bind(Ref.make(a0), bind(Ref.set([a1, 7]), fail("E"))))`, the query "the error
+has string". Folding the first node alone is refused at the write (the cell is `Ref<never>`),
+and it is admitted once the write is folded. A pass from the first address to the last keeps
+the first node; a pass from the last to the first folds it. -/
+def call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+def cell : P :=
+  .bind (.succeed (n 5))
+    (.bind (.perform .refMake (.var 0))
+      (.bind (.perform .refSet (call "pair" [.var 1, n 7])) (.fail (str "E"))))
+#eval report "the cell, a refusal inside the lattice" cell .never (.error .string)
+#eval report "the cell, a refusal inside the lattice" cell .row (.error .string)
+
+/-! ### Fold A across a closed edge: the assumed answer is the full one
+
+`forkScoped(fail(5))` answers `Fiber<never, nat>`. The mask that folds the failing body gives
+`Fiber<never, never>`. The mask that folds the fork itself assumes the fork's full answer,
+`Fiber<never, nat>`: it keeps less and its answer is larger. The error and the requirement
+stay ordered. -/
+def forked : P := .withFiber (.forkScoped (.fail (n 5)) { startImmediately := false, daemon := true, maskMode := .inherit })
+#eval report "a fork whose body fails" forked .row (.service nativeScopeKey)
+#guard (prepare [] forked).map (fun m => (account m .row (.service nativeScopeKey)).answerNotBelow) = some 1
+#guard (prepare [] forked).map (fun m => (account m .row (.service nativeScopeKey)).errorNotBelow) = some 0
+#guard (prepare [] forked).map (fun m => (account m .row (.service nativeScopeKey)).requiresNotBelow) = some 0
+
+/-! ### The sweep: every program of the two corpora with at most twelve effect addresses -/
+
+/-- The queries of the sweep: each error member, each service, under fold N the whole answer,
+and the query that every admitted mask answers (`answer above never`), which counts the masks
+and the pairs of a program that has no other query. -/
+def queriesOf (full : EffTy) (kind : FoldKind) : List Query :=
+  (full.error.normalize.members.map Query.error) ++ (full.requires.elems.map Query.service) ++
+    (if kind == .never && full.answer.normalize != .never then [Query.answer full.answer] else []) ++
+    [Query.answer .never]
+
+def sweepHeader : String :=
+  tsv ["program", "addresses", "fold", "query", "closed", "admitted", "valid", "minimal", "refusedBelowAdmitted",
+    "refusedAboveAdmitted", "typeNotBelow", "answerNotBelow", "errorNotBelow", "requiresNotBelow", "validNotUp",
+    "topKept", "topCalls", "topMinimal", "upKept", "upCalls", "upMinimal", "fixKept", "fixCalls", "fixMinimal",
+    "sweepKept", "sweepCalls", "sweepMinimal", "sweepRevKept", "sweepRevCalls", "sweepRevMinimal"]
+
+def sweepRows (name : String) (table : RowTable) (e : P) : List String :=
+  match prepare table e with
+  | none => []
+  | some m =>
+    if m.size > 12 then []
+    else [FoldKind.row, FoldKind.never].flatMap fun kind =>
+      (queriesOf m.full kind).map fun q =>
+        let a := account m kind q
+        tsv ([name, toString m.size, kind.name, q.show, toString a.closed, toString a.admitted, toString a.valid,
+          toString a.minimal.length, toString a.refusedBelow, toString a.refusedAbove, toString a.typeNotBelow,
+          toString a.answerNotBelow, toString a.errorNotBelow, toString a.requiresNotBelow,
+          toString a.validNotUp] ++
+          a.descents.flatMap fun d => [toString d.mask.kept, toString d.calls, toString d.minimal])
+
+def runSweep (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let adm := admittedOf progs
+  IO.FS.writeFile (outDir ++ label ++ "-lattice.tsv") (sweepHeader ++ "\n")
+  let mut rows := 0
+  let mut small := 0
+  for (name, table, e, _) in adm do
+    let rs := sweepRows name table e
+    if (effectPaths e).length ≤ 12 then small := small + 1
+    appendLines (outDir ++ label ++ "-lattice.tsv") rs
+    rows := rows + rs.length
+  IO.println s!"{label}: programs with at most twelve effect addresses {small} of {adm.length}; cases {rows}"
+
+def genPrograms : List (String × RowTable × P) :=
+  (List.range 400).map fun i => (s!"g{i}", [], Test.Program.Gen.program i 4)
+def truthPrograms : List (String × RowTable × P) :=
+  OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+#eval runSweep "gen" genPrograms
+#eval runSweep "truth" truthPrograms
+
+end Census.Lattice

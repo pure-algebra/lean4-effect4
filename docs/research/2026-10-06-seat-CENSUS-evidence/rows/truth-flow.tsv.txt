@@ -1,0 +1,158 @@
+program	address	rule	columnOpen	firstClosed	inLayer	nodeType	admitted	refusal	culprit	site	kind	position	before	after
+pAwait	.	root	true	-	false	<nat ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pAwait	1	Eff.bind.1	true	-	false	<nat ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pCatch	0	Eff.catchCause.0	false	Eff.catchCause.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pFailTagged	.	root	true	-	false	<never ; ["SqlError", "boom"] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlite	.	root	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlite	0	Eff.scoped.0	true	-	false	<list<list<[string, string]>> ; [string, string] ; {k0_0}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlite	0.1	Eff.bind.1	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlite	0.1.0	Eff.bind.0	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlite	0.1.1	Eff.bind.1	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlite	0.1.1.0	Eff.bind.0	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlite	0.1.1.1	Eff.bind.1	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	.	root	true	-	false	<[option<string>, bool] ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1	Eff.bind.1	true	-	false	<[option<string>, bool] ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1.0	Eff.bind.0	true	-	false	<unit ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1.1	Eff.bind.1	true	-	false	<[option<string>, bool] ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1.1.0	Eff.bind.0	true	-	false	<option<string> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1.1.1	Eff.bind.1	true	-	false	<[option<string>, bool] ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1.1.1.0	Eff.bind.0	true	-	false	<bool ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1.1.1.1	Eff.bind.1	true	-	false	<[option<string>, bool] ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pKv	1.1.1.1.0	Eff.bind.0	true	-	false	<unit ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlFail	.	root	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlFail	0	Eff.scoped.0	true	-	false	<list<list<[string, string]>> ; [string, string] ; {k0_0}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlFail	0.1	Eff.bind.1	true	-	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlCatch	0.1.0	Eff.catchCause.0	false	Eff.catchCause.0	false	<string ; [string, string] ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pSqlCatch	0.1.0.0	Eff.bind.0	false	Eff.catchCause.0	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pSqlExit	0.1.0	Eff.exit.0	false	Eff.exit.0	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlExit	0.1.0	Eff.exit.0	false	Eff.exit.0	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	.	answer	Eff.scoped	exit<list<list<[string, string]>>, [string, string]>	exit<list<list<[string, string]>>, never>
+pSqlExit	0.1.0	Eff.exit.0	false	Eff.exit.0	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	0	answer	Eff.bind	exit<list<list<[string, string]>>, [string, string]>	exit<list<list<[string, string]>>, never>
+pSqlExit	0.1.0	Eff.exit.0	false	Eff.exit.0	false	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	0.1	answer	Eff.exit	exit<list<list<[string, string]>>, [string, string]>	exit<list<list<[string, string]>>, never>
+pSqlOrDie	0.0.0	LayerTerm.effect.0	true	-	true	<nat ; [string, string] ; {k0_0}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlOrDie	0.0.0.1	Eff.bind.1	true	-	true	<nat ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pSqlOrDie	0.0.0.1.0	Eff.bind.0	true	-	true	<list<list<[string, string]>> ; [string, string] ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pFailText	.	root	true	-	false	<never ; string ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pFailBoomText	.	root	true	-	false	<never ; string ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pTextOrDie	0.0.0	LayerTerm.effect.0	true	-	true	<nat ; string ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pTextOrDie	0.0.0.0	Eff.bind.0	true	-	true	<never ; string ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pCatchError	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pCatchError	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.catchIf	nat	never
+pCatchError	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	1	use	succeed.value	nat	never
+pCatchError	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	1	answer	Eff.succeed	nat	never
+pCatchIfHit	.	root	true	-	false	<nat ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pCatchIfHit	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pCatchIfHit	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	.	use	eq.0	nat	never
+pCatchIfHit	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.catchIf	nat	never
+pCatchIfHit	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	1	use	succeed.value	nat	never
+pCatchIfHit	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	1	answer	Eff.succeed	nat	never
+pCatchIfMiss	.	root	true	-	false	<nat ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pCatchIfMiss	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pCatchIfMiss	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	.	use	eq.0	nat	never
+pCatchIfMiss	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.catchIf	nat	never
+pCatchIfMiss	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	1	use	succeed.value	nat	never
+pCatchIfMiss	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	1	answer	Eff.succeed	nat	never
+pCatchIfRetained	1.0	Eff.catchCause.0	false	Eff.catchCause.0	false	<nat ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pCatchIfRetained	1.0.0	Eff.catchIf.0	false	Eff.catchCause.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pCatchIfRetained	1.0.0.1	Eff.bind.1	false	Eff.catchCause.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagHit	.	root	true	-	false	<nat ; (string | ["A", "m"]) ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pTagHit	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; (string | ["A", "m"]) ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagHit	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; (string | ["A", "m"]) ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	never
+pTagHit	0.0	Eff.bind.0	false	Eff.catchIf.0	false	<nat ; string ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagHit	0.0	Eff.bind.0	false	Eff.catchIf.0	false	<nat ; string ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	["A", "m"]
+pTagHit	0.0.1	Eff.select.bool.1	false	Eff.catchIf.0	false	<never ; string ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagHit	0.0.1	Eff.select.bool.1	false	Eff.catchIf.0	false	<never ; string ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	["A", "m"]
+pTagHit	0.1	Eff.bind.1	false	Eff.catchIf.0	false	<never ; ["A", "m"] ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagHit	0.1	Eff.bind.1	false	Eff.catchIf.0	false	<never ; ["A", "m"] ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	string
+pTagMiss	.	root	true	-	false	<nat ; (string | ["A", "m"]) ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pTagMiss	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; (string | ["A", "m"]) ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagMiss	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; (string | ["A", "m"]) ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	never
+pTagMiss	0.0	Eff.bind.0	false	Eff.catchIf.0	false	<nat ; string ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagMiss	0.0	Eff.bind.0	false	Eff.catchIf.0	false	<nat ; string ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	["A", "m"]
+pTagMiss	0.0.1	Eff.select.bool.1	false	Eff.catchIf.0	false	<never ; string ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagMiss	0.0.1	Eff.select.bool.1	false	Eff.catchIf.0	false	<never ; string ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	["A", "m"]
+pTagMiss	0.1	Eff.bind.1	false	Eff.catchIf.0	false	<never ; ["A", "m"] ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagMiss	0.1	Eff.bind.1	false	Eff.catchIf.0	false	<never ; ["A", "m"] ; {}>	true	-	-	.	use	tagIs.1	(string | ["A", "m"])	string
+pTagTwoFail	.	root	true	-	false	<nat ; (["A", "m"] | ["B", "x"]) ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pTagTwoFail	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; (["A", "m"] | ["B", "x"]) ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagTwoFail	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; (["A", "m"] | ["B", "x"]) ; {}>	true	-	-	.	use	tagIs.1	(["A", "m"] | ["B", "x"])	never
+pOptionSome	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	-	summary	an environment entry changes	-	-
+pOptionSome	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	0	answer	Eff.exit	exit<nat, nat>	exit<nat, never>
+pOptionSome	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	use	causeError.0	exit<nat, nat>	exit<nat, never>
+pOptionSome	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	answer	Eff.succeed	option<nat>	option<never>
+pOptionSome	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	isSome.0	option<nat>	option<never>
+pOptionSome	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	getOrElse.0	option<nat>	option<never>
+pOptionSome	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	-	summary	an environment entry changes	-	-
+pOptionSome	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	0	answer	Eff.exit	exit<nat, nat>	exit<nat, never>
+pOptionSome	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	use	causeError.0	exit<nat, nat>	exit<nat, never>
+pOptionSome	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	answer	Eff.succeed	option<nat>	option<never>
+pOptionSome	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	isSome.0	option<nat>	option<never>
+pOptionSome	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	getOrElse.0	option<nat>	option<never>
+pOptionNone	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	-	summary	an environment entry changes	-	-
+pOptionNone	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	0	answer	Eff.exit	exit<nat, nat>	exit<nat, never>
+pOptionNone	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	use	causeError.0	exit<nat, nat>	exit<nat, never>
+pOptionNone	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	answer	Eff.succeed	option<nat>	option<never>
+pOptionNone	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	isSome.0	option<nat>	option<never>
+pOptionNone	0.0	Eff.exit.0	false	Eff.exit.0	false	<nat ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	getOrElse.0	option<nat>	option<never>
+pOptionNone	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	-	summary	an environment entry changes	-	-
+pOptionNone	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	0	answer	Eff.exit	exit<nat, nat>	exit<nat, never>
+pOptionNone	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	use	causeError.0	exit<nat, nat>	exit<nat, never>
+pOptionNone	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.0	answer	Eff.succeed	option<nat>	option<never>
+pOptionNone	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	isSome.0	option<nat>	option<never>
+pOptionNone	0.0.0	Eff.select.bool.0	false	Eff.exit.0	false	<never ; nat ; {}>	false	term	getOrElse(option<never>, nat)	1.1	use	getOrElse.0	option<nat>	option<never>
+pFailPayload	.	root	true	-	false	<never ; {_tag: "NotFound", id: nat} ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pTagPayload	.	root	true	-	false	<nat ; {_tag: "NotFound", id: nat} ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pTagPayload	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; {_tag: "NotFound", id: nat} ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pTagPayload	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; {_tag: "NotFound", id: nat} ; {}>	true	-	-	.	use	tagIs.1	{_tag: "NotFound", id: nat}	never
+pInterruptEscape	0	Eff.catchIf.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pInterruptEscape	0.0	Eff.uninterruptible.0	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pInterruptEscape	0.0.0	Eff.bind.0	false	Eff.catchIf.0	false	<nat ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pInterruptEscape	0.0.0.1	Eff.bind.1	false	Eff.catchIf.0	false	<nat ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pInterruptEscape	0.0.1	Eff.bind.1	false	Eff.catchIf.0	false	<never ; nat ; {}>	true	-	-	-	summary	no environment entry changes	-	-
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	.	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	1.0	answer	Eff.exit	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	1.1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	1.1.1	use	causeIsFail.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	1.1.1	use	causeError.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0	Eff.exit.0	false	Eff.exit.0	false	<unit ; nat ; {}>	true	-	-	1.1.1	answer	Eff.succeed	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	-	summary	an environment entry changes	-	-
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	.	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	1.0	answer	Eff.exit	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	1.1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	1.1.1	use	causeIsFail.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	1.1.1	use	causeError.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0	Eff.scoped.0	false	Eff.exit.0	false	<unit ; nat ; {k0_0}>	true	-	-	1.1.1	answer	Eff.succeed	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	-	summary	an environment entry changes	-	-
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	.	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	1.0	answer	Eff.exit	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	1.1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	1.1.1	use	causeIsFail.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	1.1.1	use	causeError.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<ref<{available: list<nat>, closing: bool, items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, next: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>}> ; nat ; {k0_0}>	true	-	-	1.1.1	answer	Eff.succeed	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	-	summary	an environment entry changes	-	-
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	.	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	1.0	answer	Eff.exit	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	1.1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	1.1.1	use	causeIsFail.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	1.1.1	use	causeError.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0	Eff.bind.0	false	Eff.exit.0	false	<never ; nat ; {k0_0}>	true	-	-	1.1.1	answer	Eff.succeed	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.0	answer	Eff.exit	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1.1	use	causeIsFail.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1.1	use	causeError.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1.1	answer	Eff.succeed	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	-	summary	an environment entry changes	-	-
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	.	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.0	answer	Eff.exit	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1	answer	Eff.bind	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1.1	use	causeIsFail.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1.1	use	causeError.0	exit<unit, nat>	exit<unit, never>
+pPoolMakeFails	1.0.0.0.0.0.1.1	Eff.bind.1	false	Eff.exit.0	false	<never ; nat ; {}>	true	-	-	1.1.1	answer	Eff.succeed	tuple[bool, option<nat>, list<list<nat>>]	tuple[bool, option<never>, list<list<nat>>]

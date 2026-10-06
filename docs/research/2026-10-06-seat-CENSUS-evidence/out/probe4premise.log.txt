@@ -1,0 +1,3 @@
+gen: programs 128; closed masks 418; masks in the wider premise 382: admitted 382, with the full program's answer 382, with error and requirement no larger 382; pairs a ≤ b of them 601, with error and requirement ordered 601; masks outside the premise 36, refused 0
+truth: programs 37; closed masks 812; masks in the wider premise 651: admitted 651, with the full program's answer 651, with error and requirement no larger 651; pairs a ≤ b of them 7012, with error and requirement ordered 7012; masks outside the premise 161, refused 6
+wall=17s exit=0

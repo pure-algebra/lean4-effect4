@@ -1,0 +1,16 @@
+import Test.Counterexamples.Machine.Semantics.InterruptEscape
+import Test.Codegen.TermRows
+import Test.Program.MaskContract
+import Test.Program.QueueMask
+import Test.Program.SemaphoreScenarios
+import Test.Program.PoolPublic
+import Effect4.Api
+import Test.Program.Gen
+import TypeScript.Render
+
+/-
+Seat CENSUS: the truth lane's corpus. `harness/truth/Truth.lean` is a `--run` file and no Lake
+module, so the lines of its library half that define the corpus are taken as text
+(`sed -n '97,883p'`, at base 42492024; the file's SHA-256 is in `run.sh`), from
+`namespace OCaml5.Truth` to the end of `corpus`. Nothing of them is edited.
+-/

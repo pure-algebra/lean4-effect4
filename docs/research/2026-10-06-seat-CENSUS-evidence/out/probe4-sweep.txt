@@ -1,0 +1,88 @@
+# probe 4, the sweep: gen
+cases (program, fold, query): 454 over 128 programs
+fold Arow, every program (128): closed masks 418, admitted 418; programs with a refused mask 0; with a pair a ≤ b where b is admitted and a refused 0; where a is admitted and b refused 0
+  programs with a pair of admitted masks a ≤ b and a column of a not below b's: answer 8, error 0, requirement 0
+      g53 (9 addresses): closed 30, admitted 30, answer pairs 32
+      g120 (4 addresses): closed 5, admitted 5, answer pairs 3
+      g145 (3 addresses): closed 4, admitted 4, answer pairs 2
+      g184 (2 addresses): closed 3, admitted 3, answer pairs 1
+      g193 (3 addresses): closed 4, admitted 4, answer pairs 2
+      g223 (2 addresses): closed 3, admitted 3, answer pairs 1
+      g344 (6 addresses): closed 9, admitted 9, answer pairs 5
+      g367 (3 addresses): closed 4, admitted 4, answer pairs 2
+fold Arow: 47 cases; closed masks in all 162; admitted 162
+  cases with a refused mask (admitted < closed): 0
+  cases with a pair a ≤ b, b admitted and a refused: 0; a admitted and b refused: 0; a valid and b not valid: 0
+  cases with a pair a ≤ b, both admitted, and a column of a not below b's: answer 3, error 0, requirement 0
+      g120, requires k0_0: answer 3, error 0, requirement 0 pairs
+      g344, requires k0_0: answer 5, error 0, requirement 0 pairs
+      g367, requires k0_0: answer 2, error 0, requirement 0 pairs
+  cases by the number of minimal masks: 1: 47
+  descent from the root down, skipping under a fold:    ends at a minimal mask in 47 of 47 cases; calls of check in all: 83
+  descent from the leaves up:                           ends at a minimal mask in 47 of 47 cases; calls of check in all: 71
+  descent restarting (the paper's):                     ends at a minimal mask in 47 of 47 cases; calls of check in all: 111
+  descent seat LATTICE's pass, program order:           ends at a minimal mask in 47 of 47 cases; calls of check in all: 93
+  descent seat LATTICE's pass, reverse order:           ends at a minimal mask in 47 of 47 cases; calls of check in all: 93
+  addresses in all: 93
+fold N, every program (128): closed masks 418, admitted 418; programs with a refused mask 0; with a pair a ≤ b where b is admitted and a refused 0; where a is admitted and b refused 0
+  programs with a pair of admitted masks a ≤ b and a column of a not below b's: answer 0, error 0, requirement 0
+fold N: 151 cases; closed masks in all 530; admitted 530
+  cases with a refused mask (admitted < closed): 0
+  cases with a pair a ≤ b, b admitted and a refused: 0; a admitted and b refused: 0; a valid and b not valid: 0
+  cases with a pair a ≤ b, both admitted, and a column of a not below b's: answer 0, error 0, requirement 0
+  cases by the number of minimal masks: 1: 150, 2: 1
+  descent from the root down, skipping under a fold:    ends at a minimal mask in 151 of 151 cases; calls of check in all: 286
+  descent from the leaves up:                           ends at a minimal mask in 151 of 151 cases; calls of check in all: 205
+  descent restarting (the paper's):                     ends at a minimal mask in 151 of 151 cases; calls of check in all: 366
+  descent seat LATTICE's pass, program order:           ends at a minimal mask in 151 of 151 cases; calls of check in all: 305
+  descent seat LATTICE's pass, reverse order:           ends at a minimal mask in 151 of 151 cases; calls of check in all: 305
+  addresses in all: 305
+# probe 4, the sweep: truth
+cases (program, fold, query): 141 over 37 programs
+fold Arow, every program (37): closed masks 812, admitted 806; programs with a refused mask 2; with a pair a ≤ b where b is admitted and a refused 2; where a is admitted and b refused 2
+  programs with a pair of admitted masks a ≤ b and a column of a not below b's: answer 4, error 0, requirement 0
+      pSqlExit (7 addresses): closed 17, admitted 17, answer pairs 24
+      pCatchError (3 addresses): closed 5, admitted 5, answer pairs 2
+      pCatchIfHit (3 addresses): closed 5, admitted 5, answer pairs 2
+      pCatchIfMiss (3 addresses): closed 5, admitted 5, answer pairs 2
+      pOptionSome (8 addresses): closed 31, admitted 28, answer pairs 0
+      pOptionNone (8 addresses): closed 31, admitted 28, answer pairs 0
+fold Arow: 17 cases; closed masks in all 294; admitted 294
+  cases with a refused mask (admitted < closed): 0
+  cases with a pair a ≤ b, b admitted and a refused: 0; a admitted and b refused: 0; a valid and b not valid: 0
+  cases with a pair a ≤ b, both admitted, and a column of a not below b's: answer 2, error 0, requirement 0
+      pCatchIfHit, error has nat: answer 2, error 0, requirement 0 pairs
+      pCatchIfMiss, error has nat: answer 2, error 0, requirement 0 pairs
+  cases by the number of minimal masks: 1: 15, 3: 1, 4: 1
+  descent from the root down, skipping under a fold:    ends at a minimal mask in 17 of 17 cases; calls of check in all: 71
+  descent from the leaves up:                           ends at a minimal mask in 17 of 17 cases; calls of check in all: 53
+  descent restarting (the paper's):                     ends at a minimal mask in 17 of 17 cases; calls of check in all: 144
+  descent seat LATTICE's pass, program order:           ends at a minimal mask in 17 of 17 cases; calls of check in all: 77
+  descent seat LATTICE's pass, reverse order:           ends at a minimal mask in 17 of 17 cases; calls of check in all: 77
+  addresses in all: 77
+fold N, every program (37): closed masks 812, admitted 776; programs with a refused mask 7; with a pair a ≤ b where b is admitted and a refused 7; where a is admitted and b refused 7
+  programs with a pair of admitted masks a ≤ b and a column of a not below b's: answer 0, error 0, requirement 0
+      pFork (6 addresses): closed 13, admitted 12, answer pairs 0
+      pScope (7 addresses): closed 16, admitted 12, answer pairs 0
+      pAcquireClosed (11 addresses): closed 73, admitted 65, answer pairs 0
+      pOptionSome (8 addresses): closed 31, admitted 26, answer pairs 0
+      pOptionNone (8 addresses): closed 31, admitted 26, answer pairs 0
+      pFold (5 addresses): closed 11, admitted 8, answer pairs 0
+      pModifyFold (9 addresses): closed 47, admitted 37, answer pairs 0
+fold N: 50 cases; closed masks in all 1098; admitted 1062
+  cases with a refused mask (admitted < closed): 7
+  cases with a pair a ≤ b, b admitted and a refused: 7; a admitted and b refused: 7; a valid and b not valid: 3
+  cases with a pair a ≤ b, both admitted, and a column of a not below b's: answer 0, error 0, requirement 0
+  cases by the number of minimal masks: 1: 46, 2: 2, 3: 1, 4: 1
+  descent from the root down, skipping under a fold:    ends at a minimal mask in 47 of 50 cases; calls of check in all: 233
+      not minimal: pAcquireClosed (11 addresses), answer above nat: kept 7
+      not minimal: pOptionSome (8 addresses), answer above [bool, nat]: kept 6
+      not minimal: pOptionNone (8 addresses), answer above [bool, nat]: kept 6
+  descent from the leaves up:                           ends at a minimal mask in 50 of 50 cases; calls of check in all: 190
+  descent restarting (the paper's):                     ends at a minimal mask in 50 of 50 cases; calls of check in all: 402
+  descent seat LATTICE's pass, program order:           ends at a minimal mask in 47 of 50 cases; calls of check in all: 279
+      not minimal: pAcquireClosed (11 addresses), answer above nat: kept 7
+      not minimal: pOptionSome (8 addresses), answer above [bool, nat]: kept 6
+      not minimal: pOptionNone (8 addresses), answer above [bool, nat]: kept 6
+  descent seat LATTICE's pass, reverse order:           ends at a minimal mask in 50 of 50 cases; calls of check in all: 279
+  addresses in all: 279

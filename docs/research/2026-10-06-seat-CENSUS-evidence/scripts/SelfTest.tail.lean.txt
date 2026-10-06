@@ -1,0 +1,213 @@
+/-
+Seat CENSUS, the probe's own test: nine programs whose answers are known by hand, the three
+checks of a site against the checker, and a red control for each check.
+-/
+namespace Census.SelfTest
+open Census
+
+def sig0 : Sig := nativeSignature []
+def call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+def n (k : Nat) : Term := .lit (.nat k)
+def s (t : String) : Term := .lit (.str t)
+
+def typeOf! (e : P) : Option EffTy := (Checker.check sig0 [] [] e).toOption
+def out (full : Option EffTy) (r : Option (Except TypeRefusal EffTy)) : Option (Bool × Option Rel × Option Rel × Option Rel) :=
+  match full, r with
+  | some f, some r => let o := outcome f r; some (o.admitted, o.ans, o.err, o.req)
+  | _, _ => none
+def refusalOf (r : Option (Except TypeRefusal EffTy)) : Option (List Nat × String) :=
+  match r with
+  | some (.error r) => some (r.path, r.reason.head)
+  | _ => none
+
+/-! ### The three programs of type `never` in all three columns agree -/
+#guard typeOf! neverProgram = some ⟨.never, .never, Requirement.empty⟩
+#guard typeOf! (.withFiber (.raceAll .nil)) = some ⟨.never, .never, Requirement.empty⟩
+#guard typeOf! (.failCause (.die (n 0))) = some ⟨.never, .never, Requirement.empty⟩
+
+/-! ### T1: `bind (fail "E") (succeed 1)` — answer `nat`, error `string` -/
+def t1 : P := .bind (.fail (s "E")) (.succeed (n 1))
+#guard typeOf! t1 = some ⟨.nat, .string, Requirement.empty⟩
+#guard (sites sig0 [] t1).map (fun x => (x.path, x.rule, x.env)) =
+  [([], "root", []), ([0], "Eff.bind.0", []), ([1], "Eff.bind.1", [.never])]
+-- fold A at the failing node: the answer type `never` is assumed, the error leaves the column
+#guard out (typeOf! t1) (foldAVar sig0 [] t1 [0] .never) = some (true, some .same, some .smaller, some .same)
+#guard out (typeOf! t1) (foldARow [] [] t1 [0] .never) = some (true, some .same, some .smaller, some .same)
+#guard out (typeOf! t1) (foldN sig0 [] t1 [0]) = some (true, some .same, some .smaller, some .same)
+-- fold A at the answering node keeps both columns; fold N lowers the answer alone
+#guard out (typeOf! t1) (foldAVar sig0 [] t1 [1] .nat) = some (true, some .same, some .same, some .same)
+#guard out (typeOf! t1) (foldN sig0 [] t1 [1]) = some (true, some .smaller, some .same, some .same)
+-- the root
+#guard out (typeOf! t1) (foldAVar sig0 [] t1 [] .nat) = some (true, some .same, some .smaller, some .same)
+#guard out (typeOf! t1) (foldN sig0 [] t1 []) = some (true, some .smaller, some .smaller, some .same)
+
+/-! ### T2: the plan's cell, with the cell's content bound first
+
+`bind (succeed 5) (bind (Ref.make a0) (Ref.set [a1, 7]))`. Fold N at the first node gives the
+content the type `never`, the cell is `Ref<never>`, and the write is refused at its own node
+(the plan's section 4.3). Fold A keeps the content at `nat` and changes nothing. Fold N at the
+`Ref.make` node gives the variable `a1` the type `never`, which is below `Ref<nat>`: admitted. -/
+def t2 : P :=
+  .bind (.succeed (n 5))
+    (.bind (.perform .refMake (.var 0)) (.perform .refSet (call "pair" [.var 1, n 7])))
+#guard typeOf! t2 = some ⟨.refOf .nat, .never, Requirement.empty⟩
+#guard refusalOf (foldN sig0 [] t2 [0]) = some ([1, 1], "requestNotSubtype")
+#guard out (typeOf! t2) (foldAVar sig0 [] t2 [0] .nat) = some (true, some .same, some .same, some .same)
+#guard out (typeOf! t2) (foldN sig0 [] t2 [1, 0]) = some (true, some .same, some .same, some .same)
+#guard out (typeOf! t2) (foldN sig0 [] t2 [1, 1]) = some (true, some .smaller, some .same, some .same)
+
+/-! ### T3: a caught body whose error flows into a value
+
+`catchCause (fail 7) (succeed (getOrElse(causeError(a0), 9)))`. Either fold of the body gives
+the handler a `Cause<never>`, `causeError` answers `Option<never>`, and `getOrElse` binds its
+parameter to `never` at the first argument: the default `9` is then refused. -/
+def t3 : P :=
+  .catchCause (.fail (n 7)) (.succeed (call "getOrElse" [call "causeError" [.var 0], n 9]))
+#guard typeOf! t3 = some ⟨.nat, .never, Requirement.empty⟩
+#guard (sites sig0 [] t3).map (fun x => (x.path, x.rule, x.env, x.columnOpen)) =
+  [([], "root", [], true), ([0], "Eff.catchCause.0", [], false),
+   ([1], "Eff.catchCause.1", [.causeOf .nat], true)]
+#guard refusalOf (foldAVar sig0 [] t3 [0] .never) = some ([1], "term")
+#guard refusalOf (foldN sig0 [] t3 [0]) = some ([1], "term")
+#guard out (typeOf! t3) (foldAVar sig0 [] t3 [1] .nat) = some (true, some .same, some .same, some .same)
+
+/-! ### T4: an address under a layer: the variable form does not reach it, the row form does -/
+def kA : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+def t4 : P := .provideLayer (.effect kA (.bind (.fail (s "lost")) (.succeed (n 1)))) false (.service kA)
+#guard typeOf! t4 = some ⟨.nat, .string, Requirement.empty⟩
+#guard (sites sig0 [] t4).map (fun x => (x.path, x.rule, x.inLayer)) =
+  [([], "root", false), ([0, 0], "LayerTerm.effect.0", true), ([0, 0, 0], "Eff.bind.0", true),
+   ([0, 0, 1], "Eff.bind.1", true), ([1], "Eff.provideLayer.1", false)]
+#guard refusalOf (foldAVar sig0 [] t4 [0, 0, 0] .never) = some ([0, 0, 0], "term")
+#guard out (typeOf! t4) (foldARow [] [] t4 [0, 0, 0] .never) = some (true, some .same, some .smaller, some .same)
+#guard out (typeOf! t4) (foldN sig0 [] t4 [0, 0, 0]) = some (true, some .same, some .smaller, some .same)
+
+/-! ### The site walk agrees with the tree's path fold, and every site passes the three checks -/
+def wellFormed (e : P) : Bool :=
+  let ss := sites sig0 [] e
+  ss.map (·.path) == effectPaths e && ss.all (fun x => !x.anomaly) &&
+    ss.all fun x =>
+      match x.type sig0 with
+      | .ok t => levelOk sig0 [] e x && entriesOk sig0 [] e x && answerOk sig0 [] e x t.answer
+      | .error _ => false
+#guard [t1, t2, t3, t4].all wellFormed
+
+/-! ### Red controls: each check refuses a wrong site -/
+-- a site with one entry too many, and one with one entry too few
+#guard !levelOk sig0 [] t1 ⟨[1], .succeed (n 1), [.never, .nat], [], false⟩
+#guard !levelOk sig0 [] t1 ⟨[1], .succeed (n 1), [], [], false⟩
+#guard levelOk sig0 [] t1 ⟨[1], .succeed (n 1), [.never], [], false⟩
+-- the two halves that the census runs: the upper half refuses a level too small, and the answer
+-- probe refuses a level too large
+#guard !levelUpperOk sig0 [] t1 ⟨[1], .succeed (n 1), [], [], false⟩
+#guard levelUpperOk sig0 [] t1 ⟨[1], .succeed (n 1), [.never], [], false⟩
+#guard levelUpperOk sig0 [] t1 ⟨[1], .succeed (n 1), [.never, .nat], [], false⟩
+#guard !answerOk sig0 [] t1 ⟨[1], .succeed (n 1), [.never, .nat], [], false⟩ .nat
+#guard answerOk sig0 [] t1 ⟨[1], .succeed (n 1), [.never], [], false⟩ .nat
+-- a site with a wrong entry
+#guard !entriesOk sig0 [] t1 ⟨[1], .succeed (n 1), [.nat], [], false⟩
+#guard entriesOk sig0 [] t3 ⟨[1], .succeed (n 1), [.causeOf .nat], [], false⟩
+#guard !entriesOk sig0 [] t3 ⟨[1], .succeed (n 1), [.causeOf .never], [], false⟩
+-- a wrong answer type
+#guard answerOk sig0 [] t1 ⟨[0], .fail (s "E"), [], [], false⟩ .never
+#guard !answerOk sig0 [] t1 ⟨[0], .fail (s "E"), [], [], false⟩ .string
+-- the entry probe at the type `Ty.context`, which the context probe admits
+def t5 : P := .bind (.withFiber .getContext) (.succeed (.var 0))
+#guard wellFormed t5
+#guard !entriesOk sig0 [] t5 ⟨[1], .succeed (.var 0), [.nat], [], false⟩
+-- the comparison of columns
+#guard relTy .never .nat = .smaller
+#guard relTy (.union .nat .string) .nat = .larger
+#guard relTy .nat .string = .unrelated
+#guard relTy (.union .nat .string) (.union .string .nat) = .sameNormal
+#guard relTy .nat .nat = .same
+#guard relReq (Requirement.single kA) Requirement.empty = .larger
+#guard relReq Requirement.empty (Requirement.single kA) = .smaller
+
+/-! ### The second walk of the environments agrees with the first -/
+#guard [t1, t2, t3, t4, t5].all (envAtAgrees sig0 [])
+-- a generator's statements and a loop: the walk through the other sorts
+def t6 : P :=
+  .gen (.cons (.bindYield (.succeed (n 3)))
+    (.cons (.whileTrue (.cons (.yieldDiscard (.succeed (.var 0))) (.cons .breakLoop .nil)))
+      (.cons (.ret (.var 0)) .nil)))
+#guard typeOf! t6 = some ⟨.nat, .never, Requirement.empty⟩
+#guard wellFormed t6 && envAtAgrees sig0 [] t6
+-- red control: a wrong environment at the second statement is seen
+#guard (envAt sig0 [] false [] (.eff t6) [0, 1, 0, 0, 0, 0]).map (·.2) = some [.nat]
+#guard (envAt sig0 [] false [] (.eff t6) [0, 0, 0]).map (·.2) = some []
+
+/-! ### The innermost part of a refused term -/
+def blameOf (f : Option Folded) : Option String :=
+  f.bind fun f => match f.result with
+    | .error r => some (blame (nativeSignature f.table) f.rootEnv f.program r)
+    | .ok _ => none
+#guard blameOf (foldedN [] [] t3 [0]) = some "getOrElse(option<never>, nat)"
+#guard blameOf (foldedAVar [] [] t3 [0] .never) = some "getOrElse(option<never>, nat)"
+#guard blameOf (foldedN [] [] t2 [0]) =
+  some "requestNotSubtype refSet request=[ref<never>, nat] expected=[ref<'0>, '0]"
+#guard blameOf (foldedN [] [] t1 [0]) = none
+-- a fiber that is folded: the join's own rule, with no term below it
+def t7 : P := .bind (.withFiber (.fork (.succeed (n 7)) { startImmediately := false, daemon := false, maskMode := .inherit }))
+  (.awaitFiber (.var 0) .joinEffect)
+#guard blameOf (foldedN [] [] t7 [0]) = some "notFiber never"
+-- a cursor that takes the initial value's type
+def t8 : P := .bind (.succeed (n 0))
+  (.iterate none (.var 0) (call "lt" [.var 1, n 3]) (call "succ" [.var 1]) (.var 1) (.succeed (.lit .unit)))
+#guard typeOf! t8 = some ⟨.nat, .never, Requirement.empty⟩
+#guard blameOf (foldedN [] [] t8 [0]) = some "stepNotCursor step=nat cursor=never"
+-- a list fold whose list is folded, and one whose initial value is
+def t9 : P := .bind (.succeed (call "cons" [n 1, call "nil" []]))
+  (.succeed (.fold none (.var 0) (n 0) (call "add" [.var 1, .var 2])))
+#guard blameOf (foldedN [] [] t9 [0]) = some "fold: the list is never"
+
+/-! ### The term addresses -/
+#guard (termParts "r" (call "add" [.var 0, n 1])).map (fun q => (q.path, q.role, termHead q.part)) =
+  [([], "r", "app:add"), ([0], "add.0", "var"), ([1], "add.1", "lit.nat")]
+#guard ((termParts "r" (call "add" [.var 0, n 1])).map fun q => showTerm (q.rebuild neverTerm)) =
+  ["census.never()", "add(census.never(), 1)", "add(a0, census.never())"]
+#guard (termSlots (.perform (.refModifyWith (.var 3)) (.var 1))).map (·.name) =
+  ["perform(refModifyWith).request", "perform(refModifyWith).binder"]
+#guard termTy (sigWithNever []) [] neverTerm = some .never
+#guard termTy sig0 [] neverTerm = none
+-- the plan's example at its own address: the argument of `Ref.make` folded, the write refused;
+-- so is the write when the bound content `5` is folded. The whole request of `Ref.set` folded is
+-- admitted, and the row answers `Ref<never>` at its unbound parameter: an answer that is not
+-- below `Ref<nat>`, with no refusal.
+def termRefusals (e : P) : List (String × String × String × String) :=
+  (termCensus "t" [] e ((typeOf! e).getD ⟨.never, .never, Requirement.empty⟩)).filterMap fun row =>
+    match row.splitOn "\t" with
+    | _ :: address :: slot :: _ :: _ :: _ :: admitted :: _ :: _ :: _ :: refusal :: rpath :: _ =>
+      if admitted == "false" then some (address, slot, refusal, rpath) else none
+    | _ => none
+#guard termRefusals t2 = [("0", "succeed.value", "requestNotSubtype", "1.1"),
+  ("1.0", "perform(refMake).request", "requestNotSubtype", "1.1")]
+#guard (Checker.check (sigWithNever []) [] []
+    (.bind (.succeed (n 5)) (.bind (.perform .refMake (.var 0)) (.perform .refSet neverTerm)))).toOption =
+  some ⟨.refOf .never, .never, Requirement.empty⟩
+#guard relTy (.refOf .never) (.refOf .nat) = .unrelated
+#guard termAddressCount [] t2 = 5
+
+#eval IO.println "self-test: every guard above holds"
+#eval IO.println (showProgram t3 [([0], "□:never")])
+#eval IO.println ("\n".intercalate (censusProgram "t3" [] t3 ((typeOf! t3).getD ⟨.never, .never, Requirement.empty⟩)))
+-- the row's own type: the variable form's where the answer is normal, its normal form otherwise
+#guard rowLocal [] .nat = "same"
+-- the five changes of the normaliser: a union's members are sorted; a member below another is
+-- absorbed; a product over a union is distributed; a tuple of two is a product; a record's
+-- fields take the canonical order; a reference with no argument is a handle
+#guard rowLocal [] (.union .string .nat) = "normalized"
+#guard rowLocal [] (.union .string (.lit "a")) = "normalized"
+#guard rowLocal [] (.prod (.union .nat .string) .bool) = "normalized"
+#guard rowLocal [] (.tuple [.nat, .nat]) = "normalized"
+#guard rowLocal [] (.record [("b", false, .nat), ("a", false, .nat)]) = "normalized"
+#guard rowLocal [] (.app "X" []) = "normalized"
+-- the formation of the row's columns: a map with a key that is no string and a deferred with an
+-- error outside the error alphabet refuse the assumed row
+#guard rowLocal [] (.map .nat .nat) = "refused instantiatedFormation assume"
+#guard rowLocal [] (.deferredOf .nat .bool) = "refused instantiatedFormation assume"
+-- a repeated field does not: the signature normalizes the row first, and one field stays
+#guard rowLocal [] (.record [("a", false, .nat), ("a", false, .string)]) = "normalized"
+#guard Ty.normalize (.record [("a", false, .nat), ("a", false, .string)]) = .record [("a", false, .nat)]
+
+end Census.SelfTest

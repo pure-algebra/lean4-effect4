@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Seat CENSUS: put the generated tables (tables/receipt-tables.md) into the receipt's template.
+
+    buildreceipt.py <destination> [name=value ...]
+
+A marker `@@name@@` of the template is a chunk of the tables file, or a value of the command
+line (the count of the filed texts, the count of `verify.py`'s checks)."""
+import os, re, sys
+S = os.path.dirname(os.path.abspath(__file__))
+chunks, name = {}, None
+for line in open(os.path.join(S, 'tables', 'receipt-tables.md')):
+    m = re.match(r'<!-- chunk: (.*) -->', line)
+    if m: name = m.group(1); chunks[name] = []
+    elif name: chunks[name].append(line)
+values = dict(a.split('=', 1) for a in sys.argv[2:])
+used = set()
+text = open(os.path.join(S, 'receipt.template.md')).read()
+def fill(m):
+    key = m.group(1)
+    used.add(key)
+    if key in values: return values[key]
+    return ''.join(chunks[key]).strip('\n')
+text = re.sub(r'@@([a-z0-9-]+)@@', fill, text)
+open(sys.argv[1], 'w').write(text)
+print('markers filled:', sorted(used))
+print('chunks not used:', sorted(set(chunks) - used))

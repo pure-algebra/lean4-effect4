@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Seat CENSUS: two extracts of the row files that are too large to file.
+
+    out/truth-folds-refused.tsv          every refused fold of the truth lane's effect census, whole rows
+    out/truth-terms-refused-counts.tsv   the refused folds of its term census, counted by program, position and rule
+
+The rule of a refused fold is `family` of `mdtables.py`: the two scripts hold one definition."""
+import collections, csv, os
+S = os.path.dirname(os.path.abspath(__file__))
+def rows_of(name): return list(csv.reader(open(os.path.join(S, 'out', name), newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+src = open(os.path.join(S, 'mdtables.py')).read()
+exec(src[src.index('def family(r):'):src.index("chunk('repair')")])
+
+rows = rows_of('truth-folds.tsv')
+admitted = rows[0].index('admitted')
+with open(os.path.join(S, 'out', 'truth-folds-refused.tsv'), 'w') as out:
+    for r in rows[:1] + [r for r in rows[1:] if r[admitted] != 'true']: out.write('\t'.join(r) + '\n')
+
+rows = rows_of('truth-terms.tsv')
+terms = [dict(zip(rows[0], r)) for r in rows[1:]]
+counts = collections.Counter((r['program'], r['role'], family(r)[0]) for r in terms if r['admitted'] != 'true')
+with open(os.path.join(S, 'out', 'truth-terms-refused-counts.tsv'), 'w') as out:
+    out.write('program\tposition\trule\trefused folds\n')
+    for (program, role, rule), n in sorted(counts.items()): out.write('%s\t%s\t%s\t%d\n' % (program, role, rule, n))
+print('refused folds of the effect census: %d rows; refused folds of the term census: %d, in %d lines of counts'
+      % (sum(1 for r in rows_of('truth-folds-refused.tsv')[1:]), sum(counts.values()), len(counts)))

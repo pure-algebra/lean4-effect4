@@ -1,0 +1,10 @@
+/-
+Seat CENSUS, probe 1: the term addresses of the truth lane under fold N (an assumed nullary
+atom of type `never`).
+-/
+namespace Census
+def truthPrograms : List (String × RowTable × P) :=
+  OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+#guard truthPrograms.length = 73
+#eval runTermCorpus "truth" truthPrograms
+end Census

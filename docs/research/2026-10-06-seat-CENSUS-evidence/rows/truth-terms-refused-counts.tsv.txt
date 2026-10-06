@@ -1,0 +1,796 @@
+program	position	rule	refused folds
+pAcquire	perform(refMake).request	a cell's content (invariance)	1
+pAcquireClosed	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pAcquireClosed	perform(refMake).request	a cell's content (invariance)	1
+pCatchError	catchIf.test	a handler's test	1
+pCatchIfHit	catchIf.test	a handler's test	1
+pCatchIfMiss	catchIf.test	a handler's test	1
+pCatchIfRetained	catchIf.test	a handler's test	1
+pCatchIfRetained	perform(refMake).request	a cell's content (invariance)	1
+pDeferredGate	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pDiamond	perform(refMake).request	a cell's content (invariance)	1
+pFailTagged	pair.0	a typed failure with a part at `never`	1
+pFailTagged	pair.1	a typed failure with a part at `never`	1
+pFold	fold.init	a list fold's accumulator with no stated type	2
+pFold	fold.list	a list fold's list	2
+pFold	succeed.value	a list fold's accumulator with no stated type	1
+pFold	succeed.value	a list fold's list	1
+pFork	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pGen	gen.if.test	a statement's test	1
+pInterruptEscape	catchIf.test	a handler's test	1
+pInterruptedWait	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pInterruptedWait	causeIsInterrupt.0	the cause atoms	1
+pInterruptedWait	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pInterruptedWait	perform(refMake).request	a cell's content (invariance)	1
+pLateSeen	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pLateSeen	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pLoop	iterate.initial	a loop's cursor with no stated type	1
+pLoop	iterate.test	a loop's test	1
+pLoop	perform(refMake).request	a cell's content (invariance)	1
+pMaskWait	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pMaskWait	causeIsInterrupt.0	the cause atoms	1
+pMaskWait	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pMaskWait	perform(refMake).request	a cell's content (invariance)	1
+pMaskWait	restore.saved	a restore site	1
+pMaskedRestore	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	2
+pMaskedRestore	causeIsInterrupt.0	the cause atoms	1
+pMaskedRestore	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pMaskedRestore	perform(refMake).request	a cell's content (invariance)	1
+pMaskedRestore	restore.saved	a restore site	1
+pMergeAll	perform(refMake).request	a cell's content (invariance)	1
+pModifyFold	fold.init	a list fold's accumulator with no stated type	1
+pModifyFold	fold.list	a list fold's list	1
+pModifyFold	perform(refMake).request	a list fold's accumulator with no stated type	1
+pModifyFold	perform(refModifyWith).request	a list fold's accumulator with no stated type	1
+pOptionNone	causeError.0	the cause atoms	1
+pOptionNone	fail.error	`getOrElse`	1
+pOptionNone	select.bool.scrutinee	a Boolean decision	1
+pOptionSome	causeError.0	the cause atoms	1
+pOptionSome	fail.error	`getOrElse`	1
+pOptionSome	select.bool.scrutinee	a Boolean decision	1
+pPoolCloseWaits	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	3
+pPoolCloseWaits	causeIsInterrupt.0	the cause atoms	5
+pPoolCloseWaits	cons.0	a cell's content (invariance)	2
+pPoolCloseWaits	cons.0	a list fold's accumulator with no stated type	4
+pPoolCloseWaits	failCause.interruptor	a cause's interruptor	2
+pPoolCloseWaits	field.target	`sameHandle`	11
+pPoolCloseWaits	field.target	a list fold's accumulator with no stated type	17
+pPoolCloseWaits	field.target	a list fold's list	24
+pPoolCloseWaits	fold.init	a list fold's accumulator with no stated type	28
+pPoolCloseWaits	fold.list	a list fold's list	28
+pPoolCloseWaits	iterate.initial	a loop's cursor with no stated type	3
+pPoolCloseWaits	iterate.result	a decision by an option	3
+pPoolCloseWaits	iterate.test	a loop's test	6
+pPoolCloseWaits	perform(refGet).request	a list fold's list	2
+pPoolCloseWaits	perform(refMake).request	a cell's content (invariance)	2
+pPoolCloseWaits	perform(refMake).request	a list fold's list	1
+pPoolCloseWaits	perform(refModifyWith).binder	a Boolean decision	3
+pPoolCloseWaits	perform(refModifyWith).request	a list fold's list	8
+pPoolCloseWaits	restore.saved	a restore site	5
+pPoolCloseWaits	sameHandle.0	`sameHandle`	11
+pPoolCloseWaits	sameHandle.1	`sameHandle`	11
+pPoolCloseWaits	select.bool.scrutinee	a Boolean decision	9
+pPoolCloseWaits	select.option.scrutinee	a decision by an option	8
+pPoolCloseWaits	succeed.value	a decision by an option	2
+pPoolCloseWaits	succeed.value	a fiber (`join`, `await`, `interrupt`)	1
+pPoolCloseWaits	succeed.value	a list fold's list	1
+pPoolCloseWaits	take.0	a cell's content (invariance)	1
+pPoolCloseWaits	take.0	a list fold's accumulator with no stated type	21
+pPoolCloseWaits	tuple.1	a fiber (`join`, `await`, `interrupt`)	1
+pPoolCloseWaits	tuple.2	a fiber (`join`, `await`, `interrupt`)	1
+pPoolCloseWaits	tuple.3	a list fold's list	1
+pPoolCloseWaits	tupleAt.target	a Boolean decision	2
+pPoolCloseWaits	tupleAt.target	a fiber (`join`, `await`, `interrupt`)	2
+pPoolCloseWaits	tupleAt.target	a list fold's list	1
+pPoolClosed	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pPoolClosed	causeIsInterrupt.0	the cause atoms	2
+pPoolClosed	cons.0	a cell's content (invariance)	2
+pPoolClosed	cons.0	a list fold's accumulator with no stated type	2
+pPoolClosed	failCause.interruptor	a cause's interruptor	1
+pPoolClosed	field.target	`sameHandle`	7
+pPoolClosed	field.target	a list fold's accumulator with no stated type	10
+pPoolClosed	field.target	a list fold's list	14
+pPoolClosed	fold.init	a list fold's accumulator with no stated type	16
+pPoolClosed	fold.list	a list fold's list	16
+pPoolClosed	iterate.initial	a loop's cursor with no stated type	2
+pPoolClosed	iterate.result	a decision by an option	2
+pPoolClosed	iterate.test	a loop's test	4
+pPoolClosed	perform(refGet).request	a list fold's list	1
+pPoolClosed	perform(refMake).request	a cell's content (invariance)	2
+pPoolClosed	perform(refMake).request	a list fold's list	1
+pPoolClosed	perform(refModifyWith).binder	a Boolean decision	2
+pPoolClosed	perform(refModifyWith).request	a list fold's list	5
+pPoolClosed	restore.saved	a restore site	3
+pPoolClosed	sameHandle.0	`sameHandle`	7
+pPoolClosed	sameHandle.1	`sameHandle`	7
+pPoolClosed	select.bool.scrutinee	a Boolean decision	6
+pPoolClosed	select.option.scrutinee	a decision by an option	5
+pPoolClosed	succeed.value	a decision by an option	1
+pPoolClosed	succeed.value	a list fold's list	1
+pPoolClosed	take.0	a cell's content (invariance)	1
+pPoolClosed	take.0	a list fold's accumulator with no stated type	12
+pPoolClosed	tupleAt.target	a Boolean decision	1
+pPoolClosing	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	4
+pPoolClosing	causeIsInterrupt.0	the cause atoms	5
+pPoolClosing	cons.0	a cell's content (invariance)	5
+pPoolClosing	cons.0	a list fold's accumulator with no stated type	6
+pPoolClosing	failCause.interruptor	a cause's interruptor	3
+pPoolClosing	field.target	`sameHandle`	15
+pPoolClosing	field.target	a list fold's accumulator with no stated type	24
+pPoolClosing	field.target	a list fold's list	34
+pPoolClosing	fold.init	a list fold's accumulator with no stated type	40
+pPoolClosing	fold.list	a list fold's list	40
+pPoolClosing	iterate.initial	a loop's cursor with no stated type	4
+pPoolClosing	iterate.result	a decision by an option	4
+pPoolClosing	iterate.test	a loop's test	8
+pPoolClosing	perform(refGet).request	a list fold's list	3
+pPoolClosing	perform(refMake).request	a cell's content (invariance)	3
+pPoolClosing	perform(refMake).request	a list fold's list	1
+pPoolClosing	perform(refModifyWith).binder	a Boolean decision	4
+pPoolClosing	perform(refModifyWith).request	a list fold's list	11
+pPoolClosing	restore.saved	a restore site	7
+pPoolClosing	sameHandle.0	`sameHandle`	15
+pPoolClosing	sameHandle.1	`sameHandle`	15
+pPoolClosing	select.bool.scrutinee	a Boolean decision	12
+pPoolClosing	select.option.scrutinee	a decision by an option	11
+pPoolClosing	succeed.value	a decision by an option	3
+pPoolClosing	succeed.value	a fiber (`join`, `await`, `interrupt`)	1
+pPoolClosing	succeed.value	a list fold's list	1
+pPoolClosing	take.0	a cell's content (invariance)	4
+pPoolClosing	take.0	a list fold's accumulator with no stated type	30
+pPoolClosing	tuple.0	a cell's content (invariance)	1
+pPoolClosing	tuple.1	a cell's content (invariance)	1
+pPoolClosing	tuple.1	a fiber (`join`, `await`, `interrupt`)	1
+pPoolClosing	tuple.2	a cell's content (invariance)	1
+pPoolClosing	tuple.2	a fiber (`join`, `await`, `interrupt`)	1
+pPoolClosing	tuple.3	a cell's content (invariance)	1
+pPoolClosing	tuple.3	a list fold's list	1
+pPoolClosing	tuple.4	a cell's content (invariance)	1
+pPoolClosing	tuple.5	a cell's content (invariance)	1
+pPoolClosing	tupleAt.target	a Boolean decision	3
+pPoolClosing	tupleAt.target	a fiber (`join`, `await`, `interrupt`)	2
+pPoolClosing	tupleAt.target	a list fold's list	1
+pPoolLateWake	causeIsInterrupt.0	the cause atoms	4
+pPoolLateWake	cons.0	a cell's content (invariance)	2
+pPoolLateWake	cons.0	a list fold's accumulator with no stated type	8
+pPoolLateWake	failCause.interruptor	a cause's interruptor	3
+pPoolLateWake	field.target	`sameHandle`	15
+pPoolLateWake	field.target	a list fold's accumulator with no stated type	24
+pPoolLateWake	field.target	a list fold's list	36
+pPoolLateWake	fold.init	a list fold's accumulator with no stated type	42
+pPoolLateWake	fold.list	a list fold's list	42
+pPoolLateWake	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pPoolLateWake	iterate.initial	a loop's cursor with no stated type	5
+pPoolLateWake	iterate.result	a decision by an option	4
+pPoolLateWake	iterate.test	a loop's test	9
+pPoolLateWake	perform(refGet).request	a list fold's list	4
+pPoolLateWake	perform(refMake).request	a cell's content (invariance)	2
+pPoolLateWake	perform(refMake).request	a list fold's list	1
+pPoolLateWake	perform(refModifyWith).binder	a Boolean decision	4
+pPoolLateWake	perform(refModifyWith).request	a list fold's list	11
+pPoolLateWake	restore.saved	a restore site	7
+pPoolLateWake	sameHandle.0	`sameHandle`	15
+pPoolLateWake	sameHandle.1	`sameHandle`	15
+pPoolLateWake	select.bool.scrutinee	a Boolean decision	12
+pPoolLateWake	select.option.scrutinee	a decision by an option	11
+pPoolLateWake	succeed.value	a decision by an option	3
+pPoolLateWake	succeed.value	a list fold's list	1
+pPoolLateWake	take.0	a cell's content (invariance)	1
+pPoolLateWake	take.0	a list fold's accumulator with no stated type	32
+pPoolLateWake	tupleAt.target	a Boolean decision	3
+pPoolMakeFails	causeError.0	the cause atoms	1
+pPoolMakeFails	causeIsFail.0	the cause atoms	1
+pPoolMakeFails	causeIsInterrupt.0	the cause atoms	2
+pPoolMakeFails	cons.0	a cell's content (invariance)	2
+pPoolMakeFails	failCause.interruptor	a cause's interruptor	1
+pPoolMakeFails	field.target	`sameHandle`	7
+pPoolMakeFails	field.target	a list fold's accumulator with no stated type	10
+pPoolMakeFails	field.target	a list fold's list	12
+pPoolMakeFails	fold.init	a list fold's accumulator with no stated type	14
+pPoolMakeFails	fold.list	a list fold's list	14
+pPoolMakeFails	iterate.initial	a loop's cursor with no stated type	2
+pPoolMakeFails	iterate.result	a decision by an option	2
+pPoolMakeFails	iterate.test	a loop's test	4
+pPoolMakeFails	perform(refMake).request	a cell's content (invariance)	1
+pPoolMakeFails	perform(refMake).request	a list fold's list	1
+pPoolMakeFails	perform(refModifyWith).binder	a Boolean decision	2
+pPoolMakeFails	perform(refModifyWith).request	a list fold's list	5
+pPoolMakeFails	restore.saved	a restore site	3
+pPoolMakeFails	sameHandle.0	`sameHandle`	7
+pPoolMakeFails	sameHandle.1	`sameHandle`	7
+pPoolMakeFails	select.bool.scrutinee	a Boolean decision	6
+pPoolMakeFails	select.option.scrutinee	a decision by an option	5
+pPoolMakeFails	succeed.value	a decision by an option	1
+pPoolMakeFails	succeed.value	a list fold's list	1
+pPoolMakeFails	take.0	a cell's content (invariance)	1
+pPoolMakeFails	take.0	a list fold's accumulator with no stated type	10
+pPoolMakeFails	tupleAt.target	a Boolean decision	1
+pPoolOrder	causeIsInterrupt.0	the cause atoms	5
+pPoolOrder	cons.0	a cell's content (invariance)	2
+pPoolOrder	cons.0	a list fold's accumulator with no stated type	4
+pPoolOrder	failCause.interruptor	a cause's interruptor	4
+pPoolOrder	field.target	`sameHandle`	19
+pPoolOrder	field.target	a list fold's accumulator with no stated type	31
+pPoolOrder	field.target	a list fold's list	40
+pPoolOrder	fold.init	a list fold's accumulator with no stated type	48
+pPoolOrder	fold.list	a list fold's list	48
+pPoolOrder	iterate.initial	a loop's cursor with no stated type	5
+pPoolOrder	iterate.result	a decision by an option	5
+pPoolOrder	iterate.test	a loop's test	10
+pPoolOrder	perform(refGet).request	a list fold's list	2
+pPoolOrder	perform(refMake).request	a cell's content (invariance)	2
+pPoolOrder	perform(refMake).request	a list fold's list	1
+pPoolOrder	perform(refModifyWith).binder	a Boolean decision	5
+pPoolOrder	perform(refModifyWith).request	a list fold's list	14
+pPoolOrder	restore.saved	a restore site	9
+pPoolOrder	sameHandle.0	`sameHandle`	19
+pPoolOrder	sameHandle.1	`sameHandle`	19
+pPoolOrder	select.bool.scrutinee	a Boolean decision	15
+pPoolOrder	select.option.scrutinee	a decision by an option	14
+pPoolOrder	succeed.value	a decision by an option	4
+pPoolOrder	succeed.value	a list fold's list	1
+pPoolOrder	take.0	a cell's content (invariance)	1
+pPoolOrder	take.0	a list fold's accumulator with no stated type	35
+pPoolOrder	tupleAt.target	a Boolean decision	4
+pPoolReuse	causeIsInterrupt.0	the cause atoms	3
+pPoolReuse	cons.0	a cell's content (invariance)	2
+pPoolReuse	cons.0	a list fold's accumulator with no stated type	2
+pPoolReuse	failCause.interruptor	a cause's interruptor	2
+pPoolReuse	field.target	`sameHandle`	11
+pPoolReuse	field.target	a list fold's accumulator with no stated type	17
+pPoolReuse	field.target	a list fold's list	22
+pPoolReuse	fold.init	a list fold's accumulator with no stated type	26
+pPoolReuse	fold.list	a list fold's list	26
+pPoolReuse	iterate.initial	a loop's cursor with no stated type	3
+pPoolReuse	iterate.result	a decision by an option	3
+pPoolReuse	iterate.test	a loop's test	6
+pPoolReuse	perform(refGet).request	a list fold's list	1
+pPoolReuse	perform(refMake).request	a cell's content (invariance)	2
+pPoolReuse	perform(refMake).request	a list fold's list	1
+pPoolReuse	perform(refModifyWith).binder	a Boolean decision	3
+pPoolReuse	perform(refModifyWith).request	a list fold's list	8
+pPoolReuse	restore.saved	a restore site	5
+pPoolReuse	sameHandle.0	`sameHandle`	11
+pPoolReuse	sameHandle.1	`sameHandle`	11
+pPoolReuse	select.bool.scrutinee	a Boolean decision	9
+pPoolReuse	select.option.scrutinee	a decision by an option	8
+pPoolReuse	succeed.value	a decision by an option	2
+pPoolReuse	succeed.value	a list fold's list	1
+pPoolReuse	take.0	a cell's content (invariance)	1
+pPoolReuse	take.0	a list fold's accumulator with no stated type	19
+pPoolReuse	tupleAt.target	a Boolean decision	2
+pPoolWaiters	causeIsInterrupt.0	the cause atoms	4
+pPoolWaiters	cons.0	a cell's content (invariance)	2
+pPoolWaiters	cons.0	a list fold's accumulator with no stated type	8
+pPoolWaiters	failCause.interruptor	a cause's interruptor	3
+pPoolWaiters	field.target	`sameHandle`	15
+pPoolWaiters	field.target	a list fold's accumulator with no stated type	24
+pPoolWaiters	field.target	a list fold's list	36
+pPoolWaiters	fold.init	a list fold's accumulator with no stated type	42
+pPoolWaiters	fold.list	a list fold's list	42
+pPoolWaiters	iterate.initial	a loop's cursor with no stated type	6
+pPoolWaiters	iterate.result	a decision by an option	4
+pPoolWaiters	iterate.test	a loop's test	10
+pPoolWaiters	perform(refGet).request	a list fold's list	4
+pPoolWaiters	perform(refMake).request	a cell's content (invariance)	2
+pPoolWaiters	perform(refMake).request	a list fold's list	1
+pPoolWaiters	perform(refModifyWith).binder	a Boolean decision	4
+pPoolWaiters	perform(refModifyWith).request	a list fold's list	11
+pPoolWaiters	restore.saved	a restore site	7
+pPoolWaiters	sameHandle.0	`sameHandle`	15
+pPoolWaiters	sameHandle.1	`sameHandle`	15
+pPoolWaiters	select.bool.scrutinee	a Boolean decision	12
+pPoolWaiters	select.option.scrutinee	a decision by an option	11
+pPoolWaiters	succeed.value	a decision by an option	3
+pPoolWaiters	succeed.value	a list fold's list	1
+pPoolWaiters	take.0	a cell's content (invariance)	1
+pPoolWaiters	take.0	a list fold's accumulator with no stated type	32
+pPoolWaiters	tupleAt.target	a Boolean decision	3
+pPoolWake	causeIsInterrupt.0	the cause atoms	3
+pPoolWake	cons.0	a cell's content (invariance)	2
+pPoolWake	cons.0	a list fold's accumulator with no stated type	6
+pPoolWake	failCause.interruptor	a cause's interruptor	2
+pPoolWake	field.target	`sameHandle`	11
+pPoolWake	field.target	a list fold's accumulator with no stated type	17
+pPoolWake	field.target	a list fold's list	26
+pPoolWake	fold.init	a list fold's accumulator with no stated type	30
+pPoolWake	fold.list	a list fold's list	30
+pPoolWake	iterate.initial	a loop's cursor with no stated type	4
+pPoolWake	iterate.result	a decision by an option	3
+pPoolWake	iterate.test	a loop's test	7
+pPoolWake	perform(refGet).request	a list fold's list	3
+pPoolWake	perform(refMake).request	a cell's content (invariance)	2
+pPoolWake	perform(refMake).request	a list fold's list	1
+pPoolWake	perform(refModifyWith).binder	a Boolean decision	3
+pPoolWake	perform(refModifyWith).request	a list fold's list	8
+pPoolWake	restore.saved	a restore site	5
+pPoolWake	sameHandle.0	`sameHandle`	11
+pPoolWake	sameHandle.1	`sameHandle`	11
+pPoolWake	select.bool.scrutinee	a Boolean decision	9
+pPoolWake	select.option.scrutinee	a decision by an option	8
+pPoolWake	succeed.value	a decision by an option	2
+pPoolWake	succeed.value	a list fold's list	1
+pPoolWake	take.0	a cell's content (invariance)	1
+pPoolWake	take.0	a list fold's accumulator with no stated type	23
+pPoolWake	tupleAt.target	a Boolean decision	2
+pPoolWithdrawn	causeIsInterrupt.0	the cause atoms	4
+pPoolWithdrawn	cons.0	a cell's content (invariance)	2
+pPoolWithdrawn	cons.0	a list fold's accumulator with no stated type	8
+pPoolWithdrawn	failCause.interruptor	a cause's interruptor	3
+pPoolWithdrawn	field.target	`sameHandle`	15
+pPoolWithdrawn	field.target	a list fold's accumulator with no stated type	24
+pPoolWithdrawn	field.target	a list fold's list	36
+pPoolWithdrawn	fold.init	a list fold's accumulator with no stated type	42
+pPoolWithdrawn	fold.list	a list fold's list	42
+pPoolWithdrawn	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pPoolWithdrawn	iterate.initial	a loop's cursor with no stated type	5
+pPoolWithdrawn	iterate.result	a decision by an option	4
+pPoolWithdrawn	iterate.test	a loop's test	9
+pPoolWithdrawn	perform(refGet).request	a list fold's list	4
+pPoolWithdrawn	perform(refMake).request	a cell's content (invariance)	2
+pPoolWithdrawn	perform(refMake).request	a list fold's list	1
+pPoolWithdrawn	perform(refModifyWith).binder	a Boolean decision	4
+pPoolWithdrawn	perform(refModifyWith).request	a list fold's list	11
+pPoolWithdrawn	restore.saved	a restore site	7
+pPoolWithdrawn	sameHandle.0	`sameHandle`	15
+pPoolWithdrawn	sameHandle.1	`sameHandle`	15
+pPoolWithdrawn	select.bool.scrutinee	a Boolean decision	12
+pPoolWithdrawn	select.option.scrutinee	a decision by an option	11
+pPoolWithdrawn	succeed.value	a decision by an option	3
+pPoolWithdrawn	succeed.value	a list fold's list	1
+pPoolWithdrawn	take.0	a cell's content (invariance)	1
+pPoolWithdrawn	take.0	a list fold's accumulator with no stated type	32
+pPoolWithdrawn	tupleAt.target	a Boolean decision	3
+pProvideMerge	perform(refMake).request	a cell's content (invariance)	1
+pProvideTwice	perform(refMake).request	a cell's content (invariance)	1
+pQueueFull	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pQueueFull	causeIsInterrupt.0	the cause atoms	4
+pQueueFull	drop.0	`ite` on two branches that are not comparable	2
+pQueueFull	drop.0	a list fold's accumulator with no stated type	4
+pQueueFull	field.target	`ite` on two branches that are not comparable	4
+pQueueFull	field.target	`sameHandle`	24
+pQueueFull	field.target	a list fold's accumulator with no stated type	20
+pQueueFull	field.target	a list fold's list	20
+pQueueFull	fold.init	a list fold's accumulator with no stated type	26
+pQueueFull	fold.list	a list fold's list	26
+pQueueFull	iterate.initial	a loop's cursor with no stated type	10
+pQueueFull	iterate.result	a decision by an option	2
+pQueueFull	iterate.test	a loop's test	12
+pQueueFull	pair.1	`ite` on two branches that are not comparable	4
+pQueueFull	perform(refMake).request	a list fold's list	1
+pQueueFull	perform(refModifyWith).binder	a decision by an option	4
+pQueueFull	perform(refModifyWith).request	`sameHandle`	2
+pQueueFull	perform(refModifyWith).request	a list fold's list	4
+pQueueFull	recordSet.target	`ite` on two branches that are not comparable	8
+pQueueFull	recordSet.value	`ite` on two branches that are not comparable	8
+pQueueFull	restore.saved	a restore site	4
+pQueueFull	sameHandle.0	`sameHandle`	22
+pQueueFull	sameHandle.1	`sameHandle`	22
+pQueueFull	select.bool.scrutinee	a Boolean decision	4
+pQueueFull	select.option.scrutinee	a decision by an option	16
+pQueueFull	take.0	`ite` on two branches that are not comparable	2
+pQueueFull	take.0	`sameHandle`	2
+pQueueFull	take.0	a list fold's accumulator with no stated type	16
+pQueueFull	tuple.1	`ite` on two branches that are not comparable	4
+pQueueFull	tuple.2	`ite` on two branches that are not comparable	2
+pQueueFull	tupleAt.target	a decision by an option	4
+pQueueInterrupted	causeIsInterrupt.0	the cause atoms	3
+pQueueInterrupted	drop.0	`ite` on two branches that are not comparable	2
+pQueueInterrupted	drop.0	a list fold's accumulator with no stated type	4
+pQueueInterrupted	field.target	`ite` on two branches that are not comparable	4
+pQueueInterrupted	field.target	`sameHandle`	23
+pQueueInterrupted	field.target	a list fold's accumulator with no stated type	19
+pQueueInterrupted	field.target	a list fold's list	19
+pQueueInterrupted	fold.init	a list fold's accumulator with no stated type	25
+pQueueInterrupted	fold.list	a list fold's list	25
+pQueueInterrupted	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pQueueInterrupted	iterate.initial	a loop's cursor with no stated type	8
+pQueueInterrupted	iterate.result	a decision by an option	2
+pQueueInterrupted	iterate.test	a loop's test	10
+pQueueInterrupted	pair.1	`ite` on two branches that are not comparable	3
+pQueueInterrupted	perform(refMake).request	`sameHandle`	1
+pQueueInterrupted	perform(refModifyWith).binder	a decision by an option	3
+pQueueInterrupted	perform(refModifyWith).request	`sameHandle`	2
+pQueueInterrupted	perform(refModifyWith).request	a list fold's list	3
+pQueueInterrupted	recordSet.target	`ite` on two branches that are not comparable	7
+pQueueInterrupted	recordSet.value	`ite` on two branches that are not comparable	7
+pQueueInterrupted	restore.saved	a restore site	3
+pQueueInterrupted	sameHandle.0	`sameHandle`	21
+pQueueInterrupted	sameHandle.1	`sameHandle`	21
+pQueueInterrupted	select.bool.scrutinee	a Boolean decision	3
+pQueueInterrupted	select.option.scrutinee	a decision by an option	13
+pQueueInterrupted	take.0	`ite` on two branches that are not comparable	2
+pQueueInterrupted	take.0	`sameHandle`	2
+pQueueInterrupted	take.0	a list fold's accumulator with no stated type	15
+pQueueInterrupted	tuple.1	`ite` on two branches that are not comparable	3
+pQueueInterrupted	tuple.2	`ite` on two branches that are not comparable	2
+pQueueInterrupted	tupleAt.target	a decision by an option	3
+pQueueMasked	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	2
+pQueueMasked	causeIsInterrupt.0	the cause atoms	3
+pQueueMasked	drop.0	`ite` on two branches that are not comparable	1
+pQueueMasked	drop.0	a list fold's accumulator with no stated type	2
+pQueueMasked	field.target	`ite` on two branches that are not comparable	2
+pQueueMasked	field.target	`sameHandle`	12
+pQueueMasked	field.target	a list fold's accumulator with no stated type	10
+pQueueMasked	field.target	a list fold's list	10
+pQueueMasked	fold.init	a list fold's accumulator with no stated type	13
+pQueueMasked	fold.list	a list fold's list	13
+pQueueMasked	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pQueueMasked	iterate.initial	a loop's cursor with no stated type	5
+pQueueMasked	iterate.result	a decision by an option	1
+pQueueMasked	iterate.test	a loop's test	6
+pQueueMasked	pair.1	`ite` on two branches that are not comparable	2
+pQueueMasked	perform(refMake).request	`sameHandle`	1
+pQueueMasked	perform(refMake).request	a cell's content (invariance)	1
+pQueueMasked	perform(refModifyWith).binder	a decision by an option	2
+pQueueMasked	perform(refModifyWith).request	`sameHandle`	1
+pQueueMasked	perform(refModifyWith).request	a list fold's list	2
+pQueueMasked	recordSet.target	`ite` on two branches that are not comparable	4
+pQueueMasked	recordSet.value	`ite` on two branches that are not comparable	4
+pQueueMasked	restore.saved	a restore site	2
+pQueueMasked	sameHandle.0	`sameHandle`	11
+pQueueMasked	sameHandle.1	`sameHandle`	11
+pQueueMasked	select.bool.scrutinee	a Boolean decision	2
+pQueueMasked	select.option.scrutinee	a decision by an option	8
+pQueueMasked	take.0	`ite` on two branches that are not comparable	1
+pQueueMasked	take.0	`sameHandle`	1
+pQueueMasked	take.0	a list fold's accumulator with no stated type	8
+pQueueMasked	tuple.1	`ite` on two branches that are not comparable	2
+pQueueMasked	tuple.2	`ite` on two branches that are not comparable	1
+pQueueMasked	tupleAt.target	a decision by an option	2
+pQueueOrder	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	3
+pQueueOrder	causeIsInterrupt.0	the cause atoms	4
+pQueueOrder	cons.0	a cell's content (invariance)	1
+pQueueOrder	drop.0	`ite` on two branches that are not comparable	2
+pQueueOrder	drop.0	a list fold's accumulator with no stated type	4
+pQueueOrder	field.target	`ite` on two branches that are not comparable	4
+pQueueOrder	field.target	`sameHandle`	24
+pQueueOrder	field.target	a list fold's accumulator with no stated type	20
+pQueueOrder	field.target	a list fold's list	20
+pQueueOrder	fold.init	a list fold's accumulator with no stated type	26
+pQueueOrder	fold.list	a list fold's list	26
+pQueueOrder	iterate.initial	a loop's cursor with no stated type	10
+pQueueOrder	iterate.result	a decision by an option	2
+pQueueOrder	iterate.test	a loop's test	12
+pQueueOrder	pair.1	`ite` on two branches that are not comparable	4
+pQueueOrder	perform(refMake).request	`sameHandle`	1
+pQueueOrder	perform(refMake).request	a cell's content (invariance)	1
+pQueueOrder	perform(refModifyWith).binder	a decision by an option	4
+pQueueOrder	perform(refModifyWith).request	`sameHandle`	2
+pQueueOrder	perform(refModifyWith).request	a list fold's list	4
+pQueueOrder	recordSet.target	`ite` on two branches that are not comparable	8
+pQueueOrder	recordSet.value	`ite` on two branches that are not comparable	8
+pQueueOrder	restore.saved	a restore site	4
+pQueueOrder	sameHandle.0	`sameHandle`	22
+pQueueOrder	sameHandle.1	`sameHandle`	22
+pQueueOrder	select.bool.scrutinee	a Boolean decision	4
+pQueueOrder	select.option.scrutinee	a decision by an option	16
+pQueueOrder	take.0	`ite` on two branches that are not comparable	2
+pQueueOrder	take.0	`sameHandle`	2
+pQueueOrder	take.0	a cell's content (invariance)	1
+pQueueOrder	take.0	a list fold's accumulator with no stated type	16
+pQueueOrder	tuple.1	`ite` on two branches that are not comparable	4
+pQueueOrder	tuple.2	`ite` on two branches that are not comparable	2
+pQueueOrder	tupleAt.target	a decision by an option	4
+pQueueWake	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pQueueWake	causeIsInterrupt.0	the cause atoms	2
+pQueueWake	drop.0	`ite` on two branches that are not comparable	1
+pQueueWake	drop.0	a list fold's accumulator with no stated type	2
+pQueueWake	field.target	`ite` on two branches that are not comparable	2
+pQueueWake	field.target	`sameHandle`	12
+pQueueWake	field.target	a list fold's accumulator with no stated type	10
+pQueueWake	field.target	a list fold's list	10
+pQueueWake	fold.init	a list fold's accumulator with no stated type	13
+pQueueWake	fold.list	a list fold's list	13
+pQueueWake	iterate.initial	a loop's cursor with no stated type	5
+pQueueWake	iterate.result	a decision by an option	1
+pQueueWake	iterate.test	a loop's test	6
+pQueueWake	pair.1	`ite` on two branches that are not comparable	2
+pQueueWake	perform(refMake).request	`sameHandle`	1
+pQueueWake	perform(refModifyWith).binder	a decision by an option	2
+pQueueWake	perform(refModifyWith).request	`sameHandle`	1
+pQueueWake	perform(refModifyWith).request	a list fold's list	2
+pQueueWake	recordSet.target	`ite` on two branches that are not comparable	4
+pQueueWake	recordSet.value	`ite` on two branches that are not comparable	4
+pQueueWake	restore.saved	a restore site	2
+pQueueWake	sameHandle.0	`sameHandle`	11
+pQueueWake	sameHandle.1	`sameHandle`	11
+pQueueWake	select.bool.scrutinee	a Boolean decision	2
+pQueueWake	select.option.scrutinee	a decision by an option	8
+pQueueWake	take.0	`ite` on two branches that are not comparable	1
+pQueueWake	take.0	`sameHandle`	1
+pQueueWake	take.0	a list fold's accumulator with no stated type	8
+pQueueWake	tuple.1	`ite` on two branches that are not comparable	2
+pQueueWake	tuple.2	`ite` on two branches that are not comparable	1
+pQueueWake	tupleAt.target	a decision by an option	2
+pScope	closeScope.exit	`closeScope`'s scope and exit	1
+pScope	closeScope.scope	`closeScope`'s scope and exit	1
+pSemaphoreBodies	causeIsInterrupt.0	the cause atoms	3
+pSemaphoreBodies	cons.0	a cell's content (invariance)	1
+pSemaphoreBodies	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreBodies	field.target	`sameHandle`	9
+pSemaphoreBodies	field.target	a list fold's accumulator with no stated type	18
+pSemaphoreBodies	field.target	a list fold's list	22
+pSemaphoreBodies	fold.init	a list fold's accumulator with no stated type	22
+pSemaphoreBodies	fold.list	a list fold's list	22
+pSemaphoreBodies	iterate.initial	a loop's cursor with no stated type	4
+pSemaphoreBodies	iterate.result	a decision by an option	3
+pSemaphoreBodies	iterate.test	a loop's test	7
+pSemaphoreBodies	pair.0	a Boolean decision	3
+pSemaphoreBodies	perform(refGet).request	a list fold's list	2
+pSemaphoreBodies	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreBodies	perform(refMake).request	a list fold's list	1
+pSemaphoreBodies	perform(refModifyWith).binder	a Boolean decision	6
+pSemaphoreBodies	perform(refModifyWith).binder	a decision by an option	3
+pSemaphoreBodies	perform(refModifyWith).request	a list fold's list	9
+pSemaphoreBodies	restore.saved	a restore site	6
+pSemaphoreBodies	sameHandle.0	`sameHandle`	9
+pSemaphoreBodies	sameHandle.1	`sameHandle`	9
+pSemaphoreBodies	select.bool.scrutinee	a Boolean decision	9
+pSemaphoreBodies	select.option.scrutinee	a decision by an option	6
+pSemaphoreBodies	some.0	`getOrElse`	3
+pSemaphoreBodies	take.0	a cell's content (invariance)	1
+pSemaphoreBodies	take.0	a list fold's accumulator with no stated type	22
+pSemaphoreBodies	tuple.1	a Boolean decision	3
+pSemaphoreBodies	tupleAt.target	a Boolean decision	3
+pSemaphoreBodiesJoined	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	2
+pSemaphoreBodiesJoined	causeIsInterrupt.0	the cause atoms	3
+pSemaphoreBodiesJoined	cons.0	a cell's content (invariance)	1
+pSemaphoreBodiesJoined	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreBodiesJoined	field.target	`sameHandle`	9
+pSemaphoreBodiesJoined	field.target	a list fold's accumulator with no stated type	18
+pSemaphoreBodiesJoined	field.target	a list fold's list	22
+pSemaphoreBodiesJoined	fold.init	a list fold's accumulator with no stated type	22
+pSemaphoreBodiesJoined	fold.list	a list fold's list	22
+pSemaphoreBodiesJoined	iterate.initial	a loop's cursor with no stated type	3
+pSemaphoreBodiesJoined	iterate.result	a decision by an option	3
+pSemaphoreBodiesJoined	iterate.test	a loop's test	6
+pSemaphoreBodiesJoined	pair.0	a Boolean decision	3
+pSemaphoreBodiesJoined	perform(refGet).request	a list fold's list	2
+pSemaphoreBodiesJoined	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreBodiesJoined	perform(refMake).request	a list fold's list	1
+pSemaphoreBodiesJoined	perform(refModifyWith).binder	a Boolean decision	6
+pSemaphoreBodiesJoined	perform(refModifyWith).binder	a decision by an option	3
+pSemaphoreBodiesJoined	perform(refModifyWith).request	a list fold's list	9
+pSemaphoreBodiesJoined	restore.saved	a restore site	6
+pSemaphoreBodiesJoined	sameHandle.0	`sameHandle`	9
+pSemaphoreBodiesJoined	sameHandle.1	`sameHandle`	9
+pSemaphoreBodiesJoined	select.bool.scrutinee	a Boolean decision	9
+pSemaphoreBodiesJoined	select.option.scrutinee	a decision by an option	6
+pSemaphoreBodiesJoined	some.0	`getOrElse`	3
+pSemaphoreBodiesJoined	take.0	a cell's content (invariance)	1
+pSemaphoreBodiesJoined	take.0	a list fold's accumulator with no stated type	22
+pSemaphoreBodiesJoined	tuple.1	a Boolean decision	3
+pSemaphoreBodiesJoined	tupleAt.target	a Boolean decision	3
+pSemaphoreHandoff	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pSemaphoreHandoff	causeIsInterrupt.0	the cause atoms	2
+pSemaphoreHandoff	field.target	`sameHandle`	6
+pSemaphoreHandoff	field.target	a list fold's accumulator with no stated type	12
+pSemaphoreHandoff	field.target	a list fold's list	12
+pSemaphoreHandoff	fold.init	a list fold's accumulator with no stated type	12
+pSemaphoreHandoff	fold.list	a list fold's list	12
+pSemaphoreHandoff	iterate.initial	a loop's cursor with no stated type	2
+pSemaphoreHandoff	iterate.result	a decision by an option	2
+pSemaphoreHandoff	iterate.test	a loop's test	4
+pSemaphoreHandoff	pair.0	a Boolean decision	2
+pSemaphoreHandoff	perform(refMake).request	a list fold's list	1
+pSemaphoreHandoff	perform(refModifyWith).binder	a Boolean decision	4
+pSemaphoreHandoff	perform(refModifyWith).binder	a decision by an option	2
+pSemaphoreHandoff	perform(refModifyWith).request	a list fold's list	6
+pSemaphoreHandoff	restore.saved	a restore site	3
+pSemaphoreHandoff	sameHandle.0	`sameHandle`	6
+pSemaphoreHandoff	sameHandle.1	`sameHandle`	6
+pSemaphoreHandoff	select.bool.scrutinee	a Boolean decision	6
+pSemaphoreHandoff	select.option.scrutinee	a decision by an option	4
+pSemaphoreHandoff	some.0	`getOrElse`	2
+pSemaphoreHandoff	take.0	a list fold's accumulator with no stated type	12
+pSemaphoreHandoff	tuple.1	a Boolean decision	2
+pSemaphoreHandoff	tupleAt.target	a Boolean decision	2
+pSemaphoreIfAvailable	causeIsInterrupt.0	the cause atoms	1
+pSemaphoreIfAvailable	cons.0	a cell's content (invariance)	1
+pSemaphoreIfAvailable	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreIfAvailable	field.target	`sameHandle`	3
+pSemaphoreIfAvailable	field.target	a list fold's accumulator with no stated type	9
+pSemaphoreIfAvailable	field.target	a list fold's list	13
+pSemaphoreIfAvailable	fold.init	a list fold's accumulator with no stated type	13
+pSemaphoreIfAvailable	fold.list	a list fold's list	13
+pSemaphoreIfAvailable	iterate.initial	a loop's cursor with no stated type	2
+pSemaphoreIfAvailable	iterate.result	a decision by an option	1
+pSemaphoreIfAvailable	iterate.test	a loop's test	3
+pSemaphoreIfAvailable	pair.0	a Boolean decision	2
+pSemaphoreIfAvailable	perform(refGet).request	a list fold's list	2
+pSemaphoreIfAvailable	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreIfAvailable	perform(refMake).request	a list fold's list	1
+pSemaphoreIfAvailable	perform(refModifyWith).binder	a Boolean decision	5
+pSemaphoreIfAvailable	perform(refModifyWith).binder	a decision by an option	2
+pSemaphoreIfAvailable	perform(refModifyWith).request	a list fold's list	4
+pSemaphoreIfAvailable	restore.saved	a restore site	3
+pSemaphoreIfAvailable	sameHandle.0	`sameHandle`	3
+pSemaphoreIfAvailable	sameHandle.1	`sameHandle`	3
+pSemaphoreIfAvailable	select.bool.scrutinee	a Boolean decision	8
+pSemaphoreIfAvailable	select.option.scrutinee	a decision by an option	3
+pSemaphoreIfAvailable	some.0	`getOrElse`	2
+pSemaphoreIfAvailable	take.0	a cell's content (invariance)	1
+pSemaphoreIfAvailable	take.0	a list fold's accumulator with no stated type	13
+pSemaphoreIfAvailable	tuple.1	a Boolean decision	2
+pSemaphoreIfAvailable	tupleAt.target	a Boolean decision	2
+pSemaphoreInterrupted	causeIsInterrupt.0	the cause atoms	3
+pSemaphoreInterrupted	cons.0	a list fold's accumulator with no stated type	10
+pSemaphoreInterrupted	field.target	`sameHandle`	9
+pSemaphoreInterrupted	field.target	a list fold's accumulator with no stated type	15
+pSemaphoreInterrupted	field.target	a list fold's list	25
+pSemaphoreInterrupted	fold.init	a list fold's accumulator with no stated type	25
+pSemaphoreInterrupted	fold.list	a list fold's list	25
+pSemaphoreInterrupted	interrupt.target	a fiber (`join`, `await`, `interrupt`)	2
+pSemaphoreInterrupted	iterate.initial	a loop's cursor with no stated type	3
+pSemaphoreInterrupted	iterate.result	a decision by an option	3
+pSemaphoreInterrupted	iterate.test	a loop's test	6
+pSemaphoreInterrupted	pair.0	a Boolean decision	2
+pSemaphoreInterrupted	perform(refGet).request	a list fold's list	5
+pSemaphoreInterrupted	perform(refMake).request	a list fold's list	1
+pSemaphoreInterrupted	perform(refModifyWith).binder	a Boolean decision	5
+pSemaphoreInterrupted	perform(refModifyWith).binder	a decision by an option	2
+pSemaphoreInterrupted	perform(refModifyWith).request	a list fold's list	8
+pSemaphoreInterrupted	restore.saved	a restore site	4
+pSemaphoreInterrupted	sameHandle.0	`sameHandle`	9
+pSemaphoreInterrupted	sameHandle.1	`sameHandle`	9
+pSemaphoreInterrupted	select.bool.scrutinee	a Boolean decision	8
+pSemaphoreInterrupted	select.option.scrutinee	a decision by an option	5
+pSemaphoreInterrupted	some.0	`getOrElse`	2
+pSemaphoreInterrupted	take.0	a list fold's accumulator with no stated type	25
+pSemaphoreInterrupted	tuple.1	a Boolean decision	2
+pSemaphoreInterrupted	tupleAt.target	a Boolean decision	2
+pSemaphoreMasked	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	2
+pSemaphoreMasked	causeIsInterrupt.0	the cause atoms	3
+pSemaphoreMasked	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreMasked	field.target	`sameHandle`	6
+pSemaphoreMasked	field.target	a list fold's accumulator with no stated type	12
+pSemaphoreMasked	field.target	a list fold's list	16
+pSemaphoreMasked	fold.init	a list fold's accumulator with no stated type	16
+pSemaphoreMasked	fold.list	a list fold's list	16
+pSemaphoreMasked	interrupt.target	a fiber (`join`, `await`, `interrupt`)	1
+pSemaphoreMasked	iterate.initial	a loop's cursor with no stated type	2
+pSemaphoreMasked	iterate.result	a decision by an option	2
+pSemaphoreMasked	iterate.test	a loop's test	4
+pSemaphoreMasked	pair.0	a Boolean decision	2
+pSemaphoreMasked	perform(refGet).request	a list fold's list	2
+pSemaphoreMasked	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreMasked	perform(refMake).request	a list fold's list	1
+pSemaphoreMasked	perform(refModifyWith).binder	a Boolean decision	4
+pSemaphoreMasked	perform(refModifyWith).binder	a decision by an option	2
+pSemaphoreMasked	perform(refModifyWith).request	a list fold's list	6
+pSemaphoreMasked	restore.saved	a restore site	3
+pSemaphoreMasked	sameHandle.0	`sameHandle`	6
+pSemaphoreMasked	sameHandle.1	`sameHandle`	6
+pSemaphoreMasked	select.bool.scrutinee	a Boolean decision	6
+pSemaphoreMasked	select.option.scrutinee	a decision by an option	4
+pSemaphoreMasked	some.0	`getOrElse`	2
+pSemaphoreMasked	take.0	a list fold's accumulator with no stated type	16
+pSemaphoreMasked	tuple.1	a Boolean decision	2
+pSemaphoreMasked	tupleAt.target	a Boolean decision	2
+pSemaphoreOvertake	causeIsInterrupt.0	the cause atoms	4
+pSemaphoreOvertake	cons.0	a cell's content (invariance)	1
+pSemaphoreOvertake	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreOvertake	field.target	`sameHandle`	12
+pSemaphoreOvertake	field.target	a list fold's accumulator with no stated type	15
+pSemaphoreOvertake	field.target	a list fold's list	19
+pSemaphoreOvertake	fold.init	a list fold's accumulator with no stated type	19
+pSemaphoreOvertake	fold.list	a list fold's list	19
+pSemaphoreOvertake	iterate.initial	a loop's cursor with no stated type	2
+pSemaphoreOvertake	iterate.result	a decision by an option	4
+pSemaphoreOvertake	iterate.test	a loop's test	6
+pSemaphoreOvertake	pair.0	a Boolean decision	1
+pSemaphoreOvertake	perform(refGet).request	a list fold's list	2
+pSemaphoreOvertake	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreOvertake	perform(refMake).request	a list fold's list	1
+pSemaphoreOvertake	perform(refModifyWith).binder	a Boolean decision	5
+pSemaphoreOvertake	perform(refModifyWith).binder	a decision by an option	1
+pSemaphoreOvertake	perform(refModifyWith).request	a list fold's list	9
+pSemaphoreOvertake	restore.saved	a restore site	4
+pSemaphoreOvertake	sameHandle.0	`sameHandle`	12
+pSemaphoreOvertake	sameHandle.1	`sameHandle`	12
+pSemaphoreOvertake	select.bool.scrutinee	a Boolean decision	9
+pSemaphoreOvertake	select.option.scrutinee	a decision by an option	5
+pSemaphoreOvertake	some.0	`getOrElse`	1
+pSemaphoreOvertake	take.0	a cell's content (invariance)	1
+pSemaphoreOvertake	take.0	a list fold's accumulator with no stated type	19
+pSemaphoreOvertake	tuple.1	a Boolean decision	1
+pSemaphoreOvertake	tupleAt.target	a Boolean decision	1
+pSemaphoreProtected	causeIsInterrupt.0	the cause atoms	3
+pSemaphoreProtected	cons.0	a cell's content (invariance)	1
+pSemaphoreProtected	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreProtected	field.target	`sameHandle`	9
+pSemaphoreProtected	field.target	a list fold's accumulator with no stated type	12
+pSemaphoreProtected	field.target	a list fold's list	16
+pSemaphoreProtected	fold.init	a list fold's accumulator with no stated type	16
+pSemaphoreProtected	fold.list	a list fold's list	16
+pSemaphoreProtected	iterate.initial	a loop's cursor with no stated type	2
+pSemaphoreProtected	iterate.result	a decision by an option	3
+pSemaphoreProtected	iterate.test	a loop's test	5
+pSemaphoreProtected	pair.0	a Boolean decision	1
+pSemaphoreProtected	perform(refGet).request	a list fold's list	2
+pSemaphoreProtected	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreProtected	perform(refMake).request	a list fold's list	1
+pSemaphoreProtected	perform(refModifyWith).binder	a Boolean decision	4
+pSemaphoreProtected	perform(refModifyWith).binder	a decision by an option	1
+pSemaphoreProtected	perform(refModifyWith).request	a list fold's list	7
+pSemaphoreProtected	restore.saved	a restore site	4
+pSemaphoreProtected	sameHandle.0	`sameHandle`	9
+pSemaphoreProtected	sameHandle.1	`sameHandle`	9
+pSemaphoreProtected	select.bool.scrutinee	a Boolean decision	7
+pSemaphoreProtected	select.option.scrutinee	a decision by an option	4
+pSemaphoreProtected	some.0	`getOrElse`	1
+pSemaphoreProtected	take.0	a cell's content (invariance)	1
+pSemaphoreProtected	take.0	a list fold's accumulator with no stated type	16
+pSemaphoreProtected	tuple.1	a Boolean decision	1
+pSemaphoreProtected	tupleAt.target	a Boolean decision	1
+pSemaphoreProtectedJoined	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	1
+pSemaphoreProtectedJoined	causeIsInterrupt.0	the cause atoms	3
+pSemaphoreProtectedJoined	cons.0	a cell's content (invariance)	1
+pSemaphoreProtectedJoined	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreProtectedJoined	field.target	`sameHandle`	9
+pSemaphoreProtectedJoined	field.target	a list fold's accumulator with no stated type	12
+pSemaphoreProtectedJoined	field.target	a list fold's list	16
+pSemaphoreProtectedJoined	fold.init	a list fold's accumulator with no stated type	16
+pSemaphoreProtectedJoined	fold.list	a list fold's list	16
+pSemaphoreProtectedJoined	iterate.initial	a loop's cursor with no stated type	1
+pSemaphoreProtectedJoined	iterate.result	a decision by an option	3
+pSemaphoreProtectedJoined	iterate.test	a loop's test	4
+pSemaphoreProtectedJoined	pair.0	a Boolean decision	1
+pSemaphoreProtectedJoined	perform(refGet).request	a list fold's list	2
+pSemaphoreProtectedJoined	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreProtectedJoined	perform(refMake).request	a list fold's list	1
+pSemaphoreProtectedJoined	perform(refModifyWith).binder	a Boolean decision	4
+pSemaphoreProtectedJoined	perform(refModifyWith).binder	a decision by an option	1
+pSemaphoreProtectedJoined	perform(refModifyWith).request	a list fold's list	7
+pSemaphoreProtectedJoined	restore.saved	a restore site	4
+pSemaphoreProtectedJoined	sameHandle.0	`sameHandle`	9
+pSemaphoreProtectedJoined	sameHandle.1	`sameHandle`	9
+pSemaphoreProtectedJoined	select.bool.scrutinee	a Boolean decision	7
+pSemaphoreProtectedJoined	select.option.scrutinee	a decision by an option	4
+pSemaphoreProtectedJoined	some.0	`getOrElse`	1
+pSemaphoreProtectedJoined	take.0	a cell's content (invariance)	1
+pSemaphoreProtectedJoined	take.0	a list fold's accumulator with no stated type	16
+pSemaphoreProtectedJoined	tuple.1	a Boolean decision	1
+pSemaphoreProtectedJoined	tupleAt.target	a Boolean decision	1
+pSemaphoreScan	causeIsInterrupt.0	the cause atoms	4
+pSemaphoreScan	cons.0	a cell's content (invariance)	1
+pSemaphoreScan	cons.0	a list fold's accumulator with no stated type	4
+pSemaphoreScan	field.target	`sameHandle`	12
+pSemaphoreScan	field.target	a list fold's accumulator with no stated type	15
+pSemaphoreScan	field.target	a list fold's list	19
+pSemaphoreScan	fold.init	a list fold's accumulator with no stated type	19
+pSemaphoreScan	fold.list	a list fold's list	19
+pSemaphoreScan	iterate.initial	a loop's cursor with no stated type	2
+pSemaphoreScan	iterate.result	a decision by an option	4
+pSemaphoreScan	iterate.test	a loop's test	6
+pSemaphoreScan	pair.0	a Boolean decision	1
+pSemaphoreScan	perform(refGet).request	a list fold's list	2
+pSemaphoreScan	perform(refMake).request	a cell's content (invariance)	1
+pSemaphoreScan	perform(refMake).request	a list fold's list	1
+pSemaphoreScan	perform(refModifyWith).binder	a Boolean decision	5
+pSemaphoreScan	perform(refModifyWith).binder	a decision by an option	1
+pSemaphoreScan	perform(refModifyWith).request	a list fold's list	9
+pSemaphoreScan	restore.saved	a restore site	4
+pSemaphoreScan	sameHandle.0	`sameHandle`	12
+pSemaphoreScan	sameHandle.1	`sameHandle`	12
+pSemaphoreScan	select.bool.scrutinee	a Boolean decision	9
+pSemaphoreScan	select.option.scrutinee	a decision by an option	5
+pSemaphoreScan	some.0	`getOrElse`	1
+pSemaphoreScan	take.0	a cell's content (invariance)	1
+pSemaphoreScan	take.0	a list fold's accumulator with no stated type	19
+pSemaphoreScan	tuple.1	a Boolean decision	1
+pSemaphoreScan	tupleAt.target	a Boolean decision	1
+pTagHit	catchIf.test	a handler's test	1
+pTagHit	pair.0	a typed failure with a part at `never`	1
+pTagHit	pair.1	a typed failure with a part at `never`	1
+pTagHit	select.bool.scrutinee	a Boolean decision	1
+pTagMiss	catchIf.test	a handler's test	1
+pTagMiss	pair.0	a typed failure with a part at `never`	1
+pTagMiss	pair.1	a typed failure with a part at `never`	1
+pTagMiss	select.bool.scrutinee	a Boolean decision	1
+pTagPayload	catchIf.test	a handler's test	1
+pTagTwoFail	catchIf.test	a handler's test	1
+pTagTwoFail	pair.0	a typed failure with a part at `never`	2
+pTagTwoFail	pair.1	a typed failure with a part at `never`	2
+pTwo	awaitFiber.fiber	a fiber (`join`, `await`, `interrupt`)	2

@@ -1,0 +1,34 @@
+# the second run against the first: every probe of run.sh, run again in a second scratch folder
+# first: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/census/ts
+# second: /private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/census/ts2
+the sources of the probes: 21 files, 20 with equal bytes; one line apart, the path of the rows: LibRun.lean
+gen-flow.tsv             equal bytes (59 rows)
+gen-folds.tsv            equal bytes (714 rows)
+gen-lattice.tsv          equal bytes (454 rows)
+gen-programs.tsv         equal bytes (128 rows)
+gen-sites.tsv            equal bytes (238 rows)
+gen-slices.tsv           equal in the 20 columns that are no wall time (141 rows; wall-time columns: ms, upMs, sweepMs)
+gen-terms.tsv            equal bytes (98 rows)
+truth-flow.tsv           equal bytes (157 rows)
+truth-folds.tsv          equal bytes (10326 rows)
+truth-lattice.tsv        equal bytes (141 rows)
+truth-programs.tsv       equal bytes (73 rows)
+truth-sites.tsv          equal bytes (4644 rows)
+truth-slices.tsv         equal in the 20 columns that are no wall time (51 rows; wall-time columns: ms, upMs, sweepMs)
+truth-subslices.tsv      equal in the 19 columns that are no wall time (45 rows; wall-time columns: ms, msPerCall, upMs)
+truth-terms.tsv          equal bytes (25202 rows)
+selftest.log             equal lines but for the wall times (11 lines); exit 0 in both runs
+probe1gen.log            equal lines but for the wall times (4 lines); exit 0 in both runs
+probe1truth.log          equal lines but for the wall times (4 lines); exit 0 in both runs
+probe1closed.log         equal lines but for the wall times (7 lines); exit 0 in both runs
+probe1termgen.log        equal lines but for the wall times (2 lines); exit 0 in both runs
+probe1termtruth.log      equal lines but for the wall times (1 lines); exit 0 in both runs
+probe1flow.log           equal lines but for the wall times (2 lines); exit 0 in both runs
+probe1small.log          equal lines but for the wall times (20 lines); exit 0 in both runs
+probe2.log               equal lines but for the wall times (47 lines); exit 0 in both runs
+probe3.log               equal lines but for the wall times (1 lines); exit 0 in both runs
+probe4.log               equal lines but for the wall times (174 lines); exit 0 in both runs
+probe4premise.log        equal lines but for the wall times (2 lines); exit 0 in both runs
+probe5.log               equal lines but for the wall times (73 lines); exit 0 in both runs
+
+every row file and every log of the second run equals the first, but for the wall times

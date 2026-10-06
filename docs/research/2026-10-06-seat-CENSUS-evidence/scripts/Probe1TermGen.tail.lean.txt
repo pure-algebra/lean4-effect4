@@ -1,0 +1,12 @@
+/-
+Seat CENSUS, probe 1: the term addresses of the generated corpus under fold N (an assumed
+nullary atom of type `never`).
+-/
+namespace Census
+def genPrograms : List (String × RowTable × P) :=
+  (List.range 400).map fun i => (s!"g{i}", [], Test.Program.Gen.program i 4)
+#eval do
+  let adm := admittedOf genPrograms
+  IO.println s!"gen: term addresses {(adm.map fun (x : String × RowTable × P × EffTy) => termAddressCount x.2.1 x.2.2.1).foldl (· + ·) 0}"
+#eval runTermCorpus "gen" genPrograms
+end Census

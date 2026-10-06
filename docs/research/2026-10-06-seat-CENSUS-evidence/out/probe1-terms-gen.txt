@@ -1,0 +1,38 @@
+# probe 1, the term addresses under fold N (an assumed atom of type never): gen
+programs: 80   term addresses: 98   malformed rows: 0
+refused: 2   admitted: 96   admitted with every column same or smaller: 95   admitted with a column not below: 1
+under a layer: 0 (refused 0)
+
+## by the position that is folded (its consumer): 15 positions
+position                        folds  refused  admitted, a column not below  the rules that refuse (the four largest)
+------------------------------  -----  -------  ----------------------------  ----------------------------------------
+failCause.interruptor           1      1        0                             Interrupt (in a cause): 1               
+select.bool.scrutinee           1      1        0                             predicateNotBool at Eff.select.bool: 1  
+add.0                           1      0        0                                                                     
+add.1                           1      0        0                                                                     
+fail.error                      23     0        0                                                                     
+failCause.die                   4      0        0                                                                     
+failCause.fail                  8      0        0                                                                     
+gen.return                      7      0        0                                                                     
+isZero.0                        1      0        0                                                                     
+perform(deferredAwait).request  1      0        0                                                                     
+perform(refMake).request        1      0        1                                                                     
+provideService.value            5      0        0                                                                     
+succ.0                          3      0        0                                                                     
+succeed.value                   22     0        0                                                                     
+sync.thunk                      19     0        0                                                                     
+
+## the refusals by the rule that refuses: 2 refusals, 2 rules
+rule                                 refused folds  programs  folded at (the three largest)  an instance     what it read          
+-----------------------------------  -------------  --------  -----------------------------  --------------  ----------------------
+Interrupt (in a cause)               1              1         failCause.interruptor: 1       g382@.          Interrupt(never)      
+predicateNotBool at Eff.select.bool  1              1         select.bool.scrutinee: 1       g344@0.0.0.0.0  predicateNotBool never
+
+## admitted folds with a column that is not below the full program's: 1
+position                  answer     error  requires  folds  an instance                            the folded program's type
+------------------------  ---------  -----  --------  -----  -------------------------------------  -------------------------
+perform(refMake).request  unrelated  same   same      1      g158@0.0.0 perform(refMake).request .  <ref<never> ; never ; {}>
+
+## refusals at an invariant position (a cell or a deferred): 0
+reason  refusing node  refused folds
+------  -------------  -------------

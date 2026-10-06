@@ -1,0 +1,315 @@
+<!-- chunk: rule-gen -->
+| Rule | Folds | A: refused | A: answer | A: error | A: requirement | N: refused | N: answer | N: error | N: requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `ActionTerm.fork.0` | 21 | 0 | same 17, smaller 4 | same 21 | same 19, smaller 2 | 0 | same 2, smaller 19 | same 21 | same 19, smaller 2 |
+| `ActionTerm.forkScoped.0` | 10 | 0 | same 6, smaller 4 | same 10 | same 10 | 0 | same 1, smaller 9 | same 10 | same 10 |
+| `Eff.bind.0` | 6 | 0 | same 5, smaller 1 | same 4, smaller 2 | same 6 | 0 | same 5, smaller 1 | same 4, smaller 2 | same 6 |
+| `Eff.bind.1` | 6 | 0 | same 6 | same 6 | same 5, smaller 1 | 0 | same 1, smaller 5 | same 6 | same 5, smaller 1 |
+| `Eff.catchCause.0` | 1 | 0 | same 1 | same 1 | smaller 1 | 0 | same 1 | same 1 | smaller 1 |
+| `Eff.catchCause.1` | 1 | 0 | same 1 | same 1 | smaller 1 | 0 | same 1 | same 1 | smaller 1 |
+| `Eff.exit.0` | 8 | 0 | same 8 | same 8 | same 8 | 0 | same 3, smaller 5 | same 8 | same 8 |
+| `Eff.interruptible.0` | 8 | 0 | same 8 | same 8 | same 5, smaller 3 | 0 | same 3, smaller 5 | same 8 | same 5, smaller 3 |
+| `Eff.matchCause.0` | 2 | 0 | same 2 | same 2 | same 2 | 0 | same 2 | same 2 | same 2 |
+| `Eff.matchCause.1` | 2 | 0 | same 1, smaller 1 | same 2 | same 2 | 0 | same 1, smaller 1 | same 2 | same 2 |
+| `Eff.matchCause.2` | 2 | 0 | same 2 | same 2 | same 2 | 0 | same 1, smaller 1 | same 2 | same 2 |
+| `Eff.onExit.0` | 1 | 0 | same 1 | same 1 | smaller 1 | 0 | smaller 1 | same 1 | smaller 1 |
+| `Eff.onExit.1` | 1 | 0 | same 1 | same 1 | same 1 | 0 | same 1 | same 1 | same 1 |
+| `Eff.provideLayer.1` | 2 | 0 | same 2 | same 2 | same 1, smaller 1 | 0 | smaller 2 | same 2 | same 1, smaller 1 |
+| `Eff.provideService.0` | 5 | 0 | same 5 | same 5 | same 1, smaller 4 | 0 | smaller 5 | same 5 | same 1, smaller 4 |
+| `Eff.scoped.0` | 10 | 0 | same 9, smaller 1 | same 9, smaller 1 | same 10 | 0 | same 1, smaller 9 | same 9, smaller 1 | same 10 |
+| `Eff.select.bool.0` | 1 | 0 | same 1 | same 1 | same 1 | 0 | same 1 | same 1 | same 1 |
+| `Eff.select.bool.1` | 1 | 0 | smaller 1 | same 1 | same 1 | 0 | smaller 1 | same 1 | same 1 |
+| `Eff.suspend.0` | 10 | 0 | same 10 | same 9, smaller 1 | same 7, smaller 3 | 0 | same 3, smaller 7 | same 9, smaller 1 | same 7, smaller 3 |
+| `Eff.uninterruptible.0` | 5 | 0 | same 5 | same 5 | same 5 | 0 | same 1, smaller 4 | same 5 | same 5 |
+| `Effs.cons.0` | 3 | 0 | same 3 | same 3 | same 3 | 0 | smaller 3 | same 3 | same 3 |
+| `Stmt.bindYield.0` | 1 | 0 | same 1 | same 1 | same 1 | 0 | same 1 | same 1 | same 1 |
+| `Stmt.yieldDiscard.0` | 3 | 0 | same 2, smaller 1 | same 3 | same 3 | 0 | same 2, smaller 1 | same 3 | same 3 |
+| `root` | 128 | 0 | same 128 | same 107, smaller 21 | same 103, smaller 25 | 0 | same 24, smaller 104 | same 107, smaller 21 | same 103, smaller 25 |
+| **all** | 238 | 0 | same 225, smaller 13 | same 213, smaller 25 | same 196, smaller 42 | 0 | same 55, smaller 183 | same 213, smaller 25 | same 196, smaller 42 |
+
+<!-- chunk: rule-others -->
+| Rule | Folds | A: refused | A: answer | A: error | A: requirement | N: refused | N: answer | N: error | N: requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `ActionTerm.fork.0` | 12 | 0 | same 12 | same 12 | same 12 | 0 | same 7, smaller 5 | same 12 | same 12 |
+| `Eff.acquireRelease.0` | 10 | 0 | same 10 | same 10 | same 10 | 0 | same 9, smaller 1 | same 10 | same 10 |
+| `Eff.acquireRelease.1` | 10 | 0 | same 10 | same 10 | same 10 | 0 | same 10 | same 10 | same 10 |
+| `Eff.bind.0` | 133 | 0 | same 133 | same 131, smaller 2 | same 133 | 21 | same 78, smaller 34 | same 109, smaller 3 | same 112 |
+| `Eff.bind.1` | 133 | 0 | same 133 | same 127, smaller 6 | same 133 | 0 | same 38, smaller 95 | same 127, smaller 6 | same 133 |
+| `Eff.catchCause.0` | 3 | 0 | same 3 | same 3 | same 3 | 0 | same 3 | same 3 | same 3 |
+| `Eff.catchCause.1` | 3 | 0 | same 3 | same 3 | same 3 | 0 | same 2, smaller 1 | same 3 | same 3 |
+| `Eff.catchIf.0` | 9 | 0 | same 6, smaller 3 | same 3, smaller 6 | same 9 | 0 | same 6, smaller 3 | same 3, smaller 6 | same 9 |
+| `Eff.catchIf.1` | 9 | 0 | same 9 | same 9 | same 9 | 0 | same 1, smaller 8 | same 9 | same 9 |
+| `Eff.exit.0` | 4 | 2 | same 1, smaller 1 | same 2 | same 2 | 2 | same 1, smaller 1 | same 2 | same 2 |
+| `Eff.iterate.0` | 1 | 0 | same 1 | same 1 | same 1 | 0 | same 1 | same 1 | same 1 |
+| `Eff.provideLayer.1` | 9 | 0 | same 9 | same 9 | same 9 | 0 | same 6, smaller 3 | same 9 | same 9 |
+| `Eff.provideService.0` | 4 | 0 | same 4 | same 4 | same 4 | 0 | smaller 4 | same 4 | same 4 |
+| `Eff.restore.0` | 2 | 0 | same 2 | same 2 | same 2 | 0 | same 2 | same 2 | same 2 |
+| `Eff.scoped.0` | 9 | 0 | same 9 | same 7, smaller 2 | same 9 | 1 | same 2, smaller 6 | same 6, smaller 2 | same 8 |
+| `Eff.select.bool.0` | 4 | 2 | same 2 | same 2 | same 2 | 2 | same 2 | same 2 | same 2 |
+| `Eff.select.bool.1` | 4 | 0 | same 4 | same 2, smaller 2 | same 4 | 0 | same 4 | same 2, smaller 2 | same 4 |
+| `Eff.uninterruptible.0` | 4 | 0 | same 4 | same 4 | same 4 | 0 | same 4 | same 4 | same 4 |
+| `LayerTerm.effect.0` | 13 | 0 | same 13 | same 13 | same 13 | 0 | same 13 | same 13 | same 13 |
+| `Stmt.bindYield.0` | 1 | 0 | same 1 | same 1 | same 1 | 0 | same 1 | same 1 | same 1 |
+| `root` | 48 | 0 | same 48 | same 34, smaller 14 | same 48 | 0 | same 4, smaller 44 | same 34, smaller 14 | same 48 |
+| **all** | 425 | 4 | same 417, smaller 4 | same 389, smaller 32 | same 421 | 26 | same 194, smaller 205 | same 366, smaller 33 | same 399 |
+
+<!-- chunk: rule-modules -->
+| Rule | Folds | A: refused | A: answer | A: error | A: requirement | N: refused | N: answer | N: error | N: requirement |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `ActionTerm.fork.0` | 144 | 0 | same 144 | same 144 | same 144 | 0 | same 139, smaller 5 | same 144 | same 144 |
+| `Eff.acquireRelease.0` | 21 | 0 | same 21 | same 21 | same 21 | 0 | same 21 | same 21 | same 21 |
+| `Eff.acquireRelease.1` | 21 | 0 | same 21 | same 21 | same 21 | 0 | same 21 | same 21 | same 21 |
+| `Eff.bind.0` | 1299 | 0 | same 1297, smaller 2 | same 1299 | same 1299 | 501 | same 687, smaller 111 | same 798 | same 798 |
+| `Eff.bind.1` | 1299 | 0 | same 1297, smaller 2 | same 1299 | same 1299 | 90 | same 845, smaller 364 | same 1209 | same 1209 |
+| `Eff.exit.0` | 1 | 0 | smaller 1 | same 1 | same 1 | 0 | smaller 1 | same 1 | same 1 |
+| `Eff.iterate.0` | 170 | 0 | same 170 | same 170 | same 170 | 0 | same 170 | same 170 | same 170 |
+| `Eff.onExit.0` | 114 | 0 | same 114 | same 114 | same 114 | 0 | same 109, smaller 5 | same 114 | same 114 |
+| `Eff.onExit.1` | 114 | 0 | same 114 | same 114 | same 114 | 0 | same 114 | same 114 | same 114 |
+| `Eff.restore.0` | 114 | 0 | same 114 | same 114 | same 114 | 0 | same 109, smaller 5 | same 114 | same 114 |
+| `Eff.scoped.0` | 10 | 0 | same 9, smaller 1 | same 10 | same 10 | 3 | smaller 7 | same 7 | same 7 |
+| `Eff.select.bool.0` | 195 | 0 | same 195 | same 195 | same 195 | 0 | same 193, smaller 2 | same 195 | same 195 |
+| `Eff.select.bool.1` | 195 | 0 | same 195 | same 195 | same 195 | 0 | same 195 | same 195 | same 195 |
+| `Eff.select.option.0` | 199 | 0 | same 199 | same 199 | same 199 | 0 | same 199 | same 199 | same 199 |
+| `Eff.select.option.1` | 199 | 0 | same 199 | same 199 | same 199 | 24 | same 171, smaller 4 | same 175 | same 175 |
+| `Eff.uninterruptible.0` | 99 | 0 | same 99 | same 99 | same 99 | 0 | same 85, smaller 14 | same 99 | same 99 |
+| `root` | 25 | 0 | same 25 | same 25 | same 25 | 0 | smaller 25 | same 25 | same 25 |
+| **all** | 4219 | 0 | same 4213, smaller 6 | same 4219 | same 4219 | 618 | same 3058, smaller 543 | same 3601 | same 3601 |
+
+<!-- chunk: fold-totals -->
+fold rows: 11040; left out, the variable form under a layer: 61; counted: 10979 (fold N 4882, the variable form 4821, the row form 1276)
+counted fold rows whose program is admitted: 10327; of them with a column larger or unrelated: 0
+
+<!-- chunk: premise -->
+| Corpus | The address | The node | Folds | Refused | Answer identical | Answer changed | Error smaller | Requirement smaller | A column larger or unrelated |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| generated corpus | no closed edge above | error `never` | 151 | 0 | 151 | 0 | 0 | 36 | 0 |
+| generated corpus | no closed edge above | can fail | 25 | 0 | 25 | 0 | 25 | 0 | 0 |
+| generated corpus | a closed edge above | error `never` | 48 | 0 | 48 | 0 | 0 | 6 | 0 |
+| generated corpus | a closed edge above | can fail | 14 | 0 | 1 | 13 | 0 | 0 | 0 |
+| truth lane, the 48 other programs | no closed edge above | error `never` | 308 | 0 | 308 | 0 | 0 | 0 | 0 |
+| truth lane, the 48 other programs | no closed edge above | can fail | 36 | 0 | 36 | 0 | 20 | 0 | 0 |
+| truth lane, the 48 other programs | a closed edge above | error `never` | 52 | 0 | 52 | 0 | 0 | 0 | 0 |
+| truth lane, the 48 other programs | a closed edge above | can fail | 29 | 4 | 21 | 4 | 12 | 0 | 0 |
+| truth lane, the 25 programs of the modules | no closed edge above | error `never` | 1565 | 0 | 1565 | 0 | 0 | 0 | 0 |
+| truth lane, the 25 programs of the modules | a closed edge above | error `never` | 2648 | 0 | 2648 | 0 | 0 | 0 | 0 |
+| truth lane, the 25 programs of the modules | a closed edge above | can fail | 6 | 0 | 0 | 6 | 0 | 0 | 0 |
+
+<!-- chunk: premise-totals -->
+the plan's domain: 2085 folds, 0 refused; the wider premise: 4833 folds, 0 refused, 4833 with the answer identical; outside the wider premise: 49 folds, 4 refused
+
+<!-- chunk: rowform -->
+sites: 4882; the row's own type is <A ; never ; {}> at 4882; sites whose answer is its own normal form: 4882
+row form run at 1276 addresses; under a layer 61: admitted 61, every column same or smaller 61
+both forms at 1215 addresses: the same outcome and type at 1215
+variable form under a layer: 61 addresses; refused at the fold as unbound 26; the variable names a binder of the body 35
+
+<!-- chunk: repair -->
+| Order | The rule that refuses | Where it is decided | Effect addresses | Term addresses | Refused folds | Programs |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | a list fold's accumulator with no stated type | `argTy`: the initial value's type is the accumulator's | 2 | 1627 | 1629 | 27 |
+| 2 | a list fold's list | `Checker.listOf?`: the head of the raw type | 109 | 1415 | 1524 | 27 |
+| 3 | `sameHandle` | `NativeAtom.sameHandleRule`: two heads | 81 | 919 | 1000 | 25 |
+| 4 | a decision by an option | `Decision.arms`: the head of the normal form | 199 | 341 | 540 | 25 |
+| 5 | a Boolean decision | `Decision.arms`: equality with `bool` | 82 | 360 | 442 | 30 |
+| 6 | a restore site | `Checker.check`: equality with `Ty.maskRestore` | 81 | 116 | 197 | 27 |
+| 7 | a loop's test | `Checker.check`: equality with `bool` | 0 | 171 | 171 | 26 |
+| 8 | `ite` on two branches that are not comparable | `Ty.matchTemplateArgs` with `join`: no union of the two | 0 | 132 | 132 | 5 |
+| 9 | a fiber (`join`, `await`, `interrupt`) | `fiberTy`: the head | 49 | 52 | 101 | 23 |
+| 10 | a loop's cursor with no stated type | `Checker.check`: the initial value's type is the cursor's | 0 | 101 | 101 | 26 |
+| 11 | the cause atoms | `causeInputError?`: the head | 11 | 89 | 100 | 30 |
+| 12 | a cell's content (invariance) | `Ty.sub` at `refOf`: both ways | 0 | 99 | 99 | 31 |
+| 13 | a cause's interruptor | `causeTy`: equality with `nat` | 24 | 25 | 49 | 11 |
+| 14 | `getOrElse` | `Ty.matchTemplateArgs`, the parameter kept at its first binding | 4 | 20 | 24 | 12 |
+| 15 | a typed failure with a part at `never` | `admittedErrTy`: `never` is no tag | 0 | 10 | 10 | 4 |
+| 16 | a handler's test | `Checker.check`: equality with `bool` | 0 | 9 | 9 | 9 |
+| 17 | `closeScope`'s scope and exit | `Checker.exitOf?`, equality with `Ty.scope` | 2 | 2 | 4 | 1 |
+| 18 | a statement's test | `Checker.checkStmt`: equality with `bool` | 0 | 1 | 1 | 1 |
+|  | **all** |  | 644 | 5489 | 6133 | 57 |
+
+<!-- chunk: kinds -->
+| Kind | Rules of the table | Refused folds | What repairs it |
+| --- | --- | --- | --- |
+| A head or an equality that `never` does not meet | 2, 3, 4, 5, 6, 7, 9, 11, 13, 15, 16, 17, 18 | 4148 | a uniform eliminator: member by member, total at `never` |
+| A rule that takes its expectation from a part | 1, 8, 10, 14 | 1886 | another rule: a stated type, a join, or a gap |
+| A cell's invariance | 12 | 99 | a gap alone (the plan's section 4.3) |
+
+<!-- chunk: smallest -->
+| Order | The rule that refuses | A smallest program | Folded at | The refusal | At | What the rule read |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | a list fold's accumulator with no stated type | `bind(succeed(0), succeed(fold(cons(1, nil()), a0, add(a1, a2))))` | `0` | `foldTerm` | `1` | `fold: the body nat is not below the accumulator never` |
+| 2 | a list fold's list | `bind(succeed(cons(1, nil())), succeed(fold(a0, 0, add(a1, a2))))` | `0` | `foldTerm` | `1` | `fold: the list is never` |
+| 3 | `sameHandle` | `bind(deferredMake<unit, never>(()), succeed(sameHandle(a0, a0)))` | `0` | `term` | `1` | `sameHandle(never, never)` |
+| 4 | a decision by an option | `bind(succeed(some(1)), select[option](a0, succeed(()), succeed(a1)))` | `0` | `notSelectable` | `1` | `notSelectable option never` |
+| 5 | a Boolean decision | `bind(succeed(true), select[bool](a0, succeed(()), succeed(())))` | `0` | `predicateNotBool` | `1` | `predicateNotBool never` |
+| 6 | a restore site | `bind(getInterruptible, restore(a0, succeed(())))` | `0` | `maskRestoreExpected` | `1` | `maskRestoreExpected never` |
+| 7 | a loop's test | `bind(succeed(true), iterate(0; a0; a1; (); succeed(())))` | `0` | `predicateNotBool` | `1` | `predicateNotBool never` |
+| 8 | `ite` on two branches that are not comparable | `bind(succeed(1), succeed(ite(true, pair(some(true), a0), pair(none(), 2))))` | `0` | `term` | `1` | `ite(bool, [option<bool>, never], [option<never>, nat])` |
+| 9 | a fiber (`join`, `await`, `interrupt`) | `bind(fork(succeed(())), join(a0))` | `0` | `notFiber` | `1` | `notFiber never` |
+| 10 | a loop's cursor with no stated type | `bind(succeed(0), iterate(a0; lt(a1, 3); succ(a1); a1; succeed(())))` | `0` | `stepNotCursor` | `1` | `stepNotCursor step=nat cursor=never` |
+| 11 | the cause atoms | `bind(exit(succeed(())), succeed(causeIsInterrupt(a0)))` | `0` | `term` | `1` | `causeIsInterrupt(never)` |
+| 12 | a cell's content (invariance) | `bind(succeed(5), bind(refMake(a0), refSet(pair(a1, 7))))` | `0` | `requestNotSubtype` | `1.1` | `requestNotSubtype refSet request=[ref<never>, nat] expected=[ref<'0>, '0]` |
+| 13 | a cause's interruptor | `bind(getId, failCause(Interrupt(a0)))` | `0` | `cause` | `1` | `Interrupt(never)` |
+| 14 | `getOrElse` | `bind(exit(fail(7)), succeed(getOrElse(causeError(a0), 9)))` | `0.0` | `term` | `1` | `getOrElse(option<never>, nat)` |
+| 15 | a typed failure with a part at `never` | `bind(succeed("m"), fail(pair("A", a0)))` | `0` | `errorNotAdmitted` | `1` | `errorNotAdmitted ["A", never]` |
+| 16 | a handler's test | `bind(succeed(true), catchIf(a0, fail(1), succeed(())))` | `0` | `predicateNotBool` | `1` | `predicateNotBool never` |
+| 17 | `closeScope`'s scope and exit | `bind(scopeMake(()), bind(exit(succeed(())), closeScope(a0, a1)))` | `0` | `scopeExpected` | `1.1.0` | `scopeExpected never` |
+| 18 | a statement's test | `bind(succeed(true), gen{if a0 {} else {}; })` | `0` | `predicateNotBool` | `1.0.0` | `predicateNotBool never` |
+
+<!-- chunk: repair-totals -->
+effect addresses under fold N: 4882, refused 644; term addresses: 25300, refused 5489; admitted with a column larger or unrelated: effect 0, term 1
+
+term addresses, generated corpus: 98; refused 2; admitted with a column larger or unrelated 1
+term addresses, truth lane, the 48 others: 637; refused 72; admitted with a column larger or unrelated 0
+term addresses, truth lane, the 25 modules: 24565; refused 5415; admitted with a column larger or unrelated 0
+effect addresses, generated corpus: 238; refused 0
+effect addresses, truth lane, the 48 other programs: 425; refused 26
+effect addresses, truth lane, the 25 programs of the modules: 4219; refused 618
+
+<!-- chunk: positions -->
+| The folded position | Folds | Refused | The rules that refuse (the three largest) |
+| --- | --- | --- | --- |
+| `field.target` | 3376 | 1275 | a list fold's list 539; a list fold's accumulator with no stated type 415; `sameHandle` 305 |
+| `fold.list` | 614 | 614 | a list fold's list 614 |
+| `fold.init` | 614 | 614 | a list fold's accumulator with no stated type 614 |
+| `take.0` | 805 | 526 | a list fold's accumulator with no stated type 489; a cell's content (invariance) 21; `sameHandle` 8 |
+| `sameHandle.0` | 297 | 297 | `sameHandle` 297 |
+| `sameHandle.1` | 297 | 297 | `sameHandle` 297 |
+| `select.bool.scrutinee` | 200 | 200 | a Boolean decision 200 |
+| `select.option.scrutinee` | 199 | 199 | a decision by an option 199 |
+| `perform(refModifyWith).request` | 279 | 190 | a list fold's list 181; `sameHandle` 8; a list fold's accumulator with no stated type 1 |
+| `iterate.test` | 171 | 171 | a loop's test 171 |
+| `cons.0` | 1034 | 121 | a list fold's accumulator with no stated type 90; a cell's content (invariance) 31 |
+| `restore.saved` | 116 | 116 | a restore site 116 |
+| `perform(refModifyWith).binder` | 279 | 115 | a Boolean decision 82; a decision by an option 33 |
+| `iterate.initial` | 171 | 101 | a loop's cursor with no stated type 101 |
+| `causeIsInterrupt.0` | 85 | 85 | the cause atoms 85 |
+| `iterate.result` | 171 | 70 | a decision by an option 70 |
+| `perform(refMake).request` | 70 | 67 | a cell's content (invariance) 41; a list fold's list 21; `sameHandle` 4 |
+| `tupleAt.target` | 241 | 63 | a Boolean decision 42; a decision by an option 15; a fiber (`join`, `await`, `interrupt`) 4 |
+| `perform(refGet).request` | 91 | 45 | a list fold's list 45 |
+| `succeed.value` | 834 | 38 | a decision by an option 24; a list fold's list 11; a fiber (`join`, `await`, `interrupt`) 2 |
+| `tuple.1` | 268 | 36 | a Boolean decision 18; `ite` on two branches that are not comparable 15; a fiber (`join`, `await`, `interrupt`) 2 |
+| `awaitFiber.fiber` | 31 | 31 | a fiber (`join`, `await`, `interrupt`) 31 |
+| `recordSet.target` | 680 | 31 | `ite` on two branches that are not comparable 31 |
+| `recordSet.value` | 680 | 31 | `ite` on two branches that are not comparable 31 |
+
+<!-- chunk: positions-totals -->
+positions in all: 99; positions with no refusal: 57
+
+<!-- chunk: eliminators -->
+| Eliminator | Owner | What it reads | At a first type | At a second type | At the union of the two | At `never` |
+| --- | --- | --- | --- | --- | --- | --- |
+| atom, fixed parameters: concat(a0, "x") | `NativeAtom.monoApply` | Ty.sub, raw types | `"a"`: `string` | `"b"`: `string` | `string` | `string` |
+| atom, fixed parameters: isSome(a0) | `NativeAtom.monoApply` | Ty.sub, raw types | `option<nat>`: `bool` | `option<string>`: `bool` | `bool` | `bool` |
+| atom, fixed parameters: length(a0) | `NativeAtom.monoApply` | Ty.sub, raw types | `list<nat>`: `nat` | `list<string>`: `nat` | `nat` | `nat` |
+| atom, any number of arguments: strings(a0) | `Scheme.apply (variadic)` | Ty.sub, raw types | `"a"`: `list<string>` | `"b"`: `list<string>` | `list<string>` | `list<string>` |
+| atom, alternatives: eq(a0, a0) | `Scheme.apply (alts)` | Ty.sub, raw types, the whole list per alternative | `nat`: `bool` | `string`: `bool` | refused | `bool` |
+| atom, template: get(a0, 0) | `Ty.matchTemplateArgs` | infer, then Ty.sub on normal forms | `list<nat>`: `option<nat>` | `list<string>`: `option<string>` | refused | `option<never>` |
+| atom, template: take(a0, 1) | `Ty.matchTemplateArgs` | infer, then Ty.sub on normal forms | `list<nat>`: `list<nat>` | `list<string>`: `list<string>` | refused | `list<never>` |
+| atom, template: mapGet(a0, "k") | `Ty.matchTemplateArgs` | infer, then Ty.sub on normal forms | `map<string, nat>`: `option<nat>` | `map<string, bool>`: `option<bool>` | refused | `option<never>` |
+| atom, template, repeated parameter kept at its first binding: getOrElse(a0, 9) | `Ty.matchTemplateArgs (join := false)` | infer, then Ty.sub on normal forms | `option<nat>`: `nat` | `option<never>`: refused | `nat` | `nat` |
+| atom, template, repeated parameter joined: append(a0, cons(1, nil())) | `Ty.matchTemplateArgs (join := true)` | infer, then Ty.sub on normal forms | `list<nat>`: `list<nat>` | `list<never>`: `list<nat>` | `list<nat>` | `list<nat>` |
+| atom, template, repeated parameter joined: ite(a0, 1, 2) | `Ty.matchTemplateArgs (join := true)` | infer, then Ty.sub on normal forms | `bool`: `nat` | the same | one type only; the raw `T \| T`: `nat` | `nat` |
+| atom, named rule: fst(a0) | `NativeAtom.projectProduct` | head of the raw type, member by member | `[nat, string]`: `nat` | `[bool, unit]`: `bool` | `(nat \| bool)` | `never` |
+| atom, named rule: causeIsFail(a0) | `causeInputError?` | head of the raw type | `cause<nat>`: `bool` | `exit<unit, string>`: `bool` | refused | refused |
+| atom, named rule: causeError(a0) | `causeInputError?` | head of the raw type | `cause<nat>`: `option<nat>` | `cause<string>`: `option<string>` | refused | refused |
+| atom, named rule: sameHandle(a0, a0) | `NativeAtom.sameHandleRule` | heads of the raw types | `ref<nat>`: `bool` | `ref<string>`: `bool` | refused | refused |
+| field read: a0.x | `Record.fieldType` | members of the normal form | `{_tag: "A", x: nat}`: `nat` | `{_tag: "B", x: string}`: `string` | `(nat \| string)` | `never` |
+| field write: a0 with x := 1 | `Record.setType` | members of the normal form | `{_tag: "A", x: nat}`: `{_tag: "A", x: nat}` | `{_tag: "B", x: string}`: `{_tag: "B", x: nat}` | `({_tag: "A", x: nat} \| {_tag: "B", x: nat})` | `never` |
+| tuple projection: a0#0 | `Tuple.typeAt` | the normal form, member by member | `[nat, string]`: `nat` | `tuple[bool, unit, nat]`: `bool` | `(nat \| bool)` | `never` |
+| list fold: fold(a0, 0, a1) | `Checker.listOf?` | head of the raw type | `list<nat>`: `nat` | `list<string>`: `nat` | refused | refused |
+| cause leaf: Fail(a0) | `admittedErrTy` | members of the normal form | `nat`: `nat` | `string`: `string` | `(nat \| string)` | `never` |
+| cause leaf: Interrupt(a0) | `causeTy` | equality of the raw type with nat | `nat`: `never` | the same | one type only; the raw `T \| T`: refused | refused |
+| fail(a0) | `admittedErrTy` | members of the normal form | `nat`: `<never ; nat ; {}>` | `string`: `<never ; string ; {}>` | `<never ; (nat \| string) ; {}>` | `<never ; never ; {}>` |
+| perform at a closed row: say(a0) | `checkRow, Ty.matchTemplate` | Ty.sub on normal forms | `"a"`: `<nat ; never ; {}>` | `"b"`: `<nat ; never ; {}>` | `<nat ; never ; {}>` | `<nat ; never ; {}>` |
+| perform at a template row: Ref.get(a0) | `checkRow, Ty.matchTemplate` | infer, then Ty.sub on normal forms | `ref<nat>`: `<nat ; never ; {}>` | `ref<string>`: `<string ; never ; {}>` | refused (requestNotSubtype) | `<never ; never ; {}>` |
+| perform at a template row: Deferred.await(a0) | `checkRow, Ty.matchTemplate` | infer, then Ty.sub on normal forms | `deferred<nat, string>`: `<nat ; string ; {}>` | `deferred<bool, nat>`: `<bool ; nat ; {}>` | refused (requestNotSubtype) | `<never ; never ; {}>` |
+| perform at a template row, the cell beside its content: Ref.set([a0, 7]) | `checkRow, Ty.matchTemplate` | infer, then Ty.sub on normal forms | `ref<nat>`: `<ref<nat> ; never ; {}>` | `ref<never>`: refused (requestNotSubtype) | refused (requestNotSubtype) | `<ref<nat> ; never ; {}>` |
+| perform with a binder term: Ref.update{succ(a1)}(a0) | `checkRow, bindTerm` | infer, then Ty.sub on normal forms | `ref<nat>`: `<unit ; never ; {}>` | `ref<never>`: refused (resultNotSubtype) | refused (requestNotSubtype) | `<unit ; never ; {}>` |
+| catchIf's test: catchIf(a0-typed test) | `Checker.check (catchIf)` | equality of the raw type with bool | `bool`: `<unit ; nat ; {}>` | the same | one type only; the raw `T \| T`: refused (predicateNotBool) | refused (predicateNotBool) |
+| select by a Boolean: select[bool](a0, …) | `Decision.arms` | equality of the raw type with bool | `bool`: `<unit ; never ; {}>` | the same | one type only; the raw `T \| T`: refused (predicateNotBool) | refused (predicateNotBool) |
+| select by an option: select[option](a0, …, succeed(a1)) | `Decision.arms` | head of the normal form | `option<nat>`: `<(unit \| nat) ; never ; {}>` | `option<string>`: `<(unit \| string) ; never ; {}>` | refused (notSelectable) | refused (notSelectable) |
+| select by a tag: select[tag A](a0, succeed(a1), succeed(a1)) | `Decision.arms, Ty.payloadTy, Ty.diffTag` | members of the normal form | `["A", nat]`: `<nat ; never ; {}>` | `["B", string]`: refused (notSelectable) | `<(nat \| ["B", string]) ; never ; {}>` | refused (notSelectable) |
+| select by a record's tag: select[recordTag A](a0, succeed(a1), succeed(a1)) | `Record.tagArms` | members of the normal form | `{_tag: "A", x: nat}`: `<{_tag: "A", x: nat} ; never ; {}>` | `{_tag: "B", x: string}`: `<{_tag: "B", x: string} ; never ; {}>` | `<({_tag: "A", x: nat} \| {_tag: "B", x: string}) ; never ; {}>` | `<never ; never ; {}>` |
+| iterate's test: iterate(0; a0; a1; (); …) | `Checker.check (iterate)` | equality of the raw type with bool | `bool`: `<unit ; never ; {}>` | the same | one type only; the raw `T \| T`: refused (predicateNotBool) | refused (predicateNotBool) |
+| join(a0) | `fiberTy` | head of the raw type | `fiber<nat, string>`: `<nat ; string ; {}>` | `fiber<bool, nat>`: `<bool ; nat ; {}>` | refused (notFiber) | refused (notFiber) |
+| await(a0) | `fiberTy` | head of the raw type | `fiber<nat, string>`: `<exit<nat, string> ; never ; {}>` | `fiber<bool, nat>`: `<exit<bool, nat> ; never ; {}>` | refused (notFiber) | refused (notFiber) |
+| restore(a0, …) | `Checker.check (restore)` | equality of the raw type with Ty.maskRestore | `handle(MaskRestore)`: `<unit ; never ; {}>` | the same | one type only; the raw `T \| T`: refused (maskRestoreExpected) | refused (maskRestoreExpected) |
+| provideService(k, a0, …) | `Checker.check (provideService)` | Ty.sub on normal forms | `nat`: `<unit ; never ; {}>` | `never`: `<unit ; never ; {}>` | `<unit ; never ; {}>` | `<unit ; never ; {}>` |
+| if a0 {…} else {…} (a generator's statement) | `Checker.checkStmt (ifElse)` | equality of the raw type with bool | `bool`: `<unit ; never ; {}>` | the same | one type only; the raw `T \| T`: refused (predicateNotBool) | refused (predicateNotBool) |
+| forkIn(…, a0) | `Checker.checkAction (forkIn)` | equality of the raw type with Ty.scope | `handle(Scope.Scope)`: `<fiber<unit, never> ; never ; {}>` | the same | one type only; the raw `T \| T`: refused (scopeExpected) | refused (scopeExpected) |
+| interrupt(a0) | `fiberTy` | head of the raw type | `fiber<nat, string>`: `<unit ; never ; {}>` | `fiber<bool, nat>`: `<unit ; never ; {}>` | refused (notFiber) | refused (notFiber) |
+| interruptAll(a0) | `Checker.listOf?, fiberTy` | heads of the raw types | `list<fiber<nat, string>>`: `<unit ; never ; {}>` | `list<fiber<bool, nat>>`: `<unit ; never ; {}>` | refused (listOfFibersExpected) | refused (listOfFibersExpected) |
+| awaitAll(a0) | `Checker.listOf?, fiberTy` | heads of the raw types | `list<fiber<nat, string>>`: `<list<exit<nat, string>> ; never ; {}>` | `list<fiber<bool, nat>>`: `<list<exit<bool, nat>> ; never ; {}>` | refused (listOfFibersExpected) | refused (listOfFibersExpected) |
+| awaitNewChildren(a0) | `Checker.checkAction (awaitNewChildren)` | Ty.sub on the normal form | `list<fiber<nat, string>>`: `<unit ; never ; {}>` | `list<fiber<bool, nat>>`: `<unit ; never ; {}>` | `<unit ; never ; {}>` | `<unit ; never ; {}>` |
+| setContext(a0) | `Checker.checkAction (setContext)` | equality of the raw type with Ty.context | `handle(Context.Context<unknown>)`: `<unit ; never ; {}>` | the same | one type only; the raw `T \| T`: refused (contextExpected) | refused (contextExpected) |
+| closeScope(scope, a0) | `Checker.exitOf?` | head of the raw type | `exit<nat, string>`: `<unit ; never ; {}>` | `exit<bool, nat>`: `<unit ; never ; {}>` | refused (exitExpected) | refused (exitExpected) |
+
+<!-- chunk: baseline -->
+| Program | Site | Addresses | Query | Allowed (plan/wide/all) | Kept (plan/wide/all) | Calls, root down | Wall ms | ms a call | Kept, leaves up | Calls, leaves up | Wall ms, leaves up |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `pPoolOrder` | `1.1.0.0` | 304 | requires `Scope` | 82/304/304 | 6/6/6 | 13 | 481 | 37 | 4 | 301 | 6920 |
+| `pPoolWaiters` | `1.1.0.0` | 253 | requires `Scope` | 84/253/253 | 5/5/5 | 11 | 309 | 28 | 4 | 250 | 4943 |
+| `pPoolLateWake` | `1.1.0.0` | 248 | requires `Scope` | 79/248/248 | 5/5/5 | 11 | 343 | 31 | 4 | 245 | 4935 |
+| `pPoolWithdrawn` | `1.1.0.0` | 248 | requires `Scope` | 79/248/248 | 5/5/5 | 11 | 387 | 35 | 4 | 245 | 6730 |
+| `pPoolClosing` | `1.1.1.1.0.0` | 238 | requires `Scope` | 56/238/238 | 5/5/5 | 11 | 441 | 40 | 4 | 235 | 6690 |
+| `pPoolWake` | `1.1.0.0` | 187 | requires `Scope` | 71/187/187 | 5/5/5 | 11 | 231 | 21 | 4 | 184 | 2628 |
+| `pPoolCloseWaits` | `1.1.1.0.0` | 175 | requires `Scope` | 54/175/175 | 5/5/5 | 11 | 215 | 19 | 4 | 172 | 2402 |
+| `pPoolReuse` | `1.1.0.0` | 166 | requires `Scope` | 50/166/166 | 5/5/5 | 11 | 192 | 17 | 4 | 163 | 1801 |
+| `pPoolMakeFails` | `1.0.0` | 111 | error has nat | 85/111/111 | 6/6/6 | 10 | 104 | 10 | 6 | 106 | 778 |
+| `pPoolMakeFails` | `1.0.0.0` | 110 | requires `Scope` | 84/110/110 | 5/5/5 | 11 | 120 | 10 | 4 | 107 | 769 |
+| `pPoolClosed` | `1.1.0.0` | 52 | requires `Scope` | 42/52/52 | 4/4/4 | 9 | 23 | 2 | 3 | 50 | 202 |
+| `pDiamond` | `1.0` | 21 | requires k6_7 | 21/21/21 | 6/6/6 | 11 | 1 | 0 | 4 | 18 | 2 |
+| `pMergeAll` | `1.0` | 19 | requires k6_7 | 19/19/19 | 4/4/4 | 9 | 1 | 0 | 4 | 16 | 1 |
+| `pProvideMerge` | `1.0` | 15 | requires k6_7 | 15/15/15 | 5/5/5 | 9 | 0 | 0 | 5 | 11 | 1 |
+| `pProvideTwice` | `1.0` | 14 | requires k6_7 | 14/14/14 | 4/4/4 | 8 | 0 | 0 | 4 | 11 | 1 |
+
+<!-- chunk: baseline-totals -->
+sub-programs 15; addresses 2161; from the root down 157 calls, 2848 ms; from the leaves up 2114 calls, 38803 ms
+the restarting descent from each result: 45 results from the root down, it folds more at 0 (225 calls); 15 results from the leaves up, it folds more at 0
+sub-programs of more than 100 addresses: 10; ms a call from 10 to 40
+
+<!-- chunk: runs -->
+| Probe file | Guards | Error lines in the log | Exit code | Wall time |
+| --- | --- | --- | --- | --- |
+| `SelfTest` | 83 | 0 | 0 | 2 s |
+| `Probe1Gen` | - | 0 | 0 | 1 s |
+| `Probe1Truth` | 2 | 0 | 0 | 10 min 55 s |
+| `Probe1Closed` | 2 | 0 | 0 | 12 s |
+| `Probe1TermGen` | - | 0 | 0 | 2 s |
+| `Probe1TermTruth` | 1 | 0 | 0 | 12 min 9 s |
+| `Probe1Flow` | - | 0 | 0 | 18 s |
+| `Probe1Small` | 34 | 0 | 0 | 2 s |
+| `Probe2` | 53 | 0 | 0 | 2 s |
+| `Probe3` | 92 | 0 | 0 | 2 s |
+| `Probe4` | 13 | 0 | 0 | 19 s |
+| `Probe4Premise` | - | 0 | 0 | 17 s |
+| `Probe5` | - | 0 | 0 | 87 s |
+
+<!-- chunk: example-sqlite -->
+full: scoped(bind(acquireRelease(external0(":memory:"), external2(a0)), bind(external1(pair(a0, pair("CREATE TABLE t (a INTEGER, b TEXT)", strings()))), bind(external1(pair(a0, pair("INSERT INTO t (a, b) VALUES (?, ?)", strings("7", ""x"")))), external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+mask, in the domains plan, wide, all:
+      scoped(bind(□:handle(SqlClient.SqlClient), bind(□:list<list<[string, string]>>, bind(□:list<list<[string, string]>>, external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+      kept 5 of 10 effect addresses; 8 calls of check; type <list<list<[string, string]>> ; [string, string] ; {}>
+
+<!-- chunk: example-tagmiss -->
+full: catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), succeed(1))
+mask, in the domain plan:
+      catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), □:nat)
+      kept 6 of 7 effect addresses; 2 calls of check; type <nat ; (string | ["A", "m"]) ; {}>
+mask, in the domain wide:
+      catchIf(tagIs("B", a0), bind(select[bool](true, □:nat, fail("text")), fail(pair("A", "m"))), □:nat)
+      kept 5 of 7 effect addresses; 3 calls of check; type <nat ; (string | ["A", "m"]) ; {}>
+mask, in the domain all:
+      catchIf(tagIs("B", a0), bind(select[bool](true, □:nat, fail("text")), □:never), □:nat)
+      kept 4 of 7 effect addresses; 7 calls of check; type <nat ; string ; {}>
+
+<!-- chunk: example-g309 -->
+full: onExit(forkScoped(suspend(matchCause(fail("hi"), deferredAwait(a0), getContext))), getContext)
+mask, in the domain plan:
+      onExit(forkScoped(suspend(matchCause(fail("hi"), deferredAwait(a0), getContext))), □:handle(Context.Context<unknown>))
+      kept 7 of 8 effect addresses; 2 calls of check; type <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+mask, in the domains wide, all:
+      onExit(forkScoped(□:handle(Context.Context<unknown>)), □:handle(Context.Context<unknown>))
+      kept 2 of 8 effect addresses; 4 calls of check; type <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+

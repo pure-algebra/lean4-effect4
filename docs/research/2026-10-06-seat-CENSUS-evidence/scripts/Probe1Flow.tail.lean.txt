@@ -1,0 +1,108 @@
+/-
+Seat CENSUS, probe 1, where a folded error flows. Fold A at an address whose node can fail
+lowers that node's error column. This probe finds every value type that the fold changes: it
+compares the environments of all sites of the full program with those of the folded program
+(the row form, so that no variable moves), and lists each use of a changed variable by the
+position that reads it. It runs on every fold A whose node's error is not `never`: the folds
+at a node that cannot fail change a requirement at most, which no value type holds.
+
+It answers two questions. Inside candidate A's domain (no closed edge above the address): does
+any environment entry change? Outside it: which positions read the changed value, and which of
+them refuse?
+-/
+namespace Census
+
+/-- The uses of the variables `changed` in the term slots of a node: each as the position that
+reads the variable. -/
+def usesIn (node : P) (changed : List Nat) : List String :=
+  (termSlots node).flatMap fun slot =>
+    (termParts slot.name slot.term).filterMap fun part =>
+      match part.part with
+      | .var i => if changed.contains i then some part.role else none
+      | _ => none
+
+def flowHeader : String :=
+  tsv ["program", "address", "rule", "columnOpen", "firstClosed", "inLayer", "nodeType", "admitted", "refusal",
+    "culprit", "site", "kind", "position", "before", "after"]
+
+/-- The rows of one fold: one row for each changed environment entry's use, one for each site
+whose answer changed, and one summary row. -/
+def flowRows (name : String) (table : RowTable) (e : P) (s : Site) (t : EffTy) : List String :=
+  let sig := nativeSignature table
+  match foldedARow table [] e s.path t.answer with
+  | none => []
+  | some f =>
+    let sig' := nativeSignature f.table
+    let full := sites sig [] e
+    let folded := sites sig' [] f.program
+    let (admitted, refusal, culprit) := match f.result with
+      | .ok _ => ("true", "-", "-")
+      | .error r => ("false", r.reason.head, blame sig' [] f.program r)
+    let head := [name, showPath s.path, s.rule, toString s.columnOpen, s.firstClosed, toString s.inLayer, showEffTy t,
+      admitted, refusal, culprit]
+    let rows := full.flatMap fun a =>
+      -- a site of the full program outside the folded subtree, with its twin in the folded one
+      if s.path.isPrefixOf a.path then []
+      else match folded.find? (fun b => b.path == a.path && !b.anomaly) with
+        | none => []
+        | some b =>
+          let changed := (List.range a.env.length).filter fun i => a.env[i]? != b.env[i]?
+          -- each use of a changed entry, at every site that reads it
+          let envRows := changed.flatMap fun i =>
+            (usesIn a.node [i]).map fun role =>
+              tsv (head ++ [showPath a.path, "use", role,
+                (a.env[i]?.map showTy).getD "?", (b.env[i]?.map showTy).getD "?"])
+          -- the caught error of a `catchIf`, which its test reads one level above the node's own
+          let testRows := match a.node, slotEnvs sig a.env a.path (.eff a.node), slotEnvs sig' b.env b.path (.eff b.node) with
+            | .catchIf test _ _, [env1], [env2] =>
+              if env1.getLast? != env2.getLast? then
+                ((termParts "catchIf.test" test).filterMap fun part =>
+                  match part.part with
+                  | .var i => if i == a.env.length then some part.role else none
+                  | _ => none).map fun role =>
+                  tsv (head ++ [showPath a.path, "use", role,
+                    (env1.getLast?.map showTy).getD "?", (env2.getLast?.map showTy).getD "?"])
+              else []
+            | _, _, _ => []
+          let answerRows := match a.type sig, b.type sig' with
+            | .ok ta, .ok tb =>
+              if ta.answer != tb.answer then
+                [tsv (head ++ [showPath a.path, "answer", ctorName (.eff a.node), showTy ta.answer, showTy tb.answer])]
+              else []
+            | _, _ => []
+          envRows ++ testRows ++ answerRows
+    let anyEnv := full.any fun a =>
+      !s.path.isPrefixOf a.path &&
+        match folded.find? (fun b => b.path == a.path && !b.anomaly) with
+        | some b => a.env != b.env
+        | none => false
+    tsv (head ++ ["-", "summary", if anyEnv then "an environment entry changes" else "no environment entry changes",
+      "-", "-"]) :: rows
+
+def errorOf (t : EffTy) : Ty := t.error.normalize
+
+def runFlow (label : String) (progs : List (String × RowTable × P)) : IO Unit := do
+  let adm := admittedOf progs
+  IO.FS.writeFile (outDir ++ label ++ "-flow.tsv") (flowHeader ++ "\n")
+  let mut folds := 0
+  for (name, table, e, _) in adm do
+    let sig := nativeSignature table
+    for s in sites sig [] e do
+      match s.type sig with
+      | .ok t =>
+        if errorOf t != .never then
+          folds := folds + 1
+          appendLines (outDir ++ label ++ "-flow.tsv") (flowRows name table e s t)
+      | .error _ => pure ()
+  IO.println s!"{label}: folds at a node whose error is not never: {folds}"
+
+end Census
+
+namespace Census
+def genPrograms : List (String × RowTable × P) :=
+  (List.range 400).map fun i => (s!"g{i}", [], Test.Program.Gen.program i 4)
+def truthPrograms : List (String × RowTable × P) :=
+  OCaml5.Truth.corpus.map fun (name, p) => (name, (OCaml5.Truth.hostInputs name).1, p)
+#eval runFlow "gen" genPrograms
+#eval runFlow "truth" truthPrograms
+end Census
