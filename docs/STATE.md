@@ -339,8 +339,8 @@ for a watch on the proof graph. Both packets are filed with a coordinator's note
   one answer on both builds (`8b471a8a`). No ruling changed;
 - the keyed lane's checked result has two aggregates: no entry waits, and the host itself
   measures every entry. The second is false for all four scenarios (`34db7582`);
-- three evidence labels are narrowed: the minted builders promise a variable's reading
-  (`1b2679f6`), and the mask probe and seat MOVE's receipt say what each check holds
+- three evidence labels are narrowed. The minted builders promise a variable's reading
+  (`1b2679f6`). The mask probe and seat MOVE's receipt say what each check holds
   (`d61522d3`);
 - the proof graph shows a node's own placement: Codex's patch, applied unchanged
   (`27f6e5d6`). 27 placed nodes had no concept in the drawing before.
