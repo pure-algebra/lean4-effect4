@@ -1,0 +1,357 @@
+{
+ "what": "the generated corpus (400 programs at depth 4): the manifest entries that differ between the driver before the repair and after it; every other entry is equal",
+ "programs": 400,
+ "moved": {
+  "g102": {
+   "wellTyped": true,
+   "runExit": [
+    {
+     "success": {
+      "fiber": 5
+     }
+    },
+    {
+     "success": {
+      "fiber": 5
+     }
+    }
+   ],
+   "runSyncExit": [
+    {
+     "success": {
+      "fiber": 5
+     }
+    },
+    {
+     "success": {
+      "fiber": 5
+     }
+    }
+   ],
+   "scheduleBefore": [
+    "started 0",
+    "forked 0 1",
+    "started 1",
+    "exited 1 success",
+    "forked 0 2",
+    "started 2",
+    "forked 2 3",
+    "started 3",
+    "exited 3 success",
+    "forked 2 4",
+    "started 4",
+    "exited 4 success",
+    "exited 2 success",
+    "forked 0 5",
+    "started 5",
+    "exited 5 die",
+    "forked 0 6",
+    "started 6",
+    "forked 6 9",
+    "started 9",
+    "exited 9 success",
+    "forked 6 10",
+    "started 10",
+    "exited 10 success",
+    "forked 6 11",
+    "started 11",
+    "exited 11 success",
+    "exited 6 success",
+    "forked 0 7",
+    "started 7",
+    "exited 7 success",
+    "forked 0 8",
+    "started 8",
+    "exited 8 success",
+    "exited 0 success"
+   ],
+   "scheduleAfter": [
+    "started 0",
+    "forked 0 1",
+    "started 1",
+    "exited 1 success",
+    "forked 0 2",
+    "started 2",
+    "forked 2 3",
+    "started 3",
+    "exited 3 success",
+    "forked 2 4",
+    "started 4",
+    "exited 4 success",
+    "exited 2 success",
+    "forked 0 5",
+    "started 5",
+    "exited 5 die",
+    "forked 0 6",
+    "started 6",
+    "forked 6 7",
+    "started 7",
+    "exited 7 success",
+    "forked 6 8",
+    "started 8",
+    "exited 8 success",
+    "forked 6 9",
+    "started 9",
+    "exited 9 success",
+    "exited 6 success",
+    "forked 0 10",
+    "started 10",
+    "exited 10 success",
+    "forked 0 11",
+    "started 11",
+    "exited 11 success",
+    "exited 0 success"
+   ],
+   "events": [
+    "started 0",
+    "forked 0->1 daemon",
+    "started 1",
+    "exited 1 {\"success\":{\"context\":true}}",
+    "forked 0->2 daemon",
+    "started 2",
+    "forked 2->3 daemon",
+    "started 3",
+    "exited 3 {\"success\":{\"context\":true}}",
+    "forked 2->4 daemon",
+    "started 4",
+    "exited 4 {\"success\":{\"context\":true}}",
+    "exited 2 {\"success\":{\"context\":true}}",
+    "forked 0->5",
+    "started 5",
+    "exited 5 {\"failure\":{\"reasons\":[{\"die\":\"missingService\"}]}}",
+    "forked 0->6 daemon",
+    "forked 0->7 daemon",
+    "forked 0->8 daemon",
+    "started 6",
+    "forked 6->9 daemon",
+    "forked 6->10 daemon",
+    "forked 6->11 daemon",
+    "started 9",
+    "exited 9 {\"success\":null}",
+    "started 10",
+    "exited 10 {\"success\":null}",
+    "started 11",
+    "exited 11 {\"success\":null}",
+    "exited 6 {\"success\":null}",
+    "started 7",
+    "exited 7 {\"success\":null}",
+    "started 8",
+    "exited 8 {\"success\":null}",
+    "exited 0 {\"success\":{\"fiber\":5}}"
+   ]
+  },
+  "g204": {
+   "wellTyped": false,
+   "runExit": [
+    {
+     "failure": {
+      "reasons": [
+       {
+        "die": "badName"
+       }
+      ]
+     }
+    },
+    {
+     "failure": {
+      "reasons": [
+       {
+        "die": "badName"
+       }
+      ]
+     }
+    }
+   ],
+   "runSyncExit": [
+    {
+     "failure": {
+      "reasons": [
+       {
+        "die": "badName"
+       }
+      ]
+     }
+    },
+    {
+     "failure": {
+      "reasons": [
+       {
+        "die": "badName"
+       }
+      ]
+     }
+    }
+   ],
+   "scheduleBefore": [
+    "started 0",
+    "forked 0 1",
+    "started 1",
+    "forked 1 2",
+    "started 2",
+    "exited 2 success",
+    "forked 1 3",
+    "started 3",
+    "exited 3 success",
+    "exited 1 success",
+    "forked 0 4",
+    "started 4",
+    "exited 4 die",
+    "forked 0 5",
+    "started 5",
+    "exited 5 success",
+    "forked 0 6",
+    "started 6",
+    "forked 6 8",
+    "started 8",
+    "exited 8 success",
+    "forked 6 9",
+    "started 9",
+    "exited 9 success",
+    "forked 6 10",
+    "started 10",
+    "exited 10 success",
+    "exited 6 success",
+    "forked 0 7",
+    "started 7",
+    "exited 7 success",
+    "exited 0 die"
+   ],
+   "scheduleAfter": [
+    "started 0",
+    "forked 0 1",
+    "started 1",
+    "forked 1 2",
+    "started 2",
+    "exited 2 success",
+    "forked 1 3",
+    "started 3",
+    "exited 3 success",
+    "exited 1 success",
+    "forked 0 4",
+    "started 4",
+    "exited 4 die",
+    "forked 0 5",
+    "started 5",
+    "exited 5 success",
+    "forked 0 6",
+    "started 6",
+    "forked 6 7",
+    "started 7",
+    "exited 7 success",
+    "forked 6 8",
+    "started 8",
+    "exited 8 success",
+    "forked 6 9",
+    "started 9",
+    "exited 9 success",
+    "exited 6 success",
+    "forked 0 10",
+    "started 10",
+    "exited 10 success",
+    "exited 0 die"
+   ],
+   "events": [
+    "started 0",
+    "forked 0->1 daemon",
+    "started 1",
+    "forked 1->2 daemon",
+    "started 2",
+    "exited 2 {\"success\":{\"context\":true}}",
+    "forked 1->3 daemon",
+    "started 3",
+    "exited 3 {\"success\":{\"context\":true}}",
+    "exited 1 {\"success\":{\"context\":true}}",
+    "forked 0->4 daemon",
+    "started 4",
+    "exited 4 {\"failure\":{\"reasons\":[{\"die\":\"badName\"}]}}",
+    "forked 0->5 daemon",
+    "forked 0->6 daemon",
+    "forked 0->7 daemon",
+    "started 5",
+    "exited 5 {\"success\":null}",
+    "started 6",
+    "forked 6->8 daemon",
+    "forked 6->9 daemon",
+    "forked 6->10 daemon",
+    "started 8",
+    "exited 8 {\"success\":null}",
+    "started 9",
+    "exited 9 {\"success\":null}",
+    "started 10",
+    "exited 10 {\"success\":null}",
+    "exited 6 {\"success\":null}",
+    "started 7",
+    "exited 7 {\"success\":null}",
+    "exited 0 {\"failure\":{\"reasons\":[{\"die\":\"badName\"}]}}"
+   ]
+  },
+  "g246": {
+   "wellTyped": false,
+   "runExit": [
+    {
+     "success": {
+      "fiber": 1
+     }
+    },
+    {
+     "success": {
+      "fiber": 2
+     }
+    }
+   ],
+   "runSyncExit": [
+    {
+     "success": {
+      "fiber": 1
+     }
+    },
+    {
+     "success": {
+      "fiber": 2
+     }
+    }
+   ],
+   "scheduleBefore": [
+    "started 0",
+    "scheduled 0 0",
+    "forked 0 2",
+    "scheduled 0 0",
+    "started 2",
+    "exited 2 interrupt",
+    "exited 0 success",
+    "ran 0",
+    "started 1",
+    "exited 1 success",
+    "ran 0"
+   ],
+   "scheduleAfter": [
+    "started 0",
+    "scheduled 0 0",
+    "forked 0 1",
+    "scheduled 0 0",
+    "started 1",
+    "exited 1 interrupt",
+    "exited 0 success",
+    "ran 0",
+    "started 2",
+    "exited 2 success",
+    "ran 0"
+   ],
+   "events": [
+    "started 0",
+    "forked 0->1 daemon",
+    "scheduledTask owner=0 prio=0",
+    "forked 0->2",
+    "scheduledTask owner=0 prio=0",
+    "started 0",
+    "started 2",
+    "exited 2 {\"failure\":{\"reasons\":[{\"interrupt\":0}]}}",
+    "exited 0 {\"success\":{\"fiber\":1}}",
+    "ranTask owner=0",
+    "started 1",
+    "exited 1 {\"success\":8}",
+    "ranTask owner=0"
+   ]
+  }
+ }
+}

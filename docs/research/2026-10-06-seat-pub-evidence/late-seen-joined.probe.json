@@ -1,0 +1,128 @@
+{
+ "what": "a probe, not a lane program: a detached child with a deferred start that the root joins before the first run of the child (one host run, 2026-10-06, the repaired driver)",
+ "effect": "4.0.0-rc.112",
+ "bun": "1.4.2",
+ "compiler": "@typescript/native-preview 7.0.0-dev.20260629.1",
+ "expr": "Effect.flatMap(Deferred.make<void, never>(), (a0) => Effect.flatMap(Effect.forkDetach(Effect.succeed(5), { startImmediately: false, uninterruptible: \"inherit\" }), (a1) => Effect.flatMap(Effect.forkChild(Deferred.await(a0), { startImmediately: true, uninterruptible: \"inherit\" }), (a2) => Effect.flatMap(Effect.forkChild(Fiber.interrupt(a2), { startImmediately: true, uninterruptible: \"inherit\" }), (a3) => Effect.flatMap(Fiber.await(a2), (a4) => Effect.flatMap(Fiber.join(a1), (a5) => Effect.succeed(tuple(a4, a5, a1))))))))",
+ "leanExit": {
+  "success": [
+   {
+    "failure": {
+     "reasons": [
+      {
+       "interrupt": 2
+      }
+     ]
+    }
+   },
+   5,
+   {
+    "fiber": 3
+   }
+  ]
+ },
+ "hostExit": {
+  "success": [
+   {
+    "failure": {
+     "reasons": [
+      {
+       "interrupt": 2
+      }
+     ]
+    }
+   },
+   5,
+   {
+    "fiber": 3
+   }
+  ]
+ },
+ "leanSchedule": [
+  "started 0",
+  "scheduled 0 0",
+  "forked 0 1",
+  "started 1",
+  "parked 1",
+  "forked 0 2",
+  "started 2",
+  "resumed 1",
+  "started 1",
+  "exited 1 interrupt",
+  "exited 2 success",
+  "parked 0",
+  "ran 0",
+  "started 3",
+  "exited 3 success",
+  "resumed 0",
+  "started 0",
+  "exited 0 success"
+ ],
+ "hostSchedule": [
+  "started 0",
+  "scheduled 0 0",
+  "forked 0 1",
+  "started 1",
+  "parked 1",
+  "forked 0 2",
+  "started 2",
+  "resumed 1",
+  "started 1",
+  "exited 1 interrupt",
+  "exited 2 success",
+  "parked 0",
+  "ran 0",
+  "started 3",
+  "resumed 0",
+  "started 0",
+  "exited 0 success",
+  "exited 3 success"
+ ],
+ "leanEvents": [
+  "started 0",
+  "forked 0->1 daemon",
+  "scheduledTask owner=0 prio=0",
+  "forked 0->2",
+  "started 2",
+  "parkedOn 2 token=0",
+  "forked 0->3",
+  "started 3",
+  "started 2",
+  "exited 2 {\"failure\":{\"reasons\":[{\"interrupt\":3}]}}",
+  "exited 3 {\"success\":null}",
+  "parkedOn 0 token=1",
+  "ranTask owner=0",
+  "started 1",
+  "exited 1 {\"success\":5}",
+  "resumedWith 0 token=1",
+  "started 0",
+  "exited 0 {\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":3}]}},5,{\"fiber\":1}]}"
+ ],
+ "hostEvents": [
+  "started 0",
+  "scheduledTask owner=0 prio=0",
+  "forked 0->1",
+  "started 1",
+  "parkedOn 1",
+  "forked 0->2",
+  "started 2",
+  "resumedWith 1",
+  "started 1",
+  "exited 1 {\"failure\":{\"reasons\":[{\"interrupt\":2}]}}",
+  "exited 2 {\"success\":null}",
+  "parkedOn 0",
+  "ranTask owner=0",
+  "started 3",
+  "resumedWith 0",
+  "started 0",
+  "exited 0 {\"success\":[{\"failure\":{\"reasons\":[{\"interrupt\":2}]}},5,{\"fiber\":3}]}",
+  "exited 3 {\"success\":5}"
+ ],
+ "exitAgree": true,
+ "scheduleAgree": false,
+ "runSyncAgree": true,
+ "notes": [
+  "same value",
+  "schedule differ at row 13: Lean \"exited 3 success\", rc.112 \"resumed 0\""
+ ]
+}

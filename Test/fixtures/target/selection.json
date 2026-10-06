@@ -46,7 +46,13 @@
     "pDeferredGate",
     "pInterruptedWait",
     "pMaskWait",
-    "pMaskedRestore"
+    "pMaskedRestore",
+    "pLateSeen",
+    "pQueueWake",
+    "pQueueFull",
+    "pQueueInterrupted",
+    "pQueueMasked",
+    "pQueueOrder"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

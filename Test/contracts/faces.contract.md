@@ -655,3 +655,49 @@ What this changes in the packet above, and nothing else:
   `read_print`, `read_exact`. *Tested*: tsgo 7.0.0-dev.20260629.1 on the control file. *Tested*:
   the three truth programs against rc.112 and against 4.0.1, where each agrees with Lean on
   every field of the build ledger.
+
+## Amendment, 2026-10-06: the fiber numbers of the truth lane, and six programs (decisions row 274)
+
+What this changes in the packet above, and nothing else:
+
+- **Quantifier 6 of §4, amended: both faces write a fiber under its number in the recorder's
+  order.** The recorder numbers a fiber when it first sees it (`see`,
+  `harness/truth/run-truth.ts`). Lean's reduction reads the same order from its own rows
+  (`numbering`, `harness/truth/Truth.lean`). A fiber's number is the rank of its first sight: a
+  `forked` row that names it as the child, or a `started` row. Before this amendment the Lean
+  face wrote the machine's ids, which follow the allocation order.
+- **Where the two orders differ.** They differ when the recorder sees a fiber late. A
+  scheduled daemon child has a `forked` row on neither face (quantifier 5). So a fiber that is
+  forked after it and runs before it takes the smaller number on rc.112. `pQueueOrder` is
+  the first such program of the lane. Under the machine's ids its rows differ at row 7. They
+  are equal after the exchange of two fiber numbers.
+- **The compared fields that hold a fiber.** Every row of the schedule. The exits of the fork
+  run and of the sync run: an interruptor, a fiber handle and the handles of a snapshot. The
+  machine's own record keeps the machine's ids, and no comparison reads a fiber number there.
+- **What the lane no longer checks.** The machine's allocation order. The two faces are
+  compared up to one renaming of the fibers.
+- **The truth claim (§4) gains six programs.** Five run the Queue's first public operations:
+  `pQueueWake`, `pQueueFull`, `pQueueInterrupted`, `pQueueMasked` and `pQueueOrder`. The
+  sixth, `pLateSeen`, is the control of the renaming in an exit. On every other program of
+  the lane the numbering is the allocation order, and a guard measures that. The two
+  exceptions are pinned (`lateSights`, `harness/truth/Truth.lean`).
+- **The generated corpus takes the same reduction.** Three of its 400 programs take other
+  fiber numbers: `g102`, `g204` and `g246`. Two cells of `harness/truth/corpus-results.tsv`
+  move, the Lean schedule of `g102` and the Lean exit of `g246`. No outcome moves.
+- **Limits, stated and not solved.**
+  - A literal interruptor is a number on both faces, and the two faces test different ids
+    for it (DI-74).
+  - A handle of a fiber that the recorder never sees takes an index of another table on
+    rc.112.
+  - A number that a program computes from an id is renamed on no face (DI-73).
+  - A fiber that is awaited before its first sight. Then rc.112's `exited` row comes after
+    the joiner's rows, because the recorder adds its exit observer at the first sight. No
+    renaming repairs that. No program of the lane awaits such a fiber
+    (`docs/research/2026-10-06-seat-pub-evidence/README.md`).
+- **Evidence.** *Tested*, on rc.112 under bun 1.4.2, with tsgo 7.0.0-dev.20260629.1 for the
+  modules: 52 programs agree on exits, schedules and sync exits, with 1 signed divergence.
+  *Tested*: the six new programs agree with Lean on every field of the build ledger, on
+  rc.112 and on 4.0.1. *Tested*: the generated corpus matches its committed results on 400
+  programs, with 25 registered disagreements. *Tested* by guards of
+  `harness/truth/Truth.lean`: an exchange of two fiber numbers is no difference, and two
+  rows that change places differ after the renaming.

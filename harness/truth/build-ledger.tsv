@@ -53,3 +53,9 @@ pDeferredGate	yes	yes	yes	yes	yes	yes
 pInterruptedWait	yes	yes	yes	yes	yes	yes		
 pMaskWait	yes	yes	yes	yes	yes	yes		
 pMaskedRestore	yes	yes	yes	yes	yes	yes		
+pLateSeen	yes	yes	yes	yes	yes	yes		
+pQueueWake	yes	yes	yes	yes	yes	yes		
+pQueueFull	yes	yes	yes	yes	yes	yes		
+pQueueInterrupted	yes	yes	yes	yes	yes	yes		
+pQueueMasked	yes	yes	yes	yes	yes	yes		
+pQueueOrder	yes	yes	yes	yes	yes	yes		
