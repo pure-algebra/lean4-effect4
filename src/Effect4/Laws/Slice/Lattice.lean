@@ -219,6 +219,67 @@ def restart (valid : Slice α → Bool) (l : List α) : List α :=
     restart valid l'
 termination_by l.length
 
+/-! ### The pass's law
+
+The four lemmas of this section are steps of `SliceView.descend_sublist` and
+`SliceView.descend_minimal`. The first two hold for every `valid`. The last one asks that
+`valid` is upward closed, which a view's validity is (`SliceView.valid_up`). -/
+
+/-- The pass keeps a sub-list of its sites: the sites of `done`, then some of the others, in
+their order. A step of `SliceView.descend_sublist`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweep_sublist (valid : Slice α → Bool) (done todo : List α) :
+    (sweep valid done todo).Sublist (done ++ todo) := by
+  fun_induction sweep valid done todo with
+  | case1 done => rw [List.append_nil]; exact List.Sublist.refl done
+  | case2 done x rest _ ih =>
+    exact ih.trans (List.Sublist.append_left (List.sublist_cons_self x rest) done)
+  | case3 done x rest _ ih => rwa [List.append_assoc, List.singleton_append] at ih
+
+/-- The pass keeps validity: it moves to a slice only after `valid` accepted it. It needs no
+upward closure. A step of `SliceView.descend_minimal`, through `SliceView.descend_valid`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweep_valid (valid : Slice α → Bool) (done todo : List α)
+    (h : valid ⟨done ++ todo⟩ = true) : valid ⟨sweep valid done todo⟩ = true := by
+  fun_induction sweep valid done todo with
+  | case1 done => rwa [List.append_nil] at h
+  | case2 done x rest hc ih => exact ih hc
+  | case3 done x rest _ ih => exact ih (by rwa [List.append_assoc, List.singleton_append])
+
+/-- A slice within `done ++ x :: rest`, without `x`, is below the slice that the pass asked
+about at `x`. A step of `sweep_kept_needed`, its one consumer. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem drop_le_of_subset [DecidableEq α] {r done rest : List α} {x : α}
+    (h : r ⊆ done ++ x :: rest) : (Slice.mk r).drop x ≤ ⟨done ++ rest⟩ := by
+  intro z hz
+  obtain ⟨hzr, hzx⟩ := List.mem_filter.mp hz
+  rcases List.mem_append.mp (h hzr) with hd | hx
+  · exact List.mem_append_left _ hd
+  · rcases List.mem_cons.mp hx with rfl | hr
+    · exact absurd rfl (of_decide_eq_true hzx)
+    · exact List.mem_append_right _ hr
+
+/-- Under an upward closed `valid`, the pass needs each site that it tried and kept: its result
+without the site is not valid. The pass refused the slice without the site when it tried it, and
+the result without the site is below that slice. A step of `SliceView.descend_minimal`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem sweep_kept_needed [DecidableEq α] (valid : Slice α → Bool)
+    (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true) (done todo : List α) :
+    ∀ y ∈ sweep valid done todo,
+      y ∈ done ∨ valid ((Slice.mk (sweep valid done todo)).drop y) = false := by
+  fun_induction sweep valid done todo with
+  | case1 done => exact fun y hy => Or.inl hy
+  | case2 done x rest _ ih => exact ih
+  | case3 done x rest hc ih =>
+    intro y hy
+    rcases ih y hy with hd | hneeded
+    · rcases List.mem_append.mp hd with hd | hx
+      · exact Or.inl hd
+      · obtain rfl : y = x := List.mem_singleton.mp hx
+        refine Or.inr (Bool.eq_false_iff.mpr fun hv => hc (up (drop_le_of_subset ?_) hv))
+        exact List.Subset.trans (sweep_sublist valid (done ++ [y]) rest).subset (by sub_tac)
+    · exact Or.inr hneeded
+
 end Slice
 
 /-- **A view of one program**: the type of each of its slices. An instance owes one fact, `mono`,
@@ -365,16 +426,45 @@ theorem Minimal.keeps_above [DecidableEq α] [Std.IsPreorder T] {v : SliceView �
 /-- The descent keeps sites of its start only, in the start's order, each as often as the start
 does. It holds for every start, valid or not. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal descend_sublist [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
-    (v.descend q s).kept.Sublist s.kept
+theorem descend_sublist [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
+    (v.descend q s).kept.Sublist s.kept :=
+  Slice.sweep_sublist _ [] s.kept
+
+/-- The descent's slice is below its start: it keeps no more. A corollary of
+`descend_sublist`, and a step of `exists_minimal_below`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem descend_le [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
+    v.descend q s ≤ s :=
+  (v.descend_sublist q s).subset
+
+/-- The descent of a valid slice is valid. It needs no monotonicity: the pass moves to accepted
+slices only. A step of `descend_minimal`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem descend_valid [DecidableLE T] (v : SliceView α T) {q : T} {s : Slice α}
+    (h : v.Valid q s) : v.Valid q (v.descend q s) :=
+  of_decide_eq_true
+    (Slice.sweep_valid (fun c => decide (v.Valid q c)) [] s.kept (decide_eq_true h))
+
+/-- The Boolean that the descent asks is upward closed: `valid_up`, read on the decision. A
+step of `descend_minimal` and of `descend_eq_restart`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem decide_valid_up [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T) (q : T)
+    {a b : Slice α} (hab : a ≤ b) (ha : decide (v.Valid q a) = true) :
+    decide (v.Valid q b) = true :=
+  decide_eq_true (v.valid_up (of_decide_eq_true ha) hab)
 
 /-- **The descent ends at a minimal slice** (the paper's brute-force algorithm, pp. 9 and 10).
 From a valid slice it returns a minimal slice, and `descend_sublist` puts that slice below the
 start. It returns one minimal slice, and not a least or a smallest one. Without the premise the
 start is not valid, and then no slice below it is (`valid_up`). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal descend_minimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
-    {q : T} {s : Slice α} (h : v.Valid q s) : v.Minimal q (v.descend q s)
+theorem descend_minimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
+    {q : T} {s : Slice α} (h : v.Valid q s) : v.Minimal q (v.descend q s) := by
+  refine (v.minimal_iff_drop q _).mpr ⟨v.descend_valid h, fun x hx hv => ?_⟩
+  rcases Slice.sweep_kept_needed (fun c => decide (v.Valid q c)) (v.decide_valid_up q) []
+    s.kept x hx with hnil | hneeded
+  · exact List.not_mem_nil hnil
+  · exact of_decide_eq_false hneeded hv
 
 /-- **A minimal valid slice exists below each valid slice**: the paper's Theorem 4.5 (p. 9).
 The paper's proof enumerates the slices below and does not use monotonicity. This proof is the
@@ -382,18 +472,27 @@ descent, which uses it. The statement names two decisions, of the order on the t
 equal sites, because the gate admits no classical axiom. It leaves out a map that is not
 monotone. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal exists_minimal_below [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+theorem exists_minimal_below [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) {q : T} {s : Slice α} (h : v.Valid q s) :
-    ∃ m : Slice α, m ≤ s ∧ v.Minimal q m
+    ∃ m : Slice α, m ≤ s ∧ v.Minimal q m :=
+  ⟨v.descend q s, v.descend_le q s, v.descend_minimal h⟩
+
+/-- A slice that is valid for a query is valid for each query at or below it: a refined query
+keeps the valid slices of the wider one. A step of `minimal_refine`. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem valid_refine [Std.IsPreorder T] (v : SliceView α T) {q q' : T} {s : Slice α}
+    (hq : q' ≤ q) (h : v.Valid q s) : v.Valid q' s :=
+  Std.le_trans hq h
 
 /-- **A refined query has a minimal slice below a minimal slice of the wider query**: the
 paper's Theorem 4.6 (p. 10). The witness is the descent from `m₂` for the query `q₁`. Nothing
 holds upwards: a minimal slice of `q₁` need not lie below a minimal slice of `q₂` (the paper,
 p. 11; `Test/Program/SliceLattice.lean`). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal minimal_refine [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
+theorem minimal_refine [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) {q₁ q₂ : T} {m₂ : Slice α} (hq : q₁ ≤ q₂) (h : v.Minimal q₂ m₂) :
-    ∃ m₁ : Slice α, m₁ ≤ m₂ ∧ v.Minimal q₁ m₁
+    ∃ m₁ : Slice α, m₁ ≤ m₂ ∧ v.Minimal q₁ m₁ :=
+  v.exists_minimal_below (v.valid_refine hq h.1)
 
 /-- **The one pass is the paper's descent.** The paper's brute force takes the first valid
 slice one site below and starts again (pp. 9 and 10): `Slice.restart`. Monotonicity is what
