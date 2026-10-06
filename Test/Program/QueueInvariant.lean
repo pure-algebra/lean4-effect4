@@ -17,9 +17,9 @@ one, and it has a positive control beside it:
   of the step law;
 - the step law's conclusion on a finite universe of runs: every step that keeps both premises.
 
-The controls are finite checks of the model's half of two open parts of the semantics registry:
-`wait-registration-no-gap` (the part `quiet`) and `waiting-request-obligation-preserved` (the
-flag `named`). They run no program, and they deliver no signal.
+The controls are finite checks of the model's half of two open parts of the semantics registry.
+The parts are `wait-registration-no-gap`, for `quiet`, and `waiting-request-obligation-preserved`,
+for the flag `named`. The controls run no program, and they deliver no signal.
 -/
 
 namespace Test.Program.QueueInvariant
@@ -71,6 +71,7 @@ def next (r : Run) (op : Op) : Run := step .none r op
 next run holds the invariant. -/
 def kept (r : Run) (op : Op) : Bool := holds r && requested r op && holds (next r op)
 
+/-- A taker of the bounds one and one. -/
 def T (id : Nat) : Taker := ⟨id, 1, 1⟩
 
 /-! ## Controls: each part of the invariant is a premise
@@ -167,8 +168,9 @@ def full : Run :=
 
 /-! ## Controls: the run law -/
 
-/-- Eight first operations from the empty queue of capacity one: a taker waits, two offers
-arrive, a second taker waits behind the first, the first is served, and both leave. -/
+/-- Eight first operations from the empty queue of capacity one. A taker waits, and two offers
+arrive: one enters, and one pends. A second taker waits behind the first. The first is served,
+and the pending offer enters. A poll passes the waiting taker, and the two withdrawals follow. -/
 def served : List Op :=
   [.take 1 1 1, .offer 100 1, .offer 101 2, .take 2 1 1, .take 1 1 1, .poll, .dropOffer 101,
    .dropTake 2]
@@ -207,7 +209,8 @@ example (fault : Fault) (r : Run) (op : Op) (first : firstOp op = true) :
   | shutdown => exact absurd first Bool.false_ne_true
   | _ => rfl
 
-/-- A taker of the bounds two and two behind one message. Closing lowers its threshold. -/
+/-- A taker of the bounds two and two behind one message. A closing queue serves any message,
+so the close makes the taker ready. -/
 def closingRun : Run := { s := { capacity := some 2, messages := [7], takers := [⟨5, 2, 2⟩] } }
 
 -- `Fault.closing`: the close names nobody, and the run loses `ok`. Positive control: `Fault.none`.
@@ -237,12 +240,13 @@ def arrange : Nat → List Nat → List (List Nat)
   | 0, _ => [[]]
   | n + 1, xs => [] :: xs.flatMap fun x => (arrange n (xs.filter (· != x))).map (x :: ·)
 
+/-- Every sublist of a list. -/
 def sublists : List Nat → List (List Nat)
   | [] => [[]]
   | x :: xs => (sublists xs).flatMap fun l => [l, x :: l]
 
-/-- Capacities one and two; four buffers, one above each capacity; every order of the takers 1
-to 3 and of the offers 4 and 5; sixteen signal histories. -/
+/-- The universe: capacities one and two, and four buffers of zero to three messages. It takes
+every order of the takers 1 to 3 and of the offers 4 and 5, and sixteen signal histories. -/
 def runs : List Run := Id.run do
   let mut out := []
   for c in [1, 2] do
@@ -261,8 +265,8 @@ def ops : List Op :=
   .poll :: [1, 2, 3, 4, 5, 6].flatMap fun id =>
     [.take id 1 1, .offer id 20, .dropTake id, .dropOffer id]
 
-/-- The runs of the universe; those that hold the invariant; the steps from them that keep both
-premises; and the steps among these that leave the invariant. -/
+/-- Four counts: the runs of the universe, and those that hold the invariant. Then the steps
+from them that keep both premises, and those of these steps that leave the invariant. -/
 def census : Nat × Nat × Nat × Nat := Id.run do
   let mut held := 0
   let mut steps := 0

@@ -134,13 +134,14 @@ theorem quiet_iff_wake (s : State) (signalled : List Nat) :
 
 /-! ## What the two flags ask of one step -/
 
-/-- No offer is pending, or no room is left: what `tidy` says of an opened queue. -/
+/-- No offer is pending, or no room is left: no pending offer can enter. It is what `tidy` says
+of an opened queue. -/
 abbrev Spent (s : State) : Prop := s.offers = [] ∨ room s = some 0
 
 /-- **What the two flags ask of one step, beside the buffer's bound.** `own` is the step's own
 request, as `bump` reads it.
 
-* `spent`: the next state is tidy.
+* `spent`: no pending offer can enter the next state, so it is tidy.
 * `woken`: a signal of the step names each request of the next wake. Otherwise the old wake
   named the request, and it is not the step's own.
 * `accounted`: each request that waited still waits, is the step's own, or is named by a
@@ -159,8 +160,8 @@ theorem tidy_iff {s : State} (opened : s.phase = .opened) : tidy s = true ↔ Sp
   rw [Bool.true_and, Bool.or_eq_true, List.isEmpty_iff, beq_iff_eq]
 
 /-- **A step that keeps the profile, the bound and `Flags` joins a run of the invariant.** A
-step of `first_step_inv`, its one consumer. The run that `bump` builds is quiet: a request of the
-next wake is named again by the step, or it stays signalled, since it is not the step's own. -/
+step of `first_step_inv`, its one consumer. The run that `bump` builds is quiet. The step names a
+request of the next wake again, or the request stays signalled: it is not the step's own. -/
 theorem bump_inv {r : Run} (h : FirstRunInv r) {s : State} {own : Option Nat}
     {signals : List Signal} (profile : FirstProfile s) (bound : within s = true)
     (flags : Flags r.s own s signals) : FirstRunInv (bump r s own signals) := by
@@ -277,8 +278,8 @@ theorem acceptLoop_spent (r : Nat) (ms : List Nat) (os : List Offer) :
       · rw [if_pos hl]
         dsimp only [Option.map_some]
         rcases ih (r - fit (some r) o.rest.length)
-          (ms ++ o.rest.take (fit (some r) o.rest.length)) with none | full
-        · exact .inl none
+          (ms ++ o.rest.take (fit (some r) o.rest.length)) with drained | full
+        · exact .inl drained
         · refine .inr ?_
           rw [full, List.length_append, List.length_take, least]
           omega
@@ -297,8 +298,8 @@ theorem accept_spent {s : State} {c : Nat} (capacity : s.capacity = some c) :
   show (acceptLoop (room s) s.messages s.offers).2.1 = [] ∨
     s.capacity.map (· - (acceptLoop (room s) s.messages s.offers).1.length) = some 0
   rw [room_eq capacity, capacity]
-  rcases acceptLoop_spent (c - s.messages.length) s.messages s.offers with none | full
-  · exact .inl none
+  rcases acceptLoop_spent (c - s.messages.length) s.messages s.offers with drained | full
+  · exact .inl drained
   · refine .inr ?_
     rw [full]
     show some (c - (s.messages.length + (c - s.messages.length))) = some 0
@@ -316,10 +317,11 @@ theorem room_of_full {s : State} {c : Nat} (capacity : s.capacity = some c)
 Steps of the five `Flags` lemmas of the operations. -/
 
 /-- A queue that is not closing does not settle. -/
-theorem settle_idle {s : State} (open_ : ∀ e, s.phase ≠ .closing e) : settle s = (s, []) := by
+theorem settle_idle {s : State} (notClosing : ∀ e, s.phase ≠ .closing e) :
+    settle s = (s, []) := by
   fun_cases settle s
-  · next e closing _ => exact absurd closing (open_ e)
-  · next e closing _ => exact absurd closing (open_ e)
+  · next e closing _ => exact absurd closing (notClosing e)
+  · next e closing _ => exact absurd closing (notClosing e)
   · rfl
 
 /-- In an opened queue a consuming step's tail is the accept pass and the wake. -/
@@ -388,7 +390,7 @@ theorem consume_flags {s p : State} {own : Option Nat} (h : FirstProfile p)
     (h.shrink rfl rfl rfl rfl rfl (List.Sublist.refl _) (List.Sublist.refl _)) before
 
 /-- **A take that waits is not owed a signal.** Where a take at the bounds one and one is not
-served, the wake does not name the take's own request, and its enrolment changes no wake. So
+served, the wake does not name the take's own request. The take's enrolment changes no wake. So
 the step may drop the request from `signalled`, as `bump` does. The model's half of
 `wait-registration-no-gap`. -/
 theorem wake_blocked {s : State} (h : FirstProfile s) {id : Nat}
@@ -638,10 +640,10 @@ theorem empty_inv (c : Nat) : FirstRunInv { s := { capacity := some (c + 1) } } 
     ok := rfl
     named := rfl }
 
-/-- **From the empty queue both flags hold after every list of first operations.** The
-exploration of the model holds the two flags to a bounded depth, and this statement holds them
-at every length, on the first profile. Consumer: the run-level law of the Queue's wrapper. It
-says nothing of `close` or `shutdown`, and nothing of a delivery. -/
+/-- **From the empty queue both flags hold after every list of first operations.** The model's
+bounded exploration holds both flags to a fixed depth, over more operations. This statement
+holds them at every length, on the first profile. Consumer: the run-level law of the Queue's
+wrapper. It says nothing of `close` or `shutdown`, and nothing of a delivery. -/
 @[semantics "reactive-scheduling" (requirement := R12)]
 theorem first_run_flags (c : Nat) (ops : List Op)
     (first : FirstOps { s := { capacity := some (c + 1) } } ops) :
