@@ -69,5 +69,6 @@ def onTerm : Term → Nat
   | .field _ _ _ => 3
   | .recordSet _ _ _ => 4
   | .tupleAt _ _ => 5
+  | .fold _ _ _ _ => 6
 
 end Test.Audit.ExhaustiveFixture
