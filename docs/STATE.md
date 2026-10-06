@@ -326,8 +326,13 @@ In work since the suspension of the handover:
   program requires the scope's service. Its third and fourth steps are merged
   (`src/Effect4/Laws/Modules/Pool/Ops.lean`). Each operation keeps scope and is typed at
   every scope (`use_types`, `make_types`, `close_answers`). Eleven attempt statements relate
-  one store step to the model's step, with no planned goal. The traces with their red
-  controls come next, then the faces, the truth programs and the engine.
+  one store step to the model's step, with no planned goal. Its fifth step is merged: nine
+  acceptance traces on the Lean machine, each with a fault that fails the promised property
+  (`Test/Program/PoolTraces.lean`). A borrow at a closing pool leaves the items and the idle
+  list as they were. Under a masked caller it still exits with the interrupt of its own
+  fiber. One finding: at Pool a missing withdrawal loses a wake, so the law of a run needs
+  the withdrawal as a premise of the wake. The faces, the truth programs and the engine come
+  next.
 - **Seat BRACKET has the bracket of a region** (branch `seat/bracket`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-bracket-brief.md)). A region that
   changes no flag ends with its entry flag, for an arbitrary body. Seat LIFT's law reads a
