@@ -1626,11 +1626,13 @@ The annotations are formed outside a template, so each states a closed type
 (`Formation.closed_of_formed`), and each rule of the checker keeps closed types closed
 (`hasTy_closed`). The path is any path: the checker's answer does not depend on it. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-proof_goal check_closed {Op : Type} [ScopedOp Op] (sig : Signature Op) (closed : ClosedSig sig)
+theorem check_closed {Op : Type} [ScopedOp Op] (sig : Signature Op) (closed : ClosedSig sig)
     {env : TyEnv} (henv : ∀ t ∈ env, t.closed = true) {p : List Nat} {e : Eff Op} {t : EffTy}
     (formed : Formation.Formed (Formation.programSites e))
     (h : Checker.check sig env p e = .ok t) :
-    t.answer.closed = true ∧ t.error.closed = true
+    t.answer.closed = true ∧ t.error.closed = true :=
+  hasTy_closed closed (check_sound sig e env p t h) henv
+    (Formation.annotationsClosed_of_formed formed)
 
 /-- A native atom answers a closed type at closed arguments. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
