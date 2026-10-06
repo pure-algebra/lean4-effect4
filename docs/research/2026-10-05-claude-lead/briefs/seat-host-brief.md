@@ -3,7 +3,9 @@
 Status: a brief (history, not authority), written ahead of its dispatch. Base: the head of
 `refactor/phase1-phase3` that the dispatch message names. It is the host half of the scenarios'
 lowered link (decisions row 254). Seat DOGFOOD handed that half back
-(`docs/research/2026-10-05-seat-DOGFOOD-receipt.md`, items 8 and 9.4).
+(`docs/research/2026-10-05-seat-DOGFOOD-receipt.md`, items 8 and 9.4). Revised the same day,
+before any dispatch, after Codex's review. A field's evidence is a host measurement or Lean's
+replay, and the two are never mixed.
 
 ## Why this slice exists
 
@@ -17,8 +19,10 @@ adds that run, on the lane that keeps a reply's receipt and its application apar
 
 Three rules bind every line you write.
 
-1. **One observation.** The host run is compared on the battery's own `Observation`, the
-   session clause. Add no second, looser comparison.
+1. **One observation, and one source of evidence a field.** The host run is compared on the
+   battery's own `Observation`, the session clause. Add no second, looser comparison. Each
+   field is either measured on the host or read from Lean's replay of the host's recording. A
+   field that only the replay gives is replay evidence. Never call it a host measurement.
 2. **One lane.** Extend the keyed lane. Write no second runner and no second recorder.
 3. **A check has a claim.** Each host run is a control of its scenario's placed claim. Its
    evidence word is "finite host run". It proves nothing.
@@ -62,7 +66,8 @@ branch. You work alone and hand back a receipt.
 6. `docs/core/host-boundary.md`, and `src/Effect4/Api/HostSession.lean`.
 7. Codex's reviews under
    `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/`:
-   `open-questions-review/dogfood/review.md` and `heartbeat-dogfood-2207/review.md`.
+   `open-questions-review/dogfood/review.md`, `heartbeat-dogfood-2207/review.md`, and
+   `heartbeat-host-brief-0236/review.md`: the review that this brief's item 3 follows.
 
 ## What the lane does today
 
@@ -87,22 +92,48 @@ Its programs are four fixtures of the lane's own. No program of `Test/Dogfood` r
    through `KeyedRecorder`. An action holds a call, receives a reply, applies a reply, cancels a
    fiber or advances the clock. A scenario's host answers are scripted completions. The
    recorder writes the recording as it does today.
-3. **The comparison.** Lean replays the host's recording with `Run.play` and reads the
-   battery's `Observation`. It must be the observation of the same script on the Lean machine,
-   field for field. The host's exit must be Lean's exit.
+3. **The comparison,** in two parts that the receipt keeps apart.
+   - **The host's measurements.** For each field of the battery's `Observation` that the host
+     can read, the host measures it by itself and writes it beside the recording. The check
+     compares it with the same field of the script's observation on the Lean machine. The
+     root's exit, the calls, the reply receipts and the reply applications are such fields
+     today.
+   - **Lean's replay.** Lean replays the host's recording with `Run.play` and reads the
+     battery's `Observation`. It must be the observation of the same script on the Lean
+     machine, field for field. This shows that the session accepts what the host did. It
+     measures nothing more of the host.
+   - **A scenario is accepted on its whole observation** only when every field has a host
+     measurement that agrees. Where a field has no permitted reader on the host, the
+     scenario's whole-observation comparison is waiting, and the receipt lists the field. Do
+     not put the exit's equality or a projection in its place.
 4. **The order of the scenarios.**
-   - **routing** first. Its program prints and reads back, and its calls come in sequence.
-   - **workers** second: two pending replies, both application orders, a cancellation.
-   - **timeout** third: the clock, a retry, a late reply.
-   - **atomic** last. Its printed module may not type-check: see "Known".
+   - **routing** first. Its program prints and reads back, and its calls come in sequence. Its
+     observation holds the root's exit, the repository's calls and the refused rows. State for
+     the refused rows whether the host or the replay gives them.
+   - **workers** second: two pending replies, both application orders, a cancellation. Its
+     observation also reads two cells of the program and the work left
+     (`Workers.observe`). The recorder shows neither today.
+   - **timeout** third: the clock, a retry, a late reply. Its observation reads the attempt
+     count, the cleanup log and the timers.
+   - **atomic** last. Its observation reads the window, the account and each request's exit.
+     Its printed module may not type-check: see "Known".
 5. **The one extension that is planned.** The recorder refuses an operation that completes
    after its cancellation. Two controls of workers and two of timeout need that case. Record
    such a completion as a late reply that the session refuses. Design it before you build it:
    send the coordinator the design in one message, and go on with the scripts that do not need
    it.
-6. **A red control for each scenario on the host.** One changed expectation fails the check by
-   the scenario's name. One recording with a moved record is refused by Lean's replay.
-7. **The documents.** Each scenario's row of `Test/Dogfood/README.md` gets its host result.
+6. **Three red controls, one for each connector.** Name the connector that each one tests.
+   - **The host's measurement:** a fault on the host only. It drops one assignment or one
+     cleanup update and keeps the root's exit. The comparison of the host's fields must fail
+     at that field. Without this control a comparison of exits would pass for the whole.
+   - **The comparator:** one changed expectation fails the check by the scenario's name.
+   - **Lean's replay:** one recording with a moved record is refused.
+7. **A script that ends with live work.** `KeyedRecorder.finish` refuses a live call and a
+   stored reply, and it appends a terminating flush. A script may end before the root does.
+   It then needs a named snapshot of the recorder, or an entry "not performable" in the design
+   note with this reason. Do not run a script to its end only to obtain a recording.
+8. **The documents.** Each scenario's row of `Test/Dogfood/README.md` gets its host result,
+   with the fields that the host measures and the fields that only the replay gives.
 
 Where the lane cannot carry a script, state the gap and the smallest extension that would
 close it. Do not rewrite a program to make it run. Do not change a production API.
@@ -114,6 +145,11 @@ the lane's check. Before you add a helper, name its consumer in this slice.
 
 Before the first commit, write `docs/research/2026-10-05-seat-HOST-design.md`, one page:
 
+- **one table a scenario, with a row for each field of its `Observation`.** A row gives the
+  host's own measurement of the field and its serialization. It gives the identity mapping
+  that the field needs: a runtime fiber to a fiber of the machine, a call to its key. It gives
+  the checkpoint where the field is read. A field with no reader on the host says "replay
+  evidence only". Write this table before you choose the first script;
 - how a `Move` becomes a host action, for each constructor;
 - which scripts of each battery a host can perform, and which it cannot, with the reason;
 - how the host knows a scripted completion for a call;
@@ -121,7 +157,12 @@ Before the first commit, write `docs/research/2026-10-05-seat-HOST-design.md`, o
   order that the script does not state, say how the recording carries that order to Lean;
 - where the new files live, and what `scripts/check-host-protocol.py` runs.
 
-Send its path to the coordinator in one message, and start routing without waiting.
+Extend the recorder's observer or the bindings only where that shows a field of a scenario.
+If a field needs a reader inside the program's own state (a cell, the runnable fibers, a
+timer), do not build it. Send the coordinator the narrow reader you propose, in one message:
+what it reads, where, and what it cannot change. The coordinator settles it first.
+
+Send the note's path to the coordinator in one message, and start routing without waiting.
 
 ## The obligations and their placement
 
@@ -129,8 +170,8 @@ No theorem is asked for. If you state one, place it first, as `AGENTS.md` requir
 
 | Evidence | Claim it is a control of | Reach | It does not establish |
 | --- | --- | --- | --- |
-| A scenario's host run | The scenario's claim (`workers`, `routing`, `atomic`, `timeout`), `host-session-protocol` R6 and `translation-simulation` R8 | One script, one schedule, on rc.112 under bun | No agreement for another script, no host adequacy, no liveness |
-| Lean's replay of the host's recording | The same claim, and `run-tape-replay` for the machine | The recording that the host wrote | Nothing of a host that the recorder does not see |
+| A field measured on the host | The scenario's claim (`workers`, `routing`, `atomic`, `timeout`), `host-session-protocol` R6 and `translation-simulation` R8 | One script, one schedule, on rc.112 under bun, the fields with a host reader | No agreement for another script or another field, no host adequacy, no liveness |
+| Lean's replay of the host's recording (replay evidence) | The same claim, and `run-tape-replay` for the machine | The recording that the host wrote | Nothing of the host beyond the recording: no cell, no fiber and no timer that the recorder does not see |
 
 - A theorem that is proved today stays proved.
 - Do not edit `docs/core/decisions.md`, `lakefile.toml` or `docs/STATE.md`.
@@ -139,11 +180,13 @@ No theorem is asked for. If you state one, place it first, as `AGENTS.md` requir
 
 ## Acceptance
 
-1. **routing and workers** run on rc.112 and agree with Lean on the whole observation, for
-   each script that the design note lists as performable.
+1. **routing and workers** run on rc.112, for each script that the design note lists as
+   performable. Every field with a host measurement agrees with Lean's. Lean's replay of each
+   recording gives the script's observation. The receipt says for each scenario whether its
+   whole observation is measured on the host, or which fields wait.
 2. **Each printed module** type-checks under tsgo 7 against the prelude, or its diagnostics
    are in the receipt with the compiler's version.
-3. **The red controls** of the assignment's item 6 are red.
+3. **The three red controls** of the assignment's item 6 are red, each at its connector.
 4. **`make check-host-protocol`**, with the three flags above, passes. The lane's existing
    runs are unchanged.
 5. **timeout and atomic:** landed, or stated as waiting with the first refusal and its cause.
@@ -186,7 +229,8 @@ Write `docs/research/2026-10-05-seat-HOST-receipt.md`, in the handoff form of `A
 2. the base and head commits, and each step's commit;
 3. the changed files, by group;
 4. each command with its result, the host's versions, and the evidence word for each claim;
-5. each scenario's scripts: performed, or not, with the reason;
+5. each scenario's scripts: performed, or not, with the reason; and each field of each
+   observation with its source of evidence;
 6. each choice you made, and each gap of the lane with its smallest extension;
 7. what is bounded and what is host-only;
 8. proposed decisions rows. Do not edit the register.

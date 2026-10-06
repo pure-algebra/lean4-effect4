@@ -1,0 +1,46 @@
+[
+  {
+    "path": "docs/research/2026-10-05-claude-lead/briefs/seat-host-brief.md",
+    "matches": true
+  },
+  {
+    "path": "Test/Dogfood/Scenario.lean",
+    "matches": true
+  },
+  {
+    "path": "Test/Dogfood/Scenario/Workers.lean",
+    "matches": true
+  },
+  {
+    "path": "Test/Dogfood/Scenario/Routing.lean",
+    "matches": true
+  },
+  {
+    "path": "Test/Dogfood/Scenario/Atomic.lean",
+    "matches": true
+  },
+  {
+    "path": "Test/Dogfood/Scenario/Timeout.lean",
+    "matches": true
+  },
+  {
+    "path": "harness/truth/session/Keyed.lean",
+    "matches": true
+  },
+  {
+    "path": "harness/truth/session/run-keyed.ts",
+    "matches": true
+  },
+  {
+    "path": "harness/truth/session/keyed-recorder.ts",
+    "matches": true
+  },
+  {
+    "path": "harness/truth/session/check-keyed.ts",
+    "matches": true
+  },
+  {
+    "path": "harness/truth/session/clock.ts",
+    "matches": true
+  }
+]

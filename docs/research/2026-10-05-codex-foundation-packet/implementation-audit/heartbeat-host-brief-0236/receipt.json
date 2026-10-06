@@ -1,0 +1,75 @@
+{
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "snapshot": "eb29f4a997551e5fdffa800e8886e5bc99ed2ce4",
+  "scope": "Read-only brief/observation/keyed-lane audit",
+  "sources": [
+    {
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-host-brief.md",
+      "sha256": "9fa0f7820823698534a0ee3dd3e4257046c0ba8179b2876d0f3cd79411647f4b",
+      "bytes": 11376
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "sha256": "595a1b2654ecff35c11779592a2acf65f2a6455b9ac3b7e52c3a23b9341cd4bb",
+      "bytes": 48504
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Workers.lean",
+      "sha256": "395a9ffe81b210f324ac8b2951c4f49b417796250c535ee765b9555dcf153c8b",
+      "bytes": 21277
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Routing.lean",
+      "sha256": "269df0ae603a9bbfa3f70fd934ab672607e69dbbfdb764825af0cac97660306a",
+      "bytes": 17040
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Atomic.lean",
+      "sha256": "8145330840256407c52479c5b07c4f08ad4fd2d4242eeca60d8da3c7191f6f55",
+      "bytes": 32993
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Timeout.lean",
+      "sha256": "8915acef5b4b40f7e8345506c76dc60166506309547fe9c993fd5deb8eac0f76",
+      "bytes": 25196
+    },
+    {
+      "path": "harness/truth/session/Keyed.lean",
+      "sha256": "7bfdce6a4a961ea8797979e2ebc5a1935da84e0dc1eb09e80daf5b658c446cf6",
+      "bytes": 19024
+    },
+    {
+      "path": "harness/truth/session/run-keyed.ts",
+      "sha256": "74198e3c56d8f2482c498d99f0d7aa31dd6ddcfab206ad6ed56d47e54ef51a9c",
+      "bytes": 4422
+    },
+    {
+      "path": "harness/truth/session/keyed-recorder.ts",
+      "sha256": "7b8e14956de4ad1ed11e3ccdf9abb922a30c7fce74ffa16b593338528f96de9a",
+      "bytes": 8633
+    },
+    {
+      "path": "harness/truth/session/check-keyed.ts",
+      "sha256": "e45edd9f20596267952fca2dd2114967a3a87d676ec54feb31977a4a7bf355f0",
+      "bytes": 4930
+    },
+    {
+      "path": "harness/truth/session/clock.ts",
+      "sha256": "da4ee8a1e97fd8d29c14b655e5feca9ec6095bc4e2f31c793a70e0ae09a7ea01",
+      "bytes": 4610
+    }
+  ],
+  "finding": "Whole host observation requires per-field independent host measurements; stated item3 currently provides Lean replay equality plus host exit equality. Future design obligation, not implementation defect.",
+  "not_run": [
+    "Lean",
+    "build",
+    "generator",
+    "runtime",
+    "compiler",
+    "install",
+    "UI",
+    "external message"
+  ],
+  "repository_edits": false,
+  "queue_follow_up": "Fresh-offer premise now explicit in active offerStep_agrees; advisory resolved."
+}
