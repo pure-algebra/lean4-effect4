@@ -524,3 +524,101 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
   `Test/Codegen/ReadContract.lean` and `Test/Codegen/PrintContract.lean`. *Tested*: tsgo
   7.0.0-dev.20260629.1 on `harness/truth/term-rows.typecheck.ts`, with a red control at each of
   the eight rows. *Tested*: the TypeScript reader lane, and two truth programs against rc.112.
+
+## Amendment, 2026-10-05: an operation's type arguments, a stated cursor type, and the literal rule (the state plan's T5, part B; decisions rows 212, 251 and 256)
+
+What this changes in the packet above, and nothing else:
+
+- **B19, amended: one checked reader of types.** B19 held that no reader of types exists. A
+  declared type is compared as syntax, and never read. The payload class reader has read a
+  field's type since the amendment of 2026-10-04. This amendment names the one reader and its
+  domain. `Classes.readTyChecked` (`src/Effect4/Codegen/Classes.lean`) reads a type's syntax by
+  `Classes.readTy`. It keeps the answer only when `Types.ofTy` prints that answer as the syntax
+  read. The type printer is not injective, so the reader is no inverse of it, and none is
+  claimed. A place that reads one type back reads it through this reader. The class reader
+  checks a whole declaration by the same re-print. A module declaration's annotation is still
+  compared as syntax, never read.
+- **The readable types.** `Classes.ReadableTy ty` holds when the checked reader answers `ty`
+  from the printed spelling of `ty`. Exactness holds at any syntax: what the reader accepts
+  prints back to the syntax read (`readTyChecked_exact`). The retraction has the premise
+  `ReadableTy ty` (`readTyChecked_of_readable`, `src/Effect4/Laws/Codegen/Classes.lean`). Four
+  kinds of type are outside the domain, and `Test/Codegen/TypeReader.lean` pins one of each:
+  - a type with no printed form: a row template's parameter, a nominal application at
+    arguments. A map whose key is no string and a handle whose name does not parse are two
+    more;
+  - a collision: `int` and `number` print as `number`, which reads as `nat`;
+  - a spelling with no reading: `unknown`, a handle type such as `Ref.Ref<A>` or
+    `Deferred.Deferred<A, E>`, and a tagged payload record, which prints as its class's name;
+  - a spelling that reads at the reader's own choice: `readonly [A, B]` reads as a product, and
+    a union reads in its normal order of members.
+- **An operation's type arguments.** `Deferred.make` carries its two types
+  (`NativeOp.deferredMakeOf`), and the signature shows them (`Signature.typeArgsOf` and
+  `withTypeArgs`, `src/Effect4/Program/Typing/Rules.lean`). The printer writes them on the
+  call's head, each through `Types.ofTy`: `Deferred.make<void, never>()` (`printCall` and
+  `withHeadTypes`, `src/Effect4/Codegen/PrintLeaf.lean`). The reader takes them off the head,
+  reads the call to the row's face, and installs the types it read (`readCall` and
+  `installTypeArgs`, `src/Effect4/Codegen/Read.lean`). A spelled row is its face: the unit
+  literal for its term, and no type argument (`Signature.face`). A bare `Deferred.make()` is
+  refused by its spelling. No instance is read at a default. A type with no printed form
+  refuses the row by its spelling (`PrintRefusal.typeSpelling`).
+- **A loop's stated cursor type.** `iterate` may state its cursor's type (DI-91), and the faces
+  print it on the loop's `let`. The reader reads it through the checked reader (`readLeaf`). A
+  spelling with no reading is refused by name, `ReadRefusal.annotation "local const"`. This is
+  DI-91's fallback (a) in a checked form.
+- **Not read: a list fold's stated accumulator type.** It is printed as the call's type
+  argument and refused at reading, `ReadRefusal.annotation "fold accumulator"`.
+- **The laws keep their statements.** `read_print` and `read_exact` are unchanged. Their domain
+  admits a row whose type arguments are readable, on a row that declares none of its own and is
+  no value row (`typeArgsReadable`). It admits a stated cursor type that is readable
+  (`leafReadable`, `src/Effect4/Laws/Codegen/ReadPrint.lean`). `LawfulTypeArgs` states what the
+  reader needs of a signature. The call's columns do not depend on the type arguments. Each
+  update is read back by its own projection, and the two updates commute. The call's columns
+  are the spelling, the shape, the trailing names, the request and the declared type arguments
+  (`Row.callColumns`). The answer and error columns belong to the restored operation, not to
+  the face. The row-call steps are `readCall_printCall` and `readCall_exact`
+  (`src/Effect4/Laws/Codegen/ReadLeaf.lean`).
+- **An operation's types are program annotations (decisions row 212).**
+  `Formation.argumentAnnotations` reads them (`ScopedOp.typeArgs`,
+  `src/Effect4/Program/Formation.lean`). So raw formation, the integer scan of admission and
+  the module's class table reach a type argument. A module declares the class that a type
+  argument names.
+- **`ts/eff/read.ts` reads the same forms.** `readTypeChecked` is the checked reader's twin. It
+  claims no agreement on a refusal's name.
+- **The foreign contract (§3).** Both recognizers read `Deferred.make`'s type arguments and a
+  loop's stated cursor type through that one reader (`readTypeText`). They lift the same
+  program, and both refuse a type with no reading. One control runs both on the same sources
+  (`ts/eff/ingest/test/foreign.test.ts`). Neither drops a type argument to agree.
+- **The literal rule on the target (decisions row 256, inside DI-55's ruling).** The generated
+  helpers `pair` and `tuple` widen a number or a Boolean type in an immediate slot. The slot's
+  type is then `number` or `boolean`, as `litArgTy` types a number or a Boolean literal
+  (`src/Effect4/Program/Typing/Rules.lean`). A string literal keeps its literal type. Every
+  other argument keeps its type, and nothing is rewritten below the slot. `NativeAtom.row` owns
+  the two bodies (`src/Effect4/Machine/Term.lean`). The shared type `Wide` has one owner, the
+  preamble that `tools/Effect4Gen/PreludeAtoms.lean` writes. The consequence: a number or
+  Boolean singleton type, or a brand, in a direct slot is lost on the target. A Boolean tuple
+  tag no longer discriminates. The helpers keep no arbitrary TypeScript refinement.
+- **The truth claim (§4).** The truth corpus gains `pRateRequest` and `pDeferredGate`
+  (`harness/truth/Truth.lean`). The runner's import header names every atom of the generated
+  profile (`harness/truth/run-truth.ts`). It also names the twelve printed helpers that are no
+  atom. So a new atom needs no edit of the header. The lane's compiler controls gain two files.
+  `harness/truth/literals.typecheck.ts` holds the literal rule's assertions and refusals.
+  `harness/truth/queue-steps.typecheck.ts` holds the Queue module's six printed steps, each at
+  the cell's printed type.
+- **Superseded in the amendment above** ("an operation's binder term"). Its paragraph "Not
+  established" said that a row's type arguments stay spelled at one instance. It also said
+  that a loop with a stated cursor type does not read back. Its paragraph "A registered difference on the
+  target" said that `pair` and `tuple` keep a Boolean or a number literal's type. Neither holds
+  now. A fold with a stated type still prints and does not read back.
+- **Not established.** No law states target typing or a host run. The compiler controls and
+  the truth programs are finite checks under the pinned compiler and the pinned host.
+  `Ref.make` carries no type argument, so `Ref.make<A>(v)` is not printed: it needs an appended
+  constructor (decisions rows 210 and 212). A type argument outside the readable types is
+  printed where it has a printed form. Its reading is refused, or it gives another type. No
+  lane type-checks a whole printed Queue module.
+- **Evidence.** *Proved*: `read_print`, `read_exact`, `readCall_printCall`, `readCall_exact`,
+  `readTyChecked_exact`, `readTyChecked_of_readable`, `nativeLawful`. *Tested*: the batteries
+  `Test/Codegen/TypeReader.lean`, `Test/Codegen/TermRows.lean`, `Test/Codegen/ReadContract.lean`,
+  `Test/Program/FormationContract.lean` and `Test/Program/QueueFaces.lean`. *Tested*: tsgo
+  7.0.0-dev.20260629.1 on the truth project's six control files, each with its refusals. *Tested*:
+  the TypeScript reader lane, the two foreign readers on the constructed corpus, and four truth
+  programs of this slice against rc.112.

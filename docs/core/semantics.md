@@ -619,6 +619,11 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   An operation's binder term prints as a function of the cell's current value, after the row's call.
   It reads back one level up (`readPerform_printPerform` and `readPerform_exact`, the same file; the state plan's T5).
   `read_print` and `read_exact` keep their statements at such a row.
+  An operation's type arguments print on the call's head and read back at the readable types
+  (`readCall_printCall` and `readCall_exact`, the same file; `ReadableTy`, `src/Effect4/Codegen/Classes.lean`).
+  A loop's stated cursor type reads back through the same checked type reader
+  (`readTyChecked_exact` and `readTyChecked_of_readable`, `src/Effect4/Laws/Codegen/Classes.lean`).
+  A list fold's stated accumulator type is printed and not read.
 - **Service key identity (`service-identifier-injective`)**: at one signature's scope key, distinct service keys print
   distinct target Identifier types (`keyIdentifier_injective`, `src/Effect4/Laws/Codegen/ReadLeaf.lean`).
   An ordinary key prints its full key text; the scope key prints `Scope.Scope`.
