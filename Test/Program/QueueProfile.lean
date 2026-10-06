@@ -126,24 +126,59 @@ theorem FirstProfile.pend {s : State} (h : FirstProfile s) (id a : Nat)
     · rw [List.mem_singleton.mp this]
       exact foreign t ht
 
-/-! ## The model's parts -/
+/-! ## The model's parts
 
-/-- Single offers enter whole, so what stays pending is a suffix of the pending offers. -/
-theorem acceptLoop_suffix (room : Option Nat) (ms : List Nat) (os : List Offer)
+`acceptLoop_single` and `wake_profile` give two parts in closed form. They are steps of the step
+goals: the signals of a first-profile step are the answers of the offers that entered, and then
+the wake of at most one taker. -/
+
+/-- A single offer's answer is that it was accepted. -/
+theorem answerOf_single {o : Offer} (plain : o.batch = false) :
+    answerOf o [] = .offered true := by
+  unfold answerOf
+  rw [plain]
+  rfl
+
+/-- One more single offer fits, where a place is free. -/
+theorem fit_succ {room : Option Nat} (n : Nat) (free : room ≠ some 0) :
+    fit room (n + 1) = fit (room.map (· - 1)) n + 1 := by
+  cases room with
+  | none => rfl
+  | some r =>
+    cases r with
+    | zero => exact absurd rfl free
+    | succ r =>
+      show Nat.min (r + 1) (n + 1) = Nat.min (r + 1 - 1) n + 1
+      rw [Nat.add_sub_cancel]
+      exact Nat.succ_min_succ r n
+
+/-- What `acceptLoop` answers on single offers: as many as fit enter, in arrival order. The
+buffer gains their messages, the others stay pending, and each that entered is answered. -/
+def entered (room : Option Nat) (ms : List Nat) (os : List Offer) :
+    List Nat × List Offer × List Signal :=
+  (ms ++ (os.take (fit room os.length)).flatMap (·.rest), os.drop (fit room os.length),
+    (os.take (fit room os.length)).map fun o => ⟨o.id, .offered true⟩)
+
+/-- **Single offers enter in arrival order, as many as fit.** A step of the take's and the
+poll's step goals: it names the offers that a consuming step accepts, and their answers. -/
+theorem acceptLoop_single (room : Option Nat) (ms : List Nat) (os : List Offer)
     (single : ∀ o ∈ os, o.batch = false ∧ o.rest.length = 1) :
-    (acceptLoop room ms os).2.1 <:+ os := by
+    acceptLoop room ms os = entered room ms os := by
+  unfold entered
   induction os generalizing room ms with
   | nil =>
     rw [acceptLoop]
-    exact List.suffix_refl _
+    simp only [List.take_nil, List.drop_nil, List.flatMap_nil, List.map_nil, List.append_nil]
   | cons o os ih =>
     rw [acceptLoop]
     by_cases hr : room = some 0
-    · rw [if_pos hr]
-      exact List.suffix_refl _
+    · rw [if_pos hr, hr]
+      have none_fit : fit (some 0) (o :: os).length = 0 := Nat.zero_min _
+      rw [none_fit]
+      simp only [List.take_zero, List.drop_zero, List.flatMap_nil, List.map_nil, List.append_nil]
     · rw [if_neg hr]
       dsimp only
-      have one := (single o (List.mem_cons_self ..)).2
+      obtain ⟨plain, one⟩ := single o (List.mem_cons_self ..)
       have fits : fit room o.rest.length = 1 := by
         rw [one]
         cases room with
@@ -151,11 +186,64 @@ theorem acceptLoop_suffix (room : Option Nat) (ms : List Nat) (os : List Offer)
         | some r =>
           have positive : 1 ≤ r := Nat.pos_of_ne_zero fun zero => hr (by rw [zero])
           exact Nat.min_eq_right positive
-      have spent : (o.rest.drop (fit room o.rest.length)).isEmpty = true := by
-        rw [fits, List.drop_eq_nil_of_le (Nat.le_of_eq one)]
+      have whole : o.rest.take 1 = o.rest := List.take_of_length_le (Nat.le_of_eq one)
+      have spent : (o.rest.drop 1).isEmpty = true := by
+        rw [List.drop_eq_nil_of_le (Nat.le_of_eq one)]
         rfl
-      rw [if_pos spent]
-      exact (ih _ _ fun x hx => single x (List.mem_cons_of_mem _ hx)).trans (List.suffix_cons o os)
+      rw [fits, if_pos spent, whole, ih _ _ fun x hx => single x (List.mem_cons_of_mem _ hx)]
+      have count : fit room (o :: os).length = fit (room.map (· - 1)) os.length + 1 :=
+        fit_succ os.length hr
+      rw [count, List.take_succ_cons, List.drop_succ_cons, List.flatMap_cons, List.map_cons,
+        answerOf_single plain, List.append_assoc]
+
+/-- What stays pending is a suffix of the pending offers. -/
+theorem acceptLoop_suffix (room : Option Nat) (ms : List Nat) (os : List Offer)
+    (single : ∀ o ∈ os, o.batch = false ∧ o.rest.length = 1) :
+    (acceptLoop room ms os).2.1 <:+ os := by
+  rw [acceptLoop_single room ms os single]
+  exact List.drop_suffix _ _
+
+/-- In a profile state a take at the minimum one is served exactly when a message is buffered. -/
+theorem ready_profile {s : State} (h : FirstProfile s) : ready s 1 = !s.messages.isEmpty := by
+  obtain ⟨c, capacity⟩ := h.positive
+  have open_ : isClosing s = false := by unfold isClosing; rw [h.opened]
+  have no_rendezvous : rendezvous s = false := by
+    unfold rendezvous
+    rw [capacity]
+    rfl
+  have least : threshold s 1 = 1 := by
+    unfold threshold
+    rw [open_, capacity]
+    exact Nat.min_eq_left (Nat.succ_le_succ (Nat.zero_le c))
+  unfold ready
+  rw [no_rendezvous, least, Bool.or_false]
+  cases s.messages with
+  | nil => rfl
+  | cons m ms => rfl
+
+/-- **In a profile state the model wakes the earliest taker, when a message is buffered.** A
+step of every step goal: it names the one taker that a step may notify, and no peeker. -/
+theorem wake_profile {s : State} (h : FirstProfile s) :
+    wake s = match s.takers with
+      | t :: _ => if s.messages.isEmpty then [] else [⟨t.id, .again⟩]
+      | [] => [] := by
+  unfold wake
+  rw [h.peekers]
+  have ready_one := ready_profile h
+  have bounds := h.takers
+  revert bounds
+  cases s.takers with
+  | nil =>
+    intro _
+    simp only [List.map_nil, ite_self, List.append_nil]
+  | cons t ts =>
+    intro bounds
+    have least : t.min = 1 := (bounds t (List.mem_cons_self ..)).1
+    simp only [List.map_nil, ite_self, List.append_nil]
+    rw [least, ready_one]
+    cases s.messages with
+    | nil => rfl
+    | cons m ms => rfl
 
 theorem settle_profile {s : State} (h : FirstProfile s) : FirstProfile (settle s).1 := by
   unfold settle
@@ -329,7 +417,7 @@ theorem empty_profile (c : Nat) : FirstProfile { capacity := some (c + 1) } wher
 #print axioms first_profile_closed
 
 /--
-info: Test.Program.QueueProfile.first_profile_closed: proved; nearest []; 26 lemmas, 71 definitions
+info: Test.Program.QueueProfile.first_profile_closed: proved; nearest []; 29 lemmas, 72 definitions
 next goals: 0
 -/
 #guard_msgs in
@@ -400,6 +488,17 @@ def T (id : Nat) : Taker := ⟨id, 1, 1⟩
 def next (s : State) (op : Op) : State := (step .none { s := s } op).s
 
 def full : State := { capacity := some 1, messages := [1], takers := [T 1] }
+
+-- The closed form of the accept pass: two of three single offers enter two free places.
+#guard acceptLoop (some 2) [1] [⟨7, false, [5]⟩, ⟨8, false, [6]⟩, ⟨9, false, [7]⟩] =
+  ([1, 5, 6], [⟨9, false, [7]⟩], [⟨7, .offered true⟩, ⟨8, .offered true⟩])
+-- Red control of its premise: a batch enters in part, and the closed form says otherwise.
+#guard acceptLoop (some 1) [1] [⟨7, true, [9, 8]⟩] !=
+  entered (some 1) [1] [⟨7, true, [9, 8]⟩]
+-- The wake: the earliest taker behind a message, and nobody at an empty buffer.
+#guard wake full = [⟨1, .again⟩] && wake { full with messages := [] } = []
+-- Red control of its premise: with a peeker the model wakes two requests.
+#guard wake { full with peekers := [2] } = [⟨1, .again⟩, ⟨2, .again⟩]
 
 -- Each first operation keeps the profile on one input.
 #guard inProfile full && inProfile (next full (.take 1 1 1)) && inProfile (next full (.take 2 1 1))

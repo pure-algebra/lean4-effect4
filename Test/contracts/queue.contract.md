@@ -78,6 +78,8 @@ No peeker and no awaiter waits, and no two waiting requests share an identity.
 The first operations are `take` at the bounds one and one, `offer`, `poll` and the two withdrawals.
 A request's premise is `Requested`: a take names no pending offer, and an offer no waiting taker.
 The later term-to-model step goals quantify over this predicate, and over no other state.
+Two closed forms of the model on the profile are proved beside it, as steps of those goals.
+`acceptLoop_single` names the offers that enter, and `wake_profile` the one taker to wake.
 
 ## Proof placement and first obligation
 

@@ -146,6 +146,10 @@ signals: every signal, and no other.
   that was pending before the step. The other is `again`, for a taker that is stored after it.
 - **Each goal shows that the model emits no other signal on the profile.** A signal with no
   encoding is a refusal of the comparison, and never a signal that it drops.
+- **Two closed forms of the model are proved for it,** in `Test/Program/QueueProfile.lean`.
+  `acceptLoop_single` names the offers that enter: as many as fit, in arrival order, each
+  answered `offered true`. `wake_profile` names the one taker that a step may wake: the
+  earliest, when a message is buffered, and no peeker.
 - **A new notification is related to the hint that the table holds after the step.**
 - **An earlier posted hint is not this relation's.** A helper that was posted for a hint since
   replaced belongs to the wrapper's relation, which counts each occurrence.
