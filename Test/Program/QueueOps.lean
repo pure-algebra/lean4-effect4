@@ -20,7 +20,10 @@ controls of the operations that those do not run, and of the module's laws.
    (`src/Effect4/Laws/Modules/Queue/Ops.lean`). The wrapper's own binders meet both, at every
    caller's scope: proved here, with each scope written out. And each statement's term is the
    term of the operation's own row: tested, on the trees that the operations elaborate to.
-5. **The pinned outputs**: each law's axioms, and its standing in the plan.
+5. **Hygiene.** The fixtures wrote the names `id`, `hint`, `r`, `e` and `s` around a caller's
+   variable. For each name, a caller's variable of that name keeps its reading in the library's
+   operation, and the fixture's written form is the red control.
+6. **The pinned outputs**: each law's axioms, and its standing in the plan.
 
 Placement. Each run is a finite control of the proposed claim `queue-expansion-agrees` (concept
 `translation-simulation`, requirement R10), on the side of the operations' use in a program.
@@ -549,7 +552,129 @@ def callers : List (List String) :=
       (Queue.takeStep .nat (minted ((looped caller).mint "answer"))
         (minted ((masked caller).mint "answer")))
 
-/-! ## 5. The pinned outputs
+/-! ## 5. Hygiene: a caller's variable keeps its reading
+
+**The promise.** A variable that a caller reads through `var` keeps its reading inside an
+operation: every binder of the operation is minted, a minted name is reserved, and an author's
+name is not (`var_push_minted`, `src/Effect4/Laws/Program/Author.lean`). It is no promise for an
+arbitrary source term, which is a function of its scope: the last control below is one.
+
+**The names.** The fixtures of the earlier slices wrote nine names
+(`Written`, `Test/Program/QueueScenarios.lean`). Five stand around a caller's variable: `id` and
+`hint` around the handle and the message, `r` and `e` around the handle in a withdrawal, and
+`s` around the message in the offer's row. Four stand around none: `m`, `ok`, `woken`, `got`.
+
+**The control of one name.** A client holds the handle, or a message, in a variable of that
+name. Over the library's operations its tree is the tree of the same client under another name.
+Over the written forms it is another tree: the variable reads the operation's own binder. -/
+
+section Hygiene
+
+open Test.Program.QueueScenarios (Ops library Written.ops Written.restoring)
+
+/-- The fixture's written forms, under the mask that restores. -/
+def written : Ops := Written.ops Written.restoring
+
+/-- A client that holds the queue's handle in a variable of a given name, and takes. -/
+def takeHolding (ops : Ops) (handle : String) : Src NativeOp :=
+  bindName handle (Queue.bounded .nat 2) fun q => ops.take .nat q
+
+/-- A client that holds the handle and a message in variables of given names, and offers. -/
+def offerHolding (ops : Ops) (handle message : String) : Src NativeOp :=
+  bindName handle (Queue.bounded .nat 2) fun q =>
+    bindName message (succeed (nat 5)) fun m => ops.offer .nat q m
+
+/-- A client's tree does not depend on its variable's name: it elaborates, and its tree is the
+tree of the same client under a name that nobody writes. -/
+def keeps (client : String → Src NativeOp) (name : String) : Bool :=
+  (elaborate (client name)).toOption.isSome &&
+    elaborate (client name) == elaborate (client "caller_")
+
+/-- The nine names that the fixtures wrote. -/
+def writtenNames : List String := ["id", "hint", "r", "e", "s", "m", "ok", "woken", "got"]
+
+-- The library's operations: a caller's variable of each written name keeps its reading, as
+-- the handle of a take, as the handle of an offer and as the message of an offer.
+#guard writtenNames.all fun name =>
+  keeps (takeHolding library) name && keeps (fun x => offerHolding library x "message_") name &&
+    keeps (fun x => offerHolding library "handle_" x) name
+-- Red controls, one for each name that stands around a caller's variable. Over the written
+-- forms the handle under `id`, `hint`, `r` or `e` reads the operation's own binder.
+#guard writtenNames.filter (fun name => !keeps (takeHolding written) name) =
+  ["id", "hint", "r", "e"]
+#guard writtenNames.filter (fun name => !keeps (fun x => offerHolding written x "message_") name) =
+  ["id", "hint", "r", "e"]
+-- The message under `id`, `hint` or `s` reads the offer's own binder.
+#guard writtenNames.filter (fun name => !keeps (fun x => offerHolding written "handle_" x) name) =
+  ["id", "hint", "s"]
+-- So the five names of the capture are `id`, `hint`, `r`, `e` and `s`, and the other four
+-- stand around no caller's variable.
+
+-- The checker catches each of these captures: the captured value has another type.
+#guard ["id", "hint", "r", "e"].all fun name =>
+  verdict (takeHolding written name) = "typing: requestNotSubtype" &&
+    verdict (takeHolding library name) = "built"
+#guard ["id", "hint", "s"].all fun name =>
+  verdict (offerHolding written "handle_" name) = "typing: binderTerm" &&
+    verdict (offerHolding library "handle_" name) = "built"
+
+/-! ### A capture that the checker does not catch
+
+Where the caller's variable has the type of the binder that captures it, the written form is
+scoped, it is typed and it runs: it offers the operation's own value in place of the caller's.
+A client makes a `Deferred` of its own, offers it into a queue of such values, takes one, and
+says whether the taken value is its own. -/
+
+/-- The client: its own `Deferred` under a given name, in a queue of such values. -/
+def ownDeferred (ops : Ops) (name : String) (value : Ty) : Src NativeOp :=
+  bindName "queue_" (Queue.bounded (.deferredOf value .never) 2) fun q =>
+    bindName name (Deferred.make value .never) fun mine => eff do
+      let _ ← ops.offer (.deferredOf value .never) q mine
+      let x ← ops.take (.deferredOf value .never) q
+      return same x mine
+
+-- The library's operations: the client gets its own value back, under each name. `id` meets
+-- the request's identity, a `Deferred` of nothing, and `hint` the offer's hint, of a Boolean.
+#guard [("id", Ty.unit), ("hint", Ty.bool), ("mine", Ty.unit), ("mine", Ty.bool)].all
+  fun (name, value) => verdict (ownDeferred library name value) = "built" &&
+    exitOf (ownDeferred library name value) == some (Exit.success (Val.bool true))
+-- Red control: the written forms build and run, and under `id` and `hint` the taken value is
+-- the operation's own binder, not the client's.
+#guard [("id", Ty.unit), ("hint", Ty.bool)].all fun (name, value) =>
+  verdict (ownDeferred written name value) = "built" &&
+    exitOf (ownDeferred written name value) == some (Exit.success (Val.bool false))
+-- Under a name that the forms do not write, they answer as the library does.
+#guard [Ty.unit, Ty.bool].all fun value =>
+  exitOf (ownDeferred written "mine" value) == some (Exit.success (Val.bool true))
+
+/-! ### The promise's boundary: a source term that is no variable read through `var`
+
+A minted reader is a function of its scope. Here a hand-made scope holds the name that the
+wrapper mints for the request's identity at that depth. A caller's term that reads that name
+through `minted` reads the identity inside the operation, and the handle outside it. No author
+can write such a name through `var`, which refuses the reserved prefix. -/
+
+-- The caller's scope is one name, at depth 1. The wrapper mints `_%restore1` and then the
+-- identity's name at depth 2: the name that this scope already holds.
+#guard (masked { names := ["_%answer2"] }).mint "answer" == "_%answer2"
+-- At the caller's scope the term reads level 0. In the attempt's row it reads level 2, the
+-- identity: the row's request is the identity's variable, and not the caller's.
+#guard (minted "_%answer2" { names := ["_%answer2"] } []).toOption == some (Term.var 0)
+#guard ((treeAt ["_%answer2"] (Queue.take .nat (minted "_%answer2"))).bind takeAttemptOf).map
+    (fun attempt => match attempt with
+      | .bind (.perform (.refModifyWith _) request) _ => request == Term.var 2
+      | _ => false) == some true
+-- A variable read through `var` cannot be that name: the scope reader refuses it.
+#guard (var "_%answer2" { names := ["_%answer2"] } []).toOption.isNone
+-- And an author's variable in the same place reads its own level, 0.
+#guard ((treeAt ["q"] (Queue.take .nat (var "q"))).bind takeAttemptOf).map
+    (fun attempt => match attempt with
+      | .bind (.perform (.refModifyWith _) request) _ => request == Term.var 0
+      | _ => false) == some true
+
+end Hygiene
+
+/-! ## 6. The pinned outputs
 
 Each attempt law's axioms, and its standing as the plan derives it from its proof. No law rests
 on a planned goal. The counts are of this battery's tree, which holds no step of a proof. -/
