@@ -308,9 +308,9 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
     on the generated engine on both carriers (`ocaml/engine/test/queue/`): R1, R4, a taker
     that waits, an interrupted taker and a masked caller.
 
-  - each operation is typed at every scope, for every message type and every kept term of a
-    caller (`bounded_types`, `size_types`, `poll_types`, `offer_types`, `take_types`; R4;
-    merged `c46e3ca1`). A string literal is not covered. The contract's seven connectors,
+  - each operation is typed at every scope (`bounded_types`, `size_types`, `poll_types`,
+    `offer_types`, `take_types`; R4; merged `c46e3ca1`). The laws hold for every message
+    type and every kept term of a caller. A string literal is not covered. The contract's seven connectors,
     the README's example and the architecture rows came with it.
 
   The receipt and the last acceptance runs are the seat's next step.
@@ -319,12 +319,12 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   merge freed a seat. It first runs the card's cases on our machine. Then it writes the
   contract, the model with its profile, and the cell with its five steps. It ends with the
   steps' typing and their agreement with the model. The public `make` and `use`, the close
-  that waits and the finalizers' runs are a later slice. On its branch, not merged: every
-  case of the card gives the profile's answer on the Lean machine, one schedule each
-  (`af7f6099`), and the model's profile is closed under its five transitions, with no
-  planned goal (`7f76f0b9`).
+  that waits and the finalizers' runs are a later slice. Two steps are on its branch and
+  not merged. Every case of the card gives the profile's answer on the Lean machine, one
+  schedule each (`af7f6099`). The model's profile is closed under its five transitions,
+  with no planned goal (`7f76f0b9`).
 - **Seat MASKPOP has the mask's pop discipline** (branch `seat/maskpop`), the third seat, on
-  the owner's word. Codex's predicate and statements elaborate as written. On its branch,
+  the owner's word. Lean accepts Codex's predicate and statements as written. On its branch,
   not merged: the placed theorem `saved_mask_pop_discipline` is proved in place of its
   planned goal (`12d7703d`). Its controls, documents and receipt are next.
 
