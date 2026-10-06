@@ -1,6 +1,7 @@
 import Effect4.Program.Sketch
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.Typing.Replace
+import Effect4.Laws.Program.Typing.Focus
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -22,14 +23,21 @@ checker's two extension theorems apply.
 | `Sketch.hole_hasTy` | a hole has its declared type, in every environment | `HasTy.perform`, `rowTy_closed` |
 | `Sketch.check_fill` | a filling of the focus's type keeps the sketch's type, and the filling alone is checked | `check_replace` |
 | `Sketch.check_omit` | an omission keeps the sketch's type, when the hole row declares the focus's type exactly | `check_replace`, `Sketch.hole_hasTy` |
+| `Sketch.check_focusAt` | in a sketch that the checker admits, the focus function answers at every address of a program | `check_focusAt` |
+| `Sketch.check_fill_focusAt` | a filling of the answered type in the answered environment keeps the sketch's type | `check_replace_focusAt` |
+| `Sketch.check_omit_focusAt` | an omission keeps the sketch's type, when the hole row declares the answered type | `Sketch.check_fill_focusAt`, `Sketch.hole_hasTy` |
 
 Each statement is made once, at the typing signature of an application (`SigApp.signature`).
 The form at a row table alone is the instance at `⟨table, []⟩`: `SigApp.signature_nil` holds by
 definition (`Test/Program/SketchControls.lean` has the instance).
 
-The last two are the replacement law of the typing judgment
+`Sketch.check_fill` and `Sketch.check_omit` are the replacement law of the typing judgment
 (`Laws/Program/Typing/Replace.lean`) at the two edits of a sketch, `Sketch.fillAt` and
-`Sketch.omitAt`. Their controls are in `Test/Program/ReplaceControls.lean`.
+`Sketch.omitAt`. Their controls are in `Test/Program/ReplaceControls.lean`. In those two the
+focus's environment and type are existential. The last three state the same two edits at the
+focus that `Sketch.focusAt` computes (`Program/Typing/Focus.lean`,
+`Laws/Program/Typing/Focus.lean`), so a tool has every premise in hand. Their controls are in
+`Test/Program/FocusControls.lean`.
 
 ## Placement
 
@@ -59,7 +67,14 @@ that fold at two signatures. Requirement R14, under decisions rows 282 and 288.
   error in normal form, formed columns, and the requirement as its own key list. They do not
   establish any behaviour, or a filling or an omission at a type that is equal only after
   normalization: the checker gives a node the raw type of its term, and it reads a hole row in
-  normal form. The focus's environment and type are existential here.
+  normal form. The focus's environment and type are existential in these two.
+- **`focus-function`** (proposed claim, role inversion; its pointer is
+  `NodeHasTy.replace_envAt`, in `Laws/Program/Typing/Replace.lean`). `Sketch.check_focusAt`,
+  `Sketch.check_fill_focusAt` and `Sketch.check_omit_focusAt` are its consumers on a sketch.
+  Reach: the same sketches and addresses, with the focus as `Sketch.focusAt` answers it. The
+  omission's premises are on the answered type, so a tool can decide each. They do not establish
+  a focus after a sibling that the checker refuses, any behaviour, or an omission at a type that
+  is equal only after normalization.
 
 No statement here names a gap, a term hole or a run. The host boundary stays where
 `docs/core/host-boundary.md` puts it.
@@ -285,5 +300,46 @@ theorem Sketch.check_omit (s : Sketch) (app : SigApp) {T : EffTy} {path : List N
   rw [hansN, herrN, hreq] at hhole
   exact hfill [Row.hole name t.answer t.error t.requires.elems] (pq := [])
     (check_complete _ _ env t hhole [])
+
+/-! ## The two edits at the focus that the function answers -/
+
+/-- **The focus function answers at every address of a program** of a sketch that the checker
+admits: the sub-program there, with an environment and a type. A consumer of
+`focus-function`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Sketch.check_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {q : NativeEff} (hs : s.check app = .ok T)
+    (hat : (Node.eff s.program).at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy), s.focusAt app path = some ⟨q, env, t⟩
+
+/-- **Filling at the answered focus keeps the type.** In a sketch that the checker admits, take
+the focus that `Sketch.focusAt` answers at an address. Every program that the checker admits at
+the focus's type in the focus's environment fills the address, and the checker admits the filled
+sketch at the same type. The filling may declare more holes: `more` is appended to the hole
+table. Nothing is existential: a tool computes the focus and checks its filling against it. A
+consumer of `focus-function`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Sketch.check_fill_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
+    (more : RowTable) {q' : NativeEff} {pq : List Nat}
+    (hq' : Checker.check (app.withHoles (s.holes ++ more)).signature f.env pq q' = .ok f.ty) :
+    ∃ s', Sketch.fillAt { s with holes := s.holes ++ more } path q' = some s' ∧
+      s'.check app = .ok T
+
+/-- **Omitting at the answered focus keeps the type.** In a sketch that the checker admits, take
+the focus that `Sketch.focusAt` answers at an address. When its type has closed columns, an
+answer and an error in normal form, and formed columns, the omission with the hole row that
+declares that type exists, and the checker admits it at the same type. Each premise is on the
+answered type, so a tool can decide it. They are the premises of `Sketch.check_omit`. A consumer
+of `focus-function`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal Sketch.check_omit_focusAt (s : Sketch) (app : SigApp) {T : EffTy} {path : List Nat}
+    {f : Focus NativeOp} (hs : s.check app = .ok T) (hf : s.focusAt app path = some f)
+    (name : String) (hans : f.ty.answer.closed = true) (herr : f.ty.error.closed = true)
+    (hansN : f.ty.answer.normalize = f.ty.answer) (herrN : f.ty.error.normalize = f.ty.error)
+    (formed : Formation.Formed (Formation.instantiatedSites
+      (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems).normalizeTypes [])) :
+    ∃ s', s.omitAt app path (Row.hole name f.ty.answer f.ty.error f.ty.requires.elems) = some s' ∧
+      s'.check app = .ok T
 
 end Effect4.Program

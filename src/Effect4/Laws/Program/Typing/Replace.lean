@@ -1,3 +1,4 @@
+import Effect4.Program.Typing.Focus
 import Effect4.Laws.Program.Signature
 import Effect4.Laws.Program.References
 import Effect4.Laws.Auto.Semantics
@@ -95,6 +96,18 @@ inductive NodeTy (Op : Type) where
   | layer (l : LayerTy)
   /-- a layer spine -/
   | layers (l : LayerTy)
+
+/-- The environment of a node's typing judgment: what the index holds of the nodes above the
+node, without the node's own type (`NodeEnv`, `Program/Typing/Focus.lean`). The step function
+`Node.childEnv` computes the child's from the parent's (`NodeHasTy.child_step`). -/
+def NodeTy.env : NodeTy Op → NodeEnv
+  | .eff env _ => .env env
+  | .stmts env inLoop _ => .body env inLoop
+  | .stmt env inLoop _ _ => .body env inLoop
+  | .effs env _ => .env env
+  | .action env _ => .env env
+  | .layer _ => .closed
+  | .layers _ => .closed
 
 /-- **A node has a type**: the typing judgment of its sort, at its index. It adds no rule to
 the six judgments. A statement is typed with the statements after it, because no judgment types
@@ -440,6 +453,19 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
           cases hs; exact .layers (layersHasTy_cons (layerHasTy_ext h hh) hx)⟩
 
 /-! ## The law -/
+
+/-- **The law at the environment that the step function answers: the claim `focus-function`.**
+A typed node splits at an address of a program into an environment and a type of the focus, and
+the environment is the one that `Node.envAt` computes from the node's own. Every program of
+that type in that environment, under every extension of the signature, stands in the focus's
+place, and the node keeps its type. `NodeHasTy.replace` is this statement without the
+function. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+proof_goal NodeHasTy.replace_envAt {s : Signature Op} (path : List Nat) {n : Node Op}
+    {τ : NodeTy Op} {q : Eff Op} (hn : NodeHasTy s n τ) (hat : n.at_ path = some (.eff q)) :
+    ∃ (env : TyEnv) (t : EffTy), n.envAt s τ.env path = some (.env env) ∧ HasTy s env q t ∧
+      ∀ {s' : Signature Op} {q' : Eff Op} {n' : Node Op}, SigExtends s s' → HasTy s' env q' t →
+        n.replaceAt path (.eff q') = some n' → NodeHasTy s' n' τ
 
 /-- **The replacement law, at a node: the claim `typed-replacement`.** A typed node splits at an
 address of a program into an environment and a type of the focus. Every program of that type in
