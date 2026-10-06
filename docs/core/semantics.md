@@ -279,6 +279,18 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
   The handles of a term's answer are handles of its environment.
   It establishes no correspondence in a target: that is each target's relation.
   (`handle_identity_laws` (`src/Effect4/Laws/Program/Typed/ListFold.lean`)).
+- **The mask's saved state (`saved-mask-image-membership`)**: A mask saves its caller's
+  interruptibility at an opaque host type, `Ty.maskRestore`, with a reserved target (decisions
+  row 244).
+  Its value is the saved bit in one frame of its own, `Val.savedMask`.
+  Membership at the type is exactly the two images, in `Fits` and in the shape check `Val.hasTy`.
+  An image is no member of `bool`, and a Boolean is no member of the type.
+  No subtyping relates the two types.
+  No external allocation takes the target, and no service carries it in the first profile.
+  The column scan finds it in a host answer column, so table admission refuses that table.
+  An image holds no handle, so every world and every store keep its membership.
+  It establishes no reply admission.
+  (`saved_mask_image_membership` (`src/Effect4/Laws/Program/Typed/Mask.lean`)).
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 
@@ -372,6 +384,17 @@ scope-exit callback (`.scopedGuard`, decisions row 188 (a)); the saved slot of t
   (`src/Effect4/Laws/Program/Typed/Commands/Finish.lean`) discharges the marker premise, and a
   checked layer-free program loads into `J` (`loadsTyped_of_layerFree`,
   `src/Effect4/Laws/Program/Typed/Commands/Finish.lean`).
+- **The restore site's body (`scoped-body-substitution-boundary`)**: The mask adds no scoped
+  constructor (decisions rows 245 and 246).
+  A restore site is one node that binds nothing, and its checked body is child 0.
+  Both saved choices run that one body in the node's environment.
+  A false bit is the body's own code, and a true bit is `interruptible` over it.
+  At a typed point the saved term evaluates to an image, and the node denotes a typed program.
+  The body's point is typed at the node's type.
+  A saved value that a program passes as data keeps its choice and holds no handle.
+  The claim's other half, a later constructor that binds a scope, has no statement.
+  It establishes no agreement with a target.
+  (`scoped_body_substitution_boundary` (`src/Effect4/Laws/Program/Typed/Mask.lean`)).
 
 The `sound-at-app-signature` claim carries `meaning_typed`, `run_typed` and `meaningB_typed` to an application's signature: any table, service declarations at fresh codes (`src/Effect4/Laws/Program/SoundAnySignature.lean`). A looped program is a program of the built-in signature, so C3's reflection (`effTy_restrict`) transfers its typing.
 
@@ -424,6 +447,20 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   (`close_reentrant_add` (`src/Effect4/Machine/Scope.lean`)).
 - **Close iterator protocol (`close-seq-protocol`)**: Close walk satisfies iterator protocol for clean finalizers
   (`closeSeq_protocol` (`Test/Program/ProtocolPosts.lean`)).
+- **The mask's flag at the boundaries of regions (`saved-mask-restoration`)**: The claim holds
+  the mask's law as one statement, `MaskRestoration`.
+  The statement has five parts (decisions rows 227 and 244 to 246).
+  Each part is a step of the frame machine or a pass of a saved frame.
+  The getter masks the fiber and answers the image of the flag at its entry.
+  A restore site at a true bit is the `interruptible` region over its body.
+  At a false bit it is its body's own code, so it leaves the flag as it is.
+  A region's entry sets its own flag at every fiber.
+  It saves the earlier flag in a frame exactly when it changes the flag.
+  That frame's pass returns the flag on every exit.
+  With a cause pending, an exit that leaves the fiber interruptible fails there with that cause.
+  It states nothing for a region that changes no flag, and nothing about a module.
+  It establishes no progress.
+  (`saved_mask_restoration` (`src/Effect4/Laws/Program/Typed/Mask.lean`)).
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 
@@ -639,6 +676,15 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   The class reader accepts only the declaration that it prints back (`readClassDecl_exact`).
   The printer refuses a class whose declaration does not read back, by name, with its tag.
   The tsgo verdict on the printed forms is a finite check with a red twin (`ts/eff/test/payload-classes.test.ts`).
+- **The mask's two rows (`mask-rows-table-premises`)**: The getter prints as the mask that
+  answers its own restore (decisions row 245).
+  A restore site prints as `pipe(body, saved)`.
+  Both heads are reserved, and the row table's nine decided premises hold at the extended table.
+  A restore site is readable exactly when its saved term is a readable leaf and its body is
+  readable.
+  `read_print` and `read_exact` keep their statements.
+  It is a claim of program syntax: it establishes no typing and no behaviour of a target.
+  (`mask_rows_table_premises` (`src/Effect4/Laws/Codegen/Mask.lean`)).
 
 The `type-metadata-exact` claim requires an exact embedding of stored `Ty` declarations into structural TypeScript metadata.
 It retains raw declaration order and absent optional fields.
@@ -904,6 +950,17 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
 - **Capstone M7 goals (`m7-capstone-goals`)**: Exit value agreement, final store agreement, non-halting, and exit handle
   validity on `M7Fragment` (`m7_proved` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
+- **The mask's printed form (`mask-printed-form-profile`)**: The mask is a derived form: the
+  getter bound to its body under `uninterruptible` (decisions rows 245 and 246).
+  The surface's builder is that expansion, and the form types as its body does under the saved
+  state's binder.
+  It is readable exactly when its body is, so it prints and reads back.
+  Its entry has two checkpoints that the native mask does not have, stated on the frame machine.
+  Inside the getter the fiber is masked, and a pending cause fails it at the getter's saved frame.
+  After that frame an interruptible caller is interruptible until the body's mask.
+  A client keeps one premise: nothing is acquired or registered before the body begins.
+  It establishes no equality with the native spelling and no agreement with a release.
+  (`mask_printed_form_profile` (`src/Effect4/Laws/Codegen/Mask.lean`)).
 
 ## 3. The object-language glossary (moved 2026-10-03)
 

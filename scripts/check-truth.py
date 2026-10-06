@@ -61,6 +61,9 @@ def main():
         shutil.copyfile(truth/'literals.typecheck.ts', Path(work)/'literals.typecheck.ts')
         # The Queue's six printed steps, each at the cell's printed type (decisions row 255).
         shutil.copyfile(truth/'queue-steps.typecheck.ts', Path(work)/'queue-steps.typecheck.ts')
+        # The mask's saved state at the prelude's alias, in annotated positions (decisions rows
+        # 244 to 246): three printed modules and three refusals, compiled beside the modules.
+        shutil.copyfile(truth/'mask.typecheck.ts', Path(work)/'mask.typecheck.ts')
         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
         subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),

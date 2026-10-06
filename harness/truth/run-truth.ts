@@ -333,6 +333,10 @@ class Recorder {
       this.push(this.events, `started ${idx}`)
       this.push(this.schedule, `started ${idx}`)
     } else if (state === "parked") {
+      // A `resumed k` row: a fiber that the trace last showed parked runs again, whatever woke
+      // it. A resumed registration and an interrupt that applies now (`interruptUnsafe`,
+      // `:588-594`, through `evaluate`) both arrive here, and each restart is one row. The
+      // Lean face has the same definition (`reduce`, `harness/truth/Truth.lean`).
       this.state.set(idx, "running")
       this.push(this.events, `resumedWith ${idx}`)
       this.push(this.schedule, `resumed ${idx}`)

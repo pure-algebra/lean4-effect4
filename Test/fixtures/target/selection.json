@@ -43,7 +43,10 @@
     "pModifyFold",
     "pQueueOffer",
     "pRateRequest",
-    "pDeferredGate"
+    "pDeferredGate",
+    "pInterruptedWait",
+    "pMaskWait",
+    "pMaskedRestore"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

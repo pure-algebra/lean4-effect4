@@ -50,3 +50,6 @@ pModifyFold	yes	yes	yes	yes	yes	yes
 pQueueOffer	yes	yes	yes	yes	yes	yes		
 pRateRequest	yes	yes	yes	yes	yes	yes		
 pDeferredGate	yes	yes	yes	yes	yes	yes		
+pInterruptedWait	yes	yes	yes	yes	yes	yes		
+pMaskWait	yes	yes	yes	yes	yes	yes		
+pMaskedRestore	yes	yes	yes	yes	yes	yes		
