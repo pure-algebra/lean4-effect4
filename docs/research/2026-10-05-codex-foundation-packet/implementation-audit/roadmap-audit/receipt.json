@@ -1,0 +1,52 @@
+{
+  "task": "Owner pasted roadmap audit",
+  "input": "request.txt",
+  "input_sha256": "92e3d1e7e3ed941184dd7a74c80c65a534f071977a1cb3a883ad66cd10e303dc",
+  "frozen_main": "d3a3e558ba0c4b0af8c9b47c22ed327c51506d5e",
+  "closing_main": "05489250daf49f40c962564e8577c016d0546bd1",
+  "closed_at_utc": "2026-10-06T06:50:44.644816+00:00",
+  "status": "review and proposed cards complete; no implementation dispatched",
+  "owner_rulings": "rows259-265 verified in tracked decisions and submitted Claude UI message72",
+  "sem_seat": {
+    "worktree": "/Users/pooks/Dev/lean4-effect4-qsteps",
+    "branch": "seat/semaphore",
+    "base": "05489250",
+    "running_in_ui": true,
+    "brief_read": true
+  },
+  "delivery": {
+    "coordinator": "claude.ai/epitaxy/local_acf2315e-02ac-4acd-9ef9-b0734bd686a7",
+    "message": 74,
+    "normal_send": true,
+    "composer_empty_after": true,
+    "coordinator_started_response": true,
+    "packet_adoption": "pending separate verification",
+    "no_force_send": true
+  },
+  "verification": {
+    "parent_identity_comparisons": 90,
+    "closing_core_comparisons": 30,
+    "all_pass": true,
+    "finite_python": {
+      "journal_cases": 8403,
+      "append_splits": 40617,
+      "reference_fixtures": 5,
+      "module_controls": 15,
+      "opacity_history_controls": 8
+    },
+    "not_lean_or_runtime": true
+  },
+  "evidence_limits": [
+    "All theorem shapes are proposed and uncompiled",
+    "Draft cards are not ratified profiles",
+    "No host or whole-runtime agreement inferred",
+    "No current upstream bug classification",
+    "No new remote CI run verification"
+  ],
+  "no_repository_writes": true,
+  "no_build_compiler_runtime_generator_install": true,
+  "no_branch_merge_push_dispatch_interruption": true,
+  "handoff": false,
+  "monitor": "active",
+  "automation_carryforward": "updated; ACTIVE, existing 30-minute schedule preserved"
+}

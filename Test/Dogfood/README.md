@@ -166,8 +166,8 @@ stand on a planned goal of that battery, which states nothing of a program.
 
 | Scenario | Program | Observation | Claim, assembled clauses and associated laws | Lowered runs |
 | --- | --- | --- | --- | --- |
-| workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers` assembles four clauses: `receipt_inert`, `applied_selects` and `control_retires` (theorems of `Scenario.lean`), and the planned goal `releases_once`. That goal says: under every script the crew releases no connection twice. Associated law: `replays`. | Engine: `workers.txt`, five runs of the machine clause. Host: waiting on the keyed lane. The program prints and reads back since the state plan's T5, part A (`Scenario/Faces.lean`). |
-| routing: `Scenario/Routing.lean`, on p2's consumer | `request`: p2's handler on its two host rows. `handleOn` writes it over any repository row and any two handler tests. | `Observation`, three fields: the exact response or the failure that escapes, the repository's calls, and the refused rows with the session's reason. | `routing` assembles three clauses: `tagIs_pair` (a theorem: the handler's test is exact on the pair spelling), and the planned goals `infrastructure_escapes` and `unauthorized_calls_nothing`. Associated law: `submit_success_prepared_fits`, a theorem of the law graph. | Engine: `routing.txt`, four runs of the machine clause. Host: waiting on the keyed lane. The program prints and reads back (`Scenario/Faces.lean`). |
+| workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers` assembles four clauses: `receipt_inert`, `applied_selects` and `control_retires` (theorems of `Scenario.lean`), and the planned goal `releases_once`. That goal says: under every script the crew releases no connection twice. Associated law: `replays`. | Engine: `workers.txt`, five runs of the machine clause. Host: the keyed lane performs each script of a control that a host can perform. The host measures six entries by itself: the reply receipts, the reply applications, the retired calls, the root's exit, the live calls and the stored replies. It measures five entries through a reader, at the script's end: the assignment and the cleanups through the cells reader, the timers through the sleeps reader, and the runnable fibers and the armed owners through the dispatchers reader, as a count of zero. No entry waits. One script has no host run: a forged reply is no act of a host. The program prints and reads back since the state plan's T5, part A (`Scenario/Faces.lean`). |
+| routing: `Scenario/Routing.lean`, on p2's consumer | `request`: p2's handler on its two host rows. `handleOn` writes it over any repository row and any two handler tests. | `Observation`, three fields: the exact response or the failure that escapes, the repository's calls, and the refused rows with the session's reason. | `routing` assembles three clauses: `tagIs_pair` (a theorem: the handler's test is exact on the pair spelling), and the planned goals `infrastructure_escapes` and `unauthorized_calls_nothing`. Associated law: `submit_success_prepared_fits`, a theorem of the law graph. | Engine: `routing.txt`, four runs of the machine clause. Host: the keyed lane performs each script of a control that a host can perform. The host measures the outcome and the repository's calls. The recorder's ledger predicts the refused rows, and Lean's replay gives the session's verdict of each. No field waits. Two scripts have no host run: the session refuses a reply as `envelope`, and a host has no reply admission. A third stays out: tsgo 7 refuses the printed module of the exact error column. The program prints and reads back (`Scenario/Faces.lean`). |
 | atomic: `Scenario/Atomic.lean`, on p4's and p5's consumers | `shop`: a rate-limited ledger. Each request decides over the window in one store step, and an admitted request deposits its number in one store step. Request 2 fails behind both commits. Each request's finalizer notes what it sees. | `Observation`, five fields: each request's outcome, the whole window, the whole account, the count of completed requests and the cleanup log. | `atomic` assembles five clauses. Four are planned goals over every script: `bounded`, `counted`, `committed` and `cleans_once`. One is a theorem on the straight fragment: `unsuspended_runs`. Associated law: `syncRow_typed`, a theorem of the law graph. | Engine: `atomic.txt`, three runs of the machine clause. Host: waiting on the keyed lane. The program prints and reads back since the state plan's T5, part A (`Scenario/Faces.lean`). |
 | timeout: `Scenario/Timeout.lean`, on p1's consumer | `fetch`: p1's quote fetch, with a 2000 ms timeout around each attempt and three retries. Each attempt counts itself before its host call, and its finalizer notes how it ended. | `Observation`, nine fields: what became of each held call, the accepted reply receipts, the reply applications, the retired calls and the stored replies. Then the attempts started, the cleanup log, the root's ending and the timer work. | `timeout` assembles three clauses, each a planned goal: `retries_declared`, `stale_never_applies` and `cleanup_keeps`. Associated laws: `applyReply_zero` and `advance_answer_refuses`, theorems of the law graph, and `replays`. | Engine: `timeout.txt`, six runs of the machine clause, and p1's own program as the handle case. Host: waiting on the keyed lane. The program prints since the state plan's T5, part A, and reads back since part B's second step: the checked type reader reads the retry loop's stated cursor type (`Scenario/Faces.lean`). |
 
@@ -184,7 +184,8 @@ The generated OCaml engine holds no session: no stored reply, no retired call, n
 So a scenario's observation lands as two clauses.
 
 - **The session clause** is the whole observation. Each scenario's battery checks it on the Lean
-  machine. The host run checks it on the printed TypeScript module, on the keyed lane.
+  machine. The host run checks it on the printed TypeScript module, on the keyed lane ("The
+  host runs", below).
 - **The machine clause** is `machineView` (`Scenario.lean`). It holds six readings: the root's
   exit, the cells, the calls the machine waits on, the armed owners, the runnable fibers and the
   timers.
@@ -224,6 +225,40 @@ Lake does not see a fixture as an input of the battery. So after a change of a f
 that gap (`docs/GENERATED.md`). Its marker depends on the fixtures themselves, so
 `make gen-fixtures` writes a changed fixture again from Lean. `make check-gen` refuses a
 committed fixture that Lean does not write, and `make check-ocaml` runs after the group.
+
+### The host runs
+
+The keyed lane (`harness/truth/session/`) performs a scenario's scripts on its printed
+TypeScript module, on effect 4.0.0-rc.112 under bun. `make check-host-protocol` runs it, and its
+last lines print each scenario's counts.
+
+- **A host run** is one script of a control, on the program of that control. Lean writes its
+  fixture: the printed module, the row table, the journal rows that the script leaves and the
+  battery's observation (`Keyed.lean`, the mode `scenarios`).
+- **The host** acts out each row through the lane's recorder, and it writes a recording.
+- **Lean's replay** plays the recording's rows with `Run.play`, and it reads the battery's
+  observation. That observation must be the script's.
+
+Each field of an observation has one source of evidence on the host
+(`harness/truth/session/keyed-observation.ts`).
+
+| Source | Meaning |
+| --- | --- |
+| Measured by the host | The host reads the field by itself, from the root's exit and the recorder's ledger. |
+| Predicted by the ledger | The field holds the session's refusals. The recorder predicts each one, and the check compares it with the verdict of Lean's replay. |
+| Measured through a reader | The host reads the field through a note inside the program's state, at the script's end. |
+| Replay only | The host has no reader. Lean's replay is the only evidence, and the scenario's whole-observation comparison waits. |
+
+There are four readers: the cells that the module makes, the fibers that it forks, the pending
+sleeps and the count of armed dispatchers. A reader is on only where Lean grants it for a run.
+The lane performs each script twice, with no reader and with its readers. The two recordings
+must be the same bytes.
+
+A script has no host run where a host has no act for one of its rows. The driver gives the
+reason (`performable`, `harness/truth/session/Keyed.lean`).
+
+Each host run is a finite host run of one script. It establishes no agreement for another
+script, no host adequacy and no liveness.
 
 ## The earlier dogfood programs
 

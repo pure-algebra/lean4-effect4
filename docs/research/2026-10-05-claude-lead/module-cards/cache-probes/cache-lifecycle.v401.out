@@ -1,0 +1,112 @@
+{
+ "effect": "4.0.1",
+ "runtime": "bun 1.4.2",
+ "cp1_a_read_moves_its_key": {
+  "keys": [
+   "a",
+   "b"
+  ],
+  "log": [
+   "lookup a starts (1)",
+   "lookup z starts (1)",
+   "lookup b starts (1)"
+  ]
+ },
+ "cp2_has_does_not_move": {
+  "hasA": true,
+  "keys": [
+   "z",
+   "b"
+  ],
+  "log": [
+   "lookup a starts (1)",
+   "lookup z starts (1)",
+   "lookup b starts (1)"
+  ]
+ },
+ "cp3_set_keeps_the_place": {
+  "keys": [
+   "z",
+   "b"
+  ],
+  "log": [
+   "lookup a starts (1)",
+   "lookup z starts (1)",
+   "lookup b starts (1)"
+  ]
+ },
+ "cp4_one_shared_lookup": {
+  "lookupsOfK": 1,
+  "got": [
+   "R1 v-k",
+   "R2 v-k"
+  ],
+  "log": [
+   "lookup k starts (1)"
+  ]
+ },
+ "cp5_readers_leave": {
+  "afterOneOfTwoLeaves": [
+   "lookup k starts (1)"
+  ],
+  "got": [
+   "R2 v-k"
+  ],
+  "lookupsOfK": 1,
+  "keys": [
+   "k"
+  ],
+  "log": [
+   "lookup k starts (1)",
+   "lookup lone starts (1)",
+   "lookup lone is interrupted"
+  ]
+ },
+ "cp6_reader_during_a_cleanup": {
+  "keysWhileTheCleanupIsPending": [],
+  "lookupsWhenR2Arrived": 2,
+  "keysAfterTheCleanup": [
+   "k"
+  ],
+  "r2": "success v-k from lookup 2",
+  "lookupsOfK": 2,
+  "keysAtTheEnd": [
+   "k"
+  ],
+  "log": [
+   "lookup k starts (1)",
+   "lookup 1 starts its cleanup",
+   "lookup k starts (2)",
+   "lookup 1 ends its cleanup"
+  ]
+ },
+ "cp7_pending_entry_evicted": {
+  "keysAfterB": [
+   "b"
+  ],
+  "got": [
+   "R1 v-a from lookup 1"
+  ],
+  "third": "v-a from lookup 2",
+  "lookupsOfA": 2,
+  "keysAtTheEnd": [
+   "a"
+  ],
+  "log": [
+   "lookup a starts (1)",
+   "lookup b starts (1)",
+   "lookup a starts (2)"
+  ]
+ },
+ "cp8_failed_lookup_kept": {
+  "first": "failure Fail boom",
+  "second": "failure Fail boom",
+  "lookupsOfF": 1,
+  "keys": [
+   "f"
+  ],
+  "log": [
+   "lookup f starts (1)"
+  ]
+ }
+}

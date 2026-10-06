@@ -1,0 +1,16 @@
+{
+  "evidence": "source reading, primary-literature verification, eight finite history controls",
+  "source_manifest": "source-hashes.json",
+  "independent_manifest": "independent-hashes.json",
+  "controls": "opacity-controls.py",
+  "output": "opacity-controls.json",
+  "controls_pass": 8,
+  "no_lean_or_effect_execution": true,
+  "primary_sources": {
+    "harris": "2006 post-publication appendix inspected; original and revised catch rules distinguished",
+    "opacity": "retained PDF hash verified; Definition1 and completion/legality discussion inspected; fresh web open403, primary searchmetadata resolved",
+    "wu": "primary paper abstract and scoping sections checked; no Pool finalizer law supplied",
+    "choice_trees": "primary paper internal/external choice descriptions checked; no Cache-specific rule supplied"
+  },
+  "status": "proposed obligation guidance, existing Eff profile and claims retained"
+}

@@ -641,7 +641,10 @@ $(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/D
 	bash scripts/check-ingest.sh
 	@mkdir -p $(CHK) && touch $@
 
-$(CHK)/host-protocol: $(CORE) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
+# The keyed lane also performs the scenarios' scripts (decisions row 254), so the batteries that
+# `harness/truth/session/Keyed.lean` imports are its inputs, by their sources.
+HOST_PROTOCOL_SCENARIOS := $(wildcard Test/Dogfood/*.lean Test/Dogfood/Scenario/*.lean)
+$(CHK)/host-protocol: $(CORE) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) harness/truth/prelude.ts tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 

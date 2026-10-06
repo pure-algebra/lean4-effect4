@@ -40,3 +40,15 @@ until the owner rules on the migration.
 | Four more behaviours of the pin that the release changes: a loser forked while a race settles is never interrupted; the await of a fiber's children is masked; a cancel effect that fails loses the interrupt; a memo observer of a layer can be stranded | not compared | yes | 4.0.1: changed | R1 to R3 and F9 of `docs/research/2026-10-05-seat-A401/audit.md`; the memo map by reading only |
 | The SQLite driver's `SqliteClient.make`: the pin types its error `never` and a file that cannot be opened is a defect; the release types it `SqlError` and fails with one | not compared | no: a change of the driver's contract, not a fault | 4.0.1: changed | the file `SqliteClient.ts` in the sources of `@effect/sql-sqlite-bun` at each version, read on 2026-10-05; `harness/truth/RELEASE-LANE.md`; decisions row 250 |
 | Five defects of the pin that the release repairs: `takeBetween` drops its minimum after a wait; an ending queue leaves a batch taker parked; an interrupted pending offer is still delivered in a closing queue; a transaction that retries on a stale read waits for ever; a plain read wakes waiting transactions | not compared | yes | repaired | P2, P3, P4, TX1 and TX2, in the same two folders |
+
+## Candidates recorded 2026-10-06
+
+These are not rows, and none is reported. Reporting is the owner's decision. Each rests on
+finite runs with bun 1.4.2 on the named builds, and on a reading of the named source. The
+probes and their outputs are under `docs/research/2026-10-05-claude-lead/module-cards/`.
+
+| Candidate | Effect 3.22.2 | rc.112 | 4.0.1 | Probe |
+| --- | --- | --- | --- | --- |
+| The close of a pool's scope finishes while a borrower still holds an item. The item's finalizer runs later, at the return. `shutdown` calls `releaseAll` on its local semaphore, which frees the permits that its last `take` waits for. Effect 3 calls `releaseAll` on the pool's own semaphore | no: the close waits for the return | yes | yes | `pool-probes/pool-close.ts`, on three builds |
+| A reader asks for a cache key while an abandoned lookup of that key still cleans up. The key is still present, so the reader joins that lookup and ends with an interruption that it did not ask for. No second lookup starts | not run | yes | no: the key is removed first, and a second lookup starts | CP6, `cache-probes/cache-lifecycle.ts` |
+| A pool's first acquisition fails. On the pin the failed item stays, and the next borrower gets its error. On the release the pool acquires again, and the borrower gets a resource | not run | yes | no | PP6, `pool-probes/pool-lifecycle.ts` |

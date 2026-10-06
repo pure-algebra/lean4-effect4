@@ -1,0 +1,39 @@
+{
+  "kind": "primary-source citation verification",
+  "checked": "Retained Lynch\u2013Vaandrager PDF page 219 rendered and visually checked; \u00a72.1 move definition read on page 217. Gambino\u2013Hyland locators rechecked against earlier full chapter reading.",
+  "primary_urls": [
+    "https://ir.cwi.nl/pub/1393",
+    "https://ir.cwi.nl/pub/1393/1393D.pdf",
+    "https://link.springer.com/chapter/10.1007/978-3-540-24849-1_14"
+  ],
+  "new_pdf_fetch": "Timed out; local retained final PDF used.",
+  "repository_writes": false,
+  "build_or_runtime_commands": false,
+  "files": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.pdf",
+      "bytes": 5477685,
+      "sha256": "fac099bf3462b90c58b8ed1077abef0808f5412f21879a5d1024ecdfdd5ff050"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-transactions-task-review/literature/refinement/lynch-vaandrager-1995-untimed-simulations.txt",
+      "bytes": 135484,
+      "sha256": "4d263a4a92b4fecabf2163696af54b2597ab4ff5f4cb96ae100a9429dd8faded"
+    },
+    {
+      "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-01-semantics/sources/types-2003-proofs-and-programs.pdf",
+      "bytes": 3605829,
+      "sha256": "c96a2965756f8388b1bfc4d8ddf890a415e32b219dc1a7ac9eed7ef6af1c7dfe"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/literature/lv-page-219.png",
+      "bytes": 424797,
+      "sha256": "787eab3c1ef4e01e658e154aab08db1dcf17f023bb8ef421998c5654df0506bf"
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/proofs/literature/review.md",
+      "bytes": 2286,
+      "sha256": "0b8133c6d047b0235928c6df5d468f0da1548e95eab04aad23ab906ae6d946c1"
+    }
+  ]
+}
