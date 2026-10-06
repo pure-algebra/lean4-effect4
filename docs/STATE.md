@@ -252,7 +252,9 @@ Open at this landing:
      and twice revised after Codex's reviews, with five open choices. Its step goals quantify
      over a closed predicate, the first profile's states: `FirstProfile`, with its closure
      proved (`first_profile_closed`, `Test/Program/QueueProfile.lean`). No seat has it yet:
-     two seats run;
+     two seats run.
+     [Its brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md) is written ahead,
+     and its dispatch waits for the owner's word on the design's five proposals;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
      its law, and the printed form. It follows T5 and the mask (row 251).
 
