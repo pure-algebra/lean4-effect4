@@ -165,7 +165,7 @@ def Ψ_S (root : ProgramSource) : Protocol World StoreSig where
   pre := storePre root
   post := storePost
 
-/-! ## The Fiber Protocol (40 FiberOp rows) -/
+/-! ## The Fiber Protocol (41 FiberOp rows) -/
 
 /-- An operation whose answer is an installed body's exit, a registration's delivery or a
 spawned fiber certifies that type (`EffTy`); one answering a typed value certifies the value's
@@ -232,7 +232,7 @@ def LoopPointTyped (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (
 
 def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
   match op with
-  | .getId | .yieldNow _ | .ambientScope | .sync _ => True
+  | .getId | .yieldNow _ | .ambientScope | .sync _ | .getInterruptible => True
   -- the context set keeps every service at its key's type (decision row 90)
   | .setContext ctx => ServicesFit w ctx.services
   | .getContext => cert = .handle Ty.contextTarget
@@ -290,6 +290,8 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
 def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer) : Prop :=
   match op with
   | .getId => ∃ (id : FiberId), ans = Val.nat id.value
+  -- the mask at a constant body (decisions row 245): one of the saved state's two images
+  | .getInterruptible => ∃ (flag : Bool), ans = Val.savedMask flag
   | .getContext | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren => Fits w' ans cert
   | .setContext _ | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _
   | .interruptAll _ _ | .runIn _ _ | .cancelRace _ | .dropObservers _
@@ -871,7 +873,7 @@ theorem asyncPre_mono (root : ProgramSource) (ord : w.leHost w') (register : Eff
   · exact h
   · exact h.elim
 
-/-- Every fiber row's demand is upward closed (all 40 rows). -/
+/-- Every fiber row's demand is upward closed (all 41 rows). -/
 theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     (cert : FiberCert op) (h : fiberPre root w op cert) : fiberPre root w' op cert := by
   have hGamma : TableExtends w.Γ w'.Γ := ord.1.2.1
@@ -922,7 +924,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
   | closeScope scope _ =>
     simp only [fiberPre] at h ⊢
     exact ⟨scopeLive_mono ord.1 h.1, fitsExit_mono ord h.2⟩
-  | getId | yieldNow _ | ambientScope | sync _ | suspend _
+  | getId | yieldNow _ | ambientScope | sync _ | suspend _ | getInterruptible
   | awaitNewChildren _ | guard_ _ | unguard _
   | finishFinalizer _ | construction | foreignRelease _ _
   | closeWalk _ _ _ | cancelRace _ | dropObservers _

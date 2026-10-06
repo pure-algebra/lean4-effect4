@@ -16,11 +16,11 @@ let wire_families = [
   ("ServiceTypeCode", ["value"]);
   ("ServiceKey", ["name"; "service"]);
   ("Decision", ["bool"; "option"; "tag"; "recordTag"]);
-  ("Eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]);
+  ("Eff", ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"]);
   ("Stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("Stmts", ["nil"; "cons"]);
   ("Effs", ["nil"; "cons"]);
-  ("ActionTerm", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"]);
+  ("ActionTerm", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"]);
   ("LayerTerm", ["succeed"; "effect"; "effectDiscard"; "provide"; "provideMerge"; "merge"; "fresh"; "orDie"; "ref"; "mergeAll"]);
   ("LayerTerms", ["nil"; "cons"]);
   ("RowKind", ["sync"; "async"; "program"]);
@@ -44,11 +44,11 @@ let wire_tags = [
   ("FinalizerStrategy", [("sequential", 0); ("parallel", 1)]);
   ("NativeOp", [("refMake", 0); ("refGet", 1); ("refSet", 2); ("refGetAndSet", 3); ("refSetAndGet", 4); ("deferredIsDone", 14); ("deferredPoll", 15); ("deferredSucceed", 16); ("deferredFail", 17); ("deferredAwait", 18); ("scopeMake", 19); ("sleep", 20); ("clockNow", 21); ("external", 22); ("deferredMakeOf", 23); ("refUpdateWith", 24); ("refGetAndUpdateWith", 25); ("refUpdateAndGetWith", 26); ("refUpdateSomeWith", 27); ("refGetAndUpdateSomeWith", 28); ("refUpdateSomeAndGetWith", 29); ("refModifyWith", 30); ("refModifySomeWith", 31)]);
   ("Decision", [("bool", 0); ("option", 1); ("tag", 2); ("recordTag", 3)]);
-  ("Eff", [("succeed", 0); ("fail", 1); ("failCause", 2); ("sync", 4); ("suspend", 5); ("perform", 6); ("bind", 7); ("gen", 8); ("catchCause", 9); ("matchCause", 10); ("onExit", 11); ("exit", 12); ("uninterruptible", 13); ("interruptible", 14); ("yieldNow", 17); ("awaitFiber", 19); ("withFiber", 20); ("scoped", 21); ("acquireRelease", 22); ("provideLayer", 23); ("service", 24); ("provideService", 25); ("catchIf", 26); ("select", 27); ("iterate", 28)]);
+  ("Eff", [("succeed", 0); ("fail", 1); ("failCause", 2); ("sync", 4); ("suspend", 5); ("perform", 6); ("bind", 7); ("gen", 8); ("catchCause", 9); ("matchCause", 10); ("onExit", 11); ("exit", 12); ("uninterruptible", 13); ("interruptible", 14); ("yieldNow", 17); ("awaitFiber", 19); ("withFiber", 20); ("scoped", 21); ("acquireRelease", 22); ("provideLayer", 23); ("service", 24); ("provideService", 25); ("catchIf", 26); ("select", 27); ("iterate", 28); ("restore", 29)]);
   ("Stmt", [("bindYield", 0); ("yieldDiscard", 1); ("ret", 2); ("ifElse", 3); ("whileTrue", 4); ("breakLoop", 5)]);
   ("Stmts", [("nil", 0); ("cons", 1)]);
   ("Effs", [("nil", 0); ("cons", 1)]);
-  ("ActionTerm", [("fork", 0); ("forkIn", 1); ("forkScoped", 2); ("runIn", 3); ("interrupt", 4); ("interruptScoped", 5); ("interruptAll", 6); ("awaitAll", 7); ("awaitAllFailFast", 8); ("snapshotChildren", 9); ("awaitNewChildren", 10); ("raceAll", 11); ("setContext", 12); ("getContext", 13); ("getId", 14); ("closeScope", 15)]);
+  ("ActionTerm", [("fork", 0); ("forkIn", 1); ("forkScoped", 2); ("runIn", 3); ("interrupt", 4); ("interruptScoped", 5); ("interruptAll", 6); ("awaitAll", 7); ("awaitAllFailFast", 8); ("snapshotChildren", 9); ("awaitNewChildren", 10); ("raceAll", 11); ("setContext", 12); ("getContext", 13); ("getId", 14); ("closeScope", 15); ("getInterruptible", 16)]);
   ("LayerTerm", [("succeed", 0); ("effect", 1); ("effectDiscard", 2); ("provide", 3); ("provideMerge", 4); ("merge", 5); ("fresh", 6); ("orDie", 7); ("ref", 8); ("mergeAll", 9)]);
   ("LayerTerms", [("nil", 0); ("cons", 1)]);
   ("RowKind", [("sync", 0); ("async", 1); ("program", 2)]);

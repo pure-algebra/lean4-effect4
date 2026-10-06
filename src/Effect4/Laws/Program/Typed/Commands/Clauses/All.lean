@@ -73,6 +73,7 @@ theorem fiberClauses (root : ProgramSource) (rootTy : EffTy) :
   | raceRegister race => exact clause_raceRegister root rootTy race
   | cancelRace race => exact clause_cancelRace root rootTy race
   | getId => exact clause_getId root rootTy
+  | getInterruptible => exact clause_getInterruptible root rootTy
   | getContext => exact clause_getContext root rootTy
   | setContext ctx => exact clause_setContext root rootTy ctx
   | snapshotChildren => exact clause_snapshotChildren root rootTy

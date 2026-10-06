@@ -1658,7 +1658,9 @@ def EffShape : Shape :=
         ("initial", (shape _root_.Effect4.Program.Term).root),
         ("test", (shape _root_.Effect4.Program.Term).root),
         ("step", (shape _root_.Effect4.Program.Term).root),
-        ("result", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff")])]
+        ("result", (shape _root_.Effect4.Program.Term).root), ("body", .named "Eff")]),
+      ("restore", 29, [("saved", (shape _root_.Effect4.Program.Term).root),
+        ("body", .named "Eff")])]
 
 def StmtShape : Shape :=
   .sum "Stmt"
@@ -1704,7 +1706,8 @@ def ActionTermShape : Shape :=
       ("getContext", 13, []),
       ("getId", 14, []),
       ("closeScope", 15, [("scope", (shape _root_.Effect4.Program.Term).root),
-        ("exit", (shape _root_.Effect4.Program.Term).root)])]
+        ("exit", (shape _root_.Effect4.Program.Term).root)]),
+      ("getInterruptible", 16, [])]
 
 def LayerTermShape : Shape :=
   .sum "LayerTerm"
@@ -1768,6 +1771,7 @@ def toValEff : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeOp) →
       toValEff a3]
   | .iterate a0 a1 a2 a3 a4 a5 => .ctor 28 [Canonical.toVal a0, Canonical.toVal a1,
       Canonical.toVal a2, Canonical.toVal a3, Canonical.toVal a4, toValEff a5]
+  | .restore a0 a1 => .ctor 29 [Canonical.toVal a0, toValEff a1]
 def toValStmt : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp) → Val
   | .bindYield a0 => .ctor 0 [toValEff a0]
   | .yieldDiscard a0 => .ctor 1 [toValEff a0]
@@ -1798,6 +1802,7 @@ def toValActionTerm : @_root_.Effect4.Program.ActionTerm (_root_.Effect4.Program
   | .getContext => .ctor 13 []
   | .getId => .ctor 14 []
   | .closeScope a0 a1 => .ctor 15 [Canonical.toVal a0, Canonical.toVal a1]
+  | .getInterruptible => .ctor 16 []
 def toValLayerTerm : @_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp) → Val
   | .succeed a0 a1 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1]
   | .effect a0 a1 => .ctor 1 [Canonical.toVal a0, toValEff a1]
@@ -1927,6 +1932,10 @@ def rawEff : Val → Option (@_root_.Effect4.Program.Eff (_root_.Effect4.Program
         Canonical.ofVal (α := _root_.Effect4.Program.Term) v4, rawEff v5 with
     | some a0, some a1, some a2, some a3, some a4, some a5 => some (.iterate a0 a1 a2 a3 a4 a5)
     | _, _, _, _, _, _ => none
+  | .ctor 29 [v0, v1] =>
+    match Canonical.ofVal (α := _root_.Effect4.Program.Term) v0, rawEff v1 with
+    | some a0, some a1 => some (.restore a0 a1)
+    | _, _ => none
   | _ => none
 def rawStmt : Val → Option (@_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp))
   | .ctor 0 [v0] =>
@@ -2026,6 +2035,7 @@ def rawActionTerm :
         Canonical.ofVal (α := _root_.Effect4.Program.Term) v1 with
     | some a0, some a1 => some (.closeScope a0 a1)
     | _, _ => none
+  | .ctor 16 [] => some .getInterruptible
   | _ => none
 def rawLayerTerm :
   Val → Option (@_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp))
@@ -2136,6 +2146,8 @@ theorem rawEff_toValEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program
     simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a2, rawEff_toValEff a3]
   | «iterate» a0 a1 a2 a3 a4 a5 =>
     simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a5]
+  | «restore» a0 a1 =>
+    simp [toValEff, rawEff, Canonical.ofVal_toVal, rawEff_toValEff a1]
 termination_by structural a
 theorem rawStmt_toValStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     rawStmt (toValStmt a) = some a := by
@@ -2201,6 +2213,7 @@ theorem rawActionTerm_toValActionTerm
   | «getId» => rfl
   | «closeScope» a0 a1 =>
     simp [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
+  | «getInterruptible» => rfl
 termination_by structural a
 theorem rawLayerTerm_toValLayerTerm
   (a : @_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp)) :
@@ -2440,6 +2453,10 @@ theorem fitsEff (a : @_root_.Effect4.Program.Eff (_root_.Effect4.Program.NativeO
             (acceptsFields_cons _ _ _ _ _ _ (lift_Term a3)
               (acceptsFields_cons _ _ _ _ _ _ (lift_Term a4)
                 (acceptsFields_cons _ _ _ _ _ _ (fitsEff a5) (acceptsFields_nil _)))))))
+  | «restore» a0 a1 =>
+    exact acceptsAt_sum _ _ _ 29 "restore" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0)
+        (acceptsFields_cons _ _ _ _ _ _ (fitsEff a1) (acceptsFields_nil _)))
 termination_by structural a
 theorem fitsStmt (a : @_root_.Effect4.Program.Stmt (_root_.Effect4.Program.NativeOp)) :
     acceptsIn defs (.named "Stmt") (toValStmt a) = true := by
@@ -2544,6 +2561,8 @@ theorem fitsActionTerm
     exact acceptsAt_sum _ _ _ 15 "closeScope" _ _ rfl
       (acceptsFields_cons _ _ _ _ _ _ (lift_Term a0)
         (acceptsFields_cons _ _ _ _ _ _ (lift_Term a1) (acceptsFields_nil _)))
+  | «getInterruptible» =>
+    exact acceptsAt_sum _ _ _ 16 "getInterruptible" [] [] rfl (acceptsFields_nil _)
 termination_by structural a
 theorem fitsLayerTerm (a : @_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp)) :
     acceptsIn defs (.named "LayerTerm") (toValLayerTerm a) = true := by

@@ -68,7 +68,8 @@ theorem Looped.refSites_nil : ∀ (e : NativeEff) (p : List Nat), Looped e = tru
   | .yieldNow _, _, h
   | .awaitFiber _ _, _, h | .withFiber _, _, h | .scoped _, _, h
   | .acquireRelease _ _, _, h | .provideLayer _ _ _, _, h | .service _, _, h
-  | .provideService _ _ _, _, h | .catchIf _ _ _, _, h => absurd h Bool.false_ne_true
+  | .provideService _ _ _, _, h
+  | .catchIf _ _ _, _, h | .restore _ _, _, h => absurd h Bool.false_ne_true
 
 /-- On the loop-bearing fragment the whole-program checker is `effTy` at the empty
 environment. -/

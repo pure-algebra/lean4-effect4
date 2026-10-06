@@ -9,13 +9,17 @@ open Effect4 Effect4.Machine
 
 /-- The spellings an external handle may not take: the printed types of today's native
 instances, `refOf nat` and `deferredOf nat nat` (their agreement with `Ty.render` is a guard
-below), and the targets of the internal kinds (`Ty.scope`, `Ty.context`, `Ty.memoMap`), which
-the `hasTy` arms below read. An external handle spelled so would print as a native handle's
-type. A cell or a promise fits no spelling since the state plan's T3a (decisions row 96 D2
-retired): it fits `refOf _` or `deferredOf _ _`. -/
+below), and the targets of the internal kinds (`Ty.scope`, `Ty.context`, `Ty.memoMap`,
+`Ty.maskRestore`), which the `hasTy` arms below read. An external handle spelled so would print
+as a native handle's type. A cell or a promise fits no spelling since the state plan's T3a
+(decisions row 96 D2 retired): it fits `refOf _` or `deferredOf _ _`. The mask's saved state is
+reserved here (decisions row 244): an external handle at its spelling would be a member of the
+type that a restore node reads as a saved bit. One list, so the same spelling is refused as an
+external allocation (`externalHandleTarget`) and in a host answer column (`findInternalHandle`,
+`Program/Columns.lean`). -/
 def internalHandleTargets : List String :=
   ["Ref.Ref<number>", "Deferred.Deferred<number, number>", Ty.scopeTarget, Ty.contextTarget,
-    Ty.memoMapTarget]
+    Ty.memoMapTarget, Ty.maskRestoreTarget]
 
 #guard internalHandleTargets.take 2 == [(Ty.refOf .nat).render, (Ty.deferredOf .nat .nat).render]
 
@@ -109,7 +113,9 @@ The scalars against the carrier's own frames; a handle against the spelling of i
 value `Val.context?` reads back — against `Ty.context` (`Eff.lean`); a cell against `.refOf` and a
 promise against `.deferredOf`, at any argument; an external handle at byte 7
 must name its exact target in the supplied allocation table (the default empty table admits
-none), and a nominal reference reads the handle arm at its name; the fiber handle against `.fiberOf`, and a snapshot of fiber handles
+none), and a nominal reference reads the handle arm at its name; a mask's saved state — a value
+`Val.savedMask?` reads back — against `Ty.maskRestore`, and against no other type but `unknown`
+(decisions row 244); the fiber handle against `.fiberOf`, and a snapshot of fiber handles
 (`Val.snapshot?`) against a `.list` of them; a reified exit against `.exitOf` — a failure's
 cause must read back and every typed failure must inhabit its error column (DI-62); a reified
 cause against `.causeOf` by the same error fold; the two-cell `list` `Val.tuple` builds
@@ -139,7 +145,8 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
       | some .memoMap => target == Ty.memoMapTarget
       | some .external => externalHandleTarget target && allocated[index]? == some target
       | _ => false
-    | _ => target == Ty.contextTarget && (Val.context? v).isSome
+    | _ => (target == Ty.contextTarget && (Val.context? v).isSome) ||
+        (target == Ty.maskRestoreTarget && (Val.savedMask? v).isSome)
   | .fiberOf _ _ => match v with | Value.fiber _ => true | _ => false
   -- a cell or a promise handle, coarse as every handle is (DI-17, decisions row 44): what it
   -- holds is typed by the world's tables
@@ -209,7 +216,8 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
       | some .memoMap => name == Ty.memoMapTarget
       | some .external => externalHandleTarget name && allocated[index]? == some name
       | _ => false
-    | _ => name == Ty.contextTarget && (Val.context? v).isSome
+    | _ => (name == Ty.contextTarget && (Val.context? v).isSome) ||
+        (name == Ty.maskRestoreTarget && (Val.savedMask? v).isSome)
   | .null => match v with | .none => true | _ => false
   | .undefined => match v with | .unit => true | _ => false
   | .number => numberImage v

@@ -65,6 +65,16 @@ import * as Atoms from "./prelude-atoms.gen.ts"
 export const fold = <B, A = any>(xs: ReadonlyArray<A>, init: B, step: (acc: B, x: A) => B): B =>
   xs.reduce(step, init)
 
+// ---- the mask's saved state (`Ty.maskRestore`, decisions rows 244 and 245) -----------------
+
+/** The type of the restore function that `Effect.uninterruptibleMask` hands its body. It is the
+ * printed form of `Ty.maskRestore`: the type's target is this alias's name
+ * (`Ty.maskRestoreTarget`, `src/Effect4/Program/Ty.lean`). The getter prints
+ * `Effect.uninterruptibleMask((a0) => Effect.succeed(a0))`, which answers a value of this
+ * type, and a restore site applies it: `pipe(body, a0)`. A Boolean use of the value has no
+ * type here, as the checker refuses it (`TypeReason.maskRestoreExpected`). */
+export type MaskRestore = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
+
 // ---- `select`'s printed heads (`Codegen/Print.lean`, `Head.optionCase`/`Head.caseTag`) ----
 
 /** `Eff.select s .option a0 a1`: `none` runs the first arm, `some a` the second with `a`

@@ -171,7 +171,7 @@ def Ψ_S (root : ProgramSource) : Protocol World StoreSig where
   pre := storePre root
   post := storePost
 
-/-! ## The Fiber Protocol (40 FiberOp rows) -/
+/-! ## The Fiber Protocol (41 FiberOp rows) -/
 
 /-- An operation whose answer is an installed body's exit, a registration's delivery or a
 spawned fiber certifies that type (`EffTy`); one answering a typed value certifies the value's
@@ -201,7 +201,7 @@ def asyncPre (root : ProgramSource) (w : World) (register : EffName) (cert : Eff
 
 def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert op) : Prop :=
   match op with
-  | .getId | .yieldNow _ | .ambientScope | .sync _ => True
+  | .getId | .yieldNow _ | .ambientScope | .sync _ | .getInterruptible => True
   -- the context set keeps every service at its key's type (decision row 90)
   | .setContext ctx => ServicesOk w ctx.services
   | .getContext => cert = .handle Ty.contextTarget
@@ -230,6 +230,7 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
 def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer) : Prop :=
   match op with
   | .getId => ∃ (id : FiberId), ans = Val.nat id.value
+  | .getInterruptible => ∃ (flag : Bool), ans = Val.savedMask flag
   | .getContext | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren => StrongValue w' cert ans
   | .setContext _ | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _
   | .interruptAll _ _ | .runIn _ _ | .cancelRace _ | .dropObservers _

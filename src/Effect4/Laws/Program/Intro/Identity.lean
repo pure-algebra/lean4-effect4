@@ -109,6 +109,14 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
         cases evalTerm p.env value with
         | some v => unfold updateContextR; rw [prepareR_guardR_bind]; rfl
         | none => rfl
+      | restore saved b =>
+        rw [denoteR_restore root saved b hpos]
+        cases (evalTerm p.env saved).bind Val.savedMask? with
+        | none => rfl
+        | some flag =>
+          cases flag with
+          | true => exact prepareR_denoteAction root p completed
+          | false => exact prepareR_denoteR root b (p.child 0) completed
 termination_by structural e
 
 end Effect4.Program.Sched

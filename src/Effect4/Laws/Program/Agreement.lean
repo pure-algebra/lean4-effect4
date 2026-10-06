@@ -593,6 +593,18 @@ theorem compileEff_interruptible (b : NativeEff) (hf : p.fuel = k + 1) :
     compileEff (.interruptible b) p = Prim.withFiber (EffThunk.act p) := by
   simp only [compileEff, hf]
 
+/-- A restore site at positive fuel (decisions row 245): by its saved bit, the mask over the
+body at this point's action, the body itself at child 0, or the wrong-shape refusal. The node
+spends no step of its own at a false bit. -/
+theorem compileEff_restore (saved : Term) (b : NativeEff) (hf : p.fuel = k + 1) :
+    compileEff (.restore saved b) p =
+      (match (evalTerm p.env saved).bind Val.savedMask? with
+       | some true => Prim.withFiber (EffThunk.act p)
+       | some false => compileEff b (p.child 0)
+       | none => badShape) := by
+  simp only [compileEff, hf]
+  rfl
+
 theorem compileEff_iterate (cursor : Option Ty) (initial test step result : Term) (b : NativeEff)
     (hf : p.fuel = k + 1) :
     compileEff (.iterate cursor initial test step result b) p = Prim.suspend (EffThunk.body p) := by
@@ -1493,7 +1505,7 @@ theorem meaning_of_asExit : ∀ (b : NativeEff) (q : Point) (s : Stores) {exit :
   | .«scoped» _, _, _, _, hpl, _ | .acquireRelease _ _, _, _, _, hpl, _
   | .provideLayer _ _ _, _, _, _, hpl, _
   | .service _, _, _, _, hpl, _ | .provideService _ _ _, _, _, _, hpl, _
-  | .catchIf _ _ _, _, _, _, hpl, _ => by simp [Straight] at hpl
+  | .catchIf _ _ _, _, _, _, hpl, _ | .restore _ _, _, _, _, hpl, _ => by simp [Straight] at hpl
 
 theorem contAOf_cont (root : NativeEff) (p : Point) (v : Val) :
     contAOf root (EffName.cont p) v = resolve root (p.childWith 1 v) := by aesop
@@ -1957,7 +1969,8 @@ theorem localRun_compile (root : NativeEff) :
   | .provideLayer _ _ _, _, _, _, _, hpl, _, _
   | .service _, _, _, _, _, hpl, _, _
   | .provideService _ _ _, _, _, _, _, hpl, _, _
-  | .catchIf _ _ _, _, _, _, _, hpl, _, _ => by simp [Straight] at hpl
+  | .catchIf _ _ _, _, _, _, _, hpl, _, _
+  | .restore _ _, _, _, _, _, hpl, _, _ => by simp [Straight] at hpl
 
 /-- At the root, on the empty stack, from the empty stores: the local run finishes with the
 meaning inside `steps e + 1` steps (the last one is the exit leaving the empty stack). -/

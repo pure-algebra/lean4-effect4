@@ -77,6 +77,7 @@ theorem hasTy_expandRound :
   | _, _, _, .service _ => rfl
   | _, _, _, .provideService _ _ _ hb =>
     congrArg (Eff.provideService _ _) (hasTy_expandRound hb)
+  | _, _, _, .restore _ hb => congrArg (Eff.restore _) (hasTy_expandRound hb)
 
 theorem stmtsHasTy_expandRound :
     ∀ {env : TyEnv} {inLoop : Bool} {ss : Stmts Op} {g : GenTy},
@@ -131,6 +132,7 @@ theorem actionHasTy_expandRound :
   | _, _, _, .getContext => rfl
   | _, _, _, .getId => rfl
   | _, _, _, .closeScope _ _ => rfl
+  | _, _, _, .getInterruptible => rfl
 
 theorem layerHasTy_expandRound :
     ∀ {l : LayerTerm Op} {s : LayerTy}, LayerHasTy sig l s → LayerTerm.expandRound orig l = l

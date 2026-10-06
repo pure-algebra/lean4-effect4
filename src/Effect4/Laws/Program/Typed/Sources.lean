@@ -123,6 +123,7 @@ def hookSources : List Row := [
   ("Effect4.Machine.RunInterp.exitValue", .hook (some "Effect4.Machine.fireObserver")),
   ("Effect4.Machine.RunInterp.fiberValue", .hook (some "Effect4.Machine.FiberAction.fork")),
   ("Effect4.Machine.RunInterp.fiberIdValue", .hook (some "Effect4.Machine.FiberAction.getId")),
+  ("Effect4.Machine.RunInterp.restoreValue", .hook (some "Effect4.Program.Sched.evaluateFiberR")),
   ("Effect4.Machine.RunInterp.fibersValue", .hook (some "Effect4.Machine.FiberAction.snapshotChildren")),
   ("Effect4.Machine.RunInterp.exitsValue", .hook (some "Effect4.Machine.countdownPark")),
   ("Effect4.Machine.RunInterp.voidValue", .hook (some "Effect4.Program.Sched.evaluateFiberR")),

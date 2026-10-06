@@ -164,7 +164,8 @@ end HandleKind
 `improperCons` (index 4) spelled the tail the old `Machine.Val.exitCons h t` could build with
 `t` not a list cell; U1a retired the arm and nothing writes the index, which stays reserved so
 `serviceContext` keeps index 5. The matching `improperServiceCons` row (index 6, the old
-`Env.Val.ctxCons` with a rest that was no spine) went with U1b's arms. -/
+`Env.Val.ctxCons` with a rest that was no spine) went with U1b's arms: index 6 is never given
+again. `savedMask` (index 7) is the mask's saved interruptibility (decisions row 244). -/
 inductive RuntimeCtor
   | exitSuccess
   | exitFailure
@@ -172,6 +173,7 @@ inductive RuntimeCtor
   | fiberSnapshot
   | improperCons
   | serviceContext
+  | savedMask
 deriving DecidableEq, Repr
 
 /-- The index of a runtime constructor. -/
@@ -182,6 +184,7 @@ def RuntimeCtor.index : RuntimeCtor → Nat
   | .fiberSnapshot => 3
   | .improperCons => 4
   | .serviceContext => 5
+  | .savedMask => 7
 
 /-! ## Spellings
 
@@ -224,6 +227,12 @@ index, distinct from a list of exits. -/
 /-- A service context (`Env.Val`'s spine, rc.112's `Context` map): the `pair key value`
 entries as the constructor's arguments, in binding order. -/
 @[match_pattern] abbrev serviceContext (entries : List Val) : Val := .ctor 5 entries
+/-- The mask's saved interruptibility (decisions row 244): the fiber's flag at the entry of
+`uninterruptibleMask` (`internal/effect.ts:4340-4352`), one frame under an index of its own. The
+frame holds the bit, and no other type's membership reads this index: the saved state is no
+Boolean, and widening to `unknown` does not make it one. It is a record, as the fiber's context
+is, and no handle: it names no allocation. -/
+@[match_pattern] abbrev savedMask (bit : Val) : Val := .ctor 7 [bit]
 
 end Value
 
@@ -249,6 +258,19 @@ theorem fiberIdentity_toVal (id : FiberId) : fiberIdentity.toVal id = .ctor 0 [.
 
 theorem fiberIdentity_handleFree : Image.HandleFree fiberIdentity :=
   Image.equiv_handleFree _ _ _ _ _ (Image.ctor1_handleFree _ _ Image.nat_handleFree)
+
+/-- The mask's saved interruptibility as a value (decisions row 244): the bit under
+`Value.savedMask`. `true` is the flag of a fiber that was interruptible at the mask's entry, whose
+restore is `interruptible`; `false` is the flag of a masked one, whose restore is the identity
+(`uninterruptibleMask`, `internal/effect.ts:4340-4352`). The image is exact: its reader accepts
+the two written values and no other, a Boolean frame included. -/
+def maskImage : Image Bool := Image.bool.ctor1 7
+
+theorem maskImage_toVal (flag : Bool) : maskImage.toVal flag = savedMask (.bool flag) := rfl
+
+/-- The saved state holds no handle: it names no allocation of any store. -/
+theorem maskImage_handleFree : Image.HandleFree maskImage :=
+  Image.ctor1_handleFree _ _ Image.bool_handleFree
 
 /-- `ReasonAnnotations` (`Machine/Cause.lean`): the entry list under `ctor 0`, the `Prop`
 field re-derived by decision on reading. The generator cannot write this instance (a `Prop`
@@ -420,6 +442,14 @@ end Value
 #guard RuntimeCtor.fiberSnapshot.index = 3
 #guard RuntimeCtor.improperCons.index = 4
 #guard RuntimeCtor.serviceContext.index = 5
+#guard RuntimeCtor.savedMask.index = 7
+#guard Value.maskImage.toVal true = .ctor 7 [.bool true]
+#guard Value.maskImage.ofVal (Value.maskImage.toVal false) = some false
+-- a Boolean is no saved state, and neither is the same bit under another index
+#guard Value.maskImage.ofVal (.bool true) = none
+#guard Value.maskImage.ofVal (.ctor 6 [.bool true]) = none
+#guard Value.maskImage.ofVal (.ctor 7 [.nat 1]) = none
+#guard (Value.maskImage.toVal true).handles = []
 #guard HandleKind.fiber.byte = 1
 #guard HandleKind.memoMap.byte = 5
 #guard HandleKind.ofByte? 6 = none

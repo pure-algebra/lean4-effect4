@@ -114,6 +114,8 @@ The following tables are generated from the profile, forms and taxonomy.
 | caseTag |
 | caseTagR |
 | Effect.map |
+| Effect.uninterruptibleMask |
+| pipe |
 
 ## Native rows
 

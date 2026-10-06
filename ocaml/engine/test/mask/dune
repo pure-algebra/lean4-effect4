@@ -1,0 +1,15 @@
+; lane MASK -- the mask that restores, on the generated engine, through the wire
+; (decisions rows 244 to 246; Test/Program/MaskContract.lean).
+;   test_mask  the fixture beside this file (mask.txt, written by Lean from the programs
+;              that `Api.Author.build` admits: write.lean) run on BOTH instances (Fast and
+;              Ref).  Each program crosses as its canonical bytes.  On each instance the
+;              root's exit must be the exit Lean wrote, and the two reports must be one.
+;              Red controls: another run's exit, a program cut by one byte, a small fuel.
+;              It is its own directory so that no other lane's dune file changes.
+
+(test
+ (name test_mask)
+ (modules test_mask)
+ (deps
+  (glob_files *.txt))
+ (libraries effect4_engine effect4_eff))

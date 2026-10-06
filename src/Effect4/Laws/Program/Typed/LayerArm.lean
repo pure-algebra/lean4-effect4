@@ -151,6 +151,7 @@ theorem fits_memoMap_inv {w : World} {y : Val} (h : Fits w y Ty.memoMap) :
       exact ⟨⟨index⟩, by rw [HandleKind.ofByte?_exact hk]; rfl, h.2⟩
     · exact absurd h.1 (by decide)
     · exact h.elim
+  · exact absurd h (by decide)
   · exact absurd h.1 (by decide)
 
 section Builds

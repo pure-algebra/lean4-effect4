@@ -153,6 +153,8 @@ theorem Val.hasTy_handle_retired {v : Val} {target : String} {allocated : List S
     rcases hm with rfl | rfl <;> decide
   have hctx : (target == Ty.contextTarget) = false := by
     rcases hm with rfl | rfl <;> decide
+  have hmask : (target == Ty.maskRestoreTarget) = false := by
+    rcases hm with rfl | rfl <;> decide
   simp only [Val.hasTy]
   split
   · split
@@ -160,7 +162,8 @@ theorem Val.hasTy_handle_retired {v : Val} {target : String} {allocated : List S
     · exact hmemo
     · rw [hext, Bool.false_and]
     · rfl
-  · rw [hctx, Bool.false_and]
+  · rw [hctx, hmask, Bool.false_and, Bool.false_and]
+    rfl
 
 /-- Product membership retains the allocation table of both component values. -/
 theorem Val.hasTy_prod_inv_at {v : Val} {a b : Ty} {allocated : List String}

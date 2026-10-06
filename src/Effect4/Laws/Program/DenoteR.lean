@@ -210,6 +210,8 @@ def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
     | _ => .pure badShapeExit
   -- the parallel close's step is a store program, never a source node
   | .closePar _ => .pure badShapeExit
+  -- the mask at a constant body (decisions row 245): the saved state of the entry flag
+  | .getInterruptible => .vis (.inr .getInterruptible) fun v => .pure (.success v)
 
 /-- The fiber action selected by the actual point lookup. A point that names no action is
 the frame machine's `suspendBody` refusal after its counted step. -/
@@ -516,6 +518,12 @@ def inlineYield : NativeEff → Point → Option ExitV
     -- `provideService` of a value that does not evaluate is the wrong-shape refusal
     | .provideService _ value _ => match evalTerm p.env value with
       | some _ => none | none => some badShapeExit
+    -- a restore site has no step of its own: at a false bit it is its body's own head, at a
+    -- true bit a `WithFiber`, and at any other value the wrong-shape refusal
+    | .restore saved body => match (evalTerm p.env saved).bind Val.savedMask? with
+      | some true => none
+      | some false => inlineYield body (p.child 0)
+      | none => some badShapeExit
     | _ => none
 
 /-- `Effect.provide`'s protocol after the counted step, at the point that carries the view
@@ -674,6 +682,14 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   | .provideService key value body, p =>
     match evalTerm p.env value with
     | some v => updateContextR (.provideService key v) (rec body (p.child 0))
+    | none => .pure badShapeExit
+  -- a restore site (decisions row 245), as `compileEff` reads it: the saved bit at the node's
+  -- point chooses `interruptible` over the body (the action at the point, a mask at child 0)
+  -- or the body as it is, built with the node; the node spends no step of its own
+  | .restore saved body, p =>
+    match (evalTerm p.env saved).bind Val.savedMask? with
+    | some true => denoteAction root p
+    | some false => rec body (p.child 0)
     | none => .pure badShapeExit
 
 /-- `self.build(memoMap, scope)` at the term (`compileLayer`, `innerLayerAt`, `constructionAt`),
@@ -1020,6 +1036,19 @@ theorem denoteR_interruptible (b : NativeEff) (h : p.fuel ≠ 0) :
   | zero => exact (h hf).elim
   | succ f => budget hf; try rfl
 
+/-- A restore site denotes by its saved bit (decisions row 245): the mask at child 0, the body
+at child 0, or the wrong-shape refusal. -/
+theorem denoteR_restore (saved : Term) (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.restore saved b) p =
+      match (evalTerm p.env saved).bind Val.savedMask? with
+      | some true => denoteAction root p
+      | some false => denoteR root b (p.child 0)
+      | none => .pure badShapeExit := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f =>
+    simp only [denoteR, hf, Point.child_fuel, Nat.add_sub_cancel, denoteRWith, denoteEffBody]
+
 theorem denoteR_scoped (b : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.scoped b) p = .vis (.inr (.scoped (p.child 0))) Effects.Program.pure := by
   cases hf : p.fuel with
@@ -1319,6 +1348,15 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | provideService key value body =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env value <;> rfl
+    -- a restore site: the body's own head at a false bit, a `WithFiber` at a true one
+    | restore saved body =>
+      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      cases (evalTerm p.env saved).bind Val.savedMask? with
+      | none => rfl
+      | some flag =>
+        cases flag with
+        | true => rfl
+        | false => exact inlineYield_eq_headExit body (p.child 0)
     | sync _ | suspend _ | bind _ _ | gen _ | catchCause _ _ | catchIf _ _ _ | matchCause _ _ _
     | onExit _ _ | uninterruptible _ | interruptible _ | select _ _ _ _
     | iterate _ _ _ _ _ _ | yieldNow _ | «scoped» _ | acquireRelease _ _
@@ -1401,7 +1439,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .acquireRelease _ _, _, _, hs, _
   | .provideLayer _ _ _, _, _, hs, _ | .service _, _, _, hs, _
   | .provideService _ _ _, _, _, hs, _
-  | .catchIf _ _ _, _, _, hs, _ => by
+  | .catchIf _ _ _, _, _, hs, _ | .restore _ _, _, _, hs, _ => by
     simp [Straight] at hs
 
 /-! ## Restriction to the existing straight denotation -/
@@ -1582,7 +1620,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
   | .acquireRelease _ _, _, hs, _
   | .provideLayer _ _ _, _, hs, _ | .service _, _, hs, _
   | .provideService _ _ _, _, hs, _
-  | .catchIf _ _ _, _, hs, _ => by
+  | .catchIf _ _ _, _, hs, _ | .restore _ _, _, hs, _ => by
     simp only [Straight, Bool.false_eq_true] at hs
 
 theorem meaning_denoteR_straight (root : NativeEff) (e : NativeEff) (p : Point)

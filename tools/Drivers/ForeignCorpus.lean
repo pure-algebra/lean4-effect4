@@ -43,6 +43,7 @@ mutual
     | .interruptible a => return .interruptible (← program a)
     | .select t d a b => return .select t d (← program a) (← program b)
     | .iterate c i t s r b => return .iterate c i t s r (← program b)
+    | .restore saved b => return .restore saved (← program b)
     | .yieldNow n => pure (.yieldNow n)
     | .awaitFiber t m => pure (.awaitFiber t m)
     | .withFiber a => return .withFiber (← action a)

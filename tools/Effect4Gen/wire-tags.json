@@ -79,7 +79,7 @@
       "retired": {}
     },
     "Effect4.Program.Eff": {
-      "active": {"succeed": 0, "fail": 1, "failCause": 2, "sync": 4, "suspend": 5, "perform": 6, "bind": 7, "gen": 8, "catchCause": 9, "matchCause": 10, "onExit": 11, "exit": 12, "uninterruptible": 13, "interruptible": 14, "yieldNow": 17, "awaitFiber": 19, "withFiber": 20, "scoped": 21, "acquireRelease": 22, "provideLayer": 23, "service": 24, "provideService": 25, "catchIf": 26, "select": 27, "iterate": 28},
+      "active": {"succeed": 0, "fail": 1, "failCause": 2, "sync": 4, "suspend": 5, "perform": 6, "bind": 7, "gen": 8, "catchCause": 9, "matchCause": 10, "onExit": 11, "exit": 12, "uninterruptible": 13, "interruptible": 14, "yieldNow": 17, "awaitFiber": 19, "withFiber": 20, "scoped": 21, "acquireRelease": 22, "provideLayer": 23, "service": 24, "provideService": 25, "catchIf": 26, "select": 27, "iterate": 28, "restore": 29},
       "retired": {"yieldError": 3, "branch": 15, "whileLoop": 16, "callback": 18}
     },
     "Effect4.Program.Stmt": {
@@ -95,7 +95,7 @@
       "retired": {}
     },
     "Effect4.Program.ActionTerm": {
-      "active": {"fork": 0, "forkIn": 1, "forkScoped": 2, "runIn": 3, "interrupt": 4, "interruptScoped": 5, "interruptAll": 6, "awaitAll": 7, "awaitAllFailFast": 8, "snapshotChildren": 9, "awaitNewChildren": 10, "raceAll": 11, "setContext": 12, "getContext": 13, "getId": 14, "closeScope": 15},
+      "active": {"fork": 0, "forkIn": 1, "forkScoped": 2, "runIn": 3, "interrupt": 4, "interruptScoped": 5, "interruptAll": 6, "awaitAll": 7, "awaitAllFailFast": 8, "snapshotChildren": 9, "awaitNewChildren": 10, "raceAll": 11, "setContext": 12, "getContext": 13, "getId": 14, "closeScope": 15, "getInterruptible": 16},
       "retired": {}
     },
     "Effect4.Program.LayerTerm": {

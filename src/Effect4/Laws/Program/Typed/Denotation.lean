@@ -158,6 +158,10 @@ theorem Eff.expandIn_scoped (b : NativeEff) :
     Eff.expandIn root (.scoped b) = .scoped (Eff.expandIn root b) :=
   rounds_one _ Eff.scoped (fun _ => rfl) _ b
 
+theorem Eff.expandIn_restore (saved : Term) (b : NativeEff) :
+    Eff.expandIn root (.restore saved b) = .restore saved (Eff.expandIn root b) :=
+  rounds_one _ (Eff.restore saved) (fun _ => rfl) _ b
+
 theorem Eff.expandIn_provideService (key : ServiceKey) (value : Term) (b : NativeEff) :
     Eff.expandIn root (.provideService key value b) =
       .provideService key value (Eff.expandIn root b) :=
@@ -2282,6 +2286,26 @@ theorem getId_arm
   obtain ⟨id, rfl⟩ := post
   exact .pure (strongExit_success w' _ _ trivial)
 
+/-- **`getInterruptible`** (decisions row 245): the mask at a constant body. Its answer is one of
+the two saved images (`fiberPost`'s row), a member of the saved state's type in every world
+(`fits_savedMask`). -/
+theorem getInterruptible_arm
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber .getInterruptible)))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, -, -⟩ := hpt.at_node hat
+  rw [Eff.expandIn_of_round _ _ rfl] at hcheck
+  have hty :=
+    Checker.inv_action_getInterruptible _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  subst hty
+  have hact : actionAt root.program p = some WithFiberAction.getInterruptible := by
+    unfold actionAt
+    rw [hat]
+  rw [denoteAction_of _ _ hact]
+  refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => ?_)
+  obtain ⟨flag, rfl⟩ := post
+  exact .pure (strongExit_success w' _ _ (fits_savedMask w' flag))
+
 /-- **`closeScope`**: a present scope and an exit value that decodes (`exitOfVal_of_fits`) and fits
 `Exit<unknown, unknown>` (the row's pre, F-CLOSE); the close answers an exit at `pure unit`. -/
 theorem closeScope_arm {scope exit : Term}
@@ -2316,7 +2340,7 @@ theorem closeScope_arm {scope exit : Term}
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () ⟨hlive, hfits⟩ (fun _ _ _ post => .pure post)
 
-/-- **`withFiber`**: the sixteen actions, each by its arm. -/
+/-- **`withFiber`**: the seventeen actions, each by its arm. -/
 theorem withFiber_arm {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber a)))
     (hpt : PointTyped root w p ty) :
@@ -2339,6 +2363,7 @@ theorem withFiber_arm {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)
   | getContext => exact getContext_arm hat hpt
   | getId => exact getId_arm hat hpt
   | closeScope scope exit => exact closeScope_arm hat hpt
+  | getInterruptible => exact getInterruptible_arm hat hpt
 
 end FiberArms
 
@@ -3304,6 +3329,20 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       obtain ⟨v, hv, -⟩ := evalTerm_progress_env henv hvty
       simp only [hv] at hinline
       exact nomatch hinline
+    -- a restore site: its saved term's value is a saved image; at a false bit the body's own
+    -- immediate exit at child 0, at the node's type; at a true bit a `WithFiber`, no exit
+    | restore saved b =>
+      obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+      rw [Eff.expandIn_restore] at hcheck
+      obtain ⟨hsaved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
+      obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
+      obtain ⟨flag, rfl⟩ := fits_maskRestore_inv hvfit
+      simp only [hv, Option.bind_some, Val.savedMask?_savedMask] at hinline
+      cases flag with
+      | true => exact nomatch hinline
+      | false =>
+        exact ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
+          (pointTyped_child hat rfl rfl hcb henv hview) hinline
     | _ => exact nomatch hinline
 
 section ExitArm
@@ -3331,6 +3370,37 @@ theorem exit_arm {b : NativeEff} (hfuel : p.fuel = f + 1)
     exact allGuard_typed root (fun ex => by cases ex <;> rfl)
       (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl hchild)
       (fun w' _ ex hex => .pure (strongExit_success w' _ (reifyExitVal ex) hex.1))
+
+/-- **`restore`** (decisions rows 244 and 245; the body's address in the claim
+`scoped-body-substitution-boundary`). The saved term's value is a saved image
+(`evalTerm_progress_env`, `fits_maskRestore_inv`), so the node never refuses. Both saved choices
+read the one checked body at child 0, in the node's environment and at the node's type
+(`Checker.inv_restore`, `pointTyped_child`): a true bit is the mask row over that body, as
+`interruptible_arm`; a false bit is the body's own denotation, with no row of the node's. -/
+theorem restore_arm {saved : Term} {b : NativeEff} (hfuel : p.fuel = f + 1)
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.restore saved b)))
+    (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
+    (hb : ChildDenotes root f b (p.path ++ [0])) :
+    TypedProg root w ty (denoteR root.program (.restore saved b) p) := by
+  obtain ⟨env, hcheck, henv, hview⟩ := hpt.at_node hat
+  rw [Eff.expandIn_restore] at hcheck
+  obtain ⟨hsaved, hcb⟩ := Checker.inv_restore _ _ _ _ _ _ hcheck
+  obtain ⟨v, hv, hvfit⟩ := evalTerm_progress_env henv hsaved
+  obtain ⟨flag, rfl⟩ := fits_maskRestore_inv hvfit
+  have hchild : PointTyped root w (p.child 0) ty := pointTyped_child hat rfl rfl hcb henv hview
+  rw [denoteR_restore _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hv, Option.bind_some,
+    Val.savedMask?_savedMask]
+  cases flag with
+  | true =>
+    have hact : actionAt root.program p =
+        some (WithFiberAction.setInterruptible (resolve root.program (p.child 0)) true) := by
+      unfold actionAt
+      rw [hat]
+    show TypedProg root w ty (denoteAction root.program p)
+    rw [denoteAction_of _ _ hact]
+    exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) ty (BodyTyped.at_ _ _ hchild) (fun _ _ _ post => .pure post)
+  | false => exact hb w htie (p.child 0) ty (child_fuel_eq hfuel 0) rfl hchild
 
 end ExitArm
 
@@ -3404,6 +3474,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | catchIf test b h => exact catchIf_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl)
       | select s d a0 a1 => exact select_arm hq hat hqt htie (hch a0 0 rfl) (hch a1 1 rfl)
       | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt
+      | restore saved b => exact restore_arm hq hat hqt htie (hch b 0 rfl)
 
 /-- **No node of the program is a `provideLayer`**: the fragment on which the layer family's arm
 cannot be reached. -/

@@ -402,6 +402,15 @@ mutual
     declares `let aN = initial` (`let aN: T = initial` under `some t`) and maps the
     `Effect.whileLoop` to `result`. The annotation has no meaning at run time. -/
     | iterate (cursorTy : Option Ty) (initial test step result : Term) (body : Eff Op)
+    /-- A restore site of a mask (decisions rows 245 and 246): `saved` is a value of the type
+    `Ty.maskRestore`, the answer of `ActionTerm.getInterruptible`. `body` runs under
+    `interruptible` when the saved bit is true, and as it is when the bit is false: the
+    application `restore(body)` of the function that rc.112's `uninterruptibleMask` hands its
+    body (`internal/effect.ts:4340-4352`: `f(identity)` or `f(interruptible)`). The body is
+    child 0, and the node has no step of its own. A false bit is the identity on the fiber that
+    runs the node: it does not mask that fiber. Printed as `pipe(body, saved)`. Appended, so no
+    stored program's bytes move (`Wire.lean`). -/
+    | restore (saved : Term) (body : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/
@@ -439,6 +448,13 @@ mutual
     | getContext
     | getId
     | closeScope (scope exit : Term)
+    /-- The mask at a constant body (decisions row 245):
+    `uninterruptibleMask((restore) => succeed(restore))` (`internal/effect.ts:4340-4352`). It
+    masks the fiber, answers the restore that the fiber's entry flag selects, at the type
+    `Ty.maskRestore`, and its restoring frame pops at the answer. The mask is the derived form
+    `bind (withFiber getInterruptible) (uninterruptible body)`, whose body names the answer at a
+    restore site (`Eff.restore`). Appended, so no stored program's bytes move. -/
+    | getInterruptible
   /-- The first-order layer term (the join, 2026-09-07; before it `Program/Provision.lean`):
   one constructor per rc.112 export, each naming the line it transcribes. A body is an `Eff`
   program — the same syntax the printer prints and the compile compiles — closed: a layer's
@@ -584,17 +600,18 @@ def arms : List Arm :=
   , ⟨"provideService", "Effect.provideService", "updateContext region", "internal/effect.ts:2202-2232"⟩
   , ⟨"catchIf", "Effect.catchIf", "Prim.onFailure", "internal/effect.ts:2798-2810"⟩
   , ⟨"select", "t ? a : b | Option.match | caseTag (by the decision)", "decided by the environment at compile", "select packet §1"⟩
-  , ⟨"iterate", "Effect.suspend(() => { let aN: T = initial; return Effect.map(Effect.whileLoop(…), () => result) })", "Prim.whileLoop, finished by the result term", "internal/effect.ts:4450-4470"⟩ ]
+  , ⟨"iterate", "Effect.suspend(() => { let aN: T = initial; return Effect.map(Effect.whileLoop(…), () => result) })", "Prim.whileLoop, finished by the result term", "internal/effect.ts:4450-4470"⟩
+  , ⟨"restore", "pipe(body, saved)", "the body, under WithFiberAction.setInterruptible true when the saved bit is true", "internal/effect.ts:4340-4352"⟩ ]
 
 /-- Every constructor has one arm and every arm one constructor. -/
 def constructorNames : List String :=
   ["succeed", "fail", "failCause", "sync", "suspend", "perform", "bind", "gen",
    "catchCause", "matchCause", "onExit", "exit", "uninterruptible", "interruptible",
    "yieldNow", "awaitFiber", "withFiber", "scoped", "acquireRelease",
-   "provideLayer", "service", "provideService", "catchIf", "select", "iterate"]
+   "provideLayer", "service", "provideService", "catchIf", "select", "iterate", "restore"]
 
 #guard arms.map Arm.constructor = constructorNames
-#guard constructorNames.length = 25
+#guard constructorNames.length = 26
 
 /-! ## The separation-4 receipts: first-order, decidable throughout -/
 
