@@ -1,0 +1,140 @@
+{
+ "effect": "4.0.1",
+ "runtime": "bun 1.4.2",
+ "pp1_healthy_return": {
+  "log": [
+   "acquire 1",
+   "A got 1",
+   "A returns 1",
+   "B got 1",
+   "B returns 1",
+   "the pool's scope closes",
+   "finalize 1"
+  ]
+ },
+ "pp2_order_of_reuse": {
+  "afterReuse": [
+   "C got 2",
+   "D got 1"
+  ],
+  "log": [
+   "acquire 1",
+   "acquire 2",
+   "A got 1",
+   "B got 2",
+   "A returns 1",
+   "B returns 2",
+   "C got 2",
+   "D got 1",
+   "C returns 2",
+   "D returns 1",
+   "finalize 1",
+   "finalize 2"
+  ]
+ },
+ "pp3_one_return_wakes_one": {
+  "waitingBefore": 2,
+  "waitingAfterOneReturn": 1,
+  "logAfterOneReturn": [
+   "acquire 1",
+   "H got 1",
+   "H returns 1",
+   "A got 1"
+  ],
+  "log": [
+   "acquire 1",
+   "H got 1",
+   "H returns 1",
+   "A got 1",
+   "A returns 1",
+   "B got 1",
+   "B returns 1",
+   "finalize 1"
+  ]
+ },
+ "pp4_when_a_wake_chooses": {
+  "waitingBefore": 2,
+  "logAfterTheTask": [
+   "acquire 1",
+   "H got 1",
+   "H returns 1",
+   "after H's return and before the task: 2 waiting",
+   "after A's interruption and before the task: 1 waiting",
+   "B got 1"
+  ],
+  "log": [
+   "acquire 1",
+   "H got 1",
+   "H returns 1",
+   "after H's return and before the task: 2 waiting",
+   "after A's interruption and before the task: 1 waiting",
+   "B got 1",
+   "B returns 1",
+   "finalize 1"
+  ]
+ },
+ "pp5_a_wake_hands_out_nothing": {
+  "waitingBefore": 2,
+  "logAfterTheWake": [
+   "acquire 1",
+   "A got 1",
+   "A returns 1",
+   "B got 1"
+  ],
+  "waitingAfter": 0,
+  "log": [
+   "acquire 1",
+   "A got 1",
+   "A returns 1",
+   "B got 1",
+   "B returns 1",
+   "finalize 1"
+  ]
+ },
+ "pp6_failed_acquisition": {
+  "acquisitions": 2,
+  "log": [
+   "the failing acquisition registers a cleanup",
+   "the failing acquisition's cleanup runs",
+   "acquire 1",
+   "A: success 1",
+   "B: success 1",
+   "the pool's scope closes",
+   "finalize 1"
+  ]
+ },
+ "pp7_close_with_a_holder_and_a_waiter": {
+  "whileHHolds": {
+   "closed": true,
+   "waiting": 0,
+   "log": [
+    "acquire 1",
+    "H got 1",
+    "the pool's scope starts to close",
+    "the pool's scope is closed"
+   ]
+  },
+  "closedAfterTheReturn": true,
+  "waiter": "failure Interrupt",
+  "log": [
+   "acquire 1",
+   "H got 1",
+   "the pool's scope starts to close",
+   "the pool's scope is closed",
+   "H returns 1",
+   "finalize 1"
+  ]
+ },
+ "pp8_waiter_interrupted": {
+  "waitingWhileAWaits": 1,
+  "waitingAfterAInterrupted": 0,
+  "log": [
+   "acquire 1",
+   "H got 1",
+   "H returns 1",
+   "B got 1",
+   "B returns 1",
+   "finalize 1"
+  ]
+ }
+}

@@ -1,0 +1,14 @@
+{
+ "effect": "4.0.0-rc.112",
+ "runtime": "bun 1.4.2",
+ "closedWhileHHolds": true,
+ "closedAfterTheReturn": true,
+ "log": [
+  "acquire 1",
+  "H got 1",
+  "the pool's scope starts to close",
+  "the pool's scope is closed",
+  "H returns 1",
+  "finalize 1"
+ ]
+}

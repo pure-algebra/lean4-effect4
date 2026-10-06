@@ -1,0 +1,40 @@
+vendor/effect-4.0.0-rc.112/src/MutableHashMap.ts
+
+91: const MutableHashMapProto: Omit<MutableHashMap<unknown, unknown>, "backing" | "buckets" | "bucketsSize"> = {
+92:   [TypeId]: TypeId,
+93:   [Symbol.iterator](this: MutableHashMap<unknown, unknown>): Iterator<[unknown, unknown]> {
+94:     return this.backing[Symbol.iterator]()
+95:   },
+96:   toString() {
+
+832:    *
+833:    * @category mutations
+834:    * @since 2.0.0
+835:    */
+836:   <K, V>(self: MutableHashMap<K, V>, key: K, value: V) => MutableHashMap<K, V>
+837: >(3, <K, V>(self: MutableHashMap<K, V>, key: K, value: V) => {
+838:   if (self.backing.has(key) || isSimpleKey(key)) {
+839:     self.backing.set(key, value)
+840:     return self
+841:   }
+842:   let refKey = referentialKeysCache.get(self)
+843:   if (refKey !== undefined && self.backing.has(refKey)) {
+844:     self.backing.set(refKey, value)
+845:     return self
+846:   }
+847: 
+848:   const hash = Hash.hash(key)
+849:   const bucket = self.buckets.get(hash)
+850:   if (bucket === undefined) {
+851:     self.buckets.set(hash, [key])
+852:     self.backing.set(key, value)
+853:     return self
+854:   }
+855: 
+856:   refKey = getRefKey(bucket, key)
+857:   if (refKey === undefined) {
+858:     bucket.push(key)
+859:     refKey = key
+860:   }
+861:   self.backing.set(refKey, value)
+862:   return self

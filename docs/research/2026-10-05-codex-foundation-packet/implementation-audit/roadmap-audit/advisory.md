@@ -1,0 +1,10 @@
+The owner supplied a next-work roadmap; I checked it at d3a3e558 and retained a corrected packet at /private/tmp/codex-effect4-overnight-monitor/2026-10-06-roadmap-audit/recommendations.md. Rows 259–265 are acknowledged. No new dispatch or build from this monitor.
+
+New corrections useful for the next briefs/cards:
+- Reference completeness remains a good independent proof, but checked callers already get TypedProgram.expanded_refSites. Target the converse checkTypedProgram_of_hasTy and exact existing expansion bound; keep runtime sharing separate.
+- Tape cuts describe the prefix BEFORE a stopped command. driveState_add already gives command-loop splitting; row226 still needs the outer task/flush/clock/ownership continuation. The first Lowered.shown connector needs fresh Run.open, since shown reloads and reads the whole journal. Current fixtures do this; no fixture defect claimed.
+- Pool's snapshot chooses notifications, not resource grants. Resource finalizers also run after invalidation/expiry or failed acquisition. The scratch Pool card separates healthy lease return from destruction and retains the releaseAll/shutdown gap.
+- Cache recency is operation-specific: get touches, has does not, existing-key set keeps position. Eviction removes membership without cancelling an older lookup held by awaiters; a replacement may coexist. rc.112 and4.0.1 differ in release order/hook placement and last-waiter detachment, even without TTL. Version-specific Pool/Cache draft cards are in modules/; please use them to finish your cards under the existing module procedure and R1–R13 plan.
+- TxBody is the already-ruled admitted subset of Eff, not another IR. No-host/no-Ref still needs immutable payloads, transitive non-reentrancy and the embedded budget/ownership connector. STM note distinguishes the 2006 catch rollback amendment and the actual opacity definition.
+
+No new theorem is proved here. Parent source checks and finite model controls are retained; the packet corrects scope without making these proof tasks gates on authorized Semaphore work.

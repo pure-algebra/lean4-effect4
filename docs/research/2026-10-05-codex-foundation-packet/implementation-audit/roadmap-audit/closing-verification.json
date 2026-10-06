@@ -1,0 +1,166 @@
+{
+  "head": "05489250daf49f40c962564e8577c016d0546bd1",
+  "changed_paths_since_frozen": [
+    ".github/workflows/lean_action_ci.yml",
+    "Makefile",
+    "docs/STATE.md",
+    "docs/core/decisions.md",
+    "docs/core/lcnf-route.md",
+    "docs/research/2026-10-05-claude-lead/briefs/seat-sem-brief.md",
+    "scripts/check-conform.py",
+    "tools/Conform/README.md"
+  ],
+  "core_checks": [
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "unchanged": true,
+      "sha256": "595a1b2654ecff35c11779592a2acf65f2a6455b9ac3b7e52c3a23b9341cd4bb"
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Lowered.lean",
+      "unchanged": true,
+      "sha256": "56d3368fef7a7dadfcb81b881a80d9346aa41ddd8e162b15ad96e6289f9fe06e"
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Tape.lean",
+      "unchanged": true,
+      "sha256": "842a3710c30359d6cc4bb8a2f0fdc8ce9a78bda374c77784ec64e14e2ab30741"
+    },
+    {
+      "path": "src/Effect4/Api.lean",
+      "unchanged": true,
+      "sha256": "52f91cbb2a84d374e260d3ca6fe4c71158e3bad884d258c84fed654e2aff9350"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/Approximation.lean",
+      "unchanged": true,
+      "sha256": "eed02bea96ac686c32bd554fa95ef5f8a21813209e8f26de776bd4b66a8afe5c"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/RefKernel.lean",
+      "unchanged": true,
+      "sha256": "6f49945dc33e4323887cfd3fd37758ceb08046e7d423d976abcf2becbcd23888"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/TermHandles.lean",
+      "unchanged": true,
+      "sha256": "8cbfa8f82ae544395531cbdceced175a83921e8a3c17c632e18375d69f5bb479"
+    },
+    {
+      "path": "src/Effect4/Laws/Modules/Queue/Steps.lean",
+      "unchanged": true,
+      "sha256": "de87d616240e321fea23073e338fa837b8046ae3c44daeaf4c409f9d40930784"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "unchanged": true,
+      "sha256": "053667a8a9487078a2e9bea71d042d418d8d3c1f14ac15938f1330890331a361"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathFold.lean",
+      "unchanged": true,
+      "sha256": "3b07b6f8ea7d011b262b87c78f4d667a09ef6655f5e5e80dfdab421da61e678b"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/PathOrder.lean",
+      "unchanged": true,
+      "sha256": "e8cfabfca3ac587209d002e9250ac563efebbcaa7a31b81dabd7ec68e67cb0f7"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "unchanged": true,
+      "sha256": "bd98048d469a624ddc92f60ca8c70104a8d16e2aa1ac624ef0271937b045ff76"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "unchanged": true,
+      "sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typed/Denotation.lean",
+      "unchanged": true,
+      "sha256": "66f1a635b59f7015a4f269f08b70ead0364307376f998156b002667d541bee6d"
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "unchanged": true,
+      "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25"
+    },
+    {
+      "path": "src/Effect4/Machine/Fibers.lean",
+      "unchanged": true,
+      "sha256": "00cf4375cef366719b63904f0df534bf10ab7d94213fcbfb212c66a4b5aa9fb8"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Maps.lean",
+      "unchanged": true,
+      "sha256": "8efb389e18953a4ba3c11e817e5a1ae7b62ca016670ece859cb35dffa212c6c5"
+    },
+    {
+      "path": "src/Effect4/Program/CheckedTyping.lean",
+      "unchanged": true,
+      "sha256": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75"
+    },
+    {
+      "path": "src/Effect4/Program/Refs.lean",
+      "unchanged": true,
+      "sha256": "cb64593e1215807891022dc4435565773c7908dd927b41a34831077dc6cd3d1a"
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "unchanged": true,
+      "sha256": "13f10a4775e01c8e2149c3b199260b8c4af1f37cbb6a2cbe7f9f3426a59eb7c4"
+    },
+    {
+      "path": "src/Effect4/Run.lean",
+      "unchanged": true,
+      "sha256": "710dbfa015422aed84f044268be89d8b98bd8e08e4b6a0e0a47ac2885c8a1844"
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "unchanged": true,
+      "sha256": "75195042cb052f938cf79f70954dd223f4200c4baf102f768401fcaf1eced906"
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Cache.ts",
+      "unchanged": true,
+      "sha256": "50cb55a041c0f2873e4e7693d235875ffd8d199395fc5440aa77e00173cac121"
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/MutableHashMap.ts",
+      "unchanged": true,
+      "sha256": "fa06f1e1015c682d4466ca7832e56387c43045dd3a660cb33fa7be9a4afc3d7a"
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Pool.ts",
+      "unchanged": true,
+      "sha256": "d88cd954f7cc0dd8fd086c33d48a76d4e1cd93f9630bc09f1577d95fb29492b7"
+    },
+    {
+      "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+      "unchanged": true,
+      "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2"
+    },
+    {
+      "path": "vendor/effect-4.0.1/src/Cache.ts",
+      "unchanged": true,
+      "sha256": "b21d30b4781aa9b504f507e5e4bbd408843f11c5cf84c425494941b7280a05f5"
+    },
+    {
+      "path": "vendor/effect-4.0.1/src/MutableHashMap.ts",
+      "unchanged": true,
+      "sha256": "e69fd4cd700ba21a3449ab6cd649ecd8e5c13902d3b3daec3c49ccdd8c90491d"
+    },
+    {
+      "path": "vendor/effect-4.0.1/src/Pool.ts",
+      "unchanged": true,
+      "sha256": "ebf56ba3ddc4288fc193183d131aceff7ce8b9fa79a0d087ab4fe0f35c9e7b16"
+    },
+    {
+      "path": "vendor/effect-4.0.1/src/Semaphore.ts",
+      "unchanged": true,
+      "sha256": "f8108ef8c50542e671c882b6fce97733db986c5171b13dd39021a7d0fa42105b"
+    }
+  ],
+  "all_pass": true
+}
