@@ -18,7 +18,9 @@ Every pin of rendered text is inside a `#guard`: a definition that folds over a 
 string reaches `Classical.choice`.
 
 It establishes no agreement with a target. tsgo 7 checks the printed modules in the truth
-lane (`harness/truth/Truth.lean`, `pMaskWait` and `pMaskedRestore`).
+lane (`harness/truth/Truth.lean`, `pMaskWait` and `pMaskedRestore`). The same lane checks the
+alias in its annotated positions: `harness/truth/mask.typecheck.ts` copies three modules that
+this battery pins.
 -/
 
 set_option autoImplicit false
@@ -63,6 +65,47 @@ def maskAroundWait : Src NativeOp := eff do
 -- Every scenario of the fixture is readable and reads back: the two rows, in ten programs.
 #guard engineRuns.all fun (_, src) => (buildOf (mk src)).all fun p =>
   Api.readable p && decide (Api.roundTrip p = .ok p)
+
+/-! ## A saved state as data (decisions row 246)
+
+A saved state is a value of its own type, so a promise and a cell hold it. Each program below
+is built, runs to the image of an interruptible caller's flag, and prints the alias in its
+annotated positions. `harness/truth/mask.typecheck.ts` copies the two modules of this section
+and the module of `s1` above, and tsgo 7 type-checks them in the truth lane. -/
+
+/-- A saved state kept in a promise and awaited. -/
+def keptInPromise : Src NativeOp := eff do
+  let p ← Deferred.make Ty.maskRestore .never
+  let saved ← flag
+  let _ ← Deferred.succeed p saved
+  Deferred.await p
+
+/-- A saved state kept in a cell, read back, and applied at a restore site whose body is the
+getter. -/
+def keptInCell : Src NativeOp := eff do
+  let saved ← flag
+  let c ← Ref.make saved
+  let again ← Ref.get c
+  restore again flag
+
+#guard verdict (mk keptInPromise) = "built" && verdict (mk keptInCell) = "built"
+#guard [keptInPromise, keptInCell].all fun src => (buildOf (mk src)).all fun p =>
+  decide (Api.typeOf p = some ⟨Ty.maskRestore, .never, Env.Requirement.empty⟩)
+#guard exitOf keptInPromise = some (.success open_) && exitOf keptInCell = some (.success open_)
+
+-- The two printed modules. Each rendering stays inside its guard, as the header says.
+#guard ((buildOf (mk keptInPromise)).bind fun p => (Api.printModule "main" p).map fun m =>
+    String.join (m.decls.map (TypeScript.Render.decl house0))) = some
+  "export const main: Effect.Effect<MaskRestore, never, never> = Effect.flatMap(Deferred.make<MaskRestore, never>(), (a0) => Effect.flatMap(Effect.uninterruptibleMask((a1) => Effect.succeed(a1)), (a1) => Effect.flatMap(Deferred.succeed(a0, a1), (a2) => Deferred.await(a0))))\n"
+#guard ((buildOf (mk keptInCell)).bind fun p => (Api.printModule "main" p).map fun m =>
+    String.join (m.decls.map (TypeScript.Render.decl house0))) = some
+  "export const main: Effect.Effect<MaskRestore, never, never> = Effect.flatMap(Effect.uninterruptibleMask((a0) => Effect.succeed(a0)), (a0) => Effect.flatMap(Ref.make(a0), (a1) => Effect.flatMap(Ref.get(a1), (a2) => pipe(Effect.uninterruptibleMask((a3) => Effect.succeed(a3)), a2))))\n"
+
+-- The cell's program reads back. The promise's does not: its type argument is a handle type,
+-- which is outside the readable types, and the reader refuses it by name. It prints all the same.
+#guard (buildOf (mk keptInCell)).all fun p => Api.readable p && decide (Api.roundTrip p = .ok p)
+#guard (buildOf (mk keptInPromise)).all fun p => !Api.readable p &&
+  decide (Api.roundTrip p = .error (.annotation "Deferred.make type argument"))
 
 -- Red controls. A restore site of a Boolean reads back as well: the equations are about
 -- program syntax, and typing is another judgment. A restore site whose saved term is out of
