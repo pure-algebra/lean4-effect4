@@ -158,10 +158,11 @@ def sublists : List α → List (List α)
 
 /-- The type slices below `s`, one for each sub-list of its sites. It is the finiteness of the
 carrier, as a list: the paper's Theorem 3.3 (p. 7) for this carrier. A search over it asks
-`2 ^ n` slices. -/
-def below (s : Slice α) : List (Slice α) := (sublists s.kept).map Slice.mk
+`2 ^ n` slices. The name is not `below`: that spelling under a structure is a generated
+companion's, and the tree's population reads it as one (`ProofGraph.isGeneratedCompanion`). -/
+def subslices (s : Slice α) : List (Slice α) := (sublists s.kept).map Slice.mk
 
-/-- A listed sub-list holds elements of the list only. A step of `le_of_mem_below`, its one
+/-- A listed sub-list holds elements of the list only. A step of `le_of_mem_subslices`, its one
 consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem sublists_subset : ∀ (l l' : List α), l' ∈ sublists l → l' ⊆ l
@@ -174,8 +175,8 @@ theorem sublists_subset : ∀ (l l' : List α), l' ∈ sublists l → l' ⊆ l
     · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp h
       exact List.cons_subset_cons x (sublists_subset xs t ht)
 
-/-- Each selection of a list's elements is a listed sub-list. A step of `exists_mem_below`, its
-one consumer. -/
+/-- Each selection of a list's elements is a listed sub-list. A step of `exists_mem_subslices`,
+its one consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem filter_mem_sublists (p : α → Bool) : ∀ l : List α, l.filter p ∈ sublists l
   | [] => List.mem_singleton.mpr rfl
@@ -188,7 +189,7 @@ theorem filter_mem_sublists (p : α → Bool) : ∀ l : List α, l.filter p ∈ 
 /-- A listed type slice is below the slice. A step of `SliceView.contribution_lub`, through
 `SliceView.minimals_sound`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem le_of_mem_below {j s : Slice α} (h : j ∈ s.below) : j ≤ s := by
+theorem le_of_mem_subslices {j s : Slice α} (h : j ∈ s.subslices) : j ≤ s := by
   obtain ⟨l, hl, rfl⟩ := List.mem_map.mp h
   exact sublists_subset s.kept l hl
 
@@ -196,8 +197,8 @@ theorem le_of_mem_below {j s : Slice α} (h : j ∈ s.below) : j ≤ s := by
 below `s` keeps the same sites as a listed one. It is the paper's Theorem 3.3 (p. 7), for this
 carrier. A step of `SliceView.contribution_lub`, through `SliceView.minimals_complete`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem exists_mem_below [DecidableEq α] {j s : Slice α} (h : j ≤ s) :
-    ∃ j' ∈ s.below, j' ≤ j ∧ j ≤ j' :=
+theorem exists_mem_subslices [DecidableEq α] {j s : Slice α} (h : j ≤ s) :
+    ∃ j' ∈ s.subslices, j' ≤ j ∧ j ≤ j' :=
   ⟨⟨s.kept.filter (· ∈ j.kept)⟩, List.mem_map_of_mem (filter_mem_sublists _ s.kept),
     fun _ hx => of_decide_eq_true (List.mem_filter.mp hx).2,
     fun _ hx => List.mem_filter.mpr ⟨h hx, decide_eq_true hx⟩⟩
@@ -675,7 +676,7 @@ def askedTree [DecidableEq α] [DecidableLE T] (v : SliceView α T) (parent : α
 one-step test. It is a search of `2 ^ n` slices for `n` sites. -/
 def minimals [DecidableEq α] [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
     List (Slice α) :=
-  s.below.filter (v.isMinimal q)
+  s.subslices.filter (v.isMinimal q)
 
 /-- **The contribution slice** (the paper's section 4.6, p. 12): the sites of `s` that some
 minimal type slice below `s` keeps. It is the join of the minimal slices (`contribution_lub`). It
@@ -944,7 +945,7 @@ theorem Minimal.of_same_sites [Std.IsPreorder T] {v : SliceView α T} {q : T} {m
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem minimals_sound [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
     {q : T} {s m : Slice α} (h : m ∈ v.minimals q s) : m ≤ s ∧ v.Minimal q m :=
-  ⟨Slice.le_of_mem_below (List.mem_filter.mp h).1,
+  ⟨Slice.le_of_mem_subslices (List.mem_filter.mp h).1,
     (v.isMinimal_iff q m).mp (List.mem_filter.mp h).2⟩
 
 /-- The search misses no minimal type slice below the start: each one keeps the same sites as a
@@ -953,7 +954,7 @@ listed one. A step of `contribution_lub`. -/
 theorem minimals_complete [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
     {q : T} {s m : Slice α} (hs : m ≤ s) (h : v.Minimal q m) :
     ∃ m' ∈ v.minimals q s, m' ≤ m ∧ m ≤ m' := by
-  obtain ⟨m', hm', h₁, h₂⟩ := Slice.exists_mem_below hs
+  obtain ⟨m', hm', h₁, h₂⟩ := Slice.exists_mem_subslices hs
   exact ⟨m', List.mem_filter.mpr ⟨hm', (v.isMinimal_iff q m').mpr (h.of_same_sites h₂ h₁)⟩,
     h₁, h₂⟩
 

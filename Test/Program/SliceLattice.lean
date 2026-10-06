@@ -450,7 +450,7 @@ theorem pairXX_strictly_above :
 
 /-- **No exact type slice**: no listed slice has the query's type. So validity is "at or
 above". -/
-theorem pairXX_no_exact : ∀ s ∈ pairXX.full.below,
+theorem pairXX_no_exact : ∀ s ∈ pairXX.full.subslices,
     ¬ ((toy pairXX).typeOf s ≤ qInexact ∧ qInexact ≤ (toy pairXX).typeOf s) := by
   decide +kernel
 
@@ -669,7 +669,7 @@ theorem toyMasked_full : (toyMasked page18).typeOf page18.full = maskedType page
   SliceView.ofOmitted_full _ _ _
 
 -- The two slice views give one type on each listed type slice, and one descent.
-#guard page18.full.below.all fun s => (toyMasked page18).typeOf s == (toy page18).typeOf s
+#guard page18.full.subslices.all fun s => (toyMasked page18).typeOf s == (toy page18).typeOf s
 theorem toyMasked_descent : (toyMasked page18).descend q11 page18.full = sliceD := by decide
 
 /-! ## The two counts: the restart against the one pass
