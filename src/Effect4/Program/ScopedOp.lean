@@ -21,6 +21,11 @@ The same class reads an operation's term (`term?`). The raw annotation collector
 a list fold's stated type inside an operation's term is a program annotation: raw formation and
 the integer scan reach it at a located path (decisions row 228, the fold's addendum 2).
 
+The same class reads an operation's type arguments (`typeArgs`). The raw annotation collector
+reads them too, so the types of `Deferred.make<A, E>()` are program annotations: raw formation,
+the integer scan, the module's representability check and its class table reach them at a located
+path (decisions row 212, the state plan's T5, part B).
+
 The native alphabet's instance is beside `NativeOp` (`Program/Native.lean`); the unit alphabet's
 is below. Scope is not typing: `ScopedOp` says which variables an operation's data may name, and
 nothing about their types.
@@ -51,8 +56,14 @@ class ScopedOp (Op : Type) where
   mapTerm : (Term → Term) → Op → Op := fun _ op => op
   /-- The binder term the operation carries, when it carries one: the reading view of what
   `mapTerm` rewrites. The default is an operation that carries none. An operation's type
-  arguments are types and no term, so this view does not show them (decisions row 212). -/
+  arguments are types and no term, so this view does not show them: `typeArgs` does. -/
   term? : Op → Option Term := fun _ => none
+  /-- The type arguments the operation carries: the reading view of what a signature prints on
+  the call's head (`Signature.typeArgsOf`, `Program/Typing/Rules.lean`). They are types of the
+  program, so the raw annotation collector reads them (`Formation.argumentAnnotations`,
+  decisions row 212). The default is an operation that carries none. The term map leaves them
+  as they are: a type binds no term variable. -/
+  typeArgs : Op → List Ty := fun _ => []
 
 /-- The unit alphabet carries no data. The scope fold's guards and the scope-preservation
 guards instantiate `Eff` at it. -/

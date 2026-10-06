@@ -96,11 +96,12 @@ describe("rows: the shape the grammar could not decide", () => {
       '["bind",["perform",["deferredMakeOf",["nat"],["nat"]],["lit",["unit"]]],["perform",["deferredAwait"],["var",0]]]',
     )
   })
-  // E4-CHECK-CE-013: a row that declares type arguments is read at exactly that spelling
-  // (`Deferred.make<number, number>()`, the instance the faces spell: `deferredMakeOf`
-  // at `nat, nat`); a bare call, the wrong arguments, a row that declares none, and a reserved
-  // head carrying any are refused, as the Lean reader refuses them.
-  test("Deferred.make<number, number>() is the row with its declared type arguments", () => {
+  // E4-CHECK-CE-013, and the state plan's T5, part B: `Deferred.make<A, E>()` carries its two
+  // types in the operation, and its call carries them on its head. The reader reads each by the
+  // checked type reader and installs them (`deferredMakeOf` at the types read). A bare call,
+  // another count, a row that carries none, and a reserved head carrying any are refused, as the
+  // Lean reader refuses them. `test/term-rows.test.ts` holds the instances.
+  test("Deferred.make<number, number>() is the operation at the two types on its head", () => {
     expect(json("Deferred.make<number, number>()")).toBe(
       '["perform",["deferredMakeOf",["nat"],["nat"]],["lit",["unit"]]]',
     )
@@ -108,8 +109,11 @@ describe("rows: the shape the grammar could not decide", () => {
   test("Deferred.make() without its type arguments is refused", () => {
     expect(refusal("Deferred.make()")).toEqual({ _tag: "arity", head: "Deferred.make" })
   })
-  test("Deferred.make<string, number>() with the wrong type arguments is refused", () => {
-    expect(refusal("Deferred.make<string, number>()")).toEqual({ _tag: "arity", head: "Deferred.make" })
+  test("Deferred.make<string, number>() is another instance, read at its own types", () => {
+    // Until part B the faces spelled one instance, and this spelling was refused.
+    expect(json("Deferred.make<string, number>()")).toBe(
+      '["perform",["deferredMakeOf",["string"],["nat"]],["lit",["unit"]]]',
+    )
   })
   test("Ref.make<number>(0) carries type arguments its row does not declare", () => {
     expect(refusal("Ref.make<number>(0)")).toEqual({ _tag: "arity", head: "Ref.make" })

@@ -177,12 +177,17 @@ its instance, at the row's answer column; `Deferred.make<void, never>()` is form
 #guard (checkRow (NativeOp.row (.deferredMakeOf .unit .never)).normalizeTypes .unit).toOption =
   some (EffTy.pure (.deferredOf .unit .never))
 -- A parameter inside the operation's own type arguments is accepted and types at `never` (the
--- T3a design's D5 (a)): the request binds nothing, and an operation's types are not program
--- annotations until T5 (`Formation.programAnnotations` reads an operation's binder term, through
--- `ScopedOp.term?`, and none of its type arguments; decisions row 212).
+-- T3a design's D5 (a)): the request binds nothing. Since the state plan's T5, part B, an
+-- operation's types are program annotations (`Formation.programAnnotations` reads them through
+-- `ScopedOp.typeArgs`; decisions row 212). Raw formation has no rule against a bare parameter,
+-- so the program is still admitted and still types at `never`. The faces refuse it by name: a
+-- parameter has no printed form (`Test/Codegen/TermRows.lean`, section 6).
 #guard (Effect4.Api.typeOf (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit))).map (·.answer) =
   some (.deferredOf .never .nat)
 #guard (admitProgram (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit)) ⟨[], []⟩).isOk
+#guard (Formation.programAnnotations
+    (.perform (.deferredMakeOf (.var 0) .nat) (.lit .unit) : NativeEff)).map (·.2) =
+  [.var 0, .nat]
 
 /-! ### An operation's binder term is a program annotation (decisions row 228)
 
@@ -195,8 +200,8 @@ compares that type after normalization, so a malformed stated type inside an ope
 met no check at all (Codex's review, 2026-10-05; `Test/Program/FoldContract.lean` keeps the
 candidate). The collector now reads an operation's binder term through the alphabet's own view
 (`ScopedOp.term?`), at the path segment `op`. The integer scan shares the collector, so the
-record gap closes with the fold's. An operation's type arguments stay unread (decisions row 212,
-above). -/
+record gap closes with the fold's. An operation's type arguments are read too, since the state
+plan's T5, part B (decisions row 212, above). -/
 
 /-- `{ n: 1 }` at the declaration `{ n: int }`. -/
 def intRecord : Term := .record [("n", false, .int)] ["n"] (.cons (.lit (.nat 1)) .nil)

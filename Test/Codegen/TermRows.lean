@@ -27,6 +27,16 @@ battery is the slice's acceptance for printing (decisions row 251):
    (`harness/truth/term-rows.typecheck.ts`), each pinned in full, and the Lean half of two
    programs that the truth lane runs or holds out.
 
+Part B of the slice adds the operation's type arguments (the coordinator's addenda 6 and 7):
+
+5. `Deferred.make<A, E>()` at its instances: the type arguments are derived from the operation,
+   printed through the type printer and read back by the checked type reader, on the readable
+   types (`Classes.ReadableTy`, `Test/Codegen/TypeReader.lean`);
+6. an operation's types as program annotations (decisions row 212): raw formation, the integer
+   scan and the module's class table reach them;
+7. a fixture alphabet whose one operation carries a binder term and a type argument: the two
+   updates of a reader are independent for any lawful signature (`LawfulTypeArgs`).
+
 Every guard is a finite check on one program. None states target typing or a host run: the
 TypeScript reader's twin is `ts/eff/test/term-rows.test.ts`, and the truth lane runs printed
 modules on the pin. The rendered bytes stay inside each guard: a battery `def` over rendered
@@ -40,7 +50,7 @@ set_option maxHeartbeats 8000000
 namespace Test.Codegen.TermRows
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open TypeScript (house0)
+open TypeScript (house0 Expr)
 open TypeScript.Render (expr)
 
 /-! ## 1. The forty terms that five names spelled -/
@@ -532,17 +542,39 @@ end Steps
   (text.splitOn "Ref.modify(a0, (a2) => pair(").length == 2 &&
     (text.splitOn "(a3, a4) => ite(sameHandle(recordRequired<\"id\">(\"id\")(a4), a1), a3, append(a3, cons(a4, nil())))").length == 4
 
-/-! ### The programs' modules, after part A
+/-! ### The programs' modules
 
-Each program makes a `Deferred` at a type other than `Deferred<number, number>`. The faces spell
-`Deferred.make`'s type arguments at that one instance (decisions row 212), so the module printer
-refuses each program by name, at `Deferred.make`. The refusal is no binder term's: part A lifted
-that one. Part B of the slice derives the type arguments from the instance, and moves these
-pins. -/
+Each program makes a `Deferred` at a type other than `Deferred<number, number>`, and its take
+loop states its cursor's type. Until part B of the slice the faces spelled `Deferred.make`'s type
+arguments at one instance (decisions row 212), so the module printer refused each program by
+name, `typeSpelling Deferred.make`. Since part B the faces derive the type arguments from the
+operation and print each through the type printer, so each program prints as a module. -/
 
 #guard [Skeleton.s9, Skeleton.s11, Skeleton.s12, Steps.r4].map printVerdict =
-  ["refused: typeSpelling Deferred.make", "refused: typeSpelling Deferred.make",
-   "refused: typeSpelling Deferred.make", "refused: typeSpelling Deferred.make"]
+  ["printed", "printed", "printed", "printed"]
+-- Each module's text, by its length in characters and the SHA-256 of its bytes.
+#guard [Skeleton.s9, Skeleton.s11, Skeleton.s12, Steps.r4].map (fun src =>
+    (Effect4.Api.Author.build (mk src)).toOption.bind fun b =>
+      (Effect4.Api.printModule "main" b.program b.table).map fun m =>
+        let text := TypeScript.Render.module house0 m
+        (text.length, (Effect4.Store.sha256 text.toUTF8.data.toList).hex)) =
+  [ some (12813, "6ef5d1607fedcee6e42312168634c052b48ad2342a4cf77628b5d103a4aed9da")
+  , some (11855, "b420a593926466ba5b0e1693970a780a04e920d8f2a39dd90f8880c3e4f56d32")
+  , some (6858, "03b96e441e7c359bc7b91969d9fad79ca46c4110dc3ea5eb0362c728245ee5d6")
+  , some (33585, "a337704b7826539b3a7837475f97f030e000a929aa1e8ed57a97da3ea9cac5b7") ]
+-- What `r4`'s text holds: six hints of nothing and two that carry the answer, each with its
+-- type arguments, the two take loops' stated cursor type, and no bare `Deferred.make()`.
+#guard ((Effect4.Api.Author.build (mk Steps.r4)).toOption.bind fun b =>
+    (Effect4.Api.printModule "main" b.program b.table).map
+      (TypeScript.Render.module house0)).any fun text =>
+  (text.splitOn "Deferred.make<void, never>()").length == 7 &&
+    (text.splitOn "Deferred.make<boolean, never>()").length == 3 &&
+    (text.splitOn "Option.Option<number> = none()").length == 3 &&
+    (text.splitOn "Deferred.make()").length == 1
+-- The modules do not read back yet: each take loop states its cursor's type, which is printed
+-- and not read (`ReadRefusal.annotation "local const"`). The next step of part B reads it.
+#guard [Skeleton.s9, Skeleton.s11, Skeleton.s12, Steps.r4].map readsBack =
+  [false, false, false, false]
 -- Green control: a step alone, over a cell of the Queue's first state and no `Deferred`, prints
 -- as a module and reads back.
 #guard printVerdict (bindName "q" (Ref.make Skeleton.state0) fun q =>
@@ -667,6 +699,350 @@ def twoOffers : Src NativeOp := eff do
 #guard printVerdict twoOffers = "printed"
 #guard readsBack twoOffers
 
+/-! ## 5. `Deferred.make` at its instances (part B)
+
+`Deferred.make<A, E>()` carries its two types in the operation (`NativeOp.deferredMakeOf`). The
+faces print them on the call's head, each as the type printer prints it, and read them back
+through the checked type reader (`printCall`, `readCall`). The row declares none. -/
+
+/-- `Deferred.make<A, E>()` at an instance. -/
+def make (value error : Ty) : Eff NativeOp := .perform (.deferredMakeOf value error) (.lit .unit)
+
+/-- A record type with no tag: it prints as an object type. -/
+def plainTy : Ty := .record [("a", false, .nat), ("b", true, .string)]
+
+/-- Instances whose two types are readable (`Classes.ReadableTy`), each with its printed call.
+The first two are the Queue's hints. -/
+def readableInstances : List (Ty × Ty × String) :=
+  [ (.unit, .never, "Deferred.make<void, never>()")
+  , (.bool, .never, "Deferred.make<boolean, never>()")
+  , (.nat, .nat, "Deferred.make<number, number>()")
+  , (.string, .nat, "Deferred.make<string, number>()")
+  , (.option .nat, .never, "Deferred.make<Option.Option<number>, never>()")
+  , (.list .string, .never, "Deferred.make<ReadonlyArray<string>, never>()")
+  , (.prod .nat .bool, .never, "Deferred.make<readonly [number, boolean], never>()")
+  , (.lit "x", .never, "Deferred.make<\"x\", never>()")
+  , (plainTy, .never, "Deferred.make<{ readonly a: number; readonly b?: string }, never>()") ]
+
+-- each prints its type arguments, derived from the instance
+#guard readableInstances.all fun (v, e, text) =>
+  decide ((print nativeSignature 0 (make v e)).map (expr house0 0) = .ok text)
+-- and reads back to itself: the round trip, and the domain's own verdict on the type arguments
+#guard readableInstances.all fun (v, e, _) =>
+  readable nativeSignature nativeSpell 0 (make v e) &&
+    typeArgsReadable (nativeSignature.rowOf (.deferredMakeOf v e)) [v, e]
+-- the Queue's hint, read from its syntax
+#guard readEff [] nativeSignature nativeSpell 0
+    (.call (.generic (.ident "Deferred.make") [.name ["void"] [], .name ["never"] []]) []) =
+  .ok (make .unit .never)
+
+/-- Instances that print and do not read back, each with its printed call: a collision, a type
+that is not the reader's choice for its spelling, and a spelling with no reading
+(`Classes.ReadableTy`). -/
+def unreadableInstances : List (Ty × Ty × String) :=
+  [ (.int, .never, "Deferred.make<number, never>()")
+  , (.number, .never, "Deferred.make<number, never>()")
+  , (.tuple [.nat, .bool], .never, "Deferred.make<readonly [number, boolean], never>()")
+  , (.union .string .nat, .never, "Deferred.make<number | string, never>()")
+  , (.unknown, .never, "Deferred.make<unknown, never>()")
+  , (.refOf .nat, .never, "Deferred.make<Ref.Ref<number>, never>()")
+  , (.deferredOf .unit .never, .never, "Deferred.make<Deferred.Deferred<void, never>, never>()")
+  , (.record shortFields, .never, "Deferred.make<Short, never>()") ]
+
+-- Each prints, and is outside the readable domain: the round trip does not give it back.
+#guard unreadableInstances.all fun (v, e, text) =>
+  decide ((print nativeSignature 0 (make v e)).map (expr house0 0) = .ok text) &&
+    !readable nativeSignature nativeSpell 0 (make v e) &&
+    !typeArgsReadable (nativeSignature.rowOf (.deferredMakeOf v e)) [v, e]
+-- A collision reads back at the reader's choice for the spelling: `int` at `nat`, a tuple of
+-- two items at a product, a union at its normal order.
+#guard roundTrip nativeSignature nativeSpell 0 (make .int .never) = .ok (make .nat .never)
+#guard roundTrip nativeSignature nativeSpell 0 (make (.tuple [.nat, .bool]) .never) =
+  .ok (make (.prod .nat .bool) .never)
+#guard roundTrip nativeSignature nativeSpell 0 (make (.union .string .nat) .never) =
+  .ok (make (.union .nat .string) .never)
+-- A spelling with no reading is refused as an annotation, named by the row's spelling: a
+-- handle, `unknown`, and a class's name.
+#guard [Ty.refOf .nat, .deferredOf .unit .never, .unknown, .record shortFields].all fun ty =>
+  decide (roundTrip nativeSignature nativeSpell 0 (make ty .never) =
+    .error (.annotation "Deferred.make type argument"))
+
+-- A type with no printed form refuses the row by its spelling: a row template's parameter, a
+-- nominal application at arguments, a map whose key is no string, a handle whose name does not
+-- parse.
+#guard [Ty.var 0, .app "Foo" [.nat], .map .nat .nat, .handle "not a type !"].all fun ty =>
+  match print nativeSignature 0 (make ty .never) with
+  | .error (.typeSpelling spelling) => spelling == "Deferred.make"
+  | _ => false
+
+-- Red controls of the reader. A bare call is refused by its spelling: no instance is read at a
+-- default (`E4-CHECK-CE-013`). So is a call with another count of type arguments.
+#guard readEff [] nativeSignature nativeSpell 0 (.call (.ident "Deferred.make") []) =
+  .error (.arity "Deferred.make")
+#guard readEff [] nativeSignature nativeSpell 0
+    (.call (.generic (.ident "Deferred.make") [.name ["void"] []]) []) =
+  .error (.arity "Deferred.make")
+#guard readEff [] nativeSignature nativeSpell 0
+    (.call (.generic (.ident "Deferred.make")
+      [.name ["void"] [], .name ["never"] [], .name ["never"] []]) []) =
+  .error (.arity "Deferred.make")
+-- an empty list of type arguments is no printed form
+#guard (readEff [] nativeSignature nativeSpell 0
+    (.call (.generic (.ident "Deferred.make") []) [])).isOk = false
+-- A row whose operation carries no type argument takes none.
+#guard readEff [] nativeSignature nativeSpell 1
+    (.call (.generic (.ident "Ref.get") [.name ["number"] []]) [.ident "a0"]) =
+  .error (.arity "Ref.get")
+-- The face is one instance for every instance, and no reading yields it without its two type
+-- arguments: the spelled instance `(nat, nat)` is read like any other.
+#guard nativeSignature.face (.deferredMakeOf .unit .never) = .deferredMakeOf .nat .nat
+#guard nativeSpell [] "Deferred.make" [] = some (.deferredMakeOf .nat .nat)
+#guard (NativeOp.row (.deferredMakeOf .unit .never)).typeArgs = []
+#guard (NativeOp.row (.deferredMakeOf .unit .never)).answer = .deferredOf .unit .never
+
+/-! ## 6. An operation's types are program annotations (decisions row 212)
+
+Until part B the raw annotation collector read an operation's binder term and none of its type
+arguments. The faces now print those types, so the collector reads them
+(`ScopedOp.typeArgs`, `Formation.argumentAnnotations`): raw formation, the integer scan, the
+module's representability check and its class table reach them at a located path. -/
+
+#guard Formation.programAnnotations (make .unit .never) =
+  [ (["program", "argument", "0", "op", "typeArgs", "0"], .unit)
+  , (["program", "argument", "0", "op", "typeArgs", "1"], .never) ]
+-- Red control: an alphabet that shows the collector no type argument names none, as every
+-- alphabet did before the collector read `ScopedOp.typeArgs`.
+#guard Formation.programAnnotations (Op := Blind)
+    (.perform ⟨.deferredMakeOf .unit .never⟩ (.lit .unit)) = []
+-- Raw formation refuses a repeated field inside a type argument, at its path.
+#guard match Formation.checkInput
+    (make (.record [("x", false, .nat), ("x", true, .string)]) .never) [] with
+  | some why =>
+    why.path == ["program", "argument", "0", "op", "typeArgs", "0", "type", "0"] &&
+      why.reason == .repeatedField "x"
+  | none => false
+-- The integer scan refuses `int` there. Before part B such a program was admitted: the scan
+-- read the program's own type at its root, and a `Deferred` that is made and dropped does not
+-- show there.
+#guard findIntInProgram (make .int .never) =
+  some ["program", "argument", "0", "op", "typeArgs", "0"]
+#guard findIntInProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) =
+  some ["program", "0", "argument", "0", "op", "typeArgs", "0"]
+#guard (admitProgram (.bind (make .int .never) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk =
+  false
+#guard (admitProgram (.bind (make .unit .never) (.succeed (.lit (.nat 0)))) ⟨[], []⟩).isOk
+-- A module declares the class that a type argument names: its text holds the declaration
+-- before the program. Without the collector's arm the module named `Short` and declared no
+-- such class.
+#guard ((Effect4.Api.emitModule "main"
+      (.bind (make (.record shortFields) .never) (.succeed (.lit (.nat 0))))).toOption.map
+    fun emission => TypeScript.Render.module house0 emission.module).any fun text =>
+  (text.splitOn "export class Short extends Data.TaggedError(\"Short\")<{ readonly available: number; readonly needed: number }> {}").length == 2 &&
+    (text.splitOn "Effect.flatMap(Deferred.make<Short, never>(), (a0) => Effect.succeed(0))").length == 2
+-- A type argument with no printed form refuses the module by the type's own rendering: the
+-- shared check of stored annotations names the type (`annotationRefusal`).
+#guard match Effect4.Api.emitModule "main" (make (.var 0) .never) with
+  | .error (.print (.typeSpelling text)) => text == "A"
+  | _ => false
+
+/-! ## 7. An operation that carries a binder term and type arguments
+
+No native operation carries both. The reader's laws are stated for any lawful signature
+(`LawfulTypeArgs`, `Codegen/Read.lean`): the two updates commute, and each leaves the other's
+reading as it is. This fixture alphabet has one operation that carries both, so the printed
+call holds the type argument on its head and the function after its arguments, and the reader
+installs the one and then the other. -/
+
+/-- `Cell.cast<T>(cell, (aN) => body)`, and `Cell.peek(cell)`. -/
+inductive BothOp
+  | cast (ty : Ty) (f : Term)
+  | peek
+deriving DecidableEq
+
+def BothOp.term? : BothOp → Option Term
+  | .cast _ f => some f
+  | .peek => none
+
+def BothOp.typeArgs : BothOp → List Ty
+  | .cast ty _ => [ty]
+  | .peek => []
+
+def BothOp.withTerm : BothOp → Term → BothOp
+  | .cast ty _, f => .cast ty f
+  | .peek, _ => .peek
+
+/-- At a list of another length, the face: the instance `unit`. -/
+def BothOp.withTypeArgs : BothOp → List Ty → BothOp
+  | .cast _ f, [ty] => .cast ty f
+  | .cast _ f, _ => .cast .unit f
+  | .peek, _ => .peek
+
+instance : ScopedOp BothOp where
+  scopedAt op n := op.term?.all fun f => f.scoped (n + 1)
+  mapTerm g op := match op with
+    | .cast ty f => .cast ty (g f)
+    | .peek => .peek
+  term? := BothOp.term?
+  typeArgs := BothOp.typeArgs
+
+/-- The rows: a cell at any element as the request. The cast's answer is its type argument, so
+the row depends on it, in its answer column alone. -/
+def bothRow : BothOp → Row
+  | .cast ty _ =>
+    ⟨"cast", "Cell.cast", .call, [], .sync, .refOf (.var 0), ty, .never, [], "fixture", [],
+      .deferred⟩
+  | .peek =>
+    ⟨"peek", "Cell.peek", .call, [], .sync, .refOf (.var 0), .var 0, .never, [], "fixture", [],
+      .deferred⟩
+
+def bothSig : Signature BothOp :=
+  { rowOf := bothRow, atomOf := nativeAtomTy, scopeKey := ⟨⟨0⟩, ⟨0⟩⟩
+    serviceTy := fun _ => none
+    termOf := fun op => op.term?.map fun f => ⟨f, .var 0, .var 0⟩
+    withTerm := BothOp.withTerm
+    typeArgsOf := BothOp.typeArgs
+    withTypeArgs := BothOp.withTypeArgs }
+
+/-- The inverse of the table on (spelling, trailing names): each operation at its face. -/
+def bothSpell (s : String) (names : List String) : Option BothOp :=
+  if s = "Cell.cast" ∧ names = [] then some (.cast .unit (.lit .unit))
+  else if s = "Cell.peek" ∧ names = [] then some .peek
+  else none
+
+/-- The fixture meets the reader's laws, the type arguments' and the term's with their
+independence among them. -/
+theorem bothLawful : LawfulSpelling bothSig bothSpell where
+  spell_row := by
+    intro op _ _
+    cases op <;> rfl
+  row_of_spell := by
+    intro s names op h
+    unfold bothSpell at h
+    split at h
+    · rename_i hc; cases h; exact ⟨hc.1.symm, hc.2.symm⟩
+    · split at h
+      · rename_i hc; cases h; exact ⟨hc.1.symm, hc.2.symm⟩
+      · cases h
+  value_trailing := by
+    intro op h
+    cases op <;> cases h
+  spelling_ne_name := by
+    intro op i
+    cases op with
+    | cast ty f => exact (Var.name_ne (s := "Cell.cast") (by decide) i).symm
+    | peek => exact (Var.name_ne (s := "Cell.peek") (by decide) i).symm
+  spelling_not_reserved := by
+    intro op
+    cases op with
+    | cast ty f => exact (by decide : "Cell.cast" ∉ reserved)
+    | peek => exact (by decide : "Cell.peek" ∉ reserved)
+  trailing_ne_name := by
+    intro op i
+    cases op <;> exact List.not_mem_nil
+  trailing_ne_undefined := by
+    intro op
+    cases op <;> exact List.not_mem_nil
+  withTerm_row := by
+    intro op f
+    cases op <;> rfl
+  termOf_withTerm := by
+    intro op f
+    cases op <;> rfl
+  withTerm_termOf := by
+    intro op b hb
+    cases op with
+    | cast ty f =>
+      cases hb
+      rfl
+    | peek => cases hb
+  withTerm_withTerm := by
+    intro op f g
+    cases op <;> rfl
+  withTerm_none := by
+    intro op f h
+    cases op with
+    | cast ty t => cases h
+    | peek => rfl
+  typeArgs :=
+    { call := by
+        intro op tys
+        cases op with
+        | cast ty f => rcases tys with _ | ⟨a, _ | ⟨b, rest⟩⟩ <;> rfl
+        | peek => rfl
+      typeArgsOf_withTypeArgs := by
+        intro op tys h
+        cases op with
+        | cast ty f =>
+          rcases tys with _ | ⟨a, _ | ⟨b, rest⟩⟩
+          · cases h
+          · rfl
+          · exact absurd (Nat.succ.inj h) (Nat.succ_ne_zero _)
+        | peek => exact (List.eq_nil_of_length_eq_zero h).symm
+      length_typeArgsOf := by
+        intro op tys
+        cases op with
+        | cast ty f => rcases tys with _ | ⟨a, _ | ⟨b, rest⟩⟩ <;> rfl
+        | peek => rfl
+      withTypeArgs_typeArgsOf := by
+        intro op
+        cases op <;> rfl
+      withTypeArgs_withTypeArgs := by
+        intro op tys tys'
+        cases op with
+        | cast ty f =>
+          rcases tys with _ | ⟨a, _ | ⟨b, rest⟩⟩ <;>
+            rcases tys' with _ | ⟨a', _ | ⟨b', rest'⟩⟩ <;> rfl
+        | peek => rfl
+      withTypeArgs_withTerm := by
+        intro op tys f
+        cases op with
+        | cast ty t => rcases tys with _ | ⟨a, _ | ⟨b, rest⟩⟩ <;> rfl
+        | peek => rfl
+      termOf_withTypeArgs := by
+        intro op tys
+        cases op with
+        | cast ty f => rcases tys with _ | ⟨a, _ | ⟨b, rest⟩⟩ <;> rfl
+        | peek => rfl
+      typeArgsOf_withTerm := by
+        intro op f
+        cases op <;> rfl }
+
+/-- A cast at `boolean` whose term negates the cell's value, on the cell `a0`. -/
+def castNot : Eff BothOp := .perform (.cast .bool (.app "not" (.cons (.var 1) .nil))) (.var 0)
+
+-- The printed call holds both: the type argument on the head, the function after the arguments.
+#guard (print bothSig 1 castNot).map (expr house0 0) = .ok "Cell.cast<boolean>(a0, (a1) => not(a1))"
+-- It reads back: the reader installs the type argument, then the term.
+#guard readable bothSig bothSpell 1 castNot
+#guard roundTrip bothSig bothSpell 1 castNot = .ok castNot
+-- The face holds neither, and each update restores its own part whatever the order.
+#guard bothSig.face (.cast .bool (.var 1)) = .cast .unit (.lit .unit)
+#guard bothSig.withTerm (bothSig.withTypeArgs (bothSig.face (.cast .bool (.var 1))) [.bool])
+    (.var 1) = .cast .bool (.var 1)
+#guard bothSig.withTypeArgs (bothSig.withTerm (bothSig.face (.cast .bool (.var 1))) (.var 1))
+    [.bool] = .cast .bool (.var 1)
+-- Red controls: each part alone is refused by the row's spelling, an unread type by name, and a
+-- row that carries neither takes neither.
+#guard readEff [] bothSig bothSpell 1
+    (.call (.ident "Cell.cast") [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
+  .error (.arity "Cell.cast")
+#guard readEff [] bothSig bothSpell 1
+    (.call (.generic (.ident "Cell.cast") [.name ["boolean"] []]) [.ident "a0"]) =
+  .error (.arity "Cell.cast")
+#guard readEff [] bothSig bothSpell 1
+    (.call (.generic (.ident "Cell.cast") [.name ["boolean"] [], .name ["boolean"] []])
+      [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
+  .error (.arity "Cell.cast")
+#guard readEff [] bothSig bothSpell 1
+    (.call (.generic (.ident "Cell.cast") [.name ["Foo"] []])
+      [.ident "a0", .lambda [{ name := "a1" }] (.ident "a1")]) =
+  .error (.annotation "Cell.cast type argument")
+#guard readEff [] bothSig bothSpell 1
+    (.call (.generic (.ident "Cell.peek") [.name ["boolean"] []]) [.ident "a0"]) =
+  .error (.arity "Cell.peek")
+#guard readEff [] bothSig bothSpell 1 (.call (.ident "Cell.peek") [.ident "a0"]) =
+  .ok (.perform .peek (.var 0))
+
 /-! ## The laws this battery reads
 
 `read_print` and `read_exact` (R8's top nodes, `Laws/Codegen/ReadPrint.lean` and
@@ -692,6 +1068,40 @@ example {classes : Effect4.Codegen.Classes.Classes} {n : Nat} {x : TypeScript.Ex
     print nativeSignature n e = .ok x :=
   readPerform_exact nativeLawful h
 
+/-- The call's round trip with its type arguments (part B): the operation at its term's face. -/
+example {classes : Effect4.Codegen.Classes.Classes} {n : Nat} {op : NativeOp} {r : Term}
+    (hd : nativeSignature.dom op = true)
+    (hreq : requestReadable (nativeSignature.rowOf op) n r = true)
+    (hc : r.covers classes = true) (hu : r.unannotated = true)
+    (htypes : typeArgsReadable (nativeSignature.rowOf op) (nativeSignature.typeArgsOf op) = true)
+    {x : TypeScript.Expr} (hp : printCall nativeSignature n op r = .ok x) :
+    readCall classes nativeSignature nativeSpell n x =
+      .ok (.perform (nativeSignature.withTerm op (.lit .unit)) r) :=
+  readCall_printCall nativeLawful hd hreq hc hu htypes hp
+
+/-- The call's exactness: what the reader accepts is a `perform` that prints back to the tree
+read. It asks for no readable-type premise. -/
+example {classes : Effect4.Codegen.Classes.Classes} {n : Nat} {x : TypeScript.Expr}
+    {e : Eff NativeOp} (h : readCall classes nativeSignature nativeSpell n x = .ok e) :
+    ∃ op r, e = .perform op r ∧ printCall nativeSignature n op r = .ok x :=
+  readCall_exact nativeLawful h
+
+/-- The native signature's laws of an operation's type arguments, at their exact propositions
+(`nativeLawful.typeArgs`): the call columns of the row do not depend on them, and the two
+updates commute. -/
+example : ∀ (op : NativeOp) (tys : List Ty),
+    (nativeSignature.rowOf (nativeSignature.withTypeArgs op tys)).callColumns =
+      (nativeSignature.rowOf op).callColumns :=
+  (nativeLawful).typeArgs.call
+example : ∀ (op : NativeOp) (tys : List Ty) (f : Term),
+    nativeSignature.withTypeArgs (nativeSignature.withTerm op f) tys =
+      nativeSignature.withTerm (nativeSignature.withTypeArgs op tys) f :=
+  (nativeLawful).typeArgs.withTypeArgs_withTerm
+-- The row itself does depend on the type arguments, in its answer column: no law of whole rows
+-- holds, which is why the laws are stated on the call columns.
+#guard nativeSignature.rowOf (.deferredMakeOf .unit .never) !=
+  nativeSignature.rowOf (nativeSignature.face (.deferredMakeOf .unit .never))
+
 #print axioms Effect4.Program.read_print
 #print axioms Effect4.Program.read_exact
 #print axioms Effect4.Program.readPerform_printPerform
@@ -701,5 +1111,14 @@ example {classes : Effect4.Codegen.Classes.Classes} {n : Nat} {x : TypeScript.Ex
 #print axioms Effect4.Program.splitFunction_printRow
 #print axioms Effect4.Program.printPerform_ok
 #print axioms Effect4.Program.nativeLawful
+#print axioms Effect4.Program.readCall_printCall
+#print axioms Effect4.Program.readCall_exact
+#print axioms Effect4.Program.readRowCall_typeArgs_ne
+#print axioms Effect4.Program.readPerformFace_bare_error
+#print axioms Effect4.Program.splitHeadTypes_withHeadTypes
+#print axioms Effect4.Program.withHeadTypes_of_splitHeadTypes
+#print axioms Effect4.Program.printRow_congr
+#print axioms Effect4.Program.printCall_ok
+#print axioms Test.Codegen.TermRows.bothLawful
 
 end Test.Codegen.TermRows

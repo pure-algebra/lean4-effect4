@@ -2159,7 +2159,8 @@ theorem nativeRowOf_external (table : RowTable) (i : Nat) (hi : i < table.length
 
 /-- Every native row's names are hygienic: the spelling and the trailing names are fixed by the
 operation's key, never by a type argument or a binder term it carries. A term row has no
-trailing name: the faces print its term as a function. -/
+trailing name: the faces print its term as a function. `Deferred.make`'s row declares no type
+argument: the faces print the operation's own on the call's head. -/
 theorem NativeOp.row_hygiene (op : NativeOp) :
     (op.row.shape = .value → op.row.trailing = []) ∧ rowNamesSafe op.row = true := by
   cases op with
@@ -2224,17 +2225,9 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
       rw [hb, hf]
       rfl
     | scopeMake s => cases s <;> rfl
-    | deferredMakeOf value error =>
-      -- only the instance whose type arguments the faces spell reads back
-      by_cases hve : value = .nat ∧ error = .nat
-      · obtain ⟨rfl, rfl⟩ := hve
-        rfl
-      · have hargs : NativeOp.deferredTypeArgs value error = [""] := if_neg hve
-        change (decide (RowShape.call = .value) ||
-          ((NativeOp.deferredTypeArgs value error).mapM
-            Effect4.Codegen.Types.parseLegacy).isSome) = true at hh
-        rw [hargs] at hh
-        exact absurd hh (by decide)
+    -- `Deferred.make`: its key names the row alone, and the spelling reads its face back, the
+    -- instance that `NativeOp.spelled` holds, whatever type arguments the operation carries
+    | deferredMakeOf value error => rfl
     | _ => rfl
   row_of_spell := by
     intro s names op hs
@@ -2311,6 +2304,25 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     intro op f hnone
     change op.binder?.map (fun b => (⟨b.2, b.1.param, b.1.result⟩ : BinderTerm)) = none at hnone
     exact NativeOp.withTerm_of_none (Option.map_eq_none_iff.mp hnone) f
-  typeArgs := LawfulTypeArgs.ofNone (fun _ => rfl) (fun _ _ => rfl)
+  -- an operation's type arguments: the call columns of its row do not depend on them, replacing
+  -- them is an exact update at the operation's arity, and the update is independent of the term's
+  typeArgs :=
+    { call := by
+        intro op tys
+        cases op with
+        | deferredMakeOf value error => rcases tys with _ | ⟨a, _ | ⟨b, _ | ⟨c, rest⟩⟩⟩ <;> rfl
+        | _ => rfl
+      typeArgsOf_withTypeArgs := NativeOp.typeArgs_withTypeArgs
+      length_typeArgsOf := NativeOp.length_typeArgs_withTypeArgs
+      withTypeArgs_typeArgsOf := NativeOp.withTypeArgs_typeArgs
+      withTypeArgs_withTypeArgs := NativeOp.withTypeArgs_withTypeArgs
+      withTypeArgs_withTerm := fun op tys f => NativeOp.withTypeArgs_withTerm op tys f
+      termOf_withTypeArgs := by
+        intro op tys
+        change ((op.withTypeArgs tys).binder?.map fun b =>
+            (⟨b.2, b.1.param, b.1.result⟩ : BinderTerm)).map (·.term) =
+          (op.binder?.map fun b => (⟨b.2, b.1.param, b.1.result⟩ : BinderTerm)).map (·.term)
+        rw [NativeOp.binder?_withTypeArgs]
+      typeArgsOf_withTerm := NativeOp.typeArgs_withTerm }
 
 end Effect4.Program

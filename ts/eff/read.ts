@@ -808,6 +808,37 @@ const readTypeNode = (t: Node): Ty | undefined => {
   }
 }
 
+/**
+ * The checked type reader (Lean `Classes.readTyChecked`, `Codegen/Classes.lean`): a program type
+ * from its printed spelling, kept only when the type printer prints that type as the spelling
+ * read (`targetType`, the twin of `Types.ofTy`). What it accepts is exact. It does not make the
+ * printer injective: `number` reads as `nat`, so a type at `int` does not read back, and a
+ * handle's name (`Ref.Ref<A>`, `Deferred.Deferred<A, E>`), `unknown` and a class's name read as
+ * nothing (Lean `Classes.ReadableTy` names what is outside).
+ */
+const readTypeChecked = (t: Node): Ty | undefined => {
+  const ty = readTypeNode(t)
+  return ty !== undefined && targetType(ty, legacyType) === typeName(t) ? ty : undefined
+}
+
+/**
+ * The checked type reader on a type's text: exactly one type, parsed by oxc as the right side
+ * of a type alias. The readers of this package read an operation's type arguments through this
+ * one function: this file from the spellings its fragment holds (`installTypeArgs`), and the
+ * compiler-backed foreign recognizer from the source text (`ingest/ck.ts`). The ESTree foreign
+ * recognizer hands its fragment to this file's reader. So the three read a type alike.
+ */
+export const readTypeText = (text: string): Ty | undefined => {
+  const parsed = parseSync("type.ts", `type T = ${text}`, { sourceType: "module", lang: "ts" })
+  if (parsed.errors.length > 0) return undefined
+  const program = parsed.program as unknown
+  const body = isNode(program) ? listAt(program, "body") : undefined
+  const alias = body !== undefined && body.length === 1 && isNode(body[0]) ? body[0] : undefined
+  const annotation = alias !== undefined && alias.type === "TSTypeAliasDeclaration" && !alias.typeParameters
+    ? nodeAt(alias, "typeAnnotation") : undefined
+  return annotation === undefined ? undefined : readTypeChecked(annotation)
+}
+
 /** The class's type argument as `Codegen/Classes.lean` `classDecl` prints it: the fields after
  * `_tag`, in order, `readonly`, each type as the type projection spells it. */
 const classTypeText = (rest: RecordFields): string | undefined => {
@@ -1689,6 +1720,60 @@ const withTerm = (op: NativeOp, f: Term): NativeOp | undefined => {
   }
 }
 
+/**
+ * The type arguments an operation carries on its call's head (Lean `NativeOp.typeArgs`, the
+ * native signature's `typeArgsOf`): the two types of `Deferred.make<A, E>()`. No other operation
+ * carries one. The switch lists every constructor, so an appended one is a type error here until
+ * it is classified.
+ */
+export const typeArgsOf = (op: NativeOp): ReadonlyArray<Ty> => {
+  switch (op._tag) {
+    case "deferredMakeOf":
+      return [op.value, op.error]
+    case "refMake":
+    case "refGet":
+    case "refSet":
+    case "refGetAndSet":
+    case "refSetAndGet":
+    case "refUpdateWith":
+    case "refGetAndUpdateWith":
+    case "refUpdateAndGetWith":
+    case "refUpdateSomeWith":
+    case "refGetAndUpdateSomeWith":
+    case "refUpdateSomeAndGetWith":
+    case "refModifyWith":
+    case "refModifySomeWith":
+    case "deferredIsDone":
+    case "deferredPoll":
+    case "deferredSucceed":
+    case "deferredFail":
+    case "deferredAwait":
+    case "scopeMake":
+    case "sleep":
+    case "clockNow":
+    case "external":
+      return []
+    default: {
+      const unclassified: never = op
+      return unclassified
+    }
+  }
+}
+
+/**
+ * The operation at other type arguments (Lean `NativeOp.withTypeArgs`, the native signature's
+ * `withTypeArgs`); an operation that carries none is unchanged. At a list of another length it
+ * answers the operation the row's key spells, `Deferred.make` at `(nat, nat)`, as Lean does. A
+ * reader installs only a list of the operation's own length (`installTypeArgs`).
+ */
+export const withTypeArgs = (op: NativeOp, tys: ReadonlyArray<Ty>): NativeOp => {
+  if (op._tag !== "deferredMakeOf") return op
+  const [value, error] = tys
+  return tys.length === 2 && value !== undefined && error !== undefined
+    ? { _tag: "deferredMakeOf", value, error }
+    : { _tag: "deferredMakeOf", value: { _tag: "nat" }, error: { _tag: "nat" } }
+}
+
 /** The row call an expression holds before its last argument, and that argument's body, when
  * the last argument is a function of the current value at level `n`: `(aN) => body`, the binder
  * due at the node's level (Lean `splitFunction`, `Binders.read n [0]`). The printer writes an
@@ -1710,29 +1795,74 @@ const calledSpelling = (x: Expr): string => {
   return fn._tag === "ident" ? fn.name : fn._tag === "member" ? fn.name : ""
 }
 
-/** The row call at a node of level `n` (Lean `readPerform`). A call whose last argument is the
- * function of the current value is a term row's: the call before it is read at its face
- * (`readPerformFace`), the function's body as a term one level up, where the current value is the
- * binder at `n` (decisions row 43), and the term is installed in the spelled operation (Lean
- * `installTerm`). Any other tree is read at its face and must name an operation that carries no
- * term (Lean `termFree`): a term row called without its function is refused by its spelling. */
-const readPerform = (n: number, x: Expr): Read<Eff> => {
-  const split = splitFunction(n, x)
+/** A row call without the type arguments on its head, and their spellings (Lean
+ * `splitHeadTypes`): `s<T…>(args)` as `s(args)`, and a method call `r.s<T…>(args)` as
+ * `r.s(args)`. `undefined` for a call whose head carries none, and for any other tree. */
+const splitHeadTypes = (x: Expr): { readonly bare: Expr; readonly types: ReadonlyArray<string> } | undefined => {
+  if (x._tag !== "call" || x.fn._tag !== "generic" || x.fn.typeArgs.length === 0) return undefined
+  const head = x.fn.fn
+  if (head._tag === "ident") return { bare: { _tag: "call", fn: head, args: x.args }, types: x.fn.typeArgs }
+  if (head._tag === "member") return { bare: { _tag: "method", base: head.base, name: head.name, args: x.args }, types: x.fn.typeArgs }
+  return undefined
+}
+
+/** A row call with the type arguments of its head read (Lean `readCall`; the state plan's T5,
+ * part B). A call whose head carries type arguments is first read without them, at its face.
+ * Where that names an operation, the type arguments are the operation's: they are as many as it
+ * carries, each is read by the checked type reader (`readTypeText`), and the list is installed
+ * (Lean `installTypeArgs`). Where it names none, the type arguments are the row's own declared
+ * ones: the whole call is read at its face, as a call with no type argument is, and must name an
+ * operation that carries none (Lean `typeFree`). So `Deferred.make()` is refused by its
+ * spelling, never read at a default (`E4-CHECK-CE-013`). A type argument with no reading is
+ * refused by name (Lean's `annotation "<spelling> type argument"`). */
+const readCall = (n: number, x: Expr): Read<Eff> => {
+  const split = splitHeadTypes(x)
   if (split !== undefined) {
-    const face = readPerformFace(n, split.call)
-    if (failed(face)) return face
-    const f = readTerm(n + 1, split.body)
-    if (failed(f)) return again(f)
-    const eff = face.success
-    if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
-    const op = withTerm(eff.op, f.success)
-    return op === undefined ? arity(calledSpelling(split.call)) : ok({ _tag: "perform", op, request: eff.request })
+    const bare = readPerformFace(n, split.bare)
+    if (!failed(bare)) {
+      const eff = bare.success
+      if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
+      if (typeArgsOf(eff.op).length !== split.types.length) return arity(calledSpelling(x))
+      const tys: Ty[] = []
+      for (const text of split.types) {
+        const ty = readTypeText(text)
+        if (ty === undefined) return refuse({ _tag: "shape", what: `${calledSpelling(x)} type argument annotation` })
+        tys.push(ty)
+      }
+      return ok({ _tag: "perform", op: withTypeArgs(eff.op, tys), request: eff.request })
+    }
   }
   const face = readPerformFace(n, x)
   if (failed(face)) return face
   const eff = face.success
   if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
-  return withTerm(eff.op, unit) !== undefined ? arity(calledSpelling(x)) : face
+  return typeArgsOf(eff.op).length === 0 ? face : arity(calledSpelling(x))
+}
+
+/** The row call at a node of level `n` (Lean `readPerform`). A call whose last argument is the
+ * function of the current value is a term row's: the call before it is read with its head's type
+ * arguments (`readCall`, over the face reader `readPerformFace`), the function's body as a term
+ * one level up, where the current value is the binder at `n` (decisions row 43), and the term is
+ * installed in the operation read (Lean `installTerm`). Any other tree is read the same way and
+ * must name an operation that carries no term (Lean `termFree`): a term row called without its
+ * function is refused by its spelling. The type arguments are installed before the term. */
+const readPerform = (n: number, x: Expr): Read<Eff> => {
+  const split = splitFunction(n, x)
+  if (split !== undefined) {
+    const typed = readCall(n, split.call)
+    if (failed(typed)) return typed
+    const f = readTerm(n + 1, split.body)
+    if (failed(f)) return again(f)
+    const eff = typed.success
+    if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
+    const op = withTerm(eff.op, f.success)
+    return op === undefined ? arity(calledSpelling(split.call)) : ok({ _tag: "perform", op, request: eff.request })
+  }
+  const typed = readCall(n, x)
+  if (failed(typed)) return typed
+  const eff = typed.success
+  if (eff._tag !== "perform") return refuse({ _tag: "shape", what: "operation data" })
+  return withTerm(eff.op, unit) !== undefined ? arity(calledSpelling(x)) : typed
 }
 
 /** What is not a skeleton, read as the printer's hand fields print it (`readPerformFace`): a

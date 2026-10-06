@@ -7,7 +7,7 @@
 // legs and by the fidelity reader. They recognise nothing; each engine keeps its own walk.
 import { parseSync, type Node as TreeNode } from "oxc-parser"
 import { Result } from "effect"
-import { readEff, readLayer, restoreAll, exprOf, childrenOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
+import { readEff, readLayer, restoreAll, exprOf, childrenOf, typeArgsOf, type IrNode, type Expr, type TsStmt } from "../read.ts"
 import { decodeEff, type Eff, type ForkOptions, type LayerTerm, type ServiceKey, type Term } from "../eff.gen.ts"
 import { atomNames, heads, rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
 import type { Ty } from "../eff.gen.ts"
@@ -615,7 +615,13 @@ class Normalize {
         trailing.push(n.type === "Literal" ? this.literal(n) : id(this.rawHead(n)))
       }
       if (!row.row.trailing.every((s, i) => { const x = trailing[i]!; return s === (x._tag === "ident" ? x.name : x._tag === "str" ? JSON.stringify(x.value) : "") })) continue
-      if (typeArgs.join(",") !== row.row.typeArgs.join(",")) continue
+      // An operation that carries type arguments takes its own count on the head
+      // (`Deferred.make<A, E>()`), and the fragment reader reads each through the checked type
+      // reader (`readCall` of read.ts, Lean `installTypeArgs`). A bare call of it is no
+      // invocation: it is never read at a default (`E4-CHECK-CE-013`). Any other row takes
+      // exactly the type arguments its row declares.
+      const own = typeArgsOf(row.op).length
+      if (own === 0 ? typeArgs.join(",") !== row.row.typeArgs.join(",") : typeArgs.length !== own) continue
       const fn: Expr = typeArgs.length ? { _tag: "generic", fn: id(h), typeArgs } : id(h)
       return { _tag: "call", fn, args: [...Array.from({ length: requests }, (_, i) => t(i)), ...trailing] }
     }

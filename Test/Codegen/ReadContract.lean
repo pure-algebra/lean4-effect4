@@ -173,21 +173,23 @@ def genericSpell (s : String) (names : List String) : Option Bool :=
 #guard (readEff [] sig spell 1
   (.call (.generic (.ident "Ref.get") [.name ["number"] []]) [.ident "a0"])).isOk = false
 
-/-! The native `Deferred.make` (the state plan's T3a): the operation carries its type arguments
-(`NativeOp.deferredMakeOf`), and the faces spell one instance until T5, `Deferred<number,
-number>`, which prints and reads back. The native reader refuses the bare call
-(`E4-CHECK-CE-013`) and another instance's spelling; the printer refuses another instance by
-name; the checker admits it. -/
+/-! The native `Deferred.make` (the state plan's T3a, and T5, part B): the operation carries
+its type arguments (`NativeOp.deferredMakeOf`). The faces print them on the call's head, each
+through the type printer, and read them back by the checked type reader. Until part B the faces
+spelled one instance, `Deferred<number, number>`, and refused every other by name. The native
+reader refuses the bare call (`E4-CHECK-CE-013`): no instance is read at a default. The
+instances, the readable types and the red controls are in `Test/Codegen/TermRows.lean`. -/
 
 #guard roundTrip nativeSignature nativeSpell 0 (.perform (.deferredMakeOf .nat .nat) (.lit .unit)) =
   .ok (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
-#guard (readEff [] nativeSignature nativeSpell 0 (.call (.ident "Deferred.make") [])).isOk = false
-#guard (readEff [] nativeSignature nativeSpell 0
-  (.call (.generic (.ident "Deferred.make") [.name ["string"] [], .name ["number"] []]) [])).isOk =
-  false
-#guard match Effect4.Api.print (.perform (.deferredMakeOf .string .nat) (.lit .unit)) with
-  | .error refusal => refusal == .typeSpelling "Deferred.make"
-  | .ok _ => false
+#guard readEff [] nativeSignature nativeSpell 0 (.call (.ident "Deferred.make") []) =
+  .error (.arity "Deferred.make")
+-- another instance's spelling reads to that instance, and that instance prints its own
+#guard readEff [] nativeSignature nativeSpell 0
+    (.call (.generic (.ident "Deferred.make") [.name ["string"] [], .name ["number"] []]) []) =
+  .ok (.perform (.deferredMakeOf .string .nat) (.lit .unit))
+#guard (Effect4.Api.print (.perform (.deferredMakeOf .string .nat) (.lit .unit))).map
+    (TypeScript.Render.expr TypeScript.house0 0) = .ok "Deferred.make<string, number>()"
 #guard Effect4.Api.typeOf (.perform (.deferredMakeOf .string .nat) (.lit .unit)) =
   some (EffTy.pure (.deferredOf .string .nat))
 

@@ -1232,9 +1232,10 @@ structure LawfulSpelling (sig : Signature Op) (spell : String â†’ List String â†
 `nativeSpell` inverts `NativeOp.row` on (spelling, trailing names) over one representative per
 key (`NativeOp.spelled`): each of the eight read-modify-write rows at its face, whose term the
 reader replaces by the function it read (`NativeOp.withTerm`), the two `Scope.make` rows told
-apart by the `"parallel"` strategy, and `Deferred.make` as the one instance whose type arguments
-the faces spell. `nativeLawful` is the receipt that the native table meets `LawfulSpelling`; the
-two theorems specialise to it below. -/
+apart by the `"parallel"` strategy, and `Deferred.make` at its face, the instance `(nat, nat)`,
+whose type arguments the reader replaces by the two it read on the call's head
+(`NativeOp.withTypeArgs`). `nativeLawful` is the receipt that the native table meets
+`LawfulSpelling`; the two theorems specialise to it below. -/
 
 /-- The four table requirements: unique keys, no built-in collision, no dropped
 trailing names on a value row, and names outside the reserved/binder alphabets.

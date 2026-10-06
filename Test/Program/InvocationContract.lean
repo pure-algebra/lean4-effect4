@@ -34,8 +34,8 @@ open Effect4.Program
 
 `NativeOp.spelled` holds one built-in operation per spelling key: 22 constructors, the two scope
 strategies expanded, each read-modify-write row at its face (the unit literal for its term, since
-the state plan's T5), `Deferred.make` at the instance the faces spell, external indices excluded
-(`Native.lean`). The request representatives satisfy each row's request at the
+the state plan's T5), `Deferred.make` at its face, the instance `(nat, nat)`, external indices
+excluded (`Native.lean`). The request representatives satisfy each row's request at the
 `nat` instance (the rows are templates since the state plan's T3a); that is not a claim that their
 synthetic handles are live in a running store. -/
 

@@ -26,6 +26,10 @@ import { readTypeMetadata } from "../metadata.ts"
 import { readTupleIndex } from "../tuple-index.ts"
 import { targetType, legacyType, recordKeyForm, quoteType } from "../target-types.ts"
 import type { Expr } from "../read.ts"
+// The checked type reader and the type-argument view of an operation are shared with read.ts
+// and, through its fragment reader, with the oxc engine: the three readers read a type
+// argument alike (the state plan's T5, part B). This engine keeps its own walk.
+import { readTypeText, typeArgsOf, withTypeArgs } from "../read.ts"
 
 class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
@@ -544,7 +548,12 @@ class CompilerReader {
       const functions = isTermRow(r.op) ? 1 : 0
       if (a.length !== count + r.row.trailing.length + functions || !r.row.trailing.every((v, i) => trailingName(arg(count + i)) === v)) continue
       const types = x.typeArguments?.params.map(n => this.text(n)) ?? []
-      if (types.join(",") !== r.row.typeArgs.join(",")) continue
+      // An operation that carries type arguments takes its own count on the head
+      // (`Deferred.make<A, E>()`, Lean `installTypeArgs`), and a bare call of it is no invocation:
+      // it is never read at a default (`E4-CHECK-CE-013`). Any other row takes exactly the type
+      // arguments its row declares.
+      const own = typeArgsOf(r.op).length
+      if (own === 0 ? types.join(",") !== r.row.typeArgs.join(",") : types.length !== own) continue
       let request = unit
       if (count === 1) request = t(0)
       if (count === 2) {
@@ -557,7 +566,12 @@ class CompilerReader {
         }
         request = saved ? this.term(saved, env) : { _tag: "app", atom: "pair", args: [left, right] }
       }
-      const op = isTermRow(r.op) ? withTerm(r.op, this.rowFunction(arg(count + r.row.trailing.length), env)) : r.op
+      // Each type argument is read by the checked type reader: an answer is kept only when the
+      // type printer prints it back as the spelling read. One with no reading declines the call,
+      // under the detail the fragment reader gives the other engine (`shape`).
+      const tys = own === 0 ? [] : types.map(text => readTypeText(text) ?? bad("shape"))
+      const typed = own === 0 ? r.op : withTypeArgs(r.op, tys) as RowOp
+      const op = isTermRow(typed) ? withTerm(typed, this.rowFunction(arg(count + r.row.trailing.length), env)) : typed
       return { _tag: "perform", op, request }
     }
     const application = this.term(x, env)
@@ -1403,6 +1417,12 @@ class ForeignCompilerReader extends CompilerReader {
         const f = this.foreignFunction(termRow.op, this.at(x.arguments, 1), env)
         return { _tag: "perform", op: withTerm(termRow.op, f), request: this.term(this.at(x.arguments, 0), env) }
       }
+      // An operation that carries type arguments (`Deferred.make<A, E>()`, the state plan's T5,
+      // part B): a call with another count of them on its head, a bare call among them, is no
+      // invocation of it. It is refused as the other engine refuses an admitted head with an
+      // unmatched invocation, and it is never read at a default (`E4-CHECK-CE-013`).
+      const typedRow = rows.find(r => r.row.spelling === h && typeArgsOf(r.op).length > 0)
+      if (typedRow !== undefined && (x.typeArguments?.params.length ?? 0) !== typeArgsOf(typedRow.op).length) return refuseForeign("E-NODE", h)
       if (!knownHeads.has(h) && !atoms.has(h)) return refuseForeign("E-OP-UNKNOWN", h)
     }
     if (x.type !== "CallExpression" && (x.type === "Identifier" || x.type === "MemberExpression" && !x.computed)) {

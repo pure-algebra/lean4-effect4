@@ -274,8 +274,8 @@ def printTupleArgs (n : Nat) (request : Term) : List TypeScript.Expr :=
     [.call (.ident "fst") [printTerm n request], .call (.ident "snd") [printTerm n request]]
 
 /-- A row's called head: its `spelling`, applied to the declared type arguments when it has
-any. rc.112's `Deferred.make` has defaulted type parameters, so the arguments alone do not
-determine the handle's types and the call must carry them (`E4-CHECK-CE-013`). -/
+any, the legacy spellings a supplied row holds (`Row.typeArgs`). An operation's own type
+arguments are not the row's: `printCall` prints them from the operation, below. -/
 def rowTypeArgs (row : Row) : Option (List TypeScript.TypeRef) :=
   row.typeArgs.mapM Effect4.Codegen.Types.parseLegacy
 
