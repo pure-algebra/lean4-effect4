@@ -112,6 +112,10 @@ open Effect4
 #guard_msgs in
 #print axioms SliceView.descendTree_asks
 
+/-- info: 'Effect4.SliceView.lattice_minimal' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms SliceView.lattice_minimal
+
 -- The standing is derived from each proof. The counts are of this battery's tree, which holds no
 -- step of a proof: the steps are in the law module.
 /--
@@ -133,6 +137,7 @@ Effect4.SliceView.ofFolded_full: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.SliceView.descendTree_eq_descend: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.SliceView.descendTree_minimal: proved; nearest [Effect4.SliceView.descendTree_eq_descend, Effect4.SliceView.descend_minimal]; 0 lemmas, 0 definitions
 Effect4.SliceView.descendTree_asks: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.SliceView.lattice_minimal: proved; nearest [Effect4.SliceView.valid_max, Effect4.SliceView.minimal_refine, Effect4.SliceView.descend_minimal, Effect4.SliceView.exists_minimal_below]; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
@@ -142,6 +147,7 @@ next goals: 0
   SliceView.descend_eq_restart SliceView.descend_asks SliceView.valid_max
   SliceView.contribution_lub SliceView.contribution_valid SliceView.ofFolded_full
   SliceView.descendTree_eq_descend SliceView.descendTree_minimal SliceView.descendTree_asks
+  SliceView.lattice_minimal
 
 /-! ## The toy: a term with holes, over types with a gap -/
 

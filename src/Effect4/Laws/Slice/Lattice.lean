@@ -687,7 +687,7 @@ def ofFolded [DecidableEq α] (sites : List α) (f : List α → T)
 Each of the fifteen statements of the brief began as a planned goal, and its proof replaced it in
 place. The three statements of the descent over a tree landed with their proofs:
 `descendTree_eq_descend`, `descendTree_minimal` and `descendTree_asks`, with their step
-`parentFolded_sound`. -/
+`parentFolded_sound`. The last statement, `lattice_minimal`, is the claim's four parts as one. -/
 
 /-- **Validity is upward closed**: a slice that keeps more is valid for the same query. The
 paper has it by graduality (Theorem 3.5, p. 8) for its calculus. Here it holds for every
@@ -980,6 +980,24 @@ theorem ofFolded_full [DecidableEq α] (sites : List α) (f : List α → T)
     (anti : ∀ {F G : List α}, F ⊆ G → G ⊆ sites → f G ≤ f F) :
     (ofFolded sites f anti).typeOf ⟨sites⟩ = f [] :=
   congrArg f (Slice.folded_full sites)
+
+/-- **The claim `slice-lattice-minimal`, as one statement**: its four parts, for one monotone
+view. A minimal valid slice exists below each valid slice (Theorem 4.5). The descent ends at one,
+below its start. A refined query has a minimal slice below a minimal slice of the wider query
+(Theorem 4.6). The join of two valid slices is valid for the join of their queries (Theorem 4.7).
+It is the pointer that the claim's row needs, and it adds nothing to its four parts. -/
+@[semantics "subtyping-algebra" (requirement := R14)]
+theorem lattice_minimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] [Max T]
+    [Std.LawfulOrderSup T] (v : SliceView α T) :
+    (∀ {q : T} {s : Slice α}, v.Valid q s → ∃ m : Slice α, m ≤ s ∧ v.Minimal q m) ∧
+    (∀ {q : T} {s : Slice α}, v.Valid q s →
+      v.descend q s ≤ s ∧ v.Minimal q (v.descend q s)) ∧
+    (∀ {q₁ q₂ : T} {m₂ : Slice α}, q₁ ≤ q₂ → v.Minimal q₂ m₂ →
+      ∃ m₁ : Slice α, m₁ ≤ m₂ ∧ v.Minimal q₁ m₁) ∧
+    (∀ {q₁ q₂ : T} {a b : Slice α}, v.Valid q₁ a → v.Valid q₂ b →
+      v.Valid (max q₁ q₂) (max a b)) :=
+  ⟨v.exists_minimal_below, fun h => ⟨v.descend_le _ _, v.descend_minimal h⟩, v.minimal_refine,
+    v.valid_max⟩
 
 end SliceView
 
