@@ -202,6 +202,7 @@ import Effect4.Laws.Modules.Semaphore.Typing
 import Effect4.Laws.Modules.Semaphore.Relation
 import Effect4.Laws.Modules.Semaphore.Reading
 import Effect4.Laws.Modules.Semaphore.Steps
+import Effect4.Laws.Modules.Semaphore.Ops
 import Effect4.Laws.Modules.Pool.Model
 import Effect4.Laws.Modules.Pool.Profile
 import Effect4.Laws.Modules.Pool.Typing

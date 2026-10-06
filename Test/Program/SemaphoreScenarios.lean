@@ -624,6 +624,76 @@ So each case's program has other bytes over the written forms, and it gives the 
 #guard elaborate (Semaphore.make 2) ==
   elaborate (Ref.make (Semaphore.empty 2) : Src NativeOp)
 
+/-! ## Three more scenarios: the forms that never wait, the README's example, the masked caller
+
+Their guards are in `Test/Program/SemaphoreOps.lean` and `Test/Program/SemaphoreTraces.lean`.
+They stand here because the truth lane runs each on the pinned Effect
+(`harness/truth/Truth.lean`), and that lane reads its scenarios from this one battery. -/
+
+/-- **The forms that never wait**, over a form of `withPermitsIfAvailable`. A total of 2. A
+protected body runs with both permits, and it writes the taken count that it reads. The root
+then takes 1. A second protected form asks for 2: one permit is free, so the step does not take.
+Its body would write the mark 99. Two takes of 1 follow, each one step. The answer: the first
+form's answer, the counts after it, the second form's answer, the two takes' answers, the
+counts at the end, and the marks. -/
+def ifAvailableWith (form : TermSrc → TermSrc → Src NativeOp → Src NativeOp) : Src NativeOp :=
+  eff do
+    let q ← Semaphore.make 2
+    let log ← Ref.make noNumbers
+    let a ← form q (nat 2) (eff do
+      let s ← Ref.get q
+      let _ ← mark log (field s "taken")
+      return nat 7)
+    let between ← counts q
+    let _ ← Semaphore.take q (nat 1)
+    let b ← form q (nat 2) (eff do
+      let _ ← mark log (nat 99)
+      return nat 8)
+    let c ← Semaphore.takeIfAvailable q (nat 1)
+    let d ← Semaphore.takeIfAvailable q (nat 1)
+    let after ← counts q
+    let l ← Ref.get log
+    return tuple [a, between, b, c, d, after, l]
+
+/-- The scenario over the library's form. -/
+def ifAvailable : Src NativeOp := ifAvailableWith Semaphore.withPermitsIfAvailable
+
+/-- **The README's example**, as the README writes it. The root takes the one permit. A worker
+asks for it in the protected form, and it waits. The root releases: the walk resumes the worker,
+which runs its body and releases. The answer: the free count that the release answers, and the
+worker's answer. -/
+def handoff : Src NativeOp := eff do
+  let gate ← Semaphore.make 1
+  let _ ← Semaphore.take gate (nat 1)
+  let worker ← fork (Semaphore.withPermits gate (nat 1) (succeed (nat 7)))
+  let free ← Semaphore.release gate (nat 1)
+  let x ← join worker
+  return tuple [free, x]
+
+/-- **The protected permit under a masked caller**, over one set of operations. The root holds
+the one permit. A child asks for it in the protected form, under `uninterruptible`: it waits. A
+second child requests its interruption. The root releases. The body writes 10 plus the taken
+count that it reads. The answer: the counts after the interrupt's request, what the body wrote,
+whether the child's exit is an interruption, and the counts at the end. -/
+def maskedCallerWith (ops : Ops) : Src NativeOp := eff do
+  let q ← Semaphore.make 1
+  let got ← Ref.make (nat 0)
+  let _ ← ops.take q (nat 1)
+  let f ← fork (uninterruptible (ops.withPermits q (nat 1) (eff do
+    let s ← Ref.get q
+    Ref.set got (app "add" [nat 10, field s "taken"]))))
+  let stop ← fork (withFiber (Action.interrupt f))
+  let registered ← counts q
+  let _ ← ops.release q (nat 1)
+  let e ← await f
+  let _ ← await stop
+  let x ← Ref.get got
+  let after ← counts q
+  return tuple [registered, x, app "causeIsInterrupt" [e], after]
+
+/-- The masked caller over the library's operations. -/
+def maskedCaller : Src NativeOp := maskedCallerWith library
+
 /-! ## The engine's fixture
 
 The two runs that cross to the generated engine (`ocaml/engine/test/semaphore/`): P1 and P3,
