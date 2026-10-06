@@ -2290,6 +2290,7 @@ def stores : RunInterp Name Thunk Val Err Defect FiberId Ann Ctx Stores where
     | Supervision.ObserverMode.joinEffect => Prim.ofExit exit
   fiberValue := Val.fiber
   fiberIdValue := fun fiber => Val.nat fiber.value
+  restoreValue := Val.savedMask
   fibersValue := Val.fibers
   exitsValue := exitsVal
   voidValue := Val.unit

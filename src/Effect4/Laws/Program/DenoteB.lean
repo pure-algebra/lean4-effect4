@@ -151,6 +151,7 @@ def Looped : NativeEff → Bool
   | .service _ => false
   | .provideService _ _ _ => false
   | .catchIf _ _ _ => false
+  | .restore _ _ => false
 
 /-! ## The fragment's subprograms -/
 
@@ -278,7 +279,8 @@ theorem Looped.of_straight : ∀ (e : NativeEff), Straight e = true → Looped e
   | .iterate _ _ _ _ _ _, h | .gen _, h | .uninterruptible _, h | .interruptible _, h
   | .yieldNow _, h | .awaitFiber _ _, h
   | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h | .provideLayer _ _ _, h
-  | .service _, h | .provideService _ _ _, h | .catchIf _ _ _, h => absurd h Bool.false_ne_true
+  | .service _, h | .provideService _ _ _, h
+  | .catchIf _ _ _, h | .restore _ _, h => absurd h Bool.false_ne_true
 
 /-- On the straight fragment the budgeted meaning is `denote`: every straight-fragment theorem
 is a corollary. -/
@@ -347,7 +349,7 @@ theorem denoteB_straight (k : Nat) :
   | .yieldNow _, env, h
   | .awaitFiber _ _, env, h | .withFiber _, env, h | .scoped _, env, h
   | .acquireRelease _ _, env, h | .provideLayer _ _ _, env, h | .service _, env, h
-  | .provideService _ _ _, env, h | .catchIf _ _ _, env, h => by
+  | .provideService _ _ _, env, h | .catchIf _ _ _, env, h | .restore _ _, env, h => by
     rw [denoteB_leaf k _ env rfl, leafB, if_pos h]
 
 /-- Monotonicity of a loop in the budget, given that a larger budget changes no finished round:
@@ -477,7 +479,8 @@ theorem denoteB_mono :
   | .awaitFiber _ _, k, env, s, x, s', h | .withFiber _, k, env, s, x, s', h
   | .scoped _, k, env, s, x, s', h | .acquireRelease _ _, k, env, s, x, s', h
   | .provideLayer _ _ _, k, env, s, x, s', h | .service _, k, env, s, x, s', h
-  | .provideService _ _ _, k, env, s, x, s', h | .catchIf _ _ _, k, env, s, x, s', h => by
+  | .provideService _ _ _, k, env, s, x, s', h
+  | .catchIf _ _ _, k, env, s, x, s', h | .restore _ _, k, env, s, x, s', h => by
     unfold meaningB at h ⊢
     rw [denoteB_leaf k _ env rfl] at h
     rw [denoteB_leaf (k + 1) _ env rfl]

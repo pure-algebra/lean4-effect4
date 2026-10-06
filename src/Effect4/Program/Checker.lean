@@ -262,6 +262,12 @@ mutual
       if Ty.sub v.normalize ty.normalize then
         pure ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
       else throw ⟨p, .valueNotSubtype key v ty⟩
+    -- a restore site (decisions rows 244 and 245): the saved term at the saved state's own
+    -- type, and the node at its body's type. No other rule names the type but the getter's
+    | .restore saved body => do
+      let s ← term? sig env p saved
+      if s = Ty.maskRestore then check sig env (p ++ [0]) body
+      else throw ⟨p, .maskRestoreExpected s⟩
 
   /-- `layerTy` and `explainLayer` as one. -/
   def checkLayer (sig : Signature Op) (p : List Nat) : LayerTerm Op → Except TypeRefusal LayerTy
@@ -427,6 +433,9 @@ mutual
       let e ← term? sig env p exit
       let _ ← expect ⟨p, .exitExpected e⟩ (exitOf? e)
       if s = Ty.scope then pure (EffTy.pure .unit) else throw ⟨p, .scopeExpected s⟩
+    -- the mask at a constant body (decisions row 245): it answers the saved state, with no
+    -- error and no requirement
+    | .getInterruptible => pure (EffTy.pure Ty.maskRestore)
 end
 
 /-! ### `Except.toOption` through the checker's connectives

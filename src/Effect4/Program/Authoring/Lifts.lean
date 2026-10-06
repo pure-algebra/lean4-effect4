@@ -196,6 +196,13 @@ def iterate {Op : Type} (cursor : String) (answer : String) (cursorTy : Option E
     let x5 ← body (env.push [cursor]) (p ++ [0])
     .ok (.iterate cursorTy x1 x2 x3 x4 x5)
 
+/-- `Effect4.Program.Eff.restore`. -/
+def restore {Op : Type} (saved : TermSrc) (body : Src Op) : Src Op :=
+  fun env p => do
+    let x0 ← saved env p
+    let x1 ← body env (p ++ [0])
+    .ok (.restore x0 x1)
+
 /-- `Effect4.Program.ActionTerm.fork`. -/
 def Action.fork {Op : Type} (program : Src Op) (options : Effect4.Supervision.ForkOptions) : ActionSrc Op :=
   fun env p => do
@@ -261,6 +268,10 @@ def Action.closeScope {Op : Type} (scope : TermSrc) (exit : TermSrc) : ActionSrc
     let x0 ← scope env p
     let x1 ← exit env p
     .ok (.closeScope x0 x1)
+
+/-- `Effect4.Program.ActionTerm.getInterruptible`. -/
+def Action.getInterruptible {Op : Type} : ActionSrc Op :=
+  fun _ _ => .ok (.getInterruptible)
 
 /-- `Effect4.Program.LayerTerm.succeed`. -/
 def Layer.succeed {Op : Type} (key : Effect4.ServiceKey) (value : Effect4.Program.Lit) : LayerSrc Op :=

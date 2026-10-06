@@ -104,7 +104,8 @@ def reasons : List TypeReason :=
    .errorSpelling (.record [("_tag", false, .lit "E")]) (.lit "E"),
    .binderTerm "Ref.update" .string, .resultNotSubtype "Ref.modify" (.list .string) (.list .never),
    .foldTerm ⟨[0], .notList .nat⟩,
-   .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩]
+   .foldCause ⟨[1], ⟨[0], .bodyNotAccumulator (.list .nat) (.list .never)⟩⟩,
+   .maskRestoreExpected .bool]
 
 /-- The name `ShapeDoc.print` writes for a sum's value: its `_tag` field, or the string an
 all-nullary sum prints as; the empty string for anything else. -/

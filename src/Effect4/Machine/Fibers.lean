@@ -377,6 +377,12 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
   /-- The race park's cleanup (`fiberInterruptAll(fibers)`, `:1530`): interrupt the race's
   live entrants with the running fiber's id and await them (R2-13). -/
   | cancelRace (race : Nat)
+  /-- `uninterruptibleMask((restore) => succeed(restore))` (`:4340-4352`; decisions row 245): the
+  mask at a constant body. It masks the fiber, pushes the restoring frame when the flag changes,
+  and answers the restore that the entry flag selects, as a value (`RunInterp.restoreValue`).
+  The restoring frame pops at that answer, so it keeps the frame's test for a pending cause
+  (`setInterruptible`, `:4312-4320`). -/
+  | getInterruptible
 deriving DecidableEq
 
 /-! ## Events, races, the machine, the decisions, the interp -/
@@ -592,6 +598,11 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- The numeric ID supplied by `withFiberId` (`internal/effect.ts:1092–1100`).
   Separate from the fork handle: `Effect.fiberId` answers a number. -/
   fiberIdValue : FiberId → β
+  /-- The restore that `uninterruptibleMask` hands its body (`internal/effect.ts:4340-4352`), as
+  a value, by the fiber's flag at the mask's entry: `interruptible` for a fiber that was
+  interruptible (`true`, `:4351`), the identity for a masked one (`false`, `:4348`). What
+  `getInterruptible` answers. -/
+  restoreValue : Bool → β
   /-- A list of handles as a value (`awaitAllChildren`'s snapshot). -/
   fibersValue : List FiberId → β
   /-- A list of exits as a value (`fiberAwaitAll`, `:779`; S2-M6). -/
@@ -1362,6 +1373,12 @@ where
       | none => ⟨m, answer f interp.voidValue, yielding, Outcome.continue_, []⟩
       | some race =>
         ⟨m, f, yielding, Outcome.commands, [Cmd.raceCancel raceId f.id yielding race.state.live []]⟩
+    | WithFiberAction.getInterruptible =>                               -- :4340-4352
+      -- `uninterruptibleMask((restore) => succeed(restore))`: the mask's own arm above, at the
+      -- body that answers the restore the entry flag selects
+      ⟨m, { f with frame := { f.frame.uninterruptible with
+          current := Prim.success (interp.restoreValue f.frame.interruptible) } },
+        yielding, Outcome.continue_, []⟩
   /-- `fiberInterruptAs(target, who)` (`:871-884`, D6b): record with `who` and the caller's
   stack annotations (`:880-883`, R2-5); an idle interruptible target runs now, and
   `asVoid(fiberAwait(target))` is constructed after that run, as the nested commands. -/

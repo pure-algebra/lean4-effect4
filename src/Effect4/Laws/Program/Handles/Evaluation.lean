@@ -142,6 +142,7 @@ theorem interpAt_keyBounded (root : NativeEff) (completed : List (FiberId × Exi
   exitValue := (interpOf_keyBounded root table).exitValue
   fiberValue := (interpOf_keyBounded root table).fiberValue
   fiberIdValue := (interpOf_keyBounded root table).fiberIdValue
+  restoreValue := (interpOf_keyBounded root table).restoreValue
   fibersValue := (interpOf_keyBounded root table).fibersValue
   exitsValue := (interpOf_keyBounded root table).exitsValue
   voidValue := (interpOf_keyBounded root table).voidValue

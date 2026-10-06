@@ -1,0 +1,1 @@
+["bind",["bind",["withFiber",["getInterruptible"]],["uninterruptible",["succeed",["var",0]]]],["restore",["var",0],["succeed",["lit",["nat",3]]]]]

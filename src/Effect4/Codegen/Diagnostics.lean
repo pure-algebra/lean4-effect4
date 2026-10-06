@@ -142,5 +142,8 @@ def codesOf (c : HostConfig) : TypeReason → List Nat
   -- T5, so no target diagnostic is claimed.
   | .binderTerm _ _ => []
   | .resultNotSubtype _ _ _ => []
+  -- A restore site whose saved term is no saved state, `pipe(body, true)`: no observation of the
+  -- diagnostics lane names this reason yet, so no code is claimed.
+  | .maskRestoreExpected _ => []
 
 end Effect4.Codegen

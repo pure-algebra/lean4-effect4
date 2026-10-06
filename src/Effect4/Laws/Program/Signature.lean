@@ -181,6 +181,7 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .service hk => .service (h.service _ _ hk)
   | _, _, _, .provideService hk hv hsub hb =>
     .provideService (h.service _ _ hk) ((h.termTy _ _).trans hv) hsub (hasTy_ext h hb)
+  | _, _, _, .restore hs hb => .restore ((h.termTy _ _).trans hs) (hasTy_ext h hb)
 
 theorem stmtsHasTy_ext (h : SigExtends s s') :
     ∀ {env : TyEnv} {inLoop : Bool} {b : Stmts Op} {g : GenTy},
@@ -222,6 +223,7 @@ theorem actionHasTy_ext (h : SigExtends s s') :
   | _, _, _, .getContext => .getContext
   | _, _, _, .getId => .getId
   | _, _, _, .closeScope hs he => .closeScope ((h.termTy _ _).trans hs) ((h.termTy _ _).trans he)
+  | _, _, _, .getInterruptible => .getInterruptible
 
 theorem layerHasTy_ext (h : SigExtends s s') :
     ∀ {l : LayerTerm Op} {t : LayerTy}, LayerHasTy s l t → LayerHasTy s' l t
@@ -400,6 +402,7 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   eff_catchIf : alg₁.eff_catchIf = alg₂.eff_catchIf
   eff_select : alg₁.eff_select = alg₂.eff_select
   eff_iterate : alg₁.eff_iterate = alg₂.eff_iterate
+  eff_restore : alg₁.eff_restore = alg₂.eff_restore
   stmt_bindYield : alg₁.stmt_bindYield = alg₂.stmt_bindYield
   stmt_yieldDiscard : alg₁.stmt_yieldDiscard = alg₂.stmt_yieldDiscard
   stmt_ret : alg₁.stmt_ret = alg₂.stmt_ret
@@ -426,6 +429,7 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   action_getContext : alg₁.action_getContext = alg₂.action_getContext
   action_getId : alg₁.action_getId = alg₂.action_getId
   action_closeScope : alg₁.action_closeScope = alg₂.action_closeScope
+  action_getInterruptible : alg₁.action_getInterruptible = alg₂.action_getInterruptible
   layer_succeed : ∀ key, okKey key → alg₁.layer_succeed key = alg₂.layer_succeed key
   layer_effect : ∀ key, okKey key → alg₁.layer_effect key = alg₂.layer_effect key
   layer_effectDiscard : alg₁.layer_effectDiscard = alg₂.layer_effectDiscard
@@ -468,6 +472,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
   eff_catchIf _ r1 r2 := r1 ∧ r2
   eff_select _ _ r2 r3 := r2 ∧ r3
   eff_iterate _ _ _ _ _ r5 := r5
+  eff_restore _ r1 := r1
   stmt_bindYield r0 := r0
   stmt_yieldDiscard r0 := r0
   stmt_ret _ := True
@@ -494,6 +499,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) :
   action_getContext := True
   action_getId := True
   action_closeScope _ _ := True
+  action_getInterruptible := True
   layer_succeed key _ := okKey key
   layer_effect key r1 := okKey key ∧ r1
   layer_effectDiscard r0 := r0
@@ -601,6 +607,9 @@ theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : Eff Op)
     show alg₁.eff_iterate a0 a1 a2 a3 a4 (cata_eff alg₁ a5) =
       alg₂.eff_iterate a0 a1 a2 a3 a4 (cata_eff alg₂ a5)
     rw [h.eff_iterate, cata_eff_congr_on h a5 hr]
+  | restore a0 a1 =>
+    show alg₁.eff_restore a0 (cata_eff alg₁ a1) = alg₂.eff_restore a0 (cata_eff alg₂ a1)
+    rw [h.eff_restore, cata_eff_congr_on h a1 hr]
 termination_by structural e
 
 /-- Fold congruence at `Stmt`. -/
@@ -706,6 +715,9 @@ theorem cata_action_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey) (e : ActionT
   | closeScope a0 a1 =>
     show alg₁.action_closeScope a0 a1 = alg₂.action_closeScope a0 a1
     rw [h.action_closeScope]
+  | getInterruptible =>
+    show alg₁.action_getInterruptible = alg₂.action_getInterruptible
+    rw [h.action_getInterruptible]
 termination_by structural e
 
 /-- Fold congruence at `LayerTerm`. -/
@@ -851,6 +863,7 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     eff_catchIf := by simp only [Checker.check.alg, hterm]
     eff_select := by simp only [Checker.check.alg, hterm]
     eff_iterate := by simp only [Checker.check.alg, hterm]
+    eff_restore := by simp only [Checker.check.alg, hterm]
     stmt_bindYield := rfl
     stmt_yieldDiscard := rfl
     stmt_ret := by simp only [Checker.check.alg, hterm]
@@ -877,6 +890,7 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     action_getContext := rfl
     action_getId := rfl
     action_closeScope := by simp only [Checker.check.alg, hterm]
+    action_getInterruptible := rfl
     layer_succeed := fun key hk => by
       obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
       simp only [Checker.check.alg, h.service key ty hty, hty]

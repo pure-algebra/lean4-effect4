@@ -118,13 +118,17 @@ def rowChecks (r : Row) : List (Bool × RowReason) :=
 inductive ServiceReason
   /-- The key's name is one the machine reserves (`Env.firstFreeName`). -/
   | reservedName
-  /-- The carrier is not flat (`unit`, `nat`, `bool`, `string`, a non-context handle). -/
+  /-- The carrier is not flat (`unit`, `nat`, `bool`, `string`, a handle that is neither the
+  context nor a mask's saved state). -/
   | nonFlatCarrier
   /-- The built-in table gives the key's code another carrier. -/
   | conflictsBuiltin
 deriving DecidableEq, Repr
 
-/-- The flat carriers, as a fold: the scalars, every handle but the context, and a cell. -/
+/-- The flat carriers, as a fold: the scalars, every handle but the context and the mask's saved
+state, and a cell. The saved state is refused in the first profile (decisions row 244): its image
+is no handle frame, so `FlatFits` has no member at its type, and a service that carried it would
+need the membership of a context's services at the type. -/
 def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_never := false
   ty_unit := true
@@ -132,7 +136,7 @@ def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_int := false
   ty_string := true
   ty_bool := true
-  ty_handle target := target != Ty.contextTarget
+  ty_handle target := target != Ty.contextTarget && target != Ty.maskRestoreTarget
   ty_option _ := false
   ty_list _ := false
   ty_prod _ _ := false
@@ -158,8 +162,8 @@ def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_number := false
   ty_bytes := false
 
-/-- A flat carrier (row 114; row 118 owns structured carriers): the scalars, a non-context
-handle, and a cell at any type. -/
+/-- A flat carrier (row 114; row 118 owns structured carriers): the scalars, a handle that is
+neither the context nor a mask's saved state (row 244), and a cell at any type. -/
 def flatCarrier (t : Ty) : Bool := cata_ty flatCarrierAlg t
 
 /-- A declaration's local checks, in order. -/

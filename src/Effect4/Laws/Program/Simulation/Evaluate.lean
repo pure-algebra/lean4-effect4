@@ -973,6 +973,23 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
   | actGetId t k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (getId_rel root _ hok hm hf' y (answerRel_core root hk))
+  -- the mask at a constant body (decisions row 245): the frame pushes its restoring frame
+  -- exactly when the term pushes its restoring slot, over the term's answer slot
+  | actGetInterruptible t k ht hk =>
+    rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
+    refine iterRel_prepare ?_
+    dsimp only [evaluatePrim.withFiber, evaluateFiberR, saveAnswerR, pushR, FrameFiber.uninterruptible]
+    rw [hf'.interruptible]
+    by_cases hi : g₂.frame.interruptible = true
+    · simp only [hi, ↓reduceIte, Bool.true_eq_false]
+      exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, hf'.interruptedCause, hf'.deferred,
+        CodeMeans.success _, StackMeans.slot (SlotMeans.mask true)
+          (StackMeans.answer (seqR k) hk hf'.stack), hi ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
+    · have hi' := bool_eq_false_of_not hi
+      simp only [hi', Bool.false_eq_true, ↓reduceIte]
+      exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi',
+        hf'.interruptedCause, hf'.deferred, CodeMeans.success _,
+        StackMeans.answer (seqR k) hk hf'.stack, hi' ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
   | actCloseScope t scope ex k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, frame_closeScope, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (closeScope_rel root _ hok hm (hf'.saveAnswer hk) y scope ex)

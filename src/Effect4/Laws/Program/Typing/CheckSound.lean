@@ -144,6 +144,10 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     obtain ⟨ty, valueTy, b, hty, hval, heq, hb, rfl⟩ :=
       inv_provideService sig env p key value body t h
     exact .provideService hty hval heq (check_sound sig body env _ b hb)
+  | restore saved body =>
+    intro env p t h
+    obtain ⟨hs, hb⟩ := inv_restore sig env p saved body t h
+    exact .restore hs (check_sound sig body env _ t hb)
 termination_by structural e
 
 theorem checkStmts_sound (sig : Signature Op) (body : Stmts Op) :
@@ -281,6 +285,10 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
     intro env p t h
     obtain ⟨pair, hs, he, rfl⟩ := inv_action_closeScope sig env p scope exitTerm t h
     exact .closeScope hs he
+  | getInterruptible =>
+    intro env p t h
+    obtain rfl := inv_action_getInterruptible sig env p t h
+    exact .getInterruptible
 termination_by structural action
 
 theorem checkLayer_sound (sig : Signature Op) (layer : LayerTerm Op) :
@@ -450,6 +458,10 @@ theorem check_complete (sig : Signature Op) (e : Eff Op) :
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
     aesop (rule_sets := [Effect4.Checker])
+  | restore saved body =>
+    intro env t hd p; cases hd
+    have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
+    aesop (rule_sets := [Effect4.Checker])
 termination_by structural e
 
 theorem checkStmts_complete (sig : Signature Op) (body : Stmts Op) :
@@ -538,6 +550,7 @@ theorem checkAction_complete (sig : Signature Op) (action : ActionTerm Op) :
   | getContext => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | getId => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | closeScope scope exitTerm => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | getInterruptible => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
 termination_by structural action
 
 theorem checkLayer_complete (sig : Signature Op) (layer : LayerTerm Op) :

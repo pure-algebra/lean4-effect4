@@ -243,6 +243,14 @@ theorem inv_provideService (sig : Signature Op) (env : TyEnv) (p : List Nat) (ke
         t = ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
+/-- A restore site (decisions rows 244 and 245): the saved term has the saved state's own type,
+and the body checks at child 0 at the node's type. -/
+theorem inv_restore (sig : Signature Op) (env : TyEnv) (p : List Nat) (saved : Term)
+    (body : Eff Op) :
+    ∀ t, check sig env p (.restore saved body) = .ok t →
+      termTy sig env saved = some Ty.maskRestore ∧ check sig env (p ++ [0]) body = .ok t := by
+  aesop (rule_sets := [Effect4.Checker])
+
 /-! ## `checkStmts` under `afterRet := none` — eight lemmas (`ret` splits on its tail) -/
 
 theorem inv_stmts_nil (sig : Signature Op) (env : TyEnv) (inLoop : Bool) (p : List Nat) :
@@ -427,6 +435,11 @@ theorem inv_action_closeScope (sig : Signature Op) (env : TyEnv) (p : List Nat)
     ∀ t, checkAction sig env p (.closeScope scope exit) = .ok t →
       ∃ pair : Ty × Ty, termTy sig env scope = some Ty.scope ∧
         termTy sig env exit = some (.exitOf pair.1 pair.2) ∧ t = EffTy.pure .unit := by
+  aesop (rule_sets := [Effect4.Checker])
+
+theorem inv_action_getInterruptible (sig : Signature Op) (env : TyEnv) (p : List Nat) :
+    ∀ t, checkAction sig env p (.getInterruptible : ActionTerm Op) = .ok t →
+      t = EffTy.pure Ty.maskRestore := by
   aesop (rule_sets := [Effect4.Checker])
 
 /-! ## `checkLayer` — ten arms, one of which is a refusal -/

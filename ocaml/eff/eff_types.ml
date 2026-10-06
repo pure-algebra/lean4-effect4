@@ -490,6 +490,7 @@ type eff =
   | Eff_catchIf of term * eff * eff
   | Eff_select of term * decision * eff * eff
   | Eff_iterate of ty option * term * term * term * term * eff
+  | Eff_restore of term * eff
 
 and stmt =
   | Stmt_bindYield of eff
@@ -524,6 +525,7 @@ and action_term =
   | Action_term_getContext
   | Action_term_getId
   | Action_term_closeScope of term * term
+  | Action_term_getInterruptible
 
 and layer_term =
   | Layer_term_succeed of service_key * lit
@@ -567,6 +569,7 @@ let ctor_index_eff : eff -> int = function
   | Eff_catchIf _ -> 22
   | Eff_select _ -> 23
   | Eff_iterate _ -> 24
+  | Eff_restore _ -> 25
 let wire_tag_eff : eff -> int = function
   | Eff_succeed _ -> 0
   | Eff_fail _ -> 1
@@ -593,6 +596,7 @@ let wire_tag_eff : eff -> int = function
   | Eff_catchIf _ -> 26
   | Eff_select _ -> 27
   | Eff_iterate _ -> 28
+  | Eff_restore _ -> 29
 let ctor_name_eff : eff -> string = function
   | Eff_succeed _ -> "succeed"
   | Eff_fail _ -> "fail"
@@ -619,7 +623,8 @@ let ctor_name_eff : eff -> string = function
   | Eff_catchIf _ -> "catchIf"
   | Eff_select _ -> "select"
   | Eff_iterate _ -> "iterate"
-let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"]
+  | Eff_restore _ -> "restore"
+let ctor_names_eff : string list = ["succeed"; "fail"; "failCause"; "sync"; "suspend"; "perform"; "bind"; "gen"; "catchCause"; "matchCause"; "onExit"; "exit"; "uninterruptible"; "interruptible"; "yieldNow"; "awaitFiber"; "withFiber"; "scoped"; "acquireRelease"; "provideLayer"; "service"; "provideService"; "catchIf"; "select"; "iterate"; "restore"]
 
 let ctor_index_stmt : stmt -> int = function
   | Stmt_bindYield _ -> 0
@@ -683,6 +688,7 @@ let ctor_index_action_term : action_term -> int = function
   | Action_term_getContext -> 13
   | Action_term_getId -> 14
   | Action_term_closeScope _ -> 15
+  | Action_term_getInterruptible -> 16
 let wire_tag_action_term : action_term -> int = function
   | Action_term_fork _ -> 0
   | Action_term_forkIn _ -> 1
@@ -700,6 +706,7 @@ let wire_tag_action_term : action_term -> int = function
   | Action_term_getContext -> 13
   | Action_term_getId -> 14
   | Action_term_closeScope _ -> 15
+  | Action_term_getInterruptible -> 16
 let ctor_name_action_term : action_term -> string = function
   | Action_term_fork _ -> "fork"
   | Action_term_forkIn _ -> "forkIn"
@@ -717,7 +724,8 @@ let ctor_name_action_term : action_term -> string = function
   | Action_term_getContext -> "getContext"
   | Action_term_getId -> "getId"
   | Action_term_closeScope _ -> "closeScope"
-let ctor_names_action_term : string list = ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"]
+  | Action_term_getInterruptible -> "getInterruptible"
+let ctor_names_action_term : string list = ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"]
 
 let ctor_index_layer_term : layer_term -> int = function
   | Layer_term_succeed _ -> 0

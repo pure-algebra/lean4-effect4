@@ -908,6 +908,46 @@ theorem clause_mask (root : ProgramSource) (rootTy : EffTy) (flag : Bool) (body 
     · exact answer
     · exact hostStack_push (.restoreMask cert _) answer
 
+/-- The frame `getInterruptible` installs (`Laws/Program/EvaluateR.lean`, the `getInterruptible`
+arm; `internal/effect.ts:4340-4352` at a constant body): the mask's frame at a false flag, over the
+saved state of the entry flag as the code. -/
+theorem evaluateFiberR_getInterruptible (interp : RInterp) (m : RState) (f : RFiber) (y : Bool)
+    (next : Val → RProgram) :
+    evaluateFiberR interp m f y .getInterruptible next =
+      ⟨m, { f with
+          frame := maskFrame f.frame false
+            (.pure (.success (interp.restoreValue f.frame.interruptible))) (seqR next) },
+        y, .continue_, []⟩ :=
+  rfl
+
+/-- **`getInterruptible`** (decisions row 245): the mask at a constant body. The answer is a saved
+image, a member of the saved state's type in every world (`fits_savedMask`); the answer frame
+carries it to the continuation at the row's post (`seqFrame_typed`, `fits_maskRestore_inv`), and
+the restore frame is an identity arrow, as `clause_mask`'s is. -/
+theorem clause_getInterruptible (root : ProgramSource) (rootTy : EffTy) :
+    FiberClauseKeeps root rootTy .getInterruptible := by
+  intro w m rest f y next ev hc
+  rw [evaluateFiberR_getInterruptible]
+  refine ev.settle_continue _ ?_
+  intro ty declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨_, _, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have answer : HostStack root w (m.update f) f.id (EffTy.pure Ty.maskRestore) ty
+      (.answer (seqR next) :: f.frame.stack) :=
+    hostStack_push (seqFrame_typed rfl (fun _ _ _ hv => fits_maskRestore_inv hv) typedNext) stack
+  refine ⟨EffTy.pure Ty.maskRestore, ?_, ?_, ⟨prov.recorded, prov.deferred⟩⟩
+  · show TypedProg root w (EffTy.pure Ty.maskRestore)
+      (.pure (.success (Val.savedMask f.frame.interruptible)))
+    exact TypedProg.pure (strongExit_success w _ _ (fits_savedMask w _))
+  · show HostStack root w (m.update f) f.id (EffTy.pure Ty.maskRestore) ty
+      (if f.frame.interruptible = false then .answer (seqR next) :: f.frame.stack
+       else .restoreMask f.frame.interruptible :: .answer (seqR next) :: f.frame.stack)
+    split
+    · exact answer
+    · exact hostStack_push (.restoreMask (EffTy.pure Ty.maskRestore) _) answer
+
 /-! ## Read-only store clauses (Concept 4)
 
 Helpers of `loop_preserves` and `deliver_preserves`, via `StoreClauseKeeps` and

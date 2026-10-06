@@ -383,6 +383,7 @@ def interpR (root : NativeEff) : RInterp where
     | .joinEffect => ex)
   fiberValue := Val.fiber
   fiberIdValue := fun fiber => Val.nat fiber.value
+  restoreValue := Val.savedMask
   fibersValue := Val.fibers
   exitsValue := exitsVal
   voidValue := .unit

@@ -72,3 +72,8 @@ pFoldAtoms	well-typed
 pIllFoldNotList	ill-typed
 pIllFoldBody	ill-typed
 pIllSameHandle	ill-typed
+pMask	well-typed
+pMaskNested	well-typed
+pMaskEscape	well-typed
+pIllRestoreBool	ill-typed
+pIllMaskAsBool	ill-typed

@@ -484,6 +484,7 @@ src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.forkScoped_scoped	simp-with
 src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.fork_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.getContext_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.getId_scoped	simp-without-only	1
+src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.getInterruptible_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.interruptAll_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.interrupt_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	Action.raceAll_scoped	simp-without-only	1
@@ -516,6 +517,7 @@ src/Effect4/Laws/Program/Authoring/Lifts.lean	onExit_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	perform_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	provideLayer_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	provideService_scoped	simp-without-only	1
+src/Effect4/Laws/Program/Authoring/Lifts.lean	restore_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	scope_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	selectBool_scoped	simp-without-only	1
 src/Effect4/Laws/Program/Authoring/Lifts.lean	selectOption_scoped	simp-without-only	1
@@ -1149,7 +1151,7 @@ src/Effect4/Store/Domain/Derived/Json.lean	rawJson_toValJson	simp-without-only	8
 src/Effect4/Store/Domain/Derived/Program.lean	ofVal_exact	first	10
 src/Effect4/Store/Domain/Derived/Program.lean	ofVal_toVal	simp-without-only	16
 src/Effect4/Store/Domain/Derived/Program.lean	rawCauseTerm_toValCauseTerm	simp-without-only	4
-src/Effect4/Store/Domain/Derived/Program.lean	rawEff_toValEff	simp-without-only	56
+src/Effect4/Store/Domain/Derived/Program.lean	rawEff_toValEff	simp-without-only	57
 src/Effect4/Store/Domain/Derived/Program.lean	rawTerm_toValTerm	simp-without-only	9
 src/Effect4/Store/Domain/Derived/Program.lean	rawTy_toValTy	simp-without-only	21
 src/Effect4/Store/Domain/Derived/Schema.lean	ofVal_exact	first	4

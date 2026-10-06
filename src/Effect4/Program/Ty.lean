@@ -254,6 +254,16 @@ what its intermediate type says (decisions row 187). Its spelling is written onc
 def memoMapTarget : String := "Layer.MemoMap"
 def memoMap : Ty := .handle memoMapTarget
 
+/-- The type of a mask's saved interruptibility (decisions row 244): an opaque host type with a
+reserved target, as the scope and the context are. Its members are the two images of the saved
+bit and nothing else (`Val.savedMask`, `Machine/Alphabets.lean`): no Boolean is a member, and no
+member is a Boolean. The target is the name of the prelude's one alias for the type of the
+restore function that rc.112's `uninterruptibleMask` hands its body
+(`vendor/effect-4.0.0-rc.112/src/internal/effect.ts`, `uninterruptibleMask`). The spelling is
+written once, here. -/
+def maskRestoreTarget : String := "MaskRestore"
+def maskRestore : Ty := .handle maskRestoreTarget
+
 /-- Nullable spellings: the `null` and `undefined` leaves (decisions row 160) in a union. -/
 abbrev undefinedOr (t : Ty) : Ty := .union t .undefined
 abbrev nullOr (t : Ty) : Ty := .union t .null

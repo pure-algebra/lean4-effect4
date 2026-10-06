@@ -210,7 +210,7 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), Looped e = true 
   | .provideLayer _ _ _, _, hpl
   | .service _, _, hpl
   | .provideService _ _ _, _, hpl
-  | .catchIf _ _ _, _, hpl => by simp [Looped] at hpl
+  | .catchIf _ _ _, _, hpl | .restore _ _, _, hpl => by simp [Looped] at hpl
 
 /-! ### Every subterm of a straight-line program is straight-line -/
 

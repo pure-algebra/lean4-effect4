@@ -78,6 +78,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   | provideLayer l i b => exact intro_provideLayer root n l i b p k hf hpos hle h hres
   | service key => exact intro_service root key p k hf hpos
   | provideService key value b => exact intro_provideService root n key value b p k hf hpos hw0 h ih
+  | restore saved b => exact intro_restore root n saved b p k hf hpos hw0 h hres ih
 
 /-- **Introduction.** At every source address, the compile and the denotation are related. -/
 theorem code_intro (root : NativeEff) (e : NativeEff) (p : Point)

@@ -176,6 +176,7 @@ theorem withFiber_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
     exact pendingOk_of_fields hf rfl
   | getContext => exact pendingOk_of_fields hf rfl
   | getId => exact pendingOk_of_fields hf rfl
+  | getInterruptible => exact pendingOk_of_fields hf rfl
   | closeScope scope exit =>
     unfold evaluatePrim.withFiber
     dsimp only

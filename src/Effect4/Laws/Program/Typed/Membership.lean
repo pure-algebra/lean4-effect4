@@ -177,7 +177,10 @@ fits `Exit<A, E>` exactly when the exit has `ExitOk`'s base membership and part 
 so the close walk, which passes each finalizer's exit on as a value, keeps the exclusion
 (`Test/Program/ProtocolPosts.lean`, `CloseIter`). A record value is read by name in canonical
 order (`NamedFit`), a map by its sorted entries, a tuple item by item, a nominal reference as the
-handle at its name; `int` and `number` are the nesting images (decisions row 121). -/
+handle at its name; `int` and `number` are the nesting images (decisions row 121). A mask's saved
+state has one frame of its own (`Value.savedMask`, decisions row 244): it fits the reserved
+target `Ty.maskRestoreTarget` and no other type but `unknown`, and nothing else fits that
+target (`fits_maskRestore_iff`). -/
 def Fits (w : World) (v : Val) : Ty → Prop
   | .never => False
   | .unit => match v with | .unit => True | _ => False
@@ -188,6 +191,8 @@ def Fits (w : World) (v : Val) : Ty → Prop
   | .handle target =>
     match v with
     | .handle kind index => HandleFits w kind index target
+    -- a mask's saved state (decisions row 244): its two images, at the reserved target only
+    | Value.savedMask (.bool _) => target = Ty.maskRestoreTarget
     | _ => target = Ty.contextTarget ∧
         ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services ∧ Live w v
   | .option a =>
@@ -255,6 +260,7 @@ def Fits (w : World) (v : Val) : Ty → Prop
   | .app name _ =>
     match v with
     | .handle kind index => HandleFits w kind index name
+    | Value.savedMask (.bool _) => name = Ty.maskRestoreTarget
     | _ => name = Ty.contextTarget ∧
         ∃ ctx, Val.context? v = some ctx ∧ ServicesFit w ctx.services ∧ Live w v
   | .null => match v with | .none => True | _ => False
@@ -429,10 +435,12 @@ theorem handle_fits_hasTy (w : World) {v : Val} {target : String} (h : Fits w v 
       simp only [hk]
       exact Bool.and_eq_true_iff.mpr ⟨h.1, beq_iff_eq.mpr h.2⟩
     · exact h.elim
+  · subst h
+    rfl
   · obtain ⟨ht, ctx, hctx, _, _⟩ := h
     simp only [Val.hasTy]
     rw [hctx]
-    exact Bool.and_eq_true_iff.mpr ⟨beq_iff_eq.mpr ht, rfl⟩
+    exact Bool.or_eq_true_iff.mpr (Or.inl (Bool.and_eq_true_iff.mpr ⟨beq_iff_eq.mpr ht, rfl⟩))
 
 /-- A nominal reference's membership is the handle's at its name (decisions row 158). -/
 theorem fits_app_iff (w : World) (v : Val) (name : String) (args : List Ty) :
@@ -950,6 +958,7 @@ theorem handle_fits_live {w : World} {v : Val} {target : String} (h : Fits w v (
   simp only [Fits] at h
   split at h
   · exact live_handle h
+  · exact live_of_handles_nil rfl
   · obtain ⟨_, _, _, _, hl⟩ := h
     exact hl
 
@@ -1338,6 +1347,7 @@ theorem handle_fits_map {w1 w2 : World}
   simp only [Fits] at h
   split at h
   · exact handleFits_map halloc hstore h
+  · exact h
   · obtain ⟨ht, ctx, hctx, hs, hl⟩ := h
     simp only [Fits]
     exact ⟨ht, ctx, hctx, servicesFit_map hΓ hPi hRho halloc hstore hsvc hs, live_map hΓ hPi hRho halloc hstore hl⟩
@@ -1511,6 +1521,7 @@ theorem fits_scope_inv {w : World} {v : Val} (h : Fits w v Ty.scope) :
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · exact h.elim
+  · exact absurd h (by decide)
   · exact absurd h.1 (by decide)
 
 /-- A present scope's handle is a member of `Ty.scope`. -/
@@ -2354,8 +2365,39 @@ theorem fits_context_inv {w : World} {v : Val} (h : Fits w v (.handle Ty.context
     · exact absurd h.1 (by decide)
     · exact absurd h.1 (by decide)
     · exact h.elim
+  · exact absurd h (by decide)
   · obtain ⟨_, ctx, hctx, services, _⟩ := h
     exact ⟨ctx, hctx, services⟩
+
+/-- **A member of the mask's saved-state type is one of the two saved images** (decisions row
+244): no handle kind takes the reserved target, an external handle may not take it
+(`internalHandleTargets`), and the context's arm asks for its own target. The getter's answer is
+read back here (`fiberPost`'s `getInterruptible` row, `Typed/Residual.lean`). -/
+theorem fits_maskRestore_inv {w : World} {v : Val} (h : Fits w v Ty.maskRestore) :
+    ∃ flag, v = Val.savedMask flag := by
+  change Fits w v (.handle Ty.maskRestoreTarget) at h
+  simp only [Fits] at h
+  split at h
+  · simp only [HandleFits] at h
+    split at h
+    · exact absurd h.1 (by decide)
+    · exact absurd h.1 (by decide)
+    · exact absurd h.1 (by decide)
+    · exact h.elim
+  · rename_i flag
+    exact ⟨flag, rfl⟩
+  · exact absurd h.1 (by decide)
+
+/-- A saved image is a member of the mask's saved-state type, in every world: the image holds no
+handle, so no world is read. -/
+theorem fits_savedMask (w : World) (flag : Bool) : Fits w (Val.savedMask flag) Ty.maskRestore :=
+  (rfl : Ty.maskRestoreTarget = Ty.maskRestoreTarget)
+
+/-- **Membership at the mask's saved-state type is exactly the two saved images** (decisions
+row 244; the first statement of the claim `saved-mask-image-membership`). -/
+theorem fits_maskRestore_iff (w : World) (v : Val) :
+    Fits w v Ty.maskRestore ↔ ∃ flag, v = Val.savedMask flag :=
+  ⟨fits_maskRestore_inv, fun ⟨flag, h⟩ => h ▸ fits_savedMask w flag⟩
 
 /-- Membership of a number does not read the number: the `nat` arm is the only one a number
 reaches, a union passes it to a branch, and `unknown` reads no keys (one induction over the
@@ -3980,7 +4022,8 @@ theorem not_retired_of_inhabited {target : String}
     cases h
 
 /-- The `handle` former at every target a kind owns, in a world grown from any world with fresh
-keys: an external allocation, or the scope, context or memo map at its own spelling. -/
+keys: an external allocation, or the scope, context or memo map at its own spelling, or a
+saved image at the mask's. -/
 theorem fits_handle_fresh (target : String) (hr : retiredHandleTargets.contains target = false)
     (w : World) (n : Nat) (hn : FreshFrom w n) :
     ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧
@@ -3997,7 +4040,7 @@ theorem fits_handle_fresh (target : String) (hr : retiredHandleTargets.contains 
   | true =>
     have hm : target ∈ internalHandleTargets := List.contains_iff_mem.mp hc
     simp only [internalHandleTargets, List.mem_cons, List.not_mem_nil, or_false] at hm
-    rcases hm with rfl | rfl | rfl | rfl | rfl
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl
     -- the retired spellings: no kind owns them
     · exact absurd hr (by decide)
     · exact absurd hr (by decide)
@@ -4014,6 +4057,9 @@ theorem fits_handle_fresh (target : String) (hr : retiredHandleTargets.contains 
     -- a memo map handle names a present map (decisions row 187, amended by F-WF): allocate one
     · obtain ⟨hg, hf, hpresent⟩ := hn.allocMemo
       exact ⟨_, n, Val.handle HandleKind.memoMap.byte w.state.nextName, hg, hf, rfl, hpresent⟩
+    -- a mask's saved state is data: an image fits in the world as it is (decisions row 244)
+    · exact ⟨w, n, Val.savedMask false, Grows.refl w, hn,
+        (rfl : Ty.maskRestoreTarget = Ty.maskRestoreTarget)⟩
 
 /-- The record case's induction: one world threaded through the canonical fields; an optional
 field is left out of both lists, a required one gets a witness built in the grown world. -/
@@ -4292,7 +4338,7 @@ reads and that row 132 keeps in this module. -/
 
 /-- **Membership at a flat carrier is `FlatFits`** (proved): the converse of `flatFits_fits` on
 the carriers `flatCarrier` admits (`Program/SigApp.lean`: the scalars, every handle but the
-context, and a cell at any type). `provideService`'s denotation sets a context binding the provided value under
+context and a mask's saved state, and a cell at any type). `provideService`'s denotation sets a context binding the provided value under
 its key, and the `setContext` row demands `ServicesFit` (`Typed/Residual.lean`'s `fiberPre`),
 which reads the key's carrier through `FlatFits`; the checker gives the value's membership at
 that carrier, and a lawful signature's carriers are flat (`LawfulSig.services`). -/
@@ -4304,10 +4350,15 @@ theorem fits_flatFits {w : World} {v : Val} {t : Ty} (hflat : flatCarrier t = tr
   | string => exact h
   | bool => exact h
   | handle target =>
-    have hne : target ≠ Ty.contextTarget := bne_iff_ne.mp hflat
-    cases v with
-    | handle kind index => exact h
-    | _ => exact absurd h.1 hne
+    have hboth := Bool.and_eq_true_iff.mp hflat
+    have hne : target ≠ Ty.contextTarget := bne_iff_ne.mp hboth.1
+    have hmask : target ≠ Ty.maskRestoreTarget := bne_iff_ne.mp hboth.2
+    simp only [Fits] at h
+    simp only [FlatFits]
+    split at h
+    · exact h
+    · exact absurd h hmask
+    · exact absurd h.1 hne
   | refOf t =>
     simp only [Fits] at h
     simp only [FlatFits]

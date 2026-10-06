@@ -98,6 +98,9 @@ inductive TypeReason
   | foldTerm (why : FoldTermRefusal)
   /-- A list fold has no type inside a cause leaf, at two separate addresses. -/
   | foldCause (why : FoldCauseRefusal)
+  /-- A restore site whose saved term is not at `Ty.maskRestore` (decisions row 244): a Boolean,
+  for one, is no saved state. `t` is the term's type. -/
+  | maskRestoreExpected (t : Ty)
 deriving DecidableEq
 
 /-- The constructor's name: the reason as one word, for tables and reports. -/
@@ -138,6 +141,7 @@ def TypeReason.head : TypeReason → String
   | .resultNotSubtype _ _ _ => "resultNotSubtype"
   | .foldTerm _ => "foldTerm"
   | .foldCause _ => "foldCause"
+  | .maskRestoreExpected _ => "maskRestoreExpected"
 
 /-- A refusal at a path of the tree. -/
 structure TypeRefusal where

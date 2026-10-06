@@ -286,6 +286,8 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Eff_service k -> A.Eff_service (of_service_key k)
     | Eff_types.Eff_provideService (k, t, e) ->
       A.Eff_provideService (of_service_key k, of_term t, of_eff e)
+    (* A restore site of a mask (decisions row 245): the saved term, then the body. *)
+    | Eff_types.Eff_restore (t, e) -> A.Eff_restore (of_term t, of_eff e)
 
   and of_layer_term : Eff_types.layer_term -> A.native_op A.layer_term = function
     | Eff_types.Layer_term_succeed (k, l) ->
@@ -344,6 +346,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Action_term_getId -> A.ActionTerm_getId
     | Eff_types.Action_term_closeScope (a, b) ->
       A.ActionTerm_closeScope (of_term a, of_term b)
+    | Eff_types.Action_term_getInterruptible -> A.ActionTerm_getInterruptible
 
   let load p = pin_exn (); of_eff p
 
@@ -435,6 +438,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.Eff_catchIf _ -> 22
     | A.Eff_select _ -> 23
     | A.Eff_iterate _ -> 24
+    | A.Eff_restore _ -> 25
 
   let ctor_index_stmt : 'op A.stmt -> int = function
     | A.Stmt_bindYield _ -> 0 | A.Stmt_yieldDiscard _ -> 1 | A.Stmt_ret _ -> 2
@@ -463,4 +467,5 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.ActionTerm_getContext -> 13
     | A.ActionTerm_getId -> 14
     | A.ActionTerm_closeScope _ -> 15
+    | A.ActionTerm_getInterruptible -> 16
 end

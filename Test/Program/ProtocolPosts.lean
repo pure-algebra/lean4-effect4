@@ -103,6 +103,7 @@ def oldStorePost (w' : W) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Prop
 def oldFiberPost (w' : W) (op : FiberOp) (cert : FiberCert op) (ans : op.answer) : Prop :=
   match op with
   | .getId => ∃ (id : FiberId), ans = Val.nat id.value
+  | .getInterruptible => ∃ (flag : Bool), ans = Val.savedMask flag
   | .getContext | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren => Fits w' ans cert
   | .setContext _ | .yieldNow _ | .interrupt _ | .interruptAs _ _ | .interruptScoped _
   | .interruptAll _ _ | .runIn _ _ | .cancelRace _ | .dropObservers _

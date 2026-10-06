@@ -297,6 +297,11 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
   | actGetId (t : EffThunk) (k : Val → RProgram) (ht : (interpOf root).withFiberOf t = some .getId)
       (hk : ∀ v, CodeMeans root (Prim.success v) (k v)) :
       CodeMeans root (Prim.withFiber t) (.vis (.inr .getId) k)
+  /-- The mask at a constant body (decisions row 245): the answer arrives as code under the
+  restoring frame, so the term saves its continuation as an answer slot. -/
+  | actGetInterruptible (t : EffThunk) (k : Val → RProgram)
+      (ht : (interpOf root).withFiberOf t = some .getInterruptible) (hk : Delivers (seqR k)) :
+      CodeMeans root (Prim.withFiber t) (.vis (.inr .getInterruptible) k)
   | actCloseScope (t : EffThunk) (scope : Nat) (ex : ExitV) (k : ExitV → RProgram)
       (ht : (interpOf root).withFiberOf t = some (.closeScope scope ex)) (hk : Delivers k) :
       CodeMeans root (Prim.withFiber t) (.vis (.inr (.closeScope scope ex)) k)
@@ -680,6 +685,8 @@ theorem CodeMeans.bindTail {root : NativeEff} {c : NCode} {r : RProgram} (h : Co
   | actRefuse t' cause k ht' hk ihk => exact CodeMeans.actRefuse t' cause _ ht' ihk
   | actDropObservers t' token k ht' hk ihk => exact CodeMeans.actDropObservers t' token _ ht' ihk
   | actCancelRace t' race k ht' hk => exact CodeMeans.actCancelRace t' race _ ht' (delivers_seqR_bind hk ht)
+  | actGetInterruptible t' k ht' hk =>
+    exact CodeMeans.actGetInterruptible t' _ ht' (delivers_seqR_bind hk ht)
   | actClosePar t' programs order ex k ht' hlen hc hk ihc =>
     exact CodeMeans.actClosePar t' programs order ex _ ht' hlen hc (delivers_bind hk ht)
   | scopedNode p b k hnode hk => exact CodeMeans.scopedNode p b _ hnode (delivers_bind hk ht)
@@ -775,6 +782,7 @@ theorem CodeMeans.prepare {root : NativeEff} {c : NCode} {r : RProgram} (h : Cod
   | actRefuse t cause k ht hk _ => exact CodeMeans.actRefuse t cause k ht hk
   | actDropObservers t token k ht hk _ => exact CodeMeans.actDropObservers t token k ht hk
   | actCancelRace t race k ht hk => exact CodeMeans.actCancelRace t race k ht hk
+  | actGetInterruptible t k ht hk => exact CodeMeans.actGetInterruptible t k ht hk
   | actClosePar t programs order ex k ht hlen hc hk _ =>
     exact CodeMeans.actClosePar t programs order ex k ht hlen hc hk
   | scopedNode p b k hnode hk => exact CodeMeans.scopedNode p b k hnode hk

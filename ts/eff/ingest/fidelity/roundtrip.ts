@@ -24,7 +24,7 @@ export function compareObserved(original: Observed, printed: Observed) {
   return { status: exitAgree && scheduleAgree ? "agree" as const : "disagree" as const, exitAgree, scheduleAgree }
 }
 async function* lines(path: string) { for await (const line of createInterface({ input: createReadStream(path), crlfDelay: Infinity })) if (line) yield line }
-const printedHeader = `import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope } from "effect"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd } from ${JSON.stringify(join(repo, "harness/truth/prelude.ts"))}\n`
+const printedHeader = `import { Cause, Context, Deferred, Effect, Exit, Fiber, Layer, Option, Ref, Scope, pipe } from "effect"\nimport { succ, pred, isZero, not, add, lt, eq, pair, fst, snd } from ${JSON.stringify(join(repo, "harness/truth/prelude.ts"))}\n`
 export async function roundtrip(paths: readonly string[], options: FidelityOptions) {
   checkRuntime()
   const out = resolve(options.out), timeoutMs = options.timeoutMs ?? 300

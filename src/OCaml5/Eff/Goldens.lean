@@ -248,6 +248,7 @@ partial def effV : Eff NativeOp → V
   | .provideLayer l isLocal b => .ctor ``Eff.provideLayer [layerV l, .bool isLocal, effV b]
   | .service k => .ctor ``Eff.service [keyV k]
   | .provideService k v b => .ctor ``Eff.provideService [keyV k, termV v, effV b]
+  | .restore s b => .ctor ``Eff.restore [termV s, effV b]
 partial def layerV : LayerTerm NativeOp → V
   | .succeed k v => .ctor ``LayerTerm.succeed [keyV k, litV v]
   | .effect k b => .ctor ``LayerTerm.effect [keyV k, effV b]
@@ -293,6 +294,7 @@ partial def actionV : ActionTerm NativeOp → V
   | .getContext => .ctor ``ActionTerm.getContext []
   | .getId => .ctor ``ActionTerm.getId []
   | .closeScope s e => .ctor ``ActionTerm.closeScope [termV s, termV e]
+  | .getInterruptible => .ctor ``ActionTerm.getInterruptible []
 end
 
 def effTyV (t : EffTy) : V :=
@@ -566,6 +568,28 @@ def pIllSameHandle : P :=
   binds [.perform .refMake (n 1), .perform (.deferredMakeOf .nat .nat) u]
     (.succeed (.app "sameHandle" (ts [v 0, v 1])))
 
+/-! The mask that restores (decisions rows 244 to 246). The mask is the derived form
+`bind (withFiber getInterruptible) (uninterruptible body)`: the getter's answer is the saved
+state, and a restore site names it. -/
+
+/-- The derived form over a body. The saved state is the variable at the mask's level. -/
+def mask (body : P) : P := .bind (.withFiber .getInterruptible) (.uninterruptible body)
+
+/-- A mask around one wait at a restore site. The cell is resolved first, so the wait answers. -/
+def pMask : P :=
+  binds [.perform (.deferredMakeOf .nat .nat) u, .perform .deferredSucceed (.app "pair" (ts [v 0, n 7]))]
+    (mask (.restore (v 2) (.perform .deferredAwait (v 0))))
+/-- Nested masks: a restore of the inner mask, and one of the outer mask inside the inner one. -/
+def pMaskNested : P :=
+  mask (mask (.bind (.restore (v 1) (.succeed (n 1))) (.restore (v 0) (.succeed (v 2)))))
+/-- The saved state as data: it leaves its mask as the mask's answer and is applied after it. -/
+def pMaskEscape : P := .bind (mask (.succeed (v 0))) (.restore (v 0) (.succeed (n 3)))
+
+-- ill-typed: a Boolean is no saved state, and a saved state is no Boolean
+def pIllRestoreBool : P := .restore (.lit (.bool true)) (.succeed (n 1))
+def pIllMaskAsBool : P :=
+  .bind (.withFiber .getInterruptible) (.select (v 0) .bool (.succeed (n 1)) (.succeed (n 2)))
+
 def corpus : List (String × P) :=
   [ ("p42", p42), ("pBind", pBind), ("pFork", pFork), ("pTwo", pTwo), ("pAwait", pAwait)
   , ("pGen", pGen), ("pWhile", pWhile), ("pCatch", pCatch), ("pStr", pStr), ("pFailCause", pFailCause)
@@ -592,7 +616,9 @@ def corpus : List (String × P) :=
   , ("pFold", pFold), ("pFoldCapture", pFoldCapture), ("pFoldNested", pFoldNested)
   , ("pFoldInOp", pFoldInOp), ("pFoldAtoms", pFoldAtoms)
   , ("pIllFoldNotList", pIllFoldNotList), ("pIllFoldBody", pIllFoldBody)
-  , ("pIllSameHandle", pIllSameHandle) ]
+  , ("pIllSameHandle", pIllSameHandle)
+  , ("pMask", pMask), ("pMaskNested", pMaskNested), ("pMaskEscape", pMaskEscape)
+  , ("pIllRestoreBool", pIllRestoreBool), ("pIllMaskAsBool", pIllMaskAsBool) ]
 
 end Corpus
 

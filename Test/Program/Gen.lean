@@ -424,15 +424,24 @@ def refusedActions : List String :=
 
 /-- Forms kept out of the round-trip corpus until R5 (`docs/research/2026-09-16-select-and-iterate-ready-packet.md` §1.8).
 `select` left this list when `branch` retired into it: the corpus draws it under `.bool`, the
-conditional the reader reads; its `.option` and `.tag` forms are still not drawn. -/
+conditional the reader reads; its `.option` and `.tag` forms are still not drawn. `restore`
+(decisions row 245) is not drawn: the arm table is the seed stream's reproducibility contract,
+and a new arm redraws every later program. Its round trip is held on the wire corpus's programs
+and in `Test/Program/MaskContract.lean`. -/
 def pendingEffs : List String :=
-  ["iterate"]
+  ["iterate", "restore"]
+
+/-- A fiber action the printer accepts and the corpus does not draw, for the same reason as
+`restore`: `getInterruptible` (decisions row 245). -/
+def pendingActions : List String :=
+  ["getInterruptible"]
 
 /-- Every case the printer accepts and the corpus currently draws. -/
 def expected : List (Head × String) :=
   (casesOf "Eff" EffShape).filter (fun c => !pendingEffs.contains c.2) ++
     casesOf "Stmt" StmtShape ++
-    (casesOf "ActionTerm" ActionTermShape).filter (fun c => !refusedActions.contains c.2) ++
+    (casesOf "ActionTerm" ActionTermShape).filter (fun c =>
+      !refusedActions.contains c.2 && !pendingActions.contains c.2) ++
     casesOf "LayerTerm" LayerTermShape
 
 /-- The accepted cases the corpus never draws, as `family.constructor`. -/
@@ -452,6 +461,13 @@ def refusedUnknown : List String :=
 /-- The pending names that are not constructors of `Eff`. -/
 def pendingEffsUnknown : List String :=
   pendingEffs.filter fun n => !(casesOf "Eff" EffShape).any (·.2 == n)
+
+/-- The pending action names that are not constructors of `ActionTerm`, or that the corpus draws
+after all. -/
+def pendingActionsUnknown : List String :=
+  pendingActions.filter fun n =>
+    !(casesOf "ActionTerm" ActionTermShape).any (·.2 == n) ||
+      (casesOf "ActionTerm" ActionTermShape).any fun c => c.2 == n && covered.contains c.1
 
 /-- Whether some program node of the corpus satisfies `p`, through the fold. -/
 def coversEff (p : Eff NativeOp → Bool) : Bool :=
@@ -477,6 +493,7 @@ DI-60 asks of a narrowing commit. -/
 #guard refusedDrawn = []
 #guard refusedUnknown = []
 #guard pendingEffsUnknown = []
+#guard pendingActionsUnknown = []
 
 /-! ### The printer refuses none of it; every drawn layer reference is well formed -/
 

@@ -274,6 +274,16 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
   | .setContext context => FiberAction.setContext interp m f yielding context (answerWith next)
   | .getContext => FiberAction.getContext interp m f yielding (answerWith next)
   | .getId => FiberAction.getId interp m f yielding (answerWith next)
+  -- the mask at a constant body (decisions row 245; `internal/effect.ts:4340-4352`): the fiber
+  -- masked, the saved state of its entry flag answered as code, and the restoring slot popped
+  -- by that answer, with its test for a pending cause
+  | .getInterruptible =>
+    let f := saveAnswerR f (seqR next)
+    let old := f.frame.interruptible
+    let stack := if old = false then f.frame.stack else .restoreMask old :: f.frame.stack
+    let frame := { f.frame with interruptible := false, stack }
+    ⟨m, answerR { f with frame } (.pure (.success (interp.restoreValue old))), yielding,
+      .continue_, []⟩
   | .closeScope scope ex => FiberAction.closeScope interp m (saveAnswerR f next) yielding scope ex
   | .refuse cause => FiberAction.refuse m f yielding cause
   | .dropObservers token => FiberAction.dropObservers interp m f yielding token (answerWith next)

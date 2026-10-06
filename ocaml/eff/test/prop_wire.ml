@@ -114,7 +114,7 @@ let rec rand_eff d =
     | _ -> Eff_perform (rand_op (), t ())
   else
     let e () = rand_eff (d - 1) in
-    match ri 27 with
+    match ri 28 with
     | 0 -> Eff_succeed (t ())
     | 1 -> Eff_fail (t ())
     | 2 -> Eff_failCause (rand_cause (d - 1))
@@ -141,6 +141,7 @@ let rec rand_eff d =
     | 23 -> Eff_provideLayer (rand_layer (d - 1), rb (), e ())
     | 24 -> Eff_service (rand_service_key ())
     | 25 -> Eff_provideService (rand_service_key (), t (), e ())
+    | 26 -> Eff_restore (t (), e ())
     | _ -> Eff_catchIf (t (), e (), e ())
 
 and rand_layer d =
@@ -170,7 +171,7 @@ and rand_effs d = if d <= 0 || ri 3 = 0 then Effs_nil else Effs_cons (rand_eff (
 
 and rand_action d =
   let t () = rand_term (min d 2) in
-  match ri 16 with
+  match ri 17 with
   | 0 -> Action_term_fork (rand_eff d, rand_options ())
   | 1 -> Action_term_forkIn (rand_eff d, rand_options (), t ())
   | 2 -> Action_term_forkScoped (rand_eff d, rand_options ())
@@ -186,6 +187,7 @@ and rand_action d =
   | 12 -> Action_term_setContext (t ())
   | 13 -> Action_term_getContext
   | 14 -> Action_term_getId
+  | 15 -> Action_term_getInterruptible
   | _ -> Action_term_closeScope (t (), t ())
 
 let rec rand_ty d =

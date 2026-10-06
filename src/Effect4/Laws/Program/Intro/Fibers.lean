@@ -39,6 +39,31 @@ theorem intro_interruptible (root : NativeEff) (n : Nat) (b : NativeEff) (p : Po
   unfold denoteAction; rw [hact]
   exact CodeMeans.actMask _ _ _ (.at_ (p.child 0)) _ hact (hres _ (hw0 0)) delivers_pure
 
+/-- A restore site (decisions row 245). At a true bit it is `interruptible` over the body: the
+action at the point, the body resolved at child 0. At a false bit it is the body's own compile
+and denotation at child 0. Any other saved value is the same refusal on both sides. -/
+theorem intro_restore (root : NativeEff) (n : Nat) (saved : Term) (b : NativeEff) (p : Point)
+    (k : Nat) (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.restore saved b)))
+    (hres : ∀ q : Point, q.weight < n → CodeMeans root (resolve root q) (denoteAt root q))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) →
+        CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.restore saved b) p) (denoteR root (.restore saved b) p) := by
+  rw [compileEff_restore saved b hf, denoteR_restore root saved b hpos]
+  cases (evalTerm p.env saved).bind Val.savedMask? with
+  | none => exact codeMeans_badShape root
+  | some flag =>
+    cases flag with
+    | true =>
+      have hact : actionAt root p = some (.setInterruptible (resolve root (p.child 0)) true) := by
+        simp only [actionAt, h]
+      show CodeMeans root (Prim.withFiber (EffThunk.act p)) (denoteAction root p)
+      unfold denoteAction; rw [hact]
+      exact CodeMeans.actMask _ _ _ (.at_ (p.child 0)) _ hact (hres _ (hw0 0)) delivers_pure
+    | false => exact ih _ (hw0 0) b (at_child_of h 0)
+
 theorem intro_yieldNow (root : NativeEff) (priority : Nat) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
     CodeMeans root (compileEff (.yieldNow priority) p) (denoteR root (.yieldNow priority) p) := by
@@ -149,6 +174,7 @@ theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (
     | setContext ctx => exact CodeMeans.actSetContext _ _ _ ht (successV root)
     | getContext => exact CodeMeans.actGetContext _ _ ht (successV root)
     | getId => exact CodeMeans.actGetId _ _ ht (successV root)
+    | getInterruptible => exact CodeMeans.actGetInterruptible _ _ ht delivers_seqR_pure
     | closeScope scope ex => exact CodeMeans.actCloseScope _ _ _ _ ht delivers_pure
     | refuse cause => exact CodeMeans.actRefuse _ _ _ ht (successV root)
     | dropObservers token => exact CodeMeans.actDropObservers _ _ _ ht (successV root)

@@ -49,6 +49,8 @@ import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns
 import Test.Program.FormationContract
 import Test.Program.FoldContract
+import Test.Program.MaskContract
+import Test.Program.MaskEngine
 import Test.Program.FoldHygiene
 import Test.Program.RecordValues
 import Test.Program.MapValues
