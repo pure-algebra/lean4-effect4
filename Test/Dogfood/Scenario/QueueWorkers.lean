@@ -24,13 +24,14 @@ control of the host protocol.
   handles, the fed jobs, the reply receipts, the reply applications, the retired calls, the
   opened and the released connections, the count of finished jobs, the root's exit and the work
   left.
-* **Claim.** `queueWorkers` assembles seven clauses. Three are laws of the driver and the
-  session, proved in `Test/Dogfood/Scenario.lean`. Four are planned goals over scripts:
+* **Claim.** `queueWorkers` assembles seven clauses. Three are proved laws: `receipt_inert`,
+  the driver's (`Test/Dogfood/Scenario.lean`), and `applied_selects` and `control_retires`, the
+  session's (`src/Effect4/Laws/Run/Rows.lean`). Four are planned goals over scripts:
   `held_within_fed`, `fed_accounted`, `queue_settled` and `releases_once`. Each is an instance,
   on this one program, of a proposed claim of the Queue's law of a whole run. The driver's law
   `replays` stands beside them as an associated law.
-* **Premises.** A goal's budget premise is `funded` (`Test/Dogfood/Scenario.lean`): no task of
-  the run was cut by its budget. The mask is a premise of the program: each worker takes, and
+* **Premises.** A goal's budget premise is `funded` (`src/Effect4/Laws/Run/Tape.lean`): no task
+  of the run was cut by its budget. The mask is a premise of the program: each worker takes, and
   the feeder offers, outside every mask. A red control breaks each premise.
 * **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
   fault is a variant of the crew with one changed part (`Fault`).
@@ -497,8 +498,8 @@ says what the goal would follow from. Those lists are what this scenario needs f
 
 Two premises stand in each statement, and a third in two of them.
 
-* **The budget**: `funded` (`Test/Dogfood/Scenario.lean`). No task of the run was cut by its
-  budget. The statement ranges over every command budget, at the battery's compile budget.
+* **The budget**: `funded` (`src/Effect4/Laws/Run/Tape.lean`). No task of the run was cut by
+  its budget. The statement ranges over every command budget, at the battery's compile budget.
 * **The mask**: the program is `crew`. Each worker takes, and the feeder offers, outside every
   mask. So an interruption at a wait is taken at the wait.
 * **Rest**, for the two statements about a state between two acts of a host: `atRest`, on a
@@ -1098,9 +1099,10 @@ def runsAndControls : List NamedRun × List Control :=
 
 /-! ## 6. The record -/
 
-/-- The queue-workers scenario. The claim assembles the seven clauses. Two laws of the driver
-stand beside them as associated laws: `replays`, and `funded_replays`, the proved statement that
-the goals' budget premise is tied to. -/
+/-- The queue-workers scenario. The claim assembles the seven clauses. Two laws stand beside
+them as associated laws: the driver's `replays`, and `funded_replays`
+(`src/Effect4/Laws/Run/Tape.lean`), the proved statement that the goals' budget premise is tied
+to. -/
 def scenario : Scenario :=
   { name := "queue-workers"
     program := ``crew
@@ -1127,8 +1129,8 @@ def wrongTop : Scenario :=
 -- One run of the gate over both records. The green control is that no finding names
 -- `queue-workers`. The red control names each clause that the wrong claim's proof does not reach.
 /--
-error: queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Test.Dogfood.Scenario.applied_selects)
-queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Test.Dogfood.Scenario.control_retires)
+error: queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Effect4.Run.applied_selects)
+queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Effect4.Run.control_retires)
 queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "once" (Test.Dogfood.Scenario.QueueWorkers.held_within_fed)
 queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "accounted" (Test.Dogfood.Scenario.QueueWorkers.fed_accounted)
 queue-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "settled" (Test.Dogfood.Scenario.QueueWorkers.queue_settled)

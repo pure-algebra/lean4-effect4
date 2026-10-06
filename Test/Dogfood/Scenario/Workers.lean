@@ -18,10 +18,11 @@ answers by key.
 * **Observation.** `Observation`, seven fields: the assignment of jobs to workers, the accepted
   reply receipts, the reply applications, the retired calls, the cleanup identities, the root's
   exit and the work left.
-* **Claim.** `workers` assembles four clauses. Three are laws of the driver and the session,
-  proved in `Test/Dogfood/Scenario.lean`. The fourth, `releases_once`, is a planned goal: under
-  every script the crew releases no connection twice. The driver's law `replays` stands beside
-  them as an associated law: it has controls, and the claim's proof does not use it.
+* **Claim.** `workers` assembles four clauses. Three are proved laws. `receipt_inert` is the
+  driver's (`Test/Dogfood/Scenario.lean`), and `applied_selects` and `control_retires` are the
+  session's (`src/Effect4/Laws/Run/Rows.lean`). The fourth, `releases_once`, is a planned goal:
+  under every script the crew releases no connection twice. The driver's law `replays` stands
+  beside them as an associated law: it has controls, and the claim's proof does not use it.
 * **Controls.** `controlsOf`: for each entry a green control and at least one red control. A
   control names the runs that its comparison reads. One green control of the cleanup clause is
   the lowest-fiber schedule of today: the driver of `P3WorkerQueue.lean` plays it on the same
@@ -454,8 +455,8 @@ def wrongTop : Scenario :=
 -- One run of the gate over both records. The green control is that no finding names `workers`.
 -- The red control names each clause that the wrong claim's proof does not reach.
 /--
-error: workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Test.Dogfood.Scenario.applied_selects)
-workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Test.Dogfood.Scenario.control_retires)
+error: workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "selection" (Effect4.Run.applied_selects)
+workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "retirement" (Effect4.Run.control_retires)
 workers under receipt_inert: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "cleanup" (Test.Dogfood.Scenario.Workers.releases_once)
 -/
 #guard_msgs (error) in
