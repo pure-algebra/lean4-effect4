@@ -333,6 +333,13 @@ Landed later on 2026-10-05:
   truth runner's import header is derived from the generated atom names. The coordinator
   promoted the corpus lane's results and the build ledger. The baseline policy names the 21
   corpus rows that moved in one column each. No verdict column moved.
+- **The Queue's five typing goals are theorems** (`0b048da4`, part 1 of seat QTYPES; rows 255
+  and 257). Each step has its stated type at every message type with `MessageTy`, proved in
+  place with its statement unchanged. Each is the instance of a theorem at every scope, which
+  the wrapper applies at its own scope. The checker's rules stand in their introduction form
+  in `src/Effect4/Laws/Program/Typing/TermIntro.lean`, and they name no Queue. A name that
+  `bindWith` mints is a caller's term under a step's folds (`captured_minted`). The goal gate
+  counts 24: ten scenario goals, and fourteen fixture goals in the tooling's own controls.
 - **Two tooling repairs** (`e6d63ddb`, `db54a849`, `d5b4d9cb`, `34e9423a`). The engine's
   fixtures are a generated group: a fixture that changes alone is written again, and the check
   form refuses an output that aliases a lane and a fixture folder with no writer. The plan's
