@@ -161,6 +161,7 @@ import Test.Program.MeaningEqContract
 import Test.Program.QueueContract
 import Test.Program.QueueCapacity
 import Test.Program.QueueProfile
+import Test.Program.QueueSteps
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract
