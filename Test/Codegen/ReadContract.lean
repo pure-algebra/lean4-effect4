@@ -125,6 +125,8 @@ theorem lawful : LawfulSpelling sig spell where
   withTerm_termOf := fun _ _ h => nomatch h
   withTerm_withTerm := fun _ _ _ => rfl
   withTerm_none := fun _ _ _ => rfl
+  -- and none carries a type argument
+  typeArgs := LawfulTypeArgs.ofNone (fun _ => rfl) (fun _ _ => rfl)
 
 /-! ## Tuple-call rows: the canonical wrapper, scoping and trailing-name order
 
@@ -229,6 +231,8 @@ theorem tupleLawful : LawfulSpelling tupleSig tupleSpell where
   withTerm_termOf := fun _ _ h => nomatch h
   withTerm_withTerm := fun _ _ _ => rfl
   withTerm_none := fun _ _ _ => rfl
+  -- and none carries a type argument
+  typeArgs := LawfulTypeArgs.ofNone (fun _ => rfl) (fun _ _ => rfl)
 
 -- The wrapper head is gone: `Reflect.apply` is an ordinary unknown atom (source-repairs §18).
 #guard headOf "Reflect.apply" = none

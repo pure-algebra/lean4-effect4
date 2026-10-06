@@ -833,19 +833,103 @@ theorem rowHeadReadable_of_method {row : Row} (h : rowHeadReadable (methodArgsRo
   · rcases methodArgsRow_shape row with hs | hs <;> rw [hs] at h <;> cases h
   · exact Or.inr h
 
-/-- The face of an operation has the operation's row: a row does not depend on the binder term
-(`LawfulSpelling.withTerm_row`). A step of the row lemmas below, which read a row's call back to
-the face that `spell` answers. -/
-theorem LawfulSpelling.face_row {sig : Signature Op} {spell : String → List String → Option Op}
-    (hl : LawfulSpelling sig spell) (op : Op) : sig.rowOf (sig.face op) = sig.rowOf op :=
-  hl.withTerm_row op _
+/-! ### The columns a printed call shows, at the face (the state plan's T5, part B)
 
-/-- An operation that carries no binder term is its own face. A step of the row call's round
-trip at a term-free row (`readRow_rowCall_print`, `Laws/Codegen/ReadPrint.lean`). -/
+The face of an operation drops its binder term and its type arguments (`Signature.face`). The
+row does not depend on the term (`LawfulSpelling.withTerm_row`). It does depend on the type
+arguments, in its answer and error columns, so the face has the operation's row only in the
+columns that a printed call shows (`Row.callColumns`): the spelling, the shape, the trailing
+names, the request and the declared type arguments. The row lemmas below read a row's call back
+to the face that `spell` answers, and they consult these columns alone. The restored operation,
+not the face, owns the answer and error columns. -/
+
+theorem Row.callColumns_spelling {a b : Row} (h : a.callColumns = b.callColumns) :
+    a.spelling = b.spelling := congrArg (·.1) h
+
+theorem Row.callColumns_shape {a b : Row} (h : a.callColumns = b.callColumns) :
+    a.shape = b.shape := congrArg (·.2.1) h
+
+theorem Row.callColumns_trailing {a b : Row} (h : a.callColumns = b.callColumns) :
+    a.trailing = b.trailing := congrArg (·.2.2.1) h
+
+theorem Row.callColumns_request {a b : Row} (h : a.callColumns = b.callColumns) :
+    a.request = b.request := congrArg (·.2.2.2.1) h
+
+theorem Row.callColumns_typeArgs {a b : Row} (h : a.callColumns = b.callColumns) :
+    a.typeArgs = b.typeArgs := congrArg (·.2.2.2.2) h
+
+/-- Rows with the same call columns declare the same type arguments. -/
+theorem Row.callColumns_rowTypeArgs {a b : Row} (h : a.callColumns = b.callColumns) :
+    rowTypeArgs a = rowTypeArgs b := by
+  simp only [rowTypeArgs, Row.callColumns_typeArgs h]
+
+/-- The method projection reads the request alone, so it keeps equal call columns equal. A step
+of `LawfulTypeArgs.method`. -/
+theorem methodArgsRow_callColumns {a b : Row} (h : a.callColumns = b.callColumns) :
+    (methodArgsRow a).callColumns = (methodArgsRow b).callColumns := by
+  simp only [Row.callColumns, methodArgsRow, Row.callColumns_spelling h,
+    Row.callColumns_trailing h, Row.callColumns_request h, Row.callColumns_typeArgs h]
+
+/-- The row answer does not read its row: it is a `perform` of the operation. The row lemmas
+state their answers at the operation's own row, and the reader builds them at the face's. -/
+theorem rowAnswer_eq (row : Row) (op : Op) : rowAnswer row op = Eff.perform op := rfl
+
+/-- **The face keeps the columns a printed call shows.** The term does not move the row
+(`withTerm_row`), and the type arguments do not move these columns (`LawfulTypeArgs.call`). A
+step of the row lemmas below. -/
+theorem LawfulSpelling.face_callColumns {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) (op : Op) :
+    (sig.rowOf (sig.face op)).callColumns = (sig.rowOf op).callColumns :=
+  (hl.typeArgs.call _ _).trans (congrArg Row.callColumns (hl.withTerm_row op _))
+
+theorem LawfulSpelling.face_shape {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) (op : Op) :
+    (sig.rowOf (sig.face op)).shape = (sig.rowOf op).shape :=
+  Row.callColumns_shape (hl.face_callColumns op)
+
+theorem LawfulSpelling.face_request {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) (op : Op) :
+    (sig.rowOf (sig.face op)).request = (sig.rowOf op).request :=
+  Row.callColumns_request (hl.face_callColumns op)
+
+theorem LawfulSpelling.face_rowTypeArgs {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) (op : Op) :
+    rowTypeArgs (sig.rowOf (sig.face op)) = rowTypeArgs (sig.rowOf op) :=
+  Row.callColumns_rowTypeArgs (hl.face_callColumns op)
+
+/-- An operation that carries no type argument is fixed by a replacement of its type arguments.
+It follows from the update laws: the arity is fixed, so the replaced operation carries none, and
+replacing by its own type arguments twice is replacing once. -/
+theorem LawfulTypeArgs.withTypeArgs_none {sig : Signature Op} (h : LawfulTypeArgs sig) {op : Op}
+    (hnone : sig.typeArgsOf op = []) (tys : List Ty) : sig.withTypeArgs op tys = op := by
+  have hnil : sig.typeArgsOf (sig.withTypeArgs op tys) = [] :=
+    List.eq_nil_of_length_eq_zero (by simp only [h.length_typeArgsOf, hnone, List.length_nil])
+  have h1 := h.withTypeArgs_typeArgsOf (sig.withTypeArgs op tys)
+  rw [hnil, h.withTypeArgs_withTypeArgs] at h1
+  have h2 := h.withTypeArgs_typeArgsOf op
+  rw [hnone] at h2
+  exact h1.symm.trans h2
+
+/-- The face carries as many type arguments as the operation: the arity is the row key's. -/
+theorem LawfulSpelling.length_typeArgsOf_face {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) (op : Op) :
+    (sig.typeArgsOf (sig.face op)).length = (sig.typeArgsOf op).length := by
+  rw [Signature.face, hl.typeArgs.length_typeArgsOf, hl.typeArgs.typeArgsOf_withTerm]
+
+/-- **The face with the operation's type arguments restored** is the operation at its term's
+face. The two updates commute, and replacing the type arguments by the operation's own is the
+operation. A step of `readCall_printCall`. -/
+theorem LawfulSpelling.withTypeArgs_face {sig : Signature Op}
+    {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) (op : Op) :
+    sig.withTypeArgs (sig.face op) (sig.typeArgsOf op) = sig.withTerm op (.lit .unit) := by
+  rw [Signature.face, hl.typeArgs.withTypeArgs_withTypeArgs, hl.typeArgs.withTypeArgs_withTerm,
+    hl.typeArgs.withTypeArgs_typeArgsOf]
+
+/-- An operation that carries no binder term and no type argument is its own face. -/
 theorem LawfulSpelling.face_of_none {sig : Signature Op}
     {spell : String → List String → Option Op} (hl : LawfulSpelling sig spell) {op : Op}
-    (h : sig.termOf op = none) : sig.face op = op :=
-  hl.withTerm_none op _ h
+    (h : sig.termOf op = none) (hnone : sig.typeArgsOf op = []) : sig.face op = op := by
+  rw [Signature.face, hl.withTerm_none op _ h, hl.typeArgs.withTypeArgs_none hnone]
 
 theorem readRowCall_unit {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true)
@@ -857,7 +941,7 @@ theorem readRowCall_unit {sig : Signature Op} {spell : String → List String �
       = some (.ok (rowAnswer (sig.rowOf op) (sig.face op) (.lit .unit))) := by
   unfold readRowCall
   rw [idents?_map, Option.bind_some, hl.spell_row op hd (rowHeadReadable_of_typeArgs hta)]
-  simp [hl.face_row, hshape, hreq, hta]
+  simp [rowAnswer_eq, hl.face_shape, hl.face_request, hl.face_rowTypeArgs, hshape, hreq, hta]
 
 theorem readRowCall_request {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (r : Term)
@@ -893,7 +977,7 @@ theorem readRowCall_request {sig : Signature Op} {spell : String → List String
   rw [hA]
   dsimp only
   rw [idents?_map, Option.bind_some, hl.spell_row op hd (rowHeadReadable_of_typeArgs hta)]
-  simp [hl.face_row, hshape, hreq, hta]
+  simp [rowAnswer_eq, hl.face_shape, hl.face_request, hl.face_rowTypeArgs, hshape, hreq, hta]
 
 /-! ## `read_print`: what the printer prints of a readable program reads back to it -/
 
@@ -961,7 +1045,7 @@ theorem readRowCall_tuple {sig : Signature Op} {spell : String → List String �
   rw [hB]
   dsimp only
   rw [idents?_map, Option.bind_some, hl.spell_row op hd (rowHeadReadable_of_typeArgs hta)]
-  simp [hl.face_row, hshape, hta]
+  simp [rowAnswer_eq, hl.face_shape, hl.face_rowTypeArgs, hshape, hta]
 
 /-- The tuple request round trip is shared by free calls and receiver methods. -/
 theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List String → Option Op}
@@ -1011,6 +1095,19 @@ theorem readRowCall_printTupleArgs {sig : Signature Op} {spell : String → List
     simp [readTupleArgs, hsv, readTerm_printTerm x hx hc.1 hu.1,
       readTerm_printTerm y hy hc.2.1 hu.2.1]
 
+/-- The method projection keeps the laws of an operation's type arguments. It changes the row by
+its request alone, so equal call columns stay equal, and it changes no other hook. -/
+theorem LawfulTypeArgs.method {sig : Signature Op} (h : LawfulTypeArgs sig) :
+    LawfulTypeArgs (methodSignature sig) where
+  call := fun op tys => methodArgsRow_callColumns (h.call op tys)
+  typeArgsOf_withTypeArgs := h.typeArgsOf_withTypeArgs
+  length_typeArgsOf := h.length_typeArgsOf
+  withTypeArgs_typeArgsOf := h.withTypeArgs_typeArgsOf
+  withTypeArgs_withTypeArgs := h.withTypeArgs_withTypeArgs
+  withTypeArgs_withTerm := h.withTypeArgs_withTerm
+  termOf_withTypeArgs := h.termOf_withTypeArgs
+  typeArgsOf_withTerm := h.typeArgsOf_withTerm
+
 /-- Method projection keeps the same row identities and name hygiene. -/
 theorem methodLawful {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) : LawfulSpelling (methodSignature sig) spell where
@@ -1030,6 +1127,7 @@ theorem methodLawful {sig : Signature Op} {spell : String → List String → Op
   withTerm_termOf := hl.withTerm_termOf
   withTerm_withTerm := hl.withTerm_withTerm
   withTerm_none := hl.withTerm_none
+  typeArgs := hl.typeArgs.method
 
 theorem readRowCall_methodArgs {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} (op : Op) (hd : sig.dom op = true) (args : Term)
@@ -1081,13 +1179,14 @@ theorem readRowMethod_print {sig : Signature Op} {spell : String → List String
         (.app "pair" (.cons receiver (.cons args .nil)))) := by
   simp only [readRowMethod, readTerm_printTerm receiver hr hcr hur, ok_bind,
     readRowCall_methodArgs hl op hd args ha hca hua hta, Option.getD_some]
-  simp only [rowAnswer, addReceiver, hl.face_row, hs, if_true]
+  simp only [rowAnswer, addReceiver, hl.face_shape, hs, if_true]
 
-/-- The signature at the faces: no operation carries a binder term, so a `perform` prints as its
-row's call alone (`printPerform`). The face reader (`readPerformFace`) reads no function, so what
-it reads prints back under this signature (`readPerformFace_exact`). -/
+/-- The signature at the faces: no operation carries a binder term or a type argument, so a
+`perform` prints as its row's call alone (`printPerform`). The face reader (`readPerformFace`)
+reads no function and no type argument of an operation, so what it reads prints back under this
+signature (`readPerformFace_exact`). -/
 def Signature.atFaces (sig : Signature Op) : Signature Op :=
-  { sig with termOf := fun _ => none }
+  { sig with termOf := fun _ => none, typeArgsOf := fun _ => [] }
 
 /-- The printed form of a row answer at the faces is the row's printed call. -/
 theorem print_rowAnswer {sig : Signature Op} {n : Nat} (op : Op) (r : Term) :
@@ -1134,7 +1233,8 @@ theorem read_printRow {sig : Signature Op} {spell : String → List String → O
     rw [htr] at hsp
     simp only [printRow, hshape, Except.ok.injEq] at hp
     subst x
-    simp [readPerformFace, Var.read_none hname, hhead, readRowValue, hsp, hl.face_row, hshape]
+    simp [readPerformFace, Var.read_none hname, hhead, readRowValue, hsp, rowAnswer_eq,
+      hl.face_shape, hshape]
   | call =>
     have htypes : (rowTypeArgs (sig.rowOf op)).isSome = true := by
       simp only [requestReadable, hshape, Bool.and_eq_true] at h
@@ -1346,18 +1446,264 @@ theorem withFunction_printRow {n : Nat} {row : Row} {r : Term} {call : Expr}
        · cases h
          exact ⟨_, rfl⟩)
 
+/-! ## The type arguments on a row call's head (the state plan's T5, part B)
+
+An operation's type arguments print on the head of its row's call (`printCall`,
+`withHeadTypes`), each as the type printer prints it. The reader takes them off the head
+(`splitHeadTypes`), reads the call at its face, reads each type through the checked type reader
+and installs the list (`readCall`, `installTypeArgs`). These are the steps of that round trip.
+
+Placement: concept `translation-simulation`, serving R4's first open part and R8. The consumers
+are `readPerform_printPerform` and `readPerform_exact` below, the row-call steps of `read_print`
+and `read_exact`. Reach: any lawful signature; the retraction asks for readable type arguments
+(`typeArgsReadable`, over `Classes.ReadableTy`), and exactness asks for nothing. They do not
+establish target typing or a host run, and they say nothing of a type outside `ReadableTy`. -/
+
+/-- **Retraction of the head split**: a row call with type arguments on its head splits back to
+the call and the arguments. A step of `readCall_printCall`. -/
+theorem splitHeadTypes_withHeadTypes {spelling : String} {target : TypeScript.TypeRef}
+    {targets : List TypeScript.TypeRef} {call x : Expr}
+    (h : withHeadTypes spelling (target :: targets) call = .ok x) :
+    splitHeadTypes x = some (call, target :: targets) := by
+  unfold withHeadTypes at h
+  split at h
+  · cases h
+    rfl
+  · cases h
+    rfl
+  · exact nomatch h
+
+/-- **Exactness of the head split**: what `splitHeadTypes` splits is the call it answers with
+the type arguments back on its head (`withHeadTypes`). A step of `readCall_exact`. -/
+theorem withHeadTypes_of_splitHeadTypes {x call : Expr} {targets : List TypeScript.TypeRef}
+    (spelling : String) (h : splitHeadTypes x = some (call, targets)) :
+    withHeadTypes spelling targets call = .ok x := by
+  unfold splitHeadTypes at h
+  split at h
+  · cases h
+    rfl
+  · cases h
+    rfl
+  · exact nomatch h
+
+/-- The split's type arguments are never the empty list. -/
+theorem splitHeadTypes_ne_nil {x call : Expr} {targets : List TypeScript.TypeRef}
+    (h : splitHeadTypes x = some (call, targets)) : targets ≠ [] := by
+  unfold splitHeadTypes at h
+  split at h
+  · cases h
+    exact List.cons_ne_nil _ _
+  · cases h
+    exact List.cons_ne_nil _ _
+  · exact nomatch h
+
+/-- Type arguments on the head leave the argument list as it is: a call that carries no
+function still carries none. A step of `splitFunction_printCall`. -/
+theorem splitFunction_withHeadTypes {n : Nat} {spelling : String}
+    {targets : List TypeScript.TypeRef} {call x : Expr}
+    (h : withHeadTypes spelling targets call = .ok x) (hnone : splitFunction n call = none) :
+    splitFunction n x = none := by
+  unfold withHeadTypes at h
+  split at h
+  · next s args =>
+    cases h
+    cases hlast : args.getLast? with
+    | none => simp only [splitFunction, lastArgument?, hlast, Option.map_none, Option.bind_none]
+    | some last =>
+      simp only [splitFunction, lastArgument?, hlast, Option.map_some, Option.bind_some,
+        Option.map_eq_none_iff] at hnone ⊢
+      exact hnone
+  · next receiver name args =>
+    cases h
+    cases hlast : args.getLast? with
+    | none => simp only [splitFunction, lastArgument?, hlast, Option.map_none, Option.bind_none]
+    | some last =>
+      simp only [splitFunction, lastArgument?, hlast, Option.map_some, Option.bind_some,
+        Option.map_eq_none_iff] at hnone ⊢
+      exact hnone
+  · exact nomatch h
+
+/-- **A row's call with its type arguments carries no function**: what `printCall` prints
+splits to nothing, so the reader takes it as a term-free row call. A step of
+`readPerform_printPerform`. -/
+theorem splitFunction_printCall {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {x : Expr}
+    (h : printCall sig n op r = .ok x) : splitFunction n x = none := by
+  unfold printCall at h
+  split at h
+  · exact splitFunction_printRow h
+  · split at h
+    · cases hcall : printRow n (sig.rowOf op) r with
+      | error why =>
+        rw [hcall] at h
+        exact nomatch h
+      | ok call =>
+        rw [hcall] at h
+        exact splitFunction_withHeadTypes h (splitFunction_printRow hcall)
+    · exact nomatch h
+
+/-- **A row call's declared type arguments are determined.** Where a call reads at one list of
+type arguments, the same call is refused at every other list, by its spelling: the spelling and
+the trailing names select the arm, the type arguments do not, and each arm checks them. So the
+two readings of `readCall` do not overlap: a call that reads with its head's type arguments as
+the row's own does not read without them. A step of `readPerformFace_bare_error`. -/
+theorem readRowCall_typeArgs_ne {sig : Signature Op} {spell : String → List String → Option Op}
+    {n : Nat} {s : String} {ta ta' : List TypeScript.TypeRef} {args : List Expr} {e : Eff Op}
+    (h : readRowCall classes sig spell n s ta args = some (.ok e)) (hne : ta' ≠ ta) :
+    readRowCall classes sig spell n s ta' args = some (.error (.arity s)) := by
+  unfold readRowCall at h ⊢
+  -- each split of the reading at `ta` selects the same arm of the reading at `ta'`
+  split at h
+  · simp only [Option.some.injEq] at h
+    split at h
+    · next hc => rw [if_neg fun hc' => hne (Option.some.inj (hc'.2.2.symm.trans hc.2.2))]
+    · exact nomatch h
+  · split at h
+    · split at h
+      · simp only [Option.some.injEq] at h
+        split at h
+        · next hc => rw [if_neg fun hc' => hne (Option.some.inj (hc'.2.2.symm.trans hc.2.2))]
+        · exact nomatch h
+      · split at h
+        · split at h
+          · simp only [Option.some.injEq] at h
+            split at h
+            · next hc => rw [if_neg fun hc' => hne (Option.some.inj (hc'.2.symm.trans hc.2))]
+            · exact nomatch h
+          · exact nomatch h
+        · exact nomatch h
+    · exact nomatch h
+
+/-- **The two readings of a typed head do not overlap.** A call whose head's type arguments the
+face reader reads as the row's own declared ones does not read at its face without them. So
+`readCall` reads a row's declared type arguments through its second reading. A step of
+`readCall_printCall` at an operation that carries no type argument. -/
+theorem readPerformFace_bare_error {sig : Signature Op}
+    {spell : String → List String → Option Op} {n : Nat} {x bare : Expr}
+    {targets : List TypeScript.TypeRef} {e : Eff Op}
+    (hsplit : splitHeadTypes x = some (bare, targets))
+    (h : readPerformFace classes sig spell n x = .ok e) :
+    ∃ why, readPerformFace classes sig spell n bare = .error why := by
+  unfold splitHeadTypes at hsplit
+  split at hsplit
+  · next s target rest args =>
+    cases hsplit
+    simp only [readPerformFace] at h
+    cases hrow : readRowCall classes sig spell n s (target :: rest) args with
+    | none =>
+      rw [hrow] at h
+      cases h
+    | some answer =>
+      rw [hrow, Option.getD_some] at h
+      subst h
+      have hbare := readRowCall_typeArgs_ne hrow (List.cons_ne_nil target rest).symm
+      cases hhead : headOf s with
+      | some head =>
+        by_cases hprog : s ∈ programHeads
+        · exact ⟨callRefusal head args, by simp only [readPerformFace, hhead, hprog, if_true]⟩
+        · exact ⟨.unknownHead s, by simp only [readPerformFace, hhead, hprog, if_false]⟩
+      | none => exact ⟨.arity s, by simp only [readPerformFace, hhead, hbare, Option.getD_some]⟩
+  · next receiver s target rest args =>
+    cases hsplit
+    simp only [readPerformFace, readMethod, readRowMethod] at h
+    obtain ⟨recv, hrecv, h⟩ := bind_eq_ok.mp h
+    obtain ⟨body, hbody, _⟩ := bind_eq_ok.mp h
+    cases hrow : readRowCall classes (methodSignature sig) spell n s (target :: rest) args with
+    | none =>
+      rw [hrow] at hbody
+      cases hbody
+    | some answer =>
+      rw [hrow, Option.getD_some] at hbody
+      subst hbody
+      have hbare := readRowCall_typeArgs_ne hrow (List.cons_ne_nil target rest).symm
+      exact ⟨.arity s, by
+        simp only [readPerformFace, readMethod, readRowMethod, hrecv, hbare, Option.getD_some,
+          ok_bind]
+        rfl⟩
+  · exact nomatch hsplit
+
+/-- **A row's call with its operation's type arguments reads back**, to the operation at its
+term's face: the operation with its own type arguments, and the unit literal for its binder
+term. The premises are a readable request on a row in the signature's domain, and type arguments
+that read back on that row (`typeArgsReadable`): each a readable type, on a call row that
+declares none of its own. The row's call reads to the face (`read_printRow`), each printed type
+reads to its type (`readTysChecked_of_readable`), and installing them in the face restores the
+operation's own (`LawfulSpelling.withTypeArgs_face`). An operation that carries none prints its
+row's call alone, with or without the row's declared type arguments on its head. A step of
+`readPerform_printPerform`. It states nothing of a type outside `Classes.ReadableTy`. -/
+theorem readCall_printCall {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {op : Op} {r : Term} (hd : sig.dom op = true)
+    (hreq : requestReadable (sig.rowOf op) n r = true) (hc : r.covers classes = true)
+    (hu : r.unannotated = true)
+    (htypes : typeArgsReadable (sig.rowOf op) (sig.typeArgsOf op) = true)
+    {x : Expr} (hp : printCall sig n op r = .ok x) :
+    readCall classes sig spell n x = .ok (.perform (sig.withTerm op (.lit .unit)) r) := by
+  unfold printCall at hp
+  split at hp
+  · next hnone =>
+    -- no type argument of the operation's: the row's call alone, read at its face
+    have hface := read_printRow hl op hd r hreq hc hu hp
+    have hnil : sig.typeArgsOf (sig.face op) = [] :=
+      List.eq_nil_of_length_eq_zero (by
+        simp only [hl.length_typeArgsOf_face, hnone, List.length_nil])
+    have hterm : sig.face op = sig.withTerm op (.lit .unit) := by
+      rw [Signature.face, hl.typeArgs.withTypeArgs_none
+        ((hl.typeArgs.typeArgsOf_withTerm op _).trans hnone)]
+    have hfree : (readPerformFace classes sig spell n x).bind (typeFree sig) =
+        .ok (.perform (sig.withTerm op (.lit .unit)) r) := by
+      rw [hface]
+      simp only [Except.bind, rowAnswer, typeFree, hnil, List.isEmpty_nil, if_true]
+      rw [hterm]
+    unfold readCall
+    cases hsplit : splitHeadTypes x with
+    | none => exact hfree
+    | some split =>
+      obtain ⟨bare, targets⟩ := split
+      obtain ⟨why, hbare⟩ := readPerformFace_bare_error hsplit hface
+      simp only [hbare]
+      exact hfree
+  · next ty tys htys =>
+    split at hp
+    · next targets hw =>
+      cases hcall : printRow n (sig.rowOf op) r with
+      | error why =>
+        rw [hcall] at hp
+        exact nomatch hp
+      | ok call =>
+        rw [hcall] at hp
+        have hlen := Effect4.Codegen.Classes.writeTys_length hw
+        cases targets with
+        | nil => exact nomatch hlen
+        | cons target rest =>
+          have hsplit := splitHeadTypes_withHeadTypes hp
+          have hface := read_printRow hl op hd r hreq hc hu hcall
+          rw [htys] at htypes
+          simp only [typeArgsReadable, Bool.and_eq_true] at htypes
+          have hback := Effect4.Codegen.Classes.readTysChecked_of_readable htypes.1.1 hw
+          have harity : (sig.typeArgsOf (sig.face op)).length = (target :: rest).length := by
+            rw [hl.length_typeArgsOf_face, htys, hlen]
+          unfold readCall
+          rw [hsplit]
+          dsimp only
+          rw [hface]
+          simp only [rowAnswer, installTypeArgs, harity, if_true, hback]
+          rw [← htys, hl.withTypeArgs_face]
+    · exact nomatch hp
+
 /-- **The row call of `perform` reads back from its printing** at a node of level `n`: a
-readable request on a row in the signature's domain, and a binder term that reads back on that
-row (`termReadable`: scoped one level up, covered, unannotated, on a call row). The row's call
-reads to the operation's face (`read_printRow`), the function's body to the term
-(`readTerm_printTerm`), and installing the term in the face gives the operation back
+readable request on a row in the signature's domain, type arguments that read back on that row
+(`typeArgsReadable`), and a binder term that reads back there (`termReadable`: scoped one level
+up, covered, unannotated, on a call row). The row's call with its type arguments reads to the
+operation at its term's face (`readCall_printCall`), the function's body to the term
+(`readTerm_printTerm`), and installing the term gives the operation back
 (`LawfulSpelling.withTerm_withTerm`, `withTerm_termOf`). A step of `read_print` (R8), the
 row-call case of `readT_print` (`Laws/Codegen/ReadPrint.lean`). It states nothing of a term that
-states an accumulator type, which is printed and not read, nor of any host run. -/
+states an accumulator type, which is printed and not read, nor of a type argument outside
+`Classes.ReadableTy`, nor of any host run. -/
 theorem readPerform_printPerform {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {op : Op} {r : Term} (hd : sig.dom op = true)
     (hreq : requestReadable (sig.rowOf op) n r = true) (hc : r.covers classes = true)
     (hu : r.unannotated = true)
+    (htypes : typeArgsReadable (sig.rowOf op) (sig.typeArgsOf op) = true)
     (hterm : termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) = true)
     {x : Expr} (hp : printPerform sig n op r = .ok x) :
     readPerform classes sig spell n x = .ok (.perform op r) := by
@@ -1365,29 +1711,32 @@ theorem readPerform_printPerform {sig : Signature Op} {spell : String → List S
   cases hb : sig.termOf op with
   | none =>
     rw [hb] at hp
+    have hcall := readCall_printCall (classes := classes) hl hd hreq hc hu htypes hp
+    rw [hl.withTerm_none op _ hb] at hcall
     unfold readPerform
-    rw [splitFunction_printRow hp, read_printRow hl op hd r hreq hc hu hp]
-    simp only [rowAnswer, termFree, hl.face_of_none hb, hb, Option.isNone_none, ↓reduceIte]
+    rw [splitFunction_printCall hp, hcall]
+    simp only [termFree, hb, Option.isNone_none, ↓reduceIte]
   | some b =>
     rw [hb] at hp
-    cases hcall : printRow n (sig.rowOf op) r with
-    | error why => rw [hcall] at hp; exact nomatch hp
+    cases hcall : printCall sig n op r with
+    | error why =>
+      rw [hcall] at hp
+      exact nomatch hp
     | ok call =>
       rw [hcall] at hp
       rw [hb, Option.map_some] at hterm
       simp only [termReadable, Bool.and_eq_true] at hterm
       obtain ⟨⟨⟨hscoped, hcovers⟩, hunannotated⟩, _⟩ := hterm
-      have hsome : (sig.termOf (sig.face op)).isSome = true := by
+      have hsome : (sig.termOf (sig.withTerm op (.lit .unit))).isSome = true := by
         have h := hl.termOf_withTerm op (.lit .unit)
         rw [hb, Option.map_some] at h
         obtain ⟨b', hb', _⟩ := Option.map_eq_some_iff.mp h
         exact Option.isSome_iff_exists.mpr ⟨b', hb'⟩
       unfold readPerform
       rw [splitFunction_withFunction hp]
-      simp only [read_printRow hl op hd r hreq hc hu hcall, ok_bind,
-        readTerm_printTerm b.term hscoped hcovers hunannotated, rowAnswer, installTerm, hsome,
-        ↓reduceIte]
-      rw [Signature.face, hl.withTerm_withTerm, hl.withTerm_termOf op b hb]
+      simp only [readCall_printCall hl hd hreq hc hu htypes hcall, ok_bind,
+        readTerm_printTerm b.term hscoped hcovers hunannotated, installTerm, hsome, ↓reduceIte]
+      rw [hl.withTerm_withTerm, hl.withTerm_termOf op b hb]
 
 /-- The tuple reading reconstructs its two arguments: a saved variable prints as its two
 component reads, any other pair as the printed components. -/
@@ -1653,55 +2002,134 @@ theorem withFunction_of_splitFunction {n : Nat} {x call body : Expr} (spelling :
     rfl
   · exact nomatch hsplit
 
+/-- An operation's binder term does not move its row's call or its type arguments, so the
+call prints alike with any term. A step of `readPerform_exact`. -/
+theorem printCall_withTerm {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) (n : Nat) (op : Op) (f : Term) (r : Term) :
+    printCall sig n (sig.withTerm op f) r = printCall sig n op r := by
+  unfold printCall
+  rw [hl.typeArgs.typeArgsOf_withTerm, hl.withTerm_row]
+
+/-- A face that carries no type argument of the operation's prints as its row's call. A step
+of `readCall_exact`, at both of its readings of a call whose type arguments are not the
+operation's. -/
+theorem typeFree_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
+    (h : (readPerformFace classes sig spell n x).bind (typeFree sig) = .ok e) :
+    ∃ op r, e = .perform op r ∧ printCall sig n op r = .ok x := by
+  cases hface : readPerformFace classes sig spell n x with
+  | error why =>
+    rw [hface] at h
+    exact nomatch h
+  | ok face =>
+    rw [hface] at h
+    have hx := readPerformFace_exact hl hface
+    cases face with
+    | perform op r =>
+      have hrow : printRow n (sig.rowOf op) r = .ok x := hx
+      simp only [Except.bind, typeFree] at h
+      split at h
+      · next hnil =>
+        cases h
+        refine ⟨op, r, rfl, ?_⟩
+        unfold printCall
+        rw [List.isEmpty_iff.mp hnil]
+        exact hrow
+      · exact nomatch h
+    | _ => exact nomatch h
+
+/-- **Exactness of the row call with its type arguments**: what `readCall` accepts is a
+`perform`, and the printer prints it back to the tree read. Where the head's type arguments were
+the operation's, each read type prints back to its spelling (`readTysChecked_exact`: the checked
+reader keeps only what the type printer prints back), the installed list is the operation's
+(`LawfulTypeArgs.typeArgsOf_withTypeArgs`), and the restored operation's row prints the call
+that the face's row prints, because the two rows have the same call columns
+(`LawfulTypeArgs.call`, `printRow_congr`). It asks for no readable-type premise. A step of
+`readPerform_exact`. -/
+theorem readCall_exact {sig : Signature Op} {spell : String → List String → Option Op}
+    (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
+    (h : readCall classes sig spell n x = .ok e) :
+    ∃ op r, e = .perform op r ∧ printCall sig n op r = .ok x := by
+  unfold readCall at h
+  split at h
+  · next bare targets hsplit =>
+    split at h
+    · next face hface =>
+      have hx := readPerformFace_exact hl hface
+      cases face with
+      | perform op r =>
+        have hrow : printRow n (sig.rowOf op) r = .ok bare := hx
+        simp only [installTypeArgs] at h
+        split at h
+        · next harity =>
+          split at h
+          · next tys htys =>
+            cases h
+            refine ⟨_, r, rfl, ?_⟩
+            have hlen := Effect4.Codegen.Classes.readTysChecked_length htys
+            have hargs := hl.typeArgs.typeArgsOf_withTypeArgs op tys (hlen.trans harity.symm)
+            have hw := Effect4.Codegen.Classes.readTysChecked_exact htys
+            cases tys with
+            | nil =>
+              have hnil : targets = [] := List.eq_nil_of_length_eq_zero hlen.symm
+              exact absurd hnil (splitHeadTypes_ne_nil hsplit)
+            | cons ty rest =>
+              unfold printCall
+              rw [hargs]
+              dsimp only
+              rw [hw]
+              dsimp only
+              rw [printRow_congr (hl.typeArgs.call op (ty :: rest)), hrow]
+              exact withHeadTypes_of_splitHeadTypes _ hsplit
+          · exact nomatch h
+        · exact nomatch h
+      | _ => exact nomatch h
+    · exact typeFree_exact hl h
+  · exact typeFree_exact hl h
+
 /-- The row call of `perform`: what `readPerform` accepts prints back to the tree it read. The
-face it reads prints as the row's call (`readPerformFace_exact`). Where a function follows the
-call's arguments, its body is the term the reader installed (`readTerm_exact`), the printer
-prints that term as the same function (`Binders.read_exact`) after the same call, since the row
-does not depend on the term (`LawfulSpelling.withTerm_row`). Where none follows, the operation
-carries no term, and the printer prints the row's call alone. A step of `read_exact` (R8). -/
+call it reads prints back with its type arguments (`readCall_exact`). Where a function follows
+the call's arguments, its body is the term the reader installed (`readTerm_exact`), the printer
+prints that term as the same function (`Binders.read_exact`) after the same call, since the
+call does not depend on the term (`printCall_withTerm`). Where none follows, the operation
+carries no term, and the printer prints the call alone. A step of `read_exact` (R8). -/
 theorem readPerform_exact {sig : Signature Op} {spell : String → List String → Option Op}
     (hl : LawfulSpelling sig spell) {n : Nat} {x : Expr} {e : Eff Op}
     (h : readPerform classes sig spell n x = .ok e) : print sig n e = .ok x := by
   unfold readPerform at h
   split at h
   · next call body hsplit =>
-    obtain ⟨face, hface, h⟩ := bind_eq_ok.mp h
+    obtain ⟨typed, htyped, h⟩ := bind_eq_ok.mp h
     obtain ⟨f, hf, h⟩ := bind_eq_ok.mp h
-    have hx := readPerformFace_exact hl hface
-    cases face with
-    | perform op r =>
-      have hrow : printRow n (sig.rowOf op) r = .ok call := hx
-      simp only [installTerm] at h
-      split at h
-      · next hsome =>
-        cases h
-        obtain ⟨b, hb⟩ := Option.isSome_iff_exists.mp hsome
-        have hterm := hl.termOf_withTerm op f
-        rw [hb, Option.map_some] at hterm
-        obtain ⟨b', hb', hbt⟩ := Option.map_eq_some_iff.mp hterm
-        rw [print_perform, printPerform, hb']
-        dsimp only
-        rw [hl.withTerm_row, hrow, hbt, readTerm_exact body hf]
-        exact withFunction_of_splitFunction _ hsplit
-      · exact nomatch h
-    | _ => exact nomatch h
+    obtain ⟨op, r, rfl, hcall⟩ := readCall_exact hl htyped
+    simp only [installTerm] at h
+    split at h
+    · next hsome =>
+      cases h
+      obtain ⟨b, hb⟩ := Option.isSome_iff_exists.mp hsome
+      have hterm := hl.termOf_withTerm op f
+      rw [hb, Option.map_some] at hterm
+      obtain ⟨b', hb', hbt⟩ := Option.map_eq_some_iff.mp hterm
+      rw [print_perform, printPerform, hb']
+      dsimp only
+      rw [printCall_withTerm hl, hcall, hbt, readTerm_exact body hf]
+      exact withFunction_of_splitFunction _ hsplit
+    · exact nomatch h
   · next hsplit =>
-    cases hface : readPerformFace classes sig spell n x with
-    | error why => rw [hface] at h; exact nomatch h
-    | ok face =>
-      rw [hface] at h
-      have hx := readPerformFace_exact hl hface
-      cases face with
-      | perform op r =>
-        have hrow : printRow n (sig.rowOf op) r = .ok x := hx
-        simp only [termFree] at h
-        split at h
-        · next hnone =>
-          cases h
-          rw [print_perform, printPerform, Option.isNone_iff_eq_none.mp hnone]
-          exact hrow
-        · exact nomatch h
-      | _ => exact nomatch h
+    cases htyped : readCall classes sig spell n x with
+    | error why =>
+      rw [htyped] at h
+      exact nomatch h
+    | ok typed =>
+      rw [htyped] at h
+      obtain ⟨op, r, rfl, hcall⟩ := readCall_exact hl htyped
+      simp only [termFree] at h
+      split at h
+      · next hnone =>
+        cases h
+        rw [print_perform, printPerform, Option.isNone_iff_eq_none.mp hnone]
+        exact hcall
+      · exact nomatch h
 
 end ReadExact
 
@@ -1883,5 +2311,6 @@ theorem nativeLawful (table : RowTable := []) (h : LawfulTable table = true := b
     intro op f hnone
     change op.binder?.map (fun b => (⟨b.2, b.1.param, b.1.result⟩ : BinderTerm)) = none at hnone
     exact NativeOp.withTerm_of_none (Option.map_eq_none_iff.mp hnone) f
+  typeArgs := LawfulTypeArgs.ofNone (fun _ => rfl) (fun _ _ => rfl)
 
 end Effect4.Program

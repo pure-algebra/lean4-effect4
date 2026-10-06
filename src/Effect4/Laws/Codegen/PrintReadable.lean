@@ -441,22 +441,93 @@ theorem printRow_ok {row : Row} {n : Nat} {r : Term} (h : requestReadable row n 
   cases hs : row.shape <;> rw [hs] at h <;>
     aesop (add norm simp [printRowHead, printMethod, bind, Except.bind, Option.isSome_iff_exists])
 
-/-- **The row call of `perform` prints** where its request reads back on the row and its binder
-term reads back there (`termReadable`): the row's call prints (`printRow_ok`), and a row that
-is no value row prints a call, which carries the term's function (`withFunction_printRow`).
+/-- A row that is no value row and declares no type argument of its own prints a bare call or a
+bare method call, which carries type arguments on its head. A step of `printCall_ok`. -/
+theorem withHeadTypes_printRow {n : Nat} {row : Row} {r : Term} {call : Expr}
+    (h : printRow n row r = .ok call) (hshape : row.shape ≠ .value)
+    (hnone : row.typeArgs = []) (spelling : String) (targets : List TypeScript.TypeRef) :
+    ∃ x, withHeadTypes spelling targets call = .ok x := by
+  have hta : rowTypeArgs row = some [] := by
+    simp only [rowTypeArgs, hnone, List.mapM_nil, pure]
+  cases hs : row.shape with
+  | value => exact absurd hs hshape
+  | call =>
+    simp only [printRow, hs, printRowHead, hta, ok_bind] at h
+    split at h <;> (cases h; exact ⟨_, rfl⟩)
+  | tupleCall =>
+    simp only [printRow, hs, printRowHead, hta, ok_bind] at h
+    cases h
+    exact ⟨_, rfl⟩
+  | method =>
+    simp only [printRow, hs] at h
+    split at h <;>
+      (simp only [printMethod, hta] at h
+       cases h
+       exact ⟨_, rfl⟩)
+
+/-- **A row's call with its operation's type arguments prints** where its request reads back on
+the row and its type arguments read back there (`typeArgsReadable`): each readable type has a
+printed form (`writeTys_of_readable`), and a call row that declares no type argument of its own
+carries them on its head (`withHeadTypes_printRow`). A step of `printPerform_ok`. -/
+theorem printCall_ok {sig : Signature Op} {n : Nat} {op : Op} {r : Term}
+    (hreq : requestReadable (sig.rowOf op) n r = true)
+    (htypes : typeArgsReadable (sig.rowOf op) (sig.typeArgsOf op) = true) :
+    ∃ x, printCall sig n op r = .ok x := by
+  obtain ⟨call, hcall⟩ := printRow_ok hreq
+  unfold printCall
+  cases hargs : sig.typeArgsOf op with
+  | nil => exact ⟨call, hcall⟩
+  | cons ty tys =>
+    rw [hargs] at htypes
+    simp only [typeArgsReadable, Bool.and_eq_true, Bool.not_eq_true', decide_eq_false_iff_not,
+      List.isEmpty_iff] at htypes
+    obtain ⟨⟨hread, hshape⟩, hnone⟩ := htypes
+    obtain ⟨targets, hw⟩ := Effect4.Codegen.Classes.writeTys_of_readable hread
+    obtain ⟨x, hx⟩ := withHeadTypes_printRow hcall hshape hnone (sig.rowOf op).spelling targets
+    exact ⟨x, by simp only [hw, hcall]; exact hx⟩
+
+/-- A row call that is no value row's stays a call under type arguments on its head, so it
+still carries a function. A step of `printPerform_ok`. -/
+theorem withFunction_printCall {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {call : Expr}
+    (h : printCall sig n op r = .ok call) (hshape : (sig.rowOf op).shape ≠ .value)
+    (spelling : String) (fn : Expr) : ∃ x, withFunction spelling fn call = .ok x := by
+  unfold printCall at h
+  split at h
+  · exact withFunction_printRow h hshape spelling fn
+  · split at h
+    · cases hcall : printRow n (sig.rowOf op) r with
+      | error why =>
+        rw [hcall] at h
+        exact nomatch h
+      | ok bare =>
+        rw [hcall] at h
+        simp only [Except.bind, withHeadTypes] at h
+        split at h
+        · cases h
+          exact ⟨_, rfl⟩
+        · cases h
+          exact ⟨_, rfl⟩
+        · exact nomatch h
+    · exact nomatch h
+
+/-- **The row call of `perform` prints** where its request reads back on the row, its type
+arguments read back there (`typeArgsReadable`) and its binder term reads back there
+(`termReadable`): the row's call prints with its type arguments (`printCall_ok`), and a row that
+is no value row prints a call, which carries the term's function (`withFunction_printCall`).
 A step of `print_node`, whose consumers are the module laws (`printed-modules`, R2/R3). -/
 theorem printPerform_ok {sig : Signature Op} {n : Nat} {op : Op} {r : Term}
     (hreq : requestReadable (sig.rowOf op) n r = true)
+    (htypes : typeArgsReadable (sig.rowOf op) (sig.typeArgsOf op) = true)
     (hterm : termReadable classes n (sig.rowOf op) ((sig.termOf op).map (·.term)) = true) :
     ∃ x, printPerform sig n op r = .ok x := by
-  obtain ⟨call, hcall⟩ := printRow_ok hreq
+  obtain ⟨call, hcall⟩ := printCall_ok hreq htypes
   unfold printPerform
   cases hb : sig.termOf op with
   | none => exact ⟨call, hcall⟩
   | some b =>
     rw [hb, Option.map_some] at hterm
     simp only [termReadable, Bool.and_eq_true, Bool.not_eq_true', decide_eq_false_iff_not] at hterm
-    obtain ⟨x, hx⟩ := withFunction_printRow hcall hterm.2 (sig.rowOf op).spelling
+    obtain ⟨x, hx⟩ := withFunction_printCall hcall hterm.2 (sig.rowOf op).spelling
       (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term))
     exact ⟨x, by rw [hcall]; exact hx⟩
 
@@ -517,7 +588,7 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
       tableLayer sig fam ctor (args.map (ArgF.fold (printAlg sig))) :=
     cata_build (tableLayer sig) fam ctor args e hbuild
   rw [hcata]
-  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, r, hout, hargs, hd', hreq, _, _, hterm⟩
+  rcases hcase with ⟨t, hout, hr'⟩ | ⟨op, r, hout, hargs, hd', hreq, _, _, htypes, hterm⟩
   · -- a skeleton row: the arguments print and the skeleton instantiates
     obtain ⟨τ, hτ⟩ := printArgs_ok args 0 hr' ih'
     have hkinds : Kinds τ (RowOut.holeKinds row.out) := by
@@ -533,7 +604,7 @@ theorem print_node {fam : EffFam} (hfam : fam = .eff ∨ fam = .action ∨ fam =
   · -- the row call
     have hargs' := fold_eq_op_term (readableAlg classes sig) hargs
     subst hargs'
-    obtain ⟨x, hx⟩ := printPerform_ok hreq hterm
+    obtain ⟨x, hx⟩ := printPerform_ok hreq htypes hterm
     have hfind'' : (table.find? fun r' => r'.selects fam ctor
         ([.op op, .term r] : List (ArgF Op Carrier))) = some row := by
       simpa only [List.map_cons, List.map_nil, ArgF.fold] using hfind'

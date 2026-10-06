@@ -673,17 +673,18 @@ def twoOffers : Src NativeOp := eff do
 `Laws/Codegen/Read.lean`) keep their statements. Their row-call steps are the two theorems
 below, at their exact propositions over the native signature. -/
 
-/-- The row call's round trip at a term row: a readable request and a term that reads back on
-its row (`termReadable`). -/
+/-- The row call's round trip at a term row: a readable request, type arguments that read back
+on the row (`typeArgsReadable`) and a term that reads back there (`termReadable`). -/
 example {classes : Effect4.Codegen.Classes.Classes} {n : Nat} {op : NativeOp} {r : Term}
     (hd : nativeSignature.dom op = true)
     (hreq : requestReadable (nativeSignature.rowOf op) n r = true)
     (hc : r.covers classes = true) (hu : r.unannotated = true)
+    (htypes : typeArgsReadable (nativeSignature.rowOf op) (nativeSignature.typeArgsOf op) = true)
     (hterm : termReadable classes n (nativeSignature.rowOf op)
       ((nativeSignature.termOf op).map (·.term)) = true)
     {x : TypeScript.Expr} (hp : printPerform nativeSignature n op r = .ok x) :
     readPerform classes nativeSignature nativeSpell n x = .ok (.perform op r) :=
-  readPerform_printPerform nativeLawful hd hreq hc hu hterm hp
+  readPerform_printPerform nativeLawful hd hreq hc hu htypes hterm hp
 
 /-- The row call's exactness: what the reader accepts prints back to the tree it read. -/
 example {classes : Effect4.Codegen.Classes.Classes} {n : Nat} {x : TypeScript.Expr}

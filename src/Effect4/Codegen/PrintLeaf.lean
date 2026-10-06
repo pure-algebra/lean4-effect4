@@ -55,7 +55,9 @@ inductive PrintRefusal
   | layerRef (target : List Nat)
   /-- A row table carries an unsafe spelling (colliding with binders or reserved heads). -/
   | unsafeName (spelling : String)
-  /-- A legacy target type has no structural reading in the supported profile. -/
+  /-- A legacy target type has no structural reading in the supported profile. Named by a row's
+  spelling, it is also the refusal of an operation's type arguments (`printCall`): one of them
+  has no printed form, or the row's call cannot carry them on its head (`withHeadTypes`). -/
   | typeSpelling (text : String)
   /-- An error payload class the module cannot declare, named by its tag (decisions row 120). -/
   | payloadClass (tag : String) (why : ClassRefusal)
@@ -341,6 +343,60 @@ def printRow (n : Nat) (row : Row) (request : Term) : Except PrintRefusal TypeSc
     | none =>
       printMethod n row (.app "fst" (.cons request .nil)) (.app "snd" (.cons request .nil))
 
+/-- **The columns of a row that its printed call shows**, and that a reader reads back: the
+spelling, the shape, the trailing names, the request and the declared type arguments (the legacy
+spellings a supplied row holds). `printRow` reads these five and nothing else
+(`printRow_congr`). The answer column, the error column and the requirements are not among them.
+An operation's own type arguments (`Signature.typeArgsOf`) move its row's answer and error:
+`Deferred.make<A, E>` answers `Deferred<A, E>`. They leave these five as they are
+(`LawfulTypeArgs.call`, `Codegen/Read.lean`), so a reader states its laws on them and not on the
+whole row (the state plan's T5, part B). -/
+def Row.callColumns (row : Row) : String × RowShape × List String × Ty × List String :=
+  (row.spelling, row.shape, row.trailing, row.request, row.typeArgs)
+
+/-- Two rows with the same call columns print the same call on every request. The consumer is
+the row call's exactness at an operation that carries type arguments (`readCall_exact`,
+`Laws/Codegen/ReadLeaf.lean`): the restored operation's row prints the call that the face's row
+prints. -/
+theorem printRow_congr {row row' : Row} (h : row.callColumns = row'.callColumns) (n : Nat)
+    (request : Term) : printRow n row request = printRow n row' request := by
+  obtain ⟨name, spelling, shape, trailing, kind, req, answer, error, requires, cite, typeArgs,
+    registration⟩ := row
+  obtain ⟨name', spelling', shape', trailing', kind', req', answer', error', requires', cite',
+    typeArgs', registration'⟩ := row'
+  simp only [Row.callColumns, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl, rfl, rfl, rfl⟩ := h
+  rfl
+
+/-- **A printed row call with type arguments on its head**: `s(args)` as `s<T…>(args)`, and a
+method call `r.s(args)` as `r.s<T…>(args)`. The row's own call must be one of these two. A value
+row prints a bare name, and a row that declares type arguments of its own already carries
+them: such a row is refused by its spelling. -/
+def withHeadTypes (spelling : String) (targets : List TypeScript.TypeRef) :
+    TypeScript.Expr → Except PrintRefusal TypeScript.Expr
+  | .call (.ident s) args => .ok (.call (.generic (.ident s) targets) args)
+  | .method receiver name args => .ok (.call (.generic (.member receiver name) targets) args)
+  | _ => .error (.typeSpelling spelling)
+
+/-- **The row's call with the operation's type arguments**: the row's call on the request
+(`printRow`), and on its head the type arguments that the operation carries
+(`Signature.typeArgsOf`), each as the type printer prints it (`Types.ofTy`, through
+`Classes.writeTys`). `Deferred.make` at the instance `(unit, never)` prints
+`Deferred.make<void, never>()`: no type argument is spelled by hand, so every instance whose
+types have a printed form prints (the state plan's T5, part B). A type argument with no printed
+form refuses the row by its spelling (`PrintRefusal.typeSpelling`): a row template's parameter,
+a nominal application at arguments, a map whose key is no string, and a handle whose legacy
+name does not parse. An operation that carries no type argument prints its row's call alone. -/
+def printCall {Op : Type} (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
+    Except PrintRefusal TypeScript.Expr :=
+  match sig.typeArgsOf op with
+  | [] => printRow n (sig.rowOf op) request
+  | ty :: tys =>
+    match Effect4.Codegen.Classes.writeTys (ty :: tys) with
+    | some targets =>
+      (printRow n (sig.rowOf op) request).bind (withHeadTypes (sig.rowOf op).spelling targets)
+    | none => .error (.typeSpelling (sig.rowOf op).spelling)
+
 /-- A printed row call with one more argument, after the request and the trailing names: the
 function an operation's binder term prints as (`Binders.write`, `Codegen/ListFold.lean`). A call
 and a method call carry it. A value row prints a bare name, which carries no argument: such a
@@ -351,18 +407,20 @@ def withFunction (spelling : String) (fn : TypeScript.Expr) :
   | .method receiver name args => .ok (.method receiver name (args ++ [fn]))
   | _ => .error (.binderTerm spelling)
 
-/-- **The row call of `perform`**: the row's call on the request (`printRow`), and after it the
-operation's binder term as a function of the current value, `(aN) => body`. The term's body
-prints one level up: the current value is the binder at the node's level `n` (`ScopedOp`'s
-convention), so an outer capture prints as the binder it names and a list fold inside the term
-prints its own two binders above it. An operation that carries no term prints its row's call
-alone. Every term prints this way: no term has a second printed form (the state plan's T5). -/
+/-- **The row call of `perform`**: the row's call on the request with the operation's type
+arguments on its head (`printCall`), and after its arguments the operation's binder term as a
+function of the current value, `(aN) => body`. The term's body prints one level up: the current
+value is the binder at the node's level `n` (`ScopedOp`'s convention), so an outer capture prints
+as the binder it names and a list fold inside the term prints its own two binders above it. An
+operation that carries no term prints its call alone. Every term prints this way: no term has a
+second printed form (the state plan's T5). The two additions are independent: the type
+arguments go on the head, and the function goes after the arguments. -/
 def printPerform {Op : Type} (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     Except PrintRefusal TypeScript.Expr :=
   match sig.termOf op with
-  | none => printRow n (sig.rowOf op) request
+  | none => printCall sig n op request
   | some b =>
-    (printRow n (sig.rowOf op) request).bind
+    (printCall sig n op request).bind
       (withFunction (sig.rowOf op).spelling
         (Effect4.Codegen.Binders.write n [0] (printTerm (n + 1) b.term)))
 
