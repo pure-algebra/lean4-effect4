@@ -283,5 +283,56 @@
         "new": "g0\tfalse\tfalse\t22\tnotFiber"
       }
     ]
+  },
+  {
+    "name": "R14 a corpus header moves the length column and relabels two verdict columns",
+    "expect": "REFUSE",
+    "clause": "C3",
+    "edits": [
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "# name\twellTyped\treadable\tchars\treason\tpath\tcodes",
+        "new": "# name\tchars\treadable\twellTyped\treason\tpath\tcodes"
+      },
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "g0\tfalse\ttrue\t21\tnotFiber",
+        "new": "g0\t22\tfalse\ttrue\tnotFiber"
+      }
+    ]
+  },
+  {
+    "name": "R15 a corpus table loses its header and a row loses its length cell",
+    "expect": "REFUSE",
+    "clause": "C3",
+    "edits": [
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "# name\twellTyped\treadable\tchars\treason\tpath\tcodes\n",
+        "new": ""
+      },
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "g0\tfalse\ttrue\t21\tnotFiber",
+        "new": "g0\tfalse\ttrue\tnotFiber"
+      }
+    ]
+  },
+  {
+    "name": "R16 a second length column holds a changed verdict",
+    "expect": "REFUSE",
+    "clause": "C3",
+    "edits": [
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "# name\twellTyped\treadable\tchars\treason\tpath\tcodes",
+        "new": "# name\twellTyped\treadable\tchars\tchars\treason\tpath\tcodes"
+      },
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "g0\tfalse\ttrue\t21\tnotFiber",
+        "new": "g0\tfalse\ttrue\t21\tfalse\tnotFiber"
+      }
+    ]
   }
 ]

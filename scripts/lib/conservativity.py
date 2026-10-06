@@ -37,7 +37,10 @@ an unresolved revision or a failed git command (with the message); 2 on a usage 
                 harness/truth/corpus-results.tsv (the host lane, as committed): every BASE row is in
                 CAND unchanged, unless the policy names its move (`verdict_moves`, `path:key`). A
                 column that a table's own header names `chars` measures the printed text and is no
-                verdict: a row that moves in that column alone is reported and not refused. The
+                verdict: a row that moves in that column alone is reported and not refused. That
+                holds only under one header: the same columns in the same order at BASE and CAND,
+                one measure among them, both rows at the header's width. Any other row is compared
+                exactly. The
                 golden tables (metadata.tsv, cases.txt, the CAS manifest, same-programs.txt) keep
                 every BASE line in order; the coverage tables keep every BASE key at a count no
                 smaller, except a constructor the policy names as retired, or one of a family the
@@ -53,9 +56,10 @@ The controls (`--self-test`): the ten of probe Q, each a mutation of a scratch e
 judged against HEAD (R1-R9 refuse on the clause they name, G1 the wave appended and named passes);
 the four of the named retirement and the named verdict move (seat T3a: R10 and R11 a retirement
 the policy does not name, refused by C3 and C2; G2 the same retirement named, G3 R6's verdict move
-named, both pass); the two of the printed length (G5 a row moves in `chars` alone and passes; R13
-the same row moves in `chars` and in a verdict column and is refused by C3); the two of the named
-family retirement (seat T3b: R12 a family's line leaves a
+named, both pass); the five of the printed length (G5 a row moves in `chars` alone and passes; R13
+the same row moves in `chars` and in a verdict column; R14 the header moves `chars` and relabels
+two verdict columns; R15 the header and a row's `chars` cell leave; R16 a second `chars` column
+holds a changed verdict: all four refused by C3); the two of the named family retirement (seat T3b: R12 a family's line leaves a
 generated manifest and the policy does not name the family, refused by C2; G4 the family named,
 its lines and its count rows leave, passes); and six on the revisions themselves, each run as
 this command: an invalid BASE, an invalid CAND and both invalid, each with and without --strict,
@@ -371,13 +375,28 @@ def keyed(text):
 MEASURES = ('chars',)
 
 
-def verdict(text):
-    """A table's rows without the columns that measure the printed text. The table's own header
-    line names its columns; a table with no header keeps every column."""
+def columns(text):
+    """The column names of a table's own header line; None for a table with no header."""
     header = next((l for l in (text or '').splitlines() if l.startswith('# name\t')), None)
-    skip = {i for i, c in enumerate(header[2:].split('\t')) if c in MEASURES} if header else set()
-    return {k: tuple(c for i, c in enumerate(l.split('\t')) if i not in skip)
-            for k, l in keyed(text).items()}
+    return header[2:].split('\t') if header else None
+
+
+def length_only(base_cols, cand_cols, base_line, cand_line):
+    """Whether two rows of one table differ in its measure column alone. The answer is yes only
+    under one header: BASE and CAND name the same columns in the same order, exactly one of them
+    is a measure, both rows have the header's width, and both measure cells are numbers. Then the
+    rows are compared cell by cell under that header. Any other shape is no length move, and the
+    caller compares the rows exactly (Codex's review of 7f77bd03: a header that moved `chars`
+    relabelled two verdict columns and passed)."""
+    if base_cols is None or cand_cols != base_cols or cand_line is None:
+        return False
+    measures = [i for i, c in enumerate(base_cols) if c in MEASURES]
+    b, c = base_line.split('\t'), cand_line.split('\t')
+    if len(measures) != 1 or len(b) != len(base_cols) or len(c) != len(base_cols):
+        return False
+    m = measures[0]
+    return (b[m].isdigit() and c[m].isdigit()
+            and all(x == y for i, (x, y) in enumerate(zip(b, c)) if i != m))
 
 
 def c3(base, cand, pol):
@@ -390,11 +409,11 @@ def c3(base, cand, pol):
         if tb is None:
             print(f'  {path}: absent at BASE (not judged)'); continue
         kb, kc = keyed(tb), keyed(tc)
-        vb, vc = verdict(tb), verdict(tc)
+        cb, cc = columns(tb), columns(tc)
         judged += len(kb)
         for k, line in kb.items():
             if kc.get(k) != line:
-                if k in vc and vc[k] == vb[k]:
+                if length_only(cb, cc, line, kc.get(k)):
                     resized.append(f'{path}:{k}')
                 elif f'{path}:{k}' in named_moves:
                     moved.append(f'{path}:{k}')
