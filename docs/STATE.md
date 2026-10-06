@@ -164,8 +164,9 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
   Pool's and Cache's cards are not written.
 
   [The rulings note](research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md) gives a
-  recommended ruling for each open question of this stretch, with its evidence. Eight need
-  the owner's word. No recommendation there is a ruling.
+  recommended ruling for each open question of this stretch, with its evidence. The owner
+  ruled its eight questions as recommended on 2026-10-06 (rows 259 to 265, below). The eighth
+  was a command of the owner's, and it is run.
 
 Where to read:
 
@@ -211,6 +212,25 @@ More rulings of the same day (rows 235 to 248):
 - the Queue's cell and steps are a library slice: a composed module lives in a new layer of
   the runtime root, above `Program`, and its laws in the law graph. The abstract model moves
   into the law graph, each step has one planned goal, and no binding form is added (row 255).
+
+Ruled on 2026-10-06, each as recommended (rows 259 to 265):
+
+- Semaphore's wake is the live scan: one visit at a time, and a wake reserves nothing (row
+  259);
+- Semaphore's first profile has six operations at a fixed total, without `resize` and
+  `releaseAll` (row 260);
+- the profile's law covers a release of at most what is taken, and the step releases no more
+  (row 261);
+- the target evaluator comes under the trust ceiling, by two string rules in byte form (row
+  262). The slice has no date;
+- the compiler checkpoint joins the local sweep by one marker rule (row 263; landed
+  `0acec081`);
+- a TypeScript compiler client stays inside `tools/target`, and no package is published (row
+  264);
+- Semaphore's cell and steps start now, as a third seat (row 265). Seat SEM has them since
+  2026-10-06 (branch `seat/semaphore`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-sem-brief.md)). Its first step runs
+  the card's cases on our machine: no Semaphore program ran there before the ruling.
 
 Landed later on 2026-10-05:
 
@@ -355,9 +375,17 @@ Landed later on 2026-10-05:
   names. The registry places the two new modules under `store-typing`. Not proved: a string
   literal as a caller's term, and the wrapper's law at its own scope.
 - **Two tooling repairs** (`e6d63ddb`, `db54a849`, `d5b4d9cb`, `34e9423a`). The engine's
-  fixtures are a generated group: a fixture that changes alone is written again, and the check
-  form refuses an output that aliases a lane and a fixture folder with no writer. The plan's
+  fixtures are a generated group, and a fixture that changes alone is written again. The check
+  form refuses an output that aliases a lane, and a fixture folder with no writer. The plan's
   dependency walk gives no answer from an unfinished stack.
+- **The retry form of the first acceptance program sleeps its base first** (2026-10-06; seat
+  DOGFOOD's finding). It doubled its delay before its first sleep. The builds rc.112 and 4.0.1
+  sleep 100, 200 and 400 ms at a base of 100
+  (`research/2026-10-05-claude-lead/retry-probe/`, one host run each). `Test/Dogfood/P1HttpCache.lean` now pins the sleeps' deadlines, which no guard
+  read before. The timeout scenario's scripts and its engine fixture follow.
+- **The fixtures group runs while the build is red on a stale fixture** (2026-10-06). Its
+  marker depended on traces whose rule is `build`. A changed program then made the build
+  fail on the old fixture, and the group could not write the new one.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
@@ -428,8 +456,9 @@ Open at this landing:
   - the host half: a scenario's whole observation on the printed module, on the keyed lane.
     The four programs print and read back (`Test/Dogfood/Scenario/Faces.lean`). The keyed
     recorder needs one extension, an operation that completes after its cancellation.
-    [Its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md) is written ahead.
-    It goes to the next free seat;
+    Seat HOST has it since 2026-10-06 (branch `seat/host`;
+    [its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md)). It took the slot
+    that seat QTYPES freed;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
@@ -495,11 +524,15 @@ Open at this landing:
   - the target evaluator is outside the trust ceiling. Its rules for the length of a string
     and for the order of two strings reach `Classical.choice`. The seat proposes their byte
     forms as a slice of its own, with a control for the order of strings. Then a lowering law
-    is a declaration of a battery. This is the owner's to rule;
-  - the registry's claim for the law of `let x = e in x` waits on that ruling;
+    is a declaration of a battery. The owner ruled the byte forms (row 262), and the slice
+    has no seat and no date;
+  - the registry's claim for the law of `let x = e in x` waits on that slice;
   - seven callback names of the builtin table have no rule in the evaluator, and a call is a
     refusal;
-  - no lane runs the runner's tests or the compiler checkpoint without a person;
+  - the compiler checkpoint runs in the CI job `check-ocaml`, at a push, a pull request or a
+    manual run (`.github/workflows/lean_action_ci.yml`). That is a reading of the
+    configuration, and no remote run is checked. Since `0acec081` it also runs in the local
+    sweep, as `make check-compiler` (row 263). The runner's own script tests run by hand;
   - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
 - the proposed decisions rows of four seats' receipts (T3b, M0, LOWER and DOGFOOD), for the
   owner;
@@ -507,9 +540,10 @@ Open at this landing:
   ([its recommendations](research/2026-10-05-codex-foundation-packet/implementation-audit/tsgo-research/recommendations.md);
   source reading, and no compiler run). It proposes an optional compiler client beside the
   Lean `typescript` package, extracted from the target oracle and its checker. The Effect
-  admission and the comparison of answer, error and requirement types stay in this tree. No
-  seat has it, and the proposal is the owner's to rule. Its one small finding landed with seat
-  T5's part A: the pinned truth check compiles the tuple control;
+  admission and the comparison of answer, error and requirement types stay in this tree. The
+  owner ruled its boundary (row 264): the client is built inside `tools/target` with its next
+  caller, and no package is published. Its one small finding landed with seat T5's part A:
+  the pinned truth check compiles the tuple control;
 - Codex's research on macros and declarations is filed
   ([its report](research/2026-10-05-codex-foundation-packet/implementation-audit/macro-research/report.md);
   source reading, and no Lean run). It proposes four small changes and no macro framework:

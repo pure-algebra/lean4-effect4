@@ -13,7 +13,7 @@ requested profile once in an empty directory and keeps the receipt under `.lake/
 
 ```sh
 python3 scripts/check-conform.py                      # the native layout (make check-native)
-python3 scripts/check-conform.py compiler             # actual emitted OCaml checkpoint
+python3 scripts/check-conform.py compiler             # actual emitted OCaml checkpoint (make check-compiler)
 make check-cases                                      # compiled cases / mirrors / rules (python3 scripts/check-conform.py cases)
 python3 scripts/test-conform-runner.py                # the runner's own controls: no Lean, no compiler
 ```

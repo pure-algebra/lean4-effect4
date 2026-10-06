@@ -24,7 +24,7 @@ const refusal = (source: string): Refusal => {
 
 describe("the profile", () => {
   test("retains the declared head and native row inventory", () => {
-    expect(heads.length).toBe(58)
+    expect(heads.length).toBe(60)
     expect(heads).toContain("Scope.Scope")
     // one row per spelling key: a read-modify-write row is its face, and its function is no
     // trailing name (the state plan's T5)

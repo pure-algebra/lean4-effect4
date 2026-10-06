@@ -3,9 +3,10 @@
 
     python3 scripts/check-conform.py [PROFILE ...]      default: native
 
-`make check-cases` and `make check-native` run the `cases` and `native` profiles; `compiler`
-runs by name (CI's OCaml job). Each profile is a producer that gets an empty directory and
-must write exactly its named files. A profile states the role of each file: a report, with
+`make check-cases`, `make check-native` and `make check-compiler` run the `cases`, `native`
+and `compiler` profiles; CI's OCaml job runs `compiler` by name. Each profile is a producer
+that gets an empty directory and must write exactly its named files. A profile states the
+role of each file: a report, with
 the tool identity it must carry, or an artifact. `conform_report.fresh_run` validates the
 reports, refuses an input that changed during the run, and keeps the receipt under
 `.lake/conform/`. A refused run publishes nothing: its files, its command and its full output

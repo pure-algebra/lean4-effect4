@@ -1,5 +1,5 @@
 {"note":
- "Effect4's case-site policy for `Conform.Lcnf.Cases`. SEEDED from a measured scan at seat/audit (`--seed-policy`), then annotated by hand on the two rows that are decisions rather than facts (`Ty.renderRaw`, `Val.hasTy`). It is a PIN, not a proof: it records what the compiled code does today so that tomorrow's drift is a red row. Regenerate the seed with `--seed-policy` and diff; never overwrite the notes. REMOVED 2026-09-10 (idiomatic pass, audit seat): the rule for `Effect4.Program.compileEff` on `Effect4.Program.NativeOp`. That case site was never in the source — the compiler created it by specialising `NativeOp.row` at `.external` — and at `ae85bd6` the compiled code no longer has it, with NO change under src/ between the two commits (`git diff dba71eb..ae85bd6 -- src/` is empty). A case-site count is a count of compiler output read out of a BUILD DIRECTORY, so a gate must build `Effect4` before it scans. If the compiler creates the site again, `unlisted: refuse` catches it as one named row, which is the behaviour this policy wants. DATA LANGUAGE: schema, layout, support, encoding and decoding now project exhaustive generated Ty folds. Their former direct Ty case sites are absent. Historical support note: DI-95 (fixed 2026-09-18): the classifier lists its positive arms (never, unit, nat, string, bool, lit, and the containers) and closes with `| _ => false`, so this default absorbs the NEGATIVE class — handle, int, fiberOf, refOf, deferredOf, var, unknown — exactly the types encodeRaw/decodeRaw refuse. An appended constructor lands here, unsupported, until it is given an arm in all three. RE-PINNED 2026-10-05 for `Term.fold` (seat FOLD's merge): the audit listed twelve functions of the `Term` family whose default arm takes in the new constructor. Each arm was read, and each refuses or answers 'not this shape'. Two hand matches are new and carry their own notes. RE-PINNED 2026-10-05 for the type arguments of `Deferred.make` (seat T5's part B, step a): two matches on `NativeOp` are new, `typeArgs` and `withTypeArgs`, and each carries its note. Each names every operation in the source, and its default is the operations that carry no type argument.",
+ "Effect4's case-site policy for `Conform.Lcnf.Cases`. SEEDED from a measured scan at seat/audit (`--seed-policy`), then annotated by hand on the two rows that are decisions rather than facts (`Ty.renderRaw`, `Val.hasTy`). It is a PIN, not a proof: it records what the compiled code does today so that tomorrow's drift is a red row. Regenerate the seed with `--seed-policy` and diff; never overwrite the notes. REMOVED 2026-09-10 (idiomatic pass, audit seat): the rule for `Effect4.Program.compileEff` on `Effect4.Program.NativeOp`. That case site was never in the source — the compiler created it by specialising `NativeOp.row` at `.external` — and at `ae85bd6` the compiled code no longer has it, with NO change under src/ between the two commits (`git diff dba71eb..ae85bd6 -- src/` is empty). A case-site count is a count of compiler output read out of a BUILD DIRECTORY, so a gate must build `Effect4` before it scans. If the compiler creates the site again, `unlisted: refuse` catches it as one named row, which is the behaviour this policy wants. DATA LANGUAGE: schema, layout, support, encoding and decoding now project exhaustive generated Ty folds. Their former direct Ty case sites are absent. Historical support note: DI-95 (fixed 2026-09-18): the classifier lists its positive arms (never, unit, nat, string, bool, lit, and the containers) and closes with `| _ => false`, so this default absorbs the NEGATIVE class — handle, int, fiberOf, refOf, deferredOf, var, unknown — exactly the types encodeRaw/decodeRaw refuse. An appended constructor lands here, unsupported, until it is given an arm in all three. RE-PINNED 2026-10-05 for `Term.fold` (seat FOLD's merge): the audit listed twelve functions of the `Term` family whose default arm takes in the new constructor. Each arm was read, and each refuses or answers 'not this shape'. Two hand matches are new and carry their own notes. RE-PINNED 2026-10-05 for the type arguments of `Deferred.make` (seat T5's part B, step a): two matches on `NativeOp` are new, `typeArgs` and `withTypeArgs`, and each carries its note. Each names every operation in the source, and its default is the operations that carry no type argument. RE-PINNED 2026-10-06 for `Eff.restore` (seat MASK's first step): the audit listed ten functions of the `Eff` family whose default arm takes in the new constructor. Each arm was read. `Straight` names the constructor and answers false with its reason. `docsBody`, `forkScopedAt`, `loopAt` and `loopResultAt` answer none. `provideLayerWithK` answers the wrong shape, `contEOf` passes the failure on, `syncValueAt` answers unit, and `evaluateNative` goes to the shared evaluator. `suspendBodyAt` compiles the node at its point, as it does for every head that it does not decide itself. No hand match is new.",
  "families":
  [{"unlisted": "refuse",
    "name": "Effect4.Program.Ty",
@@ -2880,7 +2880,8 @@
       "provideService",
       "catchIf",
       "select",
-      "iterate"]},
+      "iterate",
+      "restore"]},
     {"name": "Effect4.Program.loopAt",
      "mode": "default",
      "cover":
@@ -2907,7 +2908,8 @@
       "service",
       "provideService",
       "catchIf",
-      "select"]},
+      "select",
+      "restore"]},
     {"name": "Effect4.Program.contEOf",
      "mode": "default",
      "cover":
@@ -2934,7 +2936,8 @@
       "service",
       "provideService",
       "select",
-      "iterate"]},
+      "iterate",
+      "restore"]},
     {"name": "Effect4.Program.suspendBodyAt",
      "mode": "default",
      "cover":
@@ -2957,7 +2960,8 @@
       "acquireRelease",
       "service",
       "provideService",
-      "catchIf"]},
+      "catchIf",
+      "restore"]},
     {"note":
      "Only `iterate` has a result term; every other form finishes a loop with unit.",
      "name": "Effect4.Program.loopResultAt",
@@ -2986,7 +2990,8 @@
       "service",
       "provideService",
       "catchIf",
-      "select"]},
+      "select",
+      "restore"]},
     {"name": "Effect4.Program.provideLayerWithK",
      "mode": "default",
      "cover":
@@ -3013,7 +3018,8 @@
       "provideService",
       "catchIf",
       "select",
-      "iterate"]},
+      "iterate",
+      "restore"]},
     {"name": "Effect4.Program.actionAt",
      "mode": "default",
      "cover":
@@ -3066,7 +3072,8 @@
       "provideService",
       "catchIf",
       "select",
-      "iterate"]},
+      "iterate",
+      "restore"]},
     {"name": "Effect4.Program.forkScopedAt",
      "mode": "default",
      "cover":
@@ -3093,7 +3100,8 @@
       "provideService",
       "catchIf",
       "select",
-      "iterate"]},
+      "iterate",
+      "restore"]},
     {"name": "Effect4.Program.compileEff",
      "mode": "default",
      "cover": ["suspend", "gen", "provideLayer", "select", "iterate"]},
@@ -3123,7 +3131,8 @@
       "provideService",
       "catchIf",
       "select",
-      "iterate"]},
+      "iterate",
+      "restore"]},
     {"note":
      "The existing classifier now lives in Program/Fragment and is reachable from the runtime API. These constructors remain outside the fragment; moving the owner does not widen admission.",
      "name": "Effect4.Program.Denote.Straight",
@@ -3141,7 +3150,8 @@
       "service",
       "provideService",
       "catchIf",
-      "iterate"]}]},
+      "iterate",
+      "restore"]}]},
   {"unlisted": "refuse",
    "name": "Effect4.Program.NativeOp",
    "functions":

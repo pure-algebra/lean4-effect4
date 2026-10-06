@@ -72,7 +72,7 @@ def attempt (resets : Bool) (count ended : TermSrc) : Src NativeOp :=
 
 /-- The client: p1's fetch over the counting attempt. A 2000 ms timeout bounds each attempt, and
 `retries` is the retry form's test of a typed failure. The form allows three retries, on the
-delays 200, 400 and 800 ms. The cells are the count and the cleanup log, in allocation order. -/
+delays 100, 200 and 400 ms. The cells are the count and the cleanup log, in allocation order. -/
 def client (retries : TermSrc → TermSrc) (resets : Bool) : Module NativeOp :=
   { rows := [getQuote]
     main := eff do
@@ -117,7 +117,7 @@ def parked : List Move := [.start, .flush, .hold http]
 
 /-- The timer wins the first attempt. After the first delay the second attempt parks, and the
 host holds its call. -/
-def timedOut : List Move := script [parked, [.tick 2000, .tick 200, .hold http]]
+def timedOut : List Move := script [parked, [.tick 2000, .tick 100, .hold http]]
 
 /-- A reply that names a call id and a key of its own choice: a forged reply. -/
 def forged (callId : Nat) (key : Key) (completion : Api.HostSession.Answer) : Reply :=
@@ -355,7 +355,7 @@ def atTimedOut : Observation :=
     retired := [(key1, false)]
     attempts := 2
     cleanups := [ended 1 true]
-    timers := [(6, 4200)] }
+    timers := [(6, 4100)] }
 
 /-- The second attempt's reply was applied, and the root answered it. -/
 def atSecond : Observation :=
@@ -374,7 +374,7 @@ def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 a refusal compares the refused rows beside it. -/
 def controlsOf (b eager resetting : Api.Built) : List Control :=
   let run := fun (parts : List (List Move)) => Scenario.play (opened b) (script parts)
-  let notFound := [parked, answer http (failed "HttpError" "404"), [.tick 200, .flush, .hold http]]
+  let notFound := [parked, answer http (failed "HttpError" "404"), [.tick 100, .flush, .hold http]]
   let late := run [timedOut, answer first (ok body1)]
   let kept := run [parked, [.receive http (ok body1), .tick 2000, .apply first]]
   let crossed := run [timedOut, [.row (.submit (forged 0 key2 (ok body1)))]]
@@ -384,7 +384,7 @@ def controlsOf (b eager resetting : Api.Built) : List Control :=
   let recorded := run [timedOut, answer second (ok body2)]
   [ -- only the declared failures retry
     green "declared" "a 503 is declared: after the delay the second attempt calls, and its reply answers"
-      (shows (run [parked, answer http (failed "HttpError" "503"), [.tick 200, .hold http],
+      (shows (run [parked, answer http (failed "HttpError" "503"), [.tick 100, .hold http],
           answer http (ok body2)])
         { atSecond with
           calls := [.failed "HttpError" "503", .answered body2]
@@ -396,7 +396,7 @@ def controlsOf (b eager resetting : Api.Built) : List Control :=
       (shows (run [timedOut]) atTimedOut && (observe (run [timedOut])).retriesDeclared)
   , green "declared" "four timeouts end the retries: the root fails with the timeout"
       (shows (Scenario.play (opened b)
-          [.start, .tick 2000, .tick 200, .tick 2000, .tick 400, .tick 2000, .tick 800, .tick 2000])
+          [.start, .tick 2000, .tick 100, .tick 2000, .tick 200, .tick 2000, .tick 400, .tick 2000])
         { atParked with
           calls := []
           attempts := 4
@@ -438,7 +438,7 @@ def controlsOf (b eager resetting : Api.Built) : List Control :=
             receipts := [key1]
             retired := [(key1, true)]
             cleanups := [ended 1 true]
-            timers := [(0, 2200)] })
+            timers := [(0, 2100)] })
   , red "stale" "the first attempt's reply under the second attempt's key is refused"
       (refused crossed [("submit", .callOrder)] && shows crossed atTimedOut)
     -- cleanup keeps the committed count
@@ -448,9 +448,9 @@ def controlsOf (b eager resetting : Api.Built) : List Control :=
           calls := [.retired false]
           retired := [(key1, false)]
           cleanups := [ended 1 true]
-          timers := [(0, 2200)] })
+          timers := [(0, 2100)] })
   , green "cleanup" "the host interrupts the first attempt: it is cleaned once, and no attempt follows"
-      (shows (run [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 200]])
+      (shows (run [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]])
         { atParked with
           calls := [.retired false]
           retired := [(key1, false)]

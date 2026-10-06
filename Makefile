@@ -225,19 +225,23 @@ SEMANTICS_ROOTS := .lake/build/lib/lean/Test/Program/TypedProgBindRed.trace \
 # writes the lane's *.txt from the programs `Api.Author.build` admits. The engine's dune test
 # reads the files, and a Lean battery binds each by `include_str`. Lake does not take such a
 # file as an input, so a fixture that changed alone left the battery's evidence stale. Here the
-# marker depends on the fixtures themselves, on the writers, and on the traces of the modules
-# that the writers import (read from the writers' own import lines: the writer is the one hand
-# input). A fixture that changes alone is written again from Lean, and `check-gen` refuses a
-# committed fixture that Lean does not write.
+# marker depends on the fixtures themselves, on the writers and on every Lean source. A fixture
+# that changes alone is written again from Lean, and `check-gen` refuses a committed fixture
+# that Lean does not write.
+#
+# The rule does not wait for `build`. When a program changes, the binding battery refuses the
+# old fixture, so the default build is red until the fixture is written again. The producer
+# builds the modules that a writer imports, and no other. Until 2026-10-06 the marker depended
+# on those modules' traces, whose rule is `build`: the group could not repair the staleness that
+# made the build fail.
 ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
-ENGINE_FIXTURE_TRACES := $(foreach m,$(shell sed -n 's/^import //p' $(ENGINE_FIXTURE_WRITERS)),.lake/build/lib/lean/$(subst .,/,$(m)).trace)
 
 # Lake rewrites these traces while `build` runs. Make reads a prerequisite that has no rule once,
 # before any recipe, so a rule whose Lean sources changed saw the old time and stayed stale until
 # a second run (seat T1, 2026-10-04). As targets of `build` with an empty recipe, they are read
 # again after `build`: a rule reruns exactly when a trace moved.
 $(CORE) $(LAWS) $(SEMANTICS_ROOTS) $(TRACE)/Api/HostSession.trace $(TRACE)/Codegen/Schema.trace \
-  .lake/build/lib/lean/Test/Program/Gen.trace $(ENGINE_FIXTURE_TRACES): build ;
+  .lake/build/lib/lean/Test/Program/Gen.trace: build ;
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean tools/Tools/SemanticsRegistry.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
@@ -256,7 +260,7 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LAWS) $(SEMANTICS_ROOTS) | build
 $(GEN)/fixtures-inventory: FORCE
 	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
-$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(ENGINE_FIXTURE_TRACES) scripts/generate.py | build
+$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(LEAN_SOURCES) scripts/generate.py
 	$(PY) scripts/generate.py --only fixtures
 	@mkdir -p $(GEN) && touch $@
 
@@ -346,13 +350,13 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots proof-style cases native ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots proof-style cases native compiler ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs language
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
 
 check: build check-roots check-proof-style check-gen check-tsgo check-docs ## after every change: the build with its axiom gate, the fresh root elaboration, the proof-style ratchet, the generated-file drift, no TypeScript below 7, the authority documents' references
-check-full: check check-slow check-cases check-native check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
+check-full: check check-slow check-cases check-native check-compiler check-ts-reader check-corpus check-truth check-tsdiag check-target check-schema-codec check-ocaml check-ingest-smoke check-tools check-gen-full check-ingest check-host-protocol check-census check-schema-ts check-schema-pins check-semantics ## everything else: the outside oracles, the host groups and the tool harnesses
 
 # Drift: regenerate the stale Lean-only groups, then refuse any change to a committed
 # generated file. `check-gen-full` re-cuts every group, the host-cut ones included,
@@ -465,6 +469,14 @@ $(CHK)/cases: $(CORE) $(CONFORM_SOURCES)
 
 $(CHK)/native: $(CORE) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py native
+	@mkdir -p $(CHK) && touch $@
+
+# The compiler checkpoint (decisions row 263): the OCaml that the LCNF route emits for
+# normalization, compiled and run, with its emitted-code mutations. It is the command of CI's
+# OCaml job (`check-ocaml`), joined to the local sweep. It needs `ocamlopt` of the effect4 switch.
+CONFORM_COMPILER_SOURCES := $(shell find src/OCaml5/Lcnf src/OCaml5/Ml -name '*.lean')
+$(CHK)/compiler: $(CORE) $(CONFORM_SOURCES) $(CONFORM_COMPILER_SOURCES)
+	$(PY) scripts/check-conform.py compiler
 	@mkdir -p $(CHK) && touch $@
 
 # The TypeScript reader against Lean's reader: every `.ts` of the corpus and of the truth
@@ -699,7 +711,7 @@ status: ## one screen, measured: HEAD and dirty paths, build and check freshness
 help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
-	@echo '  check-<name>       one check: roots, cases, native, ts-reader, truth, truth-release, target,'
+	@echo '  check-<name>       one check: roots, cases, native, compiler, ts-reader, truth, truth-release, target,'
 	@echo '                     schema-codec, ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts,'
 	@echo '                     corpus, schema-pins, tools, tsgo, semantics, docs, language'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'

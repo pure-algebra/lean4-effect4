@@ -66,7 +66,14 @@
     "g298, g345, g379). Two moved in the note for the literal rule: the message shows a tuple's",
     "wide type (g5, g167). Five moved in the host's answer: the program is `Effect.fiberId`, and",
     "the host's fiber counter stands at 7 where it stood at 1 (g81, g144, g250, g289, g313). Each",
-    "of the five was a registered difference before, and it is the same difference."
+    "of the five was a registered difference before, and it is the same difference.",
+    "",
+    "The mask's saved state (decisions rows 244 to 246; seat MASK's first step, merged",
+    "`811ac973`). `Eff.restore` appended at tag 29 of `Effect4.Program.Eff`, and",
+    "`ActionTerm.getInterruptible` at tag 16 of `Effect4.Program.ActionTerm`. No tag moved and no",
+    "constructor left. No retained vector changed bytes: fifteen golden files were appended to",
+    "the OCaml corpus, for the programs pMask, pMaskNested, pMaskEscape, pIllRestoreBool and",
+    "pIllMaskAsBool. No corpus verdict moved."
   ],
   "constructor_additions": [
     "Effect4.Program.Eff.catchIf",
@@ -93,7 +100,9 @@
     "Effect4.Program.NativeOp.refUpdateSomeAndGetWith",
     "Effect4.Program.NativeOp.refModifyWith",
     "Effect4.Program.NativeOp.refModifySomeWith",
-    "Effect4.Program.Term.fold"
+    "Effect4.Program.Term.fold",
+    "Effect4.Program.Eff.restore",
+    "Effect4.Program.ActionTerm.getInterruptible"
   ],
   "constructor_retirements": [
     "Effect4.Program.Eff.branch",
