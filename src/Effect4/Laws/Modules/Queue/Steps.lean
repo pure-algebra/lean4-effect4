@@ -31,11 +31,15 @@ value is one atomic update of the cell (`refStep_modify`). `step_keeps_cell` giv
 half (`ListFoldRules.step`). `sizeStep` is a term over a read, and `cell_read` is its store law
 (`refStep_get`).
 
-The goals establish no delivery, no cancellation law, no liveness and nothing of a wrapper. An
-equal value in the model says nothing of a host. Each statement is a planned goal
-(`proof_goal`, decisions row 203) until its proof replaces it in place. The finite controls are
-`Test/Program/QueueAgreement.lean` and `Test/Program/QueueRelation.lean`: each goal's conclusion
-on every state of a universe of 200 states.
+The six statements are proved, each in place of its planned goal (decisions row 203). The
+proofs read each builder of a step through `src/Effect4/Laws/Modules/Queue/Reading.lean`, and
+they put the model's step in closed form on the profile: `acceptLoop_single` and
+`wake_profile` give the offers that enter and the taker to wake.
+
+The statements establish no delivery, no cancellation law, no liveness and nothing of a
+wrapper. An equal value in the model says nothing of a host. The finite controls are
+`Test/Program/QueueAgreement.lean` and `Test/Program/QueueRelation.lean`: each statement's
+conclusion on every state of a universe of 200 states, and each statement's pinned axioms.
 -/
 
 set_option autoImplicit false
@@ -342,6 +346,158 @@ theorem poll_consumes {s : State} (h : FirstProfile s) {c : Nat}
     rfl
   rw [step, consumed, quiet, List.map_nil, List.append_nil]
 
+/-! ## The take step's passes and the model's `take`, in closed form -/
+
+/-- A fold that appends one image of each element is the list with the images. -/
+theorem foldl_snoc_map {α β : Type} (g : α → β) :
+    ∀ (xs : List α) (init : List β),
+      xs.foldl (fun out x => out ++ [g x]) init = init ++ xs.map g
+  | [], init => by rw [List.foldl_nil, List.map_nil, List.append_nil]
+  | x :: xs, init => by
+    rw [List.foldl_cons, foldl_snoc_map g xs, List.map_cons, List.append_assoc]
+    rfl
+
+/-- A fold that keeps a flag is the flag, or any element's test. -/
+theorem foldl_or_any {α : Type} (p : α → Bool) :
+    ∀ (xs : List α) (found : Bool), xs.foldl (fun found x => found || p x) found =
+      (found || xs.any p)
+  | [], found => by rw [List.foldl_nil, List.any_nil, Bool.or_false]
+  | x :: xs, found => by
+    rw [List.foldl_cons, foldl_or_any p xs, List.any_cons, Bool.or_assoc]
+
+/-- The request's stored record, through the table that holds the step's hint. -/
+theorem takerVal_renewed (tb : Table) (id : Nat) (hint : DeferredKey) {t : Taker}
+    (same : t.id = id) :
+    takerVal (tb.renew id hint) t =
+      takerOf (Val.promise hint) (Val.promise (tb.handle id)) := by
+  show takerOf (Val.promise (if t.id = id then hint else tb.hint t.id))
+    (Val.promise (tb.handle t.id)) = _
+  rw [if_pos same, same]
+
+section TakePasses
+
+variable {env : Env} {path : List Nat} {vals : List Val}
+
+/-- `renewHint`: the takers, with the request's hint replaced. On the encoding of the stored
+takers it reads their encoding through the table that holds the new hint. -/
+theorem reads_renewHint {takers id hint : TermSrc} (tb : Table) (injective : tb.Injective)
+    (ts : List Taker) (i : Nat) (h : DeferredKey) (depth : vals.length = env.names.length)
+    (htakers : Reads takers env path vals (Val.list (ts.map (takerVal tb))))
+    (hid : Captured id env path vals (Val.promise (tb.handle i)))
+    (hhint : Captured hint env path vals (Val.promise h)) :
+    Reads (Queue.renewHint takers id hint) env path vals
+      (Val.list (ts.map (takerVal (tb.renew i h)))) := by
+  have folded : Reads (Queue.renewHint takers id hint) env path vals
+      (Val.list (ts.foldl (fun out t => out ++ [takerVal (tb.renew i h) t]) [])) :=
+    reads_foldWith_model (takerVal tb) Val.list
+      (fun out t => out ++ [takerVal (tb.renew i h) t]) ts [] ⟨0, 1, 1⟩ htakers
+      (reads_noneOf htakers) fun out t => by
+        refine (reads_snoc (reads_minted_acc depth path (Val.list out) (takerVal tb t))
+          (reads_ifT (reads_sameTaker tb injective i depth hid (Val.list out) t)
+            (reads_mkTaker (hid.underFold (Val.list out) (takerVal tb t))
+              (hhint.underFold (Val.list out) (takerVal tb t)))
+            (reads_minted_item depth path (Val.list out) (takerVal tb t)))).to ?_
+        by_cases same : t.id = i
+        · rw [decide_eq_true same, if_pos rfl, takerVal_renewed tb i h same]
+        · rw [decide_eq_false same, if_neg Bool.false_ne_true, takerVal_renew same h]
+  exact folded.to (by rw [foldl_snoc_map, List.nil_append])
+
+end TakePasses
+
+/-- The model's test of a taker's turn, as the take step computes it: the request is the
+earliest taker, or it is not enrolled and no taker waits. -/
+theorem earlier_isEmpty (ts : List Taker) (id : Nat) :
+    ((ts.take 1).foldl (fun _ t => decide (t.id = id)) false ||
+        (!(ts.foldl (fun found t => found || decide (t.id = id)) false) &&
+          decide (ts.length = 0))) =
+      (ts.takeWhile (fun t => t.id != id)).isEmpty := by
+  cases ts with
+  | nil => rfl
+  | cons t rest =>
+    have none : decide ((t :: rest).length = 0) = false := decide_eq_false (Nat.succ_ne_zero _)
+    rw [none, Bool.and_false, Bool.or_false]
+    show decide (t.id = id) = ((t :: rest).takeWhile (fun t => t.id != id)).isEmpty
+    rw [List.takeWhile_cons]
+    by_cases same : t.id = id
+    · have stop : (t.id != id) = false := by
+        show (!decide (t.id = id)) = false
+        rw [decide_eq_true same]
+        rfl
+      rw [stop, if_neg Bool.false_ne_true, decide_eq_true same]
+      rfl
+    · have pass : (t.id != id) = true := by
+        show (!decide (t.id = id)) = true
+        rw [decide_eq_false same]
+        rfl
+      rw [pass, if_pos rfl, decide_eq_false same]
+      rfl
+
+/-- The model's `take` at the bounds one and one, in an opened queue: its three arms. -/
+theorem take_eq {s : State} (h : FirstProfile s) (id : Nat) :
+    take s ⟨id, 1, 1⟩ =
+      if (ready s 1 && (earlier s id).isEmpty) = true then
+        ((afterConsume (pull (removeTaker s id) 1).2.1).1, .got (pull (removeTaker s id) 1).1,
+          (pull (removeTaker s id) 1).2.2 ++ (afterConsume (pull (removeTaker s id) 1).2.1).2)
+      else if s.takers.any (fun u => u.id == id) = true then (s, .wait, [])
+      else ({ s with takers := s.takers ++ [⟨id, 1, 1⟩] }, .wait, []) := by
+  unfold take
+  rw [h.opened]
+  rfl
+
+/-- The model's `take` where it consumes: a message is buffered, and no earlier taker waits.
+The request leaves the takers, the offers that fit the freed room enter, and the earliest
+taker that stays is named. -/
+theorem take_consumes {s : State} (h : FirstProfile s) {c : Nat}
+    (capacity : s.capacity = some (c + 1)) (id : Nat) {m : Nat} {ms : List Nat}
+    (buffered : s.messages = m :: ms) (turn : (earlier s id).isEmpty = true) :
+    take s ⟨id, 1, 1⟩ =
+      (afterAccept c { removeTaker s id with messages := ms }, .got [m],
+        (s.offers.take (fitCount c { removeTaker s id with messages := ms })).map
+            (fun o => (⟨o.id, .offered true⟩ : Signal)) ++
+          (toWake (afterAccept c { removeTaker s id with messages := ms })).map
+            (fun t => (⟨t.id, .again⟩ : Signal))) := by
+  have rest : FirstProfile { removeTaker s id with messages := ms } :=
+    (removeTaker_profile id h).shrink rfl rfl rfl rfl rfl (List.Sublist.refl _)
+      (List.Sublist.refl _)
+  have consumed := afterConsume_closed rest (c := c) capacity
+  have ready1 : ready s 1 = true := by
+    rw [ready_profile h, buffered]
+    rfl
+  have pulled : pull (removeTaker s id) 1 =
+      ([m], { removeTaker s id with messages := ms }, []) :=
+    pull_buffered (s := removeTaker s id) buffered 1
+  rw [take_eq h id, ready1, turn, Bool.and_true, if_pos rfl, pulled]
+  show ((afterConsume { removeTaker s id with messages := ms }).1, TakeReply.got [m],
+    [] ++ (afterConsume { removeTaker s id with messages := ms }).2) = _
+  rw [consumed]
+  rfl
+
+
+/-- The cell where a waiting request's hint is replaced: the offers' records stay. -/
+theorem cell_renewed (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey)
+    (foreign : ∀ o ∈ s.offers, o.id ≠ id) :
+    cellVal (tb.renew id hint) msg s =
+      cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg))
+        (.list (s.offers.map (offerVal tb msg)))
+        (.list (s.takers.map (takerVal (tb.renew id hint)))) := by
+  show cellOf _ _ (.list (s.offers.map (offerVal (tb.renew id hint) msg))) _ = _
+  rw [offers_renew tb msg s.offers id hint foreign]
+
+/-- The cell after a fresh taker enrols: the stored records stay, and the new taker holds the
+step's hint. -/
+theorem cell_enrolled (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint : DeferredKey)
+    (others : ∀ t ∈ s.takers, t.id ≠ id) (foreign : ∀ o ∈ s.offers, o.id ≠ id) :
+    cellVal (tb.renew id hint) msg { s with takers := s.takers ++ [⟨id, 1, 1⟩] } =
+      cellOf (.nat (s.capacity.getD 0)) (.list (s.messages.map msg))
+        (.list (s.offers.map (offerVal tb msg)))
+        (.list (s.takers.map (takerVal tb) ++
+          [takerOf (Val.promise hint) (Val.promise (tb.handle id))])) := by
+  show cellOf _ _ (.list (s.offers.map (offerVal (tb.renew id hint) msg)))
+    (.list ((s.takers ++ [(⟨id, 1, 1⟩ : Taker)]).map (takerVal (tb.renew id hint)))) = _
+  rw [offers_renew tb msg s.offers id hint foreign, List.map_append,
+    takers_renew tb s.takers id hint others, List.map_cons, List.map_nil,
+    takerVal_renewed tb id hint (t := ⟨id, 1, 1⟩) rfl]
+
 /-! ## The six step goals -/
 
 /-- **The take step agrees with the model's `take` at the bounds one and one.** The cell holds
@@ -351,7 +507,7 @@ is the model's. Its two lists are the model's signals: the offers that entered, 
 to wake. The stored value is the model's next state, through the table that holds `hint` at
 `id` where the request waits. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
+theorem takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat)
     (hint : DeferredKey) (profile : FirstProfile s) (requested : Requested s (.take id 1 1))
     (injective : tb.Injective) {idSrc hintSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
     {vals : List Val} (depth : vals.length = env.names.length)
@@ -364,7 +520,103 @@ proof_goal takeStep_agrees (A : Ty) (tb : Table) (msg : Nat → Val) (s : State)
       Reads (Queue.takeStep A idSrc hintSrc cellSrc) env path vals
         (Val.tuple [Val.tuple [reply, Val.list (entered.map (offerVal tb msg)),
             Val.list (woken.map (takerVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1)))],
-          cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1])
+          cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1]) := by
+  obtain ⟨c, capacity⟩ := profile.positive
+  have foreign : ∀ o ∈ s.offers, o.id ≠ id := requested
+  -- the cell's fields
+  have msgs := reads_field readsCell (cell_msgs _ _ _ _)
+  have offers := reads_field readsCell (cell_offers _ _ _ _)
+  have takers := reads_field readsCell (cell_takers _ _ _ _)
+  have cap := reads_field readsCell (cell_cap _ _ _ _)
+  -- the test: a message is buffered, and it is the request's turn
+  have buffered : (!decide ((s.messages.map msg).length = 0)) = ready s 1 := by
+    rw [ready_profile profile, List.length_map]
+    cases s.messages with
+    | nil => rfl
+    | cons m ms => rfl
+  have someMessage := (reads_notT (reads_isEmpty msgs)).to (congrArg Val.bool buffered)
+  have head := reads_isHead tb injective s.takers id depth takers readsId
+  have enrolled := (reads_enrolled tb injective s.takers id depth takers readsId).to
+    (show Val.bool (s.takers.foldl (fun found t => found || decide (t.id = id)) false) =
+        Val.bool (s.takers.any (fun u => u.id == id)) by
+      rw [foldl_or_any, Bool.false_or]
+      rfl)
+  have noTakers := (reads_isEmpty takers).to
+    (show Val.bool (decide ((s.takers.map (takerVal tb)).length = 0)) =
+        Val.bool (decide (s.takers.length = 0)) by rw [List.length_map])
+  have turn : Reads _ env path vals (Val.bool (earlier s id).isEmpty) :=
+    (reads_orT head (reads_andT (reads_notT
+      (reads_enrolled tb injective s.takers id depth takers readsId)) noTakers)).to
+      (congrArg Val.bool (earlier_isEmpty s.takers id))
+  have test := reads_andT someMessage turn
+  -- the arm that consumes
+  have rest : Reads (app "drop" [field cellSrc "msgs", nat 1]) env path vals
+      (Val.list ((s.messages.drop 1).map msg)) :=
+    (reads_drop msgs (reads_nat 1 env path vals)).to (by rw [List.map_drop])
+  have room : Reads (app "sub" [field cellSrc "cap", Queue.len
+      (app "drop" [field cellSrc "msgs", nat 1])]) env path vals
+      (Val.nat (c + 1 - (s.messages.drop 1).length)) :=
+    (reads_sub cap (reads_len rest)).to (by rw [List.length_map, capacity]; rfl)
+  have removed := reads_removeTaker tb injective s.takers id depth takers readsId
+  have gained := reads_gained tb msg _ (s.messages.drop 1) s.offers depth room rest offers
+  have entering := reads_entering tb msg _ s.offers room offers
+  have staying := reads_staying tb msg _ s.offers room offers
+  have toWake' := (reads_wake removed gained).to (congrArg Val.list (wake_encoded tb msg _ _))
+  have consumed := reads_recordSet
+    (reads_recordSet (reads_recordSet readsCell gained (cell_setMsgs _ _ _ _ _)) removed
+      (cell_setTakers _ _ _ _ _))
+    staying (cell_setOffers _ _ _ _ _)
+  have yes := reads_pair (reads_tuple3 (reads_head msgs) entering toWake') consumed
+  -- the arm that waits
+  have renewed := reads_renewHint tb injective s.takers id hint depth takers readsId readsHint
+  have appended := reads_snoc takers (reads_mkTaker readsId.atScope readsHint.atScope)
+  have waiting := reads_recordSet readsCell (reads_ifT enrolled renewed appended)
+    (cell_setTakers _ _ _ _ _)
+  have no := reads_pair
+    (reads_tuple3 reads_noneT (reads_noneOf offers) (reads_noneOf takers)) waiting
+  have whole := reads_ifT test yes no
+  -- the model's three arms
+  cases consumes : (ready s 1 && (earlier s id).isEmpty) with
+  | true =>
+    obtain ⟨isReady, isTurn⟩ := Bool.and_eq_true_iff.mp consumes
+    rw [ready_profile profile] at isReady
+    cases held : s.messages with
+    | nil =>
+      rw [held] at isReady
+      cases isReady
+    | cons m ms =>
+      rw [consumes, if_pos rfl, held] at whole
+      rw [take_consumes profile capacity id held isTurn]
+      exact ⟨_, _, _, rfl, ⟨rfl, fun o member => List.mem_of_mem_take member,
+        toWake_stored _⟩, whole⟩
+  | false =>
+    rw [consumes, if_neg Bool.false_ne_true] at whole
+    have waits : take s ⟨id, 1, 1⟩ =
+        if s.takers.any (fun u => u.id == id) = true then (s, .wait, [])
+        else ({ s with takers := s.takers ++ [⟨id, 1, 1⟩] }, .wait, []) := by
+      rw [take_eq profile id, consumes, if_neg Bool.false_ne_true]
+    cases isEnrolled : s.takers.any (fun u => u.id == id) with
+    | true =>
+      rw [isEnrolled, if_pos rfl] at whole
+      rw [waits, isEnrolled, if_pos rfl]
+      refine ⟨_, [], [], rfl, ⟨rfl, fun _ none => absurd none List.not_mem_nil,
+        fun _ none => absurd none List.not_mem_nil⟩, whole.to ?_⟩
+      show _ = Val.tuple [Val.tuple [Store.Val.none, Val.list [], Val.list []],
+        cellVal (tb.renew id hint) msg s]
+      rw [cell_renewed tb msg s id hint foreign]
+    | false =>
+      have others : ∀ t ∈ s.takers, t.id ≠ id := fun t member same => by
+        have found : s.takers.any (fun u => u.id == id) = true :=
+          List.any_eq_true.mpr ⟨t, member, decide_eq_true same⟩
+        rw [isEnrolled] at found
+        cases found
+      rw [isEnrolled, if_neg Bool.false_ne_true] at whole
+      rw [waits, isEnrolled, if_neg Bool.false_ne_true]
+      refine ⟨_, [], [], rfl, ⟨rfl, fun _ none => absurd none List.not_mem_nil,
+        fun _ none => absurd none List.not_mem_nil⟩, whole.to ?_⟩
+      show _ = Val.tuple [Val.tuple [Store.Val.none, Val.list [], Val.list []],
+        cellVal (tb.renew id hint) msg { s with takers := s.takers ++ [⟨id, 1, 1⟩] }]
+      rw [cell_enrolled tb msg s id hint others foreign]
 
 /-- **The offer step agrees with the model's `offer`.** The request `id` is fresh: it names no
 waiting taker and no pending offer. The message term reads the value of the model's message

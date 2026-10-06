@@ -276,4 +276,15 @@ next goals: 0
 #guard_msgs in
 #plan_status pollStep_agrees
 
+/-- info: 'Effect4.Queue.Model.takeStep_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms takeStep_agrees
+
+/--
+info: Effect4.Queue.Model.takeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status takeStep_agrees
+
 end Test.Program.QueueRelation
