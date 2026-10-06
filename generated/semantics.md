@@ -1253,6 +1253,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | replay-externals | preservation | proved | Effect4.Program.Sched.replay_externals | yes |  |
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
 | run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
+| queue-steps-agree | simulation | proved | Effect4.Queue.Model.queue_steps_agree | yes |  |
 | straight-composition-agreement | simulation | proved | Effect4.Program.Denote.StraightEq.run_agrees | yes |  |
 
 ### Printed statements
@@ -1447,6 +1448,12 @@ Literature: WrightFelleisen1994, audit P36 — analogy
 
 ```lean
 Test.Dogfood.Scenario.TapeReplays
+```
+
+**queue-steps-agree**
+
+```lean
+Effect4.Queue.Model.StepsAgree
 ```
 
 **straight-composition-agreement**
