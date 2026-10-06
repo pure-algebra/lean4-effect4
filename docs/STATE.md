@@ -155,6 +155,9 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
 
   [The plan](research/2026-10-05-claude-lead/module-factory-plan.md) holds the procedure, the
   card's template, the order and the accounting.
+  [Semaphore's card](research/2026-10-05-claude-lead/module-cards/semaphore.md) is written
+  from the pinned source. It proposes a first profile and puts four choices to the owner.
+  Pool's and Cache's cards are not written.
 
 Where to read:
 
