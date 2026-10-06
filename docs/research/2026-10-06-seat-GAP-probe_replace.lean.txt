@@ -1,0 +1,78 @@
+import Effect4.Laws.Program.Signature
+import Effect4.Program.Refs
+
+/-!
+Seat GAP, probe 6 (scratch): the replacement law on one program, through the tree's own
+`Node.at_` and `Node.replaceAt`. For each address of a program in the example, the focus is
+replaced by a hole row that declares the focus's own three columns, and the whole keeps its type.
+Each `#guard` is a finite check.
+-/
+
+set_option autoImplicit false
+open Effect4 Effect4.Program
+open Effect4.Machine.Env (Requirement)
+
+namespace GapProbe
+
+def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
+/-- `x = succeed 5; cell = Ref.make(x); _ = Ref.set(cell, 7); Ref.get(cell)`. -/
+def original : NativeEff :=
+  .bind (.succeed (.lit (.nat 5)))
+    (.bind (.perform .refMake (.var 0))
+      (.bind (.perform .refSet (pairT (.var 1) (.lit (.nat 7))))
+        (.perform .refGet (.var 1))))
+
+def holeRow (name : String) (answer error : Ty) : Row :=
+  { name := name, spelling := "Hole." ++ name, kind := .async, request := .unit,
+    answer := answer, error := error, cite := "a hole", registration := .external }
+def hole (i : Nat) : NativeEff := .perform (.external i) (.lit .unit)
+
+/-- The focus at an address, when it is a program. -/
+def focus (p : NativeEff) (path : List Nat) : Option NativeEff :=
+  match (Node.eff p).at_ path with
+  | some (.eff q) => some q
+  | _ => none
+
+/-- The program with the focus replaced by the hole at position 0. -/
+def omitAt (p : NativeEff) (path : List Nat) : Option NativeEff :=
+  match (Node.eff p).replaceAt path (.eff (hole 0)) with
+  | some (.eff p') => some p'
+  | _ => none
+
+/-- The law at one address: the focus has type `t` in `env`, and the sketch whose hole declares
+`t` has the original's type. -/
+def lawAt (path : List Nat) (env : TyEnv) (t : EffTy) : Bool :=
+  match focus original path, omitAt original path with
+  | some q, some sketch =>
+    effTy (nativeSignature []) env q == some t &&
+      effTy (nativeSignature [holeRow "h0" t.answer t.error]) [] sketch
+        == effTy (nativeSignature []) [] original
+  | _, _ => false
+
+def pure' (a : Ty) : EffTy := ⟨a, .never, Requirement.empty⟩
+
+-- the addresses of the example that hold a program, each with its environment and type
+#guard lawAt [0] [] (pure' .nat)
+#guard lawAt [1] [.nat] (pure' .nat)
+#guard lawAt [1, 0] [.nat] (pure' (.refOf .nat))
+#guard lawAt [1, 1] [.nat, .refOf .nat] (pure' .nat)
+#guard lawAt [1, 1, 0] [.nat, .refOf .nat] (pure' (.refOf .nat))
+#guard lawAt [1, 1, 1] [.nat, .refOf .nat, .refOf .nat] (pure' .nat)
+/-- The second half alone: the sketch whose hole declares `t` has the original's type. -/
+def sketchKeeps (path : List Nat) (t : EffTy) : Bool :=
+  match omitAt original path with
+  | some sketch =>
+    effTy (nativeSignature [holeRow "h0" t.answer t.error]) [] sketch
+      == effTy (nativeSignature []) [] original
+  | none => false
+
+-- red controls: a hole that declares another type does not keep the whole type
+#guard sketchKeeps [1, 0] (pure' (.refOf .string)) == false
+#guard sketchKeeps [0] (pure' .string) == false
+#guard sketchKeeps [1, 1, 1] (pure' .string) == false
+-- green: the same test at the focus's own type
+#guard sketchKeeps [1, 0] (pure' (.refOf .nat))
+-- the root: the replacement is the whole program
+#guard lawAt [] [] (pure' .nat)
+
+end GapProbe

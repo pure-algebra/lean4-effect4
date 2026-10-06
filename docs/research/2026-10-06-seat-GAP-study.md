@@ -67,6 +67,7 @@ statement from memory is marked so, and no recommendation rests on one.
 | `probe_rows.lean`: a hole as a host row, 7 theorems and 25 guards | the same, exit 0 | proved in scratch; tested |
 | `probe_hole_rule.lean`: the hole's rule, the replacement law's statements, the judgments | the same, exit 0; three theorems print `[propext, Quot.sound]` | proved in scratch; compiled in scratch |
 | `probe_steps.lean`: ten more single steps of the replacement law | the same, exit 0; two print `[propext, Quot.sound]` | proved in scratch |
+| `probe_replace.lean`: the replacement law at the seven program addresses of one example, through `Node.replaceAt`; 11 guards | the same, exit 0 | tested |
 | `probe_where.lean`: the address of the first refusal, for three programs | the same, exit 0 | tested |
 | `count-sites.sh`: the files and lines that name one constructor | run from the worktree's root | tested |
 | `d1_cells.py`: the refused omissions of the checker model that hold a cell | `python3 d1_cells.py 5` | tested |
@@ -88,8 +89,8 @@ The models, the probes and their outputs are filed beside this note, as text.
 | `2026-10-06-seat-GAP-gap_checker.py.txt` | the checker model; it imports the type model |
 | `2026-10-06-seat-GAP-out-types-list.txt`, `-out-types-rec.txt`, `-out-types-ref.txt` | the three runs of the type model |
 | `2026-10-06-seat-GAP-out-checker-5.txt` | the run of the checker model at size 5 |
-| `2026-10-06-seat-GAP-probe_var.lean.txt`, `-probe_rows.lean.txt`, `-probe_hole_rule.lean.txt`, `-probe_steps.lean.txt`, `-probe_where.lean.txt` | the five Lean probes |
-| `2026-10-06-seat-GAP-probe_var.out.txt`, `-probe_rows.out.txt`, `-probe_hole_rule.out.txt`, `-probe_steps.out.txt`, `-probe_where.out.txt` | their outputs |
+| `2026-10-06-seat-GAP-probe_var.lean.txt`, `-probe_rows.lean.txt`, `-probe_hole_rule.lean.txt`, `-probe_steps.lean.txt`, `-probe_replace.lean.txt`, `-probe_where.lean.txt` | the six Lean probes |
+| `2026-10-06-seat-GAP-probe_var.out.txt`, `-probe_rows.out.txt`, `-probe_hole_rule.out.txt`, `-probe_steps.out.txt`, `-probe_replace.out.txt`, `-probe_where.out.txt` | their outputs; an empty output is a run with no message |
 | `2026-10-06-seat-GAP-count-sites.sh.txt` | the counting script |
 | `2026-10-06-seat-GAP-d1_cells.py.txt` | a count over the checker model: which refused omissions hold a cell |
 
@@ -335,7 +336,7 @@ separates the two.
 | `Ty.sub` at an analysing site: candidate M | `sub`'s recursion and three lines: a gap on the left is below all, a gap member on the right is above all, an invariant argument compares both ways | exact on the list and record runs (0 of 208,849 and 0 of 105,625 pairs); at a cell it accepts 16,200 of 1,221,025 pairs with no witness and refuses no witnessed pair |
 | The same with bounds: candidate B | each member picks a member, as in `sub`; a gap under an invariant constructor collects a lower and an upper bound from each member; each lower bound is below each upper bound | exact on the three runs (0 and 0) |
 | `Ty.normalize`, `Ty.join` | unchanged: a gap is an opaque member, and equal names merge | exact with names; an anonymous gap loses an instance (5.2) |
-| `Record.fieldType`, `Record.setType`, `Tuple.project`: member by member, total at `never` | the same rule; a gap member answers a new gap that depends on it | `fieldType`: 0 wrong of 325 gap types |
+| `Record.fieldType`, `Record.setType`, `Tuple.project`: member by member, total at `never` | the same rule; a gap member answers a new gap that depends on it | `fieldType`: 0 wrong of 325 gap types; the other two are not modelled |
 | `Checker.listOf?`, `fiberTy`, `exitOf?`, `Decision.arms .option`: they match one shape and refuse a union and `never` | as they are, no structural rule is exact: 21 and 4 wrong of 457; made uniform first, the member-by-member rule is exact: 0 of 457 | type model, L9 |
 | A test by equality: `t = .bool`, `t = .nat`, `t = Ty.scope` | `t` is the type, a gap, or a union of the two | 0 wrong of 457, for `t = str` |
 | `t.normalize = .never`, a release's error | the least instance of `t` is `never` | 0 wrong |
@@ -557,6 +558,10 @@ are for the proof's author.
 - `typeOfProgram` expands layer references before it types. The law is about `HasTy`, so it
   speaks of the expanded program.
 
+On the running example the law holds at each of its seven addresses of a program. The test goes
+through the tree's own `Node.at_` and `Node.replaceAt`, with three red controls (tested,
+compiled: `probe_replace.lean`).
+
 The law does not need a hole. It is a law of the checker we have. With (a) it gives both uses.
 
 - **To omit**: take `q'` to be the hole at a row that declares `t`. The sketch has the type `T`.
@@ -699,7 +704,7 @@ The checker would then owe three things, to stay complete against the larger jud
 - At each premise `Ty.sub a b = true`: consistent subtyping. Castagna and others need a lemma to
   move a materialization across a subtyping step (Proposition 4.7, p. 21).
 - At each eliminator premise (`fiberTy`, `Decision.arms`, `Checker.listOf?`): the lifted
-  eliminator. Hazelnut calls it the matched arrow (p. 3); the slicing paper writes
+  eliminator. Hazelnut calls it the matched arrow (p. 3). The slicing paper writes
   `τ ⊔ (□ → □)` (Figure 7, p. 8).
 - At the rule `perform`: a match of a request that holds gaps against the row's template.
 
@@ -867,8 +872,8 @@ Only a hole whose row is a lawful host row. `rowChecks` (`src/Effect4/Program/Si
 for an external, asynchronous row with no `int` and no internal handle in its answer or error.
 
 - A hole of type `number`, or of a record of data, can wait and take a reply.
-- A hole of type `Ref<number>` can be checked and cannot take a reply. The machine mints a cell;
-  a host does not (row 97).
+- A hole of type `Ref<number>` can be checked and cannot take a reply. The machine mints a
+  cell, and a host does not (row 97).
 
 So the second candidate serves data holes. A hole whose type holds a cell, a fiber, a deferred
 or a scope stays with the first candidate until a program fills it.
@@ -1237,9 +1242,10 @@ that: the checker follows its oracle here, and the repair is a change of the pre
   and no premise here: TypeScript infers one parameter from two such arguments in the same way.
 - It differs from rc.112. Its own `Option.getOrElse` has two parameters and answers `A | B`
   (`vendor/effect-4.0.0-rc.112/src/Option.ts`, the declaration of `getOrElse`).
-- The repair: two parameters and a union answer, in the prelude and in the scheme together. The
-  map atom of `src/Effect4/Program/NativeAtom.lean` has that shape already, with
-  `union (var 0) (var 1)` in its answer. The candidates are `getOrElse`, `ite`, `cons` and the
+- The repair: two parameters and a union answer, in the prelude and in the scheme together.
+  That is rc.112's own shape, so I expect tsgo to agree. No TypeScript ran. The map atom of
+  `src/Effect4/Program/NativeAtom.lean` has that shape already, with `union (var 0) (var 1)`
+  in its answer. The candidates are `getOrElse`, `ite`, `cons` and the
   list append. For `cons` the atom's own note says that the prelude has two parameters already,
   so the scheme alone would follow. For a loop the cursor annotation is the repair, and it
   exists.
@@ -1257,6 +1263,11 @@ that: the checker follows its oracle here, and the repair is a change of the pre
 Each brief gives the files, the statements as planned goals with their placement, the controls,
 and what the seat must not touch. Every seat keeps the rules of `AGENTS.md`. Every statement
 below is not compiled unless its brief says so.
+
+A slice is done when its narrow builds pass: `lake build` of each new module, and
+`lake env lean` of each control file, both through the Lean slot. Each theorem stands at
+`[propext, Quot.sound]`. The coordinator runs the wide gates at the merge. Each seat reports in
+the receipt skeleton, with one paragraph on R1 to R14.
 
 #### Slice SKETCH (stage 1): a program with its hole table
 
@@ -1291,10 +1302,10 @@ below is not compiled unless its brief says so.
   cases with the parent's constructor and `hasTy_ext`. Thirteen are done in scratch
   (`probe_rows.lean`, `probe_steps.lean`). The step also needs the fact that a replaced child
   keeps its sort, which `replaceAt_spec` gives. A `proof_sketch` could leave the cases as
-  parts; whether it takes a mutual induction is not tried.
-- **Controls**: green, the defect-first program fills a hole and the type stays. Red: a filling
-  of another type is refused in the context; the answer-only row is refused under an exit that
-  reaches a cell.
+  parts. Whether it takes a mutual induction is not tried.
+- **Controls**: green, the defect-first program fills a hole and the type stays. Red, two
+  controls. A filling of another type is refused in the context. The answer-only row is
+  refused under an exit that reaches a cell.
 - **Do not touch**: the rules of `HasTy`; the checker; `Node.replaceAt`.
 
 | Statement | Concept; claim | Reach | It does not establish | Consumer |
@@ -1326,7 +1337,7 @@ theorem check_closed (sig : Signature Op) (lawful : sig.RowsWellScoped) {env : T
 | Statement | Concept; claim | Reach | It does not establish | Consumer |
 | --- | --- | --- | --- | --- |
 | the clause | `subtyping-algebra`; `raw-formation`, role decidability | every program annotation | closed types of the checker | `check_closed` |
-| `check_closed` | `subtyping-algebra`; `checked-types-closed`, role inversion; R1, R3, R14 | a closed environment; a signature with well-scoped rows and schemes | a closed type of a sketch with a gap | `ofSchema_schema`, `ofTy`, the codec; stage 6 |
+| `check_closed` | `subtyping-algebra`; `checked-types-closed`, role inversion; R1, R3, R14 | a closed environment; a signature with well-scoped rows and schemes, and closed service carriers | a closed type of a sketch with a gap | `ofSchema_schema`, `ofTy`, the codec; stage 6 |
 
 #### Slice TRACE (stage 3): the traced check and total marking
 
@@ -1351,7 +1362,7 @@ theorem mark_none_iff (sig : Signature Op) (env : TyEnv) (e : Eff Op) :
 
 - **Proof plan**: `traced_check` and `mark_first` are fusion: each new algebra maps to the
   checker's by a homomorphism, and `hom_eq_cata_eff` or `foldM_natural_eff` concludes.
-- **Controls**: red, a program with two independent refusals shows both marks; green, the
+- **Controls**: red, a program with two independent refusals shows both marks. Green: the
   marks of an admitted program are empty.
 - **Do not touch**: `Checker.check`. The new checks stand beside it with their agreement
   theorems.
