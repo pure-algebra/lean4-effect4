@@ -251,11 +251,54 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   [the receipt](research/2026-10-06-seat-SEM-receipt.md)): the cases P1 and P3 replay on the
   generated engine, on both carriers. The registry names four claims with their witnesses.
   No planned goal was added. The seat used the Queue's typing and reading pieces as they
-  are. Fourteen general statements wait in Semaphore's folder for the move of the shared
-  helpers. Seat MOVE has that move since 2026-10-06 (branch `seat/move`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-move-brief.md)): each shared piece
-  gets one home that names no module, and no statement changes. The operations that wait and
-  the protected form are a later slice.
+  are. Fourteen general statements waited in Semaphore's folder for the move of the shared
+  helpers. **That move is merged** (`b199c15f`;
+  [the receipt](research/2026-10-06-seat-MOVE-receipt.md),
+  [the brief](research/2026-10-05-claude-lead/briefs/seat-move-brief.md)). Each shared piece
+  has one home that names no module. The words of a step term are in
+  `src/Effect4/Modules/Words.lean`. The encoding table, the reading rules, the typing rules
+  and the store connectors are four files of `src/Effect4/Laws/Modules/`. The seat's
+  comparison finds 192 moved declarations with equal statements and no other difference, and
+  no step term moved. Fourteen list facts are in `Effect4.Constructive`. The operations that
+  wait and the protected form are a later slice.
+
+In work since 2026-10-06, two seats at once (row 237):
+
+- **Seat PUB has the Queue's first public operations** (branch `seat/pub`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
+  become library programs that capture no name of a caller. Each atomic attempt is to be
+  proved the model's step, at the operation's own scope. Each runs on the Lean machine, on
+  the generated engine and on rc.112. The slice states no law of a whole run.
+- **Seat REFS has the independent foundation proof** of the owner's roadmap, as Codex's audit
+  corrected it (branch `seat/refs`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-refs-brief.md)). A program whose
+  layer references are well formed expands to a program with no reference, at the bound of
+  `Eff.expandRefs`. Two theorems then lose a premise.
+
+Candidates with no seat, each with its place:
+
+- the mask's invariant of runs, an open part of R11. Its finite probe is
+  `research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`;
+- the Queue model's run invariant on the first profile: each operation keeps `quiet` and
+  `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
+  `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded
+  exploration holds it today, with two mutations red;
+- the journal's cut and position connectors, with the scenario driver's general laws in the
+  law graph (Codex's audit of the roadmap, priority 2);
+- Semaphore's operations that wait and its protected form, after seat PUB's shared wrapper.
+  The case P9 on the generated engine goes with it;
+- the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
+  264);
+- two small repairs of the foreign readers (row 258, points 5 and 6).
+
+Three repairs of 2026-10-06, outside any seat:
+
+- the install rule of the `Makefile` keeps a linked package folder (`6e629bb4`). A seat's
+  `make` had lost its `-o` flags and run `bun install` in the seat's worktree. The seat
+  reported it, and its receipt records it. The coordinator's install did not change;
+- the slow lane's fixture names `Term.fold` (`3f4cba07`). The census battery had not built
+  since seat FOLD's append, and no sweep had run. The rest of the slow lane is not built;
+- the dictionary gains "scenario" and "named run" (`c33d1b7d`).
 
 Landed later on 2026-10-05:
 
@@ -343,6 +386,9 @@ Landed later on 2026-10-05:
   - `Steps.lean`: three proved connectors to the store (`step_updates`, `step_keeps_cell`,
     `cell_read`) and six planned step goals on `FirstProfile`;
   - `Typing.lean`: seven typing statements, each a planned goal.
+
+  Since seat MOVE the table is `src/Effect4/Laws/Modules/Table.lean`, and the three connectors
+  are `src/Effect4/Laws/Modules/Store.lean`.
 
   Four batteries under `Test/Program/` run the steps: eight scenarios on the machine, each
   step against the model on a finite universe, and each goal's conclusion on that universe.
@@ -580,15 +626,16 @@ Open at this landing:
   - the citations that miss in the pin itself;
   - one census row that holds its digest twice;
   - a role row for `vendor/effect-4.0.1`;
-- one small cleanup waits for the merge of seat T5's part B, from Codex's review of 2026-10-05
-  (`research/2026-10-05-codex-foundation-packet/implementation-audit/list-lemma-review/recommendations.md`):
+- one small cleanup from Codex's review of 2026-10-05 is landed with seat MOVE (`b199c15f`;
+  `research/2026-10-05-codex-foundation-packet/implementation-audit/list-lemma-review/recommendations.md`):
   - five general list facts move from `src/Effect4/Laws/Program/Template.lean` to
     `Effect4.Constructive.List` in `src/Effect4/Data/Constructive.lean`, with their statements
     and proofs unchanged;
   - `lookup_weaken` of `src/Effect4/Program/Typing/Rules.lean` is exposed, and the copy
     `getElem?_weaken` in the fold's law module goes.
 
-  The shared data module has many dependents, so the cleanup must not run beside T5;
+  The seat made the shared data module's edit once, with nine more list facts of the two
+  modules;
 - the OCaml route, after seat LOWER's merge:
   - the target evaluator is outside the trust ceiling. Its rules for the length of a string
     and for the order of two strings reach `Classical.choice`. The seat proposes their byte
