@@ -66,8 +66,9 @@ Read only, at main `adf6b779`.
   type (`iterate`), a predicate against `bool`, a release against the error `never`.
 - **Eliminators are of two kinds.** A field read distributes over the union's members, and
   it is total at `never` (`Record.fieldType`, `src/Effect4/Program/Record.lean`). A fiber, an
-  option, a Boolean and an exit are matched by shape, and they refuse `never`
-  (`fiberTy`, `exitOf?`, `Decision.arms`, `src/Effect4/Program/Decision.lean`).
+  option, a Boolean and an exit are matched by shape, and they refuse `never` (`fiberTy`,
+  `src/Effect4/Program/Typing/Rules.lean`; `exitOf?`, `src/Effect4/Program/Checker.lean`;
+  `Decision.arms`, `src/Effect4/Program/Decision.lean`).
 - **A cell is invariant** in its content type (`Ty.refOf`).
 - **No hole and no gap.** `Term` and `Eff` have no hole. `Ty.unknown` is the top of the
   order, and `Ty.never` is its bottom. Neither is the paper's gap, which is consistent with
