@@ -300,8 +300,12 @@ the state at the handover point and the integration procedure as practiced.
   through the shared rule, with two general statements in the lift module. The second is
   **landed** by seat TAPE: the tape and its laws stand in the library (row 287).
 
-The set is landed. A sweep follows it: the owner approved the coordinator's recommendations
-on 2026-10-06. The law of a whole run for a module's operation is not in the set. It is the
+The set is landed, and the sweep ran on `ea0f584a` (row 289). `make check` and
+`make check-slow` pass, and the release ledger matches. Three targets of `make check-full`
+are red. `check-ingest` is red since seat MASK's merge: the constructed foreign corpus builds
+no `restore` form. `check-tsdiag` is red because its harness drifted, and it measures nothing
+today. `check-schema-ts` asks for an input that is not set. The first two are repairs with no
+seat yet. The law of a whole run for a module's operation is not in the set. It is the
 main open theory, and it starts with a design question. The owner asked for a discussion of
 it when the set has landed: its obligations, and the base abstractions that it needs first.
 
@@ -347,6 +351,18 @@ that rests on one schedule.
 
 In work since the suspension of the handover:
 
+- **Seat SKETCH has the hole table** (branch `seat/sketch`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-sketch-brief.md); row 288). It is
+  stage 1 of the study's plan, and the seat that wrote the study has it: a sketch as data,
+  and the four theorems that make the language with holes a conservative extension. The
+  replacement law follows on the same branch.
+- **Seat FORM has formation at a type variable** (branch `seat/form`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-form-brief.md); row 288, point
+  6 a). A type variable is formed in a template only, and a formed program that the checker
+  admits has closed types. It narrows the admitted programs by those that hold a variable
+  in an annotation.
+- **Seat LATTICE renames the slice module's words** (branch `seat/lattice-words`; row 286,
+  point 5): "omitted" in place of "folded".
 - **Seat UNION has the combinator of candidate N** (branch `seat/union`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-union-brief.md); row 285). It
   names the pattern of `Record.fieldType` once: a member rule, applied to every member of a
