@@ -773,6 +773,9 @@ const readTypeNode = (t: Node): Ty | undefined => {
     case "TSStringKeyword": return { _tag: "string" }
     case "TSBooleanKeyword": return { _tag: "bool" }
     case "TSVoidKeyword": return { _tag: "unit" }
+    // `never` reads as the empty type (`readNamed`, the state plan's T5, part B): the error
+    // column of `Deferred.make<A, never>()` is spelled so. `unknown` has no reading.
+    case "TSNeverKeyword": return { _tag: "never" }
     case "TSNullKeyword": return { _tag: "null" }
     case "TSUndefinedKeyword": return { _tag: "undefined" }
     case "TSLiteralType": {
