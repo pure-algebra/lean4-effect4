@@ -190,6 +190,8 @@ import Effect4.Laws.Modules.Queue.Typing
 import Effect4.Laws.Modules.Queue.Relation
 import Effect4.Laws.Modules.Queue.Reading
 import Effect4.Laws.Modules.Queue.Steps
+import Effect4.Laws.Modules.Waiting
+import Effect4.Laws.Modules.Queue.Ops
 import Effect4.Laws.Modules.Semaphore.Model
 import Effect4.Laws.Modules.Semaphore.Profile
 import Effect4.Laws.Modules.Semaphore.Typing

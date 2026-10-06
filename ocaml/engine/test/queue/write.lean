@@ -17,7 +17,7 @@ binds the committed file to these programs, and `test_queue.ml`, beside this fil
 -/
 
 open Effect4 Effect4.Machine Effect4.Program
-open Test.Program.QueueScenarios
+open Test.Program.QueueScenarios (r1 r4 mk)
 
 /-- A Boolean or a number in the spelling of the engine's `show_val`. -/
 def showScalar : Val → Option String

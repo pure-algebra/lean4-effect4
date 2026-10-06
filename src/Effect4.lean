@@ -159,6 +159,10 @@ import Effect4.Modules.Words
 -- cell and its steps.
 import Effect4.Modules.Queue.Cell
 import Effect4.Modules.Queue.Steps
+-- The shared pieces of a module that waits (decisions rows 221, 238 and 240), and the Queue's
+-- first operations over them.
+import Effect4.Modules.Waiting
+import Effect4.Modules.Queue.Ops
 -- Semaphore's cell and its five steps (decisions row 265).
 import Effect4.Modules.Semaphore.Cell
 import Effect4.Modules.Semaphore.Steps
