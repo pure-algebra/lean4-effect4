@@ -1,0 +1,79 @@
+"""Seat LATTICE, the words follow-up: the proposed dictionary rows, run through the tree's own
+checker library. The rows are put into a copy of the specification under a scratch folder, which
+the caller names. A row whose term is an entry already replaces that entry's row: an amendment.
+Each other row is inserted. Nothing of the tree is written. It reports: how each row parses; the
+anchor findings of the rows; the new findings in the two strict documents; the new findings in
+every other checked document, by rule and term."""
+import re, sys, collections
+from pathlib import Path
+# usage: try_entries.py <the rows, one Markdown table row a line> <the repository's root>
+#        <a scratch folder>
+if len(sys.argv) != 4:
+    sys.exit("usage: try_entries.py <the rows> <the repository's root> <a scratch folder>")
+ROOT = Path(sys.argv[2]).resolve()
+sys.path.insert(0, str(ROOT / 'scripts' / 'lib'))
+from language import SPEC, Checker, load_spec          # noqa: E402
+from doc_refs import doc_files                         # noqa: E402
+
+rows = [l for l in Path(sys.argv[1]).read_text().split('\n') if l.startswith('|')]
+spec_text = (ROOT / SPEC).read_text()
+lines = spec_text.split('\n')
+
+def term_of(row):
+    m = re.match(r'\| \*\*(.+?)\*\*', row)
+    return m.group(1) if m else None
+
+replaced, inserted = [], []
+for row in rows:
+    hits = [i for i, l in enumerate(lines) if term_of(l) is not None and term_of(l) == term_of(row)]
+    if len(hits) == 1:
+        lines[hits[0]] = row
+        replaced.append(term_of(row))
+    elif not hits:
+        inserted.append(row)
+    else:
+        sys.exit(f"the term {term_of(row)!r} has {len(hits)} rows in the specification")
+at = next(i for i, l in enumerate(lines) if l.startswith('| **join** |'))
+new_text = '\n'.join(lines[:at + 1] + inserted + lines[at + 1:])
+tmp = Path(sys.argv[3]).resolve()
+(tmp / 'docs' / 'core').mkdir(parents=True, exist_ok=True)
+(tmp / SPEC).write_text(new_text)
+
+old_spec, new_spec = load_spec(ROOT), load_spec(tmp)
+old, new = Checker(ROOT, old_spec), Checker(ROOT, new_spec)
+terms = {term_of(row) for row in rows}
+added = [e for e in new_spec.entries if e.term in terms]
+print(f"rows read as entries: {len(added)} of {len(rows)}; inserted {len(inserted)}; "
+      f"in place of an entry {len(replaced)} {replaced}")
+for e in added:
+    print(f"  {e.term}: forms {e.forms}; avoid {e.avoid}; scope {e.scope}; qualifiers {e.qualifiers}; in code {e.code_ok}")
+
+def key(f): return (f.rule, f.text, f.hint)
+def fresh(path, text_old, text_new):
+    before = collections.Counter(key(f) for f in old.check(path, text_old))
+    out = []
+    for f in new.check(path, text_new):
+        if before[key(f)] > 0: before[key(f)] -= 1
+        else: out.append(f)
+    return out
+
+spec_new = fresh(SPEC, spec_text, new_text)
+print(f"\nthe specification with the rows: {len(spec_new)} new finding(s)")
+for f in spec_new: print(f"  line {f.line}: {f.rule}: {f.text} {f.hint}")
+agents = (ROOT / 'AGENTS.md').read_text()
+agents_new = fresh('AGENTS.md', agents, agents)
+print(f"AGENTS.md: {len(agents_new)} new finding(s)")
+for f in agents_new: print(f"  line {f.line}: {f.rule}: {f.text} {f.hint}")
+
+print("\nevery other checked document, new findings by rule and text:")
+total = collections.Counter(); per_doc = {}
+for path in doc_files(ROOT):
+    if path in (SPEC, 'AGENTS.md'): continue
+    text = (ROOT / path).read_text(errors='replace')
+    fs = fresh(path, text, text)
+    if fs:
+        per_doc[path] = collections.Counter((f.rule, f.text.split(' (')[0] if f.rule == 'qualifier' else f.text) for f in fs)
+        for k, v in per_doc[path].items(): total[k] += v
+for path, c in sorted(per_doc.items(), key=lambda kv: -sum(kv[1].values())):
+    print(f"  {path}: {sum(c.values())}: {dict(c)}")
+print("  all:", dict(total))

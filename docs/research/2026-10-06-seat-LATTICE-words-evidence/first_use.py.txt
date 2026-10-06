@@ -1,0 +1,26 @@
+"""For each docstring of a Lean file: the first use of the word slice outside code. It must read
+"type slice(s)". The compounds "contribution slice" and "slice view" are terms of their own and
+are passed over. Also list every fold-word outside code."""
+import re, sys
+for path in sys.argv[1:]:
+    src = open(path).read()
+    bad = 0
+    for m in re.finditer(r'/-[-!].*?-/', src, flags=re.S):
+        line = src.count('\n', 0, m.start()) + 1
+        text = m.group(0)
+        if re.match(r'/--\s*info:', text):      # a pinned output, not prose
+            continue
+        prose = re.sub(r'`[^`]*`', '`C`', text)
+        prose = re.sub(r'"[^"]*"', '"Q"', prose)  # a quotation of the paper is verbatim
+        flat = re.sub(r'\s+', ' ', prose)
+        for f in re.finditer(r'(?i)\b\w*fold\w*\b', flat):
+            print(f"{path}:{line}: fold-word {f.group(0)!r}: …{flat[max(0,f.start()-40):f.end()+30]}…")
+            bad += 1
+        # pass over the compound terms
+        scan = re.sub(r'(?i)contribution slice', 'contribution-term', flat)
+        scan = re.sub(r'(?i)slice views?', 'view-term', scan)
+        first = re.search(r'(?i)\bslices?\b', scan)
+        if first and not re.search(r'(?i)\btype $', scan[:first.start()]):
+            print(f"{path}:{line}: first use is bare: …{scan[max(0,first.start()-50):first.end()+30]}…")
+            bad += 1
+    print(f"{path}: {bad} finding(s)")

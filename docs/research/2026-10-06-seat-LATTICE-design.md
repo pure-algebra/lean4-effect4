@@ -374,12 +374,24 @@ compiled.
 - `Slice.sweepLog` became `Slice.sweepAsked`: the list of the questions alone. The pair's first
   half had no consumer.
 - The coordinator added two statements: `Minimal.needs` and `Minimal.keeps_above`. A minimal
-  slice keeps each site above a kept site, where the instance's fold has the no-op.
+  slice keeps each site above a kept site, where omitting a site under an omitted parent changes
+  nothing.
 - The coordinator offered an optional step, and it closed: the descent over a tree of sites
   (`Slice.sweepFree`, `SliceView.descendTree`, three statements).
 - `SliceView.lattice_minimal` states the claim's four parts as one statement.
 - The scratch files of section 6 are filed as three probes, beside this note. The toy and the
   counts of section 4.4 are in `Test/Program/SliceLattice.lean`.
+- The words changed on the same day, in a follow-up (decisions rows 286 and 288). A site that a
+  type slice does not keep is omitted: the dictionary keeps "fold" for the catamorphism. Sections
+  1 to 8 stand as sent. Read them with the table below. The addendum is
+  `docs/research/2026-10-06-seat-LATTICE-words-receipt.md`.
+
+| In sections 1 to 8 | In the tree since the follow-up |
+| --- | --- |
+| a folded site; a slice folds a site | an omitted site; a type slice omits a site |
+| `Slice.folded`, `SliceView.ofFolded`, `SliceView.ofFolded_full` | `Slice.omitted`, `SliceView.ofOmitted`, `SliceView.ofOmitted_full` |
+| `Slice.below` | `Slice.subslices` |
+| a slice, alone | a type slice, at the first use in a document or a docstring |
 
 | Probe | What it holds |
 | --- | --- |

@@ -1,0 +1,14 @@
+/-! Appended to a copy of the module's text at the base: the spelling rule against the
+environment, for the authored `Slice.below` and for four constructions that Lean generated for
+the same structure. Nothing here is in the tree. -/
+
+open Lean Elab Command in
+run_cmd do
+  let env ← getEnv
+  for n in [`Effect4.Slice.below, `Effect4.Slice.ctorIdx, `Effect4.Slice.noConfusionType,
+      `Effect4.Slice.mk.injEq, `Effect4.Slice.mk.sizeOf_spec, `Effect4.Slice.ctorElim,
+      `Effect4.Slice.brecOn] do
+    let ranges := (← findDeclarationRangesCore? n).isSome
+    logInfo m!"{n}: declared {(env.find? n).isSome}; matched by spelling {ProofGraph.isGeneratedCompanion env n}; tagged by Lean {isAuxRecursor env n || isNoConfusion env n}; own declaration range {ranges}"
+  let some (.inductInfo v) := env.find? `Effect4.Slice | throwError "no inductive"
+  logInfo m!"Effect4.Slice: recursive {v.isRec}; constructors {v.numCtors}"

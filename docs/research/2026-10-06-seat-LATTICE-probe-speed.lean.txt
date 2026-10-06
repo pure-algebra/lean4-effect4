@@ -4,7 +4,8 @@ import Effect4.Laws.Slice.Lattice
 # Seat LATTICE, a probe for the note on speed (2026-10-06)
 
 A scratch probe: nothing here is in the tree, and no statement here is a law of the module. Run
-it as `lake env lean <this file, with the suffix .lean>` at the head of branch `seat/lattice`.
+it as `lake env lean <this file, with the suffix .lean>` at the head of branch
+`seat/lattice-words`. It names nothing that the follow-up on words of the same day renamed.
 
 Part 1 counts the questions of a divide-and-conquer descent against the one pass, under an upward
 closed validity. Part 2 states the interface of a neighbour's check, and proves that a pass over

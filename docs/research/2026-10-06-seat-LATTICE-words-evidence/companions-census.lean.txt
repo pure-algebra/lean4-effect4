@@ -1,0 +1,70 @@
+import Test.All
+
+/-!
+# Seat LATTICE, the words follow-up: a census of the spelling rule of the population
+
+A scratch census: nothing here is in the tree. Run it as `lake env lean <this file, with the
+suffix .lean>` after the default build, at the head of branch `seat/lattice-words`.
+
+`ProofGraph.isGeneratedCompanion` (`tools/ProofGraph/Population.lean`) matches a name by its
+spelling under a constructor or an inductive type. This census goes over each constant of the
+`Effect4` and `Test` modules that `Test.All` loads. By spelling it counts the matched names, the
+ones that Lean tags itself, the ones that carry a declaration range of their own, and the ones
+whose parent gets that construction from the pinned toolchain. Then it lists the matched names
+that an author wrote: the ones with a declaration range of their own.
+-/
+
+open Lean Elab Command
+
+/-- Does the pinned toolchain generate this construction for this parent? Read from its source:
+`below` and `brecOn` for a recursive inductive type, and `ctorElim` for more than one
+constructor. The other spellings are answered `true`: this census does not model them. -/
+def generatedFor (env : Environment) : Name → Bool
+  | .str p s =>
+    match env.find? p with
+    | some (.inductInfo v) =>
+      if s == "below" || s == "brecOn" then v.isRec
+      else if s == "ctorElim" then v.numCtors > 1
+      else true
+    | _ => true
+  | _ => true
+
+run_cmd do
+  let env ← getEnv
+  let ours (n : Name) : Bool :=
+    match env.getModuleIdxFor? n with
+    | some idx =>
+      let m := env.header.moduleNames[idx.toNat]!
+      (`Effect4).isPrefixOf m || (`Test).isPrefixOf m
+    | none => false
+  let spelling : Name → String
+    | .str _ s => if s.startsWith "instSizeOf" then "instSizeOf…" else s
+    | _ => "?"
+  let mut total := 0
+  let mut matched := 0
+  -- spelling ↦ (matched, tagged, own range, generated for the parent, theorems among the ranged)
+  let mut rows : List (String × Nat × Nat × Nat × Nat × Nat) := []
+  let mut authored : Array Name := #[]
+  for (n, ci) in env.constants.toList do
+    unless ours n do continue
+    total := total + 1
+    unless ProofGraph.isGeneratedCompanion env n do continue
+    matched := matched + 1
+    let key := spelling n
+    let tagged := if isAuxRecursor env n || isNoConfusion env n then 1 else 0
+    let ranged := (← findDeclarationRangesCore? n).isSome
+    if ranged then authored := authored.push n
+    let r := if ranged then 1 else 0
+    let gen := if generatedFor env n then 1 else 0
+    let thm := if ranged && (ci matches .thmInfo _) then 1 else 0
+    rows := match rows.find? (·.1 == key) with
+      | some (_, a, b, c, d, e) =>
+        (key, a + 1, b + tagged, c + r, d + gen, e + thm) :: rows.filter (·.1 != key)
+      | none => (key, 1, tagged, r, gen, thm) :: rows
+  logInfo m!"constants of the Effect4 and Test modules: {total}; matched by spelling: {matched}"
+  for (key, a, b, c, d, e) in rows.toArray.qsort (·.1 < ·.1) do
+    logInfo m!"{key}: matched {a}; tagged by Lean {b}; own declaration range {c}; generated for its parent {d}; theorems among the ranged {e}"
+  logInfo m!"matched names with a declaration range of their own: {authored.qsort (·.toString < ·.toString)}"
+  let under := (env.constants.toList.filterMap fun (n, _) =>
+    if ours n && authored.any (fun a => a != n && a.isPrefixOf n) then some n else none)
+  logInfo m!"names under one of them: {under}"

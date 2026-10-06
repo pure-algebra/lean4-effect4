@@ -6,6 +6,11 @@ registry has no claim row for them. Add the claim's row and R14's top node (sect
 text), then run `make gen-semantics`. Nothing else of the tree moves: one law module, one
 battery and two import lines.
 
+Since this receipt, on the same day: eleven names of the module moved, and no statement
+changed. A site that a type slice does not keep is omitted, where this receipt says "folded", and
+`Slice.below` is `Slice.subslices`. The addendum with both rename maps is
+`docs/research/2026-10-06-seat-LATTICE-words-receipt.md`.
+
 Brief: `docs/research/2026-10-05-claude-lead/briefs/seat-lattice-brief.md`. Design:
 `docs/research/2026-10-06-seat-LATTICE-design.md`. In this receipt a slice is the paper's type
 slice, the kept part of one program. The seat's own unit of work is "the work".

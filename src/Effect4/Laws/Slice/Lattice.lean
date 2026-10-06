@@ -2,13 +2,20 @@ import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Auto.SubsetTac
 
 /-!
-# Laws.Slice.Lattice — the generic theory of slices
+# Laws.Slice.Lattice — the generic theory of type slices
 
-A **slice** of one program is the part of it that is kept: the list of its kept **sites**
-(`Slice.kept`). A site is an address of the program. A slice is below another when it keeps no
-more: **a smaller slice keeps less**. A **view** (`SliceView`) gives each slice a type, and it is
-monotone: a slice that keeps less has a type at or below. A query is a type. It is **valid** for
-a slice when the slice's type is at or above it (`SliceView.Valid`).
+A **type slice** of one program is the part of it that is kept: the list of its kept **sites**
+(`Slice.kept`). A site is an address of the program. A site that a slice does not keep is
+**omitted**, and the omitted sites of a slice are its **mask** (`Slice.omitted`). A slice is below
+another when it keeps no more: **a smaller slice keeps less**. A **slice view** (`SliceView`)
+gives each slice a type, and it is monotone: a slice that keeps less has a type at or below. A
+query is a type. It is **valid** for a slice when the slice's type is at or above it
+(`SliceView.Valid`).
+
+**The words.** In the dictionary (`docs/core/controlled-english.md`) a slice alone is a unit of
+work, and a fold is the catamorphism. So each docstring here says "type slice" at its first use,
+and a site that is not kept is omitted: no site is called "folded". To omit is to replace a
+sub-program by a hole (decisions row 288). What stands at an omitted site is the instance's.
 
 The statements are the consequences of Theorems 4.5, 4.6 and 4.7 of Carroll, Madhavapeddy and
 Omar 2026, *Bidirectional Type Slicing* (pages 9 to 12; each page is of the vendored PDF,
@@ -23,16 +30,16 @@ this module says that each is below the other: they keep the same sites. `SliceV
 the paper's Definition 4.3 (p. 9) read that way.
 
 **An instance chooses its `T`.** A view has one type side, with one order. The checker's type
-has three columns, and an instance takes one. The first instance, the plan's fold to an
-assumption, takes the error or the requirement, and not the three columns. A finite probe of
-seat CENSUS on 2026-10-06 found its answer column not monotone across a fork, and the two other
-columns monotone on each pair of masks that it tried.
+has three columns, and an instance takes one. The first instance, the omission that declares the
+answer alone (decisions rows 286 and 288), takes the error or the requirement, and not the three
+columns. A finite probe of seat CENSUS on 2026-10-06 found its answer column not monotone across
+a fork, and the two other columns monotone on each pair of masks that it tried.
 
 **A second fact, for a tree of sites only.** The sites of a real program are the addresses of a
-tree, and a fold at an address folds its sub-tree. So folding a site changes nothing when its
-parent is folded already: the instance's no-op. Two statements take it as a premise. A minimal
-slice is then a highlighted tree (`SliceView.Minimal.keeps_above`). And the descent can ask
-nothing about a site under a folded parent, and give the same slice
+tree, and an omission at an address omits its sub-tree. So omitting a site changes nothing when
+its parent is omitted already: the instance's no-op. Two statements take it as a premise. A
+minimal slice is then a highlighted tree (`SliceView.Minimal.keeps_above`). And the descent can
+ask nothing about a site under an omitted parent, and give the same slice
 (`SliceView.descendTree_eq_descend`). No other statement needs it.
 
 The parts, in order:
@@ -47,11 +54,12 @@ The parts, in order:
   `minimals` and `contribution`;
 - the statements.
 
-Placement. Concept `subtyping-algebra`. Requirement R14, under the proposed claim
-`slice-lattice-minimal`. Reach: every monotone map from the slices of one program to a preorder
-of types, with a decided order on the types and decided equality of sites where a statement
-names them. Consumer: each slice view, first the error and requirement provenance of the plan
-(`docs/research/2026-10-06-type-slicing-plan.md`, section 8, slice 4). The statements do not
+Placement. Concept `subtyping-algebra`. Requirement R14, under the claim
+`slice-lattice-minimal`, whose pointer is `SliceView.lattice_minimal`. Reach: every monotone map
+from the slices of one program to a preorder of types, with a decided order on the types and
+decided equality of sites where a statement names them. Consumer: each slice view, first the
+error and requirement provenance of the plan
+(`docs/research/2026-10-06-type-slicing-plan.md`, section 8, order 4). The statements do not
 establish that any real type map is monotone or has the no-op, a least slice, a minimum-size
 slice, or a bound for the contribution slice below a search. The design is
 `docs/research/2026-10-06-seat-LATTICE-design.md`. The controls and the paper's examples are in
@@ -64,9 +72,9 @@ namespace Effect4
 
 universe u v
 
-/-- A slice of one program: the sites that it keeps. It is the paper's highlight of a term
+/-- A type slice of one program: the sites that it keeps. It is the paper's highlight of a term
 (p. 7). The order is by what is kept: a smaller slice keeps less. Every site that the list does
-not hold is folded. -/
+not hold is omitted. -/
 structure Slice (α : Type u) where
   /-- the kept sites, in the order that the descent tries them -/
   kept : List α
@@ -78,7 +86,7 @@ variable {α : Type u}
 
 /-! ## The carrier's order -/
 
-/-- `a ≤ b`: `a` keeps no more than `b`. A smaller slice keeps less. -/
+/-- `a ≤ b`: `a` keeps no more than `b`. A smaller type slice keeps less. -/
 instance : LE (Slice α) := ⟨fun a b => a.kept ⊆ b.kept⟩
 
 /-- The order is a preorder. It is not antisymmetric: two lists can keep the same sites. -/
@@ -87,7 +95,7 @@ instance : Std.IsPreorder (Slice α) where
   le_refl a := List.Subset.refl a.kept
   le_trans _ _ _ hab hbc := List.Subset.trans hab hbc
 
-/-- The join keeps what either slice keeps. -/
+/-- The join keeps what either type slice keeps. -/
 instance : Max (Slice α) := ⟨fun a b => ⟨a.kept ++ b.kept⟩⟩
 
 /-- The join is the least upper bound. -/
@@ -99,8 +107,8 @@ instance : Std.LawfulOrderSup (Slice α) where
 instance instDecidableLE [DecidableEq α] (a b : Slice α) : Decidable (a ≤ b) :=
   decidable_of_iff (∀ x ∈ a.kept, x ∈ b.kept) Iff.rfl
 
-/-- The meet keeps what both slices keep. A view need not keep it: the meet of two valid slices
-can lose the type (the paper, p. 23; `Test/Program/SliceLattice.lean`). -/
+/-- The meet keeps what both type slices keep. A view need not keep it: the meet of two valid
+slices can lose the type (the paper, p. 23; `Test/Program/SliceLattice.lean`). -/
 instance [DecidableEq α] : Min (Slice α) := ⟨fun a b => ⟨a.kept.filter (· ∈ b.kept)⟩⟩
 
 /-- The meet is the greatest lower bound. -/
@@ -114,23 +122,23 @@ instance [DecidableEq α] : Std.LawfulOrderInf (Slice α) where
     · intro h x hx
       exact List.mem_filter.mpr ⟨h.1 hx, decide_eq_true (h.2 hx)⟩
 
-/-- The slice one site below: it keeps every site of `s` but `x`. -/
+/-- The type slice one site below: it keeps every site of `s` but `x`. -/
 def drop [DecidableEq α] (s : Slice α) (x : α) : Slice α := ⟨s.kept.filter (· ≠ x)⟩
 
-/-- The slice without a site is below the slice. A step of `SliceView.minimal_iff_drop`, its one
-consumer. -/
+/-- The type slice without a site is below the slice. A step of `SliceView.minimal_iff_drop`,
+its one consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem drop_le [DecidableEq α] (s : Slice α) (x : α) : s.drop x ≤ s :=
   fun _ hy => (List.mem_filter.mp hy).1
 
-/-- The slice without a site does not keep it. A step of `SliceView.minimal_iff_drop`, its one
-consumer. -/
+/-- The type slice without a site does not keep it. A step of `SliceView.minimal_iff_drop`, its
+one consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem not_mem_drop [DecidableEq α] (s : Slice α) (x : α) : x ∉ (s.drop x).kept := by
   intro h
   exact of_decide_eq_true (List.mem_filter.mp h).2 rfl
 
-/-- A slice below `s` that does not keep `x` is below `s` without `x`: each slice strictly
+/-- A type slice below `s` that does not keep `x` is below `s` without `x`: each slice strictly
 below is below a slice one site below. A step of `SliceView.minimal_iff_drop`, its one
 consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -141,19 +149,20 @@ theorem le_drop [DecidableEq α] {j s : Slice α} {x : α} (h : j ≤ s) (hx : x
   rintro rfl
   exact hx hy
 
-/-! ## The slices below one slice -/
+/-! ## The type slices below one slice -/
 
 /-- Every sub-list of a list: `2 ^ n` lists for `n` elements. -/
 def sublists : List α → List (List α)
   | [] => [[]]
   | x :: xs => sublists xs ++ (sublists xs).map (x :: ·)
 
-/-- The slices below `s`, one for each sub-list of its sites. It is the finiteness of the
+/-- The type slices below `s`, one for each sub-list of its sites. It is the finiteness of the
 carrier, as a list: the paper's Theorem 3.3 (p. 7) for this carrier. A search over it asks
-`2 ^ n` slices. -/
-def below (s : Slice α) : List (Slice α) := (sublists s.kept).map Slice.mk
+`2 ^ n` slices. The name is not `below`: that spelling under a structure is a generated
+companion's, and the tree's population reads it as one (`ProofGraph.isGeneratedCompanion`). -/
+def subslices (s : Slice α) : List (Slice α) := (sublists s.kept).map Slice.mk
 
-/-- A listed sub-list holds elements of the list only. A step of `le_of_mem_below`, its one
+/-- A listed sub-list holds elements of the list only. A step of `le_of_mem_subslices`, its one
 consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem sublists_subset : ∀ (l l' : List α), l' ∈ sublists l → l' ⊆ l
@@ -166,8 +175,8 @@ theorem sublists_subset : ∀ (l l' : List α), l' ∈ sublists l → l' ⊆ l
     · obtain ⟨t, ht, rfl⟩ := List.mem_map.mp h
       exact List.cons_subset_cons x (sublists_subset xs t ht)
 
-/-- Each selection of a list's elements is a listed sub-list. A step of `exists_mem_below`, its
-one consumer. -/
+/-- Each selection of a list's elements is a listed sub-list. A step of `exists_mem_subslices`,
+its one consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem filter_mem_sublists (p : α → Bool) : ∀ l : List α, l.filter p ∈ sublists l
   | [] => List.mem_singleton.mpr rfl
@@ -177,58 +186,59 @@ theorem filter_mem_sublists (p : α → Bool) : ∀ l : List α, l.filter p ∈ 
     · exact List.mem_append_right _ (List.mem_map_of_mem (filter_mem_sublists p xs))
     · exact List.mem_append_left _ (filter_mem_sublists p xs)
 
-/-- A listed slice is below the slice. A step of `SliceView.contribution_lub`, through
+/-- A listed type slice is below the slice. A step of `SliceView.contribution_lub`, through
 `SliceView.minimals_sound`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem le_of_mem_below {j s : Slice α} (h : j ∈ s.below) : j ≤ s := by
+theorem le_of_mem_subslices {j s : Slice α} (h : j ∈ s.subslices) : j ≤ s := by
   obtain ⟨l, hl, rfl⟩ := List.mem_map.mp h
   exact sublists_subset s.kept l hl
 
-/-- **The slices below one slice are finitely many**, up to their kept sites: each slice below
-`s` keeps the same sites as a listed one. It is the paper's Theorem 3.3 (p. 7), for this
+/-- **The type slices below one slice are finitely many**, up to their kept sites: each slice
+below `s` keeps the same sites as a listed one. It is the paper's Theorem 3.3 (p. 7), for this
 carrier. A step of `SliceView.contribution_lub`, through `SliceView.minimals_complete`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem exists_mem_below [DecidableEq α] {j s : Slice α} (h : j ≤ s) :
-    ∃ j' ∈ s.below, j' ≤ j ∧ j ≤ j' :=
+theorem exists_mem_subslices [DecidableEq α] {j s : Slice α} (h : j ≤ s) :
+    ∃ j' ∈ s.subslices, j' ≤ j ∧ j ≤ j' :=
   ⟨⟨s.kept.filter (· ∈ j.kept)⟩, List.mem_map_of_mem (filter_mem_sublists _ s.kept),
     fun _ hx => of_decide_eq_true (List.mem_filter.mp hx).2,
     fun _ hx => List.mem_filter.mpr ⟨h hx, decide_eq_true hx⟩⟩
 
-/-! ## What a slice folds -/
+/-! ## What a type slice omits -/
 
-/-- The sites of `sites` that `s` folds: the plan's mask. A smaller slice folds more. -/
-def folded [DecidableEq α] (sites : List α) (s : Slice α) : List α := sites.filter (· ∉ s.kept)
+/-- The mask of the type slice `s`: the sites of `sites` that it omits. A smaller slice omits
+more. -/
+def omitted [DecidableEq α] (sites : List α) (s : Slice α) : List α := sites.filter (· ∉ s.kept)
 
-/-- A smaller slice folds more. A step of `SliceView.ofFolded`, its one consumer. -/
+/-- A smaller type slice omits more. A step of `SliceView.ofOmitted`, its one consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem folded_anti [DecidableEq α] (sites : List α) {a b : Slice α} (h : a ≤ b) :
-    b.folded sites ⊆ a.folded sites := by
+theorem omitted_anti [DecidableEq α] (sites : List α) {a b : Slice α} (h : a ≤ b) :
+    b.omitted sites ⊆ a.omitted sites := by
   intro x hx
   obtain ⟨hs, hb⟩ := List.mem_filter.mp hx
   exact List.mem_filter.mpr ⟨hs, decide_eq_true fun ha => of_decide_eq_true hb (h ha)⟩
 
-/-- A slice folds sites of the given list only. A step of `SliceView.ofFolded`, its one
+/-- A type slice omits sites of the given list only. A step of `SliceView.ofOmitted`, its one
 consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem folded_subset [DecidableEq α] (sites : List α) (s : Slice α) : s.folded sites ⊆ sites :=
+theorem omitted_subset [DecidableEq α] (sites : List α) (s : Slice α) : s.omitted sites ⊆ sites :=
   fun _ hx => (List.mem_filter.mp hx).1
 
-/-- The slice of every site folds nothing. A step of `SliceView.ofFolded_full`, its one
+/-- The type slice of every site omits nothing. A step of `SliceView.ofOmitted_full`, its one
 consumer. The proof is by a `match`: `List.filter_eq_nil_iff` reaches `Classical.choice` on this
 toolchain. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem folded_full [DecidableEq α] (sites : List α) : (Slice.mk sites).folded sites = [] := by
-  match h : (Slice.mk sites).folded sites with
+theorem omitted_full [DecidableEq α] (sites : List α) : (Slice.mk sites).omitted sites = [] := by
+  match h : (Slice.mk sites).omitted sites with
   | [] => rfl
   | x :: _ =>
-    have hx : x ∈ (Slice.mk sites).folded sites := by rw [h]; exact List.mem_cons_self
+    have hx : x ∈ (Slice.mk sites).omitted sites := by rw [h]; exact List.mem_cons_self
     exact absurd (List.mem_filter.mp hx).1 (of_decide_eq_true (List.mem_filter.mp hx).2)
 
 /-! ## The descent on a list of sites -/
 
 /-- **The descent, as one pass.** `done` holds the sites tried and kept, and the second list the
 sites not yet tried. The pass tries each site once, in the order of the list. It drops a site
-exactly when the slice without it is still valid. The recursion is on the list of sites not yet
+exactly when the type slice without it is still valid. The recursion is on the list of sites not yet
 tried, so the pass ends. It asks `valid` once for each of those sites (`sweepAsked_length`,
 `sweep_congr`). -/
 def sweep (valid : Slice α → Bool) : List α → List α → List α
@@ -236,8 +246,8 @@ def sweep (valid : Slice α → Bool) : List α → List α → List α
   | done, x :: rest =>
     if valid ⟨done ++ rest⟩ then sweep valid done rest else sweep valid (done ++ [x]) rest
 
-/-- The pass's questions: each slice that `sweep` asks `valid` about, in the order asked. It
-follows the pass's own recursion. `sweep_congr` is what makes it the list of the questions: the
+/-- The pass's questions: each type slice that `sweep` asks `valid` about, in the order asked.
+It follows the pass's own recursion. `sweep_congr` is what makes it the list of the questions: the
 pass's result depends on `valid` at these slices only. -/
 def sweepAsked (valid : Slice α → Bool) : List α → List α → List (Slice α)
   | _, [] => []
@@ -246,15 +256,15 @@ def sweepAsked (valid : Slice α → Bool) : List α → List α → List (Slice
       (if valid ⟨done ++ rest⟩ then sweepAsked valid done rest
         else sweepAsked valid (done ++ [x]) rest)
 
-/-- The first valid slice one site below, in the order of the list: the sites of `done`, then
-the sites not yet tried without the first one whose removal keeps validity. `none` when no such
-site is left. -/
+/-- The first valid type slice one site below, in the order of the list: the sites of `done`,
+then the sites not yet tried without the first one whose removal keeps validity. `none` when no
+such site is left. -/
 def firstDrop (valid : Slice α → Bool) : List α → List α → Option (List α)
   | _, [] => none
   | done, x :: rest =>
     if valid ⟨done ++ rest⟩ then some (done ++ rest) else firstDrop valid (done ++ [x]) rest
 
-/-- A found slice has one site fewer. A step of the termination of `restart`, its one
+/-- A found type slice has one site fewer. A step of the termination of `restart`, its one
 consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem firstDrop_length (valid : Slice α → Bool) (done todo : List α) (l' : List α)
@@ -271,10 +281,10 @@ theorem firstDrop_length (valid : Slice α → Bool) (done todo : List α) (l' :
     rw [List.length_cons]
     omega
 
-/-- **The paper's descent** (the brute-force algorithm, pp. 9 and 10): take the first valid slice
-one site below, and start again from it. It stops when no slice one site below is valid. Each
-start asks again about the sites that failed before. `restart_eq_sweep` is its agreement with
-the one pass. -/
+/-- **The paper's descent** (the brute-force algorithm, pp. 9 and 10): take the first valid type
+slice one site below, and start again from it. It stops when no slice one site below is valid.
+Each start asks again about the sites that failed before. `restart_eq_sweep` is its agreement
+with the one pass. -/
 def restart (valid : Slice α → Bool) (l : List α) : List α :=
   match h : firstDrop valid [] l with
   | none => l
@@ -303,7 +313,7 @@ theorem sweep_sublist (valid : Slice α → Bool) (done todo : List α) :
     exact ih.trans (List.Sublist.append_left (List.sublist_cons_self x rest) done)
   | case3 done x rest _ ih => rwa [List.append_assoc, List.singleton_append] at ih
 
-/-- The pass keeps validity: it moves to a slice only after `valid` accepted it. It needs no
+/-- The pass keeps validity: it moves to a type slice only after `valid` accepted it. It needs no
 upward closure. A step of `SliceView.descend_minimal`, through `SliceView.descend_valid`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem sweep_valid (valid : Slice α → Bool) (done todo : List α)
@@ -313,7 +323,7 @@ theorem sweep_valid (valid : Slice α → Bool) (done todo : List α)
   | case2 done x rest hc ih => exact ih hc
   | case3 done x rest _ ih => exact ih (by rwa [List.append_assoc, List.singleton_append])
 
-/-- A slice within `done ++ x :: rest`, without `x`, is below the slice that the pass asked
+/-- A type slice within `done ++ x :: rest`, without `x`, is below the slice that the pass asked
 about at `x`. A step of `sweep_kept_needed` and of `sweepFree_eq_sweep`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem drop_le_of_subset [DecidableEq α] {r done rest : List α} {x : α}
@@ -327,8 +337,9 @@ theorem drop_le_of_subset [DecidableEq α] {r done rest : List α} {x : α}
     · exact List.mem_append_right _ hr
 
 /-- Under an upward closed `valid`, the pass needs each site that it tried and kept: its result
-without the site is not valid. The pass refused the slice without the site when it tried it, and
-the result without the site is below that slice. A step of `SliceView.descend_minimal`. -/
+without the site is not valid. The pass refused the type slice without the site when it tried
+it, and the result without the site is below that slice. A step of
+`SliceView.descend_minimal`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem sweep_kept_needed [DecidableEq α] (valid : Slice α → Bool)
     (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true) (done todo : List α) :
@@ -361,8 +372,8 @@ theorem sweepAsked_length (valid : Slice α → Bool) (done todo : List α) :
   | case2 done x rest hc ih => rw [sweepAsked, if_pos hc, List.length_cons, List.length_cons, ih]
   | case3 done x rest hc ih => rw [sweepAsked, if_neg hc, List.length_cons, List.length_cons, ih]
 
-/-- The pass reads `valid` at the asked slices and nowhere else: a `valid'` that agrees with
-`valid` there gives the same result. -/
+/-- The pass reads `valid` at the asked type slices and nowhere else: a `valid'` that agrees
+with `valid` there gives the same result. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem sweep_congr (valid valid' : Slice α → Bool) (done todo : List α)
     (h : ∀ c ∈ sweepAsked valid done todo, valid' c = valid c) :
@@ -383,9 +394,9 @@ theorem sweep_congr (valid valid' : Slice α → Bool) (done todo : List α)
 Each lemma of this section is a step of `restart_eq_sweep`, whose one consumer is
 `SliceView.descend_eq_restart`. The invariant is `Failed`: each site that the pass tried and
 kept still fails. Under an upward closed `valid` it holds along the pass, so a restart finds no
-valid slice among the sites that the pass has kept, and it goes on where the pass is. -/
+valid type slice among the sites that the pass has kept, and it goes on where the pass is. -/
 
-/-- A restart that finds no valid slice one site below stops at its list. -/
+/-- A restart that finds no valid type slice one site below stops at its list. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem restart_of_none {valid : Slice α → Bool} {l : List α}
     (h : firstDrop valid [] l = none) : restart valid l = l := by
@@ -394,7 +405,7 @@ theorem restart_of_none {valid : Slice α → Bool} {l : List α}
   · rfl
   · next l' h' => rw [h] at h'; exact nomatch h'
 
-/-- A restart that finds a valid slice one site below starts again from it. -/
+/-- A restart that finds a valid type slice one site below starts again from it. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem restart_of_some {valid : Slice α → Bool} {l l' : List α}
     (h : firstDrop valid [] l = some l') : restart valid l = restart valid l' := by
@@ -403,14 +414,14 @@ theorem restart_of_some {valid : Slice α → Bool} {l l' : List α}
   · next h' => rw [h] at h'; exact nomatch h'
   · next l'' h' => rw [h] at h'; rw [Option.some.inj h']
 
-/-- Each site of `mid` fails: the slice `pre ++ mid ++ rest` without it is not valid. It is the
-invariant of the agreement, and no tool calls it. -/
+/-- Each site of `mid` fails: the type slice `pre ++ mid ++ rest` without it is not valid. It is
+the invariant of the agreement, and no tool calls it. -/
 def Failed (valid : Slice α → Bool) : List α → List α → List α → Prop
   | _, [], _ => True
   | pre, y :: mid, rest =>
     valid ⟨pre ++ (mid ++ rest)⟩ = false ∧ Failed valid (pre ++ [y]) mid rest
 
-/-- The search for the first valid slice passes over sites that fail. -/
+/-- The search for the first valid type slice passes over sites that fail. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem firstDrop_append (valid : Slice α → Bool) (pre mid rest : List α)
     (h : Failed valid pre mid rest) :
@@ -438,7 +449,7 @@ theorem failed_snoc (valid : Slice α → Bool) (pre mid rest : List α) (x : α
     · rwa [List.append_assoc pre [y] mid, List.singleton_append]
 
 /-- Under an upward closed `valid`, the invariant stays when the pass drops a site: a site that
-failed fails at the smaller slice too. This is the one place where the agreement uses
+failed fails at the smaller type slice too. This is the one place where the agreement uses
 monotonicity. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem failed_rest (valid : Slice α → Bool)
@@ -454,7 +465,7 @@ theorem failed_rest (valid : Slice α → Bool)
     sub_tac
 
 /-- The agreement at every state of the pass: with the kept sites failing, the restart from
-the pass's slice gives the pass's result. -/
+the pass's type slice gives the pass's result. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem restart_append (valid : Slice α → Bool)
     (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true) (done todo : List α)
@@ -486,13 +497,13 @@ theorem restart_eq_sweep (valid : Slice α → Bool)
 
 /-! ### The pass with free drops
 
-A site is free at a slice when dropping it there changes nothing. An instance that can tell so
-with no call of its type map gives the test, and the pass asks nothing at a free site. The three
+A site is free at a type slice when dropping it there changes nothing. An instance that can tell
+so with no call of its type map gives the test, and the pass asks nothing at a free site. The three
 lemmas of this section are steps of `SliceView.descendTree_eq_descend` and of
 `SliceView.descendTree_asks`. -/
 
-/-- **The pass with free drops.** `free c x` says that the site `x` changes nothing at the slice
-`c`. Where it holds, the pass drops the site and asks nothing. Elsewhere it is `sweep`. -/
+/-- **The pass with free drops.** `free c x` says that the site `x` changes nothing at the type
+slice `c`. Where it holds, the pass drops the site and asks nothing. Elsewhere it is `sweep`. -/
 def sweepFree (valid : Slice α → Bool) (free : Slice α → α → Bool) : List α → List α → List α
   | done, [] => done
   | done, x :: rest =>
@@ -511,16 +522,16 @@ def sweepFreeAsked (valid : Slice α → Bool) (free : Slice α → α → Bool)
       (if valid ⟨done ++ rest⟩ then sweepFreeAsked valid free done rest
         else sweepFreeAsked valid free (done ++ [x]) rest)
 
-/-- The test of a tree of sites: the site has a parent, and the slice does not keep the parent.
-A fold at the parent has folded the site already. -/
-def parentFolded [DecidableEq α] (parent : α → Option α) (c : Slice α) (x : α) : Bool :=
+/-- The test of a tree of sites: the site has a parent, and the type slice does not keep the
+parent. The omission at the parent has omitted the site already. -/
+def parentOmitted [DecidableEq α] (parent : α → Option α) (c : Slice α) (x : α) : Bool :=
   match parent x with
   | some p => !decide (p ∈ c.kept)
   | none => false
 
-/-- From a valid start, the pass with free drops gives the pass's list. The test must be sound:
-a valid slice stays valid without a site that the test calls free. Then the pass drops each free
-site too, after one question. -/
+/-- From a valid start, the pass with free drops gives the pass's list. The test must be sound
+against `valid`: a valid type slice stays valid without a site that the test calls free. Then the
+pass drops each free site too, after one question. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem sweepFree_eq_sweep [DecidableEq α] (valid : Slice α → Bool) (free : Slice α → α → Bool)
     (up : ∀ {a b : Slice α}, a ≤ b → valid a = true → valid b = true)
@@ -564,8 +575,8 @@ theorem sweepFreeAsked_sublist [DecidableEq α] (valid : Slice α → Bool)
     rw [sweepFreeAsked, if_neg hfree, if_neg hc, sweepAsked, if_neg hc]
     exact (ih (by rwa [List.append_assoc, List.singleton_append])).cons_cons _
 
-/-- The pass with free drops reads `valid` at its asked slices and nowhere else. It needs no
-premise. -/
+/-- The pass with free drops reads `valid` at its asked type slices and nowhere else. It needs
+no premise. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem sweepFree_congr (valid valid' : Slice α → Bool) (free : Slice α → α → Bool)
     (done todo : List α) (h : ∀ c ∈ sweepFreeAsked valid free done todo, valid' c = valid c) :
@@ -587,14 +598,15 @@ theorem sweepFree_congr (valid valid' : Slice α → Bool) (free : Slice α → 
 
 end Slice
 
-/-- **A view of one program**: the type of each of its slices. An instance owes one fact, `mono`,
-and nothing about its carrier. The direction: a slice that keeps less has a type at or below.
+/-- **A slice view of one program**: the type of each of its type slices. An instance owes one
+fact, `mono`, and nothing about its carrier. The direction: a slice that keeps less has a type at
+or below.
 For the checker `mono` is graduality (the paper's Definition 2.1, p. 5). The order on the types
 is the one that `T` carries as `LE`. -/
 structure SliceView (α : Type u) (T : Type v) [LE T] where
-  /-- the type of a slice -/
+  /-- the type of a type slice -/
   typeOf : Slice α → T
-  /-- a slice that keeps less has a type at or below -/
+  /-- a type slice that keeps less has a type at or below -/
   mono : ∀ {a b : Slice α}, a ≤ b → typeOf a ≤ typeOf b
 
 -- The projection of the proof field is a theorem of the environment. It is placed by its
@@ -607,7 +619,7 @@ variable {α : Type u} {T : Type v} [LE T]
 
 /-! ## Validity and minimality -/
 
-/-- A query is **valid** for a slice when the slice's type is at or above the query: the
+/-- A query is **valid** for a type slice when the slice's type is at or above the query: the
 paper's condition `υ ⊑ φ` (Definition 4.1, p. 9). It is not an equality: an exact slice need not
 exist (the paper's Counterexample 4.2, p. 9; `Test/Program/SliceLattice.lean`). -/
 def Valid (v : SliceView α T) (q : T) (s : Slice α) : Prop := q ≤ v.typeOf s
@@ -617,9 +629,10 @@ instance instDecidableValid [DecidableLE T] (v : SliceView α T) (q : T) (s : Sl
     Decidable (v.Valid q s) :=
   inferInstanceAs (Decidable (q ≤ v.typeOf s))
 
-/-- A slice is **minimal** for a query when it is valid, and each valid slice below it keeps the
-same sites. It is the paper's Definitions 4.3 and 4.4 (p. 9), with "keeps the same sites" where
-the paper says "equal". A query can have several minimal slices, and none is the least. -/
+/-- A type slice is **minimal** for a query when it is valid, and each valid slice below it
+keeps the same sites. It is the paper's Definitions 4.3 and 4.4 (p. 9), with "keeps the same
+sites" where the paper says "equal". A query can have several minimal slices, and none is the
+least. -/
 def Minimal (v : SliceView α T) (q : T) (m : Slice α) : Prop :=
   v.Valid q m ∧ ∀ j : Slice α, j ≤ m → v.Valid q j → m ≤ j
 
@@ -630,66 +643,67 @@ def isMinimal [DecidableEq α] [DecidableLE T] (v : SliceView α T) (q : T) (m :
 
 /-! ## The executable descent -/
 
-/-- **The descent**: from a slice down to a minimal slice below it, by one pass over its sites
-(`Slice.sweep`). Its choice is fixed by the order of `s.kept`: it tries each site once, in that
-order, and drops a site exactly when the slice without it is still valid. So two runs give one
-answer. It returns one minimal slice, not the smallest: a minimum-size slice is NP-hard in the
-paper's calculus (section 10, p. 22). Its law is `descend_minimal`, and its cost `descend_asks`. -/
+/-- **The descent**: from a type slice down to a minimal slice below it, by one pass over its
+sites (`Slice.sweep`). Its choice is fixed by the order of `s.kept`: it tries each site once, in
+that order, and drops a site exactly when the slice without it is still valid. So two runs give
+one answer. It returns one minimal slice, not the smallest: a minimum-size slice is NP-hard in
+the paper's calculus (section 10, p. 22). Its law is `descend_minimal`, and its cost
+`descend_asks`. -/
 def descend [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) : Slice α :=
   ⟨Slice.sweep (fun c => decide (v.Valid q c)) [] s.kept⟩
 
-/-- The slices whose validity the descent asked, in the order asked. -/
+/-- The type slices whose validity the descent asked, in the order asked. -/
 def asked [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) : List (Slice α) :=
   Slice.sweepAsked (fun c => decide (v.Valid q c)) [] s.kept
 
 /-- **The descent over a tree of sites.** `parent x` is the site above `x`, where one is. The
-descent is `descend`, and it asks nothing about a site whose parent the slice does not keep
-(`Slice.sweepFree` with `Slice.parentFolded`). With the parents first in `s.kept`, a dropped site
-takes its sub-tree with it, for one question. Its law is `descendTree_eq_descend`, under the
+descent is `descend`, and it asks nothing about a site whose parent the type slice does not keep
+(`Slice.sweepFree` with `Slice.parentOmitted`). With the parents first in `s.kept`, a dropped
+site takes its sub-tree with it, for one question. Its law is `descendTree_eq_descend`, under the
 instance's no-op premise. -/
 def descendTree [DecidableEq α] [DecidableLE T] (v : SliceView α T) (parent : α → Option α)
     (q : T) (s : Slice α) : Slice α :=
-  ⟨Slice.sweepFree (fun c => decide (v.Valid q c)) (Slice.parentFolded parent) [] s.kept⟩
+  ⟨Slice.sweepFree (fun c => decide (v.Valid q c)) (Slice.parentOmitted parent) [] s.kept⟩
 
-/-- The slices whose validity the descent over a tree asked, in the order asked. -/
+/-- The type slices whose validity the descent over a tree asked, in the order asked. -/
 def askedTree [DecidableEq α] [DecidableLE T] (v : SliceView α T) (parent : α → Option α)
     (q : T) (s : Slice α) : List (Slice α) :=
-  Slice.sweepFreeAsked (fun c => decide (v.Valid q c)) (Slice.parentFolded parent) [] s.kept
+  Slice.sweepFreeAsked (fun c => decide (v.Valid q c)) (Slice.parentOmitted parent) [] s.kept
 
-/-! ## Every minimal slice, by search -/
+/-! ## Every minimal type slice, by search -/
 
-/-- Every minimal slice below `s`, one for each sub-list of its sites that passes the one-step
-test. It is a search of `2 ^ n` slices for `n` sites. -/
+/-- Every minimal type slice below `s`, one for each sub-list of its sites that passes the
+one-step test. It is a search of `2 ^ n` slices for `n` sites. -/
 def minimals [DecidableEq α] [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
     List (Slice α) :=
-  s.below.filter (v.isMinimal q)
+  s.subslices.filter (v.isMinimal q)
 
 /-- **The contribution slice** (the paper's section 4.6, p. 12): the sites of `s` that some
-minimal slice below `s` keeps. It is the join of the minimal slices (`contribution_lub`). It is
-computed by the search of `minimals`, and no better bound is stated. -/
+minimal type slice below `s` keeps. It is the join of the minimal slices (`contribution_lub`). It
+is computed by the search of `minimals`, and no better bound is stated. -/
 def contribution [DecidableEq α] [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
     Slice α :=
   ⟨s.kept.filter fun x => (v.minimals q s).any fun m => decide (x ∈ m.kept)⟩
 
-/-! ## A view from a type map of what is folded -/
+/-! ## A slice view from a type map of what is omitted -/
 
-/-- **A view from the plan's mask.** `f F` is the type of the program with the sites `F` folded.
-The premise is graduality in the mask's direction: folding more gives a type at or below. It is
-owed for the sites of `sites` only, because a real instance can fold only some addresses. The
-view's type of a slice is `f` at the sites that the slice does not keep. -/
-def ofFolded [DecidableEq α] (sites : List α) (f : List α → T)
+/-- **A slice view from a mask.** `f F` is the type of the program with the sites `F` omitted.
+The premise is graduality in the mask's direction: omitting more gives a type at or below. It is
+owed for the sites of `sites` only, because a real instance can omit only some addresses. The
+view's type of a type slice is `f` at its mask: the sites that the slice does not keep. -/
+def ofOmitted [DecidableEq α] (sites : List α) (f : List α → T)
     (anti : ∀ {F G : List α}, F ⊆ G → G ⊆ sites → f G ≤ f F) : SliceView α T where
-  typeOf s := f (s.folded sites)
-  mono h := anti (Slice.folded_anti sites h) (Slice.folded_subset sites _)
+  typeOf s := f (s.omitted sites)
+  mono h := anti (Slice.omitted_anti sites h) (Slice.omitted_subset sites _)
 
 /-! ## The statements
 
 Each of the fifteen statements of the brief began as a planned goal, and its proof replaced it in
 place. The three statements of the descent over a tree landed with their proofs:
 `descendTree_eq_descend`, `descendTree_minimal` and `descendTree_asks`, with their step
-`parentFolded_sound`. The last statement, `lattice_minimal`, is the claim's four parts as one. -/
+`parentOmitted_sound`. The last statement, `lattice_minimal`, is the claim's four parts as one. -/
 
-/-- **Validity is upward closed**: a slice that keeps more is valid for the same query. The
+/-- **Validity is upward closed**: a type slice that keeps more is valid for the same query. The
 paper has it by graduality (Theorem 3.5, p. 8) for its calculus. Here it holds for every
 monotone view. It establishes no slice that is valid. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -697,7 +711,7 @@ theorem valid_up [Std.IsPreorder T] (v : SliceView α T) {q : T} {a b : Slice α
     (h : v.Valid q a) (hab : a ≤ b) : v.Valid q b :=
   Std.le_trans h (v.mono hab)
 
-/-- **Minimality is decided one site below.** A valid slice is minimal exactly when no slice
+/-- **Minimality is decided one site below.** A valid type slice is minimal exactly when no slice
 one site below it is valid. It is the last step of the paper's brute-force algorithm: "if none
 of the slices satisfy the query, then a minimal slice has been found, by graduality" (pp. 9
 and 10). It uses the view's monotonicity. -/
@@ -717,14 +731,14 @@ theorem isMinimal_iff [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : S
   exact and_congr_right fun _ => forall₂_congr fun _ _ => by
     rw [Bool.not_eq_true', decide_eq_false_iff_not]
 
-/-- Minimality is decided, by the one-step test. So `decide` proves the minimality of one slice
-of a finite instance whose type map the kernel can run. -/
+/-- Minimality is decided, by the one-step test. So `decide` proves the minimality of one type
+slice of a finite instance whose type map the kernel can run. -/
 instance instDecidableMinimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) (q : T) (m : Slice α) : Decidable (v.Minimal q m) :=
   decidable_of_iff _ (v.isMinimal_iff q m)
 
-/-- **A minimal slice needs each site that it keeps**: its type without the site is not at or
-above its type. A step of `Minimal.keeps_above`, and a test that one kept site is no dead
+/-- **A minimal type slice needs each site that it keeps**: its type without the site is not at
+or above its type. A step of `Minimal.keeps_above`, and a test that one kept site is no dead
 weight. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem Minimal.needs [DecidableEq α] [Std.IsPreorder T] {v : SliceView α T} {q : T}
@@ -732,10 +746,10 @@ theorem Minimal.needs [DecidableEq α] [Std.IsPreorder T] {v : SliceView α T} {
     ¬ v.typeOf m ≤ v.typeOf (m.drop x) :=
   fun hle => ((v.minimal_iff_drop q m).mp h).2 x hx (Std.le_trans h.1 hle)
 
-/-- **A minimal slice is a highlighted tree**: it keeps each site above a site that it keeps.
-`above y x` says that the site `y` is above the site `x`: for the addresses of a tree, an
-ancestor. The premise is the instance's: folding a site changes nothing when a site above it
-is folded already. A type map that folds a whole sub-tree at an address has it. The premise is
+/-- **A minimal type slice is a highlighted tree**: it keeps each site above a site that it
+keeps. `above y x` says that the site `y` is above the site `x`: for the addresses of a tree, an
+ancestor. The premise is the instance's: omitting a site changes nothing when a site above it
+is omitted already. A type map that omits a whole sub-tree at an address has it. The premise is
 asked at the slice `m` only. The statement gives no such closure for a slice that is not
 minimal. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -752,15 +766,15 @@ theorem descend_sublist [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice 
     (v.descend q s).kept.Sublist s.kept :=
   Slice.sweep_sublist _ [] s.kept
 
-/-- The descent's slice is below its start: it keeps no more. A corollary of
+/-- The descent's type slice is below its start: it keeps no more. A corollary of
 `descend_sublist`, and a step of `exists_minimal_below`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem descend_le [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α) :
     v.descend q s ≤ s :=
   (v.descend_sublist q s).subset
 
-/-- The descent of a valid slice is valid. It needs no monotonicity: the pass moves to accepted
-slices only. A step of `descend_minimal`. -/
+/-- The descent of a valid type slice is valid. It needs no monotonicity: the pass moves to
+accepted slices only. A step of `descend_minimal`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem descend_valid [DecidableLE T] (v : SliceView α T) {q : T} {s : Slice α}
     (h : v.Valid q s) : v.Valid q (v.descend q s) :=
@@ -775,7 +789,8 @@ theorem decide_valid_up [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T) 
     decide (v.Valid q b) = true :=
   decide_eq_true (v.valid_up (of_decide_eq_true ha) hab)
 
-/-- **The descent ends at a minimal slice** (the paper's brute-force algorithm, pp. 9 and 10).
+/-- **The descent ends at a minimal type slice** (the paper's brute-force algorithm, pp. 9 and
+10).
 From a valid slice it returns a minimal slice, and `descend_sublist` puts that slice below the
 start. It returns one minimal slice, and not a least or a smallest one. Without the premise the
 start is not valid, and then no slice below it is (`valid_up`). -/
@@ -788,7 +803,8 @@ theorem descend_minimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v :
   · exact List.not_mem_nil hnil
   · exact of_decide_eq_false hneeded hv
 
-/-- **A minimal valid slice exists below each valid slice**: the paper's Theorem 4.5 (p. 9).
+/-- **A minimal valid type slice exists below each valid slice**: the paper's Theorem 4.5
+(p. 9).
 The paper's proof enumerates the slices below and does not use monotonicity. This proof is the
 descent, which uses it. The statement names two decisions, of the order on the types and of
 equal sites, because the gate admits no classical axiom. It leaves out a map that is not
@@ -799,14 +815,14 @@ theorem exists_minimal_below [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     ∃ m : Slice α, m ≤ s ∧ v.Minimal q m :=
   ⟨v.descend q s, v.descend_le q s, v.descend_minimal h⟩
 
-/-- A slice that is valid for a query is valid for each query at or below it: a refined query
-keeps the valid slices of the wider one. A step of `minimal_refine`. -/
+/-- A type slice that is valid for a query is valid for each query at or below it: a refined
+query keeps the valid slices of the wider one. A step of `minimal_refine`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem valid_refine [Std.IsPreorder T] (v : SliceView α T) {q q' : T} {s : Slice α}
     (hq : q' ≤ q) (h : v.Valid q s) : v.Valid q' s :=
   Std.le_trans hq h
 
-/-- **A refined query has a minimal slice below a minimal slice of the wider query**: the
+/-- **A refined query has a minimal type slice below a minimal slice of the wider query**: the
 paper's Theorem 4.6 (p. 10). The witness is the descent from `m₂` for the query `q₁`. Nothing
 holds upwards: a minimal slice of `q₁` need not lie below a minimal slice of `q₂` (the paper,
 p. 11; `Test/Program/SliceLattice.lean`). -/
@@ -816,15 +832,16 @@ theorem minimal_refine [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     ∃ m₁ : Slice α, m₁ ≤ m₂ ∧ v.Minimal q₁ m₁ :=
   v.exists_minimal_below (v.valid_refine hq h.1)
 
-/-- **The one pass is the paper's descent.** The paper's brute force takes the first valid
+/-- **The one pass is the paper's descent.** The paper's brute force takes the first valid type
 slice one site below and starts again (pp. 9 and 10): `Slice.restart`. Monotonicity is what
 makes one pass enough: a site that failed once fails at each later slice, so no start needs to
 ask about it again. A finite probe counts the questions on one input of `n` sites: the restart
 asks 120 at `n = 20` and 255 at `n = 30`, and the pass 20 and 30
 (`Test/Program/SliceLattice.lean`). The equality rests on monotonicity, and where a type map is
-not monotone the two descents differ (the same file). On programs of the tree, under a fold that
-is not monotone, a finite probe of seat CENSUS on 2026-10-06 found the pass in program order at
-a slice that is not minimal in 3 of 50 cases, and the restart at a minimal slice in all 50. -/
+not monotone the two descents differ (the same file). On programs of the tree, under an
+omission that is not monotone, a finite probe of seat CENSUS on 2026-10-06 found the pass in
+program order at a slice that is not minimal in 3 of 50 cases, and the restart at a minimal slice
+in all 50. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem descend_eq_restart [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T) (q : T)
     (s : Slice α) :
@@ -832,7 +849,7 @@ theorem descend_eq_restart [Std.IsPreorder T] [DecidableLE T] (v : SliceView α 
   congrArg Slice.mk (Slice.restart_eq_sweep _ (v.decide_valid_up q) s.kept).symm
 
 /-- **The descent's cost: one question for each site of its start.** The first part counts the
-slices that the descent asked about. The second part says that the descent read the validity at
+type slices that the descent asked about. The second part says that the descent read the validity at
 those slices and nowhere else: a pass over any `valid'` that agrees with the view there returns
 the same sites. So the count is of the function's questions, with no counter beside it. Each
 question is one call of the type map and one comparison. It is the paper's bound `O(n × T)`
@@ -844,26 +861,27 @@ theorem descend_asks [DecidableLE T] (v : SliceView α T) (q : T) (s : Slice α)
         Slice.sweep valid' [] s.kept = (v.descend q s).kept :=
   ⟨Slice.sweepAsked_length _ [] s.kept, fun valid' h => Slice.sweep_congr _ valid' [] s.kept h⟩
 
-/-- The tree's test is sound for a view with the no-op premise: where the parent is folded, a
-valid slice stays valid without the site. A step of `descendTree_eq_descend` and of
-`descendTree_asks`. -/
+/-- The tree's test is sound against a view's validity, under the no-op premise: where the
+parent is omitted, a valid type slice stays valid without the site. A step of
+`descendTree_eq_descend` and of `descendTree_asks`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem parentFolded_sound [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
+theorem parentOmitted_sound [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
     (parent : α → Option α)
     (noop : ∀ (c : Slice α) {x y : α}, parent x = some y → y ∉ c.kept →
       v.typeOf c ≤ v.typeOf (c.drop x))
-    (q : T) (c : Slice α) (x : α) (hfree : Slice.parentFolded parent c x = true)
+    (q : T) (c : Slice α) (x : α) (hfree : Slice.parentOmitted parent c x = true)
     (hc : decide (v.Valid q c) = true) : decide (v.Valid q (c.drop x)) = true := by
-  unfold Slice.parentFolded at hfree
+  unfold Slice.parentOmitted at hfree
   split at hfree
   · next p hp =>
     exact decide_eq_true (Std.le_trans (of_decide_eq_true hc)
       (noop c hp (of_decide_eq_false (Eq.mp (Bool.not_eq_true' _) hfree))))
   · exact nomatch hfree
 
-/-- **The descent over a tree gives the descent's slice.** The premise is the instance's no-op,
-the one of `Minimal.keeps_above`, asked at every slice: folding a site changes nothing when its
-parent is folded already. A type map that folds a whole sub-tree at an address has it. From a
+/-- **The descent over a tree gives the descent's type slice.** The premise is the instance's
+no-op, the one of `Minimal.keeps_above`, asked at every slice: omitting a site changes nothing
+when its parent is omitted already. A type map that omits a whole sub-tree at an address has it.
+From a
 valid start the two descents give one slice. The statement says nothing for a start that is not
 valid, and it gives no order of the sites: with a child before its parent the descent asks about
 the child. -/
@@ -874,9 +892,9 @@ theorem descendTree_eq_descend [DecidableEq α] [Std.IsPreorder T] [DecidableLE 
       v.typeOf c ≤ v.typeOf (c.drop x))
     {q : T} {s : Slice α} (h : v.Valid q s) : v.descendTree parent q s = v.descend q s :=
   congrArg Slice.mk (Slice.sweepFree_eq_sweep _ _ (v.decide_valid_up q)
-    (v.parentFolded_sound parent noop q) [] s.kept (decide_eq_true h))
+    (v.parentOmitted_sound parent noop q) [] s.kept (decide_eq_true h))
 
-/-- The descent over a tree ends at a minimal slice: `descend_minimal`, through
+/-- The descent over a tree ends at a minimal type slice: `descend_minimal`, through
 `descendTree_eq_descend`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem descendTree_minimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
@@ -887,10 +905,10 @@ theorem descendTree_minimal [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
   v.descendTree_eq_descend parent noop h ▸ v.descend_minimal h
 
 /-- **The descent over a tree asks no more.** Its questions are a sub-list of the descent's
-questions: the same ones, without those at a site under a folded parent. And its result depends
-on the validity at its own questions only. A finite probe on the toy: 8 questions against 10 on
-the page 18 program, and 1 against 4 where the root folds (`Test/Program/SliceLattice.lean`). It
-states no count below the sub-list. -/
+questions: the same ones, without those at a site under an omitted parent. And its result
+depends on the validity at its own questions only. A finite probe on the toy: 8 questions against
+10 on the page 18 program, and 1 against 4 where the root is omitted
+(`Test/Program/SliceLattice.lean`). It states no count below the sub-list. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem descendTree_asks [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) (parent : α → Option α)
@@ -900,13 +918,13 @@ theorem descendTree_asks [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v.askedTree parent q s).Sublist (v.asked q s) ∧
       ∀ valid' : Slice α → Bool,
         (∀ c ∈ v.askedTree parent q s, valid' c = decide (v.Valid q c)) →
-          Slice.sweepFree valid' (Slice.parentFolded parent) [] s.kept =
+          Slice.sweepFree valid' (Slice.parentOmitted parent) [] s.kept =
             (v.descendTree parent q s).kept :=
-  ⟨Slice.sweepFreeAsked_sublist _ _ (v.decide_valid_up q) (v.parentFolded_sound parent noop q)
+  ⟨Slice.sweepFreeAsked_sublist _ _ (v.decide_valid_up q) (v.parentOmitted_sound parent noop q)
       [] s.kept (decide_eq_true h),
     fun valid' hv => Slice.sweepFree_congr _ valid' _ [] s.kept hv⟩
 
-/-- **The join of two valid slices is valid for the join of their queries**: the paper's
+/-- **The join of two valid type slices is valid for the join of their queries**: the paper's
 Theorem 4.7 (p. 12). The type side needs a join here, and in no other statement: `max` with
 `Std.LawfulOrderSup`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
@@ -915,34 +933,34 @@ theorem valid_max [Std.IsPreorder T] [Max T] [Std.LawfulOrderSup T] (v : SliceVi
     v.Valid (max q₁ q₂) (max a b) :=
   Std.max_le_iff.mpr ⟨v.valid_up ha Std.left_le_max, v.valid_up hb Std.right_le_max⟩
 
-/-- A slice that keeps the same sites as a minimal slice is minimal. A step of
+/-- A type slice that keeps the same sites as a minimal slice is minimal. A step of
 `minimals_complete`, its one consumer. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem Minimal.of_same_sites [Std.IsPreorder T] {v : SliceView α T} {q : T} {m m' : Slice α}
     (h : v.Minimal q m) (h₁ : m ≤ m') (h₂ : m' ≤ m) : v.Minimal q m' :=
   ⟨v.valid_up h.1 h₁, fun j hj hv => Std.le_trans h₂ (h.2 j (Std.le_trans hj h₂) hv)⟩
 
-/-- Each slice that the search lists is minimal and below the start. A step of
+/-- Each type slice that the search lists is minimal and below the start. A step of
 `contribution_lub`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem minimals_sound [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
     {q : T} {s m : Slice α} (h : m ∈ v.minimals q s) : m ≤ s ∧ v.Minimal q m :=
-  ⟨Slice.le_of_mem_below (List.mem_filter.mp h).1,
+  ⟨Slice.le_of_mem_subslices (List.mem_filter.mp h).1,
     (v.isMinimal_iff q m).mp (List.mem_filter.mp h).2⟩
 
-/-- The search misses no minimal slice below the start: each one keeps the same sites as a
+/-- The search misses no minimal type slice below the start: each one keeps the same sites as a
 listed one. A step of `contribution_lub`. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem minimals_complete [DecidableEq α] [Std.IsPreorder T] [DecidableLE T] (v : SliceView α T)
     {q : T} {s m : Slice α} (hs : m ≤ s) (h : v.Minimal q m) :
     ∃ m' ∈ v.minimals q s, m' ≤ m ∧ m ≤ m' := by
-  obtain ⟨m', hm', h₁, h₂⟩ := Slice.exists_mem_below hs
+  obtain ⟨m', hm', h₁, h₂⟩ := Slice.exists_mem_subslices hs
   exact ⟨m', List.mem_filter.mpr ⟨hm', (v.isMinimal_iff q m').mpr (h.of_same_sites h₂ h₁)⟩,
     h₁, h₂⟩
 
-/-- **The contribution slice is the join of the minimal slices**: it is below a slice exactly
-when each minimal slice below `s` is. The paper calls it "a least upper bound of actual minimal
-slices" (p. 12). -/
+/-- **The contribution slice is the join of the minimal type slices**: it is below a slice
+exactly when each minimal slice below `s` is. The paper calls it "a least upper bound of actual
+minimal slices" (p. 12). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem contribution_lub [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) (q : T) (s u : Slice α) :
@@ -956,15 +974,15 @@ theorem contribution_lub [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     obtain ⟨m, hm, hxm⟩ := List.any_eq_true.mp (List.mem_filter.mp hx).2
     exact h m (v.minimals_sound hm).1 (v.minimals_sound hm).2 (of_decide_eq_true hxm)
 
-/-- The contribution slice is below its start: it keeps sites of the start only, in the start's
-order. -/
+/-- The contribution slice is a type slice below its start: it keeps sites of the start only, in
+the start's order. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem contribution_le [DecidableEq α] [DecidableLE T] (v : SliceView α T) (q : T)
     (s : Slice α) : v.contribution q s ≤ s :=
   fun _ hx => (List.mem_filter.mp hx).1
 
-/-- **The contribution slice is valid** when its start is: the join of all minimal slices is a
-slice for the query (the paper's section 4.6, p. 12). -/
+/-- **The contribution slice is valid** when its start is: the join of all minimal type slices
+is a slice for the query (the paper's section 4.6, p. 12). -/
 @[semantics "subtyping-algebra" (requirement := R14)]
 theorem contribution_valid [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
     (v : SliceView α T) {q : T} {s : Slice α} (h : v.Valid q s) :
@@ -972,18 +990,18 @@ theorem contribution_valid [DecidableEq α] [Std.IsPreorder T] [DecidableLE T]
   v.valid_up (v.descend_valid h)
     ((v.contribution_lub q s _).mp (Std.le_refl _) _ (v.descend_le q s) (v.descend_minimal h))
 
-/-- **At the full slice nothing is folded**: the view of a mask gives the type map at the empty
-mask. It is the generic half of the plan's `slice-conservative`. It does not say that `f []` is
-the checker's answer: that is the instance's. -/
+/-- **At the full type slice nothing is omitted**: the slice view of a mask gives the type map
+at the empty mask. It is the generic half of the plan's `slice-conservative`. It does not say
+that `f []` is the checker's answer: that is the instance's. -/
 @[semantics "subtyping-algebra" (requirement := R14)]
-theorem ofFolded_full [DecidableEq α] (sites : List α) (f : List α → T)
+theorem ofOmitted_full [DecidableEq α] (sites : List α) (f : List α → T)
     (anti : ∀ {F G : List α}, F ⊆ G → G ⊆ sites → f G ≤ f F) :
-    (ofFolded sites f anti).typeOf ⟨sites⟩ = f [] :=
-  congrArg f (Slice.folded_full sites)
+    (ofOmitted sites f anti).typeOf ⟨sites⟩ = f [] :=
+  congrArg f (Slice.omitted_full sites)
 
 /-- **The claim `slice-lattice-minimal`, as one statement**: its four parts, for one monotone
-view. A minimal valid slice exists below each valid slice (Theorem 4.5). The descent ends at one,
-below its start. A refined query has a minimal slice below a minimal slice of the wider query
+view. A minimal valid type slice exists below each valid slice (Theorem 4.5). The descent ends at
+one, below its start. A refined query has a minimal slice below a minimal slice of the wider query
 (Theorem 4.6). The join of two valid slices is valid for the join of their queries (Theorem 4.7).
 It is the pointer that the claim's row needs, and it adds nothing to its four parts. -/
 @[semantics "subtyping-algebra" (requirement := R14)]

@@ -1,0 +1,9 @@
+$ python3 first_use.py src/Effect4/Laws/Slice/Lattice.lean Test/Program/SliceLattice.lean   (at the head)
+src/Effect4/Laws/Slice/Lattice.lean:4: fold-word 'fold': … a slice alone is a unit of work, and a fold is the catamorphism. So each …
+src/Effect4/Laws/Slice/Lattice.lean:4: first use is bare: …/-! # Laws.Slice.Lattice — the generic theory …
+src/Effect4/Laws/Slice/Lattice.lean: 2 finding(s)
+Test/Program/SliceLattice.lean: 0 finding(s)
+
+$ the same at the base ea0f584a (the two saved copies): the count of findings alone
+base-Lattice.lean: 106 finding(s)
+base-SliceLattice.lean: 51 finding(s)

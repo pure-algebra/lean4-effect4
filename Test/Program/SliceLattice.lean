@@ -2,31 +2,31 @@ import Effect4.Laws.Slice.Lattice
 import ProofGraph.Plan
 
 /-!
-# The generic theory of slices: its pinned outputs, the paper's examples and the red controls
+# The generic theory of type slices: its pinned outputs, the paper's examples, the red controls
 
 The statements and their proofs are in `src/Effect4/Laws/Slice/Lattice.lean`. This battery pins
 each statement's axioms and its plan status. It then holds one instance, a toy: a term with holes
 over types with a gap, with sliced assumptions. The toy owes one fact, its monotonicity
-(`synth_mono`). For the tree's two statements it owes a second one: a site under a folded parent
-changes nothing (`toy_noop`). The toy renders the examples of Carroll, Madhavapeddy and Omar
+(`synth_mono`). For the tree's two statements it owes a second one: a site under an omitted
+parent changes nothing (`toy_noop`). The toy renders the examples of Carroll, Madhavapeddy and Omar
 2026, *Bidirectional Type Slicing* (each page is of the vendored PDF,
 `vendor/papers/program-graphs/bidirectional-type-slicing-2607.12197v1.pdf`):
 
-- page 18: the four incomparable minimal slices of `if true then x else y`;
+- page 18: the four incomparable minimal type slices of `if true then x else y`;
 - page 23: the two slices whose meet loses the type, so no least slice exists;
 - page 9: Counterexample 4.2, a query with no exact slice;
 - page 11: a minimal slice of a refined query that lies below no minimal slice of the wider one.
 
-It also holds the descent over the tree, the toy as the view of a mask, and the count of the
-restart's questions against the pass's.
+It also holds the descent over the tree, the toy as the slice view of a mask, and the count of
+the restart's questions against the pass's.
 
 The red controls:
 
 - a validity that is not upward closed: the pass stops at a slice that is not minimal, and the
   restart gives another slice;
 - a query above the full type, which no slice serves;
-- a slice that keeps a site under a folded one, which is not minimal;
-- a parent function that is not the fold's: the descent over the tree returns a slice that is
+- a slice that keeps a site under an omitted one, which is not minimal;
+- a parent function that is not the tree's: the descent over the tree returns a slice that is
   not valid.
 
 Evidence. Each theorem here is about the toy only. `synth_mono`, `toy_noop` and their
@@ -96,9 +96,9 @@ open Effect4
 #guard_msgs in
 #print axioms SliceView.contribution_valid
 
-/-- info: 'Effect4.SliceView.ofFolded_full' depends on axioms: [propext] -/
+/-- info: 'Effect4.SliceView.ofOmitted_full' depends on axioms: [propext] -/
 #guard_msgs in
-#print axioms SliceView.ofFolded_full
+#print axioms SliceView.ofOmitted_full
 
 /-- info: 'Effect4.SliceView.descendTree_eq_descend' depends on axioms: [propext] -/
 #guard_msgs in
@@ -133,7 +133,7 @@ Effect4.SliceView.descend_asks: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.SliceView.valid_max: proved; nearest [Effect4.SliceView.valid_up]; 0 lemmas, 0 definitions
 Effect4.SliceView.contribution_lub: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.SliceView.contribution_valid: proved; nearest [Effect4.SliceView.descend_minimal, Effect4.SliceView.contribution_lub, Effect4.SliceView.valid_up]; 0 lemmas, 0 definitions
-Effect4.SliceView.ofFolded_full: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.SliceView.ofOmitted_full: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.SliceView.descendTree_eq_descend: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.SliceView.descendTree_minimal: proved; nearest [Effect4.SliceView.descendTree_eq_descend, Effect4.SliceView.descend_minimal]; 0 lemmas, 0 definitions
 Effect4.SliceView.descendTree_asks: proved; nearest []; 0 lemmas, 0 definitions
@@ -145,7 +145,7 @@ next goals: 0
   SliceView.Minimal.needs SliceView.Minimal.keeps_above SliceView.descend_sublist
   SliceView.descend_minimal SliceView.exists_minimal_below SliceView.minimal_refine
   SliceView.descend_eq_restart SliceView.descend_asks SliceView.valid_max
-  SliceView.contribution_lub SliceView.contribution_valid SliceView.ofFolded_full
+  SliceView.contribution_lub SliceView.contribution_valid SliceView.ofOmitted_full
   SliceView.descendTree_eq_descend SliceView.descendTree_minimal SliceView.descendTree_asks
   SliceView.lattice_minimal
 
@@ -177,7 +177,7 @@ inductive Site where
 deriving DecidableEq
 
 /-- The positions of a type that a kept list knows. A node counts when its site is kept and each
-node above it counts: a fold at a node folds its sub-tree. `site` names the node at a
+node above it counts: an omission at a node omits its sub-tree. `site` names the node at a
 position. -/
 def ToyTy.known (k : List Site) (site : TyPos → Site) : TyPos → ToyTy → List TyPos
   | _, .gap => []
@@ -194,9 +194,9 @@ def ToyTy.positions : TyPos → ToyTy → List TyPos
   | p, .arrow a b => p :: (positions (p ++ [0]) a ++ positions (p ++ [1]) b)
   | p, .prod a b => p :: (positions (p ++ [0]) a ++ positions (p ++ [1]) b)
 
-/-- A type as the slice of its positions. The type side of the toy is the paper's slice lattice
-of the full type (p. 7): a type with gaps keeps the positions that are no gap, and precision is
-inclusion. So the module's own carrier serves on both sides. -/
+/-- A type as the type slice of its positions. The type side of the toy is the paper's slice
+lattice of the full type (p. 7): a type with gaps keeps the positions that are no gap, and
+precision is inclusion. So the module's own carrier serves on both sides. -/
 def ToyTy.slice (t : ToyTy) : Slice TyPos := ⟨t.positions []⟩
 
 /-- The type that the kept part of a term synthesises, as its known positions. A node that is
@@ -280,8 +280,8 @@ structure Prog where
   env : List ToyTy
   term : ToyTm
 
-/-- **The toy view**: a slice of the program to the slice of its type. It owes `synth_mono` and
-nothing else. -/
+/-- **The toy's slice view**: a type slice of the program to the slice of its type. It owes
+`synth_mono` and nothing else. -/
 def toy (P : Prog) : SliceView Site (Slice TyPos) where
   typeOf s := ⟨synth s.kept P.env [] P.term⟩
   mono h := synth_mono h P.env P.term []
@@ -299,12 +299,12 @@ def envSites : Nat → List ToyTy → List Site
   | _, [] => []
   | x, t :: ts => (t.positions []).map (Site.asm x) ++ envSites (x + 1) ts
 
-/-- The full slice: every site of the program, the assumptions first. Its order is the order in
-which the descent tries the sites. -/
+/-- The full type slice: every site of the program, the assumptions first. Its order is the
+order in which the descent tries the sites. -/
 def Prog.full (P : Prog) : Slice Site :=
   ⟨envSites 0 P.env ++ (P.term.addrs []).map Site.tm⟩
 
-/-! ## Page 18: four incomparable minimal slices
+/-! ## Page 18: four incomparable minimal type slices
 
 `Γ = (x : 1 → 1, y : 1 → 1)`, `e = if true then x else y`, and the query `1 → 1` (the paper's
 section 8.1). -/
@@ -346,8 +346,8 @@ theorem page18_incomparable :
     ¬ sliceA ≤ sliceD ∧ ¬ sliceD ≤ sliceA ∧ ¬ sliceB ≤ sliceC ∧ ¬ sliceC ≤ sliceB ∧
     ¬ sliceB ≤ sliceD ∧ ¬ sliceD ≤ sliceB ∧ ¬ sliceC ≤ sliceD ∧ ¬ sliceD ≤ sliceC := by decide
 
-/-- **They are all the minimal slices**: the search over the 1024 sub-lists of the ten sites
-finds these four. -/
+/-- **They are all the minimal type slices**: the search over the 1024 sub-lists of the ten
+sites finds these four. -/
 theorem page18_four :
     (toy page18).minimals q11 page18.full = [sliceD, sliceB, sliceA, sliceC] := by
   decide +kernel
@@ -358,7 +358,7 @@ theorem page18_descent : (toy page18).descend q11 page18.full = sliceD := by dec
 /-- The descent asked ten questions: one for each site of its start. -/
 theorem page18_asked : ((toy page18).asked q11 page18.full).length = 10 := by decide
 
--- The paper's restart gives the same slice (`SliceView.descend_eq_restart`, on this input).
+-- The paper's restart gives the same type slice (`SliceView.descend_eq_restart`, on this input).
 #guard Slice.restart (fun c => decide ((toy page18).Valid q11 c)) page18.full.kept == sliceD.kept
 
 /-- The same ten sites in another order: `x`'s codomain and `y`'s domain first. -/
@@ -366,24 +366,25 @@ def page18Reordered : Slice Site :=
   ⟨[.asm 0 [1], .asm 1 [0], .asm 0 [], .asm 0 [0], .asm 1 [], .asm 1 [1], .tm [], .tm [0],
     .tm [1], .tm [2]]⟩
 
-/-- **One minimal slice, and not the smallest.** From the other order the descent returns (A),
-which keeps seven sites. (C) and (D) keep five. -/
+/-- **One minimal type slice, and not the smallest.** From the other order the descent returns
+(A), which keeps seven sites. (C) and (D) keep five. -/
 theorem page18_other_order : (toy page18).descend q11 page18Reordered = sliceA := by decide
 
 #guard sliceA.kept.length == 7 && sliceD.kept.length == 5
 
--- The contribution slice keeps every site but the condition `true`, which no minimal slice keeps.
+-- The contribution slice keeps every site but the condition `true`. No minimal type slice
+-- keeps the condition.
 #guard (toy page18).contribution q11 page18.full ==
   ⟨[.asm 0 [], .asm 0 [0], .asm 0 [1], .asm 1 [], .asm 1 [0], .asm 1 [1], .tm [], .tm [1],
     .tm [2]]⟩
 
-/-- The module's law on the toy: the contribution slice is valid. -/
+/-- The module's law on the toy: the contribution slice is a valid type slice. -/
 theorem page18_contribution_valid :
     (toy page18).Valid q11 ((toy page18).contribution q11 page18.full) :=
   (toy page18).contribution_valid page18_full_valid
 
 /-- Theorem 4.6 on the toy: the query `1 → □` refines `1 → 1`, and the descent from (A) for it
-is a minimal slice below (A). -/
+is a minimal type slice below (A). -/
 theorem page18_refined :
     (toy page18).descend q10 sliceA = ⟨[.asm 0 [], .asm 0 [0], .tm [], .tm [1]]⟩ ∧
     (toy page18).Minimal q10 ((toy page18).descend q10 sliceA) :=
@@ -394,7 +395,7 @@ for the join of the two queries. -/
 theorem page18_join : (toy page18).Valid (max q10 q01) (max sliceC sliceD) :=
   (toy page18).valid_max (by decide) (by decide)
 
-/-! ## Page 23: the meet of two valid slices loses the type
+/-! ## Page 23: the meet of two valid type slices loses the type
 
 A conditional whose two branches each give the type `1` (the paper's section 11.2). -/
 
@@ -402,12 +403,12 @@ A conditional whose two branches each give the type `1` (the paper's section 11.
 def page23 : Prog := ⟨[], .ite .lit .lit .lit⟩
 /-- The query `1`. -/
 def q1 : Slice TyPos := ToyTy.one.slice
-/-- The slice that keeps the first branch only. -/
+/-- The type slice that keeps the first branch only. -/
 def thenOnly : Slice Site := ⟨[.tm [], .tm [1]]⟩
-/-- The slice that keeps the second branch only. -/
+/-- The type slice that keeps the second branch only. -/
 def elseOnly : Slice Site := ⟨[.tm [], .tm [2]]⟩
 
-/-- Both slices are valid, and their meet is not: it omits both branches. -/
+/-- Both type slices are valid, and their meet is not: it omits both branches. -/
 theorem page23_meet :
     (toy page23).Valid q1 thenOnly ∧ (toy page23).Valid q1 elseOnly ∧
     ¬ (toy page23).Valid q1 (min thenOnly elseOnly) := by decide
@@ -418,18 +419,18 @@ theorem page23_types :
     (toy page23).typeOf (min thenOnly elseOnly) = ⟨[]⟩ ∧
     min ((toy page23).typeOf thenOnly) ((toy page23).typeOf elseOnly) = q1 := by decide
 
-/-- Both slices are minimal. -/
+/-- Both type slices are minimal. -/
 theorem page23_two_minimal :
     (toy page23).Minimal q1 thenOnly ∧ (toy page23).Minimal q1 elseOnly := by decide
 
-/-- **No least slice.** A least valid slice would be below both, so below their meet, and the
-meet would be valid. This is what the module's statements do not establish, and cannot. -/
+/-- **No least type slice.** A least valid slice would be below both, so below their meet, and
+the meet would be valid. This is what the module's statements do not establish, and cannot. -/
 theorem page23_no_least :
     ¬ ∃ l : Slice Site, (toy page23).Valid q1 l ∧ ∀ j, (toy page23).Valid q1 j → l ≤ j :=
   fun ⟨_, hl, hleast⟩ => page23_meet.2.2 ((toy page23).valid_up hl
     (Std.le_min_iff.mpr ⟨hleast _ page23_meet.1, hleast _ page23_meet.2.1⟩))
 
-/-! ## Page 9: Counterexample 4.2, no exact slice
+/-! ## Page 9: Counterexample 4.2, no exact type slice
 
 `x : 1 → 1 ⊢ (x, x)`, with the query `(1 → □) × (□ → 1)`. -/
 
@@ -438,7 +439,7 @@ def pairXX : Prog := ⟨[.arrow .one .one], .pair (.var 0) (.var 0)⟩
 /-- The query `(1 → □) × (□ → 1)`. -/
 def qInexact : Slice TyPos := (ToyTy.prod (.arrow .one .gap) (.arrow .gap .one)).slice
 
-/-- The whole program is the only minimal slice among the 64 sub-lists of its six sites. -/
+/-- The whole program is the only minimal type slice among the 64 sub-lists of its six sites. -/
 theorem pairXX_only_full : (toy pairXX).minimals qInexact pairXX.full = [pairXX.full] := by
   decide +kernel
 
@@ -447,38 +448,39 @@ theorem pairXX_strictly_above :
     qInexact ≤ (toy pairXX).typeOf pairXX.full ∧
     ¬ (toy pairXX).typeOf pairXX.full ≤ qInexact := by decide
 
-/-- **No exact slice**: no listed slice has the query's type. So validity is "at or above". -/
-theorem pairXX_no_exact : ∀ s ∈ pairXX.full.below,
+/-- **No exact type slice**: no listed slice has the query's type. So validity is "at or
+above". -/
+theorem pairXX_no_exact : ∀ s ∈ pairXX.full.subslices,
     ¬ ((toy pairXX).typeOf s ≤ qInexact ∧ qInexact ≤ (toy pairXX).typeOf s) := by
   decide +kernel
 
 /-! ## Page 11: nothing upwards
 
-`Γ = (x : 1 → 1, y : □ → □)`, `e = if true then x else y`. The slice through `y` is minimal for
-`□ → □`. The wider query `1 → 1` has one minimal slice, through `x`, and it is not above. This
+`Γ = (x : 1 → 1, y : □ → □)`, `e = if true then x else y`. The type slice through `y` is minimal
+for `□ → □`. The wider query `1 → 1` has one minimal slice, through `x`, and it is not above. This
 renders the paper's remark on a program of this battery, not its figure. -/
 
 /-- A program whose second assumption knows an arrow and no more. -/
 def page11 : Prog := ⟨[.arrow .one .one, .arrow .gap .gap], .ite .lit (.var 0) (.var 1)⟩
 /-- The query `□ → □`. -/
 def q00 : Slice TyPos := (ToyTy.arrow .gap .gap).slice
-/-- The slice through `y`. -/
+/-- The type slice through `y`. -/
 def viaY : Slice Site := ⟨[.asm 1 [], .tm [], .tm [2]]⟩
 
 theorem viaY_minimal : (toy page11).Minimal q00 viaY := by decide
 
-/-- The refined query is below the wider one, and no minimal slice of the wider one is above
-the slice through `y`. Theorem 4.6 goes down only. -/
+/-- The refined query is below the wider one, and no minimal type slice of the wider one is
+above the slice through `y`. Theorem 4.6 goes down only. -/
 theorem page11_nothing_upwards :
     q00 ≤ q11 ∧ ∀ m ∈ (toy page11).minimals q11 page11.full, ¬ viaY ≤ m := by
   decide +kernel
 
-/-! ## A minimal slice is a highlighted tree, and the descent over a tree
+/-! ## A minimal type slice is a highlighted tree, and the descent over a tree
 
-A fold at a site folds its sub-tree, so a site under a folded parent changes nothing. The
+An omission at a site omits its sub-tree, so a site under an omitted parent changes nothing. The
 module's `SliceView.Minimal.keeps_above` and `SliceView.descendTree_eq_descend` take that as the
-instance's premise. The toy proves it by its fold (`toy_noop`): it is the toy's second fact, owed
-for the tree only. -/
+instance's premise. The toy proves it for its synthesis (`toy_noop`): it is the toy's second
+fact, owed for the tree only. -/
 
 /-- The site above a site: the same kind, at the path without its last index. -/
 def Site.parent : Site → Option Site
@@ -494,7 +496,7 @@ theorem mem_filter_ne {k : List Site} {x y : Site} (h : y ≠ x) :
   exact ⟨fun h' => h'.1, fun h' => ⟨h', decide_eq_true h⟩⟩
 
 /-- A helper of `toy_noop`: the known positions of a type do not read the site `x`, when the
-fold never stands at `x`. It stands at a child only under a kept node (`hstep`). -/
+recursion never stands at `x`. It stands at a child only under a kept node (`hstep`). -/
 theorem known_drop {k : List Site} {x : Site} (site : TyPos → Site)
     (hstep : ∀ (q : TyPos) (i : Nat), site q ∈ k → site (q ++ [i]) ≠ x) :
     ∀ (t : ToyTy) (q : TyPos), site q ≠ x →
@@ -520,7 +522,7 @@ theorem known_drop {k : List Site} {x : Site} (site : TyPos → Site)
         known_drop site hstep b (q ++ [1]) (hstep q 1 hk)]
     · rw [if_neg hk, if_neg fun h => hk ((mem_filter_ne hq).mp h)]
 
-/-- A helper of `toy_noop`: the synthesis does not read the site `x`, when the fold never
+/-- A helper of `toy_noop`: the synthesis does not read the site `x`, when its recursion never
 stands at `x`. -/
 theorem synth_drop {k : List Site} {x : Site} (env : List ToyTy)
     (htm : ∀ (b : List Nat) (i : Nat), Site.tm b ∈ k → Site.tm (b ++ [i]) ≠ x)
@@ -555,8 +557,9 @@ theorem synth_drop {k : List Site} {x : Site} (env : List ToyTy)
         synth_drop env htm hasm hroot e (b ++ [2]) (htm b 2 hk)]
     · rw [if_neg hk, if_neg fun h => hk ((mem_filter_ne hb).mp h)]
 
-/-- **The toy's second fact**, owed for the tree only: a site under a folded parent changes
-nothing. The fold stands at a site only under its kept parent, so it never stands at `x`. -/
+/-- **The toy's second fact**, owed for the tree only: a site under an omitted parent changes
+nothing. The synthesis stands at a site only under its kept parent, so it never stands at
+`x`. -/
 theorem toy_noop (P : Prog) (c : Slice Site) {x y : Site} (hp : x.parent = some y)
     (hy : y ∉ c.kept) : (toy P).typeOf c ≤ (toy P).typeOf (c.drop x) := by
   have key : synth (c.kept.filter (· ≠ x)) P.env [] P.term = synth c.kept P.env [] P.term := by
@@ -585,8 +588,8 @@ theorem toy_noop (P : Prog) (c : Slice Site) {x y : Site} (hp : x.parent = some 
   rw [key]
   exact List.Subset.refl _
 
-/-- **The module's statement on the toy**: a minimal slice of a toy program keeps the parent of
-each site that it keeps. So it is a highlighted tree. -/
+/-- **The module's statement on the toy**: a minimal type slice of a toy program keeps the
+parent of each site that it keeps. So it is a highlighted tree. -/
 theorem toy_minimal_closed (P : Prog) {q : Slice TyPos} {m : Slice Site}
     (h : (toy P).Minimal q m) {x y : Site} (hx : x ∈ m.kept) (hp : x.parent = some y) :
     y ∈ m.kept :=
@@ -596,18 +599,18 @@ theorem toy_minimal_closed (P : Prog) {q : Slice TyPos} {m : Slice Site}
 theorem sliceD_keeps_arrow : Site.asm 1 [] ∈ sliceD.kept :=
   toy_minimal_closed page18 sliceD_minimal (x := .asm 1 [0]) (by decide) rfl
 
-/-- (D) with `x`'s domain: a site under the folded arrow of `x`. -/
+/-- (D) with `x`'s domain: a site under the omitted arrow of `x`. -/
 def dangling : Slice Site := ⟨sliceD.kept ++ [.asm 0 [0]]⟩
 
-/-- Red control: the slice is valid, the site changes nothing, and so the slice is not minimal
-(`SliceView.Minimal.needs`). -/
+/-- Red control: the type slice is valid, the site changes nothing, and so the slice is not
+minimal (`SliceView.Minimal.needs`). -/
 theorem dangling_not_minimal :
     (toy page18).Valid q11 dangling ∧ ¬ (toy page18).Minimal q11 dangling :=
   ⟨by decide, fun h => h.needs (x := .asm 0 [0]) (by decide)
     (toy_noop page18 dangling (y := .asm 0 []) rfl (by decide))⟩
 
-/-- **The descent over a tree, on the toy**: from a valid start it gives the descent's slice,
-for every toy program (`SliceView.descendTree_eq_descend`). -/
+/-- **The descent over a tree, on the toy**: from a valid start it gives the descent's type
+slice, for every toy program (`SliceView.descendTree_eq_descend`). -/
 theorem toy_descendTree (P : Prog) {q : Slice TyPos} {s : Slice Site} (h : (toy P).Valid q s) :
     (toy P).descendTree Site.parent q s = (toy P).descend q s :=
   (toy P).descendTree_eq_descend Site.parent (fun c _ _ hp hy => toy_noop P c hp hy) h
@@ -620,25 +623,25 @@ theorem page18_tree : (toy page18).descendTree Site.parent q11 page18.full = sli
 theorem page18_tree_asked :
     ((toy page18).askedTree Site.parent q11 page18.full).length = 8 := by decide
 
-/-- The query `□`: every slice serves it, the empty one too. -/
+/-- The query `□`: every type slice serves it, the empty one too. -/
 def qGap : Slice TyPos := ToyTy.gap.slice
 
-/-- Where the root folds, the descent over the tree asks 1 question, against 4: the root goes,
-and the three sites under it go with it. -/
+/-- Where the root is omitted, the descent over the tree asks 1 question, against 4: the root
+goes, and the three sites under it go with it. -/
 theorem page23_tree_asked :
     ((toy page23).askedTree Site.parent qGap page23.full).length = 1 ∧
     ((toy page23).asked qGap page23.full).length = 4 ∧
     (toy page23).descendTree Site.parent qGap page23.full = ⟨[]⟩ := by decide
 
-/-- Red control: a parent function that is not the fold's. It calls the condition the parent of
+/-- Red control: a parent function that is not the tree's. It calls the condition the parent of
 the else-branch. -/
 def Site.wrongParent : Site → Option Site
   | .tm [2] => some (.tm [0])
   | s => s.parent
 
 /-- **Without the no-op the descent over the tree goes wrong.** The condition goes, and the
-else-branch goes with it, unasked. The slice that is left is not valid. The descent returns the
-slice with the else-branch. -/
+else-branch goes with it, unasked. The type slice that is left is not valid. The descent returns
+the slice with the else-branch. -/
 theorem page23_wrong_parent :
     (toy page23).descendTree Site.wrongParent q1 page23.full = ⟨[.tm []]⟩ ∧
     ¬ (toy page23).Valid q1 ⟨[.tm []]⟩ ∧
@@ -646,36 +649,36 @@ theorem page23_wrong_parent :
 
 /-! ## The view of a mask -/
 
-/-- The toy through the plan's mask: the type of the program with the sites `F` folded. -/
+/-- The toy through a mask: the type of the program with the sites `F` omitted. -/
 def maskedType (P : Prog) (F : List Site) : Slice TyPos :=
   ⟨synth (P.full.kept.filter (· ∉ F)) P.env [] P.term⟩
 
-/-- The mask's graduality: folding more gives a type at or below. -/
+/-- The mask's graduality: omitting more gives a type at or below. -/
 theorem maskedType_anti (P : Prog) {F G : List Site} (h : F ⊆ G) :
     maskedType P G ≤ maskedType P F := by
   refine synth_mono (fun x hx => ?_) P.env P.term []
   obtain ⟨hs, hG⟩ := List.mem_filter.mp hx
   exact List.mem_filter.mpr ⟨hs, decide_eq_true fun hF => of_decide_eq_true hG (h hF)⟩
 
-/-- The toy as the view of a mask. -/
+/-- The toy as the slice view of a mask. -/
 def toyMasked (P : Prog) : SliceView Site (Slice TyPos) :=
-  SliceView.ofFolded P.full.kept (maskedType P) (fun h _ => maskedType_anti P h)
+  SliceView.ofOmitted P.full.kept (maskedType P) (fun h _ => maskedType_anti P h)
 
-/-- At the full slice nothing is folded (`SliceView.ofFolded_full`). -/
+/-- At the full type slice nothing is omitted (`SliceView.ofOmitted_full`). -/
 theorem toyMasked_full : (toyMasked page18).typeOf page18.full = maskedType page18 [] :=
-  SliceView.ofFolded_full _ _ _
+  SliceView.ofOmitted_full _ _ _
 
--- The two views give one type on each listed slice, and one descent.
-#guard page18.full.below.all fun s => (toyMasked page18).typeOf s == (toy page18).typeOf s
+-- The two slice views give one type on each listed type slice, and one descent.
+#guard page18.full.subslices.all fun s => (toyMasked page18).typeOf s == (toy page18).typeOf s
 theorem toyMasked_descent : (toyMasked page18).descend q11 page18.full = sliceD := by decide
 
 /-! ## The two counts: the restart against the one pass
 
-A finite probe. The validity is upward closed: a slice is valid when it keeps the first half of
-`n` sites. The restart asks again about each kept site at each start. -/
+A finite probe. The validity is upward closed: a type slice is valid when it keeps the first
+half of `n` sites. The restart asks again about each kept site at each start. -/
 
-/-- An instrument of this battery: one search for the first valid slice one site below, with
-the number of its questions. It follows `Slice.firstDrop`. -/
+/-- An instrument of this battery: one search for the first valid type slice one site below,
+with the number of its questions. It follows `Slice.firstDrop`. -/
 def firstDropAsks (valid : Slice Nat → Bool) : List Nat → List Nat → Nat × Option (List Nat)
   | _, [] => (0, none)
   | done, x :: rest =>
@@ -695,10 +698,10 @@ def restartAsks (valid : Slice Nat → Bool) : Nat → List Nat → Nat × List 
       let r := restartAsks valid fuel l'
       (n + r.1, r.2)
 
-/-- Valid when the slice keeps each of the first `k` numbers: upward closed. -/
+/-- Valid when the type slice keeps each of the first `k` numbers: upward closed. -/
 def keepsFirst (k : Nat) (s : Slice Nat) : Bool := (List.range k).all fun i => decide (i ∈ s.kept)
 
--- At 20 sites: the restart asks 120 questions and the pass 20, for one slice.
+-- At 20 sites: the restart asks 120 questions and the pass 20, for one type slice.
 #guard restartAsks (keepsFirst 10) 21 (List.range 20) == (120, List.range 10)
 #guard (Slice.sweepAsked (keepsFirst 10) [] (List.range 20)).length == 20
 #guard Slice.sweep (keepsFirst 10) [] (List.range 20) == List.range 10
@@ -718,8 +721,8 @@ theorem crooked_not_up :
     ¬ ∀ a b : Slice Nat, a ≤ b → crooked a = true → crooked b = true :=
   fun h => absurd (h ⟨[2]⟩ ⟨[2, 3]⟩ (by decide) (by decide)) (by decide)
 
-/-- **The pass stops at a slice that is not minimal**: at `[1, 2]`, with the valid `[2]` strictly
-below it. The pass refused to drop `1` at `[1, 2, 3]` and never asked again. -/
+/-- **The pass stops at a type slice that is not minimal**: at `[1, 2]`, with the valid `[2]`
+strictly below it. The pass refused to drop `1` at `[1, 2, 3]` and never asked again. -/
 theorem crooked_pass :
     Slice.sweep crooked [] [1, 2, 3] = [1, 2] ∧ crooked ⟨[2]⟩ = true ∧
     (⟨[2]⟩ : Slice Nat) ≤ ⟨[1, 2]⟩ ∧ ¬ (⟨[1, 2]⟩ : Slice Nat) ≤ ⟨[2]⟩ := by decide
@@ -734,12 +737,12 @@ def qTooBig : Slice TyPos := ⟨[[], [0], [1], [0, 0]]⟩
 
 theorem page18_too_big : ¬ (toy page18).Valid qTooBig page18.full := by decide
 
-/-- **No slice serves it**: `SliceView.valid_up`, read backwards. -/
+/-- **No type slice serves it**: `SliceView.valid_up`, read backwards. -/
 theorem page18_no_slice_serves (j : Slice Site) (hj : j ≤ page18.full) :
     ¬ (toy page18).Valid qTooBig j :=
   fun hv => page18_too_big ((toy page18).valid_up hv hj)
 
--- The search finds no minimal slice.
+-- The search finds no minimal type slice.
 #guard (toy page18).minimals qTooBig page18.full == []
 
 /-- The descent's premise is needed: from a start that is not valid it returns the start. -/

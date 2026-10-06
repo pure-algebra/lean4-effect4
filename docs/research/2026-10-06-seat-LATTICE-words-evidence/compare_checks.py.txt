@@ -1,0 +1,34 @@
+"""Seat LATTICE, the words follow-up: compare two listings of `#check` (the output of
+Statements.lean) up to a rename map. Each listing is cut into one block for each declaration. The
+map is applied to the first listing by whole token. The two are then compared block by block."""
+import re, sys
+from code_only import MAP_A, MAP_B, rename
+
+def blocks(path, maps):
+    text = open(path).read()
+    if maps: text = rename(text, maps)
+    parts, kind, out = re.split(r'^### (.*)$', text, flags=re.M), None, {}
+    head = parts[0]
+    section = 'THEOREMS'
+    out = {'THEOREMS': {}, 'OTHERS': {}}
+    counts = dict(re.findall(r'^(THEOREMS|OTHERS) (\d+)$', text, flags=re.M))
+    for name, body in zip(parts[1::2], parts[2::2]):
+        m = re.search(r'^(OTHERS) \d+$', body, flags=re.M)
+        body_clean = re.sub(r'^(THEOREMS|OTHERS) \d+\n?', '', body, flags=re.M).strip()
+        out[section][name.strip()] = body_clean
+        if m: section = 'OTHERS'
+    return out, counts
+
+maps = [{'a': MAP_A, 'b': MAP_B}[k] for k in sys.argv[3:]]
+base, cb = blocks(sys.argv[1], maps)
+head, ch = blocks(sys.argv[2], [])
+ok = True
+for section in ('THEOREMS', 'OTHERS'):
+    b, h = base[section], head[section]
+    only_b, only_h = sorted(set(b) - set(h)), sorted(set(h) - set(b))
+    differ = sorted(n for n in set(b) & set(h) if b[n] != h[n])
+    print(f"{section}: base {len(b)} (listed {cb.get(section)}), head {len(h)} (listed {ch.get(section)}); "
+          f"only at base {only_b}; only at head {only_h}; statements that differ {differ}")
+    ok = ok and not (only_b or only_h or differ) and len(b) == len(h)
+print("RESULT:", "the two listings are equal up to the rename map" if ok else "THE LISTINGS DIFFER")
+sys.exit(0 if ok else 1)

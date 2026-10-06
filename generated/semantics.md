@@ -2209,7 +2209,7 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved), `saved_mask_restoration` (proved) | `saved_mask_chain_runs` (proved), `saved_mask_pop_discipline` (proved), `saved_mask_region_bracket` (proved), `close_refuses` (proved), `drain_waits` (proved), `giveBack_front` (proved), `giveBack_once` (proved), `saved_mask_restoration` (proved), `compiled_mask_chain_runs` (proved), `compiled_region_bracket` (proved), `stepped_live` (proved), `cleans_once` (goal), `QueueWorkers.releases_once` (goal), `cleanup_keeps` (goal), `Workers.releases_once` (goal) | `cleans_once`, `QueueWorkers.releases_once`, `cleanup_keeps`, `Workers.releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | `select_takes_first` (proved), `first_run_flags` (proved), `first_run_inv` (proved), `first_step_inv` (proved), `visit_selects_earliest` (proved), `visit_stops_iff` (proved), `fed_accounted` (goal), `queue_settled` (goal) | `fed_accounted`, `queue_settled` |
 | R13 | open | `journal_replays` (proved) | `tapeFrom_append` (proved), `tapeFrom_cut` (proved), `tapeFrom_cut_replays` (proved), `tapeFrom_position_replays` (proved), `replays` (proved) | — |
-| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved) | `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `check_filled` (proved), `check_more_holes` (proved), `check_program` (proved), `hole_hasTy` (proved), `holes_conservative` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_below` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `folded_anti` (proved), `folded_full` (proved), `folded_subset` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_below` (proved), `not_mem_drop` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofFolded_full` (proved), `parentFolded_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
+| R14 | open | `lattice_minimal` (proved), `holes_conservative` (proved), `sketch_weakening` (proved), `hole_hasTy` (proved) | `withHoles_extends` (proved), `withHoles_nil` (proved), `withHoles_rowOf` (proved), `withHoles_withHoles` (proved), `check_filled` (proved), `check_more_holes` (proved), `check_program` (proved), `hole_hasTy` (proved), `holes_conservative` (proved), `sketch_more_holes` (proved), `sketch_reads_its_holes` (proved), `sketch_weakening` (proved), `drop_le` (proved), `drop_le_of_subset` (proved), `exists_mem_subslices` (proved), `failed_rest` (proved), `failed_snoc` (proved), `filter_mem_sublists` (proved), `firstDrop_append` (proved), `firstDrop_length` (proved), `instIsPreorder` (proved), `instLawfulOrderInf` (proved), `instLawfulOrderSup` (proved), `le_drop` (proved), `le_of_mem_subslices` (proved), `not_mem_drop` (proved), `omitted_anti` (proved), `omitted_full` (proved), `omitted_subset` (proved), `restart_append` (proved), `restart_eq_sweep` (proved), `restart_of_none` (proved), `restart_of_some` (proved), `sublists_subset` (proved), `sweepAsked_length` (proved), `sweepFreeAsked_sublist` (proved), `sweepFree_congr` (proved), `sweepFree_eq_sweep` (proved), `sweep_congr` (proved), `sweep_kept_needed` (proved), `sweep_sublist` (proved), `sweep_valid` (proved), `keeps_above` (proved), `needs` (proved), `of_same_sites` (proved), `contribution_le` (proved), `contribution_lub` (proved), `contribution_valid` (proved), `decide_valid_up` (proved), `descendTree_asks` (proved), `descendTree_eq_descend` (proved), `descendTree_minimal` (proved), `descend_asks` (proved), `descend_eq_restart` (proved), `descend_le` (proved), `descend_minimal` (proved), `descend_sublist` (proved), `descend_valid` (proved), `exists_minimal_below` (proved), `isMinimal_iff` (proved), `lattice_minimal` (proved), `minimal_iff_drop` (proved), `minimal_refine` (proved), `minimals_complete` (proved), `minimals_sound` (proved), `ofOmitted_full` (proved), `parentOmitted_sound` (proved), `valid_max` (proved), `valid_refine` (proved), `valid_up` (proved) | — |
 
 **Next goals** (14): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `Workers.releases_once`, `held_within_fed`, `fed_accounted`, `queue_settled`, `QueueWorkers.releases_once`, `infrastructure_escapes`
 
@@ -4445,21 +4445,21 @@ flowchart LR
   n12["sketch_reads_its_holes<br/>proved"]
   n13["drop_le<br/>proved"]
   n14["drop_le_of_subset<br/>proved"]
-  n15["exists_mem_below<br/>proved"]
+  n15["exists_mem_subslices<br/>proved"]
   n16["failed_rest<br/>proved"]
   n17["failed_snoc<br/>proved"]
   n18["filter_mem_sublists<br/>proved"]
   n19["firstDrop_append<br/>proved"]
   n20["firstDrop_length<br/>proved"]
-  n21["folded_anti<br/>proved"]
-  n22["folded_full<br/>proved"]
-  n23["folded_subset<br/>proved"]
-  n24["instIsPreorder<br/>proved"]
-  n25["instLawfulOrderInf<br/>proved"]
-  n26["instLawfulOrderSup<br/>proved"]
-  n27["le_drop<br/>proved"]
-  n28["le_of_mem_below<br/>proved"]
-  n29["not_mem_drop<br/>proved"]
+  n21["instIsPreorder<br/>proved"]
+  n22["instLawfulOrderInf<br/>proved"]
+  n23["instLawfulOrderSup<br/>proved"]
+  n24["le_drop<br/>proved"]
+  n25["le_of_mem_subslices<br/>proved"]
+  n26["not_mem_drop<br/>proved"]
+  n27["omitted_anti<br/>proved"]
+  n28["omitted_full<br/>proved"]
+  n29["omitted_subset<br/>proved"]
   n30["restart_append<br/>proved"]
   n31["restart_eq_sweep<br/>proved"]
   n32["restart_of_none<br/>proved"]
@@ -4495,8 +4495,8 @@ flowchart LR
   n62["minimal_refine<br/>proved"]
   n63["minimals_complete<br/>proved"]
   n64["minimals_sound<br/>proved"]
-  n65["ofFolded_full<br/>proved"]
-  n66["parentFolded_sound<br/>proved"]
+  n65["ofOmitted_full<br/>proved"]
+  n66["parentOmitted_sound<br/>proved"]
   n67["valid_max<br/>proved"]
   n68["valid_refine<br/>proved"]
   n69["valid_up<br/>proved"]
@@ -4528,7 +4528,7 @@ flowchart LR
   n12 --> n70
   n12 --> n7
   n15 --> n18
-  n28 --> n34
+  n25 --> n34
   n30 --> n17
   n30 --> n16
   n30 --> n33
@@ -4544,13 +4544,13 @@ flowchart LR
   n40 --> n14
   n43 --> n44
   n44 --> n61
-  n45 --> n24
+  n45 --> n21
   n45 --> n69
   n47 --> n64
   n47 --> n63
   n48 --> n56
   n48 --> n55
-  n48 --> n24
+  n48 --> n21
   n48 --> n47
   n48 --> n58
   n48 --> n69
@@ -4579,20 +4579,20 @@ flowchart LR
   n59 --> n56
   n59 --> n55
   n60 --> n61
-  n61 --> n27
+  n61 --> n24
   n61 --> n69
   n61 --> n13
-  n61 --> n29
+  n61 --> n26
   n62 --> n68
   n62 --> n59
   n63 --> n45
   n63 --> n60
   n63 --> n15
   n64 --> n60
-  n64 --> n28
-  n65 --> n22
-  n67 --> n26
-  n67 --> n24
+  n64 --> n25
+  n65 --> n28
+  n67 --> n23
+  n67 --> n21
   n67 --> n69
   n70 --> n73
   n70 --> n74
@@ -4617,21 +4617,21 @@ flowchart LR
 | `sketch_reads_its_holes` | proved | — | `withHoles_extends`, `check_restrict`, `withHoles_withHoles` | 53 | 354 |
 | `drop_le` | proved | — | — | 0 | 2 |
 | `drop_le_of_subset` | proved | — | — | 0 | 2 |
-| `exists_mem_below` | proved | — | `filter_mem_sublists` | 0 | 3 |
+| `exists_mem_subslices` | proved | — | `filter_mem_sublists` | 0 | 4 |
 | `failed_rest` | proved | — | — | 12 | 13 |
 | `failed_snoc` | proved | — | — | 0 | 1 |
 | `filter_mem_sublists` | proved | — | — | 0 | 1 |
 | `firstDrop_append` | proved | — | — | 0 | 2 |
 | `firstDrop_length` | proved | — | — | 0 | 1 |
-| `folded_anti` | proved | — | — | 0 | 3 |
-| `folded_full` | proved | — | — | 0 | 2 |
-| `folded_subset` | proved | — | — | 0 | 2 |
 | `instIsPreorder` | proved | — | — | 0 | 2 |
 | `instLawfulOrderInf` | proved | — | — | 0 | 3 |
 | `instLawfulOrderSup` | proved | — | — | 0 | 3 |
 | `le_drop` | proved | — | — | 0 | 2 |
-| `le_of_mem_below` | proved | — | `sublists_subset` | 0 | 3 |
+| `le_of_mem_subslices` | proved | — | `sublists_subset` | 0 | 4 |
 | `not_mem_drop` | proved | — | — | 0 | 2 |
+| `omitted_anti` | proved | — | — | 0 | 3 |
+| `omitted_full` | proved | — | — | 0 | 2 |
+| `omitted_subset` | proved | — | — | 0 | 2 |
 | `restart_append` | proved | — | `failed_snoc`, `failed_rest`, `restart_of_some`, `firstDrop_append`, `restart_of_none`, `firstDrop_length` | 0 | 6 |
 | `restart_eq_sweep` | proved | — | `restart_append` | 0 | 2 |
 | `restart_of_none` | proved | — | `firstDrop_length` | 0 | 2 |
@@ -4648,12 +4648,12 @@ flowchart LR
 | `keeps_above` | proved | — | `needs` | 0 | 6 |
 | `needs` | proved | — | `minimal_iff_drop` | 0 | 6 |
 | `of_same_sites` | proved | — | `instIsPreorder`, `valid_up` | 0 | 5 |
-| `contribution_le` | proved | — | — | 0 | 9 |
-| `contribution_lub` | proved | — | `minimals_sound`, `minimals_complete` | 0 | 11 |
-| `contribution_valid` | proved | — | `descend_minimal`, `descend_le`, `instIsPreorder`, `contribution_lub`, `descend_valid`, `valid_up` | 0 | 13 |
+| `contribution_le` | proved | — | — | 0 | 10 |
+| `contribution_lub` | proved | — | `minimals_sound`, `minimals_complete` | 0 | 12 |
+| `contribution_valid` | proved | — | `descend_minimal`, `descend_le`, `instIsPreorder`, `contribution_lub`, `descend_valid`, `valid_up` | 0 | 14 |
 | `decide_valid_up` | proved | — | `valid_up` | 0 | 5 |
-| `descendTree_asks` | proved | — | `sweepFree_congr`, `parentFolded_sound`, `decide_valid_up`, `sweepFreeAsked_sublist` | 0 | 12 |
-| `descendTree_eq_descend` | proved | — | `parentFolded_sound`, `decide_valid_up`, `sweepFree_eq_sweep` | 0 | 8 |
+| `descendTree_asks` | proved | — | `sweepFree_congr`, `parentOmitted_sound`, `decide_valid_up`, `sweepFreeAsked_sublist` | 0 | 12 |
+| `descendTree_eq_descend` | proved | — | `parentOmitted_sound`, `decide_valid_up`, `sweepFree_eq_sweep` | 0 | 8 |
 | `descendTree_minimal` | proved | — | `descendTree_eq_descend`, `descend_minimal` | 0 | 12 |
 | `descend_asks` | proved | — | `sweep_congr`, `sweepAsked_length` | 0 | 8 |
 | `descend_eq_restart` | proved | — | `decide_valid_up`, `restart_eq_sweep`, `firstDrop_length` | 0 | 7 |
@@ -4665,10 +4665,10 @@ flowchart LR
 | `isMinimal_iff` | proved | — | `minimal_iff_drop` | 0 | 8 |
 | `minimal_iff_drop` | proved | — | `le_drop`, `valid_up`, `drop_le`, `not_mem_drop` | 0 | 6 |
 | `minimal_refine` | proved | — | `valid_refine`, `exists_minimal_below` | 0 | 5 |
-| `minimals_complete` | proved | — | `of_same_sites`, `isMinimal_iff`, `exists_mem_below` | 0 | 10 |
-| `minimals_sound` | proved | — | `isMinimal_iff`, `le_of_mem_below` | 0 | 10 |
-| `ofFolded_full` | proved | — | `folded_full` | 0 | 2 |
-| `parentFolded_sound` | proved | — | — | 0 | 6 |
+| `minimals_complete` | proved | — | `of_same_sites`, `isMinimal_iff`, `exists_mem_subslices` | 0 | 11 |
+| `minimals_sound` | proved | — | `isMinimal_iff`, `le_of_mem_subslices` | 0 | 11 |
+| `ofOmitted_full` | proved | — | `omitted_full` | 0 | 2 |
+| `parentOmitted_sound` | proved | — | — | 0 | 6 |
 | `valid_max` | proved | — | `instLawfulOrderSup`, `instIsPreorder`, `valid_up` | 0 | 5 |
 | `valid_refine` | proved | — | — | 0 | 2 |
 | `valid_up` | proved | — | — | 1 | 4 |

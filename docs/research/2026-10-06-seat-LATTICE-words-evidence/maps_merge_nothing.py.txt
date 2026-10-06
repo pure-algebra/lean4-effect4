@@ -1,0 +1,24 @@
+"""Seat LATTICE, the words follow-up: the two rename maps merge no two names. A map could make
+two texts equal by giving two different identifiers one name. It cannot when no target of the
+maps is a token of the base text and no source of the maps is a token of the head text. The
+tokens are the ones that the rename acts on (`rename`, code_only.py). The comments of a Lean file
+are removed first; a listing is read as it is."""
+import re, sys
+from code_only import MAP_A, MAP_B, strip
+
+TOKEN = re.compile(r"[A-Za-z_][A-Za-z0-9_']*")
+
+def tokens(path):
+    text = open(path).read()
+    return set(TOKEN.findall(strip(text) if path.endswith('.lean') else text))
+
+sources = sorted(set(MAP_A) | set(MAP_B))
+targets = sorted(set(MAP_A.values()) | set(MAP_B.values()))
+base, head = tokens(sys.argv[1]), tokens(sys.argv[2])
+at_base = [t for t in targets if t in base]
+at_head = [s for s in sources if s in head]
+print(f"{len(sources)} sources and {len(targets)} targets; targets at the base: {len(at_base)} {at_base}; "
+      f"sources at the head: {len(at_head)} {at_head}")
+ok = not at_base and not at_head and len(sources) == len(targets)
+print("RESULT:", "the maps merge no two names" if ok else "A NAME OF THE MAPS IS ON THE WRONG SIDE")
+sys.exit(0 if ok else 1)

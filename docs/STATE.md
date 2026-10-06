@@ -369,8 +369,12 @@ In work since the suspension of the handover:
   6 a). A type variable is formed in a template only, and a formed program that the checker
   admits has closed types. It narrows the admitted programs by those that hold a variable
   in an annotation.
-- **Seat LATTICE renames the slice module's words** (branch `seat/lattice-words`; row 286,
-  point 5): "omitted" in place of "folded".
+- **Seat LATTICE's renaming is merged**
+  ([its receipt](research/2026-10-06-seat-LATTICE-words-receipt.md); row 286, point 5). The
+  slice module says "omitted" where it said "folded", and the dictionary has eight entries
+  for its words: type slice, site, slice view, valid slice, minimal slice, descent,
+  contribution slice and mask. The follow-up also found that the proof graph's population
+  skips eight authored theorems by the spelling of their names: a repair candidate.
 - **Seat UNION has the combinator of candidate N** (branch `seat/union`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-union-brief.md); row 285). It
   names the pattern of `Record.fieldType` once: a member rule, applied to every member of a
