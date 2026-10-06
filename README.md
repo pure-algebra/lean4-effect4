@@ -149,6 +149,34 @@ Each row that carries a term has this second wrapper, named with the suffix `Wit
 `Authoring.selectOptionWith` mints the payload's name, and `Authoring.onExitWith` the exit's name.
 `Test/Program/AuthoringContract.lean` holds one capture under a written name, and each minted form's reading.
 
+## A bounded queue
+
+`Queue.bounded A capacity` makes a queue of messages of the type `A`, at a positive capacity.
+Its handle is the `Ref` of the queue's cell.
+`Queue.offer`, `Queue.take`, `Queue.poll` and `Queue.size` are library programs over that handle.
+An offer waits while the queue is full, and a take waits while it is empty.
+`Queue.poll` and `Queue.size` never wait.
+
+```lean
+import Effect4
+open Effect4 Effect4.Program Effect4.Program.Authoring
+
+def handoff : Src NativeOp := eff do
+  let q ← Queue.bounded .nat 2
+  let worker ← fork (Queue.take .nat q)
+  let _ ← Queue.offer .nat q (nat 7)
+  let x ← join worker
+  return x
+```
+
+`Effect4.Api.author handoff` checks this program at the answer type `nat`, and its run answers `7`.
+The worker waits first, and the offer's posted helper wakes it.
+An operation mints the name of each of its binders, so it captures no name of its caller.
+Each operation prints as its expansion over `Ref.modify`, `Deferred` and `Effect.forkDetach`, and reads back.
+The printed program agrees with Effect 4.0.0-rc.112 on its exit and on its compared schedule rows.
+That run is the program `pQueueWake` of `harness/truth/Truth.lean`.
+`Test/Program/QueueOps.lean` holds this example, and `Test/contracts/queue.contract.md` states what is proved and what is open.
+
 ## Building
 
 The toolchain is pinned by `lean-toolchain`. Dependencies are pinned by exact
