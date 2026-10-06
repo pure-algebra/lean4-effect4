@@ -1,0 +1,226 @@
+{
+  "kind": "isolated finite Python model controls; no Lean or project runtime",
+  "passed": 18,
+  "results": [
+    {
+      "name": "raw_bind_reassociation_changes_result",
+      "actual": [
+        2,
+        1
+      ],
+      "expected": [
+        2,
+        1
+      ],
+      "pass": true,
+      "scope": "Pure mirror of absolute variables; no general bind reassociation."
+    },
+    {
+      "name": "raw_bind_suspension_positive",
+      "actual": 1,
+      "expected": 1,
+      "pass": true,
+      "scope": "Administrative suspension leaves the same selected input."
+    },
+    {
+      "name": "same_typed_slot_is_not_same_input",
+      "actual": [
+        true,
+        false
+      ],
+      "expected": [
+        true,
+        false
+      ],
+      "pass": true,
+      "scope": "Rechecking same-typed stored syntax cannot infer intent."
+    },
+    {
+      "name": "inserted_slot_shift_positive",
+      "actual": "Ada",
+      "expected": "Ada",
+      "pass": true,
+      "scope": "A correct one-slot weakening preserves the selected value."
+    },
+    {
+      "name": "loop_cursor_and_answer_are_distinct",
+      "actual": [
+        5,
+        7
+      ],
+      "expected": [
+        5,
+        7
+      ],
+      "pass": true,
+      "scope": "Both can be Nat; type equality cannot identify their roles."
+    },
+    {
+      "name": "loop_inserted_outer_slot_positive",
+      "actual": [
+        99,
+        100,
+        5,
+        7
+      ],
+      "expected": [
+        99,
+        100,
+        5,
+        7
+      ],
+      "pass": true,
+      "scope": "Inserting an outer slot moves cursor and answer together."
+    },
+    {
+      "name": "plain_node_path_aliases_loop_terms",
+      "actual": 1,
+      "expected": 1,
+      "pass": true,
+      "scope": "Loop pure terms live at the parent node, not distinct Node children."
+    },
+    {
+      "name": "tagged_term_slots_positive",
+      "actual": 4,
+      "expected": 4,
+      "pass": true,
+      "scope": "A separate slot distinguishes the four pure terms."
+    },
+    {
+      "name": "equal_finished_loop_results",
+      "actual": [
+        {
+          "exit": 2,
+          "store": 2
+        },
+        {
+          "exit": 2,
+          "store": 2
+        }
+      ],
+      "expected": [
+        {
+          "exit": 2,
+          "store": 2
+        },
+        {
+          "exit": 2,
+          "store": 2
+        }
+      ],
+      "pass": true,
+      "scope": "Two spellings can converge to the same exit and complete store."
+    },
+    {
+      "name": "equal_finished_results_do_not_imply_budget_equality",
+      "actual": [
+        {
+          "exit": null,
+          "store": 1
+        },
+        {
+          "exit": null,
+          "store": 2
+        }
+      ],
+      "expected": [
+        {
+          "exit": null,
+          "store": 1
+        },
+        {
+          "exit": null,
+          "store": 2
+        }
+      ],
+      "pass": true,
+      "scope": "A completed-result relation does not preserve unfinished stores."
+    },
+    {
+      "name": "termination_boundary_can_differ",
+      "actual": [
+        {
+          "exit": null,
+          "store": 2
+        },
+        {
+          "exit": 2,
+          "store": 2
+        }
+      ],
+      "expected": [
+        {
+          "exit": null,
+          "store": 2
+        },
+        {
+          "exit": 2,
+          "store": 2
+        }
+      ],
+      "pass": true,
+      "scope": "Equal store is not equal completion status at a fixed budget."
+    },
+    {
+      "name": "suspension_cleanup_budget_positive",
+      "actual": true,
+      "expected": true,
+      "pass": true,
+      "scope": "Finite control of a budget-transparent rewrite; not a proof for Effect4."
+    },
+    {
+      "name": "one_world_frame_contract_can_be_vacuous",
+      "actual": [
+        true,
+        false
+      ],
+      "expected": [
+        true,
+        false
+      ],
+      "pass": true,
+      "scope": "Finite allocation mirror of the need for later-world quantification."
+    },
+    {
+      "name": "later_world_positive",
+      "actual": true,
+      "expected": true,
+      "pass": true,
+      "scope": "A good continuation meets each sampled later-world demand."
+    },
+    {
+      "name": "program_identity_without_signature_is_insufficient",
+      "actual": [
+        true,
+        false
+      ],
+      "expected": [
+        true,
+        false
+      ],
+      "pass": true,
+      "scope": "A typed focus must bind both source and signature."
+    },
+    {
+      "name": "program_and_signature_positive",
+      "actual": 2,
+      "expected": 2,
+      "pass": true,
+      "scope": "Including the signature distinguishes the two typing inputs."
+    },
+    {
+      "name": "reference_definition_is_not_occurrence_identity",
+      "actual": 1,
+      "expected": 1,
+      "pass": true,
+      "scope": "A target-only address loses which expanded occurrence was selected."
+    },
+    {
+      "name": "reference_occurrence_positive",
+      "actual": 2,
+      "expected": 2,
+      "pass": true,
+      "scope": "Explicit occurrence origin can retain both selections without new program syntax."
+    }
+  ]
+}

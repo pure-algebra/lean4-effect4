@@ -1,0 +1,157 @@
+PROPOSED DATA CONTRACTS — UNCOMPILED, NOT A PATCH
+
+Existing types retain their current definitions. Braces and unions below describe data,
+not a new programming language. Names beginning Proposed are proposed carrier names only.
+The host implements operations with existing APIs and returns existing refusal payloads.
+
+ProposedFormat
+  envelopeVersion : Nat
+  wireSchema      : exact identifier of the generated codec signature
+  semantics       : named implementation/profile identity
+  [Optional provenance: source revision, generator inputs, target/compiler version]
+
+ProposedProgramBundle
+  format          : ProposedFormat
+  program         : Api.Program                   [existing first-order Eff]
+  rows            : Program.RowTable              [existing ordered list]
+  rowNames        : List (String × Nat)            [existing Built metadata]
+
+Invariant of the INITIAL load operation:
+  requested profile is supported;
+  program is admitted at SigApp ⟨rows, []⟩;
+  no unknown extension is silently ignored.
+No service-declaration field is exposed until the existing public Σ_app gap is closed.
+An external-index request depends on rows; a name-based request also depends on rowNames.
+Unknown row-name metadata does not alter program admission; the operation using it checks it.
+
+Host-local Loaded
+  built           : Api.Built                      [contains actual admission proof]
+  identity        : binding to the exact bundle used for this handle
+  [This value does not cross the wire as a trusted proof.]
+
+LoadResult
+  loaded(handle, EffTy, exact bundle identity)
+  refused(version/profile/decoding refusal OR existing BuildRefusal)
+A second implementation decodes/rechecks the bundle; it does not trust `loaded` as a Prop.
+
+ProposedSelection
+  base            : handle or content reference resolving to exact bundle bytes
+  pathScheme      : structural-node-v1
+  path            : List Nat
+  expectedSort    : existing Node sort
+  expectedNode    : selected existing Node NativeOp, or exact canonical bytes of it
+
+New codec work required:
+  a Canonical instance for the existing Node wrapper was NOT located in the frozen search;
+  generate this finite wrapper from existing carrier codecs when it gets a wire consumer.
+  This is not a second tree or a second editing language.
+
+Selection laws:
+  host lookup of base must establish exact bundle equality, not hash equality alone;
+  node lookup must equal expectedNode;
+  pathScheme counts structural Node children, not term/type fields;
+  selection neither edits nor relocates syntax.
+
+ProposedTypingView
+  selection       : ProposedSelection
+  occurrence      : original-source OR expanded-with-explicit-occurrence-connector
+  mode            : ordinary effect | layer | action | statement | statement spine | ...
+  environment     : Program.TyEnv
+  loopContext     : not-in-loop OR in-loop, where the current checker needs it
+  result          : matching tagged existing EffTy/LayerTy/GenTy/StmtTy-derived result
+  premiseLinks    : derived links to the checked source facts, not arbitrary proof strings
+
+A result can succeed only when the whole admission/typing derivation supplies this context.
+Do not expose the checker's tentative return refusal as if it were a final certificate.
+Do not claim to compute every variant before its matching path/environment theorem exists.
+Initial domain may be effect nodes without layer references, explicitly refused elsewhere.
+
+New codec work required:
+  existing EffTy and Ty codecs can be reused;
+  GenTy, LayerTy, StmtTy and the view need exact generated codecs if exposed directly;
+  simpler operation-specific views can avoid exposing unchecked intermediate types.
+
+ProposedEdit
+  selection       : ProposedSelection
+  replacement     : existing Node NativeOp
+
+EditResult
+  changed(new exact bundle/handle, computed root EffTy)
+  refused(unsupported format/profile | stale base | missing path | wrong sort
+          | unreadable replacement | existing BuildRefusal)
+
+Execution order:
+  resolve exact base → compare old node → replace same sort → rebuild entire candidate.
+The unchanged table and rowNames are guaranteed by existing rebuild_spec.
+Any refusal retains the old handle and its exact bytes.
+A successful change need not preserve old type or behavior.
+
+A Move is not included. It requires relocation/weakening with its own context premises.
+An optional CertifiedRewrite is a separately named operation with a specific relation,
+not a Boolean flag on Edit. Its result names the actual theorem application and premises.
+
+ProposedReplayPrefix
+  bundle          : exact admitted bundle reference
+  sessionName     : String
+  profile         : String
+  budget          : Api.Budget                    [fuel AND compileFuel]
+  commands        : existing List Api.Runner.Command
+  length          : optional requested prefix length, bounded by commands.length
+
+Initial operation reopens and plays the prefix. There is no opaque saved-machine input.
+Cached checkpoints may be added only with equality to that replayed prefix as their target.
+All attempted decoded commands remain, including refused/frontier commands.
+Byte rows that do not decode stay in RunnerBytes' transport transcript, outside List Command.
+A host endpoint must specify whether it follows Run.open's id domain or HostSession.start's
+nonempty-session/version checks. It cannot claim those entrypoints have identical domains.
+
+New codec work required:
+  Command and list codecs exist;
+  Api.Budget exact instance was not located by the bounded frozen-tree search;
+  add the two-field codec, not a renamed single-fuel surrogate.
+
+ProposedObserveRequest
+  prefix          : ProposedReplayPrefix
+  observation     : session-state | run-observation | machine-projection(profile)
+                    | terminal-exit-stores(fragment-profile)
+
+Observation result payloads:
+  session-state         → existing HostProtocol.State
+  run-observation       → existing Run.Observation
+  machine-projection    → named existing Inspection projection, no invented session fields
+  terminal-exit-stores  → existing ExitV and Stores under named completed-run premises
+
+Existing RunnerBytes.observeBytes implements session-state, not run-observation.
+Run.Observation has a Canonical instance; it does not contain full stores/traces.
+Run.Work may be a later typed scheduler-view result; its Canonical instance was not located.
+The initial machine-projection profile must be finite and named, not arbitrary client code.
+
+Evidence provenance:
+  retain existing Conform report inputs, pins, observation and Outcome/Evidence;
+  distinguish Lean replay, direct host measurement and related/projected fields;
+  no new evidence-status ranking and no Boolean 'whole independent host observation'.
+
+Clock values:
+  use existing ClockMillis (canonical decimal-string image) for recorded millisecond input;
+  retain unit explicitly in the schema;
+  a target adapter refuses values outside its named numeric profile;
+  nanoseconds, bigint, wall/monotonic clocks and scale preservation need their existing ruling.
+
+ProposedProofApplicationRequest [TOOLS ONLY]
+  claim           : existing registry claim identifier
+  subjects        : exact program/table/selection/prefix identities required by that claim
+  parameters      : finite data for a specific registered adapter
+  requestedLaw    : optional existing theorem identifier, validated rather than trusted
+
+Response uses existing Conform.Outcome/Evidence/Obligation and Plan status:
+  actual subjects and reconstructed proposition description;
+  theorem name/universes/environment provenance;
+  discharged premises and outstanding premises;
+  actual transitive goals/axioms, separate from authored placements;
+  unsupported/refused/unresolved result when an adapter or premise is absent.
+
+ProofRef Expr never enters canonical program content or an executable public wire term.
+The adapter reconstructs the expected proposition, validates the theorem and its application.
+A theorem of ∀x, P x → Q x alone does not establish Q for a subject without P.
+
+No format above is implemented, compiled or ratified by this packet.

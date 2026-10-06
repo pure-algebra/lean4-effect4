@@ -59,3 +59,11 @@ pQueueFull	yes	yes	yes	yes	yes	yes
 pQueueInterrupted	yes	yes	yes	yes	yes	yes		
 pQueueMasked	yes	yes	yes	yes	yes	yes		
 pQueueOrder	yes	yes	yes	yes	yes	yes		
+pSemaphoreProtectedJoined	yes	yes	yes	yes	yes	yes		
+pSemaphoreScan	yes	yes	yes	yes	yes	yes		
+pSemaphoreOvertake	yes	yes	yes	yes	yes	yes		
+pSemaphoreBodiesJoined	yes	yes	yes	yes	yes	yes		
+pSemaphoreInterrupted	yes	yes	yes	yes	yes	yes		
+pSemaphoreIfAvailable	yes	yes	yes	yes	yes	yes		
+pSemaphoreMasked	yes	yes	yes	yes	yes	yes		
+pSemaphoreHandoff	yes	yes	yes	yes	yes	yes		

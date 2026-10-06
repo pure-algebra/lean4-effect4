@@ -1,0 +1,357 @@
+{
+  "repository": "/Users/pooks/Dev/lean4-effect4",
+  "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+  "prior_cut": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "evidence": "committed source; active staged files excluded",
+  "sources": [
+    {
+      "path": "AGENTS.md",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "607959a5ece23418c8938d9903200d9f73d1f500",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/AGENTS.md"
+    },
+    {
+      "path": "docs/STATE.md",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "34dc36b55ce3ce31ff38fb48b82b93b52ae8f7f9",
+      "sha256": "4c3e25bdcbbbdbe8e67f358af36f2618daf8d575c50db45e7d8d38e1b2ffd001",
+      "bytes": 135380,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/docs/STATE.md"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "067f3dac6ff5b37cc6710ebed02c04c01bca9a03",
+      "sha256": "512d6736bd5ee86f6cec78100b6e2b18bae00510cd409186479e7f73d2d1563e",
+      "bytes": 37097,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/docs/ARCHITECTURE.md"
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "50ce216a1aca4f6b77c9503f61de5c178cf79fb6",
+      "sha256": "2a035291c6224fa073ad8576da79af8c9cb05fc1cfc0009486d15ce5d9937329",
+      "bytes": 367268,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/docs/core/decisions.md"
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "8dcf70084a49eb34fb212055f49cb740c1e0af00",
+      "sha256": "27b975c42ae4044044dca69b4b6c56d490522bca6fc10b7b2dabdf478014d7b9",
+      "bytes": 82137,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/docs/core/semantics.md"
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "a26485b87ea65c9316ab5c228d1df35f00e75639",
+      "sha256": "d455f54bacaed133b599c88db869f34bd241ac524d08dbcbfffbec9b47b3cd05",
+      "bytes": 83866,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/tools/Tools/SemanticsRegistry.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Checker.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "9d36042ea9be26907ddf5fa6c5e84a4c9099f4df",
+      "sha256": "858d1bad1e6b57536f14c45e5b9b8075305ad932996753f7d406081e5a51235a",
+      "bytes": 23432,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Checker.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "c051660402c2178c011136c023121e3126d5a1d5",
+      "sha256": "132e9b79309241616a07a1c02b2f00c42b5eb90dbfeabb4a8c3264021f2d8c8e",
+      "bytes": 12262,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Typing.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "8021cad83bb87254b6cba18d385a350f001cf5ab",
+      "sha256": "f77508cfd3c7f34b7433346654ac709e2734f5308c8b44391a229e9fdb6a6cdd",
+      "bytes": 32171,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Typing/Rules.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/TermRefusal.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "23da46962d1ccb713e5d25e0fd071ae39635f502",
+      "sha256": "de36cd16aea81d86bd2a4d943bce05dc1e517efb9f24f25ce09ad1c97829d82e",
+      "bytes": 12003,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Typing/TermRefusal.lean"
+    },
+    {
+      "path": "src/Effect4/Program/CheckedTyping.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "17c22a8363cd019349e3b048fb5e74770cc21e9e",
+      "sha256": "c5364dd6f199ebfcc677f21e621c856caef1d06edba40517533ead58311cef75",
+      "bytes": 1286,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/CheckedTyping.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Refs.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "ec309afb1b807898d215665419bf687f7caed883",
+      "sha256": "def356715b4c4cacccdcb17aa3b2c2bbb17e7bc3257b59a22bc27bb9e5fc6858",
+      "bytes": 13994,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Refs.lean"
+    },
+    {
+      "path": "src/Effect4/Program/NodeLenses.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "1591de1e3663403dd3bcb5892c44842e96c08c24",
+      "sha256": "0102d87d19e956433e0f9c153b0f7dbf2a6540145efb55ca2e3e8d1c1af5995b",
+      "bytes": 8873,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/NodeLenses.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Node.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "b88ea7082e7444fe3e2ffad5df72216b4ade5693",
+      "sha256": "2e3721dfa23eff4f772c39efc728fb82b1eeccaba8fd8d1cd301cbc6514c8eb1",
+      "bytes": 1042,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Node.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Fold.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "4a222ee1c6755e4ea2babb1d5c8b2f4f5c18e409",
+      "sha256": "f2e38bc49d477a23386e409a781198bbfe7f7d0f5aad9ba9172c36573b9a6188",
+      "bytes": 183149,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Fold.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Scoped.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "c7a63478c29e114c64160349ac280aba37fe2584",
+      "sha256": "05bb1d5bc560fbdcb71f1e27a60308d11d173afdb5024fed156b5cf9aa67c60b",
+      "bytes": 24085,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Scoped.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Native.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "483bfd7f033c7ab06e0c081596b0183a68ffb5dc",
+      "sha256": "05c27268e678f4d4d50156d03ce0a2479320c01654431dd9c4fd370857b435cb",
+      "bytes": 34667,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Native.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Eff.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "99b1f15a7f8a35fb8da255476158a03fad5e139f",
+      "sha256": "dd9c10aaa78794ad611f5928f6dfa286fd6774e8c73e049c2d7ca7ba1b2b5cfe",
+      "bytes": 31831,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Eff.lean"
+    },
+    {
+      "path": "src/Effect4/Machine/Term.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "b27400e66c6a9258afeb49cc8c10d1dc302b74ad",
+      "sha256": "b2206480c6de3daabd9ff64ddf6d18fbc6e2e1d079cbaab3b24dd5475ca64bcc",
+      "bytes": 30161,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Machine/Term.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Lifts.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "fd643e52e70da42a00090e4c3a0eedf8d83c8725",
+      "sha256": "9dbb32a9a0f8359dcd6f1e31cd4b532d4ef724c2726677fa8b02a07eab2e42d0",
+      "bytes": 15474,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Authoring/Lifts.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Sugar.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "f6afefd019ca15c2ca0be1ba2cca27dcf3e4ffb6",
+      "sha256": "b4a0f4b67748aaf5c9ff6036e3e4f6087d412054894eb4ac2444b01f341f35ec",
+      "bytes": 8263,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Authoring/Sugar.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Authoring/Loops.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "7486b41b108a5b916b337b4c6c0e895584b19517",
+      "sha256": "db8f346db8540233226e1b86d91b8e445731ef35b4b1bfb815e99c377a661a3a",
+      "bytes": 3240,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Authoring/Loops.lean"
+    },
+    {
+      "path": "src/Effect4/Api.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "13693224228f2600c1f1b2efa5676dba234aefba",
+      "sha256": "71d7ecb1180795becf34a14b01d629b9669956a25ab23872845e2389e095d076",
+      "bytes": 33437,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Api.lean"
+    },
+    {
+      "path": "src/Effect4/Api/Built.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "f6884be13795e943cb512fb89db0feb05099ab1c",
+      "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+      "bytes": 1105,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Api/Built.lean"
+    },
+    {
+      "path": "src/Effect4/Api/Author.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "63230feddcab9b8864410936bf7c81f3ee326511",
+      "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "bytes": 6392,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Api/Author.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/CheckInversion.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "90ce5b689ad15a1d9686123ba6fa27b5b07ae00a",
+      "sha256": "9df16349f5d2955fde85364d2777e935312fb69b1fe98e0c1dce6ec0d7a1945a",
+      "bytes": 28285,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/Typing/CheckInversion.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "9185a0bc1a038621ebf1b72ce9718a9e9bec80dd",
+      "sha256": "b03d91af9b39ae6807aee61c30e5826b1e597b7fedf99e47fe58e1024c958939",
+      "bytes": 6556,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/CheckedTyping.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "5890d84c5eb25b3faac735a8175c80b29990f6d3",
+      "sha256": "7f81c9ee0a4b159b0b139eb4218edbf65d56adec2fb9f4f8149440b2c18c985a",
+      "bytes": 13865,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/ReferenceTyping.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "703cade3e21a3649e283c3f21b92f3b71e580d08",
+      "sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708",
+      "bytes": 15938,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/References.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Checker.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "0df97b3262974a7db2e4e317a69f44f928da8d8a",
+      "sha256": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee",
+      "bytes": 839,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/Folds/Checker.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Term.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "2f35590a9fa394566897cf8eaa854db69609eba5",
+      "sha256": "235a13cbdbae0458d63c80c3356e77582842a62920c70cba7defb44eaaf59313",
+      "bytes": 1091,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/Folds/Term.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "5e1702a233bea0de80ea605c3642c688ddc73483",
+      "sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16",
+      "bytes": 18639,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/Author.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "bbdd22f0d93b1b7c207f67155187b8e7f2141237",
+      "sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3",
+      "bytes": 23034,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws/Program/DenoteB.lean"
+    },
+    {
+      "path": "src/Effect4/Codegen/Templates.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "edbc59c568453343786f91af7e051d577af5987d",
+      "sha256": "6f47138fd6f325c4d607cc3f9da1db3f4faeed0f3c6a570e9988aeb8d60fada4",
+      "bytes": 22415,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Codegen/Templates.lean"
+    },
+    {
+      "path": "src/Effect4/Codegen/Print.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "80d465e3f0f7f7751b71ea0b2860094f423a2c0e",
+      "sha256": "07883ce3457e2d433debab76c5c547e38a19bb06527f724bf26b246a6725977d",
+      "bytes": 13104,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Codegen/Print.lean"
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Routing.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "9c69aca3f81065c1245b2a688f05d0b9a9abac17",
+      "sha256": "c30cf4190971625e6f955045f5f6e3ba49effc480d9781357acb73c249d69231",
+      "bytes": 18734,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/Test/Dogfood/Scenario/Routing.lean"
+    },
+    {
+      "path": "Test/Dogfood/P2HandlerLayers.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "36d784c73c65595ab2b63de36263ebce449d04d6",
+      "sha256": "e626bfce9eeceb6bcf008ca99c1389b536c53ac99b19c2005d5ddc73a5bbab03",
+      "bytes": 21973,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/Test/Dogfood/P2HandlerLayers.lean"
+    },
+    {
+      "path": "src/Effect4.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "35a1308a089eda6e80bcf01eedaaabb3a7b76c35",
+      "sha256": "91494fdf7b69bfbd29e1bb91f159fee40a6213750cc25f2043f26ae1544ec5dd",
+      "bytes": 8743,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4.lean"
+    },
+    {
+      "path": "src/Effect4/Laws.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "83945187ea3a735712b91ad5287c293fa15f3862",
+      "sha256": "ccae3eed678321918b58b274cf067d92abc47a66955994e1599b08d9cadc5955",
+      "bytes": 8825,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Laws.lean"
+    },
+    {
+      "path": "Test/All.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "06f01677a2aca633631f0522a462613fcc1c3b0a",
+      "sha256": "a0348ae55c5f1e534f53f172d6005d93834e698bee7be3b77906f28160f7f2c0",
+      "bytes": 10286,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/Test/All.lean"
+    },
+    {
+      "path": "tools/Effect4Gen/binders.json",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "69d062ecd3b21c511e5d5ff4a287e46eddcc7cd9",
+      "sha256": "20d65ff09142c57e5018a92b047c86cc3fb18c3545b7ca010872685429c09538",
+      "bytes": 3819,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/tools/Effect4Gen/binders.json"
+    },
+    {
+      "path": "src/Effect4/Program/Admission.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "c3bdeb0fdefc6653c7d4269f3f8b07a47113586f",
+      "sha256": "4ef4539a87ae5b273cbb06d318c84180513c2958370b2797b5f7fc981e6f6062",
+      "bytes": 14104,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/Admission.lean"
+    },
+    {
+      "path": "src/Effect4/Program/SigApp.lean",
+      "revision": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "git_blob": "cffdd1821ff5c16647e5b481f2e18e603ab6eab1",
+      "sha256": "a02b9e5ad2e3aa38778554938e7344a0224e8cf30b322775e7e98bd08af3f0dc",
+      "bytes": 10185,
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/source/src/Effect4/Program/SigApp.lean"
+    }
+  ],
+  "recommendations_reviewed": {
+    "source": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/recommendations.md",
+    "sha256": "049665f968f6b4749d859a6b1e8cf68d59e96ab6ee3281f096d4c3368bcf8940",
+    "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/recommendations-reviewed.md"
+  }
+}

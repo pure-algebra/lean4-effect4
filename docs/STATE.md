@@ -278,7 +278,17 @@ either module exists yet):
   abandoned lookup's cleanup starts a new lookup (row 271);
 - Cache's capacity bounds the keys, and not the lookups that are alive (row 272).
 
-In work since 2026-10-06, three seats at once since the owner's word of that day (row 237):
+**Who implements next (row 277; the owner approved the handover on 2026-10-06).**
+Implementation passes to Codex, and the coordinator reviews. The handover takes effect at
+its point: seats LIFT and SEMW are merged with their records. No seat is added before it.
+The [transition account](research/2026-10-05-claude-lead/2026-10-06-transition-account.md)
+gives the handover point, what the next implementer inherits and the integration procedure
+as practiced. Three points stay open for the owner: who integrates after the handover,
+whether the reviewer builds, and a sweep at the handover head. Until the owner names a
+party, the coordinator still merges, runs the wide gates and keeps the registers.
+
+In work since 2026-10-06. The owner allowed three seats at once that day (row 237). Two
+run, and the third seat is held:
 
 - **Seat LIFT has the lift of the mask's chain to runs** (branch `seat/lift`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-lift-brief.md)), in the seat that
@@ -293,18 +303,19 @@ In work since 2026-10-06, three seats at once since the owner's word of that day
   Queue's trees must not move. Its first five steps are merged (`aa70b078`, `4b57609c`,
   `ea036307`). The two forms are `waitRetryAt` and `protectedBy`
   (`src/Effect4/Modules/Waiting.lean`). The six operations are library programs
-  (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every scope,
-  and nine attempt laws relate one store step to the model's step, with no planned goal
+  (`src/Effect4/Modules/Semaphore/Ops.lean`). Each keeps scope and is typed at every scope.
+  Nine attempt laws relate one store step to the model's step, with no planned goal
   (`src/Effect4/Laws/Modules/Semaphore/Ops.lean`; R4, R10). The traces run on the Lean
   machine, with the two red controls of the protected permit
   (`Test/Program/SemaphoreTraces.lean`). The faces, the truth programs, the engine's case and
   the receipt come next.
-- **Seat WORKQ has the workers over the public Queue** (branch `seat/workq`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)), in the seat that
-  seat CHECK freed. It is the first recommendation of Codex's dogfood review. The two-worker
-  crew takes its jobs from the Queue's public operations, as a second scenario. The first
-  scenario stays as the control of the host protocol. The slice also shares one `note`
-  through `Ref.updateWith`, and it gives the typed empty cell one home with two laws.
+- **Seat WORKQ is prepared and not dispatched: the workers over the public Queue** (branch
+  `seat/workq`; [its brief](research/2026-10-05-claude-lead/briefs/seat-workq-brief.md)). It
+  is the first recommendation of Codex's dogfood review. The two-worker crew takes its jobs
+  from the Queue's public operations, as a second scenario. The first scenario stays as the
+  control of the host protocol. The slice also shares one `note` through `Ref.updateWith`,
+  and it gives the typed empty cell one home with two laws. The worktree stands on the
+  branch at `c986b839`, with no commit. The slice is the next implementer's first candidate.
 
 Merged on 2026-10-06, after the seats above began:
 
@@ -336,8 +347,8 @@ Merged on 2026-10-06, after the seats above began:
   (`4667df9a`), and row 276 records what it leaves open.
 - **Seat QINV is merged** (`13a77be6`;
   [its receipt](research/2026-10-06-seat-QINV-receipt.md)). On the first profile, one step of
-  the Queue's model keeps its run invariant, and both flags hold after every list of first
-  operations from the empty queue (`first_step_inv`, `first_run_flags`,
+  the Queue's model keeps its run invariant (`first_step_inv`). Both flags hold after every
+  list of first operations from the empty queue (`first_run_flags`,
   `src/Effect4/Laws/Modules/Queue/Invariant.lean`; R12). Lean accepts Codex's invariant as
   written. It is the model's half of two open parts. The wrapper's run stays open.
 - **Seat CUTS is merged** (`f3568844`;
@@ -412,7 +423,7 @@ Candidates with no seat, each with its place:
   the closer as a request (row 276);
 - two points of Codex's dogfood review of 2026-10-06
   (`research/2026-10-05-codex-foundation-packet/implementation-audit/dogfood-review-1406/`).
-  Seat WORKQ has the review's other two points:
+  Seat WORKQ's brief has the review's other two points:
   - the exact Routing example has no printed twin in the host lane. Two errors of tsgo 7
     keep it out. The repair carries the checked types of the branches to the printed
     Boolean select, with the reader's laws;
@@ -422,6 +433,27 @@ Candidates with no seat, each with its place:
 - the byte forms of row 262, and the control files generated from Lean pins (rows 258 and
   264);
 - two small repairs of the foreign readers (row 258, points 5 and 6).
+
+Candidates for the plan after the handover (row 277), from Codex's capability packet of
+2026-10-06. The packet is filed with a coordinator's note
+(`research/2026-10-05-codex-foundation-packet/implementation-audit/capability-design-2026-10-06/`).
+It is research: nothing is dispatched, and every new statement is uncompiled. Its evidence
+is source inspection and finite models. Seat WORKQ's prepared slice stays first.
+
+- **The checked focus** (`next-slices/focus/brief.md` there): a view of one program location
+  that the checker itself derives. It shows the inherited bindings, the inferred type and the
+  named constraints of each parent rule. Its domain is the admitted source route without
+  references, with Routing and nested `iterate`. Four laws are proposed. A view's refusal is
+  no refusal of the program.
+- **One rewrite for straight programs and loops** (`next-slices/loop-rewrite/brief.md`):
+  the removal of administrative suspensions by the identity fold. Its proposed law compares
+  the bounded meaning at every budget, with the stores of an unfinished loop.
+- **Exact selection, an edit of the same sort and a whole rebuild**, over `Node.replaceAt`
+  and `Built.rebuild`.
+- **A completed prefix's inspection and offline branches**, over `Run` and seat CUTS's laws.
+- **A clock plan against one snapshot**, beside the clock-unit lane of row 231.
+- **Later:** the insertion of a stored fragment under a scope, a claim's applicability to
+  given subjects, causal views and the transport of live state.
 
 Three repairs of 2026-10-06, outside any seat:
 

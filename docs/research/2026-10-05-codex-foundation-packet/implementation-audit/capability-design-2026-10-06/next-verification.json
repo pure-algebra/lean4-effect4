@@ -1,0 +1,834 @@
+{
+  "all_pass": true,
+  "checks": 157,
+  "committed_source_comparisons": 113,
+  "historical_snapshot_comparisons": 13,
+  "additional_route_source_comparisons": 8,
+  "closing_source_comparisons": 3,
+  "finite_model_controls": 174,
+  "closing_commit": "ea4e7492aeb2e97ff89abf52643ca5f741511341",
+  "not_performed": [
+    "Lean",
+    "project build",
+    "compiler",
+    "Effect or target runtime",
+    "generator",
+    "installation",
+    "implementation repository edits"
+  ],
+  "results": [
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:AGENTS.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/STATE.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/ARCHITECTURE.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/decisions.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/semantics.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:tools/Tools/SemanticsRegistry.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Checker.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Typing.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Typing/Rules.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Typing/TermRefusal.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/CheckedTyping.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Refs.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/NodeLenses.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Node.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Fold.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Scoped.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Native.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Eff.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Machine/Term.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Authoring/Lifts.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Authoring/Sugar.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Authoring/Loops.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Api.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Api/Built.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Api/Author.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Typing/CheckInversion.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/CheckedTyping.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/ReferenceTyping.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/References.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Folds/Checker.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Folds/Term.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Author.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/DenoteB.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Codegen/Templates.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Codegen/Print.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/Dogfood/Scenario/Routing.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/Dogfood/P2HandlerLayers.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/All.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:tools/Effect4Gen/binders.json",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Admission.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/SigApp.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:AGENTS.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/STATE.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/semantics.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/api-surface.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/decisions.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/ARCHITECTURE.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Fold.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/DenoteB.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/MeaningEq.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/LoopAgreement.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Denote.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Api/Author.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Api/Built.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Author.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:tools/Tools/SemanticsRegistry.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Api/TestClock.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/NodeLenses.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/References.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Checker.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Typing/Rules.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Formation.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Typing.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Scoped.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Native.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/Compile.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Iter.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Agreement.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Typing/HasTy.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Typing/Sound.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Typing/CheckSound.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Typing/Inversion.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Typing/FoldAgreement.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/TypedRun.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Folds/Checker.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Program/FoldOf.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Folds/Denote.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Folds/Looped.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Laws/Program/Folds/Straight.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/Program/MeaningEqContract.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/Program/DenoteBContract.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/Program/LoopSoundContract.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/Program/LoopAgreementContract.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:Test/Program/CompileContract.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:AGENTS.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/STATE.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/decisions.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/controlled-english.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/semantics.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/system-map.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/core/machine-state.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/research/2026-10-05-claude-lead/briefs/seat-lift-brief.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/research/2026-10-05-claude-lead/briefs/seat-check-brief.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/research/2026-10-05-claude-lead/briefs/seat-semw-brief.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:docs/research/2026-10-06-seat-CHECK-receipt.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Machine/Timer.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:src/Effect4/Api/TestClock.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:c22f908def0c2a881ae46040d0dbaaaa57991352:vendor/effect-4.0.1/src/testing/TestClock.ts",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:698390476983fa89ce55e88dc7ef7aa695111cb3:src/Effect4/Laws/Machine/MaskRuns.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:698390476983fa89ce55e88dc7ef7aa695111cb3:src/Effect4/Laws/Program/MaskRuns.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:698390476983fa89ce55e88dc7ef7aa695111cb3:Test/Machine/MaskRuns.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:698390476983fa89ce55e88dc7ef7aa695111cb3:docs/research/2026-10-06-seat-LIFT-design.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:7b332a805aa9317a32b882ca6e6aafa15371fa65:docs/research/2026-10-06-seat-CHECK-receipt.md",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:7b332a805aa9317a32b882ca6e6aafa15371fa65:src/Effect4/Laws/Api/Codegen.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:11b45d8d66f8df07a4478e494dc61c27a16cdc1b:src/Effect4/Laws/Modules/Waiting.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:11b45d8d66f8df07a4478e494dc61c27a16cdc1b:src/Effect4/Laws/Modules/Semaphore/Ops.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:11b45d8d66f8df07a4478e494dc61c27a16cdc1b:src/Effect4/Modules/Semaphore/Ops.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:11b45d8d66f8df07a4478e494dc61c27a16cdc1b:Test/Program/SemaphoreOps.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "source:11b45d8d66f8df07a4478e494dc61c27a16cdc1b:Test/Program/SemaphoreTraces.lean",
+      "pass": true,
+      "kind": "committed-source"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/lift/src/Effect4/Laws/Machine/MaskRuns.lean",
+      "pass": true,
+      "kind": "active-source",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/lift/Test/Machine/MaskRuns.lean",
+      "pass": true,
+      "kind": "active-source",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/lift/docs/research/2026-10-06-seat-LIFT-design.md",
+      "pass": true,
+      "kind": "active-source",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/active-source/semw/Test/Program/SemaphoreFaces.lean",
+      "pass": true,
+      "kind": "active-source",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/check/stepB-default-again.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/check/accept-checks.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/lift/final-build.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/lift/stepF-build1.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/build-step3-default.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/build-step5-default.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/build-faces-1.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/truth-elab-3.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "snapshot:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/evidence/semw/gen-truth-1.log",
+      "pass": true,
+      "kind": "retained-seat-output",
+      "note": "Historical snapshot identity; not acceptance of later live source or a monitor rerun"
+    },
+    {
+      "name": "final-route:src/Effect4/Program/Fold.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "final-route:src/Effect4/Program/FoldOf.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "final-route:src/Effect4/Program/Fragment.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "final-route:src/Effect4/Laws/Program/Folds/Denote.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "final-route:src/Effect4/Laws/Program/Folds/Looped.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "final-route:src/Effect4/Laws/Program/Denote.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "final-route:src/Effect4/Laws/Program/DenoteB.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "final-route:src/Effect4/Laws/Program/Iter.lean",
+      "pass": true,
+      "kind": "route-source"
+    },
+    {
+      "name": "review-artifact:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/loop-rewrite/brief.md",
+      "pass": true,
+      "kind": "review-artifact"
+    },
+    {
+      "name": "review-artifact:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/loop-rewrite/statements.lean.txt",
+      "pass": true,
+      "kind": "review-artifact"
+    },
+    {
+      "name": "review-artifact:/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/interop/final-route-review.md",
+      "pass": true,
+      "kind": "review-artifact"
+    },
+    {
+      "name": "model:probe.py",
+      "pass": true,
+      "count": 24,
+      "stdout": "{\"passed\": 24, \"output\": \"/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/focus/probe-results.json\"}",
+      "kind": "isolated-finite-model"
+    },
+    {
+      "name": "model:model-controls.py",
+      "pass": true,
+      "count": 142,
+      "stdout": "{\"kind\": \"Finite Python source-equation mirror; no Lean, Effect, machine or target execution\", \"comparisons\": 126, \"named_boundary_controls\": 10, \"mutants_refused\": 5, \"diagnostic_path_control\": 1, \"all_pass\": true}",
+      "kind": "isolated-finite-model"
+    },
+    {
+      "name": "model:clock_controls.py",
+      "pass": true,
+      "count": 8,
+      "kind": "isolated-finite-model"
+    },
+    {
+      "name": "closing-full-requirements",
+      "pass": true,
+      "kind": "requirements",
+      "commit": "ea4e7492aeb2e97ff89abf52643ca5f741511341"
+    },
+    {
+      "name": "closing-requirement:R1",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R2",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R3",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R4",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R5",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R6",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R7",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R8",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R9",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R10",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R11",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R12",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing-requirement:R13",
+      "pass": true,
+      "kind": "requirements"
+    },
+    {
+      "name": "closing:docs/core/decisions.md",
+      "pass": true,
+      "kind": "closing-source",
+      "commit": "ea4e7492aeb2e97ff89abf52643ca5f741511341",
+      "sha256": "4ee918a6b956980ef455d8d081a5af21f8e3c8909641e90fe6ffda0e987abc76",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/closing-source/decisions.md"
+    },
+    {
+      "name": "closing:docs/STATE.md",
+      "pass": true,
+      "kind": "closing-source",
+      "commit": "ea4e7492aeb2e97ff89abf52643ca5f741511341",
+      "sha256": "aaf5e468f6de8651568725ef3d4616e10b2af9709cdab02871d1ac59207e5c7b",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/closing-source/STATE.md"
+    },
+    {
+      "name": "closing:docs/research/2026-10-05-claude-lead/2026-10-06-transition-account.md",
+      "pass": true,
+      "kind": "closing-source",
+      "commit": "ea4e7492aeb2e97ff89abf52643ca5f741511341",
+      "sha256": "5ec020fd2963a5d6b0d966bd0ea782e0ca0e61b9354ec7c36983e91ac0621508",
+      "snapshot": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/transition/closing-source/2026-10-06-transition-account.md"
+    }
+  ]
+}

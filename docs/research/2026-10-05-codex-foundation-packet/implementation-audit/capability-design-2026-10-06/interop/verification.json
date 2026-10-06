@@ -1,0 +1,638 @@
+{
+  "scope": "Pure source-hash and packet-reference checks only; no proposed API execution",
+  "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "checks": [
+    {
+      "check": "snapshot hash",
+      "path": "AGENTS.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/STATE.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/ARCHITECTURE.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/GENERATED.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/core/system-map.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/core/controlled-english.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/core/api-surface.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/core/host-boundary.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/core/semantics.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "docs/core/decisions.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/Built.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/Author.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/Runner.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/RunnerBytes.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/HostSession.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/HostProtocol.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/Frontier.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/TestClock.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Run.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Schema/Representation.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Schema/Codec.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Schema/Document.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Schema/Payload.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Schema/Codec.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Run.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Api/HostSession.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Api/RunnerBytes.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Tools/Semantics.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/ProofGraph/Plan.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/ProofGraph/Goal.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/ProofGraph/Sketch.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Tools/HostProtocol.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Domain/Canonical.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Domain/ProgramWire.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Domain/Node.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Domain/Derived/Program.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Domain/Derived/Schema.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Domain/RowCanonical.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Domain/Clock.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Store/Carrier/Val.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/RunnerDerived.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/Derived.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Api/RefusalsDerived.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Schema/Bridge.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Schema/TyFaces.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Tools/ProgramStructure.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Drivers/TsGen.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/ProofGraph/Proof.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Conform/Core/Proof.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Conform/Core/Report.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/Ty.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/Admission.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/Checker.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/Typing.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/Refs.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/NodeLenses.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/Formation.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Program/CheckedTyping.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Effect4Gen/wire-tags.json",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "tools/Effect4Gen/manifest.json",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ts/eff/wire.gen.ts",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ts/eff/eff.gen.ts",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ts/eff/README.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ts/eff/ingest/cli.ts",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ocaml/eff/README.md",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ocaml/eff/eff_wire.ml",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ocaml/engine/api_engine_inst.ml",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "ocaml/engine/api_engine.ml",
+      "ok": true
+    },
+    {
+      "check": "snapshot hash",
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Api/Built.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Api/Author.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Program/Admission.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Program/NodeLenses.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Program/Checker.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/CheckedTyping.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Store/Domain/Canonical.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Store/Domain/Derived/Program.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Schema/Representation.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Schema/Codec.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Schema/Codec.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Api/HostSession.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Api/Runner.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Api/RunnerBytes.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Run.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Run.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Api/RunnerBytes.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Store/Domain/Clock.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Api/TestClock.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Data/ClockMillis.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/ProofGraph/Proof.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/ProofGraph/Plan.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/Conform/Core/Report.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/Tools/Semantics.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/Tools/ProgramStructure.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/Tools/HostProtocol.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "tools/Drivers/TsGen.lean",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "ts/eff/ingest/cli.ts",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "ocaml/engine/api_engine.ml",
+      "ok": true
+    },
+    {
+      "check": "source map points to frozen source",
+      "path": "ocaml/engine/api_engine_inst.ml",
+      "ok": true
+    },
+    {
+      "check": "obligation carries required placement and limits",
+      "id": "located-checked-context",
+      "ok": true
+    },
+    {
+      "check": "obligation carries required placement and limits",
+      "id": "versioned-checked-edit",
+      "ok": true
+    },
+    {
+      "check": "obligation carries required placement and limits",
+      "id": "bundle-and-envelope-codecs",
+      "ok": true
+    },
+    {
+      "check": "obligation carries required placement and limits",
+      "id": "replay-prefix-access",
+      "ok": true
+    },
+    {
+      "check": "obligation carries required placement and limits",
+      "id": "named-observation-provenance",
+      "ok": true
+    },
+    {
+      "check": "obligation carries required placement and limits",
+      "id": "straight-loop-completed-observation",
+      "ok": true
+    },
+    {
+      "check": "obligation carries required placement and limits",
+      "id": "proof-application-boundary",
+      "ok": true
+    }
+  ],
+  "passed": 126,
+  "failed": []
+}

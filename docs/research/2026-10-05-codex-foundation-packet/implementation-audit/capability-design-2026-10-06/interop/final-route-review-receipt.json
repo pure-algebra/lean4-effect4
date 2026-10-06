@@ -1,0 +1,86 @@
+{
+  "scope_commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+  "status": "source-supported route, uncompiled; no false advertised candidate found",
+  "sources": [
+    {
+      "path": "src/Effect4/Program/Fold.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "f2e38bc49d477a23386e409a781198bbfe7f7d0f5aad9ba9172c36573b9a6188",
+      "bytes": 183149,
+      "existing_snapshot_matches": true
+    },
+    {
+      "path": "src/Effect4/Program/FoldOf.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "a8229fb5fe096a011ebce2932c1a5526a2b236d95dc97ee14afd1168b383e11c",
+      "bytes": 67537,
+      "existing_snapshot_matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Fragment.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "c8558dd227eafc0d09b0f52b72c01d35ab6307ed24fac374dfed7080cefa65a7",
+      "bytes": 1882,
+      "snapshot": "final-route-sources/src/Effect4/Program/Fragment.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Denote.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "35d66d11523f402fa7831839fcbe838a169ff95dccf52e485c023dfc19ee0055",
+      "bytes": 1343,
+      "existing_snapshot_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Looped.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "8c13e8c02abe44590b4ba106c9ff1885ddeab476cdf3d12c6707f7c4d9383e25",
+      "bytes": 403,
+      "existing_snapshot_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Denote.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "956b37473ff52de3b284f089ee684e1f9ee0f86832e51819c2a9fa7b5396f9d9",
+      "bytes": 16107,
+      "existing_snapshot_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3",
+      "bytes": 23034,
+      "existing_snapshot_matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Iter.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "sha256": "7e96d47319e44efb207ca4449ad4ed2b8d7908ca038cf2c391f15078d2972f62",
+      "bytes": 2720,
+      "existing_snapshot_matches": true
+    }
+  ],
+  "reviewed_artifacts": [
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/loop-rewrite/brief.md",
+      "sha256": "21a0db7bbf983f5775468508a12b2a74b27224e8b9d3d846eef54213aa7738da",
+      "bytes": 13175
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/next-slices/loop-rewrite/statements.lean.txt",
+      "sha256": "39e05ba4ee332f99a708cf075ad81d00b09ab12ed0edda10a624679db42a6aa2",
+      "bytes": 4746
+    },
+    {
+      "path": "/private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/interop/final-route-review.md",
+      "sha256": "3d7416bb9373bd102b20d5c942a0e6587cbc45fe93b96e265a909c042bf2e7cd",
+      "bytes": 6429
+    }
+  ],
+  "new_checks": "8 exact committed source identities; 7 existing snapshots match; no model or project execution",
+  "qualification": "Excluded heads have constant fallback; whole non-Looped programs need not. All seven homomorphism components are required.",
+  "scope_fences": {
+    "repository_edits": false,
+    "Lean_build_compiler_generator_runtime": false,
+    "UI_or_Claude_messages": false
+  }
+}

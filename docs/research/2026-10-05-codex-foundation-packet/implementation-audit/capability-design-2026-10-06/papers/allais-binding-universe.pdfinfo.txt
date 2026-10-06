@@ -1,0 +1,22 @@
+Title:           A Type and Scope Safe Universe of Syntaxes with Binding: Their Semantics and Proofs
+Subject:         -  Software and its engineering  ->  Functional languages; Formal language definitions; 
+Keywords:        Generic Programming, Syntax with Binding, Semantics, Logical Relations, Simulation, Fusion, Agda
+Author:          Guillaume Allais, Robert Atkey, James Chapman, Conor McBride, and James McKinna
+Creator:         LaTeX with acmart 2018/04/14 v1.53 Typesetting articles for the Association for Computing Machinery and hyperref 2016/06/24 v6.83q Hypertext links for LaTeX
+Producer:        pdfTeX-1.40.17
+CreationDate:    Wed Jul 18 15:21:35 2018 CDT
+ModDate:         Wed Jul 18 15:21:35 2018 CDT
+Custom Metadata: yes
+Metadata Stream: yes
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           30
+Encrypted:       no
+Page size:       486 x 720 pts
+Page rot:        0
+File size:       451773 bytes
+Optimized:       yes
+PDF version:     1.5

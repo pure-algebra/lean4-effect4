@@ -1,0 +1,197 @@
+[
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/AGENTS.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/STATE.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/decisions.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/controlled-english.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/semantics.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/system-map.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/core/machine-state.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-lift-brief.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-check-brief.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/briefs/seat-semw-brief.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Machine/Timer.lean",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/src/Effect4/Api/TestClock.lean",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.0-rc.112/src/testing/TestClock.ts",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4/vendor/effect-4.0.1/src/testing/TestClock.ts",
+    "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Program/MaskRuns.lean",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Machine/MaskRuns.lean",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-06-seat-LIFT-design.md",
+    "commit": "698390476983fa89ce55e88dc7ef7aa695111cb3",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qsteps/docs/research/2026-10-06-seat-CHECK-receipt.md",
+    "commit": "7b332a805aa9317a32b882ca6e6aafa15371fa65",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qsteps/src/Effect4/Laws/Api/Codegen.lean",
+    "commit": "7b332a805aa9317a32b882ca6e6aafa15371fa65",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Waiting.lean",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Laws/Modules/Semaphore/Ops.lean",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/src/Effect4/Modules/Semaphore/Ops.lean",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/Test/Program/SemaphoreOps.lean",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/Test/Program/SemaphoreTraces.lean",
+    "commit": "11b45d8d66f8df07a4478e494dc61c27a16cdc1b",
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/src/Effect4/Laws/Machine/MaskRuns.lean",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/Test/Machine/MaskRuns.lean",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-mask/docs/research/2026-10-06-seat-LIFT-design.md",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/Users/pooks/Dev/lean4-effect4-qtypes/Test/Program/SemaphoreFaces.lean",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/check/stepB-default-again.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/check/accept-checks.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/lift/final-build.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/lift/stepF-build1.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/build-step3-default.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/build-step5-default.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/build-faces-1.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/truth-elab-3.log",
+    "commit": null,
+    "matches_at_recheck": true
+  },
+  {
+    "source": "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/semw/gen-truth-1.log",
+    "commit": null,
+    "matches_at_recheck": true
+  }
+]

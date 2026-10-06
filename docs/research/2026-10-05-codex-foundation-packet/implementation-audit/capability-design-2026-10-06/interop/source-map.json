@@ -1,0 +1,156 @@
+{
+  "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "items": [
+    {
+      "capability": "load/check",
+      "data": [
+        "Api.Program",
+        "RowTable",
+        "Built",
+        "AdmittedProgram"
+      ],
+      "owners": [
+        "src/Effect4/Api/Built.lean",
+        "src/Effect4/Api/Author.lean",
+        "src/Effect4/Program/Admission.lean"
+      ],
+      "law_owner": [
+        "src/Effect4/Laws/Program/Author.lean",
+        "src/Effect4/Laws/Program/CheckedTyping.lean"
+      ],
+      "gap": "Exact transport bundle and an external checked host operation; current Built service declarations remain empty."
+    },
+    {
+      "capability": "select/context/edit",
+      "data": [
+        "Node NativeOp",
+        "List Nat",
+        "TyEnv",
+        "EffTy",
+        "GenTy",
+        "LayerTy",
+        "StmtTy"
+      ],
+      "owners": [
+        "src/Effect4/Program/NodeLenses.lean",
+        "src/Effect4/Program/Checker.lean",
+        "src/Effect4/Program/Typing/Rules.lean"
+      ],
+      "law_owner": [
+        "src/Effect4/Laws/Program/References.lean",
+        "src/Effect4/Laws/Program/CheckedTyping.lean"
+      ],
+      "gap": "Computed located checker context plus source/expanded occurrence relation; version-bound edit facade."
+    },
+    {
+      "capability": "exact data exchange",
+      "data": [
+        "Canonical",
+        "ShapeDoc",
+        "Ty",
+        "Representation",
+        "Val"
+      ],
+      "owners": [
+        "src/Effect4/Store/Domain/Canonical.lean",
+        "src/Effect4/Store/Domain/Derived/Program.lean",
+        "src/Effect4/Schema/Representation.lean",
+        "src/Effect4/Schema/Codec.lean"
+      ],
+      "law_owner": [
+        "src/Effect4/Laws/Schema/Codec.lean"
+      ],
+      "gap": "Finite wrapper instances only when called for; no second algebra."
+    },
+    {
+      "capability": "session/replay",
+      "data": [
+        "HostSession.Header",
+        "Runner.Command",
+        "Run",
+        "Run.Observation",
+        "Api.Budget"
+      ],
+      "owners": [
+        "src/Effect4/Api/HostSession.lean",
+        "src/Effect4/Api/Runner.lean",
+        "src/Effect4/Api/RunnerBytes.lean",
+        "src/Effect4/Run.lean"
+      ],
+      "law_owner": [
+        "src/Effect4/Laws/Run.lean",
+        "src/Effect4/Laws/Api/RunnerBytes.lean"
+      ],
+      "gap": "Bound prefix request and distinct named observations; cached checkpoints derive from the same journal."
+    },
+    {
+      "capability": "clock view",
+      "data": [
+        "ClockMillis",
+        "Run.Work"
+      ],
+      "owners": [
+        "src/Effect4/Data/ClockMillis.lean",
+        "src/Effect4/Store/Domain/Clock.lean",
+        "src/Effect4/Api/TestClock.lean"
+      ],
+      "law_owner": [
+        "src/Effect4/Data/ClockMillis.lean"
+      ],
+      "gap": "No new unit policy; target range/profile and any Work codec explicit."
+    },
+    {
+      "capability": "straight and loops",
+      "data": [
+        "StraightEq",
+        "Looped",
+        "meaningB",
+        "LoopAgreement"
+      ],
+      "owners": [
+        "src/Effect4/Laws/Program/MeaningEq.lean",
+        "src/Effect4/Laws/Program/DenoteB.lean",
+        "src/Effect4/Laws/Program/LoopAgreement.lean"
+      ],
+      "law_owner": [
+        "src/Effect4/Laws/Program/Agreement/Loop.lean"
+      ],
+      "gap": "Joint named completed observation; no finite-prefix relation or async-module generalization inferred."
+    },
+    {
+      "capability": "proof explanation/application",
+      "data": [
+        "ProofRef",
+        "Plan",
+        "Conform.Report"
+      ],
+      "owners": [
+        "tools/ProofGraph/Proof.lean",
+        "tools/ProofGraph/Plan.lean",
+        "tools/Conform/Core/Report.lean",
+        "tools/Tools/Semantics.lean",
+        "tools/Tools/SemanticsRegistry.lean"
+      ],
+      "law_owner": [],
+      "gap": "Claim-specific host-validated application adapters; preserve actual premises and transitive goals."
+    },
+    {
+      "capability": "target/CLI projection",
+      "data": [
+        "ground program description",
+        "generated TypeScript carrier",
+        "generated OCaml carrier"
+      ],
+      "owners": [
+        "tools/Tools/ProgramStructure.lean",
+        "tools/Tools/HostProtocol.lean",
+        "tools/Drivers/TsGen.lean",
+        "ts/eff/ingest/cli.ts",
+        "ocaml/engine/api_engine.ml",
+        "ocaml/engine/api_engine_inst.ml"
+      ],
+      "law_owner": [],
+      "gap": "Thin operation drivers and named numeric/observation adapters; no new checker or interpreter."
+    }
+  ]
+}

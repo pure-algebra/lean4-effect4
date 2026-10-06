@@ -1,0 +1,393 @@
+{
+  "status": "research proposals and reuse routes; not ratified or proved",
+  "commit": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "items": [
+    {
+      "id": "located-checked-context",
+      "priority": 1,
+      "status": "proposed; uncompiled; no theorem stated",
+      "concept": "residual-program-typing",
+      "required_property": "A computed located context gives the existing local typing judgment at the context in the admitted whole-program derivation.",
+      "requirements": [
+        "R1",
+        "R4",
+        "R8"
+      ],
+      "registry_relation": "Proposed connector serving rebuild-admission and the readable/typed face part of R8; operation-data-scoped supplies the separate scope facts. Do not claim a current registry entry.",
+      "consumers": [
+        "Routing Boolean-select printer",
+        "inspectAt expected-type view",
+        "same-sort checked edit"
+      ],
+      "statement_shape": "inspectChecked b selection = ok view implies that selection resolves to the exact node, view erases to that node, and the existing sort-specific judgment holds at view.environment/mode under b.table. The source-versus-expanded occurrence relation is an explicit premise or computed witness.",
+      "premises": [
+        "Exact admitted Built and ordered table",
+        "Named structural path scheme and matching node sort",
+        "Correct local environment and inLoop flag where required",
+        "Explicit reference occurrence mapping, or an initial reference-free domain",
+        "No arbitrary source closure invariance"
+      ],
+      "observations": [
+        "Selected syntax unchanged",
+        "Exact local type and binder environment",
+        "Located refusal outside the domain"
+      ],
+      "reuse": [
+        {
+          "name": "TypedProgram.hasTy",
+          "path": "src/Effect4/Laws/Program/CheckedTyping.lean"
+        },
+        {
+          "name": "checkTypedProgram_sound",
+          "path": "src/Effect4/Laws/Program/CheckedTyping.lean"
+        },
+        {
+          "name": "checkStmt/checkStmts and sort-specific checks",
+          "path": "src/Effect4/Program/Checker.lean"
+        },
+        {
+          "name": "Node.replaceAt_spec",
+          "path": "src/Effect4/Laws/Program/References.lean"
+        }
+      ],
+      "prerequisite": "Choose the first concrete view domain and source/expanded occurrence convention. Reuse binder metadata and checker derivation rather than add a second checker.",
+      "exclusions": [
+        "No target typechecking theorem",
+        "No semantic rewrite theorem",
+        "No whole-run safety",
+        "No typed holes or minimum explanation claim"
+      ],
+      "controls": [
+        "Bind/Ref/loop environments positive",
+        "One-binder deletion and fold-binder-order mutants",
+        "Duplicated reference occurrence refusal or exact mapping"
+      ]
+    },
+    {
+      "id": "versioned-checked-edit",
+      "priority": 2,
+      "status": "proposed facade over existing laws",
+      "concept": "initial-algebras-folds; residual-program-typing",
+      "required_property": "A request edits exactly its selected old node, and successful whole rebuilding admits the exact resulting candidate.",
+      "requirements": [
+        "R1",
+        "R8"
+      ],
+      "registry_relation": "Wrapper helpers of addressed-replacement and rebuild-admission; those existing statements do not need duplicate goals.",
+      "consumers": [
+        "External checked editor",
+        "Program manipulation API"
+      ],
+      "statement_shape": "edit b request = ok b2 implies exact base/selected-node equality, Node.replaceAt root path replacement = some candidate, b2.program=candidate, b2.table=b.table, b2.rowNames=b.rowNames, and b2.admitted is indexed by those fields. On refusal, the held b is unchanged.",
+      "premises": [
+        "Exact artifact resolution, not digest equality alone",
+        "Same structural sort",
+        "Supported schema/path version",
+        "Whole candidate checked against unchanged table"
+      ],
+      "observations": [
+        "Exact program/table/name map before and after",
+        "Existing located BuildRefusal"
+      ],
+      "reuse": [
+        {
+          "name": "Node.replaceAt_spec/replaceAt_self/replaceAt_overwrite/at_replaceAt_disjoint",
+          "path": "src/Effect4/Laws/Program/References.lean"
+        },
+        {
+          "name": "Authoring.rebuild_spec/rebuild_admitted",
+          "path": "src/Effect4/Laws/Program/Author.lean"
+        }
+      ],
+      "prerequisite": "First editor caller and finite base-selection record; exact Node wrapper codec only when that record crosses a wire.",
+      "exclusions": [
+        "No raw-subtree move without relocation",
+        "No type equality requirement",
+        "No behavior equivalence",
+        "No hash collision axiom"
+      ],
+      "controls": [
+        "Fresh selection succeeds",
+        "Stale base and wrong sort refuse",
+        "Same-typed capture mutation is not certified as a behavior-preserving edit"
+      ]
+    },
+    {
+      "id": "bundle-and-envelope-codecs",
+      "priority": 2,
+      "status": "proposed data instances; generic laws already exist",
+      "concept": "exact-codecs",
+      "required_property": "New finite transport records form an exact canonical image, with a supported version/profile checked separately from decoding.",
+      "requirements": [
+        "R1",
+        "R3",
+        "R8",
+        "R13"
+      ],
+      "registry_relation": "Helper of the exact-codecs carrier property and the consuming admission/replay claim. Propose a registry placement in the implementing slice only if the new property is not already covered.",
+      "consumers": [
+        "Host-validated program loading",
+        "Selection/edit transport",
+        "Replay prefix transport"
+      ],
+      "statement_shape": "For a new Canonical carrier E, decode(encode e)=some e under (toVal e).WF; decode bytes=some e implies bytes=encode e. Loading decoded bundle succeeds only with the actual AdmittedProgram at its exact rows and supported profile.",
+      "premises": [
+        "Canonical class laws",
+        "Framing WF under 2^64",
+        "Current Built domain \u27e8rows, []\u27e9",
+        "Unsupported versions/extensions explicitly refused"
+      ],
+      "observations": [
+        "Exact bytes/data",
+        "Named decode/admission refusal"
+      ],
+      "reuse": [
+        {
+          "name": "Canonical.decode_encode/decode_exact/encode_injective",
+          "path": "src/Effect4/Store/Domain/Canonical.lean"
+        },
+        {
+          "name": "Author.Internal.finishBuild",
+          "path": "src/Effect4/Api/Author.lean"
+        },
+        {
+          "name": "admitProgram",
+          "path": "src/Effect4/Program/Admission.lean"
+        }
+      ],
+      "prerequisite": "One actual external caller; generated instance in current generated group; distinguish transport/profile checks from shape acceptance.",
+      "exclusions": [
+        "No raw-codec-to-admission implication",
+        "No hash injectivity",
+        "No general JSON exactness",
+        "No arbitrary service declaration admission"
+      ],
+      "controls": [
+        "Program with its true table loads",
+        "Same program and reordered table cannot reuse a certificate",
+        "Retired tags/unknown schema/unsupported extension refuse"
+      ]
+    },
+    {
+      "id": "replay-prefix-access",
+      "priority": 3,
+      "status": "API composition of existing theorems; new adapters uncompiled",
+      "concept": "host-session-protocol; translation-simulation",
+      "required_property": "The requested prefix replays exactly from the same admitted inputs, preserving attempted decoded commands and phases.",
+      "requirements": [
+        "R6",
+        "R12",
+        "R13"
+      ],
+      "registry_relation": "Uses R13 journal_replays; raw-machine projection uses journal-machine-replay or journal-position-replay only with their exact premises. Do not restate them as a new ledger.",
+      "consumers": [
+        "Time-travel inspection",
+        "Host script debugging",
+        "Checkpoint cache validation"
+      ],
+      "statement_shape": "observe((Run.open b id budget profile).play prefix) is the named response; for reached s, reopening with s.built/id/budget/profile and s.journal reconstructs s. A validated checkpoint is equal to this replay result.",
+      "premises": [
+        "Exact bundle",
+        "Both budget fields",
+        "Same session id/profile",
+        "All decoded commands including refused/frontier commands",
+        "Reached for reconstructing an arbitrary supplied Run",
+        "Separate malformed-byte-row transcript"
+      ],
+      "observations": [
+        "Full Run equality for journal law",
+        "Only the named projection when crossing a target boundary"
+      ],
+      "reuse": [
+        {
+          "name": "Run.play_append/journal_replays/drive_eq_play",
+          "path": "src/Effect4/Laws/Run.lean"
+        },
+        {
+          "name": "RunnerBytes.replayRows/stepRow",
+          "path": "src/Effect4/Api/RunnerBytes.lean"
+        }
+      ],
+      "prerequisite": "Initial request replays from the beginning; cached checkpoints optional later. External start-domain policy must name Run.open versus HostSession.start.",
+      "exclusions": [
+        "No original host execution",
+        "No truth of external answers",
+        "No general budget-additive resumption",
+        "No resource release/liveness"
+      ],
+      "controls": [
+        "Split-prefix reconstruction",
+        "Dropped refused command mutant",
+        "Changed compile budget refusal",
+        "Malformed byte row leaves runner unchanged"
+      ]
+    },
+    {
+      "id": "named-observation-provenance",
+      "priority": 3,
+      "status": "proposed adapter contract, not target agreement",
+      "concept": "translation-simulation",
+      "required_property": "A reported observation is exactly the named existing projection, with its measurement or replay provenance.",
+      "requirements": [
+        "R6",
+        "R8",
+        "R13"
+      ],
+      "registry_relation": "Serves existing named face/profile and journal projection claims; any new target agreement is a separate placed obligation.",
+      "consumers": [
+        "TypeScript host comparisons",
+        "OCaml api_replay adapter",
+        "Clock and scheduler inspector"
+      ],
+      "statement_shape": "Each response tag fixes one payload schema and producer projection; a target agreement result additionally supplies the named relation and satisfied premises. No unrepresented session field is counted as independently measured.",
+      "premises": [
+        "Exact observation version",
+        "Exact bundle/prefix/target profile",
+        "Numeric representability for target carrier",
+        "Independent field provenance when a comparison mixes sources"
+      ],
+      "observations": [
+        "HostProtocol.State OR Run.Observation OR explicit machine projection",
+        "Terminal exit and stores only under completed-fragment profile"
+      ],
+      "reuse": [
+        {
+          "name": "RunnerBytes.observeBytes/schemaOf",
+          "path": "src/Effect4/Api/RunnerBytes.lean"
+        },
+        {
+          "name": "Run.observe/Run.work",
+          "path": "src/Effect4/Run.lean"
+        },
+        {
+          "name": "api_replay",
+          "path": "ocaml/engine/api_engine.ml"
+        },
+        {
+          "name": "Conform.Report",
+          "path": "tools/Conform/Core/Report.lean"
+        }
+      ],
+      "prerequisite": "Name the first finite projection and target relation; use real row table and both budgets for the general OCaml entry point.",
+      "exclusions": [
+        "No HostSession ledger in raw engine replay",
+        "No invented whole observation coverage",
+        "No full stores/traces in Run.Observation",
+        "No host-object revival from handle key"
+      ],
+      "controls": [
+        "Session-state and run-observation schema separation",
+        "Lean-ledger-copy negative control",
+        "Target numeric boundary refusal"
+      ]
+    },
+    {
+      "id": "straight-loop-completed-observation",
+      "priority": 3,
+      "status": "existing theorem reuse, not a new universal theorem",
+      "concept": "translation-simulation",
+      "required_property": "One completed exit-and-stores observation can be consumed through the existing straight or Looped agreement law.",
+      "requirements": [
+        "R8"
+      ],
+      "registry_relation": "Existing loop-agreement and run_eq_meaning. Keep R10 module expansions separate.",
+      "consumers": [
+        "Proof-applicability display",
+        "Certified rewrite comparison",
+        "Run completion inspector"
+      ],
+      "statement_shape": "Given Looped e=true and meaningB k e [] Stores.empty=(some x,s), loopAgreement yields a bound beyond which Api.run finishes with x and s. Straight e uses meaningB_straight/loopAgreement_of_straight.",
+      "premises": [
+        "Named fragment",
+        "Completed budgeted meaning",
+        "Empty initial environment/stores in the public LoopAgreement statement",
+        "Machine fuel at least the supplied existential bound"
+      ],
+      "observations": [
+        "Exit and full final stores"
+      ],
+      "reuse": [
+        {
+          "name": "meaningB_straight/loopAgreement_of_straight/LoopAgreement",
+          "path": "src/Effect4/Laws/Program/LoopAgreement.lean"
+        },
+        {
+          "name": "Agreement.loopAgreement",
+          "path": "src/Effect4/Laws/Program/Agreement/Loop.lean"
+        },
+        {
+          "name": "StraightEq",
+          "path": "src/Effect4/Laws/Program/MeaningEq.lean"
+        }
+      ],
+      "prerequisite": "Named completion evidence, not just equal fuel. For rewriting, separately prove the relevant all-environment/store relation.",
+      "exclusions": [
+        "No loop termination guarantee",
+        "No equal finite-prefix/fuel claim",
+        "No Queue/Pool wrapper membership inferred from sequential callers",
+        "No typed error from unfinished meaning"
+      ],
+      "controls": [
+        "Straight positive through bridge",
+        "Terminating Looped positive",
+        "Unfinished meaning preserves its partial stores"
+      ]
+    },
+    {
+      "id": "proof-application-boundary",
+      "priority": 4,
+      "status": "proposed tooling adapter; existing proof machinery retained",
+      "concept": "translation-simulation (consumer placement); exact-codecs for request carrier only",
+      "required_property": "The reported theorem application is about the exact submitted subjects, under discharged or explicitly outstanding premises.",
+      "requirements": [
+        "R1",
+        "R8",
+        "R13"
+      ],
+      "registry_relation": "Each adapter belongs to its existing consumer claim. This is a tooling correctness condition, not another semantic registry or a generic prove endpoint.",
+      "consumers": [
+        "Selected edit explanation",
+        "Fragment agreement applicability",
+        "Inspection explanation with real premises"
+      ],
+      "statement_shape": "A successful application response reconstructs the expected proposition in the current environment, validates the theorem and universes/axioms, checks the application, and reports actual transitive goal status. Undischarged premises or missing adapters remain unresolved/refused.",
+      "premises": [
+        "Fixed environment and source identities",
+        "Closed application with exact finite adapter parameters",
+        "Independent expected-proposition reconstruction",
+        "Existing transitive axiom ceiling and Plan dependency accounting"
+      ],
+      "observations": [
+        "Existing report status/evidence",
+        "Actual theorem proposition and named premises",
+        "Separate authored placement and measured dependency edges"
+      ],
+      "reuse": [
+        {
+          "name": "ProofRef.validate/checked_theorem%",
+          "path": "tools/ProofGraph/Proof.lean"
+        },
+        {
+          "name": "Plan",
+          "path": "tools/ProofGraph/Plan.lean"
+        },
+        {
+          "name": "Conform.Report",
+          "path": "tools/Conform/Core/Report.lean"
+        }
+      ],
+      "prerequisite": "One current claim-specific adapter; do not serialize Expr as runtime program data.",
+      "exclusions": [
+        "No proof from declaration name",
+        "No proof from JSON status",
+        "No goal/modulo treated as proved",
+        "No universal theorem application without premises"
+      ],
+      "controls": [
+        "Exact valid closed application",
+        "Changed proposition/universe/axiom mutant",
+        "Missing premise and unresolved goal controls"
+      ]
+    }
+  ]
+}

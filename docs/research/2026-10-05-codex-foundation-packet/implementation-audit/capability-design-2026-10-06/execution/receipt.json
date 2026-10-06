@@ -1,0 +1,67 @@
+{
+  "timestamp_utc": "2026-10-06T16:01:31.884636+00:00",
+  "task": "Research coherent run observation/explanation/prefix branching and Clock/TestClock APIs",
+  "frozen_main": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "initial_worktree": "clean",
+  "separate_committed_seat": {
+    "path": "/Users/pooks/Dev/lean4-effect4-mask",
+    "commit": "b88ff25d61316040734e4be83622087c24a393d3",
+    "acceptance": "source inspected; no acceptance rerun; final seat battery/receipt outside this packet"
+  },
+  "outputs": [
+    "report.md",
+    "api-data-proposal.json",
+    "source-manifest.json",
+    "source-comparisons.json",
+    "finite_controls.py",
+    "finite-results.json",
+    "references.json",
+    "verification.json"
+  ],
+  "verification": {
+    "original_source_rereads": 48,
+    "declaration_anchors": 41,
+    "version_comparisons": 3,
+    "finite_model_checks": 13,
+    "json_files_parsed": 5
+  },
+  "commands": [
+    "git show <frozen-revision>:<path> (48 inputs, then byte/hash reread)",
+    "git grep/git ls-tree/git worktree list (read-only discovery)",
+    "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/execution/finite_controls.py (13 controls passed)",
+    "Python source/hash/JSON verification (all pass)"
+  ],
+  "evidence_kinds": {
+    "repository": "frozen source and exact theorem-statement inspection",
+    "versions": "retained pinned primary implementation source; no newest release claim",
+    "models": "finite independent Python mirrors, not Lean or Effect execution",
+    "literature": "primary sources read at exact locators; not imported theorem facts",
+    "API": "proposed data and operations, not implemented"
+  },
+  "exclusions": [
+    "No repository writes",
+    "No branch changes",
+    "No builds or Lean",
+    "No compiler or generator",
+    "No Effect/runtime execution",
+    "No installation",
+    "No Claude/UI contact",
+    "No new general theorem proved",
+    "No claim of full driver suspension",
+    "No whole-clock or host agreement claim"
+  ],
+  "finishing_criteria": {
+    "source_grounded_design": true,
+    "clock_contract_separated": true,
+    "theorem_data_and_premises_named": true,
+    "consumers_and_placements_named": true,
+    "finite_controls_and_sources_verified": true
+  },
+  "research_limits": [
+    "No current active clock seat found in frozen STATE; foundation compatibility lane remains coordinator-owned",
+    "ClockPlan is a proposed record, not a located current declaration",
+    "Library promotion of Test-owned CUTS laws requires a consumer and owning slice",
+    "New session ids require envelope renaming; no such law is claimed",
+    "Full driver suspension, custom-clock policy and clock-unit migration remain open"
+  ]
+}

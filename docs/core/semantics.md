@@ -476,12 +476,12 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   (`saved_mask_pop_discipline` (`src/Effect4/Laws/Machine/MaskDiscipline.lean`)).
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
-- **Pool's return and close on the model (`pool-return-front`, `pool-close-refuses`)**: A
-  return of a lease that holds its item puts the item at the front of the idle items and
-  keeps every item. A second return of that lease changes nothing. After the close's first
-  step every lease is refused. They state no finalizer's run and no close that waits.
-  (`giveBack_front`, `giveBack_once`, `close_refuses`
-  (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
+- **Pool's return and close on the model (`pool-return-front`, `pool-return-once`,
+  `pool-close-refuses`)**: A return of a lease that holds its item puts the item at the front
+  of the idle items and keeps every item. The lease then holds nothing (`giveBack_front`). A
+  second return of that lease changes nothing (`giveBack_once`). After the close's first
+  step every lease is refused (`close_refuses`). They state no finalizer's run and no close
+  that waits. The three theorems are in `src/Effect4/Laws/Modules/Pool/Profile.lean`.
 
 ### 2.4 Concept 4: Reactive Scheduling & Machine Invariants (`reactive-scheduling`)
 

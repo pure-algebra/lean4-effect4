@@ -1,0 +1,313 @@
+{
+  "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 21254,
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "snapshot": "sources/AGENTS.md"
+    },
+    {
+      "path": "docs/STATE.md",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 135380,
+      "sha256": "4c3e25bdcbbbdbe8e67f358af36f2618daf8d575c50db45e7d8d38e1b2ffd001",
+      "snapshot": "sources/docs/STATE.md"
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 82137,
+      "sha256": "27b975c42ae4044044dca69b4b6c56d490522bca6fc10b7b2dabdf478014d7b9",
+      "snapshot": "sources/docs/core/semantics.md"
+    },
+    {
+      "path": "docs/core/api-surface.md",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 14330,
+      "sha256": "1133bb01744e272aa4d29e974bcbf3b8273bb370b24811f9dc09be17b70c0b90",
+      "snapshot": "sources/docs/core/api-surface.md"
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 367268,
+      "sha256": "2a035291c6224fa073ad8576da79af8c9cb05fc1cfc0009486d15ce5d9937329",
+      "snapshot": "sources/docs/core/decisions.md"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 37097,
+      "sha256": "512d6736bd5ee86f6cec78100b6e2b18bae00510cd409186479e7f73d2d1563e",
+      "snapshot": "sources/docs/ARCHITECTURE.md"
+    },
+    {
+      "path": "src/Effect4/Program/Fold.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 183149,
+      "sha256": "f2e38bc49d477a23386e409a781198bbfe7f7d0f5aad9ba9172c36573b9a6188",
+      "snapshot": "sources/src/Effect4/Program/Fold.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 23034,
+      "sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3",
+      "snapshot": "sources/src/Effect4/Laws/Program/DenoteB.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 6647,
+      "sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+      "snapshot": "sources/src/Effect4/Laws/Program/MeaningEq.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 2381,
+      "sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+      "snapshot": "sources/src/Effect4/Laws/Program/LoopAgreement.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 45631,
+      "sha256": "0b20fbd693f0400b995d044bd35ce38a0c2a04eabaf92f9d71b31d04b445e242",
+      "snapshot": "sources/src/Effect4/Laws/Program/Agreement/Loop.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Denote.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 16107,
+      "sha256": "956b37473ff52de3b284f089ee684e1f9ee0f86832e51819c2a9fa7b5396f9d9",
+      "snapshot": "sources/src/Effect4/Laws/Program/Denote.lean"
+    },
+    {
+      "path": "src/Effect4/Api/Author.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 6392,
+      "sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "snapshot": "sources/src/Effect4/Api/Author.lean"
+    },
+    {
+      "path": "src/Effect4/Api/Built.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 1105,
+      "sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+      "snapshot": "sources/src/Effect4/Api/Built.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 18639,
+      "sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16",
+      "snapshot": "sources/src/Effect4/Laws/Program/Author.lean"
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 83866,
+      "sha256": "d455f54bacaed133b599c88db869f34bd241ac524d08dbcbfffbec9b47b3cd05",
+      "snapshot": "sources/tools/Tools/SemanticsRegistry.lean"
+    },
+    {
+      "path": "src/Effect4/Api/TestClock.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 4790,
+      "sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3",
+      "snapshot": "sources/src/Effect4/Api/TestClock.lean"
+    },
+    {
+      "path": "src/Effect4/Program/NodeLenses.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 8873,
+      "sha256": "0102d87d19e956433e0f9c153b0f7dbf2a6540145efb55ca2e3e8d1c1af5995b",
+      "snapshot": "sources/src/Effect4/Program/NodeLenses.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 15938,
+      "sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708",
+      "snapshot": "sources/src/Effect4/Laws/Program/References.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Checker.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 23432,
+      "sha256": "858d1bad1e6b57536f14c45e5b9b8075305ad932996753f7d406081e5a51235a",
+      "snapshot": "sources/src/Effect4/Program/Checker.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 32171,
+      "sha256": "f77508cfd3c7f34b7433346654ac709e2734f5308c8b44391a229e9fdb6a6cdd",
+      "snapshot": "sources/src/Effect4/Program/Typing/Rules.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Formation.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 9125,
+      "sha256": "e5bc4f8ff96c045275e7e59d0a4e703fba20d8f86fc3c3b460d82780e7a3f17b",
+      "snapshot": "sources/src/Effect4/Program/Formation.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 12262,
+      "sha256": "132e9b79309241616a07a1c02b2f00c42b5eb90dbfeabb4a8c3264021f2d8c8e",
+      "snapshot": "sources/src/Effect4/Program/Typing.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Scoped.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 24085,
+      "sha256": "05bb1d5bc560fbdcb71f1e27a60308d11d173afdb5024fed156b5cf9aa67c60b",
+      "snapshot": "sources/src/Effect4/Program/Scoped.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Native.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 34667,
+      "sha256": "05c27268e678f4d4d50156d03ce0a2479320c01654431dd9c4fd370857b435cb",
+      "snapshot": "sources/src/Effect4/Program/Native.lean"
+    },
+    {
+      "path": "src/Effect4/Program/Compile.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 94529,
+      "sha256": "56e3a6040e28f3f62d895a4702cdb680afe3ffd05e36aa5cb3e9ceb9cca129b6",
+      "snapshot": "sources/src/Effect4/Program/Compile.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Iter.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 2720,
+      "sha256": "7e96d47319e44efb207ca4449ad4ed2b8d7908ca038cf2c391f15078d2972f62",
+      "snapshot": "sources/src/Effect4/Laws/Program/Iter.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 101019,
+      "sha256": "85ecc8165256c11d4715caaf04bfc23a9f20e0333471f5cf6b719fdbfa7b5762",
+      "snapshot": "sources/src/Effect4/Laws/Program/Agreement.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/HasTy.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 31936,
+      "sha256": "36050ac6f9872dd6901830d422d0d0475f92a64d4d8457a53ddbb4c9adcac9b2",
+      "snapshot": "sources/src/Effect4/Laws/Program/Typing/HasTy.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Sound.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 10200,
+      "sha256": "ec58525f55e837024d87f9d98a4081cd830248e3ae321244810e632051150248",
+      "snapshot": "sources/src/Effect4/Laws/Program/Typing/Sound.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/CheckSound.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 29923,
+      "sha256": "ec5eb3ad95353d2a40189753ec26b8f69cb2d4bd6313fd14726c2bfc7e457185",
+      "snapshot": "sources/src/Effect4/Laws/Program/Typing/CheckSound.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Inversion.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 6886,
+      "sha256": "b6dbbc78551fb3a6ac951c109fa268275934028938e83474b9dc087a7108b78f",
+      "snapshot": "sources/src/Effect4/Laws/Program/Typing/Inversion.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/FoldAgreement.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 1943,
+      "sha256": "868d3879fe54bc4067dc51ce4584217705d222e532ba84ea198474a012f52f5b",
+      "snapshot": "sources/src/Effect4/Laws/Program/Typing/FoldAgreement.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/TypedRun.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 6338,
+      "sha256": "f277a4f131058f8a0be29b7f0eacf9868c09a715ecdf260a8c68ea303c048d31",
+      "snapshot": "sources/src/Effect4/Laws/Program/TypedRun.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Checker.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 839,
+      "sha256": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee",
+      "snapshot": "sources/src/Effect4/Laws/Program/Folds/Checker.lean"
+    },
+    {
+      "path": "src/Effect4/Program/FoldOf.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 67537,
+      "sha256": "a8229fb5fe096a011ebce2932c1a5526a2b236d95dc97ee14afd1168b383e11c",
+      "snapshot": "sources/src/Effect4/Program/FoldOf.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Denote.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 1343,
+      "sha256": "35d66d11523f402fa7831839fcbe838a169ff95dccf52e485c023dfc19ee0055",
+      "snapshot": "sources/src/Effect4/Laws/Program/Folds/Denote.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Looped.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 403,
+      "sha256": "8c13e8c02abe44590b4ba106c9ff1885ddeab476cdf3d12c6707f7c4d9383e25",
+      "snapshot": "sources/src/Effect4/Laws/Program/Folds/Looped.lean"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Straight.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 590,
+      "sha256": "4915c0bc70668e909605ffe0e9cd43abf715f163f472ce2f087147c999a56e0d",
+      "snapshot": "sources/src/Effect4/Laws/Program/Folds/Straight.lean"
+    },
+    {
+      "path": "Test/Program/MeaningEqContract.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 4034,
+      "sha256": "a60b9b4c92b4a8c2d58b49bbfc602c51febd92b718997f384fbdcbb1e253940b",
+      "snapshot": "sources/Test/Program/MeaningEqContract.lean"
+    },
+    {
+      "path": "Test/Program/DenoteBContract.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 6039,
+      "sha256": "d4a0c6a95e49eb41cd5064a61c16abc4c93e27092afa01c674e09fabba98366c",
+      "snapshot": "sources/Test/Program/DenoteBContract.lean"
+    },
+    {
+      "path": "Test/Program/LoopSoundContract.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 5456,
+      "sha256": "df8e03adec8e08a2b1e42b4d9f5f97ed04727d62fbb4e738c8562c2a58bf9725",
+      "snapshot": "sources/Test/Program/LoopSoundContract.lean"
+    },
+    {
+      "path": "Test/Program/LoopAgreementContract.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 3144,
+      "sha256": "a0a630fcbadb9f4f6ba829fcdaaa33ec41ccd3a04fe72202b5186d9d4992e5cf",
+      "snapshot": "sources/Test/Program/LoopAgreementContract.lean"
+    },
+    {
+      "path": "Test/Program/CompileContract.lean",
+      "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+      "bytes": 46194,
+      "sha256": "3fd87dc20ce5fd8bbfa2afa09d3f04a2f2e1fdbd46a4496f3c2173ed24a8c13f",
+      "snapshot": "sources/Test/Program/CompileContract.lean"
+    }
+  ]
+}

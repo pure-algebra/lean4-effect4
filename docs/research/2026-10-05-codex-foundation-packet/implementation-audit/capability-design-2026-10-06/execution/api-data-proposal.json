@@ -1,0 +1,271 @@
+{
+  "status": "proposed protocol design; no declarations implemented",
+  "semantic_owner": "Effect4.Run and Effect4.Api.HostSession",
+  "frozen_main": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+  "separate_lift_commit": "b88ff25d61316040734e4be83622087c24a393d3",
+  "records": {
+    "ArtifactRef": {
+      "fields": [
+        "programIdentity",
+        "tableIdentity",
+        "semanticsRevision",
+        "profileVersion",
+        "rowNames",
+        "declaredSignature"
+      ],
+      "constraints": [
+        "Derived from one actual Built; current Built signature is table with no declared services",
+        "Revision/hash scheme is transport metadata, not a new core field"
+      ]
+    },
+    "SnapshotRef": {
+      "fields": [
+        "artifactRef",
+        "semanticSessionId",
+        "offlineBranchId?",
+        "journalCommandIndex",
+        "phaseCount",
+        "budget.fuel",
+        "budget.compileFuel",
+        "exactSnapshotIdentity"
+      ],
+      "constraints": [
+        "All indexes refer to retained bytes",
+        "Stale mutation requests refuse or replan",
+        "Branch id does not replace the semantic session id in reply envelopes"
+      ]
+    },
+    "Inspection": {
+      "fields": [
+        "snapshotRef",
+        "Run.Observation",
+        "Run.Work",
+        "clockView",
+        "selectedStoreView?",
+        "exclusions",
+        "evidenceReferences"
+      ],
+      "constraints": [
+        "No empty-work inference to deadlock or complete driver state",
+        "No store observation inferred from Run.Observation",
+        "No proof authority inferred from a displayed reference"
+      ]
+    },
+    "ClockView": {
+      "fields": [
+        "profile",
+        "currentUnit",
+        "currentLogicalValue",
+        "sleepers[{fiber,token,deadline}]",
+        "activeAdvanceTarget?"
+      ],
+      "constraints": [
+        "Read actual TimerStore; current profile exact nonnegative milliseconds",
+        "Wall and monotonic readings use distinct kinds and origins when added",
+        "An active target does not retain all driver work"
+      ]
+    },
+    "SourceRef": {
+      "fields": [
+        "artifactRef",
+        "root",
+        "childPath"
+      ],
+      "constraints": [
+        "Source location, never activation identity",
+        "After edits requires new admission or checked rebase"
+      ]
+    },
+    "EventRef": {
+      "fields": [
+        "snapshotRef",
+        "journalCommandIndex",
+        "traceOffset?",
+        "fiber",
+        "sourceRef?",
+        "activationOccurrence?",
+        "registrationKey?"
+      ],
+      "constraints": [
+        "Do not synthesize absent trace offsets or activation ids",
+        "Multiple visits may occur within one command",
+        "Causal edge kinds require actual provenance; index order alone is not causality"
+      ]
+    },
+    "ContinuationView": {
+      "fields": [
+        "snapshotRef",
+        "fiber",
+        "registrationKey?",
+        "sourceRef?",
+        "capturedEnvironment",
+        "completedView",
+        "dynamicContext",
+        "inputEffTy",
+        "outputEffTy",
+        "frameDescriptors",
+        "certificateReference?",
+        "ownershipStatus"
+      ],
+      "constraints": [
+        "Full answer/error/requirements types at path endpoints",
+        "FramePath append only at equal middle endpoint",
+        "PointTyped needs located code, fitting captures, typed completed exits",
+        "HostStack to PositionStack forgets correlation one-way",
+        "Diagnostic shape cannot authorize resume"
+      ]
+    },
+    "PrefixSelection": {
+      "fields": [
+        "openedRef",
+        "commandPrefixLength",
+        "decisionPosition?",
+        "recordedPhases",
+        "completedReplayPositions",
+        "unreadSuffix",
+        "afterCompletedPrefix",
+        "afterStoppedRow?"
+      ],
+      "constraints": [
+        "Last completed prefix and stopped-row result remain distinct",
+        "Raw machine equality excludes session metadata",
+        "Actual Run prefix includes inert receipt/bind/refused commands"
+      ]
+    },
+    "OfflineBranch": {
+      "fields": [
+        "parentSnapshotRef",
+        "prefixSelection",
+        "newBranchId",
+        "sameSemanticSessionId",
+        "suffixCommands",
+        "physicalHostCapability:none"
+      ],
+      "constraints": [
+        "No physical effects rerun",
+        "Recorded external resource ownership is not cloned",
+        "A new semantic session requires checked envelope renaming"
+      ]
+    },
+    "ClockPlan": {
+      "fields": [
+        "snapshotRef",
+        "clockProfile",
+        "unit",
+        "policy",
+        "selectedCommands",
+        "reason",
+        "budget",
+        "intendedObservation",
+        "permittedProfile"
+      ],
+      "constraints": [
+        "Uses existing Runner.Command.control/RunDecision.advance and flush",
+        "Does not mutate Clock service secretly",
+        "Does not apply pending replies by arrival order",
+        "Current emitted duration unit remains milliseconds",
+        "Plan success is not execution success; result phase must be read",
+        "A one-advance operation may include newly registered due sleeps"
+      ]
+    },
+    "DriverSuspension_future": {
+      "fields": [
+        "machine",
+        "remainingCommands",
+        "remainingDrainedTasks",
+        "enclosingPhase",
+        "advanceTarget?",
+        "atomicOwner?",
+        "remainingBudgetAndStage",
+        "worldAndOwnershipEvidence"
+      ],
+      "constraints": [
+        "Explicitly unavailable today",
+        "Existing target/snapshot insufficient",
+        "Needs row226 split/continuation equality and typed ownership proof"
+      ]
+    }
+  },
+  "operations": [
+    {
+      "name": "observe",
+      "input": "Run",
+      "result": "Inspection",
+      "basis": [
+        "Run.observe",
+        "Run.work"
+      ],
+      "new_proof": "Projection wrappers only, once exact observation is chosen"
+    },
+    {
+      "name": "explain",
+      "input": "SnapshotRef + selection",
+      "result": "typed/source/protocol reasons with evidence kinds",
+      "basis": [
+        "PointTyped",
+        "CodeOk",
+        "HostSession.Phase",
+        "Api.frontierReasons"
+      ],
+      "new_proof": "No reconstruction of unavailable dynamic/correlation evidence"
+    },
+    {
+      "name": "atPrefix",
+      "input": "opening + exact journal + command index",
+      "result": "PrefixSelection",
+      "basis": [
+        "Run.play",
+        "Run.journal_replays",
+        "Scenario.tapeFrom_cut_replays"
+      ],
+      "new_proof": "Wrapper successful-selection relation; reuse existing laws"
+    },
+    {
+      "name": "atDecision",
+      "input": "opening + exact journal + position index",
+      "result": "completed command prefix + Run + machine projection",
+      "basis": [
+        "Scenario.tapeFrom_position_prefix",
+        "Scenario.tapeFrom_position_replays"
+      ],
+      "new_proof": "Wrapper lookup relation; no second reply induction"
+    },
+    {
+      "name": "branch",
+      "input": "PrefixSelection + offline suffix",
+      "result": "OfflineBranch + Run",
+      "basis": [
+        "Run.play_append",
+        "Run.journal_replays"
+      ],
+      "new_proof": "New-session renaming unavailable; initial mode preserves semantic id"
+    },
+    {
+      "name": "planClock",
+      "input": "Inspection + declared scheduling policy",
+      "result": "ClockPlan or named refusal",
+      "basis": [
+        "Run.nextControl_spec",
+        "TimerStore.dueMin",
+        "Run.work"
+      ],
+      "new_proof": "Plan is a snapshot-bound existing command; no adequacy claim"
+    },
+    {
+      "name": "executePlan",
+      "input": "live Run + ClockPlan",
+      "result": "actual phase + Inspection",
+      "basis": [
+        "Run.step",
+        "HostSession.advance"
+      ],
+      "new_proof": "Staleness guard; no hidden new executor"
+    }
+  ],
+  "claim_boundaries": {
+    "clock_behavior": "Logical units/deadlines/adjustment rules; store relation and separate scheduled/host relations",
+    "decision_journal": "Caller-selected controls and replies; exact command replay at same semantic inputs",
+    "causal_dependencies": "A proposed projection from proven event/registration ownership; not identical to journal order",
+    "full_driver_suspension": "Future ownership-bearing continuation; neither machine snapshot nor completed-prefix replay supplies it"
+  }
+}

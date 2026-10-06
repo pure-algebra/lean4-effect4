@@ -1,0 +1,274 @@
+{
+  "commit": "c22f908def0c2a881ae46040d0dbaaaa57991352",
+  "source_checks": 44,
+  "source_failures": [],
+  "source_results": [
+    {
+      "path": "AGENTS.md",
+      "snapshot_sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "committed_sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "matches": true
+    },
+    {
+      "path": "docs/STATE.md",
+      "snapshot_sha256": "4c3e25bdcbbbdbe8e67f358af36f2618daf8d575c50db45e7d8d38e1b2ffd001",
+      "committed_sha256": "4c3e25bdcbbbdbe8e67f358af36f2618daf8d575c50db45e7d8d38e1b2ffd001",
+      "matches": true
+    },
+    {
+      "path": "docs/core/semantics.md",
+      "snapshot_sha256": "27b975c42ae4044044dca69b4b6c56d490522bca6fc10b7b2dabdf478014d7b9",
+      "committed_sha256": "27b975c42ae4044044dca69b4b6c56d490522bca6fc10b7b2dabdf478014d7b9",
+      "matches": true
+    },
+    {
+      "path": "docs/core/api-surface.md",
+      "snapshot_sha256": "1133bb01744e272aa4d29e974bcbf3b8273bb370b24811f9dc09be17b70c0b90",
+      "committed_sha256": "1133bb01744e272aa4d29e974bcbf3b8273bb370b24811f9dc09be17b70c0b90",
+      "matches": true
+    },
+    {
+      "path": "docs/core/decisions.md",
+      "snapshot_sha256": "2a035291c6224fa073ad8576da79af8c9cb05fc1cfc0009486d15ce5d9937329",
+      "committed_sha256": "2a035291c6224fa073ad8576da79af8c9cb05fc1cfc0009486d15ce5d9937329",
+      "matches": true
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "snapshot_sha256": "512d6736bd5ee86f6cec78100b6e2b18bae00510cd409186479e7f73d2d1563e",
+      "committed_sha256": "512d6736bd5ee86f6cec78100b6e2b18bae00510cd409186479e7f73d2d1563e",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Fold.lean",
+      "snapshot_sha256": "f2e38bc49d477a23386e409a781198bbfe7f7d0f5aad9ba9172c36573b9a6188",
+      "committed_sha256": "f2e38bc49d477a23386e409a781198bbfe7f7d0f5aad9ba9172c36573b9a6188",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/DenoteB.lean",
+      "snapshot_sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3",
+      "committed_sha256": "7b907e89f904361d5c29603e0be4affa6853c7bcddb02b71d4e2cfddc91f99e3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/MeaningEq.lean",
+      "snapshot_sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+      "committed_sha256": "cc8e04dc65f79a4f5577be69821161c868ff41a67b92119980066f57e9f22d29",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/LoopAgreement.lean",
+      "snapshot_sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+      "committed_sha256": "d7de991cacd0c3c63f691ee29684e2a623cc7a08c98706f0ed494106f735f000",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Loop.lean",
+      "snapshot_sha256": "0b20fbd693f0400b995d044bd35ce38a0c2a04eabaf92f9d71b31d04b445e242",
+      "committed_sha256": "0b20fbd693f0400b995d044bd35ce38a0c2a04eabaf92f9d71b31d04b445e242",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Denote.lean",
+      "snapshot_sha256": "956b37473ff52de3b284f089ee684e1f9ee0f86832e51819c2a9fa7b5396f9d9",
+      "committed_sha256": "956b37473ff52de3b284f089ee684e1f9ee0f86832e51819c2a9fa7b5396f9d9",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Author.lean",
+      "snapshot_sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "committed_sha256": "7536234c8d20bfc21776e463900e91bfaee9e9b2dba084cf1a504e999d0fc44b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Built.lean",
+      "snapshot_sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+      "committed_sha256": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Author.lean",
+      "snapshot_sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16",
+      "committed_sha256": "a9986919bbba0508b108d52a20fa96062d1517cd8f2df7ceb516d54e2909ab16",
+      "matches": true
+    },
+    {
+      "path": "tools/Tools/SemanticsRegistry.lean",
+      "snapshot_sha256": "d455f54bacaed133b599c88db869f34bd241ac524d08dbcbfffbec9b47b3cd05",
+      "committed_sha256": "d455f54bacaed133b599c88db869f34bd241ac524d08dbcbfffbec9b47b3cd05",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/TestClock.lean",
+      "snapshot_sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3",
+      "committed_sha256": "09696211eba234065e3b7ca7ce23af9b1fcda9a65dc6242fe801f504be73c7f3",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/NodeLenses.lean",
+      "snapshot_sha256": "0102d87d19e956433e0f9c153b0f7dbf2a6540145efb55ca2e3e8d1c1af5995b",
+      "committed_sha256": "0102d87d19e956433e0f9c153b0f7dbf2a6540145efb55ca2e3e8d1c1af5995b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/References.lean",
+      "snapshot_sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708",
+      "committed_sha256": "731a942e7a2fb73707c1d2777c924106d811968176e6f622a0d37362ef3fc708",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Checker.lean",
+      "snapshot_sha256": "858d1bad1e6b57536f14c45e5b9b8075305ad932996753f7d406081e5a51235a",
+      "committed_sha256": "858d1bad1e6b57536f14c45e5b9b8075305ad932996753f7d406081e5a51235a",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "snapshot_sha256": "f77508cfd3c7f34b7433346654ac709e2734f5308c8b44391a229e9fdb6a6cdd",
+      "committed_sha256": "f77508cfd3c7f34b7433346654ac709e2734f5308c8b44391a229e9fdb6a6cdd",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Formation.lean",
+      "snapshot_sha256": "e5bc4f8ff96c045275e7e59d0a4e703fba20d8f86fc3c3b460d82780e7a3f17b",
+      "committed_sha256": "e5bc4f8ff96c045275e7e59d0a4e703fba20d8f86fc3c3b460d82780e7a3f17b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing.lean",
+      "snapshot_sha256": "132e9b79309241616a07a1c02b2f00c42b5eb90dbfeabb4a8c3264021f2d8c8e",
+      "committed_sha256": "132e9b79309241616a07a1c02b2f00c42b5eb90dbfeabb4a8c3264021f2d8c8e",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Scoped.lean",
+      "snapshot_sha256": "05bb1d5bc560fbdcb71f1e27a60308d11d173afdb5024fed156b5cf9aa67c60b",
+      "committed_sha256": "05bb1d5bc560fbdcb71f1e27a60308d11d173afdb5024fed156b5cf9aa67c60b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Native.lean",
+      "snapshot_sha256": "05c27268e678f4d4d50156d03ce0a2479320c01654431dd9c4fd370857b435cb",
+      "committed_sha256": "05c27268e678f4d4d50156d03ce0a2479320c01654431dd9c4fd370857b435cb",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Compile.lean",
+      "snapshot_sha256": "56e3a6040e28f3f62d895a4702cdb680afe3ffd05e36aa5cb3e9ceb9cca129b6",
+      "committed_sha256": "56e3a6040e28f3f62d895a4702cdb680afe3ffd05e36aa5cb3e9ceb9cca129b6",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Iter.lean",
+      "snapshot_sha256": "7e96d47319e44efb207ca4449ad4ed2b8d7908ca038cf2c391f15078d2972f62",
+      "committed_sha256": "7e96d47319e44efb207ca4449ad4ed2b8d7908ca038cf2c391f15078d2972f62",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement.lean",
+      "snapshot_sha256": "85ecc8165256c11d4715caaf04bfc23a9f20e0333471f5cf6b719fdbfa7b5762",
+      "committed_sha256": "85ecc8165256c11d4715caaf04bfc23a9f20e0333471f5cf6b719fdbfa7b5762",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/HasTy.lean",
+      "snapshot_sha256": "36050ac6f9872dd6901830d422d0d0475f92a64d4d8457a53ddbb4c9adcac9b2",
+      "committed_sha256": "36050ac6f9872dd6901830d422d0d0475f92a64d4d8457a53ddbb4c9adcac9b2",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Sound.lean",
+      "snapshot_sha256": "ec58525f55e837024d87f9d98a4081cd830248e3ae321244810e632051150248",
+      "committed_sha256": "ec58525f55e837024d87f9d98a4081cd830248e3ae321244810e632051150248",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/CheckSound.lean",
+      "snapshot_sha256": "ec5eb3ad95353d2a40189753ec26b8f69cb2d4bd6313fd14726c2bfc7e457185",
+      "committed_sha256": "ec5eb3ad95353d2a40189753ec26b8f69cb2d4bd6313fd14726c2bfc7e457185",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/Inversion.lean",
+      "snapshot_sha256": "b6dbbc78551fb3a6ac951c109fa268275934028938e83474b9dc087a7108b78f",
+      "committed_sha256": "b6dbbc78551fb3a6ac951c109fa268275934028938e83474b9dc087a7108b78f",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Typing/FoldAgreement.lean",
+      "snapshot_sha256": "868d3879fe54bc4067dc51ce4584217705d222e532ba84ea198474a012f52f5b",
+      "committed_sha256": "868d3879fe54bc4067dc51ce4584217705d222e532ba84ea198474a012f52f5b",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/TypedRun.lean",
+      "snapshot_sha256": "f277a4f131058f8a0be29b7f0eacf9868c09a715ecdf260a8c68ea303c048d31",
+      "committed_sha256": "f277a4f131058f8a0be29b7f0eacf9868c09a715ecdf260a8c68ea303c048d31",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Checker.lean",
+      "snapshot_sha256": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee",
+      "committed_sha256": "4f1f051bc48dda79ad567b4656856c8637d00b63b5718348cd6488ea196a37ee",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/FoldOf.lean",
+      "snapshot_sha256": "a8229fb5fe096a011ebce2932c1a5526a2b236d95dc97ee14afd1168b383e11c",
+      "committed_sha256": "a8229fb5fe096a011ebce2932c1a5526a2b236d95dc97ee14afd1168b383e11c",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Denote.lean",
+      "snapshot_sha256": "35d66d11523f402fa7831839fcbe838a169ff95dccf52e485c023dfc19ee0055",
+      "committed_sha256": "35d66d11523f402fa7831839fcbe838a169ff95dccf52e485c023dfc19ee0055",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Looped.lean",
+      "snapshot_sha256": "8c13e8c02abe44590b4ba106c9ff1885ddeab476cdf3d12c6707f7c4d9383e25",
+      "committed_sha256": "8c13e8c02abe44590b4ba106c9ff1885ddeab476cdf3d12c6707f7c4d9383e25",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Folds/Straight.lean",
+      "snapshot_sha256": "4915c0bc70668e909605ffe0e9cd43abf715f163f472ce2f087147c999a56e0d",
+      "committed_sha256": "4915c0bc70668e909605ffe0e9cd43abf715f163f472ce2f087147c999a56e0d",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/MeaningEqContract.lean",
+      "snapshot_sha256": "a60b9b4c92b4a8c2d58b49bbfc602c51febd92b718997f384fbdcbb1e253940b",
+      "committed_sha256": "a60b9b4c92b4a8c2d58b49bbfc602c51febd92b718997f384fbdcbb1e253940b",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/DenoteBContract.lean",
+      "snapshot_sha256": "d4a0c6a95e49eb41cd5064a61c16abc4c93e27092afa01c674e09fabba98366c",
+      "committed_sha256": "d4a0c6a95e49eb41cd5064a61c16abc4c93e27092afa01c674e09fabba98366c",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/LoopSoundContract.lean",
+      "snapshot_sha256": "df8e03adec8e08a2b1e42b4d9f5f97ed04727d62fbb4e738c8562c2a58bf9725",
+      "committed_sha256": "df8e03adec8e08a2b1e42b4d9f5f97ed04727d62fbb4e738c8562c2a58bf9725",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/LoopAgreementContract.lean",
+      "snapshot_sha256": "a0a630fcbadb9f4f6ba829fcdaaa33ec41ccd3a04fe72202b5186d9d4992e5cf",
+      "committed_sha256": "a0a630fcbadb9f4f6ba829fcdaaa33ec41ccd3a04fe72202b5186d9d4992e5cf",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/CompileContract.lean",
+      "snapshot_sha256": "3fd87dc20ce5fd8bbfa2afa09d3f04a2f2e1fdbd46a4496f3c2173ed24a8c13f",
+      "committed_sha256": "3fd87dc20ce5fd8bbfa2afa09d3f04a2f2e1fdbd46a4496f3c2173ed24a8c13f",
+      "matches": true
+    }
+  ],
+  "model_kind": "Finite Python source-equation mirror; no Lean, Effect, machine or target execution",
+  "model_checks": 142,
+  "model_failed": []
+}

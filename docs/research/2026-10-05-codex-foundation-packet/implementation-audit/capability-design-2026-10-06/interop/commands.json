@@ -1,0 +1,23 @@
+{
+  "commands": [
+    {
+      "command": "git rev-parse HEAD",
+      "result": "4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0",
+      "scope": "initial frozen revision"
+    },
+    {
+      "command": "git show 4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0:<each manifest path>",
+      "result": "79 exact committed source snapshots; see source-manifest.json"
+    },
+    {
+      "command": "git grep -n -E 'Canonical \\(?(_root_\\.)?Effect4\\.(Program\\.(Node|GenTy|LayerTy|Checker.StmtTy)|Api.Budget|Run.Work)|Canonical (Node|GenTy|LayerTy|StmtTy|Budget|Work)' 4b57609c03ad0a38fd81cfc2c09ea5731dfe7ff0 -- src tools",
+      "exit_code": 1,
+      "output": "",
+      "scope": "Bounded textual search; no direct Canonical instances located for these wrappers, not a completeness proof over elaboration"
+    },
+    {
+      "command": "python3 /private/tmp/codex-effect4-overnight-monitor/2026-10-06-capability-design/interop/finish-packet.py",
+      "result": "verification.json; source/packet checks only"
+    }
+  ]
+}
