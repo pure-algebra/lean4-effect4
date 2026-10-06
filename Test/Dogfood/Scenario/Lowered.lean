@@ -14,6 +14,9 @@ files that the engine's test reads, and holds the machine clause's controls and 
 * **The Lean half of the machine clause.** At every position of every fixture the raw frame
   replay of the tape's prefix (`Api.replay`) shows the session machine's view: the finite
   controls of the theorem `tape_replays`.
+* **One name, one script.** A lowered run with the name of a record's run is that named run
+  (`taken`, `Tape.lean`). Two controls hold the lane's names: the lane has its runs, and an own
+  run that carries the name of a record's run is refused.
 
 A fixture that is not the text Lean writes fails this battery, and `Tape.lean` still builds. So
 the writer runs first, and this battery binds its files afterwards (`Test/Dogfood/README.md`).
@@ -25,7 +28,8 @@ battery, and `lake build` then binds nothing. The generated group `fixtures` clo
 a changed fixture again from Lean, and `make check-gen` refuses a committed fixture that Lean
 does not write.
 
-The host run of each scenario is not here: it waits on the keyed lane.
+The host run of each scenario is not here: the keyed lane performs it
+(`harness/truth/session/Keyed.lean`).
 -/
 
 set_option autoImplicit false
@@ -45,26 +49,57 @@ def committed : List (String × String) :=
   , ("atomic.txt", include_str "../../../ocaml/engine/test/scenarios/atomic.txt")
   , ("timeout.txt", include_str "../../../ocaml/engine/test/scenarios/timeout.txt") ]
 
-/-- The controls of the machine clause. -/
+/-- The controls of the lane's names: one name has one script. The lane takes each run that a
+record lists from the record, and it refuses an own run that carries the name of a record's run.
+They stand outside the fixtures' match. So a lane that a name keeps from its fixtures fails
+twice: at the control that the lane has its fixtures, and here, where the name is at fault. -/
+def nameControls : List Control :=
+  [ green "machine"
+      "the lane's names are in order: each taken name is a record's run, and no own run carries one"
+      [] fun _ => findings == []
+  , red "machine" "an own run with the name of a record's run is refused, by that name"
+      [] fun _ =>
+        (Workers.scenario.run? "lowest").any fun run =>
+          let clashing : Option (List (String × Lowered)) :=
+            some [("workers.txt", ⟨"workers/lowest", run.opened, []⟩)]
+          (fixturesOf clashing).isNone &&
+            findingsOf clashing ==
+              ["the name workers/lowest carries two scripts: an own run of the lane and a run of a record"] ]
+
+/-- The controls of the machine clause. The four of the tapes read no named run of a record: the
+lowered runs are the tape module's own table, `fixtures`, and `shownFixtures` plays each one. The
+run at a small budget takes its program and its script from the workers record's run `lowest`. -/
 def controls : List Control :=
-  match shownFixtures, (Effect4.Api.Author.build (Workers.crew 2)).toOption with
-  | some all, some crew =>
+  match shownFixtures, Workers.scenario.run? "lowest" with
+  | some all, some lowest =>
     let runs := all.flatMap (·.2)
     let starved : Shown := Lowered.shown
-      ⟨"workers/starved", Run.open crew "workers" { fuel := 7, compileFuel := 2000 }, Workers.lowest⟩
+      ⟨"workers/starved", Run.open lowest.opened.built "workers" { fuel := 7, compileFuel := 2000 },
+        lowest.moves⟩
     [ green "machine"
         "every tape reads every row, and its raw replay shows the session machine at every position"
-        (runs.all fun run => run.2.agrees)
+        [] fun _ => runs.all fun run => run.2.agrees
     , green "machine" "each committed fixture is the text Lean writes for the admitted programs"
-        (all.all fun entry =>
-          (committed.find? (·.1 == entry.1)).map (·.2) == fixture entry.2)
-    , red "machine" "a tape without its last decision ends at another machine view"
-        (runs.all fun run => run.2.lastCounts)
+        [] fun _ =>
+          all.all fun entry => (committed.find? (·.1 == entry.1)).map (·.2) == fixture entry.2
+    , red "machine"
+        "a tape cut before its last decision that moves the view ends at another machine view"
+        [] fun _ => runs.all fun run => run.2.lastCounts
+    , red "machine" "a tape in which no decision moves the view does not pass: it is not skipped"
+        [] fun _ =>
+          let still := machineView lowest.opened
+          let unmoved : Shown :=
+            { positions := [], left := 0, views := [still, still, still]
+              raw := [(.frontier, still), (.frontier, still), (.frontier, still)]
+              observedTableDifference := false }
+          unmoved.agrees && !unmoved.lastCounts
     , red "machine" "at a small budget the tape stops at the frontier and leaves the rows unread"
-        (starved.left != 0 && !starved.agrees && starved.raw.map (·.2) == starved.views) ]
-  | _, _ => [green "machine" "the scenarios' programs build" false]
+        [] fun _ => starved.left != 0 && !starved.agrees && starved.raw.map (·.2) == starved.views ]
+      ++ nameControls
+  | _, _ => green "machine" "the lane has its fixtures" [] (fun _ => false) :: nameControls
 
-/-- The lowered runs as a scenario: its claim is the machine clause. -/
+/-- The lowered runs as a scenario: its claim is the machine clause. Its record lists no named
+run: the lane's runs are the tape module's table. -/
 def scenario : Scenario :=
   { name := "lowered"
     program := ``fixtures
