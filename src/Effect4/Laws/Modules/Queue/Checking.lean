@@ -77,10 +77,6 @@ theorem Types.to {src : TermSrc} {const : Bool} {T U : Ty}
     (h : Types sig src env path types const T) (same : T = U) :
     Types sig src env path types const U := same ▸ h
 
-/-- A typing under each flag at another type that is the same type. -/
-theorem TypesEach.to {src : TermSrc} {T U : Ty} (h : TypesEach sig src env path types T)
-    (same : T = U) : TypesEach sig src env path types U := same ▸ h
-
 /-- A source's tree is one tree: the checker types it at what the source types at. -/
 theorem Types.tree {src : TermSrc} {const : Bool} {T : Ty}
     (h : Types sig src env path types const T) {t : Term} (tree : src env path = .ok t) :
@@ -458,7 +454,8 @@ theorem types_head {xs : TermSrc} {T : Ty} (hxs : TypesEach sig xs env path type
 theorem types_pair {a b : TermSrc} {X Y : Ty} (ha : TypesEach sig a env path types X)
     (hb : TypesEach sig b env path types Y) :
     TypesEach sig (app "pair" [a, b]) env path types (.prod X Y) :=
-  fun _ => types_app (.cons (ha _) (.cons (hb _) .nil)) (atomOf_native atoms (nativeAtomTy_pair X Y))
+  fun _ => types_app (.cons (ha _) (.cons (hb _) .nil))
+    (atomOf_native atoms (nativeAtomTy_pair X Y))
 
 /-- A tuple of two types at the product, where both types are their own normal forms and
 neither is a union. -/

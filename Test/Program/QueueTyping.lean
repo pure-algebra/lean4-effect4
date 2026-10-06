@@ -184,7 +184,8 @@ example (A : Ty) (tb : Table) (msg : Nat → Val) (s : State) (id : Nat) (hint :
         [q, Val.promise (tb.handle id), Val.promise hint, cellVal tb msg s]
         (Val.tuple [Val.tuple [reply, Val.list (entered.map (offerVal tb msg)),
             Val.list (woken.map (takerVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1)))],
-          cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg (take s ⟨id, 1, 1⟩).1]) :=
+          cellVal (tb.afterTake id hint (take s ⟨id, 1, 1⟩).2.1) msg
+            (take s ⟨id, 1, 1⟩).1]) :=
   takeStep_agrees A tb msg s id hint profile requested injective rfl
     (captured_answer (outer := { names := [cellName] }) takeScope_identity rfl)
     (captured_answer (outer := { names := [cellName, identityName] }) takeScope_hint rfl)
@@ -375,7 +376,8 @@ example (sig : Signature NativeOp) (A : Ty) (message : MessageTy A) :
 
 `typeAt_tree` recovers the step's tree and its `termTy` equation from the typing statement, and
 `step_keeps_cell` reads that equation: one `Ref.modify` of the step keeps the cell a member of
-the cell's type. No planned goal is among its dependencies. -/
+the cell's type. No planned goal is among its dependencies. The first theorem stands at the
+statement's own scope, and the second at every scope. -/
 
 /-- **The withdrawal of an offer keeps the cell a member of its type**, at every message type
 that the checker types in a cell: the step's tree at the statement's own scope, and what its
@@ -391,7 +393,9 @@ theorem withdrawOffer_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf 
   obtain ⟨f, tree, typed⟩ := typeAt_tree (withdrawOffer_typed sig atoms A message)
   exact ⟨f, tree, fun value => step_keeps_cell sig atoms typedEnv typed held member value⟩
 
-/-- info: 'Test.Program.QueueTyping.withdrawOffer_keeps_cell' depends on axioms: [propext, Quot.sound] -/
+/--
+info: 'Test.Program.QueueTyping.withdrawOffer_keeps_cell' depends on axioms: [propext, Quot.sound]
+-/
 #guard_msgs in
 #print axioms withdrawOffer_keeps_cell
 
@@ -401,6 +405,41 @@ next goals: 0
 -/
 #guard_msgs in
 #plan_status withdrawOffer_keeps_cell
+
+/-- **A step's tree is one tree, at every scope.** The tree that a step's reading evaluates is
+the tree that the step's theorem types (`Types.tree`). So a withdrawal of a take that reads a
+reply and a next value keeps the cell a member of its type, at every scope and for every
+caller's terms. The cell's value is the scope's last name. The wrapper's law has this shape,
+and it takes its tree from `step_updates`. -/
+theorem withdrawTake_keeps_cell (sig : Signature NativeOp) (atoms : sig.atomOf = nativeAtomTy)
+    (A : Ty) (message : MessageTy A) {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat}
+    {tys : List Ty} {w : Typed.World} {captured : List Val}
+    (depth : (tys ++ [Queue.cellTy A]).length = env.names.length)
+    (typesId : CapturedTy sig idSrc env path (tys ++ [Queue.cellTy A]) Queue.idTy)
+    (typesCell : TypesEach sig cellSrc env path (tys ++ [Queue.cellTy A]) (Queue.cellTy A))
+    (typedEnv : Typed.EnvTyped w tys captured) {stores : Stores} {q : RefKey}
+    {cell reply next : Val} (held : refPeek stores.refs q = some cell)
+    (member : Typed.Fits w cell (Queue.cellTy A))
+    (reads : Reads (Queue.withdrawTake A idSrc cellSrc) env path (captured ++ [cell])
+      (Val.tuple [reply, next])) :
+    Typed.Fits w reply wakeReplyTy ∧ Typed.Fits w next (Queue.cellTy A) := by
+  obtain ⟨f, tree, value⟩ := reads
+  exact step_keeps_cell sig atoms typedEnv
+    ((withdrawTake_types sig atoms A message depth typesId typesCell false).tree tree) held
+    member value
+
+/--
+info: 'Test.Program.QueueTyping.withdrawTake_keeps_cell' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms withdrawTake_keeps_cell
+
+/--
+info: Test.Program.QueueTyping.withdrawTake_keeps_cell: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status withdrawTake_keeps_cell
 
 /-! ## 6. The pinned outputs
 

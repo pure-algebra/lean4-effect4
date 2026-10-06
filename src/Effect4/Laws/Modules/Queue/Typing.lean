@@ -198,8 +198,9 @@ theorem takerFields_formed :
 theorem offerFields_normal {A : Ty} (canonical : A.normalize = A) :
     Ty.normalize (.record (Queue.offerFields A)) = Queue.offerTy A := by
   rw [Ty.normalize_record]
-  show Ty.record [("batch", false, Ty.normalize .bool), ("hint", false, Ty.normalize Queue.answerTy),
-    ("id", false, Ty.normalize Queue.idTy), ("rest", false, Ty.normalize (.list A))] = _
+  show Ty.record [("batch", false, Ty.normalize .bool),
+    ("hint", false, Ty.normalize Queue.answerTy), ("id", false, Ty.normalize Queue.idTy),
+    ("rest", false, Ty.normalize (.list A))] = _
   have rest : Ty.normalize (.list A) = .list A := Ty.normalize_list_canonical canonical
   rw [rest]
   rfl
