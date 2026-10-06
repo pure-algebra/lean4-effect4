@@ -9,6 +9,7 @@ import Effect4.Machine.Stores
 import Effect4.Laws.Machine.Witnesses
 import Effect4.Laws.Program.Intro
 import Effect4.Laws.Program.Simulation.Walk
+import Effect4.Laws.Program.Typed.Mask
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
 
 /-!
@@ -316,6 +317,15 @@ private def censusRows : List Row :=
         , `Effect4.Machine.interruptRecord_running_defers
         , `Effect4.Machine.runloopTop_deferred
         , `Effect4.FrameFiber.pendingCause_some ] }
+  , { id := "interrupt.uninterruptible-mask", kind := "interrupt", disposition := "owned", coverage := "partial"
+      -- missing clause: no theorem relates an arbitrary compiled derived mask body to the native `uninterruptibleMask` on a stated target observation; the derived entry has two more checkpoints
+      -- missing clause: no theorem of runs gives the restoration after a completed region for an arbitrary nested body; the witnesses hold at the entry and at the saved frame's boundaries
+    , witnesses :=
+        [ `Effect4.Machine.withFiber_getInterruptible
+        , `Effect4.FrameFiber.uninterruptible_flag
+        , `Effect4.FrameFiber.uninterruptible_stack
+        , `Effect4.Program.Typed.compileEff_restore_false
+        , `Effect4.Program.Typed.compileEff_restore_true ] }
   , { id := "fork.unsafe", kind := "fork", disposition := "separateCalculus", coverage := "green"
     , witnesses :=
         [ `Effect4.Supervision.MaskMode.cases_receipt

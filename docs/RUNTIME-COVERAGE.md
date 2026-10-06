@@ -128,7 +128,7 @@ census v1 and the model that closes each:
 | `ref.*` | 10 | `src/Effect4/Machine/Stores.lean`: a cell store with allocation identity, read, write, and the read-modify-write projections, including the void-typed `Ref.set` whose host value is the cell |
 | `deferred.*` | 12 | `src/Effect4/Machine/Stores.lean`: a completion store that is empty or holds exactly one effect, a registration-ordered waiter list, single completion, and interruption as an ordinary stored failure |
 | `layer.*` | 16 | `src/Effect4/Layer/*.lean`: build over a memo map and a scope, one build per memo map with observer counting and a last-observer finalizer, parent memo chains, merge and provide scoping, and the layer scope versus the program scope |
-| the `partial` rows | 1 | `op.Failure`: the stack-frame annotation of a failure needs a `StackTrace` service key |
+| the `partial` rows | 3 | `op.Failure`: the stack-frame annotation of a failure needs a `StackTrace` service key. `layer.launch-holds-scope`: `Eff` has no `never`. `interrupt.uninterruptible-mask` (added 2026-10-06): it needs a law of runs for the restoration after a nested body, and a law that relates a compiled mask body to the native `uninterruptibleMask` |
 
 The three `foreignBoundary` rows (`op.WithFiber`, `op.YieldableError`,
 `cause.annotations`) close with a registered boundary identity and a refusal

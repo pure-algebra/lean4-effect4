@@ -1,5 +1,5 @@
 format	effect4-effect-runtime-census-v1
-generator	scripts/generate-effect-runtime-census.sh	sha256=9045a4d7272a189b1fc63d4e322be79365aa58db5be7436e403d473b30a3ae7c
+generator	scripts/generate-effect-runtime-census.sh	sha256=811ac9c3b764d61e9d7d3a7c1a0c60dfc59a649ba1698190416bda5f9bb0ebcc
 regenerate	./scripts/generate-effect-runtime-census.sh > generated/effect-runtime-census.tsv
 pin	effect	4.0.0-rc.112	upstream=2600f62f4532026928454dcea8d1c48557b3f942
 input	vendor/effect-4.0.0-rc.112/src/internal/effect.ts	sha256=0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0
@@ -49,6 +49,7 @@ mechanism	checkpoint	checkpoint.set-fiber-interruptible	internal/effect.ts	4324-
 mechanism	checkpoint	checkpoint.set-interruptible-contall	internal/effect.ts	4316-4318	sha256=e91edec3b5b1d961153562ee09b3f03dcbbd28c12d52629dce9a042947b5c0b8	When a SetInterruptible frame is popped and leaves the fiber interruptible with a pending cause, it substitutes failCause(cause) for both arms.
 mechanism	interrupt	interrupt.unsafe-entry	internal/effect.ts	574-595	sha256=10b3609e5b557de0b003b94cd8f1200ba9df59e841384b6597419f6e1009fa49	interruptUnsafe is the single interruption entry: it no-ops after the Exit exists, always records the cause, and applies it now only when the fiber is interruptible and not inside runLoop.
 mechanism	interrupt	interrupt.accumulate	internal/effect.ts	585-587	sha256=fac98b7069bfdc544edd5c1466a6caec8d39a5d9a96b448c7e61addc5d76e23a	Successive interruptors accumulate into one cause by causeCombine rather than replacing it.
+mechanism	interrupt	interrupt.uninterruptible-mask	internal/effect.ts	4340-4352	sha256=276d40c762a093ac1d675da7e1a2b6146abc697e589bef4bebf10348c19b3691	An already masked fiber gives its body identity as restore. Otherwise it clears interruptibility, pushes the restoring frame, and supplies interruptible.
 mechanism	fork	fork.unsafe	internal/effect.ts	5263-5284	sha256=6fe22e10c429beb31db41a5f79885b5d840970656e031f07e078971761310ef6	Every fork goes through forkUnsafe: it derives the child mask, constructs a FiberImpl over the parent context, starts it immediately or as a priority-0 dispatcher task, and registers it only when not a daemon.
 mechanism	fork	fork.child	internal/effect.ts	5227-5261	sha256=780ef2f435854200caafa277f787c7058046538e1f209b46f351001579eca972	forkChild installs the interruptChildren middleware and forks a non-daemon child, so the parent exit interrupts it.
 mechanism	fork	fork.detach	internal/effect.ts	5286-5311	sha256=8a5546fcb8f589d7c454a29c50efbe9035381c77bb45b49035aa674999dc92b6	forkDetach forks a daemon: no registration, no middleware, and nothing interrupts it on the parent exit.

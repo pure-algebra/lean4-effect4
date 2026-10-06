@@ -395,7 +395,9 @@ under the same folder, with a coordinator's note).
     The row's comment then keeps two missing connections. No law relates a compiled mask to
     the native one. No law of runs gives the restoration after a nested body. The owner
     answered by voice: go with the recommendation. The coordinator read the transcript as
-    the census row of the mask, and it told the owner that reading. The row is not added yet;
+    the census row of the mask, and it told the owner that reading. The row is added, with
+    five witnesses of `src/Effect4/Laws/Program/Typed/Mask.lean` and the two missing
+    connections in its comment (`Test/Audit/RuntimeCoverage.lean`);
   - the install that seat CONTROLS's `make` made by mistake (95 MB, in that seat's scratch
     folder). The owner left the choice to the coordinator. The copy stays where it is.
     Nothing reads it, and no evidence rests on it. The incident's record is the seat's
@@ -715,9 +717,9 @@ Open at this landing:
     points. It compares a fiber's base only while the fiber is live, so it says nothing of
     the flag at a fiber's exit. It is no check that the cuts cover a whole run. No goal
     states the invariant yet;
-  - a row of the runtime census for `uninterruptibleMask` is proposed and not applied. A
-    permission check denied the seat's edit of the census generator, and the row waits for
-    the owner. Codex recommends the coverage `partial` (the third relay of 2026-10-06);
+  - the runtime census has a row for `uninterruptibleMask` since 2026-10-06, with the
+    coverage `partial`: `interrupt.uninterruptible-mask`. The owner approved it as Codex
+    recommended. Its comment names the two missing connections;
   - no law relates the compiled form to a release's own mask;
   - the truth lane's row `resumed k` means a parked fiber that runs again, whatever woke it.
     Lean's reduction wrote it for a token's resume alone. The repair moved no corpus row;
@@ -1208,8 +1210,17 @@ the language cut rules no function values (a program's inputs are its environmen
 rows are templates), and DI-21 stays deferred until foreign lift is a goal (row 163, ruled by the
 owner). Decoding inside a program (row 123) is next after the wave, and
 `Schedule`, `Stream`, `Config`, the stateful modules and the host packages have no admitted member.
-The runtime coverage report counts the fiber runtime only: green 132, partial 2, absent 0 of 135 at
-`bff50631`. Probe R (merged `1b2bd11d`; rows 165–167, register `E4-RECORD-CE-001`–`012`) found that row 119's
+The runtime coverage report counts the fiber runtime only. Its block, from the working tree
+of the commit that adds the mask's row (2026-10-06):
+
+```
+Effect rc.112 runtime coverage: denominator 136; owned-with-green 8/136;
+green 132, partial 3, absent 0, diverged 1; census 138 rows, 2 excluded
+partial: op.Failure interrupt.uninterruptible-mask layer.launch-holds-scope
+divergence: checkpoint.exit-failcause-skip; U-01; Test/Counterexamples/Machine/Semantics/InterruptEscape.lean
+```
+
+Probe R (merged `1b2bd11d`; rows 165–167, register `E4-RECORD-CE-001`–`012`) found that row 119's
 positional record values make projection type-directed while every evaluator and reader is
 type-blind, and one positional value fits two branches of a union of records; it recommends values
 that carry their canonical names in the existing frames (row 165 (a), the owner's ruling owed), two

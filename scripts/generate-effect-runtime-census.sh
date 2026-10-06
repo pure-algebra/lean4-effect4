@@ -184,6 +184,7 @@ checkpoint|checkpoint.set-fiber-interruptible|internal/effect.ts|const setFiberI
 checkpoint|checkpoint.set-interruptible-contall|internal/effect.ts|op: "SetInterruptible",|3|5|e91edec3b5b1d961153562ee09b3f03dcbbd28c12d52629dce9a042947b5c0b8|When a SetInterruptible frame is popped and leaves the fiber interruptible with a pending cause, it substitutes failCause(cause) for both arms.
 interrupt|interrupt.unsafe-entry|internal/effect.ts|    let cause = causeInterrupt(fiberId)|-4|17|10b3609e5b557de0b003b94cd8f1200ba9df59e841384b6597419f6e1009fa49|interruptUnsafe is the single interruption entry: it no-ops after the Exit exists, always records the cause, and applies it now only when the fiber is interruptible and not inside runLoop.
 interrupt|interrupt.accumulate|internal/effect.ts|    this._interruptedCause = this._interruptedCause|0|2|fac98b7069bfdc544edd5c1466a6caec8d39a5d9a96b448c7e61addc5d76e23a|Successive interruptors accumulate into one cause by causeCombine rather than replacing it.
+interrupt|interrupt.uninterruptible-mask|internal/effect.ts|export const uninterruptibleMask = <A, E, R>(|0|12|276d40c762a093ac1d675da7e1a2b6146abc697e589bef4bebf10348c19b3691|An already masked fiber gives its body identity as restore. Otherwise it clears interruptibility, pushes the restoring frame, and supplies interruptible.
 fork|fork.unsafe|internal/effect.ts|export const forkUnsafe = <FA, FE, A, E, R>(|-1|20|6fe22e10c429beb31db41a5f79885b5d840970656e031f07e078971761310ef6|Every fork goes through forkUnsafe: it derives the child mask, constructs a FiberImpl over the parent context, starts it immediately or as a priority-0 dispatcher task, and registers it only when not a daemon.
 fork|fork.child|internal/effect.ts|export const forkChild: {|-1|33|780ef2f435854200caafa277f787c7058046538e1f209b46f351001579eca972|forkChild installs the interruptChildren middleware and forks a non-daemon child, so the parent exit interrupts it.
 fork|fork.detach|internal/effect.ts|export const forkDetach: {|-1|24|8a5546fcb8f589d7c454a29c50efbe9035381c77bb45b49035aa674999dc92b6|forkDetach forks a daemon: no registration, no middleware, and nothing interrupts it on the parent exit.
@@ -295,7 +296,7 @@ expected_kind_counts() {
 op|17
 frame-arm|9
 checkpoint|6
-interrupt|2
+interrupt|3
 fork|12
 scope|14
 scheduler|9
@@ -309,7 +310,7 @@ layer|16
 COUNTS
 }
 
-expected_row_total=137
+expected_row_total=138
 
 tmp_parent="${TMPDIR:-/tmp}"
 tmp_parent="${tmp_parent%/}"

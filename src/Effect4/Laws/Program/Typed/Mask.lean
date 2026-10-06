@@ -60,7 +60,8 @@ namespace Effect4.FrameFiber
 universe u v
 variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
 
-/-- After `uninterruptible` the flag is false, whatever it was. -/
+/-- After `uninterruptible` the flag is false, whatever it was.
+census: interrupt.uninterruptible-mask -/
 @[semantics "scope-lifetime-finalization"]
 theorem uninterruptible_flag (self : FrameFiber ν σ β ε δ ι α) :
     self.uninterruptible.interruptible = false := by
@@ -69,7 +70,8 @@ theorem uninterruptible_flag (self : FrameFiber ν σ β ε δ ι α) :
   | true => rw [uninterruptible_masks self h]
 
 /-- `uninterruptible` saves the earlier flag exactly when it changes it: the restoring frame
-holds `true`, and it is pushed only on an interruptible fiber. -/
+holds `true`, and it is pushed only on an interruptible fiber.
+census: interrupt.uninterruptible-mask -/
 @[semantics "scope-lifetime-finalization"]
 theorem uninterruptible_stack (self : FrameFiber ν σ β ε δ ι α) :
     self.uninterruptible.stack =
@@ -140,7 +142,8 @@ variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
 /-- `uninterruptibleMask((restore) => succeed(restore))` (`internal/effect.ts:4340-4352`;
 decisions row 245): the fiber masked as `uninterruptible` masks it, and the saved state of the
-flag at the entry answered as the next code. Nothing else of the machine or the fiber moves. -/
+flag at the entry answered as the next code. Nothing else of the machine or the fiber moves.
+census: interrupt.uninterruptible-mask -/
 @[semantics "scope-lifetime-finalization"]
 theorem withFiber_getInterruptible (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) :
@@ -347,14 +350,16 @@ theorem resolve_restore_body
   rw [child]
 
 /-- **A false bit is the identity on the node**: the compiled code is the body's own, at
-child 0. The node spends no step, pushes no frame and changes no flag. -/
+child 0. The node spends no step, pushes no frame and changes no flag.
+census: interrupt.uninterruptible-mask -/
 @[semantics "residual-program-typing"]
 theorem compileEff_restore_false (hf : p.fuel = k + 1)
     (hsaved : evalTerm p.env saved = some (Val.savedMask false)) :
     compileEff (.restore saved body) p = compileEff body (p.child 0) := by
   rw [compileEff_restore saved body hf, hsaved, Option.bind_some, Val.savedMask?_savedMask]
 
-/-- **A true bit is `interruptible` over the body**: the node compiles to its point's action. -/
+/-- **A true bit is `interruptible` over the body**: the node compiles to its point's action.
+census: interrupt.uninterruptible-mask -/
 @[semantics "residual-program-typing"]
 theorem compileEff_restore_true (hf : p.fuel = k + 1)
     (hsaved : evalTerm p.env saved = some (Val.savedMask true)) :
