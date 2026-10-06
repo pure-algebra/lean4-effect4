@@ -114,7 +114,7 @@ none of its own. A script with such a refusal is not performable (section 4).
 | `workLeft.runnable`, `workLeft.queued` | The count of armed dispatchers. Zero is the two empty lists. The count names no fiber, so the fields wait in a script where Lean's field names one. | — | Reader: dispatchers |
 | `workLeft.timers` | The pending sleeps of the clock boundary, each with its fiber and its wake time. | runtime fiber to fiber | Reader: sleeps |
 
-### 3.3 Timeout: nine fields
+### 3.3 Timeout: nine fields, one with two sources
 
 | Field | The host's measurement | Source |
 | --- | --- | --- |
@@ -123,7 +123,7 @@ none of its own. A script with such a refusal is not performable (section 4).
 | `attempts` | The cell `count`, the first cell. | Reader: cells |
 | `cleanups` | The cell `ended`, the second cell. | Reader: cells |
 | `root` | The ending that the root fiber's exit shows. | Host |
-| `timers` | None. A sleeping fiber that made no call has no number on the host. | Replay only |
+| `timers` | The pending sleeps of the clock boundary, in a script where every sleeping fiber is the root or made a call. None in any other script: a timer's fiber makes no call, so it has no number on the host. | Reader: sleeps, or replay only |
 
 ### 3.4 Atomic: five fields, each through a reader
 
@@ -268,7 +268,7 @@ conditions.
 
 | Condition | How the lane meets it |
 | --- | --- |
-| A transparency control | The runner performs each script twice: with no reader, and with its readers. The check compares the two recordings byte for byte. |
+| A transparency control | The runner performs each script with no reader, with its readers, and with each reader alone. The check compares each recording with the plain run's, byte for byte. It also compares the root's exit, and what a reader gives alone with what it gives among the others. |
 | Off by default | A reader is on only where Lean grants it in the fixture (`readersOf`). The check pins the digest of the four fixture families' recordings. |
 | Harness only | Each reader lives under `harness/truth/session/`. The module's text under the header stays verbatim, and tsgo 7 checks it under both headers. |
 | A spy gives the pinned object | The reader's `Ref` and `Effect` inherit from the pinned ones. A spy calls the pinned head and hands on the cell or the fiber that it made. |
@@ -279,13 +279,15 @@ conditions.
 | --- | --- | --- | --- | --- |
 | Cells | The value of each cell that the module makes, by allocation index. | The header binds `Ref` to an object that inherits from the pinned `Ref` and owns `make`. The read is `Ref.getUnsafe` at the script's end. | The root makes every cell before it makes a fiber (`cellsFirst`). The fixture holds the count of cells. | workers `assignment`, `cleanups`; timeout `attempts`, `cleanups`; atomic `window`, `account`, `cleanups` |
 | Forked fibers | Each fiber that the module forks, in fork order, with its exit. | The header binds `Effect` to an object that inherits from the pinned `Effect` and owns the three fork heads, in both call forms. | The program holds no race, and every fiber of the run but the root has a source point. The fixture holds their count. | atomic `decisions`, `completed` |
-| Sleeps | Each pending sleep: its fiber and its wake time. | The clock boundary's own `sleep` notes a sleep's start and its end. | Every fiber that sleeps at the script's end is the root or made a call. | workers `workLeft.timers` |
+| Sleeps | Each pending sleep: its fiber and its wake time. | The clock boundary's own `sleep` notes a sleep's start and its end. | Every fiber that sleeps at the script's end is the root or made a call. | workers `workLeft.timers`; timeout `timers`, in each script where the premise holds |
 | Armed dispatchers | Whether a dispatcher of the run is armed, as a count. | A `Scheduler` at the boundary: the pinned `MixedScheduler` in its mode `"async"`, over the real `setImmediate` behind a counter. | Lean's two lists are empty at the script's end. | workers `workLeft.runnable`, `workLeft.queued`; the exact wait of every run with readers |
 
 Three limits stand.
 
-- A race forks two fibers of the machine through no fork head. So the fibers reader is refused
-  for the timeout scenario, and timeout's `timers` stays replay only.
+- A race forks two fibers of the machine through no fork head. So the fibers reader has no
+  premise for the timeout scenario, and a timer's fiber has no number on the host. Timeout's
+  `timers` is replay only in each script where a timer's fiber sleeps at the end. The
+  coordinator agreed to the split by script on 2026-10-06.
 - The fibers reader gives a fiber a name, and a script that cancels a fiber with no call needs
   that name to run at all. Such a script has no run with no reader, so the readers' control
   has no reference for it. The atomic script that interrupts request 2 stays without a host run.

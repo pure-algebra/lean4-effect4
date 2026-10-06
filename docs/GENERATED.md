@@ -206,6 +206,12 @@ same generated expressions, and replays the recorded tapes in Lean with its fini
 controls (missing, stale and duplicate keys; wrong row, request or value; receipt and
 application reordering; zero application fuel; empty public chunks).
 
+The same check performs the dogfood scenarios' scripts on their printed TypeScript modules
+(decisions row 254). Lean writes each script's fixture afresh into the work folder, and no
+fixture of a scenario is committed. `Test/Dogfood/README.md`, section "The host runs", owns
+what a host run compares. The check pins the digest of the four fixture families' recordings
+(`scripts/check-host-protocol.py`, `CASES_SHA256`).
+
 ## Engine boundary
 
 `ocaml/engine/api_engine.ml` is the LCNF projection of `Effect4.Api.run`/`replay` with the

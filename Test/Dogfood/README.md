@@ -252,8 +252,8 @@ Each field of an observation has one source of evidence on the host
 
 There are four readers: the cells that the module makes, the fibers that it forks, the pending
 sleeps and the count of armed dispatchers. A reader is on only where Lean grants it for a run.
-The lane performs each script twice, with no reader and with its readers. The two recordings
-must be the same bytes.
+The lane performs each script with no reader, with its readers, and with each reader alone.
+Each recording must be the bytes of the run with no reader.
 
 A script has no host run where a host has no act for one of its rows. The driver gives the
 reason (`performable`, `harness/truth/session/Keyed.lean`).
