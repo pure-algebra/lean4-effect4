@@ -375,8 +375,7 @@ def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 /-- The scenario's named runs: each script of a control, once, from one build of each program.
 The first fifteen are on the fetch. The last two are on the client that retries every failure
 and on the client whose finalizer resets the count. The host lane performs them in this order.
-The first run, `parked`, is the part that every other script starts with: no control reads it
-alone, and the gate reports it. -/
+The first run, `parked`, is the part that every other script starts with. -/
 def runsOf (b eager resetting : Api.Built) : List NamedRun :=
   let run := fun (name : String) (parts : List (List Move)) =>
     (⟨name, opened b, script parts⟩ : NamedRun)
@@ -490,6 +489,10 @@ def controlsOf (b : Api.Built) : List Control :=
       | [crossed] => refused crossed [("submit", .callOrder)] && shows crossed atTimedOut
       | _ => false
     -- cleanup keeps the committed count
+  , green "cleanup" "the first attempt counts itself before its call, and no finalizer ran"
+      ["parked"] fun
+      | [waiting] => shows waiting atParked && (observe waiting).cleanupKeeps
+      | _ => false
   , green "cleanup" "the timer interrupts the first attempt: it is cleaned once, and its count stays"
       ["timer-interrupt"] fun
       | [interrupted] =>
@@ -577,10 +580,6 @@ def scenario : Scenario :=
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
--- One run of the gate. It reports the one named run that no control reads, and this guard pins
--- the report: a new unread run fails the build until its line stands here.
-/-- info: timeout: no control reads the run "parked" -/
-#guard_msgs (info) in
 #scenario_gate scenario
 
 end Test.Dogfood.Scenario.Timeout
