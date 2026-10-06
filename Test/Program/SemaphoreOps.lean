@@ -48,7 +48,7 @@ namespace Test.Program.SemaphoreOps
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Test.Program.SemaphoreScenarios (Ops library mk verdict exitOf exitAt typesOf counts mark
-  noNumbers count marks treeAt)
+  noNumbers count marks treeAt ifAvailableWith ifAvailable handoff)
 open Effect4.Modules
 
 /-! ## 1. The construction: a positive total -/
@@ -69,34 +69,10 @@ example : Src NativeOp := Semaphore.make 0
 
 /-! ## 2. The forms that never wait, on the machine
 
-A total of 2. A protected body runs with both permits, and it writes the taken count that it
-reads. The root then takes 1. A second protected form asks for 2: one permit is free, so the
-step does not take. Its body would write the mark 99. Two takes of 1 follow, each one step. -/
-
-/-- The scenario, over a form of `withPermitsIfAvailable`. The answer: the first form's answer,
-the counts after it, the second form's answer, the two takes' answers, the counts at the end,
-and the marks. -/
-def ifAvailableWith (form : TermSrc → TermSrc → Src NativeOp → Src NativeOp) : Src NativeOp :=
-  eff do
-    let q ← Semaphore.make 2
-    let log ← Ref.make noNumbers
-    let a ← form q (nat 2) (eff do
-      let s ← Ref.get q
-      let _ ← mark log (field s "taken")
-      return nat 7)
-    let between ← counts q
-    let _ ← Semaphore.take q (nat 1)
-    let b ← form q (nat 2) (eff do
-      let _ ← mark log (nat 99)
-      return nat 8)
-    let c ← Semaphore.takeIfAvailable q (nat 1)
-    let d ← Semaphore.takeIfAvailable q (nat 1)
-    let after ← counts q
-    let l ← Ref.get log
-    return tuple [a, between, b, c, d, after, l]
-
-/-- The scenario over the library's form. -/
-def ifAvailable : Src NativeOp := ifAvailableWith Semaphore.withPermitsIfAvailable
+The scenario is `ifAvailableWith` of `Test/Program/SemaphoreScenarios.lean`. A total of 2. A
+protected body runs with both permits, and it writes the taken count that it reads. The root
+then takes 1. A second protected form asks for 2: one permit is free, so the step does not take.
+Its body would write the mark 99. Two takes of 1 follow, each one step. -/
 
 #guard verdict ifAvailable = "built"
 -- An option of the body's answer, a Boolean for each take, and no failure.
@@ -792,19 +768,8 @@ end Typing
 
 /-! ## The example of `README.md`
 
-The section "A semaphore" of `README.md` shows this program. It is the program
-`pSemaphoreHandoff` of the truth lane (`harness/truth/Truth.lean`). -/
-
-/-- The README's example, as the README writes it. The root takes the one permit. A worker asks
-for it in the protected form, and it waits. The root releases: the walk resumes the worker,
-which runs its body and releases. -/
-def handoff : Src NativeOp := eff do
-  let gate ← Semaphore.make 1
-  let _ ← Semaphore.take gate (nat 1)
-  let worker ← fork (Semaphore.withPermits gate (nat 1) (succeed (nat 7)))
-  let free ← Semaphore.release gate (nat 1)
-  let x ← join worker
-  return tuple [free, x]
+The section "A semaphore" of `README.md` shows the program `handoff` of
+`Test/Program/SemaphoreScenarios.lean`. -/
 
 -- `Effect4.Api.author` checks it at the pair of two numbers, with no failure and no
 -- requirement, and its run answers the free count of the release and the worker's answer.
