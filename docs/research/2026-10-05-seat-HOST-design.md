@@ -111,7 +111,7 @@ none of its own. A script with such a refusal is not performable (section 4).
 | `rootExit` | The root fiber's exit. | root | Host |
 | `workLeft.awaiting` | The module's live calls, held or not, by the machine's fiber. | call to key | Host |
 | `workLeft.pending` | The stored replies that no application consumed, in hold order. | call to key | Host |
-| `workLeft.runnable`, `workLeft.queued` | The count of armed dispatchers. Zero is the two empty lists. The count names no fiber, so the fields wait in a script where Lean's field names one. | — | Reader: dispatchers |
+| `workLeft.runnable`, `workLeft.queued` | The count of armed dispatchers. Zero is the two empty lists. The count names no fiber, so the fields wait in a script where Lean's field names one. Where the run's own wait follows the last act, that wait gives the zero, and the check's table says so. | — | Reader: dispatchers |
 | `workLeft.timers` | The pending sleeps of the clock boundary, each with its fiber and its wake time. | runtime fiber to fiber | Reader: sleeps |
 
 ### 3.3 Timeout: nine fields, one with two sources
@@ -172,9 +172,18 @@ exact error column, with two diagnostics `TS2375`. The lane runs only a module t
 so the driver names that script with this reason. The other 47 modules type-check, the shop's
 among them.
 
-Two more controls have no script of the driver's alphabet. The timeout battery's frontier control
-edits the run's budget. The journal controls play a journal, and section 7's replay control
-covers them.
+Four kinds of control have no script of the driver's alphabet.
+
+- The timeout battery's frontier control edits the run's budget.
+- The journal controls play a journal, and section 7's replay control covers them.
+- The atomic battery's straight clause runs the request alone with `Api.run`, at a bound. It
+  compares no `Observation`.
+- One workers control compares the run that `P3WorkerQueue.drive` makes.
+
+An audit of the four batteries on 2026-10-06 compared each script of each control with the
+driver's list. One script was missing: the reference run of the workers control of a stale
+reply, where worker 1's reply alone is applied. The driver lists it since that day, as
+`applied-1`. The driver also lists the timeout battery's part `parked` as a run of its own.
 
 The coordinator repaired the retry form's delays on 2026-10-06 (`0f76dd2a`). The driver's
 timeout scripts took the battery's new delays, and the same 15 scripts agreed again. The driver
@@ -282,8 +291,13 @@ conditions.
 | Sleeps | Each pending sleep: its fiber and its wake time. | The clock boundary's own `sleep` notes a sleep's start and its end. | Every fiber that sleeps at the script's end is the root or made a call. | workers `workLeft.timers`; timeout `timers`, in each script where the premise holds |
 | Armed dispatchers | Whether a dispatcher of the run is armed, as a count. | A `Scheduler` at the boundary: the pinned `MixedScheduler` in its mode `"async"`, over the real `setImmediate` behind a counter. | Lean's two lists are empty at the script's end. | workers `workLeft.runnable`, `workLeft.queued`; the exact wait of every run with readers |
 
-Three limits stand.
+Four limits stand.
 
+- The dispatchers reader reads its count at the script's end. Where the run's own wait follows
+  the last act, that wait ends at zero. The reader's zero then shows only that the host came to
+  rest. No wait follows a held call or a reply receipt: there the zero shows that the act armed
+  no dispatcher. On the Lean machine both lists are empty at the end of every performable
+  script, by the last rule of section 4.
 - A race forks two fibers of the machine through no fork head. So the fibers reader has no
   premise for the timeout scenario, and a timer's fiber has no number on the host. Timeout's
   `timers` is replay only in each script where a timer's fiber sleeps at the end. The

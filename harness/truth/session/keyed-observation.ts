@@ -60,6 +60,9 @@ export interface HostEnd {
   readonly sleeps?: Array<[fiber: number, wake: string]>
   /** The count of armed dispatchers. */
   readonly armed?: number
+  /** Whether the run's own wait followed the last act. That wait ends when no dispatcher is
+   * armed, so the count is then zero by the wait. */
+  readonly waited?: boolean
 }
 /** The host's result for one script. */
 export interface ScenarioResult {
@@ -68,8 +71,9 @@ export interface ScenarioResult {
   measured: Record<string, Json>
   /** Predicted by the recorder's ledger with no reader: the session's refusals. */
   predicted: Record<string, Json>
-  /** Measured on the host through the named reader, at the script's end. */
-  through: Record<string, { reader: ReaderName; value: Json }>
+  /** Measured on the host through the named reader, at the script's end. `limit` says where the
+   * value shows less than its entry's name: the lane's check writes it beside the entry. */
+  through: Record<string, { reader: ReaderName; value: Json; limit?: string }>
   /** No measurement on the host: Lean's replay is the only evidence. */
   waits: Array<{ field: string; why: string }>
   /** The entries of `measured` and `predicted` again, from the run with its readers and the
@@ -93,8 +97,9 @@ interface Scenario {
   readonly host: (end: HostEnd, spelling: (call: HeldCall) => string) => Entries
   /** The entries of `host` that are the ledger's predictions of the session's refusals. */
   readonly predicted?: string[]
-  /** The entries that the host measures through a reader, by the reader. */
-  readonly through: { readonly [Reader in ReaderName]?: { readonly fields: string[]; readonly read: (end: HostEnd) => Entries } }
+  /** The entries that the host measures through a reader, by the reader. `limit` gives the
+   * reason, at one script's end, why a value shows less than its entry's name. */
+  readonly through: { readonly [Reader in ReaderName]?: { readonly fields: string[]; readonly read: (end: HostEnd) => Entries; readonly limit?: (end: HostEnd) => string | undefined } }
 }
 /** The entries of a log cell (`entries` of the batteries): the list, or nothing. */
 const entries = (cell: Json | undefined): Json => Array.isArray(cell) ? cell : []
@@ -155,10 +160,13 @@ const scenarios: Record<string, Scenario> = {
       sleeps: { fields: ["workLeft.timers"], read: ({ sleeps }) => ({ "workLeft.timers": sleeps! }) },
       // The count names no fiber. Lean grants the reader only where both of its lists are empty,
       // so zero armed dispatchers is the two empty lists, and any other count is a disagreement.
+      // Where the run's own wait followed the last act, that wait gives the zero: the value then
+      // shows that the host came to rest, and no more. After a held call or a reply receipt no
+      // wait follows, and the zero shows that the act armed no dispatcher.
       dispatchers: { fields: ["workLeft.runnable", "workLeft.queued"], read: ({ armed }) => {
         const none: Json = armed === 0 ? [] : { armed: armed! }
         return { "workLeft.runnable": none, "workLeft.queued": none }
-      } }
+      }, limit: ({ waited }) => waited ? "zero by the run's own wait" : undefined }
     }
   },
   // Test/Dogfood/Scenario/Timeout.lean, `Observation`. The cells are `count` and `ended`. Lean
@@ -207,14 +215,14 @@ export const measure = (fixture: ScenarioFixture, end: HostEnd, readers: Readers
   const measured = Object.fromEntries(host.filter(([field]) => !scenario.predicted?.includes(field)))
   const predicted = Object.fromEntries(host.filter(([field]) => scenario.predicted?.includes(field)))
   const through: ScenarioResult["through"] = {}, waits: ScenarioResult["waits"] = []
-  for (const [reader, { fields, read }] of Object.entries(scenario.through) as Array<[ReaderName, NonNullable<Scenario["through"][ReaderName]>]>) {
+  for (const [reader, { fields, read, limit }] of Object.entries(scenario.through) as Array<[ReaderName, NonNullable<Scenario["through"][ReaderName]>]>) {
     if (readers[reader] === undefined) {
       const refused = fixture.refusedReaders.find(refusal => refusal.reader === reader)
       for (const field of fields) waits.push({ field, why: refused ? `the ${reader} reader is refused: ${refused.why}` : `the run has no ${reader} reader` })
       continue
     }
-    const values = read(end)
-    for (const field of fields) through[field] = { reader, value: values[field]! }
+    const values = read(end), why = limit?.(end)
+    for (const field of fields) through[field] = { reader, value: values[field]!, ...(why === undefined ? {} : { limit: why }) }
   }
   const sourced = [...host.map(([field]) => field), ...Object.keys(through), ...waits.map(wait => wait.field)]
   for (const field of Object.keys(fixture.observation)) if (!sourced.includes(field)) waits.push({ field, why: "no reader on the host" })

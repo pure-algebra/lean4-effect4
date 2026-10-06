@@ -838,7 +838,9 @@ def workers (name : String) (built : Api.Built) (moves : List Scenario.Move) : H
 
 open Scenario.Workers in
 /-- The workers scenario's runs: each script of a control of `Test/Dogfood/Scenario/Workers.lean`
-on the crew, and the lowest-fiber schedule on the crew that registers each release twice. -/
+on the crew, and the lowest-fiber schedule on the crew that registers each release twice. The
+run that `P3WorkerQueue.drive` makes and the two played journals are no scripts, so they have
+no run here. -/
 def workersRuns : Except String (List HostRun) := do
   let crew ← build "the crew" (crew 2)
   let faulty ← build "the crew that registers each release twice" (crewWith true 2)
@@ -853,6 +855,7 @@ def workersRuns : Except String (List HostRun) := do
     , run "applied-2-1" [parked, takes, [.apply w2, .apply w1]]
     , run "crossed" [parked, [.row (.submit (forged 0 2 2 (Scenario.ok (.nat 1))))]]
     , run "unreceived" [parked, [.apply w2]]
+    , run "applied-1" [parked, takes, [.apply w1]]
     , run "stale" [parked, takes,
         [.apply w1, .row (.submit (forged 0 1 1 (Scenario.ok (.nat 1)))), .row (.apply ⟨⟨1⟩, 1⟩)]]
     , run "cancelled-running" [running, [.cancel ⟨2⟩]]
@@ -902,7 +905,10 @@ def timeout (name : String) (built : Api.Built) (moves : List Scenario.Move) : H
 
 open Scenario.Timeout in
 /-- The timeout scenario's runs: each script of a control of `Test/Dogfood/Scenario/Timeout.lean`
-on the fetch, and the scripts of the two faulty clients. -/
+on the fetch, and the scripts of the two faulty clients. The battery's part `parked` is one run
+more: every script starts with it, and no control plays it alone. The frontier control has no
+run here: it edits the budget of a run, and a script does not. The two played journals are no
+scripts either. -/
 def timeoutRuns : Except String (List HostRun) := do
   let fetch ← build "the fetch" fetch
   let eager ← build "the client that retries every failure"
@@ -958,7 +964,9 @@ def atomic (name : String) (built : Api.Built) (moves : List Scenario.Move) : Ho
 
 open Scenario.Atomic in
 /-- The atomic scenario's runs: each script of a control of `Test/Dogfood/Scenario/Atomic.lean`
-on the shop, and the script `started` on the four faulty shops. -/
+on the shop, and the script `started` on the four faulty shops. The controls of the straight
+clause have no run here: they run the request alone with `Api.run`, at a bound and with no
+script, and they compare no `Observation`. -/
 def atomicRuns : Except String (List HostRun) := do
   let built := fun (fault : Fault) => build "the shop" (shop fault)
   let shop ← built .none

@@ -192,13 +192,20 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   }
   // Each entry's evidence, by scenario: measured by the host, predicted by the ledger, measured
   // through a named reader, or replay only. An entry may have a reader in some scripts and wait
-  // in the others. The table goes to `scenario-evidence.md`, so that no document counts by hand.
+  // in the others. A reader's value may show less than its entry's name in some scripts: the
+  // row then gives that limit with those scripts. The table goes to `scenario-evidence.md`, so
+  // that no document counts by hand.
   const scenarios = scenarioNames.map(scenario => {
     const runs = hosts.filter(run => run.scenario === scenario)
     const evidence = fixtureOf(runs[0]!.name).fields.flatMap(entry => {
       const words = runs.map(run => Object.hasOwn(run.measured, entry) ? "host" : Object.hasOwn(run.predicted, entry) ? "ledger"
         : run.through[entry] ? `reader: ${run.through[entry]!.reader}` : "replay only")
-      return [...new Set(words)].map(word => ({ entry, evidence: word, scripts: runs.filter((_, index) => words[index] === word).map(run => run.name) }))
+      return [...new Set(words)].map(word => {
+        const scripts = runs.filter((_, index) => words[index] === word)
+        const limits = [...new Set(scripts.flatMap(run => run.through[entry]?.limit ?? []))].map(limit =>
+          ({ limit, scripts: scripts.filter(run => run.through[entry]?.limit === limit).map(run => run.name) }))
+        return { entry, evidence: word, scripts: scripts.map(run => run.name), limits }
+      })
     })
     return { scenario, scripts: runs.length, evidence, wholeObservationOnHost: !evidence.some(row => row.evidence === "replay only") }
   })
@@ -209,23 +216,35 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ host: versions, scenarios, notPerformed: manifest.waiting, controls,
     evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, predicted by the ledger, measured through a reader, or replay only",
     boundary: "no agreement for another script or another entry; no host adequacy; no liveness" }, null, 2) + "\n")
-  // An entry with two sources has two rows, each with its scripts by name.
+  // An entry with two sources has two rows, each with its scripts by name. The last column gives
+  // a reader's limit on the entry, with the scripts that it holds in.
   const scriptsOf = (scenario: string, scripts: number, names: string[]): string =>
     names.length === scripts ? `all ${scripts}` : `${names.length} of ${scripts}: ${names.map(name => name.slice(scenario.length + 1)).join(", ")}`
   await writeFile(resolve(runPath, "scenario-evidence.md"), [
-    "| Scenario | Entry | Evidence | Scripts |", "| --- | --- | --- | --- |",
+    "| Scenario | Entry | Evidence | Scripts | Limit |", "| --- | --- | --- | --- | --- |",
     ...scenarios.flatMap(({ scenario, scripts, evidence }) => evidence.map(row =>
-      `| ${scenario} | \`${row.entry}\` | ${row.evidence} | ${scriptsOf(scenario, scripts, row.scripts)} |`)),
+      `| ${scenario} | \`${row.entry}\` | ${row.evidence} | ${scriptsOf(scenario, scripts, row.scripts)} | ${row.limits.map(({ limit, scripts: names }) =>
+        `${limit}, in ${scriptsOf(scenario, row.scripts.length, names)}`).join("; ")} |`)),
     ""].join("\n"))
   // The acceptance line of each scenario: how many entries have each source in every script,
   // and, for each entry that waits, the scripts where the whole-observation comparison waits,
-  // by count and by name.
+  // by count and by name. A reader's limit follows the readers' count: how many entries it
+  // holds for, and in how many scripts.
   const line = scenarios.map(({ scenario, scripts, evidence }) => {
     const whole = (word: (evidence: string) => boolean): number => evidence.filter(row => word(row.evidence) && row.scripts.length === scripts).length
     const waits = evidence.filter(row => row.evidence === "replay only")
+    const limited = new Map<string, { entries: Set<string>; scripts: Set<string> }>()
+    for (const row of evidence) for (const { limit, scripts: names } of row.limits) {
+      const found = limited.get(limit) ?? { entries: new Set<string>(), scripts: new Set<string>() }
+      found.entries.add(row.entry)
+      for (const name of names) found.scripts.add(name)
+      limited.set(limit, found)
+    }
     const parts = [`${whole(word => word === "host")} entries measured by the host`,
       ...(whole(word => word === "ledger") ? [`${whole(word => word === "ledger")} predicted by the ledger`] : []),
       ...(whole(word => word.startsWith("reader")) ? [`${whole(word => word.startsWith("reader"))} through a reader`] : []),
+      ...[...limited].map(([limit, found]) =>
+        `${found.entries.size} ${whole(word => word.startsWith("reader")) ? "of them" : "entries through a reader"} ${limit} in ${found.scripts.size} scripts`),
       ...evidence.filter(row => row.evidence.startsWith("reader") && row.scripts.length < scripts).map(row => `${row.entry} through a reader in ${row.scripts.length} scripts`)]
     const short = (names: string[]): string => names.map(name => name.slice(scenario.length + 1)).join(", ")
     const waiting = waits.length

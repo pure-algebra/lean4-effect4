@@ -164,12 +164,19 @@ if (scenariosPath) {
     const clock = await Rc112ClockBoundary.make()
     if (readers.sleeps) clock.noteSleeps()
     const dispatchers = variant.exact ? new ArmedDispatchers() : undefined
-    const settle = dispatchers ? (): Promise<void> => dispatchers.idle() : turns
+    // Whether the run's wait followed the last act. The root's start, a held call and a reply
+    // receipt have no wait. Where the wait is the exact one, it is what brings the count of
+    // armed dispatchers to zero, so the dispatchers reader's zero then says only that the host
+    // came to rest.
+    let waited = false
+    const wait = dispatchers ? (): Promise<void> => dispatchers.idle() : turns
+    const settle = async (): Promise<void> => { await wait(); waited = true }
     let root: Fiber.Fiber<unknown, unknown> | undefined, exit: Exit.Exit<unknown, unknown> | undefined
     bindScenario(fixture.name, host)
     try {
       for (const act of fixture.acts) {
         clock.check()
+        waited = false
         switch (act.kind) {
           // The recorder wrote the root's evaluation when it was made. rc.112 runs the root at
           // once, to its first suspension, and no dispatcher runs before the next act.
@@ -204,7 +211,7 @@ if (scenariosPath) {
         ...(readers.fibers !== undefined ? { fibers: [exitOf(exit), ...host.forks.map(fork => exitOf(fork.pollUnsafe()))] } : {}),
         ...(readers.sleeps ? { sleeps: clock.sleeps().map(({ fiber, wake }): [number, string] =>
           [recorder.fiberOf(fiber) ?? refuse("sleeps", "a sleeping fiber has no number on the host"), wake.toString()]) } : {}),
-        ...(readers.dispatchers ? { armed: dispatchers!.armed() } : {})
+        ...(readers.dispatchers ? { armed: dispatchers!.armed(), waited } : {})
       }
       const result = { ...measure(fixture, end, readers), predictions: end.ledger.refusals }
       return { recording: recorder.snapshot(), exit: end.exit, result }
