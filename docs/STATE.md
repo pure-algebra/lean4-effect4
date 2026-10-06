@@ -247,8 +247,12 @@ Ruled on 2026-10-06, each as recommended (rows 259 to 265):
   each proved at every scope of names. **Each step's agreement with the model is proved**
   (`85a8e587`; `src/Effect4/Laws/Modules/Semaphore/Steps.lean`): five theorems, and
   `semaphore_steps_agree`, which assembles them. They are parts of the proposed claim
-  `semaphore-expansion-agrees` and close no requirement. The engine's replay, the documents
-  and the receipt follow. The operations that wait and the protected form are a later slice.
+  `semaphore-expansion-agrees` and close no requirement. **The seat is finished** (`a9806b3b`;
+  [the receipt](research/2026-10-06-seat-SEM-receipt.md)): the cases P1 and P3 replay on the
+  generated engine, on both carriers. The registry names four claims with their witnesses.
+  No planned goal was added. The seat used the Queue's typing and reading pieces as they
+  are. Fourteen general statements wait in Semaphore's folder for the move of the shared
+  helpers. The operations that wait and the protected form are a later slice.
 
 Landed later on 2026-10-05:
 
@@ -515,12 +519,24 @@ Open at this landing:
 - the mask's second note is [written and ruled](research/2026-10-05-claude-lead/mask-second-note.md)
   (rows 244 to 246). Seat MASK has its slice since 2026-10-06 (branch `seat/mask`;
   [the brief](research/2026-10-05-claude-lead/briefs/seat-mask-brief.md)). Its first step is
-  merged (`811ac973`): `Eff.restore` and `ActionTerm.getInterruptible`, each appended; the
-  saved state's type; a case in every proved theorem that matches on them; and the engine's
-  lane `ocaml/engine/test/mask/`. The coordinator pinned the case policy again, moved one
-  pinned count of the reader's tests, wrote the truth modules again and named the two
-  constructors in the baseline policy. The seat's later steps hold the claims' theorems, two
-  truth programs and its receipt;
+  merged (`811ac973`). It appends `Eff.restore` and `ActionTerm.getInterruptible`, and it
+  adds the saved state's type. Every proved theorem that matches on the two has its case.
+  The engine has a lane, `ocaml/engine/test/mask/`. At that merge the coordinator pinned the
+  case policy again and moved one pinned count of the reader's tests. The coordinator also
+  wrote the truth modules again and named the two constructors in the baseline policy. **The seat is finished** (`8528496f`;
+  [the receipt](research/2026-10-05-seat-MASK-receipt.md)). Five registry claims are theorems
+  (`src/Effect4/Laws/Program/Typed/Mask.lean`, `src/Effect4/Laws/Codegen/Mask.lean`). Three
+  truth programs run the mask on rc.112 and on 4.0.1, and each agrees with Lean. Four points
+  stay open:
+  - the mask's law is proved at the boundaries of regions. One statement is an invariant of
+    runs: a region that changes no flag ends with its entry flag. It is tested, not proved,
+    and an open part of R11. The first wrapper under a masked caller is its consumer;
+  - a row of the runtime census for `uninterruptibleMask` is proposed and not applied. A
+    permission check denied the seat's edit of the census generator, and the row waits for
+    the owner;
+  - no law relates the compiled form to a release's own mask;
+  - the truth lane's row `resumed k` means a parked fiber that runs again, whatever woke it.
+    Lean's reduction wrote it for a token's resume alone. The repair moved no corpus row;
 - the design of waiting, tasks and the atomic frontier is
   [written and signed off](research/2026-10-05-claude-lead/waiting-design.md);
 - the migration plan to 4.0.1 is [written](research/2026-10-05-claude-lead/migration-plan.md)

@@ -622,3 +622,36 @@ What this changes in the packet above, and nothing else:
   7.0.0-dev.20260629.1 on the truth project's six control files, each with its refusals. *Tested*:
   the TypeScript reader lane, the two foreign readers on the constructed corpus, and four truth
   programs of this slice against rc.112.
+
+## Amendment, 2026-10-06: the mask's two rows, and the row `resumed k` (decisions rows 244 to 246)
+
+What this changes in the packet above, and nothing else:
+
+- **The admitted language (§3) gains two rows and two reserved heads.** The getter prints as
+  `Effect.uninterruptibleMask((a0) => Effect.succeed(a0))`: the mask that answers its own
+  restore. A restore site prints as `pipe(body, saved)`. The reserved heads are
+  `Effect.uninterruptibleMask` and `pipe`. The row table keeps its decided premises at the
+  extended table (`mask_rows_table_premises`, `src/Effect4/Laws/Codegen/Mask.lean`).
+- **What reads back.** A restore site is readable exactly when its saved term is a readable
+  leaf and its body is readable. The reader reads program syntax, so a site reads back whether
+  it types or not, and the checker refuses a saved term of another type. `read_print` and
+  `read_exact` keep their statements.
+- **The saved state's type on the target.** The prelude's alias `MaskRestore` is the printed
+  form of `Ty.maskRestore` (`harness/truth/prelude.ts`). The compiler control
+  `harness/truth/mask.typecheck.ts` checks the alias in annotated positions, with its
+  refusals.
+- **The truth claim (§4).** The truth corpus gains `pInterruptedWait`, `pMaskWait` and
+  `pMaskedRestore` (`harness/truth/Truth.lean`). The row `resumed k` has one meaning on both
+  sides: a fiber that the trace last showed parked runs again, whatever woke it. Before this
+  amendment Lean's reduction wrote the row for a token's resume alone, and the recorder wrote
+  it for every restart. No earlier program woke a parked fiber by an interrupt. The repair
+  changes the reduction of a trace and no event of the machine.
+- **Not established.** No law relates the compiled derived form to a release's own mask: the
+  truth programs are finite checks. `saved_mask_restoration`
+  (`src/Effect4/Laws/Program/Typed/Mask.lean`) states the mask's law at the boundaries of
+  regions. That a region which changes no flag ends with its entry flag is an invariant of
+  runs. It is tested and not proved.
+- **Evidence.** *Proved*: `mask_rows_table_premises`, `mask_printed_form_profile`,
+  `read_print`, `read_exact`. *Tested*: tsgo 7.0.0-dev.20260629.1 on the control file. *Tested*:
+  the three truth programs against rc.112 and against 4.0.1, where each agrees with Lean on
+  every field of the build ledger.
