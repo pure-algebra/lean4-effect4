@@ -294,8 +294,8 @@ persistence `ScopeLive w sc`. At exit types (`.exitOf a e`), the reified cause i
 - **Store safety invariant (`store-safety`)**: Well-typed machine stores produce values that Fit their
   declared types across write operations (seat D5; decisions rows 134, 139 and 181).
 - **Pool's profile on the model (`pool-profile-closed`, `pool-lease-enrols`)**: Each of the
-  five transitions of Pool's abstract model keeps the first profile. The law has no premise
-  on a request. An idle item beside enrolled waiters is a state of the profile. A lease enrols its
+  six transitions of Pool's abstract model keeps the first profile. The sixth is the closer's
+  step (decisions row 276, point 2). The law has no premise on a request. An idle item beside enrolled waiters is a state of the profile. A lease enrols its
   request exactly when the pool is open and a lease holds every item. Neither states
   fairness, liveness or anything of a program.
   (`profile_closed`, `lease_enrols_iff` (`src/Effect4/Laws/Modules/Pool/Profile.lean`)).
@@ -496,17 +496,32 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   that starts a run holds it outright. An entry that steps a machine keeps it from that
   machine. (`src/Effect4/Laws/Program/MaskRuns.lean`, `src/Effect4/Laws/Api/MaskRuns.lean`).
   Along a run, a live fiber's flag is a function of its stack (`MaskRuns.flag_eq`). It states
-  no bracket of a region. Two facts of the bracket stay open: a body's run returns to the
-  entry's stack, and the fiber is live at both cuts. It states nothing of an exited fiber,
-  of cleanup, of delivery or of progress.
+  no bracket of a region. The bracket is `saved-mask-region-bracket`. It states nothing of
+  an exited fiber, of cleanup, of delivery or of progress.
+- **A region ends at its entry's stack and at its entry flag (`saved-mask-region-bracket`,
+  `stepped-fiber-live`)**: A region is no syntax of the machine. Its entry is a cut of a
+  run, and a later cut is inside it where the fiber's stack is own frames over the entry's
+  stack. The later cut's stack shape `above ++ below` is a premise, and it is the region's
+  only mark on the machine. The theorem then gives the entry's stack and the entry flag at
+  the region's end. It does not give that a body's run keeps that shape. The end is inside a
+  pop: the fiber that the pop of the own frames leaves, where no own frame answers. At a
+  compiled command loop a fiber that a pending command steps has not exited
+  (`stepped-fiber-live`), so the statement takes no premise on an exit. That fact is false
+  at a hand-written interpreter. Both laws give no cleanup, no release count, no delivery,
+  no budget and no liveness, and nothing of a region whose fiber exits inside it.
+  (`compiled_region_bracket`, `stepped_live`
+  (`src/Effect4/Laws/Program/MaskBracket.lean`); the general form is
+  `saved_mask_region_bracket` (`src/Effect4/Laws/Machine/MaskBracket.lean`)).
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 - **Pool's return and close on the model (`pool-return-front`, `pool-return-once`,
-  `pool-close-refuses`)**: A held lease's return puts its item at the front of the idle
-  items, and it keeps every item. The lease then holds nothing (`giveBack_front`). A
-  second return of that lease changes nothing (`giveBack_once`). After the close's first
-  step every lease is refused (`close_refuses`). They state no finalizer's run and no close
-  that waits. The three theorems are in `src/Effect4/Laws/Modules/Pool/Profile.lean`.
+  `pool-close-refuses`, `pool-drain-waits`)**: A held lease's return puts its item at the
+  front of the idle items, and it keeps every item. The lease then holds nothing
+  (`giveBack_front`). A second return of that lease changes nothing (`giveBack_once`). After
+  the close's first step every lease is refused (`close_refuses`). The closer's step answers
+  true exactly where no lease is outstanding, and it enrols the closer otherwise
+  (`drain_waits`). They state no finalizer's run and no wait of the close along a run. The
+  four theorems are in `src/Effect4/Laws/Modules/Pool/Profile.lean`.
 
 ### 2.4 Concept 4: Reactive Scheduling & Machine Invariants (`reactive-scheduling`)
 
@@ -1037,11 +1052,11 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   positions (`tapeFrom_cut_replays`). The laws say nothing about the machine after a stopped
   row: that row may change the machine before it reports its frontier.
   (`tapeFrom_position_replays` (`Test/Dogfood/Scenario.lean`)).
-- **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's five step terms
+- **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's six step terms
   agrees with the model's step, on every state of the model. The agreement covers the reply,
   the stored value through the table, and the selected waiters' records. It is a part of the proposed claim
   `pool-expansion-agrees`. It states no order of the wake across helpers, no cancellation
-  law, no close that waits and no wrapper.
+  law, no wait of the close along a run and no wrapper.
   (`pool_steps_agree` (`src/Effect4/Laws/Modules/Pool/Steps.lean`)).
 
 ## 3. The object-language glossary (moved 2026-10-03)

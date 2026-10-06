@@ -21,18 +21,18 @@ connector is a relation, and no function of the state alone.
   fields and each waiter's identity. The stamps and the flags are numbers and Booleans, so
   they need no entry of the table.
 - **A step changes the table in one way** (`Table.renew`): a lease sets the hint of its own
-  request. Every other entry stays. A return, a selection, a withdrawal and the close's first
-  step leave the table.
+  request, and the closer's step sets the closer's. Every other entry stays. A return, a
+  selection, a withdrawal and the close's first step leave the table.
 - **The replies**: a Boolean and an option of the leased item's record for a lease
   (`leaseReplyVal`); two Booleans for a return; the selected waiters' records through the table
   for a selection (`selectReplyVal`); nothing for a withdrawal; a Boolean and a number for the
-  close's first step.
+  close's first step; a Boolean for the closer's step.
 
 `Reads` and `Captured` are shared too (`src/Effect4/Laws/Modules/Reading.lean`): a source term
 reads a value at a scope, and a caller's term keeps its value under a fold's two binders.
 
 Placement. These are definitions, with no statement. Concept `translation-simulation`,
-requirement R10: they are the vocabulary of the five step goals
+requirement R10: they are the vocabulary of the six step goals
 (`src/Effect4/Laws/Modules/Pool/Steps.lean`), parts of the proposed claim
 `pool-expansion-agrees`. The relation says nothing of a wrapper: which fiber holds which lease,
 which request waits on which hint, and which helper holds which selected records belong to the

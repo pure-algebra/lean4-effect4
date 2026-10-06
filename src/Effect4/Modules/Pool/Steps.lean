@@ -4,7 +4,7 @@ public import Effect4.Modules.Pool.Cell
 public import Effect4.Program.Authoring.Tuples
 
 /-!
-# Modules.Pool.Steps — Pool's five steps, each one pure term over the cell
+# Modules.Pool.Steps — Pool's six steps, each one pure term over the cell
 
 A step is the pure part of one operation of Pool's first profile (decisions rows 267 to 269):
 a fixed size, one borrower for an item, and a wake that selects once. Each step is the term of
@@ -18,6 +18,7 @@ source of the cell's current value last.
 | `selectStep` | `select` | the selected waiters' records, in order |
 | `withdrawStep` | `withdraw` | nothing |
 | `closeStep` | `close` | `[this step began the close, the count of the waiters]` |
+| `drainStep` | `drain` | whether no lease is outstanding |
 
 The model is `src/Effect4/Laws/Modules/Pool/Model.lean`. The rules of a step:
 
@@ -35,15 +36,18 @@ The model is `src/Effect4/Laws/Modules/Pool/Model.lean`. The rules of a step:
   borrower's own lease step, which checks again.
 - **A return names its lease**: it frees the item only where that lease holds it, and it puts
   the item's stamp at the front of the idle stamps (decisions row 269).
+- **The closer waits as a request** (decisions row 276, point 2): the closer's step enrols the
+  closer where a lease is outstanding. It adds no field to the cell.
 
 The words of a step term are shared (`src/Effect4/Modules/Words.lean`): one application of a
 native atom each. The removal by identity is the shared pass `removeById`. Two stamps are
 compared by the atom `eq`. The term language has no local binding, so a step repeats its
 passes.
 
-Nothing here performs an effect, and the module exports no row: `Pool.make` and `Pool.use`
-come with the public slice, and so does the wake's helper. The laws are in
-`src/Effect4/Laws/Modules/Pool/`. The batteries are under `Test/Program/`, each named `Pool…`.
+Nothing here performs an effect, and the module exports no row. The operations over the steps
+are `src/Effect4/Modules/Pool/Ops.lean`: `Pool.make`, `Pool.use`, the close and the wake's
+helper. The laws are in `src/Effect4/Laws/Modules/Pool/`. The batteries are under
+`Test/Program/`, each named `Pool…`.
 -/
 
 @[expose] public section
@@ -102,6 +106,11 @@ def freed (i l s : TermSrc) : TermSrc :=
   foldWith (field s "items") (noneOf (field s "items")) fun out it =>
     snoc out (ifT (holdsT i l it) (recordSet it "borrowed" (bool false)) it)
 
+/-- Whether a lease is outstanding: whether a lease holds an item. One fold over the items,
+whose body reads no caller's term. -/
+def outstanding (s : TermSrc) : TermSrc :=
+  foldWith (field s "items") (bool false) fun found it => orT found (field it "borrowed")
+
 /-! ## The steps -/
 
 /-- **The model's `lease`: lease or enrol**, as the term of a `Ref.modify` over the cell `s`.
@@ -154,5 +163,19 @@ on (decisions row 268). The count is the count of the helper that the close post
 def closeStep (s : TermSrc) : TermSrc :=
   app "pair" [tuple [notT (field s "closing"), len (field s "waiters")],
     recordSet s "closing" (bool true)]
+
+/-- **The model's `drain`: the closer's step** (decisions row 276, point 2), as the term of a
+`Ref.modify`. Reply: whether the pool is drained, which says that no lease is outstanding.
+Where a lease is outstanding, the closer enrols at the list's end, with its hint: each return's
+helper then wakes it, and it runs this step again. Otherwise no entry of the closer stays, and
+nothing else changes. The step changes the waiters alone.
+
+The closer's own entry leaves first, as a borrower's does in `leaseStep`. The step reads the
+items' flags and not `closing`: the close's first step runs before it. -/
+def drainStep (id hint s : TermSrc) : TermSrc :=
+  ifT (outstanding s)
+    (app "pair" [bool false,
+      recordSet s "waiters" (snoc (removeById (field s "waiters") id) (mkWaiter id hint))])
+    (app "pair" [bool true, withdrawn id s])
 
 end Effect4.Pool

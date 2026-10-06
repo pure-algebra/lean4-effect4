@@ -45,7 +45,9 @@ The fixtures use `posted`, `onInterrupt` and `waitAt` of `src/Effect4/Modules/Wa
 and the mask's builder. They do not use `waitRetry`: its own mask ends before the body's hook
 is installed. Two red controls of that mask stand before the engine's fixture: a lease in its
 own mask loses the lease, or it cannot be interrupted while it waits. The public `make` and
-`use` come with a later slice.
+`use` are the library's since (`src/Effect4/Modules/Pool/Ops.lean`), and
+`Test/Program/PoolPublic.lean` runs the cases over them. This battery stays as the first check
+of the cases: its fixtures write their rows inside the lease's loop and inside the helper.
 
 **The steps are the library's** (`src/Effect4/Modules/Pool/Steps.lean`): the lease step, the
 return step, the selection, the withdrawal and the close's first step. The cell is the

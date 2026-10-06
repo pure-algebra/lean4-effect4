@@ -12,8 +12,10 @@ falsifiers of the packet `Test/contracts/pool.contract.md`.
   a trace writes the schedule: which transition runs after which. Each trace reads the cell's
   lists that the machine gives on the same case (`Test/Program/PoolScenarios.lean`).
 - PP5 in its two forms: the low-level control at the count 2, and the public retry case.
-- PP7 with the close that waits: the close's first step, and the lease that the close waits
-  for. The model holds the close's first step alone.
+- PP7 with the close that waits: the close's first step, the closer's step, and the lease that
+  the close waits for.
+- The closer's step on four states, a closer that asks again, and its fault: a closer that
+  answers at once.
 - The profile: one red state for each condition, each transition on one input, and a lease by
   a request whose entry is present.
 - A stale lease's return, after the item was leased again.
@@ -149,21 +151,33 @@ def premise : State := (giveBack held 0 0).1
   rh.2 = (true, true) && s1.2 = [1] && view s1.1 = ([0], [], [], false, 1) &&
     a.2.2 = some ⟨0, 1, true, 1⟩ && view a.1 = ([], [(0, 1)], [], false, 2)
 
--- PP7, with the close that waits (decisions row 268). H holds and W, the request 1, waits.
--- The close's first step begins the close and counts one waiter. The selection at that count
--- takes W, and W's lease is refused. The lease of H is still outstanding: the close waits for
--- it. After H's return no lease is outstanding, and the item is idle in a closing pool. A
--- second close begins nothing.
+-- PP7, with the close that waits (decisions rows 268 and 276). H holds and W, the request 1,
+-- waits. The closer is the request 7. The close's first step begins the close and counts one
+-- waiter. The closer's step finds H's lease outstanding: it answers false, and the closer
+-- enrols behind W. The selection at the close's count takes W, and W's lease is refused. The
+-- lease of H is still outstanding: the close waits for it. H's return owes a wake, because the
+-- closer is enrolled. The selection at the count 1 takes the closer. The closer's step then
+-- finds no lease outstanding: it answers true, and the item is idle in a closing pool. A second
+-- close begins nothing.
 #guard
   let s := (lease (initial [1]) 9).1
   let waiting := (lease s 1).1
   let c := close waiting
-  let s1 := select c.1 c.2.2
+  let d1 := drain c.1 7
+  let s1 := select d1.1 c.2.2
   let w := lease s1.1 1
   let rh := giveBack w.1 0 0
-  c.2 = (true, 1) && s1.2 = [1] && w.2 = (true, none) && leases w.1 = [(0, 0)] &&
-    rh.2 = (true, false) && leases rh.1 = [] && view rh.1 = ([0], [], [], true, 1) &&
-    (close rh.1).2 = (false, 0)
+  let s2 := select rh.1 1
+  let d2 := drain s2.1 7
+  c.2 = (true, 1) && d1.2 = false && view d1.1 = ([], [(0, 0)], [1, 7], true, 1) &&
+    s1.2 = [1] && w.2 = (true, none) && leases w.1 = [(0, 0)] && w.1.waiters = [7] &&
+    rh.2 = (true, true) && leases rh.1 = [] && s2.2 = [7] && d2.2 = true &&
+    view d2.1 = ([0], [], [], true, 1) && (close d2.1).2 = (false, 0)
+-- With no holder the closer's first step answers true at once, and nobody enrols: PP1's close.
+#guard
+  let c := close (initial [1])
+  let d := drain c.1 7
+  c.2 = (true, 0) && d.2 = true && view d.1 = ([0], [], [], true, 0)
 
 /-! ## The profile -/
 
@@ -197,7 +211,7 @@ def inProfile (s : State) : Bool := decide (Profile s)
 -- Each transition keeps the profile on one input, and it keeps the items.
 def ops : List Op :=
   [.lease 1, .lease 4, .giveBack 0 0, .giveBack 0 5, .giveBack 3 0, .select 0, .select 1,
-   .select 5, .withdraw 2, .withdraw 9, .close]
+   .select 5, .withdraw 2, .withdraw 9, .close, .drain 7, .drain 1]
 
 #guard ops.all fun op =>
   inProfile (step held op) && inProfile (step premise op) && inProfile (step (close held).1 op)
@@ -238,6 +252,40 @@ def mayEnrol (s : State) : Bool := !s.closing && s.items.all (·.borrowed)
 #guard !mayEnrol premise && (lease premise 4).2 = (false, some ⟨0, 1, true, 1⟩) &&
   (lease premise 4).1.waiters = [1, 2]
 
+/-! ## The closer's step (`drain_waits`) -/
+
+/-- The right side of `drain_waits`, decided: no lease is outstanding. -/
+def drained (s : State) : Bool := decide (leases s = [])
+
+-- The step answers true exactly where no lease is outstanding, and the closer is enrolled
+-- after it exactly otherwise: at four states, for a closer with no entry and for one that
+-- waits already.
+#guard [held, premise, (close held).1, initial [1, 2]].all fun s =>
+  [7, 1].all fun id =>
+    (drain s id).2 == drained s && decide (id ∈ (drain s id).1.waiters) == !drained s
+#guard !drained held && drained premise && !drained (close held).1 && drained (initial [1, 2])
+-- At a state with a holder the closer enrols at the list's end, behind every waiter, and the
+-- step changes the waiters alone.
+#guard (drain held 7).1 = { held with waiters := [1, 2, 7] } && (drain held 7).2 = false
+-- A closer that asks again while it is enrolled: its first entry leaves, and its new entry
+-- joins the end. One identity waits once.
+#guard (drain (drain held 7).1 7).1.waiters = [1, 2, 7] && inProfile (drain (drain held 7).1 7).1
+#guard (drain held 1).1.waiters = [2, 1]
+-- At a state with no holder nothing changes, whatever waits: the idle item beside two waiters.
+#guard drain premise 7 = (premise, true)
+
+/-- Fault: a closer that answers at once. It is the close that does not wait (the card's
+section 9). -/
+def drainAtOnce (s : State) (id : Nat) : State × Bool := (withdraw s id, true)
+
+-- The property: the closer's step answers true only where no lease is outstanding
+-- (`drain_waits`). After the close's first step of PP7 the changed step answers true while H's
+-- lease is outstanding: a finalizer would run while H holds the item.
+#guard (drainAtOnce (close held).1 7).2 = true && leases (close held).1 = [(0, 0)] &&
+  (drain (close held).1 7).2 = false
+-- With no holder the two steps are one: the fault needs an outstanding lease.
+#guard drainAtOnce premise 7 = drain premise 7
+
 /-! ## A stale lease's return -/
 
 -- The lease 0 returns. The item is leased again, at the stamp 1. A second return of the lease
@@ -256,10 +304,10 @@ def mayEnrol (s : State) : Bool := !s.closing && s.items.all (·.borrowed)
 
 /-! ## The faults of the card's section 9 that the model can show
 
-Each fault is a changed transition or a changed trace, and it is red at its own property. Two
-more faults of that section are faults of the close that waits: a close that does not wait,
-and a cleanup reported as finished at a frontier. The model holds the close's first step
-alone, so they wait for the close's slice. -/
+Each fault is a changed transition or a changed trace, and it is red at its own property. The
+close that does not wait is the changed closer's step above (`drainAtOnce`). One more fault of
+that section is a fault of a run: a cleanup reported as finished at a frontier. The model has
+no run, so that fault waits for the law of a run. -/
 
 /-- Fault: a return that runs the item's finalizer. The item leaves the pool. -/
 def giveBackFinalizing (s : State) (i l : Nat) : State × Bool × Bool :=
@@ -367,6 +415,10 @@ counts are of this battery's tree, which holds no step of a proof. -/
 #guard_msgs in
 #print axioms initial_profile
 
+/-- info: 'Effect4.Pool.Model.drain_waits' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms drain_waits
+
 /--
 info: Effect4.Pool.Model.profile_closed: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.lease_enrols_iff: proved; nearest []; 0 lemmas, 0 definitions
@@ -374,10 +426,11 @@ Effect4.Pool.Model.select_takes_first: proved; nearest []; 0 lemmas, 0 definitio
 Effect4.Pool.Model.giveBack_front: proved; nearest []; 0 lemmas, 0 definitions
 Effect4.Pool.Model.giveBack_once: proved; nearest [Effect4.Pool.Model.giveBack_front]; 0 lemmas, 0 definitions
 Effect4.Pool.Model.close_refuses: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Pool.Model.drain_waits: proved; nearest []; 0 lemmas, 0 definitions
 next goals: 0
 -/
 #guard_msgs in
 #plan_status profile_closed lease_enrols_iff select_takes_first giveBack_front giveBack_once
-  close_refuses
+  close_refuses drain_waits
 
 end Test.Program.PoolContract

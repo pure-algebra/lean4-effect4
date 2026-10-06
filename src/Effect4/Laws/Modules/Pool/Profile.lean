@@ -12,7 +12,7 @@ request. No term, no cell and no machine occurs in this file.
 
 | Statement | What it says |
 | --- | --- |
-| `profile_closed` | each of the five transitions keeps the profile |
+| `profile_closed` | each of the six transitions keeps the profile |
 | `initial_profile` | the pool as it is made is of the profile, and its idle stamps are the numbers below its size |
 | `step_items` | no transition adds an item, removes one or changes a resource |
 | `lease_enrols_iff` | lease or enrol adds a waiter only when the pool is open and no item is idle |
@@ -20,6 +20,7 @@ request. No term, no cell and no machine occurs in this file.
 | `giveBack_front` | a return puts its item at the front, and it keeps every item |
 | `giveBack_once` | a lease that returned holds nothing: its second return changes nothing |
 | `close_refuses` | after the close's first step no lease begins |
+| `drain_waits` | the closer's step answers true exactly where no lease is outstanding |
 
 **An idle item beside enrolled waiters is a state of the profile.** No part of `Profile`
 relates `available` to `waiters`. A return makes its item idle at once, and the selection of
@@ -38,11 +39,11 @@ Placement.
 - **The selection's fact.** Concept `reactive-scheduling`, requirement R12. Its consumer is the
   proposed claim `pool-wake-selection`. Reach: one selection of the model. It states nothing
   about a run, and no liveness.
-- **The facts of a return and of the close's first step.** Concept
+- **The facts of a return, of the close's first step and of the closer's step.** Concept
   `scope-lifetime-finalization`, requirement R11. Their consumers are the proposed claims
   `pool-lease-return` and `pool-close-waits`. Reach: one transition of the model, and for the
   close every later transition. They state nothing about a finalizer's run, and no completed
-  close.
+  close. The closer's fact states one step: it gives no wait along a run.
 
 The pinned axiom and plan outputs and the finite controls are in
 `Test/Program/PoolContract.lean`.
@@ -263,7 +264,7 @@ theorem Profile.returnFront {s : State} (h : Profile s) {i l : Nat} {it0 : Item}
     rw [leaseSame]
     exact h.below it inside was
 
-/-! ## The five transitions -/
+/-! ## The six transitions -/
 
 theorem withdraw_profile {s : State} (h : Profile s) (id : Nat) : Profile (withdraw s id) :=
   h.waiters (h.distinct.sublist (without_sublist _ _))
@@ -293,6 +294,12 @@ theorem select_profile {s : State} (h : Profile s) (count : Nat) :
 theorem close_profile {s : State} (h : Profile s) : Profile (close s).1 :=
   ⟨h.stamps, h.idle, h.unheld, h.once, h.apart, h.below, h.distinct⟩
 
+theorem drain_profile {s : State} (h : Profile s) (id : Nat) : Profile (drain s id).1 := by
+  unfold drain
+  split
+  · exact h.waiters (enrol_nodup h.distinct id)
+  · exact withdraw_profile h id
+
 /-! ## The closure -/
 
 /-- **The first profile is closed.** Each transition of the model leaves a state of the
@@ -307,6 +314,7 @@ theorem profile_closed (s : State) (op : Op) (h : Profile s) : Profile (step s o
   | select count => exact select_profile h count
   | withdraw id => exact withdraw_profile h id
   | close => exact close_profile h
+  | drain id => exact drain_profile h id
 
 /-! ## The pool as it is made -/
 
@@ -406,6 +414,12 @@ theorem step_items (s : State) (op : Op) :
   | select count => rfl
   | withdraw id => rfl
   | close => rfl
+  | drain id =>
+    show (drain s id).1.items.map _ = _
+    unfold drain
+    split
+    · rfl
+    · rfl
 
 /-! ## The enrolment rule -/
 
@@ -562,6 +576,12 @@ theorem step_closing (s : State) (op : Op) (closed : s.closing = true) :
   | select count => exact closed
   | withdraw id => exact closed
   | close => rfl
+  | drain id =>
+    show (drain s id).1.closing = true
+    unfold drain
+    split
+    · exact closed
+    · exact closed
 
 /-- **After the close's first step no lease begins.** The step leaves a closing pool, it tells
 whether it began the close, and its count is the count of the waiters. At a closing pool every
@@ -574,6 +594,67 @@ theorem close_refuses (s : State) :
     (close s).1.closing = true ∧ (close s).2 = (!s.closing, s.waiters.length) ∧
       ∀ id, lease (close s).1 id = (withdraw (close s).1 id, true, none) :=
   ⟨rfl, rfl, fun id => lease_closed rfl id⟩
+
+/-! ## The closer's step -/
+
+/-- The borrowed items of a list are none exactly where no item is borrowed. The proof follows
+the list: the core lemmas of `filter` and `any` at the empty list reach `Classical.choice`. -/
+theorem borrowed_nil_iff : ∀ (items : List Item),
+    ((items.filter (·.borrowed)).map fun it => (it.stamp, it.lease)) = [] ↔
+      items.any (·.borrowed) = false
+  | [] => ⟨fun _ => rfl, fun _ => rfl⟩
+  | x :: xs => by
+    cases held : x.borrowed with
+    | true =>
+      rw [List.filter_cons_of_pos held, List.map_cons, List.any_cons, held, Bool.true_or]
+      exact ⟨fun wrong => absurd wrong (List.cons_ne_nil _ _),
+        fun wrong => Bool.noConfusion wrong⟩
+    | false =>
+      rw [List.filter_cons_of_neg (by rw [held]; exact Bool.false_ne_true), List.any_cons, held,
+        Bool.false_or]
+      exact borrowed_nil_iff xs
+
+/-- No lease is outstanding exactly where no item is borrowed. -/
+theorem leases_nil_iff (s : State) : leases s = [] ↔ s.items.any (·.borrowed) = false :=
+  borrowed_nil_iff s.items
+
+/-- Where a lease is outstanding, the closer's step enrols the closer, and it answers false. -/
+theorem drain_enrols {s : State} (id : Nat) (held : s.items.any (·.borrowed) = true) :
+    drain s id = ({ s with waiters := without s.waiters id ++ [id] }, false) := by
+  unfold drain
+  rw [if_pos held]
+
+/-- Where no lease is outstanding, the closer's step answers true, and no entry of the closer
+stays. -/
+theorem drain_drained {s : State} (id : Nat) (none : s.items.any (·.borrowed) = false) :
+    drain s id = (withdraw s id, true) := by
+  unfold drain
+  rw [if_neg (by rw [none]; exact Bool.false_ne_true)]
+
+/-- **The closer's step answers true exactly where no lease is outstanding** (decisions rows
+268 and 276, point 2). It enrols the closer exactly otherwise: the closer's own entry leaves
+first, so an entry after the step is this step's enrolment. The check and the enrolment are one
+transition, so each later return finds a waiter. The step changes the waiters alone: it frees no
+item, and it finalizes none. Consumer: the proposed claim `pool-close-waits`. It states one
+transition. It states no wait along a run, no progress of the closer and no finalizer's run. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem drain_waits (s : State) (id : Nat) :
+    ((drain s id).2 = true ↔ leases s = []) ∧
+      (id ∈ (drain s id).1.waiters ↔ leases s ≠ []) ∧
+      (drain s id).1 = { s with waiters := (drain s id).1.waiters } := by
+  cases held : s.items.any (·.borrowed) with
+  | true =>
+    have some : leases s ≠ [] := fun none => by
+      rw [(leases_nil_iff s).mp none] at held
+      exact Bool.false_ne_true held
+    rw [drain_enrols id held]
+    exact ⟨⟨fun wrong => absurd wrong Bool.false_ne_true, fun none => absurd none some⟩,
+      ⟨fun _ => some, fun _ => List.mem_append_right _ List.mem_cons_self⟩, rfl⟩
+  | false =>
+    have none : leases s = [] := (leases_nil_iff s).mpr held
+    rw [drain_drained id held]
+    exact ⟨⟨fun _ => none, fun _ => rfl⟩,
+      ⟨fun member => absurd rfl (mem_without.mp member).2, fun some => absurd none some⟩, rfl⟩
 
 /-! ## The predicate decides -/
 

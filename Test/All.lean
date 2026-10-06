@@ -195,6 +195,9 @@ import Test.Program.PoolSteps
 import Test.Program.PoolAgreement
 import Test.Program.PoolRelation
 import Test.Program.PoolEngine
+import Test.Program.PoolPublic
+import Test.Program.PoolOps
+import Test.Program.PoolTraces
 import Test.Program.ProgressContract
 import Test.Program.InvocationContract
 import Test.Program.HostSpecContract
@@ -240,6 +243,7 @@ import Test.Audit.ProofStyle
 import Test.Machine.StoreKernelBank
 import Test.Machine.MaskDiscipline
 import Test.Machine.MaskRuns
+import Test.Machine.MaskBracket
 import Test.Counterexamples.Machine.Runtime.ArmedFrontier
 import Test.Audit.Obligations
 import Test.Audit.SemanticsCensus

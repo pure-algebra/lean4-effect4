@@ -3,7 +3,7 @@ import Effect4.Laws.Modules.Pool.Profile
 import Effect4.Laws.Modules.Pool.Typing
 
 /-!
-# Pool's steps against the abstract model: the comparison (decisions rows 267 to 269)
+# Pool's steps against the abstract model: the comparison (rows 267 to 269 and 276)
 
 A comparison evaluates one step term of `src/Effect4/Modules/Pool/Steps.lean` on the encoding
 of a model state, and compares the whole result with the encoding of the model's transition
@@ -11,12 +11,12 @@ of a model state, and compares the whole result with the encoding of the model's
 
 The battery holds:
 
-- the named controls C1 to C6, on the states of the contract's traces;
-- every state of a finite universe of the profile, 130 states, with 17 moves on each;
+- the named controls C1 to C7, on the states of the contract's traces;
+- every state of a finite universe of the profile, 130 states, with 19 moves on each;
 - five states outside the profile: the comparison agrees there too, so no step goal needs the
   profile as a premise;
-- the red controls M1 to M4: one part of an expected result changed, and nothing else;
-- the faults F1 to F4 that a step can show. Each is a changed step term, red at its own
+- the red controls M1 to M5: one part of an expected result changed, and nothing else;
+- the faults F1 to F5 that a step can show. Each is a changed step term, red at its own
   property, and the checker types each as it types the library's step.
 
 Placement. Each comparison is a finite instance of a step goal of Pool's refinement (concept
@@ -154,6 +154,22 @@ def closeAgrees (s : State) : Verdict :=
   judge (Pool.closeStep (stateTerm table0 s))
     (app "pair" [tuple [bool r.2.1, nat r.2.2], stateTerm table0 r.1])
 
+def drainExpected (mutation : Mutation) (s : State) (id : Nat) : TermSrc :=
+  let r := Pool.Model.drain s id
+  let drained := match mutation with
+    | .flipReply => !r.2
+    | _ => r.2
+  let tb := match mutation with
+    | .keepHint => table0
+    | _ => table0.set id (var "fresh")
+  app "pair" [bool drained, stateTerm tb r.1]
+
+def drainTerm (s : State) (id : Nat) : TermSrc :=
+  Pool.drainStep (var (idName id)) (var "fresh") (stateTerm table0 s)
+
+def drainAgrees (s : State) (id : Nat) : Verdict :=
+  judge (drainTerm s id) (drainExpected .exact s id)
+
 /-! ## The named controls C1 to C6 -/
 
 /-- One item of the resource 1. The lease 0 holds it, and the requests 1 and 2 wait: the state
@@ -206,6 +222,16 @@ def half : State :=
 #guard (Pool.Model.close held).2 = (true, 2) && closeAgrees held = .agrees
 #guard (Pool.Model.close { held with closing := true }).2 = (false, 2) &&
   closeAgrees { held with closing := true } = .agrees
+-- C7. The closer's step. With a lease outstanding the closer enrols at the end, with the
+-- step's hint, and the reply is false. A closer whose entry is present enrols again at the
+-- end. With no lease outstanding the reply is true, and the cell stays as it is.
+#guard (Pool.Model.drain held 3) = ({ held with waiters := [1, 2, 3] }, false) &&
+  drainAgrees held 3 = .agrees
+#guard (Pool.Model.drain held 1).1.waiters = [2, 1] && drainAgrees held 1 = .agrees
+#guard (Pool.Model.drain premise 3) = (premise, true) && drainAgrees premise 3 = .agrees
+#guard (Pool.Model.drain premise 1).1.waiters = [2] && drainAgrees premise 1 = .agrees
+#guard drainAgrees { held with closing := true } 3 = .agrees &&
+  drainAgrees { premise with closing := true } 3 = .agrees
 
 /-! ## Every state of a finite universe of the profile
 
@@ -216,14 +242,14 @@ keeps a stale stamp of a last lease in three. The next stamp is 5. -/
 
 inductive Move
   | lease (id : Nat) | giveBack (item lease : Nat) | select (count : Nat) | withdraw (id : Nat)
-  | close
+  | close | drain (id : Nat)
   deriving Repr
 
 def moves : List Move :=
   [.lease 1, .lease 2, .lease 3,
    .giveBack 0 0, .giveBack 0 1, .giveBack 0 3, .giveBack 1 1, .giveBack 1 3, .giveBack 2 0,
    .select 0, .select 1, .select 2, .select 5,
-   .withdraw 1, .withdraw 2, .withdraw 3, .close]
+   .withdraw 1, .withdraw 2, .withdraw 3, .close, .drain 1, .drain 3]
 
 def Move.verdict (s : State) : Move → Verdict
   | .lease id => leaseAgrees s id
@@ -231,6 +257,7 @@ def Move.verdict (s : State) : Move → Verdict
   | .select count => selectAgrees s count
   | .withdraw id => withdrawAgrees s id
   | .close => closeAgrees s
+  | .drain id => drainAgrees s id
 
 def Move.next (s : State) : Move → State
   | .lease id => (Pool.Model.lease s id).1
@@ -238,6 +265,7 @@ def Move.next (s : State) : Move → State
   | .select count => (Pool.Model.select s count).1
   | .withdraw id => Pool.Model.withdraw s id
   | .close => (Pool.Model.close s).1
+  | .drain id => (Pool.Model.drain s id).1
 
 /-- The items of the universe, each list with the orders of its idle stamps: 13 pairs. -/
 def itemLists : List (List Item × List Nat) :=
@@ -271,10 +299,14 @@ def disagreements : List (State × Nat) :=
   profileStates.flatMap fun s => moves.zipIdx.filterMap fun (m, i) =>
     if m.verdict s = .agrees then none else some (s, i)
 
-#guard itemLists.length = 13 && profileStates.length = 130 && moves.length = 17
+#guard itemLists.length = 13 && profileStates.length = 130 && moves.length = 19
 #guard closed
--- All 2,210 comparisons agree.
-#guard disagreements.isEmpty && profileStates.length * moves.length = 2210
+-- All 2,470 comparisons agree.
+#guard disagreements.isEmpty && profileStates.length * moves.length = 2470
+-- The universe holds both answers of the closer's step: 70 states with a lease outstanding,
+-- and 60 with none.
+#guard (profileStates.filter fun s => (Pool.Model.drain s 3).2).length = 60 &&
+  (profileStates.filter fun s => !(Pool.Model.drain s 3).2).length = 70
 -- The universe holds an idle item beside enrolled waiters at an open pool: 40 such states.
 #guard (profileStates.filter fun s =>
   !s.available.isEmpty && !s.waiters.isEmpty && !s.closing).length = 40
@@ -297,7 +329,7 @@ def outside : List State :=
 #guard outside.all fun s => !inProfile s
 #guard outside.all fun s => moves.all fun m => m.verdict s = .agrees
 
-/-! ## The red controls M1 to M4: one part of an expected result changed -/
+/-! ## The red controls M1 to M5: one part of an expected result changed -/
 
 -- M1. C1's expected result with the other first Boolean.
 #guard judge (leaseTerm reused 3) (leaseExpected .flipReply reused 3) = .differs
@@ -313,12 +345,18 @@ def outside : List State :=
 #guard judge (returnTerm half 1 1) (returnExpected .backOrder half 1 1) = .differs
 -- With no other idle stamp the two orders are one.
 #guard judge (returnTerm held 0 0) (returnExpected .backOrder held 0 0) = .agrees
+-- M5. The closer's expected result with the other Boolean, and with the table left as it was
+-- where the closer enrols: the stored hint is the step's.
+#guard judge (drainTerm held 3) (drainExpected .flipReply held 3) = .differs
+#guard judge (drainTerm held 3) (drainExpected .keepHint held 3) = .differs
+-- A closer that does not enrol does not read the table's change.
+#guard judge (drainTerm premise 3) (drainExpected .keepHint premise 3) = .agrees
 
-/-! ## The faults F1 to F4, as changed step terms
+/-! ## The faults F1 to F5, as changed step terms
 
 Each fault is red at its own property. The checker types each changed step at the type of the
-library's step, so typing alone does not catch it. F1 and F2 are faults of the card's section
-9. F3 is the order of reuse of decisions row 269. F4 is a return that does not name its
+library's step, so typing alone does not catch it. F1, F2 and F5 are faults of the card's
+section 9. F3 is the order of reuse of decisions row 269. F4 is a return that does not name its
 lease. The two other faults of a wake in that section are faults of a schedule, and
 `Test/Program/PoolContract.lean` and `Test/Program/PoolScenarios.lean` hold them. -/
 
@@ -450,5 +488,28 @@ def again : State := { items := [⟨0, 1, true, 1⟩], next := 2 }
     (returnUncheckedStep (var "i") (var "l") (var "s")) =
   typeOf ["i", "l", "s"] [.nat, .nat, Pool.cellTy .nat]
     (Pool.returnStep (var "i") (var "l") (var "s")))
+
+/-- F5. A closer that answers at once: the close that does not wait. -/
+def drainAtOnceStep (id _hint s : TermSrc) : TermSrc :=
+  app "pair" [bool true, Pool.withdrawn id s]
+
+-- The property: the closer's step answers true only where no lease is outstanding
+-- (`drain_waits`). At the held state the library's step answers false, and it stores the
+-- closer's entry. The changed step answers true while the lease 0 is outstanding.
+#guard evalAt (tupleAt (drainTerm held 3) 0) = some (.bool false) &&
+  evalAt (len (field (tupleAt (drainTerm held 3) 1) "waiters")) = some (.nat 3)
+#guard evalAt (tupleAt (drainAtOnceStep (var (idName 3)) (var "fresh") (stateTerm table0 held)) 0) =
+  some (.bool true)
+#guard judge (drainAtOnceStep (var (idName 3)) (var "fresh") (stateTerm table0 held))
+  (drainExpected .exact held 3) = .differs
+-- Over the universe it differs exactly where a lease is outstanding.
+#guard profileStates.all fun s => [1, 3].all fun id =>
+  (judge (drainAtOnceStep (var (idName id)) (var "fresh") (stateTerm table0 s))
+      (drainExpected .exact s id) != .agrees) == !(Pool.Model.drain s id).2
+-- Typing does not catch it.
+#guard decide (typeOf ["id", "hint", "s"] [idTy, idTy, Pool.cellTy .nat]
+    (drainAtOnceStep (var "id") (var "hint") (var "s")) =
+  typeOf ["id", "hint", "s"] [idTy, idTy, Pool.cellTy .nat]
+    (Pool.drainStep (var "id") (var "hint") (var "s")))
 
 end Test.Program.PoolAgreement

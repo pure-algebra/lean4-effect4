@@ -15,7 +15,8 @@ Pool's steps need beside them.
   pass `removeById` (`reads_removeById`), at a waiter's record.
 - **The table's one change frames every other request** (`waiters_renew`).
 - **The passes** of `src/Effect4/Modules/Pool/Steps.lean` on the encoding of a model state: the
-  front idle stamp, the two folds of a lease, and the two folds of a return.
+  front idle stamp, the two folds of a lease, the two folds of a return, and the fold of the
+  closer's step.
 - **Two facts of Pool's own definitions** put a fold's answer in the model's form: the first
   entry's fold is the front stamp (`front_headD`), and the fold that keeps the leased item is
   the model's `leased` (`leased_flatMap`).
@@ -25,7 +26,7 @@ its own. Its rule holds at every scope, so it is applied under the outer fold's 
 depth that `depth_under` gives.
 
 Placement. Concept `translation-simulation`, requirement R10. Every lemma here is a helper of
-the five step goals (`src/Effect4/Laws/Modules/Pool/Steps.lean`), parts of the proposed claim
+the six step goals (`src/Effect4/Laws/Modules/Pool/Steps.lean`), parts of the proposed claim
 `pool-expansion-agrees`. Its consumer is the proof of a step goal. The lemmas establish nothing
 of a model's transition by themselves.
 -/
@@ -313,6 +314,21 @@ theorem reads_freed {i l s : TermSrc} (tb : Table) (res : Nat → Val) (state : 
         rw [holds, if_neg Bool.false_ne_true, if_neg Bool.false_ne_true, List.map_append]
         rfl
   exact folded.to (by rw [foldl_snoc_map, List.nil_append]; rfl)
+
+/-- `outstanding`: whether a lease is outstanding, on the encoding of a model state. -/
+theorem reads_outstanding {s : TermSrc} (tb : Table) (res : Nat → Val) (state : State)
+    (depth : vals.length = env.names.length)
+    (hs : Reads s env path vals (cellVal tb res state)) :
+    Reads (Pool.outstanding s) env path vals (Val.bool (state.items.any (·.borrowed))) := by
+  have folded := reads_foldWith_model (itemVal res) Val.bool
+    (fun found it => found || it.borrowed) state.items false ⟨0, 0, false, 0⟩
+    (reads_field hs (cell_items _ _ _ _ _)) (reads_bool false env path vals)
+    (body := fun found it => orT found (field it "borrowed"))
+    fun found x =>
+      reads_orT (reads_minted_acc depth path (Val.bool found) (itemVal res x))
+        (reads_field (reads_minted_item depth path (Val.bool found) (itemVal res x))
+          (item_borrowed _ _ _ _))
+  exact folded.to (by rw [foldl_or_any, Bool.false_or])
 
 /-- A waiter's record, built from an identity and a hint. -/
 theorem reads_mkWaiter {id hint : TermSrc} {i h : Val} (hid : Reads id env path vals i)

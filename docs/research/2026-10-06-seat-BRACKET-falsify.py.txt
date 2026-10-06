@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+"""Seat BRACKET's falsified copy of the battery `Test/Machine/MaskBracket.lean` (2026-10-06).
+
+Filed with the receipt `docs/research/2026-10-06-seat-BRACKET-receipt.md`. It is no tool of the
+tree: the name ends in `.txt` so that nothing runs it in place. Copy it to a scratch folder as
+`falsify.py` first. Its two functions are seat LIFT's
+(`docs/research/2026-10-06-seat-LIFT-falsify.py.txt`), and the list `PROVED` is this battery's.
+
+It changes every check of the battery so that the check must fail. Then it reads Lean's errors
+on the changed copy and asks for one at each changed check, and for none elsewhere. A check
+that stays green in the copy is a check that tests nothing.
+
+- each `#guard e` becomes `#guard !(e)`;
+- each pinned output's expected text gains a letter;
+- each proved control is changed at one named place (the list `PROVED` below).
+
+Usage, from the worktree, with `OUT` a scratch folder:
+
+    python3 falsify.py write Test/Machine/MaskBracket.lean OUT
+    lake env lean -M6144 -DwarningAsError=true -DmaxErrors=1000 OUT/battery-red.lean \\
+        > OUT/battery-red.log 2>&1        # through the Lean slot; it exits 1
+    python3 falsify.py compare OUT        # exits 0 when each changed check is red
+
+Lean stops at 100 errors by default, so the option `maxErrors` is needed.
+"""
+import json
+import re
+import sys
+
+# (anchor that opens the command, old text inside the command, new text). In the file's order.
+PROVED = [
+    # part A
+    ("theorem ends_needs_unanswered", "h true ⟨.success 0, [handler], true, none, false⟩", "h true ⟨.success 0, [handler], false, none, false⟩"),
+    ("theorem above_at_entry_not_base", "(h true false false [] [.setInterruptible true] (by decide) (by decide))", "(h true true true [] [] (by decide) (by decide))"),
+    ("theorem above_needs_one_base", "(h true false false true [] [] (by decide) (by decide))", "(h true true true true [] [] (by decide) (by decide))"),
+    # part B
+    ("theorem flag_needs_stack", "h [true] [true] atEntry inRegion", "h [true] [true] atEntry atEntry"),
+    ("example : ∀ f ∈ atEntry.fibers, ∀ g ∈ inRegion.fibers,", "RegionEnds f.frame g.frame [.setInterruptible true] .contA false none := by", "RegionEnds f.frame g.frame [] .contA false none := by"),
+    ("theorem bracket_needs_live", "h [true] [true] atEntry exited", "h [true] [true] atEntry atEntry"),
+    # part C
+    ("example (id fiber : FiberId) (y : Bool) :\n    Steps id (Cmd.loop fiber y : NCmd)", "steppedBy (Cmd.loop fiber y : NCmd) = some id :=", "steppedBy (Cmd.loop fiber y : NCmd) = none :="),
+    ("example (id fiber : FiberId) (y : Bool) :\n    Steps id (Cmd.deliver fiber y : NCmd)", "steppedBy (Cmd.deliver fiber y : NCmd) = some id :=", "steppedBy (Cmd.deliver fiber y : NCmd) = none :="),
+    ("example (p : NativeEff) (n : Nat) :", "∃ bases, [true] <+: bases ∧ LoopCut p [] bases", "∃ bases, [false] <+: bases ∧ LoopCut p [] bases"),
+    ("example (p : NativeEff) (bases : List Bool) (m : NativeMachine) (cmds : List NCmd)\n    (cut : LoopCut p [] bases m cmds) (id : FiberId) (y : Bool)", "(pending : Cmd.loop id y ∈ cmds)", "(pending : Cmd.evaluate id ∈ cmds)"),
+    ("example (p : NativeEff) (bases bases' : List Bool) (m m' : NativeMachine)", "f.frame.stack Effect4.Arm.contA false).interruptible =\n      f.frame.interruptible :=", "f.frame.stack Effect4.Arm.contA false).interruptible =\n      !f.frame.interruptible :="),
+    ("example : ∀ (base entry flag : Bool) (above below : List P), MaskChain base flag (above ++ below) →", "MaskChain base entry below → MaskChain entry flag above :=", "MaskChain base entry below → MaskChain base flag above :="),
+    ("example : ∀ (interp : PrimInterp Nat Nat Nat Nat Nat Nat Nat) (f : F) (below : List P) (next : F),", "FrameStep.running (next.under below) :=", "FrameStep.running next :="),
+    ("example : ∀ (bases bases' : List Bool) (m m' : M) (f g : R) (above : List P), MaskRuns bases m →", "MaskChain f.frame.interruptible g.frame.interruptible above :=", "MaskChain g.frame.interruptible f.frame.interruptible above :="),
+]
+
+
+def write(src, out):
+    text = open(src).read()
+    lines = text.split("\n")
+    result = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("#guard ") or line == "#guard":
+            j = i + 1
+            while j < len(lines) and (lines[j].startswith(" ") and lines[j].strip() != ""):
+                j += 1
+            expr = "\n".join([line[len("#guard"):]] + lines[i + 1:j])
+            result.extend(("#guard !(" + expr.strip("\n") + ")").split("\n"))
+            i = j
+            continue
+        result.append(line)
+        i += 1
+    text2 = "\n".join(result)
+
+    def pin(m):
+        return m.group(0).replace("info: ", "info: X", 1)
+
+    text2, n_pins = re.subn(r"/--\s*info: (?:(?!-/).|\n)*?-/\n#guard_msgs in", pin, text2)
+    starts = []
+    last = -1
+    for anchor, old, new in PROVED:
+        a = text2.find(anchor)
+        if a < 0:
+            sys.exit("anchor not found: " + anchor[:60])
+        if a <= last:
+            sys.exit("anchors out of order: " + anchor[:60])
+        last = a
+        b = text2.find(old, a)
+        if b < 0 or b - a > 1500:
+            sys.exit("old text not found near anchor: " + old[:60])
+        text2 = text2[:b] + new + text2[b + len(old):]
+        starts.append(a)
+    open(out + "/battery-red.lean", "w").write(text2)
+    out2 = text2.split("\n")
+    guards = [k + 1 for k, l in enumerate(out2) if l.startswith("#guard !(")]
+    pins = [k + 1 for k, l in enumerate(out2) if l.startswith("#guard_msgs in")]
+    proved = []
+    for a in starts:
+        first = text2.count("\n", 0, a) + 1
+        last_line = first
+        while last_line < len(out2) and out2[last_line].strip() != "":
+            last_line += 1
+        proved.append([first, last_line])
+    json.dump({"guards": guards, "pins": pins, "proved": proved}, open(out + "/battery-red.json", "w"))
+    authored = len(re.findall(r"^(?:private )?(?:theorem|example)\b", text, flags=re.M))
+    print("guards", len(guards), "pins", len(pins), "changed pins", n_pins,
+          "proved controls changed", len(starts), "of", authored, "proved items")
+
+
+def compare(out):
+    m = json.load(open(out + "/battery-red.json"))
+    log = open(out + "/battery-red.log").read()
+    if "maximum number of errors" in log:
+        sys.exit("Lean stopped at its error limit: run it with -DmaxErrors=1000")
+    errors = sorted({int(x) for x in re.findall(r"battery-red\.lean:(\d+):\d+: error", log)})
+    guards, pins, proved = set(m["guards"]), set(m["pins"]), m["proved"]
+    hit_guards, hit_pins, hit_proved, stray = set(), set(), set(), []
+    for line in errors:
+        if line in guards:
+            hit_guards.add(line)
+        elif line in pins:
+            hit_pins.add(line)
+        else:
+            owner = [i for i, (a, b) in enumerate(proved) if a <= line <= b]
+            if owner:
+                hit_proved.add(owner[0])
+            else:
+                stray.append(line)
+    print("errors", len(errors))
+    print("guards", len(hit_guards), "of", len(guards))
+    print("pins", len(hit_pins), "of", len(pins))
+    print("proved", len(hit_proved), "of", len(proved))
+    print("stray", stray)
+    missing = (sorted(guards - hit_guards) + sorted(pins - hit_pins)
+               + [proved[i][0] for i in range(len(proved)) if i not in hit_proved])
+    print("missing", missing)
+    sys.exit(0 if not stray and not missing else 1)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 4 and sys.argv[1] == "write":
+        write(sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 3 and sys.argv[1] == "compare":
+        compare(sys.argv[2])
+    else:
+        sys.exit(__doc__)

@@ -118,6 +118,8 @@ def registry : Registry where
         -- introduction form: each consumer is a node of R4 (seat QTYPES, decisions row 257).
         -- The judgment's file names no module since seat MOVE
         `Effect4.Laws.Modules.Checking,
+        -- a term at a declared type (`ascribe`): its typing laws' two steps (seat WORKQ)
+        `Effect4.Laws.Modules.Ascribe,
         `Effect4.Laws.Modules.Waiting,
         `Effect4.Laws.Modules.Pool.Typing,
         `Effect4.Laws.Modules.Pool.Profile,
@@ -145,7 +147,11 @@ def registry : Registry where
         -- at the compiled program's interpreter, and each entry that returns a machine
         `Effect4.Laws.Machine.MaskRuns,
         `Effect4.Laws.Program.MaskRuns,
-        `Effect4.Laws.Api.MaskRuns
+        `Effect4.Laws.Api.MaskRuns,
+        -- the bracket of a region: its general form over two machines that hold the chain's
+        -- invariant, and its pointer at the cuts of a compiled command loop (seat BRACKET)
+        `Effect4.Laws.Machine.MaskBracket,
+        `Effect4.Laws.Program.MaskBracket
       ] },
     { id := "reactive-scheduling"
       title := "Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants"
@@ -210,6 +216,7 @@ def registry : Registry where
         `Effect4.Laws.Modules.Pool.Relation,
         `Effect4.Laws.Modules.Pool.Reading,
         `Effect4.Laws.Modules.Pool.Steps,
+        `Effect4.Laws.Modules.Pool.Ops,
         `Effect4.Laws.Modules.Semaphore.Relation,
         `Effect4.Laws.Modules.Semaphore.Reading,
         `Effect4.Laws.Modules.Semaphore.Steps,
@@ -392,6 +399,12 @@ def registry : Registry where
     { id := "saved-mask-chain-runs", concept := "scope-lifetime-finalization", role := .preservation
       title := "Each live fiber of a run of a compiled program holds the saved mask's chain at its start flag: the invariant MaskRuns, at a table of start flags, is kept by every decision tape and fuel at the compiled program's interpreter, from each machine that holds it; each command keeps it under the condition just before a clearing, which the command loop discharges, so each entry outside the machine that returns a machine keeps it, with no premise for the condition (the lift of saved-mask-pop-discipline to runs; no typing, no admission and no premise on the table; no bracket of a region, no flag or stack of an exited fiber, no cleanup's multiplicity, no delivery, no budget, no liveness)"
       pointer := .witness `Effect4.Program.compiled_mask_chain_runs },
+    { id := "saved-mask-region-bracket", concept := "scope-lifetime-finalization", role := .preservation
+      title := "A region of a compiled program ends at its entry's stack and at its entry flag, for an arbitrary body: at two cuts of one command loop's run where a pending command steps the fiber, the later cut's stack shape above ++ below is a premise, and it is the region's only mark on the machine; the theorem then gives the entry's stack and the entry flag at the region's end, which is the fiber that the pop of the own frames leaves where no own frame answers, and the pop goes on from it; it does not give that a body's run keeps that shape (the run-level half of saved-mask-restoration; no premise on an exit, by stepped-fiber-live; no cleanup, no release count, no delivery, no budget, no liveness; nothing of a region whose fiber exits inside it; the client premise of the mask's derived form stays: nothing acquired or registered before the body begins, decisions rows 227, 244 to 246)"
+      pointer := .witness `Effect4.Program.compiled_region_bracket },
+    { id := "stepped-fiber-live", concept := "scope-lifetime-finalization", role := .inversion
+      title := "At each cut of a compiled command loop, a fiber that a pending command steps has not exited: the guard's queue gives the fiber of each pending Cmd.loop and Cmd.deliver as running, and the guard's state gives each exited fiber as not running (every program and row table, each machine and pending commands that hold GuardState and GuardQueue; false at a hand-written interpreter; no statement that a fiber is stepped, and nothing of a fiber that no pending command steps)"
+      pointer := .witness `Effect4.Program.stepped_live },
     { id := "pool-return-front", concept := "scope-lifetime-finalization", role := .inversion
       title := "A return of a lease that holds its item puts the item at the front of the idle items, keeps every item, and leaves the lease holding nothing (a helper of pool-lease-return; no finalizer's run)"
       pointer := .witness `Effect4.Pool.Model.giveBack_front },
@@ -401,6 +414,9 @@ def registry : Registry where
     { id := "pool-close-refuses", concept := "scope-lifetime-finalization", role := .inversion
       title := "After the close's first step of Pool's model every lease is refused, and a refused lease changes no item (a helper of pool-close-waits; no wait for a lease and no finalizer's run; decisions row 268)"
       pointer := .witness `Effect4.Pool.Model.close_refuses },
+    { id := "pool-drain-waits", concept := "scope-lifetime-finalization", role := .inversion
+      title := "The closer's step of Pool's model answers that the pool is drained exactly when no lease is outstanding, it enrols the closer exactly otherwise, and it changes the waiters alone (a helper of pool-close-waits; one transition: no wait along a run, no progress of the closer and no finalizer's run; decisions rows 268 and 276)"
+      pointer := .witness `Effect4.Pool.Model.drain_waits },
 
     -- 4. reactive-scheduling
     { id := "machine-typed-not-halted", concept := "reactive-scheduling", role := .inversion
@@ -742,7 +758,7 @@ def registry : Registry where
       title := "The machine after a position of a journal's tape is the raw replay of the decisions up to it, from the run's own machine (any run, any rows and any position; nothing about a stopped row's machine, a session ledger or a generated engine)"
       pointer := .witness `Test.Dogfood.Scenario.tapeFrom_position_replays },
     { id := "pool-steps-agree", concept := "translation-simulation", role := .simulation
-      title := "Each of Pool's five step terms agrees with the abstract model's step on every model state: the reply, the stored value through the encoding table, and the selected waiters' records (a part of pool-expansion-agrees; no order of the wake across helpers, no cancellation law, no close that waits, no liveness, no wrapper and no host; decisions rows 267 to 269)"
+      title := "Each of Pool's six step terms agrees with the abstract model's step on every model state: the reply, the stored value through the encoding table, and the selected waiters' records (a part of pool-expansion-agrees; the sixth is the closer's step of decisions row 276, point 2; no order of the wake across helpers, no cancellation law, no wait of the close along a run, no liveness, no wrapper and no host; decisions rows 267 to 269 and 276)"
       pointer := .witness `Effect4.Pool.Model.pool_steps_agree },
     { id := "queue-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of the Queue's six step terms agrees with the abstract model's step on the first profile: the reply, the stored value through the encoding table, and the ordered signals (a part of queue-expansion-agrees; no delivery, no cancellation law, no liveness, no wrapper and no host; decisions row 255)"
@@ -960,13 +976,13 @@ def registry : Registry where
         `Effect4.ScopeMachine.runState_prefix, `Effect4.Scope.close_twice,
         `Effect4.Scope.close_reentrant_add, `Effect4.Scope.closeOrder_eq,
         `Effect4.Program.Typed.saved_mask_restoration]
-      openParts := ["pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once and close_refuses (decisions rows 267, 268)",
+      openParts := ["pool-lease-return and pool-close-waits (proposed claims; scope-lifetime-finalization): a committed lease returns its item at most once, and exactly once where its exit ended; the close ends only after every lease returned, and each item is then finalized once; the model's facts are giveBack_front, giveBack_once, close_refuses and drain_waits (decisions rows 267, 268 and 276)",
         "the whole run open: release at most once per registration, counted by identity (DB-07)",
         "the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)",
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
         "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
-        "the bracket of a region (scope-lifetime-finalization; the run-level half of saved-mask-restoration): a region that changes no flag ends with its entry flag, for an arbitrary body; the invariant of runs is proved (saved-mask-chain-runs): along a run a live fiber's flag is a function of its stack (MaskRuns.flag_eq, the field sameFlag of saved_mask_chain_runs); the bracket's own fact stays open, that the body's run returns to the entry's stack, at a fiber that is live at both cuts, which no theorem states at a cut; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the bracket",
-        "semaphore-protected-permit (proposed claim; scope-lifetime-finalization): across every prefix of a run a committed activation of Semaphore's protected form releases at most once; an activation whose exit has completed through its cleanup has released exactly once, with enough work for the cleanup or a retained frontier; while the cleanup has not completed, the release obligation stays in the observation, and a frontier is no completed exit; the form is one mask over the take's loop, the hook and the body at the restore site (protectedBy), scoped and typed (protectedBy_has, withPermits_types); no goal states a clause, and each waits for the bracket of a region; finite controls: a take in its own mask loses its permit under an interruption, a wait inside a mask of the form's making cannot be interrupted, and the stand-in for the mask fails under a masked caller (Test/Program/SemaphoreTraces.lean, traces 4, 5 and 8); Pool's lease is the second user (decisions rows 222, 259, 276)",
+        "the carrying fact of a region (scope-lifetime-finalization, serving saved-mask-region-bracket): the stack shape above ++ below is kept along the fiber machine's evaluator arms and commands while the fiber is inside the region, until the command that ends it; the bracket takes the shape as a premise at the later cut; its statement elaborates and a finite probe on eight runs finds no counterexample (docs/research/2026-10-06-seat-BRACKET-carry.lean.txt); the frame machine's own step keeps the shape (step_under); no goal states it",
+        "semaphore-protected-permit (proposed claim; scope-lifetime-finalization): across every prefix of a run a committed activation of Semaphore's protected form releases at most once; an activation whose exit has completed through its cleanup has released exactly once, with enough work for the cleanup or a retained frontier; while the cleanup has not completed, the release obligation stays in the observation, and a frontier is no completed exit; the form is one mask over the take's loop, the hook and the body at the restore site (protectedBy), scoped and typed (protectedBy_has, withPermits_types); no goal states a clause, and each waits for the carrying fact of a region; finite controls: a take in its own mask loses its permit under an interruption, a wait inside a mask of the form's making cannot be interrupted, and the stand-in for the mask fails under a masked caller (Test/Program/SemaphoreTraces.lean, traces 4, 5 and 8); Pool's lease is the second user (decisions rows 222, 259, 276)",
         "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222); the Queue model's half of its first clause is proved on the first profile (queue-first-step-invariant), and the wrapper's run stays open"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]

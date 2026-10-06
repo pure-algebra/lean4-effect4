@@ -1719,6 +1719,115 @@ theorem protectedBy_has {acquire : (Src NativeOp → Src NativeOp) → Src Nativ
 
 end Pieces
 
+/-! ## More rules: a caller's program in a sequence, a finalizer, a fiber's own interruption
+
+Their first consumer is Pool (`src/Effect4/Laws/Modules/Pool/Ops.lean`; decisions rows 267 and
+279). `Pool.make` runs a caller's acquisition and registers a finalizer, so it is typed at any
+effect type. `Pool.use` reads two fields of the leased item's record. A borrow at a closed pool
+fails with the interruption of its own fiber.
+
+Placement. Concept `store-typing`, requirement R4: helpers of Pool's typing statements. The
+three scope rules of the words: concept `initial-algebras-folds`, requirement R4, helpers of the
+scope law of Pool's initial value. Reach: the checker's judgment `effTy` at every typed scope,
+and every scope of names. They establish no run and no behaviour. -/
+
+section Further
+
+/-- **`andThen`, at any effect types**: the second program stands under the binder of the
+first's discarded answer. The errors join and the requirements union. -/
+theorem has_andThen {first rest : Src NativeOp} {s : TypedScope} {f r : EffTy}
+    (hfirst : Has sig first s f) (hrest : Has sig rest (s.push .answer f.answer) r) :
+    Has sig (andThen first rest) s
+      ⟨r.answer, f.error.join r.error, f.requires.union r.requires⟩ := by
+  intro path
+  obtain ⟨a, treeA, typedA⟩ := hfirst (path ++ [0])
+  obtain ⟨b, treeB, typedB⟩ := hrest (path ++ [1])
+  have treeB' : rest (s.env.push [s.env.mint "answer"]) (path ++ [1]) = .ok b := treeB
+  refine ⟨.bind a b, ?_, effTy_complete sig _ _ _
+    (.bind (effTy_sound sig a _ _ typedA) (effTy_sound sig b _ _ typedB))⟩
+  show (first s.env (path ++ [0]) >>= fun x0 =>
+    rest (s.env.push [s.env.mint "answer"]) (path ++ [1]) >>=
+      fun x1 => Except.ok (Eff.bind x0 x1)) = _
+  rw [treeA, treeB']
+  rfl
+
+/-- **`acquireRelease`, under two minted names**: the acquired value's name and the closing
+exit's name are minted at the node's scope. The node has the acquisition's answer and failure
+type. The release is typed under both names, and it cannot fail. The requirement gains the
+scope's service: the release is a finalizer of the scope that the program runs in
+(`HasTy.acquireRelease`, `src/Effect4/Laws/Program/Typing/HasTy.lean`). -/
+theorem has_acquireRelease {acquire release : Src NativeOp} {s : TypedScope} {a r : EffTy}
+    (hacquire : Has sig acquire s a)
+    (hrelease : Has sig release (s.push2 .answer .exit a.answer (.exitOf .unknown .unknown)) r)
+    (total : r.error.normalize = .never) :
+    Has sig (acquireRelease (s.env.mint "answer") (s.env.mint "exit") acquire release) s
+      ⟨a.answer, a.error,
+        (a.requires.union r.requires).union (Requirement.single sig.scopeKey)⟩ := by
+  intro path
+  obtain ⟨x, treeX, typedX⟩ := hacquire (path ++ [0])
+  obtain ⟨y, treeY, typedY⟩ := hrelease (path ++ [1])
+  have treeY' : release (s.env.push [s.env.mint "answer", s.env.mint "exit"]) (path ++ [1]) =
+      .ok y := treeY
+  refine ⟨.acquireRelease x y, ?_, effTy_complete sig _ _ _
+    (.acquireRelease (effTy_sound sig x _ _ typedX) (effTy_sound sig y _ _ typedY) total)⟩
+  show (acquire s.env (path ++ [0]) >>= fun x0 =>
+    release (s.env.push [s.env.mint "answer", s.env.mint "exit"]) (path ++ [1]) >>=
+      fun x1 => Except.ok (Eff.acquireRelease x0 x1)) = _
+  rw [treeX, treeY']
+  rfl
+
+/-- **The fiber's own id is a number** (`ActionHasTy.getId`). -/
+theorem answers_getId (s : TypedScope) : Answers sig (withFiber Action.getId) s .nat :=
+  fun _ => ⟨.withFiber .getId, rfl, effTy_complete sig _ _ _ (.withFiber .getId)⟩
+
+/-- **A failure with a numbered fiber's interruption answers nothing, and it has no failure
+type**: an interruption is outside the failure column (`causeTy`,
+`src/Effect4/Program/Typing/Rules.lean`). It requires nothing. -/
+theorem answers_interrupt {who : TermSrc} {s : TypedScope} (hwho : Typed sig who s .nat) :
+    Answers sig (failCause (Authoring.Cause.interrupt (some who))) s .never := by
+  intro path
+  obtain ⟨t, tree, typed⟩ := hwho path false
+  have cause : causeTy sig s.types (.interrupt (some t)) = some Ty.never := by
+    unfold causeTy
+    rw [show termTy sig s.types t = some Ty.nat from typed]
+    rfl
+  refine ⟨.failCause (.interrupt (some t)), ?_,
+    effTy_complete sig _ _ _ (.failCause (ty := .never) cause)⟩
+  show (((who s.env path >>= fun x => Except.ok (some x)) >>= fun x0 =>
+    Except.ok (CauseTerm.interrupt x0)) >>= fun x0 => Except.ok (Eff.failCause x0)) = _
+  rw [tree]
+  rfl
+
+/-- A field of a kept record is kept: the read stands under the binders with its target. -/
+theorem Kept.field {target : TermSrc} {name : String} {s : TypedScope} {R T : Ty}
+    (h : Kept sig target s R) (declared : Record.fieldType false R name = some T) :
+    Kept sig (field target name) s T :=
+  fun t reach path _ => types_field (h t reach path false) declared
+
+theorem kept_nat (n : Nat) (s : TypedScope) : Kept sig (nat n) s .nat :=
+  fun _ _ _ => types_nat n
+
+/-- The list of one scoped term keeps scope (the word `single`). -/
+theorem single_scoped {x : TermSrc} (hx : x.Scoped) : (single x).Scoped :=
+  app_scoped "cons" (TermSrc.Scoped_cons hx
+    (TermSrc.Scoped_cons (app_scoped "nil" TermSrc.Scoped_nil) TermSrc.Scoped_nil))
+
+/-- A scoped term in front of a scoped list keeps scope (the word `front`). -/
+theorem front_scoped {x xs : TermSrc} (hx : x.Scoped) (hxs : xs.Scoped) : (front x xs).Scoped :=
+  app_scoped "append" (TermSrc.Scoped_cons (single_scoped hx)
+    (TermSrc.Scoped_cons hxs TermSrc.Scoped_nil))
+
+/-- The list of scoped terms keeps scope (the word `listOf`): it writes each term out, and it
+binds no name. -/
+theorem listOf_scoped : ∀ {xs : List TermSrc}, (∀ x ∈ xs, x.Scoped) → (listOf xs).Scoped
+  | [], _ => app_scoped "nil" TermSrc.Scoped_nil
+  | [x], each => single_scoped (each x List.mem_cons_self)
+  | x :: y :: rest, each =>
+    front_scoped (each x List.mem_cons_self)
+      (listOf_scoped (xs := y :: rest) fun z member => each z (List.mem_cons_of_mem x member))
+
+end Further
+
 end Typing
 
 end Effect4.Modules

@@ -755,4 +755,36 @@ theorem depth_under {α : Type} {env : Env} {xs : List α} (depth : xs.length = 
   rw [List.length_append, List.length_append, depth]
   rfl
 
+/-! ## A field of a caller's term under a fold, and a list that a term writes out
+
+A step may read a field of a caller's record in a fold's body: Pool's return step reads the
+leased item's two stamps so (`src/Effect4/Laws/Modules/Pool/Ops.lean`). The word `listOf` writes
+a list out from terms: Pool's initial value writes its items and its idle stamps so. -/
+
+/-- A field's read of a caller's term is a caller's term: the read stands under the binders
+with its target. The reading twin of `capturedTy_field`
+(`src/Effect4/Laws/Modules/Checking.lean`). -/
+theorem captured_field {target : TermSrc} {name : String} {env : Env} {path : List Nat}
+    {vals : List Val} {whole v : Val} (htarget : Captured target env path vals whole)
+    (declared : Machine.Record.read false whole name = some v) :
+    Captured (field target name) env path vals v :=
+  ⟨reads_field htarget.atScope declared,
+    fun acc item => reads_field (htarget.underFold acc item) declared⟩
+
+/-- The list of the given terms reads the list of what each term reads (the word `listOf`). -/
+theorem reads_listOf {env : Env} {path : List Nat} {vals : List Val} :
+    ∀ {xs : List TermSrc} {vs : List Val},
+      ReadsAll xs env path vals vs → Reads (listOf xs) env path vals (Val.list vs)
+  | [], _, h => by
+    cases h
+    exact reads_nilT
+  | [x], _, h => by
+    cases h with
+    | cons hx rest =>
+      cases rest
+      exact reads_single hx
+  | x :: y :: more, _, h => by
+    cases h with
+    | cons hx rest => exact reads_front hx (reads_listOf (xs := y :: more) rest)
+
 end Effect4.Modules
