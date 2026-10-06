@@ -446,6 +446,7 @@ Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwin
 | saved-mask-restoration | preservation | proved | Effect4.Program.Typed.saved_mask_restoration | yes |  |
 | saved-mask-pop-discipline | preservation | proved | Effect4.Machine.saved_mask_pop_discipline | yes |  |
 | pool-return-front | inversion | proved | Effect4.Pool.Model.giveBack_front | yes |  |
+| pool-return-once | inversion | proved | Effect4.Pool.Model.giveBack_once | yes |  |
 | pool-close-refuses | inversion | proved | Effect4.Pool.Model.close_refuses | yes |  |
 
 ### Printed statements
@@ -547,6 +548,15 @@ Effect4.Program.Typed.MaskRestoration
             (List.map (fun it => { fst := it.stamp, snd := it.resource }) s.items))
           (Eq ((Effect4.Pool.Model.giveBack s i l).fst.items.any fun x => x.heldBy i l)
             Bool.false)))
+```
+
+**pool-return-once**
+
+```lean
+∀ (s : Effect4.Pool.Model.State) (i l : Nat),
+  Eq (Effect4.Pool.Model.giveBack (Effect4.Pool.Model.giveBack s i l).fst i l)
+    { fst := (Effect4.Pool.Model.giveBack s i l).fst,
+      snd := { fst := Bool.false, snd := Bool.false } }
 ```
 
 **pool-close-refuses**

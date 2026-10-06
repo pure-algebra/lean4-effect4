@@ -174,7 +174,10 @@ other part, its step keeps `firstOp` and `Requested`, and the next run loses a f
    is not the step's own. `accounted`: the model's `accounted`. Each operation of the model has
    one lemma that states it, by the operation's own cases (`fun_cases`): `take_flags`,
    `offer_flags`, `poll_flags`, `withdrawTake_flags` and `withdrawOffer_flags`.
-3. `bump_inv` joins such a step to a run of the invariant. It needs no profile.
+3. `bump_inv` joins such a step to a run of the invariant. It takes the run's invariant
+   (`FirstRunInv r`), the next state's profile (`FirstProfile s`), the next bound
+   (`within s = true`) and `Flags`. (Corrected by the coordinator on 2026-10-06, after
+   Codex's source check. The sentence said: "It needs no profile.")
 
 Three lemmas carry the content.
 

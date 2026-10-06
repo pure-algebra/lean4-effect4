@@ -385,8 +385,11 @@ def registry : Registry where
       title := "At one fixed base bit, the frame machine keeps the chain of restoring frames on a fiber's stack: FrameFiber.popFrom from an empty scratch stack, getCont, Machine.frameExitState and the entry of each region keep it, and two fibers with one base and one stack have one flag (a local law at every demand, skip flag and carried cause; no statement of a run, of a completed exit, of cleanup or of delivery)"
       pointer := .witness `Effect4.Machine.saved_mask_pop_discipline },
     { id := "pool-return-front", concept := "scope-lifetime-finalization", role := .inversion
-      title := "A return of a lease that holds its item puts the item at the front of the idle items and keeps every item, and a second return of that lease changes nothing (giveBack_once; a helper of pool-lease-return; no finalizer's run)"
+      title := "A return of a lease that holds its item puts the item at the front of the idle items, keeps every item, and leaves the lease holding nothing (a helper of pool-lease-return; no finalizer's run)"
       pointer := .witness `Effect4.Pool.Model.giveBack_front },
+    { id := "pool-return-once", concept := "scope-lifetime-finalization", role := .inversion
+      title := "A second return of one lease changes nothing in Pool's model, and it owes no wake (a helper of pool-lease-return, from pool-return-front; the model's step only: no program and no finalizer's run)"
+      pointer := .witness `Effect4.Pool.Model.giveBack_once },
     { id := "pool-close-refuses", concept := "scope-lifetime-finalization", role := .inversion
       title := "After the close's first step of Pool's model every lease is refused, and a refused lease changes no item (a helper of pool-close-waits; no wait for a lease and no finalizer's run; decisions row 268)"
       pointer := .witness `Effect4.Pool.Model.close_refuses },
