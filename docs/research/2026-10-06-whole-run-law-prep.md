@@ -56,7 +56,8 @@ Layer 3 needs the host boundary's open parts (R6). Layers 1 and 2 do not.
 | Typed state at every reached machine | proved, for closed programs | layers 1 and 2 |
 | One law for an await and its notification across commands | missing; the one-step laws are there | layer 2 |
 | A run in which no task was cut by its budget, as a named premise | missing as a name; the machine drops the work | layer 2 |
-| The mask: the bracket of a region | in work (seat BRACKET) | layer 2, under a masked caller |
+| The mask: the bracket of a region | proved on seat BRACKET's branch, with the later cut's stack shape as its premise | layer 2, under a masked caller |
+| The stack's shape is kept along the fiber machine's commands while a fiber is inside a region | missing; seat BRACKET judges it a slice of its own | the same |
 | A finalizer runs at most once for a registration, along a run | missing (R11's first whole-run clause) | the protected permit, Pool's `use`, two scenario goals |
 | A general algebra of a record's read and overwrite | missing; it costs each module some lemmas and blocks nothing | every next module |
 | An abstract client and its agreement relation | missing | layer 3 |
@@ -92,7 +93,12 @@ In this order, each a slice of its own:
    every module's waiting uses it.
 3. **A finalizer at most once along a run**, by registration identity. It is module-free
    too. It serves the protected forms and the scenarios' goals.
-4. **The uncut run** as a named premise, with the frontier that witnesses a cut.
+4. **The uncut run** as a named premise. Seat WORKQ found its right form on 2026-10-06: the
+   tape of the run's own journal leaves no row unread, in the words of seat CUTS's laws "no
+   stopped row". A journal's verdicts do not decide it. A reply application answers
+   `applied` whatever fuel its step had left, so a cut can hide inside it (tested: one run of
+   the crew at the command budget 60). Whether an application should report its sufficiency
+   is a choice of the session's observation, for the owner.
 5. **The record's read-and-overwrite laws**, as a bank. It shortens Pool's public slice's
    successors and Cache.
 
