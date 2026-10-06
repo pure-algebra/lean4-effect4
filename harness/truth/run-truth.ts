@@ -50,8 +50,11 @@
  *  - bounded: the promise entry races a deadline and interrupts the leftover fiber
  *    (`interruptUnsafe`, `:574`) so the process terminates (by construction);
  *  - one alphabet: the compared schedule is `started`, `forked`, `parked`, `resumed`, `ran`,
- *    `exited <kind>` over fiber indices in first-seen order (root `0`, children in fork
- *    order) — `scheduled` rows are recorded on both faces and dropped from the verdict,
+ *    `exited <kind>` over fiber indices in first-seen order (root `0`, then each fiber when
+ *    `see` first meets it: at its `forked` row or at its `started` row; this is the fork
+ *    order unless a fiber is seen late, as a detached child with a deferred start is, and the
+ *    Lean face writes the same numbers, `numbering` in `Truth.lean`) — `scheduled` rows are
+ *    recorded on both faces and dropped from the verdict,
  *    because the Lean trace records the fork's scheduling but not the yield's
  *    (`Test/contracts/faces.contract.md` §4, quantifiers 2 and 5);
  *  - one entry decides the schedule, and it is the one that has a fiber: the compared rows

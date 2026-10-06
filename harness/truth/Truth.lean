@@ -1018,13 +1018,8 @@ Limits, stated and not solved:
   fiber.
 * **A number that a program computes from an id (DI-73).** It is a number in the wire, and no
   face renames it.
-* **The `exited` row of a fiber that is awaited before its first sight.** The recorder adds its
-  exit observer at the first sight, behind the awaiter's observer. rc.112 runs the observers in
-  order, so the recorder writes `exited k` after the rows of the awaiter's resumption. The
-  machine writes `exited k` at the exit. The rows then differ in order, and no renaming repairs
-  that. A probe on rc.112 measured it: a detached child with a deferred start that the root
-  joins before the child's first run. No lane program awaits such a fiber: the Queue's helpers
-  are never awaited. -/
+* **The `exited` row of a fiber that is awaited before its first sight.** The rows differ in
+  order, and no renaming repairs that. `reduce` states the cause and the evidence. -/
 
 /-- The fibers of a list of rows in the order that the recorder first sees them: the first
 sight of each (`Row.sight`), in row order. -/
@@ -1075,7 +1070,21 @@ def renumbered (order : List Nat) (rows : List Row) : List Row :=
 
 /-- The compared schedule: the rows of `machineRows`, each fiber under its number in the
 recorder's order (`numbering`). The recorder writes its rows under its own indices, so the two
-faces are compared up to one renaming of the fibers. -/
+faces are compared up to one renaming of the fibers.
+
+**What the lane no longer checks.** After this renaming the lane does not check the machine's
+allocation order. The id that the machine gives a fiber is compared in no field. So the
+position in that order of a fiber that the recorder sees late is not checked.
+
+**A limit of the recorder: a fiber that is awaited before its first sight.** The recorder adds
+its exit observer when it first sees a fiber. An awaiter that registered before that sight has
+its observer in front. rc.112 runs the observers in order, so the recorder writes `exited k`
+after the rows of the awaiter's resumption, and the machine writes `exited k` at the exit. The
+rows then differ in order, and no renaming repairs that. One run on rc.112 reproduced it: a
+detached child with a deferred start that the root joins before the child's first run
+(`docs/research/2026-10-06-seat-pub-evidence/late-seen-joined.probe.json`). No lane program
+awaits such a fiber, and the Queue's posted helpers are never awaited. The recorder is not
+repaired. The section above lists this limit with the three others. -/
 def reduce (trace : List Event) : List String :=
   (renumbered (numbering trace) (machineRows trace)).map Row.text
 
