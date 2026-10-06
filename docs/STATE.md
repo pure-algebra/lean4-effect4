@@ -164,8 +164,9 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
   Pool's and Cache's cards are not written.
 
   [The rulings note](research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md) gives a
-  recommended ruling for each open question of this stretch, with its evidence. Eight need
-  the owner's word. No recommendation there is a ruling.
+  recommended ruling for each open question of this stretch, with its evidence. The owner
+  ruled its eight questions as recommended on 2026-10-06 (rows 259 to 265, below). The eighth
+  was a command of the owner's, and it is run.
 
 Where to read:
 
@@ -211,6 +212,21 @@ More rulings of the same day (rows 235 to 248):
 - the Queue's cell and steps are a library slice: a composed module lives in a new layer of
   the runtime root, above `Program`, and its laws in the law graph. The abstract model moves
   into the law graph, each step has one planned goal, and no binding form is added (row 255).
+
+Ruled on 2026-10-06, each as recommended (rows 259 to 265):
+
+- Semaphore's wake is the live scan: one visit at a time, and a wake reserves nothing (row
+  259);
+- Semaphore's first profile has six operations at a fixed total, without `resize` and
+  `releaseAll` (row 260);
+- the profile's law covers a release of at most what is taken, and the step releases no more
+  (row 261);
+- the target evaluator comes under the trust ceiling, by two string rules in byte form (row
+  262). The slice has no date;
+- the compiler checkpoint joins the local sweep by one marker rule (row 263);
+- a TypeScript compiler client stays inside `tools/target`, and no package is published (row
+  264);
+- Semaphore's cell and steps start now, as a third seat (row 265).
 
 Landed later on 2026-10-05:
 
@@ -496,14 +512,16 @@ Open at this landing:
   - the target evaluator is outside the trust ceiling. Its rules for the length of a string
     and for the order of two strings reach `Classical.choice`. The seat proposes their byte
     forms as a slice of its own, with a control for the order of strings. Then a lowering law
-    is a declaration of a battery. This is the owner's to rule;
-  - the registry's claim for the law of `let x = e in x` waits on that ruling;
+    is a declaration of a battery. The owner ruled the byte forms (row 262), and the slice
+    has no seat and no date;
+  - the registry's claim for the law of `let x = e in x` waits on that slice;
   - seven callback names of the builtin table have no rule in the evaluator, and a call is a
     refusal;
   - the compiler checkpoint runs in the CI job `check-ocaml`, at a push, a pull request or a
     manual run (`.github/workflows/lean_action_ci.yml`). That is a reading of the
     configuration, and no remote run is checked. No `make` target runs the checkpoint, so the
-    local sweep does not. The runner's own script tests run by hand;
+    local sweep does not. The owner ruled that it joins the local sweep (row 263). The
+    runner's own script tests run by hand;
   - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
 - the proposed decisions rows of four seats' receipts (T3b, M0, LOWER and DOGFOOD), for the
   owner;
@@ -511,9 +529,10 @@ Open at this landing:
   ([its recommendations](research/2026-10-05-codex-foundation-packet/implementation-audit/tsgo-research/recommendations.md);
   source reading, and no compiler run). It proposes an optional compiler client beside the
   Lean `typescript` package, extracted from the target oracle and its checker. The Effect
-  admission and the comparison of answer, error and requirement types stay in this tree. No
-  seat has it, and the proposal is the owner's to rule. Its one small finding landed with seat
-  T5's part A: the pinned truth check compiles the tuple control;
+  admission and the comparison of answer, error and requirement types stay in this tree. The
+  owner ruled its boundary (row 264): the client is built inside `tools/target` with its next
+  caller, and no package is published. Its one small finding landed with seat T5's part A:
+  the pinned truth check compiles the tuple control;
 - Codex's research on macros and declarations is filed
   ([its report](research/2026-10-05-codex-foundation-packet/implementation-audit/macro-research/report.md);
   source reading, and no Lean run). It proposes four small changes and no macro framework:

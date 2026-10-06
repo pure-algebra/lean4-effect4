@@ -7,6 +7,9 @@ when the owner says so and the coordinator writes it into `docs/core/decisions.m
 Corrected the same day, after Codex's relay: F8 and A5 said that no lane runs the compiler
 checkpoint. A job of the CI workflow runs it, and the local sweep does not.
 
+**Ruled.** The owner answered "yes to all" on 2026-10-06. Decisions rows 259 to 265 record A1
+to A7. A8 was the owner's command, and it is run.
+
 ## Question
 
 Which questions are open for the owner on 2026-10-06? What does the coordinator recommend for

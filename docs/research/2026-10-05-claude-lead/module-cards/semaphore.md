@@ -4,7 +4,8 @@ Status: a proposal (history, not authority). It follows the card's template of
 `docs/research/2026-10-05-claude-lead/module-factory-plan.md`. The coordinator wrote it on
 2026-10-05, from the pinned source and from Codex's review
 (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/module-factory-review/breadth/report.md`).
-No profile here is ruled. Two revisions followed on 2026-10-06.
+Two revisions followed on 2026-10-06. The owner then ruled the first profile the same day, as
+section 10 recommends: decisions rows 259 to 261.
 
 - After Codex's first review
   (`docs/research/2026-10-05-codex-foundation-packet/implementation-audit/heartbeat-0451-fixtures-semaphore/`):
@@ -267,7 +268,9 @@ Each fault must fail its own property, and typing alone must not catch it.
 ## 10. The questions for the owner
 
 The coordinator's note of 2026-10-06 gives each recommendation with its evidence
-(`docs/research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md`).
+(`docs/research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md`). The owner ruled
+questions 1 to 3 as recommended on 2026-10-06: row 260, row 261 and row 259. Question 4 fell
+away with the live scan.
 
 1. **The first profile's surface**, as section 2 lists it. Recommended: as listed. The raw
    `take` and `release` stay in it: the pinned `Pool.ts` uses them.
@@ -276,7 +279,7 @@ The coordinator's note of 2026-10-06 gives each recommendation with its evidence
    most `taken`. The step itself is total: it releases at most what is taken. The atom `sub`
    has that meaning on both faces (`NativeAtom.row`, `src/Effect4/Machine/Term.lean`). This is
    a stated difference from the pin.
-3. **The wake's profile.** This is the card's main choice, and no model is frozen before it.
+3. **The wake's profile.** This was the card's main choice.
 
    | Profile | The wake | Against the pin |
    | --- | --- | --- |
