@@ -236,4 +236,107 @@ example (tb : Table) (res : Nat → Val) (s : State) (id : Nat) (hint : Deferred
       (mint_ne_of_head (b := 97) (c := 99) (by decide) (by decide) (by decide) _ _)
       (mint_ne_of_head (b := 105) (c := 99) (by decide) (by decide) (by decide) _ _))
 
+/-! ## The pinned outputs
+
+Each proved statement's axioms, and its standing as the plan derives it from the proof. Each
+statement was a planned goal, and it is proved in place with its statement unchanged. The
+counts are of this battery's tree, which holds no step of a proof: the steps are in the law
+graph. -/
+
+/-- info: 'Effect4.Pool.Model.leaseStep_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms leaseStep_agrees
+
+/-- info: 'Effect4.Pool.Model.returnStep_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms returnStep_agrees
+
+/-- info: 'Effect4.Pool.Model.selectStep_agrees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms selectStep_agrees
+
+/-- info: 'Effect4.Pool.Model.withdrawStep_agrees' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms withdrawStep_agrees
+
+/-- info: 'Effect4.Pool.Model.closeStep_agrees' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms closeStep_agrees
+
+/--
+info: Effect4.Pool.Model.leaseStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Pool.Model.returnStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Pool.Model.selectStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Pool.Model.withdrawStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Pool.Model.closeStep_agrees: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status leaseStep_agrees returnStep_agrees selectStep_agrees withdrawStep_agrees
+  closeStep_agrees
+
+-- The five statements as one: the witness of the proposed claim `pool-steps-agree`.
+/-- info: 'Effect4.Pool.Model.pool_steps_agree' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms pool_steps_agree
+
+/--
+info: Effect4.Pool.Model.pool_steps_agree: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status pool_steps_agree
+
+-- The passes that fold, the shared rule of `eq`, and the three joins to the store.
+/-- info: 'Effect4.Pool.Model.reads_marked' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms reads_marked
+
+/-- info: 'Effect4.Pool.Model.reads_leasedOf' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms reads_leasedOf
+
+/-- info: 'Effect4.Pool.Model.reads_heldBy' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms reads_heldBy
+
+/-- info: 'Effect4.Pool.Model.reads_freed' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms reads_freed
+
+/-- info: 'Effect4.Modules.reads_eq' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms reads_eq
+
+/-- info: 'Effect4.Modules.depth_under' depends on axioms: [propext] -/
+#guard_msgs in
+#print axioms depth_under
+
+/--
+info: 'Test.Program.PoolRelation.select_updates' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms select_updates
+
+/--
+info: 'Test.Program.PoolRelation.return_updates' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms return_updates
+
+/--
+info: 'Test.Program.PoolRelation.lease_updates' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms lease_updates
+
+/--
+info: Test.Program.PoolRelation.select_updates: proved; nearest []; 0 lemmas, 0 definitions
+Test.Program.PoolRelation.return_updates: proved; nearest []; 0 lemmas, 0 definitions
+Test.Program.PoolRelation.lease_updates: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+-/
+#guard_msgs in
+#plan_status select_updates return_updates lease_updates
+
 end Test.Program.PoolRelation

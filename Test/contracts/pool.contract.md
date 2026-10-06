@@ -14,6 +14,8 @@ proofs. It authorizes no public operation and no runtime behaviour.
 | `src/Effect4/Modules/Pool/Cell.lean` and `Steps.lean` | tested: the module builds in the runtime root, and the checker types each step |
 | the six typing statements of `src/Effect4/Laws/Modules/Pool/Typing.lean` | proved, at `[propext, Quot.sound]`; each plan status is `proved` |
 | `Test/Program/PoolSteps.lean` | tested: finite controls of the cell and of each step's type, size and hygiene |
+| the five step statements and `pool_steps_agree` in `src/Effect4/Laws/Modules/Pool/Steps.lean` | proved, at `[propext, Quot.sound]` or less; each plan status is `proved` |
+| `Test/Program/PoolAgreement.lean` and `PoolRelation.lean` in the same folder | tested: finite controls on 130 states, and four faults red at their own property |
 
 ## Authority and owned surface
 
@@ -190,14 +192,25 @@ rc.112's order on PP2 (`backOrder` on the machine).
 | `select_takes_first` | `reactive-scheduling`, R12; its consumer is the proposed `pool-wake-selection` | one selection of the model | no statement about a run, and no liveness |
 | `giveBack_front`, `giveBack_once`, `close_refuses` | `scope-lifetime-finalization`, R11; their consumers are the proposed `pool-lease-return` and `pool-close-waits` | one transition of the model; for the close, every later lease | nothing about a finalizer's run, and no completed close |
 | `initial_types` and the five `…Step_types` | `store-typing`, R4; the cell's half of the proposed `pool-profile-preserved` | the cell's type at a resource type in normal form; every scope of names; the native atoms | no agreement with the model |
+| the five `…Step_agrees`, and `pool_steps_agree` | `translation-simulation`, R10; parts of the proposed `pool-expansion-agrees` | every model state and an injective table; the reply, the stored value and the selected waiters' records | no order of the wake across helpers, no cancellation law, no close that waits, no fairness, no wrapper |
 
 The consumer of each statement is the public law, in the slice of the public operations. No
 proposed claim is in the semantics registry yet.
 
+**The step statements take no premise on the state.** No step reads the profile. The term and
+the model compute the same removal by identity and the same front stamp. They compute the
+same two passes over the items and the same prefix of the waiters. So the profile's closure
+and the steps' agreement are two statements, and the public law uses both.
+
+**A selection compares no record and no handle.** Its term is `take` and `drop` of the
+waiters. So its statement takes no premise on the table, and its reply holds the selected
+waiters' records: each names a selected identity and its hint.
+
 ## Remaining connectors
 
-1. Prove each of the five step terms in agreement with its transition, through the relation
-   of the cell to the model.
+1. Prove that the cell's value is a member of the cell's type: the membership premise of
+   `step_keeps_cell`. Its premises are the handles that the table names, and the resources'
+   values.
 2. Prove the waiting wrapper over the actual program: the enrolment, the wait, the retry and
    the withdrawal on interruption. The wait stands inside the mask that holds the body's hook.
 3. State the wake's helper as a library program, and its law across helpers.
