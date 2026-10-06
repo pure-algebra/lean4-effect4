@@ -177,6 +177,8 @@ import Effect4.Laws.Program.Folds.Ty
 import Effect4.Laws.Machine.Folds.Stores
 import Effect4.Laws.Store.Folds.Val
 import Effect4.Laws.Program.Typing.FoldAgreement
+import Effect4.Laws.Modules.Queue.Capacity
+import Effect4.Laws.Modules.Queue.Profile
 
 /-!
 # Effect4 proof graph

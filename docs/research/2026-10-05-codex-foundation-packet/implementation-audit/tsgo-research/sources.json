@@ -1,0 +1,350 @@
+[
+  {
+    "path": "AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254,
+    "scope": "main current source"
+  },
+  {
+    "path": "docs/ARCHITECTURE.md",
+    "sha256": "b5b65a24ecee03dc591c5b5f23a751b0e0bdf790602d3170e579b86646af9701",
+    "bytes": 27695,
+    "scope": "main current source"
+  },
+  {
+    "path": "docs/GENERATED.md",
+    "sha256": "d0451d11f4c8fb63597c74f14eac2e08fd8bda27fafdd2d11dab12a99ca0dfa3",
+    "bytes": 19416,
+    "scope": "main current source"
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "sha256": "a8ec5ead2a249a3684d53db97566120e72a1200765d2580cffa943c8b8b463ed",
+    "bytes": 318217,
+    "scope": "main current source"
+  },
+  {
+    "path": "docs/core/controlled-english.md",
+    "sha256": "ef0495605e2cfb41b2c3b2a4871f4cf1a8ab3865647fbd68258e7cafe79cc06b",
+    "bytes": 102737,
+    "scope": "main current source"
+  },
+  {
+    "path": "docs/core/semantics.md",
+    "sha256": "370a640470e329cce2af6551f6d2be2907af951a93ac6758ab619623663399a3",
+    "bytes": 72593,
+    "scope": "main current source"
+  },
+  {
+    "path": "docs/core/system-map.md",
+    "sha256": "622ec37a03dd50b7a82c7ee0f52e67b0b471ffd2fdd58cf9f8b5ca3918e6d6ca",
+    "bytes": 45257,
+    "scope": "main current source"
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md",
+    "sha256": "0c3b61d97c8c6a9b4def21641430a5c6d8639457851681492e85d72abcf3fd4c",
+    "bytes": 11504,
+    "scope": "main current source"
+  },
+  {
+    "path": "lakefile.toml",
+    "sha256": "cc29730d1d7d00a4fbc42d931bcd97819da4c21cc2ad7163042d49d677a68e47",
+    "bytes": 11217,
+    "scope": "main current source"
+  },
+  {
+    "path": "lake-manifest.json",
+    "sha256": "448045a73fe9e702e93b255af45592c8bc2ba02d86bac9fbf7b684ba28843afe",
+    "bytes": 1856,
+    "scope": "main current source"
+  },
+  {
+    "path": "Makefile",
+    "sha256": "211d37b0b6a9ddb4da9fe85c71c590da593fde174b14716232a7eb50487a1f54",
+    "bytes": 46233,
+    "scope": "main current source"
+  },
+  {
+    "path": ".github/workflows/lean_action_ci.yml",
+    "sha256": "11006dcf748921b917b92db79b3bcf39ee97cfb1b21797ae9930c4723a61d521",
+    "bytes": 12068,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/eff/package.json",
+    "sha256": "1f7a29bdf5ec701d8eef07742b2f5db7f3b9fd93bf18c29d8cb8baa888ea3444",
+    "bytes": 597,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/eff/tsconfig.json",
+    "sha256": "91d7e2bb81010663c7036f313d9608313bc3edbd440acc2de7acbda79eca8bb4",
+    "bytes": 471,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/release/package.json",
+    "sha256": "82f94f5ec98d0fc891ab3bc08832c81c502ca275e61ed45f21eb7bb3d4902a60",
+    "bytes": 568,
+    "scope": "main current source"
+  },
+  {
+    "path": "harness/schema-host/package.json",
+    "sha256": "84de18d990b322ab76b971781ef9197958e22ff62ae86c0eb23a8aac416acd97",
+    "bytes": 332,
+    "scope": "main current source"
+  },
+  {
+    "path": "harness/truth/tsconfig.json",
+    "sha256": "96e5b73ad73b1a8d3810c7f5dd4009b0f79c898ccbf6796670fbaff7b5b8c2a3",
+    "bytes": 1186,
+    "scope": "main current source"
+  },
+  {
+    "path": "harness/schema-generation/tsconfig.json",
+    "sha256": "c2f3c0da9f85a028cdb826f20cc327aa31113bf417306170f52b6eee343f1764",
+    "bytes": 631,
+    "scope": "main current source"
+  },
+  {
+    "path": "src/Effect4/Codegen/Diagnostics.lean",
+    "sha256": "2599969ed32fe40296b57bf73b4ce0fcf0d2d7847e7cd9f2d35fc048c70c65f2",
+    "bytes": 6925,
+    "scope": "main current source"
+  },
+  {
+    "path": "src/Effect4/Codegen/Types.lean",
+    "sha256": "10edeeec4968a9f3e0852f481d339593aa32e01e99a7abcdd36841f398706489",
+    "bytes": 15941,
+    "scope": "main current source"
+  },
+  {
+    "path": "src/Effect4/Codegen/SourceBindings.lean",
+    "sha256": "23a32d056579ae64983f152a4b1e562520c0847c078ce0f777a2dc1f5be25588",
+    "bytes": 14933,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/Drivers/TsGen.lean",
+    "sha256": "c3156595832865f36bc8b21ccdef2ebbab959543308e7d775b23a2212a61965e",
+    "bytes": 75696,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/Drivers/Corpus.lean",
+    "sha256": "b1a35d06f0129146ea906a43209b29587c76bbb7b554dce9519b14cb7e391618",
+    "bytes": 6892,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/oracle.ts",
+    "sha256": "204bcbe5542757a1cf73cd0dd3e446ddb288647d27103a337653515b3405f4d9",
+    "bytes": 11782,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/checker.ts",
+    "sha256": "ddb8568ee36462006c98623a0486c53dbf9c95e392862e79a2464c2011bb2bb6",
+    "bytes": 24279,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/input.ts",
+    "sha256": "d67fcd86c6efc7603108fada9c160d9dc5273042e40842dae9616b792ceaa0d9",
+    "bytes": 2045,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/cli.ts",
+    "sha256": "542814baa7b187d48672c9f760f50f4d21949dbb51d5908abc8fdcee9d93a3ad",
+    "bytes": 1847,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/oracle.test.ts",
+    "sha256": "67e5fe26112e33ffea8f66d2d730a0d9cbe61f430c30f3ab483952092a58729e",
+    "bytes": 11776,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/profile.ts",
+    "sha256": "fcd82a5c6e94f2691e08885241084619ffeaf0ab5636dc8a5147ba80ee91c921",
+    "bytes": 11268,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/rows.ts",
+    "sha256": "6ad5078809c985329af0dee161a2a484ecbf68d0b537694f34c26eeb97f06182",
+    "bytes": 9299,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/corpus.ts",
+    "sha256": "55f084ce3de06e231a2efcd79e1c1d068b16ff80f807f7c9ac8abc331901bad2",
+    "bytes": 4221,
+    "scope": "main current source"
+  },
+  {
+    "path": "tools/target/assignability.ts",
+    "sha256": "aac6113ddf0da51327def54264b73dcdf0357ae1178456efa9e49ead66ec2983",
+    "bytes": 9089,
+    "scope": "main current source"
+  },
+  {
+    "path": "scripts/check-truth.py",
+    "sha256": "c70d95b0feb18bc4fd30156913c7831148db7cd0495fc32f1284e5b9c6d578b3",
+    "bytes": 6381,
+    "scope": "main current source"
+  },
+  {
+    "path": "scripts/check-truth-release.py",
+    "sha256": "bd4356e950a9e24990c0b6ffbfa3fd42d8fe5a256d1f86495e69e6dd6899688a",
+    "bytes": 65101,
+    "scope": "main current source"
+  },
+  {
+    "path": "scripts/check-corpus.py",
+    "sha256": "98389215bb19b95676c09cf672723d3edef46defbf5ccb8b9784132495925752",
+    "bytes": 18192,
+    "scope": "main current source"
+  },
+  {
+    "path": "scripts/check-host-protocol.py",
+    "sha256": "e78f097a3fb95b6f696e39e06b99996d1a502fc51a60c13c25b308dc1edd4464",
+    "bytes": 4039,
+    "scope": "main current source"
+  },
+  {
+    "path": "scripts/check-service-identity.py",
+    "sha256": "80bba1be9cbe00c67ca89709ad0f3a2a2deef3ac910e569c483e2ef4b5183144",
+    "bytes": 7594,
+    "scope": "main current source"
+  },
+  {
+    "path": "scripts/check-schema-typescript-generation.sh",
+    "sha256": "cfab1c23d1328d5e8913ac5e73e5f4ad35cf9e34f467e97d2d27474783b4e9c7",
+    "bytes": 5076,
+    "scope": "main current source"
+  },
+  {
+    "path": "scripts/lib/truth_host.py",
+    "sha256": "dda7863735296fb8df81fccc196b167fb6c5e4892f146886f335b76714173499",
+    "bytes": 9133,
+    "scope": "main current source"
+  },
+  {
+    "path": "harness/tsdiag/run-tsdiag.mjs",
+    "sha256": "cf6ed056ed49652ecd76918a14ef92c4cac3f270b9d6e6a6a964e54060c54c2b",
+    "bytes": 9191,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/eff/check-styles.ts",
+    "sha256": "93f808dafdec2e215f93fb562e9bbe996079d06433dd43541cf724e15a54af50",
+    "bytes": 6622,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/eff/ingest/pins.ts",
+    "sha256": "f3e837f94b0781629d5661064283836071024a3fe3925ee830292b0f9338236b",
+    "bytes": 2977,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/eff/ingest/oxc.ts",
+    "sha256": "546acaef55fc894bfd1cd237a0d0461b7632c9890ae3837990c2e47ba41be66a",
+    "bytes": 68957,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/eff/ingest/ck.ts",
+    "sha256": "6cd511b11a10697e0d1ee029a8cf592ee0f9a3f276cc7f96c47ba909e97a46ef",
+    "bytes": 97314,
+    "scope": "main current source"
+  },
+  {
+    "path": "ts/eff/ingest/census/corpus.ts",
+    "sha256": "600d515969bceb4c9ecb1e234fe443d8b38ca7ea8e4f81d1a714b333c580cfd8",
+    "bytes": 9031,
+    "scope": "main current source"
+  },
+  {
+    "path": "harness/truth/tuples.typecheck.ts",
+    "sha256": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493",
+    "bytes": 1595,
+    "scope": "main current source"
+  },
+  {
+    "path": "harness/truth/folds.typecheck.ts",
+    "sha256": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001",
+    "bytes": 3140,
+    "scope": "main current source"
+  },
+  {
+    "path": "harness/truth/records.typecheck.ts",
+    "sha256": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099",
+    "bytes": 4200,
+    "scope": "main current source"
+  },
+  {
+    "path": ".lake/packages/typescript/README.md",
+    "sha256": "0514737366d5c59622ae22b54938725aadd137be377ac2ff9702938f09d192e2",
+    "bytes": 4587,
+    "scope": "installed package"
+  },
+  {
+    "path": ".lake/packages/typescript/lakefile.toml",
+    "sha256": "3c02cff1225cb22b657f0297b3dd51f4c65d2d41081b509315d60392cfbd733c",
+    "bytes": 399,
+    "scope": "installed package"
+  },
+  {
+    "path": ".lake/packages/typescript/TypeScript.lean",
+    "sha256": "79848579dba0738d666c62ac6d4b8a452d55765332ee5091b012ace910504676",
+    "bytes": 651,
+    "scope": "installed package"
+  },
+  {
+    "path": ".lake/packages/typescript/TypeScript/TypeRef.lean",
+    "sha256": "0fefe0eb79ac19997a8b5d9df408c3cd46c9c0b9177746256a25e4ae9cd9bd57",
+    "bytes": 4672,
+    "scope": "installed package"
+  },
+  {
+    "path": ".lake/packages/typescript/TypeScript/Syntax.lean",
+    "sha256": "c127a4692df836cf651acdc0eee2b4eaa5d6e6c222d91742b5b23b9b4983bfb4",
+    "bytes": 15789,
+    "scope": "installed package"
+  },
+  {
+    "path": ".lake/packages/typescript/TypeScript/Render.lean",
+    "sha256": "7a4f7e9cfb48669a2de19ad70518160e5e33b95566e0804da86e201ebe4ca96b",
+    "bytes": 19695,
+    "scope": "installed package"
+  },
+  {
+    "path": ".lake/packages/typescript/TypeScript/HostPin.lean",
+    "sha256": "402c6cf138699c26640a006f7fdd6edd8e24c8b2b2d11e940189eac527f2e010",
+    "bytes": 1220,
+    "scope": "installed package"
+  },
+  {
+    "path": ".lake/packages/typescript/TypeScript/Structure.lean",
+    "sha256": "54631186594e0f03608fe400f1e1238d2b208e528030f64c25fbbbbee345b948",
+    "bytes": 7965,
+    "scope": "installed package"
+  },
+  {
+    "path": "ts/eff/node_modules/@typescript/native-preview/package.json",
+    "sha256": "614417573536b11984632fbb2e74f3e79c12cd69de41ca37969c114dcf94b478",
+    "bytes": 3561,
+    "scope": "installed package"
+  },
+  {
+    "path": "ts/eff/node_modules/@typescript/native-preview/dist/api/sync/api.d.ts",
+    "sha256": "a1a6892671f6757452f76e4b8c05e8b4ff454a0fe908534a2f0d7bfcbdbf52e8",
+    "bytes": 20782,
+    "scope": "installed package"
+  }
+]

@@ -43,8 +43,10 @@ branch. You work alone and hand back a receipt.
    recommended.
 3. The probe beside it: `QueueSteps.lean` and `QueueSteps.out`. Read the section "The steps
    against the model" with care: its comparison is the executable form of your goals.
-4. `Test/contracts/queue.contract.md`, and the four files it names under `Test/Program/`:
-   `QueueModel.lean`, `QueueContract.lean`, `QueueCapacity.lean` and `QueueProfile.lean`.
+4. `Test/contracts/queue.contract.md`, and the files it names. The model, its capacity
+   statement and its first profile are in `src/Effect4/Laws/Modules/Queue/`: `Model.lean`,
+   `Capacity.lean` and `Profile.lean`. Their batteries are under `Test/Program/`:
+   `QueueContract.lean`, `QueueCapacity.lean` and `QueueProfile.lean`.
 5. `docs/core/decisions.md`, rows 219 to 222, 228 to 230, 233, 235, 238 and 240 to 243.
 6. Seat FOLD's receipt, `docs/research/2026-10-05-seat-FOLD-receipt.md`, and
    `src/Effect4/Laws/Program/Typed/ListFold.lean`: `ListFoldRules` and `HandleIdentityLaws`.
@@ -65,9 +67,10 @@ branch. You work alone and hand back a receipt.
    - A step frames every field that it does not change.
 3. **The typing.** Each step term is typed at the cell's type, for any message type that the
    checker types in a cell.
-4. **The model's place.** If the owner's word moves the model into the law graph, move four
-   files: the model, the capacity statement, the profile and their controls. Keep each
-   theorem's statement, placement and proof. The batteries keep the controls.
+4. **The homes** (row 255). The module is `src/Effect4/Modules/Queue/`, a new layer of the
+   runtime root above `Program`. Its laws go beside the model, which is already in the law
+   graph: `src/Effect4/Laws/Modules/Queue/`, in the namespace `Effect4.Queue.Model`. Change no
+   statement, placement or proof there.
 5. **The relation.** An encoding table gives each model identity its handle and its current
    hint. The cell's value is a function of the table and a profile state. Write both in Lean.
 6. **The step goals,** one for each step, in the shape of the design's F3.
@@ -83,7 +86,7 @@ branch. You work alone and hand back a receipt.
    - The eight scenarios on the machine, R1 to R8.
 8. **The engine.** Two scenarios run on the generated engine, through the wire.
 9. **The documents.** A row for the module in `docs/ARCHITECTURE.md`, and its role in the
-   architecture map's register.
+   architecture map's register (`tools/Tools/ArchitectureRoles.lean`). The laws' rows exist.
 
 Where the design leaves a choice open, make it and state it in the receipt. Where the tree
 proves the design wrong, stop that part and report with the evidence. Do not redesign.
@@ -96,7 +99,6 @@ State each goal as a planned goal first, with its placement, and then prove towa
 | --- | --- | --- | --- |
 | Each step's typing | `store-typing`, R4 | The cell's type at a message type, the six step terms | No agreement with the model |
 | Each step's agreement with the model | `translation-simulation`, R10, a part of `queue-expansion-agrees` | `FirstProfile`, `Requested`, an injective table; the reply, the stored value, the ordered notifications | No delivery, no cancellation law, no liveness, no wrapper |
-| The moved model's statements | as they stand | as they stand | as they stand |
 
 - The consumer of each step goal is the wrapper's law, in the public path's slice.
 - A theorem that is proved today stays proved.
@@ -121,8 +123,7 @@ Cut the work into steps that are each green and committed.
 4. The relation in Lean, and the six goals as planned goals.
 5. The proofs, shortest first: `sizeStep`, the two withdrawals, `offerStep`, `pollStep`,
    `takeStep`. Stop a proof that does not close in its step, and leave its goal planned.
-6. The model's move, if the owner's word asks for it.
-7. The engine's two scenarios, the documents and the receipt.
+6. The engine's two scenarios, the documents and the receipt.
 
 ## Acceptance
 

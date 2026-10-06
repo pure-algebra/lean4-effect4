@@ -97,6 +97,8 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws/Codegen", .laws, 4, "Laws/Codegen", "printer and reader laws over the template table; module admission and checked production", false, true⟩,
   ⟨"src/Effect4/Laws/Api", .laws, 5, "Laws/Api", "the runner, host session, supervision, frontier and fuel laws", false, true⟩,
   ⟨"src/Effect4/Laws/Run.lean", .laws, 5, "Laws/Run", "the run API's laws: `journal_replays`, `replay_unique`, `drive_eq_play`", false, true⟩,
+  ⟨"src/Effect4/Laws/Modules", .laws, 5, "Laws/Modules", "the laws of composed modules, programs over the authoring surface (decisions row 255); the Queue is the first", false, true⟩,
+  ⟨"src/Effect4/Laws/Modules/Queue", .laws, 5, "Laws/Modules/Queue", "the Queue's abstract transition model, its capacity statement, its first profile and the profile's closure", true, true⟩,
   ⟨"src/Effect4/Laws.lean", .laws, 6, "Effect4.Laws", "the root of the proof graph", false, true⟩,
   -- the tool roots
   ⟨"tools/ProofGraph", .tools, 0, "ProofGraph", "checked theorem references, rolled-back search, published theorems, the obligation join; below Laws and Conform", false, true⟩,

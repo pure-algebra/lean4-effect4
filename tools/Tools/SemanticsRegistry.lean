@@ -126,7 +126,9 @@ def registry : Registry where
       defaultModules := [
         `Effect4.Laws.Machine.Scheduling,
         `Effect4.Laws.Machine.Lift,
-        `Effect4.Laws.Program.Typed.Scheduler
+        `Effect4.Laws.Program.Typed.Scheduler,
+        `Effect4.Laws.Modules.Queue.Capacity,
+        `Effect4.Laws.Modules.Queue.Profile
       ] },
     { id := "exact-codecs"
       title := "Exact Codecs: Invertible embeddings for JSON and Schema representations"
@@ -412,6 +414,12 @@ def registry : Registry where
       literature := [
         { work := "PFPL", locator := "chs. 39–41, pp. 371–406", relation := "excludedFeature" }
       ] },
+    { id := "queue-step-capacity", concept := "reactive-scheduling", role := .preservation
+      title := "One step of the Queue's abstract model under suspend keeps the capacity, the strategy and the buffer's bound (a helper of queue-expansion-agrees on its abstract client's side; lengths in the natural-number model, no delivery and no target; decisions rows 219, 233 and 255)"
+      pointer := .witness `Effect4.Queue.Model.positive_suspend_step_capacity },
+    { id := "queue-first-profile-closed", concept := "reactive-scheduling", role := .preservation
+      title := "Each first operation of the Queue's abstract model keeps the first profile, when its request keeps the step's premise (a helper of queue-expansion-agrees: the domain of the step goals; no agreement of a term with the model; decisions rows 219, 233 and 255)"
+      pointer := .witness `Effect4.Queue.Model.first_profile_closed },
 
     -- 5. exact-codecs
     { id := "decode-iff", concept := "exact-codecs", role := .decidability

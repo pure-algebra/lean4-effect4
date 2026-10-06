@@ -70,7 +70,9 @@ outside it, and a reply or a signal with no encoding. It runs on every state of 
 universe of the profile: 200 states, twelve moves on each, and all 2,400 comparisons agree.
 Each red control changes one notification, and nothing else. No step term changed. The
 predicate and its closure are in the tree, proved: `FirstProfile` and `first_profile_closed`
-in `Test/Program/QueueProfile.lean`. The comparison decides that predicate.
+in `src/Effect4/Laws/Modules/Queue/Profile.lean`. The comparison decides that predicate. The
+model and its capacity statement are beside it since the owner's word (row 255): the table
+above names their paths at the time of the runs, under `Test/Program/`.
 
 ### F2. Cleanup on interruption needs no new construct
 

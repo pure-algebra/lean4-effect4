@@ -1,14 +1,16 @@
-import Test.Program.QueueModel
+import Effect4.Laws.Modules.Queue.Model
 
 /-!
 # The Queue's abstract contract: the small named controls
 
-Finite controls of `Test/Program/QueueModel.lean`, one input each. They are the research model's
+Finite controls of `src/Effect4/Laws/Modules/Queue/Model.lean`, one input each. They are the
+research model's
 controls, byte for byte, without its two million-element controls and its bounded exploration.
 Those stay beside the research model, in `QueueLargeControls.lean`, outside every default import.
 -/
 
-namespace QueueContract
+namespace Test.Program.QueueContract
+open Effect4.Queue.Model
 def T (id : Nat) (min : Nat := 1) (max : Nat := 1) : Taker := ⟨id, min, max⟩
 
 /-! ## Controls: the order and the point of consumption (row 219) -/
@@ -376,4 +378,4 @@ def closingRendezvousEmptied : Phase × Phase × List Signal × TakeReply :=
 #guard closingRendezvousEmptied =
   (.closing .ended, .done .ended, [⟨1, .again⟩, ⟨7, .over .ended⟩], .stopped .ended)
 
-end QueueContract
+end Test.Program.QueueContract

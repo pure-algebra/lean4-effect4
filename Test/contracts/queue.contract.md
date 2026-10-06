@@ -7,11 +7,15 @@ It authorizes no additional runtime behaviour.
 
 | Part | Evidence on 2026-10-05 |
 | --- | --- |
-| `Test/Program/QueueModel.lean` | tested: it builds under the battery's options |
+| `src/Effect4/Laws/Modules/Queue/Model.lean` | tested: it builds in the law graph |
 | `Test/Program/QueueContract.lean` | tested: its guard checks hold |
-| `acceptLoop_length_le` in `Test/Program/QueueCapacity.lean` | proved, at `[propext, Quot.sound]` |
+| `acceptLoop_length_le` in `src/Effect4/Laws/Modules/Queue/Capacity.lean` | proved, at `[propext, Quot.sound]` |
 | `positive_suspend_step_capacity` in the same file | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
-| `first_profile_closed` in `Test/Program/QueueProfile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+| `first_profile_closed` in `src/Effect4/Laws/Modules/Queue/Profile.lean` | proved, at `[propext, Quot.sound]`; its plan status is `proved` |
+
+The model and its proved statements moved into the law graph on 2026-10-05 (decisions row 255).
+Their declarations are in the namespace `Effect4.Queue.Model`. No definition changed.
+The batteries keep the pinned outputs and the finite controls.
 
 ## Authority and owned surface
 
@@ -20,7 +24,8 @@ Row 251 orders the public implementation after FOLD, T5 and the mask.
 The corrected research contract remains the detailed API specification:
 `docs/research/2026-10-05-claude-lead/queue-contract/queue-contract.md`.
 
-`QueueContract` in `Test/Program/QueueModel.lean` is the abstract transition model.
+`Effect4.Queue.Model` in `src/Effect4/Laws/Modules/Queue/Model.lean` is the abstract transition model.
+The research model names it `QueueContract`.
 Its definition bodies come unchanged from the research model at this packet's base.
 The extraction retains their exact bytes and hashes.
 It adds no program representation or production Queue.
@@ -70,7 +75,7 @@ General request-order and ownership proofs require fresh request identities and 
 The wrapper must establish those premises.
 The capacity helper itself requires neither identity freshness nor a scheduler.
 
-`FirstProfile` in `Test/Program/QueueProfile.lean` is the first profile's state predicate.
+`FirstProfile` in `src/Effect4/Laws/Modules/Queue/Profile.lean` is the first profile's state predicate.
 It has eight conditions: the opened phase, the suspend strategy and a positive capacity.
 Each stored taker has the bounds one and one, and each pending offer is one message and no batch.
 No peeker and no awaiter waits, and no two waiting requests share an identity.
@@ -96,7 +101,7 @@ Two closed forms of the model on the profile are proved beside it, as steps of t
 | Prerequisite | Freeze the exact model and place the goal before proving the helper |
 | Exclusions | No signal delivery, liveness, FIFO progress, typed store preservation, target execution or native Queue agreement |
 
-`Test/Program/QueueCapacity.lean` holds the step proposition with its placement.
+`src/Effect4/Laws/Modules/Queue/Capacity.lean` holds the step proposition with its placement.
 It was a placed `proof_goal`, and the coordinator proved it on 2026-10-05.
 Its steps are the helper and one lemma for each operation of the model.
 The helper is proved there. The coordinator rewrote its proof: Codex's draft did not compile.
@@ -106,7 +111,7 @@ The step's proof does not use the premise of a positive capacity.
 The statement holds at capacity zero too, and it stays as this packet froze it.
 A proposal to drop the premise waits for review.
 
-The file pins the full statement, the `#plan_status` output and the exact axiom output.
+`Test/Program/QueueCapacity.lean` pins the `#plan_status` output and the exact axiom output.
 They use the existing semantic ceiling and the actual proof dependencies.
 Do not count placement metadata as a proved dependency.
 

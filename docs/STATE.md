@@ -231,7 +231,7 @@ Landed later on 2026-10-05:
 - **The Queue's abstract contract is in the tree** (`9abf99b6`): the packet
   `Test/contracts/queue.contract.md`, the model and its small controls, and the first general
   statement. Codex prepared them, and the coordinator built them. `acceptLoop_length_le`
-  (`Test/Program/QueueCapacity.lean`) is proved. `positive_suspend_step_capacity` is proved too:
+  (`src/Effect4/Laws/Modules/Queue/Capacity.lean`) is proved. `positive_suspend_step_capacity` is proved too:
   one step of the model under `suspend` keeps the configuration and the buffer's bound. Its
   proof does not use the positive capacity.
 - **Seventeen worktrees of finished seats are removed,** on the owner's word. Their unique
@@ -245,9 +245,9 @@ Open at this landing:
   model). Its choices are ruled (rows 240 to 243), and it was corrected after Codex's review.
   The Queue's path lands in three parts:
   1. **The pure contract and its capacity proof.** Landed on 2026-10-05 (`9abf99b6`), and the
-     step's capacity statement is proved since. The registry's join waits until the Queue's
-     laws enter the law graph: the registry's roots do not load a battery. Codex keeps the
-     proof's route
+     step's capacity statement is proved since. The model and its proved statements are in the
+     law graph since the same day (row 255), and the registry names two of them:
+     `queue-step-capacity` and `queue-first-profile-closed`. Codex keeps the proof's route
      ([its review](research/2026-10-05-codex-foundation-packet/implementation-audit/open-questions-review/queue/review.md));
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
      The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
@@ -255,7 +255,7 @@ Open at this landing:
      and twice revised after Codex's reviews. Its five choices are ruled (row 255). Its step
      goals quantify
      over a closed predicate, the first profile's states: `FirstProfile`, with its closure
-     proved (`first_profile_closed`, `Test/Program/QueueProfile.lean`). No seat has it yet:
+     proved (`first_profile_closed`, `src/Effect4/Laws/Modules/Queue/Profile.lean`). No seat has it yet:
      two seats run.
      [Its brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md) is written ahead.
      The owner ruled the design's five proposals as recommended (row 255), so its dispatch
@@ -332,6 +332,13 @@ Open at this landing:
   - no lane runs the runner's tests or the compiler checkpoint without a person;
   - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
 - the proposed decisions rows of the three seats' receipts (T3b, M0, LOWER), for the owner;
+- Codex's research on the TypeScript compiler boundary is filed
+  ([its recommendations](research/2026-10-05-codex-foundation-packet/implementation-audit/tsgo-research/recommendations.md);
+  source reading, and no compiler run). It proposes an optional compiler client beside the
+  Lean `typescript` package, extracted from the target oracle and its checker. The Effect
+  admission and the comparison of answer, error and requirement types stay in this tree. No
+  seat has it, and the proposal is the owner's to rule. Its one small finding is with seat T5:
+  the pinned truth check does not compile the tuple control;
 - two red lanes of the sweep of 2026-10-05:
   - `check-tsdiag`: its harness copies the prelude without `prelude-atoms.gen.ts`, so every
     typed program reports a module error (seat T3b's reading);

@@ -13,7 +13,8 @@ A design for review, before any seat builds it. No file of the tree changed.
   signal it could not encode.
 
 F6 lists each point with its repair. The probe is rerun after each. After the second, the
-predicate and its closure went into the tree, proved (`Test/Program/QueueProfile.lean`).
+predicate and its closure went into the tree, proved. After the owner's word (row 255) the
+model and its proved statements moved into the law graph: `src/Effect4/Laws/Modules/Queue/`.
 
 **The one thing to know first.** One part of the Queue's first path needs neither T5 nor the
 mask. It is the cell's encoding, and each step as one term that agrees with the abstract
@@ -32,8 +33,8 @@ the wrapper and the printed TypeScript form build on it without a change?
 | Item | How |
 | --- | --- |
 | `QueueSteps.lean` and its output, beside this note | run: eight scenarios on the machine; each of the six steps against the model, on named states and on 200 states of the first profile |
-| `Test/Program/QueueModel.lean`, `Test/contracts/queue.contract.md` | read; two scenarios run on the model |
-| `Test/Program/QueueProfile.lean`: `FirstProfile` and `first_profile_closed` | built: proved at `[propext, Quot.sound]` |
+| `src/Effect4/Laws/Modules/Queue/Model.lean`, `Test/contracts/queue.contract.md` | read; two scenarios run on the model |
+| `src/Effect4/Laws/Modules/Queue/Profile.lean`: `FirstProfile` and `first_profile_closed` | built: proved at `[propext, Quot.sound]` |
 | Seat FOLD's claims `fold-typed-atomic-update` and `handle-identity-laws` | read: their fields `step`, `notMemberDeferred` and `contained` |
 | Decisions rows 219 to 222, 228 to 230, 233, 235, 238 and 240 to 243 | read |
 | `docs/ARCHITECTURE.md`, its source tree | read: it has no row for a composed module |
@@ -98,7 +99,7 @@ The model names a request by a number, and a signal by that number. The tree nam
 by a handle, and a signal by a hint. So the connector is a relation, and no function.
 
 **The first profile's states.** A step goal quantifies over the states of one predicate, and
-over no other. It is `FirstProfile` in `Test/Program/QueueProfile.lean`. A model state is of
+over no other. It is `FirstProfile` in `src/Effect4/Laws/Modules/Queue/Profile.lean`. A model state is of
 the first profile when each condition below holds.
 
 | Condition | What a step gets wrong without it |
@@ -146,7 +147,7 @@ signals: every signal, and no other.
   that was pending before the step. The other is `again`, for a taker that is stored after it.
 - **Each goal shows that the model emits no other signal on the profile.** A signal with no
   encoding is a refusal of the comparison, and never a signal that it drops.
-- **Two closed forms of the model are proved for it,** in `Test/Program/QueueProfile.lean`.
+- **Two closed forms of the model are proved for it,** in `src/Effect4/Laws/Modules/Queue/Profile.lean`.
   `acceptLoop_single` names the offers that enter: as many as fit, in arrival order, each
   answered `offered true`. `wake_profile` names the one taker that a step may wake: the
   earliest, when a message is buffered, and no peeker.
@@ -261,7 +262,7 @@ The second review changed the comparison and the goals' domain. It changed no st
 
 | Point of the second draft | Correction | Where |
 | --- | --- | --- |
-| Five premises stood for the goals' domain. They left out a peeker and a stored taker's bounds | A closed predicate of eight conditions, with the request's premise. The closure is proved in the tree | F3; `Test/Program/QueueProfile.lean` |
+| Five premises stood for the goals' domain. They left out a peeker and a stored taker's bounds | A closed predicate of eight conditions, with the request's premise. The closure is proved in the tree | F3; `src/Effect4/Laws/Modules/Queue/Profile.lean` |
 | The comparison dropped a signal that named no stored taker, so a peeker's state passed | A reply or a signal with no encoding is a refusal. `agrees` accounts for each signal, in order | F3; controls P1 and P2 |
 | One red control compared a pair with a bare state. The other changed the reply and the state | Three mutants change one notification each. A fourth is a defective step, compared on every state | F3; M1 to M4 |
 
@@ -278,7 +279,8 @@ them. Proposal 6 is the slice's acceptance, and the brief carries it.
 2. **The slice lands the cell, the six step terms and their typing,** for any message type
    that the checker types in a cell.
 3. **The model moves into the law graph** with the capacity theorem and its planned goal. The
-   battery `Test/Program/QueueContract.lean` keeps the controls.
+   battery `Test/Program/QueueContract.lean` keeps the controls. Done on 2026-10-05, with the
+   first profile: the goal was proved before the move.
 4. **Each step has one planned goal,** placed under `translation-simulation`, R10, as a part
    of `queue-expansion-agrees`. Its consumer is the wrapper's law. **The closure is proved,**
    placed under `reactive-scheduling`, R10, as a helper of the same claim on the model's side.

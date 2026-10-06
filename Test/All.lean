@@ -156,7 +156,6 @@ import Test.Program.LoopSoundContract
 import Test.Program.LoopAgreementContract
 import Test.Program.AgreementContract
 import Test.Program.MeaningEqContract
-import Test.Program.QueueModel
 import Test.Program.QueueContract
 import Test.Program.QueueCapacity
 import Test.Program.QueueProfile

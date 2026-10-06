@@ -1,0 +1,175 @@
+{
+  "format": "effect4-tsgo-research-inventory-v1",
+  "main_head": "6acbf7909eceb253d3bec2e713a5fd2d514846e6",
+  "package": {
+    "name": "lean4-typescript",
+    "version": "0.7.0",
+    "revision": "f5878bf879bd5712db964c2cd12802748c707605",
+    "compiler_adapter_present": false
+  },
+  "native_preview": {
+    "manifest": "ts/eff/package.json",
+    "package": "@typescript/native-preview",
+    "version": "7.0.0-dev.20260629.1",
+    "installed_version_read": true
+  },
+  "schema_host": {
+    "manifest": "harness/schema-host/package.json",
+    "typescript": "7.0.2",
+    "effect_tsgo": "0.38.0",
+    "installed": false,
+    "binary_implementation_unverified": true
+  },
+  "entrypoints": [
+    {
+      "id": "target-api",
+      "entry": "tools/target/checker.ts",
+      "runtime": "node",
+      "integration": "native synchronous API",
+      "observation": "selected typing, callable signatures, assignability, subject parsing",
+      "consumers": [
+        "tools/target/oracle.ts",
+        "tools/target/cli.ts",
+        "tools/target/profile.ts",
+        "tools/target/rows.ts",
+        "tools/target/corpus.ts",
+        "tools/target/assignability.ts"
+      ]
+    },
+    {
+      "id": "styles",
+      "entry": "ts/eff/check-styles.ts",
+      "runtime": "bun parent / node child",
+      "integration": "native synchronous API",
+      "observation": "syntactic acceptance and exact loaded-file inventory",
+      "consumers": [
+        "make check-styles"
+      ]
+    },
+    {
+      "id": "tsdiag",
+      "entry": "harness/tsdiag/run-tsdiag.mjs",
+      "runtime": "node",
+      "integration": "native synchronous API",
+      "observation": "per-file compiler diagnostics versus Lean refusal codes",
+      "consumers": [
+        "make check-tsdiag",
+        "make gen-tsdiag"
+      ]
+    },
+    {
+      "id": "truth",
+      "entry": "scripts/check-truth.py",
+      "runtime": "python / node",
+      "integration": "native CLI",
+      "observation": "printed modules plus adapter typechecking",
+      "consumers": [
+        "make check-truth"
+      ]
+    },
+    {
+      "id": "release",
+      "entry": "scripts/check-truth-release.py",
+      "runtime": "python / node",
+      "integration": "native CLI",
+      "observation": "separate release installation and feature-driven runtime lane",
+      "consumers": [
+        "make check-truth-release"
+      ]
+    },
+    {
+      "id": "corpus",
+      "entry": "scripts/check-corpus.py",
+      "runtime": "python / node / bun",
+      "integration": "native CLI + target API",
+      "observation": "printed corpus module typing and inferred A/E/R",
+      "consumers": [
+        "make check-corpus"
+      ]
+    },
+    {
+      "id": "host-protocol",
+      "entry": "scripts/check-host-protocol.py",
+      "runtime": "python / node",
+      "integration": "native CLI",
+      "observation": "generated session expressions and adapters",
+      "consumers": [
+        "make check-host-protocol"
+      ]
+    },
+    {
+      "id": "service-identity",
+      "entry": "scripts/check-service-identity.py",
+      "runtime": "python / node",
+      "integration": "native CLI",
+      "observation": "shipped annotations and independent initializer inference",
+      "consumers": [
+        "service identity controls"
+      ]
+    },
+    {
+      "id": "schema-generation",
+      "entry": "scripts/check-schema-typescript-generation.sh",
+      "runtime": "shell",
+      "integration": "declared TypeScript7 tsc.original + effect-tsgo language service",
+      "observation": "six generated Schema fixture files",
+      "consumers": [
+        "make check-schema-ts"
+      ]
+    },
+    {
+      "id": "schema-codec",
+      "entry": "Makefile",
+      "runtime": "node",
+      "integration": "native CLI",
+      "observation": "codec fixture typing before runtime comparisons",
+      "consumers": [
+        "make check-schema-codec"
+      ]
+    },
+    {
+      "id": "eff-types",
+      "entry": "ts/eff/package.json",
+      "runtime": "package script",
+      "integration": "native CLI",
+      "observation": "reader/library/test TypeScript project",
+      "consumers": [
+        "bun run typecheck"
+      ]
+    },
+    {
+      "id": "shared-host",
+      "entry": "scripts/lib/truth_host.py",
+      "runtime": "python",
+      "integration": "installation selection and native CLI construction",
+      "observation": "pin/release installs and version checks",
+      "consumers": [
+        "truth",
+        "release",
+        "corpus"
+      ]
+    },
+    {
+      "id": "ingest-parser",
+      "entry": "ts/eff/ingest/oxc.ts",
+      "runtime": "bun",
+      "integration": "oxc parseSync",
+      "observation": "parser shared by distinct recognizer/census walks",
+      "consumers": [
+        "ts/eff/ingest/ck.ts",
+        "ts/eff/ingest/census/decls-ck.ts",
+        "ts/eff/ingest/fidelity/source.ts"
+      ]
+    },
+    {
+      "id": "pure-syntax",
+      "entry": ".lake/packages/typescript/TypeScript.lean",
+      "runtime": "lean",
+      "integration": "none",
+      "observation": "syntax, structural equality, renderer, identifiers, HostPin data",
+      "consumers": [
+        "src/Effect4/Codegen/*"
+      ]
+    }
+  ]
+}

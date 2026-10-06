@@ -3,8 +3,7 @@ import Effect4.Run
 import Effect4.Program.Authoring.Loops
 import Effect4.Program.Authoring.Folds
 import Effect4.Codegen.ListFold
-import Test.Program.QueueModel
-import Test.Program.QueueProfile
+import Effect4.Laws.Modules.Queue.Profile
 
 /-!
 # Probe: the Queue's first profile with the real steps, after seat FOLD's merge
@@ -21,10 +20,10 @@ term folds: it finds a request by `sameHandle`, removes it, accepts pending offe
 room, and names the requests to notify. The first profile is the contract's: a positive
 capacity and the `suspend` strategy, with `take` and `offer` of one message.
 
-A step names its notifications as the abstract model does (`Test/Program/QueueModel.lean`), and
+A step names its notifications as the abstract model does (`src/Effect4/Laws/Modules/Queue/Model.lean`), and
 in the model's order: the offers that the step accepted, then the taker to wake. Section
 "The first profile's states" gives each fault of the closed predicate that a step goal
-quantifies over (`FirstProfile`, `Test/Program/QueueProfile.lean`, where its closure is proved).
+quantifies over (`FirstProfile`, `src/Effect4/Laws/Modules/Queue/Profile.lean`, where its closure is proved).
 Section "The steps against the model" compares each step's answer, stored value and ordered
 notifications with the model's: on named states, and on every state of a finite universe of the
 profile. A comparison refuses a state outside the profile, and a signal with no encoding. No
@@ -401,24 +400,24 @@ def r8 : Src NativeOp := eff do
 /-! ## The same operations on the abstract model -/
 
 /-- R1 on the model: both offers accepted, then the two messages in order. -/
-def model1 : QueueContract.OfferReply × QueueContract.OfferReply × QueueContract.TakeReply ×
-    QueueContract.TakeReply :=
-  let s : QueueContract.State := { capacity := some 2 }
-  let a := QueueContract.offer s 100 1
-  let b := QueueContract.offer a.1 101 2
-  let x := QueueContract.take b.1 ⟨1, 1, 1⟩
-  let y := QueueContract.take x.1 ⟨2, 1, 1⟩
+def model1 : Queue.Model.OfferReply × Queue.Model.OfferReply × Queue.Model.TakeReply ×
+    Queue.Model.TakeReply :=
+  let s : Queue.Model.State := { capacity := some 2 }
+  let a := Queue.Model.offer s 100 1
+  let b := Queue.Model.offer a.1 101 2
+  let x := Queue.Model.take b.1 ⟨1, 1, 1⟩
+  let y := Queue.Model.take x.1 ⟨2, 1, 1⟩
   (a.2.1, b.2.1, x.2.1, y.2.1)
 
 /-- R4 on the model: the second offer waits; the take frees room and answers it; then the
 second message. -/
-def model4 : QueueContract.OfferReply × QueueContract.OfferReply × QueueContract.TakeReply ×
-    List QueueContract.Signal × QueueContract.TakeReply :=
-  let s : QueueContract.State := { capacity := some 1 }
-  let a := QueueContract.offer s 100 1
-  let b := QueueContract.offer a.1 101 2
-  let x := QueueContract.take b.1 ⟨1, 1, 1⟩
-  let y := QueueContract.take x.1 ⟨2, 1, 1⟩
+def model4 : Queue.Model.OfferReply × Queue.Model.OfferReply × Queue.Model.TakeReply ×
+    List Queue.Model.Signal × Queue.Model.TakeReply :=
+  let s : Queue.Model.State := { capacity := some 1 }
+  let a := Queue.Model.offer s 100 1
+  let b := Queue.Model.offer a.1 101 2
+  let x := Queue.Model.take b.1 ⟨1, 1, 1⟩
+  let y := Queue.Model.take x.1 ⟨2, 1, 1⟩
   (a.2.1, b.2.1, x.2.1, x.2.2, y.2.1)
 
 #eval toString (repr model1)
@@ -427,13 +426,13 @@ def model4 : QueueContract.OfferReply × QueueContract.OfferReply × QueueContra
 /-! ## The first profile's states
 
 A step goal quantifies over the states of the first profile, and over no other. The predicate is
-`FirstProfile` of `Test/Program/QueueProfile.lean`, and it is closed: `first_profile_closed`
+`FirstProfile` of `src/Effect4/Laws/Modules/Queue/Profile.lean`, and it is closed: `first_profile_closed`
 there. A comparison below decides it. `profileFaults` says in words what a state breaks, and
 agrees with the predicate on every state that a comparison meets (`faultsAgree`, below). The
 model's `within` and `tidy` are no part of it. They are the capacity statement's, and a step
 agrees with the model at a state that breaks them too. -/
 
-open Test.Program.QueueProfile (FirstProfile)
+open Effect4.Queue.Model (FirstProfile)
 
 def distinct : List Nat → Bool
   | [] => true
@@ -441,7 +440,7 @@ def distinct : List Nat → Bool
 
 /-- What puts a model state outside the first profile, each fault in words. Empty for a state of
 the profile. -/
-def profileFaults (s : QueueContract.State) : List String :=
+def profileFaults (s : Queue.Model.State) : List String :=
   (if s.phase == .opened then [] else ["the queue is not opened"]) ++
   (if s.strategy == .suspend then [] else ["the strategy is not suspend"]) ++
   (match s.capacity with
@@ -453,13 +452,13 @@ def profileFaults (s : QueueContract.State) : List String :=
     else ["a pending offer is a batch, or holds no single message"]) ++
   (if s.peekers.isEmpty then [] else ["a peeker waits"]) ++
   (if s.awaiters.isEmpty then [] else ["an awaiter waits"]) ++
-  (if distinct (QueueContract.waiting s) then [] else ["two waiting requests share an identity"])
+  (if distinct (Queue.Model.waiting s) then [] else ["two waiting requests share an identity"])
 
 /-- The predicate of the tree, decided. -/
-def firstProfile (s : QueueContract.State) : Bool := decide (FirstProfile s)
+def firstProfile (s : Queue.Model.State) : Bool := decide (FirstProfile s)
 
 /-- The words agree with the predicate on a state. -/
-def faultsAgree (s : QueueContract.State) : Bool := (profileFaults s).isEmpty == firstProfile s
+def faultsAgree (s : Queue.Model.State) : Bool := (profileFaults s).isEmpty == firstProfile s
 
 /-! ## The steps against the model
 
@@ -492,12 +491,12 @@ def table0 : Table := fun n => var (hintName n)
 def Table.set (tb : Table) (id : Nat) (hint : TermSrc) : Table :=
   fun n => if n = id then hint else tb n
 
-def takerTerm (tb : Table) (t : QueueContract.Taker) : TermSrc := mkTaker (var (idName t.id)) (tb t.id)
-def offerTerm (o : QueueContract.Offer) : TermSrc :=
+def takerTerm (tb : Table) (t : Queue.Model.Taker) : TermSrc := mkTaker (var (idName t.id)) (tb t.id)
+def offerTerm (o : Queue.Model.Offer) : TermSrc :=
   mkOffer (var (idName o.id)) (var (hintName o.id)) (bool o.batch) (natList o.rest)
 /-- The cell's value for a model state. On the first profile it loses nothing: a stored taker's
 bounds, the strategy, the phase and the two empty lists are fixed there. -/
-def stateTerm (tb : Table) (s : QueueContract.State) : TermSrc :=
+def stateTerm (tb : Table) (s : Queue.Model.State) : TermSrc :=
   record stateFields [("msgs", natList s.messages),
     ("takers", listOf (s.takers.map (takerTerm tb))),
     ("offers", listOf (s.offers.map offerTerm)), ("cap", nat (s.capacity.getD 0))]
@@ -527,9 +526,9 @@ instance : ToString Verdict := ⟨Verdict.text⟩
 the takers to wake. It refuses a signal that such a step cannot answer: an answer other than
 `offered true`, an identity that names no stored request of its kind, any other note, and an
 answer behind a wake. -/
-def notifications (before after : QueueContract.State) (tb : Table)
-    (signals : List QueueContract.Signal) : Except String (List TermSrc × List TermSrc) := do
-  let isAnswer := fun (g : QueueContract.Signal) => g.note == QueueContract.Note.offered true
+def notifications (before after : Queue.Model.State) (tb : Table)
+    (signals : List Queue.Model.Signal) : Except String (List TermSrc × List TermSrc) := do
+  let isAnswer := fun (g : Queue.Model.Signal) => g.note == Queue.Model.Note.offered true
   let accepted ← (signals.takeWhile isAnswer).mapM fun g =>
     match before.offers.find? (·.id == g.id) with
     | some o => pure (offerTerm o)
@@ -554,20 +553,20 @@ def judge (step : TermSrc) (expected : Except String TermSrc) : Verdict :=
 
 /-- A comparison under its premises: the state before the step and the state after it are of the
 first profile, and the request keeps the step's premise. -/
-def guarded (before after : QueueContract.State) (request : List String) (raw : Verdict) :
+def guarded (before after : Queue.Model.State) (request : List String) (raw : Verdict) :
     Verdict :=
   if firstProfile before && request.isEmpty && firstProfile after then raw
   else .outside (profileFaults before ++ request ++
     (profileFaults after).map ("after the step, " ++ ·))
 
 /-- A take's request is fresh, or it is its own waiting taker. -/
-def foreign (s : QueueContract.State) (id : Nat) : List String :=
+def foreign (s : Queue.Model.State) (id : Nat) : List String :=
   if (s.offers.map (·.id) ++ s.peekers ++ s.awaiters).contains id
   then ["the request's identity names a waiting request of another kind"] else []
 
 /-- An offer's request is fresh. -/
-def notFresh (s : QueueContract.State) (id : Nat) : List String :=
-  if (QueueContract.waiting s).contains id then ["the request's identity is not fresh"] else []
+def notFresh (s : Queue.Model.State) (id : Nat) : List String :=
+  if (Queue.Model.waiting s).contains id then ["the request's identity is not fresh"] else []
 
 /-- A deliberate defect of an expected result, for a red control. The reply and the stored value
 stay as they are. -/
@@ -580,9 +579,9 @@ inductive Mutation
 
 /-- A take of request `id` with the hint `fresh`, on the encoding of `s`: the encoding of the
 model's result, the accepted offers before the takers. -/
-def takeExpected (mutation : Mutation) (s : QueueContract.State) (id : Nat) :
+def takeExpected (mutation : Mutation) (s : Queue.Model.State) (id : Nat) :
     Except String TermSrc := do
-  let r := QueueContract.take s ⟨id, 1, 1⟩
+  let r := Queue.Model.take s ⟨id, 1, 1⟩
   let (reply, tb) ← (match r.2.1 with
     | .got [m] => pure (app "some" [nat m], table0)
     | .wait => pure (noneT, table0.set id (var "fresh"))
@@ -594,23 +593,23 @@ def takeExpected (mutation : Mutation) (s : QueueContract.State) (id : Nat) :
     | .exact => (accepted, woken)
   pure (app "pair" [tuple [reply, listOf first, listOf second], stateTerm tb r.1])
 
-def takeRaw (mutation : Mutation) (s : QueueContract.State) (id : Nat) : Verdict :=
+def takeRaw (mutation : Mutation) (s : Queue.Model.State) (id : Nat) : Verdict :=
   judge (takeStep (var (idName id)) (var "fresh") (stateTerm table0 s)) (takeExpected mutation s id)
 
-def takeAgrees (s : QueueContract.State) (id : Nat) : Verdict :=
-  guarded s (QueueContract.take s ⟨id, 1, 1⟩).1 (foreign s id) (takeRaw .exact s id)
+def takeAgrees (s : Queue.Model.State) (id : Nat) : Verdict :=
+  guarded s (Queue.Model.take s ⟨id, 1, 1⟩).1 (foreign s id) (takeRaw .exact s id)
 
 /-- The takers that a step with no accepted offer wakes. -/
-def wakesOnly (before after : QueueContract.State) (signals : List QueueContract.Signal) :
+def wakesOnly (before after : Queue.Model.State) (signals : List Queue.Model.Signal) :
     Except String (List TermSrc) := do
   let (accepted, woken) ← notifications before after table0 signals
   unless accepted.isEmpty do throw "this step answers no accepted offer"
   pure woken
 
 /-- An offer of `a` by request `id`, on the encoding of `s`. -/
-def offerExpected (mutation : Mutation) (s : QueueContract.State) (id a : Nat) :
+def offerExpected (mutation : Mutation) (s : Queue.Model.State) (id a : Nat) :
     Except String TermSrc := do
-  let r := QueueContract.offer s id a
+  let r := Queue.Model.offer s id a
   let reply := match r.2.1 with
     | .accepted ok => app "some" [bool ok]
     | .wait => noneT
@@ -620,15 +619,15 @@ def offerExpected (mutation : Mutation) (s : QueueContract.State) (id a : Nat) :
     | _ => woken
   pure (app "pair" [tuple [reply, listOf woken], stateTerm table0 r.1])
 
-def offerRaw (mutation : Mutation) (s : QueueContract.State) (id a : Nat) : Verdict :=
+def offerRaw (mutation : Mutation) (s : Queue.Model.State) (id a : Nat) : Verdict :=
   judge (offerStep (var (idName id)) (var (hintName id)) (nat a) (stateTerm table0 s))
     (offerExpected mutation s id a)
 
-def offerAgrees (s : QueueContract.State) (id a : Nat) : Verdict :=
-  guarded s (QueueContract.offer s id a).1 (notFresh s id) (offerRaw .exact s id a)
+def offerAgrees (s : Queue.Model.State) (id a : Nat) : Verdict :=
+  guarded s (Queue.Model.offer s id a).1 (notFresh s id) (offerRaw .exact s id a)
 
-def pollAgrees (s : QueueContract.State) : Verdict :=
-  let r := QueueContract.poll s
+def pollAgrees (s : Queue.Model.State) : Verdict :=
+  let r := Queue.Model.poll s
   guarded s r.1 [] (judge (pollStep (stateTerm table0 s)) (do
     let (accepted, woken) ← notifications s r.1 table0 r.2.2
     unless woken.isEmpty do throw "a poll wakes no taker"
@@ -637,54 +636,54 @@ def pollAgrees (s : QueueContract.State) : Verdict :=
       | none => noneT
     pure (app "pair" [tuple [reply, listOf accepted], stateTerm table0 r.1])))
 
-def sizeAgrees (s : QueueContract.State) : Verdict :=
-  guarded s s [] (judge (sizeStep (stateTerm table0 s)) (pure (nat (QueueContract.size s))))
+def sizeAgrees (s : Queue.Model.State) : Verdict :=
+  guarded s s [] (judge (sizeStep (stateTerm table0 s)) (pure (nat (Queue.Model.size s))))
 
-def withdrawTakeAgrees (s : QueueContract.State) (id : Nat) : Verdict :=
-  let r := QueueContract.withdrawTake s id
+def withdrawTakeAgrees (s : Queue.Model.State) (id : Nat) : Verdict :=
+  let r := Queue.Model.withdrawTake s id
   guarded s r.1 [] (judge (withdrawTake (var (idName id)) (stateTerm table0 s)) (do
     let woken ← wakesOnly s r.1 r.2
     pure (app "pair" [listOf woken, stateTerm table0 r.1])))
 
-def withdrawOfferAgrees (s : QueueContract.State) (id : Nat) : Verdict :=
-  let r := QueueContract.withdrawOffer s id
+def withdrawOfferAgrees (s : Queue.Model.State) (id : Nat) : Verdict :=
+  let r := Queue.Model.withdrawOffer s id
   guarded s r.1 [] (judge (withdrawOffer (var (idName id)) (stateTerm table0 s)) (do
     let woken ← wakesOnly s r.1 r.2
     pure (app "pair" [listOf woken, stateTerm table0 r.1])))
 
-def T (n : Nat) : QueueContract.Taker := ⟨n, 1, 1⟩
+def T (n : Nat) : Queue.Model.Taker := ⟨n, 1, 1⟩
 
 /-- Codex's prefix, before its last step: capacity one, takers 1 and 2, message 1 buffered,
 the offer of message 2 by request 101 pending. -/
-def mixed : QueueContract.State :=
+def mixed : Queue.Model.State :=
   { capacity := some 1, messages := [1], takers := [T 1, T 2], offers := [⟨101, false, [2]⟩] }
 
 /-- `mixed` before its second offer: the buffer is full, and no offer is pending. -/
-def full : QueueContract.State := { mixed with offers := [] }
+def full : Queue.Model.State := { mixed with offers := [] }
 
 -- The model's last step: message 1, then the offerer's answer before taker 2's wake.
-#eval toString (repr (QueueContract.take mixed (T 1)).2)
+#eval toString (repr (Queue.Model.take mixed (T 1)).2)
 -- C1. The mixed notifications: the term agrees, in the model's order.
 #eval takeAgrees mixed 1
 -- C2. The first offer at a full buffer waits, and the model wakes the earliest taker again.
-#eval toString (repr (QueueContract.offer full 101 2).2)
+#eval toString (repr (Queue.Model.offer full 101 2).2)
 #eval offerAgrees full 101 2
 -- C2b. An offer behind a pending offer waits and notifies nobody.
-#eval toString (repr (QueueContract.offer mixed 102 3).2)
+#eval toString (repr (Queue.Model.offer mixed 102 3).2)
 #eval offerAgrees mixed 102 3
 -- C3. A taker that waits already, and no message: the model's state is unchanged, and the
 -- term renews that request's hint and no other entry.
-#eval toString (repr (QueueContract.take { capacity := some 1, takers := [T 1, T 2] } (T 1)).2)
+#eval toString (repr (Queue.Model.take { capacity := some 1, takers := [T 1, T 2] } (T 1)).2)
 #eval takeAgrees { capacity := some 1, takers := [T 1, T 2] } 1
 -- C4. A new taker enrols behind a waiting one; and an offer into room wakes the earliest.
 #eval takeAgrees { capacity := some 1, takers := [T 1] } 2
 #eval offerAgrees { capacity := some 2, takers := [T 1] } 100 7
 -- C5. The withdrawals: the earliest taker leaves and the next is woken; a pending offer leaves.
-#eval toString (repr (QueueContract.withdrawTake mixed 1).2)
+#eval toString (repr (Queue.Model.withdrawTake mixed 1).2)
 #eval withdrawTakeAgrees mixed 1
 #eval withdrawOfferAgrees mixed 101
 -- C6. A poll that frees room accepts the pending offer; the size is the buffer's length.
-#eval toString (repr (QueueContract.poll { mixed with takers := [] }).2)
+#eval toString (repr (Queue.Model.poll { mixed with takers := [] }).2)
 #eval pollAgrees { mixed with takers := [] }
 #eval sizeAgrees mixed
 
@@ -693,18 +692,18 @@ def full : QueueContract.State := { mixed with offers := [] }
 Codex's witness is C4's state with one peeker. The model wakes taker 1 and then peeker 2. The
 cell has no place for a peeker, so the comparison must not go on. -/
 
-def peeked : QueueContract.State := { capacity := some 2, takers := [T 1], peekers := [2] }
+def peeked : Queue.Model.State := { capacity := some 2, takers := [T 1], peekers := [2] }
 /-- A stored taker with the bounds two and two: one message does not make it ready. -/
-def twoTwo : QueueContract.State := { capacity := some 2, takers := [⟨1, 2, 2⟩] }
+def twoTwo : Queue.Model.State := { capacity := some 2, takers := [⟨1, 2, 2⟩] }
 
 -- P1. The model's signals at the peeker's state: taker 1, then peeker 2.
-#eval toString (repr (QueueContract.offer peeked 100 7).2)
+#eval toString (repr (Queue.Model.offer peeked 100 7).2)
 -- The comparison refuses the state. With no premise, the encoder refuses the peeker's signal.
 #eval offerAgrees peeked 100 7
 #eval offerRaw .exact peeked 100 7
 -- P2. The model wakes nobody for the two-and-two taker. The comparison refuses the state. With
 -- no premise it differs: the step's wake does not read a stored taker's bounds.
-#eval toString (repr (QueueContract.offer twoTwo 100 7).2)
+#eval toString (repr (Queue.Model.offer twoTwo 100 7).2)
 #eval offerAgrees twoTwo 100 7
 #eval offerRaw .exact twoTwo 100 7
 -- P3. A request that breaks a step's premise: an offer by a request that waits already.
@@ -736,7 +735,7 @@ def moves : List Move :=
   [.take 1, .take 2, .take 3, .offer 102 30, .poll, .size, .dropTake 1, .dropTake 2, .dropTake 3,
    .dropOffer 100, .dropOffer 101, .dropOffer 102]
 
-def Move.verdict (s : QueueContract.State) : Move → Verdict
+def Move.verdict (s : Queue.Model.State) : Move → Verdict
   | .take id => takeAgrees s id
   | .offer id a => offerAgrees s id a
   | .poll => pollAgrees s
@@ -744,23 +743,23 @@ def Move.verdict (s : QueueContract.State) : Move → Verdict
   | .dropTake id => withdrawTakeAgrees s id
   | .dropOffer id => withdrawOfferAgrees s id
 
-def Move.next (s : QueueContract.State) : Move → QueueContract.State
-  | .take id => (QueueContract.take s ⟨id, 1, 1⟩).1
-  | .offer id a => (QueueContract.offer s id a).1
-  | .poll => (QueueContract.poll s).1
+def Move.next (s : Queue.Model.State) : Move → Queue.Model.State
+  | .take id => (Queue.Model.take s ⟨id, 1, 1⟩).1
+  | .offer id a => (Queue.Model.offer s id a).1
+  | .poll => (Queue.Model.poll s).1
   | .size => s
-  | .dropTake id => (QueueContract.withdrawTake s id).1
-  | .dropOffer id => (QueueContract.withdrawOffer s id).1
+  | .dropTake id => (Queue.Model.withdrawTake s id).1
+  | .dropOffer id => (Queue.Model.withdrawOffer s id).1
 
 def orders {α : Type} (a b : α) : List (List α) := [[], [a], [b], [a, b], [b, a]]
 
-def profileStates : List QueueContract.State :=
+def profileStates : List Queue.Model.State :=
   [1, 2].flatMap fun cap =>
   ([[], [7], [7, 8], [7, 8, 9]] : List (List Nat)).flatMap fun messages =>
   (orders (T 1) (T 2)).flatMap fun takers =>
-  (orders (⟨100, false, [20]⟩ : QueueContract.Offer) ⟨101, false, [21]⟩).map fun offers =>
+  (orders (⟨100, false, [20]⟩ : Queue.Model.Offer) ⟨101, false, [21]⟩).map fun offers =>
     ({ capacity := some cap, messages := messages, takers := takers, offers := offers } :
-      QueueContract.State)
+      Queue.Model.State)
 
 /-- Every state of the universe is of the profile, and each move leaves the profile true. -/
 def closed : Bool :=
@@ -778,7 +777,7 @@ def disagreements : List (String × String) :=
 -- The words of `profileFaults` agree with the tree's predicate: on each state of the universe,
 -- on each state a move leaves, and on the three states outside the profile.
 #eval (profileStates.all fun s => faultsAgree s && moves.all fun m => faultsAgree (m.next s)) &&
-  [peeked, twoTwo, (QueueContract.offer mixed 101 9).1].all faultsAgree
+  [peeked, twoTwo, (Queue.Model.offer mixed 101 9).1].all faultsAgree
 
 /-- A deliberate defect of a step, for a red control of the whole comparison: the first draft's
 offer, which notifies nobody when it waits at a full buffer. -/

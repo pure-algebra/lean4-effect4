@@ -9,28 +9,28 @@ some
 "success (Val.list [(Val.nat 1), (Val.nat 0), (Val.nat 0)])"
 "success (Val.ctor 1 [(Val.ctor 0 [(Val.list [(Val.ctor 2 [(Val.some (Val.ctor 0 [(Val.nat 0)])), (Val.ctor 0 [(Val.list [(Val.pair (Val.str \"stack1\") Val.unit), (Val.pair (Val.str \"stack0\") Val.unit)])])])])])])"
 "success (Val.list [(Val.nat 1), (Val.nat 101), (Val.nat 2)])"
-"(QueueContract.OfferReply.accepted true,\n QueueContract.OfferReply.accepted true,\n QueueContract.TakeReply.got [1],\n QueueContract.TakeReply.got [2])"
-"(QueueContract.OfferReply.accepted true,\n QueueContract.OfferReply.wait,\n QueueContract.TakeReply.got [1],\n [{ id := 101, note := QueueContract.Note.offered true }],\n QueueContract.TakeReply.got [2])"
-"(QueueContract.TakeReply.got [1],\n [{ id := 101, note := QueueContract.Note.offered true }, { id := 2, note := QueueContract.Note.again }])"
+"(Effect4.Queue.Model.OfferReply.accepted true,\n Effect4.Queue.Model.OfferReply.accepted true,\n Effect4.Queue.Model.TakeReply.got [1],\n Effect4.Queue.Model.TakeReply.got [2])"
+"(Effect4.Queue.Model.OfferReply.accepted true,\n Effect4.Queue.Model.OfferReply.wait,\n Effect4.Queue.Model.TakeReply.got [1],\n [{ id := 101, note := Effect4.Queue.Model.Note.offered true }],\n Effect4.Queue.Model.TakeReply.got [2])"
+"(Effect4.Queue.Model.TakeReply.got [1],\n [{ id := 101, note := Effect4.Queue.Model.Note.offered true }, { id := 2, note := Effect4.Queue.Model.Note.again }])"
 agrees
-"(QueueContract.OfferReply.wait, [{ id := 1, note := QueueContract.Note.again }])"
+"(Effect4.Queue.Model.OfferReply.wait, [{ id := 1, note := Effect4.Queue.Model.Note.again }])"
 agrees
-"(QueueContract.OfferReply.wait, [])"
+"(Effect4.Queue.Model.OfferReply.wait, [])"
 agrees
-"(QueueContract.TakeReply.wait, [])"
-agrees
-agrees
-agrees
-"[{ id := 2, note := QueueContract.Note.again }]"
+"(Effect4.Queue.Model.TakeReply.wait, [])"
 agrees
 agrees
-"(some 1, [{ id := 101, note := QueueContract.Note.offered true }])"
+agrees
+"[{ id := 2, note := Effect4.Queue.Model.Note.again }]"
 agrees
 agrees
-"(QueueContract.OfferReply.accepted true,\n [{ id := 1, note := QueueContract.Note.again }, { id := 2, note := QueueContract.Note.again }])"
+"(some 1, [{ id := 101, note := Effect4.Queue.Model.Note.offered true }])"
+agrees
+agrees
+"(Effect4.Queue.Model.OfferReply.accepted true,\n [{ id := 1, note := Effect4.Queue.Model.Note.again }, { id := 2, note := Effect4.Queue.Model.Note.again }])"
 outside the profile: a peeker waits; after the step, a peeker waits
 no encoding: the wake of request 2 names no stored taker
-"(QueueContract.OfferReply.accepted true, [])"
+"(Effect4.Queue.Model.OfferReply.accepted true, [])"
 outside the profile: a stored taker's bounds are not one and one; after the step, a stored taker's bounds are not one and one
 differs
 outside the profile: the request's identity is not fresh; after the step, two waiting requests share an identity

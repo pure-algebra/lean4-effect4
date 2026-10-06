@@ -1,0 +1,32 @@
+{
+  "kind": "pure-source-file-selection",
+  "commands": [
+    "python3 copy-selection-probe.py"
+  ],
+  "compiler_executed": false,
+  "explicit_truth_copyfiles": [
+    "select-controls.ts",
+    "records.typecheck.ts",
+    "folds.typecheck.ts"
+  ],
+  "typecheck_patterns": [
+    "records.typecheck.ts",
+    "tuples.typecheck.ts",
+    "folds.typecheck.ts"
+  ],
+  "current_missing": [
+    "tuples.typecheck.ts"
+  ],
+  "candidate_copy_positive_missing": [],
+  "removed_fold_mutant_missing": [
+    "folds.typecheck.ts"
+  ],
+  "assertions": 6,
+  "source_sha256": {
+    "scripts/check-truth.py": "c70d95b0feb18bc4fd30156913c7831148db7cd0495fc32f1284e5b9c6d578b3",
+    "harness/truth/tsconfig.json": "96e5b73ad73b1a8d3810c7f5dd4009b0f79c898ccbf6796670fbaff7b5b8c2a3",
+    "harness/truth/records.typecheck.ts": "c407ae6b587f20ca30369afea862a26a40bff5cbfc38ff16c777cd3fc3f02099",
+    "harness/truth/tuples.typecheck.ts": "5e3e14ff4a82731d2d58dcf1905931313c6d9699dbeb0344af8e9b571a88d493",
+    "harness/truth/folds.typecheck.ts": "e5e2a912619cc53177daae234ad91fdea114b5cf0a88cd07e50efb420fceb001"
+  }
+}
