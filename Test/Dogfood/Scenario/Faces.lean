@@ -17,8 +17,10 @@ loop states its cursor's type: it reads back since part B's second step (DI-91).
 
 Placement. Finite controls of `read_print` and `read_exact` (R8's top nodes,
 `src/Effect4/Laws/Codegen/ReadPrint.lean` and `src/Effect4/Laws/Codegen/Read.lean`) on five
-programs. No guard states target typing, and none states a host run. The keyed lane's run of
-each module is the host clause of its scenario, which waits (`Test/Dogfood/README.md`).
+programs. No guard states target typing, and none states a host run. The host clause of each
+scenario stands on the keyed lane, which performs the scenario's named runs on its printed
+module (`harness/truth/session/Keyed.lean`; `Test/Dogfood/README.md`, the section "The host
+runs").
 -/
 
 set_option autoImplicit false
