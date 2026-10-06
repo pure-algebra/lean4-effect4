@@ -61,6 +61,7 @@ import Test.Program.MapValues
 import Test.Program.MapTyping
 import Test.Program.MapHandles
 import Test.Program.RecordOperations
+import Test.Program.UnionRule
 import Test.Program.FoldFamilySelection
 import Test.Program.RecordRefusals
 import Test.Program.RecordTerms

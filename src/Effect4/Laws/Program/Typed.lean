@@ -5,6 +5,7 @@ import Effect4.Program.ErrorImage
 import Effect4.Laws.Program.ErrorQueries
 import Effect4.Laws.Program.TypeAlgebra
 import Effect4.Laws.Program.Template
+import Effect4.Laws.Program.UnionRule
 import Effect4.Laws.Auto.Inversion
 
 /-!
@@ -1245,6 +1246,15 @@ private theorem join_left (a b : Ty) (value : Val) (h : Has value a) : Has value
 private theorem join_right (a b : Ty) (value : Val) (h : Has value b) : Has value (Ty.join a b) :=
   Ty.hasTy_join_right a b value [] h
 
+/-- The Boolean value check reads a union: its normal form, its union members and its join
+(`UnionRule.ReadsUnion`, `src/Effect4/Laws/Program/UnionRule.lean`). A step of `fieldType` and
+`setType` below: each record rule's law at one record lifts through it. -/
+theorem has_reads : UnionRule.ReadsUnion Has where
+  normalize h := (has_normalize _ _).mpr h
+  members h := (has_members _ _).mpr h
+  joinLeft a b h := join_left a b _ h
+  joinRight a b h := join_right a b _ h
+
 private theorem has_record {v : Val} {ns xs : List Val} (hv : recordParts? v = some (ns, xs))
     (fields : List (String × Bool × Ty)) :
     Has v (.record fields) ↔ NamedFit ((Ty.canon fields).map (fun q => (q.1, pred q.2))) ns xs := by
@@ -1499,18 +1509,14 @@ theorem fieldOf {value : Val} {target answer : Ty}
   | _ => cases htype
 
 
-/-- Field typing covers every union branch and returns an actual fitting read result. -/
+/-- Field typing covers every union branch and returns an actual fitting read result. The
+record-only law `fieldOf`, lifted (`UnionRule.ReadsUnion.lift_sound`). -/
 theorem fieldType {value : Val} {target answer : Ty}
     {optional : Bool} {name : String}
     (htype : Program.Record.fieldType optional target name = some answer)
     (hfit : Has value target) :
-    ∃ out, Record.read optional value name = some out ∧ Has out answer := by
-  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp htype
-  obtain ⟨branch, hbranch, hbranchFit⟩ :=
-    (has_members value target.normalize).mpr ((has_normalize target value).mpr hfit)
-  obtain ⟨branchAnswer, ha, hbranchType⟩ := mapM_some_mem hanswers branch hbranch
-  obtain ⟨out, hout, hfit⟩ := fieldOf hbranchType hbranchFit
-  exact ⟨out, hout, joinResults ha hfit⟩
+    ∃ out, Record.read optional value name = some out ∧ Has out answer :=
+  has_reads.lift_sound (fun _ _ typed fit => fieldOf typed fit) htype hfit
 
 
 /-- A sorted frame fits a record when its names and all declared lookups fit. -/
@@ -1600,18 +1606,14 @@ theorem setOf {value replacement : Val} {target answer replacementType : Ty}
   | _ => cases htype
 
 
-/-- Overwrite typing covers every union branch and returns an actual fitting value. -/
+/-- Overwrite typing covers every union branch and returns an actual fitting value. The
+record-only law `setOf`, lifted (`UnionRule.ReadsUnion.lift_sound`). -/
 theorem setType {value replacement : Val} {target answer replacementType : Ty}
     {name : String}
     (htype : Program.Record.setType target name replacementType = some answer)
     (hfit : Has value target) (hreplacement : Has replacement replacementType) :
-    ∃ out, Record.set value name replacement = some out ∧ Has out answer := by
-  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp htype
-  obtain ⟨branch, hbranch, hbranchFit⟩ :=
-    (has_members value target.normalize).mpr ((has_normalize target value).mpr hfit)
-  obtain ⟨branchAnswer, ha, hbranchType⟩ := mapM_some_mem hanswers branch hbranch
-  obtain ⟨out, hout, hfit⟩ := setOf hbranchType hbranchFit hreplacement
-  exact ⟨out, hout, joinResults ha hfit⟩
+    ∃ out, Record.set value name replacement = some out ∧ Has out answer :=
+  has_reads.lift_sound (fun _ _ typed fit => setOf typed fit hreplacement) htype hfit
 
 
 end RecordChecks

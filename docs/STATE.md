@@ -335,8 +335,9 @@ where it makes a thing generated, fast or ergonomic. Three answers are ratified.
 is the first stage, and a true gap with holes is the direction. Explanations have a
 requirement of their own, **R14: a partial program checks and explains its types**. A slice
 view promises one minimal slice and never a minimum size. The first groundwork slice is
-landed: the generic theory of type slices (seat LATTICE, row 286). The second is in work: one
-combinator for a rule that reads a union member by member (seat UNION, row 285).
+landed: the generic theory of type slices (seat LATTICE, row 286). The second is landed too:
+one combinator for a rule that reads a union member by member (seat UNION, rows 285 and 293).
+Its first conversion, the fiber rule, is next (seat PILOT).
 
 **What the study found (row 288).** A hole needs no new constructor and no new type. A hole
 is a host row with a declared type, in a hole table that is appended after the row table.
@@ -386,22 +387,30 @@ In work since the suspension of the handover:
   for its words: type slice, site, slice view, valid slice, minimal slice, descent,
   contribution slice and mask. The follow-up also found that the proof graph's population
   skips eight authored theorems by the spelling of their names: a repair candidate.
-- **Seat UNION has the combinator of candidate N** (branch `seat/union`;
-  [its brief](research/2026-10-05-claude-lead/briefs/seat-union-brief.md); row 285). It
-  names the pattern of `Record.fieldType` once: a member rule, applied to every member of a
-  union's normal form, with the answers joined. It proves the pattern's laws once and writes
-  the two record rules through it. It changes no rule and no admitted program. Each later
-  conversion of a by-shape rule is then an instance. The coordinator probed the conversions
-  beside it ([the note](research/2026-10-06-uniform-eliminators-landing-probe.md)). The
-  judgment states each rule through the checker's own function, so a conversion changes no
-  statement of it, and one inversion lemma becomes an inequality. tsgo 7 accepts `never` at
-  every printed eliminator. It refuses a proper union at a generic call unless the type
-  arguments are written at the join. So a conversion at a proper union has a target side.
-  The owner ruled its interim form on 2026-10-06 (row 292): a guard keeps today's refusal
-  at a proper union until the printer writes the type arguments. The traced check comes
-  forward for that. The owner also approved two more statements of the combinator, its
-  universal property and its adjoint form, and the reading of one more paper for the rule
-  of a repeated type parameter.
+- **Seat UNION is merged** ([its receipt](research/2026-10-06-seat-UNION-receipt.md); rows
+  285 and 293). `src/Effect4/Program/UnionRule.lean` holds one combinator for a rule that
+  reads a type by its union members. A member rule answers at one union member, or refuses
+  it. `UnionRule.lift` asks it at every union member of the target's normal form and joins
+  the answers. The record field read and the overwrite are written through it, and each
+  equals its earlier definition by `rfl`. No statement changed, and no generated file moved.
+  The laws are proved once (`src/Effect4/Laws/Program/UnionRule.lean`; the registry claim
+  `union-rule-lift`). An eliminator of one covariant constructor owes three member facts,
+  and the order laws follow (`Eliminator`). The owner's two more statements are proved. At
+  types, the lifted rule is the one map with its four properties (`lift_unique`). An
+  eliminator's lifted rule answers exactly below the constructor's image
+  (`Eliminator.adjoint`). No eliminator is converted yet.
+- **Seat PILOT has the first conversion** (branch `seat/pilot`;
+  [its brief](research/2026-10-05-claude-lead/briefs/seat-pilot-brief.md); rows 285, 292
+  and 293). `fiberTy` becomes the guarded lifted rule of its member rule. It answers at
+  `never` and at one union member of the normal form. It keeps today's refusal at a proper
+  union, by the guard that the owner ruled (row 292): tsgo 7 refuses the printed call there
+  until the printer writes the type arguments at the join
+  ([the probe](research/2026-10-06-uniform-eliminators-landing-probe.md)). The judgment
+  states each fiber rule through the checker's own function, so the conversion changes no
+  statement of it, and one inversion lemma becomes an inequality in `Ty.subN`. The seat
+  states the contract of a guarded eliminator once, for every eliminator, and it measures
+  the churn. Under the guard a converted rule is not monotone at a proper union. The traced
+  check comes forward so that the printer can write the type arguments.
 - **Seat LATTICE is merged** ([its receipt](research/2026-10-06-seat-LATTICE-receipt.md);
   row 286). `src/Effect4/Laws/Slice/Lattice.lean` holds the generic theory of type slices. A
   type slice is the list of its kept sites. A view is a monotone map from the type slices of

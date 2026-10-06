@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.Membership
+import Effect4.Laws.Program.UnionRule
 import Effect4.Program.Record
 
 /-! Record operation membership, serving registry claim `denote-typed` through `evalTerm_progress`.
@@ -201,6 +202,16 @@ theorem fits_joinResults {w : World} {value : Val} {types : List Ty} {type : Ty}
     (ht : type ∈ types) (hfit : Fits w value type) : Fits w value (Program.Record.joinResults types) :=
   fits_foldl_join types .never (Or.inr ⟨type, ht, hfit⟩)
 
+/-- Membership in a typed world reads a union: its normal form, its union members and its join
+(`UnionRule.ReadsUnion`, `src/Effect4/Laws/Program/UnionRule.lean`). A step of
+`record_fieldType_fits` and `record_setType_fits` below, for the claim `denote-typed`: each
+record rule's law at one record lifts through it. -/
+theorem fits_reads (w : World) : UnionRule.ReadsUnion (Fits w) where
+  normalize h := (fits_normalize w _ _).mpr h
+  members h := (fits_members w _ _).mpr h
+  joinLeft a b h := fits_join_left w a b _ h
+  joinRight a b h := fits_join_right w a b _ h
+
 /-- The single-record field rule returns the actual fitting read result in either mode. -/
 theorem record_fieldOf_fits {w : World} {value : Val} {target answer : Ty}
     {optional : Bool} {name : String}
@@ -243,18 +254,14 @@ theorem record_fieldOf_fits {w : World} {value : Val} {target answer : Ty}
             Bool.false_eq_true, ↓reduceIte]
   | _ => cases htype
 
-/-- Field typing covers every union branch and returns an actual fitting read result. -/
+/-- Field typing covers every union branch and returns an actual fitting read result. The
+record-only law `record_fieldOf_fits`, lifted (`UnionRule.ReadsUnion.lift_sound`). -/
 theorem record_fieldType_fits {w : World} {value : Val} {target answer : Ty}
     {optional : Bool} {name : String}
     (htype : Program.Record.fieldType optional target name = some answer)
     (hfit : Fits w value target) :
-    ∃ out, Record.read optional value name = some out ∧ Fits w out answer := by
-  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp htype
-  obtain ⟨branch, hbranch, hbranchFit⟩ :=
-    (fits_members w value target.normalize).mpr ((fits_normalize w target value).mpr hfit)
-  obtain ⟨branchAnswer, ha, hbranchType⟩ := mapM_some_mem hanswers branch hbranch
-  obtain ⟨out, hout, hfit⟩ := record_fieldOf_fits hbranchType hbranchFit
-  exact ⟨out, hout, fits_joinResults ha hfit⟩
+    ∃ out, Record.read optional value name = some out ∧ Fits w out answer :=
+  (fits_reads w).lift_sound (fun _ _ typed fit => record_fieldOf_fits typed fit) htype hfit
 
 /-- A sorted frame fits a record when its names and all declared lookups fit. -/
 theorem record_frame_fits {w : World} {fields : List (String × Bool × Ty)}
@@ -340,18 +347,15 @@ theorem record_setOf_fits {w : World} {value replacement : Val} {target answer r
     exact record_set_fits hfit hreplacement
   | _ => cases htype
 
-/-- Overwrite typing covers every union branch and returns an actual fitting value. -/
+/-- Overwrite typing covers every union branch and returns an actual fitting value. The
+record-only law `record_setOf_fits`, lifted (`UnionRule.ReadsUnion.lift_sound`). -/
 theorem record_setType_fits {w : World} {value replacement : Val} {target answer replacementType : Ty}
     {name : String}
     (htype : Program.Record.setType target name replacementType = some answer)
     (hfit : Fits w value target) (hreplacement : Fits w replacement replacementType) :
-    ∃ out, Record.set value name replacement = some out ∧ Fits w out answer := by
-  obtain ⟨answers, hanswers, rfl⟩ := Option.map_eq_some_iff.mp htype
-  obtain ⟨branch, hbranch, hbranchFit⟩ :=
-    (fits_members w value target.normalize).mpr ((fits_normalize w target value).mpr hfit)
-  obtain ⟨branchAnswer, ha, hbranchType⟩ := mapM_some_mem hanswers branch hbranch
-  obtain ⟨out, hout, hfit⟩ := record_setOf_fits hbranchType hbranchFit hreplacement
-  exact ⟨out, hout, fits_joinResults ha hfit⟩
+    ∃ out, Record.set value name replacement = some out ∧ Fits w out answer :=
+  (fits_reads w).lift_sound
+    (fun _ _ typed fit => record_setOf_fits typed fit hreplacement) htype hfit
 
 mutual
 /-- **Term soundness for membership (TY-07, proved).** Under a signature whose atoms are the

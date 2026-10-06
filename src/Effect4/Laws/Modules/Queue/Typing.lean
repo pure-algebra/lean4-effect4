@@ -115,14 +115,8 @@ theorem cellTy_normal {A : Ty} (canonical : A.normalize = A) :
 
 /-- The type of the cell's buffer, as the checker reads the field. -/
 theorem cell_msgsTy {A : Ty} (canonical : A.normalize = A) :
-    Record.fieldType false (Queue.cellTy A) "msgs" = some (.list A) := by
-  unfold Record.fieldType
-  rw [cellTy_normal canonical]
-  show some (Record.joinResults [Ty.list A]) = _
-  show some (Ty.join .never (.list A)) = _
-  rw [Ty.join_never]
-  show some (Ty.list (Ty.normalize A)) = _
-  rw [canonical]
+    Record.fieldType false (Queue.cellTy A) "msgs" = some (.list A) :=
+  Record.fieldType_normal (cellTy_normal canonical) rfl
 
 /-- The cell's written declaration normalizes to the cell's type. -/
 theorem cellFields_normal {A : Ty} (canonical : A.normalize = A) :

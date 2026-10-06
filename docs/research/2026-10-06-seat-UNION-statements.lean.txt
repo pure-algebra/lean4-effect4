@@ -1,0 +1,26 @@
+import Effect4.Laws
+import Test.All
+import ProofGraph.Population
+
+/-! The statement comparison of seat UNION: the signature that `#check` prints, for each authored
+theorem whose statement names `Record.fieldType`, `Record.setType` or `Record.joinResults`.
+Run it at the base and at the head, and compare the two outputs. -/
+
+open Lean Meta Elab Command
+
+run_cmd liftTermElabM do
+  let env ← getEnv
+  let targets : List Name := [``Effect4.Program.Record.fieldType,
+    ``Effect4.Program.Record.setType, ``Effect4.Program.Record.joinResults]
+  let mut names : Array Name := #[]
+  for (n, ci) in env.constants.toList do
+    if let .thmInfo t := ci then
+      if !ProofGraph.isAuxiliary env n then
+        let used := t.type.getUsedConstants
+        if targets.any fun target => used.contains target then
+          names := names.push n
+  let sorted := names.qsort (·.toString < ·.toString)
+  IO.println s!"theorems whose statement names fieldType, setType or joinResults: {sorted.size}"
+  for n in sorted do
+    let signature ← PrettyPrinter.ppSignature n
+    IO.println (signature.fmt.pretty 100)
