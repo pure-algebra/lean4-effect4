@@ -151,7 +151,7 @@ import Effect4.Program.Typing.Agreement
 import Effect4.Api.Author
 import Effect4.Api.Supervision
 import Effect4.Run
--- What a tool reads off a run: the machine's view, the decision of a row, the fresh open, rest.
+-- What a tool reads off a run: the machine's view, the raw replay, the tape, a funded run, rest.
 import Effect4.Run.Tape
 -- Foreign-source ingestion tables and constructed target spellings.
 import Effect4.Ingest.Taxonomy

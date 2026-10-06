@@ -33,8 +33,8 @@ and the lowered runs. This module holds what the scenarios share.
   part of an observation, and `tapeFrom` reads the decisions that moved the machine off a
   journal: each control that progressed and each reply application
   (`src/Effect4/Run/Tape.lean`). A lowered run replays the tape and compares that view
-  (`tape_replays`, `src/Effect4/Laws/Run/Tape.lean`). A journal whose tape stops has a completed prefix, and that
-  prefix and each position of the tape replay raw too (`tapeFrom_cut_replays`,
+  (`tape_replays`, `src/Effect4/Laws/Run/Tape.lean`). A journal whose tape stops has a completed
+  prefix, and that prefix and each position of the tape replay raw too (`tapeFrom_cut_replays`,
   `tapeFrom_position_replays`). Section 4 gives each name that the scenarios use an alias in
   this module's namespace.
 * **The record.** A `Scenario` names its program, its observation and its claim as declarations.
