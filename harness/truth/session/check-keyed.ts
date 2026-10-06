@@ -163,27 +163,36 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     throws(() => comparePredictions(host.name, { ...host, predictions: host.predictions.slice(1) }, byName(replays, host.name).result), named(host.name, "predictions"))
     unpredicted.push(host.name)
   }
+  // Each entry's evidence, by scenario: measured by the host, predicted by the ledger, measured
+  // through a named reader, or replay only. An entry may have a reader in some scripts and wait
+  // in the others. The table goes to `scenario-evidence.md`, so that no document counts by hand.
   const scenarios = scenarioNames.map(scenario => {
     const runs = hosts.filter(run => run.scenario === scenario)
-    const entries = (pick: (run: ScenarioResult) => string[]): string[] => [...new Set(runs.flatMap(pick))]
-    const waits = entries(run => run.waits.map(wait => wait.field))
-    return { scenario, scripts: runs.length,
-      measuredByTheHost: entries(run => Object.keys(run.measured)),
-      predictedByTheLedger: entries(run => Object.keys(run.predicted)),
-      measuredThroughAReader: Object.fromEntries(entries(run => Object.keys(run.through)).map(field => [field, runs.find(run => run.through[field])!.through[field]!.reader])),
-      waiting: Object.fromEntries(waits.map(field => [field, runs.filter(run => run.waits.some(wait => wait.field === field)).map(run => run.name)])),
-      wholeObservationOnHost: waits.length === 0 }
+    const evidence = fixtureOf(runs[0]!.name).fields.flatMap(entry => {
+      const words = runs.map(run => Object.hasOwn(run.measured, entry) ? "host" : Object.hasOwn(run.predicted, entry) ? "ledger"
+        : run.through[entry] ? `reader: ${run.through[entry]!.reader}` : "replay only")
+      return [...new Set(words)].map(word => ({ entry, evidence: word, scripts: runs.filter((_, index) => words[index] === word).map(run => run.name) }))
+    })
+    return { scenario, scripts: runs.length, evidence, wholeObservationOnHost: !evidence.some(row => row.evidence === "replay only") }
   })
   const controls = { comparator: changed, hostMeasurement: faulty.map(host => `${host.name}: ${host.fault}, at ${host.field}`),
     replay: moved.map(run => run.name), readers: dropped, predictions: unpredicted }
   await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ scenarios, notPerformed: manifest.waiting, controls,
-    evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, measured through a reader, or waits with Lean's replay as its only evidence",
+    evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, predicted by the ledger, measured through a reader, or replay only",
     boundary: "no agreement for another script or another entry; no host adequacy; no liveness" }, null, 2) + "\n")
-  const line = scenarios.map(({ scenario, scripts, measuredByTheHost, predictedByTheLedger, measuredThroughAReader, waiting }) => {
-    const parts = [`${measuredByTheHost.length} entries measured by the host`,
-      ...(predictedByTheLedger.length ? [`${predictedByTheLedger.length} predicted by the ledger`] : []),
-      ...(Object.keys(measuredThroughAReader).length ? [`${Object.keys(measuredThroughAReader).length} through a reader`] : []),
-      `${Object.keys(waiting).length} waiting`]
+  await writeFile(resolve(runPath, "scenario-evidence.md"), [
+    "| Scenario | Entry | Evidence | Scripts |", "| --- | --- | --- | --- |",
+    ...scenarios.flatMap(({ scenario, scripts, evidence }) => evidence.map(row =>
+      `| ${scenario} | \`${row.entry}\` | ${row.evidence} | ${row.scripts.length === scripts ? `all ${scripts}` : `${row.scripts.length} of ${scripts}`} |`)),
+    ""].join("\n"))
+  const line = scenarios.map(({ scenario, scripts, evidence }) => {
+    const whole = (word: (evidence: string) => boolean): number => evidence.filter(row => word(row.evidence) && row.scripts.length === scripts).length
+    const partial = evidence.filter(row => row.evidence === "replay only" && row.scripts.length < scripts)
+    const parts = [`${whole(word => word === "host")} entries measured by the host`,
+      ...(whole(word => word === "ledger") ? [`${whole(word => word === "ledger")} predicted by the ledger`] : []),
+      ...(whole(word => word.startsWith("reader")) ? [`${whole(word => word.startsWith("reader"))} through a reader`] : []),
+      ...partial.map(row => `${row.entry} through a reader in ${scripts - row.scripts.length} scripts and replay only in ${row.scripts.length}`),
+      ...(whole(word => word === "replay only") ? [`${whole(word => word === "replay only")} replay only`] : [])]
     return `${scenario} ${scripts} scripts (${parts.join(", ")})`
   }).join("; ")
   const count = Object.values(controls).reduce((sum, list) => sum + list.length, 0)

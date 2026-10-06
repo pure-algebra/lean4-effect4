@@ -39,6 +39,8 @@ export interface ScenarioFixture {
   calls: Array<Key & { row: number; request: Json }>
   acts: ScenarioAct[]
   observation: Record<string, Json>
+  /** The observation's entries, in the order of the battery's fields. */
+  fields: string[]
   readers: Readers
   refusedReaders: Array<{ reader: ReaderName; why: string }>
 }
@@ -88,6 +90,19 @@ interface Scenario {
 /** The entries of a log cell (`entries` of the batteries): the list, or nothing. */
 const entries = (cell: Json | undefined): Json => Array.isArray(cell) ? cell : []
 const key = ({ fiber, token }: Key): Json => ({ fiber, token })
+/** An exit as the timeout battery reads one: a body, one tagged failure, or `other`. With
+ * `interrupted`, one interruption is an ending of its own (`endingOf`); a held call's fate has
+ * no such case (`fateOf`). */
+const ending = (exit: Json, single: "interrupted" | "other"): Json => {
+  if (exit === null || typeof exit !== "object" || Array.isArray(exit)) return { other: true }
+  if (Object.hasOwn(exit, "success")) return { answered: exit.success! }
+  const reasons = exit.failure
+  const reason = Array.isArray(reasons) && reasons.length === 1 ? reasons[0] : undefined
+  if (reason === undefined || reason === null || typeof reason !== "object" || Array.isArray(reason)) return { other: true }
+  const failed = reason.fail
+  if (Array.isArray(failed) && failed.length === 2 && failed.every(part => typeof part === "string")) return { failed }
+  return single === "interrupted" && Object.hasOwn(reason, "interrupt") ? { interrupted: true } : { other: true }
+}
 const scenarios: Record<string, Scenario> = {
   // Test/Dogfood/Scenario/Routing.lean, `Observation`. The refused rows are the session's: the
   // ledger predicts each one.
@@ -123,6 +138,27 @@ const scenarios: Record<string, Scenario> = {
         const none: Json = armed === 0 ? [] : { armed: armed! }
         return { "workLeft.runnable": none, "workLeft.queued": none }
       } }
+    }
+  },
+  // Test/Dogfood/Scenario/Timeout.lean, `Observation`. The cells are `count` and `ended`. Lean
+  // grants the sleeps reader in a script where every sleeping fiber is the root or made a call.
+  // In any other script the timers wait: a timer's fiber makes no call, so it has no number on
+  // the host.
+  timeout: {
+    host: ({ exit, ledger }, spelling) => ({
+      calls: ledger.held.filter(call => spelling(call) === "Http.getQuote").map(call =>
+        call.state === "live" ? { live: true }
+          : call.state === "retired" ? { retired: call.kept === true }
+          : ending(call.reply ?? null, "other")),
+      receipts: ledger.receipts.map(key),
+      applications: ledger.applications.map(key),
+      retired: ledger.retired.map(({ call, kept }) => ({ key: key(call), kept })),
+      stored: ledger.stored.map(key),
+      root: exit === null ? { running: true } : ending(exit, "interrupted")
+    }),
+    through: {
+      cells: { fields: ["attempts", "cleanups"], read: ({ cells }) => ({ attempts: typeof cells![0] === "number" ? cells![0] : 0, cleanups: entries(cells![1]) }) },
+      sleeps: { fields: ["timers"], read: ({ sleeps }) => ({ timers: sleeps!.map(([fiber, wake]) => [fiber, Number(wake)]) }) }
     }
   }
 }

@@ -3,6 +3,7 @@ import Effect4.Program.Profile
 import Effect4.Program.Stream
 import Test.Dogfood.Scenario.Workers
 import Test.Dogfood.Scenario.Routing
+import Test.Dogfood.Scenario.Timeout
 import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
@@ -691,7 +692,8 @@ def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J :=
 /-! ### The fixture and the replay -/
 
 /-- One run's fixture: the printed module, the bindings' type, the table, the calls, the script
-as the host's acts, and the battery's observation of the scripted run. -/
+as the host's acts, the battery's observation of the scripted run with its fields in the
+battery's order, and the readers that the run gets. -/
 def emitRun (run : HostRun) : Except String J := do
   let built := run.opened.built
   let scripted := Scenario.play run.opened run.moves
@@ -711,6 +713,7 @@ def emitRun (run : HostRun) : Except String J := do
     ("namespaces", toJson spaces), ("bindings", .str bindings), ("table", tableJson built.table),
     ("calls", toJson ((callsOf run.opened scripted.journal).map awaitJson)),
     ("acts", toJson acts), ("observation", Json.mkObj (run.observed scripted)),
+    ("fields", toJson ((run.observed scripted).map (·.1))),
     ("readers", Json.mkObj readers), ("refusedReaders", toJson refused)]
 
 /-- Lean's replay of a host's recording: the rows of the recording played by `Run.play` from the
@@ -844,9 +847,79 @@ def workersRuns : Except String (List HostRun) := do
     , run "cancelled" [running, [.cancel ⟨2⟩], finish]
     , workers "twice" faulty lowest ]
 
+/-- A held call's fate, as one JSON object with one key. -/
+def fateJson : Scenario.Timeout.Fate → J
+  | .live => Json.mkObj [("live", true)]
+  | .answered body => Json.mkObj [("answered", valJson body)]
+  | .failed tag message => Json.mkObj [("failed", toJson [tag, message])]
+  | .retired kept => Json.mkObj [("retired", kept)]
+  | .other => Json.mkObj [("other", true)]
+
+/-- The root's ending, as one JSON object with one key. -/
+def endingJson : Scenario.Timeout.Ending → J
+  | .running => Json.mkObj [("running", true)]
+  | .answered body => Json.mkObj [("answered", valJson body)]
+  | .failed tag message => Json.mkObj [("failed", toJson [tag, message])]
+  | .interrupted => Json.mkObj [("interrupted", true)]
+  | .other => Json.mkObj [("other", true)]
+
+/-- One host run of the timeout scenario, with its observation's nine fields. -/
+def timeout (name : String) (built : Api.Built) (moves : List Scenario.Move) : HostRun :=
+  { name := "timeout/" ++ name
+    scenario := "timeout"
+    opened := Scenario.Timeout.opened built
+    moves := moves
+    observed := fun run =>
+      let o := Scenario.Timeout.observe run
+      [ ("calls", toJson (o.calls.map fateJson))
+      , ("receipts", toJson (o.receipts.map keyJson))
+      , ("applications", toJson (o.applications.map keyJson))
+      , ("retired", toJson (o.retired.map fun entry =>
+          Json.mkObj [("key", keyJson entry.1), ("kept", toJson entry.2)]))
+      , ("stored", toJson (o.stored.map keyJson))
+      , ("attempts", toJson o.attempts)
+      , ("cleanups", toJson (o.cleanups.map valJson))
+      , ("root", endingJson o.root)
+      , ("timers", toJson (o.timers.map fun timer => [timer.1, timer.2])) ]
+    same := fun a b => Scenario.Timeout.observe a == Scenario.Timeout.observe b
+    asks := [.cells, .sleeps] }
+
+open Scenario.Timeout in
+/-- The timeout scenario's runs: each script of a control of `Test/Dogfood/Scenario/Timeout.lean`
+on the fetch, and the scripts of the two faulty clients. -/
+def timeoutRuns : Except String (List HostRun) := do
+  let fetch ← build "the fetch" fetch
+  let eager ← build "the client that retries every failure"
+    (client (fun _ => Authoring.bool true) false)
+  let resetting ← build "the client whose finalizer resets the count"
+    (client P1HttpCache.retryable true)
+  let run := fun (name : String) (parts : List (List Scenario.Move)) =>
+    timeout name fetch (Scenario.script parts)
+  let notFound := [parked, Scenario.answer http (Scenario.failed "HttpError" "404"),
+    [.tick 100, .flush, .hold http]]
+  return [ run "parked" [parked]
+    , run "503" [parked, Scenario.answer http (Scenario.failed "HttpError" "503"),
+        [.tick 100, .hold http], Scenario.answer http (Scenario.ok body2)]
+    , run "timed-out" [timedOut]
+    , run "four" [[.start, .tick 2000, .tick 100, .tick 2000, .tick 200, .tick 2000, .tick 400,
+        .tick 2000]]
+    , run "404" notFound
+    , run "before" [parked, Scenario.answer http (Scenario.ok body1)]
+    , run "second" [timedOut, Scenario.answer second (Scenario.ok body2)]
+    , run "late" [timedOut, Scenario.answer first (Scenario.ok body1)]
+    , run "kept" [parked, [.receive http (Scenario.ok body1), .tick 2000, .apply first]]
+    , run "crossed" [timedOut, [.row (.submit (forged 0 key2 (Scenario.ok body1)))]]
+    , run "direct" [timedOut, [.control (.answerAsync ⟨5⟩ 7 (Scenario.ok body1))]]
+    , run "timer-interrupt" [parked, [.tick 2000]]
+    , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
+    , run "received" [parked, [.receive http (Scenario.ok body1)]]
+    , run "applied" [parked, [.receive http (Scenario.ok body1), .apply http]]
+    , timeout "eager" eager (Scenario.script notFound)
+    , timeout "resetting" resetting (Scenario.script [parked, [.tick 2000]]) ]
+
 /-- Every host run of every scenario. -/
 def runs : Except String (List HostRun) := do
-  return (← routingRuns) ++ (← workersRuns)
+  return (← routingRuns) ++ (← workersRuns) ++ (← timeoutRuns)
 
 /-- The fixtures of the runs that a host can perform, and each other run with the reason. -/
 def emit : Except String J := do
