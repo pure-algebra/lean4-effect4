@@ -35,7 +35,9 @@ an unresolved revision or a failed git command (with the message); 2 on a usage 
   C3 verdicts:  generated/corpus-index.tsv (Lean's wellTyped/readable verdict per program),
                 ocaml/eff/goldens/corpus.txt (the golden programs' typing verdicts),
                 harness/truth/corpus-results.tsv (the host lane, as committed): every BASE row is in
-                CAND unchanged, unless the policy names its move (`verdict_moves`, `path:key`). The
+                CAND unchanged, unless the policy names its move (`verdict_moves`, `path:key`). A
+                column that a table's own header names `chars` measures the printed text and is no
+                verdict: a row that moves in that column alone is reported and not refused. The
                 golden tables (metadata.tsv, cases.txt, the CAS manifest, same-programs.txt) keep
                 every BASE line in order; the coverage tables keep every BASE key at a count no
                 smaller, except a constructor the policy names as retired, or one of a family the
@@ -51,7 +53,9 @@ The controls (`--self-test`): the ten of probe Q, each a mutation of a scratch e
 judged against HEAD (R1-R9 refuse on the clause they name, G1 the wave appended and named passes);
 the four of the named retirement and the named verdict move (seat T3a: R10 and R11 a retirement
 the policy does not name, refused by C3 and C2; G2 the same retirement named, G3 R6's verdict move
-named, both pass); the two of the named family retirement (seat T3b: R12 a family's line leaves a
+named, both pass); the two of the printed length (G5 a row moves in `chars` alone and passes; R13
+the same row moves in `chars` and in a verdict column and is refused by C3); the two of the named
+family retirement (seat T3b: R12 a family's line leaves a
 generated manifest and the policy does not name the family, refused by C2; G4 the family named,
 its lines and its count rows leave, passes); and six on the revisions themselves, each run as
 this command: an invalid BASE, an invalid CAND and both invalid, each with and without --strict,
@@ -364,8 +368,20 @@ def keyed(text):
     return out
 
 
+MEASURES = ('chars',)
+
+
+def verdict(text):
+    """A table's rows without the columns that measure the printed text. The table's own header
+    line names its columns; a table with no header keeps every column."""
+    header = next((l for l in (text or '').splitlines() if l.startswith('# name\t')), None)
+    skip = {i for i, c in enumerate(header[2:].split('\t')) if c in MEASURES} if header else set()
+    return {k: tuple(c for i, c in enumerate(l.split('\t')) if i not in skip)
+            for k, l in keyed(text).items()}
+
+
 def c3(base, cand, pol):
-    problems, judged, moved, left = [], 0, [], []
+    problems, judged, moved, left, resized = [], 0, [], [], []
     named_moves = set(pol.get('verdict_moves', []))
     retired = set(pol.get('constructor_retirements', []))
     retired_fams = set(pol.get('family_retirements', []))
@@ -374,10 +390,13 @@ def c3(base, cand, pol):
         if tb is None:
             print(f'  {path}: absent at BASE (not judged)'); continue
         kb, kc = keyed(tb), keyed(tc)
+        vb, vc = verdict(tb), verdict(tc)
         judged += len(kb)
         for k, line in kb.items():
             if kc.get(k) != line:
-                if f'{path}:{k}' in named_moves:
+                if k in vc and vc[k] == vb[k]:
+                    resized.append(f'{path}:{k}')
+                elif f'{path}:{k}' in named_moves:
                     moved.append(f'{path}:{k}')
                 else:
                     problems.append(f'{path}: {k}: BASE {line!r} CAND {kc.get(k)!r}')
@@ -404,6 +423,8 @@ def c3(base, cand, pol):
           f'lanes; {len(ORDERED_TABLES)} ordered and {len(COUNT_TABLES)} count tables; '
           f'{len(moved)} verdict moves and {len(left)} retired count rows named by policy')
     for p in problems[:20]: print(f'  {p}')
+    if resized:
+        print(f'  {len(resized)} rows moved in printed length alone (no verdict): {" ".join(resized)}')
     for m in moved: print(f'  moved by policy name: {m}')
     for m in left: print(f'  retired by policy name: {m}')
     return ok

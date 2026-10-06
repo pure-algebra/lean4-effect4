@@ -642,8 +642,8 @@ $(CHK)/tools: $(SELFTEST_SOURCES) | build
 # byte-identical unless the baseline policy names them, tags and manifests append-only, every
 # verdict unchanged, every addition named, the generated diff recorded (C1-C5,
 # scripts/lib/conservativity.py). It judges committed files, so an append's producers and
-# `make corpus` run first. `make check-conservativity` runs its controls (ten mutations of HEAD and
-# six unresolvable revisions); `make check-conservativity BASE=<rev>` also judges the working tree
+# `make corpus` run first. `make check-conservativity` runs its controls (mutations of HEAD and
+# unresolvable revisions); `make check-conservativity BASE=<rev>` also judges the working tree
 # against BASE. Not `--strict` until the owner rules on promoting refOf, deferredOf, var and
 # unknown in the baseline policy (row 172).
 .PHONY: check-conservativity

@@ -260,5 +260,28 @@
         "new": "\"Effect4.Machine.FnName\",\n    \"Effect4.Supervision.ObserverMode\"\n"
       }
     ]
+  },
+  {
+    "name": "G5 a corpus row moves in printed length alone",
+    "expect": "PASS",
+    "edits": [
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "g0\tfalse\ttrue\t21\tnotFiber",
+        "new": "g0\tfalse\ttrue\t22\tnotFiber"
+      }
+    ]
+  },
+  {
+    "name": "R13 a corpus row moves in printed length and in a verdict column",
+    "expect": "REFUSE",
+    "clause": "C3",
+    "edits": [
+      {
+        "path": "generated/corpus-index.tsv",
+        "old": "g0\tfalse\ttrue\t21\tnotFiber",
+        "new": "g0\tfalse\tfalse\t22\tnotFiber"
+      }
+    ]
   }
 ]
