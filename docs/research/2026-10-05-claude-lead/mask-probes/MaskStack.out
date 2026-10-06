@@ -1,0 +1,16 @@
+s1: states 161, fibers 1, depth 1, moves 5, masked 3, covered true, alternates true, base constant true, wrong reading false
+s2: states 161, fibers 2, depth 3, moves 9, masked 12, covered true, alternates true, base constant true, wrong reading false
+s3: states 161, fibers 3, depth 1, moves 7, masked 35, covered true, alternates true, base constant true, wrong reading false
+s4: states 161, fibers 3, depth 1, moves 6, masked 22, covered true, alternates true, base constant true, wrong reading false
+s5 outer: states 161, fibers 3, depth 3, moves 11, masked 16, covered true, alternates true, base constant true, wrong reading false
+s5 inner: states 161, fibers 3, depth 1, moves 9, masked 36, covered true, alternates true, base constant true, wrong reading false
+s6: states 161, fibers 3, depth 2, moves 12, masked 136, covered true, alternates true, base constant true, wrong reading false
+s6Masked: states 161, fibers 3, depth 0, moves 2, masked 150, covered true, alternates true, base constant true, wrong reading true
+s7: states 161, fibers 1, depth 1, moves 23, masked 29, covered true, alternates true, base constant true, wrong reading false
+s7Regions: states 161, fibers 1, depth 4, moves 34, masked 53, covered true, alternates true, base constant true, wrong reading false
+s9: states 161, fibers 1, depth 3, moves 25, masked 19, covered true, alternates true, base constant true, wrong reading false
+s10: states 161, fibers 1, depth 3, moves 15, masked 12, covered true, alternates true, base constant true, wrong reading false
+queue r2: states 401, fibers 3, depth 2, moves 9, masked 390, covered true, alternates true, base constant true, wrong reading false
+queue r5: states 401, fibers 2, depth 3, moves 16, masked 91, covered true, alternates true, base constant true, wrong reading false
+queue r7: states 401, fibers 2, depth 3, moves 10, masked 44, covered true, alternates true, base constant true, wrong reading false
+queue maskedCaller: states 401, fibers 4, depth 1, moves 7, masked 419, covered true, alternates true, base constant true, wrong reading false

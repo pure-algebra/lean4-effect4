@@ -200,7 +200,7 @@ def conditionalBranchProg (b : Bool) : Src NativeOp := eff {
     (onExitWith (succeed (nat 1)) fun _ => succeed (var "x")) : Src NativeOp)
   = .ok (.bind (.succeed (.lit (.nat 7))) (.onExit (.succeed (.lit (.nat 1))) (.succeed (.var 0))))
 #guard elaborate (bind "s" (Ref.make (nat 0))
-    (Ref.modifyWith (fun current => app "pair" [var "s", current]) (var "s")) : Src NativeOp)
+    (Ref.modifyWith (var "s") fun current => app "pair" [var "s", current]) : Src NativeOp)
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
           (.perform (.refModifyWith (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))) (.var 0)))
 -- No author can read a minted name: `var` refuses the reserved prefix.

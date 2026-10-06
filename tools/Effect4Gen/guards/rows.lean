@@ -27,7 +27,7 @@ open Effect4.Program Effect4.Program.Authoring
 -- The hygienic term row mints the current value's name. So a caller's variable keeps its
 -- reading inside the binder term: the caller's `s` is the outer binder, at level 0.
 #guard elaborate (bind "s" (Ref.make (nat 0))
-    (Ref.modifyWith (fun current => app "pair" [var "s", current]) (var "s")))
+    (Ref.modifyWith (var "s") fun current => app "pair" [var "s", current]))
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
           (.perform (.refModifyWith (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))) (.var 0)))
 -- Red control: under the fixed name `s` the caller's `s` reads the cell's current value.
@@ -36,7 +36,7 @@ open Effect4.Program Effect4.Program.Authoring
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
           (.perform (.refModifyWith (.app "pair" (.cons (.var 1) (.cons (.var 1) .nil)))) (.var 0)))
 -- Where no name clashes, the two wrappers emit one node.
-#guard elaborate (Ref.updateWith (fun current => app "succ" [current]) (nat 0))
+#guard elaborate (Ref.updateWith (nat 0) fun current => app "succ" [current])
   = elaborate (Ref.update "a" (app "succ" [var "a"]) (nat 0))
 -- An async row authors as the reader reads it: a `perform`, the one invocation form.
 #guard elaborate (Effect.sleep (nat 5)) = .ok (.perform .sleep (.lit (.nat 5)))

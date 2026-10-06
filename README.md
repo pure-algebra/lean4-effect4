@@ -144,7 +144,7 @@ With fixed names, a caller's variable of the same name would read the folded ele
 `Test/Program/FoldHygiene.lean` holds that capture as a control.
 
 Three more builders mint the name that they bind, for the same reason.
-`Authoring.Ref.modifyWith (fun current => body) cell` mints the name of the cell's current value.
+`Authoring.Ref.modifyWith cell (fun current => body)` mints the name of the cell's current value.
 Each row that carries a term has this second wrapper, named with the suffix `With`.
 `Authoring.selectOptionWith` mints the payload's name, and `Authoring.onExitWith` the exit's name.
 `Test/Program/AuthoringContract.lean` holds one capture under a written name, and each minted form's reading.

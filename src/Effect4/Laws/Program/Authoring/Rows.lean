@@ -38,73 +38,73 @@ theorem update_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (
     (update current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem updateWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (updateWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem updateWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (updateWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 theorem getAndUpdate_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
     (getAndUpdate current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem getAndUpdateWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (getAndUpdateWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem getAndUpdateWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (getAndUpdateWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 theorem updateAndGet_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
     (updateAndGet current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem updateAndGetWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (updateAndGetWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem updateAndGetWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (updateAndGetWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 theorem updateSome_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
     (updateSome current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem updateSomeWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (updateSomeWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem updateSomeWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (updateSomeWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 theorem getAndUpdateSome_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
     (getAndUpdateSome current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem getAndUpdateSomeWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (getAndUpdateSomeWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem getAndUpdateSomeWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (getAndUpdateSomeWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 theorem updateSomeAndGet_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
     (updateSomeAndGet current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem updateSomeAndGetWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (updateSomeAndGetWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem updateSomeAndGetWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (updateSomeAndGetWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 theorem modify_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
     (modify current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem modifyWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (modifyWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem modifyWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (modifyWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 theorem modifySome_scoped (current : String) {f request : TermSrc} (h0 : f.Scoped) (h1 : request.Scoped) :
     (modifySome current f request).Scoped :=
   performTerm_scoped (fun _ _ => rfl) current h0 h1
 
-theorem modifySomeWith_scoped {f : TermSrc → TermSrc} {request : TermSrc}
-    (h0 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) (h1 : request.Scoped) :
-    (modifySomeWith f request).Scoped :=
-  performTermWith_scoped (fun _ _ => rfl) h0 h1
+theorem modifySomeWith_scoped {request : TermSrc} {f : TermSrc → TermSrc}
+    (h0 : request.Scoped) (h1 : ∀ current : TermSrc, current.Scoped → (f current).Scoped) :
+    (modifySomeWith request f).Scoped :=
+  performTermWith_scoped (fun _ _ => rfl) h1 h0
 
 end Ref
 
@@ -180,8 +180,8 @@ example : Src.Scoped (bind "r" (Ref.make (nat 0))
 
 -- A hygienic term row: the binder term as a function of the current value's reader.
 example : Src.Scoped (bind "r" (Ref.make (nat 0))
-    (Ref.modifyWith (fun current => app "pair" [current, app "add" [current, var "r"]])
-      (var "r"))) := by
+    (Ref.modifyWith (var "r") fun current =>
+      app "pair" [current, app "add" [current, var "r"]])) := by
   authoring_scoped
 
 end Effect4.Program.AuthoringRowsLawsGuards

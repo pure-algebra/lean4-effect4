@@ -45,7 +45,7 @@ def update (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.update` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1273-1276`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def updateWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def updateWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refUpdateWith f request
 
 /-- `Ref.getAndUpdate` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501`).
@@ -55,7 +55,7 @@ def getAndUpdate (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.getAndUpdate` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:496-501`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def getAndUpdateWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def getAndUpdateWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refGetAndUpdateWith f request
 
 /-- `Ref.updateAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1368`).
@@ -65,7 +65,7 @@ def updateAndGet (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.updateAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1368`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def updateAndGetWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def updateAndGetWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refUpdateAndGetWith f request
 
 /-- `Ref.updateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508`).
@@ -75,7 +75,7 @@ def updateSome (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.updateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1502-1508`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def updateSomeWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def updateSomeWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refUpdateSomeWith f request
 
 /-- `Ref.getAndUpdateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643`).
@@ -85,7 +85,7 @@ def getAndUpdateSome (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.getAndUpdateSome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:635-643`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def getAndUpdateSomeWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def getAndUpdateSomeWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refGetAndUpdateSomeWith f request
 
 /-- `Ref.updateSomeAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646`).
@@ -95,7 +95,7 @@ def updateSomeAndGet (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.updateSomeAndGet` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1639-1646`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def updateSomeAndGetWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def updateSomeAndGetWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refUpdateSomeAndGetWith f request
 
 /-- `Ref.modify` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901`).
@@ -105,7 +105,7 @@ def modify (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.modify` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:896-901`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def modifyWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def modifyWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refModifyWith f request
 
 /-- `Ref.modifySome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163`).
@@ -115,7 +115,7 @@ def modifySome (current : String) (f request : TermSrc) : Src NativeOp :=
 
 /-- `Ref.modifySome` (`vendor/effect-4.0.0-rc.112/src/Ref.ts:1159-1163`), with the current value's name minted by the surface.
 `f` is the binder term, as a function of the reader of the cell's current value. -/
-def modifySomeWith (f : TermSrc → TermSrc) (request : TermSrc) : Src NativeOp :=
+def modifySomeWith (request : TermSrc) (f : TermSrc → TermSrc) : Src NativeOp :=
   performTermWith .refModifySomeWith f request
 
 end Ref
@@ -199,7 +199,7 @@ open Effect4.Program Effect4.Program.Authoring
 -- The hygienic term row mints the current value's name. So a caller's variable keeps its
 -- reading inside the binder term: the caller's `s` is the outer binder, at level 0.
 #guard elaborate (bind "s" (Ref.make (nat 0))
-    (Ref.modifyWith (fun current => app "pair" [var "s", current]) (var "s")))
+    (Ref.modifyWith (var "s") fun current => app "pair" [var "s", current]))
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
           (.perform (.refModifyWith (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil)))) (.var 0)))
 -- Red control: under the fixed name `s` the caller's `s` reads the cell's current value.
@@ -208,7 +208,7 @@ open Effect4.Program Effect4.Program.Authoring
   = .ok (.bind (.perform .refMake (.lit (.nat 0)))
           (.perform (.refModifyWith (.app "pair" (.cons (.var 1) (.cons (.var 1) .nil)))) (.var 0)))
 -- Where no name clashes, the two wrappers emit one node.
-#guard elaborate (Ref.updateWith (fun current => app "succ" [current]) (nat 0))
+#guard elaborate (Ref.updateWith (nat 0) fun current => app "succ" [current])
   = elaborate (Ref.update "a" (app "succ" [var "a"]) (nat 0))
 -- An async row authors as the reader reads it: a `perform`, the one invocation form.
 #guard elaborate (Effect.sleep (nat 5)) = .ok (.perform .sleep (.lit (.nat 5)))

@@ -20,8 +20,8 @@ example : Src.Scoped (bind "r" (Ref.make (nat 0))
 
 -- A hygienic term row: the binder term as a function of the current value's reader.
 example : Src.Scoped (bind "r" (Ref.make (nat 0))
-    (Ref.modifyWith (fun current => app "pair" [current, app "add" [current, var "r"]])
-      (var "r"))) := by
+    (Ref.modifyWith (var "r") fun current =>
+      app "pair" [current, app "add" [current, var "r"]])) := by
   authoring_scoped
 
 end Effect4.Program.AuthoringRowsLawsGuards

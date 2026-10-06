@@ -94,25 +94,27 @@ def emitTermRow (row : Row) (f : String) : Emitted :=
 /-- A term row's hygienic wrapper and lemma: one application of `performTermWith`
 (`Program/Authoring.lean`). `f` is a Lean function over the reader of the current value's name,
 which the surface mints, so a caller's term inside it keeps its reading. The wrapper's name is
-the row's with the suffix `With`. -/
+the row's with the suffix `With`. The request comes first and the function last, as in
+`bindWith` and `foldWith`: an author writes `Ref.modifyWith cell fun current => …`. -/
 def emitTermRowWith (row : Row) (f : String) : Emitted :=
   let parts := row.spelling.splitOn "."
   let defName := parts.getLast! ++ "With"
   let nsParts := parts.dropLast
   let (reqParams, reqTerm) := requestOf row
   let reqText :=
-    if reqParams.isEmpty then "" else s!" ({String.intercalate " " reqParams} : TermSrc)"
-  let header := s!"def {defName} ({f} : TermSrc → TermSrc){reqText} : Src NativeOp :="
+    if reqParams.isEmpty then "" else s!"({String.intercalate " " reqParams} : TermSrc) "
+  let header := s!"def {defName} {reqText}({f} : TermSrc → TermSrc) : Src NativeOp :="
   let wrapper := s!"/-- `{row.spelling}` (`{row.cite}`), with the current value's name minted by the surface.\n`{f}` is the binder term, as a function of the reader of the cell's current value. -/\n{header}\n  performTermWith .{row.name} {f} {reqTerm}\n"
-  let reqHyps := reqParams.zipIdx.map fun (x, i) => s!" (h{i + 1} : {x}.Scoped)"
+  let reqHyps := reqParams.zipIdx.map fun (x, i) => s!"(h{i} : {x}.Scoped) "
+  let fHyp := s!"h{reqParams.length}"
   let implicitReq :=
-    if reqParams.isEmpty then "" else s!" \{{String.intercalate " " reqParams} : TermSrc}"
-  let app := String.intercalate " " ([defName, f] ++ reqParams)
+    if reqParams.isEmpty then "" else s!"\{{String.intercalate " " reqParams} : TermSrc} "
+  let app := String.intercalate " " ([defName] ++ reqParams ++ [f])
   let requestProof := match reqParams with
     | [] => "unit_scoped"
-    | [_] => "h1"
-    | _ => "(app_scoped \"pair\" (TermSrc.Scoped_cons h1 (TermSrc.Scoped_cons h2 TermSrc.Scoped_nil)))"
-  let lemma := s!"theorem {defName}_scoped \{{f} : TermSrc → TermSrc}{implicitReq}\n    (h0 : ∀ current : TermSrc, current.Scoped → ({f} current).Scoped){String.join reqHyps} :\n    ({app}).Scoped :=\n  performTermWith_scoped (fun _ _ => rfl) h0 {requestProof}\n"
+    | [_] => "h0"
+    | _ => "(app_scoped \"pair\" (TermSrc.Scoped_cons h0 (TermSrc.Scoped_cons h1 TermSrc.Scoped_nil)))"
+  let lemma := s!"theorem {defName}_scoped {implicitReq}\{{f} : TermSrc → TermSrc}\n    {String.join reqHyps}({fHyp} : ∀ current : TermSrc, current.Scoped → ({f} current).Scoped) :\n    ({app}).Scoped :=\n  performTermWith_scoped (fun _ _ => rfl) {fHyp} {requestProof}\n"
   { namespaceParts := nsParts, defName, wrapper, lemma,
     receipt := "Effect4.Program.Authoring." ++ String.intercalate "." (nsParts ++ [defName]) }
 
