@@ -284,17 +284,30 @@ In work since 2026-10-06, two seats at once (row 237):
   [its brief](research/2026-10-05-claude-lead/briefs/seat-pub-brief.md)). The operations
   become library programs that capture no name of a caller. Each atomic attempt is to be
   proved the model's step, at the operation's own scope. Each runs on the Lean machine, on
-  the generated engine and on rc.112. The slice states no law of a whole run.
+  the generated engine and on rc.112. The slice states no law of a whole run. **Its first
+  part is merged** (`f046975b`). It holds the shared pieces of a module that waits
+  (`src/Effect4/Modules/Waiting.lean`). It holds the five operations
+  (`src/Effect4/Modules/Queue/Ops.lean`: `Queue.bounded`, `offer`, `take`, `poll`, `size`),
+  and each one's scope law. The wrapper has two forms over one `Waiter`: a wake invites
+  another attempt, or the wake carries the decided answer. Every binder is minted, and the
+  batteries keep every answer. The typing at every scope, the attempt laws, the acceptance
+  traces and the truth programs are the seat's next steps.
 - **Seat REFS has the independent foundation proof** of the owner's roadmap, as Codex's audit
   corrected it (branch `seat/refs`;
   [its brief](research/2026-10-05-claude-lead/briefs/seat-refs-brief.md)). A program whose
   layer references are well formed expands to a program with no reference, at the bound of
-  `Eff.expandRefs`. Two theorems then lose a premise.
+  `Eff.expandRefs`. Two theorems then lose a premise. The seat reports the top theorem
+  proved on its branch (`00a37ffc`, not merged yet).
 
 Candidates with no seat, each with its place:
 
 - the mask's invariant of runs, an open part of R11. Its finite probe is
-  `research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`;
+  `research/2026-10-05-claude-lead/mask-probes/MaskStack.lean`. **Its first slice is placed
+  and allocated**: the proposed helper claim `saved-mask-pop-discipline`, a local law of the
+  frame machine through a pop of the stack. Codex wrote its statements, which are not
+  compiled. The filing note gives its branch, its two files and its anchors
+  (`research/2026-10-05-codex-foundation-packet/implementation-audit/deeper-proof-support/coordinator-filing-note.md`).
+  Its lift to runs is a later slice;
 - the Queue model's run invariant on the first profile: each operation keeps `quiet` and
   `accounted` (`src/Effect4/Laws/Modules/Queue/Model.lean`). It is the model's half of
   `wait-registration-no-gap` and of `waiting-request-obligation-preserved`. A bounded
@@ -315,6 +328,22 @@ Three repairs of 2026-10-06, outside any seat:
 - the slow lane's fixture names `Term.fold` (`3f4cba07`). The census battery had not built
   since seat FOLD's append, and no sweep had run. The rest of the slow lane is not built;
 - the dictionary gains "scenario" and "named run" (`c33d1b7d`).
+
+Two relays of Codex came on 2026-10-06, after the owner asked it for deeper proof support and
+for a watch on the proof graph. Both packets are filed with a coordinator's note, under
+`research/2026-10-05-codex-foundation-packet/implementation-audit/`
+(`heartbeat-1023-held-findings/` and `deeper-proof-support/`).
+
+- Cache's card is corrected. An entry that left the map while its lookup was pending keeps
+  an owner for its count: the detached records of the cell. The probe's new case CP9 gives
+  one answer on both builds (`8b471a8a`). No ruling changed;
+- the keyed lane's checked result has two aggregates: no entry waits, and the host itself
+  measures every entry. The second is false for all four scenarios (`34db7582`);
+- three evidence labels are narrowed: the minted builders promise a variable's reading
+  (`1b2679f6`), and the mask probe and seat MOVE's receipt say what each check holds
+  (`d61522d3`);
+- the proof graph shows a node's own placement: Codex's patch, applied unchanged
+  (`27f6e5d6`). 27 placed nodes had no concept in the drawing before.
 
 Landed later on 2026-10-05:
 
