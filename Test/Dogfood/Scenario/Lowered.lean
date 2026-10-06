@@ -13,7 +13,7 @@ files that the engine's test reads, and holds the machine clause's controls and 
   generated `api_replay` on both instances, and compares each view.
 * **The Lean half of the machine clause.** At every position of every fixture the raw frame
   replay of the tape's prefix (`Api.replay`) shows the session machine's view: the finite
-  controls of the planned goal `tape_replays`.
+  controls of the theorem `tape_replays`.
 
 A fixture that is not the text Lean writes fails this battery, and `Tape.lean` still builds. So
 the writer runs first, and this battery binds its files afterwards (`Test/Dogfood/README.md`).

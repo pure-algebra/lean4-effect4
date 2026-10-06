@@ -503,15 +503,20 @@ structure Position where
   decision : Api.Decision
   after : Run
 
+/-- The answer decision of a stored reply, at the reply's own key. It is the decision that the
+session hands the machine when it applies the reply: the session's preflight finds the call by
+the reply's key, never by the key of the slot (`preflight_replyDecision`). `storeReply` writes
+a reply only into the slot of its own key. -/
+def replyDecision (reply : Reply) : Api.Decision :=
+  .answerAsync reply.key.fiber reply.key.token reply.completion
+
 /-- The decision a row gives the machine, read on the run before the row. `none` for a row that
 leaves the machine as it was: a held call, a reply receipt, a refused row. A reply application
-gives the answer decision of the stored reply. -/
+gives the answer decision of the stored reply (`replyDecision`). -/
 def decisionOf (s : Run) (c : Command) (phase : Phase) : Option Api.Decision :=
   match c, phase with
   | .control decision, .progressed => some decision
-  | .apply key, .applied =>
-    (Api.HostSession.readReply s.session.pending key).map fun reply =>
-      .answerAsync key.fiber key.token reply.completion
+  | .apply key, .applied => (Api.HostSession.readReply s.session.pending key).map replyDecision
   | _, _ => none
 
 /-- Whether the raw replay takes this decision and reads on: the machine is live, and the step
@@ -546,19 +551,260 @@ def TapeReplays : Prop :=
       Run.machineOf (Run.replayFrom s.built.program s.built.table s.budget.fuel
         ((tapeFrom s rows).1.map (·.decision)) s.machine)
 
+/-! ### The proof of `tape_replays`
+
+Each lemma below is a step of `tape_replays`, and that theorem is its one consumer. The first
+three are facts of any session. The others read one row of a journal. -/
+
+/-- Step of `tape_replays`: a successful preflight returns the reply's own answer decision. -/
+theorem preflight_replyDecision {program : Api.Program} {table : RowTable}
+    (s : Session program table) (reply : Reply) (decision : NativeDecision)
+    (h : Api.HostSession.preflight s reply = .ok decision) : decision = replyDecision reply := by
+  obtain ⟨bound, found, _, _, shape⟩ := Api.HostSession.preflight_envelope s reply decision h
+  have test := List.find?_some found
+  have same : bound.key = reply.key := of_decide_eq_true test
+  rw [shape]
+  show RunDecision.answerAsync bound.key.fiber bound.key.token reply.completion = _
+  rw [same]
+  rfl
+
+/-- Step of `tape_replays`: an applied reply was stored at the key, and the machine it leaves is
+the raw stepper's on that reply's answer decision. Retiring calls does not touch the machine. -/
+theorem applyReply_applied_machine {program : Api.Program} {table : RowTable}
+    (s : Session program table) (key : Key) (fuel : Nat)
+    (h : (Api.HostSession.applyReply s key fuel).phase = .applied) :
+    ∃ reply, Api.HostSession.readReply s.pending key = some reply ∧
+      (Api.HostSession.applyReply s key fuel).session.machine =
+        steppedBy program fuel table s.machine (replyDecision reply) := by
+  cases fuel with
+  | zero => cases h
+  | succ fuel =>
+    cases hactive : s.active.find? (fun b => b.key == key) with
+    | none =>
+      simp only [Api.HostSession.applyReply, hactive] at h
+      cases h
+    | some selected =>
+      cases hreply : Api.HostSession.readReply s.pending key with
+      | none =>
+        simp only [Api.HostSession.applyReply, hactive, hreply] at h
+        cases h
+      | some reply =>
+        cases hpre : Api.HostSession.preflight s reply with
+        | error why =>
+          simp only [Api.HostSession.applyReply, hactive, hreply, hpre] at h
+          cases h
+        | ok decision =>
+          have shape := preflight_replyDecision s reply decision hpre
+          simp only [Api.HostSession.applyReply, hactive, hreply, hpre] at h ⊢
+          split at h
+          · cases h
+          · rename_i allowed
+            split at h
+            · rename_i removed
+              refine ⟨reply, rfl, ?_⟩
+              rw [if_neg allowed, if_pos removed, ← shape]
+              rfl
+            · cases h
+
+/-- Step of `tape_replays`: a reply application ends at a frontier, applied or refused. -/
+theorem applyReply_ends {program : Api.Program} {table : RowTable} (s : Session program table)
+    (key : Key) (fuel : Nat) :
+    (Api.HostSession.applyReply s key fuel).phase = .frontier ∨
+      (Api.HostSession.applyReply s key fuel).phase = .applied ∨
+      ∃ why, (Api.HostSession.applyReply s key fuel).phase = .refused why := by
+  cases fuel with
+  | zero => exact Or.inl rfl
+  | succ fuel =>
+    cases hactive : s.active.find? (fun b => b.key == key) with
+    | none =>
+      exact Or.inr (Or.inr ⟨.noCall, by simp only [Api.HostSession.applyReply, hactive]⟩)
+    | some selected =>
+      cases hreply : Api.HostSession.readReply s.pending key with
+      | none =>
+        exact Or.inr (Or.inr ⟨.noCall, by
+          simp only [Api.HostSession.applyReply, hactive, hreply]⟩)
+      | some reply =>
+        cases hpre : Api.HostSession.preflight s reply with
+        | error why =>
+          exact Or.inr (Or.inr ⟨why, by
+            simp only [Api.HostSession.applyReply, hactive, hreply, hpre]⟩)
+        | ok decision =>
+          simp only [Api.HostSession.applyReply, hactive, hreply, hpre]
+          split
+          · exact Or.inr (Or.inr ⟨.protocol, rfl⟩)
+          · split
+            · exact Or.inr (Or.inl rfl)
+            · exact Or.inl rfl
+
+/-- Step of `tape_replays`: a row that ends at no frontier and gives no decision leaves the
+machine as it was. -/
+theorem step_keeps_machine (s : Run) (c : Command)
+    (hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) = false)
+    (hdec : decisionOf s c (Api.Runner.result s.runner c).phase = none) :
+    (s.step c).machine = s.machine := by
+  cases c with
+  | bind call token =>
+    exact (congrArg Session.machine (Run.step_session_bind s call token)).trans
+      (bindCall_inert s.session call token).1
+  | submit reply =>
+    exact (congrArg Session.machine (Run.step_session_submit s reply)).trans
+      (submit_inert s.session reply).1
+  | apply key =>
+    change ((Api.HostSession.applyReply s.session key s.budget.fuel).phase == Phase.frontier) =
+      false at hfront
+    change decisionOf s (.apply key)
+      (Api.HostSession.applyReply s.session key s.budget.fuel).phase = none at hdec
+    rcases applyReply_ends s.session key s.budget.fuel with hph | hph | ⟨why, hph⟩
+    · rw [hph] at hfront
+      cases hfront
+    · obtain ⟨reply, hread, _⟩ := applyReply_applied_machine s.session key s.budget.fuel hph
+      rw [hph] at hdec
+      simp only [decisionOf, hread, Option.map_some] at hdec
+      cases hdec
+    · exact (congrArg Session.machine (Run.step_session_apply s key)).trans
+        (congrArg Session.machine
+          (Api.Runner.applyReply_refused s.session key s.budget.fuel why hph))
+  | control decision =>
+    change ((Api.HostSession.advance s.session s.budget.fuel decision).phase == Phase.frontier) =
+      false at hfront
+    change decisionOf s (.control decision)
+      (Api.HostSession.advance s.session s.budget.fuel decision).phase = none at hdec
+    rcases Run.advance_step s.session s.budget.fuel decision with ⟨why, refused⟩ | ⟨_, stepped⟩
+    · exact (congrArg Session.machine (Run.step_session_control s decision)).trans
+        (congrArg (fun r => r.session.machine) refused)
+    · rw [stepped] at hfront hdec
+      cases henough : Run.enoughFor s.built.program s.built.table s.budget.fuel s.session.machine
+          decision with
+      | true =>
+        rw [henough] at hdec
+        cases hdec
+      | false =>
+        rw [henough] at hfront
+        cases hfront
+
+/-- Step of `tape_replays`: a row that gives a decision leaves the machine that the raw stepper
+leaves on that decision. -/
+theorem step_takes_decision (s : Run) (c : Command) (decision : Api.Decision)
+    (hdec : decisionOf s c (Api.Runner.result s.runner c).phase = some decision) :
+    (s.step c).machine =
+      steppedBy s.built.program s.budget.fuel s.built.table s.machine decision := by
+  cases c with
+  | bind call token =>
+    generalize (Api.Runner.result s.runner (.bind call token)).phase = phase at hdec
+    cases phase <;> cases hdec
+  | submit reply =>
+    generalize (Api.Runner.result s.runner (.submit reply)).phase = phase at hdec
+    cases phase <;> cases hdec
+  | apply key =>
+    change decisionOf s (.apply key)
+      (Api.HostSession.applyReply s.session key s.budget.fuel).phase = some decision at hdec
+    generalize hph : (Api.HostSession.applyReply s.session key s.budget.fuel).phase = phase at hdec
+    cases phase with
+    | applied =>
+      obtain ⟨reply, hread, hmachine⟩ :=
+        applyReply_applied_machine s.session key s.budget.fuel hph
+      simp only [decisionOf, hread, Option.map_some, Option.some.injEq] at hdec
+      rw [← hdec]
+      exact (congrArg Session.machine (Run.step_session_apply s key)).trans hmachine
+    | bound => cases hdec
+    | preflight => cases hdec
+    | progressed => cases hdec
+    | frontier => cases hdec
+    | refused why => cases hdec
+  | control d =>
+    change decisionOf s (.control d)
+      (Api.HostSession.advance s.session s.budget.fuel d).phase = some decision at hdec
+    generalize hph : (Api.HostSession.advance s.session s.budget.fuel d).phase = phase at hdec
+    cases phase with
+    | progressed =>
+      obtain ⟨_, _, hmachine⟩ := Run.advance_progressed s.session s.budget.fuel d hph
+      simp only [decisionOf, Option.some.injEq] at hdec
+      rw [← hdec]
+      exact (congrArg Session.machine (Run.step_session_control s d)).trans hmachine
+    | bound => cases hdec
+    | preflight => cases hdec
+    | applied => cases hdec
+    | frontier => cases hdec
+    | refused why => cases hdec
+
+/-- Step of `tape_replays`: the tape stops at a row that ends at a frontier. -/
+theorem tapeFrom_frontier (s : Run) (c : Command) (rest : List Command)
+    (hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) = true) :
+    tapeFrom s (c :: rest) = ([], c :: rest) := by
+  rw [tapeFrom]
+  exact if_pos hfront
+
+/-- Step of `tape_replays`: the tape passes a row that gives no decision. -/
+theorem tapeFrom_skip (s : Run) (c : Command) (rest : List Command)
+    (hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) = false)
+    (hdec : decisionOf s c (Api.Runner.result s.runner c).phase = none) :
+    tapeFrom s (c :: rest) = tapeFrom (s.step c) rest := by
+  rw [tapeFrom]
+  simp only [hfront, Bool.false_eq_true, if_false, hdec]
+
+/-- Step of `tape_replays`: the tape takes a decision that the raw replay reads past. -/
+theorem tapeFrom_take (s : Run) (c : Command) (rest : List Command) (decision : Api.Decision)
+    (hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) = false)
+    (hdec : decisionOf s c (Api.Runner.result s.runner c).phase = some decision)
+    (hreads : readsOn s decision = true) :
+    tapeFrom s (c :: rest) =
+      (⟨decision, s.step c⟩ :: (tapeFrom (s.step c) rest).1, (tapeFrom (s.step c) rest).2) := by
+  rw [tapeFrom]
+  simp only [hfront, Bool.false_eq_true, if_false, hdec, hreads, if_true]
+
+/-- Step of `tape_replays`: the tape stops at a decision that the raw replay does not read
+past. -/
+theorem tapeFrom_stop (s : Run) (c : Command) (rest : List Command) (decision : Api.Decision)
+    (hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) = false)
+    (hdec : decisionOf s c (Api.Runner.result s.runner c).phase = some decision)
+    (hreads : readsOn s decision = false) :
+    tapeFrom s (c :: rest) = ([], c :: rest) := by
+  rw [tapeFrom]
+  simp only [hfront, Bool.false_eq_true, if_false, hdec, hreads]
+
 /-- **A journal's machine is the raw replay of its tape.** When the tape reads every row, the
 machine that the journal leaves is the machine that the raw frame replay leaves on the tape's
 decisions, at the same table and budgets. It is the machine clause of a lowered run: a replay of
 the machine alone needs the tape, not the session. Reach: any run, any rows whose tape reads to
 the end: no row at a frontier, and every decision taken at a live machine with enough fuel. It
-does not establish equal session ledgers: the raw replay has none. It does not reach a journal
-that stops at a frontier, and it says nothing of a lowered engine: that link is the finite
-comparison of `ocaml/engine/test/scenarios/test_scenarios.ml`. It extends `play_controls_eq_replay`
+needs no premise on the session, because the tape holds the decision that the session hands the
+machine: a reply's own answer decision (`replyDecision`). It does not establish equal session
+ledgers: the raw replay has none. It does not reach a journal that stops at a frontier, and it
+says nothing of a lowered engine: that link is the finite comparison of
+`ocaml/engine/test/scenarios/test_scenarios.ml`. It extends `play_controls_eq_replay`
 (`src/Effect4/Laws/Run.lean`) from control rows to reply applications. Concept
 `translation-simulation`, R8. Consumer: the lowered runs of `Test/Dogfood/Scenario/Lowered.lean`,
 whose finite runs check it at every position of every fixture. -/
 @[semantics "translation-simulation" (requirement := R8)]
-proof_goal tape_replays : TapeReplays
+theorem tape_replays : TapeReplays := by
+  intro s rows h
+  induction rows generalizing s with
+  | nil => exact (Run.machineOf_nil _ _ _ _).symm
+  | cons c rest ih =>
+    rw [Run.play_cons]
+    cases hfront : ((Api.Runner.result s.runner c).phase == Phase.frontier) with
+    | true =>
+      rw [tapeFrom_frontier s c rest hfront] at h
+      cases h
+    | false =>
+      cases hdec : decisionOf s c (Api.Runner.result s.runner c).phase with
+      | none =>
+        rw [tapeFrom_skip s c rest hfront hdec] at h ⊢
+        rw [ih (s.step c) h, Run.step_built, Run.step_budget, step_keeps_machine s c hfront hdec]
+      | some decision =>
+        cases hreads : readsOn s decision with
+        | false =>
+          rw [tapeFrom_stop s c rest decision hfront hdec hreads] at h
+          cases h
+        | true =>
+          rw [tapeFrom_take s c rest decision hfront hdec hreads] at h ⊢
+          have live : s.machine.stuck.isNone = true ∧
+              Run.enoughFor s.built.program s.built.table s.budget.fuel s.machine decision =
+                true :=
+            Bool.and_eq_true_iff.mp hreads
+          rw [ih (s.step c) h, Run.step_built, Run.step_budget,
+            step_takes_decision s c decision hdec, List.map_cons,
+            Run.replayFrom_cons _ _ _ _ _ _ (Option.isNone_iff_eq_none.mp live.1) live.2]
 
 /-! ## 5. A scenario's record, and the gate at the foot of a battery -/
 
@@ -722,87 +968,5 @@ open Lean in
         findings := findings ++ scenario.problems.toArray
       unless findings.isEmpty do
         throwError (String.intercalate "\n" findings.toList))
-
-/-! ## 6. Controls of the gate
-
-The fixtures name this module's own declarations and the law graph's, so they add no placed
-declaration. Seven of the nine stand on a claim that is a planned goal: its node costs no walk of
-the proof graph. -/
-
-namespace Fixture
-
-/-- A green control and a red control of an entry, both constant. -/
-def both (entry : String) : List Control :=
-  [green entry "a run the entry allows" true, red entry "a fault" true]
-
-/-- Green control. The claim is a placed theorem of this battery. Its proof uses the clause, a
-law that the registry lists as a requirement's top node. Two laws stand beside it with controls
-only: a placed theorem of this battery, and a theorem of a default module of the registry. -/
-def sound : Scenario :=
-  { name := "sound", program := ``play, observation := ``receipts, claim := ``replays
-    clauses := [⟨"replay", ``Effect4.Run.journal_replays⟩]
-    laws := [⟨"inert", ``receipt_inert⟩, ⟨"receipt", ``Effect4.Api.HostSession.submit_machine⟩]
-    controls := both "replay" ++ both "inert" ++ both "receipt" }
-
-/-- Red control: a claim whose proof does not use the record's clause. -/
-def wrongTop : Scenario := { sound with name := "wrongTop", claim := ``receipt_inert }
-
-/-- Green control. The claim is a planned goal, and the record names it as its one clause. -/
-def planned : Scenario :=
-  { name := "planned", program := ``play, observation := ``receipts, claim := ``tape_replays
-    clauses := [⟨"machine", ``tape_replays⟩], controls := both "machine" }
-
-/-- Red control: a program that names no declaration. -/
-def unresolved : Scenario := { planned with name := "unresolved", program := `Nowhere.program }
-
-/-- Red control: a claim that is a definition. -/
-def noTheorem : Scenario := { planned with name := "noTheorem", claim := ``play }
-
-/-- Red control: a law that is a battery's theorem with no placement. -/
-def unplaced : Scenario :=
-  { planned with name := "unplaced", laws := [⟨"inert", ``play_id⟩]
-                 controls := both "machine" ++ both "inert" }
-
-/-- Red control: a law of the law graph with no placement. `Effect4.Run.step_id` carries no
-`@[semantics …]`, and no row of the registry names it or its module. -/
-def unplacedLaw : Scenario :=
-  { planned with name := "unplacedLaw", laws := [⟨"inert", ``Effect4.Run.step_id⟩]
-                 controls := both "machine" ++ both "inert" }
-
-/-- Red control: a claim that rests on a planned goal which no clause names. -/
-def unlisted : Scenario :=
-  { planned with name := "unlisted", clauses := [], laws := [⟨"inert", ``receipt_inert⟩]
-                 controls := both "inert" }
-
-/-- Red control: a clause with no red control, a law with no green control, a control of no
-entry, and a control that fails. -/
-def loose : Scenario :=
-  { planned with
-    name := "loose"
-    laws := [⟨"inert", ``receipt_inert⟩]
-    controls := [green "machine" "a run the clause allows" true, red "inert" "a fault" true,
-      red "other" "a stray run" true, green "machine" "a false run" false] }
-
-end Fixture
-
--- One run of the gate over the nine fixtures, on one plan. The green control is that no finding
--- names `sound` or `planned`; each red control is one finding or more, by its fixture's name.
-/--
-error: wrongTop: the proof of Test.Dogfood.Scenario.receipt_inert does not reach the clause "replay" (Effect4.Run.journal_replays)
-unresolved: Nowhere.program does not resolve to a declaration
-noTheorem: the claim Test.Dogfood.Scenario.play is no theorem and no planned goal
-unplaced: the claim Test.Dogfood.Scenario.play_id has no placement at a requirement
-unplacedLaw: the claim Effect4.Run.step_id has no placement: no semantics attribute and no row of the semantics registry
-unlisted: the claim Test.Dogfood.Scenario.tape_replays rests on the planned goal Test.Dogfood.Scenario.tape_replays, which no clause names
-loose: the clause "machine" has no red control
-loose: the law "inert" has no green control
-loose: the control "a stray run" names no clause and no law
-loose: the control "a false run" fails
--/
-#guard_msgs (error) in
-#scenario_gate Fixture.sound Fixture.wrongTop Fixture.planned Fixture.unresolved Fixture.noTheorem
-  Fixture.unplaced Fixture.unplacedLaw Fixture.unlisted Fixture.loose
-
-#guard Fixture.sound.problems = [] && Fixture.planned.problems = []
 
 end Test.Dogfood.Scenario

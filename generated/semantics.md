@@ -1252,6 +1252,7 @@ Translation & Simulation: Semantic preservation, replay relations, and capstone 
 | m7-results-exit-hasty | adequacy | proved | Effect4.Program.Typed.exits_hasTy | yes |  |
 | replay-externals | preservation | proved | Effect4.Program.Sched.replay_externals | yes |  |
 | run-controls-replay | simulation | proved | Effect4.Run.play_controls_eq_replay | yes |  |
+| run-tape-replay | simulation | proved | Test.Dogfood.Scenario.tape_replays | yes |  |
 | straight-composition-agreement | simulation | proved | Effect4.Program.Denote.StraightEq.run_agrees | yes |  |
 
 ### Printed statements
@@ -1442,6 +1443,12 @@ Literature: WrightFelleisen1994, audit P36 — analogy
         (Effect4.Run.replayFrom s.built.program s.built.table s.budget.fuel tape s.machine))
 ```
 
+**run-tape-replay**
+
+```lean
+Test.Dogfood.Scenario.TapeReplays
+```
+
 **straight-composition-agreement**
 
 ```lean
@@ -1609,14 +1616,14 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 | R5 | open | `build_total` (proved) | `unauthorized_calls_nothing` (goal) | `unauthorized_calls_nothing` |
 | R6 | open | `reachable_typed` (proved), `preflight_success_prepared_fits` (proved), `preflight_failure_noShapeDefect` (proved) | `handles_of_payloadFieldTy` (proved), `stale_never_applies` (goal), `timeout` (modulo), `workers` (modulo), `applied_selects` (proved), `control_retires` (proved), `receipt_inert` (proved) | `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once` |
 | R7 | open | — | — | — |
-| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | `unsuspended_runs` (proved), `tape_replays` (goal) | `tape_replays` |
+| R8 | open | `read_print` (proved), `read_exact` (proved), `run_eq_meaning` (proved), `loopAgreement` (proved), `run_eq_ref` (proved) | `unsuspended_runs` (proved), `tape_replays` (proved) | — |
 | R9 | open | `m7_proved` (proved), `m7_admitted` (proved) | — | — |
 | R10 | open | `andThenEffect_typed` (proved), `andThenContinuation_typed` (proved), `andThenThunk_typed` (proved), `as_typed` (proved), `asVoid_typed` (proved), `tapContinuation_typed` (proved), `tapEffect_typed` (proved), `ensuring_typed` (proved), `void_typed` (proved), `die_typed` (proved), `yieldKey_typed` (proved), `matchCause_typed` (proved), `matchCauseEffect_typed` (proved), `yieldNow_typed` (proved), `forkChildDefault_typed` (proved), `forkDetachDefault_typed` (proved), `forkInDefault_typed` (proved), `forkScopedDefault_typed` (proved), `releaseOne_typed` (proved) | `tagHit_record` (proved), `acceptLoop_length_le` (proved), `first_profile_closed` (proved), `positive_suspend_step_capacity` (proved), `infrastructure_escapes` (goal), `routing` (modulo), `tagIs_pair` (proved), `retries_declared` (goal) | `infrastructure_escapes`, `unauthorized_calls_nothing`, `retries_declared` |
 | R11 | open | `runState_complete` (proved), `runState_restore` (proved), `runState_prefix` (proved), `close_twice` (proved), `close_reentrant_add` (proved), `closeOrder_eq` (proved) | `cleans_once` (goal), `cleanup_keeps` (goal), `releases_once` (goal) | `cleans_once`, `cleanup_keeps`, `releases_once` |
 | R12 | open | `fairTape_unarmed` (proved), `frontier_empty_iff_deadlocked` (proved) | — | — |
 | R13 | open | `journal_replays` (proved) | `replays` (proved) | — |
 
-**Next goals** (11): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `tape_replays`, `infrastructure_escapes`
+**Next goals** (10): `bounded`, `cleans_once`, `committed`, `counted`, `unauthorized_calls_nothing`, `stale_never_applies`, `cleanup_keeps`, `retries_declared`, `releases_once`, `infrastructure_escapes`
 
 ### R1: The signature is a parameter: one located refusal admits Σ_app, and every milestone statement takes it
 
@@ -2529,7 +2536,7 @@ flowchart LR
   n3["loopAgreement<br/>proved"]
   n4["run_eq_ref<br/>proved"]
   n5["unsuspended_runs<br/>proved"]
-  n6["tape_replays<br/>goal"]
+  n6["tape_replays<br/>proved"]
   n7["readTerm_printTerm<br/>proved"]
   n8["run_agrees<br/>proved"]
   n0 --> n7
@@ -2545,7 +2552,7 @@ flowchart LR
 | `loopAgreement` | proved | — | — | 339 | 911 |
 | `run_eq_ref` | proved | — | — | 877 | 1053 |
 | `unsuspended_runs` | proved | — | `run_agrees` | 87 | 857 |
-| `tape_replays` | goal | `tape_replays` | — | 70 | 953 |
+| `tape_replays` | proved | — | — | 97 | 955 |
 | `readTerm_printTerm` | proved | — | — | 164 | 205 |
 | `run_agrees` | proved | — | `run_eq_meaning` | 68 | 855 |
 

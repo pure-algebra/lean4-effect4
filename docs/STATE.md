@@ -257,6 +257,15 @@ Landed later on 2026-10-05:
   on the generated engine, on both instances: the engine's machine view is Lean's at each of
   101 positions (`ocaml/engine/test/scenarios/`). Every run is finite, and no host run of a
   scenario exists.
+- **A journal's machine is the raw replay of its tape** (`tape_replays`,
+  `Test/Dogfood/Scenario.lean`; R8, the claim `run-tape-replay`). The coordinator proved the
+  first of the scenarios' planned goals, at `[propext, Quot.sound]`. It holds for every run and
+  every journal whose tape reads to its end. The tape holds the decision that the session
+  hands the machine: for a reply application, the reply's own answer decision. So the
+  statement needs no premise on the session. The goal as first stated named the selected key.
+  That form needs each slot to hold a reply of its own key, and an arbitrary session record
+  need not. The four fixtures did not move. The gate's own controls are a battery of their own
+  with a fixture goal (`Test/Dogfood/Scenario/Gate.lean`), so the goal gate still counts 24.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
@@ -309,14 +318,18 @@ Open at this landing:
   which waits for T5;
 - the four scenarios of the acceptance programs are merged (row 254), and these parts are open
   ([the receipt](research/2026-10-05-seat-DOGFOOD-receipt.md), items 8 and 9):
-  - the eleven planned goals, each in its battery with its placement;
+  - ten planned goals, each in its battery with its placement. The eleventh, `tape_replays`,
+    is proved;
   - the host half: a scenario's whole observation on the printed module, on the keyed lane.
     On the merged tree `Workers.crew`, `Routing.request` and `Atomic.shop` print and read
     back, and `Timeout.fetch` prints and does not read back (a finite probe). The keyed
     recorder needs one extension, an operation that completes after its cancellation;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
-    the eleven goals as its next goals. A requirement with a placed scenario goal is proved
+    the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
+  - the driver's general laws are still in the battery: `tape_replays` with its tape, and the
+    three session laws. The seat proposes their move into the law graph, beside
+    `play_controls_eq_replay` and the session's laws (its receipt, item 9.5);
   - a fixture edited alone is not bound by `lake build`: Lake does not take an `include_str`
     file as an input. A fresh elaboration of `Test/Dogfood/Scenario/Lowered.lean` binds it;
   - two controls are not written: a cleanup replayed under one registration, and a timer that

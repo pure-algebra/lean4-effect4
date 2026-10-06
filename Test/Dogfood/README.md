@@ -161,6 +161,9 @@ So no control stands outside a scenario, and no scenario stands without a placed
 control is a finite probe: one script on the Lean machine. A claim's standing is derived from its
 proof: `#plan_status` prints it, with the planned goals the claim rests on.
 
+The gate has controls of its own: `Scenario/Gate.lean` runs it over nine fixture records. Seven
+stand on a planned goal of that battery, which states nothing of a program.
+
 | Scenario | Program | Observation | Claim, assembled clauses and associated laws | Lowered runs |
 | --- | --- | --- | --- | --- |
 | workers: `Scenario/Workers.lean`, on p3's consumer | `crew`: two workers with identities. Each holds a connection that its scope releases, takes jobs from the host and notes each assignment in a shared cell. | `Observation`, seven fields: the assignment of jobs to workers, the accepted reply receipts, the reply applications, the retired calls, the cleanup identities, the root's exit and the work left. | `workers` assembles four clauses: `receipt_inert`, `applied_selects` and `control_retires` (theorems of `Scenario.lean`), and the planned goal `releases_once`. That goal says: under every script the crew releases no connection twice. Associated law: `replays`. | Engine: `workers.txt`, five runs of the machine clause. Host: waiting on the keyed lane. The program prints and reads back since the state plan's T5, part A (a finite probe at the merge; no battery pins it). |
@@ -203,8 +206,10 @@ says whether the raw replay with the empty table shows another machine view at s
 `timeout.txt` is p1's own program, whose first host row answers a handle. It is the one run that
 says `table differs`.
 
-The planned goal `tape_replays` (`Scenario.lean`) states the Lean half: a journal's machine is the
-raw replay of its tape. The battery checks it at every position of every fixture, as finite runs.
+The theorem `tape_replays` (`Scenario.lean`) is the Lean half: a journal's machine is the raw
+replay of its tape, for every run and every journal whose tape reads to its end. The tape holds
+the decision that the session hands the machine: for a reply application, the reply's own answer
+decision. The battery also checks it at every position of every fixture, as finite runs.
 The engine's session clause waits: the engine has no session to compare.
 
 To write the fixtures again, follow these steps from the repository's root.

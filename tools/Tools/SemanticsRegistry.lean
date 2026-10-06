@@ -634,6 +634,9 @@ def registry : Registry where
     { id := "run-controls-replay", concept := "translation-simulation", role := .simulation
       title := "Journaled control rows leave the raw replay's machine whenever every added phase progressed"
       pointer := .witness `Effect4.Run.play_controls_eq_replay },
+    { id := "run-tape-replay", concept := "translation-simulation", role := .simulation
+      title := "A journal's machine is the raw replay of its tape: the controls that progressed and the reply applications, each as the decision the session hands the machine (machine equality for any run and any journal whose tape reads to its end; no session ledger, no journal that stops at a frontier, no lowered engine; decisions row 254)"
+      pointer := .witness `Test.Dogfood.Scenario.tape_replays },
     { id := "straight-composition-agreement", concept := "translation-simulation", role := .simulation
       title := "StraightEq programs run to equal exits and stores at their own sufficient budgets (the straight-fragment composition relation)"
       pointer := .witness `Effect4.Program.Denote.StraightEq.run_agrees }
