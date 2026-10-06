@@ -266,6 +266,21 @@ Landed later on 2026-10-05:
   That form needs each slot to hold a reply of its own key, and an arbitrary session record
   need not. The four fixtures did not move. The gate's own controls are a battery of their own
   with a fixture goal (`Test/Dogfood/Scenario/Gate.lean`), so the goal gate still counts 24.
+- **The Queue's cell and its six steps are in the tree** (`3d9d935c`, the first part of seat
+  QSTEPS; row 255). `src/Effect4/Modules/Queue/` is the first composed module, in a new layer
+  of the runtime root above `Program`: the cell's type at a message type, its initial value
+  and six step terms (`Cell.lean`, `Steps.lean`). Five steps are terms for one `Ref.modify`,
+  and `sizeStep` is a term over the value that a `Ref.get` answers. The laws are beside the
+  model, in `src/Effect4/Laws/Modules/Queue/`:
+  - `Relation.lean`: the encoding table, the message map and the cell's value of a state;
+  - `Steps.lean`: three proved connectors to the store (`step_updates`, `step_keeps_cell`,
+    `cell_read`) and six planned step goals on `FirstProfile`;
+  - `Typing.lean`: seven typing statements, each a planned goal.
+
+  Four batteries under `Test/Program/` run the steps: eight scenarios on the machine, each
+  step against the model on a finite universe, and each goal's conclusion on that universe.
+  Thirteen planned goals are new, so the goal gate counts 37. No Queue program runs on the
+  generated engine or on a host yet.
 - **The conservativity check's verdict clause judges verdicts** (`7f77bd03`, `0b214886`; row
   172's amendment). A corpus row that moves in printed length alone is reported and not
   refused, under one validated header. Codex found a false acceptance in the first repair,
@@ -295,7 +310,10 @@ Open at this landing:
      it since 2026-10-05 (branch `seat/qsteps`;
      [the brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md)). A service error
      stopped its first run before any commit, and it started again the same evening from
-     `7f77bd03`. The owner ruled the design's five proposals as recommended (row 255). Codex's design research
+     `7f77bd03`. Its first part is merged (`3d9d935c`): the cell, the six steps, the relation
+     and thirteen planned goals. The seat goes on with the proofs, two scenarios on the
+     engine and the documents. The owner ruled the design's five proposals as recommended
+     (row 255). Codex's design research
      ([its synthesis](research/2026-10-05-codex-foundation-packet/implementation-audit/queue-dogfood-design-research/recommendations.md))
      is taken into the design and the brief. `Authoring.foldWith` mints a fold's two names,
      so a step's helper cannot capture its caller's variable
