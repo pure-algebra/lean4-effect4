@@ -173,10 +173,12 @@ end
 
 /-! ## The checked type reader
 
-One reader for the places where the faces print a program type (the state plan's T5, part B):
-the type arguments an operation carries on its call's head (`Deferred.make<A, E>()`), a loop's
-stated cursor type, and a list fold's stated accumulator type. A place reads its type back only
-through this reader. The class reader below checks a whole declaration by the same re-print. -/
+One reader for the places where the faces print a program type (the state plan's T5, part B).
+Two of the three read their type back, and only through this reader: the type arguments an
+operation carries on its call's head (`Deferred.make<A, E>()`, `installTypeArgs`,
+`Codegen/Read.lean`), and a loop's stated cursor type (`readLeaf`). The third, a list fold's
+stated accumulator type, is printed and not read yet. The class reader below checks a whole
+declaration by the same re-print. -/
 
 /-- **The checked type reader**: a program type from its printed spelling (`readTy`), kept only
 when the type printer prints that type as this spelling (`Types.ofTy`). What it accepts is exact

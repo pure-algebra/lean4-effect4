@@ -189,6 +189,40 @@ test("both engines read the loop image in every spelling of its tail, cursor una
   }
 })
 
+// Seat T5, part B: a loop's stated cursor type. Both engines read it through the one checked type
+// reader (`readTypeText` of read.ts), so they lift the same program, and a type with no reading
+// is refused by both. Before part B the compiler-backed engine read the annotation by a reader
+// of its own, which answered a handle for any name, and the oxc engine dropped it: the two
+// lifted different programs from one source.
+const annotatedLoopModule = (type: string) => `import { Effect, Ref, pipe } from "effect"\nexport const program = Effect.flatMap(Ref.make(0), (a0) => Effect.suspend(() => {\n  let a1: ${type} = 0\n  return ${loopTails[0]!}\n}))\n`
+
+test("both engines read a loop's stated cursor type alike", () => {
+  const readable: ReadonlyArray<readonly [string, unknown]> = [
+    ["number", { _tag: "nat" }],
+    ["Option.Option<number>", { _tag: "option", inner: { _tag: "nat" } }],
+    ["number | string", { _tag: "union", left: { _tag: "nat" }, right: { _tag: "string" } }],
+  ]
+  for (const [type, cursorTy] of readable) {
+    const source = annotatedLoopModule(type)
+    const left = ck(source, "loop.ts"), right = oxc(source, "loop.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    for (const verdicts of [left, right]) {
+      const [v] = verdicts
+      if (v?.kind !== "lifted" || v.eff._tag !== "bind" || v.eff.rest._tag !== "iterate") throw new Error("expected bind then iterate: " + JSON.stringify(v))
+      expect(v.eff.rest.cursorTy).toEqual(cursorTy as never)
+    }
+  }
+  // a type with no reading: a name, a handle, `unknown`
+  for (const type of ["Foo", "Ref.Ref<number>", "unknown"]) {
+    const source = annotatedLoopModule(type)
+    const left = ck(source, "loop.ts"), right = oxc(source, "loop.ts")
+    expect(compareVerdicts(left, right).status).toBe("agree")
+    for (const verdicts of [left, right]) {
+      expect(verdicts.map(v => v.kind === "refusal" ? [v.code, v.detail] : v.kind)).toEqual([["E-NODE", "fragment node: shape"]])
+    }
+  }
+})
+
 test("a loop whose result is not a thunk is refused alike, and a bare whileLoop stays E-LOOP", () => {
   for (const source of [loopModule(`Effect.map(${loopBody}, (x) => x)`), 'import { Effect } from "effect"\nconst p = Effect.whileLoop({})\n']) {
     const left = ck(source, "refused-loop.ts"), right = oxc(source, "refused-loop.ts")

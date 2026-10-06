@@ -231,8 +231,9 @@ export type TsStmt =
   | { readonly _tag: "exprStmt"; readonly value: Expr }
   /** `yield* value` */
   | { readonly _tag: "yieldDiscard"; readonly value: Expr }
-  /** `let name = value` */
-  | { readonly _tag: "letInit"; readonly name: string; readonly value: Expr }
+  /** `let name = value`, or `let name: T = value` with the stated type as the checked type reader
+   * read it (`readTypeChecked`): a loop's stated cursor type (the state plan's T5, part B). */
+  | { readonly _tag: "letInit"; readonly name: string; readonly value: Expr; readonly type?: Ty }
   /** `name = value` */
   | { readonly _tag: "assign"; readonly name: string; readonly value: Expr }
   /** `while (true) { body }` */
@@ -615,8 +616,11 @@ const stmtOf = (n: Node): Read<TsStmt> => {
       if (!isNode(d)) return unsupported(n, "declaration")
       const id = nodeAt(d, "id")
       const init = nodeAt(d, "init")
-      if (!id || id.type !== "Identifier" || typeof id.name !== "string" || id.typeAnnotation || !init) return unsupported(n, "declarator")
+      if (!id || id.type !== "Identifier" || typeof id.name !== "string" || !init) return unsupported(n, "declarator")
+      const annotation = nodeAt(id, "typeAnnotation")
       if (n.kind === "const") {
+        // a yielded constant states no type: the printer never writes one there
+        if (id.typeAnnotation) return unsupported(n, "declarator")
         const argument = yieldStar(unwrap(init))
         if (!argument) return unsupported(init, "const without yield*")
         const v = exprOf(argument)
@@ -626,7 +630,13 @@ const stmtOf = (n: Node): Read<TsStmt> => {
       if (n.kind === "let") {
         const v = exprOf(init)
         if (failed(v)) return again(v)
-        return ok({ _tag: "letInit", name: id.name, value: v.success })
+        if (!id.typeAnnotation) return ok({ _tag: "letInit", name: id.name, value: v.success })
+        // A stated type on a `let` is a loop's cursor type (`iterate`'s annotated image). It is
+        // read by the checked type reader, and a type with no such reading is refused here,
+        // where Lean answers `annotation "local const"`.
+        const stated = annotation && nodeAt(annotation, "typeAnnotation")
+        const type = stated ? readTypeChecked(stated) : undefined
+        return type === undefined ? unsupported(n, "declarator") : ok({ _tag: "letInit", name: id.name, value: v.success, type })
       }
       return unsupported(n, "declaration kind")
     }
@@ -1098,8 +1108,9 @@ export const readTerm = (n: number, x: Expr): Read<Term> => {
       return ok({ _tag: "lit", value: { _tag: "str", value: x.value } })
     case "call": {
       const fn = x.fn
-      // A fold's stated accumulator type is printed and not read: no reader of types exists
-      // (Lean's `ReadRefusal.annotation "fold accumulator"`, `Codegen/Read.lean`).
+      // A fold's stated accumulator type is printed and not read yet: the checked type reader
+      // (`readTypeChecked`) does not serve this place (Lean's
+      // `ReadRefusal.annotation "fold accumulator"`, `Codegen/Read.lean`).
       if (fn._tag === "generic" && fn.fn._tag === "ident" && fn.fn.name === "fold")
         return refuse({ _tag: "shape", what: "fold accumulator annotation" })
       if (fn._tag !== "ident") return refuse({ _tag: "shape", what: "term" })
@@ -1340,6 +1351,8 @@ type Arg =
   | { readonly _tag: "str"; readonly s: string }
   | { readonly _tag: "int"; readonly v: number }
   | { readonly _tag: "stmts"; readonly ss: ReadonlyArray<TsStmt> }
+  /** A stated type, as the checked type reader read it (Lean `Arg.type`). */
+  | { readonly _tag: "type"; readonly ty: Ty }
 
 type Subst = Map<number, Arg>
 
@@ -1398,13 +1411,19 @@ const matchStmts = (n: number, ts: StmtTpls, ss: ReadonlyArray<TsStmt>, captured
 const matchTs = (n: number, ts: ReadonlyArray<Tpl>, es: ReadonlyArray<Expr>, captured: Subst): boolean =>
   ts.length === es.length && ts.every((t, j) => matchT(n, t, es[j]!, captured))
 
-/** The statements of the loop image and of a generator. An annotated `let` or `const` never
- * reaches this fragment (§ 2 refuses it), so a skeleton that captures an annotation matches
- * nothing here: the annotated loop prints and is not read, as in Lean (no reader of types). */
+/** The statements of the loop image and of a generator. An annotated `const` never reaches this
+ * fragment (§ 2 refuses it). A `let` reaches it with or without a stated type: a skeleton with no
+ * annotation matches a `let` that states none, and a skeleton with an annotation hole captures
+ * the stated type, which the checked type reader has read (Lean `Template.matchStmt`,
+ * `readLeaf` at a loop's cursor type; the state plan's T5, part B). */
 const matchStmt = (n: number, t: StmtTpl, s: TsStmt, captured: Subst): boolean => {
   switch (t._tag) {
-    case "letInit":
-      return t.ann === null && s._tag === "letInit" && s.name === varName(n + t.k) && matchT(n, t.value, s.value, captured)
+    case "letInit": {
+      if (s._tag !== "letInit" || s.name !== varName(n + t.k)) return false
+      if (t.ann === null ? s.type !== undefined : s.type === undefined) return false
+      if (t.ann !== null && s.type !== undefined) captured.set(t.ann, { _tag: "type", ty: s.type })
+      return matchT(n, t.value, s.value, captured)
+    }
     case "assign": return s._tag === "assign" && s.name === varName(n + t.k) && matchT(n, t.value, s.value, captured)
     case "ret": return s._tag === "ret" && matchT(n, t.value, s.value, captured)
     case "exprStmt": return s._tag === "exprStmt" && matchT(n, t.value, s.value, captured)
@@ -1521,7 +1540,8 @@ const explainStmt = (n: number, t: StmtTpl, s: TsStmt): Difference => {
   switch (t._tag) {
     case "letInit":
       if (s._tag !== "letInit" || s.name !== varName(n + t.k)) return here(describeStmt(n, t))
-      return below("value", explainT(n, t.value, s.value)) ?? (t.ann === null ? undefined : here("an annotation"))
+      return below("value", explainT(n, t.value, s.value))
+        ?? (t.ann === null ? (s.type === undefined ? undefined : here("no annotation")) : (s.type === undefined ? here("an annotation") : undefined))
     case "assign": return s._tag === "assign" && s.name === varName(n + t.k) ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
     case "ret": return s._tag === "ret" ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
     case "exprStmt": return s._tag === "exprStmt" ? below("value", explainT(n, t.value, s.value)) : here(describeStmt(n, t))
@@ -1629,6 +1649,8 @@ const readLeaf = (d: number, daemon: boolean, sort: ArgSort, a: Arg): Read<unkno
       default: break
     }
   }
+  // a loop's stated cursor type: the checked type reader read it where the statement was read
+  if (sort === "optTy" && a._tag === "type") return ok(a.ty)
   if (sort === "decision" && a._tag === "str") return ok({ _tag: "tag", tag: a.s })
   if (sort === "nat" && a._tag === "int") return a.v >= 0 ? ok(a.v) : refuse({ _tag: "negative", value: a.v })
   return refuse({ _tag: "shape", what: "argument" })

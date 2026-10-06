@@ -162,7 +162,8 @@ def readAt (expression : TypeScript.Expr) (table : RowTable := [])
 
 /-- Whether `read` of the program's printing is the program itself: the round trip, decided by
 running it. What the printer loses is listed in `Codegen/Read.lean`'s module note (a variable
-out of scope, a dropped `unit` request, a loop's cursor annotation, the internal fiber actions).
+out of scope, a dropped `unit` request, a stated type outside the readable types, the internal
+fiber actions).
 A program the printer refuses is not readable either: a child fork into a scope has no rc.112
 spelling, so it is refused (`internalAction "forkScoped:child"`, `Codegen/Templates.lean`), never
 printed as the daemon it is not. -/
@@ -409,9 +410,10 @@ a refusal identifies the exact constructor path.
 
 `readable` is **not** among them. It means "printing this program and reading it back gives
 this program", which is a property of the *print image*, not of execution: a program can be
-typed and run and still not be one the printer keeps whole (a loop whose cursor is annotated:
-no reader of types exists). Admission certifies execution and `readable` certifies reconstruction, so it is a
-separate optional certificate, `imageCertificate`. (The example this paragraph once gave,
+typed and run and still not be one the printer keeps whole (a loop whose stated cursor type is
+outside the readable types, `Codegen.Classes.ReadableTy`: a cursor at a cell's type prints, and
+no reading answers its spelling). Admission certifies execution and `readable` certifies
+reconstruction, so it is a separate optional certificate, `imageCertificate`. (The example this paragraph once gave,
 `Wire.Corpus.pAwait`, became readable when `callback` retired into `perform`.)
 
 None of this is a completion claim: an admitted program may park at a live frontier, and a

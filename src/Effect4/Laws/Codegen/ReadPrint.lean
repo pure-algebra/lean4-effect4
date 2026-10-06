@@ -359,9 +359,11 @@ abbrev Dom (_ : EffFam) : Type := Nat → Option Nat
 
 /-- A leaf reads back from its printing at depth `d`: a term or cause in scope whose folds
 state no accumulator type, a key whose type spells, fork options whose daemon flag the row
-spells, no type annotation (B19: types are not read), and a layer path whose declared name
-decodes (the name codec has no law of its own; the domain runs it). An operation is no leaf of
-its own: the row call's arm of the domain reads its binder term (`termReadable`). -/
+spells, a stated type that is readable (`Classes.ReadableTy`: the checked type reader answers
+it from its own printed spelling; the state plan's T5, part B), and a layer path whose declared
+name decodes (the name codec has no law of its own; the domain runs it). An operation is no leaf
+of its own: the row call's arm of the domain reads its type arguments and its binder term
+(`typeArgsReadable`, `termReadable`). -/
 def leafReadable {R : EffFam → Type} (classes : Classes) (sig : Signature Op) (d : Nat)
     (daemon : Bool) : ArgF Op R → Bool
   | .term t => t.scoped d && t.covers classes && t.unannotated
@@ -369,7 +371,7 @@ def leafReadable {R : EffFam → Type} (classes : Classes) (sig : Signature Op) 
   | .cause c => CauseTerm.scoped d c && c.covers classes && c.unannotated
   | .key k => keyReadable sig k
   | .forkOptions o => o.daemon == daemon
-  | .optTy (some _) => false
+  | .optTy (some ty) => Effect4.Codegen.Classes.ReadableTy ty
   | .path p => decide (LayerTerm.readRefName (LayerTerm.refName p) = some p)
   | _ => true
 
@@ -465,8 +467,12 @@ def ReadsTo (classes : Classes) (sig : Signature Op) (spell : String → List St
 /-! ## The leaves read back -/
 
 attribute [local aesop safe forward] readTerm_printTerm readCause_printCause readKey_printKey
+  Effect4.Codegen.Classes.readTyChecked_of_readable
 
-/-- A readable leaf prints, and what it prints reads back at the same depth and sort. -/
+set_option maxRecDepth 4096 in
+/-- A readable leaf prints, and what it prints reads back at the same depth and sort. A stated
+type reads back through the checked type reader, on the readable types
+(`readTyChecked_of_readable`). -/
 theorem readLeaf_print {sig : Signature Op} {d : Nat} {daemon : Bool}
     {v : ArgF Op (EffSelfCarrier Op)} (hleaf : ∀ fam, argSortOf v ≠ .child fam)
     (hr : leafReadable classes sig d daemon v = true)

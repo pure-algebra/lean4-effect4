@@ -27,8 +27,11 @@ A row is accepted only when the printer would choose it for the arguments read
 `readable` is the round trip itself: printing the program and reading it back gives the program.
 What it excludes is what the printer loses and no reader can recover: a variable out of scope,
 the request of a `unit`-request row (the printer drops it), the `daemon` flag of a scoped fork
-(the options object has no such field), a loop's cursor annotation (no reader of types exists,
-B19). `LawfulSpelling` is what the row reader needs of a signature.
+(the options object has no such field). A type the faces print is read by the checked type
+reader (`Classes.readTyChecked`; the state plan's T5, part B): a loop's stated cursor type and
+an operation's type arguments read back on the readable types (`Classes.ReadableTy`), and a
+type outside them is excluded, whatever it prints as. A list fold's stated accumulator type is
+printed and not read. `LawfulSpelling` is what the row reader needs of a signature.
 
 Binders are recovered by comparison, never by decoding: `Var.read n s` is the position `i < n`
 with `Var.name i = s`. Nothing here folds over a string (`String.toList` and its kin reach
@@ -502,8 +505,13 @@ def readLeaf {R : EffFam → Type} (classes : Effect4.Codegen.Classes.Classes) (
     match LayerTerm.readRefName s with
     | some target => if LayerTerm.refName target = s then .ok (.path target) else .error (.shape "layer")
     | none => .error (.shape "layer")
-  -- no reader of types exists, by design (B19): the annotated loop prints and is not read
-  | .optTy, .type _ => .error (.annotation "local const")
+  -- a loop's stated cursor type, through the checked type reader (the state plan's T5, part B):
+  -- an answer is kept only when the type printer prints it back as the spelling read, and a
+  -- spelling with no such reading is refused as an annotation
+  | .optTy, .type t =>
+    match Effect4.Codegen.Classes.readTyChecked t with
+    | some ty => .ok (.optTy (some ty))
+    | none => .error (.annotation "local const")
   | _, _ => .error (.shape "argument")
 
 /-- The daemon flag a row reads a fork's options under. -/

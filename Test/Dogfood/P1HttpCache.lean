@@ -42,8 +42,8 @@ field by its path); a `Quote` record in the cache; the forms `retry` and `catchT
 retry test compares the status text with `"503"`, where rc.112 reads `status >= 500`. When the
 timeout gives up on attempt 1, the session retires the call and records it
 (`Run.Observation.retired`), where rc.112 aborts the call's `AbortSignal`; the host protocol has
-no retirement edge (R6, parked). The retry loop's cursor annotation keeps the program outside the
-readable domain (DI-91).
+no retirement edge (R6, parked). The retry loop states its cursor's type (DI-91). The reader
+reads it by the checked type reader since the state plan's T5, part B, so the program reads back.
 
 **Waits on:** R10 with DI-89, DI-39 and DI-91 (the forms, with a readable expansion); R3 with
 row 121 (`status: number`); R7 and row 82 (`Cache` keeps code); R6, parked (the retirement
@@ -296,19 +296,16 @@ def retryAlone : Option Effect4.Api.Program :=
 def timeoutAlone : Option Effect4.Api.Program :=
   (elaborate (timeoutForm (succeed (str "ok")) (nat 2000) (str "late"))).toOption
 
--- The program prints as TypeScript, and its printing does not read back.
-#guard (built? program1).map (fun b => printedOf b) = some (true, false)
--- The reader refuses at the retry loop's cursor annotation: an annotated loop prints its type,
--- which no reader reads (DI-91; "no reader of types exists, by design", B19).
-#guard (built? program1).map (fun b => match Effect4.Api.roundTrip b.program b.table with
-    | .error (.annotation site) => site == "local const"
-    | _ => false) = some true
--- The retry form alone types, and the reader refuses its printing at the same annotation.
+-- The program prints as TypeScript, and its printing reads back. The retry loop states its
+-- cursor's type, and the reader reads it by the checked type reader (the state plan's T5,
+-- part B). Until then the reader refused the program at that annotation, by name
+-- (`annotation "local const"`, DI-91).
+#guard (built? program1).map (fun b => printedOf b) = some (true, true)
+#guard (built? program1).map (fun b =>
+    decide (Effect4.Api.roundTrip b.program b.table = .ok b.program)) = some true
+-- The retry form alone types, and its printing reads back at the same stated type.
 #guard (retryAlone.bind (Effect4.Api.typeOf ·)).isSome
-#guard retryAlone.map (Effect4.Api.readable ·) = some false
-#guard retryAlone.map (fun p => match Effect4.Api.roundTrip p with
-    | .error (.annotation site) => site == "local const"
-    | _ => false) = some true
+#guard retryAlone.map (Effect4.Api.readable ·) = some true
 -- Green control: the timeout form alone reads back.
 #guard timeoutAlone.map (Effect4.Api.readable ·) = some true
 
@@ -408,11 +405,11 @@ def measured : Reach :=
     readBack := ((built? program1).map fun b => (printedOf b).2) == some true }
 
 /-- The stage p1 reaches today, as `Test/Dogfood/README.md` quotes it: admitted and run under the
-scripted host, with the body text where rc.112 answers 42; printed, and not read back. -/
+scripted host, with the body text where rc.112 answers 42; printed, and read back. -/
 def stage : Reach :=
   { refused :=
       [ ("a Quote record in the key-value cache", "typing: requestNotSubtype") ]
-    admitted := true, answer := .differs, printed := true, readBack := false }
+    admitted := true, answer := .differs, printed := true, readBack := true }
 
 #guard measured = stage
 

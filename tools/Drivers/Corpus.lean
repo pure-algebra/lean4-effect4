@@ -28,8 +28,9 @@ bytes with the `.json`, which is a differential against Lean's reader. `<dir>/in
 one `name`, `wellTyped`, `readable`, `chars` row per program written; a program the printer
 or Lean's reader refuses is counted and not written. The reader is the table reader
 (`Codegen/Read.lean`): it reads the loop image and the two non-Boolean decisions, so this
-directory holds them again; a loop whose cursor is annotated prints and is not read (no reader
-of types exists). The TypeScript reader (`ts/eff/read.ts`) is a port of the retired hand reader
+directory holds them again; a loop that states its cursor's type reads back on the readable
+types (`Codegen.Classes.ReadableTy`; the state plan's T5, part B), and its reading is refused
+by name where no reading answers the type's spelling. The TypeScript reader (`ts/eff/read.ts`) is a port of the retired hand reader
 and does not read those images until it becomes a matcher over the exported table (R6).
 
 Each oracle also has canonical `.eff` bytes from `Wire.encodeProgram`. With `--styles`,

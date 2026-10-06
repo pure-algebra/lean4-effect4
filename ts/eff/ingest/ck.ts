@@ -18,7 +18,7 @@
 //   because no token lies inside another node's leading trivia.
 // What the change costs (receipt J2): both engines now read one parse, so the gate tests two
 // walks over one tree, not two parsers.
-import type { ArrayExpression, Class, Directive, Expression, ExportDefaultDeclarationKind, Function as FunctionNode, FunctionBody, Node as TreeNode, NumericLiteral, ParamPattern, PrivateFieldExpression, Program, SpreadElement, Statement, StaticMemberExpression, StringLiteral, TemplateElement, TSInterfaceDeclaration, TSTupleElement, TSType, VariableDeclaration } from "oxc-parser"
+import type { ArrayExpression, Class, Directive, Expression, ExportDefaultDeclarationKind, Function as FunctionNode, FunctionBody, Node as TreeNode, NumericLiteral, ParamPattern, PrivateFieldExpression, Program, SpreadElement, Statement, StaticMemberExpression, StringLiteral, TemplateElement, TSInterfaceDeclaration, TSType, VariableDeclaration } from "oxc-parser"
 import { childNodes, parseTypeScript } from "./oxc.ts"
 import { decodeEff, type Eff, type Term, type Lit, type CauseTerm, type Stmt, type ActionTerm, type LayerTerm, type ServiceKey, type ForkOptions } from "../eff.gen.ts"
 import { rows, serviceTypes, serviceTypeFor } from "../profile.gen.ts"
@@ -578,24 +578,6 @@ class CompilerReader {
     this.defer("unknownHead")
     return { _tag: "fail", error: application }
   }
-  typeNode(t?: TSType | TSTupleElement): Ty {
-    if (!t) return { _tag: "unit" }
-    if (t.type === "TSNumberKeyword") return { _tag: "nat" }
-    if (t.type === "TSBooleanKeyword") return { _tag: "bool" }
-    if (t.type === "TSStringKeyword") return { _tag: "string" }
-    if (t.type === "TSVoidKeyword" || t.type === "TSUndefinedKeyword") return { _tag: "unit" }
-    if (t.type === "TSNeverKeyword") return { _tag: "never" }
-    if (t.type === "TSTypeReference") {
-      const name = this.text(t.typeName), args = t.typeArguments?.params
-      if (name === "Option.Option" && args?.length === 1) return { _tag: "option", inner: this.typeNode(args[0]) }
-      if (name === "ReadonlyArray" && args?.length === 1) return { _tag: "list", inner: this.typeNode(args[0]) }
-      return { _tag: "handle", target: name }
-    }
-    if (t.type === "TSTupleType" && t.elementTypes.length === 2) {
-      return { _tag: "prod", left: this.typeNode(t.elementTypes[0]), right: this.typeNode(t.elementTypes[1]) }
-    }
-    return bad("type node")
-  }
   /** The loop image's tail, `Effect.map(Effect.whileLoop({…}), () => result)`: the loop's call and
    * the result's thunk. The printed seam reads the printer's spelling only; the foreign reader also
    * reads the pipe spellings of the same dual call (`ForeignCompilerReader.loopTail`). */
@@ -622,9 +604,13 @@ class CompilerReader {
     const s = step.body.body[0]
     if (!s || s.type !== "ExpressionStatement" || s.expression.type !== "AssignmentExpression" || s.expression.operator !== "=" || this.text(s.expression.left) !== cursor) return bad("step assignment")
     // An unannotated cursor has no type (`cursorTy: Ty | null`, DI-91, `5185a6cd`); this read
-    // `unit` until seat J2's step 1b, which made every printed loop a different program.
+    // `unit` until seat J2's step 1b, which made every printed loop a different program. A stated
+    // cursor type is read by the checked type reader that read.ts and the oxc engine use
+    // (`readTypeText`, Lean `Classes.readTyChecked`; the state plan's T5, part B): a type with no
+    // such reading declines the loop. Until then this engine read it by a reader of its own,
+    // which answered a handle for any name, and the oxc engine dropped the annotation.
     const annotation = decl.id.typeAnnotation
-    const cursorTy: Ty | null = annotation ? this.typeNode(annotation.typeAnnotation) : null
+    const cursorTy: Ty | null = annotation ? readTypeText(this.text(annotation.typeAnnotation)) ?? bad("shape") : null
     return { _tag: "iterate", cursorTy, initial: this.term(decl.init, env), test: this.term(this.expression(test.body), inner), body: this.eff(this.expression(body.body), inner), step: this.term(s.expression.right, step.env), result }
   }
 
