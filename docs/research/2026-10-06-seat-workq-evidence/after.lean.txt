@@ -1,0 +1,37 @@
+import Test.Dogfood.Scenario.QueueWorkers
+
+set_option autoImplicit false
+set_option maxRecDepth 16384
+set_option maxHeartbeats 8000000
+
+namespace After
+
+open Effect4 Effect4.Machine Effect4.Program
+open Test.Dogfood.Scenario
+open Test.Dogfood.Scenario.QueueWorkers
+
+def exitText : Option ExitV → String
+  | none => "none"
+  | some (.success _) => "success"
+  | some (.failure _) => "failure"
+
+def line (name : String) (more : List Move) : String :=
+  match (Effect4.Api.Author.build (crew 3)).toOption with
+  | none => "no build"
+  | some b =>
+    let dropped := _root_.Test.Dogfood.Scenario.play (openedAt 80 b) (script [running, cancelWaiting, afterWaiting])
+    let s := _root_.Test.Dogfood.Scenario.play dropped more
+    let verdicts := (s.phases.drop dropped.phases.length).map fun
+      | .progressed => "progressed" | .frontier => "frontier" | .preflight => "preflight"
+      | .applied => "applied" | .bound => "bound" | .refused _ => "refused"
+    s!"{name}: verdicts of the added rows {verdicts}; rootExit={exitText s.exit} atRest={atRest s} sameMachineView={decide (machineView s = machineView dropped)} runnable={s.work.runnable.map (·.value)} queued={s.work.queued.map (·.value)}"
+
+#eval IO.println (line "nothing more" [])
+#eval IO.println (line "five flushes" [.flush, .flush, .flush, .flush, .flush])
+#eval IO.println (line "a clock step of 10 ms and a flush" [.tick 10, .flush])
+#eval IO.println (line "hold and receive at each selector" [.hold feederCall, .hold w1, .hold w2, .receive w1 (ok .unit), .apply w1, .apply feederCall, .flush])
+#eval IO.println (line "cancel worker 1, worker 2 and the feeder" [.cancel ⟨1⟩, .cancel ⟨2⟩, .cancel ⟨3⟩, .flush])
+#eval IO.println (line "cancel the root" [.cancel ⟨0⟩])
+#eval IO.println (line "cancel the root, then a flush" [.cancel ⟨0⟩, .flush])
+
+end After

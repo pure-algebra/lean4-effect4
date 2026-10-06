@@ -15,9 +15,12 @@ Status: evidence of a receipt (history, not authority). The receipt is
 | `left.out.txt` | its output: one line for each budget | tested, on the Lean machine |
 | `rows.lean.txt` | the least command budget of each row of eight scripts, read at the funded run's machine | a finite probe |
 | `rows.out.txt` | its output: one line for each row that gives the machine a decision | tested, on the Lean machine |
+| `after.lean.txt` | the run `dropped`, then seven continuations by a host's acts | a finite probe |
+| `after.out.txt` | its output: one line for each continuation | tested, on the Lean machine |
 | `host-evidence.md` | the keyed lane's table of each entry's source of evidence, as the check wrote it in its work folder | tested, on rc.112 under bun 1.4.2 |
+| `semantics-report.diff.txt` | what the semantics report gains at its next writing: the committed `generated/semantics.md` against the report tool's output in a scratch folder | tested: one run of the report tool; the committed file is not written |
 
-The five Lean files are not modules of the tree, and no gate runs them. To run one again,
+The six Lean files are not modules of the tree, and no gate runs them. To run one again,
 follow these steps from the repository's root.
 
 1. Build `Test.Dogfood.Scenario.QueueWorkers`.
@@ -94,3 +97,25 @@ commands. So the printed commands are the work that the budget's cut loses.
 `rows.out.txt` plays a script at the battery's budget. Before each row that gives the machine a
 decision, it asks `Run.enoughFor` at each command budget from 1 to 200. A line gives the least
 sufficient one. The answer is monotone in the budget at each row: no line says otherwise.
+
+## The run that lost its work, continued
+
+`after.out.txt` plays the run `dropped` and then seven continuations.
+
+1. No more row.
+2. Five flushes.
+3. A clock step of 10 ms, then a flush.
+4. A held call at each selector, a reply receipt and two reply applications, then a flush.
+5. A cancellation of each crew member, then a flush.
+6. A cancellation of the root.
+7. A cancellation of the root, then a flush.
+
+A line gives the verdicts of the added rows and the root's exit. It also says whether the
+machine's view is still the view of `dropped`.
+
+## The semantics report
+
+`semantics-report.diff.txt` is the output of `diff` on two files. The first is the committed
+`generated/semantics.md`. The second is the file that `lake exe semantics-report` wrote into a
+scratch folder at the seat's head. The seat did not run `make gen-semantics`, and it did not
+write the committed file.

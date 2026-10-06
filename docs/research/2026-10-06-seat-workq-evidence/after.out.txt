@@ -1,0 +1,7 @@
+nothing more: verdicts of the added rows []; rootExit=none atRest=true sameMachineView=true runnable=[] queued=[]
+five flushes: verdicts of the added rows [progressed, progressed, progressed, progressed, progressed]; rootExit=none atRest=true sameMachineView=true runnable=[] queued=[]
+a clock step of 10 ms and a flush: verdicts of the added rows [progressed, progressed]; rootExit=none atRest=true sameMachineView=true runnable=[] queued=[]
+hold and receive at each selector: verdicts of the added rows [refused, refused, refused, progressed]; rootExit=none atRest=true sameMachineView=true runnable=[] queued=[]
+cancel worker 1, worker 2 and the feeder: verdicts of the added rows [progressed, progressed, progressed, progressed]; rootExit=none atRest=true sameMachineView=true runnable=[] queued=[]
+cancel the root: verdicts of the added rows [progressed]; rootExit=none atRest=true sameMachineView=true runnable=[] queued=[]
+cancel the root, then a flush: verdicts of the added rows [progressed, progressed]; rootExit=none atRest=true sameMachineView=true runnable=[] queued=[]
