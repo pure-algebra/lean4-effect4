@@ -1,11 +1,13 @@
-; lane SEM -- two of Semaphore's cases on the generated engine, through the wire
-; (decisions rows 259 and 265; Test/Program/SemaphoreScenarios.lean).
+; lane SEM -- three of Semaphore's cases on the generated engine, through the wire
+; (decisions rows 259, 265 and 276; Test/Program/SemaphoreScenarios.lean).
 ;   test_semaphore  the fixture beside this file (semaphore.txt, written by Lean from the
 ;                   programs that `Api.Author.build` admits: write.lean) run on BOTH instances
-;                   (Fast and Ref).  Each program crosses as its canonical bytes.  On each
-;                   instance the root's exit must be the exit Lean wrote, and the two reports
-;                   must be one.
-;                   Red controls: the other run's exit, a program cut by one byte, a small fuel.
+;                   (Fast and Ref).  Each program crosses as its canonical bytes.  A run with
+;                   a tape is replayed from that tape; a run with none is the engine's own
+;                   drive loop.  On each instance the root's exit must be the exit Lean
+;                   wrote, and the two reports must be one.
+;                   Red controls: the other runs' exits, a program cut by one byte, a small
+;                   fuel, and P9's program under the drive loop and under the other verdict.
 ;                   It is its own directory so that no other lane's dune file changes.
 
 (test

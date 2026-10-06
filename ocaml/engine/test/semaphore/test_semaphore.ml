@@ -1,32 +1,39 @@
-(* test_semaphore.ml -- two of Semaphore's cases on the generated engine, through the wire.
+(* test_semaphore.ml -- three of Semaphore's cases on the generated engine, through the wire.
 
-   What it is: decisions rows 259 and 265.  Semaphore's steps are terms of
-   src/Effect4/Modules/Semaphore/Steps.lean.  Test/Program/SemaphoreScenarios.lean runs the
-   host probe's cases over them on Lean's machine.  This test runs two of those programs on
-   the generated engine: P1, the protected case, and P3, the overtaking case.  Decisions row
-   259 rests on these two: a waiter runs inside the task that resolves its hint.
+   What it is: decisions rows 259, 265 and 276.  Semaphore's operations are library programs
+   of src/Effect4/Modules/Semaphore/Ops.lean, over the step terms of Steps.lean beside it.
+   Test/Program/SemaphoreScenarios.lean runs the host probe's cases over them on Lean's
+   machine.  This test runs three of those programs on the generated engine: P1, the
+   protected case; P3, the overtaking case; and P9, which is P1's program under another tape.
+   Decisions row 259 rests on these three: a waiter runs inside the task that resolves its
+   hint, and a waiter that yields at its resume checks the count again.
 
    The fixture is semaphore.txt, beside this file.  Lean writes it from the programs that
    `Api.Author.build` admits (write.lean, beside this file).  A run of the fixture holds the
    fuel, the program's canonical bytes, and the root's exit of Lean's machine in the spelling
-   of `show_exit` (ocaml/engine/e4_engine.ml).  A root's exit holds the cell's counts before
-   the release, the counts after the walk, and the marks of the fibers that took.
+   of `show_exit` (ocaml/engine/e4_engine.ml).  A run may hold its tape as data: one line of
+   decisions.  A run with no tape is the engine's own drive loop, the root evaluated and then
+   one flush.  A root's exit holds the cell's counts before the release, the counts after the
+   walk, and the marks of the fibers that took.
 
    Properties:
    S1  Each program crosses as its canonical bytes: `of_bytes` reads exactly one program, on
-       BOTH instances (Fast and Ref).                                       tested (two runs)
+       BOTH instances (Fast and Ref).                                     tested (three runs)
    S2  On each instance the run finishes, and the root's exit is the exit Lean wrote.
-                                                                            tested (two runs)
+                                                                          tested (three runs)
    S3  The two instances give one report: outcome, exits, fiber rows, trace rows, store row.
-                                                                            tested (two runs)
-   S4  The red controls.  A run's exit is not the other run's.  A program cut by one byte is
+                                                                          tested (three runs)
+   S4  The red controls.  The three runs' exits are three texts.  A program cut by one byte is
        refused, never repaired.  At a small fuel the run does not finish, and it has no root
-       exit.                                                                tested
+       exit.                                                              tested
+   S5  A run with a tape is replayed from that tape, and the tape is spent: the replay reads
+       every decision.  The red controls of P9's one decision: under the engine's own drive
+       loop, and under the same tape with the verdict `false`, P9's program gives P1's exit
+       and not its own.                                                   tested (one run)
 
-   What it does not establish: any schedule but the engine's own drive loop, the case P9
-   (its tape holds a decision that this drive loop does not take), a host run, the steps'
+   What it does not establish: any schedule but the fixture's, a host run, the steps'
    agreement with the abstract model (proved in Lean, on the term's value), or delivery under
-   another dispatcher.
+   another dispatcher.  The tape is three decisions: it is no law of the engine's replay.
 
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine *)
 
@@ -42,7 +49,13 @@ let check name ok =
 
 (* ================================================================ the fixture's text *)
 
-type run = { name : string; fuel : int; program : string; exit_text : string }
+type run = {
+  name : string;
+  fuel : int;
+  tape : string list;  (* the decisions, one word each; empty for the engine's own drive loop *)
+  program : string;
+  exit_text : string;
+}
 
 let words (line : string) : string list =
   List.filter (fun w -> w <> "") (String.split_on_char ' ' line)
@@ -72,7 +85,9 @@ let read_fixture (path : string) : run list =
     | line :: rest ->
       (match words line with
        | [ "run"; name ] ->
-         let run, rest = body { name; fuel = 0; program = ""; exit_text = "" } rest in
+         let run, rest =
+           body { name; fuel = 0; tape = []; program = ""; exit_text = "" } rest
+         in
          runs (run :: acc) rest
        | _ -> failwith (Printf.sprintf "fixture %s: expected `run`, read %S" path line))
   and body r = function
@@ -80,6 +95,7 @@ let read_fixture (path : string) : run list =
     | line :: rest ->
       (match words line with
        | [ "fuel"; n ] -> body { r with fuel = int_of_string n } rest
+       | "tape" :: (_ :: _ as decisions) -> body { r with tape = decisions } rest
        | [ "program"; hex ] -> body { r with program = bytes_of_hex hex } rest
        | "exit" :: _ -> body { r with exit_text = after_word line "exit" } rest
        | [ "end" ] -> (r, rest)
@@ -96,22 +112,38 @@ type report = {
   fibers : (int * string) list;
   trace : string list;
   store : string;
+  unread : int;  (* the decisions of the tape that the replay did not read *)
 }
 
 module Rep (En : E4_engine.ENGINE) = struct
-  (* The program from its bytes, then the engine's own drive loop. *)
-  let report (bytes : string) ~(fuel : int) : report option =
+  (* One decision of a fixture's tape.  A word this reader does not know is a failure. *)
+  let decision (word : string) : En.decision =
+    match String.split_on_char ':' word with
+    | [ "evaluate"; fiber ] -> En.evaluate (int_of_string fiber)
+    | [ "flush" ] -> En.flush
+    | [ "yieldVerdict"; fiber; verdict ] ->
+      En.yield_verdict (int_of_string fiber) (bool_of_string verdict)
+    | _ -> failwith (Printf.sprintf "fixture: unknown decision %S" word)
+
+  (* The program from its bytes.  With no tape: the engine's own drive loop.  With a tape:
+     that tape replayed from the loaded machine. *)
+  let report (bytes : string) ~(fuel : int) ~(tape : string list) : report option =
     match En.of_bytes bytes with
     | None -> None
     | Some p ->
-      let t = En.run_program p ~fuel in
+      let t, unread =
+        match tape with
+        | [] -> (En.run_program p ~fuel, [])
+        | decisions -> En.replay_to (En.load_program p ~fuel) (List.map decision decisions)
+      in
       Some
         { outcome = En.outcome t;
           root = En.root_exit t;
           exits = En.exits t;
           fibers = En.fiber_rows t;
           trace = En.trace_rows t;
-          store = En.store_row t }
+          store = En.store_row t;
+          unread = List.length unread }
 end
 
 module RF = Rep (E4_engine.Fast)
@@ -128,21 +160,34 @@ let find_fixture () : string =
 
 (* The fixture's runs, in the order Lean writes them
    (Test.Program.SemaphoreScenarios.engineRuns). *)
-let expected_names = [ "p1"; "p3" ]
+let expected_names = [ "p1"; "p3"; "p9" ]
 
 (* The fuel of the red control: no run of the fixture finishes at it
    (Test/Program/SemaphoreScenarios.lean guards the same on Lean's machine). *)
 let small_fuel = 3
 
+(* A tape with each verdict turned to `false`: the red control of P9's one decision. *)
+let without_verdict (tape : string list) : string list =
+  List.map
+    (fun word ->
+       match String.split_on_char ':' word with
+       | [ "yieldVerdict"; fiber; _ ] -> String.concat ":" [ "yieldVerdict"; fiber; "false" ]
+       | _ -> word)
+    tape
+
 let () =
   let runs = read_fixture (find_fixture ()) in
   check
-    (Printf.sprintf "the fixture holds the two runs, in order (%d)" (List.length runs))
+    (Printf.sprintf "the fixture holds the three runs, in order (%d)" (List.length runs))
     (List.map (fun (r : run) -> r.name) runs = expected_names);
   List.iter
     (fun (r : run) ->
-       Printf.printf "== run %s: %d bytes, fuel %d ==\n" r.name (String.length r.program) r.fuel;
-       match (RF.report r.program ~fuel:r.fuel, RR.report r.program ~fuel:r.fuel) with
+       Printf.printf "== run %s: %d bytes, fuel %d, tape [%s] ==\n" r.name
+         (String.length r.program) r.fuel (String.concat " " r.tape);
+       match
+         (RF.report r.program ~fuel:r.fuel ~tape:r.tape,
+          RR.report r.program ~fuel:r.fuel ~tape:r.tape)
+       with
        | Some fast, Some slow ->
          check (r.name ^ ": S1 the program's bytes decode on both instances") true;
          check (r.name ^ ": S2 Fast finishes") (fast.outcome = "finished");
@@ -155,26 +200,63 @@ let () =
          (* S4: a program cut by one byte is refused *)
          let cut = String.sub r.program 0 (String.length r.program - 1) in
          check (r.name ^ ": S4 a program cut by one byte is refused on both instances")
-           (RF.report cut ~fuel:r.fuel = None && RR.report cut ~fuel:r.fuel = None);
+           (RF.report cut ~fuel:r.fuel ~tape:r.tape = None
+            && RR.report cut ~fuel:r.fuel ~tape:r.tape = None);
          (* S4: at a small fuel the run does not finish *)
-         (match (RF.report r.program ~fuel:small_fuel, RR.report r.program ~fuel:small_fuel) with
+         (match
+            (RF.report r.program ~fuel:small_fuel ~tape:r.tape,
+             RR.report r.program ~fuel:small_fuel ~tape:r.tape)
+          with
           | Some f, Some s ->
             check
               (Printf.sprintf "%s: S4 at fuel %d neither instance finishes, and none has a root exit"
                  r.name small_fuel)
               (f.outcome <> "finished" && s.outcome <> "finished" && f.root = None && s.root = None)
-          | _ -> check (r.name ^ ": S4 the program decodes at the small fuel") false)
+          | _ -> check (r.name ^ ": S4 the program decodes at the small fuel") false);
+         (* S5: a run with a tape *)
+         if r.tape <> [] then begin
+           check (r.name ^ ": S5 the tape is spent on both instances: no decision is unread")
+             (fast.unread = 0 && slow.unread = 0);
+           let first = List.hd runs in
+           (match
+              (RF.report r.program ~fuel:r.fuel ~tape:[], RR.report r.program ~fuel:r.fuel ~tape:[])
+            with
+            | Some f, Some s ->
+              check
+                (r.name
+                 ^ ": S5 under the engine's own drive loop the program gives the first run's exit, not its own")
+                (f.root = Some first.exit_text && s.root = Some first.exit_text
+                 && first.exit_text <> r.exit_text)
+            | _ -> check (r.name ^ ": S5 the program decodes with no tape") false);
+           (match
+              (RF.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape),
+               RR.report r.program ~fuel:r.fuel ~tape:(without_verdict r.tape))
+            with
+            | Some f, Some s ->
+              check
+                (r.name
+                 ^ ": S5 with the verdict false the tape gives the first run's exit, not its own")
+                (f.root = Some first.exit_text && s.root = Some first.exit_text
+                 && f.unread = 0 && s.unread = 0)
+            | _ -> check (r.name ^ ": S5 the program decodes with the other verdict") false)
+         end
        | _ -> check (r.name ^ ": S1 the program's bytes decode on both instances") false)
     runs;
-  (* S4: the two runs answer two exits, so each run's check can fail. *)
+  (* S4: the three runs answer three exits, so each run's check can fail. *)
   (match runs with
-   | [ a; b ] ->
-     check "S4 the two runs' exits are two texts" (a.exit_text <> b.exit_text);
-     (match (RF.report a.program ~fuel:a.fuel, RR.report a.program ~fuel:a.fuel) with
+   | [ a; b; c ] ->
+     check "S4 the three runs' exits are three texts"
+       (a.exit_text <> b.exit_text && a.exit_text <> c.exit_text && b.exit_text <> c.exit_text);
+     check "S4 the first and the last run hold one program, under two tapes"
+       (a.program = c.program && a.tape <> c.tape);
+     (match
+        (RF.report a.program ~fuel:a.fuel ~tape:a.tape,
+         RR.report a.program ~fuel:a.fuel ~tape:a.tape)
+      with
       | Some fast, Some slow ->
         check "S4 the first run's exit is not the second run's, on both instances"
           (fast.root <> Some b.exit_text && slow.root <> Some b.exit_text)
       | _ -> check "S4 the first run decodes" false)
-   | _ -> check "S4 two runs to compare" false);
+   | _ -> check "S4 three runs to compare" false);
   Printf.printf "test_semaphore: %d checks, %d failures\n" !checks !failures;
   if !failures > 0 then exit 1
