@@ -36,8 +36,13 @@
        must show the same answer, in both directions.  `table same` does NOT say that the
        replay reads no row: `prepareExternalAnswer` (src/Effect4/Program/Compile.lean)
        consults a nonempty table for each successful reply, and an answer with no handle can
-       come out the same.  A tape with one decision dropped ends at another view.  A row
-       whose bytes are cut is refused, never repaired.                     tested
+       come out the same.  A tape cut before its last decision that moves the view ends at
+       another view than the full tape's.  The cut is Lean's: the last position at which two
+       neighbouring view lines of the fixture differ.  The engine's own views choose nothing.
+       A run of two or more decisions in which no decision moves the view fails: it is not
+       skipped.  The decisions after the cut move nothing, and S2 compares each of their
+       positions, so they get no second comparison.  A row whose bytes are cut is refused,
+       never repaired.                                                     tested
    S5  A run whose fixture ends at a frontier is compared up to that position only, and its
        unread rows are reported: a frontier is never read as a reply application.
                                                                  by construction
@@ -520,13 +525,25 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
          check
            (label (Printf.sprintf "%d answer values re-encode to their own bytes" (List.length values)))
            (List.for_all (fun hex -> hex_of_val (val_of_hex hex) = hex) values);
-         (* S4: the red control of every run with a decision to drop. *)
+         (* S4: the red control of every run with two decisions or more.  The cut is Lean's: the
+            last position at which two neighbouring view lines of the fixture differ.  The
+            engine's replay of the tape before that decision must end at another view than the
+            fixture's last.  A run in which no decision moves the view has no cut, and it
+            fails. *)
          if List.length tape >= 2 then begin
-           let dropped = List.filteri (fun i _ -> i <> List.length tape - 1) tape in
+           let moving =
+             List.filter
+               (fun i -> List.nth expected i <> List.nth expected (i + 1))
+               (List.init (List.length tape) Fun.id)
+           in
            check
-             (label "a tape with its last decision dropped ends at another view (red control)")
-             (List.nth (views program r table dropped) (List.length dropped)
-              <> List.nth expected (List.length tape))
+             (label
+                "the tape cut before its last decision that moves the view ends at another view (red control)")
+             (match List.rev moving with
+              | [] -> false
+              | cut :: _ ->
+                view_of (A.api_replay program r.fuel (take cut tape) [] table r.compile)
+                <> List.nth expected (List.length tape))
          end;
          (* S4: the table and its red control, on a run with a host row. *)
          if r.rows <> [] then begin

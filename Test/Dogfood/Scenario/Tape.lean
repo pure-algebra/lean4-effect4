@@ -23,7 +23,10 @@ builds whatever the committed fixtures hold. The writer imports it. The battery
 * **The fixture.** `text`: the program's canonical bytes, each row's canonical bytes, the budgets,
   then each decision with the machine view after it. A value is its canonical bytes in
   hexadecimal (`Val.encode`), and an exit is the value `reifyExitVal` gives it.
-* **The runs.** `fixtures`: each fixture file's name, with the lowered runs of its scenario.
+* **The runs.** `fixtures`: each fixture file's name, with the lowered runs of its scenario. A
+  run with the name of a record's run is that named run: `taken` lists the names, and the lane
+  writes no script of them. The lane's own runs are the two of `own`. An own run with the name
+  of a record's run is refused (`findings`), so one name has one script on every lane.
 
 To write the fixtures again after a change, follow the steps of `Test/Dogfood/README.md`.
 -/
@@ -85,13 +88,6 @@ def Lowered.shown (l : Lowered) : Shown :=
 machine's view at that position. -/
 def Shown.agrees (x : Shown) : Bool := x.left == 0 && x.raw.map (·.2) == x.views
 
-/-- Whether the raw replay of the tape without its last decision ends at another view than the
-session machine's last. -/
-def Shown.lastCounts (x : Shown) : Bool :=
-  match x.views.reverse, x.raw.reverse with
-  | last :: _, _ :: before :: _ => before.2 != last
-  | _, _ => false
-
 /-! ## 2. The fixture's text
 
 The text is built, never read: appending and pushing stay under the axiom ceiling, where a fold
@@ -139,6 +135,29 @@ def viewText (outcome : Api.Outcome) (view : MachineView) : String :=
     items (view.cells.map valText) ++ " " ++ items (view.awaiting.map awaitText) ++ " " ++
     items (view.queued.map fiberText) ++ " " ++ items (view.runnable.map fiberText) ++ " " ++
     items (view.timers.map fun timer => fiberText timer.1 ++ "@" ++ timer.2.toDecimal)
+
+/-- The view lines of a run's fixture, as data: at each position the raw replay's outcome word
+and the session machine's view. `Lowered.text` renders these lines, and the engine's test reads
+them. -/
+def Shown.lines (x : Shown) : List (String × MachineView) :=
+  (x.raw.map fun entry => outcomeText entry.1).zip x.views
+
+/-- Whether a decision of the tape counts. The tape is cut before its last decision that moves
+the view: the last position whose view line is not the line before it. The raw replay of that
+prefix must end at another line than the fixture's last. `false` for a tape in which no decision
+moves the view: such a run fails, and it is not skipped. A script may end with decisions that
+move nothing, as a second interruption of an exited fiber does. Those positions need no check
+here: `agrees` compares each one. The engine's test takes the same cut from the same lines
+(`ocaml/engine/test/scenarios/test_scenarios.ml`, S4). -/
+def Shown.lastCounts (x : Shown) : Bool :=
+  let lines := x.lines
+  let moving := (List.range (lines.length - 1)).filter fun at_ => lines[at_]? != lines[at_ + 1]?
+  match moving.getLast?, lines.getLast? with
+  | some cut, some last =>
+    match x.raw[cut]? with
+    | some before => (outcomeText before.1, before.2) != last
+    | none => false
+  | _, _ => false
 
 /-- One decision line. `none` for a decision the format does not carry: an interruption with
 annotations, a delayed cell read, a failure that is not one tagged pair. -/
@@ -198,76 +217,102 @@ def fixture (runs : List (Lowered × Shown)) : Option String := do
 
 /-! ## 3. The runs -/
 
-/-- The workers scenario's lowered runs: the lowest-fiber schedule, both orders of the reply
-applications, and the cancellation followed to the root's exit. -/
-def workersRuns (b : Api.Built) : List Lowered :=
-  [ ⟨"workers/lowest", Workers.opened b, Workers.lowest⟩
-  , ⟨"workers/applied-1-2", Workers.opened b,
-      script [Workers.parked, Workers.takes, [.apply Workers.w1, .apply Workers.w2]]⟩
-  , ⟨"workers/applied-2-1", Workers.opened b,
-      script [Workers.parked, Workers.takes, [.apply Workers.w2, .apply Workers.w1]]⟩
-  , ⟨"workers/cancelled", Workers.opened b,
-      script [Workers.running, [.cancel ⟨2⟩], Workers.finish]⟩
-  , ⟨"workers/refused", Workers.opened b,
-      script [Workers.parked, Workers.takes, [.receive Workers.w1 (ok (.nat 1)), .apply Workers.w1,
-        .row (.apply ⟨⟨1⟩, 1⟩)]]⟩ ]
+/-! The lane writes no script that a scenario's record lists. A lowered run with the name of a
+record's run takes that run from the record: its opened program and its script. So a changed
+script of a battery reaches the fixture, and one name has one script on every lane. The lane's
+own runs are the two that no record lists, each written once in `own`. -/
 
-/-- The routing scenario's lowered runs: the three requests, and an infrastructure failure. -/
-def routingRuns (bob missing denied : Api.Built) : List Lowered :=
-  [ ⟨"routing/200", Routing.opened bob, Routing.lookups 2⟩
-  , ⟨"routing/404", Routing.opened missing, Routing.lookups 9⟩
-  , ⟨"routing/401", Routing.opened denied, Routing.lookups 2⟩
-  , ⟨"routing/escape", Routing.opened bob, Routing.failing "SqlError" "connection lost"⟩ ]
+/-- A named run of a scenario's record as a lowered run. Its name is the scenario's name, a slash
+and the run's name, as the host lane quotes it. -/
+def ofRecord (scenario : Scenario) (run : NamedRun) : Lowered :=
+  ⟨scenario.name ++ "/" ++ run.name, run.opened, run.moves⟩
 
-/-- The atomic scenario's lowered runs: the scripted run to the root's exit, and the two hostile
-scripts. The shop has no host row, so its table is empty. Each run ends at a decision that moves
-the machine: a control of this battery drops the last decision and compares. -/
-def atomicRuns (b : Api.Built) : List Lowered :=
-  [ ⟨"atomic/finished", Atomic.opened b, Atomic.finished⟩
-  , ⟨"atomic/interrupted", Atomic.opened b, [.start, .cancel ⟨3⟩, .flush]⟩
-  , ⟨"atomic/stopped", Atomic.opened b, Atomic.stopped⟩ ]
+/-- What the lane takes from the records: each fixture file, its scenario's record, and the names
+of the runs in the file's order.
 
-/-- The timeout scenario's lowered runs: a reply before the timeout, the second attempt's reply
-after it, a late reply, a reply kept and never applied, a failure that does not retry, and four
-timeouts. A refused row gives no decision, so a late reply leaves no step on the tape. -/
-def timeoutRuns (b : Api.Built) : List Lowered :=
-  [ ⟨"timeout/before", Timeout.opened b,
-      script [Timeout.parked, answer Timeout.http (ok Timeout.body1)]⟩
-  , ⟨"timeout/second", Timeout.opened b,
-      script [Timeout.timedOut, answer Timeout.second (ok Timeout.body2)]⟩
-  , ⟨"timeout/late", Timeout.opened b,
-      script [Timeout.timedOut, answer Timeout.first (ok Timeout.body1),
-        answer Timeout.second (ok Timeout.body2)]⟩
-  , ⟨"timeout/kept", Timeout.opened b,
-      script [Timeout.parked,
-        [.receive Timeout.http (ok Timeout.body1), .tick 2000, .apply Timeout.first, .tick 200]]⟩
-  , ⟨"timeout/404", Timeout.opened b,
-      script [Timeout.parked, answer Timeout.http (failed "HttpError" "404")]⟩
-  , ⟨"timeout/four", Timeout.opened b,
-      [.start, .tick 2000, .tick 200, .tick 2000, .tick 400, .tick 2000, .tick 800, .tick 2000]⟩ ]
+* **Workers.** The lowest-fiber schedule, both orders of the reply applications, and the
+  cancellation followed to the root's exit.
+* **Routing.** The three requests, and an infrastructure failure.
+* **Atomic.** The scripted run to the root's exit, and the two hostile scripts. The shop has no
+  host row, so its table is empty.
+* **Timeout.** A reply before the timeout, the second attempt's reply after it, a late reply, a
+  reply kept and never applied, a failure that does not retry, and four timeouts. A refused row
+  gives no decision, so a late reply leaves no step on the tape. -/
+def taken : List (String × Scenario × List String) :=
+  [ ("workers.txt", Workers.scenario, ["lowest", "applied-1-2", "applied-2-1", "cancelled"])
+  , ("routing.txt", Routing.scenario, ["200", "404", "401", "escape"])
+  , ("atomic.txt", Atomic.scenario, ["finished", "interrupted", "stopped"])
+  , ("timeout.txt", Timeout.scenario, ["before", "second", "late", "kept", "404", "four"]) ]
 
-/-- The handle case: p1's own program, whose first host row answers a handle of the key-value
-store. The host answers the handle's number, and the session prepares the handle from the row
-table. It is the run on which the empty table shows another machine view. -/
-def handleRuns (b : Api.Built) : List Lowered :=
-  [ ⟨"handle/cache", Run.open b "p1" Timeout.budget,
-      script [[.start], answer (.row "Kv.make") (ok (.nat 0)), answer (.row "get") (ok .none),
-        [.flush, .hold Timeout.http], answer Timeout.http (ok Timeout.body1),
-        answer (.row "set") (ok .unit)]⟩ ]
+/-- The lane's own runs, each with its fixture file: the two scripts that no record lists.
+`none` when a program does not build.
 
-/-- Every fixture: its file under `ocaml/engine/test/scenarios/`, and its runs. `none` when a
-program does not build. -/
-def fixtures : Option (List (String × List Lowered)) := do
+* **`workers/refused`**, on the crew: a duplicate reply receipt, a reply application, and the
+  same application again as a raw row.
+* **`handle/cache`**, on p1's own program, whose first host row answers a handle of the
+  key-value store. The host answers the handle's number, and the session prepares the handle
+  from the row table. It is the run on which the empty table shows another machine view. -/
+def own : Option (List (String × Lowered)) := do
   let build := fun (m : Authoring.Module NativeOp) => (Effect4.Api.Author.build m).toOption
   let crew ← build (Workers.crew 2)
-  let bob ← build (Routing.request "secret" 2 "2")
-  let missing ← build (Routing.request "secret" 9 "9")
-  let denied ← build (Routing.request "wrong" 2 "2")
-  let shop ← build (Atomic.shop .none)
-  let fetch ← build Timeout.fetch
   let cache ← build P1HttpCache.program1
-  some [("workers.txt", workersRuns crew), ("routing.txt", routingRuns bob missing denied),
-    ("atomic.txt", atomicRuns shop), ("timeout.txt", timeoutRuns fetch ++ handleRuns cache)]
+  some
+    [ ("workers.txt", ⟨"workers/refused", Workers.opened crew,
+        script [Workers.parked, Workers.takes, [.receive Workers.w1 (ok (.nat 1)),
+          .apply Workers.w1, .row (.apply ⟨⟨1⟩, 1⟩)]]⟩)
+    , ("timeout.txt", ⟨"handle/cache", Run.open cache "p1" Timeout.budget,
+        script [[.start], answer (.row "Kv.make") (ok (.nat 0)), answer (.row "get") (ok .none),
+          [.flush, .hold Timeout.http], answer Timeout.http (ok Timeout.body1),
+          answer (.row "set") (ok .unit)]⟩) ]
+
+/-- The names among these runs that a record gives one of its runs, as a lane quotes them. An
+own run with such a name would give one name two scripts. -/
+def clashesOf (runs : List Lowered) : List String :=
+  let listed := taken.flatMap fun entry =>
+    entry.2.1.runs.map fun run => entry.2.1.name ++ "/" ++ run.name
+  (runs.map (·.name)).filter listed.contains
+
+/-- What keeps the lane from its fixtures, each finding in a sentence, for a list of own runs.
+Empty when the lane has its runs.
+
+* A name that the lane takes, and that its record does not list.
+* An own program that does not build.
+* An own run that carries the name of a record's run: that name would have two scripts.
+* An own run's name that stands twice among the own runs.
+* An own run whose fixture file the lane does not write. -/
+def findingsOf (mine : Option (List (String × Lowered))) : List String :=
+  let missing := taken.flatMap fun entry =>
+    entry.2.2.filterMap fun name =>
+      if (entry.2.1.run? name).isSome then none
+      else some ("the record of " ++ entry.2.1.name ++ " lists no run \"" ++ name ++ "\"")
+  match mine with
+  | none => missing ++ ["a program of the lane's own runs does not build"]
+  | some runs =>
+    let names := runs.map (·.2.name)
+    missing ++
+    (clashesOf (runs.map (·.2))).map (fun name =>
+      "the name " ++ name ++ " carries two scripts: an own run of the lane and a run of a record") ++
+    (names.eraseDups.filter fun name => names.count name != 1).map (fun name =>
+      "the name " ++ name ++ " carries two scripts: two own runs of the lane") ++
+    (runs.filter fun entry => !taken.any (·.1 == entry.1)).map fun entry =>
+      "the own run " ++ entry.2.name ++ " names the fixture " ++ entry.1 ++ ", which the lane does not write"
+
+/-- What keeps the lane from its fixtures. The writer prints each finding and writes nothing. -/
+def findings : List String := findingsOf own
+
+/-- Every fixture, for a list of own runs: its file under `ocaml/engine/test/scenarios/`, with
+the runs that the lane takes from the file's record and then the own runs of that file. `none`
+when `findingsOf` has a finding. -/
+def fixturesOf (mine : Option (List (String × Lowered))) : Option (List (String × List Lowered)) :=
+  if !(findingsOf mine).isEmpty then none
+  else do
+    let mine ← mine
+    taken.mapM fun entry => do
+      let runs ← entry.2.2.mapM fun name => (entry.2.1.run? name).map (ofRecord entry.2.1)
+      some (entry.1, runs ++ (mine.filter (·.1 == entry.1)).map (·.2))
+
+/-- Every fixture: its file, and its runs. `none` when `findings` is not empty. -/
+def fixtures : Option (List (String × List Lowered)) := fixturesOf own
 
 /-- Every fixture with each of its runs played once. -/
 def shownFixtures : Option (List (String × List (Lowered × Shown))) :=
