@@ -29,6 +29,10 @@ exitKind=success`, then `agree=9 differ=2`, "reported, not gated".
 `ocaml/engine/test/test_diff.ml` (the cross face), the engine's embedded golden `pAcquire.bin`
 and its source, and `pAcquire`, `pProvide` in `harness/truth/Truth.lean`. *Evidence:* the two
 programs' texts side by side, and the reason for each difference. Read only is enough.
+*What the coordinator read since (read only):* the comment above `cross_face` in that file
+gives a reason. Two of the Lean-cut goldens are different programs that carry the name of a
+`.bin` golden, so the report is not gated. Nobody has compared the two texts. The probe is
+that comparison: it confirms the comment, or it finds a real difference under it.
 
 **A2. No compiled program reaches the machine where a second fiber steps an exited one.**
 Seat LIFT's receipt, item 7, proves the mask invariant over live fibers only, because a
