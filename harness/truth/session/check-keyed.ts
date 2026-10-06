@@ -218,7 +218,8 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
       `| ${scenario} | \`${row.entry}\` | ${row.evidence} | ${scriptsOf(scenario, scripts, row.scripts)} |`)),
     ""].join("\n"))
   // The acceptance line of each scenario: how many entries have each source in every script,
-  // and, for each entry that waits, in how many scripts the whole-observation comparison waits.
+  // and, for each entry that waits, the scripts where the whole-observation comparison waits,
+  // by count and by name.
   const line = scenarios.map(({ scenario, scripts, evidence }) => {
     const whole = (word: (evidence: string) => boolean): number => evidence.filter(row => word(row.evidence) && row.scripts.length === scripts).length
     const waits = evidence.filter(row => row.evidence === "replay only")
@@ -226,7 +227,10 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
       ...(whole(word => word === "ledger") ? [`${whole(word => word === "ledger")} predicted by the ledger`] : []),
       ...(whole(word => word.startsWith("reader")) ? [`${whole(word => word.startsWith("reader"))} through a reader`] : []),
       ...evidence.filter(row => row.evidence.startsWith("reader") && row.scripts.length < scripts).map(row => `${row.entry} through a reader in ${row.scripts.length} scripts`)]
-    const waiting = waits.length ? `the whole-observation comparison waits on ${waits.map(row => `${row.entry} in ${row.scripts.length} scripts`).join(", ")}` : "no entry waits"
+    const short = (names: string[]): string => names.map(name => name.slice(scenario.length + 1)).join(", ")
+    const waiting = waits.length
+      ? `the whole-observation comparison waits on ${waits.map(row => `${row.entry} in ${row.scripts.length} scripts (${short(row.scripts)})`).join(", ")}`
+      : "no entry waits"
     return `${scenario} ${scripts} scripts (${parts.join(", ")}; ${waiting})`
   }).join("; ")
   const count = Object.values(controls).reduce((sum, list) => sum + list.length, 0)
