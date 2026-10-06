@@ -185,7 +185,7 @@ slices, no termination.
   carrier that already has subtyping as its `LE`.
 - **A fold that can refuse has no instance.** `f` is total. Where a fold is refused for some
   mask below the site list, `anti` is false, and no view exists. Seat CENSUS met this under the
-  fold to `never`.
+  fold to `never` (assumed: relayed).
 
 For a tree of sites an instance may supply a second fact, and two more statements then apply.
 
@@ -231,12 +231,13 @@ Each question is about a neighbour: the current slice without one site. A whole 
    step. The probe proves that this pass gives the pass's list (`sweepWith_eq_sweep`). A
    question then costs one step of the state, not one check.
 3. **Seat GAP's route for that state** (relayed by the coordinator; not followed here). A hole
-   written as a declared operation keeps the original program's types. So a fold changes the
-   answer type at no other node, and the check of a fold can be read from the original
-   derivation. The state is that derivation with each node's column. Its step joins the columns
-   again on the spine from the folded site to the root. Admission below the full slice is then
-   unchanged, so the type map of `ofFolded` is total with no case of refusal. The plan's
-   `focus-composes` is the law behind the step.
+   written as a declared operation keeps the original program's types. The rest of this item is
+   a design reading of that route, with no run and no proof. A fold would change the answer type
+   at no other node, so the check of a fold could be read from the original derivation. The
+   state would be that derivation with each node's column. Its step would join the columns again
+   on the spine from the folded site to the root. Admission below the full slice would be
+   unchanged, so the type map of `ofFolded` would be total with no case of refusal. The plan's
+   `focus-composes` would be the law behind the step.
 
 None of 2 and 3 is in the module: no instance exists yet. The probe's statement is ready to
 move with its first consumer.
