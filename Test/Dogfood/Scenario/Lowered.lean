@@ -18,6 +18,11 @@ files that the engine's test reads, and holds the machine clause's controls and 
 A fixture that is not the text Lean writes fails this battery, and `Tape.lean` still builds. So
 the writer runs first, and this battery binds its files afterwards (`Test/Dogfood/README.md`).
 
+The binding holds where this battery is elaborated. Lake does not see a fixture as an input: it
+reads `include_str` as part of this file. So a fixture that changes alone does not rebuild the
+battery, and `lake build` then binds nothing. `lake env lean Test/Dogfood/Scenario/Lowered.lean`
+elaborates it afresh.
+
 The host run of each scenario is not here: the keyed lane waits on the coordinator's word.
 -/
 
@@ -34,7 +39,9 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- The committed fixtures, read where this battery is elaborated. -/
 def committed : List (String × String) :=
   [ ("workers.txt", include_str "../../../ocaml/engine/test/scenarios/workers.txt")
-  , ("routing.txt", include_str "../../../ocaml/engine/test/scenarios/routing.txt") ]
+  , ("routing.txt", include_str "../../../ocaml/engine/test/scenarios/routing.txt")
+  , ("atomic.txt", include_str "../../../ocaml/engine/test/scenarios/atomic.txt")
+  , ("timeout.txt", include_str "../../../ocaml/engine/test/scenarios/timeout.txt") ]
 
 /-- The controls of the machine clause. -/
 def controls : List Control :=

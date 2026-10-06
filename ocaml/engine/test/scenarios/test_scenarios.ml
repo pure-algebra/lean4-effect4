@@ -520,19 +520,22 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
          check
            (label (Printf.sprintf "%d answer values re-encode to their own bytes" (List.length values)))
            (List.for_all (fun hex -> hex_of_val (val_of_hex hex) = hex) values);
-         (* S4: the table, and the red controls, on a run with a host row and a decision to drop. *)
-         if r.rows <> [] && List.length tape >= 2 then begin
+         (* S4: the red control of every run with a decision to drop. *)
+         if List.length tape >= 2 then begin
+           let dropped = List.filteri (fun i _ -> i <> List.length tape - 1) tape in
+           check
+             (label "a tape with its last decision dropped ends at another view (red control)")
+             (List.nth (views program r table dropped) (List.length dropped)
+              <> List.nth expected (List.length tape))
+         end;
+         (* S4: the table and its red control, on a run with a host row. *)
+         if r.rows <> [] then begin
            check
              (label
                 (if r.observed_table_difference then
                    "with the empty table some machine view differs, as in Lean"
                  else "with the empty table every machine view is the same, as in Lean"))
              (differs expected (views program r [] tape) <> [] = r.observed_table_difference);
-           let dropped = List.filteri (fun i _ -> i <> List.length tape - 1) tape in
-           check
-             (label "a tape with its last decision dropped ends at another view (red control)")
-             (List.nth (views program r table dropped) (List.length dropped)
-              <> List.nth expected (List.length tape));
            check
              (label "a row whose bytes are cut is refused (red control)")
              (match table_of (List.map (fun b -> String.sub b 0 (String.length b - 1)) r.rows) with

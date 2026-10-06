@@ -1,5 +1,7 @@
 import Test.Dogfood.Scenario.Workers
 import Test.Dogfood.Scenario.Routing
+import Test.Dogfood.Scenario.Atomic
+import Test.Dogfood.Scenario.Timeout
 
 /-!
 # The machine tapes of the scenarios, and the fixture text Lean writes for the engine
@@ -217,6 +219,42 @@ def routingRuns (bob missing denied : Api.Built) : List Lowered :=
   , ⟨"routing/401", Routing.opened denied, Routing.lookups 2⟩
   , ⟨"routing/escape", Routing.opened bob, Routing.failing "SqlError" "connection lost"⟩ ]
 
+/-- The atomic scenario's lowered runs: the scripted run to the root's exit, and the two hostile
+scripts. The shop has no host row, so its table is empty. Each run ends at a decision that moves
+the machine: a control of this battery drops the last decision and compares. -/
+def atomicRuns (b : Api.Built) : List Lowered :=
+  [ ⟨"atomic/finished", Atomic.opened b, Atomic.finished⟩
+  , ⟨"atomic/interrupted", Atomic.opened b, [.start, .cancel ⟨3⟩, .flush]⟩
+  , ⟨"atomic/stopped", Atomic.opened b, Atomic.stopped⟩ ]
+
+/-- The timeout scenario's lowered runs: a reply before the timeout, the second attempt's reply
+after it, a late reply, a reply kept and never applied, a failure that does not retry, and four
+timeouts. A refused row gives no decision, so a late reply leaves no step on the tape. -/
+def timeoutRuns (b : Api.Built) : List Lowered :=
+  [ ⟨"timeout/before", Timeout.opened b,
+      script [Timeout.parked, answer Timeout.http (ok Timeout.body1)]⟩
+  , ⟨"timeout/second", Timeout.opened b,
+      script [Timeout.timedOut, answer Timeout.second (ok Timeout.body2)]⟩
+  , ⟨"timeout/late", Timeout.opened b,
+      script [Timeout.timedOut, answer Timeout.first (ok Timeout.body1),
+        answer Timeout.second (ok Timeout.body2)]⟩
+  , ⟨"timeout/kept", Timeout.opened b,
+      script [Timeout.parked,
+        [.receive Timeout.http (ok Timeout.body1), .tick 2000, .apply Timeout.first, .tick 200]]⟩
+  , ⟨"timeout/404", Timeout.opened b,
+      script [Timeout.parked, answer Timeout.http (failed "HttpError" "404")]⟩
+  , ⟨"timeout/four", Timeout.opened b,
+      [.start, .tick 2000, .tick 200, .tick 2000, .tick 400, .tick 2000, .tick 800, .tick 2000]⟩ ]
+
+/-- The handle case: p1's own program, whose first host row answers a handle of the key-value
+store. The host answers the handle's number, and the session prepares the handle from the row
+table. It is the run on which the empty table shows another machine view. -/
+def handleRuns (b : Api.Built) : List Lowered :=
+  [ ⟨"handle/cache", Run.open b "p1" Timeout.budget,
+      script [[.start], answer (.row "Kv.make") (ok (.nat 0)), answer (.row "get") (ok .none),
+        [.flush, .hold Timeout.http], answer Timeout.http (ok Timeout.body1),
+        answer (.row "set") (ok .unit)]⟩ ]
+
 /-- Every fixture: its file under `ocaml/engine/test/scenarios/`, and its runs. `none` when a
 program does not build. -/
 def fixtures : Option (List (String × List Lowered)) := do
@@ -225,7 +263,11 @@ def fixtures : Option (List (String × List Lowered)) := do
   let bob ← build (Routing.request "secret" 2 "2")
   let missing ← build (Routing.request "secret" 9 "9")
   let denied ← build (Routing.request "wrong" 2 "2")
-  some [("workers.txt", workersRuns crew), ("routing.txt", routingRuns bob missing denied)]
+  let shop ← build (Atomic.shop .none)
+  let fetch ← build Timeout.fetch
+  let cache ← build P1HttpCache.program1
+  some [("workers.txt", workersRuns crew), ("routing.txt", routingRuns bob missing denied),
+    ("atomic.txt", atomicRuns shop), ("timeout.txt", timeoutRuns fetch ++ handleRuns cache)]
 
 /-- Every fixture with each of its runs played once. -/
 def shownFixtures : Option (List (String × List (Lowered × Shown))) :=
