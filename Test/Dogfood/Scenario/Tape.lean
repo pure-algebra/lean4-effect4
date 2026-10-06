@@ -339,8 +339,8 @@ holds their consumer and their controls.
   the claim's proof uses. The cut's replay law and the append law stand beside it with controls
   only. Each of the four has a green control and a red control.
 * **The runs.** Two scripts of the workers record, opened again at a small command budget
-  (`tight`). One journal stops at a reply application that the raw replay does not read past,
-  and the other at a frontier row.
+  (`cutBudget`). One journal stops at a reply application that the raw replay does not read
+  past, and the other at a frontier row.
 
 The gate at the foot plays those two journals on the Lean machine, and it reads no fixture. -/
 
@@ -417,10 +417,10 @@ It does not cover that last one, which closes the pool, or the cancellation of t
 each of the two journals stops at one row. When a change of the crew or of the machine moves
 one of those costs past this budget, a green control fails by its shape test, and the budget is
 pinned again. -/
-def tight : Api.Budget := { fuel := 60, compileFuel := 2000 }
+def cutBudget : Api.Budget := { fuel := 60, compileFuel := 2000 }
 
-/-- The cut's named runs: two scripts of the workers record, each opened again at the tight
-budget, under the record's own name and profile. The record writes no script.
+/-- The cut's named runs: two scripts of the workers record, each opened again at the cut's
+budget (`cutBudget`), under the record's own name and profile. The record writes no script.
 
 * **`stopped`** plays the script `lowest`. Its journal stops at its last row, a reply
   application that the session applies and the raw replay does not read past: the stop of
@@ -431,7 +431,7 @@ budget, under the record's own name and profile. The record writes no script.
 def cutRuns : List NamedRun :=
   [("stopped", "lowest"), ("frontier", "cancelled-root")].filterMap fun (name, script) =>
     (Workers.scenario.run? script).map fun run =>
-      ⟨name, Run.open run.opened.built run.opened.id tight run.opened.profile, run.moves⟩
+      ⟨name, Run.open run.opened.built run.opened.id cutBudget run.opened.profile, run.moves⟩
 
 /-- The run that a played run of the record started from: its own program, name, budgets and
 profile, opened fresh. Playing the run's journal from it reaches the run again
@@ -440,7 +440,7 @@ def openedOf (played : Run) : Run := Run.open played.built played.id played.budg
 
 /-- The completed prefix of a journal read from a run: its rows before the tape's unread rows.
 It is the prefix of `tapeFrom_cut`. -/
-def completed (s : Run) (rows : List Api.Runner.Command) : List Api.Runner.Command :=
+def completedPrefix (s : Run) (rows : List Api.Runner.Command) : List Api.Runner.Command :=
   rows.take (rows.length - (tapeFrom s rows).2.length)
 
 /-- The view that the raw frame replay shows on the decisions of some positions, from a run's
@@ -460,7 +460,7 @@ same positions and leaves no row unread. The machine after the prefix shows the 
 the positions' decisions. -/
 def cutShows (s : Run) (rows : List Api.Runner.Command) : Bool :=
   let tape := tapeFrom s rows
-  let done := completed s rows
+  let done := completedPrefix s rows
   let alone := tapeFrom s done
   done ++ tape.2 == rows && alone.2.isEmpty && readings alone.1 == readings tape.1 &&
     machineView (s.play done) == replayView s tape.1
@@ -478,12 +478,12 @@ def positionsShow (s : Run) (rows : List Api.Runner.Command) : Bool :=
 the completed prefix. `none` for a tape that reads every row. -/
 def stopOf (s : Run) (rows : List Api.Runner.Command) : Option Api.HostSession.Phase :=
   (tapeFrom s rows).2.head?.map fun row =>
-    (Api.Runner.result (s.play (completed s rows)).runner row).phase
+    (Api.Runner.result (s.play (completedPrefix s rows)).runner row).phase
 
 /-- The machine's view after the stopped row of a journal: the completed prefix and the first
 unread row, played. No law of the journal's cut says what that machine is. -/
 def stoppedView (s : Run) (rows : List Api.Runner.Command) : MachineView :=
-  machineView (s.play (completed s rows ++ (tapeFrom s rows).2.take 1))
+  machineView (s.play (completedPrefix s rows ++ (tapeFrom s rows).2.take 1))
 
 /-- Whether the tape of a journal in two parts shows what `tapeFrom_append` states, on the
 positions' readings and the unread rows. -/
@@ -558,7 +558,7 @@ def cutControls : List Control :=
       | [played] =>
         let s := openedOf played
         cutShows s played.journal && (tapeFrom s played.journal).1.length == 5 &&
-          (completed s played.journal).length + 1 == played.journal.length &&
+          (completedPrefix s played.journal).length + 1 == played.journal.length &&
           stopOf s played.journal == some .applied
       | _ => false
   , green "cut"
@@ -567,7 +567,7 @@ def cutControls : List Control :=
       | [played] =>
         let s := openedOf played
         cutShows s played.journal && (tapeFrom s played.journal).1.length == 2 &&
-          (completed s played.journal).length == 4 && played.journal.length == 5 &&
+          (completedPrefix s played.journal).length == 4 && played.journal.length == 5 &&
           stopOf s played.journal == some .frontier
       | _ => false
   , red "cut" "the stopped row's own machine is not the raw replay of the completed prefix's tape"
