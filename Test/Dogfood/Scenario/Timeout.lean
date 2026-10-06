@@ -373,7 +373,7 @@ def atSecond : Observation :=
 def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 
 /-- The scenario's named runs: each script of a control, once, from one build of each program.
-The first fifteen are on the fetch. The last two are on the client that retries every failure
+The first fourteen are on the fetch. The last two are on the client that retries every failure
 and on the client whose finalizer resets the count. The host lane performs them in this order.
 The first run, `parked`, is the part that every other script starts with. -/
 def runsOf (b eager resetting : Api.Built) : List NamedRun :=
@@ -396,7 +396,6 @@ def runsOf (b eager resetting : Api.Built) : List NamedRun :=
   , run "timer-interrupt" [parked, [.tick 2000]]
   , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
   , run "received" [parked, [.receive http (ok body1)]]
-  , run "applied" [parked, [.receive http (ok body1), .apply http]]
   , ⟨"eager", opened eager, script notFound⟩
   , ⟨"resetting", opened resetting, script [parked, [.tick 2000]]⟩ ]
 
@@ -528,7 +527,7 @@ def controlsOf (b : Api.Built) : List Control :=
           shows stopped { atParked with receipts := [key1], stored := [key1] }
       | _ => false
   , red "frontier" "with its budget the same row applies the reply and stores none"
-      ["applied"] fun
+      ["before"] fun
       | [applied] =>
         applied.phases.getLast? == some .applied && (observe applied).stored == []
       | _ => false
