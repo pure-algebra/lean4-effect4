@@ -1,0 +1,113 @@
+{
+  "scope": "finite Python mirrors of projection and result comparison only",
+  "python": "3.13.14",
+  "checks": [
+    {
+      "name": "allowed C4 model notifications",
+      "actual": [
+        1
+      ],
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "allowed C4 projected comparison",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "outside-profile peeker model notifications",
+      "actual": [
+        1,
+        2
+      ],
+      "expected": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "state encoding erases peeker",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "comparison erases peeker signal",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "outside-profile false positive of projection",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "exact decoder allowed positive",
+      "actual": [
+        [
+          1,
+          1001
+        ]
+      ],
+      "expected": [
+        [
+          1,
+          1001
+        ]
+      ]
+    },
+    {
+      "name": "exact decoder refuses dropped peeker",
+      "actual": null,
+      "expected": null
+    },
+    {
+      "name": "stored two-bound request model not ready",
+      "actual": [],
+      "expected": []
+    },
+    {
+      "name": "stored bounds omitted from encoding",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "concrete scalar wake differs outside stored-bound premise",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "name": "take positive same result",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "take same-shaped order mutant rejected",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "name": "bare-state red rejects corrected result",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "name": "bare-state red also rejects broken-order result",
+      "actual": false,
+      "expected": false
+    },
+    {
+      "name": "offer positive same result",
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "offer same-shaped missing-wake mutant rejected",
+      "actual": false,
+      "expected": false
+    }
+  ],
+  "count": 17,
+  "lean_executed": false
+}

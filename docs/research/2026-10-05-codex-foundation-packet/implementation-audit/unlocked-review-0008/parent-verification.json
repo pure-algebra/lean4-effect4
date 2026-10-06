@@ -1,0 +1,181 @@
+{
+  "t5": [
+    {
+      "path": "AGENTS.md",
+      "matches": true
+    },
+    {
+      "path": "Test/Codegen/PrintContract.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Codegen/ReadContract.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/P3WorkerQueue.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/P4RateLimiter.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/P5LedgerService.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/Stage.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/AuthorContract.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/FoldContract.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Program/InvocationContract.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/contracts/faces.contract.md",
+      "matches": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-t5-brief.md",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Classes.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Codegen/ListFold.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Print.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Codegen/PrintLeaf.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Read.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Templates.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/ListFold.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/PrintReadable.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/Read.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/ReadLeaf.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/ReadPrint.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Native.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Table.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Typing/Rules.lean",
+      "matches": true
+    }
+  ],
+  "dogfood": [
+    {
+      "path": "AGENTS.md",
+      "matches": true
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Workers.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Routing.lean",
+      "matches": true
+    },
+    {
+      "path": "Test/Dogfood/Scenario/Lowered.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Program/Compile.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/HostSession.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Api/Runner.lean",
+      "matches": true
+    },
+    {
+      "path": "src/Effect4/Laws/Run.lean",
+      "matches": true
+    },
+    {
+      "path": "ocaml/engine/test/scenarios/test_scenarios.ml",
+      "matches": true
+    },
+    {
+      "path": "ocaml/engine/test/scenarios/workers.txt",
+      "matches": true
+    },
+    {
+      "path": "ocaml/engine/test/scenarios/routing.txt",
+      "matches": true
+    },
+    {
+      "path": "Scenario.committed.lean",
+      "matches": true
+    }
+  ],
+  "mirror": {
+    "command": [
+      "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+      "-B",
+      "/private/tmp/codex-effect4-overnight-monitor/2026-10-05-unlocked-review/dogfood/gate-predicate-mirror.py"
+    ],
+    "exit": 0,
+    "stdout": "{\n  \"scope\": \"Python metadata predicate mirror only; not Lean or a proof-dependency query\",\n  \"cases\": {\n    \"positive_workers\": [],\n    \"wrong_top_drops_cleanup_dependency\": [],\n    \"bad_name\": [\n      \"unresolved declaration: Nowhere.program\"\n    ],\n    \"unplaced_battery_top\": [\n      \"unplaced: play_id\"\n    ],\n    \"untagged_law_top_committed_prefix_rule\": [],\n    \"placed_battery_positive\": []\n  }\n}\n",
+    "stderr": ""
+  },
+  "heads": {
+    "main": "235ed2941a6299710e3cf8c019d9d93eafaed458",
+    "t5": "d5559a5fd443f2e0e33ce15332ae077a20c79b37",
+    "dogfood": "6c0b477815922aa2923ba3fec13324b5fbf29935"
+  }
+}

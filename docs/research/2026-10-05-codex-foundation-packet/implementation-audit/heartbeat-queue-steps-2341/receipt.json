@@ -1,0 +1,89 @@
+{
+  "reviewed_head": "235ed2941a6299710e3cf8c019d9d93eafaed458",
+  "range": "61fecd0c..235ed294",
+  "observed_head_end": "235ed2941a6299710e3cf8c019d9d93eafaed458",
+  "evidence_kind": [
+    "source inspection",
+    "retained Lean output",
+    "finite Python projection mirror"
+  ],
+  "lean_run": false,
+  "repo_writes": false,
+  "ui_access": false,
+  "resolved": [
+    "ordered offer answers before taker wakes",
+    "full-buffer first-offer wake",
+    "withdraw-offer wakes",
+    "current-hint replacement relation",
+    "batch flag",
+    "unannotated fold terms and retained checks",
+    "R4 face acceptance"
+  ],
+  "new_findings": [
+    {
+      "id": "first-profile-domain",
+      "status": "source-derived false positive outside intended first profile",
+      "witness": "C4 plus peekers=[2]; stateTerm omits peekers and offerAgrees.filterMap drops its signal",
+      "control": "retained passing C4 at capacity2 with taker1, offer100(7)",
+      "smallest_correction": "closed FirstProfileState and exact notification decoding; constrain every stored taker bound"
+    },
+    {
+      "id": "red-control-shape",
+      "status": "control-quality correction",
+      "witness": "take red compares pair-shaped result against bare state record",
+      "smallest_correction": "same-shape, single-field notification mutations of C1 and C2"
+    }
+  ],
+  "commands": [
+    "git rev-parse HEAD",
+    "git diff --stat 61fecd0c..235ed294",
+    "git show 235ed294:<each listed source>"
+  ],
+  "sources": [
+    {
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.lean",
+      "sha256": "d105d8b2ad5cdb84437d9ac3f9f87894757553498722441106c45c60f007b892",
+      "bytes": 25723
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/QueueSteps.out",
+      "sha256": "d229fbd0fa29b2510c1f9d85f843db01cdf55e3c8ab822472d99faf21780fd95",
+      "bytes": 1743
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md",
+      "sha256": "7dd4139c0aae6f5d3ba11f5d301eb0fb7f19a49d07bda4026b2a2e911313dba5",
+      "bytes": 8572
+    },
+    {
+      "path": "docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md",
+      "sha256": "e5ea1fc5be04c30134d8909628eaf1671d734a1e380350fc7664429bfdb3aa49",
+      "bytes": 12269
+    },
+    {
+      "path": "Test/Program/QueueModel.lean",
+      "sha256": "8922b6f6930c8a8ca703ac8bbfdf09a1f29bc6ee25e2f43b77461d0756c71dfe",
+      "bytes": 17035
+    },
+    {
+      "path": "Test/contracts/queue.contract.md",
+      "sha256": "40d96176e35d1b2c68ab18bc97aa12b82dfbdb4dbb57767fd19de1e83d2b9f2c",
+      "bytes": 7896
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    }
+  ],
+  "probe": {
+    "command": "python3 /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-05T234132Z/queue/comparison_controls.py > /private/tmp/codex-effect4-overnight-monitor/heartbeats/2026-10-05T234132Z/queue/comparison_controls.json",
+    "python": "3.13.14",
+    "checks": 17,
+    "scope": "finite Python mirrors of projection and result comparison only",
+    "sha256": {
+      "comparison_controls.py": "dba38d9d7b4359962c429ced432a6a54b166c8838b23ce9aaa7aad8ad63d5461",
+      "comparison_controls.json": "44a69d6ead31c01391e75f9a61be16963aedde268ff955bca512dd3e1343c960"
+    }
+  }
+}

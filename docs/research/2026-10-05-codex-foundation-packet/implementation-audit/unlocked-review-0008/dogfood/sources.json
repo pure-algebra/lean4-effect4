@@ -1,0 +1,58 @@
+{
+  "AGENTS.md": {
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  "docs/research/2026-10-05-claude-lead/briefs/seat-dogfood-brief.md": {
+    "sha256": "a3e7dc489d1f17870fc43cbc01f9e6ec197ece7334bd0cab8addd4fa27d47b4e",
+    "bytes": 18306
+  },
+  "Test/Dogfood/Scenario.lean": {
+    "sha256": "1dee3bf153f90443b8aa709f83ea292dd8f6d306af8b13d432880adf806d6c40",
+    "bytes": 34955
+  },
+  "Test/Dogfood/Scenario/Workers.lean": {
+    "sha256": "8485cca12e46f9b56b0b2d3445774d443a4b7cefe89318db78ae64f430e4738f",
+    "bytes": 20030
+  },
+  "Test/Dogfood/Scenario/Routing.lean": {
+    "sha256": "c36348389c731361e46b98baa86eab2e1f97893b693b06283c9a443edb20c51b",
+    "bytes": 16647
+  },
+  "Test/Dogfood/Scenario/Lowered.lean": {
+    "sha256": "bc0a015a717713d420223fe4567bc23f0abf0aa809fe79adfb7a019c0d2c1378",
+    "bytes": 14073
+  },
+  "src/Effect4/Program/Compile.lean": {
+    "sha256": "50cac754f8e0e9efd79e13fce92608d358264f8b1c1fe30e6495cb5c3ce9a0a0",
+    "bytes": 93423
+  },
+  "src/Effect4/Api/HostSession.lean": {
+    "sha256": "473df8b8ab06acf931a67880ce11b4a3fca57247ebf47d22ad5987c3a1e04ece",
+    "bytes": 11404
+  },
+  "src/Effect4/Api/Runner.lean": {
+    "sha256": "57a2f1a0ecd32bf67cc5c8821df4ad44d857a221e28cdfddf2b02a81688aab5a",
+    "bytes": 4203
+  },
+  "src/Effect4/Laws/Run.lean": {
+    "sha256": "2b664777fb4285e7acca208bed1b356985832021108390f26a76bd47dffd5d25",
+    "bytes": 51982
+  },
+  "ocaml/engine/test/scenarios/test_scenarios.ml": {
+    "sha256": "b18d8efa5b7ccc115308a70da39f0f2b433d2bad258ac3bc09947a7126dff1a6",
+    "bytes": 26626
+  },
+  "ocaml/engine/test/scenarios/workers.txt": {
+    "sha256": "30a8783d5cdb2b553a544cb607264083f54ce0ab003a962090250106e68ceb0f",
+    "bytes": 85041
+  },
+  "ocaml/engine/test/scenarios/routing.txt": {
+    "sha256": "04381af5b6805d80beabfc19cc7f3db88424853b0586b001f270db6eaa3ed435",
+    "bytes": 44893
+  },
+  "Scenario.committed.lean": {
+    "git": "6bfc1649:Test/Dogfood/Scenario.lean",
+    "sha256": "a431c09bfd085b257bd34e6f9bdae65445c43fb9b41788ae305d8689830d45a1"
+  }
+}

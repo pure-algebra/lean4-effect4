@@ -21,7 +21,7 @@ yet there?
 | Item | How |
 | --- | --- |
 | `QueueSkeleton.lean`, before seat FOLD's merge: no fold, a cell with two indexes | run: 15 programs on the machine; output `QueueSkeleton.out` |
-| `QueueSteps.lean`, after the merge: the real steps with `fold`, `take`, `drop` and `sameHandle` | run: 8 programs on the machine, and 6 step controls against the model; output `QueueSteps.out` |
+| `QueueSteps.lean`, after the merge: the real steps with `fold`, `take`, `drop` and `sameHandle` | run: 8 programs on the machine; the six steps against the model, on named states and on 200 states of the first profile; output `QueueSteps.out` |
 | `Test/Program/QueueModel.lean`, the abstract model | run on the same operations for R1 and R4 |
 | `Test/Program/QueueCapacity.lean` | built: the helper `acceptLoop_length_le` is proved |
 | Seat FOLD's receipt, its two claims and its fixture | read |
@@ -59,9 +59,16 @@ Each of the eight programs builds. R4 is typed with the error column `never`.
 
 **Revised the same day, after Codex's review.** The first run posted a taker's wake before an
 accepted offer's answer, and an offer that waited notified nobody. The model does otherwise in
-both places. The steps follow the model now. Six controls evaluate a step term against the
-model's step, and the answer, the stored value and the ordered notifications agree
+both places. The steps follow the model now. Controls evaluate a step term against the
+model's step. The answer, the stored value and the ordered notifications agree
 (`queue-steps-design.md` beside this note, F3 and F6). The seven public answers did not change.
+
+**Revised a second time, after Codex's second review.** The comparison had no stated domain,
+and it dropped a signal that it could not encode. A state with a peeker passed for that reason.
+The first profile is a closed predicate of eight conditions now. The comparison refuses a state
+outside it, and a reply or a signal with no encoding. It runs on every state of a finite
+universe of the profile: 200 states, twelve moves on each, and all 2,400 comparisons agree.
+Each red control changes one notification, and nothing else. No step term changed.
 
 ### F2. Cleanup on interruption needs no new construct
 
@@ -114,7 +121,8 @@ and the type arguments of `Deferred.make`.
   and the probes do not cover it.
 - **One message for each request.** No batch, so no taker that waits at a minimum above one.
   A woken taker always finds its message here, so no hint is renewed by a second wait.
-- **No terminal operation,** no `poll`, no `clear`, no `peek`, and the `suspend` strategy only.
+- **No terminal operation,** no `clear`, no `peek`, and the `suspend` strategy only. The
+  `poll` step is compared with the model's, and no program runs it.
 
 ## Proposals (not rulings)
 
@@ -136,8 +144,8 @@ and the type arguments of `Deferred.make`.
   with a host is tested.
 - The generated OCaml engine did not run these programs.
 - No Queue program is printed yet, so tsgo and bun have seen none.
-- Six controls compare a step term with the model's step, each on one state. No connector
-  between a step term and the model's step is stated as a law.
+- Each step term is compared with the model's step on named states and on 200 states of the
+  first profile. No connector between a step term and the model's step is stated as a law.
 - The masked caller, batches, hint renewal, the terminal operations and the other strategies
   are not probed.
 - The budget of a delivery is not measured. The runs used a fuel of 20000.

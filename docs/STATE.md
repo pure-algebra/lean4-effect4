@@ -247,7 +247,8 @@ Open at this landing:
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
      The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
      Its design is [written](research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md)
-     for Codex's review, with five open choices. No seat has it yet: two seats run;
+     and twice revised after Codex's reviews, with five open choices. Its step goals quantify
+     over a closed predicate, the first profile's states. No seat has it yet: two seats run;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
      its law, and the printed form. It follows T5 and the mask (row 251).
 
@@ -255,9 +256,10 @@ Open at this landing:
   ([the note](research/2026-10-05-claude-lead/queue-readiness/queue-readiness.md); finite
   probes). The second uses the real steps: one `Ref.modify` whose term folds, the posted helper
   of row 238, strict order, an offer that waits at capacity, and a withdrawal that keeps the
-  interruptor. Eight scenarios answer as expected. Six controls evaluate a step term against
-  the model's step, with its notifications in the model's order (revised after Codex's
-  review). The
+  interruptor. Eight scenarios answer as expected. Each of the six steps is compared with the
+  model's step: the reply, the stored value and the ordered notifications. The comparison
+  agrees on 200 states of the first profile, and it refuses a state outside it (revised twice
+  after Codex's reviews). The
   cleanup is the pin's `onInterrupt`: `onExit` with `causeIsInterrupt` on the exit. Not
   probed: the generated engine, a masked caller, batches, and the printed module on a host,
   which waits for T5;
