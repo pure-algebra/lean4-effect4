@@ -67,6 +67,7 @@ statement from memory is marked so, and no recommendation rests on one.
 | `probe_rows.lean`: a hole as a host row, 7 theorems and 25 guards | the same, exit 0 | proved in scratch; tested |
 | `probe_hole_rule.lean`: the hole's rule, the replacement law's statements, the judgments | the same, exit 0; three theorems print `[propext, Quot.sound]` | proved in scratch; compiled in scratch |
 | `probe_steps.lean`: ten more single steps of the replacement law | the same, exit 0; two print `[propext, Quot.sound]` | proved in scratch |
+| `probe_induction.lean`: the replacement law on the addresses that pass through `bind` only | the same, exit 0; it prints `[propext, Quot.sound]` | proved in scratch |
 | `probe_replace.lean`: the replacement law at the seven program addresses of one example, through `Node.replaceAt`; 11 guards | the same, exit 0 | tested |
 | `probe_where.lean`: the address of the first refusal, for three programs | the same, exit 0 | tested |
 | `count-sites.sh`: the files and lines that name one constructor | run from the worktree's root | tested |
@@ -89,8 +90,8 @@ The models, the probes and their outputs are filed beside this note, as text.
 | `2026-10-06-seat-GAP-gap_checker.py.txt` | the checker model; it imports the type model |
 | `2026-10-06-seat-GAP-out-types-list.txt`, `-out-types-rec.txt`, `-out-types-ref.txt` | the three runs of the type model |
 | `2026-10-06-seat-GAP-out-checker-5.txt` | the run of the checker model at size 5 |
-| `2026-10-06-seat-GAP-probe_var.lean.txt`, `-probe_rows.lean.txt`, `-probe_hole_rule.lean.txt`, `-probe_steps.lean.txt`, `-probe_replace.lean.txt`, `-probe_where.lean.txt` | the six Lean probes |
-| `2026-10-06-seat-GAP-probe_var.out.txt`, `-probe_rows.out.txt`, `-probe_hole_rule.out.txt`, `-probe_steps.out.txt`, `-probe_replace.out.txt`, `-probe_where.out.txt` | their outputs; an empty output is a run with no message |
+| `2026-10-06-seat-GAP-probe_var.lean.txt`, `-probe_rows.lean.txt`, `-probe_hole_rule.lean.txt`, `-probe_steps.lean.txt`, `-probe_induction.lean.txt`, `-probe_replace.lean.txt`, `-probe_where.lean.txt` | the seven Lean probes |
+| `2026-10-06-seat-GAP-probe_var.out.txt`, `-probe_rows.out.txt`, `-probe_hole_rule.out.txt`, `-probe_steps.out.txt`, `-probe_induction.out.txt`, `-probe_replace.out.txt`, `-probe_where.out.txt` | their outputs; an empty output is a run with no message |
 | `2026-10-06-seat-GAP-count-sites.sh.txt` | the counting script |
 | `2026-10-06-seat-GAP-d1_cells.py.txt` | a count over the checker model: which refused omissions hold a cell |
 
@@ -558,6 +559,13 @@ are for the proof's author.
 - `typeOfProgram` expands layer references before it types. The law is about `HasTy`, so it
   speaks of the expanded program.
 
+The induction itself is proved in scratch on one fragment: the addresses that pass through
+`bind` nodes only (`replacement_bind`, `probe_induction.lean`, at `[propext, Quot.sound]`). It
+is the skeleton of the whole proof. The path unfolds by `Node.at_` and `Node.replaceAt`. The
+judgment is inverted by cases. The rule is applied again, with the induction hypothesis at the
+focus child. A replaced child of another sort is refused by `Node.setChild`, so that case
+closes by computation.
+
 On the running example the law holds at each of its seven addresses of a program. The test goes
 through the tree's own `Node.at_` and `Node.replaceAt`, with three red controls (tested,
 compiled: `probe_replace.lean`).
@@ -624,7 +632,7 @@ this note writes "passes the gap check" and "fillable".
 
 | From | To | Verdict | Evidence |
 | --- | --- | --- | --- |
-| fillable | declarable | holds: each filling's type declares its hole | the replacement law; 13 of its 57 cases proved in scratch |
+| fillable | declarable | holds: each filling's type declares its hole | the replacement law: proved in scratch on addresses through `bind`; 13 of its 57 single steps proved in scratch |
 | declarable | fillable | holds for a hole of a program, and says nothing: every such declaration has a program of exactly its type that dies first | tested, compiled: `dieAt`, at two declarations |
 | declarable | fillable | fails for a hole of a value: `? := never` can be the only typing, and no value fits `never` | tested: `let(?, if((v0 : nat), (v0 : str)))` |
 | declarable | passes the gap check | holds with uniform eliminators | tested: 0 of 180,892 against; 8 against with the eliminators as they are |
@@ -1299,10 +1307,11 @@ the receipt skeleton, with one paragraph on R1 to R14.
   checker: an omission to a three-column hole keeps `check`'s answer, and a filling of the
   declared type keeps it.
 - **Proof plan**: induct on the path, mutually over the six judgments. Close each of the 57
-  cases with the parent's constructor and `hasTy_ext`. Thirteen are done in scratch
-  (`probe_rows.lean`, `probe_steps.lean`). The step also needs the fact that a replaced child
-  keeps its sort, which `replaceAt_spec` gives. A `proof_sketch` could leave the cases as
-  parts. Whether it takes a mutual induction is not tried.
+  cases with the parent's constructor and `hasTy_ext`. Thirteen single steps are done in
+  scratch (`probe_rows.lean`, `probe_steps.lean`). The induction is done in scratch on the
+  addresses through `bind` (`replacement_bind`, `probe_induction.lean`): take it as the
+  template. A `proof_sketch` could leave the cases as parts. Whether it takes a mutual
+  induction is not tried.
 - **Controls**: green, the defect-first program fills a hole and the type stays. Red, two
   controls. A filling of another type is refused in the context. The answer-only row is
   refused under an exit that reaches a cell.
@@ -1453,7 +1462,7 @@ theorem column_mono (sig : Signature Op) (e : Eff Op) {m m' : Mask} (hle : m ≤
 | `sketch-conservative` | a program that performs no hole row is checked the same with any hole table | `initial-algebras-folds`; compatibility | proved in scratch from `check_restrict` | 1 |
 | `sketch-weakening` | a sketch that the checker admits stays admitted, at its type, with more holes declared | the same; weakening | proved in scratch from `check_ext` | 1 |
 | `hole-rule` | a hole row with closed, formed columns types its `perform` at those columns | the same; compatibility | proved in scratch | 1 |
-| `typed-replacement` | an admitted program splits at an address into an environment and a type; a program of that type stands there | the same; substitution | compiled as six statements; 13 of 57 cases proved in scratch | 2 |
+| `typed-replacement` | an admitted program splits at an address into an environment and a type; a program of that type stands there | the same; substitution | compiled as six statements; proved in scratch on addresses through `bind`; 13 of 57 single steps proved in scratch | 2 |
 | `raw-formation`, one clause | a variable is formed in a template only | `subtyping-algebra`; decidability | the defect is tested, compiled | 0a |
 | `checked-types-closed` | a formed program that the checker admits has closed types | `subtyping-algebra`; inversion | not compiled | 0a |
 | `focus-function` | the traced check answers the environment and type at each address, and agrees with `check` | `initial-algebras-folds`; compatibility | not compiled | 3 |
@@ -1598,8 +1607,9 @@ census's counts. Keep the gap for its first consumer, a hole with no stated type
 
 - Nothing here is a theorem of the tree. A theorem proved in scratch was accepted by the kernel
   in a scratch file. No gate has read it.
-- The replacement law is not proved. Its six statements elaborate, and 13 of its 57 cases are
-  proved in scratch. The induction on the path is not written.
+- The replacement law is not proved in full. Its six statements elaborate. It is proved in
+  scratch on the addresses that pass through `bind` only, and 13 of its 57 single steps are
+  proved in scratch.
 - Each model is a finite fragment. The type model has one constructor per run, at depth 1. The
   checker model has terms up to size 5 and sketches up to size 6. Its write answers `nat`, and
   the tree's row answers the cell. A count of it is a finite test and no theorem.
