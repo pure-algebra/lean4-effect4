@@ -28,8 +28,8 @@ Eleven more facts stand beside it.
 
 - **What the merge brings.** Steps 1 and 2 are on main since `11616581`. The next merge brings
   the timeout scenario, the atomic scenario and six later steps. The branch holds main at
-  `f569d4af`.
-- **The head is green.** At `d3494e18` the default build has 972 jobs and no error, and
+  `8528496f`.
+- **The head is green.** At `69fd8f5a` the default build has 977 jobs and no error, and
   `make check-host-protocol` passes.
 - **No theorem lands, and no status moves.** Each host run is a finite host run of one script.
   Its evidence word is tested. It proves nothing.
@@ -70,15 +70,21 @@ Eleven more facts stand beside it.
 | Step 9 | `e9bdfaf2`: the acceptance line names the scripts that wait |
 | Step 10 | `d3494e18`: the audit of the scripts, and the dispatchers reader's limit |
 | Head of the work | `d3494e18` |
-| Receipt | the commit that adds this file, on top of `d3494e18` |
+| Receipt | `0322ad76`: this file, on top of `d3494e18` |
+| Merge of main | `69fd8f5a`, of `8528496f` |
+| The receipt's revision | the commit that revises this file, on top of `69fd8f5a` |
 
-Nothing is pushed. On 2026-10-06 the coordinator merged steps 1 and 2 as `11616581`.
+Nothing is pushed. On 2026-10-06 the coordinator merged steps 1 and 2 as `11616581`. The last
+merge of main brings no file that a step of mine changes after `f569d4af`. On 2026-10-06 I ran
+the default build and the lane's check again at `69fd8f5a`. The check gives the same digests
+and the same table there.
 
 ## Changed files
 
 `git diff --stat 1d292a3d d3494e18`, over the paths below, counts 14 files, 2266 added lines and
-55 removed lines. `git diff --stat f569d4af d3494e18` counts what the next merge brings: 9 files,
-454 added lines and 90 removed lines.
+55 removed lines. `git diff --stat f569d4af d3494e18` counts the steps that main does not hold
+yet: 9 files, 454 added lines and 90 removed lines. The receipt's two commits add this file and
+one sentence of the design note's header.
 
 | File | What changed |
 | --- | --- |
@@ -131,8 +137,9 @@ SLOT lake build
 | --- | --- |
 | `310c8314`, the base | `Build completed successfully (956 jobs).` |
 | `13506219`, step 4 | `Build completed successfully (963 jobs).` |
-| `b30d1a03`, main merged | `Build completed successfully (972 jobs).` |
-| `d3494e18`, the head | `Build completed successfully (972 jobs).` |
+| `b30d1a03`, main merged at `f569d4af` | `Build completed successfully (972 jobs).` |
+| `d3494e18`, the head of the work | `Build completed successfully (972 jobs).` |
+| `69fd8f5a`, main merged at `8528496f` | `Build completed successfully (977 jobs).` |
 
 ### The lane's check
 
@@ -140,7 +147,8 @@ SLOT lake build
 SLOT make FLAGS check-host-protocol
 ```
 
-Its result at `d3494e18`, exit status 0:
+Its result at `69fd8f5a`, exit status 0. At `d3494e18` it gives the same lines, but for the
+time of the unit tests.
 
 ```text
 python3 scripts/check-host-protocol.py
@@ -159,7 +167,7 @@ bun test v1.4.2 (744846f84)
  54 pass
  0 fail
  468 expect() calls
-Ran 54 tests across 4 files. [60.00ms]
+Ran 54 tests across 4 files. [61.00ms]
 PASS keyed differential: 57 runs, 52 programs, 30 controls; exact exits and keyed applications
 PASS keyed scenarios on effect 4.0.0-rc.112 under bun 1.4.2: routing 8 scripts (2 entries measured by the host, 1 predicted by the ledger; no entry waits); workers 17 scripts (6 entries measured by the host, 5 through a reader, 2 of them zero by the run's own wait in 12 scripts; no entry waits); timeout 15 scripts (6 entries measured by the host, 2 through a reader, timers through a reader in 10 scripts; the whole-observation comparison waits on timers in 5 scripts (parked, timed-out, late, received, eager)); atomic 8 scripts (0 entries measured by the host, 5 through a reader; no entry waits); 7 scripts with no host run; 40 red controls
 PASS host-protocol: fresh projections, typed host programs, keyed replay and negative controls; the scenarios' scripts on their printed modules
@@ -252,7 +260,7 @@ script or another entry, no host adequacy and no liveness.
 
 ### The brief's acceptance
 
-| Item of the brief | Result at `d3494e18` |
+| Item of the brief | Result at `69fd8f5a` |
 | --- | --- |
 | 1. Routing and workers run, for each script that a host can perform. | 8 and 17 scripts. Each entry with a source on the host agrees, and Lean's replay gives each observation. |
 | 2. Each printed module type-checks under tsgo 7, or its diagnostics are here. | 16 modules type-check. One twin's module has two diagnostics, quoted below. |
@@ -274,7 +282,8 @@ A source is not an evidence word. An entry of an observation has one of four sou
 | replay only | The host has no reader. Lean's replay is the only evidence, and the scenario's whole-observation comparison waits. |
 
 The check writes the table below at each run, as `WORK/host/scenario-evidence.md`. Its command
-is `SLOT make FLAGS check-host-protocol`. This copy is the file's bytes at `d3494e18`.
+is `SLOT make FLAGS check-host-protocol`. This copy is the file's bytes at `d3494e18` and at
+`69fd8f5a`.
 
 | Scenario | Entry | Evidence | Scripts | Limit |
 | --- | --- | --- | --- | --- |
@@ -596,10 +605,10 @@ open part of `generated/semantics.md`, under its requirement. The slice closes n
 
 | Requirement | Open parts | The nearest to this slice |
 | --- | --- | --- |
-| R4 | 5 | The target half of `handle-identity-laws`; `atomic-attempt-isolation` |
+| R4 | 4 | The target half of `handle-identity-laws`; `atomic-attempt-isolation` |
 | R5 | 2 | `lower_refines_build` |
 | R6 | 7 | Receipt and application on the keyed lifecycle, and their converse; DI-57's table-aware reference; DI-69; the public typed guarantee |
-| R8 | 7 | One identity bijection across faces (DI-81); the TypeScript face against rc.112 (DI-49) |
+| R8 | 6 | One identity bijection across faces (DI-81); the TypeScript face against rc.112 (DI-49) |
 | R10 | 11 | A composed module's law; no form has a behaviour law (DI-89) |
 | R11 | 6 | Release at most once for each registration, counted by identity (DB-07) |
 | R13 | 4 | Load inputs, the environment snapshot and the seed |
@@ -661,6 +670,11 @@ Each choice is mine unless the row names the coordinator.
   once, in 144 jobs. The check's script builds `Tools.ProfileJson` since step 1.
   `tools/Tools/HostProtocol.lean` still imports `Tools.GeneratedStamp`, which no step builds:
   reading.
+- **The truth lane reads the lane's sources.** `scripts/check-truth.py` gives tsgo each
+  TypeScript file of `harness/truth/session/`, in the tree: reading. The marker of
+  `make check-truth` holds those files as inputs, so that check runs again at the merge. I did
+  not run it. My lane's check gives tsgo the same files under the same base configuration, and
+  it passes.
 - **A refused command.** On 2026-10-06 the permission classifier refused one of my commands.
   The command read the head of the slot script and listed my own logs. I did not route around
   the refusal, and I did not read the slot script again.
