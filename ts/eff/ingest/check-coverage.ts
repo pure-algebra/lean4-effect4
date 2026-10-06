@@ -1,4 +1,12 @@
 // Read the original JSON oracles; coverage is independent of both recognizers.
+//
+// The walker has one case for each constructor of the four sorts it reads, and the compiler
+// holds it to that. A node's tag is checked against the generated schema's cases (`eff.gen.ts`),
+// and each switch ends in a default that takes `never`. A constructor appended in Lean reaches
+// `eff.gen.ts` by regeneration (`make gen-ts`), and this file then does not type-check
+// (`bun run typecheck`) until the walker has the case. Until 2026-10-06 a constructor with no
+// case was a leaf without a word: the walker read no body of `restore` or of `catchIf`, and no
+// layer of `mergeAll`.
 import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import { Eff, Stmt, ActionTerm, LayerTerm } from "../eff.gen.ts"
@@ -15,38 +23,68 @@ const seen = { eff: new Set<string>(), stmt: new Set<string>(), action: new Set<
 const rowKey = (op: unknown): string => JSON.stringify(op)
 const array = (v: unknown): readonly unknown[] => { if (!Array.isArray(v) || typeof v[0] !== "string") throw new Error("invalid oracle constructor"); return v }
 function chain(v: unknown, walk: (v: unknown) => void): void { const a = array(v); if (a[0] === "nil") return; if (a[0] !== "cons") throw new Error("invalid oracle list"); walk(a[1]); chain(a[2], walk) }
+/** A node's tag, as a constructor of its sort: a name that the generated schema's cases hold. */
+const tagOf = <Tag extends string>(cases: Readonly<Record<Tag, unknown>>, sort: string, a: readonly unknown[]): Tag => {
+  const tag = String(a[0])
+  const known = (name: string): name is Tag => Object.hasOwn(cases, name)
+  if (!known(tag)) throw new Error(`an oracle holds the ${sort} constructor ${tag}, which the generated schema does not name`)
+  return tag
+}
+/** The default of a walker's switch. Its argument has no value when every constructor has a
+ * case, so a constructor with no case is refused where this file is type-checked. */
+const noCase = (tag: never, sort: string): never => { throw new Error(`the coverage walker has no case for the ${sort} constructor ${String(tag)}`) }
+// A node is `[tag, field, …]` in the constructor's declaration order (`json.gen.ts`).
 function eff(v: unknown): void {
-  const a = array(v), tag = String(a[0]); seen.eff.add(tag)
+  const a = array(v), tag = tagOf<Eff["_tag"]>(Eff.cases, "Eff", a); seen.eff.add(tag)
   switch (tag) {
-    case "perform": seen.row.add(rowKey(a[1])); break
-    case "suspend": case "exit": case "uninterruptible": case "interruptible": case "scoped": eff(a[1]); break
-    case "bind": case "catchCause": case "onExit": case "acquireRelease": eff(a[1]); eff(a[2]); break
-    case "matchCause": eff(a[1]); eff(a[2]); eff(a[3]); break
-    case "select": eff(a[3]); eff(a[4]); break
-    case "iterate": eff(a[6]); break
-    case "gen": chain(a[1], stmt); break
-    case "withFiber": action(a[1]); break
-    case "provideLayer": layer(a[1]); eff(a[3]); break
-    case "provideService": eff(a[3]); break
+    case "succeed": case "fail": case "failCause": case "sync": case "yieldNow": case "awaitFiber": case "service": return
+    case "perform": seen.row.add(rowKey(a[1])); return
+    case "suspend": case "exit": case "uninterruptible": case "interruptible": case "scoped": eff(a[1]); return
+    case "bind": case "catchCause": case "onExit": case "acquireRelease": eff(a[1]); eff(a[2]); return
+    case "matchCause": eff(a[1]); eff(a[2]); eff(a[3]); return
+    case "catchIf": eff(a[2]); eff(a[3]); return
+    case "select": eff(a[3]); eff(a[4]); return
+    case "iterate": eff(a[6]); return
+    case "restore": eff(a[2]); return
+    case "gen": chain(a[1], stmt); return
+    case "withFiber": action(a[1]); return
+    case "provideLayer": layer(a[1]); eff(a[3]); return
+    case "provideService": eff(a[3]); return
+    default: return noCase(tag, "Eff")
   }
 }
 function stmt(v: unknown): void {
-  const a = array(v), tag = String(a[0]); seen.stmt.add(tag)
-  if (tag === "bindYield" || tag === "yieldDiscard") eff(a[1])
-  if (tag === "ifElse") { chain(a[2], stmt); chain(a[3], stmt) }
-  if (tag === "whileTrue") chain(a[1], stmt)
+  const a = array(v), tag = tagOf<Stmt["_tag"]>(Stmt.cases, "Stmt", a); seen.stmt.add(tag)
+  switch (tag) {
+    case "ret": case "breakLoop": return
+    case "bindYield": case "yieldDiscard": eff(a[1]); return
+    case "ifElse": chain(a[2], stmt); chain(a[3], stmt); return
+    case "whileTrue": chain(a[1], stmt); return
+    default: return noCase(tag, "Stmt")
+  }
 }
 function action(v: unknown): void {
-  const a = array(v), tag = String(a[0]); seen.action.add(tag)
-  if (["fork", "forkIn", "forkScoped"].includes(tag)) eff(a[1])
-  if (tag === "raceAll") chain(a[1], eff)
+  const a = array(v), tag = tagOf<ActionTerm["_tag"]>(ActionTerm.cases, "ActionTerm", a); seen.action.add(tag)
+  switch (tag) {
+    case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
+    case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
+    case "getInterruptible": return
+    case "fork": case "forkIn": case "forkScoped": eff(a[1]); return
+    case "raceAll": chain(a[1], eff); return
+    default: return noCase(tag, "ActionTerm")
+  }
 }
 function layer(v: unknown): void {
-  const a = array(v), tag = String(a[0]); seen.layer.add(tag)
-  if (tag === "effect") eff(a[2])
-  if (tag === "effectDiscard") eff(a[1])
-  if (["provide", "provideMerge", "merge"].includes(tag)) { layer(a[1]); layer(a[2]) }
-  if (tag === "fresh" || tag === "orDie") layer(a[1])
+  const a = array(v), tag = tagOf<LayerTerm["_tag"]>(LayerTerm.cases, "LayerTerm", a); seen.layer.add(tag)
+  switch (tag) {
+    case "succeed": case "ref": return
+    case "effect": eff(a[2]); return
+    case "effectDiscard": eff(a[1]); return
+    case "provide": case "provideMerge": case "merge": layer(a[1]); layer(a[2]); return
+    case "fresh": case "orDie": layer(a[1]); return
+    case "mergeAll": chain(a[1], layer); return
+    default: return noCase(tag, "LayerTerm")
+  }
 }
 const files = readdirSync(dir)
 for (const file of files.filter(f => f.endsWith(".json") && !f.endsWith(".keys.json"))) eff(JSON.parse(readFileSync(join(dir, file), "utf8")))

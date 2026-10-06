@@ -70,6 +70,35 @@ test("only canonical path names, leading const layers, and one main program are 
     `Effect.provide(Effect.succeed(7), L_0); const L_0 = ${layer}`,
   ]) expect(() => readPrintedSource(source)).toThrow()
 })
+
+// The mask that restores (decisions rows 244 to 246). The getter prints as the mask that answers
+// its own parameter, and a restore site as `pipe(body, saved)` (`Codegen/Templates.lean`). The
+// oracles are Lean's goldens: one restore site around a wait, two masks, a saved state used
+// outside its mask, and a saved term that is no saved state.
+test("the printed mask recovers the original Lean goldens", () => {
+  const getter = (n: number) => `Effect.uninterruptibleMask((a${n}) => Effect.succeed(a${n}))`
+  for (const [golden, source] of [
+    ["pMask", `Effect.flatMap(Deferred.make<number, number>(), (a0) => Effect.flatMap(Deferred.succeed(a0, 7), (a1) => ` +
+      `Effect.flatMap(${getter(2)}, (a2) => Effect.uninterruptible(pipe(Deferred.await(a0), a2)))))`],
+    ["pMaskNested", `Effect.flatMap(${getter(0)}, (a0) => Effect.uninterruptible(Effect.flatMap(${getter(1)}, (a1) => ` +
+      `Effect.uninterruptible(Effect.flatMap(pipe(Effect.succeed(1), a1), (a2) => pipe(Effect.succeed(a2), a0))))))`],
+    ["pMaskEscape", `Effect.flatMap(Effect.flatMap(${getter(0)}, (a0) => Effect.uninterruptible(Effect.succeed(a0))), ` +
+      `(a0) => pipe(Effect.succeed(3), a0))`],
+    ["pIllRestoreBool", "pipe(Effect.succeed(1), true)"],
+  ] as const) {
+    const expected = JSON.parse(readFileSync(new URL(`../../../../ocaml/eff/goldens/${golden}.json`, import.meta.url), "utf8"))
+    expect(effJson(readPrintedSource(source))).toEqual(expected)
+  }
+})
+
+test("a mask whose callback does not answer its own parameter is no printed image", () => {
+  for (const source of [
+    "Effect.uninterruptibleMask((a0) => Effect.succeed(1))",
+    "Effect.uninterruptibleMask((a0) => pipe(Effect.succeed(1), a0))",
+    "Effect.uninterruptibleMask(Effect.succeed(1))",
+    "pipe(Effect.succeed(1))",
+  ]) expect(() => readPrintedSource(source)).toThrow()
+})
 }
 
 test("the compiler reader refuses paths whose components exceed exact integers", () => {

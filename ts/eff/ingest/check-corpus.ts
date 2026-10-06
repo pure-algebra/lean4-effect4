@@ -157,7 +157,10 @@ if (mode === "inclusion-batch") {
       const [style, n] = row.split("\t")
       if (counts.get(style!) !== Number(n)) throw new Error(`style count mismatch: ${style}`)
     }
-    if (counts.size !== 21 + 11520 || names.length !== 22314) throw new Error("foreign construction coverage/count changed")
+    // The file count is pinned: 21 isolated styles over the skeletons, the probes and the forms at
+    // four depths, and one file for each of the 11520 products (`tools/Drivers/ForeignCorpus.lean`
+    // prints it). It moved from 22314 on 2026-10-06, with the four mask probes under each style.
+    if (counts.size !== 21 + 11520 || names.length !== 22398) throw new Error("foreign construction coverage/count changed")
   }
   for (let at = 0; at < names.length; at += 500) {
     const run = spawnSync(process.execPath, [import.meta.filename, mode + "-batch", dir, String(at), "500"], { encoding: "utf8", maxBuffer: 2 ** 24 })

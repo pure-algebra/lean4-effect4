@@ -108,8 +108,15 @@ const layerPath = (name: string): readonly number[] => {
   return path.every(Number.isSafeInteger) ? path : bad("layer path")
 }
 
+/** The default of a walker's switch. Its argument has no value when every constructor of the
+ * sort has a case, so a constructor with no case is refused where this file is type-checked
+ * (`bun run typecheck`). The constructor lists are the generated types' (`eff.gen.ts`). */
+const noCase = (node: never): never => { throw new Error(`walkProgram has no case for ${JSON.stringify(node)}`) }
+
 // The seven Program.Refs.Node sorts, walked independently of the OXC reader.
 // Paths follow the cons spines; key order keeps provision bodies before providers.
+// Every constructor has a case, a leaf too: until 2026-10-06 a constructor with no case was a
+// leaf without a word, and the walk did not enter the body of a `restore`.
 function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number[]) => LayerTerm,
     onKey: (k: ServiceKey) => ServiceKey = k => k, keyOrder = false): Eff {
   const spine = <T>(items: readonly T[], path: readonly number[], visit: (x: T, p: readonly number[]) => T): readonly T[] =>
@@ -125,6 +132,7 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
       case "fresh": case "orDie": return { ...l, inner: layer(l.inner, child(0)) }
       case "mergeAll": return { ...l, layers: spine(l.layers, child(0), layer) }
       case "ref": return l
+      default: return noCase(l)
     }
   }
   const stmt = (s: Stmt, path: readonly number[]): Stmt => {
@@ -133,18 +141,25 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
       case "bindYield": case "yieldDiscard": return { ...s, effect: eff(s.effect, child(0)) }
       case "ifElse": return { ...s, thenB: spine(s.thenB, child(0), stmt), elseB: spine(s.elseB, child(1), stmt) }
       case "whileTrue": return { ...s, body: spine(s.body, child(0), stmt) }
-      default: return s
+      case "ret": case "breakLoop": return s
+      default: return noCase(s)
     }
   }
   const action = (a: ActionTerm, path: readonly number[]): ActionTerm => {
-    if (a._tag === "fork" || a._tag === "forkIn" || a._tag === "forkScoped") return { ...a, program: eff(a.program, [...path, 0]) }
-    if (a._tag === "raceAll") return { ...a, entrants: spine(a.entrants, [...path, 0], eff) }
-    return a
+    switch (a._tag) {
+      case "fork": case "forkIn": case "forkScoped": return { ...a, program: eff(a.program, [...path, 0]) }
+      case "raceAll": return { ...a, entrants: spine(a.entrants, [...path, 0], eff) }
+      case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
+      case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
+      case "getInterruptible": return a
+      default: return noCase(a)
+    }
   }
   const eff = (e: Eff, path: readonly number[]): Eff => {
     const child = (i: number) => [...path, i]
     switch (e._tag) {
-      case "suspend": case "exit": case "uninterruptible": case "interruptible": case "iterate": case "scoped":
+      // A restore site's body is its child 0 (`Node.child`, `src/Effect4/Program/NodeLenses.lean`).
+      case "suspend": case "exit": case "uninterruptible": case "interruptible": case "iterate": case "scoped": case "restore":
         return { ...e, body: eff(e.body, child(0)) }
       case "bind": return { ...e, first: eff(e.first, child(0)), rest: eff(e.rest, child(1)) }
       case "gen": return { ...e, body: spine(e.body, child(0), stmt) }
@@ -165,7 +180,8 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
         const body = eff(e.body, child(0))
         return { ...e, body, key: onKey(e.key) }
       }
-      default: return e
+      case "succeed": case "fail": case "failCause": case "sync": case "perform": case "yieldNow": case "awaitFiber": return e
+      default: return noCase(e)
     }
   }
   return eff(program, [])
@@ -441,6 +457,29 @@ class CompilerReader {
     }
     return out
   }
+  /** The getter's image (decisions row 245; `Codegen/Templates.lean`, the row of
+   * `getInterruptible`): the one argument of `Effect.uninterruptibleMask` is
+   * `(r) => Effect.succeed(r)`, an arrow of one plain parameter whose body answers that
+   * parameter. The parameter's name, or `undefined` for any other argument list. The head of the
+   * body must not start at the parameter: `(E) => E.succeed(E)` names no export of `effect`.
+   * The native callback spelling, whose body uses the function, has no reading (decisions row
+   * 215). */
+  maskParameter(args: readonly Ex[]): string | undefined {
+    const f = args.length === 1 ? this.unwrap(args[0]!) : undefined
+    if (f?.type !== "ArrowFunctionExpression" || f.async || f.typeParameters || f.params.length !== 1 || f.body.type === "BlockStatement") return undefined
+    const p = f.params[0]!
+    if (p.type !== "Identifier") return undefined
+    const body = this.unwrap(f.body)
+    if (body.type !== "CallExpression" || body.optional || body.arguments.length !== 1) return undefined
+    const answer = this.unwrap(body.arguments[0]!)
+    if (answer.type !== "Identifier" || answer.name !== p.name) return undefined
+    let root = this.unwrap(body.callee)
+    while (root.type === "MemberExpression") root = this.unwrap(root.object)
+    if (root.type !== "Identifier" || root.name === p.name) return undefined
+    let head: string
+    try { head = this.name(body.callee) } catch { return undefined }
+    return head === "Effect.succeed" ? p.name : undefined
+  }
   recordSelect(x: Ex, env: readonly string[]): Eff | undefined {
     if (x.type !== "CallExpression" || x.optional || x.typeArguments || x.callee.type !== "Identifier" || x.callee.name !== "caseTagR") return undefined
     this.arity(x.arguments, 4)
@@ -512,6 +551,10 @@ class CompilerReader {
         this.arity(a, 1); const tag = h === "Effect.exit" ? "exit" : h === "Effect.scoped" ? "scoped" : h === "Effect.interruptible" ? "interruptible" : "uninterruptible"
         return { _tag: tag, body: e(0) }
       }
+      // The mask's two rows (decisions row 245): the getter prints as the mask that answers its
+      // own parameter, and a restore site as `pipe(body, saved)`, with any term for `saved`.
+      case "Effect.uninterruptibleMask": return this.maskParameter(a) === undefined ? bad("mask getter") : { _tag: "withFiber", action: { _tag: "getInterruptible" } }
+      case "pipe": { this.arity(a, 2); const body = e(0); return { _tag: "restore", saved: t(1), body } }
       case "Effect.yieldNowWith": { this.arity(a, 1); const l = this.literal(arg(0)); return l._tag === "nat" ? { _tag: "yieldNow", priority: l.value } : bad("priority") }
       case "Effect.service": this.arity(a, 1); return { _tag: "service", key: this.key(arg(0), env) }
       case "Effect.provideService": this.arity(a, 3); return { _tag: "provideService", body: e(0), key: this.key(arg(1), env), value: t(2) }
@@ -1353,9 +1396,25 @@ class ForeignCompilerReader extends CompilerReader {
       if (h === "Effect.fn" || h === "Effect.fnUntraced") return refuseForeign("E-PARAM-SHAPE", "function")
       if (["Effect.catchTag", "Effect.catchTags", "Effect.mapError", "Effect.match", "Effect.orElseSucceed"].includes(h)) return refuseForeign("E-HANDLER", h)
       if (["Effect.promise", "Effect.tryPromise", "Effect.try", "Effect.callback"].includes(h)) return refuseForeign("E-ARG-CLOSURE", h)
+      // The mask's getter (decisions row 245), in its printed spelling alone: the mask on
+      // `(r) => Effect.succeed(r)`. Any other argument list is a closure with no reading here,
+      // the native callback spelling among them (decisions row 215).
+      if (h === "Effect.uninterruptibleMask") {
+        if (this.maskParameter(x.arguments) === undefined) return refuseForeign("E-ARG-CLOSURE", h)
+        return { _tag: "withFiber", action: { _tag: "getInterruptible" } }
+      }
       if (h === "Effect.whileLoop") return refuseForeign("E-LOOP", "whileLoop")
       if (h.startsWith("Cause.") || h.startsWith("Layer.")) return refuseForeign("E-NODE", "program fragment")
       if (h === "pipe" || h === "Function.pipe") {
+        // A restore site (decisions row 245), in its printed spelling alone: `pipe(body, saved)`
+        // whose one segment is a binder. A segment is a function, and the one function that a
+        // binder holds is a mask's saved state. Every other call of `pipe` is piping, as before:
+        // there a binder among the segments is refused, and so are `body.pipe(saved)` and
+        // `saved(body)`.
+        if (x.arguments.length === 2) {
+          const saved = this.variable(this.at(x.arguments, 1), env)
+          if (saved !== undefined) return { _tag: "restore", body: this.eff(this.at(x.arguments, 0), env), saved: { _tag: "var", index: saved } }
+        }
         let first = this.eff(this.at(x.arguments, 0), env)
         for (const segment of x.arguments.slice(1)) first = this.pipeSegment(segment, first, env)
         return first
