@@ -649,8 +649,17 @@ def cellsFirst : Api.Program → Bool
     if makesFiber first then !makesCell first && !makesCell rest else cellsFirst rest
   | program => !(makesFiber program && makesCell program)
 
+-- Controls of the premises, on small programs. A cell before a fork passes, and a cell after a
+-- fork or inside one does not. The lane's program `two` forks twice and holds no race.
+#guard cellsFirst (.bind (.perform .refMake (.lit (.nat 0))) two)
+#guard !cellsFirst (.bind two (.perform .refMake (.lit (.nat 0))))
+#guard !cellsFirst (.withFiber (.fork (.perform .refMake (.lit (.nat 0))) opts))
+#guard makesFiber two && !makesCell two && !races two && !forksInFork two
+#guard races (.withFiber (.raceAll (.cons two .nil))) && forksInFork (.withFiber (.fork two opts))
+
 /-- The readers that a run gets, each with what the host must find, and the readers that it is
-refused, each with the reason.
+refused, each with the reason. The third part gives the premise of each of the four readers on
+the run, asked for or not: `true`, or the reason it fails.
 
 * `cells`: the root makes every cell before it makes a fiber (`cellsFirst`). The fixture holds
   the count of cells at the script's end.
@@ -661,7 +670,7 @@ refused, each with the reason.
   has its number.
 * `dispatchers`: the machine has no armed owner and no runnable fiber at the script's end. The
   host reads a count, and it names no fiber. -/
-def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J :=
+def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J × List (String × J) :=
   let program := run.opened.built.program
   let machine := scripted.machine
   let callers := Api.root :: (callsOf run.opened scripted.journal).map (·.fiber)
@@ -684,11 +693,16 @@ def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J :=
     | .dispatchers =>
       if scripted.work.runnable.isEmpty && scripted.work.queued.isEmpty then .ok (Json.bool true)
       else .error "the machine names an armed owner or a runnable fiber, and the host reads a count"
-  run.asks.foldl (fun (state : List (String × J) × List J) reader =>
+  let asked := run.asks.foldl (fun (state : List (String × J) × List J) reader =>
     match verdict reader with
     | .ok found => (state.1 ++ [(reader.word, found)], state.2)
     | .error why =>
       (state.1, state.2 ++ [Json.mkObj [("reader", .str reader.word), ("why", .str why)]])) ([], [])
+  let premises := [Reader.cells, .fibers, .sleeps, .dispatchers].map fun reader =>
+    match verdict reader with
+    | .ok _ => (reader.word, Json.bool true)
+    | .error why => (reader.word, Json.str why)
+  (asked.1, asked.2, premises)
 
 /-! ### The fixture and the replay -/
 
@@ -707,7 +721,7 @@ def emitRun (run : HostRun) : Except String J := do
     | some act => pure act
     | none => throw "a row outside the wire"
   let (spaces, bindings) ← bindingsType built.table
-  let (readers, refused) := readersOf run scripted
+  let (readers, refused, premises) := readersOf run scripted
   return Json.mkObj [("name", .str run.name), ("scenario", .str run.scenario),
     ("session", .str run.opened.id),
     ("module", .str (String.join (module.decls.map (TypeScript.Render.decl TypeScript.house0)))),
@@ -715,7 +729,8 @@ def emitRun (run : HostRun) : Except String J := do
     ("calls", toJson ((callsOf run.opened scripted.journal).map awaitJson)),
     ("acts", toJson acts), ("observation", Json.mkObj (run.observed scripted)),
     ("fields", toJson ((run.observed scripted).map (·.1))),
-    ("readers", Json.mkObj readers), ("refusedReaders", toJson refused)]
+    ("readers", Json.mkObj readers), ("refusedReaders", toJson refused),
+    ("premises", Json.mkObj premises)]
 
 /-- Lean's replay of a host's recording: the rows of the recording played by `Run.play` from the
 run that the battery opens. `same` is the battery's own equality of the replayed observation and

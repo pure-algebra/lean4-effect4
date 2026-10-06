@@ -43,6 +43,8 @@ export interface ScenarioFixture {
   fields: string[]
   readers: Readers
   refusedReaders: Array<{ reader: ReaderName; why: string }>
+  /** Each reader's premise on the run, asked for or not: `true`, or the reason it fails. */
+  premises: Record<ReaderName, true | string>
 }
 export interface ScenarioManifest { runs: ScenarioFixture[]; waiting: Array<{ name: string; scenario: string; why: string }> }
 /** What the host holds at a script's end. The last four are a reader's notes, in the wire. */

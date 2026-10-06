@@ -149,6 +149,14 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
   moved.forEach(({ name, result }, index) =>
     throws(() => { compareReplay(name, result); comparePredictions(name, movedCases[index]!, result) }, named(name, ""),
       `${name}: a recording with a moved record must not replay as the script`))
+  // Red control of a reader's premise. Lean refuses the fibers reader to a program that holds a
+  // race, so the timeout scenario cannot use it. A granted reader is one whose premise holds.
+  const racing = manifest.runs.filter(run => run.scenario === "timeout")
+  for (const run of racing)
+    ok(typeof run.premises.fibers === "string" && run.premises.fibers.includes("race") && run.readers.fibers === undefined,
+      `${run.name}: the fibers reader must be refused to a program that holds a race`)
+  for (const run of manifest.runs) for (const reader of Object.keys(run.readers) as Array<keyof typeof run.readers>)
+    ok(run.premises[reader] === true, `${run.name}: the ${reader} reader is on, and its premise fails`)
   // Red control of the readers' control: one dropped record of a recording is a difference.
   const dropped: string[] = []
   for (const scenario of scenarioNames) {
@@ -176,7 +184,8 @@ if (scenariosPath && scenarioLeanPath && scenarioControlsPath) {
     return { scenario, scripts: runs.length, evidence, wholeObservationOnHost: !evidence.some(row => row.evidence === "replay only") }
   })
   const controls = { comparator: changed, hostMeasurement: faulty.map(host => `${host.name}: ${host.fault}, at ${host.field}`),
-    replay: moved.map(run => run.name), readers: dropped, predictions: unpredicted }
+    replay: moved.map(run => run.name), readers: dropped, predictions: unpredicted,
+    premises: racing.map(run => `${run.name}: no fibers reader`) }
   const versions = await read<{ effect: string; bun: string }>(resolve(runPath, "versions.json"))
   await writeFile(resolve(runPath, "scenario-checked.json"), JSON.stringify({ host: versions, scenarios, notPerformed: manifest.waiting, controls,
     evidence: "each run is a finite host run of one script on rc.112; an entry is measured by the host, predicted by the ledger, measured through a reader, or replay only",
