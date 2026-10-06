@@ -26,6 +26,11 @@ the law of, `Sketch.fillAt` and `Sketch.omitAt`. These are the fixtures of the s
   raw type of its term, and it reads a hole row in normal form. So the omission changes the
   type of the whole. It is the reason for the two premises on normal form in
   `Sketch.check_omit`.
+* **Red (tested): the same, and the sketch is refused.** An atom's scheme reads the raw type of
+  its argument, and it binds a parameter at its first occurrence. `mapFromEntries` takes a list
+  of pairs whose second component is a union, and it refuses the normal form of that list, a
+  list of a union of pairs. So an omission can be refused where the program is admitted: the
+  law does not hold "up to the normal form" either.
 * **The law at the example (proved).** Two conclusions come from the law and not from an
   evaluation: the omission of the first child, and the filling of the hole. The law's
   environment and type of the focus are existential. Each proof names them through a fact that
@@ -167,6 +172,34 @@ def readsFirst (focus : NativeEff) : NativeEff :=
 -- tested: a context that reads a component gives one type for both
 #guard (Sketch.omitAt (readsFirst pairFocus : Sketch) {} [1, 0] (Row.hole "h0" rawPair)).map (·.check) =
   some (Sketch.check (readsFirst pairFocus : Sketch))
+
+/-! ## Red: at a focus that is not in normal form, the sketch can be refused -/
+
+/-- `cons(pair("k", x), nil())`: a list of one pair, whose second component is `x`. -/
+def entries (x : Term) : Term :=
+  .app "cons" (.cons (pairT (.lit (.str "k")) x) (.cons (.app "nil" .nil) .nil))
+
+/-- The focus: the list of one pair, with `x` a number or a string. -/
+def entriesFocus : NativeEff := .succeed (entries (.var 0))
+
+/-- The focus's answer as the checker gives it. -/
+def rawEntries : Ty := .list (.prod (.lit "k") (.union .nat .string))
+
+/-- `x = numberOrString; p = FOCUS; succeed (mapFromEntries p)`: the atom reads the raw type. -/
+def readsEntries (focus : NativeEff) : NativeEff :=
+  .bind numberOrString (.bind focus (.succeed (.app "mapFromEntries" (.cons (.var 1) .nil))))
+
+-- tested: the focus's answer is the raw list, which is not its own normal form, and the checker
+-- admits the program
+#guard effTy ({} : SigApp).signature [.union .nat .string] entriesFocus =
+  some ⟨rawEntries, .never, Requirement.empty⟩
+#guard rawEntries.normalize != rawEntries
+#guard Sketch.check (readsEntries entriesFocus : Sketch) =
+  .ok ⟨.map .string (.union .nat .string), .never, Requirement.empty⟩
+-- red (tested): with the focus omitted under a hole that declares the focus's own answer, the
+-- atom refuses the row's normal form; the sketch is refused at the term
+#guard (Sketch.omitAt (readsEntries entriesFocus : Sketch) {} [1, 0] (Row.hole "h0" rawEntries)).map
+    (fun s => refusedAt s.check) = some (some ([1, 1], "term"))
 
 /-! ## The law at the example
 
