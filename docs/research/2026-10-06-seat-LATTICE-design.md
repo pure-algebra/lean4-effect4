@@ -364,3 +364,25 @@ Each helper names the statement that it is a step of, in its docstring.
    - Theorem 4.7, with the contribution slice and the adapter.
 4. The battery, with the paper's examples and the red controls.
 5. The receipt, with the note on speed and on Lean's tools.
+
+## 9. After this note
+
+The note is the design as sent on 2026-10-06, before the module. The module differs in five
+places. The receipt, `docs/research/2026-10-06-seat-LATTICE-receipt.md`, has each statement as
+compiled.
+
+- `Slice.sweepLog` became `Slice.sweepAsked`: the list of the questions alone. The pair's first
+  half had no consumer.
+- The coordinator added two statements: `Minimal.needs` and `Minimal.keeps_above`. A minimal
+  slice keeps each site above a kept site, where the instance's fold has the no-op.
+- The coordinator offered an optional step, and it closed: the descent over a tree of sites
+  (`Slice.sweepFree`, `SliceView.descendTree`, three statements).
+- `SliceView.lattice_minimal` states the claim's four parts as one statement.
+- The scratch files of section 6 are filed as three probes, beside this note. The toy and the
+  counts of section 4.4 are in `Test/Program/SliceLattice.lean`.
+
+| Probe | What it holds |
+| --- | --- |
+| `docs/research/2026-10-06-seat-LATTICE-probe-candidates.lean.txt` | section 4.1's two refused candidates, against the toy |
+| `docs/research/2026-10-06-seat-LATTICE-probe-addresses.lean.txt` | the mask over addresses, at `CTy` and at `ErrTy` |
+| `docs/research/2026-10-06-seat-LATTICE-probe-speed.lean.txt` | the counts of a divide-and-conquer descent, and a neighbour's check |

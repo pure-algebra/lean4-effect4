@@ -1,0 +1,93 @@
+import Test.Program.SliceLattice
+
+/-!
+# Seat LATTICE, the two candidates not taken, against the toy (2026-10-06)
+
+A scratch probe: nothing here is in the tree. Run it as `lake env lean <this file, with the
+suffix .lean>` at the head of branch `seat/lattice`.
+
+Only the interfaces of the two refused candidates and what an instance must supply. No theory is
+proved for them. The design note's section 4.1 reads this file.
+-/
+
+set_option autoImplicit false
+
+namespace Candidates
+open Effect4 Test.Program.SliceLattice
+
+universe u
+
+/-! ## Candidate I: an abstract carrier with a decidable order and a list of all its elements -/
+
+/-- A finite order as data. Six proof fields before any monotonicity. -/
+structure FiniteOrder (S : Type u) where
+  le : S → S → Prop
+  dec : DecidableRel le
+  refl : ∀ a, le a a
+  trans : ∀ {a b c}, le a b → le b c → le a c
+  antisymm : ∀ {a b}, le a b → le b a → a = b
+  all : List S
+  complete : ∀ s, s ∈ all
+  /-- needed by a cheap descent: the elements one step below, and that they cover -/
+  below : S → List S
+  below_lt : ∀ {a b}, b ∈ below a → le b a ∧ ¬ le a b
+  below_covers : ∀ {a j}, le j a → ¬ le a j → ∃ b ∈ below a, le j b
+
+/-- The carrier must be a type with finitely many elements, so it is tied to one program: the
+listed sub-lists of its sites. -/
+def toyCarrier (full : Slice Site) : Type := {s : Slice Site // s ∈ full.below}
+
+-- The list and its wholeness are free on that subtype.
+example (full : Slice Site) : List (toyCarrier full) := full.below.attach
+example (full : Slice Site) (s : toyCarrier full) : s ∈ full.below.attach :=
+  List.mem_attach _ s
+
+-- Antisymmetry is not: with a repeated site, three listed sub-lists keep the same site.
+example : ((Slice.mk [1, 1]).below.filter fun s =>
+    decide (s ≤ ⟨[1]⟩ ∧ (⟨[1]⟩ : Slice Nat) ≤ s)).length = 3 := by decide
+
+/-! ## Candidate III-b: flags by position over a fixed list of sites -/
+
+/-- The sites that the flags keep. Flags beyond the sites are ignored, and sites beyond the
+flags are not kept. -/
+def keptOf {α : Type u} : List α → List Bool → List α
+  | x :: xs, b :: bs => if b then x :: keptOf xs bs else keptOf xs bs
+  | _, _ => []
+
+/-- The order by position. Lengths must agree, or the order is not antisymmetric: `[true]` and
+`[true, false]` keep the same sites. -/
+def FlagsLe : List Bool → List Bool → Prop
+  | a :: as, b :: bs => (a = true → b = true) ∧ FlagsLe as bs
+  | a :: as, [] => a = false ∧ FlagsLe as []
+  | [], _ => True
+
+/-- The adapter that the module would owe each instance: the order of the flags gives inclusion
+of the kept sites. Its cases on the two lengths are the candidate's plumbing. -/
+theorem keptOf_mono {α : Type u} : ∀ (sites : List α) (a b : List Bool), FlagsLe a b →
+    keptOf sites a ⊆ keptOf sites b
+  | [], _, _, _ => by
+    intro x hx
+    cases ‹List Bool› <;> exact absurd hx List.not_mem_nil
+  | _ :: _, [], _, _ => fun x hx => absurd hx List.not_mem_nil
+  | x :: xs, true :: as, [], h => nomatch h.1
+  | x :: xs, false :: as, [], h => by
+    have ih := keptOf_mono xs as [] h.2
+    intro y hy
+    have hy' : y ∈ keptOf xs as := hy
+    have := ih hy'
+    cases xs <;> exact absurd this List.not_mem_nil
+  | x :: xs, a :: as, b :: bs, h => by
+    have ih := keptOf_mono xs as bs h.2
+    cases a <;> cases b
+    · exact ih
+    · exact fun y hy => List.mem_cons_of_mem _ (ih hy)
+    · exact nomatch h.1 rfl
+    · exact List.cons_subset_cons x ih
+
+/-- The toy at candidate III-b: the same one fact (`synth_mono`), after the adapter. What
+changes is the carrier in every statement: a slice is read through `keptOf sites`. -/
+example (P : Prog) (a b : List Bool) (h : FlagsLe a b) :
+    synth (keptOf P.full.kept a) P.env [] P.term ⊆ synth (keptOf P.full.kept b) P.env [] P.term :=
+  synth_mono (keptOf_mono P.full.kept a b h) P.env P.term []
+
+end Candidates
