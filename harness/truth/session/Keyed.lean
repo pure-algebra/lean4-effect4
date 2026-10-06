@@ -2,6 +2,7 @@ import Effect4.Api.HostSession
 import Effect4.Program.Profile
 import Effect4.Program.Stream
 import Test.Dogfood.Scenario.Workers
+import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
@@ -125,6 +126,34 @@ mutual
   def valsJson : List Val → List J
     | [] => [] | v :: vs => valJson v :: valsJson vs
 end
+
+mutual
+  /-- A value with each `Deferred` handle written without its identity: the image
+  `{"handle": "deferred"}`. Every other value is written as `valJson` writes it. The host's
+  cells reader writes a `Deferred` the same way, in its writer of the same name (`cellJson`,
+  `keyed-recorder.ts`): a host has no number for one. A wire chooses this writer for an entry
+  that holds a module's private cell, and no other entry uses it. So the lane compares such a
+  cell up to its handles, and it does not compare which handle stands where. -/
+  def cellJson : Val → J
+    | .handle 3 _ => Json.mkObj [("handle", .str "deferred")]
+    | .some v => Json.mkObj [("some", cellJson v)]
+    | .list vs => .arr (cellsJson vs).toArray
+    | .ctor n vs => Json.mkObj [("ctor", toJson n), ("args", .arr (cellsJson vs).toArray)]
+    | v => valJson v
+  def cellsJson : List Val → List J
+    | [] => [] | v :: vs => cellJson v :: cellsJson vs
+end
+
+-- Controls of the two writers. A `Deferred` handle has an identity under `valJson` and none
+-- under `cellJson`, inside a record's frame too. Any other value has one image under both.
+#guard valJson (.handle 3 7) == Json.mkObj [("handle", toJson (7 : Nat))] &&
+  cellJson (.handle 3 7) == Json.mkObj [("handle", .str "deferred")] &&
+  cellJson (.handle 3 7) == cellJson (.handle 3 8) && valJson (.handle 3 7) != valJson (.handle 3 8)
+#guard cellJson (.ctor 0 [.list [.str "id"], .list [.handle 3 2]]) ==
+  Json.mkObj [("ctor", toJson (0 : Nat)), ("args", .arr #[.arr #[.str "id"],
+    .arr #[Json.mkObj [("handle", .str "deferred")]]])]
+#guard [Val.unit, .nat 3, .bool true, .str "a", .none, .some (.nat 1), .list [.nat 1, .str "b"],
+    .ctor 1 [.nat 2], .handle 0 4].all fun v => cellJson v == valJson v
 
 def reasonJson : Reason Err Defect FiberId Ann → J
   | .fail (.tagged tag msg) _ => Json.mkObj [("fail", toJson [tag, msg])]
@@ -714,6 +743,10 @@ def emitRun (run : HostRun) : Except String J := do
   let built := run.opened.built
   let scripted := Scenario.play run.opened run.moves
   performable run.opened scripted.journal
+  -- A host has no budget. `performable` reads the journal's verdicts, and a reply application
+  -- has the verdict `applied` whatever fuel its step had left. The tape's reading shows the cut.
+  unless Scenario.funded scripted do
+    throw "a row's step is cut by the command budget, and a host has no budget"
   if let some why := run.out then throw why
   let some module := Api.printModule "main" built.program built.table
     | throw "the module printer refuses the program"
@@ -833,6 +866,37 @@ def workers : Wire :=
     same := fun a b => Scenario.Workers.observe a == Scenario.Workers.observe b
     asks := [.cells, .sleeps, .dispatchers] }
 
+/-- The queue-workers scenario (`Test/Dogfood/Scenario/QueueWorkers.lean`). Its observation has
+eleven fields, and the work left is five entries, as in the workers scenario. The entry `queue`
+is the queue's cell, which the battery's field `queue` reads up to its handles. This wire
+chooses the writer `cellJson` for that one entry: a `Deferred` handle is written without its
+identity, as the host's cells reader writes it. Every other entry, and every other scenario,
+keeps `valJson`.
+The entry is `null` while the root has not made the cell. -/
+def queueWorkers : Wire :=
+  { scenario := Scenario.QueueWorkers.scenario
+    observed := fun run =>
+      let o := Scenario.QueueWorkers.observe run
+      [ ("assignment", toJson (o.assignment.map valJson))
+      , ("queue", ((Scenario.cell run 0).map cellJson).getD .null)
+      , ("fed", toJson (o.fed.map valJson))
+      , ("receipts", toJson (o.receipts.map seenJson))
+      , ("applications", toJson (o.applications.map seenJson))
+      , ("retired", toJson (o.retired.map fun entry =>
+          Json.mkObj [("call", seenJson entry.1), ("kept", toJson entry.2)]))
+      , ("opened", toJson (o.opened.map valJson))
+      , ("cleanups", toJson (o.cleanups.map valJson))
+      , ("finished", (o.finished.map valJson).getD .null)
+      , ("rootExit", exitOrNull o.rootExit)
+      , ("workLeft.runnable", toJson (o.workLeft.runnable.map (·.value)))
+      , ("workLeft.queued", toJson (o.workLeft.queued.map (·.value)))
+      , ("workLeft.awaiting", toJson (o.workLeft.awaiting.map awaitJson))
+      , ("workLeft.pending", toJson (o.workLeft.pending.map keyJson))
+      , ("workLeft.timers", toJson (o.workLeft.timers.map fun timer =>
+          [toJson timer.1.value, Json.str timer.2.toDecimal])) ]
+    same := fun a b => Scenario.QueueWorkers.observe a == Scenario.QueueWorkers.observe b
+    asks := [.cells, .sleeps, .dispatchers] }
+
 /-- A held call's fate, as one JSON object with one key. -/
 def fateJson : Scenario.Timeout.Fate → J
   | .live => Json.mkObj [("live", true)]
@@ -890,7 +954,7 @@ def atomic : Wire :=
     asks := [.cells, .fibers] }
 
 /-- The scenarios that the lane performs, in the lane's order. -/
-def wires : List Wire := [routing, workers, timeout, atomic]
+def wires : List Wire := [routing, workers, timeout, atomic, queueWorkers]
 
 /-- The kept-out names that no run carries: a reason that outlived its run. -/
 def stale (kept : List (String × String)) (all : List HostRun) : List String :=
@@ -899,7 +963,7 @@ def stale (kept : List (String × String)) (all : List HostRun) : List String :=
 -- Control of the refusal below: a kept-out name with no run is stale.
 #guard stale [("routing/gone", "a reason")] [] == ["routing/gone"] && stale [] [] == []
 
-/-- Every host run of every scenario: the named runs of the four records. It refuses a record
+/-- Every host run of every scenario: the named runs of the five records. It refuses a record
 that lists no run, which is a battery whose program does not build. It refuses a kept-out name
 that no record lists, so a reason cannot outlive its run. -/
 def runs : Except String (List HostRun) := do

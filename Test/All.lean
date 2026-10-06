@@ -264,6 +264,7 @@ import Test.Dogfood.P4RateLimiter
 import Test.Dogfood.P5LedgerService
 import Test.Dogfood.Scenario
 import Test.Dogfood.Scenario.Workers
+import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout

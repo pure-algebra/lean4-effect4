@@ -129,6 +129,15 @@ const outcome = (exit: Json | undefined): Json => {
   if (Array.isArray(failed) && failed.length === 2 && failed[0] === "Downstream" && failed[1] === "unavailable") return { failedBehind: true }
   return Object.hasOwn(reason, "interrupt") ? { interrupted: reason.interrupt! } : { other: true }
 }
+/** A held call as the batteries' `Seen`: the row's spelling, the request and the key. */
+const seenBy = (spelling: (call: HeldCall) => string) => (call: HeldCall): Json =>
+  ({ row: spelling(call), request: call.request, fiber: call.fiber, token: call.token })
+/** The job of an applied reply: the success value of the completion that the recorder stored.
+ * A reply that is no success fed no job. */
+const fedJobs = (calls: HeldCall[]): Json[] => calls.flatMap(call => {
+  const reply = call.reply
+  return reply !== null && typeof reply === "object" && !Array.isArray(reply) && Object.hasOwn(reply, "success") ? [reply.success!] : []
+})
 const scenarios: Record<string, Scenario> = {
   // Test/Dogfood/Scenario/Routing.lean, `Observation`. The refused rows are the session's: the
   // ledger predicts each one.
@@ -163,6 +172,39 @@ const scenarios: Record<string, Scenario> = {
       // Where the run's own wait followed the last act, that wait gives the zero: the value then
       // shows that the host came to rest, and no more. After a held call or a reply receipt no
       // wait follows, and the zero shows that the act armed no dispatcher.
+      dispatchers: { fields: ["workLeft.runnable", "workLeft.queued"], read: ({ armed }) => {
+        const none: Json = armed === 0 ? [] : { armed: armed! }
+        return { "workLeft.runnable": none, "workLeft.queued": none }
+      }, limit: ({ waited }) => waited ? "zero by the run's own wait" : undefined }
+    }
+  },
+  // Test/Dogfood/Scenario/QueueWorkers.lean, `Observation`. The cells are the queue's cell,
+  // `opened`, `released`, `assigned` and `count`, in allocation order. The fed jobs are the
+  // host's own: the stored completion of each applied reply on `Jobs.take`. The entry `queue` is
+  // the queue's whole cell as the cells reader gives it. Its waiting requests hold `Deferred`
+  // handles, which the reader's writer `cellJson` writes with no identity, as Lean's wire does
+  // for this entry. So the comparison is up to the handles: it does not see which handle stands
+  // where.
+  "queue-workers": {
+    host: ({ exit, ledger }, spelling) => {
+      const seen = seenBy(spelling)
+      return {
+        fed: fedJobs(ledger.applications.filter(call => spelling(call) === "Jobs.take")),
+        receipts: ledger.receipts.map(seen),
+        applications: ledger.applications.map(seen),
+        retired: ledger.retired.map(({ call, kept }) => ({ call: seen(call), kept })),
+        rootExit: exit,
+        "workLeft.awaiting": ledger.live.map(({ fiber, token, row, request }) => ({ fiber, token, row, request })),
+        "workLeft.pending": ledger.stored.map(key)
+      }
+    },
+    through: {
+      cells: { fields: ["assignment", "queue", "opened", "cleanups", "finished"], read: ({ cells }) => ({
+        assignment: entries(cells![3]), queue: cells![0] ?? null, opened: entries(cells![1]),
+        cleanups: entries(cells![2]), finished: cells![4] ?? null }) },
+      sleeps: { fields: ["workLeft.timers"], read: ({ sleeps }) => ({ "workLeft.timers": sleeps! }) },
+      // As in the workers scenario: the count names no fiber, and Lean grants the reader only
+      // where both lists are empty.
       dispatchers: { fields: ["workLeft.runnable", "workLeft.queued"], read: ({ armed }) => {
         const none: Json = armed === 0 ? [] : { armed: armed! }
         return { "workLeft.runnable": none, "workLeft.queued": none }

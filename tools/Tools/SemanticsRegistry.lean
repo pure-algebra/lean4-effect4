@@ -103,7 +103,9 @@ def registry : Registry where
     `Test.Dogfood.Scenario, `Test.Dogfood.Scenario.Workers, `Test.Dogfood.Scenario.Routing,
     `Test.Dogfood.Scenario.Atomic, `Test.Dogfood.Scenario.Timeout,
     -- the lowered run's tape, for its placed consumer of the journal's position law
-    `Test.Dogfood.Scenario.Tape]
+    `Test.Dogfood.Scenario.Tape,
+    -- the crew over the public Queue: its claim and its four planned goals (seat WORKQ)
+    `Test.Dogfood.Scenario.QueueWorkers]
   acceptance := [`Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers,
     `Test.Dogfood.P3WorkerQueue, `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
   concepts := [
@@ -509,7 +511,7 @@ def registry : Registry where
       title := "Each transition of Semaphore's abstract model keeps the first profile, with no premise on its request (the model's half of semaphore-accounting-preserved; nothing about a program, and no progress of a waiter; decisions rows 259 to 261 and 265)"
       pointer := .witness `Effect4.Semaphore.Model.profile_closed },
     { id := "waiting-wrapper-typed", concept := "store-typing", role := .compatibility
-      title := "The waiting wrapper at a caller's restore answers its result type at every typed scope, when the module's part is typed: its attempt answers the join of what its two exits answer, and its withdrawal answers a type (the shared typing of a module that waits, decisions row 275, point 3; its users are Semaphore's take and its protected form; a result type in normal form; no run)"
+      title := "The waiting wrapper at a caller's restore answers its result type at every typed scope, when the module's part is typed: its attempt answers the join of what its two exits answer, and its withdrawal answers a type; the wrapper with no loop answers its hint's type from the same part, with no premise on that type (waitAnswer_answers, HintTy.canonical) (the shared typing of a module that waits, decisions row 275, point 3; its users are Semaphore's take and its protected form, and the Queue's take and offer; a result type in normal form; no run)"
       pointer := .witness `Effect4.Modules.waitRetryAt_answers },
     { id := "protected-form-typed", concept := "store-typing", role := .compatibility
       title := "The protected form keeps its body's effect type: one mask over an acquisition that answers a type, a body of any effect type at the restore site, and a release that answers a type under the exit's binder; the form has the body's answer, its failure type in normal form and its requirement (decisions row 276, point 1; its users are Semaphore's two protected forms; typing only: no run, no law of the mask and no release at an exit)"

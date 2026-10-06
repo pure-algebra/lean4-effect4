@@ -15,6 +15,11 @@ Placement. Concept `initial-algebras-folds`, requirement R4: a step of the claim
 client that writes a term at a declared type: a typed empty cell first. It establishes no typing
 and no behaviour: those are `types_ascribe` and `reads_ascribe`
 (`src/Effect4/Laws/Modules/Ascribe.lean`).
+
+Why the form's four laws stand in two files. The role register
+(`tools/Tools/ArchitectureRoles.lean`) puts this folder below `src/Effect4/Laws/Modules`, where
+the judgments `Types` and `Reads` live. So the scope lemma stands here, among the scope laws of
+the authoring surface, and the three laws over those judgments stand above it.
 -/
 
 set_option autoImplicit false

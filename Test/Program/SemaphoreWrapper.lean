@@ -20,7 +20,10 @@ battery holds the controls of that restatement.
    eight scenarios), the printed texts of `Test/Program/QueueFaces.lean`, and the engine's
    fixture that `Test/Program/QueueEngine.lean` binds.
 3. **The red control**: a text that differs in one place is another program.
-4. **The pinned outputs**: the axioms of the new forms' laws.
+4. **The pinned outputs**: the axioms of the new forms' laws. Two more pins hold the rule of the
+   form with no loop (`waitAnswer_answers`) and the fact of a hint's type that it reads
+   (`HintTy.canonical`). One proved control stands with that fact: a type that is not its own
+   normal form has no hint's rows.
 
 The finite controls of `protectedBy` are Semaphore's: the protected permit of
 `Test/Program/SemaphoreScenarios.lean`, and its two red controls in
@@ -181,6 +184,24 @@ info: 'Effect4.Modules.waitRetry_answers' depends on axioms: [propext, Quot.soun
 -/
 #guard_msgs in
 #print axioms Effect4.Modules.waitRetry_answers
+
+-- The rule of the form with no loop, and the fact of a hint's type that it reads (seat REPAIR).
+/--
+info: 'Effect4.Modules.HintTy.canonical' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Modules.HintTy.canonical
+
+/--
+info: 'Effect4.Modules.waitAnswer_answers' depends on axioms: [propext, Quot.sound]
+-/
+#guard_msgs in
+#print axioms Effect4.Modules.waitAnswer_answers
+
+-- The control of `HintTy.canonical`: a type that is not its own normal form has no hint's rows,
+-- at any row table. The union of a Boolean with itself is such a type.
+example (table : RowTable) : ¬ HintTy table (.union .bool .bool) := fun hint =>
+  absurd hint.canonical (by decide +kernel)
 
 /--
 info: 'Effect4.Modules.protectedBy_has' depends on axioms: [propext, Quot.sound]

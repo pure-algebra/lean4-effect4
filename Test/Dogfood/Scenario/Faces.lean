@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Workers
+import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
@@ -8,15 +9,17 @@ import Test.Dogfood.Scenario.Timeout
 
 A scenario's host run starts from its printed module. This battery pins two answers for each
 scenario's program: the module printer prints it, and the module reader gives the built program
-back. The four programs are `Workers.crew`, `Routing.request`, `Atomic.shop` and
-`Timeout.fetch`.
+back. The five programs are `Workers.crew`, `QueueWorkers.crew`, `Routing.request`,
+`Atomic.shop` and `Timeout.fetch`.
 
 Three of them needed the state plan's T5 for these answers. The crew's logs and the shop's
 window are rows whose binder terms no name images: they print since part A. The fetch's retry
-loop states its cursor's type: it reads back since part B's second step (DI-91).
+loop states its cursor's type: it reads back since part B's second step (DI-91). The crew over
+the queue holds the Queue's five public operations, whose printed text and reading
+`Test/Program/QueueFaces.lean` pins one by one.
 
 Placement. Finite controls of `read_print` and `read_exact` (R8's top nodes,
-`src/Effect4/Laws/Codegen/ReadPrint.lean` and `src/Effect4/Laws/Codegen/Read.lean`) on five
+`src/Effect4/Laws/Codegen/ReadPrint.lean` and `src/Effect4/Laws/Codegen/Read.lean`) on seven
 programs. No guard states target typing, and none states a host run. The host clause of each
 scenario stands on the keyed lane, which performs the scenario's named runs on its printed
 module (`harness/truth/session/Keyed.lean`; `Test/Dogfood/README.md`, the section "The host
@@ -48,6 +51,9 @@ def readsAs (printed other : Module NativeOp) : Bool :=
 -- The crew, at two totals of jobs.
 #guard shows (Workers.crew 2) = some ("printed", true)
 #guard shows (Workers.crew 3) = some ("printed", true)
+-- The crew over the public Queue, at two totals of jobs.
+#guard shows (QueueWorkers.crew 3) = some ("printed", true)
+#guard shows (QueueWorkers.crew 2) = some ("printed", true)
 -- The handler's request.
 #guard shows (Routing.request "secret" 2 "2") = some ("printed", true)
 -- The shop, without a fault.
@@ -58,5 +64,10 @@ def readsAs (printed other : Module NativeOp) : Bool :=
 -- Red control of the comparison: a crew's module reads as that crew's program, and as no
 -- other total's.
 #guard readsAs (Workers.crew 2) (Workers.crew 2) && !readsAs (Workers.crew 2) (Workers.crew 3)
+-- The same control on the crew over the queue. Its module reads as that crew's program. It reads
+-- as no other total's, and not as the crew whose take leaves its job in the buffer.
+#guard readsAs (QueueWorkers.crew 3) (QueueWorkers.crew 3) &&
+  !readsAs (QueueWorkers.crew 3) (QueueWorkers.crew 2) &&
+  !readsAs (QueueWorkers.crew 3) (QueueWorkers.crewWith .keeps 3)
 
 end Test.Dogfood.Scenario.Faces
