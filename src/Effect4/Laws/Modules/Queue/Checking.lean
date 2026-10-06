@@ -247,10 +247,10 @@ theorem capturedTy_minted {name : String} {i : Nat} {T : Ty}
     (bound : env.names.resolve name = some i) (held : types[i]? = some T)
     (notAcc : env.mint "acc" ≠ name) (notItem : env.mint "item" ≠ name) :
     CapturedTy sig (minted name) env path types T := by
-  have under : (env.push [env.mint "acc", env.mint "item"]).names.resolve name = some i :=
+  have pushed : (env.push [env.mint "acc", env.mint "item"]).names.resolve name = some i :=
     resolve_under_pair bound notAcc notItem
   refine ⟨types_minted bound held,
-    fun acc item const => ⟨.var i, minted_tree under path, ?_⟩⟩
+    fun acc item const => ⟨.var i, minted_tree pushed path, ?_⟩⟩
   obtain ⟨inside, -⟩ := List.getElem?_eq_some_iff.mp held
   show (types ++ [acc, item])[i]? = some T
   rw [List.getElem?_append_left inside]

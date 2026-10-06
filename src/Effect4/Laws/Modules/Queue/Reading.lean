@@ -352,10 +352,10 @@ theorem captured_minted {name : String} {env : Env} {path : List Nat} {vals : Li
     {i : Nat} {v : Val} (bound : env.names.resolve name = some i) (held : vals[i]? = some v)
     (notAcc : env.mint "acc" ≠ name) (notItem : env.mint "item" ≠ name) :
     Captured (minted name) env path vals v := by
-  have under : (env.push [env.mint "acc", env.mint "item"]).names.resolve name = some i :=
+  have pushed : (env.push [env.mint "acc", env.mint "item"]).names.resolve name = some i :=
     resolve_under_pair bound notAcc notItem
   refine ⟨⟨.var i, minted_tree bound path, held⟩,
-    fun acc item => ⟨.var i, minted_tree under path, ?_⟩⟩
+    fun acc item => ⟨.var i, minted_tree pushed path, ?_⟩⟩
   obtain ⟨inside, -⟩ := List.getElem?_eq_some_iff.mp held
   show (vals ++ [acc, item])[i]? = some v
   rw [List.getElem?_append_left inside]
