@@ -19,8 +19,8 @@ predicate and its closure went into the tree, proved (`Test/Program/QueueProfile
 mask. It is the cell's encoding, and each step as one term that agrees with the abstract
 model's step. The probe `QueueSteps.lean` beside this note already runs those steps. This note
 turns the probe into a slice. It says where the module lives and what it exports. It says
-what relates the module to the model, and what the slice proves and tests. Five choices are
-open, and each has a recommendation. Codex's review is asked before a seat starts.
+what relates the module to the model, and what the slice proves and tests. Five choices
+were open, each with a recommendation. The owner accepted all five (decisions row 255).
 
 ## Question
 
@@ -268,7 +268,10 @@ The second review changed the comparison and the goals' domain. It changed no st
 The coordinator added three things beyond the review. They are the poll and size steps, the
 withdrawals' controls, and the comparison on every state of the universe.
 
-## Proposals (not rulings)
+## Proposals
+
+**The owner accepted proposals 1 to 5 on 2026-10-05,** in session. Decisions row 255 records
+them. Proposal 6 is the slice's acceptance, and the brief carries it.
 
 1. **The module's home is option A,** with its row in `docs/ARCHITECTURE.md` and its role in
    the architecture map's register.

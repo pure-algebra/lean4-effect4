@@ -185,7 +185,10 @@ More rulings of the same day (rows 235 to 248):
 - a second seat lands Codex's follow-ups of the OCaml route (row 252);
 - the migration follows the features: a cut-over runs when a feature needs it, and a release
   case that waits is deferred with its reason (row 253);
-- dogfooding is rigorous, runs through the lowering, and is placed in the proof graph (row 254).
+- dogfooding is rigorous, runs through the lowering, and is placed in the proof graph (row 254);
+- the Queue's cell and steps are a library slice: a composed module lives in a new layer of
+  the runtime root, above `Program`, and its laws in the law graph. The abstract model moves
+  into the law graph, each step has one planned goal, and no binding form is added (row 255).
 
 Landed later on 2026-10-05:
 
@@ -249,12 +252,14 @@ Open at this landing:
   2. **The cell's encoding and each step as one term,** which agrees with the contract's step.
      The fold and part 1 are in the tree, so it can start. It needs neither T5 nor the mask.
      Its design is [written](research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md)
-     and twice revised after Codex's reviews, with five open choices. Its step goals quantify
+     and twice revised after Codex's reviews. Its five choices are ruled (row 255). Its step
+     goals quantify
      over a closed predicate, the first profile's states: `FirstProfile`, with its closure
      proved (`first_profile_closed`, `Test/Program/QueueProfile.lean`). No seat has it yet:
      two seats run.
-     [Its brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md) is written ahead,
-     and its dispatch waits for the owner's word on the design's five proposals;
+     [Its brief](research/2026-10-05-claude-lead/briefs/seat-qsteps-brief.md) is written ahead.
+     The owner ruled the design's five proposals as recommended (row 255), so its dispatch
+     waits for a free seat only;
   3. **The public path:** the operations that wait, the posted signal, the module's rows and
      its law, and the printed form. It follows T5 and the mask (row 251).
 

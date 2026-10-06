@@ -2,7 +2,8 @@
 
 Status: a brief (history, not authority), written ahead of its dispatch. Base: the head of
 `refactor/phase1-phase3` that the dispatch message names. The coordinator dispatches it under
-decisions row 237, after the owner's word on the design's five proposals.
+decisions rows 237 and 255. Row 255 is the owner's word on the design's five proposals: all
+five as recommended.
 
 ## Why this slice comes now
 
@@ -38,8 +39,8 @@ branch. You work alone and hand back a receipt.
 
 1. `AGENTS.md`, in full.
 2. `docs/research/2026-10-05-claude-lead/queue-readiness/queue-steps-design.md`, in full. Its
-   findings F1 to F6 are your specification. The dispatch message gives the owner's word on
-   its proposals 1 to 5.
+   findings F1 to F6 are your specification. Decisions row 255 rules its proposals 1 to 5 as
+   recommended.
 3. The probe beside it: `QueueSteps.lean` and `QueueSteps.out`. Read the section "The steps
    against the model" with care: its comparison is the executable form of your goals.
 4. `Test/contracts/queue.contract.md`, and the four files it names under `Test/Program/`:
