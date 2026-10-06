@@ -500,7 +500,10 @@ Open at this landing:
   - the registry's claim for the law of `let x = e in x` waits on that ruling;
   - seven callback names of the builtin table have no rule in the evaluator, and a call is a
     refusal;
-  - no lane runs the runner's tests or the compiler checkpoint without a person;
+  - the compiler checkpoint runs in the CI job `check-ocaml`, at a push, a pull request or a
+    manual run (`.github/workflows/lean_action_ci.yml`). That is a reading of the
+    configuration, and no remote run is checked. No `make` target runs the checkpoint, so the
+    local sweep does not. The runner's own script tests run by hand;
   - the emitted OCaml read back by the compiler's own parser waits for a design of its own;
 - the proposed decisions rows of four seats' receipts (T3b, M0, LOWER and DOGFOOD), for the
   owner;

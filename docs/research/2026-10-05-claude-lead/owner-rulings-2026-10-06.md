@@ -4,6 +4,9 @@ Status: research note (history, not authority). Base: `4834760e`. The coordinato
 the owner's request of 2026-10-06. Every ruling here is a recommendation. A ruling is made
 when the owner says so and the coordinator writes it into `docs/core/decisions.md`.
 
+Corrected the same day, after Codex's relay: F8 and A5 said that no lane runs the compiler
+checkpoint. A job of the CI workflow runs it, and the local sweep does not.
+
 ## Question
 
 Which questions are open for the owner on 2026-10-06? What does the coordinator recommend for
@@ -31,7 +34,7 @@ source that was read, with no run.
 | A2 | Semaphore: the first operations | As the card lists them; the raw `take` and `release` stay | reading: the pinned `Pool.ts` uses them; tested: `releaseAll` breaks the total |
 | A3 | Semaphore: a release of more than is taken | The law takes a premise; the step releases at most what is taken | tested on three builds; reading of the atom `sub` |
 | A4 | The OCaml target evaluator and the trust ceiling | Bring it under the ceiling in one slice of its own, later | tested: four pinned axiom lines |
-| A5 | A lane for the compiler checkpoint | One marker rule in the sweep, for the compiler profile alone | reading: the checkpoint was red with no lane to show it |
+| A5 | The compiler checkpoint in the local sweep | Join the existing check to the local sweep, by one marker rule | reading: a CI job runs it at a push, and no `make` target runs it |
 | A6 | The boundary of a compiler client | Accept the three owners; build it inside `tools/target` with its next caller | reading: Codex's review; two callers exist |
 | A7 | Semaphore's cell and steps, now, as a third seat | Yes, after A1 to A3 | reading: the Queue's steps needed no mask; the free disk is measured |
 | A8 | One changed file of a filed packet | The owner runs one command | tested: `git diff` |
@@ -53,6 +56,7 @@ One word answers the table: "yes to all", or the numbers to change.
 | Decisions rows 219 to 258; `docs/STATE.md`; the waiting design (`docs/research/2026-10-05-claude-lead/waiting-design.md`) | reading |
 | Codex's reviews under `docs/research/2026-10-05-codex-foundation-packet/implementation-audit/`: `tsgo-research/`, `module-factory-review/`, `heartbeat-0451-fixtures-semaphore/` and `heartbeat-0553-semaphore-qtypes/` | reading; their probes were not run again |
 | `Test/Audit/LetReturn.lean`, whose `#guard_msgs` pins four axiom lines | tested at each default build |
+| `.github/workflows/lean_action_ci.yml`, the job `check-ocaml`; the `Makefile`'s rules for `scripts/check-conform.py` | reading: the configuration only, and no remote run |
 | The merge of seat QTYPES's last part, `4834760e`: the default build, the gates, `check-semantics`, `check-docs`, `check-conservativity` | tested |
 
 ## Findings
@@ -134,11 +138,18 @@ strings. The byte size, the bytes, `==`, `++` and the integer rules do not reach
 (`docs/research/2026-10-05-seat-LOWER-receipt.md`). So the law of `let x = e in x` is
 kernel-checked and is not proved in the dictionary's sense.
 
-### F8. The compiler checkpoint was red with no lane to show it
+### F8. The compiler checkpoint runs in CI and in no local sweep
 
-The checkpoint failed after a merge of generated code, and `21b7da47` repaired it on
-2026-10-05 (reading: `docs/STATE.md`). No `make` target runs the compiler profile, so no
-sweep showed the failure.
+- The CI workflow's job `check-ocaml` runs `python3 scripts/check-conform.py compiler` after
+  the build. It runs at a push, at a pull request and at a manual run (reading of
+  `.github/workflows/lean_action_ci.yml`). No remote run was checked.
+- The `Makefile` has a marker rule for the profile `cases` and one for `native`. It has none
+  for `compiler` (reading). So `make check-full` does not run the checkpoint.
+- The checkpoint was red on this checkout until `21b7da47` repaired it on 2026-10-05 (reading:
+  `docs/STATE.md`). The branch is ahead of its remote (tested: `git status`), so the CI job has
+  not run on its latest commits.
+- Seat LOWER's receipt says that nothing runs the profile but a person. That is wrong about
+  CI. This note's first version repeated it, and Codex's relay of 2026-10-06 corrected it.
 
 ### F9. Three small facts of the scenarios' findings
 
@@ -252,14 +263,22 @@ needs one new control, for the order of two strings.
 **Why later.** The law serves R8's part on the OCaml route. Row 204 keeps the lowering of that
 route parked, and no module slice waits for it.
 
-#### A5. A lane for the compiler checkpoint
+#### A5. The compiler checkpoint joins the local sweep
 
-**The recommendation.** One `make` target runs the conformance runner's `compiler` profile. It
-is a marker rule in the sweep tier, skipped while its inputs are unchanged. The runner's own
-script tests stay run by hand.
+**The question.** CI runs the compiler profile, and the local sweep does not (F8). Should the
+local sweep run it too?
 
-**Why.** The checkpoint was red with no lane to show it (F8). The owner retired the lanes
-that test scripts, and this lane tests the emitted OCaml, not a script.
+**The recommendation.** Yes, by one marker rule beside the rules of `cases` and `native`.
+`check-full` names it, and `make` skips it while its inputs are unchanged. It is the existing
+command. It adds no CI job, no profile and no new check. The same change corrects the label of
+the workflow's step: it says one mutation, and the profile runs three (seat LOWER's receipt).
+
+**Why.** Nothing of this stretch is pushed, so the CI job does not run on the work as it
+lands. A seat's merge runs the local gates alone. The checkpoint was red on this checkout
+until its repair (F8).
+
+**A separate decision.** The runner's own script tests stay run by hand. The owner retired the
+lanes that test scripts.
 
 **What it does not settle.** The cost of one run is not measured here.
 
@@ -351,6 +370,7 @@ the same modules again.
 - F2 is a reading of the machine's declarations. It is no theorem about a wake.
 - The recommendation A1 states no fairness, no order of service and no agreement with the pin.
 - The byte forms of A4 were not written, and no control reaches the order of two strings.
-- The cost of A5's lane and the speed of A6's client were not measured.
+- The cost of A5's rule and the speed of A6's client were not measured. No remote run of the
+  CI job was checked.
 - B9, B10 and B11 are not done.
 - No recommendation here is a ruling.
