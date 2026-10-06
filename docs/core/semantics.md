@@ -474,6 +474,19 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
   with one base and one stack have one flag. It is a local law of the frame machine. It
   states no law of a run, no completed exit and no bracket of a region.
   (`saved_mask_pop_discipline` (`src/Effect4/Laws/Machine/MaskDiscipline.lean`)).
+- **The saved mask's chain at every live fiber of a run (`saved-mask-chain-runs`)**: The
+  machine holds one table of start flags. Each live fiber holds the chain at its own flag of
+  the table (`MaskRuns`). Each command keeps the invariant under one condition: just before a
+  command clears a fiber, that fiber has exited, or its stack is empty, or its flag is its
+  base. The command loop discharges the condition, so every decision, tape and fuel keeps the
+  invariant. The claim's pointer states it at the compiled program's interpreter
+  (`compiled_mask_chain_runs` (`src/Effect4/Laws/Program/MaskRuns.lean`)). Its general form is
+  at the frame evaluator (`saved_mask_chain_runs`
+  (`src/Effect4/Laws/Machine/MaskRuns.lean`)). Each entry of the program interface that
+  returns a machine holds it with no premise (`src/Effect4/Laws/Api/MaskRuns.lean`). Along a
+  run, a live fiber's flag is a function of its stack (`MaskRuns.flag_eq`). It states no
+  bracket of a region: that a body's run returns to the entry's stack stays open. It states
+  nothing of an exited fiber, of cleanup, of delivery or of progress.
 - **Scope validity under nesting (`scope-validity-open`)**: General scope validity under dynamic parent-child nesting
   (D4 hand-back, row 156).
 - **Pool's return and close on the model (`pool-return-front`, `pool-return-once`,

@@ -140,7 +140,12 @@ def registry : Registry where
       defaultModules := [
         `Effect4.Laws.Machine.ScopeMachine,
         `Effect4.Laws.Machine.ScopeRestoration,
-        `Effect4.Laws.Machine.MaskDiscipline
+        `Effect4.Laws.Machine.MaskDiscipline,
+        -- the lift of the saved mask's chain to runs: the machine's invariant, its instance
+        -- at the compiled program's interpreter, and each entry that returns a machine
+        `Effect4.Laws.Machine.MaskRuns,
+        `Effect4.Laws.Program.MaskRuns,
+        `Effect4.Laws.Api.MaskRuns
       ] },
     { id := "reactive-scheduling"
       title := "Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants"
@@ -384,6 +389,9 @@ def registry : Registry where
     { id := "saved-mask-pop-discipline", concept := "scope-lifetime-finalization", role := .preservation
       title := "At one fixed base bit, the frame machine keeps the chain of restoring frames on a fiber's stack: FrameFiber.popFrom from an empty scratch stack, getCont, Machine.frameExitState and the entry of each region keep it, and two fibers with one base and one stack have one flag (a local law at every demand, skip flag and carried cause; no statement of a run, of a completed exit, of cleanup or of delivery)"
       pointer := .witness `Effect4.Machine.saved_mask_pop_discipline },
+    { id := "saved-mask-chain-runs", concept := "scope-lifetime-finalization", role := .preservation
+      title := "Each live fiber of a run of a compiled program holds the saved mask's chain at its start flag: the invariant MaskRuns, at a table of start flags, is kept by every decision tape and fuel at the compiled program's interpreter, from each machine that holds it; each command keeps it under the condition just before a clearing, which the command loop discharges, so each entry that returns a machine holds it with no premise (the lift of saved-mask-pop-discipline to runs; no typing, no admission and no premise on the table; no bracket of a region, no flag or stack of an exited fiber, no cleanup's multiplicity, no delivery, no budget, no liveness)"
+      pointer := .witness `Effect4.Program.compiled_mask_chain_runs },
     { id := "pool-return-front", concept := "scope-lifetime-finalization", role := .inversion
       title := "A return of a lease that holds its item puts the item at the front of the idle items, keeps every item, and leaves the lease holding nothing (a helper of pool-lease-return; no finalizer's run)"
       pointer := .witness `Effect4.Pool.Model.giveBack_front },
@@ -951,8 +959,7 @@ def registry : Registry where
         "the whole run open: exactly once in close order over closed scopes and structured regions, with a completed-cleanup receipt (DB-07, DI-65)",
         "state retained at a frontier, open scopes closed only by an explicit abandon (the owner's ruling of 2026-09-07)",
         "a scope a finished run leaves open is an observation, as in rc.112 (the model probe's D8, unruled per DB-07)",
-        "the run-level half of saved-mask-restoration (scope-lifetime-finalization): a region that changes no flag ends with its entry flag, for an arbitrary body, as an invariant of runs; a candidate is that the flag is a function of the saved stack, since a region that changes the flag pushes the frame that returns it; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the invariant; a finite probe holds the candidate at scheduling points (docs/research/2026-10-05-claude-lead/mask-probes/MaskStack.lean)",
-        "the lift of saved-mask-pop-discipline to runs (scope-lifetime-finalization, serving the run-level half above): each live fiber of a reached run holds the chain at its start flag; it needs FrameFiber.step and each command to keep the chain, with a condition on a command that clears a fiber: just before the clearing the fiber's stack is empty, or its flag is its base; the stack's emptiness after the clearing protects nothing, since Cmd.exitDone clears a stack through RunFiber.cleared and keeps the flag; the local law is saved_mask_pop_discipline; no goal states the lift",
+        "the bracket of a region (scope-lifetime-finalization; the run-level half of saved-mask-restoration): a region that changes no flag ends with its entry flag, for an arbitrary body; the invariant of runs is proved (saved-mask-chain-runs): along a run a live fiber's flag is a function of its stack (MaskRuns.flag_eq, the field sameFlag of saved_mask_chain_runs); the bracket's own fact stays open, that the body's run returns to the entry's stack; the boundary statements are saved_mask_restoration, and a client premise stays, nothing acquired or registered before the body begins (decisions rows 227, 244 to 246); no goal states the bracket",
         "waiting-request-obligation-preserved (proposed claim; reactive-scheduling, serving R10 to R12): a selected request's notification stays in store debt, queued commands, dispatcher work or the receiver's accepted continuation until it is discharged; when cancellation wins and withdraws the request before consumption, the operation consumes nothing; a completed commit stays committed, even when the caller is interrupted before its continuation; an interruption that is only requested, and stays pending under a mask, withdraws nothing; an old token is inert after rearming (decisions rows 221, 222); the Queue model's half of its first clause is proved on the first profile (queue-first-step-invariant), and the wrapper's run stays open"] },
     { id := "R12", title := "Frontiers name what they await"
       top := [`Effect4.Machine.Scheduling.fairTape_unarmed, `Effect4.Api.frontier_empty_iff_deadlocked]
