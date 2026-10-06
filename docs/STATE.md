@@ -157,7 +157,15 @@ rest on finite runs, finite models, source reading and literature; none is a Lea
   card's template, the order and the accounting.
   [Semaphore's card](research/2026-10-05-claude-lead/module-cards/semaphore.md) is written
   from the pinned source. It proposes a first profile and puts four choices to the owner.
+  A host probe ran its cases on rc.112, 4.0.1 and Effect 3.22.2 on 2026-10-06
+  (`research/2026-10-05-claude-lead/module-cards/semaphore-probes/`). The card now recommends
+  the live scan: a resumed waiter takes inside the wake's walk, on the pin and on our machine.
+  Its first recommendation, a grant at the wake, rested on a wrong reading of our machine.
   Pool's and Cache's cards are not written.
+
+  [The rulings note](research/2026-10-05-claude-lead/owner-rulings-2026-10-06.md) gives a
+  recommended ruling for each open question of this stretch, with its evidence. Eight need
+  the owner's word. No recommendation there is a ruling.
 
 Where to read:
 
@@ -340,6 +348,12 @@ Landed later on 2026-10-05:
   in `src/Effect4/Laws/Program/Typing/TermIntro.lean`, and they name no Queue. A name that
   `bindWith` mints is a caller's term under a step's folds (`captured_minted`). The goal gate
   counts 24: ten scenario goals, and fourteen fixture goals in the tooling's own controls.
+  **The seat is finished** (`4834760e`, its last part;
+  [the receipt](research/2026-10-05-seat-QTYPES-receipt.md)). The last part adds no node and
+  no statement. It proves the positional read of a reply (`types_tupleAt`) and two facts of
+  minted names for the capture's premise. Its battery types a take at a scope of three minted
+  names. The registry places the two new modules under `store-typing`. Not proved: a string
+  literal as a caller's term, and the wrapper's law at its own scope.
 - **Two tooling repairs** (`e6d63ddb`, `db54a849`, `d5b4d9cb`, `34e9423a`). The engine's
   fixtures are a generated group: a fixture that changes alone is written again, and the check
   form refuses an output that aliases a lane and a fixture folder with no writer. The plan's
@@ -377,9 +391,10 @@ Open at this landing:
      ([its receipt](research/2026-10-05-seat-QSTEPS-receipt.md)). They hold the cell, the
      six steps, the relation, the six step theorems and two typing theorems. They also hold
      two scenarios on the engine, the faces' pins and the documents. Open: five typing
-     statements. Seat QTYPES has them
-     since 2026-10-05 (branch `seat/qtypes`;
-     [the brief](research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md); row 257). It
+     statements. Seat QTYPES had them
+     from 2026-10-05 (branch `seat/qtypes`;
+     [the brief](research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md); row 257), and
+     all five are theorems since 2026-10-06. It
      states the checker's rules in their introduction form and a typing judgment beside
      `Reads`. It proves the capture of a minted name, and it types each step at every scope. The wrapper's
      law takes a step's typing equation as a proof parameter. A concrete application
@@ -508,10 +523,11 @@ Open at this landing:
   - one host adapter, `kvGet`, generated from explicit contract data.
 
   The last three have no seat and no date;
-- Codex's five reviews of 2026-10-05 and 2026-10-06 are filed, each with the owner's relay
-  as pasted (`research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/`,
-  with `next-proof-review/`, `module-factory-review/`, `heartbeat-0451-fixtures-semaphore/`
-  and `graph-tree-research/` beside it). Their evidence is source reading, compiler probes
+- Codex's six reviews of 2026-10-05 and 2026-10-06 are filed, each with the owner's relay
+  as pasted. The first is
+  `research/2026-10-05-codex-foundation-packet/implementation-audit/decision-probes/`. Beside
+  it are `next-proof-review/`, `module-factory-review/`, `heartbeat-0451-fixtures-semaphore/`,
+  `graph-tree-research/` and `heartbeat-0553-semaphore-qtypes/`. Their evidence is source reading, compiler probes
   and finite controls, with no Lean run:
   - the first probes the literal repair and the typing of the Queue's steps (rows 256 and
     257);
@@ -530,6 +546,10 @@ Open at this landing:
     `reference-expansion-complete`, under `initial-algebras-folds`, for R5 and R8. It also
     proposes cut laws for a journal's consumed prefix, for the scenarios' tapes. Both are
     candidates when a seat is free, beside the module slices;
+  - the sixth reads the coordinator's Semaphore probe. A grant at the wake is a policy of its
+    own: on the pin a resumed caller's next request takes inside the walk. A visit of the
+    live scan reaches the resumed caller's work up to its own cut. The card follows both. The
+    same review found no new defect in seat QTYPES's last part;
   - the owner's guidance came with all three. Automate the repeated checks. Keep a question
     for the owner to a change of meaning, of the supported domain or of a representation;
 - two red lanes of the sweep of 2026-10-05:

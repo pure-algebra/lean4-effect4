@@ -1,0 +1,45 @@
+{
+  "kind": "retained outputs plus finite proposed selection model",
+  "checks": [
+    {
+      "version": "4.0.0-rc.112",
+      "positive_p1_p2": true,
+      "p3_retained_observation": [
+        "B took 1",
+        "B took 1 again"
+      ],
+      "atomic_grants": [
+        "B",
+        "C"
+      ],
+      "p4_final": {
+        "permits": 2,
+        "taken": 0,
+        "waiters": 0
+      }
+    },
+    {
+      "version": "4.0.1",
+      "positive_p1_p2": true,
+      "p3_retained_observation": [
+        "B took 1",
+        "B took 1 again"
+      ],
+      "atomic_grants": [
+        "B",
+        "C"
+      ],
+      "p4_final": {
+        "permits": 2,
+        "taken": 0,
+        "waiters": 0
+      }
+    }
+  ],
+  "runtime_executed": false,
+  "excluded": [
+    "Lean proof",
+    "general fairness",
+    "unmodified-runtime differential probe"
+  ]
+}

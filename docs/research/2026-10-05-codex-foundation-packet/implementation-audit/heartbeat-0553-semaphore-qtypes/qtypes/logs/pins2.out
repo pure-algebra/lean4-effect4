@@ -1,0 +1,20 @@
+Effect4.Queue.Model.types_removeTaker: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_removeOffer: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_renewHint: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_gained: proved; nearest [Effect4.Queue.Model.types_entering]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_wake: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_fitting: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_entering: proved; nearest [Effect4.Queue.Model.types_fitting]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_staying: proved; nearest [Effect4.Queue.Model.types_fitting]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_enrolled: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.types_isHead: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+Effect4.Queue.Model.captured_minted: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.captured_answer: proved; nearest [Effect4.Queue.Model.captured_minted]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.capturedTy_var: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.capturedTy_minted: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.capturedTy_answer: proved; nearest [Effect4.Queue.Model.capturedTy_minted]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.typeAt_tree: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+Effect4.Queue.Model.takeStep_typed: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0

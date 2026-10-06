@@ -1,0 +1,12 @@
+1 a fold's body above its accumulator's type
+2 a record with a field named twice
+3 the accumulator and the item in each other's place
+4 a term moved under the binders without its capture
+5 a caller's name equal to the fold's accumulator name
+6 an identity at a number
+7 a pinned standing
+8 a tag field given a string that is no literal
+9 a fourth part of a tuple of three
+10 two bindWiths at one depth
+11 the program's step term with the identity and the hint exchanged
+12 a pinned axiom list

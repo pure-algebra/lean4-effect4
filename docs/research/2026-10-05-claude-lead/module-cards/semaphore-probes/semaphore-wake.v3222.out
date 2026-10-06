@@ -1,0 +1,181 @@
+{
+ "effect": "3.22.2",
+ "runtime": "bun 1.4.2",
+ "p1_protected": {
+  "before": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 2
+  },
+  "trace": [
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "B took 2",
+   "free read 0",
+   "free read 0"
+  ],
+  "after": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 1
+  },
+  "cObserverIsTheSameObject": false
+ },
+ "p2_scan": {
+  "before": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 2
+  },
+  "releaseAnswered": 1,
+  "trace": [
+   "free read 1",
+   "free read 1",
+   "free read 1",
+   "free read 1",
+   "free read 1",
+   "free read 1",
+   "C took 1"
+  ],
+  "after": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 1
+  },
+  "bObserverIsTheSameObject": true
+ },
+ "p3_overtaking": {
+  "before": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 2
+  },
+  "trace": [
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "B took 1",
+   "free read 1",
+   "free read 1",
+   "B took 1 again",
+   "free read 0",
+   "free read 0"
+  ],
+  "after": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 1
+  }
+ },
+ "p4_protected_waiters": {
+  "before": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 2
+  },
+  "trace": [
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "free read 2",
+   "B body, taken 2",
+   "free read 2",
+   "free read 2",
+   "C body, taken 1",
+   "free read 2"
+  ],
+  "after": {
+   "permits": 2,
+   "taken": 0,
+   "waiters": 0
+  }
+ },
+ "p5_release_with_nothing_taken": {
+  "releaseAnswered": 3,
+  "afterRelease": {
+   "permits": 2,
+   "taken": -1,
+   "waiters": 0
+  },
+  "takersOfOneThatProceeded": 3,
+  "after": {
+   "permits": 2,
+   "taken": 2,
+   "waiters": 1
+  }
+ },
+ "p6_negative_and_fraction": {
+  "takeMinusOneAnswered": -1,
+  "afterNegative": {
+   "permits": 2,
+   "taken": -1,
+   "waiters": 0
+  },
+  "takeHalfAnswered": 0.5,
+  "afterFraction": {
+   "permits": 2,
+   "taken": -0.5,
+   "waiters": 0
+  }
+ },
+ "p7_waiter_interrupted": {
+  "whileBWaits": {
+   "permits": 1,
+   "taken": 1,
+   "waiters": 1
+  },
+  "afterBInterrupted": {
+   "permits": 1,
+   "taken": 1,
+   "waiters": 0
+  },
+  "whileCWaits": {
+   "permits": 1,
+   "taken": 1,
+   "waiters": 1
+  },
+  "afterCInterrupted": {
+   "permits": 1,
+   "taken": 1,
+   "waiters": 0
+  },
+  "afterRelease": {
+   "permits": 1,
+   "taken": 0,
+   "waiters": 0
+  }
+ },
+ "p8_protected_interrupted_and_releaseAll": {
+  "whileAHolds": {
+   "permits": 1,
+   "taken": 1,
+   "waiters": 0
+  },
+  "afterAInterrupted": {
+   "permits": 1,
+   "taken": 0,
+   "waiters": 0
+  },
+  "releaseAllAnswered": 1,
+  "afterReleaseAll": {
+   "permits": 1,
+   "taken": 0,
+   "waiters": 0
+  },
+  "afterBodyEnds": {
+   "permits": 1,
+   "taken": -1,
+   "waiters": 0
+  }
+ },
+ "p9_waiter_yields_before_its_retry": "not run: Effect 4 only"
+}

@@ -1,0 +1,24 @@
+[
+  {
+    "label": "rc112",
+    "package": "/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect/package.json",
+    "version": "4.0.0-rc.112",
+    "sha256": "0ad20c73dfbe482996f046a0c1170b1a08d6fea7effeb6767fd247cdad53a56d",
+    "source_sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2",
+    "matches_vendored_source": true
+  },
+  {
+    "label": "v401",
+    "package": "/Users/pooks/.bun/install/cache/effect@4.0.1@@@1/package.json",
+    "version": "4.0.1",
+    "sha256": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+    "source_sha256": "f8108ef8c50542e671c882b6fce97733db986c5171b13dd39021a7d0fa42105b",
+    "matches_vendored_source": true
+  },
+  {
+    "label": "v3222",
+    "package": "/Users/pooks/.bun/install/cache/effect@3.22.2@@@1/package.json",
+    "version": "3.22.2",
+    "sha256": "7624819f8cd2b09b3be8706b0bb6a22a73061364479550b94d4e74e93797da92"
+  }
+]

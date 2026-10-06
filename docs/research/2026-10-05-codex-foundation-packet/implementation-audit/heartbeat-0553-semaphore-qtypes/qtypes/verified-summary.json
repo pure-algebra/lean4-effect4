@@ -1,0 +1,52 @@
+{
+  "statement_checks": [
+    {
+      "name": "takeStep_typed",
+      "statement_equal": true,
+      "sha256": "06ea752426c198a341a5b10ae67f01faa31eaed7394e0ba53c1fb7a0b4322377"
+    },
+    {
+      "name": "offerStep_typed",
+      "statement_equal": true,
+      "sha256": "4981c4dbe698f57dc76cd62d03cce70a9a32f9a8a77eb18dbed2d1e5c998fae9"
+    },
+    {
+      "name": "pollStep_typed",
+      "statement_equal": true,
+      "sha256": "d8174288776f15e4340a55dc303326dc13b3b735974757fc4601bd7517d89b39"
+    },
+    {
+      "name": "withdrawTake_typed",
+      "statement_equal": true,
+      "sha256": "6828d87715b2d7e8dd56e5d0a96405d820cec5fd6e1eb40b30825d51d57f9f9f"
+    },
+    {
+      "name": "withdrawOffer_typed",
+      "statement_equal": true,
+      "sha256": "274ddb0bd17d15d7d4e3dfb47a3ffc8016904f428ea41560d391e800a2cbeb17"
+    }
+  ],
+  "axiom_output_lines": 168,
+  "axiom_distribution": {
+    "propext, Quot.sound": 164,
+    "propext": 3
+  },
+  "other_axiom_lines": [
+    "'Effect4.Queue.Model.minted_tree' does not depend on any axioms"
+  ],
+  "red_error_count": 12,
+  "red_error_headers": [
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:121:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:224:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:233:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:249:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:273:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:287:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:305:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:321:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:353:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:372:0: error: Expression",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:506:0: error: \u274c\ufe0f Docstring on `#guard_msgs` does not match generated message:",
+    "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:572:0: error: \u274c\ufe0f Docstring on `#guard_msgs` does not match generated message:"
+  ]
+}

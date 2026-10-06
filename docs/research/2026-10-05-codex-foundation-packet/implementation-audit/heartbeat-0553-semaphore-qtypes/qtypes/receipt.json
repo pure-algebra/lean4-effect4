@@ -1,0 +1,156 @@
+{
+  "scope": "read-only delta/retained acceptance review",
+  "main_commit": "21b9722976b0339db1c58973015af06f0697e126",
+  "seat_commit": "541fbb2e490fb6369665b3e56b1553234e77bd77",
+  "integration": "Part1 landed; follow-up and receipt staged at main review cut.",
+  "finding": "No new actionable defect. Acceptance evidence substantiates source claims within stated premises.",
+  "repository_writes": [],
+  "executions": "Source/text/hash inspection only; no Lean/build/compiler/runtime/generator/install/UI.",
+  "artifacts": [
+    {
+      "path": "logs/build-1.log",
+      "sha256": "8a82943c077db06b26b1aa06723dc9b40b9cf9a935676f74f30d453a0c8b9a22",
+      "bytes": 2104
+    },
+    {
+      "path": "logs/build-2.log",
+      "sha256": "7de0a65fc863a9b25f2f8bab256cc72e3076ec83a659093e3290de02a7a1d92b",
+      "bytes": 5390
+    },
+    {
+      "path": "logs/build-3.log",
+      "sha256": "6243c37bfcd0e4e55a4ea04cc279d0fa226ed5880c5632cf542d6a759a19806a",
+      "bytes": 5137
+    },
+    {
+      "path": "logs/build-4.log",
+      "sha256": "0ea14fbebf5c9a56bf3015b3cfdfca99e7da5d41a672a83a30b3f5afc6c2386a",
+      "bytes": 5392
+    },
+    {
+      "path": "logs/build-5.log",
+      "sha256": "9924b2095d842caaee8cb0e3e48ad99ae9eb1c03997b0c74e634881f7dbc9a08",
+      "bytes": 5232
+    },
+    {
+      "path": "logs/final2/Axioms.lean",
+      "sha256": "6220fd91185f81d65e2142556fdb31c54d94b38f9ca45e6aa8216aed71960ca2",
+      "bytes": 8358
+    },
+    {
+      "path": "logs/final2/axioms.out",
+      "sha256": "a66cc668f6ddb7b364d331a4251e59d35bbd1146f25d49d5052a46471100b534",
+      "bytes": 13101
+    },
+    {
+      "path": "logs/final2/declarations.txt",
+      "sha256": "4b8b0d21eef25071aa921ccee488b2d022bf46c5702eb0314ca65ae2d481bed9",
+      "bytes": 8041
+    },
+    {
+      "path": "logs/pins.out",
+      "sha256": "a765cfbaaf5029023cee1658805fe080ed5755ee649d4c2b2d7023cf64756455",
+      "bytes": 4629
+    },
+    {
+      "path": "logs/pins2.out",
+      "sha256": "583efc633d2809e3c8d5c7aed82c8218c21b26cc0275f7d580c912bc1fb225d8",
+      "bytes": 1576
+    },
+    {
+      "path": "logs/qtyping-6.log",
+      "sha256": "3e041015a1d4656ae265fd400eb8fdc2e2ebfb39033cb500f9118d586d7f5aac",
+      "bytes": 289
+    },
+    {
+      "path": "logs/red3/QueueTypingRed.lean",
+      "sha256": "eb2c7be18e3b3d491f028c55a2e544a0f7b74951740f74e9a853ee71151a8186",
+      "bytes": 31472
+    },
+    {
+      "path": "logs/red3/edits.txt",
+      "sha256": "e7b5f96fb2f866cad102430e32a61fa321ef93809838424bd3938af0dab420d6",
+      "bytes": 493
+    },
+    {
+      "path": "logs/red3/red.out",
+      "sha256": "ab62369ac66c9d8cca41a64e506c75e2bb2c9a11309ec26ee0849a6b445d9483",
+      "bytes": 5874
+    },
+    {
+      "path": "requirement-evidence.json",
+      "sha256": "38c8139d5a83e3155ab6ef4458027ff46d96a82e4025f258e5975645cdc86004",
+      "bytes": 9522
+    },
+    {
+      "path": "retained-tool-evidence.json",
+      "sha256": "ee82d59574f247f5f6b3305ec2ecfab5082868c548950fca2fa261285317ff1b",
+      "bytes": 22428
+    },
+    {
+      "path": "review.md",
+      "sha256": "3d7db9f0d33d4185574a4ced5238249b8481aeac3264d6017e617a5c3139d722",
+      "bytes": 6166
+    },
+    {
+      "path": "snapshot.json",
+      "sha256": "d1c6afe4e1e6daf5e8248bc9ea8f220579800d51e2898a05a0b8fdd7930bf7d6",
+      "bytes": 8961
+    },
+    {
+      "path": "source/AGENTS.md",
+      "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+      "bytes": 21254
+    },
+    {
+      "path": "source/Test/All.lean",
+      "sha256": "c14b0ca8a9189ae4e5f720dbb2c0e8684e321791a21fb79c4cc96b9e6e8dcb0a",
+      "bytes": 9505
+    },
+    {
+      "path": "source/Test/Program/QueueSteps.lean",
+      "sha256": "b174e1f90aa3294dde60c7b7dee0b9ecf5941d6310a34c351fd0171905ecbe32",
+      "bytes": 16446
+    },
+    {
+      "path": "source/Test/Program/QueueTyping.lean",
+      "sha256": "3cfc2be491cab6e8de4c824ade132cb491d9b947067bc773332f2c38ed49f517",
+      "bytes": 31440
+    },
+    {
+      "path": "source/docs/research/2026-10-05-claude-lead/briefs/seat-qtypes-brief.md",
+      "sha256": "e2604e51db74c705de652551df19d4f85a3f323bf73fc7c738e40e00b934b55b",
+      "bytes": 15142
+    },
+    {
+      "path": "source/docs/research/2026-10-05-seat-QTYPES-receipt.md",
+      "sha256": "0badf125dbcb5c7128db942d27c64cad8502ded4692245b10f401404b95d2d9f",
+      "bytes": 32391
+    },
+    {
+      "path": "source/src/Effect4/Laws/Modules/Queue/Checking.lean",
+      "sha256": "8ac00728267805f40998872a38d07ea0e250c2e922c9c0cc201cc1c1099dbf17",
+      "bytes": 25686
+    },
+    {
+      "path": "source/src/Effect4/Laws/Modules/Queue/Reading.lean",
+      "sha256": "6e1dbfc64fbc0cb0f7d3261d97a99790cc0820f0c859674428b0dddf704c7652",
+      "bytes": 45818
+    },
+    {
+      "path": "source/src/Effect4/Laws/Modules/Queue/Typing.lean",
+      "sha256": "8418098524b5a77b1c9ea5a691c26a57cde344472e2a00c52efe146073d92695",
+      "bytes": 43876
+    },
+    {
+      "path": "source/src/Effect4/Laws/Program/Typing/TermIntro.lean",
+      "sha256": "5baabbad0bc8fbc324a48fac497e5e8c1b022585ec978beaa277ab3ef8b3ee30",
+      "bytes": 37171
+    },
+    {
+      "path": "verified-summary.json",
+      "sha256": "772f873edfd0af6efa0d064811b391c3b9ec66144fa883cc453e82f7d4ac39d5",
+      "bytes": 3229
+    }
+  ]
+}

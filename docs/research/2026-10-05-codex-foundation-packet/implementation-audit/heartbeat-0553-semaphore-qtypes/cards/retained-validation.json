@@ -1,0 +1,95 @@
+{
+  "kind": "retained JSON comparison, not host execution",
+  "checks": 22,
+  "all_passed": true,
+  "details": [
+    {
+      "name": "output versions",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p1_protected",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p2_scan",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p3_overtaking",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p4_protected_waiters",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p5_release_with_nothing_taken",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p6_negative_and_fraction",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p7_waiter_interrupted",
+      "pass": true
+    },
+    {
+      "name": "pin-release exact retained p8_protected_interrupted_and_releaseAll",
+      "pass": true
+    },
+    {
+      "name": "pin P3 starts with both registered",
+      "pass": true
+    },
+    {
+      "name": "pin P3 B commits twice before C",
+      "pass": true
+    },
+    {
+      "name": "pin P3 final one waiter still parked",
+      "pass": true
+    },
+    {
+      "name": "release P3 starts with both registered",
+      "pass": true
+    },
+    {
+      "name": "release P3 B commits twice before C",
+      "pass": true
+    },
+    {
+      "name": "release P3 final one waiter still parked",
+      "pass": true
+    },
+    {
+      "name": "v3 P3 starts with both registered",
+      "pass": true
+    },
+    {
+      "name": "v3 P3 B commits twice before C",
+      "pass": true
+    },
+    {
+      "name": "v3 P3 final one waiter still parked",
+      "pass": true
+    },
+    {
+      "name": "P1 positive consumes B only",
+      "pass": true
+    },
+    {
+      "name": "P2 positive serves smaller C",
+      "pass": true
+    },
+    {
+      "name": "P4 protected bodies finish and restore taken",
+      "pass": true
+    },
+    {
+      "name": "v3 P1 observer identity differs",
+      "pass": true
+    }
+  ]
+}

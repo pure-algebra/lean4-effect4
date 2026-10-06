@@ -1,0 +1,6 @@
+✔ [456/459] Built Effect4.Laws.Program.Typing.TermIntro (3.7s)
+✔ [457/459] Built Effect4.Laws.Modules.Queue.Checking (1.9s)
+✔ [458/459] Built Effect4.Laws.Modules.Queue.Typing (1.7s)
+✔ [459/459] Built Test.Program.QueueTyping (2.9s)
+Build completed successfully (459 jobs).
+exit=0

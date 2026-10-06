@@ -1,0 +1,65 @@
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:121:0: error: Expression
+  (typeOf ["before", "id", "s"] [Ty.nat, Queue.idTy, Queue.cellTy Ty.nat]
+      (Queue.withdrawOffer Ty.nat (var "before") (var "s"))).isSome
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:224:0: error: Expression
+  (elaborate taking).toOption.bind modifyTerm ==
+    (Queue.takeStep Ty.nat (minted hintName) (minted identityName) (var "s") takeScope []).toOption
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:233:0: error: Expression
+  (minted cellName { names := [cellName, cellName] } []).toOption == some (Term.var 0)
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:249:0: error: Expression
+  (minted "_%acc1" (clash.push [clash.mint "acc", clash.mint "item"]) []).toOption.bind
+      (evalTerm [Val.nat 7, Val.nat 100, Val.nat 5]) ==
+    some (Val.nat 7)
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:273:0: error: Expression
+  (typeOf ["xs"] [Ty.nat.list] (foldWith (var "xs") Queue.nilT fun acc item => app "cons" [item, acc])).isSome
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:287:0: error: Expression
+  (typeOf [] [] (record [("a", false, Ty.nat), ("a", false, Ty.nat)] [("a", nat 1)])).isSome
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:305:0: error: Expression
+  (typeOf ["xs"] [Ty.nat.list]
+      (foldWith (var "xs") (Authoring.bool false) fun acc item => Queue.orT item (app "isZero" [acc]))).isSome
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:321:0: error: Expression
+  (typeOf ["xs"] [Ty.nat.list] (foldWith (var "xs") (nat 0) fun acc x => app "add" [acc, unstable])).isSome
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:353:0: error: Expression
+  (typeOf ["x"] [Ty.string] (record [("tag", false, Ty.lit "A")] [("tag", var "x")])).isSome
+did not evaluate to `true`
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:372:0: error: Expression
+  (typeOf ["r"] [takeReplyTy Ty.nat] (tupleAt (var "r") 3)).isSome
+did not evaluate to `true`
+Effect4.Queue.Model.takeStep_typed: proved; nearest [Effect4.Queue.Model.takeStep_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.offerStep_typed: proved; nearest [Effect4.Queue.Model.offerStep_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.pollStep_typed: proved; nearest [Effect4.Queue.Model.pollStep_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawTake_typed: proved; nearest [Effect4.Queue.Model.withdrawTake_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawOffer_typed: proved; nearest [Effect4.Queue.Model.withdrawOffer_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.takeStep_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.offerStep_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.pollStep_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawTake_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawOffer_types: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:506:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+- info: Effect4.Queue.Model.takeStep_typed: goal; nearest [Effect4.Queue.Model.takeStep_types]; 0 lemmas, 0 definitions
++ info: Effect4.Queue.Model.takeStep_typed: proved; nearest [Effect4.Queue.Model.takeStep_types]; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.offerStep_typed: proved; nearest [Effect4.Queue.Model.offerStep_types]; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.pollStep_typed: proved; nearest [Effect4.Queue.Model.pollStep_types]; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.withdrawTake_typed: proved; nearest [Effect4.Queue.Model.withdrawTake_types]; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.withdrawOffer_typed: proved; nearest [Effect4.Queue.Model.withdrawOffer_types]; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.takeStep_types: proved; nearest []; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.offerStep_types: proved; nearest []; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.pollStep_types: proved; nearest []; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.withdrawTake_types: proved; nearest []; 0 lemmas, 0 definitions
+  Effect4.Queue.Model.withdrawOffer_types: proved; nearest []; 0 lemmas, 0 definitions
+  next goals: 0
+'Effect4.Queue.Model.captured_minted' depends on axioms: [propext]
+/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/qtypes/red3/QueueTypingRed.lean:572:0: error: ❌️ Docstring on `#guard_msgs` does not match generated message:
+
+- info: 'Effect4.Queue.Model.captured_minted' depends on axioms: [propext, Classical.choice]
++ info: 'Effect4.Queue.Model.captured_minted' depends on axioms: [propext]

@@ -1,0 +1,57 @@
+'Effect4.Queue.Model.takeStep_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.offerStep_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.pollStep_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.withdrawTake_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.withdrawOffer_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.takeStep_types' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.offerStep_types' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.pollStep_types' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.withdrawTake_types' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.withdrawOffer_types' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_removeTaker' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_removeOffer' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_renewHint' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_gained' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_wake' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_fitting' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_entering' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_staying' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_enrolled' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_isHead' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.typeAt_tree' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.typeAt_of_types' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.captured_minted' depends on axioms: [propext]
+'Effect4.Queue.Model.captured_answer' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.capturedTy_var' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.capturedTy_minted' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.capturedTy_answer' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.capturedTy_field' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.types_foldWith' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.empty_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Queue.Model.sizeStep_typed' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.argTy_fold_intro' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.argTy_app_intro' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.argTy_record_intro' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.argTy_field_intro' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.argTy_recordSet_intro' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Record.fieldType_normal' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Record.setType_same' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.Record.check_declared' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.nativeAtomTy_ite_above' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.nativeAtomTy_ite_below' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.nativeAtomTy_cons_nil' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.nativeAtomTy_append' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.nativeAtomTy_take' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.nativeAtomTy_pair' depends on axioms: [propext, Quot.sound]
+'Effect4.Program.nativeAtomTy_length' depends on axioms: [propext, Quot.sound]
+Effect4.Queue.Model.takeStep_typed: proved; nearest [Effect4.Queue.Model.takeStep_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.offerStep_typed: proved; nearest [Effect4.Queue.Model.offerStep_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.pollStep_typed: proved; nearest [Effect4.Queue.Model.pollStep_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawTake_typed: proved; nearest [Effect4.Queue.Model.withdrawTake_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawOffer_typed: proved; nearest [Effect4.Queue.Model.withdrawOffer_types]; 0 lemmas, 0 definitions
+Effect4.Queue.Model.takeStep_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.offerStep_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.pollStep_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawTake_types: proved; nearest []; 0 lemmas, 0 definitions
+Effect4.Queue.Model.withdrawOffer_types: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0

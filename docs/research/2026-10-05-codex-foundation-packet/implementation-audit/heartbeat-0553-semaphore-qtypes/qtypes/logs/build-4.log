@@ -1,0 +1,75 @@
+✔ [910/917] Built Effect4.Laws (5.1s)
+✔ [914/918] Built Test.Program.QueueSteps (6.1s)
+✔ [915/919] Built Test.Program.QueueRelation (4.1s)
+✔ [916/922] Built Test.Program.QueueWorkload (2.0s)
+ℹ [920/956] Built Test.Audit.ProofStyle (8.4s)
+info: Test/Audit/ProofStyle.lean:37:0: proof style: 1920 recorded uses and 60 recorded unread commands in 1178 entries; the unread commands:
+  src/Effect4/Laws/Auto/Traversals.lean:173 definitionsUnder
+  src/Effect4/Laws/Program/DenoteR.lean:820 denoteR_bind
+  src/Effect4/Laws/Program/DenoteR.lean:829 denoteR_suspend
+  src/Effect4/Laws/Program/DenoteR.lean:836 denoteR_select
+  src/Effect4/Laws/Program/DenoteR.lean:848 denoteR_exit
+  src/Effect4/Laws/Program/DenoteR.lean:860 denoteR_withFiber
+  src/Effect4/Laws/Program/DenoteR.lean:867 denoteR_gen
+  src/Effect4/Laws/Program/DenoteR.lean:873 denoteR_iterate
+  src/Effect4/Laws/Program/DenoteR.lean:892 denoteR_succeed
+  src/Effect4/Laws/Program/DenoteR.lean:899 denoteR_fail
+  src/Effect4/Laws/Program/DenoteR.lean:907 denoteR_failCause
+  src/Effect4/Laws/Program/DenoteR.lean:914 denoteR_sync
+  src/Effect4/Laws/Program/DenoteR.lean:921 denoteR_perform
+  src/Effect4/Laws/Program/DenoteR.lean:949 denoteR_catchCause
+  src/Effect4/Laws/Program/DenoteR.lean:959 denoteR_catchIf
+  src/Effect4/Laws/Program/DenoteR.lean:971 denoteR_matchCause
+  src/Effect4/Laws/Program/DenoteR.lean:982 denoteR_onExit
+  src/Effect4/Laws/Program/DenoteR.lean:990 denoteR_yieldNow
+  src/Effect4/Laws/Program/DenoteR.lean:997 denoteR_awaitFiber
+  src/Effect4/Laws/Program/DenoteR.lean:1011 denoteR_uninterruptible
+  src/Effect4/Laws/Program/DenoteR.lean:1017 denoteR_interruptible
+  src/Effect4/Laws/Program/DenoteR.lean:1023 denoteR_scoped
+  src/Effect4/Laws/Program/DenoteR.lean:1029 denoteR_acquireRelease
+  src/Effect4/Laws/Program/DenoteR.lean:1053 denoteR_service
+  src/Effect4/Laws/Program/DenoteR.lean:1060 denoteR_provideService
+  src/Effect4/Laws/Program/DenoteR.lean:1094 denoteLayer_succeed
+  src/Effect4/Laws/Program/DenoteR.lean:1102 denoteLayer_fresh
+  src/Effect4/Laws/Program/DenoteR.lean:1110 denoteLayer_orDie
+  src/Effect4/Laws/Program/DenoteR.lean:1117 denoteLayer_effect
+  src/Effect4/Laws/Program/DenoteR.lean:1126 denoteLayer_effectDiscard
+  src/Effect4/Laws/Program/DenoteR.lean:1134 denoteLayer_provide
+  src/Effect4/Laws/Program/DenoteR.lean:1142 denoteLayer_provideMerge
+  src/Effect4/Laws/Program/DenoteR.lean:1150 denoteLayer_merge
+  src/Effect4/Laws/Program/DenoteR.lean:1156 denoteLayer_mergeAll
+  src/Effect4/Laws/Program/ReferenceTyping.lean:38 eff_expandRound_eq_self
+  src/Effect4/Laws/Program/ReferenceTyping.lean:46 stmts_expandRound_eq_self
+  src/Effect4/Laws/Program/ReferenceTyping.lean:53 stmt_expandRound_eq_self
+  src/Effect4/Laws/Program/ReferenceTyping.lean:60 effs_expandRound_eq_self
+  src/Effect4/Laws/Program/ReferenceTyping.lean:67 action_expandRound_eq_self
+  src/Effect4/Laws/Program/ReferenceTyping.lean:74 layer_expandRound_eq_self
+  src/Effect4/Laws/Program/ReferenceTyping.lean:82 layers_expandRound_eq_self
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:115 <ProofGraph.goalDecl>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:122 <ProofGraph.goalDecl>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:124 <ProofGraph.goalDecl>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:289 emitOwner
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:366 <Lean.Parser.Command.attribute>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:438 [anonymous]
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:441 <Lean.Parser.Command.attribute>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:443 <Lean.Parser.Command.attribute>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:454 [anonymous]
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:457 <Lean.Parser.Command.attribute>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:460 <Lean.Parser.Command.syntax>
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:462 elabTypedState
+  src/Effect4/Laws/Program/Typed/TypedStateDecl.lean:551 <Lean.Parser.Command.end>
+  src/Effect4/Laws/Program/Typing/Check.lean:47 checkTyping_spec
+  src/Effect4/Laws/Store/CanonicalSpec.lean:9 ofVal_spec
+  src/Effect4/Laws/Store/CanonicalSpec.lean:16 mapM_ofVal_spec
+  src/Effect4/Program/Authoring/Services.lean:159 <Lean.Parser.Command.macro_rules>
+  src/Effect4/Program/Authoring/Sugar.lean:176 <Lean.Parser.Command.macro_rules>
+  src/Effect4/Schema/Bridge.lean:765 mapM_reconstruct
+✔ [953/956] Built Test.Program.QueueTyping (2.7s)
+ℹ [954/956] Built Test.All (16s)
+info: Test/All.lean:253:0: Effect4 library-root gate: 167 API/utility modules, 287 Laws-only modules; every library source is reachable; Effect4 never reaches Laws
+info: Test/All.lean:253:0: Effect4 module and axiom gate: checked 706 modules and 86048 declarations; phases (ms): sources and closure 12, library roots 164, declarations 2154, resolution 542, axioms 11752, exemptions 262; semantic/test axioms are [propext,
+ Quot.sound]; exact implementation boundary (17 module(s), 23 declaration(s)) additionally allows Classical.choice
+info: Test/All.lean:253:0: Effect4 goal gate: 24 planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; 11 declaration(s) rest on goals; no other declaration reaches sorryAx
+✔ [955/956] Built Test (1.5s)
+Build completed successfully (956 jobs).
+exit=0

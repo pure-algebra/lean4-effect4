@@ -1,0 +1,35 @@
+{
+  "main": "21b9722976b0339db1c58973015af06f0697e126",
+  "card_commit": "8c61250f",
+  "new_finding": "Grant-at-wake differs without yield when a reached caller continuation reenters the semaphore; live handover must reach the actual continuation cut",
+  "status": "proposed card clarification before profile freeze",
+  "prior_fixes": "live scan, protected activation identity and retained cleanup debt verified present",
+  "pool_cache_cards": "not present; STATE agrees",
+  "retained_json_checks": 22,
+  "all_checks_pass": true,
+  "source_snapshot_hashes_verified": true,
+  "monitor_runtime_or_compiler_runs": 0,
+  "repository_edits": false,
+  "files": [
+    {
+      "path": "review.md",
+      "sha256": "bfed08399e915eefeae9d2f277a96afb9e4f187dd0b6922dc61f0fb9d1a224bf",
+      "bytes": 6910
+    },
+    {
+      "path": "source-hashes.json",
+      "sha256": "1b20d1e23dfcae7cbc1741251e1f48f56cf393d8a4d9895ebf5090a9e48dacb5",
+      "bytes": 4307
+    },
+    {
+      "path": "installed-identities.json",
+      "sha256": "931c000b99291c210e4505b7da93696bf7135cbe8eeb73bd513862833d256271",
+      "bytes": 920
+    },
+    {
+      "path": "retained-validation.json",
+      "sha256": "ae15f7d15550344dda8a7aff0a91e204d87224159a4685e4c33a245cafaff4ed",
+      "bytes": 2056
+    }
+  ]
+}

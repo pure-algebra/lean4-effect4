@@ -1,0 +1,19 @@
+✔ [632/665] Built Effect4.Laws.Program.Typing.TermIntro (13s)
+✔ [678/717] Built Effect4.Laws.Modules.Queue.Reading (13s)
+✔ [709/719] Built Effect4.Laws.Modules.Queue.Checking (3.7s)
+✔ [713/763] Built Effect4.Laws.Modules.Queue.Steps (4.4s)
+✔ [911/920] Built Effect4.Laws.Modules.Queue.Typing (4.4s)
+✔ [913/921] Built Test.Program.QueueRelation (8.6s)
+✔ [914/922] Built Test.Program.QueueSteps (5.7s)
+✔ [916/923] Built Effect4.Laws (5.6s)
+✔ [920/924] Built Test.Program.QueueWorkload (7.4s)
+✖ [952/955] Building Test.Audit.ProofStyle (13s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-qtypes/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-qtypes/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-qtypes/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-qtypes/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-qtypes/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-qtypes/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-qtypes/Test/Audit/ProofStyle.lean -o /Users/pooks/Dev/lean4-effect4-qtypes/.lake/build/lib/lean/Test/Audit/ProofStyle.olean -i /Users/pooks/Dev/lean4-effect4-qtypes/.lake/build/lib/lean/Test/Audit/ProofStyle.ilean -c /Users/pooks/Dev/lean4-effect4-qtypes/.lake/build/ir/Test/Audit/ProofStyle.c --setup /Users/pooks/Dev/lean4-effect4-qtypes/.lake/build/ir/Test/Audit/ProofStyle.setup.json --json
+error: Test/Audit/ProofStyle.lean:37:0: proof style: 2 finding(s)
+new unread command: capturedTy_minted (src/Effect4/Laws/Modules/Queue/Checking.lean, lines [244]): the scan cannot parse it, so banned uses in it go uncounted; 1 > 0 recorded
+new unread command: captured_minted (src/Effect4/Laws/Modules/Queue/Reading.lean, lines [348]): the scan cannot parse it, so banned uses in it go uncounted; 1 > 0 recorded
+error: Lean exited with code 1
+Some required targets logged failures:
+- Test.Audit.ProofStyle
+error: build failed
+exit=1

@@ -1,0 +1,52 @@
+[
+  {
+    "timestamp": "2026-10-06T05:52:43.035Z",
+    "content": {
+      "type": "tool_use",
+      "id": "toolu_01QRWdiyUfSEqsyGPyV6yDJV",
+      "name": "Bash",
+      "input": {
+        "command": "cd /Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes && EFFECT_DIR=/Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect bun run semaphore-wake.ts > semaphore-wake.rc112.out 2> semaphore-wake.rc112.err; echo \"exit rc112: $?\"; cat semaphore-wake.rc112.err | head -20; cat semaphore-wake.rc112.out",
+        "description": "Run the Semaphore probe on the pinned Effect build",
+        "timeout": 120000
+      },
+      "caller": {
+        "type": "direct"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-06T05:52:43.958Z",
+    "content": {
+      "tool_use_id": "toolu_01QRWdiyUfSEqsyGPyV6yDJV",
+      "type": "tool_result",
+      "content": "exit rc112: 0\n{\n \"effect\": \"4.0.0-rc.112\",\n \"p1_protected\": {\n  \"before\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 2\n  },\n  \"trace\": [\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"B took 2\",\n   \"free read 0\"\n  ],\n  \"after\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 1\n  },\n  \"cObserverIsTheSameObject\": true\n },\n \"p2_scan\": {\n  \"before\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 2\n  },\n  \"releaseAnswered\": 1,\n  \"trace\": [\n   \"free read 1\",\n   \"free read 1\",\n   \"free read 1\",\n   \"free read 1\",\n   \"free read 1\",\n   \"free read 1\",\n   \"C took 1\"\n  ],\n  \"after\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 1\n  },\n  \"bObserverIsTheSameObject\": true\n },\n \"p3_overtaking\": {\n  \"before\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 2\n  },\n  \"trace\": [\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"B took 1\",\n   \"free read 1\",\n   \"B took 1 again\",\n   \"free read 0\"\n  ],\n  \"after\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 1\n  }\n },\n \"p4_protected_waiters\": {\n  \"before\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 2\n  },\n  \"trace\": [\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"B body, taken 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"free read 2\",\n   \"C body, taken 1\",\n   \"free read 2\"\n  ],\n  \"after\": {\n   \"permits\": 2,\n   \"taken\": 0,\n   \"waiters\": 0\n  }\n },\n \"p5_release_with_nothing_taken\": {\n  \"releaseAnswered\": 3,\n  \"afterRelease\": {\n   \"permits\": 2,\n   \"taken\": -1,\n   \"waiters\": 0\n  },\n  \"takersOfOneThatProceeded\": 3,\n  \"after\": {\n   \"permits\": 2,\n   \"taken\": 2,\n   \"waiters\": 1\n  }\n },\n \"p6_negative_and_fraction\": {\n  \"takeMinusOneAnswered\": -1,\n  \"afterNegative\": {\n   \"permits\": 2,\n   \"taken\": -1,\n   \"waiters\": 0\n  },\n  \"takeHalfAnswered\": 0.5,\n  \"afterFraction\": {\n   \"permits\": 2,\n   \"taken\": -0.5,\n   \"waiters\": 0\n  }\n },\n \"p7_waiter_interrupted\": {\n  \"whileBWaits\": {\n   \"permits\": 1,\n   \"taken\": 1,\n   \"waiters\": 1\n  },\n  \"afterBInterrupted\": {\n   \"permits\": 1,\n   \"taken\": 1,\n   \"waiters\": 0\n  },\n  \"whileCWaits\": {\n   \"permits\": 1,\n   \"taken\": 1,\n   \"waiters\": 1\n  },\n  \"afterCInterrupted\": {\n   \"permits\": 1,\n   \"taken\": 1,\n   \"waiters\": 0\n  },\n  \"afterRelease\": {\n   \"permits\": 1,\n   \"taken\": 0,\n   \"waiters\": 0\n  }\n },\n \"p8_protected_interrupted_and_releaseAll\": {\n  \"whileAHolds\": {\n   \"permits\": 1,\n   \"taken\": 1,\n   \"waiters\": 0\n  },\n  \"afterAInterrupted\": {\n   \"permits\": 1,\n   \"taken\": 0,\n   \"waiters\": 0\n  },\n  \"releaseAllAnswered\": 1,\n  \"afterReleaseAll\": {\n   \"permits\": 1,\n   \"taken\": 0,\n   \"waiters\": 0\n  },\n  \"afterBodyEnds\": {\n   \"permits\": 1,\n   \"taken\": -1,\n   \"waiters\": 0\n  }\n }\n}",
+      "is_error": false
+    }
+  },
+  {
+    "timestamp": "2026-10-06T05:53:02.641Z",
+    "content": {
+      "type": "tool_use",
+      "id": "toolu_01AQA5385zYNqcHkwo5kReG1",
+      "name": "Bash",
+      "input": {
+        "command": "rm -f semaphore-wake.rc112.err && EFFECT_DIR=$HOME/.bun/install/cache/effect@4.0.1@@@1 bun run semaphore-wake.ts > semaphore-wake.v401.out 2> v401.err; echo \"exit v401: $?\"; head -5 v401.err; EFFECT_DIR=$HOME/.bun/install/cache/effect@3.22.2@@@1 bun run semaphore-wake.ts > semaphore-wake.v3222.out 2> v3222.err; echo \"exit v3222: $?\"; head -12 v3222.err; diff <(sed 1,2d semaphore-wake.rc112.out) <(sed 1,2d semaphore-wake.v401.out) && echo \"rc112 and 4.0.1: same answers below the version line\"; head -3 semaphore-wake.v401.out",
+        "description": "Run the Semaphore probe on Effect 4.0.1 and on Effect 3.22.2 and compare the pin with the release",
+        "timeout": 120000
+      },
+      "caller": {
+        "type": "direct"
+      }
+    }
+  },
+  {
+    "timestamp": "2026-10-06T05:53:03.596Z",
+    "content": {
+      "tool_use_id": "toolu_01AQA5385zYNqcHkwo5kReG1",
+      "type": "tool_result",
+      "content": "exit v401: 0\nexit v3222: 0\nrc112 and 4.0.1: same answers below the version line\n{\n \"effect\": \"4.0.1\",\n \"p1_protected\": {",
+      "is_error": false
+    }
+  }
+]

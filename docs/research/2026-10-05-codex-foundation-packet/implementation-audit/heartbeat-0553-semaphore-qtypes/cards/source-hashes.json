@@ -1,0 +1,100 @@
+[
+  {
+    "path": "AGENTS.md",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/AGENTS.md",
+    "sha256": "af78a9ad81c887568d32de6381bd18025f0e20866219f90346b788694d49f9a7",
+    "bytes": 21254
+  },
+  {
+    "path": "docs/STATE.md",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/docs/STATE.md",
+    "sha256": "ed27cdf90ce364c3fe7aca2d137433b3b3fd20237e90599f571577693d3c039c",
+    "bytes": 107979
+  },
+  {
+    "path": "docs/core/decisions.md",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/docs/core/decisions.md",
+    "sha256": "a5e425ca0e5596691affccb4168432792b805838f403eee4f59a55cff31afb76",
+    "bytes": 334433
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/docs/research/2026-10-05-claude-lead/module-cards/semaphore.md",
+    "sha256": "a68fd30aeb1fc6912363eca7b82bae49970e0d45ceb624923ad123edee6b2b78",
+    "bytes": 16497
+  },
+  {
+    "path": "docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/docs/research/2026-10-05-claude-lead/module-factory-plan.md",
+    "sha256": "e1c26ebe2216e5872c196e6771eab5453996ebeb59cbbb9f5f904c82256834ac",
+    "bytes": 8592
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/vendor/effect-4.0.0-rc.112/src/Semaphore.ts",
+    "sha256": "f8fa7de56c0c995a4468bafd0625d19b23dec71660c57978097421c71714abb2",
+    "bytes": 28165
+  },
+  {
+    "path": "vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/vendor/effect-4.0.0-rc.112/src/internal/effect.ts",
+    "sha256": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "bytes": 212712
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/Semaphore.ts",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/vendor/effect-4.0.1/src/Semaphore.ts",
+    "sha256": "f8108ef8c50542e671c882b6fce97733db986c5171b13dd39021a7d0fa42105b",
+    "bytes": 28803
+  },
+  {
+    "path": "vendor/effect-4.0.1/src/internal/effect.ts",
+    "commit": "21b9722976b0339db1c58973015af06f0697e126",
+    "copy": "sources/vendor/effect-4.0.1/src/internal/effect.ts",
+    "sha256": "e44262d0f2d75afc74ed16b255736fd5074fc74d049d61eff42447328d0e3a73",
+    "bytes": 223328
+  },
+  {
+    "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.ts",
+    "status": "untracked local coordinator evidence at snapshot",
+    "copy": "probes/semaphore-wake.ts",
+    "sha256": "0e1972b12359e231148c10ce79cb6b52dfbb72a574c7113128e5ff08dfc2e6b0",
+    "bytes": 8923
+  },
+  {
+    "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.rc112.out",
+    "status": "untracked local coordinator evidence at snapshot",
+    "copy": "probes/semaphore-wake.rc112.out",
+    "sha256": "97618c56efa56d87de7a0c452c17240fe50e5f95a2dbd6ce588df39af2ecd9b5",
+    "bytes": 2656
+  },
+  {
+    "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.v401.out",
+    "status": "untracked local coordinator evidence at snapshot",
+    "copy": "probes/semaphore-wake.v401.out",
+    "sha256": "02315768449e9a23f7943440a6b4b7e063591b7ecd7efd37e74a0b3a859e590a",
+    "bytes": 2649
+  },
+  {
+    "path": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-05-claude-lead/module-cards/semaphore-probes/semaphore-wake.v3222.out",
+    "status": "untracked local coordinator evidence at snapshot",
+    "copy": "probes/semaphore-wake.v3222.out",
+    "sha256": "3622952e873970199b04d5868166a46af2fe28f54bcf9640ac87a6542e2e6283",
+    "bytes": 2777
+  },
+  {
+    "path": "/Users/pooks/.claude/projects/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7.jsonl",
+    "status": "selected exact probe commands and results",
+    "copy": "probes/commands-and-results.json",
+    "sha256": "3c2ed51ea880430fd94dd68803d17181613392b7fc7f45e76508f0815f358b6a",
+    "bytes": 5342
+  }
+]
