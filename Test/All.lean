@@ -48,6 +48,7 @@ import Test.Program.SignatureControls
 import Test.Program.TypedProgRows
 import Test.Program.AdmissionColumns
 import Test.Program.FormationContract
+import Test.Program.FormationClosed
 import Test.Program.FoldContract
 import Test.Program.MaskContract
 import Test.Program.MaskEngine
