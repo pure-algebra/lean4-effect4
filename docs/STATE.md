@@ -323,7 +323,9 @@ Open at this landing:
   - the host half: a scenario's whole observation on the printed module, on the keyed lane.
     On the merged tree `Workers.crew`, `Routing.request` and `Atomic.shop` print and read
     back, and `Timeout.fetch` prints and does not read back (a finite probe). The keyed
-    recorder needs one extension, an operation that completes after its cancellation;
+    recorder needs one extension, an operation that completes after its cancellation.
+    [Its brief](research/2026-10-05-claude-lead/briefs/seat-host-brief.md) is written ahead,
+    for the next free seat;
   - the semantics report loads the five scenario modules that hold a claim, so the plan shows
     the ten open goals as its next goals. A requirement with a placed scenario goal is proved
     only when that goal is. Every requirement was open before, and none changed status;
