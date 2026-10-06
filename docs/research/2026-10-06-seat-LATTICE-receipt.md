@@ -13,8 +13,8 @@ slice, the kept part of one program. The seat's own unit of work is "the work".
 ## 1. Base and head
 
 Branch `seat/lattice`, in the worktree `/Users/pooks/Dev/lean4-effect4-mask`. Base `57ed776a`.
-The head of the Lean work is `62c1a24d`. This receipt and the three probes are the commit after
-it.
+The head of the Lean work is `62c1a24d`. The commits after it hold documents only: this
+receipt, the three probes and the design note's last section.
 
 | Commit | Step |
 | --- | --- |
