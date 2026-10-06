@@ -1,0 +1,227 @@
+/-
+Seat CENSUS: the fourth part of the shared text: masks. A mask of a program says which effect
+addresses are kept. A kept address has a kept parent, so the kept set is closed under prefixes.
+The folded regions are the sub-trees at the addresses that are not kept and whose parent is:
+the maximal folded addresses. Masks are ordered by the kept sets. It is the plan's generic
+interface (section 6), with one change that the checker forces: the check of a mask can refuse.
+-/
+namespace Census
+
+inductive FoldKind
+  | never     -- fold N: `failCause (interrupt none)`
+  | row       -- fold A, the row form: one assumed row `unit → A` for each folded region
+  | variable  -- fold A, the variable form: one root variable of type `A` for each folded region
+deriving DecidableEq, Repr
+
+def FoldKind.name : FoldKind → String
+  | .never => "N"
+  | .row => "Arow"
+  | .variable => "Avar"
+
+/-- A program prepared for masking: its sites in program order, each with its node's answer type
+and the index of its parent site. -/
+structure Masked where
+  table : RowTable
+  /-- The environment of the program's root: empty for a whole program. -/
+  rootEnv : TyEnv
+  program : P
+  sites : Array Site
+  answers : Array Ty
+  parent : Array (Option Nat)
+  full : EffTy
+
+def Masked.size (m : Masked) : Nat := m.sites.size
+
+def prepare (table : RowTable) (e : P) (rootEnv : TyEnv := []) : Option Masked :=
+  let sig := nativeSignature table
+  let ss := sites sig rootEnv e
+  match Checker.check sig rootEnv [] e, ss.mapM (fun s => (s.type sig).toOption) with
+  | .ok full, some tys =>
+    let arr := ss.toArray
+    let parent := arr.map fun s =>
+      if s.path.isEmpty then none
+      else
+        -- the nearest effect site above: the longest proper prefix among the sites
+        let above := (List.range arr.size).filter fun j =>
+          match arr[j]? with
+          | some a => a.path.length < s.path.length && a.path.isPrefixOf s.path
+          | none => false
+        above.foldl (fun (best : Option Nat) j =>
+          match best, arr[j]? with
+          | none, _ => some j
+          | some b, some a => if a.path.length > ((arr[b]?).map (·.path.length)).getD 0 then some j else some b
+          | some b, none => some b) none
+    some ⟨table, rootEnv, e, arr, (tys.map (·.answer)).toArray, parent, full⟩
+  | _, _ => none
+
+abbrev Mask := Array Bool
+
+def Mask.keeps (k : Mask) (i : Nat) : Bool := (k[i]?).getD false
+
+/-- Closed under prefixes: a kept address has a kept parent. -/
+def Masked.closed (m : Masked) (k : Mask) : Bool :=
+  (List.range m.size).all fun i =>
+    !k.keeps i || match (m.parent[i]?).getD none with
+      | some p => k.keeps p
+      | none => true
+
+/-- The maximal folded addresses of a mask, in program order. -/
+def Masked.foldedAt (m : Masked) (k : Mask) : List Nat :=
+  (List.range m.size).filter fun i =>
+    !k.keeps i && match (m.parent[i]?).getD none with
+      | some p => k.keeps p
+      | none => true
+
+def Mask.le (a b : Mask) : Bool := (List.range a.size).all fun i => !a.keeps i || b.keeps i
+def Mask.kept (k : Mask) : Nat := (k.toList.filter id).length
+def Mask.show (k : Mask) : String := String.ofList (k.toList.map fun b => if b then '1' else '0')
+
+/-- The masked program with its table and root environment, under a fold kind. -/
+def Masked.cut (m : Masked) (kind : FoldKind) (k : Mask) : Option (P × RowTable × TyEnv) :=
+  let folded := m.foldedAt k
+  match kind with
+  | .never =>
+    (folded.foldlM (fun (e : P) i => (m.sites[i]?).bind fun s => replaceEff e s.path neverProgram) m.program).map
+      fun e => (e, m.table, m.rootEnv)
+  | .row =>
+    let answers := folded.map fun i => (m.answers[i]?).getD .never
+    ((folded.zipIdx).foldlM (fun (e : P) (ij : Nat × Nat) =>
+        (m.sites[ij.1]?).bind fun s =>
+          replaceEff e s.path (.perform (.external (m.table.length + ij.2)) (.lit .unit))) m.program).map
+      fun e => (e, m.table ++ answers.map assumeRow, m.rootEnv)
+  | .variable =>
+    let answers := folded.map fun i => (m.answers[i]?).getD .never
+    -- every variable of the program moves up by the number of assumptions
+    let weakened := (List.range folded.length).foldl (fun e _ => Eff.weaken 0 e) m.program
+    ((folded.zipIdx).foldlM (fun (e : P) (ij : Nat × Nat) =>
+        (m.sites[ij.1]?).bind fun s => replaceEff e s.path (.succeed (.var ij.2))) weakened).map
+      fun e => (e, m.table, answers ++ m.rootEnv)
+
+/-- The check of a mask: the type of the masked program, or the refusal. -/
+def Masked.check (m : Masked) (kind : FoldKind) (k : Mask) : Option (Except TypeRefusal EffTy) :=
+  (m.cut kind k).map fun (e, table, env) => Checker.check (nativeSignature table) env [] e
+
+def Masked.type? (m : Masked) (kind : FoldKind) (k : Mask) : Option EffTy :=
+  (m.check kind k).bind Except.toOption
+
+/-- The order on the checker's answers: each column below, the requirement by inclusion. -/
+def effLe (a b : EffTy) : Bool :=
+  Ty.sub a.answer.normalize b.answer.normalize && Ty.sub a.error.normalize b.error.normalize &&
+    a.requires.elems.all (b.requires.elems.contains ·)
+
+/-- A query on a program's type: one member of the error column, one required service, or the
+whole answer. -/
+inductive Query
+  | error (member : Ty)
+  | service (key : ServiceKey)
+  | answer (type : Ty)
+  | errorAll (type : Ty)
+deriving DecidableEq
+
+def Query.show : Query → String
+  | .error m => "error has " ++ showTy m
+  | .service k => "requires " ++ showKey k
+  | .answer t => "answer above " ++ showTy t
+  | .errorAll t => "error above " ++ showTy t
+
+def Query.holds (q : Query) (t : EffTy) : Bool :=
+  match q with
+  | .error m => Ty.sub m.normalize t.error.normalize
+  | .service k => t.requires.elems.contains k
+  | .answer a => Ty.sub a.normalize t.answer.normalize
+  | .errorAll e => Ty.sub e.normalize t.error.normalize
+
+/-- A mask is valid for a query when the masked program is admitted and the query holds. -/
+def Masked.valid (m : Masked) (kind : FoldKind) (q : Query) (k : Mask) : Bool :=
+  match m.type? kind k with
+  | some t => q.holds t
+  | none => false
+
+def fullMask (n : Nat) : Mask := Array.replicate n true
+
+def Mask.without (k : Mask) (i : Nat) : Mask := k.setIfInBounds i false
+
+/-- The closure of a set of kept sites: a kept site under a site that is not kept is folded with
+it. The sites are in program order, so a parent comes before its children. -/
+def Masked.closeMask (m : Masked) (k : Mask) : Mask :=
+  (List.range m.size).foldl (fun (acc : Mask) i =>
+    let keep := k.keeps i && match (m.parent[i]?).getD none with
+      | some p => acc.keeps p
+      | none => true
+    acc.setIfInBounds i keep) k
+
+/-- Folding at a site: the site and everything under it. -/
+def Masked.foldAt (m : Masked) (k : Mask) (i : Nat) : Mask := m.closeMask (k.without i)
+
+/-- The mask of a list of kept sites, in seat LATTICE's carrier: a list with no closure under
+parents, whose type map ignores a kept site under a folded one. -/
+def Masked.ofKept (m : Masked) (kept : List Nat) : Mask :=
+  m.closeMask (Array.ofFn (n := m.size) fun i => kept.contains i.val)
+
+/-- **The descent from the root down**: the sites in program order, each asked once while it is
+still kept. A site that is `allowed` is folded with its sub-tree when the fold stays valid, and
+the sites under it are then asked nothing. A site that is not allowed is kept, and the pass
+goes on to its children. With a monotone check it ends at a minimal mask of the allowed folds.
+It answers the mask and the number of calls of `check`. -/
+def Masked.descentTop (m : Masked) (kind : FoldKind) (q : Query) (allowed : Nat → Bool) (start : Mask) :
+    Mask × Nat :=
+  (List.range m.size).foldl (fun (acc : Mask × Nat) i =>
+    let k := acc.1
+    if k.keeps i && allowed i then
+      let k' := m.foldAt k i
+      if m.valid kind q k' then (k', acc.2 + 1) else (k, acc.2 + 1)
+    else acc) (start, 0)
+
+/-- A kept site none of whose children is kept. -/
+def Masked.isKeptLeaf (m : Masked) (k : Mask) (i : Nat) : Bool :=
+  k.keeps i && (List.range m.size).all fun j => !(k.keeps j && (m.parent[j]?).getD none == some i)
+
+/-- **The descent from the leaves up**: the sites from the last to the first, each folded when
+it is a kept leaf and the fold stays valid. It asks one question for each site that is a kept
+leaf at its turn. -/
+def Masked.descentUp (m : Masked) (kind : FoldKind) (q : Query) (start : Mask) : Mask × Nat :=
+  (List.range m.size).reverse.foldl (fun (acc : Mask × Nat) i =>
+    let k := acc.1
+    if m.isKeptLeaf k i then
+      let k' := k.without i
+      if m.valid kind q k' then (k', acc.2 + 1) else (k, acc.2 + 1)
+    else acc) (start, 0)
+
+/-- **The restarting descent** (the paper's algorithm, page 9): fold at the first kept allowed
+site whose fold stays valid, and start again, until no site can be folded. `fuel` bounds the
+rounds by the number of sites. Its result has no valid mask one allowed fold below it. -/
+def Masked.descentFix (m : Masked) (kind : FoldKind) (q : Query) (allowed : Nat → Bool) :
+    Nat → Mask → Nat → Mask × Nat
+  | 0, k, calls => (k, calls)
+  | fuel + 1, k, calls =>
+    let candidates := (List.range m.size).filter fun i => k.keeps i && allowed i
+    let step := candidates.foldl (fun (acc : Option Mask × Nat) i =>
+      match acc.1 with
+      | some _ => acc
+      | none =>
+        let k' := m.foldAt k i
+        if m.valid kind q k' then (some k', acc.2 + 1) else (none, acc.2 + 1)) (none, calls)
+    match step.1 with
+    | some k' => m.descentFix kind q allowed fuel k' step.2
+    | none => (k, step.2)
+
+/-- Seat LATTICE's pass, copied from its design note (`Slice.sweep`): the sites in the list's
+order, each dropped when the slice without it is still valid. `done` holds the sites tried and
+kept. It asks one question for each site of the start. -/
+def sweep (valid : List Nat → Bool) : List Nat → List Nat → List Nat
+  | done, [] => done
+  | done, x :: rest => if valid (done ++ rest) then sweep valid done rest else sweep valid (done ++ [x]) rest
+
+def Masked.sweepFrom (m : Masked) (kind : FoldKind) (q : Query) (order : List Nat) : Mask × Nat :=
+  (m.ofKept (sweep (fun kept => m.valid kind q (m.ofKept kept)) [] order), order.length)
+
+/-- Every closed mask of a small program, by brute force. -/
+def Masked.allClosed (m : Masked) : List Mask :=
+  let n := m.size
+  ((List.range (2 ^ n)).map fun code => (Array.ofFn (n := n) fun i => (code >>> i.val) % 2 == 1)).filter m.closed
+
+/-- The minimal valid masks among a list of masks: no valid mask of the list strictly below. -/
+def minimalAmong (valid : List Mask) : List Mask :=
+  valid.filter fun k => valid.all fun j => !(j.le k && j != k)
+
+end Census

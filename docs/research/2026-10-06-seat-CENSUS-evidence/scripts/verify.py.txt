@@ -1,0 +1,562 @@
+#!/usr/bin/env python3
+"""Seat CENSUS: each number of the receipt's prose, computed again from the rows and the logs.
+
+    verify.py            check the receipt; exit 1 when a sentence with its numbers is not there
+    verify.py --count    print the number of checks alone (the builder writes it into the receipt)
+
+A check is a piece of the receipt's text whose numbers this script computes: the receipt must
+hold that text (white space apart). A number that changes in the rows changes the text that is
+looked for, so the receipt and the rows cannot differ in silence. The tables of the receipt
+are written by `mdtables.py` from the same rows, and they are not checked here again. The
+receipt is read from the first argument that is a path, or from the worktree's place for it.
+"""
+import collections, csv, os, re, sys
+
+S = os.path.dirname(os.path.abspath(__file__))
+W = '/Users/pooks/Dev/lean4-effect4-lower'
+MAIN = '/Users/pooks/Dev/lean4-effect4'      # the coordinator's checkout: read only
+RECEIPT = os.path.join(W, 'docs/research/2026-10-06-seat-CENSUS-receipt.md')
+EVIDENCE = os.path.join(W, 'docs/research/2026-10-06-seat-CENSUS-evidence')
+PLAN = os.path.join(W, 'docs/research/2026-10-06-type-slicing-plan.md')
+BRIEF = os.path.join(W, 'docs/research/2026-10-05-claude-lead/briefs/seat-census-brief.md')
+COUNT = '--count' in sys.argv
+for a in sys.argv[1:]:
+    if a != '--count': RECEIPT = a
+
+def read(name):
+    rows = list(csv.reader(open(os.path.join(S, 'out', name), newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+    bad = [r for r in rows[1:] if len(r) != len(rows[0])]
+    assert not bad, (name, 'malformed rows', len(bad))
+    return [dict(zip(rows[0], r)) for r in rows[1:]]
+def log(name): return open(os.path.join(S, name + '.log')).read()
+def norm(s): return re.sub(r'\s+', ' ', s).strip()
+WORD = {1: 'one', 2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten', 12: 'twelve'}
+def one(pattern, text, cast=int):
+    m = re.search(pattern, text)
+    assert m, pattern
+    return cast(m.group(1)) if m.lastindex == 1 else tuple(cast(g) for g in m.groups())
+
+needles = []      # (the text looked for in the receipt, what it rests on)
+facts = []        # (a statement checked on the rows alone, its truth)
+def need(text, source): needles.append((norm(text), source))
+def fact(text, ok): facts.append((text, bool(ok)))
+
+MODULES = ('pQueueW', 'pQueueF', 'pQueueI', 'pQueueM', 'pQueueOr', 'pSemaphore', 'pPool')
+def is_module(p): return any(p.startswith(m) for m in MODULES)
+BAD = ('larger', 'bothWays', 'unrelated')
+def bad(r): return any(r[c] in BAD for c in ('answer', 'error', 'requires'))
+def refused(r): return r['admitted'] != 'true'
+def node_error(r): return r['nodeType'].strip('<>').split(' ; ')[1]
+
+gf, tf = read('gen-folds.tsv'), read('truth-folds.tsv')
+gs, ts = read('gen-sites.tsv'), read('truth-sites.tsv')
+gt, tt = read('gen-terms.tsv'), read('truth-terms.tsv')
+gp, tp = read('gen-programs.tsv'), read('truth-programs.tsv')
+folds, sites, terms = gf + tf, gs + ts, gt + tt
+others_f = [r for r in tf if not is_module(r['program'])]
+modules_f = [r for r in tf if is_module(r['program'])]
+
+# ---------------------------------------------------------------- the corpora (sections 3 and 4)
+g_programs, g_admitted = one(r'gen: programs (\d+); admitted (\d+);', log('probe1gen'))
+t_programs, t_admitted = one(r'truth: programs (\d+); admitted (\d+);', log('probe1truth'))
+g_sites, g_rows = one(r'gen: sites (\d+); fold rows (\d+);', log('probe1gen'))
+t_sites, t_rows = one(r'truth: sites (\d+); fold rows (\d+);', log('probe1truth'))
+g_terms = one(r'gen: term addresses (\d+);', log('probe1termgen'))
+t_terms = one(r'truth: term addresses (\d+);', log('probe1termtruth'))
+fact('the rows hold the sites and the folds that the logs count', (len(gs), len(ts), len(gf), len(tf), len(gt), len(tt)) == (g_sites, t_sites, g_rows, t_rows, g_terms, t_terms))
+fact('the programs files hold the admitted programs', (len(gp), len(tp)) == (g_admitted, t_admitted))
+for label in ('gen', 'truth'):
+    text = log('probe1' + label)
+    fact(label + ': the site walk agrees with foldMapAt_eff, and the second walk with the first',
+         'the site walk agrees with foldMapAt_eff on every program: true' in text and 'envAt agrees with the site walk on every program: true' in text)
+n_eff, n_term = len(sites), len(terms)
+mod_programs = sorted(set(r['program'] for r in tp if is_module(r['program'])))
+n_mod, n_others = len(mod_programs), len(tp) - len(mod_programs)
+mod_eff = sum(int(r['effectNodes']) for r in tp if is_module(r['program']))
+others_eff = sum(int(r['effectNodes']) for r in tp if not is_module(r['program']))
+largest = max(tp, key=lambda r: int(r['effectNodes']))
+need(f'| 400 | {g_admitted} | {g_sites} | {g_terms} |', 'probe1gen.log, probe1termgen.log')
+fact('the generated corpus has 400 programs', g_programs == 400)
+need(f'| {t_programs} | {t_admitted} | {t_sites} | {t_terms} |', 'probe1truth.log, probe1termtruth.log')
+need(f'| `Probe1Gen`, `Probe1Truth` | the effect addresses: {g_sites} and {t_sites} sites; {g_rows} and {t_rows} fold rows |', 'the two logs')
+need(f'| `Probe1TermGen`, `Probe1TermTruth` | the term addresses: {g_terms} and {t_terms} |', 'the two logs')
+need(f'Its {g_admitted} admitted programs hold {sum(int(r["effectNodes"]) for r in gp)} effect nodes, under two each. '
+     f'The largest holds {max(int(r["effectNodes"]) for r in gp)}, and no environment in it has more than {max(int(r["level"]) for r in gs)} entry.', 'gen-programs.tsv, gen-sites.tsv')
+fact('the generated programs hold under two effect nodes each', sum(int(r['effectNodes']) for r in gp) < 2 * len(gp))
+need(f"The truth lane's {n_mod} programs of the modules (the Queue's, Semaphore's and Pool's) hold {mod_eff} of its {t_sites} effect addresses. "
+     f"The largest, `{largest['program']}`, holds {largest['effectNodes']}, and its largest environment has {max(int(r['level']) for r in ts if r['program'] == largest['program'])} entries.",
+     'truth-programs.tsv, truth-sites.tsv')
+fact('the largest environment of the truth lane is in its largest program', max(int(r['level']) for r in ts) == max(int(r['level']) for r in ts if r['program'] == largest['program']))
+refs_g = one(r'gen: programs \d+; admitted \d+; admitted with a reference in the stored program: (\d+)', log('probe1gen'))
+refs_t = one(r'truth: programs \d+; admitted \d+; admitted with a reference in the stored program: (\d+)', log('probe1truth'))
+truth_src = open(os.path.join(W, 'harness/truth/Truth.lean')).read().split('\n')
+ref_defs = set()
+cur = None
+for line in truth_src:
+    m = re.match(r'def (\w+)', line)
+    if m: cur = m.group(1)
+    if '.ref [' in line: ref_defs.add(cur)
+fact('no admitted generated program holds a layer reference, and one of the truth lane does: pDiamond', (refs_g, refs_t, ref_defs) == (0, 1, {'pDiamond'}))
+need('One program of the truth lane does (`pDiamond`).', 'probe1truth.log, harness/truth/Truth.lean')
+fact('lines 97 to 883 of Truth.lean run from the namespace to the end of the corpus',
+     truth_src[96] == 'namespace OCaml5.Truth' and truth_src[882].endswith('("pPoolClosing", pPoolClosing)]') and "sed -n '97,883p'" in open(os.path.join(S, 'build.sh')).read())
+need('The probes take its lines 97 to 883 as text', 'build.sh, harness/truth/Truth.lean')
+thrifty = set(r['program'] for r in tp if int(r['effectNodes']) > 40)
+fact('the programs of more than 40 effect nodes are the programs of the modules', thrifty == set(mod_programs) and not any(int(r['effectNodes']) > 40 for r in gp))
+need(f'A program of more than 40 effect nodes runs the row form\'s full fold at three kinds of site only. Those programs are the {n_mod} of the modules.', 'truth-programs.tsv, LibRun.lean')
+fact('LibRun.lean runs a program of more than 40 effect nodes thrifty', 'small : Nat := 40' in open(os.path.join(S, 'LibRun.lean')).read())
+selftest = open(os.path.join(S, 'SelfTest.tail.lean')).read()
+n_known = len(re.findall(r'(?m)^def t\d+ : P', selftest))
+need(f'holds {WORD[n_known]} programs with answers known by hand', 'SelfTest.tail.lean')
+need(f'| `SelfTest` | the probe\'s own test: {WORD[n_known]} programs with answers known by hand', 'SelfTest.tail.lean')
+fact('the base build completed', 'Build completed successfully (1031 jobs).' in open(os.path.join(S, 'base-build.log')).read())
+need('`Build completed successfully (1031 jobs)`', 'base-build.log')
+
+# ---------------------------------------------------------------- the three checks of a site (5.1)
+fact('every site passes the three checks', all((r['levelOk'], r['entriesOk'], r['answerOk']) == ('true', 'true', 'true') for r in sites))
+all_entries = sum(1 for r in sites if r['entriesChecked'] == 'all')
+need(f'All {n_eff} sites pass the three. The entry check reads every entry at {all_entries} sites, and the entries that the site adds to its parent\'s at the other {n_eff - all_entries}.', 'the sites files')
+
+# ---------------------------------------------------------------- the table by rule (5.2)
+need(f'**The generated corpus: {g_admitted} programs, {g_sites} effect addresses.**', 'gen-folds.tsv')
+need(f'**The truth lane, the {n_others} programs outside the modules: {others_eff} effect addresses.**', 'truth-programs.tsv')
+need(f'**The truth lane, the {n_mod} programs of the modules: {mod_eff} effect addresses.**', 'truth-programs.tsv')
+counted = [r for r in folds if not (r['fold'] == 'Avar' and r['inLayer'] == 'true')]
+counted_adm = [r for r in counted if not refused(r)]
+need(f'No fold whose program is admitted has a column that is larger or unrelated: {sum(1 for r in counted_adm if bad(r))} of {len(counted_adm)}.', 'the folds files')
+
+# ---------------------------------------------------------------- fold A and its premise (5.3)
+def fold_a(rs): return [r for r in rs if (r['fold'] == 'Avar' and r['inLayer'] != 'true') or (r['fold'] == 'Arow' and r['inLayer'] == 'true')]
+A = fold_a(folds)
+fact('fold A has one fold at each effect address', len(A) == n_eff)
+in_plan = [r for r in A if r['columnOpen'] == 'true']
+in_wide = [r for r in A if r['columnOpen'] == 'true' or node_error(r) == 'never']
+rest = [r for r in A if not (r['columnOpen'] == 'true' or node_error(r) == 'never')]
+def same_answer(rs): return sum(1 for r in rs if not refused(r) and r['answer'] == 'same')
+fact('inside the plan\'s domain every fold A is admitted with the answer identical and no column larger',
+     all(not refused(r) and r['answer'] == 'same' and not bad(r) for r in in_plan))
+fact('inside the wider premise every fold A is admitted with the answer identical and no column larger',
+     all(not refused(r) and r['answer'] == 'same' and not bad(r) for r in in_wide))
+need(f'- **Inside the plan\'s domain: {len(in_plan)} folds, {sum(map(refused, in_plan))} refused, the answer identical at all of them.**', 'the folds files')
+need(f'- **The wider premise: {len(in_wide)} folds, {sum(map(refused, in_wide))} refused, the answer identical at all of them.**', 'the folds files')
+fork_first = sum(1 for r in tf if r['fold'] == 'N' and r['firstClosed'] == 'ActionTerm.fork.0')
+need(f'It adds {len(in_wide) - len(in_plan)} folds under a closed edge. At {fork_first} sites of the truth lane the first closed edge above is a fork.', 'the folds files')
+rest_ref, rest_same = sum(map(refused, rest)), same_answer(rest)
+rest_changed = len(rest) - rest_ref - rest_same
+need(f'- **Outside the wider premise: {len(rest)} folds, {rest_ref} refused.**', 'the folds files')
+need(f'{rest_same} leave the root\'s answer the same, and {rest_changed} change it.', 'the folds files')
+fact('outside the wider premise a changed answer is a smaller one', all(r['answer'] in ('same', 'smaller') for r in rest if not refused(r)))
+mod_a = fold_a(modules_f)
+mod_plan = sum(1 for r in mod_a if r['columnOpen'] == 'true')
+mod_wide = sum(1 for r in mod_a if r['columnOpen'] == 'true' or node_error(r) == 'never')
+need(f'The plan\'s domain holds {mod_plan} of their {mod_eff} addresses. The wider premise holds {mod_wide}.', 'truth-folds.tsv')
+need(f'of the {len(rest)} folds outside it, {rest_ref + rest_changed} are refused or change the answer.', 'the folds files')
+need(f'None meets one of the {len(rest)} folds.', 'the folds files')
+fact('the four refusals of fold A are getOrElse in pOptionSome and pOptionNone',
+     sorted((r['program'], r['culprit']) for r in A if refused(r)) == sorted([(p, 'getOrElse(option<never>, nat)') for p in ('pOptionNone', 'pOptionSome')] * 2))
+
+# the flow of a folded error
+flow = []
+for label in ('gen', 'truth'):
+    for r in read(label + '-flow.tsv'): r['corpus'] = label; flow.append(r)
+by_fold = collections.OrderedDict()
+for r in flow: by_fold.setdefault((r['corpus'], r['program'], r['address']), []).append(r)
+def summary(rs): return [r for r in rs if r['kind'] == 'summary'][0]
+flow_in = {k: v for k, v in by_fold.items() if summary(v)['columnOpen'] == 'true'}
+flow_out = {k: v for k, v in by_fold.items() if summary(v)['columnOpen'] != 'true'}
+fact('the flow probe runs the folds of a node that can fail', len(by_fold) == sum(1 for r in A if node_error(r) != 'never'))
+fact('in the plan\'s domain no environment entry and no site\'s answer changes',
+     all(summary(v)['position'] == 'no environment entry changes' and not any(r['kind'] in ('use', 'answer') for r in v) for v in flow_in.values()))
+env_changes = sum(1 for v in flow_out.values() if summary(v)['position'] == 'an environment entry changes')
+uses = collections.defaultdict(lambda: [set(), set()])
+for k, v in flow_out.items():
+    for r in v:
+        if r['kind'] == 'use': uses[r['position']][0 if summary(v)['admitted'] == 'true' else 1].add(k)
+need(f'each of the {len(by_fold)} folds of a node that can fail', 'the flow files')
+need(f'- In the plan\'s domain: {len(flow_in)} folds. No environment entry and no site\'s answer changes.', 'the flow files')
+need(f'- Outside it: {len(flow_out)} folds. {env_changes} change an environment entry, and {WORD[len(uses)]} positions read a changed variable:', 'the flow files')
+LABEL = {'causeError.0': "`causeError`'s argument", 'tagIs.1': "`tagIs`'s second argument", 'causeIsFail.0': "`causeIsFail`'s argument",
+         'succeed.value': 'a `succeed` value', 'eq.0': "`eq`'s first argument", 'isSome.0': "`isSome`'s argument", 'getOrElse.0': "`getOrElse`'s first argument"}
+fact('the positions that read a changed variable are the seven of the table', set(uses) == set(LABEL))
+for pos, (adm, ref) in uses.items():
+    need(f'| {LABEL.get(pos, pos)} | {len(adm)} | {len(ref)} |', 'the flow files')
+refusing = [p for p, (adm, ref) in uses.items() if ref and not adm]
+fact('the positions that only refused folds reach are getOrElse.0 and isSome.0', sorted(refusing) == ['getOrElse.0', 'isSome.0'])
+need(f'One position refuses, in all {len(uses["getOrElse.0"][1])} folds that reach it: `getOrElse`\'s first argument.', 'the flow files')
+need(f'| `Probe1Flow` | where a folded error flows: {len(by_fold)} folds of a node that can fail |', 'the flow files')
+need(f'on the {len(flow_in)} folds of a failing node in the plan\'s domain', 'the flow files')
+premise = log('probe4premise')
+pm = [tuple(int(x) for x in m) for m in re.findall(
+    r'programs (\d+); closed masks (\d+); masks in the wider premise (\d+): admitted (\d+), with the full program\'s answer (\d+), '
+    r'with error and requirement no larger (\d+); pairs a ≤ b of them (\d+), with error and requirement ordered (\d+); masks outside the premise (\d+), refused (\d+)', premise)]
+assert len(pm) == 2, premise
+pm = [sum(x) for x in zip(*pm)]
+p_programs, p_masks, p_wide, p_adm, p_answer, p_cols, p_pairs, p_ordered, p_out, p_out_ref = pm
+fact('every mask of the wider premise is admitted with the full answer, and every pair of them is ordered', p_wide == p_adm == p_answer == p_cols and p_pairs == p_ordered)
+need(f'It is tested by {len(in_wide)} single folds and by {p_wide} whole masks (section 9.3), with no refusal and no changed answer.', 'the folds files, probe4premise.log')
+need(f'{len(in_wide)} single folds and {p_wide} whole masks meet it.', 'the folds files, probe4premise.log')
+need(f'The plan\'s own domain covers {len(in_plan)} of those folds.', 'the folds files')
+
+# ---------------------------------------------------------------- the row form (5.4)
+layer = [r for r in folds if r['fold'] == 'N' and r['inLayer'] == 'true']
+layer_var = [r for r in folds if r['fold'] == 'Avar' and r['inLayer'] == 'true']
+layer_row = [r for r in folds if r['fold'] == 'Arow' and r['inLayer'] == 'true']
+unbound = sum(1 for r in layer_var if refused(r) and r['refusalPlace'] == 'at-fold')
+fact('every address under a layer is in the 48 other programs of the truth lane', all(not is_module(r['program']) and r in tf for r in layer))
+fact('the row form is admitted at every address under a layer, with every column same or smaller', len(layer_row) == len(layer) and all(not refused(r) and not bad(r) for r in layer_row))
+need(f'{len(layer)} addresses lie under a layer, all in {len(set(r["program"] for r in layer))} of the truth lane\'s {n_others} other programs. At {unbound} the variable is unbound', 'truth-folds.tsv')
+need(f'At {len(layer) - unbound} `var 0` names a binder of the layer\'s own body', 'truth-folds.tsv')
+need(f'The census leaves all {len(layer)} out of the variable form\'s counts.', 'truth-folds.tsv')
+need(f'The row form reaches all {len(layer)}.', 'truth-folds.tsv')
+av = {(r['program'], r['address']): r for r in folds if r['fold'] == 'Avar'}
+both = [(av[(r['program'], r['address'])], r) for r in folds if r['fold'] == 'Arow' and r['inLayer'] != 'true']
+fact('the two forms give the same outcome and type at every address where both ran',
+     all((a['admitted'], a['foldedType'], a['refusal'], a['refusalPath']) == (b['admitted'], b['foldedType'], b['refusal'], b['refusalPath']) for a, b in both))
+need(f'Where both forms ran, {len(both)} addresses not under a layer, they give the same outcome and the same type at each.', 'the folds files')
+fact('the row\'s own type is the assumption\'s at every site, and every answer is its own normal form', all(r['rowLocal'] == 'same' and r['answerNormal'] == 'true' for r in sites))
+need(f'And the row\'s own node has the type `⟨A, never, ∅⟩` at all {n_eff} sites.', 'the sites files')
+need(f'Every node\'s answer is its own normal form, at all {n_eff} sites.', 'the sites files')
+need(f'Its own type is the assumption\'s at all {n_eff} sites.', 'the sites files')
+need(f'It checks at all {n_eff} sites with the assumption\'s own type.', 'the sites files')
+need(f'The two agree at all {len(both)} addresses where both ran.', 'the folds files')
+
+# ---------------------------------------------------------------- fold N (5.5 and 6)
+N = [r for r in folds if r['fold'] == 'N']
+n_ref = [r for r in N if refused(r)]
+t_ref = [r for r in terms if refused(r)]
+fact('every refusal of fold N at an effect address sits in a sibling of the folded node', all(r['refusalPlace'] == 'sibling' for r in n_ref))
+fact('no admitted fold N at an effect address has a column larger or unrelated', not any(bad(r) for r in N if not refused(r)))
+ref_g = sum(1 for r in gf if r['fold'] == 'N' and refused(r))
+ref_o = sum(1 for r in others_f if r['fold'] == 'N' and refused(r))
+ref_m = sum(1 for r in modules_f if r['fold'] == 'N' and refused(r))
+fact('no fold N is refused in the generated corpus', ref_g == 0)
+need(f'{len(n_ref)} of {n_eff} folds are refused. None is in the generated corpus, {ref_o} are in the truth lane\'s {n_others} other programs, and {ref_m} in the modules\' {n_mod}.', 'the folds files')
+b0 = sum(1 for r in n_ref if r['rule'] == 'Eff.bind.0'); b1 = sum(1 for r in n_ref if r['rule'] == 'Eff.bind.1')
+need(f'{b0 + b1} fold a `bind`\'s child: {b0} its first, and {b1} its second.', 'the folds files')
+need(f'**Fold N is refused at {len(n_ref)} of {n_eff} effect addresses and at {len(t_ref)} of {n_term} term addresses.**', 'the folds and terms files')
+closed = log('probe1closed')
+n_atoms = one(r'atoms: (\d+)', closed)
+r1 = one(r'round 1 (\d+)', closed); r2 = one(r'round 2 (\d+)', closed); r3 = one(r'round 3 (\d+)', closed)
+fact('the search finds no type that is never, and the control answers never',
+     'types found that are never, raw or in normal form: []' in closed and 'fst (some never), tupleAt (some never), field (some never)' in closed)
+need(f'the search applies all {n_atoms} atoms, the field reads and the projections for three rounds. It reaches {r1}, {r2} and {r3} types.', 'probe1closed.log')
+need(f'| `Probe1Closed` | the search for a closed term of type `never`: {r3} types reached, and none is `never` |', 'probe1closed.log')
+def term_row(label, rs):
+    ref = sum(map(refused, rs)); b = sum(1 for r in rs if not refused(r) and bad(r))
+    need(f'| {label} | {len(rs)} | {ref} | {len(rs) - ref - b} | {b} |', 'the terms files')
+term_row('generated', gt)
+term_row('truth lane, the 48 others', [r for r in tt if not is_module(r['program'])])
+term_row('truth lane, the 25 modules', [r for r in tt if is_module(r['program'])])
+bad_terms = [r for r in terms if not refused(r) and bad(r)]
+g158 = [r for r in gp if r['program'] == 'g158'][0]
+fact('the one admitted term fold with an unrelated column is the request of refMake in g158',
+     [(r['program'], r['slot'], r['answer'], r['foldedType']) for r in bad_terms] == [('g158', 'perform(refMake).request', 'unrelated', '<ref<never> ; never ; {}>')]
+     and g158['text'] == 'raceAll(refMake("hi") || )' and g158['type'].startswith('<ref<string> ;'))
+need('The one admitted fold with an unrelated column is in `g158`, `raceAll(refMake("hi") || )`.', 'gen-terms.tsv, gen-programs.tsv')
+roles = collections.defaultdict(list)
+for r in terms: roles[r['role']].append(r)
+need(f'The positions with the most refusals, of {len(roles)} positions ({sum(1 for rs in roles.values() if not any(map(refused, rs)))} have none):', 'the terms files')
+
+# the rules that refuse: `family` of mdtables.py, read from its text so that the two scripts hold one definition
+src = open(os.path.join(S, 'mdtables.py')).read()
+exec(src[src.index('def family(r):'):src.index("chunk('repair')")])
+fam = collections.Counter(family(r)[0] for r in n_ref + t_ref)
+ranked = [f for f, _ in sorted(fam.items(), key=lambda kv: -kv[1])]
+kind_src = src[src.index('KIND = {'):src.index('assert sorted(sum(KIND.values()')]
+exec(kind_src)
+k1 = sum(fam[f] for f in KIND['a head or an equality']); k2 = sum(fam[f] for f in KIND['an expectation from a part']); k3 = sum(fam[f] for f in KIND['invariance'])
+total_ref = len(n_ref) + len(t_ref)
+fact('the three kinds hold every refused fold', k1 + k2 + k3 == total_ref and set(fam) == set(sum(KIND.values(), ())))
+need(f'Effect addresses and term addresses together, both corpora: {total_ref} refused folds, {len(fam)} rules.', 'the folds and terms files')
+need(f'Each refusal names one of {len(fam)} rules. Uniform eliminators would remove {k1} of the {total_ref} refusals. {k2} come from a rule that takes its expectation from a part, and {k3} from a cell\'s invariance.', 'the folds and terms files')
+need(f'The {len(fam)} rules are of three kinds', 'the folds and terms files')
+need(f'| `Probe1Small` | one smallest program for each of the {len(fam)} rules that refuse |', 'probe1small.log')
+need(f'`Probe1Small` holds one smallest program for each of the {len(fam)} rules, written by hand.', 'probe1small.log')
+small = [l.split('\t') for l in log('probe1small').split('\n') if l.startswith('SMALLEST\t')][1:]
+fact('the smallest programs are one for each rule, each refused', sorted(r[1] for r in small) == sorted(fam) and not any('NOT REFUSED' in r for r in small))
+need(f'Row {ranked.index("`getOrElse`") + 1}\'s program refuses under fold A at the same address', 'the rank of getOrElse; Probe1Small.tail.lean')
+fact('Probe1Small holds the guard of fold A on the program of getOrElse', '#guard brokenA p19 [0, 0] = some ("term", [1], "getOrElse(option<never>, nat)")' in open(os.path.join(S, 'Probe1Small.tail.lean')).read())
+need(f'**The order of a repair is the table of section 6.3.** The first seven rules give {sum(fam[f] for f in ranked[:7])} of the {total_ref} refusals.', 'the folds and terms files')
+need(f'**Uniform eliminators repair {k1} of the {total_ref}.**', 'the folds and terms files')
+head_rules = sorted(KIND['a head or an equality'], key=lambda f: -fam[f])[:4]
+fact('the four largest rules of the first kind', head_rules == ["a list fold's list", '`sameHandle`', 'a decision by an option', 'a Boolean decision'])
+need(f'- a list fold\'s list: {fam[head_rules[0]]}; - `sameHandle`: {fam[head_rules[1]]}; - the decision by an option: {fam[head_rules[2]]}; - the decision by a Boolean: {fam[head_rules[3]]}.', 'the folds and terms files')
+need(f'**{k2} refusals are not an eliminator\'s.**', 'the folds and terms files')
+need(f'**Invariance stays**: {k3} refusals, and an answer that is not ordered. In the two corpora all {k3} are at term addresses.', 'the folds and terms files')
+fact('every invariance refusal of the corpora is at a term address', not any(family(r)[0] == "a cell's content (invariance)" for r in n_ref))
+fact('the plan\'s example has an invariance refusal at an effect address: row 12 of the smallest programs',
+     ranked.index("a cell's content (invariance)") + 1 == 12 and any(r[1] == "a cell's content (invariance)" and r[5] == 'requestNotSubtype' for r in small))
+need(f'**Only a gap serves the {k3} invariance refusals**', 'the folds and terms files')
+need(f'**A gap also serves the {k2} refusals of the second kind**', 'the folds and terms files')
+need(f'The term hole exists as an atom in the same way ({n_term} addresses).', 'the terms files')
+need(f'A guard and {k3} refusals confirm it.', 'the folds and terms files')
+need(f'run the same {n_eff + n_term} addresses', 'the folds and terms files')
+refmake = set((r['program'], r['address']) for r in terms if r['slot'] == 'perform(refMake).request' and r['termPath'] == '.')
+a_refmake = [r for r in A if (r['program'], r['address']) in refmake]
+fact('fold A at every refMake site is admitted with every column the same', len(a_refmake) == len(refmake) and all((r['admitted'], r['answer'], r['error'], r['requires']) == ('true', 'same', 'same', 'same') for r in a_refmake))
+need(f'The `Ref.make` node itself folds at all {len(refmake)} of its sites, with every column the same.', 'the folds and terms files')
+fact('SelfTest holds the plan\'s example under fold A', '#guard out (typeOf! t2) (foldAVar sig0 [] t2 [0] .nat) = some (true, some .same, some .same, some .same)' in selftest)
+
+# ---------------------------------------------------------------- the guards, and probes 2 and 3
+def guards(name): return sum(1 for l in open(os.path.join(S, name + '.tail.lean')) if l.startswith('#guard'))
+for name, lg in (('SelfTest', 'selftest'), ('Probe1Gen', 'probe1gen'), ('Probe1Truth', 'probe1truth'), ('Probe1Closed', 'probe1closed'), ('Probe1TermGen', 'probe1termgen'),
+                 ('Probe1TermTruth', 'probe1termtruth'), ('Probe1Flow', 'probe1flow'), ('Probe1Small', 'probe1small'), ('Probe2', 'probe2'), ('Probe3', 'probe3'),
+                 ('Probe4', 'probe4'), ('Probe4Premise', 'probe4premise'), ('Probe5', 'probe5')):
+    text = log(lg)
+    fact(f'{name}: Lean\'s exit code is 0, and the log holds no error', re.search(r'exit=0\s*$', text) is not None and ': error:' not in text)
+elim = [l.split('\t') for l in log('probe2').split('\n') if '\t' in l][1:]
+need(f'(`Probe2`, {len(elim)} entries); {guards("Probe2")} guards hold the claims, with red controls.', 'probe2.log, Probe2.tail.lean')
+need(f'| `Probe2` | the eliminators: {len(elim)} rows of the checker\'s answers |', 'probe2.log')
+raw_only = [r for r in elim if r[3] == r[5] and r[7].startswith('REFUSED') and not r[4].startswith('REFUSED')]
+need(f'at {WORD[len(raw_only)]} rows: the four Boolean tests, `restore`, `forkIn`, `setContext` and the interruptor.', 'probe2.log')
+fact('the eight rows where the raw union of a type with itself is refused', sorted(r[0].split(':')[0].split('(')[0].strip() for r in raw_only) ==
+     sorted(['cause leaf', "catchIf's test", 'select by a Boolean', "iterate's test", 'restore', 'if a0 {…} else {…}', 'forkIn', 'setContext']))
+need(f'(`Probe3`, {guards("Probe3")} guards, reproduced)', 'Probe3.tail.lean')
+blame_src = open(os.path.join(W, 'src/Effect4/Program/Typing/Blame.lean')).read()
+block = blame_src[blame_src.index('inductive TypeReason'):]
+block = block[:block.index('deriving')]
+reasons = re.findall(r'(?m)^  \| (\w+)', block)
+NO_TYPE = ['outsideDomain', 'instantiatedFormation', 'serviceUnknown', 'literalOutsideAlphabet', 'layerReference', 'referencesIllFormed', 'mergeAllEmpty', 'returnNotLast', 'breakOutsideLoop']
+fact('the nine reasons that compare no type are reasons of the checker', set(NO_TYPE) <= set(reasons) and len(set(NO_TYPE)) == 9)
+need(f'has {len(reasons)} reasons. {len(reasons) - len(NO_TYPE)} report a type that does not meet an expectation.', 'src/Effect4/Program/Typing/Blame.lean')
+need(f'The other {len(NO_TYPE)} compare no type:', 'src/Effect4/Program/Typing/Blame.lean')
+need(f'{len(reasons) - len(NO_TYPE)} of the {len(reasons)} reasons report a type that does not meet an expectation', 'src/Effect4/Program/Typing/Blame.lean')
+probe3 = open(os.path.join(S, 'Probe3.tail.lean')).read()
+guarded = set(re.findall(r'= some "(\w+)"', probe3))
+fact('Probe3 holds a guard for each reason of the checker but four: a layer reference, ill-formed references, an empty mergeAll, an instantiated formation',
+     set(reasons) - guarded == {'layerReference', 'referencesIllFormed', 'mergeAllEmpty', 'instantiatedFormation'})
+
+# ---------------------------------------------------------------- probe 4
+p4 = log('probe4')
+blocks = collections.OrderedDict()
+for part in p4.split('=== ')[1:]:
+    blocks[part.split('\n')[0]] = part
+def block_counts(title): return one(r'closed masks (\d+); admitted (\d+); valid (\d+); minimal valid masks (\d+)', blocks[title])
+page18 = [block_counts(f'page 18, the error column; fold {k}; query: error above (nat | string)') for k in ('Arow', 'Avar', 'N')]
+fact('page 18: the three folds give the same counts', len(set(page18)) == 1)
+c18 = page18[0]
+need(f'The program has {c18[0]} closed masks, of which {c18[2]} are valid and {c18[3]} minimal.', 'probe4.log')
+fact('page 18: the meet of the minimal masks keeps the root alone, has the error never and is not valid',
+     'the meet of the minimal masks: 1000000  select[bool](true, □, □)   type <never ; never ; {}>   valid: false' in blocks['page 18, the error column; fold N; query: error above (nat | string)'])
+refined = block_counts('page 18, the error column, one member; fold Arow; query: error has nat')
+need(f'has {refined[3]} minimal masks, each below one of the four.', 'probe4.log')
+ans_n = block_counts('page 18, the answer column; fold N; query: answer above (nat | string)')
+ans_a = block_counts('page 18, the answer column; fold Arow; query: answer above (nat | string)')
+fact('page 18 in the answer column: four minimal masks under fold N, and one under fold A, which folds the root',
+     ans_n[3] == 4 and ans_a[3] == 1 and 'minimal: 0000000  □:(nat | string)' in blocks['page 18, the answer column; fold Arow; query: answer above (nat | string)'])
+p23 = block_counts('page 23, the error column; fold N; query: error has string')
+need(f'has {p23[3]} minimal masks, one a branch.', 'probe4.log')
+need(f'The paper\'s two examples give {WORD[c18[3]]} and {WORD[p23[3]]} minimal masks.', 'probe4.log')
+for mask in ('select[bool](true, bind(fail(1), □), bind(□, fail("d")))', 'select[bool](true, bind(□, fail("c")), bind(fail(2), □))',
+             'select[bool](true, bind(fail(1), fail("c")), □)', 'select[bool](true, □, bind(fail(2), fail("d")))'):
+    fact('page 18: a minimal mask of the log: ' + mask, ('minimal: ' in p4) and re.search(r'minimal: \d+  ' + re.escape(mask) + '   type', p4) is not None)
+    need(f'| `{mask}` | (', 'probe4.log')
+cell_n = blocks['the cell, a refusal inside the lattice; fold N; query: error has string']
+cell_a = blocks['the cell, a refusal inside the lattice; fold Arow; query: error has string']
+cn, ca = block_counts('the cell, a refusal inside the lattice; fold N; query: error has string'), block_counts('the cell, a refusal inside the lattice; fold Arow; query: error has string')
+need(f'{cn[0]} closed masks, {cn[1]} admitted.', 'probe4.log')
+need(f'Under fold A the same program has {ca[1]} admitted masks of {ca[0]}, and every descent ends minimal.', 'probe4.log')
+fact('the cell under fold A: every descent ends minimal', cell_a.count('minimal: true') == 5 and 'minimal: false' not in cell_a)
+def descent(block, label):
+    kept, calls, minimal = one(r'descent ' + re.escape(label) + r': \d+ kept (\d+), (\d+) calls of check, minimal: (\w+)', block, str)
+    return kept, calls, 'yes' if minimal == 'true' else 'no'
+ROWS = (('from the root down, skipping under a fold', 'from the root down, skipping under a fold'), ('seat LATTICE\'s pass, program order', 'seat LATTICE\'s pass, program order'),
+        ('from the leaves up', 'from the leaves up'), ('seat LATTICE\'s pass, reverse order', 'seat LATTICE\'s pass, reverse order'), ('restarting (the paper\'s)', 'restarting (the paper\'s)'))
+ENDS = ['`bind(succeed(5), bind(□, bind(□, fail("E"))))`', 'the same', '`bind(□, bind(□, bind(□, fail("E"))))`', 'the same', 'the same']
+for (label, name), end in zip(ROWS, ENDS):
+    kept, calls, minimal = descent(cell_n, name)
+    need(f'| {label} | {end} | {kept} | {calls} | {minimal} |', 'probe4.log: the cell under fold N')
+fact('the cell under fold N: the minimal mask of the log', 'minimal: 1010101  bind(□, bind(□, bind(□, fail("E"))))' in cell_n)
+fact('the cell under fold N: the two passes in program order end at the mask 1110101, the three others at 1010101',
+     [one(r'descent ' + re.escape(name) + r': (\d+) kept', cell_n, str) for _, name in ROWS] == ['1110101', '1110101', '1010101', '1010101', '1010101']
+     and 'addresses: 7: [., 0, 1, 1.0, 1.1, 1.1.0, 1.1.1]' in cell_n)
+fact('a fork whose body fails: the mask that folds the fork answers more than the mask that folds the body',
+     'type(a) not below type(b) 1 (answer 1, error 0, requirement 0)' in blocks['a fork whose body fails; fold Arow; query: requires k0_0'])
+lat = []
+for label in ('gen', 'truth'):
+    for r in read(label + '-lattice.tsv'): r['corpus'] = label; lat.append(r)
+def every(fold): return [r for r in lat if r['fold'] == fold and r['query'] == 'answer above never']
+def cases(fold): return [r for r in lat if r['fold'] == fold and r['query'] != 'answer above never']
+ea, en = every('Arow'), every('N')
+n_small = len(ea)
+fact('the sweep holds one row of masks for each program and fold', len(ea) == len(en) == len(set(r['program'] for r in lat)))
+masks = sum(int(r['closed']) for r in ea)
+fact('the two folds have the same masks', masks == sum(int(r['closed']) for r in en) == p_masks and n_small == p_programs)
+need(f'{n_small} programs ({sum(1 for r in ea if r["corpus"] == "gen")} generated, {sum(1 for r in ea if r["corpus"] == "truth")} of the truth lane), every closed mask of each: {masks} masks.', 'the lattice files')
+def sweep_row(label, rs, names=''):
+    ref = sum(int(r['closed']) - int(r['admitted']) for r in rs)
+    progs = [r['program'] for r in rs if int(r['admitted']) < int(r['closed'])]
+    cols = sum(int(r['errorNotBelow']) + int(r['requiresNotBelow']) for r in rs)
+    ans = sum(1 for r in rs if int(r['answerNotBelow']) > 0)
+    need(f'| {label} | {masks} | {ref} | {len(progs)}{names} | {cols} | {ans} |', 'the lattice files')
+    return ref, progs, ans
+a_ref, a_progs, a_ans = sweep_row('A (row form)', ea, ' (`pOptionSome`, `pOptionNone`)')
+n_refm, n_progs, n_ans = sweep_row('N', en)
+fact('the two programs with a refused mask under fold A', sorted(a_progs) == ['pOptionNone', 'pOptionSome'])
+fact('the masks refused under fold A are the masks refused outside the wider premise', a_ref == p_out_ref)
+need(f'The answer is not, in {a_ans} programs.', 'the lattice files')
+need(f'{p_wide} of the {masks} masks fold only regions that meet it. All {p_adm} are admitted, with the full program\'s answer', 'probe4premise.log')
+need(f'All {p_pairs} pairs of them are ordered in both columns. Of the {p_out} other masks {p_out_ref} are refused.', 'probe4premise.log')
+need(f'**Under fold N the admitted programs\' masks are not closed downwards**, in {len(n_progs)} programs.', 'the lattice files')
+fact('under fold N the columns of the masks whose program is admitted are ordered', n_ans == 0 and not any(int(r['typeNotBelow']) > 0 for r in en))
+need(f'| `Probe4`, `Probe4Premise` | the lattice: the two examples, {len(lat)} cases of the sweep and {masks} masks |', 'the lattice files')
+KEYS = ('top', 'up', 'fix', 'sweep', 'sweepRev')
+for label, fold in (('A', 'Arow'), ('N', 'N')):
+    rs = cases(fold)
+    need(f'| {label}, ends minimal | {len(rs)} | ' + ' | '.join(str(sum(1 for r in rs if r[k + 'Minimal'] == 'true')) for k in KEYS) + ' |', 'the lattice files')
+    need(f'| {label}, calls of `check` | | ' + ' | '.join(str(sum(int(r[k + 'Calls']) for r in rs)) for k in KEYS) + ' |', 'the lattice files')
+notmin = sorted(set(r['program'] for r in cases('N') if r['topMinimal'] != 'true'))
+fact('the cases of fold N that end at a mask that is not minimal are queries on the answer', all(r['query'].startswith('answer above') for r in cases('N') if r['topMinimal'] != 'true'))
+need(f'The {WORD[len(notmin)]} cases of fold N that end at a mask that is not minimal: ' + ', '.join(f'`{p}`' for p in ('pAcquireClosed', 'pOptionSome', 'pOptionNone')), 'the lattice files')
+fact('the three programs of those cases', notmin == sorted(['pAcquireClosed', 'pOptionSome', 'pOptionNone']))
+several = {r['program']: int(r['minimal']) for r in cases('Arow') if int(r['minimal']) > 1}
+fact('the cases of fold A with more than one minimal mask', several == {'pSqlite': 3, 'pKv': 4})
+need('Two cases of fold A have more than one minimal mask (`pSqlite` three, `pKv` four)', 'the lattice files')
+failing = collections.Counter(r['program'] for r in ts if r['program'] in several and r['node'].startswith('Eff.perform') and node_error(r) == '[string, string]')
+fact('each of the two has as many calls that can fail with the member as it has minimal masks', dict(failing) == several)
+need(f'over every pair of the {masks - a_ref} masks whose program is admitted', 'the lattice files')
+need(f'Outside it the answer of a mask is not ordered ({a_ans} programs)', 'the lattice files')
+need(f'and it is not ordered in {a_ans} programs.', 'the lattice files')
+truth_small = [r for r in en if r['corpus'] == 'truth']
+need(f'({len([r for r in truth_small if int(r["admitted"]) < int(r["closed"])])} of {len(truth_small)} small programs of the truth lane)', 'truth-lattice.tsv')
+need(f'It holds at {len(in_wide)} folds and {p_wide} masks of the premise. Outside the premise the answer changes at {rest_changed} single folds', 'the folds files, probe4premise.log')
+
+# ---------------------------------------------------------------- probe 5
+sl = {'gen': read('gen-slices.tsv'), 'truth': read('truth-slices.tsv')}
+def queries(rs): return sorted(set((r['program'], r['query']) for r in rs))
+qg, qt = queries(sl['gen']), queries(sl['truth'])
+pg, pt = len(set(p for p, _ in qg)), len(set(p for p, _ in qt))
+def kinds(qs): return sum(1 for _, q in qs if q.startswith('error')), sum(1 for _, q in qs if q.startswith('requires'))
+fact('the truth lane has no service query at the root, and no module program has a query', kinds(qt)[1] == 0 and not any(is_module(p) for p, _ in qt))
+need(f'{pg + pt} programs have an error member or a required service at the root. {pg} are generated ({kinds(qg)[0]} error members, {kinds(qg)[1]} services), '
+     f'and {pt} are of the truth lane ({kinds(qt)[0]} error members).', 'the slices files')
+all_slices = sl['gen'] + sl['truth']
+for label, name in (('generated', 'gen'), ('truth lane', 'truth')):
+    for dom in ('plan', 'wide', 'all'):
+        rs = [r for r in sl[name] if r['domain'] == dom]
+        need(f'| {label} | {dom} | {len(rs)} | {sum(int(r["addresses"]) for r in rs)} | {sum(int(r["kept"]) for r in rs)} | {sum(int(r["calls"]) for r in rs)} | '
+             f'{sum(1 for r in rs if int(r["foldedOutsidePlan"]) > 0)} | {sum(1 for r in rs if r["minimalByBruteForce"] == "true")} of {sum(1 for r in rs if r["minimalByBruteForce"] != "-")} |', 'the slices files')
+fact('each result of a whole program is minimal by brute force, and the restart folds nothing more', all(r['minimalByBruteForce'] == 'true' and r['moreByRestart'] == '0' for r in all_slices))
+need(f'The restarting descent folds nothing more from any of the {len(all_slices)} results.', 'the slices files')
+completions = [r[c] for r in all_slices for c in ('completion1', 'completion2', 'completion3')]
+fact('each completion of a whole program is admitted and holds the member', set(completions) == {'admitted, the member stays'})
+need(f'It ran {len(completions)} completions: {len(qg) + len(qt)} queries, three domains, three replacements.', 'the slices files')
+out_g = sum(1 for r in sl['gen'] if r['domain'] == 'all' and int(r['foldedOutsidePlan']) > 0)
+out_t = [r for r in sl['truth'] if r['domain'] == 'all' and int(r['foldedOutsidePlan']) > 0]
+fact('the queries of the truth lane that leave the plan\'s domain', sorted(collections.Counter(r['program'] for r in out_t).items()) == [('pTagHit', 2), ('pTagMiss', 2)])
+need(f'The descent leaves the plan\'s domain in {out_g + len(out_t)} queries when it may: {out_g} generated, and {len(out_t)} of the truth lane. The {len(out_t)} are `pTagHit` and `pTagMiss`, two queries each.', 'the slices files')
+need(f'| `Probe5` | candidate A at work: {len(qg) + len(qt)} queries and ', 'the slices files')
+sub = read('truth-subslices.tsv')
+by_sub = collections.OrderedDict()
+for r in sub: by_sub.setdefault((r['program'], r['site'], r['query']), {})[r['domain']] = r
+sub_all = [v['all'] for v in by_sub.values()]
+need(f'at least eight sites: {len(by_sub)} sub-programs, in {len(set(k[0] for k in by_sub))} programs.', 'truth-subslices.tsv')
+site_at = {(r['program'], r['address']): r for r in ts}
+def node_above(program, address):
+    parts = address.split('.')
+    for k in range(len(parts) - 1, 0, -1):
+        if (program, '.'.join(parts[:k])) in site_at: return site_at[(program, '.'.join(parts[:k]))]['node']
+    return site_at[(program, '.')]['node']
+above = collections.Counter(node_above(k[0], k[1]) for k in by_sub)
+fact('the nodes above the sub-programs are scoped, provideService and exit', set(above) == {'Eff.scoped', 'Eff.provideService', 'Eff.exit'})
+need(f'The node above is a `scoped` at {above["Eff.scoped"]} of them, a `provideService` at {above["Eff.provideService"]} and an `exit` at {above["Eff.exit"]}.', 'truth-subslices.tsv, truth-sites.tsv')
+need(f'candidate A at work: {len(qg) + len(qt)} queries and {len(by_sub)} sub-programs |', 'the slices files')
+addresses = sum(int(r['addresses']) for r in sub_all)
+need(f'**The pass from the root asks {sum(int(r["calls"]) for r in sub_all)} questions for {addresses} addresses.** The pass from the leaves asks {sum(int(r["upCalls"]) for r in sub_all)}. One question a site is {addresses} questions.', 'truth-subslices.tsv')
+fact('the wall times: the pass from the root between 2 and 4 seconds, the pass from the leaves over 30, a call at most 50 milliseconds',
+     2000 <= sum(int(r['ms']) for r in sub_all) < 4000 and sum(int(r['upMs']) for r in sub_all) > 30000 and max(int(r['msPerCall']) for r in sub) <= 50)
+need('In wall time the first pass takes about 3 seconds, and the second over 30.', 'truth-subslices.tsv')
+need('A call of `check` takes at most 50 milliseconds under the interpreter, in this run.', 'truth-subslices.tsv')
+order = by_sub[('pPoolOrder', '1.1.0.0', 'requires k0_0')]
+fact('pPoolOrder is the largest sub-program', int(order['all']['addresses']) == max(int(r['addresses']) for r in sub_all))
+need(f'{order["all"]["kept"]} kept against {order["all"]["upKept"]} on `pPoolOrder`', 'truth-subslices.tsv')
+need(f'{order["all"]["calls"]} against {order["all"]["addresses"]} on the largest sub-program', 'truth-subslices.tsv')
+need(f'{order["all"]["calls"]} questions for {order["all"]["addresses"]} addresses.', 'truth-subslices.tsv')
+need(f'The plan\'s domain allows {order["plan"]["allowed"]} of {order["plan"]["addresses"]} sites on `pPoolOrder`', 'truth-subslices.tsv')
+need(f'On the same sub-program the pass from the root keeps {order["all"]["kept"]} sites. The pass from the leaves keeps {order["all"]["upKept"]}, for {order["all"]["upCalls"]} questions.', 'truth-subslices.tsv')
+fact('the restarting descent folds nothing more from a result of a sub-program', all(r['moreByRestart'] == '0' for r in sub) and all(r['upMoreByRestart'] == '0' for r in sub_all))
+need(f'It ran from the {len(sub)} results of the pass from the root, and from the {len(sub_all)} of the pass from the leaves.', 'truth-subslices.tsv')
+fact('the three domains agree on every sub-program, in the kept sites, the folded regions and the calls',
+     all(len(set((v[d]['kept'], v[d]['foldedRegions'], v[d]['calls']) for d in ('plan', 'wide', 'all'))) == 1 for v in by_sub.values()))
+fact('no folded region of a sub-program starts outside the plan\'s domain', all(r['foldedOutsidePlan'] == '0' for r in sub))
+need(f'The three domains agree on all {len(by_sub)}, in the kept sites, the folded regions and the calls.', 'truth-subslices.tsv')
+c3 = collections.Counter(r['completion3'] for r in sub); c1 = collections.Counter(r['completion1'] for r in sub); c2 = collections.Counter(r['completion2'] for r in sub)
+fact('the completions of the sub-programs', c3 == {'admitted, the member stays': len(sub)} and c1 == c2 and set(c1) == {'admitted, the member stays', 'not admitted (releaseFails)'})
+need(f'The third replacement gives an admitted program at all {len(sub)} results, with the member. The two that can fail give an admitted program at {c1["admitted, the member stays"]} results each. '
+     f'At the other {c1["not admitted (releaseFails)"]} the checker refuses with `releaseFails`', 'truth-subslices.tsv')
+need(f'Every count is over {g_admitted} and {t_admitted} programs.', 'the logs')
+# the table of the brief's refutations (section 12)
+need(f'| none in the {len(in_plan)} folds of the plan\'s domain, and none in the {len(in_wide)} of the wider premise |', 'the folds files')
+need(f'| {total_ref}, each named by one of {len(fam)} rules |', 'the folds and terms files')
+need(f'| none by its form, by reading; {k2} refusals come from a rule that is no eliminator, and {k3} from invariance |', 'the folds and terms files')
+need(f'| none under fold A, in {len(cases("Arow"))} cases and the two examples; under fold N the cell\'s program and {sum(1 for r in cases("N") if r["topMinimal"] != "true")} of {len(cases("N"))} cases, where the checker refuses a mask |', 'the lattice files, probe4.log')
+fact('each case of fold N that ends at a mask that is not minimal has a refused mask', all(int(r['admitted']) < int(r['closed']) for r in cases('N') if r['topMinimal'] != 'true'))
+sub_adm = sum(c['admitted, the member stays'] for c in (c1, c2, c3)); sub_not = sum(c['not admitted (releaseFails)'] for c in (c1, c2, c3))
+need(f'| none in the {len(completions)} completions of whole programs, and none in the {sub_adm} admitted completions of sub-programs; {sub_not} completions are not admitted |', 'the slices files')
+need(f'It matters for the modules: {mod_wide} of {mod_eff} addresses against {mod_plan}.', 'truth-folds.tsv')
+
+# ---------------------------------------------------------------- the plan's sentences (13)
+need(f'{len(in_wide) - len(in_plan)} folds, 0 refused.', 'the folds files')
+need(f'No environment reaches a layer\'s body ({len(layer)} addresses).', 'truth-folds.tsv')
+need(f'The variable form is unbound at {unbound} of the {len(layer)} addresses under a layer. At the other {len(layer) - unbound} it names a binder of the layer\'s own body.', 'truth-folds.tsv')
+receipt = open(RECEIPT).read()
+plan, brief = norm(open(PLAN).read()), norm(open(BRIEF).read())
+quotes, cur = [], []
+for line in receipt.split('\n'):
+    if line.startswith('> '): cur.append(line[2:])
+    elif cur: quotes.append(norm(' '.join(cur))); cur = []
+for q in quotes:
+    fact('a quote is in the plan: ' + q[:60], q in plan or q.strip('`') in plan)
+fact('the receipt quotes ten sentences of the plan', len(quotes) == 10)
+fact('the brief holds the quoted condition of the term addresses', 'where the corpus has a closed term of type `never` to put there' in brief)
+fact('the plan holds the quoted list of closed edges', 'a caught body, an `exit` or a fork' in plan)
+
+# the table of section 8, read from the receipt: its rows, the rows marked "yes", and the refusals that it names
+sec8 = receipt[receipt.index('## 8. Probe 3'):receipt.index('## 9. Probe 4')]
+rows8 = [l for l in sec8.split('\n') if l.startswith('| ') and not l.startswith('| Rule') and not l.startswith('| ---')]
+yes = [l for l in rows8 if l.split(' | ')[6].startswith('**yes**')]
+named = set(re.findall(r'`(\w+)`', ' '.join(l.split(' | ')[5] for l in rows8))) & set(reasons)
+fact('section 8: each refusal that the table names has a guard in Probe3', named <= guarded)
+fact('section 8: the reasons that the table does not name are the three of a cause\'s leaf', set(reasons) - set(NO_TYPE) - named == {'recordCause', 'tupleCause', 'foldCause'})
+fact('section 8: Probe3 holds a guard for each of those three', {'recordCause', 'tupleCause', 'foldCause'} <= guarded)
+n_rows8, n_yes, n_named = len(rows8), len(yes), len(named)
+need(f'The table has {n_named} of the {len(reasons) - len(NO_TYPE)}.', 'the receipt\'s table of section 8')
+need(f'**The rules whose answer reads the compared type are the {n_yes} rows marked "yes".**', 'the receipt\'s table of section 8')
+need(f'in the {n_rows8} rows of section 8', 'the receipt\'s table of section 8')
+need(f'{n_yes} of the {n_rows8} rows read the compared type.', 'the receipt\'s table of section 8')
+need(f'| an analysing rule whose answer reads the refused premise | {n_yes} of the {n_rows8} rows |', 'the receipt\'s table of section 8')
+need(f'**The marking checker needs the gap at {n_yes} rows of section 8**, the rows marked "yes". At the other {n_rows8 - n_yes} it can go on with the rule\'s own answer.', 'the receipt\'s table of section 8')
+
+# ---------------------------------------------------------------- the files
+sizes = sum(os.path.getsize(os.path.join(S, 'out', f)) for f in ('truth-folds.tsv', 'truth-sites.tsv', 'truth-terms.tsv', 'truth-programs.tsv'))
+need(f'The four largest row files are not filed ({round(sizes / 1e6)} MB).', 'the sizes of the four files')
+n_files = sum(len(fs) for _, _, fs in os.walk(EVIDENCE))
+need(f'this receipt, and {n_files} text files under', 'the evidence folder')
+fact('every file of the evidence folder is a text file with the suffix .txt', all(f.endswith('.txt') for _, _, fs in os.walk(EVIDENCE) for f in fs))
+second = os.path.join(EVIDENCE, 'out', 'second-run.txt')
+fact('the second run gave equal rows and logs', os.path.exists(second) and 'every row file and every log of the second run equals the first' in open(second).read())
+for ref in sorted(set(re.findall(r'`((?:out|rows|scripts)/[\w./-]+\.txt)`', receipt))):
+    fact('a named file is in the evidence folder: ' + ref, os.path.exists(os.path.join(EVIDENCE, ref)))
+for ref in sorted(set(re.findall(r'`((?:src|docs|Test|harness|vendor)/[\w./-]+\.(?:lean|md|pdf))`', receipt))):
+    # a paper of `gradual-holes` is in the coordinator's checkout; seat LATTICE's note is on its own branch
+    fact('a named path resolves: ' + ref, os.path.exists(os.path.join(W, ref)) or (ref.startswith('vendor/') and os.path.exists(os.path.join(MAIN, ref)))
+         or (ref.endswith('seat-LATTICE-design.md') and os.path.exists('/Users/pooks/Dev/lean4-effect4-mask/' + ref)))
+fact('no marker of the template is left in the receipt', '@@' not in receipt)
+
+total = len(needles) + len(facts) + 1
+need(f'{total} checks hold', 'this script\'s own count')
+if COUNT:
+    print(total); sys.exit(0)
+
+text = norm(receipt)
+failed = 0
+for needle, source in needles:
+    ok = needle in text
+    failed += not ok
+    print(('ok       ' if ok else 'MISSING  ') + needle + '   [' + source + ']')
+for statement, ok in facts:
+    failed += not ok
+    print(('ok       ' if ok else 'FALSE    ') + statement)
+print()
+print('%d checks: %d texts of the receipt and %d facts of the rows; %d failed' % (len(needles) + len(facts), len(needles), len(facts), failed))
+sys.exit(1 if failed else 0)

@@ -1,0 +1,68 @@
+/-
+Seat CENSUS, probe 1: the search for a closed term of the type `never`, which fold N at a term
+address would need.
+
+A term's type depends on its parts' types alone (`argTy`), so the search runs over types and
+not over terms. It starts from the types of the literals, in both positions of the literal
+rule. Round 1 applies every atom of `NativeAtom.all` at an arity of at most three (a variadic
+atom at 0, 1 and 2 arguments), every field read and every tuple projection. Round 2 does the
+same at an arity of at most two. Round 3 applies the forms that take a part out of a type: the
+unary atoms, the field reads, the tuple projections, and `getOrElse`, `get` and `mapGet` at a
+second argument of round 1. A list fold answers its accumulator's type, which is its initial
+value's type or a stated type above it, so it adds no type. The result is a finite probe.
+-/
+namespace Census
+
+def startTypes : List Ty := [.unit, .nat, .bool, .string, .lit "s"]
+
+def lists (n : Nat) (xs : List Ty) : List (List Ty) :=
+  match n with
+  | 0 => [[]]
+  | n + 1 => xs.flatMap fun x => (lists n xs).map (x :: ·)
+
+def atomNames : List (String × Option Nat) :=
+  Effect4.Program.NativeAtom.all.map fun atom =>
+    ((Effect4.Program.NativeAtom.row atom).name, (Effect4.Program.NativeAtom.row atom).arity)
+
+def atomResults (maxArity : Nat) (known : List Ty) : List Ty :=
+  atomNames.flatMap fun (name, arity) =>
+    let arities := match arity with
+      | some n => if n ≤ maxArity then [n] else []
+      | none => [0, 1, 2].filter (· ≤ maxArity)
+    arities.flatMap fun n => (lists n known).filterMap fun tys => nativeAtomTy name tys
+
+def formResults (known : List Ty) : List Ty :=
+  (known.flatMap fun t =>
+    match t.normalize with
+    | .record fields => fields.flatMap fun f =>
+        [Record.fieldType false t f.1, Record.fieldType true t f.1].filterMap id
+    | _ => []) ++
+  (known.flatMap fun t => [0, 1, 2].filterMap fun i => Tuple.typeAt t i)
+
+/-- Keep the first of each type, by its printed form. -/
+def dedupe (xs : List Ty) : List Ty :=
+  (xs.foldl (fun (acc : Std.HashSet String × Array Ty) t =>
+    let k := showTy t
+    if acc.1.contains k then acc else (acc.1.insert k, acc.2.push t)) (({} : Std.HashSet String), #[])).2.toList
+
+def round1 : List Ty := dedupe (startTypes ++ atomResults 3 startTypes ++ formResults startTypes)
+def round2 : List Ty := dedupe (round1 ++ atomResults 2 round1 ++ formResults round1)
+def round3 : List Ty :=
+  dedupe (round2 ++ atomResults 1 round2 ++ formResults round2 ++
+    (["getOrElse", "get", "mapGet"].flatMap fun name =>
+      round2.flatMap fun a => round1.filterMap fun b => nativeAtomTy name [a, b]))
+
+def isNever (t : Ty) : Bool := t == .never || t.normalize == .never
+
+#eval IO.println s!"atoms: {atomNames.length}"
+#eval IO.println s!"closed-term types: start {startTypes.length}; round 1 {round1.length}"
+#eval IO.println s!"closed-term types: round 2 {round2.length}"
+#eval IO.println s!"closed-term types: round 3 {round3.length}"
+#eval IO.println s!"types found that are never, raw or in normal form: {(round3.filter isNever).map showTy}"
+#eval IO.println s!"some types found that hold never under a head: {((round3.filter fun t => ((showTy t).splitOn "never").length > 1).take 8).map showTy}"
+-- the control: with a variable of the type never in hand, the same forms do answer never
+#eval IO.println s!"control, the same forms at never: fst {(nativeAtomTy "fst" [.never]).map showTy}, tupleAt {(Tuple.typeAt .never 0).map showTy}, field {(Record.fieldType false .never "x").map showTy}"
+#guard (round3.filter isNever).isEmpty
+#guard nativeAtomTy "fst" [.never] = some .never
+
+end Census

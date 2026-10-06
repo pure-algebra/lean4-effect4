@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""Seat CENSUS, probe 1: where a folded error flows, from <prefix>-flow.tsv (fold A, the row form,
+at every node whose error is not never)."""
+import csv, sys, collections
+def read(p):
+    rows = list(csv.reader(open(p, newline=''), delimiter='\t', quoting=csv.QUOTE_NONE))
+    return [dict(zip(rows[0], r)) for r in rows[1:]]
+def table(title, header, rows):
+    print(); print('## ' + title)
+    widths = [max(len(str(x)) for x in col) for col in zip(header, *rows)] if rows else [len(h) for h in header]
+    fmt = '  '.join('{:<%d}' % w for w in widths)
+    print(fmt.format(*header)); print(fmt.format(*['-' * w for w in widths]))
+    for r in rows: print(fmt.format(*[str(x) for x in r]))
+allrows = []
+for prefix in sys.argv[1:]:
+    for r in read(prefix + '-flow.tsv'):
+        r['corpus'] = prefix.split('/')[-1]; allrows.append(r)
+folds = collections.OrderedDict()
+for r in allrows:
+    folds.setdefault((r['corpus'], r['program'], r['address']), []).append(r)
+print('# probe 1, the flow of a folded error: fold A (row form) at every node whose error is not never')
+print('folds: %d (%s)' % (len(folds), ', '.join('%s: %d' % kv for kv in collections.Counter(k[0] for k in folds).items())))
+def summary(rs): return [r for r in rs if r['kind'] == 'summary'][0]
+out = []
+for dom, label in (('true', 'in the plan\'s domain'), ('false', 'outside it (a closed edge above)')):
+    fs = {k: v for k, v in folds.items() if summary(v)['columnOpen'] == dom}
+    changed = [k for k, v in fs.items() if summary(v)['position'] == 'an environment entry changes']
+    answer = [k for k, v in fs.items() if any(r['kind'] == 'answer' for r in v)]
+    refused = [k for k, v in fs.items() if summary(v)['admitted'] != 'true']
+    out.append([label, len(fs), len(changed), len(answer), len(refused)])
+table('a fold of a node that can fail: does a value type change outside the folded region?',
+      ['the address', 'folds', 'an environment entry changes', 'a site\'s answer changes', 'refused'], out)
+# by closed edge
+by = collections.defaultdict(list)
+for k, v in folds.items():
+    s = summary(v)
+    if s['columnOpen'] != 'true': by[s['firstClosed']].append(v)
+out = []
+for edge in sorted(by):
+    vs = by[edge]
+    uses = collections.Counter()
+    for v in vs:
+        for role in set(r['position'] for r in v if r['kind'] == 'use'): uses[role] += 1
+    out.append([edge, len(vs), sum(1 for v in vs if summary(v)['admitted'] != 'true'),
+                sum(1 for v in vs if summary(v)['position'] == 'an environment entry changes'),
+                '; '.join('%s: %d' % kv for kv in uses.most_common())])
+table('outside the plan\'s domain, by the closed edge: the positions that read the changed variable (folds with such a use)',
+      ['closed edge', 'folds', 'refused', 'an entry changes', 'the positions that read it'], out)
+# uses by position: admitted and refused
+uses = collections.defaultdict(lambda: [0, 0, set()])
+for k, v in folds.items():
+    s = summary(v)
+    if s['columnOpen'] == 'true': continue
+    for role in set(r['position'] for r in v if r['kind'] == 'use'):
+        u = uses[role]; u[0 if s['admitted'] == 'true' else 1] += 1
+        u[2].add((r['before'], r['after']) and tuple((r['before'], r['after']) for r in v if r['kind'] == 'use' and r['position'] == role)[0])
+out = [[role, u[0], u[1], '; '.join('%s -> %s' % ba for ba in sorted(u[2])[:2])[:150]] for role, u in sorted(uses.items(), key=lambda kv: (-kv[1][1], -kv[1][0], kv[0]))]
+table('outside the plan\'s domain: each position that reads a changed variable',
+      ['position', 'folds admitted', 'folds refused', 'the variable\'s type, before -> after (two instances)'], out)
+# the refused folds in full
+out = []
+for k, v in folds.items():
+    s = summary(v)
+    if s['admitted'] != 'true':
+        out.append([k[1], k[2], s['firstClosed'], s['nodeType'], s['refusal'], s['culprit'],
+                    '; '.join(sorted(set('%s@%s' % (r['position'], r['site']) for r in v if r['kind'] == 'use')))])
+table('the refused folds', ['program', 'address', 'closed edge', 'node type', 'refusal', 'what it read', 'uses of the changed variables'], out)
+# in-domain folds with any change (expected none)
+out = []
+for k, v in folds.items():
+    s = summary(v)
+    if s['columnOpen'] == 'true' and (s['position'] == 'an environment entry changes' or any(r['kind'] == 'answer' for r in v)):
+        out.append([k[1], k[2], s['rule'], s['nodeType']])
+table('in the plan\'s domain: folds that change an environment entry or a site\'s answer (the domain\'s definition says none)',
+      ['program', 'address', 'rule', 'node type'], out)

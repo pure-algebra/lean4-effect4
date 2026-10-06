@@ -318,9 +318,13 @@ slicing. [The plan](research/2026-10-06-type-slicing-plan.md) reads the vendored
 maps it to the checker and lists ten proposed claims, four probes and six slices. The
 owner said to go ahead with its recommendations and to run its probes, and asked for a deep
 exploration of a true gap with holes. Two research seats took them, and neither edits a
-tracked source. Seat CENSUS measures the checker's graduality on the two corpora
-([its brief](research/2026-10-05-claude-lead/briefs/seat-census-brief.md)); its receipt is
-not in yet. Seat GAP studied what a gap with holes would give, from the papers and from what
+tracked source. Seat CENSUS measured the checker's graduality on the two corpora;
+[its receipt](research/2026-10-06-seat-CENSUS-receipt.md) is merged (row 290). An omission
+to an assumed answer keeps the answer and shrinks the error and the requirement at 4833
+single omissions, on a premise wider than the plan's, with none refused. A fold to `never`
+is refused 6133 times by 18 rules: the uniform eliminators repair 4148, a rule that takes
+its expectation from a part gives 1886, and a cell's invariance gives 99. Every count is a
+finite census over 201 programs. Seat GAP studied what a gap with holes would give, from the papers and from what
 the algebra already gives; [its study](research/2026-10-06-seat-GAP-study.md) is merged
 (row 288). Two of the plan's questions were answered under row 282.
 

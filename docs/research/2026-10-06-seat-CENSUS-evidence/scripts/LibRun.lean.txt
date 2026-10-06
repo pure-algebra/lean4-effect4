@@ -1,0 +1,189 @@
+/-
+Seat CENSUS: the third part of the shared text: one fold's outcome, the rows of the census of
+one program, and the run over a corpus.
+-/
+namespace Census
+
+/-- A folded program with the signature's table and the root environment that it is checked
+at, and the checker's answer. -/
+structure Folded where
+  program : P
+  table : RowTable
+  rootEnv : TyEnv
+  result : Except TypeRefusal EffTy
+
+def foldedN (table : RowTable) (rootEnv : TyEnv) (e : P) (path : List Nat) : Option Folded :=
+  (replaceEff e path neverProgram).map fun e' =>
+    ⟨e', table, rootEnv, Checker.check (nativeSignature table) rootEnv [] e'⟩
+
+def foldedAVar (table : RowTable) (rootEnv : TyEnv) (e : P) (path : List Nat) (answer : Ty) : Option Folded :=
+  (replaceEff (Eff.weaken 0 e) path (.succeed (.var 0))).map fun e' =>
+    ⟨e', table, answer :: rootEnv, Checker.check (nativeSignature table) (answer :: rootEnv) [] e'⟩
+
+def foldedARow (table : RowTable) (rootEnv : TyEnv) (e : P) (path : List Nat) (answer : Ty) : Option Folded :=
+  (replaceEff e path (.perform (.external table.length) (.lit .unit))).map fun e' =>
+    let table' := table ++ [assumeRow answer]
+    ⟨e', table', rootEnv, Checker.check (nativeSignature table') rootEnv [] e'⟩
+
+structure Outcome where
+  admitted : Bool
+  ans : Option Rel := none
+  err : Option Rel := none
+  req : Option Rel := none
+  type : Option EffTy := none
+  refusal : Option TypeRefusal := none
+
+def outcome (full : EffTy) : Except TypeRefusal EffTy → Outcome
+  | .ok t =>
+    { admitted := true, ans := some (relTy t.answer full.answer), err := some (relTy t.error full.error),
+      req := some (relReq t.requires full.requires), type := some t }
+  | .error r => { admitted := false, refusal := some r }
+
+def tsv (cells : List String) : String := "\t".intercalate cells
+
+def relCell : Option Rel → String
+  | some r => r.name
+  | none => "-"
+
+/-- One row of a folds file. -/
+def foldRow (name : String) (s : Site) (nodeTy : EffTy) (fold : String) (full : EffTy) (f : Folded) : String :=
+  let o := outcome full f.result
+  let (reason, detail, rpath, place, rctor, culprit) := match o.refusal with
+    | none => ("-", "-", "-", "-", "-", "-")
+    | some r =>
+      (r.reason.head, reasonDetail r.reason, showPath r.path, refusalPlace s.path r.path,
+        ctorAt f.program r.path, blame (nativeSignature f.table) f.rootEnv f.program r)
+  tsv [name, showPath s.path, s.rule, ">".intercalate s.route, toString s.columnOpen, toString s.inLayer,
+    s.firstClosed, ctorName (.eff s.node), showEffTy nodeTy, fold, toString o.admitted, relCell o.ans,
+    relCell o.err, relCell o.req, reason, rpath, place, rctor, culprit, detail,
+    match o.type with | some t => showEffTy t | none => "-"]
+
+def foldHeader : String :=
+  tsv ["program", "address", "rule", "route", "columnOpen", "inLayer", "firstClosed", "node", "nodeType", "fold",
+    "admitted", "answer", "error", "requires", "refusal", "refusalPath", "refusalPlace", "refusingNode",
+    "culprit", "refusalDetail", "foldedType"]
+
+/-- The type that the assumed row gives its own node, alone: what the row form puts at an
+address. `same` when it is the variable form's `⟨A, never, ∅⟩`. -/
+def rowLocal (table : RowTable) (answer : Ty) : String :=
+  match Checker.check (nativeSignature (table ++ [assumeRow answer])) [] []
+      (.perform (.external table.length) (.lit .unit)) with
+  | .ok t =>
+    if t = ⟨answer, .never, Requirement.empty⟩ then "same"
+    else if t = ⟨answer.normalize, .never, Requirement.empty⟩ then "normalized"
+    else "other " ++ showEffTy t
+  | .error r => "refused " ++ reasonDetail r.reason
+
+/-- The census of one admitted program at the empty root environment: the rows of each effect
+address under fold N and under the two forms of fold A. `full` is the program's own type.
+With `thrifty`, the row form's full fold is run only where it can differ from the variable
+form's: under a layer, where the row's own type is not `⟨A, never, ∅⟩`, and at every seventh
+site as a control. The checker reads a child through its type alone, so elsewhere the two
+folds have one result; the control sites and every program run without `thrifty` test that. -/
+def censusProgram (name : String) (table : RowTable) (e : P) (full : EffTy) (thrifty : Bool := false) :
+    List String :=
+  let sig := nativeSignature table
+  ((sites sig [] e).zipIdx).flatMap fun (s, index) =>
+    match s.type sig with
+    | .error _ => [tsv [name, showPath s.path, s.rule, "SITE-NOT-TYPED"]]
+    | .ok t =>
+      let n := match foldedN table [] e s.path with
+        | some f => [foldRow name s t "N" full f]
+        | none => [tsv [name, showPath s.path, s.rule, "REPLACE-FAILED N"]]
+      let av := match foldedAVar table [] e s.path t.answer with
+        | some f => [foldRow name s t "Avar" full f]
+        | none => [tsv [name, showPath s.path, s.rule, "REPLACE-FAILED Avar"]]
+      let local_ := rowLocal table t.answer
+      let ar :=
+        if thrifty && !s.inLayer && local_ == "same" && index % 7 != 0 then []
+        else match foldedARow table [] e s.path t.answer with
+          | some f => [foldRow name s t "Arow" full f]
+          | none => [tsv [name, showPath s.path, s.rule, "REPLACE-FAILED Arow"]]
+      n ++ av ++ ar
+
+/-- The level of the nearest effect node above a site: the entries above it are the site's new
+ones. -/
+def parentLevel (all : List Site) (s : Site) : Nat :=
+  let above := all.filter fun a => a.path.length < s.path.length && a.path.isPrefixOf s.path
+  match above.foldl (fun (best : Option Site) a =>
+      match best with
+      | none => some a
+      | some b => if a.path.length > b.path.length then some a else some b) none with
+  | some a => if a.env.length ≤ s.env.length then a.env.length else 0
+  | none => 0
+
+/-- One row of a sites file: the site, its type, and the checks against the checker. With
+`thrifty` the entry check reads the new entries alone, and every entry at each seventh site. -/
+def siteRow (name : String) (table : RowTable) (e : P) (all : List Site) (s : Site) (index : Nat)
+    (thrifty : Bool := false) : String :=
+  let sig := nativeSignature table
+  match s.type sig with
+  | .error r => tsv [name, showPath s.path, s.rule, "SITE-NOT-TYPED", reasonDetail r.reason]
+  | .ok t =>
+    let allEntries := !thrifty || index % 7 == 0
+    let from_ := if allEntries then 0 else parentLevel all s
+    tsv [name, showPath s.path, s.rule, ">".intercalate s.route, toString s.env.length, ctorName (.eff s.node),
+      showEffTy t, toString (levelUpperOk sig [] e s), toString (entriesOk sig [] e s from_),
+      toString (answerOk sig [] e s t.answer), if allEntries then "all" else s!"from {from_}",
+      toString (t.answer == t.answer.normalize), rowLocal table t.answer, showEnv s.env]
+
+def siteHeader : String :=
+  tsv ["program", "address", "rule", "route", "level", "node", "nodeType", "levelOk", "entriesOk", "answerOk",
+    "entriesChecked", "answerNormal", "rowLocal", "env"]
+
+/-! ## The census of a corpus: three files of rows -/
+
+def outDir : String :=
+  "/private/tmp/claude-501/-Users-pooks-Dev-lean4-effect4/acf2315e-02ac-4acd-9ef9-b0734bd686a7/scratchpad/census/ts/out/"
+
+/-- The admitted programs of a corpus, each as its expansion (`Eff.expandRefs`, the tree that the
+checker types) with its row table and its type. A program is admitted when `Api.wellTyped`
+holds at its table. -/
+def admittedOf (progs : List (String × RowTable × P)) : List (String × RowTable × P × EffTy) :=
+  progs.filterMap fun (name, table, p) =>
+    if Api.wellTyped p table then
+      match Checker.check (nativeSignature table) [] [] p.expandRefs with
+      | .ok t => some (name, table, p.expandRefs, t)
+      | .error _ => none
+    else none
+
+def programRow (name : String) (e : P) (t : EffTy) : String :=
+  tsv [name, toString (nodeCount e), toString (effectPaths e).length, showEffTy t, showProgram e]
+
+def appendLines (path : String) (lines : List String) : IO Unit := do
+  let h ← IO.FS.Handle.mk path .append
+  for l in lines do h.putStrLn l
+  h.flush
+
+/-- Run the census of a corpus into `<outDir><label>-{programs,sites,folds}.tsv`. A program
+with more than `small` effect nodes runs thrifty. -/
+def runCorpus (label : String) (progs : List (String × RowTable × P)) (small : Nat := 40) : IO Unit := do
+  let adm := admittedOf progs
+  IO.println s!"{label}: programs {progs.length}; admitted {adm.length}; admitted with a reference in the stored program: {(progs.filter fun (x : String × RowTable × P) => Api.wellTyped x.2.2 x.2.1 && !(x.2.2.refSites []).isEmpty).length}"
+  IO.FS.writeFile (outDir ++ label ++ "-programs.tsv")
+    (tsv ["program", "nodes", "effectNodes", "type", "text"] ++ "\n" ++
+      "\n".intercalate (adm.map fun (x : String × RowTable × P × EffTy) => programRow x.1 x.2.2.1 x.2.2.2) ++ "\n")
+  IO.FS.writeFile (outDir ++ label ++ "-sites.tsv") (siteHeader ++ "\n")
+  IO.FS.writeFile (outDir ++ label ++ "-folds.tsv") (foldHeader ++ "\n")
+  let mut nSites := 0
+  let mut nFolds := 0
+  let mut walkAgrees := true
+  let mut envAgrees := true
+  let t00 ← IO.monoMsNow
+  for (name, table, e, t) in adm do
+    let ss := sites (nativeSignature table) [] e
+    let thrifty : Bool := decide (ss.length > small)
+    if ss.map (·.path) != effectPaths e then walkAgrees := false
+    if !envAtAgrees (nativeSignature table) [] e then envAgrees := false
+    let siteRows := (ss.zipIdx).map fun (s, index) => siteRow name table e ss s index thrifty
+    appendLines (outDir ++ label ++ "-sites.tsv") siteRows
+    let foldRows := censusProgram name table e t thrifty
+    appendLines (outDir ++ label ++ "-folds.tsv") foldRows
+    nSites := nSites + siteRows.length
+    nFolds := nFolds + foldRows.length
+  let t11 ← IO.monoMsNow
+  IO.println s!"{label}: the site walk agrees with foldMapAt_eff on every program: {walkAgrees}"
+  IO.println s!"{label}: envAt agrees with the site walk on every program: {envAgrees}"
+  IO.println s!"{label}: sites {nSites}; fold rows {nFolds}; wall time {t11 - t00} ms"
+
+end Census

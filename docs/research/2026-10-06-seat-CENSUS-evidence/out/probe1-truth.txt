@@ -1,0 +1,223 @@
+# probe 1, the graduality census: truth
+programs: 73   effect addresses: 4644   fold rows: 10265
+malformed rows: folds 0, sites 0, programs 0
+sites by (levelOk, entriesOk, answerOk): ('true', 'true', 'true'): 4644
+sites under a layer: 61
+fold Avar under a layer (the form does not reach it; left out of every table below): 61  (refused at the fold as an unbound variable: 26, the variable names a binder of the layer's body: 35)
+the assumed row's own type against <A ; never ; {}>, by site: same: 4644
+sites whose answer type is its own normal form: 4644 of 4644
+entry checks: every entry at 1038 sites, the new entries alone at 3606 sites
+sites in candidate A's domain (no closed edge above): 1909
+sites outside it, by the first closed edge above: ActionTerm.fork.0: 2520, Eff.catchCause.0: 9, Eff.catchIf.0: 21, Eff.exit.0: 119, Eff.onExit.0: 66
+
+## fold Avar by rule (the parent's constructor and the child's index): 4583 folds, 4 refused, 4579 gradual
+rule                   folds  refused  answer               error                requires   refusals (reason@place)
+---------------------  -----  -------  -------------------  -------------------  ---------  -----------------------
+ActionTerm.fork.0      156    0        same:156             same:156             same:156   -                      
+Eff.acquireRelease.0   28     0        same:28              same:28              same:28    -                      
+Eff.acquireRelease.1   28     0        same:28              same:28              same:28    -                      
+Eff.bind.0             1411   0        same:1409 smaller:2  same:1409 smaller:2  same:1411  -                      
+Eff.bind.1             1411   0        same:1409 smaller:2  same:1405 smaller:6  same:1411  -                      
+Eff.catchCause.0       3      0        same:3               same:3               same:3     -                      
+Eff.catchCause.1       3      0        same:3               same:3               same:3     -                      
+Eff.catchIf.0          9      0        same:6 smaller:3     same:3 smaller:6     same:9     -                      
+Eff.catchIf.1          9      0        same:9               same:9               same:9     -                      
+Eff.exit.0             5      2        same:1 smaller:2     same:3               same:3     term@sibling:2         
+Eff.iterate.0          171    0        same:171             same:171             same:171   -                      
+Eff.onExit.0           114    0        same:114             same:114             same:114   -                      
+Eff.onExit.1           114    0        same:114             same:114             same:114   -                      
+Eff.provideLayer.1     9      0        same:9               same:9               same:9     -                      
+Eff.provideService.0   4      0        same:4               same:4               same:4     -                      
+Eff.restore.0          116    0        same:116             same:116             same:116   -                      
+Eff.scoped.0           19     0        same:18 smaller:1    same:17 smaller:2    same:19    -                      
+Eff.select.bool.0      199    2        same:197             same:197             same:197   term@sibling:2         
+Eff.select.bool.1      199    0        same:199             same:197 smaller:2   same:199   -                      
+Eff.select.option.0    199    0        same:199             same:199             same:199   -                      
+Eff.select.option.1    199    0        same:199             same:199             same:199   -                      
+Eff.uninterruptible.0  103    0        same:103             same:103             same:103   -                      
+Stmt.bindYield.0       1      0        same:1               same:1               same:1     -                      
+root                   73     0        same:73              same:59 smaller:14   same:73    -                      
+
+## fold Arow by rule (the parent's constructor and the child's index): 1038 folds, 4 refused, 1034 gradual
+rule                   folds  refused  answer              error               requires  refusals (reason@place)
+---------------------  -----  -------  ------------------  ------------------  --------  -----------------------
+ActionTerm.fork.0      33     0        same:33             same:33             same:33   -                      
+Eff.acquireRelease.0   11     0        same:11             same:11             same:11   -                      
+Eff.acquireRelease.1   11     0        same:11             same:11             same:11   -                      
+Eff.bind.0             321    0        same:320 smaller:1  same:319 smaller:2  same:321  -                      
+Eff.bind.1             294    0        same:294            same:288 smaller:6  same:294  -                      
+Eff.catchCause.0       3      0        same:3              same:3              same:3    -                      
+Eff.catchCause.1       3      0        same:3              same:3              same:3    -                      
+Eff.catchIf.0          9      0        same:6 smaller:3    same:3 smaller:6    same:9    -                      
+Eff.catchIf.1          9      0        same:9              same:9              same:9    -                      
+Eff.exit.0             4      2        same:1 smaller:1    same:2              same:2    term@sibling:2         
+Eff.iterate.0          17     0        same:17             same:17             same:17   -                      
+Eff.onExit.0           15     0        same:15             same:15             same:15   -                      
+Eff.onExit.1           15     0        same:15             same:15             same:15   -                      
+Eff.provideLayer.1     9      0        same:9              same:9              same:9    -                      
+Eff.provideService.0   4      0        same:4              same:4              same:4    -                      
+Eff.restore.0          26     0        same:26             same:26             same:26   -                      
+Eff.scoped.0           9      0        same:9              same:7 smaller:2    same:9    -                      
+Eff.select.bool.0      36     2        same:34             same:34             same:34   term@sibling:2         
+Eff.select.bool.1      38     0        same:38             same:36 smaller:2   same:38   -                      
+Eff.select.option.0    36     0        same:36             same:36             same:36   -                      
+Eff.select.option.1    29     0        same:29             same:29             same:29   -                      
+Eff.uninterruptible.0  19     0        same:19             same:19             same:19   -                      
+LayerTerm.effect.0     13     0        same:13             same:13             same:13   -                      
+Stmt.bindYield.0       1      0        same:1              same:1              same:1    -                      
+root                   73     0        same:73             same:59 smaller:14  same:73   -                      
+
+## fold N by rule (the parent's constructor and the child's index): 4644 folds, 644 refused, 4000 gradual
+rule                   folds  refused  answer                error                requires   refusals (reason@place)                                                                                                                                                                                                            
+---------------------  -----  -------  --------------------  -------------------  ---------  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ActionTerm.fork.0      156    0        same:146 smaller:10   same:156             same:156   -                                                                                                                                                                                                                                  
+Eff.acquireRelease.0   31     0        same:30 smaller:1     same:31              same:31    -                                                                                                                                                                                                                                  
+Eff.acquireRelease.1   31     0        same:31               same:31              same:31    -                                                                                                                                                                                                                                  
+Eff.bind.0             1432   522      same:765 smaller:145  same:907 smaller:3   same:910   binderTerm@sibling:113 cause@sibling:24 exitExpected@sibling:1 foldTerm@sibling:47 maskRestoreExpected@sibling:81 notFiber@sibling:35 notSelectable@sibling:127 predicateNotBool@sibling:82 scopeExpected@sibling:1 term@sibling:11
+Eff.bind.1             1432   90       same:883 smaller:459  same:1336 smaller:6  same:1342  binderTerm@sibling:31 notFiber@sibling:11 notSelectable@sibling:48                                                                                                                                                                 
+Eff.catchCause.0       3      0        same:3                same:3               same:3     -                                                                                                                                                                                                                                  
+Eff.catchCause.1       3      0        same:2 smaller:1      same:3               same:3     -                                                                                                                                                                                                                                  
+Eff.catchIf.0          9      0        same:6 smaller:3      same:3 smaller:6     same:9     -                                                                                                                                                                                                                                  
+Eff.catchIf.1          9      0        same:1 smaller:8      same:9               same:9     -                                                                                                                                                                                                                                  
+Eff.exit.0             5      2        same:1 smaller:2      same:3               same:3     term@sibling:2                                                                                                                                                                                                                     
+Eff.iterate.0          171    0        same:171              same:171             same:171   -                                                                                                                                                                                                                                  
+Eff.onExit.0           114    0        same:109 smaller:5    same:114             same:114   -                                                                                                                                                                                                                                  
+Eff.onExit.1           114    0        same:114              same:114             same:114   -                                                                                                                                                                                                                                  
+Eff.provideLayer.1     9      0        same:6 smaller:3      same:9               same:9     -                                                                                                                                                                                                                                  
+Eff.provideService.0   4      0        smaller:4             same:4               same:4     -                                                                                                                                                                                                                                  
+Eff.restore.0          116    0        same:111 smaller:5    same:116             same:116   -                                                                                                                                                                                                                                  
+Eff.scoped.0           19     4        same:2 smaller:13     same:13 smaller:2    same:15    binderTerm@sibling:1 notFiber@sibling:3                                                                                                                                                                                            
+Eff.select.bool.0      199    2        same:195 smaller:2    same:197             same:197   term@sibling:2                                                                                                                                                                                                                     
+Eff.select.bool.1      199    0        same:199              same:197 smaller:2   same:199   -                                                                                                                                                                                                                                  
+Eff.select.option.0    199    0        same:199              same:199             same:199   -                                                                                                                                                                                                                                  
+Eff.select.option.1    199    24       same:171 smaller:4    same:175             same:175   notSelectable@sibling:24                                                                                                                                                                                                           
+Eff.uninterruptible.0  103    0        same:89 smaller:14    same:103             same:103   -                                                                                                                                                                                                                                  
+LayerTerm.effect.0     13     0        same:13               same:13              same:13    -                                                                                                                                                                                                                                  
+Stmt.bindYield.0       1      0        same:1                same:1               same:1     -                                                                                                                                                                                                                                  
+root                   73     0        same:4 smaller:69     same:59 smaller:14   same:73    -                                                                                                                                                                                                                                  
+
+## fold Avar against candidate A's domain
+domain                         layer              folds  refused  gradual  answer same (raw)  answer not same  error larger  requires larger
+-----------------------------  -----------------  -----  -------  -------  -----------------  ---------------  ------------  ---------------
+in A's domain                  not under a layer  1848   0        1848     1848               0                0             0              
+outside (a closed edge above)  not under a layer  2735   4        2731     2721               10               0             0              
+
+## fold Arow against candidate A's domain
+domain                         layer              folds  refused  gradual  answer same (raw)  answer not same  error larger  requires larger
+-----------------------------  -----------------  -----  -------  -------  -----------------  ---------------  ------------  ---------------
+in A's domain                  not under a layer  517    0        517      517                0                0             0              
+in A's domain                  under a layer      61     0        61       61                 0                0             0              
+outside (a closed edge above)  not under a layer  460    4        456      451                5                0             0              
+
+## fold Avar: the premise of column graduality, by the address and by the node's own error
+the address                                  the node                   folds  refused  gradual  answer not identical  error smaller  requires smaller  the rules that refuse  
+-------------------------------------------  -------------------------  -----  -------  -------  --------------------  -------------  ----------------  -----------------------
+in the plan's domain (no closed edge above)  the node's error is never  1817   0        1817     0                     0              0                 -                      
+in the plan's domain (no closed edge above)  the node can fail          31     0        31       0                     20             0                 -                      
+outside it (a closed edge above)             the node's error is never  2700   0        2700     0                     0              0                 -                      
+outside it (a closed edge above)             the node can fail          35     4        31       10                    12             0                 getOrElse (in a term):4
+the wider premise (no closed edge above, or the node's error is never): 4548 folds, 0 refused, 4548 with the answer identical
+outside the wider premise (a node that can fail, under a closed edge): 35 folds, 4 refused; by closed edge: Eff.catchCause.0: 6 (refused 0), Eff.catchIf.0: 18 (refused 0), Eff.exit.0: 11 (refused 4)
+
+## fold Arow: the premise of column graduality, by the address and by the node's own error
+the address                                  the node                   folds  refused  gradual  answer not identical  error smaller  requires smaller  the rules that refuse  
+-------------------------------------------  -------------------------  -----  -------  -------  --------------------  -------------  ----------------  -----------------------
+in the plan's domain (no closed edge above)  the node's error is never  542    0        542      0                     0              0                 -                      
+in the plan's domain (no closed edge above)  the node can fail          36     0        36       0                     20             0                 -                      
+outside it (a closed edge above)             the node's error is never  430    0        430      0                     0              0                 -                      
+outside it (a closed edge above)             the node can fail          30     4        26       5                     12             0                 getOrElse (in a term):4
+the wider premise (no closed edge above, or the node's error is never): 1008 folds, 0 refused, 1008 with the answer identical
+outside the wider premise (a node that can fail, under a closed edge): 30 folds, 4 refused; by closed edge: Eff.catchCause.0: 6 (refused 0), Eff.catchIf.0: 18 (refused 0), Eff.exit.0: 6 (refused 4)
+
+## fold Avar: the refusals by the rule that refuses, the largest first (4 refusals, 1 rules)
+the rule that refuses  refused folds  programs  folded at (rule:count)            an instance      what it read                 
+---------------------  -------------  --------  --------------------------------  ---------------  -----------------------------
+getOrElse (in a term)  4              2         Eff.exit.0:2 Eff.select.bool.0:2  pOptionNone@0.0  getOrElse(option<never>, nat)
+
+## fold Arow: the refusals by the rule that refuses, the largest first (4 refusals, 1 rules)
+the rule that refuses  refused folds  programs  folded at (rule:count)            an instance      what it read                 
+---------------------  -------------  --------  --------------------------------  ---------------  -----------------------------
+getOrElse (in a term)  4              2         Eff.exit.0:2 Eff.select.bool.0:2  pOptionNone@0.0  getOrElse(option<never>, nat)
+
+## fold N: the refusals by the rule that refuses, the largest first (644 refusals, 17 rules)
+the rule that refuses                     refused folds  programs  folded at (rule:count)                               an instance                                            what it read                                                                    
+----------------------------------------  -------------  --------  ---------------------------------------------------  -----------------------------------------------------  --------------------------------------------------------------------------------
+notSelectable at Eff.select.option        199            25        Eff.bind.0:127 Eff.bind.1:48 Eff.select.option.1:24  pPoolCloseWaits@1.1.1.0.0.0.1.1.0.1.1.1.1.0.1.0        notSelectable option never                                                      
+predicateNotBool at Eff.select.bool       82             20        Eff.bind.0:82                                        pPoolCloseWaits@1.1.1.0.0.0.1.1.0.1.1.1.1.0.1.0.0.1.0  predicateNotBool never                                                          
+maskRestoreExpected at Eff.restore        81             27        Eff.bind.0:81                                        pMaskWait@1.1.0.0.0.0                                  maskRestoreExpected never                                                       
+sameHandle (in a binder term)             81             25        Eff.bind.0:81                                        pQueueInterrupted@0                                    sameHandle(never, deferred<unit, never>)                                        
+fold: the list (in a binder term)         63             21        Eff.bind.0:31 Eff.bind.1:31 Eff.scoped.0:1           pPoolCloseWaits@1.1.1.0.0.0                            fold: the list is never                                                         
+fold: the list (in a term)                46             19        Eff.bind.0:46                                        pFold@1.0                                              fold: the list is never                                                         
+notFiber at Eff.awaitFiber                38             16        Eff.bind.0:24 Eff.bind.1:11 Eff.scoped.0:3           pAcquireClosed@1.0                                     notFiber never                                                                  
+Interrupt (in a cause)                    24             10        Eff.bind.0:24                                        pPoolCloseWaits@1.1.1.0.0.1.0.0.0.1.0.0.1.0.0          Interrupt(never)                                                                
+notFiber at ActionTerm.interrupt          11             10        Eff.bind.0:11                                        pInterruptedWait@1.1.0                                 notFiber never                                                                  
+causeIsInterrupt (in a term)              8              7         Eff.bind.0:8                                         pInterruptedWait@1.1.1.1.0                             causeIsInterrupt(never)                                                         
+getOrElse (in a term)                     4              2         Eff.exit.0:2 Eff.select.bool.0:2                     pOptionNone@0.0                                        getOrElse(option<never>, nat)                                                   
+causeError (in a term)                    2              2         Eff.bind.0:2                                         pOptionNone@0                                          causeError(never)                                                               
+causeIsFail (in a term)                   1              1         Eff.bind.0:1                                         pPoolMakeFails@1.0                                     causeIsFail(never)                                                              
+exitExpected at ActionTerm.closeScope     1              1         Eff.bind.0:1                                         pScope@0.1.0                                           exitExpected never                                                              
+fold: the accumulator (in a binder term)  1              1         Eff.bind.0:1                                         pModifyFold@1.0                                        fold: the body nat is not below the accumulator never (the initial value's type)
+fold: the accumulator (in a term)         1              1         Eff.bind.0:1                                         pFold@0                                                fold: the body nat is not below the accumulator never                           
+scopeExpected at ActionTerm.closeScope    1              1         Eff.bind.0:1                                         pScope@0.0                                             scopeExpected never                                                             
+
+## admitted folds with a column that is not below the full program's: 0
+program  address  rule  fold  answer  error  requires  node type  folded program type
+-------  -------  ----  ----  ------  -----  --------  ---------  -------------------
+
+fold A, both forms run at 977 addresses not under a layer; the row form alone at 61 addresses under a layer; the variable form alone at 3606 addresses
+
+## fold A: the variable form against the row form, address by address
+under a layer  outcome                               addresses
+-------------  ------------------------------------  ---------
+false          both admitted, the same type          973      
+false          both refused, the same rule and path  4        
+
+## fold A: the addresses where the two forms differ (not under a layer): 0
+program  address  rule  node type  variable form  row form
+-------  -------  ----  ---------  -------------  --------
+
+## fold Avar: one smallest program for each breaking rule (2 rules)
+- rule Eff.exit.0 -> term at Eff.succeed: 2 folds; smallest: pOptionNone (8 nodes), fold at 0.0, refusal at 1.1 (term pair(isSome(a2), getOrElse(a2, 9)))
+    bind(exit(select[bool](false, fail(7), succeed(0))), bind(succeed(causeError(a0)), succeed(pair(isSome(a1), getOrElse(a1, 9)))))
+- rule Eff.select.bool.0 -> term at Eff.succeed: 2 folds; smallest: pOptionNone (8 nodes), fold at 0.0.0, refusal at 1.1 (term pair(isSome(a2), getOrElse(a2, 9)))
+    bind(exit(select[bool](false, fail(7), succeed(0))), bind(succeed(causeError(a0)), succeed(pair(isSome(a1), getOrElse(a1, 9)))))
+
+## fold N: one smallest program for each breaking rule (19 rules)
+- rule Eff.bind.0 -> binderTerm at Eff.perform(refModifyWith): 113 folds; smallest: pModifyFold (9 nodes), fold at 1.0, refusal at 1.1.0 (binderTerm refModifyWith param=never)
+    bind(succeed(2), bind(refMake(5), bind(refModify{pair(fold(cons(succ(a0), cons(a0, cons(3, nil()))), a2, add(a3, mul(a4, a0))), add(a2, a0))}(a1), bind(refGet(a1), succeed(pair(a2, a3))))))
+- rule Eff.bind.0 -> cause at Eff.failCause: 24 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.1.1.1.0.0.1.0.0, refusal at 1.0.0.0.1.1.1.0.0.1.0.1 (cause Interrupt(a5))
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …
+- rule Eff.bind.0 -> exitExpected at ActionTerm.closeScope: 1 folds; smallest: pScope (8 nodes), fold at 0.1.0, refusal at 0.1.1.0 (exitExpected never)
+    scoped(bind(scopeMake(()), bind(exit(succeed(1)), closeScope(a0, a1))))
+- rule Eff.bind.0 -> foldTerm at Eff.succeed: 47 folds; smallest: pFold (5 nodes), fold at 0, refusal at 1.1 (foldTerm at .)
+    bind(succeed(2), bind(succeed(cons(succ(a0), cons(a0, nil()))), succeed(fold(a1, a0, add(a2, fold(a1, a3, add(a4, sub(a5, a3))))))))
+- rule Eff.bind.0 -> maskRestoreExpected at Eff.restore: 81 folds; smallest: pMaskWait (25 nodes), fold at 1.1.0.0.0.0, refusal at 1.1.0.0.0.1.0.1.0 (maskRestoreExpected never)
+    bind(deferredMake<nat, never>(()), bind(refMake(0), bind(fork(bind(getInterruptible, uninterruptible(bind(refUpdate{add(a3, 1)}(a1), bind(restore(a2, deferredAwait(a0)), refUpdate{add(a5, 10)}(a1)))))), bind(interrupt(a2), bind(await(a2), bind(refGet(a1), succeed(tuple(causeIsInterrupt(a4), a5))))))))
+- rule Eff.bind.0 -> notFiber at ActionTerm.interrupt: 11 folds; smallest: pInterruptedWait (20 nodes), fold at 1.1.0, refusal at 1.1.1.0.0 (notFiber never)
+    bind(deferredMake<nat, never>(()), bind(refMake(0), bind(fork(bind(refUpdate{add(a2, 1)}(a1), bind(deferredAwait(a0), refUpdate{add(a4, 10)}(a1)))), bind(interrupt(a2), bind(await(a2), bind(refGet(a1), succeed(tuple(causeIsInterrupt(a4), a5))))))))
+- rule Eff.bind.0 -> notFiber at Eff.awaitFiber: 24 folds; smallest: pFork (7 nodes), fold at 0, refusal at 1 (notFiber never)
+    bind(fork(bind(yieldNow(0), succeed(7))), await(a0))
+- rule Eff.bind.0 -> notSelectable at Eff.select.option: 127 folds; smallest: pQueueWake (97 nodes), fold at 1.0.0.0.1.0.1.0, refusal at 1.0.0.0.1.0.1.1 (notSelectable option never)
+    bind(refMake(record{msgs: list<nat>, cap: nat, takers: list<{hint: deferred<unit, never>, id: deferred<unit, never>}>, offers: list<{batch: bool, hint: deferred<bool, never>, id: deferred<unit, never>, rest: list<nat>}>}[msgs, cap, takers, offers](nil(), 2, nil(), nil())), bind(fork(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isS …
+- rule Eff.bind.0 -> predicateNotBool at Eff.select.bool: 82 folds; smallest: pSemaphoreHandoff (102 nodes), fold at 1.0.1.0.1.0.0.1.0, refusal at 1.0.1.0.1.0.0.1.1 (predicateNotBool never)
+    bind(refMake(record{permits: nat, taken: nat, waiters: list<{hint: deferred<unit, never>, id: deferred<unit, never>, need: nat, stamp: nat}>, next: nat}[permits, taken, waiters, next](1, 0, nil(), 0)), bind(bind(getInterruptible, uninterruptible(bind(deferredMake<unit, never>(()), bind(iterate<option<nat>>(none(); not(isSome(a3)); a4; a3; bind(deferredMake<unit, never>(()), bind(refModify{ite(not( …
+- rule Eff.bind.0 -> scopeExpected at ActionTerm.closeScope: 1 folds; smallest: pScope (8 nodes), fold at 0.0, refusal at 0.1.1.0 (scopeExpected never)
+    scoped(bind(scopeMake(()), bind(exit(succeed(1)), closeScope(a0, a1))))
+- rule Eff.bind.0 -> term at Eff.succeed: 11 folds; smallest: pOptionNone (8 nodes), fold at 0, refusal at 1.0 (term causeError(a0))
+    bind(exit(select[bool](false, fail(7), succeed(0))), bind(succeed(causeError(a0)), succeed(pair(isSome(a1), getOrElse(a1, 9)))))
+- rule Eff.bind.1 -> binderTerm at Eff.perform(refModifyWith): 31 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.0.1, refusal at 1.0.0.0.1.1.1.0.0.0.1.0.0.1.0 (binderTerm refModifyWith param=never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …
+- rule Eff.bind.1 -> notFiber at Eff.awaitFiber: 11 folds; smallest: pPoolCloseWaits (205 nodes), fold at 1.1.1.0.0.1, refusal at 1.1.1.1.0 (notFiber never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(refMake(0), bind(deferredMake<unit, never>(()), bind(scoped(bind(bind(bind(refModify{pair(succ(a3), succ(a3))}(a1), acquireRelease(succeed(a3), refUpdate{append(a6, cons(append(cons(9, nil()), cons(a4, nil())), nil()))}(a0))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, wait …
+- rule Eff.bind.1 -> notSelectable at Eff.select.option: 48 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.1.1.1.0.0.0.1, refusal at 1.0.0.0.1.1.1.0.0.1 (notSelectable option never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …
+- rule Eff.exit.0 -> term at Eff.succeed: 2 folds; smallest: pOptionNone (8 nodes), fold at 0.0, refusal at 1.1 (term pair(isSome(a1), getOrElse(a1, 9)))
+    bind(exit(select[bool](false, fail(7), succeed(0))), bind(succeed(causeError(a0)), succeed(pair(isSome(a1), getOrElse(a1, 9)))))
+- rule Eff.scoped.0 -> binderTerm at Eff.perform(refModifyWith): 1 folds; smallest: pPoolClosed (128 nodes), fold at 1.1.0.0, refusal at 1.1.1.0.0.0.1.0.0.0.1.0.0.1.0 (binderTerm refModifyWith param=never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(refMake(0), bind(scoped(bind(bind(refModify{pair(succ(a2), succ(a2))}(a1), acquireRelease(succeed(a2), refUpdate{append(a5, cons(append(cons(9, nil()), cons(a3, nil())), nil()))}(a0))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: deferred<unit, never>, i …
+- rule Eff.scoped.0 -> notFiber at Eff.awaitFiber: 3 folds; smallest: pAcquireClosed (12 nodes), fold at 1.0.0, refusal at 1.1.0 (notFiber never)
+    bind(refMake(0), bind(scoped(fork(acquireRelease(succeed(7), refSet(pair(a0, a1))))), bind(await(a1), refGet(a0))))
+- rule Eff.select.bool.0 -> term at Eff.succeed: 2 folds; smallest: pOptionNone (8 nodes), fold at 0.0.0, refusal at 1.1 (term pair(isSome(a1), getOrElse(a1, 9)))
+    bind(exit(select[bool](false, fail(7), succeed(0))), bind(succeed(causeError(a0)), succeed(pair(isSome(a1), getOrElse(a1, 9)))))
+- rule Eff.select.option.1 -> notSelectable at Eff.select.option: 24 folds; smallest: pPoolMakeFails (123 nodes), fold at 1.0.0.0.1.1.1.0.0.0.1.1.1, refusal at 1.0.0.0.1.1.1.0.0.1 (notSelectable option never)
+    bind(refMake(take(cons(cons(0, nil()), nil()), 0)), bind(exit(scoped(bind(bind(bind(acquireRelease(succeed(1), refUpdate{append(a3, cons(append(cons(9, nil()), cons(a1, nil())), nil()))}(a0)), bind(refUpdate{append(a2, cons(cons(5, nil()), nil()))}(a0), fail(77))), bind(refMake(record{items: list<{borrowed: bool, lease: nat, resource: nat, stamp: nat}>, available: list<nat>, waiters: list<{hint: d …

@@ -1,0 +1,52 @@
+#!/bin/bash
+# Seat CENSUS: after `run.sh` in this folder and in a second one, write what the branch holds.
+#   finish.sh <second folder> [the evidence folder's commit]
+# It writes the tables again, compares the two runs, files the scripts, the logs, the tables and
+# the small row files as text beside the receipt, builds the receipt from its template, and runs
+# `verify.py` on it. It runs no Lean. It stops at the first step that fails.
+set -euo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+W=/Users/pooks/Dev/lean4-effect4-lower
+E="$W/docs/research/2026-10-06-seat-CENSUS-evidence"
+R="$W/docs/research/2026-10-06-seat-CENSUS-receipt.md"
+SECOND="$1"
+COMMIT="${2:-pending}"      # the receipt names the commit of the evidence folder, once it exists
+PROBES="SelfTest Probe1Gen Probe1Truth Probe1Closed Probe1TermGen Probe1TermTruth Probe1Flow Probe1Small Probe2 Probe3 Probe4 Probe4Premise Probe5"
+LOGS="selftest probe1gen probe1truth probe1closed probe1termgen probe1termtruth probe1flow probe1small probe2 probe3 probe4 probe4premise probe5"
+
+"$S/run.sh" none                                  # the tables alone: no probe has the name `none`
+python3 "$S/compare-runs.py" "$S" "$SECOND" > "$S/tables/second-run.txt"
+
+# the filed texts: every name ends in .txt
+mkdir -p "$E/scripts" "$E/out" "$E/rows"
+for f in Lib.lean LibBlame.lean LibRun.lean LibTerm.lean LibMask.lean head-gen.lean head-truth.lean \
+         build.sh run.sh finish.sh agg1.py aggterm.py aggflow.py agg4.py agg5.py extract.py mdtables.py \
+         compare-runs.py verify.py buildreceipt.py receipt.template.md; do
+  cp "$S/$f" "$E/scripts/$f.txt"
+done
+for f in $PROBES; do cp "$S/$f.tail.lean" "$E/scripts/$f.tail.lean.txt"; done
+for f in $LOGS; do cp "$S/$f.log" "$E/out/$f.log.txt"; done
+cp "$S/base-build.log" "$E/out/base-build.log.txt"
+for f in "$S"/tables/*.txt; do cp "$f" "$E/out/$(basename "$f")"; done
+cp "$S/tables/probe2-eliminators.tsv" "$E/out/probe2-eliminators.tsv.txt"
+cp "$S/tables/receipt-tables.md" "$E/out/receipt-tables.md.txt"
+for f in gen-flow gen-folds gen-lattice gen-programs gen-sites gen-slices gen-terms \
+         truth-flow truth-lattice truth-slices truth-subslices truth-folds-refused truth-terms-refused-counts; do
+  cp "$S/out/$f.tsv" "$E/rows/$f.tsv.txt"
+done
+(cd "$S/out" && shasum -a 256 truth-folds.tsv truth-sites.tsv truth-terms.tsv truth-programs.tsv) > "$E/rows/SHA256SUMS.txt"
+[ -f "$E/out/verify.txt" ] || : > "$E/out/verify.txt"     # its place, before the files are counted
+find "$E" -type f -exec chmod 644 {} +
+n=$(find "$E" -type f | wc -l | tr -d ' ')
+
+# the receipt: once to count the checks, once with the count
+python3 "$S/buildreceipt.py" "$R" n-files="$n" n-checks=0 evidence-commit="$COMMIT" > "$S/buildreceipt.log"
+c=$(python3 "$S/verify.py" --count)
+python3 "$S/buildreceipt.py" "$R" n-files="$n" n-checks="$c" evidence-commit="$COMMIT" > "$S/buildreceipt.log"
+code=0
+python3 "$S/verify.py" > "$S/tables/verify.txt" || code=$?
+cp "$S/tables/verify.txt" "$E/out/verify.txt"
+tail -1 "$S/tables/verify.txt"
+grep -e '^MISSING' -e '^FALSE' "$S/tables/verify.txt" || true
+echo "files: $n; checks: $c; verify exit: $code"
+[ "$code" = 0 ]

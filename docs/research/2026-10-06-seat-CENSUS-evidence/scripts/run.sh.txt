@@ -1,0 +1,72 @@
+#!/bin/bash
+# Seat CENSUS, 2026-10-06: every command of the probes, in the order of the receipt.
+#   run.sh             every probe, then the tables
+#   run.sh <Name>...   the named probes alone, then the tables
+# Run from the worktree's root (/Users/pooks/Dev/lean4-effect4-lower), at base 42492024, after the
+# default build (`lean-slot.sh lake build`: 1031 jobs). Each Lean command goes through the shared
+# slot script. `build.sh <name> <gen|truth> [term|mask]` writes `<name>.lean` from the shared text
+# (Lib.lean, LibBlame.lean, LibRun.lean, and LibTerm.lean and LibMask.lean on request) and
+# `<name>.tail.lean`; for `truth` it first copies lines 97 to 883 of harness/truth/Truth.lean.
+# The rows go to `out/`, the tables to `tables/`. Wall times are the interpreter's
+# (`lake env lean`), on one slot of two threads, and they hold the wait for a slot.
+set -euo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+SLOT=/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh
+ONLY=" $* "
+want() { [ "$ONLY" = "  " ] || [[ "$ONLY" == *" $1 "* ]]; }
+mkdir -p "$S/out" "$S/tables"
+
+# probe <Name> <log> <gen|truth> [term|mask]: build one probe file and run it. The log's last
+# line holds the wall time and Lean's exit code. A guard that fails gives exit 1, and the run
+# stops there.
+probe() {
+  want "$1" || return 0
+  "$S/build.sh" "$1" "$3" "${4:-}"
+  local code=0 t0 t1
+  t0=$(date +%s)
+  "$SLOT" lake env lean -M6144 -DmaxErrors=1000 "$S/$1.lean" > "$S/$2.log" 2>&1 || code=$?
+  t1=$(date +%s)
+  echo "wall=$((t1 - t0))s exit=$code" >> "$S/$2.log"
+  echo "$1: wall $((t1 - t0)) s, exit $code"
+  [ "$code" = 0 ]
+}
+
+# the probe's own test
+probe SelfTest selftest gen term
+# probe 1, effect addresses                                   (gen: 2 s; truth: 11 min)
+probe Probe1Gen probe1gen gen
+probe Probe1Truth probe1truth truth
+# probe 1, the search for a closed term of type never         (13 s)
+probe Probe1Closed probe1closed gen
+# probe 1, term addresses                                     (gen: 2 s; truth: 12 min)
+probe Probe1TermGen probe1termgen gen term
+probe Probe1TermTruth probe1termtruth truth term
+# probe 1, where a folded error flows, and the smallest programs   (17 s; 2 s)
+probe Probe1Flow probe1flow truth term
+probe Probe1Small probe1small gen term
+# probes 2 and 3                                              (2 s each)
+probe Probe2 probe2 gen
+probe Probe3 probe3 gen
+# probes 4 and 5                                              (20 s; 18 s; 76 s)
+probe Probe4 probe4 truth mask
+probe Probe4Premise probe4premise truth mask
+probe Probe5 probe5 truth mask
+
+# the tables
+M=pQueueW,pQueueF,pQueueI,pQueueM,pQueueOr,pSemaphore,pPool    # the 25 programs of the modules
+python3 "$S/agg1.py" "$S/out/gen"   > "$S/tables/probe1-gen.txt"
+python3 "$S/agg1.py" "$S/out/truth" > "$S/tables/probe1-truth.txt"
+python3 "$S/agg1.py" "$S/out/truth" --where $M > "$S/tables/probe1-truth-modules.txt"
+python3 "$S/agg1.py" "$S/out/truth" --not $M   > "$S/tables/probe1-truth-others.txt"
+python3 "$S/aggterm.py" "$S/out/gen"   > "$S/tables/probe1-terms-gen.txt"
+python3 "$S/aggterm.py" "$S/out/truth" > "$S/tables/probe1-terms-truth.txt"
+python3 "$S/aggterm.py" "$S/out/truth" --where $M > "$S/tables/probe1-terms-truth-modules.txt"
+python3 "$S/aggterm.py" "$S/out/truth" --not $M   > "$S/tables/probe1-terms-truth-others.txt"
+python3 "$S/aggflow.py" "$S/out/gen" "$S/out/truth" > "$S/tables/probe1-flow.txt"
+grep -v -e '^probe 2' -e '^wall=' "$S/probe2.log" > "$S/tables/probe2-eliminators.tsv"
+python3 "$S/agg4.py" "$S/out/gen" "$S/out/truth" > "$S/tables/probe4-sweep.txt"
+python3 "$S/agg5.py" "$S/out/gen" "$S/out/truth" > "$S/tables/probe5.txt"
+python3 "$S/extract.py" > "$S/tables/extract.txt"             # two extracts of the largest row files
+python3 "$S/mdtables.py" > "$S/tables/receipt-tables.md"      # the tables of the receipt
+echo "tables: done"
+# `finish.sh` then compares two runs, builds the receipt and runs `verify.py` on it.

@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Seat CENSUS, probe 1, the term addresses under fold N: the tables, from a terms TSV.
+
+usage: aggterm.py <prefix> [--where p,...] [--not p,...]
+Reads <prefix>-terms.tsv and prints every table of the receipt's term section.
+"""
+import csv, sys, collections
+
+def read(path):
+    with open(path, newline='') as f:
+        rows = list(csv.reader(f, delimiter='\t', quoting=csv.QUOTE_NONE))
+    head, body = rows[0], rows[1:]
+    good, bad = [], []
+    for r in body:
+        (good if len(r) == len(head) else bad).append(dict(zip(head, r)) if len(r) == len(head) else r)
+    return good, bad
+
+def table(title, header, rows):
+    print()
+    print('## ' + title)
+    widths = [max(len(str(x)) for x in col) for col in zip(header, *rows)] if rows else [len(h) for h in header]
+    fmt = '  '.join('{:<%d}' % w for w in widths)
+    print(fmt.format(*header))
+    print(fmt.format(*['-' * w for w in widths]))
+    for r in rows:
+        print(fmt.format(*[str(x) for x in r]))
+
+BAD = ('larger', 'bothWays', 'unrelated')
+
+def eliminator(r):
+    """The rule that refuses, one level below the checker's reason."""
+    reason, node, culprit = r['refusal'], r['refusingNode'], r['culprit']
+    if reason in ('term', 'binderTerm', 'cause', 'foldTerm', 'recordTerm', 'tupleTerm'):
+        head = culprit.split('(')[0].strip()
+        if culprit.startswith('fold:'):
+            head = 'fold: the list' if 'the list is' in culprit else ('fold: the accumulator' if 'accumulator' in culprit else culprit)
+        where = 'in a binder term' if reason == 'binderTerm' else ('in a cause' if reason == 'cause' else 'in a term')
+        return '%s (%s)' % (head, where)
+    if reason in ('requestNotSubtype', 'resultNotSubtype'):
+        return '%s at %s' % (reason, node)
+    return '%s at %s' % (reason, node)
+
+def main():
+    prefix = sys.argv[1]
+    keep = sys.argv[sys.argv.index('--where') + 1].split(',') if '--where' in sys.argv else None
+    drop = sys.argv[sys.argv.index('--not') + 1].split(',') if '--not' in sys.argv else None
+    def sel(name):
+        if keep is not None and not any(name.startswith(k) for k in keep): return False
+        if drop is not None and any(name.startswith(k) for k in drop): return False
+        return True
+    rows, bad = read(prefix + '-terms.tsv')
+    rows = [r for r in rows if sel(r['program'])]
+    label = (' [programs: %s]' % ','.join(keep) if keep else '') + (' [not: %s]' % ','.join(drop) if drop else '')
+    print('# probe 1, the term addresses under fold N (an assumed atom of type never): ' + prefix.split('/')[-1] + label)
+    print('programs: %d   term addresses: %d   malformed rows: %d' % (len(set(r['program'] for r in rows)), len(rows), len(bad)))
+    adm = [r for r in rows if r['admitted'] == 'true']
+    ref = [r for r in rows if r['admitted'] != 'true']
+    nong = [r for r in adm if any(r[c] in BAD for c in ('answer', 'error', 'requires'))]
+    print('refused: %d   admitted: %d   admitted with every column same or smaller: %d   admitted with a column not below: %d'
+          % (len(ref), len(adm), len(adm) - len(nong), len(nong)))
+    print('under a layer: %d (refused %d)' % (sum(1 for r in rows if r['underLayer'] == 'true'),
+                                               sum(1 for r in ref if r['underLayer'] == 'true')))
+
+    # by the role of the folded position
+    by = collections.defaultdict(list)
+    for r in rows: by[r['role']].append(r)
+    out = []
+    for role in sorted(by, key=lambda k: (-sum(1 for r in by[k] if r['admitted'] != 'true'), k)):
+        rs = by[role]
+        rref = [r for r in rs if r['admitted'] != 'true']
+        rnon = [r for r in rs if r['admitted'] == 'true' and any(r[c] in BAD for c in ('answer', 'error', 'requires'))]
+        c = collections.Counter(eliminator(r) for r in rref)
+        out.append([role, len(rs), len(rref), len(rnon), '; '.join('%s: %d' % kv for kv in c.most_common(4))])
+    table('by the position that is folded (its consumer): %d positions' % len(by),
+          ['position', 'folds', 'refused', 'admitted, a column not below', 'the rules that refuse (the four largest)'], out)
+
+    # by the rule that refuses
+    by = collections.defaultdict(list)
+    for r in ref: by[eliminator(r)].append(r)
+    out = []
+    for key in sorted(by, key=lambda k: (-len(by[k]), k)):
+        rs = by[key]
+        roles = collections.Counter(r['role'] for r in rs)
+        ex = min(rs, key=lambda r: (len(r['culprit']), r['program']))
+        out.append([key, len(rs), len(set(r['program'] for r in rs)), '; '.join('%s: %d' % kv for kv in roles.most_common(3)),
+                    ex['program'] + '@' + ex['address'], ex['culprit'][:90]])
+    table('the refusals by the rule that refuses: %d refusals, %d rules' % (len(ref), len(by)),
+          ['rule', 'refused folds', 'programs', 'folded at (the three largest)', 'an instance', 'what it read'], out)
+
+    # admitted, not gradual
+    by = collections.defaultdict(list)
+    for r in nong: by[(r['role'], r['answer'], r['error'], r['requires'])].append(r)
+    out = []
+    for key in sorted(by, key=lambda k: (-len(by[k]), k)):
+        rs = by[key]
+        ex = rs[0]
+        out.append([key[0], key[1], key[2], key[3], len(rs), ex['program'] + '@' + ex['address'] + ' ' + ex['slot'] + ' ' + ex['termPath'], ex['foldedType'][:80]])
+    table('admitted folds with a column that is not below the full program\'s: %d' % len(nong),
+          ['position', 'answer', 'error', 'requires', 'folds', 'an instance', 'the folded program\'s type'], out)
+
+    # the invariant positions
+    inv = [r for r in ref if r['refusal'] in ('requestNotSubtype', 'resultNotSubtype')]
+    c = collections.Counter((r['refusal'], r['refusingNode']) for r in inv)
+    table('refusals at an invariant position (a cell or a deferred): %d' % len(inv),
+          ['reason', 'refusing node', 'refused folds'], [[k[0], k[1], v] for k, v in c.most_common()])
+    if inv:
+        ex = min(inv, key=lambda r: len(r['refusalDetail']))
+        print('  an instance: %s@%s %s %s: %s' % (ex['program'], ex['address'], ex['slot'], ex['termPath'], ex['refusalDetail'][:200]))
+
+if __name__ == '__main__':
+    main()

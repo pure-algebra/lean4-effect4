@@ -1,0 +1,74 @@
+gen: admitted 128; with an error member or a required service 46; rows 141
+truth: admitted 73; with an error member or a required service 14; rows 51
+--- truth pSqlite; type <list<list<[string, string]>> ; [string, string] ; {}>; query: error has [string, string]; domain plan
+    kept 5 of 10 effect addresses; 8 calls of check; 3 folded regions
+    full:  scoped(bind(acquireRelease(external0(":memory:"), external2(a0)), bind(external1(pair(a0, pair("CREATE TABLE t (a INTEGER, b TEXT)", strings()))), bind(external1(pair(a0, pair("INSERT INTO t (a, b) VALUES (?, ?)", strings("7", ""x"")))), external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+    slice: scoped(bind(□:handle(SqlClient.SqlClient), bind(□:list<list<[string, string]>>, bind(□:list<list<[string, string]>>, external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+    slice type: <list<list<[string, string]>> ; [string, string] ; {}>
+--- truth pSqlite; type <list<list<[string, string]>> ; [string, string] ; {}>; query: error has [string, string]; domain wide
+    kept 5 of 10 effect addresses; 8 calls of check; 3 folded regions
+    full:  scoped(bind(acquireRelease(external0(":memory:"), external2(a0)), bind(external1(pair(a0, pair("CREATE TABLE t (a INTEGER, b TEXT)", strings()))), bind(external1(pair(a0, pair("INSERT INTO t (a, b) VALUES (?, ?)", strings("7", ""x"")))), external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+    slice: scoped(bind(□:handle(SqlClient.SqlClient), bind(□:list<list<[string, string]>>, bind(□:list<list<[string, string]>>, external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+    slice type: <list<list<[string, string]>> ; [string, string] ; {}>
+--- truth pSqlite; type <list<list<[string, string]>> ; [string, string] ; {}>; query: error has [string, string]; domain all
+    kept 5 of 10 effect addresses; 8 calls of check; 3 folded regions
+    full:  scoped(bind(acquireRelease(external0(":memory:"), external2(a0)), bind(external1(pair(a0, pair("CREATE TABLE t (a INTEGER, b TEXT)", strings()))), bind(external1(pair(a0, pair("INSERT INTO t (a, b) VALUES (?, ?)", strings("7", ""x"")))), external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+    slice: scoped(bind(□:handle(SqlClient.SqlClient), bind(□:list<list<[string, string]>>, bind(□:list<list<[string, string]>>, external1(pair(a0, pair("SELECT a, b FROM t", strings())))))))
+    slice type: <list<list<[string, string]>> ; [string, string] ; {}>
+--- truth pTagMiss; type <nat ; (string | ["A", "m"]) ; {}>; query: error has string; domain plan
+    kept 6 of 7 effect addresses; 2 calls of check; 1 folded regions
+    full:  catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), succeed(1))
+    slice: catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), □:nat)
+    slice type: <nat ; (string | ["A", "m"]) ; {}>
+--- truth pTagMiss; type <nat ; (string | ["A", "m"]) ; {}>; query: error has ["A", "m"]; domain plan
+    kept 6 of 7 effect addresses; 2 calls of check; 1 folded regions
+    full:  catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), succeed(1))
+    slice: catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), □:nat)
+    slice type: <nat ; (string | ["A", "m"]) ; {}>
+--- truth pTagMiss; type <nat ; (string | ["A", "m"]) ; {}>; query: error has string; domain wide
+    kept 5 of 7 effect addresses; 3 calls of check; 2 folded regions
+    full:  catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), succeed(1))
+    slice: catchIf(tagIs("B", a0), bind(select[bool](true, □:nat, fail("text")), fail(pair("A", "m"))), □:nat)
+    slice type: <nat ; (string | ["A", "m"]) ; {}>
+--- truth pTagMiss; type <nat ; (string | ["A", "m"]) ; {}>; query: error has ["A", "m"]; domain wide
+    kept 5 of 7 effect addresses; 3 calls of check; 2 folded regions
+    full:  catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), succeed(1))
+    slice: catchIf(tagIs("B", a0), bind(select[bool](true, □:nat, fail("text")), fail(pair("A", "m"))), □:nat)
+    slice type: <nat ; (string | ["A", "m"]) ; {}>
+--- truth pTagMiss; type <nat ; (string | ["A", "m"]) ; {}>; query: error has string; domain all
+    kept 4 of 7 effect addresses; 7 calls of check; 3 folded regions
+    full:  catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), succeed(1))
+    slice: catchIf(tagIs("B", a0), bind(select[bool](true, □:nat, fail("text")), □:never), □:nat)
+    slice type: <nat ; string ; {}>
+--- truth pTagMiss; type <nat ; (string | ["A", "m"]) ; {}>; query: error has ["A", "m"]; domain all
+    kept 3 of 7 effect addresses; 5 calls of check; 2 folded regions
+    full:  catchIf(tagIs("B", a0), bind(select[bool](true, succeed(0), fail("text")), fail(pair("A", "m"))), succeed(1))
+    slice: catchIf(tagIs("B", a0), bind(□:nat, fail(pair("A", "m"))), □:nat)
+    slice type: <nat ; ["A", "m"] ; {}>
+--- gen g309; type <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>; query: requires k0_0; domain plan
+    kept 7 of 8 effect addresses; 2 calls of check; 1 folded regions
+    full:  onExit(forkScoped(suspend(matchCause(fail("hi"), deferredAwait(a0), getContext))), getContext)
+    slice: onExit(forkScoped(suspend(matchCause(fail("hi"), deferredAwait(a0), getContext))), □:handle(Context.Context<unknown>))
+    slice type: <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+--- gen g309; type <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>; query: requires k0_0; domain wide
+    kept 2 of 8 effect addresses; 4 calls of check; 2 folded regions
+    full:  onExit(forkScoped(suspend(matchCause(fail("hi"), deferredAwait(a0), getContext))), getContext)
+    slice: onExit(forkScoped(□:handle(Context.Context<unknown>)), □:handle(Context.Context<unknown>))
+    slice type: <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+--- gen g309; type <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>; query: requires k0_0; domain all
+    kept 2 of 8 effect addresses; 4 calls of check; 2 folded regions
+    full:  onExit(forkScoped(suspend(matchCause(fail("hi"), deferredAwait(a0), getContext))), getContext)
+    slice: onExit(forkScoped(□:handle(Context.Context<unknown>)), □:handle(Context.Context<unknown>))
+    slice type: <fiber<handle(Context.Context<unknown>), never> ; never ; {k0_0}>
+--- truth pKv; type <[option<string>, bool] ; [string, string] ; {}>; query: error has [string, string]; domain plan
+    kept 6 of 11 effect addresses; 11 calls of check; 5 folded regions
+    full:  bind(external0(()), bind(external2(pair(a0, pair("k", "1"))), bind(external1(pair(a0, "k")), bind(external4(pair(a0, "k")), bind(external3(pair(a0, "k")), succeed(pair(a2, a3)))))))
+    slice: bind(□:handle(KeyValueStore.KeyValueStore), bind(□:unit, bind(□:option<string>, bind(□:bool, bind(external3(pair(a0, "k")), □:[option<string>, bool])))))
+    slice type: <[option<string>, bool] ; [string, string] ; {}>
+--- truth pSqlFail; type <list<list<[string, string]>> ; [string, string] ; {}>; query: error has [string, string]; domain plan
+    kept 3 of 6 effect addresses; 4 calls of check; 1 folded regions
+    full:  scoped(bind(acquireRelease(external0(":memory:"), external2(a0)), external1(pair(a0, pair("SELECT a FROM missing", strings())))))
+    slice: scoped(bind(□:handle(SqlClient.SqlClient), external1(pair(a0, pair("SELECT a FROM missing", strings())))))
+    slice type: <list<list<[string, string]>> ; [string, string] ; {}>
+truth: rows of sub-programs 45
+wall=87s exit=0

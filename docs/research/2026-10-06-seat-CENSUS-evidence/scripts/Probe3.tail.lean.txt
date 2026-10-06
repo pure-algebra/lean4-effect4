@@ -1,0 +1,169 @@
+/-
+Seat CENSUS, probe 3: the analysing rules. The table of the receipt is by reading
+(`src/Effect4/Program/Checker.lean`, `src/Effect4/Program/Typing/Rules.lean`). This file holds
+a guard for each refusal that a row names: a smallest program that the rule refuses, with the
+refusal's name. For each row whose answer reads the compared type it holds the answer at two
+compared types, and for a row whose answer does not, the same answer at two.
+`a0` is the variable whose type is compared.
+-/
+namespace Census.Analysing
+open Census
+
+def sig0 : Sig := nativeSignature []
+def call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+def n (k : Nat) : Term := .lit (.nat k)
+def str (t : String) : Term := .lit (.str t)
+def v0 : Term := .var 0
+def unit_ : P := .succeed (.lit .unit)
+def kNat : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+def kNone : ServiceKey := ⟨⟨4⟩, ⟨77⟩⟩
+
+def closedTable : RowTable :=
+  [{ name := "say", spelling := "Host.say", kind := .async, registration := .external,
+     request := .string, answer := .nat, error := .never, cite := "seat CENSUS" }]
+
+def R (e : P) (env : TyEnv) (table : RowTable := []) : Option String :=
+  (Checker.refusal (Checker.check (nativeSignature table) env [] e)).map (·.reason.head)
+def E (e : P) (env : TyEnv) (table : RowTable := []) : Option EffTy :=
+  (Checker.check (nativeSignature table) env [] e).toOption
+def opts : Effect4.Supervision.ForkOptions := { startImmediately := false, daemon := true, maskMode := .inherit }
+
+/-! ### `Checker.check` -/
+-- a request against its row: a closed row answers its own columns whatever the request
+#guard R (.perform (.external 0) v0) [.nat] closedTable = some "requestNotSubtype"
+#guard E (.perform (.external 0) v0) [.lit "a"] closedTable = E (.perform (.external 0) v0) [.string] closedTable
+-- a template row answers its parameter, which the request binds: the answer reads the request
+#guard R (.perform .refGet v0) [.nat] = some "requestNotSubtype"
+#guard E (.perform .refGet v0) [.refOf .nat] = some ⟨.nat, .never, Requirement.empty⟩
+#guard E (.perform .refGet v0) [.refOf .string] = some ⟨.string, .never, Requirement.empty⟩
+#guard R (.perform (.external 3) v0) [.nat] closedTable = some "outsideDomain"
+-- an operation's binder term: no type at the parameter, or a result outside the template
+#guard R (.perform (.refUpdateWith (call "not" [.var 1])) v0) [.refOf .nat] = some "binderTerm"
+#guard R (.perform (.refUpdateWith (str "x")) v0) [.refOf .nat] = some "resultNotSubtype"
+-- `Ref.modify` answers its own parameter `B`, bound from the term: the answer reads the term
+#guard E (.perform (.refModifyWith (call "pair" [str "b", .var 1])) v0) [.refOf .nat] =
+  some ⟨.lit "b", .never, Requirement.empty⟩
+#guard E (.perform (.refModifyWith (call "pair" [n 1, .var 1])) v0) [.refOf .nat] =
+  some ⟨.nat, .never, Requirement.empty⟩
+-- `fail` against the error alphabet; the error column is the compared type
+#guard R (.fail v0) [.bool] = some "errorNotAdmitted"
+#guard E (.fail v0) [.nat] = some ⟨.never, .nat, Requirement.empty⟩
+#guard E (.fail v0) [.string] = some ⟨.never, .string, Requirement.empty⟩
+-- the two named refusals of a record in the error alphabet: a class with another spelling, and
+-- a field that no payload admits
+#guard R (.fail v0) [.record [("_tag", false, .lit "A")]] = some "errorSpelling"
+#guard R (.fail v0) [.record [("_tag", false, .lit "A"), ("x", false, .refOf .nat)]] = some "errorPayloadField"
+-- a cause's leaves: `Fail` against the error alphabet, the interruptor against `nat`
+#guard R (.failCause (.fail v0)) [.bool] = some "cause"
+#guard E (.failCause (.fail v0)) [.nat] = some ⟨.never, .nat, Requirement.empty⟩
+#guard E (.failCause (.fail v0)) [.string] = some ⟨.never, .string, Requirement.empty⟩
+#guard R (.failCause (.interrupt (some v0))) [.string] = some "cause"
+-- a predicate against `bool`, four times
+#guard R (.catchIf v0 (.fail (n 1)) unit_) [] = some "predicateNotBool"
+#guard R (.select v0 .bool unit_ unit_) [.nat] = some "predicateNotBool"
+#guard R (.iterate none (n 0) v0 (.var 1) (.lit .unit) unit_) [.nat] = some "predicateNotBool"
+#guard R (.gen (.cons (.ifElse v0 .nil .nil) .nil)) [.nat] = some "predicateNotBool"
+-- a scrutinee against its decision's shape; the arms read the scrutinee's type
+#guard R (.select v0 .option unit_ unit_) [.nat] = some "notSelectable"
+#guard R (.select v0 (.tag "A") unit_ unit_) [.nat] = some "notSelectable"
+#guard R (.select v0 (.recordTag "A") unit_ unit_) [.nat] = some "notSelectable"
+#guard E (.select v0 .option unit_ (.succeed (.var 1))) [.option .nat] = some ⟨Ty.join .unit .nat, .never, Requirement.empty⟩
+#guard E (.select v0 .option unit_ (.succeed (.var 1))) [.option .string] = some ⟨Ty.join .unit .string, .never, Requirement.empty⟩
+-- a cursor: the stated type, or the initial value's own
+#guard R (.iterate (some .string) (n 0) (.lit (.bool true)) (.var 1) (.lit .unit) unit_) [] = some "initialNotCursor"
+#guard R (.iterate none (n 0) (.lit (.bool true)) (str "x") (.lit .unit) unit_) [] = some "stepNotCursor"
+-- the loop answers its result term at the cursor's type: it reads the stated type, not the step
+#guard E (.iterate (some (.union .nat .string)) (n 0) (.lit (.bool true)) (.var 0) (.var 0) unit_) [] =
+  some ⟨.union .nat .string, .never, Requirement.empty⟩
+-- a fiber, by its head; the answer reads its two columns
+#guard R (.awaitFiber v0 .joinEffect) [.nat] = some "notFiber"
+#guard E (.awaitFiber v0 .joinEffect) [.fiberOf .nat .string] = some ⟨.nat, .string, Requirement.empty⟩
+#guard E (.awaitFiber v0 .joinEffect) [.fiberOf .bool .nat] = some ⟨.bool, .nat, Requirement.empty⟩
+-- the fiber actions answer `unit` whatever the fiber's columns
+#guard E (.withFiber (.interrupt v0)) [.fiberOf .nat .string] = E (.withFiber (.interrupt v0)) [.fiberOf .bool .nat]
+-- a release against the error `never`
+#guard R (.acquireRelease unit_ (.fail (n 1))) [] = some "releaseFails"
+-- a service: the key's type, then the value against the key's carrier
+#guard R (.service kNone) [] = some "serviceUnknown"
+#guard R (.provideService kNat v0 unit_) [.string] = some "valueNotSubtype"
+#guard E (.provideService kNat v0 unit_) [.nat] = E (.provideService kNat v0 unit_) [.never]
+-- a saved mask state
+#guard R (.restore v0 unit_) [.bool] = some "maskRestoreExpected"
+-- a layer: a literal against the key's carrier, a body's answer against it
+#guard R (.provideLayer (.succeed kNat (.bool true)) false unit_) [] = some "valueNotSubtype"
+#guard R (.provideLayer (.effect kNat (.succeed (str "x"))) false unit_) [] = some "valueNotSubtype"
+#guard R (.provideLayer (.succeed kNat (.str "x")) false unit_) [] = some "literalOutsideAlphabet"
+-- the fiber actions
+#guard R (.withFiber (.forkIn unit_ opts v0)) [.nat] = some "scopeExpected"
+#guard R (.withFiber (.runIn v0 (.var 1))) [.nat, Ty.scope] = some "notFiber"
+#guard R (.withFiber (.interrupt v0)) [.nat] = some "notFiber"
+#guard R (.withFiber (.interruptAll v0 none)) [.nat] = some "listOfFibersExpected"
+#guard R (.withFiber (.interruptAll v0 none)) [.list .nat] = some "notFiber"
+#guard R (.withFiber (.interruptAll v0 (some (.var 1)))) [.list (.fiberOf .nat .nat), .string] = some "natExpected"
+#guard R (.withFiber (.awaitAll v0)) [.nat] = some "listOfFibersExpected"
+#guard E (.withFiber (.awaitAll v0)) [.list (.fiberOf .nat .string)] =
+  some ⟨.list (.exitOf .nat .string), .never, Requirement.empty⟩
+#guard E (.withFiber (.awaitAll v0)) [.list (.fiberOf .bool .nat)] =
+  some ⟨.list (.exitOf .bool .nat), .never, Requirement.empty⟩
+#guard R (.withFiber (.awaitNewChildren v0)) [.nat] = some "snapshotExpected"
+#guard R (.withFiber (.setContext v0)) [.nat] = some "contextExpected"
+#guard R (.withFiber (.closeScope (.var 1) v0)) [.nat, Ty.scope] = some "exitExpected"
+#guard R (.withFiber (.closeScope v0 (.var 1))) [.nat, .exitOf .nat .nat] = some "scopeExpected"
+-- the two refusals of a generator's syntax, which compare no type
+#guard R (.gen (.cons (.ret (n 1)) (.cons (.ret (n 2)) .nil))) [] = some "returnNotLast"
+#guard R (.gen (.cons .breakLoop .nil)) [] = some "breakOutsideLoop"
+
+/-! ### `argTy`: a term's refusal names the whole term, or a record, tuple or fold reason -/
+-- an atom's argument against its parameter: the answer is the declared one
+#guard R (.succeed (call "succ" [v0])) [.string] = some "term"
+#guard termTy sig0 [.never] (call "succ" [v0]) = termTy sig0 [.nat] (call "succ" [v0])
+-- a template atom: the answer reads the argument's type
+#guard R (.succeed (call "get" [v0, n 0])) [.nat] = some "term"
+#guard termTy sig0 [.list .nat] (call "get" [v0, n 0]) = some (.option .nat)
+#guard termTy sig0 [.list .string] (call "get" [v0, n 0]) = some (.option .string)
+-- a named atom rule: `fst` and `causeError` read the argument's type, and a test answers `bool`
+#guard R (.succeed (call "fst" [v0])) [.nat] = some "term"
+#guard termTy sig0 [.prod .nat .string] (call "fst" [v0]) = some .nat
+#guard termTy sig0 [.prod .bool .unit] (call "fst" [v0]) = some .bool
+#guard R (.succeed (call "causeError" [v0])) [.nat] = some "term"
+#guard termTy sig0 [.causeOf .nat] (call "causeError" [v0]) = some (.option .nat)
+#guard termTy sig0 [.causeOf .string] (call "causeError" [v0]) = some (.option .string)
+#guard termTy sig0 [.causeOf .nat] (call "causeIsFail" [v0]) = some .bool
+#guard termTy sig0 [.causeOf .string] (call "causeIsFail" [v0]) = some .bool
+#guard R (.succeed (call "sameHandle" [v0, v0])) [.nat] = some "term"
+-- a record's value against its declared field: the answer is the declaration
+#guard R (.succeed (.record [("x", false, .nat)] ["x"] (.cons v0 .nil))) [.string] = some "recordTerm"
+#guard termTy sig0 [.never] (.record [("x", false, .nat)] ["x"] (.cons v0 .nil)) =
+  termTy sig0 [.nat] (.record [("x", false, .nat)] ["x"] (.cons v0 .nil))
+-- a field read, a tuple projection: the answer reads the target
+#guard R (.succeed (.field .required v0 "y")) [.record [("x", false, .nat)]] = some "recordTerm"
+#guard R (.succeed (.tupleAt v0 5)) [.prod .nat .nat] = some "tupleTerm"
+#guard termTy sig0 [.record [("x", false, .nat)]] (.field .required v0 "x") = some .nat
+#guard termTy sig0 [.record [("x", false, .string)]] (.field .required v0 "x") = some .string
+#guard termTy sig0 [.prod .nat .string] (.tupleAt v0 0) = some .nat
+#guard termTy sig0 [.prod .bool .string] (.tupleAt v0 0) = some .bool
+-- a field write at a target that is no record: the refusal names the whole term
+#guard R (.succeed (.recordSet v0 "x" (n 1))) [.nat] = some "term"
+#guard termTy sig0 [.record [("x", false, .string)]] (.recordSet v0 "x" (n 1)) = some (.record [("x", false, .nat)])
+-- a list fold: the list's head, the initial value and the body against the accumulator
+#guard R (.succeed (.fold none v0 (n 0) (.var 1))) [.nat] = some "foldTerm"
+#guard R (.succeed (.fold (some .string) v0 (n 0) (.var 1))) [.list .nat] = some "foldTerm"
+#guard R (.succeed (.fold none v0 (n 0) (str "x"))) [.list .nat] = some "foldTerm"
+-- the body reads the element's type: the same fold at two lists
+#guard termTy sig0 [.list .nat] (.fold (some .nat) v0 (n 0) (.var 2)) = some .nat
+#guard R (.succeed (.fold (some .nat) v0 (n 0) (.var 2))) [.list .string] = some "foldTerm"
+-- the fold answers its accumulator's type: the stated one, whatever the body's type below it
+#guard termTy sig0 [.list .nat] (.fold (some (.union .nat .string)) v0 (n 0) (.var 1)) = some (.union .nat .string)
+
+/-! ### The record, tuple and fold reasons inside a cause's leaf -/
+#guard R (.failCause (.fail (.field .required v0 "y"))) [.record [("x", false, .nat)]] = some "recordCause"
+#guard R (.failCause (.fail (.tupleAt v0 5))) [.prod .nat .nat] = some "tupleCause"
+#guard R (.failCause (.fail (.fold none v0 (n 0) (.var 1)))) [.nat] = some "foldCause"
+
+/-! ### The join never refuses: no rule compares two branches -/
+#guard E (.select v0 .bool (.succeed (n 1)) (.succeed (str "x"))) [.bool] =
+  some ⟨Ty.join .nat .string, .never, Requirement.empty⟩
+
+#eval IO.println "probe 3: every guard above holds"
+
+end Census.Analysing

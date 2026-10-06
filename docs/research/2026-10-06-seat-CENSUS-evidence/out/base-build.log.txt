@@ -1,0 +1,119 @@
+ℹ [766/838] Replayed Test.Audit.FrameRules
+info: Test/Audit/FrameRules.lean:11:0: frame rules: 2 checked theorems, 1 reused clauses, 3 explicit premises
+info: Test/Audit/FrameRules.lean:31:0: frame rules: 2 checked theorems, 0 reused clauses, 2 explicit premises
+ℹ [767/838] Replayed Test.Audit.ProofGraphSearch
+info: Test/Audit/ProofGraphSearch.lean:74:0: 'Test.ProofGraphSearch.closed' does not depend on any axioms
+info: Test/Audit/ProofGraphSearch.lean:192:0: 'Test.ProofGraphSearchPortability.closed' does not depend on any axioms
+info: Test/Audit/ProofGraphSearch.lean:193:0: 'Test.ProofGraphSearchPortability.polymorphic' does not depend on any axioms
+ℹ [768/838] Replayed Test.Audit.ProofGraph
+info: Test/Audit/ProofGraph.lean:27:0: 'Test.ProofGraph.searched' does not depend on any axioms
+ℹ [794/838] Replayed Test.Schema.RepresentationContract
+info: Test/Schema/RepresentationContract.lean:20:0: instDecidableEqRepresentationTag
+info: Test/Schema/RepresentationContract.lean:21:0: instReprRepresentationTag
+info: Test/Schema/RepresentationContract.lean:22:0: instInhabitedRepresentationTag
+ℹ [795/838] Replayed Test.Schema.SubAlphabetContract
+info: Test/Schema/SubAlphabetContract.lean:18:0: instDecidableEqUnionMode
+info: Test/Schema/SubAlphabetContract.lean:19:0: instReprUnionMode
+info: Test/Schema/SubAlphabetContract.lean:20:0: instInhabitedUnionMode
+info: Test/Schema/SubAlphabetContract.lean:22:0: instDecidableEqCheckTag
+info: Test/Schema/SubAlphabetContract.lean:23:0: instReprCheckTag
+info: Test/Schema/SubAlphabetContract.lean:24:0: instInhabitedCheckTag
+info: Test/Schema/SubAlphabetContract.lean:26:0: instDecidableEqLiteralKind
+info: Test/Schema/SubAlphabetContract.lean:27:0: instReprLiteralKind
+info: Test/Schema/SubAlphabetContract.lean:28:0: instInhabitedLiteralKind
+info: Test/Schema/SubAlphabetContract.lean:30:0: instDecidableEqEnumValueKind
+info: Test/Schema/SubAlphabetContract.lean:31:0: instReprEnumValueKind
+info: Test/Schema/SubAlphabetContract.lean:32:0: instInhabitedEnumValueKind
+info: Test/Schema/SubAlphabetContract.lean:34:0: instDecidableEqPropertyKeyKind
+info: Test/Schema/SubAlphabetContract.lean:35:0: instReprPropertyKeyKind
+info: Test/Schema/SubAlphabetContract.lean:36:0: instInhabitedPropertyKeyKind
+ℹ [797/838] Replayed Test.Machine.Environment.ContextKeyContract
+info: Test/Machine/Environment/ContextKeyContract.lean:45:0: Effect4.instDecidableEqServiceName
+info: Test/Machine/Environment/ContextKeyContract.lean:47:0: Effect4.instDecidableEqServiceTypeCode
+info: Test/Machine/Environment/ContextKeyContract.lean:68:0: Effect4.instDecidableEqServiceKey
+info: Test/Machine/Environment/ContextKeyContract.lean:69:0: Effect4.instReprServiceKey
+info: Test/Machine/Environment/ContextKeyContract.lean:91:0: Effect4.instLTServiceKey
+ℹ [838/898] Replayed Test.Machine.Semantics.CauseExitContract
+info: Test/Machine/Semantics/CauseExitContract.lean:44:0: instDecidableEqReasonTag
+info: Test/Machine/Semantics/CauseExitContract.lean:45:0: instReprReasonTag
+ℹ [906/981] Replayed Test.Machine.Runtime.ScopeContract
+info: Test/Machine/Runtime/ScopeContract.lean:35:0: Effect4.instDecidableEqFinalizerStrategy
+info: Test/Machine/Runtime/ScopeContract.lean:36:0: Effect4.instReprFinalizerStrategy
+ℹ [927/981] Replayed Test.Store.NodeContract
+info: Test/Store/NodeContract.lean:52:0: Kind.ofByte?_byte : ∀ (k : Kind), Kind.ofByte? k.byte = some k
+info: Test/Store/NodeContract.lean:53:0: @Kind.byte_ofByte? : ∀ {b : UInt8} {k : Kind}, Kind.ofByte? b = some k → k.byte = b
+info: Test/Store/NodeContract.lean:54:0: @Kind.byte_injective : ∀ {a b : Kind}, a.byte = b.byte → a = b
+info: Test/Store/NodeContract.lean:55:0: @Kind.name_injective : ∀ {a b : Kind}, a.name = b.name → a = b
+info: Test/Store/NodeContract.lean:169:0: @address_congr : ∀ [inst : Content Effect4.Document] {α : Type} [inst_1 : Content α] {a b : α},
+  a = b → address a = address b
+info: Test/Store/NodeContract.lean:170:0: @address_eq_or_collision : ∀ [inst : Content Effect4.Document] {α : Type} [inst_1 : Content α] {a b : α},
+  (toVal a).WF →
+    (toVal b).WF →
+      address a = address b →
+        a = b ∨ (nodeOf a).encode ≠ (nodeOf b).encode ∧ sha256 (nodeOf a).encode = sha256 (nodeOf b).encode
+info: Test/Store/NodeContract.lean:171:0: @address_inj : ∀ [inst : Content Effect4.Document],
+  Function.Injective sha256 →
+    ∀ {α : Type} [inst_1 : Content α] {a b : α}, (toVal a).WF → (toVal b).WF → address a = address b → a = b
+info: Test/Store/NodeContract.lean:172:0: Node.decode_encode : ∀ (n : Node), n.payload.WF → n.version = 0 → Node.decode n.encode = some n
+info: Test/Store/NodeContract.lean:173:0: @Node.decode_exact : ∀ {b : Bytes} {n : Node}, Node.decode b = some n → b = n.encode ∧ n.payload.WF ∧ n.version = 0
+info: Test/Store/NodeContract.lean:174:0: @Node.encode_injective : ∀ {a b : Node},
+  a.payload.WF → b.payload.WF → a.version = 0 → b.version = 0 → a.encode = b.encode → a = b
+info: Test/Store/NodeContract.lean:175:0: @metaSchema_accepts : ∀ [inst : Content Effect4.Document], (shape Effect4.Document).accepts (toVal metaSchema) = true
+info: Test/Store/NodeContract.lean:176:0: @specOf_document : ∀ [inst : Content Effect4.Document], specOf Effect4.Document = genesisAddress
+ℹ [928/981] Replayed Test.Store.WordContract
+info: Test/Store/WordContract.lean:187:0: @get_put : ∀ [inst : Content Effect4.Document] {α : Type} [inst_1 : Content α] {a : α} {s : Store} {o : Outcome}
+  {r : Ref α} {s' : Store},
+  Store.put a s = Except.ok (o, r, s') → (∀ (m : Node), o ≠ Outcome.conflict m) → Store.get r s' = some a
+info: Test/Store/WordContract.lean:188:0: @put_duplicate : ∀ [inst : Content Effect4.Document] {α : Type} [inst_1 : Content α] {a : α} {s : Store},
+  s.find (address a).digest = some (nodeOf a) →
+    (toVal a).WF →
+      (nodeOf a).malformedRef = false → Closed s → Store.put a s = Except.ok (Outcome.duplicate, address a, s)
+info: Test/Store/WordContract.lean:189:0: @put_conflict : ∀ [inst : Content Effect4.Document] {α : Type} [inst_1 : Content α] {a : α} {s : Store} {m : Node}
+  {r : Ref α} {s' : Store},
+  Store.put a s = Except.ok (Outcome.conflict m, r, s') → s' = s ∧ s.find r.digest = some m ∧ m ≠ nodeOf a
+info: Test/Store/WordContract.lean:190:0: @put_preserves : ∀ [inst : Content Effect4.Document] {α : Type} [inst_1 : Content α] {a : α} {s : Store} {d : Digest}
+  {n : Node} {o : Outcome} {r : Ref α} {s' : Store},
+  s.find d = some n → Store.put a s = Except.ok (o, r, s') → s'.find d = some n
+info: Test/Store/WordContract.lean:191:0: @putNode_closed : ∀ {s : Store} {n : Node} {o : Outcome} {d : Digest} {s' : Store},
+  Closed s → s.putNode n = Except.ok (o, d, s') → Closed s'
+info: Test/Store/WordContract.lean:192:0: @putRoot_root? : ∀ {s s' : Store} {r : Root}, s.putRoot r = Except.ok s' → s'.root? r.name = some r
+info: Test/Store/WordContract.lean:193:0: empty_closed : Closed Store.empty
+info: Test/Store/WordContract.lean:194:0: @wf_closed : ∀ {w : Word}, w.wf = true → ∃ s, w.apply Store.empty = Except.ok s ∧ Closed s
+info: Test/Store/WordContract.lean:195:0: @apply_idempotent : ∀ {w : Word} {s s' : Store}, w.apply s = Except.ok s' → w.apply s' = Except.ok s'
+info: Test/Store/WordContract.lean:196:0: closure_wf : ∀ (s : Store) (r : AnyRef), (s.closure r).wf = true
+info: Test/Store/WordContract.lean:197:0: @closure_closed : ∀ {s : Store} {rank : Digest → Nat},
+  s.Sound →
+    s.Ranked rank →
+      ∀ {r : AnyRef} {n : Node},
+        rank r.digest < s.nodes.length →
+          s.find r.digest = some n →
+            ∃ s', (s.closure r).apply Store.empty = Except.ok s' ∧ Closed s' ∧ s'.find r.digest = some n
+info: Test/Store/WordContract.lean:198:0: @layered_get : ∀ {l : Layered}, l.local.sub l.remote → ∀ (d : Digest), l.getNode d = l.remote.find d
+info: Test/Store/WordContract.lean:199:0: @outbox_wf : ∀ {l : LocalFirst}, l.Built → l.outbox.wf = true
+info: Test/Store/WordContract.lean:200:0: @sync_sub : ∀ {l : LocalFirst} {remote r : Store},
+  l.outbox.wf = true →
+    (∀ (d : Digest) (n : Node),
+        l.local.find d = some n → remote.find d = some n ∨ { digest := d, node := n } ∈ l.outbox) →
+      l.sync remote = Except.ok r → l.local.sub r
+info: Test/Store/WordContract.lean:201:0: @sync_idempotent : ∀ {l : LocalFirst} {remote r : Store}, l.sync remote = Except.ok r → l.sync r = Except.ok r
+info: Test/Store/WordContract.lean:202:0: @verify_sound : ∀ {s : Store}, s.verify = Except.ok () → s.Sound
+info: Test/Store/WordContract.lean:203:0: @verify_roots : ∀ {s : Store},
+  s.verify = Except.ok () → ∀ (r : Root), r ∈ s.roots → ∃ m, s.find r.digest = some m ∧ m.kind = r.kind
+ℹ [929/981] Replayed Test.Store.TraitContract
+info: Test/Store/TraitContract.lean:104:0: @nodeBytes_trait_free : ∀ [inst : Content Effect4.Document] {α : Type} [inst_1 : Content α] (a : α),
+  (nodeOf a).encode = 0 :: (Content.kind α).byte :: ((specFor a).bytes ++ (toVal a).encode)
+info: Test/Store/TraitContract.lean:105:0: @trait_put_preserves : ∀ [inst : Content Effect4.Document] {τ : Type} [inst_1 : Canonical τ] {t : Annotation τ}
+  {s s' : Store} {o : Outcome} {r : Ref (Annotation τ)},
+  Store.put t s = Except.ok (o, r, s') → ∀ (d : Digest) (n : Node), s.find d = some n → s'.find d = some n
+info: Test/Store/TraitContract.lean:106:0: @trait_get_preserves : ∀ [inst : Content Effect4.Document] {τ β : Type} [inst_1 : Canonical τ] [inst_2 : Content β]
+  {t : Annotation τ} {s s' : Store} {o : Outcome} {r : Ref (Annotation τ)} {q : Ref β} {b : β},
+  Store.get q s = some b → Store.put t s = Except.ok (o, r, s') → Store.get q s' = some b
+info: Test/Store/TraitContract.lean:107:0: @effective_deterministic : ∀ {s s' : Store},
+  s = s' → ∀ (registry : Digest) (n : AnyRef) (key : Digest), s.effective registry n key = s'.effective registry n key
+info: Test/Store/TraitContract.lean:108:0: @traitsOf_perm : ∀ {s s' : Store},
+  s.nodes.Perm s'.nodes → ∀ (subject : AnyRef), (s.traitsOf subject).Perm (s'.traitsOf subject)
+info: Test/Store/TraitContract.lean:109:0: @headsUnder_perm : ∀ {s s' : Store},
+  s.nodes.Perm s'.nodes →
+    ∀ (subject : AnyRef) (key : Digest), (s.headsUnder subject key).Perm (s'.headsUnder subject key)
+Build completed successfully (1031 jobs).
+exit=0

@@ -1,0 +1,52 @@
+program	addresses	query	domain	allowed	kept	foldedRegions	foldedOutsidePlan	calls	ms	moreByRestart	restartCalls	minimalByBruteForce	upKept	upCalls	upMs	sweepKept	sweepCalls	sweepMs	completion1	completion2	completion3	mask
+pAwait	3	error has nat	plan	3	2	1	0	3	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	101
+pAwait	3	error has nat	wide	3	2	1	0	3	0	0	2	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	101
+pAwait	3	error has nat	all	3	2	1	0	3	1	0	2	true	2	2	0	2	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	101
+pFailTagged	1	error has ["SqlError", "boom"]	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailTagged	1	error has ["SqlError", "boom"]	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailTagged	1	error has ["SqlError", "boom"]	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pSqlite	10	error has [string, string]	plan	10	5	3	0	8	1	0	5	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1100010101
+pSqlite	10	error has [string, string]	wide	10	5	3	0	8	1	0	5	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1100010101
+pSqlite	10	error has [string, string]	all	10	5	3	0	8	1	0	5	true	4	7	1	5	10	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	1100010101
+pKv	11	error has [string, string]	plan	11	6	5	0	11	1	0	6	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	10101010110
+pKv	11	error has [string, string]	wide	11	6	5	0	11	1	0	6	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	10101010110
+pKv	11	error has [string, string]	all	11	6	5	0	11	2	0	6	true	3	9	1	6	11	2	admitted, the member stays	admitted, the member stays	admitted, the member stays	10101010110
+pSqlFail	6	error has [string, string]	plan	6	3	1	0	4	1	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110001
+pSqlFail	6	error has [string, string]	wide	6	3	1	0	4	0	0	3	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110001
+pSqlFail	6	error has [string, string]	all	6	3	1	0	4	0	0	3	true	3	4	0	3	6	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	110001
+pFailText	1	error has string	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailText	1	error has string	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailText	1	error has string	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailBoomText	1	error has string	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailBoomText	1	error has string	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailBoomText	1	error has string	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pCatchIfHit	3	error has nat	plan	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pCatchIfHit	3	error has nat	wide	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pCatchIfHit	3	error has nat	all	3	2	1	0	3	0	0	2	true	2	2	0	2	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pCatchIfMiss	3	error has nat	plan	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pCatchIfMiss	3	error has nat	wide	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pCatchIfMiss	3	error has nat	all	3	2	1	0	3	0	0	2	true	2	2	0	2	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagHit	7	error has string	plan	2	6	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1111110
+pTagHit	7	error has string	wide	3	5	2	1	3	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110110
+pTagHit	7	error has string	all	7	4	3	2	7	0	0	4	true	4	4	0	4	7	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110100
+pTagHit	7	error has ["A", "m"]	plan	2	6	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1111110
+pTagHit	7	error has ["A", "m"]	wide	3	5	2	1	3	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110110
+pTagHit	7	error has ["A", "m"]	all	7	5	2	1	7	1	0	5	true	5	4	0	5	7	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110110
+pTagMiss	7	error has string	plan	2	6	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1111110
+pTagMiss	7	error has string	wide	3	5	2	1	3	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110110
+pTagMiss	7	error has string	all	7	4	3	2	7	1	0	4	true	4	4	0	4	7	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110100
+pTagMiss	7	error has ["A", "m"]	plan	2	6	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1111110
+pTagMiss	7	error has ["A", "m"]	wide	3	5	2	1	3	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1110110
+pTagMiss	7	error has ["A", "m"]	all	7	3	2	1	5	0	0	3	true	3	5	0	3	7	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	1100010
+pTagTwoFail	3	error has ["A", "m"]	plan	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagTwoFail	3	error has ["A", "m"]	wide	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagTwoFail	3	error has ["A", "m"]	all	3	2	1	0	3	0	0	2	true	2	2	0	2	3	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagTwoFail	3	error has ["B", "x"]	plan	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagTwoFail	3	error has ["B", "x"]	wide	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagTwoFail	3	error has ["B", "x"]	all	3	2	1	0	3	0	0	2	true	2	2	0	2	3	1	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pFailPayload	1	error has {_tag: "NotFound", id: nat}	plan	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailPayload	1	error has {_tag: "NotFound", id: nat}	wide	1	1	0	0	1	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pFailPayload	1	error has {_tag: "NotFound", id: nat}	all	1	1	0	0	1	0	0	1	true	1	1	0	1	1	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	1
+pTagPayload	3	error has {_tag: "NotFound", id: nat}	plan	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagPayload	3	error has {_tag: "NotFound", id: nat}	wide	2	2	1	0	2	0	0	1	true	-	-	-	-	-	-	admitted, the member stays	admitted, the member stays	admitted, the member stays	110
+pTagPayload	3	error has {_tag: "NotFound", id: nat}	all	3	2	1	0	3	0	0	2	true	2	2	0	2	3	0	admitted, the member stays	admitted, the member stays	admitted, the member stays	110

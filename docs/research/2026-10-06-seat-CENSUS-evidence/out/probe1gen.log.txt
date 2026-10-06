@@ -1,0 +1,5 @@
+gen: programs 400; admitted 128; admitted with a reference in the stored program: 0
+gen: the site walk agrees with foldMapAt_eff on every program: true
+gen: envAt agrees with the site walk on every program: true
+gen: sites 238; fold rows 714; wall time 32 ms
+wall=1s exit=0

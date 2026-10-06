@@ -1,0 +1,267 @@
+/-
+Seat CENSUS, probe 2: the eliminator census. Every rule of `argTy`/`termTy`, `causeTy` and
+`check` that inspects the type of a part is one entry: its name, the declaration that holds
+it, what it reads, a type that it admits, two more that it admits one by one, and a function
+that runs the rule at a given type of the variable `a0`. The table is the output of the last
+`#eval`: each cell is what the tree's checker answers. The guards after it hold the claims of
+the receipt, with one red control each.
+-/
+namespace Census.Elim
+open Census
+
+def sig0 : Sig := nativeSignature []
+def call (name : String) (args : List Term) : Term := .app name (args.foldr .cons .nil)
+def n (k : Nat) : Term := .lit (.nat k)
+def str (t : String) : Term := .lit (.str t)
+def v0 : Term := .var 0
+
+/-- The outcome of a term at `a0 : T`: its type, or `REFUSED`. -/
+def atTerm (t : Term) (T : Ty) : String :=
+  match termTy sig0 [T] t with
+  | some ty => showTy ty
+  | none => "REFUSED"
+
+/-- The outcome of a program at `a0 : T`: its three columns, or the refusal's rule. -/
+def atEff (table : RowTable) (e : P) (T : Ty) : String :=
+  match Checker.check (nativeSignature table) [T] [] e with
+  | .ok ty => showEffTy ty
+  | .error r => "REFUSED " ++ r.reason.head
+
+def atCause (c : CauseTerm) (T : Ty) : String :=
+  match causeTy sig0 [T] c with
+  | some ty => showTy ty
+  | none => "REFUSED"
+
+structure Entry where
+  name : String
+  owner : String
+  reads : String
+  /-- Two types that the rule admits one by one. -/
+  left : Ty
+  right : Ty
+  run : Ty → String
+
+def unit_ : P := .succeed (.lit .unit)
+def recA : Ty := .record [("_tag", false, .lit "A"), ("x", false, .nat)]
+def recB : Ty := .record [("_tag", false, .lit "B"), ("x", false, .string)]
+def tagA : Ty := .prod (.lit "A") .nat
+def tagB : Ty := .prod (.lit "B") .string
+def kNat : ServiceKey := ⟨⟨4⟩, ⟨4⟩⟩
+
+/-- An external row with a closed request, for the row check at a closed row. -/
+def closedTable : RowTable :=
+  [{ name := "say", spelling := "Host.say", kind := .async, registration := .external,
+     request := .string, answer := .nat, error := .never, cite := "seat CENSUS" }]
+
+def entries : List Entry :=
+  [ -- terms: the atom schemes (`Scheme.apply`, `src/Effect4/Program/NativeAtom.lean`)
+    ⟨"atom, fixed parameters: concat(a0, \"x\")", "NativeAtom.monoApply", "Ty.sub, raw types",
+      .lit "a", .lit "b", atTerm (call "concat" [v0, str "x"])⟩
+  , ⟨"atom, fixed parameters: isSome(a0)", "NativeAtom.monoApply", "Ty.sub, raw types",
+      .option .nat, .option .string, atTerm (call "isSome" [v0])⟩
+  , ⟨"atom, fixed parameters: length(a0)", "NativeAtom.monoApply", "Ty.sub, raw types",
+      .list .nat, .list .string, atTerm (call "length" [v0])⟩
+  , ⟨"atom, any number of arguments: strings(a0)", "Scheme.apply (variadic)", "Ty.sub, raw types",
+      .lit "a", .lit "b", atTerm (call "strings" [v0])⟩
+  , ⟨"atom, alternatives: eq(a0, a0)", "Scheme.apply (alts)", "Ty.sub, raw types, the whole list per alternative",
+      .nat, .string, atTerm (call "eq" [v0, v0])⟩
+  , ⟨"atom, template: get(a0, 0)", "Ty.matchTemplateArgs", "infer, then Ty.sub on normal forms",
+      .list .nat, .list .string, atTerm (call "get" [v0, n 0])⟩
+  , ⟨"atom, template: take(a0, 1)", "Ty.matchTemplateArgs", "infer, then Ty.sub on normal forms",
+      .list .nat, .list .string, atTerm (call "take" [v0, n 1])⟩
+  , ⟨"atom, template: mapGet(a0, \"k\")", "Ty.matchTemplateArgs", "infer, then Ty.sub on normal forms",
+      .map .string .nat, .map .string .bool, atTerm (call "mapGet" [v0, str "k"])⟩
+  , ⟨"atom, template, repeated parameter kept at its first binding: getOrElse(a0, 9)",
+      "Ty.matchTemplateArgs (join := false)", "infer, then Ty.sub on normal forms",
+      .option .nat, .option .never, atTerm (call "getOrElse" [v0, n 9])⟩
+  , ⟨"atom, template, repeated parameter joined: append(a0, cons(1, nil()))",
+      "Ty.matchTemplateArgs (join := true)", "infer, then Ty.sub on normal forms",
+      .list .nat, .list .never, atTerm (call "append" [v0, call "cons" [n 1, call "nil" []]])⟩
+  , ⟨"atom, template, repeated parameter joined: ite(a0, 1, 2)", "Ty.matchTemplateArgs (join := true)",
+      "infer, then Ty.sub on normal forms", .bool, .bool, atTerm (call "ite" [v0, n 1, n 2])⟩
+  , ⟨"atom, named rule: fst(a0)", "NativeAtom.projectProduct", "head of the raw type, member by member",
+      .prod .nat .string, .prod .bool .unit, atTerm (call "fst" [v0])⟩
+  , ⟨"atom, named rule: causeIsFail(a0)", "causeInputError?", "head of the raw type",
+      .causeOf .nat, .exitOf .unit .string, atTerm (call "causeIsFail" [v0])⟩
+  , ⟨"atom, named rule: causeError(a0)", "causeInputError?", "head of the raw type",
+      .causeOf .nat, .causeOf .string, atTerm (call "causeError" [v0])⟩
+  , ⟨"atom, named rule: sameHandle(a0, a0)", "NativeAtom.sameHandleRule", "heads of the raw types",
+      .refOf .nat, .refOf .string, atTerm (call "sameHandle" [v0, v0])⟩
+    -- terms: the record, tuple and fold forms (`argTy`, `src/Effect4/Program/Typing/Rules.lean`)
+  , ⟨"field read: a0.x", "Record.fieldType", "members of the normal form",
+      recA, recB, atTerm (.field .required v0 "x")⟩
+  , ⟨"field write: a0 with x := 1", "Record.setType", "members of the normal form",
+      recA, recB, atTerm (.recordSet v0 "x" (n 1))⟩
+  , ⟨"tuple projection: a0#0", "Tuple.typeAt", "the normal form, member by member",
+      .prod .nat .string, .tuple [.bool, .unit, .nat], atTerm (.tupleAt v0 0)⟩
+  , ⟨"list fold: fold(a0, 0, a1)", "Checker.listOf?", "head of the raw type",
+      .list .nat, .list .string, atTerm (.fold none v0 (n 0) (.var 1))⟩
+    -- causes (`causeTy`)
+  , ⟨"cause leaf: Fail(a0)", "admittedErrTy", "members of the normal form",
+      .nat, .string, atCause (.fail v0)⟩
+  , ⟨"cause leaf: Interrupt(a0)", "causeTy", "equality of the raw type with nat",
+      .nat, .nat, atCause (.interrupt (some v0))⟩
+    -- programs (`Checker.check`, `src/Effect4/Program/Checker.lean`)
+  , ⟨"fail(a0)", "admittedErrTy", "members of the normal form", .nat, .string, atEff [] (.fail v0)⟩
+  , ⟨"perform at a closed row: say(a0)", "checkRow, Ty.matchTemplate", "Ty.sub on normal forms",
+      .lit "a", .lit "b", atEff closedTable (.perform (.external 0) v0)⟩
+  , ⟨"perform at a template row: Ref.get(a0)", "checkRow, Ty.matchTemplate", "infer, then Ty.sub on normal forms",
+      .refOf .nat, .refOf .string, atEff [] (.perform .refGet v0)⟩
+  , ⟨"perform at a template row: Deferred.await(a0)", "checkRow, Ty.matchTemplate",
+      "infer, then Ty.sub on normal forms", .deferredOf .nat .string, .deferredOf .bool .nat,
+      atEff [] (.perform .deferredAwait v0)⟩
+  , ⟨"perform at a template row, the cell beside its content: Ref.set([a0, 7])", "checkRow, Ty.matchTemplate",
+      "infer, then Ty.sub on normal forms", .refOf .nat, .refOf .never,
+      atEff [] (.perform .refSet (call "pair" [v0, n 7]))⟩
+  , ⟨"perform with a binder term: Ref.update{succ(a1)}(a0)", "checkRow, bindTerm",
+      "infer, then Ty.sub on normal forms", .refOf .nat, .refOf .never,
+      atEff [] (.perform (.refUpdateWith (call "succ" [.var 1])) v0)⟩
+  , ⟨"catchIf's test: catchIf(a0-typed test)", "Checker.check (catchIf)", "equality of the raw type with bool",
+      .bool, .bool, fun T => atEff [] (.catchIf (.var 0) (.fail (n 1)) unit_) T⟩
+  , ⟨"select by a Boolean: select[bool](a0, …)", "Decision.arms", "equality of the raw type with bool",
+      .bool, .bool, atEff [] (.select v0 .bool unit_ unit_)⟩
+  , ⟨"select by an option: select[option](a0, …, succeed(a1))", "Decision.arms", "head of the normal form",
+      .option .nat, .option .string, atEff [] (.select v0 .option unit_ (.succeed (.var 1)))⟩
+  , ⟨"select by a tag: select[tag A](a0, succeed(a1), succeed(a1))", "Decision.arms, Ty.payloadTy, Ty.diffTag",
+      "members of the normal form", tagA, tagB,
+      atEff [] (.select v0 (.tag "A") (.succeed (.var 1)) (.succeed (.var 1)))⟩
+  , ⟨"select by a record's tag: select[recordTag A](a0, succeed(a1), succeed(a1))", "Record.tagArms",
+      "members of the normal form", recA, recB,
+      atEff [] (.select v0 (.recordTag "A") (.succeed (.var 1)) (.succeed (.var 1)))⟩
+  , ⟨"iterate's test: iterate(0; a0; a1; (); …)", "Checker.check (iterate)", "equality of the raw type with bool",
+      .bool, .bool, atEff [] (.iterate none (n 0) v0 (.var 1) (.lit .unit) unit_)⟩
+  , ⟨"join(a0)", "fiberTy", "head of the raw type", .fiberOf .nat .string, .fiberOf .bool .nat,
+      atEff [] (.awaitFiber v0 .joinEffect)⟩
+  , ⟨"await(a0)", "fiberTy", "head of the raw type", .fiberOf .nat .string, .fiberOf .bool .nat,
+      atEff [] (.awaitFiber v0 .awaitValue)⟩
+  , ⟨"restore(a0, …)", "Checker.check (restore)", "equality of the raw type with Ty.maskRestore",
+      Ty.maskRestore, Ty.maskRestore, atEff [] (.restore v0 unit_)⟩
+  , ⟨"provideService(k, a0, …)", "Checker.check (provideService)", "Ty.sub on normal forms",
+      .nat, .never, atEff [] (.provideService kNat v0 unit_)⟩
+  , ⟨"if a0 {…} else {…} (a generator's statement)", "Checker.checkStmt (ifElse)",
+      "equality of the raw type with bool", .bool, .bool,
+      atEff [] (.gen (.cons (.ifElse v0 .nil .nil) .nil))⟩
+    -- fiber actions (`Checker.checkAction`)
+  , ⟨"forkIn(…, a0)", "Checker.checkAction (forkIn)", "equality of the raw type with Ty.scope",
+      Ty.scope, Ty.scope, atEff [] (.withFiber (.forkIn unit_ { startImmediately := false, daemon := true, maskMode := .inherit } v0))⟩
+  , ⟨"interrupt(a0)", "fiberTy", "head of the raw type", .fiberOf .nat .string, .fiberOf .bool .nat,
+      atEff [] (.withFiber (.interrupt v0))⟩
+  , ⟨"interruptAll(a0)", "Checker.listOf?, fiberTy", "heads of the raw types",
+      .list (.fiberOf .nat .string), .list (.fiberOf .bool .nat), atEff [] (.withFiber (.interruptAll v0 none))⟩
+  , ⟨"awaitAll(a0)", "Checker.listOf?, fiberTy", "heads of the raw types",
+      .list (.fiberOf .nat .string), .list (.fiberOf .bool .nat), atEff [] (.withFiber (.awaitAll v0))⟩
+  , ⟨"awaitNewChildren(a0)", "Checker.checkAction (awaitNewChildren)", "Ty.sub on the normal form",
+      .list (.fiberOf .nat .string), .list (.fiberOf .bool .nat), atEff [] (.withFiber (.awaitNewChildren v0))⟩
+  , ⟨"setContext(a0)", "Checker.checkAction (setContext)", "equality of the raw type with Ty.context",
+      Ty.context, Ty.context, atEff [] (.withFiber (.setContext v0))⟩
+  , ⟨"closeScope(scope, a0)", "Checker.exitOf?", "head of the raw type", .exitOf .nat .string, .exitOf .bool .nat,
+      fun T => atEff [] (.withFiber (.closeScope (.var 1) v0)) T⟩ ]
+
+/-- `closeScope` reads a scope beside the exit: its row runs at `[T, scope]`. -/
+def runEntry (e : Entry) (T : Ty) : String :=
+  if e.name == "closeScope(scope, a0)" then
+    match Checker.check sig0 [T, Ty.scope] [] (.withFiber (.closeScope (.var 1) v0)) with
+    | .ok ty => showEffTy ty
+    | .error r => "REFUSED " ++ r.reason.head
+  else e.run T
+
+def row (e : Entry) : String :=
+  tsv [e.name, e.owner, e.reads, showTy e.left, runEntry e e.left, showTy e.right, runEntry e e.right,
+    runEntry e (.union e.left e.right), runEntry e (Ty.join e.left e.right), runEntry e .never]
+
+#eval do
+  IO.println (tsv ["eliminator", "owner", "reads", "T1", "at T1", "T2", "at T2", "at the raw union T1 | T2",
+    "at the canonical union", "at never"])
+  for e in entries do IO.println (row e)
+
+/-! ## The claims of the receipt, each with its red control -/
+
+def T (t : Term) (env : TyEnv) : Option Ty := termTy sig0 env t
+def E (e : P) (env : TyEnv) (table : RowTable := []) : Option EffTy :=
+  (Checker.check (nativeSignature table) env [] e).toOption
+def R (e : P) (env : TyEnv) : Option String :=
+  (Checker.refusal (Checker.check sig0 env [] e)).map (·.reason.head)
+
+-- 1. The four forms that go through a union's members and are total at `never`: the field read, the
+--    field write, the tuple projection and `fst`/`snd`.
+#guard T (.field .required v0 "x") [Ty.join recA recB] = some (Ty.join .nat .string)
+#guard T (.field .required v0 "x") [.never] = some .never
+#guard T (.recordSet v0 "x" (n 1)) [.never] = some .never
+#guard T (.tupleAt v0 0) [.union (.prod .nat .string) (.tuple [.bool, .unit, .nat])] = some (Ty.join .nat .bool)
+#guard T (.tupleAt v0 0) [.never] = some .never
+#guard T (call "fst" [v0]) [.union (.prod .nat .string) (.prod .bool .unit)] = some (Ty.join .nat .bool)
+#guard T (call "fst" [v0]) [.never] = some .never
+-- red control: a member without the field refuses the whole read
+#guard T (.field .required v0 "x") [Ty.join recA .nat] = none
+
+-- 2. A fixed parameter takes each member of a union, and `never`; the answer is the declared one.
+#guard T (call "concat" [v0, str "x"]) [.union (.lit "a") (.lit "b")] = some .string
+#guard T (call "concat" [v0, str "x"]) [.never] = some .string
+#guard T (call "concat" [v0, str "x"]) [.union (.lit "a") .nat] = none
+
+-- 3. A template binds at the first member of a union and refuses the second; `never` binds nothing,
+--    and an unbound parameter is `never` in the answer.
+#guard T (call "get" [v0, n 0]) [.union (.list .nat) (.list .string)] = none
+#guard T (call "get" [v0, n 0]) [.list (.union .nat .string)] = some (.option (.union .nat .string))
+#guard T (call "get" [v0, n 0]) [.never] = some (.option .never)
+#guard E (.perform .refGet v0) [.union (.refOf .nat) (.refOf .string)] = none
+#guard E (.perform .refGet v0) [.never] = some ⟨.never, .never, Requirement.empty⟩
+
+-- 4. `getOrElse` keeps its parameter at the first binding: it is not monotone in its first argument.
+#guard T (call "getOrElse" [v0, n 9]) [.option .nat] = some .nat
+#guard T (call "getOrElse" [v0, n 9]) [.option .never] = none
+#guard T (call "getOrElse" [v0, n 9]) [.never] = some .nat
+-- the joined templates are monotone at the same place
+#guard T (call "append" [v0, call "cons" [n 1, call "nil" []]]) [.list .never] = some (.list .nat)
+
+-- 5. A cell is invariant: the content's type binds at the cell, and a smaller cell refuses the write.
+#guard E (.perform .refSet (call "pair" [v0, n 7])) [.refOf .nat] = some ⟨.refOf .nat, .never, Requirement.empty⟩
+#guard R (.perform .refSet (call "pair" [v0, n 7])) [.refOf .never] = some "requestNotSubtype"
+#guard E (.perform .refSet (call "pair" [v0, n 7])) [.never] = some ⟨.refOf .nat, .never, Requirement.empty⟩
+#guard R (.perform (.refUpdateWith (call "succ" [.var 1])) v0) [.refOf .never] = some "resultNotSubtype"
+
+-- 6. The forms that match a head or test an equality refuse `never` and a union.
+#guard R (.awaitFiber v0 .joinEffect) [.never] = some "notFiber"
+#guard R (.awaitFiber v0 .joinEffect) [.union (.fiberOf .nat .string) (.fiberOf .bool .nat)] = some "notFiber"
+#guard R (.select v0 .bool unit_ unit_) [.never] = some "predicateNotBool"
+#guard R (.select v0 .option unit_ unit_) [.never] = some "notSelectable"
+#guard R (.select v0 .option unit_ unit_) [.union (.option .nat) (.option .string)] = some "notSelectable"
+#guard R (.select v0 (.tag "A") unit_ unit_) [.never] = some "notSelectable"
+#guard R (.restore v0 unit_) [.never] = some "maskRestoreExpected"
+#guard R (.withFiber (.interruptAll v0 none)) [.list .never] = some "notFiber"
+#guard R (.withFiber (.interruptAll (call "nil" []) none)) [] = some "notFiber"
+#guard T (.fold none v0 (n 0) (.var 1)) [.never] = none
+#guard T (.fold none v0 (n 0) (.var 1)) [.union (.list .nat) (.list .string)] = none
+#guard T (call "causeIsFail" [v0]) [.never] = none
+#guard T (call "causeIsFail" [v0]) [.union (.causeOf .nat) (.exitOf .unit .string)] = none
+-- red control: the same forms at the type that they admit
+#guard (E (.awaitFiber v0 .joinEffect) [.fiberOf .nat .string]).isSome
+#guard (E (.select v0 .option unit_ unit_) [.option .nat]).isSome
+
+-- 7. The two decisions that read members: the record's tag is total at `never`, the pair's tag is not.
+#guard E (.select v0 (.recordTag "A") (.succeed (.var 1)) (.succeed (.var 1))) [.never] =
+  some ⟨.never, .never, Requirement.empty⟩
+#guard E (.select v0 (.recordTag "A") (.succeed (.var 1)) (.succeed (.var 1))) [Ty.join recA recB] =
+  some ⟨Ty.join recA recB, .never, Requirement.empty⟩
+#guard E (.select v0 (.tag "A") (.succeed (.var 1)) (.succeed (.var 1))) [Ty.join tagA tagB] =
+  some ⟨Ty.join .nat tagB, .never, Requirement.empty⟩
+
+-- 8. The comparisons by `Ty.sub` take a union member by member and take `never`.
+#guard (E (.provideService kNat v0 unit_) [.never]).isSome
+#guard (E (.withFiber (.awaitNewChildren v0)) [.never]).isSome
+#guard (E (.withFiber (.awaitNewChildren v0)) [.union (.list (.fiberOf .nat .string)) (.list (.fiberOf .bool .nat))]).isSome
+#guard E (.fail v0) [.never] = some ⟨.never, .never, Requirement.empty⟩
+#guard E (.fail v0) [.union .nat .string] = some ⟨.never, .union .nat .string, Requirement.empty⟩
+
+-- 9. A cursor or an accumulator without a stated type takes the initial value's type: a smaller
+--    initial value then refuses the step.
+#guard (E (.iterate none v0 (.lit (.bool true)) (call "succ" [.var 1]) (.lit .unit) unit_) [.nat]).isSome
+#guard R (.iterate none v0 (.lit (.bool true)) (call "succ" [.var 1]) (.lit .unit) unit_) [.never] = some "stepNotCursor"
+#guard (E (.iterate (some .nat) v0 (.lit (.bool true)) (call "succ" [.var 1]) (.lit .unit) unit_) [.never]).isSome
+#guard T (.fold none (call "cons" [n 1, call "nil" []]) v0 (call "add" [.var 1, .var 2])) [.nat] = some .nat
+#guard T (.fold none (call "cons" [n 1, call "nil" []]) v0 (call "add" [.var 1, .var 2])) [.never] = none
+#guard T (.fold (some .nat) (call "cons" [n 1, call "nil" []]) v0 (call "add" [.var 1, .var 2])) [.never] = some .nat
+
+#eval IO.println "probe 2: every guard above holds"
+
+end Census.Elim

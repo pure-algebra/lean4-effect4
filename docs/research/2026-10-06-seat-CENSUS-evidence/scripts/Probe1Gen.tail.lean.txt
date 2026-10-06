@@ -1,0 +1,9 @@
+/-
+Seat CENSUS, probe 1 on the generated corpus: `Test.Program.Gen.program i 4` for `i < 400`,
+the programs of `make corpus`, at the empty row table.
+-/
+namespace Census
+def genPrograms : List (String × RowTable × P) :=
+  (List.range 400).map fun i => (s!"g{i}", [], Test.Program.Gen.program i 4)
+#eval runCorpus "gen" genPrograms
+end Census

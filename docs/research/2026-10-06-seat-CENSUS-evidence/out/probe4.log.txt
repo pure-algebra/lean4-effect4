@@ -1,0 +1,175 @@
+=== page 18, the error column; fold Arow; query: error above (nat | string)
+program: select[bool](true, bind(fail(1), fail("c")), bind(fail(2), fail("d")))   type: <never ; (nat | string) ; {}>
+addresses: 7: [., 0, 0.0, 0.1, 1, 1.0, 1.1]
+closed masks 26; admitted 26; valid 11; minimal valid masks 4
+  minimal: 1111000  select[bool](true, bind(fail(1), fail("c")), □:never)   type <never ; (nat | string) ; {}>
+  minimal: 1101110  select[bool](true, bind(□:never, fail("c")), bind(fail(2), □:never))   type <never ; (nat | string) ; {}>
+  minimal: 1110101  select[bool](true, bind(fail(1), □:never), bind(□:never, fail("d")))   type <never ; (nat | string) ; {}>
+  minimal: 1000111  select[bool](true, □:never, bind(fail(2), fail("d")))   type <never ; (nat | string) ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 1000000  select[bool](true, □:never, □:never)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 1000111 kept 4, 5 calls of check, minimal: true
+descent from the leaves up: 1111000 kept 4, 5 calls of check, minimal: true
+descent restarting (the paper's): 1000111 kept 4, 6 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 1000111 kept 4, 7 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 1111000 kept 4, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 4: [[0, 1, 2, 3], [0, 1, 3, 4, 5], [0, 1, 2, 4, 6], [0, 4, 5, 6]]; each is a closed mask: true; the same masks: true
+=== page 18, the error column; fold Avar; query: error above (nat | string)
+program: select[bool](true, bind(fail(1), fail("c")), bind(fail(2), fail("d")))   type: <never ; (nat | string) ; {}>
+addresses: 7: [., 0, 0.0, 0.1, 1, 1.0, 1.1]
+closed masks 26; admitted 26; valid 11; minimal valid masks 4
+  minimal: 1111000  select[bool](true, bind(fail(1), fail("c")), □:never)   type <never ; (nat | string) ; {}>
+  minimal: 1101110  select[bool](true, bind(□:never, fail("c")), bind(fail(2), □:never))   type <never ; (nat | string) ; {}>
+  minimal: 1110101  select[bool](true, bind(fail(1), □:never), bind(□:never, fail("d")))   type <never ; (nat | string) ; {}>
+  minimal: 1000111  select[bool](true, □:never, bind(fail(2), fail("d")))   type <never ; (nat | string) ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 1000000  select[bool](true, □:never, □:never)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 1000111 kept 4, 5 calls of check, minimal: true
+descent from the leaves up: 1111000 kept 4, 5 calls of check, minimal: true
+descent restarting (the paper's): 1000111 kept 4, 6 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 1000111 kept 4, 7 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 1111000 kept 4, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 4: [[0, 1, 2, 3], [0, 1, 3, 4, 5], [0, 1, 2, 4, 6], [0, 4, 5, 6]]; each is a closed mask: true; the same masks: true
+=== page 18, the error column; fold N; query: error above (nat | string)
+program: select[bool](true, bind(fail(1), fail("c")), bind(fail(2), fail("d")))   type: <never ; (nat | string) ; {}>
+addresses: 7: [., 0, 0.0, 0.1, 1, 1.0, 1.1]
+closed masks 26; admitted 26; valid 11; minimal valid masks 4
+  minimal: 1111000  select[bool](true, bind(fail(1), fail("c")), □)   type <never ; (nat | string) ; {}>
+  minimal: 1101110  select[bool](true, bind(□, fail("c")), bind(fail(2), □))   type <never ; (nat | string) ; {}>
+  minimal: 1110101  select[bool](true, bind(fail(1), □), bind(□, fail("d")))   type <never ; (nat | string) ; {}>
+  minimal: 1000111  select[bool](true, □, bind(fail(2), fail("d")))   type <never ; (nat | string) ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 1000000  select[bool](true, □, □)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 1000111 kept 4, 5 calls of check, minimal: true
+descent from the leaves up: 1111000 kept 4, 5 calls of check, minimal: true
+descent restarting (the paper's): 1000111 kept 4, 6 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 1000111 kept 4, 7 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 1111000 kept 4, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 4: [[0, 1, 2, 3], [0, 1, 3, 4, 5], [0, 1, 2, 4, 6], [0, 4, 5, 6]]; each is a closed mask: true; the same masks: true
+=== page 18, the answer column; fold N; query: answer above (nat | string)
+program: select[bool](true, select[bool](true, succeed(1), succeed("c")), select[bool](true, succeed(2), succeed("d")))   type: <(nat | string) ; never ; {}>
+addresses: 7: [., 0, 0.0, 0.1, 1, 1.0, 1.1]
+closed masks 26; admitted 26; valid 11; minimal valid masks 4
+  minimal: 1111000  select[bool](true, select[bool](true, succeed(1), succeed("c")), □)   type <(nat | string) ; never ; {}>
+  minimal: 1101110  select[bool](true, select[bool](true, □, succeed("c")), select[bool](true, succeed(2), □))   type <(nat | string) ; never ; {}>
+  minimal: 1110101  select[bool](true, select[bool](true, succeed(1), □), select[bool](true, □, succeed("d")))   type <(nat | string) ; never ; {}>
+  minimal: 1000111  select[bool](true, □, select[bool](true, succeed(2), succeed("d")))   type <(nat | string) ; never ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 1000000  select[bool](true, □, □)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 1000111 kept 4, 5 calls of check, minimal: true
+descent from the leaves up: 1111000 kept 4, 5 calls of check, minimal: true
+descent restarting (the paper's): 1000111 kept 4, 6 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 1000111 kept 4, 7 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 1111000 kept 4, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 4: [[0, 1, 2, 3], [0, 1, 3, 4, 5], [0, 1, 2, 4, 6], [0, 4, 5, 6]]; each is a closed mask: true; the same masks: true
+=== page 18, the answer column; fold Arow; query: answer above (nat | string)
+program: select[bool](true, select[bool](true, succeed(1), succeed("c")), select[bool](true, succeed(2), succeed("d")))   type: <(nat | string) ; never ; {}>
+addresses: 7: [., 0, 0.0, 0.1, 1, 1.0, 1.1]
+closed masks 26; admitted 26; valid 26; minimal valid masks 1
+  minimal: 0000000  □:(nat | string)   type <(nat | string) ; never ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 0000000  □:(nat | string)   type <(nat | string) ; never ; {}>   valid: true
+descent from the root down, skipping under a fold: 0000000 kept 0, 1 calls of check, minimal: true
+descent from the leaves up: 0000000 kept 0, 7 calls of check, minimal: true
+descent restarting (the paper's): 0000000 kept 0, 1 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 0000000 kept 0, 7 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 0000000 kept 0, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 1: [[]]; each is a closed mask: true; the same masks: true
+=== page 18, the error column, one member; fold Arow; query: error has nat
+program: select[bool](true, bind(fail(1), fail("c")), bind(fail(2), fail("d")))   type: <never ; (nat | string) ; {}>
+addresses: 7: [., 0, 0.0, 0.1, 1, 1.0, 1.1]
+closed masks 26; admitted 26; valid 16; minimal valid masks 2
+  minimal: 1110000  select[bool](true, bind(fail(1), □:never), □:never)   type <never ; nat ; {}>
+  minimal: 1000110  select[bool](true, □:never, bind(fail(2), □:never))   type <never ; nat ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 1000000  select[bool](true, □:never, □:never)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 1000110 kept 3, 5 calls of check, minimal: true
+descent from the leaves up: 1110000 kept 3, 5 calls of check, minimal: true
+descent restarting (the paper's): 1000110 kept 3, 9 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 1000110 kept 3, 7 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 1110000 kept 3, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 2: [[0, 1, 2], [0, 4, 5]]; each is a closed mask: true; the same masks: true
+=== page 23, the error column; fold Arow; query: error has string
+program: select[bool](true, fail("e"), fail("e"))   type: <never ; string ; {}>
+addresses: 3: [., 0, 1]
+closed masks 5; admitted 5; valid 3; minimal valid masks 2
+  minimal: 110  select[bool](true, fail("e"), □:never)   type <never ; string ; {}>
+  minimal: 101  select[bool](true, □:never, fail("e"))   type <never ; string ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 100  select[bool](true, □:never, □:never)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 101 kept 2, 3 calls of check, minimal: true
+descent from the leaves up: 110 kept 2, 2 calls of check, minimal: true
+descent restarting (the paper's): 101 kept 2, 4 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 101 kept 2, 3 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 110 kept 2, 3 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 2: [[0, 1], [0, 2]]; each is a closed mask: true; the same masks: true
+=== page 23, the error column; fold N; query: error has string
+program: select[bool](true, fail("e"), fail("e"))   type: <never ; string ; {}>
+addresses: 3: [., 0, 1]
+closed masks 5; admitted 5; valid 3; minimal valid masks 2
+  minimal: 110  select[bool](true, fail("e"), □)   type <never ; string ; {}>
+  minimal: 101  select[bool](true, □, fail("e"))   type <never ; string ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 100  select[bool](true, □, □)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 101 kept 2, 3 calls of check, minimal: true
+descent from the leaves up: 110 kept 2, 2 calls of check, minimal: true
+descent restarting (the paper's): 101 kept 2, 4 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 101 kept 2, 3 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 110 kept 2, 3 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 2: [[0, 1], [0, 2]]; each is a closed mask: true; the same masks: true
+=== page 23, the answer column; fold N; query: answer above nat
+program: select[bool](true, succeed(1), succeed(2))   type: <nat ; never ; {}>
+addresses: 3: [., 0, 1]
+closed masks 5; admitted 5; valid 3; minimal valid masks 2
+  minimal: 110  select[bool](true, succeed(1), □)   type <nat ; never ; {}>
+  minimal: 101  select[bool](true, □, succeed(2))   type <nat ; never ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 100  select[bool](true, □, □)   type <never ; never ; {}>   valid: false
+descent from the root down, skipping under a fold: 101 kept 2, 3 calls of check, minimal: true
+descent from the leaves up: 110 kept 2, 2 calls of check, minimal: true
+descent restarting (the paper's): 101 kept 2, 4 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 101 kept 2, 3 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 110 kept 2, 3 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 2: [[0, 1], [0, 2]]; each is a closed mask: true; the same masks: true
+=== the cell, a refusal inside the lattice; fold N; query: error has string
+program: bind(succeed(5), bind(refMake(a0), bind(refSet(pair(a1, 7)), fail("E"))))   type: <never ; string ; {}>
+addresses: 7: [., 0, 1, 1.0, 1.1, 1.1.0, 1.1.1]
+closed masks 23; admitted 21; valid 7; minimal valid masks 1
+  minimal: 1010101  bind(□, bind(□, bind(□, fail("E"))))   type <never ; string ; {}>
+pairs a ≤ b: b admitted and a refused 3; a admitted and b refused 17; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 3
+the meet of the minimal masks: 1010101  bind(□, bind(□, bind(□, fail("E"))))   type <never ; string ; {}>   valid: true
+descent from the root down, skipping under a fold: 1110101 kept 5, 7 calls of check, minimal: false
+descent from the leaves up: 1010101 kept 4, 4 calls of check, minimal: true
+descent restarting (the paper's): 1010101 kept 4, 14 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 1110101 kept 5, 7 calls of check, minimal: false
+descent seat LATTICE's pass, reverse order: 1010101 kept 4, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 1: [[0, 2, 4, 6]]; each is a closed mask: true; the same masks: true
+=== the cell, a refusal inside the lattice; fold Arow; query: error has string
+program: bind(succeed(5), bind(refMake(a0), bind(refSet(pair(a1, 7)), fail("E"))))   type: <never ; string ; {}>
+addresses: 7: [., 0, 1, 1.0, 1.1, 1.1.0, 1.1.1]
+closed masks 23; admitted 23; valid 8; minimal valid masks 1
+  minimal: 1010101  bind(□:nat, bind(□:ref<nat>, bind(□:ref<nat>, fail("E"))))   type <never ; string ; {}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 0 (answer 0, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 1010101  bind(□:nat, bind(□:ref<nat>, bind(□:ref<nat>, fail("E"))))   type <never ; string ; {}>   valid: true
+descent from the root down, skipping under a fold: 1010101 kept 4, 7 calls of check, minimal: true
+descent from the leaves up: 1010101 kept 4, 4 calls of check, minimal: true
+descent restarting (the paper's): 1010101 kept 4, 13 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 1010101 kept 4, 7 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 1010101 kept 4, 7 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 1: [[0, 2, 4, 6]]; each is a closed mask: true; the same masks: true
+=== a fork whose body fails; fold Arow; query: requires k0_0
+program: forkScoped(fail(5))   type: <fiber<never, nat> ; never ; {k0_0}>
+addresses: 2: [., 0.0]
+closed masks 3; admitted 3; valid 2; minimal valid masks 1
+  minimal: 10  forkScoped(□:never)   type <fiber<never, never> ; never ; {k0_0}>
+pairs a ≤ b: b admitted and a refused 0; a admitted and b refused 0; both admitted and type(a) not below type(b) 1 (answer 1, error 0, requirement 0); a valid and b not valid 0
+the meet of the minimal masks: 10  forkScoped(□:never)   type <fiber<never, never> ; never ; {k0_0}>   valid: true
+descent from the root down, skipping under a fold: 10 kept 1, 2 calls of check, minimal: true
+descent from the leaves up: 10 kept 1, 2 calls of check, minimal: true
+descent restarting (the paper's): 10 kept 1, 3 calls of check, minimal: true
+descent seat LATTICE's pass, program order: 10 kept 1, 2 calls of check, minimal: true
+descent seat LATTICE's pass, reverse order: 10 kept 1, 2 calls of check, minimal: true
+seat LATTICE's carrier (every list of kept sites): minimal slices 1: [[0]]; each is a closed mask: true; the same masks: true
+gen: programs with at most twelve effect addresses 128 of 128; cases 454
+truth: programs with at most twelve effect addresses 37 of 73; cases 141
+wall=19s exit=0

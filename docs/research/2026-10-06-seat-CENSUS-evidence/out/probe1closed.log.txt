@@ -1,0 +1,8 @@
+atoms: 43
+closed-term types: start 5; round 1 45
+closed-term types: round 2 2170
+closed-term types: round 3 6426
+types found that are never, raw or in normal form: []
+some types found that hold never under a head: [option<never>, list<never>, map<string, never>, [unit, option<never>], [unit, list<never>], [unit, map<string, never>], [nat, option<never>], [nat, list<never>]]
+control, the same forms at never: fst (some never), tupleAt (some never), field (some never)
+wall=12s exit=0

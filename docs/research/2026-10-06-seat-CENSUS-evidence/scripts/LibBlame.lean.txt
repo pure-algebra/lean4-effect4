@@ -1,0 +1,236 @@
+/-
+Seat CENSUS: the second part of the shared text. A refusal of the checker names a node and a
+rule. Where the rule is a term's (`term`, `binderTerm`, `cause`), the refusal does not say which
+part of the term has no type. `culprit` finds it: the innermost sub-term that has no type while
+each of its parts has one, printed as its head at its parts' types. It calls `argTy` and
+`argsTy` of the tree and decides nothing itself.
+-/
+namespace Census
+
+/-! ## The environment of any node, by one step of `Node.child` at a time
+
+`childEnv` is the table of inherited environments once more, for every sort of node: the
+census reads a refusal's path with it, and a statement or a fiber action can be refused. It is
+tested against the walk of the sites (`envAt_agrees`, in the self-test and in each run). -/
+
+/-- The environment and the loop flag of child `i` of a node at `env`. -/
+def childEnv (sig : Sig) (env : TyEnv) (inLoop : Bool) (p : List Nat) :
+    Node NativeOp → Nat → Option (TyEnv × Bool)
+  | .eff (.bind first _), 1 =>
+    (Checker.check sig env (p ++ [0]) first).toOption.map fun f => (env ++ [f.answer], inLoop)
+  | .eff (.catchCause body _), 1 =>
+    (Checker.check sig env (p ++ [0]) body).toOption.map fun b => (env ++ [.causeOf b.error], inLoop)
+  | .eff (.catchIf _ body _), 1 =>
+    (Checker.check sig env (p ++ [0]) body).toOption.map fun b => (env ++ [b.error], inLoop)
+  | .eff (.select s d _ _), 0 =>
+    ((Checker.term? sig env p s).toOption.bind d.arms).map fun arms => (env ++ arms.1, inLoop)
+  | .eff (.select s d _ _), 1 =>
+    ((Checker.term? sig env p s).toOption.bind d.arms).map fun arms => (env ++ arms.2, inLoop)
+  | .eff (.matchCause body _ _), 1 =>
+    (Checker.check sig env (p ++ [0]) body).toOption.map fun b => (env ++ [b.answer], inLoop)
+  | .eff (.matchCause body _ _), 2 =>
+    (Checker.check sig env (p ++ [0]) body).toOption.map fun b => (env ++ [.causeOf b.error], inLoop)
+  | .eff (.onExit body _), 1 =>
+    (Checker.check sig env (p ++ [0]) body).toOption.map fun b =>
+      (env ++ [.exitOf b.answer b.error], inLoop)
+  | .eff (.iterate cursorTy initial _ _ _ _), 0 =>
+    (Checker.term? sig env p initial).toOption.map fun c0 => (env ++ [cursorTy.getD c0], inLoop)
+  | .eff (.acquireRelease acquire _), 1 =>
+    (Checker.check sig env (p ++ [0]) acquire).toOption.map fun a =>
+      (env ++ [a.answer, .exitOf .unknown .unknown], inLoop)
+  | .eff (.gen _), 0 => some (env, false)
+  | .eff (.provideLayer _ _ _), 0 => some ([], false)
+  | .layer (.effect _ _), 0 => some ([], false)
+  | .layer (.effectDiscard _), 0 => some ([], false)
+  | .stmts (.cons head _), 1 =>
+    match Checker.checkStmt sig env inLoop (p ++ [0]) head with
+    | .ok (.step _ binds) => some (env ++ binds, inLoop)
+    | .ok (.ret _) => some (env, inLoop)
+    | .ok .pass => some (env, inLoop)
+    | .error _ => none
+  | .stmt (.whileTrue _), 0 => some (env, true)
+  | _, _ => some (env, inLoop)
+
+/-- The node at a path with its environment, from the root at `env`. -/
+def envAt (sig : Sig) (env : TyEnv) (inLoop : Bool) (p : List Nat) (node : Node NativeOp) :
+    List Nat → Option (Node NativeOp × TyEnv)
+  | [] => some (node, env)
+  | i :: rest =>
+    match node.child i, childEnv sig env inLoop p node i with
+    | some c, some (env', inLoop') => envAt sig env' inLoop' (p ++ [i]) c rest
+    | _, _ => none
+
+/-- `envAt` gives every effect site the environment that the walk of the sites gives it. -/
+def envAtAgrees (sig : Sig) (rootEnv : TyEnv) (e : P) : Bool :=
+  (sites sig rootEnv e).all fun s =>
+    match envAt sig rootEnv false [] (.eff e) s.path with
+    | some (.eff node, env) => node == s.node && env == s.env
+    | _ => false
+
+/-! ## The innermost part of a term that has no type -/
+
+def typesCell (tys : List Ty) : String := ", ".intercalate (tys.map showTy)
+
+mutual
+def culprit (sig : Sig) (env : TyEnv) : Term → Option String
+  | .var index => if (env[index]?).isNone then some s!"var a{index} (unbound)" else none
+  | .lit _ => none
+  | .app atom args =>
+    match culpritArgs sig env args with
+    | some c => some c
+    | none =>
+      match argsTy sig env (sig.constAtom atom) args with
+      | some tys => if (sig.atomOf atom tys).isNone then some (atom ++ "(" ++ typesCell tys ++ ")") else none
+      | none => some (atom ++ "(?)")
+  | .record fields names values =>
+    match culpritArgs sig env values with
+    | some c => some c
+    | none =>
+      match argsTy sig env true values with
+      | some tys => if (Record.check fields names tys).isNone then some ("record(" ++ typesCell tys ++ ")") else none
+      | none => some "record(?)"
+  | .field mode target name =>
+    match culprit sig env target with
+    | some c => some c
+    | none =>
+      match argTy sig env false target with
+      | some t =>
+        if (Record.fieldType (mode = .optional) t name).isNone then some ("field ." ++ name ++ " of " ++ showTy t)
+        else none
+      | none => some "field(?)"
+  | .recordSet target name value =>
+    match culprit sig env target with
+    | some c => some c
+    | none =>
+      match culprit sig env value with
+      | some c => some c
+      | none =>
+        match argTy sig env false target, argTy sig env true value with
+        | some t, some v =>
+          if (Record.setType t name v).isNone then some ("recordSet ." ++ name ++ " of " ++ showTy t) else none
+        | _, _ => some "recordSet(?)"
+  | .tupleAt target index =>
+    match culprit sig env target with
+    | some c => some c
+    | none =>
+      match argTy sig env false target with
+      | some t => if (Tuple.typeAt t index).isNone then some (s!"tupleAt #{index} of " ++ showTy t) else none
+      | none => some "tupleAt(?)"
+  | .fold accTy list init body =>
+    match culprit sig env list with
+    | some c => some c
+    | none =>
+      match argTy sig env false list with
+      | none => some "fold(?)"
+      | some listType =>
+        match Checker.listOf? listType with
+        | none => some ("fold: the list is " ++ showTy listType)
+        | some item =>
+          match culprit sig env init with
+          | some c => some c
+          | none =>
+            match argTy sig env false init with
+            | none => some "fold(?)"
+            | some initType =>
+              let acc := accTy.getD initType
+              let stated := if accTy.isSome then "stated" else "the initial value's"
+              if Ty.sub initType.normalize acc.normalize then
+                match culprit sig (env ++ [acc, item]) body with
+                | some c => some c
+                | none =>
+                  match argTy sig (env ++ [acc, item]) false body with
+                  | none => some "fold(?)"
+                  | some bodyType =>
+                    if Ty.sub bodyType.normalize acc.normalize then none
+                    else some ("fold: the body " ++ showTy bodyType ++ " is not below the accumulator " ++
+                      showTy acc ++ " (" ++ stated ++ " type)")
+              else some ("fold: the initial value " ++ showTy initType ++ " is not below the accumulator " ++
+                showTy acc)
+def culpritArgs (sig : Sig) (env : TyEnv) : Terms → Option String
+  | .nil => none
+  | .cons head tail =>
+    match culprit sig env head with
+    | some c => some c
+    | none => culpritArgs sig env tail
+end
+
+def culpritCause (sig : Sig) (env : TyEnv) : CauseTerm → Option String
+  | .fail error =>
+    match culprit sig env error with
+    | some c => some c
+    | none => (termTy sig env error).bind fun t =>
+        if admittedErrTy t then none else some ("Fail at " ++ showTy t)
+  | .die defect =>
+    match culprit sig env defect with
+    | some c => some c
+    | none => (termTy sig env defect).bind fun t =>
+        if admittedErrTy t then none else some ("Die at " ++ showTy t)
+  | .interrupt none => none
+  | .interrupt (some who) =>
+    match culprit sig env who with
+    | some c => some c
+    | none => (termTy sig env who).bind fun t => if t = .nat then none else some ("Interrupt(" ++ showTy t ++ ")")
+  | .both left right =>
+    match culpritCause sig env left with
+    | some c => some c
+    | none => culpritCause sig env right
+
+/-- The environments at which a node types the term that a `term` refusal names: the node's own,
+and for `catchIf` and `iterate` the extended ones, in the order of `Checker.check`. -/
+def slotEnvs (sig : Sig) (env : TyEnv) (p : List Nat) : Node NativeOp → List TyEnv
+  | .eff (.catchIf _ body _) =>
+    match Checker.check sig env (p ++ [0]) body with
+    | .ok b => [env ++ [b.error]]
+    | .error _ => []
+  | .eff (.iterate cursorTy initial _ _ _ body) =>
+    match Checker.term? sig env p initial with
+    | .ok c0 =>
+      let cursor := cursorTy.getD c0
+      [env, env ++ [cursor]] ++
+        match Checker.check sig (env ++ [cursor]) (p ++ [0]) body with
+        | .ok b => [env ++ [cursor, b.answer]]
+        | .error _ => []
+    | .error _ => [env]
+  | _ => [env]
+
+/-- What a refusal of the folded program is about, one level below the checker's reason: for a
+term's refusal the innermost part with no type, for the others the reason's own detail. -/
+def blame (sig : Sig) (rootEnv : TyEnv) (folded : P) (r : TypeRefusal) : String :=
+  match envAt sig rootEnv false [] (.eff folded) r.path with
+  | none => "?"
+  | some (node, env) =>
+    match r.reason with
+    | .term t =>
+      ((slotEnvs sig env r.path node).findSome? fun env' =>
+        if (termTy sig env' t).isNone then culprit sig env' t else none).getD "?"
+    | .binderTerm _ param =>
+      match node with
+      | .eff (.perform op _) =>
+        match ScopedOp.term? op with
+        | some t => (culprit sig (env ++ [param]) t).getD "?"
+        | none => "?"
+      | _ => "?"
+    | .cause c => (culpritCause sig env c).getD "?"
+    | .foldTerm why =>
+      match why.reason with
+      | .notList t => "fold: the list is " ++ showTy t
+      | .initialNotAccumulator i a =>
+        "fold: the initial value " ++ showTy i ++ " is not below the accumulator " ++ showTy a
+      | .bodyNotAccumulator b a => "fold: the body " ++ showTy b ++ " is not below the accumulator " ++ showTy a
+    | .recordTerm why =>
+      match why.reason with
+      | .missingReadField name branch => "field ." ++ name ++ " of " ++ showTy branch
+      | .optionalReadField name branch => "field ." ++ name ++ " (optional) of " ++ showTy branch
+      | .fieldNotSubtype name actual expected =>
+        "record field " ++ name ++ ": " ++ showTy actual ++ " is not below " ++ showTy expected
+      | _ => "record"
+    | .tupleTerm why =>
+      match why.reason with
+      | .nonTuple branch => s!"tupleAt #{why.index} of " ++ showTy branch
+      | .outOfBounds arity => s!"tupleAt #{why.index} out of {arity}"
+    | reason => reasonDetail reason
+
+/-- The head of a culprit: the part before its types, the key of the repair table. -/
+def culpritHead (c : String) : String := (c.splitOn "(").headD c
+
+end Census
