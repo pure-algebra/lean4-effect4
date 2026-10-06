@@ -56,7 +56,7 @@ Layer 3 needs the host boundary's open parts (R6). Layers 1 and 2 do not.
 | Typed state at every reached machine | proved, for closed programs | layers 1 and 2 |
 | One law for an await and its notification across commands | missing; the one-step laws are there | layer 2 |
 | A run in which no task was cut by its budget, as a named premise | missing as a name; the machine drops the work | layer 2 |
-| The mask: the bracket of a region | proved on seat BRACKET's branch, with the later cut's stack shape as its premise | layer 2, under a masked caller |
+| The mask: the bracket of a region | proved on seat BRACKET's branch, with the later cut's stack shape as its premise; a fiber that a pending command steps is live at each cut of a compiled command loop (`stepped_live`, the same branch) | layer 2, under a masked caller |
 | The stack's shape is kept along the fiber machine's commands while a fiber is inside a region | missing; seat BRACKET judges it a slice of its own | the same |
 | A finalizer runs at most once for a registration, along a run | missing (R11's first whole-run clause) | the protected permit, Pool's `use`, two scenario goals |
 | A general algebra of a record's read and overwrite | missing; it costs each module some lemmas and blocks nothing | every next module |
@@ -90,7 +90,13 @@ In this order, each a slice of its own:
    attempt laws' premises into conclusions at a reached machine.
 2. **The await and its notification**, as one invariant of the machine: a parked fiber is in
    its cell's waiters, or its delivery is owed, queued or accepted. It is module-free, and
-   every module's waiting uses it.
+   every module's waiting uses it. Seat POOLOPS found on 2026-10-06 what a module adds to
+   it: at Pool a missing withdrawal loses a wake. Pool's helper selects by a count, so it
+   takes a dead entry and resolves a hint that nobody awaits, and the item stays idle while
+   the next borrower waits (tested: trace 2 of `Test/Program/PoolTraces.lean`, one
+   schedule). Semaphore's helper scans the live waiters, and the same fault lost no wake
+   there. So the law of a wake at Pool takes the withdrawal as a premise: every entry in
+   the cell's waiters belongs to a fiber that still waits.
 3. **A finalizer at most once along a run**, by registration identity. It is module-free
    too. It serves the protected forms and the scenarios' goals.
 4. **The uncut run** as a named premise. Seat WORKQ found its right form on 2026-10-06: the
