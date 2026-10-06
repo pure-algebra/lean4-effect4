@@ -1,0 +1,63 @@
+// A probe of candidate N against tsgo 7: each eliminator's printed form at a union and at never.
+import { Cause, Deferred, Effect, Exit, Fiber, Option, Ref, Scope } from "effect"
+import { isSome, getOrElse, ite, get, take, length, append, cons, fold, optionCase, causeError, causeIsFail, sameHandle, mapGet, fst } from "/Users/pooks/Dev/lean4-effect4/harness/truth/prelude.ts"
+declare const c: boolean
+declare const n: never
+declare const f1: Fiber.Fiber<number, string>
+declare const f2: Fiber.Fiber<boolean, number>
+declare const o1: Option.Option<number>
+declare const o2: Option.Option<string>
+declare const l1: ReadonlyArray<number>
+declare const l2: ReadonlyArray<string>
+declare const e1: Exit.Exit<number, string>
+declare const e2: Exit.Exit<boolean, number>
+declare const k1: Cause.Cause<number>
+declare const k2: Cause.Cause<string>
+declare const r1: Ref.Ref<number>
+declare const r2: Ref.Ref<string>
+declare const d1: Deferred.Deferred<number, string>
+declare const d2: Deferred.Deferred<boolean, number>
+declare const m1: Readonly<Record<string, number>>
+declare const m2: Readonly<Record<string, boolean>>
+declare const p1: readonly [number, string]
+declare const p2: readonly [boolean, null]
+declare const scope: Scope.Closeable
+// ---- fibers
+export const F1_join_union = Fiber.join(c ? f1 : f2)
+export const F2_join_union_explicit = Fiber.join<number | boolean, string | number>(c ? f1 : f2)
+export const F3_await_union = Fiber.await(c ? f1 : f2)
+export const F4_interrupt_union = Fiber.interrupt(c ? f1 : f2)
+export const F5_join_never = Fiber.join(n)
+export const F6_await_union_explicit = Fiber.await<number | boolean, string | number>(c ? f1 : f2)
+// ---- options
+export const O1_isSome_union = isSome(c ? o1 : o2)
+export const O2_getOrElse_union = getOrElse(c ? o1 : o2, 9)
+export const O3_optionCase_union = optionCase(c ? o1 : o2, () => Effect.succeed(undefined), (a1) => Effect.succeed(a1))
+export const O4_optionCase_never = optionCase(n, () => Effect.succeed(undefined), (a1) => Effect.succeed(a1))
+export const O5_optionCase_union_explicit = optionCase<number | string, undefined, never, never, number | string, never, never>(c ? o1 : o2, () => Effect.succeed(undefined), (a1) => Effect.succeed(a1))
+export const O6_getOrElse_two = getOrElse(o1, "d")
+// ---- lists
+export const L1_fold_union = fold(c ? l1 : l2, 0, (acc, x) => acc + 1)
+export const L2_get_union = get(c ? l1 : l2, 0)
+export const L3_take_union = take(c ? l1 : l2, 1)
+export const L4_length_union = length(c ? l1 : l2)
+export const L5_get_union_explicit = get<number | string>(c ? l1 : l2, 0)
+export const L6_fold_never = fold(n, 0, (acc, x) => acc + 1)
+export const L7_append_two = append(l1, l2)
+export const L8_cons_two = cons("a", l1)
+// ---- exits and causes
+export const X1_causeError_exits = causeError(c ? e1 : e2)
+export const X2_causeError_causes = causeError(c ? k1 : k2)
+export const X3_causeIsFail_causes = causeIsFail(c ? k1 : k2)
+export const X4_close_union = Scope.close(scope, c ? e1 : e2)
+export const X5_causeError_exits_explicit = causeError<number | boolean, string | number>(c ? e1 : e2)
+// ---- invariant handles
+export const R1_get_union = Ref.get(c ? r1 : r2)
+export const R2_await_union = Deferred.await(c ? d1 : d2)
+export const R3_sameHandle_union = sameHandle(c ? r1 : r2, r1)
+export const R4_get_union_explicit = Ref.get<number | string>(c ? r1 : r2)
+// ---- maps, pairs, tests
+export const M1_mapGet_union = mapGet(c ? m1 : m2, "k")
+export const P1_fst_union = fst(c ? p1 : p2)
+export const T1_ite_two = ite(c, 1, "a")
+export const T2_ite_never = ite(n, 1, 2)

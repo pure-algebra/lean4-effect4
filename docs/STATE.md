@@ -352,8 +352,13 @@ In work since the suspension of the handover:
   names the pattern of `Record.fieldType` once: a member rule, applied to every member of a
   union's normal form, with the answers joined. It proves the pattern's laws once and writes
   the two record rules through it. It changes no rule and no admitted program. Each later
-  conversion of a by-shape rule is then an instance. The coordinator probes the conversions
-  beside it: the proofs that each touches, and whether tsgo reads a union the same way.
+  conversion of a by-shape rule is then an instance. The coordinator probed the conversions
+  beside it ([the note](research/2026-10-06-uniform-eliminators-landing-probe.md)). The
+  judgment states each rule through the checker's own function, so a conversion changes no
+  statement of it, and one inversion lemma becomes an inequality. tsgo 7 accepts `never` at
+  every printed eliminator. It refuses a proper union at a generic call unless the type
+  arguments are written at the join. So a conversion at a proper union has a target side,
+  and its interim form is open for the owner (row 285).
 - **Seat LATTICE is merged** ([its receipt](research/2026-10-06-seat-LATTICE-receipt.md);
   row 286). `src/Effect4/Laws/Slice/Lattice.lean` holds the generic theory of type slices. A
   type slice is the list of its kept sites. A view is a monotone map from the type slices of
