@@ -52,9 +52,9 @@ open Effect4 (FinalizerStrategy ServiceKey)
 namespace OCaml5.Eff
 
 /-- The `NativeOp` constructors by argument shape: nullary, over a binder term (the eight
-read-modify-write rows, enumerated at each of the five names' images at level 0), over a
-`finalizer_strategy`, over an index, and over type arguments (`deferredMakeOf`, enumerated at the
-one instance the faces spell, `NativeOp.spelled`). -/
+read-modify-write rows, each enumerated once, at its face), over a `finalizer_strategy`, over an
+index, and over type arguments (`deferredMakeOf`, enumerated at the one instance the faces spell,
+`NativeOp.spelled`). -/
 def countOps (nativeOp : Family) : Nat × Nat × Nat × Nat × Nat :=
   nativeOp.ctors.foldl (init := (0, 0, 0, 0, 0)) fun (nul, fn, st, indexed, typed) c =>
     match c.args with
@@ -97,16 +97,14 @@ def main (args : List String) : IO Unit := do
   let famOf (n : Name) : Option Family := families.find? (·.spec.leanName == n)
   let ctorCount (n : Name) : Nat := (famOf n).map (·.ctors.length) |>.getD 0
   -- cross-checks before anything is written
-  unless Effect4.Program.fnNames.eraseDups.length == Effect4.Program.fnNames.length do
-    throw (IO.userError "EffGen: fnNames repeats a name")
   unless FinalizerStrategy.all.length == ctorCount `Effect4.FinalizerStrategy do
     throw (IO.userError "EffGen: FinalizerStrategy.all does not enumerate FinalizerStrategy")
   let some nativeOp := famOf `Effect4.Program.NativeOp | throw (IO.userError "EffGen: NativeOp missing")
   let (nul, fn, st, indexed, typed) := countOps nativeOp
   unless nul + fn + st + indexed + typed == nativeOp.ctors.length do
     throw (IO.userError "EffGen: a NativeOp constructor has an argument shape this tool does not enumerate")
-  unless allOps.length == nul + typed + fn * Effect4.Program.fnNames.length + st * FinalizerStrategy.all.length do
-    throw (IO.userError s!"EffGen: allOps has {allOps.length} values, the constructor table implies {nul + typed + fn * Effect4.Program.fnNames.length + st * FinalizerStrategy.all.length}")
+  unless allOps.length == nul + typed + fn + st * FinalizerStrategy.all.length do
+    throw (IO.userError s!"EffGen: allOps has {allOps.length} values, the constructor table implies {nul + typed + fn + st * FinalizerStrategy.all.length}")
   unless allOps.eraseDups.length == allOps.length do throw (IO.userError "EffGen: allOps repeats a value")
   -- the corpus: every constructor name resolves in the environment
   let trees := Corpus.corpus.map fun (nm, p) => (nm, p, effV p)

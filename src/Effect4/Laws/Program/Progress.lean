@@ -70,10 +70,11 @@ theorem StoreFits.step {w w' : Typed.World} {o : SyncOp} {st' : Stores} {a : Val
 
 end Denote
 
-/-! ## The faces' images agree with the names on every number (the state plan's T3b)
+/-! ## The names' images agree with the names on every number (the state plan's T3b)
 
-Until the state plan's T5 the faces spell a read-modify-write row's binder term by a name
-(`FnName.image`, `Program/FnName.lean`). The image of a name at a shape and a node's level
+Until the state plan's T5 the faces spelled a read-modify-write row's binder term by a name
+(`FnName.image`, `Program/FnName.lean`); since T5 they print the term itself, and the images
+are a library of terms. The image of a name at a shape and a node's level
 evaluates, on every number and over every outer environment, to the value the name answers at
 that shape (`FnName.valueAt`). Before the rows carried terms a row named its function and
 `syncOpOf` handed the store the name's lowering at level 0; on every number that lowering

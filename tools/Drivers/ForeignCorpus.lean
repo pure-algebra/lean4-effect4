@@ -108,13 +108,9 @@ def nativeProbes : List (String × Eff NativeOp) :=
       | .nat | .var _ => .lit (.nat 0)
       | .prod _ _ => .app "pair" (.cons (.var 0) (.cons (.lit (.nat 0)) .nil))
       | _ => .var 0
-    -- A probe under the binder of its cell or its deferred is a node of level 1. A spelled
-    -- operation is its form at level 0 (`NativeOp.spelled`), so a read-modify-write row's binder
-    -- term moves to the node's level (`NativeOp.atLevel`; the state plan's T3b).
-    let level : Nat := match row.request with
-      | .refOf _ | .prod (.refOf _) _ | .deferredOf _ _ | .prod (.deferredOf _ _) _ => 1
-      | _ => 0
-    let p := Eff.perform ((NativeOp.atLevel 0 level op).getD op) request
+    -- A spelled read-modify-write row is its face (`NativeOp.spelled`): its binder term is the
+    -- unit literal, which is closed, so the probe performs it as it stands at every level.
+    let p := Eff.perform op request
     let p := match row.request with
       | .refOf _ | .prod (.refOf _) _ => .bind (.perform .refMake (.lit (.nat 1))) p
       | .deferredOf _ _ | .prod (.deferredOf _ _) _ =>

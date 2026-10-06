@@ -4,27 +4,25 @@ public import Effect4.Machine.Term
 public import Effect4.Store.Carrier.Image
 
 /-!
-# Program.FnName — the five function names, the faces' vocabulary for a binder term
+# Program.FnName — five function names, a library of binder terms
 
 A read-modify-write row of `NativeOp` carries a binder term (decisions row 43, the state plan's
 T3b). The term runs at `env ++ [current]`, so it reads its current value at the node's level
-(`ScopedOp`'s convention). Until the state plan's T5 prints a term as a lambda, the printer and
-the readers spell a term by one of five names (`Ref.update(ref, incr)`). This module owns that
-vocabulary:
+(`ScopedOp`'s convention). The faces print the term itself, as a function of the current value
+(the state plan's T5, `Codegen/PrintLeaf.lean` `printPerform`): no face spells a name. Before T5
+the printer and the readers spelled a term by one of the five names below
+(`Ref.update(ref, incr)`). This module keeps what still has a reader:
 
 * `FnShape`, rc.112's four function types of the eight rows, with the parameter and result
-  templates of each;
-* `FnName`, the five names, with their printed spelling (`fnSpelling`);
-* `FnName.image`, the term of a name at a shape and a level, and `FnName.decode?`, the name of a
-  term. The pair is an exact embedding of five names into terms at each shape and level:
-  `FnName.decode?_image` is the retraction and `FnName.image_of_decode?` the exactness;
+  templates of each (`nativeSignature`'s `termOf`, `Program/Native.lean`);
+* `FnName`, the five names, with `FnName.image`, the term of a name at a shape and a level. The
+  foreign lambda forms spell four of them (`LambdaShape.term`, `Codegen/Forms.lean`), and the
+  batteries and the corpus generator build their read-modify-write rows from them;
 * the names' meaning on values (`FnName.total` and its three siblings, `FnName.valueAt`): what
-  the store ran for a name before it ran terms, and what the TypeScript prelude's five functions
-  compute (`harness/truth/prelude.ts`). On every number an image evaluates to it
+  the store ran for a name before it ran terms. On every number an image evaluates to it
   (`FnName.image_agrees`, `Laws/Program/Progress.lean`).
 
-No program stores a name: a term that is no name's image is refused by the faces by its row's
-spelling (`PrintRefusal.binderTerm`), never printed as a name. No store code reads this module.
+No program stores a name, and no store code reads this module.
 -/
 
 @[expose] public section
@@ -59,10 +57,10 @@ namespace Effect4.Machine
 
 open Effect4.Program (FnShape)
 
-/-- Names of the pure functions the faces spell a read-modify-write row's binder term by, until
-the state plan's T5. rc.112 takes a JavaScript function; DB-02 forbids storing one, and the rows
-carry binder terms (decisions row 43). A name is the faces' spelling of five terms per shape
-(`FnName.image`). -/
+/-- Names of five pure functions over numbers. rc.112 takes a JavaScript function; DB-02 forbids
+storing one, and the rows carry binder terms (decisions row 43). A name stands for one term per
+shape and level (`FnName.image`); the faces print the term, never the name (the state plan's
+T5). -/
 inductive FnName
   /-- `a ↦ a + 1`. -/
   | incr
@@ -78,9 +76,8 @@ deriving DecidableEq, Repr
 
 /-! ## The names' meaning on values
 
-What the store ran for a name before it ran terms (the state plan's T2). The TypeScript prelude's
-five functions transcribe `total` and `partialUpdate` (`harness/truth/prelude.ts`). Nothing runs
-these: they are the right side of the images' agreement on numbers (`FnName.image_agrees`). -/
+What the store ran for a name before it ran terms (the state plan's T2). Nothing runs these:
+they are the right side of the images' agreement on numbers (`FnName.image_agrees`). -/
 
 /-- `a ↦ f(a)` for the total read-modify-write operations. -/
 def FnName.total : FnName → Val → Val
@@ -163,10 +160,11 @@ namespace Effect4.Program
 
 open Effect4.Machine (FnName)
 
-/-- The five names, in declaration order: the order the tools' profiles print. -/
+/-- The five names, in declaration order. -/
 def fnNames : List FnName := [.incr, .double, .zeroWhenPositive, .noChange, .takeAndBump]
 
-/-- The printed name of a pure function, `Ref.update(ref, incr)`. -/
+/-- A name's spelling, as a label: the foreign corpus names its probes by it
+(`tools/Drivers/Styles.lean`). No face prints it. -/
 def fnSpelling : FnName → String
   | .incr => "incr"
   | .double => "double"
@@ -179,67 +177,6 @@ end Effect4.Program
 namespace Effect4.Machine
 
 open Effect4.Program (FnShape fnNames)
-
-/-- **The name of a term** at a shape and a level: the name whose image the term is, `none` for a
-term that is no name's image there. -/
-def FnName.decode? (s : FnShape) (n : Nat) (t : Program.Term) : Option FnName :=
-  fnNames.find? fun f => FnName.image s n f == t
-
-/-- The name the head of an `A → A` term spells, read without the term's level. A step of
-`FnName.headName?`. -/
-def FnName.totalName? : Program.Term → Option FnName
-  | .app "succ" _ => some .incr
-  | .app "mul" _ => some .double
-  | .app "add" (.cons _ (.cons (.lit (.nat 0)) .nil)) => some .zeroWhenPositive
-  | .app "add" _ => some .takeAndBump
-  | .var _ => some .noChange
-  | _ => none
-
-/-- The name a term's head spells at a shape, read without the term's level: the injectivity
-witness of `FnName.image`, a step of `FnName.decode?_image`. -/
-def FnName.headName? : FnShape → Program.Term → Option FnName
-  | .update, t => FnName.totalName? t
-  | .updateSome, .app "none" _ => some .noChange
-  | .updateSome, .app "ite" _ => some .zeroWhenPositive
-  | .updateSome, .app "some" (.cons t .nil) => FnName.totalName? t
-  | .modify, .app "pair" (.cons _ (.cons t .nil)) => FnName.totalName? t
-  | .modifySome, .app "pair" (.cons _ (.cons (.app "none" _) .nil)) => some .noChange
-  | .modifySome, .app "pair" (.cons _ (.cons (.app "some" (.cons (.var _) .nil)) .nil)) =>
-    some .zeroWhenPositive
-  | .modifySome, .app "pair" (.cons _ (.cons (.app "some" (.cons t .nil)) .nil)) =>
-    FnName.totalName? t
-  | _, _ => none
-
-/-- The head of an image spells its name, at every level. A step of `FnName.decode?_image`. -/
-theorem FnName.headName?_image (s : FnShape) (n : Nat) (f : FnName) :
-    FnName.headName? s (FnName.image s n f) = some f := by
-  cases s <;> cases f <;> rfl
-
-/-- Two names never share an image at a shape and a level. A step of `FnName.decode?_image`. -/
-theorem FnName.image_injective {s : FnShape} {n : Nat} {f g : FnName}
-    (h : FnName.image s n f = FnName.image s n g) : f = g := by
-  have hf := FnName.headName?_image s n f
-  rw [h, FnName.headName?_image] at hf
-  exact (Option.some.inj hf).symm
-
-/-- **Retraction**: a name reads back from its image, at every shape and level. With
-`FnName.image_of_decode?` it makes the names an exact embedding into terms; a step of the faces'
-round trip (`NativeOp.atLevel_symm`, `Program/Native.lean`). -/
-theorem FnName.decode?_image (s : FnShape) (n : Nat) (f : FnName) :
-    FnName.decode? s n (FnName.image s n f) = some f := by
-  have hbeq : (fun g => FnName.image s n g == FnName.image s n f) = fun g => g == f := by
-    funext g
-    rw [Bool.eq_iff_iff, beq_iff_eq, beq_iff_eq]
-    exact ⟨FnName.image_injective, fun h => h ▸ rfl⟩
-  unfold FnName.decode?
-  rw [hbeq]
-  cases f <;> rfl
-
-/-- **Exactness**: what reads as a name is that name's image. A term that is no image reads as
-no name. -/
-theorem FnName.image_of_decode? {s : FnShape} {n : Nat} {t : Program.Term} {f : FnName}
-    (h : FnName.decode? s n t = some f) : FnName.image s n f = t :=
-  eq_of_beq (List.find?_some (p := fun g => FnName.image s n g == t) h)
 
 /-- An image reads its current value and nothing else: over any environment in which the term
 `a` evaluates to `v`, the image over `a` evaluates as the level-0 image over `[v]`. A step of
