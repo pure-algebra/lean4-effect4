@@ -43,7 +43,9 @@ restore site. A return posts one helper with the count 1 where a wake is owed (d
 238). The helper runs one selection step, and it then resolves each selected hint in order.
 The fixtures use `posted`, `onInterrupt` and `waitAt` of `src/Effect4/Modules/Waiting.lean`,
 and the mask's builder. They do not use `waitRetry`: its own mask ends before the body's hook
-is installed. The public `make` and `use` come with a later slice.
+is installed. Two red controls of that mask stand before the engine's fixture: a lease in its
+own mask loses the lease, or it cannot be interrupted while it waits. The public `make` and
+`use` come with a later slice.
 
 **The steps are the library's** (`src/Effect4/Modules/Pool/Steps.lean`): the lease step, the
 return step, the selection, the withdrawal and the close's first step. The cell is the
@@ -785,6 +787,106 @@ def pp5controlHandedRows : List (List Nat) :=
   [snap [0] [] [] 0 false 2,
     rows [[1, 1, 1, 0], [2, 1, 1, 0], [9, 1], [1, 2, 1, 1], [2, 2, 1, 1], [9, 1], [9, 1]]]))
 #guard exitOf (pp1 finalizingAt) != exitOf (pp1 plainly)
+
+/-! ### The mask of `use`: one region, with two red controls
+
+`use` holds the lease and the hook's installation in one masked region. Each control below
+joins a lease that holds its own mask to the hook, as `waitRetry` holds its own
+(`src/Effect4/Modules/Waiting.lean`). Each fails one schedule. They are the finite controls of
+the form that the public slice needs: the wrapper's loop at the caller's restore site.
+
+A yield can stand inside a masked region: the budget's yield is no interruption
+(`injectYield` in `src/Effect4/Machine/Fibers.lean`). The first control writes one such yield
+out, after the lease's commit. -/
+
+/-- The lease, and then one yield inside the mask. -/
+def leaseThenYield (c : Ctx) (mark : Nat) (restore : Src NativeOp → Src NativeOp)
+    (id : TermSrc) : Src NativeOp :=
+  bindWith (leaseLoop {} c mark restore id) fun got => andThen (yieldNow 0) (succeed got)
+
+/-- The library's return, with its helper at the count 1. -/
+def giveBackLibrary : Ctx → Nat → TermSrc → Src NativeOp :=
+  giveBackWith {} fun c => post (plainWake {} c (nat 1))
+
+/-- One region: the profile's `use`, with the yield inside it. -/
+def useOneRegion : Ctx → Nat → (TermSrc → Src NativeOp) → Src NativeOp :=
+  useWith leaseThenYield giveBackLibrary
+
+/-- Two regions: the lease in its own mask, and then the hook. -/
+def useTwoRegions (c : Ctx) (mark : Nat) (body : TermSrc → Src NativeOp) : Src NativeOp :=
+  bindWith (Deferred.make .unit .never) fun id =>
+    andThen (Ref.updateWith c.names fun reg => snoc reg (app "pair" [nat mark, id]))
+      (bindWith (uninterruptibleMaskWith fun restore => leaseThenYield c mark restore id)
+        fun got =>
+          selectOptionWith got (say c.log [nat 6, nat mark]) fun item =>
+            onExitWith (body item) fun _ => giveBackLibrary c mark item)
+
+/-- The lease's own mask inside the caller's mask: the wait stands at the inner restore site,
+which gives the caller's masked state. -/
+def useNestedMask (c : Ctx) (mark : Nat) (body : TermSrc → Src NativeOp) : Src NativeOp :=
+  uninterruptibleMaskWith fun restore =>
+    bindWith (Deferred.make .unit .never) fun id =>
+      andThen (Ref.updateWith c.names fun reg => snoc reg (app "pair" [nat mark, id]))
+        (bindWith (uninterruptibleMaskWith fun inner => leaseLoop {} c mark inner id) fun got =>
+          selectOptionWith got (say c.log [nat 6, nat mark]) fun item =>
+            onExitWith (restore (body item)) fun _ => giveBackLibrary c mark item)
+
+/-- G1. Size 1, and the item is idle. A leases and yields inside its mask. A is interrupted
+while it is masked, by a forked fiber. -/
+def interruptedHolder (use : Ctx → Nat → (TermSrc → Src NativeOp) → Src NativeOp) :
+    Src NativeOp := eff do
+  let log ← Ref.make noRows
+  withCtx [nat 1] log fun c => eff do
+    let a ← fork (use c 1 fun _ => succeed unit)
+    let held ← snapshot c
+    let _ ← fork (withFiber (Action.interrupt a))
+    let _ ← settle
+    let after ← snapshot c
+    let l ← Ref.get log
+    return tuple [held, after, l]
+
+/-- G2. Size 1. H holds. A waits, and A is interrupted by a forked fiber. H then returns. -/
+def interruptedWaiter (use : Ctx → Nat → (TermSrc → Src NativeOp) → Src NativeOp) :
+    Src NativeOp := eff do
+  let log ← Ref.make noRows
+  let gH ← Deferred.make .unit .never
+  withCtx [nat 1] log fun c => eff do
+    let _ ← fork (library.use c 9 fun _ => Deferred.await gH)
+    let a ← fork (use c 1 fun _ => succeed unit)
+    let before ← snapshot c
+    let _ ← fork (withFiber (Action.interrupt a))
+    let _ ← settle
+    let left ← snapshot c
+    let _ ← Deferred.succeed gH unit
+    let _ ← settle
+    let after ← snapshot c
+    let l ← Ref.get log
+    return tuple [before, left, after, l]
+
+#guard [interruptedHolder useOneRegion, interruptedHolder useTwoRegions,
+    interruptedWaiter library.use, interruptedWaiter useNestedMask].map verdict =
+  List.replicate 4 "built"
+
+-- G1, one region. The interruption waits for the mask's end. The hook is installed by then,
+-- so the lease returns: the item is idle again.
+#guard exitOf (interruptedHolder useOneRegion) = some (.success (.list
+  [snap [] [0] [0] 0 false 1, snap [0] [] [] 0 false 1, rows [[1, 1, 1, 0], [2, 1, 1, 0]]]))
+-- G1, two regions. The interruption lands at the first mask's end, before the hook is
+-- installed. No return runs: the item stays borrowed by a fiber that has exited.
+#guard exitOf (interruptedHolder useTwoRegions) = some (.success (.list
+  [snap [] [0] [0] 0 false 1, snap [] [0] [0] 0 false 1, rows [[1, 1, 1, 0]]]))
+#guard exitOf (interruptedHolder useTwoRegions) != exitOf (interruptedHolder useOneRegion)
+
+-- G2, the profile's `use`. The interrupted waiter's entry leaves, and A never leases.
+#guard exitOf (interruptedWaiter library.use) = some (.success (.list
+  [snap [] [0] [0] 1 false 1, snap [] [0] [0] 0 false 1, snap [0] [] [] 0 false 1,
+    rows [[1, 9, 1, 0], [2, 9, 1, 0]]]))
+-- G2, the nested mask. The wait cannot be interrupted: A's entry stays, and no withdrawal
+-- runs. After H's return A is notified, and A commits a lease after its own interruption.
+#guard exitOf (interruptedWaiter useNestedMask) = some (.success (.list
+  [snap [] [0] [0] 1 false 1, snap [] [0] [0] 1 false 1, snap [0] [] [] 0 false 2,
+    rows [[1, 9, 1, 0], [2, 9, 1, 0], [4, 1], [1, 1, 1, 1], [2, 1, 1, 1]]]))
+#guard exitOf (interruptedWaiter useNestedMask) != exitOf (interruptedWaiter library.use)
 
 /-! ## The engine's fixture
 
